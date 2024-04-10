@@ -31,12 +31,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 class allocator;
 
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION)
+#if _LIBCPP_STD_VER <= 17
 // These specializations shouldn't be marked _LIBCPP_DEPRECATED_IN_CXX17.
 // Specializing allocator<void> is deprecated, but not using it.
 template <>
 class _LIBCPP_TEMPLATE_VIS allocator<void> {
-#  if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
+#  if _LIBCPP_STD_VER <= 17
 
 public:
   _LIBCPP_DEPRECATED_IN_CXX17 typedef void* pointer;
@@ -52,7 +52,7 @@ public:
 
 template <>
 class _LIBCPP_TEMPLATE_VIS allocator<const void> {
-#  if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
+#  if _LIBCPP_STD_VER <= 17
 
 public:
   _LIBCPP_DEPRECATED_IN_CXX17 typedef const void* pointer;
@@ -101,7 +101,9 @@ public:
   typedef ptrdiff_t difference_type;
   typedef _Tp value_type;
   typedef true_type propagate_on_container_move_assignment;
-  typedef true_type is_always_equal;
+#if _LIBCPP_STD_VER <= 23 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS)
+  _LIBCPP_DEPRECATED_IN_CXX23 typedef true_type is_always_equal;
+#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
 
@@ -133,7 +135,7 @@ public:
   }
 
   // C++20 Removed members
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
+#if _LIBCPP_STD_VER <= 17
   _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp* pointer;
   _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp* const_pointer;
   _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp& reference;
@@ -179,7 +181,9 @@ public:
   typedef ptrdiff_t difference_type;
   typedef const _Tp value_type;
   typedef true_type propagate_on_container_move_assignment;
-  typedef true_type is_always_equal;
+#if _LIBCPP_STD_VER <= 23 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS)
+  _LIBCPP_DEPRECATED_IN_CXX23 typedef true_type is_always_equal;
+#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
 
@@ -211,7 +215,7 @@ public:
   }
 
   // C++20 Removed members
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
+#if _LIBCPP_STD_VER <= 17
   _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp* pointer;
   _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp* const_pointer;
   _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp& reference;

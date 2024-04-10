@@ -335,9 +335,9 @@ func.func @vectorize_affine_apply(%arg0: tensor<5xf32>, %arg3: index) -> tensor<
 // CHECK-LABEL:  func.func @vectorize_affine_apply
 // CHECK-SAME: %arg0: tensor<5xf32>
 // CHECK-SAME: %[[ARG1:.*]]: index
-// CHECK:   %[[CST:.*]] = arith.constant dense<[123, 124, 125, 126, 127]> : vector<5xindex>
-// CHECK:   %[[CST_0:.*]] = arith.constant dense<1> : vector<5xindex>
-// CHECK:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[CST:.*]] = arith.constant dense<[123, 124, 125, 126, 127]> : vector<5xindex>
+// CHECK-DAG: %[[CST_0:.*]] = arith.constant dense<1> : vector<5xindex>
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK:   %[[EMPTY:.*]] = tensor.empty() : tensor<5xi32>
 // CHECK:   %[[BCAST:.*]] = vector.broadcast %[[ARG1]] : index to vector<5xindex>
 // CHECK:   %[[ADDI_1:.*]] = arith.addi %[[BCAST]], %[[CST]] : vector<5xindex>

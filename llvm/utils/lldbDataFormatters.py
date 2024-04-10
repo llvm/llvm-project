@@ -3,6 +3,7 @@ LLDB Formatters for LLVM data types.
 
 Load into LLDB with 'command script import /path/to/lldbDataFormatters.py'
 """
+from __future__ import annotations
 
 import collections
 import lldb
@@ -218,12 +219,14 @@ class OptionalSynthProvider:
 
 
 def SmallStringSummaryProvider(valobj, internal_dict):
-    num_elements = valobj.GetNumChildren()
+    # The underlying SmallVector base class is the first child.
+    vector = valobj.GetChildAtIndex(0)
+    num_elements = vector.GetNumChildren()
     res = '"'
-    for i in range(0, num_elements):
-        c = valobj.GetChildAtIndex(i).GetValue()
+    for i in range(num_elements):
+        c = vector.GetChildAtIndex(i)
         if c:
-            res += c.strip("'")
+            res += chr(c.GetValueAsUnsigned())
     res += '"'
     return res
 

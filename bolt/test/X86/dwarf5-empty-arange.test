@@ -1,0 +1,19 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-empty-arange-main.s   -o %tmain.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-empty-arange-helper.s -o %thelper.o
+# RUN: %clang %cflags -dwarf-5 %tmain.o %thelper.o -o %t.exe -Wl,--entry=main -Wl,-q -Wl,-gc-sections
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --debug-aranges %t.bolt > %t.txt
+# RUN: llvm-dwarfdump --debug-info -r 0 %t.bolt >> %t.txt
+# RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
+
+## This tests checks that BOLT handles correctly empty arange. Before we would output 0x0,0x0.
+## Which tools interpreted as an end to aragnes list.
+
+# POSTCHECK:      Address Range Header
+# POSTCHECK-NOT:  Address Range Header
+# POSTCHECK:      DW_TAG_compile_unit
+# POSTCHECK:      DW_TAG_compile_unit
+# POSTCHECK:      DW_AT_ranges
+# POSTCHECK-NEXT: [0x0000000000000000, 0x0000000000000000))

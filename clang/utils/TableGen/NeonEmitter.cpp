@@ -735,20 +735,15 @@ Type Type::fromTypedefName(StringRef Name) {
   Type T;
   T.Kind = SInt;
 
-  if (Name.front() == 'u') {
+  if (Name.consume_front("u"))
     T.Kind = UInt;
-    Name = Name.drop_front();
-  }
 
-  if (Name.starts_with("float")) {
+  if (Name.consume_front("float")) {
     T.Kind = Float;
-    Name = Name.drop_front(5);
-  } else if (Name.starts_with("poly")) {
+  } else if (Name.consume_front("poly")) {
     T.Kind = Poly;
-    Name = Name.drop_front(4);
-  } else if (Name.starts_with("bfloat")) {
+  } else if (Name.consume_front("bfloat")) {
     T.Kind = BFloat16;
-    Name = Name.drop_front(6);
   } else {
     assert(Name.starts_with("int"));
     Name = Name.drop_front(3);
@@ -765,8 +760,7 @@ Type Type::fromTypedefName(StringRef Name) {
   T.Bitwidth = T.ElementBitwidth;
   T.NumVectors = 1;
 
-  if (Name.front() == 'x') {
-    Name = Name.drop_front();
+  if (Name.consume_front("x")) {
     unsigned I = 0;
     for (I = 0; I < Name.size(); ++I) {
       if (!isdigit(Name[I]))
@@ -780,8 +774,7 @@ Type Type::fromTypedefName(StringRef Name) {
     // Was scalar.
     T.NumVectors = 0;
   }
-  if (Name.front() == 'x') {
-    Name = Name.drop_front();
+  if (Name.consume_front("x")) {
     unsigned I = 0;
     for (I = 0; I < Name.size(); ++I) {
       if (!isdigit(Name[I]))

@@ -123,4 +123,3 @@ entry:
 
   ret <vscale x 16 x i32> %a
 }
-

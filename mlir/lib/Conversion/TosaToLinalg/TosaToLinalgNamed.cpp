@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -844,10 +845,7 @@ public:
             auto padVal = rewriter.create<arith::ConstantIndexOp>(loc, pad);
             Value dpos = rewriter.create<arith::SubIOp>(loc, pos, padVal);
 
-            Value cmp = rewriter.create<arith::CmpIOp>(
-                loc, arith::CmpIPredicate::slt, dpos, zero);
-            Value offset =
-                rewriter.create<arith::SelectOp>(loc, cmp, dpos, zero);
+            Value offset = rewriter.create<arith::MinSIOp>(loc, dpos, zero);
             return rewriter.create<arith::AddIOp>(loc, valid, offset)
                 ->getResult(0);
           };
@@ -867,9 +865,7 @@ public:
             // Determine how much padding was included.
             val = padFn(val, left, pad[i * 2]);
             val = padFn(val, right, pad[i * 2 + 1]);
-            Value cmp = rewriter.create<arith::CmpIOp>(
-                loc, arith::CmpIPredicate::slt, val, one);
-            return rewriter.create<arith::SelectOp>(loc, cmp, one, val);
+            return rewriter.create<arith::MaxSIOp>(loc, one, val);
           };
 
           // Compute the indices from either end.
@@ -889,6 +885,10 @@ public:
             auto countF = rewriter.create<arith::SIToFPOp>(loc, accETy, count);
             poolVal = rewriter.create<arith::DivFOp>(loc, poolVal, countF)
                           ->getResult(0);
+            if (accETy.getIntOrFloatBitWidth() >
+                resultETy.getIntOrFloatBitWidth())
+              poolVal =
+                  rewriter.create<arith::TruncFOp>(loc, resultETy, poolVal);
           } else {
 
             // If we have quantization information we need to apply an offset
@@ -984,6 +984,31 @@ public:
   }
 };
 
+class TransposeConverter : public OpRewritePattern<tosa::TransposeOp> {
+public:
+  using OpRewritePattern<tosa::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::TransposeOp op,
+                                PatternRewriter &rewriter) const final {
+    SmallVector<int64_t> constantPerms;
+    if (failed(op.getConstantPerms(constantPerms)))
+      return failure();
+
+    Location loc = op.getLoc();
+    // The verifier should have made sure we have a valid permutation tensor.
+    assert(isPermutationVector(constantPerms) && "Expected valid permutation");
+    SmallVector<OpFoldResult> inputSizes =
+        tensor::getMixedSizes(rewriter, loc, op.getInput1());
+    auto permutedSizes =
+        applyPermutation<OpFoldResult>(inputSizes, constantPerms);
+
+    auto permutedInit = rewriter.create<tensor::EmptyOp>(
+        loc, permutedSizes, op.getInput1().getType().getElementType());
+    rewriter.replaceOpWithNewOp<linalg::TransposeOp>(
+        op, op.getInput1(), permutedInit, constantPerms);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
@@ -1004,6 +1029,8 @@ void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
       MatMulConverter,
       MaxPool2dConverter,
       AvgPool2dConverter,
-      FullyConnectedConverter>(patterns->getContext());
+      FullyConnectedConverter,
+      TransposeConverter
+  >(patterns->getContext());
   // clang-format on
 }

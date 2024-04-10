@@ -505,9 +505,7 @@ void test_svstnt1_f64_x4(svcount_t pn, float64_t *base, svfloat64x4_t v) ATTR
   return SVE_ACLE_FUNC(svstnt1,_f64_x4,,)(pn, base, v);
 }
 
-
 // == VNUM variants ==
-
 
 
 // CHECK-LABEL: @test_svstnt1_vnum_u8_x2(

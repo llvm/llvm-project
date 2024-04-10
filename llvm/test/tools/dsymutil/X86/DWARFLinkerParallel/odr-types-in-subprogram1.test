@@ -6,7 +6,7 @@
 # RUN: echo '    symbols:' >> %t2.map
 # RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
 # RUN: echo '...' >> %t2.map
-# RUN: dsymutil --linker=llvm -y %t2.map -f -o - | llvm-dwarfdump -a - | FileCheck %s
+# RUN: dsymutil --linker=parallel -y %t2.map -f -o - | llvm-dwarfdump -a - | FileCheck %s
 
 ## This test checks debug info for the types located into the subprograms.
 ## Subprogram "float foo(int)" contains type "clas1". First compile unit

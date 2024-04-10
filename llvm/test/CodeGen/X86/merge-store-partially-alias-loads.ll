@@ -28,19 +28,19 @@
 ; DBGDAG: X86ISD::RET_GLUE t{{[0-9]+}},
 
 ; DBGDAG-LABEL: Instruction selection begins
-define void @merge_store_partial_overlap_load([4 x i8]* %tmp) {
-  %tmp8 = getelementptr inbounds [4 x i8], [4 x i8]* %tmp, i32 0, i8 0
-  %tmp10 = getelementptr inbounds [4 x i8], [4 x i8]* %tmp, i32 0, i8 1
-  %tmp12 = getelementptr inbounds [4 x i8], [4 x i8]* %tmp, i32 0, i8 2
-  %tmp14 = getelementptr [4 x i8], [4 x i8]* %tmp, i32 0, i8 3
+define void @merge_store_partial_overlap_load(ptr %tmp) {
+  %tmp8 = getelementptr inbounds [4 x i8], ptr %tmp, i32 0, i8 0
+  %tmp10 = getelementptr inbounds [4 x i8], ptr %tmp, i32 0, i8 1
+  %tmp12 = getelementptr inbounds [4 x i8], ptr %tmp, i32 0, i8 2
+  %tmp14 = getelementptr [4 x i8], ptr %tmp, i32 0, i8 3
 
-  %tmp9 = load i8, i8* %tmp8, align 1   ; base + 0
-  %tmp11 = load i8, i8* %tmp10, align 1 ; base + 1
-  %tmp13 = load i8, i8* %tmp12, align 1 ; base + 2
+  %tmp9 = load i8, ptr %tmp8, align 1   ; base + 0
+  %tmp11 = load i8, ptr %tmp10, align 1 ; base + 1
+  %tmp13 = load i8, ptr %tmp12, align 1 ; base + 2
 
-  store i8 %tmp9, i8* %tmp10, align 1   ; base + 1
-  store i8 %tmp11, i8* %tmp12, align 1  ; base + 2
-  store i8 %tmp13, i8* %tmp14, align 1  ; base + 3
+  store i8 %tmp9, ptr %tmp10, align 1   ; base + 1
+  store i8 %tmp11, ptr %tmp12, align 1  ; base + 2
+  store i8 %tmp13, ptr %tmp14, align 1  ; base + 3
 
 ; Should emit
 ; load base + 0, base + 1

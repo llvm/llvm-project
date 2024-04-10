@@ -403,14 +403,19 @@ define i32 @PR17487(i1 %tobool) {
 ;
 ; X64-LIN-LABEL: PR17487:
 ; X64-LIN:       # %bb.0:
-; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    andl $1, %eax
+; X64-LIN-NEXT:    movd %edi, %xmm0
+; X64-LIN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X64-LIN-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-LIN-NEXT:    pextrw $4, %xmm0, %eax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: PR17487:
 ; X64-WIN:       # %bb.0:
-; X64-WIN-NEXT:    andb $1, %cl
 ; X64-WIN-NEXT:    movzbl %cl, %eax
+; X64-WIN-NEXT:    movd %eax, %xmm0
+; X64-WIN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X64-WIN-NEXT:    pand __xmm@00000000000000010000000000000001(%rip), %xmm0
+; X64-WIN-NEXT:    pextrw $4, %xmm0, %eax
 ; X64-WIN-NEXT:    retq
   %tmp = insertelement <2 x i1> undef, i1 %tobool, i32 1
   %tmp1 = zext <2 x i1> %tmp to <2 x i64>

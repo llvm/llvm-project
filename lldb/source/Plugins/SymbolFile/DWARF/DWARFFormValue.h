@@ -60,6 +60,12 @@ public:
                                              const DWARFUnit *u);
   std::optional<uint8_t> GetFixedSize() const;
   DWARFDIE Reference() const;
+
+  /// If this is a reference to another DIE, return the corresponding DWARFUnit
+  /// and DIE offset such that Unit->GetDIE(offset) produces the desired DIE.
+  /// Otherwise, a nullptr and unspecified offset are returned.
+  std::pair<DWARFUnit *, uint64_t> ReferencedUnitAndOffset() const;
+
   uint64_t Reference(dw_offset_t offset) const;
   bool Boolean() const { return m_value.value.uval != 0; }
   uint64_t Unsigned() const { return m_value.value.uval; }

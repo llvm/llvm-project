@@ -81,7 +81,7 @@ define void @test_abs1(ptr %p) {
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
 ;
-  %x = load i32, i32* %p, !range !{i32 -15, i32 10}
+  %x = load i32, ptr %p, !range !{i32 -15, i32 10}
   %a = call i32 @llvm.abs.i32(i32 %x, i1 false)
   %c1 = icmp ule i32 %a, 15
   call void @use(i1 %c1)

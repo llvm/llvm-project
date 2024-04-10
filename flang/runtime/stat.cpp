@@ -66,6 +66,10 @@ RT_API_ATTRS const char *StatErrorString(int stat) {
   case StatMoveAllocSameAllocatable:
     return "MOVE_ALLOC passed the same address as to and from";
 
+  case StatBadPointerDeallocation:
+    return "DEALLOCATE of a pointer that is not the whole content of a pointer "
+           "ALLOCATE";
+
   default:
     return nullptr;
   }

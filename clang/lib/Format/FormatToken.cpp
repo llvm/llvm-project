@@ -71,8 +71,22 @@ bool FormatToken::isSimpleTypeSpecifier() const {
   }
 }
 
-bool FormatToken::isTypeOrIdentifier() const {
-  return isSimpleTypeSpecifier() || Tok.isOneOf(tok::kw_auto, tok::identifier);
+// Sorted common C++ non-keyword types.
+static SmallVector<StringRef> CppNonKeywordTypes = {
+    "clock_t",  "int16_t",   "int32_t", "int64_t",   "int8_t",
+    "intptr_t", "ptrdiff_t", "size_t",  "time_t",    "uint16_t",
+    "uint32_t", "uint64_t",  "uint8_t", "uintptr_t",
+};
+
+bool FormatToken::isTypeName(bool IsCpp) const {
+  return is(TT_TypeName) || isSimpleTypeSpecifier() ||
+         (IsCpp && is(tok::identifier) &&
+          std::binary_search(CppNonKeywordTypes.begin(),
+                             CppNonKeywordTypes.end(), TokenText));
+}
+
+bool FormatToken::isTypeOrIdentifier(bool IsCpp) const {
+  return isTypeName(IsCpp) || isOneOf(tok::kw_auto, tok::identifier);
 }
 
 bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {
@@ -113,8 +127,8 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
   if (!State.NextToken || !State.NextToken->Previous)
     return 0;
 
-  if (Formats.size() == 1)
-    return 0; // Handled by formatFromToken
+  if (Formats.size() <= 1)
+    return 0; // Handled by formatFromToken (1) or avoid severe penalty (0).
 
   // Ensure that we start on the opening brace.
   const FormatToken *LBrace =
@@ -137,7 +151,7 @@ unsigned CommaSeparatedList::formatAfterToken(LineState &State,
   // bin-packed. Add a severe penalty to this so that column layouts are
   // preferred if possible.
   if (!Format)
-    return 10000;
+    return 10'000;
 
   // Format the entire list.
   unsigned Penalty = 0;

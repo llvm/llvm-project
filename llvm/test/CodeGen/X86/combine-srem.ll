@@ -296,7 +296,7 @@ define <4 x i32> @combine_vec_srem_by_pow2b(<4 x i32> %x) {
 ; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm1
 ; AVX2-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,2,3]
+; AVX2-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [0,1,2,3]
 ; AVX2-NEXT:    vpsravd %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; AVX2-NEXT:    vpsllvd %xmm2, %xmm1, %xmm1

@@ -143,6 +143,9 @@ DecodeMatrixTileListRegisterClass(MCInst &Inst, unsigned RegMask,
 static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
+static DecodeStatus DecodePPRorPNRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                                uint64_t Addr,
+                                                const MCDisassembler *Decoder);
 static DecodeStatus DecodePNRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder);
@@ -741,6 +744,18 @@ static DecodeStatus DecodeMatrixTile(MCInst &Inst, unsigned RegNo,
   return Success;
 }
 
+static DecodeStatus DecodePPRorPNRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                                uint64_t Addr,
+                                                const MCDisassembler *Decoder) {
+  if (RegNo > 15)
+    return Fail;
+
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::PPRorPNRRegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
 static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Addr,
                                            const MCDisassembler *Decoder) {
@@ -896,7 +911,7 @@ static DecodeStatus DecodePCRelLabel16(MCInst &Inst, unsigned Imm,
   // Immediate is encoded as the top 16-bits of an unsigned 18-bit negative
   // PC-relative offset.
   uint64_t ImmVal = Imm;
-  if (ImmVal < 0 || ImmVal > (1 << 16))
+  if (ImmVal > (1 << 16))
     return Fail;
   ImmVal = -ImmVal;
   if (!Decoder->tryAddingSymbolicOperand(Inst, (ImmVal << 2), Addr,

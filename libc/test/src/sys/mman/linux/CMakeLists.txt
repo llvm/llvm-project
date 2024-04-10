@@ -62,3 +62,88 @@ add_libc_unittest(
     libc.src.sys.mman.posix_madvise
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_unittest(
+  mincore_test
+  SUITE
+    libc_sys_mman_unittests
+  SRCS
+    mincore_test.cpp
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.unistd
+    libc.src.errno.errno
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.madvise
+    libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.munlock
+    libc.src.unistd.sysconf
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  mlock_test
+  SUITE
+    libc_sys_mman_unittests
+  SRCS
+    mlock_test.cpp
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.unistd
+    libc.src.errno.errno
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.madvise
+    libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.mlock2
+    libc.src.sys.mman.munlock
+    libc.src.sys.mman.mlockall
+    libc.src.sys.mman.munlockall
+    libc.src.sys.resource.getrlimit
+    libc.src.__support.OSUtil.osutil
+    libc.src.unistd.sysconf
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  msync_test
+  SUITE
+    libc_sys_mman_unittests
+  SRCS
+    msync_test.cpp
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.unistd
+    libc.src.errno.errno
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.msync
+    libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.munlock
+    libc.src.unistd.sysconf
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  shm_test
+  SUITE
+    libc_sys_mman_unittests
+  SRCS
+    shm_test.cpp
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.errno.errno
+    libc.src.sys.mman.shm_open
+    libc.src.sys.mman.shm_unlink
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.unistd.ftruncate
+    libc.src.unistd.close
+    libc.src.__support.OSUtil.osutil
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

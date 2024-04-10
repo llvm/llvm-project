@@ -16,8 +16,8 @@ target triple = "aarch64--linux-gnu"
 
 define internal i32 @gather_multiple_use(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @gather_multiple_use(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[C:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[A:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[C:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[B:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[D:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr <4 x i32> [[TMP4]], <i32 15, i32 15, i32 15, i32 15>
@@ -57,10 +57,10 @@ define internal i32 @gather_multiple_use(i32 %a, i32 %b, i32 %c, i32 %d) {
 @data = global [6 x [258 x i8]] zeroinitializer, align 1
 define void @gather_load(ptr noalias %ptr) {
 ; CHECK-LABEL: @gather_load(
-; CHECK-NEXT:    [[ARRAYIDX182:%.*]] = getelementptr inbounds i16, ptr [[PTR:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX183:%.*]] = getelementptr inbounds i16, ptr [[PTR]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX184:%.*]] = getelementptr inbounds i16, ptr [[PTR]], i64 3
-; CHECK-NEXT:    [[ARRAYIDX185:%.*]] = getelementptr inbounds i16, ptr [[PTR]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX182:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX183:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 4
+; CHECK-NEXT:    [[ARRAYIDX184:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 6
+; CHECK-NEXT:    [[ARRAYIDX185:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 8
 ; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr getelementptr inbounds ([6 x [258 x i8]], ptr @data, i64 0, i64 1, i64 0), align 1
 ; CHECK-NEXT:    [[CONV150:%.*]] = zext i8 [[L0]] to i16
 ; CHECK-NEXT:    [[ADD152:%.*]] = add nuw nsw i16 [[CONV150]], 10

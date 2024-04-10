@@ -19,23 +19,23 @@ declare ptr @memchr(ptr, i32, i64)
 define void @fold_memchr_A_pIb_cst_cst(ptr %pchr) {
 ; CHECK-LABEL: @fold_memchr_A_pIb_cst_cst(
 ; CHECK-NEXT:    store ptr @a, ptr [[PCHR:%.*]], align 8
-; CHECK-NEXT:    [[PST_0_1_1:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 1
+; CHECK-NEXT:    [[PST_0_1_1:%.*]] = getelementptr i8, ptr [[PCHR]], i64 8
 ; CHECK-NEXT:    store ptr null, ptr [[PST_0_1_1]], align 8
-; CHECK-NEXT:    [[PST_0_4_4:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 2
+; CHECK-NEXT:    [[PST_0_4_4:%.*]] = getelementptr i8, ptr [[PCHR]], i64 16
 ; CHECK-NEXT:    store ptr null, ptr [[PST_0_4_4]], align 8
-; CHECK-NEXT:    [[PST_1_0_1:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 3
+; CHECK-NEXT:    [[PST_1_0_1:%.*]] = getelementptr i8, ptr [[PCHR]], i64 24
 ; CHECK-NEXT:    store ptr getelementptr (i8, ptr @a, i64 1), ptr [[PST_1_0_1]], align 8
-; CHECK-NEXT:    [[PST_1_0_3:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 4
+; CHECK-NEXT:    [[PST_1_0_3:%.*]] = getelementptr i8, ptr [[PCHR]], i64 32
 ; CHECK-NEXT:    store ptr getelementptr (i8, ptr @a, i64 1), ptr [[PST_1_0_3]], align 8
-; CHECK-NEXT:    [[PST_1_1_1:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 5
+; CHECK-NEXT:    [[PST_1_1_1:%.*]] = getelementptr i8, ptr [[PCHR]], i64 40
 ; CHECK-NEXT:    store ptr null, ptr [[PST_1_1_1]], align 8
-; CHECK-NEXT:    [[PST_1_1_2:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 6
+; CHECK-NEXT:    [[PST_1_1_2:%.*]] = getelementptr i8, ptr [[PCHR]], i64 48
 ; CHECK-NEXT:    store ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1), ptr [[PST_1_1_2]], align 8
-; CHECK-NEXT:    [[PST_1_3_3:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 7
+; CHECK-NEXT:    [[PST_1_3_3:%.*]] = getelementptr i8, ptr [[PCHR]], i64 56
 ; CHECK-NEXT:    store ptr null, ptr [[PST_1_3_3]], align 8
-; CHECK-NEXT:    [[PST_1_3_4:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 8
+; CHECK-NEXT:    [[PST_1_3_4:%.*]] = getelementptr i8, ptr [[PCHR]], i64 64
 ; CHECK-NEXT:    store ptr null, ptr [[PST_1_3_4]], align 8
-; CHECK-NEXT:    [[PST_1_3_6:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 10
+; CHECK-NEXT:    [[PST_1_3_6:%.*]] = getelementptr i8, ptr [[PCHR]], i64 80
 ; CHECK-NEXT:    store ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 1), ptr [[PST_1_3_6]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -108,45 +108,45 @@ define void @fold_memchr_A_pIb_cst_N(i64 %N, ptr %pchr) {
 ; CHECK-NEXT:    [[MEMCHR_CMP:%.*]] = icmp eq i64 [[N:%.*]], 0
 ; CHECK-NEXT:    [[CHR_0_0_N:%.*]] = select i1 [[MEMCHR_CMP]], ptr null, ptr @a
 ; CHECK-NEXT:    store ptr [[CHR_0_0_N]], ptr [[PCHR:%.*]], align 8
-; CHECK-NEXT:    [[PST_0_1_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 1
+; CHECK-NEXT:    [[PST_0_1_N:%.*]] = getelementptr i8, ptr [[PCHR]], i64 8
 ; CHECK-NEXT:    [[MEMCHR_CMP1:%.*]] = icmp ult i64 [[N]], 3
 ; CHECK-NEXT:    [[CHR_0_1_N:%.*]] = select i1 [[MEMCHR_CMP1]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1)
 ; CHECK-NEXT:    store ptr [[CHR_0_1_N]], ptr [[PST_0_1_N]], align 8
-; CHECK-NEXT:    [[PST_0_4_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 2
+; CHECK-NEXT:    [[PST_0_4_N:%.*]] = getelementptr i8, ptr [[PCHR]], i64 16
 ; CHECK-NEXT:    store ptr null, ptr [[PST_0_4_N]], align 8
-; CHECK-NEXT:    [[PST_1_0_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 3
+; CHECK-NEXT:    [[PST_1_0_N:%.*]] = getelementptr i8, ptr [[PCHR]], i64 24
 ; CHECK-NEXT:    [[MEMCHR_CMP2:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-NEXT:    [[CHR_1_0_N:%.*]] = select i1 [[MEMCHR_CMP2]], ptr null, ptr getelementptr (i8, ptr @a, i64 1)
 ; CHECK-NEXT:    store ptr [[CHR_1_0_N]], ptr [[PST_1_0_N]], align 8
-; CHECK-NEXT:    [[PST_1_1_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 4
+; CHECK-NEXT:    [[PST_1_1_N:%.*]] = getelementptr i8, ptr [[PCHR]], i64 32
 ; CHECK-NEXT:    [[MEMCHR_CMP3:%.*]] = icmp ult i64 [[N]], 2
 ; CHECK-NEXT:    [[CHR_1_1_N:%.*]] = select i1 [[MEMCHR_CMP3]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1)
 ; CHECK-NEXT:    store ptr [[CHR_1_1_N]], ptr [[PST_1_1_N]], align 8
-; CHECK-NEXT:    [[PST_1_2_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 5
+; CHECK-NEXT:    [[PST_1_2_N:%.*]] = getelementptr i8, ptr [[PCHR]], i64 40
 ; CHECK-NEXT:    [[MEMCHR_CMP4:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    [[CHR_1_2_N:%.*]] = select i1 [[MEMCHR_CMP4]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 0)
 ; CHECK-NEXT:    store ptr [[CHR_1_2_N]], ptr [[PST_1_2_N]], align 8
-; CHECK-NEXT:    [[PST_1_3_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 6
+; CHECK-NEXT:    [[PST_1_3_N:%.*]] = getelementptr i8, ptr [[PCHR]], i64 48
 ; CHECK-NEXT:    [[MEMCHR_CMP5:%.*]] = icmp ult i64 [[N]], 6
 ; CHECK-NEXT:    [[CHR_1_3_N:%.*]] = select i1 [[MEMCHR_CMP5]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 1)
 ; CHECK-NEXT:    store ptr [[CHR_1_3_N]], ptr [[PST_1_3_N]], align 8
-; CHECK-NEXT:    [[PST_1_4_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 7
+; CHECK-NEXT:    [[PST_1_4_N:%.*]] = getelementptr i8, ptr [[PCHR]], i64 56
 ; CHECK-NEXT:    store ptr null, ptr [[PST_1_4_N]], align 8
-; CHECK-NEXT:    [[PST_2_0_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 8
+; CHECK-NEXT:    [[PST_2_0_N:%.*]] = getelementptr i8, ptr [[PCHR]], i64 64
 ; CHECK-NEXT:    store ptr null, ptr [[PST_2_0_N]], align 8
-; CHECK-NEXT:    [[PST_2_1_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 9
+; CHECK-NEXT:    [[PST_2_1_N:%.*]] = getelementptr i8, ptr [[PCHR]], i64 72
 ; CHECK-NEXT:    [[MEMCHR_CMP6:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-NEXT:    [[CHR_2_1_N:%.*]] = select i1 [[MEMCHR_CMP6]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1)
 ; CHECK-NEXT:    store ptr [[CHR_2_1_N]], ptr [[PST_2_1_N]], align 8
-; CHECK-NEXT:    [[PST_2_2_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 10
+; CHECK-NEXT:    [[PST_2_2_N:%.*]] = getelementptr i8, ptr [[PCHR]], i64 80
 ; CHECK-NEXT:    [[MEMCHR_CMP7:%.*]] = icmp ult i64 [[N]], 3
 ; CHECK-NEXT:    [[CHR_2_2_N:%.*]] = select i1 [[MEMCHR_CMP7]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 0)
 ; CHECK-NEXT:    store ptr [[CHR_2_2_N]], ptr [[PST_2_2_N]], align 8
-; CHECK-NEXT:    [[PST_2_3_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 11
+; CHECK-NEXT:    [[PST_2_3_N:%.*]] = getelementptr i8, ptr [[PCHR]], i64 88
 ; CHECK-NEXT:    [[MEMCHR_CMP8:%.*]] = icmp ult i64 [[N]], 5
 ; CHECK-NEXT:    [[CHR_2_3_N:%.*]] = select i1 [[MEMCHR_CMP8]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 1)
 ; CHECK-NEXT:    store ptr [[CHR_2_3_N]], ptr [[PST_2_3_N]], align 8
-; CHECK-NEXT:    [[PST_2_4_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 12
+; CHECK-NEXT:    [[PST_2_4_N:%.*]] = getelementptr i8, ptr [[PCHR]], i64 96
 ; CHECK-NEXT:    store ptr null, ptr [[PST_2_4_N]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -232,10 +232,10 @@ define void @call_memchr_A_pIb_xs_cst(ptr %pchr) {
 ; CHECK-LABEL: @call_memchr_A_pIb_xs_cst(
 ; CHECK-NEXT:    [[CHR_1_0_0_2:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) getelementptr inbounds ([1 x %struct.A], ptr @a, i64 1, i64 0), i32 0, i64 2)
 ; CHECK-NEXT:    store ptr [[CHR_1_0_0_2]], ptr [[PCHR:%.*]], align 8
-; CHECK-NEXT:    [[PST_1_0_1_2:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 1
+; CHECK-NEXT:    [[PST_1_0_1_2:%.*]] = getelementptr i8, ptr [[PCHR]], i64 8
 ; CHECK-NEXT:    [[CHR_1_0_1_2:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) getelementptr inbounds ([1 x %struct.A], ptr @a, i64 1, i64 0), i32 0, i64 2)
 ; CHECK-NEXT:    store ptr [[CHR_1_0_1_2]], ptr [[PST_1_0_1_2]], align 8
-; CHECK-NEXT:    [[PST_0_0_8_2:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 2
+; CHECK-NEXT:    [[PST_0_0_8_2:%.*]] = getelementptr i8, ptr [[PCHR]], i64 16
 ; CHECK-NEXT:    [[CHR_0_0_8_2:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) getelementptr inbounds ([1 x %struct.A], ptr @a, i64 1, i64 0, i32 0, i64 0), i32 0, i64 2)
 ; CHECK-NEXT:    store ptr [[CHR_0_0_8_2]], ptr [[PST_0_0_8_2]], align 8
 ; CHECK-NEXT:    ret void

@@ -11,7 +11,7 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
@@ -20,8 +20,7 @@ template <typename T> class SqrtTest : public LIBC_NAMESPACE::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
   static constexpr StorageType HIDDEN_BIT =
-      StorageType(1)
-      << LIBC_NAMESPACE::fputil::FloatProperties<T>::FRACTION_LEN;
+      StorageType(1) << LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN;
 
 public:
   typedef T (*SqrtFunc)(T);
@@ -42,7 +41,7 @@ public:
     for (StorageType mant = 1; mant < HIDDEN_BIT; mant <<= 1) {
       FPBits denormal(T(0.0));
       denormal.set_mantissa(mant);
-      T x = T(denormal);
+      T x = denormal.get_val();
       EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
 

@@ -1,5 +1,5 @@
 ; RUN: %llc_dwarf -mtriple x86_64-gnu-linux -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
-
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -mtriple x86_64-gnu-linux -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 ; Build from the following source with clang -O2.
 
 ; The important details are that 'x's abstract definition is first built during

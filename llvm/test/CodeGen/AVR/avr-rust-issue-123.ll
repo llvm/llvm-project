@@ -43,21 +43,21 @@ bb:                                               ; preds = %entry
   %. = select i1 %tmp2, i8 5, i8 %arg1
   %tmp3 = select i1 %tmp, i8 90, i8 %.
   ; CHECK: sts delayFactor, r{{[0-9]+}}
-  store i8 %tmp3, i8* getelementptr inbounds (%UInt8, %UInt8* @delayFactor, i64 0, i32 0), align 1
+  store i8 %tmp3, ptr @delayFactor, align 1
   %tmp4 = zext i8 %tmp3 to i32
   %tmp5 = mul nuw nsw i32 %tmp4, 100
   ; CHECK:      sts  delay+3, r{{[0-9]+}}
   ; CHECK-NEXT: sts  delay+2, r{{[0-9]+}}
   ; CHECK-NEXT: sts  delay+1, r{{[0-9]+}}
   ; CHECK-NEXT: sts  delay, r{{[0-9]+}}
-  store i32 %tmp5, i32* getelementptr inbounds (%UInt32, %UInt32* @delay, i64 0, i32 0), align 4
+  store i32 %tmp5, ptr @delay, align 4
   tail call void @eeprom_write(i16 34, i8 %tmp3)
   br label %bb7
 
 bb6:                                              ; preds = %entry
   %not. = icmp ne i8 %arg1, 0
   %.2 = zext i1 %not. to i8
-  store i1 %not., i1* getelementptr inbounds (%Sb, %Sb* @flag, i64 0, i32 0), align 1
+  store i1 %not., ptr @flag, align 1
 
   ; CHECK: call eeprom_write
   tail call void @eeprom_write(i16 35, i8 %.2)

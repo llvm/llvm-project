@@ -327,6 +327,25 @@ define amdgpu_ps void @raw_ptr_buffer_store__sgpr_rsrc__vgpr_val__vgpr_voffset__
   ret void
 }
 
+define amdgpu_ps void @raw_ptr_buffer_store__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_soffset_volatile(ptr addrspace(8) inreg %rsrc, float %val, i32 %voffset, i32 inreg %soffset) {
+  ; CHECK-LABEL: name: raw_ptr_buffer_store__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_soffset_volatile
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFEN_exact [[COPY4]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (volatile dereferenceable store (s32) into %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 -2147483648)
+  ret void
+}
+
 define amdgpu_ps void @raw_ptr_buffer_store__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_soffset_v2f32(ptr addrspace(8) inreg %rsrc, <2 x float> %val, i32 %voffset, i32 inreg %soffset) {
   ; CHECK-LABEL: name: raw_ptr_buffer_store__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_soffset_v2f32
   ; CHECK: bb.1 (%ir-block.0):

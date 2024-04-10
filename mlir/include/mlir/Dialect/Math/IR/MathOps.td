@@ -136,6 +136,87 @@ def Math_AbsIOp : Math_IntegerUnaryOp<"absi"> {
 }
 
 //===----------------------------------------------------------------------===//
+// AcoshOp
+//===----------------------------------------------------------------------===//
+
+def Math_AcoshOp : Math_FloatUnaryOp<"acosh">{
+  let summary = "Hyperbolic arcus cosine of the given value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.acosh` ssa-use `:` type
+    ```
+
+    The `acosh` operation computes the arcus cosine of a given value.  It takes
+    one operand of floating point type (i.e., scalar, tensor or vector) and returns
+    one result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Hyperbolic arcus cosine of scalar value.
+    %a = math.acosh %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AsinOp
+//===----------------------------------------------------------------------===//
+
+def Math_AsinOp : Math_FloatUnaryOp<"asin">{
+  let summary = "arcus sine of the given value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.asin` ssa-use `:` type
+    ```
+
+    The `asin` operation computes the arcus sine of a given value.  It takes
+    one operand of floating point type (i.e., scalar, tensor or vector) and returns
+    one result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Arcus sine of scalar value.
+    %a = math.asin %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AsinhOp
+//===----------------------------------------------------------------------===//
+
+def Math_AsinhOp : Math_FloatUnaryOp<"asinh">{
+  let summary = "hyperbolic arcus sine of the given value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.asinh` ssa-use `:` type
+    ```
+
+    The `asinh` operation computes the hyperbolic arcus sine of a given value.  It takes
+    one operand of floating point type (i.e., scalar, tensor or vector) and returns
+    one result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Hyperbolic arcus sine of scalar value.
+    %a = math.asinh %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // AtanOp
 //===----------------------------------------------------------------------===//
 
@@ -151,6 +232,33 @@ def Math_AtanOp : Math_FloatUnaryOp<"atan">{
     ```mlir
     // Arcus tangent of scalar value.
     %a = math.atan %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AtanhOp
+//===----------------------------------------------------------------------===//
+
+def Math_AtanhOp : Math_FloatUnaryOp<"atanh">{
+  let summary = "hyperbolic arcus tangent of the given value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.atanh` ssa-use `:` type
+    ```
+
+    The `atanh` operation computes the hyperbolic arcus tangent of a given value.  It takes
+    one operand of floating point type (i.e., scalar, tensor or vector) and returns
+    one result of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Hyperbolic arcus tangent of scalar value.
+    %a = math.atanh %b : f64
     ```
   }];
   let hasFolder = 1;

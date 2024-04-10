@@ -48,6 +48,9 @@
 # RUN: llvm-objcopy -I binary -O elf64-loongarch %t.txt %t.la64.o
 # RUN: llvm-readobj --file-headers %t.la64.o | FileCheck %s --check-prefixes=CHECK,LE,LA64,64
 
+# RUN: llvm-objcopy -I binary -O elf64-s390 %t.txt %t.s390x.o
+# RUN: llvm-readobj --file-headers %t.s390x.o | FileCheck %s --check-prefixes=CHECK,BE,S390X,64
+
 # CHECK: Format:
 # 32-SAME:      elf32-
 # 64-SAME:      elf64-
@@ -64,6 +67,7 @@
 # PPCLE-SAME:   powerpcle{{$}}
 # SPARC-SAME:   sparc
 # SPARCEL-SAME: sparc
+# S390X-SAME:   s390
 # X86-64-SAME:  x86-64
 
 # AARCH64-NEXT: Arch: aarch64
@@ -81,6 +85,7 @@
 # RISCV64-NEXT: Arch: riscv64
 # SPARC-NEXT:   Arch: sparc{{$}}
 # SPARCEL-NEXT: Arch: sparcel
+# S390X-NEXT:   Arch: s390x
 # X86-64-NEXT:  Arch: x86_64
 
 # 32-NEXT:      AddressSize: 32bit
@@ -116,6 +121,7 @@
 # RISCV64-NEXT:   Machine: EM_RISCV (0xF3)
 # SPARC-NEXT:     Machine: EM_SPARC (0x2)
 # SPARCEL-NEXT:   Machine: EM_SPARC (0x2)
+# S390X-NEXT:     Machine: EM_S390 (0x16)
 # X86-64-NEXT:    Machine: EM_X86_64 (0x3E)
 
 # CHECK-NEXT:     Version: 1

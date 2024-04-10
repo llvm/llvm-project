@@ -249,6 +249,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt12experimental19bad_optional_accessD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt13exception_ptr31__from_native_exception_pointerEPv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt13exception_ptrC1ERKS_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt13exception_ptrC2ERKS_', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt13exception_ptrD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -533,6 +534,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118shared_timed_mutex8try_lockEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118shared_timed_mutexC1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__118shared_timed_mutexC2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__is_posix_terminalEP4FILE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_base11lock_sharedEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_base13unlock_sharedEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__119__shared_mutex_base15try_lock_sharedEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -1111,6 +1113,7 @@
 {'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_guard_acquire', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_guard_release', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_increment_exception_refcount', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_init_primary_exception', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_pure_virtual', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_rethrow', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '__cxa_rethrow_primary_exception', 'storage_mapping_class': 'DS', 'type': 'FUNC'}

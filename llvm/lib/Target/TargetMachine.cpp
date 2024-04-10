@@ -58,24 +58,8 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
   if (GV->isThreadLocal())
     return false;
 
-  // We should properly mark well-known section name prefixes as small/large,
-  // because otherwise the output section may have the wrong section flags and
-  // the linker will lay it out in an unexpected way.
-  StringRef Name = GV->getSection();
-  if (!Name.empty()) {
-    auto IsPrefix = [&](StringRef Prefix) {
-      StringRef S = Name;
-      return S.consume_front(Prefix) && (S.empty() || S[0] == '.');
-    };
-    if (IsPrefix(".bss") || IsPrefix(".data") || IsPrefix(".rodata"))
-      return false;
-    if (IsPrefix(".lbss") || IsPrefix(".ldata") || IsPrefix(".lrodata"))
-      return true;
-  }
-
   // For x86-64, we treat an explicit GlobalVariable small code model to mean
   // that the global should be placed in a small section, and ditto for large.
-  // Well-known section names above take precedence for correctness.
   if (auto CM = GV->getCodeModel()) {
     if (*CM == CodeModel::Small)
       return false;
@@ -83,12 +67,32 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
       return true;
   }
 
+  // Treat all globals in explicit sections as small, except for the standard
+  // large sections of .lbss, .ldata, .lrodata. This reduces the risk of linking
+  // together small and large sections, resulting in small references to large
+  // data sections. The code model attribute overrides this above.
+  if (GV->hasSection()) {
+    StringRef Name = GV->getSection();
+    auto IsPrefix = [&](StringRef Prefix) {
+      StringRef S = Name;
+      return S.consume_front(Prefix) && (S.empty() || S[0] == '.');
+    };
+    return IsPrefix(".lbss") || IsPrefix(".ldata") || IsPrefix(".lrodata");
+  }
+
+  // Respect large data threshold for medium and large code models.
   if (getCodeModel() == CodeModel::Medium ||
       getCodeModel() == CodeModel::Large) {
     if (!GV->getValueType()->isSized())
       return true;
+    // Linker defined start/stop symbols can point to arbitrary points in the
+    // binary, so treat them as large.
+    if (GV->isDeclaration() && (GV->getName() == "__ehdr_start" ||
+                                GV->getName().starts_with("__start_") ||
+                                GV->getName().starts_with("__stop_")))
+      return true;
     const DataLayout &DL = GV->getParent()->getDataLayout();
-    uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
+    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     return Size == 0 || Size > LargeDataThreshold;
   }
 
@@ -156,8 +160,7 @@ static TLSModel::Model getSelectedTLSModel(const GlobalValue *GV) {
   llvm_unreachable("invalid TLS model");
 }
 
-bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
-                                         const GlobalValue *GV) const {
+bool TargetMachine::shouldAssumeDSOLocal(const GlobalValue *GV) const {
   const Triple &TT = getTargetTriple();
   Reloc::Model RM = getRelocationModel();
 
@@ -215,12 +218,13 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
 }
 
 bool TargetMachine::useEmulatedTLS() const { return Options.EmulatedTLS; }
+bool TargetMachine::useTLSDESC() const { return Options.EnableTLSDESC; }
 
 TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
   bool IsPIE = GV->getParent()->getPIELevel() != PIELevel::Default;
   Reloc::Model RM = getRelocationModel();
   bool IsSharedLibrary = RM == Reloc::PIC_ && !IsPIE;
-  bool IsLocal = shouldAssumeDSOLocal(*GV->getParent(), GV);
+  bool IsLocal = shouldAssumeDSOLocal(GV);
 
   TLSModel::Model Model;
   if (IsSharedLibrary) {

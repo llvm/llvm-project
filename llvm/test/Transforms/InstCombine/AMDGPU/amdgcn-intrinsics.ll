@@ -2599,7 +2599,8 @@ declare i32 @llvm.amdgcn.ballot.i32(i1) nounwind readnone convergent
 
 define i64 @ballot_nocombine_64(i1 %i) {
 ; CHECK-LABEL: @ballot_nocombine_64(
-; CHECK-NEXT:    [[B:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[I:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[I:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %b = call i64 @llvm.amdgcn.ballot.i64(i1 %i)
@@ -2616,7 +2617,8 @@ define i64 @ballot_zero_64() {
 
 define i64 @ballot_one_64() {
 ; CHECK-LABEL: @ballot_one_64(
-; CHECK-NEXT:    [[B:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
+; CHECK-NEXT:    [[B:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %b = call i64 @llvm.amdgcn.ballot.i64(i1 1)

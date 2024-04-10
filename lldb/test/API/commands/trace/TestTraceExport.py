@@ -229,7 +229,7 @@ class TestTraceExport(TraceIntelPTTestCaseBase):
         index_of_first_layer_1_block = None
         for i, event in enumerate(data):
             layer_id = event.get("pid")
-            self.assertTrue(layer_id is not None)
+            self.assertIsNotNone(layer_id)
             if layer_id == 1 and index_of_first_layer_1_block is None:
                 index_of_first_layer_1_block = i
             num_units_by_layer[layer_id] += 1

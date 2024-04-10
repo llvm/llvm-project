@@ -27,10 +27,6 @@ DeviceImageTy::DeviceImageTy(__tgt_bin_desc &BinaryDesc,
                              __tgt_device_image &TgtDeviceImage)
     : BinaryDesc(&BinaryDesc), Image(TgtDeviceImage) {
 
-  for (__tgt_offload_entry &Entry :
-       llvm::make_range(Image.EntriesBegin, Image.EntriesEnd))
-    OffloadEntries.emplace_back(std::make_unique<OffloadEntryTy>(*this, Entry));
-
   llvm::StringRef ImageStr(
       static_cast<char *>(Image.ImageStart),
       llvm::omp::target::getPtrDiff(Image.ImageEnd, Image.ImageStart));

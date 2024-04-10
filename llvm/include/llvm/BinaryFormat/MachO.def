@@ -133,6 +133,8 @@ PLATFORM(IOSSIMULATOR, 7, iossimulator, iossimulator, ios-simulator, ios-simulat
 PLATFORM(TVOSSIMULATOR, 8, tvossimulator, tvossimulator, tvos-simulator, tvos-simulator, tvOS Simulator)
 PLATFORM(WATCHOSSIMULATOR, 9, watchossimulator, watchossimulator, watchos-simulator, watchos-simulator, watchOS Simulator)
 PLATFORM(DRIVERKIT, 10, driverkit, driverkit, driverkit, driverkit, DriverKit)
+PLATFORM(XROS, 11, xros, xros, xros, xros, xrOS)
+PLATFORM(XROS_SIMULATOR, 12, xrsimulator, xrsimulator, xrsimulator, xros-simulator, xrOS Simulator)
 #endif
 
 #undef HANDLE_LOAD_COMMAND

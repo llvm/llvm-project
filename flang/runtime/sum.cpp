@@ -99,6 +99,8 @@ private:
 };
 
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
+
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(SumInteger1)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line, dim, mask,
@@ -173,7 +175,8 @@ void RTDEF(CppSumComplex10)(CppTypeFor<TypeCategory::Complex, 10> &result,
   result = GetTotalReduction<TypeCategory::Complex, 10>(
       x, source, line, dim, mask, ComplexSumAccumulator<long double>{x}, "SUM");
 }
-#elif LDBL_MANT_DIG == 113
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 void RTDEF(CppSumComplex16)(CppTypeFor<TypeCategory::Complex, 16> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
@@ -187,5 +190,7 @@ void RTDEF(SumDim)(Descriptor &result, const Descriptor &x, int dim,
   TypedPartialNumericReduction<IntegerSumAccumulator, RealSumAccumulator,
       ComplexSumAccumulator>(result, x, dim, source, line, mask, "SUM");
 }
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

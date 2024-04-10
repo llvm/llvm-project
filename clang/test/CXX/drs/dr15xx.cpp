@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx11-14,cxx14-17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx11,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx11,cxx11-14,cxx14-17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx23,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx23,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace dr1512 { // dr1512: 4
   void f(char *p) {
@@ -360,6 +360,45 @@ namespace dr1563 { // dr1563: yes
 #endif
 }
 
+namespace dr1567 { // dr1567: 3.3
+#if __cplusplus >= 201103L
+struct B;
+struct A {
+  A(const A&);
+  A(const B&) = delete;
+  A(A&&);
+  A(B&&) = delete;
+  A(int); // #dr1567-A-int
+};
+
+struct B: A { // #dr1567-B
+  using A::A; // #dr1567-using-A
+  B(double); // #dr1567-B-double
+};
+
+A a{0};
+B b{1.0};
+// Good, deleted converting ctors are not inherited as copy/move ctors
+B b2{b};
+B b3{B{1.0}};
+// Good, copy/move ctors are not inherited
+B b4{a};
+// since-cxx11-error@-1 {{no matching constructor for initialization of 'B'}}
+//   since-cxx11-note@#dr1567-A-int {{candidate inherited constructor not viable: no known conversion from 'A' to 'int' for 1st argument}}
+//   since-cxx11-note@#dr1567-using-A {{constructor from base class 'A' inherited here}}
+//   since-cxx11-note@#dr1567-B {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'A' to 'const B' for 1st argument}}
+//   since-cxx11-note@#dr1567-B {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'A' to 'B' for 1st argument}}
+//   since-cxx11-note@#dr1567-B-double {{candidate constructor not viable: no known conversion from 'A' to 'double' for 1st argument}}
+B b5{A{0}};
+// since-cxx11-error@-1 {{no matching constructor for initialization of 'B'}}
+//   since-cxx11-note@#dr1567-A-int {{candidate inherited constructor not viable: no known conversion from 'A' to 'int' for 1st argument}}
+//   since-cxx11-note@#dr1567-using-A {{constructor from base class 'A' inherited here}}
+//   since-cxx11-note@#dr1567-B {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'A' to 'const B' for 1st argument}}
+//   since-cxx11-note@#dr1567-B {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'A' to 'B' for 1st argument}}
+//   since-cxx11-note@#dr1567-B-double {{candidate constructor not viable: no known conversion from 'A' to 'double' for 1st argument}}
+#endif
+}
+
 namespace dr1573 { // dr1573: 3.9
 #if __cplusplus >= 201103L
   // ellipsis is inherited (p0136r1 supersedes this part).
@@ -368,7 +407,7 @@ namespace dr1573 { // dr1573: 3.9
   B b(1, 'x', 4.0, "hello"); // ok
 
   // inherited constructor is effectively constexpr if the user-written constructor would be
-  struct C { C(); constexpr C(int) {} };
+  struct C { C(); constexpr C(int) {} }; // #dr1573-C
   struct D : C { using C::C; };
   constexpr D d = D(0); // ok
   struct E : C { using C::C; A a; }; // #dr1573-E
@@ -381,8 +420,11 @@ namespace dr1573 { // dr1573: 3.9
   struct F : C { using C::C; C c; }; // #dr1573-F
   constexpr F f = F(0);
   // since-cxx11-error@-1 {{constexpr variable 'f' must be initialized by a constant expression}}
-  //   since-cxx11-note@-2 {{constructor inherited from base class 'C' cannot be used in a constant expression; derived class cannot be implicitly initialized}}
-  //   since-cxx11-note@#dr1573-F {{declared here}}
+  //   cxx11-20-note@-2 {{constructor inherited from base class 'C' cannot be used in a constant expression; derived class cannot be implicitly initialized}}
+  //   since-cxx23-note@-3 {{in implicit initialization for inherited constructor of 'F'}}
+  //   since-cxx23-note@#dr1573-F {{non-constexpr constructor 'C' cannot be used in a constant expression}}
+  //   cxx11-20-note@#dr1573-F {{declared here}}
+  //   since-cxx23-note@#dr1573-C {{declared here}}
 
   // inherited constructor is effectively deleted if the user-written constructor would be
   struct G { G(int); };
@@ -390,6 +432,13 @@ namespace dr1573 { // dr1573: 3.9
   H h(0);
   // since-cxx11-error@-1 {{constructor inherited by 'H' from base class 'G' is implicitly deleted}}
   //   since-cxx11-note@#dr1573-H {{constructor inherited by 'H' is implicitly deleted because field 'g' has no default constructor}}
+
+  // deleted definition of constructor is inherited
+  struct I { I(int) = delete; }; // #dr1573-I
+  struct J : I { using I::I; };
+  J j(0);
+  // since-cxx11-error@-1 {{call to deleted constructor of 'J'}}
+  //   since-cxx11-note@#dr1573-I {{'I' has been explicitly marked deleted here}}
 #endif
 }
 

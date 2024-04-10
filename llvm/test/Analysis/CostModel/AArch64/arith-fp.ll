@@ -197,17 +197,17 @@ define i32 @fdiv(i32 %arg) {
 
 define i32 @frem(i32 %arg) {
 ; CHECK-LABEL: 'frem'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F16 = frem half undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4F16 = frem <4 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V8F16 = frem <8 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V16F16 = frem <16 x half> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F32 = frem float undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2F32 = frem <2 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4F32 = frem <4 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8F32 = frem <8 x float> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F64 = frem double undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2F64 = frem <2 x double> undef, undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4F64 = frem <4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %F16 = frem half undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V4F16 = frem <4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %V8F16 = frem <8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 216 for instruction: %V16F16 = frem <16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %F32 = frem float undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V2F32 = frem <2 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V4F32 = frem <4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: %V8F32 = frem <8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %F64 = frem double undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V2F64 = frem <2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V4F64 = frem <4 x double> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %F16 = frem half undef, undef

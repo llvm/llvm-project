@@ -62,8 +62,10 @@
 ; OBJDUMP-NEXT:         .amdhsa_user_sgpr_flat_scratch_init 0
 ; OBJDUMP-NEXT:         .amdhsa_user_sgpr_private_segment_size 0
 ; OBJDUMP-NEXT:         .amdhsa_wavefront_size32 0
+; OBJDUMP-NEXT:         .amdhsa_uses_dynamic_stack 0
 ; OBJDUMP-NEXT: .end_amdhsa_kernel
 
+.amdhsa_code_object_version 5
 .amdhsa_kernel my_kernel
   .amdhsa_group_segment_fixed_size 0
   .amdhsa_private_segment_fixed_size 0

@@ -466,7 +466,7 @@ struct SampleContextFrame {
   LineLocation Location;
 
   SampleContextFrame() : Location(0, 0) {}
-  
+
   SampleContextFrame(FunctionId Func, LineLocation Location)
       : Func(Func), Location(Location) {}
 
@@ -527,7 +527,7 @@ public:
       : Func(Name), State(UnknownContext), Attributes(ContextNone) {
         assert(!Name.empty() && "Name is empty");
       }
-  
+
   SampleContext(FunctionId Func)
       : Func(Func), State(UnknownContext), Attributes(ContextNone) {}
 
@@ -1330,6 +1330,8 @@ public:
   }
 
   size_t erase(const key_type &Key) { return base_type::erase(Key); }
+
+  iterator erase(iterator It) { return base_type::erase(It); }
 };
 
 using NameFunctionSamples = std::pair<hash_code, const FunctionSamples *>;

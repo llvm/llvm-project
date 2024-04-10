@@ -360,6 +360,17 @@ int inner_link;
 // CHECK-NEXT: int inner_link;
 // CHECK-NEXT: #pragma omp end declare target
 
+void foo2() { return ;}
+// CHECK: #pragma omp declare target
+// CHECK-NEXT: void foo2() {
+// CHECK-NEXT: return;
+// CHECK-NEXT: }
+
+int x;
+// CHECK: #pragma omp declare target link
+// CHECK-NEXT: int x;
+// CHECK-NEXT: #pragma omp end declare target
+
 int main (int argc, char **argv) {
   foo();
   foo_c();
@@ -367,6 +378,14 @@ int main (int argc, char **argv) {
   test1();
   baz<float>();
   baz<int>();
+
+#if _OPENMP == 202111
+#pragma omp declare target enter(foo2)
+#else
+#pragma omp declare target to (foo2)
+#endif
+
+  #pragma omp declare target link(x)
   return (0);
 }
 

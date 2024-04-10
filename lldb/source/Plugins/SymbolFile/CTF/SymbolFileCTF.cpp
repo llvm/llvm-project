@@ -603,6 +603,7 @@ llvm::Expected<TypeSP> SymbolFileCTF::CreateType(CTFType *ctf_type) {
                       ctf_type->uid, ctf_type->name, ctf_type->kind),
         llvm::inconvertibleErrorCode());
   }
+  llvm_unreachable("Unexpected CTF type kind");
 }
 
 llvm::Expected<std::unique_ptr<CTFType>>

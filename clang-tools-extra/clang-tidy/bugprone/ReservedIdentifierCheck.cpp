@@ -104,7 +104,7 @@ static std::optional<std::string> getUnderscoreCapitalFixup(StringRef Name) {
 static bool startsWithUnderscoreInGlobalNamespace(StringRef Name,
                                                   bool IsInGlobalNamespace,
                                                   bool IsMacro) {
-  return !IsMacro && IsInGlobalNamespace && !Name.empty() && Name[0] == '_';
+  return !IsMacro && IsInGlobalNamespace && Name.starts_with("_");
 }
 
 static std::optional<std::string>

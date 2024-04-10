@@ -38,7 +38,8 @@ public:
 
 private:
   SemanticsContext &context_;
-  // Buffer to use with raw_string_ostream
+  // Buffers to use with raw_string_ostream
+  std::string needsBuf_;
   std::string usesBuf_;
   std::string useExtraAttrsBuf_;
   std::string declsBuf_;
@@ -46,6 +47,7 @@ private:
   // Tracks nested DEC structures and fields of that type
   UnorderedSymbolSet emittedDECStructures_, emittedDECFields_;
 
+  llvm::raw_string_ostream needs_{needsBuf_};
   llvm::raw_string_ostream uses_{usesBuf_};
   llvm::raw_string_ostream useExtraAttrs_{
       useExtraAttrsBuf_}; // attrs added to used entity
@@ -83,18 +85,17 @@ private:
 
 class ModFileReader {
 public:
-  // directories specifies where to search for module files
   ModFileReader(SemanticsContext &context) : context_{context} {}
   // Find and read the module file for a module or submodule.
   // If ancestor is specified, look for a submodule of that module.
   // Return the Scope for that module/submodule or nullptr on error.
-  Scope *Read(const SourceName &, std::optional<bool> isIntrinsic,
-      Scope *ancestor, bool silent = false);
+  Scope *Read(SourceName, std::optional<bool> isIntrinsic, Scope *ancestor,
+      bool silent);
 
 private:
   SemanticsContext &context_;
 
-  parser::Message &Say(const SourceName &, const std::string &,
+  parser::Message &Say(SourceName, const std::string &,
       parser::MessageFixedText &&, const std::string &);
 };
 

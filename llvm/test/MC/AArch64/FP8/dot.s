@@ -44,6 +44,12 @@ fdot  v31.4h, v31.8b, v15.2b[0]
 // CHECK-ERROR: instruction requires: fp8dot2
 // CHECK-UNKNOWN: 0f4f03ff <unknown>
 
+fdot v26.8H, v22.16B, v9.2B[0]
+// CHECK-INST: fdot  v26.8h, v22.16b, v9.2b[0]
+// CHECK-ENCODING: [0xda,0x02,0x49,0x4f]
+// CHECK-ERROR: instruction requires: fp8dot2
+// CHECK-UNKNOWN: 4f4902da <unknown>
+
 fdot  v0.8h, v0.16b, v15.2b[7]
 // CHECK-INST: fdot  v0.8h, v0.16b, v15.2b[7]
 // CHECK-ENCODING: [0x00,0x08,0x7f,0x4f]

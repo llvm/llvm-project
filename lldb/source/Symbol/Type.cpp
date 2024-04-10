@@ -145,6 +145,10 @@ void TypeQuery::AddLanguage(LanguageType language) {
   m_languages->Insert(language);
 }
 
+void TypeQuery::SetLanguages(LanguageSet languages) {
+  m_languages = std::move(languages);
+}
+
 bool TypeQuery::ContextMatches(
     llvm::ArrayRef<CompilerContext> context_chain) const {
   if (GetExactMatch() || context_chain.size() == m_context.size())
@@ -484,7 +488,7 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   return {};
 }
 
-uint32_t Type::GetNumChildren(bool omit_empty_base_classes) {
+llvm::Expected<uint32_t> Type::GetNumChildren(bool omit_empty_base_classes) {
   return GetForwardCompilerType().GetNumChildren(omit_empty_base_classes, nullptr);
 }
 

@@ -32,6 +32,7 @@
 using namespace llvm;
 using namespace polly;
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polyhedral-info"
 
 static cl::opt<bool> CheckParallel("polly-check-parallel",
@@ -77,19 +78,19 @@ bool PolyhedralInfo::checkParallel(Loop *L, isl_pw_aff **MinDepDistPtr) const {
       DI->getDependences(const_cast<Scop *>(S), Dependences::AL_Access);
   if (!D.hasValidDependences())
     return false;
-  LLVM_DEBUG(dbgs() << "Loop :\t" << L->getHeader()->getName() << ":\n");
+  POLLY_DEBUG(dbgs() << "Loop :\t" << L->getHeader()->getName() << ":\n");
 
   isl_union_map *Deps =
       D.getDependences(Dependences::TYPE_RAW | Dependences::TYPE_WAW |
                        Dependences::TYPE_WAR | Dependences::TYPE_RED)
           .release();
 
-  LLVM_DEBUG(dbgs() << "Dependences :\t" << stringFromIslObj(Deps, "null")
-                    << "\n");
+  POLLY_DEBUG(dbgs() << "Dependences :\t" << stringFromIslObj(Deps, "null")
+                     << "\n");
 
   isl_union_map *Schedule = getScheduleForLoop(S, L);
-  LLVM_DEBUG(dbgs() << "Schedule: \t" << stringFromIslObj(Schedule, "null")
-                    << "\n");
+  POLLY_DEBUG(dbgs() << "Schedule: \t" << stringFromIslObj(Schedule, "null")
+                     << "\n");
 
   IsParallel = D.isParallel(Schedule, Deps, MinDepDistPtr);
   isl_union_map_free(Schedule);
@@ -125,14 +126,14 @@ __isl_give isl_union_map *PolyhedralInfo::getScheduleForLoop(const Scop *S,
                                                              Loop *L) const {
   isl_union_map *Schedule = isl_union_map_empty(S->getParamSpace().release());
   int CurrDim = S->getRelativeLoopDepth(L);
-  LLVM_DEBUG(dbgs() << "Relative loop depth:\t" << CurrDim << "\n");
+  POLLY_DEBUG(dbgs() << "Relative loop depth:\t" << CurrDim << "\n");
   assert(CurrDim >= 0 && "Loop in region should have at least depth one");
 
   for (auto &SS : *S) {
     if (L->contains(SS.getSurroundingLoop())) {
 
       unsigned int MaxDim = SS.getNumIterators();
-      LLVM_DEBUG(dbgs() << "Maximum depth of Stmt:\t" << MaxDim << "\n");
+      POLLY_DEBUG(dbgs() << "Maximum depth of Stmt:\t" << MaxDim << "\n");
       isl_map *ScheduleMap = SS.getSchedule().release();
       assert(
           ScheduleMap &&

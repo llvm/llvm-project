@@ -19,7 +19,7 @@
 #include <__mutex/mutex.h>
 #include <__system_error/system_error.h>
 #include <__thread/id.h>
-#include <__threading_support>
+#include <__thread/support.h>
 #include <__utility/forward.h>
 #include <tuple>
 
@@ -31,6 +31,9 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -104,7 +107,7 @@ __thread_specific_ptr<_Tp>::~__thread_specific_ptr() {
 
 template <class _Tp>
 void __thread_specific_ptr<_Tp>::set_pointer(pointer __p) {
-  _LIBCPP_ASSERT_UNCATEGORIZED(get() == nullptr, "Attempting to overwrite thread local data");
+  _LIBCPP_ASSERT_INTERNAL(get() == nullptr, "Attempting to overwrite thread local data");
   std::__libcpp_tls_set(__key_, __p);
 }
 
@@ -154,7 +157,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI thread() _NOEXCEPT : __t_(_LIBCPP_NULL_THREAD) {}
 #ifndef _LIBCPP_CXX03_LANG
-  template <class _Fp, class... _Args, class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, thread>::value> >
+  template <class _Fp, class... _Args, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, thread>::value, int> = 0>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS explicit thread(_Fp&& __f, _Args&&... __args);
 #else // _LIBCPP_CXX03_LANG
   template <class _Fp>
@@ -200,7 +203,7 @@ _LIBCPP_HIDE_FROM_ABI void* __thread_proxy(void* __vp) {
   return nullptr;
 }
 
-template <class _Fp, class... _Args, class >
+template <class _Fp, class... _Args, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, thread>::value, int> >
 thread::thread(_Fp&& __f, _Args&&... __args) {
   typedef unique_ptr<__thread_struct> _TSPtr;
   _TSPtr __tsp(new __thread_struct);
@@ -250,5 +253,7 @@ thread::thread(_Fp __f) {
 inline _LIBCPP_HIDE_FROM_ABI void swap(thread& __x, thread& __y) _NOEXCEPT { __x.swap(__y); }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___THREAD_THREAD_H

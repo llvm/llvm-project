@@ -114,7 +114,6 @@ define dso_local x86_intrcc void @test_fp_1(ptr byval(%struct.interrupt_frame) %
   ; CHECK: # %bb.0: # %entry
   ; CHECK-NEXT: pushq %rbp
   ; CHECK-NEXT: movq %rsp, %rbp
-  ; CHECK: cld
   ; CHECK-DAG: leaq 8(%rbp), %[[R1:[^ ]*]]
   ; CHECK-DAG: leaq 40(%rbp), %[[R2:[^ ]*]]
   ; CHECK: movq %[[R1]], sink_address
@@ -136,7 +135,6 @@ define dso_local x86_intrcc void @test_fp_2(ptr byval(%struct.interrupt_frame) %
   ; CHECK-NEXT: pushq %rax
   ; CHECK-NEXT: pushq %rbp
   ; CHECK-NEXT: movq %rsp, %rbp
-  ; CHECK: cld
   ; CHECK-DAG: movq 16(%rbp), %[[R3:[^ ]*]]
   ; CHECK-DAG: leaq 24(%rbp), %[[R1:[^ ]*]]
   ; CHECK-DAG: leaq 56(%rbp), %[[R2:[^ ]*]]
@@ -164,7 +162,6 @@ define x86_intrcc void @test_copy_elide(ptr byval(%struct.interrupt_frame) %fram
   ; CHECK-NEXT: pushq %rax
   ; CHECK-NEXT: pushq %rbp
   ; CHECK-NEXT: movq %rsp, %rbp
-  ; CHECK: cld
   ; CHECK: leaq 16(%rbp), %[[R1:[^ ]*]]
   ; CHECK: movq %[[R1]], sink_address(%rip)
 entry:

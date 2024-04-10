@@ -40,11 +40,6 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image);
 // function to move data from source device to destination device directly.
 int32_t __tgt_rtl_is_data_exchangable(int32_t SrcDevId, int32_t DstDevId);
 
-// Return an integer other than zero if the plugin can handle images which do
-// not contain target regions and global variables (but can contain other
-// functions)
-int32_t __tgt_rtl_supports_empty_images();
-
 // Initialize the requires flags for the device.
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags);
 
@@ -57,8 +52,18 @@ int32_t __tgt_rtl_init_device(int32_t ID);
 // return NULL. Otherwise, return a pointer to the built address table.
 // Individual entries in the table may also be NULL, when the corresponding
 // offload region is not supported on the target device.
-__tgt_target_table *__tgt_rtl_load_binary(int32_t ID,
-                                          __tgt_device_image *Image);
+int32_t __tgt_rtl_load_binary(int32_t ID, __tgt_device_image *Image,
+                              __tgt_device_binary *Binary);
+
+// Look up the device address of the named symbol in the given binary. Returns
+// non-zero on failure.
+int32_t __tgt_rtl_get_global(__tgt_device_binary Binary, uint64_t Size,
+                             const char *Name, void **DevicePtr);
+
+// Look up the device address of the named kernel in the given binary. Returns
+// non-zero on failure.
+int32_t __tgt_rtl_get_function(__tgt_device_binary Binary, const char *Name,
+                               void **DevicePtr);
 
 // Allocate data on the particular target device, of the specified size.
 // HostPtr is a address of the host data the allocated target data
@@ -219,6 +224,9 @@ int32_t __tgt_rtl_initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
                                            void *VAddr, bool isRecord,
                                            bool SaveOutput,
                                            uint64_t &ReqPtrArgOffset);
+
+// Returns true if the device \p DeviceId suggests to use auto zero-copy.
+int32_t __tgt_rtl_use_auto_zero_copy(int32_t DeviceId);
 }
 
 #endif // OMPTARGET_SHARED_PLUGIN_API_H

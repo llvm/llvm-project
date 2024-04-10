@@ -24,5 +24,5 @@ export {
   using ::mktime;
   using ::strftime;
   using ::time;
-  using ::timespec_get;
+  using ::timespec_get _LIBCPP_USING_IF_EXISTS;
 } // export

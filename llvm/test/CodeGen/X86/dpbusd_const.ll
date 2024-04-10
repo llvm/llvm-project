@@ -108,7 +108,7 @@ define i32 @mul_4xi8_cs(<4 x i8> %a, i32 %c) {
 ; AVXVNNI:       # %bb.0: # %entry
 ; AVXVNNI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVXVNNI-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; AVXVNNI-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,2,255,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVXVNNI-NEXT:    vmovd {{.*#+}} xmm2 = [0,1,2,255,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVXVNNI-NEXT:    {vex} vpdpbusd %xmm0, %xmm2, %xmm1
 ; AVXVNNI-NEXT:    vmovd %xmm1, %eax
 ; AVXVNNI-NEXT:    addl %edi, %eax
@@ -118,7 +118,7 @@ define i32 @mul_4xi8_cs(<4 x i8> %a, i32 %c) {
 ; AVX512VNNI:       # %bb.0: # %entry
 ; AVX512VNNI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VNNI-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; AVX512VNNI-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,255,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX512VNNI-NEXT:    vmovd {{.*#+}} xmm1 = [0,1,2,255,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX512VNNI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512VNNI-NEXT:    vpdpbusd %zmm0, %zmm1, %zmm2
 ; AVX512VNNI-NEXT:    vmovd %xmm2, %eax
@@ -130,7 +130,7 @@ define i32 @mul_4xi8_cs(<4 x i8> %a, i32 %c) {
 ; AVX512VLVNNI:       # %bb.0: # %entry
 ; AVX512VLVNNI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VLVNNI-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; AVX512VLVNNI-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,255,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX512VLVNNI-NEXT:    vmovd {{.*#+}} xmm1 = [0,1,2,255,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX512VLVNNI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512VLVNNI-NEXT:    vpdpbusd %xmm0, %xmm1, %xmm2
 ; AVX512VLVNNI-NEXT:    vmovd %xmm2, %eax

@@ -10,8 +10,6 @@
 #include "src/__support/common.h"
 #include "src/time/time_utils.h"
 
-#include <limits.h>
-
 namespace LIBC_NAMESPACE {
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;

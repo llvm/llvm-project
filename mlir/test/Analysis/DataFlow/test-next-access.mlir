@@ -575,3 +575,21 @@ func.func @call_opaque_callee(%arg0: memref<f32>) {
   memref.load %arg0[] {name = "post"} : memref<f32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: @indirect_call
+func.func @indirect_call(%arg0: memref<f32>, %arg1: (memref<f32>) -> ()) {
+  // IP:         name = "pre"
+  // IP-SAME:    next_access = ["unknown"]
+  // IP_AR:      name = "pre"
+  // IP_AR-SAME: next_access = ["unknown"] 
+  // LOCAL:      name = "pre"
+  // LOCAL-SAME: next_access = ["unknown"]
+  // LC_AR:      name = "pre"
+  // LC_AR-SAME: next_access = {{\[}}["call"]]
+  memref.load %arg0[] {name = "pre"} : memref<f32>
+  func.call_indirect %arg1(%arg0) {name = "call"} : (memref<f32>) -> ()
+  memref.load %arg0[] {name = "post"} : memref<f32>
+  return
+}

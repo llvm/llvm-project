@@ -27,33 +27,6 @@ using namespace mlir;
 
 namespace {
 
-static vector::CombiningKind
-convertReductionKind(gpu::AllReduceOperation mode) {
-  switch (mode) {
-#define MAP_CASE(X)                                                            \
-  case gpu::AllReduceOperation::X:                                             \
-    return vector::CombiningKind::X
-
-    MAP_CASE(ADD);
-    MAP_CASE(MUL);
-    MAP_CASE(MINUI);
-    MAP_CASE(MINSI);
-    MAP_CASE(MINNUMF);
-    MAP_CASE(MAXSI);
-    MAP_CASE(MAXUI);
-    MAP_CASE(MAXNUMF);
-    MAP_CASE(AND);
-    MAP_CASE(OR);
-    MAP_CASE(XOR);
-    MAP_CASE(MINIMUMF);
-    MAP_CASE(MAXIMUMF);
-
-#undef MAP_CASE
-  }
-
-  llvm_unreachable("Vector and GPU reduction kinds should match 1:1");
-}
-
 struct GpuAllReduceRewriter {
   using AccumulatorFactory = std::function<Value(Value, Value)>;
 

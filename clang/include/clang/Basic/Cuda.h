@@ -123,7 +123,7 @@ enum class CudaArch {
   LAST,
 
   CudaDefault = CudaArch::SM_52,
-  HIPDefault = CudaArch::GFX803,
+  HIPDefault = CudaArch::GFX906,
 };
 
 static inline bool IsNVIDIAGpuArch(CudaArch A) {

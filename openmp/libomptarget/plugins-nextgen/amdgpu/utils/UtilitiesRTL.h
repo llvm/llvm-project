@@ -45,7 +45,9 @@ struct AMDGPUImplicitArgsTy {
   uint16_t GroupSizeZ;
   uint8_t Unused0[46]; // 46 byte offset.
   uint16_t GridDims;
-  uint8_t Unused1[190]; // 190 byte offset.
+  uint8_t Unused1[54]; // 54 byte offset.
+  uint32_t DynamicLdsSize;
+  uint8_t Unused2[132]; // 132 byte offset.
 };
 
 // Dummy struct for COV4 implicitargs.

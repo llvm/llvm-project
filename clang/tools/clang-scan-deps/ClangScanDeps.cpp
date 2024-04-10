@@ -20,7 +20,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Program.h"
@@ -157,6 +156,8 @@ static void ParseArgs(int argc, char **argv) {
             .Case("none", ScanningOptimizations::None)
             .Case("header-search", ScanningOptimizations::HeaderSearch)
             .Case("system-warnings", ScanningOptimizations::SystemWarnings)
+            .Case("vfs", ScanningOptimizations::VFS)
+            .Case("canonicalize-macros", ScanningOptimizations::Macros)
             .Case("all", ScanningOptimizations::All)
             .Default(std::nullopt);
     if (!Optimization) {
@@ -699,7 +700,6 @@ static std::string getModuleCachePath(ArrayRef<std::string> Args) {
 // form specified command line after the positional parameter "--".
 static std::unique_ptr<tooling::CompilationDatabase>
 getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
-  llvm::InitLLVM X(argc, argv);
   ParseArgs(argc, argv);
 
   if (!CompilationDB.empty())
@@ -728,7 +728,7 @@ getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
                            *Diags);
   std::unique_ptr<driver::Compilation> C(
       TheDriver.BuildCompilation(CommandLine));
-  if (!C)
+  if (!C || C->getJobs().empty())
     return nullptr;
 
   auto Cmd = C->getJobs().begin();
@@ -867,13 +867,6 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   // Print out the dependency results to STDOUT by default.
   SharedStream DependencyOS(llvm::outs());
 
-  DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
-                                    EagerLoadModules);
-  llvm::ThreadPool Pool(llvm::hardware_concurrency(NumThreads));
-  std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
-  for (unsigned I = 0; I < Pool.getThreadCount(); ++I)
-    WorkerTools.push_back(std::make_unique<DependencyScanningTool>(Service));
-
   std::vector<tooling::CompileCommand> Inputs =
       AdjustingCompilations->getAllCompileCommands();
 
@@ -893,102 +886,114 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   if (Format == ScanningOutputFormat::Full)
     FD.emplace(ModuleName.empty() ? Inputs.size() : 0);
 
-  if (Verbose) {
-    llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
-                 << " files using " << Pool.getThreadCount() << " workers\n";
-  }
+  auto ScanningTask = [&](DependencyScanningService &Service) {
+    DependencyScanningTool WorkerTool(Service);
+
+    llvm::DenseSet<ModuleID> AlreadySeenModules;
+    while (auto MaybeInputIndex = GetNextInputIndex()) {
+      size_t LocalIndex = *MaybeInputIndex;
+      const tooling::CompileCommand *Input = &Inputs[LocalIndex];
+      std::string Filename = std::move(Input->Filename);
+      std::string CWD = std::move(Input->Directory);
+
+      std::optional<StringRef> MaybeModuleName;
+      if (!ModuleName.empty())
+        MaybeModuleName = ModuleName;
+
+      std::string OutputDir(ModuleFilesDir);
+      if (OutputDir.empty())
+        OutputDir = getModuleCachePath(Input->CommandLine);
+      auto LookupOutput = [&](const ModuleID &MID, ModuleOutputKind MOK) {
+        return ::lookupModuleOutput(MID, MOK, OutputDir);
+      };
+
+      // Run the tool on it.
+      if (Format == ScanningOutputFormat::Make) {
+        auto MaybeFile = WorkerTool.getDependencyFile(Input->CommandLine, CWD);
+        if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
+                                           Errs))
+          HadErrors = true;
+      } else if (Format == ScanningOutputFormat::P1689) {
+        // It is useful to generate the make-format dependency output during
+        // the scanning for P1689. Otherwise the users need to scan again for
+        // it. We will generate the make-format dependency output if we find
+        // `-MF` in the command lines.
+        std::string MakeformatOutputPath;
+        std::string MakeformatOutput;
+
+        auto MaybeRule = WorkerTool.getP1689ModuleDependencyFile(
+            *Input, CWD, MakeformatOutput, MakeformatOutputPath);
+
+        if (handleP1689DependencyToolResult(Filename, MaybeRule, PD, Errs))
+          HadErrors = true;
+
+        if (!MakeformatOutputPath.empty() && !MakeformatOutput.empty() &&
+            !HadErrors) {
+          static std::mutex Lock;
+          // With compilation database, we may open different files
+          // concurrently or we may write the same file concurrently. So we
+          // use a map here to allow multiple compile commands to write to the
+          // same file. Also we need a lock here to avoid data race.
+          static llvm::StringMap<llvm::raw_fd_ostream> OSs;
+          std::unique_lock<std::mutex> LockGuard(Lock);
+
+          auto OSIter = OSs.find(MakeformatOutputPath);
+          if (OSIter == OSs.end()) {
+            std::error_code EC;
+            OSIter =
+                OSs.try_emplace(MakeformatOutputPath, MakeformatOutputPath, EC)
+                    .first;
+            if (EC)
+              llvm::errs() << "Failed to open P1689 make format output file \""
+                           << MakeformatOutputPath << "\" for " << EC.message()
+                           << "\n";
+          }
+
+          SharedStream MakeformatOS(OSIter->second);
+          llvm::Expected<std::string> MaybeOutput(MakeformatOutput);
+          if (handleMakeDependencyToolResult(Filename, MaybeOutput,
+                                             MakeformatOS, Errs))
+            HadErrors = true;
+        }
+      } else if (MaybeModuleName) {
+        auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
+            *MaybeModuleName, Input->CommandLine, CWD, AlreadySeenModules,
+            LookupOutput);
+        if (handleModuleResult(*MaybeModuleName, MaybeModuleDepsGraph, *FD,
+                               LocalIndex, DependencyOS, Errs))
+          HadErrors = true;
+      } else {
+        auto MaybeTUDeps = WorkerTool.getTranslationUnitDependencies(
+            Input->CommandLine, CWD, AlreadySeenModules, LookupOutput);
+        if (handleTranslationUnitResult(Filename, MaybeTUDeps, *FD, LocalIndex,
+                                        DependencyOS, Errs))
+          HadErrors = true;
+      }
+    }
+  };
+
+  DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
+                                    EagerLoadModules);
 
   llvm::Timer T;
   T.startTimer();
 
-  for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
-    Pool.async([&, I]() {
-      llvm::DenseSet<ModuleID> AlreadySeenModules;
-      while (auto MaybeInputIndex = GetNextInputIndex()) {
-        size_t LocalIndex = *MaybeInputIndex;
-        const tooling::CompileCommand *Input = &Inputs[LocalIndex];
-        std::string Filename = std::move(Input->Filename);
-        std::string CWD = std::move(Input->Directory);
+  if (Inputs.size() == 1) {
+    ScanningTask(Service);
+  } else {
+    llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(NumThreads));
 
-        std::optional<StringRef> MaybeModuleName;
-        if (!ModuleName.empty())
-          MaybeModuleName = ModuleName;
+    if (Verbose) {
+      llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
+                   << " files using " << Pool.getMaxConcurrency()
+                   << " workers\n";
+    }
 
-        std::string OutputDir(ModuleFilesDir);
-        if (OutputDir.empty())
-          OutputDir = getModuleCachePath(Input->CommandLine);
-        auto LookupOutput = [&](const ModuleID &MID, ModuleOutputKind MOK) {
-          return ::lookupModuleOutput(MID, MOK, OutputDir);
-        };
+    for (unsigned I = 0; I < Pool.getMaxConcurrency(); ++I)
+      Pool.async([ScanningTask, &Service]() { ScanningTask(Service); });
 
-        // Run the tool on it.
-        if (Format == ScanningOutputFormat::Make) {
-          auto MaybeFile =
-              WorkerTools[I]->getDependencyFile(Input->CommandLine, CWD);
-          if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
-                                             Errs))
-            HadErrors = true;
-        } else if (Format == ScanningOutputFormat::P1689) {
-          // It is useful to generate the make-format dependency output during
-          // the scanning for P1689. Otherwise the users need to scan again for
-          // it. We will generate the make-format dependency output if we find
-          // `-MF` in the command lines.
-          std::string MakeformatOutputPath;
-          std::string MakeformatOutput;
-
-          auto MaybeRule = WorkerTools[I]->getP1689ModuleDependencyFile(
-              *Input, CWD, MakeformatOutput, MakeformatOutputPath);
-
-          if (handleP1689DependencyToolResult(Filename, MaybeRule, PD, Errs))
-            HadErrors = true;
-
-          if (!MakeformatOutputPath.empty() && !MakeformatOutput.empty() &&
-              !HadErrors) {
-            static std::mutex Lock;
-            // With compilation database, we may open different files
-            // concurrently or we may write the same file concurrently. So we
-            // use a map here to allow multiple compile commands to write to the
-            // same file. Also we need a lock here to avoid data race.
-            static llvm::StringMap<llvm::raw_fd_ostream> OSs;
-            std::unique_lock<std::mutex> LockGuard(Lock);
-
-            auto OSIter = OSs.find(MakeformatOutputPath);
-            if (OSIter == OSs.end()) {
-              std::error_code EC;
-              OSIter = OSs.try_emplace(MakeformatOutputPath,
-                                       MakeformatOutputPath, EC)
-                           .first;
-              if (EC)
-                llvm::errs()
-                    << "Failed to open P1689 make format output file \""
-                    << MakeformatOutputPath << "\" for " << EC.message()
-                    << "\n";
-            }
-
-            SharedStream MakeformatOS(OSIter->second);
-            llvm::Expected<std::string> MaybeOutput(MakeformatOutput);
-            if (handleMakeDependencyToolResult(Filename, MaybeOutput,
-                                               MakeformatOS, Errs))
-              HadErrors = true;
-          }
-        } else if (MaybeModuleName) {
-          auto MaybeModuleDepsGraph = WorkerTools[I]->getModuleDependencies(
-              *MaybeModuleName, Input->CommandLine, CWD, AlreadySeenModules,
-              LookupOutput);
-          if (handleModuleResult(*MaybeModuleName, MaybeModuleDepsGraph, *FD,
-                                 LocalIndex, DependencyOS, Errs))
-            HadErrors = true;
-        } else {
-          auto MaybeTUDeps = WorkerTools[I]->getTranslationUnitDependencies(
-              Input->CommandLine, CWD, AlreadySeenModules, LookupOutput);
-          if (handleTranslationUnitResult(Filename, MaybeTUDeps, *FD,
-                                          LocalIndex, DependencyOS, Errs))
-            HadErrors = true;
-        }
-      }
-    });
+    Pool.wait();
   }
-  Pool.wait();
 
   T.stopTimer();
   if (PrintTiming)

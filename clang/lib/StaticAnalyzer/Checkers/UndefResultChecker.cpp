@@ -28,7 +28,7 @@ namespace {
 class UndefResultChecker
   : public Checker< check::PostStmt<BinaryOperator> > {
 
-  mutable std::unique_ptr<BugType> BT;
+  const BugType BT{this, "Result of operation is garbage or undefined"};
 
 public:
   void checkPostStmt(const BinaryOperator *B, CheckerContext &C) const;
@@ -74,10 +74,6 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
     if (!N)
       return;
 
-    if (!BT)
-      BT.reset(
-          new BugType(this, "Result of operation is garbage or undefined"));
-
     SmallString<256> sbuf;
     llvm::raw_svector_ostream OS(sbuf);
     const Expr *Ex = nullptr;
@@ -104,7 +100,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
          << BinaryOperator::getOpcodeStr(B->getOpcode())
          << "' expression is undefined";
     }
-    auto report = std::make_unique<PathSensitiveBugReport>(*BT, OS.str(), N);
+    auto report = std::make_unique<PathSensitiveBugReport>(BT, OS.str(), N);
     if (Ex) {
       report->addRange(Ex->getSourceRange());
       bugreporter::trackExpressionValue(N, Ex, *report);

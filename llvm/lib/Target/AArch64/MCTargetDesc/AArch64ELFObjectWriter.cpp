@@ -120,7 +120,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
 
   assert((!Target.getSymA() ||
           Target.getSymA()->getKind() == MCSymbolRefExpr::VK_None ||
-          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_PLT) &&
+          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_PLT ||
+          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_GOTPCREL) &&
          "Should only be expression-level modifiers here");
 
   assert((!Target.getSymB() ||
@@ -206,7 +207,10 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     case FK_Data_2:
       return R_CLS(ABS16);
     case FK_Data_4:
-      return R_CLS(ABS32);
+      return (!IsILP32 &&
+              Target.getAccessVariant() == MCSymbolRefExpr::VK_GOTPCREL)
+                 ? ELF::R_AARCH64_GOTPCREL32
+                 : R_CLS(ABS32);
     case FK_Data_8:
       if (IsILP32) {
         Ctx.reportError(Fixup.getLoc(),

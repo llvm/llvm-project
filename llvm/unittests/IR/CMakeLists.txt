@@ -49,6 +49,7 @@ add_llvm_unittest(IRTests
   VectorBuilderTest.cpp
   VectorTypesTest.cpp
   VerifierTest.cpp
+  VFABIDemanglerTest.cpp
   VPIntrinsicTest.cpp
   CoreBindings.cpp
   )

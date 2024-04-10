@@ -12,7 +12,7 @@ define void @func() sspreq nounwind {
 ; FUCHSIA-RISCV64-NEXT:    ld a0, -16(tp)
 ; FUCHSIA-RISCV64-NEXT:    sd a0, 16(sp)
 ; FUCHSIA-RISCV64-NEXT:    addi a0, sp, 12
-; FUCHSIA-RISCV64-NEXT:    call capture@plt
+; FUCHSIA-RISCV64-NEXT:    call capture
 ; FUCHSIA-RISCV64-NEXT:    ld a0, -16(tp)
 ; FUCHSIA-RISCV64-NEXT:    ld a1, 16(sp)
 ; FUCHSIA-RISCV64-NEXT:    bne a0, a1, .LBB0_2
@@ -21,7 +21,7 @@ define void @func() sspreq nounwind {
 ; FUCHSIA-RISCV64-NEXT:    addi sp, sp, 32
 ; FUCHSIA-RISCV64-NEXT:    ret
 ; FUCHSIA-RISCV64-NEXT:  .LBB0_2: # %CallStackCheckFailBlk
-; FUCHSIA-RISCV64-NEXT:    call __stack_chk_fail@plt
+; FUCHSIA-RISCV64-NEXT:    call __stack_chk_fail
   %1 = alloca i32, align 4
   call void @capture(ptr %1)
   ret void

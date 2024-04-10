@@ -29,7 +29,7 @@ namespace pr33140_2 {
   // temporaries.
   struct A { int &&r = 0; }; // expected-note 2{{initializing field 'r' with default member initializer}}
   struct B { A x, y; };
-  B b = {}; // expected-warning 2{{not supported}}
+  B b = {}; // expected-warning 2{{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported}}
 }
 
 namespace pr33140_3 {

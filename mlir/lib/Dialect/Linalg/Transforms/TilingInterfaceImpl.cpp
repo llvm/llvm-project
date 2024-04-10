@@ -212,7 +212,7 @@ struct LinalgOpTilingInterface
                                              Location loc,
                                              ValueRange ivs) const {
     auto linalgOp = cast<LinalgOp>(op);
-    if (!linalgOp.hasBufferSemantics())
+    if (!linalgOp.hasPureBufferSemantics())
       return op->emitOpError("expected operation to have buffer semantics");
 
     SmallVector<Value> indexedValues;
@@ -256,7 +256,7 @@ struct LinalgOpPartialReductionInterface
     auto linalgOp = cast<LinalgOp>(op);
     OpBuilder::InsertionGuard guard(b);
 
-    if (linalgOp.hasBufferSemantics())
+    if (linalgOp.hasPureBufferSemantics())
       return op->emitOpError("expected operation to have tensor semantics");
     // Insert the new parallel dimension based on the index of the reduction
     // loops. This could be controlled by user for more flexibility.
@@ -274,14 +274,6 @@ struct LinalgOpPartialReductionInterface
 
     ArrayRef<int64_t> oldShape =
         linalgOp.getShape(linalgOp.getDpsInitOperand(0));
-
-    // Extend tile size vector to the rank of the output tensor.
-    SmallVector<Value> tileSizeVector =
-        getValueOrCreateConstantIndexOp(b, loc, sizes);
-    if (tileSizeVector.size() < oldShape.size()) {
-      auto zero = b.create<arith::ConstantIndexOp>(loc, 0);
-      tileSizeVector.append(oldShape.size() - tileSizeVector.size(), zero);
-    }
 
     // Calculate the new shape, we insert the new dimensions based on the index
     // of the reduction dimensions.

@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 subroutine forall1
   real :: a(9)
   !ERROR: 'i' is already declared in this scoping unit
@@ -10,8 +10,7 @@ subroutine forall1
     a(i) = i
   end forall
   forall (j=1:8)
-    !ERROR: 'j' is already declared in this scoping unit
-    !ERROR: Cannot redefine FORALL variable 'j'
+    !PORTABILITY: Index variable 'j' should not also be an index in an enclosing FORALL or DO CONCURRENT
     forall (j=1:9)
     end forall
   end forall
@@ -75,7 +74,6 @@ subroutine forall4
   forall(i=1:10:zero) a(i) = i
 end
 
-! Note: this gets warnings but not errors
 subroutine forall5
   real, target :: x(10), y(10)
   forall(i=1:10)
@@ -93,6 +91,8 @@ subroutine forall5
   endforall
   do concurrent(i=1:10)
     x = y
+    !Odd rule from F'2023 19.4 p8
+    !PORTABILITY: Index variable 'i' should not also be an index in an enclosing FORALL or DO CONCURRENT
     !WARNING: FORALL index variable 'i' not used on left-hand side of assignment
     forall(i=1:10) x = y
   end do
@@ -116,19 +116,33 @@ subroutine forall7(x)
   real :: a(10)
   class(*) :: x
   associate (j => iarr(1))
+    !PORTABILITY: Index variable 'j' should be a scalar object or common block if it is present in the enclosing scope
     forall (j=1:size(a))
       a(j) = a(j) + 1
     end forall
   end associate
   associate (j => iarr(1) + 1)
+    !PORTABILITY: Index variable 'j' should be a scalar object or common block if it is present in the enclosing scope
     forall (j=1:size(a))
       a(j) = a(j) + 1
     end forall
   end associate
   select type (j => x)
   type is (integer)
+    !PORTABILITY: Index variable 'j' should be a scalar object or common block if it is present in the enclosing scope
     forall (j=1:size(a))
       a(j) = a(j) + 1
     end forall
   end select
+end subroutine
+
+subroutine forall8(x)
+  real :: x(10)
+  real, external :: foo
+  !ERROR: Impure procedure 'foo' may not be referenced in a FORALL
+  forall(i=1:10) x(i) = foo() + i
+  !OK
+  associate(y => foo())
+    forall (i=1:10) x(i) = y + i
+  end associate
 end subroutine

@@ -63,6 +63,12 @@ llvm.func @arm_sme_imopa(%nxv8i16 : vector<[8]xi16>,
   // CHECK: call void @llvm.aarch64.sme.usmopa.wide.nxv16i8
   "arm_sme.intr.usmopa.wide"(%nxv16i1, %nxv16i1, %nxv16i8, %nxv16i8) <{tile_id = 0 : i32}> :
     (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.smopa.za32.nxv8i16
+  "arm_sme.intr.smopa.za32"(%nxv8i1, %nxv8i1, %nxv8i16, %nxv8i16) <{tile_id = 0 : i32}> :
+    (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.umopa.za32.nxv8i16
+  "arm_sme.intr.umopa.za32"(%nxv8i1, %nxv8i1, %nxv8i16, %nxv8i16) <{tile_id = 0 : i32}> :
+    (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
   llvm.return
 }
 
@@ -122,6 +128,12 @@ llvm.func @arm_sme_imops(%nxv8i16 : vector<[8]xi16>,
   // CHECK: call void @llvm.aarch64.sme.usmops.wide.nxv16i8
   "arm_sme.intr.usmops.wide"(%nxv16i1, %nxv16i1, %nxv16i8, %nxv16i8) <{tile_id = 0 : i32}> :
     (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.smops.za32.nxv8i16
+  "arm_sme.intr.smops.za32"(%nxv8i1, %nxv8i1, %nxv8i16, %nxv8i16) <{tile_id = 0 : i32}> :
+    (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.umops.za32.nxv8i16
+  "arm_sme.intr.umops.za32"(%nxv8i1, %nxv8i1, %nxv8i16, %nxv8i16) <{tile_id = 0 : i32}> :
+    (vector<[8]xi1>, vector<[8]xi1>, vector<[8]xi16>, vector<[8]xi16>) -> ()
   llvm.return
 }
 
@@ -401,5 +413,19 @@ llvm.func @arm_sme_tile_slice_to_vector_vert(%tileslice : i32,
   // CHECK: call <vscale x 2 x double> @llvm.aarch64.sme.read.vert.nxv2f64
   %res8 = "arm_sme.intr.read.vert"(%nxv2f64, %nxv2i1, %tileslice) <{tile_id = 0 : i32}>
     : (vector<[2]xf64>, vector<[2]xi1>, i32) -> vector<[2]xf64>
+  llvm.return
+}
+
+// -----
+
+llvm.func @arm_sme_streaming_vl() {
+  // CHECK: call i64 @llvm.aarch64.sme.cntsb()
+  %svl_b = "arm_sme.intr.cntsb"() : () -> i64
+  // CHECK: call i64 @llvm.aarch64.sme.cntsh()
+  %svl_h = "arm_sme.intr.cntsh"() : () -> i64
+  // CHECK: call i64 @llvm.aarch64.sme.cntsw()
+  %svl_w = "arm_sme.intr.cntsw"() : () -> i64
+  // CHECK: call i64 @llvm.aarch64.sme.cntsd()
+  %svl_d = "arm_sme.intr.cntsd"() : () -> i64
   llvm.return
 }

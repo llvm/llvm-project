@@ -355,7 +355,7 @@ define amdgpu_kernel void @k123() {
 
 ; Table size length number-kernels * number-variables * sizeof(uint16_t)
 ; GCN:      .type	llvm.amdgcn.lds.offset.table,@object
-; GCN-NEXT: .section	.data.rel.ro,#alloc,#write
+; GCN-NEXT: .section	.data.rel.ro,"aw"
 ; GCN-NEXT: .p2align	4, 0x0
 ; GCN-NEXT: llvm.amdgcn.lds.offset.table:
 ; GCN-NEXT: .long	0+4
@@ -373,4 +373,4 @@ define amdgpu_kernel void @k123() {
 ; GCN-NEXT: .size	llvm.amdgcn.lds.offset.table, 48
 
 !llvm.module.flags = !{!4}
-!4 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!4 = !{i32 1, !"amdhsa_code_object_version", i32 500}

@@ -3,6 +3,7 @@
 ; Also make sure that the DISubprograms reference the generated unit.
 ; make sure that if there are two outlined functions in the program, 
 ; RUN: llc %s -verify-machineinstrs -enable-machine-outliner -mtriple=x86_64-apple-darwin -o /dev/null -print-after=machine-outliner
+; RUN: llc --try-experimental-debuginfo-iterators %s -verify-machineinstrs -enable-machine-outliner -mtriple=x86_64-apple-darwin -o /dev/null -print-after=machine-outliner
 define void @f6() #0 !dbg !8 {
 entry:
   %dog = alloca i32, align 4

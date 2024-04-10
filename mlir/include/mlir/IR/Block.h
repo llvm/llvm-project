@@ -67,6 +67,10 @@ public:
   /// specific block.
   void moveBefore(Block *block);
 
+  /// Unlink this block from its current region and insert it right before the
+  /// block that the given iterator points to in the region region.
+  void moveBefore(Region *region, llvm::iplist<Block>::iterator iterator);
+
   /// Unlink this Block from its parent region and delete it.
   void erase();
 

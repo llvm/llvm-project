@@ -2,7 +2,7 @@
 ; RUN: opt -S -O3 -memssa-check-limit=1 -memdep-block-scan-limit=1 < %s | FileCheck %s
 
 define i32 @f(ptr noalias %p, i32 %c) {
-; CHECK-LABEL: define i32 @f
+; CHECK-LABEL: define noundef i32 @f
 ; CHECK-SAME: (ptr noalias nocapture readonly [[P:%.*]], i32 [[C:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:    tail call void @g()
 ; CHECK-NEXT:    tail call void @g()

@@ -147,8 +147,7 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
   // Value names may be prefixed with a binary '1' to indicate
   // that the backend should not modify the symbols due to any platform
   // naming convention. Do not include that '1' in the PGO profile name.
-  if (Name[0] == '\1')
-    Name = Name.substr(1);
+  Name.consume_front("\1");
 
   std::string GlobalName;
   if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
@@ -242,6 +241,13 @@ void GlobalValue::removeSanitizerMetadata() {
       getContext().pImpl->GlobalValueSanitizerMetadata;
   MetadataMap.erase(this);
   HasSanitizerMetadata = false;
+}
+
+void GlobalValue::setNoSanitizeMetadata() {
+  SanitizerMetadata Meta;
+  Meta.NoAddress = true;
+  Meta.NoHWAddress = true;
+  setSanitizerMetadata(Meta);
 }
 
 StringRef GlobalObject::getSectionImpl() const {

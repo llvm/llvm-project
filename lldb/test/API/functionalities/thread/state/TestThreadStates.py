@@ -3,7 +3,7 @@ Test thread states.
 """
 
 
-import unittest2
+import unittest
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -38,17 +38,19 @@ class ThreadStateTestCase(TestBase):
 
     @skipIfDarwin  # 'llvm.org/pr23669', cause Python crash randomly
     @expectedFailureDarwin("llvm.org/pr23669")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24660")
     @expectedFailureNetBSD
+    # This actually passes on Windows on Arm but it's hard to describe that
+    # and xfail it everywhere else.
+    @skipIfWindows
     # thread states not properly maintained
-    @unittest2.expectedFailure  # llvm.org/pr16712
+    @unittest.expectedFailure  # llvm.org/pr16712
     def test_state_after_expression(self):
         """Test thread state after expression."""
         self.build()
         self.thread_state_after_expression_test()
 
     # thread states not properly maintained
-    @unittest2.expectedFailure  # llvm.org/pr15824 and <rdar://problem/28557237>
+    @unittest.expectedFailure  # llvm.org/pr15824 and <rdar://problem/28557237>
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly",

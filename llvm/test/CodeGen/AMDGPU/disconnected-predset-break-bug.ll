@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
 
 ; PRED_SET* instructions must be tied to any instruction that uses their
 ; result.  This tests that there are no instructions between the PRED_SET*

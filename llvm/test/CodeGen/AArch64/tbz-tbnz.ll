@@ -1,4 +1,4 @@
-; RUN: llc < %s -O1 -mtriple=aarch64-eabi -aarch64-enable-cond-br-tune=false | FileCheck %s
+; RUN: llc < %s -O1 -mtriple=aarch64 -aarch64-enable-cond-br-tune=false | FileCheck %s
 
 declare void @t()
 

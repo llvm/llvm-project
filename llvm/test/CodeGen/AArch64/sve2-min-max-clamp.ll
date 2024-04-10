@@ -3,7 +3,7 @@
 
 ; Replace pattern min(max(v1,v2),v3) by clamp
 
-define <vscale x 16 x i8> @uclampi8(<vscale x 16 x i8> %c, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+define <vscale x 16 x i8> @uclampi8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
 ; CHECK-LABEL: uclampi8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uclamp z0.b, z1.b, z2.b
@@ -13,7 +13,7 @@ define <vscale x 16 x i8> @uclampi8(<vscale x 16 x i8> %c, <vscale x 16 x i8> %a
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 8 x i16> @uclampi16(<vscale x 8 x i16> %c, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+define <vscale x 8 x i16> @uclampi16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
 ; CHECK-LABEL: uclampi16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uclamp z0.h, z1.h, z2.h
@@ -23,7 +23,7 @@ define <vscale x 8 x i16> @uclampi16(<vscale x 8 x i16> %c, <vscale x 8 x i16> %
   ret <vscale x 8 x i16> %res
 }
 
-define <vscale x 4 x i32> @uclampi32(<vscale x 4 x i32> %c, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+define <vscale x 4 x i32> @uclampi32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: uclampi32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uclamp z0.s, z1.s, z2.s
@@ -33,7 +33,7 @@ define <vscale x 4 x i32> @uclampi32(<vscale x 4 x i32> %c, <vscale x 4 x i32> %
   ret <vscale x 4 x i32> %res
 }
 
-define <vscale x 2 x i64> @uclampi64(<vscale x 2 x i64> %c, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+define <vscale x 2 x i64> @uclampi64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) {
 ; CHECK-LABEL: uclampi64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uclamp z0.d, z1.d, z2.d
@@ -43,7 +43,7 @@ define <vscale x 2 x i64> @uclampi64(<vscale x 2 x i64> %c, <vscale x 2 x i64> %
   ret <vscale x 2 x i64> %res
 }
 
-define <vscale x 16 x i8> @sclampi8(<vscale x 16 x i8> %c, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+define <vscale x 16 x i8> @sclampi8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
 ; CHECK-LABEL: sclampi8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sclamp z0.b, z1.b, z2.b
@@ -53,7 +53,7 @@ define <vscale x 16 x i8> @sclampi8(<vscale x 16 x i8> %c, <vscale x 16 x i8> %a
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 8 x i16> @sclampi16(<vscale x 8 x i16> %c, <vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+define <vscale x 8 x i16> @sclampi16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
 ; CHECK-LABEL: sclampi16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sclamp z0.h, z1.h, z2.h
@@ -63,7 +63,7 @@ define <vscale x 8 x i16> @sclampi16(<vscale x 8 x i16> %c, <vscale x 8 x i16> %
   ret <vscale x 8 x i16> %res
 }
 
-define <vscale x 4 x i32> @sclampi32(<vscale x 4 x i32> %c, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+define <vscale x 4 x i32> @sclampi32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: sclampi32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sclamp z0.s, z1.s, z2.s
@@ -73,7 +73,7 @@ define <vscale x 4 x i32> @sclampi32(<vscale x 4 x i32> %c, <vscale x 4 x i32> %
   ret <vscale x 4 x i32> %res
 }
 
-define <vscale x 2 x i64> @sclampi64(<vscale x 2 x i64> %c, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+define <vscale x 2 x i64> @sclampi64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) {
 ; CHECK-LABEL: sclampi64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sclamp z0.d, z1.d, z2.d

@@ -5,10 +5,10 @@
 set(LLVM_DIR_SAVE ${LLVM_DIR})
 set(Clang_DIR_SAVE ${Clang_DIR})
 
-find_package(Clang 17)
-if (NOT Clang_FOUND)
-  find_package(Clang 18)
-endif()
+# Since the Clang C++ ABI is not stable the Clang libraries and clang-tidy
+# versions must match. Otherwise there likely will be ODR-violations. This had
+# led to crashes and incorrect output of the clang-tidy based checks.
+find_package(Clang ${CMAKE_CXX_COMPILER_VERSION})
 
 set(SOURCES
     abi_tag_on_virtual.cpp

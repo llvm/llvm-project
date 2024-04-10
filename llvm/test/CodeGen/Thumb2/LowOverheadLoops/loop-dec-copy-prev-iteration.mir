@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=thumbv8.1m.main -run-pass=arm-low-overhead-loops %s -o - --verify-machineinstrs | FileCheck %s
 
 --- |
-  define dso_local arm_aapcscc i32 @test1(i32* nocapture %arg, i32* nocapture readonly %arg1, i32* nocapture readonly %arg2, i32 %arg3) {
+  define dso_local arm_aapcscc i32 @test1(ptr nocapture %arg, ptr nocapture readonly %arg1, ptr nocapture readonly %arg2, i32 %arg3) {
   bb:
     %tmp = icmp eq i32 %arg3, 0
     br i1 %tmp, label %bb27, label %bb4
@@ -28,15 +28,15 @@
     br i1 %tmp15, label %bb27, label %bb16
 
   bb16:                                             ; preds = %bb13
-    %tmp17 = getelementptr inbounds i32, i32* %arg1, i32 %tmp14
-    %tmp18 = load i32, i32* %tmp17, align 4
-    %tmp19 = getelementptr inbounds i32, i32* %arg2, i32 %tmp14
-    %tmp20 = load i32, i32* %tmp19, align 4
+    %tmp17 = getelementptr inbounds i32, ptr %arg1, i32 %tmp14
+    %tmp18 = load i32, ptr %tmp17, align 4
+    %tmp19 = getelementptr inbounds i32, ptr %arg2, i32 %tmp14
+    %tmp20 = load i32, ptr %tmp19, align 4
     %tmp21 = xor i32 %tmp20, %tmp18
-    %tmp22 = getelementptr inbounds i32, i32* %arg, i32 %tmp14
-    %tmp23 = load i32, i32* %tmp22, align 4
+    %tmp22 = getelementptr inbounds i32, ptr %arg, i32 %tmp14
+    %tmp23 = load i32, ptr %tmp22, align 4
     %tmp24 = add nsw i32 %tmp23, %tmp21
-    store i32 %tmp24, i32* %tmp22, align 4
+    store i32 %tmp24, ptr %tmp22, align 4
     %tmp25 = add nuw i32 %tmp14, 1
     %tmp26 = icmp eq i32 %tmp6, 1
     br i1 %tmp26, label %bb27, label %bb57
@@ -49,69 +49,69 @@
     %lsr.iv15 = phi i32 [ %lsr.iv.next16, %bb28 ], [ %start, %bb12 ]
     %lsr.iv = phi i32 [ %lsr.iv.next, %bb28 ], [ 0, %bb12 ]
     %tmp29 = phi i32 [ 0, %bb12 ], [ %tmp54, %bb28 ]
-    %0 = bitcast i32* %arg1 to i8*
-    %1 = bitcast i32* %arg2 to i8*
-    %2 = bitcast i32* %arg to i8*
-    %uglygep14 = getelementptr i8, i8* %0, i32 %lsr.iv
-    %uglygep1415 = bitcast i8* %uglygep14 to i32*
-    %scevgep617 = bitcast i32* %uglygep1415 to i32*
-    %tmp34 = load i32, i32* %scevgep617, align 4
-    %uglygep8 = getelementptr i8, i8* %1, i32 %lsr.iv
-    %uglygep89 = bitcast i8* %uglygep8 to i32*
-    %scevgep418 = bitcast i32* %uglygep89 to i32*
-    %tmp35 = load i32, i32* %scevgep418, align 4
+    %0 = bitcast ptr %arg1 to ptr
+    %1 = bitcast ptr %arg2 to ptr
+    %2 = bitcast ptr %arg to ptr
+    %uglygep14 = getelementptr i8, ptr %0, i32 %lsr.iv
+    %uglygep1415 = bitcast ptr %uglygep14 to ptr
+    %scevgep617 = bitcast ptr %uglygep1415 to ptr
+    %tmp34 = load i32, ptr %scevgep617, align 4
+    %uglygep8 = getelementptr i8, ptr %1, i32 %lsr.iv
+    %uglygep89 = bitcast ptr %uglygep8 to ptr
+    %scevgep418 = bitcast ptr %uglygep89 to ptr
+    %tmp35 = load i32, ptr %scevgep418, align 4
     %tmp36 = xor i32 %tmp35, %tmp34
-    %uglygep2 = getelementptr i8, i8* %2, i32 %lsr.iv
-    %uglygep23 = bitcast i8* %uglygep2 to i32*
-    %scevgep219 = bitcast i32* %uglygep23 to i32*
-    %tmp37 = load i32, i32* %scevgep219, align 4
+    %uglygep2 = getelementptr i8, ptr %2, i32 %lsr.iv
+    %uglygep23 = bitcast ptr %uglygep2 to ptr
+    %scevgep219 = bitcast ptr %uglygep23 to ptr
+    %tmp37 = load i32, ptr %scevgep219, align 4
     %tmp38 = add nsw i32 %tmp37, %tmp36
-    store i32 %tmp38, i32* %scevgep219, align 4
-    %uglygep33 = getelementptr i8, i8* %0, i32 %lsr.iv
-    %uglygep3334 = bitcast i8* %uglygep33 to i32*
-    %scevgep14 = getelementptr i32, i32* %uglygep3334, i32 1
-    %tmp39 = load i32, i32* %scevgep14, align 4
-    %uglygep27 = getelementptr i8, i8* %1, i32 %lsr.iv
-    %uglygep2728 = bitcast i8* %uglygep27 to i32*
-    %scevgep11 = getelementptr i32, i32* %uglygep2728, i32 1
-    %tmp40 = load i32, i32* %scevgep11, align 4
+    store i32 %tmp38, ptr %scevgep219, align 4
+    %uglygep33 = getelementptr i8, ptr %0, i32 %lsr.iv
+    %uglygep3334 = bitcast ptr %uglygep33 to ptr
+    %scevgep14 = getelementptr i32, ptr %uglygep3334, i32 1
+    %tmp39 = load i32, ptr %scevgep14, align 4
+    %uglygep27 = getelementptr i8, ptr %1, i32 %lsr.iv
+    %uglygep2728 = bitcast ptr %uglygep27 to ptr
+    %scevgep11 = getelementptr i32, ptr %uglygep2728, i32 1
+    %tmp40 = load i32, ptr %scevgep11, align 4
     %tmp41 = xor i32 %tmp40, %tmp39
-    %uglygep20 = getelementptr i8, i8* %2, i32 %lsr.iv
-    %uglygep2021 = bitcast i8* %uglygep20 to i32*
-    %scevgep9 = getelementptr i32, i32* %uglygep2021, i32 1
-    %tmp42 = load i32, i32* %scevgep9, align 4
+    %uglygep20 = getelementptr i8, ptr %2, i32 %lsr.iv
+    %uglygep2021 = bitcast ptr %uglygep20 to ptr
+    %scevgep9 = getelementptr i32, ptr %uglygep2021, i32 1
+    %tmp42 = load i32, ptr %scevgep9, align 4
     %tmp43 = add nsw i32 %tmp42, %tmp41
-    store i32 %tmp43, i32* %scevgep9, align 4
-    %uglygep30 = getelementptr i8, i8* %0, i32 %lsr.iv
-    %uglygep3031 = bitcast i8* %uglygep30 to i32*
-    %scevgep12 = getelementptr i32, i32* %uglygep3031, i32 2
-    %tmp44 = load i32, i32* %scevgep12, align 4
-    %uglygep24 = getelementptr i8, i8* %1, i32 %lsr.iv
-    %uglygep2425 = bitcast i8* %uglygep24 to i32*
-    %scevgep10 = getelementptr i32, i32* %uglygep2425, i32 2
-    %tmp45 = load i32, i32* %scevgep10, align 4
+    store i32 %tmp43, ptr %scevgep9, align 4
+    %uglygep30 = getelementptr i8, ptr %0, i32 %lsr.iv
+    %uglygep3031 = bitcast ptr %uglygep30 to ptr
+    %scevgep12 = getelementptr i32, ptr %uglygep3031, i32 2
+    %tmp44 = load i32, ptr %scevgep12, align 4
+    %uglygep24 = getelementptr i8, ptr %1, i32 %lsr.iv
+    %uglygep2425 = bitcast ptr %uglygep24 to ptr
+    %scevgep10 = getelementptr i32, ptr %uglygep2425, i32 2
+    %tmp45 = load i32, ptr %scevgep10, align 4
     %tmp46 = xor i32 %tmp45, %tmp44
-    %uglygep17 = getelementptr i8, i8* %2, i32 %lsr.iv
-    %uglygep1718 = bitcast i8* %uglygep17 to i32*
-    %scevgep8 = getelementptr i32, i32* %uglygep1718, i32 2
-    %tmp47 = load i32, i32* %scevgep8, align 4
+    %uglygep17 = getelementptr i8, ptr %2, i32 %lsr.iv
+    %uglygep1718 = bitcast ptr %uglygep17 to ptr
+    %scevgep8 = getelementptr i32, ptr %uglygep1718, i32 2
+    %tmp47 = load i32, ptr %scevgep8, align 4
     %tmp48 = add nsw i32 %tmp47, %tmp46
-    store i32 %tmp48, i32* %scevgep8, align 4
-    %uglygep11 = getelementptr i8, i8* %0, i32 %lsr.iv
-    %uglygep1112 = bitcast i8* %uglygep11 to i32*
-    %scevgep5 = getelementptr i32, i32* %uglygep1112, i32 3
-    %tmp49 = load i32, i32* %scevgep5, align 4
-    %uglygep5 = getelementptr i8, i8* %1, i32 %lsr.iv
-    %uglygep56 = bitcast i8* %uglygep5 to i32*
-    %scevgep3 = getelementptr i32, i32* %uglygep56, i32 3
-    %tmp50 = load i32, i32* %scevgep3, align 4
+    store i32 %tmp48, ptr %scevgep8, align 4
+    %uglygep11 = getelementptr i8, ptr %0, i32 %lsr.iv
+    %uglygep1112 = bitcast ptr %uglygep11 to ptr
+    %scevgep5 = getelementptr i32, ptr %uglygep1112, i32 3
+    %tmp49 = load i32, ptr %scevgep5, align 4
+    %uglygep5 = getelementptr i8, ptr %1, i32 %lsr.iv
+    %uglygep56 = bitcast ptr %uglygep5 to ptr
+    %scevgep3 = getelementptr i32, ptr %uglygep56, i32 3
+    %tmp50 = load i32, ptr %scevgep3, align 4
     %tmp51 = xor i32 %tmp50, %tmp49
-    %uglygep = getelementptr i8, i8* %2, i32 %lsr.iv
-    %uglygep1 = bitcast i8* %uglygep to i32*
-    %scevgep1 = getelementptr i32, i32* %uglygep1, i32 3
-    %tmp52 = load i32, i32* %scevgep1, align 4
+    %uglygep = getelementptr i8, ptr %2, i32 %lsr.iv
+    %uglygep1 = bitcast ptr %uglygep to ptr
+    %scevgep1 = getelementptr i32, ptr %uglygep1, i32 3
+    %tmp52 = load i32, ptr %scevgep1, align 4
     %tmp53 = add nsw i32 %tmp52, %tmp51
-    store i32 %tmp53, i32* %scevgep1, align 4
+    store i32 %tmp53, ptr %scevgep1, align 4
     %tmp54 = add nuw i32 %tmp29, 4
     %lsr.iv.next = add i32 %lsr.iv, 16
     %loop.dec = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %lsr.iv15, i32 1)
@@ -120,29 +120,29 @@
     br i1 %tmp56, label %bb28, label %bb13
 
   bb57:                                             ; preds = %bb16
-    %tmp58 = getelementptr inbounds i32, i32* %arg1, i32 %tmp25
-    %tmp59 = load i32, i32* %tmp58, align 4
-    %tmp60 = getelementptr inbounds i32, i32* %arg2, i32 %tmp25
-    %tmp61 = load i32, i32* %tmp60, align 4
+    %tmp58 = getelementptr inbounds i32, ptr %arg1, i32 %tmp25
+    %tmp59 = load i32, ptr %tmp58, align 4
+    %tmp60 = getelementptr inbounds i32, ptr %arg2, i32 %tmp25
+    %tmp61 = load i32, ptr %tmp60, align 4
     %tmp62 = xor i32 %tmp61, %tmp59
-    %tmp63 = getelementptr inbounds i32, i32* %arg, i32 %tmp25
-    %tmp64 = load i32, i32* %tmp63, align 4
+    %tmp63 = getelementptr inbounds i32, ptr %arg, i32 %tmp25
+    %tmp64 = load i32, ptr %tmp63, align 4
     %tmp65 = add nsw i32 %tmp64, %tmp62
-    store i32 %tmp65, i32* %tmp63, align 4
+    store i32 %tmp65, ptr %tmp63, align 4
     %tmp66 = add nuw i32 %tmp14, 2
     %tmp67 = icmp eq i32 %tmp6, 2
     br i1 %tmp67, label %bb27, label %bb68
 
   bb68:                                             ; preds = %bb57
-    %tmp69 = getelementptr inbounds i32, i32* %arg1, i32 %tmp66
-    %tmp70 = load i32, i32* %tmp69, align 4
-    %tmp71 = getelementptr inbounds i32, i32* %arg2, i32 %tmp66
-    %tmp72 = load i32, i32* %tmp71, align 4
+    %tmp69 = getelementptr inbounds i32, ptr %arg1, i32 %tmp66
+    %tmp70 = load i32, ptr %tmp69, align 4
+    %tmp71 = getelementptr inbounds i32, ptr %arg2, i32 %tmp66
+    %tmp72 = load i32, ptr %tmp71, align 4
     %tmp73 = xor i32 %tmp72, %tmp70
-    %tmp74 = getelementptr inbounds i32, i32* %arg, i32 %tmp66
-    %tmp75 = load i32, i32* %tmp74, align 4
+    %tmp74 = getelementptr inbounds i32, ptr %arg, i32 %tmp66
+    %tmp75 = load i32, ptr %tmp74, align 4
     %tmp76 = add nsw i32 %tmp75, %tmp73
-    store i32 %tmp76, i32* %tmp74, align 4
+    store i32 %tmp76, ptr %tmp74, align 4
     br label %bb27
   }
 

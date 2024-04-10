@@ -121,11 +121,8 @@ void RISCVInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
                                               const MCSubtargetInfo &STI,
                                               raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
-  auto SiFiveReg = RISCVSysReg::lookupSiFiveRegByEncoding(Imm);
   auto SysReg = RISCVSysReg::lookupSysRegByEncoding(Imm);
-  if (SiFiveReg && SiFiveReg->haveVendorRequiredFeatures(STI.getFeatureBits()))
-    markup(O, Markup::Register) << SiFiveReg->Name;
-  else if (SysReg && SysReg->haveRequiredFeatures(STI.getFeatureBits()))
+  if (SysReg && SysReg->haveRequiredFeatures(STI.getFeatureBits()))
     markup(O, Markup::Register) << SysReg->Name;
   else
     markup(O, Markup::Register) << formatImm(Imm);
@@ -295,24 +292,25 @@ void RISCVInstPrinter::printRegReg(const MCInst *MI, unsigned OpNo,
   O << ")";
 }
 
-void RISCVInstPrinter::printSpimm(const MCInst *MI, unsigned OpNo,
-                                  const MCSubtargetInfo &STI, raw_ostream &O) {
+void RISCVInstPrinter::printStackAdj(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI, raw_ostream &O,
+                                     bool Negate) {
   int64_t Imm = MI->getOperand(OpNo).getImm();
-  unsigned Opcode = MI->getOpcode();
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
   bool IsEABI = STI.hasFeature(RISCV::FeatureRVE);
-  int64_t Spimm = 0;
+  int64_t StackAdj = 0;
   auto RlistVal = MI->getOperand(0).getImm();
   assert(RlistVal != 16 && "Incorrect rlist.");
   auto Base = RISCVZC::getStackAdjBase(RlistVal, IsRV64, IsEABI);
-  Spimm = Imm + Base;
-  assert((Spimm >= Base && Spimm <= Base + 48) && "Incorrect spimm");
-  if (Opcode == RISCV::CM_PUSH)
-    Spimm = -Spimm;
+  StackAdj = Imm + Base;
+  assert((StackAdj >= Base && StackAdj <= Base + 48) &&
+         "Incorrect stack adjust");
+  if (Negate)
+    StackAdj = -StackAdj;
 
   // RAII guard for ANSI color escape sequences
   WithMarkup ScopedMarkup = markup(O, Markup::Immediate);
-  RISCVZC::printSpimm(Spimm, O);
+  O << StackAdj;
 }
 
 void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,

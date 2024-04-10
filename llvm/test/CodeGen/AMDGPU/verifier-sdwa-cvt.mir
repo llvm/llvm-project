@@ -1,0 +1,38 @@
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx940 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code"  %s
+
+# CHECK: *** Bad machine code: sext, abs and neg are not allowed on this instruction ***
+# CHECK: $vgpr0 = V_CVT_F32_FP8_sdwa 1, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+# CHECK: *** Bad machine code: sext, abs and neg are not allowed on this instruction ***
+# CHECK: $vgpr0 = V_CVT_F32_BF8_sdwa 1, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+# CHECK: *** Bad machine code: sext, abs and neg are not allowed on this instruction ***
+# CHECK: $vgpr0_vgpr1 = V_CVT_PK_F32_FP8_sdwa 1, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+# CHECK: *** Bad machine code: sext, abs and neg are not allowed on this instruction ***
+# CHECK: $vgpr0_vgpr1 = V_CVT_PK_F32_BF8_sdwa 1, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+# CHECK: *** Bad machine code: sext, abs and neg are not allowed on this instruction ***
+# CHECK: $vgpr0 = V_CVT_F32_FP8_sdwa 2, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+# CHECK: *** Bad machine code: sext, abs and neg are not allowed on this instruction ***
+# CHECK: $vgpr0 = V_CVT_F32_BF8_sdwa 2, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+# CHECK: *** Bad machine code: sext, abs and neg are not allowed on this instruction ***
+# CHECK: $vgpr0_vgpr1 = V_CVT_PK_F32_FP8_sdwa 2, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+# CHECK: *** Bad machine code: sext, abs and neg are not allowed on this instruction ***
+# CHECK: $vgpr0_vgpr1 = V_CVT_PK_F32_BF8_sdwa 2, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+
+---
+name:           test
+liveins:
+body:            |
+  bb.0:
+    liveins: $vgpr0, $vgpr0_vgpr1
+
+    ; sext/neg
+    $vgpr0 = V_CVT_F32_FP8_sdwa 1, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+    $vgpr0 = V_CVT_F32_BF8_sdwa 1, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_CVT_PK_F32_FP8_sdwa 1, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_CVT_PK_F32_BF8_sdwa 1, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+
+    ; abs
+    $vgpr0 = V_CVT_F32_FP8_sdwa 2, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+    $vgpr0 = V_CVT_F32_BF8_sdwa 2, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_CVT_PK_F32_FP8_sdwa 2, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+    $vgpr0_vgpr1 = V_CVT_PK_F32_BF8_sdwa 2, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec
+...

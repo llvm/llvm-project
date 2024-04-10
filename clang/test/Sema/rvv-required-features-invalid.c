@@ -35,3 +35,7 @@ void test_xsfvfnrclipxfqf() {
 void test_xsfvfnrclipxufqf() {
   __riscv_sf_vfnrclip_xu_f_qf(); // expected-error {{call to undeclared function '__riscv_sf_vfnrclip_xu_f_qf'}}
 }
+
+void test_zvfbfwma_vfwmaccbf16() {
+  __riscv_vfwmaccbf16(); // expected-error {{call to undeclared function '__riscv_vfwmaccbf16'}}
+}

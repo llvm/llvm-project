@@ -146,7 +146,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
   }
 
   if (const ConstantArrayType *ATy = getContext().getAsConstantArrayType(Ty)) {
-    uint64_t ArraySize = ATy->getSize().getZExtValue();
+    uint64_t ArraySize = ATy->getZExtSize();
     QualType EltTy = ATy->getElementType();
     // Non-zero-length arrays of empty records make the struct ineligible to be
     // passed via FARs in C++.
@@ -323,13 +323,6 @@ ABIArgInfo LoongArchABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     FARsLeft--;
     return ABIArgInfo::getDirect();
   }
-
-  // Pass 128-bit/256-bit vector values via vector registers directly.
-  if (Ty->isVectorType() && (((getContext().getTypeSize(Ty) == 128) &&
-                              (getTarget().hasFeature("lsx"))) ||
-                             ((getContext().getTypeSize(Ty) == 256) &&
-                              getTarget().hasFeature("lasx"))))
-    return ABIArgInfo::getDirect();
 
   // Complex types for the *f or *d ABI must be passed directly rather than
   // using CoerceAndExpand.

@@ -11,7 +11,7 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(p64) = G_CONSTANT i64 44
     ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[C]](p64)
     ; CHECK: $x0 = COPY [[PTRTOINT]](s64)
-    %1:_(s32) = G_CONSTANT i32 42
+    %1:_(s64) = G_CONSTANT i64 42
     %2:_(s32) = G_CONSTANT i32 2
     %3:_(p64) = G_INTTOPTR %2
     %4:_(p64) = G_PTR_ADD %3, %1
@@ -26,7 +26,7 @@ body:             |
     ; CHECK-LABEL: name: agc.test_combine_ptradd_constants_ptrres
     ; CHECK: [[C:%[0-9]+]]:_(p64) = G_CONSTANT i64 44
     ; CHECK: $x0 = COPY [[C]](p64)
-    %1:_(s32) = G_CONSTANT i32 42
+    %1:_(s64) = G_CONSTANT i64 42
     %2:_(s32) = G_CONSTANT i32 2
     %3:_(p64) = G_INTTOPTR %2
     %4:_(p64) = G_PTR_ADD %3, %1
@@ -39,12 +39,12 @@ body:             |
     liveins: $x0, $x1
     ; Ensure non-constant G_PTR_ADDs are not folded.
     ; CHECK-LABEL: name: agc.test_not_combine_variable_ptradd
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 42
     ; CHECK: [[COPY:%[0-9]+]]:_(p64) = COPY $x1
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p64) = G_PTR_ADD [[COPY]], [[C]](s32)
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p64) = G_PTR_ADD [[COPY]], [[C]](s64)
     ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[PTR_ADD]](p64)
     ; CHECK: $x0 = COPY [[PTRTOINT]](s64)
-    %1:_(s32) = G_CONSTANT i32 42
+    %1:_(s64) = G_CONSTANT i64 42
     %2:_(p64) = COPY $x1
     %3:_(p64) = G_PTR_ADD %2, %1
     %4:_(s64) = G_PTRTOINT %3

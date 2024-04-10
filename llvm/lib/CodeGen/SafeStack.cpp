@@ -119,7 +119,6 @@ class SafeStack {
   Type *StackPtrTy;
   Type *IntPtrTy;
   Type *Int32Ty;
-  Type *Int8Ty;
 
   Value *UnsafeStackPtr = nullptr;
 
@@ -195,8 +194,7 @@ public:
       : F(F), TL(TL), DL(DL), DTU(DTU), SE(SE),
         StackPtrTy(PointerType::getUnqual(F.getContext())),
         IntPtrTy(DL.getIntPtrType(F.getContext())),
-        Int32Ty(Type::getInt32Ty(F.getContext())),
-        Int8Ty(Type::getInt8Ty(F.getContext())) {}
+        Int32Ty(Type::getInt32Ty(F.getContext())) {}
 
   // Run the transformation on the associated function.
   // Returns whether the function was changed.
@@ -562,8 +560,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
 
   if (StackGuardSlot) {
     unsigned Offset = SSL.getObjectOffset(StackGuardSlot);
-    Value *Off = IRB.CreateGEP(Int8Ty, BasePointer, // BasePointer is i8*
-                               ConstantInt::get(Int32Ty, -Offset));
+    Value *Off =
+        IRB.CreatePtrAdd(BasePointer, ConstantInt::get(Int32Ty, -Offset));
     Value *NewAI =
         IRB.CreateBitCast(Off, StackGuardSlot->getType(), "StackGuardSlot");
 
@@ -581,10 +579,10 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     if (Size == 0)
       Size = 1; // Don't create zero-sized stack objects.
 
-    Value *Off = IRB.CreateGEP(Int8Ty, BasePointer, // BasePointer is i8*
-                               ConstantInt::get(Int32Ty, -Offset));
+    Value *Off =
+        IRB.CreatePtrAdd(BasePointer, ConstantInt::get(Int32Ty, -Offset));
     Value *NewArg = IRB.CreateBitCast(Off, Arg->getType(),
-                                     Arg->getName() + ".unsafe-byval");
+                                      Arg->getName() + ".unsafe-byval");
 
     // Replace alloc with the new location.
     replaceDbgDeclare(Arg, BasePointer, DIB, DIExpression::ApplyOffset,
@@ -616,8 +614,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
         InsertBefore = User;
 
       IRBuilder<> IRBUser(InsertBefore);
-      Value *Off = IRBUser.CreateGEP(Int8Ty, BasePointer, // BasePointer is i8*
-                                     ConstantInt::get(Int32Ty, -Offset));
+      Value *Off =
+          IRBUser.CreatePtrAdd(BasePointer, ConstantInt::get(Int32Ty, -Offset));
       Value *Replacement = IRBUser.CreateBitCast(Off, AI->getType(), Name);
 
       if (auto *PHI = dyn_cast<PHINode>(User))
@@ -647,8 +645,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   IRB.SetInsertPoint(BasePointer->getNextNode());
 
   Value *StaticTop =
-      IRB.CreateGEP(Int8Ty, BasePointer, ConstantInt::get(Int32Ty, -FrameSize),
-                    "unsafe_stack_static_top");
+      IRB.CreatePtrAdd(BasePointer, ConstantInt::get(Int32Ty, -FrameSize),
+                       "unsafe_stack_static_top");
   IRB.CreateStore(StaticTop, UnsafeStackPtr);
   return StaticTop;
 }

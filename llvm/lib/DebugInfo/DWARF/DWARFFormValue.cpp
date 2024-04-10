@@ -761,8 +761,7 @@ DWARFFormValue::getAsFile(DILineInfoSpecifier::FileLineInfoKind Kind) const {
 bool llvm::dwarf::doesFormBelongToClass(dwarf::Form Form, DWARFFormValue::FormClass FC,
                            uint16_t DwarfVersion) {
   // First, check DWARF5 form classes.
-  if (Form < ArrayRef(DWARF5FormClasses).size() &&
-      DWARF5FormClasses[Form] == FC)
+  if (Form < std::size(DWARF5FormClasses) && DWARF5FormClasses[Form] == FC)
     return true;
   // Check more forms from extensions and proposals.
   switch (Form) {

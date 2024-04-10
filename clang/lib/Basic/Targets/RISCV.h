@@ -110,6 +110,8 @@ public:
 
   bool hasBFloat16Type() const override { return true; }
 
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
@@ -132,6 +134,12 @@ public:
   }
 
   bool setABI(const std::string &Name) override {
+    if (Name == "ilp32e") {
+      ABI = Name;
+      resetDataLayout("e-m:e-p:32:32-i64:64-n32-S32");
+      return true;
+    }
+
     if (Name == "ilp32" || Name == "ilp32f" || Name == "ilp32d") {
       ABI = Name;
       return true;
@@ -156,6 +164,12 @@ public:
   }
 
   bool setABI(const std::string &Name) override {
+    if (Name == "lp64e") {
+      ABI = Name;
+      resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n32:64-S64");
+      return true;
+    }
+
     if (Name == "lp64" || Name == "lp64f" || Name == "lp64d") {
       ABI = Name;
       return true;

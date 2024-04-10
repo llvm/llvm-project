@@ -206,7 +206,7 @@ spirv.module Logical GLSL450 {
       // CHECK: [[STOREPTR:%.*]] = spirv.AccessChain [[ADDRESS_ARG1]]
       %7 = spirv.AccessChain %3[%1] : !spirv.ptr<!spirv.struct<(i32 [0])>, StorageBuffer>, i32
       // CHECK-NOT: spirv.FunctionCall
-      // CHECK: spirv.AtomicIAdd "Device" "AcquireRelease" [[STOREPTR]], [[VAL]]
+      // CHECK: spirv.AtomicIAdd <Device> <AcquireRelease> [[STOREPTR]], [[VAL]]
       // CHECK: spirv.Branch
       spirv.FunctionCall @atomic_add(%5, %7) : (i32, !spirv.ptr<i32, StorageBuffer>) -> ()
       spirv.Branch ^bb2
@@ -217,11 +217,33 @@ spirv.module Logical GLSL450 {
     spirv.Return
   }
   spirv.func @atomic_add(%arg0: i32, %arg1: !spirv.ptr<i32, StorageBuffer>) "None" {
-    %0 = spirv.AtomicIAdd "Device" "AcquireRelease" %arg1, %arg0 : !spirv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicIAdd <Device> <AcquireRelease> %arg1, %arg0 : !spirv.ptr<i32, StorageBuffer>
     spirv.Return
   }
   spirv.EntryPoint "GLCompute" @inline_into_selection_region
   spirv.ExecutionMode @inline_into_selection_region "LocalSize", 32, 1, 1
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // CHECK-LABEL: @foo
+  spirv.func @foo(%arg0: i32) -> i32 "None" {
+    // CHECK-NOT: spirv.FunctionCall
+    // CHECK-NEXT: spirv.Constant 1
+    %res = spirv.FunctionCall @bar(%arg0) : (i32) -> i32
+    spirv.ReturnValue %res : i32
+  }
+
+  spirv.func @bar(%arg1: i32) -> i32 "None" attributes {sym_visibility = "private"} {
+    %cst1_i32 = spirv.Constant 1 : i32
+    %0 = spirv.IEqual %arg1, %cst1_i32 : i32
+    spirv.BranchConditional %0, ^bb1(%cst1_i32 : i32), ^bb2
+  ^bb1(%1: i32):
+    spirv.ReturnValue %1 : i32
+  ^bb2:
+    spirv.ReturnValue %cst1_i32 : i32
+  }
 }
 
 // TODO: Add tests for inlining structured control flow into

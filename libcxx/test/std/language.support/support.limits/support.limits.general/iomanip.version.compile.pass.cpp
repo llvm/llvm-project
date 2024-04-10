@@ -32,47 +32,77 @@
 
 #elif TEST_STD_VER == 14
 
-# ifndef __cpp_lib_quoted_string_io
-#   error "__cpp_lib_quoted_string_io should be defined in c++14"
-# endif
-# if __cpp_lib_quoted_string_io != 201304L
-#   error "__cpp_lib_quoted_string_io should have the value 201304L in c++14"
+# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#   ifndef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should be defined in c++14"
+#   endif
+#   if __cpp_lib_quoted_string_io != 201304L
+#     error "__cpp_lib_quoted_string_io should have the value 201304L in c++14"
+#   endif
+# else
+#   ifdef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#   endif
 # endif
 
 #elif TEST_STD_VER == 17
 
-# ifndef __cpp_lib_quoted_string_io
-#   error "__cpp_lib_quoted_string_io should be defined in c++17"
-# endif
-# if __cpp_lib_quoted_string_io != 201304L
-#   error "__cpp_lib_quoted_string_io should have the value 201304L in c++17"
+# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#   ifndef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should be defined in c++17"
+#   endif
+#   if __cpp_lib_quoted_string_io != 201304L
+#     error "__cpp_lib_quoted_string_io should have the value 201304L in c++17"
+#   endif
+# else
+#   ifdef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#   endif
 # endif
 
 #elif TEST_STD_VER == 20
 
-# ifndef __cpp_lib_quoted_string_io
-#   error "__cpp_lib_quoted_string_io should be defined in c++20"
-# endif
-# if __cpp_lib_quoted_string_io != 201304L
-#   error "__cpp_lib_quoted_string_io should have the value 201304L in c++20"
+# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#   ifndef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should be defined in c++20"
+#   endif
+#   if __cpp_lib_quoted_string_io != 201304L
+#     error "__cpp_lib_quoted_string_io should have the value 201304L in c++20"
+#   endif
+# else
+#   ifdef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#   endif
 # endif
 
 #elif TEST_STD_VER == 23
 
-# ifndef __cpp_lib_quoted_string_io
-#   error "__cpp_lib_quoted_string_io should be defined in c++23"
-# endif
-# if __cpp_lib_quoted_string_io != 201304L
-#   error "__cpp_lib_quoted_string_io should have the value 201304L in c++23"
+# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#   ifndef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should be defined in c++23"
+#   endif
+#   if __cpp_lib_quoted_string_io != 201304L
+#     error "__cpp_lib_quoted_string_io should have the value 201304L in c++23"
+#   endif
+# else
+#   ifdef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#   endif
 # endif
 
 #elif TEST_STD_VER > 23
 
-# ifndef __cpp_lib_quoted_string_io
-#   error "__cpp_lib_quoted_string_io should be defined in c++26"
-# endif
-# if __cpp_lib_quoted_string_io != 201304L
-#   error "__cpp_lib_quoted_string_io should have the value 201304L in c++26"
+# if !defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#   ifndef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should be defined in c++26"
+#   endif
+#   if __cpp_lib_quoted_string_io != 201304L
+#     error "__cpp_lib_quoted_string_io should have the value 201304L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_quoted_string_io
+#     error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || !defined(_LIBCPP_HAS_NO_LOCALIZATION)' is not met!"
+#   endif
 # endif
 
 #endif // TEST_STD_VER > 23

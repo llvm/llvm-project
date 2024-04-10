@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -misched=converge -run-pass machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
-# RUN: llc -march=amdgcn -misched-regpressure=false -run-pass machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=NORP
+# RUN: llc -mtriple=amdgcn -misched=converge -run-pass machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn -misched-regpressure=false -run-pass machine-scheduler %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s --check-prefix=NORP
 
 # REQUIRES: asserts
 

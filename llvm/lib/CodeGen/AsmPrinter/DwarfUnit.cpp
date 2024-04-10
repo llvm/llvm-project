@@ -803,6 +803,18 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   if (DTy->getDWARFAddressSpace())
     addUInt(Buffer, dwarf::DW_AT_address_class, dwarf::DW_FORM_data4,
             *DTy->getDWARFAddressSpace());
+  if (auto PtrAuthData = DTy->getPtrAuthData()) {
+    addUInt(Buffer, dwarf::DW_AT_LLVM_ptrauth_key, dwarf::DW_FORM_data1,
+            PtrAuthData->key());
+    if (PtrAuthData->isAddressDiscriminated())
+      addFlag(Buffer, dwarf::DW_AT_LLVM_ptrauth_address_discriminated);
+    addUInt(Buffer, dwarf::DW_AT_LLVM_ptrauth_extra_discriminator,
+            dwarf::DW_FORM_data2, PtrAuthData->extraDiscriminator());
+    if (PtrAuthData->isaPointer())
+      addFlag(Buffer, dwarf::DW_AT_LLVM_ptrauth_isa_pointer);
+    if (PtrAuthData->authenticatesNullValues())
+      addFlag(Buffer, dwarf::DW_AT_LLVM_ptrauth_authenticates_null_values);
+  }
 }
 
 void DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {

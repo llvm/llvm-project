@@ -10,15 +10,14 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
 template <typename T> class SqrtTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
   static constexpr StorageType HIDDEN_BIT =
-      StorageType(1)
-      << LIBC_NAMESPACE::fputil::FloatProperties<T>::FRACTION_LEN;
+      StorageType(1) << LIBC_NAMESPACE::fputil::FPBits<T>::FRACTION_LEN;
 
 public:
   typedef T (*SqrtFunc)(T);

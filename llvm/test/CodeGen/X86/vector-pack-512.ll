@@ -9,9 +9,9 @@ define <32 x i16> @trunc_concat_packssdw_512(<16 x i32> %a0, <16 x i32> %a1) nou
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrad $17, %zmm0, %zmm0
 ; AVX512-NEXT:    vpsrad $23, %zmm1, %zmm1
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [4,5,12,13,6,7,14,15]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [4,5,12,13,6,7,14,15]
 ; AVX512-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,8,9,2,3,10,11]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [0,1,8,9,2,3,10,11]
 ; AVX512-NEXT:    vpermi2q %zmm1, %zmm0, %zmm3
 ; AVX512-NEXT:    vpmovdw %zmm3, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm2, %ymm1
@@ -29,9 +29,9 @@ define <32 x i16> @trunc_concat_packusdw_512(<16 x i32> %a0, <16 x i32> %a1) nou
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrld $17, %zmm0, %zmm0
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [4,5,12,13,6,7,14,15]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [4,5,12,13,6,7,14,15]
 ; AVX512-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,8,9,2,3,10,11]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [0,1,8,9,2,3,10,11]
 ; AVX512-NEXT:    vpermi2q %zmm1, %zmm0, %zmm3
 ; AVX512-NEXT:    vpmovdw %zmm3, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm2, %ymm1
@@ -52,9 +52,9 @@ define <64 x i8> @trunc_concat_packsswb_512(<32 x i16> %a0, <32 x i16> %a1) noun
 ; AVX512F-NEXT:    vpsraw $15, %ymm0, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm2, %zmm0
 ; AVX512F-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,8,9,2,3,10,11]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,1,8,9,2,3,10,11]
 ; AVX512F-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [4,5,12,13,6,7,14,15]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [4,5,12,13,6,7,14,15]
 ; AVX512F-NEXT:    vpermi2q %zmm1, %zmm0, %zmm3
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm3[0],zero,ymm3[1],zero,ymm3[2],zero,ymm3[3],zero,ymm3[4],zero,ymm3[5],zero,ymm3[6],zero,ymm3[7],zero,ymm3[8],zero,ymm3[9],zero,ymm3[10],zero,ymm3[11],zero,ymm3[12],zero,ymm3[13],zero,ymm3[14],zero,ymm3[15],zero
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
@@ -75,9 +75,9 @@ define <64 x i8> @trunc_concat_packsswb_512(<32 x i16> %a0, <32 x i16> %a1) noun
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsraw $15, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [4,5,12,13,6,7,14,15]
+; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [4,5,12,13,6,7,14,15]
 ; AVX512BW-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,8,9,2,3,10,11]
+; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [0,1,8,9,2,3,10,11]
 ; AVX512BW-NEXT:    vpermi2q %zmm1, %zmm0, %zmm3
 ; AVX512BW-NEXT:    vpmovwb %zmm3, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm2, %ymm1
@@ -98,9 +98,9 @@ define <64 x i8> @trunc_concat_packuswb_512(<32 x i16> %a0, <32 x i16> %a1) noun
 ; AVX512F-NEXT:    vpsrlw $15, %ymm0, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm2, %zmm0
 ; AVX512F-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,8,9,2,3,10,11]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,1,8,9,2,3,10,11]
 ; AVX512F-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [4,5,12,13,6,7,14,15]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [4,5,12,13,6,7,14,15]
 ; AVX512F-NEXT:    vpermi2q %zmm1, %zmm0, %zmm3
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm3[0],zero,ymm3[1],zero,ymm3[2],zero,ymm3[3],zero,ymm3[4],zero,ymm3[5],zero,ymm3[6],zero,ymm3[7],zero,ymm3[8],zero,ymm3[9],zero,ymm3[10],zero,ymm3[11],zero,ymm3[12],zero,ymm3[13],zero,ymm3[14],zero,ymm3[15],zero
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
@@ -121,9 +121,9 @@ define <64 x i8> @trunc_concat_packuswb_512(<32 x i16> %a0, <32 x i16> %a1) noun
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsrlw $15, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [4,5,12,13,6,7,14,15]
+; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [4,5,12,13,6,7,14,15]
 ; AVX512BW-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [0,1,8,9,2,3,10,11]
+; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [0,1,8,9,2,3,10,11]
 ; AVX512BW-NEXT:    vpermi2q %zmm1, %zmm0, %zmm3
 ; AVX512BW-NEXT:    vpmovwb %zmm3, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm2, %ymm1
@@ -147,7 +147,7 @@ define <32 x i16> @concat_trunc_packssdw_512(<16 x i32> %a0, <16 x i32> %a1) nou
 ; AVX512-NEXT:    vpmovdw %zmm1, %ymm1
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,8,1,9,6,14,7,15]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [0,8,1,9,6,14,7,15]
 ; AVX512-NEXT:    vpermi2q %zmm1, %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %1 = ashr <16 x i32> %a0, <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
@@ -167,7 +167,7 @@ define <32 x i16> @concat_trunc_packusdw_512(<16 x i32> %a0, <16 x i32> %a1) nou
 ; AVX512-NEXT:    vpmovdw %zmm1, %ymm1
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2
-; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,8,1,9,6,14,7,15]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [0,8,1,9,6,14,7,15]
 ; AVX512-NEXT:    vpermi2q %zmm1, %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %1 = lshr <16 x i32> %a0, <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
@@ -194,7 +194,7 @@ define <64 x i8> @concat_trunc_packsswb_512(<32 x i16> %a0, <32 x i16> %a1) noun
 ; AVX512F-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,8,2,9,5,14,7,15]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [0,8,2,9,5,14,7,15]
 ; AVX512F-NEXT:    vpermi2q %zmm1, %zmm2, %zmm0
 ; AVX512F-NEXT:    retq
 ;
@@ -206,7 +206,7 @@ define <64 x i8> @concat_trunc_packsswb_512(<32 x i16> %a0, <32 x i16> %a1) noun
 ; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,8,1,9,6,14,7,15]
+; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [0,8,1,9,6,14,7,15]
 ; AVX512BW-NEXT:    vpermi2q %zmm1, %zmm2, %zmm0
 ; AVX512BW-NEXT:    retq
   %1 = ashr <32 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
@@ -233,7 +233,7 @@ define <64 x i8> @concat_trunc_packuswb_512(<32 x i16> %a0, <32 x i16> %a1) noun
 ; AVX512F-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
-; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,8,2,9,5,14,7,15]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [0,8,2,9,5,14,7,15]
 ; AVX512F-NEXT:    vpermi2q %zmm1, %zmm2, %zmm0
 ; AVX512F-NEXT:    retq
 ;
@@ -245,7 +245,7 @@ define <64 x i8> @concat_trunc_packuswb_512(<32 x i16> %a0, <32 x i16> %a1) noun
 ; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm2
-; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [0,8,1,9,6,14,7,15]
+; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [0,8,1,9,6,14,7,15]
 ; AVX512BW-NEXT:    vpermi2q %zmm1, %zmm2, %zmm0
 ; AVX512BW-NEXT:    retq
   %1 = lshr <32 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>

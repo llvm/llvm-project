@@ -249,25 +249,21 @@ define float @fabs_sqrt_nsz(float %a) #0 {
   ret float %fabs
 }
 
-; The fabs can be eliminated because we're nsz and nnan.
 define float @fabs_sqrt_nnan_nsz(float %a) #0 {
 ; CHECK-LABEL: @fabs_sqrt_nnan_nsz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.experimental.constrained.sqrt.f32(float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]]) #[[ATTR0]]
-; CHECK-NEXT:    ret float [[FABS]]
+; CHECK-NEXT:    ret float [[SQRT]]
 ;
   %sqrt = call nnan nsz float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   %fabs = call float @llvm.fabs.f32(float %sqrt) #0
   ret float %fabs
 }
 
-; The second fabs can be eliminated because the operand to sqrt cannot be -0.
 define float @fabs_sqrt_nnan_fabs(float %a) #0 {
 ; CHECK-LABEL: @fabs_sqrt_nnan_fabs(
 ; CHECK-NEXT:    [[B:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.experimental.constrained.sqrt.f32(float [[B]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]]) #[[ATTR0]]
-; CHECK-NEXT:    ret float [[FABS]]
+; CHECK-NEXT:    ret float [[SQRT]]
 ;
   %b = call float @llvm.fabs.f32(float %a) #0
   %sqrt = call nnan float @llvm.experimental.constrained.sqrt.f32(float %b, metadata !"round.tonearest", metadata !"fpexcept.ignore")

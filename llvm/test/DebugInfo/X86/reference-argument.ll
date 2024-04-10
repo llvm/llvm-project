@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=x86_64-apple-macosx10.9.0 -filetype=obj -O0 < %s \
 ; RUN:   | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-apple-macosx10.9.0 -filetype=obj -O0 < %s \
+; RUN:   | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ; ModuleID = 'aggregate-indirect-arg.cpp'
 ; extracted from debuginfo-tests/aggregate-indirect-arg.cpp
 

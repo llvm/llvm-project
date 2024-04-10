@@ -45,50 +45,18 @@ struct PluginAdaptorTy {
   static llvm::Expected<std::unique_ptr<PluginAdaptorTy>>
   create(const std::string &Name);
 
-  /// Initialize as many devices as possible for this plugin adaptor. Devices
-  /// that fail to initialize are ignored.
-  void initDevices(PluginManager &PM);
-
-  bool isUsed() const { return DeviceOffset >= 0; }
-
-  /// Return the number of devices visible to the underlying plugin.
-  int32_t getNumberOfPluginDevices() const { return NumberOfPluginDevices; }
-
-  /// Return the number of devices successfully initialized and visible to the
-  /// user.
-  int32_t getNumberOfUserDevices() const { return NumberOfUserDevices; }
-
-  /// Add all offload entries described by \p DI to the devices managed by this
-  /// plugin.
-  void addOffloadEntries(DeviceImageTy &DI);
-
-  /// RTL index, index is the number of devices of other RTLs that were
-  /// registered before, i.e. the OpenMP index of the first device to be
-  /// registered with this RTL.
-  int32_t DeviceOffset = -1;
-
   /// Name of the shared object file representing the plugin.
   std::string Name;
 
   /// Access to the shared object file representing the plugin.
   std::unique_ptr<llvm::sys::DynamicLibrary> LibraryHandler;
 
-#define PLUGIN_API_HANDLE(NAME, MANDATORY)                                     \
+#define PLUGIN_API_HANDLE(NAME)                                                \
   using NAME##_ty = decltype(__tgt_rtl_##NAME);                                \
   NAME##_ty *NAME = nullptr;
 
 #include "Shared/PluginAPI.inc"
 #undef PLUGIN_API_HANDLE
-
-  llvm::DenseSet<const __tgt_device_image *> UsedImages;
-
-private:
-  /// Number of devices the underling plugins sees.
-  int32_t NumberOfPluginDevices = -1;
-
-  /// Number of devices exposed to the user. This can be less than the number of
-  /// devices for the plugin if some failed to initialize.
-  int32_t NumberOfUserDevices = 0;
 
   /// Create a plugin adaptor for filename \p Name with a dynamic library \p DL.
   PluginAdaptorTy(const std::string &Name,
@@ -118,9 +86,16 @@ struct PluginManager {
   // Unregister a shared library from all RTLs.
   void unregisterLib(__tgt_bin_desc *Desc);
 
-  void addDeviceImage(__tgt_bin_desc &TgtBinDesc, __tgt_device_image &TgtDeviceImage) {
-    DeviceImages.emplace_back(std::make_unique<DeviceImageTy>(TgtBinDesc, TgtDeviceImage));
+  void addDeviceImage(__tgt_bin_desc &TgtBinDesc,
+                      __tgt_device_image &TgtDeviceImage) {
+    DeviceImages.emplace_back(
+        std::make_unique<DeviceImageTy>(TgtBinDesc, TgtDeviceImage));
   }
+
+  /// Initialize as many devices as possible for this plugin adaptor. Devices
+  /// that fail to initialize are ignored. Returns the offset the devices were
+  /// registered at.
+  void initDevices(PluginAdaptorTy &RTL);
 
   /// Return the device presented to the user as device \p DeviceNo if it is
   /// initialized and ready. Otherwise return an error explaining the problem.
@@ -171,12 +146,7 @@ struct PluginManager {
     return Devices.getExclusiveAccessor();
   }
 
-  int getNumUsedPlugins() const {
-    int NCI = 0;
-    for (auto &P : PluginAdaptors)
-      NCI += P->isUsed();
-    return NCI;
-  }
+  int getNumUsedPlugins() const { return DeviceOffsets.size(); }
 
   // Initialize all plugins.
   void initAllPlugins();
@@ -197,6 +167,15 @@ private:
   // List of all plugin adaptors, in use or not.
   llvm::SmallVector<std::unique_ptr<PluginAdaptorTy>> PluginAdaptors;
 
+  // Mapping of plugin adaptors to offsets in the device table.
+  llvm::DenseMap<const PluginAdaptorTy *, int32_t> DeviceOffsets;
+
+  // Mapping of plugin adaptors to the number of used devices.
+  llvm::DenseMap<const PluginAdaptorTy *, int32_t> DeviceUsed;
+
+  // Set of all device images currently in use.
+  llvm::DenseSet<const __tgt_device_image *> UsedImages;
+
   /// Executable images and information extracted from the input images passed
   /// to the runtime.
   llvm::SmallVector<std::unique_ptr<DeviceImageTy>> DeviceImages;
@@ -209,6 +188,12 @@ private:
   /// Devices associated with plugins, accesses to the container are exclusive.
   ProtectedObj<DeviceContainerTy> Devices;
 };
+
+/// Initialize the plugin manager and OpenMP runtime.
+void initRuntime();
+
+/// Deinitialize the plugin and delete it.
+void deinitRuntime();
 
 extern PluginManager *PM;
 

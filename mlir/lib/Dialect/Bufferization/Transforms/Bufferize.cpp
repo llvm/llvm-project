@@ -182,6 +182,11 @@ parseHeuristicOption(const std::string &s) {
     return OneShotBufferizationOptions::AnalysisHeuristic::BottomUp;
   if (s == "top-down")
     return OneShotBufferizationOptions::AnalysisHeuristic::TopDown;
+  if (s == "bottom-up-from-terminators")
+    return OneShotBufferizationOptions::AnalysisHeuristic::
+        BottomUpFromTerminators;
+  if (s == "fuzzer")
+    return OneShotBufferizationOptions::AnalysisHeuristic::Fuzzer;
   llvm_unreachable("invalid analysisheuristic option");
 }
 
@@ -210,8 +215,12 @@ struct OneShotBufferizePass
       opt.dumpAliasSets = dumpAliasSets;
       opt.setFunctionBoundaryTypeConversion(
           parseLayoutMapOption(functionBoundaryTypeConversion));
-      if (mustInferMemorySpace)
-        opt.defaultMemorySpace = std::nullopt;
+      if (mustInferMemorySpace) {
+        opt.defaultMemorySpaceFn =
+            [](TensorType t) -> std::optional<Attribute> {
+          return std::nullopt;
+        };
+      }
       opt.printConflicts = printConflicts;
       opt.testAnalysisOnly = testAnalysisOnly;
       opt.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
@@ -350,31 +359,6 @@ mlir::bufferization::createFinalizingBufferizePass() {
 // BufferizableOpInterface-based Bufferization
 //===----------------------------------------------------------------------===//
 
-static bool isaTensor(Type t) { return isa<TensorType>(t); }
-
-/// Return true if the given op has a tensor result or a tensor operand.
-static bool hasTensorSemantics(Operation *op) {
-  bool hasTensorBlockArgument = any_of(op->getRegions(), [](Region &r) {
-    return any_of(r.getBlocks(), [](Block &b) {
-      return any_of(b.getArguments(), [](BlockArgument bbArg) {
-        return isaTensor(bbArg.getType());
-      });
-    });
-  });
-  if (hasTensorBlockArgument)
-    return true;
-
-  if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-    bool hasTensorArg = any_of(funcOp.getArgumentTypes(), isaTensor);
-    bool hasTensorResult = any_of(funcOp.getResultTypes(), isaTensor);
-    return hasTensorArg || hasTensorResult;
-  }
-
-  bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);
-  bool hasTensorOperand = any_of(op->getOperandTypes(), isaTensor);
-  return hasTensorResult || hasTensorOperand;
-}
-
 namespace {
 /// A rewriter that keeps track of extra information during bufferization.
 class BufferizationRewriter : public IRRewriter, public RewriterBase::Listener {
@@ -390,13 +374,17 @@ public:
   }
 
 protected:
-  void notifyOperationRemoved(Operation *op) override {
+  void notifyOperationErased(Operation *op) override {
     erasedOps.insert(op);
     // Erase if present.
     toMemrefOps.erase(op);
   }
 
-  void notifyOperationInserted(Operation *op) override {
+  void notifyOperationInserted(Operation *op, InsertPoint previous) override {
+    // We only care about newly created ops.
+    if (previous.isSet())
+      return;
+
     erasedOps.erase(op);
 
     // Gather statistics about allocs.
@@ -470,7 +458,7 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   // canonicalize away (or canonicalize to more precise layouts).
   SmallVector<Operation *> worklist;
   op->walk<WalkOrder::PostOrder>([&](Operation *op) {
-    if (hasTensorSemantics(op))
+    if (options.isOpAllowed(op) && hasTensorSemantics(op))
       worklist.push_back(op);
   });
 
@@ -488,8 +476,6 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
     // Skip ops that are not bufferizable or not allowed.
     auto bufferizableOp = options.dynCastBufferizableOp(nextOp);
     if (!bufferizableOp)
-      continue;
-    if (!options.isOpAllowed(nextOp))
       continue;
     // Skip ops that no longer have tensor semantics.
     if (!hasTensorSemantics(nextOp))
@@ -518,6 +504,10 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
                << *op
                << "\n//===-------------------------------------------===//\n");
   }
+
+  // Return early if the top-level op is entirely gone.
+  if (erasedOps.contains(op))
+    return success();
 
   // Fold all to_memref(to_tensor(x)) pairs.
   for (Operation *op : toMemrefOps) {

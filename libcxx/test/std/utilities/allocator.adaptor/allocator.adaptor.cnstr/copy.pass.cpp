@@ -21,50 +21,49 @@
 #include "test_macros.h"
 #include "allocators.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::scoped_allocator_adaptor<A1<int>> A;
-        A a1(A1<int>(3));
-        A1<int>::copy_called = false;
-        A1<int>::move_called = false;
-        A a2 = a1;
-        assert(A1<int>::copy_called == true);
-        assert(A1<int>::move_called == false);
-        assert(a2 == a1);
-    }
-    {
-        typedef std::scoped_allocator_adaptor<A1<int>, A2<int>> A;
-        A a1(A1<int>(4), A2<int>(5));
-        A1<int>::copy_called = false;
-        A1<int>::move_called = false;
-        A2<int>::copy_called = false;
-        A2<int>::move_called = false;
-        A a2 = a1;
-        assert(A1<int>::copy_called == true);
-        assert(A1<int>::move_called == false);
-        assert(A2<int>::copy_called == true);
-        assert(A2<int>::move_called == false);
-        assert(a2 == a1);
-    }
-    {
-        typedef std::scoped_allocator_adaptor<A1<int>, A2<int>, A3<int>> A;
-        A a1(A1<int>(4), A2<int>(5), A3<int>(6));
-        A1<int>::copy_called = false;
-        A1<int>::move_called = false;
-        A2<int>::copy_called = false;
-        A2<int>::move_called = false;
-        A3<int>::copy_called = false;
-        A3<int>::move_called = false;
-        A a2 = a1;
-        assert(A1<int>::copy_called == true);
-        assert(A1<int>::move_called == false);
-        assert(A2<int>::copy_called == true);
-        assert(A2<int>::move_called == false);
-        assert(A3<int>::copy_called == true);
-        assert(A3<int>::move_called == false);
-        assert(a2 == a1);
-    }
+int main(int, char**) {
+  {
+    typedef std::scoped_allocator_adaptor<A1<int>> A;
+    A a1(A1<int>(3));
+    A1<int>::copy_called = false;
+    A1<int>::move_called = false;
+    A a2                 = a1;
+    assert(A1<int>::copy_called == true);
+    assert(A1<int>::move_called == false);
+    assert(a2 == a1);
+  }
+  {
+    typedef std::scoped_allocator_adaptor<A1<int>, A2<int>> A;
+    A a1(A1<int>(4), A2<int>(5));
+    A1<int>::copy_called = false;
+    A1<int>::move_called = false;
+    A2<int>::copy_called = false;
+    A2<int>::move_called = false;
+    A a2                 = a1;
+    assert(A1<int>::copy_called == true);
+    assert(A1<int>::move_called == false);
+    assert(A2<int>::copy_called == true);
+    assert(A2<int>::move_called == false);
+    assert(a2 == a1);
+  }
+  {
+    typedef std::scoped_allocator_adaptor<A1<int>, A2<int>, A3<int>> A;
+    A a1(A1<int>(4), A2<int>(5), A3<int>(6));
+    A1<int>::copy_called = false;
+    A1<int>::move_called = false;
+    A2<int>::copy_called = false;
+    A2<int>::move_called = false;
+    A3<int>::copy_called = false;
+    A3<int>::move_called = false;
+    A a2                 = a1;
+    assert(A1<int>::copy_called == true);
+    assert(A1<int>::move_called == false);
+    assert(A2<int>::copy_called == true);
+    assert(A2<int>::move_called == false);
+    assert(A3<int>::copy_called == true);
+    assert(A3<int>::move_called == false);
+    assert(a2 == a1);
+  }
 
   return 0;
 }

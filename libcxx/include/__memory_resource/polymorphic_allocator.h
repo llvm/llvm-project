@@ -12,6 +12,7 @@
 #include <__assert>
 #include <__availability>
 #include <__config>
+#include <__fwd/pair.h>
 #include <__memory_resource/memory_resource.h>
 #include <__utility/exception_guard.h>
 #include <cstddef>
@@ -68,7 +69,10 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI void deallocate(_ValueType* __p, size_t __n) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__n <= __max_size(), "deallocate called for size which exceeds max_size()");
+    _LIBCPP_ASSERT_VALID_DEALLOCATION(
+        __n <= __max_size(),
+        "deallocate() called for a size which exceeds max_size(), leading to a memory leak "
+        "(the argument will overflow and result in too few objects being deleted)");
     __res_->deallocate(__p, __n * sizeof(_ValueType), alignof(_ValueType));
   }
 

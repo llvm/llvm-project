@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:  -gpu-lower-to-nvvm="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
+// RUN:  -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
 // RUN:  | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
@@ -93,7 +93,8 @@ module @mymod {
       }
 
       // Step 8. Wait until TMA is done
-      nvgpu.mbarrier.try_wait.parity %9[%c0], %c0, %c10000000 : !barrierType
+      %phase_c0 = arith.constant 0 : i1
+      nvgpu.mbarrier.try_wait.parity %9[%c0], %phase_c0, %c10000000 : !barrierType
 
       // Step 9. Print loaded data in 128b swizzled
       scf.if %10 {        

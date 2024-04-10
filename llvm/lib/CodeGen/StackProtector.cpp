@@ -64,6 +64,90 @@ static cl::opt<bool> EnableSelectionDAGSP("enable-selectiondag-sp",
 static cl::opt<bool> DisableCheckNoReturn("disable-check-noreturn-call",
                                           cl::init(false), cl::Hidden);
 
+/// InsertStackProtectors - Insert code into the prologue and epilogue of the
+/// function.
+///
+///  - The prologue code loads and stores the stack guard onto the stack.
+///  - The epilogue checks the value stored in the prologue against the original
+///    value. It calls __stack_chk_fail if they differ.
+static bool InsertStackProtectors(const TargetMachine *TM, Function *F,
+                                  DomTreeUpdater *DTU, bool &HasPrologue,
+                                  bool &HasIRCheck);
+
+/// CreateFailBB - Create a basic block to jump to when the stack protector
+/// check fails.
+static BasicBlock *CreateFailBB(Function *F, const Triple &Trip);
+
+bool SSPLayoutInfo::shouldEmitSDCheck(const BasicBlock &BB) const {
+  return HasPrologue && !HasIRCheck && isa<ReturnInst>(BB.getTerminator());
+}
+
+void SSPLayoutInfo::copyToMachineFrameInfo(MachineFrameInfo &MFI) const {
+  if (Layout.empty())
+    return;
+
+  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
+    if (MFI.isDeadObjectIndex(I))
+      continue;
+
+    const AllocaInst *AI = MFI.getObjectAllocation(I);
+    if (!AI)
+      continue;
+
+    SSPLayoutMap::const_iterator LI = Layout.find(AI);
+    if (LI == Layout.end())
+      continue;
+
+    MFI.setObjectSSPLayout(I, LI->second);
+  }
+}
+
+SSPLayoutInfo SSPLayoutAnalysis::run(Function &F,
+                                     FunctionAnalysisManager &FAM) {
+
+  SSPLayoutInfo Info;
+  Info.RequireStackProtector =
+      SSPLayoutAnalysis::requiresStackProtector(&F, &Info.Layout);
+  Info.SSPBufferSize = F.getFnAttributeAsParsedInteger(
+      "stack-protector-buffer-size", SSPLayoutInfo::DefaultSSPBufferSize);
+  return Info;
+}
+
+AnalysisKey SSPLayoutAnalysis::Key;
+
+PreservedAnalyses StackProtectorPass::run(Function &F,
+                                          FunctionAnalysisManager &FAM) {
+  auto &Info = FAM.getResult<SSPLayoutAnalysis>(F);
+  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+
+  if (!Info.RequireStackProtector)
+    return PreservedAnalyses::all();
+
+  // TODO(etienneb): Functions with funclets are not correctly supported now.
+  // Do nothing if this is funclet-based personality.
+  if (F.hasPersonalityFn()) {
+    EHPersonality Personality = classifyEHPersonality(F.getPersonalityFn());
+    if (isFuncletEHPersonality(Personality))
+      return PreservedAnalyses::all();
+  }
+
+  ++NumFunProtected;
+  bool Changed = InsertStackProtectors(TM, &F, DT ? &DTU : nullptr,
+                                       Info.HasPrologue, Info.HasIRCheck);
+#ifdef EXPENSIVE_CHECKS
+  assert((!DT || DT->verify(DominatorTree::VerificationLevel::Full)) &&
+         "Failed to maintain validity of domtree!");
+#endif
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<SSPLayoutAnalysis>();
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
+}
+
 char StackProtector::ID = 0;
 
 StackProtector::StackProtector() : FunctionPass(ID) {
@@ -90,14 +174,12 @@ bool StackProtector::runOnFunction(Function &Fn) {
   if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
     DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
   TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-  Trip = TM->getTargetTriple();
-  TLI = TM->getSubtargetImpl(Fn)->getTargetLowering();
-  HasPrologue = false;
-  HasIRCheck = false;
+  LayoutInfo.HasPrologue = false;
+  LayoutInfo.HasIRCheck = false;
 
-  SSPBufferSize = Fn.getFnAttributeAsParsedInteger(
-      "stack-protector-buffer-size", DefaultSSPBufferSize);
-  if (!requiresStackProtector(F, &Layout))
+  LayoutInfo.SSPBufferSize = Fn.getFnAttributeAsParsedInteger(
+      "stack-protector-buffer-size", SSPLayoutInfo::DefaultSSPBufferSize);
+  if (!requiresStackProtector(F, &LayoutInfo.Layout))
     return false;
 
   // TODO(etienneb): Functions with funclets are not correctly supported now.
@@ -109,7 +191,9 @@ bool StackProtector::runOnFunction(Function &Fn) {
   }
 
   ++NumFunProtected;
-  bool Changed = InsertStackProtectors();
+  bool Changed =
+      InsertStackProtectors(TM, F, DTU ? &*DTU : nullptr,
+                            LayoutInfo.HasPrologue, LayoutInfo.HasIRCheck);
 #ifdef EXPENSIVE_CHECKS
   assert((!DTU ||
           DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full)) &&
@@ -284,7 +368,8 @@ static const CallInst *findStackProtectorIntrinsic(Function &F) {
 /// functions with aggregates that contain any buffer regardless of type and
 /// size, and functions that contain stack-based variables that have had their
 /// address taken.
-bool StackProtector::requiresStackProtector(Function *F, SSPLayoutMap *Layout) {
+bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
+                                               SSPLayoutMap *Layout) {
   Module *M = F->getParent();
   bool Strong = false;
   bool NeedsProtector = false;
@@ -295,7 +380,7 @@ bool StackProtector::requiresStackProtector(Function *F, SSPLayoutMap *Layout) {
   SmallPtrSet<const PHINode *, 16> VisitedPHIs;
 
   unsigned SSPBufferSize = F->getFnAttributeAsParsedInteger(
-      "stack-protector-buffer-size", DefaultSSPBufferSize);
+      "stack-protector-buffer-size", SSPLayoutInfo::DefaultSSPBufferSize);
 
   if (F->hasFnAttribute(Attribute::SafeStack))
     return false;
@@ -460,13 +545,12 @@ static bool CreatePrologue(Function *F, Module *M, Instruction *CheckLoc,
   return SupportsSelectionDAGSP;
 }
 
-/// InsertStackProtectors - Insert code into the prologue and epilogue of the
-/// function.
-///
-///  - The prologue code loads and stores the stack guard onto the stack.
-///  - The epilogue checks the value stored in the prologue against the original
-///    value. It calls __stack_chk_fail if they differ.
-bool StackProtector::InsertStackProtectors() {
+bool InsertStackProtectors(const TargetMachine *TM, Function *F,
+                           DomTreeUpdater *DTU, bool &HasPrologue,
+                           bool &HasIRCheck) {
+  auto *M = F->getParent();
+  auto *TLI = TM->getSubtargetImpl(*F)->getTargetLowering();
+
   // If the target wants to XOR the frame pointer into the guard value, it's
   // impossible to emit the check in IR, so the target *must* support stack
   // protection in SDAG.
@@ -574,7 +658,7 @@ bool StackProtector::InsertStackProtectors() {
       // merge pass will merge together all of the various BB into one including
       // fail BB generated by the stack protector pseudo instruction.
       if (!FailBB)
-        FailBB = CreateFailBB();
+        FailBB = CreateFailBB(F, TM->getTargetTriple());
 
       IRBuilder<> B(CheckLoc);
       Value *Guard = getStackGuard(TLI, M, B);
@@ -589,8 +673,7 @@ bool StackProtector::InsertStackProtectors() {
                                                  SuccessProb.getNumerator());
 
       SplitBlockAndInsertIfThen(Cmp, CheckLoc,
-                                /*Unreachable=*/false, Weights,
-                                DTU ? &*DTU : nullptr,
+                                /*Unreachable=*/false, Weights, DTU,
                                 /*LI=*/nullptr, /*ThenBlock=*/FailBB);
 
       auto *BI = cast<BranchInst>(Cmp->getParent()->getTerminator());
@@ -608,9 +691,8 @@ bool StackProtector::InsertStackProtectors() {
   return HasPrologue;
 }
 
-/// CreateFailBB - Create a basic block to jump to when the stack protector
-/// check fails.
-BasicBlock *StackProtector::CreateFailBB() {
+BasicBlock *CreateFailBB(Function *F, const Triple &Trip) {
+  auto *M = F->getParent();
   LLVMContext &Context = F->getContext();
   BasicBlock *FailBB = BasicBlock::Create(Context, "CallStackCheckFailBlk", F);
   IRBuilder<> B(FailBB);
@@ -632,28 +714,4 @@ BasicBlock *StackProtector::CreateFailBB() {
   B.CreateCall(StackChkFail, Args);
   B.CreateUnreachable();
   return FailBB;
-}
-
-bool StackProtector::shouldEmitSDCheck(const BasicBlock &BB) const {
-  return HasPrologue && !HasIRCheck && isa<ReturnInst>(BB.getTerminator());
-}
-
-void StackProtector::copyToMachineFrameInfo(MachineFrameInfo &MFI) const {
-  if (Layout.empty())
-    return;
-
-  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
-    if (MFI.isDeadObjectIndex(I))
-      continue;
-
-    const AllocaInst *AI = MFI.getObjectAllocation(I);
-    if (!AI)
-      continue;
-
-    SSPLayoutMap::const_iterator LI = Layout.find(AI);
-    if (LI == Layout.end())
-      continue;
-
-    MFI.setObjectSSPLayout(I, LI->second);
-  }
 }

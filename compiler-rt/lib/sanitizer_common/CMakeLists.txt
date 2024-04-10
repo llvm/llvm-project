@@ -151,7 +151,6 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_flags.h
   sanitizer_flags.inc
   sanitizer_flat_map.h
-  sanitizer_freebsd.h
   sanitizer_fuchsia.h
   sanitizer_getauxval.h
   sanitizer_hash.h
@@ -219,6 +218,8 @@ include_directories(..)
 set(SANITIZER_COMMON_DEFINITIONS
   HAVE_RPC_XDR_H=${HAVE_RPC_XDR_H})
 
+# note: L not I, this is nodefaultlibs for msvc
+append_list_if(MSVC /Zl SANITIZER_COMMON_CFLAGS)
 set(SANITIZER_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
 # Too many existing bugs, needs cleanup.

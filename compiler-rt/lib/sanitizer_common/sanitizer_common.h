@@ -32,6 +32,7 @@ struct AddressInfo;
 struct BufferedStackTrace;
 struct SignalContext;
 struct StackTrace;
+struct SymbolizedStack;
 
 // Constants.
 const uptr kWordSize = SANITIZER_WORDSIZE / 8;
@@ -93,7 +94,7 @@ void *MmapOrDie(uptr size, const char *mem_type, bool raw_report = false);
 inline void *MmapOrDieQuietly(uptr size, const char *mem_type) {
   return MmapOrDie(size, mem_type, /*raw_report*/ true);
 }
-void UnmapOrDie(void *addr, uptr size);
+void UnmapOrDie(void *addr, uptr size, bool raw_report = false);
 // Behaves just like MmapOrDie, but tolerates out of memory condition, in that
 // case returns nullptr.
 void *MmapOrDieOnFatalError(uptr size, const char *mem_type);
@@ -393,6 +394,8 @@ void ReportErrorSummary(const char *error_type, const AddressInfo &info,
 // Same as above, but obtains AddressInfo by symbolizing top stack trace frame.
 void ReportErrorSummary(const char *error_type, const StackTrace *trace,
                         const char *alt_tool_name = nullptr);
+// Skips frames which we consider internal and not usefull to the users.
+const SymbolizedStack *SkipInternalFrames(const SymbolizedStack *frames);
 
 void ReportMmapWriteExec(int prot, int mflags);
 
@@ -507,7 +510,7 @@ inline int ToLower(int c) {
 // A low-level vector based on mmap. May incur a significant memory overhead for
 // small vectors.
 // WARNING: The current implementation supports only POD types.
-template<typename T>
+template <typename T, bool raw_report = false>
 class InternalMmapVectorNoCtor {
  public:
   using value_type = T;
@@ -517,7 +520,7 @@ class InternalMmapVectorNoCtor {
     data_ = 0;
     reserve(initial_capacity);
   }
-  void Destroy() { UnmapOrDie(data_, capacity_bytes_); }
+  void Destroy() { UnmapOrDie(data_, capacity_bytes_, raw_report); }
   T &operator[](uptr i) {
     CHECK_LT(i, size_);
     return data_[i];
@@ -593,9 +596,10 @@ class InternalMmapVectorNoCtor {
     CHECK_LE(size_, new_capacity);
     uptr new_capacity_bytes =
         RoundUpTo(new_capacity * sizeof(T), GetPageSizeCached());
-    T *new_data = (T *)MmapOrDie(new_capacity_bytes, "InternalMmapVector");
+    T *new_data =
+        (T *)MmapOrDie(new_capacity_bytes, "InternalMmapVector", raw_report);
     internal_memcpy(new_data, data_, size_ * sizeof(T));
-    UnmapOrDie(data_, capacity_bytes_);
+    UnmapOrDie(data_, capacity_bytes_, raw_report);
     data_ = new_data;
     capacity_bytes_ = new_capacity_bytes;
   }
@@ -1094,7 +1098,7 @@ inline u32 GetNumberOfCPUsCached() {
 
 }  // namespace __sanitizer
 
-inline void *operator new(__sanitizer::operator_new_size_type size,
+inline void *operator new(__sanitizer::usize size,
                           __sanitizer::LowLevelAllocator &alloc) {
   return alloc.Allocate(size);
 }

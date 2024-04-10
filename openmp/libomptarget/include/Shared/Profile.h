@@ -32,7 +32,7 @@ class Profiler {
     Int32Envar ProfileGranularity =
         Int32Envar("LIBOMPTARGET_PROFILE_GRANULARITY", 500);
 
-    llvm::timeTraceProfilerInitialize(ProfileGranularity /* us */,
+    llvm::timeTraceProfilerInitialize(ProfileGranularity /*us=*/,
                                       "libomptarget");
   }
 

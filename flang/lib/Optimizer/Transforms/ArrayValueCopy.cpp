@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/Builder/Array.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Factory.h"
@@ -574,6 +573,8 @@ static bool conflictOnLoad(llvm::ArrayRef<mlir::Operation *> reach,
   for (auto *op : reach)
     if (auto ld = mlir::dyn_cast<ArrayLoadOp>(op)) {
       mlir::Type ldTy = ld.getMemref().getType();
+      auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
+                                              ld.getContext());
       if (ld.getMemref() == addr) {
         if (mutuallyExclusiveSliceRange(ld, st))
           continue;
@@ -589,14 +590,17 @@ static bool conflictOnLoad(llvm::ArrayRef<mlir::Operation *> reach,
         if (optimize && !hasPointerType(ldTy) &&
             !valueMayHaveFirAttributes(
                 ld.getMemref(),
-                {getTargetAttrName(), GlobalOp::getTargetAttrNameStr()}))
+                {getTargetAttrName(),
+                 fir::GlobalOp::getTargetAttrName(globalOpName).strref()}))
           continue;
 
         return true;
       } else if (hasPointerType(ldTy)) {
         if (optimize && !storeHasPointerType &&
             !valueMayHaveFirAttributes(
-                addr, {getTargetAttrName(), GlobalOp::getTargetAttrNameStr()}))
+                addr,
+                {getTargetAttrName(),
+                 fir::GlobalOp::getTargetAttrName(globalOpName).strref()}))
           continue;
 
         return true;
@@ -822,6 +826,16 @@ static mlir::Type getEleTy(mlir::Type ty) {
   return ReferenceType::get(eleTy);
 }
 
+// This is an unsafe way to deduce this (won't be true in internal
+// procedure or inside select-rank for assumed-size). Only here to satisfy
+// legacy code until removed.
+static bool isAssumedSize(llvm::SmallVectorImpl<mlir::Value> &extents) {
+  if (extents.empty())
+    return false;
+  auto cstLen = fir::getIntIfConstant(extents.back());
+  return cstLen.has_value() && *cstLen == -1;
+}
+
 // Extract extents from the ShapeOp/ShapeShiftOp into the result vector.
 static bool getAdjustedExtents(mlir::Location loc,
                                mlir::PatternRewriter &rewriter,
@@ -840,7 +854,7 @@ static bool getAdjustedExtents(mlir::Location loc,
     emitFatalError(loc, "not a fir.shape/fir.shape_shift op");
   }
   auto idxTy = rewriter.getIndexType();
-  if (factory::isAssumedSize(result)) {
+  if (isAssumedSize(result)) {
     // Use slice information to compute the extent of the column.
     auto one = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 1);
     mlir::Value size = one;

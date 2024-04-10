@@ -134,9 +134,9 @@ bool CppModuleConfiguration::hasValidConfig() {
 CppModuleConfiguration::CppModuleConfiguration(
     const FileSpecList &support_files, const llvm::Triple &triple) {
   // Analyze all files we were given to build the configuration.
-  bool error = !llvm::all_of(support_files,
-                             std::bind(&CppModuleConfiguration::analyzeFile,
-                                       this, std::placeholders::_1, triple));
+  bool error = !llvm::all_of(support_files, [&](auto &file) {
+    return CppModuleConfiguration::analyzeFile(file, triple);
+  });
   // If we have a valid configuration at this point, set the
   // include directories and module list that should be used.
   if (!error && hasValidConfig()) {

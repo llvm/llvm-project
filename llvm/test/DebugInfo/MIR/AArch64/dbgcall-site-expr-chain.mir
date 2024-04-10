@@ -20,7 +20,7 @@
 
   define dso_local i64 @foo() local_unnamed_addr !dbg !12 {
   entry:
-    %0 = load i64, i64* @global, align 8, !dbg !17
+    %0 = load i64, ptr @global, align 8, !dbg !17
     call void @llvm.dbg.value(metadata i64 %0, metadata !16, metadata !DIExpression()), !dbg !17
     %add = add nsw i64 %0, 123, !dbg !17
     %sub = add nsw i64 %0, -456, !dbg !17

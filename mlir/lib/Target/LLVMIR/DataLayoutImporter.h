@@ -97,7 +97,8 @@ private:
                                             StringRef token);
 
   /// Adds an alloca address space entry if there is none yet.
-  LogicalResult tryToEmplaceAllocaAddrSpaceEntry(StringRef token);
+  LogicalResult tryToEmplaceAddrSpaceEntry(StringRef token,
+                                           llvm::StringLiteral spaceKey);
 
   /// Adds a stack alignment entry if there is none yet.
   LogicalResult tryToEmplaceStackAlignmentEntry(StringRef token);

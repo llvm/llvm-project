@@ -98,6 +98,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
   case 'C':
     if (startswith(Magic, "CCOB"))
       return file_magic::offload_bundle_compressed;
+    if (startswith(Magic, "CPCH"))
+      return file_magic::clang_ast;
     break;
   case '!':
     if (startswith(Magic, "!<arch>\n") || startswith(Magic, "!<thin>\n"))

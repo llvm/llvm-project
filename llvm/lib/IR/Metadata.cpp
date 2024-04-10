@@ -148,30 +148,59 @@ void MetadataAsValue::untrack() {
     MetadataTracking::untrack(MD);
 }
 
-DPValue *DebugValueUser::getUser() { return static_cast<DPValue *>(this); }
-const DPValue *DebugValueUser::getUser() const {
-  return static_cast<const DPValue *>(this);
+DbgVariableRecord *DebugValueUser::getUser() {
+  return static_cast<DbgVariableRecord *>(this);
 }
-void DebugValueUser::handleChangedValue(Metadata *NewMD) {
-  getUser()->handleChangedLocation(NewMD);
-}
-
-void DebugValueUser::trackDebugValue() {
-  if (DebugValue)
-    MetadataTracking::track(&DebugValue, *DebugValue, *this);
+const DbgVariableRecord *DebugValueUser::getUser() const {
+  return static_cast<const DbgVariableRecord *>(this);
 }
 
-void DebugValueUser::untrackDebugValue() {
-  if (DebugValue)
-    MetadataTracking::untrack(DebugValue);
-}
-
-void DebugValueUser::retrackDebugValue(DebugValueUser &X) {
-  assert(DebugValue == X.DebugValue && "Expected values to match");
-  if (X.DebugValue) {
-    MetadataTracking::retrack(X.DebugValue, DebugValue);
-    X.DebugValue = nullptr;
+void DebugValueUser::handleChangedValue(void *Old, Metadata *New) {
+  // NOTE: We could inform the "owner" that a value has changed through
+  // getOwner, if needed.
+  auto OldMD = static_cast<Metadata **>(Old);
+  ptrdiff_t Idx = std::distance(&*DebugValues.begin(), OldMD);
+  // If replacing a ValueAsMetadata with a nullptr, replace it with a
+  // PoisonValue instead.
+  if (OldMD && isa<ValueAsMetadata>(*OldMD) && !New) {
+    auto *OldVAM = cast<ValueAsMetadata>(*OldMD);
+    New = ValueAsMetadata::get(PoisonValue::get(OldVAM->getValue()->getType()));
   }
+  resetDebugValue(Idx, New);
+}
+
+void DebugValueUser::trackDebugValue(size_t Idx) {
+  assert(Idx < 3 && "Invalid debug value index.");
+  Metadata *&MD = DebugValues[Idx];
+  if (MD)
+    MetadataTracking::track(&MD, *MD, *this);
+}
+
+void DebugValueUser::trackDebugValues() {
+  for (Metadata *&MD : DebugValues)
+    if (MD)
+      MetadataTracking::track(&MD, *MD, *this);
+}
+
+void DebugValueUser::untrackDebugValue(size_t Idx) {
+  assert(Idx < 3 && "Invalid debug value index.");
+  Metadata *&MD = DebugValues[Idx];
+  if (MD)
+    MetadataTracking::untrack(MD);
+}
+
+void DebugValueUser::untrackDebugValues() {
+  for (Metadata *&MD : DebugValues)
+    if (MD)
+      MetadataTracking::untrack(MD);
+}
+
+void DebugValueUser::retrackDebugValues(DebugValueUser &X) {
+  assert(DebugValueUser::operator==(X) && "Expected values to match");
+  for (const auto &[MD, XMD] : zip(DebugValues, X.DebugValues))
+    if (XMD)
+      MetadataTracking::retrack(XMD, MD);
+  X.DebugValues.fill(nullptr);
 }
 
 bool MetadataTracking::track(void *Ref, Metadata &MD, OwnerTy Owner) {
@@ -239,28 +268,29 @@ SmallVector<Metadata *> ReplaceableMetadataImpl::getAllArgListUsers() {
   return MDUsers;
 }
 
-SmallVector<DPValue *> ReplaceableMetadataImpl::getAllDPValueUsers() {
-  SmallVector<std::pair<OwnerTy, uint64_t> *> DPVUsersWithID;
+SmallVector<DbgVariableRecord *>
+ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
+  SmallVector<std::pair<OwnerTy, uint64_t> *> DVRUsersWithID;
   for (auto Pair : UseMap) {
     OwnerTy Owner = Pair.second.first;
     if (Owner.isNull())
       continue;
     if (!Owner.is<DebugValueUser *>())
       continue;
-    DPVUsersWithID.push_back(&UseMap[Pair.first]);
+    DVRUsersWithID.push_back(&UseMap[Pair.first]);
   }
-  // Order DPValue users in reverse-creation order. Normal dbg.value users
-  // of MetadataAsValues are ordered by their UseList, i.e. reverse order of
-  // when they were added: we need to replicate that here. The structure of
+  // Order DbgVariableRecord users in reverse-creation order. Normal dbg.value
+  // users of MetadataAsValues are ordered by their UseList, i.e. reverse order
+  // of when they were added: we need to replicate that here. The structure of
   // debug-info output depends on the ordering of intrinsics, thus we need
   // to keep them consistent for comparisons sake.
-  llvm::sort(DPVUsersWithID, [](auto UserA, auto UserB) {
+  llvm::sort(DVRUsersWithID, [](auto UserA, auto UserB) {
     return UserA->second > UserB->second;
   });
-  SmallVector<DPValue *> DPVUsers;
-  for (auto UserWithID : DPVUsersWithID)
-    DPVUsers.push_back(UserWithID->first.get<DebugValueUser *>()->getUser());
-  return DPVUsers;
+  SmallVector<DbgVariableRecord *> DVRUsers;
+  for (auto UserWithID : DVRUsersWithID)
+    DVRUsers.push_back(UserWithID->first.get<DebugValueUser *>()->getUser());
+  return DVRUsers;
 }
 
 void ReplaceableMetadataImpl::addRef(void *Ref, OwnerTy Owner) {
@@ -362,7 +392,7 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
     }
 
     if (Owner.is<DebugValueUser *>()) {
-      Owner.get<DebugValueUser *>()->getUser()->handleChangedLocation(MD);
+      Owner.get<DebugValueUser *>()->handleChangedValue(Pair.first, MD);
       continue;
     }
 
@@ -418,16 +448,22 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
 // commentry in DIArgList::handleChangedOperand for details. Hidden behind
 // conditional compilation to avoid a compile time regression.
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getOrCreate(Metadata &MD) {
-  if (auto *N = dyn_cast<MDNode>(&MD))
-    return N->isResolved() ? nullptr : N->Context.getOrCreateReplaceableUses();
+  if (auto *N = dyn_cast<MDNode>(&MD)) {
+    return !N->isResolved() || N->isAlwaysReplaceable()
+               ? N->Context.getOrCreateReplaceableUses()
+               : nullptr;
+  }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
   return dyn_cast<ValueAsMetadata>(&MD);
 }
 
 ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
-  if (auto *N = dyn_cast<MDNode>(&MD))
-    return N->isResolved() ? nullptr : N->Context.getReplaceableUses();
+  if (auto *N = dyn_cast<MDNode>(&MD)) {
+    return !N->isResolved() || N->isAlwaysReplaceable()
+               ? N->Context.getReplaceableUses()
+               : nullptr;
+  }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
   return dyn_cast<ValueAsMetadata>(&MD);
@@ -435,7 +471,7 @@ ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
 
 bool ReplaceableMetadataImpl::isReplaceable(const Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD))
-    return !N->isResolved();
+    return !N->isResolved() || N->isAlwaysReplaceable();
   return isa<ValueAsMetadata>(&MD) || isa<DIArgList>(&MD);
 }
 
@@ -503,7 +539,7 @@ void ValueAsMetadata::handleRAUW(Value *From, Value *To) {
   assert(From && "Expected valid value");
   assert(To && "Expected valid value");
   assert(From != To && "Expected changed value");
-  assert(From->getType() == To->getType() && "Unexpected type change");
+  assert(&From->getContext() == &To->getContext() && "Expected same context");
 
   LLVMContext &Context = From->getType()->getContext();
   auto &Store = Context.pImpl->ValuesAsMetadata;
@@ -1506,6 +1542,21 @@ bool Value::eraseMetadata(unsigned KindID) {
   return Changed;
 }
 
+void Value::eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred) {
+  if (!HasMetadata)
+    return;
+
+  auto &MetadataStore = getContext().pImpl->ValueMetadata;
+  MDAttachments &Info = MetadataStore.find(this)->second;
+  assert(!Info.empty() && "bit out of sync with hash table");
+  Info.remove_if([Pred](const MDAttachments::Attachment &I) {
+    return Pred(I.MDKind, I.Node);
+  });
+
+  if (Info.empty())
+    clearMetadata();
+}
+
 void Value::clearMetadata() {
   if (!HasMetadata)
     return;
@@ -1529,6 +1580,13 @@ MDNode *Instruction::getMetadataImpl(StringRef Kind) const {
   return Value::getMetadata(KindID);
 }
 
+void Instruction::eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred) {
+  if (DbgLoc && Pred(LLVMContext::MD_dbg, DbgLoc.getAsMDNode()))
+    DbgLoc = {};
+
+  Value::eraseMetadataIf(Pred);
+}
+
 void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   if (!Value::hasMetadata())
     return; // Nothing to remove!
@@ -1539,17 +1597,9 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   // A DIAssignID attachment is debug metadata, don't drop it.
   KnownSet.insert(LLVMContext::MD_DIAssignID);
 
-  auto &MetadataStore = getContext().pImpl->ValueMetadata;
-  MDAttachments &Info = MetadataStore.find(this)->second;
-  assert(!Info.empty() && "bit out of sync with hash table");
-  Info.remove_if([&KnownSet](const MDAttachments::Attachment &I) {
-    return !KnownSet.count(I.MDKind);
+  Value::eraseMetadataIf([&KnownSet](unsigned MDKind, MDNode *Node) {
+    return !KnownSet.count(MDKind);
   });
-
-  if (Info.empty()) {
-    // Drop our entry at the store.
-    clearMetadata();
-  }
 }
 
 void Instruction::updateDIAssignIDMapping(DIAssignID *ID) {

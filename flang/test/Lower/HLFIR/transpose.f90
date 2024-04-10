@@ -1,5 +1,5 @@
 ! Test lowering of TRANSPOSE intrinsic to HLFIR
-! RUN: bbc -emit-hlfir --polymorphic-type -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 subroutine transpose1(m, res)
   integer :: m(1,2), res(2, 1)

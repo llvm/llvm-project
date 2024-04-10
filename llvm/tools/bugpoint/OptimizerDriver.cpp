@@ -141,7 +141,7 @@ bool BugDriver::runPasses(Module &Program,
            << ": Error making unique filename: " << EC.message() << "\n";
     return true;
   }
-  OutputFilename = std::string(UniqueFilename.str());
+  OutputFilename = std::string(UniqueFilename);
 
   // set up the input file name
   Expected<sys::fs::TempFile> Temp =

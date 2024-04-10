@@ -2,7 +2,7 @@
 // everything on the same thread.
 // RUN: mlir-opt %s -test-vector-warp-distribute=rewrite-warp-ops-to-scf-if -canonicalize | \
 // RUN: mlir-opt -convert-vector-to-scf -convert-scf-to-cf -convert-cf-to-llvm -convert-vector-to-llvm -convert-arith-to-llvm \
-// RUN:  -gpu-lower-to-nvvm | \
+// RUN:  -gpu-lower-to-nvvm-pipeline | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_cuda_runtime \
 // RUN:   -shared-libs=%mlir_c_runner_utils \
@@ -13,7 +13,7 @@
 // RUN: mlir-opt %s  -test-vector-warp-distribute="hoist-uniform distribute-transfer-write" \
 // RUN:   -test-vector-warp-distribute=rewrite-warp-ops-to-scf-if -canonicalize | \
 // RUN: mlir-opt -convert-vector-to-scf -convert-scf-to-cf -convert-cf-to-llvm -convert-vector-to-llvm -convert-arith-to-llvm \
-// RUN:  -gpu-lower-to-nvvm | \
+// RUN:  -gpu-lower-to-nvvm-pipeline | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_cuda_runtime \
 // RUN:   -shared-libs=%mlir_c_runner_utils \
@@ -23,7 +23,7 @@
 // RUN: mlir-opt %s  -test-vector-warp-distribute="hoist-uniform distribute-transfer-write propagate-distribution" \
 // RUN:   -test-vector-warp-distribute=rewrite-warp-ops-to-scf-if -canonicalize | \
 // RUN: mlir-opt -convert-vector-to-scf -convert-scf-to-cf -convert-cf-to-llvm -convert-vector-to-llvm -convert-arith-to-llvm \
-// RUN:  -gpu-lower-to-nvvm | \
+// RUN:  -gpu-lower-to-nvvm-pipeline | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_cuda_runtime \
 // RUN:   -shared-libs=%mlir_c_runner_utils \

@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_TYPEMETADATAUTILS_H
 
 #include <cstdint>
+#include <utility>
 
 namespace llvm {
 
@@ -24,6 +25,7 @@ class CallInst;
 class Constant;
 class Function;
 class DominatorTree;
+class GlobalVariable;
 class Instruction;
 class Module;
 
@@ -76,6 +78,13 @@ void findDevirtualizableCallsForTypeCheckedLoad(
 /// For such (sub-)expressions, getPointerAtOffset returns the @target pointer.
 Constant *getPointerAtOffset(Constant *I, uint64_t Offset, Module &M,
                              Constant *TopLevelGlobal = nullptr);
+
+/// Given a vtable and a specified offset, returns the function and the trivial
+/// pointer at the specified offset in pair iff the pointer at the specified
+/// offset is a function or an alias to a function. Returns a pair of nullptr
+/// otherwise.
+std::pair<Function *, Constant *>
+getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset, Module &M);
 
 /// Finds the same "relative pointer" pattern as described above, where the
 /// target is `F`, and replaces the entire pattern with a constant zero.

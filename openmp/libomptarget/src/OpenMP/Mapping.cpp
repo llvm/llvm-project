@@ -16,28 +16,33 @@
 #include "device.h"
 
 /// Dump a table of all the host-target pointer pairs on failure
-void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device) {
+void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device,
+                               bool toStdOut) {
   MappingInfoTy::HDTTMapAccessorTy HDTTMap =
       Device.getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
-  if (HDTTMap->empty())
+  if (HDTTMap->empty()) {
+    DUMP_INFO(toStdOut, OMP_INFOTYPE_ALL, Device.DeviceID,
+              "OpenMP Host-Device pointer mappings table empty\n");
     return;
+  }
 
   SourceInfo Kernel(Loc);
-  INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
-       "OpenMP Host-Device pointer mappings after block at %s:%d:%d:\n",
-       Kernel.getFilename(), Kernel.getLine(), Kernel.getColumn());
-  INFO(OMP_INFOTYPE_ALL, Device.DeviceID, "%-18s %-18s %s %s %s %s\n",
-       "Host Ptr", "Target Ptr", "Size (B)", "DynRefCount", "HoldRefCount",
-       "Declaration");
+  DUMP_INFO(toStdOut, OMP_INFOTYPE_ALL, Device.DeviceID,
+            "OpenMP Host-Device pointer mappings after block at %s:%d:%d:\n",
+            Kernel.getFilename(), Kernel.getLine(), Kernel.getColumn());
+  DUMP_INFO(toStdOut, OMP_INFOTYPE_ALL, Device.DeviceID,
+            "%-18s %-18s %s %s %s %s\n", "Host Ptr", "Target Ptr", "Size (B)",
+            "DynRefCount", "HoldRefCount", "Declaration");
   for (const auto &It : *HDTTMap) {
     HostDataToTargetTy &HDTT = *It.HDTT;
     SourceInfo Info(HDTT.HstPtrName);
-    INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
-         DPxMOD " " DPxMOD " %-8" PRIuPTR " %-11s %-12s %s at %s:%d:%d\n",
-         DPxPTR(HDTT.HstPtrBegin), DPxPTR(HDTT.TgtPtrBegin),
-         HDTT.HstPtrEnd - HDTT.HstPtrBegin, HDTT.dynRefCountToStr().c_str(),
-         HDTT.holdRefCountToStr().c_str(), Info.getName(), Info.getFilename(),
-         Info.getLine(), Info.getColumn());
+    DUMP_INFO(toStdOut, OMP_INFOTYPE_ALL, Device.DeviceID,
+              DPxMOD " " DPxMOD " %-8" PRIuPTR " %-11s %-12s %s at %s:%d:%d\n",
+              DPxPTR(HDTT.HstPtrBegin), DPxPTR(HDTT.TgtPtrBegin),
+              HDTT.HstPtrEnd - HDTT.HstPtrBegin,
+              HDTT.dynRefCountToStr().c_str(), HDTT.holdRefCountToStr().c_str(),
+              Info.getName(), Info.getFilename(), Info.getLine(),
+              Info.getColumn());
   }
 }
 
@@ -252,8 +257,10 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       MESSAGE("device mapping required by 'present' map type modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
               DPxPTR(HstPtrBegin), Size);
-  } else if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY &&
-             !HasCloseModifier) {
+  } else if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+              !HasCloseModifier) ||
+             (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
+
     // If unified shared memory is active, implicitly mapped variables that are
     // not privatized use host address. Any explicitly mapped variables also use
     // host address where correctness is not impeded. In all other cases maps
@@ -261,6 +268,10 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     // In addition to the mapping rules above, the close map modifier forces the
     // mapping of the variable to the device.
     if (Size) {
+      INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
+           "Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
+           "memory\n",
+           DPxPTR((uintptr_t)HstPtrBegin), Size);
       DP("Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
          "memory\n",
          DPxPTR((uintptr_t)HstPtrBegin), Size);
@@ -303,9 +314,9 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
 
     // Notify the plugin about the new mapping.
     if (Device.notifyDataMapped(HstPtrBegin, Size))
-      return {{false /* IsNewEntry */, false /* IsHostPointer */},
-              nullptr /* Entry */,
-              nullptr /* TargetPointer */};
+      return {{false /*IsNewEntry=*/, false /*IsHostPointer=*/},
+              nullptr /*Entry=*/,
+              nullptr /*TargetPointer=*/};
   } else {
     // This entry is not present and we did not create a new entry for it.
     LR.TPR.Flags.IsPresent = false;
@@ -333,9 +344,9 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       LR.TPR.TargetPointer = nullptr;
     } else if (LR.TPR.getEntry()->addEventIfNecessary(Device, AsyncInfo) !=
                OFFLOAD_SUCCESS)
-      return {{false /* IsNewEntry */, false /* IsHostPointer */},
-              nullptr /* Entry */,
-              nullptr /* TargetPointer */};
+      return {{false /*IsNewEntry=*/, false /*IsHostPointer=*/},
+              nullptr /*Entry=*/,
+              nullptr /*TargetPointer=*/};
   } else {
     // If not a host pointer and no present modifier, we need to wait for the
     // event if it exists.
@@ -349,9 +360,9 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
           // If it fails to wait for the event, we need to return nullptr in
           // case of any data race.
           REPORT("Failed to wait for event " DPxMOD ".\n", DPxPTR(Event));
-          return {{false /* IsNewEntry */, false /* IsHostPointer */},
-                  nullptr /* Entry */,
-                  nullptr /* TargetPointer */};
+          return {{false /*IsNewEntry=*/, false /*IsHostPointer=*/},
+                  nullptr /*Entry=*/,
+                  nullptr /*TargetPointer=*/};
         }
       }
     }
@@ -415,7 +426,8 @@ TargetPointerResultTy MappingInfoTy::getTgtPtrBegin(
          LR.TPR.getEntry()->dynRefCountToStr().c_str(), DynRefCountAction,
          LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction);
     LR.TPR.TargetPointer = (void *)TP;
-  } else if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+  } else if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY ||
+             PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.
@@ -504,7 +516,8 @@ static void printCopyInfoImpl(int DeviceId, bool H2D, void *SrcPtrBegin,
        "Copying data from %s to %s, %sPtr=" DPxMOD ", %sPtr=" DPxMOD
        ", Size=%" PRId64 ", Name=%s\n",
        H2D ? "host" : "device", H2D ? "device" : "host", H2D ? "Hst" : "Tgt",
-       DPxPTR(SrcPtrBegin), H2D ? "Tgt" : "Hst", DPxPTR(DstPtrBegin), Size,
+       DPxPTR(H2D ? SrcPtrBegin : DstPtrBegin), H2D ? "Tgt" : "Hst",
+       DPxPTR(H2D ? DstPtrBegin : SrcPtrBegin), Size,
        (HT && HT->HstPtrName) ? getNameFromMapping(HT->HstPtrName).c_str()
                               : "unknown");
 }

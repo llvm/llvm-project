@@ -2,7 +2,9 @@
 # RUN: llc -mtriple=riscv64 -run-pass=legalizer %s -o - \
 # RUN:   | FileCheck %s --check-prefix=RV64I
 # RUN: llc -mtriple=riscv64 -mattr=+zbb -run-pass=legalizer %s -o - \
-# RUN:   | FileCheck %s --check-prefix=RV64ZBB
+# RUN:   | FileCheck %s --check-prefix=RV64ZBB_OR_RV64ZBKB
+# RUN: llc -mtriple=riscv64 -mattr=+zbkb -run-pass=legalizer %s -o - \
+# RUN:   | FileCheck %s --check-prefix=RV64ZBB_OR_RV64ZBKB
 
 ---
 name:            bswap_i16
@@ -27,16 +29,16 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[AND]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV64ZBB-LABEL: name: bswap_i16
-    ; RV64ZBB: liveins: $x10
-    ; RV64ZBB-NEXT: {{  $}}
-    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64ZBB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY]], 16
-    ; RV64ZBB-NEXT: [[BSWAP:%[0-9]+]]:_(s64) = G_BSWAP [[ASSERT_ZEXT]]
-    ; RV64ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
-    ; RV64ZBB-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[BSWAP]], [[C]](s64)
-    ; RV64ZBB-NEXT: $x10 = COPY [[LSHR]](s64)
-    ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ; RV64ZBB_OR_RV64ZBKB-LABEL: name: bswap_i16
+    ; RV64ZBB_OR_RV64ZBKB: liveins: $x10
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: {{  $}}
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY]], 16
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[BSWAP:%[0-9]+]]:_(s64) = G_BSWAP [[ASSERT_ZEXT]]
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[BSWAP]], [[C]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: $x10 = COPY [[LSHR]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = G_ASSERT_ZEXT %0, 16
     %2:_(s16) = G_TRUNC %1(s64)
@@ -74,16 +76,16 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[ZEXT]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV64ZBB-LABEL: name: bswap_i32
-    ; RV64ZBB: liveins: $x10
-    ; RV64ZBB-NEXT: {{  $}}
-    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64ZBB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY]], 32
-    ; RV64ZBB-NEXT: [[BSWAP:%[0-9]+]]:_(s64) = G_BSWAP [[ASSERT_ZEXT]]
-    ; RV64ZBB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; RV64ZBB-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[BSWAP]], [[C]](s64)
-    ; RV64ZBB-NEXT: $x10 = COPY [[LSHR]](s64)
-    ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ; RV64ZBB_OR_RV64ZBKB-LABEL: name: bswap_i32
+    ; RV64ZBB_OR_RV64ZBKB: liveins: $x10
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: {{  $}}
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s64) = G_ASSERT_ZEXT [[COPY]], 32
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[BSWAP:%[0-9]+]]:_(s64) = G_BSWAP [[ASSERT_ZEXT]]
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[BSWAP]], [[C]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: $x10 = COPY [[LSHR]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = G_ASSERT_ZEXT %0, 32
     %2:_(s32) = G_TRUNC %1(s64)
@@ -132,13 +134,13 @@ body:             |
     ; RV64I-NEXT: $x10 = COPY [[OR6]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV64ZBB-LABEL: name: bswap_i64
-    ; RV64ZBB: liveins: $x10
-    ; RV64ZBB-NEXT: {{  $}}
-    ; RV64ZBB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64ZBB-NEXT: [[BSWAP:%[0-9]+]]:_(s64) = G_BSWAP [[COPY]]
-    ; RV64ZBB-NEXT: $x10 = COPY [[BSWAP]](s64)
-    ; RV64ZBB-NEXT: PseudoRET implicit $x10
+    ; RV64ZBB_OR_RV64ZBKB-LABEL: name: bswap_i64
+    ; RV64ZBB_OR_RV64ZBKB: liveins: $x10
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: {{  $}}
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: [[BSWAP:%[0-9]+]]:_(s64) = G_BSWAP [[COPY]]
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: $x10 = COPY [[BSWAP]](s64)
+    ; RV64ZBB_OR_RV64ZBKB-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = G_BSWAP %0
     $x10 = COPY %1(s64)

@@ -375,7 +375,6 @@ namespace std {
 }
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
