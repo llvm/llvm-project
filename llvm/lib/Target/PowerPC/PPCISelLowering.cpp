@@ -14563,9 +14563,7 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N, DAGCombinerInfo &DCI) const {
     };
     // ult (add x -0x80000000) -0x100000000 -> ne x (sext:i64 (trunc:i32 x))
     // ult (add x -0x8000) -0x10000 -> ne x (sext:i64 (trunc:i16 x))
-    // ult (add x -0x80) -0x100 -> ne x (sext:i64 (trunc:i8 x))
-    // ult (add x -0x80) -0x100 -> ne x (sext:i32 (trunc:i16 x))
-    // ult (add x -0x80) -0x100 -> ne x (sext:i16 (trunc:i8 x))
+    // ult (add x -0x80) -0x100 -> ne x (sext:i64/i32/i16 (trunc:i8/i16/i8 x))
     if (LHS.getOpcode() == ISD::ADD) {
       const auto *Addend = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
       const auto *RhsC = dyn_cast<ConstantSDNode>(RHS);

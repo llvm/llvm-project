@@ -131,7 +131,7 @@ entry:
   ret i1 %cmp
 }
 
-define zeroext i1 @test8(i32 %a) {
+define zeroext i1 @test8(i32 signext %a) {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsb 4, 3
@@ -146,7 +146,7 @@ entry:
   ret i1 %cmp
 }
 
-define zeroext i1 @test9(i32 %a) {
+define zeroext i1 @test9(i32 signext %a) {
 ; CHECK-LABEL: test9:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsb 4, 3
@@ -161,13 +161,11 @@ entry:
   ret i1 %cmp
 }
 
-define zeroext i1 @test10(i16 %a) {
+define zeroext i1 @test10(i16 signext %a) {
 ; CHECK-LABEL: test10:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    clrlwi 4, 3, 16
-; CHECK-NEXT:    extsb 3, 3
-; CHECK-NEXT:    clrlwi 3, 3, 16
-; CHECK-NEXT:    xor 3, 4, 3
+; CHECK-NEXT:    extsb 4, 3
+; CHECK-NEXT:    xor 3, 3, 4
 ; CHECK-NEXT:    cntlzw 3, 3
 ; CHECK-NEXT:    srwi 3, 3, 5
 ; CHECK-NEXT:    xori 3, 3, 1
