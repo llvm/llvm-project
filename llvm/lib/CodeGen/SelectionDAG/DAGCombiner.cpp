@@ -23429,10 +23429,9 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
   // TODO: Maybe this is useful for non-splat too?
   if (!LegalOperations) {
     if (SDValue Splat = cast<BuildVectorSDNode>(N)->getSplatValue()) {
-      EVT SplatVT = Splat.getValueType();
       // Only change build_vector to a concat_vector if the splat value type is
       // same as the vector element type.
-      if (SplatVT == VT.getVectorElementType()) {
+      if (Splat.getValueType() == VT.getVectorElementType()) {
         Splat = peekThroughBitcasts(Splat);
         EVT SrcVT = Splat.getValueType();
         if (SrcVT.isVector()) {
