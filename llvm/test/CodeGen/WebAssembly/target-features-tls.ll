@@ -8,12 +8,6 @@ target triple = "wasm32-unknown-unknown"
 
 @foo = internal thread_local global i32 0
 
-define i32 @func() {
-  %p = call ptr @llvm.threadlocal.address.p0(ptr @foo)
-  %v = load i32, ptr %p
-  ret i32 %v
-}
-
 ; -bulk-memory
 ; NO-BULK-MEM-LABEL: .custom_section.target_features,"",@
 ; NO-BULK-MEM-NEXT: .int8 2
