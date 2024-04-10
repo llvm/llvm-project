@@ -11099,6 +11099,19 @@ OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
     ParsedClause.setDefaultDetails(
         cast<OpenACCDefaultClause>(OldClause)->getDefaultClauseKind());
     break;
+  case OpenACCClauseKind::If: {
+    Expr *Cond = const_cast<Expr *>(
+        cast<OpenACCIfClause>(OldClause)->getConditionExpr());
+    Sema::ConditionResult Res =
+        TransformCondition(Cond->getExprLoc(), /*Var=*/nullptr, Cond,
+                           Sema::ConditionKind::Boolean);
+
+    if (Res.isInvalid() || !Res.get().second)
+      return nullptr;
+
+    ParsedClause.setConditionDetails(Res.get().second);
+    break;
+  }
   default:
     assert(false && "Unhandled OpenACC clause in TreeTransform");
     return nullptr;
