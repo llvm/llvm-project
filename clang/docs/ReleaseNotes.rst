@@ -520,12 +520,11 @@ Bug Fixes to C++ Support
 - Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
 - Fixed a bug that prevented member function templates of class templates declared with a deduced return type
   from being explicitly specialized for a given implicit instantiation of the class template.
-- Fixed a crash when ``this`` is used in a dependent class scope function template specialization
-  that instantiates to a static member function.
 
 - Fix crash when inheriting from a cv-qualified type. Fixes:
   (`#35603 <https://github.com/llvm/llvm-project/issues/35603>`_)
 - Fix a crash when the using enum declaration uses an anonymous enumeration. Fixes (#GH86790).
+- Handled an edge case in ``getFullyPackExpandedSize`` so that we now avoid a false-positive diagnostic. (#GH84220)
 - Clang now correctly tracks type dependence of by-value captures in lambdas with an explicit
   object parameter.
   Fixes (#GH70604), (#GH79754), (#GH84163), (#GH84425), (#GH86054), (#GH86398), and (#GH86399).
