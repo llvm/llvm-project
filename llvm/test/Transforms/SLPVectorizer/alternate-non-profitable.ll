@@ -33,11 +33,10 @@ define <2 x float> @replace_through_casts(i16 %inp) {
 ; CHECK-LABEL: define <2 x float> @replace_through_casts(
 ; CHECK-SAME: i16 [[INP:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[INP]], -10
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> poison, i16 [[INP]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i16> [[TMP1]], i16 [[ADD]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = uitofp <2 x i16> [[TMP2]] to <2 x float>
-; CHECK-NEXT:    [[TMP4:%.*]] = sitofp <2 x i16> [[TMP2]] to <2 x float>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = uitofp i16 [[INP]] to float
+; CHECK-NEXT:    [[TMP2:%.*]] = sitofp i16 [[ADD]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i64 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP2]], i64 1
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %add = add nsw i16 %inp, -10
@@ -118,11 +117,10 @@ define <2 x i32> @replace_through_int_casts(i16 %inp, <2 x i16> %dead) {
 ; CHECK-LABEL: define <2 x i32> @replace_through_int_casts(
 ; CHECK-SAME: i16 [[INP:%.*]], <2 x i16> [[DEAD:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[INP]], -10
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> poison, i16 [[INP]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i16> [[TMP1]], i16 [[ADD]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i16> [[TMP2]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = sext <2 x i16> [[TMP2]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[INP]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i16 [[ADD]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP2]], i64 1
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %add = add nsw i16 %inp, -10
@@ -136,11 +134,10 @@ define <2 x i32> @replace_through_int_casts(i16 %inp, <2 x i16> %dead) {
 define <2 x i32> @replace_through_int_casts_ele0_only(i16 %inp, <2 x i16> %dead) {
 ; CHECK-LABEL: define <2 x i32> @replace_through_int_casts_ele0_only(
 ; CHECK-SAME: i16 [[INP:%.*]], <2 x i16> [[DEAD:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> poison, i16 [[INP]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i16> [[TMP2]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = sext <2 x i16> [[TMP2]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[INP]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[INP]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i64 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP1]], i64 1
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %2 = sext i16 %inp to i32
@@ -174,11 +171,10 @@ define <2 x i8> @replace_through_binop_preserve_flags(i8 %inp, <2 x i8> %d, <2 x
 ; CHECK-LABEL: define <2 x i8> @replace_through_binop_preserve_flags(
 ; CHECK-SAME: i8 [[INP:%.*]], <2 x i8> [[D:%.*]], <2 x i8> [[ANY:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = xor i8 [[INP]], 5
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> poison, i8 [[INP]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8> [[TMP1]], i8 [[ADD]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i8> [[TMP2]], <i8 123, i8 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <2 x i8> [[TMP2]], <i8 123, i8 1>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i8> [[TMP3]], <2 x i8> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[INP]], 123
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i8 [[ADD]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i8> poison, i8 [[TMP1]], i64 0
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i8> [[TMP3]], i8 [[TMP2]], i64 1
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %add = xor i8 %inp, 5
