@@ -379,8 +379,8 @@ DependencyScanningWorkerFilesystem::getRealPath(const Twine &Path,
   auto &Shard = SharedCache.getShardForFilename(*FilenameForLookup);
   if (const auto *ShardRealPath =
           Shard.findRealPathByFilename(*FilenameForLookup)) {
-    const auto &RealPath =
-        LocalCache.insertRealPathForFilename(*FilenameForLookup, *ShardRealPath);
+    const auto &RealPath = LocalCache.insertRealPathForFilename(
+        *FilenameForLookup, *ShardRealPath);
     return HandleCachedRealPath(RealPath);
   }
 
