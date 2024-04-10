@@ -2410,6 +2410,10 @@ def FuncOp : CIR_Op<"func", [
     above. Though mandatory, the prining of the attribute can be omitted if it is
     empty.
 
+    The `global_ctor` indicates whether a function should execute before `main()`
+    function, as specified by `__attribute__((constructor))`. A execution priority
+    can also be specified `global_ctor(<prio>)`.
+
     Example:
 
     ```mlir
@@ -2449,6 +2453,7 @@ def FuncOp : CIR_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
+                       OptionalAttr<GlobalCtorAttr>:$global_ctor,
                        OptionalAttr<AnyASTFunctionDeclAttr>:$ast);
   let regions = (region AnyRegion:$body);
   let skipDefaultBuilders = 1;

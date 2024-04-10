@@ -1773,7 +1773,6 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   StringAttr nameAttr;
   SmallVector<OpAsmParser::Argument, 8> arguments;
-  SmallVector<DictionaryAttr, 1> argAttrs;
   SmallVector<DictionaryAttr, 1> resultAttrs;
   SmallVector<Type, 8> argTypes;
   SmallVector<Type, 4> resultTypes;
@@ -1831,6 +1830,28 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     if (parser.parseRParen().failed())
       return failure();
     hasAlias = true;
+  }
+
+  if (::mlir::succeeded(parser.parseOptionalKeyword("global_ctor"))) {
+    std::optional<int> prio;
+    if (mlir::succeeded(parser.parseOptionalLParen())) {
+      auto parsedPrio = mlir::FieldParser<std::optional<int>>::parse(parser);
+      if (mlir::failed(parsedPrio)) {
+        return parser.emitError(
+            parser.getCurrentLocation(),
+            "failed to parse GlobalCtorAttr parameter "
+            "'priority' which is to be a `std::optional<int>`");
+        return failure();
+      }
+      prio = parsedPrio.value_or(std::optional<int>());
+
+      // Parse literal ')'
+      if (parser.parseRParen())
+        return failure();
+    }
+    auto globalCtorAttr =
+        mlir::cir::GlobalCtorAttr::get(builder.getContext(), nameAttr, prio);
+    state.addAttribute(getGlobalCtorAttrName(state.name), globalCtorAttr);
   }
 
   Attribute extraAttrs;
@@ -1925,14 +1946,22 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
         p, *this, fnType.getInputs(), fnType.isVarArg(), {});
   function_interface_impl::printFunctionAttributes(
       p, *this,
+      // These are all omitted since they are custom printed already.
       {getSymVisibilityAttrName(), getAliaseeAttrName(),
        getFunctionTypeAttrName(), getLinkageAttrName(), getBuiltinAttrName(),
-       getNoProtoAttrName(), getExtraAttrsAttrName()});
+       getNoProtoAttrName(), getGlobalCtorAttrName(), getExtraAttrsAttrName()});
 
   if (auto aliaseeName = getAliasee()) {
     p << " alias(";
     p.printSymbolName(*aliaseeName);
     p << ")";
+  }
+
+  if (auto globalCtor = getGlobalCtorAttr()) {
+    p << " global_ctor";
+    auto prio = globalCtor.getPriority();
+    if (prio)
+      p << "(" << *prio << ")";
   }
 
   if (!getExtraAttrs().getElements().empty()) {
@@ -2007,6 +2036,7 @@ LogicalResult cir::FuncOp::verify() {
       return emitOpError() << "a function alias '" << *fn
                            << "' must have empty body";
   }
+
   return success();
 }
 

@@ -42,6 +42,14 @@ module {
     %0 = cir.get_global @_ZL8__ioinit : cir.ptr <!ty_22Init22>
     cir.call @_ZN4InitD1Ev(%0) : (!cir.ptr<!ty_22Init22>) -> ()
   }
+
+  cir.func @f31() global_ctor {
+    cir.return
+  }
+
+  cir.func @f32() global_ctor(777) {
+    cir.return
+  }
 }
 
 // CHECK: cir.global external @a = #cir.int<3> : !s32i
@@ -61,3 +69,6 @@ module {
 // CHECK-NEXT:  %1 = cir.const(#cir.int<3> : !s8i) : !s8i
 // CHECK-NEXT:  cir.call @_ZN4InitC1Eb(%0, %1) : (!cir.ptr<!ty_22Init22>, !s8i) -> ()
 // CHECK-NEXT: }
+
+// CHECK: cir.func @f31() global_ctor
+// CHECK: cir.func @f32() global_ctor(777)
