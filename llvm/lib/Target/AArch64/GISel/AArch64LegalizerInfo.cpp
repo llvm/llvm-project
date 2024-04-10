@@ -87,8 +87,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const bool HasCSSC = ST.hasCSSC();
   const bool HasRCPC3 = ST.hasRCPC3();
 
-  getActionDefinitionsBuilder(
-      {G_IMPLICIT_DEF, G_FREEZE, G_CONSTANT_FOLD_BARRIER})
+  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_CONSTANT_FOLD_BARRIER})
       .legalFor({p0, s8, s16, s32, s64})
       .legalFor(PackedVectorAllTypeList)
       .widenScalarToNextPow2(0)
@@ -105,6 +104,18 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
               return std::make_pair(0, LLT::fixed_vector(2, 64));
             return std::make_pair(0, EltTy);
           });
+
+  getActionDefinitionsBuilder(G_FREEZE)
+      .legalFor({p0, s8, s16, s32, s64})
+      .legalFor(PackedVectorAllTypeList)
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s8, s64)
+      .moreElementsToNextPow2(0)
+      .widenVectorEltsToVectorMinSize(0, 64)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64);
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, s16, s32, s64})
