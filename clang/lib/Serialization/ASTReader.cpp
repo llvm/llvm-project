@@ -6626,8 +6626,6 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
              "Invalid data, missing pragma diagnostic states");
       FileID FID = ReadFileID(F, Record, Idx);
       assert(FID.isValid() && "invalid FileID for transition");
-      // FIXME: Remove this once we don't need the side-effects.
-      (void)SourceMgr.getSLocEntryOrNull(FID);
       unsigned Transitions = Record[Idx++];
 
       // Note that we don't need to set up Parent/ParentOffset here, because
@@ -11756,14 +11754,16 @@ void ASTRecordReader::readOMPChildren(OMPChildren *Data) {
 
 OpenACCClause *ASTRecordReader::readOpenACCClause() {
   OpenACCClauseKind ClauseKind = readEnum<OpenACCClauseKind>();
-  // TODO OpenACC: We don't have these used anywhere, but eventually we should
-  // be constructing the Clauses with them, so these attributes can go away at
-  // that point.
-  [[maybe_unused]] SourceLocation BeginLoc = readSourceLocation();
-  [[maybe_unused]] SourceLocation EndLoc = readSourceLocation();
+  SourceLocation BeginLoc = readSourceLocation();
+  SourceLocation EndLoc = readSourceLocation();
 
   switch (ClauseKind) {
-  case OpenACCClauseKind::Default:
+  case OpenACCClauseKind::Default: {
+    SourceLocation LParenLoc = readSourceLocation();
+    OpenACCDefaultClauseKind DCK = readEnum<OpenACCDefaultClauseKind>();
+    return OpenACCDefaultClause::Create(getContext(), DCK, BeginLoc, LParenLoc,
+                                        EndLoc);
+  }
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
