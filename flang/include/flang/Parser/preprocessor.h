@@ -18,7 +18,6 @@
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/token-sequence.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <list>
