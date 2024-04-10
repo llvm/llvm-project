@@ -11754,11 +11754,8 @@ void ASTRecordReader::readOMPChildren(OMPChildren *Data) {
 
 OpenACCClause *ASTRecordReader::readOpenACCClause() {
   OpenACCClauseKind ClauseKind = readEnum<OpenACCClauseKind>();
-  // TODO OpenACC: We don't have these used anywhere, but eventually we should
-  // be constructing the Clauses with them, so these attributes can go away at
-  // that point.
-  [[maybe_unused]] SourceLocation BeginLoc = readSourceLocation();
-  [[maybe_unused]] SourceLocation EndLoc = readSourceLocation();
+  SourceLocation BeginLoc = readSourceLocation();
+  SourceLocation EndLoc = readSourceLocation();
 
   switch (ClauseKind) {
   case OpenACCClauseKind::Default: {
