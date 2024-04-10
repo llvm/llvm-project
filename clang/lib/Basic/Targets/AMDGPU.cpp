@@ -249,6 +249,22 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   for (auto F : {"image-insts", "gws"})
     ReadOnlyFeatures.insert(F);
   HalfArgsAndReturns = true;
+
+  switch (GPUKind) {
+  case llvm::AMDGPU::GK_GFX908:
+    CDNAVersion = 1;
+    break;
+  case llvm::AMDGPU::GK_GFX90A:
+    CDNAVersion = 2;
+    break;
+  case llvm::AMDGPU::GK_GFX940:
+  case llvm::AMDGPU::GK_GFX941:
+  case llvm::AMDGPU::GK_GFX942:
+    CDNAVersion = 3;
+    break;
+  default:
+    CDNAVersion = 0;
+  }
 }
 
 void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
@@ -299,6 +315,8 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     StringRef CanonFamilyName = getArchFamilyNameAMDGCN(GPUKind);
     Builder.defineMacro(Twine("__") + Twine(CanonFamilyName.upper()) +
                         Twine("__"));
+    if (CDNAVersion)
+      Builder.defineMacro("__AMDGCN_CDNA_VERSION__", Twine(CDNAVersion));
     Builder.defineMacro("__amdgcn_processor__",
                         Twine("\"") + Twine(CanonName) + Twine("\""));
     Builder.defineMacro("__amdgcn_target_id__",

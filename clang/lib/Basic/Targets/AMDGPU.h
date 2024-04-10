@@ -51,6 +51,8 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   llvm::StringMap<bool> OffloadArchFeatures;
   std::string TargetID;
 
+  unsigned CDNAVersion = 0;
+
   bool hasFP64() const {
     return getTriple().getArch() == llvm::Triple::amdgcn ||
            !!(GPUFeatures & llvm::AMDGPU::FEATURE_FP64);

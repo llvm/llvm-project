@@ -45,6 +45,8 @@ Predefined Macros
      - Defined with the target ID as a string.
    * - ``__amdgcn_feature_<feature-name>__``
      - Defined for each supported target feature. The value is 1 if the feature is enabled and 0 if it is disabled. Allowed feature names are sramecc and xnack.
+   * - ``__AMDGCN_CDNA_VERSION__``
+     - Defined with the CDNA version as an integer if the processor belongs to the CDNA generation.
    * - ``__AMDGCN_CUMODE__``
      - Defined as 1 if the CU mode is enabled and 0 if the WGP mode is enabled.
    * - ``__AMDGCN_UNSAFE_FP_ATOMICS__``

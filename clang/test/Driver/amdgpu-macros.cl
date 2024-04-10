@@ -103,14 +103,14 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx902 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx902 -DFAMILY=GFX9
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx904 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx904 -DFAMILY=GFX9
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx906 -DFAMILY=GFX9
-// RUN: %clang -E -dM -target amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx908 -DFAMILY=GFX9
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,CDNA,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx908 -DFAMILY=GFX9 -DCDNA=1
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx908 -munsafe-fp-atomics %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,UNSAFEFPATOMIC %s -DWAVEFRONT_SIZE=64 -DCPU=gfx908 -DFAMILY=GFX9
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx909 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx909 -DFAMILY=GFX9
-// RUN: %clang -E -dM -target amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx90a -DFAMILY=GFX9
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,CDNA,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx90a -DFAMILY=GFX9 -DCDNA=2
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx90c %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx90c -DFAMILY=GFX9
-// RUN: %clang -E -dM -target amdgcn -mcpu=gfx940 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx940 -DFAMILY=GFX9
-// RUN: %clang -E -dM -target amdgcn -mcpu=gfx941 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx941 -DFAMILY=GFX9
-// RUN: %clang -E -dM -target amdgcn -mcpu=gfx942 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx942 -DFAMILY=GFX9
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx940 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,CDNA,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx940 -DFAMILY=GFX9 -DCDNA=3
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx941 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,CDNA,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx941 -DFAMILY=GFX9 -DCDNA=3
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx942 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,CDNA,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx942 -DFAMILY=GFX9 -DCDNA=3
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1010 -DFAMILY=GFX10
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1011 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1011 -DFAMILY=GFX10
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1012 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1012 -DFAMILY=GFX10
@@ -150,6 +150,7 @@
 // ARCH-GCN-DAG: #define __[[CPU]]__ 1
 // ARCH-GCN-DAG: #define __[[FAMILY]]__ 1
 // ARCH-GCN-DAG: #define __amdgcn_processor__ "[[CPU]]"
+// CDNA-DAG: #define __AMDGCN_CDNA_VERSION__ [[CDNA]]
 // ARCH-GCN-DAG: #define __AMDGCN_WAVEFRONT_SIZE [[WAVEFRONT_SIZE]]
 // UNSAFEFPATOMIC-DAG: #define __AMDGCN_UNSAFE_FP_ATOMICS__ 1
 
