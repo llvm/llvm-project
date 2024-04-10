@@ -184,6 +184,7 @@ class PseudoObjectExpr;
 class QualType;
 class SemaHLSL;
 class SemaOpenACC;
+class SemaSYCL;
 class StandardConversionSequence;
 class Stmt;
 class StringLiteral;
@@ -467,7 +468,6 @@ class Sema final : public SemaBase {
   // 37. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
   // 38. CUDA (SemaCUDA.cpp)
   // 39. OpenMP Directives and Clauses (SemaOpenMP.cpp)
-  // 40. SYCL Constructs (SemaSYCL.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -974,6 +974,11 @@ public:
     return *OpenACCPtr;
   }
 
+  SemaSYCL &SYCL() {
+    assert(SYCLPtr);
+    return *SYCLPtr;
+  }
+
 protected:
   friend class Parser;
   friend class InitializationSequence;
@@ -1006,6 +1011,7 @@ private:
 
   std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
+  std::unique_ptr<SemaSYCL> SYCLPtr;
 
   ///@}
 
@@ -5439,8 +5445,7 @@ public:
 
   ExprResult BuildDeclarationNameExpr(const CXXScopeSpec &SS, LookupResult &R,
                                       bool NeedsADL,
-                                      bool AcceptInvalidDecl = false,
-                                      bool NeedUnresolved = false);
+                                      bool AcceptInvalidDecl = false);
   ExprResult BuildDeclarationNameExpr(
       const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo, NamedDecl *D,
       NamedDecl *FoundD = nullptr,
@@ -5455,15 +5460,6 @@ public:
   ExprResult BuildPredefinedExpr(SourceLocation Loc, PredefinedIdentKind IK);
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
   ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
-
-  ExprResult BuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                           SourceLocation LParen,
-                                           SourceLocation RParen,
-                                           TypeSourceInfo *TSI);
-  ExprResult ActOnSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                           SourceLocation LParen,
-                                           SourceLocation RParen,
-                                           ParsedType ParsedTy);
 
   bool CheckLoopHintExpr(Expr *E, SourceLocation Loc);
 
@@ -6592,10 +6588,7 @@ public:
                             SourceLocation RParenLoc);
 
   //// ActOnCXXThis -  Parse 'this' pointer.
-  ExprResult ActOnCXXThis(SourceLocation Loc);
-
-  /// Check whether the type of 'this' is valid in the current context.
-  bool CheckCXXThisType(SourceLocation Loc, QualType Type);
+  ExprResult ActOnCXXThis(SourceLocation loc);
 
   /// Build a CXXThisExpr and mark it referenced in the current context.
   Expr *BuildCXXThisExpr(SourceLocation Loc, QualType Type, bool IsImplicit);
@@ -14518,44 +14511,6 @@ private:
                         SourceLocation StartLoc, SourceLocation EndLoc,
                         const DeclarationNameInfo &DirName,
                         OpenMPDirectiveKind CancelRegion);
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name SYCL Constructs
-  /// Implementations are in SemaSYCL.cpp
-  ///@{
-
-public:
-  /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
-  /// context is "used as device code".
-  ///
-  /// - If CurLexicalContext is a kernel function or it is known that the
-  ///   function will be emitted for the device, emits the diagnostics
-  ///   immediately.
-  /// - If CurLexicalContext is a function and we are compiling
-  ///   for the device, but we don't know that this function will be codegen'ed
-  ///   for devive yet, creates a diagnostic which is emitted if and when we
-  ///   realize that the function will be codegen'ed.
-  ///
-  /// Example usage:
-  ///
-  /// Diagnose __float128 type usage only from SYCL device code if the current
-  /// target doesn't support it
-  /// if (!S.Context.getTargetInfo().hasFloat128Type() &&
-  ///     S.getLangOpts().SYCLIsDevice)
-  ///   SYCLDiagIfDeviceCode(Loc, diag::err_type_unsupported) << "__float128";
-  SemaDiagnosticBuilder SYCLDiagIfDeviceCode(SourceLocation Loc,
-                                             unsigned DiagID);
-
-  void deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
-                                  llvm::DenseSet<QualType> Visited,
-                                  ValueDecl *DeclToCheck);
 
   ///@}
 };

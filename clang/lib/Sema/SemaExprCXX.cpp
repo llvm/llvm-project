@@ -1415,42 +1415,26 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
 }
 
 ExprResult Sema::ActOnCXXThis(SourceLocation Loc) {
-  // C++20 [expr.prim.this]p1:
-  //   The keyword this names a pointer to the object for which an
-  //   implicit object member function is invoked or a non-static
-  //   data member's initializer is evaluated.
+  /// C++ 9.3.2: In the body of a non-static member function, the keyword this
+  /// is a non-lvalue expression whose value is the address of the object for
+  /// which the function is called.
   QualType ThisTy = getCurrentThisType();
 
-  if (CheckCXXThisType(Loc, ThisTy))
-    return ExprError();
+  if (ThisTy.isNull()) {
+    DeclContext *DC = getFunctionLevelDeclContext();
+
+    if (const auto *Method = dyn_cast<CXXMethodDecl>(DC);
+        Method && Method->isExplicitObjectMemberFunction()) {
+      return Diag(Loc, diag::err_invalid_this_use) << 1;
+    }
+
+    if (isLambdaCallWithExplicitObjectParameter(CurContext))
+      return Diag(Loc, diag::err_invalid_this_use) << 1;
+
+    return Diag(Loc, diag::err_invalid_this_use) << 0;
+  }
 
   return BuildCXXThisExpr(Loc, ThisTy, /*IsImplicit=*/false);
-}
-
-bool Sema::CheckCXXThisType(SourceLocation Loc, QualType Type) {
-  if (!Type.isNull())
-    return false;
-
-  // C++20 [expr.prim.this]p3:
-  //   If a declaration declares a member function or member function template
-  //   of a class X, the expression this is a prvalue of type
-  //   "pointer to cv-qualifier-seq X" wherever X is the current class between
-  //   the optional cv-qualifier-seq and the end of the function-definition,
-  //   member-declarator, or declarator. It shall not appear within the
-  //   declaration of either a static member function or an explicit object
-  //   member function of the current class (although its type and value
-  //   category are defined within such member functions as they are within
-  //   an implicit object member function).
-  DeclContext *DC = getFunctionLevelDeclContext();
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(DC);
-      Method && Method->isExplicitObjectMemberFunction()) {
-    Diag(Loc, diag::err_invalid_this_use) << 1;
-  } else if (isLambdaCallWithExplicitObjectParameter(CurContext)) {
-    Diag(Loc, diag::err_invalid_this_use) << 1;
-  } else {
-    Diag(Loc, diag::err_invalid_this_use) << 0;
-  }
-  return true;
 }
 
 Expr *Sema::BuildCXXThisExpr(SourceLocation Loc, QualType Type,
@@ -5895,7 +5879,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
         return false;
 
       if (Self.RequireCompleteType(
-              KeyLoc, RhsT, diag::err_incomplete_type_used_in_type_trait_expr))
+              Rhs->getTypeLoc().getBeginLoc(), RhsT,
+              diag::err_incomplete_type_used_in_type_trait_expr))
         return false;
 
       return BaseInterface->isSuperClassOf(DerivedInterface);
@@ -5918,8 +5903,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     //   If Base and Derived are class types and are different types
     //   (ignoring possible cv-qualifiers) then Derived shall be a
     //   complete type.
-    if (Self.RequireCompleteType(KeyLoc, RhsT,
-                          diag::err_incomplete_type_used_in_type_trait_expr))
+    if (Self.RequireCompleteType(
+            Rhs->getTypeLoc().getBeginLoc(), RhsT,
+            diag::err_incomplete_type_used_in_type_trait_expr))
       return false;
 
     return cast<CXXRecordDecl>(rhsRecord->getDecl())
@@ -5971,7 +5957,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
       return LhsT->isVoidType();
 
     // A function definition requires a complete, non-abstract return type.
-    if (!Self.isCompleteType(KeyLoc, RhsT) || Self.isAbstractType(KeyLoc, RhsT))
+    if (!Self.isCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT) ||
+        Self.isAbstractType(Rhs->getTypeLoc().getBeginLoc(), RhsT))
       return false;
 
     // Compute the result of add_rvalue_reference.
@@ -6021,12 +6008,14 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     //   For both, T and U shall be complete types, (possibly cv-qualified)
     //   void, or arrays of unknown bound.
     if (!LhsT->isVoidType() && !LhsT->isIncompleteArrayType() &&
-        Self.RequireCompleteType(KeyLoc, LhsT,
-          diag::err_incomplete_type_used_in_type_trait_expr))
+        Self.RequireCompleteType(
+            Lhs->getTypeLoc().getBeginLoc(), LhsT,
+            diag::err_incomplete_type_used_in_type_trait_expr))
       return false;
     if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType() &&
-        Self.RequireCompleteType(KeyLoc, RhsT,
-          diag::err_incomplete_type_used_in_type_trait_expr))
+        Self.RequireCompleteType(
+            Rhs->getTypeLoc().getBeginLoc(), RhsT,
+            diag::err_incomplete_type_used_in_type_trait_expr))
       return false;
 
     // cv void is never assignable.
@@ -6081,12 +6070,17 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
   }
   case BTT_IsLayoutCompatible: {
     if (!LhsT->isVoidType() && !LhsT->isIncompleteArrayType())
-      Self.RequireCompleteType(KeyLoc, LhsT, diag::err_incomplete_type);
+      Self.RequireCompleteType(Lhs->getTypeLoc().getBeginLoc(), LhsT,
+                               diag::err_incomplete_type);
     if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType())
-      Self.RequireCompleteType(KeyLoc, RhsT, diag::err_incomplete_type);
+      Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
+                               diag::err_incomplete_type);
 
-    if (LhsT->isVariableArrayType() || RhsT->isVariableArrayType())
-      Self.Diag(KeyLoc, diag::err_vla_unsupported)
+    if (LhsT->isVariableArrayType())
+      Self.Diag(Lhs->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
+          << 1 << tok::kw___is_layout_compatible;
+    if (RhsT->isVariableArrayType())
+      Self.Diag(Rhs->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
           << 1 << tok::kw___is_layout_compatible;
     return Self.IsLayoutCompatible(LhsT, RhsT);
   }
