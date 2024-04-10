@@ -140,6 +140,9 @@ public:
     // be different and result in different checksums. So we should use the
     // state from the new (available_externally) function, which is saved in its
     // attribute.
+    // TODO: If the function's profile only exists as nested inlinee profile in
+    // a different module, we don't have the attr mismatch state(unknown), we
+    // need to fix it later.
     if (IsAvailableExternallyLinkage || !Desc)
       return !F.hasFnAttribute("profile-checksum-mismatch");
 
