@@ -90,27 +90,24 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
           kind == SparseTensorFieldKind::ValMemRef) {
         if (isIn) {
           inputs.push_back(fromVals[idx++]);
+        } else if (directOut) {
+          Value mem;
+          if (kind == SparseTensorFieldKind::PosMemRef)
+            mem = builder.create<sparse_tensor::ToPositionsOp>(loc, inputs[0],
+                                                               lv);
+          else if (kind == SparseTensorFieldKind::CrdMemRef)
+            mem = builder.create<sparse_tensor::ToCoordinatesOp>(loc, inputs[0],
+                                                                 lv);
+          else
+            mem = builder.create<sparse_tensor::ToValuesOp>(loc, inputs[0]);
+          toVals.push_back(mem);
         } else {
           ShapedType st = t.cast<ShapedType>();
           auto rtp = RankedTensorType::get(st.getShape(), st.getElementType());
-          if (directOut) {
-            Value mem;
-            if (kind == SparseTensorFieldKind::PosMemRef)
-              mem = builder.create<sparse_tensor::ToPositionsOp>(loc, inputs[0],
-                                                                 lv);
-            else if (kind == SparseTensorFieldKind::CrdMemRef)
-              mem = builder.create<sparse_tensor::ToCoordinatesOp>(
-                  loc, inputs[0], lv);
-            else
-              mem = builder.create<sparse_tensor::ToValuesOp>(loc, inputs[0]);
-            toVals.push_back(mem);
-          } else {
-            inputs.push_back(extraVals[extra++]);
-            retTypes.push_back(rtp);
-            cntTypes.push_back(builder.getIndexType());
-          }
+          inputs.push_back(extraVals[extra++]);
+          retTypes.push_back(rtp);
+          cntTypes.push_back(builder.getIndexType());
         }
-      }
       return true;
     });
 
