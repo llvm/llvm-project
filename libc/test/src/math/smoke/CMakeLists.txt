@@ -2771,6 +2771,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  scalbnf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    scalbnf128_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalbnf128
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
   erff_test
   SUITE
     libc-math-smoke-tests
