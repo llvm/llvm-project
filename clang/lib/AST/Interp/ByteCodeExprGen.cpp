@@ -1033,6 +1033,34 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
     return true;
   }
 
+  if (const auto *VecT = E->getType()->getAs<VectorType>()) {
+    unsigned NumVecElements = VecT->getNumElements();
+    assert(NumVecElements >= E->getNumInits());
+
+    QualType ElemQT = VecT->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+
+    // All initializer elements.
+    unsigned InitIndex = 0;
+    for (const Expr *Init : E->inits()) {
+      if (!this->visit(Init))
+        return false;
+
+      if (!this->emitInitElem(ElemT, InitIndex, E))
+        return false;
+      ++InitIndex;
+    }
+
+    // Fill the rest with zeroes.
+    for (; InitIndex != NumVecElements; ++InitIndex) {
+      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, InitIndex, E))
+        return false;
+    }
+    return true;
+  }
+
   return false;
 }
 
