@@ -61,6 +61,9 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
 
+  // a registry of created Intrinsic::spv_assign_ptr_type instructions
+  DenseMap<Value *, CallInst *> AssignPtrTypeInstr;
+
   // deduce element type of untyped pointers
   Type *deduceElementType(Value *I);
   Type *deduceElementTypeHelper(Value *I);
@@ -655,6 +658,7 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
         ExpectedElementTypeConst, Pointer, {B.getInt32(AddressSpace)}, B);
     GR->addDeducedElementType(CI, ExpectedElementType);
     GR->addDeducedElementType(Pointer, ExpectedElementType);
+    AssignPtrTypeInstr[Pointer] = CI;
     return;
   }
 
@@ -939,6 +943,7 @@ void SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I,
   CallInst *CI = buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {I->getType()},
                                  EltTyConst, I, {B.getInt32(AddressSpace)}, B);
   GR->addDeducedElementType(CI, ElemTy);
+  AssignPtrTypeInstr[I] = CI;
 }
 
 void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
@@ -1095,6 +1100,7 @@ void SPIRVEmitIntrinsics::processParamTypes(Function *F, IRBuilder<> &B) {
             {B.getInt32(getPointerAddressSpace(Arg->getType()))}, B);
         GR->addDeducedElementType(AssignPtrTyCI, ElemTy);
         GR->addDeducedElementType(Arg, ElemTy);
+        AssignPtrTypeInstr[Arg] = AssignPtrTyCI;
       }
     }
   }
@@ -1158,15 +1164,26 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     DenseMap<Value *, Type *> CollectedTys;
     deduceOperandElementType(&I, CollectedTys);
     Instruction *User;
+    LLVMContext &Ctx = F->getContext();
     for (const auto &Rec : CollectedTys) {
       if (Rec.first->use_empty() ||
           !(User = dyn_cast<Instruction>(Rec.first->use_begin()->get())))
         continue;
       Type *OpTy = Rec.first->getType();
-      setInsertPointSkippingPhis(B, User->getNextNode());
-      buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {OpTy},
-                      UndefValue::get(Rec.second), Rec.first,
-                      {B.getInt32(getPointerAddressSpace(OpTy))}, B);
+      Value *OpTyVal = Constant::getNullValue(Rec.second);
+      // check if there is existing Intrinsic::spv_assign_ptr_type instruction
+      auto It = AssignPtrTypeInstr.find(Rec.first);
+      if (It == AssignPtrTypeInstr.end()) {
+        setInsertPointSkippingPhis(B, User->getNextNode());
+        buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {OpTy}, OpTyVal,
+                        Rec.first, {B.getInt32(getPointerAddressSpace(OpTy))},
+                        B);
+      } else {
+        It->second->setArgOperand(
+            1,
+            MetadataAsValue::get(
+                Ctx, MDNode::get(Ctx, ValueAsMetadata::getConstant(OpTyVal))));
+      }
     }
   }
 
