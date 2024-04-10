@@ -4417,6 +4417,7 @@ void RewriteInstance::patchELFSectionHeaderTable(ELFObjectFile<ELFT> *File) {
   raw_fd_ostream &OS = Out->os();
   const ELFFile<ELFT> &Obj = File->getELFFile();
 
+  // Mapping from old section indices to new ones
   std::vector<uint32_t> NewSectionIndex;
   std::vector<ELFShdrTy> OutputSections =
       getOutputSections(File, NewSectionIndex);
@@ -4434,10 +4435,8 @@ void RewriteInstance::patchELFSectionHeaderTable(ELFObjectFile<ELFT> *File) {
   // Write all section header entries while patching section references.
   for (ELFShdrTy &Section : OutputSections) {
     Section.sh_link = NewSectionIndex[Section.sh_link];
-    if (Section.sh_type == ELF::SHT_REL || Section.sh_type == ELF::SHT_RELA) {
-      if (Section.sh_info)
-        Section.sh_info = NewSectionIndex[Section.sh_info];
-    }
+    if (Section.sh_type == ELF::SHT_REL || Section.sh_type == ELF::SHT_RELA)
+      Section.sh_info = NewSectionIndex[Section.sh_info];
     OS.write(reinterpret_cast<const char *>(&Section), sizeof(Section));
   }
 
