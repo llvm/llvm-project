@@ -15,6 +15,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/VersionTuple.h"
+#include <algorithm>
+#include <cassert>
 #include <string>
 
 using namespace llvm;
@@ -125,7 +128,7 @@ static std::string getTypeName(OverloadKind Kind, Type *Ty) {
 }
 
 struct OpSMOverloadProp {
-  uint16_t ShaderModelVer;
+  DXILShaderModel ShaderModelVer;
   uint16_t ValidTys;
 };
 
@@ -256,35 +259,35 @@ static FunctionType *getDXILOpFunctionType(const OpCodeProperty *Prop,
 }
 
 static uint16_t getValidOverloadMask(const OpCodeProperty *Prop,
-                                     uint32_t SMVer) {
+                                     VersionTuple SMVer) {
   uint16_t ValidTyMask = 0;
   // std::vector Prop->OverloadProp is in ascending order of SM Version
   // Overloads of highest SM version that is not greater than SMVer
   // are the ones that are valid for SMVer.
-  for (auto OL : Prop->OverloadProp) {
-    if (OL.ShaderModelVer <= SMVer) {
-      ValidTyMask = OL.ValidTys;
-    } else {
-      break;
-    }
-  }
+
+  // Get the lower bound value iterator of SMVer
+  auto LaterSM = std::lower_bound(
+      Prop->OverloadProp.begin(), Prop->OverloadProp.end(), SMVer,
+      [](const OpSMOverloadProp OL, VersionTuple VerTup) {
+        return (VersionTuple(OL.ShaderModelVer.Major,
+                             OL.ShaderModelVer.Minor) <= VerTup);
+      });
+  // Valid overloads are of the version prior to the lower bound
+  ValidTyMask = (--LaterSM)->ValidTys;
+  assert(ValidTyMask != 0 && "No valid overload types found");
   return ValidTyMask;
 }
 
 namespace llvm {
 namespace dxil {
 
-CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, uint32_t SMVer,
-                                          Type *ReturnTy, Type *OverloadTy,
+CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode,
+                                          VersionTuple &SMVer, Type *ReturnTy,
+                                          Type *OverloadTy,
                                           SmallVector<Value *> Args) {
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
   uint16_t ValidTyMask = getValidOverloadMask(Prop, SMVer);
 
-  if (ValidTyMask == 0) {
-    report_fatal_error(StringRef(std::to_string(SMVer).append(
-                           ": Unhandled Shader Model Version")),
-                       /*gen_crash_diag*/ false);
-  }
   OverloadKind Kind = getOverloadKind(OverloadTy);
   if ((ValidTyMask & (uint16_t)Kind) == 0) {
     report_fatal_error("Invalid Overload Type", /* gen_crash_diag=*/false);
@@ -304,7 +307,7 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, uint32_t SMVer,
   return B.CreateCall(DXILFn, Args);
 }
 
-Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, uint32_t SMVer,
+Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, VersionTuple &SMVer,
                                    FunctionType *FT) {
 
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
@@ -313,11 +316,6 @@ Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, uint32_t SMVer,
   if (Prop->OverloadParamIndex < 0) {
     auto &Ctx = FT->getContext();
     uint16_t ValidTyMask = getValidOverloadMask(Prop, SMVer);
-    if (ValidTyMask == 0) {
-      report_fatal_error(StringRef(std::to_string(SMVer).append(
-                             ": Unhandled Shader Model Version")),
-                         /*gen_crash_diag*/ false);
-    }
 
     switch (ValidTyMask) {
     case OverloadKind::VOID:
@@ -344,14 +342,15 @@ Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, uint32_t SMVer,
     }
   }
 
-  // Prop->OverloadParamIndex is 0, overload type is FT->getReturnType().
+  // Consider FT->getReturnType() as default overload type, unless
+  // Prop->OverloadParamIndex != 0.
   Type *OverloadType = FT->getReturnType();
   if (Prop->OverloadParamIndex != 0) {
     // Skip Return Type.
     OverloadType = FT->getParamType(Prop->OverloadParamIndex - 1);
   }
 
-  auto ParamKinds = getOpCodeParameterKind(*Prop);
+  const auto *ParamKinds = getOpCodeParameterKind(*Prop);
   auto Kind = ParamKinds[Prop->OverloadParamIndex];
   // For ResRet and CBufferRet, OverloadTy is in field of StructType.
   if (Kind == ParameterKind::CBufferRet ||

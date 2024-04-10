@@ -90,9 +90,9 @@ enum class ElementType : uint32_t {
 } // namespace dxil
 } // namespace llvm
 
-// Generate a unique value for given Major, Minor pair of Shader Model
-// version. Allows for 100 minor versions for a given major version number.
-// To be used uniformly by DXILEmitter backend as well as DXIL Lowering pass.
-#define COMPUTE_SM_VERSION_VALUE(MAJ, MIN) ((MAJ * 100) + MIN)
+struct DXILShaderModel {
+  unsigned Major = 0;
+  unsigned Minor = 0;
+};
 
 #endif // LLVM_SUPPORT_DXILABI_H

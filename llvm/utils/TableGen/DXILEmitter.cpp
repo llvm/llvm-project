@@ -17,15 +17,14 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
 #include <algorithm>
-#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -33,11 +32,6 @@ using namespace llvm;
 using namespace llvm::dxil;
 
 namespace {
-
-struct DXILShaderModel {
-  int Major = 0;
-  int Minor = 0;
-};
 
 struct DXILOperationDesc {
   std::string OpName; // name of DXIL operation
@@ -101,9 +95,8 @@ static ParameterKind getParameterKind(const Record *R) {
   case MVT::Any:
     return ParameterKind::Overload;
   default:
-    report_fatal_error(
-        "Support for specified parameter type not yet implemented",
-        /*gen_crash_diag*/ false);
+    llvm_unreachable(
+        "Support for specified parameter type not yet implemented");
   }
 }
 
@@ -147,11 +140,8 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
             break;
           }
         }
-        if (!KnownType) {
-          report_fatal_error("Specification of multiple differing overload "
-                             "parameter types not yet supported",
-                             /*gen_crash_diag*/ false);
-        }
+        assert(KnownType && "Specification of multiple differing overload "
+                            "parameter types not yet supported");
       } else {
         OverloadParamIndices.push_back(I);
       }
@@ -174,9 +164,8 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Set the index of the overload parameter, if any.
   OverloadParamIndex = -1; // default; indicating none
   if (!OverloadParamIndices.empty()) {
-    if (OverloadParamIndices.size() > 1)
-      report_fatal_error("Multiple overload type specification not supported",
-                         /*gen_crash_diag*/ false);
+    assert(OverloadParamIndices.size() == 1 &&
+           "Multiple overload type specification not supported");
     OverloadParamIndex = OverloadParamIndices[0];
   }
 
@@ -186,17 +175,17 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of Shader Model version
   std::sort(OverloadTypeRecs.begin(), OverloadTypeRecs.end(),
             [](Record *RecA, Record *RecB) {
-              uint16_t RecAMaj =
+              unsigned RecAMaj =
                   RecA->getValueAsDef("ShaderModel")->getValueAsInt("Major");
-              uint16_t RecAMin =
+              unsigned RecAMin =
                   RecA->getValueAsDef("ShaderModel")->getValueAsInt("Minor");
-              uint16_t RecBMaj =
+              unsigned RecBMaj =
                   RecB->getValueAsDef("ShaderModel")->getValueAsInt("Major");
-              uint16_t RecBMin =
+              unsigned RecBMin =
                   RecB->getValueAsDef("ShaderModel")->getValueAsInt("Minor");
 
-              return (COMPUTE_SM_VERSION_VALUE(RecAMaj, RecAMin) <
-                      COMPUTE_SM_VERSION_VALUE(RecBMaj, RecBMin));
+              return (VersionTuple(RecAMaj, RecAMin) <
+                      VersionTuple(RecBMaj, RecBMin));
             });
   unsigned OverloadTypeRecsSize = OverloadTypeRecs.size();
   // Populate OpOverloads with
@@ -295,22 +284,20 @@ static std::string getOverloadKindStr(const Record *R) {
 /// input LLVMType record
 /// \param Recs A vector of records of TableGen class type DXILShaderModel
 /// \return std::string string representation of OverloadKind
-
-// Constant value that is used to encode shader model version
-// denoting SM5.0
-
 static std::string getOverloadKindStrs(const SmallVector<Record *> Recs) {
   std::string OverloadString = "";
   std::string Prefix = "";
   OverloadString.append("{");
   for (auto OvRec : Recs) {
     OverloadString.append(Prefix).append("{");
-    uint16_t RecAMaj =
+    unsigned RecAMaj =
         OvRec->getValueAsDef("ShaderModel")->getValueAsInt("Major");
-    uint16_t RecAMin =
+    unsigned RecAMin =
         OvRec->getValueAsDef("ShaderModel")->getValueAsInt("Minor");
-    uint16_t RecMajMin = COMPUTE_SM_VERSION_VALUE(RecAMaj, RecAMin);
-    OverloadString.append(std::to_string(RecMajMin)).append(", ");
+    OverloadString.append("{")
+        .append(std::to_string(RecAMaj))
+        .append(", ")
+        .append(std::to_string(RecAMin).append("}, "));
     auto OverloadTys = OvRec->getValueAsListOfDefs("OpOverloads");
     auto Iter = OverloadTys.begin();
     OverloadString.append(getOverloadKindStr(*Iter++));

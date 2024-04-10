@@ -22,13 +22,9 @@ class DXILShaderModel<int major, int minor> {
 
 // Valid minimum Shader model version records
 
-// Shader Mode 6.x
-foreach i = 0...9 in {
+// Shader Model 6.0 - 6.8
+foreach i = 0...8 in {
   def SM6_#i : DXILShaderModel<6, i>;
-}
-// Shader Model 7.x - for now 7.0 is defined. Extend as needed
-foreach i = 0 in {
-  def SM7_#i : DXILShaderModel<7, i>;
 }
 
 // Abstraction of class mapping valid DXIL Op overloads the minimum
@@ -109,14 +105,13 @@ let OpClass = isSpecialFloat in {
                            "Determines if the specified value is infinite.">;
 }
 
-// Unary Class
 let OpClass = unary in {
   def Abs : DXILOpMapping<6, int_fabs, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty, llvm_double_ty]>],
                           "Returns the absolute value of the input.">;
 
   def Cos  : DXILOpMapping<12, int_cos, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                           "Returns cosine(theta) for theta in radians.">;
-  def Sin  : DXILOpMapping<13, int_sin, [DXILOpOverload<SM6_3, [llvm_half_ty, llvm_float_ty]>,
+  def Sin  : DXILOpMapping<13, int_sin, [DXILOpOverload<SM6_2, [llvm_half_ty, llvm_float_ty]>,
                                          DXILOpOverload<SM6_0, [llvm_float_ty]>],
                            "Returns sine(theta) for theta in radians.">;
   def Exp2 : DXILOpMapping<21, int_exp2, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
@@ -146,7 +141,6 @@ let OpClass = unary in {
                             "Returns the specified value with its bits reversed.">;
 }
 
-// Binary Class
 let OpClass = binary in {
 // Float overloads
   def FMax : DXILOpMapping<35, int_maxnum, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty, llvm_double_ty]>],
@@ -164,10 +158,7 @@ let OpClass = binary in {
                            "Unsigned integer minimum. UMin(a,b) = a < b ? a : b">;
 }
 
-// Tertiary Class
 let OpClass = tertiary in {
-// Float overloads
-//   let OpOverloadTypes =  [llvm_half_ty, llvm_float_ty, llvm_double_ty] in {
   def FMad : DXILOpMapping<46, int_fmuladd, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty, llvm_double_ty]>],
                             "Floating point arithmetic multiply/add operation."
                             " fmad(m,a,b) = m * a + b.">;
@@ -181,7 +172,6 @@ def UMad : DXILOpMapping<49, int_dx_umad, [DXILOpOverload<SM6_0, [llvm_i16_ty, l
 }
 
 // Dot Operations
-// let OpOverloadTypes =  [llvm_half_ty, llvm_float_ty] in
 let OpClass = dot2 in
   def Dot2 : DXILOpMapping<54, int_dx_dot2, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                           "dot product of two float vectors Dot(a,b) = a[0]*b[0] +"

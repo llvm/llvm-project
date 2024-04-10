@@ -25,6 +25,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/VersionTuple.h"
 
 #define DEBUG_TYPE "dxil-op-lower"
 
@@ -73,7 +74,7 @@ static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
   return NewOperands;
 }
 
-static uint32_t getModuleShaderModelVersion(Module &M) {
+static VersionTuple getModuleShaderModelVersion(Module &M) {
   std::string TTStr = M.getTargetTriple();
   std::string Error;
   auto Target = TargetRegistry::lookupTarget(TTStr, Error);
@@ -82,16 +83,13 @@ static uint32_t getModuleShaderModelVersion(Module &M) {
       report_fatal_error(StringRef(Error), /*gen_crash_diag*/ false);
     }
   }
-  auto Major = Triple(TTStr).getOSVersion().getMajor();
-  auto MinorOrErr = Triple(TTStr).getOSVersion().getMinor();
-  uint32_t Minor = MinorOrErr.has_value() ? *MinorOrErr : 0;
-  return COMPUTE_SM_VERSION_VALUE(Major, Minor);
+  return Triple(TTStr).getOSVersion();
 }
 
 static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
   IRBuilder<> B(M.getContext());
   DXILOpBuilder DXILB(M, B);
-  uint32_t SMVer = getModuleShaderModelVersion(M);
+  VersionTuple SMVer = getModuleShaderModelVersion(M);
   Type *OverloadTy = DXILB.getOverloadTy(DXILOp, SMVer, F.getFunctionType());
   for (User *U : make_early_inc_range(F.users())) {
     CallInst *CI = dyn_cast<CallInst>(U);
