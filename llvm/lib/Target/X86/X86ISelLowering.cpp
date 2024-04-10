@@ -31337,17 +31337,17 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.is256BitVector() && !Subtarget.hasInt256())
     return splitVectorIntUnary(Op, DAG, DL);
 
-  // Lower i32/i64 to GFNI as i32/i64 -> Convert to vector (V = v16i32/v8i64) -> vXi8 BITREVERSE -> V[0] -> BSWAP
-  if (Subtarget.hasGFNI() && !VT.isVector()) {
+  // Lower i32/i64 to GFNI as vXi8 BITREVERSE + BSWAP
+  if (!VT.isVector()) {
 
     assert ((VT.getScalarType() == MVT::i32) || (VT.getScalarType() == MVT::i64));
 
-    auto ScalarType = VT.getScalarType();
-    auto CastTo = ScalarType == MVT::i32 ? MVT::v4i32 : MVT::v2i64;
-    SDValue Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, CastTo, In);
+    MVT SVT = VT.getScalarType();
+    MVT VecVT = MVT::getVectorVT(SVT, 128 / SVT.getSizeInBits());
+    SDValue Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, In);
     Res = DAG.getNode(ISD::BITREVERSE, DL, MVT::v16i8, DAG.getBitcast(MVT::v16i8, Res));
-    Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarType, DAG.getBitcast(CastTo, Res), DAG.getIntPtrConstant(0, DL));
-    return DAG.getNode(ISD::BSWAP, DL, ScalarType, Res);
+    Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SVT, DAG.getBitcast(VecVT, Res), DAG.getIntPtrConstant(0, DL));
+    return DAG.getNode(ISD::BSWAP, DL, SVT, Res);
   }
 
   assert (VT.isVector() && VT.getSizeInBits() >= 128);
