@@ -638,10 +638,10 @@ const Stmt *ExprMutationAnalyzer::findFunctionArgMutation(const Expr *Exp) {
       if (!RefType->getPointeeType().getQualifiers() &&
           RefType->getPointeeType()->getAs<TemplateTypeParmType>()) {
         std::unique_ptr<FunctionParmMutationAnalyzer> &Analyzer =
-            getCache()->FuncParmAnalyzer[Func];
+            CrossAnalysisCache->FuncParmAnalyzer[Func];
         if (!Analyzer)
-          Analyzer.reset(
-              new FunctionParmMutationAnalyzer(*Func, Context, getCache()));
+          Analyzer.reset(new FunctionParmMutationAnalyzer(*Func, Context,
+                                                          CrossAnalysisCache));
         if (Analyzer->findMutation(Parm))
           return Exp;
         continue;
@@ -655,7 +655,7 @@ const Stmt *ExprMutationAnalyzer::findFunctionArgMutation(const Expr *Exp) {
 
 FunctionParmMutationAnalyzer::FunctionParmMutationAnalyzer(
     const FunctionDecl &Func, ASTContext &Context,
-    ExprMutationAnalyzer::Cache *CrossAnalysisCache)
+    std::shared_ptr<ExprMutationAnalyzer::Cache> CrossAnalysisCache)
     : BodyAnalyzer(*Func.getBody(), Context, CrossAnalysisCache) {
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(&Func)) {
     // CXXCtorInitializer might also mutate Param but they're not part of

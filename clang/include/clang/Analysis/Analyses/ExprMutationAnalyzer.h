@@ -29,7 +29,7 @@ public:
   };
 
   ExprMutationAnalyzer(const Stmt &Stm, ASTContext &Context)
-      : ExprMutationAnalyzer(Stm, Context, nullptr) {}
+      : ExprMutationAnalyzer(Stm, Context, std::make_shared<Cache>()) {}
 
   bool isMutated(const Expr *Exp) { return findMutation(Exp) != nullptr; }
   bool isMutated(const Decl *Dec) { return findMutation(Dec) != nullptr; }
@@ -51,16 +51,8 @@ private:
   using MutationFinder = const Stmt *(ExprMutationAnalyzer::*)(const Expr *);
   using ResultMap = llvm::DenseMap<const Expr *, const Stmt *>;
 
-  ExprMutationAnalyzer(const Stmt &Stm, ASTContext &Context, Cache *ParentCache)
-      : Stm(Stm), Context(Context) {
-    if (ParentCache != nullptr) {
-      CrossAnalysisCache = ParentCache;
-    } else {
-      CrossAnalysisCache = std::make_unique<Cache>();
-    }
-  }
   ExprMutationAnalyzer(const Stmt &Stm, ASTContext &Context,
-                       std::unique_ptr<Cache> CrossAnalysisCache)
+                       std::shared_ptr<Cache> CrossAnalysisCache)
       : Stm(Stm), Context(Context),
         CrossAnalysisCache(std::move(CrossAnalysisCache)) {}
 
@@ -86,15 +78,9 @@ private:
   const Stmt *findReferenceMutation(const Expr *Exp);
   const Stmt *findFunctionArgMutation(const Expr *Exp);
 
-  Cache *getCache() {
-    return std::holds_alternative<Cache *>(CrossAnalysisCache)
-               ? std::get<Cache *>(CrossAnalysisCache)
-               : std::get<std::unique_ptr<Cache>>(CrossAnalysisCache).get();
-  }
-
   const Stmt &Stm;
   ASTContext &Context;
-  std::variant<Cache *, std::unique_ptr<Cache>> CrossAnalysisCache;
+  std::shared_ptr<Cache> CrossAnalysisCache;
   ResultMap Results;
   ResultMap PointeeResults;
 };
@@ -104,9 +90,11 @@ private:
 class FunctionParmMutationAnalyzer {
 public:
   FunctionParmMutationAnalyzer(const FunctionDecl &Func, ASTContext &Context)
-      : FunctionParmMutationAnalyzer(Func, Context, nullptr) {}
-  FunctionParmMutationAnalyzer(const FunctionDecl &Func, ASTContext &Context,
-                               ExprMutationAnalyzer::Cache *CrossAnalysisCache);
+      : FunctionParmMutationAnalyzer(
+            Func, Context, std::make_shared<ExprMutationAnalyzer::Cache>()) {}
+  FunctionParmMutationAnalyzer(
+      const FunctionDecl &Func, ASTContext &Context,
+      std::shared_ptr<ExprMutationAnalyzer::Cache> CrossAnalysisCache);
 
   bool isMutated(const ParmVarDecl *Parm) {
     return findMutation(Parm) != nullptr;
