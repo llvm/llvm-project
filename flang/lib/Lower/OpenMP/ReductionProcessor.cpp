@@ -462,6 +462,9 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
 
     // Allocating on the heap in case the whole reduction is nested inside of a
     // loop
+    // TODO: compare performance here to using allocas - this could be made to
+    // work by inserting stacksave/stackrestore around the reduction in
+    // openmpirbuilder
     auto [temp, needsDealloc] = createTempFromMold(loc, builder, source);
     // if needsDealloc isn't statically false, add cleanup region. TODO: always
     // do this for allocatable boxes because they might have been re-allocated
