@@ -204,6 +204,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     #libc.src.stdio.scanf
     #libc.src.stdio.fscanf
 
+    # sys/ioctl.h entrypoints
+    libc.src.sys.ioctl.ioctl
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
     libc.src.sys.mman.mmap
