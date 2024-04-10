@@ -2551,8 +2551,12 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::vscale: {
+    LLT DstTy = getLLTForType(*CI.getType(), *DL);
+    auto IntN = IntegerType::get(MF->getFunction().getContext(),
+                                 DstTy.getScalarSizeInBits());
+    ConstantInt *CInt = ConstantInt::get(IntN, 1);
     MIRBuilder.buildInstr(TargetOpcode::G_VSCALE, {getOrCreateVReg(CI)}, {})
-        .addImm(1);
+        .addCImm(CInt);
     return true;
   }
   case Intrinsic::prefetch: {

@@ -4,7 +4,7 @@
 define i64 @call_vscale_i64() {
   ; CHECK-LABEL: name: call_vscale_i64
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s64) = G_VSCALE 1
+  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s64) = G_VSCALE i64 1
   ; CHECK-NEXT:   $x0 = COPY [[VSCALE]](s64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
 entry:
@@ -15,7 +15,7 @@ entry:
 define i64 @call_vscale_i32() {
   ; CHECK-LABEL: name: call_vscale_i32
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s32) = G_VSCALE 1
+  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s32) = G_VSCALE i32 1
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[VSCALE]](s32)
   ; CHECK-NEXT:   $x0 = COPY [[ZEXT]](s64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
@@ -28,7 +28,7 @@ entry:
 define i64 @call_vscale_i16() {
   ; CHECK-LABEL: name: call_vscale_i16
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s16) = G_VSCALE 1
+  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s16) = G_VSCALE i16 1
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[VSCALE]](s16)
   ; CHECK-NEXT:   $x0 = COPY [[ZEXT]](s64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
@@ -41,7 +41,7 @@ entry:
 define i64 @call_vscale_i8() {
   ; CHECK-LABEL: name: call_vscale_i8
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s8) = G_VSCALE 1
+  ; CHECK-NEXT:   [[VSCALE:%[0-9]+]]:_(s8) = G_VSCALE i8 1
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[VSCALE]](s8)
   ; CHECK-NEXT:   $x0 = COPY [[ZEXT]](s64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
