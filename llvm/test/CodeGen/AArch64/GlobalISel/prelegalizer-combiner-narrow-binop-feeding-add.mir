@@ -84,10 +84,9 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: %binop_lhs:_(s64) = COPY $x0
     ; CHECK: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %binop_lhs(s64)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC %binop_rhs(s64)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[AND]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND %binop_lhs, %binop_rhs
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s32)
     ; CHECK: $x0 = COPY [[ZEXT]](s64)
     ; CHECK: RET_ReallyLR implicit $x0
     %binop_lhs:_(s64) = COPY $x0
@@ -131,10 +130,9 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK: %binop_lhs:_(s64) = COPY $x0
     ; CHECK: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %binop_lhs(s64)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC %binop_rhs(s64)
-    ; CHECK: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[XOR]](s32)
+    ; CHECK: [[XOR:%[0-9]+]]:_(s64) = G_XOR %binop_lhs, %binop_rhs
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[XOR]](s64)
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC]](s32)
     ; CHECK: $x0 = COPY [[ZEXT]](s64)
     ; CHECK: RET_ReallyLR implicit $x0
     %binop_lhs:_(s64) = COPY $x0

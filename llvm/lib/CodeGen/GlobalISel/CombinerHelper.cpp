@@ -3154,8 +3154,10 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
     return false;
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_SEXT:
-  case TargetOpcode::G_ZEXT: {
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_TRUNC: {
     // Match: logic (ext X), (ext Y) --> ext (logic X, Y)
+    // Match: logic (trunc X), (trunc Y) -> trunc (logic X, Y)
     break;
   }
   case TargetOpcode::G_AND:
