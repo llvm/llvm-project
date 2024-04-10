@@ -342,6 +342,25 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
       return false;
     }
 
+    // Vector types.
+    if (const auto *VT = Ty->getAs<VectorType>()) {
+      assert(Ptr.getFieldDesc()->isPrimitiveArray());
+      QualType ElemTy = VT->getElementType();
+      PrimType ElemT = *Ctx.classify(ElemTy);
+
+      SmallVector<APValue> Values;
+      Values.reserve(VT->getNumElements());
+      for (unsigned I = 0; I != VT->getNumElements(); ++I) {
+        TYPE_SWITCH(ElemT, {
+          Values.push_back(Ptr.atIndex(I).deref<T>().toAPValue());
+        });
+      }
+
+      assert(Values.size() == VT->getNumElements());
+      R = APValue(Values.data(), Values.size());
+      return true;
+    }
+
     llvm_unreachable("invalid value to return");
   };
 
