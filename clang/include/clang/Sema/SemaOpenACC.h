@@ -19,6 +19,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
+#include <variant>
 
 namespace clang {
 class OpenACCClause;
@@ -35,7 +36,11 @@ public:
     SourceRange ClauseRange;
     SourceLocation LParenLoc;
 
-    // TODO OpenACC: Add variant here to store details of individual clauses.
+    struct DefaultDetails {
+      OpenACCDefaultClauseKind DefaultClauseKind;
+    };
+
+    std::variant<DefaultDetails> Details;
 
   public:
     OpenACCParsedClause(OpenACCDirectiveKind DirKind,
@@ -52,8 +57,20 @@ public:
 
     SourceLocation getEndLoc() const { return ClauseRange.getEnd(); }
 
+    OpenACCDefaultClauseKind getDefaultClauseKind() const {
+      assert(ClauseKind == OpenACCClauseKind::Default &&
+             "Parsed clause is not a default clause");
+      return std::get<DefaultDetails>(Details).DefaultClauseKind;
+    }
+
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
     void setEndLoc(SourceLocation EndLoc) { ClauseRange.setEnd(EndLoc); }
+
+    void setDefaultDetails(OpenACCDefaultClauseKind DefKind) {
+      assert(ClauseKind == OpenACCClauseKind::Default &&
+             "Parsed clause is not a default clause");
+      Details = DefaultDetails{DefKind};
+    }
   };
 
   SemaOpenACC(Sema &S);
