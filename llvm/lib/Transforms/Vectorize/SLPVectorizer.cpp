@@ -2995,6 +2995,15 @@ private:
     return ScalarToTreeEntry.lookup(V);
   }
 
+  /// Check that the operand node of alternate node does not generate
+  /// buildvector sequence. If it is, then probably not worth it to build
+  /// alternate shuffle, if number of buildvector operands + alternate
+  /// instruction > than the number of buildvector instructions.
+  /// \param S the instructions state of the analyzed values.
+  /// \param VL list of the instructions with alternate opcodes.
+  bool areAltOperandsProfitable(const InstructionsState &S,
+                                ArrayRef<Value *> VL) const;
+
   /// Checks if the specified list of the instructions/values can be vectorized
   /// and fills required data before actual scheduling of the instructions.
   TreeEntry::EntryState getScalarsVectorizationState(
@@ -5777,6 +5786,117 @@ static bool isAlternateInstruction(const Instruction *I,
                                    const Instruction *AltOp,
                                    const TargetLibraryInfo &TLI);
 
+bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
+                                       ArrayRef<Value *> VL) const {
+  unsigned Opcode0 = S.getOpcode();
+  unsigned Opcode1 = S.getAltOpcode();
+  // The opcode mask selects between the two opcodes.
+  SmallBitVector OpcodeMask(VL.size(), false);
+  for (unsigned Lane : seq<unsigned>(0, VL.size()))
+    if (cast<Instruction>(VL[Lane])->getOpcode() == Opcode1)
+      OpcodeMask.set(Lane);
+  // If this pattern is supported by the target then consider it profitable.
+  if (TTI->isLegalAltInstr(FixedVectorType::get(S.MainOp->getType(), VL.size()),
+                           Opcode0, Opcode1, OpcodeMask))
+    return true;
+  SmallVector<ValueList> Operands;
+  for (unsigned I : seq<unsigned>(0, S.MainOp->getNumOperands())) {
+    Operands.emplace_back();
+    // Prepare the operand vector.
+    for (Value *V : VL)
+      Operands.back().push_back(cast<Instruction>(V)->getOperand(I));
+  }
+  if (Operands.size() == 2) {
+    // Try find best operands candidates.
+    for (unsigned I : seq<unsigned>(0, VL.size() - 1)) {
+      SmallVector<std::pair<Value *, Value *>> Candidates(3);
+      Candidates[0] = std::make_pair(Operands[0][I], Operands[0][I + 1]);
+      Candidates[1] = std::make_pair(Operands[0][I], Operands[1][I + 1]);
+      Candidates[2] = std::make_pair(Operands[1][I], Operands[0][I + 1]);
+      std::optional<int> Res = findBestRootPair(Candidates);
+      switch (Res.value_or(0)) {
+      case 0:
+        break;
+      case 1:
+        std::swap(Operands[0][I + 1], Operands[1][I + 1]);
+        break;
+      case 2:
+        std::swap(Operands[0][I], Operands[1][I]);
+        break;
+      default:
+        llvm_unreachable("Unexpected index.");
+      }
+    }
+  }
+  DenseSet<unsigned> UniqueOpcodes;
+  constexpr unsigned NumAltInsts = 3; // main + alt + shuffle.
+  unsigned NonInstCnt = 0;
+  // Estimate number of instructions, required for the vectorized node and for
+  // the buildvector node.
+  unsigned UndefCnt = 0;
+  // Count the number of extra shuffles, required for vector nodes.
+  unsigned ExtraShuffleInsts = 0;
+  // Check that operands do not contain same values and create either perfect
+  // diamond match or shuffled match.
+  if (Operands.size() == 2) {
+    // Do not count same operands twice.
+    if (Operands.front() == Operands.back()) {
+      Operands.erase(Operands.begin());
+    } else if (!allConstant(Operands.front()) &&
+               all_of(Operands.front(), [&](Value *V) {
+                 return is_contained(Operands.back(), V);
+               })) {
+      Operands.erase(Operands.begin());
+      ++ExtraShuffleInsts;
+    }
+  }
+  const Loop *L = LI->getLoopFor(S.MainOp->getParent());
+  // Vectorize node, if:
+  // 1. at least single operand is constant or splat.
+  // 2. Operands have many loop invariants (the instructions are not loop
+  // invariants).
+  // 3. At least single unique operands is supposed to vectorized.
+  return none_of(Operands,
+                 [&](ArrayRef<Value *> Op) {
+                   if (allConstant(Op) ||
+                       (!isSplat(Op) && allSameBlock(Op) && allSameType(Op) &&
+                        getSameOpcode(Op, *TLI).MainOp))
+                     return false;
+                   DenseMap<Value *, unsigned> Uniques;
+                   for (Value *V : Op) {
+                     if (isa<Constant, ExtractElementInst>(V) ||
+                         getTreeEntry(V) || (L && L->isLoopInvariant(V))) {
+                       if (isa<UndefValue>(V))
+                         ++UndefCnt;
+                       continue;
+                     }
+                     auto Res = Uniques.try_emplace(V, 0);
+                     // Found first duplicate - need to add shuffle.
+                     if (!Res.second && Res.first->second == 1)
+                       ++ExtraShuffleInsts;
+                     ++Res.first->getSecond();
+                     if (auto *I = dyn_cast<Instruction>(V))
+                       UniqueOpcodes.insert(I->getOpcode());
+                     else if (Res.second)
+                       ++NonInstCnt;
+                   }
+                   return none_of(Uniques, [&](const auto &P) {
+                     return P.first->hasNUsesOrMore(P.second + 1) &&
+                            none_of(P.first->users(), [&](User *U) {
+                              return getTreeEntry(U) || Uniques.contains(U);
+                            });
+                   });
+                 }) ||
+         // Do not vectorize node, if estimated number of vector instructions is
+         // more than estimated number of buildvector instructions. Number of
+         // vector operands is number of vector instructions + number of vector
+         // instructions for operands (buildvectors). Number of buildvector
+         // instructions is just number_of_operands * number_of_scalars.
+         (UndefCnt < (VL.size() - 1) * S.MainOp->getNumOperands() &&
+          (UniqueOpcodes.size() + NonInstCnt + ExtraShuffleInsts +
+           NumAltInsts) < S.MainOp->getNumOperands() * VL.size());
+}
+
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     InstructionsState &S, ArrayRef<Value *> VL, bool IsScatterVectorizeUserTE,
     OrdersType &CurrentOrder, SmallVectorImpl<Value *> &PointerOps) const {
@@ -6074,6 +6194,14 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       LLVM_DEBUG(dbgs() << "SLP: ShuffleVector are not vectorized.\n");
       return TreeEntry::NeedToGather;
     }
+    if (!areAltOperandsProfitable(S, VL)) {
+      LLVM_DEBUG(
+          dbgs()
+          << "SLP: ShuffleVector not vectorized, operands are buildvector and "
+             "the whole alt sequence is not profitable.\n");
+      return TreeEntry::NeedToGather;
+    }
+
     return TreeEntry::Vectorize;
   }
   default:
@@ -10736,9 +10864,13 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                 [](Value *V) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
-        all_of(E->Scalars, [](Value *V) {
-          return !isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V);
-        }))
+        all_of(E->Scalars,
+               [](Value *V) {
+                 return !isVectorLikeInstWithConstOps(V) &&
+                        isUsedOutsideBlock(V);
+               }) ||
+        (E->State == TreeEntry::NeedToGather && E->Idx == 0 &&
+         all_of(E->Scalars, IsaPred<ExtractElementInst, UndefValue>)))
       Res.second = FindLastInst();
     else
       Res.second = FindFirstInst();
