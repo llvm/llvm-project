@@ -2763,6 +2763,29 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       return isKnownNonZero(U.get(), DemandedElts, NewDepth, RecQ);
     });
   }
+  case Instruction::InsertElement: {
+    if (isa<ScalableVectorType>(I->getType()))
+      break;
+
+    const Value *Vec = I->getOperand(0);
+    const Value *Elt = I->getOperand(1);
+    auto *CIdx = dyn_cast<ConstantInt>(I->getOperand(2));
+
+    unsigned NumElts = DemandedElts.getBitWidth();
+    APInt DemandedVecElts = DemandedElts;
+    bool SkipElt = false;
+    // If we know the index we are inserting too, clear it from Vec check.
+    if (CIdx && CIdx->getValue().ult(NumElts)) {
+      DemandedVecElts.clearBit(CIdx->getZExtValue());
+      SkipElt = !DemandedElts[CIdx->getZExtValue()];
+    }
+
+    // Result is zero if Elt is non-zero and rest of the demanded elts in Vec
+    // are non-zero.
+    return (SkipElt || isKnownNonZero(Elt, Depth, Q)) &&
+           (DemandedVecElts.isZero() ||
+            isKnownNonZero(Vec, DemandedVecElts, Depth, Q));
+  }
   case Instruction::ExtractElement:
     if (const auto *EEI = dyn_cast<ExtractElementInst>(I)) {
       const Value *Vec = EEI->getVectorOperand();
@@ -2777,6 +2800,21 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       }
     }
     break;
+  case Instruction::ShuffleVector: {
+    auto *Shuf = dyn_cast<ShuffleVectorInst>(I);
+    if (!Shuf)
+      break;
+    APInt DemandedLHS, DemandedRHS;
+    // For undef elements, we don't know anything about the common state of
+    // the shuffle result.
+    if (!getShuffleDemandedElts(Shuf, DemandedElts, DemandedLHS, DemandedRHS))
+      break;
+    // If demanded elements for both vecs are non-zero, the shuffle is non-zero.
+    return (DemandedRHS.isZero() ||
+            isKnownNonZero(Shuf->getOperand(1), DemandedRHS, Depth, Q)) &&
+           (DemandedLHS.isZero() ||
+            isKnownNonZero(Shuf->getOperand(0), DemandedLHS, Depth, Q));
+  }
   case Instruction::Freeze:
     return isKnownNonZero(I->getOperand(0), Depth, Q) &&
            isGuaranteedNotToBePoison(I->getOperand(0), Q.AC, Q.CxtI, Q.DT,
@@ -3068,7 +3106,20 @@ getInvertibleOperands(const Operator *Op1,
   switch (Op1->getOpcode()) {
   default:
     break;
-  case Instruction::Add:
+  case Instruction::Or:
+    if (!cast<PossiblyDisjointInst>(Op1)->isDisjoint() ||
+        !cast<PossiblyDisjointInst>(Op2)->isDisjoint())
+      break;
+    [[fallthrough]];
+  case Instruction::Xor:
+  case Instruction::Add: {
+    Value *Other;
+    if (match(Op2, m_c_BinOp(m_Specific(Op1->getOperand(0)), m_Value(Other))))
+      return std::make_pair(Op1->getOperand(1), Other);
+    if (match(Op2, m_c_BinOp(m_Specific(Op1->getOperand(1)), m_Value(Other))))
+      return std::make_pair(Op1->getOperand(0), Other);
+    break;
+  }
   case Instruction::Sub:
     if (Op1->getOperand(0) == Op2->getOperand(0))
       return getOperands(1);
@@ -3156,20 +3207,33 @@ getInvertibleOperands(const Operator *Op1,
   return std::nullopt;
 }
 
-/// Return true if V2 == V1 + X, where X is known non-zero.
-static bool isAddOfNonZero(const Value *V1, const Value *V2, unsigned Depth,
-                           const SimplifyQuery &Q) {
+/// Return true if V1 == (binop V2, X), where X is known non-zero.
+/// Only handle a small subset of binops where (binop V2, X) with non-zero X
+/// implies V2 != V1.
+static bool isModifyingBinopOfNonZero(const Value *V1, const Value *V2,
+                                      unsigned Depth, const SimplifyQuery &Q) {
   const BinaryOperator *BO = dyn_cast<BinaryOperator>(V1);
-  if (!BO || BO->getOpcode() != Instruction::Add)
+  if (!BO)
     return false;
-  Value *Op = nullptr;
-  if (V2 == BO->getOperand(0))
-    Op = BO->getOperand(1);
-  else if (V2 == BO->getOperand(1))
-    Op = BO->getOperand(0);
-  else
-    return false;
-  return isKnownNonZero(Op, Depth + 1, Q);
+  switch (BO->getOpcode()) {
+  default:
+    break;
+  case Instruction::Or:
+    if (!cast<PossiblyDisjointInst>(V1)->isDisjoint())
+      break;
+    [[fallthrough]];
+  case Instruction::Xor:
+  case Instruction::Add:
+    Value *Op = nullptr;
+    if (V2 == BO->getOperand(0))
+      Op = BO->getOperand(1);
+    else if (V2 == BO->getOperand(1))
+      Op = BO->getOperand(0);
+    else
+      return false;
+    return isKnownNonZero(Op, Depth + 1, Q);
+  }
+  return false;
 }
 
 /// Return true if V2 == V1 * C, where V1 is known non-zero, C is not 0/1 and
@@ -3329,7 +3393,8 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
     };
   }
 
-  if (isAddOfNonZero(V1, V2, Depth, Q) || isAddOfNonZero(V2, V1, Depth, Q))
+  if (isModifyingBinopOfNonZero(V1, V2, Depth, Q) ||
+      isModifyingBinopOfNonZero(V2, V1, Depth, Q))
     return true;
 
   if (isNonEqualMul(V1, V2, Depth, Q) || isNonEqualMul(V2, V1, Depth, Q))

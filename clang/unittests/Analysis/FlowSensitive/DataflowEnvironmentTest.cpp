@@ -24,6 +24,7 @@ namespace {
 
 using namespace clang;
 using namespace dataflow;
+using ::clang::dataflow::test::findValueDecl;
 using ::clang::dataflow::test::getFieldValue;
 using ::testing::Contains;
 using ::testing::IsNull;
@@ -197,6 +198,48 @@ TEST_F(EnvironmentTest, JoinRecords) {
     EXPECT_NE(JoinedVal, &Val2);
     EXPECT_EQ(&JoinedVal->getLoc(), &Loc);
   }
+}
+
+TEST_F(EnvironmentTest, DifferentReferenceLocInJoin) {
+  // This tests the case where the storage location for a reference-type
+  // variable is different for two states being joined. We used to believe this
+  // could not happen and therefore had an assertion disallowing this; this test
+  // exists to demonstrate that we can handle this condition without a failing
+  // assertion. See also the discussion here:
+  // https://discourse.llvm.org/t/70086/6
+
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+    void f(int &ref) {}
+  )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  const ValueDecl *Ref = findValueDecl(Context, "ref");
+
+  Environment Env1(DAContext);
+  StorageLocation &Loc1 = Env1.createStorageLocation(Context.IntTy);
+  Env1.setStorageLocation(*Ref, Loc1);
+
+  Environment Env2(DAContext);
+  StorageLocation &Loc2 = Env2.createStorageLocation(Context.IntTy);
+  Env2.setStorageLocation(*Ref, Loc2);
+
+  EXPECT_NE(&Loc1, &Loc2);
+
+  Environment::ValueModel Model;
+  Environment EnvJoined =
+      Environment::join(Env1, Env2, Model, Environment::DiscardExprState);
+
+  // Joining environments with different storage locations for the same
+  // declaration results in the declaration being removed from the joined
+  // environment.
+  EXPECT_EQ(EnvJoined.getStorageLocation(*Ref), nullptr);
 }
 
 TEST_F(EnvironmentTest, InitGlobalVarsFun) {

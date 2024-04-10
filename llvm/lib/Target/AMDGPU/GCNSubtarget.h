@@ -87,6 +87,7 @@ protected:
   bool EnableTgSplit = false;
   bool EnableCuMode = false;
   bool TrapHandler = false;
+  bool EnablePreciseMemory = false;
 
   // Used as options.
   bool EnableLoadStoreOpt = false;
@@ -600,6 +601,8 @@ public:
   bool isCuModeEnabled() const {
     return EnableCuMode;
   }
+
+  bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
   bool hasFlatAddressSpace() const {
     return FlatAddressSpace;
