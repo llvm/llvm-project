@@ -15,7 +15,12 @@
 #define LOOP_TYPE2 LOOP_TYPES
 #define LOOP_STYPE2 LOOP_TYPES
 
+#if defined _AIX
+// Use lower max threads to reduce the testing time
+#define MAX_THREADS 64
+#else
 #define MAX_THREADS 256
+#endif
 
 #if defined VERBOSE
 #define PRINTF printf
