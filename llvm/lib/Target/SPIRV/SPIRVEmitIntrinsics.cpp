@@ -75,6 +75,9 @@ class SPIRVEmitIntrinsics
   Type *deduceNestedTypeHelper(User *U, Type *Ty,
                                std::unordered_set<Value *> &Visited);
 
+  // deduce Types of operands of the Instruction if possible
+  void deduceOperandElementType(Value *I, DenseMap<Value *, Type *> &Collected);
+
   void preprocessCompositeConstants(IRBuilder<> &B);
   void preprocessUndefs(IRBuilder<> &B);
 
@@ -366,6 +369,28 @@ Type *SPIRVEmitIntrinsics::deduceElementType(Value *I) {
   if (Type *Ty = deduceElementTypeHelper(I))
     return Ty;
   return IntegerType::getInt8Ty(I->getContext());
+}
+
+// Deduce Types of operands of the Instruction if possible.
+void SPIRVEmitIntrinsics::deduceOperandElementType(
+    Value *I, DenseMap<Value *, Type *> &Collected) {
+  Type *KnownTy = GR->findDeducedElementType(I);
+  if (!KnownTy)
+    return;
+
+  // look for known basic patterns of type inference
+  if (auto *Ref = dyn_cast<PHINode>(I)) {
+    for (unsigned i = 0; i < Ref->getNumIncomingValues(); i++) {
+      Value *Op = Ref->getIncomingValue(i);
+      if (!isUntypedPointerTy(Op->getType()))
+        continue;
+      Type *Ty = GR->findDeducedElementType(Op);
+      if (!Ty) {
+        Collected[Op] = KnownTy;
+        GR->addDeducedElementType(Op, KnownTy);
+      }
+    }
+  }
 }
 
 void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
@@ -1124,6 +1149,28 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     if (!I)
       continue;
     processInstrAfterVisit(I, B);
+  }
+
+  for (auto &I : instructions(Func)) {
+    Type *ITy = I.getType();
+    if (!isPointerTy(ITy))
+      continue;
+    DenseMap<Value *, Type *> CollectedTys;
+    deduceOperandElementType(&I, CollectedTys);
+    if (CollectedTys.size() == 0)
+      continue;
+    for (const auto &Rec : CollectedTys) {
+      if (!Rec.first->use_empty()) {
+        Instruction *User = dyn_cast<Instruction>(Rec.first->use_begin()->get());
+        if (!User)
+          continue;
+        Type *OpTy = Rec.first->getType();
+        setInsertPointSkippingPhis(B, User->getNextNode());
+        buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {OpTy},
+                        UndefValue::get(Rec.second), Rec.first,
+                        {B.getInt32(getPointerAddressSpace(OpTy))}, B);
+      }
+    }
   }
 
   // check if function parameter types are set
