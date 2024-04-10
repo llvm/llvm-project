@@ -374,13 +374,21 @@ Type *parseBasicTypeName(StringRef TypeName, LLVMContext &Ctx) {
     return Type::getVoidTy(Ctx);
   else if (TypeName.consume_front("bool"))
     return Type::getIntNTy(Ctx, 1);
-  else if (TypeName.consume_front("char") || TypeName.consume_front("uchar"))
+  else if (TypeName.consume_front("char") ||
+           TypeName.consume_front("unsigned char") ||
+           TypeName.consume_front("uchar"))
     return Type::getInt8Ty(Ctx);
-  else if (TypeName.consume_front("short") || TypeName.consume_front("ushort"))
+  else if (TypeName.consume_front("short") ||
+           TypeName.consume_front("unsigned short") ||
+           TypeName.consume_front("ushort"))
     return Type::getInt16Ty(Ctx);
-  else if (TypeName.consume_front("int") || TypeName.consume_front("uint"))
+  else if (TypeName.consume_front("int") ||
+           TypeName.consume_front("unsigned int") ||
+           TypeName.consume_front("uint"))
     return Type::getInt32Ty(Ctx);
-  else if (TypeName.consume_front("long") || TypeName.consume_front("ulong"))
+  else if (TypeName.consume_front("long") ||
+           TypeName.consume_front("unsigned long") ||
+           TypeName.consume_front("ulong"))
     return Type::getInt64Ty(Ctx);
   else if (TypeName.consume_front("half"))
     return Type::getHalfTy(Ctx);
