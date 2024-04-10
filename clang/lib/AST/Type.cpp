@@ -5026,39 +5026,41 @@ void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
 }
 
 FunctionEffect::FunctionEffect(Type T)
-    : Type_(static_cast<unsigned>(T)), Flags_(0), Padding(0) {
+    : EfType(static_cast<unsigned>(T)), EfFlags(0), Padding(0) {
   switch (T) {
   case Type::NonBlocking:
-    Flags_ = FE_InferrableOnCallees | FE_ExcludeThrow | FE_ExcludeCatch |
-             FE_ExcludeObjCMessageSend | FE_ExcludeStaticLocalVars |
-             FE_ExcludeThreadLocalVars;
+    EfFlags = FE_InferrableOnCallees | FE_ExcludeThrow | FE_ExcludeCatch |
+              FE_ExcludeObjCMessageSend | FE_ExcludeStaticLocalVars |
+              FE_ExcludeThreadLocalVars;
     break;
 
   case Type::NonAllocating:
     // Same as NonBlocking, except without FE_ExcludeStaticLocalVars
-    Flags_ = FE_InferrableOnCallees | FE_ExcludeThrow | FE_ExcludeCatch |
-             FE_ExcludeObjCMessageSend | FE_ExcludeThreadLocalVars;
+    EfFlags = FE_InferrableOnCallees | FE_ExcludeThrow | FE_ExcludeCatch |
+              FE_ExcludeObjCMessageSend | FE_ExcludeThreadLocalVars;
     break;
-  default:
+  case Type::None:
     break;
   }
+  llvm_unreachable("unknown effect type");
 }
 
 StringRef FunctionEffect::name() const {
   switch (type()) {
-  default:
-    return "";
   case Type::NonBlocking:
     return "nonblocking";
   case Type::NonAllocating:
     return "nonallocating";
+  case Type::None:
+    break;
   }
+  llvm_unreachable("unknown effect type");
 }
 
-bool FunctionEffect::diagnoseConversion(bool Adding, QualType OldType,
-                                        FunctionEffectSet OldFX,
-                                        QualType NewType,
-                                        FunctionEffectSet NewFX) const {
+bool FunctionEffect::shouldDiagnoseConversion(bool Adding, QualType OldType,
+                                              FunctionEffectSet OldFX,
+                                              QualType NewType,
+                                              FunctionEffectSet NewFX) const {
 
   switch (type()) {
   case Type::NonAllocating:
@@ -5074,30 +5076,28 @@ bool FunctionEffect::diagnoseConversion(bool Adding, QualType OldType,
   case Type::NonBlocking:
     // nonblocking can't be added (spoofed) during a conversion
     return Adding;
-  default:
+  case Type::None:
     break;
   }
-  return false;
+  llvm_unreachable("unknown effect type");
 }
 
-bool FunctionEffect::diagnoseRedeclaration(bool Adding,
-                                           const FunctionDecl &OldFunction,
-                                           FunctionEffectSet OldFX,
-                                           const FunctionDecl &NewFunction,
-                                           FunctionEffectSet NewFX) const {
+bool FunctionEffect::shouldDiagnoseRedeclaration(
+    bool Adding, const FunctionDecl &OldFunction, FunctionEffectSet OldFX,
+    const FunctionDecl &NewFunction, FunctionEffectSet NewFX) const {
   switch (type()) {
   case Type::NonAllocating:
   case Type::NonBlocking:
     // nonblocking/nonallocating can't be removed in a redeclaration
     // adding -> false, removing -> true (diagnose)
     return !Adding;
-  default:
+  case Type::None:
     break;
   }
-  return false;
+  llvm_unreachable("unknown effect type");
 }
 
-FunctionEffect::OverrideResult FunctionEffect::diagnoseMethodOverride(
+FunctionEffect::OverrideResult FunctionEffect::shouldDiagnoseMethodOverride(
     bool Adding, const CXXMethodDecl &OldMethod, FunctionEffectSet OldFX,
     const CXXMethodDecl &NewMethod, FunctionEffectSet NewFX) const {
   switch (type()) {
@@ -5105,17 +5105,17 @@ FunctionEffect::OverrideResult FunctionEffect::diagnoseMethodOverride(
   case Type::NonBlocking:
     // if added on an override, that's fine and not diagnosed.
     // if missing from an override (removed), propagate from base to derived.
-    return Adding ? OverrideResult::Ignore : OverrideResult::Propagate;
-  default:
+    return Adding ? OverrideResult::Ignore : OverrideResult::Merge;
+  case Type::None:
     break;
   }
-  return OverrideResult::Ignore;
+  llvm_unreachable("unknown effect type");
 }
 
 bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
   switch (type()) {
   case Type::NonAllocating:
-  case Type::NonBlocking: {
+  case Type::NonBlocking:
     // Do any of the callee's Decls have type sugar for blocking or allocating?
     for (const Decl *D : Callee.redecls()) {
       QualType QT;
@@ -5140,16 +5140,14 @@ bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
       }
     }
     return true;
-  }
-
-  default:
+  case Type::None:
     break;
   }
-  return false;
+  llvm_unreachable("unknown effect type");
 }
 
-bool FunctionEffect::diagnoseFunctionCall(bool Direct,
-                                          FunctionEffectSet CalleeFX) const {
+bool FunctionEffect::shouldDiagnoseFunctionCall(
+    bool Direct, FunctionEffectSet CalleeFX) const {
   switch (type()) {
   case Type::NonAllocating:
   case Type::NonBlocking: {
@@ -5164,10 +5162,10 @@ bool FunctionEffect::diagnoseFunctionCall(bool Direct,
     }
     return true; // warning
   }
-  default:
+  case Type::None:
     break;
   }
-  return false;
+  llvm_unreachable("unknown effect type");
 }
 
 // =====
@@ -5185,7 +5183,7 @@ void MutableFunctionEffectSet::insert(const FunctionEffect &Effect) {
 }
 
 MutableFunctionEffectSet &
-MutableFunctionEffectSet::operator|=(FunctionEffectSet RHS) {
+MutableFunctionEffectSet::insertMultiple(FunctionEffectSet RHS) {
   // TODO: For large RHS sets, use set_union or a custom insert-in-place
   for (const auto &Effect : RHS) {
     insert(Effect);
@@ -5215,7 +5213,7 @@ FunctionEffectSet FunctionEffectSet::getUnion(ASTContext &C,
 }
 
 MutableFunctionEffectSet
-FunctionEffectSet::operator&(const FunctionEffectSet &RHS) const {
+FunctionEffectSet::intersection(const FunctionEffectSet &RHS) const {
   const FunctionEffectSet &LHS = *this;
   if (LHS.empty() || RHS.empty()) {
     return {};
@@ -5254,17 +5252,17 @@ FunctionEffectSet::differences(const FunctionEffectSet &Old,
                                const FunctionEffectSet &New) {
   // TODO: Could be a one-pass algorithm.
   Differences Result;
-  for (const auto &Effect : (New - Old)) {
+  for (const auto &Effect : New.difference(Old)) {
     Result.emplace_back(Effect, true);
   }
-  for (const auto &Effect : (Old - New)) {
+  for (const auto &Effect : Old.difference(New)) {
     Result.emplace_back(Effect, false);
   }
   return Result;
 }
 
 MutableFunctionEffectSet
-FunctionEffectSet::operator-(const FunctionEffectSet &RHS) const {
+FunctionEffectSet::difference(const FunctionEffectSet &RHS) const {
   const FunctionEffectSet &LHS = *this;
   MutableFunctionEffectSet Result;
 

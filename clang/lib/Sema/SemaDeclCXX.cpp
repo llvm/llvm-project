@@ -18335,7 +18335,8 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
     for (const auto &Item : Diffs) {
       const FunctionEffect &Effect = Item.first;
       const bool Adding = Item.second;
-      switch (Effect.diagnoseMethodOverride(Adding, *Old, OldFX, *New, NewFX)) {
+      switch (Effect.shouldDiagnoseMethodOverride(Adding, *Old, OldFX, *New,
+                                                  NewFX)) {
       case FunctionEffect::OverrideResult::Ignore:
         break;
       case FunctionEffect::OverrideResult::Warn:
@@ -18345,7 +18346,7 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
         // TODO: It would be nice to have a FIXIT here!
         AnyDiags = true;
         break;
-      case FunctionEffect::OverrideResult::Propagate: {
+      case FunctionEffect::OverrideResult::Merge: {
         auto MergedFX = FunctionEffectSet::getUnion(Context, OldFX, NewFX);
 
         FunctionProtoType::ExtProtoInfo EPI = NewFT->getExtProtoInfo();

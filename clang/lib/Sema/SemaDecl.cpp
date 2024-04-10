@@ -3928,7 +3928,8 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     for (const auto &Item : Diffs) {
       const FunctionEffect &Effect = Item.first;
       const bool Adding = Item.second;
-      if (Effect.diagnoseRedeclaration(Adding, *Old, OldFX, *New, NewFX)) {
+      if (Effect.shouldDiagnoseRedeclaration(Adding, *Old, OldFX, *New,
+                                             NewFX)) {
         Diag(New->getLocation(),
              diag::warn_mismatched_func_effect_redeclaration)
             << Effect.name();
@@ -11151,7 +11152,7 @@ void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX) {
     return;
   }
 
-  AllEffectsToVerify |= FX;
+  AllEffectsToVerify.insertMultiple(FX);
 
   // Record the declaration for later analysis.
   DeclsWithEffectsToVerify.push_back(D);

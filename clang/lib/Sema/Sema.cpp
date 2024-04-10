@@ -596,7 +596,8 @@ void Sema::diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
     for (const auto &Item : FunctionEffectSet::differences(SrcFX, DstFX)) {
       const FunctionEffect &Effect = Item.first;
       const bool Adding = Item.second;
-      if (Effect.diagnoseConversion(Adding, SrcType, SrcFX, DstType, DstFX)) {
+      if (Effect.shouldDiagnoseConversion(Adding, SrcType, SrcFX, DstType,
+                                          DstFX)) {
         Diag(Loc, Adding ? diag::warn_invalid_add_func_effects
                          : diag::warn_invalid_remove_func_effects)
             << Effect.name();

@@ -2636,7 +2636,8 @@ public:
     }
     // FX is now the set of inferrable effects which are not prohibited
     FXToInfer = Ctx.getUniquedFunctionEffectSet(
-        Ctx.getUniquedFunctionEffectSet(FX) - DeclaredVerifiableEffects);
+        Ctx.getUniquedFunctionEffectSet(FX).difference(
+            DeclaredVerifiableEffects));
   }
 
   // Hide the way that diagnostics for explicitly required effects vs. inferred
@@ -2721,7 +2722,7 @@ public:
                            FunctionEffectSet funcFX,
                            FunctionEffectSet AllInferrableEffectsToVerify) {
     MutableFunctionEffectSet verified;
-    verified |= funcFX;
+    verified.insertMultiple(funcFX);
     for (const auto &effect : AllInferrableEffectsToVerify) {
       if (pending.diagnosticForInferrableEffect(effect) == nullptr) {
         verified.insert(effect);
@@ -3043,7 +3044,7 @@ private:
     auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
       const auto Flags = Effect.flags();
       const bool diagnose =
-          Effect.diagnoseFunctionCall(DirectCall, CalleeEffects);
+          Effect.shouldDiagnoseFunctionCall(DirectCall, CalleeEffects);
       if (diagnose) {
         // If inference is not allowed, or the target is indirect (virtual
         // method/function ptr?), generate a diagnostic now.
@@ -3318,7 +3319,7 @@ private:
 
       auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
         if (FPT == nullptr ||
-            Effect.diagnoseFunctionCall(
+            Effect.shouldDiagnoseFunctionCall(
                 /*direct=*/false, FPT->getFunctionEffects())) {
           addDiagnosticInner(Inferring, Effect,
                              DiagnosticID::CallsDisallowedExpr,

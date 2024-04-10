@@ -4435,8 +4435,6 @@ public:
 
 // ------------------------------------------------------------------------------
 
-// TODO: Should FunctionEffect be located elsewhere, where Decl is not
-// forward-declared?
 class Decl;
 class CXXMethodDecl;
 class FunctionEffectSet;
@@ -4457,7 +4455,7 @@ public:
   // test a caller-specified bit. There are some potential optimizations that
   // would OR together the bits of multiple effects.)
   using Flags = unsigned;
-  enum FlagBit : unsigned {
+  enum FlagBit : Flags {
     // Can verification inspect callees' implementations? (e.g. nonblocking:
     // yes, tcb+types: no)
     FE_InferrableOnCallees = 0x1,
@@ -4475,15 +4473,15 @@ public:
   enum class OverrideResult {
     Ignore,
     Warn,
-    Propagate // Base method's effects are merged with those of the override.
+    Merge // Base method's effects are merged with those of the override.
   };
 
 private:
-  // For uniqueness, currently only Type_ is significant.
+  // For uniqueness, currently only EfType is significant.
 
   LLVM_PREFERRED_TYPE(Type)
-  unsigned Type_ : 2;
-  Flags Flags_ : 8; // A constant function of Type but cached here.
+  unsigned EfType : 2;
+  Flags EfFlags : 8; // A constant function of Type but cached here.
 
   // Expansion: for hypothetical TCB+types, there could be one Type for TCB,
   // then ~16(?) bits "Subtype" to map to a specific named TCB. Subtype would
@@ -4494,45 +4492,42 @@ private:
   [[maybe_unused]] unsigned Padding : 22;
 
 public:
-  using CalleeDeclOrType =
-      llvm::PointerUnion<const Decl *, const FunctionProtoType *>;
-
-  FunctionEffect() : Type_(unsigned(Type::None)), Flags_(0), Padding(0) {}
+  FunctionEffect() : EfType(unsigned(Type::None)), EfFlags(0), Padding(0) {}
 
   explicit FunctionEffect(Type T);
 
   /// The type of the effect.
-  Type type() const { return Type(Type_); }
+  Type type() const { return Type(EfType); }
 
   /// Flags describing behaviors of the effect.
-  Flags flags() const { return Flags_; }
+  Flags flags() const { return EfFlags; }
 
   /// The description printed in diagnostics, e.g. 'nonblocking'.
   StringRef name() const;
 
   /// A hashable representation.
-  uint32_t opaqueRepr() const { return Type_ | (Flags_ << 2u); }
+  uint32_t opaqueRepr() const { return EfType | (EfFlags << 2u); }
 
   /// Return true if adding or removing the effect as part of a type conversion
   /// should generate a diagnostic.
-  bool diagnoseConversion(bool Adding, QualType OldType,
-                          FunctionEffectSet OldFX, QualType NewType,
-                          FunctionEffectSet NewFX) const;
+  bool shouldDiagnoseConversion(bool Adding, QualType OldType,
+                                FunctionEffectSet OldFX, QualType NewType,
+                                FunctionEffectSet NewFX) const;
 
   /// Return true if adding or removing the effect in a redeclaration should
   /// generate a diagnostic.
-  bool diagnoseRedeclaration(bool Adding, const FunctionDecl &OldFunction,
-                             FunctionEffectSet OldFX,
-                             const FunctionDecl &NewFunction,
-                             FunctionEffectSet NewFX) const;
+  bool shouldDiagnoseRedeclaration(bool Adding, const FunctionDecl &OldFunction,
+                                   FunctionEffectSet OldFX,
+                                   const FunctionDecl &NewFunction,
+                                   FunctionEffectSet NewFX) const;
 
   /// Return true if adding or removing the effect in a C++ virtual method
   /// override should generate a diagnostic.
-  OverrideResult diagnoseMethodOverride(bool Adding,
-                                        const CXXMethodDecl &OldMethod,
-                                        FunctionEffectSet OldFX,
-                                        const CXXMethodDecl &NewMethod,
-                                        FunctionEffectSet NewFX) const;
+  OverrideResult shouldDiagnoseMethodOverride(bool Adding,
+                                              const CXXMethodDecl &OldMethod,
+                                              FunctionEffectSet OldFX,
+                                              const CXXMethodDecl &NewMethod,
+                                              FunctionEffectSet NewFX) const;
 
   /// Return true if the effect is allowed to be inferred on the callee,
   /// which is either a FunctionDecl or BlockDecl.
@@ -4545,16 +4540,17 @@ public:
   // FE_InferrableOnCallees flag may trigger inference rather than an immediate
   // diagnostic. Caller should be assumed to have the effect (it may not have it
   // explicitly when inferring).
-  bool diagnoseFunctionCall(bool Direct, FunctionEffectSet CalleeFX) const;
+  bool shouldDiagnoseFunctionCall(bool Direct,
+                                  FunctionEffectSet CalleeFX) const;
 
   friend bool operator==(const FunctionEffect &LHS, const FunctionEffect &RHS) {
-    return LHS.Type_ == RHS.Type_;
+    return LHS.EfType == RHS.EfType;
   }
   friend bool operator!=(const FunctionEffect &LHS, const FunctionEffect &RHS) {
-    return LHS.Type_ != RHS.Type_;
+    return LHS.EfType != RHS.EfType;
   }
   friend bool operator<(const FunctionEffect &LHS, const FunctionEffect &RHS) {
-    return LHS.Type_ < RHS.Type_;
+    return LHS.EfType < RHS.EfType;
   }
 };
 
@@ -4573,7 +4569,7 @@ public:
   /// Maintains order/uniquenesss.
   void insert(const FunctionEffect &Effect);
 
-  MutableFunctionEffectSet &operator|=(FunctionEffectSet RHS);
+  MutableFunctionEffectSet &insertMultiple(FunctionEffectSet RHS);
 
   operator llvm::ArrayRef<FunctionEffect>() const { return {data(), size()}; }
 };
@@ -4625,10 +4621,8 @@ public:
 
   void dump(llvm::raw_ostream &OS) const;
 
-  /// Intersection.
-  MutableFunctionEffectSet operator&(const FunctionEffectSet &RHS) const;
-  /// Difference.
-  MutableFunctionEffectSet operator-(const FunctionEffectSet &RHS) const;
+  MutableFunctionEffectSet intersection(const FunctionEffectSet &RHS) const;
+  MutableFunctionEffectSet difference(const FunctionEffectSet &RHS) const;
 
   static FunctionEffectSet getUnion(ASTContext &C, const FunctionEffectSet &LHS,
                                     const FunctionEffectSet &RHS);

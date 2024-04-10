@@ -7980,15 +7980,15 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
 }
 
 static bool
-handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &state,
-                                       ParsedAttr &PAttr, QualType &type,
-                                       FunctionTypeUnwrapper &unwrapped) {
+handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
+                                       ParsedAttr &PAttr, QualType &QT,
+                                       FunctionTypeUnwrapper &Unwrapped) {
   // Delay if this is not a function type.
-  if (!unwrapped.isFunctionType())
+  if (!Unwrapped.isFunctionType())
     return false;
 
   // Require FunctionProtoType
-  auto *FPT = unwrapped.get()->getAs<FunctionProtoType>();
+  auto *FPT = Unwrapped.get()->getAs<FunctionProtoType>();
   if (FPT == nullptr) {
     // TODO: special diagnostic?
     return false;
@@ -7998,7 +7998,7 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &state,
   // non/blocking or non/allocating? Or dependent?
   const bool isNonBlocking = PAttr.getKind() == ParsedAttr::AT_NonBlocking ||
                              PAttr.getKind() == ParsedAttr::AT_Blocking;
-  Sema &S = state.getSema();
+  Sema &S = TPState.getSema();
 
   BoolAttrState NewState = BoolAttrState::Unseen;
   Expr *CondExpr = nullptr; // only valid if dependent
@@ -8017,13 +8017,14 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &state,
         if (!CondExpr->isValueDependent()) {
           llvm::APSInt CondInt;
           E = S.VerifyIntegerConstantExpression(
-            E.get(), &CondInt,
-            // TODO: have our own diagnostic
-            diag::err_constexpr_if_condition_expression_is_not_constant);
+              E.get(), &CondInt,
+              // TODO: have our own diagnostic
+              diag::err_constexpr_if_condition_expression_is_not_constant);
           if (E.isInvalid()) {
             return false;
           }
-          NewState = (CondInt != 0) ? BoolAttrState::True : BoolAttrState::False;
+          NewState =
+              (CondInt != 0) ? BoolAttrState::True : BoolAttrState::False;
         } else {
           NewState = BoolAttrState::Dependent;
         }
@@ -8053,17 +8054,18 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &state,
 
   // Diagnose the newly provided attribute as incompatible with a previous one.
   auto incompatible = [&](bool prevNB, BoolAttrState prevValue) {
-    Sema &S = state.getSema();
     S.Diag(PAttr.getLoc(), diag::err_attributes_are_not_compatible)
-        << attrName(isNonBlocking, NewState) << attrName(prevNB, prevValue) << false;
+        << attrName(isNonBlocking, NewState) << attrName(prevNB, prevValue)
+        << false;
     // we don't necessarily have the location of the previous attribute,
     // so no note.
     PAttr.setInvalid();
     return true;
   };
 
-  const BoolAttrState PrevState = isNonBlocking ? state.getParsedNonBlocking() : 
-    state.getParsedNonAllocating();
+  const BoolAttrState PrevState = isNonBlocking
+                                      ? TPState.getParsedNonBlocking()
+                                      : TPState.getParsedNonAllocating();
   if (PrevState != BoolAttrState::Unseen) {
     // Only one attribute per constraint is allowed.
     return incompatible(isNonBlocking, PrevState);
@@ -8071,35 +8073,37 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &state,
 
   if (isNonBlocking) {
     // also check nonblocking(true) against allocating
-    if (NewState == BoolAttrState::True && state.getParsedNonAllocating() == BoolAttrState::False) {
+    if (NewState == BoolAttrState::True &&
+        TPState.getParsedNonAllocating() == BoolAttrState::False) {
       return incompatible(false, BoolAttrState::False);
     }
-    state.setParsedNonBlocking(NewState);
+    TPState.setParsedNonBlocking(NewState);
   } else {
     // also check nonblocking(true) against allocating
-    if (state.getParsedNonBlocking() == BoolAttrState::True) {
+    if (TPState.getParsedNonBlocking() == BoolAttrState::True) {
       if (NewState == BoolAttrState::False) {
         return incompatible(true, BoolAttrState::True);
       }
       // Ignore nonallocating(true) since we already have nonblocking(true).
       return true;
     }
-    state.setParsedNonAllocating(NewState);
+    TPState.setParsedNonAllocating(NewState);
   }
 
   if (NewState == BoolAttrState::Dependent) {
-    // nonblocking(expr)/nonallocating(expr) are represented as AttributedType sugar,
-    // using those attributes. TODO: Currently no one else tries to find it there,
-    // and this may turn out to be the wrong place.
+    // nonblocking(expr)/nonallocating(expr) are represented as AttributedType
+    // sugar, using those attributes. TODO: Currently no one else tries to find
+    // it there, and this may turn out to be the wrong place.
     Attr *A = nullptr;
     if (isNonBlocking) {
       A = NonBlockingAttr::Create(S.Context, CondExpr);
     } else {
       A = NonAllocatingAttr::Create(S.Context, CondExpr);
     }
-    type = state.getAttributedType(A, type, type);
+    QT = TPState.getAttributedType(A, QT, QT);
     return true;
   }
+
   if (NewState == BoolAttrState::False) {
     // blocking and allocating are represented as AttributedType sugar,
     // using those attributes.
@@ -8109,7 +8113,7 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &state,
     } else {
       A = AllocatingAttr::Create(S.Context);
     }
-    type = state.getAttributedType(A, type, type);
+    QT = TPState.getAttributedType(A, QT, QT);
     return true;
   }
 
@@ -8133,10 +8137,10 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &state,
   }
 
   EPI.FunctionEffects =
-      state.getSema().getASTContext().getUniquedFunctionEffectSet(NewFX);
+      TPState.getSema().getASTContext().getUniquedFunctionEffectSet(NewFX);
   QualType newtype = S.Context.getFunctionType(FPT->getReturnType(),
                                                FPT->getParamTypes(), EPI);
-  type = unwrapped.wrap(S, newtype->getAs<FunctionType>());
+  QT = Unwrapped.wrap(S, newtype->getAs<FunctionType>());
   return true;
 }
 

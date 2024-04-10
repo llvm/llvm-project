@@ -8233,7 +8233,7 @@ void ASTReader::InitializeSema(Sema &S) {
         FX = BD->getFunctionEffects();
       }
       if (FX) {
-        SemaObj->AllEffectsToVerify |= FX;
+        SemaObj->AllEffectsToVerify.insertMultiple(FX);
       }
     }
     DeclsWithEffectsToVerify.clear();
