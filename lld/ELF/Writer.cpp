@@ -541,9 +541,6 @@ template <class ELFT> void elf::createSyntheticSections() {
       in.got->hasGotOffRel = true;
   }
 
-  if (config->gdbIndex)
-    add(*GdbIndexSection::create<ELFT>());
-
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
   in.relaPlt = std::make_unique<RelocationSection<ELFT>>(
@@ -567,6 +564,11 @@ template <class ELFT> void elf::createSyntheticSections() {
 
   if (config->andFeatures || !ctx.aarch64PauthAbiCoreInfo.empty())
     add(*make<GnuPropertySection>());
+
+  if (config->gdbIndex) {
+    in.gdbIndex = GdbIndexSection::create<ELFT>();
+    add(*in.gdbIndex);
+  }
 
   // .note.GNU-stack is always added when we are creating a re-linkable
   // object file. Other linkers are using the presence of this marker

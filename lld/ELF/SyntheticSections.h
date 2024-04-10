@@ -822,7 +822,7 @@ public:
   };
 
   GdbIndexSection();
-  template <typename ELFT> static GdbIndexSection *create();
+  template <typename ELFT> static std::unique_ptr<GdbIndexSection> create();
   void writeTo(uint8_t *buf) override;
   size_t getSize() const override { return size; }
   bool isNeeded() const override;
@@ -1359,6 +1359,8 @@ struct InStruct {
   std::unique_ptr<PPC32Got2Section> ppc32Got2;
   std::unique_ptr<IBTPltSection> ibtPlt;
   std::unique_ptr<RelocationBaseSection> relaPlt;
+  // Non-SHF_ALLOC sections
+  std::unique_ptr<GdbIndexSection> gdbIndex;
   std::unique_ptr<StringTableSection> shStrTab;
   std::unique_ptr<StringTableSection> strTab;
   std::unique_ptr<SymbolTableBaseSection> symTab;

@@ -2872,7 +2872,8 @@ createSymbols(
 }
 
 // Returns a newly-created .gdb_index section.
-template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
+template <class ELFT>
+std::unique_ptr<GdbIndexSection> GdbIndexSection::create() {
   llvm::TimeTraceScope timeScope("Create gdb index");
 
   // Collect InputFiles with .debug_info. See the comment in
@@ -2918,7 +2919,7 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
     nameAttrs[i] = readPubNamesAndTypes<ELFT>(dobj, chunks[i].compilationUnits);
   });
 
-  auto *ret = make<GdbIndexSection>();
+  auto ret = std::make_unique<GdbIndexSection>();
   ret->chunks = std::move(chunks);
   std::tie(ret->symbols, ret->size) = createSymbols(nameAttrs, ret->chunks);
 
@@ -3860,6 +3861,7 @@ void InStruct::reset() {
   ppc32Got2.reset();
   ibtPlt.reset();
   relaPlt.reset();
+  gdbIndex.reset();
   shStrTab.reset();
   strTab.reset();
   symTab.reset();
@@ -3986,10 +3988,10 @@ InStruct elf::in;
 std::vector<Partition> elf::partitions;
 Partition *elf::mainPart;
 
-template GdbIndexSection *GdbIndexSection::create<ELF32LE>();
-template GdbIndexSection *GdbIndexSection::create<ELF32BE>();
-template GdbIndexSection *GdbIndexSection::create<ELF64LE>();
-template GdbIndexSection *GdbIndexSection::create<ELF64BE>();
+template std::unique_ptr<GdbIndexSection> GdbIndexSection::create<ELF32LE>();
+template std::unique_ptr<GdbIndexSection> GdbIndexSection::create<ELF32BE>();
+template std::unique_ptr<GdbIndexSection> GdbIndexSection::create<ELF64LE>();
+template std::unique_ptr<GdbIndexSection> GdbIndexSection::create<ELF64BE>();
 
 template void elf::splitSections<ELF32LE>();
 template void elf::splitSections<ELF32BE>();
