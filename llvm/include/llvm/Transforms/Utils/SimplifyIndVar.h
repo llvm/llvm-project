@@ -48,7 +48,10 @@ public:
 };
 
 /// simplifyUsersOfIV - Simplify instructions that use this induction variable
-/// by using ScalarEvolution to analyze the IV's recurrence.
+/// by using ScalarEvolution to analyze the IV's recurrence. Returns a pair
+/// where the first entry indicates that the function makes changes and the
+/// second entry indicates that it introduced new opportunities for loop
+/// unswitching.
 std::pair<bool, bool> simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE,
                                         DominatorTree *DT, LoopInfo *LI,
                                         const TargetTransformInfo *TTI,
