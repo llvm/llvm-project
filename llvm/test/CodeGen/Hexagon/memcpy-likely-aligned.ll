@@ -20,7 +20,7 @@ entry:
   %0 = load ptr, ptr @t, align 4
   store ptr %0, ptr @q, align 4
   %1 = load ptr, ptr @q, align 4
-  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %1, ptr align 4 getelementptr inbounds ({ <{ { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e }, { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e } }> }, ptr @y, i32 0, i32 0, i32 0, i32 0, i32 0), i32 32, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %1, ptr align 4 @y, i32 32, i1 false)
   ret void
 }
 

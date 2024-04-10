@@ -721,6 +721,7 @@ private:
     unsigned ID;
 
     /// Whether this is a wildcard export.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsWildcard : 1;
 
     /// String data.
@@ -1088,27 +1089,13 @@ private:
   /// the last time we loaded information about this identifier.
   llvm::DenseMap<const IdentifierInfo *, unsigned> IdentifierGeneration;
 
-  class InterestingDecl {
-    Decl *D;
-    bool DeclHasPendingBody;
-
-  public:
-    InterestingDecl(Decl *D, bool HasBody)
-        : D(D), DeclHasPendingBody(HasBody) {}
-
-    Decl *getDecl() { return D; }
-
-    /// Whether the declaration has a pending body.
-    bool hasPendingBody() { return DeclHasPendingBody; }
-  };
-
   /// Contains declarations and definitions that could be
   /// "interesting" to the ASTConsumer, when we get that AST consumer.
   ///
   /// "Interesting" declarations are those that have data that may
   /// need to be emitted, such as inline function definitions or
   /// Objective-C protocols.
-  std::deque<InterestingDecl> PotentiallyInterestingDecls;
+  std::deque<Decl *> PotentiallyInterestingDecls;
 
   /// The list of deduced function types that we have not yet read, because
   /// they might contain a deduced return type that refers to a local type
@@ -1780,12 +1767,13 @@ public:
   /// Read the control block for the named AST file.
   ///
   /// \returns true if an error occurred, false otherwise.
-  static bool readASTFileControlBlock(StringRef Filename, FileManager &FileMgr,
-                                      const InMemoryModuleCache &ModuleCache,
-                                      const PCHContainerReader &PCHContainerRdr,
-                                      bool FindModuleFileExtensions,
-                                      ASTReaderListener &Listener,
-                                      bool ValidateDiagnosticOptions);
+  static bool readASTFileControlBlock(
+      StringRef Filename, FileManager &FileMgr,
+      const InMemoryModuleCache &ModuleCache,
+      const PCHContainerReader &PCHContainerRdr, bool FindModuleFileExtensions,
+      ASTReaderListener &Listener, bool ValidateDiagnosticOptions,
+      unsigned ClientLoadCapabilities = ARR_ConfigurationMismatch |
+                                        ARR_OutOfDate);
 
   /// Determine whether the given AST file is acceptable to load into a
   /// translation unit with the given language and target options.
@@ -2270,6 +2258,9 @@ public:
   SourceRange ReadSourceRange(ModuleFile &F, const RecordData &Record,
                               unsigned &Idx, LocSeq *Seq = nullptr);
 
+  static llvm::BitVector ReadBitVector(const RecordData &Record,
+                                       const StringRef Blob);
+
   // Read a string
   static std::string ReadString(const RecordDataImpl &Record, unsigned &Idx);
 
@@ -2451,7 +2442,6 @@ private:
   uint32_t Value;
   uint32_t CurrentBitsIndex = ~0;
 };
-
 } // namespace clang
 
 #endif // LLVM_CLANG_SERIALIZATION_ASTREADER_H

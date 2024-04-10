@@ -17,6 +17,7 @@
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LangStandard.h"
+#include "clang/Testing/TestAST.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Testing/Support/Error.h"
@@ -36,6 +37,40 @@ using ::testing::IsNull;
 using ::testing::Ne;
 using ::testing::NotNull;
 using ::testing::UnorderedElementsAre;
+
+// Declares a minimal coroutine library.
+constexpr llvm::StringRef CoroutineLibrary = R"cc(
+struct promise;
+struct task;
+
+namespace std {
+template <class, class...>
+struct coroutine_traits {};
+template <>
+struct coroutine_traits<task> {
+    using promise_type = promise;
+};
+
+template <class Promise = void>
+struct coroutine_handle {
+    static constexpr coroutine_handle from_address(void *addr) { return {}; }
+};
+}  // namespace std
+
+struct awaitable {
+    bool await_ready() const noexcept;
+    void await_suspend(std::coroutine_handle<promise>) const noexcept;
+    void await_resume() const noexcept;
+};
+struct task {};
+struct promise {
+    task get_return_object();
+    awaitable initial_suspend();
+    awaitable final_suspend() noexcept;
+    void unhandled_exception();
+    void return_void();
+};
+)cc";
 
 void runDataflow(
     llvm::StringRef Code,
@@ -101,12 +136,32 @@ const Formula &getFormula(const ValueDecl &D, const Environment &Env) {
 }
 
 TEST(TransferTest, CNotSupported) {
-  std::string Code = R"(
-    void target() {}
-  )";
-  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(
-                        Code, [](const auto &, auto &) {}, {BuiltinOptions{}},
-                        LangStandard::lang_c89),
+  TestInputs Inputs("void target() {}");
+  Inputs.Language = TestLanguage::Lang_C89;
+  clang::TestAST AST(Inputs);
+  const auto *Target =
+      cast<FunctionDecl>(test::findValueDecl(AST.context(), "target"));
+  ASSERT_THAT_ERROR(AdornedCFG::build(*Target).takeError(),
+                    llvm::FailedWithMessage("Can only analyze C++"));
+}
+
+TEST(TransferTest, ObjectiveCNotSupported) {
+  TestInputs Inputs("void target() {}");
+  Inputs.Language = TestLanguage::Lang_OBJC;
+  clang::TestAST AST(Inputs);
+  const auto *Target =
+      cast<FunctionDecl>(test::findValueDecl(AST.context(), "target"));
+  ASSERT_THAT_ERROR(AdornedCFG::build(*Target).takeError(),
+                    llvm::FailedWithMessage("Can only analyze C++"));
+}
+
+TEST(TransferTest, ObjectiveCXXNotSupported) {
+  TestInputs Inputs("void target() {}");
+  Inputs.Language = TestLanguage::Lang_OBJCXX;
+  clang::TestAST AST(Inputs);
+  const auto *Target =
+      cast<FunctionDecl>(test::findValueDecl(AST.context(), "target"));
+  ASSERT_THAT_ERROR(AdornedCFG::build(*Target).takeError(),
                     llvm::FailedWithMessage("Can only analyze C++"));
 }
 
@@ -1476,6 +1531,69 @@ TEST(TransferTest, BaseClassInitializer) {
       llvm::Succeeded());
 }
 
+TEST(TransferTest, FieldsDontHaveValuesInConstructor) {
+  // In a constructor, unlike in regular member functions, we don't want fields
+  // to be pre-initialized with values, because doing so is the job of the
+  // constructor.
+  std::string Code = R"(
+    struct target {
+      target() {
+        0;
+        // [[p]]
+        // Mention the field so it is modeled;
+        Val;
+      }
+
+      int Val;
+    };
+ )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        EXPECT_EQ(getFieldValue(Env.getThisPointeeStorageLocation(), "Val",
+                                ASTCtx, Env),
+                  nullptr);
+      });
+}
+
+TEST(TransferTest, FieldsDontHaveValuesInConstructorWithBaseClass) {
+  // See above, but for a class with a base class.
+  std::string Code = R"(
+    struct Base {
+        int BaseVal;
+    };
+
+    struct target  : public Base {
+      target() {
+        0;
+        // [[p]]
+        // Mention the fields so they are modeled.
+        BaseVal;
+        Val;
+      }
+
+      int Val;
+    };
+ )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        // FIXME: The field of the base class should already have been
+        // initialized with a value by the base constructor. This test documents
+        // the current buggy behavior.
+        EXPECT_EQ(getFieldValue(Env.getThisPointeeStorageLocation(), "BaseVal",
+                                ASTCtx, Env),
+                  nullptr);
+        EXPECT_EQ(getFieldValue(Env.getThisPointeeStorageLocation(), "Val",
+                                ASTCtx, Env),
+                  nullptr);
+      });
+}
+
 TEST(TransferTest, StructModeledFieldsWithAccessor) {
   std::string Code = R"(
     class S {
@@ -2093,7 +2211,7 @@ TEST(TransferTest, TemporaryObject) {
 
 TEST(TransferTest, ElidableConstructor) {
   // This test is effectively the same as TransferTest.TemporaryObject, but
-  // the code is compiled as C++ 14.
+  // the code is compiled as C++14.
   std::string Code = R"(
     struct A {
       int Bar;
@@ -2250,8 +2368,6 @@ TEST(TransferTest, AssignmentOperator_ArgByValue) {
 }
 
 TEST(TransferTest, AssignmentOperatorFromBase) {
-  // This is a crash repro. We don't model the copy this case, so no
-  // expectations on the copied field of the base class are checked.
   std::string Code = R"(
     struct Base {
       int base;
@@ -2263,14 +2379,33 @@ TEST(TransferTest, AssignmentOperatorFromBase) {
     void target(Base B, Derived D) {
       D.base = 1;
       D.derived = 1;
+      // [[before]]
       D = B;
-      // [[p]]
+      // [[after]]
     }
   )";
   runDataflow(
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
-         ASTContext &ASTCtx) {});
+         ASTContext &ASTCtx) {
+        const Environment &EnvBefore =
+            getEnvironmentAtAnnotation(Results, "before");
+        const Environment &EnvAfter =
+            getEnvironmentAtAnnotation(Results, "after");
+
+        auto &BLoc =
+            getLocForDecl<RecordStorageLocation>(ASTCtx, EnvBefore, "B");
+        auto &DLoc =
+            getLocForDecl<RecordStorageLocation>(ASTCtx, EnvBefore, "D");
+
+        EXPECT_NE(getFieldValue(&BLoc, "base", ASTCtx, EnvBefore),
+                  getFieldValue(&DLoc, "base", ASTCtx, EnvBefore));
+        EXPECT_EQ(getFieldValue(&BLoc, "base", ASTCtx, EnvAfter),
+                  getFieldValue(&DLoc, "base", ASTCtx, EnvAfter));
+
+        EXPECT_EQ(getFieldValue(&DLoc, "derived", ASTCtx, EnvBefore),
+                  getFieldValue(&DLoc, "derived", ASTCtx, EnvAfter));
+      });
 }
 
 TEST(TransferTest, AssignmentOperatorFromCallResult) {
@@ -2311,6 +2446,174 @@ TEST(TransferTest, AssignmentOperatorWithInitAndInheritance) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {});
+}
+
+TEST(TransferTest, AssignmentOperatorReturnsVoid) {
+  // This is a crash repro.
+  std::string Code = R"(
+    struct S {
+      void operator=(S&& other);
+    };
+    void target() {
+      S s;
+      s = S();
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
+TEST(TransferTest, AssignmentOperatorReturnsByValue) {
+  // This is a crash repro.
+  std::string Code = R"(
+    struct S {
+      S operator=(S&& other);
+    };
+    void target() {
+      S s;
+      s = S();
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
+TEST(TransferTest, InitListExprAsXValue) {
+  // This is a crash repro.
+  std::string Code = R"(
+    void target() {
+      bool&& Foo{false};
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const auto &FooVal = getValueForDecl<BoolValue>(ASTCtx, Env, "Foo");
+        ASSERT_TRUE(FooVal.formula().isLiteral(false));
+      });
+}
+
+TEST(TransferTest, ArrayInitListExprOneRecordElement) {
+  // This is a crash repro.
+  std::string Code = R"cc(
+    struct S {};
+
+    void target() { S foo[] = {S()}; }
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        // Just verify that it doesn't crash.
+      });
+}
+
+TEST(TransferTest, InitListExprAsUnion) {
+  // This is a crash repro.
+  std::string Code = R"cc(
+    class target {
+      union {
+        int *a;
+        bool *b;
+      } F;
+
+     public:
+      constexpr target() : F{nullptr} {
+        int *null = nullptr;
+        F.b;  // Make sure we reference 'b' so it is modeled.
+        // [[p]]
+      }
+    };
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto &FLoc = getFieldLoc<RecordStorageLocation>(
+            *Env.getThisPointeeStorageLocation(), "F", ASTCtx);
+        auto *AVal = cast<PointerValue>(getFieldValue(&FLoc, "a", ASTCtx, Env));
+        EXPECT_EQ(AVal, &getValueForDecl<PointerValue>(ASTCtx, Env, "null"));
+        EXPECT_EQ(getFieldValue(&FLoc, "b", ASTCtx, Env), nullptr);
+      });
+}
+
+TEST(TransferTest, EmptyInitListExprForUnion) {
+  // This is a crash repro.
+  std::string Code = R"cc(
+    class target {
+      union {
+        int *a;
+        bool *b;
+      } F;
+
+     public:
+      // Empty initializer list means that `F` is aggregate-initialized.
+      // For a union, this has the effect that the first member of the union
+      // is copy-initialized from an empty initializer list; in this specific
+      // case, this has the effect of initializing `a` with null.
+      constexpr target() : F{} {
+        int *null = nullptr;
+        F.b;  // Make sure we reference 'b' so it is modeled.
+        // [[p]]
+      }
+    };
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto &FLoc = getFieldLoc<RecordStorageLocation>(
+            *Env.getThisPointeeStorageLocation(), "F", ASTCtx);
+        auto *AVal = cast<PointerValue>(getFieldValue(&FLoc, "a", ASTCtx, Env));
+        EXPECT_EQ(AVal, &getValueForDecl<PointerValue>(ASTCtx, Env, "null"));
+        EXPECT_EQ(getFieldValue(&FLoc, "b", ASTCtx, Env), nullptr);
+      });
+}
+
+TEST(TransferTest, EmptyInitListExprForStruct) {
+  std::string Code = R"cc(
+    class target {
+      struct {
+        int *a;
+        bool *b;
+      } F;
+
+     public:
+      constexpr target() : F{} {
+        int *NullIntPtr = nullptr;
+        bool *NullBoolPtr = nullptr;
+        // [[p]]
+      }
+    };
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto &FLoc = getFieldLoc<RecordStorageLocation>(
+            *Env.getThisPointeeStorageLocation(), "F", ASTCtx);
+        auto *AVal = cast<PointerValue>(getFieldValue(&FLoc, "a", ASTCtx, Env));
+        EXPECT_EQ(AVal,
+                  &getValueForDecl<PointerValue>(ASTCtx, Env, "NullIntPtr"));
+        auto *BVal = cast<PointerValue>(getFieldValue(&FLoc, "b", ASTCtx, Env));
+        EXPECT_EQ(BVal,
+                  &getValueForDecl<PointerValue>(ASTCtx, Env, "NullBoolPtr"));
+      });
 }
 
 TEST(TransferTest, CopyConstructor) {
@@ -2693,6 +2996,36 @@ TEST(TransferTest, ResultObjectLocation) {
       });
 }
 
+TEST(TransferTest, ResultObjectLocationForDefaultArgExpr) {
+  std::string Code = R"(
+    struct S {};
+    void funcWithDefaultArg(S s = S());
+    void target() {
+      funcWithDefaultArg();
+      // [[p]]
+    }
+  )";
+
+  using ast_matchers::cxxDefaultArgExpr;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *DefaultArg = selectFirst<CXXDefaultArgExpr>(
+            "default_arg",
+            match(cxxDefaultArgExpr().bind("default_arg"), ASTCtx));
+        ASSERT_NE(DefaultArg, nullptr);
+
+        // The values for default arguments aren't modeled; we merely verify
+        // that we can get a result object location for a default arg.
+        Env.getResultObjectLocation(*DefaultArg);
+      });
+}
+
 TEST(TransferTest, ResultObjectLocationForDefaultInitExpr) {
   std::string Code = R"(
     struct S {};
@@ -2732,6 +3065,39 @@ TEST(TransferTest, ResultObjectLocationForDefaultInitExpr) {
         // For the time being, we just document the current erroneous behavior
         // here (this should be `EXPECT_EQ` when the behavior is fixed).
         EXPECT_NE(&Loc, Env.getThisPointeeStorageLocation()->getChild(*SField));
+      });
+}
+
+// This test ensures that CXXOperatorCallExpr returning prvalues are correctly
+// handled by the transfer functions, especially that `getResultObjectLocation`
+// correctly returns a storage location for those.
+TEST(TransferTest, ResultObjectLocationForCXXOperatorCallExpr) {
+  std::string Code = R"(
+    struct A {
+      A operator+(int);
+    };
+
+    void target() {
+      A a;
+      a + 3;
+      (void)0; // [[p]]
+    }
+  )";
+  using ast_matchers::cxxOperatorCallExpr;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  using ast_matchers::traverse;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *CallExpr = selectFirst<CXXOperatorCallExpr>(
+            "call_expr",
+            match(cxxOperatorCallExpr().bind("call_expr"), ASTCtx));
+
+        EXPECT_NE(&Env.getResultObjectLocation(*CallExpr), nullptr);
       });
 }
 
@@ -3306,7 +3672,7 @@ TEST(TransferTest, AggregateInitializationFunctionPointer) {
     struct S {
       void (*const Field)();
     };
-    
+
     void target() {
       S s{nullptr};
     }
@@ -4296,7 +4662,7 @@ TEST(TransferTest, LoopCanProveInvariantForBoolean) {
 }
 
 TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
-  std::string Code = R"(
+  std::string Code = R"cc(
     union Union {
       int A;
       float B;
@@ -4307,7 +4673,7 @@ TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
       Union B;
       A = B;
     }
-  )";
+  )cc";
   // This is a crash regression test when calling the transfer function on a
   // `CXXThisExpr` that refers to a union.
   runDataflow(
@@ -4315,6 +4681,22 @@ TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
          ASTContext &) {},
       LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "operator=");
+}
+
+TEST(TransferTest, DoesNotCrashOnNullChildren) {
+  std::string Code = (CoroutineLibrary + R"cc(
+    task target() noexcept {
+      co_return;
+    }
+  )cc")
+                         .str();
+  // This is a crash regression test when calling `AdornedCFG::build` on a
+  // statement (in this case, the `CoroutineBodyStmt`) with null children.
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+         ASTContext &) {},
+      LangStandard::lang_cxx20, /*ApplyBuiltinTransfer=*/true);
 }
 
 TEST(TransferTest, StructuredBindingAssignFromStructIntMembersToRefs) {
@@ -5467,6 +5849,39 @@ TEST(TransferTest, ContextSensitiveReturnInt) {
          ASTContext &ASTCtx) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         // This just tests that the analysis doesn't crash.
+      },
+      {BuiltinOptions{ContextSensitiveOptions{}}});
+}
+
+TEST(TransferTest, ContextSensitiveReturnRecord) {
+  std::string Code = R"(
+    struct S {
+      bool B;
+    };
+
+    S makeS(bool BVal) { return {BVal}; }
+
+    void target() {
+      S FalseS = makeS(false);
+      S TrueS = makeS(true);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto &FalseSLoc =
+            getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "FalseS");
+        auto &TrueSLoc =
+            getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "TrueS");
+
+        EXPECT_EQ(getFieldValue(&FalseSLoc, "B", ASTCtx, Env),
+                  &Env.getBoolLiteralValue(false));
+        EXPECT_EQ(getFieldValue(&TrueSLoc, "B", ASTCtx, Env),
+                  &Env.getBoolLiteralValue(true));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }

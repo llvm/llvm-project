@@ -187,30 +187,30 @@ define <vscale x 4 x i32> @smstart_clobber_sve(<vscale x 4 x i32> %x) nounwind {
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
@@ -267,30 +267,30 @@ define <vscale x 4 x i32> @smstart_clobber_sve_duplicate(<vscale x 4 x i32> %x) 
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
@@ -313,9 +313,9 @@ define double @call_to_intrinsic_without_chain(double %x) nounwind "aarch64_psta
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
-; CHECK-NEXT:    str d0, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    stp d0, d0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    ldr d0, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr d0, [sp] // 8-byte Folded Reload
 ; CHECK-NEXT:    bl cos
 ; CHECK-NEXT:    str d0, [sp] // 8-byte Folded Spill
 ; CHECK-NEXT:    smstart sm
@@ -405,11 +405,11 @@ define void @call_to_non_streaming_pass_args(ptr nocapture noundef readnone %ptr
 ; CHECK-NEXT:    stp d11, d10, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #96] // 8-byte Folded Spill
-; CHECK-NEXT:    stp d2, d3, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    stp s1, s0, [sp, #24] // 8-byte Folded Spill
+; CHECK-NEXT:    stp d3, d2, [sp, #8] // 16-byte Folded Spill
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:    ldp s0, s1, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    ldp d2, d3, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp s1, s0, [sp, #24] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp d3, d2, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl bar
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:    ldp d9, d8, [sp, #80] // 16-byte Folded Reload

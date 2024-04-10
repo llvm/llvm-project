@@ -956,7 +956,8 @@ struct NVGPUMBarrierTryWaitParityLowering
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
     Value ticks = truncToI32(b, adaptor.getTicks());
-    Value phase = truncToI32(b, adaptor.getPhase());
+    Value phase =
+        b.create<LLVM::ZExtOp>(b.getI32Type(), adaptor.getPhaseParity());
 
     if (isMbarrierShared(op.getBarriers().getType())) {
       rewriter.replaceOpWithNewOp<NVVM::MBarrierTryWaitParitySharedOp>(
@@ -1407,7 +1408,7 @@ struct NVGPUWarpgroupMmaOpLowering
       NVVM::WGMMAScaleOutAttr scaleOut = generateScaleOut();
       NVVM::WGMMAScaleInAttr scaleIn = generateScaleIn();
       NVVM::MMALayoutAttr layoutA = generateWgmmaLayout(op.getTransposeA());
-      NVVM::MMALayoutAttr layoutB = generateWgmmaLayout(op.getTransposeB());
+      NVVM::MMALayoutAttr layoutB = generateWgmmaLayout(!op.getTransposeB());
 
       auto overflow = NVVM::MMAIntOverflowAttr::get(
           op->getContext(), NVVM::MMAIntOverflow::wrapped);

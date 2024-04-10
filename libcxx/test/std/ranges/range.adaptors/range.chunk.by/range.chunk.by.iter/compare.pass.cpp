@@ -25,14 +25,14 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 
-template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
+template <class Iter, class Sent = sentinel_wrapper<Iter>>
 constexpr void test() {
-  using Underlying      = View<Iterator, Sentinel>;
+  using Underlying      = View<Iter, Sent>;
   using ChunkByView     = std::ranges::chunk_by_view<Underlying, std::ranges::less_equal>;
   using ChunkByIterator = std::ranges::iterator_t<ChunkByView>;
 
   auto make_chunk_by_view = [](auto& arr) {
-    View view{Iterator(arr.data()), Sentinel(Iterator(arr.data() + arr.size()))};
+    View view{Iter(arr.data()), Sent(Iter(arr.data() + arr.size()))};
     return ChunkByView(std::move(view), std::ranges::less_equal{});
   };
 

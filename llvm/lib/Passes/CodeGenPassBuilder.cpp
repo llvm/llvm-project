@@ -16,12 +16,7 @@
 using namespace llvm;
 
 namespace llvm {
-#define DUMMY_MACHINE_MODULE_PASS(NAME, PASS_NAME, CONSTRUCTOR)                \
-  MachinePassKey PASS_NAME::Key;
-#include "llvm/Passes/MachinePassRegistry.def"
-#define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)              \
-  MachinePassKey PASS_NAME::Key;
-#define DUMMY_MACHINE_FUNCTION_ANALYSIS(NAME, PASS_NAME, CONSTRUCTOR)          \
+#define DUMMY_MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                     \
   AnalysisKey PASS_NAME::Key;
 #include "llvm/Passes/MachinePassRegistry.def"
 } // namespace llvm

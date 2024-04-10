@@ -19,13 +19,13 @@ define void @foo(ptr %ptr, ptr %ptr.2) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 2, i64 3, i64 4, i64 5>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 2, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[PTR_2]], align 4, !alias.scope !0, !noalias !3
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[PTR]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP6]], i32 0

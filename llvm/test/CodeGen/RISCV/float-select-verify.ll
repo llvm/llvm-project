@@ -35,7 +35,6 @@ define dso_local void @buz(i1 %pred, float %a, float %b) {
   ; CHECK-NEXT: bb.3.entry:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.entry:
   ; CHECK-NEXT:   successors: %bb.5(0x40000000), %bb.6(0x40000000)
   ; CHECK-NEXT: {{  $}}
@@ -59,7 +58,6 @@ define dso_local void @buz(i1 %pred, float %a, float %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7.entry:
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8.entry:
   ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:fpr32 = PHI [[PHI2]], %bb.6, [[FMV_W_X]], %bb.7

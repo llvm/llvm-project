@@ -76,7 +76,7 @@ define i32 @strictfp_func_fpmode_i32() strictfp {
 ; GFX11-NEXT:    s_and_b32 s0, 0x87f3ff, s0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %fpmode = call i32 @llvm.get.fpmode.i32()
+  %fpmode = call i32 @llvm.get.fpmode.i32() strictfp
   ret i32 %fpmode
 }
 

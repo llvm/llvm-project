@@ -26,6 +26,27 @@ namespace scudo {
 
 template <class Allocator, u32 TSDsArraySize, u32 DefaultTSDCount>
 struct TSDRegistrySharedT {
+  using ThisT = TSDRegistrySharedT<Allocator, TSDsArraySize, DefaultTSDCount>;
+
+  struct ScopedTSD {
+    ALWAYS_INLINE ScopedTSD(ThisT &TSDRegistry) {
+      CurrentTSD = TSDRegistry.getTSDAndLock();
+      DCHECK_NE(CurrentTSD, nullptr);
+    }
+
+    ~ScopedTSD() { CurrentTSD->unlock(); }
+
+    TSD<Allocator> &operator*() { return *CurrentTSD; }
+
+    TSD<Allocator> *operator->() {
+      CurrentTSD->assertLocked(/*BypassCheck=*/false);
+      return CurrentTSD;
+    }
+
+  private:
+    TSD<Allocator> *CurrentTSD;
+  };
+
   void init(Allocator *Instance) REQUIRES(Mutex) {
     DCHECK(!Initialized);
     Instance->init();
@@ -70,26 +91,6 @@ struct TSDRegistrySharedT {
     initThread(Instance);
   }
 
-  // TSDs is an array of locks and which is not supported for marking
-  // thread-safety capability.
-  ALWAYS_INLINE TSD<Allocator> *
-  getTSDAndLock(bool *UnlockRequired) NO_THREAD_SAFETY_ANALYSIS {
-    TSD<Allocator> *TSD = getCurrentTSD();
-    DCHECK(TSD);
-    *UnlockRequired = true;
-    // Try to lock the currently associated context.
-    if (TSD->tryLock())
-      return TSD;
-    // If that fails, go down the slow path.
-    if (TSDsArraySize == 1U) {
-      // Only 1 TSD, not need to go any further.
-      // The compiler will optimize this one way or the other.
-      TSD->lock();
-      return TSD;
-    }
-    return getTSDAndLockSlow(TSD);
-  }
-
   void disable() NO_THREAD_SAFETY_ANALYSIS {
     Mutex.lock();
     for (u32 I = 0; I < TSDsArraySize; I++)
@@ -132,6 +133,22 @@ struct TSDRegistrySharedT {
   }
 
 private:
+  ALWAYS_INLINE TSD<Allocator> *getTSDAndLock() NO_THREAD_SAFETY_ANALYSIS {
+    TSD<Allocator> *TSD = getCurrentTSD();
+    DCHECK(TSD);
+    // Try to lock the currently associated context.
+    if (TSD->tryLock())
+      return TSD;
+    // If that fails, go down the slow path.
+    if (TSDsArraySize == 1U) {
+      // Only 1 TSD, not need to go any further.
+      // The compiler will optimize this one way or the other.
+      TSD->lock();
+      return TSD;
+    }
+    return getTSDAndLockSlow(TSD);
+  }
+
   ALWAYS_INLINE uptr *getTlsPtr() const {
 #if SCUDO_HAS_PLATFORM_TLS_SLOT
     return reinterpret_cast<uptr *>(getPlatformAllocatorTlsSlot());

@@ -647,15 +647,15 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       unsigned Size = MRI.getType(MO.getReg()).getSizeInBits();
       if (MatcherOpcode == GIM_CheckMemorySizeEqualToLLT &&
-          MMO->getSizeInBits() != Size) {
+          MMO->getSizeInBits().getValue() != Size) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       } else if (MatcherOpcode == GIM_CheckMemorySizeLessThanLLT &&
-                 MMO->getSizeInBits() >= Size) {
+                 MMO->getSizeInBits().getValue() >= Size) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       } else if (MatcherOpcode == GIM_CheckMemorySizeGreaterThanLLT &&
-                 MMO->getSizeInBits() <= Size)
+                 MMO->getSizeInBits().getValue() <= Size)
         if (handleReject() == RejectAndGiveUp)
           return false;
 
@@ -1114,6 +1114,16 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs()
                           << CurrentIdx << ": GIR_AddRegister(OutMIs[" << InsnID
                           << "], " << RegNum << ", " << RegFlags << ")\n");
+      break;
+    }
+    case GIR_AddIntrinsicID: {
+      uint64_t InsnID = readULEB();
+      uint16_t Value = readU16();
+      assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
+      OutMIs[InsnID].addIntrinsicID((Intrinsic::ID)Value);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_AddIntrinsicID(OutMIs["
+                             << InsnID << "], " << Value << ")\n");
       break;
     }
     case GIR_SetImplicitDefDead: {

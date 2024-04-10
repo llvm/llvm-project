@@ -504,10 +504,8 @@ accordingly:
 
 The following example contains a few interesting cases:
 *   Basic block arguments are modified to also pass along the ownership
-    indicator, but not for entry bocks of non-private functions (assuming the
-    `private-function-dynamic-ownership` pass option is disabled) where the
-    function boundary ABI is applied instead. "Private" in this context refers
-    to functions that cannot be called externally.
+    indicator, but not for entry blocks, where the function boundary ABI
+    is applied instead.
 *   The result of `arith.select` initially has 'Unknown' assigned as ownership,
     but once the `bufferization.dealloc` operation is inserted it is put in the
     'retained' list (since it has uses in a later basic block) and thus the
@@ -543,10 +541,7 @@ func.func @example(%memref: memref<?xi8>, %select_cond: i1, %br_cond: i1) {
 After running `--ownership-based-buffer-deallocation`, it looks as follows:
 
 ```mlir
-// Since this is not a private function, the signature will not be modified even
-// when private-function-dynamic-ownership is enabled. Instead the function
-// boundary ABI has to be applied which means that ownership of `%memref` will
-// never be acquired.
+// Function boundary ABI: ownership of `%memref` will never be acquired.
 func.func @example(%memref: memref<?xi8>, %select_cond: i1, %br_cond: i1) {
   %false = arith.constant false
   %true = arith.constant true
@@ -602,7 +597,7 @@ func.func @example(%memref: memref<?xi8>, %select_cond: i1, %br_cond: i1) {
              : memref<i8>, memref<i8>, memref<i8>)
         if (%false, %not_br_cond, %false)
     retain (%memref, %select : memref<?xi8>, memref<?xi8>)
-  
+
   // Because %select is used in ^bb1 without passing it via block argument, we
   // need to update it's ownership value here by merging the ownership values
   // returned by the dealloc operations

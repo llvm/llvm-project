@@ -73,7 +73,7 @@ define void @caller16() {
 ; RV64I-LP64E-NEXT:    addi sp, sp, 32
 ; RV64I-LP64E-NEXT:    ret
   %1 = alloca i8, align 16
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 
@@ -126,7 +126,7 @@ define void @caller_no_realign16() "no-realign-stack" {
 ; RV64I-LP64E-NEXT:    addi sp, sp, 16
 ; RV64I-LP64E-NEXT:    ret
   %1 = alloca i8, align 16
-  call void @callee(i8* %1)
+  call void @callee(ptr %1)
   ret void
 }
 

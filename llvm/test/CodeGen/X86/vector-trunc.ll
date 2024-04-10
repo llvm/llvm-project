@@ -232,7 +232,7 @@ define void @trunc8i64_8i8(<8 x i64> %a) {
 ;
 ; SSE41-LABEL: trunc8i64_8i8:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
+; SSE41-NEXT:    pmovzxbq {{.*#+}} xmm4 = [255,255]
 ; SSE41-NEXT:    pand %xmm4, %xmm3
 ; SSE41-NEXT:    pand %xmm4, %xmm2
 ; SSE41-NEXT:    packusdw %xmm3, %xmm2
@@ -505,7 +505,7 @@ define void @trunc8i32_8i8(<8 x i32> %a) {
 ;
 ; SSE41-LABEL: trunc8i32_8i8:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm2 = [255,255,255,255]
 ; SSE41-NEXT:    pand %xmm2, %xmm1
 ; SSE41-NEXT:    pand %xmm2, %xmm0
 ; SSE41-NEXT:    packusdw %xmm1, %xmm0
@@ -789,7 +789,7 @@ define void @trunc16i32_16i8(<16 x i32> %a) {
 ;
 ; SSE41-LABEL: trunc16i32_16i8:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm4 = [255,255,255,255]
 ; SSE41-NEXT:    pand %xmm4, %xmm3
 ; SSE41-NEXT:    pand %xmm4, %xmm2
 ; SSE41-NEXT:    packusdw %xmm3, %xmm2
@@ -970,14 +970,23 @@ entry:
 
 ;PR25684
 define void @trunc16i16_16i8(<16 x i16> %a) {
-; SSE-LABEL: trunc16i16_16i8:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqu %xmm0, (%rax)
-; SSE-NEXT:    retq
+; SSE2-SSSE3-LABEL: trunc16i16_16i8:
+; SSE2-SSSE3:       # %bb.0: # %entry
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm1
+; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    packuswb %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    movdqu %xmm0, (%rax)
+; SSE2-SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: trunc16i16_16i8:
+; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pand %xmm2, %xmm1
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    packuswb %xmm1, %xmm0
+; SSE41-NEXT:    movdqu %xmm0, (%rax)
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc16i16_16i8:
 ; AVX1:       # %bb.0: # %entry
@@ -1161,18 +1170,31 @@ entry:
 }
 
 define void @trunc32i16_32i8(<32 x i16> %a) {
-; SSE-LABEL: trunc32i16_32i8:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SSE-NEXT:    pand %xmm4, %xmm1
-; SSE-NEXT:    pand %xmm4, %xmm0
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    pand %xmm4, %xmm3
-; SSE-NEXT:    pand %xmm4, %xmm2
-; SSE-NEXT:    packuswb %xmm3, %xmm2
-; SSE-NEXT:    movdqu %xmm2, (%rax)
-; SSE-NEXT:    movdqu %xmm0, (%rax)
-; SSE-NEXT:    retq
+; SSE2-SSSE3-LABEL: trunc32i16_32i8:
+; SSE2-SSSE3:       # %bb.0: # %entry
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm1
+; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm0
+; SSE2-SSSE3-NEXT:    packuswb %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm3
+; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm2
+; SSE2-SSSE3-NEXT:    packuswb %xmm3, %xmm2
+; SSE2-SSSE3-NEXT:    movdqu %xmm2, (%rax)
+; SSE2-SSSE3-NEXT:    movdqu %xmm0, (%rax)
+; SSE2-SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: trunc32i16_32i8:
+; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pand %xmm4, %xmm1
+; SSE41-NEXT:    pand %xmm4, %xmm0
+; SSE41-NEXT:    packuswb %xmm1, %xmm0
+; SSE41-NEXT:    pand %xmm4, %xmm3
+; SSE41-NEXT:    pand %xmm4, %xmm2
+; SSE41-NEXT:    packuswb %xmm3, %xmm2
+; SSE41-NEXT:    movdqu %xmm2, (%rax)
+; SSE41-NEXT:    movdqu %xmm0, (%rax)
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc32i16_32i8:
 ; AVX1:       # %bb.0: # %entry
@@ -1579,17 +1601,29 @@ entry:
 }
 
 define <32 x i8> @trunc2x16i16_32i8(<16 x i16> %a, <16 x i16> %b) {
-; SSE-LABEL: trunc2x16i16_32i8:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SSE-NEXT:    pand %xmm4, %xmm1
-; SSE-NEXT:    pand %xmm4, %xmm0
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    pand %xmm4, %xmm3
-; SSE-NEXT:    pand %xmm2, %xmm4
-; SSE-NEXT:    packuswb %xmm3, %xmm4
-; SSE-NEXT:    movdqa %xmm4, %xmm1
-; SSE-NEXT:    retq
+; SSE2-SSSE3-LABEL: trunc2x16i16_32i8:
+; SSE2-SSSE3:       # %bb.0: # %entry
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm1
+; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm0
+; SSE2-SSSE3-NEXT:    packuswb %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm3
+; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm4
+; SSE2-SSSE3-NEXT:    packuswb %xmm3, %xmm4
+; SSE2-SSSE3-NEXT:    movdqa %xmm4, %xmm1
+; SSE2-SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: trunc2x16i16_32i8:
+; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pand %xmm4, %xmm1
+; SSE41-NEXT:    pand %xmm4, %xmm0
+; SSE41-NEXT:    packuswb %xmm1, %xmm0
+; SSE41-NEXT:    pand %xmm4, %xmm3
+; SSE41-NEXT:    pand %xmm2, %xmm4
+; SSE41-NEXT:    packuswb %xmm3, %xmm4
+; SSE41-NEXT:    movdqa %xmm4, %xmm1
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc2x16i16_32i8:
 ; AVX1:       # %bb.0: # %entry
@@ -1651,13 +1685,21 @@ entry:
 }
 
 define <16 x i8> @trunc2x8i16_16i8(<8 x i16> %a, <8 x i16> %b) {
-; SSE-LABEL: trunc2x8i16_16i8:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE2-SSSE3-LABEL: trunc2x8i16_16i8:
+; SSE2-SSSE3:       # %bb.0: # %entry
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm1
+; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    packuswb %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: trunc2x8i16_16i8:
+; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pand %xmm2, %xmm1
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    packuswb %xmm1, %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc2x8i16_16i8:
 ; AVX1:       # %bb.0: # %entry

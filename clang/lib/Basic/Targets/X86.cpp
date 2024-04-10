@@ -139,7 +139,7 @@ bool X86TargetInfo::initFeatureMap(
     if (Feature.substr(1, 6) == "avx10.") {
       if (Feature[0] == '+') {
         HasAVX10 = true;
-        if (Feature.substr(Feature.size() - 3, 3) == "512")
+        if (StringRef(Feature).ends_with("512"))
           HasAVX10_512 = true;
         LastAVX10 = Feature;
       } else if (HasAVX10 && Feature == "-avx10.1-256") {
@@ -151,7 +151,7 @@ bool X86TargetInfo::initFeatureMap(
       // Postpone AVX10 features handling after AVX512 settled.
       UpdatedAVX10FeaturesVec.push_back(Feature);
       continue;
-    } else if (!HasAVX512F && Feature.substr(0, 7) == "+avx512") {
+    } else if (!HasAVX512F && StringRef(Feature).starts_with("+avx512")) {
       HasAVX512F = true;
       LastAVX512 = Feature;
     } else if (HasAVX512F && Feature == "-avx512f") {

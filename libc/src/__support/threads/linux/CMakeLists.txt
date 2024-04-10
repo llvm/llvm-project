@@ -52,5 +52,6 @@ add_object_library(
   DEPENDS
     libc.include.sys_syscall
     libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.limits
     libc.src.__support.OSUtil.osutil
 )

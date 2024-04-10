@@ -17,7 +17,7 @@ define void @example12() {
 ; IC2-LABEL: @example12(
 ; IC2-LABEL: vector.body:
 ; IC2-NEXT:   [[INDEX:%.+]] = phi i64 [ 0, %vector.ph ]
-; IC2-NEXT:   [[TRUNC:%.+]] = trunc i64 [[INDEX]] to i32
+; IC2:        [[TRUNC:%.+]] = trunc i64 [[INDEX]] to i32
 ; IC2-NEXT:   [[TRUNC0:%.+]] = add i32 [[TRUNC]], 0
 ; IC2-NEXT:   [[TRUNC1:%.+]] = add i32 [[TRUNC]], 1
 ; IC2:        store i32 [[TRUNC0]],
@@ -83,12 +83,14 @@ define void @cast_variable_step(i64 %step) {
 ; VF4: middle.block:
 ;
 ; IC2-LABEL: @cast_variable_step(
+; IC2:   [[TRUNC_STEP:%.+]] = trunc i64 %step to i32
+; IC2:   br label %vector.body
+
 ; IC2-LABEL: vector.body:
 ; IC2-NEXT:   [[INDEX:%.+]] = phi i64 [ 0, %vector.ph ]
-; IC2-NEXT:   [[MUL:%.+]] = mul i64 %index, %step
+; IC2:        [[MUL:%.+]] = mul i64 %index, %step
 ; IC2-NEXT:   [[OFFSET_IDX:%.+]] = add i64 10, [[MUL]]
 ; IC2-NEXT:   [[TRUNC_OFF:%.+]] = trunc i64 [[OFFSET_IDX]] to i32
-; IC2-NEXT:   [[TRUNC_STEP:%.+]] = trunc i64 %step to i32
 ; IC2-NEXT:   [[STEP0:%.+]] = mul i32 0, [[TRUNC_STEP]]
 ; IC2-NEXT:   [[T0:%.+]] = add i32 [[TRUNC_OFF]], [[STEP0]]
 ; IC2-NEXT:   [[STEP1:%.+]] = mul i32 1, [[TRUNC_STEP]]
@@ -109,6 +111,37 @@ loop:
   %iv.2.next = add i64 %iv.2, %step
   %exitcond = icmp eq i64 %iv.next, 1024
   br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @cast_induction_tail_folding(ptr %A) {
+; VF4-LABEL: @cast_induction_tail_folding(
+; VF4:       [[INDEX:%.+]] = phi i32 [ 0, %vector.ph ]
+; VF4-NEXT:  [[VEC_IND:%.+]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %vector.ph ]
+; VF4-NEXT:  = icmp ule <4 x i32> [[VEC_IND]], <i32 2, i32 2, i32 2, i32 2>
+; VF4-NEXT:  = sext <4 x i32> [[VEC_IND]] to <4 x i64>
+
+; IC2-LABEL: @cast_induction_tail_folding(
+; IC2:      [[INDEX:%.+]] = phi i32 [ 0, %vector.ph ]
+; IC2-NEXT: [[INDEX0:%.+]] = add i32 [[INDEX]], 0
+; IC2-NEXT: [[INDEX1:%.+]] = add i32 [[INDEX]], 1
+; IC2-NEXT: = icmp ule i32 [[INDEX0]], 2
+; IC2-NEXT: = icmp ule i32 [[INDEX1]], 2
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.ext = sext i32 %iv to i64
+  %iv.trunc  = trunc i64 %iv.ext to i32
+  %gep = getelementptr inbounds i32, ptr %A, i64 %iv.ext
+  store i32 %iv.trunc, ptr %gep
+  %iv.next = add i32 %iv, 1
+  %c = icmp slt i32 %iv.next, 3
+  br i1 %c, label %loop, label %exit
 
 exit:
   ret void

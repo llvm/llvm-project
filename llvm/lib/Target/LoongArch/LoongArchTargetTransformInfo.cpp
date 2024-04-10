@@ -21,17 +21,20 @@ using namespace llvm;
 
 TypeSize LoongArchTTIImpl::getRegisterBitWidth(
     TargetTransformInfo::RegisterKind K) const {
+  TypeSize DefSize = TargetTransformInfoImplBase::getRegisterBitWidth(K);
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(ST->is64Bit() ? 64 : 32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (ST->hasExtLASX() && ST->hasExpAutoVec())
+    if (!ST->hasExpAutoVec())
+      return DefSize;
+    if (ST->hasExtLASX())
       return TypeSize::getFixed(256);
-    if (ST->hasExtLSX() && ST->hasExpAutoVec())
+    if (ST->hasExtLSX())
       return TypeSize::getFixed(128);
-    return TypeSize::getFixed(0);
+    [[fallthrough]];
   case TargetTransformInfo::RGK_ScalableVector:
-    return TypeSize::getScalable(0);
+    return DefSize;
   }
 
   llvm_unreachable("Unsupported register kind");

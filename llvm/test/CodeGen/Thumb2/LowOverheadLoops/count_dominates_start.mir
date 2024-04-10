@@ -3,7 +3,7 @@
 
 --- |
 
-  define i32 @test(i16* nocapture readonly %x, i16* nocapture readonly %y, i32 %n) {
+  define i32 @test(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
   entry:
     %cmp10 = icmp sgt i32 %n, 0
     %0 = add i32 %n, 7
@@ -19,25 +19,25 @@
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
-    %lsr.iv3 = phi i16* [ %scevgep4, %vector.body ], [ %x, %vector.ph ]
-    %lsr.iv1 = phi i16* [ %scevgep, %vector.body ], [ %y, %vector.ph ]
+    %lsr.iv3 = phi ptr [ %scevgep4, %vector.body ], [ %x, %vector.ph ]
+    %lsr.iv1 = phi ptr [ %scevgep, %vector.body ], [ %y, %vector.ph ]
     %vec.phi = phi i32 [ 0, %vector.ph ], [ %16, %vector.body ]
     %7 = phi i32 [ %6, %vector.ph ], [ %17, %vector.body ]
     %8 = phi i32 [ %n, %vector.ph ], [ %10, %vector.body ]
-    %lsr.iv12 = bitcast i16* %lsr.iv1 to <8 x i16>*
-    %lsr.iv35 = bitcast i16* %lsr.iv3 to <8 x i16>*
+    %lsr.iv12 = bitcast ptr %lsr.iv1 to ptr
+    %lsr.iv35 = bitcast ptr %lsr.iv3 to ptr
     %9 = call <8 x i1> @llvm.arm.mve.vctp16(i32 %8)
     %10 = sub i32 %8, 8
-    %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %lsr.iv35, i32 2, <8 x i1> %9, <8 x i16> undef)
+    %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %lsr.iv35, i32 2, <8 x i1> %9, <8 x i16> undef)
     %11 = sext <8 x i16> %wide.masked.load to <8 x i32>
-    %wide.masked.load13 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %lsr.iv12, i32 2, <8 x i1> %9, <8 x i16> undef)
+    %wide.masked.load13 = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %lsr.iv12, i32 2, <8 x i1> %9, <8 x i16> undef)
     %12 = sext <8 x i16> %wide.masked.load13 to <8 x i32>
     %13 = mul nsw <8 x i32> %12, %11
     %14 = select <8 x i1> %9, <8 x i32> %13, <8 x i32> zeroinitializer
     %15 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %14)
     %16 = add i32 %15, %vec.phi
-    %scevgep = getelementptr i16, i16* %lsr.iv1, i32 8
-    %scevgep4 = getelementptr i16, i16* %lsr.iv3, i32 8
+    %scevgep = getelementptr i16, ptr %lsr.iv1, i32 8
+    %scevgep4 = getelementptr i16, ptr %lsr.iv3, i32 8
     %17 = call i32 @llvm.loop.decrement.reg.i32(i32 %7, i32 1)
     %18 = icmp ne i32 %17, 0
     br i1 %18, label %vector.body, label %for.cond.cleanup
@@ -48,7 +48,7 @@
   }
 
   declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)
-  declare <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>*, i32 immarg, <8 x i1>, <8 x i16>)
+  declare <8 x i16> @llvm.masked.load.v8i16.p0(ptr, i32 immarg, <8 x i1>, <8 x i16>)
   declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
   declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32(i32, i32)

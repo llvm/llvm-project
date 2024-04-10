@@ -89,4 +89,9 @@ concept simple_view =
     std::same_as<std::ranges::iterator_t<Range>, std::ranges::iterator_t<const Range>> &&
     std::same_as<std::ranges::sentinel_t<Range>, std::ranges::sentinel_t<const Range>>;
 
+template <class View, class T>
+concept CanBePiped = requires(View&& view, T&& t) {
+  { std::forward<View>(view) | std::forward<T>(t) };
+};
+
 #endif // LIBCXX_TEST_SUPPORT_TEST_RANGE_H

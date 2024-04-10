@@ -25,7 +25,7 @@ void test1() {
 
   for (int i = 0; i < 1100; i += 1) {
     test.insert(test.begin(), buff, buff + 320);
-    test.erase(test.end(), test.end() - 320);
+    test.erase(test.end() - 320, test.end());
   }
 
   test.insert(test.begin(), buff, buff + 32000);

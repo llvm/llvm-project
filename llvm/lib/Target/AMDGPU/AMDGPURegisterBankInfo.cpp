@@ -449,7 +449,7 @@ bool AMDGPURegisterBankInfo::isScalarLoadLegal(const MachineInstr &MI) const {
   const unsigned AS = MMO->getAddrSpace();
   const bool IsConst = AS == AMDGPUAS::CONSTANT_ADDRESS ||
                        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
-  const unsigned MemSize = 8 * MMO->getSize();
+  const unsigned MemSize = 8 * MMO->getSize().getValue();
 
   // Require 4-byte alignment.
   return (MMO->getAlign() >= Align(4) ||
@@ -1070,7 +1070,7 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(
       return false;
 
     MachineMemOperand *MMO = *MI.memoperands_begin();
-    const unsigned MemSize = 8 * MMO->getSize();
+    const unsigned MemSize = 8 * MMO->getSize().getValue();
     // Scalar loads of size 8 or 16 bit with proper alignment may be widened to
     // 32 bit. Check to see if we need to widen the memory access, 8 or 16 bit
     // scalar loads should have a load size of 32 but memory access size of less
@@ -3135,6 +3135,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     case Intrinsic::amdgcn_interp_inreg_p2:
     case Intrinsic::amdgcn_interp_inreg_p10_f16:
     case Intrinsic::amdgcn_interp_inreg_p2_f16:
+    case Intrinsic::amdgcn_interp_p10_rtz_f16:
+    case Intrinsic::amdgcn_interp_p2_rtz_f16:
       applyDefaultMapping(OpdMapper);
       return;
     case Intrinsic::amdgcn_permlane16:
@@ -4051,6 +4053,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_CONSTANT:
   case AMDGPU::G_GLOBAL_VALUE:
   case AMDGPU::G_BLOCK_ADDR:
+  case AMDGPU::G_READSTEADYCOUNTER:
   case AMDGPU::G_READCYCLECOUNTER: {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
@@ -4497,6 +4500,14 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_dot4_f32_bf8_fp8:
     case Intrinsic::amdgcn_dot4_f32_fp8_fp8:
     case Intrinsic::amdgcn_dot4_f32_bf8_bf8:
+    case Intrinsic::amdgcn_cvt_f32_fp8:
+    case Intrinsic::amdgcn_cvt_f32_bf8:
+    case Intrinsic::amdgcn_cvt_pk_f32_fp8:
+    case Intrinsic::amdgcn_cvt_pk_f32_bf8:
+    case Intrinsic::amdgcn_cvt_pk_fp8_f32:
+    case Intrinsic::amdgcn_cvt_pk_bf8_f32:
+    case Intrinsic::amdgcn_cvt_sr_fp8_f32:
+    case Intrinsic::amdgcn_cvt_sr_bf8_f32:
     case Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16:
     case Intrinsic::amdgcn_wmma_f16_16x16x16_f16:
     case Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16_tied:
@@ -4769,7 +4780,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_interp_inreg_p10:
     case Intrinsic::amdgcn_interp_inreg_p2:
     case Intrinsic::amdgcn_interp_inreg_p10_f16:
-    case Intrinsic::amdgcn_interp_inreg_p2_f16: {
+    case Intrinsic::amdgcn_interp_inreg_p2_f16:
+    case Intrinsic::amdgcn_interp_p10_rtz_f16:
+    case Intrinsic::amdgcn_interp_p2_rtz_f16: {
       unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
@@ -4880,7 +4893,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
     case Intrinsic::amdgcn_atomic_cond_sub_u32:
     case Intrinsic::amdgcn_global_atomic_ordered_add_b64:
-    case Intrinsic::amdgcn_global_load_tr:
+    case Intrinsic::amdgcn_global_load_tr_b64:
+    case Intrinsic::amdgcn_global_load_tr_b128:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
     case Intrinsic::amdgcn_ds_ordered_swap:

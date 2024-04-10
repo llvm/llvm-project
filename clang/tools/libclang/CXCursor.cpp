@@ -567,6 +567,10 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_SizeOfPackExpr;
     break;
 
+  case Stmt::PackIndexingExprClass:
+    K = CXCursor_PackIndexingExpr;
+    break;
+
   case Stmt::DeclRefExprClass:
     if (const ImplicitParamDecl *IPD = dyn_cast_or_null<ImplicitParamDecl>(
             cast<DeclRefExpr>(S)->getDecl())) {
@@ -865,6 +869,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     break;
   case Stmt::OMPParallelGenericLoopDirectiveClass:
     K = CXCursor_OMPParallelGenericLoopDirective;
+    break;
+  case Stmt::OpenACCComputeConstructClass:
+    K = CXCursor_OpenACCComputeConstruct;
     break;
   case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
     K = CXCursor_OMPTargetParallelGenericLoopDirective;

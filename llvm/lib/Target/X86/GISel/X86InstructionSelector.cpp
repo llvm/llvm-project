@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -35,6 +34,7 @@
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -119,8 +119,6 @@ private:
                        MachineFunction &MF) const;
   bool selectSelect(MachineInstr &I, MachineRegisterInfo &MRI,
                     MachineFunction &MF) const;
-  bool selectIntrinsicWSideEffects(MachineInstr &I, MachineRegisterInfo &MRI,
-                                   MachineFunction &MF) const;
 
   // emit insert subreg instruction and insert it before MachineInstr &I
   bool emitInsertSubreg(unsigned DstReg, unsigned SrcReg, MachineInstr &I,
@@ -434,8 +432,6 @@ bool X86InstructionSelector::select(MachineInstr &I) {
     return selectMulDivRem(I, MRI, MF);
   case TargetOpcode::G_SELECT:
     return selectSelect(I, MRI, MF);
-  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-    return selectIntrinsicWSideEffects(I, MRI, MF);
   }
 
   return false;
@@ -1778,12 +1774,9 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
         .addImm(8);
 
     // Now reference the 8-bit subreg of the result.
-    BuildMI(*I.getParent(), I, I.getDebugLoc(),
-            TII.get(TargetOpcode::SUBREG_TO_REG))
-        .addDef(DstReg)
-        .addImm(0)
-        .addReg(ResultSuperReg)
-        .addImm(X86::sub_8bit);
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
+            DstReg)
+        .addReg(ResultSuperReg, 0, X86::sub_8bit);
   } else {
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
             DstReg)
@@ -1834,21 +1827,6 @@ bool X86InstructionSelector::selectSelect(MachineInstr &I,
   }
 
   Sel.eraseFromParent();
-  return true;
-}
-
-bool X86InstructionSelector::selectIntrinsicWSideEffects(
-    MachineInstr &I, MachineRegisterInfo &MRI, MachineFunction &MF) const {
-
-  assert(I.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
-         "unexpected instruction");
-
-  if (I.getOperand(0).getIntrinsicID() != Intrinsic::trap)
-    return false;
-
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::TRAP));
-
-  I.eraseFromParent();
   return true;
 }
 

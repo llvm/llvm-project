@@ -445,8 +445,8 @@ ClangExpressionParser::ClangExpressionParser(
   // Supported subsets of x86
   if (target_machine == llvm::Triple::x86 ||
       target_machine == llvm::Triple::x86_64) {
-    m_compiler->getTargetOpts().Features.push_back("+sse");
-    m_compiler->getTargetOpts().Features.push_back("+sse2");
+    m_compiler->getTargetOpts().FeaturesAsWritten.push_back("+sse");
+    m_compiler->getTargetOpts().FeaturesAsWritten.push_back("+sse2");
   }
 
   // Set the target CPU to generate code for. This will be empty for any CPU

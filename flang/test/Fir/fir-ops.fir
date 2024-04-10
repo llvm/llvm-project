@@ -893,3 +893,10 @@ func.func @test_box_typecode(%a: !fir.class<none>) {
 // CHECK-LABEL: func.func @test_box_typecode(
 // CHECK-SAME: %[[A:.*]]: !fir.class<none>)
 // CHECK: %{{.*}} = fir.box_typecode %[[A]] : (!fir.class<none>) -> i32
+
+fir.global @t1 {keep_my_attr = "data"} : i32 {
+ %1 = arith.constant 0 : i32
+  fir.has_value %1 : i32
+}
+
+// CHECK-LABEL: fir.global @t1 {keep_my_attr = "data"} : i32

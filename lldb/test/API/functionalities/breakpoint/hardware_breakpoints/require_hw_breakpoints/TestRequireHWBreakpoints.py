@@ -1,5 +1,8 @@
 """
 Test require hardware breakpoints.
+
+Some of these tests require a target that does not have hardware breakpoints.
+So that we can check we fail when required to use them.
 """
 
 
@@ -12,10 +15,6 @@ from functionalities.breakpoint.hardware_breakpoints.base import *
 
 
 class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
-    @skipIf(oslist=["linux"], archs=["arm"])
-    def supports_hw_breakpoints(self):
-        return super().supports_hw_breakpoints()
-
     def test_breakpoint(self):
         """Test regular breakpoints when hardware breakpoints are required."""
         self.build()
@@ -27,7 +26,7 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
         breakpoint = target.BreakpointCreateByLocation("main.c", 1)
         self.assertTrue(breakpoint.IsHardware())
 
-    @expectedFailureIfFn(supports_hw_breakpoints)
+    @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
     def test_step_range(self):
         """Test stepping when hardware breakpoints are required."""
         self.build()
@@ -46,11 +45,11 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
         error = lldb.SBError()
         thread.StepInto("", 4, error)
         self.assertTrue(error.Fail())
-        self.assertTrue(
-            "Could not create hardware breakpoint for thread plan" in error.GetCString()
+        self.assertIn(
+            "Could not create hardware breakpoint for thread plan", error.GetCString()
         )
 
-    @expectedFailureIfFn(supports_hw_breakpoints)
+    @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
     def test_step_out(self):
         """Test stepping out when hardware breakpoints are required."""
         self.build()
@@ -68,11 +67,11 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
         error = lldb.SBError()
         thread.StepOut(error)
         self.assertTrue(error.Fail())
-        self.assertTrue(
-            "Could not create hardware breakpoint for thread plan" in error.GetCString()
+        self.assertIn(
+            "Could not create hardware breakpoint for thread plan", error.GetCString()
         )
 
-    @expectedFailureIfFn(supports_hw_breakpoints)
+    @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
     def test_step_over(self):
         """Test stepping over when hardware breakpoints are required."""
         self.build()
@@ -90,7 +89,9 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
             substrs=["error: Could not create hardware breakpoint for thread plan."],
         )
 
-    @expectedFailureIfFn(supports_hw_breakpoints)
+    # Was reported to sometimes pass on certain hardware.
+    @skipIf(oslist=["linux"], archs=["arm"])
+    @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
     def test_step_until(self):
         """Test stepping until when hardware breakpoints are required."""
         self.build()
@@ -106,6 +107,6 @@ class BreakpointLocationsTestCase(HardwareBreakpointTestBase):
         # Ensure we fail when stepping through the API.
         error = thread.StepOverUntil(lldb.SBFrame(), lldb.SBFileSpec(), 5)
         self.assertTrue(error.Fail())
-        self.assertTrue(
-            "Could not create hardware breakpoint for thread plan" in error.GetCString()
+        self.assertIn(
+            "Could not create hardware breakpoint for thread plan", error.GetCString()
         )

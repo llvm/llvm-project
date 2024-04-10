@@ -435,12 +435,6 @@ let Predicates = [HasVendorXSfvfnrclipxfqf] in {
 }
 
 // SDNode
-def SDT_SF_VC_X : SDTypeProfile<0, 5, [SDTCisSameAs<0, 1>,
-                                       SDTCisVT<0, XLenVT>,
-                                       SDTCisSameAs<0, 2>,
-                                       SDTCisSameAs<0, 3>,
-                                       SDTCisSameAs<0, 4>]>;
-
 def SDT_SF_VC_V_X : SDTypeProfile<1, 4, [SDTCisVec<0>,
                                          SDTCisVT<1, XLenVT>,
                                          SDTCisSameAs<1, 2>,
@@ -478,10 +472,6 @@ def SDT_SF_VC_V_XVW : SDTypeProfile<1, 5, [SDTCisVec<0>,
                                            SDTCisVec<3>,
                                            SDTCisSameAs<1, 5>]>;
 
-foreach vti = AllIntegerVectors in {
-  def sf_vc_x_e#vti.SEW#!tolower(vti.LMul.MX) : SDNode<"RISCVISD::SF_VC_X_SE_E"#vti.SEW#vti.LMul.MX, SDT_SF_VC_X, [SDNPHasChain]>;
-  def sf_vc_i_e#vti.SEW#!tolower(vti.LMul.MX) : SDNode<"RISCVISD::SF_VC_I_SE_E"#vti.SEW#vti.LMul.MX, SDT_SF_VC_X, [SDNPHasChain]>;
-}
 def sf_vc_v_x_se : SDNode<"RISCVISD::SF_VC_V_X_SE", SDT_SF_VC_V_X, [SDNPHasChain]>;
 def sf_vc_v_i_se : SDNode<"RISCVISD::SF_VC_V_I_SE", SDT_SF_VC_V_X, [SDNPHasChain]>;
 def sf_vc_vv_se : SDNode<"RISCVISD::SF_VC_VV_SE", SDT_SF_VC_XV, [SDNPHasChain]>;
@@ -646,10 +636,6 @@ class VPatVC_V_OP3<string intrinsic_name,
 
 multiclass VPatVC_X<string intrinsic_suffix, string instruction_suffix,
                     VTypeInfo vti, ValueType type, DAGOperand kind> {
-  def : VPatVC_OP4_ISD<!cast<SDPatternOperator>("sf_vc_" # intrinsic_suffix # "_e" # vti.SEW # !tolower(vti.LMul.MX)),
-                       "PseudoVC_" # instruction_suffix # "_SE_" # vti.LMul.MX,
-                       XLenVT, XLenVT, type, vti.Log2SEW,
-                       payload5, payload5, kind>;
   def : VPatVC_V_OP3_ISD<!cast<SDPatternOperator>("sf_vc_v_" # intrinsic_suffix # "_se"),
                          "PseudoVC_V_" # instruction_suffix # "_SE_" # vti.LMul.MX,
                          vti.Vector, XLenVT, type, vti.Log2SEW,
@@ -821,4 +807,36 @@ let Predicates = [HasVendorXSfvfwmaccqqq] in {
 let Predicates = [HasVendorXSfvfnrclipxfqf] in {
   defm : VPatVFNRCLIP<"vfnrclip_xu_f_qf", "VFNRCLIP_XU_F_QF">;
   defm : VPatVFNRCLIP<"vfnrclip_x_f_qf", "VFNRCLIP_X_F_QF">;
+}
+
+let Predicates = [HasVendorXSiFivecdiscarddlone] in {
+  let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
+      DecoderNamespace = "XSiFivecdiscarddlone" in
+  def SF_CDISCARD_D_L1
+      : RVInstIUnary<0b111111000010, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1),
+                     "sf.cdiscard.d.l1", "$rs1">, Sched<[]> {
+    let rd = 0;
+  }
+  def : InstAlias<"sf.cdiscard.d.l1", (SF_CDISCARD_D_L1 X0)>;
+} // Predicates = [HasVendorXSifivecdiscarddlone]
+
+let Predicates = [HasVendorXSiFivecflushdlone] in {
+  let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
+      DecoderNamespace = "XSiFivecflushdlone" in
+  def SF_CFLUSH_D_L1
+      : RVInstIUnary<0b111111000000, 0b000, OPC_SYSTEM, (outs), (ins GPR:$rs1),
+                     "sf.cflush.d.l1", "$rs1">, Sched<[]> {
+    let rd = 0;
+  }
+  def : InstAlias<"sf.cflush.d.l1", (SF_CFLUSH_D_L1 X0)>;
+} // Predicates = [HasVendorXSifivecflushdlone]
+
+let Predicates = [HasVendorXSfcease] in {
+  let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0,
+      DecoderNamespace = "XSfcease" in
+  def SF_CEASE : RVInstIUnary<0b001100000101, 0b000, OPC_SYSTEM, (outs), (ins),
+                              "sf.cease", "">, Sched<[]> {
+    let rs1 = 0b00000;
+    let rd = 0b00000;
+}
 }

@@ -46,34 +46,23 @@ multiclass VCIXBuiltinSet<string name, string IR_name, string suffix,
 }
 
 multiclass RVVVCIXBuiltinSet<list<string> range, string prototype,
-                             list<int> intrinsic_types, bit UseGPR> {
+                             list<int> intrinsic_types, bit UseGPR,
+                             string suffix = "Uv"> {
   foreach r = range in
     let RequiredFeatures = !if(!and(UseGPR, !eq(r, "l")),
                                ["Xsfvcp", "RV64"], ["Xsfvcp"]) in
-      defm : VCIXBuiltinSet<NAME, NAME, "Uv", prototype, r, intrinsic_types>;
+      defm : VCIXBuiltinSet<NAME, NAME, suffix, prototype, r, intrinsic_types>;
 }
 
-multiclass RVVVCIXBuiltinSetWVType<list<string> range, string prototype,
-                             list<int> intrinsic_types, bit UseGPR> {
-  foreach r = range in
-    let RequiredFeatures = !if(!and(UseGPR, !eq(r, "l")),
-                               ["Xsfvcp", "RV64"], ["Xsfvcp"]) in
-      // These intrinsics don't have any vector types in the output and inputs,
-      // but we still need to add vetvli for them. So we encode different
-      // VTYPE into the intrinsic names, and then will know which vsetvli is
-      // correct.
-      foreach s = VCIXSuffix<r>.suffix in
-        // Since we already encode the Vtype into the name, so just set
-        // Log2LMUL to zero.  Otherwise the RISCVVEmitter will expand
-        // lots of redundant intrinsic but have same names.
-        let Log2LMUL = [0] in
-          def : VCIXBuiltinSet<NAME # "_u" # s, NAME # "_e" # s,
-                               "", prototype, r, intrinsic_types>;
+multiclass RVVVCIXBuiltinSetWOSuffix<list<string> range, string prototype,
+                                     list<int> intrinsic_types, bit UseGPR> {
+  let Log2LMUL = [0] in
+  defm NAME : RVVVCIXBuiltinSet<range, prototype, intrinsic_types, UseGPR, "">;
 }
 
 let SupportOverloading = false in {
-  defm sf_vc_x_se  : RVVVCIXBuiltinSetWVType<["c", "s", "i", "l"], "0KzKzKzUe", [0, 3], UseGPR=1>;
-  defm sf_vc_i_se  : RVVVCIXBuiltinSetWVType<["c", "s", "i", "l"], "0KzKzKzKz", [2, 3], UseGPR=0>;
+  defm sf_vc_x  : RVVVCIXBuiltinSetWOSuffix<["c", "s", "i", "l"], "0KzKzKzUeKzKz", [0, 3], UseGPR=1>;
+  defm sf_vc_i  : RVVVCIXBuiltinSetWOSuffix<["i"], "0KzKzKzKzKzKz", [2, 3], UseGPR=0>;
   defm sf_vc_xv    : RVVVCIXBuiltinSet<["csi", "l"], "0KzKzUvUe",  [0, 2, 3],  UseGPR=1>;
   defm sf_vc_iv    : RVVVCIXBuiltinSet<["csi", "l"], "0KzKzUvKz",  [0, 2, 3],  UseGPR=0>;
   defm sf_vc_vv    : RVVVCIXBuiltinSet<["csi", "l"], "0KzKzUvUv",  [0, 2, 3],  UseGPR=0>;

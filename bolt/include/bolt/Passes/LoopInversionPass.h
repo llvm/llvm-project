@@ -49,7 +49,7 @@ public:
   const char *getName() const override { return "loop-inversion-opt"; }
 
   /// Pass entry point
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
   bool runOnFunction(BinaryFunction &Function);
 };
 

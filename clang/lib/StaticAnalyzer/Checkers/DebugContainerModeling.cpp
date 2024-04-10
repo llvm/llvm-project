@@ -52,7 +52,7 @@ public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 };
 
-} //namespace
+} // namespace
 
 bool DebugContainerModeling::evalCall(const CallEvent &Call,
                                       CheckerContext &C) const {

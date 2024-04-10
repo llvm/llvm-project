@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+m -verify-machineinstrs | FileCheck %s --check-prefix=RV64
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+zba -verify-machineinstrs | FileCheck %s --check-prefix=RV32ZBA
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+zba -verify-machineinstrs | FileCheck %s --check-prefix=RV64ZBA
-; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+experimental-zicond -verify-machineinstrs | FileCheck %s --check-prefix=RV32ZICOND
-; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+experimental-zicond -verify-machineinstrs | FileCheck %s --check-prefix=RV64ZICOND
+; RUN: llc < %s -mtriple=riscv32 -mattr=+m,+zicond -verify-machineinstrs | FileCheck %s --check-prefix=RV32ZICOND
+; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+zicond -verify-machineinstrs | FileCheck %s --check-prefix=RV64ZICOND
 
 ;
 ; Get the actual value of the overflow bit.

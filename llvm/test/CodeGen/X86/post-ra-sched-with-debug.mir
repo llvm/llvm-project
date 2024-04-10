@@ -89,63 +89,63 @@
 
 --- |
 
-  %class.s = type <{ %class.l, [4 x i8], %class.p, %class.p*, i32, [4 x i8] }>
+  %class.s = type <{ %class.l, [4 x i8], %class.p, ptr, i32, [4 x i8] }>
   %class.l = type { i32 }
   %class.p = type { %class.b }
-  %class.b = type { %struct.a*, %struct.a* }
+  %class.b = type { ptr, ptr }
   %struct.a = type opaque
 
-  @n = local_unnamed_addr global i32* null, align 8
+  @n = local_unnamed_addr global ptr null, align 8
   @o = global i32 0, align 4
 
-  define linkonce_odr void @_ZN1sC2Ei(%class.s*, i32) unnamed_addr #0 align 2 !dbg !4 {
+  define linkonce_odr void @_ZN1sC2Ei(ptr, i32) unnamed_addr #0 align 2 !dbg !4 {
     %3 = alloca i32, align 4
-    %4 = bitcast %class.s* %0 to %class.l*
-    tail call void @_ZN1lC2Ei(%class.l* %4, i32 %1)
-    %5 = getelementptr inbounds %class.s, %class.s* %0, i64 0, i32 2
-    tail call void @llvm.dbg.value(metadata %class.p* %5, i64 0, metadata !10, metadata !17), !dbg !18
-    tail call void @llvm.dbg.value(metadata %class.p* %5, i64 0, metadata !20, metadata !17), !dbg !27
-    %6 = getelementptr inbounds %class.s, %class.s* %0, i64 0, i32 2, i32 0, i32 1
-    %7 = bitcast %struct.a** %6 to i64*
-    %8 = load i64, i64* %7, align 8
-    %9 = bitcast %class.p* %5 to i64*
-    store i64 %8, i64* %9, align 8
-    %10 = getelementptr inbounds %class.s, %class.s* %0, i64 0, i32 3
-    store %class.p* %5, %class.p** %10, align 8
-    %11 = getelementptr inbounds %class.s, %class.s* %0, i64 0, i32 4
+    %4 = bitcast ptr %0 to ptr
+    tail call void @_ZN1lC2Ei(ptr %4, i32 %1)
+    %5 = getelementptr inbounds %class.s, ptr %0, i64 0, i32 2
+    tail call void @llvm.dbg.value(metadata ptr %5, i64 0, metadata !10, metadata !17), !dbg !18
+    tail call void @llvm.dbg.value(metadata ptr %5, i64 0, metadata !20, metadata !17), !dbg !27
+    %6 = getelementptr inbounds %class.s, ptr %0, i64 0, i32 2, i32 0, i32 1
+    %7 = bitcast ptr %6 to ptr
+    %8 = load i64, ptr %7, align 8
+    %9 = bitcast ptr %5 to ptr
+    store i64 %8, ptr %9, align 8
+    %10 = getelementptr inbounds %class.s, ptr %0, i64 0, i32 3
+    store ptr %5, ptr %10, align 8
+    %11 = getelementptr inbounds %class.s, ptr %0, i64 0, i32 4
     %12 = shl i32 -1, %1
-    store i32 %12, i32* %11, align 8
-    store i32 0, i32* %3, align 4
-    %13 = bitcast %class.p* %5 to i32**
-    %14 = load i32*, i32** %13, align 8
-    store i32* %14, i32** @n, align 8
-    %15 = icmp eq i32* %14, null
-    %16 = ptrtoint i32* %14 to i64
-    %17 = select i1 %15, i64 ptrtoint (i32* @o to i64), i64 0
+    store i32 %12, ptr %11, align 8
+    store i32 0, ptr %3, align 4
+    %13 = bitcast ptr %5 to ptr
+    %14 = load ptr, ptr %13, align 8
+    store ptr %14, ptr @n, align 8
+    %15 = icmp eq ptr %14, null
+    %16 = ptrtoint ptr %14 to i64
+    %17 = select i1 %15, i64 ptrtoint (ptr @o to i64), i64 0
     %18 = or i64 %17, %16
-    tail call void @llvm.dbg.value(metadata i32* %3, i64 0, metadata !29, metadata !35), !dbg !36
-    tail call void @llvm.dbg.value(metadata i32* %3, i64 0, metadata !39, metadata !17), !dbg !44
-    %19 = ptrtoint i32* %3 to i64
+    tail call void @llvm.dbg.value(metadata ptr %3, i64 0, metadata !29, metadata !35), !dbg !36
+    tail call void @llvm.dbg.value(metadata ptr %3, i64 0, metadata !39, metadata !17), !dbg !44
+    %19 = ptrtoint ptr %3 to i64
     call void @llvm.dbg.value(metadata i64 %19, i64 0, metadata !46, metadata !17), !dbg !48
     %20 = icmp eq i64 %18, 0
     %21 = select i1 %20, i64 %19, i64 0
     %22 = or i64 %21, %18
-    %23 = inttoptr i64 %22 to i32*
-    %24 = bitcast %class.s* %0 to i32*
-    %25 = load i32, i32* %24, align 8
+    %23 = inttoptr i64 %22 to ptr
+    %24 = bitcast ptr %0 to ptr
+    %25 = load i32, ptr %24, align 8
     %26 = sext i32 %25 to i64
-    %27 = getelementptr inbounds i32, i32* %23, i64 %26
-    %28 = load i32, i32* %27, align 4
+    %27 = getelementptr inbounds i32, ptr %23, i64 %26
+    %28 = load i32, ptr %27, align 4
     %29 = and i32 %12, %28
     %30 = icmp eq i32 %29, 0
     br i1 %30, label %47, label %31
 
   ; <label>:31:                                     ; preds = %2
-    %32 = bitcast %class.s* %0 to i32*
-    %33 = call i32 @_ZN1p2aaEv(%class.p* %5)
+    %32 = bitcast ptr %0 to ptr
+    %33 = call i32 @_ZN1p2aaEv(ptr %5)
     %34 = add nsw i32 %33, -1
     %35 = sdiv i32 %34, 2
-    %36 = load i32, i32* %32, align 8
+    %36 = load i32, ptr %32, align 8
     %37 = icmp sgt i32 %36, %35
     br i1 %37, label %38, label %47
 
@@ -153,15 +153,15 @@
     br label %39
 
   ; <label>:39:                                     ; preds = %39, %38
-    %40 = bitcast %class.s* %0 to i32*
-    %sunkaddr = ptrtoint %class.s* %0 to i64
+    %40 = bitcast ptr %0 to ptr
+    %sunkaddr = ptrtoint ptr %0 to i64
     %sunkaddr1 = add i64 %sunkaddr, 24
-    %sunkaddr2 = inttoptr i64 %sunkaddr1 to %class.p**
-    %41 = load %class.p*, %class.p** %sunkaddr2, align 8
-    %42 = call i32 @_ZN1p2aaEv(%class.p* %41)
+    %sunkaddr2 = inttoptr i64 %sunkaddr1 to ptr
+    %41 = load ptr, ptr %sunkaddr2, align 8
+    %42 = call i32 @_ZN1p2aaEv(ptr %41)
     %43 = add nsw i32 %42, -1
     %44 = sdiv i32 %43, 2
-    %45 = load i32, i32* %40, align 8
+    %45 = load i32, ptr %40, align 8
     %46 = icmp sgt i32 %45, %44
     br i1 %46, label %39, label %47
 
@@ -169,9 +169,9 @@
     ret void
   }
 
-  declare void @_ZN1lC2Ei(%class.l*, i32) unnamed_addr #1
+  declare void @_ZN1lC2Ei(ptr, i32) unnamed_addr #1
 
-  declare i32 @_ZN1p2aaEv(%class.p*) local_unnamed_addr #1
+  declare i32 @_ZN1p2aaEv(ptr) local_unnamed_addr #1
 
   ; Function Attrs: nounwind readnone
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2

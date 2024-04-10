@@ -67,6 +67,7 @@ class SM_Real <SM_Pseudo ps, string opName = ps.Mnemonic>
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW              = ps.SchedRW;
   let SubtargetPredicate   = ps.SubtargetPredicate;
+  let OtherPredicates      = ps.OtherPredicates;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let IsAtomicRet          = ps.IsAtomicRet;
   let IsAtomicNoRet        = ps.IsAtomicNoRet;
@@ -277,8 +278,7 @@ class SM_Pseudo_Atomic<string opName,
                         (ins CPolTy:$cpol)),
                    !if(isRet, " $sdst", " $sdata") #
                      ", $sbase, " # offsets.Asm # "$cpol",
-                   isRet>,
-  AtomicNoRet <opNameWithSuffix, isRet> {
+                   isRet> {
   let has_offset = offsets.HasOffset;
   let has_soffset = offsets.HasSOffset;
   let PseudoInstr = opNameWithSuffix;
@@ -662,8 +662,7 @@ defm S_ATC_PROBE_BUFFER : SM_Real_Probe_vi <0x27>;
 //===----------------------------------------------------------------------===//
 
 class SMEM_Atomic_Real_vi <bits<8> op, SM_Atomic_Pseudo ps>
-  : SMEM_Real_vi <op, ps>,
-    AtomicNoRet <!subst("_RTN","",NAME), ps.glc> {
+  : SMEM_Real_vi <op, ps> {
 
   bits<7> sdata;
 
@@ -1065,10 +1064,22 @@ def : GCNPat <
   (REG_SEQUENCE SReg_64,
     (S_GETREG_B32 getHwRegImm<HWREG.SHADER_CYCLES, 0, -12>.ret), sub0,
     (S_MOV_B32 (i32 0)), sub1)> {
-  // Prefer this to s_memtime because it has lower and more predictable latency.
-  let AddedComplexity = 1;
 }
 } // let OtherPredicates = [HasShaderCyclesRegister]
+
+let OtherPredicates = [HasSMemRealTime] in {
+def : GCNPat <
+  (i64 (readsteadycounter)),
+  (S_MEMREALTIME)
+>;
+} // let OtherPredicates = [HasSMemRealTime]
+
+let SubtargetPredicate = isGFX11Plus in {
+def : GCNPat <
+  (i64 (readsteadycounter)),
+  (S_SENDMSG_RTN_B64 (i32 /*MSG_RTN_GET_REALTIME=*/0x83))
+>;
+} // let SubtargetPredicate = [isGFX11Plus]
 
 def i32imm_zero : TImmLeaf <i32, [{
   return Imm == 0;
@@ -1162,11 +1173,9 @@ defm S_LOAD_DWORDX4          : SM_Real_Loads_gfx10<0x002>;
 defm S_LOAD_DWORDX8          : SM_Real_Loads_gfx10<0x003>;
 defm S_LOAD_DWORDX16         : SM_Real_Loads_gfx10<0x004>;
 
-let SubtargetPredicate = HasScalarFlatScratchInsts in {
 defm S_SCRATCH_LOAD_DWORD    : SM_Real_Loads_gfx10<0x005>;
 defm S_SCRATCH_LOAD_DWORDX2  : SM_Real_Loads_gfx10<0x006>;
 defm S_SCRATCH_LOAD_DWORDX4  : SM_Real_Loads_gfx10<0x007>;
-} // End SubtargetPredicate = HasScalarFlatScratchInsts
 
 defm S_BUFFER_LOAD_DWORD     : SM_Real_Loads_gfx10<0x008>;
 defm S_BUFFER_LOAD_DWORDX2   : SM_Real_Loads_gfx10<0x009>;
@@ -1174,19 +1183,15 @@ defm S_BUFFER_LOAD_DWORDX4   : SM_Real_Loads_gfx10<0x00a>;
 defm S_BUFFER_LOAD_DWORDX8   : SM_Real_Loads_gfx10<0x00b>;
 defm S_BUFFER_LOAD_DWORDX16  : SM_Real_Loads_gfx10<0x00c>;
 
-let SubtargetPredicate = HasScalarStores in {
 defm S_STORE_DWORD           : SM_Real_Stores_gfx10<0x010>;
 defm S_STORE_DWORDX2         : SM_Real_Stores_gfx10<0x011>;
 defm S_STORE_DWORDX4         : SM_Real_Stores_gfx10<0x012>;
-let OtherPredicates = [HasScalarFlatScratchInsts] in {
 defm S_SCRATCH_STORE_DWORD   : SM_Real_Stores_gfx10<0x015>;
 defm S_SCRATCH_STORE_DWORDX2 : SM_Real_Stores_gfx10<0x016>;
 defm S_SCRATCH_STORE_DWORDX4 : SM_Real_Stores_gfx10<0x017>;
-} // End OtherPredicates = [HasScalarFlatScratchInsts]
 defm S_BUFFER_STORE_DWORD    : SM_Real_Stores_gfx10<0x018>;
 defm S_BUFFER_STORE_DWORDX2  : SM_Real_Stores_gfx10<0x019>;
 defm S_BUFFER_STORE_DWORDX4  : SM_Real_Stores_gfx10<0x01a>;
-} // End SubtargetPredicate = HasScalarStores
 
 def S_MEMREALTIME_gfx10              : SMEM_Real_gfx10<0x025, S_MEMREALTIME>;
 def S_MEMTIME_gfx10                  : SMEM_Real_gfx10<0x024, S_MEMTIME>;
@@ -1194,9 +1199,7 @@ def S_GL1_INV_gfx10                  : SMEM_Real_gfx10<0x01f, S_GL1_INV>;
 def S_GET_WAVEID_IN_WORKGROUP_gfx10  : SMEM_Real_gfx10<0x02a, S_GET_WAVEID_IN_WORKGROUP>;
 def S_DCACHE_INV_gfx10               : SMEM_Real_gfx10<0x020, S_DCACHE_INV>;
 
-let SubtargetPredicate = HasScalarStores in {
 def S_DCACHE_WB_gfx10                : SMEM_Real_gfx10<0x021, S_DCACHE_WB>;
-} // End SubtargetPredicate = HasScalarStores
 
 multiclass SM_Real_Probe_gfx10<bits<8> op> {
   defvar ps = NAME;
@@ -1210,8 +1213,7 @@ defm S_ATC_PROBE        : SM_Real_Probe_gfx10 <0x26>;
 defm S_ATC_PROBE_BUFFER : SM_Real_Probe_gfx10 <0x27>;
 
 class SMEM_Atomic_Real_gfx10 <bits<8> op, SM_Atomic_Pseudo ps>
-  : SMEM_Real_gfx10 <op, ps>,
-    AtomicNoRet <!subst("_RTN","",NAME), ps.glc> {
+  : SMEM_Real_gfx10 <op, ps> {
 
   bits<7> sdata;
 
@@ -1233,8 +1235,6 @@ multiclass SM_Real_Atomics_gfx10<bits<8> op> {
   def _SGPR_RTN_gfx10  : SMEM_Atomic_Real_gfx10 <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR_RTN)>;
   def _SGPR_IMM_RTN_gfx10 : SMEM_Atomic_Real_gfx10 <op, !cast<SM_Atomic_Pseudo>(ps#_SGPR_IMM_RTN)>;
 }
-
-let SubtargetPredicate = HasScalarAtomics in {
 
 defm S_BUFFER_ATOMIC_SWAP         : SM_Real_Atomics_gfx10 <0x40>;
 defm S_BUFFER_ATOMIC_CMPSWAP      : SM_Real_Atomics_gfx10 <0x41>;
@@ -1301,8 +1301,6 @@ multiclass SM_Real_Discard_gfx10<bits<8> op> {
 
 defm S_DCACHE_DISCARD    : SM_Real_Discard_gfx10 <0x28>;
 defm S_DCACHE_DISCARD_X2 : SM_Real_Discard_gfx10 <0x29>;
-
-} // End SubtargetPredicate = HasScalarAtomics
 
 def SMInfoTable : GenericTable {
   let FilterClass = "SM_Real";

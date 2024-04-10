@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple sparc-sun-solaris2.11 -use-ctors < %s | FileCheck --check-prefix=CTOR %s
 ; RUN: llc -mtriple sparc-sun-solaris2.11 < %s | FileCheck --check-prefix=INIT-ARRAY %s
-@llvm.global_ctors = appending global [2 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @f, i8* null}, { i32, void ()*, i8* } { i32 15, void ()* @g, i8* @v }]
+@llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @f, ptr null}, { i32, ptr, ptr } { i32 15, ptr @g, ptr @v }]
 
 @v = weak_odr global i8 0
 

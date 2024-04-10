@@ -93,7 +93,6 @@ ExtraDeclarations["system_error"] = ["std::operator<<"]
 ExtraHeader = dict()
 # locale has a file and not a subdirectory
 ExtraHeader["locale"] = "v1/__locale$"
-ExtraHeader["thread"] = "v1/__threading_support$"
 ExtraHeader["ranges"] = "v1/__fwd/subrange.h$"
 
 # The extra header is needed since two headers are required to provide the

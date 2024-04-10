@@ -72,7 +72,6 @@ body:             |
   ; CHECK-NEXT: bb.2.if.else:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.if.end:
   ; CHECK-NEXT:   BLR implicit $lr, implicit $rm
   bb.0.for.body:

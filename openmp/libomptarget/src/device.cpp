@@ -66,7 +66,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
 
 DeviceTy::DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
     : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
-      PendingCtorsDtors(), PendingGlobalsMtx(), MappingInfo(*this) {}
+      MappingInfo(*this) {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
@@ -79,8 +79,7 @@ DeviceTy::~DeviceTy() {
 llvm::Error DeviceTy::init() {
   // Make call to init_requires if it exists for this plugin.
   int32_t Ret = 0;
-  if (RTL->init_requires)
-    Ret = RTL->init_requires(PM->getRequirements());
+  Ret = RTL->init_requires(PM->getRequirements());
   if (Ret != OFFLOAD_SUCCESS)
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
@@ -123,7 +122,7 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   OMPT_IF_BUILT(InterfaceRAII TargetDataAllocRAII(
                     RegionInterface.getCallbacks<ompt_target_data_alloc>(),
                     DeviceID, HstPtr, &TargetPtr, Size,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   TargetPtr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
   return TargetPtr;
@@ -134,7 +133,7 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
   OMPT_IF_BUILT(InterfaceRAII TargetDataDeleteRAII(
                     RegionInterface.getCallbacks<ompt_target_data_delete>(),
                     DeviceID, TgtAllocBegin,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   return RTL->data_delete(RTLDeviceID, TgtAllocBegin, Kind);
 }
@@ -151,11 +150,9 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataSubmitRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
-          DeviceID, TgtPtrBegin, HstPtrBegin, Size,
-          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+          omp_get_initial_device(), HstPtrBegin, DeviceID, TgtPtrBegin, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  if (!AsyncInfo || !RTL->data_submit_async || !RTL->synchronize)
-    return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
   return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
                                 AsyncInfo);
 }
@@ -173,11 +170,9 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataRetrieveRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
-          DeviceID, HstPtrBegin, TgtPtrBegin, Size,
-          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
+          DeviceID, TgtPtrBegin, omp_get_initial_device(), HstPtrBegin, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  if (!RTL->data_retrieve_async || !RTL->synchronize)
-    return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
   return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
                                   AsyncInfo);
 }
@@ -185,7 +180,18 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
 // Copy data from current device to destination device directly
 int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                                int64_t Size, AsyncInfoTy &AsyncInfo) {
-  if (!AsyncInfo || !RTL->data_exchange_async || !RTL->synchronize) {
+  /// RAII to establish tool anchors before and after data exchange
+  /// Note: Despite the fact that this is a data exchange, we use 'from_device'
+  ///       operation enum (w.r.t. ompt_target_data_op_t) as there is currently
+  ///       no better alternative. It is still possible to distinguish this
+  ///       scenario from a real data retrieve by checking if both involved
+  ///       device numbers are less than omp_get_num_devices().
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataExchangeRAII(
+          RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
+          RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
+  if (!AsyncInfo) {
     assert(RTL->data_exchange && "RTL->data_exchange is nullptr");
     return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
                               Size);
@@ -195,9 +201,6 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
 }
 
 int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
-  if (!RTL->data_notify_mapped)
-    return OFFLOAD_SUCCESS;
-
   DP("Notifying about new mapping: HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
      DPxPTR(HstPtr), Size);
 
@@ -209,9 +212,6 @@ int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
 }
 
 int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
-  if (!RTL->data_notify_unmapped)
-    return OFFLOAD_SUCCESS;
-
   DP("Notifying about an unmapping: HstPtr=" DPxMOD "\n", DPxPTR(HstPtr));
 
   if (RTL->data_notify_unmapped(RTLDeviceID, HstPtr)) {
@@ -231,114 +231,53 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
 
 // Run region on device
 bool DeviceTy::printDeviceInfo() {
-  if (!RTL->print_device_info)
-    return false;
   RTL->print_device_info(RTLDeviceID);
   return true;
 }
 
 // Whether data can be copied to DstDevice directly
 bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
-  if (RTL != DstDevice.RTL || !RTL->is_data_exchangable)
+  if (RTL != DstDevice.RTL)
     return false;
 
   if (RTL->is_data_exchangable(RTLDeviceID, DstDevice.RTLDeviceID))
-    return (RTL->data_exchange != nullptr) ||
-           (RTL->data_exchange_async != nullptr);
-
+    return true;
   return false;
 }
 
 int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
-  if (RTL->synchronize)
-    return RTL->synchronize(RTLDeviceID, AsyncInfo);
-  return OFFLOAD_SUCCESS;
+  return RTL->synchronize(RTLDeviceID, AsyncInfo);
 }
 
 int32_t DeviceTy::queryAsync(AsyncInfoTy &AsyncInfo) {
-  if (RTL->query_async)
-    return RTL->query_async(RTLDeviceID, AsyncInfo);
-
-  return synchronize(AsyncInfo);
+  return RTL->query_async(RTLDeviceID, AsyncInfo);
 }
 
 int32_t DeviceTy::createEvent(void **Event) {
-  if (RTL->create_event)
-    return RTL->create_event(RTLDeviceID, Event);
-
-  return OFFLOAD_SUCCESS;
+  return RTL->create_event(RTLDeviceID, Event);
 }
 
 int32_t DeviceTy::recordEvent(void *Event, AsyncInfoTy &AsyncInfo) {
-  if (RTL->record_event)
-    return RTL->record_event(RTLDeviceID, Event, AsyncInfo);
-
-  return OFFLOAD_SUCCESS;
+  return RTL->record_event(RTLDeviceID, Event, AsyncInfo);
 }
 
 int32_t DeviceTy::waitEvent(void *Event, AsyncInfoTy &AsyncInfo) {
-  if (RTL->wait_event)
-    return RTL->wait_event(RTLDeviceID, Event, AsyncInfo);
-
-  return OFFLOAD_SUCCESS;
+  return RTL->wait_event(RTLDeviceID, Event, AsyncInfo);
 }
 
 int32_t DeviceTy::syncEvent(void *Event) {
-  if (RTL->sync_event)
-    return RTL->sync_event(RTLDeviceID, Event);
-
-  return OFFLOAD_SUCCESS;
+  return RTL->sync_event(RTLDeviceID, Event);
 }
 
 int32_t DeviceTy::destroyEvent(void *Event) {
-  if (RTL->create_event)
-    return RTL->destroy_event(RTLDeviceID, Event);
-
-  return OFFLOAD_SUCCESS;
-}
-
-void DeviceTy::addOffloadEntry(const OffloadEntryTy &Entry) {
-  std::lock_guard<decltype(PendingGlobalsMtx)> Lock(PendingGlobalsMtx);
-  DeviceOffloadEntries.getExclusiveAccessor()->insert({Entry.getName(), Entry});
-  if (Entry.isGlobal())
-    return;
-
-  if (Entry.isCTor()) {
-    DP("Adding ctor " DPxMOD " to the pending list.\n",
-       DPxPTR(Entry.getAddress()));
-    MESSAGE("WARNING: Calling deprecated constructor for entry %s will be "
-            "removed in a future release \n",
-            Entry.getNameAsCStr());
-    PendingCtorsDtors[Entry.getBinaryDescription()].PendingCtors.push_back(
-        Entry.getAddress());
-  } else if (Entry.isDTor()) {
-    // Dtors are pushed in reverse order so they are executed from end
-    // to beginning when unregistering the library!
-    DP("Adding dtor " DPxMOD " to the pending list.\n",
-       DPxPTR(Entry.getAddress()));
-    MESSAGE("WARNING: Calling deprecated destructor for entry %s will be "
-            "removed in a future release \n",
-            Entry.getNameAsCStr());
-    PendingCtorsDtors[Entry.getBinaryDescription()].PendingDtors.push_front(
-        Entry.getAddress());
-  }
-
-  if (Entry.isLink()) {
-    MESSAGE(
-        "WARNING: The \"link\" attribute is not yet supported for entry: %s!\n",
-        Entry.getNameAsCStr());
-  }
+  return RTL->destroy_event(RTLDeviceID, Event);
 }
 
 void DeviceTy::dumpOffloadEntries() {
   fprintf(stderr, "Device %i offload entries:\n", DeviceID);
   for (auto &It : *DeviceOffloadEntries.getExclusiveAccessor()) {
     const char *Kind = "kernel";
-    if (It.second.isCTor())
-      Kind = "constructor";
-    else if (It.second.isDTor())
-      Kind = "destructor";
-    else if (It.second.isLink())
+    if (It.second.isLink())
       Kind = "link";
     else if (It.second.isGlobal())
       Kind = "global var.";
@@ -347,7 +286,5 @@ void DeviceTy::dumpOffloadEntries() {
 }
 
 bool DeviceTy::useAutoZeroCopy() {
-  if (RTL->use_auto_zero_copy)
-    return RTL->use_auto_zero_copy(RTLDeviceID);
-  return false;
+  return RTL->use_auto_zero_copy(RTLDeviceID);
 }

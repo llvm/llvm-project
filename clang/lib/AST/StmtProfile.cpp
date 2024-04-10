@@ -594,6 +594,8 @@ void OMPClauseProfiler::VisitOMPReleaseClause(const OMPReleaseClause *) {}
 
 void OMPClauseProfiler::VisitOMPRelaxedClause(const OMPRelaxedClause *) {}
 
+void OMPClauseProfiler::VisitOMPWeakClause(const OMPWeakClause *) {}
+
 void OMPClauseProfiler::VisitOMPThreadsClause(const OMPThreadsClause *) {}
 
 void OMPClauseProfiler::VisitOMPSIMDClause(const OMPSIMDClause *) {}
@@ -2009,6 +2011,7 @@ void StmtProfiler::VisitMSPropertySubscriptExpr(
 void StmtProfiler::VisitCXXThisExpr(const CXXThisExpr *S) {
   VisitExpr(S);
   ID.AddBoolean(S->isImplicit());
+  ID.AddBoolean(S->isCapturedByCopyInLambdaWithExplicitObjectParameter());
 }
 
 void StmtProfiler::VisitCXXThrowExpr(const CXXThrowExpr *S) {
@@ -2217,6 +2220,12 @@ void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
   } else {
     ID.AddInteger(0);
   }
+}
+
+void StmtProfiler::VisitPackIndexingExpr(const PackIndexingExpr *E) {
+  VisitExpr(E);
+  VisitExpr(E->getPackIdExpression());
+  VisitExpr(E->getIndexExpr());
 }
 
 void StmtProfiler::VisitSubstNonTypeTemplateParmPackExpr(
@@ -2431,6 +2440,37 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
       VisitTemplateArgument(P);
     break;
   }
+}
+
+namespace {
+class OpenACCClauseProfiler
+    : public OpenACCClauseVisitor<OpenACCClauseProfiler> {
+
+public:
+  OpenACCClauseProfiler() = default;
+
+  void VisitOpenACCClauseList(ArrayRef<const OpenACCClause *> Clauses) {
+    for (const OpenACCClause *Clause : Clauses) {
+      // TODO OpenACC: When we have clauses with expressions, we should
+      // profile them too.
+      Visit(Clause);
+    }
+  }
+  void VisitOpenACCDefaultClause(const OpenACCDefaultClause &Clause);
+};
+
+/// Nothing to do here, there are no sub-statements.
+void OpenACCClauseProfiler::VisitOpenACCDefaultClause(
+    const OpenACCDefaultClause &Clause) {}
+} // namespace
+
+void StmtProfiler::VisitOpenACCComputeConstruct(
+    const OpenACCComputeConstruct *S) {
+  // VisitStmt handles children, so the AssociatedStmt is handled.
+  VisitStmt(S);
+
+  OpenACCClauseProfiler P;
+  P.VisitOpenACCClauseList(S->clauses());
 }
 
 void Stmt::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,

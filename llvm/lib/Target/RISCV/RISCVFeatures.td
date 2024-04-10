@@ -72,7 +72,7 @@ def FeatureStdExtZicntr
                        [FeatureStdExtZicsr]>;
 
 def FeatureStdExtZicond
-    : SubtargetFeature<"experimental-zicond", "HasStdExtZicond", "true",
+    : SubtargetFeature<"zicond", "HasStdExtZicond", "true",
                        "'Zicond' (Integer Conditional Operations)">;
 def HasStdExtZicond : Predicate<"Subtarget->hasStdExtZicond()">,
                       AssemblerPredicate<(all_of FeatureStdExtZicond),
@@ -104,7 +104,7 @@ def FeatureStdExtZihpm
                        "'Zihpm' (Hardware Performance Counters)",
                        [FeatureStdExtZicsr]>;
 
-def FeatureStdExtZimop : SubtargetFeature<"experimental-zimop", "HasStdExtZimop", "true",
+def FeatureStdExtZimop : SubtargetFeature<"zimop", "HasStdExtZimop", "true",
                                           "'Zimop' (May-Be-Operations)">;
 def HasStdExtZimop : Predicate<"Subtarget->hasStdExtZimop()">,
                      AssemblerPredicate<(all_of FeatureStdExtZimop),
@@ -168,13 +168,45 @@ def FeatureStdExtZa64rs : SubtargetFeature<"za64rs", "HasStdExtZa64rs", "true",
 def FeatureStdExtZa128rs : SubtargetFeature<"za128rs", "HasStdExtZa128rs", "true",
                                             "'Za128rs' (Reservation Set Size of at Most 128 Bytes)">;
 
+def FeatureStdExtZaamo
+    : SubtargetFeature<"experimental-zaamo", "HasStdExtZaamo", "true",
+                       "'Zaamo' (Atomic Memory Operations)">;
+def HasStdExtAOrZaamo
+    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZaamo()">,
+      AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZaamo),
+                         "'A' (Atomic Instructions) or "
+                         "'Zaamo' (Atomic Memory Operations)">;
+
+def FeatureStdExtZabha
+    : SubtargetFeature<"experimental-zabha", "HasStdExtZabha", "true",
+                       "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
+def HasStdExtZabha : Predicate<"Subtarget->hasStdExtZabha()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZabha),
+                         "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
+
 def FeatureStdExtZacas
-    : SubtargetFeature<"experimental-zacas", "HasStdExtZacas", "true",
+    : SubtargetFeature<"zacas", "HasStdExtZacas", "true",
                        "'Zacas' (Atomic Compare-And-Swap Instructions)">;
 def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
                      AssemblerPredicate<(all_of FeatureStdExtZacas),
                          "'Zacas' (Atomic Compare-And-Swap Instructions)">;
 def NoStdExtZacas : Predicate<"!Subtarget->hasStdExtZacas()">;
+
+def FeatureStdExtZalasr
+    : SubtargetFeature<"experimental-zalasr", "HasStdExtZalasr", "true",
+                       "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
+def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
+                      AssemblerPredicate<(all_of FeatureStdExtZalasr),
+                          "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
+
+def FeatureStdExtZalrsc
+    : SubtargetFeature<"experimental-zalrsc", "HasStdExtZalrsc", "true",
+                       "'Zalrsc' (Load-Reserved/Store-Conditional)">;
+def HasStdExtAOrZalrsc
+    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZalrsc()">,
+      AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZalrsc),
+                         "'A' (Atomic Instructions) or "
+                         "'Zalrsc' (Load-Reserved/Store-Conditional)">;
 
 def FeatureStdExtZawrs : SubtargetFeature<"zawrs", "HasStdExtZawrs", "true",
                                           "'Zawrs' (Wait on Reservation Set)">;
@@ -318,7 +350,7 @@ def FeatureStdExtZcd
                        [FeatureStdExtZca]>;
 
 def HasStdExtCOrZcd
-    : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZcd()">,
+    : Predicate<"Subtarget->hasStdExtCOrZcd()">,
       AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcd),
                          "'C' (Compressed Instructions) or "
                          "'Zcd' (Compressed Double-Precision Floating-Point Instructions)">;
@@ -358,7 +390,7 @@ def HasStdExtCOrZcfOrZce
                          "'C' (Compressed Instructions) or "
                          "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
-def FeatureStdExtZcmop : SubtargetFeature<"experimental-zcmop", "HasStdExtZcmop", "true",
+def FeatureStdExtZcmop : SubtargetFeature<"zcmop", "HasStdExtZcmop", "true",
                                           "'Zcmop' (Compressed May-Be-Operations)",
                                           [FeatureStdExtZca]>;
 def HasStdExtZcmop : Predicate<"Subtarget->hasStdExtZcmop()">,
@@ -751,6 +783,13 @@ def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
 
 // Supervisor extensions
 
+def FeatureStdExtShgatpa
+    : SubtargetFeature<"shgatpa", "HasStdExtShgatpa", "true",
+                       "'Sgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare)", []>;
+def FeatureStdExtShvsatpa
+    : SubtargetFeature<"shvsatpa", "HasStdExtSvsatpa", "true",
+                       "'Svsatpa' (vsatp supports all modes supported by satp)", []>;
+
 def FeatureStdExtSmaia
     : SubtargetFeature<"smaia", "HasStdExtSmaia", "true",
                        "'Smaia' (Advanced Interrupt Architecture Machine "
@@ -763,6 +802,72 @@ def FeatureStdExtSsaia
 def FeatureStdExtSmepmp
     : SubtargetFeature<"smepmp", "HasStdExtSmepmp", "true",
                        "'Smepmp' (Enhanced Physical Memory Protection)", []>;
+
+def FeatureStdExtSsccptr
+    : SubtargetFeature<"ssccptr", "HasStdExtSsccptr", "true",
+                       "'Ssccptr' (Main memory supports page table reads)", []>;
+
+def FeatureStdExtSscofpmf
+    : SubtargetFeature<"sscofpmf", "HasStdExtSscofpmf", "true",
+                       "'Sscofpmf' (Count Overflow and Mode-Based Filtering)", []>;
+
+def FeatureStdExtShcounterenw
+    : SubtargetFeature<"shcounterenw", "HasStdExtShcounterenw", "true",
+                       "'Shcounterenw' (Support writeable hcounteren enable "
+                       "bit for any hpmcounter that is not read-only zero)", []>;
+def FeatureStdExtSscounterenw
+    : SubtargetFeature<"sscounterenw", "HasStdExtSscounterenw", "true",
+                       "'Sscounterenw' (Support writeable scounteren enable "
+                       "bit for any hpmcounter that is not read-only zero)", []>;
+
+def FeatureStdExtSsstateen
+    : SubtargetFeature<"ssstateen", "HasStdExtSsstateen", "true",
+                       "'Ssstateen' (Supervisor-mode view of the state-enable extension)", []>;
+
+def FeatureStdExtSsstrict
+    : SubtargetFeature<"ssstrict", "HasStdExtSsstrict", "true",
+                       "'Ssstrict' (No non-conforming extensions are present)", []>;
+
+def FeatureStdExtSstc
+    : SubtargetFeature<"sstc", "HasStdExtSstc", "true",
+                       "'Sstc' (Supervisor-mode timer interrupts)", []>;
+
+def FeaturesSsqosid
+    : SubtargetFeature<"experimental-ssqosid", "HasStdExtSsqosid", "true",
+                       "'Ssqosid' (Quality-of-Service (QoS) Identifiers)", []>;
+
+def FeatureStdExtShtvala
+    : SubtargetFeature<"shtvala", "HasStdExtShtvala", "true",
+                       "'Shtvala' (htval provides all needed values)", []>;
+def FeatureStdExtShvstvala
+    : SubtargetFeature<"shvstvala", "HasStdExtShvstvala", "true",
+                       "'Shvstvala' (vstval provides all needed values)", []>;
+def FeatureStdExtSstvala
+    : SubtargetFeature<"sstvala", "HasStdExtSstvala", "true",
+                       "'Sstvala' (stval provides all needed values)", []>;
+
+def FeatureStdExtShvstvecd
+    : SubtargetFeature<"shvstvecd", "HasStdExtShvstvecd", "true",
+                       "'Shvstvecd' (vstvec supports Direct mode)", []>;
+def FeatureStdExtSstvecd
+    : SubtargetFeature<"sstvecd", "HasStdExtSstvecd", "true",
+                       "'Sstvecd' (stvec supports Direct mode)", []>;
+
+def FeatureStdExtSsu64xl
+    : SubtargetFeature<"ssu64xl", "HasStdExtSsu64xl", "true",
+                       "'Ssu64xl' (UXLEN=64 supported)", []>;
+
+def FeatureStdExtSvade
+    : SubtargetFeature<"svade", "HasStdExtSvade", "true",
+                       "'Svade' (Raise exceptions on improper A/D bits)", []>;
+
+def FeatureStdExtSvadu
+    : SubtargetFeature<"svadu", "HasStdExtSvadu", "true",
+                       "'Svadu' (Hardware A/D updates)", []>;
+
+def FeatureStdExtSvbare
+    : SubtargetFeature<"svbare", "HasStdExtSvbare", "true",
+                       "'Svbare' $(satp mode Bare supported)", []>;
 
 def FeatureStdExtSvinval
     : SubtargetFeature<"svinval", "HasStdExtSvinval", "true",
@@ -778,6 +883,40 @@ def FeatureStdExtSvnapot
 def FeatureStdExtSvpbmt
     : SubtargetFeature<"svpbmt", "HasStdExtSvpbmt", "true",
                        "'Svpbmt' (Page-Based Memory Types)">;
+
+// Pointer Masking extensions
+
+// A supervisor-level extension that provides pointer masking for the next lower
+// privilege mode (U-mode), and for VS- and VU-modes if the H extension is
+// present.
+def FeatureStdExtSsnpm
+    : SubtargetFeature<"experimental-ssnpm", "HasStdExtSsnpm", "true",
+                       "'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)">;
+
+// A machine-level extension that provides pointer masking for the next lower
+// privilege mode (S/HS if S-mode is implemented, or U-mode otherwise).
+def FeatureStdExtSmnpm
+    : SubtargetFeature<"experimental-smnpm", "HasStdExtSmnpm", "true",
+                       "'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)">;
+
+// A machine-level extension that provides pointer masking for M-mode.
+def FeatureStdExtSmmpm
+    : SubtargetFeature<"experimental-smmpm", "HasStdExtSmmpm", "true",
+                       "'Smmpm' (Machine-level Pointer Masking for M-mode)">;
+
+// An extension that indicates that there is pointer-masking support available
+// in supervisor mode, with some facility provided in the supervisor execution
+// environment to control pointer masking.
+def FeatureStdExtSspm
+    : SubtargetFeature<"experimental-sspm", "HasStdExtSspm", "true",
+                       "'Sspm' (Indicates Supervisor-mode Pointer Masking)">;
+
+// An extension that indicates that there is pointer-masking support available
+// in user mode, with some facility provided in the application execution
+// environment to control pointer masking.
+def FeatureStdExtSupm
+    : SubtargetFeature<"experimental-supm", "HasStdExtSupm", "true",
+                       "'Supm' (Indicates User-mode Pointer Masking)">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
@@ -919,6 +1058,30 @@ def HasVendorXSfvfnrclipxfqf
       AssemblerPredicate<(all_of FeatureVendorXSfvfnrclipxfqf),
                          "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)">;
 
+def FeatureVendorXSiFivecdiscarddlone
+    : SubtargetFeature<"xsifivecdiscarddlone", "HasVendorXSiFivecdiscarddlone", "true",
+                       "'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)", []>;
+def HasVendorXSiFivecdiscarddlone
+    : Predicate<"Subtarget->hasVendorXSiFivecdiscarddlone()">,
+      AssemblerPredicate<(all_of FeatureVendorXSiFivecdiscarddlone),
+                         "'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)">;
+
+def FeatureVendorXSiFivecflushdlone
+    : SubtargetFeature<"xsifivecflushdlone", "HasVendorXSiFivecflushdlone", "true",
+                       "'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)", []>;
+def HasVendorXSiFivecflushdlone
+    : Predicate<"Subtarget->hasVendorXSiFivecflushdlone()">,
+      AssemblerPredicate<(all_of FeatureVendorXSiFivecflushdlone),
+                         "'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)">;
+
+def FeatureVendorXSfcease
+    : SubtargetFeature<"xsfcease", "HasVendorXSfcease", "true",
+                       "'XSfcease' (SiFive sf.cease Instruction)", []>;
+def HasVendorXSfcease
+    : Predicate<"Subtarget->hasVendorXSfcease()">,
+      AssemblerPredicate<(all_of FeatureVendorXSfcease),
+                         "'XSfcease' (SiFive sf.cease Instruction)">;
+
 // Core-V Extensions
 
 def FeatureVendorXCVelw
@@ -1044,30 +1207,6 @@ def TuneDLenFactor2
    : SubtargetFeature<"dlen-factor-2", "DLenFactor2", "true",
                       "Vector unit DLEN(data path width) is half of VLEN">;
 
-def TuneLUIADDIFusion
-    : SubtargetFeature<"lui-addi-fusion", "HasLUIADDIFusion",
-                       "true", "Enable LUI+ADDI macrofusion">;
-
-def TuneAUIPCADDIFusion
-    : SubtargetFeature<"auipc-addi-fusion", "HasAUIPCADDIFusion",
-                       "true", "Enable AUIPC+ADDI macrofusion">;
-
-def TuneZExtHFusion
-    : SubtargetFeature<"zexth-fusion", "HasZExtHFusion",
-                       "true", "Enable SLLI+SRLI to be fused to zero extension of halfword">;
-
-def TuneZExtWFusion
-    : SubtargetFeature<"zextw-fusion", "HasZExtWFusion",
-                       "true", "Enable SLLI+SRLI to be fused to zero extension of word">;
-
-def TuneShiftedZExtWFusion
-    : SubtargetFeature<"shifted-zextw-fusion", "HasShiftedZExtWFusion",
-                       "true", "Enable SLLI+SRLI to be fused when computing (shifted) zero extension of word">;
-
-def TuneLDADDFusion
-    : SubtargetFeature<"ld-add-fusion", "HasLDADDFusion",
-                       "true", "Enable LD+ADD macrofusion.">;
-
 def TuneNoDefaultUnroll
     : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
                        "Disable default unroll preference.">;
@@ -1079,6 +1218,17 @@ def TuneShortForwardBranchOpt
                        "true", "Enable short forward branch optimization">;
 def HasShortForwardBranchOpt : Predicate<"Subtarget->hasShortForwardBranchOpt()">;
 def NoShortForwardBranchOpt : Predicate<"!Subtarget->hasShortForwardBranchOpt()">;
+
+// Some subtargets require a S2V transfer buffer to move scalars into vectors.
+// FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
+def TuneNoSinkSplatOperands
+    : SubtargetFeature<"no-sink-splat-operands", "SinkSplatOperands",
+                       "false", "Disable sink splat operands to enable .vx, .vf,"
+                       ".wx, and .wf instructions">;
+
+def TuneNoStripWSuffix
+    : SubtargetFeature<"no-strip-w-suffix", "EnableStripWSuffix", "false",
+                       "Disable strip W suffix">;
 
 def TuneConditionalCompressedMoveFusion
     : SubtargetFeature<"conditional-cmv-fusion", "HasConditionalCompressedMoveFusion",
@@ -1109,3 +1259,8 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
+
+def FeatureForcedSWShadowStack : SubtargetFeature<
+    "forced-sw-shadow-stack", "HasForcedSWShadowStack", "true",
+    "Implement shadow stack with software.">;
+def HasForcedSWShadowStack : Predicate<"Subtarget->hasForcedSWShadowStack()">;

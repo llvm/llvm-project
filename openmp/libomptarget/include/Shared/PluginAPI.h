@@ -40,11 +40,6 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image);
 // function to move data from source device to destination device directly.
 int32_t __tgt_rtl_is_data_exchangable(int32_t SrcDevId, int32_t DstDevId);
 
-// Return an integer other than zero if the plugin can handle images which do
-// not contain target regions and global variables (but can contain other
-// functions)
-int32_t __tgt_rtl_supports_empty_images();
-
 // Initialize the requires flags for the device.
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags);
 

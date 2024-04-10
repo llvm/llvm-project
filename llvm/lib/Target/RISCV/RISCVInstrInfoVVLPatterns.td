@@ -387,6 +387,9 @@ def SDT_RISCVVEXTEND_VL : SDTypeProfile<1, 3, [SDTCisVec<0>,
                                                SDTCisVT<3, XLenVT>]>;
 def riscv_sext_vl : SDNode<"RISCVISD::VSEXT_VL", SDT_RISCVVEXTEND_VL>;
 def riscv_zext_vl : SDNode<"RISCVISD::VZEXT_VL", SDT_RISCVVEXTEND_VL>;
+def riscv_ext_vl : PatFrags<(ops node:$A, node:$B, node:$C),
+                            [(riscv_sext_vl node:$A, node:$B, node:$C),
+                             (riscv_zext_vl node:$A, node:$B, node:$C)]>;
 
 def riscv_trunc_vector_vl : SDNode<"RISCVISD::TRUNCATE_VECTOR_VL",
                                    SDTypeProfile<1, 3, [SDTCisVec<0>,
@@ -532,6 +535,11 @@ def riscv_sext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
 
 def riscv_zext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
                            (riscv_zext_vl node:$A, node:$B, node:$C), [{
+  return N->hasOneUse();
+}]>;
+
+def riscv_ext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
+                          (riscv_ext_vl node:$A, node:$B, node:$C), [{
   return N->hasOneUse();
 }]>;
 
@@ -691,6 +699,27 @@ multiclass VPatTiedBinaryNoMaskVL_V<SDNode vop,
                      GPR:$vl, sew, TU_MU)>;
 }
 
+class VPatTiedBinaryMaskVL_V<SDNode vop,
+                             string instruction_name,
+                             string suffix,
+                             ValueType result_type,
+                             ValueType op2_type,
+                             ValueType mask_type,
+                             int sew,
+                             LMULInfo vlmul,
+                             VReg result_reg_class,
+                             VReg op2_reg_class> :
+  Pat<(result_type (vop
+                   (result_type result_reg_class:$rs1),
+                   (op2_type op2_reg_class:$rs2),
+                   (result_type result_reg_class:$rs1),
+                   (mask_type V0),
+                   VLOpFrag)),
+      (!cast<Instruction>(instruction_name#"_"#suffix#"_"# vlmul.MX#"_MASK_TIED")
+                   result_reg_class:$rs1,
+                   op2_reg_class:$rs2,
+                   (mask_type V0), GPR:$vl, sew, TU_MU)>;
+
 multiclass VPatTiedBinaryNoMaskVL_V_RM<SDNode vop,
                                        string instruction_name,
                                        string suffix,
@@ -819,6 +848,10 @@ multiclass VPatBinaryWVL_VV_VX_WV_WX<SDPatternOperator vop, SDNode vop_w,
       defm : VPatTiedBinaryNoMaskVL_V<vop_w, instruction_name, "WV",
                                       wti.Vector, vti.Vector, vti.Log2SEW,
                                       vti.LMul, wti.RegClass, vti.RegClass>;
+      def : VPatTiedBinaryMaskVL_V<vop_w, instruction_name, "WV",
+                                   wti.Vector, vti.Vector, wti.Mask,
+                                   vti.Log2SEW, vti.LMul, wti.RegClass,
+                                   vti.RegClass>;
       def : VPatBinaryVL_V<vop_w, instruction_name, "WV",
                            wti.Vector, wti.Vector, vti.Vector, vti.Mask,
                            vti.Log2SEW, vti.LMul, wti.RegClass, wti.RegClass,
@@ -2566,7 +2599,12 @@ foreach fvti = AllFloatVectors in {
                    fvti.RegClass:$merge, fvti.RegClass:$rs2,
                    (fvti.Scalar fvti.ScalarRegClass:$rs1),
                    (fvti.Mask V0), GPR:$vl, fvti.Log2SEW)>;
+  }
+}
 
+foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
+  let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
+                               GetVTypeScalarPredicates<fvti>.Predicates) in {
     // 13.16. Vector Floating-Point Move Instruction
     // If we're splatting fpimm0, use vmv.v.x vd, x0.
     def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl

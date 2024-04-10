@@ -68,6 +68,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeLowerGlobalDtorsLegacyPassPass(PR);
   initializeFixFunctionBitcastsPass(PR);
   initializeOptimizeReturnedPass(PR);
+  initializeWebAssemblyRefTypeMem2LocalPass(PR);
   initializeWebAssemblyArgumentMovePass(PR);
   initializeWebAssemblySetP2AlignOperandsPass(PR);
   initializeWebAssemblyReplacePhysRegsPass(PR);
@@ -200,7 +201,8 @@ public:
   bool runOnModule(Module &M) override {
     FeatureBitset Features = coalesceFeatures(M);
 
-    std::string FeatureStr = getFeatureString(Features);
+    std::string FeatureStr =
+        getFeatureString(Features, WasmTM->getTargetFeatureString());
     WasmTM->setTargetFeatureString(FeatureStr);
     for (auto &F : M)
       replaceFeatures(F, FeatureStr);
@@ -238,12 +240,17 @@ private:
     return Features;
   }
 
-  std::string getFeatureString(const FeatureBitset &Features) {
+  static std::string getFeatureString(const FeatureBitset &Features,
+                                      StringRef TargetFS) {
     std::string Ret;
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
       if (Features[KV.Value])
         Ret += (StringRef("+") + KV.Key + ",").str();
     }
+    SubtargetFeatures TF{TargetFS};
+    for (std::string const &F : TF.getFeatures())
+      if (!SubtargetFeatures::isEnabled(F))
+        Ret += F + ",";
     return Ret;
   }
 
@@ -397,7 +404,7 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
       TM->Options.ExceptionModel == ExceptionHandling::Wasm)
     report_fatal_error(
         "-exception-model=wasm only allowed with at least one of "
-        "-wasm-enable-eh or -wasm-enable-sjj");
+        "-wasm-enable-eh or -wasm-enable-sjlj");
 
   // You can't enable two modes of EH at the same time
   if (WasmEnableEmEH && WasmEnableEH)
@@ -471,14 +478,15 @@ void WebAssemblyPassConfig::addISelPrepare() {
       WasmTM->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
                                std::string(WasmTM->getTargetFeatureString()));
   if (Subtarget->hasReferenceTypes()) {
-    // We need to remove allocas for reference types
-    addPass(createPromoteMemoryToRegisterPass(true));
+    // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
+    // loads and stores are promoted to local.gets/local.sets.
+    addPass(createWebAssemblyRefTypeMem2Local());
   }
   // Lower atomics and TLS if necessary
   addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
 
   // This is a no-op if atomics are not used in the module
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addISelPrepare();
 }

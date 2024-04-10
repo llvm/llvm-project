@@ -1665,6 +1665,42 @@ NonTypeTemplateParmDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
       getReplacedTemplateParameterList(getAssociatedDecl())->asArray()[Index]);
 }
 
+PackIndexingExpr *PackIndexingExpr::Create(ASTContext &Context,
+                                           SourceLocation EllipsisLoc,
+                                           SourceLocation RSquareLoc,
+                                           Expr *PackIdExpr, Expr *IndexExpr,
+                                           std::optional<int64_t> Index,
+                                           ArrayRef<Expr *> SubstitutedExprs) {
+  QualType Type;
+  if (Index && !SubstitutedExprs.empty())
+    Type = SubstitutedExprs[*Index]->getType();
+  else
+    Type = Context.DependentTy;
+
+  void *Storage =
+      Context.Allocate(totalSizeToAlloc<Expr *>(SubstitutedExprs.size()));
+  return new (Storage) PackIndexingExpr(
+      Type, EllipsisLoc, RSquareLoc, PackIdExpr, IndexExpr, SubstitutedExprs);
+}
+
+NamedDecl *PackIndexingExpr::getPackDecl() const {
+  if (auto *D = dyn_cast<DeclRefExpr>(getPackIdExpression()); D) {
+    NamedDecl *ND = dyn_cast<NamedDecl>(D->getDecl());
+    assert(ND && "exected a named decl");
+    return ND;
+  }
+  assert(false && "invalid declaration kind in pack indexing expression");
+  return nullptr;
+}
+
+PackIndexingExpr *
+PackIndexingExpr::CreateDeserialized(ASTContext &Context,
+                                     unsigned NumTransformedExprs) {
+  void *Storage =
+      Context.Allocate(totalSizeToAlloc<Expr *>(NumTransformedExprs));
+  return new (Storage) PackIndexingExpr(EmptyShell{});
+}
+
 QualType SubstNonTypeTemplateParmExpr::getParameterType(
     const ASTContext &Context) const {
   // Note that, for a class type NTTP, we will have an lvalue of type 'const

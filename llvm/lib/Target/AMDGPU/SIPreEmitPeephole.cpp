@@ -397,8 +397,7 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
     // and limit the distance to 20 instructions for compile time purposes.
     // Note: this needs to work on bundles as S_SET_GPR_IDX* instructions
     // may be bundled with the instructions they modify.
-    for (auto &MI :
-         make_early_inc_range(make_range(MBB.instr_begin(), MBB.instr_end()))) {
+    for (auto &MI : make_early_inc_range(MBB.instrs())) {
       if (Count == Threshold)
         SetGPRMI = nullptr;
       else

@@ -12,8 +12,8 @@
 #define FORTRAN_RUNTIME_IO_CONNECTION_H_
 
 #include "format.h"
+#include "flang/Common/optional.h"
 #include <cinttypes>
-#include <optional>
 
 namespace Fortran::runtime::io {
 
@@ -26,17 +26,17 @@ enum class Access { Sequential, Direct, Stream };
 // established in an OPEN statement.
 struct ConnectionAttributes {
   Access access{Access::Sequential}; // ACCESS='SEQUENTIAL', 'DIRECT', 'STREAM'
-  std::optional<bool> isUnformatted; // FORM='UNFORMATTED' if true
+  Fortran::common::optional<bool> isUnformatted; // FORM='UNFORMATTED' if true
   bool isUTF8{false}; // ENCODING='UTF-8'
   unsigned char internalIoCharKind{0}; // 0->external, 1/2/4->internal
-  std::optional<std::int64_t> openRecl; // RECL= on OPEN
+  Fortran::common::optional<std::int64_t> openRecl; // RECL= on OPEN
 
-  bool IsRecordFile() const {
+  RT_API_ATTRS bool IsRecordFile() const {
     // Formatted stream files are viewed as having records, at least on input
     return access != Access::Stream || !isUnformatted.value_or(true);
   }
 
-  template <typename CHAR = char> constexpr bool useUTF8() const {
+  template <typename CHAR = char> constexpr RT_API_ATTRS bool useUTF8() const {
     // For wide CHARACTER kinds, always use UTF-8 for formatted I/O.
     // For single-byte CHARACTER, encode characters >= 0x80 with
     // UTF-8 iff the mode is set.
@@ -45,32 +45,35 @@ struct ConnectionAttributes {
 };
 
 struct ConnectionState : public ConnectionAttributes {
-  bool IsAtEOF() const; // true when read has hit EOF or endfile record
-  bool IsAfterEndfile() const; // true after ENDFILE until repositioned
+  RT_API_ATTRS bool
+  IsAtEOF() const; // true when read has hit EOF or endfile record
+  RT_API_ATTRS bool
+  IsAfterEndfile() const; // true after ENDFILE until repositioned
 
   // All positions and measurements are always in units of bytes,
   // not characters.  Multi-byte character encodings are possible in
   // both internal I/O (when the character kind of the variable is 2 or 4)
   // and external formatted I/O (when the encoding is UTF-8).
-  std::size_t RemainingSpaceInRecord() const;
-  bool NeedAdvance(std::size_t) const;
-  void HandleAbsolutePosition(std::int64_t);
-  void HandleRelativePosition(std::int64_t);
+  RT_API_ATTRS std::size_t RemainingSpaceInRecord() const;
+  RT_API_ATTRS bool NeedAdvance(std::size_t) const;
+  RT_API_ATTRS void HandleAbsolutePosition(std::int64_t);
+  RT_API_ATTRS void HandleRelativePosition(std::int64_t);
 
-  void BeginRecord() {
+  RT_API_ATTRS void BeginRecord() {
     positionInRecord = 0;
     furthestPositionInRecord = 0;
     unterminatedRecord = false;
   }
 
-  std::optional<std::int64_t> EffectiveRecordLength() const {
+  RT_API_ATTRS Fortran::common::optional<std::int64_t>
+  EffectiveRecordLength() const {
     // When an input record is longer than an explicit RECL= from OPEN
     // it is effectively truncated on input.
     return openRecl && recordLength && *openRecl < *recordLength ? openRecl
                                                                  : recordLength;
   }
 
-  std::optional<std::int64_t> recordLength;
+  Fortran::common::optional<std::int64_t> recordLength;
 
   std::int64_t currentRecordNumber{1}; // 1 is first
 
@@ -86,11 +89,12 @@ struct ConnectionState : public ConnectionAttributes {
   std::int64_t furthestPositionInRecord{0}; // max(position+bytes)
 
   // Set at end of non-advancing I/O data transfer
-  std::optional<std::int64_t> leftTabLimit; // offset in current record
+  Fortran::common::optional<std::int64_t>
+      leftTabLimit; // offset in current record
 
   // currentRecordNumber value captured after ENDFILE/REWIND/BACKSPACE statement
   // or an end-of-file READ condition on a sequential access file
-  std::optional<std::int64_t> endfileRecordNumber;
+  Fortran::common::optional<std::int64_t> endfileRecordNumber;
 
   // Mutable modes set at OPEN() that can be overridden in READ/WRITE & FORMAT
   MutableModes modes; // BLANK=, DECIMAL=, SIGN=, ROUND=, PAD=, DELIM=, kP
@@ -109,9 +113,9 @@ struct ConnectionState : public ConnectionAttributes {
 // Utility class for capturing and restoring a position in an input stream.
 class SavedPosition {
 public:
-  explicit SavedPosition(IoStatementState &);
-  ~SavedPosition();
-  void Cancel() { cancelled_ = true; }
+  explicit RT_API_ATTRS SavedPosition(IoStatementState &);
+  RT_API_ATTRS ~SavedPosition();
+  RT_API_ATTRS void Cancel() { cancelled_ = true; }
 
 private:
   IoStatementState &io_;

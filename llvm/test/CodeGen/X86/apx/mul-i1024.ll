@@ -1618,9 +1618,9 @@ define void @test_1024(ptr %a, ptr %b, ptr %out) nounwind {
 ; EGPR-NDD-NEXT:    movq %r22, %rax
 ; EGPR-NDD-NEXT:    mulq %rdi
 ; EGPR-NDD-NEXT:    movq %rax, %r26
-; EGPR-NDD-NEXT:    imulq 120(%r20), %r22, %rax
+; EGPR-NDD-NEXT:    imulq %rdi, %r21, %rax
 ; EGPR-NDD-NEXT:    addq %rdx, %rax
-; EGPR-NDD-NEXT:    imulq %rdi, %r21, %rdx
+; EGPR-NDD-NEXT:    imulq 120(%r20), %r22, %rdx
 ; EGPR-NDD-NEXT:    addq %rdx, %rax, %r8
 ; EGPR-NDD-NEXT:    movq 96(%r20), %r28
 ; EGPR-NDD-NEXT:    movq 104(%r20), %rdi

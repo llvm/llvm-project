@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: not llvm-objcopy --discard-locals %t %t2 2>&1 | FileCheck %s
+# RUN: not llvm-objcopy --discard-locals %t %t2 2>&1 | FileCheck %s -DFILE=%t
 
 !ELF
 FileHeader:
@@ -23,4 +23,4 @@ Symbols:
     Type:     STT_FUNC
     Section:  .text
 
-# CHECK: not stripping symbol '.L.rel' because it is named in a relocation
+# CHECK: error: '[[FILE]]': not stripping symbol '.L.rel' because it is named in a relocation

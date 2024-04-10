@@ -832,6 +832,25 @@ void test_atomic_inc_dec(local uint *lptr, global uint *gptr, uint val) {
   res = __builtin_amdgcn_atomic_dec32((volatile global uint*)gptr, val, __ATOMIC_SEQ_CST, "");
 }
 
+// CHECK-LABEL test_wavefrontsize(
+unsigned test_wavefrontsize() {
+
+  // CHECK: call i32 @llvm.amdgcn.wavefrontsize()
+  return __builtin_amdgcn_wavefrontsize();
+}
+
+// CHECK-LABEL test_get_fpenv(
+unsigned long test_get_fpenv() {
+  // CHECK: call i64 @llvm.get.fpenv.i64()
+  return __builtin_amdgcn_get_fpenv();
+}
+
+// CHECK-LABEL test_set_fpenv(
+void test_set_fpenv(unsigned long env) {
+  // CHECK: call void @llvm.set.fpenv.i64(i64 %[[ENV:.+]])
+  __builtin_amdgcn_set_fpenv(env);
+}
+
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}
 // CHECK-DAG: [[$WS_RANGE]] = !{i16 1, i16 1025}
 // CHECK-DAG: attributes #[[$NOUNWIND_READONLY]] = { convergent mustprogress nocallback nofree nounwind willreturn memory(none) }

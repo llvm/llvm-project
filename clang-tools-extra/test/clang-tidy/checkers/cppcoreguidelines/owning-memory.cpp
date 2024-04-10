@@ -395,3 +395,109 @@ namespace PR63994 {
     // CHECK-NOTES: [[@LINE-1]]:5: warning: returning a newly created resource of type 'A *' or 'gsl::owner<>' from a function whose return type is not 'gsl::owner<>'
   }
 }
+
+namespace PR59389 {
+  struct S {
+    S();
+    S(int);
+
+    int value = 1;
+  };
+
+  void testLambdaInFunctionNegative() {
+    const auto MakeS = []() -> ::gsl::owner<S*> {
+      return ::gsl::owner<S*>{new S{}};
+    };
+  }
+
+  void testLambdaInFunctionPositive() {
+    const auto MakeS = []() -> S* {
+      return ::gsl::owner<S*>{new S{}};
+      // CHECK-NOTES: [[@LINE-1]]:7: warning: returning a newly created resource of type 'S *' or 'gsl::owner<>' from a lambda whose return type is not 'gsl::owner<>'
+    };
+  }
+
+  void testFunctionInFunctionNegative() {
+    struct C {
+      ::gsl::owner<S*> test() {
+        return ::gsl::owner<S*>{new S{}};
+      }
+    };
+  }
+
+  void testFunctionInFunctionPositive() {
+    struct C {
+      S* test() {
+        return ::gsl::owner<S*>{new S{}};
+        // CHECK-NOTES: [[@LINE-1]]:9: warning: returning a newly created resource of type 'S *' or 'gsl::owner<>' from a function whose return type is not 'gsl::owner<>'
+      }
+    };
+  }
+
+  ::gsl::owner<S*> testReverseLambdaNegative() {
+    const auto MakeI = [] -> int { return 5; };
+    return ::gsl::owner<S*>{new S(MakeI())};
+  }
+
+  S* testReverseLambdaPositive() {
+    const auto MakeI = [] -> int { return 5; };
+    return ::gsl::owner<S*>{new S(MakeI())};
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: returning a newly created resource of type 'S *' or 'gsl::owner<>' from a function whose return type is not 'gsl::owner<>'
+  }
+
+  ::gsl::owner<S*> testReverseFunctionNegative() {
+    struct C {
+      int test() { return 5; }
+    };
+    return ::gsl::owner<S*>{new S(C().test())};
+  }
+
+  S* testReverseFunctionPositive() {
+    struct C {
+      int test() { return 5; }
+    };
+    return ::gsl::owner<S*>{new S(C().test())};
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: returning a newly created resource of type 'S *' or 'gsl::owner<>' from a function whose return type is not 'gsl::owner<>'
+  }
+
+  void testLambdaInLambdaNegative() {
+    const auto MakeS = []() -> ::gsl::owner<S*> {
+      const auto MakeI = []() -> int { return 5; };
+      return ::gsl::owner<S*>{new S(MakeI())};
+    };
+  }
+
+  void testLambdaInLambdaPositive() {
+    const auto MakeS = []() -> S* {
+      const auto MakeI = []() -> int { return 5; };
+      return ::gsl::owner<S*>{new S(MakeI())};
+      // CHECK-NOTES: [[@LINE-1]]:7: warning: returning a newly created resource of type 'S *' or 'gsl::owner<>' from a lambda whose return type is not 'gsl::owner<>'
+    };
+  }
+
+  void testLambdaInLambdaWithDoubleReturns() {
+    const auto MakeS = []() -> S* {
+      const auto MakeS2 = []() -> S* {
+        return ::gsl::owner<S*>{new S(1)};
+        // CHECK-NOTES: [[@LINE-1]]:9: warning: returning a newly created resource of type 'S *' or 'gsl::owner<>' from a lambda whose return type is not 'gsl::owner<>' [cppcoreguidelines-owning-memory]
+      };
+      return ::gsl::owner<S*>{new S(2)};
+      // CHECK-NOTES: [[@LINE-1]]:7: warning: returning a newly created resource of type 'S *' or 'gsl::owner<>' from a lambda whose return type is not 'gsl::owner<>'
+    };
+  }
+
+  void testReverseLambdaInLambdaNegative() {
+    const auto MakeI = []() -> int {
+      const auto MakeS = []() -> ::gsl::owner<S*> { return new S(); };
+      return 5;
+    };
+  }
+
+  void testReverseLambdaInLambdaPositive() {
+    const auto MakeI = []() -> int {
+      const auto MakeS = []() -> S* { return new S(); };
+      // CHECK-NOTES: [[@LINE-1]]:39: warning: returning a newly created resource of type 'S *' or 'gsl::owner<>' from a lambda whose return type is not 'gsl::owner<>'
+      return 5;
+    };
+  }
+}

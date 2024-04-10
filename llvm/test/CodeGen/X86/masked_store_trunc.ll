@@ -674,7 +674,7 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE4-LABEL: truncstore_v8i64_v8i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm6, %xmm6
-; SSE4-NEXT:    movdqa {{.*#+}} xmm7 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
+; SSE4-NEXT:    pmovzxbq {{.*#+}} xmm7 = [255,255]
 ; SSE4-NEXT:    pand %xmm7, %xmm3
 ; SSE4-NEXT:    pand %xmm7, %xmm2
 ; SSE4-NEXT:    packusdw %xmm3, %xmm2
@@ -2727,7 +2727,7 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE4-LABEL: truncstore_v16i32_v16i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm8, %xmm8
-; SSE4-NEXT:    movdqa {{.*#+}} xmm9 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; SSE4-NEXT:    pmovzxbd {{.*#+}} xmm9 = [255,255,255,255]
 ; SSE4-NEXT:    pand %xmm9, %xmm3
 ; SSE4-NEXT:    pand %xmm9, %xmm2
 ; SSE4-NEXT:    packusdw %xmm3, %xmm2
@@ -3720,7 +3720,7 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; SSE4-LABEL: truncstore_v8i32_v8i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm4, %xmm4
-; SSE4-NEXT:    movdqa {{.*#+}} xmm5 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; SSE4-NEXT:    pmovzxbd {{.*#+}} xmm5 = [255,255,255,255]
 ; SSE4-NEXT:    pand %xmm5, %xmm1
 ; SSE4-NEXT:    pand %xmm5, %xmm0
 ; SSE4-NEXT:    packusdw %xmm1, %xmm0
@@ -4590,7 +4590,7 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE4-LABEL: truncstore_v32i16_v32i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm7, %xmm7
-; SSE4-NEXT:    movdqa {{.*#+}} xmm6 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE4-NEXT:    pmovzxbw {{.*#+}} xmm6 = [255,255,255,255,255,255,255,255]
 ; SSE4-NEXT:    pand %xmm6, %xmm1
 ; SSE4-NEXT:    pand %xmm6, %xmm0
 ; SSE4-NEXT:    packuswb %xmm1, %xmm0
@@ -5687,7 +5687,7 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; SSE4-LABEL: truncstore_v16i16_v16i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm3, %xmm3
-; SSE4-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE4-NEXT:    pmovzxbw {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
 ; SSE4-NEXT:    pand %xmm4, %xmm1
 ; SSE4-NEXT:    pand %xmm4, %xmm0
 ; SSE4-NEXT:    packuswb %xmm1, %xmm0

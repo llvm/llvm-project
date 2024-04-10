@@ -55,7 +55,7 @@ public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 };
 
-} //namespace
+} // namespace
 
 bool DebugIteratorModeling::evalCall(const CallEvent &Call,
                                      CheckerContext &C) const {

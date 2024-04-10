@@ -1,0 +1,18 @@
+; RUN: rm -rf %t
+# Setup a mix of public and private libraries that resemble apple sdk.
+; RUN: mkdir -p %t/sysroot/usr/local/lib/ %t/sysroot/usr/lib/
+; RUN: mkdir -p %t/sysroot/System/Library/Frameworks/System.framework %t/sysroot/System/Library/PrivateFrameworks/Fat.framework
+; RUN: yaml2obj %S/Inputs/libSystem.1.yaml -o %t/sysroot/System/Library/Frameworks/System.framework/System
+; RUN: yaml2obj %S/Inputs/objc.yaml -o %t/sysroot/usr/lib/libobjc.dylib
+; RUN: cp %t/sysroot/usr/lib/libobjc.dylib %t/sysroot/usr/local/lib/libobjc-unstable.dylib
+; RUN: yaml2obj %S/Inputs/universal.yaml -o %t/sysroot/System/Library/PrivateFrameworks/Fat.framework/Fat
+; RUN: llvm-readtapi -stubify %t/sysroot --delete-input --delete-private-libraries 2>&1 | FileCheck %s --allow-empty  --implicit-check-not warning: --implicit-check-not error:
+# Validate expected files are removed.
+; RUN: not test -f %t/sysroot/System/Library/PrivateFrameworks
+; RUN: not test -f %t/sysroot/usr/local
+; RUN: not test -f %t/sysroot/usr/lib/libobjc.dylib
+; RUN: not test -f %t/sysroot/System/Library/Frameworks/System.framework/System
+; RUN: test -f %t/sysroot/System/Library/Frameworks/System.framework/System.tbd
+; RUN: test -f %t/sysroot/usr/lib/libobjc.tbd
+
+

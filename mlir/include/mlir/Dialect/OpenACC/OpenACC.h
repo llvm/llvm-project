@@ -133,6 +133,10 @@ static constexpr StringLiteral getRoutineInfoAttrName() {
   return StringLiteral("acc.routine_info");
 }
 
+static constexpr StringLiteral getCombinedConstructsAttrName() {
+  return CombinedConstructsTypeAttr::name;
+}
+
 struct RuntimeCounters
     : public mlir::SideEffects::Resource::Base<RuntimeCounters> {
   mlir::StringRef getName() final { return "AccRuntimeCounters"; }

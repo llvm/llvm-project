@@ -38,24 +38,10 @@ struct PluginAdaptorTy;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
 
-///
-struct PendingCtorDtorListsTy {
-  std::list<void *> PendingCtors;
-  std::list<void *> PendingDtors;
-};
-typedef std::map<__tgt_bin_desc *, PendingCtorDtorListsTy>
-    PendingCtorsDtorsPerLibrary;
-
 struct DeviceTy {
   int32_t DeviceID;
   PluginAdaptorTy *RTL;
   int32_t RTLDeviceID;
-
-  bool HasMappedGlobalData = false;
-
-  PendingCtorsDtorsPerLibrary PendingCtorsDtors;
-
-  std::mutex PendingGlobalsMtx;
 
   DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
   // DeviceTy is not copyable
@@ -157,9 +143,6 @@ struct DeviceTy {
   /// Destroy the event.
   int32_t destroyEvent(void *Event);
   /// }
-
-  /// Register \p Entry as an offload entry that is avalable on this device.
-  void addOffloadEntry(const OffloadEntryTy &Entry);
 
   /// Print all offload entries to stderr.
   void dumpOffloadEntries();

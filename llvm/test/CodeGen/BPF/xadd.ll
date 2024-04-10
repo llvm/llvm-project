@@ -17,11 +17,11 @@ target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
 target triple = "bpf"
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(i32* nocapture %ptr) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @test(ptr nocapture %ptr) local_unnamed_addr #0 !dbg !7 {
 entry:
-  call void @llvm.dbg.value(metadata i32* %ptr, metadata !13, metadata !DIExpression()), !dbg !15
-  %0 = atomicrmw add i32* %ptr, i32 4 seq_cst, !dbg !16
-  %1 = atomicrmw add i32* %ptr, i32 6 seq_cst, !dbg !17
+  call void @llvm.dbg.value(metadata ptr %ptr, metadata !13, metadata !DIExpression()), !dbg !15
+  %0 = atomicrmw add ptr %ptr, i32 4 seq_cst, !dbg !16
+  %1 = atomicrmw add ptr %ptr, i32 6 seq_cst, !dbg !17
 ; CHECK: line 4: Invalid usage of the XADD return value
   call void @llvm.dbg.value(metadata i32 %1, metadata !14, metadata !DIExpression()), !dbg !18
   ret i32 %1, !dbg !19

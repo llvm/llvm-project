@@ -37,7 +37,6 @@ extern uintptr_t __fini_array_end[];
 }
 
 namespace LIBC_NAMESPACE {
-// TODO: this symbol will be moved to config.linux.app
 AppProperties app;
 
 using InitCallback = void(int, char **, char **);

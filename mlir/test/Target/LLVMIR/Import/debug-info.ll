@@ -136,7 +136,7 @@ define void @basic_type() !dbg !3 {
 
 ; CHECK: #[[INT:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
 ; CHECK: #[[PTR1:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT]]>
-; CHECK: #[[PTR2:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "mypointer", baseType = #[[INT]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4>
+; CHECK: #[[PTR2:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "mypointer", baseType = #[[INT]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, extraData = #[[INT]]>
 ; CHECK: #llvm.di_subroutine_type<types = #[[PTR1]], #[[PTR2]]>
 
 define void @derived_type() !dbg !3 {
@@ -153,7 +153,7 @@ define void @derived_type() !dbg !3 {
 !5 = !{!7, !8}
 !6 = !DIBasicType(name: "int")
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6)
-!8 = !DIDerivedType(name: "mypointer", tag: DW_TAG_pointer_type, baseType: !6, size: 64, align: 32, offset: 4)
+!8 = !DIDerivedType(name: "mypointer", tag: DW_TAG_pointer_type, baseType: !6, size: 64, align: 32, offset: 4, extraData: !6)
 
 ; // -----
 
@@ -197,7 +197,7 @@ define void @composite_type() !dbg !3 {
 ; // -----
 
 ; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
-; CHECK-DAG: #[[CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], isOptimized = false, emissionKind = None>
+; CHECK-DAG: #[[CU:.+]] = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #[[FILE]], isOptimized = false, emissionKind = None, nameTableKind = None>
 ; Verify an empty subroutine types list is supported.
 ; CHECK-DAG: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
 ; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #[[CU]], scope = #[[FILE]], name = "subprogram", linkageName = "subprogram", file = #[[FILE]], line = 42, scopeLine = 42, subprogramFlags = Definition, type = #[[SP_TYPE]]>
@@ -209,7 +209,7 @@ define void @subprogram() !dbg !3 {
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, nameTableKind: None)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = distinct !DISubprogram(name: "subprogram", linkageName: "subprogram", scope: !2, file: !2, line: 42, scopeLine: 42, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(cc: DW_CC_normal, types: !5)
@@ -296,12 +296,17 @@ define void @class_method() {
   ret void, !dbg !9
 }
 
-; Verify the elements parameter is dropped due to the cyclic dependencies.
-; CHECK: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_name", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial">
-; CHECK: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64>
+; Verify the cyclic composite type is identified, even though conversion begins from the subprogram type.
+; CHECK: #[[COMP_SELF:.+]] = #llvm.di_composite_type<tag = DW_TAG_null, recId = [[REC_ID:.+]]>
+; CHECK: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]], sizeInBits = 64>
 ; CHECK: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR]]>
-; CHECK: #[[SP:.+]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
-; CHECK: #[[LOC]] = loc(fused<#[[SP]]>
+; CHECK: #[[SP_INNER:.+]] = #llvm.di_subprogram<id = [[SP_ID:.+]], compileUnit = #{{.*}}, scope = #[[COMP_SELF]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
+; CHECK: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = [[REC_ID]], name = "class_name", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[SP_INNER]]>
+
+; CHECK: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64>
+; CHECK: #[[SP_TYPE_OUTER:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR_OUTER]]>
+; CHECK: #[[SP_OUTER:.+]] = #llvm.di_subprogram<id = [[SP_ID]], compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE_OUTER]]>
+; CHECK: #[[LOC]] = loc(fused<#[[SP_OUTER]]>
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -318,15 +323,18 @@ define void @class_method() {
 
 ; // -----
 
-; Verify the elements parameter is dropped due to the cyclic dependencies.
-; CHECK: #[[$COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_field", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial">
-; CHECK: #[[$COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[$COMP]]>
-; CHECK: #[[$VAR0:.+]] = #llvm.di_local_variable<scope = #{{.*}}, name = "class_field", file = #{{.*}}, type = #[[$COMP_PTR]]>
+; Verify the cyclic composite type is handled correctly.
+; CHECK: #[[COMP_SELF:.+]] = #llvm.di_composite_type<tag = DW_TAG_null, recId = [[REC_ID:.+]]>
+; CHECK: #[[COMP_PTR_INNER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]]>
+; CHECK: #[[FIELD:.+]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "call_field", baseType = #[[COMP_PTR_INNER]]>
+; CHECK: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = [[REC_ID]], name = "class_field", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[FIELD]]>
+; CHECK: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]]>
+; CHECK: #[[VAR0:.+]] = #llvm.di_local_variable<scope = #{{.*}}, name = "class_field", file = #{{.*}}, type = #[[COMP_PTR_OUTER]]>
 
-; CHECK-LABEL: @class_field
+; CHECK: @class_field
 ; CHECK-SAME:  %[[ARG0:[a-zA-Z0-9]+]]
 define void @class_field(ptr %arg1) {
-  ; CHECK: llvm.intr.dbg.value #[[$VAR0]] = %[[ARG0]] : !llvm.ptr
+  ; CHECK: llvm.intr.dbg.value #[[VAR0]] = %[[ARG0]] : !llvm.ptr
   call void @llvm.dbg.value(metadata ptr %arg1, metadata !7, metadata !DIExpression()), !dbg !9
   ret void
 }
@@ -563,35 +571,6 @@ define void @func_in_module(ptr %arg) !dbg !8 {
 
 ; // -----
 
-; Verifies that array types that have an unimportable base type are removed to
-; avoid producing invalid IR.
-; CHECK: #[[DI_LOCAL_VAR:.+]] = #llvm.di_local_variable<
-; CHECK-NOT: type =
-
-; CHECK-LABEL: @array_with_cyclic_base_type
-define i32 @array_with_cyclic_base_type(ptr %0) !dbg !3 {
-  call void @llvm.dbg.value(metadata ptr %0, metadata !4, metadata !DIExpression()), !dbg !7
-  ret i32 0
-}
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare void @llvm.dbg.value(metadata, metadata, metadata)
-
-
-!llvm.module.flags = !{!0}
-!llvm.dbg.cu = !{!1}
-
-!0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
-!2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!3 = distinct !DISubprogram(name: "func", scope: !2, file: !2, line: 46, scopeLine: 48, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1)
-!4 = !DILocalVariable(name: "op", arg: 5, scope: !3, file: !2, line: 47, type: !5)
-!5 = !DICompositeType(tag: DW_TAG_array_type, size: 42, baseType: !6)
-!6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !5)
-!7 = !DILocation(line: 0, scope: !3)
-
-; // -----
-
 ; Verifies that import compile units respect the distinctness of the input.
 ; CHECK-LABEL: @distinct_cu_func0
 define void @distinct_cu_func0() !dbg !4 {
@@ -622,8 +601,152 @@ declare !dbg !1 void @declaration()
 
 ; CHECK: #di_subprogram = #llvm.di_subprogram<
 ; CHECK-NOT: id = distinct
+; CHECK-NOT: subprogramFlags =
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = !DISubprogram(name: "declaration", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+!1 = !DISubprogram(name: "declaration", scope: !2, file: !2, flags: DIFlagPrototyped, spFlags: 0)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
+
+; // -----
+
+; Ensure that repeated occurence of recursive subtree does not result in
+; duplicate MLIR entries.
+;
+; +--> B:B1 ----+
+; |     ^       v
+; A <---+------ B
+; |     v       ^
+; +--> B:B2 ----+
+; This should result in only one B instance.
+
+; CHECK-DAG: #[[B1_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", baseType = #[[B_SELF:.+]]>
+; CHECK-DAG: #[[B2_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", baseType = #[[B_SELF]]>
+; CHECK-DAG: #[[B_INNER:.+]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID:.+]], {{.*}}name = "B", {{.*}}elements = #[[B1_INNER]], #[[B2_INNER]]
+
+; CHECK-DAG: #[[B1_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", baseType = #[[B_INNER]]>
+; CHECK-DAG: #[[B2_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", baseType = #[[B_INNER]]>
+; CHECK-DAG: #[[A_OUTER:.+]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID:.+]], {{.*}}name = "A", {{.*}}elements = #[[B1_OUTER]], #[[B2_OUTER]]
+
+; CHECK-DAG: #[[A_SELF:.+]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID]]
+; CHECK-DAG: #[[B_SELF:.+]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID]]
+
+; CHECK: #llvm.di_subprogram<{{.*}}scope = #[[A_OUTER]]
+
+define void @class_field(ptr %arg1) !dbg !18 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+
+!3 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !4)
+!4 = !{!7, !8}
+
+!5 = !DICompositeType(tag: DW_TAG_class_type, name: "B", scope: !3, file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !9)
+!7 = !DIDerivedType(tag: DW_TAG_member, name: "B:B1", file: !2, baseType: !5)
+!8 = !DIDerivedType(tag: DW_TAG_member, name: "B:B2", file: !2, baseType: !5)
+!9 = !{!7, !8}
+
+!18 = distinct !DISubprogram(name: "A", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+
+; // -----
+
+; Ensure that recursive cycles with multiple entry points are cached correctly.
+;
+; +---- A ----+
+; v           v
+; B <-------> C
+; This should result in a cached instance of B --> C --> B_SELF to be reused
+; when visiting B from C (after visiting B from A).
+
+; CHECK-DAG: #[[A:.+]] = #llvm.di_composite_type<{{.*}}name = "A", {{.*}}elements = #[[TO_B_OUTER:.+]], #[[TO_C_OUTER:.+]]>
+; CHECK-DAG: #llvm.di_subprogram<{{.*}}scope = #[[A]],
+
+; CHECK-DAG: #[[TO_B_OUTER]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_OUTER:.+]]>
+; CHECK-DAG: #[[B_OUTER]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID:.+]], {{.*}}name = "B", {{.*}}elements = #[[TO_C_INNER:.+]]>
+; CHECK-DAG: #[[TO_C_INNER]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_INNER:.+]]>
+; CHECK-DAG: #[[C_INNER]] = #llvm.di_composite_type<{{.*}}name = "C", {{.*}}elements = #[[TO_B_SELF:.+]]>
+; CHECK-DAG: #[[TO_B_SELF]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_SELF:.+]]>
+; CHECK-DAG: #[[B_SELF]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID]]>
+
+; CHECK-DAG: #[[TO_C_OUTER]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_OUTER:.+]]>
+; CHECK-DAG: #[[C_OUTER]] = #llvm.di_composite_type<{{.*}}name = "C", {{.*}}elements = #[[TO_B_OUTER]]>
+
+define void @class_field(ptr %arg1) !dbg !18 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+
+!3 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !4)
+!5 = !DICompositeType(tag: DW_TAG_class_type, name: "B", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !10)
+!6 = !DICompositeType(tag: DW_TAG_class_type, name: "C", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !9)
+
+!7 = !DIDerivedType(tag: DW_TAG_member, name: "->B", file: !2, baseType: !5)
+!8 = !DIDerivedType(tag: DW_TAG_member, name: "->C", file: !2, baseType: !6)
+!4 = !{!7, !8}
+!9 = !{!7}
+!10 = !{!8}
+
+!18 = distinct !DISubprogram(name: "SP", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+
+; // -----
+
+; Ensures that replacing a nested mutually recursive decl does not result in
+; nested duplicate recursive decls.
+;
+; A ---> B <--> C
+; ^             ^
+; +-------------+
+
+; CHECK-DAG: #[[A:.+]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID:.+]], {{.*}}name = "A", {{.*}}elements = #[[A_TO_B:.+]], #[[A_TO_C:.+]]>
+; CHECK-DAG: #llvm.di_subprogram<{{.*}}scope = #[[A]],
+; CHECK-DAG: #[[A_TO_B]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_FROM_A:.+]]>
+; CHECK-DAG: #[[A_TO_C]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_FROM_A:.+]]>
+
+; CHECK-DAG: #[[B_FROM_A]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID:.+]], {{.*}}name = "B", {{.*}}elements = #[[B_TO_C:.+]]>
+; CHECK-DAG: #[[B_TO_C]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_FROM_B:.+]]>
+; CHECK-DAG: #[[C_FROM_B]] = #llvm.di_composite_type<{{.*}}recId = [[C_RECID:.+]], {{.*}}name = "C", {{.*}}elements = #[[TO_A_SELF:.+]], #[[TO_B_SELF:.+]], #[[TO_C_SELF:.+]]>
+
+; CHECK-DAG: #[[C_FROM_A]] = #llvm.di_composite_type<{{.*}}recId = [[C_RECID]], {{.*}}name = "C", {{.*}}elements = #[[TO_A_SELF]], #[[TO_B_INNER:.+]], #[[TO_C_SELF]]
+; CHECK-DAG: #[[TO_B_INNER]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_INNER:.+]]>
+; CHECK-DAG: #[[B_INNER]] = #llvm.di_composite_type<{{.*}}name = "B", {{.*}}elements = #[[TO_C_SELF]]>
+
+; CHECK-DAG: #[[TO_A_SELF]] = #llvm.di_derived_type<{{.*}}name = "->A", {{.*}}baseType = #[[A_SELF:.+]]>
+; CHECK-DAG: #[[TO_B_SELF]] = #llvm.di_derived_type<{{.*}}name = "->B", {{.*}}baseType = #[[B_SELF:.+]]>
+; CHECK-DAG: #[[TO_C_SELF]] = #llvm.di_derived_type<{{.*}}name = "->C", {{.*}}baseType = #[[C_SELF:.+]]>
+; CHECK-DAG: #[[A_SELF]] = #llvm.di_composite_type<{{.*}}recId = [[A_RECID]]>
+; CHECK-DAG: #[[B_SELF]] = #llvm.di_composite_type<{{.*}}recId = [[B_RECID]]>
+; CHECK-DAG: #[[C_SELF]] = #llvm.di_composite_type<{{.*}}recId = [[C_RECID]]>
+
+define void @class_field(ptr %arg1) !dbg !18 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+
+!3 = !DICompositeType(tag: DW_TAG_class_type, name: "A", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !9)
+!4 = !DICompositeType(tag: DW_TAG_class_type, name: "B", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !10)
+!5 = !DICompositeType(tag: DW_TAG_class_type, name: "C", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !11)
+
+!6 = !DIDerivedType(tag: DW_TAG_member, name: "->A", file: !2, baseType: !3)
+!7 = !DIDerivedType(tag: DW_TAG_member, name: "->B", file: !2, baseType: !4)
+!8 = !DIDerivedType(tag: DW_TAG_member, name: "->C", file: !2, baseType: !5)
+
+!9 = !{!7, !8} ; A -> B, C
+!10 = !{!8} ; B -> C
+!11 = !{!6, !7, !8} ; C -> A, B, C
+
+!18 = distinct !DISubprogram(name: "SP", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1)

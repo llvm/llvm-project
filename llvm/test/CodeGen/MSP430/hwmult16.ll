@@ -13,7 +13,7 @@ entry:
 ; CHECK: mpyi:
 
 ; CHECK: call #__mspabi_mpyi_hw
-  %0 = load volatile i16, i16* @g_i16, align 8
+  %0 = load volatile i16, ptr @g_i16, align 8
   %1 = mul i16 %0, %0
 
   ret i16 %1
@@ -24,7 +24,7 @@ entry:
 ; CHECK: mpyli:
 
 ; CHECK: call #__mspabi_mpyl_hw
-  %0 = load volatile i32, i32* @g_i32, align 8
+  %0 = load volatile i32, ptr @g_i32, align 8
   %1 = mul i32 %0, %0
 
   ret i32 %1
@@ -35,7 +35,7 @@ entry:
 ; CHECK: mpylli:
 
 ; CHECK: call #__mspabi_mpyll_hw
-  %0 = load volatile i64, i64* @g_i64, align 8
+  %0 = load volatile i64, ptr @g_i64, align 8
   %1 = mul i64 %0, %0
 
   ret i64 %1

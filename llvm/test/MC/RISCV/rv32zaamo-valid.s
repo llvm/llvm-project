@@ -8,6 +8,16 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+a < %s \
 # RUN:     | llvm-objdump --mattr=+a -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-zaamo -riscv-no-aliases -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-zaamo -riscv-no-aliases -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-zaamo < %s \
+# RUN:     | llvm-objdump --mattr=+experimental-zaamo -M no-aliases -d -r - \
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-zaamo < %s \
+# RUN:     | llvm-objdump --mattr=+experimental-zaamo -M no-aliases -d -r - \
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: amoswap.w a4, ra, (s0)
 # CHECK-ASM: encoding: [0x2f,0x27,0x14,0x08]

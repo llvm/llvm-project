@@ -1,4 +1,5 @@
 # RUN: not llvm-mc -triple riscv32 -mattr=+a < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-zalrsc < %s 2>&1 | FileCheck %s
 
 # Final operand must have parentheses
 lr.w a4, a5 # CHECK: :[[@LINE]]:10: error: expected '(' or optional integer offset
