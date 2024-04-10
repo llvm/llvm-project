@@ -219,7 +219,7 @@ int bar(int n){
 // CHECK1:       omp.loop.exit:
 // CHECK1-NEXT:    [[TMP40:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP41:%.*]] = load i32, ptr [[TMP40]], align 4
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3:[0-9]+]], i32 [[TMP41]])
+// CHECK1-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP41]])
 // CHECK1-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK1:       omp.precond.end:
 // CHECK1-NEXT:    ret void
@@ -276,7 +276,7 @@ int bar(int n){
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
-// CHECK1-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB3]], i32 [[TMP8]], i32 33, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// CHECK1-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB3:[0-9]+]], i32 [[TMP8]], i32 33, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK1-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV]], align 4
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
@@ -432,7 +432,7 @@ int bar(int n){
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP2]])
+// CHECK1-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -637,7 +637,7 @@ int bar(int n){
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP2]])
+// CHECK1-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -904,7 +904,7 @@ int bar(int n){
 // CHECK1:       omp.loop.exit:
 // CHECK1-NEXT:    [[TMP41:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP42:%.*]] = load i32, ptr [[TMP41]], align 4
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP42]])
+// CHECK1-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP42]])
 // CHECK1-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK1:       omp.precond.end:
 // CHECK1-NEXT:    ret void
@@ -1208,7 +1208,7 @@ int bar(int n){
 // CHECK1:       omp.loop.exit:
 // CHECK1-NEXT:    [[TMP42:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP43:%.*]] = load i32, ptr [[TMP42]], align 4
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP43]])
+// CHECK1-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP43]])
 // CHECK1-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK1:       omp.precond.end:
 // CHECK1-NEXT:    ret void
@@ -1465,7 +1465,7 @@ int bar(int n){
 // CHECK2:       omp.loop.exit:
 // CHECK2-NEXT:    [[TMP40:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP41:%.*]] = load i32, ptr [[TMP40]], align 4
-// CHECK2-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3:[0-9]+]], i32 [[TMP41]])
+// CHECK2-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP41]])
 // CHECK2-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK2:       omp.precond.end:
 // CHECK2-NEXT:    ret void
@@ -1522,7 +1522,7 @@ int bar(int n){
 // CHECK2-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK2-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
-// CHECK2-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB3]], i32 [[TMP8]], i32 33, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// CHECK2-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB3:[0-9]+]], i32 [[TMP8]], i32 33, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK2-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV]], align 4
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
@@ -1678,7 +1678,7 @@ int bar(int n){
 // CHECK2:       omp.inner.for.end:
 // CHECK2-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK2:       omp.loop.exit:
-// CHECK2-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP2]])
+// CHECK2-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK2-NEXT:    ret void
 //
 //
@@ -1883,7 +1883,7 @@ int bar(int n){
 // CHECK2:       omp.inner.for.end:
 // CHECK2-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK2:       omp.loop.exit:
-// CHECK2-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP2]])
+// CHECK2-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK2-NEXT:    ret void
 //
 //
@@ -2149,7 +2149,7 @@ int bar(int n){
 // CHECK2:       omp.loop.exit:
 // CHECK2-NEXT:    [[TMP43:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP44:%.*]] = load i32, ptr [[TMP43]], align 4
-// CHECK2-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP44]])
+// CHECK2-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP44]])
 // CHECK2-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK2:       omp.precond.end:
 // CHECK2-NEXT:    ret void
@@ -2449,7 +2449,7 @@ int bar(int n){
 // CHECK2:       omp.loop.exit:
 // CHECK2-NEXT:    [[TMP42:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK2-NEXT:    [[TMP43:%.*]] = load i32, ptr [[TMP42]], align 4
-// CHECK2-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP43]])
+// CHECK2-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP43]])
 // CHECK2-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK2:       omp.precond.end:
 // CHECK2-NEXT:    ret void
@@ -2704,7 +2704,7 @@ int bar(int n){
 // CHECK3:       omp.loop.exit:
 // CHECK3-NEXT:    [[TMP38:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK3-NEXT:    [[TMP39:%.*]] = load i32, ptr [[TMP38]], align 4
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3:[0-9]+]], i32 [[TMP39]])
+// CHECK3-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP39]])
 // CHECK3-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK3:       omp.precond.end:
 // CHECK3-NEXT:    ret void
@@ -2759,7 +2759,7 @@ int bar(int n){
 // CHECK3-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK3-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK3-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
-// CHECK3-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB3]], i32 [[TMP8]], i32 33, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// CHECK3-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB3:[0-9]+]], i32 [[TMP8]], i32 33, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // CHECK3-NEXT:    store i32 [[TMP9]], ptr [[DOTOMP_IV]], align 4
 // CHECK3-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
@@ -2911,7 +2911,7 @@ int bar(int n){
 // CHECK3:       omp.inner.for.end:
 // CHECK3-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK3:       omp.loop.exit:
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP2]])
+// CHECK3-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK3-NEXT:    ret void
 //
 //
@@ -3110,7 +3110,7 @@ int bar(int n){
 // CHECK3:       omp.inner.for.end:
 // CHECK3-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK3:       omp.loop.exit:
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP2]])
+// CHECK3-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK3-NEXT:    ret void
 //
 //
@@ -3374,7 +3374,7 @@ int bar(int n){
 // CHECK3:       omp.loop.exit:
 // CHECK3-NEXT:    [[TMP43:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK3-NEXT:    [[TMP44:%.*]] = load i32, ptr [[TMP43]], align 4
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP44]])
+// CHECK3-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP44]])
 // CHECK3-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK3:       omp.precond.end:
 // CHECK3-NEXT:    ret void
@@ -3677,7 +3677,7 @@ int bar(int n){
 // CHECK3:       omp.loop.exit:
 // CHECK3-NEXT:    [[TMP40:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK3-NEXT:    [[TMP41:%.*]] = load i32, ptr [[TMP40]], align 4
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB3]], i32 [[TMP41]])
+// CHECK3-NEXT:    call void @__kmpc_distribute_static_fini(ptr @[[GLOB2]], i32 [[TMP41]])
 // CHECK3-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK3:       omp.precond.end:
 // CHECK3-NEXT:    ret void

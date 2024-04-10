@@ -1,5 +1,5 @@
 !RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s --check-prefixes="FIRDialect,OMPDialect"
-!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | fir-opt --cfg-conversion | fir-opt --fir-to-llvm-ir | FileCheck %s --check-prefixes="OMPDialect"
+!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | fir-opt --cfg-conversion-on-func-opt | fir-opt --fir-to-llvm-ir | FileCheck %s --check-prefixes="OMPDialect"
 
 !===============================================================================
 ! parallel construct with function call which has master construct internally

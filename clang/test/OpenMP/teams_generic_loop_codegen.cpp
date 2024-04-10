@@ -113,7 +113,7 @@ int foo() {
 // IR:       omp.loop.exit:
 // IR-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 4
-// IR-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2:[0-9]+]], i32 [[TMP17]])
+// IR-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP17]])
 // IR-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // IR-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // IR-NEXT:    br i1 [[TMP19]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
@@ -129,8 +129,8 @@ int foo() {
 // IR-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
 // IR-NEXT:    [[TMP24:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3:[0-9]+]], i32 [[TMP23]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z3foov.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // IR-NEXT:    switch i32 [[TMP24]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// IR-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// IR-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// IR-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// IR-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // IR-NEXT:    ]
 // IR:       .omp.reduction.case1:
 // IR-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[TMP1]], i64 100
@@ -221,7 +221,7 @@ int foo() {
 // IR:       omp.arrayinit.done:
 // IR-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
-// IR-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP6]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// IR-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2:[0-9]+]], i32 [[TMP6]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // IR-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // IR-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP7]], 99
 // IR-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -285,8 +285,8 @@ int foo() {
 // IR-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4
 // IR-NEXT:    [[TMP25:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP24]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z3foov.omp_outlined.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // IR-NEXT:    switch i32 [[TMP25]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// IR-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// IR-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// IR-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// IR-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // IR-NEXT:    ]
 // IR:       .omp.reduction.case1:
 // IR-NEXT:    [[TMP26:%.*]] = getelementptr i32, ptr [[TMP1]], i64 100
@@ -486,7 +486,7 @@ int foo() {
 // IR-PCH:       omp.loop.exit:
 // IR-PCH-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 4
-// IR-PCH-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2:[0-9]+]], i32 [[TMP17]])
+// IR-PCH-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP17]])
 // IR-PCH-NEXT:    [[TMP18:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // IR-PCH-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP18]], 0
 // IR-PCH-NEXT:    br i1 [[TMP19]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
@@ -502,8 +502,8 @@ int foo() {
 // IR-PCH-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
 // IR-PCH-NEXT:    [[TMP24:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3:[0-9]+]], i32 [[TMP23]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z3foov.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // IR-PCH-NEXT:    switch i32 [[TMP24]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// IR-PCH-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// IR-PCH-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// IR-PCH-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// IR-PCH-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // IR-PCH-NEXT:    ]
 // IR-PCH:       .omp.reduction.case1:
 // IR-PCH-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[TMP1]], i64 100
@@ -594,7 +594,7 @@ int foo() {
 // IR-PCH:       omp.arrayinit.done:
 // IR-PCH-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
-// IR-PCH-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP6]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// IR-PCH-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2:[0-9]+]], i32 [[TMP6]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // IR-PCH-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // IR-PCH-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP7]], 99
 // IR-PCH-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -658,8 +658,8 @@ int foo() {
 // IR-PCH-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4
 // IR-PCH-NEXT:    [[TMP25:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP24]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z3foov.omp_outlined.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // IR-PCH-NEXT:    switch i32 [[TMP25]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// IR-PCH-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// IR-PCH-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// IR-PCH-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// IR-PCH-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // IR-PCH-NEXT:    ]
 // IR-PCH:       .omp.reduction.case1:
 // IR-PCH-NEXT:    [[TMP26:%.*]] = getelementptr i32, ptr [[TMP1]], i64 100

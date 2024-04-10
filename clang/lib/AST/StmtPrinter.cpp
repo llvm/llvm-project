@@ -292,8 +292,11 @@ void StmtPrinter::VisitLabelStmt(LabelStmt *Node) {
 }
 
 void StmtPrinter::VisitAttributedStmt(AttributedStmt *Node) {
-  for (const auto *Attr : Node->getAttrs()) {
+  llvm::ArrayRef<const Attr *> Attrs = Node->getAttrs();
+  for (const auto *Attr : Attrs) {
     Attr->printPretty(OS, Policy);
+    if (Attr != Attrs.back())
+      OS << ' ';
   }
 
   PrintStmt(Node->getSubStmt(), 0);
@@ -1135,6 +1138,21 @@ void StmtPrinter::VisitOMPTargetParallelGenericLoopDirective(
     OMPTargetParallelGenericLoopDirective *Node) {
   Indent() << "#pragma omp target parallel loop";
   PrintOMPExecutableDirective(Node);
+}
+
+//===----------------------------------------------------------------------===//
+//  OpenACC construct printing methods
+//===----------------------------------------------------------------------===//
+void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
+  Indent() << "#pragma acc " << S->getDirectiveKind();
+
+  if (!S->clauses().empty()) {
+    OS << ' ';
+    OpenACCClausePrinter Printer(OS);
+    Printer.VisitClauseList(S->clauses());
+  }
+
+  PrintStmt(S->getStructuredBlock());
 }
 
 //===----------------------------------------------------------------------===//

@@ -127,6 +127,7 @@ CallStackMap readStackInfo(const char *Ptr) {
         endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
 
     SmallVector<uint64_t> CallStack;
+    CallStack.reserve(NumPCs);
     for (uint64_t J = 0; J < NumPCs; J++) {
       CallStack.push_back(
           endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr));
@@ -445,6 +446,8 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       Callstack.append(Frames.begin(), Frames.end());
     }
 
+    CallStackId CSId = hashCallStack(Callstack);
+
     // We attach the memprof record to each function bottom-up including the
     // first non-inline frame.
     for (size_t I = 0; /*Break out using the condition below*/; I++) {
@@ -452,7 +455,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       auto Result =
           FunctionProfileData.insert({F.Function, IndexedMemProfRecord()});
       IndexedMemProfRecord &Record = Result.first->second;
-      Record.AllocSites.emplace_back(Callstack, Entry.second);
+      Record.AllocSites.emplace_back(Callstack, CSId, Entry.second);
 
       if (!F.IsInlineFrame)
         break;
@@ -469,6 +472,8 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       Record.CallSites.push_back(*Loc);
     }
   }
+
+  verifyFunctionProfileData(FunctionProfileData);
 
   return Error::success();
 }
@@ -609,11 +614,11 @@ Error RawMemProfReader::readRawProfile(
     // Read in the MemInfoBlocks. Merge them based on stack id - we assume that
     // raw profiles in the same binary file are from the same process so the
     // stackdepot ids are the same.
-    for (const auto &Value : readMemInfoBlocks(Next + Header->MIBOffset)) {
-      if (CallstackProfileData.count(Value.first)) {
-        CallstackProfileData[Value.first].Merge(Value.second);
+    for (const auto &[Id, MIB] : readMemInfoBlocks(Next + Header->MIBOffset)) {
+      if (CallstackProfileData.count(Id)) {
+        CallstackProfileData[Id].Merge(MIB);
       } else {
-        CallstackProfileData[Value.first] = Value.second;
+        CallstackProfileData[Id] = MIB;
       }
     }
 

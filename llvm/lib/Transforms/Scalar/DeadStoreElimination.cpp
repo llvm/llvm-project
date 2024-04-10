@@ -526,7 +526,8 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   // returned by getAssignmentMarkers so save a copy of the markers to iterate
   // over.
   auto LinkedRange = at::getAssignmentMarkers(Inst);
-  SmallVector<DPValue *> LinkedDPVAssigns = at::getDPVAssignmentMarkers(Inst);
+  SmallVector<DbgVariableRecord *> LinkedDVRAssigns =
+      at::getDVRAssignmentMarkers(Inst);
   SmallVector<DbgAssignIntrinsic *> Linked(LinkedRange.begin(),
                                            LinkedRange.end());
   auto InsertAssignForOverlap = [&](auto *Assign) {
@@ -554,7 +555,7 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
     NewAssign->setKillAddress();
   };
   for_each(Linked, InsertAssignForOverlap);
-  for_each(LinkedDPVAssigns, InsertAssignForOverlap);
+  for_each(LinkedDVRAssigns, InsertAssignForOverlap);
 }
 
 static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
@@ -634,7 +635,8 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
     Value *Indices[1] = {
         ConstantInt::get(DeadWriteLength->getType(), ToRemoveSize)};
     Instruction *NewDestGEP = GetElementPtrInst::CreateInBounds(
-        Type::getInt8Ty(DeadIntrinsic->getContext()), OrigDest, Indices, "", DeadI);
+        Type::getInt8Ty(DeadIntrinsic->getContext()), OrigDest, Indices, "",
+        DeadI->getIterator());
     NewDestGEP->setDebugLoc(DeadIntrinsic->getDebugLoc());
     DeadIntrinsic->setDest(NewDestGEP);
   }
@@ -856,6 +858,9 @@ struct DSEState {
   // function due to removing a store causing a previously captured pointer to
   // no longer be captured.
   bool ShouldIterateEndOfFunctionDSE;
+
+  /// Dead instructions to be removed at the end of DSE.
+  SmallVector<Instruction *> ToRemove;
 
   // Class contains self-reference, make sure it's not copied/moved.
   DSEState(const DSEState &) = delete;
@@ -1692,7 +1697,8 @@ struct DSEState {
     return {MaybeDeadAccess};
   }
 
-  // Delete dead memory defs
+  /// Delete dead memory defs and recursively add their operands to ToRemove if
+  /// they became dead.
   void deleteDeadInstruction(Instruction *SI) {
     MemorySSAUpdater Updater(&MSSA);
     SmallVector<Instruction *, 32> NowDeadInsts;
@@ -1708,8 +1714,11 @@ struct DSEState {
       salvageKnowledge(DeadInst);
 
       // Remove the Instruction from MSSA.
-      if (MemoryAccess *MA = MSSA.getMemoryAccess(DeadInst)) {
-        if (MemoryDef *MD = dyn_cast<MemoryDef>(MA)) {
+      MemoryAccess *MA = MSSA.getMemoryAccess(DeadInst);
+      bool IsMemDef = MA && isa<MemoryDef>(MA);
+      if (MA) {
+        if (IsMemDef) {
+          auto *MD = cast<MemoryDef>(MA);
           SkipStores.insert(MD);
           if (auto *SI = dyn_cast<StoreInst>(MD->getMemoryInst())) {
             if (SI->getValueOperand()->getType()->isPointerTy()) {
@@ -1730,13 +1739,21 @@ struct DSEState {
       // Remove its operands
       for (Use &O : DeadInst->operands())
         if (Instruction *OpI = dyn_cast<Instruction>(O)) {
-          O = nullptr;
+          O.set(PoisonValue::get(O->getType()));
           if (isInstructionTriviallyDead(OpI, &TLI))
             NowDeadInsts.push_back(OpI);
         }
 
       EI.removeInstruction(DeadInst);
-      DeadInst->eraseFromParent();
+      // Remove memory defs directly if they don't produce results, but only
+      // queue other dead instructions for later removal. They may have been
+      // used as memory locations that have been cached by BatchAA. Removing
+      // them here may lead to newly created instructions to be allocated at the
+      // same address, yielding stale cache entries.
+      if (IsMemDef && DeadInst->getType()->isVoidTy())
+        DeadInst->eraseFromParent();
+      else
+        ToRemove.push_back(DeadInst);
     }
   }
 
@@ -1892,16 +1909,67 @@ struct DSEState {
                               Malloc->getArgOperand(0), IRB, TLI);
     if (!Calloc)
       return false;
+
     MemorySSAUpdater Updater(&MSSA);
     auto *NewAccess =
       Updater.createMemoryAccessAfter(cast<Instruction>(Calloc), nullptr,
                                       MallocDef);
     auto *NewAccessMD = cast<MemoryDef>(NewAccess);
     Updater.insertDef(NewAccessMD, /*RenameUses=*/true);
-    Updater.removeMemoryAccess(Malloc);
     Malloc->replaceAllUsesWith(Calloc);
-    Malloc->eraseFromParent();
+    deleteDeadInstruction(Malloc);
     return true;
+  }
+
+  // Check if there is a dominating condition, that implies that the value
+  // being stored in a ptr is already present in the ptr.
+  bool dominatingConditionImpliesValue(MemoryDef *Def) {
+    auto *StoreI = cast<StoreInst>(Def->getMemoryInst());
+    BasicBlock *StoreBB = StoreI->getParent();
+    Value *StorePtr = StoreI->getPointerOperand();
+    Value *StoreVal = StoreI->getValueOperand();
+
+    DomTreeNode *IDom = DT.getNode(StoreBB)->getIDom();
+    if (!IDom)
+      return false;
+
+    auto *BI = dyn_cast<BranchInst>(IDom->getBlock()->getTerminator());
+    if (!BI || !BI->isConditional())
+      return false;
+
+    // In case both blocks are the same, it is not possible to determine
+    // if optimization is possible. (We would not want to optimize a store
+    // in the FalseBB if condition is true and vice versa.)
+    if (BI->getSuccessor(0) == BI->getSuccessor(1))
+      return false;
+
+    Instruction *ICmpL;
+    ICmpInst::Predicate Pred;
+    if (!match(BI->getCondition(),
+               m_c_ICmp(Pred,
+                        m_CombineAnd(m_Load(m_Specific(StorePtr)),
+                                     m_Instruction(ICmpL)),
+                        m_Specific(StoreVal))) ||
+        !ICmpInst::isEquality(Pred))
+      return false;
+
+    // In case the else blocks also branches to the if block or the other way
+    // around it is not possible to determine if the optimization is possible.
+    if (Pred == ICmpInst::ICMP_EQ &&
+        !DT.dominates(BasicBlockEdge(BI->getParent(), BI->getSuccessor(0)),
+                      StoreBB))
+      return false;
+
+    if (Pred == ICmpInst::ICMP_NE &&
+        !DT.dominates(BasicBlockEdge(BI->getParent(), BI->getSuccessor(1)),
+                      StoreBB))
+      return false;
+
+    MemoryAccess *LoadAcc = MSSA.getMemoryAccess(ICmpL);
+    MemoryAccess *ClobAcc =
+        MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def, BatchAA);
+
+    return MSSA.dominates(ClobAcc, LoadAcc);
   }
 
   /// \returns true if \p Def is a no-op store, either because it
@@ -1933,6 +2001,9 @@ struct DSEState {
 
     if (!Store)
       return false;
+
+    if (dominatingConditionImpliesValue(Def))
+      return true;
 
     if (auto *LoadI = dyn_cast<LoadInst>(Store->getOperand(0))) {
       if (LoadI->getPointerOperand() == Store->getOperand(1)) {
@@ -2233,6 +2304,12 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 
   MadeChange |= State.eliminateRedundantStoresOfExistingValues();
   MadeChange |= State.eliminateDeadWritesAtEndOfFunction();
+
+  while (!State.ToRemove.empty()) {
+    Instruction *DeadInst = State.ToRemove.pop_back_val();
+    DeadInst->eraseFromParent();
+  }
+
   return MadeChange;
 }
 } // end anonymous namespace

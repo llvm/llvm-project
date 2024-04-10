@@ -16,11 +16,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
-#include "InfoByHwMode.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenRegisters.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/InfoByHwMode.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
@@ -595,7 +595,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     int complexity = Pattern.getPatternComplexity(CGP);
 
     auto inserted_simple_pattern = SimplePatternsCheck.insert(
-        std::make_tuple(Operands, OpcodeName, VT, RetVT, PredicateCheck));
+        std::tuple(Operands, OpcodeName, VT, RetVT, PredicateCheck));
     if (!inserted_simple_pattern.second) {
       PrintFatalError(Pattern.getSrcRecord()->getLoc(),
                       "Duplicate predicate in FastISel table!");

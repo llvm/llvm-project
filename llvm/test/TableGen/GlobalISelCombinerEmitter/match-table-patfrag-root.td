@@ -26,9 +26,9 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   Test0
 ]>;
 
-// CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
+//      CHECK: const uint8_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
-// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2(119), GIMT_Encode2(182), /*)*//*default:*//*Label 3*/ GIMT_Encode4(380),
+// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2(124), GIMT_Encode2(187), /*)*//*default:*//*Label 3*/ GIMT_Encode4(380),
 // CHECK-NEXT:     /*TargetOpcode::G_TRUNC*//*Label 0*/ GIMT_Encode4(262), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
 // CHECK-NEXT:     /*TargetOpcode::G_ZEXT*//*Label 1*/ GIMT_Encode4(298), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
 // CHECK-NEXT:     /*TargetOpcode::G_FPEXT*//*Label 2*/ GIMT_Encode4(344),

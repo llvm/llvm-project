@@ -5,7 +5,6 @@
 declare void @callee()
 
 ; Test the file could be compiled successfully.
-; .cfi_offset of fs0 is wrong here. It should be fixed by #66613.
 define float @foo(float %arg) {
 ; RV32-LABEL: foo:
 ; RV32:       # %bb.0: # %entry

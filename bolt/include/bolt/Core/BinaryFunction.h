@@ -27,6 +27,7 @@
 
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/BinaryDomTree.h"
 #include "bolt/Core/BinaryLoop.h"
 #include "bolt/Core/BinarySection.h"
 #include "bolt/Core/DebugData.h"
@@ -51,7 +52,6 @@
 #include <iterator>
 #include <limits>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -266,6 +266,7 @@ private:
   BinaryContext &BC;
 
   std::unique_ptr<BinaryLoopInfo> BLI;
+  std::unique_ptr<BinaryDominatorTree> BDT;
 
   /// All labels in the function that are referenced via relocations from
   /// data objects. Typically these are jump table destinations and computed
@@ -838,6 +839,14 @@ public:
   /// stats.
   void calculateMacroOpFusionStats();
 
+  /// Returns if BinaryDominatorTree has been constructed for this function.
+  bool hasDomTree() const { return BDT != nullptr; }
+
+  BinaryDominatorTree &getDomTree() { return *BDT.get(); }
+
+  /// Constructs DomTree for this function.
+  void constructDomTree();
+
   /// Returns if loop detection has been run for this function.
   bool hasLoopInfo() const { return BLI != nullptr; }
 
@@ -1159,7 +1168,7 @@ public:
   /// Pass an offset of the entry point in the input binary and a corresponding
   /// global symbol to the callback function.
   ///
-  /// Return true of all callbacks returned true, false otherwise.
+  /// Return true if all callbacks returned true, false otherwise.
   bool forEachEntryPoint(EntryPointCallbackTy Callback) const;
 
   /// Return MC symbol associated with the end of the function.
@@ -1910,12 +1919,11 @@ public:
 
   /// Support dynamic relocations in constant islands, which may happen if
   /// binary is linked with -z notext option.
-  void markIslandDynamicRelocationAtAddress(uint64_t Address) {
-    if (!isInConstantIsland(Address)) {
-      errs() << "BOLT-ERROR: dynamic relocation found for text section at 0x"
-             << Twine::utohexstr(Address) << "\n";
-      exit(1);
-    }
+  Error markIslandDynamicRelocationAtAddress(uint64_t Address) {
+    if (!isInConstantIsland(Address))
+      return createFatalBOLTError(
+          Twine("dynamic relocation found for text section at 0x") +
+          Twine::utohexstr(Address) + Twine("\n"));
 
     // Mark island to have dynamic relocation
     Islands->HasDynamicRelocations = true;
@@ -1924,6 +1932,7 @@ public:
     // move binary data during updateOutputValues, making us emit
     // dynamic relocation with the right offset value.
     getOrCreateIslandAccess(Address);
+    return Error::success();
   }
 
   bool hasDynamicRelocationAtIsland() const {
@@ -2054,9 +2063,18 @@ public:
   /// state to State:Disassembled.
   ///
   /// Returns false if disassembly failed.
-  bool disassemble();
+  Error disassemble();
 
-  void handlePCRelOperand(MCInst &Instruction, uint64_t Address, uint64_t Size);
+  /// An external interface to register a branch while the function is in
+  /// disassembled state. Allows to make custom modifications to the
+  /// disassembler. E.g., a pre-CFG pass can add an instruction and register
+  /// a branch that will later be used during the CFG construction.
+  ///
+  /// Return a label at the branch destination.
+  MCSymbol *registerBranch(uint64_t Src, uint64_t Dst);
+
+  Error handlePCRelOperand(MCInst &Instruction, uint64_t Address,
+                           uint64_t Size);
 
   MCSymbol *handleExternalReference(MCInst &Instruction, uint64_t Size,
                                     uint64_t Offset, uint64_t TargetAddress,
@@ -2100,7 +2118,7 @@ public:
   ///
   /// Returns true on success and update the current function state to
   /// State::CFG. Returns false if CFG cannot be built.
-  bool buildCFG(MCPlusBuilder::AllocatorIdTy);
+  Error buildCFG(MCPlusBuilder::AllocatorIdTy);
 
   /// Perform post-processing of the CFG.
   void postProcessCFG();
@@ -2217,7 +2235,7 @@ public:
   }
 
   /// Process LSDA information for the function.
-  void parseLSDA(ArrayRef<uint8_t> LSDAData, uint64_t LSDAAddress);
+  Error parseLSDA(ArrayRef<uint8_t> LSDAData, uint64_t LSDAAddress);
 
   /// Update exception handling ranges for the function.
   void updateEHRanges();

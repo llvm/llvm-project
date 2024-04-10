@@ -158,7 +158,7 @@ IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(
             {"wctype.h", "cwctype"}})) {
     CStyledHeaderToCxx.insert(KeyValue);
   }
-  // Add C++ 11 headers.
+  // Add C++11 headers.
   if (LangOpts.CPlusPlus11) {
     for (const auto &KeyValue :
          std::vector<std::pair<llvm::StringRef, std::string>>(

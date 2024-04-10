@@ -289,7 +289,7 @@ struct GenericKernelTy {
 
   /// Return a device pointer to a new kernel launch environment.
   Expected<KernelLaunchEnvironmentTy *>
-  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice,
+  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice, uint32_t Version,
                              AsyncInfoWrapperTy &AsyncInfo) const;
 
   /// Indicate whether an execution mode is valid.
@@ -610,7 +610,7 @@ public:
 struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Construct a device with its device id within the plugin, the number of
   /// devices in the plugin and the grid values for that kind of device.
-  GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
+  GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
                   const llvm::omp::GV &GridValues);
 
   /// Get the device identifier within the corresponding plugin. Notice that
@@ -860,6 +860,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Allocate and construct a kernel object.
   virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
 
+  /// Reference to the underlying plugin that created this device.
+  GenericPluginTy &Plugin;
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -976,6 +979,14 @@ struct GenericPluginTy {
   Error deinit();
   virtual Error deinitImpl() = 0;
 
+  /// Create a new device for the underlying plugin.
+  virtual GenericDeviceTy *createDevice(GenericPluginTy &Plugin,
+                                        int32_t DeviceID,
+                                        int32_t NumDevices) = 0;
+
+  /// Create a new global handler for the underlying plugin.
+  virtual GenericGlobalHandlerTy *createGlobalHandler() = 0;
+
   /// Get the reference to the device with a certain device id.
   GenericDeviceTy &getDevice(int32_t DeviceId) {
     assert(isValidDeviceId(DeviceId) && "Invalid device id");
@@ -1054,6 +1065,132 @@ protected:
     return (DeviceId >= 0 && DeviceId < getNumDevices());
   }
 
+public:
+  // TODO: This plugin interface needs to be cleaned up.
+
+  /// Returns non-zero if the provided \p Image can be executed by the runtime.
+  int32_t is_valid_binary(__tgt_device_image *Image);
+
+  /// Initialize the device inside of the plugin.
+  int32_t init_device(int32_t DeviceId);
+
+  /// Return the number of devices this plugin can support.
+  int32_t number_of_devices();
+
+  /// Initializes the OpenMP register requires information.
+  int64_t init_requires(int64_t RequiresFlags);
+
+  /// Returns non-zero if the data can be exchanged between the two devices.
+  int32_t is_data_exchangable(int32_t SrcDeviceId, int32_t DstDeviceId);
+
+  /// Initializes the record and replay mechanism inside the plugin.
+  int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
+                                   void *VAddr, bool isRecord, bool SaveOutput,
+                                   uint64_t &ReqPtrArgOffset);
+
+  /// Loads the associated binary into the plugin and returns a handle to it.
+  int32_t load_binary(int32_t DeviceId, __tgt_device_image *TgtImage,
+                      __tgt_device_binary *Binary);
+
+  /// Allocates memory that is accessively to the given device.
+  void *data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr, int32_t Kind);
+
+  /// Deallocates memory on the given device.
+  int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind);
+
+  /// Locks / pins host memory using the plugin runtime.
+  int32_t data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
+                    void **LockedPtr);
+
+  /// Unlocks / unpins host memory using the plugin runtime.
+  int32_t data_unlock(int32_t DeviceId, void *Ptr);
+
+  /// Notify the runtime about a new mapping that has been created outside.
+  int32_t data_notify_mapped(int32_t DeviceId, void *HstPtr, int64_t Size);
+
+  /// Notify t he runtime about a mapping that has been deleted.
+  int32_t data_notify_unmapped(int32_t DeviceId, void *HstPtr);
+
+  /// Copy data to the given device.
+  int32_t data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
+                      int64_t Size);
+
+  /// Copy data to the given device asynchronously.
+  int32_t data_submit_async(int32_t DeviceId, void *TgtPtr, void *HstPtr,
+                            int64_t Size, __tgt_async_info *AsyncInfoPtr);
+
+  /// Copy data from the given device.
+  int32_t data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
+                        int64_t Size);
+
+  /// Copy data from the given device asynchornously.
+  int32_t data_retrieve_async(int32_t DeviceId, void *HstPtr, void *TgtPtr,
+                              int64_t Size, __tgt_async_info *AsyncInfoPtr);
+
+  /// Exchange memory addresses between two devices.
+  int32_t data_exchange(int32_t SrcDeviceId, void *SrcPtr, int32_t DstDeviceId,
+                        void *DstPtr, int64_t Size);
+
+  /// Exchange memory addresses between two devices asynchronously.
+  int32_t data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
+                              int DstDeviceId, void *DstPtr, int64_t Size,
+                              __tgt_async_info *AsyncInfo);
+
+  /// Begin executing a kernel on the given device.
+  int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
+                        ptrdiff_t *TgtOffsets, KernelArgsTy *KernelArgs,
+                        __tgt_async_info *AsyncInfoPtr);
+
+  /// Synchronize an asyncrhonous queue with the plugin runtime.
+  int32_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
+
+  /// Query the current state of an asynchronous queue.
+  int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
+
+  /// Prints information about the given devices supported by the plugin.
+  void print_device_info(int32_t DeviceId);
+
+  /// Creates an event in the given plugin if supported.
+  int32_t create_event(int32_t DeviceId, void **EventPtr);
+
+  /// Records an event that has occurred.
+  int32_t record_event(int32_t DeviceId, void *EventPtr,
+                       __tgt_async_info *AsyncInfoPtr);
+
+  /// Wait until an event has occurred.
+  int32_t wait_event(int32_t DeviceId, void *EventPtr,
+                     __tgt_async_info *AsyncInfoPtr);
+
+  /// Syncrhonize execution until an event is done.
+  int32_t sync_event(int32_t DeviceId, void *EventPtr);
+
+  /// Remove the event from the plugin.
+  int32_t destroy_event(int32_t DeviceId, void *EventPtr);
+
+  /// Remove the event from the plugin.
+  void set_info_flag(uint32_t NewInfoLevel);
+
+  /// Creates an asynchronous queue for the given plugin.
+  int32_t init_async_info(int32_t DeviceId, __tgt_async_info **AsyncInfoPtr);
+
+  /// Creates device information to be used for diagnostics.
+  int32_t init_device_info(int32_t DeviceId, __tgt_device_info *DeviceInfo,
+                           const char **ErrStr);
+
+  /// Sets the offset into the devices for use by OMPT.
+  int32_t set_device_offset(int32_t DeviceIdOffset);
+
+  /// Returns if the plugin can support auotmatic copy.
+  int32_t use_auto_zero_copy(int32_t DeviceId);
+
+  /// Look up a global symbol in the given binary.
+  int32_t get_global(__tgt_device_binary Binary, uint64_t Size,
+                     const char *Name, void **DevicePtr);
+
+  /// Look up a kernel function in the given binary.
+  int32_t get_function(__tgt_device_binary Binary, const char *Name,
+                       void **KernelPtr);
+
 private:
   /// Number of devices available for the plugin.
   int32_t NumDevices = 0;
@@ -1085,29 +1222,53 @@ private:
   RPCServerTy *RPCServer;
 };
 
+namespace Plugin {
+/// Create a success error. This is the same as calling Error::success(), but
+/// it is recommended to use this one for consistency with Plugin::error() and
+/// Plugin::check().
+static Error success() { return Error::success(); }
+
+/// Create a string error.
+template <typename... ArgsTy>
+static Error error(const char *ErrFmt, ArgsTy... Args) {
+  return createStringError(inconvertibleErrorCode(), ErrFmt, Args...);
+}
+
+/// Check the plugin-specific error code and return an error or success
+/// accordingly. In case of an error, create a string error with the error
+/// description. The ErrFmt should follow the format:
+///     "Error in <function name>[<optional info>]: %s"
+/// The last format specifier "%s" is mandatory and will be used to place the
+/// error code's description. Notice this function should be only called from
+/// the plugin-specific code.
+/// TODO: Refactor this, must be defined individually by each plugin.
+template <typename... ArgsTy>
+static Error check(int32_t ErrorCode, const char *ErrFmt, ArgsTy... Args);
+} // namespace Plugin
+
 /// Class for simplifying the getter operation of the plugin. Anywhere on the
 /// code, the current plugin can be retrieved by Plugin::get(). The class also
 /// declares functions to create plugin-specific object instances. The check(),
 /// createPlugin(), createDevice() and createGlobalHandler() functions should be
 /// defined by each plugin implementation.
-class Plugin {
+class PluginTy {
   // Reference to the plugin instance.
   static GenericPluginTy *SpecificPlugin;
 
-  Plugin() {
+  PluginTy() {
     if (auto Err = init())
       REPORT("Failed to initialize plugin: %s\n",
              toString(std::move(Err)).data());
   }
 
-  ~Plugin() {
+  ~PluginTy() {
     if (auto Err = deinit())
       REPORT("Failed to deinitialize plugin: %s\n",
              toString(std::move(Err)).data());
   }
 
-  Plugin(const Plugin &) = delete;
-  void operator=(const Plugin &) = delete;
+  PluginTy(const PluginTy &) = delete;
+  void operator=(const PluginTy &) = delete;
 
   /// Create and intialize the plugin instance.
   static Error init() {
@@ -1158,7 +1319,7 @@ public:
     // This static variable will initialize the underlying plugin instance in
     // case there was no previous explicit initialization. The initialization is
     // thread safe.
-    static Plugin Plugin;
+    static PluginTy Plugin;
 
     assert(SpecificPlugin && "Plugin is not active");
     return *SpecificPlugin;
@@ -1170,35 +1331,8 @@ public:
   /// Indicate whether the plugin is active.
   static bool isActive() { return SpecificPlugin != nullptr; }
 
-  /// Create a success error. This is the same as calling Error::success(), but
-  /// it is recommended to use this one for consistency with Plugin::error() and
-  /// Plugin::check().
-  static Error success() { return Error::success(); }
-
-  /// Create a string error.
-  template <typename... ArgsTy>
-  static Error error(const char *ErrFmt, ArgsTy... Args) {
-    return createStringError(inconvertibleErrorCode(), ErrFmt, Args...);
-  }
-
-  /// Check the plugin-specific error code and return an error or success
-  /// accordingly. In case of an error, create a string error with the error
-  /// description. The ErrFmt should follow the format:
-  ///     "Error in <function name>[<optional info>]: %s"
-  /// The last format specifier "%s" is mandatory and will be used to place the
-  /// error code's description. Notice this function should be only called from
-  /// the plugin-specific code.
-  template <typename... ArgsTy>
-  static Error check(int32_t ErrorCode, const char *ErrFmt, ArgsTy... Args);
-
   /// Create a plugin instance.
   static GenericPluginTy *createPlugin();
-
-  /// Create a plugin-specific device.
-  static GenericDeviceTy *createDevice(int32_t DeviceId, int32_t NumDevices);
-
-  /// Create a plugin-specific global handler.
-  static GenericGlobalHandlerTy *createGlobalHandler();
 };
 
 /// Auxiliary interface class for GenericDeviceResourceManagerTy. This class
@@ -1393,7 +1527,7 @@ protected:
 };
 
 /// A static check on whether or not we support RPC in libomptarget.
-const bool libomptargetSupportsRPC();
+bool libomptargetSupportsRPC();
 
 } // namespace plugin
 } // namespace target

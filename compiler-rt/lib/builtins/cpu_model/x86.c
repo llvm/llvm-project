@@ -217,8 +217,8 @@ enum ProcessorFeatures {
   FEATURE_SM3,
   FEATURE_SHA512,
   FEATURE_SM4,
-  // FEATURE_APXF,
-  FEATURE_USERMSR = 112,
+  FEATURE_APXF,
+  FEATURE_USERMSR,
   FEATURE_AVX10_1_256,
   FEATURE_AVX10_1_512,
   CPU_FEATURE_MAX
@@ -983,6 +983,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_USERMSR);
   if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1))
     setFeature(FEATURE_AVX10_1_256);
+  if (HasLeaf7Subleaf1 && ((EDX >> 21) & 1))
+    setFeature(FEATURE_APXF);
 
   unsigned MaxLevel;
   getX86CpuIDAndInfo(0, &MaxLevel, &EBX, &ECX, &EDX);

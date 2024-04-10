@@ -14,5 +14,5 @@ void foo() {}
 
 extern "C" void bar() {}
 
-// CHECK: define {{.*}}@bar(
 // CHECK: define {{.*}}@_Z3foov(
+// CHECK: define {{.*}}@bar(

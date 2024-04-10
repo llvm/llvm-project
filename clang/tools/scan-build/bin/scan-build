@@ -722,9 +722,18 @@ ENDTEXT
 
 print OUT <<ENDTEXT;
 </table>
+
+<h2>Filter Results by File</h2>
+<input
+  type="text"
+  id="file_input"
+  onkeyup="searchFiles()"
+  placeholder="Enter a path or filename"
+  title="Enter a path or filename">
+
 <h2>Reports</h2>
 
-<table class="sortable" style="table-layout:automatic">
+<table id="reports_table" class="sortable" style="table-layout:automatic">
 <thead><tr>
   <td>Bug Group</td>
   <td class="sorttable_sorted">Bug Type<span id="sorttable_sortfwdind">&nbsp;&#x25BE;</span></td>

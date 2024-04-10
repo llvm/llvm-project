@@ -59,6 +59,7 @@ CODEGENOPT(UniqueBasicBlockSectionNames, 1, 1) ///< Set for -funique-basic-block
                                                ///< basic block sections.
 CODEGENOPT(EnableAIXExtendedAltivecABI, 1, 0) ///< Set for -mabi=vec-extabi. Enables the extended Altivec ABI on AIX.
 CODEGENOPT(XCOFFReadOnlyPointers, 1, 0) ///< Set for -mxcoff-roptr.
+CODEGENOPT(AllTocData, 1, 0) ///< AIX -mtocdata
 ENUM_CODEGENOPT(FramePointer, FramePointerKind, 2, FramePointerKind::None) /// frame-pointer: all,non-leaf,none
 
 CODEGENOPT(ClearASTBeforeBackend , 1, 0) ///< Free the AST before running backend code generation. Only works with -disable-free.

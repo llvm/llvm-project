@@ -415,20 +415,6 @@ func.func @collapse_shape_out_of_bounds(%arg0: memref<?x?xf32>) {
 
 // -----
 
-func.func @expand_shape_invalid_ranks(%arg0: memref<?x?xf32>) {
-  // expected-error @+1 {{op expected rank expansion, but found source rank 2 >= result rank 2}}
-  %0 = memref.expand_shape %arg0 [[0], [1]] : memref<?x?xf32> into memref<?x?xf32>
-}
-
-// -----
-
-func.func @collapse_shape_invalid_ranks(%arg0: memref<?x?xf32>) {
-  // expected-error @+1 {{op expected rank reduction, but found source rank 2 <= result rank 2}}
-  %0 = memref.collapse_shape %arg0 [[0], [1]] : memref<?x?xf32> into memref<?x?xf32>
-}
-
-// -----
-
 func.func @expand_shape_out_of_bounds(%arg0: memref<?xf32>) {
   // expected-error @+1 {{op reassociation index 2 is out of bounds}}
   %0 = memref.expand_shape %arg0 [[0, 1, 2]] : memref<?xf32> into memref<4x?xf32>
@@ -458,6 +444,34 @@ func.func @collapse_shape_invalid_reassociation(%arg0: memref<?x?x?xf32>) {
   // expected-error @+1 {{reassociation indices must be contiguous}}
   %0 = memref.collapse_shape %arg0 [[0, 1], [1, 2]] :
     memref<?x?x?xf32> into memref<?x?xf32, strided<[?, 1], offset: 0>>
+}
+
+// -----
+
+// An (invalid) attempt at using collapse_shape to increase the rank might look
+// like this. Verify that a sensible error is emitted in this case.
+func.func @collapse_shape_invalid_reassociation_expansion(%arg0: memref<?xf32>) {
+  // expected-error @+1 {{'memref.collapse_shape' op has source rank 1 and result rank 2. This is not a collapse (1 < 2)}}
+  %0 = memref.collapse_shape %arg0 [[0], [0]] :
+    memref<?xf32> into memref<?x?xf32>
+}
+
+// -----
+
+// An (invalid) attempt at using expand_shape to reduce the rank might look
+// like this. Verify that a sensible error is emitted in this case.
+func.func @expand_shape_invalid_reassociation(%arg0: memref<2x3x1xf32>) {
+  // expected-error @+1 {{'memref.expand_shape' op has source rank 3 and result rank 2. This is not an expansion (3 > 2)}}
+  %0 = memref.expand_shape %arg0 [[0], [1], [1]] :
+    memref<2x3x1xf32> into memref<2x3xf32>
+}
+
+// -----
+
+func.func @collapse_shape_invalid_reassociation_expansion(%arg0: memref<?x?xf32>) {
+  // expected-error @+1 {{reassociation indices must be contiguous}}
+  %0 = memref.collapse_shape %arg0 [[1], [0]] :
+    memref<?x?xf32> into memref<?x?xf32>
 }
 
 // -----

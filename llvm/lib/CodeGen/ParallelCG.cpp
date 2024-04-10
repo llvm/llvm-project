@@ -52,7 +52,7 @@ void llvm::splitCodeGen(
   // Create ThreadPool in nested scope so that threads will be joined
   // on destruction.
   {
-    ThreadPool CodegenThreadPool(hardware_concurrency(OSs.size()));
+    DefaultThreadPool CodegenThreadPool(hardware_concurrency(OSs.size()));
     int ThreadCount = 0;
 
     SplitModule(

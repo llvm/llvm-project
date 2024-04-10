@@ -25,12 +25,15 @@ TEST(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   VPBB1->appendRecipe(DefI);
 
   auto TC = std::make_unique<VPValue>();
+  VPBasicBlock *VPBB2 = new VPBasicBlock();
+  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPBlockUtils::connectBlocks(VPBB1, R1);
   VPlan Plan(VPPH, &*TC, VPBB1);
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
 #endif
-  EXPECT_FALSE(VPlanVerifier::verifyPlanIsValid(Plan));
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
@@ -62,7 +65,7 @@ TEST(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
 #endif
-  EXPECT_FALSE(VPlanVerifier::verifyPlanIsValid(Plan));
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
@@ -97,6 +100,7 @@ TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   VPBlockUtils::connectBlocks(VPBB3, VPBB4);
   VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB4, "R1");
   VPBlockUtils::connectBlocks(VPBB1, R1);
+  VPBB3->setParent(R1);
 
   auto TC = std::make_unique<VPValue>();
   VPlan Plan(VPPH, &*TC, VPBB1);
@@ -104,7 +108,7 @@ TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
 #endif
-  EXPECT_FALSE(VPlanVerifier::verifyPlanIsValid(Plan));
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
@@ -112,4 +116,105 @@ TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 
   delete Phi;
 }
+
+TEST(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
+  auto *CanIV = new VPCanonicalIVPHIRecipe(I1, {});
+  VPInstruction *BranchOnCond =
+      new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
+  VPInstruction *BranchOnCond2 =
+      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+
+  VPBasicBlock *VPPH = new VPBasicBlock("ph");
+  VPBasicBlock *VPBB1 = new VPBasicBlock();
+  VPBasicBlock *VPBB2 = new VPBasicBlock();
+
+  VPBB1->appendRecipe(I1);
+  VPBB1->appendRecipe(BranchOnCond2);
+  VPBB2->appendRecipe(CanIV);
+  VPBB2->appendRecipe(BranchOnCond);
+
+  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPBlockUtils::connectBlocks(VPBB1, R1);
+  VPBlockUtils::connectBlocks(VPBB1, R1);
+
+  auto TC = std::make_unique<VPValue>();
+  VPlan Plan(VPPH, &*TC, VPBB1);
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_STREQ("Multiple instances of the same successor.\n",
+               ::testing::internal::GetCapturedStderr().c_str());
+#endif
+}
+
+TEST(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
+  auto *CanIV = new VPCanonicalIVPHIRecipe(I1, {});
+  VPInstruction *BranchOnCond =
+      new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
+  VPInstruction *BranchOnCond2 =
+      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+
+  VPBasicBlock *VPPH = new VPBasicBlock("ph");
+  VPBasicBlock *VPBB1 = new VPBasicBlock();
+  VPBasicBlock *VPBB2 = new VPBasicBlock();
+  VPBasicBlock *VPBB3 = new VPBasicBlock();
+
+  VPBB1->appendRecipe(I1);
+  VPBB2->appendRecipe(CanIV);
+  VPBB2->appendRecipe(BranchOnCond2);
+  VPBB3->appendRecipe(BranchOnCond);
+
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB3, "R1");
+  VPBlockUtils::connectBlocks(VPBB1, R1);
+  VPBB3->setParent(R1);
+
+  auto TC = std::make_unique<VPValue>();
+  VPlan Plan(VPPH, &*TC, VPBB1);
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_STREQ("Multiple instances of the same successor.\n",
+               ::testing::internal::GetCapturedStderr().c_str());
+#endif
+}
+
+TEST(VPVerifierTest, BlockOutsideRegionWithParent) {
+  VPBasicBlock *VPPH = new VPBasicBlock("ph");
+  VPBasicBlock *VPBB1 = new VPBasicBlock();
+  VPBasicBlock *VPBB2 = new VPBasicBlock();
+
+  VPInstruction *DefI = new VPInstruction(Instruction::Add, {});
+  VPInstruction *BranchOnCond =
+      new VPInstruction(VPInstruction::BranchOnCond, {DefI});
+
+  VPBB1->appendRecipe(DefI);
+  VPBB2->appendRecipe(BranchOnCond);
+
+  VPRegionBlock *R1 = new VPRegionBlock(VPBB2, VPBB2, "R1");
+  VPBlockUtils::connectBlocks(VPBB1, R1);
+  VPBB1->setParent(R1);
+
+  auto TC = std::make_unique<VPValue>();
+  VPlan Plan(VPPH, &*TC, VPBB1);
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_STREQ("Predecessor is not in the same region.\n",
+               ::testing::internal::GetCapturedStderr().c_str());
+#endif
+}
+
 } // namespace

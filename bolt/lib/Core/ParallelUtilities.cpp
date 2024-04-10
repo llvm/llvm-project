@@ -49,7 +49,7 @@ namespace ParallelUtilities {
 
 namespace {
 /// A single thread pool that is used to run parallel tasks
-std::unique_ptr<ThreadPool> ThreadPoolPtr;
+std::unique_ptr<DefaultThreadPool> ThreadPoolPtr;
 
 unsigned computeCostFor(const BinaryFunction &BF,
                         const PredicateTy &SkipPredicate,
@@ -90,8 +90,9 @@ inline unsigned estimateTotalCost(const BinaryContext &BC,
 
   // Switch to trivial scheduling if total estimated work is zero
   if (TotalCost == 0) {
-    outs() << "BOLT-WARNING: Running parallel work of 0 estimated cost, will "
-              "switch to  trivial scheduling.\n";
+    BC.outs()
+        << "BOLT-WARNING: Running parallel work of 0 estimated cost, will "
+           "switch to  trivial scheduling.\n";
 
     SchedPolicy = SP_TRIVIAL;
     TotalCost = BC.getBinaryFunctions().size();
@@ -101,11 +102,11 @@ inline unsigned estimateTotalCost(const BinaryContext &BC,
 
 } // namespace
 
-ThreadPool &getThreadPool() {
+ThreadPoolInterface &getThreadPool() {
   if (ThreadPoolPtr.get())
     return *ThreadPoolPtr;
 
-  ThreadPoolPtr = std::make_unique<ThreadPool>(
+  ThreadPoolPtr = std::make_unique<DefaultThreadPool>(
       llvm::hardware_concurrency(opts::ThreadCount));
   return *ThreadPoolPtr;
 }
@@ -144,7 +145,7 @@ void runOnEachFunction(BinaryContext &BC, SchedulingPolicy SchedPolicy,
       TotalCost > BlocksCount ? TotalCost / BlocksCount : 1;
 
   // Divide work into blocks of equal cost
-  ThreadPool &Pool = getThreadPool();
+  ThreadPoolInterface &Pool = getThreadPool();
   auto BlockBegin = BC.getBinaryFunctions().begin();
   unsigned CurrentCost = 0;
 
@@ -201,7 +202,7 @@ void runOnEachFunctionWithUniqueAllocId(
       TotalCost > BlocksCount ? TotalCost / BlocksCount : 1;
 
   // Divide work into blocks of equal cost
-  ThreadPool &Pool = getThreadPool();
+  ThreadPoolInterface &Pool = getThreadPool();
   auto BlockBegin = BC.getBinaryFunctions().begin();
   unsigned CurrentCost = 0;
   unsigned AllocId = 1;

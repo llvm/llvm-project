@@ -291,6 +291,22 @@ cl::opt<bool> DropProfileSymbolList(
     cl::desc("Drop the profile symbol list when merging AutoFDO profiles "
              "(only meaningful for -sample)"));
 
+// Temporary support for writing the previous version of the format, to enable
+// some forward compatibility.
+// TODO: Consider enabling this with future version changes as well, to ease
+// deployment of newer versions of llvm-profdata.
+cl::opt<bool> DoWritePrevVersion(
+    "write-prev-version", cl::init(false), cl::Hidden,
+    cl::desc("Write the previous version of indexed format, to enable "
+             "some forward compatibility."));
+
+cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
+    "memprof-version", cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Specify the version of the memprof format to use"),
+    cl::init(memprof::Version0),
+    cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
+               clEnumValN(memprof::Version1, "1", "version 1")));
+
 // Options specific to overlap subcommand.
 cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
                                   cl::desc("<base profile file>"),
@@ -345,6 +361,9 @@ cl::opt<bool> ShowIndirectCallTargets(
     "ic-targets", cl::init(false),
     cl::desc("Show indirect call site target values for shown functions"),
     cl::sub(ShowSubcommand));
+cl::opt<bool> ShowVTables("show-vtables", cl::init(false),
+                          cl::desc("Show vtable names for shown functions"),
+                          cl::sub(ShowSubcommand));
 cl::opt<bool> ShowMemOPSizes(
     "memop-sizes", cl::init(false),
     cl::desc("Show the profiled sizes of the memory intrinsic calls "
@@ -579,8 +598,9 @@ struct WriterContext {
   WriterContext(bool IsSparse, std::mutex &ErrLock,
                 SmallSet<instrprof_error, 4> &WriterErrorCodes,
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
-      : Writer(IsSparse, ReservoirSize, MaxTraceLength), ErrLock(ErrLock),
-        WriterErrorCodes(WriterErrorCodes) {}
+      : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
+               MemProfVersionRequested),
+        ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
 /// Computer the overlap b/w profile BaseFilename and TestFileName,
@@ -720,6 +740,13 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       handleMergeWriterError(make_error<InstrProfError>(ErrCode, Msg),
                              Input.Filename, FuncName, firstTime);
     });
+  }
+
+  const InstrProfSymtab &symtab = Reader->getSymtab();
+  const auto &VTableNames = symtab.getVTableNames();
+
+  for (const auto &kv : VTableNames) {
+    WC->Writer.addVTableName(kv.getKey());
   }
 
   if (Reader->hasTemporalProfile()) {
@@ -898,7 +925,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
                 Contexts[0].get());
   } else {
-    ThreadPool Pool(hardware_concurrency(NumThreads));
+    DefaultThreadPool Pool(hardware_concurrency(NumThreads));
 
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;
@@ -2817,6 +2844,10 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
         OS << "    Indirect Call Site Count: "
            << Func.getNumValueSites(IPVK_IndirectCallTarget) << "\n";
 
+      if (ShowVTables)
+        OS << "    Number of instrumented vtables: "
+           << Func.getNumValueSites(IPVK_VTableTarget) << "\n";
+
       uint32_t NumMemOPCalls = Func.getNumValueSites(IPVK_MemOPSize);
       if (ShowMemOPSizes && NumMemOPCalls > 0)
         OS << "    Number of Memory Intrinsics Calls: " << NumMemOPCalls
@@ -2835,6 +2866,13 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
         OS << "    Indirect Target Results:\n";
         traverseAllValueSites(Func, IPVK_IndirectCallTarget,
                               VPStats[IPVK_IndirectCallTarget], OS,
+                              &(Reader->getSymtab()));
+      }
+
+      if (ShowVTables) {
+        OS << "    VTable Results:\n";
+        traverseAllValueSites(Func, IPVK_VTableTarget,
+                              VPStats[IPVK_VTableTarget], OS,
                               &(Reader->getSymtab()));
       }
 
@@ -2884,6 +2922,11 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     OS << "Statistics for indirect call sites profile:\n";
     showValueSitesStats(OS, IPVK_IndirectCallTarget,
                         VPStats[IPVK_IndirectCallTarget]);
+  }
+
+  if (ShownFunctions && ShowVTables) {
+    OS << "Statistics for vtable profile:\n";
+    showValueSitesStats(OS, IPVK_VTableTarget, VPStats[IPVK_VTableTarget]);
   }
 
   if (ShownFunctions && ShowMemOPSizes) {

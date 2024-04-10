@@ -404,8 +404,8 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         image_infos[i].os_type = llvm::Triple::TvOS;
       else if (os_name == "watchos")
         image_infos[i].os_type = llvm::Triple::WatchOS;
-      // NEED_BRIDGEOS_TRIPLE else if (os_name == "bridgeos")
-      // NEED_BRIDGEOS_TRIPLE   image_infos[i].os_type = llvm::Triple::BridgeOS;
+      else if (os_name == "bridgeos")
+        image_infos[i].os_type = llvm::Triple::BridgeOS;
       else if (os_name == "maccatalyst") {
         image_infos[i].os_type = llvm::Triple::IOS;
         image_infos[i].os_env = llvm::Triple::MacABI;

@@ -129,7 +129,9 @@ public:
   virtual void printGroupSections() {}
   virtual void printHashHistograms() {}
   virtual void printCGProfile() {}
-  virtual void printBBAddrMaps() {}
+  // If PrettyPGOAnalysis is true, prints BFI as relative frequency and BPI as
+  // percentage. Otherwise raw values are displayed.
+  virtual void printBBAddrMaps(bool PrettyPGOAnalysis) {}
   virtual void printAddrsig() {}
   virtual void printNotes() {}
   virtual void printELFLinkerOptions() {}
@@ -175,9 +177,9 @@ public:
   void printAsStringList(StringRef StringContent, size_t StringDataOffset = 0);
 
   void printSectionsAsString(const object::ObjectFile &Obj,
-                             ArrayRef<std::string> Sections);
+                             ArrayRef<std::string> Sections, bool Decompress);
   void printSectionsAsHex(const object::ObjectFile &Obj,
-                          ArrayRef<std::string> Sections);
+                          ArrayRef<std::string> Sections, bool Decompress);
 
   std::function<Error(const Twine &Msg)> WarningHandler;
   void reportUniqueWarning(Error Err) const;

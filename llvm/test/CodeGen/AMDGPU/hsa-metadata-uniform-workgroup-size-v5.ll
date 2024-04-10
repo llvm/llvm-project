@@ -30,4 +30,4 @@ attributes #0 = { "uniform-work-group-size"="true" }
 attributes #1 = { "uniform-work-group-size"="false" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

@@ -967,3 +967,35 @@ bool mlir::isLastMemrefDimUnitStride(MemRefType type) {
   auto successStrides = getStridesAndOffset(type, strides, offset);
   return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
 }
+
+bool mlir::trailingNDimsContiguous(MemRefType type, int64_t n) {
+  if (!isLastMemrefDimUnitStride(type))
+    return false;
+
+  auto memrefShape = type.getShape().take_back(n);
+  if (ShapedType::isDynamicShape(memrefShape))
+    return false;
+
+  if (type.getLayout().isIdentity())
+    return true;
+
+  int64_t offset;
+  SmallVector<int64_t> stridesFull;
+  if (!succeeded(getStridesAndOffset(type, stridesFull, offset)))
+    return false;
+  auto strides = ArrayRef<int64_t>(stridesFull).take_back(n);
+
+  if (strides.empty())
+    return true;
+
+  // Check whether strides match "flattened" dims.
+  SmallVector<int64_t> flattenedDims;
+  auto dimProduct = 1;
+  for (auto dim : llvm::reverse(memrefShape.drop_front(1))) {
+    dimProduct *= dim;
+    flattenedDims.push_back(dimProduct);
+  }
+
+  strides = strides.drop_back(1);
+  return llvm::equal(strides, llvm::reverse(flattenedDims));
+}

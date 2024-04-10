@@ -4,7 +4,7 @@ set(LIBC_INCLUDE_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 include(LLVMLibCHeaderRules)
 
 # The GPU build wants to install files in the compiler's resource directory.
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU)
   include(GetClangResourceDir)
 endif()
 
@@ -41,9 +41,10 @@ add_gen_header(
   DEF_FILE fcntl.h.def
   GEN_HDR fcntl.h
   DEPENDS
-    .llvm_libc_common_h
     .llvm-libc-macros.fcntl_macros
     .llvm-libc-types.mode_t
+    .llvm-libc-types.off_t
+    .llvm_libc_common_h
 )
 
 add_gen_header(
@@ -85,6 +86,14 @@ add_gen_header(
 )
 
 add_gen_header(
+  stdint
+  DEF_FILE stdint.h.def
+  GEN_HDR stdint.h
+  DEPENDS
+    .llvm-libc-macros.stdint_macros
+)
+
+add_gen_header(
   limits
   DEF_FILE limits.h.def
   GEN_HDR limits.h
@@ -102,6 +111,14 @@ add_gen_header(
     .llvm-libc-types.double_t
     .llvm-libc-types.float_t
     .llvm-libc-types.float128
+)
+
+add_gen_header(
+  stdfix
+  DEF_FILE stdfix.h.def
+  GEN_HDR stdfix.h
+  DEPENDS
+    .llvm-libc-macros.stdfix_macros
 )
 
 # TODO: This should be conditional on POSIX networking being included.
@@ -235,17 +252,27 @@ add_gen_header(
 )
 
 add_gen_header(
+  stdckdint
+  DEF_FILE stdckdint.h.def
+  GEN_HDR stdckdint.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.stdckdint_macros
+)
+
+add_gen_header(
   stdio
   DEF_FILE stdio.h.def
   GEN_HDR stdio.h
   DEPENDS
-    .llvm_libc_common_h
     .llvm-libc-macros.file_seek_macros
     .llvm-libc-macros.stdio_macros
-    .llvm-libc-types.size_t
-    .llvm-libc-types.ssize_t
     .llvm-libc-types.FILE
     .llvm-libc-types.cookie_io_functions_t
+    .llvm-libc-types.off_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.ssize_t
+    .llvm_libc_common_h
 )
 
 add_gen_header(
@@ -474,6 +501,15 @@ add_gen_header(
 )
 
 add_gen_header(
+  sys_statvfs
+  DEF_FILE sys/statvfs.h.def
+  GEN_HDR sys/statvfs.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_statvfs
+)
+
+add_gen_header(
   sys_syscall
   DEF_FILE sys/syscall.h.def
   GEN_HDR sys/syscall.h
@@ -558,18 +594,28 @@ add_gen_header(
 )
 
 add_gen_header(
+  uchar
+  DEF_FILE uchar.h.def
+  GEN_HDR uchar.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.mbstate_t
+)
+
+add_gen_header(
   wchar
   DEF_FILE wchar.h.def
   GEN_HDR wchar.h
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.wchar_macros
+    .llvm-libc-types.mbstate_t
     .llvm-libc-types.size_t
     .llvm-libc-types.wint_t
     .llvm-libc-types.wchar_t
 )
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU)
   file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/gpu)
 
   add_gen_header(
@@ -621,7 +667,7 @@ foreach(target IN LISTS all_install_header_targets)
   # The GPU optionally provides the supported declarations externally so
   # offloading languages like CUDA and OpenMP know what is supported by libc. We
   # install these in the compiler's resource directory at a preset location.
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND PACKAGE_VERSION)
+  if(LIBC_TARGET_OS_IS_GPU AND PACKAGE_VERSION)
     get_target_property(decls_file ${target} DECLS_FILE_PATH)
     if(NOT decls_file)
       continue()

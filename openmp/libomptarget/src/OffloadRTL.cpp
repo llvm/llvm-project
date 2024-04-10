@@ -20,25 +20,39 @@
 extern void llvm::omp::target::ompt::connectLibrary();
 #endif
 
-__attribute__((constructor(101))) void init() {
+static std::mutex PluginMtx;
+static uint32_t RefCount = 0;
+
+void initRuntime() {
+  std::scoped_lock<decltype(PluginMtx)> Lock(PluginMtx);
   Profiler::get();
   TIMESCOPE();
 
-  DP("Init offload library!\n");
+  if (PM == nullptr)
+    PM = new PluginManager();
 
-  PM = new PluginManager();
-
+  RefCount++;
+  if (RefCount == 1) {
+    DP("Init offload library!\n");
 #ifdef OMPT_SUPPORT
-  // Initialize OMPT first
-  llvm::omp::target::ompt::connectLibrary();
+    // Initialize OMPT first
+    llvm::omp::target::ompt::connectLibrary();
 #endif
 
-  PM->init();
-
-  PM->registerDelayedLibraries();
+    PM->init();
+    PM->registerDelayedLibraries();
+  }
 }
 
-__attribute__((destructor(101))) void deinit() {
-  DP("Deinit offload library!\n");
-  delete PM;
+void deinitRuntime() {
+  std::scoped_lock<decltype(PluginMtx)> Lock(PluginMtx);
+  assert(PM && "Runtime not initialized");
+
+  if (RefCount == 1) {
+    DP("Deinit offload library!\n");
+    delete PM;
+    PM = nullptr;
+  }
+
+  RefCount--;
 }

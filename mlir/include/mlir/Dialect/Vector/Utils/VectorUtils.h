@@ -9,11 +9,15 @@
 #ifndef MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 #define MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
 
@@ -74,6 +78,107 @@ FailureOr<std::pair<int, int>> isTranspose2DSlice(vector::TransposeOp op);
 ///        Ex. 2.4. non-contiguous slice, 2 != 3 and the leading dims != <1x1>
 ///         vector<2x1x2x2xi32> from memref<5x4x3x2xi32>)
 bool isContiguousSlice(MemRefType memrefType, VectorType vectorType);
+
+/// Returns an iterator for all positions in the leading dimensions of `vType`
+/// up to the `targetRank`. If any leading dimension before the `targetRank` is
+/// scalable (so cannot be unrolled), it will return an iterator for positions
+/// up to the first scalable dimension.
+///
+/// If no leading dimensions can be unrolled an empty optional will be returned.
+///
+/// Examples:
+///
+///   For vType = vector<2x3x4> and targetRank = 1
+///
+///   The resulting iterator will yield:
+///     [0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]
+///
+///   For vType = vector<3x[4]x5> and targetRank = 0
+///
+///   The scalable dimension blocks unrolling so the iterator yields only:
+///     [0], [1], [2]
+///
+std::optional<StaticTileOffsetRange>
+createUnrollIterator(VectorType vType, int64_t targetRank = 1);
+
+/// A wrapper for getMixedSizes for vector.transfer_read and
+/// vector.transfer_write Ops (for source and destination, respectively).
+///
+/// Tensor and MemRef types implement their own, very similar version of
+/// getMixedSizes. This method will call the appropriate version (depending on
+/// `hasTensorSemantics`). It will also automatically extract the operand for
+/// which to call it on (source for "read" and destination for "write" ops).
+SmallVector<OpFoldResult> getMixedSizesXfer(bool hasTensorSemantics,
+                                            Operation *xfer,
+                                            RewriterBase &rewriter);
+
+/// A pattern for ops that implement `MaskableOpInterface` and that _might_ be
+/// masked (i.e. inside `vector.mask` Op region). In particular:
+///   1. Matches `SourceOp` operation, Op.
+///   2.1. If Op is masked, retrieves the masking Op, maskOp, and updates the
+///     insertion point to avoid inserting new ops into the `vector.mask` Op
+///     region (which only allows one Op).
+///   2.2 If Op is not masked, this step is skipped.
+///   3. Invokes `matchAndRewriteMaskableOp` on Op and optionally maskOp if
+///     found in step 2.1.
+///
+/// This wrapper frees patterns from re-implementing the logic to update the
+/// insertion point when a maskable Op is masked. Such patterns are still
+/// responsible for providing an updated ("rewritten") version of:
+///   a. the source Op when mask _is not_ present,
+///   b. the source Op and the masking Op when mask _is_ present.
+/// To use this pattern, implement `matchAndRewriteMaskableOp`. Note that
+/// the return value will depend on the case above.
+template <class SourceOp>
+struct MaskableOpRewritePattern : OpRewritePattern<SourceOp> {
+  using OpRewritePattern<SourceOp>::OpRewritePattern;
+
+private:
+  LogicalResult matchAndRewrite(SourceOp sourceOp,
+                                PatternRewriter &rewriter) const final {
+    auto maskableOp = dyn_cast<MaskableOpInterface>(sourceOp.getOperation());
+    if (!maskableOp)
+      return failure();
+
+    Operation *rootOp = sourceOp;
+
+    // If this Op is masked, update the insertion point to avoid inserting into
+    // the vector.mask Op region.
+    OpBuilder::InsertionGuard guard(rewriter);
+    MaskingOpInterface maskOp;
+    if (maskableOp.isMasked()) {
+      maskOp = maskableOp.getMaskingOp();
+      rewriter.setInsertionPoint(maskOp);
+      rootOp = maskOp;
+    }
+
+    FailureOr<Value> newOp =
+        matchAndRewriteMaskableOp(sourceOp, maskOp, rewriter);
+    if (failed(newOp))
+      return failure();
+
+    rewriter.replaceOp(rootOp, *newOp);
+    return success();
+  }
+
+public:
+  // Matches `sourceOp` that can potentially be masked with `maskingOp`. If the
+  // latter is present, returns a replacement for `maskingOp`. Otherwise,
+  // returns a replacement for `sourceOp`.
+  virtual FailureOr<Value>
+  matchAndRewriteMaskableOp(SourceOp sourceOp, MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const = 0;
+};
+
+/// Returns true if the input Vector type can be linearized.
+///
+/// Linearization is meant in the sense of flattening vectors, e.g.:
+///   * vector<NxMxKxi32> -> vector<N*M*Kxi32>
+/// In this sense, Vectors that are either:
+///   * already linearized, or
+///   * contain more than 1 scalable dimensions,
+/// are not linearizable.
+bool isLinearizableVector(VectorType type);
 
 } // namespace vector
 

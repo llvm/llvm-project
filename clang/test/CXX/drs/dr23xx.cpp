@@ -183,6 +183,40 @@ namespace dr2358 { // dr2358: 16
 }
 #endif
 
+// CWG2363 was closed as NAD, but its resolution does affirm that
+// a friend declaration cannot have an opaque-enumm-specifier.
+namespace dr2363 { // dr2363: yes
+#if __cplusplus >= 201103L
+enum class E0;
+enum E1 : int;
+
+struct A {
+  friend enum class E0;
+  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+
+  friend enum E0;
+  // expected-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-2 {{remove 'enum' to befriend an enum}}
+
+  friend enum class E1;
+  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+
+  friend enum E1;
+  // expected-error@-1 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-2 {{remove 'enum' to befriend an enum}}
+
+  friend enum class E2;
+  // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
+  // expected-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
+  // expected-note@-3 {{remove 'enum class' to befriend an enum}}
+};
+#endif
+} // namespace dr2363
+
 namespace dr2370 { // dr2370: no
 namespace N {
 typedef int type;
@@ -261,9 +295,9 @@ namespace dr2396 { // dr2396: no
 
   // FIXME: per P1787 "Calling a conversion function" example, all of the
   // examples below are well-formed, with B resolving to A::B, but currently
-  // it's been resolved to dr2396::B. 
+  // it's been resolved to dr2396::B.
 
-  // void f(A a) { a.operator B B::*(); }            
+  // void f(A a) { a.operator B B::*(); }
   // void g(A a) { a.operator decltype(B()) B::*(); }
   // void g2(A a) { a.operator B decltype(B())::*(); }
 }
@@ -277,4 +311,5 @@ namespace dr2397 { // dr2397: 17
     auto (*c)[5] = &a;
   }
 } // namespace dr2397
+
 #endif
