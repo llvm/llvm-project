@@ -489,7 +489,7 @@ void RenamerClangTidyCheck::checkNamedDecl(const NamedDecl *Decl,
   }
 
   Failure.Info = std::move(Info);
-  addUsage(Decl, Range);
+  addUsage(Decl, Range, &SourceMgr);
 }
 
 void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
