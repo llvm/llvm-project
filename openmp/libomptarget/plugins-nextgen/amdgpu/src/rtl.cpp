@@ -3135,6 +3135,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     AMDGPUStreamTy *Stream = nullptr;
     void *PinnedPtr = nullptr;
 
+    // Prefault GPU page table in XNACK-Enabled case, on APUs,
+    // under the assumption that explicitly allocated memory
+    // will be fully accessed and that on-the-fly individual page faults
+    // perform worse than whole memory faulting.
+    if (OMPX_APUPrefaultMemcopy && Size >= OMPX_APUPrefaultMemcopySize &&
+        IsAPU && IsXnackEnabled)
+      if (auto Err = prepopulatePageTableImpl(const_cast<void *>(HstPtr), Size))
+        return Err;
+
     // Use one-step asynchronous operation when host memory is already pinned.
     if (void *PinnedPtr =
             PinnedAllocs.getDeviceAccessiblePtrFromPinnedBuffer(HstPtr)) {
