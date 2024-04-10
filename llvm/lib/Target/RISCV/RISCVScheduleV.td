@@ -446,11 +446,11 @@ defm "" : LMULSEWSchedWritesF<"WriteVFSqrtV">;
 // 13.10. Vector Floating-Point Reciprocal Estimate Instruction
 defm "" : LMULSEWSchedWritesF<"WriteVFRecpV">;
 // 13.11. Vector Floating-Point MIN/MAX Instructions
-defm "" : LMULSchedWrites<"WriteVFMinMaxV">;
-defm "" : LMULSchedWrites<"WriteVFMinMaxF">;
+defm "" : LMULSEWSchedWritesF<"WriteVFMinMaxV">;
+defm "" : LMULSEWSchedWritesF<"WriteVFMinMaxF">;
 // 13.12. Vector Floating-Point Sign-Injection Instructions
-defm "" : LMULSchedWrites<"WriteVFSgnjV">;
-defm "" : LMULSchedWrites<"WriteVFSgnjF">;
+defm "" : LMULSEWSchedWritesF<"WriteVFSgnjV">;
+defm "" : LMULSEWSchedWritesF<"WriteVFSgnjF">;
 // 13.13. Vector Floating-Point Compare Instructions
 defm "" : LMULSchedWrites<"WriteVFCmpV">;
 defm "" : LMULSchedWrites<"WriteVFCmpF">;
@@ -671,11 +671,11 @@ defm "" : LMULSEWSchedReadsF<"ReadVFSqrtV">;
 // 13.10. Vector Floating-Point Reciprocal Estimate Instruction
 defm "" : LMULSEWSchedReadsF<"ReadVFRecpV">;
 // 13.11. Vector Floating-Point MIN/MAX Instructions
-defm "" : LMULSchedReads<"ReadVFMinMaxV">;
-defm "" : LMULSchedReads<"ReadVFMinMaxF">;
+defm "" : LMULSEWSchedReadsF<"ReadVFMinMaxV">;
+defm "" : LMULSEWSchedReadsF<"ReadVFMinMaxF">;
 // 13.12. Vector Floating-Point Sign-Injection Instructions
-defm "" : LMULSchedReads<"ReadVFSgnjV">;
-defm "" : LMULSchedReads<"ReadVFSgnjF">;
+defm "" : LMULSEWSchedReadsF<"ReadVFSgnjV">;
+defm "" : LMULSEWSchedReadsF<"ReadVFSgnjF">;
 // 13.13. Vector Floating-Point Compare Instructions
 defm "" : LMULSchedReads<"ReadVFCmpV">;
 defm "" : LMULSchedReads<"ReadVFCmpF">;
@@ -908,10 +908,10 @@ defm "" : LMULSEWWriteResFW<"WriteVFWMulAddV", []>;
 defm "" : LMULSEWWriteResFW<"WriteVFWMulAddF", []>;
 defm "" : LMULSEWWriteResF<"WriteVFSqrtV", []>;
 defm "" : LMULSEWWriteResF<"WriteVFRecpV", []>;
-defm "" : LMULWriteRes<"WriteVFMinMaxV", []>;
-defm "" : LMULWriteRes<"WriteVFMinMaxF", []>;
-defm "" : LMULWriteRes<"WriteVFSgnjV", []>;
-defm "" : LMULWriteRes<"WriteVFSgnjF", []>;
+defm "" : LMULSEWWriteResF<"WriteVFMinMaxV", []>;
+defm "" : LMULSEWWriteResF<"WriteVFMinMaxF", []>;
+defm "" : LMULSEWWriteResF<"WriteVFSgnjV", []>;
+defm "" : LMULSEWWriteResF<"WriteVFSgnjF", []>;
 defm "" : LMULWriteRes<"WriteVFCmpV", []>;
 defm "" : LMULWriteRes<"WriteVFCmpF", []>;
 defm "" : LMULWriteRes<"WriteVFClassV", []>;
@@ -1064,10 +1064,10 @@ defm "" : LMULSEWReadAdvanceFW<"ReadVFWMulAddV", 0>;
 defm "" : LMULSEWReadAdvanceFW<"ReadVFWMulAddF", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFSqrtV", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFRecpV", 0>;
-defm "" : LMULReadAdvance<"ReadVFMinMaxV", 0>;
-defm "" : LMULReadAdvance<"ReadVFMinMaxF", 0>;
-defm "" : LMULReadAdvance<"ReadVFSgnjV", 0>;
-defm "" : LMULReadAdvance<"ReadVFSgnjF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMinMaxV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFMinMaxF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFSgnjV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFSgnjF", 0>;
 defm "" : LMULReadAdvance<"ReadVFCmpV", 0>;
 defm "" : LMULReadAdvance<"ReadVFCmpF", 0>;
 defm "" : LMULReadAdvance<"ReadVFClassV", 0>;

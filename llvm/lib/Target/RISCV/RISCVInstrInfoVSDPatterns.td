@@ -1339,42 +1339,42 @@ foreach vti = AllFloatVectors in {
 
     // 13.12. Vector Floating-Point Sign-Injection Instructions
     def : Pat<(fabs (vti.Vector vti.RegClass:$rs)),
-              (!cast<Instruction>("PseudoVFSGNJX_VV_"# vti.LMul.MX)
+              (!cast<Instruction>("PseudoVFSGNJX_VV_"# vti.LMul.MX#"_E"#vti.SEW)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs, vti.RegClass:$rs, vti.AVL, vti.Log2SEW, TA_MA)>;
     // Handle fneg with VFSGNJN using the same input for both operands.
     def : Pat<(fneg (vti.Vector vti.RegClass:$rs)),
-              (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
+              (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX#"_E"#vti.SEW)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs, vti.RegClass:$rs, vti.AVL, vti.Log2SEW, TA_MA)>;
 
     def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
                                      (vti.Vector vti.RegClass:$rs2))),
-              (!cast<Instruction>("PseudoVFSGNJ_VV_"# vti.LMul.MX)
+              (!cast<Instruction>("PseudoVFSGNJ_VV_"# vti.LMul.MX#"_E"#vti.SEW)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs1, vti.RegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
     def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
                                      (vti.Vector (SplatFPOp vti.ScalarRegClass:$rs2)))),
-              (!cast<Instruction>("PseudoVFSGNJ_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
+              (!cast<Instruction>("PseudoVFSGNJ_V"#vti.ScalarSuffix#"_"#vti.LMul.MX#"_E"#vti.SEW)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
 
     def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
                                      (vti.Vector (fneg vti.RegClass:$rs2)))),
-              (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
+              (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX#"_E"#vti.SEW)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs1, vti.RegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
     def : Pat<(vti.Vector (fcopysign (vti.Vector vti.RegClass:$rs1),
                                      (vti.Vector (fneg (SplatFPOp vti.ScalarRegClass:$rs2))))),
-              (!cast<Instruction>("PseudoVFSGNJN_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
+              (!cast<Instruction>("PseudoVFSGNJN_V"#vti.ScalarSuffix#"_"#vti.LMul.MX#"_E"#vti.SEW)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
   }
 }
 
 // 13.11. Vector Floating-Point MIN/MAX Instructions
-defm : VPatBinaryFPSDNode_VV_VF<fminnum, "PseudoVFMIN">;
-defm : VPatBinaryFPSDNode_VV_VF<fmaxnum, "PseudoVFMAX">;
+defm : VPatBinaryFPSDNode_VV_VF<fminnum, "PseudoVFMIN", isSEWAware=1>;
+defm : VPatBinaryFPSDNode_VV_VF<fmaxnum, "PseudoVFMAX", isSEWAware=1>;
 
 // 13.13. Vector Floating-Point Compare Instructions
 defm : VPatFPSetCCSDNode_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;
