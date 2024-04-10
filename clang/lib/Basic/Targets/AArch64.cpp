@@ -1543,10 +1543,13 @@ WindowsARM64TargetInfo::getBuiltinVaListKind() const {
 TargetInfo::CallingConvCheckResult
 WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   switch (CC) {
+  case CC_X86VectorCall:
+    if (getTriple().isWindowsArm64EC())
+      return CCCR_OK;
+    return CCCR_Ignore;
   case CC_X86StdCall:
   case CC_X86ThisCall:
   case CC_X86FastCall:
-  case CC_X86VectorCall:
     return CCCR_Ignore;
   case CC_C:
   case CC_OpenCLKernel:
