@@ -43,6 +43,9 @@ code bases.
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- Clang now supports raw string literals in ``-std=gnuXY`` mode as an extension in
+  C. This behaviour can also be overridden using ``-f[no-]raw-string-literals``.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 - Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.

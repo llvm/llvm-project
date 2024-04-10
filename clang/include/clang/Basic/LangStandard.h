@@ -130,6 +130,12 @@ public:
   /// hasDigraphs - Language supports digraphs.
   bool hasDigraphs() const { return Flags & Digraphs; }
 
+  /// hasRawStringLiterals - Language supports R"()" raw string literals.
+  bool hasRawStringLiterals() const {
+    // GCC supports raw string literals in C, but not in C++ before C++11.
+    return isCPlusPlus11() || (!isCPlusPlus() && isGNUMode());
+  }
+
   /// isGNUMode - Language includes GNU extensions.
   bool isGNUMode() const { return Flags & GNUMode; }
 
