@@ -173,45 +173,37 @@ void DefaultClause() {
 #pragma acc serial default), seq
   for(;;){}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc serial default()
   for(;;){}
 
-  // expected-error@+3{{expected identifier}}
-  // expected-warning@+2{{OpenACC clause 'default' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected identifier}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial default() seq
   for(;;){}
 
-  // expected-error@+3{{expected identifier}}
-  // expected-warning@+2{{OpenACC clause 'default' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected identifier}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial default(), seq
   for(;;){}
 
-  // expected-error@+2{{invalid value for 'default' clause; expected 'present' or 'none'}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented, clause ignored}}
+  // expected-error@+1{{invalid value for 'default' clause; expected 'present' or 'none'}}
 #pragma acc serial default(invalid)
   for(;;){}
 
-  // expected-error@+3{{invalid value for 'default' clause; expected 'present' or 'none'}}
-  // expected-warning@+2{{OpenACC clause 'default' not yet implemented, clause ignored}}
+  // expected-error@+2{{invalid value for 'default' clause; expected 'present' or 'none'}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial default(auto) seq
   for(;;){}
 
-  // expected-error@+3{{invalid value for 'default' clause; expected 'present' or 'none'}}
-  // expected-warning@+2{{OpenACC clause 'default' not yet implemented, clause ignored}}
+  // expected-error@+2{{invalid value for 'default' clause; expected 'present' or 'none'}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial default(invalid), seq
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented, clause ignored}}
 #pragma acc serial default(none)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'default' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial default(present), seq
   for(;;){}

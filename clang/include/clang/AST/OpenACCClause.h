@@ -51,6 +51,36 @@ public:
   SourceLocation getLParenLoc() const { return LParenLoc; }
 };
 
+/// A 'default' clause, has the optional 'none' or 'present' argument.
+class OpenACCDefaultClause : public OpenACCClauseWithParams {
+  friend class ASTReaderStmt;
+  friend class ASTWriterStmt;
+
+  OpenACCDefaultClauseKind DefaultClauseKind;
+
+protected:
+  OpenACCDefaultClause(OpenACCDefaultClauseKind K, SourceLocation BeginLoc,
+                       SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OpenACCClauseWithParams(OpenACCClauseKind::Default, BeginLoc, LParenLoc,
+                                EndLoc),
+        DefaultClauseKind(K) {
+    assert((DefaultClauseKind == OpenACCDefaultClauseKind::None ||
+            DefaultClauseKind == OpenACCDefaultClauseKind::Present) &&
+           "Invalid Clause Kind");
+  }
+
+public:
+  OpenACCDefaultClauseKind getDefaultClauseKind() const {
+    return DefaultClauseKind;
+  }
+
+  static OpenACCDefaultClause *Create(const ASTContext &C,
+                                      OpenACCDefaultClauseKind K,
+                                      SourceLocation BeginLoc,
+                                      SourceLocation LParenLoc,
+                                      SourceLocation EndLoc);
+};
+
 template <class Impl> class OpenACCClauseVisitor {
   Impl &getDerived() { return static_cast<Impl &>(*this); }
 
@@ -66,6 +96,8 @@ public:
 
     switch (C->getClauseKind()) {
     case OpenACCClauseKind::Default:
+      VisitOpenACCDefaultClause(*cast<OpenACCDefaultClause>(C));
+      return;
     case OpenACCClauseKind::Finalize:
     case OpenACCClauseKind::IfPresent:
     case OpenACCClauseKind::Seq:
@@ -112,6 +144,10 @@ public:
     }
     llvm_unreachable("Invalid Clause kind");
   }
+
+  void VisitOpenACCDefaultClause(const OpenACCDefaultClause &Clause) {
+    return getDerived().VisitOpenACCDefaultClause(Clause);
+  }
 };
 
 class OpenACCClausePrinter final
@@ -128,6 +164,8 @@ public:
     }
   }
   OpenACCClausePrinter(raw_ostream &OS) : OS(OS) {}
+
+  void VisitOpenACCDefaultClause(const OpenACCDefaultClause &Clause);
 };
 
 } // namespace clang
