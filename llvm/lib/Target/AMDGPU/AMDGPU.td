@@ -168,6 +168,10 @@ def FeatureCuMode : SubtargetFeature<"cumode",
   "Enable CU wavefront execution mode"
 >;
 
+def FeaturePreciseMemory
+    : SubtargetFeature<"precise-memory", "EnablePreciseMemory",
+                       "true", "Enable precise memory mode">;
+
 def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
   "SGPRInitBug",
   "true",
