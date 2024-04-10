@@ -1445,6 +1445,9 @@ def ExtractIterSpaceOp : SparseTensor_Op<"iteration.extract_space",
   let results = (outs AnySparseIterSpace:$resultSpace);
 
   let extraClassDeclaration = [{
+    std::pair<Level, Level> getLvlRange() {
+      return std::make_pair(getLoLvl(), getHiLvl());
+    }
     unsigned getSpaceDim() {
       return getHiLvl() - getLoLvl();
     }

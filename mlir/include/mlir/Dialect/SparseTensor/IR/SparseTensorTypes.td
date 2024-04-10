@@ -76,42 +76,21 @@ def SparseTensorStorageSpecifier
 // Sparse Tensor Iteration Types.
 //===----------------------------------------------------------------------===//
 
-def LevelTypeArrayParameter : ArrayRefParameter<"::mlir::sparse_tensor::LevelType", "level-types"> {
-  let printer = [{
-    auto lvlStrings = llvm::map_range($_self, [](auto lt){ return lt.toMLIRString(); });
-    $_printer << "[" << llvm::join(lvlStrings, ",") << "]";
-  }];
-
-  let parser = [{ [&]() -> FailureOr<SmallVector<::mlir::sparse_tensor::LevelType>> {
-    SmallVector<::mlir::sparse_tensor::LevelType> ret;
-
-    const auto res = $_parser.parseCommaSeparatedList(
-      mlir::OpAsmParser::Delimiter::Square,
-      [&]() -> ParseResult {
-        ::mlir::sparse_tensor::ir_detail::LvlTypeParser lParser;
-        auto lvlTpOrFail = lParser.parseLvlType($_parser);
-        if (failed(lvlTpOrFail))
-          return failure();
-        ret.emplace_back(*lvlTpOrFail);
-        return success();
-      }, " in level-type list");
-
-    if (failed(res))
-      return failure();
-    return ret;
-  }() }];
-}
-
 def SparseTensor_Iterator : SparseTensor_Type<"Iterator"> {
   let mnemonic = "iterator";
 
   let parameters = (ins
-     LevelTypeArrayParameter: $lvlTypes
+     SparseTensorEncodingAttr : $encoding,
+     "Level" : $loLvl,
+     "Level" : $hiLvl
   );
 
   let extraClassDeclaration = [{
-     unsigned getSpaceDim() {
-       return getLvlTypes().size();
+     unsigned getSpaceDim() const {
+       return getHiLvl() - getLoLvl();
+     }
+     ArrayRef<LevelType> getLvlTypes() const {
+       return getEncoding().getLvlTypes().slice(getLoLvl(), getSpaceDim());
      }
      bool isUnique() {
        // As long as the last level is unique, the entire iterator is unqiue.
@@ -119,8 +98,7 @@ def SparseTensor_Iterator : SparseTensor_Type<"Iterator"> {
      }
   }];
 
-
-  let assemblyFormat="`<` $lvlTypes `>`";
+  let assemblyFormat="`<` $encoding `,` `lvls` `=` custom<LevelRange>($loLvl, $hiLvl) `>`";
 }
 
 
@@ -128,20 +106,24 @@ def SparseTensor_IterSpace : SparseTensor_Type<"IterSpace"> {
   let mnemonic = "iter_space";
 
   let parameters = (ins
-     LevelTypeArrayParameter: $lvlTypes
+     SparseTensorEncodingAttr : $encoding,
+     "Level" : $loLvl,
+     "Level" : $hiLvl
   );
 
   let extraClassDeclaration = [{
-     unsigned getSpaceDim() {
-       return getLvlTypes().size();
+     unsigned getSpaceDim() const {
+       return getHiLvl() - getLoLvl();
      }
-
+     ArrayRef<LevelType> getLvlTypes() const {
+       return getEncoding().getLvlTypes().slice(getLoLvl(), getSpaceDim());
+     }
      ::mlir::sparse_tensor::IteratorType getIteratorType() const {
-        return IteratorType::get(getContext(), getLvlTypes());
+        return IteratorType::get(getContext(), getEncoding(), getLoLvl(), getHiLvl());
      }
   }];
 
-  let assemblyFormat="`<` $lvlTypes `>`";
+  let assemblyFormat="`<` $encoding `,` `lvls` `=` custom<LevelRange>($loLvl, $hiLvl) `>`";
 }
 
 def IsSparseSparseIterSpaceTypePred

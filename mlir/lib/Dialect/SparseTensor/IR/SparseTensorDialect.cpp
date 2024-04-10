@@ -30,6 +30,14 @@
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.cpp.inc"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrEnums.cpp.inc"
 
+// Forward declarations, following custom print/parsing methods are referenced
+// by the generated code for SparseTensorTypes.td.
+static mlir::ParseResult parseLevelRange(mlir::AsmParser &,
+                                         mlir::sparse_tensor::Level &,
+                                         mlir::sparse_tensor::Level &);
+static void printLevelRange(mlir::AsmPrinter &, mlir::sparse_tensor::Level,
+                            mlir::sparse_tensor::Level);
+
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorTypes.cpp.inc"
 
@@ -1957,11 +1965,8 @@ LogicalResult SortOp::verify() {
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Iteration Operations.
 //===----------------------------------------------------------------------===//
-
-static ParseResult parseLevelRange(OpAsmParser &parser, IntegerAttr &lvlLoAttr,
-                                   IntegerAttr &lvlHiAttr) {
-  Level lvlLo, lvlHi;
-
+static ParseResult parseLevelRange(AsmParser &parser, Level &lvlLo,
+                                   Level &lvlHi) {
   if (parser.parseInteger(lvlLo))
     return failure();
 
@@ -1976,19 +1981,34 @@ static ParseResult parseLevelRange(OpAsmParser &parser, IntegerAttr &lvlLoAttr,
     parser.emitError(parser.getNameLoc(),
                      "expect larger level upper bound than lower bound");
 
+  return success();
+}
+
+static ParseResult parseLevelRange(OpAsmParser &parser, IntegerAttr &lvlLoAttr,
+                                   IntegerAttr &lvlHiAttr) {
+  Level lvlLo, lvlHi;
+
+  if (parseLevelRange(parser, lvlLo, lvlHi))
+    return failure();
+
   lvlLoAttr = IntegerAttr::get(parser.getBuilder().getIndexType(), lvlLo);
   lvlHiAttr = IntegerAttr::get(parser.getBuilder().getIndexType(), lvlHi);
   return success();
+}
+
+static void printLevelRange(AsmPrinter &p, Level lo, Level hi) {
+
+  if (lo + 1 == hi)
+    p << lo;
+  else
+    p << lo << " to " << hi;
 }
 
 static void printLevelRange(OpAsmPrinter &p, Operation *, IntegerAttr lvlLo,
                             IntegerAttr lvlHi) {
   unsigned lo = lvlLo.getValue().getZExtValue();
   unsigned hi = lvlHi.getValue().getZExtValue();
-  if (lo + 1 == hi)
-    p << lo;
-  else
-    p << lo << " to " << hi;
+  printLevelRange(p, lo, hi);
 }
 
 static ParseResult
@@ -2092,9 +2112,8 @@ LogicalResult ExtractIterSpaceOp::inferReturnTypes(
 
   ExtractIterSpaceOp::Adaptor adaptor(ops, attr, prop, region);
   SparseTensorType stt = getSparseTensorType(adaptor.getTensor());
-  ArrayRef<LevelType> lts = stt.getLvlTypes().slice(
-      adaptor.getLoLvl(), adaptor.getHiLvl() - adaptor.getLoLvl());
-  ret.push_back(IterSpaceType::get(ctx, lts));
+  ret.push_back(IterSpaceType::get(ctx, stt.getEncoding(), adaptor.getLoLvl(),
+                                   adaptor.getHiLvl()));
   return success();
 }
 
