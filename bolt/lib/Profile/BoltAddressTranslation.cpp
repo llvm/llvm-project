@@ -100,7 +100,7 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     LLVM_DEBUG(dbgs() << "Function name: " << Function.getPrintName() << "\n");
     LLVM_DEBUG(dbgs() << " Address reference: 0x"
                       << Twine::utohexstr(Function.getOutputAddress()) << "\n");
-    LLVM_DEBUG(dbgs() << formatv(" Hash: {0:x}\n", getBFHash(OutputAddress)));
+    LLVM_DEBUG(dbgs() << formatv(" Hash: {0:x}\n", getBFHash(InputAddress)));
     LLVM_DEBUG(dbgs() << " Secondary Entry Points: " << NumSecondaryEntryPoints
                       << '\n');
 
@@ -197,8 +197,9 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
             ? SecondaryEntryPointsMap[Address].size()
             : 0;
     if (Cold) {
-      size_t HotIndex =
-          std::distance(ColdPartSource.begin(), ColdPartSource.find(Address));
+      auto HotEntryIt = Maps.find(ColdPartSource[Address]);
+      assert(HotEntryIt != Maps.end());
+      size_t HotIndex = std::distance(Maps.begin(), HotEntryIt);
       encodeULEB128(HotIndex - PrevIndex, OS);
       PrevIndex = HotIndex;
     } else {
@@ -207,7 +208,7 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
       LLVM_DEBUG(dbgs() << "Hash: " << formatv("{0:x}\n", BFHash));
       OS.write(reinterpret_cast<char *>(&BFHash), 8);
       // Number of basic blocks
-      size_t NumBasicBlocks = getBBHashMap(HotInputAddress).getNumBasicBlocks();
+      size_t NumBasicBlocks = NumBasicBlocksMap[HotInputAddress];
       LLVM_DEBUG(dbgs() << "Basic blocks: " << NumBasicBlocks << '\n');
       encodeULEB128(NumBasicBlocks, OS);
       // Secondary entry points
@@ -425,8 +426,9 @@ void BoltAddressTranslation::dump(raw_ostream &OS) {
   for (const auto &MapEntry : Maps) {
     const uint64_t Address = MapEntry.first;
     const uint64_t HotAddress = fetchParentAddress(Address);
+    const bool IsHotFunction = HotAddress == 0;
     OS << "Function Address: 0x" << Twine::utohexstr(Address);
-    if (HotAddress == 0)
+    if (IsHotFunction)
       OS << formatv(", hash: {0:x}", getBFHash(Address));
     OS << "\n";
     OS << "BB mappings:\n";
@@ -443,6 +445,8 @@ void BoltAddressTranslation::dump(raw_ostream &OS) {
         OS << formatv(" hash: {0:x}", BBHashMap.getBBHash(Val));
       OS << "\n";
     }
+    if (IsHotFunction)
+      OS << "NumBlocks: " << NumBasicBlocksMap[Address] << '\n';
     if (SecondaryEntryPointsMap.count(Address)) {
       const std::vector<uint32_t> &SecondaryEntryPoints =
           SecondaryEntryPointsMap[Address];
@@ -574,6 +578,7 @@ void BoltAddressTranslation::saveMetadata(BinaryContext &BC) {
     // Set BF/BB metadata
     for (const BinaryBasicBlock &BB : BF)
       BBHashMap.addEntry(BB.getInputOffset(), BB.getIndex(), BB.getHash());
+    NumBasicBlocksMap.emplace(BF.getAddress(), BF.size());
   }
 }
 

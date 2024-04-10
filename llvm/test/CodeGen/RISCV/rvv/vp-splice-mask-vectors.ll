@@ -29,10 +29,8 @@ define <vscale x 1 x i1> @test_vp_splice_nxv1i1(<vscale x 1 x i1> %va, <vscale x
 ; CHECK-NEXT:    vslideup.vx v9, v8, a0
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> undef, <vscale x 1 x i32> zeroinitializer
 
-  %v = call <vscale x 1 x i1> @llvm.experimental.vp.splice.nxv1i1(<vscale x 1 x i1> %va, <vscale x 1 x i1> %vb, i32 5, <vscale x 1 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 1 x i1> @llvm.experimental.vp.splice.nxv1i1(<vscale x 1 x i1> %va, <vscale x 1 x i1> %vb, i32 5, <vscale x 1 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 1 x i1> %v
 }
 
@@ -55,10 +53,8 @@ define <vscale x 1 x i1> @test_vp_splice_nxv1i1_negative_offset(<vscale x 1 x i1
 ; CHECK-NEXT:    vslideup.vi v9, v8, 5
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> undef, <vscale x 1 x i32> zeroinitializer
 
-  %v = call <vscale x 1 x i1> @llvm.experimental.vp.splice.nxv1i1(<vscale x 1 x i1> %va, <vscale x 1 x i1> %vb, i32 -5, <vscale x 1 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 1 x i1> @llvm.experimental.vp.splice.nxv1i1(<vscale x 1 x i1> %va, <vscale x 1 x i1> %vb, i32 -5, <vscale x 1 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 1 x i1> %v
 }
 
@@ -106,10 +102,8 @@ define <vscale x 2 x i1> @test_vp_splice_nxv2i1(<vscale x 2 x i1> %va, <vscale x
 ; CHECK-NEXT:    vslideup.vx v9, v8, a0
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
 
-  %v = call <vscale x 2 x i1> @llvm.experimental.vp.splice.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %vb, i32 5, <vscale x 2 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 2 x i1> @llvm.experimental.vp.splice.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %vb, i32 5, <vscale x 2 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 2 x i1> %v
 }
 
@@ -132,10 +126,8 @@ define <vscale x 2 x i1> @test_vp_splice_nxv2i1_negative_offset(<vscale x 2 x i1
 ; CHECK-NEXT:    vslideup.vi v9, v8, 5
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
 
-  %v = call <vscale x 2 x i1> @llvm.experimental.vp.splice.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %vb, i32 -5, <vscale x 2 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 2 x i1> @llvm.experimental.vp.splice.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %vb, i32 -5, <vscale x 2 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 2 x i1> %v
 }
 
@@ -183,10 +175,8 @@ define <vscale x 4 x i1> @test_vp_splice_nxv4i1(<vscale x 4 x i1> %va, <vscale x
 ; CHECK-NEXT:    vslideup.vx v9, v8, a0
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
 
-  %v = call <vscale x 4 x i1> @llvm.experimental.vp.splice.nxv4i1(<vscale x 4 x i1> %va, <vscale x 4 x i1> %vb, i32 5, <vscale x 4 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 4 x i1> @llvm.experimental.vp.splice.nxv4i1(<vscale x 4 x i1> %va, <vscale x 4 x i1> %vb, i32 5, <vscale x 4 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 4 x i1> %v
 }
 
@@ -209,10 +199,8 @@ define <vscale x 4 x i1> @test_vp_splice_nxv4i1_negative_offset(<vscale x 4 x i1
 ; CHECK-NEXT:    vslideup.vi v9, v8, 5
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
 
-  %v = call <vscale x 4 x i1> @llvm.experimental.vp.splice.nxv4i1(<vscale x 4 x i1> %va, <vscale x 4 x i1> %vb, i32 -5, <vscale x 4 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 4 x i1> @llvm.experimental.vp.splice.nxv4i1(<vscale x 4 x i1> %va, <vscale x 4 x i1> %vb, i32 -5, <vscale x 4 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 4 x i1> %v
 }
 
@@ -260,10 +248,8 @@ define <vscale x 8 x i1> @test_vp_splice_nxv8i1(<vscale x 8 x i1> %va, <vscale x
 ; CHECK-NEXT:    vslideup.vx v9, v8, a0
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
 
-  %v = call <vscale x 8 x i1> @llvm.experimental.vp.splice.nxv8i1(<vscale x 8 x i1> %va, <vscale x 8 x i1> %vb, i32 5, <vscale x 8 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 8 x i1> @llvm.experimental.vp.splice.nxv8i1(<vscale x 8 x i1> %va, <vscale x 8 x i1> %vb, i32 5, <vscale x 8 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 8 x i1> %v
 }
 
@@ -286,10 +272,8 @@ define <vscale x 8 x i1> @test_vp_splice_nxv8i1_negative_offset(<vscale x 8 x i1
 ; CHECK-NEXT:    vslideup.vi v9, v8, 5
 ; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
 
-  %v = call <vscale x 8 x i1> @llvm.experimental.vp.splice.nxv8i1(<vscale x 8 x i1> %va, <vscale x 8 x i1> %vb, i32 -5, <vscale x 8 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 8 x i1> @llvm.experimental.vp.splice.nxv8i1(<vscale x 8 x i1> %va, <vscale x 8 x i1> %vb, i32 -5, <vscale x 8 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 8 x i1> %v
 }
 
@@ -337,10 +321,8 @@ define <vscale x 16 x i1> @test_vp_splice_nxv16i1(<vscale x 16 x i1> %va, <vscal
 ; CHECK-NEXT:    vslideup.vx v8, v10, a0
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer
 
-  %v = call <vscale x 16 x i1> @llvm.experimental.vp.splice.nxv16i1(<vscale x 16 x i1> %va, <vscale x 16 x i1> %vb, i32 5, <vscale x 16 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 16 x i1> @llvm.experimental.vp.splice.nxv16i1(<vscale x 16 x i1> %va, <vscale x 16 x i1> %vb, i32 5, <vscale x 16 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 16 x i1> %v
 }
 
@@ -363,10 +345,8 @@ define <vscale x 16 x i1> @test_vp_splice_nxv16i1_negative_offset(<vscale x 16 x
 ; CHECK-NEXT:    vslideup.vi v8, v10, 5
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> undef, <vscale x 16 x i32> zeroinitializer
 
-  %v = call <vscale x 16 x i1> @llvm.experimental.vp.splice.nxv16i1(<vscale x 16 x i1> %va, <vscale x 16 x i1> %vb, i32 -5, <vscale x 16 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 16 x i1> @llvm.experimental.vp.splice.nxv16i1(<vscale x 16 x i1> %va, <vscale x 16 x i1> %vb, i32 -5, <vscale x 16 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 16 x i1> %v
 }
 
@@ -415,10 +395,8 @@ define <vscale x 32 x i1> @test_vp_splice_nxv32i1(<vscale x 32 x i1> %va, <vscal
 ; CHECK-NEXT:    vslideup.vx v8, v12, a0
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 32 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 32 x i1> %head, <vscale x 32 x i1> undef, <vscale x 32 x i32> zeroinitializer
 
-  %v = call <vscale x 32 x i1> @llvm.experimental.vp.splice.nxv32i1(<vscale x 32 x i1> %va, <vscale x 32 x i1> %vb, i32 5, <vscale x 32 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 32 x i1> @llvm.experimental.vp.splice.nxv32i1(<vscale x 32 x i1> %va, <vscale x 32 x i1> %vb, i32 5, <vscale x 32 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 32 x i1> %v
 }
 
@@ -441,10 +419,8 @@ define <vscale x 32 x i1> @test_vp_splice_nxv32i1_negative_offset(<vscale x 32 x
 ; CHECK-NEXT:    vslideup.vi v8, v12, 5
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 32 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 32 x i1> %head, <vscale x 32 x i1> undef, <vscale x 32 x i32> zeroinitializer
 
-  %v = call <vscale x 32 x i1> @llvm.experimental.vp.splice.nxv32i1(<vscale x 32 x i1> %va, <vscale x 32 x i1> %vb, i32 -5, <vscale x 32 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 32 x i1> @llvm.experimental.vp.splice.nxv32i1(<vscale x 32 x i1> %va, <vscale x 32 x i1> %vb, i32 -5, <vscale x 32 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 32 x i1> %v
 }
 
@@ -493,10 +469,8 @@ define <vscale x 64 x i1> @test_vp_splice_nxv64i1(<vscale x 64 x i1> %va, <vscal
 ; CHECK-NEXT:    vslideup.vx v8, v16, a0
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 64 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 64 x i1> %head, <vscale x 64 x i1> undef, <vscale x 64 x i32> zeroinitializer
 
-  %v = call <vscale x 64 x i1> @llvm.experimental.vp.splice.nxv64i1(<vscale x 64 x i1> %va, <vscale x 64 x i1> %vb, i32 5, <vscale x 64 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 64 x i1> @llvm.experimental.vp.splice.nxv64i1(<vscale x 64 x i1> %va, <vscale x 64 x i1> %vb, i32 5, <vscale x 64 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 64 x i1> %v
 }
 
@@ -519,10 +493,8 @@ define <vscale x 64 x i1> @test_vp_splice_nxv64i1_negative_offset(<vscale x 64 x
 ; CHECK-NEXT:    vslideup.vi v8, v16, 5
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 64 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <vscale x 64 x i1> %head, <vscale x 64 x i1> undef, <vscale x 64 x i32> zeroinitializer
 
-  %v = call <vscale x 64 x i1> @llvm.experimental.vp.splice.nxv64i1(<vscale x 64 x i1> %va, <vscale x 64 x i1> %vb, i32 -5, <vscale x 64 x i1> %allones, i32 %evla, i32 %evlb)
+  %v = call <vscale x 64 x i1> @llvm.experimental.vp.splice.nxv64i1(<vscale x 64 x i1> %va, <vscale x 64 x i1> %vb, i32 -5, <vscale x 64 x i1> splat (i1 1), i32 %evla, i32 %evlb)
   ret <vscale x 64 x i1> %v
 }
 

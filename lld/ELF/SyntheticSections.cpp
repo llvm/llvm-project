@@ -2769,7 +2769,8 @@ readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
 
   SmallVector<GdbIndexSection::NameAttrEntry, 0> ret;
   for (const LLDDWARFSection *pub : {&pubNames, &pubTypes}) {
-    DWARFDataExtractor data(obj, *pub, config->isLE, config->wordsize);
+    DWARFDataExtractor data(obj, *pub, ELFT::Endianness == endianness::little,
+                            ELFT::Is64Bits ? 8 : 4);
     DWARFDebugPubTable table;
     table.extract(data, /*GnuStyle=*/true, [&](Error e) {
       warn(toString(pub->sec) + ": " + toString(std::move(e)));
@@ -2872,7 +2873,8 @@ createSymbols(
 }
 
 // Returns a newly-created .gdb_index section.
-template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
+template <class ELFT>
+std::unique_ptr<GdbIndexSection> GdbIndexSection::create() {
   llvm::TimeTraceScope timeScope("Create gdb index");
 
   // Collect InputFiles with .debug_info. See the comment in
@@ -2918,7 +2920,7 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
     nameAttrs[i] = readPubNamesAndTypes<ELFT>(dobj, chunks[i].compilationUnits);
   });
 
-  auto *ret = make<GdbIndexSection>();
+  auto ret = std::make_unique<GdbIndexSection>();
   ret->chunks = std::move(chunks);
   std::tie(ret->symbols, ret->size) = createSymbols(nameAttrs, ret->chunks);
 
@@ -3743,8 +3745,9 @@ template <typename ELFT> void elf::writeEhdr(uint8_t *buf, Partition &part) {
   memcpy(buf, "\177ELF", 4);
 
   auto *eHdr = reinterpret_cast<typename ELFT::Ehdr *>(buf);
-  eHdr->e_ident[EI_CLASS] = config->is64 ? ELFCLASS64 : ELFCLASS32;
-  eHdr->e_ident[EI_DATA] = config->isLE ? ELFDATA2LSB : ELFDATA2MSB;
+  eHdr->e_ident[EI_CLASS] = ELFT::Is64Bits ? ELFCLASS64 : ELFCLASS32;
+  eHdr->e_ident[EI_DATA] =
+      ELFT::Endianness == endianness::little ? ELFDATA2LSB : ELFDATA2MSB;
   eHdr->e_ident[EI_VERSION] = EV_CURRENT;
   eHdr->e_ident[EI_OSABI] = config->osabi;
   eHdr->e_ident[EI_ABIVERSION] = getAbiVersion();
@@ -3860,6 +3863,7 @@ void InStruct::reset() {
   ppc32Got2.reset();
   ibtPlt.reset();
   relaPlt.reset();
+  gdbIndex.reset();
   shStrTab.reset();
   strTab.reset();
   symTab.reset();
@@ -3986,10 +3990,10 @@ InStruct elf::in;
 std::vector<Partition> elf::partitions;
 Partition *elf::mainPart;
 
-template GdbIndexSection *GdbIndexSection::create<ELF32LE>();
-template GdbIndexSection *GdbIndexSection::create<ELF32BE>();
-template GdbIndexSection *GdbIndexSection::create<ELF64LE>();
-template GdbIndexSection *GdbIndexSection::create<ELF64BE>();
+template std::unique_ptr<GdbIndexSection> GdbIndexSection::create<ELF32LE>();
+template std::unique_ptr<GdbIndexSection> GdbIndexSection::create<ELF32BE>();
+template std::unique_ptr<GdbIndexSection> GdbIndexSection::create<ELF64LE>();
+template std::unique_ptr<GdbIndexSection> GdbIndexSection::create<ELF64BE>();
 
 template void elf::splitSections<ELF32LE>();
 template void elf::splitSections<ELF32BE>();

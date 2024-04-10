@@ -81,8 +81,9 @@ const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
     return DB;
   case FileType::Invalid:
   case FileType::All:
-    llvm_unreachable("Unexpected file type for diagnostics.");
+    break;
   }
+  llvm_unreachable("Unexpected file type for diagnostics.");
 }
 
 const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
