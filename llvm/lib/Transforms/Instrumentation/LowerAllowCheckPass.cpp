@@ -40,19 +40,31 @@ static cl::opt<float>
 STATISTIC(NumChecksTotal, "Number of checks");
 STATISTIC(NumChecksRemoved, "Number of removed checks");
 
+struct RemarkInfo {
+  ore::NV Kind;
+  ore::NV F;
+  ore::NV BB;
+  explicit RemarkInfo(IntrinsicInst *II)
+      : Kind("Kind", II->getArgOperand(0)),
+        F("Function", II->getParent()->getParent()),
+        BB("Block", II->getParent()->getName()) {}
+};
+
 static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
                        bool Removed) {
-  ore::NV Kind("Kind", II->getArgOperand(0));
-  ore::NV BB("Block", II->getParent()->getName());
   if (Removed) {
     ORE.emit([&]() {
+      RemarkInfo Info(II);
       return OptimizationRemark(DEBUG_TYPE, "Removed", II)
-             << "Removed check: Kind=" << Kind << " BB=" << BB;
+             << "Removed check: Kind=" << Info.Kind << " F=" << Info.F
+             << " BB=" << Info.BB;
     });
   } else {
     ORE.emit([&]() {
+      RemarkInfo Info(II);
       return OptimizationRemarkMissed(DEBUG_TYPE, "Allowed", II)
-             << "Allowed check: Kind=" << Kind << " BB=" << BB;
+             << "Allowed check: Kind=" << Info.Kind << " F=" << Info.F
+             << " BB=" << Info.BB;
     });
   }
 }
@@ -63,8 +75,6 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
   SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
-  // TODO:
-  // https://github.com/llvm/llvm-project/pull/84858#discussion_r1520603139
   auto ShouldRemove = [&](bool IsHot) {
     if (!RandomRate.getNumOccurrences())
       return IsHot;
