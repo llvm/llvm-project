@@ -48,9 +48,9 @@ class WebAssemblyDisassembler final : public MCDisassembler {
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
 
-  bool onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
-                     ArrayRef<uint8_t> Bytes, uint64_t Address,
-                     Error &Err) const override;
+  Expected<bool> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                               ArrayRef<uint8_t> Bytes,
+                               uint64_t Address) const override;
 
 public:
   WebAssemblyDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
@@ -123,12 +123,10 @@ bool parseImmediate(MCInst &MI, uint64_t &Size, ArrayRef<uint8_t> Bytes) {
   return true;
 }
 
-bool WebAssemblyDisassembler::onSymbolStart(SymbolInfoTy &Symbol,
-                                            uint64_t &Size,
-                                            ArrayRef<uint8_t> Bytes,
-                                            uint64_t Address,
-                                            Error &Err) const {
-  ErrorAsOutParameter ErrOutParam(&Err);
+Expected<bool> WebAssemblyDisassembler::onSymbolStart(SymbolInfoTy &Symbol,
+                                                      uint64_t &Size,
+                                                      ArrayRef<uint8_t> Bytes,
+                                                      uint64_t Address) const {
   Size = 0;
   if (Symbol.Type == wasm::WASM_SYMBOL_TYPE_SECTION) {
     // Start of a code section: we're parsing only the function count.

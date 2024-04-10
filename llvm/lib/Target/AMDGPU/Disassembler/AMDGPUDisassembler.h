@@ -161,37 +161,39 @@ public:
     return MCDisassembler::Fail;
   }
 
-  bool onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
-                     ArrayRef<uint8_t> Bytes, uint64_t Address,
-                     Error &Err) const override;
+  Expected<bool> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                               ArrayRef<uint8_t> Bytes,
+                               uint64_t Address) const override;
 
-  Error decodeKernelDescriptor(StringRef KdName, ArrayRef<uint8_t> Bytes,
-                               uint64_t KdAddress) const;
-
-  Error decodeKernelDescriptorDirective(DataExtractor::Cursor &Cursor,
+  Expected<bool> decodeKernelDescriptor(StringRef KdName,
                                         ArrayRef<uint8_t> Bytes,
-                                        raw_string_ostream &KdStream) const;
+                                        uint64_t KdAddress) const;
+
+  Expected<bool>
+  decodeKernelDescriptorDirective(DataExtractor::Cursor &Cursor,
+                                  ArrayRef<uint8_t> Bytes,
+                                  raw_string_ostream &KdStream) const;
 
   /// Decode as directives that handle COMPUTE_PGM_RSRC1.
   /// \param FourByteBuffer - Bytes holding contents of COMPUTE_PGM_RSRC1.
   /// \param KdStream       - Stream to write the disassembled directives to.
   // NOLINTNEXTLINE(readability-identifier-naming)
-  Error decodeCOMPUTE_PGM_RSRC1(uint32_t FourByteBuffer,
-                                raw_string_ostream &KdStream) const;
+  Expected<bool> decodeCOMPUTE_PGM_RSRC1(uint32_t FourByteBuffer,
+                                         raw_string_ostream &KdStream) const;
 
   /// Decode as directives that handle COMPUTE_PGM_RSRC2.
   /// \param FourByteBuffer - Bytes holding contents of COMPUTE_PGM_RSRC2.
   /// \param KdStream       - Stream to write the disassembled directives to.
   // NOLINTNEXTLINE(readability-identifier-naming)
-  Error decodeCOMPUTE_PGM_RSRC2(uint32_t FourByteBuffer,
-                                raw_string_ostream &KdStream) const;
+  Expected<bool> decodeCOMPUTE_PGM_RSRC2(uint32_t FourByteBuffer,
+                                         raw_string_ostream &KdStream) const;
 
   /// Decode as directives that handle COMPUTE_PGM_RSRC3.
   /// \param FourByteBuffer - Bytes holding contents of COMPUTE_PGM_RSRC3.
   /// \param KdStream       - Stream to write the disassembled directives to.
   // NOLINTNEXTLINE(readability-identifier-naming)
-  Error decodeCOMPUTE_PGM_RSRC3(uint32_t FourByteBuffer,
-                                raw_string_ostream &KdStream) const;
+  Expected<bool> decodeCOMPUTE_PGM_RSRC3(uint32_t FourByteBuffer,
+                                         raw_string_ostream &KdStream) const;
 
   void convertEXPInst(MCInst &MI) const;
   void convertVINTERPInst(MCInst &MI) const;

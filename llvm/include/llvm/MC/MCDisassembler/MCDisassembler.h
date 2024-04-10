@@ -148,18 +148,18 @@ public:
   /// \param Address  - The address, in the memory space of region, of the first
   ///                   byte of the symbol.
   /// \param Bytes    - A reference to the actual bytes at the symbol location.
-  /// \param Err      - An out parameter that indicates whether an error was
-  ///                   found.
   /// \return         - True if this symbol triggered some target specific
   ///                   disassembly for this symbol. Size must be set with the
-  ///                   number of bytes consumed regardless of whether an error
-  ///                   was found.
+  ///                   number of bytes consumed.
+  ///                 - Error if this symbol triggered some target specific
+  ///                   disassembly for this symbol, but an error was found with
+  ///                   it. Size must be set with the number of bytes consumed.
   ///                 - False if the target doesn't want to handle the symbol
   ///                   separately. The value of Size is ignored in this case,
   ///                   and Err must not be set.
-  virtual bool onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
-                             ArrayRef<uint8_t> Bytes, uint64_t Address,
-                             Error &Err) const;
+  virtual Expected<bool> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                                       ArrayRef<uint8_t> Bytes,
+                                       uint64_t Address) const;
   // TODO:
   // Implement similar hooks that can be used at other points during
   // disassembly. Something along the following lines:

@@ -13,9 +13,10 @@ using namespace llvm;
 
 MCDisassembler::~MCDisassembler() = default;
 
-bool MCDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
-                                   ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                   Error &Err) const {
+Expected<bool> MCDisassembler::onSymbolStart(SymbolInfoTy &Symbol,
+                                             uint64_t &Size,
+                                             ArrayRef<uint8_t> Bytes,
+                                             uint64_t Address) const {
   return false;
 }
 
