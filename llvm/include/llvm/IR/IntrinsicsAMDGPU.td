@@ -2184,7 +2184,7 @@ def int_amdgcn_readfirstlane :
 // current wave. Otherwise, the result is undefined.
 def int_amdgcn_readlane :
   ClangBuiltin<"__builtin_amdgcn_readlane">,
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+  Intrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // The value to write and lane select arguments must be uniform across the

@@ -288,6 +288,14 @@ def V_SUB_U64_PSEUDO : VPseudoInstSI <
 >;
 } // End usesCustomInserter = 1, Defs = [VCC]
 
+
+let usesCustomInserter = 1 in {
+  def V_READLANE_PSEUDO_B64 : VPseudoInstSI <
+  (outs SReg_64:$sdst), (ins VReg_64:$src0, SSrc_b32:$src1),
+  [(set i64:$sdst, (int_amdgcn_readlane i64:$src0, i32:$src1))]
+  >;
+}
+
 let usesCustomInserter = 1, Defs = [SCC] in {
 def S_ADD_U64_PSEUDO : SPseudoInstSI <
   (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1),
