@@ -829,6 +829,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return OMPX_MinThreadsForLowTripCount;
   }
 
+  /// Whether or not to reuse blocks for high trip count loops.
+  /// @see OMPX__ReuseBlocksForHighTripCount
+  virtual bool getReuseBlocksForHighTripCount() {
+    return OMPX__ReuseBlocksForHighTripCount;
+  }
+
   /// Get the total amount of hardware parallelism supported by the target
   /// device. This is the total amount of warps or wavefronts that can be
   /// resident on the device simultaneously.
@@ -903,6 +909,9 @@ private:
   /// the outer (block/team) parallelism.
   UInt32Envar OMPX_MinThreadsForLowTripCount =
       UInt32Envar("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32);
+
+  BoolEnvar OMPX__ReuseBlocksForHighTripCount =
+      BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation
