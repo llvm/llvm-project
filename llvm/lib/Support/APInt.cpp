@@ -2585,11 +2585,13 @@ int APInt::tcMultiply(WordType *dst, const WordType *lhs,
   assert(dst != lhs && dst != rhs);
 
   int overflow = 0;
-  tcSet(dst, 0, parts);
 
-  for (unsigned i = 0; i < parts; i++)
-    overflow |= tcMultiplyPart(&dst[i], lhs, rhs[i], 0, parts,
-                               parts - i, true);
+  for (unsigned i = 0; i < parts; i++) {
+    // Don't accumulate on the first iteration so we don't need to initalize
+    // dst to 0.
+    overflow |=
+        tcMultiplyPart(&dst[i], lhs, rhs[i], 0, parts, parts - i, i != 0);
+  }
 
   return overflow;
 }
@@ -2605,10 +2607,11 @@ void APInt::tcFullMultiply(WordType *dst, const WordType *lhs,
 
   assert(dst != lhs && dst != rhs);
 
-  tcSet(dst, 0, rhsParts);
-
-  for (unsigned i = 0; i < lhsParts; i++)
-    tcMultiplyPart(&dst[i], rhs, lhs[i], 0, rhsParts, rhsParts + 1, true);
+  for (unsigned i = 0; i < lhsParts; i++) {
+    // Don't accumulate on the first iteration so we don't need to initalize
+    // dst to 0.
+    tcMultiplyPart(&dst[i], rhs, lhs[i], 0, rhsParts, rhsParts + 1, i != 0);
+  }
 }
 
 // If RHS is zero LHS and REMAINDER are left unchanged, return one.
