@@ -30,8 +30,13 @@ StringLiteral *Parser::ParseCXXDeletedFunctionMessage() {
 
   if (isTokenStringLiteral()) {
     ExprResult Res = ParseUnevaluatedStringLiteralExpression();
-    if (Res.isUsable())
+    if (Res.isUsable()) {
       Message = Res.getAs<StringLiteral>();
+      Diag(Message->getBeginLoc(), getLangOpts().CPlusPlus26
+                                       ? diag::warn_cxx23_delete_with_message
+                                       : diag::ext_delete_with_message)
+          << Message->getSourceRange();
+    }
   } else {
     Diag(Tok.getLocation(), diag::err_expected_string_literal)
         << /*Source='in'*/ 0 << "'delete'";
@@ -111,11 +116,6 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
       StringLiteral *Message = ParseCXXDeletedFunctionMessage();
       Actions.SetDeclDeleted(FnD, KWLoc, Message);
       Delete = true;
-      if (Message)
-        Diag(Message->getBeginLoc(), getLangOpts().CPlusPlus26
-                                         ? diag::warn_cxx23_delete_with_message
-                                         : diag::ext_delete_with_message)
-            << Message->getSourceRange();
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {
         DeclAsFunction->setRangeEnd(KWEndLoc);
       }

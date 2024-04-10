@@ -34,6 +34,9 @@ void d() = delete(42); // expected-error {{expected string literal}}
 void e() = delete("foo"[0]); // expected-error {{expected ')'}} expected-note {{to match this '('}} // pre26-warning {{'= delete' with a message is a C++2c extension}} compat-warning {{'= delete' with a message is incompatible with C++ standards before C++2c}}
 void f() = delete("foo"); // pre26-warning {{'= delete' with a message is a C++2c extension}} compat-warning {{'= delete' with a message is incompatible with C++ standards before C++2c}}
 
+constexpr const char *getMsg() { return "this is a message"; }
+void func() = delete(getMsg()); // expected-error {{expected string literal}}
+
 namespace CWG2876 {
 using T = void ();
 using U = int;
