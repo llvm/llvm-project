@@ -1640,8 +1640,8 @@ define i32 @sdiv_mul_sub_nsw(i32 %x, i32 %y) {
 
   define i32 @mul_by_150_udiv_by_100 (i32 %0) {
 ; CHECK-LABEL: @mul_by_150_udiv_by_100(
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i32 [[TMP0:%.*]], 150
-; CHECK-NEXT:    [[TMP3:%.*]] = udiv i32 [[TMP2]], 100
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP0:%.*]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 1
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %2 = mul nuw i32 %0, 150

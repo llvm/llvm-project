@@ -1149,6 +1149,57 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
         Mul->setHasNoSignedWrap(OBO->hasNoSignedWrap());
         return Mul;
       }
+
+      // If we can reduce these functions so they can factor out to a shift or
+      // something similar (i.e Reduce (X * 150/100) -> (X * 3) >> 1)
+      //
+      // (X * C1)/C2 -> X * (C1/C3) >> log2(C2/C3) where C3 divides exactly C1
+      // and C2 and C2/C3 is a power of 2.
+      // FIXME: Support negative numbers
+      if (C1->isStrictlyPositive() && C2->isStrictlyPositive()) {
+
+        APInt C3 = APIntOps::GreatestCommonDivisor(*C1, *C2);
+        APInt Q(C2->getBitWidth(), /*val=*/0ULL, IsSigned);
+
+        // Returns false if division by 0
+        if (isMultiple(*C2, C3, Q, IsSigned) && Q.isPowerOf2() && !Q.isOne()) {
+          auto *OBO = cast<OverflowingBinaryOperator>(Op0);
+
+          APInt C4 = IsSigned ? C1->sdiv(C3) : C1->udiv(C3);
+
+          if (C4.isOne()) {
+            Instruction *Shift;
+            if (IsSigned)
+              Shift = BinaryOperator::CreateAShr(
+                  X, ConstantInt::get(Ty, Q.logBase2()));
+            else
+              Shift = BinaryOperator::CreateLShr(
+                  X, ConstantInt::get(Ty, Q.logBase2()));
+            Shift->setIsExact(I.isExact());
+            return Shift;
+          }
+
+          if (Op0->hasOneUse()) {
+            auto *Mul = Builder.CreateMul(
+                X, ConstantInt::get(Ty, C4), "",
+                // If it is unsigned, then we cannot have any nsw or nuw flags.
+                // It has been tried before, but no avail.
+                /* HasNUW */ OBO->hasNoUnsignedWrap(),
+                // If an nuw division happens, then it is also nsw
+                /* HasNSW */ OBO->hasNoSignedWrap() || !IsSigned);
+
+            Instruction *Shift;
+            if (IsSigned)
+              Shift = BinaryOperator::CreateAShr(
+                  Mul, ConstantInt::get(Ty, Q.logBase2()));
+            else
+              Shift = BinaryOperator::CreateLShr(
+                  Mul, ConstantInt::get(Ty, Q.logBase2()));
+            Shift->setIsExact(I.isExact());
+            return Shift;
+          }
+        }
+      }
     }
 
     if ((IsSigned && match(Op0, m_NSWShl(m_Value(X), m_APInt(C1))) &&
