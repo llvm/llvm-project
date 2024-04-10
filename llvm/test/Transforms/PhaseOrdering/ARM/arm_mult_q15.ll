@@ -14,11 +14,11 @@ define void @arm_mult_q15(ptr %pSrcA, ptr %pSrcB, ptr noalias %pDst, i32 %blockS
 ; CHECK-NEXT:    [[CMP_NOT2:%.*]] = icmp eq i32 [[BLOCKSIZE:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT2]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 8
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[WHILE_BODY_PREHEADER16:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -8
-; CHECK-NEXT:    [[IND_END:%.*]] = and i32 [[BLOCKSIZE]], 7
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -4
+; CHECK-NEXT:    [[IND_END:%.*]] = and i32 [[BLOCKSIZE]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[N_VEC]], 1
 ; CHECK-NEXT:    [[IND_END7:%.*]] = getelementptr i8, ptr [[PSRCA:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[N_VEC]], 1
@@ -34,18 +34,19 @@ define void @arm_mult_q15(ptr %pSrcA, ptr %pSrcB, ptr noalias %pDst, i32 %blockS
 ; CHECK-NEXT:    [[NEXT_GEP13:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[NEXT_GEP14:%.*]] = getelementptr i8, ptr [[PSRCB]], i32 [[TMP5]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP]], align 2
-; CHECK-NEXT:    [[TMP6:%.*]] = sext <8 x i16> [[WIDE_LOAD]] to <8 x i32>
-; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <8 x i16>, ptr [[NEXT_GEP14]], align 2
-; CHECK-NEXT:    [[TMP7:%.*]] = sext <8 x i16> [[WIDE_LOAD15]] to <8 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = mul nsw <8 x i32> [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = ashr <8 x i32> [[TMP8]], <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
-; CHECK-NEXT:    [[TMP10:%.*]] = tail call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[TMP9]], <8 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>)
-; CHECK-NEXT:    [[TMP11:%.*]] = trunc <8 x i32> [[TMP10]] to <8 x i16>
-; CHECK-NEXT:    store <8 x i16> [[TMP11]], ptr [[NEXT_GEP13]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[NEXT_GEP]], align 2
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i16> [[WIDE_LOAD]] to <4 x i32>
+; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x i16>, ptr [[NEXT_GEP14]], align 2
+; CHECK-NEXT:    [[TMP7:%.*]] = sext <4 x i16> [[WIDE_LOAD15]] to <4 x i32>
+; CHECK-NEXT:    [[TMP8:%.*]] = mul nsw <4 x i32> [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr <4 x i32> [[TMP8]], <i32 15, i32 15, i32 15, i32 15>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt <4 x i32> [[TMP8]], <i32 1073741824, i32 1073741824, i32 1073741824, i32 1073741824>
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc <4 x i32> [[TMP9]] to <4 x i16>
+; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP10]], <4 x i16> [[TMP11]], <4 x i16> <i16 32767, i16 32767, i16 32767, i16 32767>
+; CHECK-NEXT:    store <4 x i16> [[TMP12]], ptr [[NEXT_GEP13]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[BLOCKSIZE]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[WHILE_BODY_PREHEADER16]]
@@ -61,15 +62,16 @@ define void @arm_mult_q15(ptr %pSrcA, ptr %pSrcB, ptr noalias %pDst, i32 %blockS
 ; CHECK-NEXT:    [[PDST_ADDR_04:%.*]] = phi ptr [ [[INCDEC_PTR4:%.*]], [[WHILE_BODY]] ], [ [[PDST_ADDR_04_PH]], [[WHILE_BODY_PREHEADER16]] ]
 ; CHECK-NEXT:    [[PSRCB_ADDR_03:%.*]] = phi ptr [ [[INCDEC_PTR1:%.*]], [[WHILE_BODY]] ], [ [[PSRCB_ADDR_03_PH]], [[WHILE_BODY_PREHEADER16]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[PSRCA_ADDR_05]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = load i16, ptr [[PSRCA_ADDR_05]], align 2
-; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP13]] to i32
+; CHECK-NEXT:    [[TMP14:%.*]] = load i16, ptr [[PSRCA_ADDR_05]], align 2
+; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP14]] to i32
 ; CHECK-NEXT:    [[INCDEC_PTR1]] = getelementptr inbounds i8, ptr [[PSRCB_ADDR_03]], i32 2
-; CHECK-NEXT:    [[TMP14:%.*]] = load i16, ptr [[PSRCB_ADDR_03]], align 2
-; CHECK-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP14]] to i32
+; CHECK-NEXT:    [[TMP15:%.*]] = load i16, ptr [[PSRCB_ADDR_03]], align 2
+; CHECK-NEXT:    [[CONV2:%.*]] = sext i16 [[TMP15]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[CONV2]], [[CONV]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[MUL]], 15
-; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = tail call i32 @llvm.smin.i32(i32 [[SHR]], i32 32767)
-; CHECK-NEXT:    [[CONV3:%.*]] = trunc i32 [[SPEC_SELECT_I]] to i16
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 15
+; CHECK-NEXT:    [[CMP4_I:%.*]] = icmp slt i32 [[MUL]], 1073741824
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i32 [[SHR]] to i16
+; CHECK-NEXT:    [[CONV3:%.*]] = select i1 [[CMP4_I]], i16 [[TMP16]], i16 32767
 ; CHECK-NEXT:    [[INCDEC_PTR4]] = getelementptr inbounds i8, ptr [[PDST_ADDR_04]], i32 2
 ; CHECK-NEXT:    store i16 [[CONV3]], ptr [[PDST_ADDR_04]], align 2
 ; CHECK-NEXT:    [[DEC]] = add i32 [[BLKCNT_06]], -1
