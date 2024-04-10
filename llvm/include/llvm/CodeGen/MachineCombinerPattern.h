@@ -175,6 +175,8 @@ enum class MachineCombinerPattern {
   FMADD_XA,
   FMSUB,
   FNMSUB,
+  SHXADD_ADD_SLLI_OP1,
+  SHXADD_ADD_SLLI_OP2,
 
   // X86 VNNI
   DPWSSD,
