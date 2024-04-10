@@ -21,8 +21,8 @@ using namespace clang;
 
 SemaSYCL::SemaSYCL(Sema &S) : SemaBase(S) {}
 
-Sema::SemaDiagnosticBuilder SemaSYCL::SYCLDiagIfDeviceCode(SourceLocation Loc,
-                                                           unsigned DiagID) {
+Sema::SemaDiagnosticBuilder SemaSYCL::DiagIfDeviceCode(SourceLocation Loc,
+                                                       unsigned DiagID) {
   assert(getLangOpts().SYCLIsDevice &&
          "Should only be called during SYCL compilation");
   FunctionDecl *FD = dyn_cast<FunctionDecl>(SemaRef.getCurLexicalContext());
@@ -42,9 +42,9 @@ static bool isZeroSizedArray(SemaSYCL &S, QualType Ty) {
   return false;
 }
 
-void SemaSYCL::deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
-                                          llvm::DenseSet<QualType> Visited,
-                                          ValueDecl *DeclToCheck) {
+void SemaSYCL::deepTypeCheckForDevice(SourceLocation UsedAt,
+                                      llvm::DenseSet<QualType> Visited,
+                                      ValueDecl *DeclToCheck) {
   assert(getLangOpts().SYCLIsDevice &&
          "Should only be called during SYCL compilation");
   // Emit notes only for the first discovered declaration of unsupported type
@@ -54,18 +54,18 @@ void SemaSYCL::deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
   auto Check = [&](QualType TypeToCheck, const ValueDecl *D) {
     bool ErrorFound = false;
     if (isZeroSizedArray(*this, TypeToCheck)) {
-      SYCLDiagIfDeviceCode(UsedAt, diag::err_typecheck_zero_array_size) << 1;
+      DiagIfDeviceCode(UsedAt, diag::err_typecheck_zero_array_size) << 1;
       ErrorFound = true;
     }
     // Checks for other types can also be done here.
     if (ErrorFound) {
       if (NeedToEmitNotes) {
         if (auto *FD = dyn_cast<FieldDecl>(D))
-          SYCLDiagIfDeviceCode(FD->getLocation(),
-                               diag::note_illegal_field_declared_here)
+          DiagIfDeviceCode(FD->getLocation(),
+                           diag::note_illegal_field_declared_here)
               << FD->getType()->isPointerType() << FD->getType();
         else
-          SYCLDiagIfDeviceCode(D->getLocation(), diag::note_declared_at);
+          DiagIfDeviceCode(D->getLocation(), diag::note_declared_at);
       }
     }
 
@@ -96,8 +96,8 @@ void SemaSYCL::deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
     auto EmitHistory = [&]() {
       // The first element is always nullptr.
       for (uint64_t Index = 1; Index < History.size(); ++Index) {
-        SYCLDiagIfDeviceCode(History[Index]->getLocation(),
-                             diag::note_within_field_of_type)
+        DiagIfDeviceCode(History[Index]->getLocation(),
+                         diag::note_within_field_of_type)
             << History[Index]->getType();
       }
     };
@@ -134,18 +134,18 @@ void SemaSYCL::deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
   } while (!StackForRecursion.empty());
 }
 
-ExprResult SemaSYCL::BuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                                   SourceLocation LParen,
-                                                   SourceLocation RParen,
-                                                   TypeSourceInfo *TSI) {
+ExprResult SemaSYCL::BuildUniqueStableNameExpr(SourceLocation OpLoc,
+                                               SourceLocation LParen,
+                                               SourceLocation RParen,
+                                               TypeSourceInfo *TSI) {
   return SYCLUniqueStableNameExpr::Create(getASTContext(), OpLoc, LParen,
                                           RParen, TSI);
 }
 
-ExprResult SemaSYCL::ActOnSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                                   SourceLocation LParen,
-                                                   SourceLocation RParen,
-                                                   ParsedType ParsedTy) {
+ExprResult SemaSYCL::ActOnUniqueStableNameExpr(SourceLocation OpLoc,
+                                               SourceLocation LParen,
+                                               SourceLocation RParen,
+                                               ParsedType ParsedTy) {
   TypeSourceInfo *TSI = nullptr;
   QualType Ty = SemaRef.GetTypeFromParser(ParsedTy, &TSI);
 
@@ -154,5 +154,5 @@ ExprResult SemaSYCL::ActOnSYCLUniqueStableNameExpr(SourceLocation OpLoc,
   if (!TSI)
     TSI = getASTContext().getTrivialTypeSourceInfo(Ty, LParen);
 
-  return BuildSYCLUniqueStableNameExpr(OpLoc, LParen, RParen, TSI);
+  return BuildUniqueStableNameExpr(OpLoc, LParen, RParen, TSI);
 }

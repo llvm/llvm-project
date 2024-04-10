@@ -2491,7 +2491,7 @@ ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
   if (T.consumeClose())
     return ExprError();
 
-  return Actions.SYCL().ActOnSYCLUniqueStableNameExpr(
+  return Actions.SYCL().ActOnUniqueStableNameExpr(
       OpLoc, T.getOpenLocation(), T.getCloseLocation(), Ty.get());
 }
 

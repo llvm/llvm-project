@@ -1,4 +1,4 @@
-//===----- SemaOpenACC.h 000- Semantic Analysis for SYCL constructs -------===//
+//===----- SemaSYCL.h ------- Semantic Analysis for SYCL constructs -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -33,9 +33,9 @@ public:
   ///   function will be emitted for the device, emits the diagnostics
   ///   immediately.
   /// - If CurLexicalContext is a function and we are compiling
-  ///   for the device, but we don't know that this function will be codegen'ed
-  ///   for devive yet, creates a diagnostic which is emitted if and when we
-  ///   realize that the function will be codegen'ed.
+  ///   for the device, but we don't know yet that this function will be
+  ///   codegen'ed for the devive, creates a diagnostic which is emitted if and
+  ///   when we realize that the function will be codegen'ed.
   ///
   /// Example usage:
   ///
@@ -43,22 +43,21 @@ public:
   /// target doesn't support it
   /// if (!S.Context.getTargetInfo().hasFloat128Type() &&
   ///     S.getLangOpts().SYCLIsDevice)
-  ///   SYCLDiagIfDeviceCode(Loc, diag::err_type_unsupported) << "__float128";
-  SemaDiagnosticBuilder SYCLDiagIfDeviceCode(SourceLocation Loc,
-                                             unsigned DiagID);
+  ///   DiagIfDeviceCode(Loc, diag::err_type_unsupported) << "__float128";
+  SemaDiagnosticBuilder DiagIfDeviceCode(SourceLocation Loc, unsigned DiagID);
 
-  void deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
-                                  llvm::DenseSet<QualType> Visited,
-                                  ValueDecl *DeclToCheck);
+  void deepTypeCheckForDevice(SourceLocation UsedAt,
+                              llvm::DenseSet<QualType> Visited,
+                              ValueDecl *DeclToCheck);
 
-  ExprResult BuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                           SourceLocation LParen,
-                                           SourceLocation RParen,
-                                           TypeSourceInfo *TSI);
-  ExprResult ActOnSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                           SourceLocation LParen,
-                                           SourceLocation RParen,
-                                           ParsedType ParsedTy);
+  ExprResult BuildUniqueStableNameExpr(SourceLocation OpLoc,
+                                       SourceLocation LParen,
+                                       SourceLocation RParen,
+                                       TypeSourceInfo *TSI);
+  ExprResult ActOnUniqueStableNameExpr(SourceLocation OpLoc,
+                                       SourceLocation LParen,
+                                       SourceLocation RParen,
+                                       ParsedType ParsedTy);
 };
 
 } // namespace clang

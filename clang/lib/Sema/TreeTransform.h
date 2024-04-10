@@ -2633,8 +2633,8 @@ public:
                                              SourceLocation LParen,
                                              SourceLocation RParen,
                                              TypeSourceInfo *TSI) {
-    return getSema().SYCL().BuildSYCLUniqueStableNameExpr(OpLoc, LParen, RParen,
-                                                          TSI);
+    return getSema().SYCL().BuildUniqueStableNameExpr(OpLoc, LParen, RParen,
+                                                      TSI);
   }
 
   /// Build a new predefined expression.

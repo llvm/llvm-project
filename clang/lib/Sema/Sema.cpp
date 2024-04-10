@@ -1905,7 +1905,7 @@ Sema::targetDiag(SourceLocation Loc, unsigned DiagID, const FunctionDecl *FD) {
                                       : CUDADiagIfHostCode(Loc, DiagID);
 
   if (getLangOpts().SYCLIsDevice)
-    return SYCL().SYCLDiagIfDeviceCode(Loc, DiagID);
+    return SYCL().DiagIfDeviceCode(Loc, DiagID);
 
   return SemaDiagnosticBuilder(SemaDiagnosticBuilder::K_Immediate, Loc, DiagID,
                                FD, *this);
@@ -1921,7 +1921,7 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
   // constant byte size like zero length arrays. So, do a deep check for SYCL.
   if (D && LangOpts.SYCLIsDevice) {
     llvm::DenseSet<QualType> Visited;
-    SYCL().deepTypeCheckForSYCLDevice(Loc, Visited, D);
+    SYCL().deepTypeCheckForDevice(Loc, Visited, D);
   }
 
   Decl *C = cast<Decl>(getCurLexicalContext());
