@@ -1629,6 +1629,26 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Intrinsic::vector_reduce_smin:
         computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
         break;
+      case Intrinsic::vector_reduce_mul:
+      case Intrinsic::vector_reduce_add:
+        // We compute the common bits for all elements then apply the reduce op
+        // NumEle times. This is mostly useful for known high zeros.
+        if (auto *VecTy =
+                dyn_cast<FixedVectorType>(I->getOperand(0)->getType())) {
+          computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+          KnownBits SingleKnown = Known;
+          for (unsigned i = 1, e = VecTy->getNumElements(); i < e; ++i) {
+            if (Known.isUnknown())
+              break;
+            if (II->getIntrinsicID() == Intrinsic::vector_reduce_add)
+              Known = KnownBits::computeForAddSub(
+                  /*Add=*/true, /*NSW=*/false, /*NUW=*/false, SingleKnown,
+                  Known);
+            else
+              Known = KnownBits::mul(SingleKnown, Known);
+          }
+        }
+        break;
       case Intrinsic::umin:
         computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
         computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);

@@ -1001,10 +1001,7 @@ define i1 @extract_value_smul_fail(i8 %xx, i8 %yy) {
 
 define i8 @known_reduce_add(<2 x i8> %xx) {
 ; CHECK-LABEL: @known_reduce_add(
-; CHECK-NEXT:    [[X:%.*]] = and <2 x i8> [[XX:%.*]], <i8 3, i8 3>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.add.v2i8(<2 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 8
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x = and <2 x i8> %xx, <i8 3, i8 3>
   %v = call i8 @llvm.vector.reduce.add(<2 x i8> %x)
@@ -1040,10 +1037,7 @@ define i8 @known_reduce_add_fail2(<4 x i8> %xx) {
 
 define i8 @known_reduce_add2(<4 x i8> %xx) {
 ; CHECK-LABEL: @known_reduce_add2(
-; CHECK-NEXT:    [[X:%.*]] = and <4 x i8> [[XX:%.*]], <i8 3, i8 3, i8 3, i8 3>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 32
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x = and <4 x i8> %xx, <i8 3, i8 3, i8 3, i8 3>
   %v = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> %x)
@@ -1053,10 +1047,7 @@ define i8 @known_reduce_add2(<4 x i8> %xx) {
 
 define i8 @known_reduce_add3(<2 x i8> %xx) {
 ; CHECK-LABEL: @known_reduce_add3(
-; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.add.v2i8(<2 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x = or <2 x i8> %xx, <i8 1, i8 1>
   %v = call i8 @llvm.vector.reduce.add(<2 x i8> %x)
@@ -1066,10 +1057,7 @@ define i8 @known_reduce_add3(<2 x i8> %xx) {
 
 define i8 @known_reduce_add33(<3 x i8> %xx) {
 ; CHECK-LABEL: @known_reduce_add33(
-; CHECK-NEXT:    [[X:%.*]] = or <3 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.add.v3i8(<3 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 1
 ;
   %x = or <3 x i8> %xx, <i8 1, i8 1, i8 1>
   %v = call i8 @llvm.vector.reduce.add.v3i8(<3 x i8> %x)
@@ -1079,10 +1067,7 @@ define i8 @known_reduce_add33(<3 x i8> %xx) {
 
 define i8 @known_reduce_add34(<4 x i8> %xx) {
 ; CHECK-LABEL: @known_reduce_add34(
-; CHECK-NEXT:    [[X:%.*]] = or <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x = or <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 1>
   %v = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> %x)
@@ -1120,10 +1105,7 @@ define i8 @known_reduce_add4_fail(<2 x i8> %xx) {
 
 define i8 @known_reduce_mul(<2 x i8> %xx) {
 ; CHECK-LABEL: @known_reduce_mul(
-; CHECK-NEXT:    [[X:%.*]] = and <2 x i8> [[XX:%.*]], <i8 3, i8 3>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.mul.v2i8(<2 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 16
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x = and <2 x i8> %xx, <i8 3, i8 3>
   %v = call i8 @llvm.vector.reduce.mul(<2 x i8> %x)
@@ -1159,10 +1141,7 @@ define i8 @known_reduce_mul_fail2(<3 x i8> %xx) {
 
 define i8 @known_reduce_mul2(<3 x i8> %xx) {
 ; CHECK-LABEL: @known_reduce_mul2(
-; CHECK-NEXT:    [[X:%.*]] = and <3 x i8> [[XX:%.*]], <i8 3, i8 3, i8 3>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.mul.v3i8(<3 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 64
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x = and <3 x i8> %xx, <i8 3, i8 3, i8 3>
   %v = call i8 @llvm.vector.reduce.mul.v3i8(<3 x i8> %x)
@@ -1172,10 +1151,7 @@ define i8 @known_reduce_mul2(<3 x i8> %xx) {
 
 define i8 @known_reduce_mul3(<2 x i8> %xx) {
 ; CHECK-LABEL: @known_reduce_mul3(
-; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.mul.v2i8(<2 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 1
 ;
   %x = or <2 x i8> %xx, <i8 1, i8 1>
   %v = call i8 @llvm.vector.reduce.mul(<2 x i8> %x)
