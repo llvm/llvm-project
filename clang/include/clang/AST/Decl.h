@@ -2496,10 +2496,7 @@ public:
     return FunctionDeclBits.IsDeleted && !isDefaulted();
   }
 
-  void setDeletedAsWritten(bool D = true) { FunctionDeclBits.IsDeleted = D; }
-
-  /// Only valid if isDeletedAsWritten() returns true.
-  void setDeletedMessage(StringLiteral *Message);
+  void setDeletedAsWritten(bool D = true, StringLiteral *Message = nullptr);
 
   /// Determines whether this function is "main", which is the
   /// entry point into an executable program.

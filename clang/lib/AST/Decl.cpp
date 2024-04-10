@@ -3123,6 +3123,19 @@ void FunctionDecl::setDefaultedOrDeletedInfo(
   DefaultedOrDeletedInfo = Info;
 }
 
+void FunctionDecl::setDeletedAsWritten(bool D, StringLiteral *Message) {
+  FunctionDeclBits.IsDeleted = D;
+
+  if (Message) {
+    assert(isDeletedAsWritten() && "Function must be deleted");
+    if (FunctionDeclBits.HasDefaultedOrDeletedInfo)
+      DefaultedOrDeletedInfo->setDeletedMessage(Message);
+    else
+      setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo::Create(
+          getASTContext(), /*Lookups=*/{}, Message));
+  }
+}
+
 void FunctionDecl::DefaultedOrDeletedFunctionInfo::setDeletedMessage(
     StringLiteral *Message) {
   // We should never get here with the DefaultedOrDeletedInfo populated, but
@@ -3138,16 +3151,6 @@ FunctionDecl::DefaultedOrDeletedFunctionInfo *
 FunctionDecl::getDefalutedOrDeletedInfo() const {
   return FunctionDeclBits.HasDefaultedOrDeletedInfo ? DefaultedOrDeletedInfo
                                                     : nullptr;
-}
-
-void FunctionDecl::setDeletedMessage(StringLiteral *Message) {
-  assert(Message && "Should not be called with nullptr");
-  assert(isDeletedAsWritten() && "Function must be deleted");
-  if (FunctionDeclBits.HasDefaultedOrDeletedInfo)
-    DefaultedOrDeletedInfo->setDeletedMessage(Message);
-  else
-    setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo::Create(
-        getASTContext(), /*Lookups=*/{}, Message));
 }
 
 bool FunctionDecl::hasBody(const FunctionDecl *&Definition) const {
