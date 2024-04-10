@@ -570,39 +570,37 @@ struct Log1pOpConversion : public OpConversionPattern<complex::Log1pOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = cast<ComplexType>(adaptor.getComplex().getType());
     auto elementType = cast<FloatType>(type.getElementType());
-    arith::FastMathFlags fmf = op.getFastMathFlagsAttr().getValue();
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
-    Value real = b.create<complex::ReOp>(adaptor.getComplex());
-    Value imag = b.create<complex::ImOp>(adaptor.getComplex());
+    Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
+    Value imag = b.create<complex::ImOp>(elementType, adaptor.getComplex());
 
     Value half = b.create<arith::ConstantOp>(elementType,
                                              b.getFloatAttr(elementType, 0.5));
     Value one = b.create<arith::ConstantOp>(elementType,
                                             b.getFloatAttr(elementType, 1));
-    Value realPlusOne = b.create<arith::AddFOp>(real, one, fmf);
-    Value absRealPlusOne = b.create<math::AbsFOp>(realPlusOne, fmf);
-    Value absImag = b.create<math::AbsFOp>(imag, fmf);
+    Value two = b.create<arith::ConstantOp>(elementType,
+                                            b.getFloatAttr(elementType, 2));
 
-    Value maxAbs = b.create<arith::MaximumFOp>(absRealPlusOne, absImag, fmf);
-    Value minAbs = b.create<arith::MinimumFOp>(absRealPlusOne, absImag, fmf);
+    // log1p(a+bi) = .5*log((a+1)^2+b^2) + i*atan2(b, a + 1)
+    // log((a+1)+bi) = .5*log(a*a + 2*a + 1 + b*b) + i*atan2(b, a+1)
+    // log((a+1)+bi) = .5*log1p(a*a + 2*a + b*b) + i*atan2(b, a+1)
+    Value sumSq = b.create<arith::MulFOp>(real, real, fmf.getValue());
+    sumSq = b.create<arith::AddFOp>(
+        sumSq, b.create<arith::MulFOp>(real, two, fmf.getValue()),
+        fmf.getValue());
+    sumSq = b.create<arith::AddFOp>(
+        sumSq, b.create<arith::MulFOp>(imag, imag, fmf.getValue()),
+        fmf.getValue());
+    Value logSumSq =
+        b.create<math::Log1pOp>(elementType, sumSq, fmf.getValue());
+    Value resultReal = b.create<arith::MulFOp>(logSumSq, half, fmf.getValue());
 
-    Value maxAbsOfRealPlusOneAndImagMinusOne = b.create<arith::SelectOp>(
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, realPlusOne, absImag,
-                                fmf),
-        real, b.create<arith::SubFOp>(maxAbs, one, fmf));
-    Value minMaxRatio = b.create<arith::DivFOp>(minAbs, maxAbs, fmf);
-    Value logOfMaxAbsOfRealPlusOneAndImag =
-        b.create<math::Log1pOp>(maxAbsOfRealPlusOneAndImagMinusOne, fmf);
-    Value logOfSqrtPart = b.create<math::Log1pOp>(
-        b.create<arith::MulFOp>(minMaxRatio, minMaxRatio, fmf), fmf);
-    Value r = b.create<arith::AddFOp>(
-        b.create<arith::MulFOp>(half, logOfSqrtPart, fmf),
-        logOfMaxAbsOfRealPlusOneAndImag, fmf);
-    Value resultReal = b.create<arith::SelectOp>(
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, r, r, fmf), minAbs,
-        r);
-    Value resultImag = b.create<math::Atan2Op>(imag, realPlusOne, fmf);
+    Value realPlusOne = b.create<arith::AddFOp>(real, one, fmf.getValue());
+
+    Value resultImag =
+        b.create<math::Atan2Op>(elementType, imag, realPlusOne, fmf.getValue());
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
     return success();
