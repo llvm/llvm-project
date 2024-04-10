@@ -508,7 +508,7 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
     candidates.NoteCandidates(
         PartialDiagnosticAt(range.getBegin(),
                             S.PDiag(diag::err_ovl_deleted_conversion_in_cast)
-                                << CT << srcType << destType << !!Msg
+                                << CT << srcType << destType << (Msg != nullptr)
                                 << (Msg ? Msg->getString() : StringRef())
                                 << range << src->getSourceRange()),
         S, OCD_ViableCandidates, src);

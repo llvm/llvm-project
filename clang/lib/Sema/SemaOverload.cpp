@@ -14535,7 +14535,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
                                        << UnaryOperator::getOpcodeStr(Opc)
-                                       << !!Msg
+                                       << (Msg != nullptr)
                                        << (Msg ? Msg->getString() : StringRef())
                                        << Input->getSourceRange()),
         *this, OCD_AllCandidates, ArgsArray.drop_front(),
@@ -15084,7 +15084,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
               OpLoc, PDiag(diag::err_ovl_deleted_oper)
                          << getOperatorSpelling(Best->Function->getDeclName()
                                                     .getCXXOverloadedOperator())
-                         << !!Msg << (Msg ? Msg->getString() : StringRef())
+                         << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef())
                          << Args[0]->getSourceRange()
                          << Args[1]->getSourceRange()),
           *this, OCD_AllCandidates, Args, BinaryOperator::getOpcodeStr(Opc),
@@ -15407,7 +15407,7 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
       CandidateSet.NoteCandidates(
           PartialDiagnosticAt(LLoc,
                               PDiag(diag::err_ovl_deleted_oper)
-                                  << "[]" << !!Msg
+                                  << "[]" << (Msg != nullptr)
                                   << (Msg ? Msg->getString() : StringRef())
                                   << Args[0]->getSourceRange() << Range),
           *this, OCD_AllCandidates, Args, "[]", LLoc);
@@ -15901,7 +15901,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(Object.get()->getBeginLoc(),
                             PDiag(diag::err_ovl_deleted_object_call)
-                                << Object.get()->getType() << !!Msg
+                                << Object.get()->getType() << (Msg != nullptr)
                                 << (Msg ? Msg->getString() : StringRef())
                                 << Object.get()->getSourceRange()),
         *this, OCD_AllCandidates, Args);
@@ -16110,7 +16110,7 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
     StringLiteral *Msg = Best->Function->getDeletedMessage();
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
-                                       << "->" << !!Msg
+                                       << "->" << (Msg != nullptr)
                                        << (Msg ? Msg->getString() : StringRef())
                                        << Base->getSourceRange()),
         *this, OCD_AllCandidates, Base);
@@ -16539,7 +16539,7 @@ void Sema::DiagnoseUseOfDeletedFunction(SourceLocation Loc, SourceRange Range,
   StringLiteral *Msg = Fn->getDeletedMessage();
   CandidateSet.NoteCandidates(
       PartialDiagnosticAt(Loc, PDiag(diag::err_ovl_deleted_call)
-                                   << IsMember << Name << !!Msg
+                                   << IsMember << Name << (Msg != nullptr)
                                    << (Msg ? Msg->getString() : StringRef())
                                    << Range),
       *this, OCD_AllCandidates, Args);

@@ -3100,12 +3100,12 @@ FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
       std::max({alignof(DefaultedOrDeletedFunctionInfo),
                 alignof(DeclAccessPair), alignof(StringLiteral *)});
   size_t Size = totalSizeToAlloc<DeclAccessPair, StringLiteral *>(
-      Lookups.size(), !!DeletedMessage);
+      Lookups.size(), DeletedMessage != nullptr);
 
   DefaultedOrDeletedFunctionInfo *Info =
       new (Context.Allocate(Size, Alignment)) DefaultedOrDeletedFunctionInfo;
   Info->NumLookups = Lookups.size();
-  Info->HasDeletedMessage = !!DeletedMessage;
+  Info->HasDeletedMessage = DeletedMessage != nullptr;
 
   std::uninitialized_copy(Lookups.begin(), Lookups.end(),
                           Info->getTrailingObjects<DeclAccessPair>());
