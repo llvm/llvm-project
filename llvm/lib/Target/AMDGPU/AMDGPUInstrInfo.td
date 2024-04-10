@@ -342,6 +342,22 @@ def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
 
 def AMDGPUperm_impl : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
 
+def AMDGPUReadfirstlaneOp : SDTypeProfile<1, 1, [
+  SDTCisSameAs<0, 1>
+]>;
+
+def AMDGPUReadlaneOp : SDTypeProfile<1, 2, [
+  SDTCisSameAs<0, 1>, SDTCisInt<2>
+]>;
+
+def AMDGPUDWritelaneOp : SDTypeProfile<1, 3, [
+  SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisSameAs<0, 3>
+]>;
+
+def AMDGPUreadlane_impl : SDNode<"AMDGPUISD::READLANE", AMDGPUReadlaneOp>;
+def AMDGPUreadfirstlane_impl : SDNode<"AMDGPUISD::READFIRSTLANE", AMDGPUReadfirstlaneOp>;
+def AMDGPUwritelane_impl : SDNode<"AMDGPUISD::WRITELANE", AMDGPUDWritelaneOp>;
+
 // SI+ export
 def AMDGPUExportOp : SDTypeProfile<0, 8, [
   SDTCisInt<0>,       // i8 tgt
@@ -506,3 +522,16 @@ def AMDGPUdiv_fmas : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$vcc
 def AMDGPUperm : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_perm node:$src0, node:$src1, node:$src2),
    (AMDGPUperm_impl node:$src0, node:$src1, node:$src2)]>;
+
+def AMDGPUreadlane : PatFrags<(ops node:$src0, node:$src1),
+  [(int_amdgcn_readlane node:$src0, node:$src1),
+   (AMDGPUreadlane_impl node:$src0, node:$src1)]>;
+
+def AMDGPUreadfirstlane : PatFrags<(ops node:$src),
+  [(int_amdgcn_readfirstlane node:$src),
+   (AMDGPUreadfirstlane_impl node:$src)]>;
+
+def AMDGPUwritelane : PatFrags<(ops node:$src0, node:$src1, node:$src2),
+  [(int_amdgcn_writelane node:$src0, node:$src1, node:$src2),
+   (AMDGPUwritelane_impl node:$src0, node:$src1, node:$src2)]>;
+
