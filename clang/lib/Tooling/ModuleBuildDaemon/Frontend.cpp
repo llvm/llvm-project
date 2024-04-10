@@ -15,6 +15,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ExponentialBackoff.h"
 #include "llvm/Support/Program.h"
 
 #include <cerrno>
@@ -98,13 +99,8 @@ getModuleBuildDaemon(const CompilerInvocation &Clang, const char *Argv0,
     return std::move(Err);
 
   std::chrono::seconds MaxWaitTime(30);
-  std::chrono::microseconds CumulativeTime(0);
-  std::chrono::microseconds WaitTime(10);
-
-  while (CumulativeTime <= MaxWaitTime) {
-    // Wait a bit then check to see if the module build daemon has initialized
-    std::this_thread::sleep_for(WaitTime);
-
+  ExponentialBackoff Backoff(MaxWaitTime);
+  do {
     if (llvm::sys::fs::exists(SocketPath)) {
       Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =
           connectToSocket(SocketPath);
@@ -114,10 +110,7 @@ getModuleBuildDaemon(const CompilerInvocation &Clang, const char *Argv0,
       }
       consumeError(MaybeClient.takeError());
     }
-
-    CumulativeTime += WaitTime;
-    WaitTime = WaitTime * 2;
-  }
+  } while (Backoff.waitForNextAttempt());
 
   // After waiting around 30 seconds give up and return an error
   return llvm::make_error<StringError>(
