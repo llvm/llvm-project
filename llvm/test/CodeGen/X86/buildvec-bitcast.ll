@@ -5,9 +5,10 @@
 ; the vector element type is different than splat type. The example here:
 ;   v8i1 = build_vector (i8 (bitcast (v8i1 X))), ..., (i8 (bitcast (v8i1 X))))
 
-define void @foo(<8 x i1> %mask.i1) {
+define <8 x i1> @foo(<8 x i1> %mask.i1) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = and <8 x i1> %mask.i1, <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>
@@ -20,5 +21,5 @@ entry:
 
 end:                           ; preds = %entry
   %4 = select <8 x i1> %3, <8 x i1> zeroinitializer, <8 x i1> zeroinitializer
-  ret void
+  ret <8 x i1> %4
 }

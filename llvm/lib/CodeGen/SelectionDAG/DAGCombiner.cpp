@@ -23428,22 +23428,21 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
   // If X is a build_vector itself, the concat can become a larger build_vector.
   // TODO: Maybe this is useful for non-splat too?
   if (!LegalOperations) {
-    if (SDValue Splat = cast<BuildVectorSDNode>(N)->getSplatValue()) {
-      // Only change build_vector to a concat_vector if the splat value type is
-      // same as the vector element type.
-      if (Splat.getValueType() == VT.getVectorElementType()) {
-        Splat = peekThroughBitcasts(Splat);
-        EVT SrcVT = Splat.getValueType();
-        if (SrcVT.isVector()) {
-          unsigned NumElts = N->getNumOperands() * SrcVT.getVectorNumElements();
-          EVT NewVT = EVT::getVectorVT(*DAG.getContext(),
-                                       SrcVT.getVectorElementType(), NumElts);
-          if (!LegalTypes || TLI.isTypeLegal(NewVT)) {
-            SmallVector<SDValue, 8> Ops(N->getNumOperands(), Splat);
-            SDValue Concat =
-                DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), NewVT, Ops);
-            return DAG.getBitcast(VT, Concat);
-          }
+    SDValue Splat = cast<BuildVectorSDNode>(N)->getSplatValue();
+    // Only change build_vector to a concat_vector if the splat value type is
+    // same as the vector element type.
+    if (Splat && Splat.getValueType() == VT.getVectorElementType()) {
+      Splat = peekThroughBitcasts(Splat);
+      EVT SrcVT = Splat.getValueType();
+      if (SrcVT.isVector()) {
+        unsigned NumElts = N->getNumOperands() * SrcVT.getVectorNumElements();
+        EVT NewVT = EVT::getVectorVT(*DAG.getContext(),
+                                     SrcVT.getVectorElementType(), NumElts);
+        if (!LegalTypes || TLI.isTypeLegal(NewVT)) {
+          SmallVector<SDValue, 8> Ops(N->getNumOperands(), Splat);
+          SDValue Concat =
+              DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), NewVT, Ops);
+          return DAG.getBitcast(VT, Concat);
         }
       }
     }
