@@ -20,7 +20,9 @@ TEST(ToAPValue, Pointers) {
       "  A a[3];\n"
       "};\n"
       "constexpr S d = {{{true, false}, {false, true}, {false, false}}};\n"
-      "constexpr const bool *b = &d.a[1].z;\n";
+      "constexpr const bool *b = &d.a[1].z;\n"
+      "const void *p = (void*)12;\n"
+      "const void *nullp = (void*)0;\n";
 
   auto AST = tooling::buildASTFromCodeWithArgs(
       Code, {"-fexperimental-new-constant-interpreter"});
@@ -41,15 +43,49 @@ TEST(ToAPValue, Pointers) {
     return Prog.getPtrGlobal(*Prog.getGlobal(D));
   };
 
-  const Pointer &GP = getGlobalPtr("b");
-  const Pointer &P = GP.deref<Pointer>();
-  ASSERT_TRUE(P.isLive());
-  APValue A = P.toAPValue();
-  ASSERT_TRUE(A.isLValue());
-  ASSERT_TRUE(A.hasLValuePath());
-  const auto &Path = A.getLValuePath();
-  ASSERT_EQ(Path.size(), 3u);
-  ASSERT_EQ(A.getLValueBase(), getDecl("d"));
+  {
+    const Pointer &GP = getGlobalPtr("b");
+    const Pointer &P = GP.deref<Pointer>();
+    ASSERT_TRUE(P.isLive());
+    APValue A = P.toAPValue();
+    ASSERT_TRUE(A.isLValue());
+    ASSERT_TRUE(A.hasLValuePath());
+    const auto &Path = A.getLValuePath();
+    ASSERT_EQ(Path.size(), 3u);
+    ASSERT_EQ(A.getLValueBase(), getDecl("d"));
+    // FIXME: Also test all path elements.
+  }
+
+  {
+    const ValueDecl *D = getDecl("p");
+    ASSERT_NE(D, nullptr);
+    const Pointer &GP = getGlobalPtr("p");
+    const Pointer &P = GP.deref<Pointer>();
+    ASSERT_TRUE(P.isIntegralPointer());
+    APValue A = P.toAPValue();
+    ASSERT_TRUE(A.isLValue());
+    ASSERT_TRUE(A.getLValueBase().isNull());
+    APSInt I;
+    bool Success = A.toIntegralConstant(I, D->getType(), AST->getASTContext());
+    ASSERT_TRUE(Success);
+    ASSERT_EQ(I, 12);
+  }
+
+  {
+    const ValueDecl *D = getDecl("nullp");
+    ASSERT_NE(D, nullptr);
+    const Pointer &GP = getGlobalPtr("nullp");
+    const Pointer &P = GP.deref<Pointer>();
+    ASSERT_TRUE(P.isIntegralPointer());
+    APValue A = P.toAPValue();
+    ASSERT_TRUE(A.isLValue());
+    ASSERT_TRUE(A.getLValueBase().isNull());
+    ASSERT_TRUE(A.isNullPointer());
+    APSInt I;
+    bool Success = A.toIntegralConstant(I, D->getType(), AST->getASTContext());
+    ASSERT_TRUE(Success);
+    ASSERT_EQ(I, 0);
+  }
 }
 
 TEST(ToAPValue, FunctionPointers) {
