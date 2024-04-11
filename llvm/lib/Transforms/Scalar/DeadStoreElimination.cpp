@@ -2172,7 +2172,11 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
     unsigned PartialLimit = MemorySSAPartialStoreLimit;
     // Worklist of MemoryAccesses that may be killed by KillingDef.
     SmallSetVector<MemoryAccess *, 8> ToCheck;
+    // Track MemoryAccesses that have been deleted in the loop below, so we can
+    // skip them. Don't use SkipStores for this, which may contain reused
+    // MemoryAccess addresses.
     SmallPtrSet<MemoryAccess *, 8> Deleted;
+    [[maybe_unused]] unsigned OrigNumSkipStores = State.SkipStores.size();
     ToCheck.insert(KillingDef->getDefiningAccess());
 
     bool Shortend = false;
@@ -2282,6 +2286,9 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
         }
       }
     }
+
+    assert(State.SkipStores.size() - OrigNumSkipStores == Deleted.size() &&
+           "SkipStores and Deleted out of sync?");
 
     // Check if the store is a no-op.
     if (!Shortend && State.storeIsNoop(KillingDef, KillingUndObj)) {
