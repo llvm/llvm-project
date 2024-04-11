@@ -305,32 +305,7 @@ static bool isCommutative(Instruction *I) {
   if (auto *Cmp = dyn_cast<CmpInst>(I))
     return Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
-    return BO->isCommutative() ||
-           (BO->getOpcode() == Instruction::Sub &&
-            !BO->hasNUsesOrMore(UsesLimit) &&
-            all_of(
-                BO->uses(),
-                [](const Use &U) {
-                  // Commutative, if icmp eq/ne sub, 0
-                  ICmpInst::Predicate Pred;
-                  if (match(U.getUser(),
-                            m_ICmp(Pred, m_Specific(U.get()), m_Zero())) &&
-                      (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE))
-                    return true;
-                  // Commutative, if abs(sub nsw, true) or abs(sub, false).
-                  ConstantInt *Flag;
-                  return match(U.getUser(),
-                               m_Intrinsic<Intrinsic::abs>(
-                                   m_Specific(U.get()), m_ConstantInt(Flag))) &&
-                         (!cast<Instruction>(U.get())->hasNoSignedWrap() ||
-                          Flag->isOne());
-                })) ||
-           (BO->getOpcode() == Instruction::FSub &&
-            !BO->hasNUsesOrMore(UsesLimit) &&
-            all_of(BO->uses(), [](const Use &U) {
-              return match(U.getUser(),
-                           m_Intrinsic<Intrinsic::fabs>(m_Specific(U.get())));
-            }));
+    return BO->isCommutative();
   return I->isCommutative();
 }
 
@@ -6863,7 +6838,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       // Sort operands of the instructions so that each side is more likely to
       // have the same opcode.
-      if (isa<BinaryOperator>(VL0) && isCommutative(VL0)) {
+      if (isa<BinaryOperator>(VL0) && VL0->isCommutative()) {
         ValueList Left, Right;
         reorderInputsAccordingToOpcode(VL, Left, Right, *this);
         TE->setOperand(0, Left);
@@ -12591,15 +12566,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS,
           RHS);
       propagateIRFlags(V, E->Scalars, VL0, It == MinBWs.end());
-      if (auto *I = dyn_cast<Instruction>(V)) {
+      if (auto *I = dyn_cast<Instruction>(V))
         V = propagateMetadata(I, E->Scalars);
-        // Drop nuw flags for abs(sub(commutative), true).
-        if (!MinBWs.contains(E) && ShuffleOrOp == Instruction::Sub &&
-            any_of(E->Scalars, [](Value *V) {
-              return isCommutative(cast<Instruction>(V));
-            }))
-          I->setHasNoUnsignedWrap(/*b=*/false);
-      }
 
       V = FinalShuffle(V, E, VecTy);
 
@@ -12925,19 +12893,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
 
       propagateIRFlags(V0, OpScalars, E->getMainOp(), It == MinBWs.end());
       propagateIRFlags(V1, AltScalars, E->getAltOp(), It == MinBWs.end());
-      auto DropNuwFlag = [&](Value *Vec, unsigned Opcode) {
-        // Drop nuw flags for abs(sub(commutative), true).
-        if (auto *I = dyn_cast<Instruction>(Vec);
-            I && Opcode == Instruction::Sub && !MinBWs.contains(E) &&
-            any_of(E->Scalars, [](Value *V) {
-              auto *I = cast<Instruction>(V);
-              return I->getOpcode() == Instruction::Sub &&
-                     isCommutative(cast<Instruction>(V));
-            }))
-          I->setHasNoUnsignedWrap(/*b=*/false);
-      };
-      DropNuwFlag(V0, E->getOpcode());
-      DropNuwFlag(V1, E->getAltOpcode());
 
       Value *V = Builder.CreateShuffleVector(V0, V1, Mask);
       if (auto *I = dyn_cast<Instruction>(V)) {
