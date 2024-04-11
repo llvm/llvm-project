@@ -81,8 +81,20 @@ namespace UsesThis {
   struct A {
     int x;
 
+    static inline int y;
+
     template<typename U = void>
     static void f();
+
+    template<typename U = void>
+    void g();
+
+    template<typename U>
+    static auto h() -> A*;
+
+    void i();
+
+    static void j();
 
     template<>
     void f<int>() {
@@ -93,6 +105,13 @@ namespace UsesThis {
       +A::x; // expected-error {{invalid use of member 'x' in static member function}}
       &x; // expected-error {{invalid use of member 'x' in static member function}}
       &A::x;
+      this->y; // expected-error {{invalid use of 'this' outside of a non-static member function}}
+      y;
+      A::y;
+      +y;
+      +A::y;
+      &y;
+      &A::y;
       f();
       f<void>();
       g(); // expected-error {{call to non-static member function without an object argument}}
@@ -105,9 +124,6 @@ namespace UsesThis {
       &A::j;
     }
 
-    template<typename U = void>
-    void g();
-
     template<>
     void g<int>() {
       this->x;
@@ -117,6 +133,13 @@ namespace UsesThis {
       +A::x;
       &x;
       &A::x;
+      this->y;
+      y;
+      A::y;
+      +y;
+      +A::y;
+      &y;
+      &A::y;
       f();
       f<void>();
       g();
@@ -129,14 +152,8 @@ namespace UsesThis {
       &A::j;
     }
 
-    template<typename U>
-    static auto h() -> A*;
-
     template<>
     auto h<int>() -> decltype(this); // expected-error {{'this' cannot be used in a static member function declaration}}
-
-    void i();
-    static void j();
   };
 
   template struct A<int>; // expected-note 3{{in instantiation of}}
