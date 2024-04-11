@@ -402,7 +402,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     bool isAllOrdered() const;
 
     //
-    // storage type methods.
+    // Storage type methods.
     //
 
     /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
