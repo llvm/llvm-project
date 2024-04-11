@@ -1682,10 +1682,11 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
   // type that includes a template template argument. Only the name matters for
   // this purpose, so we use dummy values for the other characteristics of the
   // type.
-  return TemplateTemplateParmDecl::Create(
-      ast, decl_ctx, SourceLocation(),
-      /*Depth*/ 0, /*Position*/ 0,
-      /*IsParameterPack*/ false, &identifier_info, template_param_list);
+  return TemplateTemplateParmDecl::Create(ast, decl_ctx, SourceLocation(),
+                                          /*Depth=*/0, /*Position=*/0,
+                                          /*IsParameterPack=*/false,
+                                          &identifier_info, /*Typename=*/false,
+                                          template_param_list);
 }
 
 ClassTemplateSpecializationDecl *
