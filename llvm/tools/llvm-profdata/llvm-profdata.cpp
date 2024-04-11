@@ -679,8 +679,8 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     }
     const auto &FunctionProfileData = Reader->getProfileData();
     // Add the memprof records into the writer context.
-    for (const auto &I : FunctionProfileData) {
-      WC->Writer.addMemProfRecord(/*Id=*/I.first, /*Record=*/I.second);
+    for (const auto &[GUID, Record] : FunctionProfileData) {
+      WC->Writer.addMemProfRecord(GUID, Record);
     }
     return;
   }
