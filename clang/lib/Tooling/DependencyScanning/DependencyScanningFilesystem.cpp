@@ -159,8 +159,11 @@ DependencyScanningFilesystemSharedCache::CacheShard::
     getOrInsertEntryForFilename(StringRef Filename,
                                 const CachedFileSystemEntry &Entry) {
   std::lock_guard<std::mutex> LockGuard(CacheLock);
-  CacheByFilename[Filename].first = &Entry;
-  return Entry;
+  auto [It, Inserted] = CacheByFilename.insert({Filename, {&Entry, nullptr}});
+  auto &[CachedEntry, CachedRealPath] = It->getValue();
+  if (!Inserted || !CachedEntry)
+    CachedEntry = &Entry;
+  return *CachedEntry;
 }
 
 const CachedRealPath *
