@@ -1839,14 +1839,13 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     if (::mlir::succeeded(parser.parseOptionalKeyword(keyword))) {
       std::optional<int> prio;
       if (mlir::succeeded(parser.parseOptionalLParen())) {
-        auto parsedPrio = mlir::FieldParser<std::optional<int>>::parse(parser);
+        auto parsedPrio = mlir::FieldParser<int>::parse(parser);
         if (mlir::failed(parsedPrio)) {
-          return parser.emitError(
-              parser.getCurrentLocation(),
-              "failed to parse 'priority', of type 'std::optional<int>'");
+          return parser.emitError(parser.getCurrentLocation(),
+                                  "failed to parse 'priority', of type 'int'");
           return failure();
         }
-        prio = parsedPrio.value_or(std::optional<int>());
+        prio = parsedPrio.value_or(int());
         // Parse literal ')'
         if (parser.parseRParen())
           return failure();
@@ -1857,15 +1856,21 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   };
 
   if (parseGlobalDtorCtor("global_ctor", [&](std::optional<int> prio) {
-        auto globalCtorAttr = mlir::cir::GlobalCtorAttr::get(
-            builder.getContext(), nameAttr, prio);
+        mlir::cir::GlobalCtorAttr globalCtorAttr =
+            prio ? mlir::cir::GlobalCtorAttr::get(builder.getContext(),
+                                                  nameAttr, *prio)
+                 : mlir::cir::GlobalCtorAttr::get(builder.getContext(),
+                                                  nameAttr);
         state.addAttribute(getGlobalCtorAttrName(state.name), globalCtorAttr);
       }).failed())
     return failure();
 
   if (parseGlobalDtorCtor("global_dtor", [&](std::optional<int> prio) {
-        auto globalDtorAttr = mlir::cir::GlobalDtorAttr::get(
-            builder.getContext(), nameAttr, prio);
+        mlir::cir::GlobalDtorAttr globalDtorAttr =
+            prio ? mlir::cir::GlobalDtorAttr::get(builder.getContext(),
+                                                  nameAttr, *prio)
+                 : mlir::cir::GlobalDtorAttr::get(builder.getContext(),
+                                                  nameAttr);
         state.addAttribute(getGlobalDtorAttrName(state.name), globalDtorAttr);
       }).failed())
     return failure();
@@ -1976,16 +1981,14 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
   if (auto globalCtor = getGlobalCtorAttr()) {
     p << " global_ctor";
-    auto prio = globalCtor.getPriority();
-    if (prio)
-      p << "(" << *prio << ")";
+    if (!globalCtor.isDefaultPriority())
+      p << "(" << globalCtor.getPriority() << ")";
   }
 
   if (auto globalDtor = getGlobalDtorAttr()) {
     p << " global_dtor";
-    auto prio = globalDtor.getPriority();
-    if (prio)
-      p << "(" << *prio << ")";
+    if (!globalDtor.isDefaultPriority())
+      p << "(" << globalDtor.getPriority() << ")";
   }
 
   if (!getExtraAttrs().getElements().empty()) {
