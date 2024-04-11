@@ -116,7 +116,8 @@ This is represented by the following TableGen class.
 .. code-block::
 
   class DXILShaderModel<int major, int minor> {
-    int MajorAndMinor = !add(!mul(major, 10), minor);
+    int Major = major;
+    int Minor = minor;
   }
 
 Each of the valid shader models is defined as TableGen records. For
