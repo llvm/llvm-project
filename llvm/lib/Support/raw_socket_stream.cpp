@@ -265,7 +265,10 @@ void ListeningSocket::shutdown() {
 
   // Ensure ::poll returns if shutdown is called by a seperate thread
   char Byte = 'A';
-  ::write(PipeFD[1], &Byte, 1);
+  ssize_t written = ::write(PipeFD[1], &Byte, 1);
+
+  // Ignore any write() error
+  (void)written;
 }
 
 ListeningSocket::~ListeningSocket() {
