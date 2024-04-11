@@ -2858,6 +2858,16 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_readz_horiz_x4 : SME_MOVAZ_TileToVector_X4_Intrinsic;
   def int_aarch64_sme_readz_vert_x4  : SME_MOVAZ_TileToVector_X4_Intrinsic;
 
+  class SME_MOVAZ_TileToVector_Intrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+          [llvm_i32_ty, llvm_i32_ty],
+          [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+
+  def int_aarch64_sme_readz_horiz : SME_MOVAZ_TileToVector_Intrinsic;
+  def int_aarch64_sme_readz_vert  : SME_MOVAZ_TileToVector_Intrinsic;
+
+  def int_aarch64_sme_readz_q_horiz : SME_MOVAZ_TileToVector_Intrinsic;
+  def int_aarch64_sme_readz_q_vert  : SME_MOVAZ_TileToVector_Intrinsic;
 
   def int_aarch64_sme_zero : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
@@ -3686,7 +3696,7 @@ def int_aarch64_sve_pmov_to_pred_lane_zero : SVE2_1VectorArg_Pred_Intrinsic;
 
 def int_aarch64_sve_pmov_to_vector_lane_merging : SVE2_Pred_1VectorArgIndexed_Intrinsic;
    
-def int_aarch64_sve_pmov_to_vector_lane_zeroing : SVE2_Pred_1VectorArg_Intrinsic;
 
 def int_aarch64_sme_mopa_nonwide : SME_OuterProduct_Intrinsic;
 def int_aarch64_sme_mops_nonwide : SME_OuterProduct_Intrinsic;
+def int_aarch64_sve_pmov_to_vector_lane_zeroing : SVE2_Pred_1VectorArg_Intrinsic;
