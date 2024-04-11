@@ -69,7 +69,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
 
   // This just needs to be some symbol in the binary; C++ doesn't
   // allow taking the address of ::main however.
-  void *P = (void*) (intptr_t) GetExecutablePath;
+  void *P = (void *)(intptr_t)GetExecutablePath;
   return llvm::sys::fs::getMainExecutable(Argv0, P);
 }
 
@@ -102,10 +102,10 @@ static void insertTargetAndModeArgs(const ParsedClangName &NameParts,
   }
 
   if (NameParts.TargetIsValid) {
-    const char *arr[] = {"-target", GetStableCStr(SavedStrings,
-                                                  NameParts.TargetPrefix)};
-    ArgVector.insert(ArgVector.begin() + InsertionPoint,
-                     std::begin(arr), std::end(arr));
+    const char *arr[] = {"-target",
+                         GetStableCStr(SavedStrings, NameParts.TargetPrefix)};
+    ArgVector.insert(ArgVector.begin() + InsertionPoint, std::begin(arr),
+                     std::end(arr));
   }
 }
 
@@ -225,6 +225,8 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   return 1;
 }
 
+// Cratels:  build 目录下会生成一个 main 方法。在该方法中调用 clang_main
+// 这里是所有程序的入口
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   noteBottomOfStack();
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
@@ -316,8 +318,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(Args);
 
-  TextDiagnosticPrinter *DiagClient
-    = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
+  TextDiagnosticPrinter *DiagClient =
+      new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
   FixupDiagPrefixExeName(DiagClient, ProgName);
 
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
@@ -423,8 +425,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
     llvm::dbgs() << llvm::getBugReportMsg();
   if (FailingCommand != nullptr &&
-    TheDriver.maybeGenerateCompilationDiagnostics(CommandStatus, ReproLevel,
-                                                  *C, *FailingCommand))
+      TheDriver.maybeGenerateCompilationDiagnostics(CommandStatus, ReproLevel,
+                                                    *C, *FailingCommand))
     Res = 1;
 
   Diags.getClient()->finish();
