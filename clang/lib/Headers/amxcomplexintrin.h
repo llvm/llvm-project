@@ -62,6 +62,8 @@
 ///    The 2nd source tile. Max size is 1024 Bytes.
 #define _tile_cmmimfp16ps(dst, a, b) __builtin_ia32_tcmmimfp16ps(dst, a, b)
 
+;
+
 /// Perform matrix multiplication of two tiles containing complex elements and
 ///    accumulate the results into a packed single precision tile. Each dword
 ///    element in input tiles \a a and \a b is interpreted as a complex number
@@ -106,6 +108,8 @@
 /// \param b
 ///    The 2nd source tile. Max size is 1024 Bytes.
 #define _tile_cmmrlfp16ps(dst, a, b) __builtin_ia32_tcmmrlfp16ps(dst, a, b)
+
+;
 
 static __inline__ _tile1024i __DEFAULT_FN_ATTRS_COMPLEX
 _tile_cmmimfp16ps_internal(unsigned short m, unsigned short n, unsigned short k,
