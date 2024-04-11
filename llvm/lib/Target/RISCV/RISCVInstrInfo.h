@@ -49,6 +49,16 @@ unsigned getBrCond(CondCode CC);
 
 } // end of namespace RISCVCC
 
+// RISCV MachineCombiner patterns
+enum RISCVMachineCombinerPattern : unsigned {
+  FMADD_AX = MachineCombinerPattern::TARGET_PATTERN_START,
+  FMADD_XA,
+  FMSUB,
+  FNMSUB,
+  SHXADD_ADD_SLLI_OP1,
+  SHXADD_ADD_SLLI_OP2,
+};
+
 class RISCVInstrInfo : public RISCVGenInstrInfo {
 
 public:
@@ -240,17 +250,18 @@ public:
 
   MachineTraceStrategy getMachineCombinerTraceStrategy() const override;
 
-  bool
-  getMachineCombinerPatterns(MachineInstr &Root,
-                             SmallVectorImpl<MachineCombinerPattern> &Patterns,
-                             bool DoRegPressureReduce) const override;
+  CombinerObjective getCombinerObjective(unsigned Pattern) const override;
+
+  bool getMachineCombinerPatterns(MachineInstr &Root,
+                                  SmallVectorImpl<unsigned> &Patterns,
+                                  bool DoRegPressureReduce) const override;
 
   void
-  finalizeInsInstrs(MachineInstr &Root, MachineCombinerPattern &P,
+  finalizeInsInstrs(MachineInstr &Root, unsigned &Pattern,
                     SmallVectorImpl<MachineInstr *> &InsInstrs) const override;
 
   void genAlternativeCodeSequence(
-      MachineInstr &Root, MachineCombinerPattern Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
