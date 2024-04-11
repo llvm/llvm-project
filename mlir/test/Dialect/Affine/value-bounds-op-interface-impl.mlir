@@ -81,12 +81,53 @@ func.func @composed_affine_apply(%i1 : index) -> (index) {
 
 // -----
 
+func.func @are_equal(%i1 : index) {
+  %i2 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16)>(%i1)
+  %i3 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16 + 8)>(%i1)
+  %s = affine.apply affine_map<()[s0, s1] -> (s0 - s1)>()[%i2, %i3]
+  // expected-remark @below{{false}}
+   "test.compare"(%i2, %i3) : (index, index) -> ()
+  return
+}
+
+// -----
+
 // Test for affine::fullyComposeAndCheckIfEqual
 func.func @composed_are_equal(%i1 : index) {
   %i2 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16)>(%i1)
   %i3 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16 + 8)>(%i1)
   %s = affine.apply affine_map<()[s0, s1] -> (s0 - s1)>()[%i2, %i3]
   // expected-remark @below{{different}}
-   "test.are_equal"(%i2, %i3) {compose} : (index, index) -> ()
+   "test.compare"(%i2, %i3) {compose} : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @compare_affine_max(%a: index, %b: index) {
+  %0 = affine.max affine_map<()[s0, s1] -> (s0, s1)>()[%a, %b]
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %a) {cmp = "GE"} : (index, index) -> ()
+  // expected-error @below{{unknown}}
+  "test.compare"(%0, %a) {cmp = "GT"} : (index, index) -> ()
+  // expected-remark @below{{false}}
+  "test.compare"(%0, %a) {cmp = "LT"} : (index, index) -> ()
+  // expected-error @below{{unknown}}
+  "test.compare"(%0, %a) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @compare_affine_min(%a: index, %b: index) {
+  %0 = affine.min affine_map<()[s0, s1] -> (s0, s1)>()[%a, %b]
+  // expected-error @below{{unknown}}
+  "test.compare"(%0, %a) {cmp = "GE"} : (index, index) -> ()
+  // expected-remark @below{{false}}
+  "test.compare"(%0, %a) {cmp = "GT"} : (index, index) -> ()
+  // expected-error @below{{unknown}}
+  "test.compare"(%0, %a) {cmp = "LT"} : (index, index) -> ()
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %a) {cmp = "LE"} : (index, index) -> ()
   return
 }
