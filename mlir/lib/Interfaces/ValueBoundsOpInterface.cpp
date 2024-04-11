@@ -758,8 +758,8 @@ bool ValueBoundsConstraintSet::compare(AffineMap lhs, ValueDimList lhsOperands,
   auto stopCondition = [&](Value v, std::optional<int64_t> dim,
                            ValueBoundsConstraintSet &cstr) {
     // Keep processing as long as lhs/rhs were not processed.
-    if (lhsPos >= cstr.positionToValueDim.size() ||
-        rhsPos >= cstr.positionToValueDim.size())
+    if (size_t(lhsPos) >= cstr.positionToValueDim.size() ||
+        size_t(rhsPos) >= cstr.positionToValueDim.size())
       return false;
     // Keep processing as long as the relation cannot be proven.
     return cstr.comparePos(lhsPos, cmp, rhsPos);
