@@ -16913,11 +16913,10 @@ Decl *Sema::ActOnEmptyDeclaration(Scope *S,
 /// Perform semantic analysis for the variable declaration that
 /// occurs within a C++ catch clause, returning the newly-created
 /// variable.
-VarDecl *Sema::BuildExceptionDeclaration(Scope *S,
-                                         TypeSourceInfo *TInfo,
+VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
                                          SourceLocation StartLoc,
                                          SourceLocation Loc,
-                                         IdentifierInfo *Name) {
+                                         const IdentifierInfo *Name) {
   bool Invalid = false;
   QualType ExDeclType = TInfo->getType();
 
@@ -17062,7 +17061,7 @@ Decl *Sema::ActOnExceptionDeclarator(Scope *S, Declarator &D) {
     Invalid = true;
   }
 
-  IdentifierInfo *II = D.getIdentifier();
+  const IdentifierInfo *II = D.getIdentifier();
   if (NamedDecl *PrevDecl = LookupSingleName(S, II, D.getIdentifierLoc(),
                                              LookupOrdinaryName,
                                              ForVisibleRedeclaration)) {
@@ -18564,6 +18563,9 @@ DeclResult Sema::ActOnCXXConditionDeclaration(Scope *S, Declarator &D) {
     return true;
   }
 
+  if (auto *VD = dyn_cast<VarDecl>(Dcl))
+    VD->setCXXCondDecl();
+
   return Dcl;
 }
 
@@ -19155,7 +19157,7 @@ MSPropertyDecl *Sema::HandleMSProperty(Scope *S, RecordDecl *Record,
                                        InClassInitStyle InitStyle,
                                        AccessSpecifier AS,
                                        const ParsedAttr &MSPropertyAttr) {
-  IdentifierInfo *II = D.getIdentifier();
+  const IdentifierInfo *II = D.getIdentifier();
   if (!II) {
     Diag(DeclStart, diag::err_anonymous_property);
     return nullptr;
