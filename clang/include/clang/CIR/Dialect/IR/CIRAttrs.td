@@ -646,11 +646,12 @@ def NoThrowAttr : CIRUnitAttr<"NoThrow", "nothrow"> {
   let storageType = [{ NoThrowAttr }];
 }
 
-def GlobalCtorAttr : CIR_Attr<"GlobalCtor", "global_ctor"> {
-  let summary = "Indicates a function is a global constructor.";
-  let description = [{
-    Describing a global constructor with an optional priority.
-  }];
+class CIR_GlobalCtorDtor<string name, string attrMnemonic,
+                         string sum, string desc>
+    : CIR_Attr<"Global" # name, "global_" # attrMnemonic> {
+  let summary = sum;
+  let description = desc;
+
   let parameters = (ins "StringAttr":$name,
                         OptionalParameter<"std::optional<int>">:$priority);
   let assemblyFormat = [{
@@ -667,6 +668,11 @@ def GlobalCtorAttr : CIR_Attr<"GlobalCtor", "global_ctor"> {
   ];
   let skipDefaultBuilders = 1;
 }
+
+def GlobalCtorAttr : CIR_GlobalCtorDtor<"Ctor", "ctor",
+  "Marks a function as a global constructor",
+  "Describes a global constructor with optional priority"
+>;
 
 def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
   let summary = "Represents a bit field info";
