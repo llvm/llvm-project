@@ -98,3 +98,25 @@ _Complex c = 1.0f; // expected-warning {{plain '_Complex' requires a type specif
 // FIXME: the warning diagnostic here is incorrect and should not be emitted.
 _Imaginary i = 1.0f; // expected-warning {{plain '_Complex' requires a type specifier; assuming '_Complex double'}} \
                         expected-error {{imaginary types are not supported}}
+
+void func(void) {
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wpedantic"
+  // Increment and decrement operators have a constraint that their operand be
+  // a real type; Clang supports this as an extension on complex types as well.
+  // FIXME: the diagnostic message says "on complex integer type" but then
+  // specifies the type as _Complex float. Oops.
+  _Complex float cf = 0.0f;
+
+  cf++; // expected-warning {{ISO C does not support '++'/'--' on complex integer type '_Complex float'}}
+  ++cf; // expected-warning {{ISO C does not support '++'/'--' on complex integer type '_Complex float'}}
+
+  cf--; // expected-warning {{ISO C does not support '++'/'--' on complex integer type '_Complex float'}}
+  --cf; // expected-warning {{ISO C does not support '++'/'--' on complex integer type '_Complex float'}}
+
+  // However, unary + and - are fine, as is += 1.
+  (void)-cf;
+  (void)+cf;
+  cf += 1;
+#pragma clang diagnostic pop
+}
