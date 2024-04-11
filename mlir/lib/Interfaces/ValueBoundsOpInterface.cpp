@@ -205,7 +205,7 @@ int64_t ValueBoundsConstraintSet::insert(bool isSymbol) {
 int64_t ValueBoundsConstraintSet::insert(AffineMap map, ValueDimList operands,
                                          bool isSymbol) {
   assert(map.getNumResults() == 1 && "expected affine map with one result");
-  int64_t pos = insert(/*isSymbol=*/false);
+  int64_t pos = insert(isSymbol);
 
   // Add map and operands to the constraint set. Dimensions are converted to
   // symbols. All operands are added to the worklist (unless they were already
