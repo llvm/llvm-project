@@ -66,16 +66,17 @@ llvm.func @_QPopenmp_target_data_region(%0 : !llvm.ptr) {
 // CHECK:         %[[VAL_2:.*]] = alloca [1 x ptr], align 8
 // CHECK:         br label %[[VAL_3:.*]]
 // CHECK:       entry:                                            ; preds = %[[VAL_4:.*]]
+// CHECK:         %[[ARR_OFFSET:.*]] = getelementptr inbounds [1024 x i32], ptr %[[ARR_DATA:.*]], i64 0, i64 0
 // CHECK:         %[[VAL_5:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
-// CHECK:         store ptr %[[VAL_6:.*]], ptr %[[VAL_5]], align 8
+// CHECK:         store ptr %[[ARR_DATA]], ptr %[[VAL_5]], align 8
 // CHECK:         %[[VAL_7:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         store ptr %[[VAL_6]], ptr %[[VAL_7]], align 8
+// CHECK:         store ptr %[[ARR_OFFSET]], ptr %[[VAL_7]], align 8
 // CHECK:         %[[VAL_8:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_2]], i64 0, i64 0
 // CHECK:         store ptr null, ptr %[[VAL_8]], align 8
 // CHECK:         %[[VAL_9:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_10:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
 // CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_9]], ptr %[[VAL_10]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
-// CHECK:         %[[VAL_11:.*]] = getelementptr [1024 x i32], ptr %[[VAL_6]], i32 0, i64 0
+// CHECK:         %[[VAL_11:.*]] = getelementptr [1024 x i32], ptr %[[ARR_DATA]], i32 0, i64 0
 // CHECK:         store i32 99, ptr %[[VAL_11]], align 4
 // CHECK:         %[[VAL_12:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_13:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
@@ -153,16 +154,18 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
 // CHECK:       entry:                                            ; preds = %[[VAL_12:.*]]
 // CHECK:         br i1 %[[VAL_9]], label %[[VAL_13:.*]], label %[[VAL_14:.*]]
 // CHECK:       omp_if.then:                                      ; preds = %[[VAL_11]]
+// CHECK:         %[[ARR_OFFSET1:.*]] = getelementptr inbounds [1024 x i32], ptr %[[VAL_16:.*]], i64 0, i64 0
+// CHECK:         %[[ARR_OFFSET2:.*]] = getelementptr inbounds [512 x i32], ptr %[[VAL_20:.*]], i64 0, i64 0
 // CHECK:         %[[VAL_15:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_3]], i32 0, i32 0
 // CHECK:         store ptr %[[VAL_16:.*]], ptr %[[VAL_15]], align 8
 // CHECK:         %[[VAL_17:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_4]], i32 0, i32 0
-// CHECK:         store ptr %[[VAL_16]], ptr %[[VAL_17]], align 8
+// CHECK:         store ptr %[[ARR_OFFSET1]], ptr %[[VAL_17]], align 8
 // CHECK:         %[[VAL_18:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_5]], i64 0, i64 0
 // CHECK:         store ptr null, ptr %[[VAL_18]], align 8
 // CHECK:         %[[VAL_19:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_3]], i32 0, i32 1
 // CHECK:         store ptr %[[VAL_20:.*]], ptr %[[VAL_19]], align 8
 // CHECK:         %[[VAL_21:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_4]], i32 0, i32 1
-// CHECK:         store ptr %[[VAL_20]], ptr %[[VAL_21]], align 8
+// CHECK:         store ptr %[[ARR_OFFSET2]], ptr %[[VAL_21]], align 8
 // CHECK:         %[[VAL_22:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_5]], i64 0, i64 1
 // CHECK:         store ptr null, ptr %[[VAL_22]], align 8
 // CHECK:         %[[VAL_23:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_3]], i32 0, i32 0
@@ -176,26 +179,28 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
 // CHECK:         %[[VAL_27:.*]] = icmp sgt i32 %[[VAL_26]], 10
 // CHECK:         %[[VAL_28:.*]] = load i32, ptr %[[VAL_6]], align 4
 // CHECK:         br i1 %[[VAL_27]], label %[[VAL_29:.*]], label %[[VAL_30:.*]]
-// CHECK:       omp_if.then1:                                     ; preds = %[[VAL_25]]
+// CHECK:       omp_if.then2:                                     ; preds = %[[VAL_25]]
+// CHECK:         %[[ARR_OFFSET3:.*]] = getelementptr inbounds [1024 x i32], ptr %[[VAL_16]], i64 0, i64 0
+// CHECK:         %[[ARR_OFFSET4:.*]] = getelementptr inbounds [512 x i32], ptr %[[VAL_20]], i64 0, i64 0
 // CHECK:         %[[VAL_31:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         store ptr %[[VAL_16]], ptr %[[VAL_31]], align 8
 // CHECK:         %[[VAL_32:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         store ptr %[[VAL_16]], ptr %[[VAL_32]], align 8
+// CHECK:         store ptr %[[ARR_OFFSET3]], ptr %[[VAL_32]], align 8
 // CHECK:         %[[VAL_33:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_2]], i64 0, i64 0
 // CHECK:         store ptr null, ptr %[[VAL_33]], align 8
 // CHECK:         %[[VAL_34:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_0]], i32 0, i32 1
 // CHECK:         store ptr %[[VAL_20]], ptr %[[VAL_34]], align 8
 // CHECK:         %[[VAL_35:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_1]], i32 0, i32 1
-// CHECK:         store ptr %[[VAL_20]], ptr %[[VAL_35]], align 8
+// CHECK:         store ptr %[[ARR_OFFSET4]], ptr %[[VAL_35]], align 8
 // CHECK:         %[[VAL_36:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_2]], i64 0, i64 1
 // CHECK:         store ptr null, ptr %[[VAL_36]], align 8
 // CHECK:         %[[VAL_37:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_38:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_1]], i32 0, i32 0
 // CHECK:         call void @__tgt_target_data_end_mapper(ptr @3, i64 -1, i32 2, ptr %[[VAL_37]], ptr %[[VAL_38]], ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr @.offload_mapnames.3, ptr null)
 // CHECK:         br label %[[VAL_39:.*]]
-// CHECK:       omp_if.else5:                                     ; preds = %[[VAL_25]]
+// CHECK:       omp_if.else8:                                     ; preds = %[[VAL_25]]
 // CHECK:         br label %[[VAL_39]]
-// CHECK:       omp_if.end6:                                      ; preds = %[[VAL_30]], %[[VAL_29]]
+// CHECK:       omp_if.end9:                                      ; preds = %[[VAL_30]], %[[VAL_29]]
 // CHECK:         ret void
 
 // -----

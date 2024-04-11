@@ -542,6 +542,7 @@ private:
   void WriteReferencedSelectorsPool(Sema &SemaRef);
   void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver &IdResolver,
                             bool IsModule);
+  void WriteDeclAndTypes(ASTContext &Context);
   void WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord);
   void WriteDeclContextVisibleUpdate(const DeclContext *DC);
   void WriteFPPragmaOptions(const FPOptionsOverride &Opts);
@@ -846,7 +847,7 @@ private:
 /// AST and semantic-analysis consumer that generates a
 /// precompiled header from the parsed source code.
 class PCHGenerator : public SemaConsumer {
-  const Preprocessor &PP;
+  Preprocessor &PP;
   std::string OutputFile;
   std::string isysroot;
   Sema *SemaPtr;
@@ -867,11 +868,12 @@ protected:
   DiagnosticsEngine &getDiagnostics() const {
     return SemaPtr->getDiagnostics();
   }
+  Preprocessor &getPreprocessor() { return PP; }
 
   virtual Module *getEmittingModule(ASTContext &Ctx);
 
 public:
-  PCHGenerator(const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+  PCHGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                StringRef OutputFile, StringRef isysroot,
                std::shared_ptr<PCHBuffer> Buffer,
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
@@ -893,7 +895,7 @@ protected:
   virtual Module *getEmittingModule(ASTContext &Ctx) override;
 
 public:
-  ReducedBMIGenerator(const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+  ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                       StringRef OutputFile);
 
   void HandleTranslationUnit(ASTContext &Ctx) override;

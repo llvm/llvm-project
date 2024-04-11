@@ -2267,6 +2267,10 @@ EXIT STATUS
 :program:`llvm-debuginfo-analyzer` returns 0 if the input files were
 parsed and printed successfully. Otherwise, it returns 1.
 
+LIMITATIONS AND KNOWN ISSUES
+----------------------------
+See :download:`Limitations <../../tools/llvm-debuginfo-analyzer/README.md>`.
+
 SEE ALSO
 --------
 :manpage:`llvm-dwarfdump`

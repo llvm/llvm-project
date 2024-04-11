@@ -38,8 +38,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "CodeGenTarget.h"
-#include "PredicateExpander.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/PredicateExpander.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -108,7 +108,8 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     OS.indent(4) << "const TargetSubtargetInfo &STI,\n";
     OS.indent(4) << "const MachineInstr *FirstMI,\n";
     OS.indent(4) << "const MachineInstr &SecondMI) {\n";
-    OS.indent(2) << "auto &MRI = SecondMI.getMF()->getRegInfo();\n";
+    OS.indent(2)
+        << "[[maybe_unused]] auto &MRI = SecondMI.getMF()->getRegInfo();\n";
 
     emitPredicates(Predicates, IsCommutable, PE, OS);
 

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/log2f.h"

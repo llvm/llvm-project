@@ -41,24 +41,25 @@ DependencyScanningWorkerFilesystem::readFile(StringRef Filename) {
   return TentativeEntry(Stat, std::move(Buffer));
 }
 
-EntryRef DependencyScanningWorkerFilesystem::scanForDirectivesIfNecessary(
-    const CachedFileSystemEntry &Entry, StringRef Filename, bool Disable) {
-  if (Entry.isError() || Entry.isDirectory() || Disable ||
-      !shouldScanForDirectives(Filename))
-    return EntryRef(Filename, Entry);
+bool DependencyScanningWorkerFilesystem::ensureDirectiveTokensArePopulated(
+    EntryRef Ref) {
+  auto &Entry = Ref.Entry;
+
+  if (Entry.isError() || Entry.isDirectory())
+    return false;
 
   CachedFileContents *Contents = Entry.getCachedContents();
   assert(Contents && "contents not initialized");
 
   // Double-checked locking.
   if (Contents->DepDirectives.load())
-    return EntryRef(Filename, Entry);
+    return true;
 
   std::lock_guard<std::mutex> GuardLock(Contents->ValueLock);
 
   // Double-checked locking.
   if (Contents->DepDirectives.load())
-    return EntryRef(Filename, Entry);
+    return true;
 
   SmallVector<dependency_directives_scan::Directive, 64> Directives;
   // Scan the file for preprocessor directives that might affect the
@@ -69,16 +70,16 @@ EntryRef DependencyScanningWorkerFilesystem::scanForDirectivesIfNecessary(
     Contents->DepDirectiveTokens.clear();
     // FIXME: Propagate the diagnostic if desired by the client.
     Contents->DepDirectives.store(new std::optional<DependencyDirectivesTy>());
-    return EntryRef(Filename, Entry);
+    return false;
   }
 
   // This function performed double-checked locking using `DepDirectives`.
   // Assigning it must be the last thing this function does, otherwise other
-  // threads may skip the
-  // critical section (`DepDirectives != nullptr`), leading to a data race.
+  // threads may skip the critical section (`DepDirectives != nullptr`), leading
+  // to a data race.
   Contents->DepDirectives.store(
       new std::optional<DependencyDirectivesTy>(std::move(Directives)));
-  return EntryRef(Filename, Entry);
+  return true;
 }
 
 DependencyScanningFilesystemSharedCache::
@@ -161,34 +162,11 @@ DependencyScanningFilesystemSharedCache::CacheShard::
   return *EntriesByFilename.insert({Filename, &Entry}).first->getValue();
 }
 
-/// Whitelist file extensions that should be minimized, treating no extension as
-/// a source file that should be minimized.
-///
-/// This is kinda hacky, it would be better if we knew what kind of file Clang
-/// was expecting instead.
-static bool shouldScanForDirectivesBasedOnExtension(StringRef Filename) {
-  StringRef Ext = llvm::sys::path::extension(Filename);
-  if (Ext.empty())
-    return true; // C++ standard library
-  return llvm::StringSwitch<bool>(Ext)
-      .CasesLower(".c", ".cc", ".cpp", ".c++", ".cxx", true)
-      .CasesLower(".h", ".hh", ".hpp", ".h++", ".hxx", true)
-      .CasesLower(".m", ".mm", true)
-      .CasesLower(".i", ".ii", ".mi", ".mmi", true)
-      .CasesLower(".def", ".inc", true)
-      .Default(false);
-}
-
 static bool shouldCacheStatFailures(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
     return false; // This may be the module cache directory.
-  // Only cache stat failures on files that are not expected to change during
-  // the build.
-  StringRef FName = llvm::sys::path::filename(Filename);
-  if (FName == "module.modulemap" || FName == "module.map")
-    return true;
-  return shouldScanForDirectivesBasedOnExtension(Filename);
+  return true;
 }
 
 DependencyScanningWorkerFilesystem::DependencyScanningWorkerFilesystem(
@@ -199,11 +177,6 @@ DependencyScanningWorkerFilesystem::DependencyScanningWorkerFilesystem(
       SharedCache(SharedCache),
       WorkingDirForCacheLookup(llvm::errc::invalid_argument) {
   updateWorkingDirForCacheLookup();
-}
-
-bool DependencyScanningWorkerFilesystem::shouldScanForDirectives(
-    StringRef Filename) {
-  return shouldScanForDirectivesBasedOnExtension(Filename);
 }
 
 const CachedFileSystemEntry &
@@ -259,7 +232,7 @@ DependencyScanningWorkerFilesystem::computeAndStoreResult(
 
 llvm::ErrorOr<EntryRef>
 DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
-    StringRef OriginalFilename, bool DisableDirectivesScanning) {
+    StringRef OriginalFilename) {
   StringRef FilenameForLookup;
   SmallString<256> PathBuf;
   if (llvm::sys::path::is_absolute_gnu(OriginalFilename)) {
@@ -276,15 +249,11 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
   assert(llvm::sys::path::is_absolute_gnu(FilenameForLookup));
   if (const auto *Entry =
           findEntryByFilenameWithWriteThrough(FilenameForLookup))
-    return scanForDirectivesIfNecessary(*Entry, OriginalFilename,
-                                        DisableDirectivesScanning)
-        .unwrapError();
+    return EntryRef(OriginalFilename, *Entry).unwrapError();
   auto MaybeEntry = computeAndStoreResult(OriginalFilename, FilenameForLookup);
   if (!MaybeEntry)
     return MaybeEntry.getError();
-  return scanForDirectivesIfNecessary(*MaybeEntry, OriginalFilename,
-                                      DisableDirectivesScanning)
-      .unwrapError();
+  return EntryRef(OriginalFilename, *MaybeEntry).unwrapError();
 }
 
 llvm::ErrorOr<llvm::vfs::Status>
