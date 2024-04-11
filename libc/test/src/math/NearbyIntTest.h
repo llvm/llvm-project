@@ -26,9 +26,7 @@ class NearbyIntTestTemplate : public LIBC_NAMESPACE::testing::Test {
 public:
   typedef T (*NearbyIntFunc)(T);
 
-  void testNaN(NearbyIntFunc func) {
-    ASSERT_FP_EQ(func(aNaN), aNaN);
-  }
+  void testNaN(NearbyIntFunc func) { ASSERT_FP_EQ(func(aNaN), aNaN); }
 
   void testInfinities(NearbyIntFunc func) {
     ASSERT_FP_EQ(func(inf), inf);
