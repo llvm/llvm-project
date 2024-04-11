@@ -189,7 +189,7 @@ writing tests:
 
 - **Consider the next reader**
 
-    Tests should be obvious to tho future reader. Avoid too much boiler plate or other
+    Tests should be obvious to the future reader. Avoid too much boiler plate or other
     distractions. Ensure each test has enough context to understand what it is testing. Avoid gratuitous use of advanced
     test features or abstractions.
 
