@@ -62,11 +62,8 @@ if (NOT CMAKE_CROSSCOMPILING)
         ${FLANG_SOURCE_DIR}/module/${filename}.f90
       DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )
-    add_custom_command(OUTPUT ${base}.f18.mod
-      DEPENDS ${base}.mod
-      COMMAND ${CMAKE_COMMAND} -E copy ${base}.mod ${base}.f18.mod)
-    list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod)
-    install(FILES ${base}.mod ${base}.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+    list(APPEND MODULE_FILES ${base}.mod)
+    install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
   endforeach()
 
   # Special case for omp_lib.mod, because its source comes from openmp/runtime/src/include.
