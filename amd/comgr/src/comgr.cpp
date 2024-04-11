@@ -54,7 +54,6 @@
 #include <fstream>
 #include <mutex>
 #include <string>
-#include <iostream>
 
 #include "time-stat/ts-interface.h"
 
@@ -1212,9 +1211,26 @@ amd_comgr_status_t AMD_COMGR_API
 
 amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
-    amd_comgr_action_info_get_bundle_entry_ids
+    amd_comgr_action_info_get_bundle_entry_id_count
     //
-    (amd_comgr_action_info_t ActionInfo, size_t *Size, char *EntryIDs[]) {
+    (amd_comgr_action_info_t ActionInfo, size_t *Count) {
+      DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  *Count = ActionP->getBundleEntryIDs().size();
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_get_bundle_entry_id
+    //
+    (amd_comgr_action_info_t ActionInfo, size_t Index, size_t *Size,
+     char *BundleEntryID) {
   DataAction *ActionP = DataAction::convert(ActionInfo);
 
   if (!ActionP || !Size) {
@@ -1223,17 +1239,19 @@ amd_comgr_status_t AMD_COMGR_API
 
   ArrayRef<std::string> ActionBundleEntryIDs = ActionP->getBundleEntryIDs();
 
-  *Size = 0;
-  std::vector<char *> cstrings;
-  for (int i = 0; i < (int) ActionBundleEntryIDs.size(); i++) {
-    cstrings.push_back(
-      const_cast<char*>(ActionBundleEntryIDs.data()[i].c_str()));
-    *Size += strlen(cstrings[i]) + 1;
+  if (Index >= ActionBundleEntryIDs.size()) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
 
-  if (EntryIDs) {
-    memcpy(EntryIDs, &cstrings[0], sizeof(cstrings));
-  }
+  // First return the size of the BundleEntryID
+  if (BundleEntryID == NULL)
+    *Size = ActionBundleEntryIDs[Index].size() + 1;
+
+  // Now that the calling API has had a chance to allocate memory, copy the
+  // bundle entry ID at Index to BundleEntryID
+  else
+    memcpy(BundleEntryID, ActionBundleEntryIDs[Index].c_str(),
+           *Size);
 
   return AMD_COMGR_STATUS_SUCCESS;
 }

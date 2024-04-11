@@ -185,29 +185,33 @@ int main(int Argc, char *Argv[]) {
     }
 
     // Check Bundle Entry IDs
-    size_t Size;
-    char **ComgrBundleEntryIDs;
+    size_t BundleCount;
+    Status = amd_comgr_action_info_get_bundle_entry_id_count(ActionInfoUnbundle,
+                                                        &BundleCount);
+    checkError(Status, "amd_comgr_action_info_get_bundle_entry_id_count");
 
-    Status = amd_comgr_action_info_get_bundle_entry_ids(ActionInfoUnbundle,
-                                                        &Size, NULL);
-    ComgrBundleEntryIDs = malloc(Size * sizeof(char));
+    for (int i = 0; i < BundleCount; i++) {
 
-    checkError(Status, "amd_comgr_action_info_get_bundle_entry_ids");
-    Status = amd_comgr_action_info_get_bundle_entry_ids(ActionInfoUnbundle,
-                                                        &Size,
-                                                        ComgrBundleEntryIDs);
+      size_t Size;
+      Status = amd_comgr_action_info_get_bundle_entry_id(ActionInfoUnbundle, i,
+                                                         &Size, NULL);
+      checkError(Status, "amd_comgr_action_info_get_bundle_entry_id");
 
-    for (int i = 0; i < 2; i++) {
-      if (strcmp(ComgrBundleEntryIDs[i], BundleEntryIDs[i])) {
+      char *BundleID = calloc(Size, sizeof(char));
+      Status = amd_comgr_action_info_get_bundle_entry_id(ActionInfoUnbundle, i,
+                                                         &Size, BundleID);
+      checkError(Status, "amd_comgr_action_info_get_bundle_entry_id");
+
+      if (strcmp(BundleID, BundleEntryIDs[i])) {
         printf("BundleEntryID mismatch. Expected \"%s\", returned \"%s\"\n",
                BundleEntryIDs[i],
-               ComgrBundleEntryIDs[i]);
+               BundleID);
         checkError(AMD_COMGR_STATUS_ERROR,
-                   "amd_comgr_action_info_get_bundle_entry_ids");
+                   "amd_comgr_action_info_get_bundle_entry_id");
       }
-    }
 
-    free(ComgrBundleEntryIDs);
+      free(BundleID);
+    }
   }
 
   // Unbundle silently via LINK action

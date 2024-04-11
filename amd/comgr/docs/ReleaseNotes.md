@@ -95,7 +95,8 @@ New APIs
     - For a given executable and ELF virtual address, return a code object
     offset. This API will benifet the ROCm debugger and profilier
 - amd\_comgr\_action\_info\_set\_bundle\_entry\_ids() (v2.8)
-- amd\_comgr\_action\_info\_get\_bundle\_entry\_ids() (v2.8)
+- amd\_comgr\_action\_info\_get\_bundle\_entry\_id_count() (v2.8)
+- amd\_comgr\_action\_info\_get\_bundle\_entry\_id() (v2.8)
     - A user can provide a set of bundle entry IDs, which are processed when
     calling the AMD\_COMGR\_UNBUNDLE action
 

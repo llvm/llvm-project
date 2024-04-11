@@ -1442,19 +1442,13 @@ amd_comgr_action_info_set_bundle_entry_ids(
   size_t count) AMD_COMGR_VERSION_2_8;
 
 /**
- * @brief Get the bundle entry IDs or number of IDs.
+ * @brief Get number of bundle entry IDs
  *
  * @param[in] action_info The action info object to query.
  *
- * @param[in, out] size On entry, the size of @p bundle_entry_ids. On return,
- * if @p bundle_entry_ids is NULL, set to the size of the bundle entry IDs
- * array.
- *
- * @param[out] bundle_entry_ids If not NULL, then the first @p size characters
- * of the bundle entry IDs array host name are copied into @p bundle_entry_ids.
- * If the bundle entry IDs array is not set then an empty array is copied into
- * @p bundle_entry_ids. If NULL, no array is copied, and only @p size is updated
- * (useful in order to find the size of buffer required to copy the array).
+ * @param[out] count The number of bundle entry IDs availible. This value
+ * can be used as an upper bound to the Index provided to the corresponding
+ * amd_comgr_get_bundle_entry_id() call.
  *
  * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
  * been executed successfully.
@@ -1466,10 +1460,41 @@ amd_comgr_action_info_set_bundle_entry_ids(
  * Unable to update the data object as out of resources.
  */
 amd_comgr_status_t AMD_COMGR_API
-amd_comgr_action_info_get_bundle_entry_ids(
+amd_comgr_action_info_get_bundle_entry_id_count(
   amd_comgr_action_info_t action_info,
+  size_t *count) AMD_COMGR_VERSION_2_8;
+
+/**
+ * @brief Fetch the Nth specific bundle entry ID or that ID's length.
+ *
+ * @param[in] action_info The action info object to query.
+ *
+ * @param[in] index The index of the bundle entry ID to be returned.
+ *
+ * @param[in, out] size For out, the size of @p bundle_entry_id. For in,
+ * if @bundle_entry_id is NULL, set to the size of the Nth ID string including
+ * the terminating null character.
+ *
+ * @param[out] bundle_entry_id If not NULL, then the first @p size characters of
+ * the Nth bundle entry ID string are copied into @p bundle_entry_id. If NULL,
+ * no bundle entry ID is copied, and only @p size is updated (useful in order
+ * to find the size of the buffer requried to copy the bundle_entry_id string).
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
+ * been executed successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
+ * action_info is an invalid action info object. @p size is NULL.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
+ * Unable to update the data object as out of resources.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_action_info_get_bundle_entry_id(
+  amd_comgr_action_info_t action_info,
+  size_t index,
   size_t *size,
-  char *bundle_entry_ids[]) AMD_COMGR_VERSION_2_8;
+  char *bundle_entry_id) AMD_COMGR_VERSION_2_8;
 
 /**
  * @brief Set the working directory of an action info object.
