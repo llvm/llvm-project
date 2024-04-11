@@ -258,9 +258,9 @@ public:
     return SelectSVEAddSubImm(N, VT, Imm, Shift);
   }
 
-  template <MVT::SimpleValueType VT>
+  template <MVT::SimpleValueType VT, bool Negate>
   bool SelectSVEAddSubSSatImm(SDValue N, SDValue &Imm, SDValue &Shift) {
-    return SelectSVEAddSubSSatImm(N, VT, Imm, Shift);
+    return SelectSVEAddSubSSatImm(N, VT, Imm, Shift, Negate);
   }
 
   template <MVT::SimpleValueType VT>
@@ -489,7 +489,8 @@ private:
   bool SelectCMP_SWAP(SDNode *N);
 
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
-  bool SelectSVEAddSubSSatImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
+  bool SelectSVEAddSubSSatImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
+                              bool Negate);
   bool SelectSVECpyDupImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
   bool SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm, bool Invert);
 
@@ -4021,7 +4022,8 @@ bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,
 }
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubSSatImm(SDValue N, MVT VT,
-                                                 SDValue &Imm, SDValue &Shift) {
+                                                 SDValue &Imm, SDValue &Shift,
+                                                 bool Negate) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
@@ -4030,6 +4032,9 @@ bool AArch64DAGToDAGISel::SelectSVEAddSubSSatImm(SDValue N, MVT VT,
                     ->getAPIntValue()
                     .trunc(VT.getFixedSizeInBits())
                     .getSExtValue();
+
+  if (Negate)
+    Val = -Val;
 
   // Signed saturating instructions treat their immediate operand as unsigned.
   if (Val < 0)
