@@ -196,25 +196,21 @@ writing tests:
 - **Consider the effect of time**
 
     Tests should be resilient to the effects of time. Tests are not static; They are
-    living documents that change over time. The intent of a test can become less clear over time.
+    living documents that change. As they change the original intent of a test can become less clear.
 
 - **Consider the edge cases carefully**
 
     Undefined behavior and edge cases are often the source of bugs. Tests should exercise these cases to ensure that
     the code under test behaves correctly. It's important to write tests for the easy cases as well as the hard ones.
+    When security is a concern, write fuzz tests. 
 
 - **Consider the focus**
 
     Each test case should test a single concern. Ideally a test should only fail when this concern
-    is violated. Focused tests are not flakey. If a test case covers multiple concerns, consider splitting it into multiple
+    is violated. Focused tests are not flaky. If a test case covers multiple concerns, consider splitting it into multiple
     test cases.
 
-
 Note that these are principles, not rules. There are cases where it is appropriate to break these principles.
-During code review, if you feel that a test is not following these principles, please discuss it with the author.
-
-Remember code review is a **consensus building** process, not a **gatekeeping** process. Your fellow engineers are
-all working towards the same goal: to make the code better.
 
 Structure of a test
 -------------------
