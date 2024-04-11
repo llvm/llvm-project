@@ -2305,9 +2305,13 @@ void RewriteInstance::processRelocations() {
     return;
 
   for (const SectionRef &Section : InputFile->sections()) {
-    if (cantFail(Section.getRelocatedSection()) != InputFile->section_end() &&
-        !BinarySection(*BC, Section).isAllocatable())
-      readRelocations(Section);
+    section_iterator SecIter = cantFail(Section.getRelocatedSection());
+    if (SecIter == InputFile->section_end())
+      continue;
+    if (BinarySection(*BC, Section).isAllocatable())
+      continue;
+
+    readRelocations(Section);
   }
 
   if (NumFailedRelocations)
