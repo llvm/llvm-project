@@ -1,23 +1,19 @@
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-selective-instrumentation=1 \
-; RUN:    | FileCheck %s --check-prefix=DEFAULT
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-selective-instrumentation=1 \
-; RUN:    -hwasan-percentile-cutoff-hot=700000 | FileCheck %s --check-prefix=HOT_RATE
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-selective-instrumentation=1 \
-; RUN:    -hwasan-random-skip-rate=0.0 | FileCheck %s --check-prefix=RANDOM_RATE_0
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-selective-instrumentation=1 \
-; RUN:    -hwasan-random-skip-rate=1.0 | FileCheck %s --check-prefix=RANDOM_RATE_1
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-percentile-cutoff-hot=700000 | FileCheck %s --check-prefix=HOT70
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-percentile-cutoff-hot=990000 | FileCheck %s --check-prefix=HOT99
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-random-rate=1.0 | FileCheck %s --check-prefix=ALL
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -S -hwasan-random-rate=0.0 | FileCheck %s --check-prefix=NONE
 
-; DEFAULT: @sanitized
-; DEFAULT-NEXT: %x = alloca i8, i64 4
+; HOT70: @sanitized
+; HOT70-NEXT: @__hwasan_tls
 
-; HOT_RATE: @sanitized
-; HOT_RATE-NEXT: @__hwasan_tls
+; HOT99: @sanitized
+; HOT99-NEXT: %x = alloca i8, i64 4
 
-; RANDOM_RATE_0: @sanitized
-; RANDOM_RATE_0-NEXT: @__hwasan_tls
+; ALL: @sanitized
+; ALL-NEXT: @__hwasan_tls
 
-; RANDOM_RATE_1: @sanitized
-; RANDOM_RATE_1-NEXT: %x = alloca i8, i64 4
+; NONE: @sanitized
+; NONE-NEXT: %x = alloca i8, i64 4
 
 declare void @use(ptr)
 

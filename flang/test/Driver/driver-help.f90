@@ -17,6 +17,7 @@
 ! HELP-NEXT: -###                    Print (but do not run) the commands to run for this compilation
 ! HELP-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! HELP-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! HELP-NEXT: -dM                     Print macro definitions in -E mode instead of normal output
 ! HELP-NEXT: -dumpmachine            Display the compiler's target processor
 ! HELP-NEXT: -dumpversion            Display the version of the compiler
 ! HELP-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
@@ -69,7 +70,7 @@
 ! HELP-NEXT: -fopenmp-targets=<value>
 ! HELP-NEXT:                         Specify comma-separated list of triples OpenMP offloading targets to be supported
 ! HELP-NEXT: -fopenmp-version=<value>
-! HELP-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 51 for Clang
+! HELP-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 11 for Flang
 ! HELP-NEXT: -fopenmp                Parse OpenMP pragmas and generate parallel code.
 ! HELP-NEXT: -foptimization-record-file=<file>
 ! HELP-NEXT:                         Specify the output name of the file containing the optimization remarks. Implies -fsave-optimization-record. On Darwin platforms, this cannot be used with multiple -arch <arch> options.
@@ -92,6 +93,9 @@
 ! HELP-NEXT: -fversion-loops-for-stride
 ! HELP-NEXT:                         Create unit-strided versions of loops
 ! HELP-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
+! HELP-NEXT: --gcc-install-dir=<value>
+! HELP-NEXT:                         Use GCC installation in the specified directory. The directory ends with path components like 'lib{,32,64}/gcc{,-cross}/$triple/$version'. Note: executables (e.g. ld) used by the compiler are not overridden by the selected GCC installation
+! HELP-NEXT: --gcc-toolchain=<value> Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. Clang will use the GCC installation with the largest version
 ! HELP-NEXT: -gline-directives-only  Emit debug line info directives only
 ! HELP-NEXT: -gline-tables-only      Emit debug line number tables only
 ! HELP-NEXT: -gpulibc                Link the LLVM C Library for GPUs
@@ -152,6 +156,7 @@
 ! HELP-FC1-NEXT:OPTIONS:
 ! HELP-FC1-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! HELP-FC1-NEXT: --dependent-lib=<value> Add dependent library
+! HELP-FC1-NEXT: -dM                     Print macro definitions in -E mode instead of normal output
 ! HELP-FC1-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-FC1-NEXT: -emit-fir               Build the parse tree, then lower it to FIR
 ! HELP-FC1-NEXT: -emit-hlfir             Build the parse tree, then lower it to HLFIR
@@ -223,7 +228,7 @@
 ! HELP-FC1-NEXT:                         Generate code only for an OpenMP target device.
 ! HELP-FC1-NEXT: -fopenmp-target-debug   Enable debugging in the OpenMP offloading device RTL
 ! HELP-FC1-NEXT: -fopenmp-version=<value>
-! HELP-FC1-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 51 for Clang
+! HELP-FC1-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 11 for Flang
 ! HELP-FC1-NEXT: -fopenmp                Parse OpenMP pragmas and generate parallel code.
 ! HELP-FC1-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
 ! HELP-FC1-NEXT: -fppc-native-vector-element-order

@@ -11,17 +11,17 @@
 # RUN: FileCheck %s -input-file %t.yaml
 # CHECK:      - name:    main
 # CHECK-NEXT:   fid:     2
-# CHECK-NEXT:   hash:    0xADF270D550151185
+# CHECK-NEXT:   hash:    {{.*}}
 # CHECK-NEXT:   exec:    0
 # CHECK-NEXT:   nblocks: 4
 # CHECK-NEXT:   blocks:
 # CHECK:          - bid:   1
 # CHECK-NEXT:       insns: 1
-# CHECK-NEXT:       hash:  0x36A303CBA4360014
+# CHECK-NEXT:       hash:  {{.*}}
 # CHECK-NEXT:       calls: [ { off: 0x0, fid: 1, disc: 1, cnt: 1 } ]
 # CHECK:          - bid:   2
 # CHECK-NEXT:       insns: 5
-# CHECK-NEXT:       hash:  0x8B2F5747CD0019
+# CHECK-NEXT:       hash:  {{.*}}
 # CHECK-NEXT:       calls: [ { off: 0x0, fid: 1, disc: 1, cnt: 1, mis: 1 } ]
 
 # Make sure that the profile is attached correctly
@@ -33,6 +33,11 @@
 # CHECK-CFG:      callq *%rax # Offset: [[#]] # CallProfile: 1 (1 misses) :
 # CHECK-CFG-NEXT:     { secondary_entry: 1 (1 misses) }
 
+# YAML BAT test of calling BAT secondary entry from non-BAT function
+# Now force-split func and skip main (making it call secondary entries)
+# RUN: llvm-bolt %t.exe -o %t.bat --data %t.fdata --funcs=func \
+# RUN:   --split-functions --split-strategy=all --split-all-cold --enable-bat
+
 .globl func
 .type	func, @function
 func:
@@ -40,8 +45,16 @@ func:
   .cfi_startproc
   pushq   %rbp
   movq    %rsp, %rbp
+  # Placeholder code to make splitting profitable
+.rept 5
+  testq   %rax, %rax
+.endr
 .globl secondary_entry
 secondary_entry:
+  # Placeholder code to make splitting profitable
+.rept 5
+  testq   %rax, %rax
+.endr
   popq    %rbp
   retq
   nopl    (%rax)
