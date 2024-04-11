@@ -120,6 +120,9 @@ static bool refineInstruction(SCCPSolver &Solver,
   };
 
   if (isa<OverflowingBinaryOperator>(Inst)) {
+    if (Inst.hasNoSignedWrap() && Inst.hasNoUnsignedWrap())
+      return false;
+
     auto RangeA = GetRange(Inst.getOperand(0));
     auto RangeB = GetRange(Inst.getOperand(1));
     if (!Inst.hasNoUnsignedWrap()) {
@@ -145,6 +148,24 @@ static bool refineInstruction(SCCPSolver &Solver,
     if (Range.isAllNonNegative()) {
       Inst.setNonNeg();
       Changed = true;
+    }
+  } else if (TruncInst *TI = dyn_cast<TruncInst>(&Inst)) {
+    if (TI->hasNoSignedWrap() && TI->hasNoUnsignedWrap())
+      return false;
+
+    auto Range = GetRange(Inst.getOperand(0));
+    uint64_t DestWidth = TI->getDestTy()->getScalarSizeInBits();
+    if (!TI->hasNoUnsignedWrap()) {
+      if (Range.getActiveBits() <= DestWidth) {
+        TI->setHasNoUnsignedWrap(true);
+        Changed = true;
+      }
+    }
+    if (!TI->hasNoSignedWrap()) {
+      if (Range.getMinSignedBits() <= DestWidth) {
+        TI->setHasNoSignedWrap(true);
+        Changed = true;
+      }
     }
   }
 
