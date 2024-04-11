@@ -2443,13 +2443,15 @@ usual build cycle when using sample profilers for optimization:
    usual build flags that you always build your application with. The only
    requirement is that DWARF debug info including source line information is
    generated. This DWARF information is important for the profiler to be able
-   to map instructions back to source line locations.
+   to map instructions back to source line locations. The usefulness of this
+   DWARF information can be improved with the ``-fdebug-info-for-profiling``
+   and ``-funique-internal-linkage-names`` options.
 
-   On Linux, ``-g`` or just ``-gline-tables-only`` is sufficient:
+   On Linux:
 
    .. code-block:: console
 
-     $ clang++ -O2 -gline-tables-only code.cc -o code
+     $ clang++ -O2 -gline-tables-only -fdebug-info-for-profiling -funique-internal-linkage-names code.cc -o code
 
    While MSVC-style targets default to CodeView debug information, DWARF debug
    information is required to generate source-level LLVM profiles. Use
@@ -2457,13 +2459,13 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: console
 
-     $ clang-cl -O2 -gdwarf -gline-tables-only coff-profile.cpp -fuse-ld=lld -link -debug:dwarf
+     $ clang-cl -O2 -gdwarf -gline-tables-only /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names code.cc -o code -fuse-ld=lld -link -debug:dwarf
 
 2. Run the executable under a sampling profiler. The specific profiler
    you use does not really matter, as long as its output can be converted
    into the format that the LLVM optimizer understands.
 
-   Two such profilers are the the Linux Perf profiler
+   Two such profilers are the Linux Perf profiler
    (https://perf.wiki.kernel.org/) and Intel's Sampling Enabling Product (SEP),
    available as part of `Intel VTune
    <https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/vtune-profiler.html>`_.
@@ -2477,7 +2479,9 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: console
 
-     $ perf record -b ./code
+     $ perf record -b -e BR_INST_RETIRED.NEAR_TAKEN:uppp ./code
+
+   If the event above is unavailable, ``branches:u`` is probably next-best.
 
    Note the use of the ``-b`` flag. This tells Perf to use the Last Branch
    Record (LBR) to record call chains. While this is not strictly required,
