@@ -143,16 +143,17 @@ DependencyScanningFilesystemSharedCache::CacheShard::getOrEmplaceEntryForUID(
     llvm::sys::fs::UniqueID UID, llvm::vfs::Status Stat,
     std::unique_ptr<llvm::MemoryBuffer> Contents) {
   std::lock_guard<std::mutex> LockGuard(CacheLock);
-  auto Insertion = EntriesByUID.insert({UID, nullptr});
-  if (Insertion.second) {
+  auto [It, Inserted] = EntriesByUID.insert({UID, nullptr});
+  auto &CachedEntry = It->getSecond();
+  if (Inserted) {
     CachedFileContents *StoredContents = nullptr;
     if (Contents)
       StoredContents = new (ContentsStorage.Allocate())
           CachedFileContents(std::move(Contents));
-    Insertion.first->second = new (EntryStorage.Allocate())
+    CachedEntry = new (EntryStorage.Allocate())
         CachedFileSystemEntry(std::move(Stat), StoredContents);
   }
-  return *Insertion.first->second;
+  return *CachedEntry;
 }
 
 const CachedFileSystemEntry &
