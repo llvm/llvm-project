@@ -1473,8 +1473,7 @@ bool TargetInstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
   // since the split part may not be placed in a contiguous region. It may also
   // be more beneficial to augment the linker to ensure contiguous layout of
   // split functions within the same section as specified by the attribute.
-  if (MF.getFunction().hasSection() ||
-      MF.getFunction().hasFnAttribute("implicit-section-name"))
+  if (MF.getFunction().hasSection())
     return false;
 
   // We don't want to proceed further for cold functions
