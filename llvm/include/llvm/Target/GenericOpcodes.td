@@ -815,7 +815,7 @@ def G_FMAXNUM_IEEE : GenericInstruction {
 
 // FMINIMUM/FMAXIMUM - NaN-propagating minimum/maximum that also treat -0.0
 // as less than 0.0. While FMINNUM_IEEE/FMAXNUM_IEEE follow IEEE 754-2008
-// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2018 draft semantics.
+// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2019 semantics.
 def G_FMINIMUM : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
@@ -1101,6 +1101,12 @@ def G_READCYCLECOUNTER : GenericInstruction {
   let hasSideEffects = true;
 }
 
+def G_READSTEADYCOUNTER : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
 //------------------------------------------------------------------------------
 // Memory ops
 //------------------------------------------------------------------------------
@@ -1283,6 +1289,15 @@ def G_MERGE_VALUES : GenericInstruction {
   let variadicOpsType = type1;
 }
 
+// Generic vscale.
+// Puts the value of the runtime vscale multiplied by the value in the source
+// operand into the destination register.
+def G_VSCALE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$src);
+  let hasSideEffects = false;
+}
+
 /// Create a vector from multiple scalar registers. No implicit
 /// conversion is performed (i.e. the result element type must be the
 /// same as all source operands)
@@ -1420,6 +1435,20 @@ def G_WRITE_REGISTER : GenericInstruction {
 // Vector ops
 //------------------------------------------------------------------------------
 
+// Generic insert subvector.
+def G_INSERT_SUBVECTOR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type1:$src1, untyped_imm_0:$idx);
+  let hasSideEffects = false;
+}
+
+// Generic extract subvector.
+def G_EXTRACT_SUBVECTOR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, untyped_imm_0:$idx);
+  let hasSideEffects = false;
+}
+
 // Generic insertelement.
 def G_INSERT_VECTOR_ELT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -1441,6 +1470,13 @@ def G_EXTRACT_VECTOR_ELT : GenericInstruction {
 def G_SHUFFLE_VECTOR: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$v1, type1:$v2, unknown:$mask);
+  let hasSideEffects = false;
+}
+
+// Generic splatvector.
+def G_SPLAT_VECTOR: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$val);
   let hasSideEffects = false;
 }
 
@@ -1537,6 +1573,28 @@ def G_BZERO : GenericInstruction {
   let InOperandList = (ins ptype0:$dst_addr, type1:$size, untyped_imm_0:$tailcall);
   let hasSideEffects = false;
   let mayStore = true;
+}
+
+//------------------------------------------------------------------------------
+// Trap intrinsics
+//------------------------------------------------------------------------------
+def G_TRAP : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+  let mayStore = true;
+}
+
+def G_DEBUGTRAP : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+def G_UBSANTRAP : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins i8imm:$kind);
+  let hasSideEffects = true;
 }
 
 //------------------------------------------------------------------------------

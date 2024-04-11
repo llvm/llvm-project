@@ -39,8 +39,9 @@ struct Errno {
   void operator=(int);
   operator int();
 };
-} // namespace LIBC_NAMESPACE
 
-extern LIBC_NAMESPACE::Errno libc_errno;
+extern Errno libc_errno;
+
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_ERRNO_LIBC_ERRNO_H

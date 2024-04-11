@@ -90,7 +90,7 @@ protected:
 /// class has value-type semantics and is just a simple wrapper around a
 /// ValueImpl that is either owner by a block(in the case of a BlockArgument) or
 /// an Operation(in the case of an OpResult).
-/// As most IR construct, this isn't const-correct, but we keep method
+/// As most IR constructs, this isn't const-correct, but we keep method
 /// consistent and as such method that immediately modify this Value aren't
 /// marked `const` (include modifying the Value use-list).
 class Value {

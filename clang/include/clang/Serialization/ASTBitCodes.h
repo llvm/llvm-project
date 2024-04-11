@@ -41,7 +41,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 29;
+const unsigned VERSION_MAJOR = 30;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -2018,6 +2018,9 @@ enum StmtCode {
 
   // SYCLUniqueStableNameExpr
   EXPR_SYCL_UNIQUE_STABLE_NAME,
+
+  // OpenACC Constructs
+  STMT_OPENACC_COMPUTE_CONSTRUCT,
 };
 
 /// The kinds of designators that can occur in a

@@ -11,9 +11,14 @@ endif()
 
 if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   message(STATUS "Enforcing strict test requirements for LLDB")
-  set(useful_python_modules
-    psutil # Lit uses psutil to do per-test timeouts.
-  )
+  # Lit uses psutil to do per-test timeouts.
+  set(useful_python_modules psutil)
+
+  if(NOT WIN32)
+    # We no longer vendor pexpect and it is not used on Windows.
+    list(APPEND pexpect)
+  endif()
+
   foreach(module ${useful_python_modules})
     lldb_find_python_module(${module})
     if (NOT PY_${module}_FOUND)
@@ -240,7 +245,8 @@ llvm_canonicalize_cmake_booleans(
   LLDB_HAS_LIBCXX
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
-  LLDB_IS_64_BITS)
+  LLDB_IS_64_BITS
+  LLDB_TEST_USE_VENDOR_PACKAGES)
 
 # Configure the individual test suites.
 add_subdirectory(API)

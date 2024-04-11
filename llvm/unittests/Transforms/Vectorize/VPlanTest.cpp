@@ -972,11 +972,13 @@ TEST(VPRecipeTest, CastVPBlendRecipeToVPUser) {
 
   IntegerType *Int32 = IntegerType::get(C, 32);
   auto *Phi = PHINode::Create(Int32, 1);
-  VPValue Op1;
-  VPValue Op2;
+  VPValue I1;
+  VPValue I2;
+  VPValue M2;
   SmallVector<VPValue *, 4> Args;
-  Args.push_back(&Op1);
-  Args.push_back(&Op2);
+  Args.push_back(&I1);
+  Args.push_back(&I2);
+  Args.push_back(&M2);
   VPBlendRecipe Recipe(Phi, Args);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
@@ -1036,7 +1038,7 @@ TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUserAndVPDef) {
       new LoadInst(Int32, UndefValue::get(Int32Ptr), "", false, Align(1));
   VPValue Addr;
   VPValue Mask;
-  VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask, true, false);
+  VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask, true, false, {});
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1119,7 +1121,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue VecOp;
     VPValue CondOp;
     VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
-                             &VecOp);
+                             &VecOp, false);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1131,7 +1133,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
         new LoadInst(Int32, UndefValue::get(Int32Ptr), "", false, Align(1));
     VPValue Addr;
     VPValue Mask;
-    VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask, true, false);
+    VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask, true, false, {});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1146,7 +1148,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue Mask;
     VPValue StoredV;
     VPWidenMemoryInstructionRecipe Recipe(*Store, &Addr, &StoredV, &Mask, false,
-                                          false);
+                                          false, {});
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_TRUE(Recipe.mayWriteToMemory());
@@ -1237,8 +1239,8 @@ TEST(VPRecipeTest, dump) {
       BinaryOperator::CreateAdd(UndefValue::get(Int32), UndefValue::get(Int32));
   AI->setName("a");
   SmallVector<VPValue *, 2> Args;
-  VPValue *ExtVPV1 = Plan.getVPValueOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPValue *ExtVPV2 = Plan.getVPValueOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPValue *ExtVPV1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *ExtVPV2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   Args.push_back(ExtVPV1);
   Args.push_back(ExtVPV2);
   VPWidenRecipe *WidenR =
@@ -1287,7 +1289,7 @@ TEST(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   VPValue VecOp;
   VPValue CondOp;
   VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, &ChainOp, &CondOp,
-                           &VecOp);
+                           &VecOp, false);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));

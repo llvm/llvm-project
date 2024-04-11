@@ -145,7 +145,7 @@ public:
 
   const char *getName() const override { return "tail duplication"; }
 
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 } // namespace bolt

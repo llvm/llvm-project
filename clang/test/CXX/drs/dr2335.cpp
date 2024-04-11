@@ -10,7 +10,7 @@
 // expected-no-diagnostics
 #endif
 
-namespace dr2335 { // dr2335: no drafting
+namespace dr2335 { // dr2335: no drafting 2018-06
 // FIXME: current consensus is that the examples are well-formed.
 #if __cplusplus >= 201402L
 namespace ex1 {

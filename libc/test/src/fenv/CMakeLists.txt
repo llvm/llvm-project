@@ -20,6 +20,7 @@ add_libc_unittest(
   DEPENDS
     libc.src.fenv.feclearexcept
     libc.src.fenv.feraiseexcept
+    libc.src.fenv.fesetexcept
     libc.src.fenv.fetestexcept
     libc.src.__support.FPUtil.fenv_impl
 )
@@ -87,7 +88,7 @@ add_libc_unittest(
 
 if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
          OR (${LIBC_TARGET_OS} STREQUAL "darwin")))
-  # Sanitizers don't like SIGFPE. So, we will run the 
+  # Sanitizers don't like SIGFPE. So, we will run the
   # tests which raise SIGFPE only in non-sanitizer builds.
   # The tests are also disabled for Windows and MacOS as they fail currently.
   # TODO: Investigate and fix the windows failures and enable them for Windows
@@ -117,7 +118,7 @@ if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
     SRCS
       feholdexcept_test.cpp
     DEPENDS
-      libc.include.fenv
+      libc.hdr.fenv_macros
       libc.src.fenv.feholdexcept
       libc.src.__support.FPUtil.fenv_impl
     LINK_LIBRARIES

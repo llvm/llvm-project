@@ -111,8 +111,8 @@ bool ProcessMachCore::CanDebug(lldb::TargetSP target_sp,
 ProcessMachCore::ProcessMachCore(lldb::TargetSP target_sp,
                                  ListenerSP listener_sp,
                                  const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp), m_core_aranges(),
-      m_core_range_infos(), m_core_module_sp(), m_core_file(core_file),
+    : PostMortemProcess(target_sp, listener_sp, core_file), m_core_aranges(),
+      m_core_range_infos(), m_core_module_sp(),
       m_dyld_addr(LLDB_INVALID_ADDRESS),
       m_mach_kernel_addr(LLDB_INVALID_ADDRESS) {}
 
@@ -574,7 +574,7 @@ Status ProcessMachCore::DoLoadCore() {
   CleanupMemoryRegionPermissions();
 
   AddressableBits addressable_bits = core_objfile->GetAddressableBits();
-  addressable_bits.SetProcessMasks(*this);
+  SetAddressableBitMasks(addressable_bits);
 
   return error;
 }
@@ -652,7 +652,7 @@ size_t ProcessMachCore::ReadMemory(addr_t addr, void *buf, size_t size,
                                    Status &error) {
   // Don't allow the caching that lldb_private::Process::ReadMemory does since
   // in core files we have it all cached our our core file anyway.
-  return DoReadMemory(addr, buf, size, error);
+  return DoReadMemory(FixAnyAddress(addr), buf, size, error);
 }
 
 size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,

@@ -511,7 +511,7 @@ define void @fold_ext_trunc(ptr %pa, ptr %pc) nounwind {
 define bfloat @fold_ext_trunc2(bfloat %a) nounwind {
 ; X86-LABEL: fold_ext_trunc2:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    retl
 ;
 ; CHECK-LABEL: fold_ext_trunc2:
@@ -934,8 +934,8 @@ define <8 x bfloat> @addv(<8 x bfloat> %a, <8 x bfloat> %b) nounwind {
 define <2 x bfloat> @pr62997(bfloat %a, bfloat %b) {
 ; X86-LABEL: pr62997:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm1
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X86-NEXT:    retl
 ;
@@ -2423,7 +2423,6 @@ define <16 x bfloat> @fptrunc_v16f32(<16 x float> %a) nounwind {
 ; AVXNC-LABEL: fptrunc_v16f32:
 ; AVXNC:       # %bb.0:
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %ymm0, %xmm0
-; AVXNC-NEXT:    vinsertf128 $0, %xmm0, %ymm0, %ymm0
 ; AVXNC-NEXT:    {vex} vcvtneps2bf16 %ymm1, %xmm1
 ; AVXNC-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVXNC-NEXT:    retq
@@ -2804,5 +2803,26 @@ define <16 x bfloat> @concat_zero_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y) {
 ; AVX-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %a = shufflevector <8 x bfloat> %x, <8 x bfloat> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x bfloat> %a
+}
+
+define <16 x bfloat> @concat_dup_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y) {
+; X86-LABEL: concat_dup_v8bf16:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    retl
+;
+; SSE2-LABEL: concat_dup_v8bf16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: concat_dup_v8bf16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    retq
+  %a = shufflevector <8 x bfloat> %x, <8 x bfloat> %y, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x bfloat> %a
 }

@@ -27,18 +27,18 @@ public:
 
   ~LibcxxStdRangesRefViewSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override {
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
     // __range_ will be the sole child of this type
     return 1;
   }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     // Since we only have a single child, return it
     assert(idx == 0);
     return m_range_sp;
   }
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
   bool MightHaveChildren() override { return true; }
 
@@ -59,17 +59,18 @@ lldb_private::formatters::LibcxxStdRangesRefViewSyntheticFrontEnd::
     Update();
 }
 
-bool lldb_private::formatters::LibcxxStdRangesRefViewSyntheticFrontEnd::
-    Update() {
+lldb::ChildCacheState
+lldb_private::formatters::LibcxxStdRangesRefViewSyntheticFrontEnd::Update() {
   ValueObjectSP range_ptr =
       GetChildMemberWithName(m_backend, {ConstString("__range_")});
   if (!range_ptr)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   lldb_private::Status error;
   m_range_sp = range_ptr->Dereference(error);
 
-  return error.Success();
+  return error.Success() ? lldb::ChildCacheState::eReuse
+                         : lldb::ChildCacheState::eRefetch;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

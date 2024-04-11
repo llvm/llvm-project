@@ -198,7 +198,7 @@ class TestJLink6Armv7RegisterDefinition(GDBRemoteTestBase):
         error = lldb.SBError()
         data = lldb.SBData()
         data.SetData(error, val, lldb.eByteOrderBig, 4)
-        self.assertEqual(r1_valobj.SetData(data, error), True)
+        self.assertTrue(r1_valobj.SetData(data, error))
         self.assertSuccess(error)
 
         r1_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("r1")

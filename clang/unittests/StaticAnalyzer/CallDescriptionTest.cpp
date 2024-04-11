@@ -488,23 +488,27 @@ TEST(CallDescription, NegativeMatchQualifiedNames) {
 }
 
 TEST(CallDescription, MatchBuiltins) {
-  // Test CDF_MaybeBuiltin - a flag that allows matching weird builtins.
-  EXPECT_TRUE(tooling::runToolOnCode(
-      std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-          {{{{"memset"}, 3}, false},
-           {{CDF_MaybeBuiltin, {"memset"}, 3}, true}})),
-      "void foo() {"
-      "  int x;"
-      "  __builtin___memset_chk(&x, 0, sizeof(x),"
-      "                         __builtin_object_size(&x, 0));"
-      "}"));
-
+  // Test the matching modes CDM::CLibrary and CDM::CLibraryMaybeHardened,
+  // which can recognize builtin variants of C library functions.
+  {
+    SCOPED_TRACE("hardened variants of functions");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDM::Unspecified, {"memset"}, 3}, false},
+             {{CDM::CLibrary, {"memset"}, 3}, false},
+             {{CDM::CLibraryMaybeHardened, {"memset"}, 3}, true}})),
+        "void foo() {"
+        "  int x;"
+        "  __builtin___memset_chk(&x, 0, sizeof(x),"
+        "                         __builtin_object_size(&x, 0));"
+        "}"));
+  }
   {
     SCOPED_TRACE("multiple similar builtins");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, {"memcpy"}, 3}, false},
-             {{CDF_MaybeBuiltin, {"wmemcpy"}, 3}, true}})),
+            {{{CDM::CLibrary, {"memcpy"}, 3}, false},
+             {{CDM::CLibrary, {"wmemcpy"}, 3}, true}})),
         R"(void foo(wchar_t *x, wchar_t *y) {
             __builtin_wmemcpy(x, y, sizeof(wchar_t));
           })"));
@@ -513,17 +517,46 @@ TEST(CallDescription, MatchBuiltins) {
     SCOPED_TRACE("multiple similar builtins reversed order");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, {"wmemcpy"}, 3}, true},
-             {{CDF_MaybeBuiltin, {"memcpy"}, 3}, false}})),
+            {{{CDM::CLibrary, {"wmemcpy"}, 3}, true},
+             {{CDM::CLibrary, {"memcpy"}, 3}, false}})),
         R"(void foo(wchar_t *x, wchar_t *y) {
             __builtin_wmemcpy(x, y, sizeof(wchar_t));
           })"));
   }
   {
-    SCOPED_TRACE("lookbehind and lookahead mismatches");
+    SCOPED_TRACE("multiple similar builtins with hardened variant");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, {"func"}}, false}})),
+            {{{CDM::CLibraryMaybeHardened, {"memcpy"}, 3}, false},
+             {{CDM::CLibraryMaybeHardened, {"wmemcpy"}, 3}, true}})),
+        R"(typedef __typeof(sizeof(int)) size_t;
+          extern wchar_t *__wmemcpy_chk (wchar_t *__restrict __s1,
+                                          const wchar_t *__restrict __s2,
+                                          size_t __n, size_t __ns1);
+          void foo(wchar_t *x, wchar_t *y) {
+            __wmemcpy_chk(x, y, sizeof(wchar_t), 1234);
+          })"));
+  }
+  {
+    SCOPED_TRACE(
+        "multiple similar builtins with hardened variant reversed order");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDM::CLibraryMaybeHardened, {"wmemcpy"}, 3}, true},
+             {{CDM::CLibraryMaybeHardened, {"memcpy"}, 3}, false}})),
+        R"(typedef __typeof(sizeof(int)) size_t;
+          extern wchar_t *__wmemcpy_chk (wchar_t *__restrict __s1,
+                                          const wchar_t *__restrict __s2,
+                                          size_t __n, size_t __ns1);
+          void foo(wchar_t *x, wchar_t *y) {
+            __wmemcpy_chk(x, y, sizeof(wchar_t), 1234);
+          })"));
+  }
+  {
+    SCOPED_TRACE("lookbehind and lookahead mismatches");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(
+            new CallDescriptionAction<>({{{CDM::CLibrary, {"func"}}, false}})),
         R"(
           void funcXXX();
           void XXXfunc();
@@ -537,8 +570,8 @@ TEST(CallDescription, MatchBuiltins) {
   {
     SCOPED_TRACE("lookbehind and lookahead matches");
     EXPECT_TRUE(tooling::runToolOnCode(
-        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, {"func"}}, true}})),
+        std::unique_ptr<FrontendAction>(
+            new CallDescriptionAction<>({{{CDM::CLibrary, {"func"}}, true}})),
         R"(
           void func();
           void func_XXX();

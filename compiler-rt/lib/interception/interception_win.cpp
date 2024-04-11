@@ -339,7 +339,7 @@ struct TrampolineMemoryRegion {
   uptr max_size;
 };
 
-UNUSED static const uptr kTrampolineScanLimitRange = 1 << 31;  // 2 gig
+UNUSED static const uptr kTrampolineScanLimitRange = 1ull << 31;  // 2 gig
 static const int kMaxTrampolineRegion = 1024;
 static TrampolineMemoryRegion TrampolineRegions[kMaxTrampolineRegion];
 
@@ -479,6 +479,8 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
 
   switch (*(u8*)address) {
     case 0x90:  // 90 : nop
+    case 0xC3:  // C3 : ret   (for small/empty function interception
+    case 0xCC:  // CC : int 3  i.e. registering weak functions)
       return 1;
 
     case 0x50:  // push eax / rax
@@ -502,7 +504,6 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     // Cannot overwrite control-instruction. Return 0 to indicate failure.
     case 0xE9:  // E9 XX XX XX XX : jmp <label>
     case 0xE8:  // E8 XX XX XX XX : call <func>
-    case 0xC3:  // C3 : ret
     case 0xEB:  // EB XX : jmp XX (short jump)
     case 0x70:  // 7Y YY : jy XX (short conditional jump)
     case 0x71:
@@ -543,6 +544,11 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   switch (0x00FFFFFF & *(u32*)address) {
     case 0x24A48D:  // 8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]
       return 7;
+  }
+
+  switch (0x000000FF & *(u32 *)address) {
+    case 0xc2:  // C2 XX XX : ret XX (needed for registering weak functions)
+      return 3;
   }
 
 #  if SANITIZER_WINDOWS_x64
@@ -605,6 +611,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xc18b4c:    // 4C 8B C1 : mov r8, rcx
     case 0xd2b60f:    // 0f b6 d2 : movzx edx, dl
     case 0xca2b48:    // 48 2b ca : sub rcx, rdx
+    case 0xca3b48:    // 48 3b ca : cmp rcx, rdx
     case 0x10b70f:    // 0f b7 10 : movzx edx, WORD PTR [rax]
     case 0xc00b4d:    // 3d 0b c0 : or r8, r8
     case 0xc08b41:    // 41 8b c0 : mov eax, r8d
@@ -624,6 +631,8 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
 
     case 0x058b48:    // 48 8b 05 XX XX XX XX :
                       //   mov rax, QWORD PTR [rip + XXXXXXXX]
+    case 0x058d48:    // 48 8d 05 XX XX XX XX :
+                      //   lea rax, QWORD PTR [rip + XXXXXXXX]
     case 0x25ff48:    // 48 ff 25 XX XX XX XX :
                       //   rex.W jmp QWORD PTR [rip + XXXXXXXX]
     case 0x158D4C:    // 4c 8d 15 XX XX XX XX : lea r10, [rip + XX]

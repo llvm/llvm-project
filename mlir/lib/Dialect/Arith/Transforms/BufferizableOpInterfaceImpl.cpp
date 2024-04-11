@@ -26,16 +26,17 @@ struct ConstantOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto constantOp = cast<arith::ConstantOp>(op);
-
-    Attribute memorySpace;
-    if (options.defaultMemorySpace.has_value())
-      memorySpace = *options.defaultMemorySpace;
-    else
-      return constantOp->emitError("could not infer memory space");
+    auto type = constantOp.getType().dyn_cast<RankedTensorType>();
 
     // Only ranked tensors are supported.
-    if (!isa<RankedTensorType>(constantOp.getType()))
+    if (!type)
       return failure();
+
+    Attribute memorySpace;
+    if (auto memSpace = options.defaultMemorySpaceFn(type))
+      memorySpace = *memSpace;
+    else
+      return constantOp->emitError("could not infer memory space");
 
     // Only constants inside a module are supported.
     auto moduleOp = constantOp->getParentOfType<ModuleOp>();

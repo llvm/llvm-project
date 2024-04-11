@@ -1,5 +1,14 @@
 ; RUN: llc -march=sparc -verify-machineinstrs < %s | FileCheck %s
 
+;; Test reserve-* options.
+; RUN: llc -mtriple=sparc64-linux-gnu -mattr=+reserve-g1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-G1
+; RUN: llc -mtriple=sparc64-linux-gnu -mattr=+reserve-o1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-O1
+; RUN: llc -mtriple=sparc64-linux-gnu -mattr=+reserve-l1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-L1
+; RUN: llc -mtriple=sparc64-linux-gnu -mattr=+reserve-i1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-I1
+
+;; Test multiple reserve-* options together.
+; RUN: llc -mtriple=sparc64-linux-gnu -mattr=+reserve-g1 -mattr=+reserve-o1 -mattr=+reserve-l1 -mattr=+reserve-i1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVED-G1,CHECK-RESERVED-O1,CHECK-RESERVED-L1,CHECK-RESERVED-I1
+
 @g = common global [32 x i32] zeroinitializer, align 16
 @h = common global [16 x i64] zeroinitializer, align 16
 
@@ -16,6 +25,10 @@
 ; CHECK-NOT: %o6
 ; CHECK-NOT: %i6
 ; CHECK-NOT: %i7
+; CHECK-RESERVED-G1-NOT: %g1
+; CHECK-RESERVED-O1-NOT: %o1
+; CHECK-RESERVED-L1-NOT: %l1
+; CHECK-RESERVED-I1-NOT: %i1
 ; CHECK: ret
 define void @use_all_i32_regs() {
 entry:
@@ -100,6 +113,10 @@ entry:
 ; CHECK-NOT: %o7
 ; CHECK-NOT: %i6
 ; CHECK-NOT: %i7
+; CHECK-RESERVED-G1-NOT: %g1
+; CHECK-RESERVED-O1-NOT: %o1
+; CHECK-RESERVED-L1-NOT: %l1
+; CHECK-RESERVED-I1-NOT: %i1
 ; CHECK: ret
 define void @use_all_i64_regs() {
 entry:

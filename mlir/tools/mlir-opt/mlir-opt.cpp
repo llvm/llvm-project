@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Config/mlir-config.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/MLIRContext.h"
@@ -43,6 +44,7 @@ void registerSliceAnalysisTestPass();
 void registerSymbolTestPasses();
 void registerRegionTestPasses();
 void registerTestAffineDataCopyPass();
+void registerTestAffineAccessAnalysisPass();
 void registerTestAffineReifyValueBoundsPass();
 void registerTestAffineLoopUnswitchingPass();
 void registerTestAffineWalk();
@@ -66,6 +68,7 @@ void registerTosaTestQuantUtilAPIPass();
 void registerVectorizerTestPass();
 
 namespace test {
+void registerTestCompositePass();
 void registerCommutativityUtils();
 void registerConvertCallOpPass();
 void registerInliner();
@@ -96,7 +99,6 @@ void registerTestMultiBuffering();
 void registerTestIntRangeInference();
 void registerTestIRVisitorsPass();
 void registerTestGenericIRVisitorsPass();
-void registerTestGenericIRVisitorsInterruptPass();
 void registerTestInterfaces();
 void registerTestLastModifiedPass();
 void registerTestLinalgDecomposeOps();
@@ -110,25 +112,27 @@ void registerTestLoopFusion();
 void registerTestCFGLoopInfoPass();
 void registerTestLoopMappingPass();
 void registerTestLoopUnrollingPass();
+void registerTestLowerToArmNeon();
+void registerTestLowerToArmSME();
 void registerTestLowerToLLVM();
-void registerTestLowerToNVVM();
 void registerTestMakeIsolatedFromAbovePass();
 void registerTestMatchReductionPass();
 void registerTestMathAlgebraicSimplificationPass();
 void registerTestMathPolynomialApproximationPass();
+void registerTestMathToVCIXPass();
 void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
 void registerTestMeshSimplificationsPass();
 void registerTestMeshReshardingSpmdizationPass();
-void registerTestMultiIndexOpLoweringPass();
+void registerTestOpLoweringPasses();
 void registerTestNextAccessPass();
 void registerTestOneToNTypeConversionPass();
 void registerTestOpaqueLoc();
 void registerTestPadFusion();
-void registerTestPreparationPassWithAllowedMemrefResults();
 void registerTestRecursiveTypesPass();
 void registerTestSCFUtilsPass();
 void registerTestSCFWhileOpBuilderPass();
+void registerTestSCFWrapInZeroTripCheckPasses();
 void registerTestShapeMappingPass();
 void registerTestSliceAnalysisPass();
 void registerTestTensorCopyInsertionPass();
@@ -169,6 +173,7 @@ void registerTestPasses() {
   registerSymbolTestPasses();
   registerRegionTestPasses();
   registerTestAffineDataCopyPass();
+  registerTestAffineAccessAnalysisPass();
   registerTestAffineLoopUnswitchingPass();
   registerTestAffineReifyValueBoundsPass();
   registerTestAffineWalk();
@@ -191,6 +196,7 @@ void registerTestPasses() {
   registerVectorizerTestPass();
   registerTosaTestQuantUtilAPIPass();
 
+  mlir::test::registerTestCompositePass();
   mlir::test::registerCommutativityUtils();
   mlir::test::registerConvertCallOpPass();
   mlir::test::registerInliner();
@@ -234,14 +240,17 @@ void registerTestPasses() {
   mlir::test::registerTestCFGLoopInfoPass();
   mlir::test::registerTestLoopMappingPass();
   mlir::test::registerTestLoopUnrollingPass();
+  mlir::test::registerTestLowerToArmNeon();
+  mlir::test::registerTestLowerToArmSME();
   mlir::test::registerTestLowerToLLVM();
   mlir::test::registerTestMakeIsolatedFromAbovePass();
   mlir::test::registerTestMatchReductionPass();
   mlir::test::registerTestMathAlgebraicSimplificationPass();
   mlir::test::registerTestMathPolynomialApproximationPass();
+  mlir::test::registerTestMathToVCIXPass();
   mlir::test::registerTestMemRefDependenceCheck();
   mlir::test::registerTestMemRefStrideCalculation();
-  mlir::test::registerTestMultiIndexOpLoweringPass();
+  mlir::test::registerTestOpLoweringPasses();
   mlir::test::registerTestMeshSimplificationsPass();
   mlir::test::registerTestMeshReshardingSpmdizationPass();
   mlir::test::registerTestNextAccessPass();
@@ -251,6 +260,7 @@ void registerTestPasses() {
   mlir::test::registerTestRecursiveTypesPass();
   mlir::test::registerTestSCFUtilsPass();
   mlir::test::registerTestSCFWhileOpBuilderPass();
+  mlir::test::registerTestSCFWrapInZeroTripCheckPasses();
   mlir::test::registerTestShapeMappingPass();
   mlir::test::registerTestSliceAnalysisPass();
   mlir::test::registerTestTensorCopyInsertionPass();
@@ -272,7 +282,7 @@ void registerTestPasses() {
 
 int main(int argc, char **argv) {
   registerAllPasses();
-#if MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE == 1
+#if MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE
   registerGpuSerializeToCubinPass();
   registerGpuSerializeToHsacoPass();
 #endif

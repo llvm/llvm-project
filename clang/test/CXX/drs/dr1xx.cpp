@@ -306,7 +306,7 @@ namespace dr122 { // dr122: yes
 }
 
 // dr123: na
-// dr124: dup 201
+// dr124 is in dr124.cpp
 
 // dr125: yes
 struct dr125_A { struct dr125_B {}; }; // #dr125_B
@@ -1169,7 +1169,7 @@ namespace dr184 { // dr184: yes
   void h() { A<B>().g(); }
 }
 
-// dr185 FIXME: add codegen test
+// dr185 is in dr185.cpp
 
 namespace dr187 { // dr187: sup 481
   const int Z = 1;
@@ -1184,6 +1184,7 @@ namespace dr188 { // dr188: yes
 }
 
 // dr190 FIXME: add codegen test for tbaa
+//              or implement C++20 std::is_layout_compatible and test it this way
 
 int dr191_j;
 namespace dr191 { // dr191: yes
@@ -1215,7 +1216,7 @@ namespace dr191 { // dr191: yes
   }
 }
 
-// dr193 FIXME: add codegen test
+// dr193 is in dr193.cpp
 
 namespace dr194 { // dr194: yes
   struct A {
@@ -1290,4 +1291,4 @@ namespace dr198 { // dr198: yes
   };
 }
 
-// dr199 FIXME: add codegen test
+// dr199 is in dr199.cpp

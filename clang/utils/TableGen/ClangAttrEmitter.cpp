@@ -171,12 +171,13 @@ static StringRef NormalizeGNUAttrSpelling(StringRef AttrSpelling) {
 typedef std::vector<std::pair<std::string, const Record *>> ParsedAttrMap;
 
 static ParsedAttrMap getParsedAttrList(const RecordKeeper &Records,
-                                       ParsedAttrMap *Dupes = nullptr) {
+                                       ParsedAttrMap *Dupes = nullptr,
+                                       bool SemaOnly = true) {
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
   std::set<std::string> Seen;
   ParsedAttrMap R;
   for (const auto *Attr : Attrs) {
-    if (Attr->getValueAsBit("SemaHandler")) {
+    if (!SemaOnly || Attr->getValueAsBit("SemaHandler")) {
       std::string AN;
       if (Attr->isSubClassOf("TargetSpecificAttr") &&
           !Attr->isValueUnset("ParseKind")) {
@@ -1590,10 +1591,10 @@ writePrettyPrintFunction(const Record &R,
     std::string Variety = Spellings[I].variety();
 
     if (Variety == "GNU") {
-      Prefix = " __attribute__((";
+      Prefix = "__attribute__((";
       Suffix = "))";
     } else if (Variety == "CXX11" || Variety == "C23") {
-      Prefix = " [[";
+      Prefix = "[[";
       Suffix = "]]";
       std::string Namespace = Spellings[I].nameSpace();
       if (!Namespace.empty()) {
@@ -1601,7 +1602,7 @@ writePrettyPrintFunction(const Record &R,
         Spelling += "::";
       }
     } else if (Variety == "Declspec") {
-      Prefix = " __declspec(";
+      Prefix = "__declspec(";
       Suffix = ")";
     } else if (Variety == "Microsoft") {
       Prefix = "[";
@@ -2358,19 +2359,21 @@ static bool isVariadicExprArgument(const Record *Arg) {
 }
 
 static bool isStringLiteralArgument(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         llvm::StringSwitch<bool>(
-             Arg->getSuperClasses().back().first->getName())
-             .Case("StringArgument", true)
-             .Default(false);
+  if (Arg->getSuperClasses().empty())
+    return false;
+  StringRef ArgKind = Arg->getSuperClasses().back().first->getName();
+  if (ArgKind == "EnumArgument")
+    return Arg->getValueAsBit("IsString");
+  return ArgKind == "StringArgument";
 }
 
 static bool isVariadicStringLiteralArgument(const Record *Arg) {
-  return !Arg->getSuperClasses().empty() &&
-         llvm::StringSwitch<bool>(
-             Arg->getSuperClasses().back().first->getName())
-             .Case("VariadicStringArgument", true)
-             .Default(false);
+  if (Arg->getSuperClasses().empty())
+    return false;
+  StringRef ArgKind = Arg->getSuperClasses().back().first->getName();
+  if (ArgKind == "VariadicEnumArgument")
+    return Arg->getValueAsBit("IsString");
+  return ArgKind == "VariadicStringArgument";
 }
 
 static void emitClangAttrVariadicIdentifierArgList(RecordKeeper &Records,
@@ -2393,14 +2396,18 @@ static void emitClangAttrVariadicIdentifierArgList(RecordKeeper &Records,
   OS << "#endif // CLANG_ATTR_VARIADIC_IDENTIFIER_ARG_LIST\n\n";
 }
 
+static bool GenerateTargetSpecificAttrChecks(const Record *R,
+                                             std::vector<StringRef> &Arches,
+                                             std::string &Test,
+                                             std::string *FnName);
+
 // Emits the list of arguments that should be parsed as unevaluated string
 // literals for each attribute.
 static void emitClangAttrUnevaluatedStringLiteralList(RecordKeeper &Records,
                                                       raw_ostream &OS) {
   OS << "#if defined(CLANG_ATTR_STRING_LITERAL_ARG_LIST)\n";
-  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
-  for (const auto *Attr : Attrs) {
-    std::vector<Record *> Args = Attr->getValueAsListOfDefs("Args");
+
+  auto MakeMask = [](ArrayRef<Record *> Args) {
     uint32_t Bits = 0;
     assert(Args.size() <= 32 && "unsupported number of arguments in attribute");
     for (uint32_t N = 0; N < Args.size(); ++N) {
@@ -2411,11 +2418,46 @@ static void emitClangAttrUnevaluatedStringLiteralList(RecordKeeper &Records,
         break;
       }
     }
-    if (!Bits)
+    return Bits;
+  };
+
+  auto AddMaskWithTargetCheck = [](const Record *Attr, uint32_t Mask,
+                                   std::string &MaskStr) {
+    const Record *T = Attr->getValueAsDef("Target");
+    std::vector<StringRef> Arches = T->getValueAsListOfStrings("Arches");
+    std::string Test;
+    GenerateTargetSpecificAttrChecks(T, Arches, Test, nullptr);
+    MaskStr.append(Test + " ? " + std::to_string(Mask) + " : ");
+  };
+
+  ParsedAttrMap Dupes;
+  ParsedAttrMap Attrs = getParsedAttrList(Records, &Dupes, /*SemaOnly=*/false);
+  for (const auto &[AttrName, Attr] : Attrs) {
+    std::string MaskStr;
+    if (Attr->isSubClassOf("TargetSpecificAttr") &&
+        !Attr->isValueUnset("ParseKind")) {
+      if (uint32_t Mask = MakeMask(Attr->getValueAsListOfDefs("Args")))
+        AddMaskWithTargetCheck(Attr, Mask, MaskStr);
+      StringRef ParseKind = Attr->getValueAsString("ParseKind");
+      for (const auto &[DupeParseKind, DupAttr] : Dupes) {
+        if (DupeParseKind != ParseKind)
+          continue;
+        if (uint32_t Mask = MakeMask(DupAttr->getValueAsListOfDefs("Args")))
+          AddMaskWithTargetCheck(DupAttr, Mask, MaskStr);
+      }
+      if (!MaskStr.empty())
+        MaskStr.append("0");
+    } else {
+      if (uint32_t Mask = MakeMask(Attr->getValueAsListOfDefs("Args")))
+        MaskStr = std::to_string(Mask);
+    }
+
+    if (MaskStr.empty())
       continue;
+
     // All these spellings have at least one string literal has argument.
     forEachUniqueSpelling(*Attr, [&](const FlattenedSpelling &S) {
-      OS << ".Case(\"" << S.name() << "\", " << Bits << ")\n";
+      OS << ".Case(\"" << S.name() << "\", " << MaskStr << ")\n";
     });
   }
   OS << "#endif // CLANG_ATTR_STRING_LITERAL_ARG_LIST\n\n";
@@ -3275,37 +3317,6 @@ void EmitClangAttrList(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 // Emits the enumeration list for attributes.
-void EmitClangAttrPrintList(const std::string &FieldName, RecordKeeper &Records,
-                            raw_ostream &OS) {
-  emitSourceFileHeader(
-      "List of attributes that can be print on the left side of a decl", OS,
-      Records);
-
-  AttrClassHierarchy Hierarchy(Records);
-
-  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
-  std::vector<Record *> PragmaAttrs;
-  bool first = false;
-
-  for (auto *Attr : Attrs) {
-    if (!Attr->getValueAsBit("ASTNode"))
-      continue;
-
-    if (!Attr->getValueAsBit(FieldName))
-      continue;
-
-    if (!first) {
-      first = true;
-      OS << "#define CLANG_ATTR_LIST_" << FieldName;
-    }
-
-    OS << " \\\n case attr::" << Attr->getName() << ":";
-  }
-
-  OS << '\n';
-}
-
-// Emits the enumeration list for attributes.
 void EmitClangAttrSubjectMatchRuleList(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader(
       "List of all attribute subject matching rules that Clang recognizes", OS,
@@ -3403,6 +3414,8 @@ void EmitClangAttrPCHWrite(RecordKeeper &Records, raw_ostream &OS) {
   }
   OS << "  }\n";
 }
+
+} // namespace clang
 
 // Helper function for GenerateTargetSpecificAttrChecks that alters the 'Test'
 // parameter with only a single check type, if applicable.
@@ -3532,10 +3545,6 @@ static void GenerateHasAttrSpellingStringSwitch(
       const Record *R = Attr->getValueAsDef("Target");
       std::vector<StringRef> Arches = R->getValueAsListOfStrings("Arches");
       GenerateTargetSpecificAttrChecks(R, Arches, Test, nullptr);
-
-      // If this is the C++11 variety, also add in the LangOpts test.
-      if (Variety == "CXX11")
-        Test += " && LangOpts.CPlusPlus11";
     } else if (!Attr->getValueAsListOfDefs("TargetSpecificSpellings").empty()) {
       // Add target checks if this spelling is target-specific.
       const std::vector<Record *> TargetSpellings =
@@ -3553,13 +3562,7 @@ static void GenerateHasAttrSpellingStringSwitch(
           }
         }
       }
-
-      if (Variety == "CXX11")
-        Test += " && LangOpts.CPlusPlus11";
-    } else if (Variety == "CXX11")
-      // C++11 mode should be checked against LangOpts, which is presumed to be
-      // present in the caller.
-      Test = "LangOpts.CPlusPlus11";
+    }
 
     std::string TestStr = !Test.empty()
                               ? Test + " ? " + llvm::itostr(Version) + " : 0"
@@ -3569,6 +3572,8 @@ static void GenerateHasAttrSpellingStringSwitch(
   }
   OS << "    .Default(0);\n";
 }
+
+namespace clang {
 
 // Emits list of regular keyword attributes with info about their arguments.
 void EmitClangRegularKeywordAttributeInfo(RecordKeeper &Records,

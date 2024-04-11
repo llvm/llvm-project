@@ -47,7 +47,7 @@ class SessionSaveTestCase(TestBase):
             raw += self.raw_transcript_builder(cmd, res)
 
         self.assertTrue(interpreter.HasCommands())
-        self.assertTrue(len(raw) != 0)
+        self.assertNotEqual(len(raw), 0)
 
         # Check for error
         cmd = "session save /root/file"

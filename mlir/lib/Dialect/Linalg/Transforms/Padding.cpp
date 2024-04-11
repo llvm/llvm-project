@@ -23,7 +23,7 @@ using namespace mlir::linalg;
 #define DBGSNL() (llvm::dbgs() << "\n")
 
 /// Compute the padded shape of the given operand. The operand is padded to a
-/// static bounding box according to the specified options.
+/// static bounding box according to the specified padding options.
 static LogicalResult computePaddedShape(linalg::LinalgOp opToPad,
                                         OpOperand *opOperand,
                                         const LinalgPaddingOptions &options,
@@ -75,7 +75,7 @@ static LogicalResult computePaddedShape(linalg::LinalgOp opToPad,
             presburger::BoundType::UB, opOperand->get(),
             /*dim=*/i, /*stopCondition=*/nullptr, /*closedUB=*/true);
     if (failed(upperBound)) {
-      LLVM_DEBUG(DBGS() << "----count not compute a bounding box for padding");
+      LLVM_DEBUG(DBGS() << "----could not compute a bounding box for padding");
       return failure();
     }
     paddedShape[i] = ceil(*upperBound, shapeDimToMultiple[i]);
@@ -89,7 +89,7 @@ static LogicalResult computePaddedShape(linalg::LinalgOp opToPad,
 /// the nofold flag found in "paddingValues" and "packPaddings", respectively.
 ///
 /// Exit early and return the `opOperand` value if it already has the requested
-/// shape. I.e.:
+/// shape. i.e.:
 /// - static shape
 /// - nofold is not set
 /// - dim sizes are multiples of "padToMultipleOf"
@@ -232,7 +232,7 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
 
   // Copy back unpadded results to the original destination (i.e., inits of the
   // linalg op), so that the destination buffer of the computation does not
-  // change. If the padding folds away, this will materizalize as a memcpy
+  // change. If the padding folds away, this will materialize as a memcpy
   // between two identical buffers, which will then also fold away.
   assert(static_cast<int64_t>(paddedSubtensorResults.size()) ==
              opToPad.getNumDpsInits() &&

@@ -14,6 +14,10 @@
 #include "LinkInModulesPass.h"
 #include "BackendConsumer.h"
 
+#include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/SourceManager.h"
+
 using namespace llvm;
 
 LinkInModulesPass::LinkInModulesPass(clang::BackendConsumer *BC,
@@ -21,9 +25,15 @@ LinkInModulesPass::LinkInModulesPass(clang::BackendConsumer *BC,
     : BC(BC), ShouldLinkFiles(ShouldLinkFiles) {}
 
 PreservedAnalyses LinkInModulesPass::run(Module &M, ModuleAnalysisManager &AM) {
+  if (!BC)
+    return PreservedAnalyses::all();
 
-  if (BC && BC->LinkInModules(&M, ShouldLinkFiles))
-    report_fatal_error("Bitcode module linking failed, compilation aborted!");
+  // Re-load bitcode modules from files
+  if (BC->ReloadModules(&M))
+    report_fatal_error("Bitcode module re-loading failed, aborted!");
+
+  if (BC->LinkInModules(&M, ShouldLinkFiles))
+    report_fatal_error("Bitcode module re-linking failed, aborted!");
 
   return PreservedAnalyses::all();
 }

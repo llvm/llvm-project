@@ -8,7 +8,7 @@
 ; Make sure we are handling hazards correctly.
 ; SGPR: v_mov_b32_e32 v0, vcc_lo
 ; SGPR-NEXT: s_or_saveexec_b64 [[EXEC_COPY:s\[[0-9]+:[0-9]+\]]], -1
-; SGPR-NEXT: buffer_load_dword [[VHI:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 ; 4-byte Folded Reload
+; SGPR-NEXT: buffer_load_dword [[VHI:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 ; 4-byte Folded Reload
 ; SGPR-NEXT: s_mov_b64 exec, [[EXEC_COPY]]
 ; SGPR-NEXT: s_waitcnt vmcnt(0)
 ; SGPR-NEXT: v_readlane_b32 s{{[0-9]+}}, [[VHI]], 0

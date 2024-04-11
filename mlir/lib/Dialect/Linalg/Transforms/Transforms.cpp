@@ -233,31 +233,11 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   rewriter.setInsertionPoint(packOp);
 
   // 2. Compute the permutation vector to shuffle packed shape into the shape
-  // before any outer or inner permutations have been applied. The permutation
-  // can be obtained from two permutations:
-  //   a) Compute the permutation vector to move the last `numPackedDims` into
-  //      the `innerPosDims` of a shape of rank `packedRank`.
-  //   b) Compute the permutation vector to move outer dims if the pack op
-  //      has outer_dims_perm.
-  // Apply (b) permutation on (a) permutation to get the final permutation.
-  int64_t numPackedDims = packOp.getInnerDimsPos().size();
-  int64_t packedRank = packedTensorType.getRank();
-  auto lastDims = llvm::to_vector(
-      llvm::seq<int64_t>(packedRank - numPackedDims, packedRank));
+  // before any outer or inner permutations have been applied.
   PackingMetadata packingMetadata = computePackingMetadata(
       packedTensorType.getRank(), packOp.getInnerDimsPos());
-  SmallVector<int64_t> innerPositionsPerm = computePermutationVector(
-      packedRank, lastDims, packingMetadata.insertPositions);
-
-  SmallVector<int64_t> outerPos = packingMetadata.outerPositions;
-  ArrayRef<int64_t> outerPerm = packOp.getOuterDimsPerm();
-  if (!outerPerm.empty())
-    applyPermutationToVector(outerPos, outerPerm);
-  SmallVector<int64_t> outerPositionPerm = computePermutationVector(
-      packedRank, packingMetadata.outerPositions, outerPos);
-
-  SmallVector<int64_t> packedToStripMinedShapePerm = innerPositionsPerm;
-  applyPermutationToVector(packedToStripMinedShapePerm, outerPositionPerm);
+  SmallVector<int64_t> packedToStripMinedShapePerm =
+      tensor::getPackInverseDestPerm(packOp);
 
   // 3. Compute the stripMinedShape: this is the packed shape before any outer
   // or inner permutations have been applied.
@@ -304,10 +284,6 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
       DBGSNL(); llvm::interleaveComma(packedTensorType.getShape(),
                                       DBGS() << "packedShape: ");
       DBGSNL();
-      llvm::interleaveComma(outerPositionPerm, DBGS() << "outerPositionPerm: ");
-      DBGSNL(); llvm::interleaveComma(innerPositionsPerm,
-                                      DBGS() << "innerPositionsPerm: ");
-      DBGSNL();
       llvm::interleaveComma(packedToStripMinedShapePerm,
                             DBGS() << "packedToStripMinedShapePerm: ");
       DBGSNL(); llvm::interleaveComma(
@@ -332,9 +308,11 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
       auto emptyOp =
           rewriter.create<tensor::EmptyOp>(loc, packedTensorType, ValueRange{});
       // Offsets.
-      SmallVector<OpFoldResult> zeros(packedRank, rewriter.getIndexAttr(0));
+      SmallVector<OpFoldResult> zeros(packOp.getDestRank(),
+                                      rewriter.getIndexAttr(0));
       // Strides.
-      SmallVector<OpFoldResult> ones(packedRank, rewriter.getIndexAttr(1));
+      SmallVector<OpFoldResult> ones(packOp.getDestRank(),
+                                     rewriter.getIndexAttr(1));
       SmallVector<OpFoldResult> sizes =
           tensor::getMixedSizes(rewriter, loc, packOp.getDest());
 
@@ -585,8 +563,10 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
             return getConstantIntValue(tile).has_value();
           });
       if (areConstantTiles && operandType.hasStaticShape() &&
-          !tensor::PackOp::requirePaddingValue(operandType.getShape(), innerPos,
-                                               innerPackSizes)) {
+          !tensor::PackOp::requirePaddingValue(
+              operandType.getShape(), innerPos,
+              dest.getType().cast<ShapedType>().getShape(), {},
+              innerPackSizes)) {
         packOps.push_back(rewriter.create<tensor::PackOp>(
             loc, operand, dest, innerPos, innerPackSizes));
       } else {

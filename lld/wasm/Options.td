@@ -230,6 +230,9 @@ def initial_memory: JJ<"initial-memory=">,
 def max_memory: JJ<"max-memory=">,
   HelpText<"Maximum size of the linear memory">;
 
+def no_growable_memory: FF<"no-growable-memory">,
+  HelpText<"Set maximum size of the linear memory to its initial size">;
+
 def no_entry: FF<"no-entry">,
   HelpText<"Do not output any entry point">;
 

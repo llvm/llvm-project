@@ -12,11 +12,16 @@
 #include "platform.h"
 #include "tests/scudo_unit_test.h"
 
+extern "C" void __hwasan_init() __attribute__((weak));
+
 #if SCUDO_LINUX
 namespace scudo {
 
 TEST(MemtagBasicDeathTest, Unsupported) {
   if (archSupportsMemoryTagging())
+    GTEST_SKIP();
+  // Skip when running with HWASan.
+  if (&__hwasan_init != 0)
     GTEST_SKIP();
 
   EXPECT_DEATH(archMemoryTagGranuleSize(), "not supported");

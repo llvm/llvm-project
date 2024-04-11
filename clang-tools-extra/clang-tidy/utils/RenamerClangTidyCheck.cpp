@@ -31,13 +31,12 @@ struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
   using NamingCheckId = clang::tidy::RenamerClangTidyCheck::NamingCheckId;
 
   static inline NamingCheckId getEmptyKey() {
-    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
-                         "EMPTY"};
+    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(), "EMPTY"};
   }
 
   static inline NamingCheckId getTombstoneKey() {
     return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
-                         "TOMBSTONE"};
+            "TOMBSTONE"};
   }
 
   static unsigned getHashValue(NamingCheckId Val) {
@@ -367,6 +366,23 @@ public:
     return true;
   }
 
+  bool VisitDesignatedInitExpr(DesignatedInitExpr *Expr) {
+    for (const DesignatedInitExpr::Designator &D : Expr->designators()) {
+      if (!D.isFieldDesignator())
+        continue;
+      const FieldDecl *FD = D.getFieldDecl();
+      if (!FD)
+        continue;
+      const IdentifierInfo *II = FD->getIdentifier();
+      if (!II)
+        continue;
+      SourceRange FixLocation{D.getFieldLoc(), D.getFieldLoc()};
+      Check->addUsage(FD, FixLocation, SM);
+    }
+
+    return true;
+  }
+
 private:
   RenamerClangTidyCheck *Check;
   const SourceManager *SM;
@@ -473,7 +489,7 @@ void RenamerClangTidyCheck::checkNamedDecl(const NamedDecl *Decl,
   }
 
   Failure.Info = std::move(Info);
-  addUsage(Decl, Range);
+  addUsage(Decl, Range, &SourceMgr);
 }
 
 void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {

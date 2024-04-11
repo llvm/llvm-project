@@ -34,27 +34,27 @@
   
   %class._Tree = type { i8 }
   %class._Tree_const_iterator = type { %class._Tree_unchecked_const_iterator }
-  %class._Tree_unchecked_const_iterator = type { %struct._Iterator_base0, i32* }
+  %class._Tree_unchecked_const_iterator = type { %struct._Iterator_base0, ptr }
   %struct._Iterator_base0 = type { i32 }
   
-  define i32 @main({ i32, i32* } %call.i) !dbg !6 {
+  define i32 @main({ i32, ptr } %call.i) !dbg !6 {
   entry:
     call void @llvm.dbg.value(metadata i32 2, metadata !10, metadata !DIExpression()), !dbg !12
-    %call.i1 = call { i32, i32* } undef(%class._Tree* null)
-    %0 = extractvalue { i32, i32* } %call.i, 1
-    call void @llvm.dbg.value(metadata i32* %0, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !15
-    %call.i.i.i.i.i = call i8 undef(i32* null), !dbg !15
+    %call.i1 = call { i32, ptr } undef(ptr null)
+    %0 = extractvalue { i32, ptr } %call.i, 1
+    call void @llvm.dbg.value(metadata ptr %0, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !15
+    %call.i.i.i.i.i = call i8 undef(ptr null), !dbg !15
     br i1 undef, label %_Z17do_insert_cv_testI5_TreeEvv.exit, label %if.then.i.i.i.i.i
   
   if.then.i.i.i.i.i:
-    %call3.i.i.i.i.i = call i32* undef(i32* null)
-    call void @llvm.dbg.value(metadata i32* %call3.i.i.i.i.i, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !15
+    %call3.i.i.i.i.i = call ptr undef(ptr null)
+    call void @llvm.dbg.value(metadata ptr %call3.i.i.i.i.i, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !15
     br label %_Z17do_insert_cv_testI5_TreeEvv.exit
   
   _Z17do_insert_cv_testI5_TreeEvv.exit:
-    %_First.sroa.2.0.i.i = phi i32* [ %0, %entry ], [ %call3.i.i.i.i.i, %if.then.i.i.i.i.i ]
-    call void @llvm.dbg.value(metadata i32* %_First.sroa.2.0.i.i, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !15
-    call void undef(%class._Tree_const_iterator* null, i32 0, i32* %_First.sroa.2.0.i.i), !dbg !16
+    %_First.sroa.2.0.i.i = phi ptr [ %0, %entry ], [ %call3.i.i.i.i.i, %if.then.i.i.i.i.i ]
+    call void @llvm.dbg.value(metadata ptr %_First.sroa.2.0.i.i, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !15
+    call void undef(ptr null, i32 0, ptr %_First.sroa.2.0.i.i), !dbg !16
     ret i32 0
   }
   

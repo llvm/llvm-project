@@ -197,10 +197,14 @@ void Serializer::processExtension() {
 }
 
 void Serializer::processMemoryModel() {
+  StringAttr memoryModelName = module.getMemoryModelAttrName();
   auto mm = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::MemoryModelAttr>("memory_model").getValue());
+      module->getAttrOfType<spirv::MemoryModelAttr>(memoryModelName)
+          .getValue());
+
+  StringAttr addressingModelName = module.getAddressingModelAttrName();
   auto am = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::AddressingModelAttr>("addressing_model")
+      module->getAttrOfType<spirv::AddressingModelAttr>(addressingModelName)
           .getValue());
 
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
@@ -1027,9 +1031,9 @@ Serializer::processBlock(Block *block, bool omitLabel,
   // into multiple basic blocks. If that's the case, we need to emit the merge
   // right now and then create new blocks for further serialization of the ops
   // in this block.
-  if (emitMerge && llvm::any_of(block->getOperations(), [](Operation &op) {
-        return isa<spirv::LoopOp, spirv::SelectionOp>(op);
-      })) {
+  if (emitMerge &&
+      llvm::any_of(block->getOperations(),
+                   llvm::IsaPred<spirv::LoopOp, spirv::SelectionOp>)) {
     if (failed(emitMerge()))
       return failure();
     emitMerge = nullptr;
@@ -1041,7 +1045,7 @@ Serializer::processBlock(Block *block, bool omitLabel,
   }
 
   // Process each op in this block except the terminator.
-  for (auto &op : llvm::make_range(block->begin(), std::prev(block->end()))) {
+  for (Operation &op : llvm::drop_end(*block)) {
     if (failed(processOperation(&op)))
       return failure();
   }

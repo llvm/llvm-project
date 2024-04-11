@@ -251,6 +251,21 @@ void DWARFTypePrinter::appendUnqualifiedNameAfter(
       optionsVec.push_back("isa-pointer");
     if (getValOrNull(DW_AT_LLVM_ptrauth_authenticates_null_values))
       optionsVec.push_back("authenticates-null-values");
+    if (auto AuthenticationMode =
+            D.find(DW_AT_LLVM_ptrauth_authentication_mode)) {
+      switch (*AuthenticationMode->getAsUnsignedConstant()) {
+      case 0:
+      case 1:
+        optionsVec.push_back("strip");
+        break;
+      case 2:
+        optionsVec.push_back("sign-and-strip");
+        break;
+      default:
+        // Default authentication policy
+        break;
+      }
+    }
     std::string options;
     for (const auto *option : optionsVec) {
       if (options.size())

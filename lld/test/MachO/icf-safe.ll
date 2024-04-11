@@ -3,14 +3,14 @@
 ; RUN: rm -rf %t; mkdir %t
 
 ; RUN: llc -filetype=obj %s -O3 -o %t/icf-obj.o -enable-machine-outliner=never -mtriple arm64-apple-macos -addrsig
-; RUN: %lld -arch arm64 -lSystem --icf=safe -dylib -o %t/icf-safe.dylib %t/icf-obj.o -no_fixup_chains
-; RUN: %lld -arch arm64 -lSystem --icf=all  -dylib -o %t/icf-all.dylib  %t/icf-obj.o -no_fixup_chains
+; RUN: %lld -arch arm64 -lSystem --icf=safe -dylib -o %t/icf-safe.dylib %t/icf-obj.o
+; RUN: %lld -arch arm64 -lSystem --icf=all  -dylib -o %t/icf-all.dylib  %t/icf-obj.o
 ; RUN: llvm-objdump %t/icf-safe.dylib -d --macho | FileCheck %s --check-prefix=ICFSAFE
 ; RUN: llvm-objdump %t/icf-all.dylib  -d --macho | FileCheck %s --check-prefix=ICFALL
 
 ; RUN: llvm-as %s -o %t/icf-bitcode.o
-; RUN: %lld -arch arm64 -lSystem --icf=safe -dylib -o %t/icf-safe-bitcode.dylib %t/icf-bitcode.o -no_fixup_chains
-; RUN: %lld -arch arm64 -lSystem --icf=all  -dylib -o %t/icf-all-bitcode.dylib %t/icf-bitcode.o -no_fixup_chains
+; RUN: %lld -arch arm64 -lSystem --icf=safe -dylib -o %t/icf-safe-bitcode.dylib %t/icf-bitcode.o
+; RUN: %lld -arch arm64 -lSystem --icf=all  -dylib -o %t/icf-all-bitcode.dylib %t/icf-bitcode.o
 ; RUN: llvm-objdump %t/icf-safe-bitcode.dylib -d --macho | FileCheck %s --check-prefix=ICFSAFE
 ; RUN: llvm-objdump %t/icf-all-bitcode.dylib  -d --macho | FileCheck %s --check-prefix=ICFALL
 

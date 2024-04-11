@@ -213,6 +213,10 @@ attributes #0 = { "sign-return-address"="all" }
 ; CHECK-DUMP-NOT: DW_CFA_remember_state
 ; CHECK-DUMP-NOT: DW_CFA_restore_state
 
+; CHECK-DUMP: CFA=WSP{{$}}
+; CHECK-DUMP: reg34=1
+; CHECK-DUMP-NOT: reg34=0
+
 ; baz_async
 ; CHECK-DUMP-LABEL: FDE
 ; CHECK-DUMP: Format:       DWARF32
@@ -222,9 +226,24 @@ attributes #0 = { "sign-return-address"="all" }
 ; CHECK-DUMP:   DW_CFA_restore_state:
 ; CHECK-DUMP:   DW_CFA_AARCH64_negate_ra_state:
 
+; CHECK-DUMP: CFA=WSP{{$}}
+;; First DW_CFA_AARCH64_negate_ra_state:
+; CHECK-DUMP: reg34=1
+;; Second DW_CFA_AARCH64_negate_ra_state:
+; CHECK-DUMP: reg34=0
+;; DW_CFA_restore_state:
+; CHECK-DUMP: reg34=1
+;; Third DW_CFA_AARCH64_negate_ra_state:
+; CHECK-DUMP: reg34=0
+; CHECK-DUMP-NOT: reg34=
+
 ; baz_sync
 ; CHECK-DUMP-LABEL: FDE
 ; CHECK-DUMP:   DW_CFA_AARCH64_negate_ra_state:
 ; CHECK-DUMP-NOT: DW_CFA_AARCH64_negate_ra_state
 ; CHECK-DUMP-NOT: DW_CFA_remember_state
 ; CHECK-DUMP-NOT: DW_CFA_restore_state
+
+; CHECK-DUMP: CFA=WSP{{$}}
+; CHECK-DUMP: reg34=1
+; CHECK-DUMP-NOT: reg34=0

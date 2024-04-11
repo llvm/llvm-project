@@ -94,8 +94,6 @@ namespace clang {
     GlobalDeclID NamedDeclForTagDecl = 0;
     IdentifierInfo *TypedefNameForLinkage = nullptr;
 
-    bool HasPendingBody = false;
-
     ///A flag to carry the information for a decl from the entity is
     /// used. We use it to delay the marking of the canonical decl as used until
     /// the entire declaration is deserialized and merged.
@@ -313,9 +311,6 @@ namespace clang {
     template <typename DeclT>
     static void markIncompleteDeclChainImpl(Redeclarable<DeclT> *D);
     static void markIncompleteDeclChainImpl(...);
-
-    /// Determine whether this declaration has a pending body.
-    bool hasPendingBody() const { return HasPendingBody; }
 
     void ReadFunctionDefinition(FunctionDecl *FD);
     void Visit(Decl *D);
@@ -541,7 +536,6 @@ void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
   }
   // Store the offset of the body so we can lazily load it later.
   Reader.PendingBodies[FD] = GetCurrentCursorOffset();
-  HasPendingBody = true;
 }
 
 void ASTDeclReader::Visit(Decl *D) {
@@ -800,11 +794,12 @@ void ASTDeclReader::VisitEnumDecl(EnumDecl *ED) {
   BitsUnpacker EnumDeclBits(Record.readInt());
   ED->setNumPositiveBits(EnumDeclBits.getNextBits(/*Width=*/8));
   ED->setNumNegativeBits(EnumDeclBits.getNextBits(/*Width=*/8));
+  bool ShouldSkipCheckingODR = EnumDeclBits.getNextBit();
   ED->setScoped(EnumDeclBits.getNextBit());
   ED->setScopedUsingClassTag(EnumDeclBits.getNextBit());
   ED->setFixed(EnumDeclBits.getNextBit());
 
-  if (!shouldSkipCheckingODR(ED)) {
+  if (!ShouldSkipCheckingODR) {
     ED->setHasODRHash(true);
     ED->ODRHash = Record.readInt();
   }
@@ -831,7 +826,7 @@ void ASTDeclReader::VisitEnumDecl(EnumDecl *ED) {
       Reader.mergeDefinitionVisibility(OldDef, ED);
       // We don't want to check the ODR hash value for declarations from global
       // module fragment.
-      if (!shouldSkipCheckingODR(ED) &&
+      if (!ED->shouldSkipCheckingODR() &&
           OldDef->getODRHash() != ED->getODRHash())
         Reader.PendingEnumOdrMergeFailures[OldDef].push_back(ED);
     } else {
@@ -873,7 +868,7 @@ void ASTDeclReader::VisitRecordDecl(RecordDecl *RD) {
   VisitRecordDeclImpl(RD);
   // We should only reach here if we're in C/Objective-C. There is no
   // global module fragment.
-  assert(!shouldSkipCheckingODR(RD));
+  assert(!RD->shouldSkipCheckingODR());
   RD->setODRHash(Record.readInt());
 
   // Maintain the invariant of a redeclaration chain containing only
@@ -1073,6 +1068,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
 
   FD->setCachedLinkage((Linkage)FunctionDeclBits.getNextBits(/*Width=*/3));
   FD->setStorageClass((StorageClass)FunctionDeclBits.getNextBits(/*Width=*/3));
+  bool ShouldSkipCheckingODR = FunctionDeclBits.getNextBit();
   FD->setInlineSpecified(FunctionDeclBits.getNextBit());
   FD->setImplicitlyInline(FunctionDeclBits.getNextBit());
   FD->setHasSkippedBody(FunctionDeclBits.getNextBit());
@@ -1102,7 +1098,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   if (FD->isExplicitlyDefaulted())
     FD->setDefaultLoc(readSourceLocation());
 
-  if (!shouldSkipCheckingODR(FD)) {
+  if (!ShouldSkipCheckingODR) {
     FD->ODRHash = Record.readInt();
     FD->setHasODRHash(true);
   }
@@ -1162,7 +1158,6 @@ void ASTDeclReader::VisitObjCMethodDecl(ObjCMethodDecl *MD) {
     // Load the body on-demand. Most clients won't care, because method
     // definitions rarely show up in headers.
     Reader.PendingBodies[MD] = GetCurrentCursorOffset();
-    HasPendingBody = true;
   }
   MD->setSelfDecl(readDeclAs<ImplicitParamDecl>());
   MD->setCmdDecl(readDeclAs<ImplicitParamDecl>());
@@ -1973,6 +1968,8 @@ void ASTDeclReader::ReadCXXDefinitionData(
 
   BitsUnpacker CXXRecordDeclBits = Record.readInt();
 
+  bool ShouldSkipCheckingODR = CXXRecordDeclBits.getNextBit();
+
 #define FIELD(Name, Width, Merge)                                              \
   if (!CXXRecordDeclBits.canGetNextNBits(Width))                         \
     CXXRecordDeclBits.updateValue(Record.readInt());                           \
@@ -1982,7 +1979,7 @@ void ASTDeclReader::ReadCXXDefinitionData(
 #undef FIELD
 
   // We only perform ODR checks for decls not in GMF.
-  if (!shouldSkipCheckingODR(D)) {
+  if (!ShouldSkipCheckingODR) {
     // Note: the caller has deserialized the IsLambda bit already.
     Data.ODRHash = Record.readInt();
     Data.HasODRHash = true;
@@ -2148,7 +2145,7 @@ void ASTDeclReader::MergeDefinitionData(
   }
 
   // We don't want to check ODR for decls in the global module fragment.
-  if (shouldSkipCheckingODR(MergeDD.Definition))
+  if (MergeDD.Definition->shouldSkipCheckingODR())
     return;
 
   if (D->getODRHash() != MergeDD.ODRHash) {
@@ -3201,7 +3198,7 @@ inline void ASTReader::LoadedDecl(unsigned Index, Decl *D) {
 /// This routine should return true for anything that might affect
 /// code generation, e.g., inline function definitions, Objective-C
 /// declarations with metadata, etc.
-static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
+bool ASTReader::isConsumerInterestedIn(Decl *D) {
   // An ObjCMethodDecl is never considered as "interesting" because its
   // implementation container always is.
 
@@ -3210,7 +3207,7 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
   if (isPartOfPerModuleInitializer(D)) {
     auto *M = D->getImportedOwningModule();
     if (M && M->Kind == Module::ModuleMapModule &&
-        Ctx.DeclMustBeEmitted(D))
+        getContext().DeclMustBeEmitted(D))
       return false;
   }
 
@@ -3225,7 +3222,7 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
            (Var->isThisDeclarationADefinition() == VarDecl::Definition ||
             OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(Var));
   if (const auto *Func = dyn_cast<FunctionDecl>(D))
-    return Func->doesThisDeclarationHaveABody() || HasBody;
+    return Func->doesThisDeclarationHaveABody() || PendingBodies.count(D);
 
   if (auto *ES = D->getASTContext().getExternalSource())
     if (ES->hasExternalDefinitions(D) == ExternalASTSource::EK_Never)
@@ -3522,7 +3519,7 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
   // same template specialization into the same CXXRecordDecl.
   auto MergedDCIt = Reader.MergedDeclContexts.find(D->getLexicalDeclContext());
   if (MergedDCIt != Reader.MergedDeclContexts.end() &&
-      !shouldSkipCheckingODR(D) && MergedDCIt->second == D->getDeclContext())
+      !D->shouldSkipCheckingODR() && MergedDCIt->second == D->getDeclContext())
     Reader.PendingOdrMergeChecks.push_back(D);
 
   return FindExistingResult(Reader, D, /*Existing=*/nullptr,
@@ -4152,8 +4149,7 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   // AST consumer might need to know about, queue it.
   // We don't pass it to the consumer immediately because we may be in recursive
   // loading, and some declarations may still be initializing.
-  PotentiallyInterestingDecls.push_back(
-      InterestingDecl(D, Reader.hasPendingBody()));
+  PotentiallyInterestingDecls.push_back(D);
 
   return D;
 }
@@ -4175,10 +4171,10 @@ void ASTReader::PassInterestingDeclsToConsumer() {
   EagerlyDeserializedDecls.clear();
 
   while (!PotentiallyInterestingDecls.empty()) {
-    InterestingDecl D = PotentiallyInterestingDecls.front();
+    Decl *D = PotentiallyInterestingDecls.front();
     PotentiallyInterestingDecls.pop_front();
-    if (isConsumerInterestedIn(getContext(), D.getDecl(), D.hasPendingBody()))
-      PassInterestingDeclToConsumer(D.getDecl());
+    if (isConsumerInterestedIn(D))
+      PassInterestingDeclToConsumer(D);
   }
 }
 
@@ -4201,8 +4197,7 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
     // the declaration, then we know it was interesting and we skip the call
     // to isConsumerInterestedIn because it is unsafe to call in the
     // current ASTReader state.
-    bool WasInteresting =
-        Record.JustLoaded || isConsumerInterestedIn(getContext(), D, false);
+    bool WasInteresting = Record.JustLoaded || isConsumerInterestedIn(D);
     for (auto &FileAndOffset : UpdateOffsets) {
       ModuleFile *F = FileAndOffset.first;
       uint64_t Offset = FileAndOffset.second;
@@ -4234,10 +4229,8 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
 
       // We might have made this declaration interesting. If so, remember that
       // we need to hand it off to the consumer.
-      if (!WasInteresting &&
-          isConsumerInterestedIn(getContext(), D, Reader.hasPendingBody())) {
-        PotentiallyInterestingDecls.push_back(
-            InterestingDecl(D, Reader.hasPendingBody()));
+      if (!WasInteresting && isConsumerInterestedIn(D)) {
+        PotentiallyInterestingDecls.push_back(D);
         WasInteresting = true;
       }
     }

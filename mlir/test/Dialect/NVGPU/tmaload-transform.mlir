@@ -62,7 +62,7 @@ func.func @main() {
     //      CHECK:   nvgpu.mbarrier.arrive.expect_tx %[[B]][%{{.*}}], %[[c0_7]] : <memorySpace = #gpu.address_space<workgroup>
     //      CHECK: }
     //
-    //      CHECK: %[[c0_6:.*]] = arith.constant 0 : index
+    //      CHECK: %[[c0_6:.*]] = llvm.mlir.constant(false) : i1 
     //      CHECK: %[[c10000000:.*]] = arith.constant 10000000 : index
     //      CHECK: nvgpu.mbarrier.try_wait.parity %[[B]][%{{.*}}], %[[c0_6]], %[[c10000000]] : <memorySpace = #gpu.address_space<workgroup>
 

@@ -28,78 +28,70 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    movl %r9d, %ebx
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
-; CHECK-NEXT:    movabsq $87960930222080, %r15 # imm = 0x500000000000
-; CHECK-NEXT:    movl 0, %r11d
-; CHECK-NEXT:    movl %esi, %r12d
-; CHECK-NEXT:    # implicit-def: $r13d
+; CHECK-NEXT:    movabsq $87960930222080, %r14 # imm = 0x500000000000
+; CHECK-NEXT:    movl 0, %r13d
+; CHECK-NEXT:    movl %esi, %r15d
+; CHECK-NEXT:    # implicit-def: $r12d
 ; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    jne .LBB0_7
+; CHECK-NEXT:    jne .LBB0_6
 ; CHECK-NEXT:  # %bb.1: # %if.else
-; CHECK-NEXT:    movq %r8, %r14
-; CHECK-NEXT:    movl %ecx, %r13d
-; CHECK-NEXT:    andl $1, %r13d
-; CHECK-NEXT:    movzbl 544(%r13), %r8d
-; CHECK-NEXT:    andl $1, %r8d
-; CHECK-NEXT:    movl %r15d, %r9d
+; CHECK-NEXT:    movl %ecx, %r12d
+; CHECK-NEXT:    andl $1, %r12d
+; CHECK-NEXT:    movzbl 544(%r12), %r9d
 ; CHECK-NEXT:    andl $1, %r9d
 ; CHECK-NEXT:    movl %r14d, %r10d
 ; CHECK-NEXT:    andl $1, %r10d
+; CHECK-NEXT:    andl $1, %r8d
 ; CHECK-NEXT:    movabsq $17592186044416, %rax # imm = 0x100000000000
-; CHECK-NEXT:    orq %r10, %rax
-; CHECK-NEXT:    movl %esi, %r10d
+; CHECK-NEXT:    orq %r8, %rax
+; CHECK-NEXT:    movl %esi, %r8d
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shrl %cl, %r10d
-; CHECK-NEXT:    andl $2, %r10d
+; CHECK-NEXT:    shrl %cl, %r8d
+; CHECK-NEXT:    andl $2, %r8d
 ; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    cmoveq %r9, %rax
-; CHECK-NEXT:    orl %r8d, %edx
-; CHECK-NEXT:    movq %r11, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movq %r11, %rcx
+; CHECK-NEXT:    cmoveq %r10, %rax
+; CHECK-NEXT:    orl %r9d, %edx
+; CHECK-NEXT:    movq %r13, %rcx
 ; CHECK-NEXT:    orq $1, %rcx
-; CHECK-NEXT:    orl %esi, %r10d
+; CHECK-NEXT:    orl %esi, %r8d
 ; CHECK-NEXT:    movl $1, %r8d
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %if.else
 ; CHECK-NEXT:    movl (%rax), %r8d
 ; CHECK-NEXT:  .LBB0_3: # %if.else
 ; CHECK-NEXT:    shlq $5, %rdx
-; CHECK-NEXT:    movq %r12, %rax
+; CHECK-NEXT:    movq %r15, %rax
 ; CHECK-NEXT:    shlq $7, %rax
 ; CHECK-NEXT:    leaq (%rax,%rdx), %rsi
 ; CHECK-NEXT:    addq $1248, %rsi # imm = 0x4E0
 ; CHECK-NEXT:    movq %rcx, 0
-; CHECK-NEXT:    movq %rdi, %r15
+; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    movl %r8d, (%rdi)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    callq *%rax
-; CHECK-NEXT:    xorq $1, %r14
-; CHECK-NEXT:    cmpl $0, (%r14)
-; CHECK-NEXT:    je .LBB0_6
-; CHECK-NEXT:  # %bb.4: # %if.else
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB0_5
-; CHECK-NEXT:  .LBB0_6: # %bb19
+; CHECK-NEXT:    je .LBB0_4
+; CHECK-NEXT:  # %bb.5: # %bb19
 ; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    movq %r15, %rdi
-; CHECK-NEXT:    movabsq $87960930222080, %r15 # imm = 0x500000000000
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r11 # 8-byte Reload
-; CHECK-NEXT:    jne .LBB0_8
-; CHECK-NEXT:  .LBB0_7: # %if.end69
-; CHECK-NEXT:    movl %r11d, 0
+; CHECK-NEXT:    movq %r14, %rdi
+; CHECK-NEXT:    movabsq $87960930222080, %r14 # imm = 0x500000000000
+; CHECK-NEXT:    jne .LBB0_7
+; CHECK-NEXT:  .LBB0_6: # %if.end69
+; CHECK-NEXT:    movl %r13d, 0
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    callq *%rax
-; CHECK-NEXT:    xorq %r15, %r12
-; CHECK-NEXT:    movslq %r13d, %rax
-; CHECK-NEXT:    movzbl (%r12), %ecx
+; CHECK-NEXT:    xorq %r14, %r15
+; CHECK-NEXT:    movslq %r12d, %rax
+; CHECK-NEXT:    movzbl (%r15), %ecx
 ; CHECK-NEXT:    movb %cl, 544(%rax)
-; CHECK-NEXT:  .LBB0_8: # %land.lhs.true56
+; CHECK-NEXT:  .LBB0_7: # %land.lhs.true56
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
@@ -110,7 +102,7 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_5: # %bb
+; CHECK-NEXT:  .LBB0_4: # %bb
 entry:
   %i = load i32, ptr null, align 8
   br i1 %cmp54, label %if.end69, label %if.else

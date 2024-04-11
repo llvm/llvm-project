@@ -672,7 +672,6 @@ class RedirectingFileSystemParser;
 ///            ]
 /// }
 /// \endverbatim
-///
 /// The roots may be absolute or relative. If relative they will be made
 /// absolute against either current working directory or the directory where
 /// the Overlay YAML file is located, depending on the 'root-relative'
@@ -704,7 +703,6 @@ class RedirectingFileSystemParser;
 ///   'contents': [ <file or directory entries> ]
 /// }
 /// \endverbatim
-///
 /// The default attributes for such virtual directories are:
 /// \verbatim
 /// MTime = now() when created
@@ -713,7 +711,6 @@ class RedirectingFileSystemParser;
 /// Size = 0
 /// UniqueID = unspecified unique value
 /// \endverbatim
-///
 /// When a path prefix matches such a directory, the next component in the path
 /// is matched against the entries in the 'contents' array.
 ///
@@ -726,7 +723,6 @@ class RedirectingFileSystemParser;
 ///   'external-contents': <path to external directory>
 /// }
 /// \endverbatim
-///
 /// and inherit their attributes from the external directory. When a path
 /// prefix matches such an entry, the unmatched components are appended to the
 /// 'external-contents' path, and the resulting path is looked up in the
@@ -741,7 +737,6 @@ class RedirectingFileSystemParser;
 ///   'external-contents': <path to external file>
 /// }
 /// \endverbatim
-///
 /// Their attributes and file contents are determined by looking up the file at
 /// their 'external-contents' path in the external file system.
 ///
@@ -934,12 +929,12 @@ private:
   /// Canonicalize path by removing ".", "..", "./", components. This is
   /// a VFS request, do not bother about symlinks in the path components
   /// but canonicalize in order to perform the correct entry search.
-  std::error_code makeCanonical(SmallVectorImpl<char> &Path) const;
+  std::error_code makeCanonicalForLookup(SmallVectorImpl<char> &Path) const;
 
   /// Get the File status, or error, from the underlying external file system.
   /// This returns the status with the originally requested name, while looking
-  /// up the entry using the canonical path.
-  ErrorOr<Status> getExternalStatus(const Twine &CanonicalPath,
+  /// up the entry using a potentially different path.
+  ErrorOr<Status> getExternalStatus(const Twine &LookupPath,
                                     const Twine &OriginalPath) const;
 
   /// Make \a Path an absolute path.
@@ -1027,7 +1022,7 @@ private:
                  llvm::SmallVectorImpl<Entry *> &Entries) const;
 
   /// Get the status for a path with the provided \c LookupResult.
-  ErrorOr<Status> status(const Twine &CanonicalPath, const Twine &OriginalPath,
+  ErrorOr<Status> status(const Twine &LookupPath, const Twine &OriginalPath,
                          const LookupResult &Result);
 
 public:

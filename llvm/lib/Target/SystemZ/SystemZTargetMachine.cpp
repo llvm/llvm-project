@@ -11,6 +11,7 @@
 #include "SystemZ.h"
 #include "SystemZMachineFunctionInfo.h"
 #include "SystemZMachineScheduler.h"
+#include "SystemZTargetObjectFile.h"
 #include "SystemZTargetTransformInfo.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/StringRef.h"
@@ -83,7 +84,7 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
 
   // Note: Some times run with -triple s390x-unknown.
   // In this case, default to ELF unless z/OS specifically provided.
-  return std::make_unique<TargetLoweringObjectFileELF>();
+  return std::make_unique<SystemZELFTargetObjectFile>();
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -228,7 +229,7 @@ void SystemZPassConfig::addIRPasses() {
     addPass(createLoopDataPrefetchPass());
   }
 
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
 }

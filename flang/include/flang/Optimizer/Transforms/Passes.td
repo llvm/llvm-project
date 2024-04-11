@@ -145,7 +145,8 @@ def CharacterConversion : Pass<"character-conversion"> {
   ];
 }
 
-def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
+class CFGConversionBase<string optExt, string operation>
+  : Pass<"cfg-conversion-on-" # optExt # "-opt", operation> {
   let summary = "Convert FIR structured control flow ops to CFG ops.";
   let description = [{
     Transform the `fir.do_loop`, `fir.if`, `fir.iterate_while` and
@@ -154,7 +155,6 @@ def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
 
     This pass is required before code gen to the LLVM IR dialect.
   }];
-  let constructor = "::fir::createFirToCfgPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
@@ -163,6 +163,14 @@ def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
            /*default=*/"false",
            "force the body of a loop to execute at least once">
   ];
+}
+
+def CFGConversionOnFunc : CFGConversionBase<"func", "mlir::func::FuncOp"> {
+  let constructor = "::fir::createFirToCfgOnFuncPass()";
+}
+
+def CFGConversionOnReduction : CFGConversionBase<"reduce", "mlir::omp::DeclareReductionOp"> {
+  let constructor = "::fir::createFirToCfgOnReductionPass()";
 }
 
 def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {

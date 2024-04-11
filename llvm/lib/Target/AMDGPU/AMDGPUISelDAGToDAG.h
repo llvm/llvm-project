@@ -105,18 +105,11 @@ protected:
 
 private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
+
   bool isInlineImmediate(const SDNode *N) const;
 
-  bool isInlineImmediate16(int64_t Imm) const {
-    return AMDGPU::isInlinableLiteral16(Imm, Subtarget->hasInv2PiInlineImm());
-  }
-
-  bool isInlineImmediate32(int64_t Imm) const {
-    return AMDGPU::isInlinableLiteral32(Imm, Subtarget->hasInv2PiInlineImm());
-  }
-
-  bool isInlineImmediate64(int64_t Imm) const {
-    return AMDGPU::isInlinableLiteral64(Imm, Subtarget->hasInv2PiInlineImm());
+  bool isInlineImmediate(const APInt &Imm) const {
+    return Subtarget->getInstrInfo()->isInlineConstant(Imm);
   }
 
   bool isInlineImmediate(const APFloat &Imm) const {

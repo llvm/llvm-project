@@ -15,6 +15,7 @@ add_flang_library(flangFrontend
 
   DEPENDS
   FIRDialect
+  FIROptCodeGenPassIncGen
   FIROptTransformsPassIncGen
   HLFIRDialect
   MLIRIR
