@@ -1448,9 +1448,9 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 /// into "castop (shuffle)".
 bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   Value *V0, *V1;
-  ArrayRef<int> Mask;
+  ArrayRef<int> OldMask;
   if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_OneUse(m_Value(V1)),
-                           m_Mask(Mask))))
+                           m_Mask(OldMask))))
     return false;
 
   auto *C0 = dyn_cast<CastInst>(V0);
@@ -1473,12 +1473,32 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
   auto *CastDstTy = dyn_cast<FixedVectorType>(C0->getDestTy());
   auto *CastSrcTy = dyn_cast<FixedVectorType>(C0->getSrcTy());
-  if (!ShuffleDstTy || !CastDstTy || !CastSrcTy ||
-      CastDstTy->getElementCount() != CastSrcTy->getElementCount())
+  if (!ShuffleDstTy || !CastDstTy || !CastSrcTy)
     return false;
 
+  unsigned NumSrcElts = CastSrcTy->getNumElements();
+  unsigned NumDstElts = CastDstTy->getNumElements();
+  assert((NumDstElts == NumSrcElts || Opcode == Instruction::BitCast) &&
+         "Only bitcasts expected to alter src/dst element counts");
+
+  SmallVector<int, 16> NewMask;
+  if (NumSrcElts >= NumDstElts) {
+    // The bitcast is from wide to narrow/equal elements. The shuffle mask can
+    // always be expanded to the equivalent form choosing narrower elements.
+    assert(NumSrcElts % NumDstElts == 0 && "Unexpected shuffle mask");
+    unsigned ScaleFactor = NumSrcElts / NumDstElts;
+    narrowShuffleMaskElts(ScaleFactor, OldMask, NewMask);
+  } else {
+    // The bitcast is from narrow elements to wide elements. The shuffle mask
+    // must choose consecutive elements to allow casting first.
+    assert(NumDstElts % NumSrcElts == 0 && "Unexpected shuffle mask");
+    unsigned ScaleFactor = NumDstElts / NumSrcElts;
+    if (!widenShuffleMaskElts(ScaleFactor, OldMask, NewMask))
+      return false;
+  }
+
   auto *NewShuffleDstTy =
-      FixedVectorType::get(CastSrcTy->getScalarType(), Mask.size());
+      FixedVectorType::get(CastSrcTy->getScalarType(), NewMask.size());
 
   // Try to replace a castop with a shuffle if the shuffle is not costly.
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
@@ -1489,11 +1509,11 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
       TTI.getCastInstrCost(C1->getOpcode(), CastDstTy, CastSrcTy,
                            TTI::CastContextHint::None, CostKind);
   OldCost +=
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, CastDstTy, Mask,
-                         CostKind, 0, nullptr, std::nullopt, &I);
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, CastDstTy,
+                         OldMask, CostKind, 0, nullptr, std::nullopt, &I);
 
   InstructionCost NewCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_PermuteTwoSrc, CastSrcTy, Mask, CostKind);
+      TargetTransformInfo::SK_PermuteTwoSrc, CastSrcTy, NewMask, CostKind);
   NewCost += TTI.getCastInstrCost(Opcode, ShuffleDstTy, NewShuffleDstTy,
                                   TTI::CastContextHint::None, CostKind);
 
@@ -1503,8 +1523,8 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   if (NewCost > OldCost)
     return false;
 
-  Value *Shuf =
-      Builder.CreateShuffleVector(C0->getOperand(0), C1->getOperand(0), Mask);
+  Value *Shuf = Builder.CreateShuffleVector(C0->getOperand(0),
+                                            C1->getOperand(0), NewMask);
   Value *Cast = Builder.CreateCast(Opcode, Shuf, ShuffleDstTy);
 
   // Intersect flags from the old casts.
