@@ -38,7 +38,6 @@
 #include "constexpr_char_traits.h"
 #include "make_string.h"
 #include "min_allocator.h"
-#include "test_allocator.h"
 #include "test_macros.h"
 
 #define CS(S) MAKE_CSTRING(CharT, S)
@@ -113,7 +112,7 @@ constexpr void test(const CharT* x, const CharT* y, const CharT* expected) {
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>, typename AllocT = std::allocator<CharT>>
 constexpr void test() {
-  // Concatinate with an empty string
+  // Concatinate with an empty `string`/`string_view`
   test<CharT, TraitsT, AllocT>(CS(""), CS(""), CS(""));
   test<CharT, TraitsT, AllocT>(CS(""), CS("short"), CS("short"));
   test<CharT, TraitsT, AllocT>(CS(""), CS("not so short"), CS("not so short"));
@@ -138,22 +137,16 @@ constexpr bool test() {
   test<char, std::char_traits<char>>();
   test<char, std::char_traits<char>, min_allocator<char>>();
   test<char, std::char_traits<char>, safe_allocator<char>>();
-  // test<char, std::char_traits<char>, test_allocator<char>>();
 
   test<char, constexpr_char_traits<char>>();
   test<char, constexpr_char_traits<char>, min_allocator<char>>();
   test<char, constexpr_char_traits<char>, safe_allocator<char>>();
-  // test<char, constexpr_char_traits<char>, test_allocator<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t, std::char_traits<wchar_t>>();
-  // test<wchar_t, std::char_traits<wchar_t>, min_allocator<wchar_t>>();
   test<wchar_t, std::char_traits<wchar_t>, safe_allocator<wchar_t>>();
-  // test<wchar_t, std::char_traits<wchar_t>, test_allocator<wchar_t>>();
 
   test<wchar_t, constexpr_char_traits<wchar_t>>();
-  // test<wchar_t, constexpr_char_traits<wchar_t>, min_allocator<wchar_t>>();
   test<wchar_t, constexpr_char_traits<wchar_t>, safe_allocator<wchar_t>>();
-  // test<wchar_t, constexpr_char_traits<wchar_t>, test_allocator<wchar_t>>();
 #endif
 
   return true;
