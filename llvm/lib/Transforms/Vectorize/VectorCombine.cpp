@@ -713,6 +713,18 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   if (SrcTy->getPrimitiveSizeInBits() % DestEltSize != 0)
     return false;
 
+  bool IsUnary = isa<UndefValue>(V1);
+
+  // For binary shuffles, only fold bitcast(shuffle(X,Y))
+  // if it won't increase the number of bitcasts.
+  if (!IsUnary) {
+    auto *BCTy0 = dyn_cast<FixedVectorType>(peekThroughBitcasts(V0)->getType());
+    auto *BCTy1 = dyn_cast<FixedVectorType>(peekThroughBitcasts(V1)->getType());
+    if (!(BCTy0 && BCTy0->getElementType() == DestTy->getElementType()) &&
+        !(BCTy1 && BCTy1->getElementType() == DestTy->getElementType()))
+      return false;
+  }
+
   SmallVector<int, 16> NewMask;
   if (DestEltSize <= SrcEltSize) {
     // The bitcast is from wide to narrow/equal elements. The shuffle mask can
@@ -736,7 +748,6 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
       FixedVectorType::get(DestTy->getScalarType(), NumSrcElts);
   auto *OldShuffleTy =
       FixedVectorType::get(SrcTy->getScalarType(), Mask.size());
-  bool IsUnary = isa<UndefValue>(V1);
   unsigned NumOps = IsUnary ? 1 : 2;
 
   // The new shuffle must not cost more than the old shuffle.
@@ -1448,7 +1459,7 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
     return false;
 
   Instruction::CastOps Opcode = C0->getOpcode();
-  if (Opcode == Instruction::BitCast || C0->getSrcTy() != C1->getSrcTy())
+  if (C0->getSrcTy() != C1->getSrcTy())
     return false;
 
   // Handle shuffle(zext_nneg(x), sext(y)) -> sext(shuffle(x,y)) folds.
@@ -1462,10 +1473,9 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
   auto *CastDstTy = dyn_cast<FixedVectorType>(C0->getDestTy());
   auto *CastSrcTy = dyn_cast<FixedVectorType>(C0->getSrcTy());
-  if (!ShuffleDstTy || !CastDstTy || !CastSrcTy)
+  if (!ShuffleDstTy || !CastDstTy || !CastSrcTy ||
+      CastDstTy->getElementCount() != CastSrcTy->getElementCount())
     return false;
-  assert(CastDstTy->getElementCount() == CastSrcTy->getElementCount() &&
-         "Unexpected src/dst element counts");
 
   auto *NewShuffleDstTy =
       FixedVectorType::get(CastSrcTy->getScalarType(), Mask.size());
