@@ -1,8 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -ast-dump %s | FileCheck %s
 
-// CXXDefaultArgExpr should inherit dependence from the inner Expr, in this case
-// RecoveryExpr.
-
 struct A {
   int arr[1];
 };
