@@ -4036,7 +4036,9 @@ bool AArch64DAGToDAGISel::SelectSVEAddSubSSatImm(SDValue N, MVT VT,
   if (Negate)
     Val = -Val;
 
-  // Signed saturating instructions treat their immediate operand as unsigned.
+  // Signed saturating instructions treat their immediate operand as unsigned,
+  // whereas the related intrinsics define their operands to be signed. This
+  // means we can only use the immediate form when the operand is non-negative.
   if (Val < 0)
     return false;
 
