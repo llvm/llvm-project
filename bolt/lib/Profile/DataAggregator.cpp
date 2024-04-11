@@ -2376,7 +2376,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       for (const auto &[FromOffset, SuccKV] : Branches.IntraIndex) {
         if (!BlockMap.isInputBlock(FromOffset))
           continue;
-        unsigned Index = BlockMap.getBBIndex(FromOffset);
+        const unsigned Index = BlockMap.getBBIndex(FromOffset);
         yaml::bolt::BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[Index];
         for (const auto &[SuccOffset, SuccDataIdx] : SuccKV)
           if (BlockMap.isInputBlock(SuccOffset))
