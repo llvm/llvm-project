@@ -61,7 +61,7 @@ namespace {
     virtual void VisitName(DeclarationName Name, bool TreatAsDecl = false) = 0;
 
     /// Visit identifiers that are not in Decl's or Type's.
-    virtual void VisitIdentifierInfo(IdentifierInfo *II) = 0;
+    virtual void VisitIdentifierInfo(const IdentifierInfo *II) = 0;
 
     /// Visit a nested-name-specifier that occurs within an expression
     /// or statement.
@@ -163,7 +163,7 @@ namespace {
       ID.AddPointer(Name.getAsOpaquePtr());
     }
 
-    void VisitIdentifierInfo(IdentifierInfo *II) override {
+    void VisitIdentifierInfo(const IdentifierInfo *II) override {
       ID.AddPointer(II);
     }
 
@@ -211,7 +211,7 @@ namespace {
       }
       Hash.AddDeclarationName(Name, TreatAsDecl);
     }
-    void VisitIdentifierInfo(IdentifierInfo *II) override {
+    void VisitIdentifierInfo(const IdentifierInfo *II) override {
       ID.AddBoolean(II);
       if (II) {
         Hash.AddIdentifierInfo(II);
