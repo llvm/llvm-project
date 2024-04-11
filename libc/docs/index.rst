@@ -69,6 +69,7 @@ stages there is no ABI stability in any form.
    fenv
    libc_search
    c23
+   ctype
 
 .. toctree::
    :hidden:

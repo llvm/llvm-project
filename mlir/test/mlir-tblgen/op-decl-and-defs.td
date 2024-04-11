@@ -59,9 +59,9 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: class AOpGenericAdaptorBase {
 // CHECK: public:
 // CHECK:   AOpGenericAdaptorBase(AOp{{[[:space:]]}}
-// CHECK:   ::mlir::IntegerAttr getAttr1Attr() {
+// CHECK:   ::mlir::IntegerAttr getAttr1Attr();
 // CHECK:   uint32_t getAttr1();
-// CHECK:   ::mlir::FloatAttr getSomeAttr2Attr() {
+// CHECK:   ::mlir::FloatAttr getSomeAttr2Attr();
 // CHECK:   ::std::optional< ::llvm::APFloat > getSomeAttr2();
 // CHECK:   ::mlir::Region &getSomeRegion() {
 // CHECK:   ::mlir::RegionRange getSomeRegions() {

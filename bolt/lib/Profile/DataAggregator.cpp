@@ -663,7 +663,7 @@ DataAggregator::getBinaryFunctionContainingAddress(uint64_t Address) const {
 }
 
 BinaryFunction *
-DataAggregator::getParentFunction(const BinaryFunction &Func) const {
+DataAggregator::getBATParentFunction(const BinaryFunction &Func) const {
   if (BAT)
     if (const uint64_t HotAddr = BAT->fetchParentAddress(Func.getAddress()))
       return getBinaryFunctionContainingAddress(HotAddr);
@@ -691,7 +691,7 @@ StringRef DataAggregator::getLocationName(const BinaryFunction &Func) const {
 
 bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
                               uint64_t Count) {
-  BinaryFunction *ParentFunc = getParentFunction(OrigFunc);
+  BinaryFunction *ParentFunc = getBATParentFunction(OrigFunc);
   BinaryFunction &Func = ParentFunc ? *ParentFunc : OrigFunc;
   if (ParentFunc)
     NumColdSamples += Count;
@@ -778,7 +778,7 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
       if (BAT)
         Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
 
-      if (BinaryFunction *ParentFunc = getParentFunction(*Func)) {
+      if (BinaryFunction *ParentFunc = getBATParentFunction(*Func)) {
         Func = ParentFunc;
         if (IsFrom)
           NumColdSamples += Count;
@@ -847,7 +847,7 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
                     << FromFunc->getPrintName() << ":"
                     << Twine::utohexstr(First.To) << " to "
                     << Twine::utohexstr(Second.From) << ".\n");
-  BinaryFunction *ParentFunc = getParentFunction(*FromFunc);
+  BinaryFunction *ParentFunc = getBATParentFunction(*FromFunc);
   for (auto [From, To] : *FTs) {
     if (BAT) {
       From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
@@ -2386,10 +2386,10 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       for (const auto &[FromOffset, CallTo] : Branches.InterIndex) {
         auto BlockIt = BlockMap.upper_bound(FromOffset);
         --BlockIt;
-        unsigned BlockOffset = BlockIt->first;
-        unsigned BlockIndex = BlockIt->second.getBBIndex();
+        const unsigned BlockOffset = BlockIt->first;
+        const unsigned BlockIndex = BlockIt->second.getBBIndex();
         yaml::bolt::BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[BlockIndex];
-        uint32_t Offset = FromOffset - BlockOffset;
+        const uint32_t Offset = FromOffset - BlockOffset;
         for (const auto &[CallToLoc, CallToIdx] : CallTo)
           YamlBB.CallSites.emplace_back(
               getCallSiteInfo(CallToLoc, CallToIdx, Offset));
@@ -2398,6 +2398,11 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
           return A.Offset < B.Offset;
         });
       }
+      // Drop blocks without a hash, won't be useful for stale matching.
+      llvm::erase_if(YamlBF.Blocks,
+                     [](const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+                       return YamlBB.Hash == (yaml::Hex64)0;
+                     });
       BP.Functions.emplace_back(YamlBF);
     }
   }
