@@ -1828,9 +1828,8 @@ static unsigned getSHXADDShiftAmount(unsigned Opc) {
 
 // Look for opportunities to combine (sh3add Z, (add X, (slli Y, 5))) into
 // (sh3add (sh2add Y, Z), X).
-static bool
-getSHXADDPatterns(const MachineInstr &Root,
-                  SmallVectorImpl<unsigned> &Patterns) {
+static bool getSHXADDPatterns(const MachineInstr &Root,
+                              SmallVectorImpl<unsigned> &Patterns) {
   unsigned ShiftAmt = getSHXADDShiftAmount(Root.getOpcode());
   if (!ShiftAmt)
     return false;
