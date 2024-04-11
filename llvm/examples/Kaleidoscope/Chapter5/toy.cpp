@@ -199,13 +199,13 @@ public:
 /// ForExprAST - Expression class for for/in.
 class ForExprAST : public ExprAST {
   std::string VarName;
-  std::unique_ptr<ExprAST> Start, End, Step, Body;
+  std::unique_ptr<ExprAST> Start, Cond, Step, Body;
 
 public:
   ForExprAST(const std::string &VarName, std::unique_ptr<ExprAST> Start,
-             std::unique_ptr<ExprAST> End, std::unique_ptr<ExprAST> Step,
+             std::unique_ptr<ExprAST> Cond, std::unique_ptr<ExprAST> Step,
              std::unique_ptr<ExprAST> Body)
-      : VarName(VarName), Start(std::move(Start)), End(std::move(End)),
+      : VarName(VarName), Start(std::move(Start)), Cond(std::move(Cond)),
         Step(std::move(Step)), Body(std::move(Body)) {}
 
   Value *codegen() override;
@@ -387,8 +387,8 @@ static std::unique_ptr<ExprAST> ParseForExpr() {
     return LogError("expected ',' after for start value");
   getNextToken();
 
-  auto End = ParseExpression();
-  if (!End)
+  auto Cond = ParseExpression();
+  if (!Cond)
     return nullptr;
 
   // The step value is optional.
@@ -408,7 +408,7 @@ static std::unique_ptr<ExprAST> ParseForExpr() {
   if (!Body)
     return nullptr;
 
-  return std::make_unique<ForExprAST>(IdName, std::move(Start), std::move(End),
+  return std::make_unique<ForExprAST>(IdName, std::move(Start), std::move(Cond),
                                        std::move(Step), std::move(Body));
 }
 
@@ -682,7 +682,7 @@ Value *IfExprAST::codegen() {
 }
 
 // Output for-loop as:
-// preloop:
+// entry:
 //   ...
 //   start = startexpr
 //   goto loopcond
@@ -705,9 +705,9 @@ Value *ForExprAST::codegen() {
   if (!StartVal)
     return nullptr;
 
-  // Make new basic blocks for loop condition, loop body and end-loop code. 
+  // Make new basic blocks for loop condition, loop body, and end-loop code. 
   Function *TheFunction = Builder->GetInsertBlock()->getParent();
-  BasicBlock *PreLoopBB = Builder->GetInsertBlock();
+  BasicBlock *EntryBB = Builder->GetInsertBlock();
   BasicBlock *LoopConditionBB = BasicBlock::Create(*TheContext, "loopcond",
       TheFunction);
   BasicBlock *LoopBB = BasicBlock::Create(*TheContext, "loop");
@@ -722,7 +722,7 @@ Value *ForExprAST::codegen() {
   // Start the PHI node with an entry for Start.
   PHINode *Variable =
       Builder->CreatePHI(Type::getDoubleTy(*TheContext), 2, VarName);
-  Variable->addIncoming(StartVal, PreLoopBB);
+  Variable->addIncoming(StartVal, EntryBB);
 
   // Within the loop, the variable is defined equal to the PHI node. If it
   // shadows an existing variable, we have to restore it, so save it now.
@@ -730,7 +730,7 @@ Value *ForExprAST::codegen() {
   NamedValues[VarName] = Variable;
 
   // Compute the end condition.
-  Value *EndCond = End->codegen();
+  Value *EndCond = Cond->codegen();
   if (!EndCond)
     return nullptr;
 

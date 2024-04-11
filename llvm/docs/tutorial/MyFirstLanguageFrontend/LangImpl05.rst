@@ -447,8 +447,7 @@ from a starting value, while the condition ("i < n" in this case) is
 true, incrementing by an optional step value ("1.0" in this case). If
 the step value is omitted, it defaults to 1.0. While the loop is true,
 it executes its body expression. Because we don't have anything better
-to return, we'll just define the loop as always returning 0.0. In the
-future when we have mutable variables, it will get more useful.
+to return, we'll just define the loop as always returning 0.0.
 
 As before, let's talk about the changes that we need to Kaleidoscope to
 support this.
@@ -493,13 +492,13 @@ variable name and the constituent expressions in the node.
     /// ForExprAST - Expression class for for/in.
     class ForExprAST : public ExprAST {
       std::string VarName;
-      std::unique_ptr<ExprAST> Start, End, Step, Body;
+      std::unique_ptr<ExprAST> Start, Cond, Step, Body;
 
     public:
       ForExprAST(const std::string &VarName, std::unique_ptr<ExprAST> Start,
-                 std::unique_ptr<ExprAST> End, std::unique_ptr<ExprAST> Step,
+                 std::unique_ptr<ExprAST> Cond, std::unique_ptr<ExprAST> Step,
                  std::unique_ptr<ExprAST> Body)
-        : VarName(VarName), Start(std::move(Start)), End(std::move(End)),
+        : VarName(VarName), Start(std::move(Start)), Cond(std::move(Cond)),
           Step(std::move(Step)), Body(std::move(Body)) {}
 
       Value *codegen() override;
@@ -537,8 +536,8 @@ value to null in the AST node:
         return LogError("expected ',' after for start value");
       getNextToken();
 
-      auto End = ParseExpression();
-      if (!End)
+      auto Cond = ParseExpression();
+      if (!Cond)
         return nullptr;
 
       // The step value is optional.
@@ -559,7 +558,7 @@ value to null in the AST node:
         return nullptr;
 
       return std::make_unique<ForExprAST>(IdName, std::move(Start),
-                                           std::move(End), std::move(Step),
+                                           std::move(Cond), std::move(Step),
                                            std::move(Body));
     }
 
@@ -646,9 +645,9 @@ expression).
 
 .. code-block:: c++
 
-      // Make new basic blocks for loop condition, loop body and end-loop code.
+      // Make new basic blocks for loop condition, loop body, and end-loop code.
       Function *TheFunction = Builder->GetInsertBlock()->getParent();
-      BasicBlock *PreLoopBB = Builder->GetInsertBlock();
+      BasicBlock *EntryBB = Builder->GetInsertBlock();
       BasicBlock *LoopConditionBB = BasicBlock::Create(*TheContext, "loopcond",
           TheFunction);
       BasicBlock *LoopBB = BasicBlock::Create(*TheContext, "loop");
@@ -659,14 +658,15 @@ expression).
 
 This code is similar to what we saw for if/then/else. Because we will
 need it to create the Phi node, we remember the block that falls through
-into the loop condition check. Once we have that, we create the actual block
-that determines if control should enter the loop and attach it directly to the
-end of our parent function. The other two blocks (``LoopBB`` and ``EndLoopBB``)
-are created, but aren't inserted into the function, similarly to our previous
-work on if/then/else. These will be used to complete our loop IR later on.
+into the loop condition check (denoted by ``EntryBB``). Once we have that, we
+create the actual block that determines if control should enter the loop and
+attach it directly to the end of our parent function (denoted by
+``LoopConditionBB``). The other two blocks (``LoopBB`` and ``EndLoopBB``) are
+created, but aren't inserted into the function, similarly to our previous work
+on if/then/else. These will be used to complete our loop IR later on.
 
 We also create an unconditional branch into the loop condition block from the
-pre-loop code.
+"entry" code.
 
 .. code-block:: c++
 
@@ -676,14 +676,14 @@ pre-loop code.
       // Start the PHI node with an entry for Start.
       PHINode *Variable =
           Builder->CreatePHI(Type::getDoubleTy(*TheContext), 2, VarName);
-      Variable->addIncoming(StartVal, PreLoopBB);
+      Variable->addIncoming(StartVal, EntryBB);
 
-Now that the "preheader" for the loop is set up, we switch to emitting
-code for the loop condition check. To begin with, we move the insertion point
-and create the Phi node for the loop induction variable. Since we already
-know the incoming value for the starting value, we add it to the Phi
-node. Note that the Phi node will eventually get a second value for the
-backedge, but we can't set it up yet (because it doesn't exist!).
+Now that ``EntryBB`` is set up, we switch to emitting code for the loop
+condition check. To begin with, we move the insertion point and create the Phi
+node for the loop induction variable. Since we already know the incoming value
+for the starting value, we add it to the Phi node. Note that the Phi node will
+eventually get a second value for the backedge, but we can't set it up yet
+(because it doesn't exist!).
 
 .. code-block:: c++
 
@@ -693,7 +693,7 @@ backedge, but we can't set it up yet (because it doesn't exist!).
       NamedValues[VarName] = Variable;
 
       // Compute the end condition.
-      Value *EndCond = End->codegen();
+      Value *EndCond = Cond->codegen();
       if (!EndCond)
         return nullptr;
 
@@ -712,7 +712,7 @@ symbol table.
 
 Once the loop variable is set into the symbol table, we codegen the condition
 that determines if we can enter into the loop (or continue looping, depending
-on if we are arriving from the "preheader" or the loop body).
+on if we are arriving from the "entry" basic block or the loop body).
 
 .. code-block:: c++
 
