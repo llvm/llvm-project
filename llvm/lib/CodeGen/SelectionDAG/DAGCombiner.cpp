@@ -9986,7 +9986,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       TLI.isOperationLegalOrCustom(ISD::MUL, VT)) {
     SDValue Y = N1.getOperand(0);
     SDLoc DL(N);
-    SDValue NegY = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Y);
+    SDValue NegY = DAG.getNegative(Y, DL, VT);
     SDValue And = DAG.getNode(ISD::AND, DL, VT, Y, NegY);
     return DAG.getNode(ISD::MUL, DL, VT, And, N0);
   }
