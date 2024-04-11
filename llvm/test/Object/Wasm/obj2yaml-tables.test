@@ -1,4 +1,4 @@
-RUN: obj2yaml %p/Inputs/WASM/multi-table.wasm | FileCheck %s
+RUN: obj2yaml %p/../Inputs/WASM/multi-table.wasm | FileCheck %s
 
 
 # CHECK:  - Type:            TABLE
