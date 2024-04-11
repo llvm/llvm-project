@@ -11851,35 +11851,6 @@ static bool isREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
   return true;
 }
 
-static bool isZIPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
-  unsigned NumElts = VT.getVectorNumElements();
-  if (NumElts % 2 != 0)
-    return false;
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  unsigned Idx = WhichResult * NumElts / 2;
-  for (unsigned i = 0; i != NumElts; i += 2) {
-    if ((M[i] >= 0 && (unsigned)M[i] != Idx) ||
-        (M[i + 1] >= 0 && (unsigned)M[i + 1] != Idx + NumElts))
-      return false;
-    Idx += 1;
-  }
-
-  return true;
-}
-
-static bool isUZPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
-  unsigned NumElts = VT.getVectorNumElements();
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  for (unsigned i = 0; i != NumElts; ++i) {
-    if (M[i] < 0)
-      continue; // ignore UNDEF indices
-    if ((unsigned)M[i] != 2 * i + WhichResult)
-      return false;
-  }
-
-  return true;
-}
-
 static bool isTRNMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
   unsigned NumElts = VT.getVectorNumElements();
   if (NumElts % 2 != 0)
