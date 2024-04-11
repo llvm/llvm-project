@@ -15,9 +15,9 @@ using namespace dependencies;
 
 DependencyScanningService::DependencyScanningService(
     ScanningMode Mode, ScanningOutputFormat Format,
-    ScanningOptimizations OptimizeArgs, bool EagerLoadModules)
+    ScanningOptimizations OptimizeArgs, bool EagerLoadModules, bool PrintStats)
     : Mode(Mode), Format(Format), OptimizeArgs(OptimizeArgs),
-      EagerLoadModules(EagerLoadModules) {
+      EagerLoadModules(EagerLoadModules), PrintStats(PrintStats) {
   // Initialize targets for object file support.
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();

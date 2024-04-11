@@ -381,7 +381,8 @@ FileManager *CompilerInstance::createFileManager(
                   : createVFSFromCompilerInvocation(getInvocation(),
                                                     getDiagnostics());
   assert(VFS && "FileManager has no VFS?");
-  FileMgr = new FileManager(getFileSystemOpts(), std::move(VFS));
+  FileMgr = new FileManager(getFileSystemOpts(), std::move(VFS),
+                            getFrontendOpts().ShowStats);
   return FileMgr.get();
 }
 

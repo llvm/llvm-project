@@ -114,6 +114,9 @@ class FileManager : public RefCountedBase<FileManager> {
   ///
   unsigned NextFileUID;
 
+  /// Whether we want to print statistics. This impacts the collection of data.
+  bool EnablePrintStats;
+
   // Caching.
   std::unique_ptr<FileSystemStatCache> StatCache;
 
@@ -134,7 +137,8 @@ public:
   /// \param FS if non-null, the VFS to use.  Otherwise uses
   /// llvm::vfs::getRealFileSystem().
   FileManager(const FileSystemOptions &FileSystemOpts,
-              IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr);
+              IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr,
+              bool PrintStats = false);
   ~FileManager();
 
   /// Installs the provided FileSystemStatCache object within

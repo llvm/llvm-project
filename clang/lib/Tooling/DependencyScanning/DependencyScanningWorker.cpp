@@ -501,6 +501,8 @@ DependencyScanningWorker::DependencyScanningWorker(
     BaseFS = FS;
     break;
   }
+
+  PrintStats = Service.getPrintStats();
 }
 
 llvm::Error DependencyScanningWorker::computeDependencies(
@@ -623,8 +625,8 @@ bool DependencyScanningWorker::computeDependencies(
       ModifiedCommandLine ? *ModifiedCommandLine : CommandLine;
   auto &FinalFS = ModifiedFS ? ModifiedFS : BaseFS;
 
-  auto FileMgr =
-      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions{}, FinalFS);
+  auto FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions{},
+                                                        FinalFS, PrintStats);
 
   std::vector<const char *> FinalCCommandLine(FinalCommandLine.size(), nullptr);
   llvm::transform(FinalCommandLine, FinalCCommandLine.begin(),
