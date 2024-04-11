@@ -50,6 +50,14 @@ module {
   cir.func @f32() global_ctor(777) {
     cir.return
   }
+
+  cir.func @f33() global_dtor {
+    cir.return
+  }
+
+  cir.func @f34() global_dtor(777) {
+    cir.return
+  }
 }
 
 // CHECK: cir.global external @a = #cir.int<3> : !s32i
@@ -72,3 +80,5 @@ module {
 
 // CHECK: cir.func @f31() global_ctor
 // CHECK: cir.func @f32() global_ctor(777)
+// CHECK: cir.func @f33() global_dtor
+// CHECK: cir.func @f34() global_dtor(777)
