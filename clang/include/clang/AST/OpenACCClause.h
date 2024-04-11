@@ -103,7 +103,7 @@ public:
 /// Represents one of the handful of classes that has an optional/required
 /// 'condition' expression as an argument.
 class OpenACCClauseWithCondition : public OpenACCClauseWithParams {
-  Expr *ConditionExpr;
+  Expr *ConditionExpr = nullptr;
 
 protected:
   OpenACCClauseWithCondition(OpenACCClauseKind K, SourceLocation BeginLoc,

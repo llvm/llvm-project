@@ -86,7 +86,7 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
 bool checkAlreadyHasClauseOfKind(
     SemaOpenACC &S, ArrayRef<const OpenACCClause *> ExistingClauses,
     SemaOpenACC::OpenACCParsedClause &Clause) {
-  auto Itr = llvm::find_if(ExistingClauses, [&](const OpenACCClause *C) {
+  const auto *Itr = llvm::find_if(ExistingClauses, [&](const OpenACCClause *C) {
     return C->getClauseKind() == Clause.getClauseKind();
   });
   if (Itr != ExistingClauses.end()) {
