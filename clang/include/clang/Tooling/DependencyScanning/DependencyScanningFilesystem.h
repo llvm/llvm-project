@@ -247,9 +247,15 @@ public:
   insertEntryForFilename(StringRef Filename,
                          const CachedFileSystemEntry &Entry) {
     assert(llvm::sys::path::is_absolute_gnu(Filename));
-    assert(Cache[Filename].first == nullptr && "entry already present");
-    Cache[Filename].first = &Entry;
-    return Entry;
+    auto [It, Inserted] = Cache.insert({Filename, {&Entry, nullptr}});
+    auto &[CachedEntry, CachedRealPath] = It->getValue();
+    if (!Inserted) {
+      // The file is already present in the local cache. If we got here, it only
+      // contains the real path. Let's make sure the entry is populated too.
+      assert((!CachedEntry && CachedRealPath) && "entry already present");
+      CachedEntry = &Entry;
+    }
+    return *CachedEntry;
   }
 
   /// Returns real path associated with the filename or nullptr if none is
@@ -266,9 +272,15 @@ public:
   insertRealPathForFilename(StringRef Filename,
                             const CachedRealPath &RealPath) {
     assert(llvm::sys::path::is_absolute_gnu(Filename));
-    assert(Cache[Filename].second == nullptr && "entry already present");
-    Cache[Filename].second = &RealPath;
-    return RealPath;
+    auto [It, Inserted] = Cache.insert({Filename, {nullptr, &RealPath}});
+    auto &[CachedEntry, CachedRealPath] = It->getValue();
+    if (!Inserted) {
+      // The file is already present in the local cache. If we got here, it only
+      // contains the entry. Let's make sure the real path is populated too.
+      assert((!CachedRealPath && CachedEntry) && "real path already present");
+      CachedRealPath = &RealPath;
+    }
+    return *CachedRealPath;
   }
 };
 
