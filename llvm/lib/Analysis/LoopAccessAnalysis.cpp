@@ -2061,7 +2061,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
       return Dependence::NoDep;
     }
 
-  // Write to the same location with the same size.
+    // Write to the same location with the same size.
     if (C->isZero()) {
       if (HasSameSize)
         return Dependence::Forward;
