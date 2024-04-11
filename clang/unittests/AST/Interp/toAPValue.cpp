@@ -90,7 +90,8 @@ TEST(ToAPValue, Pointers) {
 
 TEST(ToAPValue, FunctionPointers) {
   constexpr char Code[] = " constexpr bool foo() { return true; }\n"
-                          " constexpr bool (*func)() = foo;\n";
+                          " constexpr bool (*func)() = foo;\n"
+                          " constexpr bool (*nullp)() = nullptr;\n";
 
   auto AST = tooling::buildASTFromCodeWithArgs(
       Code, {"-fexperimental-new-constant-interpreter"});
@@ -112,15 +113,76 @@ TEST(ToAPValue, FunctionPointers) {
     return Prog.getPtrGlobal(*Prog.getGlobal(D));
   };
 
-  const Pointer &GP = getGlobalPtr("func");
-  const FunctionPointer &FP = GP.deref<FunctionPointer>();
-  ASSERT_FALSE(FP.isZero());
-  APValue A = FP.toAPValue();
-  ASSERT_TRUE(A.hasValue());
-  ASSERT_TRUE(A.isLValue());
-  ASSERT_TRUE(A.hasLValuePath());
-  const auto &Path = A.getLValuePath();
-  ASSERT_EQ(Path.size(), 0u);
-  ASSERT_FALSE(A.getLValueBase().isNull());
-  ASSERT_EQ(A.getLValueBase().dyn_cast<const ValueDecl *>(), getDecl("foo"));
+  {
+    const Pointer &GP = getGlobalPtr("func");
+    const FunctionPointer &FP = GP.deref<FunctionPointer>();
+    ASSERT_FALSE(FP.isZero());
+    APValue A = FP.toAPValue();
+    ASSERT_TRUE(A.hasValue());
+    ASSERT_TRUE(A.isLValue());
+    ASSERT_TRUE(A.hasLValuePath());
+    const auto &Path = A.getLValuePath();
+    ASSERT_EQ(Path.size(), 0u);
+    ASSERT_FALSE(A.getLValueBase().isNull());
+    ASSERT_EQ(A.getLValueBase().dyn_cast<const ValueDecl *>(), getDecl("foo"));
+  }
+
+  {
+    const ValueDecl *D = getDecl("nullp");
+    ASSERT_NE(D, nullptr);
+    const Pointer &GP = getGlobalPtr("nullp");
+    const auto &P = GP.deref<FunctionPointer>();
+    APValue A = P.toAPValue();
+    ASSERT_TRUE(A.isLValue());
+    ASSERT_TRUE(A.getLValueBase().isNull());
+    ASSERT_TRUE(A.isNullPointer());
+    APSInt I;
+    bool Success = A.toIntegralConstant(I, D->getType(), AST->getASTContext());
+    ASSERT_TRUE(Success);
+    ASSERT_EQ(I, 0);
+  }
+}
+
+TEST(ToAPValue, FunctionPointersC) {
+  // NB: The declaration of func2 is useless, but it makes us register a global
+  // variable for func.
+  constexpr char Code[] = "const int (* const func)(int *) = (void*)17;\n"
+                          "const int (*func2)(int *) = func;\n";
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      Code, {"-x", "c", "-fexperimental-new-constant-interpreter"});
+
+  auto &Ctx = AST->getASTContext().getInterpContext();
+  Program &Prog = Ctx.getProgram();
+
+  auto getDecl = [&](const char *Name) -> const ValueDecl * {
+    auto Nodes =
+        match(valueDecl(hasName(Name)).bind("var"), AST->getASTContext());
+    assert(Nodes.size() == 1);
+    const auto *D = Nodes[0].getNodeAs<ValueDecl>("var");
+    assert(D);
+    return D;
+  };
+
+  auto getGlobalPtr = [&](const char *Name) -> Pointer {
+    const VarDecl *D = cast<VarDecl>(getDecl(Name));
+    return Prog.getPtrGlobal(*Prog.getGlobal(D));
+  };
+
+  {
+    const ValueDecl *D = getDecl("func");
+    const Pointer &GP = getGlobalPtr("func");
+    ASSERT_TRUE(GP.isLive());
+    const FunctionPointer &FP = GP.deref<FunctionPointer>();
+    ASSERT_FALSE(FP.isZero());
+    APValue A = FP.toAPValue();
+    ASSERT_TRUE(A.hasValue());
+    ASSERT_TRUE(A.isLValue());
+    const auto &Path = A.getLValuePath();
+    ASSERT_EQ(Path.size(), 0u);
+    ASSERT_TRUE(A.getLValueBase().isNull());
+    APSInt I;
+    bool Success = A.toIntegralConstant(I, D->getType(), AST->getASTContext());
+    ASSERT_TRUE(Success);
+    ASSERT_EQ(I, 17);
+  }
 }
