@@ -24433,6 +24433,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   EVT NVT = N->getValueType(0);
   SDValue V = N->getOperand(0);
   uint64_t ExtIdx = N->getConstantOperandVal(1);
+  SDLoc DL(N);
 
   // Extract from UNDEF is UNDEF.
   if (V.isUndef())
@@ -24448,7 +24449,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     if (TLI.isExtractSubvectorCheap(NVT, V.getOperand(0).getValueType(),
                                     V.getConstantOperandVal(1)) &&
         TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NVT)) {
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), NVT, V.getOperand(0),
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, V.getOperand(0),
                          V.getOperand(1));
     }
   }
@@ -24457,7 +24458,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   if (V.getOpcode() == ISD::SPLAT_VECTOR)
     if (DAG.isConstantValueOfAnyType(V.getOperand(0)) || V.hasOneUse())
       if (!LegalOperations || TLI.isOperationLegal(ISD::SPLAT_VECTOR, NVT))
-        return DAG.getSplatVector(NVT, SDLoc(N), V.getOperand(0));
+        return DAG.getSplatVector(NVT, DL, V.getOperand(0));
 
   // Try to move vector bitcast after extract_subv by scaling extraction index:
   // extract_subv (bitcast X), Index --> bitcast (extract_subv X, Index')
@@ -24471,10 +24472,9 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     if ((SrcNumElts % DestNumElts) == 0) {
       unsigned SrcDestRatio = SrcNumElts / DestNumElts;
       ElementCount NewExtEC = NVT.getVectorElementCount() * SrcDestRatio;
-      EVT NewExtVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getScalarType(),
-                                      NewExtEC);
+      EVT NewExtVT =
+          EVT::getVectorVT(*DAG.getContext(), SrcVT.getScalarType(), NewExtEC);
       if (TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NewExtVT)) {
-        SDLoc DL(N);
         SDValue NewIndex = DAG.getVectorIdxConstant(ExtIdx * SrcDestRatio, DL);
         SDValue NewExtract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewExtVT,
                                          V.getOperand(0), NewIndex);
@@ -24488,7 +24488,6 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
             NVT.getVectorElementCount().divideCoefficientBy(DestSrcRatio);
         EVT ScalarVT = SrcVT.getScalarType();
         if ((ExtIdx % DestSrcRatio) == 0) {
-          SDLoc DL(N);
           unsigned IndexValScaled = ExtIdx / DestSrcRatio;
           EVT NewExtVT =
               EVT::getVectorVT(*DAG.getContext(), ScalarVT, NewExtEC);
@@ -24536,7 +24535,6 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     //   v2i8 extract_subvec v8i8 Y, 6
     if (NVT.isFixedLengthVector() && ConcatSrcVT.isFixedLengthVector() &&
         ConcatSrcNumElts % ExtNumElts == 0) {
-      SDLoc DL(N);
       unsigned NewExtIdx = ExtIdx - ConcatOpIdx * ConcatSrcNumElts;
       assert(NewExtIdx + ExtNumElts <= ConcatSrcNumElts &&
              "Trying to extract from >1 concat operand?");
@@ -24575,13 +24573,13 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
         if (NumElems == 1) {
           SDValue Src = V->getOperand(IdxVal);
           if (EltVT != Src.getValueType())
-            Src = DAG.getNode(ISD::TRUNCATE, SDLoc(N), EltVT, Src);
+            Src = DAG.getNode(ISD::TRUNCATE, DL, EltVT, Src);
           return DAG.getBitcast(NVT, Src);
         }
 
         // Extract the pieces from the original build_vector.
-        SDValue BuildVec = DAG.getBuildVector(ExtractVT, SDLoc(N),
-                                              V->ops().slice(IdxVal, NumElems));
+        SDValue BuildVec =
+            DAG.getBuildVector(ExtractVT, DL, V->ops().slice(IdxVal, NumElems));
         return DAG.getBitcast(NVT, BuildVec);
       }
     }
@@ -24608,7 +24606,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
       return DAG.getBitcast(NVT, V.getOperand(1));
     }
     return DAG.getNode(
-        ISD::EXTRACT_SUBVECTOR, SDLoc(N), NVT,
+        ISD::EXTRACT_SUBVECTOR, DL, NVT,
         DAG.getBitcast(N->getOperand(0).getValueType(), V.getOperand(0)),
         N->getOperand(1));
   }
