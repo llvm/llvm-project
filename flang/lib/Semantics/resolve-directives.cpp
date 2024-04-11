@@ -2101,10 +2101,19 @@ Symbol *OmpAttributeVisitor::ResolveOmpCommonBlockName(
     name->symbol = cur;
     return cur;
   }
-  // Then check parent scope
-  if (auto *prev{GetContext().scope.parent().FindCommonBlock(name->source)}) {
-    name->symbol = prev;
-    return prev;
+  // Then check parent scope, skipping OpenMP scopes and making sure
+  // that the top directive started its own scope.
+  DirContext &topDirContext = dirContext_.front();
+  Scope &topDirScope = topDirContext.scope;
+  assert(!topDirContext.directiveSource.empty());
+  assert(!topDirScope.sourceRange().empty());
+  if (!topDirScope.IsTopLevel() &&
+      topDirContext.directiveSource.begin() ==
+          topDirScope.sourceRange().begin()) {
+    if (auto *prev{topDirScope.parent().FindCommonBlock(name->source)}) {
+      name->symbol = prev;
+      return prev;
+    }
   }
   return nullptr;
 }
