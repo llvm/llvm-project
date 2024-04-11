@@ -1449,7 +1449,7 @@ def dD : Flag<["-"], "dD">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>
 def dI : Flag<["-"], "dI">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Print include directives in -E mode in addition to normal output">,
   MarshallingInfoFlag<PreprocessorOutputOpts<"ShowIncludeDirectives">>;
-def dM : Flag<["-"], "dM">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>,
+def dM : Flag<["-"], "dM">, Group<d_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Print macro definitions in -E mode instead of normal output">;
 def dead__strip : Flag<["-"], "dead_strip">;
 def dependency_file : Separate<["-"], "dependency-file">,
@@ -4912,6 +4912,9 @@ defm tgsplit : SimpleMFlag<"tgsplit", "Enable", "Disable",
 defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
   "Specify wavefront size 64", "Specify wavefront size 32",
   " mode (AMDGPU only)">;
+defm amdgpu_precise_memory_op
+    : SimpleMFlag<"amdgpu-precise-memory-op", "Enable", "Disable",
+                  " precise memory mode (AMDGPU only)">;
 
 defm unsafe_fp_atomics : BoolMOption<"unsafe-fp-atomics",
   TargetOpts<"AllowAMDGPUUnsafeFPAtomics">, DefaultFalse,

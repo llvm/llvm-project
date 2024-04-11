@@ -40,6 +40,7 @@
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaOpenACC.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -2632,7 +2633,8 @@ public:
                                              SourceLocation LParen,
                                              SourceLocation RParen,
                                              TypeSourceInfo *TSI) {
-    return getSema().BuildSYCLUniqueStableNameExpr(OpLoc, LParen, RParen, TSI);
+    return getSema().SYCL().BuildUniqueStableNameExpr(OpLoc, LParen, RParen,
+                                                      TSI);
   }
 
   /// Build a new predefined expression.
@@ -3307,13 +3309,12 @@ public:
 
   /// Build a new C++ "this" expression.
   ///
-  /// By default, performs semantic analysis to build a new "this" expression.
-  /// Subclasses may override this routine to provide different behavior.
+  /// By default, builds a new "this" expression without performing any
+  /// semantic analysis. Subclasses may override this routine to provide
+  /// different behavior.
   ExprResult RebuildCXXThisExpr(SourceLocation ThisLoc,
                                 QualType ThisType,
                                 bool isImplicit) {
-    if (getSema().CheckCXXThisType(ThisLoc, ThisType))
-      return ExprError();
     return getSema().BuildCXXThisExpr(ThisLoc, ThisType, isImplicit);
   }
 
@@ -4034,6 +4035,11 @@ private:
   llvm::SmallVector<OpenACCClause *>
   TransformOpenACCClauseList(OpenACCDirectiveKind DirKind,
                              ArrayRef<const OpenACCClause *> OldClauses);
+
+  OpenACCClause *
+  TransformOpenACCClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                         OpenACCDirectiveKind DirKind,
+                         const OpenACCClause *OldClause);
 };
 
 template <typename Derived>
@@ -11075,12 +11081,43 @@ OMPClause *TreeTransform<Derived>::TransformOMPXBareClause(OMPXBareClause *C) {
 // OpenACC transformation
 //===----------------------------------------------------------------------===//
 template <typename Derived>
+OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
+    ArrayRef<const OpenACCClause *> ExistingClauses,
+    OpenACCDirectiveKind DirKind, const OpenACCClause *OldClause) {
+
+  SemaOpenACC::OpenACCParsedClause ParsedClause(
+      DirKind, OldClause->getClauseKind(), OldClause->getBeginLoc());
+  ParsedClause.setEndLoc(OldClause->getEndLoc());
+
+  if (const auto *WithParms = dyn_cast<OpenACCClauseWithParams>(OldClause))
+    ParsedClause.setLParenLoc(WithParms->getLParenLoc());
+
+  switch (OldClause->getClauseKind()) {
+  case OpenACCClauseKind::Default:
+    // There is nothing to do here as nothing dependent can appear in this
+    // clause. So just set the values so Sema can set the right value.
+    ParsedClause.setDefaultDetails(
+        cast<OpenACCDefaultClause>(OldClause)->getDefaultClauseKind());
+    break;
+  default:
+    assert(false && "Unhandled OpenACC clause in TreeTransform");
+    return nullptr;
+  }
+
+  return getSema().OpenACC().ActOnClause(ExistingClauses, ParsedClause);
+}
+
+template <typename Derived>
 llvm::SmallVector<OpenACCClause *>
 TreeTransform<Derived>::TransformOpenACCClauseList(
     OpenACCDirectiveKind DirKind, ArrayRef<const OpenACCClause *> OldClauses) {
-  // TODO OpenACC: Ensure we loop through the list and transform the individual
-  // clauses.
-  return {};
+  llvm::SmallVector<OpenACCClause *> TransformedClauses;
+  for (const auto *Clause : OldClauses) {
+    if (OpenACCClause *TransformedClause = getDerived().TransformOpenACCClause(
+            TransformedClauses, DirKind, Clause))
+      TransformedClauses.push_back(TransformedClause);
+  }
+  return TransformedClauses;
 }
 
 template <typename Derived>
