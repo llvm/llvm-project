@@ -1348,83 +1348,31 @@ LogicalResult SingleOp::verify() {
 // WsloopOp
 //===----------------------------------------------------------------------===//
 
-/// loop-control ::= `(` ssa-id-list `)` `:` type `=`  loop-bounds
-/// loop-bounds := `(` ssa-id-list `)` to `(` ssa-id-list `)` inclusive? steps
-/// steps := `step` `(`ssa-id-list`)`
 ParseResult
 parseWsloop(OpAsmParser &parser, Region &region,
-            SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lowerBound,
-            SmallVectorImpl<OpAsmParser::UnresolvedOperand> &upperBound,
-            SmallVectorImpl<OpAsmParser::UnresolvedOperand> &steps,
-            SmallVectorImpl<Type> &loopVarTypes,
             SmallVectorImpl<OpAsmParser::UnresolvedOperand> &reductionOperands,
-            SmallVectorImpl<Type> &reductionTypes, ArrayAttr &reductionSymbols,
-            UnitAttr &inclusive) {
-
+            SmallVectorImpl<Type> &reductionTypes,
+            ArrayAttr &reductionSymbols) {
   // Parse an optional reduction clause
   llvm::SmallVector<OpAsmParser::Argument> privates;
-  bool hasReduction = succeeded(parser.parseOptionalKeyword("reduction")) &&
-                      succeeded(parseClauseWithRegionArgs(
-                          parser, region, reductionOperands, reductionTypes,
-                          reductionSymbols, privates));
-
-  if (parser.parseKeyword("for"))
-    return failure();
-
-  // Parse an opening `(` followed by induction variables followed by `)`
-  SmallVector<OpAsmParser::Argument> ivs;
-  Type loopVarType;
-  if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren) ||
-      parser.parseColonType(loopVarType) ||
-      // Parse loop bounds.
-      parser.parseEqual() ||
-      parser.parseOperandList(lowerBound, ivs.size(),
-                              OpAsmParser::Delimiter::Paren) ||
-      parser.parseKeyword("to") ||
-      parser.parseOperandList(upperBound, ivs.size(),
-                              OpAsmParser::Delimiter::Paren))
-    return failure();
-
-  if (succeeded(parser.parseOptionalKeyword("inclusive")))
-    inclusive = UnitAttr::get(parser.getBuilder().getContext());
-
-  // Parse step values.
-  if (parser.parseKeyword("step") ||
-      parser.parseOperandList(steps, ivs.size(), OpAsmParser::Delimiter::Paren))
-    return failure();
-
-  // Now parse the body.
-  loopVarTypes = SmallVector<Type>(ivs.size(), loopVarType);
-  for (auto &iv : ivs)
-    iv.type = loopVarType;
-
-  SmallVector<OpAsmParser::Argument> regionArgs{ivs};
-  if (hasReduction)
-    llvm::copy(privates, std::back_inserter(regionArgs));
-
-  return parser.parseRegion(region, regionArgs);
+  if (succeeded(parser.parseOptionalKeyword("reduction"))) {
+    if (failed(parseClauseWithRegionArgs(parser, region, reductionOperands,
+                                         reductionTypes, reductionSymbols,
+                                         privates)))
+      return failure();
+  }
+  return parser.parseRegion(region, privates);
 }
 
 void printWsloop(OpAsmPrinter &p, Operation *op, Region &region,
-                 ValueRange lowerBound, ValueRange upperBound, ValueRange steps,
-                 TypeRange loopVarTypes, ValueRange reductionOperands,
-                 TypeRange reductionTypes, ArrayAttr reductionSymbols,
-                 UnitAttr inclusive) {
+                 ValueRange reductionOperands, TypeRange reductionTypes,
+                 ArrayAttr reductionSymbols) {
   if (reductionSymbols) {
-    auto reductionArgs =
-        region.front().getArguments().drop_front(loopVarTypes.size());
+    auto reductionArgs = region.front().getArguments();
     printClauseWithRegionArgs(p, op, reductionArgs, "reduction",
                               reductionOperands, reductionTypes,
                               reductionSymbols);
   }
-
-  p << " for ";
-  auto args = region.front().getArguments().drop_back(reductionOperands.size());
-  p << " (" << args << ") : " << args[0].getType() << " = (" << lowerBound
-    << ") to (" << upperBound << ") ";
-  if (inclusive)
-    p << "inclusive ";
-  p << "step (" << steps << ") ";
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
@@ -1725,6 +1673,9 @@ void LoopNestOp::print(OpAsmPrinter &p) {
 }
 
 LogicalResult LoopNestOp::verify() {
+  if (getLowerBound().empty())
+    return emitOpError() << "must represent at least one loop";
+
   if (getLowerBound().size() != getIVs().size())
     return emitOpError() << "number of range arguments and IVs do not match";
 
@@ -1760,20 +1711,27 @@ void LoopNestOp::gatherWrappers(
 //===----------------------------------------------------------------------===//
 
 void WsloopOp::build(OpBuilder &builder, OperationState &state,
-                     ValueRange lowerBound, ValueRange upperBound,
-                     ValueRange step, ArrayRef<NamedAttribute> attributes) {
-  build(builder, state, lowerBound, upperBound, step,
-        /*linear_vars=*/ValueRange(),
+                     ArrayRef<NamedAttribute> attributes) {
+  build(builder, state, /*linear_vars=*/ValueRange(),
         /*linear_step_vars=*/ValueRange(), /*reduction_vars=*/ValueRange(),
         /*reductions=*/nullptr, /*schedule_val=*/nullptr,
         /*schedule_chunk_var=*/nullptr, /*schedule_modifier=*/nullptr,
         /*simd_modifier=*/false, /*nowait=*/false, /*byref=*/false,
-        /*ordered_val=*/nullptr,
-        /*order_val=*/nullptr, /*inclusive=*/false);
+        /*ordered_val=*/nullptr, /*order_val=*/nullptr);
   state.addAttributes(attributes);
 }
 
 LogicalResult WsloopOp::verify() {
+  if (!isWrapper())
+    return emitOpError() << "must be a loop wrapper";
+
+  if (LoopWrapperInterface nested = getNestedWrapper()) {
+    // Check for the allowed leaf constructs that may appear in a composite
+    // construct directly after DO/FOR.
+    if (!isa<SimdOp>(nested))
+      return emitError() << "only supported nested wrapper is 'omp.simd'";
+  }
+
   return verifyReductionVarList(*this, getReductions(), getReductionVars());
 }
 
@@ -1824,9 +1782,10 @@ LogicalResult OrderedRegionOp::verify() {
   if (getSimd())
     return failure();
 
-  if (auto container = (*this)->getParentOfType<WsloopOp>()) {
-    if (!container.getOrderedValAttr() ||
-        container.getOrderedValAttr().getInt() != 0)
+  if (auto loopOp = dyn_cast<LoopNestOp>((*this)->getParentOp())) {
+    auto wsloopOp = llvm::dyn_cast_if_present<WsloopOp>(loopOp->getParentOp());
+    if (!wsloopOp || !wsloopOp.getOrderedValAttr() ||
+        wsloopOp.getOrderedValAttr().getInt() != 0)
       return emitOpError() << "ordered region must be closely nested inside "
                            << "a worksharing-loop region with an ordered "
                            << "clause without parameter present";
@@ -1967,19 +1926,22 @@ LogicalResult CancelOp::verify() {
                          << "inside a parallel region";
   }
   if (cct == ClauseCancellationConstructType::Loop) {
-    if (!isa<WsloopOp>(parentOp)) {
-      return emitOpError() << "cancel loop must appear "
-                           << "inside a worksharing-loop region";
-    }
-    if (cast<WsloopOp>(parentOp).getNowaitAttr()) {
-      return emitError() << "A worksharing construct that is canceled "
-                         << "must not have a nowait clause";
-    }
-    if (cast<WsloopOp>(parentOp).getOrderedValAttr()) {
-      return emitError() << "A worksharing construct that is canceled "
-                         << "must not have an ordered clause";
-    }
+    auto loopOp = dyn_cast<LoopNestOp>(parentOp);
+    auto wsloopOp = llvm::dyn_cast_if_present<WsloopOp>(
+        loopOp ? loopOp->getParentOp() : nullptr);
 
+    if (!wsloopOp) {
+      return emitOpError()
+             << "cancel loop must appear inside a worksharing-loop region";
+    }
+    if (wsloopOp.getNowaitAttr()) {
+      return emitError() << "A worksharing construct that is canceled must not "
+                            "have a `nowait` clause";
+    }
+    if (wsloopOp.getOrderedValAttr()) {
+      return emitError() << "A worksharing construct that is canceled must not "
+                            "have an `ordered` clause";
+    }
   } else if (cct == ClauseCancellationConstructType::Sections) {
     if (!(isa<SectionsOp>(parentOp) || isa<SectionOp>(parentOp))) {
       return emitOpError() << "cancel sections must appear "
@@ -1988,7 +1950,7 @@ LogicalResult CancelOp::verify() {
     if (isa_and_nonnull<SectionsOp>(parentOp->getParentOp()) &&
         cast<SectionsOp>(parentOp->getParentOp()).getNowaitAttr()) {
       return emitError() << "A sections construct that is canceled "
-                         << "must not have a nowait clause";
+                         << "must not have a `nowait` clause";
     }
   }
   // TODO : Add more when we support taskgroup.
@@ -2013,7 +1975,7 @@ LogicalResult CancellationPointOp::verify() {
                          << "inside a parallel region";
   }
   if ((cct == ClauseCancellationConstructType::Loop) &&
-      !isa<WsloopOp>(parentOp)) {
+      (!isa<LoopNestOp>(parentOp) || !isa<WsloopOp>(parentOp->getParentOp()))) {
     return emitOpError() << "cancellation point loop must appear "
                          << "inside a worksharing-loop region";
   }

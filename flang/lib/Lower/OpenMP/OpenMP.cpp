@@ -1626,7 +1626,9 @@ genOmpFlush(Fortran::lower::AbstractConverter &converter,
 static llvm::SmallVector<const Fortran::semantics::Symbol *>
 genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
             mlir::Location &loc,
-            llvm::ArrayRef<const Fortran::semantics::Symbol *> args) {
+            llvm::ArrayRef<const Fortran::semantics::Symbol *> args,
+            llvm::ArrayRef<const Fortran::semantics::Symbol *> wrapperSyms = {},
+            llvm::ArrayRef<mlir::BlockArgument> wrapperArgs = {}) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto &region = op->getRegion(0);
 
@@ -1637,6 +1639,14 @@ genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Type> tiv(args.size(), loopVarType);
   llvm::SmallVector<mlir::Location> locs(args.size(), loc);
   firOpBuilder.createBlock(&region, {}, tiv, locs);
+
+  // Bind the entry block arguments of parent wrappers to the corresponding
+  // symbols. Do it here so that any hlfir.declare operations created as a
+  // result are inserted inside of the omp.loop_nest rather than the wrapper
+  // operations.
+  for (auto [arg, prv] : llvm::zip_equal(wrapperSyms, wrapperArgs))
+    converter.bindSymbol(*arg, prv);
+
   // The argument is not currently in memory, so make a temporary for the
   // argument, and store it there, then bind that location to the argument.
   mlir::Operation *storeOp = nullptr;
@@ -1648,58 +1658,6 @@ genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
   firOpBuilder.setInsertionPointAfter(storeOp);
 
   return llvm::SmallVector<const Fortran::semantics::Symbol *>(args);
-}
-
-static llvm::SmallVector<const Fortran::semantics::Symbol *>
-genLoopAndReductionVars(
-    mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
-    mlir::Location &loc,
-    llvm::ArrayRef<const Fortran::semantics::Symbol *> loopArgs,
-    llvm::ArrayRef<const Fortran::semantics::Symbol *> reductionArgs,
-    llvm::ArrayRef<mlir::Type> reductionTypes) {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-
-  llvm::SmallVector<mlir::Type> blockArgTypes;
-  llvm::SmallVector<mlir::Location> blockArgLocs;
-  blockArgTypes.reserve(loopArgs.size() + reductionArgs.size());
-  blockArgLocs.reserve(blockArgTypes.size());
-  mlir::Block *entryBlock;
-
-  if (loopArgs.size()) {
-    std::size_t loopVarTypeSize = 0;
-    for (const Fortran::semantics::Symbol *arg : loopArgs)
-      loopVarTypeSize = std::max(loopVarTypeSize, arg->GetUltimate().size());
-    mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
-    std::fill_n(std::back_inserter(blockArgTypes), loopArgs.size(),
-                loopVarType);
-    std::fill_n(std::back_inserter(blockArgLocs), loopArgs.size(), loc);
-  }
-  if (reductionArgs.size()) {
-    llvm::copy(reductionTypes, std::back_inserter(blockArgTypes));
-    std::fill_n(std::back_inserter(blockArgLocs), reductionArgs.size(), loc);
-  }
-  entryBlock = firOpBuilder.createBlock(&op->getRegion(0), {}, blockArgTypes,
-                                        blockArgLocs);
-  // The argument is not currently in memory, so make a temporary for the
-  // argument, and store it there, then bind that location to the argument.
-  if (loopArgs.size()) {
-    mlir::Operation *storeOp = nullptr;
-    for (auto [argIndex, argSymbol] : llvm::enumerate(loopArgs)) {
-      mlir::Value indexVal =
-          fir::getBase(op->getRegion(0).front().getArgument(argIndex));
-      storeOp =
-          createAndSetPrivatizedLoopVar(converter, loc, indexVal, argSymbol);
-    }
-    firOpBuilder.setInsertionPointAfter(storeOp);
-  }
-  // Bind the reduction arguments to their block arguments
-  for (auto [arg, prv] : llvm::zip_equal(
-           reductionArgs,
-           llvm::drop_begin(entryBlock->getArguments(), loopArgs.size()))) {
-    converter.bindSymbol(*arg, prv);
-  }
-
-  return llvm::SmallVector<const Fortran::semantics::Symbol *>(loopArgs);
 }
 
 static void createSimd(Fortran::lower::AbstractConverter &converter,
@@ -1797,28 +1755,26 @@ static void createWsloop(Fortran::lower::AbstractConverter &converter,
   if (ReductionProcessor::doReductionByRef(reductionVars))
     byrefOperand = firOpBuilder.getUnitAttr();
 
-  auto wsLoopOp = firOpBuilder.create<mlir::omp::WsloopOp>(
-      loc, lowerBound, upperBound, step, linearVars, linearStepVars,
-      reductionVars,
+  auto wsloopOp = firOpBuilder.create<mlir::omp::WsloopOp>(
+      loc, linearVars, linearStepVars, reductionVars,
       reductionDeclSymbols.empty()
           ? nullptr
           : mlir::ArrayAttr::get(firOpBuilder.getContext(),
                                  reductionDeclSymbols),
       scheduleValClauseOperand, scheduleChunkClauseOperand,
-      /*schedule_modifiers=*/nullptr,
-      /*simd_modifier=*/nullptr, nowaitClauseOperand, byrefOperand,
-      orderedClauseOperand, orderClauseOperand,
-      /*inclusive=*/firOpBuilder.getUnitAttr());
+      /*schedule_modifiers=*/nullptr, /*simd_modifier=*/nullptr,
+      nowaitClauseOperand, byrefOperand, orderedClauseOperand,
+      orderClauseOperand);
 
   // Handle attribute based clauses.
   if (cp.processOrdered(orderedClauseOperand))
-    wsLoopOp.setOrderedValAttr(orderedClauseOperand);
+    wsloopOp.setOrderedValAttr(orderedClauseOperand);
 
   if (cp.processSchedule(scheduleValClauseOperand, scheduleModClauseOperand,
                          scheduleSimdClauseOperand)) {
-    wsLoopOp.setScheduleValAttr(scheduleValClauseOperand);
-    wsLoopOp.setScheduleModifierAttr(scheduleModClauseOperand);
-    wsLoopOp.setSimdModifierAttr(scheduleSimdClauseOperand);
+    wsloopOp.setScheduleValAttr(scheduleValClauseOperand);
+    wsloopOp.setScheduleModifierAttr(scheduleModClauseOperand);
+    wsloopOp.setSimdModifierAttr(scheduleSimdClauseOperand);
   }
   // In FORTRAN `nowait` clause occur at the end of `omp do` directive.
   // i.e
@@ -1828,23 +1784,36 @@ static void createWsloop(Fortran::lower::AbstractConverter &converter,
   if (endClauseList) {
     if (ClauseProcessor(converter, semaCtx, *endClauseList)
             .processNowait(nowaitClauseOperand))
-      wsLoopOp.setNowaitAttr(nowaitClauseOperand);
+      wsloopOp.setNowaitAttr(nowaitClauseOperand);
   }
+
+  // Create omp.wsloop wrapper and populate entry block arguments with reduction
+  // variables.
+  llvm::SmallVector<mlir::Location> reductionLocs(reductionSymbols.size(), loc);
+  mlir::Block *wsloopEntryBlock = firOpBuilder.createBlock(
+      &wsloopOp.getRegion(), {}, reductionTypes, reductionLocs);
+  firOpBuilder.setInsertionPoint(
+      Fortran::lower::genOpenMPTerminator(firOpBuilder, wsloopOp, loc));
+
+  // Create nested omp.loop_nest and fill body with loop contents.
+  auto loopOp = firOpBuilder.create<mlir::omp::LoopNestOp>(
+      loc, lowerBound, upperBound, step,
+      /*inclusive=*/firOpBuilder.getUnitAttr());
 
   auto *nestedEval = getCollapsedLoopEval(
       eval, Fortran::lower::getCollapseValue(beginClauseList));
 
   auto ivCallback = [&](mlir::Operation *op) {
-    return genLoopAndReductionVars(op, converter, loc, iv, reductionSymbols,
-                                   reductionTypes);
+    return genLoopVars(op, converter, loc, iv, reductionSymbols,
+                       wsloopEntryBlock->getArguments());
   };
 
   createBodyOfOp<mlir::omp::WsloopOp>(
-      *wsLoopOp, OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval)
-                     .setClauses(&beginClauseList)
-                     .setDataSharingProcessor(&dsp)
-                     .setReductions(&reductionSymbols, &reductionTypes)
-                     .setGenRegionEntryCb(ivCallback));
+      *loopOp, OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval)
+                   .setClauses(&beginClauseList)
+                   .setDataSharingProcessor(&dsp)
+                   .setReductions(&reductionSymbols, &reductionTypes)
+                   .setGenRegionEntryCb(ivCallback));
 }
 
 static void createSimdWsloop(
@@ -2430,8 +2399,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 mlir::Operation *Fortran::lower::genOpenMPTerminator(fir::FirOpBuilder &builder,
                                                      mlir::Operation *op,
                                                      mlir::Location loc) {
-  if (mlir::isa<mlir::omp::WsloopOp, mlir::omp::DeclareReductionOp,
-                mlir::omp::AtomicUpdateOp, mlir::omp::LoopNestOp>(op))
+  if (mlir::isa<mlir::omp::AtomicUpdateOp, mlir::omp::DeclareReductionOp,
+                mlir::omp::LoopNestOp>(op))
     return builder.create<mlir::omp::YieldOp>(loc);
   return builder.create<mlir::omp::TerminatorOp>(loc);
 }
