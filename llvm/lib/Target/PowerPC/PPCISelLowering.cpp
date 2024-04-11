@@ -3398,11 +3398,10 @@ static void updateForAIXShLibTLSModelOpt(TLSModel::Model &Model,
 
     unsigned TLSGVCnt = TLSGV.size();
     LLVM_DEBUG(dbgs() << format("TLSGV count:%d\n", TLSGVCnt));
-    if (TLSGVCnt == 1) {
+    if (TLSGVCnt == 1)
       FuncInfo->setAIXFuncUseTLSIE();
-    } else if (TLSGVCnt > 1) {
+    else if (TLSGVCnt > 1)
       FuncInfo->setAIXFuncUseTLSLD();
-    }
     FuncInfo->setAIXFuncUseInitDone();
   }
 
