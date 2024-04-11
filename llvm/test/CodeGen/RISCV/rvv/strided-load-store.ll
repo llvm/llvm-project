@@ -206,9 +206,7 @@ define <vscale x 1 x i64> @straightline_offset_shl(ptr %p) {
 ; CHECK-NEXT:    ret <vscale x 1 x i64> [[X]]
 ;
   %step = call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
-  %splat.insert = insertelement <vscale x 1 x i64> poison, i64 3, i64 0
-  %splat = shufflevector <vscale x 1 x i64> %splat.insert, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %offset = shl <vscale x 1 x i64> %step, %splat
+  %offset = shl <vscale x 1 x i64> %step, splat (i64 3)
   %ptrs = getelementptr i32, ptr %p, <vscale x 1 x i64> %offset
   %x = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(
   <vscale x 1 x ptr> %ptrs,

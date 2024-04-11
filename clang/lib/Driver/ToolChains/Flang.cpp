@@ -264,7 +264,7 @@ static void addVSDefines(const ToolChain &TC, const ArgList &Args,
   CmdArgs.push_back(Args.MakeArgString("-D_MSC_FULL_VER=" + Twine(ver)));
   CmdArgs.push_back(Args.MakeArgString("-D_WIN32"));
 
-  llvm::Triple triple = TC.getTriple();
+  const llvm::Triple &triple = TC.getTriple();
   if (triple.isAArch64()) {
     CmdArgs.push_back("-D_M_ARM64=1");
   } else if (triple.isX86() && triple.isArch32Bit()) {
@@ -589,7 +589,7 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
-      (FPContract == "fast" || FPContract == "")) {
+      (FPContract == "fast" || FPContract.empty())) {
     CmdArgs.push_back("-ffast-math");
     return;
   }
@@ -679,7 +679,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
   if (isa<PreprocessJobAction>(JA)) {
-      CmdArgs.push_back("-E");
+    CmdArgs.push_back("-E");
+    if (Args.getLastArg(options::OPT_dM)) {
+      CmdArgs.push_back("-dM");
+    }
   } else if (isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) {
     if (JA.getType() == types::TY_Nothing) {
       CmdArgs.push_back("-fsyntax-only");
