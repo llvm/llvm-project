@@ -7333,7 +7333,7 @@ static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
   } else {
     Slot = Str;
   }
-  QualType Ty = ((clang::ValueDecl *)D)->getType();
+
   // Validate.
   if (!Slot.empty()) {
     switch (Slot[0]) {
@@ -7372,13 +7372,13 @@ static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
 
   if (VD || BD) {
     llvm::hlsl::ResourceClass RC;
-    std::string varTy = "";
+    StringRef varTy = "";
     if (VD) {
 
       const Type *Ty = VD->getType()->getPointeeOrArrayElementType();
       if (!Ty)
         return;
-      QualType t = ((ElaboratedType *)Ty)->getNamedType();
+      QualType t = cast<ElaboratedType>(Ty)->getNamedType();
       const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
       if (!RD)
         return;
@@ -7391,7 +7391,7 @@ static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
         return;
 
       RC = Attr->getResourceClass();
-      varTy = RD->getNameAsString();
+      varTy = RD->getName();
     } else {
       if (BD->isCBuffer()) {
         RC = llvm::hlsl::ResourceClass::CBuffer;
