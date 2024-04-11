@@ -1492,6 +1492,7 @@ public:
   getModuleFileLevelDecls(ModuleFile &Mod);
 
 private:
+  bool isConsumerInterestedIn(Decl *D);
   void PassInterestingDeclsToConsumer();
   void PassInterestingDeclToConsumer(Decl *D);
 
