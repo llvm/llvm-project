@@ -233,7 +233,7 @@ protected:
 
 template <typename DerivedT> class MockPassHandleBase {
 public:
-  class Pass : public MachinePassInfoMixin<Pass> {
+  class Pass : public PassInfoMixin<Pass> {
     friend MockPassHandleBase;
 
     DerivedT *Handle;
