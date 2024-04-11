@@ -15,7 +15,7 @@
 ; RUN:   FileCheck --check-prefix=ASM64 %s
 
 
-define dso_local void @vec_regs() #0 {
+define dso_local void @vec_regs() {
 entry:
   call void asm sideeffect "", "~{v13},~{v20},~{v26},~{v31}"()
   ret void
@@ -277,7 +277,7 @@ entry:
 
 ; ASM64:         blr
 
-define dso_local void @fprs_gprs_vecregs() #0 {
+define dso_local void @fprs_gprs_vecregs() {
   call void asm sideeffect "", "~{r14},~{r25},~{r31},~{f14},~{f21},~{f31},~{v20},~{v26},~{v31}"()
   ret void
 }
@@ -1049,4 +1049,3 @@ define dso_local void @fprs_gprs_vecregs() #0 {
 
 ; ASM64:            addi 1, 1, 544
 ; ASM64-NEXT:       blr
-attributes #0 = { nounwind }

@@ -287,7 +287,7 @@ entry:
 
 @gS31 = external global %struct_S31, align 1
 
-define void @call_test_byval_mem4() #0 {
+define void @call_test_byval_mem4() {
 entry:
   call void @test_byval_mem4(i32 42, ptr byval(%struct_S31) align 1 @gS31, ptr byval(%struct_S256) align 1 @gS256)
   ret void

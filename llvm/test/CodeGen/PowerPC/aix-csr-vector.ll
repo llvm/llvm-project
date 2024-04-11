@@ -14,7 +14,7 @@
 ; RUN:     -mcpu=pwr7 -mattr=+altivec < %s | \
 ; RUN:   FileCheck --check-prefix=ASM64 %s
 
-define dso_local void @vec_regs() #0 {
+define dso_local void @vec_regs() {
   entry:
     call void asm sideeffect "", "~{v13},~{v20},~{v26},~{v31}"()
       ret void
@@ -62,7 +62,7 @@ define dso_local void @vec_regs() #0 {
 ; ASM64-DAG:     #NO_APP
 ; ASM64:         blr
 
-define dso_local void @fprs_gprs_vecregs() #0 {
+define dso_local void @fprs_gprs_vecregs() {
     call void asm sideeffect "", "~{r25},~{r28},~{r31},~{f21},~{f25},~{f31},~{v20},~{v26},~{v31}"()
       ret void
 }
@@ -258,7 +258,7 @@ define dso_local void @fprs_gprs_vecregs() #0 {
 
 ; ASM64:         blr
 
-define dso_local void @all_fprs_and_vecregs() #0 {
+define dso_local void @all_fprs_and_vecregs() {
     call void asm sideeffect "", "~{f0},~{f1},~{f2},~{f3},~{f4},~{f5},~{f6},~{f7},~{f8},~{f9},~{f10},~{f12},~{f13},~{f14},~{f15},~{f16},~{f17},~{f18},~{f19},~{f20},~{f21},~{f22},~{f23},~{f24},~{f25},~{f26},~{f27},~{f28},~{f29},~{f30},~{f31},~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6}~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19}"()
       ret void
 }
@@ -293,4 +293,3 @@ define dso_local void @all_fprs_and_vecregs() #0 {
 ; MIR64-NOT:     $v29
 ; MIR64-NOT:     $v30
 ; MIR64-NOT:     $v31
-attributes #0 = { nounwind }

@@ -31,7 +31,7 @@
 ; After the prologue is set.
 ; DISABLE: cmpw 3, 4
 ; DISABLE-32: stw 0,
-; DISABLE-64: std 0,
+; DISABLE-64-AIX: std 0,
 ; DISABLE-NEXT: bge 0, {{.*}}[[EXIT_LABEL:BB[0-9_]+]]
 ;
 ; Store %a on the stack
@@ -57,7 +57,7 @@
 ; DISABLE-NEXT: blr
 ;
 
-define i32 @foo(i32 %a, i32 %b) #0 {
+define i32 @foo(i32 %a, i32 %b) {
   %tmp = alloca i32, align 4
   %tmp2 = icmp slt i32 %a, %b
   br i1 %tmp2, label %true, label %false
@@ -187,7 +187,7 @@ declare i32 @something(...)
 ; CHECK: %for.exit
 ; CHECK: mtlr {{[0-9]+}}
 ; CHECK: blr
-define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) #0 {
+define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) {
 entry:
   br label %for.preheader
 
@@ -276,7 +276,7 @@ for.end:                                          ; preds = %for.body
 ; Shift second argument by one and store into returned register.
 ; ENABLE: slwi 3, 4, 1
 ; ENABLE-NEXT: blr
-define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
+define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %for.preheader
@@ -452,7 +452,7 @@ entry:
 ; DISABLE-64-NEXT: ld 31, -[[STACK_OFFSET]](1) # 8-byte Folded Reload
 ; DISABLE-32-NEXT: lwz 31, -[[STACK_OFFSET]](1) # 4-byte Folded Reload
 ; CHECK-NEXT: blr
-define i32 @inlineAsm(i32 %cond, i32 %N) #0 {
+define i32 @inlineAsm(i32 %cond, i32 %N) {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %for.preheader
@@ -698,7 +698,7 @@ end:
 ; Ensure no subsequent uses of callee-save register before end of function
 ; CHECKXX-NOT: {{[a-z]+}} [[CSR]]
 ; CHECK: blr
-define signext i32 @transpose() #0 {
+define signext i32 @transpose() {
 entry:
   %0 = load i32, ptr getelementptr inbounds ([0 x i32], ptr @columns, i64 0, i64 1), align 4
   %shl.i = shl i32 %0, 7
@@ -843,5 +843,3 @@ if.end.6:
   %cmp1.7 = icmp eq i32 %18, %conv18.i
   br i1 %cmp1.7, label %if.then, label %cleanup
 }
-
-attributes #0 = { nounwind }
