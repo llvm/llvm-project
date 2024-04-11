@@ -89,7 +89,7 @@
 // Check -Xcuda-ptxas with clang-cl
 // RUN: %clang_cl -### -c -Xcuda-ptxas -foo1 \
 // RUN:   --offload-arch=sm_35 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
-// RUN:   -Xcuda-ptxas -foo2 %s 2>&1 \
+// RUN:   -Xcuda-ptxas -foo2 -- %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=CHECK,SM35,PTXAS-EXTRA %s
 
 // MacOS spot-checks

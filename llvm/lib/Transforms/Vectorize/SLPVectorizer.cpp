@@ -2325,19 +2325,17 @@ public:
   ~BoUpSLP();
 
 private:
-  /// Determine if a vectorized value \p V in can be demoted to
-  /// a smaller type with a truncation. We collect the values that will be
-  /// demoted in ToDemote and additional roots that require investigating in
-  /// Roots.
-  /// \param DemotedConsts list of Instruction/OperandIndex pairs that are
-  /// constant and to be demoted. Required to correctly identify constant nodes
-  /// to be demoted.
-  bool collectValuesToDemote(
-      Value *V, bool IsProfitableToDemoteRoot, unsigned &BitWidth,
-      SmallVectorImpl<Value *> &ToDemote,
-      DenseMap<Instruction *, SmallVector<unsigned>> &DemotedConsts,
-      DenseSet<Value *> &Visited, unsigned &MaxDepthLevel,
-      bool &IsProfitableToDemote, bool IsTruncRoot) const;
+  /// Determine if a node \p E in can be demoted to a smaller type with a
+  /// truncation. We collect the entries that will be demoted in ToDemote.
+  /// \param E Node for analysis
+  /// \param ToDemote indices of the nodes to be demoted.
+  bool collectValuesToDemote(const TreeEntry &E, bool IsProfitableToDemoteRoot,
+                             unsigned &BitWidth,
+                             SmallVectorImpl<unsigned> &ToDemote,
+                             DenseSet<const TreeEntry *> &Visited,
+                             unsigned &MaxDepthLevel,
+                             bool &IsProfitableToDemote,
+                             bool IsTruncRoot) const;
 
   /// Check if the operands on the edges \p Edges of the \p UserTE allows
   /// reordering (i.e. the operands can be reordered because they have only one
@@ -2996,6 +2994,15 @@ private:
   const TreeEntry *getTreeEntry(Value *V) const {
     return ScalarToTreeEntry.lookup(V);
   }
+
+  /// Check that the operand node of alternate node does not generate
+  /// buildvector sequence. If it is, then probably not worth it to build
+  /// alternate shuffle, if number of buildvector operands + alternate
+  /// instruction > than the number of buildvector instructions.
+  /// \param S the instructions state of the analyzed values.
+  /// \param VL list of the instructions with alternate opcodes.
+  bool areAltOperandsProfitable(const InstructionsState &S,
+                                ArrayRef<Value *> VL) const;
 
   /// Checks if the specified list of the instructions/values can be vectorized
   /// and fills required data before actual scheduling of the instructions.
@@ -5779,6 +5786,117 @@ static bool isAlternateInstruction(const Instruction *I,
                                    const Instruction *AltOp,
                                    const TargetLibraryInfo &TLI);
 
+bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
+                                       ArrayRef<Value *> VL) const {
+  unsigned Opcode0 = S.getOpcode();
+  unsigned Opcode1 = S.getAltOpcode();
+  // The opcode mask selects between the two opcodes.
+  SmallBitVector OpcodeMask(VL.size(), false);
+  for (unsigned Lane : seq<unsigned>(0, VL.size()))
+    if (cast<Instruction>(VL[Lane])->getOpcode() == Opcode1)
+      OpcodeMask.set(Lane);
+  // If this pattern is supported by the target then consider it profitable.
+  if (TTI->isLegalAltInstr(FixedVectorType::get(S.MainOp->getType(), VL.size()),
+                           Opcode0, Opcode1, OpcodeMask))
+    return true;
+  SmallVector<ValueList> Operands;
+  for (unsigned I : seq<unsigned>(0, S.MainOp->getNumOperands())) {
+    Operands.emplace_back();
+    // Prepare the operand vector.
+    for (Value *V : VL)
+      Operands.back().push_back(cast<Instruction>(V)->getOperand(I));
+  }
+  if (Operands.size() == 2) {
+    // Try find best operands candidates.
+    for (unsigned I : seq<unsigned>(0, VL.size() - 1)) {
+      SmallVector<std::pair<Value *, Value *>> Candidates(3);
+      Candidates[0] = std::make_pair(Operands[0][I], Operands[0][I + 1]);
+      Candidates[1] = std::make_pair(Operands[0][I], Operands[1][I + 1]);
+      Candidates[2] = std::make_pair(Operands[1][I], Operands[0][I + 1]);
+      std::optional<int> Res = findBestRootPair(Candidates);
+      switch (Res.value_or(0)) {
+      case 0:
+        break;
+      case 1:
+        std::swap(Operands[0][I + 1], Operands[1][I + 1]);
+        break;
+      case 2:
+        std::swap(Operands[0][I], Operands[1][I]);
+        break;
+      default:
+        llvm_unreachable("Unexpected index.");
+      }
+    }
+  }
+  DenseSet<unsigned> UniqueOpcodes;
+  constexpr unsigned NumAltInsts = 3; // main + alt + shuffle.
+  unsigned NonInstCnt = 0;
+  // Estimate number of instructions, required for the vectorized node and for
+  // the buildvector node.
+  unsigned UndefCnt = 0;
+  // Count the number of extra shuffles, required for vector nodes.
+  unsigned ExtraShuffleInsts = 0;
+  // Check that operands do not contain same values and create either perfect
+  // diamond match or shuffled match.
+  if (Operands.size() == 2) {
+    // Do not count same operands twice.
+    if (Operands.front() == Operands.back()) {
+      Operands.erase(Operands.begin());
+    } else if (!allConstant(Operands.front()) &&
+               all_of(Operands.front(), [&](Value *V) {
+                 return is_contained(Operands.back(), V);
+               })) {
+      Operands.erase(Operands.begin());
+      ++ExtraShuffleInsts;
+    }
+  }
+  const Loop *L = LI->getLoopFor(S.MainOp->getParent());
+  // Vectorize node, if:
+  // 1. at least single operand is constant or splat.
+  // 2. Operands have many loop invariants (the instructions are not loop
+  // invariants).
+  // 3. At least single unique operands is supposed to vectorized.
+  return none_of(Operands,
+                 [&](ArrayRef<Value *> Op) {
+                   if (allConstant(Op) ||
+                       (!isSplat(Op) && allSameBlock(Op) && allSameType(Op) &&
+                        getSameOpcode(Op, *TLI).MainOp))
+                     return false;
+                   DenseMap<Value *, unsigned> Uniques;
+                   for (Value *V : Op) {
+                     if (isa<Constant, ExtractElementInst>(V) ||
+                         getTreeEntry(V) || (L && L->isLoopInvariant(V))) {
+                       if (isa<UndefValue>(V))
+                         ++UndefCnt;
+                       continue;
+                     }
+                     auto Res = Uniques.try_emplace(V, 0);
+                     // Found first duplicate - need to add shuffle.
+                     if (!Res.second && Res.first->second == 1)
+                       ++ExtraShuffleInsts;
+                     ++Res.first->getSecond();
+                     if (auto *I = dyn_cast<Instruction>(V))
+                       UniqueOpcodes.insert(I->getOpcode());
+                     else if (Res.second)
+                       ++NonInstCnt;
+                   }
+                   return none_of(Uniques, [&](const auto &P) {
+                     return P.first->hasNUsesOrMore(P.second + 1) &&
+                            none_of(P.first->users(), [&](User *U) {
+                              return getTreeEntry(U) || Uniques.contains(U);
+                            });
+                   });
+                 }) ||
+         // Do not vectorize node, if estimated number of vector instructions is
+         // more than estimated number of buildvector instructions. Number of
+         // vector operands is number of vector instructions + number of vector
+         // instructions for operands (buildvectors). Number of buildvector
+         // instructions is just number_of_operands * number_of_scalars.
+         (UndefCnt < (VL.size() - 1) * S.MainOp->getNumOperands() &&
+          (UniqueOpcodes.size() + NonInstCnt + ExtraShuffleInsts +
+           NumAltInsts) < S.MainOp->getNumOperands() * VL.size());
+}
+
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     InstructionsState &S, ArrayRef<Value *> VL, bool IsScatterVectorizeUserTE,
     OrdersType &CurrentOrder, SmallVectorImpl<Value *> &PointerOps) const {
@@ -6076,6 +6194,14 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       LLVM_DEBUG(dbgs() << "SLP: ShuffleVector are not vectorized.\n");
       return TreeEntry::NeedToGather;
     }
+    if (!areAltOperandsProfitable(S, VL)) {
+      LLVM_DEBUG(
+          dbgs()
+          << "SLP: ShuffleVector not vectorized, operands are buildvector and "
+             "the whole alt sequence is not profitable.\n");
+      return TreeEntry::NeedToGather;
+    }
+
     return TreeEntry::Vectorize;
   }
   default:
@@ -7056,19 +7182,16 @@ bool BoUpSLP::areAllUsersVectorized(
 
 static std::pair<InstructionCost, InstructionCost>
 getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
-                   TargetTransformInfo *TTI, TargetLibraryInfo *TLI) {
+                   TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
+                   ArrayRef<Type *> ArgTys) {
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
   // Calculate the cost of the scalar and vector calls.
-  SmallVector<Type *, 4> VecTys;
-  for (Use &Arg : CI->args())
-    VecTys.push_back(
-        FixedVectorType::get(Arg->getType(), VecTy->getNumElements()));
   FastMathFlags FMF;
   if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
     FMF = FPCI->getFastMathFlags();
   SmallVector<const Value *> Arguments(CI->args());
-  IntrinsicCostAttributes CostAttrs(ID, VecTy, Arguments, VecTys, FMF,
+  IntrinsicCostAttributes CostAttrs(ID, VecTy, Arguments, ArgTys, FMF,
                                     dyn_cast<IntrinsicInst>(CI));
   auto IntrinsicCost =
     TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
@@ -7081,8 +7204,8 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
   if (!CI->isNoBuiltin() && VecFunc) {
     // Calculate the cost of the vector library call.
     // If the corresponding vector call is cheaper, return its cost.
-    LibCost = TTI->getCallInstrCost(nullptr, VecTy, VecTys,
-                                    TTI::TCK_RecipThroughput);
+    LibCost =
+        TTI->getCallInstrCost(nullptr, VecTy, ArgTys, TTI::TCK_RecipThroughput);
   }
   return {IntrinsicCost, LibCost};
 }
@@ -8508,6 +8631,30 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
   return TTI::CastContextHint::None;
 }
 
+/// Builds the arguments types vector for the given call instruction with the
+/// given \p ID for the specified vector factor.
+static SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
+                                                  const Intrinsic::ID ID,
+                                                  const unsigned VF,
+                                                  unsigned MinBW) {
+  SmallVector<Type *> ArgTys;
+  for (auto [Idx, Arg] : enumerate(CI->args())) {
+    if (ID != Intrinsic::not_intrinsic) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx)) {
+        ArgTys.push_back(Arg->getType());
+        continue;
+      }
+      if (MinBW > 0) {
+        ArgTys.push_back(FixedVectorType::get(
+            IntegerType::get(CI->getContext(), MinBW), VF));
+        continue;
+      }
+    }
+    ArgTys.push_back(FixedVectorType::get(Arg->getType(), VF));
+  }
+  return ArgTys;
+}
+
 InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
@@ -9074,7 +9221,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     };
     auto GetVectorCost = [=](InstructionCost CommonCost) {
       auto *CI = cast<CallInst>(VL0);
-      auto VecCallCosts = getVectorCallCosts(CI, VecTy, TTI, TLI);
+      Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
+      SmallVector<Type *> ArgTys =
+          buildIntrinsicArgTypes(CI, ID, VecTy->getNumElements(),
+                                 It != MinBWs.end() ? It->second.first : 0);
+      auto VecCallCosts = getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys);
       return std::min(VecCallCosts.first, VecCallCosts.second) + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
@@ -10713,9 +10864,13 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                 [](Value *V) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
-        all_of(E->Scalars, [](Value *V) {
-          return !isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V);
-        }))
+        all_of(E->Scalars,
+               [](Value *V) {
+                 return !isVectorLikeInstWithConstOps(V) &&
+                        isUsedOutsideBlock(V);
+               }) ||
+        (E->State == TreeEntry::NeedToGather && E->Idx == 0 &&
+         all_of(E->Scalars, IsaPred<ExtractElementInst, UndefValue>)))
       Res.second = FindLastInst();
     else
       Res.second = FindFirstInst();
@@ -11144,7 +11299,7 @@ public:
           VF = std::max(VF, SubVecVF);
         }
         // Adjust SubMask.
-        for (auto [I, Idx] : enumerate(SubMask))
+        for (int &Idx : SubMask)
           if (Idx != PoisonMaskElem)
             Idx += VF;
         copy(SubMask, std::next(VecMask.begin(), Part * SliceSize));
@@ -11730,8 +11885,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
               VecOp = TE->VectorizedValue;
           if (!Vec1) {
             Vec1 = VecOp;
-          } else if (Vec1 != EI->getVectorOperand()) {
-            assert((!Vec2 || Vec2 == EI->getVectorOperand()) &&
+          } else if (Vec1 != VecOp) {
+            assert((!Vec2 || Vec2 == VecOp) &&
                    "Expected only 1 or 2 vectors shuffle.");
             Vec2 = VecOp;
           }
@@ -11771,8 +11926,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         VecMask.assign(VecMask.size(), PoisonMaskElem);
         copy(SubMask, std::next(VecMask.begin(), I * SliceSize));
         if (TEs.size() == 1) {
-          IsUsedInExpr &=
-              FindReusedSplat(VecMask, TEs.front()->getVectorFactor(), I, SliceSize);
+          IsUsedInExpr &= FindReusedSplat(
+              VecMask, TEs.front()->getVectorFactor(), I, SliceSize);
           ShuffleBuilder.add(*TEs.front(), VecMask);
           if (TEs.front()->VectorizedValue)
             IsNonPoisoned &=
@@ -12548,7 +12703,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
 
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
-      auto VecCallCosts = getVectorCallCosts(CI, VecTy, TTI, TLI);
+      SmallVector<Type *> ArgTys =
+          buildIntrinsicArgTypes(CI, ID, VecTy->getNumElements(),
+                                 It != MinBWs.end() ? It->second.first : 0);
+      auto VecCallCosts = getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys);
       bool UseIntrinsic = ID != Intrinsic::not_intrinsic &&
                           VecCallCosts.first <= VecCallCosts.second;
 
@@ -12557,8 +12715,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       SmallVector<Type *, 2> TysForDecl;
       // Add return type if intrinsic is overloaded on it.
       if (UseIntrinsic && isVectorIntrinsicWithOverloadTypeAtArg(ID, -1))
-        TysForDecl.push_back(
-            FixedVectorType::get(CI->getType(), E->Scalars.size()));
+        TysForDecl.push_back(VecTy);
       auto *CEI = cast<CallInst>(VL0);
       for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
         ValueList OpVL;
@@ -12566,7 +12723,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         // vectorized.
         if (UseIntrinsic && isVectorIntrinsicWithScalarOpAtArg(ID, I)) {
           ScalarArg = CEI->getArgOperand(I);
-          OpVecs.push_back(CEI->getArgOperand(I));
+          // if decided to reduce bitwidth of abs intrinsic, it second argument
+          // must be set false (do not return poison, if value issigned min).
+          if (ID == Intrinsic::abs && It != MinBWs.end() &&
+              It->second.first < DL->getTypeSizeInBits(CEI->getType()))
+            ScalarArg = Builder.getFalse();
+          OpVecs.push_back(ScalarArg);
           if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I))
             TysForDecl.push_back(ScalarArg->getType());
           continue;
@@ -12579,10 +12741,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         }
         ScalarArg = CEI->getArgOperand(I);
         if (cast<VectorType>(OpVec->getType())->getElementType() !=
-            ScalarArg->getType()) {
+                ScalarArg->getType() &&
+            It == MinBWs.end()) {
           auto *CastTy = FixedVectorType::get(ScalarArg->getType(),
                                               VecTy->getNumElements());
           OpVec = Builder.CreateIntCast(OpVec, CastTy, GetOperandSignedness(I));
+        } else if (It != MinBWs.end()) {
+          OpVec = Builder.CreateIntCast(OpVec, VecTy, GetOperandSignedness(I));
         }
         LLVM_DEBUG(dbgs() << "SLP: OpVec[" << I << "]: " << *OpVec << "\n");
         OpVecs.push_back(OpVec);
@@ -14091,20 +14256,17 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
   return Width;
 }
 
-// Determine if a value V in a vectorizable expression Expr can be demoted to a
-// smaller type with a truncation. We collect the values that will be demoted
-// in ToDemote and additional roots that require investigating in Roots.
 bool BoUpSLP::collectValuesToDemote(
-    Value *V, bool IsProfitableToDemoteRoot, unsigned &BitWidth,
-    SmallVectorImpl<Value *> &ToDemote,
-    DenseMap<Instruction *, SmallVector<unsigned>> &DemotedConsts,
-    DenseSet<Value *> &Visited, unsigned &MaxDepthLevel,
-    bool &IsProfitableToDemote, bool IsTruncRoot) const {
+    const TreeEntry &E, bool IsProfitableToDemoteRoot, unsigned &BitWidth,
+    SmallVectorImpl<unsigned> &ToDemote, DenseSet<const TreeEntry *> &Visited,
+    unsigned &MaxDepthLevel, bool &IsProfitableToDemote,
+    bool IsTruncRoot) const {
   // We can always demote constants.
-  if (isa<Constant>(V))
+  if (all_of(E.Scalars, IsaPred<Constant>))
     return true;
 
-  if (DL->getTypeSizeInBits(V->getType()) == BitWidth) {
+  unsigned OrigBitWidth = DL->getTypeSizeInBits(E.Scalars.front()->getType());
+  if (OrigBitWidth == BitWidth) {
     MaxDepthLevel = 1;
     return true;
   }
@@ -14115,7 +14277,6 @@ bool BoUpSLP::collectValuesToDemote(
   auto IsPotentiallyTruncated = [&](Value *V, unsigned &BitWidth) -> bool {
     if (MultiNodeScalars.contains(V))
       return false;
-    uint32_t OrigBitWidth = DL->getTypeSizeInBits(V->getType());
     if (OrigBitWidth > BitWidth) {
       APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
       if (MaskedValueIsZero(V, Mask, SimplifyQuery(*DL)))
@@ -14125,50 +14286,58 @@ bool BoUpSLP::collectValuesToDemote(
     unsigned BitWidth1 = OrigBitWidth - NumSignBits;
     if (!isKnownNonNegative(V, SimplifyQuery(*DL)))
       ++BitWidth1;
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      APInt Mask = DB->getDemandedBits(I);
+      unsigned BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
+      BitWidth1 = std::min(BitWidth1, BitWidth2);
+    }
     BitWidth = std::max(BitWidth, BitWidth1);
     return BitWidth > 0 && OrigBitWidth >= (BitWidth * 2);
   };
-  auto FinalAnalysis = [&](const TreeEntry *ITE = nullptr) {
+  using namespace std::placeholders;
+  auto FinalAnalysis = [&]() {
     if (!IsProfitableToDemote)
       return false;
-    return (ITE && ITE->UserTreeIndices.size() > 1) ||
-           IsPotentiallyTruncated(V, BitWidth);
+    bool Res = all_of(
+        E.Scalars, std::bind(IsPotentiallyTruncated, _1, std::ref(BitWidth)));
+    // Gather demoted constant operands.
+    if (Res && E.State == TreeEntry::NeedToGather &&
+        all_of(E.Scalars, IsaPred<Constant>))
+      ToDemote.push_back(E.Idx);
+    return Res;
   };
   // TODO: improve handling of gathered values and others.
-  auto *I = dyn_cast<Instruction>(V);
-  const TreeEntry *ITE = I ? getTreeEntry(I) : nullptr;
-  if (!ITE || !Visited.insert(I).second || MultiNodeScalars.contains(I) ||
-      all_of(I->users(), [&](User *U) {
-        return isa<InsertElementInst>(U) && !getTreeEntry(U);
+  if (E.State == TreeEntry::NeedToGather || !Visited.insert(&E).second ||
+      any_of(E.Scalars, [&](Value *V) {
+        return all_of(V->users(), [&](User *U) {
+          return isa<InsertElementInst>(U) && !getTreeEntry(U);
+        });
       }))
     return FinalAnalysis();
 
-  if (!all_of(I->users(),
-              [=](User *U) {
-                return getTreeEntry(U) ||
-                       (UserIgnoreList && UserIgnoreList->contains(U)) ||
-                       (U->getType()->isSized() &&
-                        !U->getType()->isScalableTy() &&
-                        DL->getTypeSizeInBits(U->getType()) <= BitWidth);
-              }) &&
-      !IsPotentiallyTruncated(I, BitWidth))
+  if (any_of(E.Scalars, [&](Value *V) {
+        return !all_of(V->users(), [=](User *U) {
+          return getTreeEntry(U) ||
+                 (UserIgnoreList && UserIgnoreList->contains(U)) ||
+                 (U->getType()->isSized() && !U->getType()->isScalableTy() &&
+                  DL->getTypeSizeInBits(U->getType()) <= BitWidth);
+        }) && !IsPotentiallyTruncated(V, BitWidth);
+      }))
     return false;
 
-  unsigned Start = 0;
-  unsigned End = I->getNumOperands();
-
-  auto ProcessOperands = [&](ArrayRef<Value *> Operands, bool &NeedToExit) {
+  auto ProcessOperands = [&](ArrayRef<const TreeEntry *> Operands,
+                             bool &NeedToExit) {
     NeedToExit = false;
     unsigned InitLevel = MaxDepthLevel;
-    for (Value *IncValue : Operands) {
+    for (const TreeEntry *Op : Operands) {
       unsigned Level = InitLevel;
-      if (!collectValuesToDemote(IncValue, IsProfitableToDemoteRoot, BitWidth,
-                                 ToDemote, DemotedConsts, Visited, Level,
-                                 IsProfitableToDemote, IsTruncRoot)) {
+      if (!collectValuesToDemote(*Op, IsProfitableToDemoteRoot, BitWidth,
+                                 ToDemote, Visited, Level, IsProfitableToDemote,
+                                 IsTruncRoot)) {
         if (!IsProfitableToDemote)
           return false;
         NeedToExit = true;
-        if (!FinalAnalysis(ITE))
+        if (!FinalAnalysis())
           return false;
         continue;
       }
@@ -14180,7 +14349,6 @@ bool BoUpSLP::collectValuesToDemote(
       [&](function_ref<bool(unsigned, unsigned)> Checker, bool &NeedToExit) {
         // Try all bitwidth < OrigBitWidth.
         NeedToExit = false;
-        uint32_t OrigBitWidth = DL->getTypeSizeInBits(I->getType());
         unsigned BestFailBitwidth = 0;
         for (; BitWidth < OrigBitWidth; BitWidth *= 2) {
           if (Checker(BitWidth, OrigBitWidth))
@@ -14201,18 +14369,20 @@ bool BoUpSLP::collectValuesToDemote(
         return false;
       };
   auto TryProcessInstruction =
-      [&](Instruction *I, const TreeEntry &ITE, unsigned &BitWidth,
-          ArrayRef<Value *> Operands = std::nullopt,
+      [&](unsigned &BitWidth,
+          ArrayRef<const TreeEntry *> Operands = std::nullopt,
           function_ref<bool(unsigned, unsigned)> Checker = {}) {
         if (Operands.empty()) {
           if (!IsTruncRoot)
             MaxDepthLevel = 1;
-          (void)IsPotentiallyTruncated(V, BitWidth);
+          (void)for_each(E.Scalars, std::bind(IsPotentiallyTruncated, _1,
+                                              std::ref(BitWidth)));
         } else {
           // Several vectorized uses? Check if we can truncate it, otherwise -
           // exit.
-          if (ITE.UserTreeIndices.size() > 1 &&
-              !IsPotentiallyTruncated(I, BitWidth))
+          if (E.UserTreeIndices.size() > 1 &&
+              !all_of(E.Scalars, std::bind(IsPotentiallyTruncated, _1,
+                                           std::ref(BitWidth))))
             return false;
           bool NeedToExit = false;
           if (Checker && !AttemptCheckBitwidth(Checker, NeedToExit))
@@ -14226,26 +14396,22 @@ bool BoUpSLP::collectValuesToDemote(
         }
 
         ++MaxDepthLevel;
-        // Gather demoted constant operands.
-        for (unsigned Idx : seq<unsigned>(Start, End))
-          if (isa<Constant>(I->getOperand(Idx)))
-            DemotedConsts.try_emplace(I).first->getSecond().push_back(Idx);
-        // Record the value that we can demote.
-        ToDemote.push_back(V);
+        // Record the entry that we can demote.
+        ToDemote.push_back(E.Idx);
         return IsProfitableToDemote;
       };
-  switch (I->getOpcode()) {
+  switch (E.getOpcode()) {
 
   // We can always demote truncations and extensions. Since truncations can
   // seed additional demotion, we save the truncated value.
   case Instruction::Trunc:
     if (IsProfitableToDemoteRoot)
       IsProfitableToDemote = true;
-    return TryProcessInstruction(I, *ITE, BitWidth);
+    return TryProcessInstruction(BitWidth);
   case Instruction::ZExt:
   case Instruction::SExt:
     IsProfitableToDemote = true;
-    return TryProcessInstruction(I, *ITE, BitWidth);
+    return TryProcessInstruction(BitWidth);
 
   // We can demote certain binary operations if we can demote both of their
   // operands.
@@ -14255,75 +14421,147 @@ bool BoUpSLP::collectValuesToDemote(
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor: {
-    return TryProcessInstruction(I, *ITE, BitWidth,
-                                 {I->getOperand(0), I->getOperand(1)});
+    return TryProcessInstruction(
+        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)});
   }
   case Instruction::Shl: {
     // If we are truncating the result of this SHL, and if it's a shift of an
     // inrange amount, we can always perform a SHL in a smaller type.
     auto ShlChecker = [&](unsigned BitWidth, unsigned) {
-      KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
-      return AmtKnownBits.getMaxValue().ult(BitWidth);
+      return all_of(E.Scalars, [&](Value *V) {
+        auto *I = cast<Instruction>(V);
+        KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
+        return AmtKnownBits.getMaxValue().ult(BitWidth);
+      });
     };
     return TryProcessInstruction(
-        I, *ITE, BitWidth, {I->getOperand(0), I->getOperand(1)}, ShlChecker);
+        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)}, ShlChecker);
   }
   case Instruction::LShr: {
     // If this is a truncate of a logical shr, we can truncate it to a smaller
     // lshr iff we know that the bits we would otherwise be shifting in are
     // already zeros.
     auto LShrChecker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
-      KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
-      APInt ShiftedBits = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
-      return AmtKnownBits.getMaxValue().ult(BitWidth) &&
-             MaskedValueIsZero(I->getOperand(0), ShiftedBits,
-                               SimplifyQuery(*DL));
+      return all_of(E.Scalars, [&](Value *V) {
+        auto *I = cast<Instruction>(V);
+        KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
+        APInt ShiftedBits = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+        return AmtKnownBits.getMaxValue().ult(BitWidth) &&
+               MaskedValueIsZero(I->getOperand(0), ShiftedBits,
+                                 SimplifyQuery(*DL));
+      });
     };
     return TryProcessInstruction(
-        I, *ITE, BitWidth, {I->getOperand(0), I->getOperand(1)}, LShrChecker);
+        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)},
+        LShrChecker);
   }
   case Instruction::AShr: {
     // If this is a truncate of an arithmetic shr, we can truncate it to a
     // smaller ashr iff we know that all the bits from the sign bit of the
     // original type and the sign bit of the truncate type are similar.
     auto AShrChecker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
-      KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
-      unsigned ShiftedBits = OrigBitWidth - BitWidth;
-      return AmtKnownBits.getMaxValue().ult(BitWidth) &&
-             ShiftedBits <
-                 ComputeNumSignBits(I->getOperand(0), *DL, 0, AC, nullptr, DT);
+      return all_of(E.Scalars, [&](Value *V) {
+        auto *I = cast<Instruction>(V);
+        KnownBits AmtKnownBits = computeKnownBits(I->getOperand(1), *DL);
+        unsigned ShiftedBits = OrigBitWidth - BitWidth;
+        return AmtKnownBits.getMaxValue().ult(BitWidth) &&
+               ShiftedBits < ComputeNumSignBits(I->getOperand(0), *DL, 0, AC,
+                                                nullptr, DT);
+      });
     };
     return TryProcessInstruction(
-        I, *ITE, BitWidth, {I->getOperand(0), I->getOperand(1)}, AShrChecker);
+        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)},
+        AShrChecker);
   }
   case Instruction::UDiv:
   case Instruction::URem: {
     // UDiv and URem can be truncated if all the truncated bits are zero.
     auto Checker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
       assert(BitWidth <= OrigBitWidth && "Unexpected bitwidths!");
-      APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
-      return MaskedValueIsZero(I->getOperand(0), Mask, SimplifyQuery(*DL)) &&
-             MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL));
+      return all_of(E.Scalars, [&](Value *V) {
+        auto *I = cast<Instruction>(V);
+        APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+        return MaskedValueIsZero(I->getOperand(0), Mask, SimplifyQuery(*DL)) &&
+               MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL));
+      });
     };
-    return TryProcessInstruction(I, *ITE, BitWidth,
-                                 {I->getOperand(0), I->getOperand(1)}, Checker);
+    return TryProcessInstruction(
+        BitWidth, {getOperandEntry(&E, 0), getOperandEntry(&E, 1)}, Checker);
   }
 
   // We can demote selects if we can demote their true and false values.
   case Instruction::Select: {
-    Start = 1;
-    auto *SI = cast<SelectInst>(I);
-    return TryProcessInstruction(I, *ITE, BitWidth,
-                                 {SI->getTrueValue(), SI->getFalseValue()});
+    return TryProcessInstruction(
+        BitWidth, {getOperandEntry(&E, 1), getOperandEntry(&E, 2)});
   }
 
   // We can demote phis if we can demote all their incoming operands. Note that
   // we don't need to worry about cycles since we ensure single use above.
   case Instruction::PHI: {
-    PHINode *PN = cast<PHINode>(I);
-    SmallVector<Value *> Ops(PN->incoming_values().begin(),
-                             PN->incoming_values().end());
-    return TryProcessInstruction(I, *ITE, BitWidth, Ops);
+    const unsigned NumOps = E.getNumOperands();
+    SmallVector<const TreeEntry *> Ops(NumOps);
+    transform(seq<unsigned>(0, NumOps), Ops.begin(),
+              std::bind(&BoUpSLP::getOperandEntry, this, &E, _1));
+
+    return TryProcessInstruction(BitWidth, Ops);
+  }
+
+  case Instruction::Call: {
+    auto *IC = dyn_cast<IntrinsicInst>(E.getMainOp());
+    if (!IC)
+      break;
+    Intrinsic::ID ID = getVectorIntrinsicIDForCall(IC, TLI);
+    if (ID != Intrinsic::abs && ID != Intrinsic::smin &&
+        ID != Intrinsic::smax && ID != Intrinsic::umin && ID != Intrinsic::umax)
+      break;
+    SmallVector<const TreeEntry *, 2> Operands(1, getOperandEntry(&E, 0));
+    function_ref<bool(unsigned, unsigned)> CallChecker;
+    auto CompChecker = [&](unsigned BitWidth, unsigned OrigBitWidth) {
+      assert(BitWidth <= OrigBitWidth && "Unexpected bitwidths!");
+      return all_of(E.Scalars, [&](Value *V) {
+        auto *I = cast<Instruction>(V);
+        if (ID == Intrinsic::umin || ID == Intrinsic::umax) {
+          APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth);
+          return MaskedValueIsZero(I->getOperand(0), Mask,
+                                   SimplifyQuery(*DL)) &&
+                 MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL));
+        }
+        assert((ID == Intrinsic::smin || ID == Intrinsic::smax) &&
+               "Expected min/max intrinsics only.");
+        unsigned SignBits = OrigBitWidth - BitWidth;
+        return SignBits <= ComputeNumSignBits(I->getOperand(0), *DL, 0, AC,
+                                              nullptr, DT) &&
+               SignBits <= ComputeNumSignBits(I->getOperand(1), *DL, 0, AC,
+                                              nullptr, DT);
+      });
+    };
+    if (ID != Intrinsic::abs) {
+      Operands.push_back(getOperandEntry(&E, 1));
+      CallChecker = CompChecker;
+    }
+    InstructionCost BestCost =
+        std::numeric_limits<InstructionCost::CostType>::max();
+    unsigned BestBitWidth = BitWidth;
+    unsigned VF = E.Scalars.size();
+    // Choose the best bitwidth based on cost estimations.
+    auto Checker = [&](unsigned BitWidth, unsigned) {
+      unsigned MinBW = PowerOf2Ceil(BitWidth);
+      SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(IC, ID, VF, MinBW);
+      auto VecCallCosts = getVectorCallCosts(
+          IC,
+          FixedVectorType::get(IntegerType::get(IC->getContext(), MinBW), VF),
+          TTI, TLI, ArgTys);
+      InstructionCost Cost = std::min(VecCallCosts.first, VecCallCosts.second);
+      if (Cost < BestCost) {
+        BestCost = Cost;
+        BestBitWidth = BitWidth;
+      }
+      return false;
+    };
+    [[maybe_unused]] bool NeedToExit;
+    (void)AttemptCheckBitwidth(Checker, NeedToExit);
+    BitWidth = BestBitWidth;
+    return TryProcessInstruction(BitWidth, Operands, CallChecker);
   }
 
   // Otherwise, conservatively give up.
@@ -14333,6 +14571,8 @@ bool BoUpSLP::collectValuesToDemote(
   MaxDepthLevel = 1;
   return FinalAnalysis();
 }
+
+static RecurKind getRdxKind(Value *V);
 
 void BoUpSLP::computeMinimumValueSizes() {
   // We only attempt to truncate integer expressions.
@@ -14375,26 +14615,27 @@ void BoUpSLP::computeMinimumValueSizes() {
     ++NodeIdx;
   }
 
-  // Analyzed in reduction already and not profitable - exit.
+  // Analyzed the reduction already and not profitable - exit.
   if (AnalyzedMinBWVals.contains(VectorizableTree[NodeIdx]->Scalars.front()))
     return;
 
-  SmallVector<Value *> ToDemote;
-  DenseMap<Instruction *, SmallVector<unsigned>> DemotedConsts;
-  auto ComputeMaxBitWidth = [&](ArrayRef<Value *> TreeRoot, unsigned VF,
-                                bool IsTopRoot, bool IsProfitableToDemoteRoot,
-                                unsigned Opcode, unsigned Limit,
-                                bool IsTruncRoot) {
+  SmallVector<unsigned> ToDemote;
+  auto ComputeMaxBitWidth = [&](const TreeEntry &E, bool IsTopRoot,
+                                bool IsProfitableToDemoteRoot, unsigned Opcode,
+                                unsigned Limit, bool IsTruncRoot,
+                                bool IsSignedCmp) {
     ToDemote.clear();
-    auto *TreeRootIT = dyn_cast<IntegerType>(TreeRoot[0]->getType());
+    unsigned VF = E.getVectorFactor();
+    auto *TreeRootIT = dyn_cast<IntegerType>(E.Scalars.front()->getType());
     if (!TreeRootIT || !Opcode)
       return 0u;
 
-    if (AnalyzedMinBWVals.contains(TreeRoot.front()))
+    if (any_of(E.Scalars,
+               [&](Value *V) { return AnalyzedMinBWVals.contains(V); }))
       return 0u;
 
-    unsigned NumParts = TTI->getNumberOfParts(
-        FixedVectorType::get(TreeRoot.front()->getType(), VF));
+    unsigned NumParts =
+        TTI->getNumberOfParts(FixedVectorType::get(TreeRootIT, VF));
 
     // The maximum bit width required to represent all the values that can be
     // demoted without loss of precision. It would be safe to truncate the roots
@@ -14407,14 +14648,14 @@ void BoUpSLP::computeMinimumValueSizes() {
     // True.
     // Determine if the sign bit of all the roots is known to be zero. If not,
     // IsKnownPositive is set to False.
-    bool IsKnownPositive = all_of(TreeRoot, [&](Value *R) {
+    bool IsKnownPositive = !IsSignedCmp && all_of(E.Scalars, [&](Value *R) {
       KnownBits Known = computeKnownBits(R, *DL);
       return Known.isNonNegative();
     });
 
     // We first check if all the bits of the roots are demanded. If they're not,
     // we can truncate the roots to this narrower type.
-    for (auto *Root : TreeRoot) {
+    for (Value *Root : E.Scalars) {
       unsigned NumSignBits = ComputeNumSignBits(Root, *DL, 0, AC, nullptr, DT);
       TypeSize NumTypeBits = DL->getTypeSizeInBits(Root->getType());
       unsigned BitWidth1 = NumTypeBits - NumSignBits;
@@ -14459,23 +14700,22 @@ void BoUpSLP::computeMinimumValueSizes() {
     // Conservatively determine if we can actually truncate the roots of the
     // expression. Collect the values that can be demoted in ToDemote and
     // additional roots that require investigating in Roots.
-    for (auto *Root : TreeRoot) {
-      DenseSet<Value *> Visited;
-      unsigned MaxDepthLevel = IsTruncRoot ? Limit : 1;
-      bool NeedToDemote = IsProfitableToDemote;
+    DenseSet<const TreeEntry *> Visited;
+    unsigned MaxDepthLevel = IsTruncRoot ? Limit : 1;
+    bool NeedToDemote = IsProfitableToDemote;
 
-      if (!collectValuesToDemote(Root, IsProfitableToDemoteRoot, MaxBitWidth,
-                                 ToDemote, DemotedConsts, Visited,
-                                 MaxDepthLevel, NeedToDemote, IsTruncRoot) ||
-          (MaxDepthLevel <= Limit &&
-           !(((Opcode == Instruction::SExt || Opcode == Instruction::ZExt) &&
-              (!IsTopRoot || !(IsStoreOrInsertElt || UserIgnoreList) ||
-               DL->getTypeSizeInBits(Root->getType()) /
-                       DL->getTypeSizeInBits(
-                           cast<Instruction>(Root)->getOperand(0)->getType()) >
-                   2)))))
-        return 0u;
-    }
+    if (!collectValuesToDemote(E, IsProfitableToDemoteRoot, MaxBitWidth,
+                               ToDemote, Visited, MaxDepthLevel, NeedToDemote,
+                               IsTruncRoot) ||
+        (MaxDepthLevel <= Limit &&
+         !(((Opcode == Instruction::SExt || Opcode == Instruction::ZExt) &&
+            (!IsTopRoot || !(IsStoreOrInsertElt || UserIgnoreList) ||
+             DL->getTypeSizeInBits(TreeRootIT) /
+                     DL->getTypeSizeInBits(cast<Instruction>(E.Scalars.front())
+                                               ->getOperand(0)
+                                               ->getType()) >
+                 2)))))
+      return 0u;
     // Round MaxBitWidth up to the next power-of-two.
     MaxBitWidth = bit_ceil(MaxBitWidth);
 
@@ -14494,8 +14734,11 @@ void BoUpSLP::computeMinimumValueSizes() {
       unsigned BitWidth1 = NumTypeBits - NumSignBits;
       if (!isKnownNonNegative(V, SimplifyQuery(*DL)))
         ++BitWidth1;
-      auto Mask = DB->getDemandedBits(cast<Instruction>(V));
-      unsigned BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
+      unsigned BitWidth2 = BitWidth1;
+      if (!RecurrenceDescriptor::isIntMinMaxRecurrenceKind(::getRdxKind(V))) {
+        auto Mask = DB->getDemandedBits(cast<Instruction>(V));
+        BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
+      }
       ReductionBitWidth =
           std::max(std::min(BitWidth1, BitWidth2), ReductionBitWidth);
     }
@@ -14512,6 +14755,7 @@ void BoUpSLP::computeMinimumValueSizes() {
     ++NodeIdx;
     IsTruncRoot = true;
   }
+  bool IsSignedCmp = false;
   while (NodeIdx < VectorizableTree.size()) {
     ArrayRef<Value *> TreeRoot = VectorizableTree[NodeIdx]->Scalars;
     unsigned Limit = 2;
@@ -14522,8 +14766,8 @@ void BoUpSLP::computeMinimumValueSizes() {
                 VectorizableTree.front()->Scalars.front()->getType()))
       Limit = 3;
     unsigned MaxBitWidth = ComputeMaxBitWidth(
-        TreeRoot, VectorizableTree[NodeIdx]->getVectorFactor(), IsTopRoot,
-        IsProfitableToDemoteRoot, Opcode, Limit, IsTruncRoot);
+        *VectorizableTree[NodeIdx].get(), IsTopRoot, IsProfitableToDemoteRoot,
+        Opcode, Limit, IsTruncRoot, IsSignedCmp);
     if (ReductionBitWidth != 0 && (IsTopRoot || !RootDemotes.empty())) {
       if (MaxBitWidth != 0 && ReductionBitWidth < MaxBitWidth)
         ReductionBitWidth = bit_ceil(MaxBitWidth);
@@ -14532,13 +14776,15 @@ void BoUpSLP::computeMinimumValueSizes() {
     }
 
     for (unsigned Idx : RootDemotes) {
-      Value *V = VectorizableTree[Idx]->Scalars.front();
-      uint32_t OrigBitWidth = DL->getTypeSizeInBits(V->getType());
-      if (OrigBitWidth > MaxBitWidth) {
-      APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, MaxBitWidth);
-      if (MaskedValueIsZero(V, Mask, SimplifyQuery(*DL)))
-        ToDemote.push_back(V);
-      }
+      if (all_of(VectorizableTree[Idx]->Scalars, [&](Value *V) {
+            uint32_t OrigBitWidth = DL->getTypeSizeInBits(V->getType());
+            if (OrigBitWidth > MaxBitWidth) {
+              APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, MaxBitWidth);
+              return MaskedValueIsZero(V, Mask, SimplifyQuery(*DL));
+            }
+            return false;
+          }))
+        ToDemote.push_back(Idx);
     }
     RootDemotes.clear();
     IsTopRoot = false;
@@ -14561,6 +14807,16 @@ void BoUpSLP::computeMinimumValueSizes() {
                           EI.UserTE->getOpcode() == Instruction::Trunc &&
                           !EI.UserTE->isAltShuffle();
                  });
+      IsSignedCmp =
+          NodeIdx < VectorizableTree.size() &&
+          any_of(VectorizableTree[NodeIdx]->UserTreeIndices,
+                 [](const EdgeInfo &EI) {
+                   return EI.UserTE->getOpcode() == Instruction::ICmp &&
+                          any_of(EI.UserTE->Scalars, [](Value *V) {
+                            auto *IC = dyn_cast<ICmpInst>(V);
+                            return IC && IC->isSigned();
+                          });
+                 });
     }
 
     // If the maximum bit width we compute is less than the with of the roots'
@@ -14575,9 +14831,8 @@ void BoUpSLP::computeMinimumValueSizes() {
 
     // Finally, map the values we can demote to the maximum bit with we
     // computed.
-    for (Value *Scalar : ToDemote) {
-      TreeEntry *TE = getTreeEntry(Scalar);
-      assert(TE && "Expected vectorized scalar.");
+    for (unsigned Idx : ToDemote) {
+      TreeEntry *TE = VectorizableTree[Idx].get();
       if (MinBWs.contains(TE))
         continue;
       bool IsSigned = TE->getOpcode() == Instruction::SExt ||
@@ -14585,22 +14840,6 @@ void BoUpSLP::computeMinimumValueSizes() {
                         return !isKnownNonNegative(R, SimplifyQuery(*DL));
                       });
       MinBWs.try_emplace(TE, MaxBitWidth, IsSigned);
-      const auto *I = cast<Instruction>(Scalar);
-      auto DCIt = DemotedConsts.find(I);
-      if (DCIt != DemotedConsts.end()) {
-        for (unsigned Idx : DCIt->getSecond()) {
-          // Check that all instructions operands are demoted.
-          const TreeEntry *CTE = getOperandEntry(TE, Idx);
-          if (all_of(TE->Scalars,
-                     [&](Value *V) {
-                       auto SIt = DemotedConsts.find(cast<Instruction>(V));
-                       return SIt != DemotedConsts.end() &&
-                              is_contained(SIt->getSecond(), Idx);
-                     }) ||
-              all_of(CTE->Scalars, IsaPred<Constant>))
-            MinBWs.try_emplace(CTE, MaxBitWidth, IsSigned);
-        }
-      }
     }
   }
 }
@@ -16601,6 +16840,10 @@ private:
 };
 } // end anonymous namespace
 
+/// Gets recurrence kind from the specified value.
+static RecurKind getRdxKind(Value *V) {
+  return HorizontalReduction::getRdxKind(V);
+}
 static std::optional<unsigned> getAggregateSize(Instruction *InsertInst) {
   if (auto *IE = dyn_cast<InsertElementInst>(InsertInst))
     return cast<FixedVectorType>(IE->getType())->getNumElements();

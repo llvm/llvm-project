@@ -40,6 +40,7 @@
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaOpenACC.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -2632,7 +2633,8 @@ public:
                                              SourceLocation LParen,
                                              SourceLocation RParen,
                                              TypeSourceInfo *TSI) {
-    return getSema().BuildSYCLUniqueStableNameExpr(OpLoc, LParen, RParen, TSI);
+    return getSema().SYCL().BuildUniqueStableNameExpr(OpLoc, LParen, RParen,
+                                                      TSI);
   }
 
   /// Build a new predefined expression.
@@ -4005,17 +4007,10 @@ public:
   StmtResult RebuildOpenACCComputeConstruct(OpenACCDirectiveKind K,
                                             SourceLocation BeginLoc,
                                             SourceLocation EndLoc,
+                                            ArrayRef<OpenACCClause *> Clauses,
                                             StmtResult StrBlock) {
-    getSema().OpenACC().ActOnConstruct(K, BeginLoc);
-
-    // TODO OpenACC: Include clauses.
-    if (getSema().OpenACC().ActOnStartStmtDirective(K, BeginLoc))
-      return StmtError();
-
-    StrBlock = getSema().OpenACC().ActOnAssociatedStmt(K, StrBlock);
-
     return getSema().OpenACC().ActOnEndStmtDirective(K, BeginLoc, EndLoc,
-                                                     StrBlock);
+                                                     Clauses, StrBlock);
   }
 
 private:
@@ -4036,6 +4031,15 @@ private:
   QualType TransformDependentNameType(TypeLocBuilder &TLB,
                                       DependentNameTypeLoc TL,
                                       bool DeducibleTSTContext);
+
+  llvm::SmallVector<OpenACCClause *>
+  TransformOpenACCClauseList(OpenACCDirectiveKind DirKind,
+                             ArrayRef<const OpenACCClause *> OldClauses);
+
+  OpenACCClause *
+  TransformOpenACCClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                         OpenACCDirectiveKind DirKind,
+                         const OpenACCClause *OldClause);
 };
 
 template <typename Derived>
@@ -11077,15 +11081,68 @@ OMPClause *TreeTransform<Derived>::TransformOMPXBareClause(OMPXBareClause *C) {
 // OpenACC transformation
 //===----------------------------------------------------------------------===//
 template <typename Derived>
+OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
+    ArrayRef<const OpenACCClause *> ExistingClauses,
+    OpenACCDirectiveKind DirKind, const OpenACCClause *OldClause) {
+
+  SemaOpenACC::OpenACCParsedClause ParsedClause(
+      DirKind, OldClause->getClauseKind(), OldClause->getBeginLoc());
+  ParsedClause.setEndLoc(OldClause->getEndLoc());
+
+  if (const auto *WithParms = dyn_cast<OpenACCClauseWithParams>(OldClause))
+    ParsedClause.setLParenLoc(WithParms->getLParenLoc());
+
+  switch (OldClause->getClauseKind()) {
+  case OpenACCClauseKind::Default:
+    // There is nothing to do here as nothing dependent can appear in this
+    // clause. So just set the values so Sema can set the right value.
+    ParsedClause.setDefaultDetails(
+        cast<OpenACCDefaultClause>(OldClause)->getDefaultClauseKind());
+    break;
+  default:
+    assert(false && "Unhandled OpenACC clause in TreeTransform");
+    return nullptr;
+  }
+
+  return getSema().OpenACC().ActOnClause(ExistingClauses, ParsedClause);
+}
+
+template <typename Derived>
+llvm::SmallVector<OpenACCClause *>
+TreeTransform<Derived>::TransformOpenACCClauseList(
+    OpenACCDirectiveKind DirKind, ArrayRef<const OpenACCClause *> OldClauses) {
+  llvm::SmallVector<OpenACCClause *> TransformedClauses;
+  for (const auto *Clause : OldClauses) {
+    if (OpenACCClause *TransformedClause = getDerived().TransformOpenACCClause(
+            TransformedClauses, DirKind, Clause))
+      TransformedClauses.push_back(TransformedClause);
+  }
+  return TransformedClauses;
+}
+
+template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOpenACCComputeConstruct(
     OpenACCComputeConstruct *C) {
-  // TODO OpenACC: Transform clauses.
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+  // FIXME: When implementing this for constructs that can take arguments, we
+  // should do Sema for them here.
+
+  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
+                                                  C->getBeginLoc()))
+    return StmtError();
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
 
   // Transform Structured Block.
   StmtResult StrBlock = getDerived().TransformStmt(C->getStructuredBlock());
+  StrBlock =
+      getSema().OpenACC().ActOnAssociatedStmt(C->getDirectiveKind(), StrBlock);
 
   return getDerived().RebuildOpenACCComputeConstruct(
-      C->getDirectiveKind(), C->getBeginLoc(), C->getEndLoc(), StrBlock);
+      C->getDirectiveKind(), C->getBeginLoc(), C->getEndLoc(),
+      TransformedClauses, StrBlock);
 }
 
 //===----------------------------------------------------------------------===//
@@ -11158,8 +11215,8 @@ TreeTransform<Derived>::TransformDeclRefExpr(DeclRefExpr *E) {
   }
 
   if (!getDerived().AlwaysRebuild() &&
-      QualifierLoc == E->getQualifierLoc() &&
-      ND == E->getDecl() &&
+      !E->isCapturedByCopyInLambdaWithExplicitObjectParameter() &&
+      QualifierLoc == E->getQualifierLoc() && ND == E->getDecl() &&
       Found == E->getFoundDecl() &&
       NameInfo.getName() == E->getDecl()->getDeclName() &&
       !E->hasExplicitTemplateArgs()) {
@@ -12622,9 +12679,17 @@ TreeTransform<Derived>::TransformCXXThisExpr(CXXThisExpr *E) {
   //
   // In other contexts, the type of `this` may be overrided
   // for type deduction, so we need to recompute it.
-  QualType T = getSema().getCurLambda() ?
-                   getDerived().TransformType(E->getType())
-                 : getSema().getCurrentThisType();
+  //
+  // Always recompute the type if we're in the body of a lambda, and
+  // 'this' is dependent on a lambda's explicit object parameter.
+  QualType T = [&]() {
+    auto &S = getSema();
+    if (E->isCapturedByCopyInLambdaWithExplicitObjectParameter())
+      return S.getCurrentThisType();
+    if (S.getCurLambda())
+      return getDerived().TransformType(E->getType());
+    return S.getCurrentThisType();
+  }();
 
   if (!getDerived().AlwaysRebuild() && T == E->getType()) {
     // Mark it referenced in the new context regardless.

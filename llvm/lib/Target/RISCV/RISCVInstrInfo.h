@@ -55,6 +55,8 @@ enum RISCVMachineCombinerPattern : unsigned {
   FMADD_XA,
   FMSUB,
   FNMSUB,
+  SHXADD_ADD_SLLI_OP1,
+  SHXADD_ADD_SLLI_OP2,
 };
 
 class RISCVInstrInfo : public RISCVGenInstrInfo {
@@ -237,10 +239,12 @@ public:
                           unsigned OpIdx,
                           const TargetRegisterInfo *TRI) const override;
 
-  void getVLENFactoredAmount(
-      MachineFunction &MF, MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator II, const DebugLoc &DL, Register DestReg,
-      int64_t Amount, MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
+  /// Generate code to multiply the value in DestReg by Amt - handles all
+  /// the common optimizations for this idiom, and supports fallback for
+  /// subtargets which don't support multiply instructions.
+  void mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
+              MachineBasicBlock::iterator II, const DebugLoc &DL,
+              Register DestReg, uint32_t Amt, MachineInstr::MIFlag Flag) const;
 
   bool useMachineCombiner() const override { return true; }
 
