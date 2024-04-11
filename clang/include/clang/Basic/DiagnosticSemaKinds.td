@@ -3755,12 +3755,11 @@ def err_sme_definition_using_za_in_non_sme_target : Error<
 def err_sme_definition_using_zt0_in_non_sme2_target : Error<
   "function using ZT0 state requires 'sme2'">;
 def warn_sme_streaming_pass_return_vl_to_non_streaming : Warning<
-  "passing a VL-dependent argument to/from a function that has a different"
-  " streaming-mode. The streaming and non-streaming vector lengths may be"
-  " different">,
+  "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a function with a different"
+  " streaming-mode is undefined behaviour if the streaming and non-streaming vector lengths are different at runtime">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def warn_sme_locally_streaming_has_vl_args_returns : Warning<
-  "passing/returning a VL-dependent argument to/from a __arm_locally_streaming"
+  "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a __arm_locally_streaming"
   " function. The streaming and non-streaming vector"
   " lengths may be different">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
