@@ -5,9 +5,7 @@ define i32 @add_shl_or_disjoint(i32 %x) {
 ; CHECK-LABEL: add_shl_or_disjoint:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal (,%rdi,4), %eax
-; CHECK-NEXT:    orl $-1069531068, %eax # imm = 0xC0404044
-; CHECK-NEXT:    addl $1234567890, %eax # imm = 0x499602D2
+; CHECK-NEXT:    leal 165036822(,%rdi,4), %eax
 ; CHECK-NEXT:    retq
   %or = or disjoint i32 %x, 4027584529
   %shl = shl i32 %or, 2
