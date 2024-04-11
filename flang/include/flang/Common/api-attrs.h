@@ -133,6 +133,18 @@
 #undef RT_DEVICE_COMPILATION
 #endif
 
+/*
+ * Recurrence in the call graph prevents computing minimal stack size
+ * required for a kernel execution. This macro can be used to disable
+ * some F18 runtime functionality that is implemented using recurrent
+ * function calls or to use alternative implementation.
+ */
+#if (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
+#define RT_DEVICE_AVOID_RECURSION 1
+#else
+#undef RT_DEVICE_AVOID_RECURSION
+#endif
+
 #if defined(__CUDACC__)
 #define RT_DIAG_PUSH _Pragma("nv_diagnostic push")
 #define RT_DIAG_POP _Pragma("nv_diagnostic pop")

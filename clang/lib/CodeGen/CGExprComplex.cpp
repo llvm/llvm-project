@@ -319,12 +319,12 @@ public:
     // doubles the exponent of SmallerType.LargestFiniteVal)
     if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 <=
         llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
+      FPHasBeenPromoted = true;
       return CGF.getContext().getComplexType(HigherElementType);
     } else {
-      FPHasBeenPromoted = true;
       DiagnosticsEngine &Diags = CGF.CGM.getDiags();
       Diags.Report(diag::warn_next_larger_fp_type_same_size_than_fp);
-      return CGF.getContext().getComplexType(ElementType);
+      return QualType();
     }
   }
 
@@ -1037,7 +1037,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
       LHSi = llvm::Constant::getNullValue(RHSi->getType());
     if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
         (Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted &&
-         FPHasBeenPromoted))
+         !FPHasBeenPromoted))
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
     else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Basic ||
              Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted)

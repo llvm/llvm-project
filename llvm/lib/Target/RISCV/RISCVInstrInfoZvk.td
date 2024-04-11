@@ -64,7 +64,7 @@ multiclass VROR_IV_V_X_I<string opcodestr, bits<6> funct6>
 // op vd, vs2, vs1
 class PALUVVNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : VALUVVNoVm<funct6, opv, opcodestr> {
-  let Inst{6-0} = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_VE.Value;
 }
 
 // op vd, vs2, vs1
@@ -74,13 +74,13 @@ class PALUVVNoVmTernary<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                opcodestr, "$vd, $vs2, $vs1"> {
   let Constraints = "$vd = $vd_wb";
   let vm = 1;
-  let Inst{6-0} = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_VE.Value;
 }
 
 // op vd, vs2, imm
 class PALUVINoVm<bits<6> funct6, string opcodestr, Operand optype>
     : VALUVINoVm<funct6, opcodestr, optype> {
-  let Inst{6-0} = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_VE.Value;
   let Inst{14-12} = OPMVV.Value;
 }
 
@@ -91,7 +91,7 @@ class PALUVINoVmBinary<bits<6> funct6, string opcodestr, Operand optype>
                 opcodestr, "$vd, $vs2, $imm"> {
   let Constraints = "$vd = $vd_wb";
   let vm = 1;
-  let Inst{6-0} = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_VE.Value;
   let Inst{14-12} = OPMVV.Value;
 }
 
@@ -103,7 +103,7 @@ class PALUVs2NoVmBinary<bits<6> funct6, bits<5> vs1, RISCVVFormat opv,
               opcodestr, "$vd, $vs2"> {
   let Constraints = "$vd = $vd_wb";
   let vm = 1;
-  let Inst{6-0} = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_VE.Value;
 }
 
 multiclass VAES_MV_V_S<bits<6> funct6_vv, bits<6> funct6_vs, bits<5> vs1,
@@ -630,6 +630,19 @@ foreach vtiToWti = AllWidenableIntVectors in {
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 
     def : Pat<(riscv_shl_vl
+                 (wti.Vector (riscv_zext_vl_oneuse
+                                (vti.Vector vti.RegClass:$rs2),
+                                (vti.Mask V0), VLOpFrag)),
+                 (wti.Vector (riscv_ext_vl_oneuse
+                                (vti.Vector vti.RegClass:$rs1),
+                                (vti.Mask V0), VLOpFrag)),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VV_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, vti.RegClass:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_shl_vl
                  (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs2))),
                  (wti.Vector (Low8BitsSplatPat (XLenVT GPR:$rs1))),
                  (wti.Vector wti.RegClass:$merge),
@@ -639,7 +652,29 @@ foreach vtiToWti = AllWidenableIntVectors in {
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 
     def : Pat<(riscv_shl_vl
+                 (wti.Vector (riscv_zext_vl_oneuse
+                                (vti.Vector vti.RegClass:$rs2),
+                                (vti.Mask V0), VLOpFrag)),
+                 (wti.Vector (Low8BitsSplatPat (XLenVT GPR:$rs1))),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VX_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, GPR:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_shl_vl
                  (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs2))),
+                 (wti.Vector (SplatPat_uimm5 uimm5:$rs1)),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VI_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, uimm5:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_shl_vl
+                 (wti.Vector (riscv_zext_vl_oneuse
+                                (vti.Vector vti.RegClass:$rs2),
+                                (vti.Mask V0), VLOpFrag)),
                  (wti.Vector (SplatPat_uimm5 uimm5:$rs1)),
                  (wti.Vector wti.RegClass:$merge),
                  (vti.Mask V0), VLOpFrag),

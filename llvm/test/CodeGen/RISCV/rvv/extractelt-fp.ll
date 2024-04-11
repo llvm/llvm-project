@@ -523,9 +523,7 @@ define float @extractelt_fadd_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK-NEXT:    fmv.w.x fa4, a0
 ; CHECK-NEXT:    fadd.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x float> poison, float 3.0, i32 0
-  %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
-  %bo = fadd <vscale x 4 x float> %x, %splat
+  %bo = fadd <vscale x 4 x float> %x, splat (float 3.0)
   %ext = extractelement <vscale x 4 x float> %bo, i32 2
   ret float %ext
 }
@@ -540,9 +538,7 @@ define float @extractelt_fsub_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK-NEXT:    fmv.w.x fa4, a0
 ; CHECK-NEXT:    fsub.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x float> poison, float 3.0, i32 0
-  %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
-  %bo = fsub <vscale x 4 x float> %splat, %x
+  %bo = fsub <vscale x 4 x float> splat (float 3.0), %x
   %ext = extractelement <vscale x 4 x float> %bo, i32 1
   ret float %ext
 }
@@ -557,9 +553,7 @@ define float @extractelt_fmul_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK-NEXT:    fmv.w.x fa4, a0
 ; CHECK-NEXT:    fmul.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x float> poison, float 3.0, i32 0
-  %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
-  %bo = fmul <vscale x 4 x float> %x, %splat
+  %bo = fmul <vscale x 4 x float> %x, splat (float 3.0)
   %ext = extractelement <vscale x 4 x float> %bo, i32 3
   ret float %ext
 }
@@ -573,9 +567,7 @@ define float @extractelt_fdiv_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK-NEXT:    fmv.w.x fa4, a0
 ; CHECK-NEXT:    fdiv.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x float> poison, float 3.0, i32 0
-  %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
-  %bo = fdiv <vscale x 4 x float> %x, %splat
+  %bo = fdiv <vscale x 4 x float> %x, splat (float 3.0)
   %ext = extractelement <vscale x 4 x float> %bo, i32 0
   ret float %ext
 }

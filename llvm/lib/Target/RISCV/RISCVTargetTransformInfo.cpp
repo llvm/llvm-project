@@ -245,6 +245,10 @@ RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return TTI::TCC_Free;
 }
 
+bool RISCVTTIImpl::hasActiveVectorLength(unsigned, Type *DataTy, Align) const {
+  return ST->hasVInstructions();
+}
+
 TargetTransformInfo::PopcntSupportKind
 RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
@@ -325,7 +329,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
                                              TTI::TargetCostKind CostKind,
                                              int Index, VectorType *SubTp,
-                                             ArrayRef<const Value *> Args) {
+                                             ArrayRef<const Value *> Args,
+                                             const Instruction *CxtI) {
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
@@ -859,11 +864,31 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::get_active_lane_mask: {
+    if (ST->hasVInstructions()) {
+      Type *ExpRetTy = VectorType::get(
+          ICA.getArgTypes()[0], cast<VectorType>(RetTy)->getElementCount());
+      auto LT = getTypeLegalizationCost(ExpRetTy);
+
+      // vid.v   v8  // considered hoisted
+      // vsaddu.vx   v8, v8, a0
+      // vmsltu.vx   v0, v8, a1
+      return LT.first *
+             getRISCVInstructionCost({RISCV::VSADDU_VX, RISCV::VMSLTU_VX},
+                                     LT.second, CostKind);
+    }
+    break;
+  }
   // TODO: add more intrinsic
   case Intrinsic::experimental_stepvector: {
-    unsigned Cost = 1; // vid
     auto LT = getTypeLegalizationCost(RetTy);
-    return Cost + (LT.first - 1);
+    // Legalisation of illegal types involves an `index' instruction plus
+    // (LT.first - 1) vector adds.
+    if (ST->hasVInstructions())
+      return getRISCVInstructionCost(RISCV::VID_V, LT.second, CostKind) +
+             (LT.first - 1) *
+                 getRISCVInstructionCost(RISCV::VADD_VX, LT.second, CostKind);
+    return 1 + (LT.first - 1);
   }
   case Intrinsic::vp_rint: {
     // RISC-V target uses at least 5 instructions to lower rounding intrinsics.
@@ -1317,10 +1342,14 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
         // vmandn.mm v8, v8, v9
         // vmand.mm v9, v0, v9
         // vmor.mm v0, v9, v8
-        return LT.first * 3;
+        return LT.first *
+               getRISCVInstructionCost(
+                   {RISCV::VMANDN_MM, RISCV::VMAND_MM, RISCV::VMOR_MM},
+                   LT.second, CostKind);
       }
       // vselect and max/min are supported natively.
-      return LT.first * 1;
+      return LT.first *
+             getRISCVInstructionCost(RISCV::VMERGE_VVM, LT.second, CostKind);
     }
 
     if (ValTy->getScalarSizeInBits() == 1) {
@@ -1329,13 +1358,21 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
       //  vmandn.mm v8, v8, v9
       //  vmand.mm v9, v0, v9
       //  vmor.mm v0, v9, v8
-      return LT.first * 5;
+      MVT InterimVT = LT.second.changeVectorElementType(MVT::i8);
+      return LT.first *
+                 getRISCVInstructionCost({RISCV::VMV_V_X, RISCV::VMSNE_VI},
+                                         InterimVT, CostKind) +
+             LT.first * getRISCVInstructionCost(
+                            {RISCV::VMANDN_MM, RISCV::VMAND_MM, RISCV::VMOR_MM},
+                            LT.second, CostKind);
     }
 
     // vmv.v.x v10, a0
     // vmsne.vi v0, v10, 0
     // vmerge.vvm v8, v9, v8, v0
-    return LT.first * 3;
+    return LT.first * getRISCVInstructionCost(
+                          {RISCV::VMV_V_X, RISCV::VMSNE_VI, RISCV::VMERGE_VVM},
+                          LT.second, CostKind);
   }
 
   if ((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&

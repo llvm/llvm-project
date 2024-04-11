@@ -1340,15 +1340,6 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   } else {
     addr = hlfir::genVariableRawAddress(loc, builder, entity);
   }
-  // The last extent created for assumed-rank descriptors must be -1 (18.5.3
-  // point 5.). This should be done when creating the assumed-size shape for
-  // consistency.
-  if (auto baseBoxDummy = mlir::dyn_cast<fir::BaseBoxType>(dummyType))
-    if (baseBoxDummy.isAssumedRank())
-      if (const Fortran::semantics::Symbol *sym =
-              Fortran::evaluate::UnwrapWholeSymbolDataRef(*arg.entity))
-        if (Fortran::semantics::IsAssumedSizeArray(sym->GetUltimate()))
-          TODO(loc, "passing assumed-size to assumed-rank array");
 
   // For ranked actual passed to assumed-rank dummy, the cast to assumed-rank
   // box is inserted when building the fir.call op. Inserting it here would

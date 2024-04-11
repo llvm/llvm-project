@@ -203,7 +203,7 @@ conformance.</p>
     <tr>
       <td>extended identifiers</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n717.htm">N717</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Clang 17</td>
     </tr>
     <tr>
       <td>hexadecimal floating-point constants</td>
@@ -568,7 +568,7 @@ conformance.</p>
     <tr>
       <td>Conditional normative status for Annex G</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1514.pdf">N1514</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes <a href="#annex-g">(1)</a></td>
     </tr>
     <tr>
       <td>Creation of complex value</td>
@@ -606,6 +606,9 @@ conformance.</p>
       <td class="unknown" align="center">Unknown</td>
     </tr>
 </table>
+<span id="annex-g">(1): Clang does not implement Annex G, so our conditional support
+conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
+</span>
 </details>
 
 <h2 id="c17">C17 implementation status</h2>
@@ -748,11 +751,6 @@ conformance.</p>
     <tr>
       <td>*_IS_IEC_60559 feature test macros</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2379.htm">N2379</a></td>
-      <td class="unknown" align="center">Unknown</td>
-    </tr>
-    <tr>
-      <td>Floating-point negation and conversion</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2416.pdf">N2416</a></td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>
