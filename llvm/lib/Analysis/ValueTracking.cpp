@@ -1686,6 +1686,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.Zero.setBitsFrom(KnownZeroFirstBit);
         break;
       }
+      case Intrinsic::threadlocal_address: {
+        computeKnownBits(II->getArgOperand(0), Known, Depth + 1, Q);
+        break;
+      }
       case Intrinsic::vscale: {
         if (!II->getParent() || !II->getFunction())
           break;
