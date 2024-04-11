@@ -397,7 +397,7 @@ define i32 @parity_xor_trunc(i64 %arg, i64 %arg1) {
 ; CHECK-LABEL: @parity_xor_trunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[ARG1:%.*]], [[ARG:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP1]]), !range [[RNG5:![0-9]+]]
-; CHECK-NEXT:    [[I4:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[I4:%.*]] = trunc nuw nsw i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[I5:%.*]] = and i32 [[I4]], 1
 ; CHECK-NEXT:    ret i32 [[I5]]
 ;
