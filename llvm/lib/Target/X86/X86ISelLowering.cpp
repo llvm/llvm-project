@@ -1286,6 +1286,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::CTLZ,             VT, Custom);
     }
 
+    if (Subtarget.hasGFNI()) {
+      setOperationAction(ISD::BITREVERSE,       MVT::i32, Custom);
+      setOperationAction(ISD::BITREVERSE,       MVT::i64, Custom);
+    }
+
     // These might be better off as horizontal vector ops.
     setOperationAction(ISD::ADD,                MVT::i16, Custom);
     setOperationAction(ISD::ADD,                MVT::i32, Custom);
@@ -1495,11 +1500,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::TRUNCATE,          MVT::v32i16, Custom);
     setOperationAction(ISD::TRUNCATE,          MVT::v32i32, Custom);
     setOperationAction(ISD::TRUNCATE,          MVT::v32i64, Custom);
-
-    if (Subtarget.hasGFNI()) {
-      setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
-      setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
-    }
 
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
       setOperationAction(ISD::SETCC,           VT, Custom);
@@ -31337,12 +31337,9 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.is256BitVector() && !Subtarget.hasInt256())
     return splitVectorIntUnary(Op, DAG, DL);
 
-  // Lower i32/i64 to GFNI as vXi8 BITREVERSE + BSWAP
+  // Lower i32/i64 as vXi8 BITREVERSE + BSWAP
   if (!VT.isVector()) {
-
-    assert((VT.getScalarType() == MVT::i32) ||
-           (VT.getScalarType() == MVT::i64));
-
+    assert((VT == MVT::i32 || VT == MVT::i64) && "Only tested for i32/i64");
     MVT VecVT = MVT::getVectorVT(VT, 128 / VT.getSizeInBits());
     SDValue Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, In);
     Res = DAG.getNode(ISD::BITREVERSE, DL, MVT::v16i8,
