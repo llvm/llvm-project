@@ -2918,7 +2918,8 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         return isNonZeroAdd(DemandedElts, Depth, Q, BitWidth,
                             II->getArgOperand(0), II->getArgOperand(1),
                             /*NSW=*/true, /* NUW=*/false);
-        // umin/smin/smax/smin of all non-zero elements is always non-zero.
+        // umin/smin/smax/smin/or of all non-zero elements is always non-zero.
+      case Intrinsic::vector_reduce_or:
       case Intrinsic::vector_reduce_umax:
       case Intrinsic::vector_reduce_umin:
       case Intrinsic::vector_reduce_smax:

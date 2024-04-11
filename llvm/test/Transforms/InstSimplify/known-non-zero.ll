@@ -380,10 +380,7 @@ define <2 x i1> @insert_nonzero_any_idx_fail(<2 x i8> %xx, i8 %yy, i32 %idx) {
 
 define i1 @nonzero_reduce_or(<2 x i8> %xx) {
 ; CHECK-LABEL: @nonzero_reduce_or(
-; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[XX:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> [[X]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x = add nuw <2 x i8> %xx, <i8 1, i8 1>
   %v = call i8 @llvm.vector.reduce.or(<2 x i8> %x)
