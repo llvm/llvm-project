@@ -72,7 +72,7 @@ static cl::opt<bool> JTFootprintReductionFlag(
              "instructions at jump sites"),
     cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
+cl::opt<bool>
     KeepNops("keep-nops",
              cl::desc("keep no-op instructions. By default they are removed."),
              cl::Hidden, cl::cat(BoltOptCategory));
@@ -377,8 +377,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<NormalizeCFG>(PrintNormalized));
 
-  Manager.registerPass(std::make_unique<StripRepRet>(NeverPrint),
-                       opts::StripRepRet);
+  if (BC.isX86())
+    Manager.registerPass(std::make_unique<StripRepRet>(NeverPrint),
+                         opts::StripRepRet);
 
   Manager.registerPass(std::make_unique<IdenticalCodeFolding>(PrintICF),
                        opts::ICF);

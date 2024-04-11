@@ -120,11 +120,8 @@ memref::AllocaOp::getDestructurableSlots() {
   if (!destructuredType)
     return {};
 
-  DenseMap<Attribute, Type> indexMap;
-  for (auto const &[index, type] : *destructuredType)
-    indexMap.insert({index, MemRefType::get({}, type)});
-
-  return {DestructurableMemorySlot{{getMemref(), memrefType}, indexMap}};
+  return {
+      DestructurableMemorySlot{{getMemref(), memrefType}, *destructuredType}};
 }
 
 DenseMap<Attribute, MemorySlot>

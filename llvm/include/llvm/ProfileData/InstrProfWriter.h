@@ -63,6 +63,9 @@ private:
   // List of binary ids.
   std::vector<llvm::object::BuildID> BinaryIds;
 
+  // Read the vtable names from raw instr profile reader.
+  StringSet<> VTableNames;
+
   // An enum describing the attributes of the profile.
   InstrProfKind ProfileKind = InstrProfKind::Unknown;
   // Use raw pointer here for the incomplete type object.
@@ -75,11 +78,14 @@ private:
   // deployment of newer versions of llvm-profdata.
   bool WritePrevVersion = false;
 
+  // The MemProf version we should write.
+  memprof::IndexedVersion MemProfVersionRequested;
+
 public:
-  InstrProfWriter(bool Sparse = false,
-                  uint64_t TemporalProfTraceReservoirSize = 0,
-                  uint64_t MaxTemporalProfTraceLength = 0,
-                  bool WritePrevVersion = false);
+  InstrProfWriter(
+      bool Sparse = false, uint64_t TemporalProfTraceReservoirSize = 0,
+      uint64_t MaxTemporalProfTraceLength = 0, bool WritePrevVersion = false,
+      memprof::IndexedVersion MemProfVersionRequested = memprof::Version0);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
@@ -92,6 +98,7 @@ public:
   void addRecord(NamedInstrProfRecord &&I, function_ref<void(Error)> Warn) {
     addRecord(std::move(I), 1, Warn);
   }
+  void addVTableName(StringRef VTableName) { VTableNames.insert(VTableName); }
 
   /// Add \p SrcTraces using reservoir sampling where \p SrcStreamSize is the
   /// total number of temporal profiling traces the source has seen.

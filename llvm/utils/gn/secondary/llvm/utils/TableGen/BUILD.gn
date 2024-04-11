@@ -1,51 +1,45 @@
 source_set("llvm-min-tblgen-sources") {
   sources = [
     "Attributes.cpp",
-    "CodeGenIntrinsics.cpp",
     "DirectiveEmitter.cpp",
     "IntrinsicEmitter.cpp",
     "RISCVTargetDefEmitter.cpp",
-    "SDNodeProperties.cpp",
     "TableGen.cpp",
     "VTEmitter.cpp",
   ]
-  deps = [ "//llvm/lib/Support" ]
+  deps = [
+    "Basic",
+    "//llvm/lib/Support",
+  ]
 }
 
 executable("llvm-min-tblgen") {
   deps = [
     ":llvm-min-tblgen-sources",
-    "//llvm/lib/TableGen",
+    "Basic",
   ]
 }
 
 executable("llvm-tblgen") {
   deps = [
     ":llvm-min-tblgen-sources",
+    "Basic",
+    "Common",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/CodeGenTypes",
     "//llvm/lib/Support",
     "//llvm/lib/TableGen",
-    "//llvm/utils/TableGen/GlobalISel",
   ]
+  include_dirs = [ "." ]
   sources = [
     "AsmMatcherEmitter.cpp",
     "AsmWriterEmitter.cpp",
-    "AsmWriterInst.cpp",
     "CTagsEmitter.cpp",
     "CallingConvEmitter.cpp",
     "CodeEmitterGen.cpp",
-    "CodeGenDAGPatterns.cpp",
-    "CodeGenHwModes.cpp",
-    "CodeGenInstAlias.cpp",
-    "CodeGenInstruction.cpp",
     "CodeGenMapTable.cpp",
-    "CodeGenRegisters.cpp",
-    "CodeGenSchedule.cpp",
-    "CodeGenTarget.cpp",
     "CompressInstEmitter.cpp",
     "DAGISelEmitter.cpp",
-    "DAGISelMatcher.cpp",
     "DAGISelMatcherEmitter.cpp",
     "DAGISelMatcherGen.cpp",
     "DAGISelMatcherOpt.cpp",
@@ -58,24 +52,16 @@ executable("llvm-tblgen") {
     "FastISelEmitter.cpp",
     "GlobalISelCombinerEmitter.cpp",
     "GlobalISelEmitter.cpp",
-    "GlobalISelMatchTable.cpp",
-    "GlobalISelMatchTableExecutorEmitter.cpp",
-    "InfoByHwMode.cpp",
     "InstrDocsEmitter.cpp",
     "InstrInfoEmitter.cpp",
     "MacroFusionPredicatorEmitter.cpp",
-    "OptEmitter.cpp",
     "OptParserEmitter.cpp",
     "OptRSTEmitter.cpp",
-    "PredicateExpander.cpp",
     "PseudoLoweringEmitter.cpp",
     "RegisterBankEmitter.cpp",
     "RegisterInfoEmitter.cpp",
     "SearchableTableEmitter.cpp",
     "SubtargetEmitter.cpp",
-    "SubtargetFeatureInfo.cpp",
-    "Types.cpp",
-    "VarLenCodeEmitterGen.cpp",
     "WebAssemblyDisassemblerEmitter.cpp",
     "X86CompressEVEXTablesEmitter.cpp",
     "X86DisassemblerTables.cpp",

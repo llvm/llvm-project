@@ -15,7 +15,8 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fegetexceptflag, (fexcept_t * flagp, int excepts)) {
-  // TODO: Add a compile time check to see if the excepts actually fit in flagp.
+  static_assert(sizeof(int) >= sizeof(fexcept_t),
+                "fexcept_t value cannot fit in an int value.");
   *flagp = static_cast<fexcept_t>(fputil::test_except(FE_ALL_EXCEPT) & excepts);
   return 0;
 }

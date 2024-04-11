@@ -207,6 +207,7 @@ public:
   NODE(CompilerDirective, LoopCount)
   NODE(CompilerDirective, AssumeAligned)
   NODE(CompilerDirective, NameValue)
+  NODE(CompilerDirective, Unrecognized)
   NODE(parser, ComplexLiteralConstant)
   NODE(parser, ComplexPart)
   NODE(parser, ComponentArraySpec)

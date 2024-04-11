@@ -1593,16 +1593,12 @@ let OtherPredicates = [isGFX12Plus] in {
   defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_ORDERED_ADD_B64", "int_amdgcn_global_atomic_ordered_add_b64", i64, i64, /* isIntr */ 1>;
 
   let WaveSizePredicate = isWave32 in {
-    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w32, int_amdgcn_global_load_tr, v2i32>;
-    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w32, int_amdgcn_global_load_tr, v8i16>;
-    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w32, int_amdgcn_global_load_tr, v8f16>;
-    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w32, int_amdgcn_global_load_tr, v8bf16>;
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w32, int_amdgcn_global_load_tr_b64, v2i32>;
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w32, int_amdgcn_global_load_tr_b128, v8i16>;
   }
   let WaveSizePredicate = isWave64 in {
-    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64, int_amdgcn_global_load_tr, i32>;
-    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr, v4i16>;
-    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr, v4f16>;
-    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr, v4bf16>;
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64, int_amdgcn_global_load_tr_b64, i32>;
+    defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr_b128, v4i16>;
   }
 }
 
@@ -2562,7 +2558,7 @@ multiclass VFLAT_Real_Base_gfx12<bits<8> op,
 
 multiclass VFLAT_Real_Atomics_gfx12<bits<8> op,
                                     string name = get_FLAT_ps<NAME>.Mnemonic,
-                                    string alias = ""> :
+                                    string alias = name> :
   VFLAT_Real_Base_gfx12<op, name, alias> {
   defm _RTN : VFLAT_Real_gfx12<op, name>;
 }
@@ -2585,7 +2581,7 @@ multiclass VGLOBAL_Real_AllAddr_gfx12_w64<bits<8> op,
 
 multiclass VGLOBAL_Real_Atomics_gfx12<bits<8> op,
                                       string name = get_FLAT_ps<NAME>.Mnemonic,
-                                      string alias = ""> :
+                                      string alias = name> :
   VGLOBAL_Real_AllAddr_gfx12<op, name, alias> {
   defm _RTN : VFLAT_Real_gfx12<op, name>;
   defm _SADDR_RTN : VFLAT_Real_gfx12<op, name>;

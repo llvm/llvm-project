@@ -87,6 +87,7 @@ protected:
   bool EnableTgSplit = false;
   bool EnableCuMode = false;
   bool TrapHandler = false;
+  bool EnablePreciseMemory = false;
 
   // Used as options.
   bool EnableLoadStoreOpt = false;
@@ -223,7 +224,7 @@ protected:
   bool HasImageStoreD16Bug = false;
   bool HasImageGather4D16Bug = false;
   bool HasMSAALoadDstSelBug = false;
-  bool HasGFX11FullVGPRs = false;
+  bool Has1_5xVGPRs = false;
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
@@ -599,6 +600,8 @@ public:
     return EnableCuMode;
   }
 
+  bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
+
   bool hasFlatAddressSpace() const {
     return FlatAddressSpace;
   }
@@ -923,6 +926,8 @@ public:
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
 
+  void mirFileLoaded(MachineFunction &MF) const override;
+
   unsigned getMaxNumUserSGPRs() const {
     return AMDGPU::getMaxNumUserSGPRs(*this);
   }
@@ -1202,7 +1207,7 @@ public:
   /// target.
   bool hasNullExportTarget() const { return !GFX11Insts; }
 
-  bool hasGFX11FullVGPRs() const { return HasGFX11FullVGPRs; }
+  bool has1_5xVGPRs() const { return Has1_5xVGPRs; }
 
   bool hasVOPDInsts() const { return HasVOPDInsts; }
 

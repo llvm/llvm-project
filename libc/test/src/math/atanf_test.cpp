@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/atanf.h"
@@ -55,12 +55,15 @@ TEST_F(LlvmLibcAtanfTest, InFloatRange) {
 TEST_F(LlvmLibcAtanfTest, SpecialValues) {
   uint32_t val_arr[] = {
       0x3d8d6b23U, // x = 0x1.1ad646p-4f
+      0x3dbb6ac7U, // x = 0x1.76d58ep-4f
       0x3feefcfbU, // x = 0x1.ddf9f6p+0f
+      0x3ffe2ec1U, // x = 0x1.fc5d82p+0f
       0xbd8d6b23U, // x = -0x1.1ad646p-4f
+      0xbdbb6ac7U, // x = -0x1.76d58ep-4f
       0xbfeefcfbU, // x = -0x1.ddf9f6p+0f
+      0xbffe2ec1U, // x = -0x1.fc5d82p+0
       0x7F800000U, // x = +Inf
       0xFF800000U, // x = -Inf
-      0xbffe2ec1U, // x = -0x1.fc5d82p+0f
   };
   for (uint32_t v : val_arr) {
     float x = FPBits(v).get_val();

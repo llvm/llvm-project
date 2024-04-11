@@ -1,4 +1,4 @@
-//===- CIRTypes.td - CIR dialect types ---------------------*- tablegen -*-===//
+//===- CIRDialect.td - CIR dialect -------------------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CIR_DIALECT_CIR
-#define MLIR_CIR_DIALECT_CIR
+#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
+#define LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
 
 include "mlir/IR/OpBase.td"
 
@@ -31,16 +31,14 @@ def CIR_Dialect : Dialect {
     void registerAttributes();
     void registerTypes();
 
-    ::mlir::Type parseType(::mlir::DialectAsmParser &parser) const override;
-    void printType(::mlir::Type type,
-                   ::mlir::DialectAsmPrinter &printer) const override;
+    Type parseType(DialectAsmParser &parser) const override;
+    void printType(Type type, DialectAsmPrinter &printer) const override;
 
-    ::mlir::Attribute parseAttribute(::mlir::DialectAsmParser &parser,
-                                     ::mlir::Type type) const override;
+    Attribute parseAttribute(DialectAsmParser &parser,
+                             Type type) const override;
 
-    void printAttribute(::mlir::Attribute attr,
-                        ::mlir::DialectAsmPrinter &os) const override;
+    void printAttribute(Attribute attr, DialectAsmPrinter &os) const override;
   }];
 }
 
-#endif // MLIR_CIR_DIALECT_CIR
+#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT

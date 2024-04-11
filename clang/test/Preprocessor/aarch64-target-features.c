@@ -196,7 +196,7 @@
 // CHECK-8_6-NOT: __ARM_FEATURE_SHA3 1
 // CHECK-8_6-NOT: __ARM_FEATURE_SM4 1
 
-// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.6-a+sve -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-8_6 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.6-a+sve+f32mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-8_6 %s
 // CHECK-SVE-8_6: __ARM_FEATURE_SVE 1
 // CHECK-SVE-8_6: __ARM_FEATURE_SVE_BF16 1
 // CHECK-SVE-8_6: __ARM_FEATURE_SVE_MATMUL_FP32 1

@@ -334,6 +334,44 @@ let Predicates = [In64BitMode] in {
   def IMUL32rmi_EVEX  : IMulOpMI_RF<Xi32, WriteIMul32Imm>, PL;
   def IMUL64rmi32_EVEX : IMulOpMI_RF<Xi64, WriteIMul64Imm>, PL;
 }
+
+// IMULZU instructions
+class IMulZUOpRI8_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpRI8<0x6B, "imulzu", binop_ndd_args, t, MRMSrcReg,
+             (outs t.RegClass:$dst)> {
+  let SchedRW = [sched];
+}
+class IMulZUOpRI_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpRI<0x69, "imulzu", binop_ndd_args, t, MRMSrcReg,
+            (outs t.RegClass:$dst), []> {
+  let SchedRW = [sched];
+}
+class IMulZUOpMI8_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpMI8<"imulzu", binop_ndd_args, t, MRMSrcMem, (outs t.RegClass:$dst)> {
+  let Opcode = 0x6B;
+  let SchedRW = [sched.Folded];
+}
+class IMulZUOpMI_R<X86TypeInfo t, X86FoldableSchedWrite sched>
+  : BinOpMI<0x69, "imulzu", binop_ndd_args, t, MRMSrcMem,
+            (outs t.RegClass:$dst), []> {
+  let SchedRW = [sched.Folded];
+}
+
+let Defs = [EFLAGS], Predicates = [HasEGPR, In64BitMode] in {
+  def IMULZU16rri8 : IMulZUOpRI8_R<Xi16, WriteIMul16Imm>, ZU, PD;
+  def IMULZU16rmi8 : IMulZUOpMI8_R<Xi16, WriteIMul16Imm>, ZU, PD;
+  def IMULZU16rri : IMulZUOpRI_R<Xi16, WriteIMul16Imm>, ZU, PD;
+  def IMULZU16rmi : IMulZUOpMI_R<Xi16, WriteIMul16Imm>, ZU, PD;
+  def IMULZU32rri8 : IMulZUOpRI8_R<Xi32, WriteIMul32Imm>, ZU;
+  def IMULZU32rmi8 : IMulZUOpMI8_R<Xi32, WriteIMul32Imm>, ZU;
+  def IMULZU32rri : IMulZUOpRI_R<Xi32, WriteIMul32Imm>, ZU;
+  def IMULZU32rmi : IMulZUOpMI_R<Xi32, WriteIMul32Imm>, ZU;
+  def IMULZU64rri8 : IMulZUOpRI8_R<Xi64, WriteIMul64Imm>, ZU;
+  def IMULZU64rmi8 : IMulZUOpMI8_R<Xi64, WriteIMul64Imm>, ZU;
+  def IMULZU64rri32 : IMulZUOpRI_R<Xi64, WriteIMul64Imm>, ZU;
+  def IMULZU64rmi32 : IMulZUOpMI_R<Xi64, WriteIMul64Imm>, ZU;
+}
+
 //===----------------------------------------------------------------------===//
 // INC and DEC Instructions
 //

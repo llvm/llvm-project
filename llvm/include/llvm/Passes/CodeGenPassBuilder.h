@@ -87,14 +87,14 @@ namespace llvm {
     }                                                                          \
   };
 #define DUMMY_MACHINE_MODULE_PASS(NAME, PASS_NAME)                             \
-  struct PASS_NAME : public MachinePassInfoMixin<PASS_NAME> {                  \
+  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     PreservedAnalyses run(Module &, ModuleAnalysisManager &) {                 \
       return PreservedAnalyses::all();                                         \
     }                                                                          \
   };
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)                           \
-  struct PASS_NAME : public MachinePassInfoMixin<PASS_NAME> {                  \
+  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     PreservedAnalyses run(MachineFunction &,                                   \
                           MachineFunctionAnalysisManager &) {                  \
@@ -176,9 +176,6 @@ protected:
       // Add Function Pass
       if constexpr (is_detected<is_function_pass_t, PassT>::value) {
         FPM.addPass(std::forward<PassT>(Pass));
-
-        for (auto &C : PB.AfterCallbacks)
-          C(Name);
       } else {
         // Add Module Pass
         if (!FPM.isEmpty()) {
@@ -187,9 +184,6 @@ protected:
         }
 
         MPM.addPass(std::forward<PassT>(Pass));
-
-        for (auto &C : PB.AfterCallbacks)
-          C(Name);
       }
     }
 
@@ -222,9 +216,6 @@ protected:
       // Add Function Pass
       if constexpr (is_detected<is_machine_function_pass_t, PassT>::value) {
         MFPM.addPass(std::forward<PassT>(Pass));
-
-        for (auto &C : PB.AfterCallbacks)
-          C(Name);
       } else {
         // Add Module Pass
         if (!MFPM.isEmpty()) {
@@ -234,10 +225,10 @@ protected:
         }
 
         MPM.addPass(std::forward<PassT>(Pass));
-
-        for (auto &C : PB.AfterCallbacks)
-          C(Name);
       }
+
+      for (auto &C : PB.AfterCallbacks)
+        C(Name, MFPM);
     }
 
   private:
@@ -461,6 +452,24 @@ protected:
   Error addRegAssignmentFast(AddMachinePass &) const;
   Error addRegAssignmentOptimized(AddMachinePass &) const;
 
+  /// Allow the target to disable a specific pass by default.
+  /// Backend can declare unwanted passes in constructor.
+  template <typename... PassTs> void disablePass() {
+    BeforeCallbacks.emplace_back(
+        [](StringRef Name) { return ((Name != PassTs::name()) && ...); });
+  }
+
+  /// Insert InsertedPass pass after TargetPass pass.
+  /// Only machine function passes are supported.
+  template <typename TargetPassT, typename InsertedPassT>
+  void insertPass(InsertedPassT &&Pass) {
+    AfterCallbacks.emplace_back(
+        [&](StringRef Name, MachineFunctionPassManager &MFPM) mutable {
+          if (Name == TargetPassT::name())
+            MFPM.addPass(std::forward<InsertedPassT>(Pass));
+        });
+  }
+
 private:
   DerivedT &derived() { return static_cast<DerivedT &>(*this); }
   const DerivedT &derived() const {
@@ -480,7 +489,9 @@ private:
 
   mutable SmallVector<llvm::unique_function<bool(StringRef)>, 4>
       BeforeCallbacks;
-  mutable SmallVector<llvm::unique_function<void(StringRef)>, 4> AfterCallbacks;
+  mutable SmallVector<
+      llvm::unique_function<void(StringRef, MachineFunctionPassManager &)>, 4>
+      AfterCallbacks;
 
   /// Helper variable for `-start-before/-start-after/-stop-before/-stop-after`
   mutable bool Started = true;
