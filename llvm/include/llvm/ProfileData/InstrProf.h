@@ -1188,12 +1188,14 @@ struct Header {
   // Reads a header struct from the buffer.
   static Expected<Header> readFromBuffer(const unsigned char *Buffer);
 
-  // Returns the size of the header in bytes for all valid fields based on the
-  // version. I.e a older version header will return a smaller size.
+  // Returns the on-disk byte size of the header for all valid fields based on
+  // the version.
   size_t size() const;
 
-  // Returns the format version in little endian. The header retains the version
-  // in native endian of the compiler runtime.
+  Expected<size_t> knownFieldsEndByteOffset() const;
+
+  // Returns the format version in little endian. The header retains the
+  // version in native endian of the compiler runtime.
   uint64_t formatVersion() const;
 };
 

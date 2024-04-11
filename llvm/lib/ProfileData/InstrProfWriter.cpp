@@ -36,6 +36,9 @@
 
 using namespace llvm;
 
+static cl::opt<bool> WriteFutureVersion("write-future-version",
+                                        cl::init(false));
+
 // A struct to define how the data stream should be patched. For Indexed
 // profiling, only uint64_t data type is needed.
 struct PatchItem {
@@ -578,6 +581,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   Header.Version = WritePrevVersion
                        ? IndexedInstrProf::ProfVersion::Version12
                        : IndexedInstrProf::ProfVersion::CurrentVersion;
+  if (WriteFutureVersion)
+    Header.Version = 14;
   // The WritePrevVersion handling will either need to be removed or updated
   // if the version is advanced beyond 13.
   // Starting from version 13, an indexed profile records the on-disk
@@ -648,9 +653,17 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (!WritePrevVersion)
     OS.write(0);
 
+  // Write a dummy value
+  if (WriteFutureVersion)
+    OS.write(0);
+
   // Record the OnDiskHeader Size after each header field either gets written or
   // gets its space reserved.
   uint64_t OnDiskHeaderSize = OS.tell() - StartOffset;
+
+  llvm::errs() << "OnDiskHeaderSize is " << OnDiskHeaderSize << "\n";
+  fflush(stdout);
+  fflush(stderr);
 
   // Reserve space to write profile summary data.
   uint32_t NumEntries = ProfileSummaryBuilder::DefaultCutoffs.size();
