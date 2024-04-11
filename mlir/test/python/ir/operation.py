@@ -1057,18 +1057,22 @@ def testOpWalk():
     # CHECK-NEXT:  Interrupt post-order
     # CHECK-NEXT:  func.return
     print("Interrupt post-order")
+
     def callback(op):
         print(op.name)
         return WalkResult.INTERRUPT
+
     module.operation.walk(callback)
 
     # Test skip.
     # CHECK-NEXT:  Skip pre-order
     # CHECK-NEXT:  builtin.module
     print("Skip pre-order")
+
     def callback(op):
         print(op.name)
         return WalkResult.SKIP
+
     module.operation.walk(callback, WalkOrder.PRE_ORDER)
 
     # Test exception.
@@ -1076,6 +1080,7 @@ def testOpWalk():
     # CHECK-NEXT: func.return
     # CHECK-NEXT: Exception raised
     print("Exception")
+
     def callback(op):
         print(op.name)
         raise ValueError
