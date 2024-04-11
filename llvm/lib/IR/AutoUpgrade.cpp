@@ -5267,6 +5267,14 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
   F.removeRetAttrs(AttributeFuncs::typeIncompatible(F.getReturnType()));
   for (auto &Arg : F.args())
     Arg.removeAttrs(AttributeFuncs::typeIncompatible(Arg.getType()));
+
+  // Older versions of LLVM treated an "implicit-section-name" attribute
+  // similarly to directly setting the section on a Function.
+  if (Attribute A = F.getFnAttribute("implicit-section-name");
+      A.isValid() && A.isStringAttribute()) {
+    F.setSection(A.getValueAsString());
+    F.removeFnAttr("implicit-section-name");
+  }
 }
 
 static bool isOldLoopArgument(Metadata *MD) {
