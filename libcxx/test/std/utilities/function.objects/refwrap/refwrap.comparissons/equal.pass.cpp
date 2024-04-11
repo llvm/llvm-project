@@ -23,18 +23,51 @@
 #include "test_macros.h"
 
 constexpr bool test() {
+  int i = 92;
+  int j = 84;
+
+  // ==
   {
-    int i = 92;
-    std::reference_wrapper<int> lhs{i};
-    std::reference_wrapper<int> rhs = lhs;
-    assert(lhs == rhs);
+    // refwrap, refwrap
+    std::reference_wrapper<int> rw1{i};
+    std::reference_wrapper<int> rw2 = rw1;
+    assert(rw1 == rw2);
+    assert(rw2 == rw1);
   }
   {
-    int i = 92;
-    std::reference_wrapper<int> lhs{i};
-    int j = 84;
-    std::reference_wrapper<int> rhs{j};
-    assert(lhs != rhs);
+    // refwrap, const&
+    std::reference_wrapper<int> rw{i};
+    assert(rw == i);
+    assert(i == rw);
+  }
+  {
+    // refwrap, refwrap<const>
+    std::reference_wrapper<int> rw1{i};
+    std::reference_wrapper<const int> rw2 = rw1;
+    assert(rw1 == rw2);
+    assert(rw2 == rw1);
+  }
+
+  // !=
+  {
+    // refwrap, refwrap
+    std::reference_wrapper<int> rw1{i};
+    std::reference_wrapper<int> rw2{j};
+    assert(rw1 != rw2);
+    assert(rw2 != rw1);
+  }
+  {
+    // refwrap, const&
+    std::reference_wrapper<int> rw{i};
+    assert(rw != j);
+    assert(j != rw);
+  }
+  {
+    // refwrap, refwrap<const>
+    std::reference_wrapper<int> rw1{i};
+    std::reference_wrapper<const int> rw2{j};
+    assert(rw1 != rw2);
+    assert(rw2 != rw1);
   }
 
   return true;

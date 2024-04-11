@@ -73,14 +73,12 @@ public:
   // [refwrap.comparisons], comparisons
 
   friend constexpr bool operator==(reference_wrapper __x, reference_wrapper __y) {
-    // Mandates: The expression x.get() == y.get() is well-formed and its result is convertible to bool.
     static_assert(is_convertible_v<decltype(__x.get() == __y.get()), bool>);
 
     return __x.get() == __y.get();
   }
 
   friend constexpr bool operator==(reference_wrapper __x, const _Tp& __y) {
-    // Mandates: The expression x.get() == y is well-formed and its result is convertible to bool.
     static_assert(is_convertible_v<decltype(__x.get() == __y), bool>);
 
     return __x.get() == __y;
@@ -89,29 +87,22 @@ public:
   friend constexpr bool operator==(reference_wrapper __x, reference_wrapper<const _Tp> __y)
     requires(!is_const_v<_Tp>)
   {
-    // Constraints: is_const_v<T> is false.
-    // Mandates: The expression x.get() == y.get() is well-formed and its result is convertible to bool.
     static_assert(is_convertible_v<decltype(__x.get() == __y.get()), bool>);
 
     return __x.get() == __y.get();
   }
 
   friend constexpr __synth_three_way_result<_Tp> operator<=>(reference_wrapper __x, reference_wrapper __y) {
-    // return __synth_three_way_result(x.get(), y.get());
     return std::__synth_three_way(__x.get(), __y.get());
   }
 
   friend constexpr __synth_three_way_result<_Tp> operator<=>(reference_wrapper __x, const _Tp& __y) {
-    // return __synth_three_way_result(__x.get(), __y);
-    return std::__synth_three_way(__x.get(), __y.get());
+    return std::__synth_three_way(__x.get(), __y);
   }
 
   friend constexpr __synth_three_way_result<_Tp> operator<=>(reference_wrapper __x, reference_wrapper<const _Tp> __y)
     requires(!is_const_v<_Tp>)
   {
-    // Constraints: is_const_v<T> is false.
-
-    // return __synth_three_way_result(__x.get(), __y.get());
     return std::__synth_three_way(__x.get(), __y.get());
   }
 
