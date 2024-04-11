@@ -223,19 +223,10 @@ A derived type will be represented in metadata by `DICompositeType` with a tag o
 !6 = !DIBasicType(tag: DW_TAG_base_type, name: "real" ...)
 ```
 
-In FIR, RecordType and TypeInfoOp can be used to get information about the
-types of the component and location of the derived type. However, there are
-still some open questions about derived types.
-
-1. What is the correct way to get the offset and alignment information for the
-members of the derived type.
-
-2. Use of derived type causes the generation of many other global variables.
-Do they need to be retained in debug info?
-
-3. The location where a component of the derived type is declared is not
-available in RecordType or TypeInfoOp. This probably will need to be
-added.
+In FIR, `RecordType` and `TypeInfoOp` can be used to get information about the
+location of the derived type and the types of its components. We may also use
+`FusedLoc` on `TypeInfoOp` to encode location information for all the components
+of the derived type.
 
 ### CommonBlocks
 
