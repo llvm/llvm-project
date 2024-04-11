@@ -363,7 +363,7 @@ macro(construct_compiler_rt_default_triple)
     endif()
     message(STATUS "cmake c compiler target: ${CMAKE_C_COMPILER_TARGET}")
     if ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
-      execute_process(COMMAND ${CMAKE_C_COMPILER} -target ${CMAKE_C_COMPILER_TARGET} -print-effective-triple
+      execute_process(COMMAND ${CMAKE_C_COMPILER} --target=${CMAKE_C_COMPILER_TARGET} -print-effective-triple
                       OUTPUT_VARIABLE COMPILER_RT_DEFAULT_TARGET_TRIPLE
                       OUTPUT_STRIP_TRAILING_WHITESPACE)
     else()
@@ -371,7 +371,7 @@ macro(construct_compiler_rt_default_triple)
     endif()
   else()
     if ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
-      execute_process(COMMAND ${CMAKE_C_COMPILER} -target ${LLVM_TARGET_TRIPLE} -print-effective-triple
+      execute_process(COMMAND ${CMAKE_C_COMPILER} --target=${LLVM_TARGET_TRIPLE} -print-effective-triple
                       OUTPUT_VARIABLE COMPILER_RT_DEFAULT_TARGET_TRIPLE
                       OUTPUT_STRIP_TRAILING_WHITESPACE)
     else()
