@@ -117,7 +117,7 @@ both cases.
 The AddDebugFoundationPass will be renamed to AddDebugInfo Pass. The
 information mentioned in the line info section above will be passed to it from
 the driver. This pass will run quite late in the pipeline but before
-`DecalreOp` is removed.
+`DeclareOp` is removed.
 
 In this pass, we will iterate through the `GlobalOp`, `TypeInfoOp`, `FuncOp`
 and `DeclareOp` to extract the source information and build the MLIR
