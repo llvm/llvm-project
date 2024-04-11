@@ -437,7 +437,6 @@ bool ARMEncodeDecode::runOnModule(Module &M) {
       std::vector<std::pair<MachineInstr *, MachineOperand *>> Pushes;
       std::vector<std::pair<MachineInstr *, MachineOperand *>> Pops;
       std::vector<std::pair<MachineInstr *, MachineOperand *>> Blxs;
-      std::vector<std::pair<MachineInstr *, MachineOperand *>> Bs;
       MachineOperand *callRegister = nullptr; // 保存最后一个寄存器操作数的指针
       Register callRegister1 = ARM::R9; // 对标以下的r0
       Register callRegister2 = ARM::R9; // 对标以下的r0
@@ -607,28 +606,6 @@ bool ARMEncodeDecode::runOnModule(Module &M) {
               }
             }
             break;
-          case ARM::BL:
-          case ARM::BL_pred:
-          case ARM::BMOVPCB_CALL:
-          case ARM::BL_PUSHLR:
-          case ARM::BLXi:
-          case ARM::tBL:
-          case ARM::tBLXi:
-          case ARM::tBL_PUSHLR:
-          case ARM::tBLXr:
-          case ARM::tBLXr_noip:
-          case ARM::tBLXNSr:
-          case ARM::tBLXNS_CALL:
-          case ARM::tBX_CALL:
-          case ARM::tTAILJMPr:
-          case ARM::BLX:
-          case ARM::BLX_noip:
-          case ARM::BLX_pred:
-          case ARM::BLX_pred_noip:
-          case ARM::BX_CALL:
-          case ARM::BMOVPCRX_CALL:
-            Bs.push_back(std::make_pair(&MI, nullptr));
-            break;
           default:
             break;
           }
@@ -655,58 +632,12 @@ bool ARMEncodeDecode::runOnModule(Module &M) {
         changed |= EncodeLR(*MIMO.first, *MIMO.second, Stride);
       }
 
-      for (auto &MIMO : Bs) {
-        changed |= insertNop(*MIMO.first);
-      }
-
       for (auto &MIMO : Blxs) {
         changed |= EncodeCallSite(*MIMO.first, *MIMO.second, Stride);
       }
 
       for (auto &MIMO : Pops) {
         changed |= DecodeLR(*MIMO.first, *MIMO.second, Stride);
-      }
-    }else{
-      MachineFunction *MF = MMI.getMachineFunction(F);
-      if (MF == nullptr) {
-        continue;
-      }
-
-      std::vector<std::pair<MachineInstr *, MachineOperand *>> Bs;
-
-      for (MachineBasicBlock &MBB : *MF) {
-        for (MachineInstr &MI : MBB) {
-          switch (MI.getOpcode()) {
-          case ARM::BL:
-          case ARM::BL_pred:
-          case ARM::BMOVPCB_CALL:
-          case ARM::BL_PUSHLR:
-          case ARM::BLXi:
-          case ARM::tBL:
-          case ARM::tBLXi:
-          case ARM::tBL_PUSHLR:
-          case ARM::tBLXr:
-          case ARM::tBLXr_noip:
-          case ARM::tBLXNSr:
-          case ARM::tBLXNS_CALL:
-          case ARM::tBX_CALL:
-          case ARM::tTAILJMPr:
-          case ARM::BLX:
-          case ARM::BLX_noip:
-          case ARM::BLX_pred:
-          case ARM::BLX_pred_noip:
-          case ARM::BX_CALL:
-          case ARM::BMOVPCRX_CALL:
-            Bs.push_back(std::make_pair(&MI, nullptr));
-            break;
-          default:
-            break;
-          }
-        }
-      }
-
-      for (auto &MIMO : Bs) {
-        changed |= insertNop(*MIMO.first);
       }
     }
 

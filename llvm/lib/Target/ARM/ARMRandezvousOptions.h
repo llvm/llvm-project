@@ -31,6 +31,7 @@ extern bool EnableRandezvousDecoyPointers;
 extern bool EnableRandezvousGlobalGuard;
 extern bool EnableRandezvousShadowStack;
 extern bool EnableEncodeDecode;//jzx
+extern bool EnableTrampoline;//jzx
 extern bool EnableRandezvousRAN;
 extern bool EnableRandezvousLGPromote;
 extern bool EnableRandezvousICallLimiter;

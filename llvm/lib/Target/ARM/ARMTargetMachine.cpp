@@ -11,8 +11,6 @@
 
 #include "ARMRandezvousInstrumentor.h"
 #include "ARMRandezvousShadowStack.h"
-//jzx
-#include "ARMEncodeDecode.h"
 #include "ARMTargetMachine.h"
 #include "ARM.h"
 #include "ARMMachineFunctionInfo.h"
@@ -62,6 +60,7 @@
 
 //jzx
 #include "ARMEncodeDecode.h"
+#include "ARMTrampoline.h"
 
 using namespace llvm;
 
@@ -625,7 +624,7 @@ void ARMPassConfig::addPreEmitPass2() {
 
   //jzx
   addPass(createARMEncodeDecode());
-
+  addPass(createARMTrampoline());
 
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.

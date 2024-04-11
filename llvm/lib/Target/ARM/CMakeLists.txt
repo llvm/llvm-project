@@ -21,6 +21,7 @@ add_public_tablegen_target(ARMCommonTableGen)
 
 set(ARM_Shadow_Randomization
   ARMEncodeDecode.cpp
+  ARMTrampoline.cpp
 )
 
 set(ARMRandezvous_SOURCES
