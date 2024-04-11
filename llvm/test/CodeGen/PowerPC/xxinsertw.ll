@@ -24,8 +24,7 @@ define <4 x i1> @foo(i1 %c1, i1 %c2, i1 %c3) {
   ; CHECK-NEXT:   [[MTVSRWZ2:%[0-9]+]]:vsfrc = MTVSRWZ killed [[COPY5]]
   ; CHECK-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:vsrc = SUBREG_TO_REG 1, killed [[MTVSRWZ2]], %subreg.sub_64
   ; CHECK-NEXT:   [[XXPERM:%[0-9]+]]:vsrc = XXPERM killed [[VMRGOW]], [[SUBREG_TO_REG2]], killed [[LXV]]
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vsrc = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[XXINSERTW:%[0-9]+]]:vsrc = XXINSERTW [[DEF]], killed [[XXPERM]], 8
+  ; CHECK-NEXT:   [[XXINSERTW:%[0-9]+]]:vsrc = XXINSERTW [[XXPERM]], [[XXPERM]], 8
   ; CHECK-NEXT:   $v2 = COPY [[XXINSERTW]]
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $v2
   %1 = insertelement <4 x i1> poison, i1 %c1, i64 0

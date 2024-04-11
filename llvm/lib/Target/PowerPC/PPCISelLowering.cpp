@@ -10142,7 +10142,9 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   if (Subtarget.hasP9Vector() &&
       PPC::isXXINSERTWMask(SVOp, ShiftElts, InsertAtByte, Swap,
                            isLittleEndian)) {
-    if (Swap)
+    if (V2.isUndef())
+      V2 = V1;
+    else if (Swap)
       std::swap(V1, V2);
     SDValue Conv1 = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, V1);
     SDValue Conv2 = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, V2);
