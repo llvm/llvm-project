@@ -8644,7 +8644,7 @@ static ExprResult attemptRecovery(Sema &SemaRef,
       // Detect and handle the case where the decl might be an implicit
       // member.
       if (SemaRef.isPotentialImplicitMemberAccess(
-          NewSS, R, Consumer.isAddressOfOperand()))
+              NewSS, R, Consumer.isAddressOfOperand()))
         return SemaRef.BuildPossibleImplicitMemberExpr(
             NewSS, /*TemplateKWLoc*/ SourceLocation(), R,
             /*TemplateArgs*/ nullptr, /*S*/ nullptr);

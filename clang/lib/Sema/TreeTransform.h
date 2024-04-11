@@ -13068,48 +13068,8 @@ TreeTransform<Derived>::TransformUnresolvedLookupExpr(UnresolvedLookupExpr *Old,
     R.setNamingClass(NamingClass);
   }
 
+  // Rebuild the template arguments, if any.
   SourceLocation TemplateKWLoc = Old->getTemplateKeywordLoc();
-
-#if 0
-  // If we have neither explicit template arguments, nor the template keyword,
-  // it's a normal declaration name or member reference.
-  if (!Old->hasExplicitTemplateArgs() && !TemplateKWLoc.isValid()) {
-    NamedDecl *D = R.getAsSingle<NamedDecl>();
-    // In a C++11 unevaluated context, an UnresolvedLookupExpr might refer to an
-    // instance member. In other contexts, BuildPossibleImplicitMemberExpr will
-    // give a good diagnostic.
-    if (D && D->isCXXInstanceMember()) {
-      return SemaRef.BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc, R,
-                                                     /*TemplateArgs=*/nullptr,
-                                                     /*Scope=*/nullptr);
-    }
-
-    return getDerived().RebuildDeclarationNameExpr(SS, R, Old->requiresADL());
-  }
-#endif
-
-  bool PotentiallyImplicitAccess =
-  #if 0
-      R.isClassLookup() &&
-      (!IsAddressOfOperand ||
-       (R.isSingleResult() &&
-        R.getAsSingle<NamedDecl>()->isCXXInstanceMember()));
-  #elif 0
-      !IsAddressOfOperand && !R.empty() && R.begin()->isCXXClassMember();
-  #elif 1
-      SemaRef.isPotentialImplicitMemberAccess(SS, R, IsAddressOfOperand);
-  #endif
-
-
-  // If we have neither explicit template arguments, nor the template keyword,
-  // it's a normal declaration name or member reference.
-  if (!PotentiallyImplicitAccess && !Old->hasExplicitTemplateArgs() &&
-      !TemplateKWLoc.isValid()) {
-    return getDerived().RebuildDeclarationNameExpr(SS, R, Old->requiresADL());
-  }
-
-  // If we have template arguments, rebuild them, then rebuild the
-  // templateid expression.
   TemplateArgumentListInfo TransArgs(Old->getLAngleLoc(), Old->getRAngleLoc());
   if (Old->hasExplicitTemplateArgs() &&
       getDerived().TransformTemplateArguments(Old->getTemplateArgs(),
@@ -13119,16 +13079,23 @@ TreeTransform<Derived>::TransformUnresolvedLookupExpr(UnresolvedLookupExpr *Old,
     return ExprError();
   }
 
-  // In a C++11 unevaluated context, an UnresolvedLookupExpr might refer to an
-  // instance member. In other contexts, BuildPossibleImplicitMemberExpr will
-  // give a good diagnostic.
-  if (PotentiallyImplicitAccess) {
+  // An UnresolvedLookupExpr can refer to a class member. This occurs e.g. when
+  // a non-static data member is named in an unevaluated operand, or when
+  // a member is named in a dependent class scope function template explicit
+  // specialization that is neither declared static nor with an explicit object
+  // parameter.
+  if (SemaRef.isPotentialImplicitMemberAccess(SS, R, IsAddressOfOperand))
     return SemaRef.BuildPossibleImplicitMemberExpr(
         SS, TemplateKWLoc, R,
         Old->hasExplicitTemplateArgs() ? &TransArgs : nullptr,
-        /*Scope=*/nullptr);
-  }
+        /*S=*/nullptr);
 
+  // If we have neither explicit template arguments, nor the template keyword,
+  // it's a normal declaration name or member reference.
+  if (!Old->hasExplicitTemplateArgs() && !TemplateKWLoc.isValid())
+    return getDerived().RebuildDeclarationNameExpr(SS, R, Old->requiresADL());
+
+  // If we have template arguments, then rebuild the template-id expression.
   return getDerived().RebuildTemplateIdExpr(SS, TemplateKWLoc, R,
                                             Old->requiresADL(), &TransArgs);
 }

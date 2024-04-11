@@ -7018,8 +7018,8 @@ private:
   ///@{
 
 public:
-  bool isPotentialImplicitMemberAccess(const CXXScopeSpec &SS,
-                                       LookupResult &R,
+  /// Check whether an expression might be an implicit class member access.
+  bool isPotentialImplicitMemberAccess(const CXXScopeSpec &SS, LookupResult &R,
                                        bool IsAddressOfOperand);
 
   ExprResult BuildPossibleImplicitMemberExpr(
