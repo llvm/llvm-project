@@ -38,10 +38,62 @@
 # RUN: llvm-bolt %t.exe -o %t.bat --data %t.fdata --funcs=func \
 # RUN:   --split-functions --split-strategy=all --split-all-cold --enable-bat
 
+## Prepare pre-aggregated profile using %t.bat
+# RUN: link_fdata %s %t.bat %t.preagg PREAGG
+## Strip labels used for pre-aggregated profile
+# RUN: llvm-strip -NLcall -NLindcall %t.bat
+
+## Convert pre-aggregated profile using BAT
+# RUN: perf2bolt %t.bat -p %t.preagg --pa -o %t.bat.fdata -w %t.bat.yaml
+
+## Convert BAT fdata into YAML
+# RUN: llvm-bolt %t.exe -data %t.bat.fdata -w %t.bat.fdata-yaml -o /dev/null
+
+## Check fdata YAML - make sure that a direct call has discriminator field
+# RUN: FileCheck %s --input-file %t.bat.fdata-yaml -check-prefix CHECK-BAT-YAML
+
+## Check BAT YAML - make sure that a direct call has discriminator field
+# RUN: FileCheck %s --input-file %t.bat.yaml --check-prefix CHECK-BAT-YAML
+
+## YAML BAT test of calling BAT secondary entry from BAT function
+# RUN: llvm-bolt %t.exe -o %t.bat2 --data %t.fdata --funcs=main,func \
+# RUN:   --split-functions --split-strategy=all --split-all-cold --enable-bat
+
+## Prepare pre-aggregated profile using %t.bat
+# RUN: link_fdata %s %t.bat2 %t.preagg2 PREAGG2
+
+## Strip labels used for pre-aggregated profile
+# RUN: llvm-strip -NLcall -NLindcall %t.bat2
+
+## Convert pre-aggregated profile using BAT
+# RUN: perf2bolt %t.bat2 -p %t.preagg2 --pa -o %t.bat2.fdata -w %t.bat2.yaml
+
+## Convert BAT fdata into YAML
+# RUN: llvm-bolt %t.exe -data %t.bat2.fdata -w %t.bat2.fdata-yaml -o /dev/null
+
+## Check fdata YAML - make sure that a direct call has discriminator field
+# RUN: FileCheck %s --input-file %t.bat2.fdata-yaml -check-prefix CHECK-BAT-YAML
+
+## Check BAT YAML - make sure that a direct call has discriminator field
+# RUN: FileCheck %s --input-file %t.bat2.yaml --check-prefix CHECK-BAT-YAML
+
+# CHECK-BAT-YAML:      - name:    main
+# CHECK-BAT-YAML-NEXT:   fid:     [[#]]
+# CHECK-BAT-YAML-NEXT:   hash:    0xADF270D550151185
+# CHECK-BAT-YAML-NEXT:   exec:    0
+# CHECK-BAT-YAML-NEXT:   nblocks: 4
+# CHECK-BAT-YAML-NEXT:   blocks:
+# CHECK-BAT-YAML:          - bid:   1
+# CHECK-BAT-YAML-NEXT:       insns: [[#]]
+# CHECK-BAT-YAML-NEXT:       hash:  0x36A303CBA4360018
+# CHECK-BAT-YAML-NEXT:       calls: [ { off: 0x0, fid: [[#]], disc: 1, cnt: 1
+
 .globl func
 .type	func, @function
 func:
 # FDATA: 0 [unknown] 0 1 func 0 1 0
+# PREAGG: B X:0 #func# 1 1
+# PREAGG2: B X:0 #func# 1 1
   .cfi_startproc
   pushq   %rbp
   movq    %rsp, %rbp
@@ -71,12 +123,18 @@ main:
   movl    $0, -4(%rbp)
   testq   %rax, %rax
   jne     Lindcall
+.globl Lcall
 Lcall:
   call    secondary_entry
 # FDATA: 1 main #Lcall# 1 secondary_entry 0 1 1
+# PREAGG: B #Lcall# #secondary_entry# 1 1
+# PREAGG2: B #main.cold.0# #func.cold.0# 1 1
+.globl Lindcall
 Lindcall:
   callq   *%rax
 # FDATA: 1 main #Lindcall# 1 secondary_entry 0 1 1
+# PREAGG: B #Lindcall# #secondary_entry# 1 1
+# PREAGG2: B #main.cold.1# #func.cold.0# 1 1
   xorl    %eax, %eax
   addq    $16, %rsp
   popq    %rbp
