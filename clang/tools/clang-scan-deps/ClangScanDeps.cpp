@@ -190,7 +190,7 @@ static void ParseArgs(int argc, char **argv) {
     CompilationDB = A->getValue();
   } else if (Format != ScanningOutputFormat::P1689) {
     llvm::errs() << ToolName
-                 << ": for the --compiilation-database option: must be "
+                 << ": for the --compilation-database option: must be "
                     "specified at least once!";
     std::exit(1);
   }
