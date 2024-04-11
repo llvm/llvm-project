@@ -25,6 +25,43 @@ using namespace llvm::omp;
 #define GEN_DIRECTIVES_IMPL
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
+static iterator_range<ArrayRef<Directive>::iterator>
+getFirstCompositeRange(iterator_range<ArrayRef<Directive>::iterator> Leafs) {
+  // OpenMP Spec 5.2: [17.3, 8-9]
+  // If directive-name-A and directive-name-B both correspond to loop-
+  // associated constructs then directive-name is a composite construct
+  // otherwise directive-name is a combined construct.
+  //
+  // In the list of leaf constructs, find the first loop-associated construct,
+  // this is the beginning of the range. Then, starting from the immediately
+  // following leaf construct, find the first sequence of adjacent loop-
+  // -associated constructs. The last of those is the last one of the range.
+
+  auto firstLoopAssociated =
+      [](iterator_range<ArrayRef<Directive>::iterator> List) {
+        for (auto It = List.begin(), End = List.end(); It != End; ++It) {
+          if (getDirectiveAssociation(*It) == Association::Loop)
+            return It;
+        }
+        return List.end();
+      };
+
+  auto Begin = firstLoopAssociated(Leafs);
+  if (Begin == Leafs.end())
+    return llvm::make_range(Leafs.end(), Leafs.end());
+
+  auto End =
+      firstLoopAssociated(llvm::make_range(std::next(Begin), Leafs.end()));
+  if (End == Leafs.end())
+    return llvm::make_range(Begin, std::next(Begin));
+
+  for (; End != Leafs.end(); ++End) {
+    if (getDirectiveAssociation(*End) != Association::Loop)
+      break;
+  }
+  return llvm::make_range(Begin, End);
+}
+
 namespace llvm::omp {
 ArrayRef<Directive> getLeafConstructs(Directive D) {
   auto Idx = static_cast<std::size_t>(D);
@@ -32,6 +69,40 @@ ArrayRef<Directive> getLeafConstructs(Directive D) {
     return {};
   const auto *Row = LeafConstructTable[LeafConstructTableOrdering[Idx]];
   return ArrayRef(&Row[2], &Row[2] + static_cast<int>(Row[1]));
+}
+
+ArrayRef<Directive> getLeafConstructsOrSelf(Directive D) {
+  if (auto Leafs = getLeafConstructs(D); !Leafs.empty())
+    return Leafs;
+  auto Idx = static_cast<size_t>(D);
+  assert(Idx < Directive_enumSize && "Invalid directive");
+  const auto *Row = LeafConstructTable[LeafConstructTableOrdering[Idx]];
+  // The first entry in the row is the directive itself.
+  return ArrayRef(&Row[0], &Row[0] + 1);
+}
+
+ArrayRef<Directive>
+getLeafOrCompositeConstructs(Directive D, SmallVectorImpl<Directive> &Output) {
+  using ArrayTy = ArrayRef<Directive>;
+  using IteratorTy = ArrayTy::iterator;
+  ArrayRef<Directive> Leafs = getLeafConstructsOrSelf(D);
+
+  IteratorTy Iter = Leafs.begin();
+  do {
+    auto Range = getFirstCompositeRange(llvm::make_range(Iter, Leafs.end()));
+    // All directives before the range are leaf constructs.
+    for (; Iter != Range.begin(); ++Iter)
+      Output.push_back(*Iter);
+    if (!Range.empty()) {
+      Directive Comp =
+          getCompoundConstruct(ArrayTy(Range.begin(), Range.end()));
+      assert(Comp != OMPD_unknown);
+      Output.push_back(Comp);
+    }
+    Iter = Range.end();
+  } while (Iter != Leafs.end());
+
+  return Output;
 }
 
 Directive getCompoundConstruct(ArrayRef<Directive> Parts) {
@@ -88,20 +159,11 @@ Directive getCompoundConstruct(ArrayRef<Directive> Parts) {
 bool isLeafConstruct(Directive D) { return getLeafConstructs(D).empty(); }
 
 bool isCompositeConstruct(Directive D) {
-  // OpenMP Spec 5.2: [17.3, 8-9]
-  // If directive-name-A and directive-name-B both correspond to loop-
-  // associated constructs then directive-name is a composite construct
-  llvm::ArrayRef<Directive> Leafs{getLeafConstructs(D)};
-  if (Leafs.empty())
+  ArrayRef<Directive> Leafs = getLeafConstructsOrSelf(D);
+  if (Leafs.size() <= 1)
     return false;
-  if (getDirectiveAssociation(Leafs.front()) != Association::Loop)
-    return false;
-
-  size_t numLoopConstructs =
-      llvm::count_if(Leafs.drop_front(), [](Directive L) {
-        return getDirectiveAssociation(L) == Association::Loop;
-      });
-  return numLoopConstructs != 0;
+  auto Range = getFirstCompositeRange(Leafs);
+  return Range.begin() == Leafs.begin() && Range.end() == Leafs.end();
 }
 
 bool isCombinedConstruct(Directive D) {
