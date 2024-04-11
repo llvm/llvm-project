@@ -1,13 +1,15 @@
 // RUN: %clang_cc1 -verify -std=c99 %s
 
-/* WG14 N620, N638, N657, N694, N809: Yes*
+/* WG14 N620, N638, N657, N694, N809: Partial
  * Complex and imaginary support in <complex.h>
  *
  * NB: Clang supports _Complex but not _Imaginary. In C99, _Complex support is
  * required outside of freestanding, but _Imaginary support is fully optional.
- * In C11, both are made fully optional. We claim full conformance because we
- * are actually conforming, but this gets an asterisk because it's also only
- * partially implemented in a way and users should know about that.
+ * In C11, both are made fully optional.
+ *
+ * NB: _Complex support requires an underlying support library such as
+ * compiler-rt to provide functions like __divsc3. Compiler-rt is not supported
+ * on Windows.
  *
  * Because the functionality is so intertwined between the various papers,
  * we're testing all of the functionality in one file.
