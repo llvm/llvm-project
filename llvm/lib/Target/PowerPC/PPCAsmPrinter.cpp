@@ -1295,10 +1295,9 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(Op == PPC::ADDItocL8 ? PPC::ADDI8 : PPC::LA);
 
     const MachineOperand &MO = MI->getOperand(2);
-    if (Op == PPC::ADDItocL8)
-      assert((MO.isGlobal() || MO.isCPI()) && "Invalid operand for ADDItocL8.");
-    else
-      assert(MO.isGlobal() && "Invalid operand for ADDItocL.");
+    assert((Op == PPC::ADDItocL8)
+               ? (MO.isGlobal() || MO.isCPI())
+               : MO.isGlobal() && "Invalid operand for ADDItocL8.");
     assert(!(MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
            "Interposable definitions must use indirect accesses.");
 
