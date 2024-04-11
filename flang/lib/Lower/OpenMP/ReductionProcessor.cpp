@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Parser/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/CommandLine.h"
@@ -391,8 +392,60 @@ static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
   TODO(loc, "OpenMP genCombiner for unsupported reduction variable type");
 }
 
+static void
+createReductionCleanupRegion(fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::omp::DeclareReductionOp &reductionDecl) {
+  mlir::Type redTy = reductionDecl.getType();
+
+  mlir::Region &cleanupRegion = reductionDecl.getCleanupRegion();
+  assert(cleanupRegion.empty());
+  mlir::Block *block =
+      builder.createBlock(&cleanupRegion, cleanupRegion.end(), {redTy}, {loc});
+  builder.setInsertionPointToEnd(block);
+
+  auto typeError = [loc]() {
+    fir::emitFatalError(loc,
+                        "Attempt to create an omp reduction cleanup region "
+                        "for a type that wasn't allocated",
+                        /*genCrashDiag=*/true);
+  };
+
+  mlir::Type valTy = fir::unwrapRefType(redTy);
+  if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(valTy)) {
+    mlir::Type innerTy = fir::extractSequenceType(boxTy);
+    if (!mlir::isa<fir::SequenceType>(innerTy))
+      typeError();
+
+    mlir::Value arg = block->getArgument(0);
+    arg = builder.loadIfRef(loc, arg);
+    assert(mlir::isa<fir::BaseBoxType>(arg.getType()));
+
+    // Deallocate box
+    // The FIR type system doesn't nesecarrily know that this is a mutable box
+    // if we allocated the thread local array on the heap to avoid looped stack
+    // allocations.
+    mlir::Value addr =
+        hlfir::genVariableRawAddress(loc, builder, hlfir::Entity{arg});
+    mlir::Value isAllocated = builder.genIsNotNullAddr(loc, addr);
+    fir::IfOp ifOp =
+        builder.create<fir::IfOp>(loc, isAllocated, /*withElseRegion=*/false);
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+
+    mlir::Value cast = builder.createConvert(
+        loc, fir::HeapType::get(fir::dyn_cast_ptrEleTy(addr.getType())), addr);
+    builder.create<fir::FreeMemOp>(loc, cast);
+
+    builder.setInsertionPointAfter(ifOp);
+    builder.create<mlir::omp::YieldOp>(loc);
+    return;
+  }
+
+  typeError();
+}
+
 static mlir::Value
 createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
+                          mlir::omp::DeclareReductionOp &reductionDecl,
                           const ReductionProcessor::ReductionIdentifier redId,
                           mlir::Type type, bool isByRef) {
   mlir::Type ty = fir::unwrapRefType(type);
@@ -419,11 +472,24 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     // Create the private copy from the initial fir.box:
     hlfir::Entity source = hlfir::Entity{builder.getBlock()->getArgument(0)};
 
-    // TODO: if the whole reduction is nested inside of a loop, this alloca
-    // could lead to a stack overflow (the memory is only freed at the end of
-    // the stack frame). The reduction declare operation needs a deallocation
-    // region to undo the init region.
-    hlfir::Entity temp = createStackTempFromMold(loc, builder, source);
+    // Allocating on the heap in case the whole reduction is nested inside of a
+    // loop
+    // TODO: compare performance here to using allocas - this could be made to
+    // work by inserting stacksave/stackrestore around the reduction in
+    // openmpirbuilder
+    auto [temp, needsDealloc] = createTempFromMold(loc, builder, source);
+    // if needsDealloc isn't statically false, add cleanup region. TODO: always
+    // do this for allocatable boxes because they might have been re-allocated
+    // in the body of the loop/parallel region
+    std::optional<int64_t> cstNeedsDealloc =
+        fir::getIntIfConstant(needsDealloc);
+    assert(cstNeedsDealloc.has_value() &&
+           "createTempFromMold decides this statically");
+    if (cstNeedsDealloc.has_value() && *cstNeedsDealloc != false) {
+      auto insPt = builder.saveInsertionPoint();
+      createReductionCleanupRegion(builder, loc, reductionDecl);
+      builder.restoreInsertionPoint(insPt);
+    }
 
     // Put the temporary inside of a box:
     hlfir::Entity box = hlfir::genVariableBox(loc, builder, temp);
@@ -462,7 +528,7 @@ mlir::omp::DeclareReductionOp ReductionProcessor::createDeclareReduction(
   builder.setInsertionPointToEnd(&decl.getInitializerRegion().back());
 
   mlir::Value init =
-      createReductionInitRegion(builder, loc, redId, type, isByRef);
+      createReductionInitRegion(builder, loc, decl, redId, type, isByRef);
   builder.create<mlir::omp::YieldOp>(loc, init);
 
   builder.createBlock(&decl.getReductionRegion(),
