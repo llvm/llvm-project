@@ -1934,7 +1934,7 @@ struct DepDistanceStrideAndSizeInfo {
 };
 } // namespace
 
-// Get the dependence distance, stride, type size and whether it is a write for
+// Get the dependence distance, strides, type size and whether it is a write for
 // the dependence between A and B. Returns a DepType, if we can prove there's
 // no dependence or the analysis fails. Outlined to lambda to limit he scope
 // of various temporary variables, like A/BPtr, StrideA/BPtr and others.
@@ -2035,7 +2035,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
   uint64_t CommonStride = StrideA == StrideB ? StrideA : 0;
   if (isa<SCEVCouldNotCompute>(Dist)) {
-    FoundNonConstantDistanceDependence = true;
+    FoundNonConstantDistanceDependence |= CommonStride;
     LLVM_DEBUG(dbgs() << "LAA: Dependence because of uncomputable distance.\n");
     return Dependence::Unknown;
   }
@@ -2086,7 +2086,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     // since a forward dependency will allow vectorization using any width.
     if (IsTrueDataDependence && EnableForwardingConflictDetection) {
       if (!C) {
-        FoundNonConstantDistanceDependence = true;
+        FoundNonConstantDistanceDependence |= CommonStride;
         return Dependence::Unknown;
       }
       if (!HasSameSize ||
@@ -2103,22 +2103,20 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   }
 
   if (!SE.isKnownPositive(Dist)) {
-    if (!C)
-      FoundNonConstantDistanceDependence = true;
+    FoundNonConstantDistanceDependence |= !C && CommonStride;
     return Dependence::Unknown;
   }
 
   if (!HasSameSize) {
     LLVM_DEBUG(dbgs() << "LAA: ReadWrite-Write positive dependency with "
                          "different type sizes\n");
-    if (!C)
-      FoundNonConstantDistanceDependence = true;
+    FoundNonConstantDistanceDependence |= !C && CommonStride;
     return Dependence::Unknown;
   }
 
   if (!C) {
     LLVM_DEBUG(dbgs() << "LAA: Dependence because of non-constant distance\n");
-    FoundNonConstantDistanceDependence = true;
+    FoundNonConstantDistanceDependence |= CommonStride;
     return Dependence::Unknown;
   }
 
