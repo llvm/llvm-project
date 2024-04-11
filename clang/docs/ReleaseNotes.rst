@@ -360,6 +360,9 @@ Improvements to Clang's diagnostics
   Added the ``-Wtentative-definition-array`` warning group to cover this.
   Fixes #GH87766
 
+- Clang now uses the correct type-parameter-key (``class`` or ``typename``) when printing
+  template template parameter declarations.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -535,6 +538,7 @@ Bug Fixes to C++ Support
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
+- The presence of the ``typename`` keyword is now stored in ``TemplateTemplateParmDecl``.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
