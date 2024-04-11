@@ -15,8 +15,8 @@
 namespace LIBC_NAMESPACE {
 
 // TODO: sigmask should be nullable
-int epoll_pwait(int epfd, epoll_event *events, int maxevents, int timeout,
-                const sigset_t *sigmask);
+int epoll_pwait(int epfd, struct epoll_event *events, int maxevents,
+                int timeout, const sigset_t *sigmask);
 
 } // namespace LIBC_NAMESPACE
 
