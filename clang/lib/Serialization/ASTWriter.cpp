@@ -185,8 +185,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     if (!File)
       continue;
 
-    const HeaderFileInfo *HFI =
-        HS.getExistingFileInfo(*File, /*WantExternal*/ false);
+    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
     if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
       continue;
 
@@ -2052,14 +2051,12 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     if (!File)
       continue;
 
-    // Get the file info. This will load info from the external source if
-    // necessary. Skip emitting this file if we have no information on it
-    // as a header file (in which case HFI will be null) or if it hasn't
+    // Get the file info. Skip emitting this file if we have no information on
+    // it as a header file (in which case HFI will be null) or if it hasn't
     // changed since it was loaded. Also skip it if it's for a modular header
     // from a different module; in that case, we rely on the module(s)
     // containing the header to provide this information.
-    const HeaderFileInfo *HFI =
-        HS.getExistingFileInfo(*File, /*WantExternal*/!Chain);
+    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
     if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
       continue;
 
