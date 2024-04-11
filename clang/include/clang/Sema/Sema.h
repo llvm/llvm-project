@@ -184,6 +184,7 @@ class PseudoObjectExpr;
 class QualType;
 class SemaHLSL;
 class SemaOpenACC;
+class SemaSYCL;
 class StandardConversionSequence;
 class Stmt;
 class StringLiteral;
@@ -467,7 +468,6 @@ class Sema final : public SemaBase {
   // 37. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
   // 38. CUDA (SemaCUDA.cpp)
   // 39. OpenMP Directives and Clauses (SemaOpenMP.cpp)
-  // 40. SYCL Constructs (SemaSYCL.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -568,7 +568,7 @@ public:
 
   /// Invent a new identifier for parameters of abbreviated templates.
   IdentifierInfo *
-  InventAbbreviatedTemplateParameterTypeName(IdentifierInfo *ParamName,
+  InventAbbreviatedTemplateParameterTypeName(const IdentifierInfo *ParamName,
                                              unsigned Index);
 
   void emitAndClearUnusedLocalTypedefWarnings();
@@ -974,6 +974,11 @@ public:
     return *OpenACCPtr;
   }
 
+  SemaSYCL &SYCL() {
+    assert(SYCLPtr);
+    return *SYCLPtr;
+  }
+
 protected:
   friend class Parser;
   friend class InitializationSequence;
@@ -1006,6 +1011,7 @@ private:
 
   std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
+  std::unique_ptr<SemaSYCL> SYCLPtr;
 
   ///@}
 
@@ -2952,9 +2958,9 @@ public:
                                                   SourceLocation NameLoc,
                                                   TypeSourceInfo *TSInfo);
   ParmVarDecl *CheckParameter(DeclContext *DC, SourceLocation StartLoc,
-                              SourceLocation NameLoc, IdentifierInfo *Name,
-                              QualType T, TypeSourceInfo *TSInfo,
-                              StorageClass SC);
+                              SourceLocation NameLoc,
+                              const IdentifierInfo *Name, QualType T,
+                              TypeSourceInfo *TSInfo, StorageClass SC);
 
   // Contexts where using non-trivial C union types can be disallowed. This is
   // passed to err_non_trivial_c_union_in_invalid_context.
@@ -3359,7 +3365,7 @@ public:
   /// variable.
   void DiagnoseUnusedButSetDecl(const VarDecl *VD, DiagReceiverTy DiagReceiver);
 
-  ObjCInterfaceDecl *getObjCInterfaceDecl(IdentifierInfo *&Id,
+  ObjCInterfaceDecl *getObjCInterfaceDecl(const IdentifierInfo *&Id,
                                           SourceLocation IdLoc,
                                           bool TypoCorrection = false);
 
@@ -3436,8 +3442,9 @@ public:
   /// VerifyBitField - verifies that a bit field expression is an ICE and has
   /// the correct width, and that the field type is valid.
   /// Returns false on success.
-  ExprResult VerifyBitField(SourceLocation FieldLoc, IdentifierInfo *FieldName,
-                            QualType FieldTy, bool IsMsStruct, Expr *BitWidth);
+  ExprResult VerifyBitField(SourceLocation FieldLoc,
+                            const IdentifierInfo *FieldName, QualType FieldTy,
+                            bool IsMsStruct, Expr *BitWidth);
 
   /// IsValueInFlagEnum - Determine if a value is allowed as part of a flag
   /// enum. If AllowMask is true, then we also allow the complement of a valid
@@ -4632,7 +4639,8 @@ public:
 
   VarDecl *BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
                                      SourceLocation StartLoc,
-                                     SourceLocation IdLoc, IdentifierInfo *Id);
+                                     SourceLocation IdLoc,
+                                     const IdentifierInfo *Id);
 
   Decl *ActOnExceptionDeclarator(Scope *S, Declarator &D);
 
@@ -5439,8 +5447,7 @@ public:
 
   ExprResult BuildDeclarationNameExpr(const CXXScopeSpec &SS, LookupResult &R,
                                       bool NeedsADL,
-                                      bool AcceptInvalidDecl = false,
-                                      bool NeedUnresolved = false);
+                                      bool AcceptInvalidDecl = false);
   ExprResult BuildDeclarationNameExpr(
       const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo, NamedDecl *D,
       NamedDecl *FoundD = nullptr,
@@ -5455,15 +5462,6 @@ public:
   ExprResult BuildPredefinedExpr(SourceLocation Loc, PredefinedIdentKind IK);
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
   ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
-
-  ExprResult BuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                           SourceLocation LParen,
-                                           SourceLocation RParen,
-                                           TypeSourceInfo *TSI);
-  ExprResult ActOnSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                           SourceLocation LParen,
-                                           SourceLocation RParen,
-                                           ParsedType ParsedTy);
 
   bool CheckLoopHintExpr(Expr *E, SourceLocation Loc);
 
@@ -6559,12 +6557,12 @@ public:
 
   ParsedType getInheritingConstructorName(CXXScopeSpec &SS,
                                           SourceLocation NameLoc,
-                                          IdentifierInfo &Name);
+                                          const IdentifierInfo &Name);
 
-  ParsedType getConstructorName(IdentifierInfo &II, SourceLocation NameLoc,
-                                Scope *S, CXXScopeSpec &SS,
-                                bool EnteringContext);
-  ParsedType getDestructorName(IdentifierInfo &II, SourceLocation NameLoc,
+  ParsedType getConstructorName(const IdentifierInfo &II,
+                                SourceLocation NameLoc, Scope *S,
+                                CXXScopeSpec &SS, bool EnteringContext);
+  ParsedType getDestructorName(const IdentifierInfo &II, SourceLocation NameLoc,
                                Scope *S, CXXScopeSpec &SS,
                                ParsedType ObjectType, bool EnteringContext);
 
@@ -6592,10 +6590,7 @@ public:
                             SourceLocation RParenLoc);
 
   //// ActOnCXXThis -  Parse 'this' pointer.
-  ExprResult ActOnCXXThis(SourceLocation Loc);
-
-  /// Check whether the type of 'this' is valid in the current context.
-  bool CheckCXXThisType(SourceLocation Loc, QualType Type);
+  ExprResult ActOnCXXThis(SourceLocation loc);
 
   /// Build a CXXThisExpr and mark it referenced in the current context.
   Expr *BuildCXXThisExpr(SourceLocation Loc, QualType Type, bool IsImplicit);
@@ -6967,7 +6962,7 @@ public:
   concepts::Requirement *ActOnTypeRequirement(SourceLocation TypenameKWLoc,
                                               CXXScopeSpec &SS,
                                               SourceLocation NameLoc,
-                                              IdentifierInfo *TypeName,
+                                              const IdentifierInfo *TypeName,
                                               TemplateIdAnnotation *TemplateId);
   concepts::Requirement *ActOnCompoundRequirement(Expr *E,
                                                   SourceLocation NoexceptLoc);
@@ -9123,7 +9118,7 @@ public:
 
   TypeResult
   ActOnTemplateIdType(Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-                      TemplateTy Template, IdentifierInfo *TemplateII,
+                      TemplateTy Template, const IdentifierInfo *TemplateII,
                       SourceLocation TemplateIILoc, SourceLocation LAngleLoc,
                       ASTTemplateArgsPtr TemplateArgs, SourceLocation RAngleLoc,
                       bool IsCtorOrDtorName = false, bool IsClassName = false,
@@ -9464,7 +9459,7 @@ public:
   TypeResult
   ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
                     const CXXScopeSpec &SS, SourceLocation TemplateLoc,
-                    TemplateTy TemplateName, IdentifierInfo *TemplateII,
+                    TemplateTy TemplateName, const IdentifierInfo *TemplateII,
                     SourceLocation TemplateIILoc, SourceLocation LAngleLoc,
                     ASTTemplateArgsPtr TemplateArgs, SourceLocation RAngleLoc);
 
@@ -9542,14 +9537,15 @@ public:
 
   Decl *ActOnConceptDefinition(Scope *S,
                                MultiTemplateParamsArg TemplateParameterLists,
-                               IdentifierInfo *Name, SourceLocation NameLoc,
-                               Expr *ConstraintExpr);
+                               const IdentifierInfo *Name,
+                               SourceLocation NameLoc, Expr *ConstraintExpr);
 
   void CheckConceptRedefinition(ConceptDecl *NewDecl, LookupResult &Previous,
                                 bool &AddToScope);
 
   TypeResult ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
-                               const CXXScopeSpec &SS, IdentifierInfo *Name,
+                               const CXXScopeSpec &SS,
+                               const IdentifierInfo *Name,
                                SourceLocation TagLoc, SourceLocation NameLoc);
 
   void MarkAsLateParsedTemplate(FunctionDecl *FD, Decl *FnD,
@@ -11995,22 +11991,22 @@ public:
       SkipBodyInfo *SkipBody);
 
   ObjCCategoryDecl *ActOnStartCategoryInterface(
-      SourceLocation AtInterfaceLoc, IdentifierInfo *ClassName,
+      SourceLocation AtInterfaceLoc, const IdentifierInfo *ClassName,
       SourceLocation ClassLoc, ObjCTypeParamList *typeParamList,
-      IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
+      const IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
       Decl *const *ProtoRefs, unsigned NumProtoRefs,
       const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
       const ParsedAttributesView &AttrList);
 
   ObjCImplementationDecl *ActOnStartClassImplementation(
-      SourceLocation AtClassImplLoc, IdentifierInfo *ClassName,
-      SourceLocation ClassLoc, IdentifierInfo *SuperClassname,
+      SourceLocation AtClassImplLoc, const IdentifierInfo *ClassName,
+      SourceLocation ClassLoc, const IdentifierInfo *SuperClassname,
       SourceLocation SuperClassLoc, const ParsedAttributesView &AttrList);
 
   ObjCCategoryImplDecl *ActOnStartCategoryImplementation(
-      SourceLocation AtCatImplLoc, IdentifierInfo *ClassName,
-      SourceLocation ClassLoc, IdentifierInfo *CatName, SourceLocation CatLoc,
-      const ParsedAttributesView &AttrList);
+      SourceLocation AtCatImplLoc, const IdentifierInfo *ClassName,
+      SourceLocation ClassLoc, const IdentifierInfo *CatName,
+      SourceLocation CatLoc, const ParsedAttributesView &AttrList);
 
   DeclGroupPtrTy ActOnFinishObjCImplementation(Decl *ObjCImpDecl,
                                                ArrayRef<Decl *> Decls);
@@ -12193,11 +12189,13 @@ public:
   bool CheckObjCDeclScope(Decl *D);
 
   void ActOnDefs(Scope *S, Decl *TagD, SourceLocation DeclStart,
-                 IdentifierInfo *ClassName, SmallVectorImpl<Decl *> &Decls);
+                 const IdentifierInfo *ClassName,
+                 SmallVectorImpl<Decl *> &Decls);
 
   VarDecl *BuildObjCExceptionDecl(TypeSourceInfo *TInfo, QualType ExceptionType,
                                   SourceLocation StartLoc, SourceLocation IdLoc,
-                                  IdentifierInfo *Id, bool Invalid = false);
+                                  const IdentifierInfo *Id,
+                                  bool Invalid = false);
 
   Decl *ActOnObjCExceptionDecl(Scope *S, Declarator &D);
 
@@ -12314,8 +12312,8 @@ public:
                                        SourceLocation SuperLoc,
                                        QualType SuperType, bool Super);
 
-  ExprResult ActOnClassPropertyRefExpr(IdentifierInfo &receiverName,
-                                       IdentifierInfo &propertyName,
+  ExprResult ActOnClassPropertyRefExpr(const IdentifierInfo &receiverName,
+                                       const IdentifierInfo &propertyName,
                                        SourceLocation receiverNameLoc,
                                        SourceLocation propertyNameLoc);
 
@@ -12790,18 +12788,18 @@ public:
                                    bool IsParameter);
   void CodeCompleteObjCMessageReceiver(Scope *S);
   void CodeCompleteObjCSuperMessage(Scope *S, SourceLocation SuperLoc,
-                                    ArrayRef<IdentifierInfo *> SelIdents,
+                                    ArrayRef<const IdentifierInfo *> SelIdents,
                                     bool AtArgumentExpression);
   void CodeCompleteObjCClassMessage(Scope *S, ParsedType Receiver,
-                                    ArrayRef<IdentifierInfo *> SelIdents,
+                                    ArrayRef<const IdentifierInfo *> SelIdents,
                                     bool AtArgumentExpression,
                                     bool IsSuper = false);
-  void CodeCompleteObjCInstanceMessage(Scope *S, Expr *Receiver,
-                                       ArrayRef<IdentifierInfo *> SelIdents,
-                                       bool AtArgumentExpression,
-                                       ObjCInterfaceDecl *Super = nullptr);
+  void CodeCompleteObjCInstanceMessage(
+      Scope *S, Expr *Receiver, ArrayRef<const IdentifierInfo *> SelIdents,
+      bool AtArgumentExpression, ObjCInterfaceDecl *Super = nullptr);
   void CodeCompleteObjCForCollection(Scope *S, DeclGroupPtrTy IterationVar);
-  void CodeCompleteObjCSelector(Scope *S, ArrayRef<IdentifierInfo *> SelIdents);
+  void CodeCompleteObjCSelector(Scope *S,
+                                ArrayRef<const IdentifierInfo *> SelIdents);
   void
   CodeCompleteObjCProtocolReferences(ArrayRef<IdentifierLocPair> Protocols);
   void CodeCompleteObjCProtocolDecl(Scope *S);
@@ -12821,11 +12819,11 @@ public:
   void CodeCompleteObjCMethodDecl(Scope *S,
                                   std::optional<bool> IsInstanceMethod,
                                   ParsedType ReturnType);
-  void CodeCompleteObjCMethodDeclSelector(Scope *S, bool IsInstanceMethod,
-                                          bool AtParameterName,
-                                          ParsedType ReturnType,
-                                          ArrayRef<IdentifierInfo *> SelIdents);
-  void CodeCompleteObjCClassPropertyRefExpr(Scope *S, IdentifierInfo &ClassName,
+  void CodeCompleteObjCMethodDeclSelector(
+      Scope *S, bool IsInstanceMethod, bool AtParameterName,
+      ParsedType ReturnType, ArrayRef<const IdentifierInfo *> SelIdents);
+  void CodeCompleteObjCClassPropertyRefExpr(Scope *S,
+                                            const IdentifierInfo &ClassName,
                                             SourceLocation ClassNameLoc,
                                             bool IsBaseExprStatement);
   void CodeCompletePreprocessorDirective(bool InConditional);
@@ -14518,44 +14516,6 @@ private:
                         SourceLocation StartLoc, SourceLocation EndLoc,
                         const DeclarationNameInfo &DirName,
                         OpenMPDirectiveKind CancelRegion);
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name SYCL Constructs
-  /// Implementations are in SemaSYCL.cpp
-  ///@{
-
-public:
-  /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
-  /// context is "used as device code".
-  ///
-  /// - If CurLexicalContext is a kernel function or it is known that the
-  ///   function will be emitted for the device, emits the diagnostics
-  ///   immediately.
-  /// - If CurLexicalContext is a function and we are compiling
-  ///   for the device, but we don't know that this function will be codegen'ed
-  ///   for devive yet, creates a diagnostic which is emitted if and when we
-  ///   realize that the function will be codegen'ed.
-  ///
-  /// Example usage:
-  ///
-  /// Diagnose __float128 type usage only from SYCL device code if the current
-  /// target doesn't support it
-  /// if (!S.Context.getTargetInfo().hasFloat128Type() &&
-  ///     S.getLangOpts().SYCLIsDevice)
-  ///   SYCLDiagIfDeviceCode(Loc, diag::err_type_unsupported) << "__float128";
-  SemaDiagnosticBuilder SYCLDiagIfDeviceCode(SourceLocation Loc,
-                                             unsigned DiagID);
-
-  void deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
-                                  llvm::DenseSet<QualType> Visited,
-                                  ValueDecl *DeclToCheck);
 
   ///@}
 };

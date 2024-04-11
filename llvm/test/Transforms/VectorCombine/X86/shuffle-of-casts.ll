@@ -165,6 +165,50 @@ define <8 x double> @interleave_fpext_v4f32_v8f64(<4 x float> %a0, <4 x float> %
   ret <8 x double> %r
 }
 
+; bitcasts (same element count)
+
+define <8 x float> @concat_bitcast_v4i32_v8f32(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: @concat_bitcast_v4i32_v8f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[R:%.*]] = bitcast <8 x i32> [[TMP1]] to <8 x float>
+; CHECK-NEXT:    ret <8 x float> [[R]]
+;
+  %x0 = bitcast <4 x i32> %a0 to <4 x float>
+  %x1 = bitcast <4 x i32> %a1 to <4 x float>
+  %r = shufflevector <4 x float> %x0, <4 x float> %x1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x float> %r
+}
+
+; TODO - bitcasts (lower element count)
+
+define <4 x double> @concat_bitcast_v8i16_v4f64(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: @concat_bitcast_v8i16_v4f64(
+; CHECK-NEXT:    [[X0:%.*]] = bitcast <8 x i16> [[A0:%.*]] to <2 x double>
+; CHECK-NEXT:    [[X1:%.*]] = bitcast <8 x i16> [[A1:%.*]] to <2 x double>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x double> [[X0]], <2 x double> [[X1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x double> [[R]]
+;
+  %x0 = bitcast <8 x i16> %a0 to <2 x double>
+  %x1 = bitcast <8 x i16> %a1 to <2 x double>
+  %r = shufflevector <2 x double> %x0, <2 x double> %x1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x double> %r
+}
+
+; TODO - bitcasts (higher element count)
+
+define <16 x i16> @concat_bitcast_v4i32_v16i16(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: @concat_bitcast_v4i32_v16i16(
+; CHECK-NEXT:    [[X0:%.*]] = bitcast <4 x i32> [[A0:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[X1:%.*]] = bitcast <4 x i32> [[A1:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[X0]], <8 x i16> [[X1]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    ret <16 x i16> [[R]]
+;
+  %x0 = bitcast <4 x i32> %a0 to <8 x i16>
+  %x1 = bitcast <4 x i32> %a1 to <8 x i16>
+  %r = shufflevector <8 x i16> %x0, <8 x i16> %x1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i16> %r
+}
+
 ; negative - multiuse
 
 define <8 x i16> @concat_trunc_v4i32_v8i16_multiuse(<4 x i32> %a0, <4 x i32> %a1, ptr %a2) {
@@ -182,19 +226,19 @@ define <8 x i16> @concat_trunc_v4i32_v8i16_multiuse(<4 x i32> %a0, <4 x i32> %a1
   ret <8 x i16> %r
 }
 
-; negative - bitcasts
+; negative - bitcasts (unscalable higher element count)
 
-define <8 x float> @concat_bitcast_v4i32_v8f32(<4 x i32> %a0, <4 x i32> %a1) {
-; CHECK-LABEL: @concat_bitcast_v4i32_v8f32(
-; CHECK-NEXT:    [[X0:%.*]] = bitcast <4 x i32> [[A0:%.*]] to <4 x float>
-; CHECK-NEXT:    [[X1:%.*]] = bitcast <4 x i32> [[A1:%.*]] to <4 x float>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[X0]], <4 x float> [[X1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    ret <8 x float> [[R]]
+define <16 x i16> @revpair_bitcast_v4i32_v16i16(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: @revpair_bitcast_v4i32_v16i16(
+; CHECK-NEXT:    [[X0:%.*]] = bitcast <4 x i32> [[A0:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[X1:%.*]] = bitcast <4 x i32> [[A1:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <8 x i16> [[X0]], <8 x i16> [[X1]], <16 x i32> <i32 1, i32 0, i32 3, i32 3, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
+; CHECK-NEXT:    ret <16 x i16> [[R]]
 ;
-  %x0 = bitcast <4 x i32> %a0 to <4 x float>
-  %x1 = bitcast <4 x i32> %a1 to <4 x float>
-  %r = shufflevector <4 x float> %x0, <4 x float> %x1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  ret <8 x float> %r
+  %x0 = bitcast <4 x i32> %a0 to <8 x i16>
+  %x1 = bitcast <4 x i32> %a1 to <8 x i16>
+  %r = shufflevector <8 x i16> %x0, <8 x i16> %x1, <16 x i32> <i32 1, i32 0, i32 3, i32 3, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
+  ret <16 x i16> %r
 }
 
 ; negative - src type mismatch

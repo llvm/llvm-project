@@ -1404,9 +1404,8 @@ define i64 @sh6_sh3_add2(i64 noundef %x, i64 noundef %y, i64 noundef %z) {
 ;
 ; RV64ZBA-LABEL: sh6_sh3_add2:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    slli a1, a1, 6
-; RV64ZBA-NEXT:    add a0, a1, a0
-; RV64ZBA-NEXT:    sh3add a0, a2, a0
+; RV64ZBA-NEXT:    sh3add a1, a1, a2
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    ret
 entry:
   %shl = shl i64 %z, 3
@@ -2111,9 +2110,8 @@ define i64 @array_index_sh1_sh3(ptr %p, i64 %idx1, i64 %idx2) {
 ;
 ; RV64ZBA-LABEL: array_index_sh1_sh3:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a1, a1, 4
-; RV64ZBA-NEXT:    add a0, a0, a1
-; RV64ZBA-NEXT:    sh3add a0, a2, a0
+; RV64ZBA-NEXT:    sh1add a1, a1, a2
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %a = getelementptr inbounds [2 x i64], ptr %p, i64 %idx1, i64 %idx2
@@ -2174,9 +2172,8 @@ define i32 @array_index_sh2_sh2(ptr %p, i64 %idx1, i64 %idx2) {
 ;
 ; RV64ZBA-LABEL: array_index_sh2_sh2:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a1, a1, 4
-; RV64ZBA-NEXT:    add a0, a0, a1
-; RV64ZBA-NEXT:    sh2add a0, a2, a0
+; RV64ZBA-NEXT:    sh2add a1, a1, a2
+; RV64ZBA-NEXT:    sh2add a0, a1, a0
 ; RV64ZBA-NEXT:    lw a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %a = getelementptr inbounds [4 x i32], ptr %p, i64 %idx1, i64 %idx2
@@ -2196,9 +2193,8 @@ define i64 @array_index_sh2_sh3(ptr %p, i64 %idx1, i64 %idx2) {
 ;
 ; RV64ZBA-LABEL: array_index_sh2_sh3:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a1, a1, 5
-; RV64ZBA-NEXT:    add a0, a0, a1
-; RV64ZBA-NEXT:    sh3add a0, a2, a0
+; RV64ZBA-NEXT:    sh2add a1, a1, a2
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %a = getelementptr inbounds [4 x i64], ptr %p, i64 %idx1, i64 %idx2
@@ -2238,9 +2234,8 @@ define i16 @array_index_sh3_sh1(ptr %p, i64 %idx1, i64 %idx2) {
 ;
 ; RV64ZBA-LABEL: array_index_sh3_sh1:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a1, a1, 4
-; RV64ZBA-NEXT:    add a0, a0, a1
-; RV64ZBA-NEXT:    sh1add a0, a2, a0
+; RV64ZBA-NEXT:    sh3add a1, a1, a2
+; RV64ZBA-NEXT:    sh1add a0, a1, a0
 ; RV64ZBA-NEXT:    lh a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %a = getelementptr inbounds [8 x i16], ptr %p, i64 %idx1, i64 %idx2
@@ -2260,9 +2255,8 @@ define i32 @array_index_sh3_sh2(ptr %p, i64 %idx1, i64 %idx2) {
 ;
 ; RV64ZBA-LABEL: array_index_sh3_sh2:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a1, a1, 5
-; RV64ZBA-NEXT:    add a0, a0, a1
-; RV64ZBA-NEXT:    sh2add a0, a2, a0
+; RV64ZBA-NEXT:    sh3add a1, a1, a2
+; RV64ZBA-NEXT:    sh2add a0, a1, a0
 ; RV64ZBA-NEXT:    lw a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %a = getelementptr inbounds [8 x i32], ptr %p, i64 %idx1, i64 %idx2
@@ -2282,9 +2276,8 @@ define i64 @array_index_sh3_sh3(ptr %p, i64 %idx1, i64 %idx2) {
 ;
 ; RV64ZBA-LABEL: array_index_sh3_sh3:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    slli a1, a1, 6
-; RV64ZBA-NEXT:    add a0, a0, a1
-; RV64ZBA-NEXT:    sh3add a0, a2, a0
+; RV64ZBA-NEXT:    sh3add a1, a1, a2
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %a = getelementptr inbounds [8 x i64], ptr %p, i64 %idx1, i64 %idx2
@@ -2308,9 +2301,8 @@ define i64 @array_index_lshr_sh3_sh3(ptr %p, i64 %idx1, i64 %idx2) {
 ; RV64ZBA-LABEL: array_index_lshr_sh3_sh3:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    srli a1, a1, 58
-; RV64ZBA-NEXT:    slli a1, a1, 6
-; RV64ZBA-NEXT:    add a0, a0, a1
-; RV64ZBA-NEXT:    sh3add a0, a2, a0
+; RV64ZBA-NEXT:    sh3add a1, a1, a2
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
 ; RV64ZBA-NEXT:    ld a0, 0(a0)
 ; RV64ZBA-NEXT:    ret
   %shr = lshr i64 %idx1, 58
