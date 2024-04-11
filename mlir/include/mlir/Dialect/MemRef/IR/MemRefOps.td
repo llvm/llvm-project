@@ -1546,8 +1546,11 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
 //===----------------------------------------------------------------------===//
 
 class MemRef_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
-    MemRef_Op<mnemonic, !listconcat(traits,
-      [Pure, ViewLikeOpInterface])>,
+    MemRef_Op<mnemonic, !listconcat(traits, [
+      Pure,
+      ViewLikeOpInterface,
+      DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>
+    ])>,
     Arguments<(ins AnyStridedMemRef:$src, IndexListArrayAttr:$reassociation)>,
     Results<(outs AnyStridedMemRef:$result)>{
 
