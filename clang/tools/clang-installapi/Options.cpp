@@ -259,7 +259,10 @@ bool Options::processLinkerOptions(InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(drv::OPT_umbrella))
     LinkerOpts.ParentUmbrella = Arg->getValue();
 
-  LinkerOpts.IsDylib = Args.hasArg(drv::OPT_dynamiclib);
+  for (auto *Arg : Args.filtered(drv::OPT_alias_list)) {
+    LinkerOpts.AliasLists.emplace_back(Arg->getValue());
+    Arg->claim();
+  }
 
   LinkerOpts.AppExtensionSafe = Args.hasFlag(
       drv::OPT_fapplication_extension, drv::OPT_fno_application_extension,
@@ -684,6 +687,23 @@ InstallAPIContext Options::createContext() {
     return Ctx;
   Ctx.Reexports = Reexports;
 
+  // Collect symbols from alias lists.
+  AliasMap Aliases;
+  for (const StringRef ListPath : LinkerOpts.AliasLists) {
+    auto Buffer = FM->getBufferForFile(ListPath);
+    if (auto Err = Buffer.getError()) {
+      Diags->Report(diag::err_cannot_open_file) << ListPath << Err.message();
+      return Ctx;
+    }
+    Expected<AliasMap> Result = parseAliasList(Buffer.get());
+    if (!Result) {
+      Diags->Report(diag::err_cannot_read_alias_list)
+          << ListPath << toString(Result.takeError());
+      return Ctx;
+    }
+    Aliases.insert(Result.get().begin(), Result.get().end());
+  }
+
   // Attempt to find umbrella headers by capturing framework name.
   StringRef FrameworkName;
   if (!LinkerOpts.IsDylib)
@@ -849,7 +869,7 @@ InstallAPIContext Options::createContext() {
   }
 
   Ctx.Verifier = std::make_unique<DylibVerifier>(
-      std::move(*Slices), std::move(ReexportedIFs), Diags,
+      std::move(*Slices), std::move(ReexportedIFs), std::move(Aliases), Diags,
       DriverOpts.VerifyMode, DriverOpts.Zippered, DriverOpts.Demangle,
       DriverOpts.DSYMPath);
   return Ctx;
