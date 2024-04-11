@@ -556,7 +556,7 @@ Error RewriteInstance::discoverStorage() {
     if (Error E = SectionNameOrErr.takeError())
       return E;
     StringRef SectionName = SectionNameOrErr.get();
-    if (SectionName == ".text") {
+    if (SectionName == BC->getMainCodeSectionName()) {
       BC->OldTextSectionAddress = Section.getAddress();
       BC->OldTextSectionSize = Section.getSize();
 
@@ -1864,7 +1864,8 @@ Error RewriteInstance::readSpecialSections() {
                   "Use -update-debug-sections to keep it.\n";
   }
 
-  HasTextRelocations = (bool)BC->getUniqueSectionByName(".rela.text");
+  HasTextRelocations = (bool)BC->getUniqueSectionByName(
+      ".rela" + std::string(BC->getMainCodeSectionName()));
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
   BuildIDSection = BC->getUniqueSectionByName(".note.gnu.build-id");
@@ -3441,7 +3442,8 @@ void RewriteInstance::emitAndLink() {
   ErrorOr<BinarySection &> TextSection =
       BC->getUniqueSectionByName(BC->getMainCodeSectionName());
   if (BC->HasRelocations && TextSection)
-    BC->renameSection(*TextSection, getOrgSecPrefix() + ".text");
+    BC->renameSection(*TextSection,
+                      getOrgSecPrefix() + BC->getMainCodeSectionName());
 
   //////////////////////////////////////////////////////////////////////////////
   // Assign addresses to new sections.
