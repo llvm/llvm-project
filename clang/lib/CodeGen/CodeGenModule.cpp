@@ -2087,6 +2087,14 @@ void CodeGenModule::SetLLVMFunctionAttributes(GlobalDecl GD,
   llvm::AttributeList PAL;
   ConstructAttributeList(F->getName(), Info, GD, PAL, CallingConv,
                          /*AttrOnCallSite=*/false, IsThunk);
+  if (CallingConv == llvm::CallingConv::X86_VectorCall &&
+      getTarget().getTriple().isWindowsArm64EC()) {
+    SourceLocation Loc;
+    if (const Decl *D = GD.getDecl())
+      Loc = D->getLocation();
+
+    Error(Loc, "__vectorcall calling convention is not currently supported");
+  }
   F->setAttributes(PAL);
   F->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 }
@@ -6618,7 +6626,7 @@ static bool AllTrivialInitializers(CodeGenModule &CGM,
 void CodeGenModule::EmitObjCIvarInitializations(ObjCImplementationDecl *D) {
   // We might need a .cxx_destruct even if we don't have any ivar initializers.
   if (needsDestructMethod(D)) {
-    IdentifierInfo *II = &getContext().Idents.get(".cxx_destruct");
+    const IdentifierInfo *II = &getContext().Idents.get(".cxx_destruct");
     Selector cxxSelector = getContext().Selectors.getSelector(0, &II);
     ObjCMethodDecl *DTORMethod = ObjCMethodDecl::Create(
         getContext(), D->getLocation(), D->getLocation(), cxxSelector,
@@ -6638,7 +6646,7 @@ void CodeGenModule::EmitObjCIvarInitializations(ObjCImplementationDecl *D) {
       AllTrivialInitializers(*this, D))
     return;
 
-  IdentifierInfo *II = &getContext().Idents.get(".cxx_construct");
+  const IdentifierInfo *II = &getContext().Idents.get(".cxx_construct");
   Selector cxxSelector = getContext().Selectors.getSelector(0, &II);
   // The constructor returns 'self'.
   ObjCMethodDecl *CTORMethod = ObjCMethodDecl::Create(
@@ -7206,7 +7214,7 @@ void CodeGenModule::EmitStaticExternCAliases() {
   if (!getTargetCodeGenInfo().shouldEmitStaticExternCAliases())
     return;
   for (auto &I : StaticExternCValues) {
-    IdentifierInfo *Name = I.first;
+    const IdentifierInfo *Name = I.first;
     llvm::GlobalValue *Val = I.second;
 
     // If Val is null, that implies there were multiple declarations that each

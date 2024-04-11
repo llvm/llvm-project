@@ -17,6 +17,7 @@
 ! HELP-NEXT: -###                    Print (but do not run) the commands to run for this compilation
 ! HELP-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! HELP-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! HELP-NEXT: -dM                     Print macro definitions in -E mode instead of normal output
 ! HELP-NEXT: -dumpmachine            Display the compiler's target processor
 ! HELP-NEXT: -dumpversion            Display the version of the compiler
 ! HELP-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
@@ -155,6 +156,7 @@
 ! HELP-FC1-NEXT:OPTIONS:
 ! HELP-FC1-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! HELP-FC1-NEXT: --dependent-lib=<value> Add dependent library
+! HELP-FC1-NEXT: -dM                     Print macro definitions in -E mode instead of normal output
 ! HELP-FC1-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-FC1-NEXT: -emit-fir               Build the parse tree, then lower it to FIR
 ! HELP-FC1-NEXT: -emit-hlfir             Build the parse tree, then lower it to HLFIR
