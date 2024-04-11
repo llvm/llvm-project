@@ -61,8 +61,7 @@ __m256 test_mm256_permute2f128_ps(__m256 a, __m256 b) {
 
 __m256i test_mm256_permute2f128_si256(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_permute2f128_si256
-  // X64: shufflevector{{.*}}<i32 0, i32 1, i32 4, i32 5>
-  // X86: shufflevector{{.*}}<i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  // CHECK: shufflevector{{.*}}<i32 0, i32 1, i32 4, i32 5>
   return _mm256_permute2f128_si256(a, b, 0x20);
 }
 
