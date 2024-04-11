@@ -30,6 +30,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -344,17 +345,6 @@ public:
   /// location of the result object to pass in `this`, even though prvalues are
   /// otherwise not associated with storage locations.
   ///
-  /// FIXME: Currently, this simply returns a stable storage location for `E`,
-  /// but this doesn't do the right thing in scenarios like the following:
-  /// ```
-  /// MyClass c = some_condition()? MyClass(foo) : MyClass(bar);
-  /// ```
-  /// Here, `MyClass(foo)` and `MyClass(bar)` will have two different storage
-  /// locations, when in fact their storage locations should be the same.
-  /// Eventually, we want to propagate storage locations from result objects
-  /// down to the prvalues that initialize them, similar to the way that this is
-  /// done in Clang's CodeGen.
-  ///
   /// Requirements:
   ///  `E` must be a prvalue of record type.
   RecordStorageLocation &
@@ -462,7 +452,13 @@ public:
   /// Initializes the fields (including synthetic fields) of `Loc` with values,
   /// unless values of the field type are not supported or we hit one of the
   /// limits at which we stop producing values.
-  void initializeFieldsWithValues(RecordStorageLocation &Loc);
+  /// If `Type` is provided, initializes only those fields that are modeled for
+  /// `Type`; this is intended for use in cases where `Loc` is a derived type
+  /// and we only want to initialize the fields of a base type.
+  void initializeFieldsWithValues(RecordStorageLocation &Loc, QualType Type);
+  void initializeFieldsWithValues(RecordStorageLocation &Loc) {
+    initializeFieldsWithValues(Loc, Loc.getType());
+  }
 
   /// Assigns `Val` as the value of `Loc` in the environment.
   void setValue(const StorageLocation &Loc, Value &Val);
@@ -653,6 +649,9 @@ public:
   LLVM_DUMP_METHOD void dump(raw_ostream &OS) const;
 
 private:
+  using PrValueToResultObject =
+      llvm::DenseMap<const Expr *, RecordStorageLocation *>;
+
   // The copy-constructor is for use in fork() only.
   Environment(const Environment &) = default;
 
@@ -682,8 +681,10 @@ private:
   /// Initializes the fields (including synthetic fields) of `Loc` with values,
   /// unless values of the field type are not supported or we hit one of the
   /// limits at which we stop producing values (controlled by `Visited`,
-  /// `Depth`, and `CreatedValuesCount`).
-  void initializeFieldsWithValues(RecordStorageLocation &Loc,
+  /// `Depth`, and `CreatedValuesCount`). If `Type` is different from
+  /// `Loc.getType()`, initializes only those fields that are modeled for
+  /// `Type`.
+  void initializeFieldsWithValues(RecordStorageLocation &Loc, QualType Type,
                                   llvm::DenseSet<QualType> &Visited, int Depth,
                                   int &CreatedValuesCount);
 
@@ -702,22 +703,45 @@ private:
   /// and functions referenced in `FuncDecl`. `FuncDecl` must have a body.
   void initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl);
 
+  static PrValueToResultObject
+  buildResultObjectMap(DataflowAnalysisContext *DACtx,
+                       const FunctionDecl *FuncDecl,
+                       RecordStorageLocation *ThisPointeeLoc,
+                       RecordStorageLocation *LocForRecordReturnVal);
+
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
 
-  // FIXME: move the fields `CallStack`, `ReturnVal`, `ReturnLoc` and
-  // `ThisPointeeLoc` into a separate call-context object, shared between
-  // environments in the same call.
+  // FIXME: move the fields `CallStack`, `ResultObjectMap`, `ReturnVal`,
+  // `ReturnLoc` and `ThisPointeeLoc` into a separate call-context object,
+  // shared between environments in the same call.
   // https://github.com/llvm/llvm-project/issues/59005
 
   // `DeclContext` of the block being analysed if provided.
   std::vector<const DeclContext *> CallStack;
 
-  // Value returned by the function (if it has non-reference return type).
+  // Maps from prvalues of record type to their result objects. Shared between
+  // all environments for the same function.
+  // FIXME: It's somewhat unsatisfactory that we have to use a `shared_ptr`
+  // here, though the cost is acceptable: The overhead of a `shared_ptr` is
+  // incurred when it is copied, and this happens only relatively rarely (when
+  // we fork the environment). The need for a `shared_ptr` will go away once we
+  // introduce a shared call-context object (see above).
+  std::shared_ptr<PrValueToResultObject> ResultObjectMap;
+
+  // The following three member variables handle various different types of
+  // return values.
+  // - If the return type is not a reference and not a record: Value returned
+  //   by the function.
   Value *ReturnVal = nullptr;
-  // Storage location of the reference returned by the function (if it has
-  // reference return type).
+  // - If the return type is a reference: Storage location of the reference
+  //   returned by the function.
   StorageLocation *ReturnLoc = nullptr;
+  // - If the return type is a record or the function being analyzed is a
+  //   constructor: Storage location into which the return value should be
+  //   constructed.
+  RecordStorageLocation *LocForRecordReturnVal = nullptr;
+
   // The storage location of the `this` pointee. Should only be null if the
   // function being analyzed is only a function and not a method.
   RecordStorageLocation *ThisPointeeLoc = nullptr;
