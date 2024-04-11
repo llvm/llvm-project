@@ -1585,15 +1585,18 @@ class TemplateTemplateParmDecl final
   /// the 'typename' keyword.
   ///
   /// If false, it was declared with the 'class' keyword.
-  bool Typename : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Typename : 1;
 
   /// Whether this parameter is a parameter pack.
-  bool ParameterPack : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ParameterPack : 1;
 
   /// Whether this template template parameter is an "expanded"
   /// parameter pack, meaning that it is a pack expansion and we
   /// already know the set of template parameters that expansion expands to.
-  bool ExpandedParameterPack : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ExpandedParameterPack : 1;
 
   /// The number of parameters in an expanded parameter pack.
   unsigned NumExpandedParams = 0;
