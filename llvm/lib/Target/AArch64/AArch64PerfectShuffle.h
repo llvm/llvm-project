@@ -16,6 +16,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 
+namespace llvm {
+
 // 31 entries have cost 0
 // 756 entries have cost 1
 // 3690 entries have cost 2
@@ -6617,5 +6619,36 @@ static unsigned getPerfectShuffleCost(llvm::ArrayRef<int> M) {
   // And extract the cost from the upper bits. The cost is encoded as Cost-1.
   return (PFEntry >> 30) + 1;
 }
+
+inline bool isZIPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
+  unsigned NumElts = VT.getVectorNumElements();
+  if (NumElts % 2 != 0)
+    return false;
+  WhichResult = (M[0] == 0 ? 0 : 1);
+  unsigned Idx = WhichResult * NumElts / 2;
+  for (unsigned i = 0; i != NumElts; i += 2) {
+    if ((M[i] >= 0 && (unsigned)M[i] != Idx) ||
+        (M[i + 1] >= 0 && (unsigned)M[i + 1] != Idx + NumElts))
+      return false;
+    Idx += 1;
+  }
+
+  return true;
+}
+
+inline bool isUZPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
+  unsigned NumElts = VT.getVectorNumElements();
+  WhichResult = (M[0] == 0 ? 0 : 1);
+  for (unsigned i = 0; i != NumElts; ++i) {
+    if (M[i] < 0)
+      continue; // ignore UNDEF indices
+    if ((unsigned)M[i] != 2 * i + WhichResult)
+      return false;
+  }
+
+  return true;
+}
+
+} // namespace llvm
 
 #endif
