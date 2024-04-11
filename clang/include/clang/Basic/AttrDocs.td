@@ -1604,23 +1604,31 @@ specifies availability for the current target platform, the availability
 attributes are ignored. Supported platforms are:
 
 ``ios``
-  Apple's iOS operating system. The minimum deployment target is specified by
-  the ``-mios-version-min=*version*`` or ``-miphoneos-version-min=*version*``
-  command-line arguments.
+  Apple's iOS operating system. The minimum deployment target is specified 
+  as part of the triple. Alternatively, it can be specified by the 
+  ``-mtargetos=ios*version*`` command-line argument.
 
 ``macos``
-  Apple's macOS operating system. The minimum deployment target is
-  specified by the ``-mmacosx-version-min=*version*`` command-line argument.
-  ``macosx`` is supported for backward-compatibility reasons, but it is
-  deprecated.
+  Apple's macOS operating system. The minimum deployment target is specified 
+  as part of the triple. Alternatively, it can be specified by the 
+  ``-mtargetos=macos*version*`` or ``-mtargetos=macosx*version*``
+  command-line arguments. ``macosx`` is supported for backward-compatibility 
+  reasons, but it is deprecated.
 
 ``tvos``
-  Apple's tvOS operating system. The minimum deployment target is specified by
-  the ``-mtvos-version-min=*version*`` command-line argument.
+  Apple's tvOS operating system. The minimum deployment target is specified 
+  as part of the triple. Alternatively, it can be specified by the 
+  the ``-mtargetos=tvos*version*`` command-line argument.
 
 ``watchos``
-  Apple's watchOS operating system. The minimum deployment target is specified by
-  the ``-mwatchos-version-min=*version*`` command-line argument.
+  Apple's watchOS operating system. The minimum deployment target is specified
+  as part of the triple. Alternatively, it can be specified by the 
+  the ``-mtargetos=watchos*version*`` command-line argument.
+
+``visionos``
+  Apple's visionOS operating system. The minimum deployment target is specified
+  as part of the triple. Alternatively, it can be specified by the 
+  the ``-mtargetos=visionos*version*`` command-line argument.
 
 ``driverkit``
   Apple's DriverKit userspace kernel extensions. The minimum deployment target
