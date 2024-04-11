@@ -106,7 +106,6 @@ jobs:
     - name: Build Stage 1 Clang
       run: |
         sudo chown $USER:$USER /mnt/
-        mkdir -p /mnt/build
         cmake -G Ninja -C clang/cmake/caches/Release.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DCMAKE_POSITION_INDEPENDENT_CODE=ON -S llvm -B /mnt/build
         ninja -v -C /mnt/build
 
@@ -114,22 +113,22 @@ jobs:
     # many files to upload.
     - name: Package Build and Source Directories
       run: |
-        tar -czf ${{ github.workspace }}/../llvm-project.tar.gz .
-        mv ../llvm-project.tar.gz ${{ github.workspace }}
-        tar -C /mnt/ -czf ${{ github.workspace }}/build.tar.gz build/
+        tar -czf /mnt/build/llvm-project.tar.gz .
+        mv /mnt/build/llvm-project.tar.gz .
+        tar -C /mnt/ -czf build.tar.gz build/
 
     - name: Upload Stage 1 Source
       uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
         name: stage1-source
-        path: ${{ github.workspace }}/llvm-project.tar.gz
+        path: llvm-project.tar.gz
         retention-days: 2
 
     - name: Upload Stage 1 Build Dir
       uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
         name: stage1-build
-        path: ${{ github.workspace }}/build.tar.gz
+        path: build.tar.gz
         retention-days: 2
 
   build-stage2-linux:
@@ -165,9 +164,9 @@ jobs:
     # many files to upload.
     - name: Save Build and Source Directories
       run: |
-        tar -czf ${{ github.workspace }}/../llvm-project.tar.gz .
-        mv ../llvm-project.tar.gz ${{ github.workspace }}
-        tar -C /mnt/ -czf ${{ github.workspace }}/build.tar.gz build/
+        tar -czf /mnt/build/llvm-project.tar.gz .
+        mv /mnt/build/llvm-project.tar.gz .
+        tar -C /mnt/ -czf build.tar.gz build/
 
     - name: Upload Stage 2 Source
       uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
@@ -217,7 +216,7 @@ jobs:
 
     - id: package-info
       run: |
-        filename="LLVM-${{ needs.prepare.outputs.release-version }}-Linux.tar.Z"
+        filename="LLVM-${{ needs.prepare.outputs.release-version }}-Linux.tar.gz"
         echo "filename=$filename" >> $GITHUB_OUTPUT
         echo "path=/mnt/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/$filename" >> $GITHUB_OUTPUT
 
@@ -236,25 +235,22 @@ jobs:
     # many files to upload.
     - name: Save Build and Source Directories
       run: |
-        sudo apt-get update
-        sudo apt-get install pbzip2
-        tar -czf ${{ github.workspace }}/../llvm-project.tar.gz .
-        mv ../llvm-project.tar.gz ${{ github.workspace }}
-        # Use bzip2 for better compression since this file will be huge.
-        tar -C /mnt/ -c build/ | pbzip2 -c > ${{ github.workspace }}/build.tar.bz2
+        tar -czf /mnt/build/llvm-project.tar.gz .
+        mv /mnt/build/llvm-project.tar.gz .
+        tar -C /mnt/ -c build/ | zstd -T0 -c > build.tar.zst
 
     - name: Upload Stage 3 Source
       uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
         name: stage3-source
-        path: ${{ github.workspace }}/llvm-project.tar.gz
+        path: llvm-project.tar.gz
         retention-days: 2
 
     - name: Upload Stage 3 Build Dir
       uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
         name: stage3-build
-        path: ${{ github.workspace }}/build.tar.bz2
+        path: build.tar.zst
         retention-days: 2
 
   upload-release-binaries-linux:
@@ -302,13 +298,11 @@ jobs:
 
     - name: Unpack Artifact
       run: |
-        sudo apt-get update
-        sudo apt-get install bzip2
         tar -xzf llvm-project.tar.gz
         rm llvm-project.tar.gz
         sudo chown $USER:$USER /mnt/
-        tar -C /mnt -xjf build.tar.bz2
-        rm build.tar.bz2
+        tar --zstd -C /mnt -xf build.tar.zst
+        rm build.tar.zst
 
     - name: Run Tests
       run: |
