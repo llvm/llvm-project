@@ -3642,7 +3642,9 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
     ExtraBits.HasFunctionEffects = true;
 
-    *getTrailingObjects<FunctionEffectSet>() = epi.FunctionEffects;
+    // N.B. This is uninitialized storage.
+    FunctionEffectSet *PFX = getTrailingObjects<FunctionEffectSet>();
+    new (PFX) FunctionEffectSet(epi.FunctionEffects);
   }
 }
 
@@ -3732,7 +3734,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   // spec because of the leading 'bool' which unambiguously indicates
   // whether the following bool is the EH spec or part of the arguments.
 
-  ID.AddPointer(epi.FunctionEffects.getOpaqueValue());
+  epi.FunctionEffects.Profile(ID);
   ID.AddPointer(Result.getAsOpaquePtr());
   for (unsigned i = 0; i != NumParams; ++i)
     ID.AddPointer(ArgTys[i].getAsOpaquePtr());
@@ -5025,97 +5027,77 @@ void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
           getTypeConstraintConcept(), getTypeConstraintArguments());
 }
 
-FunctionEffect::FunctionEffect(Type T)
-    : EfType(static_cast<unsigned>(T)), EfFlags(0), Padding(0) {
-  switch (T) {
-  case Type::NonBlocking:
-    EfFlags = FE_InferrableOnCallees | FE_ExcludeThrow | FE_ExcludeCatch |
-              FE_ExcludeObjCMessageSend | FE_ExcludeStaticLocalVars |
-              FE_ExcludeThreadLocalVars;
-    break;
-
-  case Type::NonAllocating:
-    // Same as NonBlocking, except without FE_ExcludeStaticLocalVars
-    EfFlags = FE_InferrableOnCallees | FE_ExcludeThrow | FE_ExcludeCatch |
-              FE_ExcludeObjCMessageSend | FE_ExcludeThreadLocalVars;
-    break;
-  case Type::None:
-    break;
-  }
-  llvm_unreachable("unknown effect type");
-}
-
 StringRef FunctionEffect::name() const {
-  switch (type()) {
-  case Type::NonBlocking:
+  switch (kind()) {
+  case Kind::NonBlocking:
     return "nonblocking";
-  case Type::NonAllocating:
+  case Kind::NonAllocating:
     return "nonallocating";
-  case Type::None:
+  case Kind::None:
     break;
   }
-  llvm_unreachable("unknown effect type");
+  llvm_unreachable("unknown effect kind");
 }
 
-bool FunctionEffect::shouldDiagnoseConversion(bool Adding, QualType OldType,
-                                              FunctionEffectSet OldFX,
-                                              QualType NewType,
-                                              FunctionEffectSet NewFX) const {
+bool FunctionEffect::shouldDiagnoseConversion(
+    bool Adding, QualType OldType, const FunctionEffectSet &OldFX,
+    QualType NewType, const FunctionEffectSet &NewFX) const {
 
-  switch (type()) {
-  case Type::NonAllocating:
+  switch (kind()) {
+  case Kind::NonAllocating:
     // nonallocating can't be added (spoofed) during a conversion, unless we
     // have nonblocking
     if (Adding) {
       for (const auto &Effect : OldFX) {
-        if (Effect.type() == Type::NonBlocking)
+        if (Effect.kind() == Kind::NonBlocking)
           return false;
       }
     }
     [[fallthrough]];
-  case Type::NonBlocking:
+  case Kind::NonBlocking:
     // nonblocking can't be added (spoofed) during a conversion
     return Adding;
-  case Type::None:
+  case Kind::None:
     break;
   }
-  llvm_unreachable("unknown effect type");
+  llvm_unreachable("unknown effect kind");
 }
 
 bool FunctionEffect::shouldDiagnoseRedeclaration(
-    bool Adding, const FunctionDecl &OldFunction, FunctionEffectSet OldFX,
-    const FunctionDecl &NewFunction, FunctionEffectSet NewFX) const {
-  switch (type()) {
-  case Type::NonAllocating:
-  case Type::NonBlocking:
+    bool Adding, const FunctionDecl &OldFunction,
+    const FunctionEffectSet &OldFX, const FunctionDecl &NewFunction,
+    const FunctionEffectSet &NewFX) const {
+  switch (kind()) {
+  case Kind::NonAllocating:
+  case Kind::NonBlocking:
     // nonblocking/nonallocating can't be removed in a redeclaration
     // adding -> false, removing -> true (diagnose)
     return !Adding;
-  case Type::None:
+  case Kind::None:
     break;
   }
-  llvm_unreachable("unknown effect type");
+  llvm_unreachable("unknown effect kind");
 }
 
 FunctionEffect::OverrideResult FunctionEffect::shouldDiagnoseMethodOverride(
-    bool Adding, const CXXMethodDecl &OldMethod, FunctionEffectSet OldFX,
-    const CXXMethodDecl &NewMethod, FunctionEffectSet NewFX) const {
-  switch (type()) {
-  case Type::NonAllocating:
-  case Type::NonBlocking:
+    bool Adding, const CXXMethodDecl &OldMethod, const FunctionEffectSet &OldFX,
+    const CXXMethodDecl &NewMethod, const FunctionEffectSet &NewFX) const {
+  switch (kind()) {
+  case Kind::NonAllocating:
+  case Kind::NonBlocking:
     // if added on an override, that's fine and not diagnosed.
     // if missing from an override (removed), propagate from base to derived.
     return Adding ? OverrideResult::Ignore : OverrideResult::Merge;
-  case Type::None:
+  case Kind::None:
     break;
   }
-  llvm_unreachable("unknown effect type");
+  llvm_unreachable("unknown effect kind");
 }
 
 bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
-  switch (type()) {
-  case Type::NonAllocating:
-  case Type::NonBlocking:
+  switch (kind()) {
+  case Kind::NonAllocating:
+  case Kind::NonBlocking:
     // Do any of the callee's Decls have type sugar for blocking or allocating?
     for (const Decl *D : Callee.redecls()) {
       QualType QT;
@@ -5134,96 +5116,115 @@ bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
       while (AT) {
         if (AT->getAttrKind() == attr::Allocating)
           return false;
-        if (type() == Type::NonBlocking && AT->getAttrKind() == attr::Blocking)
+        if (kind() == Kind::NonBlocking && AT->getAttrKind() == attr::Blocking)
           return false;
         AT = AT->getModifiedType()->getAs<AttributedType>();
       }
     }
     return true;
-  case Type::None:
+  case Kind::None:
     break;
   }
-  llvm_unreachable("unknown effect type");
+  llvm_unreachable("unknown effect kind");
 }
 
 bool FunctionEffect::shouldDiagnoseFunctionCall(
-    bool Direct, FunctionEffectSet CalleeFX) const {
-  switch (type()) {
-  case Type::NonAllocating:
-  case Type::NonBlocking: {
-    const Type CallerType = type();
+    bool Direct, const FunctionEffectSet &CalleeFX) const {
+  switch (kind()) {
+  case Kind::NonAllocating:
+  case Kind::NonBlocking: {
+    const Kind CallerKind = kind();
     for (const auto &Effect : CalleeFX) {
-      const Type ET = Effect.type();
+      const Kind EK = Effect.kind();
       // Does callee have same or stronger constraint?
-      if (ET == CallerType ||
-          (CallerType == Type::NonAllocating && ET == Type::NonBlocking)) {
+      if (EK == CallerKind ||
+          (CallerKind == Kind::NonAllocating && EK == Kind::NonBlocking)) {
         return false; // no diagnostic
       }
     }
     return true; // warning
   }
-  case Type::None:
+  case Kind::None:
     break;
   }
-  llvm_unreachable("unknown effect type");
+  llvm_unreachable("unknown effect kind");
 }
 
 // =====
 
-MutableFunctionEffectSet::MutableFunctionEffectSet(
-    const FunctionEffect &effect) {
-  push_back(effect);
+void FunctionEffectSet::Profile(llvm::FoldingSetNodeID &ID) const {
+  if (PImpl)
+    for (const auto &Effect : *PImpl)
+      ID.AddInteger(llvm::to_underlying(Effect.kind()));
 }
 
-void MutableFunctionEffectSet::insert(const FunctionEffect &Effect) {
-  const auto &Iter = std::lower_bound(begin(), end(), Effect);
-  if (Iter == end() || *Iter != Effect) {
-    insert(Iter, Effect);
-  }
-}
-
-MutableFunctionEffectSet &
-MutableFunctionEffectSet::insertMultiple(FunctionEffectSet RHS) {
-  // TODO: For large RHS sets, use set_union or a custom insert-in-place
-  for (const auto &Effect : RHS) {
-    insert(Effect);
+FunctionEffectSet &
+FunctionEffectSet::operator=(llvm::ArrayRef<FunctionEffect> Arr) {
+  if (Arr.empty()) {
+    PImpl.reset();
+  } else {
+    if (PImpl == nullptr)
+      PImpl = new ImplVec;
+    PImpl->assign(Arr.begin(), Arr.end());
   }
   return *this;
 }
 
-FunctionEffectSet FunctionEffectSet::getUnion(ASTContext &C,
-                                              const FunctionEffectSet &LHS,
-                                              const FunctionEffectSet &RHS) {
-  // Optimize for one of the two sets being empty
+FunctionEffectSet
+FunctionEffectSet::getUnion(const FunctionEffectSet &RHS) const {
+  const FunctionEffectSet &LHS = *this;
+  // Optimize for either of the two sets being empty (very common).
   if (LHS.empty())
     return RHS;
   if (RHS.empty())
     return LHS;
 
-  // Optimize the case where the two sets are identical
+  // Optimize for the two sets being identical (very common).
   if (LHS == RHS)
     return LHS;
 
-  MutableFunctionEffectSet Vec;
-  Vec.reserve(LHS.size() + RHS.size());
+  ImplPtr PVec(new ImplVec);
+  PVec->reserve(LHS.size() + RHS.size());
   std::set_union(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
-                 std::back_inserter(Vec));
-  // The result of a set operation is an ordered/unique set.
-  return C.getUniquedFunctionEffectSet(Vec);
+                 std::back_inserter(*PVec));
+  return FunctionEffectSet(std::move(PVec));
 }
 
-MutableFunctionEffectSet
-FunctionEffectSet::intersection(const FunctionEffectSet &RHS) const {
+FunctionEffectSet
+FunctionEffectSet::getIntersection(const FunctionEffectSet &RHS) const {
   const FunctionEffectSet &LHS = *this;
   if (LHS.empty() || RHS.empty()) {
     return {};
   }
 
-  MutableFunctionEffectSet Vec;
+  ImplPtr PVec(new ImplVec);
   std::set_intersection(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
-                        std::back_inserter(Vec));
-  // The result of a set operation is an ordered/unique set.
-  return Vec;
+                        std::back_inserter(*PVec));
+  return FunctionEffectSet(std::move(PVec));
+}
+
+FunctionEffectSet::Differences
+FunctionEffectSet::differences(const FunctionEffectSet &Old,
+                               const FunctionEffectSet &New) {
+  // TODO: Could be a one-pass algorithm.
+  Differences Result;
+  for (const auto &Effect : New.getDifference(Old)) {
+    Result.emplace_back(Effect, true);
+  }
+  for (const auto &Effect : Old.getDifference(New)) {
+    Result.emplace_back(Effect, false);
+  }
+  return Result;
+}
+
+FunctionEffectSet
+FunctionEffectSet::getDifference(const FunctionEffectSet &RHS) const {
+  const FunctionEffectSet &LHS = *this;
+  ImplPtr PVec(new ImplVec);
+
+  std::set_difference(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
+                      std::back_inserter(*PVec));
+  return FunctionEffectSet(std::move(PVec));
 }
 
 // TODO: inline?
@@ -5233,6 +5234,7 @@ FunctionEffectSet FunctionEffectSet::get(QualType QT) {
   if (QT->isPointerType())
     QT = QT->getPointeeType();
 
+  // TODO: Why aren't these included in isPointerType()?
   if (const auto *BT = QT->getAs<BlockPointerType>()) {
     QT = BT->getPointeeType();
   } else if (const auto *MP = QT->getAs<MemberPointerType>()) {
@@ -5247,34 +5249,29 @@ FunctionEffectSet FunctionEffectSet::get(QualType QT) {
   return {};
 }
 
-FunctionEffectSet::Differences
-FunctionEffectSet::differences(const FunctionEffectSet &Old,
-                               const FunctionEffectSet &New) {
-  // TODO: Could be a one-pass algorithm.
-  Differences Result;
-  for (const auto &Effect : New.difference(Old)) {
-    Result.emplace_back(Effect, true);
-  }
-  for (const auto &Effect : Old.difference(New)) {
-    Result.emplace_back(Effect, false);
-  }
-  return Result;
+// For use in mutating methods: only allow mutating the vector in
+// place when we hold the only reference. Otherwise, copy it first.
+FunctionEffectSet::ImplVec &FunctionEffectSet::mutableVec() {
+  if (PImpl->UseCount() > 1)
+    PImpl = new ImplVec(*PImpl);
+  assert(PImpl->UseCount() == 1 && "mutating a shared function effect set");
+  return *PImpl;
 }
 
-MutableFunctionEffectSet
-FunctionEffectSet::difference(const FunctionEffectSet &RHS) const {
-  const FunctionEffectSet &LHS = *this;
-  MutableFunctionEffectSet Result;
-
-  std::set_difference(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
-                      std::back_inserter(Result));
-  return Result;
+void FunctionEffectSet::insert(const FunctionEffect &Effect) {
+  if (PImpl == nullptr)
+    PImpl = new ImplVec;
+  auto *Iter = std::lower_bound(PImpl->begin(), PImpl->end(), Effect);
+  if (Iter == PImpl->end() || *Iter != Effect) {
+    mutableVec().insert(Iter, Effect);
+  }
 }
 
-bool FunctionEffectSet::operator<(const FunctionEffectSet &RHS) const {
-  const FunctionEffectSet &LHS = *this;
-  return std::lexicographical_compare(LHS.begin(), LHS.end(), RHS.begin(),
-                                      RHS.end());
+void FunctionEffectSet::insert(const FunctionEffectSet &Set) {
+  // TODO: For large RHS sets, use set_union or a custom insert-in-place
+  for (const auto &Effect : Set) {
+    insert(Effect);
+  }
 }
 
 LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {

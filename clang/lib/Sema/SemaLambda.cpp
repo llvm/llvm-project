@@ -1890,7 +1890,7 @@ ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
 
   if (const auto FX = LSI.CallOperator->getFunctionEffects()) {
-    CheckAddCallableWithEffects(LSI.CallOperator, FX);
+    MaybeAddDeclWithEffects(LSI.CallOperator, FX);
   }
 
   return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);

@@ -3940,7 +3940,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     // declaration, but that would trigger an additional "conflicting types"
     // error.
     if (const auto *NewFPT = NewQType->getAs<FunctionProtoType>()) {
-      auto MergedFX = FunctionEffectSet::getUnion(Context, OldFX, NewFX);
+      auto MergedFX = OldFX.getUnion(NewFX);
 
       FunctionProtoType::ExtProtoInfo EPI = NewFPT->getExtProtoInfo();
       EPI.FunctionEffects = MergedFX;
@@ -11128,7 +11128,7 @@ Attr *Sema::getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
 
 // Should only be called when getFunctionEffects() returns a non-empty set.
 // Decl should be a FunctionDecl or BlockDecl.
-void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX) {
+void Sema::MaybeAddDeclWithEffects(const Decl *D, const FunctionEffectSet &FX) {
   if (!D->hasBody()) {
     if (const auto *FD = D->getAsFunction()) {
       if (!FD->willHaveBody()) {
@@ -11152,7 +11152,7 @@ void Sema::CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX) {
     return;
   }
 
-  AllEffectsToVerify.insertMultiple(FX);
+  AllEffectsToVerify.insert(FX);
 
   // Record the declaration for later analysis.
   DeclsWithEffectsToVerify.push_back(D);
@@ -16064,7 +16064,7 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     Diag(FD->getLocation(), diag::warn_function_def_in_objc_container);
 
   if (const auto FX = FD->getCanonicalDecl()->getFunctionEffects()) {
-    CheckAddCallableWithEffects(FD, FX);
+    MaybeAddDeclWithEffects(FD, FX);
   }
 
   return D;

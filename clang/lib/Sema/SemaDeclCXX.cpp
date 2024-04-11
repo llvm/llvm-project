@@ -18347,7 +18347,7 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
         AnyDiags = true;
         break;
       case FunctionEffect::OverrideResult::Merge: {
-        auto MergedFX = FunctionEffectSet::getUnion(Context, OldFX, NewFX);
+        auto MergedFX = OldFX.getUnion(NewFX);
 
         FunctionProtoType::ExtProtoInfo EPI = NewFT->getExtProtoInfo();
         EPI.FunctionEffects = MergedFX;

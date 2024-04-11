@@ -222,6 +222,12 @@ public:
     asImpl().writeUInt32(epi.getOpaqueValue());
   }
 
+  void writeFunctionEffect(FunctionEffect effect) {
+    static_assert(sizeof(effect.getAsOpaqueValue()) <= sizeof(uint32_t),
+                  "update this if the value size changes");
+    asImpl().writeUInt32(effect.getAsOpaqueValue());
+  }
+
   void writeNestedNameSpecifier(NestedNameSpecifier *NNS) {
     // Nested name specifiers usually aren't too long. I think that 8 would
     // typically accommodate the vast majority.

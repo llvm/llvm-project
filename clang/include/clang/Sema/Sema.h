@@ -723,7 +723,7 @@ public:
   /// FunctionEffectSet to be verified.
   SmallVector<const Decl *> DeclsWithEffectsToVerify;
   /// The union of all effects present on DeclsWithEffectsToVerify.
-  MutableFunctionEffectSet AllEffectsToVerify;
+  FunctionEffectSet AllEffectsToVerify;
 
   /// Determine if VD, which must be a variable or function, is an external
   /// symbol that nonetheless can't be referenced from outside this translation
@@ -3155,7 +3155,7 @@ public:
                               StorageClass SC);
 
   /// Potentially add a FunctionDecl or BlockDecl to DeclsWithEffectsToVerify.
-  void CheckAddCallableWithEffects(const Decl *D, FunctionEffectSet FX);
+  void MaybeAddDeclWithEffects(const Decl *D, const FunctionEffectSet &FX);
 
   // Contexts where using non-trivial C union types can be disallowed. This is
   // passed to err_non_trivial_c_union_in_invalid_context.

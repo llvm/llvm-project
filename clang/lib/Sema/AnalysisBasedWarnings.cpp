@@ -2613,13 +2613,13 @@ private:
   std::unique_ptr<SmallVector<DirectCall>> UnverifiedDirectCalls;
 
 public:
-  PendingFunctionAnalysis(Sema &Sem, const CallableInfo &CInfo,
-                          FunctionEffectSet AllInferrableEffectsToVerify) {
-    ASTContext &Ctx = Sem.getASTContext();
+  PendingFunctionAnalysis(
+      Sema &Sem, const CallableInfo &CInfo,
+      const FunctionEffectSet &AllInferrableEffectsToVerify) {
     DeclaredVerifiableEffects = CInfo.Effects;
 
     // Check for effects we are not allowed to infer
-    MutableFunctionEffectSet FX;
+    FunctionEffectSet FX;
 
     for (const auto &effect : AllInferrableEffectsToVerify) {
       if (effect.canInferOnFunction(*CInfo.CDecl)) {
@@ -2635,9 +2635,7 @@ public:
       }
     }
     // FX is now the set of inferrable effects which are not prohibited
-    FXToInfer = Ctx.getUniquedFunctionEffectSet(
-        Ctx.getUniquedFunctionEffectSet(FX).difference(
-            DeclaredVerifiableEffects));
+    FXToInfer = FX.getDifference(DeclaredVerifiableEffects);
   }
 
   // Hide the way that diagnostics for explicitly required effects vs. inferred
@@ -2718,17 +2716,16 @@ private:
   EffectToDiagnosticMap InferrableEffectToFirstDiagnostic;
 
 public:
-  CompleteFunctionAnalysis(ASTContext &Ctx, PendingFunctionAnalysis &pending,
-                           FunctionEffectSet funcFX,
-                           FunctionEffectSet AllInferrableEffectsToVerify) {
-    MutableFunctionEffectSet verified;
-    verified.insertMultiple(funcFX);
+  CompleteFunctionAnalysis(
+      ASTContext &Ctx, PendingFunctionAnalysis &pending,
+      const FunctionEffectSet &funcFX,
+      const FunctionEffectSet &AllInferrableEffectsToVerify) {
+    VerifiedEffects.insert(funcFX);
     for (const auto &effect : AllInferrableEffectsToVerify) {
       if (pending.diagnosticForInferrableEffect(effect) == nullptr) {
-        verified.insert(effect);
+        VerifiedEffects.insert(effect);
       }
     }
-    VerifiedEffects = Ctx.getUniquedFunctionEffectSet(verified);
 
     InferrableEffectToFirstDiagnostic =
         std::move(pending.InferrableEffectToFirstDiagnostic);
@@ -2835,15 +2832,12 @@ public:
     // Gather all of the effects to be verified to see what operations need to
     // be checked, and to see which ones are inferrable.
     {
-      MutableFunctionEffectSet inferrableEffects;
       for (const FunctionEffect &effect : Sem.AllEffectsToVerify) {
         const auto Flags = effect.flags();
         if (Flags & FunctionEffect::FE_InferrableOnCallees) {
-          inferrableEffects.insert(effect);
+          AllInferrableEffectsToVerify.insert(effect);
         }
       }
-      AllInferrableEffectsToVerify =
-          Sem.getASTContext().getUniquedFunctionEffectSet(inferrableEffects);
       if constexpr (DebugLogLevel > 0) {
         llvm::outs() << "AllInferrableEffectsToVerify: ";
         AllInferrableEffectsToVerify.dump(llvm::outs());
@@ -3016,8 +3010,7 @@ private:
     if (DirectCall) {
       if (auto *CFA = DeclAnalysis.completedAnalysisForDecl(Callee.CDecl)) {
         // Combine declared effects with those which may have been inferred.
-        CalleeEffects = FunctionEffectSet::getUnion(
-            Sem.getASTContext(), CalleeEffects, CFA->VerifiedEffects);
+        CalleeEffects.insert(CFA->VerifiedEffects);
         IsInferencePossible = false; // we've already traversed it
       }
     }
@@ -3589,7 +3582,7 @@ private:
       if (auto *Callable = Result.Nodes.getNodeAs<Decl>(Tag_Callable)) {
         if (const auto FX = functionEffectsForDecl(Callable)) {
           // Reuse this filtering method in Sema
-          Sem.CheckAddCallableWithEffects(Callable, FX);
+          Sem.MaybeAddDeclWithEffects(Callable, FX);
         }
       }
     }

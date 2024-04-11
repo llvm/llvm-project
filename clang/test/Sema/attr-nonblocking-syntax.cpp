@@ -45,7 +45,7 @@ void nl1() [[clang::nonblocking]] [[clang::nonallocating]];
 // CHECK: FunctionDecl {{.*}} nl1 'void () __attribute__((clang_nonblocking))'
 
 void nl2() [[clang::nonallocating]] [[clang::nonblocking]];
-// CHECK: FunctionDecl {{.*}} nl2 'void () __attribute__((clang_nonblocking))'
+// CHECK: FunctionDecl {{.*}} nl2 'void () __attribute__((clang_nonblocking)) __attribute__((clang_nonallocating))'
 
 decltype(nl1) nl3;
 // CHECK: FunctionDecl {{.*}} nl3 'decltype(nl1)':'void () __attribute__((clang_nonblocking))'
