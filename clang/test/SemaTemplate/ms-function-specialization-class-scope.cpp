@@ -91,12 +91,18 @@ namespace UsesThis {
       A::x; // expected-error {{invalid use of member 'x' in static member function}}
       +x; // expected-error {{invalid use of member 'x' in static member function}}
       +A::x; // expected-error {{invalid use of member 'x' in static member function}}
+      &x; // expected-error {{invalid use of member 'x' in static member function}}
+      &A::x;
       f();
       f<void>();
       g(); // expected-error {{call to non-static member function without an object argument}}
       g<void>(); // expected-error {{call to non-static member function without an object argument}}
       i(); // expected-error {{call to non-static member function without an object argument}}
       j();
+      &i; // expected-error 2{{must explicitly qualify name of member function when taking its address}}
+      &j;
+      &A::i;
+      &A::j;
     }
 
     template<typename U = void>
@@ -109,12 +115,18 @@ namespace UsesThis {
       A::x;
       +x;
       +A::x;
+      &x;
+      &A::x;
       f();
       f<void>();
       g();
       g<void>();
       i();
       j();
+      &i; // expected-error 2{{must explicitly qualify name of member function when taking its address}}
+      &j;
+      &A::i;
+      &A::j;
     }
 
     template<typename U>
@@ -127,7 +139,7 @@ namespace UsesThis {
     static void j();
   };
 
-  template struct A<int>; // expected-note 2{{in instantiation of}}
+  template struct A<int>; // expected-note 3{{in instantiation of}}
 
   template <typename T>
   struct Foo {
