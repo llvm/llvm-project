@@ -26,7 +26,7 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-// The algorithm is listed in https://dl.acm.org/doi/pdf/10.1145/363717.363780.
+
 struct AbsOpConversion : public OpConversionPattern<complex::AbsOp> {
   using OpConversionPattern<complex::AbsOp>::OpConversionPattern;
 
@@ -35,49 +35,27 @@ struct AbsOpConversion : public OpConversionPattern<complex::AbsOp> {
                   ConversionPatternRewriter &rewriter) const override {
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
-    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
+    arith::FastMathFlags fmf = op.getFastMathFlagsAttr().getValue();
 
     Type elementType = op.getType();
-    Value arg = adaptor.getComplex();
-
-    Value zero =
-        b.create<arith::ConstantOp>(elementType, b.getZeroAttr(elementType));
     Value one = b.create<arith::ConstantOp>(elementType,
                                             b.getFloatAttr(elementType, 1.0));
 
-    Value real = b.create<complex::ReOp>(elementType, arg);
-    Value imag = b.create<complex::ImOp>(elementType, arg);
+    Value real = b.create<complex::ReOp>(adaptor.getComplex());
+    Value imag = b.create<complex::ImOp>(adaptor.getComplex());
+    Value absReal = b.create<math::AbsFOp>(real, fmf);
+    Value absImag = b.create<math::AbsFOp>(imag, fmf);
 
-    Value realIsZero =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, real, zero);
-    Value imagIsZero =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, imag, zero);
-
-    // Real > Imag
-    Value imagDivReal = b.create<arith::DivFOp>(imag, real, fmf.getValue());
-    Value imagSq =
-        b.create<arith::MulFOp>(imagDivReal, imagDivReal, fmf.getValue());
-    Value imagSqPlusOne = b.create<arith::AddFOp>(imagSq, one, fmf.getValue());
-    Value imagSqrt = b.create<math::SqrtOp>(imagSqPlusOne, fmf.getValue());
-    Value realAbs = b.create<math::AbsFOp>(real, fmf.getValue());
-    Value absImag = b.create<arith::MulFOp>(imagSqrt, realAbs, fmf.getValue());
-
-    // Real <= Imag
-    Value realDivImag = b.create<arith::DivFOp>(real, imag, fmf.getValue());
-    Value realSq =
-        b.create<arith::MulFOp>(realDivImag, realDivImag, fmf.getValue());
-    Value realSqPlusOne = b.create<arith::AddFOp>(realSq, one, fmf.getValue());
-    Value realSqrt = b.create<math::SqrtOp>(realSqPlusOne, fmf.getValue());
-    Value imagAbs = b.create<math::AbsFOp>(imag, fmf.getValue());
-    Value absReal = b.create<arith::MulFOp>(realSqrt, imagAbs, fmf.getValue());
-
-    rewriter.replaceOpWithNewOp<arith::SelectOp>(
-        op, realIsZero, imagAbs,
-        b.create<arith::SelectOp>(
-            imagIsZero, realAbs,
-            b.create<arith::SelectOp>(
-                b.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, real, imag),
-                absImag, absReal)));
+    Value max = b.create<arith::MaximumFOp>(absReal, absImag, fmf);
+    Value min = b.create<arith::MinimumFOp>(absReal, absImag, fmf);
+    Value ratio = b.create<arith::DivFOp>(min, max, fmf);
+    Value ratioSq = b.create<arith::MulFOp>(ratio, ratio, fmf);
+    Value ratioSqPlusOne = b.create<arith::AddFOp>(ratioSq, one, fmf);
+    Value sqrt = b.create<math::SqrtOp>(ratioSqPlusOne, fmf);
+    Value result = b.create<arith::MulFOp>(max, sqrt, fmf);
+    Value isNaN =
+        b.create<arith::CmpFOp>(arith::CmpFPredicate::UNO, result, result, fmf);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNaN, min, result);
 
     return success();
   }
