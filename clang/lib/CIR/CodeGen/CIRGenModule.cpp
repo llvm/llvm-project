@@ -525,7 +525,9 @@ void CIRGenModule::AddGlobalDtor(mlir::cir::FuncOp Dtor, int Priority,
   }
 
   // FIXME(from traditional LLVM): Type coercion of void()* types.
-  llvm_unreachable("NYI");
+  Dtor->setAttr(Dtor.getGlobalDtorAttrName(),
+                mlir::cir::GlobalDtorAttr::get(builder.getContext(),
+                                               Dtor.getName(), Priority));
 }
 
 mlir::Operation *CIRGenModule::getGlobalValue(StringRef Name) {

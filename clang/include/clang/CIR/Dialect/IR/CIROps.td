@@ -2412,7 +2412,8 @@ def FuncOp : CIR_Op<"func", [
 
     The `global_ctor` indicates whether a function should execute before `main()`
     function, as specified by `__attribute__((constructor))`. A execution priority
-    can also be specified `global_ctor(<prio>)`.
+    can also be specified `global_ctor(<prio>)`. Similarly, for global destructors
+    both `global_dtor` and `global_dtor(<prio>)` are available.
 
     Example:
 
@@ -2454,6 +2455,7 @@ def FuncOp : CIR_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$res_attrs,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
                        OptionalAttr<GlobalCtorAttr>:$global_ctor,
+                       OptionalAttr<GlobalDtorAttr>:$global_dtor,
                        OptionalAttr<AnyASTFunctionDeclAttr>:$ast);
   let regions = (region AnyRegion:$body);
   let skipDefaultBuilders = 1;

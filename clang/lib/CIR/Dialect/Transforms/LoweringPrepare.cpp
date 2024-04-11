@@ -111,6 +111,8 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
 
   /// List of ctors to be called before main()
   SmallVector<mlir::Attribute, 4> globalCtorList;
+  /// List of dtors to be called when unloading module.
+  SmallVector<mlir::Attribute, 4> globalDtorList;
 };
 } // namespace
 
@@ -322,11 +324,14 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
 }
 
 void LoweringPreparePass::buildGlobalCtorDtorList() {
-  // TODO: dtors
-  if (globalCtorList.empty())
-    return;
-  theModule->setAttr("cir.global_ctors",
-                     mlir::ArrayAttr::get(&getContext(), globalCtorList));
+  if (!globalCtorList.empty()) {
+    theModule->setAttr("cir.global_ctors",
+                       mlir::ArrayAttr::get(&getContext(), globalCtorList));
+  }
+  if (!globalDtorList.empty()) {
+    theModule->setAttr("cir.global_dtors",
+                       mlir::ArrayAttr::get(&getContext(), globalDtorList));
+  }
 }
 
 void LoweringPreparePass::buildCXXGlobalInitFunc() {
@@ -515,6 +520,8 @@ void LoweringPreparePass::runOnOp(Operation *op) {
   } else if (auto fnOp = dyn_cast<mlir::cir::FuncOp>(op)) {
     if (auto globalCtor = fnOp.getGlobalCtorAttr()) {
       globalCtorList.push_back(globalCtor);
+    } else if (auto globalDtor = fnOp.getGlobalDtorAttr()) {
+      globalDtorList.push_back(globalDtor);
     }
   }
 }

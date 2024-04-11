@@ -671,7 +671,11 @@ class CIR_GlobalCtorDtor<string name, string attrMnemonic,
 
 def GlobalCtorAttr : CIR_GlobalCtorDtor<"Ctor", "ctor",
   "Marks a function as a global constructor",
-  "Describes a global constructor with optional priority"
+  "A function with this attribute executes before main()"
+>;
+def GlobalDtorAttr : CIR_GlobalCtorDtor<"Dtor", "dtor",
+  "Marks a function as a global destructor",
+  "A function with this attribute excutes before module unloading"
 >;
 
 def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {

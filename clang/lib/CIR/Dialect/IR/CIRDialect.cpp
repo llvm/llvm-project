@@ -1832,27 +1832,43 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     hasAlias = true;
   }
 
-  if (::mlir::succeeded(parser.parseOptionalKeyword("global_ctor"))) {
-    std::optional<int> prio;
-    if (mlir::succeeded(parser.parseOptionalLParen())) {
-      auto parsedPrio = mlir::FieldParser<std::optional<int>>::parse(parser);
-      if (mlir::failed(parsedPrio)) {
-        return parser.emitError(
-            parser.getCurrentLocation(),
-            "failed to parse GlobalCtorAttr parameter "
-            "'priority' which is to be a `std::optional<int>`");
-        return failure();
+  auto parseGlobalDtorCtor =
+      [&](StringRef keyword,
+          llvm::function_ref<void(std::optional<int> prio)> createAttr)
+      -> mlir::LogicalResult {
+    if (::mlir::succeeded(parser.parseOptionalKeyword(keyword))) {
+      std::optional<int> prio;
+      if (mlir::succeeded(parser.parseOptionalLParen())) {
+        auto parsedPrio = mlir::FieldParser<std::optional<int>>::parse(parser);
+        if (mlir::failed(parsedPrio)) {
+          return parser.emitError(
+              parser.getCurrentLocation(),
+              "failed to parse 'priority', of type 'std::optional<int>'");
+          return failure();
+        }
+        prio = parsedPrio.value_or(std::optional<int>());
+        // Parse literal ')'
+        if (parser.parseRParen())
+          return failure();
       }
-      prio = parsedPrio.value_or(std::optional<int>());
-
-      // Parse literal ')'
-      if (parser.parseRParen())
-        return failure();
+      createAttr(prio);
     }
-    auto globalCtorAttr =
-        mlir::cir::GlobalCtorAttr::get(builder.getContext(), nameAttr, prio);
-    state.addAttribute(getGlobalCtorAttrName(state.name), globalCtorAttr);
-  }
+    return success();
+  };
+
+  if (parseGlobalDtorCtor("global_ctor", [&](std::optional<int> prio) {
+        auto globalCtorAttr = mlir::cir::GlobalCtorAttr::get(
+            builder.getContext(), nameAttr, prio);
+        state.addAttribute(getGlobalCtorAttrName(state.name), globalCtorAttr);
+      }).failed())
+    return failure();
+
+  if (parseGlobalDtorCtor("global_dtor", [&](std::optional<int> prio) {
+        auto globalDtorAttr = mlir::cir::GlobalDtorAttr::get(
+            builder.getContext(), nameAttr, prio);
+        state.addAttribute(getGlobalDtorAttrName(state.name), globalDtorAttr);
+      }).failed())
+    return failure();
 
   Attribute extraAttrs;
   if (::mlir::succeeded(parser.parseOptionalKeyword("extra"))) {
@@ -1949,7 +1965,8 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
       // These are all omitted since they are custom printed already.
       {getSymVisibilityAttrName(), getAliaseeAttrName(),
        getFunctionTypeAttrName(), getLinkageAttrName(), getBuiltinAttrName(),
-       getNoProtoAttrName(), getGlobalCtorAttrName(), getExtraAttrsAttrName()});
+       getNoProtoAttrName(), getGlobalCtorAttrName(), getGlobalDtorAttrName(),
+       getExtraAttrsAttrName()});
 
   if (auto aliaseeName = getAliasee()) {
     p << " alias(";
@@ -1960,6 +1977,13 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (auto globalCtor = getGlobalCtorAttr()) {
     p << " global_ctor";
     auto prio = globalCtor.getPriority();
+    if (prio)
+      p << "(" << *prio << ")";
+  }
+
+  if (auto globalDtor = getGlobalDtorAttr()) {
+    p << " global_dtor";
+    auto prio = globalDtor.getPriority();
     if (prio)
       p << "(" << *prio << ")";
   }
