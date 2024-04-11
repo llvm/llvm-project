@@ -4050,8 +4050,8 @@ operator+(type_identity_t<basic_string_view<_CharT, _Traits>> __lhs,
           const basic_string<_CharT, _Traits, _Allocator>& __rhs) {
   using _String = basic_string<_CharT, _Traits, _Allocator>;
 
-  _String __r = __rhs;
-  __r.insert(0, __lhs);
+  _String __r{__lhs};
+  __r.append(__rhs);
   return __r;
 }
 
@@ -4059,8 +4059,11 @@ template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI constexpr basic_string<_CharT, _Traits, _Allocator>
 operator+(type_identity_t<basic_string_view<_CharT, _Traits>> __lhs,
           basic_string<_CharT, _Traits, _Allocator>&& __rhs) {
-  __rhs.insert(0, __lhs);
-  return std::move(__rhs);
+  using _String = basic_string<_CharT, _Traits, _Allocator>;
+
+  _String __r{__lhs};
+  __r.append(std::move(__rhs));
+  return __r;
 }
 
 #endif // _LIBCPP_STD_VER >= 26
