@@ -95,4 +95,3 @@ void buildTerminatedBody(OpBuilder &builder, Location loc);
 #include "clang/CIR/Dialect/IR/CIROps.h.inc"
 
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
-
