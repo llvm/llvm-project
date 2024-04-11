@@ -13089,10 +13089,17 @@ TreeTransform<Derived>::TransformUnresolvedLookupExpr(UnresolvedLookupExpr *Old,
 #endif
 
   bool PotentiallyImplicitAccess =
+  #if 0
       R.isClassLookup() &&
       (!IsAddressOfOperand ||
        (R.isSingleResult() &&
         R.getAsSingle<NamedDecl>()->isCXXInstanceMember()));
+  #elif 0
+      !IsAddressOfOperand && !R.empty() && R.begin()->isCXXClassMember();
+  #elif 1
+      SemaRef.isPotentialImplicitMemberAccess(SS, R, IsAddressOfOperand);
+  #endif
+
 
   // If we have neither explicit template arguments, nor the template keyword,
   // it's a normal declaration name or member reference.

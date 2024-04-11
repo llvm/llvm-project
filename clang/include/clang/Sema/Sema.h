@@ -7018,10 +7018,14 @@ private:
   ///@{
 
 public:
+  bool isPotentialImplicitMemberAccess(const CXXScopeSpec &SS,
+                                       LookupResult &R,
+                                       bool IsAddressOfOperand);
+
   ExprResult BuildPossibleImplicitMemberExpr(
       const CXXScopeSpec &SS, SourceLocation TemplateKWLoc, LookupResult &R,
-      const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
-      UnresolvedLookupExpr *AsULE = nullptr);
+      const TemplateArgumentListInfo *TemplateArgs, const Scope *S);
+
   ExprResult
   BuildImplicitMemberExpr(const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
                           LookupResult &R,

@@ -2912,6 +2912,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // to get this right here so that we don't end up making a
   // spuriously dependent expression if we're inside a dependent
   // instance method.
+  #if 0
   if (getLangOpts().CPlusPlus && !R.empty() &&
       (*R.begin())->isCXXClassMember()) {
     bool MightBeImplicitMember;
@@ -2932,6 +2933,11 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
       return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc,
                                              R, TemplateArgs, S);
   }
+  #else
+  if (isPotentialImplicitMemberAccess(SS, R, IsAddressOfOperand))
+    return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc,
+                                           R, TemplateArgs, S);
+  #endif
 
   if (TemplateArgs || TemplateKWLoc.isValid()) {
 
