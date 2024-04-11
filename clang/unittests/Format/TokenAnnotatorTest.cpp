@@ -2856,6 +2856,30 @@ TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
   EXPECT_TOKEN(Tokens[7], tok::l_brace, TT_FunctionLBrace);
 }
 
+TEST_F(TokenAnnotatorTest, BlockLBrace) {
+  auto Tokens = annotate("{\n"
+                         "  {\n"
+                         "    foo();\n"
+                         "  }\n"
+                         "}");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_brace, TT_BlockLBrace);
+  EXPECT_BRACE_KIND(Tokens[0], BK_Block);
+  EXPECT_TOKEN(Tokens[1], tok::l_brace, TT_BlockLBrace);
+  EXPECT_BRACE_KIND(Tokens[1], BK_Block);
+
+  Tokens = annotate("void bar() {\n"
+                    "  {\n"
+                    "    foo();\n"
+                    "  }\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[4], BK_Block);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_BlockLBrace);
+  EXPECT_BRACE_KIND(Tokens[5], BK_Block);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
