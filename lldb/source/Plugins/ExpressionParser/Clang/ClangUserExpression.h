@@ -185,9 +185,9 @@ private:
   /// The parameter have the same meaning as in ClangUserExpression::Parse.
   /// \see ClangUserExpression::Parse
   bool TryParse(DiagnosticManager &diagnostic_manager,
-                ExecutionContextScope *exe_scope, ExecutionContext &exe_ctx,
-                lldb_private::ExecutionPolicy execution_policy, bool keep_result_in_memory,
-                bool generate_debug_info);
+                ExecutionContext &exe_ctx,
+                lldb_private::ExecutionPolicy execution_policy,
+                bool keep_result_in_memory, bool generate_debug_info);
 
   void SetupCppModuleImports(ExecutionContext &exe_ctx);
 
