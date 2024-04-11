@@ -130,11 +130,12 @@ DependencyScanningFilesystemSharedCache::CacheShard::
     getOrEmplaceEntryForFilename(StringRef Filename,
                                  llvm::ErrorOr<llvm::vfs::Status> Stat) {
   std::lock_guard<std::mutex> LockGuard(CacheLock);
-  const CachedFileSystemEntry *StoredEntry = CacheByFilename[Filename].first;
-  if (!StoredEntry)
-    StoredEntry =
+  auto [It, Inserted] = CacheByFilename.insert({Filename, {nullptr, nullptr}});
+  auto &[CachedEntry, CachedRealPath] = It->getValue();
+  if (!CachedEntry)
+    CachedEntry =
         new (EntryStorage.Allocate()) CachedFileSystemEntry(std::move(Stat));
-  return *StoredEntry;
+  return *CachedEntry;
 }
 
 const CachedFileSystemEntry &

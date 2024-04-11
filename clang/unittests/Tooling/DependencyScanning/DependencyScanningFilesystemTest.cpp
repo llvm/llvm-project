@@ -16,10 +16,16 @@ using namespace clang::tooling::dependencies;
 namespace {
 struct InstrumentingFilesystem
     : llvm::RTTIExtends<InstrumentingFilesystem, llvm::vfs::ProxyFileSystem> {
+  unsigned NumStatusCalls = 0;
   unsigned NumGetRealPathCalls = 0;
 
   using llvm::RTTIExtends<InstrumentingFilesystem,
                           llvm::vfs::ProxyFileSystem>::RTTIExtends;
+
+  llvm::ErrorOr<llvm::vfs::Status> status(const llvm::Twine &Path) override {
+    ++NumStatusCalls;
+    return ProxyFileSystem::status(Path);
+  }
 
   std::error_code getRealPath(const llvm::Twine &Path,
                               llvm::SmallVectorImpl<char> &Output) override {
@@ -28,6 +34,29 @@ struct InstrumentingFilesystem
   }
 };
 } // namespace
+
+TEST(DependencyScanningWorkerFilesystem, CacheStatusFailures) {
+  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+
+  auto InstrumentingFS =
+      llvm::makeIntrusiveRefCnt<InstrumentingFilesystem>(InMemoryFS);
+
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InstrumentingFS);
+  DependencyScanningWorkerFilesystem DepFS2(SharedCache, InstrumentingFS);
+
+  DepFS.status("/foo.c");
+  EXPECT_EQ(InstrumentingFS->NumStatusCalls, 1u);
+
+  DepFS.status("/foo.c");
+  EXPECT_EQ(InstrumentingFS->NumStatusCalls, 1u); // Cached, no increase.
+
+  DepFS.status("/bar.c");
+  EXPECT_EQ(InstrumentingFS->NumStatusCalls, 2u);
+
+  DepFS2.status("/foo.c");
+  EXPECT_EQ(InstrumentingFS->NumStatusCalls, 2u); // Shared cache.
+}
 
 TEST(DependencyScanningFilesystem, CacheGetRealPath) {
   auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
