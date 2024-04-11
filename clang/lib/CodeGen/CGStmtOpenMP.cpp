@@ -24,6 +24,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -1621,10 +1622,12 @@ void CodeGenFunction::EmitOMPReductionClauseFinal(
           *this, D.getBeginLoc(),
           isOpenMPWorksharingDirective(D.getDirectiveKind()));
     }
+    bool TeamsLoopCanBeParallel = false;
+    if (auto *TTLD = dyn_cast<OMPTargetTeamsGenericLoopDirective>(&D))
+      TeamsLoopCanBeParallel = TTLD->canBeParallelFor();
     bool WithNowait = D.getSingleClause<OMPNowaitClause>() ||
                       isOpenMPParallelDirective(D.getDirectiveKind()) ||
-                      CGM.TeamsLoopCanBeParallelFor(D) ||
-                      ReductionKind == OMPD_simd;
+                      TeamsLoopCanBeParallel || ReductionKind == OMPD_simd;
     bool SimpleReduction = ReductionKind == OMPD_simd;
     // Emit nowait reduction if nowait clause is present or directive is a
     // parallel directive (it always has implicit barrier).
@@ -8322,6 +8325,25 @@ void CodeGenFunction::EmitOMPTeamsGenericLoopDirective(
                                    [](CodeGenFunction &) { return nullptr; });
 }
 
+static void emitTargetTeamsLoopCodegenStatus(CodeGenFunction &CGF,
+                                             std::string StatusMsg,
+                                             const OMPExecutableDirective &D) {
+#ifndef NDEBUG
+  bool IsDevice = CGF.CGM.getLangOpts().OpenMPIsTargetDevice;
+  if (IsDevice)
+    StatusMsg += ": DEVICE";
+  else
+    StatusMsg += ": HOST";
+  SourceLocation L = D.getBeginLoc();
+  auto &SM = CGF.getContext().getSourceManager();
+  PresumedLoc PLoc = SM.getPresumedLoc(L);
+  const char *FileName = PLoc.isValid() ? PLoc.getFilename() : nullptr;
+  unsigned LineNo =
+      PLoc.isValid() ? PLoc.getLine() : SM.getExpansionLineNumber(L);
+  llvm::dbgs() << StatusMsg << ": " << FileName << ": " << LineNo << "\n";
+#endif
+}
+
 static void emitTargetTeamsGenericLoopRegionAsParallel(
     CodeGenFunction &CGF, PrePostActionTy &Action,
     const OMPTargetTeamsGenericLoopDirective &S) {
@@ -8345,9 +8367,8 @@ static void emitTargetTeamsGenericLoopRegionAsParallel(
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
   DEBUG_WITH_TYPE(TTL_CODEGEN_TYPE,
-      CGF.CGM.emitTargetTeamsLoopCodegenStatus(
-          TTL_CODEGEN_TYPE " as parallel for", S,
-          CGF.CGM.getLangOpts().OpenMPIsTargetDevice));
+                  emitTargetTeamsLoopCodegenStatus(
+                      CGF, TTL_CODEGEN_TYPE " as parallel for", S));
   emitCommonOMPTeamsDirective(CGF, S, OMPD_distribute_parallel_for,
                               CodeGenTeams);
   emitPostUpdateForReductionClause(CGF, S,
@@ -8375,9 +8396,8 @@ static void emitTargetTeamsGenericLoopRegionAsDistribute(
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
   DEBUG_WITH_TYPE(TTL_CODEGEN_TYPE,
-      CGF.CGM.emitTargetTeamsLoopCodegenStatus(
-          TTL_CODEGEN_TYPE " as distribute", S,
-          CGF.CGM.getLangOpts().OpenMPIsTargetDevice));
+                  emitTargetTeamsLoopCodegenStatus(
+                      CGF, TTL_CODEGEN_TYPE " as distribute", S));
   emitCommonOMPTeamsDirective(CGF, S, OMPD_distribute, CodeGen);
   emitPostUpdateForReductionClause(CGF, S,
                                    [](CodeGenFunction &) { return nullptr; });
@@ -8386,7 +8406,7 @@ static void emitTargetTeamsGenericLoopRegionAsDistribute(
 void CodeGenFunction::EmitOMPTargetTeamsGenericLoopDirective(
     const OMPTargetTeamsGenericLoopDirective &S) {
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
-    if (CGF.CGM.TeamsLoopCanBeParallelFor(S))
+    if (S.canBeParallelFor())
       emitTargetTeamsGenericLoopRegionAsParallel(CGF, Action, S);
     else
       emitTargetTeamsGenericLoopRegionAsDistribute(CGF, Action, S);
@@ -8399,7 +8419,7 @@ void CodeGenFunction::EmitOMPTargetTeamsGenericLoopDeviceFunction(
     const OMPTargetTeamsGenericLoopDirective &S) {
   // Emit SPMD target parallel loop region as a standalone region.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
-    if (CGF.CGM.TeamsLoopCanBeParallelFor(S))
+    if (S.canBeParallelFor())
       emitTargetTeamsGenericLoopRegionAsParallel(CGF, Action, S);
     else
       emitTargetTeamsGenericLoopRegionAsDistribute(CGF, Action, S);

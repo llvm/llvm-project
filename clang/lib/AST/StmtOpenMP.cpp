@@ -2418,7 +2418,7 @@ OMPTeamsGenericLoopDirective::CreateEmpty(const ASTContext &C,
 OMPTargetTeamsGenericLoopDirective *OMPTargetTeamsGenericLoopDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
-    const HelperExprs &Exprs) {
+    const HelperExprs &Exprs, bool CanBeParallelFor) {
   auto *Dir = createDirective<OMPTargetTeamsGenericLoopDirective>(
       C, Clauses, AssociatedStmt,
       numLoopChildren(CollapsedNum, OMPD_target_teams_loop), StartLoc,
@@ -2460,6 +2460,7 @@ OMPTargetTeamsGenericLoopDirective *OMPTargetTeamsGenericLoopDirective::Create(
   Dir->setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
   Dir->setCombinedDistCond(Exprs.DistCombinedFields.DistCond);
   Dir->setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
+  Dir->setCanBeParallelFor(CanBeParallelFor);
   return Dir;
 }
 
