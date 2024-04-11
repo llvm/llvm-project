@@ -433,6 +433,48 @@ entry:
   ret i32 %i10
 }
 
+define i32 @test29_exact(i64 %d18) {
+; CHECK-LABEL: @test29_exact(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr exact i64 [[D18:%.*]], 63
+; CHECK-NEXT:    [[I101:%.*]] = trunc nuw nsw i64 [[SUM_SHIFT]] to i32
+; CHECK-NEXT:    ret i32 [[I101]]
+;
+entry:
+  %i916 = lshr exact i64 %d18, 32
+  %i917 = trunc i64 %i916 to i32
+  %i10 = lshr exact i32 %i917, 31
+  ret i32 %i10
+}
+
+define i32 @test29_exact_fail(i64 %d18) {
+; CHECK-LABEL: @test29_exact_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i64 [[D18:%.*]], 63
+; CHECK-NEXT:    [[I101:%.*]] = trunc nuw nsw i64 [[SUM_SHIFT]] to i32
+; CHECK-NEXT:    ret i32 [[I101]]
+;
+entry:
+  %i916 = lshr exact i64 %d18, 32
+  %i917 = trunc i64 %i916 to i32
+  %i10 = lshr i32 %i917, 31
+  ret i32 %i10
+}
+
+define i32 @test29_exact_fail2(i64 %d18) {
+; CHECK-LABEL: @test29_exact_fail2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i64 [[D18:%.*]], 63
+; CHECK-NEXT:    [[I101:%.*]] = trunc nuw nsw i64 [[SUM_SHIFT]] to i32
+; CHECK-NEXT:    ret i32 [[I101]]
+;
+entry:
+  %i916 = lshr i64 %d18, 32
+  %i917 = trunc i64 %i916 to i32
+  %i10 = lshr exact i32 %i917, 31
+  ret i32 %i10
+}
+
 define <2 x i32> @test29_uniform(<2 x i64> %d18) {
 ; CHECK-LABEL: @test29_uniform(
 ; CHECK-NEXT:  entry:
@@ -444,6 +486,34 @@ entry:
   %i916 = lshr <2 x i64> %d18, <i64 32, i64 32>
   %i917 = trunc <2 x i64> %i916 to <2 x i32>
   %i10 = lshr <2 x i32> %i917, <i32 31, i32 31>
+  ret <2 x i32> %i10
+}
+
+define <2 x i32> @test29_uniform_exact(<2 x i64> %d18) {
+; CHECK-LABEL: @test29_uniform_exact(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr exact <2 x i64> [[D18:%.*]], <i64 63, i64 63>
+; CHECK-NEXT:    [[I101:%.*]] = trunc nuw nsw <2 x i64> [[SUM_SHIFT]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[I101]]
+;
+entry:
+  %i916 = lshr exact <2 x i64> %d18, <i64 32, i64 32>
+  %i917 = trunc <2 x i64> %i916 to <2 x i32>
+  %i10 = lshr exact <2 x i32> %i917, <i32 31, i32 31>
+  ret <2 x i32> %i10
+}
+
+define <2 x i32> @test29_uniform_exact_fail(<2 x i64> %d18) {
+; CHECK-LABEL: @test29_uniform_exact_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 63, i64 63>
+; CHECK-NEXT:    [[I101:%.*]] = trunc nuw nsw <2 x i64> [[SUM_SHIFT]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[I101]]
+;
+entry:
+  %i916 = lshr <2 x i64> %d18, <i64 32, i64 32>
+  %i917 = trunc <2 x i64> %i916 to <2 x i32>
+  %i10 = lshr exact <2 x i32> %i917, <i32 31, i32 31>
   ret <2 x i32> %i10
 }
 

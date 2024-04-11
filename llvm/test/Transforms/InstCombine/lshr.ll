@@ -202,6 +202,34 @@ define <2 x i8> @shl_add_commute_vec(<2 x i8> %x, <2 x i8> %py) {
   ret <2 x i8> %r
 }
 
+define i8 @shl_add2(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl_add2(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP2]], 63
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %l = shl i8 %x, 2
+  %a = add i8 %l, %y
+  %r = lshr exact i8 %a, 2
+  ret i8 %r
+}
+
+define <2 x i8> @shl_add_commute_vec2(<2 x i8> %x, <2 x i8> %py) {
+; CHECK-LABEL: @shl_add_commute_vec2(
+; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[PY:%.*]], [[PY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact <2 x i8> [[Y]], <i8 3, i8 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP2]], <i8 31, i8 31>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %y = mul <2 x i8> %py, %py ; thwart complexity-based canonicalization
+  %l = shl <2 x i8> %x, <i8 3, i8 3>
+  %a = add <2 x i8> %y, %l
+  %r = lshr exact <2 x i8> %a, <i8 3, i8 3>
+  ret <2 x i8> %r
+}
+
 define i32 @shl_add_use1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @shl_add_use1(
 ; CHECK-NEXT:    [[L:%.*]] = shl i32 [[X:%.*]], 2

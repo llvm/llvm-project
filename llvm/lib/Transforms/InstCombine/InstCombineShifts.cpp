@@ -1394,8 +1394,11 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     if (match(Op0,
               m_OneUse(m_c_Add(m_OneUse(m_Shl(m_Value(X), m_Specific(Op1))),
                                m_Value(Y))))) {
-      Value *NewLshr = Builder.CreateLShr(Y, Op1);
-      Value *NewAdd = Builder.CreateAdd(NewLshr, X);
+      Value *NewLshr = Builder.CreateLShr(Y, Op1, "", I.isExact());
+      Value *NewAdd = Builder.CreateAdd(
+          NewLshr, X, "",
+          cast<OverflowingBinaryOperator>(Op0)->hasNoUnsignedWrap(),
+          cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap());
       unsigned Op1Val = C->getLimitedValue(BitWidth);
       APInt Bits = APInt::getLowBitsSet(BitWidth, BitWidth - Op1Val);
       Constant *Mask = ConstantInt::get(Ty, Bits);
@@ -1407,7 +1410,7 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       assert(ShAmtC < X->getType()->getScalarSizeInBits() &&
              "Big shift not simplified to zero?");
       // lshr (zext iM X to iN), C --> zext (lshr X, C) to iN
-      Value *NewLShr = Builder.CreateLShr(X, ShAmtC);
+      Value *NewLShr = Builder.CreateLShr(X, ShAmtC, "", I.isExact());
       return new ZExtInst(NewLShr, Ty);
     }
 
@@ -1433,7 +1436,7 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
         if (ShAmtC == BitWidth - SrcTyBitWidth) {
           // The new shift amount can't be more than the narrow source type.
           unsigned NewShAmt = std::min(ShAmtC, SrcTyBitWidth - 1);
-          Value *AShr = Builder.CreateAShr(X, NewShAmt);
+          Value *AShr = Builder.CreateAShr(X, NewShAmt, "", I.isExact());
           return new ZExtInst(AShr, Ty);
         }
       }
@@ -1469,9 +1472,11 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       // mask instruction is eliminated (and so the use check is relaxed).
       if (AmtSum < SrcWidth &&
           (TruncSrc->hasOneUse() || C1->uge(SrcWidth - BitWidth))) {
-        Value *SumShift = Builder.CreateLShr(X, AmtSum, "sum.shift");
-        Value *Trunc = Builder.CreateTrunc(SumShift, Ty, I.getName());
-
+        Value *SumShift = Builder.CreateLShr(
+            X, AmtSum, "sum.shift", TruncSrc->isExact() && I.isExact());
+        Value *Trunc = Builder.CreateTrunc(SumShift, Ty, I.getName(),
+                                           TruncSrc->hasNoUnsignedWrap(),
+                                           TruncSrc->hasNoSignedWrap());
         // If the first shift does not cover the number of bits truncated, then
         // we require a mask to get rid of high bits in the result.
         APInt MaskC = APInt::getAllOnes(BitWidth).lshr(ShAmtC);
@@ -1709,7 +1714,10 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
       // Oversized arithmetic shifts replicate the sign bit.
       AmtSum = std::min(AmtSum, BitWidth - 1);
       // (X >>s C1) >>s C2 --> X >>s (C1 + C2)
-      return BinaryOperator::CreateAShr(X, ConstantInt::get(Ty, AmtSum));
+      Instruction *NewAshr =
+          BinaryOperator::CreateAShr(X, ConstantInt::get(Ty, AmtSum));
+      NewAshr->setIsExact(I.isExact() && cast<BinaryOperator>(Op0)->isExact());
+      return NewAshr;
     }
 
     if (match(Op0, m_OneUse(m_SExt(m_Value(X)))) &&
