@@ -1440,6 +1440,8 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
     NewInst->copyIRFlags(B0);
     NewInst->andIRFlags(B1);
   }
+
+  // TODO: Add Shuf0/Shuf1 to WorkList?
   replaceValue(I, *NewBO);
   return true;
 }
@@ -1533,6 +1535,7 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
     NewInst->andIRFlags(C1);
   }
 
+  Worklist.pushValue(Shuf);
   replaceValue(I, *Cast);
   return true;
 }
