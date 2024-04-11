@@ -24,7 +24,7 @@
 
 using namespace llvm;
 
-static inline const MachineInstrBuilder &
+static const MachineInstrBuilder &
 addFrameReference(const MachineInstrBuilder &MIB, int FI) {
   MachineInstr *MI = MIB;
   MachineFunction &MF = *MI->getParent()->getParent();
@@ -63,9 +63,9 @@ void XtensaInstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
   // create virtual reg to store immediate
   unsigned Reg = RegInfo.createVirtualRegister(RC);
 
-  if (isInt<8>(Amount)) // addi sp, sp, amount
+  if (isInt<8>(Amount)) { // addi sp, sp, amount
     BuildMI(MBB, I, DL, get(Xtensa::ADDI), Reg).addReg(SP).addImm(Amount);
-  else { // Expand immediate that doesn't fit in 12-bit.
+  } else { // Expand immediate that doesn't fit in 8-bit.
     unsigned Reg1;
     loadImmediate(MBB, I, &Reg1, Amount);
     BuildMI(MBB, I, DL, get(Xtensa::ADD), Reg)

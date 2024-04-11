@@ -43,7 +43,7 @@ class XtensaAsmParser : public MCTargetAsmParser {
     return static_cast<XtensaTargetStreamer &>(TS);
   }
 
-  bool ParseDirective(AsmToken DirectiveID) override;
+  ParseStatus parseDirective(AsmToken DirectiveID) override;
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -374,7 +374,8 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     XtensaMCExpr::VariantKind Kind = XtensaMCExpr::VK_Xtensa_None;
     const MCExpr *NewOpExpr = XtensaMCExpr::create(OpExpr, Kind, getContext());
     Inst.getOperand(1).setExpr(NewOpExpr);
-  } break;
+    break;
+  }
   case Xtensa::MOVI: {
     XtensaTargetStreamer &TS = this->getTargetStreamer();
 
@@ -396,7 +397,7 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
         TmpInst.addOperand(Inst.getOperand(0));
         MCOperand Op1 = MCOperand::createExpr(OpExpr);
         TmpInst.addOperand(Op1);
-        TS.emitLiteral(Sym, Value, IDLoc);
+        TS.emitLiteral(Sym, Value, true, IDLoc);
         Inst = TmpInst;
       }
     } else {
@@ -413,7 +414,7 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       MCOperand Op1 = MCOperand::createExpr(OpExpr);
       TmpInst.addOperand(Op1);
       Inst = TmpInst;
-      TS.emitLiteral(Sym, Value, IDLoc);
+      TS.emitLiteral(Sym, Value, true, IDLoc);
     }
     break;
   }
@@ -777,7 +778,7 @@ bool XtensaAsmParser::parseLiteralDirective(SMLoc L) {
   if (!SE)
     return Error(LiteralLoc, "literal label must be a symbol");
 
-  if (Parser.parseToken(AsmToken::Comma, "expected comma"))
+  if (Parser.parseComma())
     return true;
 
   SMLoc OpcodeLoc = getLexer().getLoc();
@@ -787,31 +788,31 @@ bool XtensaAsmParser::parseLiteralDirective(SMLoc L) {
   if (Parser.parseExpression(Value))
     return true;
 
+  if (parseEOL())
+    return true;
+
   MCSymbol *Sym = getContext().getOrCreateSymbol(SE->getSymbol().getName());
 
-  TS.emitLiteral(Sym, Value, LiteralLoc);
+  TS.emitLiteral(Sym, Value, true, LiteralLoc);
 
   return false;
 }
 
-bool XtensaAsmParser::ParseDirective(AsmToken DirectiveID) {
+ParseStatus XtensaAsmParser::parseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getString();
   SMLoc Loc = getLexer().getLoc();
 
   if (IDVal == ".literal_position") {
     XtensaTargetStreamer &TS = this->getTargetStreamer();
     TS.emitLiteralPosition();
-    Lex();
-    return false;
+    return parseEOL();
   }
 
   if (IDVal == ".literal") {
-    parseLiteralDirective(Loc);
-    Lex();
-    return false;
+    return parseLiteralDirective(Loc);
   }
 
-  return true;
+  return ParseStatus::NoMatch;
 }
 
 // Force static initialization.

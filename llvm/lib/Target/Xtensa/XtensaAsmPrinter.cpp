@@ -13,6 +13,7 @@
 
 #include "XtensaAsmPrinter.h"
 #include "MCTargetDesc/XtensaMCExpr.h"
+#include "MCTargetDesc/XtensaTargetStreamer.h"
 #include "TargetInfo/XtensaTargetInfo.h"
 #include "XtensaConstantPoolValue.h"
 #include "llvm/ADT/StringExtras.h"
@@ -56,38 +57,25 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
   XtensaConstantPoolSymbol *XtensaSym = cast<XtensaConstantPoolSymbol>(ACPV);
   const char *Sym = XtensaSym->getSymbol();
   std::string SymName(Sym);
+
   if (XtensaSym->isPrivateLinkage())
     SymName = ".L" + SymName;
+
   MCSym = GetExternalSymbolSymbol(StringRef(SymName));
-
   MCSymbol *LblSym = GetCPISymbol(ACPV->getLabelId());
-  // TODO find a better way to check whether we emit data to .s file
-  if (OutStreamer->hasRawTextSupport()) {
-    SmallString<60> Str;
-    raw_svector_ostream LiteralStr(Str);
-    LiteralStr << "\t.literal " << LblSym->getName() << ", "
-               << MCSym->getName();
+  auto *TS =
+      static_cast<XtensaTargetStreamer *>(OutStreamer->getTargetStreamer());
+  MCSymbolRefExpr::VariantKind VK = getModifierVariantKind(ACPV->getModifier());
 
+  if (ACPV->getModifier() != XtensaCP::no_modifier) {
+    std::string SymName(MCSym->getName());
     StringRef Modifier = ACPV->getModifierText();
-    LiteralStr << Modifier;
-
-    OutStreamer->emitRawText(StringRef(LiteralStr.str()));
-  } else {
-    MCSymbolRefExpr::VariantKind VK =
-        getModifierVariantKind(ACPV->getModifier());
-
-    if (ACPV->getModifier() != XtensaCP::no_modifier) {
-      std::string SymName(MCSym->getName());
-      MCSym = GetExternalSymbolSymbol(StringRef(SymName));
-    }
-
-    const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, VK, OutContext);
-    uint64_t Size = getDataLayout().getTypeAllocSize(ACPV->getType());
-    OutStreamer->emitCodeAlignment(
-        Align(4), OutStreamer->getContext().getSubtargetInfo());
-    OutStreamer->emitLabel(LblSym);
-    OutStreamer->emitValue(Expr, Size);
+    SymName += Modifier;
+    MCSym = GetExternalSymbolSymbol(StringRef(SymName));
   }
+
+  const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, VK, OutContext);
+  TS->emitLiteral(LblSym, Expr, false);
 }
 
 void XtensaAsmPrinter::emitMachineConstantPoolEntry(
@@ -99,30 +87,24 @@ void XtensaAsmPrinter::emitMachineConstantPoolEntry(
     emitMachineConstantPoolValue(CPE.Val.MachineCPVal);
   } else {
     MCSymbol *LblSym = GetCPISymbol(i);
-    // TODO find a better way to check whether we emit data to .s file
-    if (OutStreamer->hasRawTextSupport()) {
-      SmallString<60> Str;
-      raw_svector_ostream LiteralStr(Str);
-      LiteralStr << "\t.literal " << LblSym->getName() << ", ";
+    auto *TS =
+        static_cast<XtensaTargetStreamer *>(OutStreamer->getTargetStreamer());
+    const Constant *C = CPE.Val.ConstVal;
+    const MCExpr *Value = nullptr;
 
-      const Constant *C = CPE.Val.ConstVal;
-
-      if (const auto *CFP = dyn_cast<ConstantFP>(C)) {
-        LiteralStr << toString(CFP->getValueAPF().bitcastToAPInt(), 10, true);
-      } else if (const auto *CI = dyn_cast<ConstantInt>(C)) {
-        LiteralStr << toString(CI->getValue(), 10, true);
-      } else {
-        report_fatal_error(
-            "This constant type is not supported yet in constantpool");
-      }
-
-      OutStreamer->emitRawText(StringRef(LiteralStr.str()));
+    Type *Ty = C->getType();
+    if (const auto *CFP = dyn_cast<ConstantFP>(C)) {
+      Value = MCConstantExpr::create(
+          CFP->getValueAPF().bitcastToAPInt().getSExtValue(), OutContext);
+    } else if (const auto *CI = dyn_cast<ConstantInt>(C)) {
+      Value = MCConstantExpr::create(CI->getValue().getSExtValue(), OutContext);
+    } else if (isa<PointerType>(Ty)) {
+      Value = lowerConstant(C);
     } else {
-      OutStreamer->emitCodeAlignment(
-          Align(4), OutStreamer->getContext().getSubtargetInfo());
-      OutStreamer->emitLabel(LblSym);
-      emitGlobalConstant(getDataLayout(), CPE.Val.ConstVal);
+      llvm_unreachable("unexpected constant pool entry type");
     }
+
+    TS->emitLiteral(LblSym, Value, false);
   }
 }
 
@@ -137,41 +119,19 @@ void XtensaAsmPrinter::emitConstantPool() {
   if (CP.empty())
     return;
 
-  if (OutStreamer->hasRawTextSupport()) {
-    OutStreamer->switchSection(getObjFileLowering().SectionForGlobal(&F, TM));
-    OutStreamer->emitRawText(StringRef("\t.literal_position\n"));
-  } else {
-    MCSectionELF *CS =
-        (MCSectionELF *)getObjFileLowering().SectionForGlobal(&F, TM);
-    StringRef CSectionName = CS->getName();
-    std::size_t Pos = CSectionName.find(".text");
-    std::string SectionName;
-    if (Pos != std::string::npos) {
-      SectionName = CSectionName.substr(0, Pos);
+  OutStreamer->pushSection();
 
-      if (Pos > 0)
-        SectionName += ".text";
-
-      CSectionName = CSectionName.drop_front(Pos);
-      CSectionName.consume_front(".text");
-
-      SectionName += ".literal";
-      SectionName += CSectionName;
-    } else {
-      SectionName = CSectionName;
-      SectionName += ".literal";
-    }
-
-    MCSectionELF *S = OutContext.getELFSection(
-        SectionName, ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
-    S->setAlignment(Align(4));
-    OutStreamer->switchSection(S);
-  }
+  auto *TS =
+      static_cast<XtensaTargetStreamer *>(OutStreamer->getTargetStreamer());
+  MCSection *CS = getObjFileLowering().SectionForGlobal(&F, TM);
+  TS->startLiteralSection(CS);
 
   int CPIdx = 0;
   for (const MachineConstantPoolEntry &CPE : CP) {
     emitMachineConstantPoolEntry(CPE, CPIdx++);
   }
+
+  OutStreamer->popSection();
 }
 
 MCSymbol *

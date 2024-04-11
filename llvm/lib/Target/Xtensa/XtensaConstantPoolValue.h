@@ -53,7 +53,7 @@ class XtensaConstantPoolValue : public MachineConstantPoolValue {
 
 protected:
   XtensaConstantPoolValue(
-      Type *Ty, unsigned id, XtensaCP::XtensaCPKind Kind,
+      Type *Ty, unsigned ID, XtensaCP::XtensaCPKind Kind,
       XtensaCP::XtensaCPModifier Modifier = XtensaCP::no_modifier);
 
   XtensaConstantPoolValue(
@@ -66,8 +66,8 @@ protected:
     for (unsigned i = 0, e = Constants.size(); i != e; ++i) {
       if (Constants[i].isMachineConstantPoolEntry() &&
           (Constants[i].getAlign() >= Alignment)) {
-        XtensaConstantPoolValue *CPV =
-            (XtensaConstantPoolValue *)Constants[i].Val.MachineCPVal;
+        auto *CPV = static_cast<XtensaConstantPoolValue *>(
+            Constants[i].Val.MachineCPVal);
         if (Derived *APC = dyn_cast<Derived>(CPV))
           if (cast<Derived>(this)->equals(APC))
             return i;
@@ -85,7 +85,7 @@ public:
   StringRef getModifierText() const;
 
   unsigned getLabelId() const { return LabelId; }
-  void setLabelId(unsigned id) { LabelId = id; }
+  void setLabelId(unsigned ID) { LabelId = ID; }
 
   bool isExtSymbol() const { return Kind == XtensaCP::CPExtSymbol; }
   bool isBlockAddress() const { return Kind == XtensaCP::CPBlockAddress; }
@@ -108,11 +108,10 @@ public:
   }
 
   void print(raw_ostream &O) const override;
-  void print(raw_ostream *O) const {
-    if (O)
-      print(*O);
-  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const;
+#endif
 };
 
 inline raw_ostream &operator<<(raw_ostream &O,
@@ -161,12 +160,12 @@ class XtensaConstantPoolSymbol : public XtensaConstantPoolValue {
   bool PrivateLinkage;
 
   XtensaConstantPoolSymbol(
-      LLVMContext &C, const char *s, unsigned id, bool PrivLinkage,
+      LLVMContext &C, const char *S, unsigned Id, bool PrivLinkage,
       XtensaCP::XtensaCPModifier Modifier = XtensaCP::no_modifier);
 
 public:
   static XtensaConstantPoolSymbol *
-  Create(LLVMContext &C, const char *s, unsigned ID, bool PrivLinkage,
+  Create(LLVMContext &C, const char *S, unsigned ID, bool PrivLinkage,
          XtensaCP::XtensaCPModifier Modifier = XtensaCP::no_modifier);
 
   const char *getSymbol() const { return S.c_str(); }
@@ -198,12 +197,12 @@ public:
 class XtensaConstantPoolMBB : public XtensaConstantPoolValue {
   const MachineBasicBlock *MBB; // Machine basic block.
 
-  XtensaConstantPoolMBB(LLVMContext &C, const MachineBasicBlock *mbb,
-                        unsigned id);
+  XtensaConstantPoolMBB(LLVMContext &C, const MachineBasicBlock *M,
+                        unsigned ID);
 
 public:
-  static XtensaConstantPoolMBB *
-  Create(LLVMContext &C, const MachineBasicBlock *mbb, unsigned ID);
+  static XtensaConstantPoolMBB *Create(LLVMContext &C,
+                                       const MachineBasicBlock *M, unsigned ID);
 
   const MachineBasicBlock *getMBB() const { return MBB; }
 
@@ -230,14 +229,14 @@ public:
 /// XtensaConstantPoolJumpTable - Xtensa-specific constantpool values for Jump
 /// Table symbols.
 class XtensaConstantPoolJumpTable : public XtensaConstantPoolValue {
-  unsigned IDX; // Jump Table Index.
+  unsigned Idx; // Jump Table Index.
 
-  XtensaConstantPoolJumpTable(LLVMContext &C, unsigned idx);
+  XtensaConstantPoolJumpTable(LLVMContext &C, unsigned Idx);
 
 public:
-  static XtensaConstantPoolJumpTable *Create(LLVMContext &C, unsigned idx);
+  static XtensaConstantPoolJumpTable *Create(LLVMContext &C, unsigned Idx);
 
-  unsigned getIndex() const { return IDX; }
+  unsigned getIndex() const { return Idx; }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
                                 Align Alignment) override;
@@ -255,7 +254,7 @@ public:
   }
 
   bool equals(const XtensaConstantPoolJumpTable *A) const {
-    return IDX == A->IDX && XtensaConstantPoolValue::equals(A);
+    return Idx == A->Idx && XtensaConstantPoolValue::equals(A);
   }
 };
 

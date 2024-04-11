@@ -17,34 +17,10 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
-
-XtensaTargetStreamer::XtensaTargetStreamer(MCStreamer &S)
-    : MCTargetStreamer(S) {}
-
-XtensaTargetAsmStreamer::XtensaTargetAsmStreamer(MCStreamer &S,
-                                                 formatted_raw_ostream &OS)
-    : XtensaTargetStreamer(S), OS(OS) {}
-
-void XtensaTargetAsmStreamer::emitLiteral(MCSymbol *LblSym, const MCExpr *Value,
-                                          SMLoc L) {
-  const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
-
-  OS << "\t.literal\t";
-  LblSym->print(OS, MAI);
-  OS << ", ";
-  Value->print(OS, MAI);
-  OS << '\n';
-}
-
-void XtensaTargetAsmStreamer::emitLiteralPosition() {
-  OS << "\t.literal_position\n";
-}
-
-XtensaTargetELFStreamer::XtensaTargetELFStreamer(MCStreamer &S)
-    : XtensaTargetStreamer(S) {}
 
 static std::string getLiteralSectionName(StringRef CSectionName) {
   std::size_t Pos = CSectionName.find(".text");
@@ -67,21 +43,75 @@ static std::string getLiteralSectionName(StringRef CSectionName) {
   return SectionName;
 }
 
+XtensaTargetStreamer::XtensaTargetStreamer(MCStreamer &S)
+    : MCTargetStreamer(S) {}
+
+XtensaTargetAsmStreamer::XtensaTargetAsmStreamer(MCStreamer &S,
+                                                 formatted_raw_ostream &OS)
+    : XtensaTargetStreamer(S), OS(OS) {}
+
+void XtensaTargetAsmStreamer::emitLiteral(MCSymbol *LblSym, const MCExpr *Value,
+                                          bool SwitchLiteralSection, SMLoc L) {
+  SmallString<60> Str;
+  raw_svector_ostream LiteralStr(Str);
+
+  LiteralStr << "\t.literal " << LblSym->getName() << ", ";
+
+  if (auto CE = dyn_cast<MCConstantExpr>(Value)) {
+    LiteralStr << CE->getValue() << "\n";
+  } else if (auto SRE = dyn_cast<MCSymbolRefExpr>(Value)) {
+    const MCSymbol &Sym = SRE->getSymbol();
+    LiteralStr << Sym.getName() << "\n";
+  } else {
+    llvm_unreachable("unexpected constant pool entry type");
+  }
+
+  OS << LiteralStr.str();
+}
+
+void XtensaTargetAsmStreamer::emitLiteralPosition() {
+  OS << "\t.literal_position\n";
+}
+
+void XtensaTargetAsmStreamer::startLiteralSection(MCSection *BaseSection) {
+  emitLiteralPosition();
+}
+
+XtensaTargetELFStreamer::XtensaTargetELFStreamer(MCStreamer &S)
+    : XtensaTargetStreamer(S) {}
+
 void XtensaTargetELFStreamer::emitLiteral(MCSymbol *LblSym, const MCExpr *Value,
-                                          SMLoc L) {
-  MCContext &Context = getStreamer().getContext();
+                                          bool SwitchLiteralSection, SMLoc L) {
   MCStreamer &OutStreamer = getStreamer();
-  MCSectionELF *CS = (MCSectionELF *)OutStreamer.getCurrentSectionOnly();
-  std::string SectionName = getLiteralSectionName(CS->getName());
+  if (SwitchLiteralSection) {
+    MCContext &Context = OutStreamer.getContext();
+    auto *CS = static_cast<MCSectionELF *>(OutStreamer.getCurrentSectionOnly());
+    std::string SectionName = getLiteralSectionName(CS->getName());
+
+    MCSection *ConstSection = Context.getELFSection(
+        SectionName, ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
+
+    OutStreamer.pushSection();
+    OutStreamer.switchSection(ConstSection);
+  }
+
+  OutStreamer.emitLabel(LblSym, L);
+  OutStreamer.emitValue(Value, 4, L);
+
+  if (SwitchLiteralSection) {
+    OutStreamer.popSection();
+  }
+}
+
+void XtensaTargetELFStreamer::startLiteralSection(MCSection *BaseSection) {
+  MCContext &Context = getStreamer().getContext();
+
+  std::string SectionName = getLiteralSectionName(BaseSection->getName());
 
   MCSection *ConstSection = Context.getELFSection(
       SectionName, ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
 
-  OutStreamer.pushSection();
-  OutStreamer.switchSection(ConstSection);
-  OutStreamer.emitLabel(LblSym, L);
-  OutStreamer.emitValue(Value, 4, L);
-  OutStreamer.popSection();
+  ConstSection->setAlignment(Align(4));
 }
 
 MCELFStreamer &XtensaTargetELFStreamer::getStreamer() {
