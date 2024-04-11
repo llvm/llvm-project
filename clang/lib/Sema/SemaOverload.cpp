@@ -1869,11 +1869,11 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
       Changed = true;
     }
 
+    // For C, when called from checkPointerTypesForAssignment,
+    // we need not to alter FromFn, or else even an innocuous cast
+    // like dropping effects will fail. In C++ however we do want to
+    // alter FromFn. TODO: Is this correct?
     if (getLangOpts().CPlusPlus) {
-      // For C, when called from checkPointerTypesForAssignment,
-      // we need not to change the type, or else even an innocuous cast
-      // like dropping effects will fail.
-      // TODO: Is this correct?
       FromFPT =
           dyn_cast<FunctionProtoType>(FromFn); // in case FromFn changed above
 

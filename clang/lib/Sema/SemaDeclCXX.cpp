@@ -18288,7 +18288,7 @@ void Sema::SetFunctionBodyKind(Decl *D, SourceLocation Loc,
   }
 }
 
-bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
+bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
                                              const CXXMethodDecl *Old) {
   const auto *NewFT = New->getType()->castAs<FunctionProtoType>();
   const auto *OldFT = Old->getType()->castAs<FunctionProtoType>();
@@ -18353,12 +18353,7 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
         EPI.FunctionEffects = MergedFX;
         QualType ModQT = Context.getFunctionType(NewFT->getReturnType(),
                                                  NewFT->getParamTypes(), EPI);
-
-        // TODO: It's ugly to be mutating the incoming const method. It is
-        // mutable in the calling function, though. There is also the
-        // possibility here that we are discarding some other sort of sugar on
-        // the method's type.
-        const_cast<CXXMethodDecl *>(New)->setType(ModQT);
+        New->setType(ModQT);
       } break;
       }
     }

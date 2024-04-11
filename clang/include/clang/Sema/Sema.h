@@ -4745,7 +4745,7 @@ public:
 
   std::string getAmbiguousPathsDisplayString(CXXBasePaths &Paths);
 
-  bool CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
+  bool CheckOverridingFunctionAttributes(CXXMethodDecl *New,
                                          const CXXMethodDecl *Old);
 
   /// CheckOverridingFunctionReturnType - Checks whether the return types are
