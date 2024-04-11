@@ -889,6 +889,8 @@ public:
     return R && classof(R);
   }
 
+  virtual VPSingleDefRecipe *clone() override = 0;
+
   /// Returns the underlying instruction.
   Instruction *getUnderlyingInstr() {
     return cast<Instruction>(getUnderlyingValue());
@@ -1249,7 +1251,7 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
-  VPRecipeBase *clone() override {
+  VPInstruction *clone() override {
     SmallVector<VPValue *, 2> Operands(operands());
     auto *New = new VPInstruction(Opcode, Operands, getDebugLoc(), Name);
     New->transferFlags(*this);
@@ -1336,7 +1338,7 @@ public:
 
   ~VPWidenRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenRecipe *clone() override {
     auto *R = new VPWidenRecipe(*getUnderlyingInstr(), operands());
     R->transferFlags(*this);
     return R;
@@ -1381,7 +1383,7 @@ public:
 
   ~VPWidenCastRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenCastRecipe *clone() override {
     if (auto *UV = getUnderlyingValue())
       return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy,
                                    *cast<CastInst>(UV));
@@ -1421,7 +1423,7 @@ public:
 
   ~VPScalarCastRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPScalarCastRecipe *clone() override {
     return new VPScalarCastRecipe(Opcode, getOperand(0), ResultTy);
   }
 
@@ -1466,7 +1468,7 @@ public:
 
   ~VPWidenCallRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenCallRecipe *clone() override {
     return new VPWidenCallRecipe(*cast<CallInst>(getUnderlyingInstr()),
                                  operands(), VectorIntrinsicID, getDebugLoc(),
                                  Variant);
@@ -1493,7 +1495,7 @@ struct VPWidenSelectRecipe : public VPSingleDefRecipe {
 
   ~VPWidenSelectRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenSelectRecipe *clone() override {
     return new VPWidenSelectRecipe(*cast<SelectInst>(getUnderlyingInstr()),
                                    operands());
   }
@@ -1541,7 +1543,7 @@ public:
 
   ~VPWidenGEPRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenGEPRecipe *clone() override {
     return new VPWidenGEPRecipe(cast<GetElementPtrInst>(getUnderlyingInstr()),
                                 operands());
   }
@@ -1582,7 +1584,7 @@ public:
     return true;
   }
 
-  VPRecipeBase *clone() override {
+  VPVectorPointerRecipe *clone() override {
     return new VPVectorPointerRecipe(getOperand(0), IndexedTy, IsReverse,
                                      isInBounds(), getDebugLoc());
   }
@@ -1697,7 +1699,7 @@ public:
 
   ~VPWidenIntOrFpInductionRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(IV, getStartValue(),
                                              getStepValue(), IndDesc, Trunc);
   }
@@ -1772,7 +1774,7 @@ public:
 
   ~VPWidenPointerInductionRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenPointerInductionRecipe *clone() override {
     return new VPWidenPointerInductionRecipe(
         cast<PHINode>(getUnderlyingInstr()), getOperand(0), getOperand(1),
         IndDesc, IsScalarAfterVectorization);
@@ -1811,7 +1813,7 @@ public:
       addOperand(Start);
   }
 
-  VPRecipeBase *clone() override {
+  VPWidenPHIRecipe *clone() override {
     llvm_unreachable("cloning not implemented yet");
   }
 
@@ -1854,7 +1856,7 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
     return R->getVPDefID() == VPDef::VPFirstOrderRecurrencePHISC;
   }
 
-  VPRecipeBase *clone() override {
+  VPFirstOrderRecurrencePHIRecipe *clone() override {
     return new VPFirstOrderRecurrencePHIRecipe(
         cast<PHINode>(getUnderlyingInstr()), *getOperand(0));
   }
@@ -1894,7 +1896,7 @@ public:
 
   ~VPReductionPHIRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPReductionPHIRecipe *clone() override {
     auto *R =
         new VPReductionPHIRecipe(cast<PHINode>(getUnderlyingInstr()), RdxDesc,
                                  *getOperand(0), IsInLoop, IsOrdered);
@@ -1933,32 +1935,35 @@ public:
 class VPBlendRecipe : public VPSingleDefRecipe {
 public:
   /// The blend operation is a User of the incoming values and of their
-  /// respective masks, ordered [I0, M0, I1, M1, ...]. Note that a single value
-  /// might be incoming with a full mask for which there is no VPValue.
+  /// respective masks, ordered [I0, I1, M1, I2, M2, ...]. Note that the first
+  /// incoming value does not have a mask associated.
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
       : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, Phi->getDebugLoc()) {
-    assert(Operands.size() > 0 &&
-           ((Operands.size() == 1) || (Operands.size() % 2 == 0)) &&
-           "Expected either a single incoming value or a positive even number "
-           "of operands");
+    assert((Operands.size() + 1) % 2 == 0 &&
+           "Expected an odd number of operands");
   }
 
-  VPRecipeBase *clone() override {
+  VPBlendRecipe *clone() override {
     SmallVector<VPValue *> Ops(operands());
     return new VPBlendRecipe(cast<PHINode>(getUnderlyingValue()), Ops);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPBlendSC)
 
-  /// Return the number of incoming values, taking into account that a single
+  /// Return the number of incoming values, taking into account that the first
   /// incoming value has no mask.
   unsigned getNumIncomingValues() const { return (getNumOperands() + 1) / 2; }
 
   /// Return incoming value number \p Idx.
-  VPValue *getIncomingValue(unsigned Idx) const { return getOperand(Idx * 2); }
+  VPValue *getIncomingValue(unsigned Idx) const {
+    return Idx == 0 ? getOperand(0) : getOperand(Idx * 2 - 1);
+  }
 
   /// Return mask number \p Idx.
-  VPValue *getMask(unsigned Idx) const { return getOperand(Idx * 2 + 1); }
+  VPValue *getMask(unsigned Idx) const {
+    assert(Idx > 0 && "First index has no mask associated.");
+    return getOperand(Idx * 2);
+  }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
@@ -2017,7 +2022,7 @@ public:
   }
   ~VPInterleaveRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPInterleaveRecipe *clone() override {
     return new VPInterleaveRecipe(IG, getAddr(), getStoredValues(), getMask(),
                                   NeedsMaskForGaps);
   }
@@ -2076,22 +2081,24 @@ public:
 class VPReductionRecipe : public VPSingleDefRecipe {
   /// The recurrence decriptor for the reduction in question.
   const RecurrenceDescriptor &RdxDesc;
+  bool IsOrdered;
 
 public:
   VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
-                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp)
+                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
+                    bool IsOrdered)
       : VPSingleDefRecipe(VPDef::VPReductionSC,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), I),
-        RdxDesc(R) {
+        RdxDesc(R), IsOrdered(IsOrdered) {
     if (CondOp)
       addOperand(CondOp);
   }
 
   ~VPReductionRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPReductionRecipe *clone() override {
     return new VPReductionRecipe(RdxDesc, getUnderlyingInstr(), getChainOp(),
-                                 getVecOp(), getCondOp());
+                                 getVecOp(), getCondOp(), IsOrdered);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReductionSC)
@@ -2138,7 +2145,7 @@ public:
 
   ~VPReplicateRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPReplicateRecipe *clone() override {
     auto *Copy =
         new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
                               isPredicated() ? getMask() : nullptr);
@@ -2200,7 +2207,7 @@ public:
       addOperand(BlockInMask);
   }
 
-  VPRecipeBase *clone() override {
+  VPBranchOnMaskRecipe *clone() override {
     return new VPBranchOnMaskRecipe(getOperand(0));
   }
 
@@ -2251,7 +2258,7 @@ public:
       : VPSingleDefRecipe(VPDef::VPPredInstPHISC, PredV) {}
   ~VPPredInstPHIRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPPredInstPHIRecipe *clone() override {
     return new VPPredInstPHIRecipe(getOperand(0));
   }
 
@@ -2301,7 +2308,7 @@ protected:
   }
 
 public:
-  VPRecipeBase *clone() override = 0;
+  VPWidenMemoryRecipe *clone() override = 0;
 
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPDef::VPWidenLoadSC ||
@@ -2371,7 +2378,7 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
     setMask(Mask);
   }
 
-  VPRecipeBase *clone() override {
+ VPWidenLoadRecipe *clone() override {
     return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
                                  getMask(), Consecutive, Reverse,
                                  getDebugLoc());
@@ -2410,7 +2417,7 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
     setMask(Mask);
   }
 
-  VPRecipeBase *clone() override {
+  VPWidenStoreRecipe*clone() override {
     return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getStoredValue(),
                                   getAddr(), getMask(), Consecutive, Reverse,
                                   getDebugLoc());
@@ -2450,7 +2457,9 @@ public:
 
   ~VPExpandSCEVRecipe() override = default;
 
-  VPRecipeBase *clone() override { return new VPExpandSCEVRecipe(Expr, SE); }
+  VPExpandSCEVRecipe *clone() override {
+    return new VPExpandSCEVRecipe(Expr, SE);
+  }
 
   VP_CLASSOF_IMPL(VPDef::VPExpandSCEVSC)
 
@@ -2477,7 +2486,7 @@ public:
 
   ~VPCanonicalIVPHIRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPCanonicalIVPHIRecipe *clone() override {
     auto *R = new VPCanonicalIVPHIRecipe(getOperand(0), getDebugLoc());
     R->addOperand(getBackedgeValue());
     return R;
@@ -2535,7 +2544,7 @@ public:
 
   ~VPActiveLaneMaskPHIRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPActiveLaneMaskPHIRecipe *clone() override {
     return new VPActiveLaneMaskPHIRecipe(getOperand(0), getDebugLoc());
   }
 
@@ -2602,7 +2611,7 @@ public:
 
   ~VPWidenCanonicalIVRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenCanonicalIVRecipe *clone() override {
     return new VPWidenCanonicalIVRecipe(
         cast<VPCanonicalIVPHIRecipe>(getOperand(0)));
   }
@@ -2653,7 +2662,7 @@ public:
 
   ~VPDerivedIVRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPDerivedIVRecipe *clone() override {
     return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(), getOperand(1),
                                  getStepValue());
   }
@@ -2707,7 +2716,7 @@ public:
 
   ~VPScalarIVStepsRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPScalarIVStepsRecipe *clone() override {
     return new VPScalarIVStepsRecipe(
         getOperand(0), getOperand(1), InductionOpcode,
         hasFastMathFlags() ? getFastMathFlags() : FastMathFlags());

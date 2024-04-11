@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/UInt128.h" // UInt<128>
 #include "src/__support/integer_literals.h"
 #include "src/__support/math_extras.h"
+#include "src/__support/uint128.h" // UInt<128>
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE {

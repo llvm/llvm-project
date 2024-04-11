@@ -9,6 +9,8 @@
 // RUN: rm -rf %t && mkdir %t
 // RUN: cp %S/Inputs/removed-args/* %t
 // RUN: touch %t/build-session
+// RUN: touch %t/tu.proftext
+// RUN: llvm-profdata merge %t/tu.proftext -o %t/tu.profdata
 
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/removed-args/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full > %t/result.json
@@ -25,6 +27,7 @@
 // CHECK-NOT:          "-fcoverage-compilation-dir="
 // CHECK-NOT:          "-coverage-notes-file
 // CHECK-NOT:          "-coverage-data-file
+// CHECK-NOT:          "-fprofile-instrument-use-path
 // CHECK-NOT:          "-dwarf-debug-flags"
 // CHECK-NOT:          "-main-file-name"
 // CHECK-NOT:          "-include"
@@ -50,6 +53,7 @@
 // CHECK-NOT:          "-fcoverage-compilation-dir=
 // CHECK-NOT:          "-coverage-notes-file
 // CHECK-NOT:          "-coverage-data-file
+// CHECK-NOT:          "-fprofile-instrument-use-path
 // CHECK-NOT:          "-dwarf-debug-flags"
 // CHECK-NOT:          "-main-file-name"
 // CHECK-NOT:          "-include"
