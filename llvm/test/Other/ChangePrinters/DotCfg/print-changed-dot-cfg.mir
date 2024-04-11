@@ -1,7 +1,7 @@
 # REQUIRES: x86-registered-target
 # Simple functionality check.
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llc -filetype=null -print-changed=dot-cfg -passes=no-op-machine-function -dot-cfg-dir=%t %s
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -filetype=null -print-changed=dot-cfg -passes=no-op-machine-function -dot-cfg-dir=%t %s
 # RUN: ls %t/*.pdf %t/passes.html | count 3
 
 ---
