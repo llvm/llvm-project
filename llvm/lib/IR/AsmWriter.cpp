@@ -3313,7 +3313,7 @@ static const char *getImportTypeName(GlobalValueSummary::ImportKind IK) {
   case GlobalValueSummary::Declaration:
     return "declaration";
   }
-  assert(false && "invalid import kind");
+  llvm_unreachable("invalid import kind");
 }
 
 void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
