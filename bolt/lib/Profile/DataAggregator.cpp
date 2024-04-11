@@ -604,8 +604,6 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
     // BAT YAML is handled by DataAggregator since normal YAML output requires
     // CFG which is not available in BAT mode.
     if (usesBAT()) {
-      // Postprocess split function profile for BAT
-      fixupBATProfile(BC);
       if (opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML)
         if (std::error_code EC = writeBATYAML(BC, opts::OutputFilename))
           report_error("cannot create output data file", EC);
@@ -664,18 +662,19 @@ DataAggregator::getBinaryFunctionContainingAddress(uint64_t Address) const {
                                                 /*UseMaxSize=*/true);
 }
 
-StringRef DataAggregator::getLocationName(BinaryFunction &Func,
-                                          uint64_t Count) {
+BinaryFunction *
+DataAggregator::getBATParentFunction(const BinaryFunction &Func) const {
+  if (BAT)
+    if (const uint64_t HotAddr = BAT->fetchParentAddress(Func.getAddress()))
+      return getBinaryFunctionContainingAddress(HotAddr);
+  return nullptr;
+}
+
+StringRef DataAggregator::getLocationName(const BinaryFunction &Func) const {
   if (!BAT)
     return Func.getOneName();
 
   const BinaryFunction *OrigFunc = &Func;
-  if (const uint64_t HotAddr = BAT->fetchParentAddress(Func.getAddress())) {
-    NumColdSamples += Count;
-    BinaryFunction *HotFunc = getBinaryFunctionContainingAddress(HotAddr);
-    if (HotFunc)
-      OrigFunc = HotFunc;
-  }
   // If it is a local function, prefer the name containing the file name where
   // the local function was declared
   for (StringRef AlternativeName : OrigFunc->getNames()) {
@@ -690,12 +689,17 @@ StringRef DataAggregator::getLocationName(BinaryFunction &Func,
   return OrigFunc->getOneName();
 }
 
-bool DataAggregator::doSample(BinaryFunction &Func, uint64_t Address,
+bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
                               uint64_t Count) {
+  BinaryFunction *ParentFunc = getBATParentFunction(OrigFunc);
+  BinaryFunction &Func = ParentFunc ? *ParentFunc : OrigFunc;
+  if (ParentFunc)
+    NumColdSamples += Count;
+
   auto I = NamesToSamples.find(Func.getOneName());
   if (I == NamesToSamples.end()) {
     bool Success;
-    StringRef LocName = getLocationName(Func, Count);
+    StringRef LocName = getLocationName(Func);
     std::tie(I, Success) = NamesToSamples.insert(
         std::make_pair(Func.getOneName(),
                        FuncSampleData(LocName, FuncSampleData::ContainerTy())));
@@ -715,22 +719,12 @@ bool DataAggregator::doIntraBranch(BinaryFunction &Func, uint64_t From,
   FuncBranchData *AggrData = getBranchData(Func);
   if (!AggrData) {
     AggrData = &NamesToBranches[Func.getOneName()];
-    AggrData->Name = getLocationName(Func, Count);
+    AggrData->Name = getLocationName(Func);
     setBranchData(Func, AggrData);
   }
 
-  From -= Func.getAddress();
-  To -= Func.getAddress();
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: bumpBranchCount: "
                     << formatv("{0} @ {1:x} -> {0} @ {2:x}\n", Func, From, To));
-  if (BAT) {
-    From = BAT->translate(Func.getAddress(), From, /*IsBranchSrc=*/true);
-    To = BAT->translate(Func.getAddress(), To, /*IsBranchSrc=*/false);
-    LLVM_DEBUG(
-        dbgs() << "BOLT-DEBUG: BAT translation on bumpBranchCount: "
-               << formatv("{0} @ {1:x} -> {0} @ {2:x}\n", Func, From, To));
-  }
-
   AggrData->bumpBranchCount(From, To, Count, Mispreds);
   return true;
 }
@@ -744,30 +738,24 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
   StringRef SrcFunc;
   StringRef DstFunc;
   if (FromFunc) {
-    SrcFunc = getLocationName(*FromFunc, Count);
+    SrcFunc = getLocationName(*FromFunc);
     FromAggrData = getBranchData(*FromFunc);
     if (!FromAggrData) {
       FromAggrData = &NamesToBranches[FromFunc->getOneName()];
       FromAggrData->Name = SrcFunc;
       setBranchData(*FromFunc, FromAggrData);
     }
-    From -= FromFunc->getAddress();
-    if (BAT)
-      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
 
     recordExit(*FromFunc, From, Mispreds, Count);
   }
   if (ToFunc) {
-    DstFunc = getLocationName(*ToFunc, 0);
+    DstFunc = getLocationName(*ToFunc);
     ToAggrData = getBranchData(*ToFunc);
     if (!ToAggrData) {
       ToAggrData = &NamesToBranches[ToFunc->getOneName()];
       ToAggrData->Name = DstFunc;
       setBranchData(*ToFunc, ToAggrData);
     }
-    To -= ToFunc->getAddress();
-    if (BAT)
-      To = BAT->translate(ToFunc->getAddress(), To, /*IsBranchSrc=*/false);
 
     recordEntry(*ToFunc, To, Mispreds, Count);
   }
@@ -783,15 +771,32 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                               uint64_t Mispreds) {
-  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(From);
-  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(To);
+  auto handleAddress = [&](uint64_t &Addr, bool IsFrom) -> BinaryFunction * {
+    if (BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr)) {
+      Addr -= Func->getAddress();
+
+      if (BAT)
+        Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
+
+      if (BinaryFunction *ParentFunc = getBATParentFunction(*Func)) {
+        Func = ParentFunc;
+        if (IsFrom)
+          NumColdSamples += Count;
+      }
+
+      return Func;
+    }
+    return nullptr;
+  };
+
+  BinaryFunction *FromFunc = handleAddress(From, /*IsFrom=*/true);
+  BinaryFunction *ToFunc = handleAddress(To, /*IsFrom=*/false);
   if (!FromFunc && !ToFunc)
     return false;
 
   // Treat recursive control transfers as inter-branches.
-  if (FromFunc == ToFunc && (To != ToFunc->getAddress())) {
-    recordBranch(*FromFunc, From - FromFunc->getAddress(),
-                 To - FromFunc->getAddress(), Count, Mispreds);
+  if (FromFunc == ToFunc && To != 0) {
+    recordBranch(*FromFunc, From, To, Count, Mispreds);
     return doIntraBranch(*FromFunc, From, To, Count, Mispreds);
   }
 
@@ -842,9 +847,14 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
                     << FromFunc->getPrintName() << ":"
                     << Twine::utohexstr(First.To) << " to "
                     << Twine::utohexstr(Second.From) << ".\n");
-  for (const std::pair<uint64_t, uint64_t> &Pair : *FTs)
-    doIntraBranch(*FromFunc, Pair.first + FromFunc->getAddress(),
-                  Pair.second + FromFunc->getAddress(), Count, false);
+  BinaryFunction *ParentFunc = getBATParentFunction(*FromFunc);
+  for (auto [From, To] : *FTs) {
+    if (BAT) {
+      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
+      To = BAT->translate(FromFunc->getAddress(), To, /*IsBranchSrc=*/false);
+    }
+    doIntraBranch(ParentFunc ? *ParentFunc : *FromFunc, From, To, Count, false);
+  }
 
   return true;
 }
@@ -2273,29 +2283,6 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
   return std::error_code();
 }
 
-void DataAggregator::fixupBATProfile(BinaryContext &BC) {
-  for (auto &[FuncName, Branches] : NamesToBranches) {
-    BinaryData *BD = BC.getBinaryDataByName(FuncName);
-    assert(BD);
-    uint64_t FuncAddress = BD->getAddress();
-    if (!BAT->isBATFunction(FuncAddress))
-      continue;
-    // Filter out cold fragments
-    if (!BD->getSectionName().equals(BC.getMainCodeSectionName()))
-      continue;
-    // Convert inter-branches between hot and cold fragments into
-    // intra-branches.
-    for (auto &[OffsetFrom, CallToMap] : Branches.InterIndex) {
-      for (auto &[CallToLoc, CallToIdx] : CallToMap) {
-        if (CallToLoc.Name != FuncName)
-          continue;
-        Branches.IntraIndex[OffsetFrom][CallToLoc.Offset] = CallToIdx;
-        Branches.InterIndex[OffsetFrom].erase(CallToLoc);
-      }
-    }
-  }
-}
-
 std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
                                              StringRef OutputFilename) const {
   std::error_code EC;
@@ -2344,9 +2331,6 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       assert(BD);
       uint64_t FuncAddress = BD->getAddress();
       if (!BAT->isBATFunction(FuncAddress))
-        continue;
-      // Filter out cold fragments
-      if (!BD->getSectionName().equals(BC.getMainCodeSectionName()))
         continue;
       BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
       assert(BF);

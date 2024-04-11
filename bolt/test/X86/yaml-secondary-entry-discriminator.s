@@ -1,5 +1,5 @@
-# This reproduces a bug with BOLT setting incorrect discriminator for
-# secondary entry points in YAML profile.
+## This reproduces a bug with BOLT setting incorrect discriminator for
+## secondary entry points in YAML profile.
 
 # REQUIRES: system-linux
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
@@ -24,7 +24,7 @@
 # CHECK-NEXT:       hash:  {{.*}}
 # CHECK-NEXT:       calls: [ { off: 0x0, fid: 1, disc: 1, cnt: 1, mis: 1 } ]
 
-# Make sure that the profile is attached correctly
+## Make sure that the profile is attached correctly
 # RUN: llvm-bolt %t.exe -o %t.out --data %t.yaml --print-profile \
 # RUN:   --print-only=main | FileCheck %s --check-prefix=CHECK-CFG
 
@@ -33,8 +33,8 @@
 # CHECK-CFG:      callq *%rax # Offset: [[#]] # CallProfile: 1 (1 misses) :
 # CHECK-CFG-NEXT:     { secondary_entry: 1 (1 misses) }
 
-# YAML BAT test of calling BAT secondary entry from non-BAT function
-# Now force-split func and skip main (making it call secondary entries)
+## YAML BAT test of calling BAT secondary entry from non-BAT function
+## Now force-split func and skip main (making it call secondary entries)
 # RUN: llvm-bolt %t.exe -o %t.bat --data %t.fdata --funcs=func \
 # RUN:   --split-functions --split-strategy=all --split-all-cold --enable-bat
 
@@ -45,13 +45,13 @@ func:
   .cfi_startproc
   pushq   %rbp
   movq    %rsp, %rbp
-  # Placeholder code to make splitting profitable
+## Placeholder code to make splitting profitable
 .rept 5
   testq   %rax, %rax
 .endr
 .globl secondary_entry
 secondary_entry:
-  # Placeholder code to make splitting profitable
+## Placeholder code to make splitting profitable
 .rept 5
   testq   %rax, %rax
 .endr
@@ -81,7 +81,7 @@ Lindcall:
   addq    $16, %rsp
   popq    %rbp
   retq
-# For relocations against .text
+## For relocations against .text
   call exit
   .cfi_endproc
   .size	main, .-main
