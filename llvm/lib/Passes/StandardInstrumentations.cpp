@@ -805,7 +805,8 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
   std::string DumpIRFilename;
   if (!IRDumpDirectory.empty() &&
       (shouldPrintBeforePass(PassID) || shouldPrintAfterPass(PassID) ||
-       shouldPrintBeforeCurrentPassNumber() || shouldPrintAfterCurrentPassNumber()))
+       shouldPrintBeforeCurrentPassNumber() ||
+       shouldPrintAfterCurrentPassNumber()))
     DumpIRFilename = fetchDumpFilename(PassID, IR);
 
   // Saving Module for AfterPassInvalidated operations.
