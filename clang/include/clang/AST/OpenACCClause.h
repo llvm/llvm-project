@@ -14,8 +14,8 @@
 #ifndef LLVM_CLANG_AST_OPENACCCLAUSE_H
 #define LLVM_CLANG_AST_OPENACCCLAUSE_H
 #include "clang/AST/ASTContext.h"
-#include "clang/Basic/OpenACCKinds.h"
 #include "clang/AST/StmtIterator.h"
+#include "clang/Basic/OpenACCKinds.h"
 
 namespace clang {
 /// This is the base type for all OpenACC Clauses.
@@ -68,7 +68,6 @@ public:
   const_child_range children() const {
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
-
 };
 
 /// A 'default' clause, has the optional 'none' or 'present' argument.
@@ -106,14 +105,14 @@ public:
 class OpenACCClauseWithCondition : public OpenACCClauseWithParams {
   Expr *ConditionExpr;
 
-  protected:
-    OpenACCClauseWithCondition(OpenACCClauseKind K, SourceLocation BeginLoc,
-                               SourceLocation LParenLoc,
-                               Expr *ConditionExpr, SourceLocation EndLoc)
-        : OpenACCClauseWithParams(K, BeginLoc, LParenLoc, EndLoc),
-          ConditionExpr(ConditionExpr) {}
+protected:
+  OpenACCClauseWithCondition(OpenACCClauseKind K, SourceLocation BeginLoc,
+                             SourceLocation LParenLoc, Expr *ConditionExpr,
+                             SourceLocation EndLoc)
+      : OpenACCClauseWithParams(K, BeginLoc, LParenLoc, EndLoc),
+        ConditionExpr(ConditionExpr) {}
 
-  public:
+public:
   bool hasConditionExpr() const { return ConditionExpr; }
   const Expr *getConditionExpr() const { return ConditionExpr; }
   Expr *getConditionExpr() { return ConditionExpr; }
@@ -142,8 +141,7 @@ protected:
 
 public:
   static OpenACCIfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
-                                 SourceLocation LParenLoc,
-                                 Expr *ConditionExpr,
+                                 SourceLocation LParenLoc, Expr *ConditionExpr,
                                  SourceLocation EndLoc);
 };
 
@@ -215,8 +213,8 @@ public:
 
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   void VisitOpenACC##CLAUSE_NAME##Clause(                                      \
-                                  const OpenACC##CLAUSE_NAME##Clause &Clause) {\
-  return getDerived().VisitOpenACC##CLAUSE_NAME##Clause(Clause);               \
+      const OpenACC##CLAUSE_NAME##Clause &Clause) {                            \
+    return getDerived().VisitOpenACC##CLAUSE_NAME##Clause(Clause);             \
   }
 
 #include "clang/Basic/OpenACCClauses.def"
@@ -239,7 +237,7 @@ public:
 
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   void VisitOpenACC##CLAUSE_NAME##Clause(                                      \
-                                   const OpenACC##CLAUSE_NAME##Clause &Clause);
+      const OpenACC##CLAUSE_NAME##Clause &Clause);
 #include "clang/Basic/OpenACCClauses.def"
 };
 

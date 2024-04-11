@@ -2445,10 +2445,10 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
 namespace {
 class OpenACCClauseProfiler
     : public OpenACCClauseVisitor<OpenACCClauseProfiler> {
-      StmtProfiler &Profiler;
+  StmtProfiler &Profiler;
 
 public:
-  OpenACCClauseProfiler(StmtProfiler &P) :Profiler(P) {}
+  OpenACCClauseProfiler(StmtProfiler &P) : Profiler(P) {}
 
   void VisitOpenACCClauseList(ArrayRef<const OpenACCClause *> Clauses) {
     for (const OpenACCClause *Clause : Clauses) {
@@ -2472,9 +2472,9 @@ void OpenACCClauseProfiler::VisitOpenACCDefaultClause(
 void OpenACCClauseProfiler::VisitOpenACCIfClause(
     const OpenACCIfClause &Clause) {
   assert(Clause.hasConditionExpr() &&
-        "if clause requires a valid condition expr");
+         "if clause requires a valid condition expr");
   Profiler.VisitStmt(Clause.getConditionExpr());
-  }
+}
 } // namespace
 
 void StmtProfiler::VisitOpenACCComputeConstruct(

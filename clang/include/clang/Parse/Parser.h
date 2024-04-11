@@ -3662,6 +3662,7 @@ private:
   bool ParseOpenACCGangArg();
   /// Parses a 'condition' expr, ensuring it results in a
   ExprResult ParseOpenACCConditionExpr();
+
 private:
   //===--------------------------------------------------------------------===//
   // C++ 14: Templates [temp]

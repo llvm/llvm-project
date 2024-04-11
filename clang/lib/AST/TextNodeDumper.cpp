@@ -401,7 +401,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";
-        break;
+      break;
     default:
       // Nothing to do here.
       break;

@@ -7428,7 +7428,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::If: {
     const auto *IC = cast<OpenACCIfClause>(C);
     writeSourceLocation(IC->getLParenLoc());
-    AddStmt(const_cast<Expr*>(IC->getConditionExpr()));
+    AddStmt(const_cast<Expr *>(IC->getConditionExpr()));
     return;
   }
   case OpenACCClauseKind::Finalize:

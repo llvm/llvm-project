@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/OpenACCClause.h"
-#include "clang/AST/Expr.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Expr.h"
 
 using namespace clang;
 
@@ -38,8 +38,7 @@ OpenACCIfClause *OpenACCIfClause::Create(const ASTContext &C,
 }
 
 OpenACCIfClause::OpenACCIfClause(SourceLocation BeginLoc,
-                                 SourceLocation LParenLoc,
-                                 Expr *ConditionExpr,
+                                 SourceLocation LParenLoc, Expr *ConditionExpr,
                                  SourceLocation EndLoc)
     : OpenACCClauseWithCondition(OpenACCClauseKind::If, BeginLoc, LParenLoc,
                                  ConditionExpr, EndLoc) {
@@ -51,12 +50,12 @@ OpenACCIfClause::OpenACCIfClause(SourceLocation BeginLoc,
 
 OpenACCClause::child_range OpenACCClause::children() {
   switch (getClauseKind()) {
-    default:
-      assert(false && "Clause children function not implemented");
-      break;
+  default:
+    assert(false && "Clause children function not implemented");
+    break;
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
-    case OpenACCClauseKind::CLAUSE_NAME:                                       \
-      return cast<OpenACC##CLAUSE_NAME##Clause>(this)->children();
+  case OpenACCClauseKind::CLAUSE_NAME:                                         \
+    return cast<OpenACC##CLAUSE_NAME##Clause>(this)->children();
 
 #include "clang/Basic/OpenACCClauses.def"
   }
@@ -71,7 +70,6 @@ void OpenACCClausePrinter::VisitOpenACCDefaultClause(
   OS << "default(" << C.getDefaultClauseKind() << ")";
 }
 
-void OpenACCClausePrinter::VisitOpenACCIfClause(
-    const OpenACCIfClause &C) {
+void OpenACCClausePrinter::VisitOpenACCIfClause(const OpenACCIfClause &C) {
   OS << "if(" << C.getConditionExpr() << ")";
 }

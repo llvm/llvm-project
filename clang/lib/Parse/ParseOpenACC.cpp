@@ -601,7 +601,7 @@ ExprResult Parser::ParseOpenACCConditionExpr() {
       getActions().ActOnCondition(getCurScope(), ER.get()->getExprLoc(),
                                   ER.get(), Sema::ConditionKind::Boolean);
 
-  return R.isInvalid() ? ExprError () : R.get().second;
+  return R.isInvalid() ? ExprError() : R.get().second;
 }
 
 // OpenACC 3.3, section 1.7:
@@ -852,8 +852,8 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     }
     case OpenACCClauseKind::If: {
       ExprResult CondExpr = ParseOpenACCConditionExpr();
-      ParsedClause.setConditionDetails(
-          CondExpr.isUsable() ? CondExpr.get() : nullptr);
+      ParsedClause.setConditionDetails(CondExpr.isUsable() ? CondExpr.get()
+                                                           : nullptr);
 
       if (CondExpr.isInvalid()) {
         Parens.skipToEnd();

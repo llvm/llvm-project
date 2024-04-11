@@ -244,7 +244,7 @@ public:
     getNodeDelegate().AddChild([=] {
       getNodeDelegate().Visit(C);
       for (const auto *S : C->children())
-      Visit(S);
+        Visit(S);
     });
   }
 
