@@ -1063,7 +1063,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
                             ISD::EXTRACT_SUBVECTOR, ISD::SCALAR_TO_VECTOR},
                            VT, Custom);
-        setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+        if (Subtarget.hasStdExtZfhminOrZhinxmin())
+          setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
         // load/store
         setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
 
@@ -4633,9 +4634,7 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
   } else if (Subtarget.hasStdExtZvbb()) {
     // Interleaved = (OddV << VecVT.getScalarSizeInBits()) + EvenV.
     SDValue OffsetVec =
-        DAG.getSplatVector(VecContainerVT, DL,
-                           DAG.getConstant(VecVT.getScalarSizeInBits(), DL,
-                                           Subtarget.getXLenVT()));
+        DAG.getConstant(VecVT.getScalarSizeInBits(), DL, VecContainerVT);
     Interleaved = DAG.getNode(RISCVISD::VWSLL_VL, DL, WideContainerVT, OddV,
                               OffsetVec, Passthru, Mask, VL);
     if (!EvenV.isUndef())
