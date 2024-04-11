@@ -19,7 +19,9 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -180,6 +182,12 @@ const Module *unwrapModule(Any IR, bool Force = false) {
     return F->getParent();
   }
 
+  if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
+    if (!Force && !isFunctionInPrintList(MF->getName()))
+      return nullptr;
+    return MF->getFunction().getParent();
+  }
+
   llvm_unreachable("Unknown IR unit");
 }
 
@@ -213,6 +221,12 @@ void printIR(raw_ostream &OS, const Loop *L) {
   if (!isFunctionInPrintList(F->getName()))
     return;
   printLoop(const_cast<Loop &>(*L), OS);
+}
+
+void printIR(raw_ostream &OS, const MachineFunction *MF) {
+  if (!isFunctionInPrintList(MF->getName()))
+    return;
+  MF->print(OS);
 }
 
 std::string getIRName(Any IR) {
@@ -262,6 +276,9 @@ bool shouldPrintIR(Any IR) {
 
   if (const auto *L = unwrapIR<Loop>(IR))
     return isFunctionInPrintList(L->getHeader()->getParent()->getName());
+
+  if (const auto *MF = unwrapIR<MachineFunction>(IR))
+    return isFunctionInPrintList(MF->getName());
   llvm_unreachable("Unknown wrapped IR type");
 }
 
@@ -275,6 +292,14 @@ void unwrapAndPrint(raw_ostream &OS, Any IR) {
     auto *M = unwrapModule(IR);
     assert(M && "should have unwrapped module");
     printIR(OS, M);
+
+    if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
+      auto &MMI = MF->getMMI();
+      for (const auto &F : *M) {
+        if (auto *MF = MMI.getMachineFunction(F))
+          MF->print(OS);
+      }
+    }
     return;
   }
 
@@ -297,6 +322,11 @@ void unwrapAndPrint(raw_ostream &OS, Any IR) {
     printIR(OS, L);
     return;
   }
+
+  if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
+    printIR(OS, MF);
+    return;
+  }
   llvm_unreachable("Unknown wrapped IR type");
 }
 
@@ -305,7 +335,8 @@ bool isIgnored(StringRef PassID) {
   return isSpecialPass(PassID,
                        {"PassManager", "PassAdaptor", "AnalysisManagerProxy",
                         "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass",
-                        "VerifierPass", "PrintModulePass"});
+                        "VerifierPass", "PrintModulePass", "PrintMIRPass",
+                        "PrintMIRPreparePass"});
 }
 
 std::string makeHTMLReady(StringRef SR) {
@@ -664,20 +695,38 @@ template <typename T> void IRComparer<T>::analyzeIR(Any IR, IRDataT<T> &Data) {
     return;
   }
 
-  const auto *F = unwrapIR<Function>(IR);
-  if (!F) {
-    const auto *L = unwrapIR<Loop>(IR);
-    assert(L && "Unknown IR unit.");
-    F = L->getHeader()->getParent();
+  if (const auto *F = unwrapIR<Function>(IR)) {
+    generateFunctionData(Data, *F);
+    return;
   }
-  assert(F && "Unknown IR unit.");
-  generateFunctionData(Data, *F);
+
+  if (const auto *L = unwrapIR<Loop>(IR)) {
+    auto *F = L->getHeader()->getParent();
+    generateFunctionData(Data, *F);
+    return;
+  }
+
+  if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
+    generateFunctionData(Data, *MF);
+    return;
+  }
+
+  llvm_unreachable("Unknown IR unit");
+}
+
+static bool shouldGenerateData(const Function &F) {
+  return !F.isDeclaration() && isFunctionInPrintList(F.getName());
+}
+
+static bool shouldGenerateData(const MachineFunction &MF) {
+  return isFunctionInPrintList(MF.getName());
 }
 
 template <typename T>
-bool IRComparer<T>::generateFunctionData(IRDataT<T> &Data, const Function &F) {
-  if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
-    FuncDataT<T> FD(F.getEntryBlock().getName().str());
+template <typename FunctionT>
+bool IRComparer<T>::generateFunctionData(IRDataT<T> &Data, const FunctionT &F) {
+  if (shouldGenerateData(F)) {
+    FuncDataT<T> FD(F.front().getName().str());
     int I = 0;
     for (const auto &B : F) {
       std::string BBName = B.getName().str();
@@ -722,6 +771,12 @@ static SmallString<32> getIRFileDisplayName(Any IR) {
     ResultStream << "-loop-";
     stable_hash LoopNameHash = stable_hash_combine_string(L->getName());
     write_hex(ResultStream, LoopNameHash, HexPrintStyle::Lower, MaxHashWidth);
+  } else if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
+    ResultStream << "-machine-function-";
+    stable_hash MachineFunctionNameHash =
+        stable_hash_combine_string(MF->getName());
+    write_hex(ResultStream, MachineFunctionNameHash, HexPrintStyle::Lower,
+              MaxHashWidth);
   } else {
     llvm_unreachable("Unknown wrapped IR type");
   }
@@ -2120,6 +2175,11 @@ DCData::DCData(const BasicBlock &B) {
   } else
     for (const BasicBlock *Succ : successors(&B))
       addSuccessorLabel(Succ->getName().str(), "");
+}
+
+DCData::DCData(const MachineBasicBlock &B) {
+  for (const MachineBasicBlock *Succ : successors(&B))
+    addSuccessorLabel(Succ->getName().str(), "");
 }
 
 DotCfgChangeReporter::DotCfgChangeReporter(bool Verbose)
