@@ -132,9 +132,13 @@ DependencyScanningFilesystemSharedCache::CacheShard::
   std::lock_guard<std::mutex> LockGuard(CacheLock);
   auto [It, Inserted] = CacheByFilename.insert({Filename, {nullptr, nullptr}});
   auto &[CachedEntry, CachedRealPath] = It->getValue();
-  if (!CachedEntry)
+  if (!CachedEntry) {
+    // The entry is not present in the shared cache. Either the cache doesn't
+    // know about the file at all, or it only knows about its real path.
+    assert((Inserted || CachedRealPath) && "existing file with empty pair");
     CachedEntry =
         new (EntryStorage.Allocate()) CachedFileSystemEntry(std::move(Stat));
+  }
   return *CachedEntry;
 }
 

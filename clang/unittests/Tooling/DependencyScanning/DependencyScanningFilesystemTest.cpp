@@ -95,3 +95,58 @@ TEST(DependencyScanningFilesystem, CacheGetRealPath) {
     EXPECT_EQ(InstrumentingFS->NumGetRealPathCalls, 2u); // Shared cache.
   }
 }
+
+TEST(DependencyScanningFilesystem, RealPathAndStatusInvariants) {
+  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  InMemoryFS->setCurrentWorkingDirectory("/");
+  InMemoryFS->addFile("/foo.c", 0, llvm::MemoryBuffer::getMemBuffer(""));
+  InMemoryFS->addFile("/bar.c", 0, llvm::MemoryBuffer::getMemBuffer(""));
+
+  auto InstrumentingFS =
+      llvm::makeIntrusiveRefCnt<InstrumentingFilesystem>(InMemoryFS);
+
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InstrumentingFS);
+
+  // Success.
+  {
+    DepFS.status("/foo.c");
+
+    llvm::SmallString<128> Result;
+    DepFS.getRealPath("/foo.c", Result);
+  }
+  {
+    llvm::SmallString<128> Result;
+    DepFS.getRealPath("/bar.c", Result);
+
+    DepFS.status("/bar.c");
+  }
+
+  // Failure.
+  {
+    DepFS.status("/foo.m");
+
+    llvm::SmallString<128> Result;
+    DepFS.getRealPath("/foo.m", Result);
+  }
+  {
+    llvm::SmallString<128> Result;
+    DepFS.getRealPath("/bar.m", Result);
+
+    DepFS.status("/bar.m");
+  }
+
+  // Failure without caching.
+  {
+    DepFS.status("/foo");
+
+    llvm::SmallString<128> Result;
+    DepFS.getRealPath("/foo", Result);
+  }
+  {
+    llvm::SmallString<128> Result;
+    DepFS.getRealPath("/bar", Result);
+
+    DepFS.status("/bar");
+  }
+}
