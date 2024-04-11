@@ -860,7 +860,7 @@ void Output::newLineCheck(bool EmptySequence) {
 }
 
 void Output::paddedKey(StringRef key) {
-  output(key);
+  output(key, needsQuotes(key));
   output(":");
   const char *spaces = "                ";
   if (key.size() < strlen(spaces))
@@ -879,7 +879,7 @@ void Output::flowKey(StringRef Key) {
     Column = ColumnAtMapFlowStart;
     output("  ");
   }
-  output(Key);
+  output(Key, needsQuotes(Key));
   output(": ");
 }
 
