@@ -6335,16 +6335,15 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
         if (TST->isDependentType() && TST->isTypeAlias())
           Diag(Loc, diag::ext_alias_template_in_declarative_nns)
               << SpecLoc.getLocalSourceRange();
-      } else if (T->isDecltypeType()) {
+      } else if (T->isDecltypeType() || T->getAsAdjusted<PackIndexingType>()) {
         // C++23 [expr.prim.id.qual]p2:
         //   [...] A declarative nested-name-specifier shall not have a
-        //   decltype-specifier.
+        //   computed-type-specifier.
         //
-        // FIXME: This wording appears to be defective as it does not forbid
-        // declarative nested-name-specifiers with pack-index-specifiers.
-        // See https://github.com/cplusplus/CWG/issues/499.
-        Diag(Loc, diag::err_decltype_in_declarator)
-            << SpecLoc.getTypeLoc().getSourceRange();
+        // CWG2858 changed this from 'decltype-specifier' to
+        // 'computed-type-specifier'.
+        Diag(Loc, diag::err_computed_type_in_declarative_nns)
+            << T->isDecltypeType() << SpecLoc.getTypeLoc().getSourceRange();
       }
     }
   } while ((SpecLoc = SpecLoc.getPrefix()));

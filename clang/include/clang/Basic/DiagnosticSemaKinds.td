@@ -2402,10 +2402,6 @@ def err_selected_explicit_constructor : Error<
 def note_explicit_ctor_deduction_guide_here : Note<
   "explicit %select{constructor|deduction guide}0 declared here">;
 
-// C++11 decltype
-def err_decltype_in_declarator : Error<
-    "'decltype' cannot be used to name a declaration">;
-
 // C++11 auto
 def warn_cxx98_compat_auto_type_specifier : Warning<
   "'auto' type specifier is incompatible with C++98">,
@@ -8313,6 +8309,9 @@ def ext_template_after_declarative_nns : ExtWarn<
 def ext_alias_template_in_declarative_nns : ExtWarn<
   "a declarative nested name specifier cannot name an alias template">,
   InGroup<DiagGroup<"alias-template-in-declaration-name">>;
+def err_computed_type_in_declarative_nns  : Error<
+  "a %select{pack indexing|'decltype'}0 specifier cannot be used in "
+  "a declarative nested name specifier">;
 
 def err_no_typeid_with_fno_rtti : Error<
   "use of typeid requires -frtti">;
