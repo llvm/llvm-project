@@ -57,6 +57,36 @@ public:
     return FunctionProfileData;
   }
 
+  // Convert IndexedMemProfRecord to MemProfRecord, populating call stacks and
+  // frames inline.
+  virtual MemProfRecord convertIndexedMemProfRecordToMemProfRecord(
+      const IndexedMemProfRecord &IndexedRecord,
+      std::function<const Frame(const FrameId)> Callback) {
+    MemProfRecord Record;
+
+    for (const memprof::IndexedAllocationInfo &IndexedAI :
+         IndexedRecord.AllocSites) {
+      memprof::AllocationInfo AI;
+      AI.Info = IndexedAI.Info;
+      auto CSIter = CSIdToCallStack.find(IndexedAI.CSId);
+      assert(CSIter != CSIdToCallStack.end());
+      for (memprof::FrameId Id : CSIter->second)
+        AI.CallStack.push_back(Callback(Id));
+      Record.AllocSites.push_back(AI);
+    }
+
+    for (memprof::CallStackId CSId : IndexedRecord.CallSiteIds) {
+      auto CSIter = CSIdToCallStack.find(CSId);
+      assert(CSIter != CSIdToCallStack.end());
+      llvm::SmallVector<memprof::Frame> Frames;
+      for (memprof::FrameId Id : CSIter->second)
+        Frames.push_back(Callback(Id));
+      Record.CallSites.push_back(Frames);
+    }
+
+    return Record;
+  }
+
   virtual Error
   readNextRecord(GuidMemProfRecordPair &GuidRecord,
                  std::function<const Frame(const FrameId)> Callback = nullptr) {
@@ -71,7 +101,8 @@ public:
           std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
 
     const IndexedMemProfRecord &IndexedRecord = Iter->second;
-    GuidRecord = {Iter->first, MemProfRecord(IndexedRecord, Callback)};
+    GuidRecord = {Iter->first, convertIndexedMemProfRecordToMemProfRecord(
+                                   IndexedRecord, Callback)};
     Iter++;
     return Error::success();
   }
@@ -84,9 +115,7 @@ public:
   // Initialize the MemProfReader with the frame mappings and profile contents.
   MemProfReader(
       llvm::DenseMap<FrameId, Frame> FrameIdMap,
-      llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
-      : IdToFrame(std::move(FrameIdMap)),
-        FunctionProfileData(std::move(ProfData)) {}
+      llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData);
 
 protected:
   // A helper method to extract the frame from the IdToFrame map.
@@ -97,6 +126,8 @@ protected:
   }
   // A mapping from FrameId (a hash of the contents) to the frame.
   llvm::DenseMap<FrameId, Frame> IdToFrame;
+  // A mapping from CallStackId to the call stack.
+  llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdToCallStack;
   // A mapping from function GUID, hash of the canonical function symbol to the
   // memprof profile data for that function, i.e allocation and callsite info.
   llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> FunctionProfileData;
