@@ -1459,7 +1459,7 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
     return false;
 
   Instruction::CastOps Opcode = C0->getOpcode();
-  if (Opcode == Instruction::BitCast || C0->getSrcTy() != C1->getSrcTy())
+  if (C0->getSrcTy() != C1->getSrcTy())
     return false;
 
   // Handle shuffle(zext_nneg(x), sext(y)) -> sext(shuffle(x,y)) folds.
@@ -1473,10 +1473,9 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
   auto *CastDstTy = dyn_cast<FixedVectorType>(C0->getDestTy());
   auto *CastSrcTy = dyn_cast<FixedVectorType>(C0->getSrcTy());
-  if (!ShuffleDstTy || !CastDstTy || !CastSrcTy)
+  if (!ShuffleDstTy || !CastDstTy || !CastSrcTy ||
+      CastDstTy->getElementCount() != CastSrcTy->getElementCount())
     return false;
-  assert(CastDstTy->getElementCount() == CastSrcTy->getElementCount() &&
-         "Unexpected src/dst element counts");
 
   auto *NewShuffleDstTy =
       FixedVectorType::get(CastSrcTy->getScalarType(), Mask.size());
