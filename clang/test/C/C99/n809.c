@@ -34,7 +34,10 @@ long double _Imaginary ldi1; // expected-error {{imaginary types are not support
 _Imaginary long double ldi2; // expected-error {{imaginary types are not supported}}
 
 // Each complex type has the same representation and alignment as an array
-// containing two elements of the corresponding real type.
+// containing two elements of the corresponding real type. Note, it is not
+// mandatory that the alignment of a structure containing an array of two
+// elements has the same alignment as an array of two elements outside of a
+// structure, but this is a property Clang supports.
 _Static_assert(sizeof(float _Complex) == sizeof(struct { float mem[2]; }), "");
 _Static_assert(_Alignof(float _Complex) == _Alignof(struct { float mem[2]; }), "");
 
