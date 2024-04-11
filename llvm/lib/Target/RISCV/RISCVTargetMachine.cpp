@@ -119,7 +119,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVCoalesceVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
-  initializeRISCVDAGToDAGISelPass(*PR);
+  initializeRISCVDAGToDAGISelLegacyPass(*PR);
   initializeRISCVMoveMergePass(*PR);
   initializeRISCVPushPopOptPass(*PR);
 }

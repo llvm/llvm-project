@@ -85,7 +85,7 @@ void initializeRISCVPushPopOptPass(PassRegistry &);
 InstructionSelector *createRISCVInstructionSelector(const RISCVTargetMachine &,
                                                     RISCVSubtarget &,
                                                     RISCVRegisterBankInfo &);
-void initializeRISCVDAGToDAGISelPass(PassRegistry &);
+void initializeRISCVDAGToDAGISelLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVPostLegalizerCombiner();
 void initializeRISCVPostLegalizerCombinerPass(PassRegistry &);
