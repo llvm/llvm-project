@@ -49,9 +49,9 @@ class ARMSubtarget : public ARMGenSubtargetInfo {
 protected:
   enum ARMProcFamilyEnum {
     Others,
-    #define ARM_PROCESSOR_FAMILY(ENUM) ENUM,
-    #include "llvm/TargetParser/ARMTargetParserDef.inc"
-    #undef ARM_PROCESSOR_FAMILY
+#define ARM_PROCESSOR_FAMILY(ENUM) ENUM,
+#include "llvm/TargetParser/ARMTargetParserDef.inc"
+#undef ARM_PROCESSOR_FAMILY
   };
   enum ARMProcClassEnum {
     None,
@@ -61,9 +61,9 @@ protected:
     RClass
   };
   enum ARMArchEnum {
-    #define ARM_ARCHITECTURE(ENUM) ENUM,
-    #include "llvm/TargetParser/ARMTargetParserDef.inc"
-    #undef ARM_ARCHITECTURE
+#define ARM_ARCHITECTURE(ENUM) ENUM,
+#include "llvm/TargetParser/ARMTargetParserDef.inc"
+#undef ARM_ARCHITECTURE
   };
 
 public:

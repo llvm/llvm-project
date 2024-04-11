@@ -39,9 +39,9 @@ class AArch64Subtarget final : public AArch64GenSubtargetInfo {
 public:
   enum ARMProcFamilyEnum : uint8_t {
     Others,
-    #define ARM_PROCESSOR_FAMILY(ENUM) ENUM,
-    #include "llvm/TargetParser/AArch64TargetParserDef.inc"
-    #undef ARM_PROCESSOR_FAMILY
+#define ARM_PROCESSOR_FAMILY(ENUM) ENUM,
+#include "llvm/TargetParser/AArch64TargetParserDef.inc"
+#undef ARM_PROCESSOR_FAMILY
   };
 
 protected:
