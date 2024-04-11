@@ -69,7 +69,7 @@ define void @arm_mult_q15(ptr %pSrcA, ptr %pSrcB, ptr noalias %pDst, i32 %blockS
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[CONV2]], [[CONV]]
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[MUL]], 15
 ; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = tail call i32 @llvm.smin.i32(i32 [[SHR]], i32 32767)
-; CHECK-NEXT:    [[CONV3:%.*]] = trunc i32 [[SPEC_SELECT_I]] to i16
+; CHECK-NEXT:    [[CONV3:%.*]] = trunc nsw i32 [[SPEC_SELECT_I]] to i16
 ; CHECK-NEXT:    [[INCDEC_PTR4]] = getelementptr inbounds i8, ptr [[PDST_ADDR_04]], i32 2
 ; CHECK-NEXT:    store i16 [[CONV3]], ptr [[PDST_ADDR_04]], align 2
 ; CHECK-NEXT:    [[DEC]] = add i32 [[BLKCNT_06]], -1
