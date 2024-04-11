@@ -42,14 +42,9 @@ static void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
           if (kind == SparseTensorFieldKind::PosMemRef ||
               kind == SparseTensorFieldKind::CrdMemRef ||
               kind == SparseTensorFieldKind::ValMemRef) {
-            auto st = t.cast<ShapedType>();
-            auto shape = st.getShape();
-            auto eltTp = st.getElementType();
-            Type rtp;
-            if (directOut) {
-              rtp = MemRefType::get(shape, eltTp);
-            } else {
-              rtp = RankedTensorType::get(shape, eltTp);
+            auto rtp = t.cast<ShapedType>();
+            if (!directOut) {
+              rtp = RankedTensorType::get(rtp.getShape(), rtp.getElementType());
               if (extraTypes)
                 extraTypes->push_back(rtp);
             }
@@ -102,8 +97,8 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
             mem = builder.create<sparse_tensor::ToValuesOp>(loc, inputs[0]);
           toVals.push_back(mem);
         } else {
-          ShapedType st = t.cast<ShapedType>();
-          auto rtp = RankedTensorType::get(st.getShape(), st.getElementType());
+          ShapedType rtp = t.cast<ShapedType>();
+          rtp = RankedTensorType::get(rtp.getShape(), rtp.getElementType());
           inputs.push_back(extraVals[extra++]);
           retTypes.push_back(rtp);
           cntTypes.push_back(builder.getIndexType());
@@ -181,7 +176,7 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     SmallVector<Type> inputTypes;
     SmallVector<Type> outputTypes;
     SmallVector<Type> extraTypes;
-    convTypes(funcOp.getArgumentTypes(), inputTypes, nullptr, directOut);
+    convTypes(funcOp.getArgumentTypes(), inputTypes, nullptr, false);
     convTypes(funcOp.getResultTypes(), outputTypes, &extraTypes, directOut);
 
     // Only sparse inputs or outputs need a wrapper method.
