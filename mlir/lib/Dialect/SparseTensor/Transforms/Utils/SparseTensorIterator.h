@@ -49,8 +49,8 @@ public:
   /// `bound` is only used when the level is `non-unique` and deduplication is
   /// required. It specifies the max upper bound of the non-unique segment.
   virtual std::pair<Value, Value> peekRangeAt(OpBuilder &b, Location l,
-                                              ValueRange batchPrefix, Value p,
-                                              Value segHi = Value()) const = 0;
+                                              ValueRange batchPrefix,
+                                              ValueRange parentPos) const = 0;
 
   Level getLevel() const { return lvl; }
   LevelType getLT() const { return lt; }
@@ -208,9 +208,7 @@ public:
   // Not every type of iterator supports the operation, e.g., non-empty
   // subsection iterator does not because it represent a range of coordinates
   // instead of just one.
-  virtual std::pair<Value, Value> getCurPosition() const {
-    llvm_unreachable("unsupported");
-  };
+  virtual ValueRange getCurPosition() const { return getCursor(); };
 
   // Returns a pair of values for *upper*, *lower* bound respectively.
   virtual std::pair<Value, Value> genForCond(OpBuilder &b, Location l) {
