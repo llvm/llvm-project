@@ -1,19 +1,24 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --translator-compatibility-mode %s -o - -filetype=obj | spirv-val %}
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; CHECK-DAG: %[[Char:.*]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[Long:.*]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[Array:.*]] = OpTypeArray %[[Long]] %[[#]]
 ; CHECK-DAG: %[[Struct:.*]] = OpTypeStruct %[[Array]]
 ; CHECK-DAG: %[[StructPtr:.*]] = OpTypePointer Function %[[Struct]]
+; CHECK-DAG: %[[CharPtr:.*]] = OpTypePointer Function %[[Char]]
 
 ; CHECK: %[[Branch1:.*]] = OpLabel
 ; CHECK: %[[Res1:.*]] = OpVariable %[[StructPtr]] Function
 ; CHECK: OpBranchConditional %[[#]] %[[#]] %[[Branch2:.*]]
-; CHECK: %[[Res2:.*]] = OpInBoundsPtrAccessChain %[[StructPtr]] %[[#]] %[[#]]
+; CHECK: %[[Res2:.*]] = OpInBoundsPtrAccessChain %[[CharPtr]] %[[#]] %[[#]]
+; CHECK: %[[Res2Casted:.*]] = OpBitcast %[[StructPtr]] %[[Res2]]
 ; CHECK: OpBranchConditional %[[#]] %[[#]] %[[BranchSelect:.*]]
-; CHECK: %[[SelectRes:.*]] = OpSelect %[[StructPtr]] %[[#]] %[[#]] %[[#]]
+; CHECK: %[[SelectRes:.*]] = OpSelect %[[CharPtr]] %[[#]] %[[#]] %[[#]]
+; CHECK: %[[SelectResCasted:.*]] = OpBitcast %[[StructPtr]] %[[SelectRes]]
 ; CHECK: OpLabel
-; CHECK: OpPhi %[[StructPtr]] %[[Res1]] %[[Branch1]] %[[Res2]] %[[Branch2]] %[[SelectRes]] %[[BranchSelect]]
+; CHECK: OpPhi %[[StructPtr]] %[[Res1]] %[[Branch1]] %[[Res2Casted]] %[[Branch2]] %[[SelectResCasted]] %[[BranchSelect]]
 
 %struct = type { %array }
 %array = type { [1 x i64] }
@@ -48,5 +53,6 @@ exit: ; preds = %sw2, %sw1, %entry
   %cmp = xor i1 %r4, %expected
   %frombool6.i = zext i1 %cmp to i8
   store i8 %frombool6.i, ptr addrspace(1) %add.ptr.i, align 1
+  %r5 = icmp eq ptr %add.ptr, %retval.0
   ret void
 }

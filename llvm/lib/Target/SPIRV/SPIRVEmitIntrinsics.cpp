@@ -79,7 +79,7 @@ class SPIRVEmitIntrinsics
                                std::unordered_set<Value *> &Visited);
 
   // deduce Types of operands of the Instruction if possible
-  void deduceOperandElementType(Value *I, DenseMap<Value *, Type *> &Collected);
+  void deduceOperandElementType(Instruction *I);
 
   void preprocessCompositeConstants(IRBuilder<> &B);
   void preprocessUndefs(IRBuilder<> &B);
@@ -275,6 +275,12 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       if (Ty)
         break;
     }
+  } else if (auto *Ref = dyn_cast<SelectInst>(I)) {
+    for (Value *Op : {Ref->getTrueValue(), Ref->getFalseValue()}) {
+      Ty = deduceElementTypeByUsersDeep(Op, Visited);
+      if (Ty)
+        break;
+    }
   }
 
   // remember the found relationship
@@ -374,24 +380,92 @@ Type *SPIRVEmitIntrinsics::deduceElementType(Value *I) {
   return IntegerType::getInt8Ty(I->getContext());
 }
 
-// Deduce Types of operands of the Instruction if possible.
-void SPIRVEmitIntrinsics::deduceOperandElementType(
-    Value *I, DenseMap<Value *, Type *> &Collected) {
-  Type *KnownTy = GR->findDeducedElementType(I);
-  if (!KnownTy)
-    return;
-
+// If the Instruction has Pointer operands with unresolved types, this function
+// tries to deduce them. If the Instruction has Pointer operands with known
+// types which differ from expected, this function tries to insert a bitcast to
+// resolve the issue.
+void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
+  SmallVector<std::pair<Value *, unsigned>> Ops;
+  Type *KnownElemTy = nullptr;
   // look for known basic patterns of type inference
   if (auto *Ref = dyn_cast<PHINode>(I)) {
+    if (!isPointerTy(I->getType()) ||
+        !(KnownElemTy = GR->findDeducedElementType(I)))
+      return;
     for (unsigned i = 0; i < Ref->getNumIncomingValues(); i++) {
       Value *Op = Ref->getIncomingValue(i);
-      if (!isUntypedPointerTy(Op->getType()))
-        continue;
-      Type *Ty = GR->findDeducedElementType(Op);
-      if (!Ty) {
-        Collected[Op] = KnownTy;
-        GR->addDeducedElementType(Op, KnownTy);
+      if (isPointerTy(Op->getType()))
+        Ops.push_back(std::make_pair(Op, i));
+    }
+  } else if (auto *Ref = dyn_cast<SelectInst>(I)) {
+    if (!isPointerTy(I->getType()) ||
+        !(KnownElemTy = GR->findDeducedElementType(I)))
+      return;
+    for (unsigned i = 0; i < Ref->getNumOperands(); i++) {
+      Value *Op = Ref->getOperand(i);
+      if (isPointerTy(Op->getType()))
+        Ops.push_back(std::make_pair(Op, i));
+    }
+  } else if (auto *Ref = dyn_cast<ICmpInst>(I)) {
+    if (!isPointerTy(Ref->getOperand(0)->getType()))
+      return;
+    Value *Op0 = Ref->getOperand(0);
+    Value *Op1 = Ref->getOperand(1);
+    Type *ElemTy0 = GR->findDeducedElementType(Op0);
+    Type *ElemTy1 = GR->findDeducedElementType(Op1);
+    if (ElemTy0) {
+      KnownElemTy = ElemTy0;
+      Ops.push_back(std::make_pair(Op1, 1));
+    } else if (ElemTy1) {
+      KnownElemTy = ElemTy1;
+      Ops.push_back(std::make_pair(Op0, 0));
+    }
+  }
+
+  // There is no enough info to deduce types or all is valid.
+  if (!KnownElemTy || Ops.size() == 0)
+    return;
+
+  Instruction *User = nullptr;
+  LLVMContext &Ctx = F->getContext();
+  IRBuilder<> B(Ctx);
+  for (auto &OpIt : Ops) {
+    Value *Op = OpIt.first;
+    // unsigned i = OpIt.second;
+    Type *Ty = GR->findDeducedElementType(Op);
+    if (Ty == KnownElemTy)
+      continue;
+    if (Op->use_empty() ||
+        !(User = dyn_cast<Instruction>(Op->use_begin()->get())))
+      continue;
+
+    setInsertPointSkippingPhis(B, User->getNextNode());
+    Value *OpTyVal = Constant::getNullValue(KnownElemTy);
+    Type *OpTy = Op->getType();
+    if (!Ty) {
+      GR->addDeducedElementType(Op, KnownElemTy);
+      // check if there is existing Intrinsic::spv_assign_ptr_type instruction
+      auto It = AssignPtrTypeInstr.find(Op);
+      if (It == AssignPtrTypeInstr.end()) {
+        CallInst *CI =
+            buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {OpTy}, OpTyVal, Op,
+                            {B.getInt32(getPointerAddressSpace(OpTy))}, B);
+        AssignPtrTypeInstr[Op] = CI;
+      } else {
+        It->second->setArgOperand(
+            1,
+            MetadataAsValue::get(
+                Ctx, MDNode::get(Ctx, ValueAsMetadata::getConstant(OpTyVal))));
       }
+    } else {
+      SmallVector<Type *, 2> Types = {OpTy, OpTy};
+      MetadataAsValue *VMD = MetadataAsValue::get(
+          Ctx, MDNode::get(Ctx, ValueAsMetadata::getConstant(OpTyVal)));
+      SmallVector<Value *, 2> Args = {Op, VMD,
+                                      B.getInt32(getPointerAddressSpace(OpTy))};
+      CallInst *PtrCastI =
+          B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
+      I->setOperand(OpIt.second, PtrCastI);
     }
   }
 }
@@ -1145,6 +1219,10 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     insertAssignTypeIntrs(I, B);
     insertPtrCastOrAssignTypeInstr(I, B);
   }
+
+  for (auto &I : instructions(Func))
+    deduceOperandElementType(&I);
+
   for (auto *I : Worklist) {
     TrackConstants = true;
     if (!I->getType()->isVoidTy() || isa<StoreInst>(I))
@@ -1155,36 +1233,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     if (!I)
       continue;
     processInstrAfterVisit(I, B);
-  }
-
-  for (auto &I : instructions(Func)) {
-    Type *ITy = I.getType();
-    if (!isPointerTy(ITy))
-      continue;
-    DenseMap<Value *, Type *> CollectedTys;
-    deduceOperandElementType(&I, CollectedTys);
-    Instruction *User;
-    LLVMContext &Ctx = F->getContext();
-    for (const auto &Rec : CollectedTys) {
-      if (Rec.first->use_empty() ||
-          !(User = dyn_cast<Instruction>(Rec.first->use_begin()->get())))
-        continue;
-      Type *OpTy = Rec.first->getType();
-      Value *OpTyVal = Constant::getNullValue(Rec.second);
-      // check if there is existing Intrinsic::spv_assign_ptr_type instruction
-      auto It = AssignPtrTypeInstr.find(Rec.first);
-      if (It == AssignPtrTypeInstr.end()) {
-        setInsertPointSkippingPhis(B, User->getNextNode());
-        buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {OpTy}, OpTyVal,
-                        Rec.first, {B.getInt32(getPointerAddressSpace(OpTy))},
-                        B);
-      } else {
-        It->second->setArgOperand(
-            1,
-            MetadataAsValue::get(
-                Ctx, MDNode::get(Ctx, ValueAsMetadata::getConstant(OpTyVal))));
-      }
-    }
   }
 
   // check if function parameter types are set
