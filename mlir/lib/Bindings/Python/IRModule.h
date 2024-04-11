@@ -580,7 +580,8 @@ public:
                      std::optional<int64_t> bytecodeVersion);
 
   // Implement the walk method.
-  void walk(pybind11::object callback, bool usePreOrder);
+  void walk(std::function<MlirWalkResult(MlirOperation)> callback,
+            MlirWalkOrder walkOrder);
 
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);

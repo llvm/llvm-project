@@ -1032,7 +1032,11 @@ def testOpWalk():
   """,
         ctx,
     )
-    callback = lambda op: print(op.name)
+
+    def callback(op):
+        print(op.name)
+        return WalkResult.ADVANCE
+
     # Test post-order walk (default).
     # CHECK-NEXT:  Post-order
     # CHECK-NEXT:  func.return
@@ -1047,4 +1051,37 @@ def testOpWalk():
     # CHECK-NEXT:  func.fun
     # CHECK-NEXT:  func.return
     print("Pre-order")
-    module.operation.walk(callback, True)
+    module.operation.walk(callback, WalkOrder.PRE_ORDER)
+
+    # Test interrput.
+    # CHECK-NEXT:  Interrupt post-order
+    # CHECK-NEXT:  func.return
+    print("Interrupt post-order")
+    def callback(op):
+        print(op.name)
+        return WalkResult.INTERRUPT
+    module.operation.walk(callback)
+
+    # Test skip.
+    # CHECK-NEXT:  Skip pre-order
+    # CHECK-NEXT:  builtin.module
+    print("Skip pre-order")
+    def callback(op):
+        print(op.name)
+        return WalkResult.SKIP
+    module.operation.walk(callback, WalkOrder.PRE_ORDER)
+
+    # Test exception.
+    # CHECK: Exception
+    # CHECK-NEXT: func.return
+    # CHECK-NEXT: Exception raised
+    print("Exception")
+    def callback(op):
+        print(op.name)
+        raise ValueError
+        return WalkResult.ADVANCE
+
+    try:
+        module.operation.walk(callback)
+    except ValueError:
+        print("Exception raised")
