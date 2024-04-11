@@ -80,7 +80,7 @@ define <4 x i8> @testv4i16i8_undef(<4 x i16> %add) {
 define i8 @wrongimm(i16 %add) {
 ; CHECK-LABEL: @wrongimm(
 ; CHECK-NEXT:    [[SH:%.*]] = ashr i16 [[ADD:%.*]], 14
-; CHECK-NEXT:    [[T:%.*]] = trunc i16 [[SH]] to i8
+; CHECK-NEXT:    [[T:%.*]] = trunc nsw i16 [[SH]] to i8
 ; CHECK-NEXT:    [[X:%.*]] = xor i8 [[T]], 27
 ; CHECK-NEXT:    ret i8 [[X]]
 ;
@@ -140,7 +140,7 @@ define i16 @extrause_trunc1(i32 %add) {
 define i16 @extrause_trunc2(i32 %add) {
 ; CHECK-LABEL: @extrause_trunc2(
 ; CHECK-NEXT:    [[SH:%.*]] = ashr i32 [[ADD:%.*]], 31
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[SH]] to i16
+; CHECK-NEXT:    [[T:%.*]] = trunc nsw i32 [[SH]] to i16
 ; CHECK-NEXT:    call void @use16(i16 [[T]])
 ; CHECK-NEXT:    [[X:%.*]] = xor i16 [[T]], 127
 ; CHECK-NEXT:    ret i16 [[X]]

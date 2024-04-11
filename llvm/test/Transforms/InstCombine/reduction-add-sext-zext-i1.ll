@@ -53,7 +53,7 @@ define i8 @reduce_add_zext_long(<128 x i1> %x) {
 ; CHECK-LABEL: @reduce_add_zext_long(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <128 x i1> [[X:%.*]] to i128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i128 @llvm.ctpop.i128(i128 [[TMP1]]), !range [[RNG3:![0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i128 [[TMP2]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw i128 [[TMP2]] to i8
 ; CHECK-NEXT:    [[RES:%.*]] = sub i8 0, [[TMP3]]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
@@ -67,7 +67,7 @@ define i8 @reduce_add_zext_long_external_use(<128 x i1> %x) {
 ; CHECK-LABEL: @reduce_add_zext_long_external_use(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <128 x i1> [[X:%.*]] to i128
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i128 @llvm.ctpop.i128(i128 [[TMP1]]), !range [[RNG3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i128 [[TMP2]] to i8
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw i128 [[TMP2]] to i8
 ; CHECK-NEXT:    [[RES:%.*]] = sub i8 0, [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <128 x i1> [[X]], i64 0
 ; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[TMP4]] to i8

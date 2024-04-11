@@ -91,7 +91,7 @@ define <2 x i16> @t5_vec_undef(<2 x i8> %x) {
 define i16 @t6_extrause0(i8 %x) {
 ; CHECK-LABEL: @t6_extrause0(
 ; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[A]] to i4
+; CHECK-NEXT:    [[B:%.*]] = trunc nuw i8 [[A]] to i4
 ; CHECK-NEXT:    call void @use4(i4 [[B]])
 ; CHECK-NEXT:    [[C:%.*]] = sext i4 [[B]] to i16
 ; CHECK-NEXT:    ret i16 [[C]]
@@ -157,7 +157,7 @@ define i16 @t10_extrause2(i8 %x) {
 ; CHECK-LABEL: @t10_extrause2(
 ; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 4
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[A]] to i4
+; CHECK-NEXT:    [[B:%.*]] = trunc nuw i8 [[A]] to i4
 ; CHECK-NEXT:    call void @use4(i4 [[B]])
 ; CHECK-NEXT:    [[C:%.*]] = sext i4 [[B]] to i16
 ; CHECK-NEXT:    ret i16 [[C]]
@@ -189,7 +189,7 @@ define <2 x i16> @t11_extrause2_vec_undef(<2 x i8> %x) {
 define <2 x i10> @wide_source_shifted_signbit(<2 x i32> %x) {
 ; CHECK-LABEL: @wide_source_shifted_signbit(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 24, i32 24>
-; CHECK-NEXT:    [[C:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i10>
+; CHECK-NEXT:    [[C:%.*]] = trunc nsw <2 x i32> [[TMP1]] to <2 x i10>
 ; CHECK-NEXT:    ret <2 x i10> [[C]]
 ;
   %a = lshr <2 x i32> %x, <i32 24, i32 24>
@@ -203,7 +203,7 @@ define i10 @wide_source_shifted_signbit_use1(i32 %x) {
 ; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X:%.*]], 24
 ; CHECK-NEXT:    call void @use32(i32 [[A]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X]], 24
-; CHECK-NEXT:    [[C:%.*]] = trunc i32 [[TMP1]] to i10
+; CHECK-NEXT:    [[C:%.*]] = trunc nsw i32 [[TMP1]] to i10
 ; CHECK-NEXT:    ret i10 [[C]]
 ;
   %a = lshr i32 %x, 24
@@ -216,7 +216,7 @@ define i10 @wide_source_shifted_signbit_use1(i32 %x) {
 define i10 @wide_source_shifted_signbit_use2(i32 %x) {
 ; CHECK-LABEL: @wide_source_shifted_signbit_use2(
 ; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X:%.*]], 24
-; CHECK-NEXT:    [[B:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[B:%.*]] = trunc nuw i32 [[A]] to i8
 ; CHECK-NEXT:    call void @use8(i8 [[B]])
 ; CHECK-NEXT:    [[C:%.*]] = sext i8 [[B]] to i10
 ; CHECK-NEXT:    ret i10 [[C]]
@@ -256,7 +256,7 @@ define i32 @same_source_shifted_signbit_use1(i32 %x) {
 define i32 @same_source_shifted_signbit_use2(i32 %x) {
 ; CHECK-LABEL: @same_source_shifted_signbit_use2(
 ; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X:%.*]], 24
-; CHECK-NEXT:    [[B:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[B:%.*]] = trunc nuw i32 [[A]] to i8
 ; CHECK-NEXT:    call void @use8(i8 [[B]])
 ; CHECK-NEXT:    [[C:%.*]] = sext i8 [[B]] to i32
 ; CHECK-NEXT:    ret i32 [[C]]

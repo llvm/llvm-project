@@ -452,7 +452,7 @@ define i64 @test21(i32 %x) {
 define i16 @test22(i32 %x) {
 ; CHECK-LABEL: @test22(
 ; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[RETVAL:%.*]] = trunc i32 [[X_LOBIT]] to i16
+; CHECK-NEXT:    [[RETVAL:%.*]] = trunc nsw i32 [[X_LOBIT]] to i16
 ; CHECK-NEXT:    ret i16 [[RETVAL]]
 ;
   %t = icmp slt i32 %x, 0
