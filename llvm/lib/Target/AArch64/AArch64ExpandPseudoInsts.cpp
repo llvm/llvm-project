@@ -1602,15 +1602,17 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
    case AArch64::VGUnwindInfoPseudo: {
      MachineFunction &MF = *MBB.getParent();
      SMEAttrs FuncAttrs(MF.getFunction());
+     bool LocallyStreaming =
+         FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface();
      const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
 
-     if ((!FuncAttrs.hasStreamingBody() && FuncAttrs.hasStreamingInterface()) ||
-         !AFI->requiresVGSpill(MF))
+     if (!AFI->requiresVGSpill(MF))
        return false;
 
-     int64_t StreamingVGIdx = AFI->getStreamingVGIdx();
-     assert(StreamingVGIdx != std::numeric_limits<int>::max() &&
-            "Expected FrameIdx for Streaming-VG");
+     int64_t VGFrameIdx =
+         LocallyStreaming ? AFI->getStreamingVGIdx() : AFI->getVGIdx();
+     assert(VGFrameIdx != std::numeric_limits<int>::max() &&
+            "Expected FrameIdx for VG");
 
      const TargetSubtargetInfo &STI = MF.getSubtarget();
      const TargetInstrInfo &TII = *STI.getInstrInfo();
@@ -1618,13 +1620,13 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      if (MI.getOperand(0).getImm() == 1) {
        // This pseudo has been inserted after a streaming-mode change
        // to save the streaming value of VG before a call.
-       // Calculate and emit the CFI offset using StreamingVGIdx.
+       // Calculate and emit the CFI offset using VGFrameIdx.
        MachineFrameInfo &MFI = MF.getFrameInfo();
        const AArch64FrameLowering *TFI =
            MF.getSubtarget<AArch64Subtarget>().getFrameLowering();
 
        int64_t Offset =
-           MFI.getObjectOffset(StreamingVGIdx) - TFI->getOffsetOfLocalArea();
+           MFI.getObjectOffset(VGFrameIdx) - TFI->getOffsetOfLocalArea();
        unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
            nullptr, TRI.getDwarfRegNum(AArch64::VG, true), Offset));
        BuildMI(MBB, MBBI, MBBI->getDebugLoc(),

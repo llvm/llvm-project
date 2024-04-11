@@ -559,6 +559,9 @@ void AArch64FrameLowering::emitCalleeSavedGPRLocations(
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  SMEAttrs Attrs(MF.getFunction());
+  bool LocallyStreaming =
+      Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface();
 
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   if (CSI.empty())
@@ -578,10 +581,12 @@ void AArch64FrameLowering::emitCalleeSavedGPRLocations(
     int64_t DwarfReg = TRI.getDwarfRegNum(Info.getReg(), true);
     int64_t Offset = MFI.getObjectOffset(FrameIdx) - getOffsetOfLocalArea();
 
-    // Locally streaming functions save two values for VG, but we should only
-    // emit the location of the non-streaming value here.
-    if (DwarfReg == TRI.getDwarfRegNum(AArch64::VG, true) &&
-        FrameIdx == AFI->getStreamingVGIdx())
+    // The location of VG will be emitted before each streaming-mode change in
+    // the function. Only locally-streaming functions require emitting the
+    // non-streaming VG location here.
+    if ((LocallyStreaming && FrameIdx == AFI->getStreamingVGIdx()) ||
+        (!LocallyStreaming &&
+         DwarfReg == TRI.getDwarfRegNum(AArch64::VG, true)))
       continue;
 
     unsigned CFIIndex = MF.addFrameInst(
@@ -3142,6 +3147,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
             .addImm(31)
             .addImm(1)
             .setMIFlag(MachineInstr::FrameSetup);
+        AFI->setVGIdx(RPI.FrameIdx);
       }
     }
 

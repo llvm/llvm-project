@@ -8514,22 +8514,20 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
 
   SDValue InGlue;
-  bool IsLocallyStreaming =
-      !CallerAttrs.hasStreamingInterface() && CallerAttrs.hasStreamingBody();
   if (RequiresSMChange) {
+
+    if (Subtarget->hasSVE()) {
+      Chain = DAG.getNode(
+          AArch64ISD::VG_UNWIND, DL, DAG.getVTList(MVT::Other, MVT::Glue),
+          {Chain, DAG.getTargetConstant(/*Save*/ 1, DL, MVT::i64)});
+      InGlue = Chain.getValue(1);
+    }
+
     SDValue NewChain = changeStreamingMode(
         DAG, DL, CalleeAttrs.hasStreamingInterface(), Chain, InGlue,
         getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
     Chain = NewChain.getValue(0);
     InGlue = NewChain.getValue(1);
-
-    if (IsLocallyStreaming && Subtarget->hasSVE()) {
-      NewChain = DAG.getNode(
-          AArch64ISD::VG_UNWIND, DL, DAG.getVTList(MVT::Other, MVT::Glue),
-          {Chain, DAG.getTargetConstant(/*Save*/ 1, DL, MVT::i64), InGlue});
-      Chain = NewChain.getValue(0);
-      InGlue = NewChain.getValue(1);
-    }
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token chain
@@ -8699,14 +8697,16 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (RequiresSMChange) {
     assert(PStateSM && "Expected a PStateSM to be set");
+
     Result = changeStreamingMode(
         DAG, DL, !CalleeAttrs.hasStreamingInterface(), Result, InGlue,
         getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
+    InGlue = Result.getValue(1);
 
-    if (IsLocallyStreaming && Subtarget->hasSVE())
+    if (Subtarget->hasSVE())
       Result = DAG.getNode(
-          AArch64ISD::VG_UNWIND, DL, MVT::Other,
-          {Result, DAG.getTargetConstant(/*Restore*/ 0, DL, MVT::i64)});
+          AArch64ISD::VG_UNWIND, DL, DAG.getVTList(MVT::Other, MVT::Glue),
+          {Result, DAG.getTargetConstant(/*Restore*/ 0, DL, MVT::i64), InGlue});
   }
 
   if (CallerAttrs.requiresEnablingZAAfterCall(CalleeAttrs))
