@@ -120,6 +120,7 @@ class TestDebugInfoSize(lldbtest.TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, lldbtest.VALID_TARGET)
 
+        # By default dwo files will not be loaded
         stats = target.GetStatistics()
         stream = lldb.SBStream()
         res = stats.GetAsJSON(stream)
@@ -129,6 +130,15 @@ class TestDebugInfoSize(lldbtest.TestBase):
             debug_stats,
             'Make sure the "totalDebugInfoByteSize" key is in target.GetStatistics()',
         )
+        self.assertEqual(debug_stats["totalDebugInfoByteSize"], SKELETON_DEBUGINFO_SIZE)
+
+        # Force loading all the dwo files
+        stats_options = lldb.SBStatisticsOptions()
+        stats_options.SetReportAllAvailableDebugInfo(True)
+        stats = target.GetStatistics(stats_options)
+        stream = lldb.SBStream()
+        stats.GetAsJSON(stream)
+        debug_stats = json.loads(stream.GetData())
         self.assertEqual(
             debug_stats["totalDebugInfoByteSize"],
             SKELETON_DEBUGINFO_SIZE + MAIN_DWO_DEBUGINFO_SIZE + FOO_DWO_DEBUGINFO_SIZE,

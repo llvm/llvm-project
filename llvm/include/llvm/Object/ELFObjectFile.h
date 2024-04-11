@@ -60,6 +60,7 @@ class ELFObjectFileBase : public ObjectFile {
 
   SubtargetFeatures getMIPSFeatures() const;
   SubtargetFeatures getARMFeatures() const;
+  SubtargetFeatures getHexagonFeatures() const;
   Expected<SubtargetFeatures> getRISCVFeatures() const;
   SubtargetFeatures getLoongArchFeatures() const;
 
@@ -389,25 +390,38 @@ protected:
   }
 
   Error getBuildAttributes(ELFAttributeParser &Attributes) const override {
+    uint32_t Type;
+    switch (getEMachine()) {
+    case ELF::EM_ARM:
+      Type = ELF::SHT_ARM_ATTRIBUTES;
+      break;
+    case ELF::EM_RISCV:
+      Type = ELF::SHT_RISCV_ATTRIBUTES;
+      break;
+    case ELF::EM_HEXAGON:
+      Type = ELF::SHT_HEXAGON_ATTRIBUTES;
+      break;
+    default:
+      return Error::success();
+    }
+
     auto SectionsOrErr = EF.sections();
     if (!SectionsOrErr)
       return SectionsOrErr.takeError();
-
     for (const Elf_Shdr &Sec : *SectionsOrErr) {
-      if (Sec.sh_type == ELF::SHT_ARM_ATTRIBUTES ||
-          Sec.sh_type == ELF::SHT_RISCV_ATTRIBUTES) {
-        auto ErrorOrContents = EF.getSectionContents(Sec);
-        if (!ErrorOrContents)
-          return ErrorOrContents.takeError();
+      if (Sec.sh_type != Type)
+        continue;
+      auto ErrorOrContents = EF.getSectionContents(Sec);
+      if (!ErrorOrContents)
+        return ErrorOrContents.takeError();
 
-        auto Contents = ErrorOrContents.get();
-        if (Contents[0] != ELFAttrs::Format_Version || Contents.size() == 1)
-          return Error::success();
+      auto Contents = ErrorOrContents.get();
+      if (Contents[0] != ELFAttrs::Format_Version || Contents.size() == 1)
+        return Error::success();
 
-        if (Error E = Attributes.parse(Contents, ELFT::TargetEndianness))
-          return E;
-        break;
-      }
+      if (Error E = Attributes.parse(Contents, ELFT::Endianness))
+        return E;
+      break;
     }
     return Error::success();
   }
@@ -468,7 +482,7 @@ public:
   bool isDyldType() const { return isDyldELFObject; }
   static bool classof(const Binary *v) {
     return v->getType() ==
-           getELFType(ELFT::TargetEndianness == llvm::endianness::little,
+           getELFType(ELFT::Endianness == llvm::endianness::little,
                       ELFT::Is64Bits);
   }
 
@@ -1141,10 +1155,9 @@ ELFObjectFile<ELFT>::ELFObjectFile(MemoryBufferRef Object, ELFFile<ELFT> EF,
                                    const Elf_Shdr *DotDynSymSec,
                                    const Elf_Shdr *DotSymtabSec,
                                    const Elf_Shdr *DotSymtabShndx)
-    : ELFObjectFileBase(
-          getELFType(ELFT::TargetEndianness == llvm::endianness::little,
-                     ELFT::Is64Bits),
-          Object),
+    : ELFObjectFileBase(getELFType(ELFT::Endianness == llvm::endianness::little,
+                                   ELFT::Is64Bits),
+                        Object),
       EF(EF), DotDynSymSec(DotDynSymSec), DotSymtabSec(DotSymtabSec),
       DotSymtabShndxSec(DotSymtabShndx) {}
 
@@ -1212,8 +1225,7 @@ uint8_t ELFObjectFile<ELFT>::getBytesInAddress() const {
 
 template <class ELFT>
 StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
-  constexpr bool IsLittleEndian =
-      ELFT::TargetEndianness == llvm::endianness::little;
+  constexpr bool IsLittleEndian = ELFT::Endianness == llvm::endianness::little;
   switch (EF.getHeader().e_ident[ELF::EI_CLASS]) {
   case ELF::ELFCLASS32:
     switch (EF.getHeader().e_machine) {
@@ -1291,7 +1303,7 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
 }
 
 template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
-  bool IsLittleEndian = ELFT::TargetEndianness == llvm::endianness::little;
+  bool IsLittleEndian = ELFT::Endianness == llvm::endianness::little;
   switch (EF.getHeader().e_machine) {
   case ELF::EM_68K:
     return Triple::m68k;

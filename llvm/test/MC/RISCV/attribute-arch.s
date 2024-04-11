@@ -318,8 +318,14 @@
 .attribute arch, "rv32i_ssccptr1p0"
 # CHECK: attribute      5, "rv32i2p1_ssccptr1p0"
 
+.attribute arch, "rv32i_sscofpmf1p0"
+# CHECK: attribute      5, "rv32i2p1_sscofpmf1p0"
+
 .attribute arch, "rv32i_sscounterenw1p0"
 # CHECK: attribute      5, "rv32i2p1_sscounterenw1p0"
+
+.attribute arch, "rv32i_ssqosid1p0"
+# CHECK: attribute      5, "rv32i2p1_ssqosid1p0"
 
 .attribute arch, "rv32i_ssstateen1p0"
 # CHECK: attribute      5, "rv32i2p1_ssstateen1p0"
@@ -388,7 +394,7 @@
 # CHECK: attribute      5, "rv32i2p1_zicfilp0p4"
 
 .attribute arch, "rv32i_zicfiss0p4"
-# CHECK: .attribute     5, "rv32i2p1_zicfiss0p4_zicsr2p0_zimop0p1"
+# CHECK: .attribute     5, "rv32i2p1_zicfiss0p4_zicsr2p0_zimop1p0"
 
 .attribute arch, "rv64i_xsfvfwmaccqqq"
 # CHECK: attribute      5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvl32b1p0_xsfvfwmaccqqq1p0"

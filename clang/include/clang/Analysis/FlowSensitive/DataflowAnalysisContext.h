@@ -18,8 +18,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/Arena.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
@@ -99,6 +99,8 @@ public:
   /// Sets a callback that returns the names and types of the synthetic fields
   /// to add to a `RecordStorageLocation` of a given type.
   /// Typically, this is called from the constructor of a `DataflowAnalysis`
+  ///
+  /// The field types returned by the callback may not have reference type.
   ///
   /// To maintain the invariant that all `RecordStorageLocation`s of a given
   /// type have the same fields:
@@ -181,9 +183,9 @@ public:
   LLVM_DUMP_METHOD void dumpFlowCondition(Atom Token,
                                           llvm::raw_ostream &OS = llvm::dbgs());
 
-  /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
+  /// Returns the `AdornedCFG` registered for `F`, if any. Otherwise,
   /// returns null.
-  const ControlFlowContext *getControlFlowContext(const FunctionDecl *F);
+  const AdornedCFG *getAdornedCFG(const FunctionDecl *F);
 
   const Options &getOptions() { return Opts; }
 
@@ -205,8 +207,17 @@ public:
   /// type.
   llvm::StringMap<QualType> getSyntheticFields(QualType Type) {
     assert(Type->isRecordType());
-    if (SyntheticFieldCallback)
-      return SyntheticFieldCallback(Type);
+    if (SyntheticFieldCallback) {
+      llvm::StringMap<QualType> Result = SyntheticFieldCallback(Type);
+      // Synthetic fields are not allowed to have reference type.
+      assert([&Result] {
+        for (const auto &Entry : Result)
+          if (Entry.getValue()->isReferenceType())
+            return false;
+        return true;
+      }());
+      return Result;
+    }
     return {};
   }
 
@@ -285,7 +296,7 @@ private:
   llvm::DenseMap<Atom, const Formula *> FlowConditionConstraints;
   const Formula *Invariant = nullptr;
 
-  llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
+  llvm::DenseMap<const FunctionDecl *, AdornedCFG> FunctionContexts;
 
   // Fields modeled by environments covered by this context.
   FieldSet ModeledFields;

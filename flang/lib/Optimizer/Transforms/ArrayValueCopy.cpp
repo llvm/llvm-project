@@ -573,6 +573,8 @@ static bool conflictOnLoad(llvm::ArrayRef<mlir::Operation *> reach,
   for (auto *op : reach)
     if (auto ld = mlir::dyn_cast<ArrayLoadOp>(op)) {
       mlir::Type ldTy = ld.getMemref().getType();
+      auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
+                                              ld.getContext());
       if (ld.getMemref() == addr) {
         if (mutuallyExclusiveSliceRange(ld, st))
           continue;
@@ -588,14 +590,17 @@ static bool conflictOnLoad(llvm::ArrayRef<mlir::Operation *> reach,
         if (optimize && !hasPointerType(ldTy) &&
             !valueMayHaveFirAttributes(
                 ld.getMemref(),
-                {getTargetAttrName(), GlobalOp::getTargetAttrNameStr()}))
+                {getTargetAttrName(),
+                 fir::GlobalOp::getTargetAttrName(globalOpName).strref()}))
           continue;
 
         return true;
       } else if (hasPointerType(ldTy)) {
         if (optimize && !storeHasPointerType &&
             !valueMayHaveFirAttributes(
-                addr, {getTargetAttrName(), GlobalOp::getTargetAttrNameStr()}))
+                addr,
+                {getTargetAttrName(),
+                 fir::GlobalOp::getTargetAttrName(globalOpName).strref()}))
           continue;
 
         return true;

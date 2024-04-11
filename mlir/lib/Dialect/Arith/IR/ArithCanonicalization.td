@@ -253,9 +253,6 @@ def CmpIExtUI :
 // SelectOp
 //===----------------------------------------------------------------------===//
 
-def GetScalarOrVectorTrueAttribute :
-  NativeCodeCall<"cast<TypedAttr>(getBoolAttribute($0.getType(), true))">;
-
 // select(not(pred), a, b) => select(pred, b, a)
 def SelectNotCond :
     Pat<(SelectOp (Arith_XOrIOp $pred, (ConstantLikeMatcher APIntAttr:$ones)), $a, $b),
@@ -272,31 +269,12 @@ def RedundantSelectFalse :
     Pat<(SelectOp $pred, $a, (SelectOp $pred, $b, $c)),
         (SelectOp $pred, $a, $c)>;
 
-// select(predA, select(predB, x, y), y) => select(and(predA, predB), x, y)
-def SelectAndCond :
-    Pat<(SelectOp $predA, (SelectOp $predB, $x, $y), $y),
-        (SelectOp (Arith_AndIOp $predA, $predB), $x, $y)>;
-
-// select(predA, select(predB, y, x), y) => select(and(predA, not(predB)), x, y)
-def SelectAndNotCond :
-    Pat<(SelectOp $predA, (SelectOp $predB, $y, $x), $y),
-        (SelectOp (Arith_AndIOp $predA,
-                                (Arith_XOrIOp $predB,
-                                (Arith_ConstantOp (GetScalarOrVectorTrueAttribute $predB)))),
-                  $x, $y)>;
-
-// select(predA, x, select(predB, x, y)) => select(or(predA, predB), x, y)
-def SelectOrCond :
-    Pat<(SelectOp $predA, $x, (SelectOp $predB, $x, $y)),
-        (SelectOp (Arith_OrIOp $predA, $predB), $x, $y)>;
-
-// select(predA, x, select(predB, y, x)) => select(or(predA, not(predB)), x, y)
-def SelectOrNotCond :
-    Pat<(SelectOp $predA, $x, (SelectOp $predB, $y, $x)),
-        (SelectOp (Arith_OrIOp $predA,
-                               (Arith_XOrIOp $predB,
-                               (Arith_ConstantOp (GetScalarOrVectorTrueAttribute $predB)))),
-                  $x, $y)>;
+// select(pred, false, true) => not(pred) 
+def SelectI1ToNot :
+    Pat<(SelectOp $pred,
+                  (ConstantLikeMatcher ConstantAttr<I1Attr, "0">),
+                  (ConstantLikeMatcher ConstantAttr<I1Attr, "1">)),
+        (Arith_XOrIOp $pred, (Arith_ConstantOp ConstantAttr<I1Attr, "1">))>;
 
 //===----------------------------------------------------------------------===//
 // IndexCastOp

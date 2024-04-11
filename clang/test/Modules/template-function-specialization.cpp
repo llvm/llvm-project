@@ -4,7 +4,10 @@
 //
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/foo.cppm -o %t/foo.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -verify -fsyntax-only
-//
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/foo.cppm -o %t/foo.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -verify -fsyntax-only
+
 //--- foo.cppm
 module;
 # 3 __FILE__ 1 // use the next physical line number here (and below)

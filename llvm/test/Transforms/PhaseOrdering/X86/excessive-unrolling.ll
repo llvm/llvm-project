@@ -13,124 +13,124 @@ define void @test_known_trip_count() {
 ; CHECK-LABEL: @test_known_trip_count(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr @b, align 16
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x double>, ptr @c, align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[WIDE_LOAD]], [[WIDE_LOAD3]]
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 2), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x double>, ptr @c, align 16
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 2), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[WIDE_LOAD]], [[WIDE_LOAD4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[WIDE_LOAD3]], [[WIDE_LOAD5]]
 ; CHECK-NEXT:    store <2 x double> [[TMP0]], ptr @a, align 16
-; CHECK-NEXT:    [[WIDE_LOAD_1:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 2), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_1:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 2), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[WIDE_LOAD_1]], [[WIDE_LOAD3_1]]
 ; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 2), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_2:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 4), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_2:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 4), align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[WIDE_LOAD_2]], [[WIDE_LOAD3_2]]
+; CHECK-NEXT:    [[WIDE_LOAD_1:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 4), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_1:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 6), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_1:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 4), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_1:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 6), align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[WIDE_LOAD_1]], [[WIDE_LOAD4_1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[WIDE_LOAD3_1]], [[WIDE_LOAD5_1]]
 ; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 4), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_3:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 6), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_3:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 6), align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[WIDE_LOAD_3]], [[WIDE_LOAD3_3]]
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 6), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_4:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 8), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_4:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 8), align 16
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[WIDE_LOAD_4]], [[WIDE_LOAD3_4]]
+; CHECK-NEXT:    [[WIDE_LOAD_2:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 8), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_2:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 10), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_2:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 8), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_2:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 10), align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[WIDE_LOAD_2]], [[WIDE_LOAD4_2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[WIDE_LOAD3_2]], [[WIDE_LOAD5_2]]
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 8), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_5:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 10), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_5:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 10), align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[WIDE_LOAD_5]], [[WIDE_LOAD3_5]]
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 10), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_6:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 12), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_6:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 12), align 16
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[WIDE_LOAD_6]], [[WIDE_LOAD3_6]]
+; CHECK-NEXT:    [[WIDE_LOAD_3:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 12), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_3:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 14), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_3:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 12), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_3:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 14), align 16
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[WIDE_LOAD_3]], [[WIDE_LOAD4_3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[WIDE_LOAD3_3]], [[WIDE_LOAD5_3]]
 ; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 12), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_7:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 14), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_7:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 14), align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[WIDE_LOAD_7]], [[WIDE_LOAD3_7]]
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 14), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_8:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 16), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_8:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 16), align 16
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[WIDE_LOAD_8]], [[WIDE_LOAD3_8]]
+; CHECK-NEXT:    [[WIDE_LOAD_4:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 16), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_4:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 18), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_4:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 16), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_4:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 18), align 16
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[WIDE_LOAD_4]], [[WIDE_LOAD4_4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[WIDE_LOAD3_4]], [[WIDE_LOAD5_4]]
 ; CHECK-NEXT:    store <2 x double> [[TMP8]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 16), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_9:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 18), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_9:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 18), align 16
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[WIDE_LOAD_9]], [[WIDE_LOAD3_9]]
 ; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 18), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_10:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 20), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_10:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 20), align 16
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[WIDE_LOAD_10]], [[WIDE_LOAD3_10]]
+; CHECK-NEXT:    [[WIDE_LOAD_5:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 20), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_5:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 22), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_5:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 20), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_5:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 22), align 16
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[WIDE_LOAD_5]], [[WIDE_LOAD4_5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[WIDE_LOAD3_5]], [[WIDE_LOAD5_5]]
 ; CHECK-NEXT:    store <2 x double> [[TMP10]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 20), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_11:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 22), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_11:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 22), align 16
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[WIDE_LOAD_11]], [[WIDE_LOAD3_11]]
 ; CHECK-NEXT:    store <2 x double> [[TMP11]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 22), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_12:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 24), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_12:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 24), align 16
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd <2 x double> [[WIDE_LOAD_12]], [[WIDE_LOAD3_12]]
+; CHECK-NEXT:    [[WIDE_LOAD_6:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 24), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_6:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 26), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_6:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 24), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_6:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 26), align 16
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd <2 x double> [[WIDE_LOAD_6]], [[WIDE_LOAD4_6]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd <2 x double> [[WIDE_LOAD3_6]], [[WIDE_LOAD5_6]]
 ; CHECK-NEXT:    store <2 x double> [[TMP12]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 24), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_13:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 26), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_13:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 26), align 16
-; CHECK-NEXT:    [[TMP13:%.*]] = fadd <2 x double> [[WIDE_LOAD_13]], [[WIDE_LOAD3_13]]
 ; CHECK-NEXT:    store <2 x double> [[TMP13]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 26), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_14:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 28), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_14:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 28), align 16
-; CHECK-NEXT:    [[TMP14:%.*]] = fadd <2 x double> [[WIDE_LOAD_14]], [[WIDE_LOAD3_14]]
+; CHECK-NEXT:    [[WIDE_LOAD_7:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 28), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_7:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 30), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_7:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 28), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_7:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 30), align 16
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd <2 x double> [[WIDE_LOAD_7]], [[WIDE_LOAD4_7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[WIDE_LOAD3_7]], [[WIDE_LOAD5_7]]
 ; CHECK-NEXT:    store <2 x double> [[TMP14]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 28), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_15:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 30), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_15:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 30), align 16
-; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[WIDE_LOAD_15]], [[WIDE_LOAD3_15]]
 ; CHECK-NEXT:    store <2 x double> [[TMP15]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 30), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_16:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 32), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_16:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 32), align 16
-; CHECK-NEXT:    [[TMP16:%.*]] = fadd <2 x double> [[WIDE_LOAD_16]], [[WIDE_LOAD3_16]]
+; CHECK-NEXT:    [[WIDE_LOAD_8:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 32), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_8:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 34), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_8:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 32), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_8:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 34), align 16
+; CHECK-NEXT:    [[TMP16:%.*]] = fadd <2 x double> [[WIDE_LOAD_8]], [[WIDE_LOAD4_8]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fadd <2 x double> [[WIDE_LOAD3_8]], [[WIDE_LOAD5_8]]
 ; CHECK-NEXT:    store <2 x double> [[TMP16]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 32), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_17:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 34), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_17:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 34), align 16
-; CHECK-NEXT:    [[TMP17:%.*]] = fadd <2 x double> [[WIDE_LOAD_17]], [[WIDE_LOAD3_17]]
 ; CHECK-NEXT:    store <2 x double> [[TMP17]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 34), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_18:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 36), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_18:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 36), align 16
-; CHECK-NEXT:    [[TMP18:%.*]] = fadd <2 x double> [[WIDE_LOAD_18]], [[WIDE_LOAD3_18]]
+; CHECK-NEXT:    [[WIDE_LOAD_9:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 36), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_9:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 38), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_9:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 36), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_9:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 38), align 16
+; CHECK-NEXT:    [[TMP18:%.*]] = fadd <2 x double> [[WIDE_LOAD_9]], [[WIDE_LOAD4_9]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fadd <2 x double> [[WIDE_LOAD3_9]], [[WIDE_LOAD5_9]]
 ; CHECK-NEXT:    store <2 x double> [[TMP18]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 36), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_19:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 38), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_19:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 38), align 16
-; CHECK-NEXT:    [[TMP19:%.*]] = fadd <2 x double> [[WIDE_LOAD_19]], [[WIDE_LOAD3_19]]
 ; CHECK-NEXT:    store <2 x double> [[TMP19]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 38), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_20:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 40), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_20:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 40), align 16
-; CHECK-NEXT:    [[TMP20:%.*]] = fadd <2 x double> [[WIDE_LOAD_20]], [[WIDE_LOAD3_20]]
+; CHECK-NEXT:    [[WIDE_LOAD_10:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 40), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_10:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 42), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_10:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 40), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_10:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 42), align 16
+; CHECK-NEXT:    [[TMP20:%.*]] = fadd <2 x double> [[WIDE_LOAD_10]], [[WIDE_LOAD4_10]]
+; CHECK-NEXT:    [[TMP21:%.*]] = fadd <2 x double> [[WIDE_LOAD3_10]], [[WIDE_LOAD5_10]]
 ; CHECK-NEXT:    store <2 x double> [[TMP20]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 40), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_21:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 42), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_21:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 42), align 16
-; CHECK-NEXT:    [[TMP21:%.*]] = fadd <2 x double> [[WIDE_LOAD_21]], [[WIDE_LOAD3_21]]
 ; CHECK-NEXT:    store <2 x double> [[TMP21]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 42), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_22:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 44), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_22:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 44), align 16
-; CHECK-NEXT:    [[TMP22:%.*]] = fadd <2 x double> [[WIDE_LOAD_22]], [[WIDE_LOAD3_22]]
+; CHECK-NEXT:    [[WIDE_LOAD_11:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 44), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_11:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 46), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_11:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 44), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_11:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 46), align 16
+; CHECK-NEXT:    [[TMP22:%.*]] = fadd <2 x double> [[WIDE_LOAD_11]], [[WIDE_LOAD4_11]]
+; CHECK-NEXT:    [[TMP23:%.*]] = fadd <2 x double> [[WIDE_LOAD3_11]], [[WIDE_LOAD5_11]]
 ; CHECK-NEXT:    store <2 x double> [[TMP22]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 44), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_23:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 46), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_23:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 46), align 16
-; CHECK-NEXT:    [[TMP23:%.*]] = fadd <2 x double> [[WIDE_LOAD_23]], [[WIDE_LOAD3_23]]
 ; CHECK-NEXT:    store <2 x double> [[TMP23]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 46), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_24:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 48), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_24:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 48), align 16
-; CHECK-NEXT:    [[TMP24:%.*]] = fadd <2 x double> [[WIDE_LOAD_24]], [[WIDE_LOAD3_24]]
+; CHECK-NEXT:    [[WIDE_LOAD_12:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 48), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_12:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 50), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_12:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 48), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_12:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 50), align 16
+; CHECK-NEXT:    [[TMP24:%.*]] = fadd <2 x double> [[WIDE_LOAD_12]], [[WIDE_LOAD4_12]]
+; CHECK-NEXT:    [[TMP25:%.*]] = fadd <2 x double> [[WIDE_LOAD3_12]], [[WIDE_LOAD5_12]]
 ; CHECK-NEXT:    store <2 x double> [[TMP24]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 48), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_25:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 50), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_25:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 50), align 16
-; CHECK-NEXT:    [[TMP25:%.*]] = fadd <2 x double> [[WIDE_LOAD_25]], [[WIDE_LOAD3_25]]
 ; CHECK-NEXT:    store <2 x double> [[TMP25]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 50), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_26:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 52), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_26:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 52), align 16
-; CHECK-NEXT:    [[TMP26:%.*]] = fadd <2 x double> [[WIDE_LOAD_26]], [[WIDE_LOAD3_26]]
+; CHECK-NEXT:    [[WIDE_LOAD_13:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 52), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_13:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 54), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_13:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 52), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_13:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 54), align 16
+; CHECK-NEXT:    [[TMP26:%.*]] = fadd <2 x double> [[WIDE_LOAD_13]], [[WIDE_LOAD4_13]]
+; CHECK-NEXT:    [[TMP27:%.*]] = fadd <2 x double> [[WIDE_LOAD3_13]], [[WIDE_LOAD5_13]]
 ; CHECK-NEXT:    store <2 x double> [[TMP26]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 52), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_27:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 54), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_27:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 54), align 16
-; CHECK-NEXT:    [[TMP27:%.*]] = fadd <2 x double> [[WIDE_LOAD_27]], [[WIDE_LOAD3_27]]
 ; CHECK-NEXT:    store <2 x double> [[TMP27]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 54), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_28:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 56), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_28:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 56), align 16
-; CHECK-NEXT:    [[TMP28:%.*]] = fadd <2 x double> [[WIDE_LOAD_28]], [[WIDE_LOAD3_28]]
+; CHECK-NEXT:    [[WIDE_LOAD_14:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 0, i64 56), align 16
+; CHECK-NEXT:    [[WIDE_LOAD3_14:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 1, i64 0), align 16
+; CHECK-NEXT:    [[WIDE_LOAD4_14:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 0, i64 56), align 16
+; CHECK-NEXT:    [[WIDE_LOAD5_14:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 1, i64 0), align 16
+; CHECK-NEXT:    [[TMP28:%.*]] = fadd <2 x double> [[WIDE_LOAD_14]], [[WIDE_LOAD4_14]]
+; CHECK-NEXT:    [[TMP29:%.*]] = fadd <2 x double> [[WIDE_LOAD3_14]], [[WIDE_LOAD5_14]]
 ; CHECK-NEXT:    store <2 x double> [[TMP28]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 0, i64 56), align 16
-; CHECK-NEXT:    [[WIDE_LOAD_29:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @b, i64 1, i64 0), align 16
-; CHECK-NEXT:    [[WIDE_LOAD3_29:%.*]] = load <2 x double>, ptr getelementptr inbounds ([58 x double], ptr @c, i64 1, i64 0), align 16
-; CHECK-NEXT:    [[TMP29:%.*]] = fadd <2 x double> [[WIDE_LOAD_29]], [[WIDE_LOAD3_29]]
 ; CHECK-NEXT:    store <2 x double> [[TMP29]], ptr getelementptr inbounds ([58 x double], ptr @a, i64 1, i64 0), align 16
 ; CHECK-NEXT:    [[TMP30:%.*]] = load double, ptr getelementptr inbounds ([58 x double], ptr @b, i64 1, i64 2), align 16
 ; CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr getelementptr inbounds ([58 x double], ptr @c, i64 1, i64 2), align 16

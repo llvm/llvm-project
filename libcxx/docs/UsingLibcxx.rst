@@ -234,7 +234,7 @@ C++17 Specific Configuration Macros
 
 C++20 Specific Configuration Macros
 -----------------------------------
-**_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE**
+**_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE**:
   This macro is used to re-enable the function
   ``std::shared_ptr<...>::unique()``.
 
@@ -243,18 +243,6 @@ C++20 Specific Configuration Macros
   is equivalent to manually defining each macro listed below.
   This macro is deprecated and will be removed in LLVM-19. Use the
   individual macros listed below.
-
-**_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS**:
-  This macro is used to re-enable redundant members of `allocator<T>`,
-  including `pointer`, `reference`, `rebind`, `address`, `max_size`,
-  `construct`, `destroy`, and the two-argument overload of `allocate`.
-  This macro has been deprecated and will be removed in LLVM-19.
-
-**_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION**:
-  This macro is used to re-enable the library-provided specializations of
-  `allocator<void>` and `allocator<const void>`.
-  Use it in conjunction with `_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`
-  to ensure that removed members of `allocator<void>` can be accessed.
 
 **_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS**:
   This macro is used to re-enable the `argument_type`, `result_type`,
@@ -279,12 +267,19 @@ C++26 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT**:
   This macro is used to re-enable all named declarations in ``<codecvt>``.
 
-**_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE**
+**_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE**:
   This macro is used to re-enable the function
   ``std::basic_string<...>::reserve()``.
 
 **_LIBCPP_ENABLE_CXX26_REMOVED_ALLOCATOR_MEMBERS**:
-  This macro is used to re-enable redundant member of ``allocator<T>::is_always_equal``
+  This macro is used to re-enable redundant member of ``allocator<T>::is_always_equal``.
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM**:
+  This macro is used to re-enable all named declarations in ``<strstream>``.
+
+**_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT**:
+  This macro is used to re-enable the ``wstring_convert`` and ``wbuffer_convert``
+  in ``<locale>``.
 
 Libc++ Extensions
 =================

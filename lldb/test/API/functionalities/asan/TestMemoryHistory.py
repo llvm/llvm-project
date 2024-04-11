@@ -87,7 +87,7 @@ class AsanTestCase(TestBase):
         self.assertEqual(threads.GetSize(), 2)
 
         history_thread = threads.GetThreadAtIndex(0)
-        self.assertTrue(history_thread.num_frames >= 2)
+        self.assertGreaterEqual(history_thread.num_frames, 2)
         self.assertEqual(
             history_thread.frames[1].GetLineEntry().GetFileSpec().GetFilename(),
             "main.c",
@@ -97,7 +97,7 @@ class AsanTestCase(TestBase):
         )
 
         history_thread = threads.GetThreadAtIndex(1)
-        self.assertTrue(history_thread.num_frames >= 2)
+        self.assertGreaterEqual(history_thread.num_frames, 2)
         self.assertEqual(
             history_thread.frames[1].GetLineEntry().GetFileSpec().GetFilename(),
             "main.c",
@@ -109,7 +109,7 @@ class AsanTestCase(TestBase):
         # let's free the container (SBThreadCollection) and see if the
         # SBThreads still live
         threads = None
-        self.assertTrue(history_thread.num_frames >= 2)
+        self.assertGreaterEqual(history_thread.num_frames, 2)
         self.assertEqual(
             history_thread.frames[1].GetLineEntry().GetFileSpec().GetFilename(),
             "main.c",

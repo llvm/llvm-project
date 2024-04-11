@@ -3,6 +3,11 @@
 ; RUN:   -mtriple=x86_64-unknown-unknown %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg."
 
+;; Test with RemoveDIs non-intrinsic debug-info too.
+; RUN: llc -start-before=codegenprepare -stop-after=codegenprepare \
+; RUN:   -mtriple=x86_64-unknown-unknown %s -o - --try-experimental-debuginfo-iterators \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg."
+
 ;; Check that when CodeGenPrepare moves an address computation to a block it's
 ;; used in its dbg.assign uses are updated.
 ;;

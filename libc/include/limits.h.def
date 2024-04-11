@@ -9,6 +9,6 @@
 #ifndef LLVM_LIBC_LIMITS_H
 #define LLVM_LIBC_LIMITS_H
 
-#include <llvm-libc-macros/limits-macros.h>
+#include "llvm-libc-macros/limits-macros.h"
 
 #endif // LLVM_LIBC_LIMITS_H

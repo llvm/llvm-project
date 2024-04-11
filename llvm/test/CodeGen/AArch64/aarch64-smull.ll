@@ -3,8 +3,7 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve < %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SVE
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for smull_zext_v4i16_v4i32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for pmlsl2_v8i16_uzp1
+; CHECK-GI:       warning: Instruction selection used fallback path for pmlsl2_v8i16_uzp1
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for smlsl2_v8i16_uzp1
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for umlsl2_v8i16_uzp1
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for smlsl2_v4i32_uzp1
@@ -189,13 +188,49 @@ define <8 x i32> @smull_zext_v8i8_v8i32_top_bit_is_1(ptr %A, ptr %B) nounwind {
 }
 
 define <4 x i32> @smull_zext_v4i16_v4i32(ptr %A, ptr %B) nounwind {
-; CHECK-LABEL: smull_zext_v4i16_v4i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: smull_zext_v4i16_v4i32:
+; CHECK-NEON:       // %bb.0:
+; CHECK-NEON-NEXT:    ldr s0, [x0]
+; CHECK-NEON-NEXT:    ldr d1, [x1]
+; CHECK-NEON-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEON-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smull_zext_v4i16_v4i32:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    ldr s0, [x0]
+; CHECK-SVE-NEXT:    ldr d1, [x1]
+; CHECK-SVE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SVE-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-GI-LABEL: smull_zext_v4i16_v4i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    uxtb w8, w8
+; CHECK-GI-NEXT:    mov b1, v0.b[1]
+; CHECK-GI-NEXT:    mov b2, v0.b[2]
+; CHECK-GI-NEXT:    mov b3, v0.b[3]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    fmov w9, s1
+; CHECK-GI-NEXT:    fmov w10, s2
+; CHECK-GI-NEXT:    fmov w11, s3
+; CHECK-GI-NEXT:    uxtb w9, w9
+; CHECK-GI-NEXT:    uxtb w10, w10
+; CHECK-GI-NEXT:    uxtb w11, w11
+; CHECK-GI-NEXT:    fmov s1, w9
+; CHECK-GI-NEXT:    fmov s2, w10
+; CHECK-GI-NEXT:    fmov s3, w11
+; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-NEXT:    mov v2.h[1], v3.h[0]
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    ushll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    ldr d2, [x1]
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
+; CHECK-GI-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    ret
   %load.A = load <4 x i8>, ptr %A
   %load.B = load <4 x i16>, ptr %B
   %zext.A = zext <4 x i8> %load.A to <4 x i32>

@@ -18,7 +18,6 @@
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
@@ -112,7 +111,7 @@ class BinarySection {
   static StringRef getName(SectionRef Section) {
     return cantFail(Section.getName());
   }
-  static StringRef getContents(SectionRef Section) {
+  static StringRef getContentsOrQuit(SectionRef Section) {
     if (Section.getObject()->isELF() &&
         ELFSectionRef(Section).getType() == ELF::SHT_NOBITS)
       return StringRef();
@@ -139,10 +138,7 @@ class BinarySection {
     Alignment = NewAlignment;
     ELFType = NewELFType;
     ELFFlags = NewELFFlags;
-    OutputSize = NewSize;
-    OutputContents = StringRef(reinterpret_cast<const char *>(NewData),
-                               NewData ? NewSize : 0);
-    IsFinalized = true;
+    updateContents(NewData, NewSize);
   }
 
 public:
@@ -159,7 +155,7 @@ public:
 
   BinarySection(BinaryContext &BC, SectionRef Section)
       : BC(BC), Name(getName(Section)), Section(Section),
-        Contents(getContents(Section)), Address(Section.getAddress()),
+        Contents(getContentsOrQuit(Section)), Address(Section.getAddress()),
         Size(Section.getSize()), Alignment(Section.getAlignment().value()),
         OutputName(Name), SectionNumber(++Count) {
     if (isELF()) {
@@ -484,9 +480,18 @@ public:
   void flushPendingRelocations(raw_pwrite_stream &OS,
                                SymbolResolverFuncTy Resolver);
 
-  /// Change contents of the section.
-  void updateContents(const uint8_t *Data, size_t NewSize) {
-    OutputContents = StringRef(reinterpret_cast<const char *>(Data), NewSize);
+  /// Change contents of the section. Unless the section has a valid SectionID,
+  /// the memory passed in \p NewData will be managed by the instance of
+  /// BinarySection.
+  void updateContents(const uint8_t *NewData, size_t NewSize) {
+    if (getOutputData() && !hasValidSectionID() &&
+        (!hasSectionRef() ||
+         OutputContents.data() != getContentsOrQuit(Section).data())) {
+      delete[] getOutputData();
+    }
+
+    OutputContents = StringRef(reinterpret_cast<const char *>(NewData),
+                               NewData ? NewSize : 0);
     OutputSize = NewSize;
     IsFinalized = true;
   }

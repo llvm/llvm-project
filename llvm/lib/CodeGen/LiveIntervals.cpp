@@ -1666,13 +1666,27 @@ LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
     for (const MachineOperand &MO : MI.operands()) {
       if (MO.isReg() && MO.getReg().isVirtual()) {
         Register Reg = MO.getReg();
-        // If the new instructions refer to subregs but the old instructions did
-        // not, throw away any old live interval so it will be recomputed with
-        // subranges.
         if (MO.getSubReg() && hasInterval(Reg) &&
-            !getInterval(Reg).hasSubRanges() &&
-            MRI->shouldTrackSubRegLiveness(Reg))
-          removeInterval(Reg);
+            MRI->shouldTrackSubRegLiveness(Reg)) {
+          LiveInterval &LI = getInterval(Reg);
+          if (!LI.hasSubRanges()) {
+            // If the new instructions refer to subregs but the old instructions
+            // did not, throw away any old live interval so it will be
+            // recomputed with subranges.
+            removeInterval(Reg);
+          } else if (MO.isDef()) {
+            // Similarly if a subreg def has no precise subrange match then
+            // assume we need to recompute all subranges.
+            unsigned SubReg = MO.getSubReg();
+            LaneBitmask Mask = TRI->getSubRegIndexLaneMask(SubReg);
+            if (llvm::none_of(LI.subranges(),
+                              [Mask](LiveInterval::SubRange &SR) {
+                                return SR.LaneMask == Mask;
+                              })) {
+              removeInterval(Reg);
+            }
+          }
+        }
         if (!hasInterval(Reg)) {
           createAndComputeVirtRegInterval(Reg);
           // Don't bother to repair a freshly calculated live interval.

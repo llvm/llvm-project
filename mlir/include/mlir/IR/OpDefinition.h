@@ -1729,8 +1729,7 @@ public:
   template <typename... Models>
   static void attachInterface(MLIRContext &context) {
     std::optional<RegisteredOperationName> info =
-        RegisteredOperationName::lookup(ConcreteType::getOperationName(),
-                                        &context);
+        RegisteredOperationName::lookup(TypeID::get<ConcreteType>(), &context);
     if (!info)
       llvm::report_fatal_error(
           "Attempting to attach an interface to an unregistered operation " +
@@ -1966,7 +1965,7 @@ public:
     if constexpr (!hasProperties())
       return getEmptyProperties();
     return *getOperation()
-                ->getPropertiesStorage()
+                ->getPropertiesStorageUnsafe()
                 .template as<InferredProperties<T> *>();
   }
 

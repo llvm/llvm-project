@@ -35,8 +35,8 @@ class TestObjCBuiltinTypes(TestBase):
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(process, bpt)
 
         # Make sure we stopped at the first breakpoint.
-        self.assertTrue(len(thread_list) != 0, "No thread stopped at our breakpoint.")
-        self.assertEquals(
+        self.assertNotEqual(len(thread_list), 0, "No thread stopped at our breakpoint.")
+        self.assertEqual(
             len(thread_list), 1, "More than one thread stopped at our breakpoint."
         )
 
@@ -51,7 +51,4 @@ class TestObjCBuiltinTypes(TestBase):
             "expr --language Objective-C++ -- id my_id = 0; my_id",
             patterns=["\(id\) \$.* = nil"],
         )
-        self.expect(
-            "expr --language C++ -- id my_id = 0; my_id",
-            patterns=["\(id\) \$.* = nullptr"],
-        )
+        self.expect("expr --language C++ -- id my_id = 0; my_id", error=True)

@@ -32,6 +32,8 @@ class UncountedCallArgsChecker
             "WebKit coding guidelines"};
   mutable BugReporter *BR;
 
+  TrivialFunctionAnalysis TFA;
+
 public:
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -70,6 +72,20 @@ public:
       // or std::function call operator).
       unsigned ArgIdx = isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
 
+      if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE)) {
+        if (auto *MD = MemberCallExpr->getMethodDecl()) {
+          auto name = safeGetName(MD);
+          if (name == "ref" || name == "deref")
+            return;
+        }
+        auto *E = MemberCallExpr->getImplicitObjectArgument();
+        QualType ArgType = MemberCallExpr->getObjectType();
+        std::optional<bool> IsUncounted =
+            isUncounted(ArgType->getAsCXXRecordDecl());
+        if (IsUncounted && *IsUncounted && !isPtrOriginSafe(E))
+          reportBugOnThis(E);
+      }
+
       for (auto P = F->param_begin();
            // FIXME: Also check variadic function parameters.
            // FIXME: Also check default function arguments. Probably a different
@@ -91,25 +107,10 @@ public:
 
         const auto *Arg = CE->getArg(ArgIdx);
 
-        std::pair<const clang::Expr *, bool> ArgOrigin =
-            tryToFindPtrOrigin(Arg, true);
+        if (auto *defaultArg = dyn_cast<CXXDefaultArgExpr>(Arg))
+          Arg = defaultArg->getExpr();
 
-        // Temporary ref-counted object created as part of the call argument
-        // would outlive the call.
-        if (ArgOrigin.second)
-          continue;
-
-        if (isa<CXXNullPtrLiteralExpr>(ArgOrigin.first)) {
-          // foo(nullptr)
-          continue;
-        }
-        if (isa<IntegerLiteral>(ArgOrigin.first)) {
-          // FIXME: Check the value.
-          // foo(NULL)
-          continue;
-        }
-
-        if (isASafeCallArg(ArgOrigin.first))
+        if (isPtrOriginSafe(Arg))
           continue;
 
         reportBug(Arg, *P);
@@ -117,7 +118,34 @@ public:
     }
   }
 
+  bool isPtrOriginSafe(const Expr *Arg) const {
+    std::pair<const clang::Expr *, bool> ArgOrigin =
+        tryToFindPtrOrigin(Arg, true);
+
+    // Temporary ref-counted object created as part of the call argument
+    // would outlive the call.
+    if (ArgOrigin.second)
+      return true;
+
+    if (isa<CXXNullPtrLiteralExpr>(ArgOrigin.first)) {
+      // foo(nullptr)
+      return true;
+    }
+    if (isa<IntegerLiteral>(ArgOrigin.first)) {
+      // FIXME: Check the value.
+      // foo(NULL)
+      return true;
+    }
+
+    return isASafeCallArg(ArgOrigin.first);
+  }
+
   bool shouldSkipCall(const CallExpr *CE) const {
+    const auto *Callee = CE->getDirectCallee();
+
+    if (Callee && TFA.isTrivial(Callee))
+      return true;
+
     if (CE->getNumArgs() == 0)
       return false;
 
@@ -125,13 +153,25 @@ public:
     // of object on LHS.
     if (auto *MemberOp = dyn_cast<CXXOperatorCallExpr>(CE)) {
       // Note: assignemnt to built-in type isn't derived from CallExpr.
+      if (MemberOp->getOperator() ==
+          OO_Equal) { // Ignore assignment to Ref/RefPtr.
+        auto *callee = MemberOp->getDirectCallee();
+        if (auto *calleeDecl = dyn_cast<CXXMethodDecl>(callee)) {
+          if (const CXXRecordDecl *classDecl = calleeDecl->getParent()) {
+            if (isRefCounted(classDecl))
+              return true;
+          }
+        }
+      }
       if (MemberOp->isAssignmentOp())
         return false;
     }
 
-    const auto *Callee = CE->getDirectCallee();
     if (!Callee)
       return false;
+
+    if (isMethodOnWTFContainerType(Callee))
+      return true;
 
     auto overloadedOperatorType = Callee->getOverloadedOperator();
     if (overloadedOperatorType == OO_EqualEqual ||
@@ -148,16 +188,42 @@ public:
 
     auto name = safeGetName(Callee);
     if (name == "adoptRef" || name == "getPtr" || name == "WeakPtr" ||
-        name == "dynamicDowncast" || name == "downcast" || name == "bitwise_cast" ||
-        name == "is" || name == "equal" || name == "hash" ||
-        name == "isType"
+        name == "dynamicDowncast" || name == "downcast" ||
+        name == "checkedDowncast" || name == "uncheckedDowncast" ||
+        name == "bitwise_cast" || name == "is" || name == "equal" ||
+        name == "hash" || name == "isType" ||
         // FIXME: Most/all of these should be implemented via attributes.
-        || name == "equalIgnoringASCIICase" ||
+        name == "equalIgnoringASCIICase" ||
         name == "equalIgnoringASCIICaseCommon" ||
-        name == "equalIgnoringNullity")
+        name == "equalIgnoringNullity" || name == "toString")
       return true;
 
     return false;
+  }
+
+  bool isMethodOnWTFContainerType(const FunctionDecl *Decl) const {
+    if (!isa<CXXMethodDecl>(Decl))
+      return false;
+    auto *ClassDecl = Decl->getParent();
+    if (!ClassDecl || !isa<CXXRecordDecl>(ClassDecl))
+      return false;
+
+    auto *NsDecl = ClassDecl->getParent();
+    if (!NsDecl || !isa<NamespaceDecl>(NsDecl))
+      return false;
+
+    auto MethodName = safeGetName(Decl);
+    auto ClsNameStr = safeGetName(ClassDecl);
+    StringRef ClsName = ClsNameStr; // FIXME: Make safeGetName return StringRef.
+    auto NamespaceName = safeGetName(NsDecl);
+    // FIXME: These should be implemented via attributes.
+    return NamespaceName == "WTF" &&
+           (MethodName == "find" || MethodName == "findIf" ||
+            MethodName == "reverseFind" || MethodName == "reverseFindIf" ||
+            MethodName == "get" || MethodName == "inlineGet" ||
+            MethodName == "contains" || MethodName == "containsIf") &&
+           (ClsName.ends_with("Vector") || ClsName.ends_with("Set") ||
+            ClsName.ends_with("Map"));
   }
 
   void reportBug(const Expr *CallArg, const ParmVarDecl *Param) const {
@@ -180,6 +246,19 @@ public:
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
+    Report->addRange(CallArg->getSourceRange());
+    BR->emitReport(std::move(Report));
+  }
+
+  void reportBugOnThis(const Expr *CallArg) const {
+    assert(CallArg);
+
+    const SourceLocation SrcLocToReport = CallArg->getSourceRange().getBegin();
+
+    PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
+    auto Report = std::make_unique<BasicBugReport>(
+        Bug, "Call argument for 'this' parameter is uncounted and unsafe.",
+        BSLoc);
     Report->addRange(CallArg->getSourceRange());
     BR->emitReport(std::move(Report));
   }

@@ -34,7 +34,7 @@ TEST(LlvmLibcFtruncateTest, CreateAndTruncate) {
   //   2. Read it to make sure what was written is actually in the file.
   //   3. Truncate to 1 byte.
   //   4. Try to read more than 1 byte and fail.
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);

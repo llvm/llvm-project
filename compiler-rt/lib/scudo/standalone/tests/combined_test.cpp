@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "memtag.h"
+#include "stack_depot.h"
 #include "tests/scudo_unit_test.h"
 
 #include "allocator_config.h"
@@ -189,7 +190,6 @@ struct TestConditionVariableConfig {
 #endif
     static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
     static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
-    static const bool UseConditionVariable = true;
 #if SCUDO_LINUX
     using ConditionVariableT = scudo::ConditionVariableLinux;
 #else
@@ -867,18 +867,105 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateInPlaceStress) {
   }
 }
 
+SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferDefaultDisabled) {
+  // The RingBuffer is not initialized until tracking is enabled for the
+  // first time.
+  auto *Allocator = this->Allocator.get();
+  EXPECT_EQ(0u, Allocator->getRingBufferSize());
+  EXPECT_EQ(nullptr, Allocator->getRingBufferAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferInitOnce) {
+  auto *Allocator = this->Allocator.get();
+  Allocator->setTrackAllocationStacks(true);
+
+  auto RingBufferSize = Allocator->getRingBufferSize();
+  ASSERT_GT(RingBufferSize, 0u);
+  auto *RingBufferAddress = Allocator->getRingBufferAddress();
+  EXPECT_NE(nullptr, RingBufferAddress);
+
+  // Enable tracking again to verify that the initialization only happens once.
+  Allocator->setTrackAllocationStacks(true);
+  ASSERT_EQ(RingBufferSize, Allocator->getRingBufferSize());
+  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddress());
+}
+
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferSize) {
   auto *Allocator = this->Allocator.get();
-  auto Size = Allocator->getRingBufferSize();
-  if (Size > 0)
-    EXPECT_EQ(Allocator->getRingBufferAddress()[Size - 1], '\0');
+  Allocator->setTrackAllocationStacks(true);
+
+  auto RingBufferSize = Allocator->getRingBufferSize();
+  ASSERT_GT(RingBufferSize, 0u);
+  EXPECT_EQ(Allocator->getRingBufferAddress()[RingBufferSize - 1], '\0');
 }
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, RingBufferAddress) {
   auto *Allocator = this->Allocator.get();
-  auto *Addr = Allocator->getRingBufferAddress();
-  EXPECT_NE(Addr, nullptr);
-  EXPECT_EQ(Addr, Allocator->getRingBufferAddress());
+  Allocator->setTrackAllocationStacks(true);
+
+  auto *RingBufferAddress = Allocator->getRingBufferAddress();
+  EXPECT_NE(RingBufferAddress, nullptr);
+  EXPECT_EQ(RingBufferAddress, Allocator->getRingBufferAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotDefaultDisabled) {
+  // The StackDepot is not initialized until tracking is enabled for the
+  // first time.
+  auto *Allocator = this->Allocator.get();
+  EXPECT_EQ(0u, Allocator->getStackDepotSize());
+  EXPECT_EQ(nullptr, Allocator->getStackDepotAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotInitOnce) {
+  auto *Allocator = this->Allocator.get();
+  Allocator->setTrackAllocationStacks(true);
+
+  auto StackDepotSize = Allocator->getStackDepotSize();
+  EXPECT_GT(StackDepotSize, 0u);
+  auto *StackDepotAddress = Allocator->getStackDepotAddress();
+  EXPECT_NE(nullptr, StackDepotAddress);
+
+  // Enable tracking again to verify that the initialization only happens once.
+  Allocator->setTrackAllocationStacks(true);
+  EXPECT_EQ(StackDepotSize, Allocator->getStackDepotSize());
+  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotSize) {
+  auto *Allocator = this->Allocator.get();
+  Allocator->setTrackAllocationStacks(true);
+
+  auto StackDepotSize = Allocator->getStackDepotSize();
+  EXPECT_GT(StackDepotSize, 0u);
+  EXPECT_EQ(Allocator->getStackDepotAddress()[StackDepotSize - 1], '\0');
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepotAddress) {
+  auto *Allocator = this->Allocator.get();
+  Allocator->setTrackAllocationStacks(true);
+
+  auto *StackDepotAddress = Allocator->getStackDepotAddress();
+  EXPECT_NE(StackDepotAddress, nullptr);
+  EXPECT_EQ(StackDepotAddress, Allocator->getStackDepotAddress());
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
+  alignas(scudo::StackDepot) char Buf[sizeof(scudo::StackDepot) +
+                                      1024 * sizeof(scudo::atomic_u64) +
+                                      1024 * sizeof(scudo::atomic_u32)] = {};
+  auto *Depot = reinterpret_cast<scudo::StackDepot *>(Buf);
+  Depot->init(1024, 1024);
+  ASSERT_TRUE(Depot->isValid(sizeof(Buf)));
+  ASSERT_FALSE(Depot->isValid(sizeof(Buf) - 1));
+  scudo::uptr Stack[] = {1, 2, 3};
+  scudo::u32 Elem = Depot->insert(&Stack[0], &Stack[3]);
+  scudo::uptr RingPosPtr = 0;
+  scudo::uptr SizePtr = 0;
+  ASSERT_TRUE(Depot->find(Elem, &RingPosPtr, &SizePtr));
+  ASSERT_EQ(SizePtr, 3u);
+  EXPECT_EQ(Depot->at(RingPosPtr), 1u);
+  EXPECT_EQ(Depot->at(RingPosPtr + 1), 2u);
+  EXPECT_EQ(Depot->at(RingPosPtr + 2), 3u);
 }
 
 #if SCUDO_CAN_USE_PRIMARY64

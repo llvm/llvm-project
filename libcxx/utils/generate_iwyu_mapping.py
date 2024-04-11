@@ -11,6 +11,7 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         "__debug_utils/.+",
         "__fwd/get[.]h",
         "__support/.+",
+        "__utility/private_constructor_tag.h",
     ]
     if any(re.match(pattern, header) for pattern in ignore):
         return None
@@ -34,12 +35,12 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         return ["atomic", "mutex", "semaphore", "thread"]
     elif header == "__tree":
         return ["map", "set"]
-    elif header == "__fwd/hash.h":
-        return ["functional"]
     elif header == "__fwd/pair.h":
         return ["utility"]
     elif header == "__fwd/subrange.h":
         return ["ranges"]
+    elif re.match("__fwd/(fstream|ios|istream|ostream|sstream|streambuf)[.]h", header):
+        return ["iosfwd"]
     # Handle remaining forward declaration headers
     elif re.match("__fwd/(.+)[.]h", header):
         return [re.match("__fwd/(.+)[.]h", header).group(1)]

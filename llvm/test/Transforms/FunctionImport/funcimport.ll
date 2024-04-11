@@ -57,7 +57,7 @@ declare void @linkoncealias(...) #1
 ; CHECK-DAG: define available_externally void @linkoncealias()
 
 ; INSTLIMDEF-DAG: Import referencestatics
-; INSTLIMDEF-DAG: define available_externally i32 @referencestatics(i32 %i) !thinlto_src_module !0 {
+; INSTLIMDEF-DAG: define available_externally i32 @referencestatics(i32 %i) !thinlto_src_module !0 !thinlto_src_file !1 {
 ; INSTLIM5-DAG: declare i32 @referencestatics(...)
 declare i32 @referencestatics(...) #1
 
@@ -66,27 +66,27 @@ declare i32 @referencestatics(...) #1
 ; Ensure that the call is to the properly-renamed function.
 ; INSTLIMDEF-DAG: Import staticfunc
 ; INSTLIMDEF-DAG: %call = call i32 @staticfunc.llvm.
-; INSTLIMDEF-DAG: define available_externally hidden i32 @staticfunc.llvm.{{.*}} !thinlto_src_module !0 {
+; INSTLIMDEF-DAG: define available_externally hidden i32 @staticfunc.llvm.{{.*}} !thinlto_src_module !0 !thinlto_src_file !1 {
 
 ; INSTLIMDEF-DAG: Import referenceglobals
-; CHECK-DAG: define available_externally i32 @referenceglobals(i32 %i) !thinlto_src_module !0 {
+; CHECK-DAG: define available_externally i32 @referenceglobals(i32 %i) !thinlto_src_module !0 !thinlto_src_file !1 {
 declare i32 @referenceglobals(...) #1
 
 ; The import of referenceglobals will expose call to globalfunc1 that
 ; should in turn be imported.
 ; INSTLIMDEF-DAG: Import globalfunc1
-; CHECK-DAG: define available_externally void @globalfunc1() !thinlto_src_module !0
+; CHECK-DAG: define available_externally void @globalfunc1() !thinlto_src_module !0 !thinlto_src_file !1
 
 ; INSTLIMDEF-DAG: Import referencecommon
-; CHECK-DAG: define available_externally i32 @referencecommon(i32 %i) !thinlto_src_module !0 {
+; CHECK-DAG: define available_externally i32 @referencecommon(i32 %i) !thinlto_src_module !0 !thinlto_src_file !1 {
 declare i32 @referencecommon(...) #1
 
 ; INSTLIMDEF-DAG: Import setfuncptr
-; CHECK-DAG: define available_externally void @setfuncptr() !thinlto_src_module !0 {
+; CHECK-DAG: define available_externally void @setfuncptr() !thinlto_src_module !0 !thinlto_src_file !1 {
 declare void @setfuncptr(...) #1
 
 ; INSTLIMDEF-DAG: Import callfuncptr
-; CHECK-DAG: define available_externally void @callfuncptr() !thinlto_src_module !0 {
+; CHECK-DAG: define available_externally void @callfuncptr() !thinlto_src_module !0 !thinlto_src_file !1 {
 declare void @callfuncptr(...) #1
 
 ; Ensure that all uses of local variable @P which has used in setfuncptr
@@ -97,7 +97,7 @@ declare void @callfuncptr(...) #1
 
 ; Ensure that @referencelargelinkonce definition is pulled in, but later we
 ; also check that the linkonceodr function is not.
-; CHECK-DAG: define available_externally void @referencelargelinkonce() !thinlto_src_module !0 {
+; CHECK-DAG: define available_externally void @referencelargelinkonce() !thinlto_src_module !0 !thinlto_src_file !1 {
 ; INSTLIM5-DAG: declare void @linkonceodr()
 declare void @referencelargelinkonce(...)
 
@@ -110,13 +110,13 @@ declare void @weakfunc(...) #1
 declare void @linkoncefunc2(...) #1
 
 ; INSTLIMDEF-DAG: Import funcwithpersonality
-; INSTLIMDEF-DAG: define available_externally hidden void @funcwithpersonality.llvm.{{.*}}() personality ptr @__gxx_personality_v0 !thinlto_src_module !0 {
+; INSTLIMDEF-DAG: define available_externally hidden void @funcwithpersonality.llvm.{{.*}}() personality ptr @__gxx_personality_v0 !thinlto_src_module !0 !thinlto_src_file !1 {
 ; INSTLIM5-DAG: declare hidden void @funcwithpersonality.llvm.{{.*}}()
 
 ; We can import variadic functions without a va_start, since the inliner
 ; can handle them.
 ; INSTLIMDEF-DAG: Import variadic_no_va_start
-; CHECK-DAG: define available_externally void @variadic_no_va_start(...) !thinlto_src_module !0 {
+; CHECK-DAG: define available_externally void @variadic_no_va_start(...) !thinlto_src_module !0 !thinlto_src_file !1 {
 declare void @variadic_no_va_start(...)
 
 ; We can import variadic functions with a va_start, since the inliner
@@ -128,7 +128,8 @@ declare void @variadic_va_start(...)
 ; INSTLIMDEF-DAG: 15 function-import - Number of functions imported
 ; INSTLIMDEF-DAG: 4 function-import - Number of global variables imported
 
-; CHECK-DAG: !0 = !{!"{{.*}}/Inputs/funcimport.ll"}
+; CHECK-DAG: !0 = !{!"{{.*}}.bc"}
+; CHECK-DAG: !1 = !{!"{{.*}}/Inputs/funcimport.ll"}
 
 ; The actual GUID values will depend on path to test.
 ; GUID-DAG: GUID {{.*}} is weakalias

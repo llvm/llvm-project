@@ -87,7 +87,7 @@ unsigned char test_BitScanForward64(unsigned LONG *Index, unsigned __int64 Mask)
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
 // CHECK:   [[INDEX:%[0-9]+]] = tail call i64 @llvm.cttz.i64(i64 %Mask, i1 true)
-// CHECK:   [[TRUNC_INDEX:%[0-9]+]] = trunc i64 [[INDEX]] to i32
+// CHECK:   [[TRUNC_INDEX:%[0-9]+]] = trunc nuw nsw i64 [[INDEX]] to i32
 // CHECK:   store i32 [[TRUNC_INDEX]], ptr %Index, align 4
 // CHECK:   br label %[[END_LABEL]]
 
@@ -102,7 +102,7 @@ unsigned char test_BitScanReverse64(unsigned LONG *Index, unsigned __int64 Mask)
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
 // CHECK:   [[REVINDEX:%[0-9]+]] = tail call i64 @llvm.ctlz.i64(i64 %Mask, i1 true)
-// CHECK:   [[TRUNC_REVINDEX:%[0-9]+]] = trunc i64 [[REVINDEX]] to i32
+// CHECK:   [[TRUNC_REVINDEX:%[0-9]+]] = trunc nuw nsw i64 [[REVINDEX]] to i32
 // CHECK:   [[INDEX:%[0-9]+]] = xor i32 [[TRUNC_REVINDEX]], 63
 // CHECK:   store i32 [[INDEX]], ptr %Index, align 4
 // CHECK:   br label %[[END_LABEL]]
@@ -240,6 +240,15 @@ LONG test_InterlockedAdd(LONG volatile *Addend, LONG Value) {
 // CHECK-ARM-ARM64: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %Addend, i32 %Value seq_cst, align 4
 // CHECK-ARM-ARM64: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %Value
 // CHECK-ARM-ARM64: ret i32 %[[NEWVAL:[0-9]+]]
+
+__int64 test_InterlockedAdd64(__int64 volatile *Addend, __int64 Value) {
+  return _InterlockedAdd64(Addend, Value);
+}
+
+// CHECK-ARM-ARM64: define{{.*}}i64 @test_InterlockedAdd64(ptr{{[a-z_ ]*}}%Addend, i64 noundef %Value) {{.*}} {
+// CHECK-ARM-ARM64: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %Addend, i64 %Value seq_cst, align 8
+// CHECK-ARM-ARM64: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %Value
+// CHECK-ARM-ARM64: ret i64 %[[NEWVAL:[0-9]+]]
 #endif
 
 #if defined(__arm__) || defined(__aarch64__)

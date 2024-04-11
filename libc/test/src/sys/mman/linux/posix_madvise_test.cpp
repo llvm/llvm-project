@@ -20,7 +20,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST(LlvmLibcPosixMadviseTest, NoError) {
   size_t alloc_size = 128;
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, alloc_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   ASSERT_ERRNO_SUCCESS();
@@ -38,7 +38,7 @@ TEST(LlvmLibcPosixMadviseTest, NoError) {
 }
 
 TEST(LlvmLibcPosixMadviseTest, Error_BadPtr) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   // posix_madvise is a no-op on DONTNEED, so it shouldn't fail even with the
   // nullptr.
   EXPECT_EQ(LIBC_NAMESPACE::posix_madvise(nullptr, 8, POSIX_MADV_DONTNEED), 0);

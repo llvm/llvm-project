@@ -12,6 +12,7 @@
 
 #include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/Record.h"
 #include "llvm/TextAPI/Symbol.h"
 #include <utility>
@@ -170,8 +171,8 @@ ObjCIVarRecord *RecordsSlice::findObjCIVar(bool IsScopedName,
 }
 
 GlobalRecord *RecordsSlice::addGlobal(StringRef Name, RecordLinkage Linkage,
-                                      GlobalRecord::Kind GV,
-                                      SymbolFlags Flags) {
+                                      GlobalRecord::Kind GV, SymbolFlags Flags,
+                                      bool Inlined) {
   if (GV == GlobalRecord::Kind::Function)
     Flags |= SymbolFlags::Text;
   else if (GV == GlobalRecord::Kind::Variable)
@@ -181,7 +182,7 @@ GlobalRecord *RecordsSlice::addGlobal(StringRef Name, RecordLinkage Linkage,
   auto Result = Globals.insert({Name, nullptr});
   if (Result.second)
     Result.first->second =
-        std::make_unique<GlobalRecord>(Name, Linkage, Flags, GV);
+        std::make_unique<GlobalRecord>(Name, Linkage, Flags, GV, Inlined);
   else {
     updateLinkage(Result.first->second.get(), Linkage);
     updateFlags(Result.first->second.get(), Flags);
@@ -224,6 +225,7 @@ bool ObjCInterfaceRecord::addObjCCategory(ObjCCategoryRecord *Record) {
 ObjCCategoryRecord *RecordsSlice::addObjCCategory(StringRef ClassToExtend,
                                                   StringRef Category) {
   Category = copyString(Category);
+  ClassToExtend = copyString(ClassToExtend);
 
   // Add owning record first into record slice.
   auto Result =
@@ -325,28 +327,7 @@ createInterfaceFile(const Records &Slices, StringRef InstallName) {
       continue;
     const Target &Targ = S->getTarget();
     File->addTarget(Targ);
-    if (File->getFileType() == FileType::Invalid)
-      File->setFileType(BA.File);
-    if (BA.AppExtensionSafe && !File->isApplicationExtensionSafe())
-      File->setApplicationExtensionSafe();
-    if (BA.TwoLevelNamespace && !File->isTwoLevelNamespace())
-      File->setTwoLevelNamespace();
-    if (BA.OSLibNotForSharedCache && !File->isOSLibNotForSharedCache())
-      File->setOSLibNotForSharedCache();
-    if (File->getCurrentVersion().empty())
-      File->setCurrentVersion(BA.CurrentVersion);
-    if (File->getCompatibilityVersion().empty())
-      File->setCompatibilityVersion(BA.CompatVersion);
-    if (File->getSwiftABIVersion() == 0)
-      File->setSwiftABIVersion(BA.SwiftABI);
-    if (File->getPath().empty())
-      File->setPath(BA.Path);
-    if (!BA.ParentUmbrella.empty())
-      File->addParentUmbrella(Targ, BA.ParentUmbrella);
-    for (const auto &Client : BA.AllowableClients)
-      File->addAllowableClient(Client, Targ);
-    for (const auto &Lib : BA.RexportedLibraries)
-      File->addReexportedLibrary(Lib, Targ);
+    File->setFromBinaryAttrs(BA, Targ);
   }
 
   return File;

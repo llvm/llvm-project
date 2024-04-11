@@ -1,9 +1,5 @@
 // DEFINE: %{entry_point} = entry
-// DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
-// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf -allocate-arm-sme-tiles \
-// DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
-// DEFINE:   -test-lower-to-llvm
+// DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:   -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:   -e %{entry_point} -entry-point-result=void \
@@ -55,9 +51,9 @@ func.func @entry() {
   // CHECK-NEXT: ( 2, 2, 2, 2
   // CHECK-NEXT: ( 3, 3, 3, 3
   // CHECK:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %tile : vector<[4]x[4]xi32>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   // Dump the transposed tile. The smallest SVL is 128-bits so the tile will be
   // at least 4x4xi32.
@@ -68,9 +64,9 @@ func.func @entry() {
   // CHECK-NEXT: ( 0, 1, 2, 3
   // CHECK-NEXT: ( 0, 1, 2, 3
   // CHECK:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %transposed_tile : vector<[4]x[4]xi32>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   return
 }

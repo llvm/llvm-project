@@ -634,21 +634,6 @@ BlockFrequencyInfoImplBase::getLoopName(const LoopData &Loop) const {
   return getBlockName(Loop.getHeader()) + (Loop.isIrreducible() ? "**" : "*");
 }
 
-void llvm::printBlockFreqImpl(raw_ostream &OS, BlockFrequency EntryFreq,
-                              BlockFrequency Freq) {
-  if (Freq == BlockFrequency(0)) {
-    OS << "0";
-    return;
-  }
-  if (EntryFreq == BlockFrequency(0)) {
-    OS << "<invalid BFI>";
-    return;
-  }
-  Scaled64 Block(Freq.getFrequency(), 0);
-  Scaled64 Entry(EntryFreq.getFrequency(), 0);
-  OS << Block / Entry;
-}
-
 void IrreducibleGraph::addNodesInLoop(const BFIBase::LoopData &OuterLoop) {
   Start = OuterLoop.getHeader();
   Nodes.reserve(OuterLoop.Nodes.size());

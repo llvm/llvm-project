@@ -286,6 +286,8 @@ Fraction dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b);
 std::vector<Fraction> multiplyPolynomials(ArrayRef<Fraction> a,
                                           ArrayRef<Fraction> b);
 
+bool isRangeZero(ArrayRef<Fraction> arr);
+
 } // namespace presburger
 } // namespace mlir
 

@@ -17,12 +17,15 @@ AnotherFunction
 ; CHECK-ARM64: Format: COFF-import-file-ARM64
 ; CHECK: Type: code
 ; CHECK:      Name type: name
+; CHECK-NEXT: Export name: TestFunction1
 ; CHECK-NEXT: Symbol: __imp_TestFunction1
 ; CHECK-NEXT: Symbol: TestFunction1
 ; CHECK:      Name type: name
+; CHECK-NEXT: Export name: TestFunction2
 ; CHECK-NEXT: Symbol: __imp_TestFunction2{{$}}
 ; CHECK-NEXT: Symbol: TestFunction2{{$}}
 ; CHECK:      Name type: name
+; CHECK-NEXT: Export name: TestFunction3
 ; CHECK-NEXT: Symbol: __imp_TestFunction3{{$}}
 ; CHECK-NEXT: Symbol: TestFunction3{{$}}
 

@@ -494,6 +494,45 @@ TEST_F(PatternMatchTest, Unless) {
   EXPECT_FALSE(m_Unless(m_c_Add(m_Zero(), m_One())).match(X));
 }
 
+TEST_F(PatternMatchTest, BitWise) {
+  Value *Or = IRB.CreateOr(IRB.getInt32(1), IRB.getInt32(0));
+  Value *Xor = IRB.CreateXor(IRB.getInt32(1), IRB.getInt32(0));
+  Value *And = IRB.CreateXor(IRB.getInt32(1), IRB.getInt32(0));
+  Constant *T = IRB.getInt1(true);
+  Constant *F = IRB.getInt1(false);
+  Value *Alloca = IRB.CreateAlloca(IRB.getInt1Ty());
+  Value *X = IRB.CreateLoad(IRB.getInt1Ty(), Alloca);
+  Value *Y = IRB.CreateLoad(IRB.getInt1Ty(), Alloca);
+  Value *LAnd = IRB.CreateSelect(X, Y, F);
+  Value *LOr = IRB.CreateSelect(X, T, Y);
+  Value *Add = IRB.CreateAdd(IRB.getInt32(1), IRB.getInt32(0));
+
+  EXPECT_TRUE(m_BitwiseLogic(m_One(), m_Zero()).match(Or));
+  EXPECT_TRUE(m_BitwiseLogic(m_One(), m_Zero()).match(Xor));
+  EXPECT_TRUE(m_BitwiseLogic(m_One(), m_Zero()).match(And));
+  EXPECT_FALSE(m_BitwiseLogic(m_Value(), m_Value()).match(LAnd));
+  EXPECT_FALSE(m_BitwiseLogic(m_Value(), m_Value()).match(LOr));
+  EXPECT_FALSE(m_BitwiseLogic(m_Value(), m_Value()).match(Add));
+
+  EXPECT_FALSE(m_BitwiseLogic(m_Zero(), m_One()).match(Or));
+  EXPECT_FALSE(m_BitwiseLogic(m_Zero(), m_One()).match(Xor));
+  EXPECT_FALSE(m_BitwiseLogic(m_Zero(), m_One()).match(And));
+
+  EXPECT_TRUE(m_c_BitwiseLogic(m_One(), m_Zero()).match(Or));
+  EXPECT_TRUE(m_c_BitwiseLogic(m_One(), m_Zero()).match(Xor));
+  EXPECT_TRUE(m_c_BitwiseLogic(m_One(), m_Zero()).match(And));
+  EXPECT_FALSE(m_c_BitwiseLogic(m_Value(), m_Value()).match(LAnd));
+  EXPECT_FALSE(m_c_BitwiseLogic(m_Value(), m_Value()).match(LOr));
+  EXPECT_FALSE(m_c_BitwiseLogic(m_Value(), m_Value()).match(Add));
+
+  EXPECT_TRUE(m_c_BitwiseLogic(m_Zero(), m_One()).match(Or));
+  EXPECT_TRUE(m_c_BitwiseLogic(m_Zero(), m_One()).match(Xor));
+  EXPECT_TRUE(m_c_BitwiseLogic(m_Zero(), m_One()).match(And));
+
+  EXPECT_FALSE(m_c_BitwiseLogic(m_One(), m_One()).match(Or));
+  EXPECT_FALSE(m_c_BitwiseLogic(m_Zero(), m_Zero()).match(Xor));
+}
+
 TEST_F(PatternMatchTest, ZExtSExtSelf) {
   LLVMContext &Ctx = IRB.getContext();
 
@@ -530,6 +569,48 @@ TEST_F(PatternMatchTest, ZExtSExtSelf) {
   EXPECT_TRUE(m_ZExtOrSExtOrSelf(m_One()).match(One64S));
 }
 
+TEST_F(PatternMatchTest, BitCast) {
+  Value *OneDouble = ConstantFP::get(IRB.getDoubleTy(), APFloat(1.0));
+  Value *ScalableDouble = ConstantFP::get(
+      VectorType::get(IRB.getDoubleTy(), 2, /*Scalable=*/true), APFloat(1.0));
+  // scalar -> scalar
+  Value *DoubleToI64 = IRB.CreateBitCast(OneDouble, IRB.getInt64Ty());
+  // scalar -> vector
+  Value *DoubleToV2I32 = IRB.CreateBitCast(
+      OneDouble, VectorType::get(IRB.getInt32Ty(), 2, /*Scalable=*/false));
+  // vector -> scalar
+  Value *V2I32ToDouble = IRB.CreateBitCast(DoubleToV2I32, IRB.getDoubleTy());
+  // vector -> vector (same count)
+  Value *V2I32ToV2Float = IRB.CreateBitCast(
+      DoubleToV2I32, VectorType::get(IRB.getFloatTy(), 2, /*Scalable=*/false));
+  // vector -> vector (different count)
+  Value *V2I32TOV4I16 = IRB.CreateBitCast(
+      DoubleToV2I32, VectorType::get(IRB.getInt16Ty(), 4, /*Scalable=*/false));
+  // scalable vector -> scalable vector (same count)
+  Value *NXV2DoubleToNXV2I64 = IRB.CreateBitCast(
+      ScalableDouble, VectorType::get(IRB.getInt64Ty(), 2, /*Scalable=*/true));
+  // scalable vector -> scalable vector (different count)
+  Value *NXV2I64ToNXV4I32 = IRB.CreateBitCast(
+      NXV2DoubleToNXV2I64,
+      VectorType::get(IRB.getInt32Ty(), 4, /*Scalable=*/true));
+
+  EXPECT_TRUE(m_BitCast(m_Value()).match(DoubleToI64));
+  EXPECT_TRUE(m_BitCast(m_Value()).match(DoubleToV2I32));
+  EXPECT_TRUE(m_BitCast(m_Value()).match(V2I32ToDouble));
+  EXPECT_TRUE(m_BitCast(m_Value()).match(V2I32ToV2Float));
+  EXPECT_TRUE(m_BitCast(m_Value()).match(V2I32TOV4I16));
+  EXPECT_TRUE(m_BitCast(m_Value()).match(NXV2DoubleToNXV2I64));
+  EXPECT_TRUE(m_BitCast(m_Value()).match(NXV2I64ToNXV4I32));
+
+  EXPECT_TRUE(m_ElementWiseBitCast(m_Value()).match(DoubleToI64));
+  EXPECT_FALSE(m_ElementWiseBitCast(m_Value()).match(DoubleToV2I32));
+  EXPECT_FALSE(m_ElementWiseBitCast(m_Value()).match(V2I32ToDouble));
+  EXPECT_TRUE(m_ElementWiseBitCast(m_Value()).match(V2I32ToV2Float));
+  EXPECT_FALSE(m_ElementWiseBitCast(m_Value()).match(V2I32TOV4I16));
+  EXPECT_TRUE(m_ElementWiseBitCast(m_Value()).match(NXV2DoubleToNXV2I64));
+  EXPECT_FALSE(m_ElementWiseBitCast(m_Value()).match(NXV2I64ToNXV4I32));
+}
+
 TEST_F(PatternMatchTest, Power2) {
   Value *C128 = IRB.getInt32(128);
   Value *CNeg128 = ConstantExpr::getNeg(cast<Constant>(C128));
@@ -537,8 +618,14 @@ TEST_F(PatternMatchTest, Power2) {
   EXPECT_TRUE(m_Power2().match(C128));
   EXPECT_FALSE(m_Power2().match(CNeg128));
 
+  EXPECT_TRUE(m_Power2OrZero().match(C128));
+  EXPECT_FALSE(m_Power2OrZero().match(CNeg128));
+
   EXPECT_FALSE(m_NegatedPower2().match(C128));
   EXPECT_TRUE(m_NegatedPower2().match(CNeg128));
+
+  EXPECT_FALSE(m_NegatedPower2OrZero().match(C128));
+  EXPECT_TRUE(m_NegatedPower2OrZero().match(CNeg128));
 
   Value *CIntMin = IRB.getInt64(APSInt::getSignedMinValue(64).getSExtValue());
   Value *CNegIntMin = ConstantExpr::getNeg(cast<Constant>(CIntMin));
@@ -546,8 +633,24 @@ TEST_F(PatternMatchTest, Power2) {
   EXPECT_TRUE(m_Power2().match(CIntMin));
   EXPECT_TRUE(m_Power2().match(CNegIntMin));
 
+  EXPECT_TRUE(m_Power2OrZero().match(CIntMin));
+  EXPECT_TRUE(m_Power2OrZero().match(CNegIntMin));
+
   EXPECT_TRUE(m_NegatedPower2().match(CIntMin));
   EXPECT_TRUE(m_NegatedPower2().match(CNegIntMin));
+
+  EXPECT_TRUE(m_NegatedPower2OrZero().match(CIntMin));
+  EXPECT_TRUE(m_NegatedPower2OrZero().match(CNegIntMin));
+
+  Value *CZero = IRB.getInt64(0);
+
+  EXPECT_FALSE(m_Power2().match(CZero));
+
+  EXPECT_TRUE(m_Power2OrZero().match(CZero));
+
+  EXPECT_FALSE(m_NegatedPower2().match(CZero));
+
+  EXPECT_TRUE(m_NegatedPower2OrZero().match(CZero));
 }
 
 TEST_F(PatternMatchTest, Not) {
@@ -845,6 +948,16 @@ TEST_F(PatternMatchTest, OverflowingBinOps) {
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
   MatchL = MatchR = nullptr;
+
+  EXPECT_TRUE(
+      m_c_NUWAdd(m_Specific(L), m_Specific(R)).match(IRB.CreateNUWAdd(L, R)));
+  EXPECT_TRUE(
+      m_c_NUWAdd(m_Specific(R), m_Specific(L)).match(IRB.CreateNUWAdd(L, R)));
+  EXPECT_FALSE(
+      m_c_NUWAdd(m_Specific(R), m_ZeroInt()).match(IRB.CreateNUWAdd(L, R)));
+  EXPECT_FALSE(
+      m_NUWAdd(m_Specific(R), m_Specific(L)).match(IRB.CreateNUWAdd(L, R)));
+
   EXPECT_TRUE(
       m_NUWSub(m_Value(MatchL), m_Value(MatchR)).match(IRB.CreateNUWSub(L, R)));
   EXPECT_EQ(L, MatchL);
@@ -1845,6 +1958,28 @@ TEST_F(PatternMatchTest, ConstExpr) {
   // or a constant that contains a constant expression.
   EXPECT_TRUE(match(S, m_ConstantExpr()));
   EXPECT_TRUE(match(V, m_ConstantExpr()));
+}
+
+TEST_F(PatternMatchTest, PtrAdd) {
+  Type *PtrTy = PointerType::getUnqual(Ctx);
+  Type *IdxTy = Type::getInt64Ty(Ctx);
+  Constant *Null = Constant::getNullValue(PtrTy);
+  Constant *Offset = ConstantInt::get(IdxTy, 42);
+  Value *PtrAdd = IRB.CreatePtrAdd(Null, Offset);
+  Value *OtherGEP = IRB.CreateGEP(IdxTy, Null, Offset);
+  Value *PtrAddConst =
+      ConstantExpr::getGetElementPtr(Type::getInt8Ty(Ctx), Null, Offset);
+
+  Value *A, *B;
+  EXPECT_TRUE(match(PtrAdd, m_PtrAdd(m_Value(A), m_Value(B))));
+  EXPECT_EQ(A, Null);
+  EXPECT_EQ(B, Offset);
+
+  EXPECT_TRUE(match(PtrAddConst, m_PtrAdd(m_Value(A), m_Value(B))));
+  EXPECT_EQ(A, Null);
+  EXPECT_EQ(B, Offset);
+
+  EXPECT_FALSE(match(OtherGEP, m_PtrAdd(m_Value(A), m_Value(B))));
 }
 
 } // anonymous namespace.

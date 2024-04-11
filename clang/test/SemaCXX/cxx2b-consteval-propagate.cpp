@@ -368,3 +368,29 @@ vector<void> v{};
 // expected-note@-2 {{in call to 'vector()'}}
 
 }
+
+
+namespace GH82258 {
+
+template <class R, class Pred>
+constexpr auto none_of(R&& r, Pred pred) -> bool { return true; }
+
+struct info { int value; };
+consteval auto is_invalid(info i) -> bool { return false; }
+constexpr info types[] = { {1}, {3}, {5}};
+
+static_assert(none_of(
+    types,
+    +[](info i) consteval {
+        return is_invalid(i);
+    }
+));
+
+static_assert(none_of(
+    types,
+    []{
+        return is_invalid;
+    }()
+));
+
+}
