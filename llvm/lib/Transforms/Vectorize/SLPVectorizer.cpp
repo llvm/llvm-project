@@ -12930,9 +12930,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
         if (auto *I = dyn_cast<Instruction>(Vec);
             I && Opcode == Instruction::Sub && !MinBWs.contains(E) &&
             any_of(E->Scalars, [](Value *V) {
-              auto *I = cast<Instruction>(V);
-              return I->getOpcode() == Instruction::Sub &&
-                     isCommutative(cast<Instruction>(V));
+              auto *IV = cast<Instruction>(V);
+              return IV->getOpcode() == Instruction::Sub &&
+                     isCommutative(cast<Instruction>(IV));
             }))
           I->setHasNoUnsignedWrap(/*b=*/false);
       };
