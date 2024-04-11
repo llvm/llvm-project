@@ -63,8 +63,10 @@
 // Weirdly the finalization block is generated before the reduction blocks:
 // CHECK: [[FINALIZE:.+]]:
 // CHECK: call void @__kmpc_barrier
-// CHECK: call void @free(ptr %[[PRIV_PTR_I]])
-// CHECK: call void @free(ptr %[[PRIV_PTR_J]])
+// CHECK: %[[PRIV_I:.+]] = load ptr, ptr %[[PRIV_PTR_I]], align 8
+// CHECK: call void @free(ptr %[[PRIV_I]])
+// CHECK: %[[PRIV_J:.+]] = load ptr, ptr %[[PRIV_PTR_J]], align 8
+// CHECK: call void @free(ptr %[[PRIV_J]])
 // CHECK: ret void
 
 // Non-atomic reduction:

@@ -889,8 +889,17 @@ static LogicalResult inlineReductionCleanup(
 
     // map the argument to the cleanup region
     Block &entry = cleanupRegion.front();
-    moduleTranslation.mapValue(entry.getArgument(0),
-                               privateReductionVariables[i]);
+
+    llvm::Instruction *potentialTerminator =
+        builder.GetInsertBlock()->empty() ? nullptr
+                                          : &builder.GetInsertBlock()->back();
+    if (potentialTerminator && potentialTerminator->isTerminator())
+      builder.SetInsertPoint(potentialTerminator);
+    llvm::Value *reductionVar = builder.CreateLoad(
+        moduleTranslation.convertType(entry.getArgument(0).getType()),
+        privateReductionVariables[i]);
+
+    moduleTranslation.mapValue(entry.getArgument(0), reductionVar);
 
     if (failed(inlineConvertOmpRegions(cleanupRegion, "omp.reduction.cleanup",
                                        builder, moduleTranslation)))
