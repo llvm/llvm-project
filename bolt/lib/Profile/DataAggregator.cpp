@@ -2341,87 +2341,68 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
       const BoltAddressTranslation::BBHashMapTy &BlockMap =
           BAT->getBBHashMap(FuncAddress);
+      YamlBF.Blocks.resize(YamlBF.NumBasicBlocks);
 
-      auto addSuccProfile = [&](yaml::bolt::BinaryBasicBlockProfile &YamlBB,
-                                uint64_t SuccOffset, unsigned SuccDataIdx) {
+      for (auto &&[Idx, YamlBB] : llvm::enumerate(YamlBF.Blocks))
+        YamlBB.Index = Idx;
+
+      for (auto BI = BlockMap.begin(), BE = BlockMap.end(); BI != BE; ++BI)
+        YamlBF.Blocks[BI->second.getBBIndex()].Hash = BI->second.getBBHash();
+
+      auto getSuccessorInfo = [&](uint32_t SuccOffset, unsigned SuccDataIdx) {
         const llvm::bolt::BranchInfo &BI = Branches.Data.at(SuccDataIdx);
         yaml::bolt::SuccessorInfo SI;
         SI.Index = BlockMap.getBBIndex(SuccOffset);
         SI.Count = BI.Branches;
         SI.Mispreds = BI.Mispreds;
-        YamlBB.Successors.emplace_back(SI);
+        return SI;
       };
 
-      std::unordered_map<uint32_t, std::vector<uint32_t>> BFBranches =
-          BAT->getBFBranches(FuncAddress);
-
-      auto addCallsProfile = [&](yaml::bolt::BinaryBasicBlockProfile &YamlBB,
-                                 uint64_t Offset) {
-        // Iterate over BRANCHENTRY records in the current block
-        for (uint32_t BranchOffset : BFBranches[Offset]) {
-          if (!Branches.InterIndex.contains(BranchOffset))
-            continue;
-          for (const auto &[CallToLoc, CallToIdx] :
-               Branches.InterIndex.at(BranchOffset)) {
-            const llvm::bolt::BranchInfo &BI = Branches.Data.at(CallToIdx);
-            yaml::bolt::CallSiteInfo YamlCSI;
-            YamlCSI.DestId = 0; // designated for unknown functions
-            YamlCSI.EntryDiscriminator = 0;
-            YamlCSI.Count = BI.Branches;
-            YamlCSI.Mispreds = BI.Mispreds;
-            YamlCSI.Offset = BranchOffset - Offset;
-            BinaryData *CallTargetBD = BC.getBinaryDataByName(CallToLoc.Name);
-            if (!CallTargetBD) {
-              YamlBB.CallSites.emplace_back(YamlCSI);
-              continue;
-            }
-            uint64_t CallTargetAddress = CallTargetBD->getAddress();
-            BinaryFunction *CallTargetBF =
-                BC.getBinaryFunctionAtAddress(CallTargetAddress);
-            if (!CallTargetBF) {
-              YamlBB.CallSites.emplace_back(YamlCSI);
-              continue;
-            }
-            // Calls between hot and cold fragments must be handled in
-            // fixupBATProfile.
-            assert(CallTargetBF != BF && "invalid CallTargetBF");
-            YamlCSI.DestId = CallTargetBF->getFunctionNumber();
-            if (CallToLoc.Offset) {
-              if (BAT->isBATFunction(CallTargetAddress)) {
-                LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Unsupported secondary "
-                                     "entry point in BAT function "
-                                  << CallToLoc.Name << '\n');
-              } else if (const BinaryBasicBlock *CallTargetBB =
-                             CallTargetBF->getBasicBlockAtOffset(
-                                 CallToLoc.Offset)) {
-                // Only record true call information, ignoring returns (normally
-                // won't have a target basic block) and jumps to the landing
-                // pads (not an entry point).
-                if (CallTargetBB->isEntryPoint()) {
-                  YamlCSI.EntryDiscriminator =
-                      CallTargetBF->getEntryIDForSymbol(
-                          CallTargetBB->getLabel());
-                }
-              }
-            }
-            YamlBB.CallSites.emplace_back(YamlCSI);
-          }
-        }
+      auto getCallSiteInfo = [&](Location CallToLoc, unsigned CallToIdx,
+                                 uint32_t Offset) {
+        const llvm::bolt::BranchInfo &BI = Branches.Data.at(CallToIdx);
+        yaml::bolt::CallSiteInfo CSI;
+        CSI.DestId = 0; // designated for unknown functions
+        CSI.EntryDiscriminator = 0;
+        CSI.Count = BI.Branches;
+        CSI.Mispreds = BI.Mispreds;
+        CSI.Offset = Offset;
+        if (BinaryData *BD = BC.getBinaryDataByName(CallToLoc.Name))
+          YAMLProfileWriter::setCSIDestination(BC, CSI, BD->getSymbol(), BAT,
+                                               CallToLoc.Offset);
+        return CSI;
       };
 
       for (const auto &[FromOffset, SuccKV] : Branches.IntraIndex) {
-        yaml::bolt::BinaryBasicBlockProfile YamlBB;
         if (!BlockMap.isInputBlock(FromOffset))
           continue;
-        YamlBB.Index = BlockMap.getBBIndex(FromOffset);
-        YamlBB.Hash = BlockMap.getBBHash(FromOffset);
+        const unsigned Index = BlockMap.getBBIndex(FromOffset);
+        yaml::bolt::BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[Index];
         for (const auto &[SuccOffset, SuccDataIdx] : SuccKV)
-          addSuccProfile(YamlBB, SuccOffset, SuccDataIdx);
-        addCallsProfile(YamlBB, FromOffset);
-        if (YamlBB.ExecCount || !YamlBB.Successors.empty() ||
-            !YamlBB.CallSites.empty())
-          YamlBF.Blocks.emplace_back(YamlBB);
+          if (BlockMap.isInputBlock(SuccOffset))
+            YamlBB.Successors.emplace_back(
+                getSuccessorInfo(SuccOffset, SuccDataIdx));
       }
+      for (const auto &[FromOffset, CallTo] : Branches.InterIndex) {
+        auto BlockIt = BlockMap.upper_bound(FromOffset);
+        --BlockIt;
+        const unsigned BlockOffset = BlockIt->first;
+        const unsigned BlockIndex = BlockIt->second.getBBIndex();
+        yaml::bolt::BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[BlockIndex];
+        const uint32_t Offset = FromOffset - BlockOffset;
+        for (const auto &[CallToLoc, CallToIdx] : CallTo)
+          YamlBB.CallSites.emplace_back(
+              getCallSiteInfo(CallToLoc, CallToIdx, Offset));
+        llvm::sort(YamlBB.CallSites, [](yaml::bolt::CallSiteInfo &A,
+                                        yaml::bolt::CallSiteInfo &B) {
+          return A.Offset < B.Offset;
+        });
+      }
+      // Drop blocks without a hash, won't be useful for stale matching.
+      llvm::erase_if(YamlBF.Blocks,
+                     [](const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+                       return YamlBB.Hash == (yaml::Hex64)0;
+                     });
       BP.Functions.emplace_back(YamlBF);
     }
   }
