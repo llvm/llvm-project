@@ -1374,5 +1374,185 @@ define i8 @nonzero_reduce_xor_vscale_odd(<vscale x 3 x i8> %xx) {
   ret i8 %r
 }
 
+define i1 @test_sign_pos(float %x) {
+; CHECK-LABEL: @test_sign_pos(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[FABS]] to i32
+; CHECK-NEXT:    [[SIGN:%.*]] = icmp sgt i32 [[Y]], -1
+; CHECK-NEXT:    ret i1 [[SIGN]]
+;
+  %fabs = call float @llvm.fabs.f32(float %x)
+  %y = bitcast float %fabs to i32
+  %sign = icmp sgt i32 %y, -1
+  ret i1 %sign
+}
+
+define i1 @test_sign_neg(float %x) {
+; CHECK-LABEL: @test_sign_neg(
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[FNABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[FNABS]] to i32
+; CHECK-NEXT:    [[SIGN:%.*]] = icmp slt i32 [[Y]], 0
+; CHECK-NEXT:    ret i1 [[SIGN]]
+;
+  %fabs = call float @llvm.fabs.f32(float %x)
+  %fnabs = fneg float %fabs
+  %y = bitcast float %fnabs to i32
+  %sign = icmp slt i32 %y, 0
+  ret i1 %sign
+}
+
+define <2 x i1> @test_sign_pos_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_sign_pos_vec(
+; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = bitcast <2 x float> [[FABS]] to <2 x i32>
+; CHECK-NEXT:    [[SIGN:%.*]] = icmp slt <2 x i32> [[Y]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[SIGN]]
+;
+  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
+  %y = bitcast <2 x float> %fabs to <2 x i32>
+  %sign = icmp slt <2 x i32> %y, zeroinitializer
+  ret <2 x i1> %sign
+}
+
+define i32 @test_inf_only(float nofpclass(nan sub norm zero) %x) {
+; CHECK-LABEL: @test_inf_only(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = bitcast float [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, 2147483647
+  ret i32 %and
+}
+
+define i32 @test_zero_only(float nofpclass(nan sub norm inf) %x) {
+; CHECK-LABEL: @test_zero_only(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = bitcast float [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, 2147483647
+  ret i32 %and
+}
+
+define i80 @test_zero_only_non_ieee(x86_fp80 nofpclass(nan sub norm inf) %x) {
+; CHECK-LABEL: @test_zero_only_non_ieee(
+; CHECK-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[X:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = bitcast x86_fp80 [[TMP1]] to i80
+; CHECK-NEXT:    ret i80 [[AND]]
+;
+  %y = bitcast x86_fp80 %x to i80
+  %and = and i80 %y, 604462909807314587353087
+  ret i80 %and
+}
+
+define i32 @test_inf_nan_only(float nofpclass(sub norm zero) %x) {
+; CHECK-LABEL: @test_inf_nan_only(
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 2130706432
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, 2130706432
+  ret i32 %and
+}
+
+define i32 @test_sub_zero_only(float nofpclass(nan norm inf) %x) {
+; CHECK-LABEL: @test_sub_zero_only(
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 2130706432
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, 2130706432
+  ret i32 %and
+}
+
+define i32 @test_inf_zero_only(float nofpclass(nan norm sub) %x) {
+; CHECK-LABEL: @test_inf_zero_only(
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 16777215
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, 16777215
+  ret i32 %and
+}
+
+define i1 @test_simplify_icmp(i32 %x) {
+; CHECK-LABEL: @test_simplify_icmp(
+; CHECK-NEXT:    [[CAST1:%.*]] = uitofp i32 [[X:%.*]] to double
+; CHECK-NEXT:    [[CAST2:%.*]] = bitcast double [[CAST1]] to i64
+; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[CAST2]], -140737488355328
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[MASK]], -1970324836974592
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cast1 = uitofp i32 %x to double
+  %cast2 = bitcast double %cast1 to i64
+  %mask = and i64 %cast2, -140737488355328
+  %cmp = icmp eq i64 %mask, -1970324836974592
+  ret i1 %cmp
+}
+
+define i16 @test_simplify_mask(i32 %ui, float %x) {
+; CHECK-LABEL: @test_simplify_mask(
+; CHECK-NEXT:    [[CONV:%.*]] = uitofp i32 [[UI:%.*]] to float
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[CONV]], [[X:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast float [[CONV]] to i32
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[CAST]], 16
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHR]] to i16
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[TRUNC]], -32768
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i16 [[AND]], 31744
+; CHECK-NEXT:    ret i16 [[OR]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i16 0
+;
+  %conv = uitofp i32 %ui to float
+  %cmp = fcmp olt float %x, %conv
+  br i1 %cmp, label %if.else, label %if.end
+
+if.end:
+  %cast = bitcast float %conv to i32
+  %shr = lshr i32 %cast, 16
+  %trunc = trunc i32 %shr to i16
+  %and = and i16 %trunc, -32768
+  %or = or disjoint i16 %and, 31744
+  ret i16 %or
+
+if.else:
+  ret i16 0
+}
+
+; TODO: %cmp always evaluates to false
+
+define i1 @test_simplify_icmp2(double %x) {
+; CHECK-LABEL: @test_simplify_icmp2(
+; CHECK-NEXT:    [[ABS:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[COND:%.*]] = fcmp oeq double [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast double [[X]] to i64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[CAST]], 3458764513820540928
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %abs = tail call double @llvm.fabs.f64(double %x)
+  %cond = fcmp oeq double %abs, 0x7FF0000000000000
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %cast = bitcast double %x to i64
+  %cmp = icmp eq i64 %cast, 3458764513820540928
+  ret i1 %cmp
+
+if.else:
+  ret i1 false
+}
+
 declare void @use(i1)
 declare void @sink(i8)
