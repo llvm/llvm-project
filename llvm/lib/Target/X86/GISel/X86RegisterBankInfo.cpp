@@ -71,51 +71,6 @@ X86RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   llvm_unreachable("Unsupported register kind yet.");
 }
 
-// Returns whether opcode \p Opc is a pre-isel generic floating-point opcode,
-// having only floating-point operands.
-static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
-  switch (Opc) {
-  case TargetOpcode::G_FABS:
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FCANONICALIZE:
-  case TargetOpcode::G_FCEIL:
-  case TargetOpcode::G_FCONSTANT:
-  case TargetOpcode::G_FCOPYSIGN:
-  case TargetOpcode::G_FCOS:
-  case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FEXP:
-  case TargetOpcode::G_FEXP2:
-  case TargetOpcode::G_FFLOOR:
-  case TargetOpcode::G_FLOG10:
-  case TargetOpcode::G_FLOG2:
-  case TargetOpcode::G_FLOG:
-  case TargetOpcode::G_FMA:
-  case TargetOpcode::G_FMAD:
-  case TargetOpcode::G_FMAXIMUM:
-  case TargetOpcode::G_FMAXNUM:
-  case TargetOpcode::G_FMAXNUM_IEEE:
-  case TargetOpcode::G_FMINIMUM:
-  case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMINNUM_IEEE:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FNEARBYINT:
-  case TargetOpcode::G_FNEG:
-  case TargetOpcode::G_FPEXT:
-  case TargetOpcode::G_FPOW:
-  case TargetOpcode::G_FPTRUNC:
-  case TargetOpcode::G_FREM:
-  case TargetOpcode::G_FRINT:
-  case TargetOpcode::G_FSIN:
-  case TargetOpcode::G_FSQRT:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_INTRINSIC_ROUND:
-  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
-  case TargetOpcode::G_INTRINSIC_TRUNC:
-    return true;
-  }
-  return false;
-}
-
 // \returns true if a given intrinsic only uses and defines FPRs.
 static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
                           const MachineInstr &MI) {
