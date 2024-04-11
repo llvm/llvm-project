@@ -1636,6 +1636,7 @@ public:
 
 private:
   void output(StringRef s);
+  void output(StringRef, QuotingType);
   void outputUpToEndOfLine(StringRef s);
   void newLineCheck(bool EmptySequence = false);
   void outputNewLine();
