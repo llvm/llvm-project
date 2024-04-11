@@ -6,7 +6,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/MemProfData.inc"
-#include "llvm/ProfileData/RawMemProfReader.h"
+#include "llvm/ProfileData/MemProfReader.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
