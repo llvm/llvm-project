@@ -58,3 +58,26 @@ void B<int>::g() requires true;
 #endif
 
 } // namespace dr2847
+
+namespace dr2858 { // dr2858: 19
+
+#if __cplusplus > 202302L
+
+template<typename... Ts>
+struct A {
+  // FIXME: The nested-name-specifier in the following friend declarations are declarative,
+  // but we don't treat them as such (yet).
+  friend void Ts...[0]::f();
+  template<typename U>
+  friend void Ts...[0]::g();
+
+  friend struct Ts...[0]::B;
+  // FIXME: The index of the pack-index-specifier is printed as a memory address in the diagnostic.
+  template<typename U>
+  friend struct Ts...[0]::C;
+  // expected-warning-re@-1 {{dependent nested name specifier 'Ts...[{{.*}}]::' for friend template declaration is not supported; ignoring this friend declaration}}
+};
+
+#endif
+
+} // namespace dr2858

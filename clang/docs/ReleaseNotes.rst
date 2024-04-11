@@ -147,6 +147,9 @@ Resolutions to C++ Defect Reports
   compatibility of two types.
   (`CWG2759: [[no_unique_address] and common initial sequence  <https://cplusplus.github.io/CWG/issues/2759.html>`_).
 
+- Clang now diagnoses declarative nested-name-specifiers with pack-index-specifiers.
+  (`CWG2858: Declarative nested-name-specifiers and pack-index-specifiers <https://cplusplus.github.io/CWG/issues/2858.html>`_).
+
 C Language Changes
 ------------------
 
