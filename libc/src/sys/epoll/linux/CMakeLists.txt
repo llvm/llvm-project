@@ -5,7 +5,9 @@ add_entrypoint_object(
   HDRS
     ../epoll_wait.h
   DEPENDS
-    libc.include.sys_epoll
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_epoll_event
+    libc.hdr.types.struct_timespec
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -18,7 +20,9 @@ add_entrypoint_object(
   HDRS
     ../epoll_pwait.h
   DEPENDS
-    libc.include.sys_epoll
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_epoll_event
+    libc.hdr.types.struct_timespec
     libc.include.signal
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -32,10 +36,12 @@ add_entrypoint_object(
   HDRS
     ../epoll_pwait2.h
   DEPENDS
-    libc.include.sys_epoll
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_epoll_event
+    libc.hdr.types.struct_timespec
     libc.include.signal
-    libc.include.time
     libc.include.sys_syscall
+    libc.include.time
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )

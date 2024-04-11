@@ -40,3 +40,5 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.fenv_macros
     libc.include.fenv
 )
+
+add_subdirectory(types)
