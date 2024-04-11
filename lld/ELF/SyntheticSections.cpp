@@ -2784,6 +2784,7 @@ void DebugNamesBaseSection::parseDebugNames(
       const char *errMsg = nullptr;
       uint64_t offset = locs.EntriesBase + entryOffsets[i];
       while (offset < namesSec.Data.size() && namesSec.Data[offset] != 0) {
+        // Read & store all entries (for the same string).
         auto ie = makeThreadLocal<IndexEntry>();
         ie->poolOffset = offset;
         Error err = Error::success();
@@ -2871,9 +2872,9 @@ void DebugNamesBaseSection::parseDebugNames(
   }
 }
 
-// Compute the form for output DW_IDX_compile_unit attributes similar to
-// DIEInteger::BestForm. The input forms (often DW_FORM_data1) may not hold all
-// CU indices.
+// Compute the form for output DW_IDX_compile_unit attributes, similar to
+// DIEInteger::BestForm. The input form (often DW_FORM_data1) may not hold all
+// the merged CU indices.
 std::pair<uint8_t, dwarf::Form> static getMergedCuCountForm(
     uint32_t compUnitCount) {
   if (compUnitCount > UINT16_MAX)
@@ -2908,23 +2909,26 @@ void DebugNamesBaseSection::computeHdrAndAbbrevTable(
         hdr.AugmentationStringSize = nd.hdr.AugmentationStringSize;
         hdr.AugmentationString = nd.hdr.AugmentationString;
       } else if (hdr.AugmentationString != nd.hdr.AugmentationString) {
+        // There are conflicting augmentation strings, so it's best for the
+        // merged index to not use an augmentation string.
         hdr.AugmentationStringSize = 0;
         hdr.AugmentationString.clear();
       }
     }
   }
 
-  // Uniquify input abbrev tables and compute mapping from old abbrev code to
-  // new abbrev code.
+  // Create the merged abbrev table, uniquifyinng the input abbrev tables and
+  // computing mapping from old (per-cu) abbrev codes to new (merged) abbrev
+  // codes.
   FoldingSet<Abbrev> abbrevSet;
   // Determine the form for the DW_IDX_compile_unit attributes in the merged
-  // index. The input form may not encode all possible CU indices.
+  // index. The input form may not be big enough for all CU indices.
   const dwarf::Form cuAttrForm = getMergedCuCountForm(hdr.CompUnitCount).second;
   for (InputChunk &inputChunk : inputChunks) {
     for (auto [i, ni] : enumerate(*inputChunk.llvmDebugNames)) {
       for (const DWARFDebugNames::Abbrev &oldAbbrev : ni.getAbbrevs()) {
         // Canonicalize abbrev by placing the CU/TU index at the end,
-        // similar to `DebugNamesBaseSection::parse`.
+        // similar to 'parseDebugNames'.
         Abbrev abbrev;
         DWARFDebugNames::AttributeEncoding cuAttr(DW_IDX_compile_unit,
                                                   cuAttrForm);
@@ -2936,6 +2940,7 @@ void DebugNamesBaseSection::computeHdrAndAbbrevTable(
           else
             abbrev.attributes.push_back({a.Index, a.Form});
         }
+        // Put the CU/TU index at the end of the attributes list.
         abbrev.attributes.push_back(cuAttr);
 
         // Profile the abbrev, get or assign a new code, then record the abbrev
@@ -2945,6 +2950,7 @@ void DebugNamesBaseSection::computeHdrAndAbbrevTable(
         uint32_t newCode;
         void *insertPos;
         if (Abbrev *existing = abbrevSet.FindNodeOrInsertPos(id, insertPos)) {
+          // Found it; we've already seen an identical abbreviation.
           newCode = existing->code;
         } else {
           Abbrev *abbrev2 =
@@ -2985,17 +2991,22 @@ void DebugNamesBaseSection::Abbrev::Profile(FoldingSetNodeID &id) const {
 std::pair<uint32_t, uint32_t> DebugNamesBaseSection::computeEntryPool(
     MutableArrayRef<InputChunk> inputChunks) {
   TimeTraceScope timeScope("Merge .debug_names", "entry pool");
-  // Collect the compilation units for each unique name. Speed it up using
-  // multi-threading as the number of symbols can be in the order of millions.
+  // Collect and de-duplicate all the names (preserving all the entries).
+  // Speed it up using multithreading, as the number of symbols can be in the
+  // order of millions.
   const size_t concurrency =
       bit_floor(std::min<size_t>(config->threadCount, numShards));
   const size_t shift = 32 - countr_zero(numShards);
   const uint8_t cuAttrSize = getMergedCuCountForm(hdr.CompUnitCount).first;
   DenseMap<CachedHashStringRef, size_t> maps[numShards];
+
   parallelFor(0, concurrency, [&](size_t threadId) {
     for (auto i : seq(numChunks)) {
       InputChunk &inputChunk = inputChunks[i];
       for (NameData &nd : inputChunk.nameData) {
+        // Deduplicate the NameEntry records (based on the string/name),
+        // appending all IndexEntries from duplicate NameEntry records to
+        // the single preserved copy.
         for (NameEntry &ne : nd.nameEntries) {
           auto shardId = ne.hashValue >> shift;
           if ((shardId & (concurrency - 1)) != threadId)
@@ -3003,9 +3014,11 @@ std::pair<uint32_t, uint32_t> DebugNamesBaseSection::computeEntryPool(
 
           ne.chunkIdx = i;
           for (IndexEntry &ie : ne.entries()) {
+            // Update the IndexEntry's abbrev code to match the merged
+            // abbreviations.
             ie.abbrevCode = nd.abbrevCodeMap[ie.abbrevCode];
             // Update the DW_IDX_compile_unit attribute (the last one after
-            // canonicalization).
+            // canonicalization) to have correct merged offset value and size.
             auto &back = ie.attrValues.back();
             back.attrValue += inputChunk.baseCuIdx;
             back.attrSize = cuAttrSize;
@@ -3017,13 +3030,13 @@ std::pair<uint32_t, uint32_t> DebugNamesBaseSection::computeEntryPool(
           if (inserted)
             nameVec.push_back(std::move(ne));
           else
-            nameVec[it->second].indexEntries.append(ne.indexEntries);
+            nameVec[it->second].indexEntries.append(std::move(ne.indexEntries));
         }
       }
     }
   });
 
-  // Compute entry offsets parallelly. First, compute offsets relative to the
+  // Compute entry offsets in parallel. First, comptute offsets relative to the
   // current shard.
   uint32_t offsets[numShards];
   parallelFor(0, numShards, [&](size_t shard) {
@@ -3051,12 +3064,15 @@ std::pair<uint32_t, uint32_t> DebugNamesBaseSection::computeEntryPool(
     }
   });
 
-  // Update DW_IDX_parent attributes that use DW_FORM_ref4.
+  // Update the DW_IDX_parent entries that refer to real parents (have
+  // DW_FORM_ref4).
   parallelFor(0, numShards, [&](size_t shard) {
     for (NameEntry &ne : nameVecs[shard]) {
       for (IndexEntry &ie : ne.entries()) {
         if (!ie.parentEntry)
           continue;
+        // Abbrevs are indexed starting at 1; vector starts at 0. (abbrevCode
+        // corresponds to position in the merged table vector).
         const Abbrev *abbrev = abbrevTable[ie.abbrevCode - 1];
         for (auto i : seq(abbrev->attributes.size())) {
           DWARFDebugNames::AttributeEncoding a = abbrev->attributes[i];
@@ -3217,6 +3233,8 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
     }
   }
 
+  // Write the local TU list, then the foreign TU list..
+  // TODO: Fix this, once we get everything working without TUs.
   if (hdr.LocalTypeUnitCount || hdr.ForeignTypeUnitCount)
     warn(".debug_names: type units are not implemented");
 
@@ -3253,6 +3271,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
       buf += 4;
     }
   }
+
   // Then write the entry offsets.
   for (const SmallVector<NameEntry *, 0> &bucket : buckets) {
     for (const NameEntry *ne : bucket) {
@@ -3269,6 +3288,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
   // nameVecs order computed by `computeEntryPool`.
   for (auto &nameVec : nameVecs) {
     for (NameEntry &ne : nameVec) {
+      // Write all the entries for the string.
       for (const IndexEntry &ie : ne.entries()) {
         buf += encodeULEB128(ie.abbrevCode, buf);
         for (AttrValue value : ie.attrValues) {
@@ -4860,6 +4880,7 @@ template <class ELFT> void elf::createSyntheticSections() {
     in.debugNames = std::make_unique<DebugNamesSection<ELFT>>();
     add(*in.debugNames);
   }
+
   if (config->gdbIndex) {
     in.gdbIndex = GdbIndexSection::create<ELFT>();
     add(*in.gdbIndex);

@@ -836,16 +836,17 @@ public:
     }
   };
 
-  // One name index described by an input .debug_names section. An InputChunk
-  // typically contains one single name index.
+  // The contents of one input .debug_names section. An InputChunk
+  // typically contains one NameData, but might contain more, especially
+  // in LTO builds.
   struct NameData {
     llvm::DWARFDebugNames::Header hdr;
     llvm::DenseMap<uint32_t, uint32_t> abbrevCodeMap;
     SmallVector<NameEntry, 0> nameEntries;
   };
 
-  // InputChunk and OutputChunk hold per-file contribution to the merged index.
-  // InputChunk instances will be discarded after `create` completes.
+  // InputChunk and OutputChunk hold per-file contributions to the merged index.
+  // InputChunk instances will be discarded after `init` completes.
   struct InputChunk {
     uint32_t baseCuIdx;
     LLDDWARFSection section;
@@ -874,11 +875,12 @@ protected:
                       const llvm::DWARFDebugNames::Header &hdr,
                       const llvm::DWARFDebugNames::DWARFDebugNamesOffsets &)>
                       readOffsets);
-  void computeHdrAndAbbrevTable(MutableArrayRef<InputChunk>);
-  std::pair<uint32_t, uint32_t> computeEntryPool(MutableArrayRef<InputChunk>);
+  void computeHdrAndAbbrevTable(MutableArrayRef<InputChunk> inputChunks);
+  std::pair<uint32_t, uint32_t>
+  computeEntryPool(MutableArrayRef<InputChunk> inputChunks);
 
   // Input .debug_names sections for relocating string offsets in the name table
-  // in finalizeContents.
+  // in `finalizeContents`.
   SmallVector<InputSection *, 0> inputSections;
 
   llvm::DWARFDebugNames::Header hdr;
