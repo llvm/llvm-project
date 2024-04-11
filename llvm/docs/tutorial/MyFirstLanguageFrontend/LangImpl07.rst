@@ -287,7 +287,7 @@ them. Here's a motivating example that shows how we could use these:
     # Iterative fib.
     def fibi(x)
       var a = 1, b = 1, c in
-      (for i = 3, i < x in
+      (for i = 3, i < x + 1 in
          c = a + b :
          a = b :
          b = c) :
