@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -ast-dump -std=c99 %s | FileCheck %s
 
+void variadic(int i, ...);
+
 void func(void) {
   // CHECK: FunctionDecl {{.*}} func 'void (void)'
 
@@ -48,5 +50,15 @@ void func(void) {
   // CHECK-NEXT: DeclRefExpr {{.*}} 'cf'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
   // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+
+  // Show that we do not promote a _Complex float to _Complex double as part of
+  // the default argument promotions when passing to a variadic function.
+  variadic(1, cf);
+  // CHECK: CallExpr
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} <FunctionToPointerDecay>
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'variadic'
+  // CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} '_Complex float' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'cf'
 }
 
