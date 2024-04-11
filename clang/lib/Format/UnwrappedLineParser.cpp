@@ -395,9 +395,10 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
         ParseDefault();
         continue;
       }
-      if (!InRequiresExpression && FormatTok->isNot(TT_MacroBlockBegin) &&
-          tryToParseBracedList()) {
-        continue;
+      if (!InRequiresExpression && FormatTok->isNot(TT_MacroBlockBegin)) {
+        if (tryToParseBracedList())
+          continue;
+        FormatTok->setFinalizedType(TT_BlockLBrace);
       }
       parseBlock();
       ++StatementCount;
