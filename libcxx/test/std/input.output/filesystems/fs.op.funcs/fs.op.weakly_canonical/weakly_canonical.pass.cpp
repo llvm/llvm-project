@@ -79,6 +79,14 @@ int main(int, char**) {
     TEST_REQUIRE(PathEq(output, expect),
                  TEST_WRITE_CONCATENATED(
                      "Input: ", TC.input.string(), "\nExpected: ", expect.string(), "\nOutput: ", output.string()));
+
+    // Get coverage over the error_code form of the api.
+    std::error_code ec;
+    const fs::path output_c = fs::weakly_canonical(p, ec);
+
+    TEST_REQUIRE(PathEq(output_c, expect),
+                 TEST_WRITE_CONCATENATED(
+                     "Input: ", TC.input.string(), "\nExpected: ", expect.string(), "\nOutput: ", output_c.string()));
   }
   return 0;
 }
