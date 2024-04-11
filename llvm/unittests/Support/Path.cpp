@@ -1296,6 +1296,7 @@ TEST_F(FileSystemTest, UTF8ToUTF16DirectoryIteration) {
 }
 #endif
 
+#ifndef _WIN32
 TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
   ASSERT_NO_ERROR(fs::create_directory(Twine(TestDirectory)));
   ASSERT_EQ(fs::create_directory(Twine(TestDirectory), false),
@@ -1309,6 +1310,7 @@ TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
       fs::readNativeFile(*FD, MutableArrayRef(&*Buf.begin(), Buf.size()));
   ASSERT_EQ(errorToErrorCode(BytesRead.takeError()), errc::is_a_directory);
 }
+#endif
 
 TEST_F(FileSystemTest, OpenDirectoryAsFileForWrite) {
   ASSERT_NO_ERROR(fs::create_directory(Twine(TestDirectory)));
