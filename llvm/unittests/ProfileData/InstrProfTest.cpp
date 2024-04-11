@@ -19,6 +19,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <cstdarg>
+#include <optional>
 
 using namespace llvm;
 using ::testing::EndsWith;
@@ -433,21 +434,19 @@ TEST_F(InstrProfTest, test_memprof) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  memprof::FrameId LastUnmappedFrameId = 0;
-  bool HasFrameMappingError = false;
+  std::optional<memprof::FrameId> LastUnmappedFrameId;
   auto IdToFrameCallback = [&](const memprof::FrameId Id) {
     auto Iter = IdToFrameMap.find(Id);
     if (Iter == IdToFrameMap.end()) {
       LastUnmappedFrameId = Id;
-      HasFrameMappingError = true;
       return memprof::Frame(0, 0, 0, false);
     }
     return Iter->second;
   };
 
   const memprof::MemProfRecord WantRecord(IndexedMR, IdToFrameCallback);
-  ASSERT_FALSE(HasFrameMappingError)
-      << "could not map frame id: " << LastUnmappedFrameId;
+  ASSERT_FALSE(LastUnmappedFrameId.has_value())
+      << "could not map frame id: " << *LastUnmappedFrameId;
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 
