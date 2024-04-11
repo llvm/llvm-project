@@ -1621,6 +1621,14 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
         Known = KnownBits::ssub_sat(Known, Known2);
         break;
+        // for min/max reduce, any bit common to each element in the input vec
+        // is set in the output.
+      case Intrinsic::vector_reduce_umax:
+      case Intrinsic::vector_reduce_umin:
+      case Intrinsic::vector_reduce_smax:
+      case Intrinsic::vector_reduce_smin:
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        break;
       case Intrinsic::umin:
         computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
         computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
@@ -2463,6 +2471,34 @@ static bool isNonZeroSub(const APInt &DemandedElts, unsigned Depth,
   return ::isKnownNonEqual(X, Y, Depth, Q);
 }
 
+static bool isNonZeroMul(const APInt &DemandedElts, unsigned Depth,
+                         const SimplifyQuery &Q, unsigned BitWidth, Value *X,
+                         Value *Y, bool NSW, bool NUW) {
+  // If X and Y are non-zero then so is X * Y as long as the multiplication
+  // does not overflow.
+  if (NSW || NUW)
+    return isKnownNonZero(X, DemandedElts, Depth, Q) &&
+           isKnownNonZero(Y, DemandedElts, Depth, Q);
+
+  // If either X or Y is odd, then if the other is non-zero the result can't
+  // be zero.
+  KnownBits XKnown = computeKnownBits(X, DemandedElts, Depth, Q);
+  if (XKnown.One[0])
+    return isKnownNonZero(Y, DemandedElts, Depth, Q);
+
+  KnownBits YKnown = computeKnownBits(Y, DemandedElts, Depth, Q);
+  if (YKnown.One[0])
+    return XKnown.isNonZero() || isKnownNonZero(X, DemandedElts, Depth, Q);
+
+  // If there exists any subset of X (sX) and subset of Y (sY) s.t sX * sY is
+  // non-zero, then X * Y is non-zero. We can find sX and sY by just taking
+  // the lowest known One of X and Y. If they are non-zero, the result
+  // must be non-zero. We can check if LSB(X) * LSB(Y) != 0 by doing
+  // X.CountLeadingZeros + Y.CountLeadingZeros < BitWidth.
+  return (XKnown.countMaxTrailingZeros() + YKnown.countMaxTrailingZeros()) <
+         BitWidth;
+}
+
 static bool isNonZeroShift(const Operator *I, const APInt &DemandedElts,
                            unsigned Depth, const SimplifyQuery &Q,
                            const KnownBits &KnownVal) {
@@ -2658,33 +2694,10 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
                         Q.IIQ.hasNoUnsignedWrap(BO));
   }
   case Instruction::Mul: {
-    // If X and Y are non-zero then so is X * Y as long as the multiplication
-    // does not overflow.
     const OverflowingBinaryOperator *BO = cast<OverflowingBinaryOperator>(I);
-    if (Q.IIQ.hasNoSignedWrap(BO) || Q.IIQ.hasNoUnsignedWrap(BO))
-      return isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q) &&
-             isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q);
-
-    // If either X or Y is odd, then if the other is non-zero the result can't
-    // be zero.
-    KnownBits XKnown =
-        computeKnownBits(I->getOperand(0), DemandedElts, Depth, Q);
-    if (XKnown.One[0])
-      return isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q);
-
-    KnownBits YKnown =
-        computeKnownBits(I->getOperand(1), DemandedElts, Depth, Q);
-    if (YKnown.One[0])
-      return XKnown.isNonZero() ||
-             isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q);
-
-    // If there exists any subset of X (sX) and subset of Y (sY) s.t sX * sY is
-    // non-zero, then X * Y is non-zero. We can find sX and sY by just taking
-    // the lowest known One of X and Y. If they are non-zero, the result
-    // must be non-zero. We can check if LSB(X) * LSB(Y) != 0 by doing
-    // X.CountLeadingZeros + Y.CountLeadingZeros < BitWidth.
-    return (XKnown.countMaxTrailingZeros() + YKnown.countMaxTrailingZeros()) <
-           BitWidth;
+    return isNonZeroMul(DemandedElts, Depth, Q, BitWidth, I->getOperand(0),
+                        I->getOperand(1), Q.IIQ.hasNoSignedWrap(BO),
+                        Q.IIQ.hasNoUnsignedWrap(BO));
   }
   case Instruction::Select: {
     // (C ? X : Y) != 0 if X != 0 and Y != 0.
@@ -2750,6 +2763,29 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       return isKnownNonZero(U.get(), DemandedElts, NewDepth, RecQ);
     });
   }
+  case Instruction::InsertElement: {
+    if (isa<ScalableVectorType>(I->getType()))
+      break;
+
+    const Value *Vec = I->getOperand(0);
+    const Value *Elt = I->getOperand(1);
+    auto *CIdx = dyn_cast<ConstantInt>(I->getOperand(2));
+
+    unsigned NumElts = DemandedElts.getBitWidth();
+    APInt DemandedVecElts = DemandedElts;
+    bool SkipElt = false;
+    // If we know the index we are inserting too, clear it from Vec check.
+    if (CIdx && CIdx->getValue().ult(NumElts)) {
+      DemandedVecElts.clearBit(CIdx->getZExtValue());
+      SkipElt = !DemandedElts[CIdx->getZExtValue()];
+    }
+
+    // Result is zero if Elt is non-zero and rest of the demanded elts in Vec
+    // are non-zero.
+    return (SkipElt || isKnownNonZero(Elt, Depth, Q)) &&
+           (DemandedVecElts.isZero() ||
+            isKnownNonZero(Vec, DemandedVecElts, Depth, Q));
+  }
   case Instruction::ExtractElement:
     if (const auto *EEI = dyn_cast<ExtractElementInst>(I)) {
       const Value *Vec = EEI->getVectorOperand();
@@ -2764,6 +2800,21 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       }
     }
     break;
+  case Instruction::ShuffleVector: {
+    auto *Shuf = dyn_cast<ShuffleVectorInst>(I);
+    if (!Shuf)
+      break;
+    APInt DemandedLHS, DemandedRHS;
+    // For undef elements, we don't know anything about the common state of
+    // the shuffle result.
+    if (!getShuffleDemandedElts(Shuf, DemandedElts, DemandedLHS, DemandedRHS))
+      break;
+    // If demanded elements for both vecs are non-zero, the shuffle is non-zero.
+    return (DemandedRHS.isZero() ||
+            isKnownNonZero(Shuf->getOperand(1), DemandedRHS, Depth, Q)) &&
+           (DemandedLHS.isZero() ||
+            isKnownNonZero(Shuf->getOperand(0), DemandedLHS, Depth, Q));
+  }
   case Instruction::Freeze:
     return isKnownNonZero(I->getOperand(0), Depth, Q) &&
            isGuaranteedNotToBePoison(I->getOperand(0), Q.AC, Q.CxtI, Q.DT,
@@ -2784,6 +2835,29 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     // No need to fall through to computeKnownBits as range metadata is already
     // handled in isKnownNonZero.
     return false;
+  }
+  case Instruction::ExtractValue: {
+    const WithOverflowInst *WO;
+    if (match(I, m_ExtractValue<0>(m_WithOverflowInst(WO)))) {
+      switch (WO->getBinaryOp()) {
+      default:
+        break;
+      case Instruction::Add:
+        return isNonZeroAdd(DemandedElts, Depth, Q, BitWidth,
+                            WO->getArgOperand(0), WO->getArgOperand(1),
+                            /*NSW=*/false,
+                            /*NUW=*/false);
+      case Instruction::Sub:
+        return isNonZeroSub(DemandedElts, Depth, Q, BitWidth,
+                            WO->getArgOperand(0), WO->getArgOperand(1));
+      case Instruction::Mul:
+        return isNonZeroMul(DemandedElts, Depth, Q, BitWidth,
+                            WO->getArgOperand(0), WO->getArgOperand(1),
+                            /*NSW=*/false, /*NUW=*/false);
+        break;
+      }
+    }
+    break;
   }
   case Instruction::Call:
   case Instruction::Invoke: {
@@ -2824,27 +2898,54 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         return isNonZeroAdd(DemandedElts, Depth, Q, BitWidth,
                             II->getArgOperand(0), II->getArgOperand(1),
                             /*NSW=*/true, /* NUW=*/false);
+        // umin/smin/smax/smin of all non-zero elements is always non-zero.
+      case Intrinsic::vector_reduce_umax:
+      case Intrinsic::vector_reduce_umin:
+      case Intrinsic::vector_reduce_smax:
+      case Intrinsic::vector_reduce_smin:
+        return isKnownNonZero(II->getArgOperand(0), Depth, Q);
       case Intrinsic::umax:
       case Intrinsic::uadd_sat:
         return isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q) ||
                isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q);
-      case Intrinsic::smin:
       case Intrinsic::smax: {
-        auto KnownOpImpliesNonZero = [&](const KnownBits &K) {
-          return II->getIntrinsicID() == Intrinsic::smin
-                     ? K.isNegative()
-                     : K.isStrictlyPositive();
+        // If either arg is strictly positive the result is non-zero. Otherwise
+        // the result is non-zero if both ops are non-zero.
+        auto IsNonZero = [&](Value *Op, std::optional<bool> &OpNonZero,
+                             const KnownBits &OpKnown) {
+          if (!OpNonZero.has_value())
+            OpNonZero = OpKnown.isNonZero() ||
+                        isKnownNonZero(Op, DemandedElts, Depth, Q);
+          return *OpNonZero;
         };
-        KnownBits XKnown =
-            computeKnownBits(II->getArgOperand(0), DemandedElts, Depth, Q);
-        if (KnownOpImpliesNonZero(XKnown))
-          return true;
-        KnownBits YKnown =
+        // Avoid re-computing isKnownNonZero.
+        std::optional<bool> Op0NonZero, Op1NonZero;
+        KnownBits Op1Known =
             computeKnownBits(II->getArgOperand(1), DemandedElts, Depth, Q);
-        if (KnownOpImpliesNonZero(YKnown))
+        if (Op1Known.isNonNegative() &&
+            IsNonZero(II->getArgOperand(1), Op1NonZero, Op1Known))
+          return true;
+        KnownBits Op0Known =
+            computeKnownBits(II->getArgOperand(0), DemandedElts, Depth, Q);
+        if (Op0Known.isNonNegative() &&
+            IsNonZero(II->getArgOperand(0), Op0NonZero, Op0Known))
+          return true;
+        return IsNonZero(II->getArgOperand(1), Op1NonZero, Op1Known) &&
+               IsNonZero(II->getArgOperand(0), Op0NonZero, Op0Known);
+      }
+      case Intrinsic::smin: {
+        // If either arg is negative the result is non-zero. Otherwise
+        // the result is non-zero if both ops are non-zero.
+        KnownBits Op1Known =
+            computeKnownBits(II->getArgOperand(1), DemandedElts, Depth, Q);
+        if (Op1Known.isNegative())
+          return true;
+        KnownBits Op0Known =
+            computeKnownBits(II->getArgOperand(0), DemandedElts, Depth, Q);
+        if (Op0Known.isNegative())
           return true;
 
-        if (XKnown.isNonZero() && YKnown.isNonZero())
+        if (Op1Known.isNonZero() && Op0Known.isNonZero())
           return true;
       }
         [[fallthrough]];
@@ -3005,7 +3106,20 @@ getInvertibleOperands(const Operator *Op1,
   switch (Op1->getOpcode()) {
   default:
     break;
-  case Instruction::Add:
+  case Instruction::Or:
+    if (!cast<PossiblyDisjointInst>(Op1)->isDisjoint() ||
+        !cast<PossiblyDisjointInst>(Op2)->isDisjoint())
+      break;
+    [[fallthrough]];
+  case Instruction::Xor:
+  case Instruction::Add: {
+    Value *Other;
+    if (match(Op2, m_c_BinOp(m_Specific(Op1->getOperand(0)), m_Value(Other))))
+      return std::make_pair(Op1->getOperand(1), Other);
+    if (match(Op2, m_c_BinOp(m_Specific(Op1->getOperand(1)), m_Value(Other))))
+      return std::make_pair(Op1->getOperand(0), Other);
+    break;
+  }
   case Instruction::Sub:
     if (Op1->getOperand(0) == Op2->getOperand(0))
       return getOperands(1);
@@ -3093,20 +3207,33 @@ getInvertibleOperands(const Operator *Op1,
   return std::nullopt;
 }
 
-/// Return true if V2 == V1 + X, where X is known non-zero.
-static bool isAddOfNonZero(const Value *V1, const Value *V2, unsigned Depth,
-                           const SimplifyQuery &Q) {
+/// Return true if V1 == (binop V2, X), where X is known non-zero.
+/// Only handle a small subset of binops where (binop V2, X) with non-zero X
+/// implies V2 != V1.
+static bool isModifyingBinopOfNonZero(const Value *V1, const Value *V2,
+                                      unsigned Depth, const SimplifyQuery &Q) {
   const BinaryOperator *BO = dyn_cast<BinaryOperator>(V1);
-  if (!BO || BO->getOpcode() != Instruction::Add)
+  if (!BO)
     return false;
-  Value *Op = nullptr;
-  if (V2 == BO->getOperand(0))
-    Op = BO->getOperand(1);
-  else if (V2 == BO->getOperand(1))
-    Op = BO->getOperand(0);
-  else
-    return false;
-  return isKnownNonZero(Op, Depth + 1, Q);
+  switch (BO->getOpcode()) {
+  default:
+    break;
+  case Instruction::Or:
+    if (!cast<PossiblyDisjointInst>(V1)->isDisjoint())
+      break;
+    [[fallthrough]];
+  case Instruction::Xor:
+  case Instruction::Add:
+    Value *Op = nullptr;
+    if (V2 == BO->getOperand(0))
+      Op = BO->getOperand(1);
+    else if (V2 == BO->getOperand(1))
+      Op = BO->getOperand(0);
+    else
+      return false;
+    return isKnownNonZero(Op, Depth + 1, Q);
+  }
+  return false;
 }
 
 /// Return true if V2 == V1 * C, where V1 is known non-zero, C is not 0/1 and
@@ -3266,7 +3393,8 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
     };
   }
 
-  if (isAddOfNonZero(V1, V2, Depth, Q) || isAddOfNonZero(V2, V1, Depth, Q))
+  if (isModifyingBinopOfNonZero(V1, V2, Depth, Q) ||
+      isModifyingBinopOfNonZero(V2, V1, Depth, Q))
     return true;
 
   if (isNonEqualMul(V1, V2, Depth, Q) || isNonEqualMul(V2, V1, Depth, Q))

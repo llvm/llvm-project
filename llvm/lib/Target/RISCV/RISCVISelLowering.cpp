@@ -1063,7 +1063,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
                             ISD::EXTRACT_SUBVECTOR, ISD::SCALAR_TO_VECTOR},
                            VT, Custom);
-        setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+        if (Subtarget.hasStdExtZfhminOrZhinxmin())
+          setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
         // load/store
         setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
 
@@ -4633,13 +4634,20 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
   } else if (Subtarget.hasStdExtZvbb()) {
     // Interleaved = (OddV << VecVT.getScalarSizeInBits()) + EvenV.
     SDValue OffsetVec =
-        DAG.getSplatVector(VecContainerVT, DL,
-                           DAG.getConstant(VecVT.getScalarSizeInBits(), DL,
-                                           Subtarget.getXLenVT()));
+        DAG.getConstant(VecVT.getScalarSizeInBits(), DL, VecContainerVT);
     Interleaved = DAG.getNode(RISCVISD::VWSLL_VL, DL, WideContainerVT, OddV,
                               OffsetVec, Passthru, Mask, VL);
-    Interleaved = DAG.getNode(RISCVISD::VWADDU_W_VL, DL, WideContainerVT,
-                              Interleaved, EvenV, Passthru, Mask, VL);
+    if (!EvenV.isUndef())
+      Interleaved = DAG.getNode(RISCVISD::VWADDU_W_VL, DL, WideContainerVT,
+                                Interleaved, EvenV, Passthru, Mask, VL);
+  } else if (EvenV.isUndef()) {
+    Interleaved =
+        DAG.getNode(RISCVISD::VZEXT_VL, DL, WideContainerVT, OddV, Mask, VL);
+
+    SDValue OffsetVec =
+        DAG.getConstant(VecVT.getScalarSizeInBits(), DL, WideContainerVT);
+    Interleaved = DAG.getNode(RISCVISD::SHL_VL, DL, WideContainerVT,
+                              Interleaved, OffsetVec, Passthru, Mask, VL);
   } else {
     // FIXME: We should freeze the odd vector here. We already handled the case
     // of provably undef/poison above.
@@ -17902,6 +17910,17 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::PseudoFROUND_D_IN32X:
     return emitFROUND(MI, BB, Subtarget);
   case TargetOpcode::STATEPOINT:
+    // STATEPOINT is a pseudo instruction which has no implicit defs/uses
+    // while jal call instruction (where statepoint will be lowered at the end)
+    // has implicit def. This def is early-clobber as it will be set at
+    // the moment of the call and earlier than any use is read.
+    // Add this implicit dead def here as a workaround.
+    MI.addOperand(*MI.getMF(),
+                  MachineOperand::CreateReg(
+                      RISCV::X1, /*isDef*/ true,
+                      /*isImp*/ true, /*isKill*/ false, /*isDead*/ true,
+                      /*isUndef*/ false, /*isEarlyClobber*/ true));
+    [[fallthrough]];
   case TargetOpcode::STACKMAP:
   case TargetOpcode::PATCHPOINT:
     if (!Subtarget.is64Bit())
