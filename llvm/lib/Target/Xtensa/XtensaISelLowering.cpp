@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <deque>
 
@@ -128,7 +129,7 @@ static bool CC_Xtensa_Custom(unsigned ValNo, MVT ValVT, MVT LocVT,
   bool needs64BitAlign = (ValVT == MVT::i32 && OrigAlign == Align(8));
   bool needs128BitAlign = (ValVT == MVT::i32 && OrigAlign == Align(16));
 
-  if (ValVT == MVT::i32 || ValVT == MVT::f32) {
+  if (ValVT == MVT::i32) {
     Register = State.AllocateReg(IntRegs);
     // If this is the first part of an i64 arg,
     // the allocated register must be either A2, A4 or A6.
@@ -290,7 +291,7 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getStackSize();
 
-  unsigned StackAlignment = TFL->getStackAlignment();
+  Align StackAlignment = TFL->getStackAlign();
   unsigned NextStackOffset = alignTo(NumBytes, StackAlignment);
 
   Chain = DAG.getCALLSEQ_START(Chain, NextStackOffset, 0, DL);
@@ -493,19 +494,19 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
                                              SelectionDAG &DAG) const {
   const ConstantSDNode *CN = cast<ConstantSDNode>(Op);
   SDLoc DL(CN);
-  APInt apval = CN->getAPIntValue();
-  int64_t value = apval.getSExtValue();
+  APInt APVal = CN->getAPIntValue();
+  int64_t Value = APVal.getSExtValue();
   if (Op.getValueType() == MVT::i32) {
     // Check if use node maybe lowered to the MOVI instruction
-    if (value > -2048 && value <= 2047)
+    if (Value > -2048 && Value <= 2047)
       return Op;
     // Check if use node maybe lowered to the ADDMI instruction
     SDNode &OpNode = *Op.getNode();
     if ((OpNode.hasOneUse() && OpNode.use_begin()->getOpcode() == ISD::ADD) &&
-        (value >= -32768) && (value <= 32512) && ((value & 0xff) == 0))
+        isShiftedInt<16, 8>(Value))
       return Op;
     Type *Ty = Type::getInt32Ty(*DAG.getContext());
-    Constant *CV = ConstantInt::get(Ty, value);
+    Constant *CV = ConstantInt::get(Ty, Value);
     SDValue CP = DAG.getConstantPool(CV, MVT::i32);
     return CP;
   }
