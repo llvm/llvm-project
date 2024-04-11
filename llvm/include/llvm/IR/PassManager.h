@@ -64,23 +64,6 @@ extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace llvm {
 
-// RemoveDIs: Provide facilities for converting debug-info from one form to
-// another, which are no-ops for everything but modules.
-template <class IRUnitT> inline bool shouldConvertDbgInfo(IRUnitT &IR) {
-  return false;
-}
-template <> inline bool shouldConvertDbgInfo(Module &IR) {
-  return !IR.IsNewDbgInfoFormat && UseNewDbgInfoFormat;
-}
-template <class IRUnitT> inline void doConvertDbgInfoToNew(IRUnitT &IR) {}
-template <> inline void doConvertDbgInfoToNew(Module &IR) {
-  IR.convertToNewDbgValues();
-}
-template <class IRUnitT> inline void doConvertDebugInfoToOld(IRUnitT &IR) {}
-template <> inline void doConvertDebugInfoToOld(Module &IR) {
-  IR.convertFromNewDbgValues();
-}
-
 // Forward declare the analysis manager template.
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 
@@ -229,9 +212,7 @@ public:
 
     // RemoveDIs: if requested, convert debug-info to DbgRecord representation
     // for duration of these passes.
-    bool ShouldConvertDbgInfo = shouldConvertDbgInfo(IR);
-    if (ShouldConvertDbgInfo)
-      doConvertDbgInfoToNew(IR);
+    ScopedDbgInfoFormatSetter FormatSetter(IR, UseNewDbgInfoFormat);
 
     for (auto &Pass : Passes) {
       // Check the PassInstrumentation's BeforePass callbacks before running the
@@ -254,9 +235,6 @@ public:
       // preserved set for this pass manager.
       PA.intersect(std::move(PassPA));
     }
-
-    if (ShouldConvertDbgInfo)
-      doConvertDebugInfoToOld(IR);
 
     // Invalidation was handled after each pass in the above loop for the
     // current unit of IR. Therefore, the remaining analysis results in the

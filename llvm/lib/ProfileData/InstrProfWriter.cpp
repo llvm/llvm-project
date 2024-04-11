@@ -414,6 +414,144 @@ static void setSummary(IndexedInstrProf::Summary *TheSummary,
     TheSummary->setEntry(I, Res[I]);
 }
 
+// Serialize Schema.
+static void writeMemProfSchema(ProfOStream &OS,
+                               const memprof::MemProfSchema &Schema) {
+  OS.write(static_cast<uint64_t>(Schema.size()));
+  for (const auto Id : Schema)
+    OS.write(static_cast<uint64_t>(Id));
+}
+
+// Serialize MemProfRecordData.  Return RecordTableOffset.
+static uint64_t writeMemProfRecords(
+    ProfOStream &OS,
+    llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
+        &MemProfRecordData,
+    memprof::MemProfSchema *Schema) {
+  auto RecordWriter =
+      std::make_unique<memprof::RecordWriterTrait>(memprof::Version1);
+  RecordWriter->Schema = Schema;
+  OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
+      RecordTableGenerator;
+  for (auto &[GUID, Record] : MemProfRecordData) {
+    // Insert the key (func hash) and value (memprof record).
+    RecordTableGenerator.insert(GUID, Record, *RecordWriter.get());
+  }
+  // Release the memory of this MapVector as it is no longer needed.
+  MemProfRecordData.clear();
+
+  // The call to Emit invokes RecordWriterTrait::EmitData which destructs
+  // the memprof record copies owned by the RecordTableGenerator. This works
+  // because the RecordTableGenerator is not used after this point.
+  return RecordTableGenerator.Emit(OS.OS, *RecordWriter);
+}
+
+// Serialize MemProfFrameData.  Return FrameTableOffset.
+static uint64_t writeMemProfFrames(
+    ProfOStream &OS,
+    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
+  auto FrameWriter = std::make_unique<memprof::FrameWriterTrait>();
+  OnDiskChainedHashTableGenerator<memprof::FrameWriterTrait>
+      FrameTableGenerator;
+  for (auto &[FrameId, Frame] : MemProfFrameData) {
+    // Insert the key (frame id) and value (frame contents).
+    FrameTableGenerator.insert(FrameId, Frame);
+  }
+  // Release the memory of this MapVector as it is no longer needed.
+  MemProfFrameData.clear();
+
+  return FrameTableGenerator.Emit(OS.OS, *FrameWriter);
+}
+
+static Error writeMemProfV0(
+    ProfOStream &OS,
+    llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
+        &MemProfRecordData,
+    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
+  uint64_t HeaderUpdatePos = OS.tell();
+  OS.write(0ULL); // Reserve space for the memprof record table offset.
+  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
+  OS.write(0ULL); // Reserve space for the memprof frame table offset.
+
+  auto Schema = memprof::PortableMemInfoBlock::getSchema();
+  writeMemProfSchema(OS, Schema);
+
+  uint64_t RecordTableOffset =
+      writeMemProfRecords(OS, MemProfRecordData, &Schema);
+
+  uint64_t FramePayloadOffset = OS.tell();
+  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfFrameData);
+
+  uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
+  OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
+
+  return Error::success();
+}
+
+static Error writeMemProfV1(
+    ProfOStream &OS,
+    llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
+        &MemProfRecordData,
+    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
+  OS.write(memprof::Version1);
+  uint64_t HeaderUpdatePos = OS.tell();
+  OS.write(0ULL); // Reserve space for the memprof record table offset.
+  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
+  OS.write(0ULL); // Reserve space for the memprof frame table offset.
+
+  auto Schema = memprof::PortableMemInfoBlock::getSchema();
+  writeMemProfSchema(OS, Schema);
+
+  uint64_t RecordTableOffset =
+      writeMemProfRecords(OS, MemProfRecordData, &Schema);
+
+  uint64_t FramePayloadOffset = OS.tell();
+  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfFrameData);
+
+  uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
+  OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
+
+  return Error::success();
+}
+
+// The MemProf profile data includes a simple schema
+// with the format described below followed by the hashtable:
+// uint64_t Version
+// uint64_t RecordTableOffset = RecordTableGenerator.Emit
+// uint64_t FramePayloadOffset = Stream offset before emitting the frame table
+// uint64_t FrameTableOffset = FrameTableGenerator.Emit
+// uint64_t Num schema entries
+// uint64_t Schema entry 0
+// uint64_t Schema entry 1
+// ....
+// uint64_t Schema entry N - 1
+// OnDiskChainedHashTable MemProfRecordData
+// OnDiskChainedHashTable MemProfFrameData
+static Error writeMemProf(
+    ProfOStream &OS,
+    llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
+        &MemProfRecordData,
+    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData,
+    memprof::IndexedVersion MemProfVersionRequested) {
+
+  switch (MemProfVersionRequested) {
+  case memprof::Version0:
+    return writeMemProfV0(OS, MemProfRecordData, MemProfFrameData);
+  case memprof::Version1:
+    return writeMemProfV1(OS, MemProfRecordData, MemProfFrameData);
+  case memprof::Version2:
+    // TODO: Implement.  Fall through to the error handling below for now.
+    break;
+  }
+
+  return make_error<InstrProfError>(
+      instrprof_error::unsupported_version,
+      formatv("MemProf version {} not supported; "
+              "requires version between {} and {}, inclusive",
+              MemProfVersionRequested, memprof::MinimumSupportedVersion,
+              memprof::MaximumSupportedVersion));
+}
+
 Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   using namespace IndexedInstrProf;
   using namespace support;
@@ -517,84 +655,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // Write the hash table.
   uint64_t HashTableStart = Generator.Emit(OS.OS, *InfoObj);
 
-  // Write the MemProf profile data if we have it. This includes a simple schema
-  // with the format described below followed by the hashtable:
-  // uint64_t Version
-  // uint64_t RecordTableOffset = RecordTableGenerator.Emit
-  // uint64_t FramePayloadOffset = Stream offset before emitting the frame table
-  // uint64_t FrameTableOffset = FrameTableGenerator.Emit
-  // uint64_t Num schema entries
-  // uint64_t Schema entry 0
-  // uint64_t Schema entry 1
-  // ....
-  // uint64_t Schema entry N - 1
-  // OnDiskChainedHashTable MemProfRecordData
-  // OnDiskChainedHashTable MemProfFrameData
+  // Write the MemProf profile data if we have it.
   uint64_t MemProfSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
-    if (MemProfVersionRequested < memprof::MinimumSupportedVersion ||
-        MemProfVersionRequested > memprof::MaximumSupportedVersion) {
-      return make_error<InstrProfError>(
-          instrprof_error::unsupported_version,
-          formatv("MemProf version {} not supported; "
-                  "requires version between {} and {}, inclusive",
-                  MemProfVersionRequested, memprof::MinimumSupportedVersion,
-                  memprof::MaximumSupportedVersion));
-    }
-
     MemProfSectionStart = OS.tell();
-
-    if (MemProfVersionRequested >= memprof::Version1)
-      OS.write(MemProfVersionRequested);
-
-    OS.write(0ULL); // Reserve space for the memprof record table offset.
-    OS.write(0ULL); // Reserve space for the memprof frame payload offset.
-    OS.write(0ULL); // Reserve space for the memprof frame table offset.
-
-    auto Schema = memprof::PortableMemInfoBlock::getSchema();
-    OS.write(static_cast<uint64_t>(Schema.size()));
-    for (const auto Id : Schema) {
-      OS.write(static_cast<uint64_t>(Id));
-    }
-
-    auto RecordWriter = std::make_unique<memprof::RecordWriterTrait>();
-    RecordWriter->Schema = &Schema;
-    OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
-        RecordTableGenerator;
-    for (auto &I : MemProfRecordData) {
-      // Insert the key (func hash) and value (memprof record).
-      RecordTableGenerator.insert(I.first, I.second);
-    }
-    // Release the memory of this MapVector as it is no longer needed.
-    MemProfRecordData.clear();
-
-    // The call to Emit invokes RecordWriterTrait::EmitData which destructs
-    // the memprof record copies owned by the RecordTableGenerator. This works
-    // because the RecordTableGenerator is not used after this point.
-    uint64_t RecordTableOffset =
-        RecordTableGenerator.Emit(OS.OS, *RecordWriter);
-
-    uint64_t FramePayloadOffset = OS.tell();
-
-    auto FrameWriter = std::make_unique<memprof::FrameWriterTrait>();
-    OnDiskChainedHashTableGenerator<memprof::FrameWriterTrait>
-        FrameTableGenerator;
-    for (auto &I : MemProfFrameData) {
-      // Insert the key (frame id) and value (frame contents).
-      FrameTableGenerator.insert(I.first, I.second);
-    }
-    // Release the memory of this MapVector as it is no longer needed.
-    MemProfFrameData.clear();
-
-    uint64_t FrameTableOffset = FrameTableGenerator.Emit(OS.OS, *FrameWriter);
-
-    uint64_t Header[] = {RecordTableOffset, FramePayloadOffset,
-                         FrameTableOffset};
-    uint64_t HeaderUpdatePos = MemProfSectionStart;
-    if (MemProfVersionRequested >= memprof::Version1)
-      // The updates go just after the version field.
-      HeaderUpdatePos += sizeof(uint64_t);
-    OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
+    if (auto E = writeMemProf(OS, MemProfRecordData, MemProfFrameData,
+                              MemProfVersionRequested))
+      return E;
   }
 
   // BinaryIdSection has two parts:

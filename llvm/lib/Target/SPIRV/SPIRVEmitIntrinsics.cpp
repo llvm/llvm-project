@@ -460,15 +460,36 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
 }
 
 Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
-  IRBuilder<> B(I.getParent());
-  SmallVector<Value *, 4> Args;
-  for (auto &Op : I.operands())
-    if (Op.get()->getType()->isSized())
-      Args.push_back(Op);
+  BasicBlock *ParentBB = I.getParent();
+  IRBuilder<> B(ParentBB);
   B.SetInsertPoint(&I);
-  B.CreateIntrinsic(Intrinsic::spv_switch, {I.getOperand(0)->getType()},
-                    {Args});
-  return &I;
+  SmallVector<Value *, 4> Args;
+  SmallVector<BasicBlock *> BBCases;
+  for (auto &Op : I.operands()) {
+    if (Op.get()->getType()->isSized()) {
+      Args.push_back(Op);
+    } else if (BasicBlock *BB = dyn_cast<BasicBlock>(Op.get())) {
+      BBCases.push_back(BB);
+      Args.push_back(BlockAddress::get(BB->getParent(), BB));
+    } else {
+      report_fatal_error("Unexpected switch operand");
+    }
+  }
+  CallInst *NewI = B.CreateIntrinsic(Intrinsic::spv_switch,
+                                     {I.getOperand(0)->getType()}, {Args});
+  // remove switch to avoid its unneeded and undesirable unwrap into branches
+  // and conditions
+  I.replaceAllUsesWith(NewI);
+  I.eraseFromParent();
+  // insert artificial and temporary instruction to preserve valid CFG,
+  // it will be removed after IR translation pass
+  B.SetInsertPoint(ParentBB);
+  IndirectBrInst *BrI = B.CreateIndirectBr(
+      Constant::getNullValue(PointerType::getUnqual(ParentBB->getContext())),
+      BBCases.size());
+  for (BasicBlock *BBCase : BBCases)
+    BrI->addDestination(BBCase);
+  return BrI;
 }
 
 Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {

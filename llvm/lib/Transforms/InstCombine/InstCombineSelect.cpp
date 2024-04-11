@@ -3091,6 +3091,13 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       return BinaryOperator::CreateOr(CondVal, FalseVal);
     }
 
+    if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_One(), m_Value(B)))) &&
+        impliesPoison(FalseVal, B)) {
+      // (A || B) || C --> A || (B | C)
+      return replaceInstUsesWith(
+          SI, Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal)));
+    }
+
     if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
       if (auto *RHS = dyn_cast<FCmpInst>(FalseVal))
         if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ false,
@@ -3130,6 +3137,13 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     if (impliesPoison(TrueVal, CondVal)) {
       // Change: A = select B, C, false --> A = and B, C
       return BinaryOperator::CreateAnd(CondVal, TrueVal);
+    }
+
+    if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_Value(B), m_Zero()))) &&
+        impliesPoison(TrueVal, B)) {
+      // (A && B) && C --> A && (B & C)
+      return replaceInstUsesWith(
+          SI, Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal)));
     }
 
     if (auto *LHS = dyn_cast<FCmpInst>(CondVal))

@@ -42,13 +42,6 @@ static Type isElementTypeInconsistent(Value addr, Type expectedType) {
   return elemType;
 }
 
-/// Checks that two types are the same or can be bitcast into one another.
-static bool areBitcastCompatible(DataLayout &layout, Type lhs, Type rhs) {
-  return lhs == rhs || (!isa<LLVMStructType, LLVMArrayType>(lhs) &&
-                        !isa<LLVMStructType, LLVMArrayType>(rhs) &&
-                        layout.getTypeSize(lhs) == layout.getTypeSize(rhs));
-}
-
 //===----------------------------------------------------------------------===//
 // CanonicalizeAlignedGep
 //===----------------------------------------------------------------------===//
@@ -518,26 +511,6 @@ LogicalResult SplitStores::matchAndRewrite(StoreOp store,
   return success();
 }
 
-LogicalResult BitcastStores::matchAndRewrite(StoreOp store,
-                                             PatternRewriter &rewriter) const {
-  Type sourceType = store.getValue().getType();
-  Type typeHint = isElementTypeInconsistent(store.getAddr(), sourceType);
-  if (!typeHint) {
-    // Nothing to do, since it is already consistent.
-    return failure();
-  }
-
-  auto dataLayout = DataLayout::closest(store);
-  if (!areBitcastCompatible(dataLayout, typeHint, sourceType))
-    return failure();
-
-  auto bitcastOp =
-      rewriter.create<BitcastOp>(store.getLoc(), typeHint, store.getValue());
-  rewriter.modifyOpInPlace(store,
-                           [&] { store.getValueMutable().assign(bitcastOp); });
-  return success();
-}
-
 LogicalResult SplitGEP::matchAndRewrite(GEPOp gepOp,
                                         PatternRewriter &rewriter) const {
   FailureOr<Type> typeHint = getRequiredConsistentGEPType(gepOp);
@@ -588,7 +561,6 @@ struct LLVMTypeConsistencyPass
     RewritePatternSet rewritePatterns(&getContext());
     rewritePatterns.add<CanonicalizeAlignedGep>(&getContext());
     rewritePatterns.add<SplitStores>(&getContext(), maxVectorSplitSize);
-    rewritePatterns.add<BitcastStores>(&getContext());
     rewritePatterns.add<SplitGEP>(&getContext());
     FrozenRewritePatternSet frozen(std::move(rewritePatterns));
 

@@ -56,7 +56,13 @@ using namespace CodeGen;
 // Experiment to make sanitizers easier to debug
 static llvm::cl::opt<bool> ClSanitizeDebugDeoptimization(
     "ubsan-unique-traps", llvm::cl::Optional,
-    llvm::cl::desc("Deoptimize traps for UBSAN so there is 1 trap per check"));
+    llvm::cl::desc("Deoptimize traps for UBSAN so there is 1 trap per check."));
+
+// TODO: Introduce frontend options to enabled per sanitizers, similar to
+// `fsanitize-trap`.
+static llvm::cl::opt<bool> ClSanitizeGuardChecks(
+    "ubsan-guard-checks", llvm::cl::Optional,
+    llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
 
 //===--------------------------------------------------------------------===//
 //                        Miscellaneous Helper Methods
@@ -109,10 +115,16 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
 llvm::AllocaInst *CodeGenFunction::CreateTempAlloca(llvm::Type *Ty,
                                                     const Twine &Name,
                                                     llvm::Value *ArraySize) {
+  llvm::AllocaInst *Alloca;
   if (ArraySize)
-    return Builder.CreateAlloca(Ty, ArraySize, Name);
-  return new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
-                              ArraySize, Name, AllocaInsertPt);
+    Alloca = Builder.CreateAlloca(Ty, ArraySize, Name);
+  else
+    Alloca = new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
+                                  ArraySize, Name, AllocaInsertPt);
+  if (Allocas) {
+    Allocas->Add(Alloca);
+  }
+  return Alloca;
 }
 
 /// CreateDefaultAlignTempAlloca - This creates an alloca with the
@@ -3522,6 +3534,17 @@ void CodeGenFunction::EmitCheck(
     Cond = Cond ? Builder.CreateAnd(Cond, Check) : Check;
   }
 
+  if (ClSanitizeGuardChecks) {
+    llvm::Value *Allow =
+        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::allow_ubsan_check),
+                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandler));
+
+    for (llvm::Value **Cond : {&FatalCond, &RecoverableCond, &TrapCond}) {
+      if (*Cond)
+        *Cond = Builder.CreateOr(*Cond, Builder.CreateNot(Allow));
+    }
+  }
+
   if (TrapCond)
     EmitTrapCheck(TrapCond, CheckHandler);
   if (!FatalCond && !RecoverableCond)
@@ -5580,11 +5603,44 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
       break;
     }
 
-    RValue RV = EmitAnyExpr(E->getRHS());
+    // TODO: Can we de-duplicate this code with the corresponding code in
+    // CGExprScalar, similar to the way EmitCompoundAssignmentLValue works?
+    RValue RV;
+    llvm::Value *Previous = nullptr;
+    QualType SrcType = E->getRHS()->getType();
+    // Check if LHS is a bitfield, if RHS contains an implicit cast expression
+    // we want to extract that value and potentially (if the bitfield sanitizer
+    // is enabled) use it to check for an implicit conversion.
+    if (E->getLHS()->refersToBitField()) {
+      llvm::Value *RHS =
+          EmitWithOriginalRHSBitfieldAssignment(E, &Previous, &SrcType);
+      RV = RValue::get(RHS);
+    } else
+      RV = EmitAnyExpr(E->getRHS());
+
     LValue LV = EmitCheckedLValue(E->getLHS(), TCK_Store);
+
     if (RV.isScalar())
       EmitNullabilityCheck(LV, RV.getScalarVal(), E->getExprLoc());
-    EmitStoreThroughLValue(RV, LV);
+
+    if (LV.isBitField()) {
+      llvm::Value *Result = nullptr;
+      // If bitfield sanitizers are enabled we want to use the result
+      // to check whether a truncation or sign change has occurred.
+      if (SanOpts.has(SanitizerKind::ImplicitBitfieldConversion))
+        EmitStoreThroughBitfieldLValue(RV, LV, &Result);
+      else
+        EmitStoreThroughBitfieldLValue(RV, LV);
+
+      // If the expression contained an implicit conversion, make sure
+      // to use the value before the scalar conversion.
+      llvm::Value *Src = Previous ? Previous : RV.getScalarVal();
+      QualType DstType = E->getLHS()->getType();
+      EmitBitfieldConversionCheck(Src, SrcType, Result, DstType,
+                                  LV.getBitFieldInfo(), E->getExprLoc());
+    } else
+      EmitStoreThroughLValue(RV, LV);
+
     if (getLangOpts().OpenMP)
       CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(*this,
                                                                 E->getLHS());

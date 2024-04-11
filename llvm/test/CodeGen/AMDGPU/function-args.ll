@@ -114,7 +114,6 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0)
 ; CIGFX89-NEXT:  .LBB3_2: ; %bb2
 ; CIGFX89-NEXT:    s_or_b64 exec, exec, s[4:5]
-; CIGFX89-NEXT:    s_waitcnt vmcnt(0)
 ; CIGFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: i1_arg_i1_use:

@@ -337,6 +337,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.fegetround
     libc.src.fenv.feholdexcept
     libc.src.fenv.fesetenv
+    libc.src.fenv.fesetexcept
     libc.src.fenv.fesetexceptflag
     libc.src.fenv.fesetround
     libc.src.fenv.feraiseexcept
@@ -370,6 +371,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.exp10f
     libc.src.math.exp2
     libc.src.math.exp2f
+    libc.src.math.exp2m1f
     libc.src.math.expm1
     libc.src.math.expm1f
     libc.src.math.fabs
@@ -493,6 +495,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl
+    libc.src.math.roundeven
+    libc.src.math.roundevenf
+    libc.src.math.roundevenl
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
@@ -554,6 +559,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.nextdownf128
     libc.src.math.nextupf128
     libc.src.math.rintf128
+    libc.src.math.roundevenf128
     libc.src.math.roundf128
     libc.src.math.sqrtf128
     libc.src.math.truncf128

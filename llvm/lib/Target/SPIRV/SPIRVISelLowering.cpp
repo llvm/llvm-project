@@ -160,12 +160,15 @@ void validateFunCallMachineDef(const SPIRVSubtarget &STI,
             : nullptr;
     if (DefElemType) {
       const Type *DefElemTy = GR.getTypeForSPIRVType(DefElemType);
-      // Switch GR context to the call site instead of the (default) definition
-      // side
-      GR.setCurrentFunc(*FunCall.getParent()->getParent());
+      // validatePtrTypes() works in the context if the call site
+      // When we process historical records about forward calls
+      // we need to switch context to the (forward) call site and
+      // then restore it back to the current machine function.
+      MachineFunction *CurMF =
+          GR.setCurrentFunc(*FunCall.getParent()->getParent());
       validatePtrTypes(STI, CallMRI, GR, FunCall, OpIdx, DefElemType,
                        DefElemTy);
-      GR.setCurrentFunc(*FunDef->getParent()->getParent());
+      GR.setCurrentFunc(*CurMF);
     }
   }
 }
@@ -193,7 +196,7 @@ void validateForwardCalls(const SPIRVSubtarget &STI,
                           MachineRegisterInfo *DefMRI, SPIRVGlobalRegistry &GR,
                           MachineInstr &FunDef) {
   const Function *F = GR.getFunctionByDefinition(&FunDef);
-  if (SmallVector<MachineInstr *> *FwdCalls = GR.getForwardCalls(F))
+  if (SmallPtrSet<MachineInstr *, 8> *FwdCalls = GR.getForwardCalls(F))
     for (MachineInstr *FunCall : *FwdCalls) {
       MachineRegisterInfo *CallMRI =
           &FunCall->getParent()->getParent()->getRegInfo();
@@ -215,6 +218,11 @@ void validateAccessChain(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
 // TODO: the logic of inserting additional bitcast's is to be moved
 // to pre-IRTranslation passes eventually
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  // finalizeLowering() is called twice (see GlobalISel/InstructionSelect.cpp)
+  // We'd like to avoid the needless second processing pass.
+  if (ProcessedMF.find(&MF) != ProcessedMF.end())
+    return;
+
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();
   GR.setCurrentFunc(MF);
@@ -302,5 +310,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
       }
     }
   }
+  ProcessedMF.insert(&MF);
   TargetLowering::finalizeLowering(MF);
 }

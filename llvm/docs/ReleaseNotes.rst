@@ -174,6 +174,10 @@ Changes to the LLVM tools
 * llvm-ar now allows specifying COFF archive format with ``--format`` argument
   and uses it by default for COFF targets.
 
+* llvm-ranlib now supports ``-V`` as an alias for ``--version``.
+  ``-v`` (``--verbose`` in llvm-ar) has been removed.
+  (`#87661 <https://github.com/llvm/llvm-project/pull/87661>`_)
+
 * llvm-objcopy now supports ``--set-symbol-visibility`` and
   ``--set-symbols-visibility`` options for ELF input to change the
   visibility of symbols.

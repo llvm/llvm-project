@@ -603,6 +603,8 @@ func.func @omp_target_pretty(%if_cond : i1, %device : si32,  %num_threads : i32)
 // CHECK: atomic
 // CHECK: ^{{.+}}(%{{.+}}: !llvm.ptr, %{{.+}}: !llvm.ptr):
 // CHECK:  omp.yield
+// CHECK: cleanup
+// CHECK:  omp.yield
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
@@ -618,6 +620,10 @@ atomic {
 ^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
   %2 = llvm.load %arg3 : !llvm.ptr -> f32
   llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
+  omp.yield
+}
+cleanup {
+^bb0(%arg: f32):
   omp.yield
 }
 
@@ -789,6 +795,7 @@ combiner {
   omp.yield (%1 : f32)
 }
 // CHECK-NOT: atomic
+// CHECK-NOT: cleanup
 
 // CHECK-LABEL: func @wsloop_reduction2
 func.func @wsloop_reduction2(%lb : index, %ub : index, %step : index) {
@@ -2088,6 +2095,7 @@ func.func @opaque_pointers_atomic_rwu(%v: !llvm.ptr, %x: !llvm.ptr) {
 // CHECK-LABEL: @opaque_pointers_reduction
 // CHECK: atomic {
 // CHECK-NEXT: ^{{[[:alnum:]]+}}(%{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr):
+// CHECK-NOT: cleanup
 omp.declare_reduction @opaque_pointers_reduction : f32
 init {
 ^bb0(%arg: f32):

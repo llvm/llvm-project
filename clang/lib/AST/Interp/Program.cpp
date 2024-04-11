@@ -411,5 +411,12 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                               IsMutable);
   }
 
+  // Same with vector types.
+  if (const auto *VT = Ty->getAs<VectorType>()) {
+    PrimType ElemTy = *Ctx.classify(VT->getElementType());
+    return allocateDescriptor(D, ElemTy, MDSize, VT->getNumElements(), IsConst,
+                              IsTemporary, IsMutable);
+  }
+
   return nullptr;
 }
