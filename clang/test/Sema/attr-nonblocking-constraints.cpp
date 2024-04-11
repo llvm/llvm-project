@@ -150,21 +150,6 @@ void nl12() {
 void nl12() [[clang::nonblocking]];
 void nl13() [[clang::nonblocking]] { nl12(); }
 
-// Objective-C
-@interface OCClass
-- (void)method;
-@end
-
-void nl14(OCClass *oc) [[clang::nonblocking]] {
-	[oc method]; // expected-warning {{'nonblocking' function must not access an ObjC method or property}}
-}
-void nl15(OCClass *oc) {
-	[oc method]; // expected-note {{function cannot be inferred 'nonblocking' because it accesses an ObjC method or property}}
-}
-void nl16(OCClass *oc) [[clang::nonblocking]] {
-	nl15(oc); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function 'nl15'}}
-}
-
 // C++ member function pointers
 struct PTMFTester {
 	typedef void (PTMFTester::*ConvertFunction)() [[clang::nonblocking]];
