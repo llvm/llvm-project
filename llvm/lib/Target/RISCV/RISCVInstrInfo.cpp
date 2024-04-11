@@ -1682,6 +1682,10 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &MI1,
   if (!areOpcodesEqualOrInverse(MI1.getOpcode(), MI2.getOpcode()))
     return false;
 
+  assert(MI1.getMF() == MI2.getMF());
+  const MachineRegisterInfo *MRI = &MI1.getMF()->getRegInfo();
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+
   // Make sure vtype operands are also the same.
   const MCInstrDesc &Desc = get(MI1.getOpcode());
   const uint64_t TSFlags = Desc.TSFlags;
@@ -1704,10 +1708,49 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &MI1,
     return false;
 
   // Mask
-  // There might be more sophisticated ways to check equality of masks, but
-  // right now we simply check if they're the same virtual register.
-  if (RISCVII::usesMaskPolicy(TSFlags) && !checkRegOperand(4))
-    return false;
+  if (RISCVII::usesMaskPolicy(TSFlags)) {
+    const MachineBasicBlock *MBB = MI1.getParent();
+    const MachineBasicBlock::const_reverse_iterator It1(&MI1);
+    const MachineBasicBlock::const_reverse_iterator It2(&MI2);
+    Register MI1VReg;
+
+    bool SeenMI2 = false;
+    for (auto End = MBB->rend(), It = It1; It != End; ++It) {
+      if (It == It2) {
+        SeenMI2 = true;
+        if (!MI1VReg.isValid())
+          // There is no V0 def between MI1 and MI2; they're sharing the
+          // same V0.
+          break;
+      }
+
+      if (It->definesRegister(RISCV::V0, TRI)) {
+        Register SrcReg =
+            TRI->lookThruCopyLike(It->getOperand(1).getReg(), MRI);
+
+        if (!MI1VReg.isValid()) {
+          // This is the V0 def for MI1.
+          MI1VReg = SrcReg;
+          continue;
+        }
+
+        // Some random mask updates.
+        if (!SeenMI2)
+          continue;
+
+        // This is the V0 def for MI2; check if it's the same as that of
+        // MI1.
+        if (MI1VReg != SrcReg)
+          return false;
+        else
+          break;
+      }
+    }
+
+    // If we haven't encountered MI2, it's likely that this function was
+    // called in a wrong way (e.g. MI1 is before MI2).
+    assert(SeenMI2 && "MI2 is expected to appear before MI1");
+  }
 
   // Tail / Mask policies
   if (RISCVII::hasVecPolicyOp(TSFlags) &&
