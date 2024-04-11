@@ -1454,6 +1454,28 @@ public:
            getLoadExtAction(ExtType, ValVT, MemVT) == Custom;
   }
 
+  /// Same as getLoadExtAction, but for atomic loads.
+  LegalizeAction getAtomicLoadExtAction(unsigned ExtType, EVT ValVT,
+                                        EVT MemVT) const {
+    if (ValVT.isExtended() || MemVT.isExtended()) return Expand;
+    unsigned ValI = (unsigned)ValVT.getSimpleVT().SimpleTy;
+    unsigned MemI = (unsigned)MemVT.getSimpleVT().SimpleTy;
+    assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::VALUETYPE_SIZE &&
+           MemI < MVT::VALUETYPE_SIZE && "Table isn't big enough!");
+    unsigned Shift = 4 * ExtType;
+    LegalizeAction Action =
+        (LegalizeAction)((AtomicLoadExtActions[ValI][MemI] >> Shift) & 0xf);
+    assert((Action == Legal || Action == Expand) &&
+           "Unsupported atomic load extension action.");
+    return Action;
+  }
+
+  /// Return true if the specified atomic load with extension is legal on
+  /// this target.
+  bool isAtomicLoadExtLegal(unsigned ExtType, EVT ValVT, EVT MemVT) const {
+    return getAtomicLoadExtAction(ExtType, ValVT, MemVT) == Legal;
+  }
+
   /// Return how this store with truncation should be treated: either it is
   /// legal, needs to be promoted to a larger size, needs to be expanded to some
   /// other code sequence, or the target has a custom expander for it.
@@ -2536,6 +2558,30 @@ protected:
       setLoadExtAction(ExtTypes, ValVT, MemVT, Action);
   }
 
+  /// Let target indicate that an extending atomic load of the specified type
+  /// is legal.
+  void setAtomicLoadExtAction(unsigned ExtType, MVT ValVT, MVT MemVT,
+                              LegalizeAction Action) {
+    assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValVT.isValid() &&
+           MemVT.isValid() && "Table isn't big enough!");
+    assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
+    unsigned Shift = 4 * ExtType;
+    AtomicLoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] &=
+        ~((uint16_t)0xF << Shift);
+    AtomicLoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] |=
+        ((uint16_t)Action << Shift);
+  }
+  void setAtomicLoadExtAction(ArrayRef<unsigned> ExtTypes, MVT ValVT, MVT MemVT,
+                              LegalizeAction Action) {
+    for (auto ExtType : ExtTypes)
+      setAtomicLoadExtAction(ExtType, ValVT, MemVT, Action);
+  }
+  void setAtomicLoadExtAction(ArrayRef<unsigned> ExtTypes, MVT ValVT,
+                              ArrayRef<MVT> MemVTs, LegalizeAction Action) {
+    for (auto MemVT : MemVTs)
+      setAtomicLoadExtAction(ExtTypes, ValVT, MemVT, Action);
+  }
+
   /// Indicate that the specified truncating store does not work with the
   /// specified type and indicate what to do about it.
   void setTruncStoreAction(MVT ValVT, MVT MemVT, LegalizeAction Action) {
@@ -3520,6 +3566,10 @@ private:
   /// specific value type and extension type. Uses 4-bits to store the action
   /// for each of the 4 load ext types.
   uint16_t LoadExtActions[MVT::VALUETYPE_SIZE][MVT::VALUETYPE_SIZE];
+
+  /// Similar to LoadExtActions, but for atomic loads. Only Legal or Expand
+  /// (default) values are supported.
+  uint16_t AtomicLoadExtActions[MVT::VALUETYPE_SIZE][MVT::VALUETYPE_SIZE];
 
   /// For each value type pair keep a LegalizeAction that indicates whether a
   /// truncating store of a specific value type and truncating type is legal.

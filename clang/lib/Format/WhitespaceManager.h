@@ -235,6 +235,9 @@ private:
   /// Align consecutive short case statements over all \c Changes.
   void alignConsecutiveShortCaseStatements();
 
+  /// Align consecutive TableGen DAGArg colon over all \c Changes.
+  void alignConsecutiveTableGenBreakingDAGArgColons();
+
   /// Align consecutive TableGen cond operator colon over all \c Changes.
   void alignConsecutiveTableGenCondOperatorColons();
 

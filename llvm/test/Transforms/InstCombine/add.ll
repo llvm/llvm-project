@@ -2375,7 +2375,7 @@ define { i64, i64 } @PR57576(i64 noundef %x, i64 noundef %y, i64 noundef %z, i64
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i128 [[XY]], [[ZZ]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i128 [[SUB]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i128 [[SUB]], 64
-; CHECK-NEXT:    [[DOTTR:%.*]] = trunc i128 [[TMP1]] to i64
+; CHECK-NEXT:    [[DOTTR:%.*]] = trunc nuw i128 [[TMP1]] to i64
 ; CHECK-NEXT:    [[DOTNARROW:%.*]] = sub i64 [[DOTTR]], [[W:%.*]]
 ; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i64, i64 } poison, i64 [[T]], 0
 ; CHECK-NEXT:    [[R2:%.*]] = insertvalue { i64, i64 } [[R1]], i64 [[DOTNARROW]], 1

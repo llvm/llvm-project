@@ -802,9 +802,11 @@ def B : JoinedOrSeparate<["-"], "B">, MetaVarName<"<prefix>">,
     HelpText<"Search $prefix$file for executables, libraries, and data files. "
     "If $prefix is a directory, search $prefix/$file">;
 def gcc_install_dir_EQ : Joined<["--"], "gcc-install-dir=">,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Use GCC installation in the specified directory. The directory ends with path components like 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
   "Note: executables (e.g. ld) used by the compiler are not overridden by the selected GCC installation">;
 def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
   "Clang will use the GCC installation with the largest version">;
 def gcc_triple_EQ : Joined<["--"], "gcc-triple=">,
@@ -1001,7 +1003,8 @@ def : Joined<["-"], "Xclang=">, Group<CompileOnly_Group>,
 def Xcuda_fatbinary : Separate<["-"], "Xcuda-fatbinary">,
   HelpText<"Pass <arg> to fatbinary invocation">, MetaVarName<"<arg>">;
 def Xcuda_ptxas : Separate<["-"], "Xcuda-ptxas">,
-  HelpText<"Pass <arg> to the ptxas assembler">, MetaVarName<"<arg>">;
+  HelpText<"Pass <arg> to the ptxas assembler">, MetaVarName<"<arg>">,
+  Visibility<[ClangOption, CLOption]>;
 def Xopenmp_target : Separate<["-"], "Xopenmp-target">, Group<CompileOnly_Group>,
   HelpText<"Pass <arg> to the target offloading toolchain.">, MetaVarName<"<arg>">;
 def Xopenmp_target_EQ : JoinedAndSeparate<["-"], "Xopenmp-target=">, Group<CompileOnly_Group>,
@@ -1446,7 +1449,7 @@ def dD : Flag<["-"], "dD">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>
 def dI : Flag<["-"], "dI">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Print include directives in -E mode in addition to normal output">,
   MarshallingInfoFlag<PreprocessorOutputOpts<"ShowIncludeDirectives">>;
-def dM : Flag<["-"], "dM">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>,
+def dM : Flag<["-"], "dM">, Group<d_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Print macro definitions in -E mode instead of normal output">;
 def dead__strip : Flag<["-"], "dead_strip">;
 def dependency_file : Separate<["-"], "dependency-file">,
@@ -1507,14 +1510,29 @@ def extract_api : Flag<["-"], "extract-api">,
 def product_name_EQ: Joined<["--"], "product-name=">,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<FrontendOpts<"ProductName">>;
-def emit_symbol_graph_EQ: JoinedOrSeparate<["--"], "emit-symbol-graph=">,
+def emit_symbol_graph: Flag<["-"], "emit-symbol-graph">,
   Visibility<[ClangOption, CC1Option]>,
-    HelpText<"Generate Extract API information as a side effect of compilation.">,
-    MarshallingInfoString<FrontendOpts<"SymbolGraphOutputDir">>;
+  HelpText<"Generate Extract API information as a side effect of compilation.">,
+  MarshallingInfoFlag<FrontendOpts<"EmitSymbolGraph">>;
+def emit_extension_symbol_graphs: Flag<["--"], "emit-extension-symbol-graphs">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Generate additional symbol graphs for extended modules.">,
+  MarshallingInfoFlag<FrontendOpts<"EmitExtensionSymbolGraphs">>;
 def extract_api_ignores_EQ: CommaJoined<["--"], "extract-api-ignores=">,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Comma separated list of files containing a new line separated list of API symbols to ignore when extracting API information.">,
     MarshallingInfoStringVector<FrontendOpts<"ExtractAPIIgnoresFileList">>;
+def symbol_graph_dir_EQ: Joined<["--"], "symbol-graph-dir=">,
+   Visibility<[ClangOption, CC1Option]>,
+   HelpText<"Directory in which to emit symbol graphs.">,
+   MarshallingInfoString<FrontendOpts<"SymbolGraphOutputDir">>;
+def emit_pretty_sgf: Flag<["--"], "pretty-sgf">,
+    Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Emit pretty printed symbol graphs">,
+    MarshallingInfoFlag<FrontendOpts<"EmitPrettySymbolGraphs">>;
+def emit_sgf_symbol_labels_for_testing: Flag<["--"], "emit-sgf-symbol-labels-for-testing">,
+   Visibility<[CC1Option]>,
+   MarshallingInfoFlag<FrontendOpts<"EmitSymbolGraphSymbolLabelsForTesting">>;
 def e : Separate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
 def fmax_tokens_EQ : Joined<["-"], "fmax-tokens=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -3392,17 +3410,24 @@ def fopenmp : Flag<["-"], "fopenmp">, Group<f_Group>,
   HelpText<"Parse OpenMP pragmas and generate parallel code.">;
 def fno_openmp : Flag<["-"], "fno-openmp">, Group<f_Group>,
   Flags<[NoArgumentUnused]>;
+class OpenMPVersionHelp<string program, string default> {
+  string str = !strconcat(
+    "Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is ",
+    default, " for ", program);
+}
 def fopenmp_version_EQ : Joined<["-"], "fopenmp-version=">, Group<f_Group>,
   Flags<[NoArgumentUnused]>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-  HelpText<"Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 51 for Clang">;
+  HelpText<OpenMPVersionHelp<"Clang", "51">.str>,
+  HelpTextForVariants<[FlangOption, FC1Option], OpenMPVersionHelp<"Flang", "11">.str>;
 defm openmp_extensions: BoolFOption<"openmp-extensions",
   LangOpts<"OpenMPExtensions">, DefaultTrue,
   PosFlag<SetTrue, [NoArgumentUnused], [ClangOption, CC1Option],
           "Enable all Clang extensions for OpenMP directives and clauses">,
   NegFlag<SetFalse, [NoArgumentUnused], [ClangOption, CC1Option],
           "Disable all Clang extensions for OpenMP directives and clauses">>;
-def fopenmp_EQ : Joined<["-"], "fopenmp=">, Group<f_Group>;
+def fopenmp_EQ : Joined<["-"], "fopenmp=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fopenmp_use_tls : Flag<["-"], "fopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>;
 def fnoopenmp_use_tls : Flag<["-"], "fnoopenmp-use-tls">, Group<f_Group>,
@@ -3635,6 +3660,9 @@ defm preserve_as_comments : BoolFOption<"preserve-as-comments",
           "Do not preserve comments in inline assembly">,
   PosFlag<SetTrue>>;
 def framework : Separate<["-"], "framework">, Flags<[LinkerInput]>;
+def reexport_framework : Separate<["-"], "reexport_framework">, Flags<[LinkerInput]>;
+def reexport_l : Joined<["-"], "reexport-l">, Flags<[LinkerInput]>;
+def reexport_library : JoinedOrSeparate<["-"], "reexport_library">, Flags<[LinkerInput]>;
 def frandom_seed_EQ : Joined<["-"], "frandom-seed=">, Group<clang_ignored_f_Group>;
 def freg_struct_return : Flag<["-"], "freg-struct-return">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -4105,12 +4133,8 @@ defm strict_return : BoolFOption<"strict-return",
             " of a non-void function as unreachable">,
   PosFlag<SetTrue>>;
 
-let Group = f_Group in {
-  let Visibility = [ClangOption,CC1Option] in {
-    def fptrauth_intrinsics : Flag<["-"], "fptrauth-intrinsics">,
-      HelpText<"Enable pointer authentication intrinsics">;
-  }
-  def fno_ptrauth_intrinsics : Flag<["-"], "fno-ptrauth-intrinsics">;
+let Flags = [TargetSpecific] in {
+defm ptrauth_intrinsics : OptInCC1FFlag<"ptrauth-intrinsics", "Enable pointer authentication intrinsics">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -4511,6 +4535,9 @@ def mwindows : Joined<["-"], "mwindows">, Group<m_Group>;
 def mdll : Joined<["-"], "mdll">, Group<m_Group>;
 def municode : Joined<["-"], "municode">, Group<m_Group>;
 def mthreads : Joined<["-"], "mthreads">, Group<m_Group>;
+def marm64x : Joined<["-"], "marm64x">, Group<m_Group>,
+  Visibility<[ClangOption, CLOption]>,
+  HelpText<"Link as a hybrid ARM64X image">;
 def mguard_EQ : Joined<["-"], "mguard=">, Group<m_Group>,
   HelpText<"Enable or disable Control Flow Guard checks and guard tables emission">,
   Values<"none,cf,cf-nochecks">;
@@ -4885,6 +4912,9 @@ defm tgsplit : SimpleMFlag<"tgsplit", "Enable", "Disable",
 defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
   "Specify wavefront size 64", "Specify wavefront size 32",
   " mode (AMDGPU only)">;
+defm amdgpu_precise_memory_op
+    : SimpleMFlag<"amdgpu-precise-memory-op", "Enable", "Disable",
+                  " precise memory mode (AMDGPU only)">;
 
 defm unsafe_fp_atomics : BoolMOption<"unsafe-fp-atomics",
   TargetOpts<"AllowAMDGPUUnsafeFPAtomics">, DefaultFalse,
@@ -6688,6 +6718,9 @@ def analyzer_opt_analyze_headers : Flag<["-"], "analyzer-opt-analyze-headers">,
 def analyzer_display_progress : Flag<["-"], "analyzer-display-progress">,
   HelpText<"Emit verbose output about the analyzer's progress">,
   MarshallingInfoFlag<AnalyzerOpts<"AnalyzerDisplayProgress">>;
+def analyzer_note_analysis_entry_points : Flag<["-"], "analyzer-note-analysis-entry-points">,
+  HelpText<"Add a note for each bug report to denote their analysis entry points">,
+  MarshallingInfoFlag<AnalyzerOpts<"AnalyzerNoteAnalysisEntryPoints">>;
 def analyze_function : Separate<["-"], "analyze-function">,
   HelpText<"Run analysis on specific function (for C++ include parameters in name)">,
   MarshallingInfoString<AnalyzerOpts<"AnalyzeSpecificFunction">>;
@@ -8308,6 +8341,7 @@ def _SLASH_Fi : CLCompileJoined<"Fi">,
 def _SLASH_Fo : CLCompileJoined<"Fo">,
   HelpText<"Set output object file (with /c)">,
   MetaVarName<"<file or dir/>">;
+def _SLASH_Fo_COLON : CLCompileJoined<"Fo:">, Alias<_SLASH_Fo>;
 def _SLASH_guard : CLJoined<"guard:">,
   HelpText<"Enable Control Flow Guard with /guard:cf, or only the table with /guard:cf,nochecks. "
            "Enable EH Continuation Guard with /guard:ehcont">;

@@ -419,7 +419,7 @@ Sema::HandlePropertyInClassExtension(Scope *S,
   ObjCCategoryDecl *CDecl = cast<ObjCCategoryDecl>(CurContext);
   // Diagnose if this property is already in continuation class.
   DeclContext *DC = CurContext;
-  IdentifierInfo *PropertyId = FD.D.getIdentifier();
+  const IdentifierInfo *PropertyId = FD.D.getIdentifier();
   ObjCInterfaceDecl *CCPrimary = CDecl->getClassInterface();
 
   // We need to look in the @interface to see if the @property was
@@ -571,7 +571,7 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
                                            TypeSourceInfo *TInfo,
                                            tok::ObjCKeywordKind MethodImplKind,
                                            DeclContext *lexicalDC){
-  IdentifierInfo *PropertyId = FD.D.getIdentifier();
+  const IdentifierInfo *PropertyId = FD.D.getIdentifier();
 
   // Property defaults to 'assign' if it is readwrite, unless this is ARC
   // and the type is retainable.
@@ -638,14 +638,14 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
     PDecl->setInvalidDecl();
   }
 
-  ProcessDeclAttributes(S, PDecl, FD.D);
-
   // Regardless of setter/getter attribute, we save the default getter/setter
   // selector names in anticipation of declaration of setter/getter methods.
   PDecl->setGetterName(GetterSel, GetterNameLoc);
   PDecl->setSetterName(SetterSel, SetterNameLoc);
   PDecl->setPropertyAttributesAsWritten(
                           makePropertyAttributesAsWritten(AttributesAsWritten));
+
+  ProcessDeclAttributes(S, PDecl, FD.D);
 
   if (Attributes & ObjCPropertyAttribute::kind_readonly)
     PDecl->setPropertyAttributes(ObjCPropertyAttribute::kind_readonly);

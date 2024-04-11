@@ -46,6 +46,14 @@ void lld::macho::addInputSection(InputSection *inputSection) {
   if (auto *isec = dyn_cast<ConcatInputSection>(inputSection)) {
     if (isec->isCoalescedWeak())
       return;
+    if (config->emitRelativeMethodLists &&
+        ObjCMethListSection::isMethodList(isec)) {
+      if (in.objcMethList->inputOrder == UnspecifiedInputOrder)
+        in.objcMethList->inputOrder = inputSectionsOrder++;
+      in.objcMethList->addInput(isec);
+      isec->parent = in.objcMethList;
+      return;
+    }
     if (config->emitInitOffsets &&
         sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS) {
       in.initOffsets->addInput(isec);
@@ -273,6 +281,9 @@ ConcatInputSection *macho::makeSyntheticInputSection(StringRef segName,
   Section &section =
       *make<Section>(/*file=*/nullptr, segName, sectName, flags, /*addr=*/0);
   auto isec = make<ConcatInputSection>(section, data, align);
+  // Since this is an explicitly created 'fake' input section,
+  // it should not be dead stripped.
+  isec->live = true;
   section.subsections.push_back({0, isec});
   return isec;
 }

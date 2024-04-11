@@ -740,7 +740,7 @@ void is_bounded_array(int n) {
   static_assert(!__is_bounded_array(cvoid *));
 
   int t32[n];
-  (void)__is_bounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported for '__is_bounded_array'}}
+  (void)__is_bounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported in '__is_bounded_array'}}
 }
 
 void is_unbounded_array(int n) {
@@ -772,7 +772,7 @@ void is_unbounded_array(int n) {
   static_assert(!__is_unbounded_array(cvoid *));
 
   int t32[n];
-  (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported for '__is_unbounded_array'}}
+  (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported in '__is_unbounded_array'}}
 }
 
 void is_referenceable() {
@@ -1622,7 +1622,7 @@ enum class EnumClassLayout {};
 enum EnumForward : int;
 enum class EnumClassForward;
 
-struct CStructIncomplete;
+struct CStructIncomplete; // #CStructIncomplete
 
 struct CStructNested {
   int a;
@@ -1719,6 +1719,20 @@ struct StructWithAnonUnion3 {
   } u;
 };
 
+struct CStructWithArrayAtTheEnd {
+  int a;
+  int b[4];
+};
+
+struct CStructWithFMA {
+  int c;
+  int d[];
+};
+
+struct CStructWithFMA2 {
+  int e;
+  int f[];
+};
 
 void is_layout_compatible(int n)
 {
@@ -1741,8 +1755,11 @@ void is_layout_compatible(int n)
   static_assert(!__is_layout_compatible(unsigned char, signed char));
   static_assert(__is_layout_compatible(int[], int[]));
   static_assert(__is_layout_compatible(int[2], int[2]));
-  static_assert(!__is_layout_compatible(int[n], int[2])); // FIXME: VLAs should be rejected
-  static_assert(!__is_layout_compatible(int[n], int[n])); // FIXME: VLAs should be rejected
+  static_assert(!__is_layout_compatible(int[n], int[2]));
+  // expected-error@-1 {{variable length arrays are not supported in '__is_layout_compatible'}}
+  static_assert(!__is_layout_compatible(int[n], int[n]));
+  // expected-error@-1 {{variable length arrays are not supported in '__is_layout_compatible'}}
+  // expected-error@-2 {{variable length arrays are not supported in '__is_layout_compatible'}}
   static_assert(__is_layout_compatible(int&, int&));
   static_assert(!__is_layout_compatible(int&, char&));
   static_assert(__is_layout_compatible(void(int), void(int)));
@@ -1798,15 +1815,28 @@ void is_layout_compatible(int n)
   static_assert(__is_layout_compatible(EnumLayout, EnumClassLayout));
   static_assert(__is_layout_compatible(EnumForward, EnumForward));
   static_assert(__is_layout_compatible(EnumForward, EnumClassForward));
-  // Layout compatibility for enums might be relaxed in the future. See https://github.com/cplusplus/CWG/issues/39#issuecomment-1184791364
+  static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete));
+  // expected-error@-1 {{incomplete type 'CStructIncomplete' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  // expected-error@-3 {{incomplete type 'CStructIncomplete' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  static_assert(!__is_layout_compatible(CStruct, CStructIncomplete));
+  // expected-error@-1 {{incomplete type 'CStructIncomplete' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  static_assert(__is_layout_compatible(CStructIncomplete[2], CStructIncomplete[2]));
+  // expected-error@-1 {{incomplete type 'CStructIncomplete[2]' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  // expected-error@-3 {{incomplete type 'CStructIncomplete[2]' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  static_assert(__is_layout_compatible(CStructIncomplete[], CStructIncomplete[]));
+  static_assert(!__is_layout_compatible(CStructWithArrayAtTheEnd, CStructWithFMA));
+  static_assert(__is_layout_compatible(CStructWithFMA, CStructWithFMA));
+  static_assert(__is_layout_compatible(CStructWithFMA, CStructWithFMA2));
+  // Layout compatibility rules for enums might be relaxed in the future. See https://github.com/cplusplus/CWG/issues/39#issuecomment-1184791364
   static_assert(!__is_layout_compatible(EnumLayout, int));
   static_assert(!__is_layout_compatible(EnumClassLayout, int));
   static_assert(!__is_layout_compatible(EnumForward, int));
   static_assert(!__is_layout_compatible(EnumClassForward, int));
-  // FIXME: the following should be rejected (array of unknown bound and void are the only allowed incomplete types)
-  static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete)); 
-  static_assert(!__is_layout_compatible(CStruct, CStructIncomplete));
-  static_assert(__is_layout_compatible(CStructIncomplete[2], CStructIncomplete[2]));
 }
 
 void is_signed()

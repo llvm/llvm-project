@@ -265,7 +265,7 @@ SystemZTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     if ((Idx < 4) || (Imm.getBitWidth() <= 64 && isInt<64>(Imm.getSExtValue())))
       return TTI::TCC_Free;
     break;
@@ -601,12 +601,10 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
                                        Args, CxtI);
 }
 
-InstructionCost SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                               VectorType *Tp,
-                                               ArrayRef<int> Mask,
-                                               TTI::TargetCostKind CostKind,
-                                               int Index, VectorType *SubTp,
-                                               ArrayRef<const Value *> Args) {
+InstructionCost SystemZTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
+    TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
+    ArrayRef<const Value *> Args, const Instruction *CxtI) {
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
   if (ST->hasVector()) {
     unsigned NumVectors = getNumVectorRegs(Tp);

@@ -658,7 +658,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Provided by all supported Vulkan versions.
   addAvailableCaps({Capability::Int16, Capability::Int64, Capability::Float16,
-                    Capability::Float64});
+                    Capability::Float64, Capability::GroupNonUniform});
 }
 
 } // namespace SPIRV

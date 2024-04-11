@@ -5282,7 +5282,7 @@ static bool isIncompleteOrZeroLengthArrayType(ASTContext &Context, QualType T) {
     return true;
 
   while (const ConstantArrayType *ArrayT = Context.getAsConstantArrayType(T)) {
-    if (!ArrayT->getSize())
+    if (ArrayT->isZeroSize())
       return true;
 
     T = ArrayT->getElementType();
@@ -11353,7 +11353,7 @@ Decl *Sema::ActOnConversionDeclarator(CXXConversionDecl *Conversion) {
     if (ConvType->isUndeducedAutoType()) {
       Diag(Conversion->getTypeSpecStartLoc(), diag::err_auto_not_allowed)
           << getReturnTypeLoc(Conversion).getSourceRange()
-          << llvm::to_underlying(ConvType->getAs<AutoType>()->getKeyword())
+          << llvm::to_underlying(ConvType->castAs<AutoType>()->getKeyword())
           << /* in declaration of conversion function template= */ 24;
     }
 
@@ -13589,6 +13589,7 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
       Diag(UsingLoc, diag::err_alias_template_extra_headers)
         << SourceRange(TemplateParamLists[1]->getTemplateLoc(),
          TemplateParamLists[TemplateParamLists.size()-1]->getRAngleLoc());
+      Invalid = true;
     }
     TemplateParameterList *TemplateParams = TemplateParamLists[0];
 
@@ -16202,7 +16203,8 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
 
   // Emit warning for non-trivial dtor in global scope (a real global,
   // class-static, function-static).
-  Diag(VD->getLocation(), diag::warn_exit_time_destructor);
+  if (!VD->hasAttr<AlwaysDestroyAttr>())
+    Diag(VD->getLocation(), diag::warn_exit_time_destructor);
 
   // TODO: this should be re-enabled for static locals by !CXAAtExit
   if (!VD->isStaticLocal())
@@ -16911,11 +16913,10 @@ Decl *Sema::ActOnEmptyDeclaration(Scope *S,
 /// Perform semantic analysis for the variable declaration that
 /// occurs within a C++ catch clause, returning the newly-created
 /// variable.
-VarDecl *Sema::BuildExceptionDeclaration(Scope *S,
-                                         TypeSourceInfo *TInfo,
+VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
                                          SourceLocation StartLoc,
                                          SourceLocation Loc,
-                                         IdentifierInfo *Name) {
+                                         const IdentifierInfo *Name) {
   bool Invalid = false;
   QualType ExDeclType = TInfo->getType();
 
@@ -17060,7 +17061,7 @@ Decl *Sema::ActOnExceptionDeclarator(Scope *S, Declarator &D) {
     Invalid = true;
   }
 
-  IdentifierInfo *II = D.getIdentifier();
+  const IdentifierInfo *II = D.getIdentifier();
   if (NamedDecl *PrevDecl = LookupSingleName(S, II, D.getIdentifierLoc(),
                                              LookupOrdinaryName,
                                              ForVisibleRedeclaration)) {
@@ -18562,6 +18563,9 @@ DeclResult Sema::ActOnCXXConditionDeclaration(Scope *S, Declarator &D) {
     return true;
   }
 
+  if (auto *VD = dyn_cast<VarDecl>(Dcl))
+    VD->setCXXCondDecl();
+
   return Dcl;
 }
 
@@ -19153,7 +19157,7 @@ MSPropertyDecl *Sema::HandleMSProperty(Scope *S, RecordDecl *Record,
                                        InClassInitStyle InitStyle,
                                        AccessSpecifier AS,
                                        const ParsedAttr &MSPropertyAttr) {
-  IdentifierInfo *II = D.getIdentifier();
+  const IdentifierInfo *II = D.getIdentifier();
   if (!II) {
     Diag(DeclStart, diag::err_anonymous_property);
     return nullptr;
