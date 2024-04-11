@@ -210,7 +210,10 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec FCntl = HeaderSpec<
     "fcntl.h",
     [], // Macros
-    [ModeTType],
+    [
+        ModeTType,
+        OffTType,
+    ],
     [], // Enumerations
     [
       FunctionSpec<
@@ -1180,7 +1183,7 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec StdIO = HeaderSpec<
       "stdio.h",
       [], // Macros
-      [], // Types
+      [OffTType], // Types
       [], // Enumerations
       [
           FunctionSpec<

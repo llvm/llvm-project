@@ -1,4 +1,4 @@
-// RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s
+// RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck %s
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
@@ -15,7 +15,7 @@ def OpWithAttr : NS_Op<"op_with_attr">{
   let arguments = (ins AnyAttr:$attr, OptionalAttr<AnyAttr>:$optional);
 }
 
-// CHECK: void OpWithAttr::setAttrAttr(::mlir::Attribute attr)
+// CHECK: void setAttrAttr(::mlir::Attribute attr)
 // CHECK-NEXT: getProperties().attr = attr
-// CHECK: void OpWithAttr::setOptionalAttr(::mlir::Attribute attr)
+// CHECK: void setOptionalAttr(::mlir::Attribute attr)
 // CHECK-NEXT: getProperties().optional = attr

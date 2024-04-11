@@ -6,11 +6,10 @@ define i32 @test(ptr noalias %in, ptr noalias %inn, ptr %out) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i8>, ptr [[IN:%.*]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = load <4 x i8>, ptr [[INN:%.*]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sext <4 x i8> [[TMP7]] to <4 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = sext <4 x i8> [[TMP11]] to <4 x i32>
-; CHECK-NEXT:    [[TMP13:%.*]] = sub <4 x i32> [[TMP12]], [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP13]], i1 true)
-; CHECK-NEXT:    [[TMP15:%.*]] = trunc <4 x i32> [[TMP14]] to <4 x i16>
+; CHECK-NEXT:    [[TMP8:%.*]] = sext <4 x i8> [[TMP7]] to <4 x i16>
+; CHECK-NEXT:    [[TMP12:%.*]] = sext <4 x i8> [[TMP11]] to <4 x i16>
+; CHECK-NEXT:    [[TMP13:%.*]] = sub <4 x i16> [[TMP12]], [[TMP8]]
+; CHECK-NEXT:    [[TMP15:%.*]] = call <4 x i16> @llvm.abs.v4i16(<4 x i16> [[TMP13]], i1 false)
 ; CHECK-NEXT:    store <4 x i16> [[TMP15]], ptr [[OUT:%.*]], align 2
 ; CHECK-NEXT:    ret i32 undef
 ;

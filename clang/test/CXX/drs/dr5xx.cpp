@@ -1098,7 +1098,7 @@ namespace dr591 { // dr591: no
 }
 
 // dr592: na
-// dr593 needs an IRGen test.
+// dr593 is in dr593.cpp
 // dr594: na
 
 namespace dr595 { // dr595: dup 1330

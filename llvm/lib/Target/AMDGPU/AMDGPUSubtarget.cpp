@@ -642,6 +642,17 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
     Policy.ShouldTrackLaneMasks = true;
 }
 
+void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {
+  if (isWave32()) {
+    // Fix implicit $vcc operands after MIParser has verified that they match
+    // the instruction definitions.
+    for (auto &MBB : MF) {
+      for (auto &MI : MBB)
+        InstrInfo.fixImplicitOperands(MI);
+    }
+  }
+}
+
 bool GCNSubtarget::hasMadF16() const {
   return InstrInfo.pseudoToMCOpcode(AMDGPU::V_MAD_F16_e64) != -1;
 }
