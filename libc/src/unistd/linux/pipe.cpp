@@ -1,4 +1,4 @@
-//===---------- Linux implementation of the epoll_pwait function ----------===//
+//===-- Linux implementation of pipe --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,33 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/sys/epoll/epoll_pwait.h"
+#include "src/unistd/pipe.h"
 
-#include "hdr/signal_macros.h" // for NSIG
-#include "hdr/types/sigset_t.h"
-#include "hdr/types/struct_epoll_event.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
-
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(int, epoll_pwait,
-                   (int epfd, struct epoll_event *events, int maxevents,
-                    int timeout, const sigset_t *sigmask)) {
+LLVM_LIBC_FUNCTION(int, pipe, (int pipefd[2])) {
+#ifdef SYS_pipe
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_pipe,
+                                              reinterpret_cast<long>(pipefd));
+#elif defined(SYS_pipe2)
   int ret = LIBC_NAMESPACE::syscall_impl<int>(
-      SYS_epoll_pwait, epfd, reinterpret_cast<long>(events), maxevents, timeout,
-      reinterpret_cast<long>(sigmask), NSIG / 8);
-
-  // A negative return value indicates an error with the magnitude of the
-  // value being the error code.
+      SYS_pipe2, reinterpret_cast<long>(pipefd), 0);
+#endif
   if (ret < 0) {
     libc_errno = -ret;
     return -1;
   }
-
   return ret;
 }
 
