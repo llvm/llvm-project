@@ -1430,10 +1430,13 @@ void RewriteInstance::registerFragments() {
         continue;
       // For cold function with local (foo.cold/1) symbol, prefer a parent with
       // local symbol as well (foo/1) over global symbol (foo).
+      // As a heuristic, use the last registered local name since BOLT processes
+      // the last instance.
       std::string ParentName = BaseName.substr(0, ColdSuffixPos).str();
       const BinaryData *BD = BC->getBinaryDataByName(ParentName);
       if (Suffix != "") {
-        ParentName.append(Twine("/", Suffix).str());
+        ParentName.append(
+            formatv("/{0}", NR.getNumDuplicates(ParentName)).str());
         const BinaryData *BDLocal = BC->getBinaryDataByName(ParentName);
         if (BDLocal || !BD)
           BD = BDLocal;
