@@ -736,6 +736,121 @@ define i1 @is_signbit_set_simplify_nan(double %x) {
   ret i1 %r
 }
 
+define i1 @test_oeq(float %a) {
+; CHECK-LABEL: @test_oeq(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float 1.000000e+00, float [[A:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[RES]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 1.0, float %a)
+  %cmp = fcmp oeq float %res, 1.0
+  ret i1 %cmp
+}
+
+define <2 x i1> @test_oeq_vec_splat(<2 x float> %a) {
+; CHECK-LABEL: @test_oeq_vec_splat(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> [[A:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq <2 x float> [[RES]], <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+;
+entry:
+  %res = call <2 x float> @llvm.copysign.v2f32(<2 x float> splat(float 1.0), <2 x float> %a)
+  %cmp = fcmp oeq <2 x float> %res, splat(float 1.0)
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @test_oeq_vec_nonsplat(<2 x float> %a) {
+; CHECK-LABEL: @test_oeq_vec_nonsplat(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> [[A:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[RES]], <float 0.000000e+00, float 2.000000e+00>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+entry:
+  %res = call <2 x float> @llvm.copysign.v2f32(<2 x float> splat(float 1.0), <2 x float> %a)
+  %cmp = fcmp oeq <2 x float> %res, <float 0.0, float 2.0>
+  ret <2 x i1> %cmp
+}
+
+define i1 @test_one(float %a) {
+; CHECK-LABEL: @test_one(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float 1.000000e+00, float [[A:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[RES]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 1.0, float %a)
+  %cmp = fcmp one float %res, 1.0
+  ret i1 %cmp
+}
+
+define i1 @test_ogt_false(float %a) {
+; CHECK-LABEL: @test_ogt_false(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float 1.000000e+00, float [[A:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[RES]], 2.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 1.0, float %a)
+  %cmp = fcmp ogt float %res, 2.0
+  ret i1 %cmp
+}
+
+define i1 @test_olt_true(float %a) {
+; CHECK-LABEL: @test_olt_true(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float 1.000000e+00, float [[A:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[RES]], 2.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 1.0, float %a)
+  %cmp = fcmp olt float %res, 2.0
+  ret i1 %cmp
+}
+
+define i1 @test_oeq_nan_false(float %a) {
+; CHECK-LABEL: @test_oeq_nan_false(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float 0x7FF8000000000000, float [[A:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[RES]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 0x7FF8000000000000, float %a)
+  %cmp = fcmp oeq float %res, 1.0
+  ret i1 %cmp
+}
+
+define i1 @test_uno_nan_true(float %a) {
+; CHECK-LABEL: @test_uno_nan_true(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 0x7FF8000000000000, float %a)
+  %cmp = fcmp uno float %res, 1.0
+  ret i1 %cmp
+}
+
+define i1 @test_oge_zero_false(float %a) {
+; CHECK-LABEL: @test_oge_zero_false(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[A:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[RES]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 0.0, float %a)
+  %cmp = fcmp oge float %res, 1.0
+  ret i1 %cmp
+}
+
 define <2 x i1> @lossy_oeq(<2 x float> %x) {
 ; CHECK-LABEL: @lossy_oeq(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
