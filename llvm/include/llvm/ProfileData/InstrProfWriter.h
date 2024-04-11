@@ -60,6 +60,10 @@ private:
   // inline.
   llvm::MapVector<memprof::FrameId, memprof::Frame> MemProfFrameData;
 
+  // A map to hold call stack id to call stacks.
+  llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
+      MemProfCallStackData;
+
   // List of binary ids.
   std::vector<llvm::object::BuildID> BinaryIds;
 
@@ -113,6 +117,12 @@ public:
   /// \p FrameId.
   bool addMemProfFrame(const memprof::FrameId, const memprof::Frame &F,
                        function_ref<void(Error)> Warn);
+
+  /// Add a call stack identified by the hash of the contents of the call stack
+  /// in \p CallStack.
+  bool addMemProfCallStack(const memprof::CallStackId CSId,
+                           const llvm::SmallVector<memprof::FrameId> &CallStack,
+                           function_ref<void(Error)> Warn);
 
   // Add a binary id to the binary ids list.
   void addBinaryIds(ArrayRef<llvm::object::BuildID> BIs);
