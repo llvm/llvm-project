@@ -72,23 +72,26 @@ endfunction()
 # Links together one or more bytecode files
 #
 # Arguments:
-# * OUTPUT <string>
-#     Bytecode file to generate
+# * TARGET <string>
+#     Custom target to create
 # * INPUT <string> ...
 #     List of bytecode files to link together
 function(link_bc)
   cmake_parse_arguments(ARG
     ""
-    "OUTPUT"
+    "TARGET"
     "INPUTS"
     ${ARGN}
   )
 
   add_custom_command(
-    OUTPUT ${ARG_OUTPUT}
-    COMMAND libclc::llvm-link -o ${ARG_OUTPUT} ${ARG_INPUTS}
+    OUTPUT ${ARG_TARGET}.bc
+    COMMAND libclc::llvm-link -o ${ARG_TARGET}.bc ${ARG_INPUTS}
     DEPENDS libclc::llvm-link ${ARG_INPUTS}
   )
+
+  add_custom_target( ${ARG_TARGET} ALL DEPENDS ${ARG_TARGET}.bc )
+  set_target_properties( ${ARG_TARGET} PROPERTIES TARGET_FILE ${ARG_TARGET}.bc )
 endfunction()
 
 # Decomposes and returns variables based on a libclc triple and architecture
