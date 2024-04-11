@@ -1220,8 +1220,7 @@ TEST(DeclPrinter, TestTemplateTemplateParameterWrittenWithTypename) {
   ASSERT_TRUE(PrintedDeclCXX17Matches(
       "template <template <typename> typename Z> void A();",
       functionTemplateDecl(hasName("A")).bind("id"),
-      "template <template <typename> class Z> void A()"));
-  // WRONG: We should use typename if the parameter was written with it.
+      "template <template <typename> typename Z> void A()"));
 }
 
 TEST(DeclPrinter, TestTemplateArgumentList1) {

@@ -9064,7 +9064,7 @@ public:
                                            Expr *DefaultArg);
   NamedDecl *ActOnTemplateTemplateParameter(
       Scope *S, SourceLocation TmpLoc, TemplateParameterList *Params,
-      SourceLocation EllipsisLoc, IdentifierInfo *ParamName,
+      bool Typename, SourceLocation EllipsisLoc, IdentifierInfo *ParamName,
       SourceLocation ParamNameLoc, unsigned Depth, unsigned Position,
       SourceLocation EqualLoc, ParsedTemplateArgument DefaultArg);
 
