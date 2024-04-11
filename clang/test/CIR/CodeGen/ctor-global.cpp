@@ -20,5 +20,5 @@ void foo2(void) {
 
 // BEFORE: cir.func @_Z4foo2v() global_ctor(777)
 
-// AFTER: module @{{.*}} attributes {cir.globalCtors = [#cir.globalCtor<"_Z3foov", 65535>, #cir.globalCtor<"_Z4foo2v", 777>],
+// AFTER: module @{{.*}} attributes {cir.global_ctors = [#cir.global_ctor<"_Z3foov", 65535>, #cir.global_ctor<"_Z4foo2v", 777>],
 // LLVM: @llvm.global_ctors = appending constant [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_Z3foov, ptr null }, { i32, ptr, ptr } { i32 777, ptr @_Z4foo2v, ptr null }]

@@ -325,7 +325,7 @@ void LoweringPreparePass::buildGlobalCtorDtorList() {
   // TODO: dtors
   if (globalCtorList.empty())
     return;
-  theModule->setAttr("cir.globalCtors",
+  theModule->setAttr("cir.global_ctors",
                      mlir::ArrayAttr::get(&getContext(), globalCtorList));
 }
 
