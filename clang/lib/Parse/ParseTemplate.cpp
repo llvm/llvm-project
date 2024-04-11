@@ -313,7 +313,7 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
     return nullptr;
   }
 
-  IdentifierInfo *Id = Result.Identifier;
+  const IdentifierInfo *Id = Result.Identifier;
   SourceLocation IdLoc = Result.getBeginLoc();
 
   DiagnoseAndSkipCXX11Attributes();
@@ -1289,7 +1289,7 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
     // later.
     Tok.setKind(tok::annot_template_id);
 
-    IdentifierInfo *TemplateII =
+    const IdentifierInfo *TemplateII =
         TemplateName.getKind() == UnqualifiedIdKind::IK_Identifier
             ? TemplateName.Identifier
             : nullptr;

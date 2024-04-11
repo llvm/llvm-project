@@ -92,9 +92,8 @@ DarwinSDKInfo *Sema::getDarwinSDKInfoForAvailabilityChecking() {
   return nullptr;
 }
 
-IdentifierInfo *
-Sema::InventAbbreviatedTemplateParameterTypeName(IdentifierInfo *ParamName,
-                                                 unsigned int Index) {
+IdentifierInfo *Sema::InventAbbreviatedTemplateParameterTypeName(
+    const IdentifierInfo *ParamName, unsigned int Index) {
   std::string InventedName;
   llvm::raw_string_ostream OS(InventedName);
 

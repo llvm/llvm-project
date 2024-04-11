@@ -7375,7 +7375,7 @@ void Sema::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
           llvm::omp::TraitProperty::implementation_extension_allow_templates))
     return;
 
-  IdentifierInfo *BaseII = D.getIdentifier();
+  const IdentifierInfo *BaseII = D.getIdentifier();
   LookupResult Lookup(*this, DeclarationName(BaseII), D.getIdentifierLoc(),
                       LookupOrdinaryName);
   LookupParsedName(Lookup, S, &D.getCXXScopeSpec());
