@@ -51,7 +51,4 @@ class TestObjCBuiltinTypes(TestBase):
             "expr --language Objective-C++ -- id my_id = 0; my_id",
             patterns=["\(id\) \$.* = nil"],
         )
-        self.expect(
-            "expr --language C++ -- id my_id = 0; my_id",
-            patterns=["\(id\) \$.* = nullptr"],
-        )
+        self.expect("expr --language C++ -- id my_id = 0; my_id", error=True)
