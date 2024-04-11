@@ -360,6 +360,9 @@ Improvements to Clang's diagnostics
   Added the ``-Wtentative-definition-array`` warning group to cover this.
   Fixes #GH87766
 
+- Clang now uses the correct type-parameter-key (``class`` or ``typename``) when printing
+  template template parameter declarations.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
