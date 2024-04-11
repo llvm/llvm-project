@@ -794,12 +794,12 @@ public:
     return IncludeTree::FileList(std::move(*Node));
   }
 
-  Expected<std::optional<StringRef>> getPCHBuffer() {
+  Expected<std::optional<IncludeTree::File>> getPCH() {
     if (std::optional<ObjectRef> Ref = getPCHRef()) {
       auto Node = getCAS().getProxy(*Ref);
       if (!Node)
         return Node.takeError();
-      return Node->getData();
+      return IncludeTree::File(std::move(*Node));
     }
     return std::nullopt;
   }

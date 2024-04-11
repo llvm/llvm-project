@@ -47,7 +47,7 @@
 // CHECK-NOT: Bar
 
 // CHECK-LABEL: TRANSLATION UNIT
-// CHECK: (PCH) llvmcas://
+// CHECK: (PCH) <PCH> llvmcas://
 // CHECK: [[PREFIX]]/tu.c llvmcas://
 // CHECK: 1:1 <built-in> llvmcas://
 // CHECK: 2:1 (Spurious import) (Module) Foo.Bar [[PREFIX]]/Foo.framework/Headers/Bar.h llvmcas://

@@ -652,9 +652,17 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
         FM.getObjectRefForFileContent(PPOpts.ImplicitPCHInclude);
     if (!CASContents)
       return llvm::errorCodeToError(CASContents.getError());
-    PCHRef = **CASContents;
 
-    return Error::success();
+    StringRef PCHFilename = "<PCH>";
+    if (NewInvocation.getFrontendOpts().IncludeTreePreservePCHPath)
+      PCHFilename = PPOpts.ImplicitPCHInclude;
+
+    auto PCHFile =
+        cas::IncludeTree::File::create(DB, PCHFilename, **CASContents);
+    if (!PCHFile)
+      return PCHFile.takeError();
+    PCHRef = PCHFile->getRef();
+    return llvm::Error::success();
   };
 
   if (Error E = FinishIncludeTree())
