@@ -713,6 +713,18 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   if (SrcTy->getPrimitiveSizeInBits() % DestEltSize != 0)
     return false;
 
+  bool IsUnary = isa<UndefValue>(V1);
+
+  // For binary shuffles, only fold bitcast(shuffle(X,Y))
+  // if it won't increase the number of bitcasts.
+  if (!IsUnary) {
+    auto *BCTy0 = dyn_cast<FixedVectorType>(peekThroughBitcasts(V0)->getType());
+    auto *BCTy1 = dyn_cast<FixedVectorType>(peekThroughBitcasts(V1)->getType());
+    if (!(BCTy0 && BCTy0->getElementType() == DestTy->getElementType()) &&
+        !(BCTy1 && BCTy1->getElementType() == DestTy->getElementType()))
+      return false;
+  }
+
   SmallVector<int, 16> NewMask;
   if (DestEltSize <= SrcEltSize) {
     // The bitcast is from wide to narrow/equal elements. The shuffle mask can
@@ -736,7 +748,6 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
       FixedVectorType::get(DestTy->getScalarType(), NumSrcElts);
   auto *OldShuffleTy =
       FixedVectorType::get(SrcTy->getScalarType(), Mask.size());
-  bool IsUnary = isa<UndefValue>(V1);
   unsigned NumOps = IsUnary ? 1 : 2;
 
   // The new shuffle must not cost more than the old shuffle.
