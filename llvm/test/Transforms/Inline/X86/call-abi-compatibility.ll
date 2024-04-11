@@ -113,8 +113,8 @@ define internal <8 x i64> @callee_inline_asm(ptr %p0, i64 %k, ptr %p1, ptr %p2) 
   %src = load <8 x i64>, ptr %p0, align 64
   %a = load <8 x i64>, ptr %p1, align 64
   %b = load <8 x i64>, ptr %p2, align 64
-  %3 = tail call <8 x i64> asm "vpaddb\09$($3, $2, $0 {$1}", "=v,^Yk,v,v,0,~{dirflag},~{fpsr},~{flags}"(i64 %k, <8 x i64> %a, <8 x i64> %b, <8 x i64> %src) #2
-  ret <8 x i64> %3
+  %1 = tail call <8 x i64> asm "vpaddb\09$($3, $2, $0 {$1}", "=v,^Yk,v,v,0,~{dirflag},~{fpsr},~{flags}"(i64 %k, <8 x i64> %a, <8 x i64> %b, <8 x i64> %src) #2
+  ret <8 x i64> %1
 }
 
 attributes #0 = { "min-legal-vector-width"="512" "target-features"="+avx,+avx2,+avx512bw,+avx512dq,+avx512f,+cmov,+crc32,+cx8,+evex512,+f16c,+fma,+fxsr,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave" "tune-cpu"="generic" }
