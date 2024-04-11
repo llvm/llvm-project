@@ -128,4 +128,22 @@ namespace UsesThis {
   };
 
   template struct A<int>; // expected-note 2{{in instantiation of}}
+
+  template <typename T>
+  struct Foo {
+    template <typename X>
+    int bar(X x) {
+      return 0;
+    }
+
+    template <>
+    int bar(int x) {
+      return bar(5.0); // ok
+    }
+  };
+
+  void call() {
+    Foo<double> f;
+    f.bar(1);
+  }
 }
