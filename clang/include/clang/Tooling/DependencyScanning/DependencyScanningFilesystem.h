@@ -202,11 +202,11 @@ public:
     getOrInsertEntryForFilename(StringRef Filename,
                                 const CachedFileSystemEntry &Entry);
 
-    /// Returns real path associated with the filename or nullptr if none is
+    /// Returns the real path associated with the filename or nullptr if none is
     /// found.
     const CachedRealPath *findRealPathByFilename(StringRef Filename) const;
 
-    /// Returns real path associated with the filename if there is some.
+    /// Returns the real path associated with the filename if there is some.
     /// Otherwise, constructs new one with the given one, associates it with the
     /// filename and returns the result.
     const CachedRealPath &
