@@ -652,20 +652,21 @@ class CIR_GlobalCtorDtor<string name, string attrMnemonic,
   let summary = sum;
   let description = desc;
 
-  let parameters = (ins "StringAttr":$name,
-                        OptionalParameter<"std::optional<int>">:$priority);
+  let parameters = (ins "StringAttr":$name, "int":$priority);
   let assemblyFormat = [{
     `<`
-      $name
-      (`,` $priority^)?
+      $name `,` $priority
     `>`
   }];
   let builders = [
     AttrBuilder<(ins "StringRef":$name,
-                      CArg<"std::optional<int>", "{}">:$priority), [{
+                      CArg<"int", "65536">:$priority), [{
       return $_get($_ctxt, StringAttr::get($_ctxt, name), priority);
     }]>
   ];
+  let extraClassDeclaration = [{
+    bool isDefaultPriority() const { return getPriority() == 65536; };
+  }];
   let skipDefaultBuilders = 1;
 }
 
