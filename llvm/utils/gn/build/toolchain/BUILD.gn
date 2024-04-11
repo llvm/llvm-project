@@ -207,6 +207,9 @@ template("stage2_unix_toolchain") {
       ar = "bin/llvm-ar"
       deps += [ "//:llvm-ar($host_toolchain)" ]
     }
+    if (toolchain_args.current_os != host_os) {
+      toolchain_args.llvm_enable_zstd = false
+    }
   }
 }
 
