@@ -310,10 +310,11 @@ static Value createMinMaxF(OpBuilder &builder, Location loc, Value lhs,
   Value sel = builder.create<LLVM::SelectOp>(loc, cmp, lhs, rhs);
   Value isNan = builder.create<LLVM::FCmpOp>(
       loc, i1Type, LLVM::FCmpPredicate::uno, lhs, rhs);
-  Value nan = builder.create<LLVM::ConstantOp>(
-      loc, lhs.getType(),
-      builder.getFloatAttr(floatType,
-                           APFloat::getQNaN(floatType.getFloatSemantics())));
+  auto qnan = APFloat::getQNaN(floatType.getFloatSemantics());
+  TypedAttr nanAttr = builder.getFloatAttr(floatType, qnan);
+  if (auto vecType = dyn_cast<VectorType>(lhs.getType()))
+    nanAttr = SplatElementsAttr::get(vecType, qnan);
+  Value nan = builder.create<LLVM::ConstantOp>(loc, lhs.getType(), nanAttr);
   return builder.create<LLVM::SelectOp>(loc, isNan, nan, sel);
 }
 
