@@ -4608,11 +4608,11 @@ public:
 
   bool operator==(const FunctionEffectSet &RHS) const {
     const FunctionEffectSet &LHS = *this;
-    if (LHS.PImpl == nullptr)
-      return RHS.PImpl == nullptr;
-    if (RHS.PImpl == nullptr)
+    if (LHS.PImpl == RHS.PImpl)
+      return true;
+    if (LHS.PImpl == nullptr || RHS.PImpl == nullptr)
       return false;
-    return LHS.PImpl == RHS.PImpl || *LHS.PImpl == *RHS.PImpl;
+    return *LHS.PImpl == *RHS.PImpl;
   }
   bool operator!=(const FunctionEffectSet &RHS) const {
     return !(*this == RHS);

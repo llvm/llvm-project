@@ -3734,7 +3734,10 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   // spec because of the leading 'bool' which unambiguously indicates
   // whether the following bool is the EH spec or part of the arguments.
 
+  // TODO: The effect set is variable-length, though prefaced with a size.
+  // Does this create potential ambiguity?
   epi.FunctionEffects.Profile(ID);
+
   ID.AddPointer(Result.getAsOpaquePtr());
   for (unsigned i = 0; i != NumParams; ++i)
     ID.AddPointer(ArgTys[i].getAsOpaquePtr());
@@ -5153,6 +5156,7 @@ bool FunctionEffect::shouldDiagnoseFunctionCall(
 // =====
 
 void FunctionEffectSet::Profile(llvm::FoldingSetNodeID &ID) const {
+  ID.AddInteger(size());
   if (PImpl)
     for (const auto &Effect : *PImpl)
       ID.AddInteger(llvm::to_underlying(Effect.kind()));
