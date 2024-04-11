@@ -31,6 +31,7 @@ define i32 @v_extract_v64i32_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <64 x i32>, ptr addrspace(1) %ptr
   %elt = extractelement <64 x i32> %vec, i32 %idx
@@ -63,6 +64,7 @@ define i16 @v_extract_v128i16_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX12-NEXT:    global_load_u16 v0, v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <128 x i16>, ptr addrspace(1) %ptr
   %elt = extractelement <128 x i16> %vec, i32 %idx
@@ -95,6 +97,7 @@ define i64 @v_extract_v32i64_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX12-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <32 x i64>, ptr addrspace(1) %ptr
   %elt = extractelement <32 x i64> %vec, i32 %idx
