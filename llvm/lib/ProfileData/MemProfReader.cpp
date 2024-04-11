@@ -142,13 +142,13 @@ CallStackMap readStackInfo(const char *Ptr) {
 // any stack ids observed previously map to a different set of program counter
 // addresses.
 bool mergeStackMap(const CallStackMap &From, CallStackMap &To) {
-  for (const auto &IdStack : From) {
-    auto I = To.find(IdStack.first);
+  for (const auto &[Id, Stack] : From) {
+    auto I = To.find(Id);
     if (I == To.end()) {
-      To[IdStack.first] = IdStack.second;
+      To[Id] = Stack;
     } else {
       // Check that the PCs are the same (in order).
-      if (IdStack.second != I->second)
+      if (Stack != I->second)
         return true;
     }
   }
@@ -275,10 +275,10 @@ void RawMemProfReader::printYAML(raw_ostream &OS) {
   }
   // Print out the merged contents of the profiles.
   OS << "  Records:\n";
-  for (const auto &Entry : *this) {
+  for (const auto &[GUID, Record] : *this) {
     OS << "  -\n";
-    OS << "    FunctionGUID: " << Entry.first << "\n";
-    Entry.second.print(OS);
+    OS << "    FunctionGUID: " << GUID << "\n";
+    Record.print(OS);
   }
 }
 
@@ -405,9 +405,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
 
   // Convert the raw profile callstack data into memprof records. While doing so
   // keep track of related contexts so that we can fill these in later.
-  for (const auto &Entry : CallstackProfileData) {
-    const uint64_t StackId = Entry.first;
-
+  for (const auto &[StackId, MIB] : CallstackProfileData) {
     auto It = StackMap.find(StackId);
     if (It == StackMap.end())
       return make_error<InstrProfError>(
@@ -455,7 +453,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       auto Result =
           FunctionProfileData.insert({F.Function, IndexedMemProfRecord()});
       IndexedMemProfRecord &Record = Result.first->second;
-      Record.AllocSites.emplace_back(Callstack, CSId, Entry.second);
+      Record.AllocSites.emplace_back(Callstack, CSId, MIB);
 
       if (!F.IsInlineFrame)
         break;

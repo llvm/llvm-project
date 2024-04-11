@@ -2778,26 +2778,34 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
   std::optional<PrimType> VarT = classify(VD->getType());
 
   if (Context::shouldBeGloballyIndexed(VD)) {
+    auto initGlobal = [&](unsigned GlobalIndex) -> bool {
+      assert(Init);
+      DeclScope<Emitter> LocalScope(this, VD);
+
+      if (VarT) {
+        if (!this->visit(Init))
+          return false;
+        return this->emitInitGlobal(*VarT, GlobalIndex, VD);
+      }
+      return this->visitGlobalInitializer(Init, GlobalIndex);
+    };
+
     // We've already seen and initialized this global.
-    if (P.getGlobal(VD))
-      return true;
+    if (std::optional<unsigned> GlobalIndex = P.getGlobal(VD)) {
+      if (P.getPtrGlobal(*GlobalIndex).isInitialized())
+        return true;
+
+      // The previous attempt at initialization might've been unsuccessful,
+      // so let's try this one.
+      return Init && initGlobal(*GlobalIndex);
+    }
 
     std::optional<unsigned> GlobalIndex = P.createGlobal(VD, Init);
 
     if (!GlobalIndex)
       return false;
 
-    if (Init) {
-      DeclScope<Emitter> LocalScope(this, VD);
-
-      if (VarT) {
-        if (!this->visit(Init))
-          return false;
-        return this->emitInitGlobal(*VarT, *GlobalIndex, VD);
-      }
-      return this->visitGlobalInitializer(Init, *GlobalIndex);
-    }
-    return true;
+    return !Init || initGlobal(*GlobalIndex);
   } else {
     VariableScope<Emitter> LocalScope(this);
     if (VarT) {

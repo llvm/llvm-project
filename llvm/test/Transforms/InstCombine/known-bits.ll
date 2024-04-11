@@ -455,7 +455,7 @@ define i64 @test_icmp_trunc5(i64 %n) {
 ; CHECK-LABEL: @test_icmp_trunc5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i64 [[N:%.*]], 47
-; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[SHR]] to i32
+; CHECK-NEXT:    [[CONV1:%.*]] = trunc nsw i64 [[SHR]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CONV1]], -13
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
@@ -541,6 +541,202 @@ define i8 @and_eq_bits_must_be_set(i8 %x, i8 %y) {
   call void @llvm.assume(i1 %cmp)
   %r = and i8 %x, 1
   ret i8 %r
+}
+
+define i8 @test_icmp_or(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[N_OR]], 32
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 0
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_or = or i8 %n, %n2
+  %cmp = icmp ult i8 %n_or, 32
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_or2(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_or2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_OR]], 14
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %n_or = or i8 %n, %n2
+  %cmp = icmp uge i8 %n_or, 15
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  ret i8 %other
+if.else:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+}
+
+define i8 @test_icmp_or_fail_bad_range(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_or_fail_bad_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[N_OR]], 33
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_or = or i8 %n, %n2
+  %cmp = icmp ule i8 %n_or, 32
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_or_fail_bad_pred(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_or_fail_bad_pred(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_OR]], 32
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_or = or i8 %n, %n2
+  %cmp = icmp ugt i8 %n_or, 32
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_and(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_AND:%.*]] = and i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_AND]], -33
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 32
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_and = and i8 %n, %n2
+  %cmp = icmp ugt i8 %n_and, 223
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_and2(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_and2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_AND:%.*]] = and i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[N_AND]], -31
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 32
+;
+entry:
+  %n_and = and i8 %n, %n2
+  %cmp = icmp ule i8 %n_and, 224
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  ret i8 %other
+if.else:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+}
+
+define i8 @test_icmp_and_fail_bad_range(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_and_fail_bad_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_AND:%.*]] = and i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_AND]], -34
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_and = and i8 %n, %n2
+  %cmp = icmp uge i8 %n_and, 223
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_and_fail_bad_pred(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_and_fail_bad_pred(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_AND:%.*]] = and i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[N_AND]], 31
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_and = and i8 %n, %n2
+  %cmp = icmp sge i8 %n_and, 32
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
 }
 
 define i8 @and_eq_bits_must_be_set2(i8 %x, i8 %y) {
