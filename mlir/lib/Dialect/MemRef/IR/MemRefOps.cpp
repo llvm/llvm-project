@@ -1125,11 +1125,67 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
   }
 };
 
+int64_t getCorrespondingSourceDim(ExpandShapeOp expandShapeOp,
+                                  int64_t resultDim) {
+  assert(resultDim >= 0 &&
+         resultDim < expandShapeOp.getResultType().getRank() &&
+         "invalid resultDim");
+  for (const auto &it :
+       llvm::enumerate(expandShapeOp.getReassociationIndices()))
+    if (llvm::is_contained(it.value(), resultDim))
+      return it.index();
+  assert(false && "could not find reassociation group");
+  return 0;
+}
+
+struct FoldDimOfExpandShape : public OpRewritePattern<DimOp> {
+  using OpRewritePattern<DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    auto expandShapeOp = dimOp.getSource().getDefiningOp<ExpandShapeOp>();
+    if (!expandShapeOp)
+      return failure();
+
+    // Only constant dimension values are supported.
+    std::optional<int64_t> dim = dimOp.getConstantIndex();
+    if (!dim.has_value())
+      return failure();
+
+    // Skip static dims. These are folded to constant ops.
+    MemRefType resultType = expandShapeOp.getResultType();
+    if (!resultType.isDynamicDim(*dim))
+      return failure();
+
+    // Find reassociation group that contains this result dimension.
+    int64_t srcDim = getCorrespondingSourceDim(expandShapeOp, *dim);
+
+    // `dim` is the only dynamic dimension in `group`. (Otherwise, the
+    // ExpandShapeOp would be ambiguous.)
+    int64_t product = 1;
+    ReassociationIndices grp = expandShapeOp.getReassociationIndices()[srcDim];
+    for (int64_t d : grp) {
+      if (d != dim) {
+        assert(!resultType.isDynamicDim(d) && "expected static dim");
+        product *= resultType.getDimSize(d);
+      }
+    }
+
+    // result dim size = src dim size / (product(other dims in reassoc group))
+    Value srcDimSz =
+        rewriter.create<DimOp>(dimOp.getLoc(), expandShapeOp.getSrc(), srcDim);
+    rewriter.replaceOpWithNewOp<arith::FloorDivSIOp>(
+        dimOp, srcDimSz,
+        rewriter.create<arith::ConstantIndexOp>(dimOp.getLoc(), product));
+    return success();
+  }
+};
+
 } // namespace
 
 void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.add<DimOfMemRefReshape>(context);
+  results.add<DimOfMemRefReshape, FoldDimOfExpandShape>(context);
 }
 
 // ---------------------------------------------------------------------------
