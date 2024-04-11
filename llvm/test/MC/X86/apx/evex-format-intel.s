@@ -210,6 +210,16 @@
 # CHECK: encoding: [0x62,0xfc,0xf4,0x10,0xc1,0xf8,0x7b]
          sar	r17, r16, 123
 
+## MRMXrCC
+# CHECK: setzuo	r16b
+# CHECK: encoding: [0x62,0xfc,0x7f,0x18,0x40,0xc0]
+         setzuo r16b
+
+## MRMXmCC
+# CHECK: setzuo byte ptr [r16 + r17]
+# CHECK: encoding: [0x62,0xfc,0x7b,0x18,0x40,0x04,0x08]
+         setzuo byte ptr [r16 + r17]
+
 ## NoCD8
 
 # CHECK: {nf}	neg	qword ptr [r16 + 123]
