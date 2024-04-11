@@ -251,7 +251,7 @@ private:
 
   /// Perform BAT translation for a given \p Func and return the parent
   /// BinaryFunction or nullptr.
-  BinaryFunction *getParentFunction(const BinaryFunction &Func) const;
+  BinaryFunction *getBATParentFunction(const BinaryFunction &Func) const;
 
   /// Retrieve the location name to be used for samples recorded in \p Func.
   StringRef getLocationName(const BinaryFunction &Func) const;

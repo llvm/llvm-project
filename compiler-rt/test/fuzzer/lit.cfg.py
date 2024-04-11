@@ -106,7 +106,6 @@ def generate_compiler_cmd(is_cpp=True, fuzzer_enabled=True, msan_enabled=False):
     return " ".join(
         [
             compiler_cmd,
-            config.target_cflags,
             std_cmd,
             "-O2 -gline-tables-only",
             sanitizers_cmd,

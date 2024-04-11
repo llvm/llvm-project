@@ -15,3 +15,22 @@
 #include "clang/AST/ASTContext.h"
 
 using namespace clang;
+
+OpenACCDefaultClause *OpenACCDefaultClause::Create(const ASTContext &C,
+                                                   OpenACCDefaultClauseKind K,
+                                                   SourceLocation BeginLoc,
+                                                   SourceLocation LParenLoc,
+                                                   SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(sizeof(OpenACCDefaultClause), alignof(OpenACCDefaultClause));
+
+  return new (Mem) OpenACCDefaultClause(K, BeginLoc, LParenLoc, EndLoc);
+}
+
+//===----------------------------------------------------------------------===//
+//  OpenACC clauses printing methods
+//===----------------------------------------------------------------------===//
+void OpenACCClausePrinter::VisitOpenACCDefaultClause(
+    const OpenACCDefaultClause &C) {
+  OS << "default(" << C.getDefaultClauseKind() << ")";
+}
