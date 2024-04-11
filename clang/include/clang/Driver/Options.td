@@ -5461,11 +5461,11 @@ def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>;
 def resource_dir : Separate<["-"], "resource-dir">,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
   HelpText<"The directory which holds the compiler resource files">,
   MarshallingInfoString<HeaderSearchOpts<"ResourceDir">>;
 def resource_dir_EQ : Joined<["-"], "resource-dir=">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   Alias<resource_dir>;
 def rpath : Separate<["-"], "rpath">, Flags<[LinkerInput]>, Group<Link_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
