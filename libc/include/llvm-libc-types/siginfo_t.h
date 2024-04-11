@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_TYPES_SIGINFO_T_H
 #define LLVM_LIBC_TYPES_SIGINFO_T_H
 
-#include <llvm-libc-types/clock_t.h>
-#include <llvm-libc-types/pid_t.h>
-#include <llvm-libc-types/uid_t.h>
-#include <llvm-libc-types/union_sigval.h>
+#include "llvm-libc-types/clock_t.h"
+#include "llvm-libc-types/pid_t.h"
+#include "llvm-libc-types/uid_t.h"
+#include "llvm-libc-types/union_sigval.h"
 
 #define SI_MAX_SIZE 128
 

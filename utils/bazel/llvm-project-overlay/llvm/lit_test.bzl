@@ -10,6 +10,7 @@ def lit_test(
         srcs,
         args = None,
         data = None,
+        deps = None,
         **kwargs):
     """Runs a single test file with LLVM's lit tool.
 
@@ -27,6 +28,7 @@ def lit_test(
 
     args = args or []
     data = data or []
+    deps = deps or []
 
     native.py_test(
         name = name,
@@ -35,6 +37,7 @@ def lit_test(
         args = args + ["-v"] + ["$(execpath %s)" % src for src in srcs],
         data = data + srcs,
         legacy_create_init = False,
+        deps = deps + [Label("//llvm:lit")],
         **kwargs
     )
 

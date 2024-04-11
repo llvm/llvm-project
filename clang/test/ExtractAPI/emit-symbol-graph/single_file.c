@@ -3,11 +3,12 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
 // RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang_cc1 %t/main.c --emit-symbol-graph=%t/SymbolGraphs --product-name=basicfile -triple=x86_64-apple-macosx12.0.0
+// RUN: %clang_cc1 %t/main.c -emit-symbol-graph --pretty-sgf  \
+// RUN:   --symbol-graph-dir=%t/SymbolGraphs --product-name=basicfile -triple=x86_64-apple-macosx12.0.0
 
 // Generator version is not consistent across test runs, normalize it.
 // RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \
-// RUN: %t/SymbolGraphs/main.json >> %t/output-normalized.json
+// RUN: %t/SymbolGraphs/main.c.symbols.json >> %t/output-normalized.json
 // RUN: diff %t/reference.output.json %t/output-normalized.json
 
 // CHECK-NOT: error:

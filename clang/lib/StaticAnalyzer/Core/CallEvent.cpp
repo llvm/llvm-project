@@ -1408,9 +1408,12 @@ CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
 
   if (const auto *OpCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     const FunctionDecl *DirectCallee = OpCE->getDirectCallee();
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(DirectCallee))
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(DirectCallee)) {
       if (MD->isImplicitObjectMemberFunction())
         return create<CXXMemberOperatorCall>(OpCE, State, LCtx, ElemRef);
+      if (MD->isStatic())
+        return create<CXXStaticOperatorCall>(OpCE, State, LCtx, ElemRef);
+    }
 
   } else if (CE->getCallee()->getType()->isBlockPointerType()) {
     return create<BlockCall>(CE, State, LCtx, ElemRef);
