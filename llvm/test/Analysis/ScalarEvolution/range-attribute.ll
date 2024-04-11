@@ -5,9 +5,9 @@ define i32 @slt_trip_count_with_range_attr(i32 range(i32 1, 100) %limit) {
 ;
 ; CHECK-LABEL: 'slt_trip_count_with_range_attr'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_trip_count_with_range_attr
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 smax %limit))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 126
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 smax %limit))<nsw>
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %limit)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 98
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %limit)<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
  entry:
@@ -29,9 +29,9 @@ define i32 @slt_trip_count_with_range_call() {
 ;
 ; CHECK-LABEL: 'slt_trip_count_with_range_call'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_trip_count_with_range_call
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 smax %limit))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 126
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 smax %limit))<nsw>
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %limit)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 98
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %limit)<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
  entry:
@@ -54,9 +54,9 @@ define i32 @slt_trip_count_with_range_result() {
 ;
 ; CHECK-LABEL: 'slt_trip_count_with_range_result'
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_trip_count_with_range_result
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 smax %limit))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 126
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 smax %limit))<nsw>
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %limit)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 98
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %limit)<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
  entry:
