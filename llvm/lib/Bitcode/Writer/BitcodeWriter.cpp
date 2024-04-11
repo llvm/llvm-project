@@ -1217,6 +1217,8 @@ static uint64_t getEncodedGVSummaryFlags(GlobalValueSummary::GVFlags Flags) {
 
   RawFlags |= (Flags.Visibility << 8); // 2 bits
 
+  RawFlags |= (Flags.ImportType << 10); // 1 bit
+
   return RawFlags;
 }
 
