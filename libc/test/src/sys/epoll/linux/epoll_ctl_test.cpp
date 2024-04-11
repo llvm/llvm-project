@@ -27,7 +27,9 @@ TEST(LlvmLibcEpollCtlTest, Basic) {
 
   ASSERT_THAT(LIBC_NAMESPACE::pipe(pipefd), Succeeds());
 
-  epoll_event event{.events = EPOLLOUT, .data = {.fd = pipefd[0]}};
+  epoll_event event;
+  event.events = EPOLLOUT;
+  event.data.fd = pipefd[0];
 
   ASSERT_THAT(LIBC_NAMESPACE::epoll_ctl(epfd, EPOLL_CTL_ADD, pipefd[0], &event),
               Succeeds());
