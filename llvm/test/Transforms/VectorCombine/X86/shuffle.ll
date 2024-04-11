@@ -122,11 +122,14 @@ define <16 x i8> @bitcast_shuf_uses(<4 x i32> %v) {
 }
 
 ; shuffle of 2 operands removes bitcasts
+; TODO - can we remove the empty bitcast(bitcast()) ?
 
 define <4 x i64> @bitcast_shuf_remove_bitcasts(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: @bitcast_shuf_remove_bitcasts(
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i64> [[A0:%.*]], <2 x i64> [[A1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    [[SHUF:%.*]] = bitcast <4 x i64> [[R]] to <8 x i32>
+; CHECK-NEXT:    [[R1:%.*]] = bitcast <8 x i32> [[SHUF]] to <4 x i64>
+; CHECK-NEXT:    ret <4 x i64> [[R1]]
 ;
   %bc0 = bitcast <2 x i64> %a0 to <4 x i32>
   %bc1 = bitcast <2 x i64> %a1 to <4 x i32>
@@ -149,13 +152,12 @@ define <8 x i32> @bitcast_shuf_one_bitcast(<4 x i32> %a0, <2 x i64> %a1) {
   ret <8 x i32> %r
 }
 
-; TODO - Negative test - shuffle of 2 operands must not increase bitcasts
+; Negative test - shuffle of 2 operands must not increase bitcasts
 
 define <8 x i32> @bitcast_shuf_too_many_bitcasts(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: @bitcast_shuf_too_many_bitcasts(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[A0:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[A1:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i64> [[A0:%.*]], <2 x i64> [[A1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = bitcast <4 x i64> [[SHUF]] to <8 x i32>
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %shuf = shufflevector <2 x i64> %a0, <2 x i64> %a1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
