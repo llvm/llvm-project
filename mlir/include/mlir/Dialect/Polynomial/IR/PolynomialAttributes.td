@@ -64,7 +64,7 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
   }];
 
   let parameters = (ins
-    Builtin_TypeAttr: $coefficientType,
+    "Type": $coefficientType,
     OptionalParameter<"IntegerAttr">: $coefficientModulus,
     OptionalParameter<"PolynomialAttr">: $polynomialModulus
   );

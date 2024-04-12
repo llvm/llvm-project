@@ -160,8 +160,8 @@ Attribute RingAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseEqual()))
     return {};
 
-  TypeAttr typeAttr;
-  if (failed(parser.parseAttribute<TypeAttr>(typeAttr)))
+  Type ty;
+  if (failed(parser.parseType(ty)))
     return {};
 
   if (failed(parser.parseComma()))
@@ -172,7 +172,7 @@ Attribute RingAttr::parse(AsmParser &parser, Type type) {
     if (failed(parser.parseEqual()))
       return {};
 
-    IntegerType iType = typeAttr.getValue().dyn_cast<IntegerType>();
+    IntegerType iType = ty.dyn_cast<IntegerType>();
     if (!iType) {
       parser.emitError(parser.getCurrentLocation(),
                        "coefficientType must specify an integer type");
@@ -205,7 +205,7 @@ Attribute RingAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseGreater()))
     return {};
 
-  return RingAttr::get(parser.getContext(), typeAttr, coefficientModulusAttr,
+  return RingAttr::get(parser.getContext(), ty, coefficientModulusAttr,
                        polyAttr);
 }
 
