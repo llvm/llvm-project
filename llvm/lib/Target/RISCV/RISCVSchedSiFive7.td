@@ -819,11 +819,13 @@ foreach mx = SchedMxListW in {
   }
 }
 foreach mx = SchedMxListFW in {
-  defvar Cycles = SiFive7GetCyclesNarrowing<mx>.c;
-  defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxListFW>.c;
-  let Latency = 8, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
-    defm "" : LMULWriteResMX<"WriteVFNCvtIToFV", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFNCvtFToFV", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+  foreach sew = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
+    defvar Cycles = SiFive7GetCyclesNarrowing<mx>.c;
+    defvar IsWorstCase = SiFive7IsWorstCaseMXSEW<mx, sew, SchedMxListFW, isF=1>.c;
+    let Latency = 8, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFNCvtIToFV", [SiFive7VCQ, SiFive7VA], mx, sew, IsWorstCase>;
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFNCvtFToFV", [SiFive7VCQ, SiFive7VA], mx, sew, IsWorstCase>;
+    }
   }
 }
 
@@ -1182,9 +1184,9 @@ defm "" : LMULReadAdvance<"ReadVFCvtFToIV", 0>;
 defm "" : LMULSEWReadAdvanceW<"ReadVFWCvtIToFV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWCvtFToIV", 0>;
 defm "" : LMULSEWReadAdvanceFW<"ReadVFWCvtFToFV", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFNCvtIToFV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFNCvtIToFV", 0>;
 defm "" : LMULReadAdvanceW<"ReadVFNCvtFToIV", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFNCvtFToFV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFNCvtFToFV", 0>;
 
 // 15. Vector Reduction Operations
 def : ReadAdvance<ReadVIRedV, 0>;

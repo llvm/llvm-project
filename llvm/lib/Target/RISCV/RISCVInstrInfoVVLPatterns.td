@@ -1389,7 +1389,7 @@ multiclass VPatNConvertI2FPVL_W_RM<SDPatternOperator vop,
     def : Pat<(fvti.Vector (vop (iwti.Vector iwti.RegClass:$rs1),
                                 (iwti.Mask V0),
                                 VLOpFrag)),
-              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_MASK")
+              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK") 
                   (fvti.Vector (IMPLICIT_DEF)), iwti.RegClass:$rs1,
                   (iwti.Mask V0),
                   // Value to indicate no rounding mode change in
@@ -1408,7 +1408,7 @@ multiclass VPatNConvertI2FP_RM_VL_W<SDNode vop, string instruction_name> {
     def : Pat<(fvti.Vector (vop (iwti.Vector iwti.RegClass:$rs1),
                                 (iwti.Mask V0),  (XLenVT timm:$frm),
                                 VLOpFrag)),
-              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_MASK")
+              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
                   (fvti.Vector (IMPLICIT_DEF)), iwti.RegClass:$rs1,
                   (iwti.Mask V0), timm:$frm, GPR:$vl, fvti.Log2SEW, TA_MA)>;
   }
@@ -2703,7 +2703,7 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
     def : Pat<(fvti.Vector (any_riscv_fpround_vl
                                (fwti.Vector fwti.RegClass:$rs1),
                                (fwti.Mask V0), VLOpFrag)),
-              (!cast<Instruction>("PseudoVFNCVT_F_F_W_"#fvti.LMul.MX#"_MASK")
+              (!cast<Instruction>("PseudoVFNCVT_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
                   (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
                   (fwti.Mask V0),
                   // Value to indicate no rounding mode change in
@@ -2716,7 +2716,7 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
     def : Pat<(fvti.Vector (any_riscv_fncvt_rod_vl
                                (fwti.Vector fwti.RegClass:$rs1),
                                (fwti.Mask V0), VLOpFrag)),
-              (!cast<Instruction>("PseudoVFNCVT_ROD_F_F_W_"#fvti.LMul.MX#"_MASK")
+              (!cast<Instruction>("PseudoVFNCVT_ROD_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
                   (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
                   (fwti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
   }
