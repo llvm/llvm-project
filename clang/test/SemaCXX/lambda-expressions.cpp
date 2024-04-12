@@ -762,3 +762,12 @@ template auto t::operator()<int>(int a) const; // expected-note {{in instantiati
 
 }
 #endif
+
+namespace GH84473_bug {
+void f1() {
+  int b;
+  (void) [=] [[gnu::regcall]] () { // expected-warning {{an attribute specifier sequence in this position is a C++23 extension}}
+    (void) b;
+  };
+}
+}
