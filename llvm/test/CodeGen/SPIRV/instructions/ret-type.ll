@@ -2,6 +2,7 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --translator-compatibility-mode %s -o - -filetype=obj | spirv-val %}
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; CHECK-DAG: OpName %[[Test1:.*]] "test1"
 ; CHECK-DAG: OpName %[[Foo:.*]] "foo"
 ; CHECK-DAG: OpName %[[Bar:.*]] "bar"
 ; CHECK-DAG: OpName %[[Test2:.*]] "test2"
@@ -15,6 +16,11 @@
 ; CHECK-DAG: %[[FooType:.*]] = OpTypeFunction %[[StructPtr:.*]] %[[StructPtr]] %[[StructPtr]] %[[Bool]]
 ; CHECK-DAG: %[[Char:.*]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[CharPtr:.*]] = OpTypePointer Function %[[Char]]
+
+; CHECK: %[[Test1]] = OpFunction
+; CHECK: OpFunctionCall %[[StructPtr:.*]] %[[Foo]]
+; CHECK: OpFunctionCall %[[StructPtr:.*]] %[[Bar]]
+; CHECK: OpFunctionEnd
 
 ; CHECK: %[[Foo]] = OpFunction %[[StructPtr:.*]] None %[[FooType]]
 ; CHECK: %[[Arg1:.*]] = OpFunctionParameter %[[StructPtr]]
@@ -39,6 +45,13 @@
 
 %struct = type { %array }
 %array = type { [1 x i64] }
+
+define spir_func void @test1(ptr %arg1, ptr %arg2, i1 %sw) {
+entry:
+  %r1 = call ptr @foo(ptr %arg1, ptr %arg2, i1 %sw)
+  %r2 = call ptr @bar(ptr %arg1, i1 %sw)
+  ret void
+}
 
 define spir_func ptr @foo(ptr %arg1, ptr %arg2, i1 %sw) {
 entry:

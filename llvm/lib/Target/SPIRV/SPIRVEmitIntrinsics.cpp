@@ -51,7 +51,7 @@ void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
 
 namespace {
 class SPIRVEmitIntrinsics
-    : public FunctionPass,
+    : public ModulePass,
       public InstVisitor<SPIRVEmitIntrinsics, Instruction *> {
   SPIRVTargetMachine *TM = nullptr;
   SPIRVGlobalRegistry *GR = nullptr;
@@ -117,10 +117,10 @@ class SPIRVEmitIntrinsics
 
 public:
   static char ID;
-  SPIRVEmitIntrinsics() : FunctionPass(ID) {
+  SPIRVEmitIntrinsics() : ModulePass(ID) {
     initializeSPIRVEmitIntrinsicsPass(*PassRegistry::getPassRegistry());
   }
-  SPIRVEmitIntrinsics(SPIRVTargetMachine *_TM) : FunctionPass(ID), TM(_TM) {
+  SPIRVEmitIntrinsics(SPIRVTargetMachine *_TM) : ModulePass(ID), TM(_TM) {
     initializeSPIRVEmitIntrinsicsPass(*PassRegistry::getPassRegistry());
   }
   Instruction *visitInstruction(Instruction &I) { return &I; }
@@ -136,7 +136,15 @@ public:
   Instruction *visitAllocaInst(AllocaInst &I);
   Instruction *visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
   Instruction *visitUnreachableInst(UnreachableInst &I);
-  bool runOnFunction(Function &F) override;
+
+  StringRef getPassName() const override { return "SPIRV emit intrinsics"; }
+
+  bool runOnModule(Module &M) override;
+  bool runOnFunction(Function &F);
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    ModulePass::getAnalysisUsage(AU);
+  }
 };
 } // namespace
 
@@ -414,8 +422,12 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
     if (!Op)
       return;
     if (!(KnownElemTy = GR->findDeducedElementType(F))) {
-      if (Type *OpElemTy = GR->findDeducedElementType(Op))
+      if (Type *OpElemTy = GR->findDeducedElementType(Op)) {
         GR->addDeducedElementType(F, OpElemTy);
+        TypedPointerType *DerivedTy =
+            TypedPointerType::get(OpElemTy, getPointerAddressSpace(RetTy));
+        GR->addReturnType(F, DerivedTy);
+      }
       return;
     }
     Ops.push_back(std::make_pair(Op, 0));
@@ -1247,13 +1259,29 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     processInstrAfterVisit(I, B);
   }
 
-  // check if function parameter types are set
-  if (!F->isIntrinsic())
-    processParamTypes(F, B);
-
   return true;
 }
 
-FunctionPass *llvm::createSPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM) {
+bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
+  bool Changed = false;
+
+  for (auto &F : M) {
+    Changed |= runOnFunction(F);
+  }
+
+  for (auto &F : M) {
+    // check if function parameter types are set
+    if (!F.isDeclaration() && !F.isIntrinsic()) {
+      const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(F);
+      GR = ST.getSPIRVGlobalRegistry();
+      IRBuilder<> B(F.getContext());
+      processParamTypes(&F, B);
+    }
+  }
+
+  return Changed;
+}
+
+ModulePass *llvm::createSPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM) {
   return new SPIRVEmitIntrinsics(TM);
 }
