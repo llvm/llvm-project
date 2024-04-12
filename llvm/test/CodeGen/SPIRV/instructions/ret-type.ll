@@ -2,6 +2,10 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --translator-compatibility-mode %s -o - -filetype=obj | spirv-val %}
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; CHECK-DAG: OpName %[[Foo:.*]] "foo"
+; CHECK-DAG: OpName %[[Bar:.*]] "bar"
+; CHECK-DAG: OpName %[[Test2:.*]] "test2"
+
 ; CHECK-DAG: %[[Long:.*]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[Array:.*]] = OpTypeArray %[[Long]] %[[#]]
 ; CHECK-DAG: %[[Struct1:.*]] = OpTypeStruct %[[Array]]
@@ -12,7 +16,7 @@
 ; CHECK-DAG: %[[Char:.*]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[CharPtr:.*]] = OpTypePointer Function %[[Char]]
 
-; CHECK: %[[Foo:.*]] = OpFunction %[[StructPtr:.*]] None %[[FooType]]
+; CHECK: %[[Foo]] = OpFunction %[[StructPtr:.*]] None %[[FooType]]
 ; CHECK: %[[Arg1:.*]] = OpFunctionParameter %[[StructPtr]]
 ; CHECK: %[[Arg2:.*]] = OpFunctionParameter
 ; CHECK: %[[Sw:.*]] = OpFunctionParameter
@@ -20,13 +24,18 @@
 ; CHECK: OpReturnValue %[[Res]]
 ; CHECK: OpReturnValue %[[Arg2]]
 
-; CHECK: %[[Bar:.*]] = OpFunction %[[StructPtr:.*]] None %[[#]]
+; CHECK: %[[Bar]] = OpFunction %[[StructPtr:.*]] None %[[#]]
 ; CHECK: %[[BarArg:.*]] = OpFunctionParameter
 ; CHECK: %[[BarRes:.*]] = OpInBoundsPtrAccessChain %[[CharPtr]] %[[BarArg]] %[[#]]
 ; CHECK: %[[BarResCasted:.*]] = OpBitcast %[[StructPtr]] %[[BarRes]]
 ; CHECK: %[[BarResStruct:.*]] = OpInBoundsPtrAccessChain %[[StructPtr]] %[[#]] %[[#]]
 ; CHECK: OpReturnValue %[[BarResStruct]]
 ; CHECK: OpReturnValue %[[BarResCasted]]
+
+; CHECK: %[[Test2]] = OpFunction
+; CHECK: OpFunctionCall %[[StructPtr:.*]] %[[Foo]]
+; CHECK: OpFunctionCall %[[StructPtr:.*]] %[[Bar]]
+; CHECK: OpFunctionEnd
 
 %struct = type { %array }
 %array = type { [1 x i64] }
@@ -52,7 +61,7 @@ exit:
   ret ptr %charptr
 }
 
-define spir_func void @test(ptr %arg1, ptr %arg2, i1 %sw) {
+define spir_func void @test2(ptr %arg1, ptr %arg2, i1 %sw) {
 entry:
   %r1 = call ptr @foo(ptr %arg1, ptr %arg2, i1 %sw)
   %r2 = call ptr @bar(ptr %arg1, i1 %sw)
