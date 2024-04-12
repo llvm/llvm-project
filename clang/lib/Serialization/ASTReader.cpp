@@ -78,6 +78,7 @@
 #include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
@@ -8274,7 +8275,7 @@ void ASTReader::UpdateSema() {
             PragmaMSPointersToMembersState,
         PointersToMembersPragmaLocation);
   }
-  SemaObj->ForceCUDAHostDeviceDepth = ForceCUDAHostDeviceDepth;
+  SemaObj->CUDA().ForceCUDAHostDeviceDepth = ForceCUDAHostDeviceDepth;
 
   if (PragmaAlignPackCurrentValue) {
     // The bottom of the stack might have a default value. It must be adjusted

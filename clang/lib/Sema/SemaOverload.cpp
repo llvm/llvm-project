@@ -31,6 +31,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
@@ -1549,8 +1550,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     // Don't allow overloading of destructors.  (In theory we could, but it
     // would be a giant change to clang.)
     if (!isa<CXXDestructorDecl>(New)) {
-      CUDAFunctionTarget NewTarget = SemaRef.IdentifyCUDATarget(New),
-                         OldTarget = SemaRef.IdentifyCUDATarget(Old);
+      CUDAFunctionTarget NewTarget = SemaRef.CUDA().IdentifyCUDATarget(New),
+                         OldTarget = SemaRef.CUDA().IdentifyCUDATarget(Old);
       if (NewTarget != CUDAFunctionTarget::InvalidTarget) {
         assert((OldTarget != CUDAFunctionTarget::InvalidTarget) &&
                "Unexpected invalid target.");
@@ -7100,7 +7101,7 @@ void Sema::AddOverloadCandidate(
     // inferred for the member automatically, based on the bases and fields of
     // the class.
     if (!(Caller && Caller->isImplicit()) &&
-        !IsAllowedCUDACall(Caller, Function)) {
+        !CUDA().IsAllowedCUDACall(Caller, Function)) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_bad_target;
       return;
@@ -7618,7 +7619,7 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
 
   // (CUDA B.1): Check for invalid calls between targets.
   if (getLangOpts().CUDA)
-    if (!IsAllowedCUDACall(getCurFunctionDecl(/*AllowLambda=*/true), Method)) {
+    if (!CUDA().IsAllowedCUDACall(getCurFunctionDecl(/*AllowLambda=*/true), Method)) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_bad_target;
       return;
@@ -10452,14 +10453,14 @@ bool clang::isBetterOverloadCandidate(
   if (S.getLangOpts().CUDA && Cand1.Function && Cand2.Function &&
       S.getLangOpts().GPUExcludeWrongSideOverloads) {
     if (FunctionDecl *Caller = S.getCurFunctionDecl(/*AllowLambda=*/true)) {
-      bool IsCallerImplicitHD = Sema::isCUDAImplicitHostDeviceFunction(Caller);
+      bool IsCallerImplicitHD = SemaCUDA::isCUDAImplicitHostDeviceFunction(Caller);
       bool IsCand1ImplicitHD =
-          Sema::isCUDAImplicitHostDeviceFunction(Cand1.Function);
+          SemaCUDA::isCUDAImplicitHostDeviceFunction(Cand1.Function);
       bool IsCand2ImplicitHD =
-          Sema::isCUDAImplicitHostDeviceFunction(Cand2.Function);
-      auto P1 = S.IdentifyCUDAPreference(Caller, Cand1.Function);
-      auto P2 = S.IdentifyCUDAPreference(Caller, Cand2.Function);
-      assert(P1 != Sema::CFP_Never && P2 != Sema::CFP_Never);
+          SemaCUDA::isCUDAImplicitHostDeviceFunction(Cand2.Function);
+      auto P1 = S.CUDA().IdentifyCUDAPreference(Caller, Cand1.Function);
+      auto P2 = S.CUDA().IdentifyCUDAPreference(Caller, Cand2.Function);
+      assert(P1 != SemaCUDA::CFP_Never && P2 != SemaCUDA::CFP_Never);
       // The implicit HD function may be a function in a system header which
       // is forced by pragma. In device compilation, if we prefer HD candidates
       // over wrong-sided candidates, overloading resolution may change, which
@@ -10473,8 +10474,8 @@ bool clang::isBetterOverloadCandidate(
       auto EmitThreshold =
           (S.getLangOpts().CUDAIsDevice && IsCallerImplicitHD &&
            (IsCand1ImplicitHD || IsCand2ImplicitHD))
-              ? Sema::CFP_Never
-              : Sema::CFP_WrongSide;
+              ? SemaCUDA::CFP_Never
+              : SemaCUDA::CFP_WrongSide;
       auto Cand1Emittable = P1 > EmitThreshold;
       auto Cand2Emittable = P2 > EmitThreshold;
       if (Cand1Emittable && !Cand2Emittable)
@@ -10758,8 +10759,8 @@ bool clang::isBetterOverloadCandidate(
   // to determine which is better.
   if (S.getLangOpts().CUDA && Cand1.Function && Cand2.Function) {
     FunctionDecl *Caller = S.getCurFunctionDecl(/*AllowLambda=*/true);
-    return S.IdentifyCUDAPreference(Caller, Cand1.Function) >
-           S.IdentifyCUDAPreference(Caller, Cand2.Function);
+    return S.CUDA().IdentifyCUDAPreference(Caller, Cand1.Function) >
+           S.CUDA().IdentifyCUDAPreference(Caller, Cand2.Function);
   }
 
   // General member function overloading is handled above, so this only handles
@@ -10891,15 +10892,15 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
         llvm::any_of(Candidates, [&](OverloadCandidate *Cand) {
           // Check viable function only.
           return Cand->Viable && Cand->Function &&
-                 S.IdentifyCUDAPreference(Caller, Cand->Function) ==
-                     Sema::CFP_SameSide;
+                 S.CUDA().IdentifyCUDAPreference(Caller, Cand->Function) ==
+                     SemaCUDA::CFP_SameSide;
         });
     if (ContainsSameSideCandidate) {
       auto IsWrongSideCandidate = [&](OverloadCandidate *Cand) {
         // Check viable function only to avoid unnecessary data copying/moving.
         return Cand->Viable && Cand->Function &&
-               S.IdentifyCUDAPreference(Caller, Cand->Function) ==
-                   Sema::CFP_WrongSide;
+               S.CUDA().IdentifyCUDAPreference(Caller, Cand->Function) ==
+                   SemaCUDA::CFP_WrongSide;
       };
       llvm::erase_if(Candidates, IsWrongSideCandidate);
     }
@@ -11938,8 +11939,8 @@ static void DiagnoseBadTarget(Sema &S, OverloadCandidate *Cand) {
   FunctionDecl *Caller = S.getCurFunctionDecl(/*AllowLambda=*/true);
   FunctionDecl *Callee = Cand->Function;
 
-  CUDAFunctionTarget CallerTarget = S.IdentifyCUDATarget(Caller),
-                     CalleeTarget = S.IdentifyCUDATarget(Callee);
+  CUDAFunctionTarget CallerTarget = S.CUDA().IdentifyCUDATarget(Caller),
+                     CalleeTarget = S.CUDA().IdentifyCUDATarget(Callee);
 
   std::string FnDesc;
   std::pair<OverloadCandidateKind, OverloadCandidateSelect> FnKindPair =
@@ -11986,7 +11987,7 @@ static void DiagnoseBadTarget(Sema &S, OverloadCandidate *Cand) {
       }
     }
 
-    S.inferCUDATargetForImplicitSpecialMember(ParentClass, CSM, Meth,
+    S.CUDA().inferCUDATargetForImplicitSpecialMember(ParentClass, CSM, Meth,
                                               /* ConstRHS */ ConstRHS,
                                               /* Diagnose */ true);
   }
@@ -13060,7 +13061,7 @@ private:
       if (S.getLangOpts().CUDA) {
         FunctionDecl *Caller = S.getCurFunctionDecl(/*AllowLambda=*/true);
         if (!(Caller && Caller->isImplicit()) &&
-            !S.IsAllowedCUDACall(Caller, FunDecl))
+            !S.CUDA().IsAllowedCUDACall(Caller, FunDecl))
           return false;
       }
       if (FunDecl->isMultiVersion()) {
@@ -13180,7 +13181,7 @@ private:
   }
 
   void EliminateSuboptimalCudaMatches() {
-    S.EraseUnwantedCUDAMatches(S.getCurFunctionDecl(/*AllowLambda=*/true),
+    S.CUDA().EraseUnwantedCUDAMatches(S.getCurFunctionDecl(/*AllowLambda=*/true),
                                Matches);
   }
 
@@ -13335,8 +13336,8 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
   // Return positive for better, negative for worse, 0 for equal preference.
   auto CheckCUDAPreference = [&](FunctionDecl *FD1, FunctionDecl *FD2) {
     FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true);
-    return static_cast<int>(IdentifyCUDAPreference(Caller, FD1)) -
-           static_cast<int>(IdentifyCUDAPreference(Caller, FD2));
+    return static_cast<int>(CUDA().IdentifyCUDAPreference(Caller, FD1)) -
+           static_cast<int>(CUDA().IdentifyCUDAPreference(Caller, FD2));
   };
 
   auto CheckMoreConstrained = [&](FunctionDecl *FD1,

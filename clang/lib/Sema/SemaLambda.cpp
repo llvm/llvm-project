@@ -18,6 +18,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
 #include "clang/Sema/Template.h"
@@ -1393,7 +1394,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // CUDA lambdas get implicit host and device attributes.
   if (getLangOpts().CUDA)
-    CUDASetLambdaAttrs(Method);
+    CUDA().CUDASetLambdaAttrs(Method);
 
   // OpenMP lambdas might get assumumption attributes.
   if (LangOpts.OpenMP)
@@ -2136,7 +2137,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       CaptureInits.push_back(Init.get());
 
       if (LangOpts.CUDA)
-        CUDACheckLambdaCapture(CallOperator, From);
+        CUDA().CUDACheckLambdaCapture(CallOperator, From);
     }
 
     Class->setCaptures(Context, Captures);
