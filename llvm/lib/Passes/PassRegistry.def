@@ -258,6 +258,9 @@ FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis())
 FUNCTION_ANALYSIS("inliner-size-estimator", InlineSizeEstimatorAnalysis())
 FUNCTION_ANALYSIS("lazy-value-info", LazyValueAnalysis())
 FUNCTION_ANALYSIS("loops", LoopAnalysis())
+FUNCTION_ANALYSIS(
+    "machine-function-info",
+    MachineFunctionAnalysis(static_cast<const LLVMTargetMachine *>(TM)))
 FUNCTION_ANALYSIS("memdep", MemoryDependenceAnalysis())
 FUNCTION_ANALYSIS("memoryssa", MemorySSAAnalysis())
 FUNCTION_ANALYSIS("no-op-function", NoOpFunctionAnalysis())

@@ -121,10 +121,10 @@ int llvm::compileModuleWithNewPM(
   registerCodeGenCallback(PIC, LLVMTM);
 
   LoopAnalysisManager LAM;
+  MachineFunctionAnalysisManager MFAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  MachineFunctionAnalysisManager MFAM;
   PassBuilder PB(Target.get(), PipelineTuningOptions(), std::nullopt, &PIC);
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
@@ -155,7 +155,7 @@ int llvm::compileModuleWithNewPM(
     MFPM.addPass(FreeMachineFunctionPass());
     MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
 
-    if (MIR->parseMachineFunctions(*M, MMI))
+    if (MIR->parseMachineFunctions(*M, MAM))
       return 1;
   } else {
     ExitOnErr(LLVMTM.buildCodeGenPipeline(
