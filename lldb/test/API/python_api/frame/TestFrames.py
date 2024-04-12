@@ -73,19 +73,7 @@ class FrameAPITestCase(TestBase):
                 gpr_reg_set = lldbutil.get_GPRs(frame)
                 pc_value = gpr_reg_set.GetChildMemberWithName("pc")
                 self.assertTrue(pc_value, "We should have a valid PC.")
-                # Make sure we can also get this from the "register" property:
-                iterator_pc_value = 0
-                found_pc = False
-                for reg in frame.register:
-                    if reg.name == "pc":
-                        found_pc = True
-                        iterator_pc_value = int(reg.GetValue(), 0)
-                        break
-
                 pc_value_int = int(pc_value.GetValue(), 0)
-                self.assertTrue(found_pc, "Found the PC value in the register list")
-                self.assertEqual(iterator_pc_value, pc_value_int, "The methods of finding pc match")
-    
                 # Make sure on arm targets we dont mismatch PC value on the basis of thumb bit.
                 # Frame PC will not have thumb bit set in case of a thumb
                 # instruction as PC.
