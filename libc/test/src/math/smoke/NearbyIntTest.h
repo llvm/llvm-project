@@ -26,36 +26,34 @@ class NearbyIntTestTemplate : public LIBC_NAMESPACE::testing::Test {
 public:
   typedef T (*NearbyIntFunc)(T);
 
-  void testNaN(NearbyIntFunc func) { ASSERT_FP_EQ(func(aNaN), aNaN); }
+  void testNaN(NearbyIntFunc func) {
+    EXPECT_FP_EQ_ALL_ROUNDING(func(aNaN), aNaN);
+  }
 
   void testInfinities(NearbyIntFunc func) {
-    ASSERT_FP_EQ(func(inf), inf);
-    ASSERT_FP_EQ(func(neg_inf), neg_inf);
+    EXPECT_FP_EQ_ALL_ROUNDING(func(inf), inf);
+    EXPECT_FP_EQ_ALL_ROUNDING(func(neg_inf), neg_inf);
   }
 
   void testZeroes(NearbyIntFunc func) {
-    ASSERT_FP_EQ(func(zero), zero);
-    ASSERT_FP_EQ(func(neg_zero), neg_zero);
+    EXPECT_FP_EQ_ALL_ROUNDING(func(zero), zero);
+    EXPECT_FP_EQ_ALL_ROUNDING(func(neg_zero), neg_zero);
   }
 
   void testIntegers(NearbyIntFunc func) {
-    for (int mode : ROUNDING_MODES) {
-      LIBC_NAMESPACE::fputil::set_round(mode);
+    EXPECT_FP_EQ_ALL_ROUNDING(func(T(1.0)), T(1.0));
+    EXPECT_FP_EQ_ALL_ROUNDING(func(T(-1.0)), T(-1.0));
 
-      ASSERT_FP_EQ(func(T(1.0)), T(1.0));
-      ASSERT_FP_EQ(func(T(-1.0)), T(-1.0));
+    EXPECT_FP_EQ_ALL_ROUNDING(func(T(1234.0)), T(1234.0));
+    EXPECT_FP_EQ_ALL_ROUNDING(func(T(-1234.0)), T(-1234.0));
 
-      ASSERT_FP_EQ(func(T(1234.0)), T(1234.0));
-      ASSERT_FP_EQ(func(T(-1234.0)), T(-1234.0));
+    EXPECT_FP_EQ_ALL_ROUNDING(func(T(10.0)), T(10.0));
+    EXPECT_FP_EQ_ALL_ROUNDING(func(T(-10.0)), T(-10.0));
 
-      ASSERT_FP_EQ(func(T(10.0)), T(10.0));
-      ASSERT_FP_EQ(func(T(-10.0)), T(-10.0));
-
-      FPBits ints_start(T(0));
-      ints_start.set_biased_exponent(FPBits::SIG_LEN + FPBits::EXP_BIAS);
-      T expected = ints_start.get_val();
-      ASSERT_FP_EQ(func(expected), expected);
-    }
+    FPBits ints_start(T(0));
+    ints_start.set_biased_exponent(FPBits::SIG_LEN + FPBits::EXP_BIAS);
+    T expected = ints_start.get_val();
+    EXPECT_FP_EQ_ALL_ROUNDING(func(expected), expected);
   }
 
   void testSubnormalToNearest(NearbyIntFunc func) {
@@ -63,23 +61,20 @@ public:
     ASSERT_FP_EQ(func(-min_denormal), neg_zero);
   }
 
-  void testSubnormalToZero(NearbyIntFunc func) {
-    LIBC_NAMESPACE::fputil::set_round(FE_TOWARDZERO);
-    ASSERT_FP_EQ(func(min_denormal), zero);
-    ASSERT_FP_EQ(func(-min_denormal), neg_zero);
+  void testSubnormalTowardZero(NearbyIntFunc func) {
+    EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(func(min_denormal), zero);
+    EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(func(-min_denormal), neg_zero);
   }
 
   void testSubnormalToPosInf(NearbyIntFunc func) {
-    LIBC_NAMESPACE::fputil::set_round(FE_UPWARD);
-    ASSERT_FP_EQ(func(min_denormal), FPBits::one().get_val());
-    ASSERT_FP_EQ(func(-min_denormal), neg_zero);
+    EXPECT_FP_EQ_ROUNDING_UPWARD(func(min_denormal), FPBits::one().get_val());
+    EXPECT_FP_EQ_ROUNDING_UPWARD(func(-min_denormal), neg_zero);
   }
 
   void testSubnormalToNegInf(NearbyIntFunc func) {
-    LIBC_NAMESPACE::fputil::set_round(FE_DOWNWARD);
-    FPBits negative_one = FPBits::one(Sign::NEG);
-    ASSERT_FP_EQ(func(min_denormal), zero);
-    ASSERT_FP_EQ(func(-min_denormal), negative_one.get_val());
+    T negative_one = FPBits::one(Sign::NEG).get_val();
+    EXPECT_FP_EQ_ROUNDING_DOWNWARD(func(min_denormal), zero);
+    EXPECT_FP_EQ_ROUNDING_DOWNWARD(func(-min_denormal), negative_one);
   }
 };
 
@@ -92,8 +87,8 @@ public:
   TEST_F(LlvmLibcNearbyIntTest, TestSubnormalToNearest) {                      \
     testSubnormalToNearest(&func);                                             \
   }                                                                            \
-  TEST_F(LlvmLibcNearbyIntTest, TestSubnormalToZero) {                         \
-    testSubnormalToZero(&func);                                                \
+  TEST_F(LlvmLibcNearbyIntTest, TestSubnormalTowardZero) {                     \
+    testSubnormalTowardZero(&func);                                            \
   }                                                                            \
   TEST_F(LlvmLibcNearbyIntTest, TestSubnormalToPosInf) {                       \
     testSubnormalToPosInf(&func);                                              \
