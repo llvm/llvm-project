@@ -55,12 +55,49 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     default:
       return false;
     }
+  case OpenACCClauseKind::If:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::EnterData:
+    case OpenACCDirectiveKind::ExitData:
+    case OpenACCDirectiveKind::HostData:
+    case OpenACCDirectiveKind::Init:
+    case OpenACCDirectiveKind::Shutdown:
+    case OpenACCDirectiveKind::Set:
+    case OpenACCDirectiveKind::Update:
+    case OpenACCDirectiveKind::Wait:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
   default:
     // Do nothing so we can go to the 'unimplemented' diagnostic instead.
     return true;
   }
   llvm_unreachable("Invalid clause kind");
 }
+
+bool checkAlreadyHasClauseOfKind(
+    SemaOpenACC &S, ArrayRef<const OpenACCClause *> ExistingClauses,
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  const auto *Itr = llvm::find_if(ExistingClauses, [&](const OpenACCClause *C) {
+    return C->getClauseKind() == Clause.getClauseKind();
+  });
+  if (Itr != ExistingClauses.end()) {
+    S.Diag(Clause.getBeginLoc(), diag::err_acc_duplicate_clause_disallowed)
+        << Clause.getDirectiveKind() << Clause.getClauseKind();
+    S.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    return true;
+  }
+  return false;
+}
+
 } // namespace
 
 SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
@@ -97,21 +134,37 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     // At most one 'default' clause may appear, and it must have a value of
     // either 'none' or 'present'.
     // Second half of the sentence is diagnosed during parsing.
-    auto Itr = llvm::find_if(ExistingClauses, [](const OpenACCClause *C) {
-      return C->getClauseKind() == OpenACCClauseKind::Default;
-    });
-
-    if (Itr != ExistingClauses.end()) {
-      Diag(Clause.getBeginLoc(),
-                   diag::err_acc_duplicate_clause_disallowed)
-          << Clause.getDirectiveKind() << Clause.getClauseKind();
-      Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
       return nullptr;
-    }
 
     return OpenACCDefaultClause::Create(
         getASTContext(), Clause.getDefaultClauseKind(), Clause.getBeginLoc(),
         Clause.getLParenLoc(), Clause.getEndLoc());
+  }
+
+  case OpenACCClauseKind::If: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Parallel &&
+        Clause.getDirectiveKind() != OpenACCDirectiveKind::Serial &&
+        Clause.getDirectiveKind() != OpenACCDirectiveKind::Kernels)
+      break;
+
+    // There is no prose in the standard that says duplicates aren't allowed,
+    // but this diagnostic is present in other compilers, as well as makes
+    // sense.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    // The parser has ensured that we have a proper condition expr, so there
+    // isn't really much to do here.
+
+    // TODO OpenACC: When we implement 'self', this clauses causes us to
+    // 'ignore' the self clause, so we should implement a warning here.
+    return OpenACCIfClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getConditionExpr(), Clause.getEndLoc());
   }
   default:
     break;
