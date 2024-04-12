@@ -275,8 +275,8 @@ def gemm_warp_specialized(a, b, d):
     @NVDSL.mlir_gpu_launch(grid=grid, block=block, smem=smem_size_in_bytes)
     def gemm_warp_specialized_kernel():
         # Init Warpgroups
-        wg_producer = Warpgroup(PRODUCER_PRIMARY_THREAD, PRODUCER_REGISTER_SIZE)
-        wg_consumer = Warpgroup(CONSUMER_PRIMARY_THREAD, CONSUMER_REGISTER_SIZE)
+        wg_producer = Warpgroup(primary_thread=128, register_size=40)
+        wg_consumer = Warpgroup(primary_thread=0, register_size=232)
 
         # Initialize mbarriers and prefetch TMA descriptors
         mbar_group_mma, mbar_group_tma = bootstrap(a_tma, b_tma)
@@ -285,7 +285,7 @@ def gemm_warp_specialized(a, b, d):
         with wg_producer:
             producer_loop(mbar_group_tma, mbar_group_mma, a_tma, b_tma, wg_producer)
 
-        # Producer performs MMA/Tensor Core
+        # Consumer performs MMA/Tensor Core
         with wg_consumer:
             D = consumer_loop(mbar_group_tma, mbar_group_mma, a_tma, b_tma, wg_consumer)
             epilogue(D, d_dev)

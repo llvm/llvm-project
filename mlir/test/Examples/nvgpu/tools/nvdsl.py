@@ -172,13 +172,13 @@ WARP_GROUP_SIZE = 128  # Number of threads in a warpgroup
 
 
 class Warpgroup:
-    def __init__(self, primaryThread, registerSize):
+    def __init__(self, primary_thread, register_size):
         tidx = gpu.thread_id(gpu.Dimension.x)
-        self.primary_thread = primaryThread
-        self.register_size = registerSize
+        self.primary_thread = primary_thread
+        self.register_size = register_size
         self.is_wg_primary = (tidx % WARP_GROUP_SIZE) == 0
         self.wg_id = tidx / WARP_GROUP_SIZE
-        self.is_me = self.wg_id == (primaryThread // WARP_GROUP_SIZE)
+        self.is_me = self.wg_id == (primary_thread // WARP_GROUP_SIZE)
 
     def __enter__(self):
         if_op = scf.IfOp(self.is_me)

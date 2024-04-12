@@ -7,7 +7,7 @@
 #
 # This program demonstrates Hello World
 #
-# This chapter introduces demonstrates:
+# This chapter demonstrates:
 #   1. Build MLIR function with arguments
 #   2. Build MLIR GPU kernel
 #   3. Print from a GPU thread
@@ -20,13 +20,19 @@ from mlir.dialects import gpu
 from tools.nvdsl import *
 
 
-# 1. Build function with arguments
+# 1. The `mlir_func` decorator generates a MLIR `func.func`. 
+#    Everything inside the Python function becomes the body of the `func`. 
+#    The decorator also translates `alpha` to an `index` type.
 @NVDSL.mlir_func
 def main(alpha):
-    # 2. Build GPU kernel
+# 2. The `mlir_gpu_launch` decorator generates a MLIR `gpu.launch`. 
+#    Everything inside the Python function becomes the body of the `gpu.launch`.
+#    This allows for late outlining of the GPU kernel, enabling optimizations 
+#    like constant folding from host to device.
     @NVDSL.mlir_gpu_launch(grid=(1, 1, 1), block=(4, 1, 1))
     def kernel():
         tidx = gpu.thread_id(gpu.Dimension.x)
+        # `+`` operator generates a `arith.addi`
         myValue = alpha + tidx
         # Print from a GPU thread
         gpu.printf("GPU thread %llu has %llu\n", [tidx, myValue])
@@ -34,10 +40,10 @@ def main(alpha):
     # 3. Call the GPU kernel
     kernel()
 
-
-# 4. Pass arguments, JIT compile and run the MLIR function
 alpha = 100
+# 4. The `mlir_func` decorator JIT compiles the IR and executes the MLIR function.
 main(alpha)
+
 
 
 # CHECK: GPU thread 0 has 100

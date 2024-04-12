@@ -7,7 +7,7 @@
 #
 # This program demonstrates 2D Saxpy
 #
-# This chapter introduces demonstrates:
+# This chapter demonstrates:
 #  1. Use MLIR GPU dialect to allocate and copy memory
 #  2. Compute 2D SAXPY kernel
 #  3. Pass numpy arrays to MLIR
