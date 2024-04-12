@@ -201,6 +201,16 @@ private:
   /// The declarations and types to emit.
   std::queue<DeclOrType> DeclTypesToEmit;
 
+  /// The delayed namespace to emit. Only meaningful for reduced BMI.
+  ///
+  /// In reduced BMI, we want to elide the unreachable declarations in
+  /// the global module fragment. However, in ASTWriterDecl, when we see
+  /// a namespace, all the declarations in the namespace would be emitted.
+  /// So the optimization become meaningless. To solve the issue, we
+  /// delay recording all the declarations until we emit all the declarations.
+  /// Then we can safely record the reached declarations only.
+  llvm::SmallVector<NamespaceDecl *, 16> DelayedNamespace;
+
   /// The first ID number we can use for our own declarations.
   serialization::DeclID FirstDeclID = serialization::NUM_PREDEF_DECL_IDS;
 
@@ -529,7 +539,8 @@ private:
   void WriteType(QualType T);
 
   bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
-  bool isLookupResultEntirelyExternal(StoredDeclsList &Result, DeclContext *DC);
+  bool isLookupResultEntirelyExternalOrUnreachable(StoredDeclsList &Result,
+                                                   DeclContext *DC);
 
   void GenerateNameLookupTable(const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
@@ -704,6 +715,15 @@ public:
   /// declaration.
   serialization::DeclID getDeclID(const Decl *D);
 
+  /// Whether or not the declaration got emitted. If not, it wouldn't be
+  /// emitted.
+  ///
+  /// This may only be called after we've done the job to write the
+  /// declarations (marked by DoneWritingDeclsAndTypes).
+  ///
+  /// A declaration may only be omitted in reduced BMI.
+  bool wasDeclEmitted(const Decl *D) const;
+
   unsigned getAnonymousDeclarationNumber(const NamedDecl *D);
 
   /// Add a string to the given record.
@@ -797,6 +817,10 @@ public:
   bool isWritingStdCXXNamedModules() const {
     return WritingModule && WritingModule->isNamedModule();
   }
+
+  bool isGeneratingReducedBMI() const { return GeneratingReducedBMI; }
+
+  bool getDoneWritingDeclsAndTypes() const { return DoneWritingDeclsAndTypes; }
 
 private:
   // ASTDeserializationListener implementation

@@ -698,6 +698,10 @@ enum ASTRecordTypes {
   /// Record code for an unterminated \#pragma clang assume_nonnull begin
   /// recorded in a preamble.
   PP_ASSUME_NONNULL_LOC = 67,
+
+  /// Record code for lexical and visible block for delayed namespace in
+  /// reduced BMI.
+  DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD = 68,
 };
 
 /// Record types used within a source manager block.
