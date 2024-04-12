@@ -35,8 +35,8 @@ public:
   Monomial(int64_t coeff, uint64_t expo)
       : coefficient(apintBitWidth, coeff), exponent(apintBitWidth, expo) {}
 
-  Monomial(APInt coeff, APInt expo)
-      : coefficient(std::move(coeff)), exponent(std::move(expo)) {}
+  Monomial(const APInt &coeff, const APInt &expo)
+      : coefficient(coeff), exponent(expo) {}
 
   Monomial() : coefficient(apintBitWidth, 0), exponent(apintBitWidth, 0) {}
 
