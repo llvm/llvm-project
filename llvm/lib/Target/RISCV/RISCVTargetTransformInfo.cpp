@@ -1375,44 +1375,12 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                           LT.second, CostKind);
   }
 
-  if ((Opcode == Instruction::ICmp) && ValTy->isVectorTy()) {
-    unsigned RVVOp;
-    switch (VecPred) {
-    case CmpInst::ICMP_EQ:
-      RVVOp = RISCV::VMSEQ_VV;
-      break;
-    case CmpInst::ICMP_NE:
-      RVVOp = RISCV::VMSNE_VV;
-      break;
-    case CmpInst::ICMP_UGT:
-      RVVOp = RISCV::VMSLTU_VV;
-      break;
-    case CmpInst::ICMP_ULT:
-      RVVOp = RISCV::VMSLTU_VV;
-      break;
-    case CmpInst::ICMP_ULE:
-      RVVOp = RISCV::VMSLEU_VV;
-      break;
-    case CmpInst::ICMP_SGT:
-      RVVOp = RISCV::VMSLT_VV;
-      break;
-    case CmpInst::ICMP_UGE:
-      RVVOp = RISCV::VMSLEU_VV;
-      break;
-    case CmpInst::ICMP_SGE:
-      RVVOp = RISCV::VMSLE_VV;
-      break;
-    case CmpInst::ICMP_SLT:
-      RVVOp = RISCV::VMSLT_VV;
-      break;
-    case CmpInst::ICMP_SLE:
-      RVVOp = RISCV::VMSLE_VV;
-      break;
-    default:
-      return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                       I);
-    }
-    return LT.first * getRISCVInstructionCost(RVVOp, LT.second, CostKind);
+  if ((Opcode == Instruction::ICmp) && ValTy->isVectorTy() &&
+      CmpInst::isIntPredicate(VecPred)) {
+    // Use VMSLT_VV to represent VMSEQ, VMSNE, VMSLTU, VMSLEU, VMSLT, VMSLE
+    // provided they incur the same cost across all implementations
+    return LT.first *
+           getRISCVInstructionCost(RISCV::VMSLT_VV, LT.second, CostKind);
   }
 
   if ((Opcode == Instruction::FCmp) && ValTy->isVectorTy()) {
