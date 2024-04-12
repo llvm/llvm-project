@@ -175,6 +175,14 @@ bool dirExists(const std::string &path) {
     return info.st_mode & S_IFDIR;
 }
 
+bool fileExists(const std::string &path) {
+    struct stat info;
+
+    if (stat(path.c_str(), &info) != 0)
+        return false;
+    return info.st_mode & S_IFREG;
+}
+
 /*****************************************************************
  * 以下是没用到的函数
  *****************************************************************/

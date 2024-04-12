@@ -170,4 +170,9 @@ bool allFieldsMatch(const json &x, const json &y,
  */
 bool dirExists(const std::string &path);
 
+/**
+ * 判断文件是否存在（并且只是普通文件，不是链接、目录等）
+ */
+bool fileExists(const std::string &path);
+
 #endif
