@@ -27,8 +27,9 @@ Polynomial Polynomial::fromMonomials(ArrayRef<Monomial> monomials) {
 
 Polynomial Polynomial::fromCoefficients(ArrayRef<int64_t> coeffs) {
   llvm::SmallVector<Monomial> monomials;
-  monomials.reserve(coeffs.size());
-  for (size_t i = 0; i < coeffs.size(); i++) {
+  auto size = coeffs.size();
+  monomials.reserve(size);
+  for (size_t i = 0; i < size; i++) {
     monomials.emplace_back(coeffs[i], i);
   }
   return Polynomial::fromMonomials(monomials);
