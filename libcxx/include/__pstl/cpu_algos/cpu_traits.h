@@ -64,6 +64,7 @@ namespace __pstl {
 //
 //   constexpr size_t __lane_size;
 //      Size of SIMD lanes.
+//      TODO: Merge this with __native_vector_size from __algorithm/simd_utils.h
 //
 //
 // Exception handling
