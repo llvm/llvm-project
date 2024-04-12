@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/fenv_t.h"
 #include "src/fenv/feholdexcept.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
-#include <fenv.h>
 
 namespace LIBC_NAMESPACE {
 

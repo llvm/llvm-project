@@ -118,6 +118,16 @@ libc_support_library(
     hdrs = ["hdr/fenv_macros.h"],
 )
 
+libc_support_library(
+    name = "hdr_fenv_t",
+    hdrs = ["hdr/fenv_t.h"],
+)
+
+libc_support_library(
+    name = "hdr_fexcept_t",
+    hdrs = ["hdr/fexcept_t.h"],
+)
+
 ############################### Support libraries ##############################
 
 libc_support_library(
@@ -749,6 +759,7 @@ libc_support_library(
         ":errno",
         ":hdr_fenv_macros",
         ":hdr_math_macros",
+	":hdr_fenv_t"
     ],
 )
 
@@ -1224,6 +1235,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_fputil_fenv_impl",
+	":hdr_fexcept_t"
     ],
 )
 
@@ -1234,6 +1246,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_fputil_fenv_impl",
+	":hdr_fexcept_t",
     ],
 )
 
