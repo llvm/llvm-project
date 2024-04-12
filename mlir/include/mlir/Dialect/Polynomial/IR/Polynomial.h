@@ -101,7 +101,7 @@ public:
 
   unsigned getDegree() const;
 
-  friend ::llvm::hash_code hash_value(Polynomial arg);
+  friend ::llvm::hash_code hash_value(const Polynomial &arg);
 
 private:
   // The monomial terms for this polynomial.
@@ -109,7 +109,7 @@ private:
 };
 
 // Make Polynomial hashable.
-inline ::llvm::hash_code hash_value(Polynomial arg) {
+inline ::llvm::hash_code hash_value(const Polynomial &arg) {
   return ::llvm::hash_combine_range(arg.terms.begin(), arg.terms.end());
 }
 
