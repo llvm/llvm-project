@@ -104,14 +104,7 @@ static constexpr llvm::StringRef getHostAssocAttrName() {
   return "fir.host_assoc";
 }
 
-/// Attribute to mark an internal procedure.
-static constexpr llvm::StringRef getInternalProcedureAttrName() {
-  return "fir.internal_proc";
-}
-
-/// Attribute to link an internal procedure to its host procedure symbol when
-/// the internal procedure mangled name does not allow retrieving the host
-/// func.func because the host is BIND(C).
+/// Attribute to link an internal procedure to its host procedure symbol.
 static constexpr llvm::StringRef getHostSymbolAttrName() {
   return "fir.host_symbol";
 }
@@ -129,8 +122,8 @@ bool hasHostAssociationArgument(mlir::func::FuncOp func);
 /// Is the function, \p func an internal procedure ?
 /// Some internal procedures may have access to saved host procedure
 /// variables even when they do not have a tuple argument.
-inline bool isInternalPorcedure(mlir::func::FuncOp func) {
-  return func->hasAttr(fir::getInternalProcedureAttrName());
+inline bool isInternalProcedure(mlir::func::FuncOp func) {
+  return func->hasAttr(fir::getHostSymbolAttrName());
 }
 
 /// Tell if \p value is:

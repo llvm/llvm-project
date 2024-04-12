@@ -575,13 +575,6 @@ mlir::Value Fortran::lower::CalleeInterface::getHostAssociatedTuple() const {
   return converter.hostAssocTupleValue();
 }
 
-void Fortran::lower::CalleeInterface::setFuncAttrs(
-    mlir::func::FuncOp func) const {
-  if (funit.parentHasHostAssoc())
-    func->setAttr(fir::getInternalProcedureAttrName(),
-                  mlir::UnitAttr::get(func->getContext()));
-}
-
 //===----------------------------------------------------------------------===//
 // CallInterface implementation: this part is common to both caller and callee.
 //===----------------------------------------------------------------------===//
@@ -595,7 +588,7 @@ static void addSymbolAttribute(mlir::func::FuncOp func,
   // allow retrieving the host bind(C) name, and therefore func.func symbol.
   // Preserve it as an attribute so that this can be later retrieved.
   if (Fortran::semantics::ClassifyProcedure(ultimate) ==
-      Fortran::semantics::ProcedureDefinitionClass::Internal)
+      Fortran::semantics::ProcedureDefinitionClass::Internal) {
     if (ultimate.owner().kind() ==
         Fortran::semantics::Scope::Kind::Subprogram) {
       if (const Fortran::semantics::Symbol *hostProcedure =
@@ -615,6 +608,7 @@ static void addSymbolAttribute(mlir::func::FuncOp func,
                         mlir::StringAttr::get(
                             &mlirContext, fir::NameUniquer::doProgramEntry())));
     }
+  }
 
   // Only add this on bind(C) functions for which the symbol is not reflected in
   // the current context.
@@ -713,7 +707,6 @@ void Fortran::lower::CallInterface<T>::declare() {
       for (const auto &placeHolder : llvm::enumerate(inputs))
         if (!placeHolder.value().attributes.empty())
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
-      side().setFuncAttrs(func);
 
       setCUDAAttributes(func, side().getProcedureSymbol(), characteristic);
     }
@@ -1617,10 +1610,6 @@ public:
   getCallDescription() const {
     return proc;
   }
-
-  /// Set internal procedure attribute on MLIR function. Internal procedure
-  /// are defined in the current file and will not go through SignatureBuilder.
-  void setFuncAttrs(mlir::func::FuncOp) const {}
 
   /// This is not the description of an indirect call.
   static constexpr bool isIndirectCall() { return false; }
