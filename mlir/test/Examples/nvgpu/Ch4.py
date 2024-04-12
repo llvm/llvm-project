@@ -17,7 +17,7 @@
 #
 # Loops illustration:
 #
-#  for s in range(NUM_STAGES):
+#  for s in range(num_stages):
 #    TMA_128x64_64x128...
 #  for ti in range(M//128):  # -> blockIdx.x
 #   for tj in range(N//128): # -> blockIdx.y
@@ -74,6 +74,7 @@ def tma_load(
     b_tma: TMA,
     slot,
     stage,
+    num_stages,
     p=None,
 ):
     """
@@ -88,7 +89,7 @@ def tma_load(
     dimX, dimY = partition_shape()
 
     tidx = gpu.thread_id(gpu.Dimension.x)
-    begin_b = NUM_STAGES * get_type_size(a_tma.tma_memref)
+    begin_b = num_stages * get_type_size(a_tma.tma_memref)
     size_tma_a = get_type_size(a_tma.tma_memref)
     size_tma_b = get_type_size(b_tma.tma_memref)
     ta_count = size_tma_a + (size_tma_b * 2)
@@ -113,15 +114,15 @@ def tma_load(
     b_tma.load(b2, mbar_group[slot], coords=[dimY + 64, c1], predicate=p)
 
 
-def bootstrap(a_tma: TMA, b_tma: TMA):
+def initialize(a_tma: TMA, b_tma: TMA, num_stages):
     """
     Initialize mbarriers and prefetch TMA descriptors.
     """
     tidx = gpu.thread_id(gpu.Dimension.x)
-    mbar_group = Mbarriers(number_of_barriers=NUM_STAGES)
+    mbar_group = Mbarriers(number_of_barriers=num_stages)
     isThread0 = tidx == const(0)
     with ir.InsertionPoint(scf.IfOp(isThread0).then_block):
-        for i in scf.for_(0, NUM_STAGES, 1):
+        for i in scf.for_(0, num_stages, 1):
             mbar_group[i].init(1)
             scf.yield_([])
         a_tma.prefetch()
@@ -131,7 +132,7 @@ def bootstrap(a_tma: TMA, b_tma: TMA):
     return mbar_group
 
 
-def prologue(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
+def prologue(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA, num_stages):
     """
     Prologue of the GEMM kernel. It loads 2 input matrices for each stage in loop like below:
 
@@ -139,13 +140,13 @@ def prologue(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
         tma_load x, y, stage
 
     """
-    ns = NUM_STAGES if NUM_STAGES == 1 else NUM_STAGES - 1
+    ns = num_stages if num_stages == 1 else num_stages - 1
     for iv in scf.for_(0, ns, 1):
-        tma_load(mbar_group, a_tma, b_tma, iv, iv)
+        tma_load(mbar_group, a_tma, b_tma, iv, iv, num_stages)
         scf.yield_([])
 
 
-def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
+def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA, num_stages):
     """
     Main loop of the Multistage GEMM kernel. It iterates through
     stages and performs matrix multiplication, loading data by TMA to shared memory. It like following
@@ -163,10 +164,10 @@ def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
             tma_load(x, y, nextSlot, nextStage)
 
     """
-    ns = NUM_STAGES if NUM_STAGES == 1 else NUM_STAGES - 1
+    ns = num_stages if num_stages == 1 else num_stages - 1
 
     tidx = gpu.thread_id(gpu.Dimension.x)
-    begin_b = NUM_STAGES * get_type_size(a_tma.tma_memref)
+    begin_b = num_stages * get_type_size(a_tma.tma_memref)
 
     size_a = TILE_M * TILE_K * get_type_size(T.f16())
 
@@ -182,7 +183,7 @@ def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
     with ir.InsertionPoint(for_op.body):
         phase = for_op.inner_iter_args[1]
         iv = for_op.induction_variable
-        stage = iv % NUM_STAGES
+        stage = iv % num_stages
 
         # Wait for current stage
         mbar_group[stage].try_wait(phase=phase)
@@ -202,18 +203,18 @@ def mainloop(mbar_group: Mbarriers, a_tma: TMA, b_tma: TMA):
         D += A @ B
 
         # Wait Tensor Core for single stage
-        if NUM_STAGES == 1:
+        if num_stages == 1:
             nvvm.WgmmaWaitGroupSyncOp(0)
 
         # Load next stage
         pred = ((iv + ns) < const(K // TILE_K)) & (tidx == 0)
         nextStage = iv + ns
-        nextSlot = nextStage % NUM_STAGES
-        tma_load(mbar_group, a_tma, b_tma, nextSlot, nextStage, pred)
+        nextSlot = nextStage % num_stages
+        tma_load(mbar_group, a_tma, b_tma, nextSlot, nextStage, num_stages, pred)
 
         # Switch phase parity for the mbarrier
         newPhase = arith.select(
-            stage == (NUM_STAGES - 1),
+            stage == (num_stages - 1),
             (phase ^ const(True, ty=T.bool())),
             phase,
         )
@@ -250,9 +251,12 @@ def epilogue(D: WGMMAMatrix, d_dev):
         memref.store(val, d_gmem, [i, tidx])
         scf.yield_([])
 
-
+# The decorator generates 
+#   a -> memref<MxKxf16> 
+#   b -> memref<NxKf16> 
+#   d -> memref<MxNxf32> 
 @NVDSL.mlir_func
-def gemm_multistage(a, b, d):
+def gemm_multistage(a, b, d, num_stages):
     token_ty = ir.Type.parse("!gpu.async.token")
     t1 = gpu.wait(token_ty, [])
     a_dev, t2 = gpu.alloc(a.type, token_ty, [t1], [], [])
@@ -273,18 +277,18 @@ def gemm_multistage(a, b, d):
 
     size_a = get_type_size(a.type.element_type) * TILE_M * TILE_K
     size_b = get_type_size(b.type.element_type) * TILE_N * TILE_K
-    smem_size_in_bytes = (size_a + size_b) * NUM_STAGES
+    smem_size_in_bytes = (size_a + size_b) * num_stages
 
     @NVDSL.mlir_gpu_launch(grid=grid, block=block, smem=smem_size_in_bytes)
     def gemm_multistage_kernel():
         # Initialize mbarriers and prefetch TMA descriptors
-        mbar_group = bootstrap(a_tma, b_tma)
+        mbar_group = initialize(a_tma, b_tma, num_stages)
 
         # Fill the pipeline stages
-        prologue(mbar_group, a_tma, b_tma)
+        prologue(mbar_group, a_tma, b_tma, num_stages)
 
         # Main loop
-        D = mainloop(mbar_group, a_tma, b_tma)
+        D = mainloop(mbar_group, a_tma, b_tma, num_stages)
 
         # Store registers to global memory
         epilogue(D, d_dev)
@@ -296,7 +300,6 @@ def gemm_multistage(a, b, d):
 
 
 # Python pass arguments to MLIR
-NUM_STAGES = 7
 N = 256
 M = 512
 K = 1024
@@ -307,7 +310,7 @@ a = np.random.randn(M, K).astype(np.float16)
 b = np.random.randn(K, N).astype(np.float16)
 d = np.zeros((M, N), np.float32)
 
-gemm_multistage(a, b, d)
+gemm_multistage(a, b, d, num_stages=7)
 
 
 # Verify MLIR with reference computation

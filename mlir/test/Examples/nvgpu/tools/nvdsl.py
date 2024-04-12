@@ -173,6 +173,7 @@ WARP_GROUP_SIZE = 128  # Number of threads in a warpgroup
 
 class Warpgroup:
     def __init__(self, primary_thread, register_size):
+        assert (primary_thread % WARP_GROUP_SIZE) == 0
         tidx = gpu.thread_id(gpu.Dimension.x)
         self.primary_thread = primary_thread
         self.register_size = register_size
@@ -280,7 +281,6 @@ def get_dynamic_shared_memory(shape=None, ty=None, offset: int = 0):
     )
 
 
-@staticmethod
 def get_mlir_ty(arg):
     def get_mlir_ty_from_np(dtype):
         if dtype == np.float16:
@@ -433,11 +433,11 @@ class NVDSL:
                         result = funcBody(*fargs, **kwargs)
                         func.ReturnOp([])
 
-                # Verify the module
-                module.operation.verify()
-
                 # Save IR in a file
-                # saveIR(module)
+                saveIR(module)
+
+                # Verify the module
+                # module.operation.verify()
 
                 # Compile and JIT MLIR module
                 options = f"cubin-chip=sm_90a cubin-features=+ptx80 opt-level=3"

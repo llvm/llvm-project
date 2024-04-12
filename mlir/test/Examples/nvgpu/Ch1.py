@@ -5,13 +5,11 @@
 #  Chapter 1 : 2D Saxpy
 # ===----------------------------------------------------------------------===//
 #
-# This program demonstrates 2D Saxpy
-#
-# This chapter demonstrates:
-#  1. Use MLIR GPU dialect to allocate and copy memory
-#  2. Compute 2D SAXPY kernel
-#  3. Pass numpy arrays to MLIR
-#  4. Verify MLIR with reference computation
+# This program demonstrates 2D Saxpy:
+#  1. Use GPU dialect to allocate and copy memory host to gpu and vice versa
+#  2. Computes 2D SAXPY kernel using operator overloading
+#  3. Pass numpy arrays to MLIR as memref arguments
+#  4. Verify MLIR program with reference computation in python
 #
 # ===----------------------------------------------------------------------===//
 

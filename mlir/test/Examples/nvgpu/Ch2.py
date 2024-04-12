@@ -9,9 +9,11 @@
 # but it loads data using TMA (Tensor Memory Accelerator)
 #
 # This chapter introduces demonstrates:
-#  1. Create and initialize asynchronous transactional barrier (mbarrier)
-#  2. Execute Tensor Memory Accelerator (TMA) Load
-#  3. Wait for completion of TMA load with mbarrier
+#  1. Computes 2D SAXPY in the same way as Ch1.py but loads data using TMA
+#  2. Create and initialize 1 asynchronous transactional barrier (mbarrier)
+#  3. Thread-0 Load request data load from TMA for each thread block
+#  4. Each thread block loads <1x32xf32> for x and y.
+#  5. Wait for completion of TMA load with mbarrier
 #
 # ===----------------------------------------------------------------------===//
 

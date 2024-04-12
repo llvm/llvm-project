@@ -5,7 +5,7 @@
 #  Chapter 5 : Warp Specialized GEMM with Tensor Core
 # ===----------------------------------------------------------------------===//
 #
-# This program exemplifies a GEMM operation for `f32+=f16*f16`, utilizing the
+# This program demonstrates a GEMM operation for `f32+=f16*f16`, utilizing the
 # Warp Specialized method with a tile size of 128x128x64. The code completely
 # parallelizes the two outermost loops into thread blocks. It launches two Warp
 # Groups (256 threads in total): one for the producer and the other for the consumer.
@@ -48,20 +48,19 @@ from tools.nvdsl import *
 import numpy as np
 
 
-PRODUCER_PRIMARY_THREAD = 128  # Producer primary thread
-CONSUMER_PRIMARY_THREAD = 0  # Consumer primary thread
-PRODUCER_REGISTER_SIZE = 40  # Producer primary thread
-CONSUMER_REGISTER_SIZE = 232  # Consumer primary thread
-
-
 def partition_shape():
     """
     Calculate the partition shape based on the block IDs.
 
-    It partitions the shape like below:
-    for(.. i < M ...)   --> blockIdx.x
-     for(.. j < N ...)  --> blockIdx.y
-      for(.. k < K ...)
+    It parallelizes the two outermost loops into thread blocks.
+    for ti in range(M//128):    # -> blockIdx.x
+     for tj in range(N//128):   # -> blockIdx.y
+      D = 0
+      for tk in range(K//64):
+       for i in range(128):
+        for j in range(128):
+         for k in range(64):
+           FMA
 
     Returns:
         dimX (int): Dimension along the x-axis.
@@ -80,6 +79,7 @@ def tma_load(
     b_tma: TMA,
     slot,
     stage,
+    num_stages,
     p=None,
 ):
     """
@@ -94,7 +94,7 @@ def tma_load(
     dimX, dimY = partition_shape()
 
     tidx = gpu.thread_id(gpu.Dimension.x)
-    begin_b = NUM_STAGES * get_type_size(a_tma.tma_memref)
+    begin_b = num_stages * get_type_size(a_tma.tma_memref)
     size_tma_a = get_type_size(a_tma.tma_memref)
     size_tma_b = get_type_size(b_tma.tma_memref)
     ta_count = size_tma_a + (size_tma_b * 2)
@@ -116,16 +116,16 @@ def tma_load(
     b_tma.load(b2, mbar_group[slot], coords=[dimY + 64, c1], predicate=p)
 
 
-def bootstrap(a_tma: TMA, b_tma: TMA):
+def initialize(a_tma: TMA, b_tma: TMA, num_stages):
     """
     Initialize mbarriers and prefetch TMA descriptors.
     """
     tidx = gpu.thread_id(gpu.Dimension.x)
-    mbar_group_tma = Mbarriers(number_of_barriers=NUM_STAGES)
-    mbar_group_mma = Mbarriers(number_of_barriers=NUM_STAGES)
+    mbar_group_tma = Mbarriers(number_of_barriers=num_stages)
+    mbar_group_mma = Mbarriers(number_of_barriers=num_stages)
     isThread0 = tidx == const(0)
     with ir.InsertionPoint(scf.IfOp(isThread0).then_block):
-        for i in scf.for_(0, NUM_STAGES, 1):
+        for i in scf.for_(0, num_stages, 1):
             mbar_group_tma[i].init(1)
             mbar_group_mma[i].init(1)
             scf.yield_([])
@@ -136,8 +136,8 @@ def bootstrap(a_tma: TMA, b_tma: TMA):
     return mbar_group_tma, mbar_group_mma
 
 
-def switch_phase(stage, phase):
-    p = stage == (NUM_STAGES - 1)
+def switch_phase(stage, phase, num_stages):
+    p = stage == (num_stages - 1)
     phase = arith.select(
         p,
         (phase ^ const(True, ty=T.bool())),
@@ -152,17 +152,18 @@ def producer_loop(
     a_tma: TMA,
     b_tma: TMA,
     wg_me: Warpgroup,
+    num_stages
 ):
     phase = const(True, ty=T.bool())
 
     for iv, phase in scf.for_(0, (K // TILE_K), 1, [phase]):
-        stage = iv % NUM_STAGES
+        stage = iv % num_stages
         # Wait MMA to be done
         mbar_group_mma[stage].try_wait(phase)
         # New phase for mbarrier
-        phase = switch_phase(stage, phase)
+        phase = switch_phase(stage, phase, num_stages)
         # TMA Load
-        tma_load(mbar_group_tma, a_tma, b_tma, stage, iv, wg_me.is_wg_primary)
+        tma_load(mbar_group_tma, a_tma, b_tma, stage, iv, num_stages, wg_me.is_wg_primary)
         scf.yield_([phase])
 
 
@@ -172,8 +173,9 @@ def consumer_loop(
     a_tma: TMA,
     b_tma: TMA,
     wg_me: Warpgroup,
+    num_stages
 ):
-    begin_b = NUM_STAGES * get_type_size(a_tma.tma_memref)
+    begin_b = num_stages * get_type_size(a_tma.tma_memref)
 
     size_a = TILE_M * TILE_K * get_type_size(T.f16())
 
@@ -186,7 +188,7 @@ def consumer_loop(
     with ir.InsertionPoint(for_op.body):
         phase = for_op.inner_iter_args[1]
         iv = for_op.induction_variable
-        stage = iv % NUM_STAGES
+        stage = iv % num_stages
 
         # Wait TMA for current stage
         mbar_group_tma[stage].try_wait(phase)
@@ -208,11 +210,11 @@ def consumer_loop(
         # MMA Barrier Arrive
         p_arrive = (iv > 0) & wg_me.is_wg_primary
         with ir.InsertionPoint(scf.IfOp(p_arrive).then_block):
-            barId = arith.select((stage == 0), const(NUM_STAGES - 1), (stage - 1))
+            barId = arith.select((stage == 0), const(num_stages - 1), (stage - 1))
             mbar_group_mma[barId].arrive()
             scf.yield_([])
 
-        phase = switch_phase(stage, phase)
+        phase = switch_phase(stage, phase, num_stages)
         scf.yield_([D.acc_op, phase])
 
     nvvm.WgmmaWaitGroupSyncOp(0)
@@ -249,7 +251,7 @@ def epilogue(D: WGMMAMatrix, d_dev):
 
 
 @NVDSL.mlir_func
-def gemm_warp_specialized(a, b, d):
+def gemm_warp_specialized(a, b, d, num_stages):
     token_ty = ir.Type.parse("!gpu.async.token")
     t1 = gpu.wait(token_ty, [])
     a_dev, t2 = gpu.alloc(a.type, token_ty, [t1], [], [])
@@ -270,7 +272,7 @@ def gemm_warp_specialized(a, b, d):
 
     size_a = get_type_size(a.type.element_type) * TILE_M * TILE_K
     size_b = get_type_size(b.type.element_type) * TILE_N * TILE_K
-    smem_size_in_bytes = (size_a + size_b) * NUM_STAGES
+    smem_size_in_bytes = (size_a + size_b) * num_stages
 
     @NVDSL.mlir_gpu_launch(grid=grid, block=block, smem=smem_size_in_bytes)
     def gemm_warp_specialized_kernel():
@@ -279,15 +281,15 @@ def gemm_warp_specialized(a, b, d):
         wg_consumer = Warpgroup(primary_thread=0, register_size=232)
 
         # Initialize mbarriers and prefetch TMA descriptors
-        mbar_group_mma, mbar_group_tma = bootstrap(a_tma, b_tma)
+        mbar_group_mma, mbar_group_tma = initialize(a_tma, b_tma, num_stages)
 
         # Producer performs TMA
         with wg_producer:
-            producer_loop(mbar_group_tma, mbar_group_mma, a_tma, b_tma, wg_producer)
+            producer_loop(mbar_group_tma, mbar_group_mma, a_tma, b_tma, wg_producer, num_stages)
 
         # Consumer performs MMA/Tensor Core
         with wg_consumer:
-            D = consumer_loop(mbar_group_tma, mbar_group_mma, a_tma, b_tma, wg_consumer)
+            D = consumer_loop(mbar_group_tma, mbar_group_mma, a_tma, b_tma, wg_consumer, num_stages)
             epilogue(D, d_dev)
 
     gemm_warp_specialized_kernel()
@@ -297,7 +299,6 @@ def gemm_warp_specialized(a, b, d):
 
 
 # Python pass arguments to MLIR
-NUM_STAGES = 7
 N = 256
 M = 512
 K = 1024
@@ -308,7 +309,7 @@ a = np.random.randn(M, K).astype(np.float16)
 b = np.random.randn(K, N).astype(np.float16)
 d = np.zeros((M, N), np.float32)
 
-gemm_warp_specialized(a, b, d)
+gemm_warp_specialized(a, b, d, num_stages = 7)
 
 
 # Verify MLIR with reference computation

@@ -5,9 +5,7 @@
 #  Chapter 0 : Hello World
 # ===----------------------------------------------------------------------===//
 #
-# This program demonstrates Hello World
-#
-# This chapter demonstrates:
+# This program demonstrates Hello World:
 #   1. Build MLIR function with arguments
 #   2. Build MLIR GPU kernel
 #   3. Print from a GPU thread
