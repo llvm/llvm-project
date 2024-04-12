@@ -405,6 +405,13 @@ if (NOT UNIX)
     PRIVATE version)
 endif()
 
+target_link_libraries(amd_comgr
+  PRIVATE
+    pthread
+    rt
+    c
+    ${CMAKE_DL_LIBS})
+
 include(CTest)
 if(BUILD_TESTING)
   add_custom_target(check-comgr COMMAND ${CMAKE_CTEST_COMMAND} DEPENDS amd_comgr)
