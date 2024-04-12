@@ -342,20 +342,6 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
     StringRef Val = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
   }
-
-  // Check ROCm path if specified
-  if (!Args.getLastArg(options::OPT_rocm_path_EQ))
-    return;
-
-  // If ROCm path is specified, check correctness of the path
-  const ToolChain &TC = getToolChain();
-  std::string HIPVersion;
-  llvm::raw_string_ostream HIPInfo(HIPVersion);
-  TC.printVerboseInfo(HIPInfo);
-  llvm::StringRef HIPInfoStrRef(HIPInfo.str());
-  if (!HIPInfoStrRef.contains("Found HIP installation") &&
-      !Args.getLastArg(options::OPT_nogpulib))
-    TC.getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
 }
 
 void Flang::addTargetOptions(const ArgList &Args,
