@@ -262,7 +262,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return this->discard(SubExpr);
 
     std::optional<PrimType> FromT = classify(SubExpr->getType());
-    std::optional<PrimType> ToT = classifyPrim(CE->getType());
+    std::optional<PrimType> ToT = classify(CE->getType());
     if (!FromT || !ToT)
       return false;
 
