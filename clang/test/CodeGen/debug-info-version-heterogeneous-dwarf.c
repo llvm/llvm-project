@@ -4,5 +4,5 @@ int main (void) {
   return 0;
 }
 
-// CHECK:  i32 2, !"Debug Info Version", i32 4}
+// CHECK:  i32 4, !"Debug Info Version", i32 4}
 // NO_DEBUG-NOT: !"Debug Info Version"
