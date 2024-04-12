@@ -81,8 +81,20 @@ namespace UsesThis {
   struct A {
     int x;
 
-    template<typename U>
+    static inline int y;
+
+    template<typename U = void>
     static void f();
+
+    template<typename U = void>
+    void g();
+
+    template<typename U>
+    static auto h() -> A*;
+
+    void i();
+
+    static void j();
 
     template<>
     void f<int>() {
@@ -91,10 +103,26 @@ namespace UsesThis {
       A::x; // expected-error {{invalid use of member 'x' in static member function}}
       +x; // expected-error {{invalid use of member 'x' in static member function}}
       +A::x; // expected-error {{invalid use of member 'x' in static member function}}
+      &x; // expected-error {{invalid use of member 'x' in static member function}}
+      &A::x;
+      this->y; // expected-error {{invalid use of 'this' outside of a non-static member function}}
+      y;
+      A::y;
+      +y;
+      +A::y;
+      &y;
+      &A::y;
+      f();
+      f<void>();
+      g(); // expected-error {{call to non-static member function without an object argument}}
+      g<void>(); // expected-error {{call to non-static member function without an object argument}}
+      i(); // expected-error {{call to non-static member function without an object argument}}
+      j();
+      &i; // expected-error 2{{must explicitly qualify name of member function when taking its address}}
+      &j;
+      &A::i;
+      &A::j;
     }
-
-    template<typename U>
-    void g();
 
     template<>
     void g<int>() {
@@ -103,14 +131,48 @@ namespace UsesThis {
       A::x;
       +x;
       +A::x;
+      &x;
+      &A::x;
+      this->y;
+      y;
+      A::y;
+      +y;
+      +A::y;
+      &y;
+      &A::y;
+      f();
+      f<void>();
+      g();
+      g<void>();
+      i();
+      j();
+      &i; // expected-error 2{{must explicitly qualify name of member function when taking its address}}
+      &j;
+      &A::i;
+      &A::j;
     }
-
-    template<typename U>
-    static auto h() -> A*;
 
     template<>
     auto h<int>() -> decltype(this); // expected-error {{'this' cannot be used in a static member function declaration}}
   };
 
-  template struct A<int>; // expected-note 2{{in instantiation of}}
+  template struct A<int>; // expected-note 3{{in instantiation of}}
+
+  template <typename T>
+  struct Foo {
+    template <typename X>
+    int bar(X x) {
+      return 0;
+    }
+
+    template <>
+    int bar(int x) {
+      return bar(5.0); // ok
+    }
+  };
+
+  void call() {
+    Foo<double> f;
+    f.bar(1);
+  }
 }

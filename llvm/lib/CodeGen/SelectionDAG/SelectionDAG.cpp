@@ -3397,6 +3397,18 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = KnownBits::mulhs(Known, Known2);
     break;
   }
+  case ISD::ABDU: {
+    Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known = KnownBits::abdu(Known, Known2);
+    break;
+  }
+  case ISD::ABDS: {
+    Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known = KnownBits::abds(Known, Known2);
+    break;
+  }
   case ISD::UMUL_LOHI: {
     assert((Op.getResNo() == 0 || Op.getResNo() == 1) && "Unknown result");
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
@@ -4308,7 +4320,7 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
   //    x & -x -> non-zero pow2
   // so if we find the pattern return whether we know `x` is non-zero.
   SDValue X;
-  if (sd_match(Val, m_And(m_Value(X), m_Sub(m_Zero(), m_Deferred(X)))))
+  if (sd_match(Val, m_And(m_Value(X), m_Neg(m_Deferred(X)))))
     return isKnownNeverZero(X, Depth);
 
   if (Val.getOpcode() == ISD::ZERO_EXTEND)
