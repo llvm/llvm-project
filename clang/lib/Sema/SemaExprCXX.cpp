@@ -1488,7 +1488,7 @@ void Sema::MarkThisReferenced(CXXThisExpr *This) {
         if (MD->getType().isNull())
           return false;
 
-        const auto *Ty = cast<FunctionProtoType>(MD->getType());
+        const auto *Ty = MD->getType()->getAs<FunctionProtoType>();
         return Ty && MD->isExplicitObjectMemberFunction() &&
                Ty->getParamType(0)->isDependentType();
       }
