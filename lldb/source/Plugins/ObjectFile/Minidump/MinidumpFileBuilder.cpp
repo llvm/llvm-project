@@ -655,9 +655,10 @@ MinidumpFileBuilder::AddMemoryList(const lldb::ProcessSP &process_sp,
     const addr_t addr = core_range.range.start();
     const addr_t size = core_range.range.size();
     auto data_up = std::make_unique<DataBufferHeap>(size, 0);
+    Status read_error;
     const size_t bytes_read =
-        process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
-    if (bytes_read == 0)
+        process_sp->ReadMemory(addr, data_up->GetBytes(), size, read_error);
+    if (read_error.Fail() || bytes_read == 0)
       continue;
     // We have a good memory region with valid bytes to store.
     LocationDescriptor memory_dump;
