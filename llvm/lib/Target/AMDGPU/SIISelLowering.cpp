@@ -16325,9 +16325,10 @@ bool SITargetLowering::checkForPhysRegDependency(
 }
 
 void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
-  if (AI->getOperation() == AtomicRMWInst::Sub ||
-      AI->getOperation() == AtomicRMWInst::Or ||
-      AI->getOperation() == AtomicRMWInst::Xor) {
+  AtomicRMWInst::BinOp Op = AI->getOperation();
+
+  if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
+      Op == AtomicRMWInst::Xor) {
     // atomicrmw or %ptr, 0 -> atomicrmw add %ptr, 0
     assert(cast<Constant>(AI->getValOperand())->isNullValue() &&
            "this cannot be replaced with add");
@@ -16341,8 +16342,7 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
          AI->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS &&
          "generic atomicrmw expansion only supports FP32 operand in flat "
          "address space");
-  assert(AI->getOperation() == AtomicRMWInst::FAdd &&
-         "only fadd is supported for now");
+  assert(Op == AtomicRMWInst::FAdd && "only fadd is supported for now");
 
   // Given: atomicrmw fadd ptr %addr, float %val ordering
   //
