@@ -535,14 +535,6 @@ bool ClauseHasRequiredParens(OpenACCDirectiveKind DirKind,
   return getClauseParensKind(DirKind, Kind) == ClauseParensKind::Required;
 }
 
-ExprResult ParseOpenACCConditionalExpr(Parser &P) {
-  // FIXME: It isn't clear if the spec saying 'condition' means the same as
-  // it does in an if/while/etc (See ParseCXXCondition), however as it was
-  // written with Fortran/C in mind, we're going to assume it just means an
-  // 'expression evaluating to boolean'.
-  return P.getActions().CorrectDelayedTyposInExpr(P.ParseExpression());
-}
-
 // Skip until we see the end of pragma token, but don't consume it. This is us
 // just giving up on the rest of the pragma so we can continue executing. We
 // have to do this because 'SkipUntil' considers paren balancing, which isn't
@@ -593,6 +585,23 @@ Parser::OpenACCClauseParseResult Parser::OpenACCCannotContinue() {
 
 Parser::OpenACCClauseParseResult Parser::OpenACCSuccess(OpenACCClause *Clause) {
   return {Clause, OpenACCParseCanContinue::Can};
+}
+
+ExprResult Parser::ParseOpenACCConditionExpr() {
+  // FIXME: It isn't clear if the spec saying 'condition' means the same as
+  // it does in an if/while/etc (See ParseCXXCondition), however as it was
+  // written with Fortran/C in mind, we're going to assume it just means an
+  // 'expression evaluating to boolean'.
+  ExprResult ER = getActions().CorrectDelayedTyposInExpr(ParseExpression());
+
+  if (!ER.isUsable())
+    return ER;
+
+  Sema::ConditionResult R =
+      getActions().ActOnCondition(getCurScope(), ER.get()->getExprLoc(),
+                                  ER.get(), Sema::ConditionKind::Boolean);
+
+  return R.isInvalid() ? ExprError() : R.get().second;
 }
 
 // OpenACC 3.3, section 1.7:
@@ -842,12 +851,15 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       break;
     }
     case OpenACCClauseKind::If: {
-      ExprResult CondExpr = ParseOpenACCConditionalExpr(*this);
+      ExprResult CondExpr = ParseOpenACCConditionExpr();
+      ParsedClause.setConditionDetails(CondExpr.isUsable() ? CondExpr.get()
+                                                           : nullptr);
 
       if (CondExpr.isInvalid()) {
         Parens.skipToEnd();
         return OpenACCCanContinue();
       }
+
       break;
     }
     case OpenACCClauseKind::CopyIn:
@@ -964,7 +976,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       switch (ClauseKind) {
       case OpenACCClauseKind::Self: {
         assert(DirKind != OpenACCDirectiveKind::Update);
-        ExprResult CondExpr = ParseOpenACCConditionalExpr(*this);
+        ExprResult CondExpr = ParseOpenACCConditionExpr();
 
         if (CondExpr.isInvalid()) {
           Parens.skipToEnd();
