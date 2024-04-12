@@ -449,7 +449,7 @@ defm "" : LMULSchedWrites<"WriteVFMergeV">;
 // 13.16. Vector Floating-Point Move Instruction
 defm "" : LMULSchedWrites<"WriteVFMovV">;
 // 13.17. Single-Width Floating-Point/Integer Type-Convert Instructions
-defm "" : LMULSchedWrites<"WriteVFCvtIToFV">;
+defm "" : LMULSEWSchedWritesF<"WriteVFCvtIToFV">;
 defm "" : LMULSchedWrites<"WriteVFCvtFToIV">;
 // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
 defm "" : LMULSchedWritesW<"WriteVFWCvtIToFV">;
@@ -675,7 +675,7 @@ defm "" : LMULSchedReads<"ReadVFMergeF">;
 // 13.16. Vector Floating-Point Move Instruction
 defm "" : LMULSchedReads<"ReadVFMovF">;
 // 13.17. Single-Width Floating-Point/Integer Type-Convert Instructions
-defm "" : LMULSchedReads<"ReadVFCvtIToFV">;
+defm "" : LMULSEWSchedReadsF<"ReadVFCvtIToFV">;
 defm "" : LMULSchedReads<"ReadVFCvtFToIV">;
 // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
 defm "" : LMULSchedReadsW<"ReadVFWCvtIToFV">;
@@ -905,7 +905,7 @@ defm "" : LMULWriteRes<"WriteVFCmpF", []>;
 defm "" : LMULWriteRes<"WriteVFClassV", []>;
 defm "" : LMULWriteRes<"WriteVFMergeV", []>;
 defm "" : LMULWriteRes<"WriteVFMovV", []>;
-defm "" : LMULWriteRes<"WriteVFCvtIToFV", []>;
+defm "" : LMULSEWWriteResF<"WriteVFCvtIToFV", []>;
 defm "" : LMULWriteRes<"WriteVFCvtFToIV", []>;
 defm "" : LMULWriteResW<"WriteVFWCvtIToFV", []>;
 defm "" : LMULWriteResFW<"WriteVFWCvtFToIV", []>;
@@ -1062,7 +1062,7 @@ defm "" : LMULReadAdvance<"ReadVFClassV", 0>;
 defm "" : LMULReadAdvance<"ReadVFMergeV", 0>;
 defm "" : LMULReadAdvance<"ReadVFMergeF", 0>;
 defm "" : LMULReadAdvance<"ReadVFMovF", 0>;
-defm "" : LMULReadAdvance<"ReadVFCvtIToFV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFCvtIToFV", 0>;
 defm "" : LMULReadAdvance<"ReadVFCvtFToIV", 0>;
 defm "" : LMULReadAdvanceW<"ReadVFWCvtIToFV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWCvtFToIV", 0>;

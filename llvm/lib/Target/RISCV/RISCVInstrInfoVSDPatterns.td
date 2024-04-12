@@ -410,7 +410,7 @@ multiclass VPatConvertI2FPSDNode_V_RM<SDPatternOperator vop,
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                  GetVTypePredicates<ivti>.Predicates) in
     def : Pat<(fvti.Vector (vop (ivti.Vector ivti.RegClass:$rs1))),
-              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX)
+              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_E"#fvti.SEW)
                   (fvti.Vector (IMPLICIT_DEF)),
                   ivti.RegClass:$rs1,
                   // Value to indicate no rounding mode change in
