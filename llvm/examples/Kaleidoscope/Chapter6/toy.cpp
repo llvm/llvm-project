@@ -799,7 +799,7 @@ Value *IfExprAST::codegen() {
 //   start = startexpr
 //   goto loopcond
 // loopcond:
-//   variable = phi [start, loopheader], [nextvariable, loop]
+//   variable = phi [start, entry], [nextvariable, loop]
 //   endcond = endexpr
 //   br endcond, loop, endloop
 // loop:
