@@ -132,6 +132,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   const TargetRegisterClass *
   getLargestSuperClass(const TargetRegisterClass *RC) const override {
+    if (RISCV::VMV0RegClass.hasSubClassEq(RC))
+      return &RISCV::VMV0RegClass;
     if (RISCV::VRM8RegClass.hasSubClassEq(RC))
       return &RISCV::VRM8RegClass;
     if (RISCV::VRM4RegClass.hasSubClassEq(RC))

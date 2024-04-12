@@ -572,7 +572,7 @@ declare <vscale x 128 x i8> @llvm.vp.sadd.sat.nxv128i8(<vscale x 128 x i8>, <vsc
 define <vscale x 128 x i8> @vsadd_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsadd_vi_nxv128i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -588,7 +588,7 @@ define <vscale x 128 x i8> @vsadd_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale x
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:  .LBB50_2:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vsadd.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 128 x i8> @llvm.vp.sadd.sat.nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> splat (i8 -1), <vscale x 128 x i1> %m, i32 %evl)
@@ -1350,10 +1350,10 @@ declare <vscale x 32 x i32> @llvm.vp.sadd.sat.nxv32i32(<vscale x 32 x i32>, <vsc
 define <vscale x 32 x i32> @vsadd_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsadd_vi_nxv32i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 2
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    sub a2, a0, a1
@@ -1367,7 +1367,7 @@ define <vscale x 32 x i32> @vsadd_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale x
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB118_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vsadd.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i32> @llvm.vp.sadd.sat.nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i32> splat (i32 -1), <vscale x 32 x i1> %m, i32 %evl)

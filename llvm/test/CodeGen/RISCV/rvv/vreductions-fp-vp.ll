@@ -178,7 +178,7 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; ZVFH-NEXT:    csrr a2, vlenb
 ; ZVFH-NEXT:    srli a1, a2, 1
 ; ZVFH-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; ZVFH-NEXT:    vslidedown.vx v24, v0, a1
+; ZVFH-NEXT:    vslidedown.vx v25, v0, a1
 ; ZVFH-NEXT:    slli a2, a2, 2
 ; ZVFH-NEXT:    sub a1, a0, a2
 ; ZVFH-NEXT:    sltu a3, a0, a1
@@ -189,13 +189,13 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 ; ZVFH-NEXT:    mv a0, a2
 ; ZVFH-NEXT:  .LBB6_2:
 ; ZVFH-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVFH-NEXT:    vfmv.s.f v25, fa0
+; ZVFH-NEXT:    vfmv.s.f v24, fa0
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; ZVFH-NEXT:    vfredusum.vs v25, v8, v25, v0.t
+; ZVFH-NEXT:    vfredusum.vs v24, v8, v24, v0.t
 ; ZVFH-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; ZVFH-NEXT:    vmv1r.v v0, v24
-; ZVFH-NEXT:    vfredusum.vs v25, v16, v25, v0.t
-; ZVFH-NEXT:    vfmv.f.s fa0, v25
+; ZVFH-NEXT:    vmv1r.v v0, v25
+; ZVFH-NEXT:    vfredusum.vs v24, v16, v24, v0.t
+; ZVFH-NEXT:    vfmv.f.s fa0, v24
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vpreduce_fadd_nxv64f16:
@@ -284,7 +284,7 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; ZVFH-NEXT:    csrr a2, vlenb
 ; ZVFH-NEXT:    srli a1, a2, 1
 ; ZVFH-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
-; ZVFH-NEXT:    vslidedown.vx v24, v0, a1
+; ZVFH-NEXT:    vslidedown.vx v25, v0, a1
 ; ZVFH-NEXT:    slli a2, a2, 2
 ; ZVFH-NEXT:    sub a1, a0, a2
 ; ZVFH-NEXT:    sltu a3, a0, a1
@@ -295,13 +295,13 @@ define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscal
 ; ZVFH-NEXT:    mv a0, a2
 ; ZVFH-NEXT:  .LBB7_2:
 ; ZVFH-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; ZVFH-NEXT:    vfmv.s.f v25, fa0
+; ZVFH-NEXT:    vfmv.s.f v24, fa0
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; ZVFH-NEXT:    vfredosum.vs v25, v8, v25, v0.t
+; ZVFH-NEXT:    vfredosum.vs v24, v8, v24, v0.t
 ; ZVFH-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; ZVFH-NEXT:    vmv1r.v v0, v24
-; ZVFH-NEXT:    vfredosum.vs v25, v16, v25, v0.t
-; ZVFH-NEXT:    vfmv.f.s fa0, v25
+; ZVFH-NEXT:    vmv1r.v v0, v25
+; ZVFH-NEXT:    vfredosum.vs v24, v16, v24, v0.t
+; ZVFH-NEXT:    vfmv.f.s fa0, v24
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vpreduce_ord_fadd_nxv64f16:

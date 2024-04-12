@@ -3315,40 +3315,40 @@ define void @mulhu_v16i16(ptr %x) {
 ; RV32-LABEL: mulhu_v16i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV32-NEXT:    vle16.v v10, (a0)
+; RV32-NEXT:    vle16.v v8, (a0)
 ; RV32-NEXT:    li a1, 257
 ; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    vmv.v.i v8, 0
+; RV32-NEXT:    vmv.v.i v10, 0
 ; RV32-NEXT:    lui a1, 1048568
-; RV32-NEXT:    vmerge.vxm v12, v8, a1, v0
+; RV32-NEXT:    vmerge.vxm v10, v10, a1, v0
 ; RV32-NEXT:    lui a1, 4
 ; RV32-NEXT:    addi a1, a1, 64
-; RV32-NEXT:    vmv.s.x v8, a1
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v9, 0
-; RV32-NEXT:    vmv1r.v v0, v8
-; RV32-NEXT:    vmerge.vim v9, v9, 1, v0
+; RV32-NEXT:    vmv.v.i v12, 0
+; RV32-NEXT:    vmerge.vim v12, v12, 1, v0
+; RV32-NEXT:    vmv1r.v v18, v0
 ; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32-NEXT:    lui a1, %hi(.LCPI182_0)
 ; RV32-NEXT:    addi a1, a1, %lo(.LCPI182_0)
 ; RV32-NEXT:    vle16.v v14, (a1)
-; RV32-NEXT:    vsext.vf2 v16, v9
-; RV32-NEXT:    vsrl.vv v16, v10, v16
-; RV32-NEXT:    vmulhu.vv v14, v16, v14
-; RV32-NEXT:    vsub.vv v10, v10, v14
-; RV32-NEXT:    vmulhu.vv v10, v10, v12
-; RV32-NEXT:    vadd.vv v10, v10, v14
+; RV32-NEXT:    vsext.vf2 v16, v12
+; RV32-NEXT:    vsrl.vv v12, v8, v16
+; RV32-NEXT:    vmulhu.vv v12, v12, v14
+; RV32-NEXT:    vsub.vv v8, v8, v12
+; RV32-NEXT:    vmulhu.vv v8, v8, v10
+; RV32-NEXT:    vadd.vv v8, v8, v12
 ; RV32-NEXT:    lui a1, 2
 ; RV32-NEXT:    addi a1, a1, 289
 ; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v9, 3
-; RV32-NEXT:    vmerge.vim v9, v9, 2, v0
-; RV32-NEXT:    vmv1r.v v0, v8
-; RV32-NEXT:    vmerge.vim v8, v9, 1, v0
+; RV32-NEXT:    vmv.v.i v10, 3
+; RV32-NEXT:    vmerge.vim v10, v10, 2, v0
+; RV32-NEXT:    vmv1r.v v0, v18
+; RV32-NEXT:    vmerge.vim v10, v10, 1, v0
 ; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV32-NEXT:    vsext.vf2 v12, v8
-; RV32-NEXT:    vsrl.vv v8, v10, v12
+; RV32-NEXT:    vsext.vf2 v12, v10
+; RV32-NEXT:    vsrl.vv v8, v8, v12
 ; RV32-NEXT:    vse16.v v8, (a0)
 ; RV32-NEXT:    ret
 ;

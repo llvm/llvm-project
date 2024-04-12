@@ -9,16 +9,16 @@ define void @vector_interleave_store_nxv32i1_nxv16i1(<vscale x 16 x i1> %a, <vsc
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv.v.i v12, 0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v12, v10, 1, v0
+; CHECK-NEXT:    vmerge.vim v10, v12, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
-; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
-; CHECK-NEXT:    vwaddu.vv v16, v8, v12
+; CHECK-NEXT:    vmerge.vim v8, v12, 1, v0
+; CHECK-NEXT:    vwaddu.vv v12, v8, v10
 ; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vwmaccu.vx v16, a1, v12
-; CHECK-NEXT:    vmsne.vi v8, v18, 0
-; CHECK-NEXT:    vmsne.vi v9, v16, 0
+; CHECK-NEXT:    vwmaccu.vx v12, a1, v10
+; CHECK-NEXT:    vmsne.vi v8, v14, 0
+; CHECK-NEXT:    vmsne.vi v9, v12, 0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a1, a1, 2
 ; CHECK-NEXT:    add a2, a1, a1
@@ -107,14 +107,14 @@ define void @vector_interleave_store_nxv16i64_nxv8i64(<vscale x 8 x i64> %a, <vs
 ; CHECK-NEXT:    srli a2, a1, 1
 ; CHECK-NEXT:    vsetvli a3, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vid.v v24
-; CHECK-NEXT:    vand.vi v26, v24, 1
-; CHECK-NEXT:    vmsne.vi v28, v26, 0
-; CHECK-NEXT:    vsrl.vi v24, v24, 1
+; CHECK-NEXT:    vsrl.vi v26, v24, 1
+; CHECK-NEXT:    vand.vi v24, v24, 1
+; CHECK-NEXT:    vmsne.vi v28, v24, 0
 ; CHECK-NEXT:    vmv1r.v v0, v28
-; CHECK-NEXT:    vadd.vx v24, v24, a2, v0.t
+; CHECK-NEXT:    vadd.vx v26, v26, a2, v0.t
 ; CHECK-NEXT:    vmv4r.v v12, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v0, v8, v24
+; CHECK-NEXT:    vrgatherei16.vv v0, v8, v26
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    add a2, sp, a2
@@ -123,7 +123,7 @@ define void @vector_interleave_store_nxv16i64_nxv8i64(<vscale x 8 x i64> %a, <vs
 ; CHECK-NEXT:    addi a2, sp, 16
 ; CHECK-NEXT:    vl8r.v v8, (a2) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vmv4r.v v16, v12
-; CHECK-NEXT:    vrgatherei16.vv v8, v16, v24
+; CHECK-NEXT:    vrgatherei16.vv v8, v16, v26
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vs8r.v v8, (a1)

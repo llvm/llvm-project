@@ -368,7 +368,7 @@ declare <256 x i8> @llvm.vp.uadd.sat.v258i8(<256 x i8>, <256 x i8>, <256 x i1>, 
 define <256 x i8> @vsaddu_vi_v258i8(<256 x i8> %va, <256 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsaddu_vi_v258i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
@@ -383,7 +383,7 @@ define <256 x i8> @vsaddu_vi_v258i8(<256 x i8> %va, <256 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:    li a1, 128
 ; CHECK-NEXT:  .LBB32_2:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    vsaddu.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <256 x i8> @llvm.vp.uadd.sat.v258i8(<256 x i8> %va, <256 x i8> splat (i8 -1), <256 x i1> %m, i32 %evl)

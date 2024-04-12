@@ -50,10 +50,7 @@ private:
   bool convertToUnmasked(MachineInstr &MI) const;
   bool convertVMergeToVMv(MachineInstr &MI) const;
 
-  bool isAllOnesMask(const MachineInstr *MaskDef) const;
-
-  /// Maps uses of V0 to the corresponding def of V0.
-  DenseMap<const MachineInstr *, const MachineInstr *> V0Defs;
+  bool isAllOnesMask(const MachineOperand& MaskOp) const;
 };
 
 } // namespace
@@ -62,12 +59,22 @@ char RISCVFoldMasks::ID = 0;
 
 INITIALIZE_PASS(RISCVFoldMasks, DEBUG_TYPE, "RISC-V Fold Masks", false, false)
 
-bool RISCVFoldMasks::isAllOnesMask(const MachineInstr *MaskDef) const {
-  assert(MaskDef && MaskDef->isCopy() &&
-         MaskDef->getOperand(0).getReg() == RISCV::V0);
+bool RISCVFoldMasks::isAllOnesMask(const MachineOperand &MaskOp) const {
+  if (!MaskOp.isReg())
+    return false;
+
+  Register MaskReg = MaskOp.getReg();
+  if (!MaskReg.isVirtual())
+    return false;
+
+  MachineInstr *MaskDef = MRI->getVRegDef(MaskReg);
+  if (!MaskDef || !MaskDef->isCopy())
+    return false;
+
   Register SrcReg = TRI->lookThruCopyLike(MaskDef->getOperand(1).getReg(), MRI);
   if (!SrcReg.isVirtual())
     return false;
+
   MaskDef = MRI->getVRegDef(SrcReg);
   if (!MaskDef)
     return false;
@@ -116,8 +123,8 @@ bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI) const {
                                            TRI->lookThruCopyLike(FalseReg, MRI))
     return false;
 
-  assert(MI.getOperand(4).isReg() && MI.getOperand(4).getReg() == RISCV::V0);
-  if (!isAllOnesMask(V0Defs.lookup(&MI)))
+  // assert(MI.getOperand(4).isReg() && MI.getOperand(4).getReg() == RISCV::V0);
+  if (!isAllOnesMask(MI.getOperand(4)))
     return false;
 
   MI.setDesc(TII->get(NewOpc));
@@ -140,7 +147,9 @@ bool RISCVFoldMasks::convertToUnmasked(MachineInstr &MI) const {
   if (!I)
     return false;
 
-  if (!isAllOnesMask(V0Defs.lookup(&MI)))
+  // TODO: Increment all MaskOpIdxs in tablegen by num of explicit defs?
+  unsigned MaskOpIdx = I->MaskOpIdx + MI.getNumExplicitDefs();
+  if (!isAllOnesMask(MI.getOperand(MaskOpIdx)))
     return false;
 
   // There are two classes of pseudos in the table - compares and
@@ -160,9 +169,6 @@ bool RISCVFoldMasks::convertToUnmasked(MachineInstr &MI) const {
   (void)HasPolicyOp;
 
   MI.setDesc(MCID);
-
-  // TODO: Increment all MaskOpIdxs in tablegen by num of explicit defs?
-  unsigned MaskOpIdx = I->MaskOpIdx + MI.getNumExplicitDefs();
   MI.removeOperand(MaskOpIdx);
 
   // The unmasked pseudo will no longer be constrained to the vrnov0 reg class,
@@ -192,24 +198,6 @@ bool RISCVFoldMasks::runOnMachineFunction(MachineFunction &MF) {
   TRI = MRI->getTargetRegisterInfo();
 
   bool Changed = false;
-
-  // Masked pseudos coming out of isel will have their mask operand in the form:
-  //
-  // $v0:vr = COPY %mask:vr
-  // %x:vr = Pseudo_MASK %a:vr, %b:br, $v0:vr
-  //
-  // Because $v0 isn't in SSA, keep track of its definition at each use so we
-  // can check mask operands.
-  for (const MachineBasicBlock &MBB : MF) {
-    const MachineInstr *CurrentV0Def = nullptr;
-    for (const MachineInstr &MI : MBB) {
-      if (MI.readsRegister(RISCV::V0, TRI))
-        V0Defs[&MI] = CurrentV0Def;
-
-      if (MI.definesRegister(RISCV::V0, TRI))
-        CurrentV0Def = &MI;
-    }
-  }
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {

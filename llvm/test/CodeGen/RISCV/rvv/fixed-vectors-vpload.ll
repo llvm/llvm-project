@@ -395,7 +395,7 @@ define <33 x double> @vpload_v33f64(ptr %ptr, <33 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v33f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a4, 32
-; CHECK-NEXT:    vmv1r.v v8, v0
+; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:    bltu a2, a4, .LBB32_2
 ; CHECK-NEXT:  # %bb.1:
@@ -404,40 +404,40 @@ define <33 x double> @vpload_v33f64(ptr %ptr, <33 x i1> %m, i32 zeroext %evl) {
 ; CHECK-NEXT:    addi a4, a3, -16
 ; CHECK-NEXT:    sltu a3, a3, a4
 ; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a3, a3, a4
+; CHECK-NEXT:    and a5, a3, a4
 ; CHECK-NEXT:    addi a4, a1, 128
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v0, v8, 2
-; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-NEXT:    vle64.v v16, (a4), v0.t
 ; CHECK-NEXT:    addi a3, a2, -32
-; CHECK-NEXT:    sltu a4, a2, a3
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a4, a4, a3
+; CHECK-NEXT:    sltu a6, a2, a3
+; CHECK-NEXT:    addi a6, a6, -1
+; CHECK-NEXT:    and a6, a6, a3
 ; CHECK-NEXT:    li a3, 16
-; CHECK-NEXT:    bltu a4, a3, .LBB32_4
+; CHECK-NEXT:    vslidedown.vi v0, v24, 2
+; CHECK-NEXT:    bltu a6, a3, .LBB32_4
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    li a4, 16
+; CHECK-NEXT:    li a6, 16
 ; CHECK-NEXT:  .LBB32_4:
-; CHECK-NEXT:    addi a5, a1, 256
+; CHECK-NEXT:    vsetvli zero, a5, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a4), v0.t
+; CHECK-NEXT:    addi a4, a1, 256
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v0, v8, 4
-; CHECK-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
-; CHECK-NEXT:    vle64.v v24, (a5), v0.t
+; CHECK-NEXT:    vslidedown.vi v0, v24, 4
+; CHECK-NEXT:    vsetvli zero, a6, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v16, (a4), v0.t
 ; CHECK-NEXT:    bltu a2, a3, .LBB32_6
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:  .LBB32_6:
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vle64.v v8, (a1), v0.t
+; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vle64.v v24, (a1), v0.t
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    vse64.v v24, (a0)
 ; CHECK-NEXT:    addi a1, a0, 128
-; CHECK-NEXT:    vse64.v v16, (a1)
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    addi a0, a0, 256
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vse64.v v24, (a0)
+; CHECK-NEXT:    vse64.v v16, (a0)
 ; CHECK-NEXT:    ret
   %load = call <33 x double> @llvm.vp.load.v33f64.p0(ptr %ptr, <33 x i1> %m, i32 %evl)
   ret <33 x double> %load

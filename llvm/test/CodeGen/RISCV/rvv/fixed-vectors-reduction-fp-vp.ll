@@ -179,24 +179,24 @@ define float @vpreduce_fadd_v64f32(float %s, <64 x float> %v, <64 x i1> %m, i32 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    li a2, 32
-; CHECK-NEXT:    vslidedown.vi v24, v0, 4
+; CHECK-NEXT:    vslidedown.vi v25, v0, 4
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB8_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:  .LBB8_2:
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v25, fa0
+; CHECK-NEXT:    vfmv.s.f v24, fa0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; CHECK-NEXT:    vfredusum.vs v25, v8, v25, v0.t
+; CHECK-NEXT:    vfredusum.vs v24, v8, v24, v0.t
 ; CHECK-NEXT:    addi a1, a0, -32
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vfredusum.vs v25, v16, v25, v0.t
-; CHECK-NEXT:    vfmv.f.s fa0, v25
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    vfredusum.vs v24, v16, v24, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v24
 ; CHECK-NEXT:    ret
   %r = call reassoc float @llvm.vp.reduce.fadd.v64f32(float %s, <64 x float> %v, <64 x i1> %m, i32 %evl)
   ret float %r
@@ -207,24 +207,24 @@ define float @vpreduce_ord_fadd_v64f32(float %s, <64 x float> %v, <64 x i1> %m, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    li a2, 32
-; CHECK-NEXT:    vslidedown.vi v24, v0, 4
+; CHECK-NEXT:    vslidedown.vi v25, v0, 4
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB9_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:  .LBB9_2:
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v25, fa0
+; CHECK-NEXT:    vfmv.s.f v24, fa0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; CHECK-NEXT:    vfredosum.vs v25, v8, v25, v0.t
+; CHECK-NEXT:    vfredosum.vs v24, v8, v24, v0.t
 ; CHECK-NEXT:    addi a1, a0, -32
 ; CHECK-NEXT:    sltu a0, a0, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vfredosum.vs v25, v16, v25, v0.t
-; CHECK-NEXT:    vfmv.f.s fa0, v25
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    vfredosum.vs v24, v16, v24, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v24
 ; CHECK-NEXT:    ret
   %r = call float @llvm.vp.reduce.fadd.v64f32(float %s, <64 x float> %v, <64 x i1> %m, i32 %evl)
   ret float %r

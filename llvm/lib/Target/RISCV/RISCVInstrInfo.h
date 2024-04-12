@@ -279,6 +279,7 @@ public:
 
   unsigned getUndefInitOpcode(unsigned RegClassID) const override {
     switch (RegClassID) {
+    case RISCV::VMV0RegClassID:
     case RISCV::VRRegClassID:
       return RISCV::PseudoRVVInitUndefM1;
     case RISCV::VRM2RegClassID:

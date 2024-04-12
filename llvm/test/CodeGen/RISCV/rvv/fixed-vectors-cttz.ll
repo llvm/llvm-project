@@ -45,9 +45,9 @@ define void @cttz_v16i8(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; RVF-NEXT:    vnsrl.wi v9, v10, 0
 ; RVF-NEXT:    li a1, 127
+; RVF-NEXT:    vsub.vx v9, v9, a1
 ; RVF-NEXT:    vmseq.vi v0, v8, 0
-; RVF-NEXT:    vsub.vx v8, v9, a1
-; RVF-NEXT:    vmerge.vim v8, v8, 8, v0
+; RVF-NEXT:    vmerge.vim v8, v9, 8, v0
 ; RVF-NEXT:    vse8.v v8, (a0)
 ; RVF-NEXT:    ret
 ;
@@ -64,9 +64,9 @@ define void @cttz_v16i8(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; RVD-NEXT:    vnsrl.wi v9, v10, 0
 ; RVD-NEXT:    li a1, 127
+; RVD-NEXT:    vsub.vx v9, v9, a1
 ; RVD-NEXT:    vmseq.vi v0, v8, 0
-; RVD-NEXT:    vsub.vx v8, v9, a1
-; RVD-NEXT:    vmerge.vim v8, v8, 8, v0
+; RVD-NEXT:    vmerge.vim v8, v9, 8, v0
 ; RVD-NEXT:    vse8.v v8, (a0)
 ; RVD-NEXT:    ret
 ;
@@ -444,9 +444,9 @@ define void @cttz_v32i8(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; RVF-NEXT:    vnsrl.wi v10, v12, 0
 ; RVF-NEXT:    li a1, 127
+; RVF-NEXT:    vsub.vx v10, v10, a1
 ; RVF-NEXT:    vmseq.vi v0, v8, 0
-; RVF-NEXT:    vsub.vx v8, v10, a1
-; RVF-NEXT:    vmerge.vim v8, v8, 8, v0
+; RVF-NEXT:    vmerge.vim v8, v10, 8, v0
 ; RVF-NEXT:    vse8.v v8, (a0)
 ; RVF-NEXT:    ret
 ;
@@ -464,9 +464,9 @@ define void @cttz_v32i8(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; RVD-NEXT:    vnsrl.wi v10, v12, 0
 ; RVD-NEXT:    li a1, 127
+; RVD-NEXT:    vsub.vx v10, v10, a1
 ; RVD-NEXT:    vmseq.vi v0, v8, 0
-; RVD-NEXT:    vsub.vx v8, v10, a1
-; RVD-NEXT:    vmerge.vim v8, v8, 8, v0
+; RVD-NEXT:    vmerge.vim v8, v10, 8, v0
 ; RVD-NEXT:    vse8.v v8, (a0)
 ; RVD-NEXT:    ret
 ;
