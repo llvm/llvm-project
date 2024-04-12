@@ -60,6 +60,7 @@ namespace {
     SmallVectorImpl<WeakTrackingVH> &DeadInsts;
 
     bool Changed = false;
+    bool RunUnswitching = false;
 
   public:
     SimplifyIndvar(Loop *Loop, ScalarEvolution *SE, DominatorTree *DT,
@@ -72,6 +73,7 @@ namespace {
     }
 
     bool hasChanged() const { return Changed; }
+    bool runUnswitching() const { return RunUnswitching; }
 
     /// Iteratively perform simplification on a worklist of users of the
     /// specified induction variable. This is the top-level driver that applies
@@ -233,6 +235,7 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   ICmp->setPredicate(InvariantPredicate);
   ICmp->setOperand(0, NewLHS);
   ICmp->setOperand(1, NewRHS);
+  RunUnswitching = true;
   return true;
 }
 
@@ -993,14 +996,18 @@ void IVVisitor::anchor() { }
 
 /// Simplify instructions that use this induction variable
 /// by using ScalarEvolution to analyze the IV's recurrence.
-bool simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
-                       LoopInfo *LI, const TargetTransformInfo *TTI,
-                       SmallVectorImpl<WeakTrackingVH> &Dead,
-                       SCEVExpander &Rewriter, IVVisitor *V) {
+///  Returns a pair where the first entry indicates that the function makes
+///  changes and the second entry indicates that it introduced new opportunities
+///  for loop unswitching.
+std::pair<bool, bool> simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE,
+                                        DominatorTree *DT, LoopInfo *LI,
+                                        const TargetTransformInfo *TTI,
+                                        SmallVectorImpl<WeakTrackingVH> &Dead,
+                                        SCEVExpander &Rewriter, IVVisitor *V) {
   SimplifyIndvar SIV(LI->getLoopFor(CurrIV->getParent()), SE, DT, LI, TTI,
                      Rewriter, Dead);
   SIV.simplifyUsers(CurrIV, V);
-  return SIV.hasChanged();
+  return {SIV.hasChanged(), SIV.runUnswitching()};
 }
 
 /// Simplify users of induction variables within this
@@ -1014,8 +1021,9 @@ bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
 #endif
   bool Changed = false;
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
-    Changed |=
+    const auto &[C, _] =
         simplifyUsersOfIV(cast<PHINode>(I), SE, DT, LI, TTI, Dead, Rewriter);
+    Changed |= C;
   }
   return Changed;
 }
