@@ -22,6 +22,7 @@
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
@@ -321,6 +322,16 @@ public:
   using OpRewritePattern<nvgpu::DeviceAsyncCopyOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(nvgpu::DeviceAsyncCopyOp copyOp,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Merges subview operation with xegpu.create_nd_tdesc operation.
+class XegpuCreateNdDescOpSubViewOpFolder final
+    : public OpRewritePattern<xegpu::CreateNdDescOp> {
+public:
+  using OpRewritePattern<xegpu::CreateNdDescOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(xegpu::CreateNdDescOp descOp,
                                 PatternRewriter &rewriter) const override;
 };
 } // namespace
@@ -700,6 +711,28 @@ LogicalResult NvgpuAsyncCopyOpSubViewOpFolder::matchAndRewrite(
   return success();
 }
 
+LogicalResult XegpuCreateNdDescOpSubViewOpFolder::matchAndRewrite(
+    xegpu::CreateNdDescOp descOp, PatternRewriter &rewriter) const {
+  auto subViewOp = descOp.getSource().getDefiningOp<memref::SubViewOp>();
+
+  if (!subViewOp)
+    return rewriter.notifyMatchFailure(descOp, "not a subview producer");
+  if (!subViewOp.hasUnitStride())
+    return rewriter.notifyMatchFailure(descOp, "requires unit strides");
+
+  SmallVector<Value> resolvedOffsets;
+  affine::resolveIndicesIntoOpWithOffsetsAndStrides(
+      rewriter, descOp.getLoc(), subViewOp.getMixedOffsets(),
+      subViewOp.getMixedStrides(), subViewOp.getDroppedDims(),
+      descOp.getMixedOffsets(), resolvedOffsets);
+
+  rewriter.replaceOpWithNewOp<xegpu::CreateNdDescOp>(
+      descOp, descOp.getTensorDesc().getType(), subViewOp.getSource(),
+      getAsOpFoldResult(resolvedOffsets));
+
+  return success();
+}
+
 void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
   patterns.add<LoadOpOfSubViewOpFolder<affine::AffineLoadOp>,
                LoadOpOfSubViewOpFolder<memref::LoadOp>,
@@ -722,8 +755,8 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
                LoadOpOfCollapseShapeOpFolder<memref::LoadOp>,
                StoreOpOfCollapseShapeOpFolder<affine::AffineStoreOp>,
                StoreOpOfCollapseShapeOpFolder<memref::StoreOp>,
-               SubViewOfSubViewFolder, NvgpuAsyncCopyOpSubViewOpFolder>(
-      patterns.getContext());
+               SubViewOfSubViewFolder, NvgpuAsyncCopyOpSubViewOpFolder,
+               XegpuCreateNdDescOpSubViewOpFolder>(patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
