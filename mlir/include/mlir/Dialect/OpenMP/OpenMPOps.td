@@ -574,6 +574,10 @@ def LoopNestOp : OpenMP_Op<"loop_nest", [SameVariadicOperandSize,
                        Variadic<IntLikeType>:$step,
                        UnitAttr:$inclusive);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const LoopNestClauseOps &">:$clauses)>
+  ];
+
   let regions = (region AnyRegion:$region);
 
   let extraClassDeclaration = [{
