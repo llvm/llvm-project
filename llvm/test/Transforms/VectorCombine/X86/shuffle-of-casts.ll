@@ -239,6 +239,21 @@ define <16 x i16> @revpair_bitcast_v4i32_v16i16(<4 x i32> %a0, <4 x i32> %a1) {
   ret <16 x i16> %r
 }
 
+; negative - bitcasts (unscalable element counts)
+
+define <4 x i32> @shuffle_bitcast_v32i40_v4i32(<32 x i40> %a0, <32 x i40> %a1) {
+; CHECK-LABEL: @shuffle_bitcast_v32i40_v4i32(
+; CHECK-NEXT:    [[X0:%.*]] = bitcast <32 x i40> [[A0:%.*]] to <40 x i32>
+; CHECK-NEXT:    [[X1:%.*]] = bitcast <32 x i40> [[A1:%.*]] to <40 x i32>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <40 x i32> [[X0]], <40 x i32> [[X1]], <4 x i32> <i32 0, i32 42, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %x0 = bitcast <32 x i40> %a0 to <40 x i32>
+  %x1 = bitcast <32 x i40> %a1 to <40 x i32>
+  %r = shufflevector <40 x i32> %x0, <40 x i32> %x1, <4 x i32> <i32 0, i32 42, i32 poison, i32 poison>
+  ret <4 x i32> %r
+}
+
 ; negative - src type mismatch
 
 define <8 x i32> @concat_sext_v4i8_v4i16_v8i32(<4 x i8> %a0, <4 x i16> %a1) {
