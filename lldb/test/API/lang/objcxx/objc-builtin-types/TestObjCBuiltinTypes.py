@@ -63,5 +63,5 @@ class TestObjCBuiltinTypes(TestBase):
 
         self.expect_expr("id", result_value="12", result_type="int")
         self.expect_expr("Class", result_value="15", result_type="int")
-        self.expect("expr --language C++ -- id", error=True)
-        self.expect("expr --language C++ -- Class", error=True)
+        self.expect("expr --language Objective-C++ -- id", error=True)
+        self.expect("expr --language Objective-C++ -- Class", error=True)
