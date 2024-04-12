@@ -1978,10 +1978,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::v16f16, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::v16f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::v16f32, Custom);
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
-      setOperationPromotedToType(Opc, MVT::v16f16, MVT::v16f32);
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
       setOperationPromotedToType(Opc, MVT::v32f16, MVT::v32f32);
-    }
 
     for (auto VT : { MVT::v16i32, MVT::v8i64, MVT::v16f32, MVT::v8f64 }) {
       setOperationAction(ISD::MLOAD,               VT, Legal);
@@ -2296,14 +2294,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::bf16, Custom);
     for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
       setF16Action(VT, Expand);
-      setOperationAction(ISD::FADD, VT, Expand);
-      setOperationAction(ISD::FSUB, VT, Expand);
-      setOperationAction(ISD::FMUL, VT, Expand);
-      setOperationAction(ISD::FDIV, VT, Expand);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
+    }
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
+      setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
+      setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
     }
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
     addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
@@ -2312,10 +2310,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (!Subtarget.useSoftFloat() && Subtarget.hasBF16()) {
     addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
     setF16Action(MVT::v32bf16, Expand);
-    setOperationAction(ISD::FADD, MVT::v32bf16, Expand);
-    setOperationAction(ISD::FSUB, MVT::v32bf16, Expand);
-    setOperationAction(ISD::FMUL, MVT::v32bf16, Expand);
-    setOperationAction(ISD::FDIV, MVT::v32bf16, Expand);
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
+      setOperationPromotedToType(Opc, MVT::v32bf16, MVT::v32f32);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::v16bf16, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v32bf16, Custom);
