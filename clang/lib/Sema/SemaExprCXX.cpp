@@ -44,6 +44,7 @@
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
@@ -57,7 +58,7 @@ using namespace sema;
 /// name of the corresponding type.
 ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
                                               SourceLocation NameLoc,
-                                              IdentifierInfo &Name) {
+                                              const IdentifierInfo &Name) {
   NestedNameSpecifier *NNS = SS.getScopeRep();
 
   // Convert the nested-name-specifier into a type.
@@ -89,10 +90,9 @@ ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
                           Context.getTrivialTypeSourceInfo(Type, NameLoc));
 }
 
-ParsedType Sema::getConstructorName(IdentifierInfo &II,
-                                    SourceLocation NameLoc,
-                                    Scope *S, CXXScopeSpec &SS,
-                                    bool EnteringContext) {
+ParsedType Sema::getConstructorName(const IdentifierInfo &II,
+                                    SourceLocation NameLoc, Scope *S,
+                                    CXXScopeSpec &SS, bool EnteringContext) {
   CXXRecordDecl *CurClass = getCurrentClass(S, &SS);
   assert(CurClass && &II == CurClass->getIdentifier() &&
          "not a constructor name");
@@ -140,9 +140,9 @@ ParsedType Sema::getConstructorName(IdentifierInfo &II,
   return ParsedType::make(T);
 }
 
-ParsedType Sema::getDestructorName(IdentifierInfo &II, SourceLocation NameLoc,
-                                   Scope *S, CXXScopeSpec &SS,
-                                   ParsedType ObjectTypePtr,
+ParsedType Sema::getDestructorName(const IdentifierInfo &II,
+                                   SourceLocation NameLoc, Scope *S,
+                                   CXXScopeSpec &SS, ParsedType ObjectTypePtr,
                                    bool EnteringContext) {
   // Determine where to perform name lookup.
 
@@ -500,7 +500,7 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
     //
     // double operator""_Bq(long double);  // OK: not a reserved identifier
     // double operator"" _Bq(long double); // ill-formed, no diagnostic required
-    IdentifierInfo *II = Name.Identifier;
+    const IdentifierInfo *II = Name.Identifier;
     ReservedIdentifierStatus Status = II->isReserved(PP.getLangOpts());
     SourceLocation Loc = Name.getEndLoc();
     if (!PP.getSourceManager().isInSystemHeader(Loc)) {
@@ -885,7 +885,7 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
     CUDADiagIfDeviceCode(OpLoc, diag::err_cuda_device_exceptions)
-        << "throw" << CurrentCUDATarget();
+        << "throw" << llvm::to_underlying(CurrentCUDATarget());
 
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
@@ -1489,7 +1489,7 @@ void Sema::MarkThisReferenced(CXXThisExpr *This) {
         if (MD->getType().isNull())
           return false;
 
-        const auto *Ty = cast<FunctionProtoType>(MD->getType());
+        const auto *Ty = MD->getType()->getAs<FunctionProtoType>();
         return Ty && MD->isExplicitObjectMemberFunction() &&
                Ty->getParamType(0)->isDependentType();
       }
@@ -5895,7 +5895,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
         return false;
 
       if (Self.RequireCompleteType(
-              KeyLoc, RhsT, diag::err_incomplete_type_used_in_type_trait_expr))
+              Rhs->getTypeLoc().getBeginLoc(), RhsT,
+              diag::err_incomplete_type_used_in_type_trait_expr))
         return false;
 
       return BaseInterface->isSuperClassOf(DerivedInterface);
@@ -5918,8 +5919,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     //   If Base and Derived are class types and are different types
     //   (ignoring possible cv-qualifiers) then Derived shall be a
     //   complete type.
-    if (Self.RequireCompleteType(KeyLoc, RhsT,
-                          diag::err_incomplete_type_used_in_type_trait_expr))
+    if (Self.RequireCompleteType(
+            Rhs->getTypeLoc().getBeginLoc(), RhsT,
+            diag::err_incomplete_type_used_in_type_trait_expr))
       return false;
 
     return cast<CXXRecordDecl>(rhsRecord->getDecl())
@@ -5971,7 +5973,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
       return LhsT->isVoidType();
 
     // A function definition requires a complete, non-abstract return type.
-    if (!Self.isCompleteType(KeyLoc, RhsT) || Self.isAbstractType(KeyLoc, RhsT))
+    if (!Self.isCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT) ||
+        Self.isAbstractType(Rhs->getTypeLoc().getBeginLoc(), RhsT))
       return false;
 
     // Compute the result of add_rvalue_reference.
@@ -6021,12 +6024,14 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     //   For both, T and U shall be complete types, (possibly cv-qualified)
     //   void, or arrays of unknown bound.
     if (!LhsT->isVoidType() && !LhsT->isIncompleteArrayType() &&
-        Self.RequireCompleteType(KeyLoc, LhsT,
-          diag::err_incomplete_type_used_in_type_trait_expr))
+        Self.RequireCompleteType(
+            Lhs->getTypeLoc().getBeginLoc(), LhsT,
+            diag::err_incomplete_type_used_in_type_trait_expr))
       return false;
     if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType() &&
-        Self.RequireCompleteType(KeyLoc, RhsT,
-          diag::err_incomplete_type_used_in_type_trait_expr))
+        Self.RequireCompleteType(
+            Rhs->getTypeLoc().getBeginLoc(), RhsT,
+            diag::err_incomplete_type_used_in_type_trait_expr))
       return false;
 
     // cv void is never assignable.
@@ -6081,12 +6086,17 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
   }
   case BTT_IsLayoutCompatible: {
     if (!LhsT->isVoidType() && !LhsT->isIncompleteArrayType())
-      Self.RequireCompleteType(KeyLoc, LhsT, diag::err_incomplete_type);
+      Self.RequireCompleteType(Lhs->getTypeLoc().getBeginLoc(), LhsT,
+                               diag::err_incomplete_type);
     if (!RhsT->isVoidType() && !RhsT->isIncompleteArrayType())
-      Self.RequireCompleteType(KeyLoc, RhsT, diag::err_incomplete_type);
+      Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
+                               diag::err_incomplete_type);
 
-    if (LhsT->isVariableArrayType() || RhsT->isVariableArrayType())
-      Self.Diag(KeyLoc, diag::err_vla_unsupported)
+    if (LhsT->isVariableArrayType())
+      Self.Diag(Lhs->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
+          << 1 << tok::kw___is_layout_compatible;
+    if (RhsT->isVariableArrayType())
+      Self.Diag(Rhs->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
           << 1 << tok::kw___is_layout_compatible;
     return Self.IsLayoutCompatible(LhsT, RhsT);
   }
@@ -8633,21 +8643,8 @@ static ExprResult attemptRecovery(Sema &SemaRef,
 
       // Detect and handle the case where the decl might be an implicit
       // member.
-      bool MightBeImplicitMember;
-      if (!Consumer.isAddressOfOperand())
-        MightBeImplicitMember = true;
-      else if (!NewSS.isEmpty())
-        MightBeImplicitMember = false;
-      else if (R.isOverloadedResult())
-        MightBeImplicitMember = false;
-      else if (R.isUnresolvableResult())
-        MightBeImplicitMember = true;
-      else
-        MightBeImplicitMember = isa<FieldDecl>(ND) ||
-                                isa<IndirectFieldDecl>(ND) ||
-                                isa<MSPropertyDecl>(ND);
-
-      if (MightBeImplicitMember)
+      if (SemaRef.isPotentialImplicitMemberAccess(
+              NewSS, R, Consumer.isAddressOfOperand()))
         return SemaRef.BuildPossibleImplicitMemberExpr(
             NewSS, /*TemplateKWLoc*/ SourceLocation(), R,
             /*TemplateArgs*/ nullptr, /*S*/ nullptr);
@@ -9184,10 +9181,9 @@ concepts::Requirement *Sema::ActOnSimpleRequirement(Expr *E) {
                               /*ReturnTypeRequirement=*/{});
 }
 
-concepts::Requirement *
-Sema::ActOnTypeRequirement(SourceLocation TypenameKWLoc, CXXScopeSpec &SS,
-                           SourceLocation NameLoc, IdentifierInfo *TypeName,
-                           TemplateIdAnnotation *TemplateId) {
+concepts::Requirement *Sema::ActOnTypeRequirement(
+    SourceLocation TypenameKWLoc, CXXScopeSpec &SS, SourceLocation NameLoc,
+    const IdentifierInfo *TypeName, TemplateIdAnnotation *TemplateId) {
   assert(((!TypeName && TemplateId) || (TypeName && !TemplateId)) &&
          "Exactly one of TypeName and TemplateId must be specified.");
   TypeSourceInfo *TSI = nullptr;

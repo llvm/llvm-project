@@ -932,6 +932,14 @@ public:
       Visit(TArg);
   }
 
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
+    Visit(Node->getExpr());
+  }
+
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
+    Visit(Node->getExpr());
+  }
+
   // Implements Visit methods for Attrs.
 #include "clang/AST/AttrNodeTraverse.inc"
 };

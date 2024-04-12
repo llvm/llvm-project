@@ -5952,7 +5952,8 @@ ASTNodeImporter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
           ToD, D, Importer.getToContext(),
           Importer.getToContext().getTranslationUnitDecl(), *LocationOrErr,
           D->getDepth(), D->getPosition(), D->isParameterPack(),
-          (*NameOrErr).getAsIdentifierInfo(), *TemplateParamsOrErr))
+          (*NameOrErr).getAsIdentifierInfo(), D->wasDeclaredWithTypename(),
+          *TemplateParamsOrErr))
     return ToD;
 
   if (D->hasDefaultArgument()) {
@@ -8383,8 +8384,8 @@ ASTNodeImporter::VisitCXXPseudoDestructorExpr(CXXPseudoDestructorExpr *E) {
     return std::move(Err);
 
   PseudoDestructorTypeStorage Storage;
-  if (IdentifierInfo *FromII = E->getDestroyedTypeIdentifier()) {
-    IdentifierInfo *ToII = Importer.Import(FromII);
+  if (const IdentifierInfo *FromII = E->getDestroyedTypeIdentifier()) {
+    const IdentifierInfo *ToII = Importer.Import(FromII);
     ExpectedSLoc ToDestroyedTypeLocOrErr = import(E->getDestroyedTypeLoc());
     if (!ToDestroyedTypeLocOrErr)
       return ToDestroyedTypeLocOrErr.takeError();
@@ -10194,7 +10195,7 @@ Expected<Selector> ASTImporter::Import(Selector FromSel) {
   if (FromSel.isNull())
     return Selector{};
 
-  SmallVector<IdentifierInfo *, 4> Idents;
+  SmallVector<const IdentifierInfo *, 4> Idents;
   Idents.push_back(Import(FromSel.getIdentifierInfoForSlot(0)));
   for (unsigned I = 1, N = FromSel.getNumArgs(); I < N; ++I)
     Idents.push_back(Import(FromSel.getIdentifierInfoForSlot(I)));

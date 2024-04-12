@@ -291,6 +291,7 @@ set(files
   __chrono/parser_std_format_spec.h
   __chrono/statically_widen.h
   __chrono/steady_clock.h
+  __chrono/sys_info.h
   __chrono/system_clock.h
   __chrono/time_point.h
   __chrono/time_zone.h
@@ -862,6 +863,7 @@ set(files
   __utility/pair.h
   __utility/piecewise_construct.h
   __utility/priority_tag.h
+  __utility/private_constructor_tag.h
   __utility/rel_ops.h
   __utility/small_buffer.h
   __utility/swap.h

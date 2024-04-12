@@ -390,6 +390,17 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
   {
     ColorScope Color(OS, ShowColors, AttrColor);
     OS << C->getClauseKind();
+
+    // Handle clauses with parens for types that have no children, likely
+    // because there is no sub expression.
+    switch (C->getClauseKind()) {
+    case OpenACCClauseKind::Default:
+      OS << '(' << cast<OpenACCDefaultClause>(C)->getDefaultClauseKind() << ')';
+      break;
+    default:
+      // Nothing to do here.
+      break;
+    }
   }
   dumpPointer(C);
   dumpSourceRange(SourceRange(C->getBeginLoc(), C->getEndLoc()));
@@ -1439,23 +1450,13 @@ void TextNodeDumper::VisitExpressionTraitExpr(const ExpressionTraitExpr *Node) {
 }
 
 void TextNodeDumper::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
-  if (Node->hasRewrittenInit()) {
+  if (Node->hasRewrittenInit())
     OS << " has rewritten init";
-    AddChild([=] {
-      ColorScope Color(OS, ShowColors, StmtColor);
-      Visit(Node->getExpr());
-    });
-  }
 }
 
 void TextNodeDumper::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
-  if (Node->hasRewrittenInit()) {
+  if (Node->hasRewrittenInit())
     OS << " has rewritten init";
-    AddChild([=] {
-      ColorScope Color(OS, ShowColors, StmtColor);
-      Visit(Node->getExpr());
-    });
-  }
 }
 
 void TextNodeDumper::VisitMaterializeTemporaryExpr(
