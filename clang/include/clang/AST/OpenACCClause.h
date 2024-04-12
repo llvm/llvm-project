@@ -160,10 +160,10 @@ public:
 
     switch (C->getClauseKind()) {
     case OpenACCClauseKind::Default:
-      VisitOpenACCDefaultClause(*cast<OpenACCDefaultClause>(C));
+      VisitDefaultClause(*cast<OpenACCDefaultClause>(C));
       return;
     case OpenACCClauseKind::If:
-      VisitOpenACCIfClause(*cast<OpenACCIfClause>(C));
+      VisitIfClause(*cast<OpenACCIfClause>(C));
       return;
     case OpenACCClauseKind::Finalize:
     case OpenACCClauseKind::IfPresent:
@@ -212,9 +212,9 @@ public:
   }
 
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
-  void VisitOpenACC##CLAUSE_NAME##Clause(                                      \
+  void Visit##CLAUSE_NAME##Clause(                                             \
       const OpenACC##CLAUSE_NAME##Clause &Clause) {                            \
-    return getDerived().VisitOpenACC##CLAUSE_NAME##Clause(Clause);             \
+    return getDerived().Visit##CLAUSE_NAME##Clause(Clause);                    \
   }
 
 #include "clang/Basic/OpenACCClauses.def"
@@ -236,8 +236,7 @@ public:
   OpenACCClausePrinter(raw_ostream &OS) : OS(OS) {}
 
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
-  void VisitOpenACC##CLAUSE_NAME##Clause(                                      \
-      const OpenACC##CLAUSE_NAME##Clause &Clause);
+  void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &Clause);
 #include "clang/Basic/OpenACCClauses.def"
 };
 
