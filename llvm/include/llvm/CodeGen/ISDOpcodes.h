@@ -710,6 +710,13 @@ enum NodeType {
   FSHL,
   FSHR,
 
+  // Represents (ADD (SHL a, b), c) with the arguments appearing in the order
+  // a, b, c.  'b' must be a constant, and follows the rules for shift amount
+  // types described just above.  This is used soley post-legalization when
+  // lowering MUL to target specific instructions - e.g. LEA on x86 or
+  // sh1add/sh2add/sh3add on RISCV.
+  SHL_ADD,
+
   /// Byte Swap and Counting operators.
   BSWAP,
   CTTZ,

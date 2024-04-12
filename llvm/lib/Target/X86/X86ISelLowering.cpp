@@ -33553,7 +33553,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BZHI)
   NODE_NAME_CASE(PDEP)
   NODE_NAME_CASE(PEXT)
-  NODE_NAME_CASE(MUL_IMM)
   NODE_NAME_CASE(MOVMSK)
   NODE_NAME_CASE(PTEST)
   NODE_NAME_CASE(TESTP)
@@ -36845,13 +36844,6 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   Known.resetAll();
   switch (Opc) {
   default: break;
-  case X86ISD::MUL_IMM: {
-    KnownBits Known2;
-    Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known2 = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known = KnownBits::mul(Known, Known2);
-    break;
-  }
   case X86ISD::SETCC:
     Known.Zero.setBitsFrom(1);
     break;
@@ -46905,12 +46897,18 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResLo, ResHi);
 }
 
+static SDValue createMulImm(uint64_t MulAmt, SDValue N, SelectionDAG &DAG,
+                            EVT VT, const SDLoc &DL) {
+  assert(MulAmt == 3 || MulAmt == 5 || MulAmt == 9);
+  SDValue ShAmt = DAG.getConstant(Log2_64(MulAmt-1), DL, MVT::i8);
+  return DAG.getNode(ISD::SHL_ADD, DL, VT, N, ShAmt, N);
+}
+
 static SDValue combineMulSpecial(uint64_t MulAmt, SDNode *N, SelectionDAG &DAG,
                                  EVT VT, const SDLoc &DL) {
 
   auto combineMulShlAddOrSub = [&](int Mult, int Shift, bool isAdd) {
-    SDValue Result = DAG.getNode(X86ISD::MUL_IMM, DL, VT, N->getOperand(0),
-                                 DAG.getConstant(Mult, DL, VT));
+    SDValue Result = createMulImm(Mult, N->getOperand(0), DAG, VT, DL);
     Result = DAG.getNode(ISD::SHL, DL, VT, Result,
                          DAG.getConstant(Shift, DL, MVT::i8));
     Result = DAG.getNode(isAdd ? ISD::ADD : ISD::SUB, DL, VT, Result,
@@ -46919,10 +46917,8 @@ static SDValue combineMulSpecial(uint64_t MulAmt, SDNode *N, SelectionDAG &DAG,
   };
 
   auto combineMulMulAddOrSub = [&](int Mul1, int Mul2, bool isAdd) {
-    SDValue Result = DAG.getNode(X86ISD::MUL_IMM, DL, VT, N->getOperand(0),
-                                 DAG.getConstant(Mul1, DL, VT));
-    Result = DAG.getNode(X86ISD::MUL_IMM, DL, VT, Result,
-                         DAG.getConstant(Mul2, DL, VT));
+    SDValue Result = createMulImm(Mul1, N->getOperand(0), DAG, VT, DL);
+    Result = createMulImm(Mul2, Result, DAG, VT, DL);
     Result = DAG.getNode(isAdd ? ISD::ADD : ISD::SUB, DL, VT, Result,
                          N->getOperand(0));
     return Result;
@@ -46982,9 +46978,8 @@ static SDValue combineMulSpecial(uint64_t MulAmt, SDNode *N, SelectionDAG &DAG,
       unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
       SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
                                    DAG.getConstant(ShiftAmt, DL, MVT::i8));
-      SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                   DAG.getConstant(ScaleShift, DL, MVT::i8));
-      return DAG.getNode(ISD::ADD, DL, VT, Shift1, Shift2);
+      return DAG.getNode(ISD::SHL_ADD, DL, VT, N->getOperand(0),
+                         DAG.getConstant(ScaleShift, DL, MVT::i8), Shift1);
     }
   }
 
@@ -47204,8 +47199,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   SDValue NewMul = SDValue();
   if (VT == MVT::i64 || VT == MVT::i32) {
     if (AbsMulAmt == 3 || AbsMulAmt == 5 || AbsMulAmt == 9) {
-      NewMul = DAG.getNode(X86ISD::MUL_IMM, DL, VT, N->getOperand(0),
-                           DAG.getConstant(AbsMulAmt, DL, VT));
+      NewMul = createMulImm(AbsMulAmt, N->getOperand(0), DAG, VT, DL);
       if (SignMulAmt < 0)
         NewMul =
             DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), NewMul);
@@ -47243,15 +47237,13 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
         NewMul = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
                              DAG.getConstant(Log2_64(MulAmt1), DL, MVT::i8));
       else
-        NewMul = DAG.getNode(X86ISD::MUL_IMM, DL, VT, N->getOperand(0),
-                             DAG.getConstant(MulAmt1, DL, VT));
+        NewMul = createMulImm(MulAmt1, N->getOperand(0), DAG, VT, DL);
 
       if (isPowerOf2_64(MulAmt2))
         NewMul = DAG.getNode(ISD::SHL, DL, VT, NewMul,
                              DAG.getConstant(Log2_64(MulAmt2), DL, MVT::i8));
       else
-        NewMul = DAG.getNode(X86ISD::MUL_IMM, DL, VT, NewMul,
-                             DAG.getConstant(MulAmt2, DL, VT));
+        NewMul = NewMul = createMulImm(MulAmt2, NewMul, DAG, VT, DL);
 
       // Negate the result.
       if (SignMulAmt < 0)

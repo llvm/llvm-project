@@ -2519,7 +2519,6 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     if (N.getResNo() != 0) break;
     [[fallthrough]];
   case ISD::MUL:
-  case X86ISD::MUL_IMM:
     // X*[3,5,9] -> X+X*[2,4,8]
     if (AM.BaseType == X86ISelAddressMode::RegBase &&
         AM.Base_Reg.getNode() == nullptr &&
@@ -2551,7 +2550,45 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
         }
     }
     break;
+  case ISD::SHL_ADD: {
+    // X << [1,2,3] + Y (we should never create anything else)
+    auto *CN = cast<ConstantSDNode>(N.getOperand(1));
+    assert(CN->getZExtValue() == 1 || CN->getZExtValue() == 2 ||
+           CN->getZExtValue() == 3);
+    if (AM.BaseType == X86ISelAddressMode::RegBase &&
+        AM.Base_Reg.getNode() == nullptr &&
+        AM.IndexReg.getNode() == nullptr) {
+      AM.Scale = unsigned(2 << (CN->getZExtValue() - 1));
 
+      if (N.getOperand(0) == N.getOperand(2)) {
+        SDValue MulVal = N.getOperand(0);
+        SDValue Reg;
+
+        // Okay, we know that we have a scale by now.  However, if the scaled
+        // value is an add of something and a constant, we can fold the
+        // constant into the disp field here.
+        if (MulVal.getNode()->getOpcode() == ISD::ADD &&
+            N->isOnlyUserOf(MulVal.getNode()) &&
+            isa<ConstantSDNode>(MulVal.getOperand(1))) {
+          Reg = MulVal.getOperand(0);
+          auto *AddVal = cast<ConstantSDNode>(MulVal.getOperand(1));
+          uint64_t Disp = AddVal->getSExtValue() * (AM.Scale + 1);
+          if (foldOffsetIntoAddress(Disp, AM))
+            Reg = N.getOperand(0);
+        } else {
+          Reg = N.getOperand(0);
+        }
+        AM.IndexReg = AM.Base_Reg = Reg;
+        return false;
+      }
+      // TODO: If N.getOperand(2) is a constant, we could try folding
+      // the displacement analogously to the above.
+      AM.IndexReg = N.getOperand(0);
+      AM.Base_Reg = N.getOperand(2);
+      return false;
+    }
+    break;
+  }
   case ISD::SUB: {
     // Given A-B, if A can be completely folded into the address and
     // the index field with the index field unused, use -B as the index.

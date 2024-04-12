@@ -3521,6 +3521,13 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = KnownBits::ashr(Known, Known2, /*ShAmtNonZero=*/false,
                             Op->getFlags().hasExact());
     break;
+  case ISD::SHL_ADD:
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::computeForAddSub(true, false, false,
+        KnownBits::shl(Known, Known2),
+        computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1));
+    break;
   case ISD::FSHL:
   case ISD::FSHR:
     if (ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(2), DemandedElts)) {
@@ -7345,6 +7352,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // Don't create noop casts.
     if (N1.getValueType() == VT)
       return N1;
+    break;
+  case ISD::SHL_ADD:
+    assert(VT == N1.getValueType() && VT == N3.getValueType());
+    assert(TLI->isTypeLegal(VT) && "Created only post legalize");
+    assert(isa<ConstantSDNode>(N2) && "Constant shift expected");
     break;
   }
 

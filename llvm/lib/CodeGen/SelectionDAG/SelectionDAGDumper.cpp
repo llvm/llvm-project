@@ -264,6 +264,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SRL:                        return "srl";
   case ISD::ROTL:                       return "rotl";
   case ISD::ROTR:                       return "rotr";
+  case ISD::SHL_ADD:                    return "shl_add";
   case ISD::FSHL:                       return "fshl";
   case ISD::FSHR:                       return "fshr";
   case ISD::FADD:                       return "fadd";

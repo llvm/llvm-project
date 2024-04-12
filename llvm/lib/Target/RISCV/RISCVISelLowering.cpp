@@ -12789,10 +12789,9 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
   SDValue NS = (C0 < C1) ? N0->getOperand(0) : N1->getOperand(0);
   SDValue NL = (C0 > C1) ? N0->getOperand(0) : N1->getOperand(0);
-  SDValue NA0 =
-      DAG.getNode(ISD::SHL, DL, VT, NL, DAG.getConstant(Diff, DL, VT));
-  SDValue NA1 = DAG.getNode(ISD::ADD, DL, VT, NA0, NS);
-  return DAG.getNode(ISD::SHL, DL, VT, NA1, DAG.getConstant(Bits, DL, VT));
+  SDValue SHADD =
+      DAG.getNode(ISD::SHL_ADD, DL, VT, NL, DAG.getConstant(Diff, DL, VT), NS);
+  return DAG.getNode(ISD::SHL, DL, VT, SHADD, DAG.getConstant(Bits, DL, VT));
 }
 
 // Combine a constant select operand into its use:
@@ -13028,14 +13027,17 @@ static SDValue combineAddOfBooleanXor(SDNode *N, SelectionDAG &DAG) {
                      N0.getOperand(0));
 }
 
-static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
+static SDValue performADDCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
+  SelectionDAG &DAG = DCI.DAG;
   if (SDValue V = combineAddOfBooleanXor(N, DAG))
     return V;
   if (SDValue V = transformAddImmMulImm(N, DAG, Subtarget))
     return V;
-  if (SDValue V = transformAddShlImm(N, DAG, Subtarget))
-    return V;
+  if (!DCI.isBeforeLegalize())
+    if (SDValue V = transformAddShlImm(N, DAG, Subtarget))
+      return V;
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
@@ -15894,7 +15896,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     if (SDValue V = combineToVWMACC(N, DAG, Subtarget))
       return V;
-    return performADDCombine(N, DAG, Subtarget);
+    return performADDCombine(N, DCI, Subtarget);
   }
   case ISD::SUB: {
     if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))

@@ -121,6 +121,10 @@ def SDTIntShiftOp : SDTypeProfile<1, 2, [   // shl, sra, srl
 def SDTIntShiftDOp: SDTypeProfile<1, 3, [   // fshl, fshr
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>
 ]>;
+def SDTIntShiftAddOp : SDTypeProfile<1, 3, [   // shl_add
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 3>, SDTCisInt<0>, SDTCisInt<2>,
+  SDTCisInt<3>
+]>;
 def SDTIntSatNoShOp : SDTypeProfile<1, 2, [   // ssat with no shift
   SDTCisSameAs<0, 1>, SDTCisInt<2>
 ]>;
@@ -411,6 +415,7 @@ def rotl       : SDNode<"ISD::ROTL"      , SDTIntShiftOp>;
 def rotr       : SDNode<"ISD::ROTR"      , SDTIntShiftOp>;
 def fshl       : SDNode<"ISD::FSHL"      , SDTIntShiftDOp>;
 def fshr       : SDNode<"ISD::FSHR"      , SDTIntShiftDOp>;
+def shl_add    : SDNode<"ISD::SHL_ADD"   , SDTIntShiftAddOp>;
 def and        : SDNode<"ISD::AND"       , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def or         : SDNode<"ISD::OR"        , SDTIntBinOp,

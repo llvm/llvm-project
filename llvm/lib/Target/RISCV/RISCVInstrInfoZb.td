@@ -678,6 +678,8 @@ foreach i = {1,2,3} in {
   defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
   def : Pat<(XLenVT (add_like_non_imm12 (shl GPR:$rs1, (XLenVT i)), GPR:$rs2)),
             (shxadd GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (shl_add GPR:$rs1, (XLenVT i), GPR:$rs2)),
+            (shxadd GPR:$rs1, GPR:$rs2)>;
 
   defvar pat = !cast<ComplexPattern>("sh"#i#"add_op");
   // More complex cases use a ComplexPattern.
@@ -881,6 +883,9 @@ foreach i = {1,2,3} in {
   defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
   def : Pat<(i32 (add_like_non_imm12 (shl GPR:$rs1, (i64 i)), GPR:$rs2)),
             (shxadd GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (shl_add GPR:$rs1, (i32 i), GPR:$rs2)),
+            (shxadd GPR:$rs1, GPR:$rs2)>;
+
 }
 }
 

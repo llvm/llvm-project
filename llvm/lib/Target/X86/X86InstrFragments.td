@@ -284,8 +284,6 @@ def X86bzhi   : SDNode<"X86ISD::BZHI",   SDTIntBinOp>;
 def X86pdep   : SDNode<"X86ISD::PDEP",   SDTIntBinOp>;
 def X86pext   : SDNode<"X86ISD::PEXT",   SDTIntBinOp>;
 
-def X86mul_imm : SDNode<"X86ISD::MUL_IMM", SDTIntBinOp>;
-
 def X86DynAlloca : SDNode<"X86ISD::DYN_ALLOCA", SDT_X86DYN_ALLOCA,
                           [SDNPHasChain, SDNPOutGlue]>;
 
@@ -341,11 +339,11 @@ def X86cmpccxadd : SDNode<"X86ISD::CMPCCXADD", SDTX86Cmpccxadd,
 // Define X86-specific addressing mode.
 def addr      : ComplexPattern<iPTR, 5, "selectAddr", [], [SDNPWantParent]>;
 def lea32addr : ComplexPattern<i32, 5, "selectLEAAddr",
-                               [add, sub, mul, X86mul_imm, shl, or, xor, frameindex],
+                               [add, sub, mul, shl_add, shl, or, xor, frameindex],
                                []>;
 // In 64-bit mode 32-bit LEAs can use RIP-relative addressing.
 def lea64_32addr : ComplexPattern<i32, 5, "selectLEA64_32Addr",
-                                  [add, sub, mul, X86mul_imm, shl, or, xor,
+                                  [add, sub, mul, shl_add, shl, or, xor,
                                    frameindex, X86WrapperRIP],
                                   []>;
 
@@ -356,7 +354,7 @@ def tls32baseaddr : ComplexPattern<i32, 5, "selectTLSADDRAddr",
                                [tglobaltlsaddr], []>;
 
 def lea64addr : ComplexPattern<i64, 5, "selectLEAAddr",
-                        [add, sub, mul, X86mul_imm, shl, or, xor, frameindex,
+                        [add, sub, mul, shl_add, shl, or, xor, frameindex,
                          X86WrapperRIP], []>;
 
 def tls64addr : ComplexPattern<i64, 5, "selectTLSADDRAddr",
