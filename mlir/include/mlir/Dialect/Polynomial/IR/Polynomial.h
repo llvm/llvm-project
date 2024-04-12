@@ -13,7 +13,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -74,7 +74,7 @@ class Polynomial {
 public:
   Polynomial() = delete;
 
-  Polynomial(const llvm::SmallVector<Monomial> &terms) : terms(terms){};
+  explicit Polynomial(ArrayRef<Monomial> terms) : terms(terms) {};
 
   static Polynomial fromMonomials(ArrayRef<Monomial> monomials);
 
