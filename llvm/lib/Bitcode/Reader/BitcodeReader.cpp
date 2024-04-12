@@ -2325,10 +2325,11 @@ Error BitcodeReader::parseAttributeGroupBlock() {
 
           ConstantRangeList CRL(64, false);
           int RangeSize = Record[++i];
+          assert(i + RangeSize < e);
           for (int Idx = 0; Idx < RangeSize; ++Idx) {
             int64_t Start = BitcodeReader::decodeSignRotatedValue(Record[++i]);
             int64_t End = BitcodeReader::decodeSignRotatedValue(Record[++i]);
-            CRL.append(Start, End);
+            CRL.insert(Start, End);
           }
           B.addConstantRangeListAttr(Kind, CRL);
         } else {

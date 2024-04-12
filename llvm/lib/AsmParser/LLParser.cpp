@@ -3087,7 +3087,7 @@ bool LLParser::parseInitializesAttr(AttrBuilder &B) {
     if (parseToken(lltok::rparen, "expected ')'"))
       return true;
 
-    CRL.append(ConstantRange(Lower, Upper));
+    CRL.insert(ConstantRange(Lower, Upper));
   } while (EatIfPresent(lltok::comma));
 
   if (parseToken(lltok::rparen, "expected ')'"))

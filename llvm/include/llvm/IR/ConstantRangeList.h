@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // Represent a list of signed ConstantRange and do NOT support wrap around the
-// end of the numeric range. Ranges in the list should have the same bitwidth.
-// Each range's lower should be less than its upper. Special lists (take 8-bit
-// as an example):
+// end of the numeric range. Ranges in the list are ordered and no overlapping.
+// Ranges should have the same bitwidth. Each range's lower should be less than
+// its upper. Special lists (take 8-bit as an example):
 //
 // {[0, 0)}     = Empty set
 // {[255, 255)} = Full Set
@@ -34,8 +34,6 @@ class raw_ostream;
 /// This class represents a list of constant ranges.
 class [[nodiscard]] ConstantRangeList {
   SmallVector<ConstantRange, 2> Ranges;
-  // Whether the range list is sorted: [i].lower() < [i+1].lower()
-  bool Sorted = true;
 
 public:
   /// Initialize a full or empty set for the specified bit width.
@@ -76,22 +74,11 @@ public:
   /// For EmptySet or FullSet, the CRL size is 1 not 0.
   size_t size() const { return Ranges.size(); }
 
-  void append(const ConstantRange &Range) {
-    assert(Range.getLower().slt(Range.getUpper()));
-    assert(getBitWidth() == Range.getBitWidth());
-    if (isFullSet())
-      return;
-    if (isEmptySet()) {
-      Ranges[0] = Range;
-      return;
-    }
-    if (Range.getLower().slt(Ranges[size() - 1].getLower()))
-      Sorted = false;
-    Ranges.push_back(Range);
-  }
-
-  void append(int64_t Lower, int64_t Upper) {
-    append(ConstantRange(APInt(64, Lower, /*isSigned=*/true),
+  /// Insert a range to Ranges. Keep the list ordered
+  /// and no overlapping (merge ranges if needed).
+  void insert(const ConstantRange &Range);
+  void insert(int64_t Lower, int64_t Upper) {
+    insert(ConstantRange(APInt(64, Lower, /*isSigned=*/true),
                          APInt(64, Upper, /*isSigned=*/true)));
   }
 
