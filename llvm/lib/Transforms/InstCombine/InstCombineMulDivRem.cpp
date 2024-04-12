@@ -636,26 +636,43 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
   // expression.
   if (match(Op1, m_Constant(C)) && C->isFiniteNonZeroFP()) {
     Constant *C1;
-    if (match(Op0, m_OneUse(m_FDiv(m_Constant(C1), m_Value(X))))) {
+    if (match(Op0,
+              m_AllowReassoc(m_OneUse(m_FDiv(m_Constant(C1), m_Value(X)))))) {
       // (C1 / X) * C --> (C * C1) / X
       Constant *CC1 =
           ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL);
-      if (CC1 && CC1->isNormalFP())
-        return BinaryOperator::CreateFDivFMF(CC1, X, &I);
+      if (CC1 && CC1->isNormalFP()) {
+        // Preserve only fast-math flags that were set on both of the original
+        // instructions
+        auto *NewDiv = BinaryOperator::CreateFDivFMF(CC1, X, &I);
+        NewDiv->andIRFlags(Op0);
+        return NewDiv;
+      }
     }
-    if (match(Op0, m_FDiv(m_Value(X), m_Constant(C1)))) {
+    if (match(Op0, m_AllowReassoc(m_FDiv(m_Value(X), m_Constant(C1))))) {
+      // FIXME: This seems like it should also be checking for arcp
       // (X / C1) * C --> X * (C / C1)
       Constant *CDivC1 =
           ConstantFoldBinaryOpOperands(Instruction::FDiv, C, C1, DL);
-      if (CDivC1 && CDivC1->isNormalFP())
-        return BinaryOperator::CreateFMulFMF(X, CDivC1, &I);
+      if (CDivC1 && CDivC1->isNormalFP()) {
+        // Preserve only fast-math flags that were set on both of the original
+        // instructions
+        auto *NewMul = BinaryOperator::CreateFMulFMF(X, CDivC1, &I);
+        NewMul->andIRFlags(Op0);
+        return NewMul;
+      }
 
       // If the constant was a denormal, try reassociating differently.
       // (X / C1) * C --> X / (C1 / C)
       Constant *C1DivC =
           ConstantFoldBinaryOpOperands(Instruction::FDiv, C1, C, DL);
-      if (C1DivC && Op0->hasOneUse() && C1DivC->isNormalFP())
-        return BinaryOperator::CreateFDivFMF(X, C1DivC, &I);
+      if (C1DivC && Op0->hasOneUse() && C1DivC->isNormalFP()) {
+        // Preserve only fast-math flags that were set on both of the original
+        // instructions
+        auto *NewDiv = BinaryOperator::CreateFDivFMF(X, C1DivC, &I);
+        NewDiv->andIRFlags(Op0);
+        return NewDiv;
+      }
     }
 
     // We do not need to match 'fadd C, X' and 'fsub X, C' because they are

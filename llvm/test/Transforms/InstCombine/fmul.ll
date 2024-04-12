@@ -653,10 +653,47 @@ define float @fdiv_constant_numerator_fmul(float %x) {
 ; CHECK-NEXT:    [[T3:%.*]] = fdiv reassoc float 1.200000e+07, [[X:%.*]]
 ; CHECK-NEXT:    ret float [[T3]]
 ;
+  %t1 = fdiv reassoc float 2.0e+3, %x
+  %t3 = fmul reassoc float %t1, 6.0e+3
+  ret float %t3
+}
+
+; C1/X * C2 => (C1*C2) / X with mixed fast-math flags
+
+define float @fdiv_constant_numerator_fmul_mixed(float %x) {
+; CHECK-LABEL: @fdiv_constant_numerator_fmul_mixed(
+; CHECK-NEXT:    [[T3:%.*]] = fdiv reassoc float 1.200000e+07, [[X:%.*]]
+; CHECK-NEXT:    ret float [[T3]]
+;
+  %t1 = fdiv reassoc float 2.0e+3, %x
+  %t3 = fmul fast float %t1, 6.0e+3
+  ret float %t3
+}
+
+; C1/X * C2 => (C1*C2) / X with full fast-math flags
+
+define float @fdiv_constant_numerator_fmul_fast(float %x) {
+; CHECK-LABEL: @fdiv_constant_numerator_fmul_fast(
+; CHECK-NEXT:    [[T3:%.*]] = fdiv fast float 1.200000e+07, [[X:%.*]]
+; CHECK-NEXT:    ret float [[T3]]
+;
+  %t1 = fdiv fast float 2.0e+3, %x
+  %t3 = fmul fast float %t1, 6.0e+3
+  ret float %t3
+}
+
+; C1/X * C2 => (C1*C2) / X with no fast-math flags on the fdiv
+
+define float @fdiv_constant_numerator_fmul_precdiv(float %x) {
+; CHECK-LABEL: @fdiv_constant_numerator_fmul_precdiv(
+; CHECK-NEXT:    [[T4:%.*]] = fdiv reassoc float 1.200000e+07, [[X:%.*]]
+; CHECK-NEXT:    ret float [[T4]]
+;
   %t1 = fdiv float 2.0e+3, %x
   %t3 = fmul reassoc float %t1, 6.0e+3
   ret float %t3
 }
+
 
 ; C1/X * C2 => (C1*C2) / X is disabled if C1/X has multiple uses
 
@@ -679,7 +716,8 @@ define float @fdiv_constant_numerator_fmul_extra_use(float %x) {
 
 define float @fdiv_constant_denominator_fmul(float %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul(
-; CHECK-NEXT:    [[T3:%.*]] = fmul reassoc float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc float [[X:%.*]], 6.000000e+03
+; CHECK-NEXT:    [[T3:%.*]] = fdiv reassoc float [[TMP1]], 2.000000e+03
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fdiv float %x, 2.0e+3
@@ -692,7 +730,7 @@ define <4 x float> @fdiv_constant_denominator_fmul_vec(<4 x float> %x) {
 ; CHECK-NEXT:    [[T3:%.*]] = fmul reassoc <4 x float> [[X:%.*]], <float 3.000000e+00, float 2.000000e+00, float 1.000000e+00, float 1.000000e+00>
 ; CHECK-NEXT:    ret <4 x float> [[T3]]
 ;
-  %t1 = fdiv <4 x float> %x, <float 2.0e+3, float 3.0e+3, float 2.0e+3, float 1.0e+3>
+  %t1 = fdiv reassoc <4 x float> %x, <float 2.0e+3, float 3.0e+3, float 2.0e+3, float 1.0e+3>
   %t3 = fmul reassoc <4 x float> %t1, <float 6.0e+3, float 6.0e+3, float 2.0e+3, float 1.0e+3>
   ret <4 x float> %t3
 }
@@ -705,7 +743,7 @@ define <4 x float> @fdiv_constant_denominator_fmul_vec_constexpr(<4 x float> %x)
 ; CHECK-NEXT:    ret <4 x float> [[T3]]
 ;
   %constExprMul = bitcast i128 trunc (i160 bitcast (<5 x float> <float 6.0e+3, float 6.0e+3, float 2.0e+3, float 1.0e+3, float undef> to i160) to i128) to <4 x float>
-  %t1 = fdiv <4 x float> %x, <float 2.0e+3, float 3.0e+3, float 2.0e+3, float 1.0e+3>
+  %t1 = fdiv reassoc <4 x float> %x, <float 2.0e+3, float 3.0e+3, float 2.0e+3, float 1.0e+3>
   %t3 = fmul reassoc <4 x float> %t1, %constExprMul
   ret <4 x float> %t3
 }
@@ -745,7 +783,8 @@ define float @fdiv_constant_denominator_fmul_denorm(float %x) {
 
 define float @fdiv_constant_denominator_fmul_denorm_try_harder(float %x) {
 ; CHECK-LABEL: @fdiv_constant_denominator_fmul_denorm_try_harder(
-; CHECK-NEXT:    [[T3:%.*]] = fdiv reassoc float [[X:%.*]], 0x47E8000000000000
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc float [[X:%.*]], 0x3810000000000000
+; CHECK-NEXT:    [[T3:%.*]] = fdiv reassoc float [[TMP1]], 3.000000e+00
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fdiv float %x, 3.0
@@ -868,7 +907,8 @@ define float @fmul_fadd_distribute_extra_use(float %x) {
 
 define double @fmul_fadd_fdiv_distribute2(double %x) {
 ; CHECK-LABEL: @fmul_fadd_fdiv_distribute2(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc double [[X:%.*]], 0x7FE8000000000000
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc double [[X:%.*]], 0x10000000000000
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc double [[TMP2]], 3.000000e+00
 ; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc double [[TMP1]], 0x34000000000000
 ; CHECK-NEXT:    ret double [[T3]]
 ;
@@ -883,7 +923,8 @@ define double @fmul_fadd_fdiv_distribute2(double %x) {
 
 define double @fmul_fadd_fdiv_distribute3(double %x) {
 ; CHECK-LABEL: @fmul_fadd_fdiv_distribute3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc double [[X:%.*]], 0x7FE8000000000000
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc double [[X:%.*]], 0x10000000000000
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc double [[TMP2]], 3.000000e+00
 ; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc double [[TMP1]], 0x34000000000000
 ; CHECK-NEXT:    ret double [[T3]]
 ;
