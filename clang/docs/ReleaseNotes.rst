@@ -204,7 +204,7 @@ Non-comprehensive list of changes in this release
   like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
 
 - Improved stack usage with C++ initialization code. This allows significantly
-  more template instantiations before reaching stack exhaustion limits.
+  more levels of recursive initialization before reaching stack exhaustion limits.
   Fixes #GH88330
 
 New Compiler Flags
