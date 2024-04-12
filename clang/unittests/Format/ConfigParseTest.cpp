@@ -403,6 +403,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BCOS_Never);
   CHECK_PARSE("BreakChevronOperator: BetweenStrings", BreakChevronOperator,
               FormatStyle::BCOS_BetweenStrings);
+  CHECK_PARSE("BreakChevronOperator: Always", BreakChevronOperator,
+              FormatStyle::BCOS_Always);
 
   Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   CHECK_PARSE("BreakConstructorInitializers: BeforeComma",
@@ -1459,3 +1461,4 @@ TEST(ConfigParseTest, GetStyleOfSpecificFile) {
 } // namespace
 } // namespace format
 } // namespace clang
+                    
