@@ -87,6 +87,7 @@ protected:
   bool EnableTgSplit = false;
   bool EnableCuMode = false;
   bool TrapHandler = false;
+  bool EnablePreciseMemory = false;
 
   // Used as options.
   bool EnableLoadStoreOpt = false;
@@ -599,6 +600,8 @@ public:
     return EnableCuMode;
   }
 
+  bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
+
   bool hasFlatAddressSpace() const {
     return FlatAddressSpace;
   }
@@ -922,6 +925,8 @@ public:
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
+
+  void mirFileLoaded(MachineFunction &MF) const override;
 
   unsigned getMaxNumUserSGPRs() const {
     return AMDGPU::getMaxNumUserSGPRs(*this);

@@ -125,3 +125,6 @@ clang/test/AST/Interp/ @tbaederr
 /llvm/**/TextAPI/ @cyndyishida
 /clang/**/InstallAPI/ @cyndyishida
 /clang/tools/clang-installapi/ @cyndyishida
+
+# ExtractAPI
+/clang/**/ExtractAPI @daniel-grumberg

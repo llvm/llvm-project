@@ -20,8 +20,8 @@ struct Format : public FormatAdapter<int> {
   void format(raw_ostream &OS, StringRef Opt) override { OS << "Format"; }
 };
 
-using detail::uses_format_member;
-using detail::uses_missing_provider;
+using support::detail::uses_format_member;
+using support::detail::uses_missing_provider;
 
 static_assert(uses_format_member<Format>::value, "");
 static_assert(uses_format_member<Format &>::value, "");

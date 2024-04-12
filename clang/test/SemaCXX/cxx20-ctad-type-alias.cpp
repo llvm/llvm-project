@@ -259,3 +259,23 @@ using Bar2 = Foo<K>; // expected-error {{extraneous template parameter list in a
 
 Bar2 b = 1; // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
 } // namespace test19
+
+// GH85385
+namespace test20 {
+template <template <typename> typename T>
+struct K {};
+
+template <typename U>
+class Foo {};
+
+// Verify that template template type parameter TTP is referenced/used in the
+// template arguments of the RHS.
+template <template<typename> typename TTP>
+using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'Foo<K<>>' against 'int'}}
+
+template <class T>
+class Container {};
+Bar t = Foo<K<Container>>();
+
+Bar s = 1; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of}}
+} // namespace test20
