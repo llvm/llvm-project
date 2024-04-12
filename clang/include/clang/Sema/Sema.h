@@ -60,6 +60,7 @@
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -423,6 +424,25 @@ enum class TemplateDeductionResult {
   AlreadyDiagnosed
 };
 
+/// Kinds of C++ special members.
+enum class CXXSpecialMemberKind {
+  DefaultConstructor,
+  CopyConstructor,
+  MoveConstructor,
+  CopyAssignment,
+  MoveAssignment,
+  Destructor,
+  Invalid
+};
+
+enum class CUDAFunctionTarget {
+  Device,
+  Global,
+  Host,
+  HostDevice,
+  InvalidTarget
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -568,7 +588,7 @@ public:
 
   /// Invent a new identifier for parameters of abbreviated templates.
   IdentifierInfo *
-  InventAbbreviatedTemplateParameterTypeName(IdentifierInfo *ParamName,
+  InventAbbreviatedTemplateParameterTypeName(const IdentifierInfo *ParamName,
                                              unsigned Index);
 
   void emitAndClearUnusedLocalTypedefWarnings();
@@ -2940,13 +2960,6 @@ public:
                                       QualType NewT, QualType OldT);
   void CheckMain(FunctionDecl *FD, const DeclSpec &D);
   void CheckMSVCRTEntryPoint(FunctionDecl *FD);
-  void ActOnHLSLTopLevelFunction(FunctionDecl *FD);
-  void CheckHLSLEntryPoint(FunctionDecl *FD);
-  void CheckHLSLSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
-                                   const HLSLAnnotationAttr *AnnotationAttr);
-  void DiagnoseHLSLAttrStageMismatch(
-      const Attr *A, HLSLShaderAttr::ShaderType Stage,
-      std::initializer_list<HLSLShaderAttr::ShaderType> AllowedStages);
   Attr *getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
                                                    bool IsDefinition);
   void CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D);
@@ -2958,9 +2971,9 @@ public:
                                                   SourceLocation NameLoc,
                                                   TypeSourceInfo *TSInfo);
   ParmVarDecl *CheckParameter(DeclContext *DC, SourceLocation StartLoc,
-                              SourceLocation NameLoc, IdentifierInfo *Name,
-                              QualType T, TypeSourceInfo *TSInfo,
-                              StorageClass SC);
+                              SourceLocation NameLoc,
+                              const IdentifierInfo *Name, QualType T,
+                              TypeSourceInfo *TSInfo, StorageClass SC);
 
   // Contexts where using non-trivial C union types can be disallowed. This is
   // passed to err_non_trivial_c_union_in_invalid_context.
@@ -3365,7 +3378,7 @@ public:
   /// variable.
   void DiagnoseUnusedButSetDecl(const VarDecl *VD, DiagReceiverTy DiagReceiver);
 
-  ObjCInterfaceDecl *getObjCInterfaceDecl(IdentifierInfo *&Id,
+  ObjCInterfaceDecl *getObjCInterfaceDecl(const IdentifierInfo *&Id,
                                           SourceLocation IdLoc,
                                           bool TypoCorrection = false);
 
@@ -3442,8 +3455,9 @@ public:
   /// VerifyBitField - verifies that a bit field expression is an ICE and has
   /// the correct width, and that the field type is valid.
   /// Returns false on success.
-  ExprResult VerifyBitField(SourceLocation FieldLoc, IdentifierInfo *FieldName,
-                            QualType FieldTy, bool IsMsStruct, Expr *BitWidth);
+  ExprResult VerifyBitField(SourceLocation FieldLoc,
+                            const IdentifierInfo *FieldName, QualType FieldTy,
+                            bool IsMsStruct, Expr *BitWidth);
 
   /// IsValueInFlagEnum - Determine if a value is allowed as part of a flag
   /// enum. If AllowMask is true, then we also allow the complement of a valid
@@ -3657,20 +3671,12 @@ public:
   InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D,
                                                 const InternalLinkageAttr &AL);
 
-  enum CUDAFunctionTarget {
-    CFT_Device,
-    CFT_Global,
-    CFT_Host,
-    CFT_HostDevice,
-    CFT_InvalidTarget
-  };
-
   /// Check validaty of calling convention attribute \p attr. If \p FD
   /// is not null pointer, use \p FD to determine the CUDA/HIP host/device
   /// target. Otherwise, it is specified by \p CFT.
-  bool CheckCallingConvAttr(const ParsedAttr &attr, CallingConv &CC,
-                            const FunctionDecl *FD = nullptr,
-                            CUDAFunctionTarget CFT = CFT_InvalidTarget);
+  bool CheckCallingConvAttr(
+      const ParsedAttr &attr, CallingConv &CC, const FunctionDecl *FD = nullptr,
+      CUDAFunctionTarget CFT = CUDAFunctionTarget::InvalidTarget);
 
   void AddParameterABIAttr(Decl *D, const AttributeCommonInfo &CI,
                            ParameterABI ABI);
@@ -3707,14 +3713,6 @@ public:
                           StringRef UuidAsWritten, MSGuidDecl *GuidDecl);
 
   BTFDeclTagAttr *mergeBTFDeclTagAttr(Decl *D, const BTFDeclTagAttr &AL);
-  HLSLNumThreadsAttr *mergeHLSLNumThreadsAttr(Decl *D,
-                                              const AttributeCommonInfo &AL,
-                                              int X, int Y, int Z);
-  HLSLShaderAttr *mergeHLSLShaderAttr(Decl *D, const AttributeCommonInfo &AL,
-                                      HLSLShaderAttr::ShaderType ShaderType);
-  HLSLParamModifierAttr *
-  mergeHLSLParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
-                             HLSLParamModifierAttr::Spelling Spelling);
 
   WebAssemblyImportNameAttr *
   mergeImportNameAttr(Decl *D, const WebAssemblyImportNameAttr &AL);
@@ -4091,22 +4089,11 @@ public:
       SourceRange SpecificationRange, ArrayRef<ParsedType> DynamicExceptions,
       ArrayRef<SourceRange> DynamicExceptionRanges, Expr *NoexceptExpr);
 
-  /// Kinds of C++ special members.
-  enum CXXSpecialMember {
-    CXXDefaultConstructor,
-    CXXCopyConstructor,
-    CXXMoveConstructor,
-    CXXCopyAssignment,
-    CXXMoveAssignment,
-    CXXDestructor,
-    CXXInvalid
-  };
-
   class InheritedConstructorInfo;
 
   /// Determine if a special member function should have a deleted
   /// definition when it is defaulted.
-  bool ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMember CSM,
+  bool ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
                                  InheritedConstructorInfo *ICI = nullptr,
                                  bool Diagnose = false);
 
@@ -4472,7 +4459,7 @@ public:
   void CheckExplicitlyDefaultedFunction(Scope *S, FunctionDecl *MD);
 
   bool CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
-                                             CXXSpecialMember CSM,
+                                             CXXSpecialMemberKind CSM,
                                              SourceLocation DefaultLoc);
   void CheckDelayedMemberExceptionSpecs();
 
@@ -4632,13 +4619,14 @@ public:
   void CheckCXXDefaultArguments(FunctionDecl *FD);
   void CheckExtraCXXDefaultArguments(Declarator &D);
 
-  CXXSpecialMember getSpecialMember(const CXXMethodDecl *MD) {
+  CXXSpecialMemberKind getSpecialMember(const CXXMethodDecl *MD) {
     return getDefaultedFunctionKind(MD).asSpecialMember();
   }
 
   VarDecl *BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
                                      SourceLocation StartLoc,
-                                     SourceLocation IdLoc, IdentifierInfo *Id);
+                                     SourceLocation IdLoc,
+                                     const IdentifierInfo *Id);
 
   Decl *ActOnExceptionDeclarator(Scope *S, Declarator &D);
 
@@ -4658,7 +4646,8 @@ public:
                                    AccessSpecifier AS,
                                    const ParsedAttr &MSPropertyAttr);
 
-  void DiagnoseNontrivial(const CXXRecordDecl *Record, CXXSpecialMember CSM);
+  void DiagnoseNontrivial(const CXXRecordDecl *Record,
+                          CXXSpecialMemberKind CSM);
 
   enum TrivialABIHandling {
     /// The triviality of a method unaffected by "trivial_abi".
@@ -4668,26 +4657,31 @@ public:
     TAH_ConsiderTrivialABI
   };
 
-  bool SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMember CSM,
+  bool SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
                               TrivialABIHandling TAH = TAH_IgnoreTrivialABI,
                               bool Diagnose = false);
 
   /// For a defaulted function, the kind of defaulted function that it is.
   class DefaultedFunctionKind {
+    LLVM_PREFERRED_TYPE(CXXSpecialMemberKind)
     unsigned SpecialMember : 8;
     unsigned Comparison : 8;
 
   public:
     DefaultedFunctionKind()
-        : SpecialMember(CXXInvalid),
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
           Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
-    DefaultedFunctionKind(CXXSpecialMember CSM)
-        : SpecialMember(CSM),
+    DefaultedFunctionKind(CXXSpecialMemberKind CSM)
+        : SpecialMember(llvm::to_underlying(CSM)),
           Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
     DefaultedFunctionKind(DefaultedComparisonKind Comp)
-        : SpecialMember(CXXInvalid), Comparison(llvm::to_underlying(Comp)) {}
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
+          Comparison(llvm::to_underlying(Comp)) {}
 
-    bool isSpecialMember() const { return SpecialMember != CXXInvalid; }
+    bool isSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember) !=
+             CXXSpecialMemberKind::Invalid;
+    }
     bool isComparison() const {
       return static_cast<DefaultedComparisonKind>(Comparison) !=
              DefaultedComparisonKind::None;
@@ -4697,8 +4691,8 @@ public:
       return isSpecialMember() || isComparison();
     }
 
-    CXXSpecialMember asSpecialMember() const {
-      return static_cast<CXXSpecialMember>(SpecialMember);
+    CXXSpecialMemberKind asSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember);
     }
     DefaultedComparisonKind asComparison() const {
       return static_cast<DefaultedComparisonKind>(Comparison);
@@ -4706,7 +4700,8 @@ public:
 
     /// Get the index of this function kind for use in diagnostics.
     unsigned getDiagnosticIndex() const {
-      static_assert(CXXInvalid > CXXDestructor,
+      static_assert(llvm::to_underlying(CXXSpecialMemberKind::Invalid) >
+                        llvm::to_underlying(CXXSpecialMemberKind::Destructor),
                     "invalid should have highest index");
       static_assert((unsigned)DefaultedComparisonKind::None == 0,
                     "none should be equal to zero");
@@ -4812,7 +4807,7 @@ public:
   /// definition in this translation unit.
   llvm::MapVector<NamedDecl *, SourceLocation> UndefinedButUsed;
 
-  typedef llvm::PointerIntPair<CXXRecordDecl *, 3, CXXSpecialMember>
+  typedef llvm::PointerIntPair<CXXRecordDecl *, 3, CXXSpecialMemberKind>
       SpecialMemberDecl;
 
   /// The C++ special members which we are currently in the process of
@@ -5445,7 +5440,8 @@ public:
 
   ExprResult BuildDeclarationNameExpr(const CXXScopeSpec &SS, LookupResult &R,
                                       bool NeedsADL,
-                                      bool AcceptInvalidDecl = false);
+                                      bool AcceptInvalidDecl = false,
+                                      bool NeedUnresolved = false);
   ExprResult BuildDeclarationNameExpr(
       const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo, NamedDecl *D,
       NamedDecl *FoundD = nullptr,
@@ -6555,12 +6551,12 @@ public:
 
   ParsedType getInheritingConstructorName(CXXScopeSpec &SS,
                                           SourceLocation NameLoc,
-                                          IdentifierInfo &Name);
+                                          const IdentifierInfo &Name);
 
-  ParsedType getConstructorName(IdentifierInfo &II, SourceLocation NameLoc,
-                                Scope *S, CXXScopeSpec &SS,
-                                bool EnteringContext);
-  ParsedType getDestructorName(IdentifierInfo &II, SourceLocation NameLoc,
+  ParsedType getConstructorName(const IdentifierInfo &II,
+                                SourceLocation NameLoc, Scope *S,
+                                CXXScopeSpec &SS, bool EnteringContext);
+  ParsedType getDestructorName(const IdentifierInfo &II, SourceLocation NameLoc,
                                Scope *S, CXXScopeSpec &SS,
                                ParsedType ObjectType, bool EnteringContext);
 
@@ -6588,7 +6584,10 @@ public:
                             SourceLocation RParenLoc);
 
   //// ActOnCXXThis -  Parse 'this' pointer.
-  ExprResult ActOnCXXThis(SourceLocation loc);
+  ExprResult ActOnCXXThis(SourceLocation Loc);
+
+  /// Check whether the type of 'this' is valid in the current context.
+  bool CheckCXXThisType(SourceLocation Loc, QualType Type);
 
   /// Build a CXXThisExpr and mark it referenced in the current context.
   Expr *BuildCXXThisExpr(SourceLocation Loc, QualType Type, bool IsImplicit);
@@ -6960,7 +6959,7 @@ public:
   concepts::Requirement *ActOnTypeRequirement(SourceLocation TypenameKWLoc,
                                               CXXScopeSpec &SS,
                                               SourceLocation NameLoc,
-                                              IdentifierInfo *TypeName,
+                                              const IdentifierInfo *TypeName,
                                               TemplateIdAnnotation *TemplateId);
   concepts::Requirement *ActOnCompoundRequirement(Expr *E,
                                                   SourceLocation NoexceptLoc);
@@ -7011,10 +7010,14 @@ private:
   ///@{
 
 public:
+  /// Check whether an expression might be an implicit class member access.
+  bool isPotentialImplicitMemberAccess(const CXXScopeSpec &SS, LookupResult &R,
+                                       bool IsAddressOfOperand);
+
   ExprResult BuildPossibleImplicitMemberExpr(
       const CXXScopeSpec &SS, SourceLocation TemplateKWLoc, LookupResult &R,
-      const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
-      UnresolvedLookupExpr *AsULE = nullptr);
+      const TemplateArgumentListInfo *TemplateArgs, const Scope *S);
+
   ExprResult
   BuildImplicitMemberExpr(const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
                           LookupResult &R,
@@ -7498,7 +7501,7 @@ public:
   };
 
   SpecialMemberOverloadResult
-  LookupSpecialMember(CXXRecordDecl *D, CXXSpecialMember SM, bool ConstArg,
+  LookupSpecialMember(CXXRecordDecl *D, CXXSpecialMemberKind SM, bool ConstArg,
                       bool VolatileArg, bool RValueThis, bool ConstThis,
                       bool VolatileThis);
 
@@ -9062,7 +9065,7 @@ public:
                                            Expr *DefaultArg);
   NamedDecl *ActOnTemplateTemplateParameter(
       Scope *S, SourceLocation TmpLoc, TemplateParameterList *Params,
-      SourceLocation EllipsisLoc, IdentifierInfo *ParamName,
+      bool Typename, SourceLocation EllipsisLoc, IdentifierInfo *ParamName,
       SourceLocation ParamNameLoc, unsigned Depth, unsigned Position,
       SourceLocation EqualLoc, ParsedTemplateArgument DefaultArg);
 
@@ -9116,7 +9119,7 @@ public:
 
   TypeResult
   ActOnTemplateIdType(Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-                      TemplateTy Template, IdentifierInfo *TemplateII,
+                      TemplateTy Template, const IdentifierInfo *TemplateII,
                       SourceLocation TemplateIILoc, SourceLocation LAngleLoc,
                       ASTTemplateArgsPtr TemplateArgs, SourceLocation RAngleLoc,
                       bool IsCtorOrDtorName = false, bool IsClassName = false,
@@ -9457,7 +9460,7 @@ public:
   TypeResult
   ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
                     const CXXScopeSpec &SS, SourceLocation TemplateLoc,
-                    TemplateTy TemplateName, IdentifierInfo *TemplateII,
+                    TemplateTy TemplateName, const IdentifierInfo *TemplateII,
                     SourceLocation TemplateIILoc, SourceLocation LAngleLoc,
                     ASTTemplateArgsPtr TemplateArgs, SourceLocation RAngleLoc);
 
@@ -9535,14 +9538,15 @@ public:
 
   Decl *ActOnConceptDefinition(Scope *S,
                                MultiTemplateParamsArg TemplateParameterLists,
-                               IdentifierInfo *Name, SourceLocation NameLoc,
-                               Expr *ConstraintExpr);
+                               const IdentifierInfo *Name,
+                               SourceLocation NameLoc, Expr *ConstraintExpr);
 
   void CheckConceptRedefinition(ConceptDecl *NewDecl, LookupResult &Previous,
                                 bool &AddToScope);
 
   TypeResult ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
-                               const CXXScopeSpec &SS, IdentifierInfo *Name,
+                               const CXXScopeSpec &SS,
+                               const IdentifierInfo *Name,
                                SourceLocation TagLoc, SourceLocation NameLoc);
 
   void MarkAsLateParsedTemplate(FunctionDecl *FD, Decl *FnD,
@@ -10018,7 +10022,7 @@ public:
       unsigned NumCallArgs;
 
       /// The special member being declared or defined.
-      CXXSpecialMember SpecialMember;
+      CXXSpecialMemberKind SpecialMember;
     };
 
     ArrayRef<TemplateArgument> template_arguments() const {
@@ -11988,22 +11992,22 @@ public:
       SkipBodyInfo *SkipBody);
 
   ObjCCategoryDecl *ActOnStartCategoryInterface(
-      SourceLocation AtInterfaceLoc, IdentifierInfo *ClassName,
+      SourceLocation AtInterfaceLoc, const IdentifierInfo *ClassName,
       SourceLocation ClassLoc, ObjCTypeParamList *typeParamList,
-      IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
+      const IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
       Decl *const *ProtoRefs, unsigned NumProtoRefs,
       const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
       const ParsedAttributesView &AttrList);
 
   ObjCImplementationDecl *ActOnStartClassImplementation(
-      SourceLocation AtClassImplLoc, IdentifierInfo *ClassName,
-      SourceLocation ClassLoc, IdentifierInfo *SuperClassname,
+      SourceLocation AtClassImplLoc, const IdentifierInfo *ClassName,
+      SourceLocation ClassLoc, const IdentifierInfo *SuperClassname,
       SourceLocation SuperClassLoc, const ParsedAttributesView &AttrList);
 
   ObjCCategoryImplDecl *ActOnStartCategoryImplementation(
-      SourceLocation AtCatImplLoc, IdentifierInfo *ClassName,
-      SourceLocation ClassLoc, IdentifierInfo *CatName, SourceLocation CatLoc,
-      const ParsedAttributesView &AttrList);
+      SourceLocation AtCatImplLoc, const IdentifierInfo *ClassName,
+      SourceLocation ClassLoc, const IdentifierInfo *CatName,
+      SourceLocation CatLoc, const ParsedAttributesView &AttrList);
 
   DeclGroupPtrTy ActOnFinishObjCImplementation(Decl *ObjCImpDecl,
                                                ArrayRef<Decl *> Decls);
@@ -12186,11 +12190,13 @@ public:
   bool CheckObjCDeclScope(Decl *D);
 
   void ActOnDefs(Scope *S, Decl *TagD, SourceLocation DeclStart,
-                 IdentifierInfo *ClassName, SmallVectorImpl<Decl *> &Decls);
+                 const IdentifierInfo *ClassName,
+                 SmallVectorImpl<Decl *> &Decls);
 
   VarDecl *BuildObjCExceptionDecl(TypeSourceInfo *TInfo, QualType ExceptionType,
                                   SourceLocation StartLoc, SourceLocation IdLoc,
-                                  IdentifierInfo *Id, bool Invalid = false);
+                                  const IdentifierInfo *Id,
+                                  bool Invalid = false);
 
   Decl *ActOnObjCExceptionDecl(Scope *S, Declarator &D);
 
@@ -12307,8 +12313,8 @@ public:
                                        SourceLocation SuperLoc,
                                        QualType SuperType, bool Super);
 
-  ExprResult ActOnClassPropertyRefExpr(IdentifierInfo &receiverName,
-                                       IdentifierInfo &propertyName,
+  ExprResult ActOnClassPropertyRefExpr(const IdentifierInfo &receiverName,
+                                       const IdentifierInfo &propertyName,
                                        SourceLocation receiverNameLoc,
                                        SourceLocation propertyNameLoc);
 
@@ -12783,18 +12789,18 @@ public:
                                    bool IsParameter);
   void CodeCompleteObjCMessageReceiver(Scope *S);
   void CodeCompleteObjCSuperMessage(Scope *S, SourceLocation SuperLoc,
-                                    ArrayRef<IdentifierInfo *> SelIdents,
+                                    ArrayRef<const IdentifierInfo *> SelIdents,
                                     bool AtArgumentExpression);
   void CodeCompleteObjCClassMessage(Scope *S, ParsedType Receiver,
-                                    ArrayRef<IdentifierInfo *> SelIdents,
+                                    ArrayRef<const IdentifierInfo *> SelIdents,
                                     bool AtArgumentExpression,
                                     bool IsSuper = false);
-  void CodeCompleteObjCInstanceMessage(Scope *S, Expr *Receiver,
-                                       ArrayRef<IdentifierInfo *> SelIdents,
-                                       bool AtArgumentExpression,
-                                       ObjCInterfaceDecl *Super = nullptr);
+  void CodeCompleteObjCInstanceMessage(
+      Scope *S, Expr *Receiver, ArrayRef<const IdentifierInfo *> SelIdents,
+      bool AtArgumentExpression, ObjCInterfaceDecl *Super = nullptr);
   void CodeCompleteObjCForCollection(Scope *S, DeclGroupPtrTy IterationVar);
-  void CodeCompleteObjCSelector(Scope *S, ArrayRef<IdentifierInfo *> SelIdents);
+  void CodeCompleteObjCSelector(Scope *S,
+                                ArrayRef<const IdentifierInfo *> SelIdents);
   void
   CodeCompleteObjCProtocolReferences(ArrayRef<IdentifierLocPair> Protocols);
   void CodeCompleteObjCProtocolDecl(Scope *S);
@@ -12814,11 +12820,11 @@ public:
   void CodeCompleteObjCMethodDecl(Scope *S,
                                   std::optional<bool> IsInstanceMethod,
                                   ParsedType ReturnType);
-  void CodeCompleteObjCMethodDeclSelector(Scope *S, bool IsInstanceMethod,
-                                          bool AtParameterName,
-                                          ParsedType ReturnType,
-                                          ArrayRef<IdentifierInfo *> SelIdents);
-  void CodeCompleteObjCClassPropertyRefExpr(Scope *S, IdentifierInfo &ClassName,
+  void CodeCompleteObjCMethodDeclSelector(
+      Scope *S, bool IsInstanceMethod, bool AtParameterName,
+      ParsedType ReturnType, ArrayRef<const IdentifierInfo *> SelIdents);
+  void CodeCompleteObjCClassPropertyRefExpr(Scope *S,
+                                            const IdentifierInfo &ClassName,
                                             SourceLocation ClassNameLoc,
                                             bool IsBaseExprStatement);
   void CodeCompletePreprocessorDirective(bool InConditional);
@@ -12961,7 +12967,8 @@ public:
   /// Example usage:
   ///
   ///  // Variable-length arrays are not allowed in CUDA device code.
-  ///  if (CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget())
+  ///  if (CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla)
+  ///     << llvm::to_underlying(CurrentCUDATarget()))
   ///    return ExprError();
   ///  // Otherwise, continue parsing as normal.
   SemaDiagnosticBuilder CUDADiagIfDeviceCode(SourceLocation Loc,
@@ -12977,7 +12984,7 @@ public:
   /// function.
   ///
   /// Use this rather than examining the function's attributes yourself -- you
-  /// will get it wrong.  Returns CFT_Host if D is null.
+  /// will get it wrong.  Returns CUDAFunctionTarget::Host if D is null.
   CUDAFunctionTarget IdentifyCUDATarget(const FunctionDecl *D,
                                         bool IgnoreImplicitHDAttr = false);
   CUDAFunctionTarget IdentifyCUDATarget(const ParsedAttributesView &Attrs);
@@ -13002,7 +13009,7 @@ public:
   /// Define the current global CUDA host/device context where a function may be
   /// called. Only used when a function is called outside of any functions.
   struct CUDATargetContext {
-    CUDAFunctionTarget Target = CFT_HostDevice;
+    CUDAFunctionTarget Target = CUDAFunctionTarget::HostDevice;
     CUDATargetContextKind Kind = CTCK_Unknown;
     Decl *D = nullptr;
   } CurCUDATargetCtx;
@@ -13111,7 +13118,7 @@ public:
   /// The result of this call is implicit CUDA target attribute(s) attached to
   /// the member declaration.
   bool inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
-                                               CXXSpecialMember CSM,
+                                               CXXSpecialMemberKind CSM,
                                                CXXMethodDecl *MemberDecl,
                                                bool ConstRHS, bool Diagnose);
 

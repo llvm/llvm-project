@@ -1775,9 +1775,30 @@ const char *enumAttrBeginPrinterCode = R"(
 /// Generate the printer for the 'prop-dict' directive.
 static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body) {
+  body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedProps;\n";
+  // Add code to check attributes for equality with the default value
+  // for attributes with the elidePrintingDefaultValue bit set.
+  for (const NamedAttribute &namedAttr : op.getAttributes()) {
+    const Attribute &attr = namedAttr.attr;
+    if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
+      const StringRef &name = namedAttr.name;
+      FmtContext fctx;
+      fctx.withBuilder("odsBuilder");
+      std::string defaultValue = std::string(
+          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      body << "  {\n";
+      body << "     ::mlir::Builder odsBuilder(getContext());\n";
+      body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
+           << "Attr();\n";
+      body << "     if(attr && (attr == " << defaultValue << "))\n";
+      body << "       elidedProps.push_back(\"" << name << "\");\n";
+      body << "  }\n";
+    }
+  }
+
   body << "  _odsPrinter << \" \";\n"
        << "  printProperties(this->getContext(), _odsPrinter, "
-          "getProperties());\n";
+          "getProperties(), elidedProps);\n";
 }
 
 /// Generate the printer for the 'attr-dict' directive.

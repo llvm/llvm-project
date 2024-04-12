@@ -2100,10 +2100,15 @@ void Fortran::lower::mapSymbolAttributes(
   if (ba.isChar()) {
     if (arg) {
       assert(!preAlloc && "dummy cannot be pre-allocated");
-      if (arg.getType().isa<fir::BoxCharType>())
+      if (mlir::isa<fir::BoxCharType>(arg.getType())) {
         std::tie(addr, len) = charHelp.createUnboxChar(arg);
-      else if (!addr)
+      } else if (mlir::isa<fir::CharacterType>(arg.getType())) {
+        // fir.char<1> passed by value (BIND(C) with VALUE attribute).
+        addr = builder.create<fir::AllocaOp>(loc, arg.getType());
+        builder.create<fir::StoreOp>(loc, arg, addr);
+      } else if (!addr) {
         addr = arg;
+      }
       // Ensure proper type is given to array/scalar that was transmitted as a
       // fir.boxchar arg or is a statement function actual argument with
       // a different length than the dummy.

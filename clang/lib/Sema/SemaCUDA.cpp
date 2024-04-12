@@ -22,6 +22,7 @@
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
 using namespace clang;
@@ -64,8 +65,7 @@ ExprResult Sema::ActOnCUDAExecConfigExpr(Scope *S, SourceLocation LLLLoc,
                        /*IsExecConfig=*/true);
 }
 
-Sema::CUDAFunctionTarget
-Sema::IdentifyCUDATarget(const ParsedAttributesView &Attrs) {
+CUDAFunctionTarget Sema::IdentifyCUDATarget(const ParsedAttributesView &Attrs) {
   bool HasHostAttr = false;
   bool HasDeviceAttr = false;
   bool HasGlobalAttr = false;
@@ -90,18 +90,18 @@ Sema::IdentifyCUDATarget(const ParsedAttributesView &Attrs) {
   }
 
   if (HasInvalidTargetAttr)
-    return CFT_InvalidTarget;
+    return CUDAFunctionTarget::InvalidTarget;
 
   if (HasGlobalAttr)
-    return CFT_Global;
+    return CUDAFunctionTarget::Global;
 
   if (HasHostAttr && HasDeviceAttr)
-    return CFT_HostDevice;
+    return CUDAFunctionTarget::HostDevice;
 
   if (HasDeviceAttr)
-    return CFT_Device;
+    return CUDAFunctionTarget::Device;
 
-  return CFT_Host;
+  return CUDAFunctionTarget::Host;
 }
 
 template <typename A>
@@ -120,43 +120,43 @@ Sema::CUDATargetContextRAII::CUDATargetContextRAII(Sema &S_,
   assert(K == CTCK_InitGlobalVar);
   auto *VD = dyn_cast_or_null<VarDecl>(D);
   if (VD && VD->hasGlobalStorage() && !VD->isStaticLocal()) {
-    auto Target = CFT_Host;
+    auto Target = CUDAFunctionTarget::Host;
     if ((hasAttr<CUDADeviceAttr>(VD, /*IgnoreImplicit=*/true) &&
          !hasAttr<CUDAHostAttr>(VD, /*IgnoreImplicit=*/true)) ||
         hasAttr<CUDASharedAttr>(VD, /*IgnoreImplicit=*/true) ||
         hasAttr<CUDAConstantAttr>(VD, /*IgnoreImplicit=*/true))
-      Target = CFT_Device;
+      Target = CUDAFunctionTarget::Device;
     S.CurCUDATargetCtx = {Target, K, VD};
   }
 }
 
 /// IdentifyCUDATarget - Determine the CUDA compilation target for this function
-Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D,
-                                                  bool IgnoreImplicitHDAttr) {
+CUDAFunctionTarget Sema::IdentifyCUDATarget(const FunctionDecl *D,
+                                            bool IgnoreImplicitHDAttr) {
   // Code that lives outside a function gets the target from CurCUDATargetCtx.
   if (D == nullptr)
     return CurCUDATargetCtx.Target;
 
   if (D->hasAttr<CUDAInvalidTargetAttr>())
-    return CFT_InvalidTarget;
+    return CUDAFunctionTarget::InvalidTarget;
 
   if (D->hasAttr<CUDAGlobalAttr>())
-    return CFT_Global;
+    return CUDAFunctionTarget::Global;
 
   if (hasAttr<CUDADeviceAttr>(D, IgnoreImplicitHDAttr)) {
     if (hasAttr<CUDAHostAttr>(D, IgnoreImplicitHDAttr))
-      return CFT_HostDevice;
-    return CFT_Device;
+      return CUDAFunctionTarget::HostDevice;
+    return CUDAFunctionTarget::Device;
   } else if (hasAttr<CUDAHostAttr>(D, IgnoreImplicitHDAttr)) {
-    return CFT_Host;
+    return CUDAFunctionTarget::Host;
   } else if ((D->isImplicit() || !D->isUserProvided()) &&
              !IgnoreImplicitHDAttr) {
     // Some implicit declarations (like intrinsic functions) are not marked.
     // Set the most lenient target on them for maximal flexibility.
-    return CFT_HostDevice;
+    return CUDAFunctionTarget::HostDevice;
   }
 
-  return CFT_Host;
+  return CUDAFunctionTarget::Host;
 }
 
 /// IdentifyTarget - Determine the CUDA compilation target for this variable.
@@ -181,10 +181,10 @@ Sema::CUDAVariableTarget Sema::IdentifyCUDATarget(const VarDecl *Var) {
   //  - on device side in device or global functions
   if (auto *FD = dyn_cast<FunctionDecl>(Var->getDeclContext())) {
     switch (IdentifyCUDATarget(FD)) {
-    case CFT_HostDevice:
+    case CUDAFunctionTarget::HostDevice:
       return CVT_Both;
-    case CFT_Device:
-    case CFT_Global:
+    case CUDAFunctionTarget::Device:
+    case CUDAFunctionTarget::Global:
       return CVT_Device;
     default:
       return CVT_Host;
@@ -230,7 +230,7 @@ Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
   // trivial ctor/dtor without device attr to be used. Non-trivial ctor/dtor
   // will be diagnosed by checkAllowedCUDAInitializer.
   if (Caller == nullptr && CurCUDATargetCtx.Kind == CTCK_InitGlobalVar &&
-      CurCUDATargetCtx.Target == CFT_Device &&
+      CurCUDATargetCtx.Target == CUDAFunctionTarget::Device &&
       (isa<CXXConstructorDecl>(Callee) || isa<CXXDestructorDecl>(Callee)))
     return CFP_HostDevice;
 
@@ -239,40 +239,47 @@ Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
 
   // If one of the targets is invalid, the check always fails, no matter what
   // the other target is.
-  if (CallerTarget == CFT_InvalidTarget || CalleeTarget == CFT_InvalidTarget)
+  if (CallerTarget == CUDAFunctionTarget::InvalidTarget ||
+      CalleeTarget == CUDAFunctionTarget::InvalidTarget)
     return CFP_Never;
 
   // (a) Can't call global from some contexts until we support CUDA's
   // dynamic parallelism.
-  if (CalleeTarget == CFT_Global &&
-      (CallerTarget == CFT_Global || CallerTarget == CFT_Device))
+  if (CalleeTarget == CUDAFunctionTarget::Global &&
+      (CallerTarget == CUDAFunctionTarget::Global ||
+       CallerTarget == CUDAFunctionTarget::Device))
     return CFP_Never;
 
   // (b) Calling HostDevice is OK for everyone.
-  if (CalleeTarget == CFT_HostDevice)
+  if (CalleeTarget == CUDAFunctionTarget::HostDevice)
     return CFP_HostDevice;
 
   // (c) Best case scenarios
   if (CalleeTarget == CallerTarget ||
-      (CallerTarget == CFT_Host && CalleeTarget == CFT_Global) ||
-      (CallerTarget == CFT_Global && CalleeTarget == CFT_Device))
+      (CallerTarget == CUDAFunctionTarget::Host &&
+       CalleeTarget == CUDAFunctionTarget::Global) ||
+      (CallerTarget == CUDAFunctionTarget::Global &&
+       CalleeTarget == CUDAFunctionTarget::Device))
     return CFP_Native;
 
   // HipStdPar mode is special, in that assessing whether a device side call to
   // a host target is deferred to a subsequent pass, and cannot unambiguously be
   // adjudicated in the AST, hence we optimistically allow them to pass here.
   if (getLangOpts().HIPStdPar &&
-      (CallerTarget == CFT_Global || CallerTarget == CFT_Device ||
-       CallerTarget == CFT_HostDevice) &&
-      CalleeTarget == CFT_Host)
+      (CallerTarget == CUDAFunctionTarget::Global ||
+       CallerTarget == CUDAFunctionTarget::Device ||
+       CallerTarget == CUDAFunctionTarget::HostDevice) &&
+      CalleeTarget == CUDAFunctionTarget::Host)
     return CFP_HostDevice;
 
   // (d) HostDevice behavior depends on compilation mode.
-  if (CallerTarget == CFT_HostDevice) {
+  if (CallerTarget == CUDAFunctionTarget::HostDevice) {
     // It's OK to call a compilation-mode matching function from an HD one.
-    if ((getLangOpts().CUDAIsDevice && CalleeTarget == CFT_Device) ||
+    if ((getLangOpts().CUDAIsDevice &&
+         CalleeTarget == CUDAFunctionTarget::Device) ||
         (!getLangOpts().CUDAIsDevice &&
-         (CalleeTarget == CFT_Host || CalleeTarget == CFT_Global)))
+         (CalleeTarget == CUDAFunctionTarget::Host ||
+          CalleeTarget == CUDAFunctionTarget::Global)))
       return CFP_SameSide;
 
     // Calls from HD to non-mode-matching functions (i.e., to host functions
@@ -283,9 +290,12 @@ Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
   }
 
   // (e) Calling across device/host boundary is not something you should do.
-  if ((CallerTarget == CFT_Host && CalleeTarget == CFT_Device) ||
-      (CallerTarget == CFT_Device && CalleeTarget == CFT_Host) ||
-      (CallerTarget == CFT_Global && CalleeTarget == CFT_Host))
+  if ((CallerTarget == CUDAFunctionTarget::Host &&
+       CalleeTarget == CUDAFunctionTarget::Device) ||
+      (CallerTarget == CUDAFunctionTarget::Device &&
+       CalleeTarget == CUDAFunctionTarget::Host) ||
+      (CallerTarget == CUDAFunctionTarget::Global &&
+       CalleeTarget == CUDAFunctionTarget::Host))
     return CFP_Never;
 
   llvm_unreachable("All cases should've been handled by now.");
@@ -337,16 +347,16 @@ void Sema::EraseUnwantedCUDAMatches(
 /// \param ResolvedTarget with a target that resolves for both calls.
 /// \return true if there's a conflict, false otherwise.
 static bool
-resolveCalleeCUDATargetConflict(Sema::CUDAFunctionTarget Target1,
-                                Sema::CUDAFunctionTarget Target2,
-                                Sema::CUDAFunctionTarget *ResolvedTarget) {
+resolveCalleeCUDATargetConflict(CUDAFunctionTarget Target1,
+                                CUDAFunctionTarget Target2,
+                                CUDAFunctionTarget *ResolvedTarget) {
   // Only free functions and static member functions may be global.
-  assert(Target1 != Sema::CFT_Global);
-  assert(Target2 != Sema::CFT_Global);
+  assert(Target1 != CUDAFunctionTarget::Global);
+  assert(Target2 != CUDAFunctionTarget::Global);
 
-  if (Target1 == Sema::CFT_HostDevice) {
+  if (Target1 == CUDAFunctionTarget::HostDevice) {
     *ResolvedTarget = Target2;
-  } else if (Target2 == Sema::CFT_HostDevice) {
+  } else if (Target2 == CUDAFunctionTarget::HostDevice) {
     *ResolvedTarget = Target1;
   } else if (Target1 != Target2) {
     return true;
@@ -358,7 +368,7 @@ resolveCalleeCUDATargetConflict(Sema::CUDAFunctionTarget Target1,
 }
 
 bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
-                                                   CXXSpecialMember CSM,
+                                                   CXXSpecialMemberKind CSM,
                                                    CXXMethodDecl *MemberDecl,
                                                    bool ConstRHS,
                                                    bool Diagnose) {
@@ -422,7 +432,8 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
         if (Diagnose) {
           Diag(ClassDecl->getLocation(),
                diag::note_implicit_member_target_infer_collision)
-              << (unsigned)CSM << *InferredTarget << BaseMethodTarget;
+              << (unsigned)CSM << llvm::to_underlying(*InferredTarget)
+              << llvm::to_underlying(BaseMethodTarget);
         }
         MemberDecl->addAttr(CUDAInvalidTargetAttr::CreateImplicit(Context));
         return true;
@@ -465,7 +476,8 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
         if (Diagnose) {
           Diag(ClassDecl->getLocation(),
                diag::note_implicit_member_target_infer_collision)
-              << (unsigned)CSM << *InferredTarget << FieldMethodTarget;
+              << (unsigned)CSM << llvm::to_underlying(*InferredTarget)
+              << llvm::to_underlying(FieldMethodTarget);
         }
         MemberDecl->addAttr(CUDAInvalidTargetAttr::CreateImplicit(Context));
         return true;
@@ -478,9 +490,9 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
   // it's the least restrictive option that can be invoked from any target.
   bool NeedsH = true, NeedsD = true;
   if (InferredTarget) {
-    if (*InferredTarget == CFT_Device)
+    if (*InferredTarget == CUDAFunctionTarget::Device)
       NeedsH = false;
-    else if (*InferredTarget == CFT_Host)
+    else if (*InferredTarget == CUDAFunctionTarget::Host)
       NeedsD = false;
   }
 
@@ -677,9 +689,10 @@ void Sema::checkAllowedCUDAInitializer(VarDecl *VD) {
     }
     if (InitFn) {
       CUDAFunctionTarget InitFnTarget = IdentifyCUDATarget(InitFn);
-      if (InitFnTarget != CFT_Host && InitFnTarget != CFT_HostDevice) {
+      if (InitFnTarget != CUDAFunctionTarget::Host &&
+          InitFnTarget != CUDAFunctionTarget::HostDevice) {
         Diag(VD->getLocation(), diag::err_ref_bad_target_global_initializer)
-            << InitFnTarget << InitFn;
+            << llvm::to_underlying(InitFnTarget) << InitFn;
         Diag(InitFn->getLocation(), diag::note_previous_decl) << InitFn;
         VD->setInvalidDecl();
       }
@@ -699,8 +712,9 @@ void Sema::CUDARecordImplicitHostDeviceFuncUsedByDevice(
   CUDAFunctionTarget CallerTarget = IdentifyCUDATarget(Caller);
 
   // Record whether an implicit host device function is used on device side.
-  if (CallerTarget != CFT_Device && CallerTarget != CFT_Global &&
-      (CallerTarget != CFT_HostDevice ||
+  if (CallerTarget != CUDAFunctionTarget::Device &&
+      CallerTarget != CUDAFunctionTarget::Global &&
+      (CallerTarget != CUDAFunctionTarget::HostDevice ||
        (isCUDAImplicitHostDeviceFunction(Caller) &&
         !getASTContext().CUDAImplicitHostDeviceFunUsedByDevice.count(Caller))))
     return;
@@ -806,10 +820,10 @@ Sema::SemaDiagnosticBuilder Sema::CUDADiagIfDeviceCode(SourceLocation Loc,
     if (!CurFunContext)
       return SemaDiagnosticBuilder::K_Nop;
     switch (CurrentCUDATarget()) {
-    case CFT_Global:
-    case CFT_Device:
+    case CUDAFunctionTarget::Global:
+    case CUDAFunctionTarget::Device:
       return SemaDiagnosticBuilder::K_Immediate;
-    case CFT_HostDevice:
+    case CUDAFunctionTarget::HostDevice:
       // An HD function counts as host code if we're compiling for host, and
       // device code if we're compiling for device.  Defer any errors in device
       // mode until the function is known-emitted.
@@ -836,9 +850,9 @@ Sema::SemaDiagnosticBuilder Sema::CUDADiagIfHostCode(SourceLocation Loc,
     if (!CurFunContext)
       return SemaDiagnosticBuilder::K_Nop;
     switch (CurrentCUDATarget()) {
-    case CFT_Host:
+    case CUDAFunctionTarget::Host:
       return SemaDiagnosticBuilder::K_Immediate;
-    case CFT_HostDevice:
+    case CUDAFunctionTarget::HostDevice:
       // An HD function counts as host code if we're compiling for host, and
       // device code if we're compiling for device.  Defer any errors in device
       // mode until the function is known-emitted.
@@ -911,8 +925,8 @@ bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
     return true;
 
   SemaDiagnosticBuilder(DiagKind, Loc, diag::err_ref_bad_target, Caller, *this)
-      << IdentifyCUDATarget(Callee) << /*function*/ 0 << Callee
-      << IdentifyCUDATarget(Caller);
+      << llvm::to_underlying(IdentifyCUDATarget(Callee)) << /*function*/ 0
+      << Callee << llvm::to_underlying(IdentifyCUDATarget(Caller));
   if (!Callee->getBuiltinID())
     SemaDiagnosticBuilder(DiagKind, Callee->getLocation(),
                           diag::note_previous_decl, Caller, *this)
@@ -995,19 +1009,21 @@ void Sema::checkCUDATargetOverload(FunctionDecl *NewFD,
     // HD/global functions "exist" in some sense on both the host and device, so
     // should have the same implementation on both sides.
     if (NewTarget != OldTarget &&
-        ((NewTarget == CFT_HostDevice &&
+        ((NewTarget == CUDAFunctionTarget::HostDevice &&
           !(LangOpts.OffloadImplicitHostDeviceTemplates &&
             isCUDAImplicitHostDeviceFunction(NewFD) &&
-            OldTarget == CFT_Device)) ||
-         (OldTarget == CFT_HostDevice &&
+            OldTarget == CUDAFunctionTarget::Device)) ||
+         (OldTarget == CUDAFunctionTarget::HostDevice &&
           !(LangOpts.OffloadImplicitHostDeviceTemplates &&
             isCUDAImplicitHostDeviceFunction(OldFD) &&
-            NewTarget == CFT_Device)) ||
-         (NewTarget == CFT_Global) || (OldTarget == CFT_Global)) &&
+            NewTarget == CUDAFunctionTarget::Device)) ||
+         (NewTarget == CUDAFunctionTarget::Global) ||
+         (OldTarget == CUDAFunctionTarget::Global)) &&
         !IsOverload(NewFD, OldFD, /* UseMemberUsingDeclRules = */ false,
                     /* ConsiderCudaAttrs = */ false)) {
       Diag(NewFD->getLocation(), diag::err_cuda_ovl_target)
-          << NewTarget << NewFD->getDeclName() << OldTarget << OldFD;
+          << llvm::to_underlying(NewTarget) << NewFD->getDeclName()
+          << llvm::to_underlying(OldTarget) << OldFD;
       Diag(OldFD->getLocation(), diag::note_previous_declaration);
       NewFD->setInvalidDecl();
       break;

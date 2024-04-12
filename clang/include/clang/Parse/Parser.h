@@ -329,7 +329,7 @@ class Parser : public CodeCompletionHandler {
   };
 
   /// Identifiers which have been declared within a tentative parse.
-  SmallVector<IdentifierInfo *, 8> TentativelyDeclaredIdentifiers;
+  SmallVector<const IdentifierInfo *, 8> TentativelyDeclaredIdentifiers;
 
   /// Tracker for '<' tokens that might have been intended to be treated as an
   /// angle bracket instead of a less-than comparison.
@@ -1927,15 +1927,11 @@ private:
                                   bool EnteringContext, IdentifierInfo &II,
                                   CXXScopeSpec &SS);
 
-  bool ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
-                                      ParsedType ObjectType,
-                                      bool ObjectHasErrors,
-                                      bool EnteringContext,
-                                      bool *MayBePseudoDestructor = nullptr,
-                                      bool IsTypename = false,
-                                      IdentifierInfo **LastII = nullptr,
-                                      bool OnlyNamespace = false,
-                                      bool InUsingDeclaration = false);
+  bool ParseOptionalCXXScopeSpecifier(
+      CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHasErrors,
+      bool EnteringContext, bool *MayBePseudoDestructor = nullptr,
+      bool IsTypename = false, const IdentifierInfo **LastII = nullptr,
+      bool OnlyNamespace = false, bool InUsingDeclaration = false);
 
   //===--------------------------------------------------------------------===//
   // C++11 5.1.2: Lambda expressions
@@ -3615,6 +3611,9 @@ private:
   OpenACCClauseParseResult OpenACCCannotContinue();
   OpenACCClauseParseResult OpenACCSuccess(OpenACCClause *Clause);
 
+  using OpenACCConditionExprParseResult =
+      std::pair<ExprResult, OpenACCParseCanContinue>;
+
   /// Parses the OpenACC directive (the entire pragma) including the clause
   /// list, but does not produce the main AST node.
   OpenACCDirectiveParseInfo ParseOpenACCDirective();
@@ -3661,6 +3660,8 @@ private:
   bool ParseOpenACCGangArgList();
   /// Parses a 'gang-arg', used for the 'gang' clause.
   bool ParseOpenACCGangArg();
+  /// Parses a 'condition' expr, ensuring it results in a
+  ExprResult ParseOpenACCConditionExpr();
 
 private:
   //===--------------------------------------------------------------------===//
