@@ -981,6 +981,33 @@ entry:
   ret i32 %1
 }
 
+define i32 @test_umin_smax_usat(i32 %x) {
+; V4T-LABEL: test_umin_smax_usat:
+; V4T:       @ %bb.0: @ %entry
+; V4T-NEXT:    bic r0, r0, r0, asr #31
+; V4T-NEXT:    cmp r0, #255
+; V4T-NEXT:    movhs r0, #255
+; V4T-NEXT:    bx lr
+;
+; V6-LABEL: test_umin_smax_usat:
+; V6:       @ %bb.0: @ %entry
+; V6-NEXT:    bic r0, r0, r0, asr #31
+; V6-NEXT:    cmp r0, #255
+; V6-NEXT:    movhs r0, #255
+; V6-NEXT:    bx lr
+;
+; V6T2-LABEL: test_umin_smax_usat:
+; V6T2:       @ %bb.0: @ %entry
+; V6T2-NEXT:    bic r0, r0, r0, asr #31
+; V6T2-NEXT:    cmp r0, #255
+; V6T2-NEXT:    movhs r0, #255
+; V6T2-NEXT:    bx lr
+entry:
+  %v1 = tail call i32 @llvm.smax.i32(i32 %x, i32 0)
+  %v2 = tail call i32 @llvm.umin.i32(i32 %v1, i32 255)
+  ret i32 %v2
+}
+
 declare i32 @llvm.smin.i32(i32, i32)
 declare i32 @llvm.smax.i32(i32, i32)
 declare i16 @llvm.smin.i16(i16, i16)
