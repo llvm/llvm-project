@@ -1431,6 +1431,57 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
 }
 
 //===----------------------------------------------------------------------===//
+// Sparse Tensor Iteration Operations.
+//===----------------------------------------------------------------------===//
+
+def ExtractIterSpaceOp : SparseTensor_Op<"iteration.extract_space",
+    [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+
+  let arguments = (ins AnySparseTensor:$tensor,
+                       Optional<AnySparseIterator>:$parentIter,
+                       LevelAttr:$loLvl, LevelAttr:$hiLvl);
+
+  let results = (outs AnySparseIterSpace:$resultSpace);
+
+  let summary = "Extract an iteration space from a sparse tensor between certain levels";
+  let description = [{
+      Extracts a `!sparse_tensor.iter_space` from a sparse tensor between
+      certian (consecutive) levels.
+
+      `tensor`: the input sparse tensor that defines the iteration space.
+      `parentIter`: the iterator for the previous level, at which the iteration space
+      at the current levels will be extracted.
+      `loLvl`, `hiLvl`: the level range between [loLvl, hiLvl) in the input tensor that
+      the returned iteration space covers. `hiLvl - loLvl` defines the dimension of the
+      iteration space.
+
+      Example:
+      ```mlir
+      // Extracts a 1-D iteration space from a COO tensor at level 1.
+      %space = sparse_tensor.iteration.extract_space %sp at %it1 lvls = 1
+        : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 0>
+      ```
+  }];
+
+
+  let extraClassDeclaration = [{
+    std::pair<Level, Level> getLvlRange() {
+      return std::make_pair(getLoLvl(), getHiLvl());
+    }
+    unsigned getSpaceDim() {
+      return getHiLvl() - getLoLvl();
+    }
+    ArrayRef<::mlir::sparse_tensor::LevelType> getSpaceLvlTypes() {
+      return getResultSpace().getType().getLvlTypes();
+    }
+  }];
+
+  let hasVerifier = 1;
+  let assemblyFormat = "$tensor (`at` $parentIter^)? `lvls` `=` custom<LevelRange>($loLvl, $hiLvl) "
+                       " attr-dict `:` type($tensor) (`,` type($parentIter)^)?";
+}
+
+//===----------------------------------------------------------------------===//
 // Sparse Tensor Debugging and Test-Only Operations.
 //===----------------------------------------------------------------------===//
 
