@@ -13,7 +13,6 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "test/UnitTest/Test.h"
 
-
 TEST(LlvmLibcFenvTest, GetExceptFlagAndSetExceptFlag) {
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
