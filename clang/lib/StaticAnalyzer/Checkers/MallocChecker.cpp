@@ -402,7 +402,8 @@ private:
 
   const CallDescriptionMap<CheckFn> FreeingMemFnMap{
       {{CDM::CLibrary, {"free"}, 1}, &MallocChecker::checkFree},
-      {{CDM::CLibrary, {"if_freenameindex"}, 1}, &MallocChecker::checkIfFreeNameIndex},
+      {{CDM::CLibrary, {"if_freenameindex"}, 1},
+       &MallocChecker::checkIfFreeNameIndex},
       {{CDM::CLibrary, {"kfree"}, 1}, &MallocChecker::checkFree},
       {{CDM::CLibrary, {"g_free"}, 1}, &MallocChecker::checkFree},
   };
