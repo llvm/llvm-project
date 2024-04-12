@@ -13401,8 +13401,8 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
 
 
 static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
-                          TargetLowering::DAGCombinerInfo &DCI,
-                          const RISCVSubtarget &Subtarget) {
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const RISCVSubtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   if (!VT.isVector())
     return expandMul(N, DAG, DCI, Subtarget);
