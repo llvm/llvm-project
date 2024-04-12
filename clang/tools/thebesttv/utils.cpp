@@ -172,10 +172,7 @@ bool dirExists(const std::string &path) {
 
     if (stat(path.c_str(), &info) != 0)
         return false;
-    else if (info.st_mode & S_IFDIR)
-        return true;
-    else
-        return false;
+    return info.st_mode & S_IFDIR;
 }
 
 /*****************************************************************
