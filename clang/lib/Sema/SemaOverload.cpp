@@ -1549,10 +1549,10 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     // Don't allow overloading of destructors.  (In theory we could, but it
     // would be a giant change to clang.)
     if (!isa<CXXDestructorDecl>(New)) {
-      Sema::CUDAFunctionTarget NewTarget = SemaRef.IdentifyCUDATarget(New),
-                               OldTarget = SemaRef.IdentifyCUDATarget(Old);
-      if (NewTarget != Sema::CFT_InvalidTarget) {
-        assert((OldTarget != Sema::CFT_InvalidTarget) &&
+      CUDAFunctionTarget NewTarget = SemaRef.IdentifyCUDATarget(New),
+                         OldTarget = SemaRef.IdentifyCUDATarget(Old);
+      if (NewTarget != CUDAFunctionTarget::InvalidTarget) {
+        assert((OldTarget != CUDAFunctionTarget::InvalidTarget) &&
                "Unexpected invalid target.");
 
         // Allow overloading of functions with same signature and different CUDA
@@ -11938,8 +11938,8 @@ static void DiagnoseBadTarget(Sema &S, OverloadCandidate *Cand) {
   FunctionDecl *Caller = S.getCurFunctionDecl(/*AllowLambda=*/true);
   FunctionDecl *Callee = Cand->Function;
 
-  Sema::CUDAFunctionTarget CallerTarget = S.IdentifyCUDATarget(Caller),
-                           CalleeTarget = S.IdentifyCUDATarget(Callee);
+  CUDAFunctionTarget CallerTarget = S.IdentifyCUDATarget(Caller),
+                     CalleeTarget = S.IdentifyCUDATarget(Callee);
 
   std::string FnDesc;
   std::pair<OverloadCandidateKind, OverloadCandidateSelect> FnKindPair =
@@ -11949,7 +11949,7 @@ static void DiagnoseBadTarget(Sema &S, OverloadCandidate *Cand) {
   S.Diag(Callee->getLocation(), diag::note_ovl_candidate_bad_target)
       << (unsigned)FnKindPair.first << (unsigned)ocs_non_template
       << FnDesc /* Ignored */
-      << CalleeTarget << CallerTarget;
+      << llvm::to_underlying(CalleeTarget) << llvm::to_underlying(CallerTarget);
 
   // This could be an implicit constructor for which we could not infer the
   // target due to a collsion. Diagnose that case.
