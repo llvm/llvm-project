@@ -1384,6 +1384,29 @@ define i1 @test_sign_pos(float %x) {
   ret i1 %sign
 }
 
+define i1 @test_sign_pos_half(half %x) {
+; CHECK-LABEL: @test_sign_pos_half(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs = call half @llvm.fabs.f16(half %x)
+  %y = bitcast half %fabs to i16
+  %sign = icmp sgt i16 %y, -1
+  ret i1 %sign
+}
+
+define i1 @test_sign_pos_half_non_elementwise(<2 x half> %x) {
+; CHECK-LABEL: @test_sign_pos_half_non_elementwise(
+; CHECK-NEXT:    [[FABS:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = bitcast <2 x half> [[FABS]] to i32
+; CHECK-NEXT:    [[SIGN:%.*]] = icmp sgt i32 [[Y]], -1
+; CHECK-NEXT:    ret i1 [[SIGN]]
+;
+  %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %x)
+  %y = bitcast <2 x half> %fabs to i32
+  %sign = icmp sgt i32 %y, -1
+  ret i1 %sign
+}
+
 define i1 @test_sign_neg(float %x) {
 ; CHECK-LABEL: @test_sign_neg(
 ; CHECK-NEXT:    ret i1 true
@@ -1412,6 +1435,26 @@ define i32 @test_inf_only(float nofpclass(nan sub norm zero) %x) {
   %y = bitcast float %x to i32
   %and = and i32 %y, 2147483647
   ret i32 %and
+}
+
+define i16 @test_inf_only_bfloat(bfloat nofpclass(nan sub norm zero) %x) {
+; CHECK-LABEL: @test_inf_only_bfloat(
+; CHECK-NEXT:    ret i16 32512
+;
+  %y = bitcast bfloat %x to i16
+  %and = and i16 %y, 32767
+  ret i16 %and
+}
+
+define i128 @test_inf_only_ppc_fp128(ppc_fp128 nofpclass(nan sub norm zero) %x) {
+; CHECK-LABEL: @test_inf_only_ppc_fp128(
+; CHECK-NEXT:    [[Y:%.*]] = bitcast ppc_fp128 [[X:%.*]] to i128
+; CHECK-NEXT:    [[AND:%.*]] = and i128 [[Y]], 170141183460469231731687303715884105727
+; CHECK-NEXT:    ret i128 [[AND]]
+;
+  %y = bitcast ppc_fp128 %x to i128
+  %and = and i128 %y, 170141183460469231731687303715884105727
+  ret i128 %and
 }
 
 define i32 @test_zero_only(float nofpclass(nan sub norm inf) %x) {
