@@ -2282,21 +2282,26 @@ public:
 };
 
 /// A common base class for widening memory operations. An optional mask can be
-/// provided the last operand.
+/// provided as the last operand.
 class VPWidenMemoryRecipe : public VPRecipeBase {
 protected:
   Instruction &Ingredient;
 
-  /// Whether the loaded-from / stored-to addresses are consecutive.
+  /// Whether the accessed addresses are consecutive.
   bool Consecutive;
 
-  /// Whether the consecutive loaded/stored addresses are in reverse order.
+  /// Whether the consecutive accessed addresses are in reverse order.
   bool Reverse;
 
+  /// Whether the memory access is masked.
+  bool IsMasked = false;
+
   void setMask(VPValue *Mask) {
+    assert(!IsMasked && "cannot re-set mask");
     if (!Mask)
       return;
     addOperand(Mask);
+    IsMasked = true;
   }
 
   VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
@@ -2321,28 +2326,10 @@ public:
   }
 
   /// Returns true if the recipe is masked.
-  bool isMasked() const {
-    switch (getVPDefID()) {
-    case VPDef::VPWidenLoadSC:
-      return getNumOperands() == 2;
-    case VPDef::VPWidenStoreSC:
-      return getNumOperands() == 3;
-    default:
-      llvm_unreachable("unhandled recipe");
-    }
-  }
+  bool isMasked() const { return IsMasked; }
 
   /// Return the address accessed by this recipe.
-  VPValue *getAddr() const {
-    switch (getVPDefID()) {
-    case VPDef::VPWidenLoadSC:
-      return getOperand(0);
-    case VPDef::VPWidenStoreSC:
-      return getOperand(1);
-    default:
-      llvm_unreachable("unhandled recipe");
-    }
-  }
+  VPValue *getAddr() const { return getOperand(0); }
 
   /// Return whether the loaded-from / stored-to addresses are consecutive.
   bool isConsecutive() const { return Consecutive; }
@@ -2374,7 +2361,6 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
       : VPWidenMemoryRecipe(VPDef::VPWidenLoadSC, Load, {Addr}, Consecutive,
                             Reverse, DL),
         VPValue(this, &Load) {
-    assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     setMask(Mask);
   }
 
@@ -2411,9 +2397,8 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
 struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   VPWidenStoreRecipe(StoreInst &Store, VPValue *StoredVal, VPValue *Addr,
                      VPValue *Mask, bool Consecutive, bool Reverse, DebugLoc DL)
-      : VPWidenMemoryRecipe(VPDef::VPWidenStoreSC, Store, {StoredVal, Addr},
+      : VPWidenMemoryRecipe(VPDef::VPWidenStoreSC, Store, {Addr, StoredVal},
                             Consecutive, Reverse, DL) {
-    assert((Consecutive || !Reverse) && "Reverse implies consecutive");
     setMask(Mask);
   }
 
@@ -2425,8 +2410,8 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
 
   VP_CLASSOF_IMPL(VPDef::VPWidenStoreSC);
 
-  /// Return the address accessed by this recipe.
-  VPValue *getStoredValue() const { return getOperand(0); }
+  /// Return the value stored by this recipe.
+  VPValue *getStoredValue() const { return getOperand(1); }
 
   /// Generate the wide load/store.
   void execute(VPTransformState &State) override;
