@@ -48,3 +48,12 @@ Revert: 41f9c78
     Konstantin
 ---
 
+Revert "Recommit "[InstCombine] Expand `foldSelectICmpAndOr` -> `foldSelectICmpAndBinOp` to work for more binops" (3rd Try)"
+
+    Backup fix for SWDEV-454675
+
+    This reverts commit 54ec8bcaf85e3a3341c97640331d58e24ac0d2cd.
+
+contact: Selehov
+
+---
