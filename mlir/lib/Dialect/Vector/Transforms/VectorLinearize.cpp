@@ -109,6 +109,9 @@ private:
   unsigned targetVectorBitWidth;
 };
 
+
+/// This pattern converts the vector.extract_strided_slice operation to a
+/// vector.shuffle operation that works on a linearized vector.
 struct LinearizeVectorExtractStridedSlice final
     : public mlir::OpConversionPattern<mlir::vector::ExtractStridedSliceOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -137,18 +140,16 @@ struct LinearizeVectorExtractStridedSlice final
     auto offsets = extractOp.getOffsets().getValue();
     auto sizes = extractOp.getSizes().getValue();
     auto strides = extractOp.getStrides().getValue();
-
     if (!isConstantIntValue(strides[0], 1))
       return rewriter.notifyMatchFailure(
           extractOp, "Strided slice with stride != 1 is not supported.");
-
     Value srcVector = adaptor.getVector();
-
     // if kD offsets are specified for nd source vector (n > k), the granularity
     // of the extraction is greater than 1. In this case last (n-k) dimensions
-    // form the extraction granularity. example : %0 =
-    // vector.extract_strided_slice %src { offsets = [0, 0], sizes = [2, 2],
-    // strides = [1, 1]} : vector<4x8x8xf32> to vector<2x2x8xf32>
+    // form the extraction granularity. 
+    // example : 
+    //  %0 = vector.extract_strided_slice %src { offsets = [0, 0], sizes = [2, 2],
+    //     strides = [1, 1]} : vector<4x8x8xf32> to vector<2x2x8xf32>
     // here, extraction granularity is 8.
     int64_t extractSliceLen = 1;
     auto n = extractOp.getSourceVectorType().getRank();
@@ -158,13 +159,11 @@ struct LinearizeVectorExtractStridedSlice final
         extractSliceLen *= extractOp.getSourceVectorType().getShape()[i + k];
       }
     }
-
     // get total number of extracted slices
     int64_t nExtractedSlices = 1;
     for (auto size : sizes) {
       nExtractedSlices *= size.cast<IntegerAttr>().getInt();
     }
-
     // compute the strides of the source vector considering first k dimensions
     llvm::SmallVector<int64_t, 4> sourceStrides(k, extractSliceLen);
     for (int i = k - 2; i >= 0; --i) {
@@ -209,7 +208,6 @@ struct LinearizeVectorExtractStridedSlice final
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
         extractOp, dstType, srcVector, srcVector,
         rewriter.getI64ArrayAttr(indices));
-
     return success();
   }
 
@@ -217,6 +215,9 @@ private:
   unsigned targetVectorBitWidth;
 };
 
+
+/// This pattern converts the vector.shuffle operation that works on nD (n > 1)
+/// vectors to a vector.shuffle operation that works on linearized vectors.
 struct LinearizeVectorShffle final
     : public OpConversionPattern<vector::ShuffleOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -234,7 +235,6 @@ struct LinearizeVectorShffle final
     auto loc = shuffleOp.getLoc();
     if (!dstType)
       return rewriter.notifyMatchFailure(loc, "cannot convert type.");
-
     if (shuffleOp.getV1VectorType().isScalable() ||
         shuffleOp.getV2VectorType().isScalable() ||
         dstType.cast<VectorType>().isScalable())
@@ -246,7 +246,6 @@ struct LinearizeVectorShffle final
 
     auto vec1 = adaptor.getV1();
     auto vec2 = adaptor.getV2();
-
     int shuffleSliceLen = 1;
     int rank = shuffleOp.getV1().getType().getRank();
 
@@ -261,10 +260,13 @@ struct LinearizeVectorShffle final
       }
     }
 
+    // for each value in the mask, we generate the indices of the source vectors
+    // that needs to be shuffled to the destination vector. if shuffleSliceLen > 1
+    // we need to shuffle the slices (consecutive shuffleSliceLen number of elements) 
+    // instead of scalars.
     auto mask = shuffleOp.getMask();
-    auto totalSize = mask.size() * shuffleSliceLen;
-
-    llvm::SmallVector<int64_t, 2> indices(totalSize);
+    auto totalSizeOfShuffledElmnts = mask.size() * shuffleSliceLen;
+    llvm::SmallVector<int64_t, 2> indices(totalSizeOfShuffledElmnts);
     for (auto [i, value] :
          llvm::enumerate(mask.getAsValueRange<IntegerAttr>())) {
 
@@ -276,7 +278,6 @@ struct LinearizeVectorShffle final
 
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
         shuffleOp, dstType, vec1, vec2, rewriter.getI64ArrayAttr(indices));
-
     return success();
   }
 
@@ -284,6 +285,9 @@ private:
   unsigned targetVectorBitWidth;
 };
 
+
+/// This pattern converts the vector.extract operation to a vector.shuffle operation
+/// that works on a linearized vector.
 struct LinearizeVectorExtract final
     : public OpConversionPattern<vector::ExtractOp> {
   using OpConversionPattern::OpConversionPattern;
