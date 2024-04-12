@@ -6084,7 +6084,7 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     return Self.IsLayoutCompatible(LhsT, RhsT);
   }
   case BTT_IsPointerInterconvertibleBaseOf: {
-    if (!LhsT->isStructureOrClassType() && !RhsT->isStructureOrClassType() &&
+    if (LhsT->isStructureOrClassType() && RhsT->isStructureOrClassType() &&
         !Self.getASTContext().hasSameUnqualifiedType(LhsT, RhsT)) {
       Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
                                diag::err_incomplete_type);
