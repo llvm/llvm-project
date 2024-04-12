@@ -114,11 +114,13 @@ bool operator==(not_unequality_comparable, not_unequality_comparable);
 bool operator!=(not_unequality_comparable, not_unequality_comparable) = delete;
 
 void check_input_iterator_requirements() {
+  // clang-format off
   _LIBCPP_REQUIRE_CPP17_INPUT_ITERATOR(not_equality_comparable, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{'__lhs == __rhs' would be invalid: overload resolution selected deleted operator '=='}}
 
   _LIBCPP_REQUIRE_CPP17_INPUT_ITERATOR(not_unequality_comparable, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{'__lhs != __rhs' would be invalid: overload resolution selected deleted operator '!='}}
+  // clang-format on
 }
 
 template <class Derived>
@@ -165,13 +167,14 @@ struct not_returning_iter_reference : valid_forward_iterator<not_returning_iter_
 };
 
 void check_bidirectional_iterator_requirements() {
+  // clang-format off
   _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(missing_predecrement, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{cannot decrement value of type 'missing_predecrement'}}
   _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(missing_postdecrement, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{cannot decrement value of type 'missing_postdecrement'}}
-  _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(
-      not_returning_iter_reference, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(not_returning_iter_reference, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because type constraint 'same_as<int, __iter_reference<not_returning_iter_reference> >' was not satisfied}}
+  // clang-format on
 }
 
 template <class Derived>
@@ -359,85 +362,64 @@ struct missing_const_const_greater_eq : valid_random_access_iterator<missing_con
 };
 
 void check_random_access_iterator() {
+  // clang-format off
   _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_plus_equals, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter += __n' would be invalid: overload resolution selected deleted operator '+='}}
   _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_minus_equals, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter -= __n' would be invalid: overload resolution selected deleted operator '-='}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_plus_iter_diff, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_plus_iter_diff, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter + __n' would be invalid: overload resolution selected deleted operator '+'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_plus_diff_iter, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_plus_diff_iter, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__n + __iter' would be invalid: overload resolution selected deleted operator '+'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_plus_iter_diff_const_mut, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_plus_iter_diff_const_mut, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because 'std::as_const(__iter) + __n' would be invalid: overload resolution selected deleted operator '+'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_plus_iter_diff_mut_const, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_plus_iter_diff_mut_const, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__n + std::as_const(__iter)' would be invalid: overload resolution selected deleted operator '+'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_minus_iter_diff_const, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_minus_iter_diff_const, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because 'std::as_const(__iter) - __n' would be invalid: overload resolution selected deleted operator '-'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_minus_iter_iter, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_minus_iter_iter, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter - __iter' would be invalid: overload resolution selected deleted operator '-'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_minus_const_iter_iter, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_minus_const_iter_iter, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because 'std::as_const(__iter) - __iter' would be invalid: overload resolution selected deleted operator '-'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_minus_iter_const_iter, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_minus_iter_const_iter, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter - std::as_const(__iter)' would be invalid: overload resolution selected deleted operator '-'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_minus_const_iter_const_iter, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_minus_const_iter_const_iter, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because 'std::as_const(__iter) - std::as_const(__iter)' would be invalid: overload resolution selected deleted operator '-'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_subscript_operator, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_subscript_operator, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter[__n]' would be invalid: overload resolution selected deleted operator '[]'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_const_subscript_operator, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_const_subscript_operator, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because 'std::as_const(__iter)[__n]' would be invalid: overload resolution selected deleted operator '[]'}}
   _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_less, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter < __iter' would be invalid: overload resolution selected deleted operator '<'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_const_mut_less, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_const_mut_less, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because 'std::as_const(__iter) < __iter' would be invalid: overload resolution selected deleted operator '<'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_mut_const_less, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_mut_const_less, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter < std::as_const(__iter)' would be invalid: overload resolution selected deleted operator '<'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_const_const_less, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_const_const_less, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because 'std::as_const(__iter) < std::as_const(__iter)' would be invalid: overload resolution selected deleted operator '<'}}
   _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_greater, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter > __iter' would be invalid: overload resolution selected deleted operator '>'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_const_mut_greater, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_const_mut_greater, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because 'std::as_const(__iter) > __iter' would be invalid: overload resolution selected deleted operator '>'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_mut_const_greater, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_mut_const_greater, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter > std::as_const(__iter)' would be invalid: overload resolution selected deleted operator '>'}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_const_const_greater, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_const_const_greater, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because 'std::as_const(__iter) > std::as_const(__iter)' would be invalid: overload resolution selected deleted operator '>'}}
   _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_less_eq, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter <= __iter' would be invalid: overload resolution selected deleted operator '<='}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_const_mut_less_eq, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_const_mut_less_eq, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because 'std::as_const(__iter) <= __iter' would be invalid: overload resolution selected deleted operator '<='}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_mut_const_less_eq, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_mut_const_less_eq, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter <= std::as_const(__iter)' would be invalid: overload resolution selected deleted operator '<='}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_const_const_less_eq, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_const_const_less_eq, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because 'std::as_const(__iter) <= std::as_const(__iter)' would be invalid: overload resolution selected deleted operator '<='}}
   _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_greater_eq, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter >= __iter' would be invalid: overload resolution selected deleted operator '>='}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_const_mut_greater_eq, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_const_mut_greater_eq, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because 'std::as_const(__iter) >= __iter' would be invalid: overload resolution selected deleted operator '>='}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_mut_const_greater_eq, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_mut_const_greater_eq, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because '__iter >= std::as_const(__iter)' would be invalid: overload resolution selected deleted operator '>='}}
-  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(
-      missing_const_const_greater_eq, ""); // expected-error {{static assertion failed}}
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(missing_const_const_greater_eq, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{because 'std::as_const(__iter) >= std::as_const(__iter)' would be invalid: overload resolution selected deleted operator '>='}}
+  // clang-format on
 }
