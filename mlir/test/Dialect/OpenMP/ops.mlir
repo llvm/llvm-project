@@ -133,6 +133,85 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
   return
 }
 
+// CHECK-LABEL: omp_loop_nest
+func.func @omp_loop_nest(%lb : index, %ub : index, %step : index) -> () {
+  // TODO Remove induction variables from omp.wsloop.
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    // CHECK: omp.loop_nest
+    // CHECK-SAME: (%{{.*}}) : index =
+    // CHECK-SAME: (%{{.*}}) to (%{{.*}}) step (%{{.*}})
+    "omp.loop_nest" (%lb, %ub, %step) ({
+    ^bb0(%iv2: index):
+      omp.yield
+    }) : (index, index, index) -> ()
+    omp.yield
+  }
+
+  // TODO Remove induction variables from omp.wsloop.
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    // CHECK: omp.loop_nest
+    // CHECK-SAME: (%{{.*}}) : index =
+    // CHECK-SAME: (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}})
+    "omp.loop_nest" (%lb, %ub, %step) ({
+    ^bb0(%iv2: index):
+      omp.yield
+    }) {inclusive} : (index, index, index) -> ()
+    omp.yield
+  }
+
+  // TODO Remove induction variables from omp.wsloop.
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    // CHECK: omp.loop_nest
+    // CHECK-SAME: (%{{.*}}, %{{.*}}) : index =
+    // CHECK-SAME: (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}})
+    "omp.loop_nest" (%lb, %lb, %ub, %ub, %step, %step) ({
+    ^bb0(%iv2: index, %iv3: index):
+      omp.yield
+    }) : (index, index, index, index, index, index) -> ()
+    omp.yield
+  }
+
+  return
+}
+
+// CHECK-LABEL: omp_loop_nest_pretty
+func.func @omp_loop_nest_pretty(%lb : index, %ub : index, %step : index) -> () {
+  // TODO Remove induction variables from omp.wsloop.
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    // CHECK: omp.loop_nest
+    // CHECK-SAME: (%{{.*}}) : index =
+    // CHECK-SAME: (%{{.*}}) to (%{{.*}}) step (%{{.*}})
+    omp.loop_nest (%iv2) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+    omp.yield
+  }
+
+  // TODO Remove induction variables from omp.wsloop.
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    // CHECK: omp.loop_nest
+    // CHECK-SAME: (%{{.*}}) : index =
+    // CHECK-SAME: (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}})
+    omp.loop_nest (%iv2) : index = (%lb) to (%ub) inclusive step (%step) {
+      omp.yield
+    }
+    omp.yield
+  }
+
+  // TODO Remove induction variables from omp.wsloop.
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    // CHECK: omp.loop_nest
+    // CHECK-SAME: (%{{.*}}) : index =
+    // CHECK-SAME: (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}})
+    omp.loop_nest (%iv2, %iv3) : index = (%lb, %lb) to (%ub, %ub) step (%step, %step) {
+      omp.yield
+    }
+    omp.yield
+  }
+
+  return
+}
+
 // CHECK-LABEL: omp_wsloop
 func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memref<i32>, %linear_var : i32, %chunk_var : i32) -> () {
 
