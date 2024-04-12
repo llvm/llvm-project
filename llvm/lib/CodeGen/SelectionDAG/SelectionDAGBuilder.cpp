@@ -3882,7 +3882,11 @@ void SelectionDAGBuilder::visitUIToFP(const User &I) {
   SDValue N = getValue(I.getOperand(0));
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getNode(ISD::UINT_TO_FP, getCurSDLoc(), DestVT, N));
+  SDNodeFlags Flags;
+  if (auto *PNI = dyn_cast<PossiblyNonNegInst>(&I))
+    Flags.setNonNeg(PNI->hasNonNeg());
+
+  setValue(&I, DAG.getNode(ISD::UINT_TO_FP, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitSIToFP(const User &I) {
@@ -4754,8 +4758,12 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
 
   EVT VT = Src0.getValueType();
 
+  auto MMOFlags = MachineMemOperand::MOStore;
+  if (I.hasMetadata(LLVMContext::MD_nontemporal))
+    MMOFlags |= MachineMemOperand::MONonTemporal;
+
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
+      MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), Alignment, I.getAAMetadata());
   SDValue StoreNode =
       DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask, VT, MMO,
@@ -4924,8 +4932,12 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
 
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
 
+  auto MMOFlags = MachineMemOperand::MOLoad;
+  if (I.hasMetadata(LLVMContext::MD_nontemporal))
+    MMOFlags |= MachineMemOperand::MONonTemporal;
+
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
+      MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), Alignment, AAInfo, Ranges);
 
   SDValue Load =
@@ -7326,6 +7338,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
 
+  case Intrinsic::allow_runtime_check:
+  case Intrinsic::allow_ubsan_check:
+    setValue(&I, getValue(ConstantInt::getTrue(I.getType())));
+    return;
+
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
   case Intrinsic::usub_with_overflow:
@@ -8607,8 +8624,6 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
   if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_convergencectrl)) {
     auto *Token = Bundle->Inputs[0].get();
     ConvControlToken = getValue(Token);
-  } else {
-    ConvControlToken = DAG.getUNDEF(MVT::Untyped);
   }
 
   TargetLowering::CallLoweringInfo CLI(DAG);

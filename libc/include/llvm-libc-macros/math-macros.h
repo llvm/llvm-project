@@ -51,32 +51,9 @@
 #define math_errhandling (MATH_ERRNO | MATH_ERREXCEPT)
 #endif
 
-// These must be type-generic functions.  The C standard specifies them as
-// being macros rather than functions, in fact.  However, in C++ it's important
-// that there be function declarations that don't interfere with other uses of
-// the identifier, even in places with parentheses where a function-like macro
-// will be expanded (such as a function declaration in a C++ namespace).
-
-#ifdef __cplusplus
-
-template <typename T> inline constexpr bool isfinite(T x) {
-  return __builtin_isfinite(x);
-}
-
-template <typename T> inline constexpr bool isinf(T x) {
-  return __builtin_isinf(x);
-}
-
-template <typename T> inline constexpr bool isnan(T x) {
-  return __builtin_isnan(x);
-}
-
-#else
-
+// TODO: Move generic functional math macros to a separate header file.
 #define isfinite(x) __builtin_isfinite(x)
 #define isinf(x) __builtin_isinf(x)
 #define isnan(x) __builtin_isnan(x)
-
-#endif
 
 #endif // LLVM_LIBC_MACROS_MATH_MACROS_H

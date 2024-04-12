@@ -7,7 +7,7 @@ define void @test() {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <2 x i64> <i64 -1, i64 0>, ptr @h, align 8
+; CHECK-NEXT:    store <2 x i64> <i64 4294967295, i64 0>, ptr @h, align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

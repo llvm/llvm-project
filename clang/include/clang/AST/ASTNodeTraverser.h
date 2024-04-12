@@ -53,6 +53,7 @@ struct {
   void Visit(TypeLoc);
   void Visit(const Decl *D);
   void Visit(const CXXCtorInitializer *Init);
+  void Visit(const OpenACCClause *C);
   void Visit(const OMPClause *C);
   void Visit(const BlockDecl::Capture &C);
   void Visit(const GenericSelectionExpr::ConstAssociation &A);
@@ -236,6 +237,13 @@ public:
       getNodeDelegate().Visit(C);
       if (C.hasCopyExpr())
         Visit(C.getCopyExpr());
+    });
+  }
+
+  void Visit(const OpenACCClause *C) {
+    getNodeDelegate().AddChild([=] {
+      getNodeDelegate().Visit(C);
+      // TODO OpenACC: Switch on clauses that have children, and add them.
     });
   }
 
@@ -799,6 +807,11 @@ public:
       Visit(C);
   }
 
+  void VisitOpenACCConstructStmt(const OpenACCConstructStmt *Node) {
+    for (const auto *C : Node->clauses())
+      Visit(C);
+  }
+
   void VisitInitListExpr(const InitListExpr *ILE) {
     if (auto *Filler = ILE->getArrayFiller()) {
       Visit(Filler, "array_filler");
@@ -917,6 +930,14 @@ public:
   void VisitPackTemplateArgument(const TemplateArgument &TA) {
     for (const auto &TArg : TA.pack_elements())
       Visit(TArg);
+  }
+
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
+    Visit(Node->getExpr());
+  }
+
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
+    Visit(Node->getExpr());
   }
 
   // Implements Visit methods for Attrs.

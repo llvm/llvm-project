@@ -667,11 +667,13 @@ void Fortran::lower::CallInterface<T>::declare() {
   if (!side().isIndirectCall()) {
     std::string name = side().getMangledName();
     mlir::ModuleOp module = converter.getModuleOp();
-    func = fir::FirOpBuilder::getNamedFunction(module, name);
+    mlir::SymbolTable *symbolTable = converter.getMLIRSymbolTable();
+    func = fir::FirOpBuilder::getNamedFunction(module, symbolTable, name);
     if (!func) {
       mlir::Location loc = side().getCalleeLocation();
       mlir::FunctionType ty = genFunctionType();
-      func = fir::FirOpBuilder::createFunction(loc, module, name, ty);
+      func =
+          fir::FirOpBuilder::createFunction(loc, module, name, ty, symbolTable);
       if (const Fortran::semantics::Symbol *sym = side().getProcedureSymbol()) {
         if (side().isMainProgram()) {
           func->setAttr(fir::getSymbolAttrName(),
@@ -1134,14 +1136,22 @@ private:
       addPassedArg(PassEntityBy::Box, entity, characteristics);
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Character) {
-      // Pass as fir.box_char
-      mlir::Type boxCharTy =
-          fir::BoxCharType::get(&mlirContext, dynamicType.kind());
-      addFirOperand(boxCharTy, nextPassedArgPosition(), Property::BoxChar,
-                    attrs);
-      addPassedArg(isValueAttr ? PassEntityBy::CharBoxValueAttribute
-                               : PassEntityBy::BoxChar,
-                   entity, characteristics);
+      if (isValueAttr && isBindC) {
+        // Pass as fir.char<1>
+        mlir::Type charTy =
+            fir::CharacterType::getSingleton(&mlirContext, dynamicType.kind());
+        addFirOperand(charTy, nextPassedArgPosition(), Property::Value, attrs);
+        addPassedArg(PassEntityBy::Value, entity, characteristics);
+      } else {
+        // Pass as fir.box_char
+        mlir::Type boxCharTy =
+            fir::BoxCharType::get(&mlirContext, dynamicType.kind());
+        addFirOperand(boxCharTy, nextPassedArgPosition(), Property::BoxChar,
+                      attrs);
+        addPassedArg(isValueAttr ? PassEntityBy::CharBoxValueAttribute
+                                 : PassEntityBy::BoxChar,
+                     entity, characteristics);
+      }
     } else {
       // Pass as fir.ref unless it's by VALUE and BIND(C). Also pass-by-value
       // for numerical/logical scalar without OPTIONAL so that the behavior is
@@ -1644,7 +1654,8 @@ mlir::func::FuncOp Fortran::lower::getOrDeclareFunction(
     Fortran::lower::AbstractConverter &converter) {
   mlir::ModuleOp module = converter.getModuleOp();
   std::string name = getProcMangledName(proc, converter);
-  mlir::func::FuncOp func = fir::FirOpBuilder::getNamedFunction(module, name);
+  mlir::func::FuncOp func = fir::FirOpBuilder::getNamedFunction(
+      module, converter.getMLIRSymbolTable(), name);
   if (func)
     return func;
 

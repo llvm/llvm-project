@@ -2,8 +2,9 @@
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++11 %s -verify=expected,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++14 %s -verify=expected,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++17 %s -verify=expected,since-cxx17,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++20 %s -verify=expected,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++23 %s -verify=expected,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++20 %s -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++23 %s -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++2c %s -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 // FIXME: __SIZE_TYPE__ expands to 'long long' on some targets.
 __extension__ typedef __SIZE_TYPE__ size_t;
@@ -948,34 +949,35 @@ namespace dr460 { // dr460: yes
 // dr464: na
 // dr465: na
 
-namespace dr466 { // dr466: no
-  typedef int I;
-  typedef const int CI;
-  typedef volatile int VI;
-  void f(int *a, CI *b, VI *c) {
-    a->~I();
-    a->~CI();
-    a->~VI();
-    a->I::~I();
-    a->CI::~CI();
-    a->VI::~VI();
+namespace dr466 { // dr466: 2.8
+typedef int I;
+typedef const int CI;
+typedef volatile int VI;
+void g(int a, CI b, VI c) {
+// since-cxx20-warning@-1 {{volatile-qualified parameter type 'VI' (aka 'volatile int') is deprecated}}
+  a.~I();
+  a.~CI();
+  a.~VI();
+  a.I::~I();
+  a.CI::~CI();
+  a.VI::~VI();
 
-    a->CI::~VI(); // FIXME: This is invalid; CI and VI are not the same scalar type.
+  a.CI::~VI(); // allowed by changes to [expr.id.prim.qual]/2 introduced in P1131R2
 
-    b->~I();
-    b->~CI();
-    b->~VI();
-    b->I::~I();
-    b->CI::~CI();
-    b->VI::~VI();
+  b.~I();
+  b.~CI();
+  b.~VI();
+  b.I::~I();
+  b.CI::~CI();
+  b.VI::~VI();
 
-    c->~I();
-    c->~CI();
-    c->~VI();
-    c->I::~I();
-    c->CI::~CI();
-    c->VI::~VI();
-  }
+  c.~I();
+  c.~CI();
+  c.~VI();
+  c.I::~I();
+  c.CI::~CI();
+  c.VI::~VI();
+}
 }
 
 namespace dr467 { // dr467: yes

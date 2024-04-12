@@ -187,6 +187,8 @@ void JSONNodeDumper::Visit(const CXXCtorInitializer *Init) {
     llvm_unreachable("Unknown initializer type");
 }
 
+void JSONNodeDumper::Visit(const OpenACCClause *C) {}
+
 void JSONNodeDumper::Visit(const OMPClause *C) {}
 
 void JSONNodeDumper::Visit(const BlockDecl::Capture &C) {
@@ -1572,6 +1574,14 @@ void JSONNodeDumper::VisitMaterializeTemporaryExpr(
   }
 
   attributeOnlyIfTrue("boundToLValueRef", MTE->isBoundToLvalueReference());
+}
+
+void JSONNodeDumper::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
+  attributeOnlyIfTrue("hasRewrittenInit", Node->hasRewrittenInit());
+}
+
+void JSONNodeDumper::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
+  attributeOnlyIfTrue("hasRewrittenInit", Node->hasRewrittenInit());
 }
 
 void JSONNodeDumper::VisitCXXDependentScopeMemberExpr(
