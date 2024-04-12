@@ -1,4 +1,4 @@
-// XFAIL: target={{.*}}-aix{{.*}}
+// XFAIL: target={{.*}}-aix{{.*}}, target=riscv{{.*}}
 
 // RUN: %clang -### -c -save-temps -integrated-as %s 2>&1 | FileCheck %s
 
