@@ -1758,6 +1758,9 @@ amd_comgr_status_t AMDGPUCompiler::assembleToRelocatable() {
   Args.push_back("-x");
   Args.push_back("assembler");
 
+  // -nogpulib option not needed for assembling to relocatable
+  NoGpuLib = false;
+
   return processFiles(AMD_COMGR_DATA_KIND_RELOCATABLE, ".o");
 }
 
