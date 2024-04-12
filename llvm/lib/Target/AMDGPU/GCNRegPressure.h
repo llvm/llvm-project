@@ -259,6 +259,41 @@ public:
                const LiveRegSet *LiveRegsCopy = nullptr);
 };
 
+class GCNIterativeRPTracker {
+public:
+  using LiveRegSet = DenseMap<unsigned, LaneBitmask>;
+
+protected:
+  LiveRegSet LiveRegs;
+  GCNRegPressure CurPressure, MaxPressure;
+
+  mutable const MachineRegisterInfo *MRI = nullptr;
+
+  GCNIterativeRPTracker() {};
+
+public:
+  void reset(const MachineRegisterInfo *MRI_, const LiveRegSet *LiveRegsCopy);
+
+  GCNRegPressure getPressure() const { return CurPressure; }
+  GCNRegPressure getMaxPressure() const { return MaxPressure; }
+};
+
+class GCNIterativeUpwardRPTracker : public GCNIterativeRPTracker {
+public:
+  GCNIterativeUpwardRPTracker() {};
+
+  // Move to the state just before the MI.
+  void recede(const MachineInstr &MI, LiveIntervals *TheLIS);
+};
+
+class GCNIterativeDownwardRPTracker : public GCNIterativeRPTracker {
+public:
+  GCNIterativeDownwardRPTracker() {};
+
+  // Move to the state just after the MI.
+  void advance(const MachineInstr &MI, LiveIntervals *TheLIS);
+};
+
 LaneBitmask getLiveLaneMask(unsigned Reg,
                             SlotIndex SI,
                             const LiveIntervals &LIS,
