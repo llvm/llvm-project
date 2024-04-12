@@ -2940,13 +2940,6 @@ public:
                                       QualType NewT, QualType OldT);
   void CheckMain(FunctionDecl *FD, const DeclSpec &D);
   void CheckMSVCRTEntryPoint(FunctionDecl *FD);
-  void ActOnHLSLTopLevelFunction(FunctionDecl *FD);
-  void CheckHLSLEntryPoint(FunctionDecl *FD);
-  void CheckHLSLSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
-                                   const HLSLAnnotationAttr *AnnotationAttr);
-  void DiagnoseHLSLAttrStageMismatch(
-      const Attr *A, HLSLShaderAttr::ShaderType Stage,
-      std::initializer_list<HLSLShaderAttr::ShaderType> AllowedStages);
   Attr *getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
                                                    bool IsDefinition);
   void CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D);
@@ -3708,14 +3701,6 @@ public:
                           StringRef UuidAsWritten, MSGuidDecl *GuidDecl);
 
   BTFDeclTagAttr *mergeBTFDeclTagAttr(Decl *D, const BTFDeclTagAttr &AL);
-  HLSLNumThreadsAttr *mergeHLSLNumThreadsAttr(Decl *D,
-                                              const AttributeCommonInfo &AL,
-                                              int X, int Y, int Z);
-  HLSLShaderAttr *mergeHLSLShaderAttr(Decl *D, const AttributeCommonInfo &AL,
-                                      HLSLShaderAttr::ShaderType ShaderType);
-  HLSLParamModifierAttr *
-  mergeHLSLParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
-                             HLSLParamModifierAttr::Spelling Spelling);
 
   WebAssemblyImportNameAttr *
   mergeImportNameAttr(Decl *D, const WebAssemblyImportNameAttr &AL);

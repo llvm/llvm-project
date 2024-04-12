@@ -72,9 +72,9 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
     return nullptr;
   }
 
-  Decl *D = Actions.HLSL().ActOnStartHLSLBuffer(
-      getCurScope(), IsCBuffer, BufferLoc, Identifier, IdentifierLoc,
-      T.getOpenLocation());
+  Decl *D = Actions.HLSL().ActOnStartBuffer(getCurScope(), IsCBuffer, BufferLoc,
+                                            Identifier, IdentifierLoc,
+                                            T.getOpenLocation());
 
   while (Tok.isNot(tok::r_brace) && Tok.isNot(tok::eof)) {
     // FIXME: support attribute on constants inside cbuffer/tbuffer.
@@ -88,7 +88,7 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
       T.skipToEnd();
       DeclEnd = T.getCloseLocation();
       BufferScope.Exit();
-      Actions.HLSL().ActOnFinishHLSLBuffer(D, DeclEnd);
+      Actions.HLSL().ActOnFinishBuffer(D, DeclEnd);
       return nullptr;
     }
   }
@@ -96,7 +96,7 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
   T.consumeClose();
   DeclEnd = T.getCloseLocation();
   BufferScope.Exit();
-  Actions.HLSL().ActOnFinishHLSLBuffer(D, DeclEnd);
+  Actions.HLSL().ActOnFinishBuffer(D, DeclEnd);
 
   Actions.ProcessDeclAttributeList(Actions.CurScope, D, Attrs);
   return D;

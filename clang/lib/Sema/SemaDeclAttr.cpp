@@ -39,6 +39,7 @@
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -7238,22 +7239,9 @@ static void handleHLSLNumThreadsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  HLSLNumThreadsAttr *NewAttr = S.mergeHLSLNumThreadsAttr(D, AL, X, Y, Z);
+  HLSLNumThreadsAttr *NewAttr = S.HLSL().mergeNumThreadsAttr(D, AL, X, Y, Z);
   if (NewAttr)
     D->addAttr(NewAttr);
-}
-
-HLSLNumThreadsAttr *Sema::mergeHLSLNumThreadsAttr(Decl *D,
-                                                  const AttributeCommonInfo &AL,
-                                                  int X, int Y, int Z) {
-  if (HLSLNumThreadsAttr *NT = D->getAttr<HLSLNumThreadsAttr>()) {
-    if (NT->getX() != X || NT->getY() != Y || NT->getZ() != Z) {
-      Diag(NT->getLocation(), diag::err_hlsl_attribute_param_mismatch) << AL;
-      Diag(AL.getLoc(), diag::note_conflicting_attribute);
-    }
-    return nullptr;
-  }
-  return ::new (Context) HLSLNumThreadsAttr(Context, AL, X, Y, Z);
 }
 
 static bool isLegalTypeForHLSLSV_DispatchThreadID(QualType T) {
@@ -7299,22 +7287,9 @@ static void handleHLSLShaderAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // FIXME: check function match the shader stage.
 
-  HLSLShaderAttr *NewAttr = S.mergeHLSLShaderAttr(D, AL, ShaderType);
+  HLSLShaderAttr *NewAttr = S.HLSL().mergeShaderAttr(D, AL, ShaderType);
   if (NewAttr)
     D->addAttr(NewAttr);
-}
-
-HLSLShaderAttr *
-Sema::mergeHLSLShaderAttr(Decl *D, const AttributeCommonInfo &AL,
-                          HLSLShaderAttr::ShaderType ShaderType) {
-  if (HLSLShaderAttr *NT = D->getAttr<HLSLShaderAttr>()) {
-    if (NT->getType() != ShaderType) {
-      Diag(NT->getLocation(), diag::err_hlsl_attribute_param_mismatch) << AL;
-      Diag(AL.getLoc(), diag::note_conflicting_attribute);
-    }
-    return nullptr;
-  }
-  return HLSLShaderAttr::Create(Context, ShaderType, AL);
 }
 
 static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
@@ -7391,32 +7366,11 @@ static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
 
 static void handleHLSLParamModifierAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
-  HLSLParamModifierAttr *NewAttr = S.mergeHLSLParamModifierAttr(
+  HLSLParamModifierAttr *NewAttr = S.HLSL().mergeParamModifierAttr(
       D, AL,
       static_cast<HLSLParamModifierAttr::Spelling>(AL.getSemanticSpelling()));
   if (NewAttr)
     D->addAttr(NewAttr);
-}
-
-HLSLParamModifierAttr *
-Sema::mergeHLSLParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
-                                 HLSLParamModifierAttr::Spelling Spelling) {
-  // We can only merge an `in` attribute with an `out` attribute. All other
-  // combinations of duplicated attributes are ill-formed.
-  if (HLSLParamModifierAttr *PA = D->getAttr<HLSLParamModifierAttr>()) {
-    if ((PA->isIn() && Spelling == HLSLParamModifierAttr::Keyword_out) ||
-        (PA->isOut() && Spelling == HLSLParamModifierAttr::Keyword_in)) {
-      D->dropAttr<HLSLParamModifierAttr>();
-      SourceRange AdjustedRange = {PA->getLocation(), AL.getRange().getEnd()};
-      return HLSLParamModifierAttr::Create(
-          Context, /*MergedSpelling=*/true, AdjustedRange,
-          HLSLParamModifierAttr::Keyword_inout);
-    }
-    Diag(AL.getLoc(), diag::err_hlsl_duplicate_parameter_modifier) << AL;
-    Diag(PA->getLocation(), diag::note_conflicting_attribute);
-    return nullptr;
-  }
-  return HLSLParamModifierAttr::Create(Context, AL);
 }
 
 static void handleMSInheritanceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
