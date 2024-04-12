@@ -19710,6 +19710,27 @@ bool Sema::IsLayoutCompatible(QualType T1, QualType T2) const {
   return isLayoutCompatible(getASTContext(), T1, T2);
 }
 
+//===-------------- Pointer interconvertibility ----------------------------//
+
+bool Sema::IsPointerInterconvertibleBaseOf(const TypeSourceInfo *Base,
+                                           const TypeSourceInfo *Derived) {
+  QualType BaseT = Base->getType().getCanonicalType().getUnqualifiedType();
+  QualType DerivedT =
+      Derived->getType().getCanonicalType().getUnqualifiedType();
+
+  if (!BaseT->isUnionType() && !DerivedT->isUnionType() &&
+      getASTContext().hasSameType(BaseT, DerivedT))
+    return true;
+
+  if (!IsDerivedFrom(Derived->getTypeLoc().getBeginLoc(), DerivedT, BaseT))
+    return false;
+
+  if (DerivedT->getAsCXXRecordDecl()->isStandardLayout())
+    return true;
+
+  return false;
+}
+
 //===--- CHECK: pointer_with_type_tag attribute: datatypes should match ----//
 
 /// Given a type tag expression find the type tag itself.
