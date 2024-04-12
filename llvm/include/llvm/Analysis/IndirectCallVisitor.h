@@ -88,3 +88,5 @@ inline std::vector<Instruction *> findVTableAddrs(Function &F) {
   return ICV.ProfiledAddresses;
 }
 } // namespace llvm
+
+#endif
