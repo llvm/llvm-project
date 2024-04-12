@@ -10,7 +10,6 @@
 #include "mlir/Dialect/Polynomial/IR/Polynomial.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -51,7 +50,7 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
     return success();
   }
 
-  // A monomial can be a trailing constant term, as in `x + 1`
+  // A monomial can be a trailing constant term, as in `x + 1`.
   if (failed(parser.parseOptionalKeyword(&variable))) {
     // If neither a coefficient nor a variable was found, then it's effectively
     // parsing an empty string.
@@ -64,11 +63,11 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
     return success();
   }
 
-  // Parse exponentiation symbol as **
-  // We can't use caret because it's reserved for basic block identifiers
-  // If no star is present, it's treated as a polynomial with exponent 1
+  // Parse exponentiation symbol as `**`. We can't use caret because it's
+  // reserved for basic block identifiers If no star is present, it's treated
+  // as a polynomial with exponent 1.
   if (succeeded(parser.parseOptionalStar())) {
-    // If there's one * there must be two
+    // If there's one * there must be two.
     if (failed(parser.parseStar())) {
       parser.emitError(parser.getCurrentLocation(),
                        "exponents must be specified as a double-asterisk `**`");
