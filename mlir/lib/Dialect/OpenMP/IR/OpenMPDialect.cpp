@@ -1920,6 +1920,12 @@ void LoopNestOp::print(OpAsmPrinter &p) {
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
+void LoopNestOp::build(OpBuilder &builder, OperationState &state,
+                       const LoopNestClauseOps &clauses) {
+  LoopNestOp::build(builder, state, clauses.loopLBVar, clauses.loopUBVar,
+                    clauses.loopStepVar, clauses.loopInclusiveAttr);
+}
+
 LogicalResult LoopNestOp::verify() {
   if (getLowerBound().size() != getIVs().size())
     return emitOpError() << "number of range arguments and IVs do not match";
