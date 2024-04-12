@@ -19718,7 +19718,7 @@ bool Sema::IsPointerInterconvertibleBaseOf(const TypeSourceInfo *Base,
   QualType DerivedT =
       Derived->getType().getCanonicalType().getUnqualifiedType();
 
-  if (!BaseT->isUnionType() && !DerivedT->isUnionType() &&
+  if (BaseT->isStructureOrClassType() && DerivedT->isStructureOrClassType() &&
       getASTContext().hasSameType(BaseT, DerivedT))
     return true;
 
