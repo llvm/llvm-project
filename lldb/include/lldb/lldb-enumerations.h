@@ -1339,6 +1339,14 @@ enum AddressMaskRange {
   eAddressMaskRangeAll = eAddressMaskRangeAny,
 };
 
+/// Used by the debugger to indicate which events are being broadcasted.
+enum DebuggerBroadcastBit {
+  eBroadcastBitProgress = (1 << 0),
+  eBroadcastBitWarning = (1 << 1),
+  eBroadcastBitError = (1 << 2),
+  eBroadcastBitProgressCategory = (1 << 3),
+};
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H
