@@ -36,6 +36,7 @@
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -11955,25 +11956,25 @@ static void DiagnoseBadTarget(Sema &S, OverloadCandidate *Cand) {
   CXXMethodDecl *Meth = dyn_cast<CXXMethodDecl>(Callee);
   if (Meth != nullptr && Meth->isImplicit()) {
     CXXRecordDecl *ParentClass = Meth->getParent();
-    Sema::CXXSpecialMember CSM;
+    CXXSpecialMemberKind CSM;
 
     switch (FnKindPair.first) {
     default:
       return;
     case oc_implicit_default_constructor:
-      CSM = Sema::CXXDefaultConstructor;
+      CSM = CXXSpecialMemberKind::DefaultConstructor;
       break;
     case oc_implicit_copy_constructor:
-      CSM = Sema::CXXCopyConstructor;
+      CSM = CXXSpecialMemberKind::CopyConstructor;
       break;
     case oc_implicit_move_constructor:
-      CSM = Sema::CXXMoveConstructor;
+      CSM = CXXSpecialMemberKind::MoveConstructor;
       break;
     case oc_implicit_copy_assignment:
-      CSM = Sema::CXXCopyAssignment;
+      CSM = CXXSpecialMemberKind::CopyAssignment;
       break;
     case oc_implicit_move_assignment:
-      CSM = Sema::CXXMoveAssignment;
+      CSM = CXXSpecialMemberKind::MoveAssignment;
       break;
     };
 
@@ -15064,7 +15065,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         DefaultedFunctionKind DFK = getDefaultedFunctionKind(DeletedFD);
         if (DFK.isSpecialMember()) {
           Diag(OpLoc, diag::err_ovl_deleted_special_oper)
-            << Args[0]->getType() << DFK.asSpecialMember();
+              << Args[0]->getType()
+              << llvm::to_underlying(DFK.asSpecialMember());
         } else {
           assert(DFK.isComparison());
           Diag(OpLoc, diag::err_ovl_deleted_comparison)
