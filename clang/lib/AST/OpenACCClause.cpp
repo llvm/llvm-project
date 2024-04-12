@@ -65,11 +65,11 @@ OpenACCClause::child_range OpenACCClause::children() {
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
-void OpenACCClausePrinter::VisitOpenACCDefaultClause(
+void OpenACCClausePrinter::VisitDefaultClause(
     const OpenACCDefaultClause &C) {
   OS << "default(" << C.getDefaultClauseKind() << ")";
 }
 
-void OpenACCClausePrinter::VisitOpenACCIfClause(const OpenACCIfClause &C) {
+void OpenACCClausePrinter::VisitIfClause(const OpenACCIfClause &C) {
   OS << "if(" << C.getConditionExpr() << ")";
 }
