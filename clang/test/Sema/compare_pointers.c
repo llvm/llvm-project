@@ -24,7 +24,3 @@ int test5(int *a){
     int zero = 0;
     return a>=zero; // pointer-integer-ordered-warning{{ordered comparison between pointer and integer ('int *' and 'int')}}
 }
-
-
-
-
