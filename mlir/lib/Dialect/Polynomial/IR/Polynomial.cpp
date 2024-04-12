@@ -8,7 +8,7 @@
 
 #include "mlir/Dialect/Polynomial/IR/Polynomial.h"
 
-#include "mlir/IR/MLIRContext.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -18,10 +18,20 @@
 namespace mlir {
 namespace polynomial {
 
-Polynomial Polynomial::fromMonomials(ArrayRef<Monomial> monomials) {
+FailureOr<Polynomial> Polynomial::fromMonomials(ArrayRef<Monomial> monomials) {
   // A polynomial's terms are canonically stored in order of increasing degree.
   auto monomialsCopy = llvm::SmallVector<Monomial>(monomials);
   std::sort(monomialsCopy.begin(), monomialsCopy.end());
+
+  // Ensure non-unique exponents are not present. Since we sorted the list by
+  // exponent, a linear scan of adjancent monomials suffices.
+  if (std::adjacent_find(monomialsCopy.begin(), monomialsCopy.end(),
+                         [](const Monomial &lhs, const Monomial &rhs) {
+                           return lhs.exponent == rhs.exponent;
+                         }) != monomialsCopy.end()) {
+    return failure();
+  }
+
   return Polynomial(monomialsCopy);
 }
 
@@ -32,7 +42,11 @@ Polynomial Polynomial::fromCoefficients(ArrayRef<int64_t> coeffs) {
   for (size_t i = 0; i < size; i++) {
     monomials.emplace_back(coeffs[i], i);
   }
-  return Polynomial::fromMonomials(monomials);
+  auto result = Polynomial::fromMonomials(monomials);
+  // Construction guarantees unique exponents, so the failure mode of
+  // fromMonomials can be bypassed.
+  assert(succeeded(result));
+  return result.value();
 }
 
 void Polynomial::print(raw_ostream &os, ::llvm::StringRef separator,

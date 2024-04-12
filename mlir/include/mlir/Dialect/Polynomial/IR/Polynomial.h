@@ -9,8 +9,7 @@
 #ifndef MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
 #define MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
 
-#include <utility>
-
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -76,7 +75,9 @@ public:
 
   explicit Polynomial(ArrayRef<Monomial> terms) : terms(terms) {};
 
-  static Polynomial fromMonomials(ArrayRef<Monomial> monomials);
+  // Returns a Polynomial from a list of monomials.
+  // Fails if two monomials have the same exponent.
+  static FailureOr<Polynomial> fromMonomials(ArrayRef<Monomial> monomials);
 
   /// Returns a polynomial with coefficients given by `coeffs`. The value
   /// coeffs[i] is converted to a monomial with exponent i.

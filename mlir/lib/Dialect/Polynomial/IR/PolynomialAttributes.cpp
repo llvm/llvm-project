@@ -97,7 +97,6 @@ Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
 
   llvm::SmallVector<Monomial> monomials;
   llvm::StringSet<> variables;
-  llvm::DenseSet<APInt> exponents;
 
   while (true) {
     Monomial parsedMonomial;
@@ -115,16 +114,6 @@ Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
       variables.insert(parsedVariable);
     }
     monomials.push_back(parsedMonomial);
-
-    if (llvm::is_contained(exponents, parsedMonomial.exponent)) {
-      llvm::SmallString<16> coeffString;
-      parsedMonomial.exponent.toStringSigned(coeffString);
-      parser.emitError(parser.getCurrentLocation())
-          << "at most one monomial may have exponent " << coeffString
-          << ", but found multiple";
-      return {};
-    }
-    exponents.insert(parsedMonomial.exponent);
 
     if (shouldParseMore)
       continue;
@@ -146,8 +135,13 @@ Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
             vars);
   }
 
-  Polynomial poly = Polynomial::fromMonomials(monomials);
-  return PolynomialAttr::get(parser.getContext(), poly);
+  auto result = Polynomial::fromMonomials(monomials);
+  if (failed(result)) {
+      parser.emitError(parser.getCurrentLocation())
+          << "parsed polynomial must have unique exponents among monomials";
+      return {};
+  }
+  return PolynomialAttr::get(parser.getContext(), result.value());
 }
 
 void RingAttr::print(AsmPrinter &p) const {

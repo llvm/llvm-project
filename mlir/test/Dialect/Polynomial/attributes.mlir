@@ -14,8 +14,8 @@
 
 // -----
 
-// expected-error@below {{at most one monomial may have exponent 2, but found multiple}}
 #my_poly = #polynomial.polynomial<5 + x**2 + 3x**2>
+// expected-error@below {{parsed polynomial must have unique exponents among monomials}}
 #ring1 = #polynomial.ring<coefficientType=i32, coefficientModulus=2837465, polynomialModulus=#my_poly>
 
 // -----
