@@ -8100,6 +8100,13 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
         return new FCmpInst(I.getSwappedPredicate(), X, NegC, "", &I);
   }
 
+  // fcmp (fadd X, 0.0), Y --> fcmp X, Y
+  if (match(Op0, m_FAdd(m_Value(X), m_APFloat(C))) && C->isZero()) {
+    if (match(Op1, m_Value(Y))) {
+      return new FCmpInst(Pred, X, Y, "", &I);
+    }
+  }
+
   if (match(Op0, m_FPExt(m_Value(X)))) {
     // fcmp (fpext X), (fpext Y) -> fcmp X, Y
     if (match(Op1, m_FPExt(m_Value(Y))) && X->getType() == Y->getType())

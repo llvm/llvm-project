@@ -1289,8 +1289,7 @@ define <1 x i1> @bitcast_1vec_eq0(i32 %x) {
 
 define i1 @fcmp_fadd_zero_ugt(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ugt(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1300,8 +1299,7 @@ define i1 @fcmp_fadd_zero_ugt(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_uge(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_uge(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1311,8 +1309,7 @@ define i1 @fcmp_fadd_zero_uge(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_ogt(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ogt(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1322,8 +1319,7 @@ define i1 @fcmp_fadd_zero_ogt(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_oge(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_oge(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1333,8 +1329,7 @@ define i1 @fcmp_fadd_zero_oge(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_ult(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ult(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1344,8 +1339,7 @@ define i1 @fcmp_fadd_zero_ult(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_ule(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ule(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1355,8 +1349,7 @@ define i1 @fcmp_fadd_zero_ule(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_olt(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_olt(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1366,8 +1359,7 @@ define i1 @fcmp_fadd_zero_olt(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_ole(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ole(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1377,8 +1369,7 @@ define i1 @fcmp_fadd_zero_ole(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_oeq(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_oeq(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1388,8 +1379,7 @@ define i1 @fcmp_fadd_zero_oeq(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_one(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_one(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1399,8 +1389,7 @@ define i1 @fcmp_fadd_zero_one(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_ueq(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ueq(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1410,8 +1399,7 @@ define i1 @fcmp_fadd_zero_ueq(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_une(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_une(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1421,8 +1409,7 @@ define i1 @fcmp_fadd_zero_une(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_ord(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ord(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1432,8 +1419,7 @@ define i1 @fcmp_fadd_zero_ord(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_uno(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_uno(
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[ADD:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
