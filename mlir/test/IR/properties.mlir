@@ -33,3 +33,8 @@ test.using_property_in_custom [1, 4, 20]
 // GENERIC-SAME: second = 4
 // GENERIC-SAME: }>
 test.using_property_ref_in_custom 1 + 4 = 5
+
+// CHECK:   test.with_default_valued_properties {{$}}
+// GENERIC: "test.with_default_valued_properties"()
+// GENERIC-SAME:  <{a = 0 : i32}>
+test.with_default_valued_properties <{a = 0 : i32}>
