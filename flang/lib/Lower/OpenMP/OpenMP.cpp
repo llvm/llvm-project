@@ -1234,9 +1234,10 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
             llvm::omp::Directive directive, bool outerCombined = false) {
   Fortran::lower::StatementContext stmtCtx;
   mlir::omp::TargetClauseOps clauseOps;
-  llvm::SmallVector<const Fortran::semantics::Symbol *> mapSyms;
-  llvm::SmallVector<mlir::Location> mapSymLocs;
-  llvm::SmallVector<mlir::Type> mapSymTypes;
+  llvm::SmallVector<mlir::Type> mapTypes, devicePtrTypes, deviceAddrTypes;
+  llvm::SmallVector<mlir::Location> mapLocs, devicePtrLocs, deviceAddrLocs;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> mapSyms, devicePtrSyms,
+      deviceAddrSyms;
 
   ClauseProcessor cp(converter, semaCtx, clauseList);
   cp.processIf(llvm::omp::Directive::OMPD_target, clauseOps);
@@ -1245,13 +1246,17 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   cp.processDepend(clauseOps);
   cp.processNowait(clauseOps);
   cp.processMap(currentLocation, directive, stmtCtx, clauseOps, &mapSyms,
-                &mapSymLocs, &mapSymTypes);
+                &mapLocs, &mapTypes);
+  cp.processIsDevicePtr(clauseOps, devicePtrTypes, devicePtrLocs,
+                        devicePtrSyms);
+  cp.processHasDeviceAddr(clauseOps, deviceAddrTypes, deviceAddrLocs,
+                          deviceAddrSyms);
   // TODO Support delayed privatization.
 
-  cp.processTODO<clause::Private, clause::Firstprivate, clause::IsDevicePtr,
-                 clause::HasDeviceAddr, clause::Reduction, clause::InReduction,
-                 clause::Allocate, clause::UsesAllocators, clause::Defaultmap>(
-      currentLocation, llvm::omp::Directive::OMPD_target);
+  cp.processTODO<clause::Private, clause::Firstprivate, clause::Reduction,
+                 clause::InReduction, clause::Allocate, clause::UsesAllocators,
+                 clause::Defaultmap>(currentLocation,
+                                     llvm::omp::Directive::OMPD_target);
 
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
@@ -1331,8 +1336,8 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
 
         clauseOps.mapVars.push_back(mapOp);
         mapSyms.push_back(&sym);
-        mapSymLocs.push_back(baseOp.getLoc());
-        mapSymTypes.push_back(baseOp.getType());
+        mapLocs.push_back(baseOp.getLoc());
+        mapTypes.push_back(baseOp.getType());
       }
     }
   };
@@ -1342,7 +1347,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
       currentLocation, clauseOps);
 
   genBodyOfTargetOp(converter, semaCtx, eval, genNested, targetOp, mapSyms,
-                    mapSymLocs, mapSymTypes, currentLocation);
+                    mapLocs, mapTypes, currentLocation);
 
   return targetOp;
 }
@@ -1955,6 +1960,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         !std::get_if<Fortran::parser::OmpClause::Map>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::UseDevicePtr>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::UseDeviceAddr>(&clause.u) &&
+        !std::get_if<Fortran::parser::OmpClause::IsDevicePtr>(&clause.u) &&
+        !std::get_if<Fortran::parser::OmpClause::HasDeviceAddr>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::ThreadLimit>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::NumTeams>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Simd>(&clause.u)) {

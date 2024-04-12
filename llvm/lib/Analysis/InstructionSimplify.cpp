@@ -440,7 +440,8 @@ static Value *threadBinOpOverSelect(Instruction::BinaryOps Opcode, Value *LHS,
     // Check that the simplified value has the form "X op Y" where "op" is the
     // same as the original operation.
     Instruction *Simplified = dyn_cast<Instruction>(FV ? FV : TV);
-    if (Simplified && Simplified->getOpcode() == unsigned(Opcode)) {
+    if (Simplified && Simplified->getOpcode() == unsigned(Opcode) &&
+        !Simplified->hasPoisonGeneratingFlags()) {
       // The value that didn't simplify is "UnsimplifiedLHS op UnsimplifiedRHS".
       // We already know that "op" is the same as for the simplified value.  See
       // if the operands match too.  If so, return the simplified value.
@@ -5051,7 +5052,7 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
 
       // gep (gep V, C), (sub 0, V) -> C
       if (match(Indices.back(),
-                m_Sub(m_Zero(), m_PtrToInt(m_Specific(StrippedBasePtr)))) &&
+                m_Neg(m_PtrToInt(m_Specific(StrippedBasePtr)))) &&
           !BasePtrOffset.isZero()) {
         auto *CI = ConstantInt::get(GEPTy->getContext(), BasePtrOffset);
         return ConstantExpr::getIntToPtr(CI, GEPTy);

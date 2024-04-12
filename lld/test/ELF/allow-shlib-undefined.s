@@ -31,10 +31,12 @@
 
 ## Test some cases when a relocatable object file provides a non-exported definition.
 # RUN: not ld.lld main.o a.so def-hidden.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
+# RUN: not ld.lld main.o def-hidden.o a.so -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
 # RUN: not ld.lld main.o a.so def-hidden.o -shared --no-allow-shlib-undefined -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
 # RUN: ld.lld main.o a.so def-hidden.o --allow-shlib-undefined --fatal-warnings -o /dev/null
 ## Test a relocatable object file definition that is converted to STB_LOCAL.
 # RUN: not ld.lld main.o a.so def-hidden.o --version-script=local.ver -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
+# RUN: not ld.lld main.o def-hidden.o a.so --version-script=local.ver -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
 
 ## The section containing the definition is discarded, and we report an error.
 # RUN: not ld.lld --gc-sections main.o a.so def-hidden.o -o /dev/null 2>&1 | FileCheck %s

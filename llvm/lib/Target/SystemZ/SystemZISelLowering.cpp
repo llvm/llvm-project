@@ -8173,6 +8173,27 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
   MF->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
 }
 
+MachineBasicBlock *
+SystemZTargetLowering::emitAdjCallStack(MachineInstr &MI,
+                                        MachineBasicBlock *BB) const {
+  MachineFunction &MF = *BB->getParent();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
+  assert(TFL->hasReservedCallFrame(MF) &&
+         "ADJSTACKDOWN and ADJSTACKUP should be no-ops");
+  (void)TFL;
+  // Get the MaxCallFrameSize value and erase MI since it serves no further
+  // purpose as the call frame is statically reserved in the prolog. Set
+  // AdjustsStack as MI is *not* mapped as a frame instruction.
+  uint32_t NumBytes = MI.getOperand(0).getImm();
+  if (NumBytes > MFI.getMaxCallFrameSize())
+    MFI.setMaxCallFrameSize(NumBytes);
+  MFI.setAdjustsStack(true);
+
+  MI.eraseFromParent();
+  return BB;
+}
+
 // Implement EmitInstrWithCustomInserter for pseudo Select* instruction MI.
 MachineBasicBlock *
 SystemZTargetLowering::emitSelect(MachineInstr &MI,
@@ -9376,6 +9397,10 @@ getBackchainAddress(SDValue SP, SelectionDAG &DAG) const {
 MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *MBB) const {
   switch (MI.getOpcode()) {
+  case SystemZ::ADJCALLSTACKDOWN:
+  case SystemZ::ADJCALLSTACKUP:
+    return emitAdjCallStack(MI, MBB);
+
   case SystemZ::Select32:
   case SystemZ::Select64:
   case SystemZ::Select128:

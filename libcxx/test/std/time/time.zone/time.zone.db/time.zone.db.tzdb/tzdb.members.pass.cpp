@@ -37,11 +37,9 @@ int main(int, const char**) {
   tzdb.version = "version";
   assert(tzdb.version == "version");
 
-  [[maybe_unused]] std::vector<std::chrono::time_zone>& zones = tzdb.zones;
-
+  [[maybe_unused]] std::vector<std::chrono::time_zone>& zones          = tzdb.zones;
   [[maybe_unused]] std::vector<std::chrono::time_zone_link>& links = tzdb.links;
-
-  // TODO TZDB add the leap data member
+  [[maybe_unused]] std::vector<std::chrono::leap_second>& leap_seconds = tzdb.leap_seconds;
 
   return 0;
 }

@@ -1440,8 +1440,7 @@ static unsigned getDwarfCC(CallingConv CC) {
   case CC_Swift:
     return llvm::dwarf::DW_CC_LLVM_Swift;
   case CC_SwiftAsync:
-    // [FIXME: swiftasynccc] Update to SwiftAsync once LLVM support lands.
-    return llvm::dwarf::DW_CC_LLVM_Swift;
+    return llvm::dwarf::DW_CC_LLVM_SwiftTail;
   case CC_PreserveMost:
     return llvm::dwarf::DW_CC_LLVM_PreserveMost;
   case CC_PreserveAll:
@@ -3642,6 +3641,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::ConstantArray:
   case Type::VariableArray:
   case Type::IncompleteArray:
+  case Type::ArrayParameter:
     return CreateType(cast<ArrayType>(Ty), Unit);
 
   case Type::LValueReference:

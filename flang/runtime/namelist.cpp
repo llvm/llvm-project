@@ -17,16 +17,20 @@
 
 namespace Fortran::runtime::io {
 
+RT_VAR_GROUP_BEGIN
 // Max size of a group, symbol or component identifier that can appear in
 // NAMELIST input, plus a byte for NUL termination.
-static constexpr std::size_t nameBufferSize{201};
+static constexpr RT_CONST_VAR_ATTRS std::size_t nameBufferSize{201};
+RT_VAR_GROUP_END
 
-static inline char32_t GetComma(IoStatementState &io) {
+RT_OFFLOAD_API_GROUP_BEGIN
+
+static inline RT_API_ATTRS char32_t GetComma(IoStatementState &io) {
   return io.mutableModes().editingFlags & decimalComma ? char32_t{';'}
                                                        : char32_t{','};
 }
 
-bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
+bool IODEF(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoStatementState &io{*cookie};
   io.CheckFormattedStmtType<Direction::Output>("OutputNamelist");
   io.mutableModes().inNamelist = true;
@@ -40,7 +44,8 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
     if ((connection.NeedAdvance(prefixLen) &&
             !(io.AdvanceRecord() && EmitAscii(io, " ", 1))) ||
         !EmitAscii(io, prefix, prefixLen) ||
-        (connection.NeedAdvance(std::strlen(str) + (suffix != ' ')) &&
+        (connection.NeedAdvance(
+             Fortran::runtime::strlen(str) + (suffix != ' ')) &&
             !(io.AdvanceRecord() && EmitAscii(io, " ", 1)))) {
       return false;
     }
@@ -84,20 +89,20 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   return EmitUpperCase("/", 1, "", ' ');
 }
 
-static constexpr bool IsLegalIdStart(char32_t ch) {
+static constexpr RT_API_ATTRS bool IsLegalIdStart(char32_t ch) {
   return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || ch == '_' ||
       ch == '@';
 }
 
-static constexpr bool IsLegalIdChar(char32_t ch) {
+static constexpr RT_API_ATTRS bool IsLegalIdChar(char32_t ch) {
   return IsLegalIdStart(ch) || (ch >= '0' && ch <= '9');
 }
 
-static constexpr char NormalizeIdChar(char32_t ch) {
+static constexpr RT_API_ATTRS char NormalizeIdChar(char32_t ch) {
   return static_cast<char>(ch >= 'A' && ch <= 'Z' ? ch - 'A' + 'a' : ch);
 }
 
-static bool GetLowerCaseName(
+static RT_API_ATTRS bool GetLowerCaseName(
     IoStatementState &io, char buffer[], std::size_t maxLength) {
   std::size_t byteLength{0};
   if (auto ch{io.GetNextNonBlank(byteLength)}) {
@@ -119,7 +124,7 @@ static bool GetLowerCaseName(
   return false;
 }
 
-static Fortran::common::optional<SubscriptValue> GetSubscriptValue(
+static RT_API_ATTRS Fortran::common::optional<SubscriptValue> GetSubscriptValue(
     IoStatementState &io) {
   Fortran::common::optional<SubscriptValue> value;
   std::size_t byteCount{0};
@@ -152,8 +157,8 @@ static Fortran::common::optional<SubscriptValue> GetSubscriptValue(
   return value;
 }
 
-static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
-    const Descriptor &source, const char *name) {
+static RT_API_ATTRS bool HandleSubscripts(IoStatementState &io,
+    Descriptor &desc, const Descriptor &source, const char *name) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   // Allow for blanks in subscripts; they're nonstandard, but not
   // ambiguous within the parentheses.
@@ -252,7 +257,7 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   return false;
 }
 
-static void StorageSequenceExtension(
+static RT_API_ATTRS void StorageSequenceExtension(
     Descriptor &desc, const Descriptor &source) {
   // Support the near-universal extension of NAMELIST input into a
   // designatable storage sequence identified by its initial scalar array
@@ -274,7 +279,7 @@ static void StorageSequenceExtension(
   }
 }
 
-static bool HandleSubstring(
+static RT_API_ATTRS bool HandleSubstring(
     IoStatementState &io, Descriptor &desc, const char *name) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   auto pair{desc.type().GetCategoryAndKind()};
@@ -335,7 +340,7 @@ static bool HandleSubstring(
   return false;
 }
 
-static bool HandleComponent(IoStatementState &io, Descriptor &desc,
+static RT_API_ATTRS bool HandleComponent(IoStatementState &io, Descriptor &desc,
     const Descriptor &source, const char *name) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   char compName[nameBufferSize];
@@ -344,7 +349,8 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
     if (const typeInfo::DerivedType *
         type{addendum ? addendum->derivedType() : nullptr}) {
       if (const typeInfo::Component *
-          comp{type->FindDataComponent(compName, std::strlen(compName))}) {
+          comp{type->FindDataComponent(
+              compName, Fortran::runtime::strlen(compName))}) {
         bool createdDesc{false};
         if (comp->rank() > 0 && source.rank() > 0) {
           // If base and component are both arrays, the component name
@@ -408,7 +414,7 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
 
 // Advance to the terminal '/' of a namelist group or leading '&'/'$'
 // of the next.
-static void SkipNamelistGroup(IoStatementState &io) {
+static RT_API_ATTRS void SkipNamelistGroup(IoStatementState &io) {
   std::size_t byteCount{0};
   while (auto ch{io.GetNextNonBlank(byteCount)}) {
     io.HandleRelativePosition(byteCount);
@@ -431,7 +437,7 @@ static void SkipNamelistGroup(IoStatementState &io) {
   }
 }
 
-bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
+bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoStatementState &io{*cookie};
   io.CheckFormattedStmtType<Direction::Input>("InputNamelist");
   io.mutableModes().inNamelist = true;
@@ -470,7 +476,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
       handler.SignalError("NAMELIST input group has no name");
       return false;
     }
-    if (std::strcmp(group.groupName, name) == 0) {
+    if (Fortran::runtime::strcmp(group.groupName, name) == 0) {
       break; // found it
     }
     SkipNamelistGroup(io);
@@ -489,7 +495,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     }
     std::size_t itemIndex{0};
     for (; itemIndex < group.items; ++itemIndex) {
-      if (std::strcmp(name, group.item[itemIndex].name) == 0) {
+      if (Fortran::runtime::strcmp(name, group.item[itemIndex].name) == 0) {
         break;
       }
     }
@@ -589,8 +595,6 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   }
   return true;
 }
-
-RT_OFFLOAD_API_GROUP_BEGIN
 
 bool IsNamelistNameOrSlash(IoStatementState &io) {
   if (auto *listInput{

@@ -61,6 +61,26 @@ static constexpr bool acceptBitWidth(unsigned bitWidth) {
   }
 }
 
+static SmallVector<Size>
+getSparseFieldShape(const SparseTensorEncodingAttr enc,
+                    std::optional<ArrayRef<int64_t>> dimShape) {
+  assert(enc);
+  // With only encoding, we can not determine the static shape for leading
+  // batch levels, we therefore return a dynamic shape memref instead.
+  SmallVector<int64_t> memrefShape(enc.getBatchLvlRank(), ShapedType::kDynamic);
+  if (dimShape.has_value()) {
+    // If the actual tensor shape is provided, we can then refine the leading
+    // batch dimension.
+    SmallVector<int64_t> lvlShape =
+        enc.translateShape(*dimShape, CrdTransDirectionKind::dim2lvl);
+    memrefShape.assign(lvlShape.begin(),
+                       lvlShape.begin() + enc.getBatchLvlRank());
+  }
+  // Another dynamic dimension to store the sparse level.
+  memrefShape.push_back(ShapedType::kDynamic);
+  return memrefShape;
+}
+
 //===----------------------------------------------------------------------===//
 // SparseTensorDialect StorageLayout.
 //===----------------------------------------------------------------------===//
@@ -122,21 +142,17 @@ void sparse_tensor::foreachFieldAndTypeInSparseTensor(
                             LevelType)>
         callback) {
   assert(stt.hasEncoding());
-  // Construct the basic types.
-  const Type crdType = stt.getCrdType();
-  const Type posType = stt.getPosType();
-  const Type eltType = stt.getElementType();
 
-  SmallVector<int64_t> memrefShape = stt.getBatchLvlShape();
-  memrefShape.push_back(ShapedType::kDynamic);
+  SmallVector<int64_t> memrefShape =
+      getSparseFieldShape(stt.getEncoding(), stt.getDimShape());
 
   const Type specType = StorageSpecifierType::get(stt.getEncoding());
   // memref<[batch] x ? x pos>  positions
-  const Type posMemType = MemRefType::get(memrefShape, posType);
+  const Type posMemType = MemRefType::get(memrefShape, stt.getPosType());
   // memref<[batch] x ? x crd>  coordinates
-  const Type crdMemType = MemRefType::get(memrefShape, crdType);
+  const Type crdMemType = MemRefType::get(memrefShape, stt.getCrdType());
   // memref<[batch] x ? x eltType> values
-  const Type valMemType = MemRefType::get(memrefShape, eltType);
+  const Type valMemType = MemRefType::get(memrefShape, stt.getElementType());
 
   StorageLayout(stt).foreachField([specType, posMemType, crdMemType, valMemType,
                                    callback](FieldIndex fieldIdx,
@@ -352,6 +368,34 @@ bool SparseTensorEncodingAttr::isAllDense() const {
 
 bool SparseTensorEncodingAttr::isAllOrdered() const {
   return !getImpl() || llvm::all_of(getLvlTypes(), isOrderedLT);
+}
+
+Type SparseTensorEncodingAttr::getCrdElemType() const {
+  if (!getImpl())
+    return nullptr;
+  if (getCrdWidth())
+    return IntegerType::get(getContext(), getCrdWidth());
+  return IndexType::get(getContext());
+}
+
+Type SparseTensorEncodingAttr::getPosElemType() const {
+  if (!getImpl())
+    return nullptr;
+  if (getPosWidth())
+    return IntegerType::get(getContext(), getPosWidth());
+  return IndexType::get(getContext());
+}
+
+MemRefType SparseTensorEncodingAttr::getCrdMemRefType(
+    std::optional<ArrayRef<int64_t>> dimShape) const {
+  SmallVector<Size> shape = getSparseFieldShape(*this, dimShape);
+  return MemRefType::get(shape, getCrdElemType());
+}
+
+MemRefType SparseTensorEncodingAttr::getPosMemRefType(
+    std::optional<ArrayRef<int64_t>> dimShape) const {
+  SmallVector<Size> shape = getSparseFieldShape(*this, dimShape);
+  return MemRefType::get(shape, getPosElemType());
 }
 
 bool SparseTensorEncodingAttr::isIdentity() const {
@@ -1591,7 +1635,8 @@ static LogicalResult verifyNumBlockArgs(T *op, Region &region,
   if (!yield)
     return op->emitError() << regionName
                            << " region must end with sparse_tensor.yield";
-  if (!yield.getResult() || yield.getResult().getType() != outputType)
+  if (!yield.hasSingleResult() ||
+      yield.getSingleResult().getType() != outputType)
     return op->emitError() << regionName << " region yield type mismatch";
 
   return success();
@@ -1654,7 +1699,8 @@ LogicalResult UnaryOp::verify() {
     // Absent branch can only yield invariant values.
     Block *absentBlock = &absent.front();
     Block *parent = getOperation()->getBlock();
-    Value absentVal = cast<YieldOp>(absentBlock->getTerminator()).getResult();
+    Value absentVal =
+        cast<YieldOp>(absentBlock->getTerminator()).getSingleResult();
     if (auto arg = dyn_cast<BlockArgument>(absentVal)) {
       if (arg.getOwner() == parent)
         return emitError("absent region cannot yield linalg argument");
@@ -1905,18 +1951,6 @@ LogicalResult SortOp::verify() {
     checkDim(opnd, n, "Expected dimension(y) >= n");
 
   return success();
-}
-
-LogicalResult YieldOp::verify() {
-  // Check for compatible parent.
-  auto *parentOp = (*this)->getParentOp();
-  if (isa<BinaryOp>(parentOp) || isa<UnaryOp>(parentOp) ||
-      isa<ReduceOp>(parentOp) || isa<SelectOp>(parentOp) ||
-      isa<ForeachOp>(parentOp))
-    return success();
-
-  return emitOpError("expected parent op to be sparse_tensor unary, binary, "
-                     "reduce, select or foreach");
 }
 
 /// Materialize a single constant operation from a given attribute value with

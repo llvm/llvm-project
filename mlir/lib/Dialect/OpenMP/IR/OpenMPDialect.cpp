@@ -1258,10 +1258,11 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
   // TODO Store clauses in op: allocateVars, allocatorVars, inReductionVars,
   // inReductionDeclSymbols, privateVars, privatizers, reductionVars,
   // reductionByRefAttr, reductionDeclSymbols.
-  TargetOp::build(builder, state, clauses.ifVar, clauses.deviceVar,
-                  clauses.threadLimitVar,
-                  makeArrayAttr(ctx, clauses.dependTypeAttrs),
-                  clauses.dependVars, clauses.nowaitAttr, clauses.mapVars);
+  TargetOp::build(
+      builder, state, clauses.ifVar, clauses.deviceVar, clauses.threadLimitVar,
+      makeArrayAttr(ctx, clauses.dependTypeAttrs), clauses.dependVars,
+      clauses.nowaitAttr, clauses.isDevicePtrVars, clauses.hasDeviceAddrVars,
+      clauses.mapVars);
 }
 
 LogicalResult TargetOp::verify() {
@@ -1677,6 +1678,21 @@ static void printAtomicReductionRegion(OpAsmPrinter &printer,
   printer.printRegion(region);
 }
 
+static ParseResult parseCleanupReductionRegion(OpAsmParser &parser,
+                                               Region &region) {
+  if (parser.parseOptionalKeyword("cleanup"))
+    return success();
+  return parser.parseRegion(region);
+}
+
+static void printCleanupReductionRegion(OpAsmPrinter &printer,
+                                        DeclareReductionOp op, Region &region) {
+  if (region.empty())
+    return;
+  printer << "cleanup ";
+  printer.printRegion(region);
+}
+
 LogicalResult DeclareReductionOp::verifyRegions() {
   if (getInitializerRegion().empty())
     return emitOpError() << "expects non-empty initializer region";
@@ -1710,21 +1726,29 @@ LogicalResult DeclareReductionOp::verifyRegions() {
                               "of the reduction type";
   }
 
-  if (getAtomicReductionRegion().empty())
-    return success();
+  if (!getAtomicReductionRegion().empty()) {
+    Block &atomicReductionEntryBlock = getAtomicReductionRegion().front();
+    if (atomicReductionEntryBlock.getNumArguments() != 2 ||
+        atomicReductionEntryBlock.getArgumentTypes()[0] !=
+            atomicReductionEntryBlock.getArgumentTypes()[1])
+      return emitOpError() << "expects atomic reduction region with two "
+                              "arguments of the same type";
+    auto ptrType = llvm::dyn_cast<PointerLikeType>(
+        atomicReductionEntryBlock.getArgumentTypes()[0]);
+    if (!ptrType ||
+        (ptrType.getElementType() && ptrType.getElementType() != getType()))
+      return emitOpError() << "expects atomic reduction region arguments to "
+                              "be accumulators containing the reduction type";
+  }
 
-  Block &atomicReductionEntryBlock = getAtomicReductionRegion().front();
-  if (atomicReductionEntryBlock.getNumArguments() != 2 ||
-      atomicReductionEntryBlock.getArgumentTypes()[0] !=
-          atomicReductionEntryBlock.getArgumentTypes()[1])
-    return emitOpError() << "expects atomic reduction region with two "
-                            "arguments of the same type";
-  auto ptrType = llvm::dyn_cast<PointerLikeType>(
-      atomicReductionEntryBlock.getArgumentTypes()[0]);
-  if (!ptrType ||
-      (ptrType.getElementType() && ptrType.getElementType() != getType()))
-    return emitOpError() << "expects atomic reduction region arguments to "
-                            "be accumulators containing the reduction type";
+  if (getCleanupRegion().empty())
+    return success();
+  Block &cleanupEntryBlock = getCleanupRegion().front();
+  if (cleanupEntryBlock.getNumArguments() != 1 ||
+      cleanupEntryBlock.getArgument(0).getType() != getType())
+    return emitOpError() << "expects cleanup region with one argument "
+                            "of the reduction type";
+
   return success();
 }
 
@@ -1835,6 +1859,77 @@ LogicalResult TaskloopOp::verify() {
         "the grainsize clause and num_tasks clause are mutually exclusive and "
         "may not appear on the same taskloop directive");
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// LoopNestOp
+//===----------------------------------------------------------------------===//
+
+ParseResult LoopNestOp::parse(OpAsmParser &parser, OperationState &result) {
+  // Parse an opening `(` followed by induction variables followed by `)`
+  SmallVector<OpAsmParser::Argument> ivs;
+  SmallVector<OpAsmParser::UnresolvedOperand> lbs, ubs;
+  Type loopVarType;
+  if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren) ||
+      parser.parseColonType(loopVarType) ||
+      // Parse loop bounds.
+      parser.parseEqual() ||
+      parser.parseOperandList(lbs, ivs.size(), OpAsmParser::Delimiter::Paren) ||
+      parser.parseKeyword("to") ||
+      parser.parseOperandList(ubs, ivs.size(), OpAsmParser::Delimiter::Paren))
+    return failure();
+
+  for (auto &iv : ivs)
+    iv.type = loopVarType;
+
+  // Parse "inclusive" flag.
+  if (succeeded(parser.parseOptionalKeyword("inclusive")))
+    result.addAttribute("inclusive",
+                        UnitAttr::get(parser.getBuilder().getContext()));
+
+  // Parse step values.
+  SmallVector<OpAsmParser::UnresolvedOperand> steps;
+  if (parser.parseKeyword("step") ||
+      parser.parseOperandList(steps, ivs.size(), OpAsmParser::Delimiter::Paren))
+    return failure();
+
+  // Parse the body.
+  Region *region = result.addRegion();
+  if (parser.parseRegion(*region, ivs))
+    return failure();
+
+  // Resolve operands.
+  if (parser.resolveOperands(lbs, loopVarType, result.operands) ||
+      parser.resolveOperands(ubs, loopVarType, result.operands) ||
+      parser.resolveOperands(steps, loopVarType, result.operands))
+    return failure();
+
+  // Parse the optional attribute list.
+  return parser.parseOptionalAttrDict(result.attributes);
+}
+
+void LoopNestOp::print(OpAsmPrinter &p) {
+  Region &region = getRegion();
+  auto args = region.getArguments();
+  p << " (" << args << ") : " << args[0].getType() << " = (" << getLowerBound()
+    << ") to (" << getUpperBound() << ") ";
+  if (getInclusive())
+    p << "inclusive ";
+  p << "step (" << getStep() << ") ";
+  p.printRegion(region, /*printEntryBlockArgs=*/false);
+}
+
+LogicalResult LoopNestOp::verify() {
+  if (getLowerBound().size() != getIVs().size())
+    return emitOpError() << "number of range arguments and IVs do not match";
+
+  for (auto [lb, iv] : llvm::zip_equal(getLowerBound(), getIVs())) {
+    if (lb.getType() != iv.getType())
+      return emitOpError()
+             << "range argument type does not match corresponding IV type";
+  }
+
   return success();
 }
 

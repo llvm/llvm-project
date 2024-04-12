@@ -1,4 +1,5 @@
 # REQUIRES: aarch64
+# UNSUPPORTED: target=arm{{.*}}-unknown-linux-gnueabihf
 # RUN: rm -rf %t; split-file %s %t && cd %t
 
 ## Compile a64_rel_dylib.o

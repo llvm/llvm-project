@@ -132,11 +132,6 @@ conformance.</p>
       <td>Unknown</td>
       <td class="full" align="center">Yes</td>
     </tr>
-    <tr>
-      <td>more precise aliasing rules via effective type</td>
-      <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
-    </tr>
     <tr id="complex">
       <td rowspan="6">complex and imaginary support in &lt;complex.h&gt;</td>
     </tr>
@@ -173,12 +168,12 @@ conformance.</p>
     <tr>
       <td>increase minimum translation limits</td>
       <td>N590</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Clang 3.2</td>
     </tr>
     <tr>
       <td>additional floating-point characteristics in &lt;float.h&gt;</td>
       <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr id="implicit int">
       <td rowspan="4">remove implicit int</td>
@@ -208,7 +203,7 @@ conformance.</p>
     <tr>
       <td>extended identifiers</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n717.htm">N717</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Clang 17</td>
     </tr>
     <tr>
       <td>hexadecimal floating-point constants</td>
@@ -305,7 +300,7 @@ conformance.</p>
     <tr>
       <td>empty macro arguments</td>
       <td>N570</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>new structure type compatibility (tag compatibility)</td>
@@ -353,24 +348,19 @@ conformance.</p>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
-      <td>LIA compatibility annex</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n792.htm">N792</a></td>
-      <td class="none" align="center">No</td>
-    </tr>
-    <tr>
       <td>remove deprecation of aliased array parameters</td>
       <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>conversion of array to pointer not limited to lvalues</td>
-      <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n835.pdf">N835</a></td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>relaxed constraints on aggregate and union initialization</td>
-      <td>Unknown</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n782.htm">N782</a></td>
+      <td class="full" align="center">Clang 3.4</td>
     </tr>
     <tr>
       <td>relaxed restrictions on portable header names</td>
@@ -558,7 +548,7 @@ conformance.</p>
     <tr>
       <td>Explicit initializers for atomics</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1482.htm">N1482</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Clang 4</td>
     </tr>
     <tr>
       <td>Atomics proposal (minus ternary op)</td>
@@ -578,7 +568,7 @@ conformance.</p>
     <tr>
       <td>Conditional normative status for Annex G</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1514.pdf">N1514</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes <a href="#annex-g">(1)</a></td>
     </tr>
     <tr>
       <td>Creation of complex value</td>
@@ -616,6 +606,9 @@ conformance.</p>
       <td class="unknown" align="center">Unknown</td>
     </tr>
 </table>
+<span id="annex-g">(1): Clang does not implement Annex G, so our conditional support
+conforms by not defining the <code>__STDC_IEC_559_COMPLEX__</code> macro.
+</span>
 </details>
 
 <h2 id="c17">C17 implementation status</h2>
@@ -758,11 +751,6 @@ conformance.</p>
     <tr>
       <td>*_IS_IEC_60559 feature test macros</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2379.htm">N2379</a></td>
-      <td class="unknown" align="center">Unknown</td>
-    </tr>
-    <tr>
-      <td>Floating-point negation and conversion</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2416.pdf">N2416</a></td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
     <tr>

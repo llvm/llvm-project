@@ -3006,6 +3006,15 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   }
 }
 
@@ -3768,9 +3777,11 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   }
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
     auto [OldValRes, SuccessRes, Addr, CmpVal, NewVal] = MI.getFirst5Regs();
-    MIRBuilder.buildAtomicCmpXchg(OldValRes, Addr, CmpVal, NewVal,
+    Register NewOldValRes = MRI.cloneVirtualRegister(OldValRes);
+    MIRBuilder.buildAtomicCmpXchg(NewOldValRes, Addr, CmpVal, NewVal,
                                   **MI.memoperands_begin());
-    MIRBuilder.buildICmp(CmpInst::ICMP_EQ, SuccessRes, OldValRes, CmpVal);
+    MIRBuilder.buildICmp(CmpInst::ICMP_EQ, SuccessRes, NewOldValRes, CmpVal);
+    MIRBuilder.buildCopy(OldValRes, NewOldValRes);
     MI.eraseFromParent();
     return Legalized;
   }
@@ -3789,8 +3800,12 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_UADDO: {
     auto [Res, CarryOut, LHS, RHS] = MI.getFirst4Regs();
 
-    MIRBuilder.buildAdd(Res, LHS, RHS);
-    MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CarryOut, Res, RHS);
+    Register NewRes = MRI.cloneVirtualRegister(Res);
+
+    MIRBuilder.buildAdd(NewRes, LHS, RHS);
+    MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CarryOut, NewRes, RHS);
+
+    MIRBuilder.buildCopy(Res, NewRes);
 
     MI.eraseFromParent();
     return Legalized;
@@ -3800,6 +3815,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     const LLT CondTy = MRI.getType(CarryOut);
     const LLT Ty = MRI.getType(Res);
 
+    Register NewRes = MRI.cloneVirtualRegister(Res);
+
     // Initial add of the two operands.
     auto TmpRes = MIRBuilder.buildAdd(Ty, LHS, RHS);
 
@@ -3808,14 +3825,17 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
 
     // Add the sum and the carry.
     auto ZExtCarryIn = MIRBuilder.buildZExt(Ty, CarryIn);
-    MIRBuilder.buildAdd(Res, TmpRes, ZExtCarryIn);
+    MIRBuilder.buildAdd(NewRes, TmpRes, ZExtCarryIn);
 
     // Second check for carry. We can only carry if the initial sum is all 1s
     // and the carry is set, resulting in a new sum of 0.
     auto Zero = MIRBuilder.buildConstant(Ty, 0);
-    auto ResEqZero = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, CondTy, Res, Zero);
+    auto ResEqZero =
+        MIRBuilder.buildICmp(CmpInst::ICMP_EQ, CondTy, NewRes, Zero);
     auto Carry2 = MIRBuilder.buildAnd(CondTy, ResEqZero, CarryIn);
     MIRBuilder.buildOr(CarryOut, Carry, Carry2);
+
+    MIRBuilder.buildCopy(Res, NewRes);
 
     MI.eraseFromParent();
     return Legalized;
@@ -6389,12 +6409,26 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     // 8 bits can hold CTPOP result of 128 bit int or smaller. Mul with this
     // bitmask will set 8 msb in ResTmp to sum of all B8Counts in 8 bit blocks.
     auto MulMask = B.buildConstant(Ty, APInt::getSplat(Size, APInt(8, 0x01)));
-    auto ResTmp = B.buildMul(Ty, B8Count, MulMask);
 
     // Shift count result from 8 high bits to low bits.
     auto C_SizeM8 = B.buildConstant(Ty, Size - 8);
-    B.buildLShr(MI.getOperand(0).getReg(), ResTmp, C_SizeM8);
 
+    auto IsMulSupported = [this](const LLT Ty) {
+      auto Action = LI.getAction({TargetOpcode::G_MUL, {Ty}}).Action;
+      return Action == Legal || Action == WidenScalar || Action == Custom;
+    };
+    if (IsMulSupported(Ty)) {
+      auto ResTmp = B.buildMul(Ty, B8Count, MulMask);
+      B.buildLShr(MI.getOperand(0).getReg(), ResTmp, C_SizeM8);
+    } else {
+      auto ResTmp = B8Count;
+      for (unsigned Shift = 8; Shift < Size; Shift *= 2) {
+        auto ShiftC = B.buildConstant(Ty, Shift);
+        auto Shl = B.buildShl(Ty, ResTmp, ShiftC);
+        ResTmp = B.buildAdd(Ty, ResTmp, Shl);
+      }
+      B.buildLShr(MI.getOperand(0).getReg(), ResTmp, C_SizeM8);
+    }
     MI.eraseFromParent();
     return Legalized;
   }
@@ -7657,10 +7691,12 @@ LegalizerHelper::lowerSADDO_SSUBO(MachineInstr &MI) {
   LLT Ty = Dst0Ty;
   LLT BoolTy = Dst1Ty;
 
+  Register NewDst0 = MRI.cloneVirtualRegister(Dst0);
+
   if (IsAdd)
-    MIRBuilder.buildAdd(Dst0, LHS, RHS);
+    MIRBuilder.buildAdd(NewDst0, LHS, RHS);
   else
-    MIRBuilder.buildSub(Dst0, LHS, RHS);
+    MIRBuilder.buildSub(NewDst0, LHS, RHS);
 
   // TODO: If SADDSAT/SSUBSAT is legal, compare results to detect overflow.
 
@@ -7673,12 +7709,15 @@ LegalizerHelper::lowerSADDO_SSUBO(MachineInstr &MI) {
   // (LHS) if and only if the other operand (RHS) is (non-zero) positive,
   // otherwise there will be overflow.
   auto ResultLowerThanLHS =
-      MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, Dst0, LHS);
+      MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, NewDst0, LHS);
   auto ConditionRHS = MIRBuilder.buildICmp(
       IsAdd ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGT, BoolTy, RHS, Zero);
 
   MIRBuilder.buildXor(Dst1, ConditionRHS, ResultLowerThanLHS);
+
+  MIRBuilder.buildCopy(Dst0, NewDst0);
   MI.eraseFromParent();
+
   return Legalized;
 }
 

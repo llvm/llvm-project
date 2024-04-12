@@ -282,6 +282,7 @@ set(files
   __chrono/formatter.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
+  __chrono/leap_second.h
   __chrono/literals.h
   __chrono/month.h
   __chrono/month_weekday.h
@@ -290,6 +291,7 @@ set(files
   __chrono/parser_std_format_spec.h
   __chrono/statically_widen.h
   __chrono/steady_clock.h
+  __chrono/sys_info.h
   __chrono/system_clock.h
   __chrono/time_point.h
   __chrono/time_zone.h
@@ -394,6 +396,7 @@ set(files
   __format/formatter_pointer.h
   __format/formatter_string.h
   __format/formatter_tuple.h
+  __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
   __format/range_default_formatter.h
   __format/range_formatter.h
@@ -430,22 +433,27 @@ set(files
   __fwd/array.h
   __fwd/bit_reference.h
   __fwd/complex.h
+  __fwd/deque.h
   __fwd/format.h
   __fwd/fstream.h
   __fwd/functional.h
   __fwd/ios.h
   __fwd/istream.h
   __fwd/mdspan.h
+  __fwd/memory.h
   __fwd/memory_resource.h
   __fwd/ostream.h
   __fwd/pair.h
+  __fwd/queue.h
   __fwd/span.h
   __fwd/sstream.h
+  __fwd/stack.h
   __fwd/streambuf.h
   __fwd/string.h
   __fwd/string_view.h
   __fwd/subrange.h
   __fwd/tuple.h
+  __fwd/vector.h
   __hash_table
   __ios/fpos.h
   __iterator/access.h
@@ -704,12 +712,12 @@ set(files
   __tree
   __tuple/find_index.h
   __tuple/make_tuple_types.h
-  __tuple/pair_like.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
   __tuple/tuple_indices.h
   __tuple/tuple_like.h
   __tuple/tuple_like_ext.h
+  __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
   __tuple/tuple_types.h
   __type_traits/add_const.h
@@ -732,6 +740,7 @@ set(files
   __type_traits/datasizeof.h
   __type_traits/decay.h
   __type_traits/dependent_type.h
+  __type_traits/desugars_to.h
   __type_traits/disjunction.h
   __type_traits/enable_if.h
   __type_traits/extent.h
@@ -816,7 +825,6 @@ set(files
   __type_traits/nat.h
   __type_traits/negation.h
   __type_traits/noexcept_move_assign_container.h
-  __type_traits/operation_traits.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
@@ -855,6 +863,7 @@ set(files
   __utility/pair.h
   __utility/piecewise_construct.h
   __utility/priority_tag.h
+  __utility/private_constructor_tag.h
   __utility/rel_ops.h
   __utility/small_buffer.h
   __utility/swap.h
