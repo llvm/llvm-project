@@ -9,8 +9,8 @@
 #ifndef MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
 #define MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
 
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
@@ -73,7 +73,7 @@ class Polynomial {
 public:
   Polynomial() = delete;
 
-  explicit Polynomial(ArrayRef<Monomial> terms) : terms(terms) {};
+  explicit Polynomial(ArrayRef<Monomial> terms) : terms(terms){};
 
   // Returns a Polynomial from a list of monomials.
   // Fails if two monomials have the same exponent.

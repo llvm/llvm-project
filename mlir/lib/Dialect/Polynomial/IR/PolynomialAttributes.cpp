@@ -137,9 +137,9 @@ Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
 
   auto result = Polynomial::fromMonomials(monomials);
   if (failed(result)) {
-      parser.emitError(parser.getCurrentLocation())
-          << "parsed polynomial must have unique exponents among monomials";
-      return {};
+    parser.emitError(parser.getCurrentLocation())
+        << "parsed polynomial must have unique exponents among monomials";
+    return {};
   }
   return PolynomialAttr::get(parser.getContext(), result.value());
 }
