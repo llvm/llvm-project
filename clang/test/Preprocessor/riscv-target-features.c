@@ -706,9 +706,9 @@
 // CHECK-ZACAS-EXT: __riscv_zacas 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -march=rv32izama16b -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-ZAMA16B-EXT %s
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZAMA16B-EXT %s
 // RUN: %clang --target=riscv64 -march=rv64izama16b  -x c -E -dM %s \
-// RUN: -o - | FileCheck --check-prefix=CHECK-ZAMA16B-EXT %s
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZAMA16B-EXT %s
 // CHECK-ZAMA16B-EXT: __riscv_zama16b  1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
