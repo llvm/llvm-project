@@ -611,6 +611,30 @@ GCNScheduleDAGMILive::getBBLiveInMap() const {
   return getLiveRegMap(BBStarters, false /*After*/, *LIS);
 }
 
+DenseMap<int, GCNRPTracker::LiveRegSet>
+GCNScheduleDAGMILive::getBBLiveOutMap() const {
+  assert(!Regions.empty());
+  DenseMap<MachineInstr *, int> BBEnders;
+  for (int I = Regions.size() - 1; I >= 0; I--) {
+    auto Rgn = Regions[I];
+    auto TheBB = Rgn.first->getParent();
+    if (Rgn.second != TheBB->end() && !Rgn.second->isDebugInstr()) {
+      BBEnders.insert({&*Rgn.second, I});
+      continue;
+    }
+    if (Rgn.second == TheBB->end()) {
+      auto *MI = &*prev_nodbg(Rgn.second, Rgn.first);
+      BBEnders.insert({&*MI, I});
+      continue;
+    }
+
+    auto *MI = &*skipDebugInstructionsBackward(Rgn.second, Rgn.first);
+    BBEnders.insert({MI, I});
+  }
+
+  return getLiveRegMap(BBEnders, true /*After*/, *LIS);
+}
+
 void GCNScheduleDAGMILive::finalizeSchedule() {
   // Start actual scheduling here. This function is called by the base
   // MachineScheduler after all regions have been recorded by
