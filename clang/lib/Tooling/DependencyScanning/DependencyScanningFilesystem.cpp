@@ -233,24 +233,15 @@ DependencyScanningWorkerFilesystem::computeAndStoreResult(
 llvm::ErrorOr<EntryRef>
 DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
     StringRef OriginalFilename) {
-  StringRef FilenameForLookup;
   SmallString<256> PathBuf;
-  if (llvm::sys::path::is_absolute_gnu(OriginalFilename)) {
-    FilenameForLookup = OriginalFilename;
-  } else if (!WorkingDirForCacheLookup) {
-    return WorkingDirForCacheLookup.getError();
-  } else {
-    StringRef RelFilename = OriginalFilename;
-    RelFilename.consume_front("./");
-    PathBuf = *WorkingDirForCacheLookup;
-    llvm::sys::path::append(PathBuf, RelFilename);
-    FilenameForLookup = PathBuf.str();
-  }
-  assert(llvm::sys::path::is_absolute_gnu(FilenameForLookup));
+  auto FilenameForLookup = tryGetFilenameForLookup(OriginalFilename, PathBuf);
+  if (!FilenameForLookup)
+    return FilenameForLookup.getError();
+
   if (const auto *Entry =
-          findEntryByFilenameWithWriteThrough(FilenameForLookup))
+          findEntryByFilenameWithWriteThrough(*FilenameForLookup))
     return EntryRef(OriginalFilename, *Entry).unwrapError();
-  auto MaybeEntry = computeAndStoreResult(OriginalFilename, FilenameForLookup);
+  auto MaybeEntry = computeAndStoreResult(OriginalFilename, *FilenameForLookup);
   if (!MaybeEntry)
     return MaybeEntry.getError();
   return EntryRef(OriginalFilename, *MaybeEntry).unwrapError();
@@ -349,6 +340,26 @@ void DependencyScanningWorkerFilesystem::updateWorkingDirForCacheLookup() {
   }
   assert(!WorkingDirForCacheLookup ||
          llvm::sys::path::is_absolute_gnu(*WorkingDirForCacheLookup));
+}
+
+llvm::ErrorOr<StringRef>
+DependencyScanningWorkerFilesystem::tryGetFilenameForLookup(
+    StringRef OriginalFilename, llvm::SmallVectorImpl<char> &PathBuf) const {
+  StringRef FilenameForLookup;
+  if (llvm::sys::path::is_absolute_gnu(OriginalFilename)) {
+    FilenameForLookup = OriginalFilename;
+  } else if (!WorkingDirForCacheLookup) {
+    return WorkingDirForCacheLookup.getError();
+  } else {
+    StringRef RelFilename = OriginalFilename;
+    RelFilename.consume_front("./");
+    PathBuf.assign(WorkingDirForCacheLookup->begin(),
+                   WorkingDirForCacheLookup->end());
+    llvm::sys::path::append(PathBuf, RelFilename);
+    FilenameForLookup = StringRef{PathBuf.begin(), PathBuf.size()};
+  }
+  assert(llvm::sys::path::is_absolute_gnu(FilenameForLookup));
+  return FilenameForLookup;
 }
 
 const char DependencyScanningWorkerFilesystem::ID = 0;
