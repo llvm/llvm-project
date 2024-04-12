@@ -76,20 +76,32 @@ on_ompt_callback_sync_region(
   ompt_data_t *task_data,
   const void *codeptr_ra)
 {
-  switch(endpoint)
-  {
-    case ompt_scope_begin:
-      task_data->value = ompt_get_unique_id();
-      if (kind == ompt_sync_region_barrier_implicit)
-        printf("%" PRIu64 ": ompt_event_barrier_begin: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", codeptr_ra=%p\n", ompt_get_thread_data()->value, parallel_data->value, task_data->value, codeptr_ra);
-      break;
-    case ompt_scope_end:
-      if (kind == ompt_sync_region_barrier_implicit)
-        printf("%" PRIu64 ": ompt_event_barrier_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", codeptr_ra=%p\n", ompt_get_thread_data()->value, (parallel_data)?parallel_data->value:0, task_data->value, codeptr_ra);
-      break;
-    case ompt_scope_beginend:
-      printf("ompt_scope_beginend should never be passed to %s\n", __func__);
-      exit(-1);
+  const char *event_name = NULL;
+  if (endpoint == ompt_scope_begin) {
+    event_name = "ompt_event_barrier_begin";
+    task_data->value = ompt_get_unique_id();
+  } else if (endpoint == ompt_scope_end) {
+    event_name = "ompt_event_barrier_end";
+  } else {
+    printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+    exit(-1);
+  }
+
+  switch (kind) {
+  case ompt_sync_region_barrier:
+  case ompt_sync_region_barrier_implicit:
+  case ompt_sync_region_barrier_explicit:
+  case ompt_sync_region_barrier_implicit_workshare:
+  case ompt_sync_region_barrier_implicit_parallel:
+  case ompt_sync_region_barrier_teams:
+  case ompt_sync_region_barrier_implementation:
+    printf("%" PRIu64 ": %s: parallel_id=%" PRIu64 ", task_id=%" PRIu64
+           ", codeptr_ra=%p\n", ompt_get_thread_data()->value, event_name,
+           parallel_data ? parallel_data->value : 0, task_data->value,
+           codeptr_ra);
+    break;
+  default:
+    ; // do nothing
   }
 }
 
@@ -101,23 +113,31 @@ on_ompt_callback_sync_region_wait(
   ompt_data_t *task_data,
   const void *codeptr_ra)
 {
-  switch(endpoint)
-  {
-    case ompt_scope_begin:
-      if (kind == ompt_sync_region_barrier_implicit)
-        printf("%" PRIu64
-               ": ompt_event_wait_barrier_begin: parallel_id=%" PRIu64
-               ", task_id=%" PRIu64 ", codeptr_ra=%p\n",
-               ompt_get_thread_data()->value, parallel_data->value,
-               task_data->value, codeptr_ra);
-      break;
-    case ompt_scope_end:
-      if (kind == ompt_sync_region_barrier_implicit)
-        printf("%" PRIu64 ": ompt_event_wait_barrier_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", codeptr_ra=%p\n", ompt_get_thread_data()->value, (parallel_data)?parallel_data->value:0, task_data->value, codeptr_ra);
-      break;
-    case ompt_scope_beginend:
-      printf("ompt_scope_beginend should never be passed to %s\n", __func__);
-      exit(-1);
+  const char *event_name = NULL;
+  if (endpoint == ompt_scope_begin) {
+    event_name = "ompt_event_wait_barrier_begin";
+  } else if (endpoint == ompt_scope_end) {
+    event_name = "ompt_event_wait_barrier_end";
+  } else {
+    printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+    exit(-1);
+  }
+
+  switch (kind) {
+  case ompt_sync_region_barrier:
+  case ompt_sync_region_barrier_implicit:
+  case ompt_sync_region_barrier_explicit:
+  case ompt_sync_region_barrier_implicit_workshare:
+  case ompt_sync_region_barrier_implicit_parallel:
+  case ompt_sync_region_barrier_teams:
+  case ompt_sync_region_barrier_implementation:
+    printf("%" PRIu64 ": %s: parallel_id=%" PRIu64 ", task_id=%" PRIu64
+           ", codeptr_ra=%p\n", ompt_get_thread_data()->value, event_name,
+           parallel_data ? parallel_data->value : 0, task_data->value,
+           codeptr_ra);
+    break;
+  default:
+    ; // do nothing
   }
 }
 
