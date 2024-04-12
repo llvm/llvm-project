@@ -194,12 +194,10 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   if (failed(copyBufferType))
     return failure();
   std::optional<Attribute> memorySpace = copyBufferType->getMemorySpace();
-  if (!memorySpace) {
+  if (!memorySpace)
     memorySpace = options.defaultMemorySpaceFn(tensorType);
-  }
-  if (memorySpace.has_value()) {
+  if (memorySpace.has_value())
     allocTensorOp.setMemorySpaceAttr(memorySpace.value());
-  }
   return allocTensorOp.getResult();
 }
 
