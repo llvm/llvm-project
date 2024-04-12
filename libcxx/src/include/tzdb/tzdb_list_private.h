@@ -15,6 +15,9 @@
 #include <forward_list>
 
 // When threads are not available the locking is not required.
+// When threads are available, we use std::mutex over std::shared_mutex
+// due to the increased overhead of std::shared_mutex.
+// See shared_mutex_vs_mutex.bench.cpp
 #ifndef _LIBCPP_HAS_NO_THREADS
 #  include <mutex>
 #endif
