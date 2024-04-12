@@ -919,7 +919,8 @@ void SwingSchedulerDAG::updatePhiDependences() {
           if (!MI->isPHI()) {
             SDep Dep(SU, SDep::Data, Reg);
             Dep.setLatency(0);
-            ST.adjustSchedDependency(SU, 0, &I, MO.getOperandNo(), Dep);
+            ST.adjustSchedDependency(SU, 0, &I, MO.getOperandNo(), Dep,
+                                     &SchedModel);
             I.addPred(Dep);
           } else {
             HasPhiUse = Reg;

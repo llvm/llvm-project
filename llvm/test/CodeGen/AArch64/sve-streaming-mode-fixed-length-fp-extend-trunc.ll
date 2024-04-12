@@ -239,10 +239,10 @@ define void @fcvt_v16f16_v16f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
 ; CHECK-NEXT:    ld1h { z4.d }, p0/z, [x0, x8, lsl #1]
-; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
 ; CHECK-NEXT:    mov x8, #6 // =0x6
-; CHECK-NEXT:    fcvt z2.d, p0/m, z2.h
+; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
 ; CHECK-NEXT:    ld1h { z5.d }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    fcvt z2.d, p0/m, z2.h
 ; CHECK-NEXT:    mov x8, #2 // =0x2
 ; CHECK-NEXT:    fcvt z3.d, p0/m, z3.h
 ; CHECK-NEXT:    ld1h { z7.d }, p0/z, [x0, x8, lsl #1]
@@ -255,8 +255,8 @@ define void @fcvt_v16f16_v16f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    stp q2, q3, [x1, #64]
 ; CHECK-NEXT:    movprfx z2, z7
 ; CHECK-NEXT:    fcvt z2.d, p0/m, z7.h
-; CHECK-NEXT:    stp q1, q2, [x1]
 ; CHECK-NEXT:    stp q4, q0, [x1, #32]
+; CHECK-NEXT:    stp q1, q2, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
   %res = fpext <16 x half> %op1 to <16 x double>
