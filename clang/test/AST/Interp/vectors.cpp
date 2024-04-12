@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -verify=ref,both %s
 
-// both-no-diagnostics
+// ref-no-diagnostics
 
 typedef int __attribute__((vector_size(16))) VI4;
 constexpr VI4 A = {1,2,3,4};
@@ -19,4 +19,10 @@ namespace Vector {
     return (VD4) { n / 2.0, n + 1.5, n - 5.4, n * 0.9 };
   }
   constexpr auto v2 = g(4);
+}
+
+/// FIXME: We need to support BitCasts between vector types.
+namespace {
+  typedef float __attribute__((vector_size(16))) VI42;
+  constexpr VI42 A2 = A; // expected-error {{must be initialized by a constant expression}}
 }
