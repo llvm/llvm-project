@@ -483,8 +483,9 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   auto lhsLoc{std::get<parser::Variable>(x.t).GetSource()};
   const auto &scope{context_.FindScope(lhsLoc)};
   const Scope &progUnit{GetProgramUnitContaining(scope)};
-  if (IsCUDADeviceContext(&progUnit))
+  if (IsCUDADeviceContext(&progUnit)) {
     return; // Data transfer with assignment is only perform on host.
+  }
 
   const evaluate::Assignment *assign{semantics::GetAssignment(x)};
   int nbLhs{evaluate::GetNbOfCUDASymbols(assign->lhs)};
