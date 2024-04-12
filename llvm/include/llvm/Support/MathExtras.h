@@ -66,7 +66,9 @@ template <typename T> T maskTrailingOnes(unsigned N) {
   static_assert(std::is_unsigned_v<T>, "Invalid type!");
   const unsigned Bits = CHAR_BIT * sizeof(T);
   assert(N <= Bits && "Invalid bit index");
-  return N == 0 ? 0 : (T(-1) >> (Bits - N));
+  if (N == 0)
+    return 0;
+  return T(-1) >> (Bits - N);
 }
 
 /// Create a bitmask with the N left-most bits set to 1, and all other
@@ -193,8 +195,7 @@ constexpr inline bool isShiftedUInt(uint64_t x) {
   static_assert(S < 64, "isShiftedUInt<N, S> with S >= 64 is too much.");
   static_assert(N + S <= 64,
                 "isShiftedUInt<N, S> with N + S > 64 is too wide.");
-  // Per the two static_asserts above, S must be strictly less than 64.  So
-  // 1 << S is not undefined behavior.
+  // S must be strictly less than 64. So 1 << S is not undefined behavior.
   return isUInt<N + S>(x) && (x % (UINT64_C(1) << S) == 0);
 }
 
@@ -209,14 +210,18 @@ inline uint64_t maxUIntN(uint64_t N) {
   // Unfortunately, shifting a uint64_t right by 64 bit is undefined
   // behavior, so the condition on N == 0 is necessary. Fortunately, most
   // optimizers do not emit branches for this check.
-  return N == 0 ? 0 : UINT64_MAX >> (64 - N);
+  if (N == 0)
+    return 0;
+  return UINT64_MAX >> (64 - N);
 }
 
 /// Gets the minimum value for a N-bit signed integer.
 inline int64_t minIntN(int64_t N) {
   assert(N <= 64 && "integer width out of range");
 
-  return N == 0 ? 0 : UINT64_C(1) + ~(UINT64_C(1) << (N - 1));
+  if (N == 0)
+    return 0;
+  return UINT64_C(1) + ~(UINT64_C(1) << (N - 1));
 }
 
 /// Gets the maximum value for a N-bit signed integer.
@@ -225,7 +230,9 @@ inline int64_t maxIntN(int64_t N) {
 
   // This relies on two's complement wraparound when N == 64, so we convert to
   // int64_t only at the very end to avoid UB.
-  return N == 0 ? 0 : (UINT64_C(1) << (N - 1)) - 1;
+  if (N == 0)
+    return 0;
+  return (UINT64_C(1) << (N - 1)) - 1;
 }
 
 /// Checks if an unsigned integer fits into the given (dynamic) bit width.
