@@ -366,12 +366,13 @@ void AIX::AddOpenMPIncludeArgs(const ArgList &DriverArgs,
                                ArgStringList &CC1Args) const {
   // Add OpenMP include paths if -fopenmp is specified.
   if (DriverArgs.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                   options::OPT_fno_openmp, false)) {
+                         options::OPT_fno_openmp, false)) {
     SmallString<128> PathOpenMP;
     switch (getDriver().getOpenMPRuntime(DriverArgs)) {
     case Driver::OMPRT_OMP:
       PathOpenMP = GetHeaderSysroot(DriverArgs);
-      llvm::sys::path::append(PathOpenMP, "opt/IBM/openxlCSDK", "include", "openmp");
+      llvm::sys::path::append(PathOpenMP, "opt/IBM/openxlCSDK", "include",
+                              "openmp");
       addSystemInclude(DriverArgs, CC1Args, PathOpenMP.str());
       break;
     case Driver::OMPRT_IOMP5:
