@@ -6025,7 +6025,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // FIXME: Hexagon uses i32 scalar for a floating point zero vector so allow
     // that for now.
     assert((VT.getVectorElementType() == N1.getValueType() ||
-            (!VT.isInteger() && N1.getValueType() == MVT::i32) ||
+            (VT.isFloatingPoint() && N1.getValueType() == MVT::i32) ||
             (VT.getVectorElementType().isInteger() &&
              N1.getValueType().isInteger() &&
              VT.getVectorElementType().bitsLE(N1.getValueType()))) &&
