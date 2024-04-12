@@ -75,18 +75,21 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
 private:
   InstructionType Type;
 };
+
 inline std::vector<CallBase *> findIndirectCalls(Function &F) {
   PGOIndirectCallVisitor ICV(
       PGOIndirectCallVisitor::InstructionType::kIndirectCall);
   ICV.visit(F);
   return ICV.IndirectCalls;
 }
+
 inline std::vector<Instruction *> findVTableAddrs(Function &F) {
   PGOIndirectCallVisitor ICV(
       PGOIndirectCallVisitor::InstructionType::kVTableVal);
   ICV.visit(F);
   return ICV.ProfiledAddresses;
 }
+
 } // namespace llvm
 
 #endif
