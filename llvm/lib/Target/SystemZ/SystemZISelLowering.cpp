@@ -449,7 +449,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       // Add ISD::VECREDUCE_ADD as custom in order to implement
       // it with VZERO+VSUM
       setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
-      
+
       // Map SETCCs onto one of VCE, VCH or VCHL, swapping the operands
       // and inverting the result as necessary.
       setOperationAction(ISD::SETCC, VT, Custom);
