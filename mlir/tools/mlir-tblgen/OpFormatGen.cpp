@@ -508,7 +508,7 @@ const char *const optionalOperandParserCode = R"(
 )";
 const char *const operandParserCode = R"(
   {0}OperandsLoc = parser.getCurrentLocation();
-  if (parser.parseOperand({0}RawOperands[0]))
+  if (parser.parseOperand({0}RawOperand))
     return ::mlir::failure();
 )";
 /// The code snippet used to generate a parser call for a VariadicOfVariadic
@@ -564,11 +564,11 @@ const char *const typeParserCode = R"(
     {0} type;
     if (parser.parseCustomTypeWithFallback(type))
       return ::mlir::failure();
-    {1}RawTypes[0] = type;
+    {1}RawType = type;
   }
 )";
 const char *const qualifiedTypeParserCode = R"(
-  if (parser.parseType({1}RawTypes[0]))
+  if (parser.parseType({1}RawType))
     return ::mlir::failure();
 )";
 
@@ -842,9 +842,9 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
       }
     } else {
       body << "  ::mlir::OpAsmParser::UnresolvedOperand " << name
-           << "RawOperands[1];\n"
+           << "RawOperand{};\n"
            << "  ::llvm::ArrayRef<::mlir::OpAsmParser::UnresolvedOperand> "
-           << name << "Operands(" << name << "RawOperands);";
+           << name << "Operands(&" << name << "RawOperand, 1);";
     }
     body << llvm::formatv("  ::llvm::SMLoc {0}OperandsLoc;\n"
                           "  (void){0}OperandsLoc;\n",
@@ -879,10 +879,11 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
     if (lengthKind != ArgumentLengthKind::Single)
       body << "  ::llvm::SmallVector<::mlir::Type, 1> " << name << "Types;\n";
     else
-      body << llvm::formatv("  ::mlir::Type {0}RawTypes[1];\n", name)
-           << llvm::formatv(
-                  "  ::llvm::ArrayRef<::mlir::Type> {0}Types({0}RawTypes);\n",
-                  name);
+      body
+          << llvm::formatv("  ::mlir::Type {0}RawType{{};\n", name)
+          << llvm::formatv(
+                 "  ::llvm::ArrayRef<::mlir::Type> {0}Types(&{0}RawType, 1);\n",
+                 name);
   } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element)) {
     ArgumentLengthKind ignored;
     body << "  ::llvm::ArrayRef<::mlir::Type> "
@@ -910,7 +911,7 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
     else if (lengthKind == ArgumentLengthKind::Optional)
       body << llvm::formatv("{0}Operand", name);
     else
-      body << formatv("{0}RawOperands[0]", name);
+      body << formatv("{0}RawOperand", name);
 
   } else if (auto *region = dyn_cast<RegionVariable>(param)) {
     StringRef name = region->getVar()->name;
@@ -939,7 +940,7 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
     else if (lengthKind == ArgumentLengthKind::Optional)
       body << llvm::formatv("{0}Type", listName);
     else
-      body << formatv("{0}RawTypes[0]", listName);
+      body << formatv("{0}RawType", listName);
 
   } else if (auto *string = dyn_cast<StringElement>(param)) {
     FmtContext ctx;
@@ -1774,9 +1775,30 @@ const char *enumAttrBeginPrinterCode = R"(
 /// Generate the printer for the 'prop-dict' directive.
 static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body) {
+  body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedProps;\n";
+  // Add code to check attributes for equality with the default value
+  // for attributes with the elidePrintingDefaultValue bit set.
+  for (const NamedAttribute &namedAttr : op.getAttributes()) {
+    const Attribute &attr = namedAttr.attr;
+    if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
+      const StringRef &name = namedAttr.name;
+      FmtContext fctx;
+      fctx.withBuilder("odsBuilder");
+      std::string defaultValue = std::string(
+          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      body << "  {\n";
+      body << "     ::mlir::Builder odsBuilder(getContext());\n";
+      body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
+           << "Attr();\n";
+      body << "     if(attr && (attr == " << defaultValue << "))\n";
+      body << "       elidedProps.push_back(\"" << name << "\");\n";
+      body << "  }\n";
+    }
+  }
+
   body << "  _odsPrinter << \" \";\n"
        << "  printProperties(this->getContext(), _odsPrinter, "
-          "getProperties());\n";
+          "getProperties(), elidedProps);\n";
 }
 
 /// Generate the printer for the 'attr-dict' directive.

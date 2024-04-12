@@ -2909,7 +2909,8 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
   );
   let extraClassDeclaration = [{
     void printProperties(::mlir::MLIRContext *ctx, ::mlir::OpAsmPrinter &p,
-                         const Properties &prop);
+                         const Properties &prop,
+                         ::mlir::ArrayRef<::llvm::StringRef> elidedProps);
     static ::mlir::ParseResult  parseProperties(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result);
     static ::mlir::LogicalResult readFromMlirBytecode(
@@ -2938,7 +2939,8 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
       writer.writeVarInt(prop.value);
     }
     void TestOpWithNiceProperties::printProperties(::mlir::MLIRContext *ctx,
-            ::mlir::OpAsmPrinter &p, const Properties &prop) {
+            ::mlir::OpAsmPrinter &p, const Properties &prop,
+            ::mlir::ArrayRef<::llvm::StringRef> elidedProps) {
       customPrintProperties(p, prop.prop);
     }
     ::mlir::ParseResult TestOpWithNiceProperties::parseProperties(
@@ -2971,7 +2973,8 @@ def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
   );
   let extraClassDeclaration = [{
     void printProperties(::mlir::MLIRContext *ctx, ::mlir::OpAsmPrinter &p,
-                         const Properties &prop);
+                         const Properties &prop,
+                         ::mlir::ArrayRef<::llvm::StringRef> elidedProps);
     static ::mlir::ParseResult  parseProperties(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result);
     static ::mlir::LogicalResult readFromMlirBytecode(
@@ -2983,7 +2986,8 @@ def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
   }];
   let extraClassDefinition = [{
     void TestOpWithVersionedProperties::printProperties(::mlir::MLIRContext *ctx,
-            ::mlir::OpAsmPrinter &p, const Properties &prop) {
+            ::mlir::OpAsmPrinter &p, const Properties &prop,
+            ::mlir::ArrayRef<::llvm::StringRef> elidedProps) {
       customPrintProperties(p, prop.prop);
     }
     ::mlir::ParseResult TestOpWithVersionedProperties::parseProperties(
@@ -2995,6 +2999,11 @@ def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
       return success();
     }
   }];
+}
+
+def TestOpWithDefaultValuedProperties : TEST_Op<"with_default_valued_properties"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$a);
 }
 
 //===----------------------------------------------------------------------===//

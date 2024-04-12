@@ -6,7 +6,6 @@ add_fp_unittest(
   SRCS
     ../ceil_test.cpp
   DEPENDS
-    libc.include.math
     libc.src.math.generic.ceil
 )
 
@@ -18,7 +17,6 @@ add_fp_unittest(
   SRCS
     ../ceilf_test.cpp
   DEPENDS
-    libc.include.math
     libc.src.math.generic.ceilf
 )
 
@@ -30,7 +28,6 @@ add_fp_unittest(
   SRCS
     ../ceill_test.cpp
   DEPENDS
-    libc.include.math
     libc.src.math.generic.ceill
 )
 
