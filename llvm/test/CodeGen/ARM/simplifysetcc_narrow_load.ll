@@ -40,7 +40,9 @@ define i1 @test_129_15_0(ptr %y) {
 ;
 ; CHECK-BE-LABEL: test_129_15_0:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    ldrh r0, [r0, #14]
+; CHECK-BE-NEXT:    ldr r1, [r0, #12]
+; CHECK-BE-NEXT:    ldrb r0, [r0, #16]
+; CHECK-BE-NEXT:    orr r0, r0, r1, lsl #8
 ; CHECK-BE-NEXT:    mov r1, #255
 ; CHECK-BE-NEXT:    orr r1, r1, #32512
 ; CHECK-BE-NEXT:    ands r0, r0, r1
@@ -49,7 +51,7 @@ define i1 @test_129_15_0(ptr %y) {
 ;
 ; CHECK-V7-BE-LABEL: test_129_15_0:
 ; CHECK-V7-BE:       @ %bb.0:
-; CHECK-V7-BE-NEXT:    ldrh r0, [r0, #14]
+; CHECK-V7-BE-NEXT:    ldrh r0, [r0, #15]
 ; CHECK-V7-BE-NEXT:    bfc r0, #15, #17
 ; CHECK-V7-BE-NEXT:    cmp r0, #0
 ; CHECK-V7-BE-NEXT:    movwne r0, #1
@@ -119,14 +121,14 @@ define i1 @test_33_8_0(ptr %y) {
 ;
 ; CHECK-BE-LABEL: test_33_8_0:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    ldrb r0, [r0, #3]
+; CHECK-BE-NEXT:    ldrb r0, [r0, #4]
 ; CHECK-BE-NEXT:    cmp r0, #0
 ; CHECK-BE-NEXT:    movne r0, #1
 ; CHECK-BE-NEXT:    mov pc, lr
 ;
 ; CHECK-V7-BE-LABEL: test_33_8_0:
 ; CHECK-V7-BE:       @ %bb.0:
-; CHECK-V7-BE-NEXT:    ldrb r0, [r0, #3]
+; CHECK-V7-BE-NEXT:    ldrb r0, [r0, #4]
 ; CHECK-V7-BE-NEXT:    cmp r0, #0
 ; CHECK-V7-BE-NEXT:    movwne r0, #1
 ; CHECK-V7-BE-NEXT:    bx lr
@@ -179,13 +181,13 @@ define i1 @test_33_1_31(ptr %y) {
 ;
 ; CHECK-BE-LABEL: test_33_1_31:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    ldrb r0, [r0]
+; CHECK-BE-NEXT:    ldrb r0, [r0, #1]
 ; CHECK-BE-NEXT:    lsr r0, r0, #7
 ; CHECK-BE-NEXT:    mov pc, lr
 ;
 ; CHECK-V7-BE-LABEL: test_33_1_31:
 ; CHECK-V7-BE:       @ %bb.0:
-; CHECK-V7-BE-NEXT:    ldrb r0, [r0]
+; CHECK-V7-BE-NEXT:    ldrb r0, [r0, #1]
 ; CHECK-V7-BE-NEXT:    lsr r0, r0, #7
 ; CHECK-V7-BE-NEXT:    bx lr
   %a = load i33, ptr %y
@@ -209,13 +211,13 @@ define i1 @test_33_1_0(ptr %y) {
 ;
 ; CHECK-BE-LABEL: test_33_1_0:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    ldrb r0, [r0, #3]
+; CHECK-BE-NEXT:    ldrb r0, [r0, #4]
 ; CHECK-BE-NEXT:    and r0, r0, #1
 ; CHECK-BE-NEXT:    mov pc, lr
 ;
 ; CHECK-V7-BE-LABEL: test_33_1_0:
 ; CHECK-V7-BE:       @ %bb.0:
-; CHECK-V7-BE-NEXT:    ldrb r0, [r0, #3]
+; CHECK-V7-BE-NEXT:    ldrb r0, [r0, #4]
 ; CHECK-V7-BE-NEXT:    and r0, r0, #1
 ; CHECK-V7-BE-NEXT:    bx lr
   %a = load i33, ptr %y
@@ -309,7 +311,7 @@ define i1 @test_48_16_8(ptr %y) {
 ; CHECK-LE-LABEL: test_48_16_8:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    ldrh r0, [r0, #1]
-; CHECK-LE-NEXT:    cmp r0, #0
+; CHECK-LE-NEXT:    lsls r0, r0, #8
 ; CHECK-LE-NEXT:    movne r0, #1
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
@@ -444,9 +446,7 @@ define i1 @test_48_17_0(ptr %y) {
 ;
 ; CHECK-V7-BE-LABEL: test_48_17_0:
 ; CHECK-V7-BE:       @ %bb.0:
-; CHECK-V7-BE-NEXT:    ldr r1, [r0]
-; CHECK-V7-BE-NEXT:    ldrh r0, [r0, #4]
-; CHECK-V7-BE-NEXT:    orr r0, r0, r1, lsl #16
+; CHECK-V7-BE-NEXT:    ldr r0, [r0, #2]
 ; CHECK-V7-BE-NEXT:    bfc r0, #17, #15
 ; CHECK-V7-BE-NEXT:    cmp r0, #0
 ; CHECK-V7-BE-NEXT:    movwne r0, #1
@@ -506,15 +506,14 @@ define i1 @test_40_1_32(ptr %y) {
 ;
 ; CHECK-BE-LABEL: test_40_1_32:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    ldr r0, [r0]
-; CHECK-BE-NEXT:    mov r1, #1
-; CHECK-BE-NEXT:    and r0, r1, r0, lsr #24
+; CHECK-BE-NEXT:    ldrb r0, [r0]
+; CHECK-BE-NEXT:    and r0, r0, #1
 ; CHECK-BE-NEXT:    mov pc, lr
 ;
 ; CHECK-V7-BE-LABEL: test_40_1_32:
 ; CHECK-V7-BE:       @ %bb.0:
-; CHECK-V7-BE-NEXT:    ldr r0, [r0]
-; CHECK-V7-BE-NEXT:    ubfx r0, r0, #24, #1
+; CHECK-V7-BE-NEXT:    ldrb r0, [r0]
+; CHECK-V7-BE-NEXT:    and r0, r0, #1
 ; CHECK-V7-BE-NEXT:    bx lr
   %a = load i40, ptr %y
   %b = and i40 %a, u0x100000000
