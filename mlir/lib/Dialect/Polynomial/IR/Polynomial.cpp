@@ -38,7 +38,7 @@ Polynomial Polynomial::fromCoefficients(ArrayRef<int64_t> coeffs) {
 void Polynomial::print(raw_ostream &os, ::llvm::StringRef separator,
                        ::llvm::StringRef exponentiation) const {
   bool first = true;
-  for (const auto &term : terms) {
+  for (const Monomial &term : terms) {
     if (first) {
       first = false;
     } else {
