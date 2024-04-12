@@ -970,10 +970,7 @@ void ASTStmtWriter::VisitMemberExpr(MemberExpr *E) {
   VisitExpr(E);
 
   bool HasQualifier = E->hasQualifier();
-  bool HasFoundDecl =
-      E->hasQualifierOrFoundDecl() &&
-      (E->getFoundDecl().getDecl() != E->getMemberDecl() ||
-       E->getFoundDecl().getAccess() != E->getMemberDecl()->getAccess());
+  bool HasFoundDecl = E->hasFoundDecl();
   bool HasTemplateInfo = E->hasTemplateKWAndArgsInfo();
   unsigned NumTemplateArgs = E->getNumTemplateArgs();
 
@@ -995,14 +992,14 @@ void ASTStmtWriter::VisitMemberExpr(MemberExpr *E) {
   CurrentPackingBits.addBits(E->isNonOdrUse(), /*Width=*/2);
   Record.AddSourceLocation(E->getOperatorLoc());
 
+  if (HasQualifier)
+    Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
+
   if (HasFoundDecl) {
     DeclAccessPair FoundDecl = E->getFoundDecl();
     Record.AddDeclRef(FoundDecl.getDecl());
     CurrentPackingBits.addBits(FoundDecl.getAccess(), /*BitWidth=*/2);
   }
-
-  if (HasQualifier)
-    Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
 
   if (HasTemplateInfo)
     AddTemplateKWAndArgsInfo(*E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
@@ -1842,6 +1839,7 @@ void ASTStmtWriter::VisitCXXThisExpr(CXXThisExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getLocation());
   Record.push_back(E->isImplicit());
+  Record.push_back(E->isCapturedByCopyInLambdaWithExplicitObjectParameter());
 
   Code = serialization::EXPR_CXX_THIS;
 }
@@ -2823,6 +2821,7 @@ void ASTStmtWriter::VisitOMPTeamsGenericLoopDirective(
 void ASTStmtWriter::VisitOMPTargetTeamsGenericLoopDirective(
     OMPTargetTeamsGenericLoopDirective *D) {
   VisitOMPLoopDirective(D);
+  Record.writeBool(D->canBeParallelFor());
   Code = serialization::STMT_OMP_TARGET_TEAMS_GENERIC_LOOP_DIRECTIVE;
 }
 
@@ -2842,9 +2841,10 @@ void ASTStmtWriter::VisitOMPTargetParallelGenericLoopDirective(
 // OpenACC Constructs/Directives.
 //===----------------------------------------------------------------------===//
 void ASTStmtWriter::VisitOpenACCConstructStmt(OpenACCConstructStmt *S) {
+  Record.push_back(S->clauses().size());
   Record.writeEnum(S->Kind);
   Record.AddSourceRange(S->Range);
-  // TODO OpenACC: Serialize Clauses.
+  Record.writeOpenACCClauseList(S->clauses());
 }
 
 void ASTStmtWriter::VisitOpenACCAssociatedStmtConstruct(

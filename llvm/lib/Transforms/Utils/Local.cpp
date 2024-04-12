@@ -475,6 +475,12 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
         II->getIntrinsicID() == Intrinsic::launder_invariant_group)
       return true;
 
+    // Intrinsics declare sideeffects to prevent them from moving, but they are
+    // nops without users.
+    if (II->getIntrinsicID() == Intrinsic::allow_runtime_check ||
+        II->getIntrinsicID() == Intrinsic::allow_ubsan_check)
+      return true;
+
     if (II->isLifetimeStartOrEnd()) {
       auto *Arg = II->getArgOperand(1);
       // Lifetime intrinsics are dead when their right-hand is undef.

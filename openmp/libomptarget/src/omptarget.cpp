@@ -481,12 +481,10 @@ void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
   int32_t Err = 0;
-  if (!DeviceOrErr->RTL->data_lock) {
-    Err = DeviceOrErr->RTL->data_lock(DeviceNum, HostPtr, Size, &RC);
-    if (Err) {
-      DP("Could not lock ptr %p\n", HostPtr);
-      return nullptr;
-    }
+  Err = DeviceOrErr->RTL->data_lock(DeviceNum, HostPtr, Size, &RC);
+  if (Err) {
+    DP("Could not lock ptr %p\n", HostPtr);
+    return nullptr;
   }
   DP("%s returns device ptr " DPxMOD "\n", Name, DPxPTR(RC));
   return RC;
@@ -499,9 +497,7 @@ void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  if (!DeviceOrErr->RTL->data_unlock)
-    DeviceOrErr->RTL->data_unlock(DeviceNum, HostPtr);
-
+  DeviceOrErr->RTL->data_unlock(DeviceNum, HostPtr);
   DP("%s returns\n", Name);
 }
 

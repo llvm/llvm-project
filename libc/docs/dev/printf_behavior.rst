@@ -173,6 +173,10 @@ If a number passed as a min width or precision value is out of range for an int,
 then it will be treated as the largest or smallest value in the int range
 (e.g. "%-999999999999.999999999999s" is the same as "%-2147483648.2147483647s").
 
+If a number passed as a bit width is less than or equal to zero, the conversion
+is considered invalid. If the provided bit width is larger than the width of
+uintmax_t, it will be clamped to the width of uintmax_t.
+
 ----------
 Conversion
 ----------

@@ -1189,9 +1189,9 @@ vzeroupper
 # CHECK-NEXT:  3      9     1.00                        vdppd	$22, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  4      15    1.00    *                   vdppd	$22, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  4      13    1.50                        vdpps	$22, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  5      19    1.50    *                   vdpps	$22, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  6      19    1.50    *                   vdpps	$22, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  4      13    1.50                        vdpps	$22, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  5      20    1.50    *                   vdpps	$22, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  6      20    1.50    *                   vdpps	$22, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      3     1.00                        vextractf128	$1, %ymm0, %xmm2
 # CHECK-NEXT:  2      1     1.00           *            vextractf128	$1, %ymm0, (%rax)
 # CHECK-NEXT:  2      3     1.00                        vextractps	$1, %xmm0, %ecx
@@ -1736,7 +1736,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     126.00 338.58 199.58 173.83 173.83 38.00  326.58 5.25   11.33
+# CHECK-NEXT:  -     126.00 339.58 199.58 173.83 173.83 38.00  326.58 6.25   11.33
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -1899,9 +1899,9 @@ vzeroupper
 # CHECK-NEXT:  -      -     1.00   1.00    -      -      -     1.00    -      -     vdppd	$22, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -     1.00    -      -     vdppd	$22, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -     1.50   1.50    -      -      -     1.00    -      -     vdpps	$22, %xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  -      -     1.50   1.50   0.50   0.50    -     1.00    -      -     vdpps	$22, (%rax), %xmm1, %xmm2
+# CHECK-NEXT:  -      -     2.00   1.50   0.50   0.50    -     1.00   0.50    -     vdpps	$22, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -     1.50   1.50    -      -      -     1.00    -      -     vdpps	$22, %ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  -      -     1.50   1.50   0.50   0.50    -     1.00    -      -     vdpps	$22, (%rax), %ymm1, %ymm2
+# CHECK-NEXT:  -      -     2.00   1.50   0.50   0.50    -     1.00   0.50    -     vdpps	$22, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vextractf128	$1, %ymm0, %xmm2
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33   vextractf128	$1, %ymm0, (%rax)
 # CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -     vextractps	$1, %xmm0, %ecx

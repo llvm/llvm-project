@@ -92,6 +92,7 @@ public:
   /// in the new format (\p NewFlag == true), converting to the desired format
   /// if necessary.
   void setIsNewDbgInfoFormat(bool NewFlag);
+  void setNewDbgInfoFormatFlag(bool NewFlag);
 
   /// Record that the collection of DbgRecords in \p M "trails" after the last
   /// instruction of this block. These are equivalent to dbg.value intrinsics
@@ -791,7 +792,7 @@ template <> struct DenseMapInfo<BasicBlock::iterator> {
   static unsigned getHashValue(const BasicBlock::iterator &It) {
     return DenseMapInfo<void *>::getHashValue(
                reinterpret_cast<void *>(It.getNodePtr())) ^
-           It.getHeadBit();
+           (unsigned)It.getHeadBit();
   }
 
   static bool isEqual(const BasicBlock::iterator &LHS,

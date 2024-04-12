@@ -276,6 +276,8 @@ private:
   ParseStatus tryParseSVEDataVector(OperandVector &Operands);
   template <RegKind RK>
   ParseStatus tryParseSVEPredicateVector(OperandVector &Operands);
+  ParseStatus
+  tryParseSVEPredicateOrPredicateAsCounterVector(OperandVector &Operands);
   template <RegKind VectorKind>
   ParseStatus tryParseVectorList(OperandVector &Operands,
                                  bool ExpectMatch = false);
@@ -654,7 +656,7 @@ public:
     return Barrier.HasnXSModifier;
   }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert(Kind == k_Register && "Invalid access!");
     return Reg.RegNum;
   }
@@ -1241,6 +1243,7 @@ public:
     case AArch64::PPR_p8to15RegClassID:
     case AArch64::PNRRegClassID:
     case AArch64::PNR_p8to15RegClassID:
+    case AArch64::PPRorPNRRegClassID:
       RK = RegKind::SVEPredicateAsCounter;
       break;
     default:
@@ -1264,6 +1267,7 @@ public:
     case AArch64::PPR_p8to15RegClassID:
     case AArch64::PNRRegClassID:
     case AArch64::PNR_p8to15RegClassID:
+    case AArch64::PPRorPNRRegClassID:
       RK = RegKind::SVEPredicateVector;
       break;
     default:
@@ -1285,6 +1289,20 @@ public:
       return DiagnosticPredicateTy::NoMatch;
 
     if (isSVEVectorReg<Class>() && (Reg.ElementWidth == ElementWidth))
+      return DiagnosticPredicateTy::Match;
+
+    return DiagnosticPredicateTy::NearMatch;
+  }
+
+  template <int ElementWidth, unsigned Class>
+  DiagnosticPredicate isSVEPredicateOrPredicateAsCounterRegOfWidth() const {
+    if (Kind != k_Register || (Reg.Kind != RegKind::SVEPredicateAsCounter &&
+                               Reg.Kind != RegKind::SVEPredicateVector))
+      return DiagnosticPredicateTy::NoMatch;
+
+    if ((isSVEPredicateAsCounterReg<Class>() ||
+         isSVEPredicateVectorRegOfWidth<ElementWidth, Class>()) &&
+        Reg.ElementWidth == ElementWidth)
       return DiagnosticPredicateTy::Match;
 
     return DiagnosticPredicateTy::NearMatch;
@@ -1768,6 +1786,15 @@ public:
       llvm_unreachable("Unsupported width");
     }
     Inst.addOperand(MCOperand::createReg(AArch64::Z0 + getReg() - Base));
+  }
+
+  void addPPRorPNRRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    unsigned Reg = getReg();
+    // Normalise to PPR
+    if (Reg >= AArch64::PN0 && Reg <= AArch64::PN15)
+      Reg = Reg - AArch64::PN0 + AArch64::P0;
+    Inst.addOperand(MCOperand::createReg(Reg));
   }
 
   void addPNRasPPRRegOperands(MCInst &Inst, unsigned N) const {
@@ -4167,6 +4194,15 @@ ParseStatus AArch64AsmParser::tryParseVectorRegister(MCRegister &Reg,
   return ParseStatus::NoMatch;
 }
 
+ParseStatus AArch64AsmParser::tryParseSVEPredicateOrPredicateAsCounterVector(
+    OperandVector &Operands) {
+  ParseStatus Status =
+      tryParseSVEPredicateVector<RegKind::SVEPredicateAsCounter>(Operands);
+  if (!Status.isSuccess())
+    Status = tryParseSVEPredicateVector<RegKind::SVEPredicateVector>(Operands);
+  return Status;
+}
+
 /// tryParseSVEPredicateVector - Parse a SVE predicate register operand.
 template <RegKind RK>
 ParseStatus
@@ -6019,6 +6055,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "Invalid restricted vector register, expected z0.d..z15.d");
   case Match_InvalidSVEPattern:
     return Error(Loc, "invalid predicate pattern");
+  case Match_InvalidSVEPPRorPNRAnyReg:
+  case Match_InvalidSVEPPRorPNRBReg:
   case Match_InvalidSVEPredicateAnyReg:
   case Match_InvalidSVEPredicateBReg:
   case Match_InvalidSVEPredicateHReg:
@@ -6131,9 +6169,6 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_AddSubLSLImm3ShiftLarge:
     return Error(Loc,
       "expected 'lsl' with optional integer in range [0, 7]");
-  case Match_InvalidSVEPNRasPPRPredicateBReg:
-    return Error(Loc,
-                 "Expected predicate-as-counter register name with .B suffix");
   default:
     llvm_unreachable("unexpected error code!");
   }
@@ -6653,6 +6688,8 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidZPR_4b16:
   case Match_InvalidZPR_4b32:
   case Match_InvalidZPR_4b64:
+  case Match_InvalidSVEPPRorPNRAnyReg:
+  case Match_InvalidSVEPPRorPNRBReg:
   case Match_InvalidSVEPredicateAnyReg:
   case Match_InvalidSVEPattern:
   case Match_InvalidSVEVecLenSpecifier:
@@ -6714,7 +6751,6 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEVectorListStrided4x16:
   case Match_InvalidSVEVectorListStrided4x32:
   case Match_InvalidSVEVectorListStrided4x64:
-  case Match_InvalidSVEPNRasPPRPredicateBReg:
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())

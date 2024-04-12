@@ -218,18 +218,19 @@ foreach(entry ${runtimes})
 endforeach()
 
 if(LLVM_INCLUDE_TESTS)
-  # Add lit if needed before adding any runtimes since their CMake tests
-  # configuration might depend on lit being present.
+  # If built with the runtimes build (rooted at runtimes/CMakeLists.txt), we
+  # won't have llvm-lit. If built with the bootstrapping build (rooted at
+  # llvm/CMakeLists.txt), the top-level llvm CMake invocation already generated
+  # the llvm-lit script.
   if (NOT HAVE_LLVM_LIT)
-    # If built by manually invoking cmake on this directory, we don't have
-    # llvm-lit. If invoked via llvm/runtimes, the toplevel llvm cmake
-    # invocation already generated the llvm-lit script.
+    # Add lit before adding any runtimes since their CMake tests configuration
+    # might depend on lit being present.
     set(LLVM_LIT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin)
     add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit
                      ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
     # Ensure that the testsuites use the local lit rather than
-    # LLVM_INSTALL_DIR/bin/llvm-lit (which may not exist if LLVM_BINARY_DIR
-    # points at an installed LLVM tree rather than a build tree.
+    # ${LLVM_INSTALL_DIR}/bin/llvm-lit (which may not exist if LLVM_BINARY_DIR
+    # points at an installed LLVM tree rather than a build tree).
     get_llvm_lit_path(_base_dir _file_name)
     set(LLVM_EXTERNAL_LIT "${_base_dir}/${_file_name}" CACHE STRING "Command used to spawn lit" FORCE)
   endif()

@@ -80,7 +80,6 @@ chrono cstring
 chrono ctime
 chrono cwchar
 chrono forward_list
-chrono initializer_list
 chrono limits
 chrono new
 chrono optional
@@ -190,6 +189,7 @@ filesystem string_view
 filesystem version
 format array
 format cctype
+format cerrno
 format clocale
 format cmath
 format cstddef
@@ -201,8 +201,6 @@ format initializer_list
 format limits
 format new
 format optional
-format queue
-format stack
 format stdexcept
 format string
 format string_view
@@ -453,6 +451,7 @@ random vector
 random version
 ranges compare
 ranges cstddef
+ranges cstdint
 ranges cwchar
 ranges initializer_list
 ranges iterator
@@ -680,7 +679,6 @@ vector cstdlib
 vector cstring
 vector cwchar
 vector initializer_list
-vector iosfwd
 vector limits
 vector new
 vector stdexcept
