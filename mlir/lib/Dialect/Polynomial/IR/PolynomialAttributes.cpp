@@ -69,8 +69,6 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
   if (succeeded(parser.parseOptionalStar())) {
     // If there's one * there must be two.
     if (failed(parser.parseStar())) {
-      parser.emitError(parser.getCurrentLocation(),
-                       "exponents must be specified as a double-asterisk `**`");
       return failure();
     }
 
