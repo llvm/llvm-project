@@ -5190,8 +5190,9 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Diagnostic is emitted elsewhere: here we store the (valid) AL
   // in the Decl node for syntactic reasoning, e.g., pretty-printing.
   CallingConv CC;
-  if (S.CheckCallingConvAttr(AL, CC, /*FD*/ nullptr,
-                             S.CUDA().IdentifyTarget(dyn_cast<FunctionDecl>(D))))
+  if (S.CheckCallingConvAttr(
+          AL, CC, /*FD*/ nullptr,
+          S.CUDA().IdentifyTarget(dyn_cast<FunctionDecl>(D))))
     return;
 
   if (!isa<ObjCMethodDecl>(D)) {

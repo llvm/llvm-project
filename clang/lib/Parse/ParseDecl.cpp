@@ -2665,7 +2665,8 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     }
   }
 
-  SemaCUDA::CUDATargetContextRAII X(Actions.CUDA(), SemaCUDA::CTCK_InitGlobalVar, ThisDecl);
+  SemaCUDA::CUDATargetContextRAII X(Actions.CUDA(),
+                                    SemaCUDA::CTCK_InitGlobalVar, ThisDecl);
   switch (TheInitKind) {
   // Parse declarator '=' initializer.
   case InitKind::Equal: {

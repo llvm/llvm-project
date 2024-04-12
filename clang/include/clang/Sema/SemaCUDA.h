@@ -47,8 +47,8 @@ public:
   bool PopForceHostDevice();
 
   ExprResult ActOnExecConfigExpr(Scope *S, SourceLocation LLLLoc,
-                                     MultiExprArg ExecConfig,
-                                     SourceLocation GGGLoc);
+                                 MultiExprArg ExecConfig,
+                                 SourceLocation GGGLoc);
 
   /// A pair of a canonical FunctionDecl and a SourceLocation.  When used as the
   /// key in a hashtable, both the FD and location are hashed.
@@ -88,8 +88,7 @@ public:
   ///  if (DiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentTarget())
   ///    return ExprError();
   ///  // Otherwise, continue parsing as normal.
-  SemaDiagnosticBuilder DiagIfDeviceCode(SourceLocation Loc,
-                                             unsigned DiagID);
+  SemaDiagnosticBuilder DiagIfDeviceCode(SourceLocation Loc, unsigned DiagID);
 
   /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
   /// context is "used as host code".
@@ -103,7 +102,7 @@ public:
   /// Use this rather than examining the function's attributes yourself -- you
   /// will get it wrong.  Returns CUDAFunctionTarget::Host if D is null.
   CUDAFunctionTarget IdentifyTarget(const FunctionDecl *D,
-                                        bool IgnoreImplicitHDAttr = false);
+                                    bool IgnoreImplicitHDAttr = false);
   CUDAFunctionTarget IdentifyTarget(const ParsedAttributesView &Attrs);
 
   enum CUDAVariableTarget {
@@ -134,7 +133,8 @@ public:
   struct CUDATargetContextRAII {
     SemaCUDA &S;
     SemaCUDA::CUDATargetContext SavedCtx;
-    CUDATargetContextRAII(SemaCUDA &S_, SemaCUDA::CUDATargetContextKind K, Decl *D);
+    CUDATargetContextRAII(SemaCUDA &S_, SemaCUDA::CUDATargetContextKind K,
+                          Decl *D);
     ~CUDATargetContextRAII() { S.CurCUDATargetCtx = SavedCtx; }
   };
 
@@ -166,22 +166,20 @@ public:
   ///
   /// \returns preference value for particular Caller/Callee combination.
   CUDAFunctionPreference IdentifyPreference(const FunctionDecl *Caller,
-                                                const FunctionDecl *Callee);
+                                            const FunctionDecl *Callee);
 
   /// Determines whether Caller may invoke Callee, based on their CUDA
   /// host/device attributes.  Returns false if the call is not allowed.
   ///
   /// Note: Will return true for CFP_WrongSide calls.  These may appear in
   /// semantically correct CUDA programs, but only if they're never codegen'ed.
-  bool IsAllowedCall(const FunctionDecl *Caller,
-                         const FunctionDecl *Callee) {
+  bool IsAllowedCall(const FunctionDecl *Caller, const FunctionDecl *Callee) {
     return IdentifyPreference(Caller, Callee) != CFP_Never;
   }
 
   /// May add implicit CUDAHostAttr and CUDADeviceAttr attributes to FD,
   /// depending on FD and the current compilation settings.
-  void maybeAddHostDeviceAttrs(FunctionDecl *FD,
-                                   const LookupResult &Previous);
+  void maybeAddHostDeviceAttrs(FunctionDecl *FD, const LookupResult &Previous);
 
   /// May add implicit CUDAConstantAttr attribute to VD, depending on VD
   /// and current compilation settings.
@@ -221,7 +219,8 @@ public:
   /// calling priority.
   void EraseUnwantedMatches(
       const FunctionDecl *Caller,
-      llvm::SmallVectorImpl<std::pair<DeclAccessPair, FunctionDecl *>> &Matches);
+      llvm::SmallVectorImpl<std::pair<DeclAccessPair, FunctionDecl *>>
+          &Matches);
 
   /// Given a implicit special member, infer its CUDA target from the
   /// calls it needs to make to underlying base/field special members.
@@ -235,9 +234,9 @@ public:
   /// The result of this call is implicit CUDA target attribute(s) attached to
   /// the member declaration.
   bool inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
-                                               CXXSpecialMemberKind CSM,
-                                               CXXMethodDecl *MemberDecl,
-                                               bool ConstRHS, bool Diagnose);
+                                           CXXSpecialMemberKind CSM,
+                                           CXXMethodDecl *MemberDecl,
+                                           bool ConstRHS, bool Diagnose);
 
   /// \return true if \p CD can be considered empty according to CUDA
   /// (E.2.3.1 in CUDA 7.5 Programming guide).
@@ -256,8 +255,7 @@ public:
 
   /// Check whether NewFD is a valid overload for CUDA. Emits
   /// diagnostics and invalidates NewFD if not.
-  void checkTargetOverload(FunctionDecl *NewFD,
-                               const LookupResult &Previous);
+  void checkTargetOverload(FunctionDecl *NewFD, const LookupResult &Previous);
   /// Copies target attributes from the template TD to the function FD.
   void inheritTargetAttrs(FunctionDecl *FD, const FunctionTemplateDecl &TD);
 

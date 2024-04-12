@@ -10157,7 +10157,7 @@ bool Sema::CheckFunctionTemplateSpecialization(
       // here that have a different target.
       if (LangOpts.CUDA &&
           CUDA().IdentifyTarget(Specialization,
-                             /* IgnoreImplicitHDAttr = */ true) !=
+                                /* IgnoreImplicitHDAttr = */ true) !=
               CUDA().IdentifyTarget(FD, /* IgnoreImplicitHDAttr = */ true)) {
         FailedCandidates.addCandidate().set(
             I.getPair(), FunTmpl->getTemplatedDecl(),
@@ -11366,7 +11366,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     // have a different target.
     if (LangOpts.CUDA &&
         CUDA().IdentifyTarget(Specialization,
-                           /* IgnoreImplicitHDAttr = */ true) !=
+                              /* IgnoreImplicitHDAttr = */ true) !=
             CUDA().IdentifyTarget(D.getDeclSpec().getAttributes())) {
       FailedCandidates.addCandidate().set(
           P.getPair(), FunTmpl->getTemplatedDecl(),

@@ -9885,7 +9885,7 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
       RealCSM = getSpecialMember(MD);
 
     return CUDA().inferTargetForImplicitSpecialMember(RD, RealCSM, MD,
-                                                   SMI.ConstArg, Diagnose);
+                                                      SMI.ConstArg, Diagnose);
   }
 
   return false;

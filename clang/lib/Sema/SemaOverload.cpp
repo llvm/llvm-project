@@ -7619,7 +7619,8 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
 
   // (CUDA B.1): Check for invalid calls between targets.
   if (getLangOpts().CUDA)
-    if (!CUDA().IsAllowedCall(getCurFunctionDecl(/*AllowLambda=*/true), Method)) {
+    if (!CUDA().IsAllowedCall(getCurFunctionDecl(/*AllowLambda=*/true),
+                              Method)) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_bad_target;
       return;
@@ -11988,8 +11989,8 @@ static void DiagnoseBadTarget(Sema &S, OverloadCandidate *Cand) {
     }
 
     S.CUDA().inferTargetForImplicitSpecialMember(ParentClass, CSM, Meth,
-                                              /* ConstRHS */ ConstRHS,
-                                              /* Diagnose */ true);
+                                                 /* ConstRHS */ ConstRHS,
+                                                 /* Diagnose */ true);
   }
 }
 
@@ -13182,7 +13183,7 @@ private:
 
   void EliminateSuboptimalCudaMatches() {
     S.CUDA().EraseUnwantedMatches(S.getCurFunctionDecl(/*AllowLambda=*/true),
-                               Matches);
+                                  Matches);
   }
 
 public:

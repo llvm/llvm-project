@@ -2958,7 +2958,7 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
 
     if (getLangOpts().CUDA)
       CUDA().EraseUnwantedMatches(getCurFunctionDecl(/*AllowLambda=*/true),
-                               Matches);
+                                  Matches);
   } else {
     // C++1y [expr.new]p22:
     //   For a non-placement allocation function, the normal deallocation

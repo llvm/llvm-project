@@ -60,12 +60,12 @@ ExprResult SemaCUDA::ActOnExecConfigExpr(Scope *S, SourceLocation LLLLoc,
                      << getConfigureFuncName());
   QualType ConfigQTy = ConfigDecl->getType();
 
-  DeclRefExpr *ConfigDR = new (getASTContext())
-      DeclRefExpr(getASTContext(), ConfigDecl, false, ConfigQTy, VK_LValue, LLLLoc);
+  DeclRefExpr *ConfigDR = new (getASTContext()) DeclRefExpr(
+      getASTContext(), ConfigDecl, false, ConfigQTy, VK_LValue, LLLLoc);
   SemaRef.MarkFunctionReferenced(LLLLoc, ConfigDecl);
 
   return SemaRef.BuildCallExpr(S, ConfigDR, LLLLoc, ExecConfig, GGGLoc, nullptr,
-                       /*IsExecConfig=*/true);
+                               /*IsExecConfig=*/true);
 }
 
 CUDAFunctionTarget SemaCUDA::IdentifyTarget(const ParsedAttributesView &Attrs) {
@@ -115,9 +115,8 @@ static bool hasAttr(const Decl *D, bool IgnoreImplicitAttr) {
          });
 }
 
-SemaCUDA::CUDATargetContextRAII::CUDATargetContextRAII(SemaCUDA &S_,
-                                                   SemaCUDA::CUDATargetContextKind K,
-                                                   Decl *D)
+SemaCUDA::CUDATargetContextRAII::CUDATargetContextRAII(
+    SemaCUDA &S_, SemaCUDA::CUDATargetContextKind K, Decl *D)
     : S(S_) {
   SavedCtx = S.CurCUDATargetCtx;
   assert(K == SemaCUDA::CTCK_InitGlobalVar);
@@ -416,11 +415,11 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     CXXRecordDecl *BaseClassDecl = cast<CXXRecordDecl>(BaseType->getDecl());
     Sema::SpecialMemberOverloadResult SMOR =
         SemaRef.LookupSpecialMember(BaseClassDecl, CSM,
-                            /* ConstArg */ ConstRHS,
-                            /* VolatileArg */ false,
-                            /* RValueThis */ false,
-                            /* ConstThis */ false,
-                            /* VolatileThis */ false);
+                                    /* ConstArg */ ConstRHS,
+                                    /* VolatileArg */ false,
+                                    /* RValueThis */ false,
+                                    /* ConstThis */ false,
+                                    /* VolatileThis */ false);
 
     if (!SMOR.getMethod())
       continue;
@@ -438,7 +437,8 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
               << (unsigned)CSM << llvm::to_underlying(*InferredTarget)
               << llvm::to_underlying(BaseMethodTarget);
         }
-        MemberDecl->addAttr(CUDAInvalidTargetAttr::CreateImplicit(getASTContext()));
+        MemberDecl->addAttr(
+            CUDAInvalidTargetAttr::CreateImplicit(getASTContext()));
         return true;
       }
     }
@@ -459,17 +459,16 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     CXXRecordDecl *FieldRecDecl = cast<CXXRecordDecl>(FieldType->getDecl());
     Sema::SpecialMemberOverloadResult SMOR =
         SemaRef.LookupSpecialMember(FieldRecDecl, CSM,
-                            /* ConstArg */ ConstRHS && !F->isMutable(),
-                            /* VolatileArg */ false,
-                            /* RValueThis */ false,
-                            /* ConstThis */ false,
-                            /* VolatileThis */ false);
+                                    /* ConstArg */ ConstRHS && !F->isMutable(),
+                                    /* VolatileArg */ false,
+                                    /* RValueThis */ false,
+                                    /* ConstThis */ false,
+                                    /* VolatileThis */ false);
 
     if (!SMOR.getMethod())
       continue;
 
-    CUDAFunctionTarget FieldMethodTarget =
-        IdentifyTarget(SMOR.getMethod());
+    CUDAFunctionTarget FieldMethodTarget = IdentifyTarget(SMOR.getMethod());
     if (!InferredTarget) {
       InferredTarget = FieldMethodTarget;
     } else {
@@ -482,7 +481,8 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
               << (unsigned)CSM << llvm::to_underlying(*InferredTarget)
               << llvm::to_underlying(FieldMethodTarget);
         }
-        MemberDecl->addAttr(CUDAInvalidTargetAttr::CreateImplicit(getASTContext()));
+        MemberDecl->addAttr(
+            CUDAInvalidTargetAttr::CreateImplicit(getASTContext()));
         return true;
       }
     }
@@ -774,8 +774,9 @@ void SemaCUDA::maybeAddHostDeviceAttrs(FunctionDecl *NewD,
     FunctionDecl *OldD = D->getAsFunction();
     return OldD && OldD->hasAttr<CUDADeviceAttr>() &&
            !OldD->hasAttr<CUDAHostAttr>() &&
-           !SemaRef.IsOverload(NewD, OldD, /* UseMemberUsingDeclRules = */ false,
-                       /* ConsiderCudaAttrs = */ false);
+           !SemaRef.IsOverload(NewD, OldD,
+                               /* UseMemberUsingDeclRules = */ false,
+                               /* ConsiderCudaAttrs = */ false);
   };
   auto It = llvm::find_if(Previous, IsMatchingDeviceFn);
   if (It != Previous.end()) {
@@ -816,9 +817,10 @@ void SemaCUDA::MaybeAddConstantAttr(VarDecl *VD) {
 }
 
 SemaBase::SemaDiagnosticBuilder SemaCUDA::DiagIfDeviceCode(SourceLocation Loc,
-                                                       unsigned DiagID) {
+                                                           unsigned DiagID) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
-  FunctionDecl *CurFunContext = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
+  FunctionDecl *CurFunContext =
+      SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
   SemaDiagnosticBuilder::Kind DiagKind = [&] {
     if (!CurFunContext)
       return SemaDiagnosticBuilder::K_Nop;
@@ -832,7 +834,8 @@ SemaBase::SemaDiagnosticBuilder SemaCUDA::DiagIfDeviceCode(SourceLocation Loc,
       // mode until the function is known-emitted.
       if (!getLangOpts().CUDAIsDevice)
         return SemaDiagnosticBuilder::K_Nop;
-      if (SemaRef.IsLastErrorImmediate && getDiagnostics().getDiagnosticIDs()->isBuiltinNote(DiagID))
+      if (SemaRef.IsLastErrorImmediate &&
+          getDiagnostics().getDiagnosticIDs()->isBuiltinNote(DiagID))
         return SemaDiagnosticBuilder::K_Immediate;
       return (SemaRef.getEmissionStatus(CurFunContext) ==
               Sema::FunctionEmissionStatus::Emitted)
@@ -848,7 +851,8 @@ SemaBase::SemaDiagnosticBuilder SemaCUDA::DiagIfDeviceCode(SourceLocation Loc,
 Sema::SemaDiagnosticBuilder SemaCUDA::DiagIfHostCode(SourceLocation Loc,
                                                      unsigned DiagID) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
-  FunctionDecl *CurFunContext = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
+  FunctionDecl *CurFunContext =
+      SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
   SemaDiagnosticBuilder::Kind DiagKind = [&] {
     if (!CurFunContext)
       return SemaDiagnosticBuilder::K_Nop;
@@ -861,7 +865,8 @@ Sema::SemaDiagnosticBuilder SemaCUDA::DiagIfHostCode(SourceLocation Loc,
       // mode until the function is known-emitted.
       if (getLangOpts().CUDAIsDevice)
         return SemaDiagnosticBuilder::K_Nop;
-      if (SemaRef.IsLastErrorImmediate && getDiagnostics().getDiagnosticIDs()->isBuiltinNote(DiagID))
+      if (SemaRef.IsLastErrorImmediate &&
+          getDiagnostics().getDiagnosticIDs()->isBuiltinNote(DiagID))
         return SemaDiagnosticBuilder::K_Immediate;
       return (SemaRef.getEmissionStatus(CurFunContext) ==
               Sema::FunctionEmissionStatus::Emitted)
@@ -890,8 +895,8 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
 
   // If the caller is known-emitted, mark the callee as known-emitted.
   // Otherwise, mark the call in our call graph so we can traverse it later.
-  bool CallerKnownEmitted =
-      SemaRef.getEmissionStatus(Caller) == Sema::FunctionEmissionStatus::Emitted;
+  bool CallerKnownEmitted = SemaRef.getEmissionStatus(Caller) ==
+                            Sema::FunctionEmissionStatus::Emitted;
   SemaDiagnosticBuilder::Kind DiagKind = [this, Caller, Callee,
                                           CallerKnownEmitted] {
     switch (IdentifyPreference(Caller, Callee)) {
@@ -927,9 +932,10 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
   if (!LocsWithCUDACallDiags.insert({Caller, Loc}).second)
     return true;
 
-  SemaDiagnosticBuilder(DiagKind, Loc, diag::err_ref_bad_target, Caller, SemaRef)
-      << llvm::to_underlying(IdentifyTarget(Callee)) << /*function*/ 0
-      << Callee << llvm::to_underlying(IdentifyTarget(Caller));
+  SemaDiagnosticBuilder(DiagKind, Loc, diag::err_ref_bad_target, Caller,
+                        SemaRef)
+      << llvm::to_underlying(IdentifyTarget(Callee)) << /*function*/ 0 << Callee
+      << llvm::to_underlying(IdentifyTarget(Caller));
   if (!Callee->getBuiltinID())
     SemaDiagnosticBuilder(DiagKind, Callee->getLocation(),
                           diag::note_previous_decl, Caller, SemaRef)
@@ -1023,7 +1029,7 @@ void SemaCUDA::checkTargetOverload(FunctionDecl *NewFD,
          (NewTarget == CUDAFunctionTarget::Global) ||
          (OldTarget == CUDAFunctionTarget::Global)) &&
         !SemaRef.IsOverload(NewFD, OldFD, /* UseMemberUsingDeclRules = */ false,
-                    /* ConsiderCudaAttrs = */ false)) {
+                            /* ConsiderCudaAttrs = */ false)) {
       Diag(NewFD->getLocation(), diag::err_cuda_ovl_target)
           << llvm::to_underlying(NewTarget) << NewFD->getDeclName()
           << llvm::to_underlying(OldTarget) << OldFD;
