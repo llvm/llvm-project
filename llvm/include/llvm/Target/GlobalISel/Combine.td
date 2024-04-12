@@ -1556,7 +1556,6 @@ extract_vector_element_build_vector_trunc8,
 extract_vector_element_freeze
 ]>;
 
-
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,

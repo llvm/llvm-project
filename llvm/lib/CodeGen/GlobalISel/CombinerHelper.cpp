@@ -352,6 +352,13 @@ bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
     }
   }
 
+  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {ConcatSrcTy}}))
+    return false;
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_CONCAT_VECTORS,
+           {MRI.getType(MI.getOperand(0).getReg()), ConcatSrcTy}}))
+    return false;
+
   return !Ops.empty();
 }
 
