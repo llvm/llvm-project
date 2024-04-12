@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/fenv/feholdexcept.h"
-#include "hdr/fenv_t.h"
+#include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
 

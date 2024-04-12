@@ -20,7 +20,7 @@
 #include <stdint.h>
 
 #include "hdr/fenv_macros.h"
-#include "hdr/fenv_t.h"
+#include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FPBits.h"
 
 namespace LIBC_NAMESPACE {

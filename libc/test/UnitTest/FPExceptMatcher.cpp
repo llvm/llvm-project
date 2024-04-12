@@ -8,7 +8,7 @@
 
 #include "FPExceptMatcher.h"
 
-#include "hdr/fenv_t.h"
+#include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include <memory>
 #include <setjmp.h>

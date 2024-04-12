@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/fenv_t.h"
+#include "hdr/types/fenv_t.h"
 #include "src/fenv/fegetenv.h"
 #include "src/fenv/fegetround.h"
 #include "src/fenv/fesetenv.h"

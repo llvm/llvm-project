@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/fexcept_t.h"
+#include "hdr/types/fexcept_t.h"
 #include "src/fenv/fegetexceptflag.h"
 #include "src/fenv/fesetexceptflag.h"
 

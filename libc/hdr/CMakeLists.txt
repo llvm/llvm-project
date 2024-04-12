@@ -42,24 +42,6 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
-  fenv_t
-  HDRS
-    fenv_t.h
-  FULL_BUILD_DEPENDS
-    libc.include.llvm-libc-types.fenv_t
-    libc.incude.fenv
-)
-
-add_proxy_header_library(
-  fexcept_t
-  HDRS
-    fexcept_t.h
-  FULL_BUILD_DEPENDS
-    libc.include.llvm-libc-types.fexcept_t
-    libc.incude.fenv
-)
-
-add_proxy_header_library(
   signal_macros
   HDRS
     signal_macros.h

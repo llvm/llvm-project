@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 
-#include "hdr/fenv_t.h"
+#include "hdr/types/fenv_t.h"
 #include "src/__support/macros/sanitizer.h"
 
 namespace LIBC_NAMESPACE {
