@@ -470,7 +470,7 @@ multiclass VPatNConvertI2FPSDNode_W_RM<SDPatternOperator vop,
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                  GetVTypePredicates<iwti>.Predicates) in
     def : Pat<(fvti.Vector (vop (iwti.Vector iwti.RegClass:$rs1))),
-              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX)
+              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_E"#fvti.SEW)
                   (fvti.Vector (IMPLICIT_DEF)),
                   iwti.RegClass:$rs1,
                   // Value to indicate no rounding mode change in
@@ -1445,7 +1445,7 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
                        !listconcat(GetVTypePredicates<fvti>.Predicates,
                                    GetVTypePredicates<fwti>.Predicates)) in
   def : Pat<(fvti.Vector (fpround (fwti.Vector fwti.RegClass:$rs1))),
-            (!cast<Instruction>("PseudoVFNCVT_F_F_W_"#fvti.LMul.MX)
+            (!cast<Instruction>("PseudoVFNCVT_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW)
                 (fvti.Vector (IMPLICIT_DEF)),
                 fwti.RegClass:$rs1,
                 // Value to indicate no rounding mode change in

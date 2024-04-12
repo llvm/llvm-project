@@ -468,9 +468,9 @@ defm "" : LMULSEWSchedWritesW<"WriteVFWCvtIToFV">;
 defm "" : LMULSchedWritesFW<"WriteVFWCvtFToIV">;
 defm "" : LMULSEWSchedWritesFW<"WriteVFWCvtFToFV">;
 // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
-defm "" : LMULSchedWritesFW<"WriteVFNCvtIToFV">;
+defm "" : LMULSEWSchedWritesFW<"WriteVFNCvtIToFV">;
 defm "" : LMULSchedWritesW<"WriteVFNCvtFToIV">;
-defm "" : LMULSchedWritesFW<"WriteVFNCvtFToFV">;
+defm "" : LMULSEWSchedWritesFW<"WriteVFNCvtFToFV">;
 
 // 14. Vector Reduction Operations
 // The latency of reduction is determined by the size of the read resource.
@@ -694,9 +694,9 @@ defm "" : LMULSEWSchedReadsW<"ReadVFWCvtIToFV">;
 defm "" : LMULSchedReadsFW<"ReadVFWCvtFToIV">;
 defm "" : LMULSEWSchedReadsFW<"ReadVFWCvtFToFV">;
 // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
-defm "" : LMULSchedReadsFW<"ReadVFNCvtIToFV">;
+defm "" : LMULSEWSchedReadsFW<"ReadVFNCvtIToFV">;
 defm "" : LMULSchedReadsW<"ReadVFNCvtFToIV">;
-defm "" : LMULSchedReadsFW<"ReadVFNCvtFToFV">;
+defm "" : LMULSEWSchedReadsFW<"ReadVFNCvtFToFV">;
 
 // 14. Vector Reduction Operations
 // 14.1. Vector Single-Width Integer Reduction Instructions
@@ -922,9 +922,9 @@ defm "" : LMULWriteRes<"WriteVFCvtFToIV", []>;
 defm "" : LMULSEWWriteResW<"WriteVFWCvtIToFV", []>;
 defm "" : LMULWriteResFW<"WriteVFWCvtFToIV", []>;
 defm "" : LMULSEWWriteResFW<"WriteVFWCvtFToFV", []>;
-defm "" : LMULWriteResFW<"WriteVFNCvtIToFV", []>;
+defm "" : LMULSEWWriteResFW<"WriteVFNCvtIToFV", []>;
 defm "" : LMULWriteResW<"WriteVFNCvtFToIV", []>;
-defm "" : LMULWriteResFW<"WriteVFNCvtFToFV", []>;
+defm "" : LMULSEWWriteResFW<"WriteVFNCvtFToFV", []>;
 
 // 14. Vector Reduction Operations
 defm "" : LMULSEWWriteRes<"WriteVIRedV_From", []>;
@@ -1079,9 +1079,9 @@ defm "" : LMULReadAdvance<"ReadVFCvtFToIV", 0>;
 defm "" : LMULSEWReadAdvanceW<"ReadVFWCvtIToFV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWCvtFToIV", 0>;
 defm "" : LMULSEWReadAdvanceFW<"ReadVFWCvtFToFV", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFNCvtIToFV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"SEWReadVFNCvtIToFV", 0>;
 defm "" : LMULReadAdvanceW<"ReadVFNCvtFToIV", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFNCvtFToFV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFNCvtFToFV", 0>;
 
 // 14. Vector Reduction Operations
 def : ReadAdvance<ReadVIRedV, 0>;
