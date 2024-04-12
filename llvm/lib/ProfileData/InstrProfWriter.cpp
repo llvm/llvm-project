@@ -428,14 +428,13 @@ static uint64_t writeMemProfRecords(
     llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
         &MemProfRecordData,
     memprof::MemProfSchema *Schema) {
-  auto RecordWriter =
-      std::make_unique<memprof::RecordWriterTrait>(memprof::Version1);
-  RecordWriter->Schema = Schema;
+  memprof::RecordWriterTrait RecordWriter(memprof::Version1);
+  RecordWriter.Schema = Schema;
   OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
       RecordTableGenerator;
   for (auto &[GUID, Record] : MemProfRecordData) {
     // Insert the key (func hash) and value (memprof record).
-    RecordTableGenerator.insert(GUID, Record, *RecordWriter.get());
+    RecordTableGenerator.insert(GUID, Record, RecordWriter);
   }
   // Release the memory of this MapVector as it is no longer needed.
   MemProfRecordData.clear();
@@ -443,14 +442,13 @@ static uint64_t writeMemProfRecords(
   // The call to Emit invokes RecordWriterTrait::EmitData which destructs
   // the memprof record copies owned by the RecordTableGenerator. This works
   // because the RecordTableGenerator is not used after this point.
-  return RecordTableGenerator.Emit(OS.OS, *RecordWriter);
+  return RecordTableGenerator.Emit(OS.OS, RecordWriter);
 }
 
 // Serialize MemProfFrameData.  Return FrameTableOffset.
 static uint64_t writeMemProfFrames(
     ProfOStream &OS,
     llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
-  auto FrameWriter = std::make_unique<memprof::FrameWriterTrait>();
   OnDiskChainedHashTableGenerator<memprof::FrameWriterTrait>
       FrameTableGenerator;
   for (auto &[FrameId, Frame] : MemProfFrameData) {
@@ -460,7 +458,7 @@ static uint64_t writeMemProfFrames(
   // Release the memory of this MapVector as it is no longer needed.
   MemProfFrameData.clear();
 
-  return FrameTableGenerator.Emit(OS.OS, *FrameWriter);
+  return FrameTableGenerator.Emit(OS.OS);
 }
 
 static Error writeMemProfV0(

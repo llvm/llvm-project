@@ -7588,8 +7588,8 @@ def ext_gnu_ptr_func_arith : Extension<
   InGroup<GNUPointerArith>;
 def err_readonly_message_assignment : Error<
   "assigning to 'readonly' return result of an Objective-C message not allowed">;
-def ext_integer_increment_complex : Extension<
-  "ISO C does not support '++'/'--' on complex integer type %0">;
+def ext_increment_complex : Extension<
+  "'%select{--|++}0' on an object of complex type is a Clang extension">;
 def ext_integer_complement_complex : Extension<
   "ISO C does not support '~' for complex conjugation of %0">;
 def err_nosetter_property_assignment : Error<
