@@ -1733,6 +1733,8 @@ TEST(TypeHints, Links) {
         struct ]]Class {
         };
       ]]};
+
+      $NestedInt[[using NestedInt = Nested<int]]>;
     }
 
     void basic() {
@@ -1747,6 +1749,15 @@ TEST(TypeHints, Links) {
       auto $6[[A]] = Container<ns::Nested<int>::Class<float>&>();
       auto $7[[B]] = Container<ns::Nested<int>::Class<float>&&>();
       auto $8[[C]] = Container<ns::Nested<int>::Class<const Container<int>> *>();
+    }
+
+    namespace nns {
+      $UsingShadow[[using ns::]]NestedInt;
+
+      void aliases() {
+        auto $9[[A]] = Container<NestedInt>();
+        auto $10[[B]] = Container<ns::NestedInt>();
+      }
     }
 
   )cpp");
@@ -1795,6 +1806,14 @@ TEST(TypeHints, Links) {
                       ExpectedHintLabelPiece{"<const "},
                       ExpectedHintLabelPiece{"Container", "Container"},
                       ExpectedHintLabelPiece{"<int>> *>"});
+
+  assertTypeLinkHints(Source, "9", ExpectedHintLabelPiece{": Container<"},
+                      ExpectedHintLabelPiece{"NestedInt", "UsingShadow"},
+                      ExpectedHintLabelPiece{">"});
+
+  assertTypeLinkHints(Source, "10", ExpectedHintLabelPiece{": Container<"},
+                      ExpectedHintLabelPiece{"NestedInt", "NestedInt"},
+                      ExpectedHintLabelPiece{">"});
 }
 
 TEST(DesignatorHints, Basic) {

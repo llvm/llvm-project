@@ -618,6 +618,21 @@ public:
     maybeAddQualifiers();
   }
 
+  void VisitUsingType(const UsingType *UT) {
+    addLabel([&](llvm::raw_ostream &OS) { UT->getFoundDecl()->printName(OS); },
+             [&] {
+               BaseUsingDecl *Introducer = UT->getFoundDecl()->getIntroducer();
+               if (auto *UD = dyn_cast<UsingDecl>(Introducer))
+                 return UD->getSourceRange();
+               return Introducer->getSourceRange();
+             });
+  }
+
+  void VisitTypedefType(const TypedefType *TT) {
+    addLabel([&](llvm::raw_ostream &OS) { TT->getDecl()->printName(OS); },
+             [&] { return TT->getDecl()->getSourceRange(); });
+  }
+
   void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
     maybeAddQualifiers();
     SourceRange Range;
