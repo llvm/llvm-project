@@ -23,14 +23,13 @@ void convertLevelType(SparseTensorEncodingAttr enc, Level lvl,
 
 static std::optional<LogicalResult>
 convertIterSpaceType(IterSpaceType itSp, SmallVectorImpl<Type> &fields) {
-  if (itSp.getSpaceDim() > 1)
-    llvm_unreachable("Not implemented.");
 
   auto idxTp = IndexType::get(itSp.getContext());
   for (Level l = itSp.getLoLvl(); l < itSp.getHiLvl(); l++)
     convertLevelType(itSp.getEncoding(), l, fields);
 
-  // Two indices for lower and upper bound.
+  // Two indices for lower and upper bound (we only need one pair for the last
+  // iteration space).
   fields.append({idxTp, idxTp});
   return success();
 }
@@ -38,9 +37,6 @@ convertIterSpaceType(IterSpaceType itSp, SmallVectorImpl<Type> &fields) {
 static std::optional<LogicalResult>
 convertIteratorType(bool isConvertingLoopBody, IteratorType itTp,
                     SmallVectorImpl<Type> &fields) {
-  if (itTp.getSpaceDim() > 1)
-    llvm_unreachable("Not implemented.");
-
   // The actually Iterator Values (that are updated every iteration).
   auto idxTp = IndexType::get(itTp.getContext());
   // TODO: This assumes there is no batch dimenstion in the sparse tensor.
@@ -63,14 +59,11 @@ public:
   matchAndRewrite(ExtractIterSpaceOp op, OpAdaptor adaptor,
                   OneToNPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    if (op.getSpaceDim() > 1)
-      llvm_unreachable("Not implemented.");
-
     const OneToNTypeMapping &resultMapping = adaptor.getResultMapping();
 
     // Construct the iteration space.
     SparseIterationSpace space(loc, rewriter, op.getTensor(), 0,
-                               op.getLvlRange(), nullptr);
+                               op.getLvlRange(), adaptor.getParentIter());
 
     SmallVector<Value> result = space.toValues();
     rewriter.replaceOp(op, result, resultMapping);
@@ -84,7 +77,7 @@ public:
   LogicalResult
   matchAndRewrite(IterateOp op, OpAdaptor adaptor,
                   OneToNPatternRewriter &rewriter) const override {
-    if (op.getSpaceDim() > 1 || !op.getCrdUsedLvls().empty())
+    if (!op.getCrdUsedLvls().empty())
       llvm_unreachable("Not implemented.");
 
     Location loc = op.getLoc();
@@ -105,8 +98,34 @@ public:
     // FIXME: only works for the first level.
     // it->genInit(rewriter, loc, /*parent*/ nullptr);
     if (it->iteratableByFor()) {
-      // TODO
-      llvm_unreachable("not yet implemented.");
+      auto [lo, hi] = it->genForCond(rewriter, loc);
+      Value step = constantIndex(rewriter, loc, 1);
+      SmallVector<Value> ivs;
+      for (ValueRange inits : adaptor.getInitArgs())
+        llvm::append_range(ivs, inits);
+      scf::ForOp forOp = rewriter.create<scf::ForOp>(loc, lo, hi, step, ivs);
+
+      Block *loopBody = op.getBody();
+      OneToNTypeMapping bodyTypeMapping(loopBody->getArgumentTypes());
+      if (failed(typeConverter->convertSignatureArgs(
+              loopBody->getArgumentTypes(), bodyTypeMapping)))
+        return failure();
+      rewriter.applySignatureConversion(loopBody, bodyTypeMapping);
+
+      forOp.getBody()->erase();
+      Region &dstRegion = forOp.getRegion();
+      rewriter.inlineRegionBefore(op.getRegion(), dstRegion, dstRegion.end());
+
+      auto yieldOp =
+          llvm::cast<sparse_tensor::YieldOp>(forOp.getBody()->getTerminator());
+
+      rewriter.setInsertionPointToEnd(forOp.getBody());
+      // replace sparse_tensor.yield with scf.yield.
+      rewriter.create<scf::YieldOp>(loc, yieldOp.getResults());
+      yieldOp.erase();
+
+      const OneToNTypeMapping &resultMapping = adaptor.getResultMapping();
+      rewriter.replaceOp(op, forOp.getResults(), resultMapping);
     } else {
       SmallVector<Value> ivs;
       llvm::append_range(ivs, it->getCursor());

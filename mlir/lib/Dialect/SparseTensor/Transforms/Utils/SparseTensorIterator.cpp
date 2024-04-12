@@ -182,6 +182,13 @@ public:
     // Use the segHi as the loop upper bound.
     return {p, segHi};
   }
+
+  ValuePair
+  collapseRangeBetween(OpBuilder &b, Location l, ValueRange batchPrefix,
+                       std::pair<Value, Value> parentRange) const override {
+    // Singleton level keeps the same range after collapsing.
+    return parentRange;
+  };
 };
 
 class NOutOfMLevel : public SparseLevel</*hasPosBuf=*/false> {
@@ -1352,20 +1359,20 @@ ValueRange NonEmptySubSectIterator::forwardImpl(OpBuilder &b, Location l) {
 
 mlir::sparse_tensor::SparseIterationSpace::SparseIterationSpace(
     Location l, OpBuilder &b, Value t, unsigned tid,
-    std::pair<Level, Level> lvlRange, const SparseIterator *parentIt)
+    std::pair<Level, Level> lvlRange, ValueRange parentPos)
     : lvls() {
   auto [lvlLo, lvlHi] = lvlRange;
-  assert(lvlHi - lvlLo == 1 && "Not implemented.");
 
-  // SparseTensorType stt = getSparseTensorType(t);
-  for (Level lvl = lvlLo; lvl < lvlHi; lvl++) {
+  Value c0 = C_IDX(0);
+  if (parentPos.empty())
+    parentPos = c0;
+
+  for (Level lvl = lvlLo; lvl < lvlHi; lvl++)
     lvls.emplace_back(makeSparseTensorLevel(b, l, t, tid, lvl));
-    if (parentIt) {
-      llvm_unreachable("Not implemented.");
-    }
-  }
-  // TODO: only works for the first level.
-  bound = lvls.back()->peekRangeAt(b, l, /*batchPrefix=*/{}, C_IDX(0));
+
+  bound = lvls.front()->peekRangeAt(b, l, /*batchPrefix=*/{}, parentPos);
+  for (auto &lvl : getLvlRef().drop_front())
+    bound = lvl->collapseRangeBetween(b, l, /*batchPrefix=*/{}, bound);
 }
 
 SparseIterationSpace mlir::sparse_tensor::SparseIterationSpace::fromValues(
@@ -1463,8 +1470,7 @@ sparse_tensor::makeSynLevelAndIterator(Value sz, unsigned tid, unsigned lvl,
 std::unique_ptr<SparseIterator>
 sparse_tensor::makeSimpleIterator(OpBuilder &b, Location l,
                                   const SparseIterationSpace &iterSpace) {
-  assert(iterSpace.getSpaceDim() == 1);
-
+  // assert(iterSpace.getSpaceDim() == 1);
   std::unique_ptr<SparseIterator> ret;
   if (!iterSpace.isUnique()) {
     // We always dedupliate the non-unique level, but we should optimize it away

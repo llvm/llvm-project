@@ -55,6 +55,12 @@ public:
                                               ValueRange batchPrefix,
                                               ValueRange parentPos) const = 0;
 
+  virtual std::pair<Value, Value>
+  collapseRangeBetween(OpBuilder &b, Location l, ValueRange batchPrefix,
+                       std::pair<Value, Value> parentRange) const {
+    llvm_unreachable("Not Implemented");
+  };
+
   Level getLevel() const { return lvl; }
   LevelType getLT() const { return lt; }
   Value getSize() const { return lvlSize; }
@@ -89,13 +95,12 @@ public:
 
   // Constructs a N-D iteration space.
   SparseIterationSpace(Location loc, OpBuilder &b, Value t, unsigned tid,
-                       std::pair<Level, Level> lvlRange,
-                       const SparseIterator *parentIt);
+                       std::pair<Level, Level> lvlRange, ValueRange parentPos);
 
   // Constructs a 1-D iteration space.
   SparseIterationSpace(Location loc, OpBuilder &b, Value t, unsigned tid,
-                       Level lvl, const SparseIterator *parentIt)
-      : SparseIterationSpace(loc, b, t, tid, {lvl, lvl + 1}, parentIt){};
+                       Level lvl, ValueRange parentPos)
+      : SparseIterationSpace(loc, b, t, tid, {lvl, lvl + 1}, parentPos){};
 
   bool isUnique() const { return lvls.back()->isUnique(); }
 
@@ -117,6 +122,9 @@ public:
   }
 
   const SparseTensorLevel &getLastLvl() const { return *lvls.back(); }
+  ArrayRef<std::unique_ptr<SparseTensorLevel>> getLvlRef() const {
+    return lvls;
+  }
 
   Value getBoundLo() const { return bound.first; }
   Value getBoundHi() const { return bound.second; }
