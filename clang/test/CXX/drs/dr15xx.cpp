@@ -555,7 +555,7 @@ auto DR1579_lambda_invalid = []() -> GenericMoveOnly<char> {
 #endif
 } // end namespace dr1579
 
-namespace dr1584 {
+namespace dr1584 { // dr1584: 7 drafting 2015-05
 #if __cplusplus >= 201103L
   // Deducing function types from cv-qualified types
   template<typename T> void f(const T *); // #dr1584-f
