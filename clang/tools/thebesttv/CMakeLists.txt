@@ -5,6 +5,7 @@ add_clang_tool(thebesttv
     GenICFG.cpp
     ICFG.cpp
     CompilationDatabase.cpp
+    GenAST.cpp
 )
 
 if(NOT TARGET spdlog)

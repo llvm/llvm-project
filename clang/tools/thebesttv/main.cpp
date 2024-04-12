@@ -1,5 +1,6 @@
 #include "CompilationDatabase.h"
 #include "FunctionInfo.h"
+#include "GenAST.h"
 #include "GenICFG.h"
 #include "ICFG.h"
 #include "PathFinder.h"
@@ -628,7 +629,7 @@ int main(int argc, const char **argv) {
         fs::canonical(input["compile_commands"].template get<std::string>());
     logger.info("Compilation database: {}", compile_commands);
     fixCompilationDatabase(compile_commands);
-    Global.cb = getCompilationDatabase(compile_commands);
+    Global.cb = getCompilationDatabaseWithASTEmit(compile_commands);
 
     generateICFG(Global.cb->getAllFiles());
 
