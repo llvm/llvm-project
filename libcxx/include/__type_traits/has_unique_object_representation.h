@@ -25,7 +25,7 @@ struct _LIBCPP_TEMPLATE_VIS has_unique_object_representations
     : public integral_constant<bool, __has_unique_object_representations(_Tp)> {};
 
 template <class _Tp>
-inline constexpr bool has_unique_object_representations_v = has_unique_object_representations<_Tp>::value;
+inline constexpr bool has_unique_object_representations_v = __has_unique_object_representations(_Tp);
 
 #endif
 
