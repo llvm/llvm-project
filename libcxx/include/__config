@@ -120,10 +120,11 @@
 #    define _LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB
 #    define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
 #    define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
-// Override the default return value of exception::what() for
-// bad_function_call::what() with a string that is specific to
-// bad_function_call (see http://wg21.link/LWG2233). This is an ABI break
-// because it changes the vtable layout of bad_function_call.
+// Override the default return value of exception::what() for bad_function_call::what()
+// with a string that is specific to bad_function_call (see http://wg21.link/LWG2233).
+// This is an ABI break on platforms that sign and authenticate vtable function pointers
+// because it changes the mangling of the virtual function located in the vtable, which
+// changes how it gets signed.
 #    define _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
 // Enable optimized version of __do_get_(un)signed which avoids redundant copies.
 #    define _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET

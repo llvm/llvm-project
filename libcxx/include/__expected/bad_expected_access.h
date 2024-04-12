@@ -28,8 +28,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Err>
 class bad_expected_access;
 
-#  if !_LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION
 _LIBCPP_DIAGNOSTIC_PUSH
+#  if !_LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 #  endif
 template <>
@@ -49,9 +49,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL const char* what() const noexcept override { return "bad access to std::expected"; }
 #  endif
 };
-#  if !_LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION
 _LIBCPP_DIAGNOSTIC_POP
-#  endif
 
 template <class _Err>
 class bad_expected_access : public bad_expected_access<void> {
