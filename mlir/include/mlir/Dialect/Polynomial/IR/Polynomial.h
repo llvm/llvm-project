@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
-#define MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
+#ifndef MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
+#define MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
 
 #include <utility>
 
@@ -126,4 +126,4 @@ inline raw_ostream &operator<<(raw_ostream &os, const Polynomial &polynomial) {
 } // namespace polynomial
 } // namespace mlir
 
-#endif // MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
+#endif // MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIAL_H_
