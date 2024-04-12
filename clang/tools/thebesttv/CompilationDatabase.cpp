@@ -23,8 +23,8 @@ getCompilationDatabase(fs::path buildPath) {
 
 void dumpCompileCommand(const CompileCommand &cmd) {
     logger.info("CompileCommand for: {}", cmd.Filename);
-    logger.warn("  dir: {}", cmd.Directory);
-    logger.warn("  cmd: {}", fmt::join(cmd.CommandLine, " "));
+    logger.info("  dir: {}", cmd.Directory);
+    logger.info("  cmd: {}", fmt::join(cmd.CommandLine, " "));
 }
 
 void dumpCompilationDatabase(const CompilationDatabase &cb) {
