@@ -1689,40 +1689,35 @@ static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
 
 static Value *foldSelectInstWithICmpOr(SelectInst &SI, ICmpInst *ICI,
                                        InstCombiner::BuilderTy &Builder) {
-
-  // a > -1 ? 1 : (a | value) --> smin(1, a | value)
-  // a >= 0 ? 1 : (a | value) --> smin(1, a | value)
+  // a > -1 ? 1 : ( a | (+ve)value) --> smin(1, a | (+ve)value)
+  // a < -1 ? ( a | (+ve)value) : 1 --> smin(1, a | (+ve)value)
+  Value *C;
   const APInt *Cmp;
   Value *A = ICI->getOperand(0);
   Value *B = ICI->getOperand(1);
-  Type *Ty = SI.getType();
   Value *TVal = SI.getTrueValue();
   Value *FVal = SI.getFalseValue();
-  Constant *One = ConstantInt::get(Ty, 1);
-  Constant *NegOne = ConstantInt::get(Ty, -1);
-  Constant *Zero = Constant::getNullValue(Ty);
-  CmpInst::Predicate Pred = ICI->getPredicate();
+  ICmpInst::Predicate Pred = ICI->getPredicate();
 
-  if (!match(B, m_APIntAllowUndef(Cmp)))
+  if (!match(B, m_APInt(Cmp)))
     return nullptr;
 
-  // Swap TVal, FVal for Inverse
-  if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SLE)
+  if (Pred == ICmpInst::ICMP_SLT)
     std::swap(TVal, FVal);
 
   if (!(match(TVal, m_One()) || match(TVal, m_Zero()) ||
         match(TVal, m_AllOnes())) ||
-      !match(FVal, m_Or(m_Value(A), m_StrictlyPositive())))
+      !(match(FVal, m_Or(m_Value(A), m_Value(C)))))
     return nullptr;
 
-  if (((Pred == ICmpInst::ICMP_SGT && *Cmp == -1) ||
-       (Pred == ICmpInst::ICMP_SGE && *Cmp == 0)))
-    if (match(TVal, m_One()))
-      return Builder.CreateBinaryIntrinsic(Intrinsic::smin, One, FVal);
-  if (match(TVal, m_Zero()))
-    return Builder.CreateBinaryIntrinsic(Intrinsic::smin, Zero, FVal);
-  if (match(TVal, m_AllOnes()))
-    return Builder.CreateBinaryIntrinsic(Intrinsic::smin, NegOne, FVal);
+  if (!match(C, m_StrictlyPositive()))
+    return nullptr;
+
+  if ((Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGT))
+    if ((match(TVal, m_One()) || match(TVal, m_Zero()) ||
+         match(TVal, m_AllOnes())) &&
+        (Cmp->isAllOnes() || Cmp->isZero()))
+      return Builder.CreateBinaryIntrinsic(Intrinsic::smin, TVal, FVal);
 }
 
 /// Visit a SelectInst that has an ICmpInst as its first operand.
