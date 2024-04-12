@@ -441,7 +441,7 @@ multiclass VPatWConvertI2FPSDNode_V<SDPatternOperator vop,
     let Predicates = !listconcat(GetVTypePredicates<ivti>.Predicates,
                                  GetVTypePredicates<fwti>.Predicates) in
     def : Pat<(fwti.Vector (vop (ivti.Vector ivti.RegClass:$rs1))),
-              (!cast<Instruction>(instruction_name#"_"#ivti.LMul.MX)
+              (!cast<Instruction>(instruction_name#"_"#ivti.LMul.MX#"_E"#ivti.SEW)
                   (fwti.Vector (IMPLICIT_DEF)),
                   ivti.RegClass:$rs1,
                   ivti.AVL, ivti.Log2SEW, TA_MA)>;
