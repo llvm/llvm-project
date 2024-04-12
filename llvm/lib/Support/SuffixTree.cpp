@@ -274,6 +274,11 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
     RS.Length = Length;
     for (unsigned StartIdx : RepeatedSubstringStarts)
       RS.StartIndices.push_back(StartIdx);
+
+    // Sort the start indices so that we can efficiently check if candidates
+    // overlap with each other in MachineOutliner::findCandidates().
+    llvm::sort(RS.StartIndices);
+
     break;
   }
   // At this point, either NewRS is an empty RepeatedSubstring, or it was

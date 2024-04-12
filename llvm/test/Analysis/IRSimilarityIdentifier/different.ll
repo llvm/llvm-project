@@ -14,11 +14,11 @@
 ; CHECK-NEXT:       End Instruction:   store i32 5, ptr %5, align 4
 ; CHECK-NEXT: 2 candidates of length 3.  Found in:
 ; CHECK-NEXT:   Function: turtle, Basic Block: (unnamed)
-; CHECK-NEXT:     Start Instruction:   %b = load i32, ptr %1, align 4
-; CHECK-NEXT:       End Instruction:   %d = load i32, ptr %3, align 4
-; CHECK-NEXT:   Function: turtle, Basic Block: (unnamed)
 ; CHECK-NEXT:     Start Instruction:   %a = load i32, ptr %0, align 4
 ; CHECK-NEXT:       End Instruction:   %c = load i32, ptr %2, align 4
+; CHECK-NEXT:   Function: turtle, Basic Block: (unnamed)
+; CHECK-NEXT:     Start Instruction:   %b = load i32, ptr %1, align 4
+; CHECK-NEXT:       End Instruction:   %d = load i32, ptr %3, align 4
 
 define linkonce_odr void @fish() {
 entry:

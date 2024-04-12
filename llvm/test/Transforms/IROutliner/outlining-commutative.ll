@@ -123,7 +123,7 @@ define void @outline_from_sub1() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @outlined_ir_func_2(ptr [[A]], ptr [[B]], ptr [[C]])
+; CHECK-NEXT:    call void @outlined_ir_func_1(ptr [[A]], ptr [[B]], ptr [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -148,7 +148,7 @@ define void @outline_from_sub2() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @outlined_ir_func_2(ptr [[A]], ptr [[B]], ptr [[C]])
+; CHECK-NEXT:    call void @outlined_ir_func_1(ptr [[A]], ptr [[B]], ptr [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -173,7 +173,7 @@ define void @dontoutline_from_flipped_sub3() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @outlined_ir_func_1(ptr [[A]], ptr [[B]], ptr [[C]])
+; CHECK-NEXT:    call void @outlined_ir_func_2(ptr [[A]], ptr [[B]], ptr [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -198,7 +198,7 @@ define void @dontoutline_from_flipped_sub4() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @outlined_ir_func_1(ptr [[A]], ptr [[B]], ptr [[C]])
+; CHECK-NEXT:    call void @outlined_ir_func_2(ptr [[A]], ptr [[B]], ptr [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -237,9 +237,9 @@ entry:
 ; CHECK-NEXT:    [[AL:%.*]] = load i32, ptr [[ARG0]], align 4
 ; CHECK-NEXT:    [[BL:%.*]] = load i32, ptr [[ARG1]], align 4
 ; CHECK-NEXT:    [[CL:%.*]] = load i32, ptr [[ARG2]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[BL]], [[AL]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[CL]], [[AL]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[CL]], [[BL]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[AL]], [[BL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[AL]], [[CL]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[BL]], [[CL]]
 
 ; CHECK: define internal void @outlined_ir_func_2(ptr [[ARG0:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) #0 {
 ; CHECK: entry_to_outline:
@@ -249,6 +249,6 @@ entry:
 ; CHECK-NEXT:    [[AL:%.*]] = load i32, ptr [[ARG0]], align 4
 ; CHECK-NEXT:    [[BL:%.*]] = load i32, ptr [[ARG1]], align 4
 ; CHECK-NEXT:    [[CL:%.*]] = load i32, ptr [[ARG2]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[AL]], [[BL]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[AL]], [[CL]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[BL]], [[CL]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[BL]], [[AL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[CL]], [[AL]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[CL]], [[BL]]
