@@ -240,6 +240,13 @@ enum LoadDependentFiles {
   eLoadDependentsNo,
 };
 
+/// Useful for callbacks whose return type indicates
+/// whether to continue iteration or short-circuit.
+enum class IterationAction {
+  Continue = 0,
+  Stop,
+};
+
 inline std::string GetStatDescription(lldb_private::StatisticKind K) {
    switch (K) {
    case StatisticKind::ExpressionSuccessful:

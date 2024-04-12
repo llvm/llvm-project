@@ -531,9 +531,7 @@ bool PassManagerImpl::run(Module &M) {
   // RemoveDIs: if a command line flag is given, convert to the
   // DbgVariableRecord representation of debug-info for the duration of these
   // passes.
-  bool shouldConvertDbgInfo = UseNewDbgInfoFormat && !M.IsNewDbgInfoFormat;
-  if (shouldConvertDbgInfo)
-    M.convertToNewDbgValues();
+  ScopedDbgInfoFormatSetter FormatSetter(M, UseNewDbgInfoFormat);
 
   for (ImmutablePass *ImPass : getImmutablePasses())
     Changed |= ImPass->doInitialization(M);
@@ -546,9 +544,6 @@ bool PassManagerImpl::run(Module &M) {
 
   for (ImmutablePass *ImPass : getImmutablePasses())
     Changed |= ImPass->doFinalization(M);
-
-  if (shouldConvertDbgInfo)
-    M.convertFromNewDbgValues();
 
   return Changed;
 }

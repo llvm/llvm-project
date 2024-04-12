@@ -19,6 +19,7 @@
 #include <unordered_map>
 
 namespace llvm {
+class MCSymbol;
 class raw_ostream;
 
 namespace object {
@@ -118,10 +119,12 @@ public:
   /// True if a given \p Address is a function with translation table entry.
   bool isBATFunction(uint64_t Address) const { return Maps.count(Address); }
 
-  /// Returns branch offsets grouped by containing basic block in a given
-  /// function.
-  std::unordered_map<uint32_t, std::vector<uint32_t>>
-  getBFBranches(uint64_t FuncOutputAddress) const;
+  /// For a given \p Symbol in the output binary and known \p InputOffset
+  /// return a corresponding pair of parent BinaryFunction and secondary entry
+  /// point in it.
+  std::pair<const BinaryFunction *, unsigned>
+  translateSymbol(const BinaryContext &BC, const MCSymbol &Symbol,
+                  uint32_t InputOffset) const;
 
 private:
   /// Helper to update \p Map by inserting one or more BAT entries reflecting
@@ -158,6 +161,10 @@ private:
   /// Map a function to its secondary entry points vector
   std::unordered_map<uint64_t, std::vector<uint32_t>> SecondaryEntryPointsMap;
 
+  /// Return a secondary entry point ID for a function located at \p Address and
+  /// \p Offset within that function.
+  unsigned getSecondaryEntryPointId(uint64_t Address, uint32_t Offset) const;
+
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;
 
@@ -181,7 +188,7 @@ public:
       EntryTy(unsigned Index, size_t Hash) : Index(Index), Hash(Hash) {}
     };
 
-    std::unordered_map<uint32_t, EntryTy> Map;
+    std::map<uint32_t, EntryTy> Map;
     const EntryTy &getEntry(uint32_t BBInputOffset) const {
       auto It = Map.find(BBInputOffset);
       assert(It != Map.end());
@@ -206,6 +213,10 @@ public:
     }
 
     size_t getNumBasicBlocks() const { return Map.size(); }
+
+    auto begin() const { return Map.begin(); }
+    auto end() const { return Map.end(); }
+    auto upper_bound(uint32_t Offset) const { return Map.upper_bound(Offset); }
   };
 
   /// Map function output address to its hash and basic blocks hash map.
