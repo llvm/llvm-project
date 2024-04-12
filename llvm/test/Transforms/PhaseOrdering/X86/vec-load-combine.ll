@@ -71,7 +71,7 @@ define noundef <4 x float> @ConvertVectors_ByVal(ptr noundef nonnull align 16 de
 ; AVX-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
 ; AVX-NEXT:    [[VECINIT:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; AVX-NEXT:    [[TMP3:%.*]] = lshr i64 [[V_VAL20]], 32
-; AVX-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; AVX-NEXT:    [[TMP4:%.*]] = trunc nuw i64 [[TMP3]] to i32
 ; AVX-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to float
 ; AVX-NEXT:    [[VECINIT6:%.*]] = insertelement <4 x float> [[VECINIT]], float [[TMP5]], i64 1
 ; AVX-NEXT:    [[TMP6:%.*]] = trunc i64 [[V_VAL421]] to i32

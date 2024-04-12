@@ -1119,6 +1119,8 @@ TemplateDeclInstantiator::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
           : (TemplateArgs.begin() + TemplateArgs.getNumLevels() - 1 -
              D->getTemplateDepth())
                 ->Args);
+  if (InstTemplate.isInvalid())
+    return nullptr;
 
   TypeAliasTemplateDecl *PrevAliasTemplate = nullptr;
   if (getPreviousDeclForInstantiation<TypedefNameDecl>(Pattern)) {
@@ -3231,12 +3233,14 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
     Param = TemplateTemplateParmDecl::Create(
         SemaRef.Context, Owner, D->getLocation(),
         D->getDepth() - TemplateArgs.getNumSubstitutedLevels(),
-        D->getPosition(), D->getIdentifier(), InstParams, ExpandedParams);
+        D->getPosition(), D->getIdentifier(), D->wasDeclaredWithTypename(),
+        InstParams, ExpandedParams);
   else
     Param = TemplateTemplateParmDecl::Create(
         SemaRef.Context, Owner, D->getLocation(),
         D->getDepth() - TemplateArgs.getNumSubstitutedLevels(),
-        D->getPosition(), D->isParameterPack(), D->getIdentifier(), InstParams);
+        D->getPosition(), D->isParameterPack(), D->getIdentifier(),
+        D->wasDeclaredWithTypename(), InstParams);
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited()) {
     NestedNameSpecifierLoc QualifierLoc =
         D->getDefaultArgument().getTemplateQualifierLoc();
@@ -5091,6 +5095,14 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
 
+  Qualifiers ThisTypeQuals;
+  CXXRecordDecl *ThisContext = nullptr;
+  if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Function)) {
+    ThisContext = Method->getParent();
+    ThisTypeQuals = Method->getMethodQualifiers();
+  }
+  CXXThisScopeRAII ThisScope(*this, ThisContext, ThisTypeQuals);
+
   // Introduce a new scope where local variable instantiations will be
   // recorded, unless we're actually a member function within a local
   // class, in which case we need to merge our results with the parent
@@ -5111,10 +5123,10 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     assert(PatternDecl->isDefaulted() &&
            "Special member needs to be defaulted");
     auto PatternSM = getDefaultedFunctionKind(PatternDecl).asSpecialMember();
-    if (!(PatternSM == Sema::CXXCopyConstructor ||
-          PatternSM == Sema::CXXCopyAssignment ||
-          PatternSM == Sema::CXXMoveConstructor ||
-          PatternSM == Sema::CXXMoveAssignment))
+    if (!(PatternSM == CXXSpecialMemberKind::CopyConstructor ||
+          PatternSM == CXXSpecialMemberKind::CopyAssignment ||
+          PatternSM == CXXSpecialMemberKind::MoveConstructor ||
+          PatternSM == CXXSpecialMemberKind::MoveAssignment))
       return;
 
     auto *NewRec = dyn_cast<CXXRecordDecl>(Function->getDeclContext());
