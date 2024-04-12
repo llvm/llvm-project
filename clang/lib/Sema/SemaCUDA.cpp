@@ -358,7 +358,7 @@ resolveCalleeCUDATargetConflict(Sema::CUDAFunctionTarget Target1,
 }
 
 bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
-                                                   CXXSpecialMember CSM,
+                                                   CXXSpecialMemberKind CSM,
                                                    CXXMethodDecl *MemberDecl,
                                                    bool ConstRHS,
                                                    bool Diagnose) {
