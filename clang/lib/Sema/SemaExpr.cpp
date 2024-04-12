@@ -53,6 +53,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -2912,26 +2913,9 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // to get this right here so that we don't end up making a
   // spuriously dependent expression if we're inside a dependent
   // instance method.
-  if (getLangOpts().CPlusPlus && !R.empty() &&
-      (*R.begin())->isCXXClassMember()) {
-    bool MightBeImplicitMember;
-    if (!IsAddressOfOperand)
-      MightBeImplicitMember = true;
-    else if (!SS.isEmpty())
-      MightBeImplicitMember = false;
-    else if (R.isOverloadedResult())
-      MightBeImplicitMember = false;
-    else if (R.isUnresolvableResult())
-      MightBeImplicitMember = true;
-    else
-      MightBeImplicitMember = isa<FieldDecl>(R.getFoundDecl()) ||
-                              isa<IndirectFieldDecl>(R.getFoundDecl()) ||
-                              isa<MSPropertyDecl>(R.getFoundDecl());
-
-    if (MightBeImplicitMember)
-      return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc,
-                                             R, TemplateArgs, S);
-  }
+  if (isPotentialImplicitMemberAccess(SS, R, IsAddressOfOperand))
+    return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs,
+                                           S);
 
   if (TemplateArgs || TemplateKWLoc.isValid()) {
 
@@ -3442,10 +3426,11 @@ static bool ShouldLookupResultBeMultiVersionOverload(const LookupResult &R) {
 
 ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                           LookupResult &R, bool NeedsADL,
-                                          bool AcceptInvalidDecl) {
+                                          bool AcceptInvalidDecl,
+                                          bool NeedUnresolved) {
   // If this is a single, fully-resolved result and we don't need ADL,
   // just build an ordinary singleton decl ref.
-  if (!NeedsADL && R.isSingleResult() &&
+  if (!NeedUnresolved && !NeedsADL && R.isSingleResult() &&
       !R.getAsSingle<FunctionTemplateDecl>() &&
       !ShouldLookupResultBeMultiVersionOverload(R))
     return BuildDeclarationNameExpr(SS, R.getLookupNameInfo(), R.getFoundDecl(),
@@ -3792,28 +3777,6 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
 
   return PredefinedExpr::Create(Context, Loc, ResTy, IK, LangOpts.MicrosoftExt,
                                 SL);
-}
-
-ExprResult Sema::BuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                               SourceLocation LParen,
-                                               SourceLocation RParen,
-                                               TypeSourceInfo *TSI) {
-  return SYCLUniqueStableNameExpr::Create(Context, OpLoc, LParen, RParen, TSI);
-}
-
-ExprResult Sema::ActOnSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                               SourceLocation LParen,
-                                               SourceLocation RParen,
-                                               ParsedType ParsedTy) {
-  TypeSourceInfo *TSI = nullptr;
-  QualType Ty = GetTypeFromParser(ParsedTy, &TSI);
-
-  if (Ty.isNull())
-    return ExprError();
-  if (!TSI)
-    TSI = Context.getTrivialTypeSourceInfo(Ty, LParen);
-
-  return BuildSYCLUniqueStableNameExpr(OpLoc, LParen, RParen, TSI);
 }
 
 ExprResult Sema::ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind) {
@@ -17345,7 +17308,8 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
   if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
     if (const FunctionDecl *F = dyn_cast<FunctionDecl>(CurContext)) {
       CUDAFunctionTarget T = IdentifyCUDATarget(F);
-      if (T == CFT_Global || T == CFT_Device || T == CFT_HostDevice)
+      if (T == CUDAFunctionTarget::Global || T == CUDAFunctionTarget::Device ||
+          T == CUDAFunctionTarget::HostDevice)
         return ExprError(Diag(E->getBeginLoc(), diag::err_va_arg_in_device));
     }
   }
@@ -18981,8 +18945,10 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   // Note that we skip the implicit instantiation of templates that are only
   // used in unused default arguments or by recursive calls to themselves.
   // This is formally non-conforming, but seems reasonable in practice.
-  bool NeedDefinition = !IsRecursiveCall && (OdrUse == OdrUseContext::Used ||
-                                             NeededForConstantEvaluation);
+  bool NeedDefinition =
+      !IsRecursiveCall &&
+      (OdrUse == OdrUseContext::Used ||
+       (NeededForConstantEvaluation && !Func->isPureVirtual()));
 
   // C++14 [temp.expl.spec]p6:
   //   If a template [...] is explicitly specialized then that specialization
@@ -19218,14 +19184,16 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
     auto VarTarget = SemaRef.IdentifyCUDATarget(Var);
     auto UserTarget = SemaRef.IdentifyCUDATarget(FD);
     if (VarTarget == Sema::CVT_Host &&
-        (UserTarget == Sema::CFT_Device || UserTarget == Sema::CFT_HostDevice ||
-         UserTarget == Sema::CFT_Global)) {
+        (UserTarget == CUDAFunctionTarget::Device ||
+         UserTarget == CUDAFunctionTarget::HostDevice ||
+         UserTarget == CUDAFunctionTarget::Global)) {
       // Diagnose ODR-use of host global variables in device functions.
       // Reference of device global variables in host functions is allowed
       // through shadow variables therefore it is not diagnosed.
       if (SemaRef.LangOpts.CUDAIsDevice && !SemaRef.LangOpts.HIPStdPar) {
         SemaRef.targetDiag(Loc, diag::err_ref_bad_target)
-            << /*host*/ 2 << /*variable*/ 1 << Var << UserTarget;
+            << /*host*/ 2 << /*variable*/ 1 << Var
+            << llvm::to_underlying(UserTarget);
         SemaRef.targetDiag(Var->getLocation(),
                            Var->getType().isConstQualified()
                                ? diag::note_cuda_const_var_unpromoted
@@ -19233,8 +19201,8 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
       }
     } else if (VarTarget == Sema::CVT_Device &&
                !Var->hasAttr<CUDASharedAttr>() &&
-               (UserTarget == Sema::CFT_Host ||
-                UserTarget == Sema::CFT_HostDevice)) {
+               (UserTarget == CUDAFunctionTarget::Host ||
+                UserTarget == CUDAFunctionTarget::HostDevice)) {
       // Record a CUDA/HIP device side variable if it is ODR-used
       // by host code. This is done conservatively, when the variable is
       // referenced in any of the following contexts:
@@ -20719,20 +20687,42 @@ void Sema::MarkVariableReferenced(SourceLocation Loc, VarDecl *Var) {
 static void FixDependencyOfIdExpressionsInLambdaWithDependentObjectParameter(
     Sema &SemaRef, ValueDecl *D, Expr *E) {
   auto *ID = dyn_cast<DeclRefExpr>(E);
-  if (!ID || ID->isTypeDependent())
+  if (!ID || ID->isTypeDependent() || !ID->refersToEnclosingVariableOrCapture())
     return;
 
+  // If any enclosing lambda with a dependent explicit object parameter either
+  // explicitly captures the variable by value, or has a capture default of '='
+  // and does not capture the variable by reference, then the type of the DRE
+  // is dependent on the type of that lambda's explicit object parameter.
   auto IsDependent = [&]() {
-    const LambdaScopeInfo *LSI = SemaRef.getCurLambda();
-    if (!LSI)
-      return false;
-    if (!LSI->ExplicitObjectParameter ||
-        !LSI->ExplicitObjectParameter->getType()->isDependentType())
-      return false;
-    if (!LSI->CaptureMap.count(D))
-      return false;
-    const Capture &Cap = LSI->getCapture(D);
-    return !Cap.isCopyCapture();
+    for (auto *Scope : llvm::reverse(SemaRef.FunctionScopes)) {
+      auto *LSI = dyn_cast<sema::LambdaScopeInfo>(Scope);
+      if (!LSI)
+        continue;
+
+      if (LSI->Lambda && !LSI->Lambda->Encloses(SemaRef.CurContext) &&
+          LSI->AfterParameterList)
+        return false;
+
+      const auto *MD = LSI->CallOperator;
+      if (MD->getType().isNull())
+        continue;
+
+      const auto *Ty = MD->getType()->getAs<FunctionProtoType>();
+      if (!Ty || !MD->isExplicitObjectMemberFunction() ||
+          !Ty->getParamType(0)->isDependentType())
+        continue;
+
+      if (auto *C = LSI->CaptureMap.count(D) ? &LSI->getCapture(D) : nullptr) {
+        if (C->isCopyCapture())
+          return true;
+        continue;
+      }
+
+      if (LSI->ImpCaptureStyle == LambdaScopeInfo::ImpCap_LambdaByval)
+        return true;
+    }
+    return false;
   }();
 
   ID->setCapturedByCopyInLambdaWithExplicitObjectParameter(

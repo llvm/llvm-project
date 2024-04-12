@@ -19,11 +19,11 @@ __global__ void __cluster_dims__(4) test_literal_1d() {} //NS-error {{__cluster_
 // CHECK: __attribute__((global)) __attribute__((cluster_dims(constint, constint / 4, 1))) void test_constant()
 __global__ void __cluster_dims__(constint, constint / 4, 1) test_constant() {} //NS-error {{__cluster_dims__ is not supported for this GPU architecture}}
 
-// CHECK: template <int x, int y, int z> __attribute__((cluster_dims(x, y, z))) void test_template()
-template <int x, int y, int z> __cluster_dims__(x, y, z) void test_template(void) {} //NS-error {{__cluster_dims__ is not supported for this GPU architecture}}
+// CHECK: template <int x, int y, int z> void test_template() __attribute__((cluster_dims(x, y, z))) 
+template <int x, int y, int z>  void test_template(void) __cluster_dims__(x, y, z){} //NS-error {{__cluster_dims__ is not supported for this GPU architecture}}
 
-// CHECK: template <int x, int y, int z> __attribute__((cluster_dims(x + constint, y, z))) void test_template_expr()
-template <int x, int y, int z> __cluster_dims__(x + constint, y, z) void test_template_expr(void) {} //NS-error {{__cluster_dims__ is not supported for this GPU architecture}}
+// CHECK: template <int x, int y, int z> void test_template_expr() __attribute__((cluster_dims(x + constint, y, z)))
+template <int x, int y, int z> void test_template_expr(void) __cluster_dims__(x + constint, y, z) {} //NS-error {{__cluster_dims__ is not supported for this GPU architecture}}
 
 //NS-error@+1 {{__cluster_dims__ is not supported for this GPU architecture}}
 __global__ void __cluster_dims__(32, 2, 4) test_too_large_dim_0() {} // common-error {{integer constant expression evaluates to value 32 that cannot be represented in a 4-bit unsigned integer type}}

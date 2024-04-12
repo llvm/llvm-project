@@ -223,7 +223,7 @@ define <2 x i1> @shift_trunc_signbit_test_vec_uses(<2 x i17> %x, ptr %p1, ptr %p
 ; CHECK-LABEL: @shift_trunc_signbit_test_vec_uses(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i17> [[X:%.*]], <i17 4, i17 4>
 ; CHECK-NEXT:    store <2 x i17> [[SH]], ptr [[P1:%.*]], align 8
-; CHECK-NEXT:    [[TR:%.*]] = trunc <2 x i17> [[SH]] to <2 x i13>
+; CHECK-NEXT:    [[TR:%.*]] = trunc nuw <2 x i17> [[SH]] to <2 x i13>
 ; CHECK-NEXT:    store <2 x i13> [[TR]], ptr [[P2:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i17> [[X]], <i17 -1, i17 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -255,7 +255,7 @@ define i1 @shift_trunc_wrong_shift(i32 %x) {
 define i1 @shift_trunc_wrong_cmp(i32 %x) {
 ; CHECK-LABEL: @shift_trunc_wrong_cmp(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i32 [[X:%.*]], 24
-; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[SH]] to i8
+; CHECK-NEXT:    [[TR:%.*]] = trunc nuw i32 [[SH]] to i8
 ; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[TR]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;

@@ -916,14 +916,14 @@ ASTSelectorLookupTrait::ReadKey(const unsigned char* d, unsigned) {
   SelectorTable &SelTable = Reader.getContext().Selectors;
   unsigned N =
       endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
-  IdentifierInfo *FirstII = Reader.getLocalIdentifier(
+  const IdentifierInfo *FirstII = Reader.getLocalIdentifier(
       F, endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d));
   if (N == 0)
     return SelTable.getNullarySelector(FirstII);
   else if (N == 1)
     return SelTable.getUnarySelector(FirstII);
 
-  SmallVector<IdentifierInfo *, 16> Args;
+  SmallVector<const IdentifierInfo *, 16> Args;
   Args.push_back(FirstII);
   for (unsigned I = 1; I != N; ++I)
     Args.push_back(Reader.getLocalIdentifier(
@@ -987,7 +987,7 @@ ASTIdentifierLookupTraitBase::ReadKey(const unsigned char* d, unsigned n) {
 }
 
 /// Whether the given identifier is "interesting".
-static bool isInterestingIdentifier(ASTReader &Reader, IdentifierInfo &II,
+static bool isInterestingIdentifier(ASTReader &Reader, const IdentifierInfo &II,
                                     bool IsModule) {
   bool IsInteresting =
       II.getNotableIdentifierID() != tok::NotableIdentifierKind::not_notable ||
@@ -2229,7 +2229,7 @@ namespace {
 
 } // namespace
 
-void ASTReader::updateOutOfDateIdentifier(IdentifierInfo &II) {
+void ASTReader::updateOutOfDateIdentifier(const IdentifierInfo &II) {
   // Note that we are loading an identifier.
   Deserializing AnIdentifier(this);
 
@@ -2254,11 +2254,11 @@ void ASTReader::updateOutOfDateIdentifier(IdentifierInfo &II) {
   markIdentifierUpToDate(&II);
 }
 
-void ASTReader::markIdentifierUpToDate(IdentifierInfo *II) {
+void ASTReader::markIdentifierUpToDate(const IdentifierInfo *II) {
   if (!II)
     return;
 
-  II->setOutOfDate(false);
+  const_cast<IdentifierInfo *>(II)->setOutOfDate(false);
 
   // Update the generation for this identifier.
   if (getContext().getLangOpts().Modules)
@@ -3794,6 +3794,29 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
               PendingUpdateRecord(ID, D, /*JustLoaded=*/false));
       }
       break;
+
+    case DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD: {
+      if (Record.size() % 3 != 0)
+        return llvm::createStringError(
+            std::errc::illegal_byte_sequence,
+            "invalid DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD block in AST "
+            "file");
+      for (unsigned I = 0, N = Record.size(); I != N; I += 3) {
+        GlobalDeclID ID = getGlobalDeclID(F, Record[I]);
+
+        uint64_t BaseOffset = F.DeclsBlockStartOffset;
+        assert(BaseOffset && "Invalid DeclsBlockStartOffset for module file!");
+        uint64_t LexicalOffset = Record[I + 1] ? BaseOffset + Record[I + 1] : 0;
+        uint64_t VisibleOffset = Record[I + 2] ? BaseOffset + Record[I + 2] : 0;
+
+        DelayedNamespaceOffsetMap[ID] = {LexicalOffset, VisibleOffset};
+
+        assert(!GetExistingDecl(ID) &&
+               "We shouldn't load the namespace in the front of delayed "
+               "namespace lexical and visible block");
+      }
+      break;
+    }
 
     case OBJC_CATEGORIES_MAP:
       if (F.LocalNumObjCCategoriesInMap != 0)
@@ -6626,8 +6649,6 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
              "Invalid data, missing pragma diagnostic states");
       FileID FID = ReadFileID(F, Record, Idx);
       assert(FID.isValid() && "invalid FileID for transition");
-      // FIXME: Remove this once we don't need the side-effects.
-      (void)SourceMgr.getSLocEntryOrNull(FID);
       unsigned Transitions = Record[Idx++];
 
       // Note that we don't need to set up Parent/ParentOffset here, because
@@ -10170,7 +10191,7 @@ void ASTReader::FinishedDeserializing() {
 }
 
 void ASTReader::pushExternalDeclIntoScope(NamedDecl *D, DeclarationName Name) {
-  if (IdentifierInfo *II = Name.getAsIdentifierInfo()) {
+  if (const IdentifierInfo *II = Name.getAsIdentifierInfo()) {
     // Remove any fake results before adding any real ones.
     auto It = PendingFakeLookupResults.find(II);
     if (It != PendingFakeLookupResults.end()) {
@@ -11756,14 +11777,16 @@ void ASTRecordReader::readOMPChildren(OMPChildren *Data) {
 
 OpenACCClause *ASTRecordReader::readOpenACCClause() {
   OpenACCClauseKind ClauseKind = readEnum<OpenACCClauseKind>();
-  // TODO OpenACC: We don't have these used anywhere, but eventually we should
-  // be constructing the Clauses with them, so these attributes can go away at
-  // that point.
-  [[maybe_unused]] SourceLocation BeginLoc = readSourceLocation();
-  [[maybe_unused]] SourceLocation EndLoc = readSourceLocation();
+  SourceLocation BeginLoc = readSourceLocation();
+  SourceLocation EndLoc = readSourceLocation();
 
   switch (ClauseKind) {
-  case OpenACCClauseKind::Default:
+  case OpenACCClauseKind::Default: {
+    SourceLocation LParenLoc = readSourceLocation();
+    OpenACCDefaultClauseKind DCK = readEnum<OpenACCDefaultClauseKind>();
+    return OpenACCDefaultClause::Create(getContext(), DCK, BeginLoc, LParenLoc,
+                                        EndLoc);
+  }
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:

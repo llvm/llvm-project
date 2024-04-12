@@ -95,18 +95,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
-add_object_library(
-  math_utils
-  SRCS
-    math_utils.cpp
-  HDRS
-    math_utils.h
-  DEPENDS
-    libc.hdr.math_macros
-    libc.include.errno
-    libc.src.errno.errno
-)
-
 add_header_library(
   range_reduction
   HDRS
@@ -749,8 +737,6 @@ add_object_library(
     exp_utils.h
   SRCS
     exp_utils.cpp
-  DEPENDS
-    .math_utils
 )
 
 add_entrypoint_object(

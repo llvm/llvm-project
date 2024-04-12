@@ -22,6 +22,7 @@
 #  include <__compare/ordering.h>
 #  include <__compare/three_way_comparable.h>
 #  include <__config>
+#  include <__utility/private_constructor_tag.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -35,9 +36,8 @@ namespace chrono {
 
 class leap_second {
 public:
-  struct __constructor_tag;
   [[nodiscard]]
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr leap_second(__constructor_tag&&, sys_seconds __date, seconds __value)
+  _LIBCPP_HIDE_FROM_ABI explicit constexpr leap_second(__private_constructor_tag, sys_seconds __date, seconds __value)
       : __date_(__date), __value_(__value) {}
 
   _LIBCPP_HIDE_FROM_ABI leap_second(const leap_second&)            = default;

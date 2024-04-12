@@ -39,11 +39,11 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
   int Subtarget = sub;
 }
 
-def GFX13Gen             : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
-def GFX12_10Gen          : GFXGen<isGFX12_10Only, "GFX12_10", "_gfx1210", SIEncodingFamily.GFX12_10>;
-def GFX12PlusNot12_10Gen : GFXGen<isGFX12PlusNot12_10, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
-def GFX12Gen             : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
-def GFX11Gen             : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
+def GFX13Gen         : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
+def GFX12_10Gen      : GFXGen<isGFX12_10Only, "GFX12_10", "_gfx1210", SIEncodingFamily.GFX12_10>;
+def GFX12Not12_10Gen : GFXGen<isGFX12Not12_10, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
+def GFX12Gen         : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
+def GFX11Gen         : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1816,6 +1816,9 @@ multiclass VOP3Only_Real_Base_gfx12_gfx13<bits<10> op> :
 multiclass VOP3Only_Realtriple_t16_gfx12_gfx13<bits<10> op> :
   VOP3Only_Realtriple<GFX12Gen, op>,
   VOP3Only_Realtriple<GFX13Gen, op>;
+
+multiclass VOP3Only_Real_Base_gfx1210<bits<10> op> :
+  VOP3_Real_Base<GFX12_10Gen, op, NAME, 1/*IsSingle*/>;
 
 multiclass VOP3Only_Realtriple_gfx1210<bits<10> op, bit isSingle = 0> :
   VOP3_Realtriple<GFX12_10Gen, op, isSingle>;

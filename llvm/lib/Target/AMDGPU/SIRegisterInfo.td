@@ -1074,7 +1074,7 @@ def VS_32_Lo256 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2
   let HasSGPR = 1;
 }
 
-def VS_64 : SIRegisterClass<"AMDGPU", [i64, f64, v2f32], 32, (add VReg_64, SReg_64)> {
+def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64, SReg_64)> {
   let isAllocatable = 0;
   let HasVGPR = 1;
   let HasSGPR = 1;
@@ -1271,6 +1271,7 @@ def VRegSrc_32 : SrcReg9<VGPR_32, "OPW32">;
 def VRegSrc_64 : SrcReg9<VReg_64, "OPW64">;
 def VRegSrc_96 : SrcReg9<VReg_96, "OPW96">;
 def VRegSrc_128: SrcReg9<VReg_128, "OPW128">;
+def VRegSrc_192: SrcReg9<VReg_192, "OPW192">;
 def VRegSrc_256: SrcReg9<VReg_256, "OPW256">;
 def VRegSrc_512: SrcReg9<VReg_512, "OPW512">;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32, "OPW32">;
@@ -1292,6 +1293,10 @@ def VGPRSrc_64 : RegisterOperand<VReg_64> {
 
 def VGPRSrc_96 : RegisterOperand<VReg_96> {
   let DecoderMethod = "DecodeVReg_96RegisterClass";
+}
+
+def VGPRSrc_192 : RegisterOperand<VReg_192> {
+  let DecoderMethod = "DecodeVReg_192RegisterClass";
 }
 
 def VGPRSrc_16_Lo128 : RegisterOperand<VGPR_16_Lo128> {
