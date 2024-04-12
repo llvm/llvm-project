@@ -767,8 +767,15 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
                             bool DstIsDead) const {
   Register SrcReg = RISCV::X0;
 
-  if (!STI.is64Bit() && !isInt<32>(Val))
-    report_fatal_error("Should only materialize 32-bit constants for RV32");
+  // For RV32, allow a sign or unsigned 32 bit value.
+  if (!STI.is64Bit() && !isInt<32>(Val)) {
+    // If have a uimm32 it will still fit in a register so we can allow it.
+    if (!isUInt<32>(Val))
+      report_fatal_error("Should only materialize 32-bit constants for RV32");
+
+    // Sign extend for generateInstSeq.
+    Val = SignExtend64<32>(Val);
+  }
 
   RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Val, STI);
   assert(!Seq.empty());
