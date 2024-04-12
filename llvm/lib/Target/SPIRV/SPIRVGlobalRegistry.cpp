@@ -23,7 +23,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/TypedPointerType.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 
@@ -61,7 +60,6 @@ SPIRVType *SPIRVGlobalRegistry::assignVectTypeToVReg(
 SPIRVType *SPIRVGlobalRegistry::assignTypeToVReg(
     const Type *Type, Register VReg, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
-
   SPIRVType *SpirvType =
       getOrCreateSPIRVType(Type, MIRBuilder, AccessQual, EmitIR);
   assignSPIRVTypeToVReg(SpirvType, VReg, MIRBuilder.getMF());
@@ -847,7 +845,8 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     return getOpTypeStruct(SType, MIRBuilder, EmitIR);
   }
   if (auto FType = dyn_cast<FunctionType>(Ty)) {
-    SPIRVType *RetTy = findSPIRVType(FType->getReturnType(), MIRBuilder);
+    SPIRVType *RetTy =
+        findSPIRVType(FType->getReturnType(), MIRBuilder);
     SmallVector<SPIRVType *, 4> ParamTypes;
     for (const auto &t : FType->params()) {
       ParamTypes.push_back(findSPIRVType(t, MIRBuilder));

@@ -406,6 +406,19 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
       if (isPointerTy(Op->getType()))
         Ops.push_back(std::make_pair(Op, i));
     }
+  } else if (auto *Ref = dyn_cast<ReturnInst>(I)) {
+    Type *RetTy = F->getReturnType();
+    if (!isPointerTy(RetTy))
+      return;
+    Value *Op = Ref->getReturnValue();
+    if (!Op)
+      return;
+    if (!(KnownElemTy = GR->findDeducedElementType(F))) {
+      if (Type *OpElemTy = GR->findDeducedElementType(Op))
+        GR->addDeducedElementType(F, OpElemTy);
+      return;
+    }
+    Ops.push_back(std::make_pair(Op, 0));
   } else if (auto *Ref = dyn_cast<ICmpInst>(I)) {
     if (!isPointerTy(Ref->getOperand(0)->getType()))
       return;
@@ -426,20 +439,19 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
   if (!KnownElemTy || Ops.size() == 0)
     return;
 
-  Instruction *User = nullptr;
   LLVMContext &Ctx = F->getContext();
   IRBuilder<> B(Ctx);
   for (auto &OpIt : Ops) {
     Value *Op = OpIt.first;
-    // unsigned i = OpIt.second;
+    if (Op->use_empty())
+      continue;
     Type *Ty = GR->findDeducedElementType(Op);
     if (Ty == KnownElemTy)
       continue;
-    if (Op->use_empty() ||
-        !(User = dyn_cast<Instruction>(Op->use_begin()->get())))
-      continue;
-
-    setInsertPointSkippingPhis(B, User->getNextNode());
+    if (Instruction *User = dyn_cast<Instruction>(Op->use_begin()->get()))
+      setInsertPointSkippingPhis(B, User->getNextNode());
+    else
+      B.SetInsertPoint(I);
     Value *OpTyVal = Constant::getNullValue(KnownElemTy);
     Type *OpTy = Op->getType();
     if (!Ty) {
