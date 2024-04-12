@@ -3134,8 +3134,7 @@ SDValue AMDGPUTargetLowering::lowerCTLZResults(SDValue Op,
   if (Opc == ISD::CTLZ_ZERO_UNDEF) {
     NewOp = DAG.getNode(ISD::SHL, SL, MVT::i32, NewOp, NumExtBits);
     NewOp = DAG.getNode(Opc, SL, MVT::i32, NewOp);
-  }
-  else {
+  } else {
     NewOp = DAG.getNode(Opc, SL, MVT::i32, NewOp);
     NewOp = DAG.getNode(ISD::SUB, SL, MVT::i32, NewOp, NumExtBits);
   }
