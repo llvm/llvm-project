@@ -112,7 +112,7 @@ class getVOP1Pat <SDPatternOperator node, VOPProfile P> : LetDummies {
         !if(P.HasOMod,
             [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3OMods P.Src0VT:$src0,
                                                   i1:$clamp, i32:$omod))))],
-            [(set P.DstVT:$vdst, (node P.Src0RC32:$src0))]
+            [(set P.DstVT:$vdst, (node (P.Src0VT P.Src0RC32:$src0)))]
         )
     );
 }

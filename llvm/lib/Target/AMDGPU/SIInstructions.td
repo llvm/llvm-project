@@ -294,6 +294,16 @@ let usesCustomInserter = 1 in {
   (outs SReg_64:$sdst), (ins VReg_64:$src0, SSrc_b32:$src1),
   [(set i64:$sdst, (int_amdgcn_readlane i64:$src0, i32:$src1))]
   >;
+
+  def V_READFIRSTLANE_PSEUDO_B64 : VPseudoInstSI <
+  (outs SReg_64:$sdst), (ins VReg_64:$src0),
+  [(set i64:$sdst, (int_amdgcn_readfirstlane i64:$src0))]
+  >;
+  
+  def V_WRITELANE_PSEUDO_B64 : VPseudoInstSI <
+  (outs VReg_64:$sdst), (ins SReg_64:$src0, SSrc_b32:$src1, VReg_64:$src2),
+  [(set i64:$sdst, (int_amdgcn_writelane i64:$src0, i32:$src1, i64:$src2))]
+  >;
 }
 
 let usesCustomInserter = 1, Defs = [SCC] in {
@@ -3413,7 +3423,7 @@ def : GCNPat<
 // FIXME: Should also do this for readlane, but tablegen crashes on
 // the ignored src1.
 def : GCNPat<
-  (int_amdgcn_readfirstlane (i32 imm:$src)),
+  (i32 (int_amdgcn_readfirstlane (i32 imm:$src))),
   (S_MOV_B32 SReg_32:$src)
 >;
 

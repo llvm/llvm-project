@@ -2177,7 +2177,7 @@ def int_amdgcn_wave_reduce_umax : AMDGPUWaveReduce;
 
 def int_amdgcn_readfirstlane :
   ClangBuiltin<"__builtin_amdgcn_readfirstlane">,
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
+  Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // The lane argument must be uniform across the currently active threads of the
@@ -2192,10 +2192,10 @@ def int_amdgcn_readlane :
 // undefined.
 def int_amdgcn_writelane :
   ClangBuiltin<"__builtin_amdgcn_writelane">,
-  Intrinsic<[llvm_i32_ty], [
-    llvm_i32_ty,    // uniform value to write: returned by the selected lane
-    llvm_i32_ty,    // uniform lane select
-    llvm_i32_ty     // returned by all lanes other than the selected one
+  Intrinsic<[llvm_any_ty], [
+    LLVMMatchType<0>,    // uniform value to write: returned by the selected lane
+    llvm_i32_ty,        // uniform lane select
+    LLVMMatchType<0>     // returned by all lanes other than the selected one
   ],
   [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;

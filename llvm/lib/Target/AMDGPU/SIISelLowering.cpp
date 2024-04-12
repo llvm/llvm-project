@@ -5108,6 +5108,101 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MI.eraseFromParent();
     return BB;
   }
+  case AMDGPU::V_READFIRSTLANE_PSEUDO_B64: {
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    const DebugLoc &DL = MI.getDebugLoc();
+
+    MachineOperand &Dest = MI.getOperand(0);
+    MachineOperand &Src0 = MI.getOperand(1);
+
+    Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+    Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+
+    const TargetRegisterClass *Src0RC = MRI.getRegClass(Src0.getReg());
+
+    const TargetRegisterClass *Src0SubRC =
+        TRI->getSubRegisterClass(Src0RC, AMDGPU::sub0);
+    
+    MachineOperand SrcReg0Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
+
+    MachineOperand SrcReg0Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub1, Src0SubRC);
+
+    MachineInstr *LoHalf = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DestSub0)
+                           .add(SrcReg0Sub0);
+    MachineInstr *HighHalf = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DestSub1)
+                           .add(SrcReg0Sub1);
+    
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
+          .addReg(DestSub0)
+          .addImm(AMDGPU::sub0)
+          .addReg(DestSub1)
+          .addImm(AMDGPU::sub1);
+
+    MI.eraseFromParent();
+    return BB;
+  }
+  case AMDGPU::V_WRITELANE_PSEUDO_B64: {
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    const DebugLoc &DL = MI.getDebugLoc();
+
+    MachineOperand &Dest = MI.getOperand(0);
+    MachineOperand &Src0 = MI.getOperand(1);
+    MachineOperand &Src1 = MI.getOperand(2);
+    MachineOperand &Src2 = MI.getOperand(3);
+
+    Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+    const TargetRegisterClass *Src0RC = MRI.getRegClass(Src0.getReg());
+    const TargetRegisterClass *Src1RC = Src1.isReg()
+                                        ? MRI.getRegClass(Src1.getReg())
+                                        : &AMDGPU::SReg_32RegClass;
+    const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2.getReg());                                     
+    
+    const TargetRegisterClass *Src0SubRC =
+        TRI->getSubRegisterClass(Src0RC, AMDGPU::sub0);
+    
+    MachineOperand SrcReg0Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
+
+    MachineOperand SrcReg0Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub1, Src0SubRC);
+
+    
+    const TargetRegisterClass *Src2SubRC =
+        TRI->getSubRegisterClass(Src2RC, AMDGPU::sub0);
+    
+    MachineOperand SrcReg2Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src2, Src2RC, AMDGPU::sub0, Src2SubRC);
+
+    MachineOperand SrcReg2Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src2, Src2RC, AMDGPU::sub1, Src2SubRC);        
+    
+    
+    MachineInstr *LoHalf = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), DestSub0)
+                           .add(SrcReg0Sub0)
+                           .add(Src1)
+                           .add(SrcReg2Sub0);
+    MachineInstr *HighHalf = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), DestSub1)
+                           .add(SrcReg0Sub1)
+                           .add(Src1)
+                           .add(SrcReg2Sub1);
+    
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
+          .addReg(DestSub0)
+          .addImm(AMDGPU::sub0)
+          .addReg(DestSub1)
+          .addImm(AMDGPU::sub1);
+
+    MI.eraseFromParent();
+    return BB;   
+  }
   case AMDGPU::SI_INIT_M0: {
     BuildMI(*BB, MI.getIterator(), MI.getDebugLoc(),
             TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
