@@ -40,6 +40,7 @@
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaOpenACC.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -793,6 +794,9 @@ public:
   ExprResult TransformParenDependentScopeDeclRefExpr(
       ParenExpr *PE, DependentScopeDeclRefExpr *DRE, bool IsAddressOfOperand,
       TypeSourceInfo **RecoveryTSI);
+
+  ExprResult TransformUnresolvedLookupExpr(UnresolvedLookupExpr *E,
+                                           bool IsAddressOfOperand);
 
   StmtResult TransformOMPExecutableDirective(OMPExecutableDirective *S);
 
@@ -2632,7 +2636,8 @@ public:
                                              SourceLocation LParen,
                                              SourceLocation RParen,
                                              TypeSourceInfo *TSI) {
-    return getSema().BuildSYCLUniqueStableNameExpr(OpLoc, LParen, RParen, TSI);
+    return getSema().SYCL().BuildUniqueStableNameExpr(OpLoc, LParen, RParen,
+                                                      TSI);
   }
 
   /// Build a new predefined expression.
@@ -4034,6 +4039,11 @@ private:
   llvm::SmallVector<OpenACCClause *>
   TransformOpenACCClauseList(OpenACCDirectiveKind DirKind,
                              ArrayRef<const OpenACCClause *> OldClauses);
+
+  OpenACCClause *
+  TransformOpenACCClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                         OpenACCDirectiveKind DirKind,
+                         const OpenACCClause *OldClause);
 };
 
 template <typename Derived>
@@ -11075,12 +11085,43 @@ OMPClause *TreeTransform<Derived>::TransformOMPXBareClause(OMPXBareClause *C) {
 // OpenACC transformation
 //===----------------------------------------------------------------------===//
 template <typename Derived>
+OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
+    ArrayRef<const OpenACCClause *> ExistingClauses,
+    OpenACCDirectiveKind DirKind, const OpenACCClause *OldClause) {
+
+  SemaOpenACC::OpenACCParsedClause ParsedClause(
+      DirKind, OldClause->getClauseKind(), OldClause->getBeginLoc());
+  ParsedClause.setEndLoc(OldClause->getEndLoc());
+
+  if (const auto *WithParms = dyn_cast<OpenACCClauseWithParams>(OldClause))
+    ParsedClause.setLParenLoc(WithParms->getLParenLoc());
+
+  switch (OldClause->getClauseKind()) {
+  case OpenACCClauseKind::Default:
+    // There is nothing to do here as nothing dependent can appear in this
+    // clause. So just set the values so Sema can set the right value.
+    ParsedClause.setDefaultDetails(
+        cast<OpenACCDefaultClause>(OldClause)->getDefaultClauseKind());
+    break;
+  default:
+    assert(false && "Unhandled OpenACC clause in TreeTransform");
+    return nullptr;
+  }
+
+  return getSema().OpenACC().ActOnClause(ExistingClauses, ParsedClause);
+}
+
+template <typename Derived>
 llvm::SmallVector<OpenACCClause *>
 TreeTransform<Derived>::TransformOpenACCClauseList(
     OpenACCDirectiveKind DirKind, ArrayRef<const OpenACCClause *> OldClauses) {
-  // TODO OpenACC: Ensure we loop through the list and transform the individual
-  // clauses.
-  return {};
+  llvm::SmallVector<OpenACCClause *> TransformedClauses;
+  for (const auto *Clause : OldClauses) {
+    if (OpenACCClause *TransformedClause = getDerived().TransformOpenACCClause(
+            TransformedClauses, DirKind, Clause))
+      TransformedClauses.push_back(TransformedClause);
+  }
+  return TransformedClauses;
 }
 
 template <typename Derived>
@@ -11314,7 +11355,11 @@ template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformAddressOfOperand(Expr *E) {
   if (DependentScopeDeclRefExpr *DRE = dyn_cast<DependentScopeDeclRefExpr>(E))
-    return getDerived().TransformDependentScopeDeclRefExpr(DRE, true, nullptr);
+    return getDerived().TransformDependentScopeDeclRefExpr(
+        DRE, /*IsAddressOfOperand=*/true, nullptr);
+  else if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(E))
+    return getDerived().TransformUnresolvedLookupExpr(
+        ULE, /*IsAddressOfOperand=*/true);
   else
     return getDerived().TransformExpr(E);
 }
@@ -13020,10 +13065,16 @@ bool TreeTransform<Derived>::TransformOverloadExprDecls(OverloadExpr *Old,
   return false;
 }
 
-template<typename Derived>
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformUnresolvedLookupExpr(
+    UnresolvedLookupExpr *Old) {
+  return TransformUnresolvedLookupExpr(Old, /*IsAddressOfOperand=*/false);
+}
+
+template <typename Derived>
 ExprResult
-TreeTransform<Derived>::TransformUnresolvedLookupExpr(
-                                                  UnresolvedLookupExpr *Old) {
+TreeTransform<Derived>::TransformUnresolvedLookupExpr(UnresolvedLookupExpr *Old,
+                                                      bool IsAddressOfOperand) {
   LookupResult R(SemaRef, Old->getName(), Old->getNameLoc(),
                  Sema::LookupOrdinaryName);
 
@@ -13055,26 +13106,8 @@ TreeTransform<Derived>::TransformUnresolvedLookupExpr(
     R.setNamingClass(NamingClass);
   }
 
+  // Rebuild the template arguments, if any.
   SourceLocation TemplateKWLoc = Old->getTemplateKeywordLoc();
-
-  // If we have neither explicit template arguments, nor the template keyword,
-  // it's a normal declaration name or member reference.
-  if (!Old->hasExplicitTemplateArgs() && !TemplateKWLoc.isValid()) {
-    NamedDecl *D = R.getAsSingle<NamedDecl>();
-    // In a C++11 unevaluated context, an UnresolvedLookupExpr might refer to an
-    // instance member. In other contexts, BuildPossibleImplicitMemberExpr will
-    // give a good diagnostic.
-    if (D && D->isCXXInstanceMember()) {
-      return SemaRef.BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc, R,
-                                                     /*TemplateArgs=*/nullptr,
-                                                     /*Scope=*/nullptr);
-    }
-
-    return getDerived().RebuildDeclarationNameExpr(SS, R, Old->requiresADL());
-  }
-
-  // If we have template arguments, rebuild them, then rebuild the
-  // templateid expression.
   TemplateArgumentListInfo TransArgs(Old->getLAngleLoc(), Old->getRAngleLoc());
   if (Old->hasExplicitTemplateArgs() &&
       getDerived().TransformTemplateArguments(Old->getTemplateArgs(),
@@ -13084,6 +13117,23 @@ TreeTransform<Derived>::TransformUnresolvedLookupExpr(
     return ExprError();
   }
 
+  // An UnresolvedLookupExpr can refer to a class member. This occurs e.g. when
+  // a non-static data member is named in an unevaluated operand, or when
+  // a member is named in a dependent class scope function template explicit
+  // specialization that is neither declared static nor with an explicit object
+  // parameter.
+  if (SemaRef.isPotentialImplicitMemberAccess(SS, R, IsAddressOfOperand))
+    return SemaRef.BuildPossibleImplicitMemberExpr(
+        SS, TemplateKWLoc, R,
+        Old->hasExplicitTemplateArgs() ? &TransArgs : nullptr,
+        /*S=*/nullptr);
+
+  // If we have neither explicit template arguments, nor the template keyword,
+  // it's a normal declaration name or member reference.
+  if (!Old->hasExplicitTemplateArgs() && !TemplateKWLoc.isValid())
+    return getDerived().RebuildDeclarationNameExpr(SS, R, Old->requiresADL());
+
+  // If we have template arguments, then rebuild the template-id expression.
   return getDerived().RebuildTemplateIdExpr(SS, TemplateKWLoc, R,
                                             Old->requiresADL(), &TransArgs);
 }

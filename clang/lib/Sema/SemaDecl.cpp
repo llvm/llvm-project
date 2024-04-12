@@ -45,6 +45,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/SmallString.h"
@@ -2318,7 +2319,7 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
 ///
 /// \returns The declaration of the named Objective-C class, or NULL if the
 /// class could not be found.
-ObjCInterfaceDecl *Sema::getObjCInterfaceDecl(IdentifierInfo *&Id,
+ObjCInterfaceDecl *Sema::getObjCInterfaceDecl(const IdentifierInfo *&Id,
                                               SourceLocation IdLoc,
                                               bool DoTypoCorrection) {
   // The third "scope" argument is 0 since we aren't enabling lazy built-in
@@ -2972,10 +2973,10 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   else if (const auto *BTFA = dyn_cast<BTFDeclTagAttr>(Attr))
     NewAttr = S.mergeBTFDeclTagAttr(D, *BTFA);
   else if (const auto *NT = dyn_cast<HLSLNumThreadsAttr>(Attr))
-    NewAttr =
-        S.mergeHLSLNumThreadsAttr(D, *NT, NT->getX(), NT->getY(), NT->getZ());
+    NewAttr = S.HLSL().mergeNumThreadsAttr(D, *NT, NT->getX(), NT->getY(),
+                                           NT->getZ());
   else if (const auto *SA = dyn_cast<HLSLShaderAttr>(Attr))
-    NewAttr = S.mergeHLSLShaderAttr(D, *SA, SA->getType());
+    NewAttr = S.HLSL().mergeShaderAttr(D, *SA, SA->getType());
   else if (isa<SuppressAttr>(Attr))
     // Do nothing. Each redeclaration should be suppressed separately.
     NewAttr = nullptr;
@@ -6335,16 +6336,15 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
         if (TST->isDependentType() && TST->isTypeAlias())
           Diag(Loc, diag::ext_alias_template_in_declarative_nns)
               << SpecLoc.getLocalSourceRange();
-      } else if (T->isDecltypeType()) {
+      } else if (T->isDecltypeType() || T->getAsAdjusted<PackIndexingType>()) {
         // C++23 [expr.prim.id.qual]p2:
         //   [...] A declarative nested-name-specifier shall not have a
-        //   decltype-specifier.
+        //   computed-type-specifier.
         //
-        // FIXME: This wording appears to be defective as it does not forbid
-        // declarative nested-name-specifiers with pack-index-specifiers.
-        // See https://github.com/cplusplus/CWG/issues/499.
-        Diag(Loc, diag::err_decltype_in_declarator)
-            << SpecLoc.getTypeLoc().getSourceRange();
+        // CWG2858 changed this from 'decltype-specifier' to
+        // 'computed-type-specifier'.
+        Diag(Loc, diag::err_computed_type_in_declarative_nns)
+            << T->isDecltypeType() << SpecLoc.getTypeLoc().getSourceRange();
       }
     }
   } while ((SpecLoc = SpecLoc.getPrefix()));
@@ -10809,10 +10809,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (getLangOpts().HLSL && D.isFunctionDefinition()) {
     // Any top level function could potentially be specified as an entry.
     if (!NewFD->isInvalidDecl() && S->getDepth() == 0 && Name.isIdentifier())
-      ActOnHLSLTopLevelFunction(NewFD);
+      HLSL().ActOnTopLevelFunction(NewFD);
 
     if (NewFD->hasAttr<HLSLShaderAttr>())
-      CheckHLSLEntryPoint(NewFD);
+      HLSL().CheckEntryPoint(NewFD);
   }
 
   // If this is the first declaration of a library builtin function, add
@@ -11912,8 +11912,14 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
     return false;
   }
 
+  const llvm::Triple &T = S.getASTContext().getTargetInfo().getTriple();
+
   // Target attribute on AArch64 is not used for multiversioning
-  if (NewTA && S.getASTContext().getTargetInfo().getTriple().isAArch64())
+  if (NewTA && T.isAArch64())
+    return false;
+
+  // Target attribute on RISCV is not used for multiversioning
+  if (NewTA && T.isRISCV())
     return false;
 
   if (!OldDecl || !OldDecl->getAsFunction() ||
@@ -12395,12 +12401,22 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   }
 
   // Check if the function definition uses any AArch64 SME features without
-  // having the '+sme' feature enabled.
+  // having the '+sme' feature enabled and warn user if sme locally streaming
+  // function returns or uses arguments with VL-based types.
   if (DeclIsDefn) {
     const auto *Attr = NewFD->getAttr<ArmNewAttr>();
     bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
     bool UsesZA = Attr && Attr->isNewZA();
     bool UsesZT0 = Attr && Attr->isNewZT0();
+
+    if (NewFD->hasAttr<ArmLocallyStreamingAttr>()) {
+      if (NewFD->getReturnType()->isSizelessVectorType() ||
+          llvm::any_of(NewFD->parameters(), [](ParmVarDecl *P) {
+            return P->getOriginalType()->isSizelessVectorType();
+          }))
+        Diag(NewFD->getLocation(),
+             diag::warn_sme_locally_streaming_has_vl_args_returns);
+    }
     if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       UsesSM |=
@@ -12648,125 +12664,6 @@ void Sema::CheckMSVCRTEntryPoint(FunctionDecl *FD) {
     Diag(FD->getLocation(), diag::err_mainlike_template_decl) << FD;
     FD->setInvalidDecl();
   }
-}
-
-void Sema::ActOnHLSLTopLevelFunction(FunctionDecl *FD) {
-  auto &TargetInfo = getASTContext().getTargetInfo();
-
-  if (FD->getName() != TargetInfo.getTargetOpts().HLSLEntry)
-    return;
-
-  StringRef Env = TargetInfo.getTriple().getEnvironmentName();
-  HLSLShaderAttr::ShaderType ShaderType;
-  if (HLSLShaderAttr::ConvertStrToShaderType(Env, ShaderType)) {
-    if (const auto *Shader = FD->getAttr<HLSLShaderAttr>()) {
-      // The entry point is already annotated - check that it matches the
-      // triple.
-      if (Shader->getType() != ShaderType) {
-        Diag(Shader->getLocation(), diag::err_hlsl_entry_shader_attr_mismatch)
-            << Shader;
-        FD->setInvalidDecl();
-      }
-    } else {
-      // Implicitly add the shader attribute if the entry function isn't
-      // explicitly annotated.
-      FD->addAttr(HLSLShaderAttr::CreateImplicit(Context, ShaderType,
-                                                 FD->getBeginLoc()));
-    }
-  } else {
-    switch (TargetInfo.getTriple().getEnvironment()) {
-    case llvm::Triple::UnknownEnvironment:
-    case llvm::Triple::Library:
-      break;
-    default:
-      llvm_unreachable("Unhandled environment in triple");
-    }
-  }
-}
-
-void Sema::CheckHLSLEntryPoint(FunctionDecl *FD) {
-  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
-  assert(ShaderAttr && "Entry point has no shader attribute");
-  HLSLShaderAttr::ShaderType ST = ShaderAttr->getType();
-
-  switch (ST) {
-  case HLSLShaderAttr::Pixel:
-  case HLSLShaderAttr::Vertex:
-  case HLSLShaderAttr::Geometry:
-  case HLSLShaderAttr::Hull:
-  case HLSLShaderAttr::Domain:
-  case HLSLShaderAttr::RayGeneration:
-  case HLSLShaderAttr::Intersection:
-  case HLSLShaderAttr::AnyHit:
-  case HLSLShaderAttr::ClosestHit:
-  case HLSLShaderAttr::Miss:
-  case HLSLShaderAttr::Callable:
-    if (const auto *NT = FD->getAttr<HLSLNumThreadsAttr>()) {
-      DiagnoseHLSLAttrStageMismatch(NT, ST,
-                                    {HLSLShaderAttr::Compute,
-                                     HLSLShaderAttr::Amplification,
-                                     HLSLShaderAttr::Mesh});
-      FD->setInvalidDecl();
-    }
-    break;
-
-  case HLSLShaderAttr::Compute:
-  case HLSLShaderAttr::Amplification:
-  case HLSLShaderAttr::Mesh:
-    if (!FD->hasAttr<HLSLNumThreadsAttr>()) {
-      Diag(FD->getLocation(), diag::err_hlsl_missing_numthreads)
-          << HLSLShaderAttr::ConvertShaderTypeToStr(ST);
-      FD->setInvalidDecl();
-    }
-    break;
-  }
-
-  for (ParmVarDecl *Param : FD->parameters()) {
-    if (const auto *AnnotationAttr = Param->getAttr<HLSLAnnotationAttr>()) {
-      CheckHLSLSemanticAnnotation(FD, Param, AnnotationAttr);
-    } else {
-      // FIXME: Handle struct parameters where annotations are on struct fields.
-      // See: https://github.com/llvm/llvm-project/issues/57875
-      Diag(FD->getLocation(), diag::err_hlsl_missing_semantic_annotation);
-      Diag(Param->getLocation(), diag::note_previous_decl) << Param;
-      FD->setInvalidDecl();
-    }
-  }
-  // FIXME: Verify return type semantic annotation.
-}
-
-void Sema::CheckHLSLSemanticAnnotation(
-    FunctionDecl *EntryPoint, const Decl *Param,
-    const HLSLAnnotationAttr *AnnotationAttr) {
-  auto *ShaderAttr = EntryPoint->getAttr<HLSLShaderAttr>();
-  assert(ShaderAttr && "Entry point has no shader attribute");
-  HLSLShaderAttr::ShaderType ST = ShaderAttr->getType();
-
-  switch (AnnotationAttr->getKind()) {
-  case attr::HLSLSV_DispatchThreadID:
-  case attr::HLSLSV_GroupIndex:
-    if (ST == HLSLShaderAttr::Compute)
-      return;
-    DiagnoseHLSLAttrStageMismatch(AnnotationAttr, ST,
-                                  {HLSLShaderAttr::Compute});
-    break;
-  default:
-    llvm_unreachable("Unknown HLSLAnnotationAttr");
-  }
-}
-
-void Sema::DiagnoseHLSLAttrStageMismatch(
-    const Attr *A, HLSLShaderAttr::ShaderType Stage,
-    std::initializer_list<HLSLShaderAttr::ShaderType> AllowedStages) {
-  SmallVector<StringRef, 8> StageStrings;
-  llvm::transform(AllowedStages, std::back_inserter(StageStrings),
-                  [](HLSLShaderAttr::ShaderType ST) {
-                    return StringRef(
-                        HLSLShaderAttr::ConvertShaderTypeToStr(ST));
-                  });
-  Diag(A->getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
-      << A << HLSLShaderAttr::ConvertShaderTypeToStr(Stage)
-      << (AllowedStages.size() != 1) << join(StageStrings, ", ");
 }
 
 bool Sema::CheckForConstantInitializer(Expr *Init, QualType DclT) {
@@ -15297,7 +15194,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
   QualType parmDeclType = TInfo->getType();
 
   // Check for redeclaration of parameters, e.g. int foo(int x, int x);
-  IdentifierInfo *II = D.getIdentifier();
+  const IdentifierInfo *II = D.getIdentifier();
   if (II) {
     LookupResult R(*this, II, D.getIdentifierLoc(), LookupOrdinaryName,
                    ForVisibleRedeclaration);
@@ -15449,9 +15346,9 @@ QualType Sema::AdjustParameterTypeForObjCAutoRefCount(QualType T,
 }
 
 ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
-                                  SourceLocation NameLoc, IdentifierInfo *Name,
-                                  QualType T, TypeSourceInfo *TSInfo,
-                                  StorageClass SC) {
+                                  SourceLocation NameLoc,
+                                  const IdentifierInfo *Name, QualType T,
+                                  TypeSourceInfo *TSInfo, StorageClass SC) {
   // In ARC, infer a lifetime qualifier for appropriate parameter types.
   if (getLangOpts().ObjCAutoRefCount &&
       T.getObjCLifetime() == Qualifiers::OCL_None &&
@@ -18541,8 +18438,9 @@ void Sema::ActOnTagDefinitionError(Scope *S, Decl *TagD) {
 
 // Note that FieldName may be null for anonymous bitfields.
 ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
-                                IdentifierInfo *FieldName, QualType FieldTy,
-                                bool IsMsStruct, Expr *BitWidth) {
+                                const IdentifierInfo *FieldName,
+                                QualType FieldTy, bool IsMsStruct,
+                                Expr *BitWidth) {
   assert(BitWidth);
   if (BitWidth->containsErrors())
     return ExprError();
@@ -18651,7 +18549,7 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
     return nullptr;
   }
 
-  IdentifierInfo *II = D.getIdentifier();
+  const IdentifierInfo *II = D.getIdentifier();
   SourceLocation Loc = DeclStart;
   if (II) Loc = D.getIdentifierLoc();
 
@@ -18752,7 +18650,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
                                 SourceLocation TSSL,
                                 AccessSpecifier AS, NamedDecl *PrevDecl,
                                 Declarator *D) {
-  IdentifierInfo *II = Name.getAsIdentifierInfo();
+  const IdentifierInfo *II = Name.getAsIdentifierInfo();
   bool InvalidDecl = false;
   if (D) InvalidDecl = D->isInvalidType();
 
@@ -19012,7 +18910,7 @@ TranslateIvarVisibility(tok::ObjCKeywordKind ivarVisibility) {
 Decl *Sema::ActOnIvar(Scope *S, SourceLocation DeclStart, Declarator &D,
                       Expr *BitWidth, tok::ObjCKeywordKind Visibility) {
 
-  IdentifierInfo *II = D.getIdentifier();
+  const IdentifierInfo *II = D.getIdentifier();
   SourceLocation Loc = DeclStart;
   if (II) Loc = D.getIdentifierLoc();
 

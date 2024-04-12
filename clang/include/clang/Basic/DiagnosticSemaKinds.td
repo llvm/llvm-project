@@ -2402,10 +2402,6 @@ def err_selected_explicit_constructor : Error<
 def note_explicit_ctor_deduction_guide_here : Note<
   "explicit %select{constructor|deduction guide}0 declared here">;
 
-// C++11 decltype
-def err_decltype_in_declarator : Error<
-    "'decltype' cannot be used to name a declaration">;
-
 // C++11 auto
 def warn_cxx98_compat_auto_type_specifier : Warning<
   "'auto' type specifier is incompatible with C++98">,
@@ -3755,6 +3751,16 @@ def err_sme_definition_using_za_in_non_sme_target : Error<
   "function using ZA state requires 'sme'">;
 def err_sme_definition_using_zt0_in_non_sme2_target : Error<
   "function using ZT0 state requires 'sme2'">;
+def warn_sme_streaming_pass_return_vl_to_non_streaming : Warning<
+  "passing a VL-dependent argument to/from a function that has a different"
+  " streaming-mode. The streaming and non-streaming vector lengths may be"
+  " different">,
+  InGroup<AArch64SMEAttributes>, DefaultIgnore;
+def warn_sme_locally_streaming_has_vl_args_returns : Warning<
+  "passing/returning a VL-dependent argument to/from a __arm_locally_streaming"
+  " function. The streaming and non-streaming vector"
+  " lengths may be different">,
+  InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
 def err_sme_streaming_cannot_be_multiversioned : Error<
@@ -8303,6 +8309,9 @@ def ext_template_after_declarative_nns : ExtWarn<
 def ext_alias_template_in_declarative_nns : ExtWarn<
   "a declarative nested name specifier cannot name an alias template">,
   InGroup<DiagGroup<"alias-template-in-declaration-name">>;
+def err_computed_type_in_declarative_nns  : Error<
+  "a %select{pack indexing|'decltype'}0 specifier cannot be used in "
+  "a declarative nested name specifier">;
 
 def err_no_typeid_with_fno_rtti : Error<
   "use of typeid requires -frtti">;
@@ -12255,6 +12264,10 @@ def err_acc_construct_appertainment
             "be used in a statement context">;
 def err_acc_clause_appertainment
     : Error<"OpenACC '%1' clause is not valid on '%0' directive">;
+def err_acc_duplicate_clause_disallowed
+    : Error<"OpenACC '%1' clause cannot appear more than once on a '%0' "
+            "directive">;
+def note_acc_previous_clause_here : Note<"previous clause is here">;
 def err_acc_branch_in_out_compute_construct
     : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
             "OpenACC Compute Construct">;

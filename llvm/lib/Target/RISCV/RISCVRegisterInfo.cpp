@@ -210,8 +210,7 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       unsigned Opc = NumOfVReg == 2 ? RISCV::SH1ADD :
         (NumOfVReg == 4 ? RISCV::SH2ADD : RISCV::SH3ADD);
       BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
-          .addReg(ScratchReg, RegState::Kill)
-          .addReg(SrcReg, getKillRegState(KillSrcReg))
+          .addReg(ScratchReg, RegState::Kill).addReg(SrcReg)
           .setMIFlag(Flag);
     } else {
       TII->mulImm(MF, MBB, II, DL, ScratchReg, NumOfVReg, Flag);
