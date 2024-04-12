@@ -837,23 +837,14 @@ static bool isCyclic(SmallVector<T> xs, int64_t cycleLen) {
   return true;
 }
 
-static SmallVector<int64_t> constructShuffles(int64_t inputSize,
-                                              int64_t numCycles,
+static SmallVector<int64_t> constructShuffles(int64_t numCycles,
                                               int64_t cycleLen, int64_t idx) {
-  // If idx == 1, then the first operand of the shuffle will be the mask which
-  // will have the original size. So we need to step through the mask with a
-  // stride of cycleSize.
-  // When idx > 1, then the first operand will be the size of (idx * cycleSize)
-  // and so we take the first idx elements of the input and then append the
-  // strided mask value.
-  int64_t inputStride = idx == 1 ? cycleLen : idx;
-
   SmallVector<int64_t> shuffles;
   for (int64_t cycle = 0; cycle < numCycles; cycle++) {
     for (int64_t inputIdx = 0; inputIdx < idx; inputIdx++) {
-      shuffles.push_back(cycle * inputStride + inputIdx);
+      shuffles.push_back(cycle * idx + inputIdx);
     }
-    shuffles.push_back(inputSize + cycle * cycleLen + idx);
+    shuffles.push_back(numCycles * idx + cycle);
   }
   return shuffles;
 }
@@ -917,47 +908,31 @@ Value BitCastRewriter::splatRewriteStep(
     PatternRewriter &rewriter, Location loc, Value initialValue,
     Value runningResult, const BitCastRewriter::Metadata &metadata) {
 
-  // Initial result will be the Shifted Mask which will have the shuffles size.
-  int64_t inputSize = metadata.shuffles.size();
-  int64_t numCycles = inputSize / cycleLen;
-
-  auto shuffleOp = rewriter.create<vector::ShuffleOp>(
-      loc, initialValue, initialValue, metadata.shuffles);
-
-  // Intersect with the mask.
-  VectorType shuffledVectorType = shuffleOp.getResultVectorType();
-  auto constOp = rewriter.create<arith::ConstantOp>(
-      loc, DenseElementsAttr::get(shuffledVectorType, metadata.masks));
-  Value andValue = rewriter.create<arith::AndIOp>(loc, shuffleOp, constOp);
-
+  int64_t numCycles = metadata.shuffles.size() / cycleLen;
+  ShapedType vectorType = dyn_cast<ShapedType>(initialValue.getType());
   Value result;
   for (int64_t idx = 0; idx < cycleLen; idx++) {
+    // Intersect with the mask.
+    auto constOp = rewriter.create<arith::ConstantOp>(
+        loc, DenseElementsAttr::get(vectorType, metadata.masks[idx]));
+    Value andValue = rewriter.create<arith::AndIOp>(loc, initialValue, constOp);
+
     auto shiftRightConstantOp = rewriter.create<arith::ConstantOp>(
-        loc, SplatElementsAttr::get(shuffledVectorType,
-                                    metadata.shiftRightAmounts[idx]));
+        loc,
+        SplatElementsAttr::get(vectorType, metadata.shiftRightAmounts[idx]));
     Value shiftedRight =
         rewriter.create<arith::ShRUIOp>(loc, andValue, shiftRightConstantOp);
 
     auto shiftLeftConstantOp = rewriter.create<arith::ConstantOp>(
-        loc, SplatElementsAttr::get(shuffledVectorType,
-                                    metadata.shiftLeftAmounts[idx]));
+        loc,
+        SplatElementsAttr::get(vectorType, metadata.shiftLeftAmounts[idx]));
     Value shiftedLeft =
         rewriter.create<arith::ShLIOp>(loc, shiftedRight, shiftLeftConstantOp);
 
-    if (result) {
-      SmallVector<int64_t> shuffles =
-          constructShuffles(inputSize, numCycles, cycleLen, idx);
-      result = rewriter.create<vector::ShuffleOp>(loc, result, shiftedLeft,
-                                                  shuffles);
-
-      // After the first shuffle in the chain, the size of the input result will
-      // grow as we append more shuffles together to reconstruct the
-      // shuffledVectorType size. Each iteration they will retain numCycles more
-      // elements.
-      inputSize = numCycles * (idx + 1);
-    } else {
-      result = shiftedLeft;
-    }
+    SmallVector<int64_t> shuffles = constructShuffles(numCycles, cycleLen, idx);
+    result = result ? rewriter.create<vector::ShuffleOp>(loc, result,
+                                                         shiftedLeft, shuffles)
+                    : shiftedLeft;
   }
 
   return result;
