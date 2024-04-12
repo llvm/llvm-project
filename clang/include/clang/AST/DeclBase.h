@@ -533,7 +533,9 @@ public:
     return AccessSpecifier(Access);
   }
 
-  bool hasAttrs() const { return DeclCtxWithInvalidDeclAndHasAttrs.getPointer().getInt(); }
+  bool hasAttrs() const {
+    return DeclCtxWithInvalidDeclAndHasAttrs.getPointer().getInt();
+  }
 
   void setAttrs(const AttrVec& Attrs) {
     return setAttrsImpl(Attrs, getASTContext());
@@ -562,7 +564,8 @@ public:
   }
 
   template <typename... Ts> void dropAttrs() {
-    if (!hasAttrs()) return;
+    if (!hasAttrs())
+      return;
 
     AttrVec &Vec = getAttrs();
     llvm::erase_if(Vec, [](Attr *A) { return isa<Ts...>(A); });
