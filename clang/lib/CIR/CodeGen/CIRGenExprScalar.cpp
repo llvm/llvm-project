@@ -225,7 +225,8 @@ public:
     if (E->isGLValue())
       llvm_unreachable("NYI");
 
-    llvm_unreachable("NYI");
+    // Otherwise, assume the mapping is the scalar directly.
+    return CGF.getOrCreateOpaqueRValueMapping(E).getScalarVal();
   }
 
   /// Emits the address of the l-value, then loads and returns the result.
