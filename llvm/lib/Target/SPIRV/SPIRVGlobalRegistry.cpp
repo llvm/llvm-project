@@ -845,8 +845,7 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     return getOpTypeStruct(SType, MIRBuilder, EmitIR);
   }
   if (auto FType = dyn_cast<FunctionType>(Ty)) {
-    SPIRVType *RetTy =
-        findSPIRVType(FType->getReturnType(), MIRBuilder);
+    SPIRVType *RetTy = findSPIRVType(FType->getReturnType(), MIRBuilder);
     SmallVector<SPIRVType *, 4> ParamTypes;
     for (const auto &t : FType->params()) {
       ParamTypes.push_back(findSPIRVType(t, MIRBuilder));
