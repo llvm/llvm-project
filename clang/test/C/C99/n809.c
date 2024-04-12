@@ -106,15 +106,13 @@ void func(void) {
 #pragma clang diagnostic warning "-Wpedantic"
   // Increment and decrement operators have a constraint that their operand be
   // a real type; Clang supports this as an extension on complex types as well.
-  // FIXME: the diagnostic message says "on complex integer type" but then
-  // specifies the type as _Complex float. Oops.
   _Complex float cf = 0.0f;
 
-  cf++; // expected-warning {{ISO C does not support '++'/'--' on complex integer type '_Complex float'}}
-  ++cf; // expected-warning {{ISO C does not support '++'/'--' on complex integer type '_Complex float'}}
+  cf++; // expected-warning {{'++' on an object of complex type is a Clang extension}}
+  ++cf; // expected-warning {{'++' on an object of complex type is a Clang extension}}
 
-  cf--; // expected-warning {{ISO C does not support '++'/'--' on complex integer type '_Complex float'}}
-  --cf; // expected-warning {{ISO C does not support '++'/'--' on complex integer type '_Complex float'}}
+  cf--; // expected-warning {{'--' on an object of complex type is a Clang extension}}
+  --cf; // expected-warning {{'--' on an object of complex type is a Clang extension}}
 
   // However, unary + and - are fine, as is += 1.
   (void)-cf;
