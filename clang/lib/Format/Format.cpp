@@ -4147,4 +4147,3 @@ bool isClangFormatOff(StringRef Comment) {
 
 } // namespace format
 } // namespace clang
-                    

@@ -1461,4 +1461,3 @@ TEST(ConfigParseTest, GetStyleOfSpecificFile) {
 } // namespace
 } // namespace format
 } // namespace clang
-                    
