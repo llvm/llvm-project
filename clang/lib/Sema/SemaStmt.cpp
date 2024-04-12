@@ -4575,8 +4575,8 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
 
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
-    CUDA().CUDADiagIfDeviceCode(TryLoc, diag::err_cuda_device_exceptions)
-        << "try" << llvm::to_underlying(CUDA().CurrentCUDATarget());
+    CUDA().DiagIfDeviceCode(TryLoc, diag::err_cuda_device_exceptions)
+        << "try" << llvm::to_underlying(CUDA().CurrentTarget());
 
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(TryLoc, diag::err_omp_simd_region_cannot_use_stmt) << "try";

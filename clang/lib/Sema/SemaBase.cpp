@@ -71,8 +71,8 @@ Sema::SemaDiagnosticBuilder SemaBase::Diag(SourceLocation Loc, unsigned DiagID,
   }
 
   SemaDiagnosticBuilder DB = getLangOpts().CUDAIsDevice
-                                 ? SemaRef.CUDA().CUDADiagIfDeviceCode(Loc, DiagID)
-                                 : SemaRef.CUDA().CUDADiagIfHostCode(Loc, DiagID);
+                                 ? SemaRef.CUDA().DiagIfDeviceCode(Loc, DiagID)
+                                 : SemaRef.CUDA().DiagIfHostCode(Loc, DiagID);
   SetIsLastErrorImmediate(DB.isImmediate());
   return DB;
 }

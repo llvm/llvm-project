@@ -885,8 +885,8 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
 
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
-    CUDA().CUDADiagIfDeviceCode(OpLoc, diag::err_cuda_device_exceptions)
-        << "throw" << llvm::to_underlying(CUDA().CurrentCUDATarget());
+    CUDA().DiagIfDeviceCode(OpLoc, diag::err_cuda_device_exceptions)
+        << "throw" << llvm::to_underlying(CUDA().CurrentTarget());
 
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
@@ -1709,7 +1709,7 @@ bool Sema::isUsualDeallocationFunction(const CXXMethodDecl *Method) {
   // [CUDA] Ignore this function, if we can't call it.
   const FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true);
   if (getLangOpts().CUDA) {
-    auto CallPreference = CUDA().IdentifyCUDAPreference(Caller, Method);
+    auto CallPreference = CUDA().IdentifyPreference(Caller, Method);
     // If it's not callable at all, it's not the right function.
     if (CallPreference < SemaCUDA::CFP_WrongSide)
       return false;
@@ -1719,7 +1719,7 @@ bool Sema::isUsualDeallocationFunction(const CXXMethodDecl *Method) {
           Method->getDeclContext()->lookup(Method->getDeclName());
       for (const auto *D : R) {
         if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-          if (CUDA().IdentifyCUDAPreference(Caller, FD) > SemaCUDA::CFP_WrongSide)
+          if (CUDA().IdentifyPreference(Caller, FD) > SemaCUDA::CFP_WrongSide)
             return false;
         }
       }
@@ -1738,7 +1738,7 @@ bool Sema::isUsualDeallocationFunction(const CXXMethodDecl *Method) {
   return llvm::none_of(PreventedBy, [&](const FunctionDecl *FD) {
     assert(FD->getNumParams() == 1 &&
            "Only single-operand functions should be in PreventedBy");
-    return CUDA().IdentifyCUDAPreference(Caller, FD) >= SemaCUDA::CFP_HostDevice;
+    return CUDA().IdentifyPreference(Caller, FD) >= SemaCUDA::CFP_HostDevice;
   });
 }
 
@@ -1801,7 +1801,7 @@ namespace {
 
       // In CUDA, determine how much we'd like / dislike to call this.
       if (S.getLangOpts().CUDA)
-        CUDAPref = S.CUDA().IdentifyCUDAPreference(
+        CUDAPref = S.CUDA().IdentifyPreference(
             S.getCurFunctionDecl(/*AllowLambda=*/true), FD);
     }
 
@@ -2957,7 +2957,7 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
     }
 
     if (getLangOpts().CUDA)
-      CUDA().EraseUnwantedCUDAMatches(getCurFunctionDecl(/*AllowLambda=*/true),
+      CUDA().EraseUnwantedMatches(getCurFunctionDecl(/*AllowLambda=*/true),
                                Matches);
   } else {
     // C++1y [expr.new]p22:

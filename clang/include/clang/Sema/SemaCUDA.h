@@ -39,14 +39,14 @@ public:
   /// Increments our count of the number of times we've seen a pragma forcing
   /// functions to be __host__ __device__.  So long as this count is greater
   /// than zero, all functions encountered will be __host__ __device__.
-  void PushForceCUDAHostDevice();
+  void PushForceHostDevice();
 
   /// Decrements our count of the number of times we've seen a pragma forcing
   /// functions to be __host__ __device__.  Returns false if the count is 0
   /// before incrementing, so you can emit an error.
-  bool PopForceCUDAHostDevice();
+  bool PopForceHostDevice();
 
-  ExprResult ActOnCUDAExecConfigExpr(Scope *S, SourceLocation LLLLoc,
+  ExprResult ActOnExecConfigExpr(Scope *S, SourceLocation LLLLoc,
                                      MultiExprArg ExecConfig,
                                      SourceLocation GGGLoc);
 
@@ -57,7 +57,7 @@ public:
     SourceLocation Loc;
   };
 
-  /// FunctionDecls and SourceLocations for which CheckCUDACall has emitted a
+  /// FunctionDecls and SourceLocations for which CheckCall has emitted a
   /// (maybe deferred) "bad call" diagnostic.  We use this to avoid emitting the
   /// same deferred diag twice.
   llvm::DenseSet<FunctionDeclAndLoc> LocsWithCUDACallDiags;
@@ -85,26 +85,26 @@ public:
   /// Example usage:
   ///
   ///  // Variable-length arrays are not allowed in CUDA device code.
-  ///  if (CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget())
+  ///  if (DiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentTarget())
   ///    return ExprError();
   ///  // Otherwise, continue parsing as normal.
-  SemaDiagnosticBuilder CUDADiagIfDeviceCode(SourceLocation Loc,
+  SemaDiagnosticBuilder DiagIfDeviceCode(SourceLocation Loc,
                                              unsigned DiagID);
 
   /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
   /// context is "used as host code".
   ///
-  /// Same as CUDADiagIfDeviceCode, with "host" and "device" switched.
-  SemaDiagnosticBuilder CUDADiagIfHostCode(SourceLocation Loc, unsigned DiagID);
+  /// Same as DiagIfDeviceCode, with "host" and "device" switched.
+  SemaDiagnosticBuilder DiagIfHostCode(SourceLocation Loc, unsigned DiagID);
 
   /// Determines whether the given function is a CUDA device/host/kernel/etc.
   /// function.
   ///
   /// Use this rather than examining the function's attributes yourself -- you
   /// will get it wrong.  Returns CUDAFunctionTarget::Host if D is null.
-  CUDAFunctionTarget IdentifyCUDATarget(const FunctionDecl *D,
+  CUDAFunctionTarget IdentifyTarget(const FunctionDecl *D,
                                         bool IgnoreImplicitHDAttr = false);
-  CUDAFunctionTarget IdentifyCUDATarget(const ParsedAttributesView &Attrs);
+  CUDAFunctionTarget IdentifyTarget(const ParsedAttributesView &Attrs);
 
   enum CUDAVariableTarget {
     CVT_Device,  /// Emitted on device side with a shadow variable on host side
@@ -113,7 +113,7 @@ public:
     CVT_Unified, /// Emitted as a unified address, e.g. managed variables
   };
   /// Determines whether the given variable is emitted on host or device side.
-  CUDAVariableTarget IdentifyCUDATarget(const VarDecl *D);
+  CUDAVariableTarget IdentifyTarget(const VarDecl *D);
 
   /// Defines kinds of CUDA global host/device context where a function may be
   /// called.
@@ -139,11 +139,11 @@ public:
   };
 
   /// Gets the CUDA target for the current context.
-  CUDAFunctionTarget CurrentCUDATarget() {
-    return IdentifyCUDATarget(dyn_cast<FunctionDecl>(SemaRef.CurContext));
+  CUDAFunctionTarget CurrentTarget() {
+    return IdentifyTarget(dyn_cast<FunctionDecl>(SemaRef.CurContext));
   }
 
-  static bool isCUDAImplicitHostDeviceFunction(const FunctionDecl *D);
+  static bool isImplicitHostDeviceFunction(const FunctionDecl *D);
 
   // CUDA function call preference. Must be ordered numerically from
   // worst to best.
@@ -165,7 +165,7 @@ public:
   /// \param Callee target function
   ///
   /// \returns preference value for particular Caller/Callee combination.
-  CUDAFunctionPreference IdentifyCUDAPreference(const FunctionDecl *Caller,
+  CUDAFunctionPreference IdentifyPreference(const FunctionDecl *Caller,
                                                 const FunctionDecl *Callee);
 
   /// Determines whether Caller may invoke Callee, based on their CUDA
@@ -173,19 +173,19 @@ public:
   ///
   /// Note: Will return true for CFP_WrongSide calls.  These may appear in
   /// semantically correct CUDA programs, but only if they're never codegen'ed.
-  bool IsAllowedCUDACall(const FunctionDecl *Caller,
+  bool IsAllowedCall(const FunctionDecl *Caller,
                          const FunctionDecl *Callee) {
-    return IdentifyCUDAPreference(Caller, Callee) != CFP_Never;
+    return IdentifyPreference(Caller, Callee) != CFP_Never;
   }
 
   /// May add implicit CUDAHostAttr and CUDADeviceAttr attributes to FD,
   /// depending on FD and the current compilation settings.
-  void maybeAddCUDAHostDeviceAttrs(FunctionDecl *FD,
+  void maybeAddHostDeviceAttrs(FunctionDecl *FD,
                                    const LookupResult &Previous);
 
   /// May add implicit CUDAConstantAttr attribute to VD, depending on VD
   /// and current compilation settings.
-  void MaybeAddCUDAConstantAttr(VarDecl *VD);
+  void MaybeAddConstantAttr(VarDecl *VD);
 
   /// Check whether we're allowed to call Callee from the current context.
   ///
@@ -201,25 +201,25 @@ public:
   ///   deferred errors.
   ///
   /// - Otherwise, returns true without emitting any diagnostics.
-  bool CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee);
+  bool CheckCall(SourceLocation Loc, FunctionDecl *Callee);
 
-  void CUDACheckLambdaCapture(CXXMethodDecl *D, const sema::Capture &Capture);
+  void CheckLambdaCapture(CXXMethodDecl *D, const sema::Capture &Capture);
 
   /// Set __device__ or __host__ __device__ attributes on the given lambda
   /// operator() method.
   ///
   /// CUDA lambdas by default is host device function unless it has explicit
   /// host or device attribute.
-  void CUDASetLambdaAttrs(CXXMethodDecl *Method);
+  void SetLambdaAttrs(CXXMethodDecl *Method);
 
   /// Record \p FD if it is a CUDA/HIP implicit host device function used on
   /// device side in device compilation.
-  void CUDARecordImplicitHostDeviceFuncUsedByDevice(const FunctionDecl *FD);
+  void RecordImplicitHostDeviceFuncUsedByDevice(const FunctionDecl *FD);
 
   /// Finds a function in \p Matches with highest calling priority
   /// from \p Caller context and erases all functions with lower
   /// calling priority.
-  void EraseUnwantedCUDAMatches(
+  void EraseUnwantedMatches(
       const FunctionDecl *Caller,
       llvm::SmallVectorImpl<std::pair<DeclAccessPair, FunctionDecl *>> &Matches);
 
@@ -234,15 +234,15 @@ public:
   /// \return true if there was an error inferring.
   /// The result of this call is implicit CUDA target attribute(s) attached to
   /// the member declaration.
-  bool inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
+  bool inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
                                                CXXSpecialMemberKind CSM,
                                                CXXMethodDecl *MemberDecl,
                                                bool ConstRHS, bool Diagnose);
 
   /// \return true if \p CD can be considered empty according to CUDA
   /// (E.2.3.1 in CUDA 7.5 Programming guide).
-  bool isEmptyCudaConstructor(SourceLocation Loc, CXXConstructorDecl *CD);
-  bool isEmptyCudaDestructor(SourceLocation Loc, CXXDestructorDecl *CD);
+  bool isEmptyConstructor(SourceLocation Loc, CXXConstructorDecl *CD);
+  bool isEmptyDestructor(SourceLocation Loc, CXXDestructorDecl *CD);
 
   // \brief Checks that initializers of \p Var satisfy CUDA restrictions. In
   // case of error emits appropriate diagnostic and invalidates \p Var.
@@ -252,22 +252,22 @@ public:
   // __shared__ variables whether they are local or not (they all are implicitly
   // static in CUDA). One exception is that CUDA allows constant initializers
   // for __constant__ and __device__ variables.
-  void checkAllowedCUDAInitializer(VarDecl *VD);
+  void checkAllowedInitializer(VarDecl *VD);
 
   /// Check whether NewFD is a valid overload for CUDA. Emits
   /// diagnostics and invalidates NewFD if not.
-  void checkCUDATargetOverload(FunctionDecl *NewFD,
+  void checkTargetOverload(FunctionDecl *NewFD,
                                const LookupResult &Previous);
   /// Copies target attributes from the template TD to the function FD.
-  void inheritCUDATargetAttrs(FunctionDecl *FD, const FunctionTemplateDecl &TD);
+  void inheritTargetAttrs(FunctionDecl *FD, const FunctionTemplateDecl &TD);
 
   /// Returns the name of the launch configuration function.  This is the name
   /// of the function that will be called to configure kernel call, with the
   /// parameters specified via <<<>>>.
-  std::string getCudaConfigureFuncName() const;
+  std::string getConfigureFuncName() const;
 
 private:
-  unsigned ForceCUDAHostDeviceDepth = 0;
+  unsigned ForceHostDeviceDepth = 0;
 
   friend class ASTReader;
   friend class ASTWriter;

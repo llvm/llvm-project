@@ -9877,14 +9877,14 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
     // failed.
     // For inherited constructors (non-null ICI), CSM may be passed so that MD
     // is treated as certain special member, which may not reflect what special
-    // member MD really is. However inferCUDATargetForImplicitSpecialMember
+    // member MD really is. However inferTargetForImplicitSpecialMember
     // expects CSM to match MD, therefore recalculate CSM.
     assert(ICI || CSM == getSpecialMember(MD));
     auto RealCSM = CSM;
     if (ICI)
       RealCSM = getSpecialMember(MD);
 
-    return CUDA().inferCUDATargetForImplicitSpecialMember(RD, RealCSM, MD,
+    return CUDA().inferTargetForImplicitSpecialMember(RD, RealCSM, MD,
                                                    SMI.ConstArg, Diagnose);
   }
 
@@ -14056,7 +14056,7 @@ CXXConstructorDecl *Sema::DeclareImplicitDefaultConstructor(
   setupImplicitSpecialMemberType(DefaultCon, Context.VoidTy, std::nullopt);
 
   if (getLangOpts().CUDA)
-    CUDA().inferCUDATargetForImplicitSpecialMember(
+    CUDA().inferTargetForImplicitSpecialMember(
         ClassDecl, CXXSpecialMemberKind::DefaultConstructor, DefaultCon,
         /* ConstRHS */ false,
         /* Diagnose */ false);
@@ -14342,7 +14342,7 @@ CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
   setupImplicitSpecialMemberType(Destructor, Context.VoidTy, std::nullopt);
 
   if (getLangOpts().CUDA)
-    CUDA().inferCUDATargetForImplicitSpecialMember(
+    CUDA().inferTargetForImplicitSpecialMember(
         ClassDecl, CXXSpecialMemberKind::Destructor, Destructor,
         /* ConstRHS */ false,
         /* Diagnose */ false);
@@ -14984,7 +14984,7 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
   setupImplicitSpecialMemberType(CopyAssignment, RetType, ArgType);
 
   if (getLangOpts().CUDA)
-    CUDA().inferCUDATargetForImplicitSpecialMember(
+    CUDA().inferTargetForImplicitSpecialMember(
         ClassDecl, CXXSpecialMemberKind::CopyAssignment, CopyAssignment,
         /* ConstRHS */ Const,
         /* Diagnose */ false);
@@ -15336,7 +15336,7 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
   setupImplicitSpecialMemberType(MoveAssignment, RetType, ArgType);
 
   if (getLangOpts().CUDA)
-    CUDA().inferCUDATargetForImplicitSpecialMember(
+    CUDA().inferTargetForImplicitSpecialMember(
         ClassDecl, CXXSpecialMemberKind::MoveAssignment, MoveAssignment,
         /* ConstRHS */ false,
         /* Diagnose */ false);
@@ -15734,7 +15734,7 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
   setupImplicitSpecialMemberType(CopyConstructor, Context.VoidTy, ArgType);
 
   if (getLangOpts().CUDA)
-    CUDA().inferCUDATargetForImplicitSpecialMember(
+    CUDA().inferTargetForImplicitSpecialMember(
         ClassDecl, CXXSpecialMemberKind::CopyConstructor, CopyConstructor,
         /* ConstRHS */ Const,
         /* Diagnose */ false);
@@ -15879,7 +15879,7 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
   setupImplicitSpecialMemberType(MoveConstructor, Context.VoidTy, ArgType);
 
   if (getLangOpts().CUDA)
-    CUDA().inferCUDATargetForImplicitSpecialMember(
+    CUDA().inferTargetForImplicitSpecialMember(
         ClassDecl, CXXSpecialMemberKind::MoveConstructor, MoveConstructor,
         /* ConstRHS */ false,
         /* Diagnose */ false);
@@ -16185,7 +16185,7 @@ ExprResult Sema::BuildCXXConstructExpr(
              DeclInitType->getBaseElementTypeUnsafe()->getAsCXXRecordDecl()) &&
          "given constructor for wrong type");
   MarkFunctionReferenced(ConstructLoc, Constructor);
-  if (getLangOpts().CUDA && !CUDA().CheckCUDACall(ConstructLoc, Constructor))
+  if (getLangOpts().CUDA && !CUDA().CheckCall(ConstructLoc, Constructor))
     return ExprError();
 
   return CheckForImmediateInvocation(

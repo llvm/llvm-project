@@ -4336,8 +4336,8 @@ void ASTWriter::WriteOpenCLExtensions(Sema &SemaRef) {
   Stream.EmitRecord(OPENCL_EXTENSIONS, Record);
 }
 void ASTWriter::WriteCUDAPragmas(Sema &SemaRef) {
-  if (SemaRef.CUDA().ForceCUDAHostDeviceDepth > 0) {
-    RecordData::value_type Record[] = {SemaRef.CUDA().ForceCUDAHostDeviceDepth};
+  if (SemaRef.CUDA().ForceHostDeviceDepth > 0) {
+    RecordData::value_type Record[] = {SemaRef.CUDA().ForceHostDeviceDepth};
     Stream.EmitRecord(CUDA_PRAGMA_FORCE_HOST_DEVICE_DEPTH, Record);
   }
 }

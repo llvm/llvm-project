@@ -3996,7 +3996,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       if (Record.size() != 1)
         return llvm::createStringError(std::errc::illegal_byte_sequence,
                                        "invalid cuda pragma options record");
-      ForceCUDAHostDeviceDepth = Record[0];
+      ForceHostDeviceDepth = Record[0];
       break;
 
     case ALIGN_PACK_PRAGMA_OPTIONS: {
@@ -8275,7 +8275,7 @@ void ASTReader::UpdateSema() {
             PragmaMSPointersToMembersState,
         PointersToMembersPragmaLocation);
   }
-  SemaObj->CUDA().ForceCUDAHostDeviceDepth = ForceCUDAHostDeviceDepth;
+  SemaObj->CUDA().ForceHostDeviceDepth = ForceHostDeviceDepth;
 
   if (PragmaAlignPackCurrentValue) {
     // The bottom of the stack might have a default value. It must be adjusted

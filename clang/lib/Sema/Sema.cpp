@@ -1838,8 +1838,8 @@ void Sema::emitDeferredDiags() {
 // which other not-known-emitted functions.
 //
 // When we see something which is illegal if the current function is emitted
-// (usually by way of CUDADiagIfDeviceCode, CUDADiagIfHostCode, or
-// CheckCUDACall), we first check if the current function is known-emitted.  If
+// (usually by way of DiagIfDeviceCode, DiagIfHostCode, or
+// CheckCall), we first check if the current function is known-emitted.  If
 // so, we immediately output the diagnostic.
 //
 // Otherwise, we "defer" the diagnostic.  It sits in Sema::DeviceDeferredDiags
@@ -1902,8 +1902,8 @@ Sema::targetDiag(SourceLocation Loc, unsigned DiagID, const FunctionDecl *FD) {
                ? diagIfOpenMPDeviceCode(Loc, DiagID, FD)
                : diagIfOpenMPHostCode(Loc, DiagID, FD);
   if (getLangOpts().CUDA)
-    return getLangOpts().CUDAIsDevice ? CUDA().CUDADiagIfDeviceCode(Loc, DiagID)
-                                      : CUDA().CUDADiagIfHostCode(Loc, DiagID);
+    return getLangOpts().CUDAIsDevice ? CUDA().DiagIfDeviceCode(Loc, DiagID)
+                                      : CUDA().DiagIfHostCode(Loc, DiagID);
 
   if (getLangOpts().SYCLIsDevice)
     return SYCL().DiagIfDeviceCode(Loc, DiagID);

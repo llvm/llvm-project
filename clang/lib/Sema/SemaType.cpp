@@ -2736,7 +2736,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       bool IsCUDADevice = (getLangOpts().CUDA && getLangOpts().CUDAIsDevice);
       targetDiag(Loc,
                  IsCUDADevice ? diag::err_cuda_vla : diag::err_vla_unsupported)
-          << (IsCUDADevice ? llvm::to_underlying(CUDA().CurrentCUDATarget()) : 0);
+          << (IsCUDADevice ? llvm::to_underlying(CUDA().CurrentTarget()) : 0);
     } else if (sema::FunctionScopeInfo *FSI = getCurFunction()) {
       // VLAs are supported on this target, but we may need to do delayed
       // checking that the VLA is not being used within a coroutine.
@@ -3619,7 +3619,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
   // D.getDeclarationAttributes()) because those are always C++11 attributes,
   // and those don't get distributed.
   distributeTypeAttrsFromDeclarator(
-      state, T, SemaRef.CUDA().IdentifyCUDATarget(D.getAttributes()));
+      state, T, SemaRef.CUDA().IdentifyTarget(D.getAttributes()));
 
   // Find the deduced type in this type. Look in the trailing return type if we
   // have one, otherwise in the DeclSpec type.
@@ -4140,7 +4140,7 @@ static CallingConv getCCForDeclaratorChunk(
       // handleFunctionTypeAttr.
       CallingConv CC;
       if (!S.CheckCallingConvAttr(AL, CC, /*FunctionDecl=*/nullptr,
-                                  S.CUDA().IdentifyCUDATarget(D.getAttributes())) &&
+                                  S.CUDA().IdentifyTarget(D.getAttributes())) &&
           (!FTI.isVariadic || supportsVariadicCall(CC))) {
         return CC;
       }
@@ -5826,7 +5826,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
     // See if there are any attributes on this declarator chunk.
     processTypeAttrs(state, T, TAL_DeclChunk, DeclType.getAttrs(),
-                     S.CUDA().IdentifyCUDATarget(D.getAttributes()));
+                     S.CUDA().IdentifyTarget(D.getAttributes()));
 
     if (DeclType.Kind != DeclaratorChunk::Paren) {
       if (ExpectNoDerefChunk && !IsNoDerefableChunk(DeclType))

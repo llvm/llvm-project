@@ -2130,7 +2130,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         }
 
         if (!LHS.isInvalid()) {
-          ExprResult ECResult = Actions.CUDA().ActOnCUDAExecConfigExpr(getCurScope(),
+          ExprResult ECResult = Actions.CUDA().ActOnExecConfigExpr(getCurScope(),
                                     OpenLoc,
                                     ExecConfigExprs,
                                     CloseLoc);

@@ -309,7 +309,7 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
         DeduceReturnType(FD, Loc))
       return true;
 
-    if (getLangOpts().CUDA && !CUDA().CheckCUDACall(Loc, FD))
+    if (getLangOpts().CUDA && !CUDA().CheckCall(Loc, FD))
       return true;
 
   }
@@ -17308,7 +17308,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
   // CUDA device code does not support varargs.
   if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
     if (const FunctionDecl *F = dyn_cast<FunctionDecl>(CurContext)) {
-      CUDAFunctionTarget T = CUDA().IdentifyCUDATarget(F);
+      CUDAFunctionTarget T = CUDA().IdentifyTarget(F);
       if (T == CUDAFunctionTarget::Global || T == CUDAFunctionTarget::Device ||
           T == CUDAFunctionTarget::HostDevice)
         return ExprError(Diag(E->getBeginLoc(), diag::err_va_arg_in_device));
@@ -18962,7 +18962,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
     checkSpecializationReachability(Loc, Func);
 
   if (getLangOpts().CUDA)
-    CUDA().CheckCUDACall(Loc, Func);
+    CUDA().CheckCall(Loc, Func);
 
   // If we need a definition, try to create one.
   if (NeedDefinition && !Func->getBody()) {
@@ -19109,7 +19109,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   // side. Therefore keep trying until it is recorded.
   if (LangOpts.OffloadImplicitHostDeviceTemplates && LangOpts.CUDAIsDevice &&
       !getASTContext().CUDAImplicitHostDeviceFunUsedByDevice.count(Func))
-    CUDA().CUDARecordImplicitHostDeviceFuncUsedByDevice(Func);
+    CUDA().RecordImplicitHostDeviceFuncUsedByDevice(Func);
 
   // If this is the first "real" use, act on that.
   if (OdrUse == OdrUseContext::Used && !Func->isUsed(/*CheckUsedAttr=*/false)) {
@@ -19182,8 +19182,8 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
 
   if (SemaRef.LangOpts.CUDA && Var->hasGlobalStorage()) {
     auto *FD = dyn_cast_or_null<FunctionDecl>(SemaRef.CurContext);
-    auto VarTarget = SemaRef.CUDA().IdentifyCUDATarget(Var);
-    auto UserTarget = SemaRef.CUDA().IdentifyCUDATarget(FD);
+    auto VarTarget = SemaRef.CUDA().IdentifyTarget(Var);
+    auto UserTarget = SemaRef.CUDA().IdentifyTarget(FD);
     if (VarTarget == SemaCUDA::CVT_Host &&
         (UserTarget == CUDAFunctionTarget::Device ||
          UserTarget == CUDAFunctionTarget::HostDevice ||
