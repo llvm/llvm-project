@@ -24,10 +24,10 @@ namespace {
 struct AccessTests : public CrashHandlerFixture {};
 
 struct AccessType {
-  bool read = false;
-  bool write = false;
-  bool execute = false;
-  bool exists = false;
+  bool read{false};
+  bool write{false};
+  bool execute{false};
+  bool exists{false};
 };
 
 } // namespace
@@ -44,15 +44,15 @@ static std::string addPIDSuffix(const char *name) {
 
 static std::filesystem::path createTemporaryFile(
     const char *name, const AccessType &accessType) {
-  std::filesystem::path path =
-      std::filesystem::temp_directory_path() / addPIDSuffix(name);
+  std::filesystem::path path{
+      std::filesystem::temp_directory_path() / addPIDSuffix(name)};
 
   // O_CREAT | O_EXCL enforces that this file is newly created by this call.
   // This feels risky. If we don't have permission to create files in the
   // temporary directory or if the files already exist, the test will fail.
   // But we can't use std::tmpfile() because we need a path to the file and
   // to control the filesystem permissions
-  mode_t mode = 0;
+  mode_t mode{0};
   if (accessType.read) {
     mode |= S_IRUSR;
   }
@@ -75,7 +75,7 @@ static std::filesystem::path createTemporaryFile(
 
 static std::int64_t callAccess(
     const std::filesystem::path &path, const AccessType &accessType) {
-  const char *cpath = path.c_str();
+  const char *cpath{path.c_str()};
   std::int64_t pathlen = std::strlen(cpath);
 
   std::string mode;

@@ -143,13 +143,13 @@ void RTNAME(Sleep)(std::int64_t seconds) {
 #ifndef _WIN32
 std::int64_t FORTRAN_PROCEDURE_NAME(access)(const char *name,
     std::int64_t nameLength, const char *mode, std::int64_t modeLength) {
-  std::int64_t ret = -1;
+  std::int64_t ret{-1};
   if (nameLength <= 0 || modeLength <= 0 || !name || !mode) {
     return ret;
   }
 
   // ensure name is null terminated
-  char *newName = nullptr;
+  char *newName{nullptr};
   if (name[nameLength - 1] != '\0') {
     newName = static_cast<char *>(std::malloc(nameLength + 1));
     std::memcpy(newName, name, nameLength);
@@ -158,11 +158,11 @@ std::int64_t FORTRAN_PROCEDURE_NAME(access)(const char *name,
   }
 
   // calculate mode
-  bool read = false;
-  bool write = false;
-  bool execute = false;
-  bool exists = false;
-  int imode = 0;
+  bool read{false};
+  bool write{false};
+  bool execute{false};
+  bool exists{false};
+  int imode{0};
 
   for (std::int64_t i = 0; i < modeLength; ++i) {
     switch (mode[i]) {
