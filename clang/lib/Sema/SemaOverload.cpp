@@ -1058,7 +1058,7 @@ void OverloadCandidateSet::destroyCandidates() {
   for (iterator i = begin(), e = end(); i != e; ++i) {
     for (auto &C : i->Conversions)
       C.~ImplicitConversionSequence();
-    Ctx.Deallocate(i->Conversions.begin());
+    Ctx.Deallocate(i->Conversions.data());
     if (!i->Viable && i->FailureKind == ovl_fail_bad_deduction)
       i->DeductionFailure.Destroy();
   }
