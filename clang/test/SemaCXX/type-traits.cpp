@@ -1856,7 +1856,7 @@ struct DerivedVirtual : virtual Base {};
 
 union Union {};
 union UnionIncomplete;
-struct StructIncomplete;
+struct StructIncomplete; // #StructIncomplete
 
 void is_pointer_interconvertible_base_of(int n)
 {
@@ -1874,6 +1874,10 @@ void is_pointer_interconvertible_base_of(int n)
   static_assert(__is_pointer_interconvertible_base_of(StructIncomplete, const StructIncomplete));
   static_assert(__is_pointer_interconvertible_base_of(StructIncomplete, volatile StructIncomplete));
   static_assert(__is_pointer_interconvertible_base_of(const StructIncomplete, volatile StructIncomplete));
+  static_assert(!__is_pointer_interconvertible_base_of(StructIncomplete, Derived));
+  static_assert(!__is_pointer_interconvertible_base_of(Base, StructIncomplete));
+  // expected-error@-1 {{incomplete type 'StructIncomplete' where a complete type is required}}
+  //   expected-note@#StructIncomplete {{forward declaration of 'IPIBO::StructIncomplete'}}
   static_assert(!__is_pointer_interconvertible_base_of(CStruct2, CppStructNonStandardByBase2));
   static_assert(!__is_pointer_interconvertible_base_of(void, void));
   static_assert(!__is_pointer_interconvertible_base_of(void, int));
@@ -1906,6 +1910,7 @@ void is_pointer_interconvertible_base_of(int n)
   static_assert(!__is_pointer_interconvertible_base_of(void(CStruct2::*)(int), void(CStruct2::*)(int)));
   static_assert(!__is_pointer_interconvertible_base_of(void(CStruct2::*)(int), void(CStruct2::*)(char)));
   static_assert(!__is_pointer_interconvertible_base_of(int[], int[]));
+  static_assert(!__is_pointer_interconvertible_base_of(int[], double[]));
   static_assert(!__is_pointer_interconvertible_base_of(int[2], int[2]));
   static_assert(!__is_pointer_interconvertible_base_of(int[n], int[2]));
   // expected-error@-1 {{variable length arrays are not supported in '__is_pointer_interconvertible_base_of'}}

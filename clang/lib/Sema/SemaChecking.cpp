@@ -19714,9 +19714,8 @@ bool Sema::IsLayoutCompatible(QualType T1, QualType T2) const {
 
 bool Sema::IsPointerInterconvertibleBaseOf(const TypeSourceInfo *Base,
                                            const TypeSourceInfo *Derived) {
-  QualType BaseT = Base->getType().getCanonicalType().getUnqualifiedType();
-  QualType DerivedT =
-      Derived->getType().getCanonicalType().getUnqualifiedType();
+  QualType BaseT = Base->getType()->getCanonicalTypeUnqualified();
+  QualType DerivedT = Derived->getType()->getCanonicalTypeUnqualified();
 
   if (BaseT->isStructureOrClassType() && DerivedT->isStructureOrClassType() &&
       getASTContext().hasSameType(BaseT, DerivedT))
@@ -19725,6 +19724,7 @@ bool Sema::IsPointerInterconvertibleBaseOf(const TypeSourceInfo *Base,
   if (!IsDerivedFrom(Derived->getTypeLoc().getBeginLoc(), DerivedT, BaseT))
     return false;
 
+  // Per [basic.compound]/4.3, containing object has to be standard-layout.
   if (DerivedT->getAsCXXRecordDecl()->isStandardLayout())
     return true;
 
