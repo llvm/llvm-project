@@ -62,6 +62,52 @@ FieldSet getObjectFields(QualType Type);
 bool containsSameFields(const FieldSet &Fields,
                         const RecordStorageLocation::FieldToLoc &FieldLocs);
 
+/// Returns the fields of a `RecordDecl` that are initialized by an
+/// `InitListExpr`, in the order in which they appear in
+/// `InitListExpr::inits()`.
+/// `Init->getType()` must be a record type.
+std::vector<const FieldDecl *>
+getFieldsForInitListExpr(const InitListExpr *InitList);
+
+/// Helper class for initialization of a record with an `InitListExpr`.
+/// `InitListExpr::inits()` contains the initializers for both the base classes
+/// and the fields of the record; this helper class separates these out into two
+/// different lists. In addition, it deals with special cases associated with
+/// unions.
+class RecordInitListHelper {
+public:
+  // `InitList` must have record type.
+  RecordInitListHelper(const InitListExpr *InitList);
+
+  // Base classes with their associated initializer expressions.
+  ArrayRef<std::pair<const CXXBaseSpecifier *, Expr *>> base_inits() const {
+    return BaseInits;
+  }
+
+  // Fields with their associated initializer expressions.
+  ArrayRef<std::pair<const FieldDecl *, Expr *>> field_inits() const {
+    return FieldInits;
+  }
+
+private:
+  SmallVector<std::pair<const CXXBaseSpecifier *, Expr *>> BaseInits;
+  SmallVector<std::pair<const FieldDecl *, Expr *>> FieldInits;
+
+  // We potentially synthesize an `ImplicitValueInitExpr` for unions. It's a
+  // member variable because we store a pointer to it in `FieldInits`.
+  std::optional<ImplicitValueInitExpr> ImplicitValueInitForUnion;
+};
+
+struct FieldsGlobalsAndFuncs {
+  FieldSet Fields;
+  // Globals includes all variables with global storage, notably including
+  // static data members and static variables declared within a function.
+  llvm::DenseSet<const VarDecl *> Globals;
+  llvm::DenseSet<const FunctionDecl *> Funcs;
+};
+
+FieldsGlobalsAndFuncs getFieldsGlobalsAndFuncs(const FunctionDecl &FD);
+
 struct ContextSensitiveOptions {
   /// The maximum depth to analyze. A value of zero is equivalent to disabling
   /// context-sensitive analysis entirely.
