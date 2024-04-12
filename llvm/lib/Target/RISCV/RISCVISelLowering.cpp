@@ -13363,7 +13363,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
 
   EVT VT = N->getValueType(0);
 
-  // An imul is usually smaller than the alternative sequence.
+  // LI + MUL is usually smaller than the alternative sequence.
   if (DAG.getMachineFunction().getFunction().hasMinSize())
     return SDValue();
 
