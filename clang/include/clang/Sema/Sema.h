@@ -435,6 +435,14 @@ enum class CXXSpecialMemberKind {
   Invalid
 };
 
+enum class CUDAFunctionTarget {
+  Device,
+  Global,
+  Host,
+  HostDevice,
+  InvalidTarget
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -3663,20 +3671,12 @@ public:
   InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D,
                                                 const InternalLinkageAttr &AL);
 
-  enum CUDAFunctionTarget {
-    CFT_Device,
-    CFT_Global,
-    CFT_Host,
-    CFT_HostDevice,
-    CFT_InvalidTarget
-  };
-
   /// Check validaty of calling convention attribute \p attr. If \p FD
   /// is not null pointer, use \p FD to determine the CUDA/HIP host/device
   /// target. Otherwise, it is specified by \p CFT.
-  bool CheckCallingConvAttr(const ParsedAttr &attr, CallingConv &CC,
-                            const FunctionDecl *FD = nullptr,
-                            CUDAFunctionTarget CFT = CFT_InvalidTarget);
+  bool CheckCallingConvAttr(
+      const ParsedAttr &attr, CallingConv &CC, const FunctionDecl *FD = nullptr,
+      CUDAFunctionTarget CFT = CUDAFunctionTarget::InvalidTarget);
 
   void AddParameterABIAttr(Decl *D, const AttributeCommonInfo &CI,
                            ParameterABI ABI);
@@ -12967,7 +12967,8 @@ public:
   /// Example usage:
   ///
   ///  // Variable-length arrays are not allowed in CUDA device code.
-  ///  if (CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget())
+  ///  if (CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla)
+  ///     << llvm::to_underlying(CurrentCUDATarget()))
   ///    return ExprError();
   ///  // Otherwise, continue parsing as normal.
   SemaDiagnosticBuilder CUDADiagIfDeviceCode(SourceLocation Loc,
@@ -12983,7 +12984,7 @@ public:
   /// function.
   ///
   /// Use this rather than examining the function's attributes yourself -- you
-  /// will get it wrong.  Returns CFT_Host if D is null.
+  /// will get it wrong.  Returns CUDAFunctionTarget::Host if D is null.
   CUDAFunctionTarget IdentifyCUDATarget(const FunctionDecl *D,
                                         bool IgnoreImplicitHDAttr = false);
   CUDAFunctionTarget IdentifyCUDATarget(const ParsedAttributesView &Attrs);
@@ -13008,7 +13009,7 @@ public:
   /// Define the current global CUDA host/device context where a function may be
   /// called. Only used when a function is called outside of any functions.
   struct CUDATargetContext {
-    CUDAFunctionTarget Target = CFT_HostDevice;
+    CUDAFunctionTarget Target = CUDAFunctionTarget::HostDevice;
     CUDATargetContextKind Kind = CTCK_Unknown;
     Decl *D = nullptr;
   } CurCUDATargetCtx;
