@@ -11102,6 +11102,7 @@ OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
   case OpenACCClauseKind::If: {
     Expr *Cond = const_cast<Expr *>(
         cast<OpenACCIfClause>(OldClause)->getConditionExpr());
+    assert(Cond && "If constructed with invalid Condition");
     Sema::ConditionResult Res =
         TransformCondition(Cond->getExprLoc(), /*Var=*/nullptr, Cond,
                            Sema::ConditionKind::Boolean);
