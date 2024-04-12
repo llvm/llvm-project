@@ -1069,6 +1069,12 @@ Address X86_32ABIInfo::EmitVAArg(CodeGenFunction &CGF,
 
   auto TypeInfo = getContext().getTypeInfoInChars(Ty);
 
+  CCState State(*const_cast<CGFunctionInfo *>(CGF.CurFnInfo));
+  ABIArgInfo AI = classifyArgumentType(Ty, State, /*ArgIndex*/ 0);
+  // Empty records are ignored for parameter passing purposes.
+  if (AI.isIgnore())
+    return CGF.CreateMemTemp(Ty);
+
   // x86-32 changes the alignment of certain arguments on the stack.
   //
   // Just messing with TypeInfo like this works because we never pass
@@ -1993,7 +1999,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     // this, but it isn't worth it and would be harder to verify.
     Current = NoClass;
     uint64_t EltSize = getContext().getTypeSize(AT->getElementType());
-    uint64_t ArraySize = AT->getSize().getZExtValue();
+    uint64_t ArraySize = AT->getZExtSize();
 
     // The only case a 256-bit wide vector could be used is when the array
     // contains a single 256-bit element. Since Lo and Hi logic isn't extended
@@ -2100,8 +2106,11 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
         postMerge(Size, Lo, Hi);
         return;
       }
+
+      bool IsInMemory =
+          Offset % getContext().getTypeAlign(i->getType().getCanonicalType());
       // Note, skip this test for bit-fields, see below.
-      if (!BitField && Offset % getContext().getTypeAlign(i->getType())) {
+      if (!BitField && IsInMemory) {
         Lo = Memory;
         postMerge(Size, Lo, Hi);
         return;
@@ -2295,7 +2304,7 @@ static bool BitsContainNoUserData(QualType Ty, unsigned StartBit,
 
   if (const ConstantArrayType *AT = Context.getAsConstantArrayType(Ty)) {
     unsigned EltSize = (unsigned)Context.getTypeSize(AT->getElementType());
-    unsigned NumElts = (unsigned)AT->getSize().getZExtValue();
+    unsigned NumElts = (unsigned)AT->getZExtSize();
 
     // Check each element to see if the element overlaps with the queried range.
     for (unsigned i = 0; i != NumElts; ++i) {
@@ -2788,12 +2797,11 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
     // memory), except in situations involving unions.
   case X87Up:
   case SSE:
+    ++neededSSE;
     HighPart = GetSSETypeAtOffset(CGT.ConvertType(Ty), 8, Ty, 8);
 
     if (Lo == NoClass)  // Pass HighPart at offset 8 in memory.
       return ABIArgInfo::getDirect(HighPart, 8);
-
-    ++neededSSE;
     break;
 
     // AMD64-ABI 3.2.3p3: Rule 4. If the class is SSEUP, the

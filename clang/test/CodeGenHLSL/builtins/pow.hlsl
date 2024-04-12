@@ -39,16 +39,3 @@ float3 test_pow_float3(float3 p0, float3 p1) { return pow(p0, p1); }
 // CHECK: define noundef <4 x float> @"?test_pow_float4
 // CHECK: call <4 x float> @llvm.pow.v4f32
 float4 test_pow_float4(float4 p0, float4 p1) { return pow(p0, p1); }
-
-// CHECK: define noundef double @"?test_pow_double@@YANNN@Z"(
-// CHECK: call double @llvm.pow.f64(
-double test_pow_double(double p0, double p1) { return pow(p0, p1); }
-// CHECK: define noundef <2 x double> @"?test_pow_double2@@YAT?$__vector@N$01@__clang@@T12@0@Z"(
-// CHECK: call <2 x double> @llvm.pow.v2f64
-double2 test_pow_double2(double2 p0, double2 p1) { return pow(p0, p1); }
-// CHECK: define noundef <3 x double> @"?test_pow_double3@@YAT?$__vector@N$02@__clang@@T12@0@Z"(
-// CHECK: call <3 x double> @llvm.pow.v3f64
-double3 test_pow_double3(double3 p0, double3 p1) { return pow(p0, p1); }
-// CHECK: define noundef <4 x double> @"?test_pow_double4@@YAT?$__vector@N$03@__clang@@T12@0@Z"(
-// CHECK: call <4 x double> @llvm.pow.v4f64
-double4 test_pow_double4(double4 p0, double4 p1) { return pow(p0, p1); }

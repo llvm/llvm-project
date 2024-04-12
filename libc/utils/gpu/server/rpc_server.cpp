@@ -6,10 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Workaround for missing __has_builtin in < GCC 10.
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
 #include "llvmlibc_rpc_server.h"
 
 #include "src/__support/RPC/rpc.h"
+#include "src/__support/arg_list.h"
+#include "src/stdio/printf_core/converter.h"
+#include "src/stdio/printf_core/parser.h"
+#include "src/stdio/printf_core/writer.h"
+
 #include "src/stdio/gpu/file.h"
+#include <algorithm>
 #include <atomic>
 #include <cstdio>
 #include <cstring>
@@ -20,12 +31,148 @@
 #include <vector>
 
 using namespace LIBC_NAMESPACE;
+using namespace LIBC_NAMESPACE::printf_core;
 
 static_assert(sizeof(rpc_buffer_t) == sizeof(rpc::Buffer),
               "Buffer size mismatch");
 
 static_assert(RPC_MAXIMUM_PORT_COUNT == rpc::MAX_PORT_COUNT,
               "Incorrect maximum port count");
+
+template <uint32_t lane_size> void handle_printf(rpc::Server::Port &port) {
+  FILE *files[lane_size] = {nullptr};
+  // Get the appropriate output stream to use.
+  if (port.get_opcode() == RPC_PRINTF_TO_STREAM)
+    port.recv([&](rpc::Buffer *buffer, uint32_t id) {
+      files[id] = reinterpret_cast<FILE *>(buffer->data[0]);
+    });
+  else if (port.get_opcode() == RPC_PRINTF_TO_STDOUT)
+    std::fill(files, files + lane_size, stdout);
+  else
+    std::fill(files, files + lane_size, stderr);
+
+  uint64_t format_sizes[lane_size] = {0};
+  void *format[lane_size] = {nullptr};
+
+  uint64_t args_sizes[lane_size] = {0};
+  void *args[lane_size] = {nullptr};
+
+  // Recieve the format string and arguments from the client.
+  port.recv_n(format, format_sizes,
+              [&](uint64_t size) { return new char[size]; });
+  port.recv_n(args, args_sizes, [&](uint64_t size) { return new char[size]; });
+
+  // Identify any arguments that are actually pointers to strings on the client.
+  // Additionally we want to determine how much buffer space we need to print.
+  std::vector<void *> strs_to_copy[lane_size];
+  int buffer_size[lane_size] = {0};
+  for (uint32_t lane = 0; lane < lane_size; ++lane) {
+    if (!format[lane])
+      continue;
+
+    WriteBuffer wb(nullptr, 0);
+    Writer writer(&wb);
+
+    internal::StructArgList printf_args(args[lane], args_sizes[lane]);
+    Parser<internal::StructArgList> parser(
+        reinterpret_cast<const char *>(format[lane]), printf_args);
+
+    for (FormatSection cur_section = parser.get_next_section();
+         !cur_section.raw_string.empty();
+         cur_section = parser.get_next_section()) {
+      if (cur_section.has_conv && cur_section.conv_name == 's' &&
+          cur_section.conv_val_ptr) {
+        strs_to_copy[lane].emplace_back(cur_section.conv_val_ptr);
+      } else if (cur_section.has_conv) {
+        // Ignore conversion errors for the first pass.
+        convert(&writer, cur_section);
+      } else {
+        writer.write(cur_section.raw_string);
+      }
+    }
+    buffer_size[lane] = writer.get_chars_written();
+  }
+
+  // Recieve any strings from the client and push them into a buffer.
+  std::vector<void *> copied_strs[lane_size];
+  while (std::any_of(std::begin(strs_to_copy), std::end(strs_to_copy),
+                     [](const auto &v) { return !v.empty() && v.back(); })) {
+    port.send([&](rpc::Buffer *buffer, uint32_t id) {
+      void *ptr = !strs_to_copy[id].empty() ? strs_to_copy[id].back() : nullptr;
+      buffer->data[1] = reinterpret_cast<uintptr_t>(ptr);
+      if (!strs_to_copy[id].empty())
+        strs_to_copy[id].pop_back();
+    });
+    uint64_t str_sizes[lane_size] = {0};
+    void *strs[lane_size] = {nullptr};
+    port.recv_n(strs, str_sizes, [](uint64_t size) { return new char[size]; });
+    for (uint32_t lane = 0; lane < lane_size; ++lane) {
+      if (!strs[lane])
+        continue;
+
+      copied_strs[lane].emplace_back(strs[lane]);
+      buffer_size[lane] += str_sizes[lane];
+    }
+  }
+
+  // Perform the final formatting and printing using the LLVM C library printf.
+  int results[lane_size] = {0};
+  std::vector<void *> to_be_deleted;
+  for (uint32_t lane = 0; lane < lane_size; ++lane) {
+    if (!format[lane])
+      continue;
+
+    std::unique_ptr<char[]> buffer(new char[buffer_size[lane]]);
+    WriteBuffer wb(buffer.get(), buffer_size[lane]);
+    Writer writer(&wb);
+
+    internal::StructArgList printf_args(args[lane], args_sizes[lane]);
+    Parser<internal::StructArgList> parser(
+        reinterpret_cast<const char *>(format[lane]), printf_args);
+
+    // Parse and print the format string using the arguments we copied from
+    // the client.
+    int ret = 0;
+    for (FormatSection cur_section = parser.get_next_section();
+         !cur_section.raw_string.empty();
+         cur_section = parser.get_next_section()) {
+      // If this argument was a string we use the memory buffer we copied from
+      // the client by replacing the raw pointer with the copied one.
+      if (cur_section.has_conv && cur_section.conv_name == 's') {
+        if (!copied_strs[lane].empty()) {
+          cur_section.conv_val_ptr = copied_strs[lane].back();
+          to_be_deleted.push_back(copied_strs[lane].back());
+          copied_strs[lane].pop_back();
+        } else {
+          cur_section.conv_val_ptr = nullptr;
+        }
+      }
+      if (cur_section.has_conv) {
+        ret = convert(&writer, cur_section);
+        if (ret == -1)
+          break;
+      } else {
+        writer.write(cur_section.raw_string);
+      }
+    }
+
+    results[lane] =
+        fwrite(buffer.get(), 1, writer.get_chars_written(), files[lane]);
+    if (results[lane] != writer.get_chars_written() || ret == -1)
+      results[lane] = -1;
+  }
+
+  // Send the final return value and signal completion by setting the string
+  // argument to null.
+  port.send([&](rpc::Buffer *buffer, uint32_t id) {
+    buffer->data[0] = static_cast<uint64_t>(results[id]);
+    buffer->data[1] = reinterpret_cast<uintptr_t>(nullptr);
+    delete[] reinterpret_cast<char *>(format[id]);
+    delete[] reinterpret_cast<char *>(args[id]);
+  });
+  for (void *ptr : to_be_deleted)
+    delete[] reinterpret_cast<char *>(ptr);
+}
 
 template <uint32_t lane_size>
 rpc_status_t handle_server_impl(
@@ -190,6 +337,12 @@ rpc_status_t handle_server_impl(
     });
     break;
   }
+  case RPC_PRINTF_TO_STREAM:
+  case RPC_PRINTF_TO_STDOUT:
+  case RPC_PRINTF_TO_STDERR: {
+    handle_printf<lane_size>(*port);
+    break;
+  }
   case RPC_NOOP: {
     port->recv([](rpc::Buffer *) {});
     break;
@@ -243,126 +396,74 @@ struct Device {
   std::unordered_map<uint16_t, void *> callback_data;
 };
 
-// A struct containing all the runtime state required to run the RPC server.
-struct State {
-  State(uint32_t num_devices)
-      : num_devices(num_devices), devices(num_devices), reference_count(0u) {}
-  uint32_t num_devices;
-  std::vector<std::unique_ptr<Device>> devices;
-  std::atomic_uint32_t reference_count;
-};
-
-static std::mutex startup_mutex;
-
-static State *state;
-
-rpc_status_t rpc_init(uint32_t num_devices) {
-  std::scoped_lock<decltype(startup_mutex)> lock(startup_mutex);
-  if (!state)
-    state = new State(num_devices);
-
-  if (state->reference_count == std::numeric_limits<uint32_t>::max())
-    return RPC_STATUS_ERROR;
-
-  state->reference_count++;
-
-  return RPC_STATUS_SUCCESS;
-}
-
-rpc_status_t rpc_shutdown(void) {
-  if (state && state->reference_count-- == 1)
-    delete state;
-
-  return RPC_STATUS_SUCCESS;
-}
-
-rpc_status_t rpc_server_init(uint32_t device_id, uint64_t num_ports,
+rpc_status_t rpc_server_init(rpc_device_t *rpc_device, uint64_t num_ports,
                              uint32_t lane_size, rpc_alloc_ty alloc,
                              void *data) {
-  if (!state)
-    return RPC_STATUS_NOT_INITIALIZED;
-  if (device_id >= state->num_devices)
-    return RPC_STATUS_OUT_OF_RANGE;
+  if (!rpc_device)
+    return RPC_STATUS_ERROR;
   if (lane_size != 1 && lane_size != 32 && lane_size != 64)
     return RPC_STATUS_INVALID_LANE_SIZE;
 
-  if (!state->devices[device_id]) {
-    uint64_t size = rpc::Server::allocation_size(lane_size, num_ports);
-    void *buffer = alloc(size, data);
+  uint64_t size = rpc::Server::allocation_size(lane_size, num_ports);
+  void *buffer = alloc(size, data);
 
-    if (!buffer)
-      return RPC_STATUS_ERROR;
+  if (!buffer)
+    return RPC_STATUS_ERROR;
 
-    state->devices[device_id] =
-        std::make_unique<Device>(lane_size, num_ports, buffer);
-    if (!state->devices[device_id])
-      return RPC_STATUS_ERROR;
-  }
+  Device *device = new Device(lane_size, num_ports, buffer);
+  if (!device)
+    return RPC_STATUS_ERROR;
 
+  rpc_device->handle = reinterpret_cast<uintptr_t>(device);
   return RPC_STATUS_SUCCESS;
 }
 
-rpc_status_t rpc_server_shutdown(uint32_t device_id, rpc_free_ty dealloc,
+rpc_status_t rpc_server_shutdown(rpc_device_t rpc_device, rpc_free_ty dealloc,
                                  void *data) {
-  if (!state)
-    return RPC_STATUS_NOT_INITIALIZED;
-  if (device_id >= state->num_devices)
-    return RPC_STATUS_OUT_OF_RANGE;
-  if (!state->devices[device_id])
+  if (!rpc_device.handle)
     return RPC_STATUS_ERROR;
 
-  dealloc(state->devices[device_id]->buffer, data);
-  if (state->devices[device_id])
-    state->devices[device_id].release();
+  Device *device = reinterpret_cast<Device *>(rpc_device.handle);
+  dealloc(device->buffer, data);
+  delete device;
 
   return RPC_STATUS_SUCCESS;
 }
 
-rpc_status_t rpc_handle_server(uint32_t device_id) {
-  if (!state)
-    return RPC_STATUS_NOT_INITIALIZED;
-  if (device_id >= state->num_devices)
-    return RPC_STATUS_OUT_OF_RANGE;
-  if (!state->devices[device_id])
+rpc_status_t rpc_handle_server(rpc_device_t rpc_device) {
+  if (!rpc_device.handle)
     return RPC_STATUS_ERROR;
 
+  Device *device = reinterpret_cast<Device *>(rpc_device.handle);
   uint32_t index = 0;
   for (;;) {
-    Device &device = *state->devices[device_id];
-    rpc_status_t status = device.handle_server(index);
+    rpc_status_t status = device->handle_server(index);
     if (status != RPC_STATUS_CONTINUE)
       return status;
   }
 }
 
-rpc_status_t rpc_register_callback(uint32_t device_id, uint16_t opcode,
+rpc_status_t rpc_register_callback(rpc_device_t rpc_device, uint16_t opcode,
                                    rpc_opcode_callback_ty callback,
                                    void *data) {
-  if (!state)
-    return RPC_STATUS_NOT_INITIALIZED;
-  if (device_id >= state->num_devices)
-    return RPC_STATUS_OUT_OF_RANGE;
-  if (!state->devices[device_id])
+  if (!rpc_device.handle)
     return RPC_STATUS_ERROR;
 
-  state->devices[device_id]->callbacks[opcode] = callback;
-  state->devices[device_id]->callback_data[opcode] = data;
+  Device *device = reinterpret_cast<Device *>(rpc_device.handle);
+
+  device->callbacks[opcode] = callback;
+  device->callback_data[opcode] = data;
   return RPC_STATUS_SUCCESS;
 }
 
-const void *rpc_get_client_buffer(uint32_t device_id) {
-  if (!state || device_id >= state->num_devices || !state->devices[device_id])
+const void *rpc_get_client_buffer(rpc_device_t rpc_device) {
+  if (!rpc_device.handle)
     return nullptr;
-  return &state->devices[device_id]->client;
+  Device *device = reinterpret_cast<Device *>(rpc_device.handle);
+  return &device->client;
 }
 
 uint64_t rpc_get_client_size() { return sizeof(rpc::Client); }
-
-using ServerPort = std::variant<rpc::Server::Port *>;
-
-ServerPort get_port(rpc_port_t ref) {
-  return reinterpret_cast<rpc::Server::Port *>(ref.handle);
-}
 
 void rpc_send(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
   auto port = reinterpret_cast<rpc::Server::Port *>(ref.handle);

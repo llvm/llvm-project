@@ -145,8 +145,7 @@ add_subdirectory(DeviceRTL)
 add_subdirectory(tools)
 
 # Build target agnostic offloading library.
-set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-add_subdirectory(${LIBOMPTARGET_SRC_DIR})
+add_subdirectory(src)
 
 # Add tests.
 add_subdirectory(test)

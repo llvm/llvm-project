@@ -1827,6 +1827,10 @@ public:
             [&](const std::list<CompilerDirective::NameValue> &names) {
               Walk("!DIR$ ", names, " ");
             },
+            [&](const CompilerDirective::Unrecognized &) {
+              Word("!DIR$ ");
+              Word(x.source.ToString());
+            },
         },
         x.u);
     Put('\n');

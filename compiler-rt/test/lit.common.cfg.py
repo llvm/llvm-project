@@ -131,6 +131,7 @@ if execute_external:
     config.available_features.add("shell")
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
+target_is_windows = bool(re.match(r".*-windows.*$", config.target_triple))
 
 compiler_id = getattr(config, "compiler_id", None)
 if compiler_id == "Clang":
@@ -184,8 +185,8 @@ if test_cc_resource_dir is not None:
 if lit_config.debug:
     lit_config.note(f"Resource dir for {config.clang} is {test_cc_resource_dir}")
 local_build_resource_dir = os.path.realpath(config.compiler_rt_output_dir)
-if test_cc_resource_dir != local_build_resource_dir:
-    if config.test_standalone_build_libs and config.compiler_id == "Clang":
+if test_cc_resource_dir != local_build_resource_dir and config.test_standalone_build_libs:
+    if config.compiler_id == "Clang":
         if lit_config.debug:
             lit_config.note(
                 f"Overriding test compiler resource dir to use "
@@ -202,7 +203,15 @@ if test_cc_resource_dir != local_build_resource_dir:
         config.target_cflags += f" -I{config.compiler_rt_src_root}/include"
         config.target_cflags += f" -idirafter {test_cc_resource_dir}/include"
         config.target_cflags += f" -resource-dir={config.compiler_rt_output_dir}"
-        config.target_cflags += f" -Wl,-rpath,{config.compiler_rt_libdir}"
+        if not target_is_windows:
+            # Avoid passing -rpath on Windows where it is not supported.
+            config.target_cflags += f" -Wl,-rpath,{config.compiler_rt_libdir}"
+    else:
+        lit_config.warning(
+            f"Cannot override compiler-rt library directory with non-Clang "
+            f"compiler: {config.compiler_id}"
+        )
+
 
 # Ask the compiler for the path to libraries it is going to use. If this
 # doesn't match config.compiler_rt_libdir then it means we might be testing the
@@ -917,6 +926,10 @@ if config.use_lld and config.has_lld and not config.use_lto:
     extra_cflags += ["-fuse-ld=lld"]
 elif config.use_lld and (not config.has_lld):
     config.unsupported = True
+
+if config.host_os == "Darwin":
+    if getattr(config, "darwin_linker_version", None):
+        extra_cflags += ["-mlinker-version=" + config.darwin_linker_version]
 
 # Append any extra flags passed in lit_config
 append_target_cflags = lit_config.params.get("append_target_cflags", None)

@@ -88,8 +88,6 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned DSP : 1;
   LLVM_PREFERRED_TYPE(bool)
-  unsigned Unaligned : 1;
-  LLVM_PREFERRED_TYPE(bool)
   unsigned DotProd : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasMatMul : 1;

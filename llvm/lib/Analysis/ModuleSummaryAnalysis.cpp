@@ -82,6 +82,8 @@ static cl::opt<std::string> ModuleSummaryDotFile(
 
 extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 
+extern cl::opt<unsigned> MaxNumVTableAnnotations;
+
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
 // Instruction or a GlobalVariable (which walks its initializer).
@@ -122,6 +124,24 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
       }
       if (Visited.insert(Operand).second)
         Worklist.push_back(Operand);
+    }
+  }
+
+  const Instruction *I = dyn_cast<Instruction>(CurUser);
+  if (I) {
+    uint32_t ActualNumValueData = 0;
+    uint64_t TotalCount = 0;
+    // MaxNumVTableAnnotations is the maximum number of vtables annotated on
+    // the instruction.
+    auto ValueDataArray =
+        getValueProfDataFromInst(*I, IPVK_VTableTarget, MaxNumVTableAnnotations,
+                                 ActualNumValueData, TotalCount);
+
+    if (ValueDataArray.get()) {
+      for (uint32_t j = 0; j < ActualNumValueData; j++) {
+        RefEdges.insert(Index.getOrInsertValueInfo(/* VTableGUID = */
+                                                   ValueDataArray[j].Value));
+      }
     }
   }
   return HasBlockAddress;
@@ -615,7 +635,8 @@ static void computeFunctionSummary(
                               HasIndirBranchToBlockAddress || HasIFuncCall;
   GlobalValueSummary::GVFlags Flags(
       F.getLinkage(), F.getVisibility(), NotEligibleForImport,
-      /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable());
+      /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable(),
+      GlobalValueSummary::ImportKind::Definition);
   FunctionSummary::FFlags FunFlags{
       F.doesNotAccessMemory(), F.onlyReadsMemory() && !F.doesNotAccessMemory(),
       F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
@@ -741,7 +762,8 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(
       V.getLinkage(), V.getVisibility(), NonRenamableLocal,
-      /* Live = */ false, V.isDSOLocal(), V.canBeOmittedFromSymbolTable());
+      /* Live = */ false, V.isDSOLocal(), V.canBeOmittedFromSymbolTable(),
+      GlobalValueSummary::Definition);
 
   VTableFuncList VTableFuncs;
   // If splitting is not enabled, then we compute the summary information
@@ -787,7 +809,8 @@ static void computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
   bool NonRenamableLocal = isNonRenamableLocal(A);
   GlobalValueSummary::GVFlags Flags(
       A.getLinkage(), A.getVisibility(), NonRenamableLocal,
-      /* Live = */ false, A.isDSOLocal(), A.canBeOmittedFromSymbolTable());
+      /* Live = */ false, A.isDSOLocal(), A.canBeOmittedFromSymbolTable(),
+      GlobalValueSummary::Definition);
   auto AS = std::make_unique<AliasSummary>(Flags);
   auto AliaseeVI = Index.getValueInfo(Aliasee->getGUID());
   assert(AliaseeVI && "Alias expects aliasee summary to be available");
@@ -867,7 +890,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
               GlobalValue::InternalLinkage, GlobalValue::DefaultVisibility,
               /* NotEligibleToImport = */ true,
               /* Live = */ true,
-              /* Local */ GV->isDSOLocal(), GV->canBeOmittedFromSymbolTable());
+              /* Local */ GV->isDSOLocal(), GV->canBeOmittedFromSymbolTable(),
+              GlobalValueSummary::Definition);
           CantBePromoted.insert(GV->getGUID());
           // Create the appropriate summary type.
           if (Function *F = dyn_cast<Function>(GV)) {

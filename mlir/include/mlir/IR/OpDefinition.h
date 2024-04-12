@@ -226,8 +226,10 @@ protected:
   static ParseResult genericParseProperties(OpAsmParser &parser,
                                             Attribute &result);
 
-  /// Print the properties as a Attribute.
-  static void genericPrintProperties(OpAsmPrinter &p, Attribute properties);
+  /// Print the properties as a Attribute with names not included within
+  /// 'elidedProps'
+  static void genericPrintProperties(OpAsmPrinter &p, Attribute properties,
+                                     ArrayRef<StringRef> elidedProps = {});
 
   /// Print an operation name, eliding the dialect prefix if necessary.
   static void printOpName(Operation *op, OpAsmPrinter &p,
@@ -1729,8 +1731,7 @@ public:
   template <typename... Models>
   static void attachInterface(MLIRContext &context) {
     std::optional<RegisteredOperationName> info =
-        RegisteredOperationName::lookup(ConcreteType::getOperationName(),
-                                        &context);
+        RegisteredOperationName::lookup(TypeID::get<ConcreteType>(), &context);
     if (!info)
       llvm::report_fatal_error(
           "Attempting to attach an interface to an unregistered operation " +
@@ -1806,10 +1807,13 @@ private:
   template <typename T>
   using detect_has_print = llvm::is_detected<has_print, T>;
 
-  /// Trait to check if printProperties(OpAsmPrinter, T) exist
+  /// Trait to check if printProperties(OpAsmPrinter, T, ArrayRef<StringRef>)
+  /// exist
   template <typename T, typename... Args>
-  using has_print_properties = decltype(printProperties(
-      std::declval<OpAsmPrinter &>(), std::declval<T>()));
+  using has_print_properties =
+      decltype(printProperties(std::declval<OpAsmPrinter &>(),
+                               std::declval<T>(),
+                               std::declval<ArrayRef<StringRef>>()));
   template <typename T>
   using detect_has_print_properties =
       llvm::is_detected<has_print_properties, T>;
@@ -1966,7 +1970,7 @@ public:
     if constexpr (!hasProperties())
       return getEmptyProperties();
     return *getOperation()
-                ->getPropertiesStorage()
+                ->getPropertiesStorageUnsafe()
                 .template as<InferredProperties<T> *>();
   }
 
@@ -1975,16 +1979,18 @@ public:
   static void populateDefaultProperties(OperationName opName,
                                         InferredProperties<T> &properties) {}
 
-  /// Print the operation properties. Unless overridden, this method will try to
-  /// dispatch to a `printProperties` free-function if it exists, and otherwise
-  /// by converting the properties to an Attribute.
+  /// Print the operation properties with names not included within
+  /// 'elidedProps'. Unless overridden, this method will try to dispatch to a
+  /// `printProperties` free-function if it exists, and otherwise by converting
+  /// the properties to an Attribute.
   template <typename T>
   static void printProperties(MLIRContext *ctx, OpAsmPrinter &p,
-                              const T &properties) {
+                              const T &properties,
+                              ArrayRef<StringRef> elidedProps = {}) {
     if constexpr (detect_has_print_properties<T>::value)
-      return printProperties(p, properties);
-    genericPrintProperties(p,
-                           ConcreteType::getPropertiesAsAttr(ctx, properties));
+      return printProperties(p, properties, elidedProps);
+    genericPrintProperties(
+        p, ConcreteType::getPropertiesAsAttr(ctx, properties), elidedProps);
   }
 
   /// Parser the properties. Unless overridden, this method will print by

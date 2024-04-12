@@ -1240,53 +1240,17 @@ APInt APInt::sqrt() const {
   return x_old + 1;
 }
 
-/// Computes the multiplicative inverse of this APInt for a given modulo. The
-/// iterative extended Euclidean algorithm is used to solve for this value,
-/// however we simplify it to speed up calculating only the inverse, and take
-/// advantage of div+rem calculations. We also use some tricks to avoid copying
-/// (potentially large) APInts around.
-/// WARNING: a value of '0' may be returned,
-///          signifying that no multiplicative inverse exists!
-APInt APInt::multiplicativeInverse(const APInt& modulo) const {
-  assert(ult(modulo) && "This APInt must be smaller than the modulo");
+/// \returns the multiplicative inverse of an odd APInt modulo 2^BitWidth.
+APInt APInt::multiplicativeInverse() const {
+  assert((*this)[0] &&
+         "multiplicative inverse is only defined for odd numbers!");
 
-  // Using the properties listed at the following web page (accessed 06/21/08):
-  //   http://www.numbertheory.org/php/euclid.html
-  // (especially the properties numbered 3, 4 and 9) it can be proved that
-  // BitWidth bits suffice for all the computations in the algorithm implemented
-  // below. More precisely, this number of bits suffice if the multiplicative
-  // inverse exists, but may not suffice for the general extended Euclidean
-  // algorithm.
-
-  APInt r[2] = { modulo, *this };
-  APInt t[2] = { APInt(BitWidth, 0), APInt(BitWidth, 1) };
-  APInt q(BitWidth, 0);
-
-  unsigned i;
-  for (i = 0; r[i^1] != 0; i ^= 1) {
-    // An overview of the math without the confusing bit-flipping:
-    // q = r[i-2] / r[i-1]
-    // r[i] = r[i-2] % r[i-1]
-    // t[i] = t[i-2] - t[i-1] * q
-    udivrem(r[i], r[i^1], q, r[i]);
-    t[i] -= t[i^1] * q;
-  }
-
-  // If this APInt and the modulo are not coprime, there is no multiplicative
-  // inverse, so return 0. We check this by looking at the next-to-last
-  // remainder, which is the gcd(*this,modulo) as calculated by the Euclidean
-  // algorithm.
-  if (r[i] != 1)
-    return APInt(BitWidth, 0);
-
-  // The next-to-last t is the multiplicative inverse.  However, we are
-  // interested in a positive inverse. Calculate a positive one from a negative
-  // one if necessary. A simple addition of the modulo suffices because
-  // abs(t[i]) is known to be less than *this/2 (see the link above).
-  if (t[i].isNegative())
-    t[i] += modulo;
-
-  return std::move(t[i]);
+  // Use Newton's method.
+  APInt Factor = *this;
+  APInt T;
+  while (!(T = *this * Factor).isOne())
+    Factor *= 2 - std::move(T);
+  return Factor;
 }
 
 /// Implementation of Knuth's Algorithm D (Division of nonnegative integers)
@@ -2621,11 +2585,13 @@ int APInt::tcMultiply(WordType *dst, const WordType *lhs,
   assert(dst != lhs && dst != rhs);
 
   int overflow = 0;
-  tcSet(dst, 0, parts);
 
-  for (unsigned i = 0; i < parts; i++)
-    overflow |= tcMultiplyPart(&dst[i], lhs, rhs[i], 0, parts,
-                               parts - i, true);
+  for (unsigned i = 0; i < parts; i++) {
+    // Don't accumulate on the first iteration so we don't need to initalize
+    // dst to 0.
+    overflow |=
+        tcMultiplyPart(&dst[i], lhs, rhs[i], 0, parts, parts - i, i != 0);
+  }
 
   return overflow;
 }
@@ -2641,10 +2607,11 @@ void APInt::tcFullMultiply(WordType *dst, const WordType *lhs,
 
   assert(dst != lhs && dst != rhs);
 
-  tcSet(dst, 0, rhsParts);
-
-  for (unsigned i = 0; i < lhsParts; i++)
-    tcMultiplyPart(&dst[i], rhs, lhs[i], 0, rhsParts, rhsParts + 1, true);
+  for (unsigned i = 0; i < lhsParts; i++) {
+    // Don't accumulate on the first iteration so we don't need to initalize
+    // dst to 0.
+    tcMultiplyPart(&dst[i], rhs, lhs[i], 0, rhsParts, rhsParts + 1, i != 0);
+  }
 }
 
 // If RHS is zero LHS and REMAINDER are left unchanged, return one.
@@ -3120,4 +3087,20 @@ APInt APIntOps::avgCeilS(const APInt &C1, const APInt &C2) {
 APInt APIntOps::avgCeilU(const APInt &C1, const APInt &C2) {
   // Return ceil((C1 + C2) / 2)
   return (C1 | C2) - (C1 ^ C2).lshr(1);
+}
+
+APInt APIntOps::mulhs(const APInt &C1, const APInt &C2) {
+  assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
+  unsigned FullWidth = C1.getBitWidth() * 2;
+  APInt C1Ext = C1.sext(FullWidth);
+  APInt C2Ext = C2.sext(FullWidth);
+  return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
+}
+
+APInt APIntOps::mulhu(const APInt &C1, const APInt &C2) {
+  assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
+  unsigned FullWidth = C1.getBitWidth() * 2;
+  APInt C1Ext = C1.zext(FullWidth);
+  APInt C2Ext = C2.zext(FullWidth);
+  return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
 }

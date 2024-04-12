@@ -140,7 +140,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
 
   // Integral constants can be freely negated.
   if (match(V, m_AnyIntegralConstant()))
-    return ConstantExpr::getNeg(cast<Constant>(V), /*HasNUW=*/false,
+    return ConstantExpr::getNeg(cast<Constant>(V),
                                 /*HasNSW=*/false);
 
   // If we have a non-instruction, then give up.
