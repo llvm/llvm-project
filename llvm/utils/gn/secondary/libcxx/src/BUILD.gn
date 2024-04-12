@@ -297,7 +297,7 @@ if (libcxx_enable_static) {
     deps = [
       "//compiler-rt/lib/builtins",
       "//libcxx/include",
-      "//libcxxabi/src:cxxabi_static",
+      "//libcxxabi/src:sources",
       "//libunwind/src:unwind_static",
     ]
     configs += [ ":cxx_config" ]
