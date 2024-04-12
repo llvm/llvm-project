@@ -1136,14 +1136,22 @@ private:
       addPassedArg(PassEntityBy::Box, entity, characteristics);
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Character) {
-      // Pass as fir.box_char
-      mlir::Type boxCharTy =
-          fir::BoxCharType::get(&mlirContext, dynamicType.kind());
-      addFirOperand(boxCharTy, nextPassedArgPosition(), Property::BoxChar,
-                    attrs);
-      addPassedArg(isValueAttr ? PassEntityBy::CharBoxValueAttribute
-                               : PassEntityBy::BoxChar,
-                   entity, characteristics);
+      if (isValueAttr && isBindC) {
+        // Pass as fir.char<1>
+        mlir::Type charTy =
+            fir::CharacterType::getSingleton(&mlirContext, dynamicType.kind());
+        addFirOperand(charTy, nextPassedArgPosition(), Property::Value, attrs);
+        addPassedArg(PassEntityBy::Value, entity, characteristics);
+      } else {
+        // Pass as fir.box_char
+        mlir::Type boxCharTy =
+            fir::BoxCharType::get(&mlirContext, dynamicType.kind());
+        addFirOperand(boxCharTy, nextPassedArgPosition(), Property::BoxChar,
+                      attrs);
+        addPassedArg(isValueAttr ? PassEntityBy::CharBoxValueAttribute
+                                 : PassEntityBy::BoxChar,
+                     entity, characteristics);
+      }
     } else {
       // Pass as fir.ref unless it's by VALUE and BIND(C). Also pass-by-value
       // for numerical/logical scalar without OPTIONAL so that the behavior is
