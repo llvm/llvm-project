@@ -2713,8 +2713,6 @@ static Constant *computePointerICmp(CmpInst::Predicate Pred, Value *LHS,
   assert(LHS->getType() == RHS->getType() && "Must have same types");
   const DataLayout &DL = Q.DL;
   const TargetLibraryInfo *TLI = Q.TLI;
-  const DominatorTree *DT = Q.DT;
-  const Instruction *CxtI = Q.CxtI;
 
   // We can only fold certain predicates on pointer comparisons.
   switch (Pred) {
