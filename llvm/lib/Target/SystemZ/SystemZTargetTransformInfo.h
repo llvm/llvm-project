@@ -127,6 +127,8 @@ public:
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
+
+  bool shouldExpandReduction(const IntrinsicInst *II) const;
   /// @}
 };
 
