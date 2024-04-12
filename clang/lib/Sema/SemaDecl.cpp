@@ -11911,8 +11911,14 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
     return false;
   }
 
+  const llvm::Triple &T = S.getASTContext().getTargetInfo().getTriple();
+
   // Target attribute on AArch64 is not used for multiversioning
-  if (NewTA && S.getASTContext().getTargetInfo().getTriple().isAArch64())
+  if (NewTA && T.isAArch64())
+    return false;
+
+  // Target attribute on RISCV is not used for multiversioning
+  if (NewTA && T.isRISCV())
     return false;
 
   if (!OldDecl || !OldDecl->getAsFunction() ||
