@@ -2787,9 +2787,8 @@ public:
 #include "clang/Basic/OpenACCClauses.def"
 };
 
-void OpenACCClauseEnqueue::VisitOpenACCDefaultClause(
-    const OpenACCDefaultClause &C) {}
-void OpenACCClauseEnqueue::VisitOpenACCIfClause(const OpenACCIfClause &C) {
+void OpenACCClauseEnqueue::VisitDefaultClause(const OpenACCDefaultClause &C) {}
+void OpenACCClauseEnqueue::VisitIfClause(const OpenACCIfClause &C) {
   Visitor.AddStmt(C.getConditionExpr());
 }
 } // namespace

@@ -2459,17 +2459,17 @@ public:
   }
 
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
-  void VisitOpenACC##CLAUSE_NAME##Clause(                                      \
+  void Visit##CLAUSE_NAME##Clause(                                      \
       const OpenACC##CLAUSE_NAME##Clause &Clause);
 
 #include "clang/Basic/OpenACCClauses.def"
 };
 
 /// Nothing to do here, there are no sub-statements.
-void OpenACCClauseProfiler::VisitOpenACCDefaultClause(
+void OpenACCClauseProfiler::VisitDefaultClause(
     const OpenACCDefaultClause &Clause) {}
 
-void OpenACCClauseProfiler::VisitOpenACCIfClause(
+void OpenACCClauseProfiler::VisitIfClause(
     const OpenACCIfClause &Clause) {
   assert(Clause.hasConditionExpr() &&
          "if clause requires a valid condition expr");
