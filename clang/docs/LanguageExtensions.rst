@@ -3507,7 +3507,7 @@ precedence.
 ``true``, allowing all checks.
 
 Parameter ``kind`` is a string literal representing a user selected kind for
-guarded check. It's unused now. It will enable kind specific lowering in future.
+guarded check. It's unused now. It will enable kind-specific lowering in future.
 E.g. a higher hotness cutoff can be used for more expensive kind of check.
 
 Query for this feature with ``__has_builtin(__builtin_allow_runtime_check)``.
