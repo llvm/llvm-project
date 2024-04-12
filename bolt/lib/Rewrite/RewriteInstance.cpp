@@ -4300,7 +4300,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   for (auto &SectionKV : OutputSections) {
     ELFShdrTy &Section = SectionKV.second;
 
-    // Ignore TLS sections as they don't take any space in the file.
+    // Ignore NOBITS sections as they don't take any space in the file.
     if (Section.sh_type == ELF::SHT_NOBITS)
       continue;
 
@@ -4308,10 +4308,9 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     // placed in different loadable segments.
     if (PrevSection &&
         PrevSection->sh_offset + PrevSection->sh_size > Section.sh_offset) {
-      if (opts::Verbosity > 1) {
+      if (opts::Verbosity > 1)
         BC->outs() << "BOLT-INFO: adjusting size for section "
                    << PrevBinSec->getOutputName() << '\n';
-      }
       PrevSection->sh_size = Section.sh_offset - PrevSection->sh_offset;
     }
 
