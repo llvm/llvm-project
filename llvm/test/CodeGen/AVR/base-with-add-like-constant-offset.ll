@@ -4,11 +4,10 @@
 define void @test(i16 %x, ptr addrspace(1) %o) {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ori r22, 10
 ; CHECK-NEXT:    mov r30, r22
 ; CHECK-NEXT:    mov r31, r23
-; CHECK-NEXT:    std Z+1, r25
-; CHECK-NEXT:    st Z, r24
+; CHECK-NEXT:    std Z+11, r25
+; CHECK-NEXT:    std Z+10, r24
 ; CHECK-NEXT:    ret
   %int = ptrtoint ptr addrspace(1) %o to i16
   %or = or disjoint i16 %int, 10
