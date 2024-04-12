@@ -135,6 +135,7 @@
 ! HELP-NEXT: -print-target-triple    Print the normalized target triple
 ! HELP-NEXT: -pthread                Support POSIX threads in generated code
 ! HELP-NEXT: -P                      Disable linemarker output in -E mode
+! HELP-NEXT:  --rocm-path=<value> ROCm installation path, used for finding and automatically linking required bitcode libraries.
 ! HELP-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
 ! HELP-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression
 ! HELP-NEXT: -Rpass=<value>          Report transformations performed by optimization passes whose name matches the given POSIX regular expression
