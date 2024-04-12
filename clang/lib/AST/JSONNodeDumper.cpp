@@ -1576,6 +1576,14 @@ void JSONNodeDumper::VisitMaterializeTemporaryExpr(
   attributeOnlyIfTrue("boundToLValueRef", MTE->isBoundToLvalueReference());
 }
 
+void JSONNodeDumper::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
+  attributeOnlyIfTrue("hasRewrittenInit", Node->hasRewrittenInit());
+}
+
+void JSONNodeDumper::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
+  attributeOnlyIfTrue("hasRewrittenInit", Node->hasRewrittenInit());
+}
+
 void JSONNodeDumper::VisitCXXDependentScopeMemberExpr(
     const CXXDependentScopeMemberExpr *DSME) {
   JOS.attribute("isArrow", DSME->isArrow());
