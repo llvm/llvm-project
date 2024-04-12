@@ -26,7 +26,7 @@ define i1 @test_129_15_0(ptr %y) {
 ;
 ; CHECK-BE-LABEL: test_129_15_0:
 ; CHECK-BE:       # %bb.0:
-; CHECK-BE-NEXT:    lhz 3, 14(3)
+; CHECK-BE-NEXT:    lhz 3, 15(3)
 ; CHECK-BE-NEXT:    clrlwi 3, 3, 17
 ; CHECK-BE-NEXT:    addic 4, 3, -1
 ; CHECK-BE-NEXT:    subfe 3, 4, 3
@@ -69,7 +69,7 @@ define i1 @test_33_8_0(ptr %y) {
 ;
 ; CHECK-BE-LABEL: test_33_8_0:
 ; CHECK-BE:       # %bb.0:
-; CHECK-BE-NEXT:    lbz 3, 3(3)
+; CHECK-BE-NEXT:    lbz 3, 4(3)
 ; CHECK-BE-NEXT:    addic 4, 3, -1
 ; CHECK-BE-NEXT:    subfe 3, 4, 3
 ; CHECK-BE-NEXT:    blr
@@ -105,7 +105,7 @@ define i1 @test_33_1_31(ptr %y) {
 ;
 ; CHECK-BE-LABEL: test_33_1_31:
 ; CHECK-BE:       # %bb.0:
-; CHECK-BE-NEXT:    lbz 3, 0(3)
+; CHECK-BE-NEXT:    lbz 3, 1(3)
 ; CHECK-BE-NEXT:    srwi 3, 3, 7
 ; CHECK-BE-NEXT:    blr
   %a = load i33, ptr %y
@@ -123,7 +123,7 @@ define i1 @test_33_1_0(ptr %y) {
 ;
 ; CHECK-BE-LABEL: test_33_1_0:
 ; CHECK-BE:       # %bb.0:
-; CHECK-BE-NEXT:    lbz 3, 3(3)
+; CHECK-BE-NEXT:    lbz 3, 4(3)
 ; CHECK-BE-NEXT:    clrlwi 3, 3, 31
 ; CHECK-BE-NEXT:    blr
   %a = load i33, ptr %y
@@ -250,12 +250,10 @@ define i1 @test_48_17_0(ptr %y) {
 ;
 ; CHECK-BE-LABEL: test_48_17_0:
 ; CHECK-BE:       # %bb.0:
-; CHECK-BE-NEXT:    lhz 4, 4(3)
-; CHECK-BE-NEXT:    lwz 3, 0(3)
-; CHECK-BE-NEXT:    clrlwi 4, 4, 16
-; CHECK-BE-NEXT:    rlwimi 4, 3, 16, 15, 15
-; CHECK-BE-NEXT:    addic 3, 4, -1
-; CHECK-BE-NEXT:    subfe 3, 3, 4
+; CHECK-BE-NEXT:    lwz 3, 2(3)
+; CHECK-BE-NEXT:    clrlwi 3, 3, 15
+; CHECK-BE-NEXT:    addic 4, 3, -1
+; CHECK-BE-NEXT:    subfe 3, 4, 3
 ; CHECK-BE-NEXT:    blr
   %a = load i48, ptr %y
   %b = and i48 %a, u0x1ffff
@@ -292,8 +290,8 @@ define i1 @test_40_1_32(ptr %y) {
 ;
 ; CHECK-BE-LABEL: test_40_1_32:
 ; CHECK-BE:       # %bb.0:
-; CHECK-BE-NEXT:    lwz 3, 0(3)
-; CHECK-BE-NEXT:    rlwinm 3, 3, 8, 31, 31
+; CHECK-BE-NEXT:    lbz 3, 0(3)
+; CHECK-BE-NEXT:    clrlwi 3, 3, 31
 ; CHECK-BE-NEXT:    blr
   %a = load i40, ptr %y
   %b = and i40 %a, u0x100000000
@@ -325,7 +323,6 @@ define i1 @test_24_8_8(ptr %y) {
 ; CHECK-LE-LABEL: test_24_8_8:
 ; CHECK-LE:       # %bb.0:
 ; CHECK-LE-NEXT:    lbz 3, 1(3)
-; CHECK-LE-NEXT:    slwi 3, 3, 8
 ; CHECK-LE-NEXT:    addic 4, 3, -1
 ; CHECK-LE-NEXT:    subfe 3, 4, 3
 ; CHECK-LE-NEXT:    blr
@@ -333,7 +330,6 @@ define i1 @test_24_8_8(ptr %y) {
 ; CHECK-BE-LABEL: test_24_8_8:
 ; CHECK-BE:       # %bb.0:
 ; CHECK-BE-NEXT:    lbz 3, 1(3)
-; CHECK-BE-NEXT:    slwi 3, 3, 8
 ; CHECK-BE-NEXT:    addic 4, 3, -1
 ; CHECK-BE-NEXT:    subfe 3, 4, 3
 ; CHECK-BE-NEXT:    blr
@@ -346,18 +342,16 @@ define i1 @test_24_8_8(ptr %y) {
 define i1 @test_24_8_12(ptr %y) {
 ; CHECK-LE-LABEL: test_24_8_12:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    lhz 4, 0(3)
-; CHECK-LE-NEXT:    lbz 3, 2(3)
-; CHECK-LE-NEXT:    rlwinm 4, 4, 0, 16, 19
-; CHECK-LE-NEXT:    rlwimi 4, 3, 16, 12, 15
-; CHECK-LE-NEXT:    addic 3, 4, -1
-; CHECK-LE-NEXT:    subfe 3, 3, 4
+; CHECK-LE-NEXT:    lhz 3, 1(3)
+; CHECK-LE-NEXT:    rlwinm 3, 3, 0, 20, 27
+; CHECK-LE-NEXT:    addic 4, 3, -1
+; CHECK-LE-NEXT:    subfe 3, 4, 3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_24_8_12:
 ; CHECK-BE:       # %bb.0:
 ; CHECK-BE-NEXT:    lhz 3, 0(3)
-; CHECK-BE-NEXT:    rlwinm 3, 3, 8, 12, 19
+; CHECK-BE-NEXT:    rlwinm 3, 3, 0, 20, 27
 ; CHECK-BE-NEXT:    addic 4, 3, -1
 ; CHECK-BE-NEXT:    subfe 3, 4, 3
 ; CHECK-BE-NEXT:    blr
@@ -371,7 +365,6 @@ define i1 @test_24_8_16(ptr %y) {
 ; CHECK-LE-LABEL: test_24_8_16:
 ; CHECK-LE:       # %bb.0:
 ; CHECK-LE-NEXT:    lbz 3, 2(3)
-; CHECK-LE-NEXT:    slwi 3, 3, 16
 ; CHECK-LE-NEXT:    addic 4, 3, -1
 ; CHECK-LE-NEXT:    subfe 3, 4, 3
 ; CHECK-LE-NEXT:    blr
@@ -379,7 +372,6 @@ define i1 @test_24_8_16(ptr %y) {
 ; CHECK-BE-LABEL: test_24_8_16:
 ; CHECK-BE:       # %bb.0:
 ; CHECK-BE-NEXT:    lbz 3, 0(3)
-; CHECK-BE-NEXT:    slwi 3, 3, 16
 ; CHECK-BE-NEXT:    addic 4, 3, -1
 ; CHECK-BE-NEXT:    subfe 3, 4, 3
 ; CHECK-BE-NEXT:    blr
