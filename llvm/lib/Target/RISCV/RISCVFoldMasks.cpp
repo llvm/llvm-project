@@ -50,7 +50,7 @@ private:
   bool convertToUnmasked(MachineInstr &MI) const;
   bool convertVMergeToVMv(MachineInstr &MI) const;
 
-  bool isAllOnesMask(const MachineOperand& MaskOp) const;
+  bool isAllOnesMask(const MachineOperand &MaskOp) const;
 };
 
 } // namespace

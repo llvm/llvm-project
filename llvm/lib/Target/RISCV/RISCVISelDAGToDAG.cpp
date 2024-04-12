@@ -3425,8 +3425,7 @@ static bool usesAllOnesMask(SDValue MaskOp) {
   // TODO: Check that the VMSET is the expected bitwidth? The pseudo has
   // undefined behaviour if it's the wrong bitwidth, so we could choose to
   // assume that it's all-ones? Same applies to its VL.
-  return MaskOp->isMachineOpcode() &&
-         IsVMSet(MaskOp.getMachineOpcode());
+  return MaskOp->isMachineOpcode() && IsVMSet(MaskOp.getMachineOpcode());
 }
 
 // Return true if we can make sure mask of N is all-ones mask.
@@ -3476,11 +3475,6 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
       continue;
     Ops.push_back(Op);
   }
-
-  // // Transitively apply any node glued to our new node.
-  // const auto *Glued = N->getGluedNode();
-  // if (auto *TGlued = Glued->getGluedNode())
-  //   Ops.push_back(SDValue(TGlued, TGlued->getNumValues() - 1));
 
   MachineSDNode *Result =
       CurDAG->getMachineNode(Opc, SDLoc(N), N->getVTList(), Ops);
