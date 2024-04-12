@@ -3762,36 +3762,45 @@ multiclass VPseudoVNCVTI_RM_W {
 multiclass VPseudoVNCVTF_W_RM {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxListFW in {
-    defm _W : VPseudoConversionRoundingMode<m.vrclass, m.wvrclass, m, constraint, TargetConstraintType=2>,
-              SchedUnary<"WriteVFNCvtIToFV", "ReadVFNCvtIToFV", m.MX,
-                         forceMergeOpRead=true>;
+    foreach e = SchedSEWSet<m.MX, isF=1, isWidening=1>.val in
+      defm _W : VPseudoConversionRoundingMode<m.vrclass, m.wvrclass, m,
+                                              constraint, sew=e,
+                                              TargetConstraintType=2>,
+                SchedUnary<"WriteVFNCvtIToFV", "ReadVFNCvtIToFV", m.MX, e,
+                           forceMergeOpRead=true>;
   }
 }
 
 multiclass VPseudoVNCVTF_RM_W {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxListFW in {
-    defm _W : VPseudoConversionRM<m.vrclass, m.wvrclass, m, constraint>,
-              SchedUnary<"WriteVFNCvtIToFV", "ReadVFNCvtIToFV", m.MX,
-                         forceMergeOpRead=true>;
+    foreach e = SchedSEWSet<m.MX, isF=1, isWidening=1>.val in
+      defm _W : VPseudoConversionRM<m.vrclass, m.wvrclass, m, constraint, sew=e>,
+                SchedUnary<"WriteVFNCvtIToFV", "ReadVFNCvtIToFV", m.MX, e,
+                           forceMergeOpRead=true>;
   }
 }
 
 multiclass VPseudoVNCVTD_W {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxListFW in {
-    defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint, TargetConstraintType=2>,
-              SchedUnary<"WriteVFNCvtFToFV", "ReadVFNCvtFToFV", m.MX,
-                         forceMergeOpRead=true>;
+    foreach e = SchedSEWSet<m.MX, isF=1, isWidening=1>.val in
+      defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint, sew=e,
+                                  TargetConstraintType=2>,
+                SchedUnary<"WriteVFNCvtFToFV", "ReadVFNCvtFToFV", m.MX, e,
+                           forceMergeOpRead=true>;
   }
 }
 
 multiclass VPseudoVNCVTD_W_RM {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxListFW in {
-    defm _W : VPseudoConversionRoundingMode<m.vrclass, m.wvrclass, m, constraint, TargetConstraintType=2>,
-              SchedUnary<"WriteVFNCvtFToFV", "ReadVFNCvtFToFV", m.MX,
-                         forceMergeOpRead=true>;
+    foreach e = SchedSEWSet<m.MX, isF=1, isWidening=1>.val in
+      defm _W : VPseudoConversionRoundingMode<m.vrclass, m.wvrclass, m,
+                                              constraint, sew=e,
+                                              TargetConstraintType=2>,
+                SchedUnary<"WriteVFNCvtFToFV", "ReadVFNCvtFToFV", m.MX, e,
+                           forceMergeOpRead=true>;
   }
 }
 
@@ -6027,7 +6036,8 @@ multiclass VPatConversionVI_WF_RM <string intrinsic, string instruction> {
   }
 }
 
-multiclass VPatConversionVF_WI_RM <string intrinsic, string instruction> {
+multiclass VPatConversionVF_WI_RM <string intrinsic, string instruction,
+                                   bit isSEWAware = 0> {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar iwti = GetIntVTypeInfo<fvtiToFWti.Wti>.Vti;
@@ -6035,11 +6045,13 @@ multiclass VPatConversionVF_WI_RM <string intrinsic, string instruction> {
                                  GetVTypePredicates<iwti>.Predicates) in
     defm : VPatConversionTARoundingMode<intrinsic, instruction, "W",
                                         fvti.Vector, iwti.Vector, fvti.Mask, fvti.Log2SEW,
-                                        fvti.LMul, fvti.RegClass, iwti.RegClass>;
+                                        fvti.LMul, fvti.RegClass, iwti.RegClass,
+                                        isSEWAware>;
   }
 }
 
-multiclass VPatConversionVF_WF <string intrinsic, string instruction> {
+multiclass VPatConversionVF_WF<string intrinsic, string instruction,
+                               bit isSEWAware = 0> {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
@@ -6047,12 +6059,13 @@ multiclass VPatConversionVF_WF <string intrinsic, string instruction> {
                                  GetVTypePredicates<fwti>.Predicates) in
     defm : VPatConversionTA<intrinsic, instruction, "W",
                             fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
-                            fvti.LMul, fvti.RegClass, fwti.RegClass>;
+                            fvti.LMul, fvti.RegClass, fwti.RegClass, isSEWAware>;
   }
 }
 
-multiclass VPatConversionVF_WF_RM <string intrinsic, string instruction,
-                                   list<VTypeInfoToWide> wlist = AllWidenableFloatVectors> {
+multiclass VPatConversionVF_WF_RM<string intrinsic, string instruction,
+                                   list<VTypeInfoToWide> wlist = AllWidenableFloatVectors,
+                                   bit isSEWAware = 0> {
   foreach fvtiToFWti = wlist in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
@@ -6060,11 +6073,13 @@ multiclass VPatConversionVF_WF_RM <string intrinsic, string instruction,
                                  GetVTypePredicates<fwti>.Predicates) in
     defm : VPatConversionTARoundingMode<intrinsic, instruction, "W",
                                         fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
-                                        fvti.LMul, fvti.RegClass, fwti.RegClass>;
+                                        fvti.LMul, fvti.RegClass, fwti.RegClass,
+                                        isSEWAware>;
   }
 }
 
-multiclass VPatConversionVF_WF_BF_RM <string intrinsic, string instruction> {
+multiclass VPatConversionVF_WF_BF_RM <string intrinsic, string instruction,
+                                      bit isSEWAware = 0> {
   foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
@@ -6072,7 +6087,8 @@ multiclass VPatConversionVF_WF_BF_RM <string intrinsic, string instruction> {
                                  GetVTypePredicates<fwti>.Predicates) in
     defm : VPatConversionTARoundingMode<intrinsic, instruction, "W",
                                         fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
-                                        fvti.LMul, fvti.RegClass, fwti.RegClass>;
+                                        fvti.LMul, fvti.RegClass, fwti.RegClass,
+                                        isSEWAware>;
   }
 }
 
@@ -7320,21 +7336,24 @@ defm : VPatConversionVI_WF_RM<"int_riscv_vfncvt_xu_f_w", "PseudoVFNCVT_XU_F">;
 defm : VPatConversionVI_WF_RM<"int_riscv_vfncvt_x_f_w", "PseudoVFNCVT_X_F">;
 defm : VPatConversionVI_WF<"int_riscv_vfncvt_rtz_xu_f_w", "PseudoVFNCVT_RTZ_XU_F">;
 defm : VPatConversionVI_WF<"int_riscv_vfncvt_rtz_x_f_w", "PseudoVFNCVT_RTZ_X_F">;
-defm : VPatConversionVF_WI_RM <"int_riscv_vfncvt_f_xu_w", "PseudoVFNCVT_F_XU">;
-defm : VPatConversionVF_WI_RM <"int_riscv_vfncvt_f_x_w", "PseudoVFNCVT_F_X">;
+defm : VPatConversionVF_WI_RM<"int_riscv_vfncvt_f_xu_w", "PseudoVFNCVT_F_XU",
+                              isSEWAware=1>;
+defm : VPatConversionVF_WI_RM<"int_riscv_vfncvt_f_x_w", "PseudoVFNCVT_F_X",
+                              isSEWAware=1>;
 defvar WidenableFloatVectorsExceptF16 = !filter(fvtiToFWti, AllWidenableFloatVectors,
                                                 !ne(fvtiToFWti.Vti.Scalar, f16));
 defm : VPatConversionVF_WF_RM<"int_riscv_vfncvt_f_f_w", "PseudoVFNCVT_F_F",
-                           WidenableFloatVectorsExceptF16>;
+                           WidenableFloatVectorsExceptF16, isSEWAware=1>;
 // Define vfncvt.f.f.w for f16 when Zvfhmin is enable.
 defvar F16WidenableFloatVectors = !filter(fvtiToFWti, AllWidenableFloatVectors,
                                           !eq(fvtiToFWti.Vti.Scalar, f16));
 let Predicates = [HasVInstructionsF16Minimal] in
 defm : VPatConversionVF_WF_RM<"int_riscv_vfncvt_f_f_w", "PseudoVFNCVT_F_F",
-                           F16WidenableFloatVectors>;
+                           F16WidenableFloatVectors, isSEWAware=1>;
 defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w", 
-                                 "PseudoVFNCVTBF16_F_F">;
-defm : VPatConversionVF_WF<"int_riscv_vfncvt_rod_f_f_w", "PseudoVFNCVT_ROD_F_F">;
+                                 "PseudoVFNCVTBF16_F_F", isSEWAware=1>;
+defm : VPatConversionVF_WF<"int_riscv_vfncvt_rod_f_f_w", "PseudoVFNCVT_ROD_F_F",
+                           isSEWAware=1>;
 
 //===----------------------------------------------------------------------===//
 // 14. Vector Reduction Operations
