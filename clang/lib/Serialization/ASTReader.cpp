@@ -3795,6 +3795,29 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       }
       break;
 
+    case DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD: {
+      if (Record.size() % 3 != 0)
+        return llvm::createStringError(
+            std::errc::illegal_byte_sequence,
+            "invalid DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD block in AST "
+            "file");
+      for (unsigned I = 0, N = Record.size(); I != N; I += 3) {
+        GlobalDeclID ID = getGlobalDeclID(F, Record[I]);
+
+        uint64_t BaseOffset = F.DeclsBlockStartOffset;
+        assert(BaseOffset && "Invalid DeclsBlockStartOffset for module file!");
+        uint64_t LexicalOffset = Record[I + 1] ? BaseOffset + Record[I + 1] : 0;
+        uint64_t VisibleOffset = Record[I + 2] ? BaseOffset + Record[I + 2] : 0;
+
+        DelayedNamespaceOffsetMap[ID] = {LexicalOffset, VisibleOffset};
+
+        assert(!GetExistingDecl(ID) &&
+               "We shouldn't load the namespace in the front of delayed "
+               "namespace lexical and visible block");
+      }
+      break;
+    }
+
     case OBJC_CATEGORIES_MAP:
       if (F.LocalNumObjCCategoriesInMap != 0)
         return llvm::createStringError(
