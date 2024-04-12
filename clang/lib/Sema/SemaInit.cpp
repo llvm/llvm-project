@@ -6114,7 +6114,8 @@ InitializationSequence::InitializationSequence(
     Sema &S, const InitializedEntity &Entity, const InitializationKind &Kind,
     MultiExprArg Args, bool TopLevelOfInitList, bool TreatUnavailableAsInvalid)
     : FailedOverloadResult(OR_Success),
-      FailedCandidateSet(Kind.getLocation(), OverloadCandidateSet::CSK_Normal) {
+      FailedCandidateSet(S.getASTContext(), Kind.getLocation(),
+                         OverloadCandidateSet::CSK_Normal) {
   InitializeFrom(S, Entity, Kind, Args, TopLevelOfInitList,
                  TreatUnavailableAsInvalid);
 }
@@ -6808,7 +6809,8 @@ static ExprResult CopyObject(Sema &S,
   // Perform overload resolution using the class's constructors. Per
   // C++11 [dcl.init]p16, second bullet for class types, this initialization
   // is direct-initialization.
-  OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
+  OverloadCandidateSet CandidateSet(S.getASTContext(), Loc,
+                                    OverloadCandidateSet::CSK_Normal);
   DeclContext::lookup_result Ctors = S.LookupConstructors(Class);
 
   OverloadCandidateSet::iterator Best;
@@ -6949,7 +6951,8 @@ static void CheckCXX98CompatAccessibleCopy(Sema &S,
     return;
 
   // Find constructors which would have been considered.
-  OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
+  OverloadCandidateSet CandidateSet(S.getASTContext(), Loc,
+                                    OverloadCandidateSet::CSK_Normal);
   DeclContext::lookup_result Ctors =
       S.LookupConstructors(cast<CXXRecordDecl>(Record->getDecl()));
 
@@ -10818,7 +10821,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   //
   // Since we know we're initializing a class type of a type unrelated to that
   // of the initializer, this reduces to something fairly reasonable.
-  OverloadCandidateSet Candidates(Kind.getLocation(),
+  OverloadCandidateSet Candidates(Context, Kind.getLocation(),
                                   OverloadCandidateSet::CSK_Normal);
   OverloadCandidateSet::iterator Best;
 
