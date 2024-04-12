@@ -27398,4 +27398,3 @@ TEST_F(FormatTest, BreakAdjacentStringLiterals) {
 } // namespace test
 } // namespace format
 } // namespace clang
-                    
