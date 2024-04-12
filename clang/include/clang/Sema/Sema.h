@@ -480,8 +480,7 @@ class Sema final : public SemaBase {
   // 35. Code Completion (SemaCodeComplete.cpp)
   // 36. FixIt Helpers (SemaFixItUtils.cpp)
   // 37. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
-  // 38. CUDA (SemaCUDA.cpp)
-  // 39. OpenMP Directives and Clauses (SemaOpenMP.cpp)
+  // 38. OpenMP Directives and Clauses (SemaOpenMP.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
