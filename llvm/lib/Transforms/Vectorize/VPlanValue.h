@@ -444,27 +444,29 @@ public:
 class VPlan;
 class VPBasicBlock;
 
-/// This class can be used to assign consecutive numbers to VPValues in a
-/// VPlan without underlying values and deduplicated names to VPValues with
-/// underlying values. Allows querying the numbering and deduplicated names for
-/// printing, similar to the ModuleSlotTracker for IR values.
+/// This class can be used to assign names to VPValues. For VPValues without
+/// underlying value, assign consecutive numbers and use those as names (wrapped
+/// in vp<>). Otherwise, use the name from the underlying value (wrapped in
+/// ir<>), apending a .V version number if there are multiple uses of the same
+/// name. Allows querying names for VPValues for  printing, similar to the
+/// ModuleSlotTracker for IR values.
 class VPSlotTracker {
-  /// Keep track of de-duplicated names assigned to VPValues with underlying IR
+  /// Keep track of versioned names assigned to VPValues with underlying IR
   /// values
-  DenseMap<const VPValue *, std::string> AssignedNames;
+  DenseMap<const VPValue *, std::string> VPValue2Name;
   /// Keep track of the next number to use to deduplicate the base name.
-  StringMap<unsigned> NameUseCount;
+  StringMap<unsigned> BaseName2Version;
 
-  DenseMap<const VPValue *, unsigned> Slots;
+  /// Number to assign to the next VPValue without underlying value.
   unsigned NextSlot = 0;
 
   void assignSlotOrName(const VPValue *V);
   void assignSlotsOrNames(const VPlan &Plan);
   void assignSlotsOrNames(const VPBasicBlock *VPBB);
 
-  /// Create a deduplicated version of \p Name for \p V by appending ".Number"
+  /// Create a versioned variant of \p Name for \p V by appending ".Number"
   /// to \p Name if there are multiple uses of that name.
-  void deduplicateName(const VPValue *V, StringRef Name);
+  void versionName(const VPValue *V, StringRef Name);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
@@ -472,14 +474,10 @@ public:
       assignSlotsOrNames(*Plan);
   }
 
-  unsigned getSlot(const VPValue *V) const {
-    auto I = Slots.find(V);
-    if (I == Slots.end())
-      return -1;
-    return I->second;
-  }
-
-  std::string getName(const VPValue *) const;
+  /// Returns the name assigned to \p V, if there is one, otherwise try to
+  /// construct one from the underlying value, if there's one; else return
+  /// <badref>.
+  std::string getName(const VPValue *V) const;
 };
 
 } // namespace llvm

@@ -1363,15 +1363,17 @@ VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
 }
 
 void VPSlotTracker::assignSlotOrName(const VPValue *V) {
-  if (auto *UV = V->getUnderlyingValue()) {
-    std::string Name;
-    raw_string_ostream S(Name);
-    UV->printAsOperand(S, false);
-    deduplicateName(V, Name);
+  auto *UV = V->getUnderlyingValue();
+  if (!UV) {
+    assert(!VPValue2Name.contains(V) && "VPValue already has a slot!");
+    VPValue2Name[V] = (Twine("vp<%") + Twine(NextSlot) + ">").str();
+    NextSlot++;
     return;
   }
-  assert(!Slots.contains(V) && "VPValue already has a slot!");
-  Slots[V] = NextSlot++;
+  std::string Name;
+  raw_string_ostream S(Name);
+  UV->printAsOperand(S, false);
+  versionName(V, Name);
 }
 
 void VPSlotTracker::assignSlotsOrNames(const VPlan &Plan) {
@@ -1397,38 +1399,47 @@ void VPSlotTracker::assignSlotsOrNames(const VPBasicBlock *VPBB) {
       assignSlotOrName(Def);
 }
 
-void VPSlotTracker::deduplicateName(const VPValue *V, StringRef Name) {
-  assert(!Name.empty() && "Name cannot be be empty.");
-  std::string NewName = Name.str();
-  const auto &[A, AssignedInserted] = AssignedNames.insert({V, NewName});
-  if (!AssignedInserted || V->isLiveIn())
+void VPSlotTracker::versionName(const VPValue *V, StringRef Name) {
+  assert(!Name.empty() && "Name cannot be empty.");
+  std::string BaseName = (Twine("ir<") + Name + Twine(">")).str();
+
+  // First assign the base name for V.
+  const auto &[A, AssignedInserted] = VPValue2Name.insert({V, BaseName});
+  assert(AssignedInserted && "name assigned already?");
+  if (V->isLiveIn())
     return;
 
-  const auto &[C, UseInserted] = NameUseCount.insert({NewName, 0});
+  // If it is already used by C > 0 other VPValues, increase the version counter
+  // C and use it for V.
+  const auto &[C, UseInserted] = BaseName2Version.insert({BaseName, 0});
   if (!UseInserted) {
     C->second++;
-    NewName = NewName + "." + std::to_string(C->second);
-    A->second = NewName;
+    A->second = (BaseName + Twine(".") + Twine(C->second)).str();
   }
 }
 
 std::string VPSlotTracker::getName(const VPValue *V) const {
-  std::string Name = AssignedNames.lookup(V);
-  if (!Name.empty()) {
-    assert(
-        V->getUnderlyingValue() &&
-        "Can only have assigned names for VPValues with an underlying value");
-    return (Twine("ir<") + Name + ">").str();
+  std::string Name = VPValue2Name.lookup(V);
+  if (!Name.empty())
+    return Name;
+
+  // If no name was assigned, no VPlan was provided when creating the slot
+  // tracker or it is not reachable from the provided VPlan. This can happen,
+  // e.g. when trying to print a recipe that has not been inserted into a VPlan
+  // in a debugger.
+  const VPRecipeBase *DefR = V->getDefiningRecipe();
+  assert((!DefR || !DefR->getParent() || !DefR->getParent()->getPlan()) &&
+         "VPValue defined by a recipe in a VPlan?");
+
+  // Use the underlying value's name, if there is one.
+  if (auto *UV = V->getUnderlyingValue()) {
+    std::string Name;
+    raw_string_ostream S(Name);
+    UV->printAsOperand(S, false);
+    return (Twine("ir<%") + Name + ">").str();
   }
 
-  assert(
-      !V->getUnderlyingValue() &&
-      "Must not have assigned names for VPValues without an underlying value");
-  unsigned Slot = getSlot(V);
-  if (Slot == unsigned(-1))
-    return "<badref>";
-  else
-    return (Twine("vp<%") + std::to_string(Slot) + ">").str();
+  return "<badref>";
 }
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
