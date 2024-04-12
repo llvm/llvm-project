@@ -234,6 +234,8 @@ using DistributeClauseOps =
     detail::Clauses<AllocateClauseOps, DistScheduleClauseOps, OrderClauseOps,
                     PrivateClauseOps>;
 
+using LoopNestClauseOps = detail::Clauses<CollapseClauseOps, LoopRelatedOps>;
+
 // TODO `filter` clause.
 using MaskedClauseOps = detail::Clauses<>;
 
