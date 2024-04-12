@@ -28,14 +28,14 @@ void PolynomialAttr::print(AsmPrinter &p) const {
 /// variable name. Sets shouldParseMore to true if the monomial is followed by
 /// a '+'.
 ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
-                          llvm::StringRef &variable, bool *isConstantTerm,
-                          bool *shouldParseMore) {
+                          llvm::StringRef &variable, bool &isConstantTerm,
+                          bool &shouldParseMore) {
   APInt parsedCoeff(apintBitWidth, 1);
   auto parsedCoeffResult = parser.parseOptionalInteger(parsedCoeff);
   monomial.coefficient = parsedCoeff;
 
-  *isConstantTerm = false;
-  *shouldParseMore = false;
+  isConstantTerm = false;
+  shouldParseMore = false;
 
   // A + indicates it's a constant term with more to go, as in `1 + x`.
   if (succeeded(parser.parseOptionalPlus())) {
@@ -45,8 +45,8 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
       return failure();
     }
     monomial.exponent = APInt(apintBitWidth, 0);
-    *isConstantTerm = true;
-    *shouldParseMore = true;
+    isConstantTerm = true;
+    shouldParseMore = true;
     return success();
   }
 
@@ -59,7 +59,7 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
     }
 
     monomial.exponent = APInt(apintBitWidth, 0);
-    *isConstantTerm = true;
+    isConstantTerm = true;
     return success();
   }
 
@@ -86,7 +86,7 @@ ParseResult parseMonomial(AsmParser &parser, Monomial &monomial,
   }
 
   if (succeeded(parser.parseOptionalPlus())) {
-    *shouldParseMore = true;
+    shouldParseMore = true;
   }
   return success();
 }
@@ -105,7 +105,7 @@ Attribute PolynomialAttr::parse(AsmParser &parser, Type type) {
     bool isConstantTerm;
     bool shouldParseMore;
     if (failed(parseMonomial(parser, parsedMonomial, parsedVariableRef,
-                             &isConstantTerm, &shouldParseMore))) {
+                             isConstantTerm, shouldParseMore))) {
       parser.emitError(parser.getCurrentLocation(), "expected a monomial");
       return {};
     }
