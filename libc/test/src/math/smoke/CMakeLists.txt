@@ -2189,6 +2189,58 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  nearbyint_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyint_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyint
+)
+
+add_fp_unittest(
+  nearbyintf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyintf_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyintf
+)
+
+add_fp_unittest(
+  nearbyintl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyintl_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyintl
+)
+
+add_fp_unittest(
+  nearbyintf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nearbyintf128_test.cpp
+  HDRS
+    NearbyIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.nearbyintf128
+)
+
+add_fp_unittest(
   nextafter_test
   SUITE
     libc-math-smoke-tests

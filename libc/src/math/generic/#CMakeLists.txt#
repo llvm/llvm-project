@@ -727,7 +727,7 @@ add_entrypoint_object(
     ../nearbyintl.h
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
-  COMPILE_OPTIONS
+  COMPILE_OPTIOfNS
     -O3
 )
 
