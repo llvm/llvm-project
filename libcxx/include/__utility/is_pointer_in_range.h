@@ -44,7 +44,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address
       return false;
   }
 
-  // Checking this for unrelated pointers is technically UB, but no compiler optimizes based on it (currently).
   return !__less<>()(__ptr, __begin) && __less<>()(__ptr, __end);
 }
 

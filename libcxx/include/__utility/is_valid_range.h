@@ -29,7 +29,6 @@ __is_valid_range(const _Tp* __first, const _Tp* __last) {
     return __builtin_constant_p(__first <= __last) && __first <= __last;
   }
 
-  // Checking this for unrelated pointers is technically UB, but no compiler optimizes based on it (currently).
   return !__less<>()(__last, __first);
 }
 

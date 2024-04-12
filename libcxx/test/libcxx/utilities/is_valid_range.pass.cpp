@@ -17,13 +17,10 @@ TEST_CONSTEXPR_CXX14 void check_type() {
     T i = 0;
     T j = 0;
     assert(std::__is_valid_range(&i, &i));
+    assert(std::__is_valid_range(&i, &i + 1));
 
     assert(!std::__is_valid_range(&i, &j));
     assert(!std::__is_valid_range(&i + 1, &i));
-
-    // We detect this one as being a valid range.
-    // Ideally we would detect it as an invalid range, but this may not be implementable.
-    assert(std::__is_valid_range(&i, &i + 1));
   }
 
   {
