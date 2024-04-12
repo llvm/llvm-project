@@ -27,7 +27,8 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
 
   code extraBaseClassDeclaration = [{
     void printProperties(::mlir::MLIRContext *ctx,
-            ::mlir::OpAsmPrinter &p, const Properties &prop) {
+            ::mlir::OpAsmPrinter &p, const Properties &prop,
+            ::mlir::ArrayRef<::llvm::StringRef> elidedProps) {
       Attribute propAttr = getPropertiesAsAttr(ctx, prop);
       if (propAttr)
         p << "<" << propAttr << ">";
