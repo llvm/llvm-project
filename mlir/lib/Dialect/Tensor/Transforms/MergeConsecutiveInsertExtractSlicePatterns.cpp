@@ -156,7 +156,7 @@ struct DropRedundantRankExpansionOnInsertSliceOfExtractSlice final
   using OpRewritePattern<tensor::InsertSliceOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(tensor::InsertSliceOp insertSliceOp,
-                                PatternRewriter &rewriter) const {
+                                PatternRewriter &rewriter) const override {
     auto extractSliceOp =
         insertSliceOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
     if (!extractSliceOp) {

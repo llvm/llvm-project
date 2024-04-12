@@ -45,8 +45,10 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TargetParser/Triple.h"
@@ -1537,6 +1539,10 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
       cast<FunctionDecl>(D)->isFunctionTemplateSpecialization())
     return;
 
+  if (isa<UsingEnumDecl>(D) && D->getDeclName().isEmpty()) {
+    S->AddDecl(D);
+    return;
+  }
   // If this replaces anything in the current scope,
   IdentifierResolver::iterator I = IdResolver.begin(D->getDeclName()),
                                IEnd = IdResolver.end();
@@ -2188,8 +2194,21 @@ void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD,
 
   assert(iter->getSecond() >= 0 &&
          "Found a negative number of references to a VarDecl");
-  if (iter->getSecond() != 0)
-    return;
+  if (int RefCnt = iter->getSecond(); RefCnt > 0) {
+    // Assume the given VarDecl is "used" if its ref count stored in
+    // `RefMinusAssignments` is positive, with one exception.
+    //
+    // For a C++ variable whose decl (with initializer) entirely consist the
+    // condition expression of a if/while/for construct,
+    // Clang creates a DeclRefExpr for the condition expression rather than a
+    // BinaryOperator of AssignmentOp. Thus, the C++ variable's ref
+    // count stored in `RefMinusAssignment` equals 1 when the variable is never
+    // used in the body of the if/while/for construct.
+    bool UnusedCXXCondDecl = VD->isCXXCondDecl() && (RefCnt == 1);
+    if (!UnusedCXXCondDecl)
+      return;
+  }
+
   unsigned DiagID = isa<ParmVarDecl>(VD) ? diag::warn_unused_but_set_parameter
                                          : diag::warn_unused_but_set_variable;
   DiagReceiver(VD->getLocation(), PDiag(DiagID) << VD);
@@ -2301,7 +2320,7 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
 ///
 /// \returns The declaration of the named Objective-C class, or NULL if the
 /// class could not be found.
-ObjCInterfaceDecl *Sema::getObjCInterfaceDecl(IdentifierInfo *&Id,
+ObjCInterfaceDecl *Sema::getObjCInterfaceDecl(const IdentifierInfo *&Id,
                                               SourceLocation IdLoc,
                                               bool DoTypoCorrection) {
   // The third "scope" argument is 0 since we aren't enabling lazy built-in
@@ -2955,10 +2974,10 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   else if (const auto *BTFA = dyn_cast<BTFDeclTagAttr>(Attr))
     NewAttr = S.mergeBTFDeclTagAttr(D, *BTFA);
   else if (const auto *NT = dyn_cast<HLSLNumThreadsAttr>(Attr))
-    NewAttr =
-        S.mergeHLSLNumThreadsAttr(D, *NT, NT->getX(), NT->getY(), NT->getZ());
+    NewAttr = S.HLSL().mergeNumThreadsAttr(D, *NT, NT->getX(), NT->getY(),
+                                           NT->getZ());
   else if (const auto *SA = dyn_cast<HLSLShaderAttr>(Attr))
-    NewAttr = S.mergeHLSLShaderAttr(D, *SA, SA->getType());
+    NewAttr = S.HLSL().mergeShaderAttr(D, *SA, SA->getType());
   else if (isa<SuppressAttr>(Attr))
     // Do nothing. Each redeclaration should be suppressed separately.
     NewAttr = nullptr;
@@ -4031,13 +4050,13 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         } else {
           Diag(NewMethod->getLocation(),
                diag::err_definition_of_implicitly_declared_member)
-            << New << getSpecialMember(OldMethod);
+              << New << llvm::to_underlying(getSpecialMember(OldMethod));
           return true;
         }
       } else if (OldMethod->getFirstDecl()->isExplicitlyDefaulted() && !isFriend) {
         Diag(NewMethod->getLocation(),
              diag::err_definition_of_explicitly_defaulted_member)
-          << getSpecialMember(OldMethod);
+            << llvm::to_underlying(getSpecialMember(OldMethod));
         return true;
       }
     }
@@ -6318,16 +6337,15 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
         if (TST->isDependentType() && TST->isTypeAlias())
           Diag(Loc, diag::ext_alias_template_in_declarative_nns)
               << SpecLoc.getLocalSourceRange();
-      } else if (T->isDecltypeType()) {
+      } else if (T->isDecltypeType() || T->getAsAdjusted<PackIndexingType>()) {
         // C++23 [expr.prim.id.qual]p2:
         //   [...] A declarative nested-name-specifier shall not have a
-        //   decltype-specifier.
+        //   computed-type-specifier.
         //
-        // FIXME: This wording appears to be defective as it does not forbid
-        // declarative nested-name-specifiers with pack-index-specifiers.
-        // See https://github.com/cplusplus/CWG/issues/499.
-        Diag(Loc, diag::err_decltype_in_declarator)
-            << SpecLoc.getTypeLoc().getSourceRange();
+        // CWG2858 changed this from 'decltype-specifier' to
+        // 'computed-type-specifier'.
+        Diag(Loc, diag::err_computed_type_in_declarative_nns)
+            << T->isDecltypeType() << SpecLoc.getTypeLoc().getSourceRange();
       }
     }
   } while ((SpecLoc = SpecLoc.getPrefix()));
@@ -9915,7 +9933,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // FIXME: We need a better way to separate C++ standard and clang modules.
     bool ImplicitInlineCXX20 = !getLangOpts().CPlusPlusModules ||
                                !NewFD->getOwningModule() ||
-                               NewFD->getOwningModule()->isGlobalModule() ||
+                               NewFD->isFromExplicitGlobalModule() ||
                                NewFD->getOwningModule()->isHeaderLikeModule();
     bool isInline = D.getDeclSpec().isInlineSpecified();
     bool isVirtual = D.getDeclSpec().isVirtualSpecified();
@@ -10122,23 +10140,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       if (getLangOpts().CPlusPlus14 &&
           NewFD->getReturnType()->isUndeducedType())
         Diag(D.getDeclSpec().getVirtualSpecLoc(), diag::err_auto_fn_virtual);
-    }
-
-    if (getLangOpts().CPlusPlus14 &&
-        (NewFD->isDependentContext() ||
-         (isFriend && CurContext->isDependentContext())) &&
-        NewFD->getReturnType()->isUndeducedType()) {
-      // If the function template is referenced directly (for instance, as a
-      // member of the current instantiation), pretend it has a dependent type.
-      // This is not really justified by the standard, but is the only sane
-      // thing to do.
-      // FIXME: For a friend function, we have not marked the function as being
-      // a friend yet, so 'isDependentContext' on the FD doesn't work.
-      const FunctionProtoType *FPT =
-          NewFD->getType()->castAs<FunctionProtoType>();
-      QualType Result = SubstAutoTypeDependent(FPT->getReturnType());
-      NewFD->setType(Context.getFunctionType(Result, FPT->getParamTypes(),
-                                             FPT->getExtProtoInfo()));
     }
 
     // C++ [dcl.fct.spec]p3:
@@ -10809,10 +10810,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (getLangOpts().HLSL && D.isFunctionDefinition()) {
     // Any top level function could potentially be specified as an entry.
     if (!NewFD->isInvalidDecl() && S->getDepth() == 0 && Name.isIdentifier())
-      ActOnHLSLTopLevelFunction(NewFD);
+      HLSL().ActOnTopLevelFunction(NewFD);
 
     if (NewFD->hasAttr<HLSLShaderAttr>())
-      CheckHLSLEntryPoint(NewFD);
+      HLSL().CheckEntryPoint(NewFD);
   }
 
   // If this is the first declaration of a library builtin function, add
@@ -11912,8 +11913,14 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
     return false;
   }
 
+  const llvm::Triple &T = S.getASTContext().getTargetInfo().getTriple();
+
   // Target attribute on AArch64 is not used for multiversioning
-  if (NewTA && S.getASTContext().getTargetInfo().getTriple().isAArch64())
+  if (NewTA && T.isAArch64())
+    return false;
+
+  // Target attribute on RISCV is not used for multiversioning
+  if (NewTA && T.isRISCV())
     return false;
 
   if (!OldDecl || !OldDecl->getAsFunction() ||
@@ -12111,6 +12118,35 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   }
 
   CheckConstPureAttributesUsage(*this, NewFD);
+
+  // C++ [dcl.spec.auto.general]p12:
+  //   Return type deduction for a templated function with a placeholder in its
+  //   declared type occurs when the definition is instantiated even if the
+  //   function body contains a return statement with a non-type-dependent
+  //   operand.
+  //
+  // C++ [temp.dep.expr]p3:
+  //   An id-expression is type-dependent if it is a template-id that is not a
+  //   concept-id and is dependent; or if its terminal name is:
+  //   - [...]
+  //   - associated by name lookup with one or more declarations of member
+  //     functions of a class that is the current instantiation declared with a
+  //     return type that contains a placeholder type,
+  //   - [...]
+  //
+  // If this is a templated function with a placeholder in its return type,
+  // make the placeholder type dependent since it won't be deduced until the
+  // definition is instantiated. We do this here because it needs to happen
+  // for implicitly instantiated member functions/member function templates.
+  if (getLangOpts().CPlusPlus14 &&
+      (NewFD->isDependentContext() &&
+       NewFD->getReturnType()->isUndeducedType())) {
+    const FunctionProtoType *FPT =
+        NewFD->getType()->castAs<FunctionProtoType>();
+    QualType NewReturnType = SubstAutoTypeDependent(FPT->getReturnType());
+    NewFD->setType(Context.getFunctionType(NewReturnType, FPT->getParamTypes(),
+                                           FPT->getExtProtoInfo()));
+  }
 
   // C++11 [dcl.constexpr]p8:
   //   A constexpr specifier for a non-static member function that is not
@@ -12366,12 +12402,22 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   }
 
   // Check if the function definition uses any AArch64 SME features without
-  // having the '+sme' feature enabled.
+  // having the '+sme' feature enabled and warn user if sme locally streaming
+  // function returns or uses arguments with VL-based types.
   if (DeclIsDefn) {
     const auto *Attr = NewFD->getAttr<ArmNewAttr>();
     bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
     bool UsesZA = Attr && Attr->isNewZA();
     bool UsesZT0 = Attr && Attr->isNewZT0();
+
+    if (NewFD->hasAttr<ArmLocallyStreamingAttr>()) {
+      if (NewFD->getReturnType()->isSizelessVectorType() ||
+          llvm::any_of(NewFD->parameters(), [](ParmVarDecl *P) {
+            return P->getOriginalType()->isSizelessVectorType();
+          }))
+        Diag(NewFD->getLocation(),
+             diag::warn_sme_locally_streaming_has_vl_args_returns);
+    }
     if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       UsesSM |=
@@ -12619,125 +12665,6 @@ void Sema::CheckMSVCRTEntryPoint(FunctionDecl *FD) {
     Diag(FD->getLocation(), diag::err_mainlike_template_decl) << FD;
     FD->setInvalidDecl();
   }
-}
-
-void Sema::ActOnHLSLTopLevelFunction(FunctionDecl *FD) {
-  auto &TargetInfo = getASTContext().getTargetInfo();
-
-  if (FD->getName() != TargetInfo.getTargetOpts().HLSLEntry)
-    return;
-
-  StringRef Env = TargetInfo.getTriple().getEnvironmentName();
-  HLSLShaderAttr::ShaderType ShaderType;
-  if (HLSLShaderAttr::ConvertStrToShaderType(Env, ShaderType)) {
-    if (const auto *Shader = FD->getAttr<HLSLShaderAttr>()) {
-      // The entry point is already annotated - check that it matches the
-      // triple.
-      if (Shader->getType() != ShaderType) {
-        Diag(Shader->getLocation(), diag::err_hlsl_entry_shader_attr_mismatch)
-            << Shader;
-        FD->setInvalidDecl();
-      }
-    } else {
-      // Implicitly add the shader attribute if the entry function isn't
-      // explicitly annotated.
-      FD->addAttr(HLSLShaderAttr::CreateImplicit(Context, ShaderType,
-                                                 FD->getBeginLoc()));
-    }
-  } else {
-    switch (TargetInfo.getTriple().getEnvironment()) {
-    case llvm::Triple::UnknownEnvironment:
-    case llvm::Triple::Library:
-      break;
-    default:
-      llvm_unreachable("Unhandled environment in triple");
-    }
-  }
-}
-
-void Sema::CheckHLSLEntryPoint(FunctionDecl *FD) {
-  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
-  assert(ShaderAttr && "Entry point has no shader attribute");
-  HLSLShaderAttr::ShaderType ST = ShaderAttr->getType();
-
-  switch (ST) {
-  case HLSLShaderAttr::Pixel:
-  case HLSLShaderAttr::Vertex:
-  case HLSLShaderAttr::Geometry:
-  case HLSLShaderAttr::Hull:
-  case HLSLShaderAttr::Domain:
-  case HLSLShaderAttr::RayGeneration:
-  case HLSLShaderAttr::Intersection:
-  case HLSLShaderAttr::AnyHit:
-  case HLSLShaderAttr::ClosestHit:
-  case HLSLShaderAttr::Miss:
-  case HLSLShaderAttr::Callable:
-    if (const auto *NT = FD->getAttr<HLSLNumThreadsAttr>()) {
-      DiagnoseHLSLAttrStageMismatch(NT, ST,
-                                    {HLSLShaderAttr::Compute,
-                                     HLSLShaderAttr::Amplification,
-                                     HLSLShaderAttr::Mesh});
-      FD->setInvalidDecl();
-    }
-    break;
-
-  case HLSLShaderAttr::Compute:
-  case HLSLShaderAttr::Amplification:
-  case HLSLShaderAttr::Mesh:
-    if (!FD->hasAttr<HLSLNumThreadsAttr>()) {
-      Diag(FD->getLocation(), diag::err_hlsl_missing_numthreads)
-          << HLSLShaderAttr::ConvertShaderTypeToStr(ST);
-      FD->setInvalidDecl();
-    }
-    break;
-  }
-
-  for (ParmVarDecl *Param : FD->parameters()) {
-    if (const auto *AnnotationAttr = Param->getAttr<HLSLAnnotationAttr>()) {
-      CheckHLSLSemanticAnnotation(FD, Param, AnnotationAttr);
-    } else {
-      // FIXME: Handle struct parameters where annotations are on struct fields.
-      // See: https://github.com/llvm/llvm-project/issues/57875
-      Diag(FD->getLocation(), diag::err_hlsl_missing_semantic_annotation);
-      Diag(Param->getLocation(), diag::note_previous_decl) << Param;
-      FD->setInvalidDecl();
-    }
-  }
-  // FIXME: Verify return type semantic annotation.
-}
-
-void Sema::CheckHLSLSemanticAnnotation(
-    FunctionDecl *EntryPoint, const Decl *Param,
-    const HLSLAnnotationAttr *AnnotationAttr) {
-  auto *ShaderAttr = EntryPoint->getAttr<HLSLShaderAttr>();
-  assert(ShaderAttr && "Entry point has no shader attribute");
-  HLSLShaderAttr::ShaderType ST = ShaderAttr->getType();
-
-  switch (AnnotationAttr->getKind()) {
-  case attr::HLSLSV_DispatchThreadID:
-  case attr::HLSLSV_GroupIndex:
-    if (ST == HLSLShaderAttr::Compute)
-      return;
-    DiagnoseHLSLAttrStageMismatch(AnnotationAttr, ST,
-                                  {HLSLShaderAttr::Compute});
-    break;
-  default:
-    llvm_unreachable("Unknown HLSLAnnotationAttr");
-  }
-}
-
-void Sema::DiagnoseHLSLAttrStageMismatch(
-    const Attr *A, HLSLShaderAttr::ShaderType Stage,
-    std::initializer_list<HLSLShaderAttr::ShaderType> AllowedStages) {
-  SmallVector<StringRef, 8> StageStrings;
-  llvm::transform(AllowedStages, std::back_inserter(StageStrings),
-                  [](HLSLShaderAttr::ShaderType ST) {
-                    return StringRef(
-                        HLSLShaderAttr::ConvertShaderTypeToStr(ST));
-                  });
-  Diag(A->getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
-      << A << HLSLShaderAttr::ConvertShaderTypeToStr(Stage)
-      << (AllowedStages.size() != 1) << join(StageStrings, ", ");
 }
 
 bool Sema::CheckForConstantInitializer(Expr *Init, QualType DclT) {
@@ -15268,7 +15195,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
   QualType parmDeclType = TInfo->getType();
 
   // Check for redeclaration of parameters, e.g. int foo(int x, int x);
-  IdentifierInfo *II = D.getIdentifier();
+  const IdentifierInfo *II = D.getIdentifier();
   if (II) {
     LookupResult R(*this, II, D.getIdentifierLoc(), LookupOrdinaryName,
                    ForVisibleRedeclaration);
@@ -15420,9 +15347,9 @@ QualType Sema::AdjustParameterTypeForObjCAutoRefCount(QualType T,
 }
 
 ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
-                                  SourceLocation NameLoc, IdentifierInfo *Name,
-                                  QualType T, TypeSourceInfo *TSInfo,
-                                  StorageClass SC) {
+                                  SourceLocation NameLoc,
+                                  const IdentifierInfo *Name, QualType T,
+                                  TypeSourceInfo *TSInfo, StorageClass SC) {
   // In ARC, infer a lifetime qualifier for appropriate parameter types.
   if (getLangOpts().ObjCAutoRefCount &&
       T.getObjCLifetime() == Qualifiers::OCL_None &&
@@ -18170,7 +18097,9 @@ CreateNewDecl:
                                cast_or_null<RecordDecl>(PrevDecl));
   }
 
-  if (OOK != OOK_Outside && TUK == TUK_Definition && !getLangOpts().CPlusPlus)
+  // Only C23 and later allow defining new types in 'offsetof()'.
+  if (OOK != OOK_Outside && TUK == TUK_Definition && !getLangOpts().CPlusPlus &&
+      !getLangOpts().C23)
     Diag(New->getLocation(), diag::ext_type_defined_in_offsetof)
         << (OOK == OOK_Macro) << New->getSourceRange();
 
@@ -18317,8 +18246,10 @@ CreateNewDecl:
   if (PrevDecl)
     mergeDeclAttributes(New, PrevDecl);
 
-  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(New))
+  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(New)) {
     inferGslOwnerPointerAttribute(CXXRD);
+    inferNullableClassAttribute(CXXRD);
+  }
 
   // If there's a #pragma GCC visibility in scope, set the visibility of this
   // record.
@@ -18508,8 +18439,9 @@ void Sema::ActOnTagDefinitionError(Scope *S, Decl *TagD) {
 
 // Note that FieldName may be null for anonymous bitfields.
 ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
-                                IdentifierInfo *FieldName, QualType FieldTy,
-                                bool IsMsStruct, Expr *BitWidth) {
+                                const IdentifierInfo *FieldName,
+                                QualType FieldTy, bool IsMsStruct,
+                                Expr *BitWidth) {
   assert(BitWidth);
   if (BitWidth->containsErrors())
     return ExprError();
@@ -18618,7 +18550,7 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
     return nullptr;
   }
 
-  IdentifierInfo *II = D.getIdentifier();
+  const IdentifierInfo *II = D.getIdentifier();
   SourceLocation Loc = DeclStart;
   if (II) Loc = D.getIdentifierLoc();
 
@@ -18719,7 +18651,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
                                 SourceLocation TSSL,
                                 AccessSpecifier AS, NamedDecl *PrevDecl,
                                 Declarator *D) {
-  IdentifierInfo *II = Name.getAsIdentifierInfo();
+  const IdentifierInfo *II = Name.getAsIdentifierInfo();
   bool InvalidDecl = false;
   if (D) InvalidDecl = D->isInvalidType();
 
@@ -18916,22 +18848,22 @@ bool Sema::CheckNontrivialField(FieldDecl *FD) {
       // because otherwise we'll never get complaints about
       // copy constructors.
 
-      CXXSpecialMember member = CXXInvalid;
+      CXXSpecialMemberKind member = CXXSpecialMemberKind::Invalid;
       // We're required to check for any non-trivial constructors. Since the
       // implicit default constructor is suppressed if there are any
       // user-declared constructors, we just need to check that there is a
       // trivial default constructor and a trivial copy constructor. (We don't
       // worry about move constructors here, since this is a C++98 check.)
       if (RDecl->hasNonTrivialCopyConstructor())
-        member = CXXCopyConstructor;
+        member = CXXSpecialMemberKind::CopyConstructor;
       else if (!RDecl->hasTrivialDefaultConstructor())
-        member = CXXDefaultConstructor;
+        member = CXXSpecialMemberKind::DefaultConstructor;
       else if (RDecl->hasNonTrivialCopyAssignment())
-        member = CXXCopyAssignment;
+        member = CXXSpecialMemberKind::CopyAssignment;
       else if (RDecl->hasNonTrivialDestructor())
-        member = CXXDestructor;
+        member = CXXSpecialMemberKind::Destructor;
 
-      if (member != CXXInvalid) {
+      if (member != CXXSpecialMemberKind::Invalid) {
         if (!getLangOpts().CPlusPlus11 &&
             getLangOpts().ObjCAutoRefCount && RDecl->hasObjectMember()) {
           // Objective-C++ ARC: it is an error to have a non-trivial field of
@@ -18948,10 +18880,13 @@ bool Sema::CheckNontrivialField(FieldDecl *FD) {
           }
         }
 
-        Diag(FD->getLocation(), getLangOpts().CPlusPlus11 ?
-               diag::warn_cxx98_compat_nontrivial_union_or_anon_struct_member :
-               diag::err_illegal_union_or_anon_struct_member)
-          << FD->getParent()->isUnion() << FD->getDeclName() << member;
+        Diag(
+            FD->getLocation(),
+            getLangOpts().CPlusPlus11
+                ? diag::warn_cxx98_compat_nontrivial_union_or_anon_struct_member
+                : diag::err_illegal_union_or_anon_struct_member)
+            << FD->getParent()->isUnion() << FD->getDeclName()
+            << llvm::to_underlying(member);
         DiagnoseNontrivial(RDecl, member);
         return !getLangOpts().CPlusPlus11;
       }
@@ -18979,7 +18914,7 @@ TranslateIvarVisibility(tok::ObjCKeywordKind ivarVisibility) {
 Decl *Sema::ActOnIvar(Scope *S, SourceLocation DeclStart, Declarator &D,
                       Expr *BitWidth, tok::ObjCKeywordKind Visibility) {
 
-  IdentifierInfo *II = D.getIdentifier();
+  const IdentifierInfo *II = D.getIdentifier();
   SourceLocation Loc = DeclStart;
   if (II) Loc = D.getIdentifierLoc();
 
@@ -19201,10 +19136,10 @@ static void ComputeSelectedDestructor(Sema &S, CXXRecordDecl *Record) {
 static bool AreSpecialMemberFunctionsSameKind(ASTContext &Context,
                                               CXXMethodDecl *M1,
                                               CXXMethodDecl *M2,
-                                              Sema::CXXSpecialMember CSM) {
+                                              CXXSpecialMemberKind CSM) {
   // We don't want to compare templates to non-templates: See
   // https://github.com/llvm/llvm-project/issues/59206
-  if (CSM == Sema::CXXDefaultConstructor)
+  if (CSM == CXXSpecialMemberKind::DefaultConstructor)
     return bool(M1->getDescribedFunctionTemplate()) ==
            bool(M2->getDescribedFunctionTemplate());
   // FIXME: better resolve CWG
@@ -19227,7 +19162,7 @@ static bool AreSpecialMemberFunctionsSameKind(ASTContext &Context,
 ///   [CWG2595], if any, are satisfied is more constrained.
 static void SetEligibleMethods(Sema &S, CXXRecordDecl *Record,
                                ArrayRef<CXXMethodDecl *> Methods,
-                               Sema::CXXSpecialMember CSM) {
+                               CXXSpecialMemberKind CSM) {
   SmallVector<bool, 4> SatisfactionStatus;
 
   for (CXXMethodDecl *Method : Methods) {
@@ -19285,7 +19220,8 @@ static void SetEligibleMethods(Sema &S, CXXRecordDecl *Record,
     // DR1734 and DR1496.
     if (!AnotherMethodIsMoreConstrained) {
       Method->setIneligibleOrNotSelected(false);
-      Record->addedEligibleSpecialMemberFunction(Method, 1 << CSM);
+      Record->addedEligibleSpecialMemberFunction(Method,
+                                                 1 << llvm::to_underlying(CSM));
     }
   }
 }
@@ -19324,13 +19260,15 @@ static void ComputeSpecialMemberFunctionsEligiblity(Sema &S,
   }
 
   SetEligibleMethods(S, Record, DefaultConstructors,
-                     Sema::CXXDefaultConstructor);
-  SetEligibleMethods(S, Record, CopyConstructors, Sema::CXXCopyConstructor);
-  SetEligibleMethods(S, Record, MoveConstructors, Sema::CXXMoveConstructor);
+                     CXXSpecialMemberKind::DefaultConstructor);
+  SetEligibleMethods(S, Record, CopyConstructors,
+                     CXXSpecialMemberKind::CopyConstructor);
+  SetEligibleMethods(S, Record, MoveConstructors,
+                     CXXSpecialMemberKind::MoveConstructor);
   SetEligibleMethods(S, Record, CopyAssignmentOperators,
-                     Sema::CXXCopyAssignment);
+                     CXXSpecialMemberKind::CopyAssignment);
   SetEligibleMethods(S, Record, MoveAssignmentOperators,
-                     Sema::CXXMoveAssignment);
+                     CXXSpecialMemberKind::MoveAssignment);
 }
 
 void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
@@ -19699,7 +19637,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
     if (CXXRecord) {
       auto *Dtor = CXXRecord->getDestructor();
       if (Dtor && Dtor->isImplicit() &&
-          ShouldDeleteSpecialMember(Dtor, CXXDestructor)) {
+          ShouldDeleteSpecialMember(Dtor, CXXSpecialMemberKind::Destructor)) {
         CXXRecord->setImplicitDestructorIsDeleted();
         SetDeclDeleted(Dtor, CXXRecord->getLocation());
       }
@@ -20728,11 +20666,11 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
     // when compiling for host, device and global functions are never emitted.
     // (Technically, we do emit a host-side stub for global functions, but this
     // doesn't count for our purposes here.)
-    Sema::CUDAFunctionTarget T = IdentifyCUDATarget(FD);
-    if (LangOpts.CUDAIsDevice && T == Sema::CFT_Host)
+    CUDAFunctionTarget T = IdentifyCUDATarget(FD);
+    if (LangOpts.CUDAIsDevice && T == CUDAFunctionTarget::Host)
       return FunctionEmissionStatus::CUDADiscarded;
     if (!LangOpts.CUDAIsDevice &&
-        (T == Sema::CFT_Device || T == Sema::CFT_Global))
+        (T == CUDAFunctionTarget::Device || T == CUDAFunctionTarget::Global))
       return FunctionEmissionStatus::CUDADiscarded;
 
     if (IsEmittedForExternalSymbol())
@@ -20753,5 +20691,5 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
   // for host, only HD functions actually called from the host get marked as
   // known-emitted.
   return LangOpts.CUDA && !LangOpts.CUDAIsDevice &&
-         IdentifyCUDATarget(Callee) == CFT_Global;
+         IdentifyCUDATarget(Callee) == CUDAFunctionTarget::Global;
 }

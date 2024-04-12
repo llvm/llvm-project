@@ -87,6 +87,43 @@ func.func @proc_bind_once() {
 
 // -----
 
+func.func @invalid_parent(%lb : index, %ub : index, %step : index) {
+  // expected-error@+1 {{op expects parent op to be one of 'omp.distribute, omp.simdloop, omp.taskloop, omp.wsloop'}}
+  omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+    omp.yield
+  }
+}
+
+// -----
+
+func.func @type_mismatch(%lb : index, %ub : index, %step : index) {
+  // TODO Remove induction variables from omp.wsloop.
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    // expected-error@+1 {{range argument type does not match corresponding IV type}}
+    "omp.loop_nest" (%lb, %ub, %step) ({
+    ^bb0(%iv2: i32):
+      omp.yield
+    }) : (index, index, index) -> ()
+    omp.yield
+  }
+}
+
+// -----
+
+func.func @iv_number_mismatch(%lb : index, %ub : index, %step : index) {
+  // TODO Remove induction variables from omp.wsloop.
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    // expected-error@+1 {{number of range arguments and IVs do not match}}
+    "omp.loop_nest" (%lb, %ub, %step) ({
+    ^bb0(%iv1 : index, %iv2 : index):
+      omp.yield
+    }) : (index, index, index) -> ()
+    omp.yield
+  }
+}
+
+// -----
+
 func.func @inclusive_not_a_clause(%lb : index, %ub : index, %step : index) {
   // expected-error @below {{expected 'for'}}
   omp.wsloop nowait inclusive
@@ -431,6 +468,25 @@ combiner {
 }
 atomic {
 ^bb2(%arg0: memref<f64>, %arg1: memref<f64>):
+  omp.yield
+}
+
+// -----
+
+// expected-error @below {{op expects cleanup region with one argument of the reduction type}}
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+cleanup {
+^bb0(%arg: f64):
   omp.yield
 }
 
@@ -1790,7 +1846,7 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.target"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {depends = [], operandSegmentSizes = array<i32: 0, 0, 0, 1, 0>} : (memref<i32>) -> ()
+    }) {depends = [], operandSegmentSizes = array<i32: 0, 0, 0, 1, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 

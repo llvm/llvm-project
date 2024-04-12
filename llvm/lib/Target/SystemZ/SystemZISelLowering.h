@@ -760,6 +760,8 @@ private:
                                   MachineBasicBlock *Target) const;
 
   // Implement EmitInstrWithCustomInserter for individual operation types.
+  MachineBasicBlock *emitAdjCallStack(MachineInstr &MI,
+                                      MachineBasicBlock *BB) const;
   MachineBasicBlock *emitSelect(MachineInstr &MI, MachineBasicBlock *BB) const;
   MachineBasicBlock *emitCondStore(MachineInstr &MI, MachineBasicBlock *BB,
                                    unsigned StoreOpcode, unsigned STOCOpcode,

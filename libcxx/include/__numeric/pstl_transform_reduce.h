@@ -87,7 +87,7 @@ _LIBCPP_HIDE_FROM_ABI _Tp transform_reduce(
 }
 
 // This overload doesn't get a customization point because it's trivial to detect (through e.g.
-// __desugars_to) when specializing the more general variant, which should always be preferred
+// __desugars_to_v) when specializing the more general variant, which should always be preferred
 template <class _ExecutionPolicy,
           class _ForwardIterator1,
           class _ForwardIterator2,

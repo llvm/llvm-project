@@ -1604,27 +1604,40 @@ specifies availability for the current target platform, the availability
 attributes are ignored. Supported platforms are:
 
 ``ios``
-  Apple's iOS operating system. The minimum deployment target is specified by
-  the ``-mios-version-min=*version*`` or ``-miphoneos-version-min=*version*``
-  command-line arguments.
+  Apple's iOS operating system. The minimum deployment target is specified 
+  as part of the ``-target *arch*-apple-ios*version*`` command line argument. 
+  Alternatively, it can be specified by the ``-mtargetos=ios*version*`` 
+  command-line argument.
 
 ``macos``
-  Apple's macOS operating system. The minimum deployment target is
-  specified by the ``-mmacosx-version-min=*version*`` command-line argument.
-  ``macosx`` is supported for backward-compatibility reasons, but it is
-  deprecated.
+  Apple's macOS operating system. The minimum deployment target is specified 
+  as part of the ``-target *arch*-apple-macos*version*`` command line argument. 
+  Alternatively, it can be specified by the ``-mtargetos=macos*version*`` 
+  command-line argument. ``macosx`` is supported for 
+  backward-compatibility reasons, but it is deprecated.
 
 ``tvos``
-  Apple's tvOS operating system. The minimum deployment target is specified by
-  the ``-mtvos-version-min=*version*`` command-line argument.
+  Apple's tvOS operating system. The minimum deployment target is specified 
+  as part of the ``-target *arch*-apple-tvos*version*`` command line argument. 
+  Alternatively, it can be specified by the ``-mtargetos=tvos*version*`` 
+  command-line argument.
 
 ``watchos``
-  Apple's watchOS operating system. The minimum deployment target is specified by
-  the ``-mwatchos-version-min=*version*`` command-line argument.
+  Apple's watchOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-watchos*version*`` command line argument. 
+  Alternatively, it can be specified by the ``-mtargetos=watchos*version*`` 
+  command-line argument.
+
+``visionos``
+  Apple's visionOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-visionos*version*`` command line argument. 
+  Alternatively, it can be specified by the ``-mtargetos=visionos*version*`` 
+  command-line argument.
 
 ``driverkit``
   Apple's DriverKit userspace kernel extensions. The minimum deployment target
-  is specified as part of the triple.
+  is specified as part of the ``-target *arch*-apple-driverkit*version*`` 
+  command line argument.
 
 A declaration can typically be used even when deploying back to a platform
 version prior to when the declaration was introduced. When this happens, the
@@ -4151,6 +4164,20 @@ non-underscored keywords. For example:
       @property (assign, nullable) NSView *superview;
       @property (readonly, nonnull) NSArray *subviews;
     @end
+
+As well as built-in pointer types, the nullability attributes can be attached
+to C++ classes marked with the ``_Nullable`` attribute.
+
+The following C++ standard library types are considered nullable:
+``unique_ptr``, ``shared_ptr``, ``auto_ptr``, ``exception_ptr``, ``function``,
+``move_only_function`` and ``coroutine_handle``.
+
+Types should be marked nullable only where the type itself leaves nullability
+ambiguous. For example, ``std::optional`` is not marked ``_Nullable``, because
+``optional<int> _Nullable`` is redundant and ``optional<int> _Nonnull`` is
+not a useful type. ``std::weak_ptr`` is not nullable, because its nullability
+can change with no visible modification, so static annotation is unlikely to be
+unhelpful.
   }];
 }
 
@@ -4185,6 +4212,17 @@ The ``_Nullable`` nullability qualifier indicates that a value of the
     int fetch_or_zero(int * _Nullable ptr);
 
 a caller of ``fetch_or_zero`` can provide null.
+
+The ``_Nullable`` attribute on classes indicates that the given class can
+represent null values, and so the ``_Nullable``, ``_Nonnull`` etc qualifiers
+make sense for this type. For example:
+
+  .. code-block:: c
+
+    class _Nullable ArenaPointer { ... };
+
+    ArenaPointer _Nonnull x = ...;
+    ArenaPointer _Nullable y = nullptr;
   }];
 }
 

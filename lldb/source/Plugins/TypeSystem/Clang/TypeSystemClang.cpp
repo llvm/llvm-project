@@ -1682,10 +1682,11 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
   // type that includes a template template argument. Only the name matters for
   // this purpose, so we use dummy values for the other characteristics of the
   // type.
-  return TemplateTemplateParmDecl::Create(
-      ast, decl_ctx, SourceLocation(),
-      /*Depth*/ 0, /*Position*/ 0,
-      /*IsParameterPack*/ false, &identifier_info, template_param_list);
+  return TemplateTemplateParmDecl::Create(ast, decl_ctx, SourceLocation(),
+                                          /*Depth=*/0, /*Position=*/0,
+                                          /*IsParameterPack=*/false,
+                                          &identifier_info, /*Typename=*/false,
+                                          template_param_list);
 }
 
 ClassTemplateSpecializationDecl *
@@ -4097,6 +4098,8 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
     return lldb::eTypeClassArray;
   case clang::Type::DependentSizedArray:
     return lldb::eTypeClassArray;
+  case clang::Type::ArrayParameter:
+    return lldb::eTypeClassArray;
   case clang::Type::DependentSizedExtVector:
     return lldb::eTypeClassVector;
   case clang::Type::DependentVector:
@@ -4776,6 +4779,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
 
   case clang::Type::IncompleteArray:
   case clang::Type::VariableArray:
+  case clang::Type::ArrayParameter:
     break;
 
   case clang::Type::ConstantArray:
@@ -5109,6 +5113,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::IncompleteArray:
   case clang::Type::VariableArray:
+  case clang::Type::ArrayParameter:
     break;
 
   case clang::Type::ConstantArray:
@@ -7906,14 +7911,14 @@ bool TypeSystemClang::AddObjCClassProperty(
   if (property_setter_name) {
     std::string property_setter_no_colon(property_setter_name,
                                          strlen(property_setter_name) - 1);
-    clang::IdentifierInfo *setter_ident =
+    const clang::IdentifierInfo *setter_ident =
         &clang_ast.Idents.get(property_setter_no_colon);
     setter_sel = clang_ast.Selectors.getSelector(1, &setter_ident);
   } else if (!(property_attributes & DW_APPLE_PROPERTY_readonly)) {
     std::string setter_sel_string("set");
     setter_sel_string.push_back(::toupper(property_name[0]));
     setter_sel_string.append(&property_name[1]);
-    clang::IdentifierInfo *setter_ident =
+    const clang::IdentifierInfo *setter_ident =
         &clang_ast.Idents.get(setter_sel_string);
     setter_sel = clang_ast.Selectors.getSelector(1, &setter_ident);
   }
@@ -7921,11 +7926,12 @@ bool TypeSystemClang::AddObjCClassProperty(
   property_decl->setPropertyAttributes(ObjCPropertyAttribute::kind_setter);
 
   if (property_getter_name != nullptr) {
-    clang::IdentifierInfo *getter_ident =
+    const clang::IdentifierInfo *getter_ident =
         &clang_ast.Idents.get(property_getter_name);
     getter_sel = clang_ast.Selectors.getSelector(0, &getter_ident);
   } else {
-    clang::IdentifierInfo *getter_ident = &clang_ast.Idents.get(property_name);
+    const clang::IdentifierInfo *getter_ident =
+        &clang_ast.Idents.get(property_name);
     getter_sel = clang_ast.Selectors.getSelector(0, &getter_ident);
   }
   property_decl->setGetterName(getter_sel);
@@ -8087,7 +8093,7 @@ clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
     return nullptr;
 
   selector_start++;
-  llvm::SmallVector<clang::IdentifierInfo *, 12> selector_idents;
+  llvm::SmallVector<const clang::IdentifierInfo *, 12> selector_idents;
 
   size_t len = 0;
   const char *start;
