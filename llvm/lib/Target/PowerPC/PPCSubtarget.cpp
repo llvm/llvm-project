@@ -124,22 +124,22 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   // Determine endianness.
   IsLittleEndian = TM.isLittleEndian();
 
-  if (HasAIXSmallLocalExecTLS) {
+  if (HasAIXSmallLocalExecTLS || HasAIXSmallLocalDynamicTLS) {
     if (!TargetTriple.isOSAIX() || !IsPPC64)
-      report_fatal_error(
-          "The aix-small-local-exec-tls attribute is only supported on AIX in "
-          "64-bit mode.\n",
-          false);
-    // The aix-small-local-exec-tls attribute should only be used with
+      report_fatal_error("The aix-small-local-[exec|dynamic]-tls attribute is "
+                         "only supported on AIX in "
+                         "64-bit mode.\n",
+                         false);
+    // The aix-small-local-[exec|dynamic]-tls attribute should only be used with
     // -data-sections, as having data sections turned off with this option
-    // is not ideal for performance. Moreover, the small-local-exec-tls region
-    // is a limited resource, and should not be used for variables that may
-    // be replaced.
+    // is not ideal for performance. Moreover, the
+    // small-local-[exec|dynamic]-tls region is a limited resource, and should
+    // not be used for variables that may be replaced.
     if (!TM.getDataSections())
-      report_fatal_error(
-          "The aix-small-local-exec-tls attribute can only be specified with "
-          "-data-sections.\n",
-          false);
+      report_fatal_error("The aix-small-local-[exec|dynamic]-tls attribute can "
+                         "only be specified with "
+                         "-data-sections.\n",
+                         false);
   }
 }
 

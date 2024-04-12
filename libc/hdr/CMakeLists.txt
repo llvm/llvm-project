@@ -38,7 +38,7 @@ add_proxy_header_library(
     fenv_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.fenv_macros
-    libc.incude.fenv
+    libc.include.fenv
 )
 
 add_proxy_header_library(
@@ -58,3 +58,23 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.fexcept_t
     libc.incude.fenv
 )
+
+add_proxy_header_library(
+  signal_macros
+  HDRS
+    signal_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.signal_macros
+    libc.include.signal
+)
+
+add_proxy_header_library(
+  sys_epoll_macros
+  HDRS
+    sys_epoll_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_epoll
+    libc.include.llvm-libc-macros.sys_epoll_macros
+)
+
+add_subdirectory(types)

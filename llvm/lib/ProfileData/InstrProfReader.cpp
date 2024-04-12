@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -1506,13 +1507,11 @@ IndexedInstrProfReader::getMemProfRecord(const uint64_t FuncNameHash) {
 
   // Setup a callback to convert from frame ids to frame using the on-disk
   // FrameData hash table.
-  memprof::FrameId LastUnmappedFrameId = 0;
-  bool HasFrameMappingError = false;
+  std::optional<memprof::FrameId> LastUnmappedFrameId;
   auto IdToFrameCallback = [&](const memprof::FrameId Id) {
     auto FrIter = MemProfFrameTable->find(Id);
     if (FrIter == MemProfFrameTable->end()) {
       LastUnmappedFrameId = Id;
-      HasFrameMappingError = true;
       return memprof::Frame(0, 0, 0, false);
     }
     return *FrIter;
@@ -1521,10 +1520,10 @@ IndexedInstrProfReader::getMemProfRecord(const uint64_t FuncNameHash) {
   memprof::MemProfRecord Record(*Iter, IdToFrameCallback);
 
   // Check that all frame ids were successfully converted to frames.
-  if (HasFrameMappingError) {
+  if (LastUnmappedFrameId) {
     return make_error<InstrProfError>(instrprof_error::hash_mismatch,
                                       "memprof frame not found for frame id " +
-                                          Twine(LastUnmappedFrameId));
+                                          Twine(*LastUnmappedFrameId));
   }
   return Record;
 }

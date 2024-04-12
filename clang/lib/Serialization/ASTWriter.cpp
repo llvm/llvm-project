@@ -163,8 +163,13 @@ static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
 
 namespace {
 
-std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
-                                                   Module *RootModule) {
+std::optional<std::set<const FileEntry *>>
+GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
+  // Without implicit module map search, there's no good reason to know about
+  // any module maps that are not affecting.
+  if (!PP.getHeaderSearchInfo().getHeaderSearchOpts().ImplicitModuleMaps)
+    return std::nullopt;
+
   SmallVector<const Module *> ModulesToProcess{RootModule};
 
   const HeaderSearch &HS = PP.getHeaderSearchInfo();
@@ -180,8 +185,7 @@ std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
     if (!File)
       continue;
 
-    const HeaderFileInfo *HFI =
-        HS.getExistingFileInfo(*File, /*WantExternal*/ false);
+    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
     if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
       continue;
 
@@ -2047,14 +2051,12 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     if (!File)
       continue;
 
-    // Get the file info. This will load info from the external source if
-    // necessary. Skip emitting this file if we have no information on it
-    // as a header file (in which case HFI will be null) or if it hasn't
+    // Get the file info. Skip emitting this file if we have no information on
+    // it as a header file (in which case HFI will be null) or if it hasn't
     // changed since it was loaded. Also skip it if it's for a modular header
     // from a different module; in that case, we rely on the module(s)
     // containing the header to provide this information.
-    const HeaderFileInfo *HFI =
-        HS.getExistingFileInfo(*File, /*WantExternal*/!Chain);
+    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
     if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
       continue;
 
@@ -3624,7 +3626,7 @@ class ASTIdentifierTableTrait {
   }
 
 public:
-  using key_type = IdentifierInfo *;
+  using key_type = const IdentifierInfo *;
   using key_type_ref = key_type;
 
   using data_type = IdentID;
@@ -3656,7 +3658,7 @@ public:
   }
 
   std::pair<unsigned, unsigned>
-  EmitKeyDataLength(raw_ostream& Out, IdentifierInfo* II, IdentID ID) {
+  EmitKeyDataLength(raw_ostream &Out, const IdentifierInfo *II, IdentID ID) {
     // Record the location of the identifier data. This is used when generating
     // the mapping from persistent IDs to strings.
     Writer.SetIdentifierOffset(II, Out.tell());
@@ -3683,13 +3685,12 @@ public:
     return emitULEBKeyDataLength(KeyLen, DataLen, Out);
   }
 
-  void EmitKey(raw_ostream& Out, const IdentifierInfo* II,
-               unsigned KeyLen) {
+  void EmitKey(raw_ostream &Out, const IdentifierInfo *II, unsigned KeyLen) {
     Out.write(II->getNameStart(), KeyLen);
   }
 
-  void EmitData(raw_ostream& Out, IdentifierInfo* II,
-                IdentID ID, unsigned) {
+  void EmitData(raw_ostream &Out, const IdentifierInfo *II, IdentID ID,
+                unsigned) {
     using namespace llvm::support;
 
     endian::Writer LE(Out, llvm::endianness::little);
@@ -3771,13 +3772,14 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
     // for identifiers that appear here for the first time.
     IdentifierOffsets.resize(NextIdentID - FirstIdentID);
     for (auto IdentIDPair : IdentifierIDs) {
-      auto *II = const_cast<IdentifierInfo *>(IdentIDPair.first);
+      const IdentifierInfo *II = IdentIDPair.first;
       IdentID ID = IdentIDPair.second;
       assert(II && "NULL identifier in identifier table");
+
       // Write out identifiers if either the ID is local or the identifier has
       // changed since it was loaded.
-      if (ID >= FirstIdentID || !Chain || !II->isFromAST()
-          || II->hasChangedSinceDeserialization() ||
+      if (ID >= FirstIdentID || !Chain || !II->isFromAST() ||
+          II->hasChangedSinceDeserialization() ||
           (Trait.needDecls() &&
            II->hasFETokenInfoChangedSinceDeserialization()))
         Generator.insert(II, ID, Trait);
@@ -4735,8 +4737,16 @@ void ASTWriter::computeNonAffectingInputFiles() {
     if (!Cache->OrigEntry)
       continue;
 
-    if (!isModuleMap(File.getFileCharacteristic()) ||
-        llvm::is_contained(AffectingModuleMaps, *Cache->OrigEntry))
+    // Don't prune anything other than module maps.
+    if (!isModuleMap(File.getFileCharacteristic()))
+      continue;
+
+    // Don't prune module maps if all are guaranteed to be affecting.
+    if (!AffectingModuleMaps)
+      continue;
+
+    // Don't prune module maps that are affecting.
+    if (llvm::is_contained(*AffectingModuleMaps, *Cache->OrigEntry))
       continue;
 
     IsSLocAffecting[I] = false;
@@ -7406,7 +7416,12 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   writeSourceLocation(C->getEndLoc());
 
   switch (C->getClauseKind()) {
-  case OpenACCClauseKind::Default:
+  case OpenACCClauseKind::Default: {
+    const auto *DC = cast<OpenACCDefaultClause>(C);
+    writeSourceLocation(DC->getLParenLoc());
+    writeEnum(DC->getDefaultClauseKind());
+    return;
+  }
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:

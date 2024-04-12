@@ -278,11 +278,29 @@ static void diagnoseInstanceReference(Sema &SemaRef,
   }
 }
 
+bool Sema::isPotentialImplicitMemberAccess(const CXXScopeSpec &SS,
+                                           LookupResult &R,
+                                           bool IsAddressOfOperand) {
+  if (!getLangOpts().CPlusPlus)
+    return false;
+  else if (R.empty() || !R.begin()->isCXXClassMember())
+    return false;
+  else if (!IsAddressOfOperand)
+    return true;
+  else if (!SS.isEmpty())
+    return false;
+  else if (R.isOverloadedResult())
+    return false;
+  else if (R.isUnresolvableResult())
+    return true;
+  else
+    return isa<FieldDecl, IndirectFieldDecl, MSPropertyDecl>(R.getFoundDecl());
+}
+
 /// Builds an expression which might be an implicit member expression.
 ExprResult Sema::BuildPossibleImplicitMemberExpr(
     const CXXScopeSpec &SS, SourceLocation TemplateKWLoc, LookupResult &R,
-    const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
-    UnresolvedLookupExpr *AsULE) {
+    const TemplateArgumentListInfo *TemplateArgs, const Scope *S) {
   switch (IMAKind Classification = ClassifyImplicitMemberAccess(*this, R)) {
   case IMA_Instance:
   case IMA_Mixed:
@@ -303,10 +321,9 @@ ExprResult Sema::BuildPossibleImplicitMemberExpr(
     if (TemplateArgs || TemplateKWLoc.isValid())
       return BuildTemplateIdExpr(SS, TemplateKWLoc, R, /*RequiresADL=*/false,
                                  TemplateArgs);
-    return AsULE ? AsULE
-                 : BuildDeclarationNameExpr(
-                       SS, R, /*NeedsADL=*/false, /*AcceptInvalidDecl=*/false,
-                       /*NeedUnresolved=*/Classification == IMA_Dependent);
+    return BuildDeclarationNameExpr(
+        SS, R, /*NeedsADL=*/false, /*AcceptInvalidDecl=*/false,
+        /*NeedUnresolved=*/Classification == IMA_Dependent);
 
   case IMA_Error_StaticOrExplicitContext:
   case IMA_Error_Unrelated:
