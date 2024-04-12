@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -Wunused -x c -verify %s
-// RUN: %clang_cc1 -triple %itanium_abi_triple -Wunused -x c++ -verify=expected,cxx %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -Wunused -verify=expected,cxx %s
 
 #ifdef __cplusplus
 extern "C" {
@@ -10,6 +10,10 @@ int g(void) __attribute__((alias("f")));
 static int foo [] = { 42, 0xDEAD }; // cxx-warning{{variable 'foo' is not needed and will not be emitted}}
 extern typeof(foo) bar __attribute__((unused, alias("foo")));
 
+/// https://github.com/llvm/llvm-project/issues/88593
+/// We report a warning in C++ mode because the internal linkage `resolver` gets
+/// mangled as it does not have a language linkage. GCC does not mangle
+/// `resolver` or report a warning.
 static int (*resolver(void))(void) { return f; } // cxx-warning{{unused function 'resolver'}}
 int ifunc(void) __attribute__((ifunc("resolver")));
 

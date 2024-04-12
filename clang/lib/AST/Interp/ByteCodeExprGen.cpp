@@ -173,10 +173,18 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->emitCastFloatingIntegral(*ToT, CE);
   }
 
-  case CK_NullToPointer:
+  case CK_NullToPointer: {
     if (DiscardResult)
       return true;
-    return this->emitNull(classifyPrim(CE->getType()), CE);
+
+    const Descriptor *Desc = nullptr;
+    const QualType PointeeType = CE->getType()->getPointeeType();
+    if (!PointeeType.isNull()) {
+      if (std::optional<PrimType> T = classify(PointeeType))
+        Desc = P.createDescriptor(SubExpr, *T);
+    }
+    return this->emitNull(classifyPrim(CE->getType()), Desc, CE);
+  }
 
   case CK_PointerToIntegral: {
     if (DiscardResult)
@@ -199,6 +207,41 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return true;
   }
 
+  case CK_IntegralToPointer: {
+    QualType IntType = SubExpr->getType();
+    assert(IntType->isIntegralOrEnumerationType());
+    if (!this->visit(SubExpr))
+      return false;
+    // FIXME: I think the discard is wrong since the int->ptr cast might cause a
+    // diagnostic.
+    PrimType T = classifyPrim(IntType);
+    if (DiscardResult)
+      return this->emitPop(T, CE);
+
+    QualType PtrType = CE->getType();
+    assert(PtrType->isPointerType());
+
+    const Descriptor *Desc;
+    if (std::optional<PrimType> T = classify(PtrType->getPointeeType()))
+      Desc = P.createDescriptor(SubExpr, *T);
+    else if (PtrType->getPointeeType()->isVoidType())
+      Desc = nullptr;
+    else
+      Desc = P.createDescriptor(CE, PtrType->getPointeeType().getTypePtr(),
+                                Descriptor::InlineDescMD, true, false,
+                                /*IsMutable=*/false, nullptr);
+
+    if (!this->emitGetIntPtr(T, Desc, CE))
+      return false;
+
+    PrimType DestPtrT = classifyPrim(PtrType);
+    if (DestPtrT == PT_Ptr)
+      return true;
+
+    // In case we're converting the integer to a non-Pointer.
+    return this->emitDecayPtr(PT_Ptr, DestPtrT, CE);
+  }
+
   case CK_AtomicToNonAtomic:
   case CK_ConstructorConversion:
   case CK_FunctionToPointerDecay:
@@ -207,13 +250,31 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_UserDefinedConversion:
     return this->delegate(SubExpr);
 
-  case CK_BitCast:
+  case CK_BitCast: {
+    // Reject bitcasts to atomic types.
     if (CE->getType()->isAtomicType()) {
       if (!this->discard(SubExpr))
         return false;
       return this->emitInvalidCast(CastKind::Reinterpret, CE);
     }
-    return this->delegate(SubExpr);
+
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
+    std::optional<PrimType> FromT = classify(SubExpr->getType());
+    std::optional<PrimType> ToT = classifyPrim(CE->getType());
+    if (!FromT || !ToT)
+      return false;
+
+    assert(isPtrType(*FromT));
+    assert(isPtrType(*ToT));
+    if (FromT == ToT)
+      return this->delegate(SubExpr);
+
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitDecayPtr(*FromT, *ToT, CE);
+  }
 
   case CK_IntegralToBoolean:
   case CK_IntegralCast: {
@@ -245,7 +306,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    if (!this->emitNull(PtrT, CE))
+    if (!this->emitNull(PtrT, nullptr, CE))
       return false;
 
     return this->emitNE(PtrT, CE);
@@ -455,7 +516,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
 
   // Pointer arithmetic special case.
   if (BO->getOpcode() == BO_Add || BO->getOpcode() == BO_Sub) {
-    if (T == PT_Ptr || (LT == PT_Ptr && RT == PT_Ptr))
+    if (isPtrType(*T) || (isPtrType(*LT) && isPtrType(*RT)))
       return this->VisitPointerArithBinOp(BO);
   }
 
@@ -1033,6 +1094,34 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
     return true;
   }
 
+  if (const auto *VecT = E->getType()->getAs<VectorType>()) {
+    unsigned NumVecElements = VecT->getNumElements();
+    assert(NumVecElements >= E->getNumInits());
+
+    QualType ElemQT = VecT->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+
+    // All initializer elements.
+    unsigned InitIndex = 0;
+    for (const Expr *Init : E->inits()) {
+      if (!this->visit(Init))
+        return false;
+
+      if (!this->emitInitElem(ElemT, InitIndex, E))
+        return false;
+      ++InitIndex;
+    }
+
+    // Fill the rest with zeroes.
+    for (; InitIndex != NumVecElements; ++InitIndex) {
+      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, InitIndex, E))
+        return false;
+    }
+    return true;
+  }
+
   return false;
 }
 
@@ -1083,6 +1172,9 @@ static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
   //     alignment of the referenced type.
   if (const auto *Ref = T->getAs<ReferenceType>())
     T = Ref->getPointeeType();
+
+  if (T.getQualifiers().hasUnaligned())
+    return CharUnits::One();
 
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and
@@ -2323,7 +2415,7 @@ bool ByteCodeExprGen<Emitter>::visitBool(const Expr *E) {
 
   // Convert pointers to bool.
   if (T == PT_Ptr || T == PT_FnPtr) {
-    if (!this->emitNull(*T, E))
+    if (!this->emitNull(*T, nullptr, E))
       return false;
     return this->emitNE(*T, E);
   }
@@ -2363,9 +2455,9 @@ bool ByteCodeExprGen<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
   case PT_IntAPS:
     return this->emitZeroIntAPS(Ctx.getBitWidth(QT), E);
   case PT_Ptr:
-    return this->emitNullPtr(E);
+    return this->emitNullPtr(nullptr, E);
   case PT_FnPtr:
-    return this->emitNullFnPtr(E);
+    return this->emitNullFnPtr(nullptr, E);
   case PT_Float: {
     return this->emitConstFloat(APFloat::getZero(Ctx.getFloatSemantics(QT)), E);
   }
@@ -2511,6 +2603,7 @@ unsigned ByteCodeExprGen<Emitter>::allocateLocalPrimitive(DeclTy &&Src,
           dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
     assert(!P.getGlobal(VD));
     assert(!Locals.contains(VD));
+    (void)VD;
   }
 
   // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.
@@ -2685,26 +2778,34 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
   std::optional<PrimType> VarT = classify(VD->getType());
 
   if (Context::shouldBeGloballyIndexed(VD)) {
+    auto initGlobal = [&](unsigned GlobalIndex) -> bool {
+      assert(Init);
+      DeclScope<Emitter> LocalScope(this, VD);
+
+      if (VarT) {
+        if (!this->visit(Init))
+          return false;
+        return this->emitInitGlobal(*VarT, GlobalIndex, VD);
+      }
+      return this->visitGlobalInitializer(Init, GlobalIndex);
+    };
+
     // We've already seen and initialized this global.
-    if (P.getGlobal(VD))
-      return true;
+    if (std::optional<unsigned> GlobalIndex = P.getGlobal(VD)) {
+      if (P.getPtrGlobal(*GlobalIndex).isInitialized())
+        return true;
+
+      // The previous attempt at initialization might've been unsuccessful,
+      // so let's try this one.
+      return Init && initGlobal(*GlobalIndex);
+    }
 
     std::optional<unsigned> GlobalIndex = P.createGlobal(VD, Init);
 
     if (!GlobalIndex)
       return false;
 
-    if (Init) {
-      DeclScope<Emitter> LocalScope(this, VD);
-
-      if (VarT) {
-        if (!this->visit(Init))
-          return false;
-        return this->emitInitGlobal(*VarT, *GlobalIndex, VD);
-      }
-      return this->visitGlobalInitializer(Init, *GlobalIndex);
-    }
-    return true;
+    return !Init || initGlobal(*GlobalIndex);
   } else {
     VariableScope<Emitter> LocalScope(this);
     if (VarT) {
@@ -2948,7 +3049,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXNullPtrLiteralExpr(
   if (DiscardResult)
     return true;
 
-  return this->emitNullPtr(E);
+  return this->emitNullPtr(nullptr, E);
 }
 
 template <class Emitter>

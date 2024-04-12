@@ -46,13 +46,13 @@ define <vscale x 8 x double> @ext8_f16_f64(ptr %ptr, i64 %index) {
 ; CHECK-NEXT:    uunpkhi z1.d, z1.s
 ; CHECK-NEXT:    uunpklo z3.d, z0.s
 ; CHECK-NEXT:    uunpkhi z4.d, z0.s
+; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
 ; CHECK-NEXT:    movprfx z0, z2
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z2.h
 ; CHECK-NEXT:    movprfx z2, z3
 ; CHECK-NEXT:    fcvt z2.d, p0/m, z3.h
 ; CHECK-NEXT:    movprfx z3, z4
 ; CHECK-NEXT:    fcvt z3.d, p0/m, z4.h
-; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %load = load <vscale x 8 x half>, ptr %ptr, align 4
   %load.ext = fpext <vscale x 8 x half> %load to <vscale x 8 x double>

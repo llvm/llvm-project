@@ -15,6 +15,10 @@ static float __attribute__((overloadable)) f0(float x) { return x; } // expected
 int g0(void) __attribute__((alias("?f0@@YAHH@Z")));
 
 #ifdef __cplusplus
+/// https://github.com/llvm/llvm-project/issues/88593
+/// We report a warning in C++ mode because the internal linkage `resolver` gets
+/// mangled as it does not have a language linkage. GCC does not mangle
+/// `resolver` or report a warning.
 static int f1() { return 42; } // cxx-warning{{unused function 'f1'}}
 int g1(void) __attribute__((alias("?f1@@YAHXZ")));
 }

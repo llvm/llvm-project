@@ -597,8 +597,8 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
         UseMI.getOpcode() == TargetOpcode::G_ZEXT ||
         (UseMI.getOpcode() == TargetOpcode::G_ANYEXT)) {
       const auto &MMO = LoadMI->getMMO();
-      // For atomics, only form anyextending loads.
-      if (MMO.isAtomic() && UseMI.getOpcode() != TargetOpcode::G_ANYEXT)
+      // Don't do anything for atomics.
+      if (MMO.isAtomic())
         continue;
       // Check for legality.
       if (!isPreLegalize()) {
@@ -2925,8 +2925,10 @@ bool CombinerHelper::matchCombineInsertVecElts(
     }
     return true;
   }
-  // If we didn't end in a G_IMPLICIT_DEF, bail out.
-  return TmpInst->getOpcode() == TargetOpcode::G_IMPLICIT_DEF;
+  // If we didn't end in a G_IMPLICIT_DEF and the source is not fully
+  // overwritten, bail out.
+  return TmpInst->getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
+         all_of(MatchInfo, [](Register Reg) { return !!Reg; });
 }
 
 void CombinerHelper::applyCombineInsertVecElts(

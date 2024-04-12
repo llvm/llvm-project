@@ -164,6 +164,7 @@ template<class... Args>                                                         
   void print(ostream& os, format_string<Args...> fmt, Args&&... args);
 template<class... Args>                                                                                // since C++23
   void println(ostream& os, format_string<Args...> fmt, Args&&... args);
+void println(ostream& os);                                                                             // since C++26
 
 void vprint_unicode(ostream& os, string_view fmt, format_args args);                                   // since C++23
 void vprint_nonunicode(ostream& os, string_view fmt, format_args args);                                // since C++23
@@ -1162,6 +1163,9 @@ _LIBCPP_HIDE_FROM_ABI void println(ostream& __os, format_string<_Args...> __fmt,
   std::__vprint_nonunicode(__os, __fmt.get(), std::make_format_args(__args...), true);
 #  endif // _LIBCPP_HAS_NO_UNICODE
 }
+
+template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
+_LIBCPP_HIDE_FROM_ABI inline void println(ostream& __os) { std::print(__os, "\n"); }
 
 #endif // _LIBCPP_STD_VER >= 23
 
