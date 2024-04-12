@@ -48,7 +48,7 @@ void Polynomial::print(raw_ostream &os, ::llvm::StringRef separator,
     if (term.coefficient == 1 && term.exponent.uge(1)) {
       coeffToPrint = "";
     } else {
-      llvm::SmallString<512> coeffString;
+      llvm::SmallString<16> coeffString;
       term.coefficient.toStringSigned(coeffString);
       coeffToPrint = coeffString.str();
     }
@@ -58,7 +58,7 @@ void Polynomial::print(raw_ostream &os, ::llvm::StringRef separator,
     } else if (term.exponent == 1) {
       os << coeffToPrint << "x";
     } else {
-      llvm::SmallString<512> expString;
+      llvm::SmallString<16> expString;
       term.exponent.toStringSigned(expString);
       os << coeffToPrint << "x" << exponentiation << expString;
     }
