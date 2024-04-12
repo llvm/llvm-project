@@ -19,3 +19,10 @@
 // RUN: -isysroot /no/such/path -o tmp.tbd 2> %t 
 // RUN: FileCheck --check-prefix INVALID_ISYSROOT -input-file %t %s 
 // INVALID_ISYSROOT: error: no such sysroot directory: {{.*}}no/such/path'
+
+/// Check invalid target-variant.
+// RUN: not clang-installapi -target x86_64-apple-macosx12 \
+// RUN: -darwin-target-variant arm64-apple-ios15-macabi \
+// RUN: -install_name tmp.dylib -o tmp.tbd 2> %t 
+// RUN: FileCheck --check-prefix INVALID_TARGET_VARIANT -input-file %t %s
+// INVALID_TARGET_VARIANT: error: no matching target found for target variant 'arm64-apple-ios15-macabi'
