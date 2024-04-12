@@ -2449,9 +2449,20 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
   }
 }
 
+static bool matchOpWithOpEqZero(Value *Op0, Value *Op1) {
+  ICmpInst::Predicate Pred;
+  return (match(Op0, m_ZExtOrSExt(m_ICmp(Pred, m_Specific(Op1), m_Zero()))) ||
+          match(Op1, m_ZExtOrSExt(m_ICmp(Pred, m_Specific(Op0), m_Zero())))) &&
+         Pred == ICmpInst::ICMP_EQ;
+}
+
 static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
                          const SimplifyQuery &Q, unsigned BitWidth, Value *X,
                          Value *Y, bool NSW, bool NUW) {
+  // (X + (X != 0)) is non zero
+  if (matchOpWithOpEqZero(X, Y))
+    return true;
+
   if (NUW)
     return isKnownNonZero(Y, DemandedElts, Q, Depth) ||
            isKnownNonZero(X, DemandedElts, Q, Depth);
@@ -2495,6 +2506,11 @@ static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
 static bool isNonZeroSub(const APInt &DemandedElts, unsigned Depth,
                          const SimplifyQuery &Q, unsigned BitWidth, Value *X,
                          Value *Y) {
+  // (X - (X != 0)) is non zero
+  // ((X != 0) - X) is non zero
+  if (matchOpWithOpEqZero(X, Y))
+    return true;
+
   // TODO: Move this case into isKnownNonEqual().
   if (auto *C = dyn_cast<Constant>(X))
     if (C->isNullValue() && isKnownNonZero(Y, DemandedElts, Q, Depth))
@@ -2654,7 +2670,15 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
   case Instruction::Sub:
     return isNonZeroSub(DemandedElts, Depth, Q, BitWidth, I->getOperand(0),
                         I->getOperand(1));
+  case Instruction::Xor:
+    // (X ^ (X != 0)) is non zero
+    if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
+      return true;
+    break;
   case Instruction::Or:
+    // (X | (X != 0)) is non zero
+    if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
+      return true;
     // X | Y != 0 if X != 0 or Y != 0.
     return isKnownNonZero(I->getOperand(1), DemandedElts, Q, Depth) ||
            isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
@@ -2945,6 +2969,11 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         return isKnownNonZero(II->getArgOperand(0), Q, Depth);
       case Intrinsic::umax:
       case Intrinsic::uadd_sat:
+        // umax(X, (X != 0)) is non zero
+        // X +usat (X != 0) is non zero
+        if (matchOpWithOpEqZero(II->getArgOperand(0), II->getArgOperand(1)))
+          return true;
+
         return isKnownNonZero(II->getArgOperand(1), DemandedElts, Q, Depth) ||
                isKnownNonZero(II->getArgOperand(0), DemandedElts, Q, Depth);
       case Intrinsic::smax: {
