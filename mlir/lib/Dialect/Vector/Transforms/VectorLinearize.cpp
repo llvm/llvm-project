@@ -17,6 +17,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <cstdint>
 #include <numeric>
 
 using namespace mlir;
@@ -109,7 +110,6 @@ private:
   unsigned targetVectorBitWidth;
 };
 
-
 /// This pattern converts the vector.extract_strided_slice operation to a
 /// vector.shuffle operation that works on a linearized vector.
 struct LinearizeVectorExtractStridedSlice final
@@ -144,67 +144,68 @@ struct LinearizeVectorExtractStridedSlice final
       return rewriter.notifyMatchFailure(
           extractOp, "Strided slice with stride != 1 is not supported.");
     Value srcVector = adaptor.getVector();
-    // if kD offsets are specified for nd source vector (n > k), the granularity
+    // If kD offsets are specified for nd source vector (n > k), the granularity
     // of the extraction is greater than 1. In this case last (n-k) dimensions
-    // form the extraction granularity. 
-    // example : 
-    //  %0 = vector.extract_strided_slice %src { offsets = [0, 0], sizes = [2, 2],
+    // form the extraction granularity.
+    // example :
+    //  %0 = vector.extract_strided_slice %src { offsets = [0, 0], sizes = [2,
+    //  2],
     //     strides = [1, 1]} : vector<4x8x8xf32> to vector<2x2x8xf32>
     // here, extraction granularity is 8.
     int64_t extractSliceLen = 1;
     auto n = extractOp.getSourceVectorType().getRank();
-    auto k = (int64_t)offsets.size();
+    int64_t k = (int64_t)offsets.size();
     if (n > k) {
       for (unsigned i = 0; i < n - k; i++) {
         extractSliceLen *= extractOp.getSourceVectorType().getShape()[i + k];
       }
     }
-    // get total number of extracted slices
+    // Get total number of extracted slices.
     int64_t nExtractedSlices = 1;
     for (auto size : sizes) {
       nExtractedSlices *= size.cast<IntegerAttr>().getInt();
     }
-    // compute the strides of the source vector considering first k dimensions
+    // Compute the strides of the source vector considering first k dimensions.
     llvm::SmallVector<int64_t, 4> sourceStrides(k, extractSliceLen);
     for (int i = k - 2; i >= 0; --i) {
       sourceStrides[i] = sourceStrides[i + 1] *
                          extractOp.getSourceVectorType().getShape()[i + 1];
     }
-    // final shuffle indices has nExtractedElems * extractSliceLen elements
+    // Final shuffle indices has nExtractedElems * extractSliceLen elements.
     llvm::SmallVector<int64_t, 4> indices(nExtractedSlices * extractSliceLen);
-    // compute the strides of the extracted kD vector
+    // Compute the strides of the extracted kD vector.
     llvm::SmallVector<int64_t, 4> extractedStrides(k, 1);
-    // compute extractedStrides
+    // Compute extractedStrides.
     for (int i = k - 2; i >= 0; --i) {
       extractedStrides[i] =
           extractedStrides[i + 1] * sizes[i + 1].cast<IntegerAttr>().getInt();
     }
-    // iterate over all extracted slices from 0 to nExtractedElems-1
+    // Iterate over all extracted slices from 0 to nExtractedElems-1
     // and compute the multi-dimensional index and the corresponding linearized
-    // index within the source vector
+    // index within the source vector.
     for (int64_t i = 0; i < nExtractedSlices; ++i) {
       int64_t index = i;
-      // compute the corresponding multi-dimensional index
+      // Compute the corresponding multi-dimensional index.
       llvm::SmallVector<int64_t, 4> multiDimIndex(k, 0);
       for (int64_t j = 0; j < k; ++j) {
         multiDimIndex[j] = (index / extractedStrides[j]);
         index -= multiDimIndex[j] * extractedStrides[j];
       }
-      // compute the corresponding linearized index in the source vector
-      // i.e. shift the multiDimIndex by the offsets
+      // Compute the corresponding linearized index in the source vector
+      // i.e. shift the multiDimIndex by the offsets.
       int64_t linearizedIndex = 0;
       for (int64_t j = 0; j < k; ++j) {
         linearizedIndex +=
             (offsets[j].cast<IntegerAttr>().getInt() + multiDimIndex[j]) *
             sourceStrides[j];
       }
-      // fill the indices array form linearizedIndex to linearizedIndex +
-      // sliceLen
+      // Fill the indices array form linearizedIndex to linearizedIndex +
+      // sliceLen.
       for (int64_t j = 0; j < extractSliceLen; ++j) {
         indices[i * extractSliceLen + j] = linearizedIndex + j;
       }
     }
-    // perform a shuffle to extract the kD vector
+    // Perform a shuffle to extract the kD vector.
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
         extractOp, dstType, srcVector, srcVector,
         rewriter.getI64ArrayAttr(indices));
@@ -215,13 +216,12 @@ private:
   unsigned targetVectorBitWidth;
 };
 
-
 /// This pattern converts the vector.shuffle operation that works on nD (n > 1)
 /// vectors to a vector.shuffle operation that works on linearized vectors.
-struct LinearizeVectorShffle final
+struct LinearizeVectorShuffle final
     : public OpConversionPattern<vector::ShuffleOp> {
   using OpConversionPattern::OpConversionPattern;
-  LinearizeVectorShffle(
+  LinearizeVectorShuffle(
       const TypeConverter &typeConverter, MLIRContext *context,
       unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
       PatternBenefit benefit = 1)
@@ -249,7 +249,7 @@ struct LinearizeVectorShffle final
     int shuffleSliceLen = 1;
     int rank = shuffleOp.getV1().getType().getRank();
 
-    // if rank > 1, we need to do the shuffle in the granularity of slices
+    // If rank > 1, we need to do the shuffle in the granularity of slices
     // instead of scalars. Size of the slice is equal to the rank-1 innermost
     // dims. Mask of the shuffle op specifies which slice to take from the
     // outermost dim.
@@ -260,10 +260,10 @@ struct LinearizeVectorShffle final
       }
     }
 
-    // for each value in the mask, we generate the indices of the source vectors
-    // that needs to be shuffled to the destination vector. if shuffleSliceLen > 1
-    // we need to shuffle the slices (consecutive shuffleSliceLen number of elements) 
-    // instead of scalars.
+    // For each value in the mask, we generate the indices of the source vectors
+    // that needs to be shuffled to the destination vector. If shuffleSliceLen >
+    // 1 we need to shuffle the slices (consecutive shuffleSliceLen number of
+    // elements) instead of scalars.
     auto mask = shuffleOp.getMask();
     auto totalSizeOfShuffledElmnts = mask.size() * shuffleSliceLen;
     llvm::SmallVector<int64_t, 2> indices(totalSizeOfShuffledElmnts);
@@ -285,9 +285,8 @@ private:
   unsigned targetVectorBitWidth;
 };
 
-
-/// This pattern converts the vector.extract operation to a vector.shuffle operation
-/// that works on a linearized vector.
+/// This pattern converts the vector.extract operation to a vector.shuffle
+/// operation that works on a linearized vector.
 struct LinearizeVectorExtract final
     : public OpConversionPattern<vector::ExtractOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -312,7 +311,7 @@ struct LinearizeVectorExtract final
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
 
-    // dynamic position is not supported
+    // Dynamic position is not supported.
     if (extractOp.hasDynamicPosition())
       return rewriter.notifyMatchFailure(extractOp,
                                          "dynamic position is not supported.");
@@ -320,7 +319,7 @@ struct LinearizeVectorExtract final
     auto shape = extractOp.getVector().getType().getShape();
     auto size = extractOp.getVector().getType().getNumElements();
 
-    // compute linearized offset
+    // Compute linearized offset.
     int64_t linearizedOffset = 0;
     auto offsets = extractOp.getStaticPosition();
     for (auto [i, off] : llvm::enumerate(offsets)) {
@@ -373,6 +372,18 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
                       ? typeConverter.isLegal(op)
                       : true);
         }
+        return std::nullopt;
+      });
+
+  patterns.add<LinearizeConstant, LinearizeVectorizable>(
+      typeConverter, patterns.getContext(), targetBitWidth);
+}
+
+void mlir::vector::populateVectorLinearizeToShuffleRewritePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target, unsigned int targetBitWidth) {
+  target.markUnknownOpDynamicallyLegal(
+      [=](Operation *op) -> std::optional<bool> {
         if (isa<vector::ShuffleOp>(op)) {
           return (isLessThanTargetBitWidth(op, targetBitWidth)
                       ? (typeConverter.isLegal(op) &&
@@ -384,8 +395,7 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
         }
         return std::nullopt;
       });
-
-  patterns.add<LinearizeConstant, LinearizeVectorizable, LinearizeVectorShffle,
-               LinearizeVectorExtract, LinearizeVectorExtractStridedSlice>(
+  patterns.add<LinearizeVectorShuffle, LinearizeVectorExtract,
+               LinearizeVectorExtractStridedSlice>(
       typeConverter, patterns.getContext(), targetBitWidth);
 }
