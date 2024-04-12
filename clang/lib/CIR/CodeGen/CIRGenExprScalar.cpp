@@ -222,6 +222,9 @@ public:
     llvm_unreachable("NYI");
   }
   mlir::Value VisitOpaqueValueExpr(OpaqueValueExpr *E) {
+    if (E->isGLValue())
+      llvm_unreachable("NYI");
+
     llvm_unreachable("NYI");
   }
 
