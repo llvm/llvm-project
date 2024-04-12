@@ -2783,7 +2783,7 @@ public:
   OpenACCClauseEnqueue(EnqueueVisitor &V) : Visitor(V) {}
 
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
-  void VisitOpenACC##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &C);
+  void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &C);
 #include "clang/Basic/OpenACCClauses.def"
 };
 
