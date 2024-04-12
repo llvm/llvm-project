@@ -257,8 +257,9 @@ LOCAL_LABEL(arg1entryFail):
 
 //===----------------------------------------------------------------------===//
 
+// __xray_*Event have default visibility so that they can be referenced by user
+// DSOs that do not link against the runtime.
 	.global ASM_SYMBOL(__xray_CustomEvent)
-	ASM_HIDDEN(__xray_CustomEvent)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_CustomEvent)
 # LLVM-MCA-BEGIN __xray_CustomEvent
@@ -284,7 +285,6 @@ LOCAL_LABEL(customEventCleanup):
 //===----------------------------------------------------------------------===//
 
 	.global ASM_SYMBOL(__xray_TypedEvent)
-	ASM_HIDDEN(__xray_TypedEvent)
 	.align 16, 0x90
 	ASM_TYPE_FUNCTION(__xray_TypedEvent)
 # LLVM-MCA-BEGIN __xray_TypedEvent
