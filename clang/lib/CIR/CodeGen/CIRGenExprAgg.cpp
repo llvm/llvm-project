@@ -826,7 +826,7 @@ void AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
   if (Destruct)
     llvm_unreachable("NYI");
 
-  llvm_unreachable("NYI");
+  CGF.buildAggExpr(E->getInitializer(), Slot);
 
   if (Destruct)
     if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())

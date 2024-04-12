@@ -45,3 +45,23 @@ int foo() {
 // CIR:    cir.store [[ONE]], [[RET_MEM]] : !s32i, cir.ptr <!s32i>
 // CIR:    [[RET:%.*]] = cir.load [[RET_MEM]] : cir.ptr <!s32i>, !s32i
 // CIR:    cir.return [[RET]] : !s32i
+
+struct G { short x, y, z; };
+struct G g(int x, int y, int z) {
+  return (struct G) { x, y, z };
+}
+
+// CIR:  cir.func @g
+// CIR:    %[[RETVAL:.*]] = cir.alloca !ty_22G22, cir.ptr <!ty_22G22>, ["__retval"] {alignment = 2 : i64} loc(#loc18)
+// CIR:    %[[X:.*]] = cir.get_member %[[RETVAL]][0] {name = "x"}
+// CIR:    cir.store {{.*}}, %[[X]] : !s16i
+// CIR:    %[[Y:.*]] = cir.get_member %[[RETVAL]][1] {name = "y"}
+// CIR:    cir.store {{.*}}, %[[Y]] : !s16i
+// CIR:    %[[Z:.*]] = cir.get_member %[[RETVAL]][2] {name = "z"}
+// CIR:    cir.store {{.*}}, %[[Z]] : !s16i
+// CIR:    %[[RES:.*]] = cir.load %[[RETVAL]]
+// CIR:    cir.return %[[RES]]
+
+// Nothing meaningful to test for LLVM codegen here.
+// FIXME: ABI note, LLVM lowering differs from traditional LLVM codegen here,
+// because the former does a memcopy + i48 load.
