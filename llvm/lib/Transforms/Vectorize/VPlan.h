@@ -2364,7 +2364,7 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
     setMask(Mask);
   }
 
- VPWidenLoadRecipe *clone() override {
+  VPWidenLoadRecipe *clone() override {
     return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
                                  getMask(), Consecutive, Reverse,
                                  getDebugLoc());
@@ -2402,7 +2402,7 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
     setMask(Mask);
   }
 
-  VPWidenStoreRecipe*clone() override {
+  VPWidenStoreRecipe *clone() override {
     return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getStoredValue(),
                                   getAddr(), getMask(), Consecutive, Reverse,
                                   getDebugLoc());
