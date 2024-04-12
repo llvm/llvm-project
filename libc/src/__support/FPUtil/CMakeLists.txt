@@ -4,7 +4,6 @@ add_header_library(
     FEnvImpl.h
   DEPENDS
     libc.hdr.fenv_t
-    libc.hdr.fexcept_t
     libc.hdr.fenv_macros
     libc.hdr.math_macros
     libc.src.__support.macros.attributes
