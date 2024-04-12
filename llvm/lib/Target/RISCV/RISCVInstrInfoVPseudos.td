@@ -3593,12 +3593,15 @@ multiclass VPseudoConversionRoundingMode<VReg RetClass,
                              VReg Op1Class,
                              LMULInfo MInfo,
                              string Constraint = "",
+                             int sew = 0,
                              int TargetConstraintType = 1> {
   let VLMul = MInfo.value in {
-    def "_" # MInfo.MX : VPseudoUnaryNoMaskRoundingMode<RetClass, Op1Class, Constraint, TargetConstraintType>;
-    def "_" # MInfo.MX # "_MASK" : VPseudoUnaryMaskRoundingMode<RetClass, Op1Class,
-                                                                Constraint, TargetConstraintType>,
-                                   RISCVMaskedPseudo<MaskIdx=2>;
+    defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
+    def suffix : VPseudoUnaryNoMaskRoundingMode<RetClass, Op1Class, Constraint, TargetConstraintType>;
+    def suffix # "_MASK" : VPseudoUnaryMaskRoundingMode<RetClass, Op1Class,
+                                                        Constraint,
+                                                        TargetConstraintType>,
+                           RISCVMaskedPseudo<MaskIdx=2>;
   }
 }
 
@@ -3607,13 +3610,15 @@ multiclass VPseudoConversionRM<VReg RetClass,
                                VReg Op1Class,
                                LMULInfo MInfo,
                                string Constraint = "",
+                               int sew = 0,
                                int TargetConstraintType = 1> {
   let VLMul = MInfo.value in {
-    def "_" # MInfo.MX : VPseudoUnaryNoMask_FRM<RetClass, Op1Class,
-                                                        Constraint, TargetConstraintType>;
-    def "_" # MInfo.MX # "_MASK" : VPseudoUnaryMask_FRM<RetClass, Op1Class,
-                                                        Constraint, TargetConstraintType>,
-                                   RISCVMaskedPseudo<MaskIdx=2>;
+    defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
+    def suffix : VPseudoUnaryNoMask_FRM<RetClass, Op1Class,
+                                        Constraint, TargetConstraintType>;
+    def suffix # "_MASK" : VPseudoUnaryMask_FRM<RetClass, Op1Class,
+                                                Constraint, TargetConstraintType>,
+                           RISCVMaskedPseudo<MaskIdx=2>;
   }
 }
 
@@ -3660,17 +3665,19 @@ multiclass VPseudoVFROUND_NOEXCEPT_V {
 
 multiclass VPseudoVCVTF_V_RM {
   foreach m = MxListF in {
-    defm _V : VPseudoConversionRoundingMode<m.vrclass, m.vrclass, m>,
-              SchedUnary<"WriteVFCvtIToFV", "ReadVFCvtIToFV", m.MX,
-                         forceMergeOpRead=true>;
+    foreach e = SchedSEWSet<m.MX, isF=1>.val in
+      defm _V : VPseudoConversionRoundingMode<m.vrclass, m.vrclass, m, sew=e>,
+                SchedUnary<"WriteVFCvtIToFV", "ReadVFCvtIToFV", m.MX, e,
+                           forceMergeOpRead=true>;
   }
 }
 
 multiclass VPseudoVCVTF_RM_V {
   foreach m = MxListF in {
-    defm _V : VPseudoConversionRM<m.vrclass, m.vrclass, m>,
-              SchedUnary<"WriteVFCvtIToFV", "ReadVFCvtIToFV", m.MX,
-                         forceMergeOpRead=true>;
+    foreach e = SchedSEWSet<m.MX, isF=1>.val in
+      defm _V : VPseudoConversionRM<m.vrclass, m.vrclass, m, sew=e>,
+                SchedUnary<"WriteVFCvtIToFV", "ReadVFCvtIToFV", m.MX, e,
+                           forceMergeOpRead=true>;
   }
 }
 
@@ -4905,14 +4912,17 @@ multiclass VPatConversionTARoundingMode<string intrinsic,
                                         ValueType result_type,
                                         ValueType op1_type,
                                         ValueType mask_type,
-                                        int sew,
+                                        int log2sew,
                                         LMULInfo vlmul,
                                         VReg result_reg_class,
-                                        VReg op1_reg_class> {
+                                        VReg op1_reg_class,
+                                        bit isSEWAware = 0> {
   def : VPatUnaryNoMaskRoundingMode<intrinsic, inst, kind, result_type, op1_type,
-                                    sew, vlmul, result_reg_class, op1_reg_class>;
+                                    log2sew, vlmul, result_reg_class,
+                                    op1_reg_class, isSEWAware>;
   def : VPatUnaryMaskRoundingMode<intrinsic, inst, kind, result_type, op1_type,
-                                  mask_type, sew, vlmul, result_reg_class, op1_reg_class>;
+                                  mask_type, log2sew, vlmul, result_reg_class,
+                                  op1_reg_class, isSEWAware>;
 }
 
 multiclass VPatBinaryV_VV<string intrinsic, string instruction,
@@ -5905,15 +5915,16 @@ multiclass VPatConversionVI_VF_RM<string intrinsic,
   }
 }
 
-multiclass VPatConversionVF_VI_RM<string intrinsic,
-                                  string instruction> {
+multiclass VPatConversionVF_VI_RM<string intrinsic, string instruction,
+                                  bit isSEWAware = 0> {
   foreach fvti = AllFloatVectors in {
     defvar ivti = GetIntVTypeInfo<fvti>.Vti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                  GetVTypePredicates<ivti>.Predicates) in
     defm : VPatConversionTARoundingMode<intrinsic, instruction, "V",
                                         fvti.Vector, ivti.Vector, fvti.Mask, ivti.Log2SEW,
-                                        ivti.LMul, fvti.RegClass, ivti.RegClass>;
+                                        ivti.LMul, fvti.RegClass, ivti.RegClass,
+                                        isSEWAware>;
   }
 }
 
@@ -7269,8 +7280,10 @@ defm : VPatConversionVI_VF_RM<"int_riscv_vfcvt_x_f_v", "PseudoVFCVT_X_F">;
 defm : VPatConversionVI_VF_RM<"int_riscv_vfcvt_xu_f_v", "PseudoVFCVT_XU_F">;
 defm : VPatConversionVI_VF<"int_riscv_vfcvt_rtz_xu_f_v", "PseudoVFCVT_RTZ_XU_F">;
 defm : VPatConversionVI_VF<"int_riscv_vfcvt_rtz_x_f_v", "PseudoVFCVT_RTZ_X_F">;
-defm : VPatConversionVF_VI_RM<"int_riscv_vfcvt_f_x_v", "PseudoVFCVT_F_X">;
-defm : VPatConversionVF_VI_RM<"int_riscv_vfcvt_f_xu_v", "PseudoVFCVT_F_XU">;
+defm : VPatConversionVF_VI_RM<"int_riscv_vfcvt_f_x_v", "PseudoVFCVT_F_X",
+                              isSEWAware=1>;
+defm : VPatConversionVF_VI_RM<"int_riscv_vfcvt_f_xu_v", "PseudoVFCVT_F_XU",
+                              isSEWAware=1>;
 
 //===----------------------------------------------------------------------===//
 // 13.18. Widening Floating-Point/Integer Type-Convert Instructions

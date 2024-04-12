@@ -1229,7 +1229,7 @@ multiclass VPatConvertI2FPVL_V_RM<SDPatternOperator vop, string instruction_name
     def : Pat<(fvti.Vector (vop (ivti.Vector ivti.RegClass:$rs1),
                                 (ivti.Mask V0),
                                 VLOpFrag)),
-              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_MASK")
+              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
                   (fvti.Vector (IMPLICIT_DEF)), ivti.RegClass:$rs1,
                   (ivti.Mask V0),
                   // Value to indicate no rounding mode change in
@@ -1247,7 +1247,7 @@ multiclass VPatConvertI2FP_RM_VL_V<SDNode vop, string instruction_name> {
     def : Pat<(fvti.Vector (vop (ivti.Vector ivti.RegClass:$rs1),
                                 (ivti.Mask V0), (XLenVT timm:$frm),
                                 VLOpFrag)),
-              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_MASK")
+              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
                   (fvti.Vector (IMPLICIT_DEF)), ivti.RegClass:$rs1,
                   (ivti.Mask V0), timm:$frm, GPR:$vl, fvti.Log2SEW, TA_MA)>;
   }
