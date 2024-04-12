@@ -45,7 +45,7 @@ define <vscale x 2 x double> @fabd_d(<vscale x 2 x i1> %pg, <vscale x 2 x double
 define <vscale x 8 x half> @fadd_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: fadd_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    fadd z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fadd.u.nxv8f16(<vscale x 8 x i1> %pg,
                                                                    <vscale x 8 x half> %a,
@@ -56,7 +56,7 @@ define <vscale x 8 x half> @fadd_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a
 define <vscale x 4 x float> @fadd_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fadd_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    fadd z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fadd.u.nxv4f32(<vscale x 4 x i1> %pg,
                                                                     <vscale x 4 x float> %a,
@@ -66,6 +66,43 @@ define <vscale x 4 x float> @fadd_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> 
 
 define <vscale x 2 x double> @fadd_d(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: fadd_d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x double> @llvm.aarch64.sve.fadd.u.nxv2f64(<vscale x 2 x i1> %pg,
+                                                                     <vscale x 2 x double> %a,
+                                                                     <vscale x 2 x double> %b)
+  ret <vscale x 2 x double> %out
+}
+
+;
+; FADD (strictfp)
+;
+
+define <vscale x 8 x half> @fadd_h_strictfp(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) strictfp {
+; CHECK-LABEL: fadd_h_strictfp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fadd.u.nxv8f16(<vscale x 8 x i1> %pg,
+                                                                   <vscale x 8 x half> %a,
+                                                                   <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %out
+}
+
+define <vscale x 4 x float> @fadd_s_strictfp(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) strictfp {
+; CHECK-LABEL: fadd_s_strictfp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fadd.u.nxv4f32(<vscale x 4 x i1> %pg,
+                                                                    <vscale x 4 x float> %a,
+                                                                    <vscale x 4 x float> %b)
+  ret <vscale x 4 x float> %out
+}
+
+define <vscale x 2 x double> @fadd_d_strictfp(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) strictfp {
+; CHECK-LABEL: fadd_d_strictfp:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -464,7 +501,7 @@ define <vscale x 2 x double> @fmsb_d(<vscale x 2 x i1> %pg, <vscale x 2 x double
 define <vscale x 8 x half> @fmul_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: fmul_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmul z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    fmul z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1> %pg,
                                                                    <vscale x 8 x half> %a,
@@ -475,7 +512,7 @@ define <vscale x 8 x half> @fmul_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a
 define <vscale x 4 x float> @fmul_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fmul_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    fmul z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.u.nxv4f32(<vscale x 4 x i1> %pg,
                                                                     <vscale x 4 x float> %a,
@@ -485,6 +522,43 @@ define <vscale x 4 x float> @fmul_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> 
 
 define <vscale x 2 x double> @fmul_d(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: fmul_d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmul z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1> %pg,
+                                                                     <vscale x 2 x double> %a,
+                                                                     <vscale x 2 x double> %b)
+  ret <vscale x 2 x double> %out
+}
+
+;
+; FMUL (strictfp)
+;
+
+define <vscale x 8 x half> @fmul_h_strictfp(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) strictfp {
+; CHECK-LABEL: fmul_h_strictfp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmul z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fmul.u.nxv8f16(<vscale x 8 x i1> %pg,
+                                                                   <vscale x 8 x half> %a,
+                                                                   <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %out
+}
+
+define <vscale x 4 x float> @fmul_s_strictfp(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) strictfp {
+; CHECK-LABEL: fmul_s_strictfp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmul.u.nxv4f32(<vscale x 4 x i1> %pg,
+                                                                    <vscale x 4 x float> %a,
+                                                                    <vscale x 4 x float> %b)
+  ret <vscale x 4 x float> %out
+}
+
+define <vscale x 2 x double> @fmul_d_strictfp(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) strictfp {
+; CHECK-LABEL: fmul_d_strictfp:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -698,7 +772,7 @@ define <vscale x 2 x double> @fnmsb_d(<vscale x 2 x i1> %pg, <vscale x 2 x doubl
 define <vscale x 8 x half> @fsub_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: fsub_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsub z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    fsub z0.h, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fsub.u.nxv8f16(<vscale x 8 x i1> %pg,
                                                                    <vscale x 8 x half> %a,
@@ -709,7 +783,7 @@ define <vscale x 8 x half> @fsub_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a
 define <vscale x 4 x float> @fsub_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fsub_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsub z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    fsub z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fsub.u.nxv4f32(<vscale x 4 x i1> %pg,
                                                                     <vscale x 4 x float> %a,
@@ -720,7 +794,44 @@ define <vscale x 4 x float> @fsub_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> 
 define <vscale x 2 x double> @fsub_d(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: fsub_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsub z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    fsub z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x double> @llvm.aarch64.sve.fsub.u.nxv2f64(<vscale x 2 x i1> %pg,
+                                                                     <vscale x 2 x double> %a,
+                                                                     <vscale x 2 x double> %b)
+  ret <vscale x 2 x double> %out
+}
+
+;
+; FSUB (strictfp)
+;
+
+define <vscale x 8 x half> @fsub_h_strictfp(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) strictfp {
+; CHECK-LABEL: fsub_h_strictfp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fsub z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fsub.u.nxv8f16(<vscale x 8 x i1> %pg,
+                                                                   <vscale x 8 x half> %a,
+                                                                   <vscale x 8 x half> %b)
+  ret <vscale x 8 x half> %out
+}
+
+define <vscale x 4 x float> @fsub_s_strictfp(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) strictfp {
+; CHECK-LABEL: fsub_s_strictfp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fsub z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fsub.u.nxv4f32(<vscale x 4 x i1> %pg,
+                                                                    <vscale x 4 x float> %a,
+                                                                    <vscale x 4 x float> %b)
+  ret <vscale x 4 x float> %out
+}
+
+define <vscale x 2 x double> @fsub_d_strictfp(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) "_strictfp" {
+; CHECK-LABEL: fsub_d_strictfp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fsub z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %out = call <vscale x 2 x double> @llvm.aarch64.sve.fsub.u.nxv2f64(<vscale x 2 x i1> %pg,
                                                                      <vscale x 2 x double> %a,
@@ -735,7 +846,7 @@ define <vscale x 2 x double> @fsub_d(<vscale x 2 x i1> %pg, <vscale x 2 x double
 define <vscale x 8 x half> @fsubr_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: fsubr_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsubr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    fsub z0.h, z1.h, z0.h
 ; CHECK-NEXT:    ret
   %out = call <vscale x 8 x half> @llvm.aarch64.sve.fsub.u.nxv8f16(<vscale x 8 x i1> %pg,
                                                                    <vscale x 8 x half> %b,
@@ -746,7 +857,7 @@ define <vscale x 8 x half> @fsubr_h(<vscale x 8 x i1> %pg, <vscale x 8 x half> %
 define <vscale x 4 x float> @fsubr_s(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: fsubr_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fsubr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    fsub z0.s, z1.s, z0.s
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x float> @llvm.aarch64.sve.fsub.u.nxv4f32(<vscale x 4 x i1> %pg,
                                                                     <vscale x 4 x float> %b,
@@ -756,6 +867,43 @@ define <vscale x 4 x float> @fsubr_s(<vscale x 4 x i1> %pg, <vscale x 4 x float>
 
 define <vscale x 2 x double> @fsubr_d(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: fsubr_d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fsub z0.d, z1.d, z0.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x double> @llvm.aarch64.sve.fsub.u.nxv2f64(<vscale x 2 x i1> %pg,
+                                                                     <vscale x 2 x double> %b,
+                                                                     <vscale x 2 x double> %a)
+  ret <vscale x 2 x double> %out
+}
+
+;
+; FSUBR (strictfp)
+;
+
+define <vscale x 8 x half> @fsubr_h_strictfp(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a, <vscale x 8 x half> %b) strictfp {
+; CHECK-LABEL: fsubr_h_strictfp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fsubr z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fsub.u.nxv8f16(<vscale x 8 x i1> %pg,
+                                                                   <vscale x 8 x half> %b,
+                                                                   <vscale x 8 x half> %a)
+  ret <vscale x 8 x half> %out
+}
+
+define <vscale x 4 x float> @fsubr_s_strictfp(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a, <vscale x 4 x float> %b) strictfp {
+; CHECK-LABEL: fsubr_s_strictfp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fsubr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fsub.u.nxv4f32(<vscale x 4 x i1> %pg,
+                                                                    <vscale x 4 x float> %b,
+                                                                    <vscale x 4 x float> %a)
+  ret <vscale x 4 x float> %out
+}
+
+define <vscale x 2 x double> @fsubr_d_strictfp(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a, <vscale x 2 x double> %b) strictfp {
+; CHECK-LABEL: fsubr_d_strictfp:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fsubr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret

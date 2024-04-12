@@ -343,7 +343,7 @@ define half @faddv_v32f16(half %start, ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    fadd z1.h, p0/m, z1.h, z2.h
+; VBITS_GE_256-NEXT:    fadd z1.h, z2.h, z1.h
 ; VBITS_GE_256-NEXT:    faddv h1, p0, z1.h
 ; VBITS_GE_256-NEXT:    fadd h0, h0, h1
 ; VBITS_GE_256-NEXT:    ret
@@ -430,7 +430,7 @@ define float @faddv_v16f32(float %start, ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    fadd z1.s, p0/m, z1.s, z2.s
+; VBITS_GE_256-NEXT:    fadd z1.s, z2.s, z1.s
 ; VBITS_GE_256-NEXT:    faddv s1, p0, z1.s
 ; VBITS_GE_256-NEXT:    fadd s0, s0, s1
 ; VBITS_GE_256-NEXT:    ret
@@ -514,7 +514,7 @@ define double @faddv_v8f64(double %start, ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    fadd z1.d, p0/m, z1.d, z2.d
+; VBITS_GE_256-NEXT:    fadd z1.d, z2.d, z1.d
 ; VBITS_GE_256-NEXT:    faddv d1, p0, z1.d
 ; VBITS_GE_256-NEXT:    fadd d0, d0, d1
 ; VBITS_GE_256-NEXT:    ret

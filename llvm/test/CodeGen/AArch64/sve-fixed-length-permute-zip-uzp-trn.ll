@@ -150,7 +150,7 @@ define void @zip_v4f64(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_512-NEXT:    stp d3, d2, [sp, #16]
 ; VBITS_EQ_512-NEXT:    stp d5, d4, [sp]
 ; VBITS_EQ_512-NEXT:    ld1d { z1.d }, p0/z, [x8]
-; VBITS_EQ_512-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
+; VBITS_EQ_512-NEXT:    fadd z0.d, z0.d, z1.d
 ; VBITS_EQ_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    mov sp, x29
 ; VBITS_EQ_512-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
@@ -356,7 +356,7 @@ define void @trn_v4f64(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; VBITS_EQ_512-NEXT:    trn1 z2.d, z0.d, z1.d
 ; VBITS_EQ_512-NEXT:    trn2 z0.d, z0.d, z1.d
-; VBITS_EQ_512-NEXT:    fadd z0.d, p0/m, z0.d, z2.d
+; VBITS_EQ_512-NEXT:    fadd z0.d, z2.d, z0.d
 ; VBITS_EQ_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load <4 x double>, ptr %a
@@ -667,7 +667,7 @@ define void @zip_vscale2_4(ptr %a, ptr %b) #2 {
 ; CHECK-NEXT:    stp d3, d2, [sp, #16]
 ; CHECK-NEXT:    stp d5, d4, [sp]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x8]
-; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    fadd z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
