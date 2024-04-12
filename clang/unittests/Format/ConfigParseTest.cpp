@@ -396,6 +396,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BreakBeforeBinaryOperators: true", BreakBeforeBinaryOperators,
               FormatStyle::BOS_All);
 
+  Style.BreakChevronOperator = FormatStyle::BCOS_BetweenStrings;
+  CHECK_PARSE("BreakChevronOperator: BetweenNewlineStrings",
+              BreakChevronOperator, FormatStyle::BCOS_BetweenNewlineStrings);
+  CHECK_PARSE("BreakChevronOperator: Never", BreakChevronOperator,
+              FormatStyle::BCOS_Never);
+  CHECK_PARSE("BreakChevronOperator: BetweenStrings", BreakChevronOperator,
+              FormatStyle::BCOS_BetweenStrings);
+
   Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   CHECK_PARSE("BreakConstructorInitializers: BeforeComma",
               BreakConstructorInitializers, FormatStyle::BCIS_BeforeComma);

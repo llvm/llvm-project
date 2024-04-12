@@ -27340,9 +27340,44 @@ TEST_F(FormatTest, PPDirectivesAndCommentsInBracedInit) {
 }
 
 TEST_F(FormatTest, StreamOutputOperator) {
-  verifyFormat("std::cout << \"foo\" << \"bar\" << baz;");
-  verifyFormat("std::cout << \"foo\\n\"\n"
-               "          << \"bar\";");
+  auto Style = getLLVMStyle();
+
+  // This should be the default as it was the original style, thats
+  // been in place since the beginning.
+  verifyFormat("std::cout << \"aaaa\"\n"
+               "          << \"bbbbb\";",
+               Style);
+  verifyFormat("std::cout << \"aaaa\"\n"
+               "          << \"bbbbb\"\n"
+               "          << \"ccc\";",
+               Style);
+  verifyFormat("std::cout << \"aaaa\"\n"
+               "          << \"bbbbb\"\n"
+               "          << \"cccc\"\n"
+               "          << \"ddd\";",
+               Style);
+  verifyFormat("std::cout << \"aaaa\"\n"
+               "          << \"bbbbb\" << baz << \"cccc\"\n"
+               "          << \"ddd\";",
+               Style);
+
+  Style.BreakChevronOperator = FormatStyle::BCOS_Never;
+  verifyFormat("std::cout << \"aaaa\" << \"bbb\" << baz;", Style);
+  verifyFormat("std::cout << \"ccc\\n\" << \"dddd\";", Style);
+
+  Style.BreakChevronOperator = FormatStyle::BCOS_BetweenStrings;
+  verifyFormat("std::cout << \"eee\"\n"
+               "          << \"ffff\";",
+               Style);
+  verifyFormat("std::cout << \"aa\\n\"\n"
+               "          << \"bbbb\";",
+               Style);
+
+  Style.BreakChevronOperator = FormatStyle::BCOS_BetweenNewlineStrings;
+  verifyFormat("std::cout << \"aaaa\" << \"bbb\" << baz;", Style);
+  verifyFormat("std::cout << \"ggg\\n\"\n"
+               "          << \"dddd\";",
+               Style);
 }
 
 TEST_F(FormatTest, BreakAdjacentStringLiterals) {
@@ -27363,3 +27398,4 @@ TEST_F(FormatTest, BreakAdjacentStringLiterals) {
 } // namespace test
 } // namespace format
 } // namespace clang
+                    
