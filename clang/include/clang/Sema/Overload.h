@@ -1088,7 +1088,6 @@ class Sema;
     // Address space of the object being constructed.
     LangAS DestAS = LangAS::Default;
 
-
     void destroyCandidates();
 
   public:

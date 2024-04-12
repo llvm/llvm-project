@@ -9772,8 +9772,8 @@ bool InitializationSequence::Diagnose(Sema &S,
         << OnlyArg->getType() << DestType.getNonReferenceType()
         << Args[0]->getSourceRange();
       OverloadCandidateSet::iterator Best;
-      OverloadingResult Ovl
-        = FailedCandidateSet->BestViableFunction(S, Kind.getLocation(), Best);
+      OverloadingResult Ovl =
+          FailedCandidateSet->BestViableFunction(S, Kind.getLocation(), Best);
       if (Ovl == OR_Deleted) {
         S.NoteDeletedFunction(Best->Function);
       } else {
@@ -10015,8 +10015,8 @@ bool InitializationSequence::Diagnose(Sema &S,
 
       case OR_Deleted: {
         OverloadCandidateSet::iterator Best;
-        OverloadingResult Ovl
-          = FailedCandidateSet->BestViableFunction(S, Kind.getLocation(), Best);
+        OverloadingResult Ovl =
+            FailedCandidateSet->BestViableFunction(S, Kind.getLocation(), Best);
         if (Ovl != OR_Deleted) {
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_init)
               << DestType << ArgsRange;
@@ -10092,8 +10092,8 @@ bool InitializationSequence::Diagnose(Sema &S,
     S.Diag(Kind.getLocation(), diag::err_selected_explicit_constructor)
       << Args[0]->getSourceRange();
     OverloadCandidateSet::iterator Best;
-    OverloadingResult Ovl
-      = FailedCandidateSet->BestViableFunction(S, Kind.getLocation(), Best);
+    OverloadingResult Ovl =
+        FailedCandidateSet->BestViableFunction(S, Kind.getLocation(), Best);
     (void)Ovl;
     assert(Ovl == OR_Success && "Inconsistent overload resolution");
     CXXConstructorDecl *CtorDecl = cast<CXXConstructorDecl>(Best->Function);
