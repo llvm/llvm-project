@@ -253,6 +253,18 @@ multiclass LMULReadAdvanceFW<string name, int val, list<SchedWrite> writes = []>
   : LMULReadAdvanceImpl<name, val, writes>;
 class LMULSchedWriteListFW<list<string> names> : LMULSchedWriteListImpl<names, SchedMxListFW>;
 
+multiclass LMULSEWSchedWritesW<string name>
+    : LMULSEWSchedWritesImpl<name, SchedMxListW, isF = 0, isWidening = 1>;
+multiclass LMULSEWSchedReadsW<string name>
+    : LMULSEWSchedReadsImpl<name, SchedMxListW, isF = 0, isWidening = 1>;
+multiclass LMULSEWWriteResW<string name, list<ProcResourceKind> resources>
+    : LMULSEWWriteResImpl<name, resources, SchedMxListW, isF = 0,
+                          isWidening = 1>;
+multiclass
+    LMULSEWReadAdvanceW<string name, int val, list<SchedWrite> writes = []>
+    : LMULSEWReadAdvanceImpl<name, val, writes, SchedMxListW, isF = 0,
+                             isWidening = 1>;
+
 multiclass LMULSEWSchedWritesFW<string name>
     : LMULSEWSchedWritesImpl<name, SchedMxListFW, isF = 1, isWidening = 1>;
 multiclass LMULSEWSchedReadsFW<string name>
@@ -452,9 +464,9 @@ defm "" : LMULSchedWrites<"WriteVFMovV">;
 defm "" : LMULSEWSchedWritesF<"WriteVFCvtIToFV">;
 defm "" : LMULSchedWrites<"WriteVFCvtFToIV">;
 // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
-defm "" : LMULSchedWritesW<"WriteVFWCvtIToFV">;
+defm "" : LMULSEWSchedWritesW<"WriteVFWCvtIToFV">;
 defm "" : LMULSchedWritesFW<"WriteVFWCvtFToIV">;
-defm "" : LMULSchedWritesFW<"WriteVFWCvtFToFV">;
+defm "" : LMULSEWSchedWritesFW<"WriteVFWCvtFToFV">;
 // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
 defm "" : LMULSchedWritesFW<"WriteVFNCvtIToFV">;
 defm "" : LMULSchedWritesW<"WriteVFNCvtFToIV">;
@@ -678,9 +690,9 @@ defm "" : LMULSchedReads<"ReadVFMovF">;
 defm "" : LMULSEWSchedReadsF<"ReadVFCvtIToFV">;
 defm "" : LMULSchedReads<"ReadVFCvtFToIV">;
 // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
-defm "" : LMULSchedReadsW<"ReadVFWCvtIToFV">;
+defm "" : LMULSEWSchedReadsW<"ReadVFWCvtIToFV">;
 defm "" : LMULSchedReadsFW<"ReadVFWCvtFToIV">;
-defm "" : LMULSchedReadsFW<"ReadVFWCvtFToFV">;
+defm "" : LMULSEWSchedReadsFW<"ReadVFWCvtFToFV">;
 // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
 defm "" : LMULSchedReadsFW<"ReadVFNCvtIToFV">;
 defm "" : LMULSchedReadsW<"ReadVFNCvtFToIV">;
@@ -907,9 +919,9 @@ defm "" : LMULWriteRes<"WriteVFMergeV", []>;
 defm "" : LMULWriteRes<"WriteVFMovV", []>;
 defm "" : LMULSEWWriteResF<"WriteVFCvtIToFV", []>;
 defm "" : LMULWriteRes<"WriteVFCvtFToIV", []>;
-defm "" : LMULWriteResW<"WriteVFWCvtIToFV", []>;
+defm "" : LMULSEWWriteResW<"WriteVFWCvtIToFV", []>;
 defm "" : LMULWriteResFW<"WriteVFWCvtFToIV", []>;
-defm "" : LMULWriteResFW<"WriteVFWCvtFToFV", []>;
+defm "" : LMULSEWWriteResFW<"WriteVFWCvtFToFV", []>;
 defm "" : LMULWriteResFW<"WriteVFNCvtIToFV", []>;
 defm "" : LMULWriteResW<"WriteVFNCvtFToIV", []>;
 defm "" : LMULWriteResFW<"WriteVFNCvtFToFV", []>;
@@ -1064,9 +1076,9 @@ defm "" : LMULReadAdvance<"ReadVFMergeF", 0>;
 defm "" : LMULReadAdvance<"ReadVFMovF", 0>;
 defm "" : LMULSEWReadAdvanceF<"ReadVFCvtIToFV", 0>;
 defm "" : LMULReadAdvance<"ReadVFCvtFToIV", 0>;
-defm "" : LMULReadAdvanceW<"ReadVFWCvtIToFV", 0>;
+defm "" : LMULSEWReadAdvanceW<"ReadVFWCvtIToFV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWCvtFToIV", 0>;
-defm "" : LMULReadAdvanceFW<"ReadVFWCvtFToFV", 0>;
+defm "" : LMULSEWReadAdvanceFW<"ReadVFWCvtFToFV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFNCvtIToFV", 0>;
 defm "" : LMULReadAdvanceW<"ReadVFNCvtFToIV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFNCvtFToFV", 0>;

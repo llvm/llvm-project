@@ -17642,8 +17642,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
 static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
                                                     MachineBasicBlock *BB,
-                                                    unsigned CVTXOpc,
-                                                    unsigned CVTFOpc) {
+                                                    unsigned CVTXOpc) {
   DebugLoc DL = MI.getDebugLoc();
 
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
@@ -17674,6 +17673,85 @@ static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
                                      /*IsImp*/ true));
 
   // Emit a VFCVT_F_X
+  RISCVII::VLMUL LMul = RISCVII::getLMul(MI.getDesc().TSFlags);
+  unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+  // There is no E8 variant for VFCVT_F_X.
+  assert(Log2SEW >= 4);
+  // Since MI (VFROUND) isn't SEW specific, we cannot use a macro to make
+  // handling of different (LMUL, SEW) pairs easier because we need to pull the
+  // SEW immediate from MI, and that information is not avaliable during macro
+  // expansion.
+  unsigned CVTFOpc;
+  if (Log2SEW == 4) {
+    switch (LMul) {
+    case RISCVII::LMUL_1:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M1_E16_MASK;
+      break;
+    case RISCVII::LMUL_2:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M2_E16_MASK;
+      break;
+    case RISCVII::LMUL_4:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M4_E16_MASK;
+      break;
+    case RISCVII::LMUL_8:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M8_E16_MASK;
+      break;
+    case RISCVII::LMUL_F2:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_MF2_E16_MASK;
+      break;
+    case RISCVII::LMUL_F4:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_MF4_E16_MASK;
+      break;
+    case RISCVII::LMUL_F8:
+    case RISCVII::LMUL_RESERVED:
+      llvm_unreachable("Unexpected LMUL and SEW combination value for MI.");
+    }
+  } else if (Log2SEW == 5) {
+    switch (LMul) {
+    case RISCVII::LMUL_1:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M1_E32_MASK;
+      break;
+    case RISCVII::LMUL_2:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M2_E32_MASK;
+      break;
+    case RISCVII::LMUL_4:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M4_E32_MASK;
+      break;
+    case RISCVII::LMUL_8:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M8_E32_MASK;
+      break;
+    case RISCVII::LMUL_F2:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_MF2_E32_MASK;
+      break;
+    case RISCVII::LMUL_F4:
+    case RISCVII::LMUL_F8:
+    case RISCVII::LMUL_RESERVED:
+      llvm_unreachable("Unexpected LMUL and SEW combination value for MI.");
+    }
+  } else if (Log2SEW == 6) {
+    switch (LMul) {
+    case RISCVII::LMUL_1:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M1_E64_MASK;
+      break;
+    case RISCVII::LMUL_2:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M2_E64_MASK;
+      break;
+    case RISCVII::LMUL_4:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M4_E64_MASK;
+      break;
+    case RISCVII::LMUL_8:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M8_E64_MASK;
+      break;
+    case RISCVII::LMUL_F2:
+    case RISCVII::LMUL_F4:
+    case RISCVII::LMUL_F8:
+    case RISCVII::LMUL_RESERVED:
+      llvm_unreachable("Unexpected LMUL and SEW combination value for MI.");
+    }
+  } else {
+    llvm_unreachable("Unexpected LMUL and SEW combination value for MI.");
+  }
+
   BuildMI(*BB, MI, DL, TII.get(CVTFOpc))
       .add(MI.getOperand(0))
       .add(MI.getOperand(1))
@@ -17883,23 +17961,17 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                          Subtarget);
 
   case RISCV::PseudoVFROUND_NOEXCEPT_V_M1_MASK:
-    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M1_MASK,
-                                     RISCV::PseudoVFCVT_F_X_V_M1_MASK);
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M1_MASK);
   case RISCV::PseudoVFROUND_NOEXCEPT_V_M2_MASK:
-    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M2_MASK,
-                                     RISCV::PseudoVFCVT_F_X_V_M2_MASK);
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M2_MASK);
   case RISCV::PseudoVFROUND_NOEXCEPT_V_M4_MASK:
-    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M4_MASK,
-                                     RISCV::PseudoVFCVT_F_X_V_M4_MASK);
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M4_MASK);
   case RISCV::PseudoVFROUND_NOEXCEPT_V_M8_MASK:
-    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M8_MASK,
-                                     RISCV::PseudoVFCVT_F_X_V_M8_MASK);
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M8_MASK);
   case RISCV::PseudoVFROUND_NOEXCEPT_V_MF2_MASK:
-    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF2_MASK,
-                                     RISCV::PseudoVFCVT_F_X_V_MF2_MASK);
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF2_MASK);
   case RISCV::PseudoVFROUND_NOEXCEPT_V_MF4_MASK:
-    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF4_MASK,
-                                     RISCV::PseudoVFCVT_F_X_V_MF4_MASK);
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF4_MASK);
   case RISCV::PseudoFROUND_H:
   case RISCV::PseudoFROUND_H_INX:
   case RISCV::PseudoFROUND_S:

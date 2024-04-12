@@ -1315,7 +1315,7 @@ multiclass VPatWConvertI2FPVL_V<SDPatternOperator vop,
     def : Pat<(fwti.Vector (vop (ivti.Vector ivti.RegClass:$rs1),
                                 (ivti.Mask V0),
                                 VLOpFrag)),
-              (!cast<Instruction>(instruction_name#"_"#ivti.LMul.MX#"_MASK")
+              (!cast<Instruction>(instruction_name#"_"#ivti.LMul.MX#"_E"#ivti.SEW#"_MASK")
                   (fwti.Vector (IMPLICIT_DEF)), ivti.RegClass:$rs1,
                   (ivti.Mask V0),
                   GPR:$vl, ivti.Log2SEW, TA_MA)>;
@@ -2672,7 +2672,7 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
                              (fvti.Vector fvti.RegClass:$rs1),
                              (fvti.Mask V0),
                              VLOpFrag)),
-            (!cast<Instruction>("PseudoVFWCVT_F_F_V_"#fvti.LMul.MX#"_MASK")
+            (!cast<Instruction>("PseudoVFWCVT_F_F_V_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
                 (fwti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
                 (fvti.Mask V0),
                 GPR:$vl, fvti.Log2SEW, TA_MA)>;
