@@ -405,11 +405,14 @@ function(add_compiler_rt_runtime name type)
         if (HAD_ERROR)
           message(FATAL_ERROR "${CMAKE_LINKER} failed with status ${HAD_ERROR}")
         endif()
-        set(NEED_EXPLICIT_ADHOC_CODESIGN 1)
+        set(NEED_EXPLICIT_ADHOC_CODESIGN 0)
+        # Apple introduced a new linker by default in Xcode 15. This linker reports itself as ld
+        # rather than ld64 and does not match this version regex. That's ok since it never needs
+        # the explicit ad-hoc code signature.
         if ("${LD_V_OUTPUT}" MATCHES ".*ld64-([0-9.]+).*")
           string(REGEX REPLACE ".*ld64-([0-9.]+).*" "\\1" HOST_LINK_VERSION ${LD_V_OUTPUT})
-          if (HOST_LINK_VERSION VERSION_GREATER_EQUAL 609)
-            set(NEED_EXPLICIT_ADHOC_CODESIGN 0)
+          if (HOST_LINK_VERSION VERSION_LESS 609)
+            set(NEED_EXPLICIT_ADHOC_CODESIGN 1)
           endif()
         endif()
         if (NEED_EXPLICIT_ADHOC_CODESIGN)
@@ -768,6 +771,7 @@ function(configure_compiler_rt_lit_site_cfg input output)
   get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir)
 
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_TEST_COMPILER ${COMPILER_RT_TEST_COMPILER})
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_OUTPUT_DIR ${COMPILER_RT_OUTPUT_DIR})
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR ${output_dir})
 
   configure_lit_site_cfg(${input} ${output})

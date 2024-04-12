@@ -23,7 +23,7 @@ define void @saddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 4294967280
-; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc nuw i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[IND_END1:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[TMP1]]
@@ -138,7 +138,7 @@ define void @umin(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[IND_END18:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[IND_END15:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[N_VEC]]
-; CHECK-NEXT:    [[DOTCAST11:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[DOTCAST11:%.*]] = trunc nuw i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END12:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST11]]
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP0]], 24
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
@@ -146,7 +146,7 @@ define void @umin(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_VEC9:%.*]] = and i64 [[TMP0]], 4294967288
-; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC9]] to i32
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc nuw i64 [[N_VEC9]] to i32
 ; CHECK-NEXT:    [[IND_END10:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST]]
 ; CHECK-NEXT:    [[IND_END14:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[N_VEC9]]
 ; CHECK-NEXT:    [[IND_END17:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[N_VEC9]]

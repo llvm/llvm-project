@@ -45,7 +45,7 @@ entry:
 define signext i32 @vsetvl_sext() nounwind #0 {
 ; CHECK-LABEL: @vsetvl_sext(
 ; CHECK-NEXT:    [[A:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 1, i64 1)
-; CHECK-NEXT:    [[B:%.*]] = trunc i64 [[A]] to i32
+; CHECK-NEXT:    [[B:%.*]] = trunc nuw nsw i64 [[A]] to i32
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %a = call i64 @llvm.riscv.vsetvli(i64 1, i64 1, i64 1)
@@ -56,7 +56,7 @@ define signext i32 @vsetvl_sext() nounwind #0 {
 define zeroext i32 @vsetvl_zext() nounwind #0 {
 ; CHECK-LABEL: @vsetvl_zext(
 ; CHECK-NEXT:    [[A:%.*]] = call i64 @llvm.riscv.vsetvli.i64(i64 1, i64 1, i64 1)
-; CHECK-NEXT:    [[B:%.*]] = trunc i64 [[A]] to i32
+; CHECK-NEXT:    [[B:%.*]] = trunc nuw nsw i64 [[A]] to i32
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %a = call i64 @llvm.riscv.vsetvli(i64 1, i64 1, i64 1)
