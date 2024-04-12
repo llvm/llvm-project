@@ -764,42 +764,42 @@ KnownBits KnownBits::usub_sat(const KnownBits &LHS, const KnownBits &RHS) {
 
 KnownBits KnownBits::avgFloorS(const KnownBits &LHS, const KnownBits &RHS) {
   // (C1 & C2) + (C1 ^ C2).ashr(1)
-  KnownBits andResult = LHS & RHS;
-  KnownBits xorResult = LHS ^ RHS;
-  xorResult.Zero.ashrInPlace(1);
-  xorResult.One.ashrInPlace(1);
-  return computeForAddSub(/*Add*/ true, /* NSW */ true, /* NUW */ false,
-                          andResult, xorResult);
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits tmpLHS = LHS.sext(BitWidth + 1);
+  KnownBits tmpRHS = RHS.sext(BitWidth + 1);
+  KnownBits Carry = KnownBits::makeConstant(APInt(1, 1));
+  tmpLHS = KnownBits::computeForAddCarry(tmpLHS, tmpRHS, Carry);
+  return tmpLHS.extractBits(BitWidth, 1);
 }
 
 KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
   // (C1 & C2) + (C1 ^ C2).lshr(1)
-  KnownBits andResult = LHS & RHS;
-  KnownBits xorResult = LHS ^ RHS;
-  xorResult.Zero.lshrInPlace(1);
-  xorResult.One.lshrInPlace(1);
-  return computeForAddSub(/*Add*/ true, /* NSW */ false, /* NUW */ true,
-                          andResult, xorResult);
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits tmpLHS = LHS.zext(BitWidth + 1);
+  KnownBits tmpRHS = RHS.zext(BitWidth + 1);
+  KnownBits Carry = KnownBits::makeConstant(APInt(1, 0));
+  tmpLHS = KnownBits::computeForAddCarry(tmpLHS, tmpRHS, Carry);
+  return tmpLHS.extractBits(BitWidth, 1);
 }
 
 KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
   // (C1 | C2) - (C1 ^ C2).ashr(1)
-  KnownBits orResult = LHS | RHS;
-  KnownBits xorResult = LHS ^ RHS;
-  xorResult.Zero.ashrInPlace(1);
-  xorResult.One.ashrInPlace(1);
-  return computeForAddSub(/*Add*/ false, /* NSW */ true, /* NUW */ false,
-                          orResult, xorResult);
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits tmpLHS = LHS.sext(BitWidth + 1);
+  KnownBits tmpRHS = RHS.sext(BitWidth + 1);
+  KnownBits Carry = KnownBits::makeConstant(APInt(1, 1));
+  tmpLHS = KnownBits::computeForAddCarry(tmpLHS, tmpRHS, Carry);
+  return tmpLHS.extractBits(BitWidth, 1);
 }
 
 KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
   // (C1 | C2) - (C1 ^ C2).lshr(1)
-  KnownBits orResult = LHS | RHS;
-  KnownBits xorResult = LHS ^ RHS;
-  xorResult.Zero.lshrInPlace(1);
-  xorResult.One.lshrInPlace(1);
-  return computeForAddSub(/*Add*/ false, /* NSW */ false, /* NUW */ true,
-                          orResult, xorResult);
+  unsigned BitWidth = LHS.getBitWidth();
+  KnownBits tmpLHS = LHS.zext(BitWidth + 1);
+  KnownBits tmpRHS = RHS.zext(BitWidth + 1);
+  KnownBits Carry = KnownBits::makeConstant(APInt(1, 0));
+  tmpLHS = KnownBits::computeForAddCarry(tmpLHS, tmpRHS, Carry);
+  return tmpLHS.extractBits(BitWidth, 1);
 }
 
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
