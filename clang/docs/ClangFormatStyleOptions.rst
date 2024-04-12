@@ -3291,7 +3291,7 @@ the configuration (without a prefix: ``Auto``).
          << "\n";
 
   * ``BCOS_Always`` (in configuration: ``Always``)
-    Break between adjacent items
+    Break between adjacent chevrons.
 
     .. code-block:: c++
 

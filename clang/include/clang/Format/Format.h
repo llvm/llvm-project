@@ -2193,7 +2193,7 @@ struct FormatStyle {
   /// \version 3.7
   bool BreakBeforeTernaryOperators;
 
-  /// Different ways to Break Between Chevrons
+  /// Different ways to Break Between Chevrons.
   enum BreakChevronOperatorStyle : int8_t {
     /// Break using ColumnLimit rules.
     /// \code
@@ -2214,7 +2214,7 @@ struct FormatStyle {
     ///      << "\n";
     /// \endcode
     BCOS_BetweenNewlineStrings,
-    /// Break between adjacent items
+    /// Break between adjacent chevrons.
     /// \code
     ///   os << "aaaaa\n"
     ///      << "bbbbb"
