@@ -467,6 +467,10 @@ public:
   void setGVProperties(mlir::Operation *Op, const NamedDecl *D) const;
   void setGVPropertiesAux(mlir::Operation *Op, const NamedDecl *D) const;
 
+  /// Set the TLS mode for the given global Op for the thread-local
+  /// variable declaration D.
+  void setTLSMode(mlir::Operation *Op, const VarDecl &D) const;
+
   /// Replace the present global `Old` with the given global `New`. Their symbol
   /// names must match; their types can be different. Usages of the old global
   /// will be automatically updated if their types mismatch.

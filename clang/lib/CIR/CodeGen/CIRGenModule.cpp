@@ -609,6 +609,18 @@ void CIRGenModule::replaceGlobal(mlir::cir::GlobalOp Old,
   Old.erase();
 }
 
+void CIRGenModule::setTLSMode(mlir::Operation *Op, const VarDecl &D) const {
+  assert(D.getTLSKind() && "setting TLS mode on non-TLS var!");
+  llvm_unreachable("NYI");
+
+  // Override the TLS model if it is explicitly specified.
+  if (const TLSModelAttr *Attr = D.getAttr<TLSModelAttr>()) {
+    llvm_unreachable("NYI");
+  }
+
+  llvm_unreachable("NYI");
+}
+
 /// If the specified mangled name is not in the module,
 /// create and return an mlir GlobalOp with the specified type (TODO(cir):
 /// address space).
@@ -733,7 +745,9 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
     //   setLinkageForGV(GV, D);
 
     if (D->getTLSKind()) {
-      assert(0 && "not implemented");
+      if (D->getTLSKind() == VarDecl::TLS_Dynamic)
+        llvm_unreachable("NYI");
+      setTLSMode(GV, *D);
     }
 
     setGVProperties(GV, D);
