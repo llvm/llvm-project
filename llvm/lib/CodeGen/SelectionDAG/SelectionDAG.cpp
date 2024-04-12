@@ -4308,7 +4308,7 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
   //    x & -x -> non-zero pow2
   // so if we find the pattern return whether we know `x` is non-zero.
   SDValue X;
-  if (sd_match(Val, m_And(m_Value(X), m_Sub(m_Zero(), m_Deferred(X)))))
+  if (sd_match(Val, m_And(m_Value(X), m_Neg(m_Deferred(X)))))
     return isKnownNeverZero(X, Depth);
 
   if (Val.getOpcode() == ISD::ZERO_EXTEND)
