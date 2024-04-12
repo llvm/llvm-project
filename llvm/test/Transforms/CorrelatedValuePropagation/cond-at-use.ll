@@ -602,7 +602,7 @@ define i32 @pr87854(i32 noundef %x.1, i32 noundef %i) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[X_1:%.*]], -1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
 ; CHECK-NEXT:    [[INBOUNDS:%.*]] = icmp ult i32 [[I:%.*]], [[X_1]]
-; CHECK-NEXT:    [[NEXT:%.*]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[NEXT:%.*]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[INBOUNDS]], i32 [[NEXT]], i32 -1
 ; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
 ;
@@ -618,7 +618,7 @@ define i64 @test_shl_nsw_at_use(i64 noundef %x) {
 ; CHECK-LABEL: @test_shl_nsw_at_use(
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[X:%.*]], 2147483648
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[ADD]], 4294967296
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X]], 32
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i64 [[X]], 32
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i64 [[SHL]], 32
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i64 [[SHR]], i64 0
 ; CHECK-NEXT:    ret i64 [[RES]]
