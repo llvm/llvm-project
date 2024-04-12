@@ -44,6 +44,7 @@
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
@@ -884,7 +885,7 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
     CUDADiagIfDeviceCode(OpLoc, diag::err_cuda_device_exceptions)
-        << "throw" << CurrentCUDATarget();
+        << "throw" << llvm::to_underlying(CurrentCUDATarget());
 
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
