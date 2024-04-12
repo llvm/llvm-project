@@ -27378,6 +27378,67 @@ TEST_F(FormatTest, StreamOutputOperator) {
   verifyFormat("std::cout << \"ggg\\n\"\n"
                "          << \"dddd\";",
                Style);
+
+  Style.BreakChevronOperator = FormatStyle::BCOS_Always;
+  verifyFormat("std::cout << \"aaaa\"\n"
+               "          << \"bbb\"\n"
+               "          << baz;",
+               Style);
+  verifyFormat("std::cout << \"ggg\\n\"\n"
+               "          << \"dddd\";",
+               Style);
+  verifyFormat("std::cout << \"aaaa\"\n"
+               "          << \"bbbbb\"\n"
+               "          << \"cccc\"\n"
+               "          << \"ddd\";",
+               Style);
+  verifyFormat("std::cout << \"aaaa\"\n"
+               "          << \"bbbbb\"\n"
+               "          << baz\n"
+               "          << \"cccc\"\n"
+               "          << \"ddd\";",
+               Style);
+  verifyFormat("cout << \"aaaa\"\n"
+               "     << \"bbbbb\"\n"
+               "     << baz\n"
+               "     << \"cccc\"\n"
+               "     << \"ddd\";",
+               Style);
+}
+
+TEST_F(FormatTest, StreamInputOperator) {
+  auto Style = getLLVMStyle();
+
+  Style.BreakChevronOperator = FormatStyle::BCOS_Never;
+  verifyFormat("std::in >> aaaa >> bbb >> baz;", Style);
+  verifyFormat("std::in >> ccc >> dddd;", Style);
+
+  Style.BreakChevronOperator = FormatStyle::BCOS_Always;
+  verifyFormat("std::in >> ccc;", Style);
+  verifyFormat("std::in >> aaaa\n"
+               "    >> bbb\n"
+               "    >> baz;",
+               Style);
+  verifyFormat("std::in >> ggg\n"
+               "    >> dddd;",
+               Style);
+  verifyFormat("std::in >> aaaa\n"
+               "    >> bbbbb\n"
+               "    >> cccc\n"
+               "    >> ddd;",
+               Style);
+  verifyFormat("std::in >> aaaa\n"
+               "    >> bbbbb\n"
+               "    >> baz\n"
+               "    >> cccc\n"
+               "    >> ddd;",
+               Style);
+  verifyFormat("in >> aaaa\n"
+               "    >> bbbbb\n"
+               "    >> baz\n"
+               "    >> cccc\n"
+               "    >> ddd;",
+               Style);
 }
 
 TEST_F(FormatTest, BreakAdjacentStringLiterals) {

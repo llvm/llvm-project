@@ -3290,6 +3290,16 @@ the configuration (without a prefix: ``Auto``).
          << "bbbbb" << "ccccc\n"
          << "\n";
 
+  * ``BCOS_Always`` (in configuration: ``Always``)
+    Break between adjacent items
+
+    .. code-block:: c++
+
+      os << "aaaaa\n"
+         << "bbbbb"
+         << "ccccc\n"
+         << "\n";
+
 
 
 .. _BreakConstructorInitializers:

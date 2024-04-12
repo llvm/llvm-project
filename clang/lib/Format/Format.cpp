@@ -251,6 +251,7 @@ struct ScalarEnumerationTraits<FormatStyle::BreakChevronOperatorStyle> {
     IO.enumCase(Value, "BetweenStrings", FormatStyle::BCOS_BetweenStrings);
     IO.enumCase(Value, "BetweenNewlineStrings",
                 FormatStyle::BCOS_BetweenNewlineStrings);
+    IO.enumCase(Value, "Always", FormatStyle::BCOS_Always);
   }
 };
 
@@ -4146,3 +4147,4 @@ bool isClangFormatOff(StringRef Comment) {
 
 } // namespace format
 } // namespace clang
+                    

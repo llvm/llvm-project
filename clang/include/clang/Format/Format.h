@@ -2213,7 +2213,15 @@ struct FormatStyle {
     ///      << "bbbbb" << "ccccc\n"
     ///      << "\n";
     /// \endcode
-    BCOS_BetweenNewlineStrings
+    BCOS_BetweenNewlineStrings,
+    /// Break between adjacent items
+    /// \code
+    ///   os << "aaaaa\n"
+    ///      << "bbbbb"
+    ///      << "ccccc\n"
+    ///      << "\n";
+    /// \endcode
+    BCOS_Always
   };
 
   /// Break Between Chevron Operators

@@ -5611,6 +5611,22 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
     }
   }
+  if (Style.BreakChevronOperator == FormatStyle::BCOS_Always) {
+    // can be std::os or os
+    auto *FirstChevron = Right.Previous;
+    while (FirstChevron) {
+      if (FirstChevron->isOneOf(tok::lessless, tok::greater))
+        break;
+      FirstChevron = FirstChevron->Previous;
+    }
+
+    if (Right.is(tok::lessless) && FirstChevron)
+      return true;
+    if (Right.is(tok::greater) && Right.Next && Right.Next->is(tok::greater) &&
+        FirstChevron) {
+      return true;
+    }
+  }
   if (Right.is(TT_RequiresClause)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:
