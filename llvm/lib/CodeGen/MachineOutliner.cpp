@@ -825,10 +825,16 @@ bool MachineOutliner::outline(Module &M,
                     << "\n");
   bool OutlinedSomething = false;
 
-  // Sort by benefit. The most beneficial functions should be outlined first.
+  // Sort by priority where priority := getNotOutlinedCost / getOutliningCost.
+  // The function with highest priority should be outlined first.
   stable_sort(FunctionList,
               [](const OutlinedFunction &LHS, const OutlinedFunction &RHS) {
-                return LHS.getBenefit() > RHS.getBenefit();
+                if (LHS.getBenefit() == 0)
+                  return false;
+                if (LHS.getBenefit() > 0 && RHS.getBenefit() == 0)
+                  return true;
+                return LHS.getNotOutlinedCost() * RHS.getOutliningCost() >
+                       RHS.getNotOutlinedCost() * LHS.getOutliningCost();
               });
 
   // Walk over each function, outlining them as we go along. Functions are
