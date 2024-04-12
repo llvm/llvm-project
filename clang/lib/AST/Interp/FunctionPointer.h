@@ -32,6 +32,12 @@ public:
 
   const Function *getFunction() const { return Func; }
   bool isZero() const { return !Func; }
+  bool isWeak() const {
+    if (!Func || !Valid)
+      return false;
+
+    return Func->getDecl()->isWeak();
+  }
 
   APValue toAPValue() const {
     if (!Func)
