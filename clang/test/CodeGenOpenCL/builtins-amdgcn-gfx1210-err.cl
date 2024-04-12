@@ -2,8 +2,20 @@
 
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1210 -verify -S -emit-llvm -o - %s
 
+typedef unsigned int uint;
+typedef unsigned char uchar;
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef int    v4i   __attribute__((ext_vector_type(4)));
+typedef unsigned int __attribute__((ext_vector_type(2))) uint2;
+typedef unsigned int __attribute__((ext_vector_type(3))) uint3;
+typedef unsigned int __attribute__((ext_vector_type(6))) uint6;
+typedef __bf16 __attribute__((ext_vector_type(8))) bfloat8;
+typedef __bf16 __attribute__((ext_vector_type(32))) bfloat32;
+typedef half __attribute__((ext_vector_type(8))) half8;
+typedef half __attribute__((ext_vector_type(32))) half32;
+typedef float __attribute__((ext_vector_type(8))) float8;
+typedef float __attribute__((ext_vector_type(32))) float32;
+
 
 void test_setprio_inc_wg(short a) {
   __builtin_amdgcn_s_setprio_inc_wg(a); // expected-error {{'__builtin_amdgcn_s_setprio_inc_wg' must be a constant integer}}
@@ -33,6 +45,28 @@ void test_cvt_sr_f8_f16(global int* out, short sr, int old, int sel)
 {
   *out = __builtin_amdgcn_cvt_sr_bf8_f16(1.0, sr, old, sel); // expected-error {{'__builtin_amdgcn_cvt_sr_bf8_f16' must be a constant integer}}
   *out = __builtin_amdgcn_cvt_sr_fp8_f16(1.0, sr, old, sel); // expected-error {{'__builtin_amdgcn_cvt_sr_fp8_f16' must be a constant integer}}
+}
+
+void test_cvt_scale_pk(global half32 *outh32, global bfloat32 *outy32, uint6 src6,
+                       global half8 *outh8, global bfloat8 *outy8, uint2 src2,
+                       global float32 *outf32, global float8 *outf8, uint src1,
+                       uint scale, uchar scale_sel)
+{
+  *outh32 = __builtin_amdgcn_cvt_scale_pk32_f16_fp6(src6, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f16_fp6' must be a constant integer}}
+  *outy32 = __builtin_amdgcn_cvt_scale_pk32_bf16_fp6(src6, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_bf16_fp6' must be a constant integer}}
+  *outh32 = __builtin_amdgcn_cvt_scale_pk32_f16_bf6(src6, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f16_bf6' must be a constant integer}}
+  *outy32 = __builtin_amdgcn_cvt_scale_pk32_bf16_bf6(src6, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_bf16_bf6' must be a constant integer}}
+  *outh8 = __builtin_amdgcn_cvt_scale_pk8_f16_fp8(src2, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk8_f16_fp8' must be a constant integer}}
+  *outy8 = __builtin_amdgcn_cvt_scale_pk8_bf16_fp8(src2, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk8_bf16_fp8' must be a constant integer}}
+  *outh8 = __builtin_amdgcn_cvt_scale_pk8_f16_bf8(src2, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk8_f16_bf8' must be a constant integer}}
+  *outy8 = __builtin_amdgcn_cvt_scale_pk8_bf16_bf8(src2, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk8_bf16_bf8' must be a constant integer}}
+  *outh8 = __builtin_amdgcn_cvt_scale_pk8_f16_fp4(src1, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk8_f16_fp4' must be a constant integer}}
+  *outy8 = __builtin_amdgcn_cvt_scale_pk8_bf16_fp4(src1, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk8_bf16_fp4' must be a constant integer}}
+  *outf32 = __builtin_amdgcn_cvt_scale_pk32_f32_fp6(src6, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f32_fp6' must be a constant integer}}
+  *outf32 = __builtin_amdgcn_cvt_scale_pk32_f32_bf6(src6, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk32_f32_bf6' must be a constant integer}}
+  *outf8 = __builtin_amdgcn_cvt_scale_pk8_f32_fp8(src2, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk8_f32_fp8' must be a constant integer}}
+  *outf8 = __builtin_amdgcn_cvt_scale_pk8_f32_bf8(src2, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk8_f32_bf8' must be a constant integer}}
+  *outf8 = __builtin_amdgcn_cvt_scale_pk8_f32_fp4(src1, scale, scale_sel); // expected-error {{'__builtin_amdgcn_cvt_scale_pk8_f32_fp4' must be a constant integer}}
 }
 
 void test_amdgcn_load_monitor(global int* b32gaddr, global v2i* b64gaddr, global v4i* b128gaddr, int *b32faddr, v2i* b64faddr, v4i *b128faddr,
