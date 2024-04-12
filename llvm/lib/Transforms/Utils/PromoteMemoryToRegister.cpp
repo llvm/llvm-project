@@ -459,7 +459,7 @@ static void convertMetadataToAssumes(LoadInst *LI, Value *Val,
   // we can only do this if the value is known non-poison.
   if (AC && LI->getMetadata(LLVMContext::MD_nonnull) &&
       LI->getMetadata(LLVMContext::MD_noundef) &&
-      !isKnownNonZero(Val, DL, 0, AC, LI, DT))
+      !isKnownNonZero(Val, /*Depth=*/0, SimplifyQuery(DL, DT, AC, LI)))
     addAssumeNonNull(AC, LI);
 }
 
