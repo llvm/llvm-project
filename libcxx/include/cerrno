@@ -40,7 +40,7 @@ Macros:
 
 // LWG3869 Deprecate std::errc constants related to UNIX STREAMS
 //
-// deprecates the POSIX macros ENODATA, ENOSR, ENOSTR, and ETIME. These were
+// This LWG issue deprecates the POSIX macros ENODATA, ENOSR, ENOSTR, and ETIME. These were
 // deprecated in libc++ in https://github.com/llvm/llvm-project/pull/80542.
 // Based on the post commit feedback the macro are no longer deprecated.
 // Instead libc++ leaves the deprecation to the provider of errno.h.

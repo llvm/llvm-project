@@ -115,8 +115,8 @@ enum class errc
 //
 // Note based on the post-review comments in
 // https://github.com/llvm/llvm-project/pull/80542 libc++ no longer deprecates
-// the macros. Since C libraries my start to deprecate these POSIX macros the
-// disabling of the deprecated macros is not removed.
+// the macros. Since C libraries may start to deprecate these POSIX macros the
+// deprecation warning avoidance is kept.
 #if defined(_LIBCPP_COMPILER_CLANG_BASED)
 #  define _LIBCPP_SUPPRESS_DEPRECATED_ERRC_PUSH _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 #  define _LIBCPP_SUPPRESS_DEPRECATED_ERRC_POP _LIBCPP_SUPPRESS_DEPRECATED_POP
