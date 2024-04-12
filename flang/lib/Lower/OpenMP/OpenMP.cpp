@@ -1293,7 +1293,8 @@ static void genTargetClauses(
 
   cp.processTODO<clause::Allocate, clause::Defaultmap, clause::Firstprivate,
                  clause::InReduction, clause::Private, clause::Reduction,
-                 clause::UsesAllocators>(loc, llvm::omp::Directive::OMPD_target);
+                 clause::UsesAllocators>(loc,
+                                         llvm::omp::Directive::OMPD_target);
 }
 
 static void genTargetDataClauses(
@@ -1704,13 +1705,15 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
            .getIsTargetDevice();
 
   mlir::omp::TargetClauseOps clauseOps;
-  llvm::SmallVector<const Fortran::semantics::Symbol *> mapSyms, devicePtrSyms, deviceAddrSyms;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> mapSyms, devicePtrSyms,
+      deviceAddrSyms;
   llvm::SmallVector<mlir::Location> mapLocs, devicePtrLocs, deviceAddrLocs;
   llvm::SmallVector<mlir::Type> mapTypes, devicePtrTypes, deviceAddrTypes;
   genTargetClauses(converter, semaCtx, stmtCtx, clauseList, loc,
                    processHostOnlyClauses, /*processReduction=*/outerCombined,
-                   clauseOps, mapSyms, mapLocs, mapTypes, deviceAddrSyms, deviceAddrLocs, deviceAddrTypes,
-                   devicePtrSyms, devicePtrLocs, devicePtrTypes);
+                   clauseOps, mapSyms, mapLocs, mapTypes, deviceAddrSyms,
+                   deviceAddrLocs, deviceAddrTypes, devicePtrSyms,
+                   devicePtrLocs, devicePtrTypes);
 
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
