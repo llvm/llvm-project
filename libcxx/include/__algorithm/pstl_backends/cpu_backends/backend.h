@@ -26,7 +26,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER >= 17
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -40,6 +40,6 @@ using __cpu_backend_tag = __pstl::__libdispatch_backend_tag;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 17
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && && _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKEND_BACKEND_H
