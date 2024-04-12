@@ -106,7 +106,7 @@ libc_support_library(
     hdrs = ["include/llvm-libc-macros/linux/fcntl-macros.h"],
 )
 
-############################ Proxy Header Files ################################
+########################### Macro Proxy Header Files ###########################
 
 libc_support_library(
     name = "hdr_math_macros",
@@ -116,6 +116,33 @@ libc_support_library(
 libc_support_library(
     name = "hdr_fenv_macros",
     hdrs = ["hdr/fenv_macros.h"],
+)
+
+libc_support_library(
+    name = "hdr_signal_macros",
+    hdrs = ["hdr/signal_macros.h"],
+)
+
+libc_support_library(
+    name = "hdr_sys_epoll_macros",
+    hdrs = ["hdr/sys_epoll_macros.h"],
+)
+
+############################ Type Proxy Header Files ###########################
+
+libc_support_library(
+    name = "types_sigset_t",
+    hdrs = ["hdr/types/sigset_t.h"],
+)
+
+libc_support_library(
+    name = "types_struct_epoll_event",
+    hdrs = ["hdr/types/struct_epoll_event.h"],
+)
+
+libc_support_library(
+    name = "types_struct_timespec",
+    hdrs = ["hdr/types/struct_timespec.h"],
 )
 
 ############################### Support libraries ##############################
@@ -2942,6 +2969,17 @@ libc_function(
 )
 
 libc_function(
+    name = "pipe",
+    srcs = ["src/unistd/linux/pipe.cpp"],
+    hdrs = ["src/unistd/pipe.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
     name = "lseek",
     srcs = ["src/unistd/linux/lseek.cpp"],
     hdrs = ["src/unistd/lseek.h"],
@@ -3418,6 +3456,53 @@ libc_function(
 ############################## sys/epoll targets ###############################
 
 libc_function(
+    name = "epoll_create",
+    srcs = ["src/sys/epoll/linux/epoll_create.cpp"],
+    hdrs = ["src/sys/epoll/epoll_create.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    weak = True,
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "epoll_create1",
+    srcs = ["src/sys/epoll/linux/epoll_create1.cpp"],
+    hdrs = ["src/sys/epoll/epoll_create1.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    weak = True,
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+    ],
+)
+
+libc_function(
+    name = "epoll_ctl",
+    srcs = ["src/sys/epoll/linux/epoll_ctl.cpp"],
+    hdrs = ["src/sys/epoll/epoll_ctl.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    weak = True,
+    deps = [
+        ":__support_osutil_syscall",
+        ":errno",
+        ":hdr_sys_epoll_macros",
+        ":types_struct_epoll_event",
+    ],
+)
+
+libc_function(
     name = "epoll_wait",
     srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
     hdrs = ["src/sys/epoll/epoll_wait.h"],
@@ -3429,6 +3514,10 @@ libc_function(
     deps = [
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_signal_macros",
+        ":hdr_sys_epoll_macros",
+        ":types_sigset_t",
+        ":types_struct_epoll_event",
     ],
 )
 
@@ -3444,6 +3533,10 @@ libc_function(
     deps = [
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_signal_macros",
+        ":hdr_sys_epoll_macros",
+        ":types_sigset_t",
+        ":types_struct_epoll_event",
     ],
 )
 
@@ -3453,9 +3546,18 @@ libc_function(
 #     name = "epoll_pwait2",
 #     srcs = ["src/sys/epoll/linux/epoll_pwait2.cpp"],
 #     hdrs = ["src/sys/epoll/epoll_pwait2.h"],
+#     target_compatible_with = select({
+#         "@platforms//os:linux": [],
+#         "//conditions:default": ["@platforms//:incompatible"],
+#     }),
 #     weak = True,
 #     deps = [
 #         ":__support_osutil_syscall",
 #         ":errno",
+#         ":hdr_signal_macros",
+#         ":hdr_sys_epoll_macros",
+#         ":types_sigset_t",
+#         ":types_struct_epoll_event",
+#         ":types_struct_timespec",
 #     ],
 # )
