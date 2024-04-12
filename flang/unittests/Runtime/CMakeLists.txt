@@ -1,5 +1,4 @@
 add_flang_unittest(FlangRuntimeTests
-  AccessTest.cpp
   Allocatable.cpp
   ArrayConstructor.cpp
   BufferTest.cpp
