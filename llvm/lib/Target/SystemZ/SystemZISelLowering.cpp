@@ -448,9 +448,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
       // Add ISD::VECREDUCE_ADD as custom in order to implement
       // it with VZERO+VSUM
-      if (Subtarget.hasVector()) {
-        setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
-      }
+      setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
+      
       // Map SETCCs onto one of VCE, VCH or VCHL, swapping the operands
       // and inverting the result as necessary.
       setOperationAction(ISD::SETCC, VT, Custom);
@@ -9532,8 +9531,7 @@ SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
   switch (OpVT.getScalarSizeInBits()) {
   case 8:
   case 16:
-    Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::v4i32, Op,
-                     DAG.getBitcast(OpVT, Zero));
+    Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::v4i32, Op, Zero);
     LLVM_FALLTHROUGH;
   case 32:
   case 64:

@@ -1342,11 +1342,7 @@ bool SystemZTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   // Do not expand vector.reduce.add
   case Intrinsic::vector_reduce_add:
     // Except for i64, since the performance benefit is dubious there
-    if (ScalarSize < 64) {
-      return false;
-    } else {
-      return true;
-    }
+    return ScalarSize >= 64;
   default:
     return true;
   }
