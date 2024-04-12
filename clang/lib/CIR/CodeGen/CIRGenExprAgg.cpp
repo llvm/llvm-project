@@ -197,9 +197,7 @@ public:
   void VisitMemberExpr(MemberExpr *E) { buildAggLoadOfLValue(E); }
   void VisitUnaryDeref(UnaryOperator *E) { buildAggLoadOfLValue(E); }
   void VisitStringLiteral(StringLiteral *E) { llvm_unreachable("NYI"); }
-  void VisitCompoundLIteralExpr(CompoundLiteralExpr *E) {
-    llvm_unreachable("NYI");
-  }
+  void VisitCompoundLiteralExpr(CompoundLiteralExpr *E);
   void VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
     buildAggLoadOfLValue(E);
   }
@@ -812,6 +810,27 @@ void AggExprEmitter::VisitMaterializeTemporaryExpr(
 void AggExprEmitter::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   AggValueSlot Slot = EnsureSlot(CGF.getLoc(E->getSourceRange()), E->getType());
   CGF.buildCXXConstructExpr(E, Slot);
+}
+
+void AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
+  if (Dest.isPotentiallyAliased() && E->getType().isPODType(CGF.getContext())) {
+    llvm_unreachable("NYI");
+  }
+
+  AggValueSlot Slot = EnsureSlot(CGF.getLoc(E->getSourceRange()), E->getType());
+
+  // Block-scope compound literals are destroyed at the end of the enclosing
+  // scope in C.
+  bool Destruct =
+      !CGF.getLangOpts().CPlusPlus && !Slot.isExternallyDestructed();
+  if (Destruct)
+    llvm_unreachable("NYI");
+
+  llvm_unreachable("NYI");
+
+  if (Destruct)
+    if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
+      llvm_unreachable("NYI");
 }
 
 void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
