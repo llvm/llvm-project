@@ -8016,12 +8016,12 @@ bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW) {
 
   // X = sub (0, Y) || X = sub nsw (0, Y)
   if ((!NeedNSW && match(X, m_Sub(m_ZeroInt(), m_Specific(Y)))) ||
-      (NeedNSW && match(X, m_NSWSub(m_ZeroInt(), m_Specific(Y)))))
+      (NeedNSW && match(X, m_NSWNeg(m_Specific(Y)))))
     return true;
 
   // Y = sub (0, X) || Y = sub nsw (0, X)
   if ((!NeedNSW && match(Y, m_Sub(m_ZeroInt(), m_Specific(X)))) ||
-      (NeedNSW && match(Y, m_NSWSub(m_ZeroInt(), m_Specific(X)))))
+      (NeedNSW && match(Y, m_NSWNeg(m_Specific(X)))))
     return true;
 
   // X = sub (A, B), Y = sub (B, A) || X = sub nsw (A, B), Y = sub nsw (B, A)

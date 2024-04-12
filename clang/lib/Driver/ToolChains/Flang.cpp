@@ -786,6 +786,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  // Pass the path to compiler resource files.
+  CmdArgs.push_back("-resource-dir");
+  CmdArgs.push_back(D.ResourceDir.c_str());
+
   // Offloading related options
   addOffloadOptions(C, Inputs, JA, Args, CmdArgs);
 

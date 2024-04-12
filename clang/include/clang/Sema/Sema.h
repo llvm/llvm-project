@@ -60,6 +60,7 @@
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -421,6 +422,25 @@ enum class TemplateDeductionResult {
   CUDATargetMismatch,
   /// Some error which was already diagnosed.
   AlreadyDiagnosed
+};
+
+/// Kinds of C++ special members.
+enum class CXXSpecialMemberKind {
+  DefaultConstructor,
+  CopyConstructor,
+  MoveConstructor,
+  CopyAssignment,
+  MoveAssignment,
+  Destructor,
+  Invalid
+};
+
+enum class CUDAFunctionTarget {
+  Device,
+  Global,
+  Host,
+  HostDevice,
+  InvalidTarget
 };
 
 /// Sema - This implements semantic analysis and AST building for C.
@@ -2940,13 +2960,6 @@ public:
                                       QualType NewT, QualType OldT);
   void CheckMain(FunctionDecl *FD, const DeclSpec &D);
   void CheckMSVCRTEntryPoint(FunctionDecl *FD);
-  void ActOnHLSLTopLevelFunction(FunctionDecl *FD);
-  void CheckHLSLEntryPoint(FunctionDecl *FD);
-  void CheckHLSLSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
-                                   const HLSLAnnotationAttr *AnnotationAttr);
-  void DiagnoseHLSLAttrStageMismatch(
-      const Attr *A, HLSLShaderAttr::ShaderType Stage,
-      std::initializer_list<HLSLShaderAttr::ShaderType> AllowedStages);
   Attr *getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
                                                    bool IsDefinition);
   void CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D);
@@ -3662,20 +3675,12 @@ public:
   InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D,
                                                 const InternalLinkageAttr &AL);
 
-  enum CUDAFunctionTarget {
-    CFT_Device,
-    CFT_Global,
-    CFT_Host,
-    CFT_HostDevice,
-    CFT_InvalidTarget
-  };
-
   /// Check validaty of calling convention attribute \p attr. If \p FD
   /// is not null pointer, use \p FD to determine the CUDA/HIP host/device
   /// target. Otherwise, it is specified by \p CFT.
-  bool CheckCallingConvAttr(const ParsedAttr &attr, CallingConv &CC,
-                            const FunctionDecl *FD = nullptr,
-                            CUDAFunctionTarget CFT = CFT_InvalidTarget);
+  bool CheckCallingConvAttr(
+      const ParsedAttr &attr, CallingConv &CC, const FunctionDecl *FD = nullptr,
+      CUDAFunctionTarget CFT = CUDAFunctionTarget::InvalidTarget);
 
   void AddParameterABIAttr(Decl *D, const AttributeCommonInfo &CI,
                            ParameterABI ABI);
@@ -3712,14 +3717,6 @@ public:
                           StringRef UuidAsWritten, MSGuidDecl *GuidDecl);
 
   BTFDeclTagAttr *mergeBTFDeclTagAttr(Decl *D, const BTFDeclTagAttr &AL);
-  HLSLNumThreadsAttr *mergeHLSLNumThreadsAttr(Decl *D,
-                                              const AttributeCommonInfo &AL,
-                                              int X, int Y, int Z);
-  HLSLShaderAttr *mergeHLSLShaderAttr(Decl *D, const AttributeCommonInfo &AL,
-                                      HLSLShaderAttr::ShaderType ShaderType);
-  HLSLParamModifierAttr *
-  mergeHLSLParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
-                             HLSLParamModifierAttr::Spelling Spelling);
 
   WebAssemblyImportNameAttr *
   mergeImportNameAttr(Decl *D, const WebAssemblyImportNameAttr &AL);
@@ -4096,22 +4093,11 @@ public:
       SourceRange SpecificationRange, ArrayRef<ParsedType> DynamicExceptions,
       ArrayRef<SourceRange> DynamicExceptionRanges, Expr *NoexceptExpr);
 
-  /// Kinds of C++ special members.
-  enum CXXSpecialMember {
-    CXXDefaultConstructor,
-    CXXCopyConstructor,
-    CXXMoveConstructor,
-    CXXCopyAssignment,
-    CXXMoveAssignment,
-    CXXDestructor,
-    CXXInvalid
-  };
-
   class InheritedConstructorInfo;
 
   /// Determine if a special member function should have a deleted
   /// definition when it is defaulted.
-  bool ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMember CSM,
+  bool ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
                                  InheritedConstructorInfo *ICI = nullptr,
                                  bool Diagnose = false);
 
@@ -4477,7 +4463,7 @@ public:
   void CheckExplicitlyDefaultedFunction(Scope *S, FunctionDecl *MD);
 
   bool CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
-                                             CXXSpecialMember CSM,
+                                             CXXSpecialMemberKind CSM,
                                              SourceLocation DefaultLoc);
   void CheckDelayedMemberExceptionSpecs();
 
@@ -4637,7 +4623,7 @@ public:
   void CheckCXXDefaultArguments(FunctionDecl *FD);
   void CheckExtraCXXDefaultArguments(Declarator &D);
 
-  CXXSpecialMember getSpecialMember(const CXXMethodDecl *MD) {
+  CXXSpecialMemberKind getSpecialMember(const CXXMethodDecl *MD) {
     return getDefaultedFunctionKind(MD).asSpecialMember();
   }
 
@@ -4664,7 +4650,8 @@ public:
                                    AccessSpecifier AS,
                                    const ParsedAttr &MSPropertyAttr);
 
-  void DiagnoseNontrivial(const CXXRecordDecl *Record, CXXSpecialMember CSM);
+  void DiagnoseNontrivial(const CXXRecordDecl *Record,
+                          CXXSpecialMemberKind CSM);
 
   enum TrivialABIHandling {
     /// The triviality of a method unaffected by "trivial_abi".
@@ -4674,26 +4661,31 @@ public:
     TAH_ConsiderTrivialABI
   };
 
-  bool SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMember CSM,
+  bool SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
                               TrivialABIHandling TAH = TAH_IgnoreTrivialABI,
                               bool Diagnose = false);
 
   /// For a defaulted function, the kind of defaulted function that it is.
   class DefaultedFunctionKind {
+    LLVM_PREFERRED_TYPE(CXXSpecialMemberKind)
     unsigned SpecialMember : 8;
     unsigned Comparison : 8;
 
   public:
     DefaultedFunctionKind()
-        : SpecialMember(CXXInvalid),
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
           Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
-    DefaultedFunctionKind(CXXSpecialMember CSM)
-        : SpecialMember(CSM),
+    DefaultedFunctionKind(CXXSpecialMemberKind CSM)
+        : SpecialMember(llvm::to_underlying(CSM)),
           Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
     DefaultedFunctionKind(DefaultedComparisonKind Comp)
-        : SpecialMember(CXXInvalid), Comparison(llvm::to_underlying(Comp)) {}
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
+          Comparison(llvm::to_underlying(Comp)) {}
 
-    bool isSpecialMember() const { return SpecialMember != CXXInvalid; }
+    bool isSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember) !=
+             CXXSpecialMemberKind::Invalid;
+    }
     bool isComparison() const {
       return static_cast<DefaultedComparisonKind>(Comparison) !=
              DefaultedComparisonKind::None;
@@ -4703,8 +4695,8 @@ public:
       return isSpecialMember() || isComparison();
     }
 
-    CXXSpecialMember asSpecialMember() const {
-      return static_cast<CXXSpecialMember>(SpecialMember);
+    CXXSpecialMemberKind asSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember);
     }
     DefaultedComparisonKind asComparison() const {
       return static_cast<DefaultedComparisonKind>(Comparison);
@@ -4712,7 +4704,8 @@ public:
 
     /// Get the index of this function kind for use in diagnostics.
     unsigned getDiagnosticIndex() const {
-      static_assert(CXXInvalid > CXXDestructor,
+      static_assert(llvm::to_underlying(CXXSpecialMemberKind::Invalid) >
+                        llvm::to_underlying(CXXSpecialMemberKind::Destructor),
                     "invalid should have highest index");
       static_assert((unsigned)DefaultedComparisonKind::None == 0,
                     "none should be equal to zero");
@@ -4818,7 +4811,7 @@ public:
   /// definition in this translation unit.
   llvm::MapVector<NamedDecl *, SourceLocation> UndefinedButUsed;
 
-  typedef llvm::PointerIntPair<CXXRecordDecl *, 3, CXXSpecialMember>
+  typedef llvm::PointerIntPair<CXXRecordDecl *, 3, CXXSpecialMemberKind>
       SpecialMemberDecl;
 
   /// The C++ special members which we are currently in the process of
@@ -7512,7 +7505,7 @@ public:
   };
 
   SpecialMemberOverloadResult
-  LookupSpecialMember(CXXRecordDecl *D, CXXSpecialMember SM, bool ConstArg,
+  LookupSpecialMember(CXXRecordDecl *D, CXXSpecialMemberKind SM, bool ConstArg,
                       bool VolatileArg, bool RValueThis, bool ConstThis,
                       bool VolatileThis);
 
@@ -10033,7 +10026,7 @@ public:
       unsigned NumCallArgs;
 
       /// The special member being declared or defined.
-      CXXSpecialMember SpecialMember;
+      CXXSpecialMemberKind SpecialMember;
     };
 
     ArrayRef<TemplateArgument> template_arguments() const {
@@ -12978,7 +12971,8 @@ public:
   /// Example usage:
   ///
   ///  // Variable-length arrays are not allowed in CUDA device code.
-  ///  if (CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget())
+  ///  if (CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla)
+  ///     << llvm::to_underlying(CurrentCUDATarget()))
   ///    return ExprError();
   ///  // Otherwise, continue parsing as normal.
   SemaDiagnosticBuilder CUDADiagIfDeviceCode(SourceLocation Loc,
@@ -12994,7 +12988,7 @@ public:
   /// function.
   ///
   /// Use this rather than examining the function's attributes yourself -- you
-  /// will get it wrong.  Returns CFT_Host if D is null.
+  /// will get it wrong.  Returns CUDAFunctionTarget::Host if D is null.
   CUDAFunctionTarget IdentifyCUDATarget(const FunctionDecl *D,
                                         bool IgnoreImplicitHDAttr = false);
   CUDAFunctionTarget IdentifyCUDATarget(const ParsedAttributesView &Attrs);
@@ -13019,7 +13013,7 @@ public:
   /// Define the current global CUDA host/device context where a function may be
   /// called. Only used when a function is called outside of any functions.
   struct CUDATargetContext {
-    CUDAFunctionTarget Target = CFT_HostDevice;
+    CUDAFunctionTarget Target = CUDAFunctionTarget::HostDevice;
     CUDATargetContextKind Kind = CTCK_Unknown;
     Decl *D = nullptr;
   } CurCUDATargetCtx;
@@ -13128,7 +13122,7 @@ public:
   /// The result of this call is implicit CUDA target attribute(s) attached to
   /// the member declaration.
   bool inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
-                                               CXXSpecialMember CSM,
+                                               CXXSpecialMemberKind CSM,
                                                CXXMethodDecl *MemberDecl,
                                                bool ConstRHS, bool Diagnose);
 
