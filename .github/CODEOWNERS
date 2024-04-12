@@ -116,8 +116,8 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/**/NVVM*/ @grypp
 
 # MLIR Python Bindings
-/mlir/test/python/ @makslevental
-/mlir/python/ @makslevental
+/mlir/test/python/ @makslevental @stellaraccident
+/mlir/python/ @makslevental @stellaraccident
 
 # BOLT
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
