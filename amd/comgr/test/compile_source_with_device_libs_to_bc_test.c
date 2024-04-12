@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
   checkError(Status, "amd_comgr_action_data_count");
 
   if (Count != 1) {
-    printf("AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE Failed: "
+    printf("AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE Failed: "
            "produced %zu relocatable objects (expected 1)\n",
            Count);
     exit(1);
