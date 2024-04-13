@@ -5,6 +5,17 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
+
+#if __cplusplus == 199711L
+#define __enable_constant_folding(x) (__builtin_constant_p(x) ? (x) : (x))
+#else
+#define __enable_constant_folding
+#endif
+
 namespace cwg100 { // cwg100: yes
   template<const char (*)[4]> struct A {}; // #cwg100-A
   template<const char (&)[4]> struct B {}; // #cwg100-B
@@ -745,13 +756,7 @@ namespace cwg148 { // cwg148: yes
 namespace cwg151 { // cwg151: 3.1
   struct X {};
   typedef int X::*p;
-#if __cplusplus < 201103L
-#define fold(x) (__builtin_constant_p(0) ? (x) : (x))
-#else
-#define fold
-#endif
-  int check[fold(p() == 0) ? 1 : -1];
-#undef fold
+  static_assert(__enable_constant_folding(p() == 0), "");
 }
 
 namespace cwg152 { // cwg152: yes
