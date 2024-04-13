@@ -1426,3 +1426,33 @@ define i1 @fcmp_fadd_zero_uno(float %x, float %y) {
   %cmp = fcmp uno float %add, %y
   ret i1 %cmp
 }
+
+define i1 @fcmp_fadd_zero_switched(float %x, float %y) {
+; CHECK-LABEL: @fcmp_fadd_zero_switched(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = fadd float %y, 0.000000e+00
+  %cmp = fcmp ugt float %x, %add
+  ret i1 %cmp
+}
+
+define <2 x i1> @fcmp_fadd_zero_vec(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fcmp_fadd_zero_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt <2 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %add = fadd <2 x float> %x, <float 0.0, float -0.0>
+  %cmp = fcmp ugt <2 x float> %add, %y
+  ret <2 x i1> %cmp
+}
+
+define i1 @fcmp_fadd_zero_fast(float %x, float %y) {
+; CHECK-LABEL: @fcmp_fadd_zero_fast(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast ugt float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = fadd fast float %x, 0.000000e+00
+  %cmp = fcmp fast ugt float %add, %y
+  ret i1 %cmp
+}
