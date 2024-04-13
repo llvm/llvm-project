@@ -12,8 +12,8 @@
 // RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wformat -verify=okay %s
 
 // Verify that -Wformat-signedness with -Wno-format are not reported (gcc compat).
-// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wformat-signedness -Wno-format -verify=okay %s
-// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wno-format -Wformat-signedness -verify=okay %s
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wformat-signedness -Wno-format -verify %s
+// RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wno-format -Wformat-signedness -verify %s
 // okay-no-diagnostics
 
 int printf(const char *restrict format, ...);
@@ -218,5 +218,5 @@ void test_printf_unsigned_priX16(uint16_t x) {
 void test_suppress(int x)
 {
 #pragma GCC diagnostic ignored "-Wformat"
-    printf("%u", x);
+    printf("%u", x); // expected-warning{{format specifies type 'unsigned int' but the argument has type 'int'}}
 }
