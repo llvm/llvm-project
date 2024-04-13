@@ -47,6 +47,7 @@ Implemented Papers
 - P3142R0 - Printing Blank Lines with ``println`` (as DR against C++23)
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
+- P3029R1 - Better ``mdspan``'s CTAD
 
 Improvements and New Features
 -----------------------------
@@ -56,6 +57,7 @@ Improvements and New Features
   resulting in a performance increase of up to 1400x.
 - The ``std::mismatch`` algorithm has been optimized for integral types, which can lead up to 40x performance
   improvements.
+
 - The ``std::ranges::minmax`` algorithm has been optimized for integral types, resulting in a performance increase of
   up to 100x.
 
@@ -63,6 +65,8 @@ Improvements and New Features
 
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT`` macro has been added to make the declarations in ``<locale>``
   available.
+
+- The formatting library is updated to Unicode 15.1.0.
 
 Deprecations and Removals
 -------------------------
@@ -117,7 +121,10 @@ TODO
 
 ABI Affecting Changes
 ---------------------
-TODO
+
+- The optional POSIX macro ``ENODATA`` has been deprecated in C++ and POSIX 2017. The
+  ``random_device`` could throw a ``system_error`` with this value. It now
+  throws ``ENOMSG``.
 
 
 Build System Changes

@@ -1333,6 +1333,10 @@ private:
 
   void unlinkMaterializationResponsibility(MaterializationResponsibility &MR);
 
+  /// Attempt to reduce memory usage from empty \c UnmaterializedInfos and
+  /// \c MaterializingInfos tables.
+  void shrinkMaterializationInfoMemory();
+
   ExecutionSession &ES;
   enum { Open, Closing, Closed } State = Open;
   std::mutex GeneratorsMutex;
