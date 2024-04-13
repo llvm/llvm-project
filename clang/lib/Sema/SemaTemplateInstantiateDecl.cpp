@@ -26,6 +26,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
@@ -5537,7 +5538,7 @@ void Sema::InstantiateVariableInitializer(
   }
 
   if (getLangOpts().CUDA)
-    checkAllowedCUDAInitializer(Var);
+    CUDA().checkAllowedInitializer(Var);
 }
 
 /// Instantiate the definition of the given variable from its
