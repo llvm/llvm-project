@@ -13,7 +13,7 @@
 #pragma clang diagnostic pop
 #endif
 
-namespace dr210 { // dr210: 2.7
+namespace cwg210 { // cwg210: 2.7
 struct B {
   long i;
   B();
@@ -33,9 +33,9 @@ void toss(const B* b) {
   throw *b;
 }
 
-// CHECK-LABEL: define {{.*}} void @dr210::toss(dr210::B const*)
+// CHECK-LABEL: define {{.*}} void @cwg210::toss(cwg210::B const*)
 // CHECK:         %[[EXCEPTION:.*]] = call ptr @__cxa_allocate_exception(i64 16)
-// CHECK:         call void @__cxa_throw(ptr %[[EXCEPTION]], ptr @typeinfo for dr210::B, ptr @dr210::B::~B())
+// CHECK:         call void @__cxa_throw(ptr %[[EXCEPTION]], ptr @typeinfo for cwg210::B, ptr @cwg210::B::~B())
 // CHECK-LABEL: }
 
-} // namespace dr210
+} // namespace cwg210

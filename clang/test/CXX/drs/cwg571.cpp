@@ -6,20 +6,15 @@
 // RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 
-namespace dr438 { // dr438: 2.7
-
-void f() {
-  long A[2];
-  A[0] = 0;
-  A[A[0]] = 1;
+namespace cwg571 { // cwg571: 2.7
+  typedef int &ir;
+  int n;
+  const ir r = n;
+  // expected-warning@-1 {{'const' qualifier on reference type 'ir' (aka 'int &') has no effect}}
+  ir r2 = n;
 }
 
-} // namespace dr438
+// Entities have external linkage by default.
 
-// CHECK-LABEL: define {{.*}} void @dr438::f()()
-// CHECK:         [[A:%.+]] = alloca [2 x i64]
-// CHECK:         {{.+}} = getelementptr inbounds [2 x i64], ptr [[A]], i64 0, i64 0
-// CHECK:         [[ARRAYIDX1:%.+]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 0, i64 0
-// CHECK-NEXT:    [[TEMPIDX:%.+]] = load i64, ptr [[ARRAYIDX1]]
-// CHECK-NEXT:    [[ARRAYIDX2:%.+]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 0, i64 [[TEMPIDX]]
-// CHECK-LABEL: }
+// CHECK: @cwg571::r = constant ptr @cwg571::n
+// CHECK: @cwg571::r2 = constant ptr @cwg571::n

@@ -12,21 +12,24 @@
 #define NOTHROW noexcept(true)
 #endif
 
-namespace dr672 { // dr672: 2.7
+namespace cwg593 { // cwg593: 2.8
+
+void f();
+void fence() NOTHROW;
 
 struct A {
-  A() NOTHROW;
+  ~A() try {
+    f();
+  } catch (...) {
+    fence();
+  }
 };
 
-void f() {
-  A *a = new A;
+void g() {
+  A();
 }
 
-} // namespace dr672
+} // namespace cwg593
 
-// CHECK-LABEL: define {{.*}} void @dr672::f()()
-// CHECK:         [[A:%.+]] = alloca ptr
-// CHECK:         [[CALL:%.+]] = call {{.*}} ptr @operator new(unsigned long)
-// CHECK:         call void @dr672::A::A()
-// CHECK:         store ptr [[CALL]], ptr [[A]]
-// CHECK-LABEL: }
+// CHECK:      call void @cwg593::fence()()
+// CHECK-NEXT: invoke void @__cxa_rethrow()

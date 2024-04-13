@@ -6,31 +6,20 @@
 // RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 
-namespace dr519 { // dr519: 2.7
+namespace cwg438 { // cwg438: 2.7
+
 void f() {
-  int *a = 0;
-  void *v = a;
-  bool c1 = v == static_cast<void *>(0);
-
-  void *w = 0;
-  int *b = static_cast<int*>(w);
-  bool c2 = b == static_cast<int *>(0);
+  long A[2];
+  A[0] = 0;
+  A[A[0]] = 1;
 }
-} // namespace dr519
 
-// We're checking that `null`s that were initially stored in `a` and `w`
-// are simply copied over all the way to respective comparisons with `null`.
+} // namespace cwg438
 
-// CHECK-LABEL: define {{.*}} void @dr519::f()()
-// CHECK:         store ptr null, ptr [[A:%.+]],
-// CHECK-NEXT:    [[TEMP_A:%.+]] = load ptr, ptr [[A]] 
-// CHECK-NEXT:    store ptr [[TEMP_A]], ptr [[V:%.+]],
-// CHECK-NEXT:    [[TEMP_V:%.+]] = load ptr, ptr [[V]]
-// CHECK-NEXT:    {{.+}} = icmp eq ptr [[TEMP_V]], null
-
-// CHECK:         store ptr null, ptr [[W:%.+]],
-// CHECK-NEXT:    [[TEMP_W:%.+]] = load ptr, ptr [[W]] 
-// CHECK-NEXT:    store ptr [[TEMP_W]], ptr [[B:%.+]],
-// CHECK-NEXT:    [[TEMP_B:%.+]] = load ptr, ptr [[B]]
-// CHECK-NEXT:    {{.+}} = icmp eq ptr [[TEMP_B]], null
+// CHECK-LABEL: define {{.*}} void @cwg438::f()()
+// CHECK:         [[A:%.+]] = alloca [2 x i64]
+// CHECK:         {{.+}} = getelementptr inbounds [2 x i64], ptr [[A]], i64 0, i64 0
+// CHECK:         [[ARRAYIDX1:%.+]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 0, i64 0
+// CHECK-NEXT:    [[TEMPIDX:%.+]] = load i64, ptr [[ARRAYIDX1]]
+// CHECK-NEXT:    [[ARRAYIDX2:%.+]] = getelementptr inbounds [2 x i64], ptr [[A]], i64 0, i64 [[TEMPIDX]]
 // CHECK-LABEL: }

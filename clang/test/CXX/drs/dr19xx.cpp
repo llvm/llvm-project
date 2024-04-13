@@ -8,13 +8,13 @@
 
 namespace std { struct type_info; }
 
-namespace dr1902 { // dr1902: 3.7
+namespace cwg1902 { // cwg1902: 3.7
   struct A {};
   struct B {
-    B(A); // #dr1902-B-A
-    B() = delete; // #dr1902-B-ctor
+    B(A); // #cwg1902-B-A
+    B() = delete; // #cwg1902-B-ctor
     // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
-    B(const B&) = delete; // #dr1902-B-copy-ctor
+    B(const B&) = delete; // #cwg1902-B-copy-ctor
     // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
     operator A();
   };
@@ -22,19 +22,19 @@ namespace dr1902 { // dr1902: 3.7
   extern B b1;
   B b2(b1);
   // expected-error@-1 {{call to deleted constructor of 'B'}}
-  //   expected-note@#dr1902-B-copy-ctor {{'B' has been explicitly marked deleted here}}
+  //   expected-note@#cwg1902-B-copy-ctor {{'B' has been explicitly marked deleted here}}
 
 #if __cplusplus >= 201103L
   // This is ambiguous, even though calling the B(const B&) constructor would
   // both directly and indirectly call a deleted function.
   B b({});
   // since-cxx11-error@-1 {{call to constructor of 'B' is ambiguous}}
-  //   since-cxx11-note@#dr1902-B-A {{candidate constructor}}
-  //   since-cxx11-note@#dr1902-B-copy-ctor {{candidate constructor has been explicitly deleted}}
+  //   since-cxx11-note@#cwg1902-B-A {{candidate constructor}}
+  //   since-cxx11-note@#cwg1902-B-copy-ctor {{candidate constructor has been explicitly deleted}}
 #endif
 }
 
-namespace dr1903 { // dr1903: 2.7
+namespace cwg1903 { // cwg1903: 2.7
   namespace A {
     struct a {};
     int a;
@@ -59,7 +59,7 @@ namespace dr1903 { // dr1903: 2.7
   }
 }
 
-namespace dr1909 { // dr1909: 3.7
+namespace cwg1909 { // cwg1909: 3.7
   struct A {
     template<typename T> struct A {};
     // expected-error@-1 {{member 'A' has the same name as its class}}
@@ -80,7 +80,7 @@ namespace dr1909 { // dr1909: 3.7
   };
 }
 
-namespace dr1940 { // dr1940: 3.5
+namespace cwg1940 { // cwg1940: 3.5
 #if __cplusplus >= 201103L
 static union {
   static_assert(true, "");  // ok
@@ -91,7 +91,7 @@ static union {
 #endif
 }
 
-namespace dr1941 { // dr1941: 3.9
+namespace cwg1941 { // cwg1941: 3.9
 #if __cplusplus >= 201402L
 template<typename X>
 struct base {
@@ -121,7 +121,7 @@ derived d2(42, 9);
 #endif
 }
 
-namespace dr1947 { // dr1947: 3.5
+namespace cwg1947 { // cwg1947: 3.5
 #if __cplusplus >= 201402L
 unsigned o = 0'01;  // ok
 unsigned b = 0b'01;
@@ -132,26 +132,26 @@ unsigned x = 0x'01;
 }
 
 #if __cplusplus >= 201103L
-// dr1948: 3.5
+// cwg1948: 3.5
 // FIXME: This diagnostic could be improved.
 void *operator new(__SIZE_TYPE__) noexcept { return nullptr; }
 // since-cxx11-error@-1 {{exception specification in declaration does not match previous declaration}}
 #endif
 
-namespace dr1959 { // dr1959: 3.9
+namespace cwg1959 { // cwg1959: 3.9
 #if __cplusplus >= 201103L
   struct b;
   struct c;
   struct a {
     a() = default;
-    a(const a &) = delete; // #dr1959-copy-ctor
+    a(const a &) = delete; // #cwg1959-copy-ctor
     a(const b &) = delete; // not inherited
-    a(c &&) = delete; // #dr1959-move-ctor
-    template<typename T> a(T) = delete; // #dr1959-temp-ctor
+    a(c &&) = delete; // #cwg1959-move-ctor
+    template<typename T> a(T) = delete; // #cwg1959-temp-ctor
   };
 
-  struct b : a { // #dr1959-b
-    using a::a; // #dr1959-using-a
+  struct b : a { // #cwg1959-b
+    using a::a; // #cwg1959-using-a
   };
 
   a x;
@@ -160,15 +160,15 @@ namespace dr1959 { // dr1959: 3.9
   // where the base class is reference-related to the argument type.
   b y = x;
   // since-cxx11-error@-1 {{no viable conversion from 'a' to 'b'}}
-  //   since-cxx11-note@#dr1959-move-ctor {{candidate inherited constructor not viable: no known conversion from 'a' to 'c &&' for 1st argument}}
-  //   since-cxx11-note@#dr1959-using-a {{constructor from base class 'a' inherited here}}
-  //   since-cxx11-note@#dr1959-b {{candidate constructor (the implicit copy constructor) not viable: cannot bind base class object of type 'a' to derived class reference 'const b &' for 1st argument}}
-  //   since-cxx11-note@#dr1959-temp-ctor {{candidate template ignored: instantiation would take its own class type by value}}
-  //   since-cxx11-note@#dr1959-using-a {{constructor from base class 'a' inherited here}}
+  //   since-cxx11-note@#cwg1959-move-ctor {{candidate inherited constructor not viable: no known conversion from 'a' to 'c &&' for 1st argument}}
+  //   since-cxx11-note@#cwg1959-using-a {{constructor from base class 'a' inherited here}}
+  //   since-cxx11-note@#cwg1959-b {{candidate constructor (the implicit copy constructor) not viable: cannot bind base class object of type 'a' to derived class reference 'const b &' for 1st argument}}
+  //   since-cxx11-note@#cwg1959-temp-ctor {{candidate template ignored: instantiation would take its own class type by value}}
+  //   since-cxx11-note@#cwg1959-using-a {{constructor from base class 'a' inherited here}}
   b z = z;
   // since-cxx11-error@-1 {{call to implicitly-deleted copy constructor of 'b'}}
-  //   since-cxx11-note@#dr1959-b {{copy constructor of 'b' is implicitly deleted because base class 'a' has a deleted copy constructor}}
-  //   since-cxx11-note@#dr1959-copy-ctor {{'a' has been explicitly marked deleted here}}
+  //   since-cxx11-note@#cwg1959-b {{copy constructor of 'b' is implicitly deleted because base class 'a' has a deleted copy constructor}}
+  //   since-cxx11-note@#cwg1959-copy-ctor {{'a' has been explicitly marked deleted here}}
 
   struct c : a {
     using a::a;
@@ -181,7 +181,7 @@ namespace dr1959 { // dr1959: 3.9
 #endif
 }
 
-namespace dr1960 { // dr1960: no
+namespace cwg1960 { // cwg1960: no
 struct A {
 void f() {}
 protected:
@@ -202,7 +202,7 @@ using A::g;
 };
 }
 
-namespace dr1966 { // dr1966: 11
+namespace cwg1966 { // cwg1966: 11
 #if __cplusplus >= 201103L
   struct A {
     enum E : int {1};
@@ -215,12 +215,12 @@ namespace dr1966 { // dr1966: 11
   auto *p3 = true ? new enum G : int {};
   // since-cxx11-error@-1 {{ISO C++ forbids forward references to 'enum' types}}
   // since-cxx11-error@-2 {{allocation of incomplete type 'enum G'}}
-  //   since-cxx11-note@-3 {{forward declaration of 'dr1966::G'}}
+  //   since-cxx11-note@-3 {{forward declaration of 'cwg1966::G'}}
   auto h() -> enum E : int {};
   // since-cxx11-error@-1 {{non-defining declaration of enumeration with a fixed underlying type is only permitted as a standalone declaration}}
 
   enum X : enum Y : int {} {};
-  // since-cxx11-error@-1 {{'dr1966::Y' cannot be defined in a type specifier}}
+  // since-cxx11-error@-1 {{'cwg1966::Y' cannot be defined in a type specifier}}
   struct Q {
     // FIXME: can we emit something nicer than that?
     enum X : enum Y : int {} {};
@@ -231,9 +231,9 @@ namespace dr1966 { // dr1966: 11
 #endif
 }
 
-namespace dr1968 { // dr1968: no
+namespace cwg1968 { // cwg1968: no
 #if __cplusplus >= 201103L
-  // FIXME: According to DR1968, both of these should be considered
+  // FIXME: According to CWG1968, both of these should be considered
   // non-constant.
   static_assert(&typeid(int) == &typeid(int), "");
 
@@ -242,7 +242,7 @@ namespace dr1968 { // dr1968: no
 #endif
 }
 
-namespace dr1991 { // dr1991: 3.9
+namespace cwg1991 { // cwg1991: 3.9
 #if __cplusplus >= 201103L
   struct A {
     A(int, int) = delete;
@@ -260,4 +260,4 @@ namespace dr1991 { // dr1991: 3.9
 #endif
 }
 
-// dr1994: dup 529
+// cwg1994: dup 529

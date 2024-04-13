@@ -4,9 +4,9 @@
 // RUN: %clang_cc1 -std=c++1z %s -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s --check-prefixes=CHECK,CXX11,CXX14
 // RUN: %clang_cc1 -std=c++1z %s -fexceptions -fcxx-exceptions -pedantic-errors -triple i386-windows-pc -ast-dump | FileCheck %s --check-prefixes=CHECK,CXX11,CXX14
 
-namespace dr1772 { // dr1772: 14
+namespace cwg1772 { // cwg1772: 14
   // __func__ in a lambda should name operator(), not the containing function.
-  // CHECK: NamespaceDecl{{.+}}dr1772
+  // CHECK: NamespaceDecl{{.+}}cwg1772
 #if __cplusplus >= 201103L
   auto x = []() { __func__; };
   // CXX11: LambdaExpr
@@ -30,10 +30,10 @@ namespace dr1772 { // dr1772: 14
 #endif // __cplusplus >= 201103L
 }
 
-namespace dr1779 { // dr1779: 14
+namespace cwg1779 { // cwg1779: 14
   // __func__ in a function template, member function template, or generic
   //  lambda should have a dependent type.
-  // CHECK: NamespaceDecl{{.+}}dr1779
+  // CHECK: NamespaceDecl{{.+}}cwg1779
 
   template<typename T>
   void FuncTemplate() {

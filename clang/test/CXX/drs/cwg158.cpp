@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux -std=c++14 %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-linux -std=c++1z %s -O3 -disable-llvm-passes -pedantic-errors -emit-llvm -o - | FileCheck %s
 
-// dr158: yes
+// cwg158: yes
 
 // CHECK-LABEL: define {{.*}} @_Z1f
 const int *f(const int * const *p, int **q) {

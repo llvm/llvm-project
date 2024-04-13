@@ -10,7 +10,7 @@
 // expected-no-diagnostics
 #endif
 
-namespace dr2847 { // dr2847: 19
+namespace cwg2847 { // cwg2847: 19
 
 #if __cplusplus >= 202002L
 
@@ -57,9 +57,9 @@ void B<int>::g() requires true;
 
 #endif
 
-} // namespace dr2847
+} // namespace cwg2847
 
-namespace dr2858 { // dr2858: 19
+namespace cwg2858 { // cwg2858: 19
 
 #if __cplusplus > 202302L
 
@@ -80,4 +80,4 @@ struct A {
 
 #endif
 
-} // namespace dr2858
+} // namespace cwg2858

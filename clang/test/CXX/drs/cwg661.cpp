@@ -6,20 +6,24 @@
 // RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 
-namespace dr658 { // dr658: 2.7
+namespace cwg661 {
 
-void f(int* p1) {
-  char* p2 = reinterpret_cast<char*>(p1);
+void f(int a, int b) { // cwg661: 2.7
+  a == b;
+  a != b;
+  a < b;
+  a <= b;
+  a > b;
+  a >= b;
 }
 
-} // namespace dr658
+} // namespace cwg661
 
-// We're checking that p1 is stored into p2 without changes.
-
-// CHECK-LABEL: define {{.*}} void @dr658::f(int*)(ptr noundef %p1)
-// CHECK:         [[P1_ADDR:%.+]] = alloca ptr, align 8
-// CHECK-NEXT:    [[P2:%.+]] = alloca ptr, align 8
-// CHECK:         store ptr %p1, ptr [[P1_ADDR]]
-// CHECK-NEXT:    [[TEMP:%.+]] = load ptr, ptr [[P1_ADDR]]
-// CHECK-NEXT:    store ptr [[TEMP]], ptr [[P2]]
+// CHECK-LABEL: define {{.*}} void @cwg661::f(int, int)
+// CHECK:         icmp eq
+// CHECK:         icmp ne
+// CHECK:         icmp slt
+// CHECK:         icmp sle
+// CHECK:         icmp sgt
+// CHECK:         icmp sge
 // CHECK-LABEL: }

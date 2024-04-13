@@ -6,41 +6,31 @@
 // RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 
-#if __cplusplus == 199711L
-#define NOTHROW throw()
-#else
-#define NOTHROW noexcept(true)
-#endif
+namespace cwg519 { // cwg519: 2.7
+void f() {
+  int *a = 0;
+  void *v = a;
+  bool c1 = v == static_cast<void *>(0);
 
-namespace dr193 { // dr193: 2.7
-struct A {
-  ~A() NOTHROW {}
-};
-
-struct B {
-  ~B() NOTHROW {}
-};
-
-struct C {
-  ~C() NOTHROW {}
-};
-
-struct D : A {
-  B b;
-  ~D() NOTHROW { C c; }
-};
-
-void foo() {
-  D d;
+  void *w = 0;
+  int *b = static_cast<int*>(w);
+  bool c2 = b == static_cast<int *>(0);
 }
+} // namespace cwg519
 
-// skipping over D1 (complete object destructor)
-// CHECK-LABEL: define {{.*}} void @dr193::D::~D(){{.*}}
-// CHECK-LABEL: define {{.*}} void @dr193::D::~D(){{.*}}
-// CHECK-NOT:     call void @dr193::A::~A()
-// CHECK-NOT:     call void @dr193::B::~B()
-// CHECK:         call void @dr193::C::~C()
-// CHECK:         call void @dr193::B::~B()
-// CHECK:         call void @dr193::A::~A()
+// We're checking that `null`s that were initially stored in `a` and `w`
+// are simply copied over all the way to respective comparisons with `null`.
+
+// CHECK-LABEL: define {{.*}} void @cwg519::f()()
+// CHECK:         store ptr null, ptr [[A:%.+]],
+// CHECK-NEXT:    [[TEMP_A:%.+]] = load ptr, ptr [[A]] 
+// CHECK-NEXT:    store ptr [[TEMP_A]], ptr [[V:%.+]],
+// CHECK-NEXT:    [[TEMP_V:%.+]] = load ptr, ptr [[V]]
+// CHECK-NEXT:    {{.+}} = icmp eq ptr [[TEMP_V]], null
+
+// CHECK:         store ptr null, ptr [[W:%.+]],
+// CHECK-NEXT:    [[TEMP_W:%.+]] = load ptr, ptr [[W]] 
+// CHECK-NEXT:    store ptr [[TEMP_W]], ptr [[B:%.+]],
+// CHECK-NEXT:    [[TEMP_B:%.+]] = load ptr, ptr [[B]]
+// CHECK-NEXT:    {{.+}} = icmp eq ptr [[TEMP_B]], null
 // CHECK-LABEL: }
-} // namespace dr193

@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux -std=c++14 %s -pedantic-errors -emit-llvm -o - | FileCheck %s --implicit-check-not " call "
 // RUN: %clang_cc1 -triple x86_64-linux -std=c++1z %s -pedantic-errors -emit-llvm -o - | FileCheck %s --implicit-check-not " call "
 
-// dr118: yes
+// cwg118: yes
 
 struct S {
   virtual void f();
