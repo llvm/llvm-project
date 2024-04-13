@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -DNOEXCEPT=noexcept -DBAD_ALLOC=
 // RUN: %clang_cc1 -std=c++2c %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -DNOEXCEPT=noexcept -DBAD_ALLOC=
 
-// dr412: 3.4
+// cwg412: 3.4
 // lwg404: yes
 // lwg2340: yes
 

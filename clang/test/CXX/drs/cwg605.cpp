@@ -6,30 +6,18 @@
 // RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 
-#if __cplusplus == 199711L
-#define NOTHROW throw()
-#else
-#define NOTHROW noexcept(true)
-#endif
+namespace cwg605 { // cwg605: 2.7
 
-namespace dr593 { // dr593: 2.8
+template <class T>
+static T f(T t) {}
 
-void f();
-void fence() NOTHROW;
+template <>
+int f(int t) {}
 
-struct A {
-  ~A() try {
-    f();
-  } catch (...) {
-    fence();
-  }
-};
-
-void g() {
-  A();
+void g(int a) {
+  f(a);
 }
 
-} // namespace dr593
+} // namespace cwg605
 
-// CHECK:      call void @dr593::fence()()
-// CHECK-NEXT: invoke void @__cxa_rethrow()
+// CHECK: define internal {{.*}} i32 @int cwg605::f<int>(int)
