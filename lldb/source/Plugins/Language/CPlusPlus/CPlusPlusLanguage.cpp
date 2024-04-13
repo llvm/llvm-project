@@ -1050,7 +1050,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libc++ std::chrono::sys_seconds summary provider",
                 "^std::__[[:alnum:]]+::chrono::time_point<"
                 "std::__[[:alnum:]]+::chrono::system_clock, "
-                "std::__[[:alnum:]]+::chrono::duration<long long, "
+                "std::__[[:alnum:]]+::chrono::duration<.*, "
                 "std::__[[:alnum:]]+::ratio<1, 1> "
                 "> >$",
                 eTypeOptionHideChildren | eTypeOptionHideValue |
@@ -1061,6 +1061,29 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libc++ std::chrono::sys_seconds summary provider",
                 "^std::__[[:alnum:]]+::chrono::time_point<"
                 "std::__[[:alnum:]]+::chrono::system_clock, "
+                "std::__[[:alnum:]]+::chrono::duration<int, "
+                "std::__[[:alnum:]]+::ratio<86400, 1> "
+                "> >$",
+                eTypeOptionHideChildren | eTypeOptionHideValue |
+                    eTypeOptionCascade,
+                true);
+
+  AddCXXSummary(
+      cpp_category_sp,
+      lldb_private::formatters::LibcxxChronoLocalSecondsSummaryProvider,
+      "libc++ std::chrono::local_seconds summary provider",
+      "^std::__[[:alnum:]]+::chrono::time_point<"
+      "std::__[[:alnum:]]+::chrono::local_t, "
+      "std::__[[:alnum:]]+::chrono::duration<.*, "
+      "std::__[[:alnum:]]+::ratio<1, 1> "
+      "> >$",
+      eTypeOptionHideChildren | eTypeOptionHideValue | eTypeOptionCascade,
+      true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxChronoLocalDaysSummaryProvider,
+                "libc++ std::chrono::local_seconds summary provider",
+                "^std::__[[:alnum:]]+::chrono::time_point<"
+                "std::__[[:alnum:]]+::chrono::local_t, "
                 "std::__[[:alnum:]]+::chrono::duration<int, "
                 "std::__[[:alnum:]]+::ratio<86400, 1> "
                 "> >$",
