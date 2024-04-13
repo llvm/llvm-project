@@ -2911,12 +2911,25 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
                                       "objc_msgSend_fpret")
                 .getCallee();
       } else if (CGM.ReturnTypeUsesSRet(MSI.CallInfo)) {
+        StringRef name = "objc_msgSend_stret";
+
+        // The address of the memory block is be passed in x8 for POD type,
+        // or in x0 for non-POD type (marked as inreg).
+        bool shouldCheckForInReg =
+            CGM.getContext()
+                .getTargetInfo()
+                .getTriple()
+                .isWindowsMSVCEnvironment() &&
+            CGM.getContext().getTargetInfo().getTriple().isAArch64();
+        if (shouldCheckForInReg && CGM.ReturnTypeHasInReg(MSI.CallInfo)) {
+          name = "objc_msgSend_stret2_np";
+        }
+
         // The actual types here don't matter - we're going to bitcast the
         // function anyway
-        imp =
-            CGM.CreateRuntimeFunction(llvm::FunctionType::get(IdTy, IdTy, true),
-                                      "objc_msgSend_stret")
-                .getCallee();
+        CGM.CreateRuntimeFunction(llvm::FunctionType::get(IdTy, IdTy, true),
+                                  name)
+            .getCallee();
       } else {
         imp = CGM.CreateRuntimeFunction(
                      llvm::FunctionType::get(IdTy, IdTy, true), "objc_msgSend")
