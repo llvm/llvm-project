@@ -483,6 +483,7 @@ struct DwarfSectionsCache {
   MCSection *Loc;
   MCSection *Loclists;
   MCSection *Ranges;
+  MCSection *Rangelists;
 };
 
 /// Queries `Asm` for all dwarf sections and returns an object with (possibly
@@ -617,6 +618,10 @@ private:
   // If a DWARF Ranges section exists, create a DebugRangesRef CAS
   // object for the section.
   Error createDebugRangesSection();
+
+  // If a DWARF Rangeslists section exists, create a DebugRangeslistsRef CAS
+  // object for the section.
+  Error createDebugRangelistsSection();
 
   /// If there is any padding between one section and the next, create a
   /// PaddingRef CAS object to represent the bytes of Padding between the two
