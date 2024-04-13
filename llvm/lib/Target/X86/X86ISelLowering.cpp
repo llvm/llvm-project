@@ -1287,10 +1287,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     if (Subtarget.hasGFNI()) {
-      setOperationAction(ISD::BITREVERSE,       MVT::i8, Custom);
-      setOperationAction(ISD::BITREVERSE,       MVT::i16, Custom);
-      setOperationAction(ISD::BITREVERSE,       MVT::i32, Custom);
-      setOperationAction(ISD::BITREVERSE,       MVT::i64, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i16, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
+      setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
     }
 
     // These might be better off as horizontal vector ops.
