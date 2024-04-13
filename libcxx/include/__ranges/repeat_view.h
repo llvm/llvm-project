@@ -127,8 +127,8 @@ private:
   _LIBCPP_NO_UNIQUE_ADDRESS _Bound __bound_ = _Bound();
 };
 
-template <class _Tp, class _Bound>
-repeat_view(_Tp, _Bound) -> repeat_view<_Tp, _Bound>;
+template <class _Tp, class _Bound = unreachable_sentinel_t>
+repeat_view(_Tp, _Bound = _Bound()) -> repeat_view<_Tp, _Bound>;
 
 // [range.repeat.iterator]
 template <move_constructible _Tp, semiregular _Bound>
