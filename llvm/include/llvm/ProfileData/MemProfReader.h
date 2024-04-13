@@ -57,36 +57,6 @@ public:
     return FunctionProfileData;
   }
 
-  // Convert IndexedMemProfRecord to MemProfRecord, populating call stacks and
-  // frames inline.
-  virtual MemProfRecord convertIndexedMemProfRecordToMemProfRecord(
-      const IndexedMemProfRecord &IndexedRecord,
-      std::function<const Frame(const FrameId)> Callback) {
-    MemProfRecord Record;
-
-    for (const memprof::IndexedAllocationInfo &IndexedAI :
-         IndexedRecord.AllocSites) {
-      memprof::AllocationInfo AI;
-      AI.Info = IndexedAI.Info;
-      auto CSIter = CSIdToCallStack.find(IndexedAI.CSId);
-      assert(CSIter != CSIdToCallStack.end());
-      for (memprof::FrameId Id : CSIter->second)
-        AI.CallStack.push_back(Callback(Id));
-      Record.AllocSites.push_back(AI);
-    }
-
-    for (memprof::CallStackId CSId : IndexedRecord.CallSiteIds) {
-      auto CSIter = CSIdToCallStack.find(CSId);
-      assert(CSIter != CSIdToCallStack.end());
-      llvm::SmallVector<memprof::Frame> Frames;
-      for (memprof::FrameId Id : CSIter->second)
-        Frames.push_back(Callback(Id));
-      Record.CallSites.push_back(Frames);
-    }
-
-    return Record;
-  }
-
   virtual Error
   readNextRecord(GuidMemProfRecordPair &GuidRecord,
                  std::function<const Frame(const FrameId)> Callback = nullptr) {
@@ -100,9 +70,20 @@ public:
       Callback =
           std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
 
+    auto CallStackCallback = [&](CallStackId CSId) {
+      llvm::SmallVector<Frame> CallStack;
+      auto Iter = CSIdToCallStack.find(CSId);
+      assert(Iter != CSIdToCallStack.end());
+      for (FrameId Id : Iter->second)
+        CallStack.push_back(Callback(Id));
+      return CallStack;
+    };
+
     const IndexedMemProfRecord &IndexedRecord = Iter->second;
-    GuidRecord = {Iter->first, convertIndexedMemProfRecordToMemProfRecord(
-                                   IndexedRecord, Callback)};
+    GuidRecord = {
+        Iter->first,
+        IndexedRecord.toMemProfRecord(CallStackCallback),
+    };
     Iter++;
     return Error::success();
   }
