@@ -45,9 +45,11 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TargetParser/Triple.h"
@@ -4049,13 +4051,13 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         } else {
           Diag(NewMethod->getLocation(),
                diag::err_definition_of_implicitly_declared_member)
-            << New << getSpecialMember(OldMethod);
+              << New << llvm::to_underlying(getSpecialMember(OldMethod));
           return true;
         }
       } else if (OldMethod->getFirstDecl()->isExplicitlyDefaulted() && !isFriend) {
         Diag(NewMethod->getLocation(),
              diag::err_definition_of_explicitly_defaulted_member)
-          << getSpecialMember(OldMethod);
+            << llvm::to_underlying(getSpecialMember(OldMethod));
         return true;
       }
     }
@@ -10594,12 +10596,12 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
     // We do not add HD attributes to specializations here because
     // they may have different constexpr-ness compared to their
-    // templates and, after maybeAddCUDAHostDeviceAttrs() is applied,
+    // templates and, after maybeAddHostDeviceAttrs() is applied,
     // may end up with different effective targets. Instead, a
     // specialization inherits its target attributes from its template
     // in the CheckFunctionTemplateSpecialization() call below.
     if (getLangOpts().CUDA && !isFunctionTemplateSpecialization)
-      maybeAddCUDAHostDeviceAttrs(NewFD, Previous);
+      CUDA().maybeAddHostDeviceAttrs(NewFD, Previous);
 
     // Handle explict specializations of function templates
     // and friend function declarations with an explicit
@@ -10897,12 +10899,12 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   if (getLangOpts().CUDA) {
     IdentifierInfo *II = NewFD->getIdentifier();
-    if (II && II->isStr(getCudaConfigureFuncName()) &&
+    if (II && II->isStr(CUDA().getConfigureFuncName()) &&
         !NewFD->isInvalidDecl() &&
         NewFD->getDeclContext()->getRedeclContext()->isTranslationUnit()) {
       if (!R->castAs<FunctionType>()->getReturnType()->isScalarType())
         Diag(NewFD->getLocation(), diag::err_config_scalar_return)
-            << getCudaConfigureFuncName();
+            << CUDA().getConfigureFuncName();
       Context.setcudaConfigureCallDecl(NewFD);
     }
 
@@ -12397,7 +12399,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     }
 
     if (!Redeclaration && LangOpts.CUDA)
-      checkCUDATargetOverload(NewFD, Previous);
+      CUDA().checkTargetOverload(NewFD, Previous);
   }
 
   // Check if the function definition uses any AArch64 SME features without
@@ -14414,7 +14416,7 @@ StmtResult Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   if (var->isInvalidDecl()) return;
 
-  MaybeAddCUDAConstantAttr(var);
+  CUDA().MaybeAddConstantAttr(var);
 
   if (getLangOpts().OpenCL) {
     // OpenCL v2.0 s6.12.5 - Every block variable declaration must have an
@@ -14828,7 +14830,7 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   // variables whether they are local or not. CUDA also allows
   // constant initializers for __constant__ and __device__ variables.
   if (getLangOpts().CUDA)
-    checkAllowedCUDAInitializer(VD);
+    CUDA().checkAllowedInitializer(VD);
 
   // Grab the dllimport or dllexport attribute off of the VarDecl.
   const InheritableAttr *DLLAttr = getDLLAttr(VD);
@@ -18847,22 +18849,22 @@ bool Sema::CheckNontrivialField(FieldDecl *FD) {
       // because otherwise we'll never get complaints about
       // copy constructors.
 
-      CXXSpecialMember member = CXXInvalid;
+      CXXSpecialMemberKind member = CXXSpecialMemberKind::Invalid;
       // We're required to check for any non-trivial constructors. Since the
       // implicit default constructor is suppressed if there are any
       // user-declared constructors, we just need to check that there is a
       // trivial default constructor and a trivial copy constructor. (We don't
       // worry about move constructors here, since this is a C++98 check.)
       if (RDecl->hasNonTrivialCopyConstructor())
-        member = CXXCopyConstructor;
+        member = CXXSpecialMemberKind::CopyConstructor;
       else if (!RDecl->hasTrivialDefaultConstructor())
-        member = CXXDefaultConstructor;
+        member = CXXSpecialMemberKind::DefaultConstructor;
       else if (RDecl->hasNonTrivialCopyAssignment())
-        member = CXXCopyAssignment;
+        member = CXXSpecialMemberKind::CopyAssignment;
       else if (RDecl->hasNonTrivialDestructor())
-        member = CXXDestructor;
+        member = CXXSpecialMemberKind::Destructor;
 
-      if (member != CXXInvalid) {
+      if (member != CXXSpecialMemberKind::Invalid) {
         if (!getLangOpts().CPlusPlus11 &&
             getLangOpts().ObjCAutoRefCount && RDecl->hasObjectMember()) {
           // Objective-C++ ARC: it is an error to have a non-trivial field of
@@ -18879,10 +18881,13 @@ bool Sema::CheckNontrivialField(FieldDecl *FD) {
           }
         }
 
-        Diag(FD->getLocation(), getLangOpts().CPlusPlus11 ?
-               diag::warn_cxx98_compat_nontrivial_union_or_anon_struct_member :
-               diag::err_illegal_union_or_anon_struct_member)
-          << FD->getParent()->isUnion() << FD->getDeclName() << member;
+        Diag(
+            FD->getLocation(),
+            getLangOpts().CPlusPlus11
+                ? diag::warn_cxx98_compat_nontrivial_union_or_anon_struct_member
+                : diag::err_illegal_union_or_anon_struct_member)
+            << FD->getParent()->isUnion() << FD->getDeclName()
+            << llvm::to_underlying(member);
         DiagnoseNontrivial(RDecl, member);
         return !getLangOpts().CPlusPlus11;
       }
@@ -19132,10 +19137,10 @@ static void ComputeSelectedDestructor(Sema &S, CXXRecordDecl *Record) {
 static bool AreSpecialMemberFunctionsSameKind(ASTContext &Context,
                                               CXXMethodDecl *M1,
                                               CXXMethodDecl *M2,
-                                              Sema::CXXSpecialMember CSM) {
+                                              CXXSpecialMemberKind CSM) {
   // We don't want to compare templates to non-templates: See
   // https://github.com/llvm/llvm-project/issues/59206
-  if (CSM == Sema::CXXDefaultConstructor)
+  if (CSM == CXXSpecialMemberKind::DefaultConstructor)
     return bool(M1->getDescribedFunctionTemplate()) ==
            bool(M2->getDescribedFunctionTemplate());
   // FIXME: better resolve CWG
@@ -19158,7 +19163,7 @@ static bool AreSpecialMemberFunctionsSameKind(ASTContext &Context,
 ///   [CWG2595], if any, are satisfied is more constrained.
 static void SetEligibleMethods(Sema &S, CXXRecordDecl *Record,
                                ArrayRef<CXXMethodDecl *> Methods,
-                               Sema::CXXSpecialMember CSM) {
+                               CXXSpecialMemberKind CSM) {
   SmallVector<bool, 4> SatisfactionStatus;
 
   for (CXXMethodDecl *Method : Methods) {
@@ -19216,7 +19221,8 @@ static void SetEligibleMethods(Sema &S, CXXRecordDecl *Record,
     // DR1734 and DR1496.
     if (!AnotherMethodIsMoreConstrained) {
       Method->setIneligibleOrNotSelected(false);
-      Record->addedEligibleSpecialMemberFunction(Method, 1 << CSM);
+      Record->addedEligibleSpecialMemberFunction(Method,
+                                                 1 << llvm::to_underlying(CSM));
     }
   }
 }
@@ -19255,13 +19261,15 @@ static void ComputeSpecialMemberFunctionsEligiblity(Sema &S,
   }
 
   SetEligibleMethods(S, Record, DefaultConstructors,
-                     Sema::CXXDefaultConstructor);
-  SetEligibleMethods(S, Record, CopyConstructors, Sema::CXXCopyConstructor);
-  SetEligibleMethods(S, Record, MoveConstructors, Sema::CXXMoveConstructor);
+                     CXXSpecialMemberKind::DefaultConstructor);
+  SetEligibleMethods(S, Record, CopyConstructors,
+                     CXXSpecialMemberKind::CopyConstructor);
+  SetEligibleMethods(S, Record, MoveConstructors,
+                     CXXSpecialMemberKind::MoveConstructor);
   SetEligibleMethods(S, Record, CopyAssignmentOperators,
-                     Sema::CXXCopyAssignment);
+                     CXXSpecialMemberKind::CopyAssignment);
   SetEligibleMethods(S, Record, MoveAssignmentOperators,
-                     Sema::CXXMoveAssignment);
+                     CXXSpecialMemberKind::MoveAssignment);
 }
 
 void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
@@ -19630,7 +19638,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
     if (CXXRecord) {
       auto *Dtor = CXXRecord->getDestructor();
       if (Dtor && Dtor->isImplicit() &&
-          ShouldDeleteSpecialMember(Dtor, CXXDestructor)) {
+          ShouldDeleteSpecialMember(Dtor, CXXSpecialMemberKind::Destructor)) {
         CXXRecord->setImplicitDestructorIsDeleted();
         SetDeclDeleted(Dtor, CXXRecord->getLocation());
       }
@@ -20659,11 +20667,11 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
     // when compiling for host, device and global functions are never emitted.
     // (Technically, we do emit a host-side stub for global functions, but this
     // doesn't count for our purposes here.)
-    Sema::CUDAFunctionTarget T = IdentifyCUDATarget(FD);
-    if (LangOpts.CUDAIsDevice && T == Sema::CFT_Host)
+    CUDAFunctionTarget T = CUDA().IdentifyTarget(FD);
+    if (LangOpts.CUDAIsDevice && T == CUDAFunctionTarget::Host)
       return FunctionEmissionStatus::CUDADiscarded;
     if (!LangOpts.CUDAIsDevice &&
-        (T == Sema::CFT_Device || T == Sema::CFT_Global))
+        (T == CUDAFunctionTarget::Device || T == CUDAFunctionTarget::Global))
       return FunctionEmissionStatus::CUDADiscarded;
 
     if (IsEmittedForExternalSymbol())
@@ -20684,5 +20692,5 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
   // for host, only HD functions actually called from the host get marked as
   // known-emitted.
   return LangOpts.CUDA && !LangOpts.CUDAIsDevice &&
-         IdentifyCUDATarget(Callee) == CFT_Global;
+         CUDA().IdentifyTarget(Callee) == CUDAFunctionTarget::Global;
 }

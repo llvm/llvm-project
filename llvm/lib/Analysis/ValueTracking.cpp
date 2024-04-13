@@ -274,16 +274,6 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
 static bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
                            unsigned Depth, const SimplifyQuery &Q);
 
-static bool isKnownNonZero(const Value *V, unsigned Depth,
-                           const SimplifyQuery &Q);
-
-bool llvm::isKnownNonZero(const Value *V, const DataLayout &DL, unsigned Depth,
-                          AssumptionCache *AC, const Instruction *CxtI,
-                          const DominatorTree *DT, bool UseInstrInfo) {
-  return ::isKnownNonZero(
-      V, Depth, SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
-}
-
 bool llvm::isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
                               unsigned Depth) {
   return computeKnownBits(V, Depth, SQ).isNonNegative();
@@ -298,7 +288,7 @@ bool llvm::isKnownPositive(const Value *V, const SimplifyQuery &SQ,
   // this updated.
   KnownBits Known = computeKnownBits(V, Depth, SQ);
   return Known.isNonNegative() &&
-         (Known.isNonZero() || ::isKnownNonZero(V, Depth, SQ));
+         (Known.isNonZero() || isKnownNonZero(V, Depth, SQ));
 }
 
 bool llvm::isKnownNegative(const Value *V, const SimplifyQuery &SQ,
@@ -3093,11 +3083,12 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
   return false;
 }
 
-bool isKnownNonZero(const Value *V, unsigned Depth, const SimplifyQuery &Q) {
+bool llvm::isKnownNonZero(const Value *V, unsigned Depth,
+                          const SimplifyQuery &Q) {
   auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  return isKnownNonZero(V, DemandedElts, Depth, Q);
+  return ::isKnownNonZero(V, DemandedElts, Depth, Q);
 }
 
 /// If the pair of operators are the same invertible function, return the
@@ -8016,12 +8007,12 @@ bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW) {
 
   // X = sub (0, Y) || X = sub nsw (0, Y)
   if ((!NeedNSW && match(X, m_Sub(m_ZeroInt(), m_Specific(Y)))) ||
-      (NeedNSW && match(X, m_NSWSub(m_ZeroInt(), m_Specific(Y)))))
+      (NeedNSW && match(X, m_NSWNeg(m_Specific(Y)))))
     return true;
 
   // Y = sub (0, X) || Y = sub nsw (0, X)
   if ((!NeedNSW && match(Y, m_Sub(m_ZeroInt(), m_Specific(X)))) ||
-      (NeedNSW && match(Y, m_NSWSub(m_ZeroInt(), m_Specific(X)))))
+      (NeedNSW && match(Y, m_NSWNeg(m_Specific(X)))))
     return true;
 
   // X = sub (A, B), Y = sub (B, A) || X = sub nsw (A, B), Y = sub nsw (B, A)

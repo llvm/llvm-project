@@ -26,6 +26,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
@@ -5123,10 +5124,10 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     assert(PatternDecl->isDefaulted() &&
            "Special member needs to be defaulted");
     auto PatternSM = getDefaultedFunctionKind(PatternDecl).asSpecialMember();
-    if (!(PatternSM == Sema::CXXCopyConstructor ||
-          PatternSM == Sema::CXXCopyAssignment ||
-          PatternSM == Sema::CXXMoveConstructor ||
-          PatternSM == Sema::CXXMoveAssignment))
+    if (!(PatternSM == CXXSpecialMemberKind::CopyConstructor ||
+          PatternSM == CXXSpecialMemberKind::CopyAssignment ||
+          PatternSM == CXXSpecialMemberKind::MoveConstructor ||
+          PatternSM == CXXSpecialMemberKind::MoveAssignment))
       return;
 
     auto *NewRec = dyn_cast<CXXRecordDecl>(Function->getDeclContext());
@@ -5537,7 +5538,7 @@ void Sema::InstantiateVariableInitializer(
   }
 
   if (getLangOpts().CUDA)
-    checkAllowedCUDAInitializer(Var);
+    CUDA().checkAllowedInitializer(Var);
 }
 
 /// Instantiate the definition of the given variable from its
