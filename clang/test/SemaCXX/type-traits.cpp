@@ -1864,6 +1864,7 @@ void is_pointer_interconvertible_base_of(int n)
   static_assert(!__is_pointer_interconvertible_base_of(Base2, Derived));
   static_assert(__is_pointer_interconvertible_base_of(Base, DerivedIndirect));
   static_assert(__is_pointer_interconvertible_base_of(Base, DerivedMultiple));
+  static_assert(__is_pointer_interconvertible_base_of(Base2, DerivedMultiple));
   static_assert(!__is_pointer_interconvertible_base_of(Base3, DerivedMultiple));
   static_assert(!__is_pointer_interconvertible_base_of(Base, DerivedAmbiguous));
   static_assert(__is_pointer_interconvertible_base_of(Base, DerivedPrivate));
