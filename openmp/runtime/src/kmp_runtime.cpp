@@ -1743,14 +1743,8 @@ __kmp_serial_fork_call(ident_t *loc, int gtid, enum fork_context_e call_context,
       __kmp_alloc_argv_entries(argc, team, TRUE);
       team->t.t_argc = argc;
       argv = (void **)team->t.t_argv;
-      if (ap) {
-        for (i = argc - 1; i >= 0; --i)
-          *argv++ = va_arg(kmp_va_deref(ap), void *);
-      } else {
-        for (i = 0; i < argc; ++i)
-          // Get args from parent team for teams construct
-          argv[i] = parent_team->t.t_argv[i];
-      }
+      for (i = argc - 1; i >= 0; --i)
+        *argv++ = va_arg(kmp_va_deref(ap), void *);
       // AC: revert change made in __kmpc_serialized_parallel()
       //     because initial code in teams should have level=0
       team->t.t_level--;
@@ -4437,8 +4431,10 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
 #endif
   KMP_MB();
 
-  /* first, try to get one from the thread pool */
-  if (__kmp_thread_pool) {
+  /* first, try to get one from the thread pool unless allocating thread is
+   * the main hidden helper thread. The hidden helper team should always
+   * allocate new OS threads. */
+  if (__kmp_thread_pool && !KMP_HIDDEN_HELPER_TEAM(team)) {
     new_thr = CCAST(kmp_info_t *, __kmp_thread_pool);
     __kmp_thread_pool = (volatile kmp_info_t *)new_thr->th.th_next_pool;
     if (new_thr == __kmp_thread_pool_insert_pt) {
@@ -4503,7 +4499,7 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
   }
 
   /* no, well fork a new one */
-  KMP_ASSERT(__kmp_nth == __kmp_all_nth);
+  KMP_ASSERT(KMP_HIDDEN_HELPER_TEAM(team) || __kmp_nth == __kmp_all_nth);
   KMP_ASSERT(__kmp_all_nth < __kmp_threads_capacity);
 
 #if KMP_USE_MONITOR
@@ -5376,7 +5372,8 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
           __kmp_reinitialize_team(team, new_icvs, NULL);
         }
 
-#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
+#if (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY) &&   \
+    KMP_AFFINITY_SUPPORTED
         /* Temporarily set full mask for primary thread before creation of
            workers. The reason is that workers inherit the affinity from the
            primary thread, so if a lot of workers are created on the single
@@ -5412,7 +5409,8 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
           }
         }
 
-#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
+#if (KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY) &&   \
+    KMP_AFFINITY_SUPPORTED
         /* Restore initial primary thread's affinity mask */
         new_temp_affinity.restore();
 #endif
@@ -6756,11 +6754,11 @@ void __kmp_register_library_startup(void) {
       int fd1 = -1;
       shm_name = __kmp_str_format("/%s", name);
       int shm_preexist = 0;
-      fd1 = shm_open(shm_name, O_CREAT | O_EXCL | O_RDWR, 0666);
+      fd1 = shm_open(shm_name, O_CREAT | O_EXCL | O_RDWR, 0600);
       if ((fd1 == -1) && (errno == EEXIST)) {
         // file didn't open because it already exists.
         // try opening existing file
-        fd1 = shm_open(shm_name, O_RDWR, 0666);
+        fd1 = shm_open(shm_name, O_RDWR, 0600);
         if (fd1 == -1) { // file didn't open
           KMP_WARNING(FunctionError, "Can't open SHM");
           __kmp_shm_available = false;
@@ -6804,11 +6802,11 @@ void __kmp_register_library_startup(void) {
       int fd1 = -1;
       temp_reg_status_file_name = __kmp_str_format("/tmp/%s", name);
       int tmp_preexist = 0;
-      fd1 = open(temp_reg_status_file_name, O_CREAT | O_EXCL | O_RDWR, 0666);
+      fd1 = open(temp_reg_status_file_name, O_CREAT | O_EXCL | O_RDWR, 0600);
       if ((fd1 == -1) && (errno == EEXIST)) {
         // file didn't open because it already exists.
         // try opening existing file
-        fd1 = open(temp_reg_status_file_name, O_RDWR, 0666);
+        fd1 = open(temp_reg_status_file_name, O_RDWR, 0600);
         if (fd1 == -1) { // file didn't open if (fd1 == -1) {
           KMP_WARNING(FunctionError, "Can't open TEMP");
           __kmp_tmp_available = false;
@@ -6948,7 +6946,7 @@ void __kmp_unregister_library(void) {
   int fd1;
   if (__kmp_shm_available) {
     shm_name = __kmp_str_format("/%s", name);
-    fd1 = shm_open(shm_name, O_RDONLY, 0666);
+    fd1 = shm_open(shm_name, O_RDONLY, 0600);
     if (fd1 != -1) { // File opened successfully
       char *data1 = (char *)mmap(0, SHM_SIZE, PROT_READ, MAP_SHARED, fd1, 0);
       if (data1 != MAP_FAILED) {
@@ -8928,7 +8926,7 @@ __kmp_determine_reduction_method(
        // KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
 
 #elif KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_AARCH || KMP_ARCH_MIPS ||       \
-    KMP_ARCH_WASM || KMP_ARCH_PPC
+    KMP_ARCH_WASM || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
     KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_HURD || KMP_OS_SOLARIS ||       \

@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fexceptions -verify %s
 // RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -DUSE_CONSTEVAL -fexceptions -verify %s
 // RUN: %clang_cc1 -std=c++2b -fcxx-exceptions -DUSE_CONSTEVAL -DPAREN_INIT -fexceptions -verify %s
-// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fms-extensions -DMS -fexceptions -verify %s
-// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS -DUSE_CONSTEVAL -fexceptions -verify %s
+// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fms-extensions -DMS -fexceptions -fms-compatibility -verify %s
+// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS -DUSE_CONSTEVAL -fexceptions -fms-compatibility -verify %s
 //
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
 // RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -DUSE_CONSTEVAL -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
 // RUN: %clang_cc1 -std=c++2b -fcxx-exceptions -DUSE_CONSTEVAL -DPAREN_INIT -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
-// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fms-extensions -DMS -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
-// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS -DUSE_CONSTEVAL -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify %s
+// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fms-extensions -DMS -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -fms-compatibility -verify %s
+// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fms-extensions -DMS -DUSE_CONSTEVAL -fexceptions -fexperimental-new-constant-interpreter -DNEW_INTERP -verify -fms-compatibility %s
 // expected-no-diagnostics
 
 #define assert(...) ((__VA_ARGS__) ? ((void)0) : throw 42)
@@ -463,7 +463,69 @@ void ctor_tests() {
 constexpr SL global_sl = SL::current();
 static_assert(is_equal(global_sl.function(), ""));
 
+template <class T>
+class TestBI {
+public:
+   TestBI() {
+#ifdef MS
+     static_assert(is_equal(__FUNCTION__, "test_func::TestBI<int>::TestBI"));
+#else
+     static_assert(is_equal(__FUNCTION__, "TestBI"));
+#endif
+     static_assert(is_equal(__func__, "TestBI"));
+   }
+};
+
+template <class T>
+class TestClass {
+public:
+   TestClass() {
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::TestClass<class test_func::C>::TestClass"));
+#else
+      static_assert(is_equal(__FUNCTION__, "TestClass"));
+#endif
+      static_assert(is_equal(__func__, "TestClass"));
+   }
+};
+
+template <class T>
+class TestStruct {
+public:
+   TestStruct() {
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::TestStruct<struct test_func::S>::TestStruct"));
+#else
+      static_assert(is_equal(__FUNCTION__, "TestStruct"));
+#endif
+      static_assert(is_equal(__func__, "TestStruct"));
+   }
+};
+
+template <class T>
+class TestEnum {
+public:
+   TestEnum() {
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::TestEnum<enum test_func::E>::TestEnum"));
+#else
+      static_assert(is_equal(__FUNCTION__, "TestEnum"));
+#endif
+      static_assert(is_equal(__func__, "TestEnum"));
+   }
+};
+
+class C {};
+struct S {};
+enum E {};
+
+TestBI<int> t1;
+TestClass<test_func::C> t2;
+TestStruct<test_func::S> t3;
+TestEnum<test_func::E> t4;
+
 } // namespace test_func
+
 
 //===----------------------------------------------------------------------===//
 //                            __builtin_FUNCSIG()

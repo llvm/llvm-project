@@ -73,6 +73,7 @@ if (NOT LIBOMPTARGET_PLUGINS_TO_LOAD)
 	check_plugin_target(cuda)
 	check_plugin_target(aarch64)
 	check_plugin_target(amdgpu)
+	check_plugin_target(s390x)
 endif()
 
 list(TRANSFORM LIBOMPTARGET_PLUGINS_TO_LOAD PREPEND "\"libomptarget.rtl.")

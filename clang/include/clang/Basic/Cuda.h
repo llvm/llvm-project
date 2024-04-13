@@ -123,7 +123,15 @@ enum class CudaArch {
   LAST,
 
   CudaDefault = CudaArch::SM_52,
-  HIPDefault = CudaArch::GFX803,
+  HIPDefault = CudaArch::GFX906,
+};
+
+enum class CUDAFunctionTarget {
+  Device,
+  Global,
+  Host,
+  HostDevice,
+  InvalidTarget
 };
 
 static inline bool IsNVIDIAGpuArch(CudaArch A) {

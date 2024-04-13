@@ -18,7 +18,6 @@ template <typename OutType, typename InType>
 class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<InType>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
 public:
   typedef OutType (*Func)(InType);

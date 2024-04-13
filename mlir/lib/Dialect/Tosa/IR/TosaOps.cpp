@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Mesh/Interfaces/ShardingInterface.h"
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
@@ -136,6 +137,14 @@ void TosaDialect::initialize() {
 #include "mlir/Dialect/Tosa/IR/TosaAttributes.cpp.inc"
       >();
   addInterfaces<TosaDialectBytecodeInterface, TosaInlinerInterface>();
+  declarePromisedInterfaces<
+      mesh::ShardingInterface, ClampOp, SigmoidOp, TanhOp, AddOp,
+      ArithmeticRightShiftOp, BitwiseAndOp, BitwiseOrOp, BitwiseXorOp, DivOp,
+      LogicalAndOp, LogicalLeftShiftOp, LogicalRightShiftOp, LogicalOrOp,
+      LogicalXorOp, MaximumOp, MinimumOp, MulOp, PowOp, SubOp, AbsOp,
+      BitwiseNotOp, CeilOp, ClzOp, ExpOp, FloorOp, LogOp, LogicalNotOp,
+      NegateOp, ReciprocalOp, RsqrtOp, SelectOp, EqualOp, GreaterOp,
+      GreaterEqualOp, MatMulOp>();
 }
 
 Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
@@ -946,21 +955,35 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
 }
 
 mlir::LogicalResult tosa::ReshapeOp::verify() {
-  ShapedType inputType = llvm::cast<ShapedType>(getInput1().getType());
-  ShapedType outputType = llvm::cast<ShapedType>(getType());
+  TensorType inputType = getInput1().getType();
+  RankedTensorType outputType = getType();
 
   if (hasZeroDimension(inputType) || hasZeroDimension(outputType))
     return emitOpError() << "tensor has a dimension with size zero. Each "
                             "dimension of a tensor must have size >= 1";
 
+  if ((int64_t) getNewShape().size() != outputType.getRank())
+    return emitOpError() << "new shape does not match result rank";
+
+  for (auto [newShapeDim, outputShapeDim] :
+       zip(getNewShape(), outputType.getShape()))
+    if (newShapeDim != -1 && outputShapeDim != ShapedType::kDynamic &&
+        newShapeDim != outputShapeDim)
+      return emitOpError() << "new shape is inconsistent with result shape";
+
   if (inputType.hasStaticShape() && outputType.hasStaticShape()) {
     int64_t inputElementsNum = inputType.getNumElements();
     int64_t outputElementsNum = outputType.getNumElements();
     if (inputElementsNum != outputElementsNum) {
-      return emitOpError() << "Cannot reshape " << inputElementsNum
+      return emitOpError() << "cannot reshape " << inputElementsNum
                            << " elements into " << outputElementsNum;
     }
   }
+
+  int missingDims = llvm::count(getNewShape(), -1);
+  if (missingDims > 1)
+    return emitOpError() << "expected at most one target dimension to be -1";
+
   return mlir::success();
 }
 

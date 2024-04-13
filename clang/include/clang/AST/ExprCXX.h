@@ -1149,6 +1149,7 @@ class CXXThisExpr : public Expr {
   CXXThisExpr(SourceLocation L, QualType Ty, bool IsImplicit, ExprValueKind VK)
       : Expr(CXXThisExprClass, Ty, VK, OK_Ordinary) {
     CXXThisExprBits.IsImplicit = IsImplicit;
+    CXXThisExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
     CXXThisExprBits.Loc = L;
     setDependence(computeDependence(this));
   }
@@ -1169,6 +1170,15 @@ public:
 
   bool isImplicit() const { return CXXThisExprBits.IsImplicit; }
   void setImplicit(bool I) { CXXThisExprBits.IsImplicit = I; }
+
+  bool isCapturedByCopyInLambdaWithExplicitObjectParameter() const {
+    return CXXThisExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter;
+  }
+
+  void setCapturedByCopyInLambdaWithExplicitObjectParameter(bool Set) {
+    CXXThisExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = Set;
+    setDependence(computeDependence(this));
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXThisExprClass;
@@ -2549,7 +2559,7 @@ public:
 class PseudoDestructorTypeStorage {
   /// Either the type source information or the name of the type, if
   /// it couldn't be resolved due to type-dependence.
-  llvm::PointerUnion<TypeSourceInfo *, IdentifierInfo *> Type;
+  llvm::PointerUnion<TypeSourceInfo *, const IdentifierInfo *> Type;
 
   /// The starting source location of the pseudo-destructor type.
   SourceLocation Location;
@@ -2557,7 +2567,7 @@ class PseudoDestructorTypeStorage {
 public:
   PseudoDestructorTypeStorage() = default;
 
-  PseudoDestructorTypeStorage(IdentifierInfo *II, SourceLocation Loc)
+  PseudoDestructorTypeStorage(const IdentifierInfo *II, SourceLocation Loc)
       : Type(II), Location(Loc) {}
 
   PseudoDestructorTypeStorage(TypeSourceInfo *Info);
@@ -2566,8 +2576,8 @@ public:
     return Type.dyn_cast<TypeSourceInfo *>();
   }
 
-  IdentifierInfo *getIdentifier() const {
-    return Type.dyn_cast<IdentifierInfo *>();
+  const IdentifierInfo *getIdentifier() const {
+    return Type.dyn_cast<const IdentifierInfo *>();
   }
 
   SourceLocation getLocation() const { return Location; }
@@ -2698,7 +2708,7 @@ public:
   /// In a dependent pseudo-destructor expression for which we do not
   /// have full type information on the destroyed type, provides the name
   /// of the destroyed type.
-  IdentifierInfo *getDestroyedTypeIdentifier() const {
+  const IdentifierInfo *getDestroyedTypeIdentifier() const {
     return DestroyedType.getIdentifier();
   }
 
@@ -5038,6 +5048,9 @@ class CoroutineSuspendExpr : public Expr {
   OpaqueValueExpr *OpaqueValue = nullptr;
 
 public:
+  // These types correspond to the three C++ 'await_suspend' return variants
+  enum class SuspendReturnType { SuspendVoid, SuspendBool, SuspendHandle };
+
   CoroutineSuspendExpr(StmtClass SC, SourceLocation KeywordLoc, Expr *Operand,
                        Expr *Common, Expr *Ready, Expr *Suspend, Expr *Resume,
                        OpaqueValueExpr *OpaqueValue)
@@ -5095,6 +5108,24 @@ public:
   // The syntactic operand written in the code
   Expr *getOperand() const {
     return static_cast<Expr *>(SubExprs[SubExpr::Operand]);
+  }
+
+  SuspendReturnType getSuspendReturnType() const {
+    auto *SuspendExpr = getSuspendExpr();
+    assert(SuspendExpr);
+
+    auto SuspendType = SuspendExpr->getType();
+
+    if (SuspendType->isVoidType())
+      return SuspendReturnType::SuspendVoid;
+    if (SuspendType->isBooleanType())
+      return SuspendReturnType::SuspendBool;
+
+    // Void pointer is the type of handle.address(), which is returned
+    // from the await suspend wrapper so that the temporary coroutine handle
+    // value won't go to the frame by mistake
+    assert(SuspendType->isVoidPointerType());
+    return SuspendReturnType::SuspendHandle;
   }
 
   SourceLocation getKeywordLoc() const { return KeywordLoc; }

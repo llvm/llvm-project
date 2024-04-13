@@ -603,8 +603,8 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_nothrow_default_constructible.h>
-#include <__type_traits/is_nothrow_move_assignable.h>
+#include <__type_traits/is_nothrow_assignable.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_standard_layout.h>
 #include <__type_traits/is_trivial.h>

@@ -585,6 +585,12 @@ public:
                                            const SelectionDAG &DAG,
                                            unsigned Depth) const override;
 
+  bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                           const APInt &DemandedElts,
+                                           const SelectionDAG &DAG,
+                                           bool PoisonOnly, bool ConsiderFlags,
+                                           unsigned Depth) const override;
+
   const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const override;
 
   // This method returns the name of a target specific DAG node.
@@ -994,7 +1000,7 @@ private:
   /// RISC-V doesn't have flags so it's better to perform the and/or in a GPR.
   bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override {
     return false;
-  };
+  }
 
   /// For available scheduling models FDIV + two independent FMULs are much
   /// faster than two FDIVs.

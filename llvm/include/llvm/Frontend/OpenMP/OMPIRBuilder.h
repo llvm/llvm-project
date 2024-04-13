@@ -1339,10 +1339,12 @@ public:
   ///                           in reductions.
   /// \param ReductionInfos     A list of info on each reduction variable.
   /// \param IsNoWait           A flag set if the reduction is marked as nowait.
+  /// \param IsByRef            A flag set if the reduction is using reference
+  /// or direct value.
   InsertPointTy createReductions(const LocationDescription &Loc,
                                  InsertPointTy AllocaIP,
                                  ArrayRef<ReductionInfo> ReductionInfos,
-                                 bool IsNoWait = false);
+                                 bool IsNoWait = false, bool IsByRef = false);
 
   ///}
 

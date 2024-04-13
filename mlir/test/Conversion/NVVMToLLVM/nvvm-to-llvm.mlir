@@ -680,3 +680,15 @@ func.func @fence_proxy() {
   nvvm.fence.proxy { kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cluster>}
   func.return
 }
+
+// -----
+
+// CHECK-LABEL: @llvm_nvvm_barrier_arrive
+// CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
+llvm.func @llvm_nvvm_barrier_arrive(%barID : i32, %numberOfThreads : i32) {
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "bar.arrive 0, $0;", "r" %[[numberOfThreads]] : (i32) -> ()
+  nvvm.barrier.arrive number_of_threads = %numberOfThreads
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "bar.arrive $0, $1'", "r,r" %[[barId]], %[[numberOfThreads]] : (i32, i32) -> ()
+  nvvm.barrier.arrive id = %barID number_of_threads = %numberOfThreads
+  llvm.return
+}

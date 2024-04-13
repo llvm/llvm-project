@@ -35,6 +35,7 @@ jobs:
   prepare:
     name: Prepare to build binaries
     runs-on: ubuntu-22.04
+    if: github.repository == 'llvm/llvm-project'
     outputs:
       release-version: ${{ steps.vars.outputs.release-version }}
       flags: ${{ steps.vars.outputs.flags }}
@@ -47,11 +48,16 @@ jobs:
     - name: Checkout LLVM
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
+    - name: Install Dependencies
+      run: |
+        pip install -r ./llvm/utils/git/requirements.txt
+
     - name: Check Permissions
       env:
         GITHUB_TOKEN: ${{ github.token }}
+        USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
       run: |
-        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} check-permissions
+        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
 
     - name: Collect Variables
       id: vars
@@ -65,8 +71,8 @@ jobs:
       # | X.Y.Z     | -final
       run: |
         tag="${{ github.ref_name }}"
-        trimmed=$(echo ${{ inputs.tag }} | xargs)
-        [[ "$trimmed" != "" ]] && tag="$trimmed"
+        trimmed=$(echo ${{ inputs.release-version }} | xargs)
+        [[ "$trimmed" != "" ]] && tag="llvmorg-$trimmed"
         if [ "$tag" = "main" ]; then
           # If tag is main, then we've been triggered by a scheduled so pass so
           # use the head commit as the tag.
@@ -85,6 +91,7 @@ jobs:
     name: "Fill Cache ${{ matrix.os }}"
     needs: prepare
     runs-on: ${{ matrix.os }}
+    if: github.repository == 'llvm/llvm-project'
     strategy:
       matrix:
         os:
@@ -119,6 +126,7 @@ jobs:
       - prepare
       - fill-cache
     runs-on: ${{ matrix.target.runs-on }}
+    if: github.repository == 'llvm/llvm-project'
     strategy:
       fail-fast: false
       matrix:

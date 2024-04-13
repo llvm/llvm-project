@@ -12,9 +12,6 @@
 // XFAIL: libcpp-has-no-incomplete-tzdb
 // XFAIL: availability-tzdb-missing
 
-// TODO TZDB (#81654) Enable tests
-// UNSUPPORTED: c++20, c++23, c++26
-
 // <chrono>
 
 // Note there is no Standard way to change the remote database used.

@@ -507,6 +507,16 @@ def TLS_base_addrX32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
                   Requires<[In64BitMode, NotLP64]>;
 }
 
+// TLSDESC only clobbers EAX and EFLAGS. ESP is marked as a use to prevent
+// stack-pointer assignments that appear immediately before calls from
+// potentially appearing dead.
+let Defs = [EAX, EFLAGS], usesCustomInserter = 1, Uses = [RSP, SSP] in {
+  def TLS_desc32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
+                     "# TLS_desc32", [(X86tlsdesc tls32addr:$sym)]>;
+  def TLS_desc64 : I<0, Pseudo, (outs), (ins i64mem:$sym),
+                     "# TLS_desc64", [(X86tlsdesc tls64addr:$sym)]>;
+}
+
 // Darwin TLS Support
 // For i386, the address of the thunk is passed on the stack, on return the
 // address of the variable is in %eax.  %ecx is trashed during the function
@@ -2151,6 +2161,11 @@ multiclass EFLAGSDefiningPats<string suffix, Predicate p> {
     def : Pat<(X86sub_flag_nocf GR16:$src, -1), (!cast<Instruction>(INC16r#suffix) GR16:$src)>;
     def : Pat<(X86sub_flag_nocf GR32:$src, -1), (!cast<Instruction>(INC32r#suffix) GR32:$src)>;
     def : Pat<(X86sub_flag_nocf GR64:$src, -1), (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
+
+    def : Pat<(or_is_add GR8:$src, 1),   (!cast<Instruction>(INC8r#suffix) GR8:$src)>;
+    def : Pat<(or_is_add GR16:$src, 1),  (!cast<Instruction>(INC16r#suffix) GR16:$src)>;
+    def : Pat<(or_is_add GR32:$src, 1),  (!cast<Instruction>(INC32r#suffix) GR32:$src)>;
+    def : Pat<(or_is_add GR64:$src, 1),  (!cast<Instruction>(INC64r#suffix) GR64:$src)>;
   }
 }
 

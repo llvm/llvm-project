@@ -231,12 +231,31 @@ KnownBits KnownBits::smin(const KnownBits &LHS, const KnownBits &RHS) {
   return Flip(umax(Flip(LHS), Flip(RHS)));
 }
 
-KnownBits KnownBits::absdiff(const KnownBits &LHS, const KnownBits &RHS) {
-  // absdiff(LHS,RHS) = sub(umax(LHS,RHS), umin(LHS,RHS)).
+KnownBits KnownBits::abdu(const KnownBits &LHS, const KnownBits &RHS) {
+  // abdu(LHS,RHS) = sub(umax(LHS,RHS), umin(LHS,RHS)).
   KnownBits UMaxValue = umax(LHS, RHS);
   KnownBits UMinValue = umin(LHS, RHS);
   KnownBits MinMaxDiff = computeForAddSub(/*Add=*/false, /*NSW=*/false,
                                           /*NUW=*/true, UMaxValue, UMinValue);
+
+  // find the common bits between sub(LHS,RHS) and sub(RHS,LHS).
+  KnownBits Diff0 =
+      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, LHS, RHS);
+  KnownBits Diff1 =
+      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, RHS, LHS);
+  KnownBits SubDiff = Diff0.intersectWith(Diff1);
+
+  KnownBits KnownAbsDiff = MinMaxDiff.unionWith(SubDiff);
+  assert(!KnownAbsDiff.hasConflict() && "Bad Output");
+  return KnownAbsDiff;
+}
+
+KnownBits KnownBits::abds(const KnownBits &LHS, const KnownBits &RHS) {
+  // abds(LHS,RHS) = sub(smax(LHS,RHS), smin(LHS,RHS)).
+  KnownBits SMaxValue = smax(LHS, RHS);
+  KnownBits SMinValue = smin(LHS, RHS);
+  KnownBits MinMaxDiff = computeForAddSub(/*Add=*/false, /*NSW=*/false,
+                                          /*NUW=*/false, SMaxValue, SMinValue);
 
   // find the common bits between sub(LHS,RHS) and sub(RHS,LHS).
   KnownBits Diff0 =
@@ -343,7 +362,7 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS, bool NUW,
 }
 
 KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
-                          bool ShAmtNonZero) {
+                          bool ShAmtNonZero, bool Exact) {
   unsigned BitWidth = LHS.getBitWidth();
   auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
     KnownBits Known = LHS;
@@ -367,6 +386,18 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
   // Find the common bits from all possible shifts.
   APInt MaxValue = RHS.getMaxValue();
   unsigned MaxShiftAmount = getMaxShiftAmount(MaxValue, BitWidth);
+
+  // If exact, bound MaxShiftAmount to first known 1 in LHS.
+  if (Exact) {
+    unsigned FirstOne = LHS.countMaxTrailingZeros();
+    if (FirstOne < MinShiftAmount) {
+      // Always poison. Return zero because we don't like returning conflict.
+      Known.setAllZero();
+      return Known;
+    }
+    MaxShiftAmount = std::min(MaxShiftAmount, FirstOne);
+  }
+
   unsigned ShiftAmtZeroMask = RHS.Zero.zextOrTrunc(32).getZExtValue();
   unsigned ShiftAmtOneMask = RHS.One.zextOrTrunc(32).getZExtValue();
   Known.Zero.setAllBits();
@@ -389,7 +420,7 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
 }
 
 KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
-                          bool ShAmtNonZero) {
+                          bool ShAmtNonZero, bool Exact) {
   unsigned BitWidth = LHS.getBitWidth();
   auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
     KnownBits Known = LHS;
@@ -415,6 +446,18 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
   // Find the common bits from all possible shifts.
   APInt MaxValue = RHS.getMaxValue();
   unsigned MaxShiftAmount = getMaxShiftAmount(MaxValue, BitWidth);
+
+  // If exact, bound MaxShiftAmount to first known 1 in LHS.
+  if (Exact) {
+    unsigned FirstOne = LHS.countMaxTrailingZeros();
+    if (FirstOne < MinShiftAmount) {
+      // Always poison. Return zero because we don't like returning conflict.
+      Known.setAllZero();
+      return Known;
+    }
+    MaxShiftAmount = std::min(MaxShiftAmount, FirstOne);
+  }
+
   unsigned ShiftAmtZeroMask = RHS.Zero.zextOrTrunc(32).getZExtValue();
   unsigned ShiftAmtOneMask = RHS.One.zextOrTrunc(32).getZExtValue();
   Known.Zero.setAllBits();

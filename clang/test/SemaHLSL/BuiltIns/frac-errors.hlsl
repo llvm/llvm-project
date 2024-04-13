@@ -13,7 +13,7 @@ float2 test_too_many_arg(float2 p0) {
 
 float builtin_bool_to_float_type_promotion(bool p1) {
   return __builtin_hlsl_elementwise_frac(p1);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was 'bool')}}
+  // expected-error@-1 {{passing 'bool' to parameter of incompatible type 'float'}}
 }
 
 float builtin_frac_int_to_float_promotion(int p1) {
@@ -25,3 +25,15 @@ float2 builtin_frac_int2_to_float2_promotion(int2 p1) {
   return __builtin_hlsl_elementwise_frac(p1);
   // expected-error@-1 {{passing 'int2' (aka 'vector<int, 2>') to parameter of incompatible type '__attribute__((__vector_size__(2 * sizeof(float)))) float' (vector of 2 'float' values)}}
 }
+
+// builtins are variadic functions and so are subject to DefaultVariadicArgumentPromotion
+half builtin_frac_half_scalar (half p0) {
+  return __builtin_hlsl_elementwise_frac (p0);
+  // expected-error@-1 {{passing 'double' to parameter of incompatible type 'float'}}
+}
+
+float builtin_frac_float_scalar ( float p0) {
+  return __builtin_hlsl_elementwise_frac (p0);
+  // expected-error@-1 {{passing 'double' to parameter of incompatible type 'float'}}
+}
+

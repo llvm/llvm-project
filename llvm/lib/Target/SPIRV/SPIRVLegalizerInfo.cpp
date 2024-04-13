@@ -149,7 +149,9 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).alwaysLegal();
 
   // TODO: add proper rules for vectors legalization.
-  getActionDefinitionsBuilder({G_BUILD_VECTOR, G_SHUFFLE_VECTOR}).alwaysLegal();
+  getActionDefinitionsBuilder(
+      {G_BUILD_VECTOR, G_SHUFFLE_VECTOR, G_SPLAT_VECTOR})
+      .alwaysLegal();
 
   // Vector Reduction Operations
   getActionDefinitionsBuilder(

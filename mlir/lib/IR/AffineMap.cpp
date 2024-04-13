@@ -249,7 +249,7 @@ AffineMap AffineMap::getPermutationMap(ArrayRef<unsigned> permutation,
                                        MLIRContext *context) {
   assert(!permutation.empty() &&
          "Cannot create permutation map from empty permutation vector");
-  const auto *m = std::max_element(permutation.begin(), permutation.end());
+  const auto *m = llvm::max_element(permutation);
   auto permutationMap = getMultiDimMapWithTargets(*m + 1, permutation, context);
   assert(permutationMap.isPermutation() && "Invalid permutation vector");
   return permutationMap;
@@ -359,9 +359,7 @@ bool AffineMap::isSingleConstant() const {
 }
 
 bool AffineMap::isConstant() const {
-  return llvm::all_of(getResults(), [](AffineExpr expr) {
-    return isa<AffineConstantExpr>(expr);
-  });
+  return llvm::all_of(getResults(), llvm::IsaPred<AffineConstantExpr>);
 }
 
 int64_t AffineMap::getSingleConstantResult() const {

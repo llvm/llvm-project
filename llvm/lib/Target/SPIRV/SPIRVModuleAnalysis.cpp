@@ -658,7 +658,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Provided by all supported Vulkan versions.
   addAvailableCaps({Capability::Int16, Capability::Int64, Capability::Float16,
-                    Capability::Float64});
+                    Capability::Float64, Capability::GroupNonUniform});
 }
 
 } // namespace SPIRV
@@ -1308,6 +1308,9 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
   // If there are no entry points, we need the Linkage capability.
   if (MAI.MS[SPIRV::MB_EntryPoints].empty())
     MAI.Reqs.addCapability(SPIRV::Capability::Linkage);
+
+  // Set maximum ID used.
+  GR->setBound(MAI.MaxID);
 
   return false;
 }

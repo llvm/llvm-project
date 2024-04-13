@@ -10,6 +10,12 @@
 # CHECK: encoding: [0x62,0xec,0xec,0x10,0x01,0x41,0x7b]
          add	r18, qword ptr [r17 + 123], r16
 
+## MRMDestMemCC
+
+# CHECK: cfcmovb	qword ptr [r17 + 4*r18 + 123], r16
+# CHECK: encoding: [0x62,0xec,0xf8,0x0c,0x42,0x44,0x91,0x7b]
+         cfcmovb	qword ptr [r17 + 4*r18 + 123], r16
+
 ## MRMSrcMem
 
 # CHECK: vbroadcasti32x4	zmm0, xmmword ptr [r16 + r17]
@@ -19,6 +25,16 @@
 # CHECK: sub	r18, r17, qword ptr [r16 + 123]
 # CHECK: encoding: [0x62,0xec,0xec,0x10,0x2b,0x48,0x7b]
          sub	r18, r17, qword ptr [r16 + 123]
+
+## MRMSrcMemCC
+
+# CHECK: cfcmovb	r18, qword ptr [r16 + 4*r17 + 123]
+# CHECK: encoding: [0x62,0xec,0xf8,0x08,0x42,0x54,0x88,0x7b]
+         cfcmovb	r18, qword ptr [r16 + 4*r17 + 123]
+
+# CHECK: cfcmovb	r19, r18, qword ptr [r16 + 4*r17 + 123]
+# CHECK: encoding: [0x62,0xec,0xe0,0x14,0x42,0x54,0x88,0x7b]
+         cfcmovb	r19, r18, qword ptr [r16 + 4*r17 + 123]
 
 ## MRM0m
 
@@ -122,11 +138,23 @@
 # CHECK: encoding: [0x62,0xec,0xfc,0x0c,0x01,0xc1]
          {nf}	add	r17, r16
 
+## MRMDestRegCC
+
+# CHECK: cfcmovb	r17, r16
+# CHECK: encoding: [0x62,0xec,0xfc,0x0c,0x42,0xc1]
+         cfcmovb	r17, r16
+
 ## MRMSrcReg
 
 # CHECK: mulx	r18, r17, r16
 # CHECK: encoding: [0x62,0xea,0xf7,0x00,0xf6,0xd0]
          mulx	r18, r17, r16
+
+## MRMSrcRegCC
+
+# CHECK: cfcmovb	r18, r17, r16
+# CHECK: encoding: [0x62,0xec,0xec,0x14,0x42,0xc8]
+         cfcmovb	r18, r17, r16
 
 ## MRMSrcReg4VOp3
 
@@ -181,6 +209,16 @@
 # CHECK: sar	r17, r16, 123
 # CHECK: encoding: [0x62,0xfc,0xf4,0x10,0xc1,0xf8,0x7b]
          sar	r17, r16, 123
+
+## MRMXrCC
+# CHECK: setzuo	r16b
+# CHECK: encoding: [0x62,0xfc,0x7f,0x18,0x40,0xc0]
+         setzuo r16b
+
+## MRMXmCC
+# CHECK: setzuo byte ptr [r16 + r17]
+# CHECK: encoding: [0x62,0xfc,0x7b,0x18,0x40,0x04,0x08]
+         setzuo byte ptr [r16 + r17]
 
 ## NoCD8
 

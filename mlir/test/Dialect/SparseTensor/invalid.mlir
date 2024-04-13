@@ -60,7 +60,7 @@ func.func @invalid_pack_mis_position(%values: tensor<6xf64>, %coordinates: tenso
 
 func.func @invalid_unpack_type(%sp: tensor<100xf32, #SparseVector>, %values: tensor<6xf64>, %pos: tensor<2xi32>, %coordinates: tensor<6x1xi32>) {
   // expected-error@+1 {{input/output element-types don't match}}
-  %rv, %rp, %rc, %vl, %pl, %cl = sparse_tensor.disassemble %sp : tensor<100xf32, #SparseVector>
+  %rp, %rc, %rv, %pl, %cl, %vl = sparse_tensor.disassemble %sp : tensor<100xf32, #SparseVector>
                   out_lvls(%pos, %coordinates : tensor<2xi32>, tensor<6x1xi32>)
                   out_vals(%values : tensor<6xf64>)
                   -> (tensor<2xi32>, tensor<6x1xi32>), tensor<6xf64>, (index, index), index
@@ -73,7 +73,7 @@ func.func @invalid_unpack_type(%sp: tensor<100xf32, #SparseVector>, %values: ten
 
 func.func @invalid_unpack_type(%sp: tensor<100x2xf64, #SparseVector>, %values: tensor<6xf64>, %pos: tensor<2xi32>, %coordinates: tensor<6x3xi32>) {
   // expected-error@+1 {{input/output trailing COO level-ranks don't match}}
-  %rv, %rp, %rc, %vl, %pl, %cl = sparse_tensor.disassemble %sp : tensor<100x2xf64, #SparseVector>
+  %rp, %rc, %rv, %pl, %cl, %vl = sparse_tensor.disassemble %sp : tensor<100x2xf64, #SparseVector>
                   out_lvls(%pos, %coordinates : tensor<2xi32>, tensor<6x3xi32> )
                   out_vals(%values : tensor<6xf64>)
                   -> (tensor<2xi32>, tensor<6x3xi32>), tensor<6xf64>, (index, index), index
@@ -86,7 +86,7 @@ func.func @invalid_unpack_type(%sp: tensor<100x2xf64, #SparseVector>, %values: t
 
 func.func @invalid_unpack_mis_position(%sp: tensor<2x100xf64, #CSR>, %values: tensor<6xf64>, %coordinates: tensor<6xi32>) {
   // expected-error@+1 {{inconsistent number of fields between input/output}}
-  %rv, %rc, %vl, %pl = sparse_tensor.disassemble %sp : tensor<2x100xf64, #CSR>
+  %rc, %rv, %cl, %vl = sparse_tensor.disassemble %sp : tensor<2x100xf64, #CSR>
              out_lvls(%coordinates : tensor<6xi32>)
              out_vals(%values : tensor<6xf64>)
              -> (tensor<6xi32>), tensor<6xf64>, (index), index
@@ -286,24 +286,6 @@ func.func @sparse_unannotated_load(%arg0: tensor<16x32xf64>) -> tensor<16x32xf64
   // expected-error@+1 {{'sparse_tensor.load' op operand #0 must be sparse tensor of any type values, but got 'tensor<16x32xf64>'}}
   %0 = sparse_tensor.load %arg0 : tensor<16x32xf64>
   return %0 : tensor<16x32xf64>
-}
-
-// -----
-
-func.func @sparse_unannotated_insert(%arg0: tensor<128xf64>, %arg1: index, %arg2: f64) {
-  // expected-error@+1 {{'sparse_tensor.insert' 'tensor' must be sparse tensor of any type values, but got 'tensor<128xf64>'}}
-  sparse_tensor.insert %arg2 into %arg0[%arg1] : tensor<128xf64>
-  return
-}
-
-// -----
-
-#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
-
-func.func @sparse_wrong_arity_insert(%arg0: tensor<128x64xf64, #CSR>, %arg1: index, %arg2: f64) {
-  // expected-error@+1 {{'sparse_tensor.insert' op incorrect number of coordinates}}
-  sparse_tensor.insert %arg2 into %arg0[%arg1] : tensor<128x64xf64, #CSR>
-  return
 }
 
 // -----
@@ -882,16 +864,6 @@ func.func @sparse_sort_coo_no_perm(%arg0: index, %arg1: memref<?xindex>) -> (mem
   // expected-error@+1 {{Expected a permutation map, got (d0, d1) -> (d0, d0)}}
   sparse_tensor.sort hybrid_quick_sort %arg0, %arg1 {perm_map = #NON_PERM_MAP, ny = 1 : index}: memref<?xindex>
   return %arg1 : memref<?xindex>
-}
-
-// -----
-
-#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
-
-func.func @sparse_alloc_escapes(%arg0: index) -> tensor<10x?xf64, #CSR> {
-  // expected-error@+1 {{sparse tensor allocation should not escape function}}
-  %0 = bufferization.alloc_tensor(%arg0) : tensor<10x?xf64, #CSR>
-  return %0: tensor<10x?xf64, #CSR>
 }
 
 // -----

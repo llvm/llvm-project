@@ -21,6 +21,7 @@
 ! CHECK-NEXT: -ccc-print-phases       Dump list of actions to perform
 ! CHECK-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! CHECK-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! CHECK-NEXT: -dM                     Print macro definitions in -E mode instead of normal output
 ! CHECK-NEXT: -dumpmachine            Display the compiler's target processor
 ! CHECK-NEXT: -dumpversion            Display the version of the compiler
 ! CHECK-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
@@ -52,8 +53,6 @@
 ! CHECK-NEXT:                         Do not use HLFIR lowering (deprecated)
 ! CHECK-NEXT: -flang-experimental-hlfir
 ! CHECK-NEXT:                         Use HLFIR lowering (experimental)
-! CHECK-NEXT: -flang-experimental-polymorphism
-! CHECK-NEXT:                         Enable Fortran 2003 polymorphism (experimental)
 ! CHECK-NEXT: -flarge-sizes           Use INTEGER(KIND=8) for the result type in size-related intrinsics
 ! CHECK-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! CHECK-NEXT: -flto=auto              Enable LTO in 'full' mode
@@ -69,6 +68,7 @@
 ! CHECK-NEXT: -fno-lto                Disable LTO mode (default)
 ! CHECK-NEXT: -fno-ppc-native-vector-element-order
 ! CHECK-NEXT:                         Specifies PowerPC non-native vector element order
+! CHECK-NEXT: -fno-rtlib-add-rpath Do not add -rpath with architecture-specific resource directory to the linker flags. When --hip-link is specified, do not add -rpath with HIP runtime library directory to the linker flags
 ! CHECK-NEXT: -fno-signed-zeros       Allow optimizations that ignore the sign of floating point zeros
 ! CHECK-NEXT: -fno-stack-arrays       Allocate array temporaries on the heap (default)
 ! CHECK-NEXT: -fno-version-loops-for-stride
@@ -83,7 +83,7 @@
 ! CHECK-NEXT: -fopenmp-targets=<value>
 ! CHECK-NEXT:                         Specify comma-separated list of triples OpenMP offloading targets to be supported
 ! CHECK-NEXT: -fopenmp-version=<value>
-! CHECK-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 51 for Clang
+! CHECK-NEXT:                         Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 11 for Flang
 ! CHECK-NEXT: -fopenmp                Parse OpenMP pragmas and generate parallel code.
 ! CHECK-NEXT: -foptimization-record-file=<file>
 ! CHECK-NEXT:                         Specify the output name of the file containing the optimization remarks. Implies -fsave-optimization-record. On Darwin platforms, this cannot be used with multiple -arch <arch> options.
@@ -94,6 +94,7 @@
 ! CHECK-NEXT:                         Specifies PowerPC native vector element order (default)
 ! CHECK-NEXT: -freciprocal-math       Allow division operations to be reassociated
 ! CHECK-NEXT: -fropi                  Generate read-only position independent code (ARM only)
+! CHECK-NEXT: -frtlib-add-rpath Add -rpath with architecture-specific resource directory to the linker flags. When --hip-link is specified, also add -rpath with HIP runtime library directory to the linker flags
 ! CHECK-NEXT: -frwpi                  Generate read-write position independent code (ARM only)
 ! CHECK-NEXT: -fsave-optimization-record=<format>
 ! CHECK-NEXT:                         Generate an optimization record file in a specific format
@@ -106,6 +107,9 @@
 ! CHECK-NEXT: -fversion-loops-for-stride
 ! CHECK-NEXT:                         Create unit-strided versions of loops
 ! CHECK-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
+! CHECK-NEXT: --gcc-install-dir=<value>
+! CHECK-NEXT:                         Use GCC installation in the specified directory. The directory ends with path components like 'lib{,32,64}/gcc{,-cross}/$triple/$version'. Note: executables (e.g. ld) used by the compiler are not overridden by the selected GCC installation
+! CHECK-NEXT: --gcc-toolchain=<value> Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. Clang will use the GCC installation with the largest version
 ! CHECK-NEXT: -gline-directives-only  Emit debug line info directives only
 ! CHECK-NEXT: -gline-tables-only      Emit debug line number tables only
 ! CHECK-NEXT: -gpulibc                Link the LLVM C Library for GPUs
@@ -143,6 +147,8 @@
 ! CHECK-NEXT: -print-target-triple    Print the normalized target triple
 ! CHECK-NEXT: -pthread                Support POSIX threads in generated code
 ! CHECK-NEXT: -P                      Disable linemarker output in -E mode
+! CHECK-NEXT: -resource-dir <value>   The directory which holds the compiler resource files
+! CHECK-NEXT: --rocm-path=<value> ROCm installation path, used for finding and automatically linking required bitcode libraries.
 ! CHECK-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
 ! CHECK-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression
 ! CHECK-NEXT: -Rpass=<value>          Report transformations performed by optimization passes whose name matches the given POSIX regular expression

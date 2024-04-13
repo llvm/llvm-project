@@ -1,14 +1,25 @@
 add_custom_target(libc-cpp-utils-tests)
 
 add_libc_test(
+  array_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    array_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.array
+  )
+
+add_libc_test(
   bit_test
   SUITE
     libc-cpp-utils-tests
   SRCS
     bit_test.cpp
   DEPENDS
+    libc.src.__support.big_int
     libc.src.__support.CPP.bit
-    libc.src.__support.uint
+    libc.src.__support.macros.properties.types
 )
 
 add_libc_test(
@@ -48,8 +59,9 @@ add_libc_test(
   SRCS
     limits_test.cpp
   DEPENDS
+    libc.src.__support.big_int
     libc.src.__support.CPP.limits
-    libc.src.__support.uint
+    libc.src.__support.macros.properties.types
 )
 
 add_libc_test(

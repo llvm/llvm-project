@@ -10,12 +10,19 @@
 
 include(ExtendPath)
 
+# The generated headers will be placed in clang's resource directory if present.
+if(OPENMP_STANDALONE_BUILD OR NOT LLVM_RUNTIMES_BUILD)
+  set(LIBOMP_HEADERS_INTDIR ${CMAKE_CURRENT_BINARY_DIR})
+else()
+  set(LIBOMP_HEADERS_INTDIR ${LLVM_BINARY_DIR}/${LIBOMP_HEADERS_INSTALL_PATH})
+endif()
+
 # Configure omp.h, kmp_config.h and omp-tools.h if necessary
-configure_file(${LIBOMP_INC_DIR}/omp.h.var omp.h @ONLY)
-configure_file(${LIBOMP_INC_DIR}/ompx.h.var ompx.h @ONLY)
-configure_file(kmp_config.h.cmake kmp_config.h @ONLY)
+configure_file(${LIBOMP_INC_DIR}/omp.h.var ${LIBOMP_HEADERS_INTDIR}/omp.h @ONLY)
+configure_file(${LIBOMP_INC_DIR}/ompx.h.var ${LIBOMP_HEADERS_INTDIR}/ompx.h @ONLY)
+configure_file(kmp_config.h.cmake ${LIBOMP_HEADERS_INTDIR}/kmp_config.h @ONLY)
 if(${LIBOMP_OMPT_SUPPORT})
-  configure_file(${LIBOMP_INC_DIR}/omp-tools.h.var omp-tools.h @ONLY)
+  configure_file(${LIBOMP_INC_DIR}/omp-tools.h.var ${LIBOMP_HEADERS_INTDIR}/omp-tools.h @ONLY)
 endif()
 
 # Generate message catalog files: kmp_i18n_id.inc and kmp_i18n_default.inc
@@ -48,6 +55,7 @@ include_directories(
   ${LIBOMP_SRC_DIR}/i18n
   ${LIBOMP_INC_DIR}
   ${LIBOMP_SRC_DIR}/thirdparty/ittnotify
+  ${LIBOMP_HEADERS_INTDIR}
 )
 
 # Building with time profiling support requires LLVM directory includes.
@@ -316,9 +324,25 @@ endif()
 
 # Building the Fortran module files
 # One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
-if(${LIBOMP_FORTRAN_MODULES})
-  configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
-  configure_file(${LIBOMP_INC_DIR}/omp_lib.f90.var omp_lib.f90 @ONLY)
+configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
+configure_file(${LIBOMP_INC_DIR}/omp_lib.F90.var omp_lib.F90 @ONLY)
+
+set(BUILD_FORTRAN_MODULES False)
+if (NOT ${LIBOMP_FORTRAN_MODULES_COMPILER} STREQUAL "")
+  # If libomp is built as an LLVM runtime and the flang compiler is available,
+  # compile the Fortran module files.
+  message(STATUS "configuring openmp to build Fortran module files using ${LIBOMP_FORTRAN_MODULES_COMPILER}")
+  set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
+  add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
+  add_custom_command(
+    OUTPUT omp_lib.mod omp_lib_kinds.mod
+    COMMAND ${LIBOMP_FORTRAN_MODULES_COMPILER} -cpp -fsyntax-only ${LIBOMP_FORTRAN_SOURCE_FILE}
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}
+      ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
+  )
+  set(BUILD_FORTRAN_MODULES True)
+elseif(${LIBOMP_FORTRAN_MODULES})
+  # The following requests explicit building of the Fortran module files
   # Workaround for gfortran to build modules with the
   # omp_sched_monotonic integer parameter
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
@@ -327,7 +351,7 @@ if(${LIBOMP_FORTRAN_MODULES})
   add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
   libomp_get_fflags(LIBOMP_CONFIGURED_FFLAGS)
   if(CMAKE_Fortran_COMPILER_SUPPORTS_F90)
-    set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.f90)
+    set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
   else()
     message(FATAL_ERROR "Fortran module build requires Fortran 90 compiler")
   endif()
@@ -339,6 +363,7 @@ if(${LIBOMP_FORTRAN_MODULES})
       ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
   )
   set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES omp_lib${CMAKE_C_OUTPUT_EXTENSION})
+  set(BUILD_FORTRAN_MODULES True)
 endif()
 
 # Move files to exports/ directory if requested
@@ -402,21 +427,25 @@ else()
 endif()
 install(
   FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/omp.h
-  ${CMAKE_CURRENT_BINARY_DIR}/ompx.h
+  ${LIBOMP_HEADERS_INTDIR}/omp.h
+  ${LIBOMP_HEADERS_INTDIR}/ompx.h
   DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
 )
 if(${LIBOMP_OMPT_SUPPORT})
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
+  install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
   # install under legacy name ompt.h
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
-  set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
+  install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
+  set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_HEADERS_INTDIR} PARENT_SCOPE)
 endif()
-if(${LIBOMP_FORTRAN_MODULES})
+if(${BUILD_FORTRAN_MODULES})
+  set (destination ${LIBOMP_HEADERS_INSTALL_PATH})
+  if (NOT ${LIBOMP_MODULES_INSTALL_PATH} STREQUAL "")
+    set (destination ${LIBOMP_MODULES_INSTALL_PATH})
+  endif()
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.mod
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib_kinds.mod
-    DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
+    DESTINATION ${destination}
   )
 endif()

@@ -684,9 +684,8 @@ define <2 x i32> @signbit_mul_vec_commute(<2 x i32> %a, <2 x i32> %b) {
 
 define i32 @lowbit_mul(i32 %a, i32 %b) {
 ; CHECK-LABEL: @lowbit_mul(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    [[E:%.*]] = select i1 [[DOTNOT]], i32 0, i32 [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[A:%.*]] to i1
+; CHECK-NEXT:    [[E:%.*]] = select i1 [[TMP1]], i32 [[B:%.*]], i32 0
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %d = and i32 %a, 1
@@ -2048,4 +2047,95 @@ define i32 @zext_negpow2_use(i8 %x) {
   call void @use32(i32 %zx)
   %r = mul i32 %zx, -16777216 ; -1 << 24
   ret i32 %r
+}
+
+define i32 @mul_sext_icmp_with_zero(i32 %x) {
+; CHECK-LABEL: @mul_sext_icmp_with_zero(
+; CHECK-NEXT:    ret i32 0
+;
+  %cmp = icmp eq i32 %x, 0
+  %sext = sext i1 %cmp to i32
+  %mul = mul i32 %sext, %x
+  ret i32 %mul
+}
+
+define i32 @test_mul_sext_bool(i1 %x, i32 %y) {
+; CHECK-LABEL: @test_mul_sext_bool(
+; CHECK-NEXT:    [[Y_NEG:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[Y_NEG]], i32 0
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %sext = sext i1 %x to i32
+  %mul = mul i32 %sext, %y
+  ret i32 %mul
+}
+
+define i32 @test_mul_sext_bool_nuw(i1 %x, i32 %y) {
+; CHECK-LABEL: @test_mul_sext_bool_nuw(
+; CHECK-NEXT:    [[Y_NEG:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[Y_NEG]], i32 0
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %sext = sext i1 %x to i32
+  %mul = mul nuw i32 %sext, %y
+  ret i32 %mul
+}
+
+define i32 @test_mul_sext_bool_nsw(i1 %x, i32 %y) {
+; CHECK-LABEL: @test_mul_sext_bool_nsw(
+; CHECK-NEXT:    [[Y_NEG:%.*]] = sub nsw i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[Y_NEG]], i32 0
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %sext = sext i1 %x to i32
+  %mul = mul nsw i32 %sext, %y
+  ret i32 %mul
+}
+
+define i32 @test_mul_sext_bool_nuw_nsw(i1 %x, i32 %y) {
+; CHECK-LABEL: @test_mul_sext_bool_nuw_nsw(
+; CHECK-NEXT:    [[Y_NEG:%.*]] = sub nsw i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[Y_NEG]], i32 0
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %sext = sext i1 %x to i32
+  %mul = mul nuw nsw i32 %sext, %y
+  ret i32 %mul
+}
+
+define i32 @test_mul_sext_bool_commuted(i1 %x, i32 %y) {
+; CHECK-LABEL: @test_mul_sext_bool_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[Y:%.*]], -2
+; CHECK-NEXT:    [[YY_NEG1:%.*]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[YY_NEG1]], i32 0
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %yy = xor i32 %y, 1
+  %sext = sext i1 %x to i32
+  %mul = mul i32 %yy, %sext
+  ret i32 %mul
+}
+
+define i32 @test_mul_sext_nonbool(i2 %x, i32 %y) {
+; CHECK-LABEL: @test_mul_sext_nonbool(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i2 [[X:%.*]] to i32
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SEXT]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %sext = sext i2 %x to i32
+  %mul = mul i32 %sext, %y
+  ret i32 %mul
+}
+
+define i32 @test_mul_sext_multiuse(i1 %x, i32 %y) {
+; CHECK-LABEL: @test_mul_sext_multiuse(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[X:%.*]] to i32
+; CHECK-NEXT:    tail call void @use(i32 [[SEXT]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SEXT]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %sext = sext i1 %x to i32
+  tail call void @use(i32 %sext)
+  %mul = mul i32 %sext, %y
+  ret i32 %mul
 }

@@ -33,6 +33,8 @@ namespace X86Disassembler {
 #define twoBitsFromOffset6(val) (((val) >> 6) & 0x3)
 #define threeBitsFromOffset0(val) ((val) & 0x7)
 #define threeBitsFromOffset3(val) (((val) >> 3) & 0x7)
+#define fourBitsFromOffset0(val) ((val) & 0xf)
+#define fourBitsFromOffset3(val) (((val) >> 3) & 0xf)
 #define fiveBitsFromOffset0(val) ((val) & 0x1f)
 #define invertedBitFromOffset2(val) (((~(val)) >> 2) & 0x1)
 #define invertedBitFromOffset3(val) (((~(val)) >> 3) & 0x1)
@@ -97,6 +99,7 @@ namespace X86Disassembler {
 #define vvvvFromEVEX3of4(evex) invertedFourBitsFromOffset3(evex)
 #define x2FromEVEX3of4(evex) invertedBitFromOffset2(evex)
 #define ppFromEVEX3of4(evex) twoBitsFromOffset0(evex)
+#define oszcFromEVEX3of4(evex) fourBitsFromOffset3(evex)
 #define zFromEVEX4of4(evex) bitFromOffset7(evex)
 #define l2FromEVEX4of4(evex) bitFromOffset6(evex)
 #define lFromEVEX4of4(evex) bitFromOffset5(evex)
@@ -104,6 +107,7 @@ namespace X86Disassembler {
 #define v2FromEVEX4of4(evex) invertedBitFromOffset3(evex)
 #define aaaFromEVEX4of4(evex) threeBitsFromOffset0(evex)
 #define nfFromEVEX4of4(evex) bitFromOffset2(evex)
+#define scFromEVEX4of4(evex) fourBitsFromOffset0(evex)
 
 // These enums represent Intel registers for use by the decoder.
 #define REGS_8BIT                                                              \
@@ -755,10 +759,10 @@ struct InternalInstruction {
   // The displacement, used for memory operands
   int32_t displacement;
 
-  // Immediates.  There can be two in some cases
+  // Immediates.  There can be three in some cases
   uint8_t numImmediatesConsumed;
   uint8_t numImmediatesTranslated;
-  uint64_t immediates[2];
+  uint64_t immediates[3];
 
   // A register or immediate operand encoded into the opcode
   Reg opcodeRegister;

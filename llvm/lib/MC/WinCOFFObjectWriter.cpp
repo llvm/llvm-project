@@ -266,7 +266,7 @@ WinCOFFWriter::WinCOFFWriter(WinCOFFObjectWriter &OWriter,
   // limited range for the immediate offset (+/- 1 MB); create extra offset
   // label symbols with regular intervals to allow referencing a
   // non-temporary symbol that is close enough.
-  UseOffsetLabels = Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64;
+  UseOffsetLabels = COFF::isAnyArm64(Header.Machine);
 }
 
 COFFSymbol *WinCOFFWriter::createSymbol(StringRef Name) {
@@ -954,7 +954,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
        Reloc.Data.Type == COFF::IMAGE_REL_I386_REL32) ||
       (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT &&
        Reloc.Data.Type == COFF::IMAGE_REL_ARM_REL32) ||
-      (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64 &&
+      (COFF::isAnyArm64(Header.Machine) &&
        Reloc.Data.Type == COFF::IMAGE_REL_ARM64_REL32))
     FixedValue += 4;
 

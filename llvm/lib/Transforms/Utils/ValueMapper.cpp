@@ -146,7 +146,7 @@ public:
   Value *mapValue(const Value *V);
   void remapInstruction(Instruction *I);
   void remapFunction(Function &F);
-  void remapDPValue(DbgRecord &DPV);
+  void remapDbgRecord(DbgRecord &DVR);
 
   Constant *mapConstant(const Constant *C) {
     return cast_or_null<Constant>(mapValue(C));
@@ -537,13 +537,13 @@ Value *Mapper::mapValue(const Value *V) {
   return getVM()[V] = ConstantPointerNull::get(cast<PointerType>(NewTy));
 }
 
-void Mapper::remapDPValue(DbgRecord &DR) {
-  if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-    DPL->setLabel(cast<DILabel>(mapMetadata(DPL->getLabel())));
+void Mapper::remapDbgRecord(DbgRecord &DR) {
+  if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+    DLR->setLabel(cast<DILabel>(mapMetadata(DLR->getLabel())));
     return;
   }
 
-  DPValue &V = cast<DPValue>(DR);
+  DbgVariableRecord &V = cast<DbgVariableRecord>(DR);
   // Remap variables and DILocations.
   auto *MappedVar = mapMetadata(V.getVariable());
   auto *MappedDILoc = mapMetadata(V.getDebugLoc());
@@ -1066,8 +1066,8 @@ void Mapper::remapFunction(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       remapInstruction(&I);
-      for (DbgRecord &DR : I.getDbgValueRange())
-        remapDPValue(DR);
+      for (DbgRecord &DR : I.getDbgRecordRange())
+        remapDbgRecord(DR);
     }
   }
 }
@@ -1233,14 +1233,14 @@ void ValueMapper::remapInstruction(Instruction &I) {
   FlushingMapper(pImpl)->remapInstruction(&I);
 }
 
-void ValueMapper::remapDPValue(Module *M, DPValue &V) {
-  FlushingMapper(pImpl)->remapDPValue(V);
+void ValueMapper::remapDbgVariableRecord(Module *M, DbgVariableRecord &V) {
+  FlushingMapper(pImpl)->remapDbgRecord(V);
 }
 
-void ValueMapper::remapDPValueRange(
+void ValueMapper::remapDbgVariableRecordRange(
     Module *M, iterator_range<DbgRecord::self_iterator> Range) {
-  for (DPValue &DPV : DPValue::filter(Range)) {
-    remapDPValue(M, DPV);
+  for (DbgVariableRecord &DVR : filterDbgVars(Range)) {
+    remapDbgVariableRecord(M, DVR);
   }
 }
 

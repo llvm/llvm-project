@@ -92,6 +92,7 @@ public:
     LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
     HasStrictFP = true;
     HasIbm128 = true;
+    HasUnalignedAccess = true;
   }
 
   // Set the language option for altivec based on our value.

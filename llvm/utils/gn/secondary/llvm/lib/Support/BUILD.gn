@@ -3,6 +3,7 @@ static_library("Support") {
   deps = [
     "BLAKE3",
     "//llvm/include/llvm/Config:config",
+    "//llvm/include/llvm/Support:write_vcsrevision",
     "//llvm/lib/Demangle",
     "//llvm/utils/gn/build/libs/pthread",
     "//llvm/utils/gn/build/libs/terminfo",
@@ -89,6 +90,8 @@ static_library("Support") {
     "GlobPattern.cpp",
     "GraphWriter.cpp",
     "Hashing.cpp",
+    "HexagonAttributeParser.cpp",
+    "HexagonAttributes.cpp",
     "InitLLVM.cpp",
     "InstructionCost.cpp",
     "IntEqClasses.cpp",

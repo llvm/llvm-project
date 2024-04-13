@@ -1219,6 +1219,15 @@ ASTNodeImporter::VisitConstantArrayType(const ConstantArrayType *T) {
 }
 
 ExpectedType
+ASTNodeImporter::VisitArrayParameterType(const ArrayParameterType *T) {
+  ExpectedType ToArrayTypeOrErr = VisitConstantArrayType(T);
+  if (!ToArrayTypeOrErr)
+    return ToArrayTypeOrErr.takeError();
+
+  return Importer.getToContext().getArrayParameterType(*ToArrayTypeOrErr);
+}
+
+ExpectedType
 ASTNodeImporter::VisitIncompleteArrayType(const IncompleteArrayType *T) {
   ExpectedType ToElementTypeOrErr = import(T->getElementType());
   if (!ToElementTypeOrErr)
@@ -1525,6 +1534,28 @@ ExpectedType ASTNodeImporter::VisitAttributedType(const AttributedType *T) {
 
   return Importer.getToContext().getAttributedType(T->getAttrKind(),
       *ToModifiedTypeOrErr, *ToEquivalentTypeOrErr);
+}
+
+ExpectedType
+ASTNodeImporter::VisitCountAttributedType(const CountAttributedType *T) {
+  ExpectedType ToWrappedTypeOrErr = import(T->desugar());
+  if (!ToWrappedTypeOrErr)
+    return ToWrappedTypeOrErr.takeError();
+
+  Error Err = Error::success();
+  Expr *CountExpr = importChecked(Err, T->getCountExpr());
+
+  SmallVector<TypeCoupledDeclRefInfo, 1> CoupledDecls;
+  for (auto TI : T->dependent_decls()) {
+    Expected<ValueDecl *> ToDeclOrErr = import(TI.getDecl());
+    if (!ToDeclOrErr)
+      return ToDeclOrErr.takeError();
+    CoupledDecls.emplace_back(*ToDeclOrErr, TI.isDeref());
+  }
+
+  return Importer.getToContext().getCountAttributedType(
+      *ToWrappedTypeOrErr, CountExpr, T->isCountInBytes(), T->isOrNull(),
+      ArrayRef(CoupledDecls.data(), CoupledDecls.size()));
 }
 
 ExpectedType ASTNodeImporter::VisitTemplateTypeParmType(
@@ -4510,6 +4541,10 @@ ExpectedDecl ASTNodeImporter::VisitVarDecl(VarDecl *D) {
   ToVar->setQualifierInfo(ToQualifierLoc);
   ToVar->setAccess(D->getAccess());
   ToVar->setLexicalDeclContext(LexicalDC);
+  if (D->isInlineSpecified())
+    ToVar->setInlineSpecified();
+  if (D->isInline())
+    ToVar->setImplicitlyInline();
 
   if (FoundByLookup) {
     auto *Recent = const_cast<VarDecl *>(FoundByLookup->getMostRecentDecl());
@@ -5917,7 +5952,8 @@ ASTNodeImporter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
           ToD, D, Importer.getToContext(),
           Importer.getToContext().getTranslationUnitDecl(), *LocationOrErr,
           D->getDepth(), D->getPosition(), D->isParameterPack(),
-          (*NameOrErr).getAsIdentifierInfo(), *TemplateParamsOrErr))
+          (*NameOrErr).getAsIdentifierInfo(), D->wasDeclaredWithTypename(),
+          *TemplateParamsOrErr))
     return ToD;
 
   if (D->hasDefaultArgument()) {
@@ -8348,8 +8384,8 @@ ASTNodeImporter::VisitCXXPseudoDestructorExpr(CXXPseudoDestructorExpr *E) {
     return std::move(Err);
 
   PseudoDestructorTypeStorage Storage;
-  if (IdentifierInfo *FromII = E->getDestroyedTypeIdentifier()) {
-    IdentifierInfo *ToII = Importer.Import(FromII);
+  if (const IdentifierInfo *FromII = E->getDestroyedTypeIdentifier()) {
+    const IdentifierInfo *ToII = Importer.Import(FromII);
     ExpectedSLoc ToDestroyedTypeLocOrErr = import(E->getDestroyedTypeLoc());
     if (!ToDestroyedTypeLocOrErr)
       return ToDestroyedTypeLocOrErr.takeError();
@@ -9305,16 +9341,6 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
                   From->args_size());
     break;
   }
-  case attr::CountedBy: {
-    AI.cloneAttr(FromAttr);
-    const auto *CBA = cast<CountedByAttr>(FromAttr);
-    Expected<SourceRange> SR = Import(CBA->getCountedByFieldLoc()).get();
-    if (!SR)
-      return SR.takeError();
-    AI.castAttrAs<CountedByAttr>()->setCountedByFieldLoc(SR.get());
-    break;
-  }
-
   default: {
     // The default branch works for attributes that have no arguments to import.
     // FIXME: Handle every attribute type that has arguments of type to import
@@ -10169,7 +10195,7 @@ Expected<Selector> ASTImporter::Import(Selector FromSel) {
   if (FromSel.isNull())
     return Selector{};
 
-  SmallVector<IdentifierInfo *, 4> Idents;
+  SmallVector<const IdentifierInfo *, 4> Idents;
   Idents.push_back(Import(FromSel.getIdentifierInfoForSlot(0)));
   for (unsigned I = 1, N = FromSel.getNumArgs(); I < N; ++I)
     Idents.push_back(Import(FromSel.getIdentifierInfoForSlot(I)));

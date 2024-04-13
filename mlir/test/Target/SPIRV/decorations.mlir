@@ -87,3 +87,13 @@ spirv.func @fadd_decorations(%arg: f32) -> f32 "None" {
   spirv.ReturnValue %0 : f32
 }
 }
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Kernel], []> {
+spirv.func @fmul_decorations(%arg: f32) -> f32 "None" {
+  // CHECK: spirv.FMul %{{.*}}, %{{.*}} {no_contraction}
+  %0 = spirv.FMul %arg, %arg {no_contraction} : f32
+  spirv.ReturnValue %0 : f32
+}
+}

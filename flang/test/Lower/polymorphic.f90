@@ -1,4 +1,4 @@
-! RUN: bbc --use-desc-for-alloc=false -polymorphic-type -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Tests various aspect of the lowering of polymorphic entities.
 

@@ -67,3 +67,29 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.fixed_point.sqrt
 )
+
+add_entrypoint_object(
+  exphk
+  HDRS
+    exphk.h
+  SRCS
+    exphk.cpp
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.fixed_point.fx_rep
+    libc.src.__support.CPP.bit
+)
+
+add_entrypoint_object(
+  expk
+  HDRS
+    expk.h
+  SRCS
+    expk.cpp
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.fixed_point.fx_rep
+    libc.src.__support.CPP.bit
+)

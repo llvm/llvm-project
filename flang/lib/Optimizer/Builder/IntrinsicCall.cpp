@@ -177,6 +177,8 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"c_funloc", &I::genCFunLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"c_loc", &I::genCLoc, {{{"x", asBox}}}, /*isElemental=*/false},
+    {"c_ptr_eq", &I::genCPtrCompare<mlir::arith::CmpIPredicate::eq>},
+    {"c_ptr_ne", &I::genCPtrCompare<mlir::arith::CmpIPredicate::ne>},
     {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
     {"cmplx",
@@ -567,6 +569,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asAddr, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/false},
+    {"sizeof",
+     &I::genSizeOf,
+     {{{"a", asBox}}},
+     /*isElemental=*/false},
     {"sleep", &I::genSleep, {{{"seconds", asValue}}}, /*isElemental=*/false},
     {"spacing", &I::genSpacing},
     {"spread",
@@ -718,7 +724,7 @@ mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp funcOp = builder.getNamedFunction(libFuncName);
 
   if (!funcOp) {
-    funcOp = builder.addNamedFunction(loc, libFuncName, libFuncType);
+    funcOp = builder.createFunction(loc, libFuncName, libFuncType);
     // C-interoperability rules apply to these library functions.
     funcOp->setAttr(fir::getSymbolAttrName(),
                     mlir::StringAttr::get(builder.getContext(), libFuncName));
@@ -918,6 +924,8 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
 constexpr auto FuncTypeReal16Real16 = genFuncType<Ty::Real<16>, Ty::Real<16>>;
 constexpr auto FuncTypeReal16Real16Real16 =
     genFuncType<Ty::Real<16>, Ty::Real<16>, Ty::Real<16>>;
+constexpr auto FuncTypeReal16Real16Real16Real16 =
+    genFuncType<Ty::Real<16>, Ty::Real<16>, Ty::Real<16>, Ty::Real<16>>;
 constexpr auto FuncTypeReal16Integer4Real16 =
     genFuncType<Ty::Real<16>, Ty::Integer<4>, Ty::Real<16>>;
 constexpr auto FuncTypeInteger4Real16 =
@@ -1139,6 +1147,8 @@ static constexpr MathOperation mathOperations[] = {
     {"fma", "llvm.fma.f64",
      genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
      genMathOp<mlir::math::FmaOp>},
+    {"fma", RTNAME_STRING(FmaF128), FuncTypeReal16Real16Real16Real16,
+     genLibF128Call},
     {"gamma", "tgammaf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
     {"gamma", "tgamma", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
     {"gamma", RTNAME_STRING(TgammaF128), FuncTypeReal16Real16, genLibF128Call},
@@ -1884,8 +1894,8 @@ mlir::func::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
     // Create local context to emit code into the newly created function
     // This new function is not linked to a source file location, only
     // its calls will be.
-    auto localBuilder =
-        std::make_unique<fir::FirOpBuilder>(function, builder.getKindMap());
+    auto localBuilder = std::make_unique<fir::FirOpBuilder>(
+        function, builder.getKindMap(), builder.getMLIRSymbolTable());
     localBuilder->setFastMathFlags(builder.getFastMathFlags());
     localBuilder->setInsertionPointToStart(&function.front());
     // Location of code inside wrapper of the wrapper is independent from
@@ -2789,6 +2799,23 @@ IntrinsicLibrary::genCLoc(mlir::Type resultType,
   return genCLocOrCFunLoc(builder, loc, resultType, args);
 }
 
+// C_PTR_EQ and C_PTR_NE
+template <mlir::arith::CmpIPredicate pred>
+fir::ExtendedValue
+IntrinsicLibrary::genCPtrCompare(mlir::Type resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value cPtr1 = fir::getBase(args[0]);
+  mlir::Value cPtrVal1 =
+      fir::factory::genCPtrOrCFunptrValue(builder, loc, cPtr1);
+  mlir::Value cPtr2 = fir::getBase(args[1]);
+  mlir::Value cPtrVal2 =
+      fir::factory::genCPtrOrCFunptrValue(builder, loc, cPtr2);
+  mlir::Value cmp =
+      builder.create<mlir::arith::CmpIOp>(loc, pred, cPtrVal1, cPtrVal2);
+  return builder.createConvert(loc, resultType, cmp);
+}
+
 // CEILING
 mlir::Value IntrinsicLibrary::genCeiling(mlir::Type resultType,
                                          llvm::ArrayRef<mlir::Value> args) {
@@ -3594,7 +3621,7 @@ mlir::Value IntrinsicLibrary::genIbclr(mlir::Type resultType,
   assert(args.size() == 2);
   mlir::Value pos = builder.createConvert(loc, resultType, args[1]);
   mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
-  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, resultType);
   auto mask = builder.create<mlir::arith::ShLIOp>(loc, one, pos);
   auto res = builder.create<mlir::arith::XOrIOp>(loc, ones, mask);
   return builder.create<mlir::arith::AndIOp>(loc, args[0], res);
@@ -3618,7 +3645,7 @@ mlir::Value IntrinsicLibrary::genIbits(mlir::Type resultType,
       loc, resultType, resultType.cast<mlir::IntegerType>().getWidth());
   auto shiftCount = builder.create<mlir::arith::SubIOp>(loc, bitSize, len);
   mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
-  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, resultType);
   auto mask = builder.create<mlir::arith::ShRUIOp>(loc, ones, shiftCount);
   auto res1 = builder.create<mlir::arith::ShRSIOp>(loc, args[0], pos);
   auto res2 = builder.create<mlir::arith::AndIOp>(loc, res1, mask);
@@ -3778,7 +3805,8 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
   assert(args.size() == 1);
   mlir::Value realVal = args[0];
   mlir::FloatType realType = realVal.getType().dyn_cast<mlir::FloatType>();
-  mlir::Type intType = builder.getIntegerType(realType.getWidth());
+  const unsigned intWidth = realType.getWidth();
+  mlir::Type intType = builder.getIntegerType(intWidth);
   mlir::Value intVal =
       builder.create<mlir::arith::BitcastOp>(loc, intType, realVal);
   llvm::StringRef tableName = RTNAME_STRING(IeeeClassTable);
@@ -3789,41 +3817,25 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
   auto createIntegerConstant = [&](uint64_t k) {
     return builder.createIntegerConstant(loc, intType, k);
   };
+  auto createIntegerConstantAPI = [&](const llvm::APInt &apInt) {
+    return builder.create<mlir::arith::ConstantOp>(
+        loc, intType, builder.getIntegerAttr(intType, apInt));
+  };
   auto getMasksAndShifts = [&](uint64_t totalSize, uint64_t exponentSize,
                                uint64_t significandSize,
                                bool hasExplicitBit = false) {
     assert(1 + exponentSize + significandSize == totalSize &&
            "invalid floating point fields");
-    constexpr uint64_t one = 1; // type promotion
     uint64_t lowSignificandSize = significandSize - hasExplicitBit - 1;
     signShift = createIntegerConstant(totalSize - 1 - hasExplicitBit - 4);
     highSignificandShift = createIntegerConstant(lowSignificandSize);
-    if (totalSize <= 64) {
-      exponentMask =
-          createIntegerConstant(((one << exponentSize) - 1) << significandSize);
-      lowSignificandMask =
-          createIntegerConstant((one << lowSignificandSize) - 1);
-      return;
-    }
-    // Mlir can't directly build large constants. Build them in steps.
-    // The folded end result is the same.
-    mlir::Value sixtyfour = createIntegerConstant(64);
-    exponentMask = createIntegerConstant(((one << exponentSize) - 1)
-                                         << (significandSize - 64));
-    exponentMask =
-        builder.create<mlir::arith::ShLIOp>(loc, exponentMask, sixtyfour);
-    if (lowSignificandSize <= 64) {
-      lowSignificandMask =
-          createIntegerConstant((one << lowSignificandSize) - 1);
-      return;
-    }
-    mlir::Value ones = createIntegerConstant(0xffffffffffffffff);
-    lowSignificandMask =
-        createIntegerConstant((one << (lowSignificandSize - 64)) - 1);
-    lowSignificandMask =
-        builder.create<mlir::arith::ShLIOp>(loc, lowSignificandMask, sixtyfour);
-    lowSignificandMask =
-        builder.create<mlir::arith::OrIOp>(loc, lowSignificandMask, ones);
+    llvm::APInt exponentMaskAPI =
+        llvm::APInt::getBitsSet(intWidth, /*lo=*/significandSize,
+                                /*hi=*/significandSize + exponentSize);
+    exponentMask = createIntegerConstantAPI(exponentMaskAPI);
+    llvm::APInt lowSignificandMaskAPI =
+        llvm::APInt::getLowBitsSet(intWidth, lowSignificandSize);
+    lowSignificandMask = createIntegerConstantAPI(lowSignificandMaskAPI);
   };
   switch (realType.getWidth()) {
   case 16:
@@ -3856,7 +3868,7 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
   int pos = 3 + highSignificandSize;
   mlir::Value index = builder.create<mlir::arith::AndIOp>(
       loc, builder.create<mlir::arith::ShRUIOp>(loc, intVal, signShift),
-      createIntegerConstant(1 << pos));
+      createIntegerConstant(1ULL << pos));
 
   // [e] exponent != 0
   mlir::Value exponent =
@@ -3868,7 +3880,7 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
           loc,
           builder.create<mlir::arith::CmpIOp>(
               loc, mlir::arith::CmpIPredicate::ne, exponent, zero),
-          createIntegerConstant(1 << --pos), zero));
+          createIntegerConstant(1ULL << --pos), zero));
 
   // [m] exponent == 1..1 (max exponent)
   index = builder.create<mlir::arith::OrIOp>(
@@ -3877,7 +3889,7 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
           loc,
           builder.create<mlir::arith::CmpIOp>(
               loc, mlir::arith::CmpIPredicate::eq, exponent, exponentMask),
-          createIntegerConstant(1 << --pos), zero));
+          createIntegerConstant(1ULL << --pos), zero));
 
   // [l] low-order significand != 0
   index = builder.create<mlir::arith::OrIOp>(
@@ -3889,7 +3901,7 @@ mlir::Value IntrinsicLibrary::genIeeeClass(mlir::Type resultType,
               builder.create<mlir::arith::AndIOp>(loc, intVal,
                                                   lowSignificandMask),
               zero),
-          createIntegerConstant(1 << --pos), zero));
+          createIntegerConstant(1ULL << --pos), zero));
 
   // [h] high-order significand (1 or 2 bits)
   index = builder.create<mlir::arith::OrIOp>(
@@ -4291,7 +4303,7 @@ mlir::Value IntrinsicLibrary::genIeeeLogb(mlir::Type resultType,
   // X is zero -- result is -infinity
   builder.setInsertionPointToStart(&outerIfOp.getThenRegion().front());
   genRaiseExcept(_FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO);
-  mlir::Value ones = builder.createIntegerConstant(loc, intType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, intType);
   mlir::Value result = builder.create<mlir::arith::ShLIOp>(
       loc, ones,
       builder.createIntegerConstant(loc, intType,
@@ -4910,7 +4922,7 @@ mlir::Value IntrinsicLibrary::genIshftc(mlir::Type resultType,
   mlir::Value size =
       args[2] ? builder.createConvert(loc, resultType, args[2]) : bitSize;
   mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
-  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, resultType);
   mlir::Value absShift = genAbs(resultType, {shift});
   auto elseSize = builder.create<mlir::arith::SubIOp>(loc, size, absShift);
   auto shiftIsZero = builder.create<mlir::arith::CmpIOp>(
@@ -5046,7 +5058,7 @@ mlir::Value IntrinsicLibrary::genMask(mlir::Type resultType,
   assert(args.size() == 2);
 
   mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
-  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, resultType);
   mlir::Value bitSize = builder.createIntegerConstant(
       loc, resultType, resultType.getIntOrFloatBitWidth());
   mlir::Value bitsToSet = builder.createConvert(loc, resultType, args[0]);
@@ -5179,7 +5191,7 @@ mlir::Value IntrinsicLibrary::genMergeBits(mlir::Type resultType,
   mlir::Value i = builder.createConvert(loc, resultType, args[0]);
   mlir::Value j = builder.createConvert(loc, resultType, args[1]);
   mlir::Value mask = builder.createConvert(loc, resultType, args[2]);
-  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, resultType);
 
   // MERGE_BITS(I, J, MASK) = IOR(IAND(I, MASK), IAND(J, NOT(MASK)))
   mlir::Value notMask = builder.create<mlir::arith::XOrIOp>(loc, mask, ones);
@@ -5204,6 +5216,8 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
 // MODULO
 mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
+  // TODO: we'd better generate a runtime call here, when runtime error
+  // checking is needed (to detect 0 divisor) or when precise math is requested.
   assert(args.size() == 2);
   // No floored modulo op in LLVM/MLIR yet. TODO: add one to MLIR.
   // In the meantime, use a simple inlined implementation based on truncated
@@ -5229,10 +5243,17 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
     return builder.create<mlir::arith::SelectOp>(loc, mustAddP, remPlusP,
                                                  remainder);
   }
-  // Real case
-  if (resultType == mlir::FloatType::getF128(builder.getContext()))
 
-    TODO(loc, "REAL(KIND=16): in MODULO intrinsic");
+  auto fastMathFlags = builder.getFastMathFlags();
+  // F128 arith::RemFOp may be lowered to a runtime call that may be unsupported
+  // on the target, so generate a call to Fortran Runtime's ModuloReal16.
+  if (resultType == mlir::FloatType::getF128(builder.getContext()) ||
+      (fastMathFlags & mlir::arith::FastMathFlags::ninf) ==
+          mlir::arith::FastMathFlags::none)
+    return builder.createConvert(
+        loc, resultType,
+        fir::runtime::genModulo(builder, loc, args[0], args[1]));
+
   auto remainder = builder.create<mlir::arith::RemFOp>(loc, args[0], args[1]);
   mlir::Value zero = builder.createRealZeroConstant(loc, remainder.getType());
   auto remainderIsNotZero = builder.create<mlir::arith::CmpFOp>(
@@ -5317,7 +5338,7 @@ void IntrinsicLibrary::genMvbits(llvm::ArrayRef<fir::ExtendedValue> args) {
   auto to = builder.create<fir::LoadOp>(loc, resultType, toAddr);
   mlir::Value topos = builder.createConvert(loc, resultType, unbox(args[4]));
   mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
-  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value ones = builder.createAllOnesInteger(loc, resultType);
   mlir::Value bitSize = builder.createIntegerConstant(
       loc, resultType, resultType.cast<mlir::IntegerType>().getWidth());
   auto shiftCount = builder.create<mlir::arith::SubIOp>(loc, bitSize, len);
@@ -5396,7 +5417,7 @@ IntrinsicLibrary::genNorm2(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genNot(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 1);
-  mlir::Value allOnes = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value allOnes = builder.createAllOnesInteger(loc, resultType);
   return builder.create<mlir::arith::XOrIOp>(loc, args[0], allOnes);
 }
 
@@ -5839,7 +5860,7 @@ mlir::Value IntrinsicLibrary::genShiftA(mlir::Type resultType,
   // the shift amount is equal to the element size.
   // So if SHIFT is equal to the bit width then it is handled as a special case.
   mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
-  mlir::Value minusOne = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value minusOne = builder.createMinusOneInteger(loc, resultType);
   mlir::Value valueIsNeg = builder.create<mlir::arith::CmpIOp>(
       loc, mlir::arith::CmpIPredicate::slt, args[0], zero);
   mlir::Value specialRes =
@@ -5944,6 +5965,20 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
         builder.create<fir::ResultOp>(loc, size);
       })
       .getResults()[0];
+}
+
+// SIZEOF
+fir::ExtendedValue
+IntrinsicLibrary::genSizeOf(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value box = fir::getBase(args[0]);
+  mlir::Value eleSize = builder.create<fir::BoxEleSizeOp>(loc, resultType, box);
+  if (!fir::isArray(args[0]))
+    return eleSize;
+  mlir::Value arraySize = builder.createConvert(
+      loc, resultType, fir::runtime::genSize(builder, loc, box));
+  return builder.create<mlir::arith::MulIOp>(loc, eleSize, arraySize);
 }
 
 // TAND
