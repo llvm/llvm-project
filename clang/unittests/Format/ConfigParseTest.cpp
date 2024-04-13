@@ -396,16 +396,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BreakBeforeBinaryOperators: true", BreakBeforeBinaryOperators,
               FormatStyle::BOS_All);
 
-  Style.BreakStreamOperator = FormatStyle::BCOS_BetweenStrings;
-  CHECK_PARSE("BreakStreamOperator: BetweenNewlineStrings", BreakStreamOperator,
-              FormatStyle::BCOS_BetweenNewlineStrings);
-  CHECK_PARSE("BreakStreamOperator: Normal", BreakStreamOperator,
-              FormatStyle::BCOS_Normal);
-  CHECK_PARSE("BreakStreamOperator: BetweenStrings", BreakStreamOperator,
-              FormatStyle::BCOS_BetweenStrings);
-  CHECK_PARSE("BreakStreamOperator: Always", BreakStreamOperator,
-              FormatStyle::BCOS_Always);
-
   Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   CHECK_PARSE("BreakConstructorInitializers: BeforeComma",
               BreakConstructorInitializers, FormatStyle::BCIS_BeforeComma);
@@ -429,6 +419,16 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   // For backward compatibility:
   CHECK_PARSE("BreakBeforeInheritanceComma: true", BreakInheritanceList,
               FormatStyle::BILS_BeforeComma);
+
+  Style.BreakStreamOperator = FormatStyle::BCOS_BetweenStrings;
+  CHECK_PARSE("BreakStreamOperator: BetweenNewlineStrings", BreakStreamOperator,
+              FormatStyle::BCOS_BetweenNewlineStrings);
+  CHECK_PARSE("BreakStreamOperator: Normal", BreakStreamOperator,
+              FormatStyle::BCOS_Normal);
+  CHECK_PARSE("BreakStreamOperator: BetweenStrings", BreakStreamOperator,
+              FormatStyle::BCOS_BetweenStrings);
+  CHECK_PARSE("BreakStreamOperator: Always", BreakStreamOperator,
+              FormatStyle::BCOS_Always);
 
   Style.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
   CHECK_PARSE("PackConstructorInitializers: Never", PackConstructorInitializers,

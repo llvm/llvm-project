@@ -244,18 +244,6 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBeforeInlineASMColonStyle> {
 };
 
 template <>
-struct ScalarEnumerationTraits<FormatStyle::BreakStreamOperatorStyle> {
-  static void enumeration(IO &IO,
-                          FormatStyle::BreakStreamOperatorStyle &Value) {
-    IO.enumCase(Value, "Normal", FormatStyle::BCOS_Normal);
-    IO.enumCase(Value, "BetweenStrings", FormatStyle::BCOS_BetweenStrings);
-    IO.enumCase(Value, "BetweenNewlineStrings",
-                FormatStyle::BCOS_BetweenNewlineStrings);
-    IO.enumCase(Value, "Always", FormatStyle::BCOS_Always);
-  }
-};
-
-template <>
 struct ScalarEnumerationTraits<FormatStyle::BreakConstructorInitializersStyle> {
   static void
   enumeration(IO &IO, FormatStyle::BreakConstructorInitializersStyle &Value) {
@@ -273,6 +261,18 @@ struct ScalarEnumerationTraits<FormatStyle::BreakInheritanceListStyle> {
     IO.enumCase(Value, "BeforeComma", FormatStyle::BILS_BeforeComma);
     IO.enumCase(Value, "AfterColon", FormatStyle::BILS_AfterColon);
     IO.enumCase(Value, "AfterComma", FormatStyle::BILS_AfterComma);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakStreamOperatorStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BreakStreamOperatorStyle &Value) {
+    IO.enumCase(Value, "Normal", FormatStyle::BCOS_Normal);
+    IO.enumCase(Value, "BetweenStrings", FormatStyle::BCOS_BetweenStrings);
+    IO.enumCase(Value, "BetweenNewlineStrings",
+                FormatStyle::BCOS_BetweenNewlineStrings);
+    IO.enumCase(Value, "Always", FormatStyle::BCOS_Always);
   }
 };
 
@@ -1479,10 +1479,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
   LLVMStyle.BreakBeforeTernaryOperators = true;
-  LLVMStyle.BreakStreamOperator = FormatStyle::BCOS_BetweenStrings;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakFunctionDefinitionParameters = false;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
+  LLVMStyle.BreakStreamOperator = FormatStyle::BCOS_BetweenStrings;
   LLVMStyle.BreakStringLiterals = true;
   LLVMStyle.BreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
   LLVMStyle.ColumnLimit = 80;

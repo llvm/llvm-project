@@ -2193,41 +2193,6 @@ struct FormatStyle {
   /// \version 3.7
   bool BreakBeforeTernaryOperators;
 
-  /// Different ways to Break Between Stream Operators.
-  enum BreakStreamOperatorStyle : int8_t {
-    /// Break using ColumnLimit rules.
-    /// \code
-    ///   os << "aaaaa" << "bbbbb" << "\n";
-    /// \endcode
-    BCOS_Normal,
-    /// Break between adjacent strings.
-    /// \code
-    ///   os << "aaaaa"
-    ///      << "bbbbb"
-    ///      << "\n";
-    /// \endcode
-    BCOS_BetweenStrings,
-    /// Break between adjacent strings that end with \n.
-    /// \code
-    ///   os << "aaaaa\n"
-    ///      << "bbbbb" << "ccccc\n"
-    ///      << "\n";
-    /// \endcode
-    BCOS_BetweenNewlineStrings,
-    /// Break between adjacent stream operations.
-    /// \code
-    ///   os << "aaaaa\n"
-    ///      << "bbbbb"
-    ///      << "ccccc\n"
-    ///      << "\n";
-    /// \endcode
-    BCOS_Always
-  };
-
-  /// Break Between Stream Operators.
-  /// \version 19
-  BreakStreamOperatorStyle BreakStreamOperator;
-
   /// Different ways to break initializers.
   enum BreakConstructorInitializersStyle : int8_t {
     /// Break constructor initializers before the colon and after the commas.
@@ -2382,6 +2347,41 @@ struct FormatStyle {
   /// The inheritance list style to use.
   /// \version 7
   BreakInheritanceListStyle BreakInheritanceList;
+
+  /// Different ways to Break Between Stream Operators.
+  enum BreakStreamOperatorStyle : int8_t {
+    /// Break using ColumnLimit rules.
+    /// \code
+    ///   os << "aaaaa" << "bbbbb" << "\n";
+    /// \endcode
+    BCOS_Normal,
+    /// Break between adjacent strings.
+    /// \code
+    ///   os << "aaaaa"
+    ///      << "bbbbb"
+    ///      << "\n";
+    /// \endcode
+    BCOS_BetweenStrings,
+    /// Break between adjacent strings that end with \n.
+    /// \code
+    ///   os << "aaaaa\n"
+    ///      << "bbbbb" << "ccccc\n"
+    ///      << "\n";
+    /// \endcode
+    BCOS_BetweenNewlineStrings,
+    /// Break between adjacent stream operations.
+    /// \code
+    ///   os << "aaaaa\n"
+    ///      << "bbbbb"
+    ///      << "ccccc\n"
+    ///      << "\n";
+    /// \endcode
+    BCOS_Always
+  };
+
+  /// Break Between Stream Operators.
+  /// \version 19
+  BreakStreamOperatorStyle BreakStreamOperator;
 
   /// The template declaration breaking style to use.
   /// \version 19
