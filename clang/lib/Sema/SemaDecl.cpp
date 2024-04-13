@@ -45,6 +45,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
@@ -10595,12 +10596,12 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
     // We do not add HD attributes to specializations here because
     // they may have different constexpr-ness compared to their
-    // templates and, after maybeAddCUDAHostDeviceAttrs() is applied,
+    // templates and, after maybeAddHostDeviceAttrs() is applied,
     // may end up with different effective targets. Instead, a
     // specialization inherits its target attributes from its template
     // in the CheckFunctionTemplateSpecialization() call below.
     if (getLangOpts().CUDA && !isFunctionTemplateSpecialization)
-      maybeAddCUDAHostDeviceAttrs(NewFD, Previous);
+      CUDA().maybeAddHostDeviceAttrs(NewFD, Previous);
 
     // Handle explict specializations of function templates
     // and friend function declarations with an explicit
@@ -10898,12 +10899,12 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   if (getLangOpts().CUDA) {
     IdentifierInfo *II = NewFD->getIdentifier();
-    if (II && II->isStr(getCudaConfigureFuncName()) &&
+    if (II && II->isStr(CUDA().getConfigureFuncName()) &&
         !NewFD->isInvalidDecl() &&
         NewFD->getDeclContext()->getRedeclContext()->isTranslationUnit()) {
       if (!R->castAs<FunctionType>()->getReturnType()->isScalarType())
         Diag(NewFD->getLocation(), diag::err_config_scalar_return)
-            << getCudaConfigureFuncName();
+            << CUDA().getConfigureFuncName();
       Context.setcudaConfigureCallDecl(NewFD);
     }
 
@@ -12398,7 +12399,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     }
 
     if (!Redeclaration && LangOpts.CUDA)
-      checkCUDATargetOverload(NewFD, Previous);
+      CUDA().checkTargetOverload(NewFD, Previous);
   }
 
   // Check if the function definition uses any AArch64 SME features without
@@ -14415,7 +14416,7 @@ StmtResult Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   if (var->isInvalidDecl()) return;
 
-  MaybeAddCUDAConstantAttr(var);
+  CUDA().MaybeAddConstantAttr(var);
 
   if (getLangOpts().OpenCL) {
     // OpenCL v2.0 s6.12.5 - Every block variable declaration must have an
@@ -14829,7 +14830,7 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   // variables whether they are local or not. CUDA also allows
   // constant initializers for __constant__ and __device__ variables.
   if (getLangOpts().CUDA)
-    checkAllowedCUDAInitializer(VD);
+    CUDA().checkAllowedInitializer(VD);
 
   // Grab the dllimport or dllexport attribute off of the VarDecl.
   const InheritableAttr *DLLAttr = getDLLAttr(VD);
@@ -20666,7 +20667,7 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
     // when compiling for host, device and global functions are never emitted.
     // (Technically, we do emit a host-side stub for global functions, but this
     // doesn't count for our purposes here.)
-    CUDAFunctionTarget T = IdentifyCUDATarget(FD);
+    CUDAFunctionTarget T = CUDA().IdentifyTarget(FD);
     if (LangOpts.CUDAIsDevice && T == CUDAFunctionTarget::Host)
       return FunctionEmissionStatus::CUDADiscarded;
     if (!LangOpts.CUDAIsDevice &&
@@ -20691,5 +20692,5 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
   // for host, only HD functions actually called from the host get marked as
   // known-emitted.
   return LangOpts.CUDA && !LangOpts.CUDAIsDevice &&
-         IdentifyCUDATarget(Callee) == CUDAFunctionTarget::Global;
+         CUDA().IdentifyTarget(Callee) == CUDAFunctionTarget::Global;
 }

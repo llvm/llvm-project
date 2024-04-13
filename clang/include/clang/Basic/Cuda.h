@@ -126,6 +126,14 @@ enum class CudaArch {
   HIPDefault = CudaArch::GFX906,
 };
 
+enum class CUDAFunctionTarget {
+  Device,
+  Global,
+  Host,
+  HostDevice,
+  InvalidTarget
+};
+
 static inline bool IsNVIDIAGpuArch(CudaArch A) {
   return A >= CudaArch::SM_20 && A < CudaArch::GFX600;
 }
