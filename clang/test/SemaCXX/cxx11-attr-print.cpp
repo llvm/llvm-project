@@ -24,10 +24,10 @@ int d [[deprecated("warning")]];
 // CHECK: __attribute__((deprecated("warning", "fixit")));
 int e __attribute__((deprecated("warning", "fixit")));
 
-// CHECK: int cxx11_alignas alignas(4);
+// CHECK: alignas(4) int cxx11_alignas;
 alignas(4) int cxx11_alignas;
 
-// CHECK: int c11_alignas _Alignas(int);
+// CHECK: _Alignas(int) int c11_alignas;
 _Alignas(int) int c11_alignas;
 
 // CHECK: int foo() __attribute__((const));
@@ -66,7 +66,7 @@ void f8 (void *, const char *, ...) __attribute__ ((format (printf, 2, 3)));
 // CHECK: int n alignas(4
 // CHECK: int p alignas(int
 // CHECK: __attribute__((pure)) static int f()
-// CHECK: static int g() {{\[}}[gnu::pure]]
+// CHECK: {{\[}}[gnu::pure]] static int g()
 template <typename T> struct S {
   __attribute__((aligned(4))) int m;
   alignas(4) int n;
@@ -82,7 +82,7 @@ template <typename T> struct S {
 // CHECK: int m __attribute__((aligned(4
 // CHECK: int n alignas(4
 // CHECK: __attribute__((pure)) static int f()
-// CHECK: static int g() {{\[}}[gnu::pure]]
+// CHECK: {{\[}}[gnu::pure]] static int g()
 template struct S<int>;
 
 // CHECK: using Small2 {{\[}}[gnu::mode(byte)]] = int;

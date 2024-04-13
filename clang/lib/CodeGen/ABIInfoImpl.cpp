@@ -257,7 +257,7 @@ bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
   bool WasArray = false;
   if (AllowArrays)
     while (const ConstantArrayType *AT = Context.getAsConstantArrayType(FT)) {
-      if (AT->getSize() == 0)
+      if (AT->isZeroSize())
         return true;
       FT = AT->getElementType();
       // The [[no_unique_address]] special case below does not apply to
@@ -352,7 +352,7 @@ const Type *CodeGen::isSingleElementStruct(QualType T, ASTContext &Context) {
 
     // Treat single element arrays as the element.
     while (const ConstantArrayType *AT = Context.getAsConstantArrayType(FT)) {
-      if (AT->getSize().getZExtValue() != 1)
+      if (AT->getZExtSize() != 1)
         break;
       FT = AT->getElementType();
     }

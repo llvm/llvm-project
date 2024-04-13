@@ -87,9 +87,7 @@ define void @splat_zero_v8f16(ptr %x) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <8 x half> poison, half 0.0, i32 0
-  %b = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> zeroinitializer
-  store <8 x half> %b, ptr %x
+  store <8 x half> splat (half 0.0), ptr %x
   ret void
 }
 
@@ -100,9 +98,7 @@ define void @splat_zero_v4f32(ptr %x) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <4 x float> poison, float 0.0, i32 0
-  %b = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> zeroinitializer
-  store <4 x float> %b, ptr %x
+  store <4 x float> splat (float 0.0), ptr %x
   ret void
 }
 
@@ -113,9 +109,7 @@ define void @splat_zero_v2f64(ptr %x) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <2 x double> poison, double 0.0, i32 0
-  %b = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> zeroinitializer
-  store <2 x double> %b, ptr %x
+  store <2 x double> splat (double 0.0), ptr %x
   ret void
 }
 
@@ -126,9 +120,7 @@ define void @splat_zero_16f16(ptr %x) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <16 x half> poison, half 0.0, i32 0
-  %b = shufflevector <16 x half> %a, <16 x half> poison, <16 x i32> zeroinitializer
-  store <16 x half> %b, ptr %x
+  store <16 x half> splat (half 0.0), ptr %x
   ret void
 }
 
@@ -139,9 +131,7 @@ define void @splat_zero_v8f32(ptr %x) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <8 x float> poison, float 0.0, i32 0
-  %b = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> zeroinitializer
-  store <8 x float> %b, ptr %x
+  store <8 x float> splat (float 0.0), ptr %x
   ret void
 }
 
@@ -152,9 +142,7 @@ define void @splat_zero_v4f64(ptr %x) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <4 x double> poison, double 0.0, i32 0
-  %b = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> zeroinitializer
-  store <4 x double> %b, ptr %x
+  store <4 x double> splat (double 0.0), ptr %x
   ret void
 }
 
@@ -166,9 +154,7 @@ define void @splat_negzero_v8f16(ptr %x) {
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <8 x half> poison, half -0.0, i32 0
-  %b = shufflevector <8 x half> %a, <8 x half> poison, <8 x i32> zeroinitializer
-  store <8 x half> %b, ptr %x
+  store <8 x half> splat (half -0.0), ptr %x
   ret void
 }
 
@@ -180,9 +166,7 @@ define void @splat_negzero_v4f32(ptr %x) {
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <4 x float> poison, float -0.0, i32 0
-  %b = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> zeroinitializer
-  store <4 x float> %b, ptr %x
+  store <4 x float> splat (float -0.0), ptr %x
   ret void
 }
 
@@ -204,9 +188,7 @@ define void @splat_negzero_v2f64(ptr %x) {
 ; CHECK-RV64-NEXT:    vmv.v.x v8, a1
 ; CHECK-RV64-NEXT:    vse64.v v8, (a0)
 ; CHECK-RV64-NEXT:    ret
-  %a = insertelement <2 x double> poison, double -0.0, i32 0
-  %b = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> zeroinitializer
-  store <2 x double> %b, ptr %x
+  store <2 x double> splat (double -0.0), ptr %x
   ret void
 }
 
@@ -218,9 +200,7 @@ define void @splat_negzero_16f16(ptr %x) {
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <16 x half> poison, half -0.0, i32 0
-  %b = shufflevector <16 x half> %a, <16 x half> poison, <16 x i32> zeroinitializer
-  store <16 x half> %b, ptr %x
+  store <16 x half> splat (half -0.0), ptr %x
   ret void
 }
 
@@ -232,9 +212,7 @@ define void @splat_negzero_v8f32(ptr %x) {
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = insertelement <8 x float> poison, float -0.0, i32 0
-  %b = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> zeroinitializer
-  store <8 x float> %b, ptr %x
+  store <8 x float> splat (float -0.0), ptr %x
   ret void
 }
 
@@ -256,8 +234,6 @@ define void @splat_negzero_v4f64(ptr %x) {
 ; CHECK-RV64-NEXT:    vmv.v.x v8, a1
 ; CHECK-RV64-NEXT:    vse64.v v8, (a0)
 ; CHECK-RV64-NEXT:    ret
-  %a = insertelement <4 x double> poison, double -0.0, i32 0
-  %b = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> zeroinitializer
-  store <4 x double> %b, ptr %x
+  store <4 x double> splat (double -0.0), ptr %x
   ret void
 }

@@ -742,7 +742,7 @@ define <3 x i32> @add3_i96(<3 x i32> %0, <3 x i32> %1) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <3 x i32> [[TMP1]], i64 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP11]], 32
-; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i32
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc nuw nsw i64 [[TMP15]] to i32
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP14]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <3 x i32> poison, i32 [[ADD_NARROWED]], i64 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP11]] to i32

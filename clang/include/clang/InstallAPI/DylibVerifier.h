@@ -10,6 +10,7 @@
 #define LLVM_CLANG_INSTALLAPI_DYLIBVERIFIER_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/InstallAPI/MachO.h"
 
 namespace clang {
@@ -24,6 +25,19 @@ enum class VerificationMode {
   Pedantic,
 };
 
+using LibAttrs = llvm::StringMap<ArchitectureSet>;
+using ReexportedInterfaces = llvm::SmallVector<llvm::MachO::InterfaceFile, 8>;
+
+// Pointers to information about a zippered declaration used for
+// querying and reporting violations against different
+// declarations that all map to the same symbol.
+struct ZipperedDeclSource {
+  const FrontendAttrs *FA;
+  clang::SourceManager *SrcMgr;
+  Target T;
+};
+using ZipperedDeclSources = std::vector<ZipperedDeclSource>;
+
 /// Service responsible to tracking state of verification across the
 /// lifetime of InstallAPI.
 /// As declarations are collected during AST traversal, they are
@@ -31,6 +45,7 @@ enum class VerificationMode {
 class DylibVerifier : llvm::MachO::RecordVisitor {
 private:
   struct SymbolContext;
+  struct DWARFContext;
 
 public:
   enum class Result { NoVerify, Ignore, Valid, Invalid };
@@ -54,7 +69,7 @@ public:
     DiagnosticsEngine *Diag = nullptr;
 
     // Handle diagnostics reporting for target level violations.
-    void emitDiag(llvm::function_ref<void()> Report);
+    void emitDiag(llvm::function_ref<void()> Report, RecordLoc *Loc = nullptr);
 
     VerifierContext() = default;
     VerifierContext(DiagnosticsEngine *Diag) : Diag(Diag) {}
@@ -62,9 +77,11 @@ public:
 
   DylibVerifier() = default;
 
-  DylibVerifier(llvm::MachO::Records &&Dylib, DiagnosticsEngine *Diag,
-                VerificationMode Mode, bool Demangle)
-      : Dylib(std::move(Dylib)), Mode(Mode), Demangle(Demangle),
+  DylibVerifier(llvm::MachO::Records &&Dylib, ReexportedInterfaces &&Reexports,
+                DiagnosticsEngine *Diag, VerificationMode Mode, bool Zippered,
+                bool Demangle, StringRef DSYMPath)
+      : Dylib(std::move(Dylib)), Reexports(std::move(Reexports)), Mode(Mode),
+        Zippered(Zippered), Demangle(Demangle), DSYMPath(DSYMPath),
         Exports(std::make_unique<SymbolSet>()), Ctx(VerifierContext{Diag}) {}
 
   Result verify(GlobalRecord *R, const FrontendAttrs *FA);
@@ -74,6 +91,14 @@ public:
 
   // Scan through dylib slices and report any remaining missing exports.
   Result verifyRemainingSymbols();
+
+  /// Compare and report the attributes represented as
+  /// load commands in the dylib to the attributes provided via options.
+  bool verifyBinaryAttrs(const ArrayRef<Target> ProvidedTargets,
+                         const BinaryAttrs &ProvidedBA,
+                         const LibAttrs &ProvidedReexports,
+                         const LibAttrs &ProvidedClients,
+                         const LibAttrs &ProvidedRPaths, const FileType &FT);
 
   /// Initialize target for verification.
   void setTarget(const Target &T);
@@ -85,11 +110,7 @@ public:
   Result getState() const { return Ctx.FrontendState; }
 
   /// Set different source managers to the same diagnostics engine.
-  void setSourceManager(SourceManager &SourceMgr) const {
-    if (!Ctx.Diag)
-      return;
-    Ctx.Diag->setSourceManager(&SourceMgr);
-  }
+  void setSourceManager(IntrusiveRefCntPtr<SourceManager> SourceMgr);
 
 private:
   /// Determine whether to compare declaration to symbol in binary.
@@ -102,6 +123,19 @@ private:
   // expected to result in a symbol mismatch.
   bool shouldIgnoreObsolete(const Record *R, SymbolContext &SymCtx,
                             const Record *DR);
+
+  /// Check if declaration is exported from a reexported library. These
+  /// symbols should be omitted from the text-api file.
+  bool shouldIgnoreReexport(const Record *R, SymbolContext &SymCtx) const;
+
+  // Ignore and omit unavailable symbols in zippered libraries.
+  bool shouldIgnoreZipperedAvailability(const Record *R, SymbolContext &SymCtx);
+
+  // Check if an internal declaration in zippered library has an
+  // external declaration for a different platform. This results
+  // in the symbol being in a "seperate" platform slice.
+  bool shouldIgnoreInternalZipperedSymbol(const Record *R,
+                                          const SymbolContext &SymCtx) const;
 
   /// Compare the visibility declarations to the linkage of symbol found in
   /// dylib.
@@ -143,20 +177,45 @@ private:
   std::string getAnnotatedName(const Record *R, SymbolContext &SymCtx,
                                bool ValidSourceLoc = true);
 
+  /// Extract source location for symbol implementations.
+  /// As this is a relatively expensive operation, it is only used
+  /// when there is a violation to report and there is not a known declaration
+  /// in the interface.
+  void accumulateSrcLocForDylibSymbols();
+
   // Symbols in dylib.
   llvm::MachO::Records Dylib;
+
+  // Reexported interfaces apart of the library.
+  ReexportedInterfaces Reexports;
 
   // Controls what class of violations to report.
   VerificationMode Mode = VerificationMode::Invalid;
 
+  // Library is zippered.
+  bool Zippered = false;
+
   // Attempt to demangle when reporting violations.
   bool Demangle = false;
+
+  // File path to DSYM file.
+  StringRef DSYMPath;
 
   // Valid symbols in final text file.
   std::unique_ptr<SymbolSet> Exports = std::make_unique<SymbolSet>();
 
+  // Unavailable or obsoleted declarations for a zippered library.
+  // These are cross referenced against symbols in the dylib.
+  llvm::StringMap<ZipperedDeclSources> DeferredZipperedSymbols;
+
   // Track current state of verification while traversing AST.
   VerifierContext Ctx;
+
+  // Track DWARF provided source location for dylibs.
+  DWARFContext *DWARFCtx = nullptr;
+
+  // Source manager for each unique compiler instance.
+  llvm::SmallVector<IntrusiveRefCntPtr<SourceManager>, 12> SourceManagers;
 };
 
 } // namespace installapi
