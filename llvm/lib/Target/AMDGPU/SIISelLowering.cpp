@@ -4083,14 +4083,14 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
     if (UseReducedTable) {
       // Truncate to the low 32-bits.
       SDValue BitTable = DAG.getConstant(
-        AMDGPU::FltRoundToHWConversionTable & 0xffff, SL, MVT::i32);
+          AMDGPU::FltRoundToHWConversionTable & 0xffff, SL, MVT::i32);
 
       SDValue Two = DAG.getConstant(2, SL, MVT::i32);
       SDValue RoundModeTimesNumBits =
-        DAG.getNode(ISD::SHL, SL, MVT::i32, NewMode, Two);
+          DAG.getNode(ISD::SHL, SL, MVT::i32, NewMode, Two);
 
       SDValue TableValue =
-        DAG.getNode(ISD::SRL, SL, MVT::i32, BitTable, RoundModeTimesNumBits);
+          DAG.getNode(ISD::SRL, SL, MVT::i32, BitTable, RoundModeTimesNumBits);
       NewMode = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, TableValue);
 
       // TODO: SimplifyDemandedBits on the setreg source here can likely reduce
@@ -4100,11 +4100,11 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
       // table_index = is_standard ? value : (value - 4)
       // MODE.fp_round = (bit_table >> table_index) & 0xf
       SDValue BitTable =
-        DAG.getConstant(AMDGPU::FltRoundToHWConversionTable, SL, MVT::i64);
+          DAG.getConstant(AMDGPU::FltRoundToHWConversionTable, SL, MVT::i64);
 
       SDValue Four = DAG.getConstant(4, SL, MVT::i32);
       SDValue IsStandardValue =
-        DAG.getSetCC(SL, MVT::i1, NewMode, Four, ISD::SETULT);
+          DAG.getSetCC(SL, MVT::i1, NewMode, Four, ISD::SETULT);
       SDValue OffsetEnum = DAG.getNode(ISD::SUB, SL, MVT::i32, NewMode, Four);
 
       SDValue IndexVal = DAG.getNode(ISD::SELECT, SL, MVT::i32, IsStandardValue,
@@ -4112,10 +4112,10 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
 
       SDValue Two = DAG.getConstant(2, SL, MVT::i32);
       SDValue RoundModeTimesNumBits =
-        DAG.getNode(ISD::SHL, SL, MVT::i32, IndexVal, Two);
+          DAG.getNode(ISD::SHL, SL, MVT::i32, IndexVal, Two);
 
       SDValue TableValue =
-        DAG.getNode(ISD::SRL, SL, MVT::i64, BitTable, RoundModeTimesNumBits);
+          DAG.getNode(ISD::SRL, SL, MVT::i64, BitTable, RoundModeTimesNumBits);
       SDValue TruncTable = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, TableValue);
 
       // No need to mask out the high bits since the setreg will ignore them
