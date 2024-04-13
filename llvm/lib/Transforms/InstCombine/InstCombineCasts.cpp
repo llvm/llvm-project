@@ -1189,10 +1189,9 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
     // TODO: Subsume this into EvaluateInDifferentType.
 
     Value *A = CSrc->getOperand(0);
-    // If TRUNC has nuw flag, then convert directly to final type.
+    // If trunc has nuw flag, then convert directly to final type.
     if (CSrc->hasNoUnsignedWrap()) {
-      CastInst *I =
-          CastInst::CreateIntegerCast(A, DestTy, /* isSigned */ false);
+      CastInst *I = CastInst::CreateIntegerCast(A, DestTy, /*isSigned=*/false);
       if (auto *ZExt = dyn_cast<ZExtInst>(I))
         ZExt->setNonNeg();
       if (auto *Trunc = dyn_cast<TruncInst>(I))
@@ -1479,9 +1478,9 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
       return CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
 
     // If trunc has nsw flag, then convert directly to final type.
-    auto *CSrc = static_cast<TruncInst *>(Src);
+    auto *CSrc = cast<TruncInst>(Src);
     if (CSrc->hasNoSignedWrap()) {
-      CastInst *I = CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
+      CastInst *I = CastInst::CreateIntegerCast(X, DestTy, /*isSigned=*/true);
       if (auto *Trunc = dyn_cast<TruncInst>(I))
         Trunc->setHasNoSignedWrap(true);
       return I;
