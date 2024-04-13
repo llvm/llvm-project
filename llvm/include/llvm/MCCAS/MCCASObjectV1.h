@@ -480,6 +480,7 @@ struct DwarfSectionsCache {
   MCSection *Str;
   MCSection *Abbrev;
   MCSection *StrOffsets;
+  MCSection *Loc;
   MCSection *Loclists;
   MCSection *Ranges;
 };
@@ -604,6 +605,10 @@ private:
   // If a DWARF String Offsets section exists, create a DebugStrOffsetsRef CAS
   // object for the section.
   Error createDebugStrOffsetsSection();
+
+  // If a DWARF Loc section exists, create a DebugLocRef CAS object for the
+  // section.
+  Error createDebugLocSection();
 
   // If a DWARF Loclists section exists, create a DebugLoclistsRef CAS
   // object for the section.
