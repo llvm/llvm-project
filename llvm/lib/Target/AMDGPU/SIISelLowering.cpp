@@ -4067,14 +4067,14 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
   // Index a table of 4-bit entries mapping from the C FLT_ROUNDS values to the
   // hardware MODE.fp_round values.
   if (auto *ConstMode = dyn_cast<ConstantSDNode>(NewMode)) {
-      uint32_t ClampedVal = std::min(
-          static_cast<uint32_t>(ConstMode->getZExtValue()),
-          static_cast<uint32_t>(AMDGPU::TowardZeroF32_TowardNegativeF64));
-      NewMode = DAG.getConstant(
-          AMDGPU::decodeFltRoundToHWConversionTable(ClampedVal), SL, MVT::i32);
+    uint32_t ClampedVal = std::min(
+        static_cast<uint32_t>(ConstMode->getZExtValue()),
+        static_cast<uint32_t>(AMDGPU::TowardZeroF32_TowardNegativeF64));
+    NewMode = DAG.getConstant(
+        AMDGPU::decodeFltRoundToHWConversionTable(ClampedVal), SL, MVT::i32);
   } else {
     SDValue BitTable =
-      DAG.getConstant(AMDGPU::FltRoundToHWConversionTable, SL, MVT::i64);
+        DAG.getConstant(AMDGPU::FltRoundToHWConversionTable, SL, MVT::i64);
 
     // The supported standard values are 0-3. The extended values start at 8. We
     // need to offset by 4 if the value is in the extended range.
@@ -4085,17 +4085,17 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
 
     SDValue Four = DAG.getConstant(4, SL, MVT::i32);
     SDValue IsStandardValue =
-      DAG.getSetCC(SL, MVT::i1, NewMode, Four, ISD::SETULT);
+        DAG.getSetCC(SL, MVT::i1, NewMode, Four, ISD::SETULT);
     SDValue OffsetEnum = DAG.getNode(ISD::SUB, SL, MVT::i32, NewMode, Four);
     SDValue IndexVal = DAG.getNode(ISD::SELECT, SL, MVT::i32, IsStandardValue,
                                    NewMode, OffsetEnum);
 
     SDValue Two = DAG.getConstant(2, SL, MVT::i32);
     SDValue RoundModeTimesNumBits =
-      DAG.getNode(ISD::SHL, SL, MVT::i32, IndexVal, Two);
+        DAG.getNode(ISD::SHL, SL, MVT::i32, IndexVal, Two);
 
     SDValue TableValue =
-      DAG.getNode(ISD::SRL, SL, MVT::i64, BitTable, RoundModeTimesNumBits);
+        DAG.getNode(ISD::SRL, SL, MVT::i64, BitTable, RoundModeTimesNumBits);
     SDValue TruncTable = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, TableValue);
 
     // No need to mask out the high bits since the setreg will ignore them
@@ -4106,7 +4106,7 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
     // earlier and keep more operations scalar, but that interferes with
     // combining the source.
     SDValue ReadFirstLaneID =
-      DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, SL, MVT::i32);
+        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, SL, MVT::i32);
     NewMode = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32,
                           ReadFirstLaneID, NewMode);
   }
