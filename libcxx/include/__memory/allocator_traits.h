@@ -407,18 +407,6 @@ struct __is_cpp17_copy_insertable<
                    __has_construct<_Alloc, typename _Alloc::value_type*, const typename _Alloc::value_type&>::value > >
     : __is_cpp17_move_insertable<_Alloc> {};
 
-// ASan choices
-#ifndef _LIBCPP_HAS_NO_ASAN
-#  define _LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS 1
-#endif
-
-#ifdef _LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS
-template <class _Alloc>
-struct __asan_annotate_container_with_allocator : true_type {};
-template <class _Tp>
-struct __asan_annotate_container_with_allocator<allocator<_Tp> > : true_type {};
-#endif
-
 #undef _LIBCPP_ALLOCATOR_TRAITS_HAS_XXX
 
 _LIBCPP_END_NAMESPACE_STD

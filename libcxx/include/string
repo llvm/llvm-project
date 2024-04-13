@@ -574,6 +574,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__algorithm/remove_if.h>
 #include <__assert>
 #include <__config>
+#include <__debug_utils/sanitizers.h>
 #include <__format/enable_insertable.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
@@ -1909,10 +1910,7 @@ private:
     (void)__old_mid;
     (void)__new_mid;
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
-    const void* __begin = data();
-    const void* __end   = data() + capacity() + 1;
-    if (__asan_annotate_container_with_allocator<allocator_type>::value && !__libcpp_is_constant_evaluated())
-      __sanitizer_annotate_contiguous_container(__begin, __end, __old_mid, __new_mid);
+    std::__annotate_contiguous_container<_Allocator>(data(), data() + capacity() + 1, __old_mid, __new_mid);
 #endif
   }
 
