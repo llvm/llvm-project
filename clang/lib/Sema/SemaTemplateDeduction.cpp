@@ -831,7 +831,7 @@ private:
     if (IsPartiallyExpanded)
       PackElements += NumPartialPackArgs;
     else if (IsExpanded)
-      PackElements += *FixedNumExpansions;
+      PackElements += FixedNumExpansions.value_or(1);
 
     for (auto &Pack : Packs) {
       if (Info.PendingDeducedPacks.size() > Pack.Index)
