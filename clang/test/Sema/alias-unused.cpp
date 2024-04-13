@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -Wunused -x c -verify %s
-// RUN: %clang_cc1 -triple %itanium_abi_triple -Wunused -verify=expected,cxx %s
+// RUN: %clang_cc1 -triple x86_64-linux -Wunused -x c -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux -Wunused -verify=expected,cxx %s
 
 #ifdef __cplusplus
 extern "C" {
