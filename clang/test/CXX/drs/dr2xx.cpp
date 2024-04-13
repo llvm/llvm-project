@@ -1029,7 +1029,7 @@ namespace cwg275 { // cwg275: no
 namespace cwg277 { // cwg277: 3.1
   typedef int *intp;
   int *p = intp();
-  static_assert(__enable_constant_folding(intp() ? -1 : 1), "");
+  static_assert(__enable_constant_folding(!intp()), "");
 }
 
 namespace cwg280 { // cwg280: 2.9
