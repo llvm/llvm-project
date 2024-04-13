@@ -13,12 +13,14 @@ namespace Vector {
     return VI4 { n * 3, n + 4, n - 5, n / 6 };
   }
   constexpr auto v1 = f(10);
+  static_assert(__builtin_vectorelements(v1) == (16 / sizeof(int)), "");
 
   typedef double __attribute__((vector_size(32))) VD4;
   constexpr VD4 g(int n) {
     return (VD4) { n / 2.0, n + 1.5, n - 5.4, n * 0.9 };
   }
   constexpr auto v2 = g(4);
+  static_assert(__builtin_vectorelements(v2) == (32 / sizeof(double)), "");
 }
 
 /// FIXME: We need to support BitCasts between vector types.
