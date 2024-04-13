@@ -757,12 +757,9 @@ static LogicalResult areAllLLVMTypes(Operation *op, ValueRange operands,
 static LogicalResult
 isAsyncWithOneDependency(ConversionPatternRewriter &rewriter,
                          gpu::AsyncOpInterface op) {
-  if (op.getAsyncDependencies().size() != 1)
+  if (op.getAsyncToken() && op.getAsyncDependencies().size() != 1)
     return rewriter.notifyMatchFailure(
         op, "Can only convert with exactly one async dependency.");
-
-  if (!op.getAsyncToken())
-    return rewriter.notifyMatchFailure(op, "Can convert only async version.");
 
   return success();
 }
