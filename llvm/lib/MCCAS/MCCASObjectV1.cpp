@@ -765,6 +765,20 @@ static Error createGenericDebugSection(MCCASBuilder &MB,
   return Error::success();
 }
 
+Expected<DebugStringOffsetsSectionRef>
+DebugStringOffsetsSectionRef::create(MCCASBuilder &MB,
+                                     ArrayRef<cas::ObjectRef> Fragments) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+
+  if (auto E = createGenericDebugSection<DebugStringOffsetsSectionRef>(
+          MB, Fragments, B->Data, B->Refs))
+    return E;
+
+  return get(B->build());
+}
+
 Expected<uint64_t> SectionRef::materialize(MCCASReader &Reader,
                                            raw_ostream *Stream) const {
   // Start a new section for relocations.
@@ -1216,6 +1230,14 @@ static Expected<uint64_t> materializeGenericDebugSection(MCCASReader &Reader,
   Reader.OS << SectionContents;
 
   return Size;
+}
+
+Expected<uint64_t>
+DebugStringOffsetsSectionRef::materialize(MCCASReader &Reader,
+                                          raw_ostream *Stream) const {
+  StringRef Remaining = getData();
+  return materializeGenericDebugSection<DebugStringOffsetsSectionRef>(
+      Reader, Remaining, *this);
 }
 
 Expected<AtomRef> AtomRef::create(MCCASBuilder &MB,
@@ -2373,6 +2395,23 @@ MCCASBuilder::createGenericDebugRef(MCSection *Section) {
   return *DebugCASRef;
 }
 
+Error MCCASBuilder::createDebugStrOffsetsSection() {
+
+  auto MaybeDebugStringOffsetsRef =
+      createGenericDebugRef<DebugStrOffsetsRef>(DwarfSections.StrOffsets);
+  if (!MaybeDebugStringOffsetsRef)
+    return Error::success();
+
+  if (!*MaybeDebugStringOffsetsRef)
+    return MaybeDebugStringOffsetsRef->takeError();
+
+  startSection(DwarfSections.StrOffsets);
+  addNode(**MaybeDebugStringOffsetsRef);
+  if (auto E = createPaddingRef(DwarfSections.StrOffsets))
+    return E;
+  return finalizeSection<DebugStringOffsetsSectionRef>();
+}
+
 static ArrayRef<char> getFragmentContents(const MCFragment &Fragment) {
   switch (Fragment.getKind()) {
 #define MCFRAGMENT_NODE_REF(MCFragmentName, MCEnumName, MCEnumIdentifier)      \
@@ -2500,6 +2539,13 @@ Error MCCASBuilder::buildFragments() {
     // Handle Debug Str sections separately.
     if (&Sec == DwarfSections.Str) {
       if (auto E = createDebugStrSection())
+        return E;
+      continue;
+    }
+
+    // Handle Debug Str Offsets sections separately.
+    if (&Sec == DwarfSections.StrOffsets) {
+      if (auto E = createDebugStrOffsetsSection())
         return E;
       continue;
     }
@@ -2663,7 +2709,7 @@ void MCCASBuilder::startSection(const MCSection *Sec) {
       // For the Dwarf Sections, just append the relocations to the
       // SectionRelocs. No Atoms are considered for this section.
       if (R.F && Sec != DwarfSections.Line && Sec != DwarfSections.DebugInfo &&
-          Sec != DwarfSections.Abbrev)
+          Sec != DwarfSections.Abbrev && Sec != DwarfSections.StrOffsets)
         RelMap[R.F].push_back(R.MRE);
       else
         // If the fragment is nullptr, it should a section with only relocation
@@ -2866,6 +2912,8 @@ Expected<uint64_t> MCCASReader::materializeGroup(cas::ObjectRef ID) {
     return F->materialize(*this);
   if (auto F = DebugStringSectionRef::Cast(*Node))
     return F->materialize(*this);
+  if (auto F = DebugStringOffsetsSectionRef::Cast(*Node))
+    return F->materialize(*this);
   if (auto F = CStringRef::Cast(*Node)) {
     auto Size = F->materialize(OS);
     if (!Size)
@@ -2930,6 +2978,8 @@ Expected<uint64_t> MCCASReader::materializeSection(cas::ObjectRef ID,
     Stream->write_zeros(1);
     return *Size + 1;
   }
+  if (auto F = DebugStrOffsetsRef::Cast(*Node))
+    return F->materialize(*Stream);
   if (auto F = AddendsRef::Cast(*Node))
     // AddendsRef is already handled when materializing Atoms, skip.
     return 0;

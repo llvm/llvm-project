@@ -599,6 +599,10 @@ private:
   // string in the section.
   Error createDebugStrSection();
 
+  // If a DWARF String Offsets section exists, create a DebugStrOffsetsRef CAS
+  // object for the section.
+  Error createDebugStrOffsetsSection();
+
   /// If there is any padding between one section and the next, create a
   /// PaddingRef CAS object to represent the bytes of Padding between the two
   /// sections.
