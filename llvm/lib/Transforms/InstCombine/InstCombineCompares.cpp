@@ -8086,12 +8086,8 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       case FCmpInst::FCMP_OGE:
       case FCmpInst::FCMP_OLE: {
         BinaryOperator *SubI = cast<BinaryOperator>(LHSI);
-        if (!computeKnownFPClass(SubI->getOperand(0), SubI->getFastMathFlags(),
-                                 fcInf, LHSI, 0)
-                 .isKnownNeverInfinity() &&
-            !computeKnownFPClass(SubI->getOperand(1), SubI->getFastMathFlags(),
-                                 fcInf, LHSI, 0)
-                 .isKnownNeverInfinity())
+        if (!isKnownNeverInfOrNaN(SubI->getOperand(0), 0, SQ) &&
+            !isKnownNeverInfOrNaN(SubI->getOperand(1), 0, SQ))
           break;
       }
         LLVM_FALLTHROUGH;
