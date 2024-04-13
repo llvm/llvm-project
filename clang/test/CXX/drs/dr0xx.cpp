@@ -902,7 +902,7 @@ namespace cwg54 { // cwg54: 2.8
 
 namespace cwg55 { // cwg55: yes
   enum E { e = 5 };
-  int test[(e + 1 == 6) ? 1 : -1];
+  static_assert(e + 1 == 6, "");
 }
 
 namespace cwg56 { // cwg56: yes

@@ -222,7 +222,7 @@ namespace cwg407 { // cwg407: 3.8
 }
 
 namespace cwg408 { // cwg408: 3.4
-  template<int N> void g() { int arr[N != 1 ? 1 : -1]; }
+  template<int N> void g() { static_assert(N != 1, ""); }
   template<> void g<2>() { }
 
   template<typename T> struct S {
@@ -244,7 +244,7 @@ namespace cwg408 { // cwg408: 3.4
   };
   template<typename T> int R<T>::arr[1];
   template<typename T> void R<T>::f() {
-    int arr[sizeof(arr) != sizeof(int) ? 1 : -1];
+    static_assert(sizeof(arr) != sizeof(int), "");
   }
   template<> int R<int>::arr[2];
   template void R<int>::f();
@@ -1279,20 +1279,20 @@ namespace cwg482 { // cwg482: 3.5
 
 namespace cwg483 { // cwg483: yes
   namespace climits {
-    int check1[__SCHAR_MAX__ >= 127 ? 1 : -1];
-    int check2[__SHRT_MAX__ >= 32767 ? 1 : -1];
-    int check3[__INT_MAX__ >= 32767 ? 1 : -1];
-    int check4[__LONG_MAX__ >= 2147483647 ? 1 : -1];
-    int check5[__LONG_LONG_MAX__ >= 9223372036854775807 ? 1 : -1];
+    static_assert(__SCHAR_MAX__ >= 127, "");
+    static_assert(__SHRT_MAX__ >= 32767, "");
+    static_assert(__INT_MAX__ >= 32767, "");
+    static_assert(__LONG_MAX__ >= 2147483647, "");
+    int check[(__LONG_LONG_MAX__ >= 9223372036854775807) ? 1 : -1]
     // cxx98-error@-1 {{'long long' is a C++11 extension}}
     // cxx98-error@-2 0-1{{'long long' is a C++11 extension}}
   }
   namespace cstdint {
-    int check1[__PTRDIFF_WIDTH__ >= 16 ? 1 : -1];
-    int check2[__SIG_ATOMIC_WIDTH__ >= 8 ? 1 : -1];
-    int check3[__SIZE_WIDTH__ >= 16 ? 1 : -1];
-    int check4[__WCHAR_WIDTH__ >= 8 ? 1 : -1];
-    int check5[__WINT_WIDTH__ >= 16 ? 1 : -1];
+    static_assert(__PTRDIFF_WIDTH__ >= 16, "");
+    static_assert(__SIG_ATOMIC_WIDTH__ >= 8, "");
+    static_assert(__SIZE_WIDTH__ >= 16, "");
+    static_assert(__WCHAR_WIDTH__ >= 8, "");
+    static_assert(__WINT_WIDTH__ >= 16, "");
   }
 }
 
@@ -1487,13 +1487,13 @@ namespace cwg495 { // cwg495: 3.5
 namespace cwg496 { // cwg496: sup 2094
   struct A { int n; };
   struct B { volatile int n; };
-  int check1[ __is_trivially_copyable(const int) ? 1 : -1];
+  static_assert(__is_trivially_copyable(const int), "");
   // This checks the cwg2094 behavior, not cwg496
-  int check2[ __is_trivially_copyable(volatile int) ? 1 : -1];
-  int check3[ __is_trivially_constructible(A, const A&) ? 1 : -1];
-  int check4[ __is_trivially_constructible(B, const B&) ? 1 : -1];
-  int check5[ __is_trivially_assignable(A, const A&) ? 1 : -1];
-  int check6[ __is_trivially_assignable(B, const B&) ? 1 : -1];
+  static_assert(__is_trivially_copyable(volatile int), "");
+  static_assert(__is_trivially_constructible(A, const A&), "");
+  static_assert(__is_trivially_constructible(B, const B&), "");
+  static_assert(__is_trivially_assignable(A, const A&), "");
+  static_assert(__is_trivially_assignable(B, const B&), "");
 }
 
 namespace cwg497 { // cwg497: sup 253
