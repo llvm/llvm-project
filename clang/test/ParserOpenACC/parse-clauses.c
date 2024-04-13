@@ -283,11 +283,9 @@ void IfClause() {
 
   int i, j;
 
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented, clause ignored}}
 #pragma acc serial if(i > j)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'if' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial if(1+5>3), seq
   for(;;){}

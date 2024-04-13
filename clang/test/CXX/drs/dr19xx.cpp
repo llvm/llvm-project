@@ -34,7 +34,7 @@ namespace dr1902 { // dr1902: 3.7
 #endif
 }
 
-namespace dr1903 {
+namespace dr1903 { // dr1903: 2.7
   namespace A {
     struct a {};
     int a;
