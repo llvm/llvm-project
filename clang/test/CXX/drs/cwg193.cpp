@@ -12,22 +12,35 @@
 #define NOTHROW noexcept(true)
 #endif
 
-namespace dr462 { // dr462: 2.7
-
+namespace cwg193 { // cwg193: 2.7
 struct A {
   ~A() NOTHROW {}
 };
 
-extern void full_expr_fence() NOTHROW;
+struct B {
+  ~B() NOTHROW {}
+};
 
-void f() {
-  const A& r = (3, A());
-  full_expr_fence();
+struct C {
+  ~C() NOTHROW {}
+};
+
+struct D : A {
+  B b;
+  ~D() NOTHROW { C c; }
+};
+
+void foo() {
+  D d;
 }
 
-} // namespace dr462
-
-// CHECK-LABEL: define {{.*}} void @dr462::f()()
-// CHECK:         call void @dr462::full_expr_fence()()
-// CHECK:         call void @dr462::A::~A()
+// skipping over D1 (complete object destructor)
+// CHECK-LABEL: define {{.*}} void @cwg193::D::~D(){{.*}}
+// CHECK-LABEL: define {{.*}} void @cwg193::D::~D(){{.*}}
+// CHECK-NOT:     call void @cwg193::A::~A()
+// CHECK-NOT:     call void @cwg193::B::~B()
+// CHECK:         call void @cwg193::C::~C()
+// CHECK:         call void @cwg193::B::~B()
+// CHECK:         call void @cwg193::A::~A()
 // CHECK-LABEL: }
+} // namespace cwg193

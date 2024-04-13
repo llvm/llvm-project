@@ -6,15 +6,27 @@
 // RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 
-namespace dr571 { // dr571: 2.7
-  typedef int &ir;
-  int n;
-  const ir r = n;
-  // expected-warning@-1 {{'const' qualifier on reference type 'ir' (aka 'int &') has no effect}}
-  ir r2 = n;
+#if __cplusplus == 199711L
+#define NOTHROW throw()
+#else
+#define NOTHROW noexcept(true)
+#endif
+
+namespace cwg672 { // cwg672: 2.7
+
+struct A {
+  A() NOTHROW;
+};
+
+void f() {
+  A *a = new A;
 }
 
-// Entities have external linkage by default.
+} // namespace cwg672
 
-// CHECK: @dr571::r = constant ptr @dr571::n
-// CHECK: @dr571::r2 = constant ptr @dr571::n
+// CHECK-LABEL: define {{.*}} void @cwg672::f()()
+// CHECK:         [[A:%.+]] = alloca ptr
+// CHECK:         [[CALL:%.+]] = call {{.*}} ptr @operator new(unsigned long)
+// CHECK:         call void @cwg672::A::A()
+// CHECK:         store ptr [[CALL]], ptr [[A]]
+// CHECK-LABEL: }
