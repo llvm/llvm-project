@@ -98,7 +98,8 @@ C++20 Feature Support
   behavior can use the flag '-Xclang -fno-skip-odr-check-in-gmf'.
   (#GH79240).
 
-- Implemented the `__is_layout_compatible` intrinsic to support
+- Implemented the `__is_layout_compatible` and `__is_pointer_interconvertible_base_of`
+  intrinsics to support
   `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
 
 - Clang now implements [module.import]p7 fully. Clang now will import module
