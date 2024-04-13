@@ -4512,15 +4512,17 @@ void RewriteInstance::updateELFSymbolTable(
   // Get the extra symbol name of a split fragment; used in addExtraSymbols.
   auto getSplitSymbolName = [&](const FunctionFragment &FF,
                                 const ELFSymTy &FunctionSymbol) {
-    SmallString<256> SymbolName;
-    if (BC->HasWarmSection)
-      SymbolName =
-          formatv("{0}.{1}", cantFail(FunctionSymbol.getName(StringSection)),
-                  FF.getFragmentNum() == FragmentNum::warm() ? "warm" : "cold");
+    SmallString<256> SymbolName =
+        cantFail(FunctionSymbol.getName(StringSection));
+    if (BC->HasWarmSection && FF.getFragmentNum() == FragmentNum::warm())
+      SymbolName.append(".warm");
     else
-      SymbolName = formatv("{0}.cold.{1}",
-                           cantFail(FunctionSymbol.getName(StringSection)),
-                           FF.getFragmentNum().get() - 1);
+      SymbolName.append(".cold");
+
+    if (BC->HasWarmSection)
+      return SymbolName;
+
+    SymbolName.append(formatv(".{0}", FF.getFragmentNum().get() - 1).str());
     return SymbolName;
   };
 
