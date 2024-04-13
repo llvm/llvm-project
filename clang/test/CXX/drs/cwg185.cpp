@@ -6,28 +6,25 @@
 // RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 
-#if __cplusplus == 199711L
-#define NOTHROW throw()
-#else
-#define NOTHROW noexcept(true)
-#endif
-
-namespace dr199 { // dr199: 2.8
+namespace cwg185 { // cwg185: 2.7
 struct A {
-  ~A() NOTHROW {}
+  mutable int value;
+  explicit A(int i) : value(i) {}
+  void mutate(int i) const { value = i; }
 };
 
-struct B {
-  ~B() NOTHROW {}
-};
-
-void foo() {
-  A(), B();
+int foo() {
+  A const& t = A(1);
+  A n(t);
+  t.mutate(2);
+  return n.value;
 }
 
-// CHECK-LABEL: define {{.*}} void @dr199::foo()
-// CHECK-NOT:     call void @dr199::A::~A()
-// CHECK:         call void @dr199::B::~B()
-// CHECK:         call void @dr199::A::~A()
+// CHECK-LABEL: define {{.*}} i32 @cwg185::foo()
+// CHECK:         call void @cwg185::A::A(int)(ptr {{[^,]*}} %ref.tmp, {{.*}})
+// CHECK:         store ptr %ref.tmp, ptr %t
+// CHECK-NOT:     %t =
+// CHECK:         [[CWG185_T:%.+]] = load ptr, ptr %t
+// CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr {{[^,]*}} %n, ptr {{[^,]*}} [[CWG185_T]], {{.*}})
 // CHECK-LABEL: }
-} // namespace dr199
+} // namespace cwg185

@@ -12,7 +12,7 @@
 #define NOTHROW noexcept(true)
 #endif
 
-namespace dr124 { // dr124: 2.7
+namespace cwg124 { // cwg124: 2.7
 
 extern void full_expr_fence() NOTHROW;
 
@@ -32,20 +32,20 @@ void f() {
   full_expr_fence();
 }
 
-// CHECK-LABEL: define {{.*}} void @dr124::f()()
-// CHECK:         call void @dr124::full_expr_fence()
+// CHECK-LABEL: define {{.*}} void @cwg124::f()()
+// CHECK:         call void @cwg124::full_expr_fence()
 // CHECK:         br label %arrayctor.loop
 // CHECK-LABEL: arrayctor.loop:
-// CHECK:         call void @dr124::A::A()
-// CHECK:         call void @dr124::B::B(dr124::A)
-// CHECK:         call void @dr124::A::~A()
+// CHECK:         call void @cwg124::A::A()
+// CHECK:         call void @cwg124::B::B(cwg124::A)
+// CHECK:         call void @cwg124::A::~A()
 // CHECK:         br {{.*}}, label %arrayctor.cont, label %arrayctor.loop
 // CHECK-LABEL: arrayctor.cont:
-// CHECK:         call void @dr124::full_expr_fence()
+// CHECK:         call void @cwg124::full_expr_fence()
 // CHECK:         br label %arraydestroy.body
 // CHECK-LABEL: arraydestroy.body:
-// CHECK:         call void @dr124::B::~B()
+// CHECK:         call void @cwg124::B::~B()
 // CHECK-LABEL: }
 
 
-} // namespace dr124
+} // namespace cwg124

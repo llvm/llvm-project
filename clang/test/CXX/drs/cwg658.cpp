@@ -6,25 +6,20 @@
 // RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 
-namespace dr439 { // dr439: 2.7
+namespace cwg658 { // cwg658: 2.7
 
-void f() {
-  int* p1 = new int;
-  const int* p2 = static_cast<const int*>(static_cast<void *>(p1));
-  bool b = p1 == p2; // b will have the value true.
+void f(int* p1) {
+  char* p2 = reinterpret_cast<char*>(p1);
 }
 
-} // namespace dr439
+} // namespace cwg658
 
-// We're checking that p2 was copied from p1, and then was carried over
-// to the comparison without change.
+// We're checking that p1 is stored into p2 without changes.
 
-// CHECK-LABEL: define {{.*}} void @dr439::f()()
-// CHECK:         [[P1:%.+]] = alloca ptr, align 8
+// CHECK-LABEL: define {{.*}} void @cwg658::f(int*)(ptr noundef %p1)
+// CHECK:         [[P1_ADDR:%.+]] = alloca ptr, align 8
 // CHECK-NEXT:    [[P2:%.+]] = alloca ptr, align 8
-// CHECK:         [[TEMP0:%.+]] = load ptr, ptr [[P1]]
-// CHECK-NEXT:    store ptr [[TEMP0:%.+]], ptr [[P2]]
-// CHECK-NEXT:    [[TEMP1:%.+]] = load ptr, ptr [[P1]]
-// CHECK-NEXT:    [[TEMP2:%.+]] = load ptr, ptr [[P2]]
-// CHECK-NEXT:    {{.*}} = icmp eq ptr [[TEMP1]], [[TEMP2]]
+// CHECK:         store ptr %p1, ptr [[P1_ADDR]]
+// CHECK-NEXT:    [[TEMP:%.+]] = load ptr, ptr [[P1_ADDR]]
+// CHECK-NEXT:    store ptr [[TEMP]], ptr [[P2]]
 // CHECK-LABEL: }

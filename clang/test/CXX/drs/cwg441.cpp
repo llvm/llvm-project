@@ -6,18 +6,33 @@
 // RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 
-namespace dr605 { // dr605: 2.7
+namespace cwg441 { // cwg441: 2.7
 
-template <class T>
-static T f(T t) {}
+struct A {
+  A() {}
+};
 
-template <>
-int f(int t) {}
+A dynamic_init;
+int i;
+int& ir = i;
+int* ip = &i;
 
-void g(int a) {
-  f(a);
-}
+} // namespace cwg441
 
-} // namespace dr605
+// CHECK-DAG:   @cwg441::dynamic_init = global %"struct.cwg441::A" zeroinitializer
+// CHECK-DAG:   @cwg441::i = global i32 0
+// CHECK-DAG:   @cwg441::ir = constant ptr @cwg441::i
+// CHECK-DAG:   @cwg441::ip = global ptr @cwg441::i
+// CHECK-DAG:   @llvm.global_ctors = appending global [{{.+}}] [{ {{.+}} } { {{.+}}, ptr @_GLOBAL__sub_I_cwg441.cpp, {{.+}} }]
 
-// CHECK: define internal {{.*}} i32 @int dr605::f<int>(int)
+// CHECK-LABEL: define {{.*}} void @__cxx_global_var_init()
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @cwg441::A::A()({{.*}} @cwg441::dynamic_init)
+// CHECK-NEXT:    ret void
+// CHECK-NEXT:  }
+
+// CHECK-LABEL: define {{.*}} void @_GLOBAL__sub_I_cwg441.cpp()
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @__cxx_global_var_init()
+// CHECK-NEXT:    ret void
+// CHECK-NEXT:  }
