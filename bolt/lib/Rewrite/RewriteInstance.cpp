@@ -1417,21 +1417,25 @@ void RewriteInstance::registerFragments() {
   if (!BC->HasSplitFunctions)
     return;
 
+  const Regex ColdFragment("(.*)\\.cold(_[0-9]+)?(\\.[0-9]+)?(/[0-9]+)?");
   for (auto &BFI : BC->getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
     if (!Function.isFragment())
       continue;
     unsigned ParentsFound = 0;
     for (StringRef Name : Function.getNames()) {
-      StringRef BaseName, Suffix;
-      std::tie(BaseName, Suffix) = Name.split('/');
-      const size_t ColdSuffixPos = BaseName.find(".cold");
-      if (ColdSuffixPos == StringRef::npos)
+      SmallVector<StringRef, 0> Matches;
+      if (!ColdFragment.match(Name, &Matches))
         continue;
+      std::string ParentName = Matches[1].str();
+      StringRef LocalSymbolHint = Matches[2];
+      StringRef Suffix = Matches[4].size() ? Matches[4].drop_front() : "";
       // For cold function with local (foo.cold/1) symbol, prefer a parent with
       // local symbol as well (foo/1) over global symbol (foo).
-      std::string ParentName = BaseName.substr(0, ColdSuffixPos).str();
       const BinaryData *BD = BC->getBinaryDataByName(ParentName);
+      // If the local symbol hint is given, use it over the matching one.
+      if (LocalSymbolHint != "")
+        Suffix = LocalSymbolHint.drop_front();
       if (Suffix != "") {
         ParentName.append(Twine("/", Suffix).str());
         const BinaryData *BDLocal = BC->getBinaryDataByName(ParentName);
@@ -4512,15 +4516,30 @@ void RewriteInstance::updateELFSymbolTable(
   // Get the extra symbol name of a split fragment; used in addExtraSymbols.
   auto getSplitSymbolName = [&](const FunctionFragment &FF,
                                 const ELFSymTy &FunctionSymbol) {
-    SmallString<256> SymbolName;
-    if (BC->HasWarmSection)
-      SymbolName =
-          formatv("{0}.{1}", cantFail(FunctionSymbol.getName(StringSection)),
-                  FF.getFragmentNum() == FragmentNum::warm() ? "warm" : "cold");
+    const BinaryFunction &Function = *FF.front()->getFunction();
+    SmallString<256> SymbolName =
+        cantFail(FunctionSymbol.getName(StringSection));
+    StringRef LocalSymbolHint;
+    // Resolve local symbol to uniquified function label, used in split fragment
+    // suffix as local symbol hint for fragment-parent name-based matching.
+    if (FunctionSymbol.getBinding() == ELF::STB_LOCAL) {
+      std::optional<StringRef> UniqueName =
+          Function.hasRestoredNameRegex(Regex::escape(SymbolName));
+      assert(UniqueName.has_value());
+      LocalSymbolHint = UniqueName->rsplit('/').second;
+    }
+    if (BC->HasWarmSection && FF.getFragmentNum() == FragmentNum::warm())
+      SymbolName.append(".warm");
     else
-      SymbolName = formatv("{0}.cold.{1}",
-                           cantFail(FunctionSymbol.getName(StringSection)),
-                           FF.getFragmentNum().get() - 1);
+      SymbolName.append(".cold");
+
+    if (BC->HasWarmSection)
+      return SymbolName;
+
+    if (!LocalSymbolHint.empty())
+      SymbolName.append(formatv("_{0}", LocalSymbolHint).str());
+
+    SymbolName.append(formatv(".{0}", FF.getFragmentNum().get() - 1).str());
     return SymbolName;
   };
 
