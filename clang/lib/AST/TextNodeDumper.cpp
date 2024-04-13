@@ -397,6 +397,11 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Default:
       OS << '(' << cast<OpenACCDefaultClause>(C)->getDefaultClauseKind() << ')';
       break;
+    case OpenACCClauseKind::If:
+      // The condition expression will be printed as a part of the 'children',
+      // but print 'clause' here so it is clear what is happening from the dump.
+      OS << " clause";
+      break;
     default:
       // Nothing to do here.
       break;
@@ -1450,23 +1455,13 @@ void TextNodeDumper::VisitExpressionTraitExpr(const ExpressionTraitExpr *Node) {
 }
 
 void TextNodeDumper::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
-  if (Node->hasRewrittenInit()) {
+  if (Node->hasRewrittenInit())
     OS << " has rewritten init";
-    AddChild([=] {
-      ColorScope Color(OS, ShowColors, StmtColor);
-      Visit(Node->getExpr());
-    });
-  }
 }
 
 void TextNodeDumper::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
-  if (Node->hasRewrittenInit()) {
+  if (Node->hasRewrittenInit())
     OS << " has rewritten init";
-    AddChild([=] {
-      ColorScope Color(OS, ShowColors, StmtColor);
-      Visit(Node->getExpr());
-    });
-  }
 }
 
 void TextNodeDumper::VisitMaterializeTemporaryExpr(
