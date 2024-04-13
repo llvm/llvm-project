@@ -7747,7 +7747,7 @@ void Parser::ParseParameterDeclarationClause(
     }
 
     // Remember this parsed parameter in ParamInfo.
-    IdentifierInfo *ParmII = ParmDeclarator.getIdentifier();
+    const IdentifierInfo *ParmII = ParmDeclarator.getIdentifier();
 
     // DefArgToks is used when the parsing of default arguments needs
     // to be delayed.

@@ -308,7 +308,7 @@ static hash_code computeHash(Selector Sel) {
     ++N;
   hash_code Hash = INITIAL_HASH;
   for (unsigned I = 0; I != N; ++I)
-    if (IdentifierInfo *II = Sel.getIdentifierInfoForSlot(I))
+    if (const IdentifierInfo *II = Sel.getIdentifierInfoForSlot(I))
       COMBINE_HASH(computeHash(II));
   return Hash;
 }

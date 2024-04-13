@@ -616,7 +616,7 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
   }
 
   // Parse nested-name-specifier.
-  IdentifierInfo *LastII = nullptr;
+  const IdentifierInfo *LastII = nullptr;
   if (ParseOptionalCXXScopeSpecifier(D.SS, /*ObjectType=*/nullptr,
                                      /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/false,
