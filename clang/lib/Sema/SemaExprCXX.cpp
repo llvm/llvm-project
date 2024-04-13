@@ -6101,6 +6101,22 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
           << 1 << tok::kw___is_layout_compatible;
     return Self.IsLayoutCompatible(LhsT, RhsT);
   }
+  case BTT_IsPointerInterconvertibleBaseOf: {
+    if (LhsT->isStructureOrClassType() && RhsT->isStructureOrClassType() &&
+        !Self.getASTContext().hasSameUnqualifiedType(LhsT, RhsT)) {
+      Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
+                               diag::err_incomplete_type);
+    }
+
+    if (LhsT->isVariableArrayType())
+      Self.Diag(Lhs->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
+          << 1 << tok::kw___is_pointer_interconvertible_base_of;
+    if (RhsT->isVariableArrayType())
+      Self.Diag(Rhs->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
+          << 1 << tok::kw___is_pointer_interconvertible_base_of;
+
+    return Self.IsPointerInterconvertibleBaseOf(Lhs, Rhs);
+  }
     default: llvm_unreachable("not a BTT");
   }
   llvm_unreachable("Unknown type trait or not implemented");
