@@ -1300,7 +1300,7 @@ void VPValue::replaceUsesWithIf(
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const {
-  OS << Tracker.getName(this);
+  OS << Tracker.getOrCreateName(this);
 }
 
 void VPUser::printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const {
@@ -1362,51 +1362,28 @@ VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
   visitRegion(Plan.getVectorLoopRegion(), Old2New, IAI);
 }
 
-void VPSlotTracker::assignSlotOrName(const VPValue *V) {
+void VPSlotTracker::assignName(const VPValue *V) {
+  assert(!VPValue2Name.contains(V) && "VPValue already has a name!");
   auto *UV = V->getUnderlyingValue();
   if (!UV) {
-    assert(!VPValue2Name.contains(V) && "VPValue already has a slot!");
     VPValue2Name[V] = (Twine("vp<%") + Twine(NextSlot) + ">").str();
     NextSlot++;
     return;
   }
+
+  // Use the name of the underlying Value, wrapped in "ir<>", and versioned by
+  // appending ".Number" to the name if there are multiple uses.
   std::string Name;
   raw_string_ostream S(Name);
   UV->printAsOperand(S, false);
-  versionName(V, Name);
-}
-
-void VPSlotTracker::assignSlotsOrNames(const VPlan &Plan) {
-  if (Plan.VFxUF.getNumUsers() > 0)
-    assignSlotOrName(&Plan.VFxUF);
-  assignSlotOrName(&Plan.VectorTripCount);
-  if (Plan.BackedgeTakenCount)
-    assignSlotOrName(Plan.BackedgeTakenCount);
-  for (VPValue *LI : Plan.VPLiveInsToFree)
-    assignSlotOrName(LI);
-  assignSlotsOrNames(Plan.getPreheader());
-
-  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<const VPBlockBase *>>
-      RPOT(VPBlockDeepTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
-  for (const VPBasicBlock *VPBB :
-       VPBlockUtils::blocksOnly<const VPBasicBlock>(RPOT))
-    assignSlotsOrNames(VPBB);
-}
-
-void VPSlotTracker::assignSlotsOrNames(const VPBasicBlock *VPBB) {
-  for (const VPRecipeBase &Recipe : *VPBB)
-    for (VPValue *Def : Recipe.definedValues())
-      assignSlotOrName(Def);
-}
-
-void VPSlotTracker::versionName(const VPValue *V, StringRef Name) {
   assert(!Name.empty() && "Name cannot be empty.");
   std::string BaseName = (Twine("ir<") + Name + Twine(">")).str();
 
   // First assign the base name for V.
-  const auto &[A, AssignedInserted] = VPValue2Name.insert({V, BaseName});
-  assert(AssignedInserted && "name assigned already?");
-  if (V->isLiveIn())
+  const auto &[A, _] = VPValue2Name.insert({V, BaseName});
+  // Integer or FP constants with different types will result in he same string
+  // due to stripping types.
+  if (V->isLiveIn() && isa<ConstantInt, ConstantFP>(UV))
     return;
 
   // If it is already used by C > 0 other VPValues, increase the version counter
@@ -1418,7 +1395,30 @@ void VPSlotTracker::versionName(const VPValue *V, StringRef Name) {
   }
 }
 
-std::string VPSlotTracker::getName(const VPValue *V) const {
+void VPSlotTracker::assignNames(const VPlan &Plan) {
+  if (Plan.VFxUF.getNumUsers() > 0)
+    assignName(&Plan.VFxUF);
+  assignName(&Plan.VectorTripCount);
+  if (Plan.BackedgeTakenCount)
+    assignName(Plan.BackedgeTakenCount);
+  for (VPValue *LI : Plan.VPLiveInsToFree)
+    assignName(LI);
+  assignNames(Plan.getPreheader());
+
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<const VPBlockBase *>>
+      RPOT(VPBlockDeepTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
+  for (const VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<const VPBasicBlock>(RPOT))
+    assignNames(VPBB);
+}
+
+void VPSlotTracker::assignNames(const VPBasicBlock *VPBB) {
+  for (const VPRecipeBase &Recipe : *VPBB)
+    for (VPValue *Def : Recipe.definedValues())
+      assignName(Def);
+}
+
+std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
   std::string Name = VPValue2Name.lookup(V);
   if (!Name.empty())
     return Name;
@@ -1427,6 +1427,9 @@ std::string VPSlotTracker::getName(const VPValue *V) const {
   // tracker or it is not reachable from the provided VPlan. This can happen,
   // e.g. when trying to print a recipe that has not been inserted into a VPlan
   // in a debugger.
+  // TODO: Update VPSlotTracker constructor to assign names to recipes &
+  // VPValues not associated with a VPlan, instead of constructing names ad-hoc
+  // here.
   const VPRecipeBase *DefR = V->getDefiningRecipe();
   assert((!DefR || !DefR->getParent() || !DefR->getParent()->getPlan()) &&
          "VPValue defined by a recipe in a VPlan?");

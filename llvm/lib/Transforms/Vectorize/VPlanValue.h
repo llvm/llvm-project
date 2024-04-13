@@ -460,24 +460,20 @@ class VPSlotTracker {
   /// Number to assign to the next VPValue without underlying value.
   unsigned NextSlot = 0;
 
-  void assignSlotOrName(const VPValue *V);
-  void assignSlotsOrNames(const VPlan &Plan);
-  void assignSlotsOrNames(const VPBasicBlock *VPBB);
-
-  /// Create a versioned variant of \p Name for \p V by appending ".Number"
-  /// to \p Name if there are multiple uses of that name.
-  void versionName(const VPValue *V, StringRef Name);
+  void assignName(const VPValue *V);
+  void assignNames(const VPlan &Plan);
+  void assignNames(const VPBasicBlock *VPBB);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
     if (Plan)
-      assignSlotsOrNames(*Plan);
+      assignNames(*Plan);
   }
 
   /// Returns the name assigned to \p V, if there is one, otherwise try to
   /// construct one from the underlying value, if there's one; else return
   /// <badref>.
-  std::string getName(const VPValue *V) const;
+  std::string getOrCreateName(const VPValue *V) const;
 };
 
 } // namespace llvm
