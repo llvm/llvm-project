@@ -1283,9 +1283,7 @@ namespace cwg483 { // cwg483: yes
     static_assert(__SHRT_MAX__ >= 32767, "");
     static_assert(__INT_MAX__ >= 32767, "");
     static_assert(__LONG_MAX__ >= 2147483647, "");
-    int check[(__LONG_LONG_MAX__ >= 9223372036854775807) ? 1 : -1]
-    // cxx98-error@-1 {{'long long' is a C++11 extension}}
-    // cxx98-error@-2 0-1{{'long long' is a C++11 extension}}
+    static_assert(__LONG_LONG_MAX__ >= 9223372036854775807, "");
   }
   namespace cstdint {
     static_assert(__PTRDIFF_WIDTH__ >= 16, "");
