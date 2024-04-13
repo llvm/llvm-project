@@ -444,6 +444,15 @@ define i16 @sext_trunc_nsw_2(i32 %x) {
   ret i16 %e
 }
 
+define i16 @sext_trunc_nsw_3(i16 %x) {
+; CHECK-LABEL: @sext_trunc_nsw_3(
+; CHECK-NEXT:    ret i16 [[E:%.*]]
+;
+  %c = trunc nsw i16 %x to i8
+  %e = sext i8 %c to i16
+  ret i16 %e
+}
+
 define <2 x i32> @sext_trunc_nsw_vec(<2 x i16> %x) {
 ; CHECK-LABEL: @sext_trunc_nsw_vec(
 ; CHECK-NEXT:    [[E:%.*]] = sext <2 x i16> [[X:%.*]] to <2 x i32>

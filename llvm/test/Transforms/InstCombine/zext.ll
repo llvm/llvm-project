@@ -888,6 +888,15 @@ define i16 @zext_trunc_nuw_2(i32 %x) {
   ret i16 %e
 }
 
+define i16 @zext_trunc_nuw_3(i16 %x) {
+; CHECK-LABEL: @zext_trunc_nuw_3(
+; CHECK-NEXT:    ret i16 [[E:%.*]]
+;
+  %c = trunc nuw i16 %x to i8
+  %e = zext i8 %c to i16
+  ret i16 %e
+}
+
 define <2 x i32> @zext_trunc_nuw_vec(<2 x i16> %x) {
 ; CHECK-LABEL: @zext_trunc_nuw_vec(
 ; CHECK-NEXT:    [[E1:%.*]] = zext nneg <2 x i16> [[X:%.*]] to <2 x i32>
