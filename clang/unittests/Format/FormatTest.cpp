@@ -5434,7 +5434,7 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
                "    C();\n"
                "#endif",
                style);
-  verifyFormat("if (emacs) {\n"
+  verifyFormat("if (vim) {\n"
                "#ifdef is\n"
                "#define lit           \\\n"
                "    if (af) {         \\\n"
@@ -5457,7 +5457,7 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
                style);
   verifyFormat("#ifndef foo\n"
                "#define foo\n"
-               "if (emacs) {\n"
+               "if (vim) {\n"
                "#ifdef is\n"
                "#define lit           \\\n"
                "    if (af) {         \\\n"
@@ -5543,7 +5543,7 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
                style);
   verifyFormat("#ifndef foo\n"
                "#define foo\n"
-               "if (emacs) {\n"
+               "if (vim) {\n"
                "#ifdef is\n"
                "# define lit           \\\n"
                "     if (af) {         \\\n"
@@ -5583,7 +5583,7 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
   style.IndentWidth = 4;
   style.PPIndentWidth = 1;
   style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
-  verifyFormat("if (emacs) {\n"
+  verifyFormat("if (vim) {\n"
                "#ifdef is\n"
                " #define lit           \\\n"
                "     if (af) {         \\\n"
