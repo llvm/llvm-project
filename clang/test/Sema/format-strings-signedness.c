@@ -11,7 +11,7 @@
 // (gcc compat).
 // RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wformat -verify=okay %s
 
-// Verify that -Wformat-signedness with -Wno-format are not reported (gcc compat).
+// Verify that -Wformat-signedness with -Wno-format are still reported (gcc compat).
 // RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wformat-signedness -Wno-format -verify %s
 // RUN: %clang_cc1 -triple=x86_64-pc-linux-gnu -std=c11 -fsyntax-only -Wno-format -Wformat-signedness -verify %s
 // okay-no-diagnostics
@@ -213,7 +213,7 @@ void test_printf_unsigned_priX16(uint16_t x) {
   printf("PRIX16: %" "X" /*PRIX16*/ "\n", x); // no-warning
 }
 
-// Verify that we can suppress a -Wformat-signedness warning by ignoring
+// Verify that we can not suppress a -Wformat-signedness warning by ignoring
 // -Wformat (gcc compat).
 void test_suppress(int x)
 {
