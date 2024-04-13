@@ -5,6 +5,11 @@
 // RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
+
 namespace cwg600 { // cwg600: 2.8
 struct S {
   void f(int);
@@ -43,8 +48,7 @@ namespace cwg601 { // cwg601: yes
 #endif
 
 #if __INT_MAX__ == 0x7FFFFFFF
-_Static_assert(0x80000000 < -1, "0x80000000 should be unsigned");
-// expected-error@-1 {{'_Static_assert' is a C11 extension}}
+static_assert(0x80000000 < -1, "0x80000000 should be unsigned");
 #endif
 
 #if MAX > 0xFFFFFFFFFFFFFFFF && 0x8000000000000000 < -1
@@ -223,15 +227,12 @@ namespace cwg619 { // cwg619: yes
   struct S { static int x[10]; };
 
   int x[];
-  _Static_assert(sizeof(x) == sizeof(int) * 10, "");
-  // expected-error@-1 {{'_Static_assert' is a C11 extension}}
+  static_assert(sizeof(x) == sizeof(int) * 10, "");
   extern int x[];
-  _Static_assert(sizeof(x) == sizeof(int) * 10, "");
-  // expected-error@-1 {{'_Static_assert' is a C11 extension}}
+  static_assert(sizeof(x) == sizeof(int) * 10, "");
 
   int S::x[];
-  _Static_assert(sizeof(S::x) == sizeof(int) * 10, "");
-  // expected-error@-1 {{'_Static_assert' is a C11 extension}}
+  static_assert(sizeof(S::x) == sizeof(int) * 10, "");
 
   void f() {
     extern int x[];
@@ -325,12 +326,10 @@ const bool MB_EQ_WC =
     ',' == L',' && '\\' == L'\\' && '"' == L'"' && '\'' == L'\'';
 #if __STDC_MB_MIGHT_NEQ_WC__
 #ifndef __FreeBSD__ // PR22208, FreeBSD expects us to give a bad (but conforming) answer here.
-_Static_assert(!MB_EQ_WC, "__STDC_MB_MIGHT_NEQ_WC__ but all basic source characters have same representation");
-// expected-error@-1 {{'_Static_assert' is a C11 extension}}
+static_assert(!MB_EQ_WC, "__STDC_MB_MIGHT_NEQ_WC__ but all basic source characters have same representation");
 #endif
 #else
-_Static_assert(MB_EQ_WC, "!__STDC_MB_MIGHT_NEQ_WC__ but some character differs");
-// expected-error@-1 {{'_Static_assert' is a C11 extension}}
+static_assert(MB_EQ_WC, "!__STDC_MB_MIGHT_NEQ_WC__ but some character differs");
 #endif
 }
 
@@ -488,8 +487,7 @@ namespace cwg642 { // cwg642: yes
     const int i = 2;
     {
       char i[i];
-      _Static_assert(sizeof(i) == 2, "");
-      // expected-error@-1 {{'_Static_assert' is a C11 extension}}
+      static_assert(sizeof(i) == 2, "");
     }
   }
 
