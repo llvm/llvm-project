@@ -125,6 +125,12 @@
 // RUN: %clang -### -target sparc64 -S -O1 %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NONE %s
 
+// M68k targets omit the frame pointer when optimizations are enabled.
+// RUN: %clang -### -target m68k -S %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-ALL %s
+// RUN: %clang -### -target m68k -S -O1 %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
+
 // For AAarch32 (A32, T32) linux targets, default omit frame pointer when
 // optimizations are enabled.
 // RUN: %clang -### -target arm-linux-gnueabihf- -marm -S %s 2>&1 | \
