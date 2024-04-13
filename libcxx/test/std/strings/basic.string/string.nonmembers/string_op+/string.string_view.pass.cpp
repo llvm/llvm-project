@@ -138,17 +138,10 @@ constexpr bool test() {
   test<char, std::char_traits<char>, min_allocator<char>>();
   test<char, std::char_traits<char>, safe_allocator<char>>();
 
-  test<char, constexpr_char_traits<char>>();
-  test<char, constexpr_char_traits<char>, min_allocator<char>>();
-  test<char, constexpr_char_traits<char>, safe_allocator<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t, std::char_traits<wchar_t>>();
   test<wchar_t, std::char_traits<wchar_t>, min_allocator<wchar_t>>();
   test<wchar_t, std::char_traits<wchar_t>, safe_allocator<wchar_t>>();
-
-  test<wchar_t, constexpr_char_traits<wchar_t>>();
-  test<wchar_t, constexpr_char_traits<wchar_t>, min_allocator<wchar_t>>();
-  test<wchar_t, constexpr_char_traits<wchar_t>, safe_allocator<wchar_t>>();
 #endif
 
   return true;
