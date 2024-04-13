@@ -746,7 +746,8 @@ public:
   /// \pre \p Op must be smaller than \p Res
   ///
   /// \return The newly created instruction.
-  MachineInstrBuilder buildZExt(const DstOp &Res, const SrcOp &Op);
+  MachineInstrBuilder buildZExt(const DstOp &Res, const SrcOp &Op,
+                                std::optional<unsigned> Flags = std::nullopt);
 
   /// Build and insert \p Res = G_SEXT \p Op, \p Res = G_TRUNC \p Op, or
   /// \p Res = COPY \p Op depending on the differing sizes of \p Res and \p Op.
@@ -1231,7 +1232,8 @@ public:
   /// \pre \p Res must be smaller than \p Op
   ///
   /// \return The newly created instruction.
-  MachineInstrBuilder buildTrunc(const DstOp &Res, const SrcOp &Op);
+  MachineInstrBuilder buildTrunc(const DstOp &Res, const SrcOp &Op,
+                                 std::optional<unsigned> Flags = std::nullopt);
 
   /// Build and insert a \p Res = G_ICMP \p Pred, \p Op0, \p Op1
   ///

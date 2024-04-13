@@ -131,9 +131,8 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = nsw G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
-    ; CHECK-NEXT: $w1 = COPY [[SEXT]](s32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = nsw G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: $w1 = COPY [[TRUNC]](s32)
     %0:_(s64) = COPY $x0
     %2:_(s16) = nsw G_TRUNC %0
     %3:_(s32) = G_SEXT  %2
@@ -261,8 +260,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK-NEXT: %bv0:_(<2 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64)
-    ; CHECK-NEXT: %t:_(<2 x s16>) = nuw G_TRUNC %bv0(<2 x s64>)
-    ; CHECK-NEXT: %z:_(<2 x s32>) = G_ZEXT %t(<2 x s16>)
+    ; CHECK-NEXT: %z:_(<2 x s32>) = nuw G_TRUNC %bv0(<2 x s64>)
     ; CHECK-NEXT: $d0 = COPY %z(<2 x s32>)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
@@ -288,4 +286,68 @@ body:             |
     %t:_(<vscale x 2 x s32>) = nuw G_TRUNC %sv0
     %z:_(<vscale x 2 x s64>) = G_ZEXT  %t
     $z0 = COPY %z
+...
+---
+name:            zext_trunc_nuw_to_zext
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: zext_trunc_nuw_to_zext
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: %2:_(s64) = nneg G_ZEXT [[COPY]](s32)
+    ; CHECK-NEXT: $x1 = COPY %2(s64)
+    %0:_(s32) = COPY $w0
+    %2:_(s16) = nuw G_TRUNC %0
+    %3:_(s64) = G_ZEXT  %2
+    $x1 = COPY %3
+...
+---
+name:            zext_trunc_nuw_to_trunc
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: zext_trunc_nuw_to_trunc
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = nuw G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: $w1 = COPY [[TRUNC]](s32)
+    %0:_(s64) = COPY $x0
+    %2:_(s16) = nuw G_TRUNC %0
+    %3:_(s32) = G_ZEXT  %2
+    $w1 = COPY %3
+...
+---
+name:            sext_trunc_nsw_to_sext
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: sext_trunc_nsw_to_sext
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY]](s32)
+    ; CHECK-NEXT: $x1 = COPY [[SEXT]](s64)
+    %0:_(s32) = COPY $w0
+    %2:_(s16) = nsw G_TRUNC %0
+    %3:_(s64) = G_SEXT  %2
+    $x1 = COPY %3
+...
+---
+name:            sext_trunc_nsw_to_trunc
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: sext_trunc_nsw_to_trunc
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = nsw G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: $w1 = COPY [[TRUNC]](s32)
+    %0:_(s64) = COPY $x0
+    %2:_(s16) = nsw G_TRUNC %0
+    %3:_(s32) = G_SEXT  %2
+    $w1 = COPY %3
 ...

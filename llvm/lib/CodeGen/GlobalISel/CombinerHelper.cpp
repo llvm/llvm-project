@@ -7263,13 +7263,26 @@ bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);
 
-  // The types have to match for a no-op.
-  if (DstTy != SrcTy)
-    return false;
+  if (DstTy == SrcTy) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
+    return true;
+  }
 
-  MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
+  if (DstTy.getScalarSizeInBits() < SrcTy.getScalarSizeInBits() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildTrunc(Dst, Src, MachineInstr::MIFlag::NoSWrap);
+    };
+    return true;
+  }
 
-  return true;
+  if (DstTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_SEXT, {DstTy, SrcTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
+    return true;
+  }
+
+  return false;
 }
 
 bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
@@ -7283,11 +7296,26 @@ bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);
 
-  // The types have to match for a no-op.
-  if (DstTy != SrcTy)
-    return false;
+  if (DstTy == SrcTy) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
+    return true;
+  }
 
-  MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
+  if (DstTy.getScalarSizeInBits() < SrcTy.getScalarSizeInBits() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildTrunc(Dst, Src, MachineInstr::MIFlag::NoUWrap);
+    };
+    return true;
+  }
 
-  return true;
+  if (DstTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {DstTy, SrcTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildZExt(Dst, Src, MachineInstr::MIFlag::NonNeg);
+    };
+    return true;
+  }
+
+  return false;
 }
