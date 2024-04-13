@@ -244,12 +244,12 @@ public:
     return FunctionProtoType::ExtParameterInfo::getFromOpaqueValue(value);
   }
 
-  FunctionEffect readFunctionEffect() {
-    static_assert(sizeof(FunctionEffect().getAsOpaqueValue()) <=
-                      sizeof(uint32_t),
+  CondFunctionEffect readCondFunctionEffect() {
+    static_assert(sizeof(FunctionEffect::Kind) <= sizeof(uint32_t),
                   "update this if size changes");
     uint32_t value = asImpl().readUInt32();
-    return FunctionEffect::getFromOpaqueValue(value);
+    Expr *cond = asImpl().readExprRef();
+    return CondFunctionEffect(static_cast<FunctionEffect::Kind>(value), cond);
   }
 
   NestedNameSpecifier *readNestedNameSpecifier() {

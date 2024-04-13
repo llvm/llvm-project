@@ -4295,12 +4295,11 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasArmTypeAttributes : 1;
 
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned HasFunctionEffects : 1;
+    unsigned NumFunctionEffects : 4;
 
     FunctionTypeExtraBitfields()
         : NumExceptionType(0), HasArmTypeAttributes(false),
-          HasFunctionEffects(false) {}
+          NumFunctionEffects(0) {}
   };
 
   /// The AArch64 SME ACLE (Arm C/C++ Language Extensions) define a number
@@ -4437,10 +4436,11 @@ public:
 
 class Decl;
 class CXXMethodDecl;
-class FunctionEffectSet;
+class FunctionTypeEffects;
+class FunctionTypeEffectSet;
 
 /// Represents an abstract function effect, using just an enumeration describing
-/// its type. Encapsulates its semantic behaviors.
+/// its kind.
 class FunctionEffect {
 public:
   /// Identifies the particular effect.
@@ -4474,27 +4474,19 @@ public:
   };
 
 private:
-  Kind FKind;
+  Kind FKind = Kind::None;
 
   // Expansion: for hypothetical TCB+types, there could be one Kind for TCB,
   // then ~16(?) bits "SubKind" to map to a specific named TCB. SubKind would
   // be considered for uniqueness.
 
 public:
-  FunctionEffect() : FKind(Kind::None) {}
+  FunctionEffect() = default;
 
-  explicit FunctionEffect(Kind T) : FKind(T) {}
+  explicit FunctionEffect(Kind K) : FKind(K) {}
 
   /// The kind of the effect.
   Kind kind() const { return FKind; }
-
-  /// Return an opaque integer, as a serializable representation.
-  uint32_t getAsOpaqueValue() const { return llvm::to_underlying(FKind); }
-
-  /// Construct from a serialized representation.
-  static FunctionEffect getFromOpaqueValue(uint32_t V) {
-    return FunctionEffect(static_cast<Kind>(V));
-  }
 
   /// Flags describing some behaviors of the effect.
   Flags flags() const {
@@ -4519,24 +4511,24 @@ public:
   /// Return true if adding or removing the effect as part of a type conversion
   /// should generate a diagnostic.
   bool shouldDiagnoseConversion(bool Adding, QualType OldType,
-                                const FunctionEffectSet &OldFX,
+                                const FunctionTypeEffects &OldFX,
                                 QualType NewType,
-                                const FunctionEffectSet &NewFX) const;
+                                const FunctionTypeEffects &NewFX) const;
 
   /// Return true if adding or removing the effect in a redeclaration should
   /// generate a diagnostic.
   bool shouldDiagnoseRedeclaration(bool Adding, const FunctionDecl &OldFunction,
-                                   const FunctionEffectSet &OldFX,
+                                   const FunctionTypeEffects &OldFX,
                                    const FunctionDecl &NewFunction,
-                                   const FunctionEffectSet &NewFX) const;
+                                   const FunctionTypeEffects &NewFX) const;
 
   /// Return true if adding or removing the effect in a C++ virtual method
   /// override should generate a diagnostic.
   OverrideResult
   shouldDiagnoseMethodOverride(bool Adding, const CXXMethodDecl &OldMethod,
-                               const FunctionEffectSet &OldFX,
+                               const FunctionTypeEffects &OldFX,
                                const CXXMethodDecl &NewMethod,
-                               const FunctionEffectSet &NewFX) const;
+                               const FunctionTypeEffects &NewFX) const;
 
   /// Return true if the effect is allowed to be inferred on the callee,
   /// which is either a FunctionDecl or BlockDecl.
@@ -4550,91 +4542,134 @@ public:
   // diagnostic. Caller should be assumed to have the effect (it may not have it
   // explicitly when inferring).
   bool shouldDiagnoseFunctionCall(bool Direct,
-                                  const FunctionEffectSet &CalleeFX) const;
+                                  ArrayRef<FunctionEffect> CalleeFX) const;
 
   friend bool operator==(const FunctionEffect &LHS, const FunctionEffect &RHS) {
     return LHS.FKind == RHS.FKind;
   }
   friend bool operator!=(const FunctionEffect &LHS, const FunctionEffect &RHS) {
-    return LHS.FKind != RHS.FKind;
+    return !(LHS == RHS);
   }
   friend bool operator<(const FunctionEffect &LHS, const FunctionEffect &RHS) {
     return LHS.FKind < RHS.FKind;
   }
 };
 
-/// A value type, representing a set of FunctionEffects. To reduce superfluous
-/// retain/release, however, prefer to pass by reference.
-class FunctionEffectSet {
-private:
-  // Implementation is as a SmallVector, kept sorted.
-  // With a SmallVector size of 4, footprint is 32 bytes (on arm64).
-  // Use indirection through a possibly null reference-counted pointer to
-  // optimize the overwhelmingly common case of an empty set, and to
-  // minimize memory footprint.
-  struct ImplVec : public SmallVector<FunctionEffect, 4>,
-                   public RefCountedBase<ImplVec> {};
-  using ImplPtr = IntrusiveRefCntPtr<ImplVec>;
-
-  ImplPtr PImpl;
-
-  explicit FunctionEffectSet(ImplPtr &&Ptr) : PImpl(std::move(Ptr)) {}
-  ImplVec &mutableVec();
+/// A FunctionEffect plus a potential boolean expression determining whether
+/// the effect is declared (e.g. nonblocking(expr)). Generally the condition
+/// expression when present, is dependent.
+class CondFunctionEffect {
+  FunctionEffect Effect;
+  const Expr *Cond = nullptr; // if null, unconditional
 
 public:
-  using Differences = SmallVector<std::pair<FunctionEffect, /*added=*/bool>>;
+  CondFunctionEffect() = default;
+  CondFunctionEffect(FunctionEffect::Kind K, const Expr *Cond)
+      : Effect(K), Cond(Cond) {}
 
-  FunctionEffectSet() = default;
+  const FunctionEffect &effect() const { return Effect; }
+  const Expr *condition() const { return Cond; }
+
+private:
+  // Comparisons are tricky when the condition might be involved, so limit who
+  // might be doing them.
+  friend FunctionTypeEffects;
+  friend FunctionTypeEffectSet;
+
+  friend bool operator==(const CondFunctionEffect &LHS,
+                         const CondFunctionEffect &RHS) {
+    return LHS.Effect == RHS.Effect && LHS.Cond == RHS.Cond;
+  }
+  friend bool operator!=(const CondFunctionEffect &LHS,
+                         const CondFunctionEffect &RHS) {
+    return !(LHS == RHS);
+  }
+  friend bool operator<(const CondFunctionEffect &LHS,
+                        const CondFunctionEffect &RHS) {
+    return LHS.Effect < RHS.Effect;
+  }
+};
+
+// Container naming:
+// "type effects" are the ones which include a condition
+// FunctionTypeEffectsRef - holds pointers
+// FunctionTypeEffectSet - mutable
+// FunctionEffectSet - mutable, no condition
+
+/// An immutable set of CondFunctionEffect. The effects reside in memory not
+/// managed by this object (typically, trailing objects in FunctionProtoType).
+class FunctionTypeEffects {
+  ArrayRef<CondFunctionEffect> Items;
+
+public:
+  /// Extract the effects from a Type if it is a function, block, or member
+  /// function pointer, or a reference or pointer to one.
+  static FunctionTypeEffects get(QualType QT);
+
+  FunctionTypeEffects() = default;
+
+  // The array is expected to have been sorted by the caller.
+  explicit FunctionTypeEffects(ArrayRef<CondFunctionEffect> Arr) : Items(Arr) {}
+
+  operator bool() const { return !Items.empty(); }
+  size_t size() const { return Items.size(); }
+  operator ArrayRef<CondFunctionEffect>() const { return Items; }
+
+  using iterator = const CondFunctionEffect *;
+  iterator begin() const { return Items.begin(); }
+  iterator end() const { return Items.end(); }
+
+  friend bool operator==(const FunctionTypeEffects &LHS,
+                         const FunctionTypeEffects &RHS) {
+    return LHS.Items == RHS.Items;
+  }
+  friend bool operator!=(const FunctionTypeEffects &LHS,
+                         const FunctionTypeEffects &RHS) {
+    return !(LHS == RHS);
+  }
 
   void Profile(llvm::FoldingSetNodeID &ID) const;
+  void dump(llvm::raw_ostream &OS) const;
+};
 
-  FunctionEffectSet &operator=(const llvm::ArrayRef<FunctionEffect> arr);
+/// A mutable set of CondFunctionEffect.
+// Used transitorily within Sema to compare and merge effects on declarations.
+class FunctionTypeEffectSet {
+  SmallVector<CondFunctionEffect> Impl;
 
-  explicit operator bool() const { return !empty(); }
-  bool empty() const { return PImpl == nullptr || PImpl->empty(); }
-  size_t size() const { return PImpl ? PImpl->size() : 0; }
+public:
+  FunctionTypeEffectSet() = default;
+  explicit FunctionTypeEffectSet(ArrayRef<CondFunctionEffect> Arr)
+      : Impl(Arr.begin(), Arr.end()) {}
 
-  using iterator = const FunctionEffect *;
+  explicit operator bool() const { return !Impl.empty(); }
 
-  iterator begin() const { return PImpl ? PImpl->begin() : nullptr; }
+  // Implicit conversion to ArrayRef - careful with lifetime.
+  operator ArrayRef<CondFunctionEffect>() const { return Impl; }
 
-  iterator end() const { return PImpl ? PImpl->end() : nullptr; }
-
-  ArrayRef<FunctionEffect> items() const {
-    if (PImpl)
-      return *PImpl;
-    return {};
-  }
-
-  bool operator==(const FunctionEffectSet &RHS) const {
-    const FunctionEffectSet &LHS = *this;
-    if (LHS.PImpl == RHS.PImpl)
-      return true;
-    if (LHS.PImpl == nullptr || RHS.PImpl == nullptr)
-      return false;
-    return *LHS.PImpl == *RHS.PImpl;
-  }
-  bool operator!=(const FunctionEffectSet &RHS) const {
-    return !(*this == RHS);
-  }
+  using iterator = const CondFunctionEffect *;
+  iterator begin() const { return Impl.begin(); }
+  iterator end() const { return Impl.end(); }
 
   void dump(llvm::raw_ostream &OS) const;
 
-  FunctionEffectSet getIntersection(const FunctionEffectSet &RHS) const;
-  FunctionEffectSet getDifference(const FunctionEffectSet &RHS) const;
-  FunctionEffectSet getUnion(const FunctionEffectSet &RHS) const;
-
-  /// Caller should short-circuit by checking for equality first.
-  static Differences differences(const FunctionEffectSet &Old,
-                                 const FunctionEffectSet &New);
-
-  /// Extract the effects from a Type if it is a function, block, or member
-  /// function pointer, or a reference or pointer to one.
-  static FunctionEffectSet get(QualType QT);
-
   // Mutators
-  void insert(const FunctionEffect &Effect);
-  void insert(const FunctionEffectSet &Set);
+  void insert(const CondFunctionEffect &Effect);
+  void insert(ArrayRef<CondFunctionEffect> Arr);
+  void insertIgnoringConditions(ArrayRef<CondFunctionEffect> Arr);
+
+  // Set operations, using ArrayRef to support FunctionTypeEffects
+
+  using Differences =
+      SmallVector<std::pair<CondFunctionEffect, /*added=*/bool>>;
+  /// Caller should short-circuit by checking for equality first.
+  static Differences differences(const FunctionTypeEffects &Old,
+                                 const FunctionTypeEffects &New);
+
+  static FunctionTypeEffectSet getUnion(ArrayRef<CondFunctionEffect> LHS,
+                                        ArrayRef<CondFunctionEffect> RHS);
+  static FunctionTypeEffectSet difference(ArrayRef<CondFunctionEffect> LHS,
+                                          ArrayRef<CondFunctionEffect> RHS);
 };
 
 /// Represents a prototype with parameter type info, e.g.
@@ -4652,7 +4687,7 @@ class FunctionProtoType final
           FunctionType::FunctionTypeExtraBitfields,
           FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
           Expr *, FunctionDecl *, FunctionType::ExtParameterInfo,
-          FunctionEffectSet, Qualifiers> {
+          CondFunctionEffect, Qualifiers> {
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
@@ -4683,8 +4718,7 @@ class FunctionProtoType final
   //   an ExtParameterInfo for each of the parameters. Present if and
   //   only if hasExtParameterInfos() is true.
   //
-  // * Optionally, a FunctionEffectSet. Present if and only if
-  //   hasFunctionEffects() is true.
+  // * Optionally, an array of getNumFunctionEffects() CondFunctionEffect.
   //
   // * Optionally a Qualifiers object to represent extra qualifiers that can't
   //   be represented by FunctionTypeBitfields.FastTypeQuals. Present if and
@@ -4744,7 +4778,7 @@ public:
     ExceptionSpecInfo ExceptionSpec;
     const ExtParameterInfo *ExtParameterInfos = nullptr;
     SourceLocation EllipsisLoc;
-    FunctionEffectSet FunctionEffects;
+    FunctionTypeEffects FunctionEffects;
 
     ExtProtoInfo()
         : Variadic(false), HasTrailingReturn(false),
@@ -4810,8 +4844,8 @@ private:
     return hasExtParameterInfos() ? getNumParams() : 0;
   }
 
-  unsigned numTrailingObjects(OverloadToken<FunctionEffectSet>) const {
-    return hasFunctionEffects() ? 1 : 0;
+  unsigned numTrailingObjects(OverloadToken<CondFunctionEffect>) const {
+    return getNumFunctionEffects();
   }
 
   /// Determine whether there are any argument types that
@@ -5127,15 +5161,20 @@ public:
     return false;
   }
 
-  bool hasFunctionEffects() const {
-    if (!hasExtraBitfields())
-      return false;
-    return getTrailingObjects<FunctionTypeExtraBitfields>()->HasFunctionEffects;
+  unsigned getNumFunctionEffects() const {
+    return hasExtraBitfields()
+               ? getTrailingObjects<FunctionTypeExtraBitfields>()
+                     ->NumFunctionEffects
+               : 0;
   }
 
-  FunctionEffectSet getFunctionEffects() const {
-    if (hasFunctionEffects())
-      return *getTrailingObjects<FunctionEffectSet>();
+  FunctionTypeEffects getFunctionEffects() const {
+    if (hasExtraBitfields()) {
+      const auto *Bitfields = getTrailingObjects<FunctionTypeExtraBitfields>();
+      if (Bitfields->NumFunctionEffects > 0)
+        return FunctionTypeEffects({getTrailingObjects<CondFunctionEffect>(),
+                                    Bitfields->NumFunctionEffects});
+    }
     return {};
   }
 

@@ -719,12 +719,6 @@ public:
   /// Load weak undeclared identifiers from the external source.
   void LoadExternalWeakUndeclaredIdentifiers();
 
-  /// All functions/lambdas/blocks which have bodies and which have a non-empty
-  /// FunctionEffectSet to be verified.
-  SmallVector<const Decl *> DeclsWithEffectsToVerify;
-  /// The union of all effects present on DeclsWithEffectsToVerify.
-  FunctionEffectSet AllEffectsToVerify;
-
   /// Determine if VD, which must be a variable or function, is an external
   /// symbol that nonetheless can't be referenced from outside this translation
   /// unit because its type has no linkage and it's not extern "C".
@@ -944,9 +938,25 @@ public:
   /// Warn when implicitly casting 0 to nullptr.
   void diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E);
 
+  // ----- function effects --- where ?????
+  // Ultimately some more of the effects implementation could/should be moved
+  // out of Type.h, but where to?
+
+  /// All functions/lambdas/blocks which have bodies and which have a non-empty
+  /// FunctionTypeEffects to be verified.
+  SmallVector<const Decl *> DeclsWithEffectsToVerify;
+  /// The union of all effects present on DeclsWithEffectsToVerify. Conditions
+  /// are all null.
+  FunctionTypeEffectSet AllEffectsToVerify;
+
   /// Warn when implicitly changing function effects.
   void diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
                                         SourceLocation Loc);
+
+  /// Potentially add a FunctionDecl or BlockDecl to DeclsWithEffectsToVerify.
+  void maybeAddDeclWithEffects(const Decl *D, const FunctionTypeEffects &FX);
+
+  // ----- function effects --- where ?????
 
   bool makeUnavailableInSystemHeader(SourceLocation loc,
                                      UnavailableAttr::ImplicitReason reason);
@@ -3153,9 +3163,6 @@ public:
                               SourceLocation NameLoc, IdentifierInfo *Name,
                               QualType T, TypeSourceInfo *TSInfo,
                               StorageClass SC);
-
-  /// Potentially add a FunctionDecl or BlockDecl to DeclsWithEffectsToVerify.
-  void MaybeAddDeclWithEffects(const Decl *D, const FunctionEffectSet &FX);
 
   // Contexts where using non-trivial C union types can be disallowed. This is
   // passed to err_non_trivial_c_union_in_invalid_context.

@@ -2384,6 +2384,11 @@ public:
 
 // =============================================================================
 
+// Temporary feature enablement
+#define FX_ANALYZER_ENABLED 1
+
+#if FX_ANALYZER_ENABLED
+
 // Temporary debugging option
 #define FX_ANALYZER_VERIFY_DECL_LIST 1
 
@@ -2448,6 +2453,133 @@ static bool functionIsVerifiable(const FunctionDecl *FD) {
   return true;
 }
 
+#if 0
+/// A mutable set of FunctionEffect, for use in places where any conditions
+/// have been resolved or can be ignored.
+class FunctionEffectSet {
+  SmallVector<FunctionEffect, 4> Impl;
+public:
+  FunctionEffectSet() = default;
+
+  operator ArrayRef<FunctionEffect>() const { return Impl; }
+
+  using iterator = const FunctionEffect *;
+  iterator begin() const { return Impl.begin(); }
+  iterator end() const { return Impl.end(); }
+
+  void insert(const FunctionEffect &Effect);
+  void insert(const FunctionEffectSet &Set);
+  void insertIgnoringConditions(ArrayRef<CondFunctionEffect> Arr);
+
+  void dump(llvm::raw_ostream &OS) const;
+
+  static FunctionEffectSet difference(ArrayRef<FunctionEffect> LHS, ArrayRef<FunctionEffect> RHS);
+};
+#endif
+
+/// A mutable set of FunctionEffect, for use in places where any conditions
+/// have been resolved or can be ignored.
+// (This implementation optimizes footprint. As long as FunctionEffect is only 1
+// byte, and there are only 2 possible effects, this is more than sufficient. In
+// AnalysisBasedWarnings, we hold one of these for every function visited,
+// which, due to inference, can be many more functions than have effects.)
+class FunctionEffectSet {
+  template <typename T, typename SizeT, SizeT Capacity> struct FixedVector {
+    SizeT Count = 0;
+    T Items[Capacity] = {};
+
+    using value_type = T;
+
+    using iterator = T *;
+    using const_iterator = const T *;
+    iterator begin() { return &Items[0]; }
+    iterator end() { return &Items[Count]; }
+    const_iterator cbegin() const { return &Items[0]; }
+    const_iterator cend() const { return &Items[Count]; }
+
+    void insert(iterator I, const T &Value) {
+      assert(Count < Capacity);
+      iterator E = end();
+      if (I != E)
+        std::copy_backward(I, E, E + 1);
+      *I = Value;
+      ++Count;
+    }
+
+    void push_back(const T &Value) {
+      assert(Count < Capacity);
+      Items[Count++] = Value;
+    }
+  };
+
+  FixedVector<FunctionEffect, uint8_t, 7> Impl;
+
+public:
+  FunctionEffectSet() = default;
+
+  operator ArrayRef<FunctionEffect>() const {
+    return ArrayRef(Impl.cbegin(), Impl.cend());
+  }
+
+  using iterator = const FunctionEffect *;
+  iterator begin() const { return Impl.cbegin(); }
+  iterator end() const { return Impl.cend(); }
+
+  void insert(const FunctionEffect &Effect);
+  void insert(const FunctionEffectSet &Set);
+  void insertIgnoringConditions(ArrayRef<CondFunctionEffect> Arr);
+
+  void dump(llvm::raw_ostream &OS) const;
+
+  static FunctionEffectSet difference(ArrayRef<FunctionEffect> LHS,
+                                      ArrayRef<FunctionEffect> RHS);
+};
+
+void FunctionEffectSet::insert(const FunctionEffect &Effect) {
+  FunctionEffect *Iter = Impl.begin();
+  FunctionEffect *End = Impl.end();
+  // lower_bound is overkill for a tiny vector like this
+  for (; Iter != End; ++Iter) {
+    if (*Iter == Effect)
+      return;
+    if (Effect < *Iter)
+      break;
+  }
+  Impl.insert(Iter, Effect);
+}
+
+void FunctionEffectSet::insert(const FunctionEffectSet &Set) {
+  for (auto &Item : Set)
+    insert(Item);
+}
+
+void FunctionEffectSet::insertIgnoringConditions(
+    ArrayRef<CondFunctionEffect> Arr) {
+  for (auto &Item : Arr)
+    insert(Item.effect());
+}
+
+LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
+  OS << "Effects{";
+  bool First = true;
+  for (const auto &Effect : *this) {
+    if (!First)
+      OS << ", ";
+    else
+      First = false;
+    OS << Effect.name();
+  }
+  OS << "}";
+}
+
+FunctionEffectSet FunctionEffectSet::difference(ArrayRef<FunctionEffect> LHS,
+                                                ArrayRef<FunctionEffect> RHS) {
+  FunctionEffectSet Result;
+  std::set_difference(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
+                      std::back_inserter(Result.Impl));
+  return Result;
+}
+
 // Transitory, more extended information about a callable, which can be a
 // function, block, function pointer...
 struct CallableInfo {
@@ -2462,6 +2594,7 @@ struct CallableInfo {
   CallableInfo(const Decl &CD, SpecialFuncType FT = SpecialFuncType::None)
       : CDecl(&CD), FuncType(FT) {
     // llvm::errs() << "CallableInfo " << name() << "\n";
+    FunctionTypeEffects FX;
 
     if (auto *FD = dyn_cast<FunctionDecl>(CDecl)) {
       // Use the function's definition, if any.
@@ -2474,14 +2607,15 @@ struct CallableInfo {
           CType = CallType::Virtual;
         }
       }
-      Effects = FD->getFunctionEffects();
+      FX = FD->getFunctionEffects();
     } else if (auto *BD = dyn_cast<BlockDecl>(CDecl)) {
       CType = CallType::Block;
-      Effects = BD->getFunctionEffects();
+      FX = BD->getFunctionEffects();
     } else if (auto *VD = dyn_cast<ValueDecl>(CDecl)) {
       // ValueDecl is function, enum, or variable, so just look at its type.
-      Effects = FunctionEffectSet::get(VD->getType());
+      FX = FunctionTypeEffects::get(VD->getType());
     }
+    Effects.insertIgnoringConditions(FX);
   }
 
   bool isDirectCall() const {
@@ -2574,8 +2708,8 @@ private:
 // ----------
 // State pertaining to a function whose AST is walked. Since there are
 // potentially a large number of these objects, it needs care about size.
+// TODO: FunctionEffectSet could be made much smaller.
 class PendingFunctionAnalysis {
-  // Current size: 5 pointers
   friend class CompleteFunctionAnalysis;
 
   struct DirectCall {
@@ -2615,7 +2749,7 @@ private:
 public:
   PendingFunctionAnalysis(
       Sema &Sem, const CallableInfo &CInfo,
-      const FunctionEffectSet &AllInferrableEffectsToVerify) {
+      ArrayRef<FunctionEffect> AllInferrableEffectsToVerify) {
     DeclaredVerifiableEffects = CInfo.Effects;
 
     // Check for effects we are not allowed to infer
@@ -2635,7 +2769,7 @@ public:
       }
     }
     // FX is now the set of inferrable effects which are not prohibited
-    FXToInfer = FX.getDifference(DeclaredVerifiableEffects);
+    FXToInfer = FunctionEffectSet::difference(FX, DeclaredVerifiableEffects);
   }
 
   // Hide the way that diagnostics for explicitly required effects vs. inferred
@@ -2719,7 +2853,7 @@ public:
   CompleteFunctionAnalysis(
       ASTContext &Ctx, PendingFunctionAnalysis &pending,
       const FunctionEffectSet &funcFX,
-      const FunctionEffectSet &AllInferrableEffectsToVerify) {
+      ArrayRef<FunctionEffect> AllInferrableEffectsToVerify) {
     VerifiedEffects.insert(funcFX);
     for (const auto &effect : AllInferrableEffectsToVerify) {
       if (pending.diagnosticForInferrableEffect(effect) == nullptr) {
@@ -2832,10 +2966,11 @@ public:
     // Gather all of the effects to be verified to see what operations need to
     // be checked, and to see which ones are inferrable.
     {
-      for (const FunctionEffect &effect : Sem.AllEffectsToVerify) {
-        const auto Flags = effect.flags();
+      for (const CondFunctionEffect &CFE : Sem.AllEffectsToVerify) {
+        const FunctionEffect &Effect = CFE.effect();
+        const auto Flags = Effect.flags();
         if (Flags & FunctionEffect::FE_InferrableOnCallees) {
-          AllInferrableEffectsToVerify.insert(effect);
+          AllInferrableEffectsToVerify.insert(Effect);
         }
       }
       if constexpr (DebugLogLevel > 0) {
@@ -3309,11 +3444,14 @@ private:
       const auto CalleeType = CalleeExpr->getType();
       auto *FPT =
           CalleeType->getAs<FunctionProtoType>(); // null if FunctionType
+      FunctionEffectSet CalleeFX;
+      if (FPT)
+        CalleeFX.insertIgnoringConditions(FPT->getFunctionEffects());
+      static_assert(sizeof(FunctionEffect) == 1);
 
       auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
-        if (FPT == nullptr ||
-            Effect.shouldDiagnoseFunctionCall(
-                /*direct=*/false, FPT->getFunctionEffects())) {
+        if (FPT == nullptr || Effect.shouldDiagnoseFunctionCall(
+                                  /*direct=*/false, CalleeFX)) {
           addDiagnosticInner(Inferring, Effect,
                              DiagnosticID::CallsDisallowedExpr,
                              Call->getBeginLoc());
@@ -3582,12 +3720,12 @@ private:
       if (auto *Callable = Result.Nodes.getNodeAs<Decl>(Tag_Callable)) {
         if (const auto FX = functionEffectsForDecl(Callable)) {
           // Reuse this filtering method in Sema
-          Sem.MaybeAddDeclWithEffects(Callable, FX);
+          Sem.maybeAddDeclWithEffects(Callable, FX);
         }
       }
     }
 
-    static FunctionEffectSet functionEffectsForDecl(const Decl *D) {
+    static FunctionTypeEffects functionEffectsForDecl(const Decl *D) {
       if (auto *FD = D->getAsFunction()) {
         return FD->getFunctionEffects();
       }
@@ -3649,6 +3787,7 @@ Analyzer::AnalysisMap::~AnalysisMap() {
 }
 
 } // namespace FXAnalysis
+#endif // FX_ANALYZER_ENABLED
 
 // =============================================================================
 
@@ -3807,8 +3946,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
   }
 
+#if FX_ANALYZER_ENABLED
   // TODO: skip this if the warning isn't enabled.
   FXAnalysis::Analyzer{S}.run(*TU);
+#endif
 }
 
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(

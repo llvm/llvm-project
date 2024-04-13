@@ -4508,7 +4508,7 @@ unsigned FunctionDecl::getODRHash() {
 // Effects may differ between declarations, but they should be propagated from
 // old to new on any redeclaration, so it suffices to look at
 // getMostRecentDecl().
-FunctionEffectSet FunctionDecl::getFunctionEffects() const {
+FunctionTypeEffects FunctionDecl::getFunctionEffects() const {
   if (const auto *FPT =
           getMostRecentDecl()->getType()->getAs<FunctionProtoType>()) {
     return FPT->getFunctionEffects();
@@ -5240,7 +5240,7 @@ SourceRange BlockDecl::getSourceRange() const {
   return SourceRange(getLocation(), Body ? Body->getEndLoc() : getLocation());
 }
 
-FunctionEffectSet BlockDecl::getFunctionEffects() const {
+FunctionTypeEffects BlockDecl::getFunctionEffects() const {
   if (auto *TSI = getSignatureAsWritten()) {
     if (auto *FPT = TSI->getType()->getAs<FunctionProtoType>()) {
       return FPT->getFunctionEffects();

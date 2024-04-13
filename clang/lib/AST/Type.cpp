@@ -3640,11 +3640,12 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
 
   if (epi.FunctionEffects) {
     auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
-    ExtraBits.HasFunctionEffects = true;
-
-    // N.B. This is uninitialized storage.
-    FunctionEffectSet *PFX = getTrailingObjects<FunctionEffectSet>();
-    new (PFX) FunctionEffectSet(epi.FunctionEffects);
+    // TODO: bitfield overflow?
+    if (epi.FunctionEffects) {
+      ExtraBits.NumFunctionEffects = epi.FunctionEffects.size();
+      CondFunctionEffect *CFE = getTrailingObjects<CondFunctionEffect>();
+      std::copy(epi.FunctionEffects.begin(), epi.FunctionEffects.end(), CFE);
+    }
   }
 }
 
@@ -3718,7 +3719,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   // Note that valid type pointers are never ambiguous with anything else.
   //
   // The encoding grammar begins:
-  //      effects type type* bool int bool
+  //      type type* bool int bool
   // If that final bool is true, then there is a section for the EH spec:
   //      bool type*
   // This is followed by an optional "consumed argument" section of the
@@ -3729,14 +3730,11 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   // Finally we have a trailing return type flag (bool)
   // combined with AArch64 SME Attributes, to save space:
   //      int
+  // combined with any FunctionEffects
   //
   // There is no ambiguity between the consumed arguments and an empty EH
   // spec because of the leading 'bool' which unambiguously indicates
   // whether the following bool is the EH spec or part of the arguments.
-
-  // TODO: The effect set is variable-length, though prefaced with a size.
-  // Does this create potential ambiguity?
-  epi.FunctionEffects.Profile(ID);
 
   ID.AddPointer(Result.getAsOpaquePtr());
   for (unsigned i = 0; i != NumParams; ++i)
@@ -3768,6 +3766,8 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
 
   epi.ExtInfo.Profile(ID);
   ID.AddInteger((epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
+
+  epi.FunctionEffects.Profile(ID);
 }
 
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
@@ -5043,16 +5043,16 @@ StringRef FunctionEffect::name() const {
 }
 
 bool FunctionEffect::shouldDiagnoseConversion(
-    bool Adding, QualType OldType, const FunctionEffectSet &OldFX,
-    QualType NewType, const FunctionEffectSet &NewFX) const {
+    bool Adding, QualType OldType, const FunctionTypeEffects &OldFX,
+    QualType NewType, const FunctionTypeEffects &NewFX) const {
 
   switch (kind()) {
   case Kind::NonAllocating:
     // nonallocating can't be added (spoofed) during a conversion, unless we
     // have nonblocking
     if (Adding) {
-      for (const auto &Effect : OldFX) {
-        if (Effect.kind() == Kind::NonBlocking)
+      for (const auto &CFE : OldFX) {
+        if (CFE.effect().kind() == Kind::NonBlocking)
           return false;
       }
     }
@@ -5068,8 +5068,8 @@ bool FunctionEffect::shouldDiagnoseConversion(
 
 bool FunctionEffect::shouldDiagnoseRedeclaration(
     bool Adding, const FunctionDecl &OldFunction,
-    const FunctionEffectSet &OldFX, const FunctionDecl &NewFunction,
-    const FunctionEffectSet &NewFX) const {
+    const FunctionTypeEffects &OldFX, const FunctionDecl &NewFunction,
+    const FunctionTypeEffects &NewFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking:
@@ -5083,8 +5083,9 @@ bool FunctionEffect::shouldDiagnoseRedeclaration(
 }
 
 FunctionEffect::OverrideResult FunctionEffect::shouldDiagnoseMethodOverride(
-    bool Adding, const CXXMethodDecl &OldMethod, const FunctionEffectSet &OldFX,
-    const CXXMethodDecl &NewMethod, const FunctionEffectSet &NewFX) const {
+    bool Adding, const CXXMethodDecl &OldMethod,
+    const FunctionTypeEffects &OldFX, const CXXMethodDecl &NewMethod,
+    const FunctionTypeEffects &NewFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking:
@@ -5132,7 +5133,7 @@ bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
 }
 
 bool FunctionEffect::shouldDiagnoseFunctionCall(
-    bool Direct, const FunctionEffectSet &CalleeFX) const {
+    bool Direct, ArrayRef<FunctionEffect> CalleeFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking: {
@@ -5155,84 +5156,98 @@ bool FunctionEffect::shouldDiagnoseFunctionCall(
 
 // =====
 
-void FunctionEffectSet::Profile(llvm::FoldingSetNodeID &ID) const {
+void FunctionTypeEffects::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.AddInteger(size());
-  if (PImpl)
-    for (const auto &Effect : *PImpl)
-      ID.AddInteger(llvm::to_underlying(Effect.kind()));
-}
-
-FunctionEffectSet &
-FunctionEffectSet::operator=(llvm::ArrayRef<FunctionEffect> Arr) {
-  if (Arr.empty()) {
-    PImpl.reset();
-  } else {
-    if (PImpl == nullptr)
-      PImpl = new ImplVec;
-    PImpl->assign(Arr.begin(), Arr.end());
+  for (const auto &CFE : Items) {
+    ID.AddInteger(llvm::to_underlying(CFE.effect().kind()));
+    ID.AddPointer(CFE.condition());
   }
-  return *this;
 }
 
-FunctionEffectSet
-FunctionEffectSet::getUnion(const FunctionEffectSet &RHS) const {
-  const FunctionEffectSet &LHS = *this;
+FunctionTypeEffectSet
+FunctionTypeEffectSet::getUnion(ArrayRef<CondFunctionEffect> LHS,
+                                ArrayRef<CondFunctionEffect> RHS) {
   // Optimize for either of the two sets being empty (very common).
   if (LHS.empty())
-    return RHS;
+    return FunctionTypeEffectSet(RHS);
   if (RHS.empty())
-    return LHS;
+    return FunctionTypeEffectSet(LHS);
 
   // Optimize for the two sets being identical (very common).
   if (LHS == RHS)
-    return LHS;
+    return FunctionTypeEffectSet(LHS);
 
-  ImplPtr PVec(new ImplVec);
-  PVec->reserve(LHS.size() + RHS.size());
+  FunctionTypeEffectSet Result;
+  Result.Impl.reserve(LHS.size() + RHS.size());
   std::set_union(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
-                 std::back_inserter(*PVec));
-  return FunctionEffectSet(std::move(PVec));
+                 std::back_inserter(Result.Impl));
+  return Result;
 }
 
-FunctionEffectSet
-FunctionEffectSet::getIntersection(const FunctionEffectSet &RHS) const {
-  const FunctionEffectSet &LHS = *this;
-  if (LHS.empty() || RHS.empty()) {
-    return {};
-  }
-
-  ImplPtr PVec(new ImplVec);
-  std::set_intersection(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
-                        std::back_inserter(*PVec));
-  return FunctionEffectSet(std::move(PVec));
-}
-
-FunctionEffectSet::Differences
-FunctionEffectSet::differences(const FunctionEffectSet &Old,
-                               const FunctionEffectSet &New) {
+FunctionTypeEffectSet::Differences
+FunctionTypeEffectSet::differences(const FunctionTypeEffects &Old,
+                                   const FunctionTypeEffects &New) {
   // TODO: Could be a one-pass algorithm.
   Differences Result;
-  for (const auto &Effect : New.getDifference(Old)) {
+  for (const auto &Effect : FunctionTypeEffectSet::difference(New, Old)) {
     Result.emplace_back(Effect, true);
   }
-  for (const auto &Effect : Old.getDifference(New)) {
+  for (const auto &Effect : FunctionTypeEffectSet::difference(Old, New)) {
     Result.emplace_back(Effect, false);
   }
   return Result;
 }
 
-FunctionEffectSet
-FunctionEffectSet::getDifference(const FunctionEffectSet &RHS) const {
-  const FunctionEffectSet &LHS = *this;
-  ImplPtr PVec(new ImplVec);
-
+FunctionTypeEffectSet
+FunctionTypeEffectSet::difference(ArrayRef<CondFunctionEffect> LHS,
+                                  ArrayRef<CondFunctionEffect> RHS) {
+  FunctionTypeEffectSet Result;
   std::set_difference(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
-                      std::back_inserter(*PVec));
-  return FunctionEffectSet(std::move(PVec));
+                      std::back_inserter(Result.Impl));
+  return Result;
+}
+
+void FunctionTypeEffectSet::insert(const CondFunctionEffect &Effect) {
+  auto *Iter = std::lower_bound(Impl.begin(), Impl.end(), Effect);
+  if (Iter == Impl.end() || *Iter != Effect) {
+    Impl.insert(Iter, Effect);
+  }
+}
+
+void FunctionTypeEffectSet::insert(ArrayRef<CondFunctionEffect> Arr) {
+  // TODO: For large RHS sets, use set_union or a custom insert-in-place
+  for (const auto &CFE : Arr) {
+    insert(CFE);
+  }
+}
+
+void FunctionTypeEffectSet::insertIgnoringConditions(
+    ArrayRef<CondFunctionEffect> Arr) {
+  // TODO: For large RHS sets, use set_union or a custom insert-in-place
+  for (const auto &CFE : Arr) {
+    insert(CondFunctionEffect(CFE.effect().kind(), nullptr));
+  }
+}
+
+LLVM_DUMP_METHOD void FunctionTypeEffects::dump(llvm::raw_ostream &OS) const {
+  OS << "Effects{";
+  bool First = true;
+  for (const auto &CFE : *this) {
+    if (!First)
+      OS << ", ";
+    else
+      First = false;
+    OS << CFE.effect().name();
+  }
+  OS << "}";
+}
+
+LLVM_DUMP_METHOD void FunctionTypeEffectSet::dump(llvm::raw_ostream &OS) const {
+  FunctionTypeEffects(*this).dump(OS);
 }
 
 // TODO: inline?
-FunctionEffectSet FunctionEffectSet::get(QualType QT) {
+FunctionTypeEffects FunctionTypeEffects::get(QualType QT) {
   if (QT->isReferenceType())
     QT = QT.getNonReferenceType();
   if (QT->isPointerType())
@@ -5251,42 +5266,4 @@ FunctionEffectSet FunctionEffectSet::get(QualType QT) {
     return FPT->getFunctionEffects();
 
   return {};
-}
-
-// For use in mutating methods: only allow mutating the vector in
-// place when we hold the only reference. Otherwise, copy it first.
-FunctionEffectSet::ImplVec &FunctionEffectSet::mutableVec() {
-  if (PImpl->UseCount() > 1)
-    PImpl = new ImplVec(*PImpl);
-  assert(PImpl->UseCount() == 1 && "mutating a shared function effect set");
-  return *PImpl;
-}
-
-void FunctionEffectSet::insert(const FunctionEffect &Effect) {
-  if (PImpl == nullptr)
-    PImpl = new ImplVec;
-  auto *Iter = std::lower_bound(PImpl->begin(), PImpl->end(), Effect);
-  if (Iter == PImpl->end() || *Iter != Effect) {
-    mutableVec().insert(Iter, Effect);
-  }
-}
-
-void FunctionEffectSet::insert(const FunctionEffectSet &Set) {
-  // TODO: For large RHS sets, use set_union or a custom insert-in-place
-  for (const auto &Effect : Set) {
-    insert(Effect);
-  }
-}
-
-LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
-  OS << "Effects{";
-  bool First = true;
-  for (const auto &Effect : *this) {
-    if (!First)
-      OS << ", ";
-    else
-      First = false;
-    OS << Effect.name();
-  }
-  OS << "}";
 }

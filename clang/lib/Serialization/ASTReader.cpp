@@ -8226,14 +8226,14 @@ void ASTReader::InitializeSema(Sema &S) {
       Decl *D = GetDecl(ID);
       SemaObj->DeclsWithEffectsToVerify.push_back(D);
 
-      FunctionEffectSet FX;
+      FunctionTypeEffects FX;
       if (auto *FD = dyn_cast<FunctionDecl>(D)) {
         FX = FD->getFunctionEffects();
       } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
         FX = BD->getFunctionEffects();
       }
       if (FX) {
-        SemaObj->AllEffectsToVerify.insert(FX);
+        SemaObj->AllEffectsToVerify.insertIgnoringConditions(FX);
       }
     }
     DeclsWithEffectsToVerify.clear();

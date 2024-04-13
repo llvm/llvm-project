@@ -222,10 +222,11 @@ public:
     asImpl().writeUInt32(epi.getOpaqueValue());
   }
 
-  void writeFunctionEffect(FunctionEffect effect) {
-    static_assert(sizeof(effect.getAsOpaqueValue()) <= sizeof(uint32_t),
+  void writeCondFunctionEffect(const CondFunctionEffect &effect) {
+    static_assert(sizeof(FunctionEffect::Kind) <= sizeof(uint32_t),
                   "update this if the value size changes");
-    asImpl().writeUInt32(effect.getAsOpaqueValue());
+    asImpl().writeUInt32(llvm::to_underlying(effect.effect().kind()));
+    asImpl().writeExprRef(effect.condition());
   }
 
   void writeNestedNameSpecifier(NestedNameSpecifier *NNS) {

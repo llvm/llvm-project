@@ -3924,9 +3924,9 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   const auto NewFX = New->getFunctionEffects();
   QualType OldQTypeForComparison = OldQType;
   if (OldFX != NewFX) {
-    const auto Diffs = FunctionEffectSet::differences(OldFX, NewFX);
+    const auto Diffs = FunctionTypeEffectSet::differences(OldFX, NewFX);
     for (const auto &Item : Diffs) {
-      const FunctionEffect &Effect = Item.first;
+      const FunctionEffect &Effect = Item.first.effect();
       const bool Adding = Item.second;
       if (Effect.shouldDiagnoseRedeclaration(Adding, *Old, OldFX, *New,
                                              NewFX)) {
@@ -3940,10 +3940,10 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     // declaration, but that would trigger an additional "conflicting types"
     // error.
     if (const auto *NewFPT = NewQType->getAs<FunctionProtoType>()) {
-      auto MergedFX = OldFX.getUnion(NewFX);
+      auto MergedFX = FunctionTypeEffectSet::getUnion(OldFX, NewFX);
 
       FunctionProtoType::ExtProtoInfo EPI = NewFPT->getExtProtoInfo();
-      EPI.FunctionEffects = MergedFX;
+      EPI.FunctionEffects = FunctionTypeEffects(MergedFX);
       QualType ModQT = Context.getFunctionType(NewFPT->getReturnType(),
                                                NewFPT->getParamTypes(), EPI);
 
@@ -3954,7 +3954,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       // so as not to fail due to differences later.
       if (const auto *OldFPT = OldQType->getAs<FunctionProtoType>()) {
         EPI = OldFPT->getExtProtoInfo();
-        EPI.FunctionEffects = MergedFX;
+        EPI.FunctionEffects = FunctionTypeEffects(MergedFX);
         OldQTypeForComparison = Context.getFunctionType(
             OldFPT->getReturnType(), OldFPT->getParamTypes(), EPI);
       }
@@ -11128,7 +11128,8 @@ Attr *Sema::getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
 
 // Should only be called when getFunctionEffects() returns a non-empty set.
 // Decl should be a FunctionDecl or BlockDecl.
-void Sema::MaybeAddDeclWithEffects(const Decl *D, const FunctionEffectSet &FX) {
+void Sema::maybeAddDeclWithEffects(const Decl *D,
+                                   const FunctionTypeEffects &FX) {
   if (!D->hasBody()) {
     if (const auto *FD = D->getAsFunction()) {
       if (!FD->willHaveBody()) {
@@ -11152,7 +11153,8 @@ void Sema::MaybeAddDeclWithEffects(const Decl *D, const FunctionEffectSet &FX) {
     return;
   }
 
-  AllEffectsToVerify.insert(FX);
+  // Ignore any conditions when building the list of effects.
+  AllEffectsToVerify.insertIgnoringConditions(FX);
 
   // Record the declaration for later analysis.
   DeclsWithEffectsToVerify.push_back(D);
@@ -16064,7 +16066,7 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     Diag(FD->getLocation(), diag::warn_function_def_in_objc_container);
 
   if (const auto FX = FD->getCanonicalDecl()->getFunctionEffects()) {
-    MaybeAddDeclWithEffects(FD, FX);
+    maybeAddDeclWithEffects(FD, FX);
   }
 
   return D;

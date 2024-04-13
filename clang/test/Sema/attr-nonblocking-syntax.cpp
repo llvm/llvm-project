@@ -40,15 +40,15 @@ struct Struct {
 // CHECK: FieldDecl {{.*}} nl_func_field 'void (*)() __attribute__((clang_nonblocking))'
 };
 
-// nonallocating should be subsumed into nonblocking
+// nonallocating should NOT be subsumed into nonblocking
 void nl1() [[clang::nonblocking]] [[clang::nonallocating]];
-// CHECK: FunctionDecl {{.*}} nl1 'void () __attribute__((clang_nonblocking))'
+// CHECK: FunctionDecl {{.*}} nl1 'void () __attribute__((clang_nonblocking)) __attribute__((clang_nonallocating))'
 
 void nl2() [[clang::nonallocating]] [[clang::nonblocking]];
 // CHECK: FunctionDecl {{.*}} nl2 'void () __attribute__((clang_nonblocking)) __attribute__((clang_nonallocating))'
 
 decltype(nl1) nl3;
-// CHECK: FunctionDecl {{.*}} nl3 'decltype(nl1)':'void () __attribute__((clang_nonblocking))'
+// CHECK: FunctionDecl {{.*}} nl3 'decltype(nl1)':'void () __attribute__((clang_nonblocking)) __attribute__((clang_nonallocating))'
 
 // Attribute propagates from base class virtual method to overrides.
 struct Base {

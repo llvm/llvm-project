@@ -3008,7 +3008,7 @@ public:
   /// computed and stored.
   unsigned getODRHash() const;
 
-  FunctionEffectSet getFunctionEffects() const;
+  FunctionTypeEffects getFunctionEffects() const;
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -4635,7 +4635,7 @@ public:
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
-  FunctionEffectSet getFunctionEffects() const;
+  FunctionTypeEffects getFunctionEffects() const;
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
