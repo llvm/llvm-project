@@ -60,6 +60,10 @@ static_assert(!std::is_invocable_v<decltype(std::views::repeat), NonCopyable>);
 // Tp is move_constructible
 static_assert(std::is_invocable_v<decltype(std::views::repeat), MoveOnly>);
 
+// Test LWG4054 "Repeating a repeat_view should repeat the view"
+static_assert(std::is_same_v<decltype(std::views::repeat(std::views::repeat(42))),
+                             std::ranges::repeat_view<std::ranges::repeat_view<int>>>);
+
 constexpr bool test() {
   assert(*std::views::repeat(33).begin() == 33);
   assert(*std::views::repeat(33, 10).begin() == 33);
