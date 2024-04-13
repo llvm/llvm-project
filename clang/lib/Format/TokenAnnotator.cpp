@@ -5598,35 +5598,45 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   // FIXME: Breaking after newlines seems useful in general. Turn this into an
   // option and recognize more cases like endl etc, and break independent of
   // what comes after operator lessless.
-  if (Style.BreakChevronOperator == FormatStyle::BCOS_BetweenStrings) {
+  switch (Style.BreakStreamOperator) {
+  case FormatStyle::BCOS_BetweenStrings: {
     if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
         Right.Next->is(tok::string_literal)) {
       return true;
     }
+    break;
   }
-  if (Style.BreakChevronOperator == FormatStyle::BCOS_BetweenNewlineStrings) {
+  case FormatStyle::BCOS_BetweenNewlineStrings: {
     if (Right.is(tok::lessless) && Right.Next &&
         Right.Next->is(tok::string_literal) && Left.is(tok::string_literal) &&
         Left.TokenText.ends_with("\\n\"")) {
       return true;
     }
+    break;
   }
-  if (Style.BreakChevronOperator == FormatStyle::BCOS_Always) {
-    // can be std::os or os
-    auto *FirstChevron = Right.Previous;
-    while (FirstChevron) {
-      if (FirstChevron->isOneOf(tok::lessless, tok::greater))
+  case FormatStyle::BCOS_Always: {
+    // Don't break after the very first << or >>
+    // but the Left token can be os or std::os so
+    // scan back
+    auto *FirstStream = Right.Previous;
+    while (FirstStream) {
+      if (FirstStream->isOneOf(tok::lessless, tok::greater))
         break;
-      FirstChevron = FirstChevron->Previous;
+      FirstStream = FirstStream->Previous;
     }
 
-    if (Right.is(tok::lessless) && FirstChevron)
+    if (Right.is(tok::lessless) && FirstStream)
       return true;
     if (Right.is(tok::greater) && Right.Next && Right.Next->is(tok::greater) &&
-        FirstChevron) {
+        FirstStream) {
       return true;
     }
+    break;
   }
+  case FormatStyle::BCOS_Normal:
+    break;
+  }
+
   if (Right.is(TT_RequiresClause)) {
     switch (Style.RequiresClausePosition) {
     case FormatStyle::RCPS_OwnLine:

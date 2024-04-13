@@ -27361,11 +27361,11 @@ TEST_F(FormatTest, StreamOutputOperator) {
                "          << \"ddd\";",
                Style);
 
-  Style.BreakChevronOperator = FormatStyle::BCOS_Never;
+  Style.BreakStreamOperator = FormatStyle::BCOS_Normal;
   verifyFormat("std::cout << \"aaaa\" << \"bbb\" << baz;", Style);
   verifyFormat("std::cout << \"ccc\\n\" << \"dddd\";", Style);
 
-  Style.BreakChevronOperator = FormatStyle::BCOS_BetweenStrings;
+  Style.BreakStreamOperator = FormatStyle::BCOS_BetweenStrings;
   verifyFormat("std::cout << \"eee\"\n"
                "          << \"ffff\";",
                Style);
@@ -27373,13 +27373,13 @@ TEST_F(FormatTest, StreamOutputOperator) {
                "          << \"bbbb\";",
                Style);
 
-  Style.BreakChevronOperator = FormatStyle::BCOS_BetweenNewlineStrings;
+  Style.BreakStreamOperator = FormatStyle::BCOS_BetweenNewlineStrings;
   verifyFormat("std::cout << \"aaaa\" << \"bbb\" << baz;", Style);
   verifyFormat("std::cout << \"ggg\\n\"\n"
                "          << \"dddd\";",
                Style);
 
-  Style.BreakChevronOperator = FormatStyle::BCOS_Always;
+  Style.BreakStreamOperator = FormatStyle::BCOS_Always;
   verifyFormat("std::cout << \"aaaa\"\n"
                "          << \"bbb\"\n"
                "          << baz;",
@@ -27409,11 +27409,11 @@ TEST_F(FormatTest, StreamOutputOperator) {
 TEST_F(FormatTest, StreamInputOperator) {
   auto Style = getLLVMStyle();
 
-  Style.BreakChevronOperator = FormatStyle::BCOS_Never;
+  Style.BreakStreamOperator = FormatStyle::BCOS_Normal;
   verifyFormat("std::in >> aaaa >> bbb >> baz;", Style);
   verifyFormat("std::in >> ccc >> dddd;", Style);
 
-  Style.BreakChevronOperator = FormatStyle::BCOS_Always;
+  Style.BreakStreamOperator = FormatStyle::BCOS_Always;
   verifyFormat("std::in >> ccc;", Style);
   verifyFormat("std::in >> aaaa\n"
                "    >> bbb\n"

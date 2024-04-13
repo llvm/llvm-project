@@ -244,10 +244,10 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBeforeInlineASMColonStyle> {
 };
 
 template <>
-struct ScalarEnumerationTraits<FormatStyle::BreakChevronOperatorStyle> {
+struct ScalarEnumerationTraits<FormatStyle::BreakStreamOperatorStyle> {
   static void enumeration(IO &IO,
-                          FormatStyle::BreakChevronOperatorStyle &Value) {
-    IO.enumCase(Value, "Never", FormatStyle::BCOS_Never);
+                          FormatStyle::BreakStreamOperatorStyle &Value) {
+    IO.enumCase(Value, "Normal", FormatStyle::BCOS_Normal);
     IO.enumCase(Value, "BetweenStrings", FormatStyle::BCOS_BetweenStrings);
     IO.enumCase(Value, "BetweenNewlineStrings",
                 FormatStyle::BCOS_BetweenNewlineStrings);
@@ -965,7 +965,7 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.BreakBeforeInlineASMColon);
     IO.mapOptional("BreakBeforeTernaryOperators",
                    Style.BreakBeforeTernaryOperators);
-    IO.mapOptional("BreakChevronOperator", Style.BreakChevronOperator);
+    IO.mapOptional("BreakStreamOperator", Style.BreakStreamOperator);
     IO.mapOptional("BreakConstructorInitializers",
                    Style.BreakConstructorInitializers);
     IO.mapOptional("BreakFunctionDefinitionParameters",
@@ -1479,7 +1479,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
   LLVMStyle.BreakBeforeTernaryOperators = true;
-  LLVMStyle.BreakChevronOperator = FormatStyle::BCOS_BetweenStrings;
+  LLVMStyle.BreakStreamOperator = FormatStyle::BCOS_BetweenStrings;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakFunctionDefinitionParameters = false;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;

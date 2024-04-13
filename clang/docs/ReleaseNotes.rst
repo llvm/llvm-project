@@ -671,7 +671,7 @@ clang-format
   ``BreakTemplateDeclarations``.
 - ``AlwaysBreakAfterReturnType`` is deprecated and renamed to
   ``BreakAfterReturnType``.
-- ``BreakChevronOperator`` Style is added and the previous default
+- ``BreakStreamOperator`` Style is added and the previous default
   of breaking between strings is reverted.
 
 libclang

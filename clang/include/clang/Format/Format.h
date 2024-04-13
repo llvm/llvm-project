@@ -2193,13 +2193,13 @@ struct FormatStyle {
   /// \version 3.7
   bool BreakBeforeTernaryOperators;
 
-  /// Different ways to Break Between Chevrons.
-  enum BreakChevronOperatorStyle : int8_t {
+  /// Different ways to Break Between Stream Operators.
+  enum BreakStreamOperatorStyle : int8_t {
     /// Break using ColumnLimit rules.
     /// \code
     ///   os << "aaaaa" << "bbbbb" << "\n";
     /// \endcode
-    BCOS_Never,
+    BCOS_Normal,
     /// Break between adjacent strings.
     /// \code
     ///   os << "aaaaa"
@@ -2214,7 +2214,7 @@ struct FormatStyle {
     ///      << "\n";
     /// \endcode
     BCOS_BetweenNewlineStrings,
-    /// Break between adjacent chevrons.
+    /// Break between adjacent stream operations.
     /// \code
     ///   os << "aaaaa\n"
     ///      << "bbbbb"
@@ -2224,9 +2224,9 @@ struct FormatStyle {
     BCOS_Always
   };
 
-  /// Break Between Chevron Operators
+  /// Break Between Stream Operators.
   /// \version 19
-  BreakChevronOperatorStyle BreakChevronOperator;
+  BreakStreamOperatorStyle BreakStreamOperator;
 
   /// Different ways to break initializers.
   enum BreakConstructorInitializersStyle : int8_t {
@@ -4986,7 +4986,7 @@ struct FormatStyle {
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
-           BreakChevronOperator == R.BreakChevronOperator &&
+           BreakStreamOperator == R.BreakStreamOperator &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
            BreakFunctionDefinitionParameters ==
                R.BreakFunctionDefinitionParameters &&
