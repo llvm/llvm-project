@@ -1471,12 +1471,6 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
 
   Value *X;
   if (match(Src, m_Trunc(m_Value(X)))) {
-    // If the input has more sign bits than bits truncated, then convert
-    // directly to final type.
-    unsigned XBitSize = X->getType()->getScalarSizeInBits();
-    if (ComputeNumSignBits(X, 0, &Sext) > XBitSize - SrcBitSize)
-      return CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
-
     // If trunc has nsw flag, then convert directly to final type.
     auto *CSrc = cast<TruncInst>(Src);
     if (CSrc->hasNoSignedWrap()) {
@@ -1497,6 +1491,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     // the logic shift to arithmetic shift and eliminate the cast to
     // intermediate type:
     // sext (trunc (lshr Y, C)) --> sext/trunc (ashr Y, C)
+    unsigned XBitSize = X->getType()->getScalarSizeInBits();
     Value *Y;
     if (Src->hasOneUse() &&
         match(X, m_LShr(m_Value(Y),
