@@ -56508,14 +56508,14 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
 
   SDLoc dl(N);
   if (SrcVT.getScalarType() == MVT::bf16) {
-    assert(!IsStrict && "Strict FP doesn't support BF16");
-    if (Src.getOpcode() == ISD::FP_ROUND &&
+    if (!IsStrict && Src.getOpcode() == ISD::FP_ROUND &&
         Src.getOperand(0).getValueType() == VT)
       return Src.getOperand(0);
 
     if (!SrcVT.isVector())
       return SDValue();
 
+    assert(!IsStrict && "Strict FP doesn't support BF16");
     if (VT.getVectorElementType() == MVT::f64) {
       MVT TmpVT = VT.getSimpleVT().changeVectorElementType(MVT::f32);
       return DAG.getNode(ISD::FP_EXTEND, dl, VT,
