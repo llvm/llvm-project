@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -disable-llvm-passes -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -emit-llvm -disable-llvm-passes -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 
-namespace dr292 { // dr292: 2.9
+namespace cwg292 { // cwg292: 2.9
 
 extern int g();
 
@@ -18,13 +18,13 @@ void f() {
   new A(g());
 }
 
-// CHECK-LABEL: define {{.*}} void @dr292::f()()
+// CHECK-LABEL: define {{.*}} void @cwg292::f()()
 // CHECK:         %[[CALL:.+]] = call {{.*}} @operator new(unsigned long)({{.*}})
-// CHECK:         invoke {{.*}} i32 @dr292::g()()
+// CHECK:         invoke {{.*}} i32 @cwg292::g()()
 // CHECK-NEXT:           to {{.*}} unwind label %lpad
 // CHECK-LABEL: lpad:
 // CHECK:         call void @operator delete(void*)(ptr {{.*}} %[[CALL]])
 // CHECK-LABEL: eh.resume:
 // CHECK-LABEL: }
 
-} // namespace dr292
+} // namespace cwg292

@@ -6,33 +6,28 @@
 // RUN: %clang_cc1 -std=c++23 %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-linux-gnu -emit-llvm -o - -fexceptions -fcxx-exceptions -pedantic-errors | llvm-cxxfilt -n | FileCheck %s --check-prefixes CHECK
 
-namespace dr441 { // dr441: 2.7
+#if __cplusplus == 199711L
+#define NOTHROW throw()
+#else
+#define NOTHROW noexcept(true)
+#endif
 
+namespace cwg199 { // cwg199: 2.8
 struct A {
-  A() {}
+  ~A() NOTHROW {}
 };
 
-A dynamic_init;
-int i;
-int& ir = i;
-int* ip = &i;
+struct B {
+  ~B() NOTHROW {}
+};
 
-} // namespace dr441
+void foo() {
+  A(), B();
+}
 
-// CHECK-DAG:   @dr441::dynamic_init = global %"struct.dr441::A" zeroinitializer
-// CHECK-DAG:   @dr441::i = global i32 0
-// CHECK-DAG:   @dr441::ir = constant ptr @dr441::i
-// CHECK-DAG:   @dr441::ip = global ptr @dr441::i
-// CHECK-DAG:   @llvm.global_ctors = appending global [{{.+}}] [{ {{.+}} } { {{.+}}, ptr @_GLOBAL__sub_I_dr441.cpp, {{.+}} }]
-
-// CHECK-LABEL: define {{.*}} void @__cxx_global_var_init()
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @dr441::A::A()({{.*}} @dr441::dynamic_init)
-// CHECK-NEXT:    ret void
-// CHECK-NEXT:  }
-
-// CHECK-LABEL: define {{.*}} void @_GLOBAL__sub_I_dr441.cpp()
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @__cxx_global_var_init()
-// CHECK-NEXT:    ret void
-// CHECK-NEXT:  }
+// CHECK-LABEL: define {{.*}} void @cwg199::foo()
+// CHECK-NOT:     call void @cwg199::A::~A()
+// CHECK:         call void @cwg199::B::~B()
+// CHECK:         call void @cwg199::A::~A()
+// CHECK-LABEL: }
+} // namespace cwg199
