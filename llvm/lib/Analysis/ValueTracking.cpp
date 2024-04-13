@@ -1111,9 +1111,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
       break;
     }
 
-    Value *V;
+    const Value *V;
     // Handle bitcast from floating point to integer.
-    if (match(const_cast<Operator *>(I), m_ElementWiseBitCast(m_Value(V))) &&
+    if (match(I, m_ElementWiseBitCast(m_Value(V))) &&
         V->getType()->isFPOrFPVectorTy()) {
       KnownFPClass Result = computeKnownFPClass(V, fcAllFlags, Depth + 1, Q);
       if (Result.SignBit) {
@@ -1126,19 +1126,18 @@ static void computeKnownBitsFromOperator(const Operator *I,
       Type *FPType = V->getType()->getScalarType();
       if (FPType->isIEEELikeFPTy()) {
         int MantissaWidth = FPType->getFPMantissaWidth();
-        if (MantissaWidth != -1) {
-          if (Result.isKnownOnly(fcInf)) {
-            Known.Zero.setLowBits(MantissaWidth);
-            Known.One.setBits(MantissaWidth, BitWidth - 1);
-          } else if (Result.isKnownOnly(fcZero)) {
-            Known.Zero.setLowBits(BitWidth - 1);
-          } else if (Result.isKnownOnly(fcInf | fcNan)) {
-            Known.One.setBits(MantissaWidth, BitWidth - 1);
-          } else if (Result.isKnownOnly(fcSubnormal | fcZero)) {
-            Known.Zero.setBits(MantissaWidth, BitWidth - 1);
-          } else if (Result.isKnownOnly(fcInf | fcZero)) {
-            Known.Zero.setLowBits(MantissaWidth);
-          }
+        assert(MantissaWidth != -1 && "Invalid mantissa width");
+        if (Result.isKnownOnly(fcInf)) {
+          Known.Zero.setLowBits(MantissaWidth);
+          Known.One.setBits(MantissaWidth, BitWidth - 1);
+        } else if (Result.isKnownOnly(fcZero)) {
+          Known.Zero.setLowBits(BitWidth - 1);
+        } else if (Result.isKnownOnly(fcInf | fcNan)) {
+          Known.One.setBits(MantissaWidth, BitWidth - 1);
+        } else if (Result.isKnownOnly(fcSubnormal | fcZero)) {
+          Known.Zero.setBits(MantissaWidth, BitWidth - 1);
+        } else if (Result.isKnownOnly(fcInf | fcZero)) {
+          Known.Zero.setLowBits(MantissaWidth);
         }
       }
 
