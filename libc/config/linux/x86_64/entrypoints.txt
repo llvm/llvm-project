@@ -215,6 +215,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.fileno
 
     # sys/epoll.h entrypoints
+    libc.src.sys.epoll.epoll_create
+    libc.src.sys.epoll.epoll_create1
+    libc.src.sys.epoll.epoll_ctl
     libc.src.sys.epoll.epoll_wait
     libc.src.sys.epoll.epoll_pwait
     # TODO: Need to check if pwait2 is available before providing.
@@ -308,6 +311,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
+    libc.src.unistd.pipe
     libc.src.unistd.pread
     libc.src.unistd.pwrite
     libc.src.unistd.read
