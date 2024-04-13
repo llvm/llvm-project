@@ -1188,9 +1188,20 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   if (auto *CSrc = dyn_cast<TruncInst>(Src)) {   // A->B->C cast
     // TODO: Subsume this into EvaluateInDifferentType.
 
+    Value *A = CSrc->getOperand(0);
+    // If TRUNC has nuw flag, then convert directly to final type.
+    if (CSrc->hasNoUnsignedWrap()) {
+      CastInst *I =
+          CastInst::CreateIntegerCast(A, DestTy, /* isSigned */ false);
+      if (auto *ZExt = dyn_cast<ZExtInst>(I))
+        ZExt->setNonNeg();
+      if (auto *Trunc = dyn_cast<TruncInst>(I))
+        Trunc->setHasNoUnsignedWrap(true);
+      return I;
+    }
+
     // Get the sizes of the types involved.  We know that the intermediate type
     // will be smaller than A or C, but don't know the relation between A and C.
-    Value *A = CSrc->getOperand(0);
     unsigned SrcSize = A->getType()->getScalarSizeInBits();
     unsigned MidSize = CSrc->getType()->getScalarSizeInBits();
     unsigned DstSize = DestTy->getScalarSizeInBits();
@@ -1466,6 +1477,15 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     unsigned XBitSize = X->getType()->getScalarSizeInBits();
     if (ComputeNumSignBits(X, 0, &Sext) > XBitSize - SrcBitSize)
       return CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
+
+    // If trunc has nsw flag, then convert directly to final type.
+    auto *CSrc = static_cast<TruncInst *>(Src);
+    if (CSrc->hasNoSignedWrap()) {
+      CastInst *I = CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
+      if (auto *Trunc = dyn_cast<TruncInst>(I))
+        Trunc->setHasNoSignedWrap(true);
+      return I;
+    }
 
     // If input is a trunc from the destination type, then convert into shifts.
     if (Src->hasOneUse() && X->getType() == DestTy) {
