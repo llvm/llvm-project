@@ -1,5 +1,8 @@
 #include "utils.h"
 
+#include <sys/wait.h>
+#include <unistd.h>
+
 GlobalStat Global;
 
 spdlog::logger &logger = *spdlog::default_logger();
@@ -181,6 +184,49 @@ bool fileExists(const std::string &path) {
     if (stat(path.c_str(), &info) != 0)
         return false;
     return info.st_mode & S_IFREG;
+}
+int run_program(const std::vector<std::string> &args, const std::string &pwd) {
+    // 创建 C 字符串数组来存储参数
+    std::vector<char *> c_args;
+    for (const auto &arg : args) {
+        c_args.push_back(const_cast<char *>(arg.c_str()));
+    }
+    c_args.push_back(nullptr); // 添加 NULL 作为结束标志
+
+    // 创建新的进程
+    pid_t pid = fork();
+
+    if (pid == -1) {
+        // 错误处理，创建进程失败
+        perror("fork");
+        return -1;
+    } else if (pid == 0) {
+        // 在子进程中改变工作目录
+        if (chdir(pwd.c_str()) == -1) {
+            // 如果chdir返回-1，说明改变目录失败
+            perror("chdir");
+            return -1;
+        }
+
+        // 在子进程中执行程序
+        if (execvp(c_args[0], c_args.data()) == -1) {
+            // 如果execvp返回-1，说明执行失败
+            perror("execvp");
+            return -1;
+        }
+    } else {
+        // 在父进程中等待子进程结束
+        int status;
+        waitpid(pid, &status, 0);
+
+        if (WIFEXITED(status)) {
+            // 子进程正常退出，返回退出状态
+            return WEXITSTATUS(status);
+        } else {
+            // 子进程异常退出
+            return -1;
+        }
+    }
 }
 
 /*****************************************************************

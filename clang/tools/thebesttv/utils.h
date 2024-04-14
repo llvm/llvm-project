@@ -175,4 +175,9 @@ bool dirExists(const std::string &path);
  */
 bool fileExists(const std::string &path);
 
+/**
+ * 在指定目录运行程序，并返回程序的返回值
+ */
+int run_program(const std::vector<std::string> &args, const std::string &pwd);
+
 #endif
