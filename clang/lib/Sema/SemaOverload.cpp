@@ -14171,15 +14171,13 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
     break;
 
   case OR_Deleted: {
-    CandidateSet->NoteCandidates(
-        PartialDiagnosticAt(Fn->getBeginLoc(),
-                            SemaRef.PDiag(diag::err_ovl_deleted_call)
-                                << ULE->getName() << Fn->getSourceRange()),
-        SemaRef, OCD_AllCandidates, Args);
+    FunctionDecl *FDecl = (*Best)->Function;
+    SemaRef.DiagnoseUseOfDeletedFunction(Fn->getBeginLoc(),
+                                         Fn->getSourceRange(), ULE->getName(),
+                                         *CandidateSet, FDecl, Args);
 
     // We emitted an error for the unavailable/deleted function call but keep
     // the call in the AST.
-    FunctionDecl *FDecl = (*Best)->Function;
     ExprResult Res =
         SemaRef.FixOverloadedFunctionReference(Fn, (*Best)->FoundDecl, FDecl);
     if (Res.isInvalid())
@@ -14531,19 +14529,23 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
         UnaryOperator::getOpcodeStr(Opc), OpLoc);
     return ExprError();
 
-  case OR_Deleted:
+  case OR_Deleted: {
     // CreateOverloadedUnaryOp fills the first element of ArgsArray with the
     // object whose method was called. Later in NoteCandidates size of ArgsArray
     // is passed further and it eventually ends up compared to number of
     // function candidate parameters which never includes the object parameter,
     // so slice ArgsArray to make sure apples are compared to apples.
+    StringLiteral *Msg = Best->Function->getDeletedMessage();
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
                                        << UnaryOperator::getOpcodeStr(Opc)
+                                       << (Msg != nullptr)
+                                       << (Msg ? Msg->getString() : StringRef())
                                        << Input->getSourceRange()),
         *this, OCD_AllCandidates, ArgsArray.drop_front(),
         UnaryOperator::getOpcodeStr(Opc), OpLoc);
     return ExprError();
+  }
   }
 
   // Either we found no viable overloaded operator or we matched a
@@ -15061,7 +15063,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           OpLoc);
       return ExprError();
 
-    case OR_Deleted:
+    case OR_Deleted: {
       if (isImplicitlyDeleted(Best->Function)) {
         FunctionDecl *DeletedFD = Best->Function;
         DefaultedFunctionKind DFK = getDefaultedFunctionKind(DeletedFD);
@@ -15080,16 +15082,20 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         NoteDeletedFunction(DeletedFD);
         return ExprError();
       }
+
+      StringLiteral *Msg = Best->Function->getDeletedMessage();
       CandidateSet.NoteCandidates(
           PartialDiagnosticAt(
-              OpLoc, PDiag(diag::err_ovl_deleted_oper)
-                         << getOperatorSpelling(Best->Function->getDeclName()
-                                                    .getCXXOverloadedOperator())
-                         << Args[0]->getSourceRange()
-                         << Args[1]->getSourceRange()),
+              OpLoc,
+              PDiag(diag::err_ovl_deleted_oper)
+                  << getOperatorSpelling(Best->Function->getDeclName()
+                                             .getCXXOverloadedOperator())
+                  << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef())
+                  << Args[0]->getSourceRange() << Args[1]->getSourceRange()),
           *this, OCD_AllCandidates, Args, BinaryOperator::getOpcodeStr(Opc),
           OpLoc);
       return ExprError();
+    }
   }
 
   // We matched a built-in operator; build it.
@@ -15401,13 +15407,17 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
       }
       return ExprError();
 
-    case OR_Deleted:
+    case OR_Deleted: {
+      StringLiteral *Msg = Best->Function->getDeletedMessage();
       CandidateSet.NoteCandidates(
-          PartialDiagnosticAt(LLoc, PDiag(diag::err_ovl_deleted_oper)
-                                        << "[]" << Args[0]->getSourceRange()
-                                        << Range),
+          PartialDiagnosticAt(LLoc,
+                              PDiag(diag::err_ovl_deleted_oper)
+                                  << "[]" << (Msg != nullptr)
+                                  << (Msg ? Msg->getString() : StringRef())
+                                  << Args[0]->getSourceRange() << Range),
           *this, OCD_AllCandidates, Args, "[]", LLoc);
       return ExprError();
+    }
     }
 
   // We matched a built-in operator; build it.
@@ -15622,11 +15632,9 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
           *this, OCD_AmbiguousCandidates, Args);
       break;
     case OR_Deleted:
-      CandidateSet.NoteCandidates(
-          PartialDiagnosticAt(UnresExpr->getMemberLoc(),
-                              PDiag(diag::err_ovl_deleted_member_call)
-                                  << DeclName << MemExprE->getSourceRange()),
-          *this, OCD_AllCandidates, Args);
+      DiagnoseUseOfDeletedFunction(
+          UnresExpr->getMemberLoc(), MemExprE->getSourceRange(), DeclName,
+          CandidateSet, Best->Function, Args, /*IsMember=*/true);
       break;
     }
     // Overload resolution fails, try to recover.
@@ -15890,14 +15898,20 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
           *this, OCD_AmbiguousCandidates, Args);
     break;
 
-  case OR_Deleted:
+  case OR_Deleted: {
+    // FIXME: Is this diagnostic here really necessary? It seems that
+    //   1. we don't have any tests for this diagnostic, and
+    //   2. we already issue err_deleted_function_use for this later on anyway.
+    StringLiteral *Msg = Best->Function->getDeletedMessage();
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(Object.get()->getBeginLoc(),
                             PDiag(diag::err_ovl_deleted_object_call)
-                                << Object.get()->getType()
+                                << Object.get()->getType() << (Msg != nullptr)
+                                << (Msg ? Msg->getString() : StringRef())
                                 << Object.get()->getSourceRange()),
         *this, OCD_AllCandidates, Args);
     break;
+  }
   }
 
   if (Best == CandidateSet.end())
@@ -16097,12 +16111,16 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
           *this, OCD_AmbiguousCandidates, Base);
     return ExprError();
 
-  case OR_Deleted:
+  case OR_Deleted: {
+    StringLiteral *Msg = Best->Function->getDeletedMessage();
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_deleted_oper)
-                                       << "->" << Base->getSourceRange()),
+                                       << "->" << (Msg != nullptr)
+                                       << (Msg ? Msg->getString() : StringRef())
+                                       << Base->getSourceRange()),
         *this, OCD_AllCandidates, Base);
     return ExprError();
+  }
   }
 
   CheckMemberOperatorAccess(OpLoc, Base, nullptr, Best->FoundDecl);
@@ -16516,4 +16534,18 @@ bool clang::shouldEnforceArgLimit(bool PartialOverloading,
       if (Proto->isTemplateVariadic())
         return false;
   return true;
+}
+
+void Sema::DiagnoseUseOfDeletedFunction(SourceLocation Loc, SourceRange Range,
+                                        DeclarationName Name,
+                                        OverloadCandidateSet &CandidateSet,
+                                        FunctionDecl *Fn, MultiExprArg Args,
+                                        bool IsMember) {
+  StringLiteral *Msg = Fn->getDeletedMessage();
+  CandidateSet.NoteCandidates(
+      PartialDiagnosticAt(Loc, PDiag(diag::err_ovl_deleted_call)
+                                   << IsMember << Name << (Msg != nullptr)
+                                   << (Msg ? Msg->getString() : StringRef())
+                                   << Range),
+      *this, OCD_AllCandidates, Args);
 }

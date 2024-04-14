@@ -16083,7 +16083,17 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     // This is meant to pop the context added in ActOnStartOfFunctionDef().
     ExitFunctionBodyRAII ExitRAII(*this, isLambdaCallOperator(FD));
     if (FD) {
-      FD->setBody(Body);
+      // If this is called by Parser::ParseFunctionDefinition() after marking
+      // the declaration as deleted, and if the deleted-function-body contains
+      // a message (C++26), then a DefaultedOrDeletedInfo will have already been
+      // added to store that message; do not overwrite it in that case.
+      //
+      // Since this would always set the body to 'nullptr' in that case anyway,
+      // which is already done when the function decl is initially created,
+      // always skipping this irrespective of whether there is a delete message
+      // should not be a problem.
+      if (!FD->isDeletedAsWritten())
+        FD->setBody(Body);
       FD->setWillHaveBody(false);
       CheckImmediateEscalatingFunctionDefinition(FD, FSI);
 
