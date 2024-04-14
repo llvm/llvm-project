@@ -18,10 +18,12 @@ entry:
 
 if.then:                                          ; preds = %entry
 ; CHECK: call void @llvm.pseudoprobe(i64 -1069303473483922844, i64 2
+; callsite probe 3
   invoke void @_Z3foov()
           to label %invoke.cont unwind label %terminate.lpad, !dbg !24
 
 invoke.cont:                                      ; preds = %if.then
+; callsite probe 4
 ; CHECK-NOT: call void @llvm.pseudoprobe(i64 -1069303473483922844,
   invoke void @_Z3bazv()
           to label %invoke.cont1 unwind label %terminate.lpad, !dbg !26
@@ -31,7 +33,8 @@ invoke.cont1:                                     ; preds = %invoke.cont
   br label %if.end, !dbg !27
 
 if.else:                                          ; preds = %entry
-; CHECK: call void @llvm.pseudoprobe(i64 -1069303473483922844, i64 3
+; CHECK: call void @llvm.pseudoprobe(i64 -1069303473483922844, i64 5
+; callsite probe 6
   invoke void @_Z3foov()
           to label %invoke.cont2 unwind label %terminate.lpad, !dbg !28
 
@@ -40,7 +43,8 @@ invoke.cont2:                                     ; preds = %if.else
   br label %if.end
 
 if.end:                                           ; preds = %invoke.cont2, %invoke.cont1
-; CHECK: call void @llvm.pseudoprobe(i64 -1069303473483922844, i64 4
+; CHECK: call void @llvm.pseudoprobe(i64 -1069303473483922844, i64 7
+; callsite probe 8
   invoke void @_Z3foov()
           to label %invoke.cont3 unwind label %terminate.lpad, !dbg !29
 
@@ -51,14 +55,14 @@ invoke.cont3:                                     ; preds = %if.end
   br i1 %tobool4, label %if.then5, label %if.end6, !dbg !32
 
 if.then5:                                         ; preds = %invoke.cont3
-; CHECK: call void @llvm.pseudoprobe(i64 -1069303473483922844, i64 5
+; CHECK: call void @llvm.pseudoprobe(i64 -1069303473483922844, i64 9
   %2 = load volatile i32, ptr @x, align 4, !dbg !33, !tbaa !19
   %inc = add nsw i32 %2, 1, !dbg !33
   store volatile i32 %inc, ptr @x, align 4, !dbg !33, !tbaa !19
   br label %if.end6, !dbg !35
 
 if.end6:                                          ; preds = %if.then5, %invoke.cont3
-; CHECK: call void @llvm.pseudoprobe(i64 -1069303473483922844, i64 6
+; CHECK: call void @llvm.pseudoprobe(i64 -1069303473483922844, i64 10
   ret void, !dbg !36
 
 terminate.lpad:                                   ; preds = %if.end, %if.else, %invoke.cont, %if.then

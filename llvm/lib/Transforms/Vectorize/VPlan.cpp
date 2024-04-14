@@ -871,13 +871,15 @@ void VPlan::execute(VPTransformState *State) {
     // only a single part is generated, which provides the last part from the
     // previous iteration. For non-ordered reductions all UF parts are
     // generated.
-    bool SinglePartNeeded = isa<VPCanonicalIVPHIRecipe>(PhiR) ||
-                            isa<VPFirstOrderRecurrencePHIRecipe>(PhiR) ||
-                            (isa<VPReductionPHIRecipe>(PhiR) &&
-                             cast<VPReductionPHIRecipe>(PhiR)->isOrdered());
-    bool NeedsScalar = isa<VPCanonicalIVPHIRecipe>(PhiR) ||
-                       (isa<VPReductionPHIRecipe>(PhiR) &&
-                        cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+    bool SinglePartNeeded =
+        isa<VPCanonicalIVPHIRecipe>(PhiR) ||
+        isa<VPFirstOrderRecurrencePHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
+        (isa<VPReductionPHIRecipe>(PhiR) &&
+         cast<VPReductionPHIRecipe>(PhiR)->isOrdered());
+    bool NeedsScalar =
+        isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
+        (isa<VPReductionPHIRecipe>(PhiR) &&
+         cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
     unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;
 
     for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
@@ -1372,6 +1374,8 @@ VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
 }
 
 void VPSlotTracker::assignSlot(const VPValue *V) {
+  if (V->getUnderlyingValue())
+    return;
   assert(!Slots.contains(V) && "VPValue already has a slot!");
   Slots[V] = NextSlot++;
 }

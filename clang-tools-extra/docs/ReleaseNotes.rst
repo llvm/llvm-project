@@ -100,6 +100,8 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` script. Added argument `-source-filter`
   to filter source files from the compilation database, via a RegEx. In a
   similar fashion to what `-header-filter` does for header files.
+- Improved :program:`check_clang_tidy.py` script. Added argument `-export-fixes`
+  to aid in clang-tidy and test development.
 
 New checks
 ^^^^^^^^^^
@@ -179,8 +181,9 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
-  giving false positives for deleted functions and fix false negative when some
-  parameters are forwarded, but other aren't.
+  giving false positives for deleted functions, by fixing false negatives when only
+  a few parameters are forwarded and by ignoring parameters without a name (unused
+  arguments).
 
 - Improved :doc:`cppcoreguidelines-owning-memory
   <clang-tidy/checks/cppcoreguidelines/owning-memory>` check to properly handle
@@ -209,6 +212,10 @@ Changes in existing checks
 
 - Improved :doc:`google-runtime-int <clang-tidy/checks/google/runtime-int>`
   check performance through optimizations.
+
+- Improved :doc:`hicpp-ignored-remove-result <clang-tidy/checks/hicpp/ignored-remove-result>`
+  check by ignoring other functions with same prefixes as the target specific
+  functions.
 
 - Improved :doc:`llvm-header-guard
   <clang-tidy/checks/llvm/header-guard>` check by replacing the local
@@ -251,10 +258,19 @@ Changes in existing checks
   analyzed, se the check now handles the common patterns
   `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
 
+- Improved :doc:`readability-avoid-return-with-void-value
+  <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding
+  fix-its.
+
+- Improved :doc:`readability-duplicate-include
+  <clang-tidy/checks/readability/duplicate-include>` check by excluding include
+  directives that form the filename using macro.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
   mode by resolving symbolic links to header files. Fixed handling of Hungarian
-  Prefix when configured to `LowerCase`.
+  Prefix when configured to `LowerCase`. Added support for renaming designated
+  initializers. Added support for renaming macro arguments.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
