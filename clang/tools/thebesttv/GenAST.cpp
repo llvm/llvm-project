@@ -3,6 +3,7 @@
 #include "GenAST.h"
 #include "lib/BS_thread_pool.hpp"
 
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 
@@ -171,4 +172,37 @@ void generateASTDump(const CompilationDatabase &cb) {
     }
     logger.info("AST dump generation finished, {} success, {} failed", goodCnt,
                 badCnt);
+}
+
+std::unique_ptr<ASTUnit> loadFromASTDump(std::string AstDumpPath) {
+    requireTrue(fileExists(AstDumpPath), "AST dump not found: " + AstDumpPath);
+
+    auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
+    auto Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
+    auto HSOpts = std::make_shared<HeaderSearchOptions>();
+
+    return ASTUnit::LoadFromASTFile(
+        AstDumpPath, PCHContainerOps->getRawReader(), ASTUnit::LoadEverything,
+        Diags, FileSystemOptions(), HSOpts);
+}
+
+std::unique_ptr<ASTUnit> getASTOfFile(const std::string &file) {
+    std::string AstDumpPath = getASTDumpFile(file);
+    if (!fileExists(AstDumpPath)) {
+        logger.warn("AST dump not found, generating from: {}", file);
+        auto commands = Global.cb->getCompileCommands(file);
+        if (commands.empty()) {
+            logger.error("No compile command found!");
+            return nullptr;
+        }
+        if (commands.size() > 1) {
+            logger.warn("Multiple compile commands found, using the first one");
+        }
+        if (generateASTDump(commands[0]) != 0) {
+            logger.error("Failed to generate AST dump");
+            return nullptr;
+        }
+        logger.info("AST dump generated successfully");
+    }
+    return loadFromASTDump(AstDumpPath);
 }

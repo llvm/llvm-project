@@ -12,3 +12,5 @@ std::unique_ptr<CompilationDatabase>
 getCompilationDatabaseWithASTEmit(fs::path buildPath);
 
 void generateASTDump(const CompilationDatabase &cb);
+
+std::unique_ptr<ASTUnit> getASTOfFile(const std::string &path);

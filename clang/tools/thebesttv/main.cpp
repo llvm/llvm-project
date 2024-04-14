@@ -187,21 +187,15 @@ VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
         return VarLocResult();
     }
 
-    ClangTool Tool(*Global.cb, {loc.file});
-    DiagnosticConsumer DC = IgnoringDiagConsumer();
-    Tool.setDiagnosticConsumer(&DC);
-
-    std::vector<std::unique_ptr<ASTUnit>> ASTs;
-    Tool.buildASTs(ASTs);
+    auto AST = getASTOfFile(loc.file);
+    if (!AST)
+        return VarLocResult();
+    ASTContext &Context = AST->getASTContext();
+    auto *TUD = Context.getTranslationUnitDecl();
 
     fif functionsInFile;
-    for (auto &AST : ASTs) {
-        ASTContext &Context = AST->getASTContext();
-        auto *TUD = Context.getTranslationUnitDecl();
-        if (TUD->isUnavailable())
-            continue;
+    if (!TUD->isUnavailable())
         FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
-    }
 
     auto exactResult = locateVariable(functionsInFile, loc.file, loc.line,
                                       loc.column, isStmt, true);
@@ -295,21 +289,12 @@ void dumpICFGNode(int u, ordered_json &jPath) {
 
     logger.info(">> Node {} is in {} B{}", u, loc.name, bid);
 
-    ClangTool Tool(*Global.cb, {loc.file});
-    DiagnosticConsumer DC = IgnoringDiagConsumer();
-    Tool.setDiagnosticConsumer(&DC);
-
-    std::vector<std::unique_ptr<ASTUnit>> ASTs;
-    Tool.buildASTs(ASTs);
-
     // FIXME: compile_commands
     // 中一个文件可能对应多条编译命令，所以这里可能有多个AST
     // TODO: 想办法记录 function 用的是哪一条命令，然后只用这一条生成的
-    requireTrue(ASTs.size() != 0, "No AST for file");
-    if (ASTs.size() > 1) {
-        logger.warn("Warning: multiple ASTs for file {}", loc.file);
-    }
-    std::unique_ptr<ASTUnit> AST = std::move(ASTs[0]);
+
+    auto AST = getASTOfFile(loc.file);
+    requireTrue(AST != nullptr);
 
     fif functionsInFile;
     ASTContext &Context = AST->getASTContext();
@@ -519,11 +504,14 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
  */
 void generateICFG(const std::vector<std::string> &allFiles) {
     logger.info("--- Generating whole program call graph ---");
-    ClangTool Tool(*Global.cb, allFiles);
-    DiagnosticConsumer DC = IgnoringDiagConsumer();
-    Tool.setDiagnosticConsumer(&DC);
-
-    Tool.run(newFrontendActionFactory<GenICFGAction>().get());
+    for (auto &file : allFiles) {
+        auto AST = getASTOfFile(file);
+        if (!AST)
+            continue;
+        auto &Context = AST->getASTContext();
+        GenICFGVisitor visitor(&Context, file);
+        visitor.TraverseDecl(Context.getTranslationUnitDecl());
+    }
 }
 
 void generatePathFromOneEntry(const ordered_json &result,
