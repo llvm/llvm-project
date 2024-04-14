@@ -1,5 +1,4 @@
-//===-- Unittests for fegetexceptflag, fesetexceptflag and ----------------===//
-//===-- fetestexceptflag --------------------------------------------------===//
+//===-- Unittests for fe{get|set|test}exceptflag --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +14,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcFenvTest, GetExceptFlagAndSetExceptFlagAndTestExceptFlag) {
+TEST(LlvmLibcFenvTest, GetSetTestExceptFlag) {
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
   LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
