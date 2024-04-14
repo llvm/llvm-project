@@ -92,11 +92,11 @@ define ptr @_Z3fooRSt6vectorIiSaIiEE(ptr %X) {
 ; IC-NEXT:    [[TMP37:%.*]] = load ptr, ptr [[__FIRST_ADDR_I_I]], align 4
 ; IC-NEXT:    [[TMP38:%.*]] = ptrtoint ptr [[TMP37]] to i32
 ; IC-NEXT:    [[TMP39:%.*]] = sub i32 [[TMP36]], [[TMP38]]
-; IC-NEXT:    [[TMP40:%.*]] = ashr i32 [[TMP39]], 2
+; IC-NEXT:    [[TMP40:%.*]] = and i32 [[TMP39]], -4
 ; IC-NEXT:    switch i32 [[TMP40]], label [[BB26_I_I:%.*]] [
-; IC-NEXT:      i32 1, label [[BB22_I_I:%.*]]
-; IC-NEXT:      i32 2, label [[BB18_I_I:%.*]]
-; IC-NEXT:      i32 3, label [[BB14_I_I:%.*]]
+; IC-NEXT:      i32 4, label [[BB22_I_I:%.*]]
+; IC-NEXT:      i32 8, label [[BB18_I_I:%.*]]
+; IC-NEXT:      i32 12, label [[BB14_I_I:%.*]]
 ; IC-NEXT:    ]
 ; IC:       bb14.i.i:
 ; IC-NEXT:    [[TMP41:%.*]] = load ptr, ptr [[__FIRST_ADDR_I_I]], align 4
@@ -199,11 +199,11 @@ define ptr @_Z3fooRSt6vectorIiSaIiEE(ptr %X) {
 ; IC_SROA-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP1]] to i32
 ; IC_SROA-NEXT:    [[TMP22:%.*]] = ptrtoint ptr [[__FIRST_ADDR_I_I_SROA_0_0]] to i32
 ; IC_SROA-NEXT:    [[TMP23:%.*]] = sub i32 [[TMP21]], [[TMP22]]
-; IC_SROA-NEXT:    [[TMP24:%.*]] = ashr i32 [[TMP23]], 2
+; IC_SROA-NEXT:    [[TMP24:%.*]] = and i32 [[TMP23]], -4
 ; IC_SROA-NEXT:    switch i32 [[TMP24]], label [[BB26_I_I:%.*]] [
-; IC_SROA-NEXT:      i32 1, label [[BB22_I_I:%.*]]
-; IC_SROA-NEXT:      i32 2, label [[BB18_I_I:%.*]]
-; IC_SROA-NEXT:      i32 3, label [[BB14_I_I:%.*]]
+; IC_SROA-NEXT:      i32 4, label [[BB22_I_I:%.*]]
+; IC_SROA-NEXT:      i32 8, label [[BB18_I_I:%.*]]
+; IC_SROA-NEXT:      i32 12, label [[BB14_I_I:%.*]]
 ; IC_SROA-NEXT:    ]
 ; IC_SROA:       bb14.i.i:
 ; IC_SROA-NEXT:    [[TMP25:%.*]] = load i32, ptr [[__FIRST_ADDR_I_I_SROA_0_0]], align 4
