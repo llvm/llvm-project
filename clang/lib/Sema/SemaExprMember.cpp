@@ -21,6 +21,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaOpenMP.h"
 
 using namespace clang;
 using namespace sema;
@@ -1935,8 +1936,8 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
   if (getLangOpts().OpenMP && IsArrow &&
       !CurContext->isDependentContext() &&
       isa<CXXThisExpr>(Base.get()->IgnoreParenImpCasts())) {
-    if (auto *PrivateCopy = isOpenMPCapturedDecl(Field)) {
-      return getOpenMPCapturedExpr(PrivateCopy, VK, OK,
+    if (auto *PrivateCopy = OpenMP().isOpenMPCapturedDecl(Field)) {
+      return OpenMP().getOpenMPCapturedExpr(PrivateCopy, VK, OK,
                                    MemberNameInfo.getLoc());
     }
   }
