@@ -1123,7 +1123,10 @@ module std_private_charconv_to_chars                [system] { header "__charcon
 module std_private_charconv_to_chars_base_10        [system] { header "__charconv/to_chars_base_10.h" }
 module std_private_charconv_to_chars_floating_point [system] { header "__charconv/to_chars_floating_point.h" }
 module std_private_charconv_to_chars_integral       [system] { header "__charconv/to_chars_integral.h" }
-module std_private_charconv_to_chars_result         [system] { header "__charconv/to_chars_result.h" }
+module std_private_charconv_to_chars_result         [system] {
+  header "__charconv/to_chars_result.h"
+  export *
+}
 module std_private_charconv_traits                  [system] { header "__charconv/traits.h" }
 
 module std_private_chrono_calendar               [system] { header "__chrono/calendar.h" }
