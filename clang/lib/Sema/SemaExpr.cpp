@@ -5062,9 +5062,10 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
 
   if (base && !base->getType().isNull() &&
       base->hasPlaceholderType(BuiltinType::OMPArraySection))
-    return OpenMP().ActOnOMPArraySectionExpr(base, lbLoc, ArgExprs.front(), SourceLocation(),
-                                    SourceLocation(), /*Length*/ nullptr,
-                                    /*Stride=*/nullptr, rbLoc);
+    return OpenMP().ActOnOMPArraySectionExpr(base, lbLoc, ArgExprs.front(),
+                                             SourceLocation(), SourceLocation(),
+                                             /*Length*/ nullptr,
+                                             /*Stride=*/nullptr, rbLoc);
 
   // Since this might be a postfix expression, get rid of ParenListExprs.
   if (isa<ParenListExpr>(base)) {
@@ -6622,7 +6623,7 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
   if (LangOpts.OpenMP)
     Call = OpenMP().ActOnOpenMPCall(Call, Scope, LParenLoc, ArgExprs, RParenLoc,
-                           ExecConfig);
+                                    ExecConfig);
   if (LangOpts.CPlusPlus) {
     if (const auto *CE = dyn_cast<CallExpr>(Call.get()))
       DiagnosedUnqualifiedCallsToStdFunctions(*this, CE);
@@ -18942,11 +18943,11 @@ static bool captureInCapturedRegion(
         DeclRefType.addConst();
     }
     // Do not capture firstprivates in tasks.
-    if (S.OpenMP().isOpenMPPrivateDecl(Var, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel) !=
-        OMPC_unknown)
+    if (S.OpenMP().isOpenMPPrivateDecl(Var, RSI->OpenMPLevel,
+                                       RSI->OpenMPCaptureLevel) != OMPC_unknown)
       return true;
     ByRef = S.OpenMP().isOpenMPCapturedByRef(Var, RSI->OpenMPLevel,
-                                    RSI->OpenMPCaptureLevel);
+                                             RSI->OpenMPCaptureLevel);
   }
 
   if (ByRef)
@@ -19207,9 +19208,9 @@ bool Sema::tryCaptureVariable(
   // Capture global variables if it is required to use private copy of this
   // variable.
   bool IsGlobal = !VD->hasLocalStorage();
-  if (IsGlobal &&
-      !(LangOpts.OpenMP && OpenMP().isOpenMPCapturedDecl(Var, /*CheckScopeInfo=*/true,
-                                                MaxFunctionScopesIndex)))
+  if (IsGlobal && !(LangOpts.OpenMP &&
+                    OpenMP().isOpenMPCapturedDecl(Var, /*CheckScopeInfo=*/true,
+                                                  MaxFunctionScopesIndex)))
     return true;
 
   if (isa<VarDecl>(Var))
@@ -19338,7 +19339,8 @@ bool Sema::tryCaptureVariable(
             QualType QTy = Var->getType();
             if (ParmVarDecl *PVD = dyn_cast_or_null<ParmVarDecl>(Var))
               QTy = PVD->getOriginalType();
-            for (int I = 1, E = OpenMP().getNumberOfConstructScopes(RSI->OpenMPLevel);
+            for (int I = 1,
+                     E = OpenMP().getNumberOfConstructScopes(RSI->OpenMPLevel);
                  I < E; ++I) {
               auto *OuterRSI = cast<CapturedRegionScopeInfo>(
                   FunctionScopes[FunctionScopesIndex - I]);
@@ -19351,17 +19353,18 @@ bool Sema::tryCaptureVariable(
           bool IsTargetCap =
               IsOpenMPPrivateDecl != OMPC_private &&
               OpenMP().isOpenMPTargetCapturedDecl(Var, RSI->OpenMPLevel,
-                                         RSI->OpenMPCaptureLevel);
+                                                  RSI->OpenMPCaptureLevel);
           // Do not capture global if it is not privatized in outer regions.
           bool IsGlobalCap =
-              IsGlobal && OpenMP().isOpenMPGlobalCapturedDecl(Var, RSI->OpenMPLevel,
-                                                     RSI->OpenMPCaptureLevel);
+              IsGlobal && OpenMP().isOpenMPGlobalCapturedDecl(
+                              Var, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel);
 
           // When we detect target captures we are looking from inside the
           // target region, therefore we need to propagate the capture from the
           // enclosing region. Therefore, the capture is not initially nested.
           if (IsTargetCap)
-            OpenMP().adjustOpenMPTargetScopeIndex(FunctionScopesIndex, RSI->OpenMPLevel);
+            OpenMP().adjustOpenMPTargetScopeIndex(FunctionScopesIndex,
+                                                  RSI->OpenMPLevel);
 
           if (IsTargetCap || IsOpenMPPrivateDecl == OMPC_private ||
               (IsGlobal && !IsGlobalCap)) {

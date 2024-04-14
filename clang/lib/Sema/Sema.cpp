@@ -2688,7 +2688,9 @@ void Sema::PushCapturedRegionScope(Scope *S, CapturedDecl *CD, RecordDecl *RD,
                                    unsigned OpenMPCaptureLevel) {
   auto *CSI = new CapturedRegionScopeInfo(
       getDiagnostics(), S, CD, RD, CD->getContextParam(), K,
-      (getLangOpts().OpenMP && K == CR_OpenMP) ? OpenMP().getOpenMPNestingLevel() : 0,
+      (getLangOpts().OpenMP && K == CR_OpenMP)
+          ? OpenMP().getOpenMPNestingLevel()
+          : 0,
       OpenMPCaptureLevel);
   CSI->ReturnType = Context.VoidTy;
   FunctionScopes.push_back(CSI);

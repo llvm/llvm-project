@@ -1688,9 +1688,9 @@ public:
                                 SourceLocation NameModifierLoc,
                                 SourceLocation ColonLoc,
                                 SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPIfClause(NameModifier, Condition, StartLoc,
-                                         LParenLoc, NameModifierLoc, ColonLoc,
-                                         EndLoc);
+    return getSema().OpenMP().ActOnOpenMPIfClause(
+        NameModifier, Condition, StartLoc, LParenLoc, NameModifierLoc, ColonLoc,
+        EndLoc);
   }
 
   /// Build a new OpenMP 'final' clause.
@@ -1700,8 +1700,8 @@ public:
   OMPClause *RebuildOMPFinalClause(Expr *Condition, SourceLocation StartLoc,
                                    SourceLocation LParenLoc,
                                    SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPFinalClause(Condition, StartLoc, LParenLoc,
-                                            EndLoc);
+    return getSema().OpenMP().ActOnOpenMPFinalClause(Condition, StartLoc,
+                                                     LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'num_threads' clause.
@@ -1713,7 +1713,7 @@ public:
                                         SourceLocation LParenLoc,
                                         SourceLocation EndLoc) {
     return getSema().OpenMP().ActOnOpenMPNumThreadsClause(NumThreads, StartLoc,
-                                                 LParenLoc, EndLoc);
+                                                          LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'safelen' clause.
@@ -1723,7 +1723,8 @@ public:
   OMPClause *RebuildOMPSafelenClause(Expr *Len, SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPSafelenClause(Len, StartLoc, LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPSafelenClause(Len, StartLoc, LParenLoc,
+                                                       EndLoc);
   }
 
   /// Build a new OpenMP 'simdlen' clause.
@@ -1733,14 +1734,16 @@ public:
   OMPClause *RebuildOMPSimdlenClause(Expr *Len, SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPSimdlenClause(Len, StartLoc, LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPSimdlenClause(Len, StartLoc, LParenLoc,
+                                                       EndLoc);
   }
 
   OMPClause *RebuildOMPSizesClause(ArrayRef<Expr *> Sizes,
                                    SourceLocation StartLoc,
                                    SourceLocation LParenLoc,
                                    SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPSizesClause(Sizes, StartLoc, LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPSizesClause(Sizes, StartLoc, LParenLoc,
+                                                     EndLoc);
   }
 
   /// Build a new OpenMP 'full' clause.
@@ -1753,8 +1756,8 @@ public:
   OMPClause *RebuildOMPPartialClause(Expr *Factor, SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPPartialClause(Factor, StartLoc, LParenLoc,
-                                              EndLoc);
+    return getSema().OpenMP().ActOnOpenMPPartialClause(Factor, StartLoc,
+                                                       LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'allocator' clause.
@@ -1764,7 +1767,8 @@ public:
   OMPClause *RebuildOMPAllocatorClause(Expr *A, SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPAllocatorClause(A, StartLoc, LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPAllocatorClause(A, StartLoc, LParenLoc,
+                                                         EndLoc);
   }
 
   /// Build a new OpenMP 'collapse' clause.
@@ -1774,8 +1778,8 @@ public:
   OMPClause *RebuildOMPCollapseClause(Expr *Num, SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPCollapseClause(Num, StartLoc, LParenLoc,
-                                               EndLoc);
+    return getSema().OpenMP().ActOnOpenMPCollapseClause(Num, StartLoc,
+                                                        LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'default' clause.
@@ -1786,8 +1790,8 @@ public:
                                      SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPDefaultClause(Kind, KindKwLoc,
-                                              StartLoc, LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPDefaultClause(
+        Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'proc_bind' clause.
@@ -1799,8 +1803,8 @@ public:
                                       SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPProcBindClause(Kind, KindKwLoc,
-                                               StartLoc, LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPProcBindClause(
+        Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'schedule' clause.
@@ -1824,7 +1828,8 @@ public:
   OMPClause *RebuildOMPOrderedClause(SourceLocation StartLoc,
                                      SourceLocation EndLoc,
                                      SourceLocation LParenLoc, Expr *Num) {
-    return getSema().OpenMP().ActOnOpenMPOrderedClause(StartLoc, EndLoc, LParenLoc, Num);
+    return getSema().OpenMP().ActOnOpenMPOrderedClause(StartLoc, EndLoc,
+                                                       LParenLoc, Num);
   }
 
   /// Build a new OpenMP 'private' clause.
@@ -1835,8 +1840,8 @@ public:
                                      SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPPrivateClause(VarList, StartLoc, LParenLoc,
-                                              EndLoc);
+    return getSema().OpenMP().ActOnOpenMPPrivateClause(VarList, StartLoc,
+                                                       LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'firstprivate' clause.
@@ -1847,8 +1852,8 @@ public:
                                           SourceLocation StartLoc,
                                           SourceLocation LParenLoc,
                                           SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPFirstprivateClause(VarList, StartLoc, LParenLoc,
-                                                   EndLoc);
+    return getSema().OpenMP().ActOnOpenMPFirstprivateClause(VarList, StartLoc,
+                                                            LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'lastprivate' clause.
@@ -1874,8 +1879,8 @@ public:
                                     SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPSharedClause(VarList, StartLoc, LParenLoc,
-                                             EndLoc);
+    return getSema().OpenMP().ActOnOpenMPSharedClause(VarList, StartLoc,
+                                                      LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'reduction' clause.
@@ -1934,9 +1939,9 @@ public:
       SourceLocation LParenLoc, OpenMPLinearClauseKind Modifier,
       SourceLocation ModifierLoc, SourceLocation ColonLoc,
       SourceLocation StepModifierLoc, SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPLinearClause(VarList, Step, StartLoc, LParenLoc,
-                                             Modifier, ModifierLoc, ColonLoc,
-                                             StepModifierLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPLinearClause(
+        VarList, Step, StartLoc, LParenLoc, Modifier, ModifierLoc, ColonLoc,
+        StepModifierLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'aligned' clause.
@@ -1948,8 +1953,8 @@ public:
                                      SourceLocation LParenLoc,
                                      SourceLocation ColonLoc,
                                      SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPAlignedClause(VarList, Alignment, StartLoc,
-                                              LParenLoc, ColonLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPAlignedClause(
+        VarList, Alignment, StartLoc, LParenLoc, ColonLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'copyin' clause.
@@ -1960,8 +1965,8 @@ public:
                                     SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPCopyinClause(VarList, StartLoc, LParenLoc,
-                                             EndLoc);
+    return getSema().OpenMP().ActOnOpenMPCopyinClause(VarList, StartLoc,
+                                                      LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'copyprivate' clause.
@@ -1972,8 +1977,8 @@ public:
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPCopyprivateClause(VarList, StartLoc, LParenLoc,
-                                                  EndLoc);
+    return getSema().OpenMP().ActOnOpenMPCopyprivateClause(VarList, StartLoc,
+                                                           LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'flush' pseudo clause.
@@ -1984,8 +1989,8 @@ public:
                                    SourceLocation StartLoc,
                                    SourceLocation LParenLoc,
                                    SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPFlushClause(VarList, StartLoc, LParenLoc,
-                                            EndLoc);
+    return getSema().OpenMP().ActOnOpenMPFlushClause(VarList, StartLoc,
+                                                     LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'depobj' pseudo clause.
@@ -1995,8 +2000,8 @@ public:
   OMPClause *RebuildOMPDepobjClause(Expr *Depobj, SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPDepobjClause(Depobj, StartLoc, LParenLoc,
-                                             EndLoc);
+    return getSema().OpenMP().ActOnOpenMPDepobjClause(Depobj, StartLoc,
+                                                      LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'depend' pseudo clause.
@@ -2008,8 +2013,8 @@ public:
                                     SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPDependClause(Data, DepModifier, VarList,
-                                             StartLoc, LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPDependClause(
+        Data, DepModifier, VarList, StartLoc, LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'device' clause.
@@ -2021,8 +2026,8 @@ public:
                                     SourceLocation LParenLoc,
                                     SourceLocation ModifierLoc,
                                     SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPDeviceClause(Modifier, Device, StartLoc,
-                                             LParenLoc, ModifierLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPDeviceClause(
+        Modifier, Device, StartLoc, LParenLoc, ModifierLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'map' clause.
@@ -2052,8 +2057,8 @@ public:
                                       SourceLocation LParenLoc,
                                       SourceLocation ColonLoc,
                                       SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPAllocateClause(Allocate, VarList, StartLoc,
-                                               LParenLoc, ColonLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPAllocateClause(
+        Allocate, VarList, StartLoc, LParenLoc, ColonLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'num_teams' clause.
@@ -2063,8 +2068,8 @@ public:
   OMPClause *RebuildOMPNumTeamsClause(Expr *NumTeams, SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPNumTeamsClause(NumTeams, StartLoc, LParenLoc,
-                                               EndLoc);
+    return getSema().OpenMP().ActOnOpenMPNumTeamsClause(NumTeams, StartLoc,
+                                                        LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'thread_limit' clause.
@@ -2075,8 +2080,8 @@ public:
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPThreadLimitClause(ThreadLimit, StartLoc,
-                                                  LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPThreadLimitClause(
+        ThreadLimit, StartLoc, LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'priority' clause.
@@ -2086,8 +2091,8 @@ public:
   OMPClause *RebuildOMPPriorityClause(Expr *Priority, SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPPriorityClause(Priority, StartLoc, LParenLoc,
-                                               EndLoc);
+    return getSema().OpenMP().ActOnOpenMPPriorityClause(Priority, StartLoc,
+                                                        LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'grainsize' clause.
@@ -2099,8 +2104,8 @@ public:
                                        SourceLocation LParenLoc,
                                        SourceLocation ModifierLoc,
                                        SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPGrainsizeClause(Modifier, Device, StartLoc,
-                                                LParenLoc, ModifierLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPGrainsizeClause(
+        Modifier, Device, StartLoc, LParenLoc, ModifierLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'num_tasks' clause.
@@ -2112,8 +2117,8 @@ public:
                                       SourceLocation LParenLoc,
                                       SourceLocation ModifierLoc,
                                       SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPNumTasksClause(Modifier, NumTasks, StartLoc,
-                                               LParenLoc, ModifierLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPNumTasksClause(
+        Modifier, NumTasks, StartLoc, LParenLoc, ModifierLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'hint' clause.
@@ -2123,7 +2128,8 @@ public:
   OMPClause *RebuildOMPHintClause(Expr *Hint, SourceLocation StartLoc,
                                   SourceLocation LParenLoc,
                                   SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPHintClause(Hint, StartLoc, LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPHintClause(Hint, StartLoc, LParenLoc,
+                                                    EndLoc);
   }
 
   /// Build a new OpenMP 'detach' clause.
@@ -2133,7 +2139,8 @@ public:
   OMPClause *RebuildOMPDetachClause(Expr *Evt, SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPDetachClause(Evt, StartLoc, LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPDetachClause(Evt, StartLoc, LParenLoc,
+                                                      EndLoc);
   }
 
   /// Build a new OpenMP 'dist_schedule' clause.
@@ -2160,9 +2167,9 @@ public:
                      DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
                      ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
                      ArrayRef<Expr *> UnresolvedMappers) {
-    return getSema().OpenMP().ActOnOpenMPToClause(MotionModifiers, MotionModifiersLoc,
-                                         MapperIdScopeSpec, MapperId, ColonLoc,
-                                         VarList, Locs, UnresolvedMappers);
+    return getSema().OpenMP().ActOnOpenMPToClause(
+        MotionModifiers, MotionModifiersLoc, MapperIdScopeSpec, MapperId,
+        ColonLoc, VarList, Locs, UnresolvedMappers);
   }
 
   /// Build a new OpenMP 'from' clause.
@@ -2228,8 +2235,8 @@ public:
                                         SourceLocation MLoc,
                                         SourceLocation KindLoc,
                                         SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPDefaultmapClause(M, Kind, StartLoc, LParenLoc,
-                                                 MLoc, KindLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPDefaultmapClause(
+        M, Kind, StartLoc, LParenLoc, MLoc, KindLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'nontemporal' clause.
@@ -2240,8 +2247,8 @@ public:
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPNontemporalClause(VarList, StartLoc, LParenLoc,
-                                                  EndLoc);
+    return getSema().OpenMP().ActOnOpenMPNontemporalClause(VarList, StartLoc,
+                                                           LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'inclusive' clause.
@@ -2252,8 +2259,8 @@ public:
                                        SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPInclusiveClause(VarList, StartLoc, LParenLoc,
-                                                EndLoc);
+    return getSema().OpenMP().ActOnOpenMPInclusiveClause(VarList, StartLoc,
+                                                         LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'exclusive' clause.
@@ -2264,8 +2271,8 @@ public:
                                        SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPExclusiveClause(VarList, StartLoc, LParenLoc,
-                                                EndLoc);
+    return getSema().OpenMP().ActOnOpenMPExclusiveClause(VarList, StartLoc,
+                                                         LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'uses_allocators' clause.
@@ -2275,8 +2282,8 @@ public:
   OMPClause *RebuildOMPUsesAllocatorsClause(
       ArrayRef<SemaOpenMP::UsesAllocatorsData> Data, SourceLocation StartLoc,
       SourceLocation LParenLoc, SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPUsesAllocatorClause(StartLoc, LParenLoc, EndLoc,
-                                                    Data);
+    return getSema().OpenMP().ActOnOpenMPUsesAllocatorClause(
+        StartLoc, LParenLoc, EndLoc, Data);
   }
 
   /// Build a new OpenMP 'affinity' clause.
@@ -2288,8 +2295,8 @@ public:
                                       SourceLocation ColonLoc,
                                       SourceLocation EndLoc, Expr *Modifier,
                                       ArrayRef<Expr *> Locators) {
-    return getSema().OpenMP().ActOnOpenMPAffinityClause(StartLoc, LParenLoc, ColonLoc,
-                                               EndLoc, Modifier, Locators);
+    return getSema().OpenMP().ActOnOpenMPAffinityClause(
+        StartLoc, LParenLoc, ColonLoc, EndLoc, Modifier, Locators);
   }
 
   /// Build a new OpenMP 'order' clause.
@@ -2300,8 +2307,8 @@ public:
       OpenMPOrderClauseKind Kind, SourceLocation KindKwLoc,
       SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc,
       OpenMPOrderClauseModifier Modifier, SourceLocation ModifierKwLoc) {
-    return getSema().OpenMP().ActOnOpenMPOrderClause(Modifier, Kind, StartLoc, LParenLoc,
-                                            ModifierKwLoc, KindKwLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPOrderClause(
+        Modifier, Kind, StartLoc, LParenLoc, ModifierKwLoc, KindKwLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'init' clause.
@@ -2313,8 +2320,8 @@ public:
                                   SourceLocation LParenLoc,
                                   SourceLocation VarLoc,
                                   SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPInitClause(InteropVar, InteropInfo, StartLoc,
-                                           LParenLoc, VarLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPInitClause(
+        InteropVar, InteropInfo, StartLoc, LParenLoc, VarLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'use' clause.
@@ -2324,8 +2331,8 @@ public:
   OMPClause *RebuildOMPUseClause(Expr *InteropVar, SourceLocation StartLoc,
                                  SourceLocation LParenLoc,
                                  SourceLocation VarLoc, SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPUseClause(InteropVar, StartLoc, LParenLoc,
-                                          VarLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPUseClause(InteropVar, StartLoc,
+                                                   LParenLoc, VarLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'destroy' clause.
@@ -2336,8 +2343,8 @@ public:
                                      SourceLocation LParenLoc,
                                      SourceLocation VarLoc,
                                      SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPDestroyClause(InteropVar, StartLoc, LParenLoc,
-                                              VarLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPDestroyClause(
+        InteropVar, StartLoc, LParenLoc, VarLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'novariants' clause.
@@ -2348,8 +2355,8 @@ public:
                                         SourceLocation StartLoc,
                                         SourceLocation LParenLoc,
                                         SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPNovariantsClause(Condition, StartLoc, LParenLoc,
-                                                 EndLoc);
+    return getSema().OpenMP().ActOnOpenMPNovariantsClause(Condition, StartLoc,
+                                                          LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'nocontext' clause.
@@ -2359,8 +2366,8 @@ public:
   OMPClause *RebuildOMPNocontextClause(Expr *Condition, SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPNocontextClause(Condition, StartLoc, LParenLoc,
-                                                EndLoc);
+    return getSema().OpenMP().ActOnOpenMPNocontextClause(Condition, StartLoc,
+                                                         LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'filter' clause.
@@ -2370,8 +2377,8 @@ public:
   OMPClause *RebuildOMPFilterClause(Expr *ThreadID, SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPFilterClause(ThreadID, StartLoc, LParenLoc,
-                                             EndLoc);
+    return getSema().OpenMP().ActOnOpenMPFilterClause(ThreadID, StartLoc,
+                                                      LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'bind' clause.
@@ -2383,8 +2390,8 @@ public:
                                   SourceLocation StartLoc,
                                   SourceLocation LParenLoc,
                                   SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPBindClause(Kind, KindLoc, StartLoc, LParenLoc,
-                                           EndLoc);
+    return getSema().OpenMP().ActOnOpenMPBindClause(Kind, KindLoc, StartLoc,
+                                                    LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'ompx_dyn_cgroup_mem' clause.
@@ -2394,8 +2401,8 @@ public:
   OMPClause *RebuildOMPXDynCGroupMemClause(Expr *Size, SourceLocation StartLoc,
                                            SourceLocation LParenLoc,
                                            SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPXDynCGroupMemClause(Size, StartLoc, LParenLoc,
-                                                    EndLoc);
+    return getSema().OpenMP().ActOnOpenMPXDynCGroupMemClause(Size, StartLoc,
+                                                             LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'ompx_attribute' clause.
@@ -2406,8 +2413,8 @@ public:
                                         SourceLocation StartLoc,
                                         SourceLocation LParenLoc,
                                         SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPXAttributeClause(Attrs, StartLoc, LParenLoc,
-                                                 EndLoc);
+    return getSema().OpenMP().ActOnOpenMPXAttributeClause(Attrs, StartLoc,
+                                                          LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'ompx_bare' clause.
@@ -2426,7 +2433,8 @@ public:
   OMPClause *RebuildOMPAlignClause(Expr *A, SourceLocation StartLoc,
                                    SourceLocation LParenLoc,
                                    SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPAlignClause(A, StartLoc, LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPAlignClause(A, StartLoc, LParenLoc,
+                                                     EndLoc);
   }
 
   /// Build a new OpenMP 'at' clause.
@@ -2437,8 +2445,8 @@ public:
                                 SourceLocation StartLoc,
                                 SourceLocation LParenLoc,
                                 SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPAtClause(Kind, KwLoc, StartLoc, LParenLoc,
-                                         EndLoc);
+    return getSema().OpenMP().ActOnOpenMPAtClause(Kind, KwLoc, StartLoc,
+                                                  LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'severity' clause.
@@ -2450,8 +2458,8 @@ public:
                                       SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPSeverityClause(Kind, KwLoc, StartLoc, LParenLoc,
-                                               EndLoc);
+    return getSema().OpenMP().ActOnOpenMPSeverityClause(Kind, KwLoc, StartLoc,
+                                                        LParenLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'message' clause.
@@ -2461,7 +2469,8 @@ public:
   OMPClause *RebuildOMPMessageClause(Expr *MS, SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc) {
-    return getSema().OpenMP().ActOnOpenMPMessageClause(MS, StartLoc, LParenLoc, EndLoc);
+    return getSema().OpenMP().ActOnOpenMPMessageClause(MS, StartLoc, LParenLoc,
+                                                       EndLoc);
   }
 
   /// Build a new OpenMP 'doacross' clause.
@@ -2781,9 +2790,9 @@ public:
                                         SourceLocation ColonLocSecond,
                                         Expr *Length, Expr *Stride,
                                         SourceLocation RBracketLoc) {
-    return getSema().OpenMP().ActOnOMPArraySectionExpr(Base, LBracketLoc, LowerBound,
-                                              ColonLocFirst, ColonLocSecond,
-                                              Length, Stride, RBracketLoc);
+    return getSema().OpenMP().ActOnOMPArraySectionExpr(
+        Base, LBracketLoc, LowerBound, ColonLocFirst, ColonLocSecond, Length,
+        Stride, RBracketLoc);
   }
 
   /// Build a new array shaping expression.
@@ -2794,19 +2803,20 @@ public:
                                         SourceLocation RParenLoc,
                                         ArrayRef<Expr *> Dims,
                                         ArrayRef<SourceRange> BracketsRanges) {
-    return getSema().OpenMP().ActOnOMPArrayShapingExpr(Base, LParenLoc, RParenLoc, Dims,
-                                              BracketsRanges);
+    return getSema().OpenMP().ActOnOMPArrayShapingExpr(
+        Base, LParenLoc, RParenLoc, Dims, BracketsRanges);
   }
 
   /// Build a new iterator expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildOMPIteratorExpr(
-      SourceLocation IteratorKwLoc, SourceLocation LLoc, SourceLocation RLoc,
-      ArrayRef<SemaOpenMP::OMPIteratorData> Data) {
-    return getSema().OpenMP().ActOnOMPIteratorExpr(/*Scope=*/nullptr, IteratorKwLoc,
-                                          LLoc, RLoc, Data);
+  ExprResult
+  RebuildOMPIteratorExpr(SourceLocation IteratorKwLoc, SourceLocation LLoc,
+                         SourceLocation RLoc,
+                         ArrayRef<SemaOpenMP::OMPIteratorData> Data) {
+    return getSema().OpenMP().ActOnOMPIteratorExpr(
+        /*Scope=*/nullptr, IteratorKwLoc, LLoc, RLoc, Data);
   }
 
   /// Build a new call expression.
@@ -8076,7 +8086,8 @@ TreeTransform<Derived>::TransformForStmt(ForStmt *S) {
   // In OpenMP loop region loop control variable must be captured and be
   // private. Perform analysis of first part (if any).
   if (getSema().getLangOpts().OpenMP && Init.isUsable())
-    getSema().OpenMP().ActOnOpenMPLoopInitialization(S->getForLoc(), Init.get());
+    getSema().OpenMP().ActOnOpenMPLoopInitialization(S->getForLoc(),
+                                                     Init.get());
 
   // Transform the condition
   Sema::ConditionResult Cond = getDerived().TransformCondition(
@@ -9050,8 +9061,9 @@ StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
   }
   StmtResult AssociatedStmt;
   if (D->hasAssociatedStmt() && D->getAssociatedStmt()) {
-    getDerived().getSema().OpenMP().ActOnOpenMPRegionStart(D->getDirectiveKind(),
-                                                  /*CurScope=*/nullptr);
+    getDerived().getSema().OpenMP().ActOnOpenMPRegionStart(
+        D->getDirectiveKind(),
+        /*CurScope=*/nullptr);
     StmtResult Body;
     {
       Sema::CompoundScopeRAII CompoundScope(getSema());
@@ -9110,8 +9122,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPParallelDirective(OMPParallelDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_parallel, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_parallel, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9121,8 +9133,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPSimdDirective(OMPSimdDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_simd, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_simd, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9132,8 +9144,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPTileDirective(OMPTileDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(D->getDirectiveKind(), DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9143,8 +9155,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPUnrollDirective(OMPUnrollDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(D->getDirectiveKind(), DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9154,8 +9166,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPForDirective(OMPForDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_for, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_for, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9165,8 +9177,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPForSimdDirective(OMPForSimdDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_for_simd, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_for_simd, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9176,8 +9188,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPSectionsDirective(OMPSectionsDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_sections, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_sections, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9187,8 +9199,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPSectionDirective(OMPSectionDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_section, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_section, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9198,8 +9210,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPScopeDirective(OMPScopeDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_scope, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_scope, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9209,8 +9221,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPSingleDirective(OMPSingleDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_single, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_single, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9220,8 +9232,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPMasterDirective(OMPMasterDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_master, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_master, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9241,8 +9253,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPParallelForDirective(
     OMPParallelForDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_parallel_for, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_parallel_for, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9252,8 +9264,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPParallelForSimdDirective(
     OMPParallelForSimdDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_parallel_for_simd, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_parallel_for_simd, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9263,8 +9275,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPParallelMasterDirective(
     OMPParallelMasterDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_parallel_master, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_parallel_master, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9274,8 +9286,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPParallelMaskedDirective(
     OMPParallelMaskedDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_parallel_masked, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_parallel_masked, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9285,8 +9297,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPParallelSectionsDirective(
     OMPParallelSectionsDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_parallel_sections, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_parallel_sections, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9296,8 +9308,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPTaskDirective(OMPTaskDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_task, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_task, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9307,8 +9319,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTaskyieldDirective(
     OMPTaskyieldDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_taskyield, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_taskyield, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9318,8 +9330,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPBarrierDirective(OMPBarrierDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_barrier, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_barrier, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9329,8 +9341,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPTaskwaitDirective(OMPTaskwaitDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_taskwait, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_taskwait, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9340,8 +9352,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPErrorDirective(OMPErrorDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_error, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_error, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9351,8 +9363,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTaskgroupDirective(
     OMPTaskgroupDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_taskgroup, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_taskgroup, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9362,8 +9374,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPFlushDirective(OMPFlushDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_flush, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_flush, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9373,8 +9385,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPDepobjDirective(OMPDepobjDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_depobj, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_depobj, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9384,8 +9396,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPScanDirective(OMPScanDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_scan, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_scan, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9395,8 +9407,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPOrderedDirective(OMPOrderedDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_ordered, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_ordered, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9406,8 +9418,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPAtomicDirective(OMPAtomicDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_atomic, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_atomic, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9417,8 +9429,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPTargetDirective(OMPTargetDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_target, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9428,8 +9440,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTargetDataDirective(
     OMPTargetDataDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_target_data, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target_data, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9439,8 +9451,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTargetEnterDataDirective(
     OMPTargetEnterDataDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_target_enter_data, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target_enter_data, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9450,8 +9462,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTargetExitDataDirective(
     OMPTargetExitDataDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_target_exit_data, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target_exit_data, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9461,8 +9473,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTargetParallelDirective(
     OMPTargetParallelDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_target_parallel, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target_parallel, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9472,8 +9484,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTargetParallelForDirective(
     OMPTargetParallelForDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_target_parallel_for, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target_parallel_for, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9483,8 +9495,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTargetUpdateDirective(
     OMPTargetUpdateDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_target_update, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target_update, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9494,8 +9506,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPTeamsDirective(OMPTeamsDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_teams, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_teams, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9505,8 +9517,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPCancellationPointDirective(
     OMPCancellationPointDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_cancellation_point, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_cancellation_point, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9516,8 +9528,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPCancelDirective(OMPCancelDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_cancel, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_cancel, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9527,8 +9539,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPTaskLoopDirective(OMPTaskLoopDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_taskloop, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_taskloop, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9538,8 +9550,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTaskLoopSimdDirective(
     OMPTaskLoopSimdDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_taskloop_simd, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_taskloop_simd, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9549,8 +9561,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPMasterTaskLoopDirective(
     OMPMasterTaskLoopDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_master_taskloop, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_master_taskloop, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9560,8 +9572,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPMaskedTaskLoopDirective(
     OMPMaskedTaskLoopDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_masked_taskloop, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_masked_taskloop, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9571,8 +9583,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPMasterTaskLoopSimdDirective(
     OMPMasterTaskLoopSimdDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_master_taskloop_simd, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_master_taskloop_simd, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9582,8 +9594,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPMaskedTaskLoopSimdDirective(
     OMPMaskedTaskLoopSimdDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_masked_taskloop_simd, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_masked_taskloop_simd, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9639,8 +9651,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPDistributeDirective(
     OMPDistributeDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_distribute, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_distribute, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9673,8 +9685,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPDistributeSimdDirective(
     OMPDistributeSimdDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_distribute_simd, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_distribute_simd, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9695,8 +9707,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTargetSimdDirective(
     OMPTargetSimdDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_target_simd, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target_simd, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9706,8 +9718,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTeamsDistributeDirective(
     OMPTeamsDistributeDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_teams_distribute, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_teams_distribute, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9751,8 +9763,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTargetTeamsDirective(
     OMPTargetTeamsDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_target_teams, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target_teams, DirName, nullptr, D->getBeginLoc());
   auto Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9811,8 +9823,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPInteropDirective(OMPInteropDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_interop, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_interop, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9822,8 +9834,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPDispatchDirective(OMPDispatchDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_dispatch, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_dispatch, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9833,8 +9845,8 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPMaskedDirective(OMPMaskedDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_masked, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_masked, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9844,8 +9856,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPGenericLoopDirective(
     OMPGenericLoopDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_loop, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_loop, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9855,8 +9867,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTeamsGenericLoopDirective(
     OMPTeamsGenericLoopDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_teams_loop, DirName, nullptr,
-                                             D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_teams_loop, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9866,8 +9878,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPTargetTeamsGenericLoopDirective(
     OMPTargetTeamsGenericLoopDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_target_teams_loop, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target_teams_loop, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9877,8 +9889,8 @@ template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPParallelGenericLoopDirective(
     OMPParallelGenericLoopDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_parallel_loop, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_parallel_loop, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -9889,8 +9901,8 @@ StmtResult
 TreeTransform<Derived>::TransformOMPTargetParallelGenericLoopDirective(
     OMPTargetParallelGenericLoopDirective *D) {
   DeclarationNameInfo DirName;
-  getDerived().getSema().OpenMP().StartOpenMPDSABlock(OMPD_target_parallel_loop, DirName,
-                                             nullptr, D->getBeginLoc());
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target_parallel_loop, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -11816,7 +11828,8 @@ TreeTransform<Derived>::TransformMemberExpr(MemberExpr *E) {
     // Skip for member expression of (this->f), rebuilt thisi->f is needed
     // for Openmp where the field need to be privatizized in the case.
     if (!(isa<CXXThisExpr>(E->getBase()) &&
-          getSema().OpenMP().isOpenMPRebuildMemberExpr(cast<ValueDecl>(Member)))) {
+          getSema().OpenMP().isOpenMPRebuildMemberExpr(
+              cast<ValueDecl>(Member)))) {
       // Mark it referenced in the new context regardless.
       // FIXME: this is a bit instantiation-specific.
       SemaRef.MarkMemberReferenced(E);

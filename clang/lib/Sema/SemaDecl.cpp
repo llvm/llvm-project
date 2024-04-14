@@ -6170,10 +6170,11 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
   // declaration only if the `bind_to_declaration` extension is set.
   SmallVector<FunctionDecl *, 4> Bases;
   if (LangOpts.OpenMP && OpenMP().isInOpenMPDeclareVariantScope())
-    if (OpenMP().getOMPTraitInfoForSurroundingScope()->isExtensionActive(llvm::omp::TraitProperty::
-              implementation_extension_bind_to_declaration))
-    OpenMP().ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
-        S, D, MultiTemplateParamsArg(), Bases);
+    if (OpenMP().getOMPTraitInfoForSurroundingScope()->isExtensionActive(
+            llvm::omp::TraitProperty::
+                implementation_extension_bind_to_declaration))
+      OpenMP().ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
+          S, D, MultiTemplateParamsArg(), Bases);
 
   Decl *Dcl = HandleDeclarator(S, D, MultiTemplateParamsArg());
 
@@ -6182,7 +6183,8 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
     Dcl->setTopLevelDeclInObjCContainer();
 
   if (!Bases.empty())
-    OpenMP().ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl, Bases);
+    OpenMP().ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl,
+                                                                        Bases);
 
   return Dcl;
 }
@@ -15505,7 +15507,8 @@ Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Declarator &D,
   Decl *Dcl = ActOnStartOfFunctionDef(FnBodyScope, DP, SkipBody, BodyKind);
 
   if (!Bases.empty())
-    OpenMP().ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl, Bases);
+    OpenMP().ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl,
+                                                                        Bases);
 
   return Dcl;
 }

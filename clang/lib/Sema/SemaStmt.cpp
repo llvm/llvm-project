@@ -4823,7 +4823,8 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
       assert(Cap.isVariableCapture() && "unknown kind of capture");
 
       if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP)
-        S.OpenMP().setOpenMPCaptureKind(Field, Cap.getVariable(), RSI->OpenMPLevel);
+        S.OpenMP().setOpenMPCaptureKind(Field, Cap.getVariable(),
+                                        RSI->OpenMPLevel);
 
       Captures.push_back(CapturedStmt::Capture(
           Cap.getLocation(),

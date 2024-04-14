@@ -477,9 +477,9 @@ static void instantiateOMPDeclareVariantAttr(
   // Check function/variant ref for `omp declare variant` but not for `omp
   // begin declare variant` (which use implicit attributes).
   std::optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
-      S.OpenMP().checkOpenMPDeclareVariantFunction(S.ConvertDeclToDeclGroup(New), E, TI,
-                                          Attr.appendArgs_size(),
-                                          Attr.getRange());
+      S.OpenMP().checkOpenMPDeclareVariantFunction(
+          S.ConvertDeclToDeclGroup(New), E, TI, Attr.appendArgs_size(),
+          Attr.getRange());
 
   if (!DeclVarData)
     return;
@@ -3587,7 +3587,7 @@ Decl *TemplateDeclInstantiator::VisitOMPThreadPrivateDecl(
   }
 
   OMPThreadPrivateDecl *TD =
-    SemaRef.OpenMP().CheckOMPThreadPrivateDecl(D->getLocation(), Vars);
+      SemaRef.OpenMP().CheckOMPThreadPrivateDecl(D->getLocation(), Vars);
 
   TD->setAccess(AS_public);
   Owner->addDecl(TD);
@@ -3616,8 +3616,8 @@ Decl *TemplateDeclInstantiator::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
       ExprResult NewE = SemaRef.SubstExpr(AC->getAlignment(), TemplateArgs);
       if (!NewE.isUsable())
         continue;
-      IC = SemaRef.OpenMP().ActOnOpenMPAlignClause(NewE.get(), AC->getBeginLoc(),
-                                          AC->getLParenLoc(), AC->getEndLoc());
+      IC = SemaRef.OpenMP().ActOnOpenMPAlignClause(
+          NewE.get(), AC->getBeginLoc(), AC->getLParenLoc(), AC->getEndLoc());
       // If align clause value ends up being invalid, this can end up null.
       if (!IC)
         continue;
@@ -3688,12 +3688,14 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
     Sema::CXXThisScopeRAII ThisScope(SemaRef, ThisContext, Qualifiers(),
                                      ThisContext);
     SubstCombiner = SemaRef.SubstExpr(Combiner, TemplateArgs).get();
-    SemaRef.OpenMP().ActOnOpenMPDeclareReductionCombinerEnd(NewDRD, SubstCombiner);
+    SemaRef.OpenMP().ActOnOpenMPDeclareReductionCombinerEnd(NewDRD,
+                                                            SubstCombiner);
   }
   // Initializers instantiation sequence.
   if (Init) {
-    VarDecl *OmpPrivParm = SemaRef.OpenMP().ActOnOpenMPDeclareReductionInitializerStart(
-        /*S=*/nullptr, NewDRD);
+    VarDecl *OmpPrivParm =
+        SemaRef.OpenMP().ActOnOpenMPDeclareReductionInitializerStart(
+            /*S=*/nullptr, NewDRD);
     SemaRef.CurrentInstantiationScope->InstantiatedLocal(
         cast<DeclRefExpr>(D->getInitOrig())->getDecl(),
         cast<DeclRefExpr>(NewDRD->getInitOrig())->getDecl());
@@ -3710,8 +3712,8 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
         SemaRef.InstantiateVariableInitializer(OmpPrivParm, OldPrivParm,
                                                TemplateArgs);
     }
-    SemaRef.OpenMP().ActOnOpenMPDeclareReductionInitializerEnd(NewDRD, SubstInitializer,
-                                                      OmpPrivParm);
+    SemaRef.OpenMP().ActOnOpenMPDeclareReductionInitializerEnd(
+        NewDRD, SubstInitializer, OmpPrivParm);
   }
   IsCorrect = IsCorrect && SubstCombiner &&
               (!Init ||
@@ -3757,10 +3759,11 @@ TemplateDeclInstantiator::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
   // Instantiate the mapper variable.
   DeclarationNameInfo DirName;
   SemaRef.OpenMP().StartOpenMPDSABlock(llvm::omp::OMPD_declare_mapper, DirName,
-                              /*S=*/nullptr,
-                              (*D->clauselist_begin())->getBeginLoc());
-  ExprResult MapperVarRef = SemaRef.OpenMP().ActOnOpenMPDeclareMapperDirectiveVarDecl(
-      /*S=*/nullptr, SubstMapperTy, D->getLocation(), VN);
+                                       /*S=*/nullptr,
+                                       (*D->clauselist_begin())->getBeginLoc());
+  ExprResult MapperVarRef =
+      SemaRef.OpenMP().ActOnOpenMPDeclareMapperDirectiveVarDecl(
+          /*S=*/nullptr, SubstMapperTy, D->getLocation(), VN);
   SemaRef.CurrentInstantiationScope->InstantiatedLocal(
       cast<DeclRefExpr>(D->getMapperVarRef())->getDecl(),
       cast<DeclRefExpr>(MapperVarRef.get())->getDecl());

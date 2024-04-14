@@ -9,7 +9,6 @@
 //  This file implements semantic analysis member access expressions.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Sema/Overload.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -18,6 +17,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
@@ -1938,7 +1938,7 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
       isa<CXXThisExpr>(Base.get()->IgnoreParenImpCasts())) {
     if (auto *PrivateCopy = OpenMP().isOpenMPCapturedDecl(Field)) {
       return OpenMP().getOpenMPCapturedExpr(PrivateCopy, VK, OK,
-                                   MemberNameInfo.getLoc());
+                                            MemberNameInfo.getLoc());
     }
   }
 
