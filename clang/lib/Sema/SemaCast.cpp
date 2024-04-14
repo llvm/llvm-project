@@ -500,7 +500,7 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
 
   case OR_Deleted: {
     OverloadCandidateSet::iterator Best;
-    OverloadingResult Res =
+    [[maybe_unused]] OverloadingResult Res =
         candidates.BestViableFunction(S, range.getBegin(), Best);
     assert(Res == OR_Deleted && "Inconsistent overload resolution");
 
