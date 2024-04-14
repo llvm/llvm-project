@@ -1,23 +1,23 @@
-# debug-names.s was generated with:
+# ppc-debug-names.s was generated with:
 
-# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='debug-names-test' \
-#     -S a.cpp -o a.s
+# - clang++ --target=powerpc -g -O0 -gpubnames \
+#     -fdebug-compilation-dir='debug-names-test' -S a.cpp -o a.s
 
 # a.cpp contents:
 
 # struct t1 { };
 # void f1(t1) { }
 
-# REQUIRES: x86
+# REQUIRES: ppc
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64 b.s -o b.o
+# RUN: llvm-mc -filetype=obj -triple=powerpc a.s -o a.o
+# RUN: llvm-mc -filetype=obj -triple=powerpc b.s -o b.o
 
 # RUN: ld.lld --debug-names --no-debug-names a.o b.o -o out0
 # RUN: llvm-readelf -SW out0 | FileCheck %s --check-prefix=NO_MERGE
 	
 # NO_MERGE: Name              Type     Address          Off      Size   ES Flg Lk Inf Al
-# NO_MERGE: .debug_names      PROGBITS 0000000000000000 [[#%x,]] 000110 00      0   0  4
+# NO_MERGE: .debug_names      PROGBITS 00000000 [[#%x,]] 000110 00      0   0  4
 	
 # RUN: ld.lld --debug-names a.o b.o -o out
 
@@ -25,8 +25,9 @@
 # RUN: llvm-readelf -SW out | FileCheck %s --check-prefix=READELF
 
 # READELF: Name              Type     Address          Off      Size   ES Flg Lk Inf Al
-# READELF: .debug_names      PROGBITS 0000000000000000 [[#%x,]] 0000cc 00      0   0  4
+# READELF: .debug_names      PROGBITS 00000000 [[#%x,]] 0000cc 00      0   0  4
 
+# DWARF:      file format elf32-powerpc
 # DWARF:      .debug_names contents:
 # DWARF:      Name Index @ 0x0 {
 # DWARF-NEXT:   Header {
@@ -94,7 +95,7 @@
 # DWARF-NEXT:     }
 # DWARF-NEXT:     Name 3 {
 # DWARF-NEXT:       Hash: 0x7C9A7F6A
-# DWARF-NEXT:       String: 0x00000115 "main"
+# DWARF-NEXT:       String: 0x00000111 "main"
 # DWARF-NEXT:       Entry @ 0xc5 {
 # DWARF-NEXT:         Abbrev: 0x2
 # DWARF-NEXT:         Tag: DW_TAG_subprogram
@@ -110,7 +111,7 @@
 # DWARF-NEXT:   Bucket 3 [
 # DWARF-NEXT:     Name 4 {
 # DWARF-NEXT:       Hash: 0xB888030
-# DWARF-NEXT:       String: 0x0000011a "int"
+# DWARF-NEXT:       String: 0x00000116 "int"
 # DWARF-NEXT:       Entry @ 0xb7 {
 # DWARF-NEXT:         Abbrev: 0x3
 # DWARF-NEXT:         Tag: DW_TAG_base_type
@@ -137,24 +138,25 @@
 #--- a.s
 	.text
 	.globl	_Z2f12t1                        # -- Begin function _Z2f12t1
-	.p2align	4, 0x90
+	.p2align	2
 	.type	_Z2f12t1,@function
 _Z2f12t1:                               # @_Z2f12t1
 .Lfunc_begin0:
 	.cfi_startproc
 # %bb.0:                                # %entry
-	pushq	%rbp
+	stwu 1, -16(1)
+	stw 31, 12(1)
 	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
+	.cfi_offset r31, -4
+	mr	31, 1
+	.cfi_def_cfa_register r31
 .Ltmp0:
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
-	retq
+	lwz 31, 12(1)
+	addi 1, 1, 16
+	blr
 .Ltmp1:
 .Lfunc_end0:
-	.size	_Z2f12t1, .Lfunc_end0-_Z2f12t1
+	.size	_Z2f12t1, .Lfunc_end0-.Lfunc_begin0
 	.cfi_endproc
                                         # -- End function
 	.section	.debug_abbrev,"",@progbits
@@ -167,7 +169,7 @@ _Z2f12t1:                               # @_Z2f12t1
 .Ldebug_info_start0:
 	.short	5                               # DWARF version number
 	.byte	1                               # DWARF Unit Type
-	.byte	8                               # Address Size (in bytes)
+	.byte	4                               # Address Size (in bytes)
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
 .Ldebug_info_end0:
 	.section	.debug_str_offsets,"",@progbits
@@ -189,7 +191,7 @@ _Z2f12t1:                               # @_Z2f12t1
 .Linfo_string5:
 	.asciz	"t1"                            # string offset=139
 .Laddr_table_base0:
-	.quad	.Lfunc_begin0
+	.long	.Lfunc_begin0
 .Ldebug_addr_end0:
 	.section	.debug_names,"",@progbits
 	.long	.Lnames_end0-.Lnames_start0     # Header: unit length
@@ -264,8 +266,8 @@ _Z2f12t1:                               # @_Z2f12t1
 
 #--- b.s
 # Generated with:
-# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='debug-names-test' \
-#     -S b.cpp -o b.s
+# - clang++ --target=powerpc -g -O0 -gpubnames \
+#     -fdebug-compilation-dir='debug-names-test' -S b.cpp -o b.s
 
 # b.cpp contents:
 
@@ -276,25 +278,26 @@ _Z2f12t1:                               # @_Z2f12t1
 #
 	.text
 	.globl	main                            # -- Begin function main
-	.p2align	4, 0x90
+	.p2align	2
 	.type	main,@function
 main:                                   # @main
 .Lfunc_begin0:
 	.cfi_startproc
 # %bb.0:                                # %entry
-	pushq	%rbp
+	stwu 1, -16(1)
+	stw 31, 12(1)
 	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
+	.cfi_offset r31, -4
+	mr	31, 1
+	.cfi_def_cfa_register r31
+	li 3, 0
 .Ltmp0:
-	xorl	%eax, %eax
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
-	retq
+	lwz 31, 12(1)
+	addi 1, 1, 16
+	blr
 .Ltmp1:
 .Lfunc_end0:
-	.size	main, .Lfunc_end0-main
+	.size	main, .Lfunc_end0-.Lfunc_begin0
 	.cfi_endproc
                                         # -- End function
 	.section	.debug_abbrev,"",@progbits
@@ -307,7 +310,7 @@ main:                                   # @main
 .Ldebug_info_start0:
 	.short	5                               # DWARF version number
 	.byte	1                               # DWARF Unit Type
-	.byte	8                               # Address Size (in bytes)
+	.byte	4                               # Address Size (in bytes)
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
 .Ldebug_info_end0:
 	.section	.debug_str_offsets,"",@progbits
@@ -331,7 +334,7 @@ main:                                   # @main
 .Linfo_string6:
 	.asciz	"t1"                            # string offset=139
 .Laddr_table_base0:
-	.quad	.Lfunc_begin0
+	.long	.Lfunc_begin0
 .Ldebug_addr_end0:
 	.section	.debug_names,"",@progbits
 	.long	.Lnames_end0-.Lnames_start0     # Header: unit length
