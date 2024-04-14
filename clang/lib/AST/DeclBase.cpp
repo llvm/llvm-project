@@ -52,6 +52,8 @@
 
 using namespace clang;
 
+static_assert(sizeof(Decl) <= 32, "Decl grew beyond 32 bytes!");
+
 //===----------------------------------------------------------------------===//
 //  Statistics
 //===----------------------------------------------------------------------===//
@@ -130,7 +132,7 @@ const char *Decl::getDeclKindName() const {
 }
 
 void Decl::setInvalidDecl(bool Invalid) {
-  InvalidDecl = Invalid;
+  DeclCtxWithInvalidDeclAndHasAttrs.setInt(Invalid);
   assert(!isa<TagDecl>(this) || !cast<TagDecl>(this)->isCompleteDefinition());
   if (!Invalid) {
     return;
@@ -334,7 +336,9 @@ void PrettyStackTraceDecl::print(raw_ostream &OS) const {
 Decl::~Decl() = default;
 
 void Decl::setDeclContext(DeclContext *DC) {
-  DeclCtx = DC;
+  auto InnerPtr = DeclCtxWithInvalidDeclAndHasAttrs.getPointer();
+  InnerPtr.setPointer(DC);
+  DeclCtxWithInvalidDeclAndHasAttrs.setPointer(InnerPtr);
 }
 
 void Decl::setLexicalDeclContext(DeclContext *DC) {
@@ -364,12 +368,16 @@ void Decl::setLexicalDeclContext(DeclContext *DC) {
 void Decl::setDeclContextsImpl(DeclContext *SemaDC, DeclContext *LexicalDC,
                                ASTContext &Ctx) {
   if (SemaDC == LexicalDC) {
-    DeclCtx = SemaDC;
+    auto InnerPtr = DeclCtxWithInvalidDeclAndHasAttrs.getPointer();
+    InnerPtr.setPointer(SemaDC);
+    DeclCtxWithInvalidDeclAndHasAttrs.setPointer(InnerPtr);
   } else {
     auto *MDC = new (Ctx) Decl::MultipleDC();
     MDC->SemanticDC = SemaDC;
     MDC->LexicalDC = LexicalDC;
-    DeclCtx = MDC;
+    auto InnerPtr = DeclCtxWithInvalidDeclAndHasAttrs.getPointer();
+    InnerPtr.setPointer(MDC);
+    DeclCtxWithInvalidDeclAndHasAttrs.setPointer(InnerPtr);
   }
 }
 
@@ -956,19 +964,24 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
 }
 
 void Decl::setAttrsImpl(const AttrVec &attrs, ASTContext &Ctx) {
-  assert(!HasAttrs && "Decl already contains attrs.");
+  assert(!hasAttrs() && "Decl already contains attrs.");
 
   AttrVec &AttrBlank = Ctx.getDeclAttrs(this);
   assert(AttrBlank.empty() && "HasAttrs was wrong?");
 
   AttrBlank = attrs;
-  HasAttrs = true;
+  auto InnerPtr = DeclCtxWithInvalidDeclAndHasAttrs.getPointer();
+  InnerPtr.setInt(true);
+  DeclCtxWithInvalidDeclAndHasAttrs.setPointer(InnerPtr);
 }
 
 void Decl::dropAttrs() {
-  if (!HasAttrs) return;
+  if (!hasAttrs())
+    return;
 
-  HasAttrs = false;
+  auto InnerPtr = DeclCtxWithInvalidDeclAndHasAttrs.getPointer();
+  InnerPtr.setInt(false);
+  DeclCtxWithInvalidDeclAndHasAttrs.setPointer(InnerPtr);
   getASTContext().eraseDeclAttrs(this);
 }
 
@@ -996,7 +1009,7 @@ void Decl::addAttr(Attr *A) {
 }
 
 const AttrVec &Decl::getAttrs() const {
-  assert(HasAttrs && "No attrs to get!");
+  assert(hasAttrs() && "No attrs to get!");
   return getASTContext().getDeclAttrs(this);
 }
 
