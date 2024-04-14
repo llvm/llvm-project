@@ -941,6 +941,12 @@ def warn_cxx98_compat_defaulted_deleted_function : Warning<
   "%select{defaulted|deleted}0 function definitions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 
+def ext_delete_with_message : ExtWarn<
+  "'= delete' with a message is a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_delete_with_message : Warning<
+  "'= delete' with a message is incompatible with C++ standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+
 // C++11 default member initialization
 def ext_nonstatic_member_init : ExtWarn<
   "default member initializer for non-static data member is a C++11 "

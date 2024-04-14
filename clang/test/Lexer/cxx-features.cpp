@@ -34,6 +34,10 @@
 
 // --- C++26 features ---
 
+#if check(deleted_function, 202403, 202403, 202403, 202403, 202403, 202403, 202403)
+#error "wrong value for __cpp_deleted_function"
+#endif
+
 #if check(placeholder_variables, 202306, 202306, 202306, 202306, 202306, 202306, 202306)
 #error "wrong value for __cpp_placeholder_variables"
 #endif
