@@ -631,6 +631,8 @@ int main(int argc, const char **argv) {
     fixCompilationDatabase(compile_commands);
     Global.cb = getCompilationDatabaseWithASTEmit(compile_commands);
 
+    generateASTDump(*Global.cb);
+
     generateICFG(Global.cb->getAllFiles());
 
     {

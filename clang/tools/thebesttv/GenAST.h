@@ -10,3 +10,5 @@ std::string getASTDumpFile(const std::string &file);
  */
 std::unique_ptr<CompilationDatabase>
 getCompilationDatabaseWithASTEmit(fs::path buildPath);
+
+void generateASTDump(const CompilationDatabase &cb);
