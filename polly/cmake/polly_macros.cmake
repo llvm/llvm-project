@@ -41,7 +41,8 @@ macro(add_polly_library name)
   if( LLVM_LINK_COMPONENTS )
     llvm_config(${name} ${LLVM_LINK_COMPONENTS})
   endif( LLVM_LINK_COMPONENTS )
-  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "LLVMPolly")
+  if ((NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "LLVMPolly")
+    AND NOT LLVM_LINK_LLVM_DYLIB)
     install(TARGETS ${name}
       COMPONENT ${name}
       EXPORT LLVMExports

@@ -1180,9 +1180,17 @@ function(process_llvm_pass_plugins)
       # LLVM_INSTALL_PACKAGE_DIR might be absolute, so don't reuse below.
       string(REPLACE "${CMAKE_CFG_INTDIR}" "." llvm_cmake_builddir "${LLVM_LIBRARY_DIR}")
       set(llvm_cmake_builddir "${llvm_cmake_builddir}/cmake/llvm")
-      file(WRITE
-          "${llvm_cmake_builddir}/LLVMConfigExtensions.cmake"
-          "set(LLVM_STATIC_EXTENSIONS ${LLVM_STATIC_EXTENSIONS})")
+      if(LLVM_LINK_LLVM_DYLIB)
+          # Install a dummy file. When the extensions are part of libLLVM other
+          # tools should link it instead of the static library.
+          file(WRITE
+              "${llvm_cmake_builddir}/LLVMConfigExtensions.cmake"
+              "set(LLVM_STATIC_EXTENSIONS )")
+      else()
+          file(WRITE
+              "${llvm_cmake_builddir}/LLVMConfigExtensions.cmake"
+              "set(LLVM_STATIC_EXTENSIONS ${LLVM_STATIC_EXTENSIONS})")
+      endif()
       install(FILES
           ${llvm_cmake_builddir}/LLVMConfigExtensions.cmake
           DESTINATION ${LLVM_INSTALL_PACKAGE_DIR}
