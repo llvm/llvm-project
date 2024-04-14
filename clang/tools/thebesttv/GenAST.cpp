@@ -162,17 +162,20 @@ void generateASTDump(const CompilationDatabase &cb) {
     BS::thread_pool pool;
     std::vector<std::future<int>> tasks;
 
-    for (const auto &cmd : cb.getAllCompileCommands()) {
-        tasks.push_back(
-            pool.submit_task([cmd] { return generateASTDump(cmd); }));
+    auto allCmds = cb.getAllCompileCommands();
+    ProgressBar bar("Gen AST", allCmds.size());
+    for (const auto &cmd : allCmds) {
+        tasks.push_back(pool.submit_task([cmd, &bar] {
+            int ret = generateASTDump(cmd);
+            bar.tick();
+            return ret;
+        }));
     }
 
     int badCnt = 0, goodCnt = 0;
-    ProgressBar bar("Gen AST", tasks.size());
     for (auto &task : tasks) {
         int ret = task.get();
         ret == 0 ? goodCnt++ : badCnt++;
-        bar.tick();
     }
     logger.info("AST dump generation finished, {} success, {} failed", goodCnt,
                 badCnt);
