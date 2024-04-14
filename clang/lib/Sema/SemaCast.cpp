@@ -498,10 +498,22 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
     howManyCandidates = OCD_AmbiguousCandidates;
     break;
 
-  case OR_Deleted:
-    msg = diag::err_ovl_deleted_conversion_in_cast;
-    howManyCandidates = OCD_ViableCandidates;
-    break;
+  case OR_Deleted: {
+    OverloadCandidateSet::iterator Best;
+    [[maybe_unused]] OverloadingResult Res =
+        candidates.BestViableFunction(S, range.getBegin(), Best);
+    assert(Res == OR_Deleted && "Inconsistent overload resolution");
+
+    StringLiteral *Msg = Best->Function->getDeletedMessage();
+    candidates.NoteCandidates(
+        PartialDiagnosticAt(range.getBegin(),
+                            S.PDiag(diag::err_ovl_deleted_conversion_in_cast)
+                                << CT << srcType << destType << (Msg != nullptr)
+                                << (Msg ? Msg->getString() : StringRef())
+                                << range << src->getSourceRange()),
+        S, OCD_ViableCandidates, src);
+    return true;
+  }
   }
 
   candidates.NoteCandidates(
