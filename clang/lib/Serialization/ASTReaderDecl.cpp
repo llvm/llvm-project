@@ -588,7 +588,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
   bool HasStandaloneLexicalDC = DeclBits.getNextBit();
   bool HasAttrs = DeclBits.getNextBit();
   D->setTopLevelDeclInObjCContainer(DeclBits.getNextBit());
-  D->DeclCtxWithInvalidDeclAndHasAttrs.setInt(DeclBits.getNextBit());
+  D->InvalidDecl = DeclBits.getNextBit();
   D->FromASTFile = true;
 
   if (D->isTemplateParameter() || D->isTemplateParameterPack() ||
