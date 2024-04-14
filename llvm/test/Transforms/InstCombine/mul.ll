@@ -1607,7 +1607,7 @@ define i32 @combine_mul_nabs_i32(i32 %0) {
 
 define i32 @combine_mul_nabs_i32_unsigned_wrap(i32 %0) {
 ; CHECK-LABEL: @combine_mul_nabs_i32_unsigned_wrap(
-; CHECK-NEXT:    [[M:%.*]] = mul i32 [[TMP0:%.*]], [[TMP0]]
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[TMP0:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %c = icmp slt i32 %0, 0
@@ -1619,7 +1619,7 @@ define i32 @combine_mul_nabs_i32_unsigned_wrap(i32 %0) {
 
 define i32 @combine_mul_nabs_i32_signed_wrap(i32 %0) {
 ; CHECK-LABEL: @combine_mul_nabs_i32_signed_wrap(
-; CHECK-NEXT:    [[M:%.*]] = mul i32 [[TMP0:%.*]], [[TMP0]]
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[TMP0:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %c = icmp slt i32 %0, 0
@@ -1644,7 +1644,7 @@ define <4 x i32> @combine_mul_nabs_v4i32(<4 x i32> %0) {
 
 define <4 x i32> @combine_mul_nabs_v4i32_unsigned_wrap(<4 x i32> %0) {
 ; CHECK-LABEL: @combine_mul_nabs_v4i32_unsigned_wrap(
-; CHECK-NEXT:    [[M:%.*]] = mul <4 x i32> [[TMP0:%.*]], [[TMP0]]
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw <4 x i32> [[TMP0:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret <4 x i32> [[M]]
 ;
   %c = icmp slt <4 x i32> %0, zeroinitializer
@@ -1656,7 +1656,7 @@ define <4 x i32> @combine_mul_nabs_v4i32_unsigned_wrap(<4 x i32> %0) {
 
 define <4 x i32> @combine_mul_nabs_v4i32_signed_wrap(<4 x i32> %0) {
 ; CHECK-LABEL: @combine_mul_nabs_v4i32_signed_wrap(
-; CHECK-NEXT:    [[M:%.*]] = mul <4 x i32> [[TMP0:%.*]], [[TMP0]]
+; CHECK-NEXT:    [[M:%.*]] = mul nsw <4 x i32> [[TMP0:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret <4 x i32> [[M]]
 ;
   %c = icmp slt <4 x i32> %0, zeroinitializer
@@ -1689,7 +1689,7 @@ define i32 @combine_mul_nabs_intrin(i32 %x) {
 
 define i32 @combine_mul_nabs_intrin_unsigned_flags(i32 %x) {
 ; CHECK-LABEL: @combine_mul_nabs_intrin_unsigned_flags(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
@@ -1700,7 +1700,7 @@ define i32 @combine_mul_nabs_intrin_unsigned_flags(i32 %x) {
 
 define i32 @combine_mul_nabs_intrin_signed_flags(i32 %x) {
 ; CHECK-LABEL: @combine_mul_nabs_intrin_signed_flags(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)

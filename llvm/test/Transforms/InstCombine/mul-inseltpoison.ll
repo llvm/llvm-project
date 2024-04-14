@@ -927,7 +927,7 @@ define i32 @combine_mul_abs_intrin_nuw(i32 %x) {
 
 define i32 @combine_mul_abs_intrin_nsw(i32 %x) {
 ; CHECK-LABEL: @combine_mul_abs_intrin_nsw(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
@@ -948,7 +948,7 @@ define i32 @combine_mul_nabs_intrin(i32 %x) {
 
 define i32 @combine_mul_nabs_intrin_nuw(i32 %x) {
 ; CHECK-LABEL: @combine_mul_nabs_intrin_nuw(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
@@ -959,7 +959,7 @@ define i32 @combine_mul_nabs_intrin_nuw(i32 %x) {
 
 define i32 @combine_mul_nabs_intrin_nsw(i32 %x) {
 ; CHECK-LABEL: @combine_mul_nabs_intrin_nsw(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
