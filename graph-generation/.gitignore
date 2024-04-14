@@ -2,3 +2,4 @@
 output.json
 
 *.o
+*.path-gen-ast
