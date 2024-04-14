@@ -63,10 +63,10 @@ static_assert(std::is_invocable_v<decltype(std::views::repeat), MoveOnly>);
 // LWG4053: Unary call to std::views::repeat does not decay the argument
 using RPV = std::ranges::repeat_view<const char*>;
 
-static_assert(std::same_as<decltype(std::views::repeat("foo", std::unreachable_sentinel)), RPV>); // OK
+static_assert(std::same_as<decltype(std::views::repeat("foo", std::unreachable_sentinel)), RPV>);  // OK
 static_assert(std::same_as<decltype(std::views::repeat(+"foo", std::unreachable_sentinel)), RPV>); // OK
-static_assert(std::same_as<decltype(std::views::repeat("foo")), RPV>); // OK since LWG4053
-static_assert(std::same_as<decltype(std::views::repeat(+"foo")), RPV>); // OK
+static_assert(std::same_as<decltype(std::views::repeat("foo")), RPV>);                             // OK since LWG4053
+static_assert(std::same_as<decltype(std::views::repeat(+"foo")), RPV>);                            // OK
 
 constexpr bool test() {
   assert(*std::views::repeat(33).begin() == 33);
