@@ -56,6 +56,7 @@ private:
   bool runOnMachineFunction(MachineFunction &) override;
   void releaseMemory() override;
   void getAnalysisUsage(AnalysisUsage &) const override;
+  void verifyAnalysis() const override;
 
   MachineFunctionProperties getSetProperties() const override {
     return MachineFunctionProperties().set(

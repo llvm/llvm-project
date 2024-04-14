@@ -492,6 +492,13 @@ public:
   /// Return DebugLoc of this UserValue.
   const DebugLoc &getDebugLoc() { return dl; }
 
+  void verify() const {
+    for (auto I = locInts.begin(), E = locInts.end(); I != E; ++I) {
+      assert(!I.start().isPoisoned());
+      assert(!I.stop().isPoisoned());
+    }
+  }
+
   void print(raw_ostream &, const TargetRegisterInfo *);
 };
 
@@ -653,6 +660,11 @@ public:
            "Dbg values are not emitted in LDV");
     EmitDone = false;
     ModifiedMF = false;
+  }
+
+  void verify() const {
+    for (auto [DV, UV] : userVarMap)
+      UV->verify();
   }
 
   /// Map virtual register to an equivalence class.
@@ -1318,6 +1330,11 @@ bool LiveDebugVariables::runOnMachineFunction(MachineFunction &mf) {
 void LiveDebugVariables::releaseMemory() {
   if (pImpl)
     static_cast<LDVImpl*>(pImpl)->clear();
+}
+
+void LiveDebugVariables::verifyAnalysis() const {
+  if (pImpl)
+    static_cast<LDVImpl *>(pImpl)->verify();
 }
 
 LiveDebugVariables::~LiveDebugVariables() {
