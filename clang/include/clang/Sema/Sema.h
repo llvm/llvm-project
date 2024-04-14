@@ -988,7 +988,7 @@ public:
   }
 
   SemaOpenMP &OpenMP() {
-    assert(OpenMPPtr);
+    assert(OpenMPPtr && "SemaOpenMP is dead");
     return *OpenMPPtr;
   }
 
