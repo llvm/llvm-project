@@ -26,7 +26,7 @@ bool needsJsonEscapingFixing(const std::string &arg) {
 ArgumentsAdjuster getFixJsonEscapingAdjuster() {
     return [](const CommandLineArguments &Args, StringRef Filename) {
         CommandLineArguments result;
-        for (int i = 0; i < Args.size(); i++) {
+        for (size_t i = 0; i < Args.size(); i++) {
             auto &a = Args[i];
             if (needsJsonEscapingFixing(a) && i + 1 < Args.size()) {
                 auto &b = Args[i + 1];
