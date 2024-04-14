@@ -29,13 +29,13 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <initializer_list>
 #include <string>
 #include <tuple>
 #include <utility>
-#include <cmath>
 
 namespace {
 using namespace clang::ast_matchers;
