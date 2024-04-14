@@ -362,10 +362,22 @@ macro(construct_compiler_rt_default_triple)
       message(FATAL_ERROR "CMAKE_C_COMPILER_TARGET must also be set when COMPILER_RT_DEFAULT_TARGET_ONLY is ON")
     endif()
     message(STATUS "cmake c compiler target: ${CMAKE_C_COMPILER_TARGET}")
-    set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${CMAKE_C_COMPILER_TARGET})
+    if ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
+      execute_process(COMMAND ${CMAKE_C_COMPILER} --target=${CMAKE_C_COMPILER_TARGET} -print-effective-triple
+                      OUTPUT_VARIABLE COMPILER_RT_DEFAULT_TARGET_TRIPLE
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    else()
+      set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${CMAKE_C_COMPILER_TARGET})
+    endif()
   else()
-    set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${LLVM_TARGET_TRIPLE} CACHE STRING
-          "Default triple for which compiler-rt runtimes will be built.")
+    if ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
+      execute_process(COMMAND ${CMAKE_C_COMPILER} --target=${LLVM_TARGET_TRIPLE} -print-effective-triple
+                      OUTPUT_VARIABLE COMPILER_RT_DEFAULT_TARGET_TRIPLE
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    else()
+      set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${LLVM_TARGET_TRIPLE} CACHE STRING
+            "Default triple for which compiler-rt runtimes will be built.")
+    endif()
   endif()
 
   string(REPLACE "-" ";" LLVM_TARGET_TRIPLE_LIST ${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
