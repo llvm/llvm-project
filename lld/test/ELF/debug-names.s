@@ -1,7 +1,7 @@
 # debug-names.s was generated with:
 
-# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='debug-names-test' \
-#     -S a.cpp -o a.s
+# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='/proc/self/cwd' \
+#    -S a.cpp -o a.s
 
 # a.cpp contents:
 
@@ -65,7 +65,7 @@
 # DWARF-NEXT:   Bucket 1 [
 # DWARF-NEXT:     Name 1 {
 # DWARF-NEXT:       Hash: 0x59796A
-# DWARF-NEXT:       String: 0x0000008b "t1"
+# DWARF-NEXT:       String: 0x00000089 "t1"
 # DWARF-NEXT:       Entry @ 0xaa {
 # DWARF-NEXT:         Abbrev: 0x1
 # DWARF-NEXT:         Tag: DW_TAG_structure_type
@@ -83,7 +83,7 @@
 # DWARF-NEXT:     }
 # DWARF-NEXT:     Name 2 {
 # DWARF-NEXT:       Hash: 0x5355B2BE
-# DWARF-NEXT:       String: 0x00000082 "_Z2f12t1"
+# DWARF-NEXT:       String: 0x00000080 "_Z2f12t1"
 # DWARF-NEXT:       Entry @ 0xbe {
 # DWARF-NEXT:         Abbrev: 0x2
 # DWARF-NEXT:         Tag: DW_TAG_subprogram
@@ -94,7 +94,7 @@
 # DWARF-NEXT:     }
 # DWARF-NEXT:     Name 3 {
 # DWARF-NEXT:       Hash: 0x7C9A7F6A
-# DWARF-NEXT:       String: 0x00000115 "main"
+# DWARF-NEXT:       String: 0x00000111 "main"
 # DWARF-NEXT:       Entry @ 0xc5 {
 # DWARF-NEXT:         Abbrev: 0x2
 # DWARF-NEXT:         Tag: DW_TAG_subprogram
@@ -110,7 +110,7 @@
 # DWARF-NEXT:   Bucket 3 [
 # DWARF-NEXT:     Name 4 {
 # DWARF-NEXT:       Hash: 0xB888030
-# DWARF-NEXT:       String: 0x0000011a "int"
+# DWARF-NEXT:       String: 0x00000116 "int"
 # DWARF-NEXT:       Entry @ 0xb7 {
 # DWARF-NEXT:         Abbrev: 0x3
 # DWARF-NEXT:         Tag: DW_TAG_base_type
@@ -123,7 +123,7 @@
 # DWARF-NEXT:   Bucket 4 [
 # DWARF-NEXT:     Name 5 {
 # DWARF-NEXT:       Hash: 0x59779C
-# DWARF-NEXT:       String: 0x0000007f "f1"
+# DWARF-NEXT:       String: 0x0000007d "f1"
 # DWARF-NEXT:       Entry @ 0xa3 {
 # DWARF-NEXT:         Abbrev: 0x2
 # DWARF-NEXT:         Tag: DW_TAG_subprogram
@@ -181,13 +181,13 @@ _Z2f12t1:                               # @_Z2f12t1
 .Linfo_string1:
 	.asciz	"a.cpp"                         # string offset=104
 .Linfo_string2:
-	.asciz	"debug-names-test"              # string offset=110
+	.asciz	"/proc/self/cwd"                # string offset=110
 .Linfo_string3:
-	.asciz	"f1"                            # string offset=127
+	.asciz	"f1"                            # string offset=125
 .Linfo_string4:
-	.asciz	"_Z2f12t1"                      # string offset=130
+	.asciz	"_Z2f12t1"                      # string offset=128
 .Linfo_string5:
-	.asciz	"t1"                            # string offset=139
+	.asciz	"t1"                            # string offset=137
 .Laddr_table_base0:
 	.quad	.Lfunc_begin0
 .Ldebug_addr_end0:
@@ -264,7 +264,7 @@ _Z2f12t1:                               # @_Z2f12t1
 
 #--- b.s
 # Generated with:
-# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='debug-names-test' \
+# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='/proc/self/cwd' \
 #     -S b.cpp -o b.s
 
 # b.cpp contents:
@@ -274,6 +274,7 @@ _Z2f12t1:                               # @_Z2f12t1
 #   t1 v1;
 # }
 #
+
 	.text
 	.globl	main                            # -- Begin function main
 	.p2align	4, 0x90
@@ -321,15 +322,15 @@ main:                                   # @main
 .Linfo_string1:
 	.asciz	"b.cpp"                         # string offset=104
 .Linfo_string2:
-	.asciz	"debug-names-test"              # string offset=110
+	.asciz	"/proc/self/cwd"                # string offset=110
 .Linfo_string3:
-	.asciz	"main"                          # string offset=127
+	.asciz	"main"                          # string offset=125
 .Linfo_string4:
-	.asciz	"int"                           # string offset=132
+	.asciz	"int"                           # string offset=130
 .Linfo_string5:
-	.asciz	"v1"                            # string offset=136
+	.asciz	"v1"                            # string offset=134
 .Linfo_string6:
-	.asciz	"t1"                            # string offset=139
+	.asciz	"t1"                            # string offset=137
 .Laddr_table_base0:
 	.quad	.Lfunc_begin0
 .Ldebug_addr_end0:

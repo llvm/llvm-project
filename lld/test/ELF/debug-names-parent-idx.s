@@ -1,7 +1,7 @@
 # debug-names-parent-idx.s generated with:
 
-# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='parent-idx-test' \
-#     -S debug-names-parent-idx.cpp -o debug-names-parent-idx.s
+# clang++ -g -O0 -gpubnames -fdebug-compilation-dir='/proc/self/cwd' -S \
+#    a.cpp -o a.s
 
 # foo.h contents:
 
@@ -17,7 +17,7 @@
 #   int foo();
 # }
 
-#  debug-names-parent-idx.cpp contents:
+#  a.cpp contents:
 
 # #include "foo.h"
 # void bar (struct foo &foo, int junk) {
@@ -36,14 +36,11 @@
 
 # REQUIRES: x86
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64 debug-names-parent-idx.s \
-# RUN:     -o debug-names-parent-idx.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64 debug-names-parent-idx-2.s \
-# RUN:     -o debug-names-parent-idx-2.o
-# RUN: ld.lld --debug-names debug-names-parent-idx.o \
-# RUN:     debug-names-parent-idx-2.o -o debug-names-parent-idx
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 b.s -o b.o
+# RUN: ld.lld --debug-names a.o b.o -o out
 
-# RUN: llvm-dwarfdump -debug-names debug-names-parent-idx | FileCheck %s --check-prefix=DWARF
+# RUN: llvm-dwarfdump -debug-names out | FileCheck %s --check-prefix=DWARF
 
 # DWARF:      .debug_names contents:
 # DWARF:      Name Index @ 0x0 {
@@ -93,7 +90,7 @@
 # DWARF-NEXT:   Bucket 1 [
 # DWARF-NEXT:     Name 1 {
 # DWARF-NEXT:       Hash: 0xA974AA29
-# DWARF-NEXT:       String: 0x000001a2 "_ZN11parent_test3fooEv"
+# DWARF-NEXT:       String: 0x00000174 "_ZN11parent_test3fooEv"
 # DWARF-NEXT:       Entry @ 0x14a {
 # DWARF-NEXT:         Abbrev: 0x4
 # DWARF-NEXT:         Tag: DW_TAG_subprogram
@@ -104,7 +101,7 @@
 # DWARF-NEXT:     }
 # DWARF-NEXT:     Name 2 {
 # DWARF-NEXT:       Hash: 0xB5063D0B
-# DWARF-NEXT:       String: 0x0000018e "_Z3foov"
+# DWARF-NEXT:       String: 0x00000160 "_Z3foov"
 # DWARF-NEXT:       Entry @ 0x155 {
 # DWARF-NEXT:         Abbrev: 0x2
 # DWARF-NEXT:         Tag: DW_TAG_subprogram
@@ -117,7 +114,7 @@
 # DWARF-NEXT:   Bucket 2 [
 # DWARF-NEXT:     Name 3 {
 # DWARF-NEXT:       Hash: 0xB888030
-# DWARF-NEXT:       String: 0x000000a9 "int"
+# DWARF-NEXT:       String: 0x00000093 "int"
 # DWARF-NEXT:       Entry @ 0xfe {
 # DWARF-NEXT:         Abbrev: 0x1
 # DWARF-NEXT:         Tag: DW_TAG_base_type
@@ -137,7 +134,7 @@
 # DWARF-NEXT:   Bucket 3 [
 # DWARF-NEXT:     Name 4 {
 # DWARF-NEXT:       Hash: 0xB8860BA
-# DWARF-NEXT:       String: 0x00000093 "bar"
+# DWARF-NEXT:       String: 0x0000007d "bar"
 # DWARF-NEXT:       Entry @ 0xf7 {
 # DWARF-NEXT:         Abbrev: 0x2
 # DWARF-NEXT:         Tag: DW_TAG_subprogram
@@ -148,7 +145,7 @@
 # DWARF-NEXT:     }
 # DWARF-NEXT:     Name 5 {
 # DWARF-NEXT:       Hash: 0xB887389
-# DWARF-NEXT:       String: 0x000000ad "foo"
+# DWARF-NEXT:       String: 0x00000097 "foo"
 # DWARF-NEXT:       Entry @ 0x10b {
 # DWARF-NEXT:         Abbrev: 0x3
 # DWARF-NEXT:         Tag: DW_TAG_structure_type
@@ -191,7 +188,7 @@
 # DWARF-NEXT:   Bucket 7 [
 # DWARF-NEXT:     Name 6 {
 # DWARF-NEXT:       Hash: 0x7C9A7F6A
-# DWARF-NEXT:       String: 0x000000a4 "main"
+# DWARF-NEXT:       String: 0x0000008e "main"
 # DWARF-NEXT:       Entry @ 0x136 {
 # DWARF-NEXT:         Abbrev: 0x2
 # DWARF-NEXT:         Tag: DW_TAG_subprogram
@@ -204,7 +201,7 @@
 # DWARF-NEXT:   Bucket 8 [
 # DWARF-NEXT:     Name 7 {
 # DWARF-NEXT:       Hash: 0xA7255AE
-# DWARF-NEXT:       String: 0x00000196 "parent_test"
+# DWARF-NEXT:       String: 0x00000168 "parent_test"
 # DWARF-NEXT:       Entry @ 0x128 {
 # DWARF-NEXT:         Abbrev: 0x5
 # DWARF-NEXT:         Tag: DW_TAG_namespace
@@ -215,7 +212,7 @@
 # DWARF-NEXT:     }
 # DWARF-NEXT:     Name 8 {
 # DWARF-NEXT:       Hash: 0x51007E98
-# DWARF-NEXT:       String: 0x00000097 "_Z3barR3fooi"
+# DWARF-NEXT:       String: 0x00000081 "_Z3barR3fooi"
 # DWARF-NEXT:       Entry @ 0x12f {
 # DWARF-NEXT:         Abbrev: 0x2
 # DWARF-NEXT:         Tag: DW_TAG_subprogram
@@ -226,7 +223,7 @@
 # DWARF-NEXT:     }
 # DWARF-NEXT:     Name 9 {
 # DWARF-NEXT:       Hash: 0x7C952063
-# DWARF-NEXT:       String: 0x000000b5 "char"
+# DWARF-NEXT:       String: 0x0000009f "char"
 # DWARF-NEXT:       Entry @ 0x13d {
 # DWARF-NEXT:         Abbrev: 0x1
 # DWARF-NEXT:         Tag: DW_TAG_base_type
@@ -244,7 +241,7 @@
 # DWARF-NEXT:     }
 # DWARF-NEXT:   ]
 
-#--- debug-names-parent-idx.s
+#--- a.s
 	.text
 	.globl	_Z3barR3fooi                    # -- Begin function _Z3barR3fooi
 	.p2align	4, 0x90
@@ -331,39 +328,39 @@ main:                                   # @main
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 4df364bc93af49ae413ec1ae8328f34ac70730c4)" # string offset=0
+	.asciz	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)" # string offset=0
 .Linfo_string1:
-	.asciz	"debug-names-parent-idx.cpp"    # string offset=104
+	.asciz	"a.cpp"                         # string offset=104
 .Linfo_string2:
-	.asciz	"parent-idx-test"               # string offset=131
+	.asciz	"/proc/self/cwd"                # string offset=110
 .Linfo_string3:
-	.asciz	"bar"                           # string offset=147
+	.asciz	"bar"                           # string offset=125
 .Linfo_string4:
-	.asciz	"_Z3barR3fooi"                  # string offset=151
+	.asciz	"_Z3barR3fooi"                  # string offset=129
 .Linfo_string5:
-	.asciz	"main"                          # string offset=164
+	.asciz	"main"                          # string offset=142
 .Linfo_string6:
-	.asciz	"int"                           # string offset=169
+	.asciz	"int"                           # string offset=147
 .Linfo_string7:
-	.asciz	"foo"                           # string offset=173
+	.asciz	"foo"                           # string offset=151
 .Linfo_string8:
-	.asciz	"x"                             # string offset=177
+	.asciz	"x"                             # string offset=155
 .Linfo_string9:
-	.asciz	"y"                             # string offset=179
+	.asciz	"y"                             # string offset=157
 .Linfo_string10:
-	.asciz	"char"                          # string offset=181
+	.asciz	"char"                          # string offset=159
 .Linfo_string11:
-	.asciz	"foo_ptr"                       # string offset=186
+	.asciz	"foo_ptr"                       # string offset=164
 .Linfo_string12:
-	.asciz	"junk"                          # string offset=194
+	.asciz	"junk"                          # string offset=172
 .Linfo_string13:
-	.asciz	"argc"                          # string offset=199
+	.asciz	"argc"                          # string offset=177
 .Linfo_string14:
-	.asciz	"argv"                          # string offset=204
+	.asciz	"argv"                          # string offset=182
 .Linfo_string15:
-	.asciz	"my_struct"                     # string offset=209
+	.asciz	"my_struct"                     # string offset=187
 .Linfo_string16:
-	.asciz	"junk2"                         # string offset=219
+	.asciz	"junk2"                         # string offset=197
 .Laddr_table_base0:
 	.quad	.Lfunc_begin0
 	.quad	.Lfunc_begin1
@@ -471,7 +468,7 @@ main:                                   # @main
                                         # End of list: char
 	.p2align	2, 0x0
 .Lnames_end0:
-	.ident	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 4df364bc93af49ae413ec1ae8328f34ac70730c4)"
+	.ident	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.addrsig_sym _Z3barR3fooi
@@ -480,11 +477,11 @@ main:                                   # @main
 	.section	.debug_line,"",@progbits
 .Lline_table_start0:
 	
-#--- debug-names-parent-idx-2.s
+#--- b.s
 # Generated with:
 
-# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='parent-idx-test' \
-#     -S debug-names-parent-idx-2.cpp -o debug-names-parent-idx-2.s
+# clang++ -g -O0 -gpubnames -fdebug-compilation-dir='/proc/self/cwd' -S \
+#     b.cpp -o b.s
 
 # foo.h contents:
 
@@ -500,7 +497,7 @@ main:                                   # @main
 #   int foo();
 # }
 
-# debug-names-parent-index-2.cpp contents:
+# b.cpp contents:
 
 # #include "foo.h"
 # int foo () {
@@ -587,31 +584,31 @@ _ZN11parent_test3fooEv:                 # @_ZN11parent_test3fooEv
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 4df364bc93af49ae413ec1ae8328f34ac70730c4)" # string offset=0
+	.asciz	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)" # string offset=0
 .Linfo_string1:
-	.asciz	"debug-names-parent-idx-2.cpp"  # string offset=104
+	.asciz	"b.cpp"                         # string offset=104
 .Linfo_string2:
-	.asciz	"parent-idx-test"               # string offset=133
+	.asciz	"/proc/self/cwd"                # string offset=110
 .Linfo_string3:
-	.asciz	"int"                           # string offset=149
+	.asciz	"int"                           # string offset=125
 .Linfo_string4:
-	.asciz	"foo"                           # string offset=153
+	.asciz	"foo"                           # string offset=129
 .Linfo_string5:
-	.asciz	"_Z3foov"                       # string offset=157
+	.asciz	"_Z3foov"                       # string offset=133
 .Linfo_string6:
-	.asciz	"parent_test"                   # string offset=165
+	.asciz	"parent_test"                   # string offset=141
 .Linfo_string7:
-	.asciz	"_ZN11parent_test3fooEv"        # string offset=177
+	.asciz	"_ZN11parent_test3fooEv"        # string offset=153
 .Linfo_string8:
-	.asciz	"struct2"                       # string offset=200
+	.asciz	"struct2"                       # string offset=176
 .Linfo_string9:
-	.asciz	"x"                             # string offset=208
+	.asciz	"x"                             # string offset=184
 .Linfo_string10:
-	.asciz	"y"                             # string offset=210
+	.asciz	"y"                             # string offset=186
 .Linfo_string11:
-	.asciz	"char"                          # string offset=212
+	.asciz	"char"                          # string offset=188
 .Linfo_string12:
-	.asciz	"foo_ptr"                       # string offset=217
+	.asciz	"foo_ptr"                       # string offset=193
 .Laddr_table_base0:
 	.quad	.Lfunc_begin0
 	.quad	.Lfunc_begin1
@@ -742,7 +739,7 @@ _ZN11parent_test3fooEv:                 # @_ZN11parent_test3fooEv
                                         # End of list: char
 	.p2align	2, 0x0
 .Lnames_end0:
-	.ident	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 4df364bc93af49ae413ec1ae8328f34ac70730c4)"
+	.ident	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.section	.debug_line,"",@progbits

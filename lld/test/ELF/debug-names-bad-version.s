@@ -4,13 +4,14 @@
 	
 # REQUIRES: x86
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64 bad-version.s -o bad-version.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 b.s -o b.o
-# RUN: not ld.lld --debug-names bad-version.o b.o 2>&1 | FileCheck %s --implicit-check-not=error:
+# RUN: not ld.lld --debug-names a.o b.o 2>&1 \
+# RUN:    | FileCheck -DFILE=a.o %s --implicit-check-not=error:
 
-# CHECK: error: bad-version.o:(.debug_names): unsupported version 4
-	
-#--- bad-version.s
+# CHECK: error: [[FILE]]:(.debug_names): unsupported version 4
+
+#--- a.s
 	.text
 	.globl	_Z2f12t1                        # -- Begin function _Z2f12t1
 	.p2align	4, 0x90
@@ -45,41 +46,6 @@ _Z2f12t1:                               # @_Z2f12t1
 	.byte	1                               # DWARF Unit Type
 	.byte	8                               # Address Size (in bytes)
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
-	.byte	1                               # Abbrev [1] 0xc:0x35 DW_TAG_compile_unit
-	.byte	0                               # DW_AT_producer
-	.short	33                              # DW_AT_language
-	.byte	1                               # DW_AT_name
-	.long	.Lstr_offsets_base0             # DW_AT_str_offsets_base
-	.long	.Lline_table_start0             # DW_AT_stmt_list
-	.byte	2                               # DW_AT_comp_dir
-	.byte	0                               # DW_AT_low_pc
-	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
-	.long	.Laddr_table_base0              # DW_AT_addr_base
-	.byte	2                               # Abbrev [2] 0x23:0x17 DW_TAG_subprogram
-	.byte	0                               # DW_AT_low_pc
-	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
-	.byte	1                               # DW_AT_frame_base
-	.byte	86
-	.byte	3                               # DW_AT_linkage_name
-	.byte	4                               # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	2                               # DW_AT_decl_line
-                                        # DW_AT_external
-	.byte	3                               # Abbrev [3] 0x2f:0xa DW_TAG_formal_parameter
-	.byte	2                               # DW_AT_location
-	.byte	145
-	.byte	127
-	.byte	0                               # DW_AT_decl_file
-	.byte	2                               # DW_AT_decl_line
-	.long	58                              # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	4                               # Abbrev [4] 0x3a:0x6 DW_TAG_structure_type
-	.byte	5                               # DW_AT_calling_convention
-	.byte	5                               # DW_AT_name
-	.byte	1                               # DW_AT_byte_size
-	.byte	0                               # DW_AT_decl_file
-	.byte	1                               # DW_AT_decl_line
-	.byte	0                               # End Of Children Mark
 .Ldebug_info_end0:
 	.section	.debug_str_offsets,"",@progbits
 	.long	28                              # Length of String Offsets Set
@@ -88,17 +54,17 @@ _Z2f12t1:                               # @_Z2f12t1
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 4df364bc93af49ae413ec1ae8328f34ac70730c4)" # string offset=0
+	.asciz	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)" # string offset=0
 .Linfo_string1:
-	.asciz	"debug-names.cpp"               # string offset=104
+	.asciz	"a.cpp"                         # string offset=104
 .Linfo_string2:
-	.asciz	"debug-names-test"              # string offset=120
+	.asciz	"/proc/self/cwd"                # string offset=110
 .Linfo_string3:
-	.asciz	"f1"                            # string offset=137
+	.asciz	"f1"                            # string offset=125
 .Linfo_string4:
-	.asciz	"_Z2f12t1"                      # string offset=140
+	.asciz	"_Z2f12t1"                      # string offset=128
 .Linfo_string5:
-	.asciz	"t1"                            # string offset=149
+	.asciz	"t1"                            # string offset=137
 .Laddr_table_base0:
 	.quad	.Lfunc_begin0
 .Ldebug_addr_end0:
@@ -167,19 +133,18 @@ _Z2f12t1:                               # @_Z2f12t1
                                         # End of list: _Z2f12t1
 	.p2align	2, 0x0
 .Lnames_end0:
-	.ident	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 4df364bc93af49ae413ec1ae8328f34ac70730c4)"
+	.ident	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.section	.debug_line,"",@progbits
 .Lline_table_start0:
 
 #--- b.s
-# input file: debug-names-2.cpp
 # Generated with:
-# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='debug-names-test' \
-#     -S debug-names-2.cpp -o b.s
+# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='/proc/self/cwd' \
+#     -S b.cpp -o b.s
 
-# debug-names-2.cpp contents:
+# b.cpp contents:
 
 # struct t1 { };
 # int main() {
@@ -217,7 +182,7 @@ main:                                   # @main
 .Lcu_begin0:
 	.long	.Ldebug_info_end0-.Ldebug_info_start0 # Length of Unit
 .Ldebug_info_start0:
-	.short	5                               # DWARF version number
+	.short	4                               # DWARF version number
 	.byte	1                               # DWARF Unit Type
 	.byte	8                               # Address Size (in bytes)
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
@@ -229,19 +194,19 @@ main:                                   # @main
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 4df364bc93af49ae413ec1ae8328f34ac70730c4)" # string offset=0
+	.asciz	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)" # string offset=0
 .Linfo_string1:
-	.asciz	"debug-names-2.cpp"             # string offset=104
+	.asciz	"b.cpp"                         # string offset=104
 .Linfo_string2:
-	.asciz	"debug-names-test"              # string offset=122
+	.asciz	"/proc/self/cwd"                # string offset=110
 .Linfo_string3:
-	.asciz	"main"                          # string offset=139
+	.asciz	"main"                          # string offset=125
 .Linfo_string4:
-	.asciz	"int"                           # string offset=144
+	.asciz	"int"                           # string offset=130
 .Linfo_string5:
-	.asciz	"v1"                            # string offset=148
+	.asciz	"v1"                            # string offset=134
 .Linfo_string6:
-	.asciz	"t1"                            # string offset=151
+	.asciz	"t1"                            # string offset=137
 .Laddr_table_base0:
 	.quad	.Lfunc_begin0
 .Ldebug_addr_end0:
@@ -319,7 +284,7 @@ main:                                   # @main
                                         # End of list: int
 	.p2align	2, 0x0
 .Lnames_end0:
-	.ident	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 4df364bc93af49ae413ec1ae8328f34ac70730c4)"
+	.ident	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.section	.debug_line,"",@progbits

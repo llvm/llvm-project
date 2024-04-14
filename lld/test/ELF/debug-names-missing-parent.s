@@ -1,6 +1,6 @@
 # debug-names-missing-parent was generated with
 
-# clang++ -g -O0 -S -fdebug-compilation-dir='debug-names-test' \
+# clang++ -g -O0 -S -fdebug-compilation-dir='/proc/self/cwd' \
 #     -gpubnames a.cpp
 
 # a.cpp contents:
@@ -47,7 +47,7 @@
 # DWARF-NEXT:    Bucket 1 [
 # DWARF-NEXT:      Name 1 {
 # DWARF-NEXT:        Hash: 0x7C9A7F6A
-# DWARF-NEXT:        String: 0x0000007f "main"
+# DWARF-NEXT:        String: 0x0000007d "main"
 # DWARF-NEXT:        Entry @ 0x7a {
 # DWARF-NEXT:          Abbrev: 0x2
 # DWARF-NEXT:          Tag: DW_TAG_subprogram
@@ -66,7 +66,7 @@
 # DWARF-NEXT:    Bucket 2 [
 # DWARF-NEXT:      Name 2 {
 # DWARF-NEXT:        Hash: 0xB888030
-# DWARF-NEXT:        String: 0x00000084 "int"
+# DWARF-NEXT:        String: 0x00000082 "int"
 # DWARF-NEXT:        Entry @ 0x73 {
 # DWARF-NEXT:          Abbrev: 0x1
 # DWARF-NEXT:          Tag: DW_TAG_base_type
@@ -77,7 +77,7 @@
 # DWARF-NEXT:      }
 # DWARF-NEXT:      Name 3 {
 # DWARF-NEXT:        Hash: 0x7C952063
-# DWARF-NEXT:        String: 0x00000092 "char"
+# DWARF-NEXT:        String: 0x0000008b "char"
 # DWARF-NEXT:        Entry @ 0x87 {
 # DWARF-NEXT:          Abbrev: 0x1
 # DWARF-NEXT:          Tag: DW_TAG_base_type
@@ -139,17 +139,18 @@ main:                                   # @main
 .Linfo_string1:
 	.asciz	"a.cpp"                         # string offset=104
 .Linfo_string2:
-	.asciz	"debug-names-test"              # string offset=110
+	.asciz	"/proc/self/cwd"                # string offset=110
 .Linfo_string3:
-	.asciz	"main"                          # string offset=127
+	.asciz	"main"                          # string offset=125
 .Linfo_string4:
-	.asciz	"int"                           # string offset=132
+	.asciz	"int"                           # string offset=130
 .Linfo_string5:
-	.asciz	"argc"                          # string offset=136
+	.asciz	"argc"                          # string offset=134
 .Linfo_string6:
-	.asciz	"argv"                          # string offset=141
+	.asciz	"argv"                          # string offset=139
 .Linfo_string7:
-	.asciz	"char"                          # string offset=146
+	.asciz	"char"                          # string offset=144
+	.section	.debug_str_offsets,"",@progbits
 .Laddr_table_base0:
 	.quad	.Lfunc_begin0
 .Ldebug_addr_end0:

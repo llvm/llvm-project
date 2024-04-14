@@ -3,9 +3,9 @@
 
 # REQUIRES: x86
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64 bad-aug-string.s -o bad-aug-string.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 b.s -o b.o
-# RUN: ld.lld --debug-names bad-aug-string.o b.o -o out
+# RUN: ld.lld --debug-names a.o b.o -o out
 # RUN: llvm-dwarfdump -debug-names out | FileCheck %s --check-prefix=DWARF
 
 # DWARF:      .debug_names contents:
@@ -24,8 +24,8 @@
 # DWARF:        Compilation Unit offsets [
 # DWARF-NEXT:     CU[0]: 0x00000000
 # DWARF-NEXT:     CU[1]: 0x0000000c
-	
-#--- bad-aug-string.s
+
+#--- a.s
 	.text
 	.globl	_Z2f12t1                        # -- Begin function _Z2f12t1
 	.p2align	4, 0x90
@@ -68,17 +68,17 @@ _Z2f12t1:                               # @_Z2f12t1
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 4df364bc93af49ae413ec1ae8328f34ac70730c4)" # string offset=0
+	.asciz	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)" # string offset=0
 .Linfo_string1:
-	.asciz	"debug-names.cpp"               # string offset=104
+	.asciz	"a.cpp"                         # string offset=104
 .Linfo_string2:
-	.asciz	"debug-names-test"              # string offset=120
+	.asciz	"/proc/self/cwd"                # string offset=110
 .Linfo_string3:
-	.asciz	"f1"                            # string offset=137
+	.asciz	"f1"                            # string offset=125
 .Linfo_string4:
-	.asciz	"_Z2f12t1"                      # string offset=140
+	.asciz	"_Z2f12t1"                      # string offset=128
 .Linfo_string5:
-	.asciz	"t1"                            # string offset=149
+	.asciz	"t1"                            # string offset=137
 .Laddr_table_base0:
 	.quad	.Lfunc_begin0
 .Ldebug_addr_end0:
@@ -147,19 +147,18 @@ _Z2f12t1:                               # @_Z2f12t1
                                         # End of list: _Z2f12t1
 	.p2align	2, 0x0
 .Lnames_end0:
-	.ident	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 4df364bc93af49ae413ec1ae8328f34ac70730c4)"
+	.ident	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.section	.debug_line,"",@progbits
 .Lline_table_start0:
 
 #--- b.s
-# input file: debug-names-2.cpp
 # Generated with:
-# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='debug-names-test' \
-#     -S debug-names-2.cpp -o b.s
+# - clang++ -g -O0 -gpubnames -fdebug-compilation-dir='/proc/self/cwdt' \
+#     -S b.cpp -o b.s
 
-# debug-names-2.cpp contents:
+# b.cpp contents:
 
 # struct t1 { };
 # int main() {
@@ -209,19 +208,19 @@ main:                                   # @main
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 4df364bc93af49ae413ec1ae8328f34ac70730c4)" # string offset=0
+	.asciz	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)" # string offset=0
 .Linfo_string1:
-	.asciz	"debug-names-2.cpp"             # string offset=104
+	.asciz	"b.cpp"                         # string offset=104
 .Linfo_string2:
-	.asciz	"debug-names-test"              # string offset=122
+	.asciz	"/proc/self/cwd"                # string offset=110
 .Linfo_string3:
-	.asciz	"main"                          # string offset=139
+	.asciz	"main"                          # string offset=125
 .Linfo_string4:
-	.asciz	"int"                           # string offset=144
+	.asciz	"int"                           # string offset=130
 .Linfo_string5:
-	.asciz	"v1"                            # string offset=148
+	.asciz	"v1"                            # string offset=134
 .Linfo_string6:
-	.asciz	"t1"                            # string offset=151
+	.asciz	"t1"                            # string offset=137
 .Laddr_table_base0:
 	.quad	.Lfunc_begin0
 .Ldebug_addr_end0:
@@ -299,7 +298,7 @@ main:                                   # @main
                                         # End of list: int
 	.p2align	2, 0x0
 .Lnames_end0:
-	.ident	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 4df364bc93af49ae413ec1ae8328f34ac70730c4)"
+	.ident	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.section	.debug_line,"",@progbits
