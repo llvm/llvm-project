@@ -145,6 +145,14 @@ getCompilationDatabaseWithASTEmit(fs::path buildPath) {
     return cb;
 }
 
+int generateASTDump(const CompileCommand &cmd) {
+    int ret = run_program(cmd.CommandLine, cmd.Directory);
+    if (ret != 0) {
+        logger.error("Error generating AST dump for: {}", cmd.Filename);
+    }
+    return ret;
+}
+
 void generateASTDump(const CompilationDatabase &cb) {
     logger.info("Generating AST dump ...");
 
@@ -152,13 +160,8 @@ void generateASTDump(const CompilationDatabase &cb) {
     std::vector<std::future<int>> tasks;
 
     for (const auto &cmd : cb.getAllCompileCommands()) {
-        tasks.push_back(pool.submit_task([cmd] {
-            int ret = run_program(cmd.CommandLine, cmd.Directory);
-            if (ret != 0) {
-                logger.error("Error generating AST dump for: {}", cmd.Filename);
-            }
-            return ret;
-        }));
+        tasks.push_back(
+            pool.submit_task([cmd] { return generateASTDump(cmd); }));
     }
 
     int badCnt = 0, goodCnt = 0;
