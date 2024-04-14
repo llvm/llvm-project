@@ -328,18 +328,10 @@ public:
   unsigned getPosWidth() const { return enc ? enc.getPosWidth() : 0; }
 
   /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
-  Type getCrdType() const {
-    if (getCrdWidth())
-      return IntegerType::get(getContext(), getCrdWidth());
-    return IndexType::get(getContext());
-  }
+  Type getCrdType() const { return enc.getCrdElemType(); }
 
   /// Returns the position-overhead MLIR type, defaulting to `IndexType`.
-  Type getPosType() const {
-    if (getPosWidth())
-      return IntegerType::get(getContext(), getPosWidth());
-    return IndexType::get(getContext());
-  }
+  Type getPosType() const { return enc.getPosElemType(); }
 
   /// Returns true iff this sparse tensor type has a trailing
   /// COO region starting at the given level. By default, it

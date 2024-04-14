@@ -21,6 +21,7 @@
 ! CHECK-NEXT: -ccc-print-phases       Dump list of actions to perform
 ! CHECK-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! CHECK-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! CHECK-NEXT: -dM                     Print macro definitions in -E mode instead of normal output
 ! CHECK-NEXT: -dumpmachine            Display the compiler's target processor
 ! CHECK-NEXT: -dumpversion            Display the version of the compiler
 ! CHECK-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
@@ -67,6 +68,7 @@
 ! CHECK-NEXT: -fno-lto                Disable LTO mode (default)
 ! CHECK-NEXT: -fno-ppc-native-vector-element-order
 ! CHECK-NEXT:                         Specifies PowerPC non-native vector element order
+! CHECK-NEXT: -fno-rtlib-add-rpath Do not add -rpath with architecture-specific resource directory to the linker flags. When --hip-link is specified, do not add -rpath with HIP runtime library directory to the linker flags
 ! CHECK-NEXT: -fno-signed-zeros       Allow optimizations that ignore the sign of floating point zeros
 ! CHECK-NEXT: -fno-stack-arrays       Allocate array temporaries on the heap (default)
 ! CHECK-NEXT: -fno-version-loops-for-stride
@@ -92,6 +94,7 @@
 ! CHECK-NEXT:                         Specifies PowerPC native vector element order (default)
 ! CHECK-NEXT: -freciprocal-math       Allow division operations to be reassociated
 ! CHECK-NEXT: -fropi                  Generate read-only position independent code (ARM only)
+! CHECK-NEXT: -frtlib-add-rpath Add -rpath with architecture-specific resource directory to the linker flags. When --hip-link is specified, also add -rpath with HIP runtime library directory to the linker flags
 ! CHECK-NEXT: -frwpi                  Generate read-write position independent code (ARM only)
 ! CHECK-NEXT: -fsave-optimization-record=<format>
 ! CHECK-NEXT:                         Generate an optimization record file in a specific format
@@ -144,6 +147,8 @@
 ! CHECK-NEXT: -print-target-triple    Print the normalized target triple
 ! CHECK-NEXT: -pthread                Support POSIX threads in generated code
 ! CHECK-NEXT: -P                      Disable linemarker output in -E mode
+! CHECK-NEXT: -resource-dir <value>   The directory which holds the compiler resource files
+! CHECK-NEXT: --rocm-path=<value> ROCm installation path, used for finding and automatically linking required bitcode libraries.
 ! CHECK-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
 ! CHECK-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression
 ! CHECK-NEXT: -Rpass=<value>          Report transformations performed by optimization passes whose name matches the given POSIX regular expression
