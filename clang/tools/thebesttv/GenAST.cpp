@@ -43,6 +43,50 @@ ArgumentsAdjuster getFixJsonEscapingAdjuster() {
     };
 }
 
+/**
+ * 删除 Clang 不认识的参数。
+ * 对于使用 GCC 编译的项目，可能包含 Clang 不认识的参数。
+ */
+ArgumentsAdjuster getRmoveUnknownArgumentsAdjuster() {
+    const std::set<std::string> unknownArgPrefixes = {
+        "-mindirect-branch-register",
+        "-mpreferred-stack-boundary=",
+        "-mrecord-mcount",
+        "-mindirect-branch=thunk-extern",
+        "-mindirect-branch=thunk-inline",
+
+        "-fno-allow-store-data-races",
+        "-fconserve-stack",
+        "-falign-jumps=",
+        "-fno-code-hoisting",
+        "-fsched-pressure",
+    };
+
+    auto unknownArgAdj = [unknownArgPrefixes](const CommandLineArguments &Args,
+                                              StringRef Filename) {
+        CommandLineArguments result;
+        for (const auto &arg : Args) {
+            bool needIgnore = false;
+            for (const auto &prefix : unknownArgPrefixes) {
+                if (arg.find(prefix) == 0) {
+                    needIgnore = true;
+                    break;
+                }
+            }
+            if (!needIgnore)
+                result.push_back(arg);
+        }
+        return result;
+    };
+
+    // also suppress all warnings
+    // 一部分来自不认识的 Warning flag，用 -Wno-unknown-warning-option 消除
+    auto suppressWarningAdj =
+        getInsertArgumentAdjuster("-w", ArgumentInsertPosition::BEGIN);
+
+    return combineAdjusters(unknownArgAdj, suppressWarningAdj);
+}
+
 ArgumentsAdjuster getEmitAstAdjuster() {
     ArgumentsAdjuster identityAdjuster = [](const CommandLineArguments &Args,
                                             StringRef Filename) {
@@ -76,6 +120,7 @@ ArgumentsAdjuster getEmitAstAdjuster() {
     std::vector<ArgumentsAdjuster> adjusters = {
         getClangStripOutputAdjuster(), // 删除 -o 开头，用于指定输出文件的参数
         getFixJsonEscapingAdjuster(),
+        getRmoveUnknownArgumentsAdjuster(),
         addAstOptionToFrontAdjuster, // 添加 -emit-ast -o FILE.ast 这样的参数
         useClangAdjuster,            // 指定编译器为 Clang
     };
