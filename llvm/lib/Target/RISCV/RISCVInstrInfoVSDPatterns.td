@@ -1166,6 +1166,56 @@ defm : VPatBinarySDNode_VV_VX<usubsat, "PseudoVSSUBU">;
 defm : VPatAVGADD_VV_VX_RM<avgflooru, 0b10>;
 defm : VPatAVGADD_VV_VX_RM<avgceilu, 0b00>;
 
+// 12.5. Vector Narrowing Fixed-Point Clip Instructions
+class VPatTruncSatClipMaxMinSDNodeBase<VTypeInfo vti,
+                                       VTypeInfo wti,
+                                       SDPatternOperator op1,
+                                       int op1_value,
+                                       SDPatternOperator op2,
+                                       int op2_value> :
+  Pat<(vti.Vector (riscv_trunc_vector_vl
+        (wti.Vector (op1
+          (wti.Vector (op2 (wti.Vector wti.RegClass:$rs1),
+            (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), op2_value, (XLenVT srcvalue))))),
+          (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), op1_value, (XLenVT srcvalue))))),
+        (vti.Mask V0), VLOpFrag)),
+      (!cast<Instruction>("PseudoVNCLIP_WI_"#vti.LMul.MX#"_MASK")
+        (vti.Vector (IMPLICIT_DEF)), wti.RegClass:$rs1, 0,
+        (vti.Mask V0), 0, GPR:$vl, vti.Log2SEW, TA_MA)>;
+
+class VPatTruncSatClipUMinSDNode<VTypeInfo vti,
+                                 VTypeInfo wti,
+                                 int uminval> :
+  Pat<(vti.Vector (riscv_trunc_vector_vl
+        (wti.Vector (umin (wti.Vector wti.RegClass:$rs1),
+          (wti.Vector (riscv_vmv_v_x_vl (wti.Vector undef), uminval, (XLenVT srcvalue))))), (vti.Mask V0), VLOpFrag)),
+      (!cast<Instruction>("PseudoVNCLIPU_WI_"#vti.LMul.MX#"_MASK")
+        (vti.Vector (IMPLICIT_DEF)), wti.RegClass:$rs1, 0,
+        (vti.Mask V0), 0, GPR:$vl, vti.Log2SEW, TA_MA)>;
+
+multiclass VPatTruncSatClipMaxMinSDNode<VTypeInfo vti, VTypeInfo wti,
+  SDPatternOperator max, int maxval, SDPatternOperator min, int minval> {
+    def : VPatTruncSatClipMaxMinSDNodeBase<vti, wti, max, maxval, min, minval>;
+    def : VPatTruncSatClipMaxMinSDNodeBase<vti, wti, min, minval, max, maxval>;
+}
+
+multiclass VPatTruncSatClipSDNode<VTypeInfo vti, VTypeInfo wti> {
+  defvar sew = vti.SEW;
+  defvar uminval = !sub(!shl(1, sew), 1);
+  defvar sminval = !sub(!shl(1, !sub(sew, 1)), 1);
+  defvar smaxval = !sub(0, !shl(1, !sub(sew, 1)));
+
+  let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                               GetVTypePredicates<wti>.Predicates) in {
+    defm : VPatTruncSatClipMaxMinSDNode<vti, wti, smin, sminval, smax, smaxval>;
+    def : VPatTruncSatClipUMinSDNode<vti, wti, uminval>;
+  }
+
+}
+
+foreach vtiToWti = AllWidenableIntVectors in
+  defm : VPatTruncSatClipSDNode<vtiToWti.Vti, vtiToWti.Wti>;
+
 // 15. Vector Mask Instructions
 
 // 15.1. Vector Mask-Register Logical Instructions
