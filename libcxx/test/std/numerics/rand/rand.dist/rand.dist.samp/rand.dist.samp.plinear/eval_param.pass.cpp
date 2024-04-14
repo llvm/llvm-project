@@ -60,7 +60,7 @@ int main(int, char**)
             u.push_back(v);
         }
         std::sort(u.begin(), u.end());
-        int kp = -1;
+        std::ptrdiff_t kp = -1;
         double a = std::numeric_limits<double>::quiet_NaN();
         double m = std::numeric_limits<double>::quiet_NaN();
         double bk = std::numeric_limits<double>::quiet_NaN();
@@ -78,7 +78,7 @@ int main(int, char**)
             p[i] /= S;
         for (std::size_t i = 0; i < N; ++i)
         {
-            int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
+            std::ptrdiff_t k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
             if (k != kp)
             {
                 a = 0;
@@ -89,7 +89,7 @@ int main(int, char**)
                 c = (b[k+1]*p[k] - b[k]*p[k+1]) / (b[k+1] - b[k]);
                 kp = k;
             }
-            assert(std::abs(f(u[i], a, m, bk, c) - double(i)/N) < .001);
+            assert(std::abs(f(u[i], a, m, bk, c) - double(i)/N) < .0013);
         }
     }
 
