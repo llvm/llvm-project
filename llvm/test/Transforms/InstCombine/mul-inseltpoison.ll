@@ -915,6 +915,26 @@ define i32 @combine_mul_abs_intrin(i32 %x) {
   ret i32 %mul
 }
 
+define i32 @combine_mul_abs_intrin_nuw(i32 %x) {
+; CHECK-LABEL: @combine_mul_abs_intrin_nuw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %mul = mul nuw i32 %abs, %abs
+  ret i32 %mul
+}
+
+define i32 @combine_mul_abs_intrin_nsw(i32 %x) {
+; CHECK-LABEL: @combine_mul_abs_intrin_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %mul = mul nsw i32 %abs, %abs
+  ret i32 %mul
+}
+
 define i32 @combine_mul_nabs_intrin(i32 %x) {
 ; CHECK-LABEL: @combine_mul_nabs_intrin(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[X]]
@@ -925,6 +945,29 @@ define i32 @combine_mul_nabs_intrin(i32 %x) {
   %mul = mul i32 %neg, %neg
   ret i32 %mul
 }
+
+define i32 @combine_mul_nabs_intrin_nuw(i32 %x) {
+; CHECK-LABEL: @combine_mul_nabs_intrin_nuw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %neg = sub i32 0, %abs
+  %mul = mul nuw i32 %neg, %neg
+  ret i32 %mul
+}
+
+define i32 @combine_mul_nabs_intrin_nsw(i32 %x) {
+; CHECK-LABEL: @combine_mul_nabs_intrin_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %neg = sub i32 0, %abs
+  %mul = mul nsw i32 %neg, %neg
+  ret i32 %mul
+}
+
 
 ; z * splat(0) = splat(0), even for scalable vectors
 define <vscale x 2 x i64> @mul_scalable_splat_zero(<vscale x 2 x i64> %z) {
