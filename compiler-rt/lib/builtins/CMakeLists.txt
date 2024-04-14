@@ -854,11 +854,30 @@ else ()
         list(APPEND BUILTIN_CFLAGS_${arch} -fforce-enable-int128)
       endif()
 
+      set(BUILTIN_OBJECT_LIBS_${arch})
+      # For WebAssembly, we need to compile the atomic.c with different flags than the rest
+      # to enable atomics and bulk-memory features only for the object file.
+      if((arch STREQUAL "wasm32" OR arch STREQUAL "wasm64") AND "atomic.c" IN_LIST ${arch}_SOURCES)
+        set(BUILTIN_ATOMIC_CFLAGS_${arch} ${BUILTIN_CFLAGS_${arch}})
+        list(APPEND BUILTIN_ATOMIC_CFLAGS_${arch} -matomics -mbulk-memory)
+        add_compiler_rt_object_libraries(clang_rt.builtins.${arch}.atomic
+                                         ARCHS ${arch}
+                                         DEPS ${deps_${arch}}
+                                         SOURCES atomic.c
+                                         DEFS ${BUILTIN_DEFS}
+                                         CFLAGS ${BUILTIN_ATOMIC_CFLAGS_${arch}})
+        # Include the atomic object file in the builtins archive
+        list(APPEND BUILTIN_OBJECT_LIBS_${arch} clang_rt.builtins.${arch}.atomic)
+        # Remove atomic.c from the main list of sources
+        list(REMOVE_ITEM ${arch}_SOURCES atomic.c)
+      endif()
+
       add_compiler_rt_runtime(clang_rt.builtins
                               STATIC
                               ARCHS ${arch}
                               DEPS ${deps_${arch}}
                               SOURCES ${${arch}_SOURCES}
+                              OBJECT_LIBS ${BUILTIN_OBJECT_LIBS_${arch}}
                               DEFS ${BUILTIN_DEFS}
                               CFLAGS ${BUILTIN_CFLAGS_${arch}}
                               PARENT_TARGET builtins)
