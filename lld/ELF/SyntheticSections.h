@@ -872,6 +872,8 @@ protected:
                   llvm::DWARFDataExtractor &namesExtractor,
                   llvm::DataExtractor &strExtractor,
                   llvm::function_ref<SmallVector<uint32_t, 0>(
+                      uint32_t numCUs,
+                      uint32_t niOffset,
                       const llvm::DWARFDebugNames::Header &hdr,
                       const llvm::DWARFDebugNames::DWARFDebugNamesOffsets &)>
                       readOffsets);
