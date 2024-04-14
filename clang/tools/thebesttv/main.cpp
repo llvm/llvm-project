@@ -514,6 +514,7 @@ void generateICFG(const std::vector<std::string> &allFiles) {
         }
         bar.tick();
     }
+    bar.done();
 }
 
 void generatePathFromOneEntry(const ordered_json &result,

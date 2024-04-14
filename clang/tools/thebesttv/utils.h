@@ -184,11 +184,11 @@ int run_program(const std::vector<std::string> &args, const std::string &pwd);
 class ProgressBar {
   private:
     indicators::BlockProgressBar bar;
-    int current, totalSize;
+    const int totalSize;
 
   public:
     ProgressBar(std::string msg, int totalSize, int barWidth = 60)
-        : current(0), totalSize(totalSize),
+        : totalSize(totalSize), //
           bar{
               indicators::option::BarWidth{barWidth},
               indicators::option::Start{"["},
@@ -201,15 +201,12 @@ class ProgressBar {
 
     void tick() {
         bar.tick();
-
-        current++;
+        int current = bar.current();
         std::string postfix = fmt::format("{}/{}", current, totalSize);
         bar.set_option(indicators::option::PostfixText{postfix});
-
-        if (current == totalSize) {
-            bar.mark_as_completed();
-        }
     }
+
+    void done() { bar.mark_as_completed(); }
 };
 
 #endif
