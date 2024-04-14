@@ -50,6 +50,11 @@ const char *CudaVersionToString(CudaVersion V);
 // Input is "Major.Minor"
 CudaVersion CudaStringToVersion(const llvm::Twine &S);
 
+// We have a name conflict with sys/mac.h on AIX
+#ifdef _AIX
+#undef SM_32
+#endif
+
 enum class CudaArch {
   UNUSED,
   UNKNOWN,
