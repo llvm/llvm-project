@@ -17,8 +17,8 @@
 # CHECK-NM-DAG:  T foo
 # CHECK-NM-DAG:  t foo
 # CHECK-NM-DAG:  t foo
-# CHECK-NM-BOLT: t foo.cold_2.0
-# CHECK-BOLT: BOLT-INFO: marking foo.cold_2.0/1(*2) as a fragment of foo/2
+# CHECK-NM-BOLT: t foo.cold_[[#]].0
+# CHECK-BOLT: BOLT-INFO: marking foo.cold_[[#]].0/1(*2) as a fragment of foo/2
 
 #--- global
 .text
