@@ -168,9 +168,11 @@ void generateASTDump(const CompilationDatabase &cb) {
     }
 
     int badCnt = 0, goodCnt = 0;
+    ProgressBar bar("Gen AST", tasks.size());
     for (auto &task : tasks) {
         int ret = task.get();
         ret == 0 ? goodCnt++ : badCnt++;
+        bar.tick();
     }
     logger.info("AST dump generation finished, {} success, {} failed", goodCnt,
                 badCnt);

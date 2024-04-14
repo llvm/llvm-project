@@ -26,6 +26,7 @@
 
 #include "ICFG.h"
 
+#include "lib/indicators.hpp"
 #include "lib/json.hpp"
 
 // doesn't seem useful
@@ -179,5 +180,36 @@ bool fileExists(const std::string &path);
  * 在指定目录运行程序，并返回程序的返回值
  */
 int run_program(const std::vector<std::string> &args, const std::string &pwd);
+
+class ProgressBar {
+  private:
+    indicators::BlockProgressBar bar;
+    int current, totalSize;
+
+  public:
+    ProgressBar(std::string msg, int totalSize, int barWidth = 60)
+        : current(0), totalSize(totalSize),
+          bar{
+              indicators::option::BarWidth{barWidth},
+              indicators::option::Start{"["},
+              indicators::option::End{"]"},
+              indicators::option::ShowElapsedTime{true},
+              indicators::option::ShowRemainingTime{true},
+              indicators::option::MaxProgress{totalSize},
+              indicators::option::PrefixText{msg + " "},
+          } {}
+
+    void tick() {
+        bar.tick();
+
+        current++;
+        std::string postfix = fmt::format("{}/{}", current, totalSize);
+        bar.set_option(indicators::option::PostfixText{postfix});
+
+        if (current == totalSize) {
+            bar.mark_as_completed();
+        }
+    }
+};
 
 #endif

@@ -504,13 +504,15 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
  */
 void generateICFG(const std::vector<std::string> &allFiles) {
     logger.info("--- Generating whole program call graph ---");
+    ProgressBar bar("Gen ICFG", allFiles.size());
     for (auto &file : allFiles) {
         auto AST = getASTOfFile(file);
-        if (!AST)
-            continue;
-        auto &Context = AST->getASTContext();
-        GenICFGVisitor visitor(&Context, file);
-        visitor.TraverseDecl(Context.getTranslationUnitDecl());
+        if (AST) {
+            auto &Context = AST->getASTContext();
+            GenICFGVisitor visitor(&Context, file);
+            visitor.TraverseDecl(Context.getTranslationUnitDecl());
+        }
+        bar.tick();
     }
 }
 
