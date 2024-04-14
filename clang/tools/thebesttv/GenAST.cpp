@@ -3,7 +3,9 @@
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 
-std::string getASTDumpFile(const std::string &file) { return file + ".ast"; }
+std::string getASTDumpFile(const std::string &file) {
+    return file + ".path-gen-ast";
+}
 
 ArgumentsAdjuster getEmitAstAdjuster() {
     ArgumentsAdjuster identityAdjuster = [](const CommandLineArguments &Args,
