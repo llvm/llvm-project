@@ -115,6 +115,10 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
 /mlir/**/NVVM*/ @grypp
 
+# MLIR Python Bindings
+/mlir/test/python/ @makslevental @stellaraccident
+/mlir/python/ @makslevental @stellaraccident
+
 # BOLT
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci
 
