@@ -1,3 +1,5 @@
+#include <regex>
+
 #include "GenAST.h"
 
 #include "clang/Tooling/ArgumentsAdjusters.h"
@@ -5,6 +7,40 @@
 
 std::string getASTDumpFile(const std::string &file) {
     return file + ".path-gen-ast";
+}
+
+/**
+ * 判断参数是否形如 -Dxxx"xxx，即中部包含没有闭合的引号
+ */
+bool needsJsonEscapingFixing(const std::string &arg) {
+    const static std::string middle = "[-=A-Za-z0-9_]";
+    const static std::regex pattern(
+        fmt::format("^-D{}+\"{}+$", middle, middle));
+    return std::regex_match(arg, pattern);
+}
+
+/**
+ * 对于参数 -DPAGER_ENV="LESS=FRX LV=-c"，LLVM会把它拆分成两个参数。
+ * 该函数修复这样的参数，把它们重新组合成原始状态。
+ */
+ArgumentsAdjuster getFixJsonEscapingAdjuster() {
+    return [](const CommandLineArguments &Args, StringRef Filename) {
+        CommandLineArguments result;
+        for (int i = 0; i < Args.size(); i++) {
+            auto &a = Args[i];
+            if (needsJsonEscapingFixing(a) && i + 1 < Args.size()) {
+                auto &b = Args[i + 1];
+                logger.warn("Fixing wrongly escaped entry, combining:");
+                logger.warn("  {}", a);
+                logger.warn("  {}", b);
+                result.push_back(a + " " + b);
+                i++;
+                continue;
+            }
+            result.push_back(a);
+        }
+        return result;
+    };
 }
 
 ArgumentsAdjuster getEmitAstAdjuster() {
@@ -39,6 +75,7 @@ ArgumentsAdjuster getEmitAstAdjuster() {
 
     std::vector<ArgumentsAdjuster> adjusters = {
         getClangStripOutputAdjuster(), // 删除 -o 开头，用于指定输出文件的参数
+        getFixJsonEscapingAdjuster(),
         addAstOptionToFrontAdjuster, // 添加 -emit-ast -o FILE.ast 这样的参数
         useClangAdjuster,            // 指定编译器为 Clang
     };
