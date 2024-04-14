@@ -55,6 +55,7 @@ ArgumentsAdjuster getRmoveUnknownArgumentsAdjuster() {
         "-mrecord-mcount",
         "-mindirect-branch=thunk-extern",
         "-mindirect-branch=thunk-inline",
+        "-mhard-float",
 
         "-fno-allow-store-data-races",
         "-fconserve-stack",
