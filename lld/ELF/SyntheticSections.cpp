@@ -2738,9 +2738,7 @@ void DebugNamesBaseSection::parseDebugNames(
     InputChunk &inputChunk, OutputChunk &chunk,
     DWARFDataExtractor &namesExtractor, DataExtractor &strExtractor,
     function_ref<SmallVector<uint32_t, 0>(
-        uint32_t numCus,
-        uint32_t niOffset,
-        const DWARFDebugNames::Header &,
+        uint32_t numCus, uint32_t niOffset, const DWARFDebugNames::Header &,
         const DWARFDebugNames::DWARFDebugNamesOffsets &)>
         readOffsets) {
   const LLDDWARFSection namesSec = inputChunk.section;
@@ -2773,8 +2771,8 @@ void DebugNamesBaseSection::parseDebugNames(
       return;
     }
 
-    SmallVector<uint32_t, 0> entryOffsets = readOffsets(numCus, niOffset,
-                                                        nd.hdr, locs);
+    SmallVector<uint32_t, 0> entryOffsets =
+        readOffsets(numCus, niOffset, nd.hdr, locs);
 
     // Read the entry pool.
     offsetMap.clear();
@@ -3167,8 +3165,7 @@ template <class ELFT> DebugNamesSection<ELFT>::DebugNamesSection() {
     parseDebugNames(
         inputChunk, chunk, namesExtractor, strExtractor,
         [&chunk, namesData = dobj.getNamesSection().Data.data()](
-            uint32_t numCus,
-            uint32_t niOffset,
+            uint32_t numCus, uint32_t niOffset,
             const DWARFDebugNames::Header &hdr,
             const DWARFDebugNames::DWARFDebugNamesOffsets &locs) {
           // Read CU offsets.
