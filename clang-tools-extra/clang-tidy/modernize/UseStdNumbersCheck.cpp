@@ -35,6 +35,7 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <cmath>
 
 namespace {
 using namespace clang::ast_matchers;
