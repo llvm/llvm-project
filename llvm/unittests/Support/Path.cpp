@@ -1297,10 +1297,6 @@ TEST_F(FileSystemTest, UTF8ToUTF16DirectoryIteration) {
 #endif
 
 TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
-  ASSERT_NO_ERROR(fs::create_directory(Twine(TestDirectory)));
-  ASSERT_EQ(fs::create_directory(Twine(TestDirectory), false),
-            errc::file_exists);
-
   std::string Buf(5, '?');
   Expected<fs::file_t> FD = fs::openNativeFileForRead(TestDirectory);
 #ifdef _WIN32
@@ -1315,18 +1311,12 @@ TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
 }
 
 TEST_F(FileSystemTest, OpenDirectoryAsFileForWrite) {
-  ASSERT_NO_ERROR(fs::create_directory(Twine(TestDirectory)));
-  ASSERT_EQ(fs::create_directory(Twine(TestDirectory), false),
-            errc::file_exists);
-
   int FD;
   std::error_code EC;
   EC = fs::openFileForWrite(Twine(TestDirectory), FD);
   if (!EC)
     ::close(FD);
   ASSERT_EQ(EC, errc::is_a_directory);
-
-  ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory)));
 }
 
 TEST_F(FileSystemTest, Remove) {
