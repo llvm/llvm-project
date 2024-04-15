@@ -529,8 +529,6 @@ Bug Fixes to C++ Support
 - Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
 - Fixed a bug that prevented member function templates of class templates declared with a deduced return type
   from being explicitly specialized for a given implicit instantiation of the class template.
-- Fixed a crash when ``this`` is used in a dependent class scope function template specialization
-  that instantiates to a static member function.
 
 - Fix crash when inheriting from a cv-qualified type. Fixes:
   (`#35603 <https://github.com/llvm/llvm-project/issues/35603>`_)
