@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/BinaryPasses.h"
+#include "bolt/Core/BoltBisect.h"
 #include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Passes/ReorderAlgorithm.h"
@@ -228,6 +229,13 @@ static cl::opt<unsigned> TopCalledLimit(
 
 namespace llvm {
 namespace bolt {
+
+bool BinaryFunctionPass::skipFunction(const BinaryFunction &BF) const {
+  BoltPassGate &Gate = BF.getBinaryContext().getBoltBisect();
+  if (Gate.isEnabled() && !Gate.shouldRunPass(this->getName()))
+    return true;
+  return false;
+}
 
 bool BinaryFunctionPass::shouldOptimize(const BinaryFunction &BF) const {
   return BF.isSimple() && BF.getState() == BinaryFunction::State::CFG &&

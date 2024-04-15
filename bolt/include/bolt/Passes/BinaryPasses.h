@@ -34,6 +34,8 @@ protected:
 
   /// Control whether a specific function should be skipped during
   /// optimization.
+  virtual bool skipFunction(const BinaryFunction &BF) const;
+
   virtual bool shouldOptimize(const BinaryFunction &BF) const;
 
 public:
