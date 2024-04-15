@@ -43,6 +43,15 @@
 #define GET_SUBTARGETINFO_MC_DESC
 #include "RISCVGenSubtargetInfo.inc"
 
+namespace llvm::RISCVVInversePseudosTable {
+
+using namespace RISCV;
+
+#define GET_RISCVVInversePseudosTable_IMPL
+#include "RISCVGenSearchableTables.inc"
+
+} // namespace llvm::RISCVVInversePseudosTable
+
 using namespace llvm;
 
 static MCInstrInfo *createRISCVMCInstrInfo() {
