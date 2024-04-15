@@ -82,6 +82,54 @@ struct __simd_operations<_Tp, simd_abi::__scalar> {
   static _LIBCPP_HIDE_FROM_ABI _SimdStorage __unary_minus(_SimdStorage __s) noexcept {
     return {static_cast<_Tp>(-__s.__data)};
   }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __plus(_SimdStorage __lhs, _SimdStorage __rhs) noexcept {
+    return {static_cast<_Tp>(__lhs.__data + __rhs.__data)};
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __minus(_SimdStorage __lhs, _SimdStorage __rhs) noexcept {
+    return {static_cast<_Tp>(__lhs.__data - __rhs.__data)};
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __multiplies(_SimdStorage __lhs, _SimdStorage __rhs) noexcept {
+    return {static_cast<_Tp>(__lhs.__data * __rhs.__data)};
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __divides(_SimdStorage __lhs, _SimdStorage __rhs) noexcept {
+    return {static_cast<_Tp>(__lhs.__data / __rhs.__data)};
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __modulus(_SimdStorage __lhs, _SimdStorage __rhs) noexcept {
+    return {static_cast<_Tp>(__lhs.__data % __rhs.__data)};
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __bitwise_and(_SimdStorage __lhs, _SimdStorage __rhs) noexcept {
+    return {static_cast<_Tp>(__lhs.__data & __rhs.__data)};
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __bitwise_or(_SimdStorage __lhs, _SimdStorage __rhs) noexcept {
+    return {static_cast<_Tp>(__lhs.__data | __rhs.__data)};
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __bitwise_xor(_SimdStorage __lhs, _SimdStorage __rhs) noexcept {
+    return {static_cast<_Tp>(__lhs.__data ^ __rhs.__data)};
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __shift_left(_SimdStorage __lhs, _SimdStorage __rhs) noexcept {
+    return {static_cast<_Tp>(__lhs.__data << __rhs.__data)};
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __shift_right(_SimdStorage __lhs, _SimdStorage __rhs) noexcept {
+    return {static_cast<_Tp>(__lhs.__data >> __rhs.__data)};
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __shift_left(_SimdStorage __lhs, int __rhs) noexcept {
+    return {static_cast<_Tp>(__lhs.__data << __rhs)};
+  }
+
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __shift_right(_SimdStorage __lhs, int __rhs) noexcept {
+    return {static_cast<_Tp>(__lhs.__data >> __rhs)};
+  }
 };
 
 template <class _Tp>

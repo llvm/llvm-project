@@ -37,6 +37,39 @@ public:
   _LIBCPP_HIDE_FROM_ABI _Simd operator~() const noexcept {
     return _Simd(_Impl::__bitwise_not((*static_cast<const _Simd*>(this)).__s_), _Simd::__storage_tag);
   }
+
+  // binary operators for integral _Tp
+  friend _LIBCPP_HIDE_FROM_ABI _Simd operator%(const _Simd& __lhs, const _Simd& __rhs) noexcept {
+    return _Simd(_Impl::__modulus(__lhs.__s_, __rhs.__s_), _Simd::__storage_tag);
+  }
+
+  friend _LIBCPP_HIDE_FROM_ABI _Simd operator&(const _Simd& __lhs, const _Simd& __rhs) noexcept {
+    return _Simd(_Impl::__bitwise_and(__lhs.__s_, __rhs.__s_), _Simd::__storage_tag);
+  }
+
+  friend _LIBCPP_HIDE_FROM_ABI _Simd operator|(const _Simd& __lhs, const _Simd& __rhs) noexcept {
+    return _Simd(_Impl::__bitwise_or(__lhs.__s_, __rhs.__s_), _Simd::__storage_tag);
+  }
+
+  friend _LIBCPP_HIDE_FROM_ABI _Simd operator^(const _Simd& __lhs, const _Simd& __rhs) noexcept {
+    return _Simd(_Impl::__bitwise_xor(__lhs.__s_, __rhs.__s_), _Simd::__storage_tag);
+  }
+
+  friend _LIBCPP_HIDE_FROM_ABI _Simd operator<<(const _Simd& __lhs, const _Simd& __rhs) noexcept {
+    return _Simd(_Impl::__shift_left(__lhs.__s_, __rhs.__s_), _Simd::__storage_tag);
+  }
+
+  friend _LIBCPP_HIDE_FROM_ABI _Simd operator>>(const _Simd& __lhs, const _Simd& __rhs) noexcept {
+    return _Simd(_Impl::__shift_right(__lhs.__s_, __rhs.__s_), _Simd::__storage_tag);
+  }
+
+  friend _LIBCPP_HIDE_FROM_ABI _Simd operator<<(const _Simd& __lhs, int __rhs) noexcept {
+    return _Simd(_Impl::__shift_left(__lhs.__s_, __rhs), _Simd::__storage_tag);
+  }
+
+  friend _LIBCPP_HIDE_FROM_ABI _Simd operator>>(const _Simd& __lhs, int __rhs) noexcept {
+    return _Simd(_Impl::__shift_right(__lhs.__s_, __rhs), _Simd::__storage_tag);
+  }
 };
 
 // class template simd [simd.class]
@@ -137,6 +170,23 @@ public:
   _LIBCPP_HIDE_FROM_ABI simd operator+() const noexcept { return *this; }
 
   _LIBCPP_HIDE_FROM_ABI simd operator-() const noexcept { return simd(_Impl::__unary_minus(__s_), __storage_tag); }
+
+  // binary operators
+  friend _LIBCPP_HIDE_FROM_ABI simd operator+(const simd& __lhs, const simd& __rhs) noexcept {
+    return simd(_Impl::__plus(__lhs.__s_, __rhs.__s_), __storage_tag);
+  }
+
+  friend _LIBCPP_HIDE_FROM_ABI simd operator-(const simd& __lhs, const simd& __rhs) noexcept {
+    return simd(_Impl::__minus(__lhs.__s_, __rhs.__s_), __storage_tag);
+  }
+
+  friend _LIBCPP_HIDE_FROM_ABI simd operator*(const simd& __lhs, const simd& __rhs) noexcept {
+    return simd(_Impl::__multiplies(__lhs.__s_, __rhs.__s_), __storage_tag);
+  }
+
+  friend _LIBCPP_HIDE_FROM_ABI simd operator/(const simd& __lhs, const simd& __rhs) noexcept {
+    return simd(_Impl::__divides(__lhs.__s_, __rhs.__s_), __storage_tag);
+  }
 };
 
 template <class _Tp, class _Abi>
