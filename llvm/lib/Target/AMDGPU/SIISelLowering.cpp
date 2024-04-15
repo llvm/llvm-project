@@ -5160,9 +5160,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
     const TargetRegisterClass *Src0RC = MRI.getRegClass(Src0.getReg());
-    const TargetRegisterClass *Src1RC = Src1.isReg()
-                                        ? MRI.getRegClass(Src1.getReg())
-                                        : &AMDGPU::SReg_32RegClass;
     const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2.getReg());                                     
     
     const TargetRegisterClass *Src0SubRC =

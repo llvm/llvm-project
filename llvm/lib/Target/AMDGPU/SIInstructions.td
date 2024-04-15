@@ -303,7 +303,9 @@ let usesCustomInserter = 1 in {
   def V_WRITELANE_PSEUDO_B64 : VPseudoInstSI <
   (outs VReg_64:$sdst), (ins SReg_64:$src0, SSrc_b32:$src1, VReg_64:$src2),
   [(set i64:$sdst, (int_amdgcn_writelane i64:$src0, i32:$src1, i64:$src2))]
-  >;
+  > {
+    let UseNamedOperandTable = 1;
+  }
 }
 
 let usesCustomInserter = 1, Defs = [SCC] in {
