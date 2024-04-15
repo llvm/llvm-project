@@ -3093,10 +3093,14 @@ define <2 x i32> @dec_zext_add_nonzero_vec(<2 x i8> %x) {
   ret <2 x i32> %c
 }
 
+; Negative test: Folding this with undef is not safe.
+
 define <2 x i32> @dec_zext_add_nonzero_vec_undef0(<2 x i8> %x) {
 ; CHECK-LABEL: @dec_zext_add_nonzero_vec_undef0(
 ; CHECK-NEXT:    [[O:%.*]] = or <2 x i8> [[X:%.*]], <i8 8, i8 undef>
-; CHECK-NEXT:    [[C:%.*]] = zext <2 x i8> [[O]] to <2 x i32>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[O]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[B:%.*]] = zext <2 x i8> [[A]] to <2 x i32>
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw <2 x i32> [[B]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %o = or <2 x i8> %x, <i8 8, i8 undef>
