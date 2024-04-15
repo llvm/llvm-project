@@ -149,7 +149,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone/forwarding-reference-overload>`
-  check to not flag deleted constructors which are unable to hide anything.
+  check to ignore deleted constructors which won't hide other overloads.
 
 - Improved :doc:`bugprone-inc-dec-in-conditions
   <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check to ignore code
