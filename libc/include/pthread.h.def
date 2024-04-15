@@ -32,6 +32,9 @@ enum {
   PTHREAD_MUTEX_ROBUST = 0x1,
 };
 
+#define PTHREAD_PROCESS_PRIVATE 0
+#define PTHREAD_PROCESS_SHARED 1
+
 %%public_api()
 
 #endif // LLVM_LIBC_PTHREAD_H
