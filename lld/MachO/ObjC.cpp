@@ -458,7 +458,7 @@ private:
                                const PointerListInfo &ptrList);
 
   Defined *emitCategory(const ClassExtensionInfo &extInfo);
-  Defined *emitCatListEntrySec(const std::string &forCateogryName,
+  Defined *emitCatListEntrySec(const std::string &forCategoryName,
                                const std::string &forBaseClassName,
                                ObjFile *objFile);
   Defined *emitCategoryBody(const std::string &name, const Defined *nameSym,
@@ -878,7 +878,7 @@ void ObjcCategoryMerger::emitAndLinkPointerList(
 
 // This method creates an __objc_catlist ConcatInputSection with a single slot
 Defined *
-ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCateogryName,
+ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCategoryName,
                                         const std::string &forBaseClassName,
                                         ObjFile *objFile) {
   uint32_t sectionSize = target->wordSize;
@@ -894,7 +894,7 @@ ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCateogryName,
   newCatList->parent = infoCategoryWriter.catListInfo.outputSection;
 
   std::string catSymName = "<__objc_catlist slot for merged category ";
-  catSymName += forBaseClassName + "(" + forCateogryName + ")>";
+  catSymName += forBaseClassName + "(" + forCategoryName + ")>";
 
   Defined *catListSym = make<Defined>(
       newStringData(catSymName.c_str()), /*file=*/objFile, newCatList,
@@ -1069,7 +1069,7 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
          off += target->wordSize) {
       Defined *categorySym = tryGetDefinedAtIsecOffset(catListCisec, off);
       assert(categorySym &&
-             "Failed to get a valid cateogry at __objc_catlit offset");
+             "Failed to get a valid category at __objc_catlit offset");
 
       // We only support ObjC categories (no swift + @objc)
       // TODO: Support swift + @objc categories also
