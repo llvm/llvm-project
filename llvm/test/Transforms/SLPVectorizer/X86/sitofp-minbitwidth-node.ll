@@ -8,7 +8,7 @@ define void @foo(ptr %ptr) {
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 334
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[GEP0]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i16> [[TMP1]], <i16 -1, i16 -1>
-; CHECK-NEXT:    [[TMP4:%.*]] = sitofp <2 x i16> [[TMP3]] to <2 x double>
+; CHECK-NEXT:    [[TMP4:%.*]] = uitofp <2 x i16> [[TMP3]] to <2 x double>
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i16>, ptr [[GEP3]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i16> [[TMP5]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i16> [[TMP1]] to <2 x i32>
