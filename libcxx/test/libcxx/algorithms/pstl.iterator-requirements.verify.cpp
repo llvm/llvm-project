@@ -20,6 +20,9 @@
 // Ignore spurious errors after the initial static_assert failure.
 // ADDITIONAL_COMPILE_FLAGS: -Xclang -verify-ignore-unexpected=error
 
+// We only diagnose this in C++20 and above because we implement the checks with concepts.
+// UNSUPPORTED: c++17
+
 #include <algorithm>
 #include <cstddef>
 #include <numeric>
