@@ -1123,7 +1123,10 @@ module std_private_charconv_to_chars                [system] { header "__charcon
 module std_private_charconv_to_chars_base_10        [system] { header "__charconv/to_chars_base_10.h" }
 module std_private_charconv_to_chars_floating_point [system] { header "__charconv/to_chars_floating_point.h" }
 module std_private_charconv_to_chars_integral       [system] { header "__charconv/to_chars_integral.h" }
-module std_private_charconv_to_chars_result         [system] { header "__charconv/to_chars_result.h" }
+module std_private_charconv_to_chars_result         [system] {
+  header "__charconv/to_chars_result.h"
+  export *
+}
 module std_private_charconv_traits                  [system] { header "__charconv/traits.h" }
 
 module std_private_chrono_calendar               [system] { header "__chrono/calendar.h" }
@@ -1254,6 +1257,7 @@ module std_private_coroutine_noop_coroutine_handle [system] { header "__coroutin
 module std_private_coroutine_trivial_awaitables    [system] { header "__coroutine/trivial_awaitables.h" }
 
 module std_private_debug_utils_randomize_range            [system] { header "__debug_utils/randomize_range.h" }
+module std_private_debug_utils_sanitizers                 [system] { header "__debug_utils/sanitizers.h" }
 module std_private_debug_utils_strict_weak_ordering_check [system] {
   header "__debug_utils/strict_weak_ordering_check.h"
   export std_private_type_traits_is_constant_evaluated
