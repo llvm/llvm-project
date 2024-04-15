@@ -1,7 +1,7 @@
-.. title:: clang-tidy - linuxkernel-must-use-errs
+.. title:: clang-tidy - linuxkernel-must-check-errs
 
-linuxkernel-must-use-errs
-=========================
+linuxkernel-must-check-errs
+===========================
 
 Checks Linux kernel code to see if it uses the results from the functions in
 ``linux/err.h``. Also checks to see if code uses the results from functions that

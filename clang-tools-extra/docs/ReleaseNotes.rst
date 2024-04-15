@@ -303,6 +303,10 @@ Miscellaneous
   ``--format`` option is specified. Now :program:`clang-apply-replacements`
   applies formatting only with the option.
 
+- Fixed the :doc:`linuxkernel-must-check-errs
+  <clang-tidy/checks/linuxkernel/must-check-errs>` documentation to consistently
+  use the check's proper name.
+
 Improvements to include-fixer
 -----------------------------
 
