@@ -802,8 +802,8 @@ def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
     write and following read or write.
     1. `Memory_kind` describes the memory kind. "global" means the global memory,
         "slm" means the share local memory.
-    2. `Fence_scope` describes the scope of fence. "local" means that the scope would be
-        within each XeCore. "tile" means the scope would be across XeCore with one tile.
+    2. `Fence_scope` describes the scope of fence. "Workgroup" means that the scope would be
+        within each workgroup. "GPU" means the scope would be across workgroups within the GPU.
   }];
   let arguments = (ins XeGPU_MemoryScopeAttr: $memory_kind,
                        StrAttr: $fence_scope);
