@@ -1586,7 +1586,8 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
     DAG.MBBLiveIns.erase(DAG.Regions[Idx].first->getParent());
   }
 
-  DAG.BBLiveOutMap = DAG.getBBLiveOutMap();
+  if (GCNTrackers)
+    DAG.BBLiveOutMap = DAG.getBBLiveOutMap();
 
   DAG.Regions = NewRegions;
   DAG.RescheduleRegions = NewRescheduleRegions;
