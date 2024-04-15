@@ -100,9 +100,9 @@
 // CHECK-LD-RT-ANDROID: "--eh-frame-hdr"
 // CHECK-LD-RT-ANDROID: "-m" "armelf_linux_eabi"
 // CHECK-LD-RT-ANDROID: "-dynamic-linker"
-// CHECK-LD-RT-ANDROID: libclang_rt.builtins-arm-android.a"
+// CHECK-LD-RT-ANDROID: libclang_rt.builtins.a"
 // CHECK-LD-RT-ANDROID: "-lc"
-// CHECK-LD-RT-ANDROID: libclang_rt.builtins-arm-android.a"
+// CHECK-LD-RT-ANDROID: libclang_rt.builtins.a"
 //
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
@@ -266,7 +266,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-ANDROID-STATIC %s
 // CHECK-CLANG-ANDROID-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-CLANG-ANDROID-STATIC: "--start-group" "{{[^"]*}}{{/|\\\\}}libclang_rt.builtins-aarch64-android.a" "-l:libunwind.a" "-lc" "--end-group"
+// CHECK-CLANG-ANDROID-STATIC: "--start-group" "{{[^"]*}}{{/|\\\\}}libclang_rt.builtins.a" "-l:libunwind.a" "-lc" "--end-group"
 //
 // RUN: %clang -### %s 2>&1      \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
