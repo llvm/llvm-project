@@ -23,8 +23,8 @@ class ExprMutationAnalyzer {
 public:
   friend class FunctionParmMutationAnalyzer;
   struct Cache {
-    llvm::DenseMap<const FunctionDecl *,
-                   std::unique_ptr<FunctionParmMutationAnalyzer>>
+    llvm::SmallDenseMap<const FunctionDecl *,
+                        std::unique_ptr<FunctionParmMutationAnalyzer>>
         FuncParmAnalyzer;
   };
 
