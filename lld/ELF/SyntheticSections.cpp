@@ -3217,6 +3217,38 @@ template <class ELFT> void DebugNamesSection<ELFT>::finalizeContents() {
   });
 }
 
+template <class ELFT>
+void DebugNamesSection<ELFT>::updateMultiCuOffsets(OutputChunk &chunk) {
+  // Find the .debug_info section data for this chunk.
+  auto *file = cast<ObjFile<ELFT>>(chunk.infoSec->file);
+  DWARFContext dwarf(std::make_unique<LLDDwarfObj<ELFT>>(file));
+  auto &dobj = static_cast<const LLDDwarfObj<ELFT> &>(dwarf.getDWARFObj());
+  InputSection *infoSec = dobj.getInfoSection();
+  auto infoData = toStringRef(infoSec->contentMaybeDecompress());
+  const char *p = infoData.data();
+
+  // Skim through the CUs reading the unit lengths & types to find correct
+  // starting offsets for CUs (before relocation).
+  uint32_t nextCu = 0;
+  for (size_t i = 1, end = chunk.compUnits.size(); i < end; ++i) {
+    // First CU offset for each new (appended) .debug_names section starts at
+    // zero.
+    if (chunk.compUnits[i] == 0) {
+      // Skip to start of next CU and read the type & size.
+      p = infoData.data() + nextCu;
+      uint32_t unit_length =
+          endian::readNext<uint32_t, ELFT::Endianness, unaligned>(p);
+      [[maybe_unused]] uint16_t version =
+          endian::readNext<uint16_t, ELFT::Endianness, unaligned>(p);
+      uint8_t unitType =
+          endian::readNext<uint8_t, ELFT::Endianness, unaligned>(p);
+      if (unitType == dwarf::DW_UT_compile)
+        nextCu += unit_length + 4;
+    }
+    chunk.compUnits[i] += nextCu;
+  }
+}
+
 template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
   [[maybe_unused]] uint8_t *oldBuf = buf;
   // Write the header.
@@ -3236,6 +3268,8 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
   // Write the CU list.
   for (auto i : seq(numChunks)) {
     OutputChunk &chunk = chunks[i];
+    if (chunk.compUnits.size() > 1)
+      updateMultiCuOffsets(chunk);
     for (uint32_t cuOffset : chunk.compUnits) {
       endian::write32<ELFT::Endianness>(buf,
                                         chunk.infoSec->outSecOff + cuOffset);

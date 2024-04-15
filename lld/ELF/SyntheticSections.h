@@ -910,6 +910,8 @@ public:
   void getNameRelocs(InputSection *sec, ArrayRef<RelTy> rels,
                      llvm::DenseMap<uint32_t, uint32_t> &relocs);
 
+  void updateMultiCuOffsets(OutputChunk &chunk);
+
 private:
   static void readOffsets(InputChunk &inputChunk, OutputChunk &chunk,
                           llvm::DWARFDataExtractor &namesExtractor,
