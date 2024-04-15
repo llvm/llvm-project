@@ -1601,6 +1601,8 @@ private:
                                      const ParsedTemplateInfo &TemplateInfo,
                                      const VirtSpecifiers &VS,
                                      SourceLocation PureSpecLoc);
+  StringLiteral *ParseCXXDeletedFunctionMessage();
+  void SkipDeletedFunctionBody();
   void ParseCXXNonStaticMemberInitializer(Decl *VarD);
   void ParseLexedAttributes(ParsingClass &Class);
   void ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
@@ -3657,6 +3659,8 @@ private:
   bool ParseOpenACCGangArgList();
   /// Parses a 'gang-arg', used for the 'gang' clause.
   bool ParseOpenACCGangArg();
+  /// Parses a 'condition' expr, ensuring it results in a
+  ExprResult ParseOpenACCConditionExpr();
 
 private:
   //===--------------------------------------------------------------------===//

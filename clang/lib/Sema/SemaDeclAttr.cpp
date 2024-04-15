@@ -39,6 +39,7 @@
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/STLExtras.h"
@@ -5099,8 +5100,8 @@ static void handleSharedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
   if (S.getLangOpts().CUDA && VD->hasLocalStorage() &&
-      S.CUDADiagIfHostCode(AL.getLoc(), diag::err_cuda_host_shared)
-          << llvm::to_underlying(S.CurrentCUDATarget()))
+      S.CUDA().DiagIfHostCode(AL.getLoc(), diag::err_cuda_host_shared)
+          << llvm::to_underlying(S.CUDA().CurrentTarget()))
     return;
   D->addAttr(::new (S.Context) CUDASharedAttr(S.Context, AL));
 }
@@ -5189,8 +5190,9 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Diagnostic is emitted elsewhere: here we store the (valid) AL
   // in the Decl node for syntactic reasoning, e.g., pretty-printing.
   CallingConv CC;
-  if (S.CheckCallingConvAttr(AL, CC, /*FD*/ nullptr,
-                             S.IdentifyCUDATarget(dyn_cast<FunctionDecl>(D))))
+  if (S.CheckCallingConvAttr(
+          AL, CC, /*FD*/ nullptr,
+          S.CUDA().IdentifyTarget(dyn_cast<FunctionDecl>(D))))
     return;
 
   if (!isa<ObjCMethodDecl>(D)) {
@@ -5495,7 +5497,7 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   if (LangOpts.CUDA) {
     auto *Aux = Context.getAuxTargetInfo();
     assert(FD || CFT != CUDAFunctionTarget::InvalidTarget);
-    auto CudaTarget = FD ? IdentifyCUDATarget(FD) : CFT;
+    auto CudaTarget = FD ? CUDA().IdentifyTarget(FD) : CFT;
     bool CheckHost = false, CheckDevice = false;
     switch (CudaTarget) {
     case CUDAFunctionTarget::HostDevice:

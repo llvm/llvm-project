@@ -243,7 +243,8 @@ public:
   void Visit(const OpenACCClause *C) {
     getNodeDelegate().AddChild([=] {
       getNodeDelegate().Visit(C);
-      // TODO OpenACC: Switch on clauses that have children, and add them.
+      for (const auto *S : C->children())
+        Visit(S);
     });
   }
 
@@ -930,6 +931,14 @@ public:
   void VisitPackTemplateArgument(const TemplateArgument &TA) {
     for (const auto &TArg : TA.pack_elements())
       Visit(TArg);
+  }
+
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
+    Visit(Node->getExpr());
+  }
+
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
+    Visit(Node->getExpr());
   }
 
   // Implements Visit methods for Attrs.
