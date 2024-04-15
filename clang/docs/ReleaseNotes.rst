@@ -423,7 +423,7 @@ Bug Fixes in This Version
 - Fixed a regression in CTAD that a friend declaration that befriends itself may cause
   incorrect constraint substitution. (#GH86769).
 
-- Clang now allowed the value of unroll count to be zero in ``#pragma GCC unroll`` and ``#pragma unroll``.
+- Clang now allows the value of unroll count to be zero in ``#pragma GCC unroll`` and ``#pragma unroll``.
   The values of 0 and 1 block any unrolling of the loop. This keeps the same behavior with GCC.
   Fixes (`#88624 <https://github.com/llvm/llvm-project/issues/88624>`_).
 
