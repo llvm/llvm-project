@@ -3205,6 +3205,7 @@ def fir_CUDAAllocateOp : fir_Op<"cuda_allocate", [AttrSizedOperandSegments,
                        Optional<AnyIntegerType>:$stream,
                        Optional<AnyRefOrBoxType>:$pinned,
                        Optional<AnyRefOrBoxType>:$source,
+                       fir_CUDADataAttributeAttr:$cuda_attr,
                        UnitAttr:$hasStat);
 
   let results = (outs AnyIntegerType:$stat);

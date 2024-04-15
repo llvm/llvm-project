@@ -8,7 +8,7 @@ func.func @_QPsub1() {
   %11 = fir.convert %4#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
   %s = fir.load %1 : !fir.ref<i32>
   // expected-error@+1{{'fir.cuda_allocate' op pinned and stream cannot appears at the same time}}
-  %13 = fir.cuda_allocate %11 : !fir.ref<!fir.box<none>> stream(%s : i32) pinned(%pinned : !fir.ref<i1>) -> i32
+  %13 = fir.cuda_allocate %11 : !fir.ref<!fir.box<none>> stream(%s : i32) pinned(%pinned : !fir.ref<i1>) {cuda_attr = #fir.cuda<device>} -> i32
   return
 }
 
@@ -17,7 +17,7 @@ func.func @_QPsub1() {
 func.func @_QPsub1() {
   %1 = fir.alloca i32
   // expected-error@+1{{'fir.cuda_allocate' op expect box to be a reference to/or a class or box type value}}
-  %2 = fir.cuda_allocate %1 : !fir.ref<i32> -> i32
+  %2 = fir.cuda_allocate %1 : !fir.ref<i32> {cuda_attr = #fir.cuda<device>} -> i32
   return
 }
 
@@ -33,7 +33,7 @@ func.func @_QPsub1() {
   %11 = fir.convert %4#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
   %16 = fir.convert %9 : (!fir.box<!fir.char<1,100>>) -> !fir.box<none>
   // expected-error@+1{{'fir.cuda_allocate' op expect stat attribute when errmsg is provided}}
-  %13 = fir.cuda_allocate %11 : !fir.ref<!fir.box<none>> errmsg(%16 : !fir.box<none>) -> i32
+  %13 = fir.cuda_allocate %11 : !fir.ref<!fir.box<none>> errmsg(%16 : !fir.box<none>) {cuda_attr = #fir.cuda<device>} -> i32
   return
 }
 
@@ -45,6 +45,6 @@ func.func @_QPsub1() {
   %1 = fir.alloca i32
   %11 = fir.convert %4#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
   // expected-error@+1{{'fir.cuda_allocate' op expect errmsg to be a reference to/or a box type value}}
-  %13 = fir.cuda_allocate %11 : !fir.ref<!fir.box<none>> errmsg(%1 : !fir.ref<i32>) {hasStat} -> i32
+  %13 = fir.cuda_allocate %11 : !fir.ref<!fir.box<none>> errmsg(%1 : !fir.ref<i32>) {cuda_attr = #fir.cuda<device>, hasStat} -> i32
   return
 }
