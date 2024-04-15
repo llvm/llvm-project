@@ -180,6 +180,7 @@ public:
     ImmTyMatrixBFMT,
     ImmTyMatrixAScale,
     ImmTyMatrixBScale,
+    ImmTyScaleSel,
   };
 
   // Immediate operand kind.
@@ -441,6 +442,7 @@ public:
   bool isGlobalSReg32() const { return isImmTy(ImmTyGlobalSReg32); }
   bool isGlobalSReg64() const { return isImmTy(ImmTyGlobalSReg64); }
   bool isBitOp3() const { return isImmTy(ImmTyBitOp3) && isUInt<8>(getImm()); }
+  bool isScaleSel() const { return isImmTy(ImmTyScaleSel) && isUInt<3>(getImm()); }
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -1196,6 +1198,7 @@ public:
     case ImmTyMatrixBFMT: OS << "ImmTyMatrixBFMT"; break;
     case ImmTyMatrixAScale: OS << "ImmTyMatrixAScale"; break;
     case ImmTyMatrixBScale: OS << "ImmTyMatrixBScale"; break;
+    case ImmTyScaleSel: OS << "ScaleSel" ; break;
     }
     // clang-format on
   }
@@ -1988,6 +1991,9 @@ public:
 
   ParseStatus parseBitOp3(OperandVector &Operands);
   AMDGPUOperand::Ptr defaultBitOp3() const;
+
+  ParseStatus parseScaleSel(OperandVector &Operands);
+  AMDGPUOperand::Ptr defaultScaleSel() const;
 };
 
 } // end anonymous namespace
@@ -9114,6 +9120,12 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
     }
   }
 
+  int ScaleSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_sel);
+  if (ScaleSelIdx != -1) {
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                          AMDGPUOperand::ImmTyScaleSel);
+  }
+
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTyClampSI);
@@ -10271,6 +10283,20 @@ ParseStatus AMDGPUAsmParser::parseBitOp3(OperandVector &Operands) {
 
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultBitOp3() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyBitOp3);
+}
+
+//===----------------------------------------------------------------------===//
+// ScaleSel
+//===----------------------------------------------------------------------===//
+
+ParseStatus AMDGPUAsmParser::parseScaleSel(OperandVector &Operands) {
+  ParseStatus Res =
+      parseIntWithPrefix("scale_sel", Operands, AMDGPUOperand::ImmTyScaleSel);
+  return Res;
+}
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultScaleSel() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyScaleSel);
 }
 
 //===----------------------------------------------------------------------===//

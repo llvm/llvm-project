@@ -365,6 +365,13 @@ class VOP3a_BITOP3_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
   let Inst{14} = !if(p.HasOpSel, src0_modifiers{3}, 0);
 }
 
+class VOP3a_ScaleSel_gfx1210<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
+  bits<3> scale_sel;
+
+  let Inst{13-11} = scale_sel;
+  let Inst{14} = 0;
+}
+
 // NB: For V_INTERP* opcodes, src0 is encoded as src1 and vice versa
 class VOP3Interp_vi <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
   bits<2> attrchan;
@@ -1776,6 +1783,13 @@ multiclass VOP3_BITOP3_Real_Base<GFXGen Gen, bits<10> op, bit isSingle = 0> {
   }
 }
 
+multiclass VOP3Only_ScaleSel_Real_gfx1210<bits<10> op> {
+  defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
+  def _e64_gfx1210 :
+    VOP3_Real_Gen<ps, GFX12_10Gen>,
+    VOP3a_ScaleSel_gfx1210<op, ps.Pfl>;
+}
+
 //===----------------------------------------------------------------------===//
 // VOP3 GFX11
 //===----------------------------------------------------------------------===//
@@ -1816,9 +1830,6 @@ multiclass VOP3Only_Real_Base_gfx12_gfx13<bits<10> op> :
 multiclass VOP3Only_Realtriple_t16_gfx12_gfx13<bits<10> op> :
   VOP3Only_Realtriple<GFX12Gen, op>,
   VOP3Only_Realtriple<GFX13Gen, op>;
-
-multiclass VOP3Only_Real_Base_gfx1210<bits<10> op> :
-  VOP3_Real_Base<GFX12_10Gen, op, NAME, 1/*IsSingle*/>;
 
 multiclass VOP3Only_Realtriple_gfx1210<bits<10> op, bit isSingle = 0> :
   VOP3_Realtriple<GFX12_10Gen, op, isSingle>;
