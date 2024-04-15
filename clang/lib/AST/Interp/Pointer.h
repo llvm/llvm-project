@@ -241,13 +241,10 @@ public:
 
   /// Checks if the pointer is null.
   bool isZero() const {
-    if (Offset != 0)
-      return false;
-
     if (isBlockPointer())
       return asBlockPointer().Pointee == nullptr;
     assert(isIntegralPointer());
-    return asIntPointer().Value == 0;
+    return asIntPointer().Value == 0 && Offset == 0;
   }
   /// Checks if the pointer is live.
   bool isLive() const {
