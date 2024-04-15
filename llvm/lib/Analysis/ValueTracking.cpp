@@ -4664,6 +4664,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     return;
   }
 
+  if (isa<PoisonValue>(V)) {
+    Known.KnownFPClasses = fcNone;
+    Known.SignBit = false;
+    return;
+  }
+
   // Try to handle fixed width vector constants
   auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
   const Constant *CV = dyn_cast<Constant>(V);
