@@ -681,7 +681,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
     is represented as `A: vector<8x8x2xf16>`, and `B: vector<16x16xf16>` is
     represented as `B: vector<8x16x2xf16>`.
 
-    Note: on PVC, the hardware can perform load with VNN transformation when data
+    Note: on PVC, the hardware can perform load with VNNI transformation when data
           element type is 16-bit or lower precision, taking 2 or 4 elements from
           the first dimension and inserted into the newly added innermost dimension.
   }];
