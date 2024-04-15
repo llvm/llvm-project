@@ -2075,6 +2075,7 @@ module std_private_utility_forward_like           [system] { header "__utility/f
 module std_private_utility_in_place               [system] { header "__utility/in_place.h" }
 module std_private_utility_integer_sequence       [system] { header "__utility/integer_sequence.h" }
 module std_private_utility_is_pointer_in_range    [system] { header "__utility/is_pointer_in_range.h" }
+module std_private_utility_is_valid_range         [system] { header "__utility/is_valid_range.h" }
 module std_private_utility_move                   [system] {
   header "__utility/move.h"
   export std_private_type_traits_is_copy_constructible
