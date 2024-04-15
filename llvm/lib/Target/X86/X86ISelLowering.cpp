@@ -3596,6 +3596,17 @@ static bool isUndefOrZeroInRange(ArrayRef<int> Mask, unsigned Pos,
   return llvm::all_of(Mask.slice(Pos, Size), isUndefOrZero);
 }
 
+/// Return true if every element of a single input is referenced by the shuffle
+/// mask. i.e. it just permutes them all.
+static bool isCompletePermute(ArrayRef<int> Mask) {
+  unsigned NumElts = Mask.size();
+  APInt DemandedElts = APInt::getZero(NumElts);
+  for (int M : Mask)
+    if (isInRange(M, 0, NumElts))
+      DemandedElts.setBit(M);
+  return DemandedElts.isAllOnes();
+}
+
 /// Helper function to test whether a shuffle mask could be
 /// simplified by widening the elements being shuffled.
 ///
@@ -46469,24 +46480,15 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   if (NumElts <= CmpBits &&
       getTargetShuffleInputs(peekThroughBitcasts(Vec), ShuffleInputs,
                              ShuffleMask, DAG) &&
-      ShuffleInputs.size() == 1 && !isAnyZeroOrUndef(ShuffleMask) &&
+      ShuffleInputs.size() == 1 && isCompletePermute(ShuffleMask) &&
       ShuffleInputs[0].getValueSizeInBits() == VecVT.getSizeInBits() &&
       scaleShuffleElements(ShuffleMask, NumElts, ScaledMaskUnused)) {
-    unsigned NumShuffleElts = ShuffleMask.size();
-    APInt DemandedElts = APInt::getZero(NumShuffleElts);
-    for (int M : ShuffleMask) {
-      assert(0 <= M && M < (int)NumShuffleElts && "Bad unary shuffle index");
-      DemandedElts.setBit(M);
-    }
-    if (DemandedElts.isAllOnes()) {
-      SDLoc DL(EFLAGS);
-      SDValue Result = DAG.getBitcast(VecVT, ShuffleInputs[0]);
-      Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
-      Result =
-          DAG.getZExtOrTrunc(Result, DL, EFLAGS.getOperand(0).getValueType());
-      return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result,
-                         EFLAGS.getOperand(1));
-    }
+    SDLoc DL(EFLAGS);
+    SDValue Result = DAG.getBitcast(VecVT, ShuffleInputs[0]);
+    Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
+    Result =
+        DAG.getZExtOrTrunc(Result, DL, EFLAGS.getOperand(0).getValueType());
+    return DAG.getNode(X86ISD::CMP, DL, MVT::i32, Result, EFLAGS.getOperand(1));
   }
 
   // MOVMSKPS(V) !=/== 0 -> TESTPS(V,V)
