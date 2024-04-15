@@ -1670,7 +1670,9 @@ void RewriteInstance::disassemblePLT() {
       return disassemblePLTSectionAArch64(Section);
     if (BC->isRISCV())
       return disassemblePLTSectionRISCV(Section);
-    return disassemblePLTSectionX86(Section, EntrySize);
+    if (BC->isX86())
+      return disassemblePLTSectionX86(Section, EntrySize);
+    llvm_unreachable("Unmplemented PLT");
   };
 
   for (BinarySection &Section : BC->allocatableSections()) {
@@ -2605,7 +2607,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 
   // Special handling of PC-relative relocations.
-  if (!IsAArch64 && !BC->isRISCV() && Relocation::isPCRelative(RType)) {
+  if (BC->isX86() && Relocation::isPCRelative(RType)) {
     if (!IsFromCode && IsToCode) {
       // PC-relative relocations from data to code are tricky since the
       // original information is typically lost after linking, even with
