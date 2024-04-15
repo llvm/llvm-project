@@ -10,6 +10,7 @@
 #define TEST_SUPPORT_CONCAT_MACROS_H
 
 #include <cstdio>
+#include <source_location>
 #include <string>
 
 #include "assert_macros.h"
@@ -132,6 +133,10 @@ OutIt test_transcode(InIt first, InIt last, OutIt out_it) {
       test_encode(out_it, static_cast<char16_t>(test_replacement_character));
   }
   return out_it;
+}
+
+std::ostream& operator<<(std::ostream& os, const std::source_location& loc) {
+  return os << loc.file_name() << ':' << loc.line() << ':' << loc.column();
 }
 
 template <class T>
