@@ -23,11 +23,13 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 
-void DataSharingProcessor::processStep1() {
+void DataSharingProcessor::processStep1(
+    mlir::omp::PrivateClauseOps *clauseOps,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
   collectSymbolsForPrivatization();
   collectDefaultSymbols();
-  privatize();
-  defaultPrivatize();
+  privatize(clauseOps, privateSyms);
+  defaultPrivatize(clauseOps, privateSyms);
   insertBarrier();
 }
 
@@ -299,14 +301,16 @@ void DataSharingProcessor::collectDefaultSymbols() {
   }
 }
 
-void DataSharingProcessor::privatize() {
+void DataSharingProcessor::privatize(
+    mlir::omp::PrivateClauseOps *clauseOps,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols) {
     if (const auto *commonDet =
             sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
       for (const auto &mem : commonDet->objects())
-        doPrivatize(&*mem);
+        doPrivatize(&*mem, clauseOps, privateSyms);
     } else
-      doPrivatize(sym);
+      doPrivatize(sym, clauseOps, privateSyms);
   }
 }
 
@@ -323,7 +327,9 @@ void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
     }
 }
 
-void DataSharingProcessor::defaultPrivatize() {
+void DataSharingProcessor::defaultPrivatize(
+    mlir::omp::PrivateClauseOps *clauseOps,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
   for (const Fortran::semantics::Symbol *sym : defaultSymbols) {
     if (!Fortran::semantics::IsProcedure(*sym) &&
         !sym->GetUltimate().has<Fortran::semantics::DerivedTypeDetails>() &&
@@ -331,11 +337,14 @@ void DataSharingProcessor::defaultPrivatize() {
         !symbolsInNestedRegions.contains(sym) &&
         !symbolsInParentRegions.contains(sym) &&
         !privatizedSymbols.contains(sym))
-      doPrivatize(sym);
+      doPrivatize(sym, clauseOps, privateSyms);
   }
 }
 
-void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
+void DataSharingProcessor::doPrivatize(
+    const Fortran::semantics::Symbol *sym,
+    mlir::omp::PrivateClauseOps *clauseOps,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
   if (!useDelayedPrivatization) {
     cloneSymbol(sym);
     copyFirstPrivateSymbol(sym);
@@ -419,10 +428,13 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
     return result;
   }();
 
-  delayedPrivatizationInfo.privatizers.push_back(
-      mlir::SymbolRefAttr::get(privatizerOp));
-  delayedPrivatizationInfo.originalAddresses.push_back(hsb.getAddr());
-  delayedPrivatizationInfo.symbols.push_back(sym);
+  if (clauseOps) {
+    clauseOps->privatizers.push_back(mlir::SymbolRefAttr::get(privatizerOp));
+    clauseOps->privateVars.push_back(hsb.getAddr());
+  }
+
+  if (privateSyms)
+    privateSyms->push_back(sym);
 }
 
 } // namespace omp

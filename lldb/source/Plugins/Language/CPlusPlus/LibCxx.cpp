@@ -1087,8 +1087,10 @@ bool lldb_private::formatters::LibcxxWStringViewSummaryProvider(
                                         dataobj, size);
 }
 
-bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+static bool
+LibcxxChronoTimePointSecondsSummaryProvider(ValueObject &valobj, Stream &stream,
+                                            const TypeSummaryOptions &options,
+                                            const char *fmt) {
   ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__d_");
   if (!ptr_sp)
     return false;
@@ -1112,7 +1114,7 @@ bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
   else {
     std::array<char, 128> str;
     std::size_t size =
-        std::strftime(str.data(), str.size(), "%FT%H:%M:%SZ", gmtime(&seconds));
+        std::strftime(str.data(), str.size(), fmt, gmtime(&seconds));
     if (size == 0)
       return false;
 
@@ -1123,8 +1125,22 @@ bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
   return true;
 }
 
-bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
+bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return LibcxxChronoTimePointSecondsSummaryProvider(valobj, stream, options,
+                                                     "%FT%H:%M:%SZ");
+}
+
+bool lldb_private::formatters::LibcxxChronoLocalSecondsSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return LibcxxChronoTimePointSecondsSummaryProvider(valobj, stream, options,
+                                                     "%FT%H:%M:%S");
+}
+
+static bool
+LibcxxChronoTimepointDaysSummaryProvider(ValueObject &valobj, Stream &stream,
+                                         const TypeSummaryOptions &options,
+                                         const char *fmt) {
   ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__d_");
   if (!ptr_sp)
     return false;
@@ -1148,7 +1164,7 @@ bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
 
     std::array<char, 128> str;
     std::size_t size =
-        std::strftime(str.data(), str.size(), "%FZ", gmtime(&seconds));
+        std::strftime(str.data(), str.size(), fmt, gmtime(&seconds));
     if (size == 0)
       return false;
 
@@ -1156,6 +1172,18 @@ bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
   }
 
   return true;
+}
+
+bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return LibcxxChronoTimepointDaysSummaryProvider(valobj, stream, options,
+                                                  "%FZ");
+}
+
+bool lldb_private::formatters::LibcxxChronoLocalDaysSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return LibcxxChronoTimepointDaysSummaryProvider(valobj, stream, options,
+                                                  "%F");
 }
 
 bool lldb_private::formatters::LibcxxChronoMonthSummaryProvider(

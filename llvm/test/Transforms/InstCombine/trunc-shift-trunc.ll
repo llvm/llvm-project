@@ -72,7 +72,7 @@ define i8 @trunc_lshr_trunc_outofrange(i64 %a) {
 ; CHECK-LABEL: @trunc_lshr_trunc_outofrange(
 ; CHECK-NEXT:    [[B:%.*]] = trunc i64 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[C:%.*]] = lshr i32 [[B]], 25
-; CHECK-NEXT:    [[D:%.*]] = trunc i32 [[C]] to i8
+; CHECK-NEXT:    [[D:%.*]] = trunc nuw nsw i32 [[C]] to i8
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %b = trunc i64 %a to i32
@@ -158,7 +158,7 @@ define i8 @trunc_ashr_trunc_outofrange(i64 %a) {
 ; CHECK-LABEL: @trunc_ashr_trunc_outofrange(
 ; CHECK-NEXT:    [[B:%.*]] = trunc i64 [[A:%.*]] to i32
 ; CHECK-NEXT:    [[C:%.*]] = ashr i32 [[B]], 25
-; CHECK-NEXT:    [[D:%.*]] = trunc i32 [[C]] to i8
+; CHECK-NEXT:    [[D:%.*]] = trunc nsw i32 [[C]] to i8
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %b = trunc i64 %a to i32

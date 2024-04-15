@@ -56,22 +56,65 @@ static bool Jf(InterpState &S, CodePtr &PC, int32_t Offset) {
   return true;
 }
 
+static void diagnoseMissingInitializer(InterpState &S, CodePtr OpPC,
+                                       const ValueDecl *VD) {
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.FFDiag(E, diag::note_constexpr_var_init_unknown, 1) << VD;
+  S.Note(VD->getLocation(), diag::note_declared_at) << VD->getSourceRange();
+}
+
+static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
+                                     const ValueDecl *VD);
+static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
+                                const ValueDecl *D) {
+  const SourceInfo &E = S.Current->getSource(OpPC);
+
+  if (isa<ParmVarDecl>(D)) {
+    if (S.getLangOpts().CPlusPlus11) {
+      S.FFDiag(E, diag::note_constexpr_function_param_value_unknown) << D;
+      S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
+    } else {
+      S.FFDiag(E);
+    }
+  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (!VD->getType().isConstQualified()) {
+      diagnoseNonConstVariable(S, OpPC, VD);
+      return false;
+    }
+
+    // const, but no initializer.
+    if (!VD->getAnyInitializer()) {
+      diagnoseMissingInitializer(S, OpPC, VD);
+      return false;
+    }
+  }
+  return false;
+}
+
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
                                      const ValueDecl *VD) {
   if (!S.getLangOpts().CPlusPlus)
     return;
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
+  if (const auto *VarD = dyn_cast<VarDecl>(VD);
+      VarD && VarD->getType().isConstQualified() &&
+      !VarD->getAnyInitializer()) {
+    diagnoseMissingInitializer(S, OpPC, VD);
+    return;
+  }
 
-  if (VD->getType()->isIntegralOrEnumerationType())
+  if (VD->getType()->isIntegralOrEnumerationType()) {
     S.FFDiag(Loc, diag::note_constexpr_ltor_non_const_int, 1) << VD;
-  else
-    S.FFDiag(Loc,
-             S.getLangOpts().CPlusPlus11
-                 ? diag::note_constexpr_ltor_non_constexpr
-                 : diag::note_constexpr_ltor_non_integral,
-             1)
-        << VD << VD->getType();
+    S.Note(VD->getLocation(), diag::note_declared_at);
+    return;
+  }
+
+  S.FFDiag(Loc,
+           S.getLangOpts().CPlusPlus11 ? diag::note_constexpr_ltor_non_constexpr
+                                       : diag::note_constexpr_ltor_non_integral,
+           1)
+      << VD << VD->getType();
   S.Note(VD->getLocation(), diag::note_declared_at);
 }
 
@@ -202,6 +245,9 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
 
+  if (Ptr.isInitialized())
+    return true;
+
   if (!S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus) {
     const auto *VD = Ptr.getDeclDesc()->asValueDecl();
     diagnoseNonConstVariable(S, OpPC, VD);
@@ -282,6 +328,8 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 }
 
 static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (Ptr.isIntegralPointer())
+    return true;
   return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
 
@@ -335,6 +383,9 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return true;
   }
 
+  if (!Ptr.isBlockPointer())
+    return false;
+
   const QualType Ty = Ptr.getType();
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_modify_const_type) << Ty;
@@ -364,9 +415,15 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
       VD && VD->hasGlobalStorage()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
-    S.Note(VD->getLocation(), diag::note_declared_at);
+    if (VD->getAnyInitializer()) {
+      S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+      S.Note(VD->getLocation(), diag::note_declared_at);
+    } else {
+      diagnoseMissingInitializer(S, OpPC, VD);
+    }
+    return false;
   }
+
   if (!S.checkingPotentialConstantExpression()) {
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
         << AK << /*uninitialized=*/true << S.Current->getRange(OpPC);
@@ -591,33 +648,6 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
   }
 
   return true;
-}
-
-static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
-                                const ValueDecl *D) {
-  const SourceInfo &E = S.Current->getSource(OpPC);
-
-  if (isa<ParmVarDecl>(D)) {
-    if (S.getLangOpts().CPlusPlus11) {
-      S.FFDiag(E, diag::note_constexpr_function_param_value_unknown) << D;
-      S.Note(D->getLocation(), diag::note_declared_at) << D->getSourceRange();
-    } else {
-      S.FFDiag(E);
-    }
-  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
-    if (!VD->getType().isConstQualified()) {
-      diagnoseNonConstVariable(S, OpPC, VD);
-      return false;
-    }
-
-    // const, but no initializer.
-    if (!VD->getAnyInitializer()) {
-      S.FFDiag(E, diag::note_constexpr_var_init_unknown, 1) << VD;
-      S.Note(VD->getLocation(), diag::note_declared_at) << VD->getSourceRange();
-      return false;
-    }
-  }
-  return false;
 }
 
 /// We aleady know the given DeclRefExpr is invalid for some reason,

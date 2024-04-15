@@ -588,10 +588,14 @@ LazyValueInfoImpl::getBlockValue(Value *Val, BasicBlock *BB,
 
 static ValueLatticeElement getFromRangeMetadata(Instruction *BBI) {
   switch (BBI->getOpcode()) {
-  default: break;
-  case Instruction::Load:
+  default:
+    break;
   case Instruction::Call:
   case Instruction::Invoke:
+    if (std::optional<ConstantRange> Range = cast<CallBase>(BBI)->getRange())
+      return ValueLatticeElement::getRange(*Range);
+    [[fallthrough]];
+  case Instruction::Load:
     if (MDNode *Ranges = BBI->getMetadata(LLVMContext::MD_range))
       if (isa<IntegerType>(BBI->getType())) {
         return ValueLatticeElement::getRange(
@@ -641,7 +645,7 @@ LazyValueInfoImpl::solveBlockValueImpl(Value *Val, BasicBlock *BB) {
   // instruction is placed, even if it could legally be hoisted much higher.
   // That is unfortunate.
   PointerType *PT = dyn_cast<PointerType>(BBI->getType());
-  if (PT && isKnownNonZero(BBI, DL))
+  if (PT && isKnownNonZero(BBI, /*Depth=*/0, DL))
     return ValueLatticeElement::getNot(ConstantPointerNull::get(PT));
 
   if (BBI->getType()->isIntegerTy()) {
@@ -706,10 +710,11 @@ std::optional<ValueLatticeElement>
 LazyValueInfoImpl::solveBlockValueNonLocal(Value *Val, BasicBlock *BB) {
   ValueLatticeElement Result;  // Start Undefined.
 
-  // If this is the entry block, we must be asking about an argument.  The
-  // value is overdefined.
+  // If this is the entry block, we must be asking about an argument.
   if (BB->isEntryBlock()) {
     assert(isa<Argument>(Val) && "Unknown live-in to the entry block");
+    if (std::optional<ConstantRange> Range = cast<Argument>(Val)->getRange())
+      return ValueLatticeElement::getRange(*Range);
     return ValueLatticeElement::getOverdefined();
   }
 
@@ -1858,7 +1863,8 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
   Module *M = CxtI->getModule();
   const DataLayout &DL = M->getDataLayout();
   if (V->getType()->isPointerTy() && C->isNullValue() &&
-      isKnownNonZero(V->stripPointerCastsSameRepresentation(), DL)) {
+      isKnownNonZero(V->stripPointerCastsSameRepresentation(), /*Depth=*/0,
+                     DL)) {
     if (Pred == ICmpInst::ICMP_EQ)
       return LazyValueInfo::False;
     else if (Pred == ICmpInst::ICMP_NE)

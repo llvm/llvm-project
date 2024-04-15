@@ -204,9 +204,7 @@ define <vscale x 4 x i8> @vpgather_truemask_nxv4i8(<vscale x 4 x ptr> %ptrs, i32
 ; RV64-NEXT:    vluxei64.v v12, (zero), v8
 ; RV64-NEXT:    vmv1r.v v8, v12
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i8> @llvm.vp.gather.nxv4i8.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %mtrue, i32 %evl)
+  %v = call <vscale x 4 x i8> @llvm.vp.gather.nxv4i8.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x i8> %v
 }
 
@@ -500,9 +498,7 @@ define <vscale x 4 x i16> @vpgather_truemask_nxv4i16(<vscale x 4 x ptr> %ptrs, i
 ; RV64-NEXT:    vluxei64.v v12, (zero), v8
 ; RV64-NEXT:    vmv.v.v v8, v12
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i16> @llvm.vp.gather.nxv4i16.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %mtrue, i32 %evl)
+  %v = call <vscale x 4 x i16> @llvm.vp.gather.nxv4i16.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x i16> %v
 }
 
@@ -729,9 +725,7 @@ define <vscale x 4 x i32> @vpgather_truemask_nxv4i32(<vscale x 4 x ptr> %ptrs, i
 ; RV64-NEXT:    vluxei64.v v12, (zero), v8
 ; RV64-NEXT:    vmv.v.v v8, v12
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %mtrue, i32 %evl)
+  %v = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x i32> %v
 }
 
@@ -988,9 +982,7 @@ define <vscale x 4 x i64> @vpgather_truemask_nxv4i64(<vscale x 4 x ptr> %ptrs, i
 ; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV64-NEXT:    vluxei64.v v8, (zero), v8
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x i64> @llvm.vp.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %mtrue, i32 %evl)
+  %v = call <vscale x 4 x i64> @llvm.vp.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x i64> %v
 }
 
@@ -1319,9 +1311,7 @@ define <vscale x 4 x half> @vpgather_truemask_nxv4f16(<vscale x 4 x ptr> %ptrs, 
 ; RV64-NEXT:    vluxei64.v v12, (zero), v8
 ; RV64-NEXT:    vmv.v.v v8, v12
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x half> @llvm.vp.gather.nxv4f16.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %mtrue, i32 %evl)
+  %v = call <vscale x 4 x half> @llvm.vp.gather.nxv4f16.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x half> %v
 }
 
@@ -1506,9 +1496,7 @@ define <vscale x 4 x float> @vpgather_truemask_nxv4f32(<vscale x 4 x ptr> %ptrs,
 ; RV64-NEXT:    vluxei64.v v12, (zero), v8
 ; RV64-NEXT:    vmv.v.v v8, v12
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x float> @llvm.vp.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %mtrue, i32 %evl)
+  %v = call <vscale x 4 x float> @llvm.vp.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x float> %v
 }
 
@@ -1765,9 +1753,7 @@ define <vscale x 4 x double> @vpgather_truemask_nxv4f64(<vscale x 4 x ptr> %ptrs
 ; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV64-NEXT:    vluxei64.v v8, (zero), v8
 ; RV64-NEXT:    ret
-  %mhead = insertelement <vscale x 4 x i1> poison, i1 1, i32 0
-  %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %v = call <vscale x 4 x double> @llvm.vp.gather.nxv4f64.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %mtrue, i32 %evl)
+  %v = call <vscale x 4 x double> @llvm.vp.gather.nxv4f64.nxv4p0(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret <vscale x 4 x double> %v
 }
 
