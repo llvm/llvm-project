@@ -594,6 +594,7 @@ set(files
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
+  __pstl/cpu_algos/cpu_traits.h
   __random/bernoulli_distribution.h
   __random/binomial_distribution.h
   __random/cauchy_distribution.h
@@ -859,6 +860,7 @@ set(files
   __utility/in_place.h
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
+  __utility/is_valid_range.h
   __utility/move.h
   __utility/no_destroy.h
   __utility/pair.h
