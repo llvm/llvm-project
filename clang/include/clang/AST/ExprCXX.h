@@ -3219,7 +3219,8 @@ public:
   Create(const ASTContext &Context, CXXRecordDecl *NamingClass,
          NestedNameSpecifierLoc QualifierLoc,
          const DeclarationNameInfo &NameInfo, bool RequiresADL, bool Overloaded,
-         UnresolvedSetIterator Begin, UnresolvedSetIterator End);
+         UnresolvedSetIterator Begin, UnresolvedSetIterator End,
+         bool KnownDependent);
 
   // After canonicalization, there may be dependent template arguments in
   // CanonicalConverted But none of Args is dependent. When any of

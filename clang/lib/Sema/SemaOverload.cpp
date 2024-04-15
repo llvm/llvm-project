@@ -14274,7 +14274,8 @@ ExprResult Sema::CreateUnresolvedLookupExpr(CXXRecordDecl *NamingClass,
                                             bool PerformADL) {
   return UnresolvedLookupExpr::Create(Context, NamingClass, NNSLoc, DNI,
                                       PerformADL, IsOverloaded(Fns),
-                                      Fns.begin(), Fns.end());
+                                      Fns.begin(), Fns.end(),
+                                      /*KnownDependent=*/false);
 }
 
 ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
