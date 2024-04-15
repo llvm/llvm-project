@@ -316,15 +316,19 @@ ExprResult Sema::BuildPossibleImplicitMemberExpr(
     [[fallthrough]];
   case IMA_Static:
   case IMA_Abstract:
-  case IMA_Dependent:
   case IMA_Mixed_StaticOrExplicitContext:
   case IMA_Unresolved_StaticOrExplicitContext:
     if (TemplateArgs || TemplateKWLoc.isValid())
       return BuildTemplateIdExpr(SS, TemplateKWLoc, R, /*RequiresADL=*/false,
                                  TemplateArgs);
-    return BuildDeclarationNameExpr(
-        SS, R, /*NeedsADL=*/false, /*AcceptInvalidDecl=*/false,
-        /*NeedUnresolved=*/Classification == IMA_Dependent);
+    return BuildDeclarationNameExpr(SS, R, /*NeedsADL=*/false,
+                                    /*AcceptInvalidDecl=*/false);
+  case IMA_Dependent:
+    R.suppressDiagnostics();
+    return UnresolvedLookupExpr::Create(
+        Context, R.getNamingClass(), SS.getWithLocInContext(Context),
+        TemplateKWLoc, R.getLookupNameInfo(), /*RequiresADL=*/false,
+        TemplateArgs, R.begin(), R.end(), /*KnownDependent=*/true);
 
   case IMA_Error_StaticOrExplicitContext:
   case IMA_Error_Unrelated:

@@ -390,16 +390,16 @@ UnresolvedLookupExpr *UnresolvedLookupExpr::Create(
     const DeclarationNameInfo &NameInfo, bool RequiresADL,
     const TemplateArgumentListInfo *Args, UnresolvedSetIterator Begin,
     UnresolvedSetIterator End, bool KnownDependent) {
-  assert(Args || TemplateKWLoc.isValid());
   unsigned NumResults = End - Begin;
+  bool HasTemplateKWAndArgsInfo = Args || TemplateKWLoc.isValid();
   unsigned NumTemplateArgs = Args ? Args->size() : 0;
-  unsigned Size =
-      totalSizeToAlloc<DeclAccessPair, ASTTemplateKWAndArgsInfo,
-                       TemplateArgumentLoc>(NumResults, 1, NumTemplateArgs);
+  unsigned Size = totalSizeToAlloc<DeclAccessPair, ASTTemplateKWAndArgsInfo,
+                                   TemplateArgumentLoc>(
+      NumResults, HasTemplateKWAndArgsInfo, NumTemplateArgs);
   void *Mem = Context.Allocate(Size, alignof(UnresolvedLookupExpr));
-  return new (Mem) UnresolvedLookupExpr(
-      Context, NamingClass, QualifierLoc, TemplateKWLoc, NameInfo,
-      RequiresADL, Args, Begin, End, KnownDependent);
+  return new (Mem) UnresolvedLookupExpr(Context, NamingClass, QualifierLoc,
+                                        TemplateKWLoc, NameInfo, RequiresADL,
+                                        Args, Begin, End, KnownDependent);
 }
 
 UnresolvedLookupExpr *UnresolvedLookupExpr::CreateEmpty(

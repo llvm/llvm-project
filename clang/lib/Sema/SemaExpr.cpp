@@ -3431,11 +3431,10 @@ static bool ShouldLookupResultBeMultiVersionOverload(const LookupResult &R) {
 
 ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                           LookupResult &R, bool NeedsADL,
-                                          bool AcceptInvalidDecl,
-                                          bool NeedUnresolved) {
+                                          bool AcceptInvalidDecl) {
   // If this is a single, fully-resolved result and we don't need ADL,
   // just build an ordinary singleton decl ref.
-  if (!NeedUnresolved && !NeedsADL && R.isSingleResult() &&
+  if (!NeedsADL && R.isSingleResult() &&
       !R.getAsSingle<FunctionTemplateDecl>() &&
       !ShouldLookupResultBeMultiVersionOverload(R))
     return BuildDeclarationNameExpr(SS, R.getLookupNameInfo(), R.getFoundDecl(),
@@ -3457,7 +3456,8 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
 
   UnresolvedLookupExpr *ULE = UnresolvedLookupExpr::Create(
       Context, R.getNamingClass(), SS.getWithLocInContext(Context),
-      R.getLookupNameInfo(), NeedsADL, R.begin(), R.end(), NeedUnresolved);
+      R.getLookupNameInfo(), NeedsADL, R.begin(), R.end(),
+      /*KnownDependent=*/false);
 
   return ULE;
 }
