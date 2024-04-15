@@ -40,7 +40,7 @@ inline uint24_t getSwappedBytes(uint24_t C) {
 
 class DataExtractor {
   StringRef Data;
-  bool IsLittleEndian;
+  uint8_t IsLittleEndian;
   uint8_t AddressSize;
 public:
   /// A class representing a position in a DataExtractor, as well as any error
