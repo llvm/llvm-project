@@ -10,15 +10,16 @@
 	.syntax unified
 
 	.arch_extension crypto
-@ CHECK-V7: error: architectural extension 'crypto' is not allowed for the current base architecture
+@ CHECK-V7: architectural extension 'crypto' is not allowed for the current base architecture
 @ CHECK-V7-NEXT: 	.arch_extension crypto
 @ CHECK-V7-NEXT:                     ^
 
 	.type crypto,%function
 crypto:
 	vmull.p64 q0, d0, d1
-@ CHECK-V7: error: instruction requires: aes armv8
-
+@ CHECK-V7: error: invalid instruction, any one of the following would fix this:
+@ CHECK-V7: note: invalid operand for instruction
+@ CHECK-V7: note: instruction requires: aes armv8
 	aesd.8 q0, q1
 @ CHECK-V7: error: instruction requires: aes armv8
 	aese.8 q0, q1
@@ -51,14 +52,18 @@ crypto:
 @ CHECK-V7: error: instruction requires: sha2 armv8
 
 	.arch_extension nocrypto
+@ CHECK-V7: error: architectural extension 'sha2' is not allowed for the current base architecture
+@ CHECK-V7: error: architectural extension 'aes' is not allowed for the current base architecture
 @ CHECK-V7: error: architectural extension 'crypto' is not allowed for the current base architecture
-@ CHECK-V7-NEXT: 	.arch_extension nocrypto
+@ CHECK-V7-NEXT:     .arch_extension nocrypto
 @ CHECK-V7-NEXT:                     ^
 
 	.type nocrypto,%function
 nocrypto:
 	vmull.p64 q0, d0, d1
-@ CHECK-V7: error: instruction requires: aes armv8
+@ CHECK-V7: error: invalid instruction, any one of the following
+@ CHECK-V7: note: invalid operand for instruction
+@ CHECK-V7: note: instruction requires: aes armv8
 @ CHECK-V8: error: instruction requires: aes
 
 	aesd.8 q0, q1

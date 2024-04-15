@@ -11,6 +11,7 @@
 
 #include "Plugins/ScriptInterpreter/Python/PythonDataObjects.h"
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -26,6 +27,8 @@ using namespace lldb_private::python;
 using llvm::Expected;
 
 class PythonDataObjectsTest : public PythonTestSuite {
+  SubsystemRAII<FileSystem> subsystems;
+
 public:
   void SetUp() override {
     PythonTestSuite::SetUp();
@@ -209,8 +212,8 @@ TEST_F(PythonDataObjectsTest, TestPythonBoolean) {
   };
 
   // Test PythonBoolean constructed from long integer values.
-  test_from_long(0); // Test 'false' value.
-  test_from_long(1); // Test 'true' value.
+  test_from_long(0);  // Test 'false' value.
+  test_from_long(1);  // Test 'true' value.
   test_from_long(~0); // Any value != 0 is 'true'.
 }
 
@@ -811,7 +814,8 @@ main = foo
                                 testing::ContainsRegex("line 7, in baz"),
                                 testing::ContainsRegex("ZeroDivisionError")))));
 
-#if !((defined(_WIN32) || defined(_WIN64)) && (defined(__aarch64__) || defined(_M_ARM64)))
+#if !((defined(_WIN32) || defined(_WIN64)) &&                                  \
+      (defined(__aarch64__) || defined(_M_ARM64)))
 
   static const char script2[] = R"(
 class MyError(Exception):

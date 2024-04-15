@@ -1591,10 +1591,10 @@ writePrettyPrintFunction(const Record &R,
     std::string Variety = Spellings[I].variety();
 
     if (Variety == "GNU") {
-      Prefix = " __attribute__((";
+      Prefix = "__attribute__((";
       Suffix = "))";
     } else if (Variety == "CXX11" || Variety == "C23") {
-      Prefix = " [[";
+      Prefix = "[[";
       Suffix = "]]";
       std::string Namespace = Spellings[I].nameSpace();
       if (!Namespace.empty()) {
@@ -1602,7 +1602,7 @@ writePrettyPrintFunction(const Record &R,
         Spelling += "::";
       }
     } else if (Variety == "Declspec") {
-      Prefix = " __declspec(";
+      Prefix = "__declspec(";
       Suffix = ")";
     } else if (Variety == "Microsoft") {
       Prefix = "[";
@@ -3317,37 +3317,6 @@ void EmitClangAttrList(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 // Emits the enumeration list for attributes.
-void EmitClangAttrPrintList(const std::string &FieldName, RecordKeeper &Records,
-                            raw_ostream &OS) {
-  emitSourceFileHeader(
-      "List of attributes that can be print on the left side of a decl", OS,
-      Records);
-
-  AttrClassHierarchy Hierarchy(Records);
-
-  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
-  std::vector<Record *> PragmaAttrs;
-  bool first = false;
-
-  for (auto *Attr : Attrs) {
-    if (!Attr->getValueAsBit("ASTNode"))
-      continue;
-
-    if (!Attr->getValueAsBit(FieldName))
-      continue;
-
-    if (!first) {
-      first = true;
-      OS << "#define CLANG_ATTR_LIST_" << FieldName;
-    }
-
-    OS << " \\\n case attr::" << Attr->getName() << ":";
-  }
-
-  OS << '\n';
-}
-
-// Emits the enumeration list for attributes.
 void EmitClangAttrSubjectMatchRuleList(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader(
       "List of all attribute subject matching rules that Clang recognizes", OS,
@@ -3576,10 +3545,6 @@ static void GenerateHasAttrSpellingStringSwitch(
       const Record *R = Attr->getValueAsDef("Target");
       std::vector<StringRef> Arches = R->getValueAsListOfStrings("Arches");
       GenerateTargetSpecificAttrChecks(R, Arches, Test, nullptr);
-
-      // If this is the C++11 variety, also add in the LangOpts test.
-      if (Variety == "CXX11")
-        Test += " && LangOpts.CPlusPlus11";
     } else if (!Attr->getValueAsListOfDefs("TargetSpecificSpellings").empty()) {
       // Add target checks if this spelling is target-specific.
       const std::vector<Record *> TargetSpellings =
@@ -3597,13 +3562,7 @@ static void GenerateHasAttrSpellingStringSwitch(
           }
         }
       }
-
-      if (Variety == "CXX11")
-        Test += " && LangOpts.CPlusPlus11";
-    } else if (Variety == "CXX11")
-      // C++11 mode should be checked against LangOpts, which is presumed to be
-      // present in the caller.
-      Test = "LangOpts.CPlusPlus11";
+    }
 
     std::string TestStr = !Test.empty()
                               ? Test + " ? " + llvm::itostr(Version) + " : 0"

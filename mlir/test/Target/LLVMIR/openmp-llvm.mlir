@@ -1191,7 +1191,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
 
   // CHECK: [[OMP_THREAD:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
   // CHECK-NEXT:  call void @__kmpc_ordered(ptr @[[GLOB1]], i32 [[OMP_THREAD]])
-  omp.ordered_region {
+  omp.ordered.region {
     omp.terminator
   // CHECK: call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[OMP_THREAD]])
   }
@@ -1199,7 +1199,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
   omp.wsloop ordered(0)
   for (%arg7) : i32 = (%arg0) to (%arg1) step (%arg2) {
     // CHECK:  call void @__kmpc_ordered(ptr @[[GLOB3:[0-9]+]], i32 [[OMP_THREAD2:%.*]])
-    omp.ordered_region  {
+    omp.ordered.region  {
       omp.terminator
     // CHECK: call void @__kmpc_end_ordered(ptr @[[GLOB3]], i32 [[OMP_THREAD2]])
     }
@@ -2180,6 +2180,43 @@ llvm.func @single_nowait(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
   %t = llvm.mul %x, %y : i32
   // CHECK: store i32 %[[t]], ptr %[[zaddr]]
   llvm.store %t, %zaddr : i32, !llvm.ptr
+  // CHECK: ret void
+  llvm.return
+}
+
+// -----
+
+llvm.func @copy_i32(!llvm.ptr, !llvm.ptr)
+llvm.func @copy_f32(!llvm.ptr, !llvm.ptr)
+
+// CHECK-LABEL: @single_copyprivate
+// CHECK-SAME: (ptr %[[ip:.*]], ptr %[[fp:.*]])
+llvm.func @single_copyprivate(%ip: !llvm.ptr, %fp: !llvm.ptr) {
+  // CHECK: %[[didit_addr:.*]] = alloca i32
+  // CHECK: store i32 0, ptr %[[didit_addr]]
+  // CHECK: call i32 @__kmpc_single
+  omp.single copyprivate(%ip -> @copy_i32 : !llvm.ptr, %fp -> @copy_f32 : !llvm.ptr) {
+    // CHECK: %[[i:.*]] = load i32, ptr %[[ip]]
+    %i = llvm.load %ip : !llvm.ptr -> i32
+    // CHECK: %[[i2:.*]] = add i32 %[[i]], %[[i]]
+    %i2 = llvm.add %i, %i : i32
+    // CHECK: store i32 %[[i2]], ptr %[[ip]]
+    llvm.store %i2, %ip : i32, !llvm.ptr
+    // CHECK: %[[f:.*]] = load float, ptr %[[fp]]
+    %f = llvm.load %fp : !llvm.ptr -> f32
+    // CHECK: %[[f2:.*]] = fadd float %[[f]], %[[f]]
+    %f2 = llvm.fadd %f, %f : f32
+    // CHECK: store float %[[f2]], ptr %[[fp]]
+    llvm.store %f2, %fp : f32, !llvm.ptr
+    // CHECK: store i32 1, ptr %[[didit_addr]]
+    // CHECK: call void @__kmpc_end_single
+    // CHECK: %[[didit:.*]] = load i32, ptr %[[didit_addr]]
+    // CHECK: call void @__kmpc_copyprivate({{.*}}, ptr %[[ip]], ptr @copy_i32, i32 %[[didit]])
+    // CHECK: %[[didit2:.*]] = load i32, ptr %[[didit_addr]]
+    // CHECK: call void @__kmpc_copyprivate({{.*}}, ptr %[[fp]], ptr @copy_f32, i32 %[[didit2]])
+    // CHECK-NOT: call void @__kmpc_barrier
+    omp.terminator
+  }
   // CHECK: ret void
   llvm.return
 }

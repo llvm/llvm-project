@@ -25,9 +25,9 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -2112,15 +2112,31 @@ transform::ScalarizeOp::applyToOne(transform::TransformRewriter &rewriter,
 // ConvertToLoopsOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure transform::ConvertToLoopsOp::applyToOne(
-    transform::TransformRewriter &rewriter, TilingInterface target,
-    transform::ApplyToEachResultList &results,
-    transform::TransformState &state) {
-  rewriter.setInsertionPoint(target);
-  FailureOr<SmallVector<scf::ForOp>> loops =
-      scf::lowerToLoopsUsingSCFForOp(rewriter, target);
-  if (failed(loops))
-    return emitDefaultDefiniteFailure(target);
+DiagnosedSilenceableFailure
+transform::ConvertToLoopsOp::apply(transform::TransformRewriter &rewriter,
+                                   transform::TransformResults &results,
+                                   transform::TransformState &state) {
+  SmallVector<Operation *> loops;
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    auto tilingOp = dyn_cast<TilingInterface>(*target);
+    if (!target) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
+          << "expected the payload to implement TilingInterface";
+      diag.attachNote(target->getLoc()) << "payload op";
+      return diag;
+    }
+    rewriter.setInsertionPoint(target);
+    FailureOr<SmallVector<scf::ForOp>> generatedLoops =
+        scf::lowerToLoopsUsingSCFForOp(rewriter, tilingOp);
+    if (failed(generatedLoops))
+      return emitDefaultDefiniteFailure(target);
+    for (scf::ForOp &loop : *generatedLoops) {
+      loops.push_back(loop.getOperation());
+    }
+    rewriter.eraseOp(target);
+  }
+  results.set(cast<OpResult>(getResult()), loops);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -3106,6 +3122,81 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 //===----------------------------------------------------------------------===//
 // VectorizeOp
 //===----------------------------------------------------------------------===//
+
+static const StringLiteral kVectorSizesKeyword = "vector_sizes";
+
+ParseResult transform::VectorizeOp::parse(OpAsmParser &parser,
+                                          OperationState &result) {
+  OpAsmParser::UnresolvedOperand target;
+  SmallVector<OpAsmParser::UnresolvedOperand> dynamicSizes;
+  DenseI64ArrayAttr staticSizes;
+  SmallVector<Type> operandTypes;
+  llvm::SMLoc operandLoc;
+  DenseBoolArrayAttr scalableVals;
+
+  if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc))
+    return ParseResult::failure();
+
+  if (succeeded(parser.parseOptionalKeyword(kVectorSizesKeyword))) {
+    if (failed(parseDynamicIndexList(parser, dynamicSizes, staticSizes,
+                                     scalableVals)))
+      return ParseResult::failure();
+  }
+
+  if (succeeded(parser.parseOptionalKeyword(
+          getVectorizeNdExtractAttrName(result.name))))
+    result.addAttribute(getVectorizeNdExtractAttrName(result.name),
+                        parser.getBuilder().getUnitAttr());
+
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonTypeList(operandTypes))
+    return ParseResult::failure();
+
+  if (operandTypes.size() != dynamicSizes.size() + 1) {
+    return parser.emitError(operandLoc)
+           << "expected " << dynamicSizes.size() + 1 << " operand type(s)";
+  }
+  if (parser.resolveOperand(target, operandTypes.front(), result.operands) ||
+      parser.resolveOperands(dynamicSizes, ArrayRef(operandTypes).drop_front(),
+                             operandLoc, result.operands)) {
+    return failure();
+  }
+
+  if (scalableVals)
+    result.addAttribute(getScalableSizesAttrName(result.name), scalableVals);
+  if (staticSizes)
+    result.addAttribute(getStaticVectorSizesAttrName(result.name), staticSizes);
+
+  return success();
+}
+
+void transform::VectorizeOp::print(OpAsmPrinter &p) {
+  p << ' ' << getTarget() << ' ';
+  if (!getMixedVectorSizes().empty()) {
+    p << kVectorSizesKeyword << ' ';
+    printDynamicIndexList(p, getOperation(), getVectorSizes(),
+                          getStaticVectorSizesAttr(),
+                          /*valueTypes=*/{}, getScalableSizesAttr(),
+                          OpAsmParser::Delimiter::Square);
+  }
+
+  if (getVectorizeNdExtract())
+    p << getVectorizeNdExtractAttrName() << ' ';
+
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      /*elidedAttrs=*/{
+          getScalableSizesAttrName(getOperation()->getName()),
+          getStaticVectorSizesAttrName(getOperation()->getName())});
+  p << " : ";
+  p << getTarget().getType();
+  if (!getVectorSizes().empty()) {
+    p << ", ";
+    llvm::interleaveComma(getVectorSizes(), p,
+                          [&](Value operand) { p << operand.getType(); });
+  }
+}
+
 DiagnosedSilenceableFailure transform::VectorizeOp::apply(
     transform::TransformRewriter &rewriter,
     mlir::transform::TransformResults &transformResults,
@@ -3119,6 +3210,13 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
     if (sz.is<Attribute>()) {
       auto attr = sz.get<Attribute>();
       vectorSizes.push_back(cast<IntegerAttr>(attr).getInt());
+      continue;
+    } else if (sz.is<Value>() && isa<ParamType>(sz.get<Value>().getType())) {
+      ArrayRef<Attribute> params = state.getParams(sz.get<Value>());
+      if (params.size() != 1)
+        return emitSilenceableFailure(getLoc()) << "expected a single param";
+      vectorSizes.push_back(
+          cast<IntegerAttr>(params.front()).getValue().getSExtValue());
       continue;
     }
 
@@ -3241,6 +3339,38 @@ DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
   results.push_back(maybeTransformed->first);
   // Handle to the operation that replaces the original convolution.
   results.push_back(maybeTransformed->second);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// FlattenElementwiseLinalgOp.
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  if (!isElementwise(target))
+    return mlir::emitSilenceableFailure(target->getLoc())
+           << "only elementwise flattening is supported";
+
+  // If rank <= 1, do nothing
+  if (target.getNumLoops() <= 1) {
+    results.push_back(target);
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  // Attempt to flatten all dims to one.
+  ReassociationIndices reassociation(target.getNumLoops());
+  std::iota(reassociation.begin(), reassociation.end(), 0);
+  auto maybeFlattened =
+      collapseOpIterationDims(target, reassociation, rewriter);
+  if (failed(maybeFlattened))
+    return mlir::emitSilenceableFailure(target->getLoc())
+           << "attempted to flatten, but failed";
+  results.push_back(maybeFlattened->collapsedOp);
+  rewriter.replaceOp(target, maybeFlattened->results);
   return DiagnosedSilenceableFailure::success();
 }
 

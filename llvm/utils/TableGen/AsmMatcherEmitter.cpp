@@ -95,12 +95,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenInstAlias.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
-#include "SubtargetFeatureInfo.h"
-#include "Types.h"
+#include "Common/CodeGenInstAlias.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenRegisters.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/SubtargetFeatureInfo.h"
+#include "Common/Types.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
@@ -375,6 +375,10 @@ public:
   int AsmVariantNo;
 };
 
+bool getPreferSmallerInstructions(CodeGenTarget const &Target) {
+  return Target.getAsmParser()->getValueAsBit("PreferSmallerInstructions");
+}
+
 /// MatchableInfo - Helper class for storing the necessary information for an
 /// instruction or alias which is capable of being matched.
 struct MatchableInfo {
@@ -502,6 +506,9 @@ struct MatchableInfo {
   /// matchable came from.
   Record *const TheDef;
 
+  // ResInstSize - The size of the resulting instruction for this matchable.
+  unsigned ResInstSize;
+
   /// DefRec - This is the definition that it came from.
   PointerUnion<const CodeGenInstruction *, const CodeGenInstAlias *> DefRec;
 
@@ -543,10 +550,12 @@ struct MatchableInfo {
 
   MatchableInfo(const CodeGenInstruction &CGI)
       : AsmVariantID(0), AsmString(CGI.AsmString), TheDef(CGI.TheDef),
-        DefRec(&CGI), UseInstAsmMatchConverter(true) {}
+        ResInstSize(TheDef->getValueAsInt("Size")), DefRec(&CGI),
+        UseInstAsmMatchConverter(true) {}
 
   MatchableInfo(std::unique_ptr<const CodeGenInstAlias> Alias)
       : AsmVariantID(0), AsmString(Alias->AsmString), TheDef(Alias->TheDef),
+        ResInstSize(Alias->ResultInst->TheDef->getValueAsInt("Size")),
         DefRec(Alias.release()), UseInstAsmMatchConverter(TheDef->getValueAsBit(
                                      "UseInstAsmMatchConverter")) {}
 
@@ -555,9 +564,9 @@ struct MatchableInfo {
   // where it was copied while being in an owning state.
   MatchableInfo(const MatchableInfo &RHS)
       : AsmVariantID(RHS.AsmVariantID), AsmString(RHS.AsmString),
-        TheDef(RHS.TheDef), DefRec(RHS.DefRec), ResOperands(RHS.ResOperands),
-        Mnemonic(RHS.Mnemonic), AsmOperands(RHS.AsmOperands),
-        RequiredFeatures(RHS.RequiredFeatures),
+        TheDef(RHS.TheDef), ResInstSize(RHS.ResInstSize), DefRec(RHS.DefRec),
+        ResOperands(RHS.ResOperands), Mnemonic(RHS.Mnemonic),
+        AsmOperands(RHS.AsmOperands), RequiredFeatures(RHS.RequiredFeatures),
         ConversionFnKind(RHS.ConversionFnKind),
         HasDeprecation(RHS.HasDeprecation),
         UseInstAsmMatchConverter(RHS.UseInstAsmMatchConverter) {
@@ -608,11 +617,17 @@ struct MatchableInfo {
   void buildInstructionResultOperands();
   void buildAliasResultOperands(bool AliasConstraintsAreChecked);
 
-  /// operator< - Compare two matchables.
-  bool operator<(const MatchableInfo &RHS) const {
+  /// shouldBeMatchedBefore - Compare two matchables for ordering.
+  bool shouldBeMatchedBefore(const MatchableInfo &RHS,
+                             bool PreferSmallerInstructions) const {
     // The primary comparator is the instruction mnemonic.
     if (int Cmp = Mnemonic.compare_insensitive(RHS.Mnemonic))
       return Cmp == -1;
+
+    // (Optionally) Order by the resultant instuctions size.
+    // eg. for ARM thumb instructions smaller encodings should be preferred.
+    if (PreferSmallerInstructions && ResInstSize != RHS.ResInstSize)
+      return ResInstSize < RHS.ResInstSize;
 
     if (AsmOperands.size() != RHS.AsmOperands.size())
       return AsmOperands.size() < RHS.AsmOperands.size();
@@ -630,12 +645,13 @@ struct MatchableInfo {
     // vex encoding size is smaller. Since X86InstrSSE.td is included ahead
     // of X86InstrAVX512.td, the AVX instruction ID is less than AVX512 ID.
     // We use the ID to sort AVX instruction before AVX512 instruction in
-    // matching table.
-    if (TheDef->isSubClassOf("Instruction") &&
-        TheDef->getValueAsBit("HasPositionOrder") &&
-        RHS.TheDef->isSubClassOf("Instruction") &&
-        RHS.TheDef->getValueAsBit("HasPositionOrder"))
-      return TheDef->getID() < RHS.TheDef->getID();
+    // matching table. As well as InstAlias.
+    if (getResultInst()->TheDef->isSubClassOf("Instruction") &&
+        getResultInst()->TheDef->getValueAsBit("HasPositionOrder") &&
+        RHS.getResultInst()->TheDef->isSubClassOf("Instruction") &&
+        RHS.getResultInst()->TheDef->getValueAsBit("HasPositionOrder"))
+      return getResultInst()->TheDef->getID() <
+             RHS.getResultInst()->TheDef->getID();
 
     // Give matches that require more features higher precedence. This is useful
     // because we cannot define AssemblerPredicates with the negation of
@@ -652,13 +668,18 @@ struct MatchableInfo {
   /// couldMatchAmbiguouslyWith - Check whether this matchable could
   /// ambiguously match the same set of operands as \p RHS (without being a
   /// strictly superior match).
-  bool couldMatchAmbiguouslyWith(const MatchableInfo &RHS) const {
+  bool couldMatchAmbiguouslyWith(const MatchableInfo &RHS,
+                                 bool PreferSmallerInstructions) const {
     // The primary comparator is the instruction mnemonic.
     if (Mnemonic != RHS.Mnemonic)
       return false;
 
     // Different variants can't conflict.
     if (AsmVariantID != RHS.AsmVariantID)
+      return false;
+
+    // The size of instruction is unambiguous.
+    if (PreferSmallerInstructions && ResInstSize != RHS.ResInstSize)
       return false;
 
     // The number of operands is unambiguous.
@@ -1976,7 +1997,8 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
           << "convertToMCInst(unsigned Kind, MCInst &Inst, "
           << "unsigned Opcode,\n"
           << "                const OperandVector &Operands,\n"
-          << "                const SmallBitVector &OptionalOperandsMask) {\n";
+          << "                const SmallBitVector &OptionalOperandsMask,\n"
+          << "                ArrayRef<unsigned> DefaultsOffset) {\n";
   } else {
     CvtOS << "void " << Target.getName() << ClassName << "::\n"
           << "convertToMCInst(unsigned Kind, MCInst &Inst, "
@@ -1985,28 +2007,16 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   }
   CvtOS << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n";
   CvtOS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
-  if (HasOptionalOperands) {
-    size_t MaxNumOperands = 0;
-    for (const auto &MI : Infos) {
-      MaxNumOperands = std::max(MaxNumOperands, MI->AsmOperands.size());
-    }
-    CvtOS << "  unsigned DefaultsOffset[" << (MaxNumOperands + 1)
-          << "] = { 0 };\n";
-    CvtOS << "  assert(OptionalOperandsMask.size() == " << (MaxNumOperands)
-          << ");\n";
-    CvtOS << "  for (unsigned i = 0, NumDefaults = 0; i < " << (MaxNumOperands)
-          << "; ++i) {\n";
-    CvtOS << "    DefaultsOffset[i + 1] = NumDefaults;\n";
-    CvtOS << "    NumDefaults += (OptionalOperandsMask[i] ? 1 : 0);\n";
-    CvtOS << "  }\n";
-  }
-  CvtOS << "  unsigned OpIdx;\n";
   CvtOS << "  Inst.setOpcode(Opcode);\n";
   CvtOS << "  for (const uint8_t *p = Converter; *p; p += 2) {\n";
   if (HasOptionalOperands) {
-    CvtOS << "    OpIdx = *(p + 1) - DefaultsOffset[*(p + 1)];\n";
+    // When optional operands are involved, formal and actual operand indices
+    // may differ. Map the former to the latter by subtracting the number of
+    // absent optional operands.
+    // FIXME: This is not an operand index in the CVT_Tied case
+    CvtOS << "    unsigned OpIdx = *(p + 1) - DefaultsOffset[*(p + 1)];\n";
   } else {
-    CvtOS << "    OpIdx = *(p + 1);\n";
+    CvtOS << "    unsigned OpIdx = *(p + 1);\n";
   }
   CvtOS << "    switch (*p) {\n";
   CvtOS << "    default: llvm_unreachable(\"invalid conversion entry!\");\n";
@@ -2015,11 +2025,11 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         << " &>(*Operands[OpIdx]).addRegOperands(Inst, 1);\n";
   CvtOS << "      break;\n";
   CvtOS << "    case CVT_Tied: {\n";
-  CvtOS << "      assert(OpIdx < (size_t)(std::end(TiedAsmOperandTable) -\n";
+  CvtOS << "      assert(*(p + 1) < (size_t)(std::end(TiedAsmOperandTable) -\n";
   CvtOS
       << "                              std::begin(TiedAsmOperandTable)) &&\n";
   CvtOS << "             \"Tied operand not found\");\n";
-  CvtOS << "      unsigned TiedResOpnd = TiedAsmOperandTable[OpIdx][0];\n";
+  CvtOS << "      unsigned TiedResOpnd = TiedAsmOperandTable[*(p + 1)][0];\n";
   CvtOS << "      if (TiedResOpnd != (uint8_t)-1)\n";
   CvtOS << "        Inst.addOperand(Inst.getOperand(TiedResOpnd));\n";
   CvtOS << "      break;\n";
@@ -2510,7 +2520,7 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info, raw_ostream &OS) {
   // Check for register operands, including sub-classes.
   OS << "  if (Operand.isReg()) {\n";
   OS << "    MatchClassKind OpKind;\n";
-  OS << "    switch (Operand.getReg()) {\n";
+  OS << "    switch (Operand.getReg().id()) {\n";
   OS << "    default: OpKind = InvalidMatchClass; break;\n";
   for (const auto &RC : Info.RegisterClasses)
     OS << "    case " << RC.first->getValueAsString("Namespace")
@@ -3031,15 +3041,17 @@ emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
 }
 
 static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
-                                          AsmMatcherInfo &Info,
-                                          raw_ostream &OS) {
+                                          AsmMatcherInfo &Info, raw_ostream &OS,
+                                          bool HasOptionalOperands) {
   std::string AsmParserName =
       std::string(Info.AsmParser->getValueAsString("AsmParserClassName"));
   OS << "static bool ";
   OS << "checkAsmTiedOperandConstraints(const " << Target.getName()
      << AsmParserName << "&AsmParser,\n";
-  OS << "                               unsigned Kind,\n";
-  OS << "                               const OperandVector &Operands,\n";
+  OS << "                               unsigned Kind, const OperandVector "
+        "&Operands,\n";
+  if (HasOptionalOperands)
+    OS << "                               ArrayRef<unsigned> DefaultsOffset,\n";
   OS << "                               uint64_t &ErrorInfo) {\n";
   OS << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n";
   OS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
@@ -3052,6 +3064,13 @@ static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
   OS << "             \"Tied operand not found\");\n";
   OS << "      unsigned OpndNum1 = TiedAsmOperandTable[OpIdx][1];\n";
   OS << "      unsigned OpndNum2 = TiedAsmOperandTable[OpIdx][2];\n";
+  if (HasOptionalOperands) {
+    // When optional operands are involved, formal and actual operand indices
+    // may differ. Map the former to the latter by subtracting the number of
+    // absent optional operands.
+    OS << "      OpndNum1 = OpndNum1 - DefaultsOffset[OpndNum1];\n";
+    OS << "      OpndNum2 = OpndNum2 - DefaultsOffset[OpndNum2];\n";
+  }
   OS << "      if (OpndNum1 != OpndNum2) {\n";
   OS << "        auto &SrcOp1 = Operands[OpndNum1];\n";
   OS << "        auto &SrcOp2 = Operands[OpndNum2];\n";
@@ -3223,20 +3242,23 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   AsmMatcherInfo Info(AsmParser, Target, Records);
   Info.buildInfo();
 
+  bool PreferSmallerInstructions = getPreferSmallerInstructions(Target);
   // Sort the instruction table using the partial order on classes. We use
   // stable_sort to ensure that ambiguous instructions are still
   // deterministically ordered.
   llvm::stable_sort(
       Info.Matchables,
-      [](const std::unique_ptr<MatchableInfo> &a,
-         const std::unique_ptr<MatchableInfo> &b) { return *a < *b; });
+      [PreferSmallerInstructions](const std::unique_ptr<MatchableInfo> &A,
+                                  const std::unique_ptr<MatchableInfo> &B) {
+        return A->shouldBeMatchedBefore(*B, PreferSmallerInstructions);
+      });
 
 #ifdef EXPENSIVE_CHECKS
   // Verify that the table is sorted and operator < works transitively.
   for (auto I = Info.Matchables.begin(), E = Info.Matchables.end(); I != E;
        ++I) {
     for (auto J = I; J != E; ++J) {
-      assert(!(**J < **I));
+      assert(!(*J)->shouldBeMatchedBefore(**I, PreferSmallerInstructions));
     }
   }
 #endif
@@ -3255,7 +3277,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
         const MatchableInfo &A = **I;
         const MatchableInfo &B = **J;
 
-        if (A.couldMatchAmbiguouslyWith(B)) {
+        if (A.couldMatchAmbiguouslyWith(B, PreferSmallerInstructions)) {
           errs() << "warning: ambiguous matchables:\n";
           A.dump();
           errs() << "\nis incomparable with:\n";
@@ -3291,7 +3313,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
        << "unsigned Opcode,\n"
        << "                       const OperandVector &Operands,\n"
        << "                       const SmallBitVector "
-          "&OptionalOperandsMask);\n";
+          "&OptionalOperandsMask,\n"
+       << "                       ArrayRef<unsigned> DefaultsOffset);\n";
   } else {
     OS << "  void convertToMCInst(unsigned Kind, MCInst &Inst, "
        << "unsigned Opcode,\n"
@@ -3405,7 +3428,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
       Info.SubtargetFeatures, OS);
 
   if (!ReportMultipleNearMisses)
-    emitAsmTiedOperandConstraints(Target, Info, OS);
+    emitAsmTiedOperandConstraints(Target, Info, OS, HasOptionalOperands);
 
   StringToOffsetTable StringTable;
 
@@ -3730,6 +3753,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "        } else {\n";
     OS << "          DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"but formal "
           "operand not required\\n\");\n";
+    OS << "          if (isSubclass(Formal, OptionalMatchClass)) {\n";
+    OS << "            OptionalOperandsMask.set(FormalIdx);\n";
+    OS << "          }\n";
     OS << "        }\n";
     OS << "        continue;\n";
   } else {
@@ -3928,11 +3954,39 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "    }\n\n";
   }
 
+  // When converting parsed operands to MCInst we need to know whether optional
+  // operands were parsed or not so that we can choose the correct converter
+  // function. We also need to know this when checking tied operand constraints.
+  // DefaultsOffset is an array of deltas between the formal (MCInst) and the
+  // actual (parsed operand array) operand indices. When all optional operands
+  // are present, all elements of the array are zeros. If some of the optional
+  // operands are absent, the array might look like '0, 0, 1, 1, 1, 2, 2, 3',
+  // where each increment in value reflects the absence of an optional operand.
+  if (HasOptionalOperands) {
+    OS << "    unsigned DefaultsOffset[" << (MaxNumOperands + 1)
+       << "] = { 0 };\n";
+    OS << "    assert(OptionalOperandsMask.size() == " << (MaxNumOperands)
+       << ");\n";
+    OS << "    for (unsigned i = 0, NumDefaults = 0; i < " << (MaxNumOperands)
+       << "; ++i) {\n";
+    OS << "      DefaultsOffset[i + 1] = NumDefaults;\n";
+    OS << "      NumDefaults += (OptionalOperandsMask[i] ? 1 : 0);\n";
+    OS << "    }\n\n";
+  }
+
   OS << "    if (matchingInlineAsm) {\n";
   OS << "      convertToMapAndConstraints(it->ConvertFn, Operands);\n";
   if (!ReportMultipleNearMisses) {
-    OS << "      if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
-          "Operands, ErrorInfo))\n";
+    if (HasOptionalOperands) {
+      OS << "      if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
+            "Operands,\n";
+      OS << "                                          DefaultsOffset, "
+            "ErrorInfo))\n";
+    } else {
+      OS << "      if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
+            "Operands,\n";
+      OS << "                                          ErrorInfo))\n";
+    }
     OS << "        return Match_InvalidTiedOperand;\n";
     OS << "\n";
   }
@@ -3942,7 +3996,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
      << "    // operands into the appropriate MCInst.\n";
   if (HasOptionalOperands) {
     OS << "    convertToMCInst(it->ConvertFn, Inst, it->Opcode, Operands,\n"
-       << "                    OptionalOperandsMask);\n";
+       << "                    OptionalOperandsMask, DefaultsOffset);\n";
   } else {
     OS << "    convertToMCInst(it->ConvertFn, Inst, it->Opcode, Operands);\n";
   }
@@ -4022,8 +4076,16 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   }
 
   if (!ReportMultipleNearMisses) {
-    OS << "    if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
-          "Operands, ErrorInfo))\n";
+    if (HasOptionalOperands) {
+      OS << "    if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
+            "Operands,\n";
+      OS << "                                         DefaultsOffset, "
+            "ErrorInfo))\n";
+    } else {
+      OS << "    if (!checkAsmTiedOperandConstraints(*this, it->ConvertFn, "
+            "Operands,\n";
+      OS << "                                         ErrorInfo))\n";
+    }
     OS << "      return Match_InvalidTiedOperand;\n";
     OS << "\n";
   }

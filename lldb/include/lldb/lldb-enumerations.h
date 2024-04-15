@@ -1323,6 +1323,30 @@ enum SymbolDownload {
   eSymbolDownloadForeground = 2,
 };
 
+/// Used in the SBProcess AddressMask/FixAddress methods.
+enum AddressMaskType {
+  eAddressMaskTypeCode = 0,
+  eAddressMaskTypeData,
+  eAddressMaskTypeAny,
+  eAddressMaskTypeAll = eAddressMaskTypeAny
+};
+
+/// Used in the SBProcess AddressMask/FixAddress methods.
+enum AddressMaskRange {
+  eAddressMaskRangeLow = 0,
+  eAddressMaskRangeHigh,
+  eAddressMaskRangeAny,
+  eAddressMaskRangeAll = eAddressMaskRangeAny,
+};
+
+/// Used by the debugger to indicate which events are being broadcasted.
+enum DebuggerBroadcastBit {
+  eBroadcastBitProgress = (1 << 0),
+  eBroadcastBitWarning = (1 << 1),
+  eBroadcastBitError = (1 << 2),
+  eBroadcastBitProgressCategory = (1 << 3),
+};
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H

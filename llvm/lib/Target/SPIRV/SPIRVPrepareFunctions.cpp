@@ -263,6 +263,21 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   return;
 }
 
+static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
+                                     ArrayRef<unsigned> OpNos) {
+  Function *F = nullptr;
+  if (OpNos.empty()) {
+    F = Intrinsic::getDeclaration(II->getModule(), NewID);
+  } else {
+    SmallVector<Type *, 4> Tys;
+    for (unsigned OpNo : OpNos)
+      Tys.push_back(II->getOperand(OpNo)->getType());
+    F = Intrinsic::getDeclaration(II->getModule(), NewID, Tys);
+  }
+  II->setCalledFunction(F);
+  return true;
+}
+
 static void lowerUMulWithOverflow(IntrinsicInst *UMulIntrinsic) {
   // Get a separate function - otherwise, we'd have to rework the CFG of the
   // current one. Then simply replace the intrinsic uses with a call to the new
@@ -290,22 +305,35 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
       if (!CF || !CF->isIntrinsic())
         continue;
       auto *II = cast<IntrinsicInst>(Call);
-      if (II->getIntrinsicID() == Intrinsic::memset ||
-          II->getIntrinsicID() == Intrinsic::bswap)
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::memset:
+      case Intrinsic::bswap:
         Changed |= lowerIntrinsicToFunction(II);
-      else if (II->getIntrinsicID() == Intrinsic::fshl ||
-               II->getIntrinsicID() == Intrinsic::fshr) {
+        break;
+      case Intrinsic::fshl:
+      case Intrinsic::fshr:
         lowerFunnelShifts(II);
         Changed = true;
-      } else if (II->getIntrinsicID() == Intrinsic::umul_with_overflow) {
+        break;
+      case Intrinsic::umul_with_overflow:
         lowerUMulWithOverflow(II);
         Changed = true;
-      } else if (II->getIntrinsicID() == Intrinsic::assume ||
-                 II->getIntrinsicID() == Intrinsic::expect) {
+        break;
+      case Intrinsic::assume:
+      case Intrinsic::expect: {
         const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
         if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
           lowerExpectAssume(II);
         Changed = true;
+      } break;
+      case Intrinsic::lifetime_start:
+        Changed |= toSpvOverloadedIntrinsic(
+            II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
+        break;
+      case Intrinsic::lifetime_end:
+        Changed |= toSpvOverloadedIntrinsic(
+            II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
+        break;
       }
     }
   }

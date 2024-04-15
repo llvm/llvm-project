@@ -104,7 +104,7 @@ def FeatureStdExtZihpm
                        "'Zihpm' (Hardware Performance Counters)",
                        [FeatureStdExtZicsr]>;
 
-def FeatureStdExtZimop : SubtargetFeature<"experimental-zimop", "HasStdExtZimop", "true",
+def FeatureStdExtZimop : SubtargetFeature<"zimop", "HasStdExtZimop", "true",
                                           "'Zimop' (May-Be-Operations)">;
 def HasStdExtZimop : Predicate<"Subtarget->hasStdExtZimop()">,
                      AssemblerPredicate<(all_of FeatureStdExtZimop),
@@ -185,7 +185,7 @@ def HasStdExtZabha : Predicate<"Subtarget->hasStdExtZabha()">,
                          "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
 
 def FeatureStdExtZacas
-    : SubtargetFeature<"experimental-zacas", "HasStdExtZacas", "true",
+    : SubtargetFeature<"zacas", "HasStdExtZacas", "true",
                        "'Zacas' (Atomic Compare-And-Swap Instructions)">;
 def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
                      AssemblerPredicate<(all_of FeatureStdExtZacas),
@@ -390,7 +390,7 @@ def HasStdExtCOrZcfOrZce
                          "'C' (Compressed Instructions) or "
                          "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
-def FeatureStdExtZcmop : SubtargetFeature<"experimental-zcmop", "HasStdExtZcmop", "true",
+def FeatureStdExtZcmop : SubtargetFeature<"zcmop", "HasStdExtZcmop", "true",
                                           "'Zcmop' (Compressed May-Be-Operations)",
                                           [FeatureStdExtZca]>;
 def HasStdExtZcmop : Predicate<"Subtarget->hasStdExtZcmop()">,
@@ -807,6 +807,10 @@ def FeatureStdExtSsccptr
     : SubtargetFeature<"ssccptr", "HasStdExtSsccptr", "true",
                        "'Ssccptr' (Main memory supports page table reads)", []>;
 
+def FeatureStdExtSscofpmf
+    : SubtargetFeature<"sscofpmf", "HasStdExtSscofpmf", "true",
+                       "'Sscofpmf' (Count Overflow and Mode-Based Filtering)", []>;
+
 def FeatureStdExtShcounterenw
     : SubtargetFeature<"shcounterenw", "HasStdExtShcounterenw", "true",
                        "'Shcounterenw' (Support writeable hcounteren enable "
@@ -1054,6 +1058,30 @@ def HasVendorXSfvfnrclipxfqf
       AssemblerPredicate<(all_of FeatureVendorXSfvfnrclipxfqf),
                          "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)">;
 
+def FeatureVendorXSiFivecdiscarddlone
+    : SubtargetFeature<"xsifivecdiscarddlone", "HasVendorXSiFivecdiscarddlone", "true",
+                       "'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)", []>;
+def HasVendorXSiFivecdiscarddlone
+    : Predicate<"Subtarget->hasVendorXSiFivecdiscarddlone()">,
+      AssemblerPredicate<(all_of FeatureVendorXSiFivecdiscarddlone),
+                         "'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)">;
+
+def FeatureVendorXSiFivecflushdlone
+    : SubtargetFeature<"xsifivecflushdlone", "HasVendorXSiFivecflushdlone", "true",
+                       "'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)", []>;
+def HasVendorXSiFivecflushdlone
+    : Predicate<"Subtarget->hasVendorXSiFivecflushdlone()">,
+      AssemblerPredicate<(all_of FeatureVendorXSiFivecflushdlone),
+                         "'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)">;
+
+def FeatureVendorXSfcease
+    : SubtargetFeature<"xsfcease", "HasVendorXSfcease", "true",
+                       "'XSfcease' (SiFive sf.cease Instruction)", []>;
+def HasVendorXSfcease
+    : Predicate<"Subtarget->hasVendorXSfcease()">,
+      AssemblerPredicate<(all_of FeatureVendorXSfcease),
+                         "'XSfcease' (SiFive sf.cease Instruction)">;
+
 // Core-V Extensions
 
 def FeatureVendorXCVelw
@@ -1197,6 +1225,10 @@ def TuneNoSinkSplatOperands
     : SubtargetFeature<"no-sink-splat-operands", "SinkSplatOperands",
                        "false", "Disable sink splat operands to enable .vx, .vf,"
                        ".wx, and .wf instructions">;
+
+def TuneNoStripWSuffix
+    : SubtargetFeature<"no-strip-w-suffix", "EnableStripWSuffix", "false",
+                       "Disable strip W suffix">;
 
 def TuneConditionalCompressedMoveFusion
     : SubtargetFeature<"conditional-cmv-fusion", "HasConditionalCompressedMoveFusion",

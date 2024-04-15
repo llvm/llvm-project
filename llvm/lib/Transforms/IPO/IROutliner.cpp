@@ -723,9 +723,9 @@ static void moveFunctionData(Function &Old, Function &New,
     for (Instruction &Val : CurrBB) {
       // Since debug-info originates from many different locations in the
       // program, it will cause incorrect reporting from a debugger if we keep
-      // the same debug instructions. Drop non-intrinsic DPValues here,
-      // collect intrinsics for removal later.
-      Val.dropDbgValues();
+      // the same debug instructions. Drop non-intrinsic DbgVariableRecords
+      // here, collect intrinsics for removal later.
+      Val.dropDbgRecords();
 
       // We must handle the scoping of called functions differently than
       // other outlined instructions.
@@ -1501,7 +1501,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
                     << *AggFunc << " with new set of arguments\n");
   // Create the new call instruction and erase the old one.
   Call = CallInst::Create(AggFunc->getFunctionType(), AggFunc, NewCallArgs, "",
-                          Call);
+                          Call->getIterator());
 
   // It is possible that the call to the outlined function is either the first
   // instruction is in the new block, the last instruction, or both.  If either

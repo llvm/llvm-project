@@ -135,4 +135,5 @@ add_clang_library(clangTooling
   clangRewrite
   clangSerialization
   clangToolingCore
+  ${LLVM_PTHREAD_LIB}
   )

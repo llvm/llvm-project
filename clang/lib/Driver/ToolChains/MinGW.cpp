@@ -463,7 +463,7 @@ findClangRelativeSysroot(const Driver &D, const llvm::Triple &LiteralTriple,
   Subdirs.back() += "-w64-mingw32";
   Subdirs.emplace_back(T.getArchName());
   Subdirs.back() += "-w64-mingw32ucrt";
-  StringRef ClangRoot = llvm::sys::path::parent_path(D.getInstalledDir());
+  StringRef ClangRoot = llvm::sys::path::parent_path(D.Dir);
   StringRef Sep = llvm::sys::path::get_separator();
   for (StringRef CandidateSubdir : Subdirs) {
     if (llvm::sys::fs::is_directory(ClangRoot + Sep + CandidateSubdir)) {
@@ -487,10 +487,10 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
       RocmInstallation(D, Triple, Args) {
-  getProgramPaths().push_back(getDriver().getInstalledDir());
+  getProgramPaths().push_back(getDriver().Dir);
 
   std::string InstallBase =
-      std::string(llvm::sys::path::parent_path(getDriver().getInstalledDir()));
+      std::string(llvm::sys::path::parent_path(getDriver().Dir));
   // The sequence for detecting a sysroot here should be kept in sync with
   // the testTriple function below.
   llvm::Triple LiteralTriple = getLiteralTriple(D, getTriple());
@@ -796,8 +796,7 @@ static bool testTriple(const Driver &D, const llvm::Triple &Triple,
   if (D.SysRoot.size())
     return true;
   llvm::Triple LiteralTriple = getLiteralTriple(D, Triple);
-  std::string InstallBase =
-      std::string(llvm::sys::path::parent_path(D.getInstalledDir()));
+  std::string InstallBase = std::string(llvm::sys::path::parent_path(D.Dir));
   if (llvm::ErrorOr<std::string> TargetSubdir =
           findClangRelativeSysroot(D, LiteralTriple, Triple, SubdirName))
     return true;

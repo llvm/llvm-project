@@ -123,9 +123,12 @@ namespace FunctionPointers {
   }
 
   constexpr int applyBinOp(int a, int b, int (*op)(int, int)) {
-    return op(a, b);
+    return op(a, b); // both-note {{evaluates to a null function pointer}}
   }
   static_assert(applyBinOp(1, 2, add) == 3, "");
+  static_assert(applyBinOp(1, 2, nullptr) == 3, ""); // both-error {{not an integral constant expression}} \
+                                                     // both-note {{in call to}}
+
 
   constexpr int ignoreReturnValue() {
     int (*foo)(int, int) = add;
@@ -182,6 +185,21 @@ namespace FunctionReturnType {
   constexpr int (*invalidFnPtr)() = m;
   static_assert(invalidFnPtr() == 5, ""); // both-error {{not an integral constant expression}} \
                                           // both-note {{non-constexpr function 'm'}}
+
+
+namespace ToBool {
+  void mismatched(int x) {}
+  typedef void (*callback_t)(int);
+  void foo() {
+    callback_t callback = (callback_t)mismatched; // warns
+    /// Casts a function pointer to a boolean and then back to a function pointer.
+    /// This is extracted from test/Sema/callingconv-cast.c
+    callback = (callback_t)!mismatched; // both-warning {{address of function 'mismatched' will always evaluate to 'true'}} \
+                                        // both-note {{prefix with the address-of operator to silence this warning}}
+  }
+}
+
+
 }
 
 namespace Comparison {
@@ -551,4 +569,24 @@ namespace Local {
     const int t=t;
     return t;
   }
+}
+
+namespace VariadicOperator {
+  struct Callable {
+    float& operator()(...);
+  };
+
+  void test_callable(Callable c) {
+    float &fr = c(10);
+  }
+}
+
+namespace WeakCompare {
+  [[gnu::weak]]void weak_method();
+  static_assert(weak_method != nullptr, ""); // both-error {{not an integral constant expression}} \
+                                         // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
+
+  constexpr auto A = &weak_method;
+  static_assert(A != nullptr, ""); // both-error {{not an integral constant expression}} \
+                               // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
 }

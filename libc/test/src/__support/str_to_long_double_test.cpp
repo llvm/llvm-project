@@ -7,13 +7,13 @@ namespace LIBC_NAMESPACE {
 using LlvmLibcStrToLongDblTest = LlvmLibcStrToFloatTest<long double>;
 using LIBC_NAMESPACE::operator""_u128;
 
-#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat64AsLongDouble) {
   eisel_lemire_test(123, 0, 0x1EC00000000000, 1029);
 }
 
-#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat80Simple) {
   eisel_lemire_test(123, 0, 0xf600000000000000, 16389);
@@ -54,7 +54,7 @@ TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat80Fallback) {
   ASSERT_FALSE(internal::eisel_lemire<long double>({1, -1000}).has_value());
 }
 
-#else // Quad precision long double
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 
 TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat128Simple) {
   eisel_lemire_test(123, 0, 0x1ec00'00000000'00000000'00000000_u128, 16389);
@@ -77,6 +77,8 @@ TEST_F(LlvmLibcStrToLongDblTest, EiselLemireFloat128Fallback) {
                    .has_value());
 }
 
+#else
+#error "Unknown long double type"
 #endif
 
 } // namespace LIBC_NAMESPACE

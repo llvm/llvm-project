@@ -13,10 +13,10 @@ func.func @nop(%arg0: tensor<100xf32>) -> tensor<100xf32> {
 // -----
 
 // CHECK-LABEL: func.func @sparse_in(
-// CHECK-SAME:    %[[A:.*]]: tensor<?xf32>,
-// CHECK-SAME:    %[[B:.*]]: tensor<?xindex>,
-// CHECK-SAME:    %[[C:.*]]: tensor<?xindex>) -> tensor<64x64xf32> {
-// CHECK:         %[[I:.*]] = sparse_tensor.assemble %[[A]], %[[B]], %[[C]]
+// CHECK-SAME:    %[[B:.*0]]: tensor<?xindex>,
+// CHECK-SAME:    %[[C:.*1]]: tensor<?xindex>,
+// CHECK-SAME:    %[[A:.*]]: tensor<?xf32>) -> tensor<64x64xf32> {
+// CHECK:         %[[I:.*]] = sparse_tensor.assemble (%[[B]], %[[C]]), %[[A]]
 // CHECK:         %[[F:.*]] = call @_internal_sparse_in(%[[I]])
 // CHECK:         return %[[F]] : tensor<64x64xf32>
 // CHECK:       }
@@ -30,11 +30,11 @@ func.func @sparse_in(%arg0: tensor<64x64xf32, #sparse>) -> tensor<64x64xf32> {
 // -----
 
 // CHECK-LABEL: func.func @sparse_in2(
-// CHECK-SAME:    %[[X:.*]]: tensor<100xf32>,
-// CHECK-SAME:    %[[A:.*]]: tensor<?xf32>,
-// CHECK-SAME:    %[[B:.*]]: tensor<?xindex>,
-// CHECK-SAME:    %[[C:.*]]: tensor<?xindex>) -> tensor<64x64xf32> {
-// CHECK:         %[[I:.*]] = sparse_tensor.assemble %[[A]], %[[B]], %[[C]]
+// CHECK-SAME:    %[[X:.*0]]: tensor<100xf32>,
+// CHECK-SAME:    %[[B:.*1]]: tensor<?xindex>,
+// CHECK-SAME:    %[[C:.*2]]: tensor<?xindex>,
+// CHECK-SAME:    %[[A:.*3]]: tensor<?xf32>) -> tensor<64x64xf32> {
+// CHECK:         %[[I:.*]] = sparse_tensor.assemble (%[[B]], %[[C]]), %[[A]]
 // CHECK:         %[[F:.*]] = call @_internal_sparse_in2(%[[X]], %[[I]])
 // CHECK:         return %[[F]] : tensor<64x64xf32>
 // CHECK:       }
@@ -48,10 +48,10 @@ func.func @sparse_in2(%arg0: tensor<100xf32>, %arg1: tensor<64x64xf32, #sparse>)
 // -----
 
 // CHECK-LABEL: func.func @sparse_out(
-// CHECK-SAME:    %[[X:.*]]: tensor<64x64xf32>,
-// CHECK-SAME:    %[[A:.*]]: tensor<?xf32>,
-// CHECK-SAME:    %[[B:.*]]: tensor<?xindex>,
-// CHECK-SAME:    %[[C:.*]]: tensor<?xindex>) -> (tensor<?xf32>, tensor<?xindex>, tensor<?xindex>) {
+// CHECK-SAME:    %[[X:.*0]]: tensor<64x64xf32>,
+// CHECK-SAME:    %[[B:.*1]]: tensor<?xindex>,
+// CHECK-SAME:    %[[C:.*2]]: tensor<?xindex>,
+// CHECK-SAME:    %[[A:.*3]]: tensor<?xf32>)
 // CHECK:         %[[F:.*]] = call @_internal_sparse_out(%[[X]])
 // CHECK:         sparse_tensor.disassemble %[[F]]
 // CHECK:         return
@@ -66,10 +66,10 @@ func.func @sparse_out(%arg0: tensor<64x64xf32>) -> tensor<64x64xf32, #sparse> {
 // -----
 
 // CHECK-LABEL: func.func @sparse_out2(
-// CHECK-SAME:    %[[X:.*]]: tensor<64x64xf32>,
-// CHECK-SAME:    %[[A:.*]]: tensor<?xf32>,
-// CHECK-SAME:    %[[B:.*]]: tensor<?xindex>,
-// CHECK-SAME:    %[[C:.*]]: tensor<?xindex>) -> (tensor<64x64xf32>, tensor<?xf32>, tensor<?xindex>, tensor<?xindex>) {
+// CHECK-SAME:    %[[X:.*0]]: tensor<64x64xf32>,
+// CHECK-SAME:    %[[B:.*1]]: tensor<?xindex>,
+// CHECK-SAME:    %[[C:.*2]]: tensor<?xindex>,
+// CHECK-SAME:    %[[A:.*3]]: tensor<?xf32>)
 // CHECK:         %[[F:.*]]:2 = call @_internal_sparse_out2(%[[X]])
 // CHECK:         sparse_tensor.disassemble %[[F]]#1
 // CHECK:         return %[[F]]#0
@@ -84,13 +84,13 @@ func.func @sparse_out2(%arg0: tensor<64x64xf32>) -> (tensor<64x64xf32>, tensor<6
 // -----
 
 // CHECK-LABEL: func.func @sparse_inout(
-// CHECK-SAME:    %[[A:.*0]]: tensor<?xf32>,
-// CHECK-SAME:    %[[B:.*1]]: tensor<?xindex>,
-// CHECK-SAME:    %[[C:.*2]]: tensor<?xindex>,
-// CHECK-SAME:    %[[D:.*3]]: tensor<?xf32>,
-// CHECK-SAME:    %[[E:.*4]]: tensor<?xindex>,
-// CHECK-SAME:    %[[F:.*5]]: tensor<?xindex>) -> (tensor<?xf32>, tensor<?xindex>, tensor<?xindex>) {
-// CHECK:         %[[I:.*]] = sparse_tensor.assemble %[[A]], %[[B]], %[[C]]
+// CHECK-SAME:    %[[B:.*0]]: tensor<?xindex>,
+// CHECK-SAME:    %[[C:.*1]]: tensor<?xindex>,
+// CHECK-SAME:    %[[A:.*2]]: tensor<?xf32>,
+// CHECK-SAME:    %[[E:.*3]]: tensor<?xindex>,
+// CHECK-SAME:    %[[F:.*4]]: tensor<?xindex>,
+// CHECK-SAME:    %[[D:.*5]]: tensor<?xf32>)
+// CHECK:         %[[I:.*]] = sparse_tensor.assemble (%[[B]], %[[C]]), %[[A]]
 // CHECK:         %[[F:.*]] = call @_internal_sparse_inout(%[[I]])
 // CHECK:         sparse_tensor.disassemble %[[F]]
 // CHECK:         return
@@ -104,15 +104,15 @@ func.func @sparse_inout(%arg0: tensor<64x64xf32, #sparse>) -> tensor<64x64xf32, 
 // -----
 
 // CHECK-LABEL: func.func @sparse_inout_coo_soa(
-// CHECK-SAME:    %[[A:.*0]]: tensor<?xf32>,
-// CHECK-SAME:    %[[B:.*1]]: tensor<?xindex>,
-// CHECK-SAME:    %[[C:.*2]]: tensor<?xindex>,
-// CHECK-SAME:    %[[D:.*3]]: tensor<?xindex>,
-// CHECK-SAME:    %[[E:.*4]]: tensor<?xf32>,
-// CHECK-SAME:    %[[F:.*5]]: tensor<?xindex>,
-// CHECK-SAME:    %[[G:.*6]]: tensor<?xindex>,
-// CHECK-SAME:    %[[H:.*7]]: tensor<?xindex>) -> (tensor<?xf32>, tensor<?xindex>, tensor<?xindex>, tensor<?xindex>) {
-// CHECK:         %[[I:.*]] = sparse_tensor.assemble %[[A]], %[[B]], %[[C]], %[[D]]
+// CHECK-SAME:    %[[B:.*0]]: tensor<?xindex>,
+// CHECK-SAME:    %[[C:.*1]]: tensor<?xindex>,
+// CHECK-SAME:    %[[D:.*2]]: tensor<?xindex>,
+// CHECK-SAME:    %[[A:.*3]]: tensor<?xf32>,
+// CHECK-SAME:    %[[F:.*4]]: tensor<?xindex>,
+// CHECK-SAME:    %[[G:.*5]]: tensor<?xindex>,
+// CHECK-SAME:    %[[H:.*6]]: tensor<?xindex>,
+// CHECK-SAME:    %[[E:.*7]]: tensor<?xf32>)
+// CHECK:         %[[I:.*]] = sparse_tensor.assemble (%[[B]], %[[C]], %[[D]]), %[[A]]
 // CHECK:         %[[F:.*]] = call @_internal_sparse_inout_coo_soa(%[[I]])
 // CHECK:         sparse_tensor.disassemble %[[F]]
 // CHECK:         return

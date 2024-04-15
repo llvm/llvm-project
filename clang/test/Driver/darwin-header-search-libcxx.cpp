@@ -193,7 +193,7 @@
 // RUN: ln -sf %t/install/bin/clang %t/symlinked1/bin/clang
 // RUN: mkdir -p %t/symlinked1/include/c++/v1
 
-// RUN: %t/symlinked1/bin/clang -### %s -fsyntax-only 2>&1 \
+// RUN: %t/symlinked1/bin/clang -### %s -no-canonical-prefixes -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
 // RUN:     -stdlib=libc++ \
 // RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 \

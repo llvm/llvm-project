@@ -177,7 +177,16 @@ void DivergenceLoweringHelper::buildMergeLaneMasks(
   B.buildInstr(OrOp, {DstReg}, {PrevMaskedReg, CurMaskedReg});
 }
 
-void DivergenceLoweringHelper::constrainAsLaneMask(Incoming &In) { return; }
+// GlobalISel has to constrain S1 incoming taken as-is with lane mask register
+// class. Insert a copy of Incoming.Reg to new lane mask inside Incoming.Block,
+// Incoming.Reg becomes that new lane mask.
+void DivergenceLoweringHelper::constrainAsLaneMask(Incoming &In) {
+  B.setInsertPt(*In.Block, In.Block->getFirstTerminator());
+
+  auto Copy = B.buildCopy(LLT::scalar(1), In.Reg);
+  MRI->setRegClass(Copy.getReg(0), ST->getBoolRC());
+  In.Reg = Copy.getReg(0);
+}
 
 } // End anonymous namespace.
 

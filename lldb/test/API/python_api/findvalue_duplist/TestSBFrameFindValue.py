@@ -25,7 +25,7 @@ class SBFrameFindValueTestCase(TestBase):
         breakpoint = target.BreakpointCreateBySourceRegex(
             "Set breakpoint here", lldb.SBFileSpec("main.cpp")
         )
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
+        self.assertGreater(breakpoint.GetNumLocations(), 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, self.get_process_working_directory())

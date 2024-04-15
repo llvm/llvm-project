@@ -797,10 +797,6 @@ static MCSection *selectExplicitSectionGlobal(
       SectionName = Attrs.getAttribute("data-section").getValueAsString();
     }
   }
-  const Function *F = dyn_cast<Function>(GO);
-  if (F && F->hasFnAttribute("implicit-section-name")) {
-    SectionName = F->getFnAttribute("implicit-section-name").getValueAsString();
-  }
 
   // Infer section flags from the section name if we can.
   Kind = getELFKindForNamedSection(SectionName, Kind);
@@ -934,7 +930,7 @@ MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
   unsigned Flags = getELFSectionFlags(Kind);
   // If the function's section names is pre-determined via pragma or a
   // section attribute, call selectExplicitSectionGlobal.
-  if (F.hasSection() || F.hasFnAttribute("implicit-section-name"))
+  if (F.hasSection())
     return selectExplicitSectionGlobal(
         &F, Kind, TM, getContext(), getMangler(), NextUniqueID,
         Used.count(&F), /* ForceUnique = */true);
@@ -1296,11 +1292,6 @@ MCSection *TargetLoweringObjectFileMachO::getExplicitSectionGlobal(
     } else if (Attrs.hasAttribute("data-section") && Kind.isData()) {
       SectionName = Attrs.getAttribute("data-section").getValueAsString();
     }
-  }
-
-  const Function *F = dyn_cast<Function>(GO);
-  if (F && F->hasFnAttribute("implicit-section-name")) {
-    SectionName = F->getFnAttribute("implicit-section-name").getValueAsString();
   }
 
   // Parse the section specifier and create it if valid.
@@ -2418,6 +2409,15 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForExternalReference(
   SmallString<128> Name;
   getNameWithPrefix(Name, GO, TM);
 
+  // AIX TLS local-dynamic does not need the external reference for the
+  // "_$TLSML" symbol.
+  if (GO->getThreadLocalMode() == GlobalVariable::LocalDynamicTLSModel &&
+      GO->hasName() && GO->getName() == "_$TLSML") {
+    return getContext().getXCOFFSection(
+        Name, SectionKind::getData(),
+        XCOFF::CsectProperties(XCOFF::XMC_TC, XCOFF::XTY_SD));
+  }
+
   XCOFF::StorageMappingClass SMC =
       isa<Function>(GO) ? XCOFF::XMC_DS : XCOFF::XMC_UA;
   if (GO->isThreadLocal())
@@ -2671,17 +2671,34 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForFunctionDescriptor(
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
     const MCSymbol *Sym, const TargetMachine &TM) const {
-  // Use TE storage-mapping class when large code model is enabled so that
-  // the chance of needing -bbigtoc is decreased. Also, the toc-entry for
-  // EH info is never referenced directly using instructions so it can be
-  // allocated with TE storage-mapping class.
+  const XCOFF::StorageMappingClass SMC = [](const MCSymbol *Sym,
+                                            const TargetMachine &TM) {
+    const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(Sym);
+
+    // The "_$TLSML" symbol for TLS local-dynamic mode requires XMC_TC,
+    // otherwise the AIX assembler will complain.
+    if (XSym->getSymbolTableName() == "_$TLSML")
+      return XCOFF::XMC_TC;
+
+    // Use large code model toc entries for ehinfo symbols as they are
+    // never referenced directly. The runtime loads their TOC entry
+    // addresses from the trace-back table.
+    if (XSym->isEHInfo())
+      return XCOFF::XMC_TE;
+
+    // If the symbol does not have a code model specified use the module value.
+    if (!XSym->hasPerSymbolCodeModel())
+      return TM.getCodeModel() == CodeModel::Large ? XCOFF::XMC_TE
+                                                   : XCOFF::XMC_TC;
+
+    return XSym->getPerSymbolCodeModel() == MCSymbolXCOFF::CM_Large
+               ? XCOFF::XMC_TE
+               : XCOFF::XMC_TC;
+  }(Sym, TM);
+
   return getContext().getXCOFFSection(
       cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(), SectionKind::getData(),
-      XCOFF::CsectProperties((TM.getCodeModel() == CodeModel::Large ||
-                              cast<MCSymbolXCOFF>(Sym)->isEHInfo())
-                                 ? XCOFF::XMC_TE
-                                 : XCOFF::XMC_TC,
-                             XCOFF::XTY_SD));
+      XCOFF::CsectProperties(SMC, XCOFF::XTY_SD));
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(

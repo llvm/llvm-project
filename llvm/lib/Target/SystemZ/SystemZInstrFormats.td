@@ -3777,7 +3777,7 @@ class BinarySI<string mnemonic, bits<8> opcode, SDPatternOperator operator,
                Operand imm, AddressingMode mode = bdaddr12only>
   : InstSI<opcode, (outs), (ins (mode $B1, $D1):$BD1, imm:$I2),
            mnemonic#"\t$BD1, $I2",
-           [(store (operator (load mode:$BD1), imm:$I2), mode:$BD1)]> {
+           [(store (operator (z_load mode:$BD1), imm:$I2), mode:$BD1)]> {
   let mayLoad = 1;
   let mayStore = 1;
 }
@@ -3786,7 +3786,7 @@ class BinarySIY<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                 Operand imm, AddressingMode mode = bdaddr20only>
   : InstSIY<opcode, (outs), (ins (mode $B1, $D1):$BD1, imm:$I2),
             mnemonic#"\t$BD1, $I2",
-            [(store (operator (load mode:$BD1), imm:$I2), mode:$BD1)]> {
+            [(store (operator (z_load mode:$BD1), imm:$I2), mode:$BD1)]> {
   let mayLoad = 1;
   let mayStore = 1;
 }

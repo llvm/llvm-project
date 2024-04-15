@@ -577,16 +577,16 @@ Export LinkerDriver::parseExport(StringRef arg) {
     if (y.contains(".")) {
       e.name = x;
       e.forwardTo = y;
-      return e;
+    } else {
+      e.extName = x;
+      e.name = y;
+      if (e.name.empty())
+        goto err;
     }
-
-    e.extName = x;
-    e.name = y;
-    if (e.name.empty())
-      goto err;
   }
 
-  // If "<name>=<internalname>[,@ordinal[,NONAME]][,DATA][,PRIVATE]"
+  // Optional parameters
+  // "[,@ordinal[,NONAME]][,DATA][,PRIVATE][,EXPORTAS,exportname]"
   while (!rest.empty()) {
     StringRef tok;
     std::tie(tok, rest) = rest.split(",");
@@ -607,6 +607,13 @@ Export LinkerDriver::parseExport(StringRef arg) {
     if (tok.equals_insensitive("private")) {
       e.isPrivate = true;
       continue;
+    }
+    if (tok.equals_insensitive("exportas")) {
+      if (!rest.empty() && !rest.contains(','))
+        e.exportAs = rest;
+      else
+        error("invalid EXPORTAS value: " + rest);
+      break;
     }
     if (tok.starts_with("@")) {
       int32_t ord;
@@ -684,7 +691,9 @@ void LinkerDriver::fixupExports() {
   }
 
   for (Export &e : ctx.config.exports) {
-    if (!e.forwardTo.empty()) {
+    if (!e.exportAs.empty()) {
+      e.exportName = e.exportAs;
+    } else if (!e.forwardTo.empty()) {
       e.exportName = undecorate(ctx, e.name);
     } else {
       e.exportName = undecorate(ctx, e.extName.empty() ? e.name : e.extName);

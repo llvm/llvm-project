@@ -113,8 +113,8 @@ define <vscale x 8 x half> @masked_gather_nxv8f16(<vscale x 8 x ptr> %ptrs, <vsc
 ; CHECK-NEXT:    ld1h { z2.d }, p1/z, [z2.d]
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
-; CHECK-NEXT:    uzp1 z2.s, z2.s, z3.s
 ; CHECK-NEXT:    ld1h { z1.d }, p1/z, [z1.d]
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z3.s
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
@@ -145,10 +145,10 @@ define <vscale x 4 x double> @masked_gather_nxv4f64(ptr %base, <vscale x 4 x i16
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    sxth z1.s, p1/m, z0.s
-; CHECK-NEXT:    sunpklo z0.d, z1.s
 ; CHECK-NEXT:    punpklo p1.h, p0.b
-; CHECK-NEXT:    sunpkhi z1.d, z1.s
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    sunpklo z0.d, z1.s
+; CHECK-NEXT:    sunpkhi z1.d, z1.s
 ; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x0, z0.d, lsl #3]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, z1.d, lsl #3]
 ; CHECK-NEXT:    ret

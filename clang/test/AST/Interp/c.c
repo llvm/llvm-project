@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=expected,all -std=c11 -Wcast-qual %s
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic-expected,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -pedantic -verify=pedantic,pedantic-expected,all -std=c11 -Wcast-qual %s
 // RUN: %clang_cc1 -triple x86_64-linux -verify=ref,all -std=c11 -Wcast-qual %s
-// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic-ref,all -std=c11 -Wcast-qual %s
+// RUN: %clang_cc1 -triple x86_64-linux -pedantic -verify=pedantic,pedantic-ref,all -std=c11 -Wcast-qual %s
 
 typedef __INTPTR_TYPE__ intptr_t;
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
@@ -21,6 +21,9 @@ _Static_assert(!!1.0, ""); // pedantic-ref-warning {{not an integer constant exp
                            // pedantic-expected-warning {{not an integer constant expression}}
 _Static_assert(!!1, "");
 
+_Static_assert(!(_Bool){(void*)0}, ""); // pedantic-ref-warning {{not an integer constant expression}} \
+                                        // pedantic-expected-warning {{not an integer constant expression}}
+
 int a = (1 == 1 ? 5 : 3);
 _Static_assert(a == 5, ""); // all-error {{not an integral constant expression}}
 
@@ -30,15 +33,15 @@ const int b = 3;
 _Static_assert(b == 3, ""); // pedantic-ref-warning {{not an integer constant expression}} \
                             // pedantic-expected-warning {{not an integer constant expression}}
 
-/// FIXME: The new interpreter is missing the "initializer of 'c' unknown" diagnostics.
-const int c; // ref-note {{declared here}} \
-             // pedantic-ref-note {{declared here}}
+const int c; // all-note {{declared here}}
 _Static_assert(c == 0, ""); // ref-error {{not an integral constant expression}} \
                             // ref-note {{initializer of 'c' is unknown}} \
                             // pedantic-ref-error {{not an integral constant expression}} \
                             // pedantic-ref-note {{initializer of 'c' is unknown}} \
                             // expected-error {{not an integral constant expression}} \
-                            // pedantic-expected-error {{not an integral constant expression}}
+                            // expected-note {{initializer of 'c' is unknown}} \
+                            // pedantic-expected-error {{not an integral constant expression}} \
+                            // pedantic-expected-note {{initializer of 'c' is unknown}}
 
 _Static_assert(&c != 0, ""); // ref-warning {{always true}} \
                              // pedantic-ref-warning {{always true}} \
@@ -63,11 +66,11 @@ _Static_assert((&a - 100) != 0, ""); // pedantic-ref-warning {{is a GNU extensio
                                      // pedantic-ref-note {{-100 of non-array}} \
                                      // pedantic-expected-note {{-100 of non-array}}
 /// extern variable of a composite type.
-/// FIXME: The 'cast from void*' note is missing in the new interpreter.
+/// FIXME: The 'this conversion is not allowed' note is missing in the new interpreter.
 extern struct Test50S Test50;
 _Static_assert(&Test50 != (void*)0, ""); // all-warning {{always true}} \
                                          // pedantic-ref-warning {{is a GNU extension}} \
-                                         // pedantic-ref-note {{cast from 'void *' is not allowed}} \
+                                         // pedantic-ref-note {{this conversion is not allowed in a constant expression}} \
                                          // pedantic-expected-warning {{is a GNU extension}}
 
 struct y {int x,y;};
@@ -75,6 +78,11 @@ int a2[(intptr_t)&((struct y*)0)->y]; // all-warning {{folded to constant array}
 
 const struct y *yy = (struct y*)0;
 const intptr_t L = (intptr_t)(&(yy->y)); // all-error {{not a compile-time constant}}
+
+_Static_assert((long)&((struct y*)0)->y > 0, ""); // pedantic-ref-warning {{GNU extension}} \
+                                                  // pedantic-ref-note {{this conversion is not allowed in a constant expression}} \
+                                                  // pedantic-expected-warning {{GNU extension}} \
+                                                  // pedantic-expected-note {{this conversion is not allowed in a constant expression}}
 
 const ptrdiff_t m = &m + 137 - &m;
 _Static_assert(m == 137, ""); // pedantic-ref-warning {{GNU extension}} \
@@ -92,7 +100,7 @@ int chooseexpr[__builtin_choose_expr(1, 1, expr)];
 
 int somefunc(int i) {
   return (i, 65537) * 65537; // all-warning {{left operand of comma operator has no effect}} \
-                             // all-warning {{overflow in expression; result is 131073}}
+                             // all-warning {{overflow in expression; result is 131'073 with type 'int'}}
 }
 
 /// FIXME: The following test is incorrect in the new interpreter.
@@ -177,3 +185,51 @@ void test4(void) {
   t1 = sizeof(int);
 }
 
+void localCompoundLiteral(void) {
+  struct S { int x, y; } s = {}; // pedantic-expected-warning {{use of an empty initializer}} \
+                                 // pedantic-ref-warning {{use of an empty initializer}}
+  struct T {
+	int i;
+    struct S s;
+  } t1 = { 1, {} }; // pedantic-expected-warning {{use of an empty initializer}} \
+                    // pedantic-ref-warning {{use of an empty initializer}}
+
+  struct T t3 = {
+    (int){}, // pedantic-expected-warning {{use of an empty initializer}} \
+             // pedantic-ref-warning {{use of an empty initializer}}
+    {} // pedantic-expected-warning {{use of an empty initializer}} \
+       // pedantic-ref-warning {{use of an empty initializer}}
+  };
+}
+
+/// struct copy
+struct StrA {int a; };
+const struct StrA sa = { 12 };
+const struct StrA * const sb = &sa;
+const struct StrA sc = *sb;
+_Static_assert(sc.a == 12, ""); // pedantic-ref-warning {{GNU extension}} \
+                                // pedantic-expected-warning {{GNU extension}}
+
+_Static_assert(((void*)0 + 1) != (void*)0, ""); // pedantic-expected-warning {{arithmetic on a pointer to void is a GNU extension}} \
+                                                // pedantic-expected-warning {{not an integer constant expression}} \
+                                                // pedantic-expected-note {{cannot perform pointer arithmetic on null pointer}} \
+                                                // pedantic-ref-warning {{arithmetic on a pointer to void is a GNU extension}} \
+                                                // pedantic-ref-warning {{not an integer constant expression}} \
+                                                // pedantic-ref-note {{cannot perform pointer arithmetic on null pointer}}
+
+typedef __INTPTR_TYPE__ intptr_t;
+int array[(intptr_t)(int*)1]; // ref-warning {{variable length array folded to constant array}} \
+                              // pedantic-ref-warning {{variable length array folded to constant array}} \
+                              // expected-warning {{variable length array folded to constant array}} \
+                              // pedantic-expected-warning {{variable length array folded to constant array}}
+
+int castViaInt[*(int*)(unsigned long)"test"]; // ref-error {{variable length array}} \
+                                              // pedantic-ref-error {{variable length array}} \
+                                              // expected-error {{variable length array}} \
+                                              // pedantic-expected-error {{variable length array}}
+
+const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}}
+_Static_assert(funcp == (void*)0, ""); // all-error {{failed due to requirement 'funcp == (void *)0'}} \
+                                       // pedantic-warning {{expression is not an integer constant expression}}
+_Static_assert(funcp == (void*)123, ""); // pedantic-warning {{equality comparison between function pointer and void pointer}} \
+                                         // pedantic-warning {{expression is not an integer constant expression}}

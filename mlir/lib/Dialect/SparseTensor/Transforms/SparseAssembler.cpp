@@ -8,6 +8,7 @@
 
 #include "Utils/CodegenUtils.h"
 
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorStorageLayout.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
@@ -24,44 +25,41 @@ using namespace sparse_tensor;
 
 // Convert type range to new types range, with sparse tensors externalized.
 static void convTypes(TypeRange types, SmallVectorImpl<Type> &convTypes,
-                      SmallVectorImpl<Type> *extraTypes = nullptr) {
+                      SmallVectorImpl<Type> *extraTypes, bool directOut) {
   for (auto type : types) {
     // All "dense" data passes through unmodified.
     if (!getSparseTensorEncoding(type)) {
       convTypes.push_back(type);
       continue;
     }
-    // Convert the external representation of the values array.
-    const SparseTensorType stt(cast<RankedTensorType>(type));
-    auto shape = {ShapedType::kDynamic};
-    auto vtp = RankedTensorType::get(shape, stt.getElementType());
-    convTypes.push_back(vtp);
-    if (extraTypes)
-      extraTypes->push_back(vtp);
 
-    // Convert the external representation of the position/coordinate array.
-    foreachFieldAndTypeInSparseTensor(stt, [&convTypes, extraTypes](
-                                               Type t, FieldIndex,
-                                               SparseTensorFieldKind kind,
-                                               Level, LevelType) {
-      if (kind == SparseTensorFieldKind::CrdMemRef ||
-          kind == SparseTensorFieldKind::PosMemRef) {
-        ShapedType st = t.cast<ShapedType>();
-        auto rtp = RankedTensorType::get(st.getShape(), st.getElementType());
-        convTypes.push_back(rtp);
-        if (extraTypes)
-          extraTypes->push_back(rtp);
-      }
-      return true;
-    });
+    // Convert the external representations of the pos/crd/val arrays.
+    const SparseTensorType stt(cast<RankedTensorType>(type));
+    foreachFieldAndTypeInSparseTensor(
+        stt, [&convTypes, extraTypes, directOut](Type t, FieldIndex,
+                                                 SparseTensorFieldKind kind,
+                                                 Level, LevelType) {
+          if (kind == SparseTensorFieldKind::PosMemRef ||
+              kind == SparseTensorFieldKind::CrdMemRef ||
+              kind == SparseTensorFieldKind::ValMemRef) {
+            auto rtp = t.cast<ShapedType>();
+            if (!directOut) {
+              rtp = RankedTensorType::get(rtp.getShape(), rtp.getElementType());
+              if (extraTypes)
+                extraTypes->push_back(rtp);
+            }
+            convTypes.push_back(rtp);
+          }
+          return true;
+        });
   }
 }
 
 // Convert input and output values to [dis]assemble ops for sparse tensors.
 static void convVals(OpBuilder &builder, Location loc, TypeRange types,
                      ValueRange fromVals, ValueRange extraVals,
-                     SmallVectorImpl<Value> &toVals, unsigned extra,
-                     bool isIn) {
+                     SmallVectorImpl<Value> &toVals, unsigned extra, bool isIn,
+                     bool directOut) {
   unsigned idx = 0;
   for (auto type : types) {
     // All "dense" data passes through unmodified.
@@ -69,36 +67,41 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
       toVals.push_back(fromVals[idx++]);
       continue;
     }
-    // Convert the external representation of the values array.
+    // Handle sparse data.
     auto rtp = cast<RankedTensorType>(type);
     const SparseTensorType stt(rtp);
-    auto shape = {ShapedType::kDynamic};
     SmallVector<Value> inputs;
     SmallVector<Type> retTypes;
     SmallVector<Type> cntTypes;
-    // Collect the external representation of the values array for
-    // input or the outgoing sparse tensor for output.
-    inputs.push_back(fromVals[idx++]);
-    if (!isIn) {
-      inputs.push_back(extraVals[extra++]);
-      retTypes.push_back(RankedTensorType::get(shape, stt.getElementType()));
-      cntTypes.push_back(builder.getIndexType()); // nnz
-    }
+    if (!isIn)
+      inputs.push_back(fromVals[idx++]); // The sparse tensor to disassemble
 
-    // Collect the external representations of the pos/crd arrays.
+    // Collect the external representations of the pos/crd/val arrays.
     foreachFieldAndTypeInSparseTensor(stt, [&, isIn](Type t, FieldIndex,
                                                      SparseTensorFieldKind kind,
-                                                     Level, LevelType) {
-      if (kind == SparseTensorFieldKind::CrdMemRef ||
-          kind == SparseTensorFieldKind::PosMemRef) {
+                                                     Level lv, LevelType) {
+      if (kind == SparseTensorFieldKind::PosMemRef ||
+          kind == SparseTensorFieldKind::CrdMemRef ||
+          kind == SparseTensorFieldKind::ValMemRef) {
         if (isIn) {
           inputs.push_back(fromVals[idx++]);
+        } else if (directOut) {
+          Value mem;
+          if (kind == SparseTensorFieldKind::PosMemRef)
+            mem = builder.create<sparse_tensor::ToPositionsOp>(loc, inputs[0],
+                                                               lv);
+          else if (kind == SparseTensorFieldKind::CrdMemRef)
+            mem = builder.create<sparse_tensor::ToCoordinatesOp>(loc, inputs[0],
+                                                                 lv);
+          else
+            mem = builder.create<sparse_tensor::ToValuesOp>(loc, inputs[0]);
+          toVals.push_back(mem);
         } else {
-          ShapedType st = t.cast<ShapedType>();
-          auto rtp = RankedTensorType::get(st.getShape(), st.getElementType());
+          ShapedType rtp = t.cast<ShapedType>();
+          rtp = RankedTensorType::get(rtp.getShape(), rtp.getElementType());
           inputs.push_back(extraVals[extra++]);
           retTypes.push_back(rtp);
-          cntTypes.push_back(rtp.getElementType());
+          cntTypes.push_back(builder.getIndexType());
         }
       }
       return true;
@@ -108,7 +111,7 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
       // Assemble multiple inputs into a single sparse tensor.
       auto a = builder.create<sparse_tensor::AssembleOp>(loc, rtp, inputs);
       toVals.push_back(a.getResult());
-    } else {
+    } else if (!directOut) {
       // Disassemble a single sparse input into multiple outputs.
       // Note that this includes the counters, which are dropped.
       unsigned len = retTypes.size();
@@ -155,10 +158,13 @@ namespace {
 //   return ..., t1..tn, ...
 // }
 //
-// TODO: refine output sparse tensors to work well with external framework
+// (with a direct-out variant without the disassemble).
 //
 struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
   using OpRewritePattern::OpRewritePattern;
+
+  SparseFuncAssembler(MLIRContext *context, bool dO)
+      : OpRewritePattern(context), directOut(dO) {}
 
   LogicalResult matchAndRewrite(func::FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
@@ -170,8 +176,8 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     SmallVector<Type> inputTypes;
     SmallVector<Type> outputTypes;
     SmallVector<Type> extraTypes;
-    convTypes(funcOp.getArgumentTypes(), inputTypes);
-    convTypes(funcOp.getResultTypes(), outputTypes, &extraTypes);
+    convTypes(funcOp.getArgumentTypes(), inputTypes, nullptr, false);
+    convTypes(funcOp.getResultTypes(), outputTypes, &extraTypes, directOut);
 
     // Only sparse inputs or outputs need a wrapper method.
     if (inputTypes.size() == funcOp.getArgumentTypes().size() &&
@@ -203,7 +209,7 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     // Convert inputs.
     SmallVector<Value> inputs;
     convVals(rewriter, loc, funcOp.getArgumentTypes(), body->getArguments(),
-             ValueRange(), inputs, 0, /*isIn=*/true);
+             ValueRange(), inputs, /*extra=*/0, /*isIn=*/true, directOut);
 
     // Call the original, now private method. A subsequent inlining pass can
     // determine whether cloning the method body in place is worthwhile.
@@ -214,7 +220,7 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     // Convert outputs and return.
     SmallVector<Value> outputs;
     convVals(rewriter, loc, funcOp.getResultTypes(), call.getResults(),
-             body->getArguments(), outputs, extra, /*isIn=*/false);
+             body->getArguments(), outputs, extra, /*isIn=*/false, directOut);
     rewriter.create<func::ReturnOp>(loc, outputs);
 
     // Finally, migrate a potential c-interface property.
@@ -226,6 +232,9 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     }
     return success();
   }
+
+private:
+  const bool directOut;
 };
 
 } // namespace
@@ -234,6 +243,7 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
 // Public method for populating conversion rules.
 //===----------------------------------------------------------------------===//
 
-void mlir::populateSparseAssembler(RewritePatternSet &patterns) {
-  patterns.add<SparseFuncAssembler>(patterns.getContext());
+void mlir::populateSparseAssembler(RewritePatternSet &patterns,
+                                   bool directOut) {
+  patterns.add<SparseFuncAssembler>(patterns.getContext(), directOut);
 }

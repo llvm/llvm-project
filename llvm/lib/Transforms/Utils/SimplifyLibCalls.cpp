@@ -305,7 +305,7 @@ static void annotateNonNullAndDereferenceable(CallInst *CI, ArrayRef<unsigned> A
   if (ConstantInt *LenC = dyn_cast<ConstantInt>(Size)) {
     annotateNonNullNoUndefBasedOnAccess(CI, ArgNos);
     annotateDereferenceableBytes(CI, ArgNos, LenC->getZExtValue());
-  } else if (isKnownNonZero(Size, DL)) {
+  } else if (isKnownNonZero(Size, /*Depth=*/0, DL)) {
     annotateNonNullNoUndefBasedOnAccess(CI, ArgNos);
     const APInt *X, *Y;
     uint64_t DerefMin = 1;
@@ -394,7 +394,7 @@ Value *LibCallSimplifier::optimizeStrNCat(CallInst *CI, IRBuilderBase &B) {
   Value *Size = CI->getArgOperand(2);
   uint64_t Len;
   annotateNonNullNoUndefBasedOnAccess(CI, 0);
-  if (isKnownNonZero(Size, DL))
+  if (isKnownNonZero(Size, /*Depth=*/0, DL))
     annotateNonNullNoUndefBasedOnAccess(CI, 1);
 
   // We don't do anything if length is not constant.
@@ -613,7 +613,7 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
   if (Str1P == Str2P) // strncmp(x,x,n)  -> 0
     return ConstantInt::get(CI->getType(), 0);
 
-  if (isKnownNonZero(Size, DL))
+  if (isKnownNonZero(Size, /*Depth=*/0, DL))
     annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
   // Get the length argument if it is constant.
   uint64_t Length;
@@ -749,7 +749,7 @@ Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeStrLCpy(CallInst *CI, IRBuilderBase &B) {
   Value *Size = CI->getArgOperand(2);
-  if (isKnownNonZero(Size, DL))
+  if (isKnownNonZero(Size, /*Depth=*/0, DL))
     // Like snprintf, the function stores into the destination only when
     // the size argument is nonzero.
     annotateNonNullNoUndefBasedOnAccess(CI, 0);
@@ -833,7 +833,7 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
   Value *Src = CI->getArgOperand(1);
   Value *Size = CI->getArgOperand(2);
 
-  if (isKnownNonZero(Size, DL)) {
+  if (isKnownNonZero(Size, /*Depth=*/0, DL)) {
     // Both st{p,r}ncpy(D, S, N) access the source and destination arrays
     // only when N is nonzero.
     annotateNonNullNoUndefBasedOnAccess(CI, 0);
@@ -926,7 +926,7 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
   Type *CharTy = B.getIntNTy(CharSize);
 
   if (isOnlyUsedInZeroEqualityComparison(CI) &&
-      (!Bound || isKnownNonZero(Bound, DL))) {
+      (!Bound || isKnownNonZero(Bound, /*Depth=*/0, DL))) {
     // Fold strlen:
     //   strlen(x) != 0 --> *x != 0
     //   strlen(x) == 0 --> *x == 0
@@ -1047,7 +1047,7 @@ Value *LibCallSimplifier::optimizeStrNLen(CallInst *CI, IRBuilderBase &B) {
   if (Value *V = optimizeStringLength(CI, B, 8, Bound))
     return V;
 
-  if (isKnownNonZero(Bound, DL))
+  if (isKnownNonZero(Bound, /*Depth=*/0, DL))
     annotateNonNullNoUndefBasedOnAccess(CI, 0);
   return nullptr;
 }
@@ -1291,7 +1291,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
   Value *SrcStr = CI->getArgOperand(0);
   Value *Size = CI->getArgOperand(2);
 
-  if (isKnownNonZero(Size, DL)) {
+  if (isKnownNonZero(Size, /*Depth=*/0, DL)) {
     annotateNonNullNoUndefBasedOnAccess(CI, 0);
     if (isOnlyUsedInEqualityComparison(CI, SrcStr))
       return memChrToCharCompare(CI, Size, B, DL);
@@ -1906,49 +1906,6 @@ Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
                                               CI->getType());
   return copyFlags(
       *CI, B.CreateCall(FSqrt, B.CreateFAdd(RealReal, ImagImag), "cabs"));
-}
-
-static Value *optimizeTrigReflections(CallInst *Call, LibFunc Func,
-                                      IRBuilderBase &B) {
-  if (!isa<FPMathOperator>(Call))
-    return nullptr;
-
-  IRBuilderBase::FastMathFlagGuard Guard(B);
-  B.setFastMathFlags(Call->getFastMathFlags());
-
-  // TODO: Can this be shared to also handle LLVM intrinsics?
-  Value *X;
-  switch (Func) {
-  case LibFunc_sin:
-  case LibFunc_sinf:
-  case LibFunc_sinl:
-  case LibFunc_tan:
-  case LibFunc_tanf:
-  case LibFunc_tanl:
-    // sin(-X) --> -sin(X)
-    // tan(-X) --> -tan(X)
-    if (match(Call->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X)))))
-      return B.CreateFNeg(
-          copyFlags(*Call, B.CreateCall(Call->getCalledFunction(), X)));
-    break;
-  case LibFunc_cos:
-  case LibFunc_cosf:
-  case LibFunc_cosl: {
-    // cos(-x) --> cos(x)
-    // cos(fabs(x)) --> cos(x)
-    // cos(copysign(x, y)) --> cos(x)
-    Value *Sign;
-    Value *Src = Call->getArgOperand(0);
-    if (match(Src, m_FNeg(m_Value(X))) || match(Src, m_FAbs(m_Value(X))) ||
-        match(Src, m_CopySign(m_Value(X), m_Value(Sign))))
-      return copyFlags(*Call,
-                       B.CreateCall(Call->getCalledFunction(), X, "cos"));
-    break;
-  }
-  default:
-    break;
-  }
-  return nullptr;
 }
 
 // Return a properly extended integer (DstWidth bits wide) if the operation is
@@ -2797,6 +2754,63 @@ static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,
   return true;
 }
 
+static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
+                                    IRBuilderBase &B) {
+  Value *X;
+  Value *Src = CI->getArgOperand(0);
+
+  if (match(Src, m_OneUse(m_FNeg(m_Value(X))))) {
+    IRBuilderBase::FastMathFlagGuard Guard(B);
+    B.setFastMathFlags(CI->getFastMathFlags());
+
+    auto *CallInst = copyFlags(*CI, B.CreateCall(CI->getCalledFunction(), {X}));
+    if (IsEven) {
+      // Even function: f(-x) = f(x)
+      return CallInst;
+    }
+    // Odd function: f(-x) = -f(x)
+    return B.CreateFNeg(CallInst);
+  }
+
+  // Even function: f(abs(x)) = f(x), f(copysign(x, y)) = f(x)
+  if (IsEven && (match(Src, m_FAbs(m_Value(X))) ||
+                 match(Src, m_CopySign(m_Value(X), m_Value())))) {
+    IRBuilderBase::FastMathFlagGuard Guard(B);
+    B.setFastMathFlags(CI->getFastMathFlags());
+
+    auto *CallInst = copyFlags(*CI, B.CreateCall(CI->getCalledFunction(), {X}));
+    return CallInst;
+  }
+
+  return nullptr;
+}
+
+Value *LibCallSimplifier::optimizeSymmetric(CallInst *CI, LibFunc Func,
+                                            IRBuilderBase &B) {
+  switch (Func) {
+  case LibFunc_cos:
+  case LibFunc_cosf:
+  case LibFunc_cosl:
+    return optimizeSymmetricCall(CI, /*IsEven*/ true, B);
+
+  case LibFunc_sin:
+  case LibFunc_sinf:
+  case LibFunc_sinl:
+
+  case LibFunc_tan:
+  case LibFunc_tanf:
+  case LibFunc_tanl:
+
+  case LibFunc_erf:
+  case LibFunc_erff:
+  case LibFunc_erfl:
+    return optimizeSymmetricCall(CI, /*IsEven*/ false, B);
+
+  default:
+    return nullptr;
+  }
+}
+
 Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBase &B) {
   // Make sure the prototype is as expected, otherwise the rest of the
   // function is probably invalid and likely to abort.
@@ -2962,7 +2976,7 @@ Value *LibCallSimplifier::optimizeStrToInt(CallInst *CI, IRBuilderBase &B,
     // It would be readonly too, except that it still may write to errno.
     CI->addParamAttr(0, Attribute::NoCapture);
     EndPtr = nullptr;
-  } else if (!isKnownNonZero(EndPtr, DL))
+  } else if (!isKnownNonZero(EndPtr, /*Depth=*/0, DL))
     return nullptr;
 
   StringRef Str;
@@ -3388,7 +3402,7 @@ Value *LibCallSimplifier::optimizeSnPrintF(CallInst *CI, IRBuilderBase &B) {
     return V;
   }
 
-  if (isKnownNonZero(CI->getOperand(1), DL))
+  if (isKnownNonZero(CI->getOperand(1), /*Depth=*/0, DL))
     annotateNonNullNoUndefBasedOnAccess(CI, 0);
   return nullptr;
 }
@@ -3678,7 +3692,7 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   if (CI->isStrictFP())
     return nullptr;
 
-  if (Value *V = optimizeTrigReflections(CI, Func, Builder))
+  if (Value *V = optimizeSymmetric(CI, Func, Builder))
     return V;
 
   switch (Func) {

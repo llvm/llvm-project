@@ -27,8 +27,18 @@ using namespace llvm::coverage::mcdc;
 /// Per-Function MC/DC state
 struct State {
   unsigned BitmapBytes = 0;
-  llvm::DenseMap<const Stmt *, unsigned> BitmapMap;
-  llvm::DenseMap<const Stmt *, ConditionID> CondIDMap;
+
+  struct Decision {
+    unsigned BitmapIdx;
+  };
+
+  llvm::DenseMap<const Stmt *, Decision> DecisionByStmt;
+
+  struct Branch {
+    ConditionID ID;
+  };
+
+  llvm::DenseMap<const Stmt *, Branch> BranchByStmt;
 };
 
 } // namespace clang::CodeGen::MCDC

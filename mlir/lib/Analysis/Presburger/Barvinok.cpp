@@ -61,7 +61,7 @@ ConeH mlir::presburger::detail::getDual(ConeV cone) {
 }
 
 /// Find the index of a cone in V-representation.
-MPInt mlir::presburger::detail::getIndex(ConeV cone) {
+MPInt mlir::presburger::detail::getIndex(const ConeV &cone) {
   if (cone.getNumRows() > cone.getNumColumns())
     return MPInt(0);
 
@@ -79,7 +79,7 @@ MPInt mlir::presburger::detail::getIndex(ConeV cone) {
 /// coefficients.
 GeneratingFunction
 mlir::presburger::detail::computeUnimodularConeGeneratingFunction(
-    ParamPoint vertex, int sign, ConeH cone) {
+    ParamPoint vertex, int sign, const ConeH &cone) {
   // Consider a cone with H-representation [0  -1].
   //                                       [-1 -2]
   // Let the vertex be given by the matrix [ 2  2   0], with 2 params.
@@ -515,8 +515,7 @@ Point mlir::presburger::detail::getNonOrthogonalVector(
 /// barvinokalgorithm-latte1.pdf, p. 1285
 QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
     unsigned power, ArrayRef<QuasiPolynomial> num, ArrayRef<Fraction> den) {
-  assert(den.size() != 0 &&
-         "division by empty denominator in rational function!");
+  assert(!den.empty() && "division by empty denominator in rational function!");
 
   unsigned numParam = num[0].getNumInputs();
   // We use the `isEqual` method of PresburgerSpace, which QuasiPolynomial
@@ -556,8 +555,8 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
 /// v represents the affine functions whose floors are multiplied by the
 /// generators, and ds represents the list of generators.
 std::pair<QuasiPolynomial, std::vector<Fraction>>
-substituteMuInTerm(unsigned numParams, ParamPoint v, std::vector<Point> ds,
-                   Point mu) {
+substituteMuInTerm(unsigned numParams, const ParamPoint &v,
+                   const std::vector<Point> &ds, const Point &mu) {
   unsigned numDims = mu.size();
 #ifndef NDEBUG
   for (const Point &d : ds)
@@ -613,10 +612,10 @@ void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
   // denominator, and convert them to their absolute values.
   unsigned numNegExps = 0;
   Fraction sumNegExps(0, 1);
-  for (unsigned j = 0, e = dens.size(); j < e; ++j) {
-    if (dens[j] < 0) {
+  for (const auto &den : dens) {
+    if (den < 0) {
       numNegExps += 1;
-      sumNegExps += dens[j];
+      sumNegExps += den;
     }
   }
 
@@ -635,12 +634,12 @@ void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
 
 /// Compute the binomial coefficients nCi for 0 ≤ i ≤ r,
 /// where n is a QuasiPolynomial.
-std::vector<QuasiPolynomial> getBinomialCoefficients(QuasiPolynomial n,
+std::vector<QuasiPolynomial> getBinomialCoefficients(const QuasiPolynomial &n,
                                                      unsigned r) {
   unsigned numParams = n.getNumInputs();
   std::vector<QuasiPolynomial> coefficients;
   coefficients.reserve(r + 1);
-  coefficients.push_back(QuasiPolynomial(numParams, 1));
+  coefficients.emplace_back(numParams, 1);
   for (unsigned j = 1; j <= r; ++j)
     // We use the recursive formula for binomial coefficients here and below.
     coefficients.push_back(
@@ -652,10 +651,11 @@ std::vector<QuasiPolynomial> getBinomialCoefficients(QuasiPolynomial n,
 
 /// Compute the binomial coefficients nCi for 0 ≤ i ≤ r,
 /// where n is a QuasiPolynomial.
-std::vector<Fraction> getBinomialCoefficients(Fraction n, Fraction r) {
+std::vector<Fraction> getBinomialCoefficients(const Fraction &n,
+                                              const Fraction &r) {
   std::vector<Fraction> coefficients;
   coefficients.reserve((int64_t)floor(r));
-  coefficients.push_back(1);
+  coefficients.emplace_back(1);
   for (unsigned j = 1; j <= r; ++j)
     coefficients.push_back(coefficients[j - 1] * (n - (j - 1)) / (j));
   return coefficients;
@@ -722,8 +722,8 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
     // Then, using the formula for geometric series, we replace each (1 -
     // (s+1)^(dens[j])) with
     // (-s)(\sum_{0 ≤ k < dens[j]} (s+1)^k).
-    for (unsigned j = 0, e = dens.size(); j < e; ++j)
-      dens[j] = abs(dens[j]) - 1;
+    for (auto &j : dens)
+      j = abs(j) - 1;
     // Note that at this point, the semantics of `dens[j]` changes to mean
     // a term (\sum_{0 ≤ k ≤ dens[j]} (s+1)^k). The denominator is, as before,
     // a product of these terms.

@@ -532,11 +532,11 @@ def VOP3_CVT_PK_F8_F32_Profile : VOP3_Profile<VOP_I32_F32_F32, VOP3_OPSEL> {
                           FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
                           VGPR_32:$vdst_in, op_sel0:$op_sel,
                           dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
-                          DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, DppFI:$fi);
+                          DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi);
   let InsVOP3DPP8 = (ins VGPR_32:$old,
                          FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
                          FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
-                         VGPR_32:$vdst_in, op_sel0:$op_sel, dpp8:$dpp8, DppFI:$fi);
+                         VGPR_32:$vdst_in, op_sel0:$op_sel, dpp8:$dpp8, Dpp8FI:$fi);
 
   let HasClamp = 0;
   let HasExtVOP3DPP = 1;
@@ -553,12 +553,12 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
                           FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
                           FP32InputMods:$src2_modifiers, VGPR_32:$src2,
                           op_sel0:$op_sel, dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
-                          DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, DppFI:$fi);
+                          DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi);
   let InsVOP3DPP8 = (ins VGPR_32:$old,
                          FP32InputMods:$src0_modifiers, Src0VOP3DPP:$src0,
                          FP32InputMods:$src1_modifiers, Src1VOP3DPP:$src1,
                          FP32InputMods:$src2_modifiers, VGPR_32:$src2,
-                         op_sel0:$op_sel, dpp8:$dpp8, DppFI:$fi);
+                         op_sel0:$op_sel, dpp8:$dpp8, Dpp8FI:$fi);
   let HasClamp = 0;
   let HasSrc2 = 0;
   let HasSrc2Mods = 1;
@@ -728,25 +728,34 @@ def : OpSelBinOpClampPat<saddsat, V_ADD_I16_e64>;
 def : OpSelBinOpClampPat<ssubsat, V_SUB_I16_e64>;
 } // End SubtargetPredicate = isGFX9Plus
 
-// FIXME: GlobalISel in general does not handle instructions with 2 results,
-// so it cannot use these patterns.
 multiclass IMAD32_Pats <VOP3_Pseudo inst> {
   def : GCNPat <
         (ThreeOpFrag<mul, add> i32:$src0, i32:$src1, i32:$src2),
-        (EXTRACT_SUBREG (inst $src0, $src1,
+        (EXTRACT_SUBREG (inst i32:$src0, i32:$src1,
                               (REG_SEQUENCE SReg_64, // Use scalar and let it be legalized
                                             $src2, sub0,
                                             (i32 (IMPLICIT_DEF)), sub1),
                                             0 /* clamp */),
                         sub0)
         >;
+
+  // GISel-specific pattern that avoids creating a SGPR->VGPR copy if
+  // $src2 is a VGPR.
+  def : GCNPat <
+        (ThreeOpFrag<mul, add> i32:$src0, i32:$src1, VGPR_32:$src2),
+        (EXTRACT_SUBREG (inst i32:$src0, i32:$src1,
+                              (REG_SEQUENCE VReg_64,
+                                            $src2, sub0,
+                                            (i32 (IMPLICIT_DEF)), sub1),
+                                            0 /* clamp */),
+                        sub0)
+        >;
+
   // Immediate src2 in the pattern above will not fold because it would be partially
   // undef. Hence define specialized pattern for this case.
-  // FIXME: GlobalISel pattern exporter fails to export a pattern like this and asserts,
-  // make it SDAG only.
   def : GCNPat <
-        (ThreeOpFragSDAG<mul, add> i32:$src0, i32:$src1, (i32 imm:$src2)),
-        (EXTRACT_SUBREG (inst $src0, $src1, (i64 (as_i64imm $src2)), 0 /* clamp */), sub0)
+        (ThreeOpFrag<mul, add> i32:$src0, i32:$src1, (i32 imm:$src2)),
+        (EXTRACT_SUBREG (inst i32:$src0, i32:$src1, (i64 (as_i64imm $src2)), 0 /* clamp */), sub0)
         >;
 }
 
@@ -893,7 +902,7 @@ let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
   defm V_MINIMUMMAXIMUM_F16 : VOP3Inst<"v_minimummaximum_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>>;
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
 
-let SubtargetPredicate = HasDot9Insts, IsDOT=1 in {
+let OtherPredicates = [HasDot9Insts], IsDOT=1 in {
   defm V_DOT2_F16_F16 :   VOP3Inst<"v_dot2_f16_f16",   VOP3_DOT_Profile<VOP_F16_V2F16_V2F16_F16>, int_amdgcn_fdot2_f16_f16>;
   defm V_DOT2_BF16_BF16 : VOP3Inst<"v_dot2_bf16_bf16", VOP3_DOT_Profile<VOP_BF16_V2BF16_V2BF16_BF16>, int_amdgcn_fdot2_bf16_bf16>;
 }
@@ -1647,9 +1656,7 @@ defm V_CVT_PKNORM_U16_F16 : VOP3OpSel_Real_gfx9 <0x29a>;
 
 defm V_LSHL_ADD_U64 : VOP3_Real_vi <0x208>;
 
-let OtherPredicates = [HasFP8ConversionInsts] in {
 defm V_CVT_PK_FP8_F32 : VOP3OpSel_Real_gfx9 <0x2a2>;
 defm V_CVT_PK_BF8_F32 : VOP3OpSel_Real_gfx9 <0x2a3>;
 defm V_CVT_SR_FP8_F32 : VOP3OpSel_Real_gfx9_forced_opsel2 <0x2a4>;
 defm V_CVT_SR_BF8_F32 : VOP3OpSel_Real_gfx9_forced_opsel2 <0x2a5>;
-}

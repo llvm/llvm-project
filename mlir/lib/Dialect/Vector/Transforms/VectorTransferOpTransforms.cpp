@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -577,7 +578,6 @@ public:
     if (transferReadOp.getMask())
       return failure();
 
-    SmallVector<Value> collapsedIndices;
     int64_t firstDimToCollapse = sourceType.getRank() - vectorType.getRank();
 
     // 1. Collapse the source memref
@@ -599,12 +599,14 @@ public:
     // 2.2 New indices
     // If all the collapsed indices are zero then no extra logic is needed.
     // Otherwise, a new offset/index has to be computed.
+    SmallVector<Value> collapsedIndices;
     if (failed(checkAndCollapseInnerZeroIndices(transferReadOp.getIndices(),
                                                 firstDimToCollapse,
                                                 collapsedIndices))) {
-      // Copy all the leading indices
-      collapsedIndices = transferReadOp.getIndices();
-      collapsedIndices.resize(firstDimToCollapse);
+      // Copy all the leading indices.
+      SmallVector<Value> indices = transferReadOp.getIndices();
+      collapsedIndices.append(indices.begin(),
+                              indices.begin() + firstDimToCollapse);
 
       // Compute the remaining trailing index/offset required for reading from
       // the collapsed memref:
@@ -621,24 +623,26 @@ public:
       //      memref<1x86xi32>, vector<2xi32>
       // one would get the following offset:
       //    %offset = %arg0 * 43
-      AffineExpr offsetExpr, idxExpr;
-      bindSymbols(rewriter.getContext(), offsetExpr, idxExpr);
-
-      int64_t outputRank = transferReadOp.getIndices().size();
-      OpFoldResult offset =
+      OpFoldResult collapsedOffset =
           rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult();
 
-      for (int64_t i = firstDimToCollapse; i < outputRank; ++i) {
-        int64_t dim = dyn_cast<ShapedType>(source.getType()).getDimSize(i);
-        offset = affine::makeComposedFoldedAffineApply(
-            rewriter, loc, offsetExpr + dim * idxExpr,
-            {offset, transferReadOp.getIndices()[i]});
-      }
-      if (offset.is<Value>()) {
-        collapsedIndices.push_back(offset.get<Value>());
+      auto sourceShape = sourceType.getShape();
+      auto collapsedStrides = computeSuffixProduct(ArrayRef<int64_t>(
+          sourceShape.begin() + firstDimToCollapse, sourceShape.end()));
+
+      // Compute the collapsed offset.
+      ArrayRef<Value> indicesToCollapse(indices.begin() + firstDimToCollapse,
+                                        indices.end());
+      auto &&[collapsedExpr, collapsedVals] = computeLinearIndex(
+          collapsedOffset, collapsedStrides, indicesToCollapse);
+      collapsedOffset = affine::makeComposedFoldedAffineApply(
+          rewriter, loc, collapsedExpr, collapsedVals);
+
+      if (collapsedOffset.is<Value>()) {
+        collapsedIndices.push_back(collapsedOffset.get<Value>());
       } else {
         collapsedIndices.push_back(rewriter.create<arith::ConstantIndexOp>(
-            loc, *getConstantIntValue(offset)));
+            loc, *getConstantIntValue(collapsedOffset)));
       }
     }
 
@@ -710,6 +714,7 @@ public:
                                                 firstContiguousInnerDim,
                                                 collapsedIndices)))
       return failure();
+
     Value collapsedSource =
         collapseInnerDims(rewriter, loc, source, firstContiguousInnerDim);
     MemRefType collapsedSourceType =

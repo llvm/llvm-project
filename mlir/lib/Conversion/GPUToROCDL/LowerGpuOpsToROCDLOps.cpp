@@ -75,6 +75,11 @@ Value getLaneId(ConversionPatternRewriter &rewriter, Location loc,
                                                    ValueRange{minus1, mbcntLo});
   return laneId;
 }
+static constexpr StringLiteral amdgcnDataLayout =
+    "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
+    "-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:"
+    "128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-"
+    "G1-ni:7:8";
 
 namespace {
 struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
@@ -212,6 +217,12 @@ struct LowerGpuOpsToROCDLOpsPass
     gpu::GPUModuleOp m = getOperation();
     MLIRContext *ctx = m.getContext();
 
+    auto llvmDataLayout = m->getAttrOfType<StringAttr>(
+        LLVM::LLVMDialect::getDataLayoutAttrName());
+    if (!llvmDataLayout) {
+      llvmDataLayout = StringAttr::get(ctx, amdgcnDataLayout);
+      m->setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(), llvmDataLayout);
+    }
     // Request C wrapper emission.
     for (auto func : m.getOps<func::FuncOp>()) {
       func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
@@ -227,6 +238,7 @@ struct LowerGpuOpsToROCDLOpsPass
     /// Customize the bitwidth used for the device side index computations.
     LowerToLLVMOptions options(
         ctx, DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
+    options.dataLayout = llvm::DataLayout(llvmDataLayout.getValue());
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 

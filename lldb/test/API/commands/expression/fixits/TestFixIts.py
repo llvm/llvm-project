@@ -79,11 +79,11 @@ class ExprCommandWithFixits(TestBase):
         self.assertTrue(value.IsValid())
         self.assertTrue(value.GetError().Fail())
         error_string = value.GetError().GetCString()
-        self.assertTrue(
-            error_string.find("fixed expression suggested:") != -1, "Fix was suggested"
+        self.assertNotEqual(
+            error_string.find("fixed expression suggested:"), -1, "Fix was suggested"
         )
-        self.assertTrue(
-            error_string.find("my_pointer->second.a") != -1, "Fix was right"
+        self.assertNotEqual(
+            error_string.find("my_pointer->second.a"), -1, "Fix was right"
         )
 
     def test_with_target_error_applies_fixit(self):

@@ -14,6 +14,7 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "SPIRVInstrInfo.h"
+#include "SPIRVSubtarget.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -146,15 +147,19 @@ unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 3;
   case SPIRV::StorageClass::Generic:
     return 4;
+  case SPIRV::StorageClass::DeviceOnlyINTEL:
+    return 5;
+  case SPIRV::StorageClass::HostOnlyINTEL:
+    return 6;
   case SPIRV::StorageClass::Input:
     return 7;
   default:
-    llvm_unreachable("Unable to get address space id");
+    report_fatal_error("Unable to get address space id");
   }
 }
 
 SPIRV::StorageClass::StorageClass
-addressSpaceToStorageClass(unsigned AddrSpace) {
+addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {
   case 0:
     return SPIRV::StorageClass::Function;
@@ -166,10 +171,18 @@ addressSpaceToStorageClass(unsigned AddrSpace) {
     return SPIRV::StorageClass::Workgroup;
   case 4:
     return SPIRV::StorageClass::Generic;
+  case 5:
+    return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
+               ? SPIRV::StorageClass::DeviceOnlyINTEL
+               : SPIRV::StorageClass::CrossWorkgroup;
+  case 6:
+    return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
+               ? SPIRV::StorageClass::HostOnlyINTEL
+               : SPIRV::StorageClass::CrossWorkgroup;
   case 7:
     return SPIRV::StorageClass::Input;
   default:
-    llvm_unreachable("Unknown address space");
+    report_fatal_error("Unknown address space");
   }
 }
 
@@ -238,7 +251,8 @@ bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
 }
 
 Type *getMDOperandAsType(const MDNode *N, unsigned I) {
-  return cast<ValueAsMetadata>(N->getOperand(I))->getType();
+  Type *ElementTy = cast<ValueAsMetadata>(N->getOperand(I))->getType();
+  return toTypedPointer(ElementTy, N->getContext());
 }
 
 // The set of names is borrowed from the SPIR-V translator.
@@ -293,10 +307,12 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   bool IsNonMangledOCL = isNonMangledOCLBuiltin(Name);
   bool IsNonMangledSPIRV = Name.starts_with("__spirv_");
+  bool IsNonMangledHLSL = Name.starts_with("__hlsl_");
   bool IsMangled = Name.starts_with("_Z");
 
-  if (!IsNonMangledOCL && !IsNonMangledSPIRV && !IsMangled)
-    return std::string();
+  // Otherwise use simple demangling to return the function name.
+  if (IsNonMangledOCL || IsNonMangledSPIRV || IsNonMangledHLSL || !IsMangled)
+    return Name.str();
 
   // Try to use the itanium demangler.
   if (char *DemangledName = itaniumDemangle(Name.data())) {
@@ -304,9 +320,6 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     free(DemangledName);
     return Result;
   }
-  // Otherwise use simple demangling to return the function name.
-  if (IsNonMangledOCL || IsNonMangledSPIRV)
-    return Name.str();
 
   // Autocheck C++, maybe need to do explicit check of the source language.
   // OpenCL C++ built-ins are declared in cl namespace.
@@ -328,25 +341,15 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
   return Name.substr(Start, Len).str();
 }
 
-const Type *getTypedPtrEltType(const Type *Ty) {
-  // TODO: This function requires updating following the opaque pointer
-  // migration.
-  return Ty;
-}
-
 bool hasBuiltinTypePrefix(StringRef Name) {
-  if (Name.starts_with("opencl.") || Name.starts_with("spirv."))
+  if (Name.starts_with("opencl.") || Name.starts_with("ocl_") ||
+      Name.starts_with("spirv."))
     return true;
   return false;
 }
 
 bool isSpecialOpaqueType(const Type *Ty) {
-  const StructType *SType = dyn_cast<StructType>(getTypedPtrEltType(Ty));
-  if (SType && SType->hasName())
-    return hasBuiltinTypePrefix(SType->getName());
-
-  if (const TargetExtType *EType =
-          dyn_cast<TargetExtType>(getTypedPtrEltType(Ty)))
+  if (const TargetExtType *EType = dyn_cast<TargetExtType>(Ty))
     return hasBuiltinTypePrefix(EType->getName());
 
   return false;
@@ -365,4 +368,38 @@ bool isEntryPoint(const Function &F) {
 
   return false;
 }
+
+Type *parseBasicTypeName(StringRef TypeName, LLVMContext &Ctx) {
+  TypeName.consume_front("atomic_");
+  if (TypeName.consume_front("void"))
+    return Type::getVoidTy(Ctx);
+  else if (TypeName.consume_front("bool"))
+    return Type::getIntNTy(Ctx, 1);
+  else if (TypeName.consume_front("char") ||
+           TypeName.consume_front("unsigned char") ||
+           TypeName.consume_front("uchar"))
+    return Type::getInt8Ty(Ctx);
+  else if (TypeName.consume_front("short") ||
+           TypeName.consume_front("unsigned short") ||
+           TypeName.consume_front("ushort"))
+    return Type::getInt16Ty(Ctx);
+  else if (TypeName.consume_front("int") ||
+           TypeName.consume_front("unsigned int") ||
+           TypeName.consume_front("uint"))
+    return Type::getInt32Ty(Ctx);
+  else if (TypeName.consume_front("long") ||
+           TypeName.consume_front("unsigned long") ||
+           TypeName.consume_front("ulong"))
+    return Type::getInt64Ty(Ctx);
+  else if (TypeName.consume_front("half"))
+    return Type::getHalfTy(Ctx);
+  else if (TypeName.consume_front("float"))
+    return Type::getFloatTy(Ctx);
+  else if (TypeName.consume_front("double"))
+    return Type::getDoubleTy(Ctx);
+
+  // Unable to recognize SPIRV type name
+  return nullptr;
+}
+
 } // namespace llvm

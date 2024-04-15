@@ -76,7 +76,9 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         )
         self.assertTrue(no_files_bkpt, VALID_BREAKPOINT)
         num_locations = no_files_bkpt.GetNumLocations()
-        self.assertTrue(num_locations >= 2, "Got at least two breakpoint locations")
+        self.assertGreaterEqual(
+            num_locations, 2, "Got at least two breakpoint locations"
+        )
         got_one_in_A = False
         got_one_in_B = False
         for idx in range(0, num_locations):

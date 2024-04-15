@@ -22,7 +22,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertTrue(process.GetProcessInfo().IsValid())
         self.assertEqual(process.GetProcessInfo().GetProcessID(), expected_pid)
-        self.assertTrue(target.GetTriple().find("linux") != -1)
+        self.assertNotEqual(target.GetTriple().find("linux"), -1)
         self.assertTrue(target.GetNumModules(), len(expected_modules))
         self.assertEqual(process.GetNumThreads(), len(expected_threads))
 
@@ -40,7 +40,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             thread = process.GetThreadAtIndex(thread_idx)
             self.assertTrue(thread.IsValid())
             thread_id = thread.GetThreadID()
-            self.assertTrue(thread_id in expected_threads)
+            self.assertIn(thread_id, expected_threads)
         self.dbg.DeleteTarget(target)
 
     @skipUnlessArch("x86_64")

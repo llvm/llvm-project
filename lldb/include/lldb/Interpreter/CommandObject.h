@@ -207,6 +207,20 @@ public:
   static const ArgumentTableEntry *
   FindArgumentDataByType(lldb::CommandArgumentType arg_type);
 
+  // Sets the argument list for this command to one homogenous argument type,
+  // with the repeat specified.
+  void AddSimpleArgumentList(
+      lldb::CommandArgumentType arg_type,
+      ArgumentRepetitionType repetition_type = eArgRepeatPlain);
+
+  // Helper function to set BP IDs or ID ranges as the command argument data
+  // for this command.
+  // This used to just populate an entry you could add to, but that was never
+  // used.  If we ever need that we can take optional extra args here.
+  // Use this to define a simple argument list:
+  enum IDType { eBreakpointArgs = 0, eWatchpointArgs = 1 };
+  void AddIDsArgumentData(IDType type);
+
   int GetNumArgumentEntries();
 
   CommandArgumentEntry *GetArgumentEntryAtIndex(int idx);
@@ -391,12 +405,6 @@ protected:
   lldb_private::CommandOverrideCallbackWithResult m_command_override_callback;
   void *m_command_override_baton;
   bool m_is_user_command = false;
-
-  // Helper function to populate IDs or ID ranges as the command argument data
-  // to the specified command argument entry.
-  static void AddIDsArgumentData(CommandArgumentEntry &arg,
-                                 lldb::CommandArgumentType ID,
-                                 lldb::CommandArgumentType IDRange);
 };
 
 class CommandObjectParsed : public CommandObject {
