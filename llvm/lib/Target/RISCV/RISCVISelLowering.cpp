@@ -10402,15 +10402,9 @@ RISCVTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
       RISCVTargetLowering::computeVLMAXBounds(ContainerVT, Subtarget);
   if (MinVLMAX == MaxVLMAX && MinVLMAX == VT.getVectorNumElements() &&
       getLMUL1VT(ContainerVT).bitsLE(ContainerVT)) {
-    MachineMemOperand *MMO = Load->getMemOperand();
-    MachineFunction &MF = DAG.getMachineFunction();
-    MMO = MF.getMachineMemOperand(
-        MMO, MMO->getPointerInfo(),
-        MMO->getMemoryType().isValid()
-            ? LLT::scalable_vector(1, MMO->getMemoryType().getSizeInBits())
-            : MMO->getMemoryType());
     SDValue NewLoad =
-        DAG.getLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(), MMO);
+        DAG.getLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
+                    Load->getMemOperand());
     SDValue Result = convertFromScalableVector(VT, NewLoad, DAG, Subtarget);
     return DAG.getMergeValues({Result, NewLoad.getValue(1)}, DL);
   }
@@ -10468,17 +10462,9 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
   const auto [MinVLMAX, MaxVLMAX] =
       RISCVTargetLowering::computeVLMAXBounds(ContainerVT, Subtarget);
   if (MinVLMAX == MaxVLMAX && MinVLMAX == VT.getVectorNumElements() &&
-      getLMUL1VT(ContainerVT).bitsLE(ContainerVT)) {
-    MachineMemOperand *MMO = Store->getMemOperand();
-    MachineFunction &MF = DAG.getMachineFunction();
-    MMO = MF.getMachineMemOperand(
-        MMO, MMO->getPointerInfo(),
-        MMO->getMemoryType().isValid()
-            ? LLT::scalable_vector(1, MMO->getMemoryType().getSizeInBits())
-            : MMO->getMemoryType());
+      getLMUL1VT(ContainerVT).bitsLE(ContainerVT))
     return DAG.getStore(Store->getChain(), DL, NewValue, Store->getBasePtr(),
-                        MMO);
-  }
+                        Store->getMemOperand());
 
   SDValue VL = getVLOp(VT.getVectorNumElements(), ContainerVT, DL, DAG,
                        Subtarget);

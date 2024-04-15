@@ -2687,7 +2687,10 @@ bool AArch64InstrInfo::getMemOperandsWithOffsetWidth(
     return false;
   // The maximum vscale is 16 under AArch64, return the maximal extent for the
   // vector.
-  Width = LocationSize::precise(WidthN);
+  Width = WidthN.isScalable()
+              ? WidthN.getKnownMinValue() * AArch64::SVEMaxBitsPerVector /
+                    AArch64::SVEBitsPerBlock
+              : WidthN.getKnownMinValue();
   BaseOps.push_back(BaseOp);
   return true;
 }
