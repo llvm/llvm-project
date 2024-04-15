@@ -1928,6 +1928,7 @@ cc_library(
         ":frontend",
         ":lex",
         ":sema",
+        ":serialization",
         ":type_nodes_gen",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:Analysis",
