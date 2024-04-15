@@ -943,7 +943,7 @@ public:
   // out of Type.h, but where to?
 
   /// All functions/lambdas/blocks which have bodies and which have a non-empty
-  /// FunctionTypeEffects to be verified.
+  /// FunctionTypeEffectsRef to be verified.
   SmallVector<const Decl *> DeclsWithEffectsToVerify;
   /// The union of all effects present on DeclsWithEffectsToVerify. Conditions
   /// are all null.
@@ -954,7 +954,7 @@ public:
                                         SourceLocation Loc);
 
   /// Potentially add a FunctionDecl or BlockDecl to DeclsWithEffectsToVerify.
-  void maybeAddDeclWithEffects(const Decl *D, const FunctionTypeEffects &FX);
+  void maybeAddDeclWithEffects(const Decl *D, const FunctionTypeEffectsRef &FX);
 
   // ----- function effects --- where ?????
 

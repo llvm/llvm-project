@@ -2527,7 +2527,7 @@ public:
 
   void insert(const FunctionEffect &Effect);
   void insert(const FunctionEffectSet &Set);
-  void insertIgnoringConditions(ArrayRef<CondFunctionEffect> Arr);
+  void insertIgnoringConditions(const FunctionTypeEffectsRef &FX);
 
   void dump(llvm::raw_ostream &OS) const;
 
@@ -2554,9 +2554,9 @@ void FunctionEffectSet::insert(const FunctionEffectSet &Set) {
 }
 
 void FunctionEffectSet::insertIgnoringConditions(
-    ArrayRef<CondFunctionEffect> Arr) {
-  for (auto &Item : Arr)
-    insert(Item.effect());
+    const FunctionTypeEffectsRef &FX) {
+  for (const auto &Item : FX)
+    insert(Item.Effect);
 }
 
 LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
@@ -2594,7 +2594,7 @@ struct CallableInfo {
   CallableInfo(const Decl &CD, SpecialFuncType FT = SpecialFuncType::None)
       : CDecl(&CD), FuncType(FT) {
     // llvm::errs() << "CallableInfo " << name() << "\n";
-    FunctionTypeEffects FX;
+    FunctionTypeEffectsRef FX;
 
     if (auto *FD = dyn_cast<FunctionDecl>(CDecl)) {
       // Use the function's definition, if any.
@@ -2613,7 +2613,7 @@ struct CallableInfo {
       FX = BD->getFunctionEffects();
     } else if (auto *VD = dyn_cast<ValueDecl>(CDecl)) {
       // ValueDecl is function, enum, or variable, so just look at its type.
-      FX = FunctionTypeEffects::get(VD->getType());
+      FX = FunctionTypeEffectsRef::get(VD->getType());
     }
     Effects.insertIgnoringConditions(FX);
   }
@@ -2967,7 +2967,7 @@ public:
     // be checked, and to see which ones are inferrable.
     {
       for (const CondFunctionEffect &CFE : Sem.AllEffectsToVerify) {
-        const FunctionEffect &Effect = CFE.effect();
+        const FunctionEffect &Effect = CFE.Effect;
         const auto Flags = Effect.flags();
         if (Flags & FunctionEffect::FE_InferrableOnCallees) {
           AllInferrableEffectsToVerify.insert(Effect);
@@ -3718,14 +3718,14 @@ private:
 
     void run(const MatchFinder::MatchResult &Result) override {
       if (auto *Callable = Result.Nodes.getNodeAs<Decl>(Tag_Callable)) {
-        if (const auto FX = functionEffectsForDecl(Callable)) {
+        if (const auto FX = functionEffectsForDecl(Callable); !FX.empty()) {
           // Reuse this filtering method in Sema
           Sem.maybeAddDeclWithEffects(Callable, FX);
         }
       }
     }
 
-    static FunctionTypeEffects functionEffectsForDecl(const Decl *D) {
+    static FunctionTypeEffectsRef functionEffectsForDecl(const Decl *D) {
       if (auto *FD = D->getAsFunction()) {
         return FD->getFunctionEffects();
       }

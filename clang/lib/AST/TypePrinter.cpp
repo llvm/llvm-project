@@ -998,9 +998,9 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
   }
   T->printExceptionSpecification(OS, Policy);
 
-  const FunctionTypeEffects FX = T->getFunctionEffects();
+  const FunctionTypeEffectsRef FX = T->getFunctionEffects();
   for (const auto &CFE : FX)
-    OS << " __attribute__((clang_" << CFE.effect().name() << "))";
+    OS << " __attribute__((clang_" << CFE.Effect.name() << "))";
   // $$$ TODO: Conditions ???
 
   if (T->hasTrailingReturn()) {

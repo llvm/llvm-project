@@ -17156,7 +17156,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   BlockScopeInfo *BSI = cast<BlockScopeInfo>(FunctionScopes.back());
   BlockDecl *BD = BSI->TheDecl;
 
-  if (const auto FX = BD->getFunctionEffects()) {
+  if (const auto FX = BD->getFunctionEffects(); !FX.empty()) {
     maybeAddDeclWithEffects(BD, FX);
   }
 

@@ -1889,7 +1889,7 @@ ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
 
-  if (const auto FX = LSI.CallOperator->getFunctionEffects()) {
+  if (const auto FX = LSI.CallOperator->getFunctionEffects(); !FX.empty()) {
     maybeAddDeclWithEffects(LSI.CallOperator, FX);
   }
 

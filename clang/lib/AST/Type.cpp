@@ -3638,13 +3638,20 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     EllipsisLoc = epi.EllipsisLoc;
   }
 
-  if (epi.FunctionEffects) {
+  if (!epi.FunctionEffects.empty()) {
     auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
     // TODO: bitfield overflow?
-    if (epi.FunctionEffects) {
-      ExtraBits.NumFunctionEffects = epi.FunctionEffects.size();
-      CondFunctionEffect *CFE = getTrailingObjects<CondFunctionEffect>();
-      std::copy(epi.FunctionEffects.begin(), epi.FunctionEffects.end(), CFE);
+    ExtraBits.NumFunctionEffects = epi.FunctionEffects.size();
+
+    ArrayRef<FunctionEffect> SrcFX = epi.FunctionEffects.effects();
+    auto *DestFX = getTrailingObjects<FunctionEffect>();
+    std::copy(SrcFX.begin(), SrcFX.end(), DestFX);
+
+    ArrayRef<FunctionEffectCondExpr> SrcConds =
+        epi.FunctionEffects.conditions();
+    if (!SrcConds.empty()) {
+      auto *DestConds = getTrailingObjects<FunctionEffectCondExpr>();
+      std::copy(SrcConds.begin(), SrcConds.end(), DestConds);
     }
   }
 }
@@ -5043,8 +5050,8 @@ StringRef FunctionEffect::name() const {
 }
 
 bool FunctionEffect::shouldDiagnoseConversion(
-    bool Adding, QualType OldType, const FunctionTypeEffects &OldFX,
-    QualType NewType, const FunctionTypeEffects &NewFX) const {
+    bool Adding, QualType OldType, const FunctionTypeEffectsRef &OldFX,
+    QualType NewType, const FunctionTypeEffectsRef &NewFX) const {
 
   switch (kind()) {
   case Kind::NonAllocating:
@@ -5052,7 +5059,7 @@ bool FunctionEffect::shouldDiagnoseConversion(
     // have nonblocking
     if (Adding) {
       for (const auto &CFE : OldFX) {
-        if (CFE.effect().kind() == Kind::NonBlocking)
+        if (CFE.Effect.kind() == Kind::NonBlocking)
           return false;
       }
     }
@@ -5068,8 +5075,8 @@ bool FunctionEffect::shouldDiagnoseConversion(
 
 bool FunctionEffect::shouldDiagnoseRedeclaration(
     bool Adding, const FunctionDecl &OldFunction,
-    const FunctionTypeEffects &OldFX, const FunctionDecl &NewFunction,
-    const FunctionTypeEffects &NewFX) const {
+    const FunctionTypeEffectsRef &OldFX, const FunctionDecl &NewFunction,
+    const FunctionTypeEffectsRef &NewFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking:
@@ -5084,8 +5091,8 @@ bool FunctionEffect::shouldDiagnoseRedeclaration(
 
 FunctionEffect::OverrideResult FunctionEffect::shouldDiagnoseMethodOverride(
     bool Adding, const CXXMethodDecl &OldMethod,
-    const FunctionTypeEffects &OldFX, const CXXMethodDecl &NewMethod,
-    const FunctionTypeEffects &NewFX) const {
+    const FunctionTypeEffectsRef &OldFX, const CXXMethodDecl &NewMethod,
+    const FunctionTypeEffectsRef &NewFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking:
@@ -5156,65 +5163,125 @@ bool FunctionEffect::shouldDiagnoseFunctionCall(
 
 // =====
 
-void FunctionTypeEffects::Profile(llvm::FoldingSetNodeID &ID) const {
-  ID.AddInteger(size());
-  for (const auto &CFE : Items) {
-    ID.AddInteger(llvm::to_underlying(CFE.effect().kind()));
-    ID.AddPointer(CFE.condition());
+void FunctionTypeEffectsRef::Profile(llvm::FoldingSetNodeID &ID) const {
+  const bool HasConds = !Conditions.empty();
+
+  ID.AddInteger(size() | (HasConds << 31u));
+  for (unsigned Idx = 0, Count = Effects.size(); Idx != Count; ++Idx) {
+    ID.AddInteger(llvm::to_underlying(Effects[Idx].kind()));
+    if (HasConds)
+      ID.AddPointer(Conditions[Idx].Cond);
   }
 }
 
+void FunctionTypeEffectSet::insert(FunctionEffect Effect, const Expr *Cond) {
+  // lower_bound would be overkill
+  unsigned Idx = 0;
+  for (unsigned Count = Effects.size(); Idx != Count; ++Idx) {
+    const auto &IterEffect = Effects[Idx];
+    if (IterEffect == Effect) {
+      // TODO: Is it okay to assume the caller has already diagnosed
+      // any potential conflict with conditions here?
+      return;
+    }
+    if (Effect < IterEffect)
+      break;
+  }
+
+  if (Cond != nullptr) {
+    if (Conditions.empty() && !Effects.empty())
+      Conditions.resize(Effects.size());
+    Conditions.insert(Conditions.begin() + Idx, FunctionEffectCondExpr{Cond});
+  }
+  Effects.insert(Effects.begin() + Idx, Effect);
+}
+
+void FunctionTypeEffectSet::insert(const FunctionTypeEffectsRef &Set) {
+  for (const auto &Item : Set)
+    insert(Item.Effect, Item.Cond);
+}
+
+void FunctionTypeEffectSet::insertIgnoringConditions(
+    const FunctionTypeEffectsRef &Set) {
+  for (const auto &Item : Set)
+    insert(Item.Effect, nullptr);
+}
+
 FunctionTypeEffectSet
-FunctionTypeEffectSet::getUnion(ArrayRef<CondFunctionEffect> LHS,
-                                ArrayRef<CondFunctionEffect> RHS) {
+FunctionTypeEffectSet::getUnion(FunctionTypeEffectsRef LHS,
+                                FunctionTypeEffectsRef RHS) {
   // Optimize for either of the two sets being empty (very common).
   if (LHS.empty())
     return FunctionTypeEffectSet(RHS);
-  if (RHS.empty())
-    return FunctionTypeEffectSet(LHS);
 
-  // Optimize for the two sets being identical (very common).
-  if (LHS == RHS)
-    return FunctionTypeEffectSet(LHS);
-
-  FunctionTypeEffectSet Result;
-  Result.Impl.reserve(LHS.size() + RHS.size());
-  std::set_union(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
-                 std::back_inserter(Result.Impl));
+  FunctionTypeEffectSet Result(LHS);
+  Result.insert(RHS);
   return Result;
 }
 
 FunctionTypeEffectSet::Differences
-FunctionTypeEffectSet::differences(const FunctionTypeEffects &Old,
-                                   const FunctionTypeEffects &New) {
-  // TODO: Could be a one-pass algorithm.
-  Differences Result;
-  for (const auto &Effect : FunctionTypeEffectSet::difference(New, Old)) {
-    Result.emplace_back(Effect, true);
+FunctionTypeEffectSet::differences(const FunctionTypeEffectsRef &Old,
+                                   const FunctionTypeEffectsRef &New) {
+
+  FunctionTypeEffectSet::Differences Result;
+
+  FunctionTypeEffectsRef::iterator POld = Old.begin();
+  FunctionTypeEffectsRef::iterator OldEnd = Old.end();
+  FunctionTypeEffectsRef::iterator PNew = New.begin();
+  FunctionTypeEffectsRef::iterator NewEnd = New.end();
+
+  auto compare = [](const CondFunctionEffect &LHS,
+                    const CondFunctionEffect &RHS) {
+    if (LHS.Effect < RHS.Effect)
+      return -1;
+    if (LHS.Effect > RHS.Effect)
+      return 1;
+    if (LHS.Cond < RHS.Cond)
+      return -1;
+    if (LHS.Cond > RHS.Cond)
+      return 1;
+    return 0;
+  };
+
+  while (true) {
+    int cmp = 0;
+    if (POld == OldEnd) {
+      if (PNew == NewEnd)
+        break;
+      cmp = 1;
+    } else if (PNew == NewEnd)
+      cmp = -1;
+    else
+      cmp = compare(*POld, *PNew);
+
+    if (cmp < 0) {
+      // removal
+      Result.push_back({*POld, false});
+      ++POld;
+    } else if (cmp > 0) {
+      // addition
+      Result.push_back({*PNew, true});
+      ++PNew;
+    } else {
+      ++POld;
+      ++PNew;
+    }
   }
-  for (const auto &Effect : FunctionTypeEffectSet::difference(Old, New)) {
-    Result.emplace_back(Effect, false);
-  }
+
   return Result;
 }
 
+#if 0
 FunctionTypeEffectSet
-FunctionTypeEffectSet::difference(ArrayRef<CondFunctionEffect> LHS,
-                                  ArrayRef<CondFunctionEffect> RHS) {
+FunctionTypeEffectSet::difference(FunctionTypeEffectsRef LHS,
+                                  FunctionTypeEffectsRef RHS) {
   FunctionTypeEffectSet Result;
   std::set_difference(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
                       std::back_inserter(Result.Impl));
   return Result;
 }
 
-void FunctionTypeEffectSet::insert(const CondFunctionEffect &Effect) {
-  auto *Iter = std::lower_bound(Impl.begin(), Impl.end(), Effect);
-  if (Iter == Impl.end() || *Iter != Effect) {
-    Impl.insert(Iter, Effect);
-  }
-}
-
-void FunctionTypeEffectSet::insert(ArrayRef<CondFunctionEffect> Arr) {
+void FunctionTypeEffectSet::insert(FunctionTypeEffectsRef Arr) {
   // TODO: For large RHS sets, use set_union or a custom insert-in-place
   for (const auto &CFE : Arr) {
     insert(CFE);
@@ -5222,14 +5289,16 @@ void FunctionTypeEffectSet::insert(ArrayRef<CondFunctionEffect> Arr) {
 }
 
 void FunctionTypeEffectSet::insertIgnoringConditions(
-    ArrayRef<CondFunctionEffect> Arr) {
+    FunctionTypeEffectsRef Arr) {
   // TODO: For large RHS sets, use set_union or a custom insert-in-place
   for (const auto &CFE : Arr) {
     insert(CondFunctionEffect(CFE.effect().kind(), nullptr));
   }
 }
+#endif
 
-LLVM_DUMP_METHOD void FunctionTypeEffects::dump(llvm::raw_ostream &OS) const {
+LLVM_DUMP_METHOD void
+FunctionTypeEffectsRef::dump(llvm::raw_ostream &OS) const {
   OS << "Effects{";
   bool First = true;
   for (const auto &CFE : *this) {
@@ -5237,17 +5306,18 @@ LLVM_DUMP_METHOD void FunctionTypeEffects::dump(llvm::raw_ostream &OS) const {
       OS << ", ";
     else
       First = false;
-    OS << CFE.effect().name();
+    OS << CFE.Effect.name();
+    // TODO: Condition
   }
   OS << "}";
 }
 
 LLVM_DUMP_METHOD void FunctionTypeEffectSet::dump(llvm::raw_ostream &OS) const {
-  FunctionTypeEffects(*this).dump(OS);
+  FunctionTypeEffectsRef(*this).dump(OS);
 }
 
 // TODO: inline?
-FunctionTypeEffects FunctionTypeEffects::get(QualType QT) {
+FunctionTypeEffectsRef FunctionTypeEffectsRef::get(QualType QT) {
   if (QT->isReferenceType())
     QT = QT.getNonReferenceType();
   if (QT->isPointerType())

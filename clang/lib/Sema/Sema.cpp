@@ -590,11 +590,11 @@ void Sema::diagnoseNullableToNonnullConversion(QualType DstType,
 // Generate diagnostics when adding or removing effects in a type conversion.
 void Sema::diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
                                             SourceLocation Loc) {
-  const auto SrcFX = FunctionTypeEffects::get(SrcType);
-  const auto DstFX = FunctionTypeEffects::get(DstType);
+  const auto SrcFX = FunctionTypeEffectsRef::get(SrcType);
+  const auto DstFX = FunctionTypeEffectsRef::get(DstType);
   if (SrcFX != DstFX) {
     for (const auto &Item : FunctionTypeEffectSet::differences(SrcFX, DstFX)) {
-      const FunctionEffect &Effect = Item.first.effect();
+      const FunctionEffect &Effect = Item.first.Effect;
       const bool Adding = Item.second;
       if (Effect.shouldDiagnoseConversion(Adding, SrcType, SrcFX, DstType,
                                           DstFX)) {

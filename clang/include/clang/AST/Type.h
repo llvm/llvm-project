@@ -4295,11 +4295,13 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasArmTypeAttributes : 1;
 
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned EffectsHaveConditions : 1;
     unsigned NumFunctionEffects : 4;
 
     FunctionTypeExtraBitfields()
         : NumExceptionType(0), HasArmTypeAttributes(false),
-          NumFunctionEffects(0) {}
+          EffectsHaveConditions(false), NumFunctionEffects(0) {}
   };
 
   /// The AArch64 SME ACLE (Arm C/C++ Language Extensions) define a number
@@ -4436,8 +4438,24 @@ public:
 
 class Decl;
 class CXXMethodDecl;
-class FunctionTypeEffects;
+class FunctionTypeEffectsRef;
 class FunctionTypeEffectSet;
+
+/*
+  TODO: Idea about how to move most of the FunctionEffect business out of
+  Type.h, thus removing these forward declarations.
+
+  - Keep FunctionEffect itself here but make it more minimal. Don't define flags
+  or any behaviors, just the Kind and an accessor.
+  - Keep FunctionEffectCondExpr here.
+  - Make FunctionProtoType and ExtProtoInfo use only ArrayRef<FunctionEffect>
+  and ArrayRef<FunctionEffectCondExpr>.
+  - Somewhere in Sema, define ExtFunctionEffect, which holds a FunctionEffect
+    and has all the behavior-related methods.
+  - There too, define the containers. FunctionTypeEffectsRef can have a
+  constructor or factory method that initializes itself from a
+  FunctionProtoType.
+*/
 
 /// Represents an abstract function effect, using just an enumeration describing
 /// its kind.
@@ -4511,24 +4529,24 @@ public:
   /// Return true if adding or removing the effect as part of a type conversion
   /// should generate a diagnostic.
   bool shouldDiagnoseConversion(bool Adding, QualType OldType,
-                                const FunctionTypeEffects &OldFX,
+                                const FunctionTypeEffectsRef &OldFX,
                                 QualType NewType,
-                                const FunctionTypeEffects &NewFX) const;
+                                const FunctionTypeEffectsRef &NewFX) const;
 
   /// Return true if adding or removing the effect in a redeclaration should
   /// generate a diagnostic.
   bool shouldDiagnoseRedeclaration(bool Adding, const FunctionDecl &OldFunction,
-                                   const FunctionTypeEffects &OldFX,
+                                   const FunctionTypeEffectsRef &OldFX,
                                    const FunctionDecl &NewFunction,
-                                   const FunctionTypeEffects &NewFX) const;
+                                   const FunctionTypeEffectsRef &NewFX) const;
 
   /// Return true if adding or removing the effect in a C++ virtual method
   /// override should generate a diagnostic.
   OverrideResult
   shouldDiagnoseMethodOverride(bool Adding, const CXXMethodDecl &OldMethod,
-                               const FunctionTypeEffects &OldFX,
+                               const FunctionTypeEffectsRef &OldFX,
                                const CXXMethodDecl &NewMethod,
-                               const FunctionTypeEffects &NewFX) const;
+                               const FunctionTypeEffectsRef &NewFX) const;
 
   /// Return true if the effect is allowed to be inferred on the callee,
   /// which is either a FunctionDecl or BlockDecl.
@@ -4553,78 +4571,97 @@ public:
   friend bool operator<(const FunctionEffect &LHS, const FunctionEffect &RHS) {
     return LHS.FKind < RHS.FKind;
   }
+  friend bool operator>(const FunctionEffect &LHS, const FunctionEffect &RHS) {
+    return LHS.FKind > RHS.FKind;
+  }
+};
+
+/// Wrap a function effect's condition expression in another struct so
+/// that FunctionProtoType's TrailingObjects can treat it separately.
+struct FunctionEffectCondExpr {
+  const Expr *Cond = nullptr; // if null, unconditional
+
+  bool operator==(const FunctionEffectCondExpr &RHS) const {
+    return Cond == RHS.Cond;
+  }
 };
 
 /// A FunctionEffect plus a potential boolean expression determining whether
 /// the effect is declared (e.g. nonblocking(expr)). Generally the condition
 /// expression when present, is dependent.
-class CondFunctionEffect {
+struct CondFunctionEffect {
   FunctionEffect Effect;
   const Expr *Cond = nullptr; // if null, unconditional
+};
+
+/// Support iteration in parallel through a pair of FunctionEffect and
+/// FunctionEffectCondExpr containers.
+template <typename Container> class FunctionEffectIterator {
+  const Container &Outer;
+  size_t Idx;
 
 public:
-  CondFunctionEffect() = default;
-  CondFunctionEffect(FunctionEffect::Kind K, const Expr *Cond)
-      : Effect(K), Cond(Cond) {}
-
-  const FunctionEffect &effect() const { return Effect; }
-  const Expr *condition() const { return Cond; }
-
-private:
-  // Comparisons are tricky when the condition might be involved, so limit who
-  // might be doing them.
-  friend FunctionTypeEffects;
-  friend FunctionTypeEffectSet;
-
-  friend bool operator==(const CondFunctionEffect &LHS,
-                         const CondFunctionEffect &RHS) {
-    return LHS.Effect == RHS.Effect && LHS.Cond == RHS.Cond;
+  FunctionEffectIterator(const Container &O, size_t I) : Outer(O), Idx(I) {}
+  bool operator==(const FunctionEffectIterator &Other) const {
+    return Idx == Other.Idx;
   }
-  friend bool operator!=(const CondFunctionEffect &LHS,
-                         const CondFunctionEffect &RHS) {
-    return !(LHS == RHS);
+  bool operator!=(const FunctionEffectIterator &Other) const {
+    return Idx != Other.Idx;
   }
-  friend bool operator<(const CondFunctionEffect &LHS,
-                        const CondFunctionEffect &RHS) {
-    return LHS.Effect < RHS.Effect;
+
+  // prefix increment
+  FunctionEffectIterator operator++() {
+    ++Idx;
+    return *this;
+  }
+
+  CondFunctionEffect operator*() const {
+    const bool HasConds = !Outer.Conditions.empty();
+    return CondFunctionEffect{Outer.Effects[Idx],
+                              HasConds ? Outer.Conditions[Idx].Cond : nullptr};
   }
 };
 
-// Container naming:
-// "type effects" are the ones which include a condition
-// FunctionTypeEffectsRef - holds pointers
-// FunctionTypeEffectSet - mutable
-// FunctionEffectSet - mutable, no condition
+/// An immutable set of FunctionEffects and possibly conditions attached to
+/// them. The effects and conditions reside in memory not managed by this object
+/// (typically, trailing objects in FunctionProtoType, or borrowed references
+/// from a FunctionTypeEffectSet).
+class FunctionTypeEffectsRef {
+  ArrayRef<FunctionEffect> Effects;
 
-/// An immutable set of CondFunctionEffect. The effects reside in memory not
-/// managed by this object (typically, trailing objects in FunctionProtoType).
-class FunctionTypeEffects {
-  ArrayRef<CondFunctionEffect> Items;
+  // The array of conditions is either empty or has the same size
+  // as the array of effects.
+  ArrayRef<FunctionEffectCondExpr> Conditions;
 
 public:
   /// Extract the effects from a Type if it is a function, block, or member
   /// function pointer, or a reference or pointer to one.
-  static FunctionTypeEffects get(QualType QT);
+  static FunctionTypeEffectsRef get(QualType QT);
 
-  FunctionTypeEffects() = default;
+  FunctionTypeEffectsRef() = default;
 
-  // The array is expected to have been sorted by the caller.
-  explicit FunctionTypeEffects(ArrayRef<CondFunctionEffect> Arr) : Items(Arr) {}
+  // The arrays are expected to have been sorted by the caller.
+  FunctionTypeEffectsRef(ArrayRef<FunctionEffect> FX,
+                         ArrayRef<FunctionEffectCondExpr> Conds)
+      : Effects(FX), Conditions(Conds) {}
 
-  operator bool() const { return !Items.empty(); }
-  size_t size() const { return Items.size(); }
-  operator ArrayRef<CondFunctionEffect>() const { return Items; }
+  bool empty() const { return Effects.empty(); }
+  size_t size() const { return Effects.size(); }
 
-  using iterator = const CondFunctionEffect *;
-  iterator begin() const { return Items.begin(); }
-  iterator end() const { return Items.end(); }
+  ArrayRef<FunctionEffect> effects() const { return Effects; }
+  ArrayRef<FunctionEffectCondExpr> conditions() const { return Conditions; }
 
-  friend bool operator==(const FunctionTypeEffects &LHS,
-                         const FunctionTypeEffects &RHS) {
-    return LHS.Items == RHS.Items;
+  using iterator = FunctionEffectIterator<FunctionTypeEffectsRef>;
+  friend iterator;
+  iterator begin() const { return iterator(*this, 0); }
+  iterator end() const { return iterator(*this, size()); }
+
+  friend bool operator==(const FunctionTypeEffectsRef &LHS,
+                         const FunctionTypeEffectsRef &RHS) {
+    return LHS.Effects == RHS.Effects && LHS.Conditions == RHS.Conditions;
   }
-  friend bool operator!=(const FunctionTypeEffects &LHS,
-                         const FunctionTypeEffects &RHS) {
+  friend bool operator!=(const FunctionTypeEffectsRef &LHS,
+                         const FunctionTypeEffectsRef &RHS) {
     return !(LHS == RHS);
   }
 
@@ -4632,44 +4669,47 @@ public:
   void dump(llvm::raw_ostream &OS) const;
 };
 
-/// A mutable set of CondFunctionEffect.
-// Used transitorily within Sema to compare and merge effects on declarations.
+/// A mutable set of FunctionEffects and possibly conditions attached to them.
+/// Used transitorily within Sema to compare and merge effects on declarations.
 class FunctionTypeEffectSet {
-  SmallVector<CondFunctionEffect> Impl;
+  SmallVector<FunctionEffect> Effects;
+  // The vector of conditions is either empty or has the same size
+  // as the vector of effects.
+  SmallVector<FunctionEffectCondExpr> Conditions;
 
 public:
   FunctionTypeEffectSet() = default;
-  explicit FunctionTypeEffectSet(ArrayRef<CondFunctionEffect> Arr)
-      : Impl(Arr.begin(), Arr.end()) {}
 
-  explicit operator bool() const { return !Impl.empty(); }
+  explicit FunctionTypeEffectSet(const FunctionTypeEffectsRef &FX)
+      : Effects(FX.effects()), Conditions(FX.conditions()) {}
 
-  // Implicit conversion to ArrayRef - careful with lifetime.
-  operator ArrayRef<CondFunctionEffect>() const { return Impl; }
+  bool empty() const { return Effects.empty(); }
+  size_t size() const { return Effects.size(); }
 
-  using iterator = const CondFunctionEffect *;
-  iterator begin() const { return Impl.begin(); }
-  iterator end() const { return Impl.end(); }
+  using iterator = FunctionEffectIterator<FunctionTypeEffectSet>;
+  friend iterator;
+  iterator begin() const { return iterator(*this, 0); }
+  iterator end() const { return iterator(*this, size()); }
+
+  operator FunctionTypeEffectsRef() const { return {Effects, Conditions}; }
 
   void dump(llvm::raw_ostream &OS) const;
 
   // Mutators
-  void insert(const CondFunctionEffect &Effect);
-  void insert(ArrayRef<CondFunctionEffect> Arr);
-  void insertIgnoringConditions(ArrayRef<CondFunctionEffect> Arr);
+  void insert(FunctionEffect Effect, const Expr *Cond);
+  void insert(const FunctionTypeEffectsRef &Set);
+  void insertIgnoringConditions(const FunctionTypeEffectsRef &Set);
 
-  // Set operations, using ArrayRef to support FunctionTypeEffects
+  // Set operations
 
   using Differences =
       SmallVector<std::pair<CondFunctionEffect, /*added=*/bool>>;
   /// Caller should short-circuit by checking for equality first.
-  static Differences differences(const FunctionTypeEffects &Old,
-                                 const FunctionTypeEffects &New);
+  static Differences differences(const FunctionTypeEffectsRef &Old,
+                                 const FunctionTypeEffectsRef &New);
 
-  static FunctionTypeEffectSet getUnion(ArrayRef<CondFunctionEffect> LHS,
-                                        ArrayRef<CondFunctionEffect> RHS);
-  static FunctionTypeEffectSet difference(ArrayRef<CondFunctionEffect> LHS,
-                                          ArrayRef<CondFunctionEffect> RHS);
+  static FunctionTypeEffectSet getUnion(FunctionTypeEffectsRef LHS,
+                                        FunctionTypeEffectsRef RHS);
 };
 
 /// Represents a prototype with parameter type info, e.g.
@@ -4687,7 +4727,7 @@ class FunctionProtoType final
           FunctionType::FunctionTypeExtraBitfields,
           FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
           Expr *, FunctionDecl *, FunctionType::ExtParameterInfo,
-          CondFunctionEffect, Qualifiers> {
+          FunctionEffect, FunctionEffectCondExpr, Qualifiers> {
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
@@ -4718,7 +4758,11 @@ class FunctionProtoType final
   //   an ExtParameterInfo for each of the parameters. Present if and
   //   only if hasExtParameterInfos() is true.
   //
-  // * Optionally, an array of getNumFunctionEffects() CondFunctionEffect.
+  // * Optionally, an array of getNumFunctionEffects() FunctionEffect.
+  //   Present only when getNumFunctionEffects() > 0
+  //
+  // * Optionally, an array of getNumFunctionEffects() FunctionEffectCondExpr.
+  //   Present only when getNumFunctionEffectConditions() > 0.
   //
   // * Optionally a Qualifiers object to represent extra qualifiers that can't
   //   be represented by FunctionTypeBitfields.FastTypeQuals. Present if and
@@ -4778,7 +4822,7 @@ public:
     ExceptionSpecInfo ExceptionSpec;
     const ExtParameterInfo *ExtParameterInfos = nullptr;
     SourceLocation EllipsisLoc;
-    FunctionTypeEffects FunctionEffects;
+    FunctionTypeEffectsRef FunctionEffects;
 
     ExtProtoInfo()
         : Variadic(false), HasTrailingReturn(false),
@@ -4796,7 +4840,8 @@ public:
 
     bool requiresFunctionProtoTypeExtraBitfields() const {
       return ExceptionSpec.Type == EST_Dynamic ||
-             requiresFunctionProtoTypeArmAttributes() || FunctionEffects;
+             requiresFunctionProtoTypeArmAttributes() ||
+             !FunctionEffects.empty();
     }
 
     bool requiresFunctionProtoTypeArmAttributes() const {
@@ -4844,8 +4889,12 @@ private:
     return hasExtParameterInfos() ? getNumParams() : 0;
   }
 
-  unsigned numTrailingObjects(OverloadToken<CondFunctionEffect>) const {
+  unsigned numTrailingObjects(OverloadToken<FunctionEffect>) const {
     return getNumFunctionEffects();
+  }
+
+  unsigned numTrailingObjects(OverloadToken<FunctionEffectCondExpr>) const {
+    return getNumFunctionEffectConditions();
   }
 
   /// Determine whether there are any argument types that
@@ -5168,12 +5217,51 @@ public:
                : 0;
   }
 
-  FunctionTypeEffects getFunctionEffects() const {
+  // For serialization.
+  ArrayRef<FunctionEffect> getFunctionEffectsOnly() const {
     if (hasExtraBitfields()) {
       const auto *Bitfields = getTrailingObjects<FunctionTypeExtraBitfields>();
       if (Bitfields->NumFunctionEffects > 0)
-        return FunctionTypeEffects({getTrailingObjects<CondFunctionEffect>(),
-                                    Bitfields->NumFunctionEffects});
+        return {getTrailingObjects<FunctionEffect>(),
+                Bitfields->NumFunctionEffects};
+    }
+    return {};
+  }
+
+  unsigned getNumFunctionEffectConditions() const {
+    if (hasExtraBitfields()) {
+      const auto *Bitfields = getTrailingObjects<FunctionTypeExtraBitfields>();
+      if (Bitfields->EffectsHaveConditions)
+        return Bitfields->NumFunctionEffects;
+    }
+    return 0;
+  }
+
+  // For serialization.
+  ArrayRef<FunctionEffectCondExpr> getFunctionEffectConditions() const {
+    if (hasExtraBitfields()) {
+      const auto *Bitfields = getTrailingObjects<FunctionTypeExtraBitfields>();
+      if (Bitfields->EffectsHaveConditions)
+        return {getTrailingObjects<FunctionEffectCondExpr>(),
+                Bitfields->NumFunctionEffects};
+    }
+    return {};
+  }
+
+  // Combines effects with their conditions.
+  FunctionTypeEffectsRef getFunctionEffects() const {
+    if (hasExtraBitfields()) {
+      const auto *Bitfields = getTrailingObjects<FunctionTypeExtraBitfields>();
+      if (Bitfields->NumFunctionEffects > 0) {
+        const size_t NumConds = Bitfields->EffectsHaveConditions
+                                    ? Bitfields->NumFunctionEffects
+                                    : 0;
+        return FunctionTypeEffectsRef(
+            {getTrailingObjects<FunctionEffect>(),
+             Bitfields->NumFunctionEffects},
+            {NumConds ? getTrailingObjects<FunctionEffectCondExpr>() : nullptr,
+             NumConds});
+      }
     }
     return {};
   }

@@ -3926,7 +3926,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   if (OldFX != NewFX) {
     const auto Diffs = FunctionTypeEffectSet::differences(OldFX, NewFX);
     for (const auto &Item : Diffs) {
-      const FunctionEffect &Effect = Item.first.effect();
+      const FunctionEffect &Effect = Item.first.Effect;
       const bool Adding = Item.second;
       if (Effect.shouldDiagnoseRedeclaration(Adding, *Old, OldFX, *New,
                                              NewFX)) {
@@ -3943,7 +3943,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       auto MergedFX = FunctionTypeEffectSet::getUnion(OldFX, NewFX);
 
       FunctionProtoType::ExtProtoInfo EPI = NewFPT->getExtProtoInfo();
-      EPI.FunctionEffects = FunctionTypeEffects(MergedFX);
+      EPI.FunctionEffects = FunctionTypeEffectsRef(MergedFX);
       QualType ModQT = Context.getFunctionType(NewFPT->getReturnType(),
                                                NewFPT->getParamTypes(), EPI);
 
@@ -3954,7 +3954,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       // so as not to fail due to differences later.
       if (const auto *OldFPT = OldQType->getAs<FunctionProtoType>()) {
         EPI = OldFPT->getExtProtoInfo();
-        EPI.FunctionEffects = FunctionTypeEffects(MergedFX);
+        EPI.FunctionEffects = FunctionTypeEffectsRef(MergedFX);
         OldQTypeForComparison = Context.getFunctionType(
             OldFPT->getReturnType(), OldFPT->getParamTypes(), EPI);
       }
@@ -11129,7 +11129,7 @@ Attr *Sema::getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
 // Should only be called when getFunctionEffects() returns a non-empty set.
 // Decl should be a FunctionDecl or BlockDecl.
 void Sema::maybeAddDeclWithEffects(const Decl *D,
-                                   const FunctionTypeEffects &FX) {
+                                   const FunctionTypeEffectsRef &FX) {
   if (!D->hasBody()) {
     if (const auto *FD = D->getAsFunction()) {
       if (!FD->willHaveBody()) {
@@ -16065,7 +16065,8 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
       getCurLexicalContext()->getDeclKind() != Decl::ObjCImplementation)
     Diag(FD->getLocation(), diag::warn_function_def_in_objc_container);
 
-  if (const auto FX = FD->getCanonicalDecl()->getFunctionEffects()) {
+  if (const auto FX = FD->getCanonicalDecl()->getFunctionEffects();
+      !FX.empty()) {
     maybeAddDeclWithEffects(FD, FX);
   }
 
