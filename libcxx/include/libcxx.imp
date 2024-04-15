@@ -853,6 +853,7 @@
   { include: [ "<__utility/in_place.h>", "private", "<utility>", "public" ] },
   { include: [ "<__utility/integer_sequence.h>", "private", "<utility>", "public" ] },
   { include: [ "<__utility/is_pointer_in_range.h>", "private", "<utility>", "public" ] },
+  { include: [ "<__utility/is_valid_range.h>", "private", "<utility>", "public" ] },
   { include: [ "<__utility/move.h>", "private", "<utility>", "public" ] },
   { include: [ "<__utility/no_destroy.h>", "private", "<utility>", "public" ] },
   { include: [ "<__utility/pair.h>", "private", "<utility>", "public" ] },
