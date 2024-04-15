@@ -1333,50 +1333,58 @@ arguments.
 
   %val = load i32, ptr %in, align 4, !amdgpu.last.use !{}
 
-.. _amdgpu_no_access_location_types:
+.. _amdgpu_no_fine_grained_host_memory:
 
-'``amdgpu.no.access.location.types``' Metadata
-----------------------------------------------
+'``amdgpu.no.fine.grained.host.memory``' Metadata
+-------------------------------------------------
 
-Asserts a memory access does not access bytes residing in certain
-allocation kinds. This is intended for use with :ref:`atomicrmw
-<i_atomicrmw>` and other atomic instructions. This is required to emit
-a native hardware instruction for some :ref:`system scope
-<amdgpu-memory-scopes>` atomic operations on some subtargets. An
+Asserts a memory access does not access bytes allocated in fine
+grained allocated host memory. This is intended for use with
+:ref:`atomicrmw <i_atomicrmw>` and other atomic instructions. This is
+required to emit a native hardware instruction for some :ref:`system
+scope <amdgpu-memory-scopes>` atomic operations on some subtargets. An
 :ref:`atomicrmw <i_atomicrmw>` without metadata will be treated
 conservatively as required to preserve the operation behavior in all
-cases.
-
-If the memory operation does access an address in an indicated region,
-any stored values and any returned results are :ref:`poison
-<poisonvalues>`. This has a single integer argument, interpreted as a
-bitfield. A 0 value is equivalent to removing the metadata.
-
-.. list-table::
-
-  * - Bit
-    - Description
-  * - 0
-    - Not in fine-grained host memory.
-  * - 1
-    - Not in a remote connected peer device (address must be device local)
+cases. This will typically be used in conjunction with
+:ref:`!amdgpu.no.remote.memory.access<amdgpu_no_remote_memory_access>`.
 
 .. code-block:: llvm
 
   ; Indicates the access does not access fine-grained memory, or
   ; remote device memory.
-  %old0 = atomicrmw sub ptr %ptr0, i32 1 acquire, !amdgpu.no.access.location.types !0
-
-  ; Indicates the access does not access fine-grained memory.
-  %old1 = atomicrmw sub ptr %ptr1, i32 1 acquire, !amdgpu.no.access.location.types !1
+  %old0 = atomicrmw sub ptr %ptr0, i32 1 acquire, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0
 
   ; Indicates the access does not access peer device memory.
-  %old2 = atomicrmw sub ptr %ptr2, i32 1 acquire, !amdgpu.no.access.location.types !2
+  %old2 = atomicrmw sub ptr %ptr2, i32 1 acquire, !amdgpu.no.fine.grained.host.memory !0
 
-  !0 = !{i32 3} ; no_fine_grained_memory_access | no_remote_memory_access
-  !1 = !{i32 1} ; no_fine_grained_memory_access
-  !2 = !{i32 2} ; no_remote_memory_access
+  !0 = !{}
 
+.. _amdgpu_no_remote_memory_access:
+
+'``amdgpu.no.remote.memory.access``' Metadata
+---------------------------------------------
+
+Asserts a memory access does not access bytes in remote connected peer
+device memory (the device address must be device local). This is
+intended for use with :ref:`atomicrmw <i_atomicrmw>` and other atomic
+instructions. This is required to emit a native hardware instruction
+for some :ref:`system scope <amdgpu-memory-scopes>` atomic operations
+on some subtargets. An :ref:`atomicrmw <i_atomicrmw>` without metadata
+will be treated conservatively as required to preserve the operation
+behavior in all cases. This will typically be used in conjunction with
+:ref:`!amdgpu.no.fine.grained.host.memory<amdgpu_no_fine_grained_host_memory>`.
+
+
+.. code-block:: llvm
+
+  ; Indicates the access does not access fine-grained memory, or
+  ; remote device memory.
+  %old0 = atomicrmw sub ptr %ptr0, i32 1 acquire, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0
+
+  ; Indicates the access does not access peer device memory.
+  %old2 = atomicrmw sub ptr %ptr2, i32 1 acquire, !amdgpu.no.remote.memory.access !0
+
+  !0 = !{}
 
 LLVM IR Attributes
 ==================
