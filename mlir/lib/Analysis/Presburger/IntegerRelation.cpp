@@ -1451,28 +1451,22 @@ void IntegerRelation::removeRedundantLocalVars() {
 void IntegerRelation::convertVarKind(VarKind srcKind, unsigned varStart,
                                      unsigned varLimit, VarKind dstKind,
                                      unsigned pos) {
-  assert(varLimit <= getNumVarKind(srcKind) && "Invalid id range");
+  assert(varLimit <= getNumVarKind(srcKind) && "invalid id range");
 
   if (varStart >= varLimit)
     return;
 
-  // Append new local variables corresponding to the dimensions to be converted.
+  unsigned srcOffset = getVarKindOffset(srcKind);
+  unsigned dstOffset = getVarKindOffset(dstKind);
   unsigned convertCount = varLimit - varStart;
-  unsigned newVarsBegin = insertVar(dstKind, pos, convertCount);
+  int forwardMoveOffset = dstOffset > srcOffset ? -convertCount : 0;
 
-  // Swap the new local variables with dimensions.
-  //
-  // Essentially, this moves the information corresponding to the specified ids
-  // of kind `srcKind` to the `convertCount` newly created ids of kind
-  // `dstKind`. In particular, this moves the columns in the constraint
-  // matrices, and zeros out the initially occupied columns (because the newly
-  // created ids we're swapping with were zero-initialized).
-  unsigned offset = getVarKindOffset(srcKind);
-  for (unsigned i = 0; i < convertCount; ++i)
-    swapVar(offset + varStart + i, newVarsBegin + i);
+  equalities.moveColumns(srcOffset + varStart, convertCount,
+                         dstOffset + pos + forwardMoveOffset);
+  inequalities.moveColumns(srcOffset + varStart, convertCount,
+                           dstOffset + pos + forwardMoveOffset);
 
-  // Complete the move by deleting the initially occupied columns.
-  removeVarRange(srcKind, varStart, varLimit);
+  space.convertVarKind(srcKind, varStart, varLimit - varStart, dstKind, pos);
 }
 
 void IntegerRelation::addBound(BoundType type, unsigned pos,
