@@ -23501,6 +23501,32 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
       return DAG.getNode(ISD::SPLAT_VECTOR, SDLoc(N), VT, V);
     }
 
+  if (N->getNumOperands() == 1) {
+    SDValue N0 = N->getOperand(0);
+    if (ISD::isNormalLoad(N0.getNode()) && N0.hasOneUse() &&
+        // Do not remove the cast if the types differ in endian layout.
+        TLI.hasBigEndianPartOrdering(N0.getValueType(), DAG.getDataLayout()) ==
+            TLI.hasBigEndianPartOrdering(VT, DAG.getDataLayout()) &&
+        // If the load is volatile, we only want to change the load type if the
+        // resulting load is legal. Otherwise we might increase the number of
+        // memory accesses. We don't care if the original type was legal or not
+        // as we assume software couldn't rely on the number of accesses of an
+        // illegal type.
+        ((!LegalOperations && cast<LoadSDNode>(N0)->isSimple()) ||
+         TLI.isOperationLegal(ISD::LOAD, VT))) {
+      LoadSDNode *LN0 = cast<LoadSDNode>(N0);
+
+      if (TLI.isLoadBitCastBeneficial(N0.getValueType(), VT, DAG,
+                                      *LN0->getMemOperand())) {
+        SDValue Load =
+            DAG.getLoad(VT, SDLoc(N), LN0->getChain(), LN0->getBasePtr(),
+                        LN0->getMemOperand());
+        DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
+        return Load;
+      }
+    }
+  }
+
   return SDValue();
 }
 
