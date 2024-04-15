@@ -1327,10 +1327,11 @@ void ClangExpressionDeclMap::LookupFunction(
     }
 
     if (!context.m_found_function_with_type_info) {
-      if (extern_symbol)
+      if (extern_symbol) {
         AddOneFunction(context, nullptr, extern_symbol);
-      else if (non_extern_symbol)
+      } else if (non_extern_symbol) {
         AddOneFunction(context, nullptr, non_extern_symbol);
+      }
     }
   }
 }
