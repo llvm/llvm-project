@@ -1267,9 +1267,18 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   // 'Base.Member'
   const Expr *Base = E->getBase();
+  const ValueDecl *Member = E->getMemberDecl();
 
   if (DiscardResult)
     return this->discard(Base);
+
+  if (const auto *VD = dyn_cast<VarDecl>(Member)) {
+    // I am almost confident in saying that a var decl must be static
+    // and therefore registered as a global variable. But this will probably
+    // turn out to be wrong some time in the future, as always.
+    if (auto GlobalIndex = P.getGlobal(VD))
+      return this->emitGetPtrGlobal(*GlobalIndex, E);
+  }
 
   if (Initializing) {
     if (!this->delegate(Base))
@@ -1280,8 +1289,6 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   }
 
   // Base above gives us a pointer on the stack.
-  // TODO: Implement non-FieldDecl members.
-  const ValueDecl *Member = E->getMemberDecl();
   if (const auto *FD = dyn_cast<FieldDecl>(Member)) {
     const RecordDecl *RD = FD->getParent();
     const Record *R = getRecord(RD);
