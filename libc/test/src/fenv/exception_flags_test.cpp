@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/fexcept_t.h"
 #include "src/fenv/fegetexceptflag.h"
 #include "src/fenv/fesetexceptflag.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "test/UnitTest/Test.h"
-
-#include <fenv.h>
 
 TEST(LlvmLibcFenvTest, GetExceptFlagAndSetExceptFlag) {
   // We will disable all exceptions to prevent invocation of the exception

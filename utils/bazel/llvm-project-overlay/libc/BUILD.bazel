@@ -131,6 +131,16 @@ libc_support_library(
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
+    name = "types_fenv_t",
+    hdrs = ["hdr/types/fenv_t.h"],
+)
+
+libc_support_library(
+    name = "types_fexcept_t",
+    hdrs = ["hdr/types/fexcept_t.h"],
+)
+
+libc_support_library(
     name = "types_sigset_t",
     hdrs = ["hdr/types/sigset_t.h"],
 )
@@ -776,6 +786,7 @@ libc_support_library(
         ":errno",
         ":hdr_fenv_macros",
         ":hdr_math_macros",
+	":types_fenv_t"
     ],
 )
 
@@ -1251,6 +1262,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_fputil_fenv_impl",
+	":types_fexcept_t"
     ],
 )
 
@@ -1261,6 +1273,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_fputil_fenv_impl",
+	":types_fexcept_t",
     ],
 )
 
