@@ -9367,10 +9367,14 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
   const char *CowExec = Args.MakeArgString(
       getToolChain().GetProgramPath("clang-offload-wrapper"));
 
+  // The offload target.
+  CowArgs.push_back("-target");
+  CowArgs.push_back(Args.MakeArgString(TheTriple.getTriple()));
+
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
 
-  // Add the "effective" target triple.
-  CowArgs.push_back("-target");
+  // The host triple is the "effective" target triple here.
+  CowArgs.push_back("-aux-triple");
   CowArgs.push_back(Args.MakeArgString(Triple.getTriple()));
 
   // Add the output file name.
