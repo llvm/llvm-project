@@ -41,15 +41,16 @@ class ExternalSemaSource;
 class FrontendOptions;
 class PCHContainerReader;
 class Preprocessor;
-class FileManager;
 class PreprocessorOptions;
 class PreprocessorOutputOptions;
+class CodeGenOptions;
 
 /// InitializePreprocessor - Initialize the preprocessor getting it and the
 /// environment ready to process a single file.
 void InitializePreprocessor(Preprocessor &PP, const PreprocessorOptions &PPOpts,
                             const PCHContainerReader &PCHContainerRdr,
-                            const FrontendOptions &FEOpts);
+                            const FrontendOptions &FEOpts,
+                            const CodeGenOptions &CodeGenOpts);
 
 /// DoPrintPreprocessedInput - Implement -E mode.
 void DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
@@ -80,14 +81,11 @@ public:
   /// Return true if system files should be passed to sawDependency().
   virtual bool needSystemDependencies() { return false; }
 
-  /// Return true if system files should be canonicalized.
-  virtual bool shouldCanonicalizeSystemDependencies() { return false; }
-
   /// Add a dependency \p Filename if it has not been seen before and
   /// sawDependency() returns true.
   virtual void maybeAddDependency(StringRef Filename, bool FromModule,
                                   bool IsSystem, bool IsModuleFile,
-                                  FileManager *FileMgr, bool IsMissing);
+                                  bool IsMissing);
 
 protected:
   /// Return true if the filename was added to the list of dependencies, false
@@ -116,10 +114,6 @@ public:
   bool sawDependency(StringRef Filename, bool FromModule, bool IsSystem,
                      bool IsModuleFile, bool IsMissing) final;
 
-  bool shouldCanonicalizeSystemDependencies() override {
-    return CanonicalSystemHeaders;
-  }
-
 protected:
   void outputDependencyFile(llvm::raw_ostream &OS);
 
@@ -129,7 +123,6 @@ private:
   std::string OutputFile;
   std::vector<std::string> Targets;
   bool IncludeSystemHeaders;
-  bool CanonicalSystemHeaders;
   bool PhonyTarget;
   bool AddMissingHeaderDeps;
   bool SeenMissingHeader;

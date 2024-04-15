@@ -445,8 +445,8 @@ ClangExpressionParser::ClangExpressionParser(
   // Supported subsets of x86
   if (target_machine == llvm::Triple::x86 ||
       target_machine == llvm::Triple::x86_64) {
-    m_compiler->getTargetOpts().Features.push_back("+sse");
-    m_compiler->getTargetOpts().Features.push_back("+sse2");
+    m_compiler->getTargetOpts().FeaturesAsWritten.push_back("+sse");
+    m_compiler->getTargetOpts().FeaturesAsWritten.push_back("+sse2");
   }
 
   // Set the target CPU to generate code for. This will be empty for any CPU
@@ -526,7 +526,10 @@ ClangExpressionParser::ClangExpressionParser(
     [[fallthrough]];
   case lldb::eLanguageTypeC_plus_plus_03:
     lang_opts.CPlusPlus = true;
-    if (process_sp)
+    if (process_sp
+        // We're stopped in a frame without debug-info. The user probably
+        // intends to make global queries (which should include Objective-C).
+        && !(frame_sp && frame_sp->HasDebugInformation()))
       lang_opts.ObjC =
           process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
     break;
@@ -834,13 +837,13 @@ public:
     case CodeCompletionResult::RK_Declaration:
       return !(
           Result.Declaration->getIdentifier() &&
-          Result.Declaration->getIdentifier()->getName().startswith(Filter));
+          Result.Declaration->getIdentifier()->getName().starts_with(Filter));
     case CodeCompletionResult::RK_Keyword:
-      return !StringRef(Result.Keyword).startswith(Filter);
+      return !StringRef(Result.Keyword).starts_with(Filter);
     case CodeCompletionResult::RK_Macro:
-      return !Result.Macro->getName().startswith(Filter);
+      return !Result.Macro->getName().starts_with(Filter);
     case CodeCompletionResult::RK_Pattern:
-      return !StringRef(Result.Pattern->getAsString()).startswith(Filter);
+      return !StringRef(Result.Pattern->getAsString()).starts_with(Filter);
     }
     // If we trigger this assert or the above switch yields a warning, then
     // CodeCompletionResult has been enhanced with more kinds of completion
@@ -904,7 +907,7 @@ private:
     }
     // We also filter some internal lldb identifiers here. The user
     // shouldn't see these.
-    if (llvm::StringRef(ToInsert).startswith("$__lldb_"))
+    if (llvm::StringRef(ToInsert).starts_with("$__lldb_"))
       return std::nullopt;
     if (ToInsert.empty())
       return std::nullopt;

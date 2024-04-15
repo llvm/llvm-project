@@ -21,7 +21,6 @@ define zeroext i1 @saddoi8(i8 signext %v1, i8 signext %v2, ptr %res) {
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    movb %dil, (%rdx)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i8, i1} @llvm.sadd.with.overflow.i8(i8 %v1, i8 %v2)
   %val = extractvalue {i8, i1} %t, 0
@@ -44,7 +43,6 @@ define zeroext i1 @saddoi16(i16 %v1, i16 %v2, ptr %res) {
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    movw %di, (%rdx)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i16, i1} @llvm.sadd.with.overflow.i16(i16 %v1, i16 %v2)
   %val = extractvalue {i16, i1} %t, 0
@@ -67,7 +65,6 @@ define zeroext i1 @saddoi32(i32 %v1, i32 %v2, ptr %res) {
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    movl %edi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
@@ -90,7 +87,6 @@ define zeroext i1 @saddoi64(i64 %v1, i64 %v2, ptr %res) {
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    movq %rdi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
@@ -114,7 +110,6 @@ define zeroext i1 @saddoinci8(i8 %v1, ptr %res) {
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    movb %dil, (%rsi)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i8, i1} @llvm.sadd.with.overflow.i8(i8 %v1, i8 1)
   %val = extractvalue {i8, i1} %t, 0
@@ -137,7 +132,6 @@ define zeroext i1 @saddoinci16(i16 %v1, ptr %res) {
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    movw %di, (%rsi)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i16, i1} @llvm.sadd.with.overflow.i16(i16 %v1, i16 1)
   %val = extractvalue {i16, i1} %t, 0
@@ -160,7 +154,6 @@ define zeroext i1 @saddoinci32(i32 %v1, ptr %res) {
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    movl %edi, (%rsi)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 1)
   %val = extractvalue {i32, i1} %t, 0
@@ -183,7 +176,6 @@ define zeroext i1 @saddoinci64(i64 %v1, ptr %res) {
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    movq %rdi, (%rsi)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 1)
   %val = extractvalue {i64, i1} %t, 0
@@ -207,7 +199,6 @@ define zeroext i1 @saddoi64imm1(i64 %v1, ptr %res) {
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    movq %rdi, (%rsi)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 2, i64 %v1)
   %val = extractvalue {i64, i1} %t, 0
@@ -231,7 +222,6 @@ define zeroext i1 @saddoi64imm2(i64 %v1, ptr %res) {
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    movq %rdi, (%rsi)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 -2147483648)
   %val = extractvalue {i64, i1} %t, 0
@@ -251,12 +241,11 @@ define zeroext i1 @saddoi64imm3(i64 %v1, ptr %res) {
 ;
 ; FAST-LABEL: saddoi64imm3:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    movabsq $-21474836489, %rax ## imm = 0xFFFFFFFAFFFFFFF7
-; FAST-NEXT:    addq %rdi, %rax
-; FAST-NEXT:    seto %cl
-; FAST-NEXT:    movq %rax, (%rsi)
-; FAST-NEXT:    andb $1, %cl
-; FAST-NEXT:    movzbl %cl, %eax
+; FAST-NEXT:    movabsq $-21474836489, %rcx ## imm = 0xFFFFFFFAFFFFFFF7
+; FAST-NEXT:    addq %rdi, %rcx
+; FAST-NEXT:    seto %al
+; FAST-NEXT:    movq %rcx, (%rsi)
+; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 -21474836489)
   %val = extractvalue {i64, i1} %t, 0
@@ -279,7 +268,6 @@ define zeroext i1 @saddoi64imm4(i64 %v1, ptr %res) {
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    movq %rdi, (%rsi)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 2147483647)
   %val = extractvalue {i64, i1} %t, 0
@@ -298,12 +286,11 @@ define zeroext i1 @saddoi64imm5(i64 %v1, ptr %res) {
 ;
 ; FAST-LABEL: saddoi64imm5:
 ; FAST:       ## %bb.0:
-; FAST-NEXT:    movl $2147483648, %eax ## imm = 0x80000000
-; FAST-NEXT:    addq %rdi, %rax
-; FAST-NEXT:    seto %cl
-; FAST-NEXT:    movq %rax, (%rsi)
-; FAST-NEXT:    andb $1, %cl
-; FAST-NEXT:    movzbl %cl, %eax
+; FAST-NEXT:    movl $2147483648, %ecx ## imm = 0x80000000
+; FAST-NEXT:    addq %rdi, %rcx
+; FAST-NEXT:    seto %al
+; FAST-NEXT:    movq %rcx, (%rsi)
+; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 2147483648)
   %val = extractvalue {i64, i1} %t, 0
@@ -327,7 +314,6 @@ define zeroext i1 @uaddoi32(i32 %v1, i32 %v2, ptr %res) {
 ; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movl %edi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
@@ -350,7 +336,6 @@ define zeroext i1 @uaddoi64(i64 %v1, i64 %v2, ptr %res) {
 ; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movq %rdi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
@@ -374,7 +359,6 @@ define zeroext i1 @uaddoinci8(i8 %v1, ptr %res) {
 ; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movb %dil, (%rsi)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %v1, i8 1)
   %val = extractvalue {i8, i1} %t, 0
@@ -397,7 +381,6 @@ define zeroext i1 @uaddoinci16(i16 %v1, ptr %res) {
 ; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movw %di, (%rsi)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i16, i1} @llvm.uadd.with.overflow.i16(i16 %v1, i16 1)
   %val = extractvalue {i16, i1} %t, 0
@@ -420,7 +403,6 @@ define zeroext i1 @uaddoinci32(i32 %v1, ptr %res) {
 ; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movl %edi, (%rsi)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %v1, i32 1)
   %val = extractvalue {i32, i1} %t, 0
@@ -443,7 +425,6 @@ define zeroext i1 @uaddoinci64(i64 %v1, ptr %res) {
 ; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movq %rdi, (%rsi)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %v1, i64 1)
   %val = extractvalue {i64, i1} %t, 0
@@ -467,7 +448,6 @@ define zeroext i1 @ssuboi32(i32 %v1, i32 %v2, ptr %res) {
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    movl %edi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
@@ -490,7 +470,6 @@ define zeroext i1 @ssuboi64(i64 %v1, i64 %v2, ptr %res) {
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    movq %rdi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
@@ -514,7 +493,6 @@ define zeroext i1 @usuboi32(i32 %v1, i32 %v2, ptr %res) {
 ; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movl %edi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
@@ -537,7 +515,6 @@ define zeroext i1 @usuboi64(i64 %v1, i64 %v2, ptr %res) {
 ; FAST-NEXT:    setb %al
 ; FAST-NEXT:    movq %rdi, (%rdx)
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
@@ -679,12 +656,11 @@ define zeroext i1 @saddobri32(i32 %v1, i32 %v2) {
 ; FAST-NEXT:  ## %bb.2: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
 ; FAST-NEXT:  LBB31_1: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
+; FAST-NEXT:    ## kill: def $al killed $al killed $eax
 ; FAST-NEXT:    retq
   %t = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
@@ -717,12 +693,11 @@ define zeroext i1 @saddobri64(i64 %v1, i64 %v2) {
 ; FAST-NEXT:  ## %bb.2: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
 ; FAST-NEXT:  LBB32_1: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
+; FAST-NEXT:    ## kill: def $al killed $al killed $eax
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
@@ -755,12 +730,11 @@ define zeroext i1 @uaddobri32(i32 %v1, i32 %v2) {
 ; FAST-NEXT:  ## %bb.2: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
 ; FAST-NEXT:  LBB33_1: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
+; FAST-NEXT:    ## kill: def $al killed $al killed $eax
 ; FAST-NEXT:    retq
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
@@ -793,12 +767,11 @@ define zeroext i1 @uaddobri64(i64 %v1, i64 %v2) {
 ; FAST-NEXT:  ## %bb.2: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
 ; FAST-NEXT:  LBB34_1: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
+; FAST-NEXT:    ## kill: def $al killed $al killed $eax
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
@@ -831,12 +804,11 @@ define zeroext i1 @ssubobri32(i32 %v1, i32 %v2) {
 ; FAST-NEXT:  ## %bb.2: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
 ; FAST-NEXT:  LBB35_1: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
+; FAST-NEXT:    ## kill: def $al killed $al killed $eax
 ; FAST-NEXT:    retq
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
@@ -869,12 +841,11 @@ define zeroext i1 @ssubobri64(i64 %v1, i64 %v2) {
 ; FAST-NEXT:  ## %bb.2: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
 ; FAST-NEXT:  LBB36_1: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
+; FAST-NEXT:    ## kill: def $al killed $al killed $eax
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
@@ -907,12 +878,11 @@ define zeroext i1 @usubobri32(i32 %v1, i32 %v2) {
 ; FAST-NEXT:  ## %bb.2: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
 ; FAST-NEXT:  LBB37_1: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
+; FAST-NEXT:    ## kill: def $al killed $al killed $eax
 ; FAST-NEXT:    retq
   %t = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
@@ -945,12 +915,11 @@ define zeroext i1 @usubobri64(i64 %v1, i64 %v2) {
 ; FAST-NEXT:  ## %bb.2: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
 ; FAST-NEXT:    retq
 ; FAST-NEXT:  LBB38_1: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
-; FAST-NEXT:    movzbl %al, %eax
+; FAST-NEXT:    ## kill: def $al killed $al killed $eax
 ; FAST-NEXT:    retq
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0

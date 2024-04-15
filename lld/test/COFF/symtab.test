@@ -5,8 +5,12 @@
 # RUN: llvm-readobj --symbols %t.exe | FileCheck %s
 # RUN: lld-link /debug:symtab /opt:noref /out:%t.exe /entry:main %t.obj %p/Inputs/std64.lib
 # RUN: llvm-readobj --symbols %t.exe | FileCheck %s
+# RUN: lld-link /debug:full,symtab /opt:noref /out:%t.exe /entry:main %t.obj %p/Inputs/std64.lib
+# RUN: llvm-readobj --symbols %t.exe | FileCheck %s
 
 # RUN: lld-link /debug /out:%t.exe /entry:main %t.obj %p/Inputs/std64.lib
+# RUN: llvm-readobj --symbols %t.exe | FileCheck -check-prefix=NO %s
+# RUN: lld-link /debug:dwarf,nosymtab /out:%t.exe /entry:main %t.obj %p/Inputs/std64.lib
 # RUN: llvm-readobj --symbols %t.exe | FileCheck -check-prefix=NO %s
 
 # CHECK:      Symbols [

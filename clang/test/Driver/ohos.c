@@ -17,9 +17,9 @@
 // CHECK-NOT: "-fno-common"
 // CHECK: {{.*}}ld.lld{{.*}}" "--sysroot=[[SYSROOT]]"
 // CHECK-NOT: "--sysroot=[[SYSROOT]]"
-// CHECK: "-pie"
 // CHECK-NOT: "--build-id"
 // CHECK: "--hash-style=both"
+// CHECK: "-pie"
 // CHECK: "-dynamic-linker" "/lib/ld-musl-arm.so.1"
 // CHECK: Scrt1.o
 // CHECK: crti.o
@@ -230,7 +230,6 @@
 
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm64-linux-ohos -pthread \
-// RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ohos_native_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-OHOS-PTHREAD %s

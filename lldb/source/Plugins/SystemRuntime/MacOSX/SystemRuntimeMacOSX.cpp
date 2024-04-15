@@ -61,7 +61,8 @@ SystemRuntime *SystemRuntimeMacOSX::CreateInstance(Process *process) {
       case llvm::Triple::IOS:
       case llvm::Triple::TvOS:
       case llvm::Triple::WatchOS:
-      // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS:
+      case llvm::Triple::XROS:
+      case llvm::Triple::BridgeOS:
         create = triple_ref.getVendor() == llvm::Triple::Apple;
         break;
       default:
@@ -420,7 +421,8 @@ void SystemRuntimeMacOSX::ReadLibdispatchTSDIndexes() {
           scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 16);
       CompilerType dispatch_tsd_indexes_s = scratch_ts_sp->CreateRecordType(
           nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-          "__lldb_dispatch_tsd_indexes_s", clang::TTK_Struct,
+          "__lldb_dispatch_tsd_indexes_s",
+          llvm::to_underlying(clang::TagTypeKind::Struct),
           lldb::eLanguageTypeC);
 
       TypeSystemClang::StartTagDeclarationDefinition(dispatch_tsd_indexes_s);

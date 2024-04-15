@@ -7,6 +7,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_BUILD_EXAMPLES
   LLVM_ENABLE_PLUGINS
   LLVM_BYE_LINK_INTO_TOOLS
+  LLVM_TOOL_LLVM_DRIVER_BUILD
   )
 
 configure_lit_site_cfg(
@@ -37,11 +38,10 @@ configure_lit_site_cfg(
   "LLD_SOURCE_DIR"
 )
 
-set(LLD_TEST_DEPS lld)
+set(LLD_TEST_DEPS lld LLDUnitTests)
 if (NOT LLD_BUILT_STANDALONE)
   list(APPEND LLD_TEST_DEPS
     FileCheck
-    LLDUnitTests
     count
     dsymutil
     llc

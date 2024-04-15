@@ -36,15 +36,15 @@ concept CanEmplace = requires(T t, Args&&... args) { t.emplace(std::forward<Args
 static_assert(CanEmplace<std::expected<int, int>, int>);
 
 template <bool Noexcept>
-struct CtorFromInitalizerList {
-  CtorFromInitalizerList(std::initializer_list<int>&) noexcept(Noexcept);
-  CtorFromInitalizerList(std::initializer_list<int>&, int) noexcept(Noexcept);
+struct CtorFromInitializerList {
+  CtorFromInitializerList(std::initializer_list<int>&) noexcept(Noexcept);
+  CtorFromInitializerList(std::initializer_list<int>&, int) noexcept(Noexcept);
 };
 
-static_assert(CanEmplace<std::expected<CtorFromInitalizerList<true>, int>, std::initializer_list<int>&>);
-static_assert(!CanEmplace<std::expected<CtorFromInitalizerList<false>, int>, std::initializer_list<int>&>);
-static_assert(CanEmplace<std::expected<CtorFromInitalizerList<true>, int>, std::initializer_list<int>&, int>);
-static_assert(!CanEmplace<std::expected<CtorFromInitalizerList<false>, int>, std::initializer_list<int>&, int>);
+static_assert(CanEmplace<std::expected<CtorFromInitializerList<true>, int>, std::initializer_list<int>&>);
+static_assert(!CanEmplace<std::expected<CtorFromInitializerList<false>, int>, std::initializer_list<int>&>);
+static_assert(CanEmplace<std::expected<CtorFromInitializerList<true>, int>, std::initializer_list<int>&, int>);
+static_assert(!CanEmplace<std::expected<CtorFromInitializerList<false>, int>, std::initializer_list<int>&, int>);
 
 struct Data {
   std::initializer_list<int> il;
@@ -79,6 +79,14 @@ constexpr bool test() {
     assert(e.has_value());
     assert(std::ranges::equal(e.value().il, list));
     assert(e.value().i == 10);
+  }
+
+  // TailClobberer
+  {
+    std::expected<TailClobberer<0>, bool> e(std::unexpect);
+    auto list = {4, 5, 6};
+    e.emplace(list);
+    assert(e.has_value());
   }
 
   return true;

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --sparsification --canonicalize --cse | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map --sparsification --canonicalize --cse | FileCheck %s
 
 #DCSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 #SparseTensor = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : compressed) }>
@@ -33,7 +33,7 @@
 //       CHECK:      %[[L2:.*]] = scf.for %[[TMP_arg3:.*]] = %[[TMP_10]] to %[[TMP_12]] step %[[TMP_c1]] {{.*}} {
 //       CHECK:        %[[TMP_13:.*]] = memref.load %[[TMP_4]][%[[TMP_arg3]]] : memref<?xindex>
 //       CHECK:        %[[TMP_14:.*]] = memref.load %[[TMP_5]][%[[TMP_arg3]]] : memref<?xi32>
-//       CHECK:        %[[Y:.*]] = sparse_tensor.insert %[[TMP_14]] into %{{.*}}[%[[TMP_9]], %[[TMP_arg2]], %[[TMP_13]]]
+//       CHECK:        %[[Y:.*]] = tensor.insert %[[TMP_14]] into %{{.*}}[%[[TMP_9]], %[[TMP_arg2]], %[[TMP_13]]]
 //       CHECK:        scf.yield %[[Y]]
 //       CHECK:      }
 //       CHECK:      scf.yield %[[L2]]

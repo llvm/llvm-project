@@ -277,7 +277,13 @@ public:
   }
 
   bool dataTraverseStmtPre(Stmt *S) {
-    if (S && !shouldIgnore(S))
+    if (!S) {
+      return true;
+    }
+    if (Check->IgnoreMacros && S->getBeginLoc().isMacroID()) {
+      return false;
+    }
+    if (!shouldIgnore(S))
       StmtStack.push_back(S);
     return true;
   }
@@ -583,6 +589,7 @@ private:
 SimplifyBooleanExprCheck::SimplifyBooleanExprCheck(StringRef Name,
                                                    ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      IgnoreMacros(Options.get("IgnoreMacros", false)),
       ChainedConditionalReturn(Options.get("ChainedConditionalReturn", false)),
       ChainedConditionalAssignment(
           Options.get("ChainedConditionalAssignment", false)),
@@ -671,6 +678,7 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
 }
 
 void SimplifyBooleanExprCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
   Options.store(Opts, "ChainedConditionalReturn", ChainedConditionalReturn);
   Options.store(Opts, "ChainedConditionalAssignment",
                 ChainedConditionalAssignment);

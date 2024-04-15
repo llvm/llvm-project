@@ -3,7 +3,7 @@
 # RUN: not llvm-mc -triple=riscv32 -show-encoding -mattr=+v,+f %s 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
 # RUN: llvm-mc -triple=riscv32 -filetype=obj -mattr=+experimental-zvfbfwma %s \
-# RUN:    | llvm-objdump -d --mattr=+experimental-zvfbfwma - \
+# RUN:    | llvm-objdump -d --mattr=+experimental-zvfbfwma --no-print-imm-hex - \
 # RUN:    | FileCheck %s --check-prefix=CHECK-INST
 # RUN: llvm-mc -triple=riscv32 -filetype=obj -mattr=+experimental-zvfbfwma %s \
 # RUN:    | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
@@ -12,7 +12,7 @@
 # RUN: not llvm-mc -triple=riscv64 -show-encoding -mattr=+v,+f %s 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
 # RUN: llvm-mc -triple=riscv64 -filetype=obj -mattr=+experimental-zvfbfwma %s \
-# RUN:    | llvm-objdump -d --mattr=+experimental-zvfbfwma - \
+# RUN:    | llvm-objdump -d --mattr=+experimental-zvfbfwma --no-print-imm-hex - \
 # RUN:    | FileCheck %s --check-prefix=CHECK-INST
 # RUN: llvm-mc -triple=riscv64 -filetype=obj -mattr=+experimental-zvfbfwma %s \
 # RUN:    | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN

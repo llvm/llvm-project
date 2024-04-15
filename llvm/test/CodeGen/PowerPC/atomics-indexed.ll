@@ -15,7 +15,9 @@ define i8 @load_x_i8_seq_cst(ptr %mem) {
 ; PPC32-NEXT:    sync
 ; PPC32-NEXT:    ori r4, r4, 24464
 ; PPC32-NEXT:    lbzx r3, r3, r4
-; PPC32-NEXT:    lwsync
+; PPC32-NEXT:    cmpw cr7, r3, r3
+; PPC32-NEXT:    bne- cr7, .+4
+; PPC32-NEXT:    isync
 ; PPC32-NEXT:    blr
 ;
 ; PPC64-LABEL: load_x_i8_seq_cst:
@@ -38,7 +40,9 @@ define i16 @load_x_i16_acquire(ptr %mem) {
 ; PPC32-NEXT:    lis r4, 2
 ; PPC32-NEXT:    ori r4, r4, 48928
 ; PPC32-NEXT:    lhzx r3, r3, r4
-; PPC32-NEXT:    lwsync
+; PPC32-NEXT:    cmpw cr7, r3, r3
+; PPC32-NEXT:    bne- cr7, .+4
+; PPC32-NEXT:    isync
 ; PPC32-NEXT:    blr
 ;
 ; PPC64-LABEL: load_x_i16_acquire:

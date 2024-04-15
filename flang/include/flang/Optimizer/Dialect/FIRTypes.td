@@ -22,7 +22,7 @@ include "flang/Optimizer/Dialect/FIRDialect.td"
 
 class FIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
                string baseCppClass = "::mlir::Type">
-    : TypeDef<fir_Dialect, name, traits, baseCppClass> {
+    : TypeDef<FIROpsDialect, name, traits, baseCppClass> {
   let mnemonic = typeMnemonic;
 }
 
@@ -326,6 +326,8 @@ def fir_RealType : FIR_Type<"Real", "real"> {
 
   let extraClassDeclaration = [{
     using KindTy = unsigned;
+    // Get MLIR float type with same semantics.
+    mlir::Type getFloatType(const fir::KindMapping &kindMap) const;
   }];
 
   let genVerifyDecl = 1;
@@ -494,6 +496,14 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
     // The value `kDynamic` represents an unknown extent for a dimension
     static constexpr Extent getUnknownExtent() {
       return mlir::ShapedType::kDynamic;
+    }
+
+    std::uint64_t getConstantArraySize() {
+      assert(!hasDynamicExtents() && "array type must have constant shape");
+      std::uint64_t size = 1;
+      for (Extent extent : getShape())
+        size = size * static_cast<std::uint64_t>(extent);
+      return size;
     }
   }];
 }

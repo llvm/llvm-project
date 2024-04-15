@@ -1,5 +1,8 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - | FileCheck %s
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - | FileCheck %s
+
 ;; Check that a zero-sized fragment (the final dbg.assign) is ignored by
 ;; AssignmentTrackingAnalysis.
 

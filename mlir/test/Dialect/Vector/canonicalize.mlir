@@ -53,6 +53,19 @@ func.func @create_vector_mask_to_constant_mask_truncation_zero() -> (vector<4x3x
 
 // -----
 
+// CHECK-LABEL: create_vector_mask_to_constant_mask_scalable_all_true
+func.func @create_vector_mask_to_constant_mask_scalable_all_true() -> (vector<8x[16]xi1>) {
+  %c8 = arith.constant 8 : index
+  %c16 = arith.constant 16 : index
+  %0 = vector.vscale
+  %1 = arith.muli %0, %c16 : index
+  // CHECK: vector.constant_mask [8, 16] : vector<8x[16]xi1>
+  %10 = vector.create_mask %c8, %1 : vector<8x[16]xi1>
+  return %10 : vector<8x[16]xi1>
+}
+
+// -----
+
 // CHECK-LABEL: create_mask_transpose_to_transposed_create_mask
 //  CHECK-SAME: %[[DIM0:.*]]: index, %[[DIM1:.*]]: index, %[[DIM2:.*]]: index
 func.func @create_mask_transpose_to_transposed_create_mask(
@@ -854,6 +867,29 @@ func.func @canonicalize_broadcast_shapecast_to_shapecast(%arg0: vector<3x4xf32>)
 
 // -----
 
+// CHECK-LABEL: fold_vector_transfer_masks
+func.func @fold_vector_transfer_masks(%A: memref<?x?xf32>) -> (vector<4x8xf32>) {
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[F0:.+]] = arith.constant 0.000000e+00 : f32
+  %f0 = arith.constant 0.0 : f32
+
+  %mask = vector.constant_mask [8, 4] : vector<8x4xi1>
+
+  // CHECK: vector.transfer_read %{{.*}}, %[[F0]] {permutation_map
+  %1 = vector.transfer_read %A[%c0, %c0], %f0, %mask
+      {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : memref<?x?xf32>, vector<4x8xf32>
+
+  // CHECK: vector.transfer_write {{.*}}[%[[C0]], %[[C0]]] {permutation_map
+  vector.transfer_write %1, %A[%c0, %c0], %mask
+      {permutation_map = affine_map<(d0, d1) -> (d1, d0)>} : vector<4x8xf32>, memref<?x?xf32>
+
+  // CHECK: return
+  return %1 : vector<4x8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: fold_vector_transfers
 func.func @fold_vector_transfers(%A: memref<?x8xf32>) -> (vector<4x8xf32>, vector<4x9xf32>) {
   %c0 = arith.constant 0 : index
@@ -1262,6 +1298,24 @@ func.func @store_to_load_tensor_broadcast(%arg0 : tensor<4x4xf32>,
   permutation_map = affine_map<(d0, d1) -> (d0, d1, 0)>} :
     tensor<4x4xf32>, vector<4x2x6xf32>
   return %0 : vector<4x2x6xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @store_to_load_tensor_broadcast_scalable
+//  CHECK-SAME: (%[[ARG:.*]]: tensor<?xf32>, %[[V0:.*]]: vector<[4]xf32>)
+//       CHECK:   %[[B:.*]] = vector.broadcast %[[V0]] : vector<[4]xf32> to vector<6x[4]xf32>
+//       CHECK:   return %[[B]] : vector<6x[4]xf32>
+func.func @store_to_load_tensor_broadcast_scalable(%arg0 : tensor<?xf32>,
+  %v0 : vector<[4]xf32>) -> vector<6x[4]xf32> {
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg0[%c0] {in_bounds = [true]} :
+    vector<[4]xf32>, tensor<?xf32>
+  %0 = vector.transfer_read %w0[%c0], %cf0 {in_bounds = [true, true],
+  permutation_map = affine_map<(d0) -> (0, d0)>} :
+    tensor<?xf32>, vector<6x[4]xf32>
+  return %0 : vector<6x[4]xf32>
 }
 
 // -----
@@ -2016,6 +2070,59 @@ func.func @insert_element_fold() -> vector<4xi32> {
 
 // -----
 
+// CHECK-LABEL: func @insert_element_invalid_fold
+func.func @insert_element_invalid_fold() -> vector<1xf32> {
+  // Out-of-bound index here.
+  %c26 = arith.constant 26 : index
+  %cst_2 = arith.constant 1.60215309E+9 : f32
+  %cst_20 = arith.constant dense<1.60215309E+9> : vector<1xf32>
+// CHECK: vector.insertelement
+  %46 = vector.insertelement %cst_2, %cst_20[%c26 : index] : vector<1xf32>
+  return %46 : vector<1xf32>
+}
+
+
+// -----
+
+// Do not crash on poison
+// CHECK-LABEL: func @insert_poison_fold1
+//       CHECK:   vector.insertelement
+func.func @insert_poison_fold1() -> vector<4xi32> {
+  %v = ub.poison : vector<4xi32>
+  %s = arith.constant 7 : i32
+  %i = arith.constant 2 : i32
+  %1 = vector.insertelement %s, %v[%i : i32] : vector<4xi32>
+  return %1 : vector<4xi32>
+}
+
+// -----
+
+// Do not crash on poison
+// CHECK-LABEL: func @insert_poison_fold2
+//       CHECK:   vector.insertelement
+func.func @insert_poison_fold2() -> vector<4xi32> {
+  %v = arith.constant dense<[0, 1, 2, 3]> : vector<4xi32>
+  %s = ub.poison : i32
+  %i = arith.constant 2 : i32
+  %1 = vector.insertelement %s, %v[%i : i32] : vector<4xi32>
+  return %1 : vector<4xi32>
+}
+
+// -----
+
+// Do not crash on poison
+// CHECK-LABEL: func @insert_poison_fold3
+//       CHECK:   vector.insertelement
+func.func @insert_poison_fold3() -> vector<4xi32> {
+  %v = arith.constant dense<[0, 1, 2, 3]> : vector<4xi32>
+  %s = arith.constant 7 : i32
+  %i = ub.poison : i32
+  %1 = vector.insertelement %s, %v[%i : i32] : vector<4xi32>
+  return %1 : vector<4xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @extract_element_fold
 //       CHECK:   %[[C:.+]] = arith.constant 5 : i32
 //       CHECK:   return %[[C]]
@@ -2032,6 +2139,30 @@ func.func @extract_element_fold() -> i32 {
 func.func @extract_element_splat_fold(%a : i32) -> i32 {
   %v = vector.splat %a : vector<4xi32>
   %i = arith.constant 2 : i32
+  %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
+  return %1 : i32
+}
+
+// -----
+
+// Do not crash on poison
+// CHECK-LABEL: func @extract_element_poison_fold1
+//       CHECK:   vector.extractelement
+func.func @extract_element_poison_fold1() -> i32 {
+  %v = ub.poison : vector<4xi32>
+  %i = arith.constant 2 : i32
+  %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
+  return %1 : i32
+}
+
+// -----
+
+// Do not crash on poison
+// CHECK-LABEL: func @extract_element_poison_fold2
+//       CHECK:   vector.extractelement
+func.func @extract_element_poison_fold2() -> i32 {
+  %v = arith.constant dense<[1, 3, 5, 7]> : vector<4xi32>
+  %i = ub.poison : i32
   %1 = vector.extractelement %v[%i : i32] : vector<4xi32>
   return %1 : i32
 }
@@ -2067,6 +2198,18 @@ func.func @masked_reduce_one_element_vector_extract(%a : vector<1xf32>, %mask : 
 //       CHECK:   return %[[S]]
 func.func @reduce_one_element_vector_addf(%a : vector<1xf32>, %b: f32) -> f32 {
   %s = vector.reduction <add>, %a, %b : vector<1xf32> into f32
+  return %s : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @reduce_one_element_vector_addf_fastmath
+//  CHECK-SAME: (%[[V:.+]]: vector<1xf32>, %[[B:.+]]: f32)
+//       CHECK:   %[[A:.+]] = vector.extract %[[V]][0] : f32 from vector<1xf32>
+//       CHECK:   %[[S:.+]] = arith.addf %[[A]], %arg1 fastmath<nnan,ninf> : f32
+//       CHECK:   return %[[S]]
+func.func @reduce_one_element_vector_addf_fastmath(%a : vector<1xf32>, %b: f32) -> f32 {
+  %s = vector.reduction <add>, %a, %b fastmath<nnan,ninf> : vector<1xf32> into f32
   return %s : f32
 }
 
@@ -2340,6 +2483,18 @@ func.func @all_true_vector_mask(%a : vector<3x4xf32>) -> vector<3x4xf32> {
 
 // -----
 
+// CHECK-LABEL: func @all_true_vector_mask_no_result(
+func.func @all_true_vector_mask_no_result(%a : vector<3x4xf32>, %m : memref<3x4xf32>) {
+//   CHECK-NOT:   vector.mask
+//       CHECK:   vector.transfer_write
+  %c0 = arith.constant 0 : index
+  %all_true = vector.constant_mask [3, 4] : vector<3x4xi1>
+  vector.mask %all_true { vector.transfer_write %a, %m[%c0, %c0] : vector<3x4xf32>, memref<3x4xf32> } : vector<3x4xi1>
+  return
+}
+
+// -----
+
 // CHECK-LABEL:   func.func @fold_shape_cast_with_mask(
 // CHECK-SAME:     %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<1x4xi1> {
 func.func @fold_shape_cast_with_mask(%arg0: tensor<1x?xf32>) -> vector<1x4xi1> {
@@ -2423,4 +2578,27 @@ func.func @load_store_forwarding_rank_mismatch(%v0: vector<4x1x1xf32>, %arg0: te
       permutation_map = affine_map<(d0, d1, d2) -> (d1, 0, d2, 0)>} :
       tensor<4x4x4xf32>, vector<1x100x4x5xf32>
   return %r : vector<1x100x4x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @rank_0_shuffle_to_interleave(
+//  CHECK-SAME:     %[[LHS:.*]]: vector<f64>, %[[RHS:.*]]: vector<f64>)
+func.func @rank_0_shuffle_to_interleave(%arg0: vector<f64>, %arg1: vector<f64>) -> vector<2xf64>
+{
+  // CHECK: %[[ZIP:.*]] = vector.interleave %[[LHS]], %[[RHS]] : vector<f64>
+  // CHECK: return %[[ZIP]]
+  %0 = vector.shuffle %arg0, %arg1 [0, 1] : vector<f64>, vector<f64>
+  return %0 : vector<2xf64>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @rank_1_shuffle_to_interleave(
+//  CHECK-SAME:     %[[LHS:.*]]: vector<6xi32>, %[[RHS:.*]]: vector<6xi32>)
+func.func @rank_1_shuffle_to_interleave(%arg0: vector<6xi32>, %arg1: vector<6xi32>) -> vector<12xi32> {
+  // CHECK: %[[ZIP:.*]] = vector.interleave %[[LHS]], %[[RHS]] : vector<6xi32>
+  // CHECK: return %[[ZIP]]
+  %0 = vector.shuffle %arg0, %arg1 [0, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 11] : vector<6xi32>, vector<6xi32>
+  return %0 : vector<12xi32>
 }

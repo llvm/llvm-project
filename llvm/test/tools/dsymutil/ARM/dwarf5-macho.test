@@ -22,28 +22,40 @@ RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWA
 RUN: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --linker parallel --no-odr -y %p/dummy-debug-map-amr64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s
+
+### Uncomment following when llvm-dwarfdump will print resolved address ranges
+### for the case mutiplue compile units.
+COM: rm -rf %t.dir && mkdir -p %t.dir
+COM: dsymutil --linker parallel -y %p/dummy-debug-map-amr64.map \
+COM:   -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
+COM: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s \
+COM: --check-prefixes=CHECK,CHECK-LLVM
+
 
 CHECK:.debug_abbrev contents:
 CHECK-NEXT: Abbrev table for offset: 0x00000000
 
 CHECK: .debug_info contents:
-CHECK-NEXT: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 
+CHECK-LLVM: Compile Unit: length = 0x0000001f, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
+CHECK-LLVM: DW_TAG_compile_unit
+CHECK-LLVM: DW_TAG_base_type
+CHECK: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
 CHECK: DW_AT_ranges [DW_FORM_sec_offset] (0x[[RANGELIST_OFFSET:[0-9a-f]+]]
 CHECK-NEXT:                  [0x[[RANGELIST_OFFSET_START:[0-9a-f]+]], 0x[[RANGELIST_OFFSET_END:[0-9a-f]+]]))
 CHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
-CHECK: 0x0000002c:   DW_TAG_subprogram [2] * (0x0000000c)
+CHECK:   DW_TAG_subprogram
 CHECK-NEXT:  DW_AT_low_pc [DW_FORM_addrx]     (indexed (00000000) address = 0x[[#%.16x,LOCLIST_LOWPC:]])
-CHECK: 0x0000003c:     DW_TAG_formal_parameter [3]   (0x0000002c)
-CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]: 
+CHECK:     DW_TAG_formal_parameter
+CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]:
 CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START:]], 0x[[#%.16x,LOCLIST_PAIR_END:]]): [[LOCLIST_EXPR:.*]]
 CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START2:]], 0x[[#%.16x,LOCLIST_PAIR_END2:]]): [[LOCLIST_EXPR2:.*]])
 
 CHECK: .debug_loclists contents:
 CHECK-NEXT: 0x00000000: locations list header: length = 0x00000018, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
-CHECK-NEXT: 0x[[LOC_OFFSET]]: 
+CHECK-NEXT: 0x[[LOC_OFFSET]]:
 CHECK-NEXT:            DW_LLE_base_addressx   (0x0000000000000000)
 CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END,LOCLIST_LOWPC)]])
 CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START2,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END2,LOCLIST_LOWPC)]])
@@ -52,12 +64,12 @@ CHECK-NEXT:            DW_LLE_end_of_list     ()
 CHECK: .debug_line contents:
 CHECK-NEXT: debug_line[0x00000000]
 CHECK-NEXT: Line table prologue:
-CHECK-NEXT:     total_length: 0x00000048
+CHECK-NEXT:     total_length: 0x0000005a
 CHECK-NEXT:           format: DWARF32
 CHECK-NEXT:          version: 5
 CHECK-NEXT:     address_size: 8
 CHECK-NEXT:  seg_select_size: 0
-CHECK-NEXT:  prologue_length: 0x00000025
+CHECK-NEXT:  prologue_length: 0x00000037
 CHECK-NEXT:  min_inst_length: 1
 CHECK-NEXT: max_ops_per_inst: 1
 CHECK-NEXT:  default_is_stmt: 1
@@ -80,6 +92,7 @@ CHECK-NEXT: include_directories[  0] =  .debug_line_str[0x00000000] = "/Users/sh
 CHECK-NEXT: file_names[  0]:
 CHECK-NEXT:            name:  .debug_line_str[0x00000029] = "a.cpp"
 CHECK-NEXT:       dir_index: 0
+CHECK-NEXT:    md5_checksum: 2675ab7ce3623b564cfd8a2906a462e5
 
 
 CHECK: .debug_str contents:

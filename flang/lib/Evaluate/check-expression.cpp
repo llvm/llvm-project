@@ -12,6 +12,7 @@
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <set>
@@ -189,7 +190,12 @@ struct IsActuallyConstantHelper {
   bool operator()(const StructureConstructor &x) {
     for (const auto &pair : x) {
       const Expr<SomeType> &y{pair.second.value()};
-      if (!(*this)(y) && !IsNullPointer(y)) {
+      const auto sym{pair.first};
+      const bool compIsConstant{(*this)(y)};
+      // If an allocatable component is initialized by a constant,
+      // the structure constructor is not a constant.
+      if ((!compIsConstant && !IsNullPointer(y)) ||
+          (compIsConstant && IsAllocatable(sym))) {
         return false;
       }
     }
@@ -244,6 +250,8 @@ public:
         }
       }
       return false;
+    } else if (!CheckVarOrComponent(ultimate)) {
+      return false;
     } else if (!ultimate.attrs().test(semantics::Attr::TARGET)) {
       if (messages_) {
         messages_->Say(
@@ -261,7 +269,7 @@ public:
       }
       return false;
     } else {
-      return CheckVarOrComponent(ultimate);
+      return true;
     }
   }
   bool operator()(const StaticDataObject &) const { return false; }
@@ -312,24 +320,23 @@ public:
 private:
   bool CheckVarOrComponent(const semantics::Symbol &symbol) {
     const Symbol &ultimate{symbol.GetUltimate()};
-    if (IsAllocatable(ultimate)) {
-      if (messages_) {
-        messages_->Say(
-            "An initial data target may not be a reference to an ALLOCATABLE '%s'"_err_en_US,
-            ultimate.name());
-        emittedMessage_ = true;
-      }
-      return false;
-    } else if (ultimate.Corank() > 0) {
-      if (messages_) {
-        messages_->Say(
-            "An initial data target may not be a reference to a coarray '%s'"_err_en_US,
-            ultimate.name());
-        emittedMessage_ = true;
-      }
-      return false;
+    const char *unacceptable{nullptr};
+    if (ultimate.Corank() > 0) {
+      unacceptable = "a coarray";
+    } else if (IsAllocatable(ultimate)) {
+      unacceptable = "an ALLOCATABLE";
+    } else if (IsPointer(ultimate)) {
+      unacceptable = "a POINTER";
+    } else {
+      return true;
     }
-    return true;
+    if (messages_) {
+      messages_->Say(
+          "An initial data target may not be a reference to %s '%s'"_err_en_US,
+          unacceptable, ultimate.name());
+      emittedMessage_ = true;
+    }
+    return false;
   }
 
   parser::ContextualMessages *messages_;
@@ -351,10 +358,14 @@ bool IsInitialProcedureTarget(const semantics::Symbol &symbol) {
   const auto &ultimate{symbol.GetUltimate()};
   return common::visit(
       common::visitors{
-          [](const semantics::SubprogramDetails &subp) {
-            return !subp.isDummy();
+          [&](const semantics::SubprogramDetails &subp) {
+            return !subp.isDummy() && !subp.stmtFunction() &&
+                symbol.owner().kind() != semantics::Scope::Kind::MainProgram &&
+                symbol.owner().kind() != semantics::Scope::Kind::Subprogram;
           },
-          [](const semantics::SubprogramNameDetails &) { return true; },
+          [](const semantics::SubprogramNameDetails &x) {
+            return x.kind() != semantics::SubprogramKind::Internal;
+          },
           [&](const semantics::ProcEntityDetails &proc) {
             return !semantics::IsPointer(ultimate) && !proc.isDummy();
           },
@@ -467,6 +478,14 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
           return {std::move(folded)};
         }
       } else if (IsNamedConstant(symbol)) {
+        if (symbol.name() == "numeric_storage_size" &&
+            symbol.owner().IsModule() &&
+            DEREF(symbol.owner().symbol()).name() == "iso_fortran_env") {
+          // Very special case: numeric_storage_size is not folded until
+          // it read from the iso_fortran_env module file, as its value
+          // depends on compilation options.
+          return {std::move(folded)};
+        }
         context.messages().Say(
             "Value of named constant '%s' (%s) cannot be computed as a constant value"_err_en_US,
             symbol.name(), folded.AsFortran());
@@ -1030,23 +1049,46 @@ public:
   using Result = std::optional<parser::Message>;
   using Base = AnyTraverse<StmtFunctionChecker, Result>;
   StmtFunctionChecker(const Symbol &sf, FoldingContext &context)
-      : Base{*this}, sf_{sf}, context_{context} {}
+      : Base{*this}, sf_{sf}, context_{context} {
+    if (!context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::StatementFunctionExtensions)) {
+      severity_ = parser::Severity::Error;
+    } else if (context_.languageFeatures().ShouldWarn(
+                   common::LanguageFeature::StatementFunctionExtensions)) {
+      severity_ = parser::Severity::Portability;
+    }
+  }
   using Base::operator();
 
   template <typename T> Result operator()(const ArrayConstructor<T> &) const {
-    return parser::Message{sf_.name(),
-        "Statement function '%s' should not contain an array constructor"_port_en_US,
-        sf_.name()};
+    if (severity_) {
+      auto msg{
+          "Statement function '%s' should not contain an array constructor"_port_en_US};
+      msg.set_severity(*severity_);
+      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+    } else {
+      return std::nullopt;
+    }
   }
   Result operator()(const StructureConstructor &) const {
-    return parser::Message{sf_.name(),
-        "Statement function '%s' should not contain a structure constructor"_port_en_US,
-        sf_.name()};
+    if (severity_) {
+      auto msg{
+          "Statement function '%s' should not contain a structure constructor"_port_en_US};
+      msg.set_severity(*severity_);
+      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+    } else {
+      return std::nullopt;
+    }
   }
   Result operator()(const TypeParamInquiry &) const {
-    return parser::Message{sf_.name(),
-        "Statement function '%s' should not contain a type parameter inquiry"_port_en_US,
-        sf_.name()};
+    if (severity_) {
+      auto msg{
+          "Statement function '%s' should not contain a type parameter inquiry"_port_en_US};
+      msg.set_severity(*severity_);
+      return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+    } else {
+      return std::nullopt;
+    }
   }
   Result operator()(const ProcedureDesignator &proc) const {
     if (const Symbol * symbol{proc.GetSymbol()}) {
@@ -1064,16 +1106,23 @@ public:
       if (auto chars{
               characteristics::Procedure::Characterize(proc, context_)}) {
         if (!chars->CanBeCalledViaImplicitInterface()) {
-          return parser::Message(sf_.name(),
-              "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US,
-              sf_.name(), symbol->name());
+          if (severity_) {
+            auto msg{
+                "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US};
+            msg.set_severity(*severity_);
+            return parser::Message{
+                sf_.name(), std::move(msg), sf_.name(), symbol->name()};
+          }
         }
       }
     }
     if (proc.Rank() > 0) {
-      return parser::Message(sf_.name(),
-          "Statement function '%s' should not reference a function that returns an array"_port_en_US,
-          sf_.name());
+      if (severity_) {
+        auto msg{
+            "Statement function '%s' should not reference a function that returns an array"_port_en_US};
+        msg.set_severity(*severity_);
+        return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+      }
     }
     return std::nullopt;
   }
@@ -1083,9 +1132,12 @@ public:
         return result;
       }
       if (expr->Rank() > 0 && !UnwrapWholeSymbolOrComponentDataRef(*expr)) {
-        return parser::Message(sf_.name(),
-            "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US,
-            sf_.name());
+        if (severity_) {
+          auto msg{
+              "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US};
+          msg.set_severity(*severity_);
+          return parser::Message{sf_.name(), std::move(msg), sf_.name()};
+        }
       }
     }
     return std::nullopt;
@@ -1094,6 +1146,7 @@ public:
 private:
   const Symbol &sf_;
   FoldingContext &context_;
+  std::optional<parser::Severity> severity_;
 };
 
 std::optional<parser::Message> CheckStatementFunction(

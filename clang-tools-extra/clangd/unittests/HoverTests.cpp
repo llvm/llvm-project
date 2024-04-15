@@ -1983,10 +1983,14 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Macro;
             HI.Definition =
                 R"cpp(#define MACRO                                                                  \
-  { return 0; }
+  {                                                                            \
+    return 0;                                                                  \
+  }
 
 // Expands to
-{ return 0; })cpp";
+{
+  return 0;
+})cpp";
           }},
       {
           R"cpp(// Forward class declaration
@@ -3347,6 +3351,20 @@ TEST(Hover, NoCrashAPInt64) {
   )cpp");
   auto AST = TestTU::withCode(T.code()).build();
   getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+}
+
+TEST(Hover, NoCrashInt128) {
+  Annotations T(R"cpp(
+    constexpr __int128_t value = -4;
+    void foo() { va^lue; }
+  )cpp");
+  auto TU = TestTU::withCode(T.code());
+  // Need a triple that support __int128_t.
+  TU.ExtraArgs.push_back("--target=x86_64-pc-linux-gnu");
+  auto AST = TU.build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(H);
+  EXPECT_EQ(H->Value, "-4 (0xfffffffc)");
 }
 
 TEST(Hover, DocsFromMostSpecial) {

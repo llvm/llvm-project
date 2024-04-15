@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
@@ -28,6 +29,7 @@
 
 namespace mlir {
 namespace bufferization {
+class AllocTensorOp;
 class OneShotAnalysisState;
 } // namespace bufferization
 
@@ -50,8 +52,12 @@ struct BufferizeToAllocationOptions {
   enum class AllocOp { MemrefAlloc = 0, MemrefAlloca = 1 };
   AllocOp allocOp = AllocOp::MemrefAlloc;
 
-  enum class MemcpyOp { MemrefTensorStore = 0, MemrefCopy = 1, LinalgCopy = 2 };
-  MemcpyOp memcpyOp = MemcpyOp::MemrefTensorStore;
+  enum class MemcpyOp {
+    MaterializeInDestination = 0,
+    MemrefCopy = 1,
+    LinalgCopy = 2
+  };
+  MemcpyOp memcpyOp = MemcpyOp::MaterializeInDestination;
 
   /// If set to "true", only the destination tensor operands are bufferized to
   /// a new allocation (and wrapped in "bufferization.to_tensor"), but not the
@@ -66,7 +72,8 @@ struct BufferizeToAllocationOptions {
 };
 
 /// Materialize a buffer allocation for the given tensor.pad op and lower the
-/// op to linalg.fill/linalg.generic + memref.tensor_store. E.g.:
+/// op to linalg.fill/linalg.generic + bufferization.materialize_in_destination.
+/// E.g.:
 ///
 /// %0 = tensor.pad low[%l] high[%h] %t ...
 ///
@@ -75,7 +82,7 @@ struct BufferizeToAllocationOptions {
 /// %alloc = memref.alloc
 /// linalg.fill ... outs(%alloc)
 /// %subview = memref.subview %alloc [%l] [...] [1]
-/// memref.tensor_store %t, %subview
+/// bufferization.materialize_in_destination %t in %subview
 /// %0 = bufferization.to_tensor %alloc restrict writable
 ///
 /// In addition to rewriting the IR as shown above, this function returns the
@@ -96,7 +103,7 @@ Value bufferizeToAllocation(RewriterBase &rewriter,
 /// is lowered to:
 ///
 /// %alloc = memref.alloc
-/// memref.tensor_store %t, %subview
+/// bufferization.materialize_in_destination %t in %subview
 /// vector.mask {
 ///   vector.transfer_write %arg0, %alloc : vector<16xf32>, memref<?xf32>
 /// } : vector<16xi1>
@@ -108,6 +115,18 @@ Value bufferizeToAllocation(RewriterBase &rewriter,
 Value bufferizeToAllocation(RewriterBase &rewriter,
                             const BufferizeToAllocationOptions &options,
                             vector::MaskOp maskOp, Attribute memorySpace = {},
+                            Operation *insertionPoint = nullptr);
+
+/// Materialize a buffer allocation for the given bufferization.alloc_tensor op
+/// and lower the op to memref.alloc + memref.tensor_store.
+///
+/// In addition to rewriting the IR, this function returns the newly allocated
+/// buffer. The `insertionPoint` parameter can be used to specify a custom
+/// insertion point for the buffer allocation.
+Value bufferizeToAllocation(RewriterBase &rewriter,
+                            const BufferizeToAllocationOptions &options,
+                            bufferization::AllocTensorOp allocTensorOp,
+                            Attribute memorySpace = {},
                             Operation *insertionPoint = nullptr);
 
 /// Bufferize the given op with tensor semantics and materialize the result in
@@ -441,7 +460,8 @@ LogicalResult promoteSubviewsPrecondition(Operation *op,
 LogicalResult vectorizeOpPrecondition(Operation *op,
                                       ArrayRef<int64_t> inputVectorSizes = {},
                                       ArrayRef<bool> inputScalableVecDims = {},
-                                      bool vectorizeNDExtract = false);
+                                      bool vectorizeNDExtract = false,
+                                      bool flatten1DDepthwiseConv = false);
 
 //===----------------------------------------------------------------------===//
 // Transformations exposed as functional-style API calls.
@@ -462,6 +482,10 @@ struct ControlDropUnitDims {
     if (auto genericOp = dyn_cast_or_null<GenericOp>(op)) {
       return llvm::to_vector(llvm::seq<unsigned>(0, genericOp.getNumLoops()));
     }
+    if (auto padOp = dyn_cast_or_null<tensor::PadOp>(op)) {
+      return llvm::to_vector(
+          llvm::seq<unsigned>(0, padOp.getSourceType().getRank()));
+    }
     return SmallVector<unsigned>{};
   };
 };
@@ -474,6 +498,8 @@ LogicalResult dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
 struct ElementwiseOpFusionResult {
   Operation *fusedOp;
   llvm::DenseMap<Value, Value> replacements;
+  static llvm::SmallDenseSet<int>
+  getPreservedProducerResults(GenericOp producer, GenericOp consumer);
 };
 FailureOr<ElementwiseOpFusionResult>
 fuseElementwiseOps(RewriterBase &rewriter, OpOperand *fusedOperand);
@@ -668,6 +694,11 @@ FailureOr<GenericOp> interchangeGenericOp(RewriterBase &rewriter,
 FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
                                        LinalgOp namedOp);
 
+/// Create a namedOp from the given GenericOp and replace the GenericOp.
+/// Currently we can specialize only trivial linalg copy operations.
+FailureOr<LinalgOp> specializeGenericOp(RewriterBase &rewriter,
+                                        GenericOp genericOp);
+
 /// Create a new buffer using the `allocationFn` provided. The size of this
 /// buffer is the smallest constant bounding size along each dimension that
 /// can be computed for the size of the result of `subView`. Returns the
@@ -729,7 +760,8 @@ LogicalResult deallocateGPUPrivateMemory(OpBuilder &, Value /*buffer*/);
 LogicalResult vectorize(RewriterBase &rewriter, Operation *op,
                         ArrayRef<int64_t> inputVectorSizes = {},
                         ArrayRef<bool> inputScalableVecDims = {},
-                        bool vectorizeNDExtract = false);
+                        bool vectorizeNDExtract = false,
+                        bool flatten1DDepthwiseConv = false);
 
 /// Emit a suitable vector form for a Copy op with fully static shape.
 LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);
@@ -1047,6 +1079,11 @@ bool isDimSequencePreserved(AffineMap map, ReassociationIndicesRef dimSequence);
 bool areDimSequencesPreserved(ArrayRef<AffineMap> maps,
                               ArrayRef<ReassociationIndices> dimSequences);
 
+struct CollapseResult {
+  SmallVector<Value> results;
+  LinalgOp collapsedOp;
+};
+
 /// Collapses dimensions of linalg.generic/linalg.copy operation. A precondition
 /// to calling this method is that for each list in `foldedIterationDim`, the
 /// sequence of dimensions is contiguous in domains of all `indexing_maps` of
@@ -1054,9 +1091,8 @@ bool areDimSequencesPreserved(ArrayRef<AffineMap> maps,
 /// When valid, the method also collapses the operands of the op. Returns
 /// replacement values of the results of the original `linalgOp` by inserting
 /// reshapes to get back values of compatible types.
-template <typename LinalgType>
-FailureOr<SmallVector<Value>>
-collapseOpIterationDims(LinalgType op,
+FailureOr<CollapseResult>
+collapseOpIterationDims(LinalgOp op,
                         ArrayRef<ReassociationIndices> foldedIterationDims,
                         RewriterBase &rewriter);
 
@@ -1200,6 +1236,13 @@ rewriteInIm2Col(RewriterBase &rewriter,
 /// (C x Kh x Kw, Ho x Wo))
 FailureOr<std::pair<Operation *, Operation *>>
 rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp);
+
+/// Convert linalg.conv_2d_nhwc_fhwc(_q) to linalg.conv_2d_nhwc_hwcf(_q) by
+/// materializing transpose.
+FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
+                                       linalg::Conv2DNhwcFhwcOp op);
+FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
+                                       linalg::Conv2DNhwcFhwcQOp op);
 
 //===----------------------------------------------------------------------===//
 // Rewrite patterns wrapping transformations.

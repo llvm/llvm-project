@@ -90,6 +90,7 @@ def : GINodeEquiv<G_UDIVFIX, udivfix>;
 def : GINodeEquiv<G_SDIVFIXSAT, sdivfixsat>;
 def : GINodeEquiv<G_UDIVFIXSAT, udivfixsat>;
 def : GINodeEquiv<G_SELECT, select>;
+def : GINodeEquiv<G_SELECT, vselect>;
 def : GINodeEquiv<G_FNEG, fneg>;
 def : GINodeEquiv<G_FPEXT, fpextend>;
 def : GINodeEquiv<G_FPTRUNC, fpround>;
@@ -116,6 +117,9 @@ def : GINodeEquiv<G_INTRINSIC, intrinsic_wo_chain> {
   let IfConvergent = G_INTRINSIC_CONVERGENT;
 }
 
+def : GINodeEquiv<G_GET_FPENV, get_fpenv>;
+def : GINodeEquiv<G_SET_FPENV, set_fpenv>;
+def : GINodeEquiv<G_RESET_FPENV, reset_fpenv>;
 def : GINodeEquiv<G_GET_FPMODE, get_fpmode>;
 def : GINodeEquiv<G_SET_FPMODE, set_fpmode>;
 def : GINodeEquiv<G_RESET_FPMODE, reset_fpmode>;
@@ -127,6 +131,7 @@ let IfConvergent = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS in {
 }
 
 def : GINodeEquiv<G_BR, br>;
+def : GINodeEquiv<G_BRCOND, brcond>;
 def : GINodeEquiv<G_BSWAP, bswap>;
 def : GINodeEquiv<G_BITREVERSE, bitreverse>;
 def : GINodeEquiv<G_FSHL, fshl>;
@@ -137,6 +142,7 @@ def : GINodeEquiv<G_CTLZ_ZERO_UNDEF, ctlz_zero_undef>;
 def : GINodeEquiv<G_CTTZ_ZERO_UNDEF, cttz_zero_undef>;
 def : GINodeEquiv<G_CTPOP, ctpop>;
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, extractelt>;
+def : GINodeEquiv<G_INSERT_VECTOR_ELT, vector_insert>;
 def : GINodeEquiv<G_CONCAT_VECTORS, concat_vectors>;
 def : GINodeEquiv<G_BUILD_VECTOR, build_vector>;
 def : GINodeEquiv<G_FCEIL, fceil>;
@@ -164,6 +170,7 @@ def : GINodeEquiv<G_FMAXNUM_IEEE, fmaxnum_ieee>;
 def : GINodeEquiv<G_FMAXIMUM, fmaximum>;
 def : GINodeEquiv<G_FMINIMUM, fminimum>;
 def : GINodeEquiv<G_READCYCLECOUNTER, readcyclecounter>;
+def : GINodeEquiv<G_READSTEADYCOUNTER, readsteadycounter>;
 def : GINodeEquiv<G_ROTR, rotr>;
 def : GINodeEquiv<G_ROTL, rotl>;
 def : GINodeEquiv<G_LROUND, lround>;
@@ -173,6 +180,11 @@ def : GINodeEquiv<G_VECREDUCE_FMAX, vecreduce_fmax>;
 def : GINodeEquiv<G_VECREDUCE_FMIN, vecreduce_fmin>;
 def : GINodeEquiv<G_VECREDUCE_FMAXIMUM, vecreduce_fmaximum>;
 def : GINodeEquiv<G_VECREDUCE_FMINIMUM, vecreduce_fminimum>;
+def : GINodeEquiv<G_VECREDUCE_UMIN, vecreduce_umin>;
+def : GINodeEquiv<G_VECREDUCE_UMAX, vecreduce_umax>;
+def : GINodeEquiv<G_VECREDUCE_SMIN, vecreduce_smin>;
+def : GINodeEquiv<G_VECREDUCE_SMAX, vecreduce_smax>;
+def : GINodeEquiv<G_VECREDUCE_ADD, vecreduce_add>;
 
 def : GINodeEquiv<G_STRICT_FADD, strict_fadd>;
 def : GINodeEquiv<G_STRICT_FSUB, strict_fsub>;
@@ -239,6 +251,10 @@ def : GINodeEquiv<G_ATOMICRMW_FMIN, atomic_load_fmin>;
 def : GINodeEquiv<G_ATOMICRMW_UINC_WRAP, atomic_load_uinc_wrap>;
 def : GINodeEquiv<G_ATOMICRMW_UDEC_WRAP, atomic_load_udec_wrap>;
 def : GINodeEquiv<G_FENCE, atomic_fence>;
+def : GINodeEquiv<G_PREFETCH, prefetch>;
+def : GINodeEquiv<G_TRAP, trap>;
+def : GINodeEquiv<G_DEBUGTRAP, debugtrap>;
+def : GINodeEquiv<G_UBSANTRAP, ubsantrap>;
 
 // Specifies the GlobalISel equivalents for SelectionDAG's ComplexPattern.
 // Should be used on defs that subclass GIComplexOperandMatcher<>.

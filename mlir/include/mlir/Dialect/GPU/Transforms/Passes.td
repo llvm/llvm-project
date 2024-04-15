@@ -37,6 +37,24 @@ def GpuMapParallelLoopsPass
   let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
+def GpuEliminateBarriers
+    : Pass<"gpu-eliminate-barriers", "mlir::func::FuncOp"> {
+  let summary = "Erase unnecessary barriers";
+  let description = [{
+    Barrier elimination pass. If a barrier does not enforce any conflicting
+    pair of memory effects, including a pair that is enforced by another
+    barrier, it is unnecessary and can be removed. Adapted from
+    "High-Performance GPU-to-CPU Transpilation and Optimization via High-Level
+    Parallel Constructs" by Moses, Ivanov, Domke, Endo, Doerfert, and Zinenko in
+    PPoPP 2023 and implementation in Polygeist.
+  }];
+  let dependentDialects = [
+    "mlir::gpu::GPUDialect",
+    "mlir::memref::MemRefDialect",
+    "mlir::scf::SCFDialect"
+  ];
+}
+
 def GpuDecomposeMemrefsPass : Pass<"gpu-decompose-memrefs"> {
   let summary = "Decomposes memref index computation into explicit ops.";
   let description = [{
@@ -160,8 +178,8 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
            /*default=*/"\"\"",
            "Target features.">,
     Option<"abiVersion", "abi", "std::string",
-           /*default=*/"\"400\"",
-           "Optimization level.">,
+           /*default=*/"\"500\"",
+           "ABI version.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",
            "Optimization level.">,
@@ -185,6 +203,50 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
            "Enable correct rounded sqrt.">,
     ListOption<"linkLibs", "l", "std::string",
            "Extra bitcode libraries paths to link to.">,
+  ];
+}
+
+def GpuSPIRVAttachTarget: Pass<"spirv-attach-target", ""> {
+  let summary = "Attaches an SPIR-V target attribute to a GPU Module.";
+  let description = [{
+    This pass searches for all GPU Modules in the immediate regions and attaches
+    an SPIR-V target if the module matches the name specified by the `module` argument.
+
+    Example:
+    ```
+    // Given the following file: in1.mlir:
+    gpu.module @nvvm_module_1 {...}
+    gpu.module @spirv_module_1 {...}
+    // With
+    // mlir-opt --spirv-attach-target="module=spirv.* ver=v1.0 caps=Kernel" in1.mlir
+    // it will generate,
+    gpu.module @nvvm_module_1 {...}
+    gpu.module @spirv_module_1 [#spirv.target<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>] {...}
+    ```
+  }];
+  let options = [
+    Option<"moduleMatcher", "module", "std::string",
+           /*default=*/ [{""}],
+           "Regex used to identify the modules to attach the target to.">,
+    Option<"spirvVersion", "ver", "std::string",
+           /*default=*/ "\"v1.0\"",
+           "SPIR-V Version.">,
+    ListOption<"spirvCapabilities", "caps", "std::string",
+           "List of supported SPIR-V Capabilities">,
+    ListOption<"spirvExtensions", "exts", "std::string",
+           "List of supported SPIR-V Extensions">,
+    Option<"clientApi", "client_api", "std::string",
+           /*default=*/ "\"Unknown\"",
+           "Client API">,
+    Option<"deviceVendor", "vendor", "std::string",
+           /*default=*/ "\"Unknown\"",
+           "Device Vendor">,
+    Option<"deviceType", "device_type", "std::string",
+           /*default=*/ "\"Unknown\"",
+           "Device Type">,
+    Option<"deviceId", "device_id", "uint32_t",
+           /*default=*/ "",
+           "Device ID">,
   ];
 }
 

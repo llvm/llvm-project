@@ -20,6 +20,7 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -114,6 +115,8 @@ public:
                              // this instruction.
     Unpredictable = 1 << 16, // Instruction with unpredictable condition.
     NoConvergent = 1 << 17,  // Call does not require convergence guarantees.
+    NonNeg = 1 << 18,        // The operand is non-negative.
+    Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
   };
 
 private:
@@ -1364,6 +1367,10 @@ public:
     return getOpcode() == TargetOpcode::INLINEASM ||
            getOpcode() == TargetOpcode::INLINEASM_BR;
   }
+  /// Returns true if the register operand can be folded with a load or store
+  /// into a frame index. Does so by checking the InlineAsm::Flag immediate
+  /// operand at OpId - 1.
+  bool mayFoldInlineAsmRegOp(unsigned OpId) const;
 
   bool isStackAligningInlineAsm() const;
   InlineAsm::AsmDialect getInlineAsmDialect() const;
@@ -1434,7 +1441,7 @@ public:
   unsigned getBundleSize() const;
 
   /// Return true if the MachineInstr reads the specified register.
-  /// If TargetRegisterInfo is passed, then it also checks if there
+  /// If TargetRegisterInfo is non-null, then it also checks if there
   /// is a read of a super-register.
   /// This does not count partial redefines of virtual registers as reads:
   ///   %reg1024:6 = OP.
@@ -1457,7 +1464,7 @@ public:
                                 SmallVectorImpl<unsigned> *Ops = nullptr) const;
 
   /// Return true if the MachineInstr kills the specified register.
-  /// If TargetRegisterInfo is passed, then it also checks if there is
+  /// If TargetRegisterInfo is non-null, then it also checks if there is
   /// a kill of a super-register.
   bool killsRegister(Register Reg,
                      const TargetRegisterInfo *TRI = nullptr) const {
@@ -1465,7 +1472,7 @@ public:
   }
 
   /// Return true if the MachineInstr fully defines the specified register.
-  /// If TargetRegisterInfo is passed, then it also checks
+  /// If TargetRegisterInfo is non-null, then it also checks
   /// if there is a def of a super-register.
   /// NOTE: It's ignoring subreg indices on virtual registers.
   bool definesRegister(Register Reg,
@@ -1482,7 +1489,7 @@ public:
   }
 
   /// Returns true if the register is dead in this machine instruction.
-  /// If TargetRegisterInfo is passed, then it also checks
+  /// If TargetRegisterInfo is non-null, then it also checks
   /// if there is a dead def of a super-register.
   bool registerDefIsDead(Register Reg,
                          const TargetRegisterInfo *TRI = nullptr) const {
@@ -1740,16 +1747,17 @@ public:
   bool allImplicitDefsAreDead() const;
 
   /// Return a valid size if the instruction is a spill instruction.
-  std::optional<unsigned> getSpillSize(const TargetInstrInfo *TII) const;
+  std::optional<LocationSize> getSpillSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a folded spill instruction.
-  std::optional<unsigned> getFoldedSpillSize(const TargetInstrInfo *TII) const;
+  std::optional<LocationSize>
+  getFoldedSpillSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a restore instruction.
-  std::optional<unsigned> getRestoreSize(const TargetInstrInfo *TII) const;
+  std::optional<LocationSize> getRestoreSize(const TargetInstrInfo *TII) const;
 
   /// Return a valid size if the instruction is a folded restore instruction.
-  std::optional<unsigned>
+  std::optional<LocationSize>
   getFoldedRestoreSize(const TargetInstrInfo *TII) const;
 
   /// Copy implicit register operands from specified
@@ -1811,6 +1819,9 @@ public:
   /// MachineInstrBuilder and the two-argument addOperand(MF, MO) should be
   /// preferred.
   void addOperand(const MachineOperand &Op);
+
+  /// Inserts Ops BEFORE It. Can untie/retie tied operands.
+  void insert(mop_iterator InsertBefore, ArrayRef<MachineOperand> Ops);
 
   /// Replace the instruction descriptor (thus opcode) of
   /// the current instruction with a new one.

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_DIR_H__
-#define __LLVM_LIBC_TYPES_DIR_H__
+#ifndef LLVM_LIBC_TYPES_DIR_H
+#define LLVM_LIBC_TYPES_DIR_H
 
 typedef struct DIR DIR;
 
-#endif // __LLVM_LIBC_TYPES_DIR_H__
+#endif // LLVM_LIBC_TYPES_DIR_H

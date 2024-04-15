@@ -57,7 +57,7 @@ public:
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
     // Mixed and buffer sematics aren't supported.
-    if (!genericOp.hasTensorSemantics())
+    if (!genericOp.hasPureTensorSemantics())
       return failure();
 
     // Only support ops generating one output for now.
@@ -148,7 +148,7 @@ public:
       SmallVector<unsigned> dims;
       dims.reserve(map.getNumResults());
       for (AffineExpr result : map.getResults()) {
-        dims.push_back(result.cast<AffineDimExpr>().getPosition());
+        dims.push_back(cast<AffineDimExpr>(result).getPosition());
       }
       return dims;
     };

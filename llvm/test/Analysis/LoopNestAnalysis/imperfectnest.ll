@@ -26,8 +26,8 @@ imperf_nest_1_loop_i:
 for.body:
   %conv = sitofp i32 %i2.0 to double
   %idxprom = sext i32 %i2.0 to i64
-  %arrayidx = getelementptr inbounds double, double* %vla1, i64 %idxprom
-  store double %conv, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %vla1, i64 %idxprom
+  store double %conv, ptr %arrayidx, align 8
   br label %imperf_nest_1_loop_j
 
 imperf_nest_1_loop_j:
@@ -37,16 +37,16 @@ imperf_nest_1_loop_j:
 
 for.body7:
   %idxprom8 = sext i32 %i2.0 to i64
-  %arrayidx9 = getelementptr inbounds double, double* %vla1, i64 %idxprom8
-  %4 = load double, double* %arrayidx9, align 8
+  %arrayidx9 = getelementptr inbounds double, ptr %vla1, i64 %idxprom8
+  %4 = load double, ptr %arrayidx9, align 8
   %conv10 = sitofp i32 %j3.0 to double
   %add = fadd double %4, %conv10
   %idxprom11 = sext i32 %j3.0 to i64
   %5 = mul nsw i64 %idxprom11, %1
-  %arrayidx12 = getelementptr inbounds double, double* %vla, i64 %5
+  %arrayidx12 = getelementptr inbounds double, ptr %vla, i64 %5
   %idxprom13 = sext i32 %i2.0 to i64
-  %arrayidx14 = getelementptr inbounds double, double* %arrayidx12, i64 %idxprom13
-  store double %add, double* %arrayidx14, align 8
+  %arrayidx14 = getelementptr inbounds double, ptr %arrayidx12, i64 %idxprom13
+  store double %add, ptr %arrayidx14, align 8
   br label %for.inc
 
 for.inc:
@@ -97,16 +97,16 @@ imperf_nest_2_loop_j:
 
 for.body6:
   %idxprom = sext i32 %i2.0 to i64
-  %arrayidx = getelementptr inbounds double, double* %vla1, i64 %idxprom
-  %4 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %vla1, i64 %idxprom
+  %4 = load double, ptr %arrayidx, align 8
   %conv = sitofp i32 %j3.0 to double
   %add = fadd double %4, %conv
   %idxprom7 = sext i32 %j3.0 to i64
   %5 = mul nsw i64 %idxprom7, %1
-  %arrayidx8 = getelementptr inbounds double, double* %vla, i64 %5
+  %arrayidx8 = getelementptr inbounds double, ptr %vla, i64 %5
   %idxprom9 = sext i32 %i2.0 to i64
-  %arrayidx10 = getelementptr inbounds double, double* %arrayidx8, i64 %idxprom9
-  store double %add, double* %arrayidx10, align 8
+  %arrayidx10 = getelementptr inbounds double, ptr %arrayidx8, i64 %idxprom9
+  store double %add, ptr %arrayidx10, align 8
   br label %for.inc
 
 for.inc:
@@ -116,12 +116,12 @@ for.inc:
 for.end:
   %conv11 = sitofp i32 %i2.0 to double
   %6 = mul nsw i64 0, %1
-  %arrayidx12 = getelementptr inbounds double, double* %vla, i64 %6
+  %arrayidx12 = getelementptr inbounds double, ptr %vla, i64 %6
   %idxprom13 = sext i32 %i2.0 to i64
-  %arrayidx14 = getelementptr inbounds double, double* %arrayidx12, i64 %idxprom13
-  %7 = load double, double* %arrayidx14, align 8
+  %arrayidx14 = getelementptr inbounds double, ptr %arrayidx12, i64 %idxprom13
+  %7 = load double, ptr %arrayidx14, align 8
   %add15 = fadd double %7, %conv11
-  store double %add15, double* %arrayidx14, align 8
+  store double %add15, ptr %arrayidx14, align 8
   br label %for.inc16
 
 for.inc16:
@@ -167,16 +167,16 @@ imperf_nest_3_loop_j:                                        ; preds = %for.inc,
 
 for.body4:                                        ; preds = %imperf_nest_3_loop_j
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds double, double* %vla1, i64 %idxprom
-  %4 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %vla1, i64 %idxprom
+  %4 = load double, ptr %arrayidx, align 8
   %conv = sitofp i32 %j.0 to double
   %add = fadd double %4, %conv
   %idxprom5 = sext i32 %i.0 to i64
   %5 = mul nsw i64 %idxprom5, %1
-  %arrayidx6 = getelementptr inbounds double, double* %vla, i64 %5
+  %arrayidx6 = getelementptr inbounds double, ptr %vla, i64 %5
   %idxprom7 = sext i32 %j.0 to i64
-  %arrayidx8 = getelementptr inbounds double, double* %arrayidx6, i64 %idxprom7
-  store double %add, double* %arrayidx8, align 8
+  %arrayidx8 = getelementptr inbounds double, ptr %arrayidx6, i64 %idxprom7
+  store double %add, ptr %arrayidx8, align 8
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body4
@@ -194,16 +194,16 @@ imperf_nest_3_loop_k:                                       ; preds = %for.inc22
 
 for.body13:                                       ; preds = %imperf_nest_3_loop_k
   %idxprom14 = sext i32 %i.0 to i64
-  %arrayidx15 = getelementptr inbounds double, double* %vla1, i64 %idxprom14
-  %6 = load double, double* %arrayidx15, align 8
+  %arrayidx15 = getelementptr inbounds double, ptr %vla1, i64 %idxprom14
+  %6 = load double, ptr %arrayidx15, align 8
   %conv16 = sitofp i32 %j.1 to double
   %sub17 = fsub double %6, %conv16
   %idxprom18 = sext i32 %i.0 to i64
   %7 = mul nsw i64 %idxprom18, %1
-  %arrayidx19 = getelementptr inbounds double, double* %vla, i64 %7
+  %arrayidx19 = getelementptr inbounds double, ptr %vla, i64 %7
   %idxprom20 = sext i32 %j.1 to i64
-  %arrayidx21 = getelementptr inbounds double, double* %arrayidx19, i64 %idxprom20
-  store double %sub17, double* %arrayidx21, align 8
+  %arrayidx21 = getelementptr inbounds double, ptr %arrayidx19, i64 %idxprom20
+  store double %sub17, ptr %arrayidx21, align 8
   br label %for.inc22
 
 for.inc22:                                        ; preds = %for.body13
@@ -269,20 +269,20 @@ imperf_nest_4_loop_k:
   %k.0 = phi i32 [ 0, %imperf_nest_4_loop_k.lr.ph ], [ %inc, %for.inc ]
   %add = add nsw i32 %i.0, %j.0
   %idxprom = sext i32 %add to i64
-  %arrayidx = getelementptr inbounds double, double* %vla1, i64 %idxprom
-  %6 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %vla1, i64 %idxprom
+  %6 = load double, ptr %arrayidx, align 8
   %conv = sitofp i32 %k.0 to double
   %add8 = fadd double %6, %conv
   %idxprom9 = sext i32 %i.0 to i64
   %7 = mul nuw i64 %1, %2
   %8 = mul nsw i64 %idxprom9, %7
-  %arrayidx10 = getelementptr inbounds double, double* %vla, i64 %8
+  %arrayidx10 = getelementptr inbounds double, ptr %vla, i64 %8
   %idxprom11 = sext i32 %j.0 to i64
   %9 = mul nsw i64 %idxprom11, %2
-  %arrayidx12 = getelementptr inbounds double, double* %arrayidx10, i64 %9
+  %arrayidx12 = getelementptr inbounds double, ptr %arrayidx10, i64 %9
   %idxprom13 = sext i32 %k.0 to i64
-  %arrayidx14 = getelementptr inbounds double, double* %arrayidx12, i64 %idxprom13
-  store double %add8, double* %arrayidx14, align 8
+  %arrayidx14 = getelementptr inbounds double, ptr %arrayidx12, i64 %idxprom13
+  store double %add8, ptr %arrayidx14, align 8
   br label %for.inc
 
 for.inc:
@@ -316,8 +316,8 @@ imperf_nest_4_loop_j2.lr.ph:
 imperf_nest_4_loop_j2:
   %j.1 = phi i32 [ %sub18, %imperf_nest_4_loop_j2.lr.ph ], [ %inc33, %for.inc32 ]
   %idxprom23 = sext i32 %i.0 to i64
-  %arrayidx24 = getelementptr inbounds double, double* %vla1, i64 %idxprom23
-  %10 = load double, double* %arrayidx24, align 8
+  %arrayidx24 = getelementptr inbounds double, ptr %vla1, i64 %idxprom23
+  %10 = load double, ptr %arrayidx24, align 8
   %conv25 = sitofp i32 %j.1 to double
   %sub26 = fsub double %10, %conv25
   %idxprom27 = sext i32 %i.0 to i64
@@ -325,10 +325,10 @@ imperf_nest_4_loop_j2:
   %11 = mul nsw i64 %idxprom29, %2
   %12 = mul nuw i64 %1, %2
   %13 = mul nsw i64 %idxprom27, %12
-  %arrayidx28 = getelementptr inbounds double, double* %vla, i64 %13
-  %arrayidx30 = getelementptr inbounds double, double* %arrayidx28, i64 %11
-  %arrayidx31 = getelementptr inbounds double, double* %arrayidx30, i64 0
-  store double %sub26, double* %arrayidx31, align 8
+  %arrayidx28 = getelementptr inbounds double, ptr %vla, i64 %13
+  %arrayidx30 = getelementptr inbounds double, ptr %arrayidx28, i64 %11
+  %arrayidx31 = getelementptr inbounds double, ptr %arrayidx30, i64 0
+  store double %sub26, ptr %arrayidx31, align 8
   br label %for.inc32
 
 for.inc32:
@@ -361,7 +361,7 @@ for.end37:
 ;         y[j][i] = x[i][j] + j;
 ;     }
 
-define void @imperf_nest_5(i32** %y, i32** %x, i32 signext %nx, i32 signext %ny) {
+define void @imperf_nest_5(ptr %y, ptr %x, i32 signext %nx, i32 signext %ny) {
 ; CHECK-LABEL: IsPerfect=false, Depth=2, OutermostLoop: imperf_nest_5_loop_i, Loops: ( imperf_nest_5_loop_i imperf_nest_5_loop_j )
 entry:
   %cmp2 = icmp slt i32 0, %nx
@@ -385,18 +385,18 @@ imperf_nest_5_loop_j.lr.ph:
 imperf_nest_5_loop_j:      
   %j.0 = phi i32 [ 0, %imperf_nest_5_loop_j.lr.ph ], [ %inc, %for.inc ]
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds i32*, i32** %x, i64 %idxprom
-  %0 = load i32*, i32** %arrayidx, align 8
+  %arrayidx = getelementptr inbounds ptr, ptr %x, i64 %idxprom
+  %0 = load ptr, ptr %arrayidx, align 8
   %idxprom5 = sext i32 %j.0 to i64
-  %arrayidx6 = getelementptr inbounds i32, i32* %0, i64 %idxprom5
-  %1 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %0, i64 %idxprom5
+  %1 = load i32, ptr %arrayidx6, align 4
   %add = add nsw i32 %1, %j.0
   %idxprom7 = sext i32 %j.0 to i64
-  %arrayidx8 = getelementptr inbounds i32*, i32** %y, i64 %idxprom7
-  %2 = load i32*, i32** %arrayidx8, align 8
+  %arrayidx8 = getelementptr inbounds ptr, ptr %y, i64 %idxprom7
+  %2 = load ptr, ptr %arrayidx8, align 8
   %idxprom9 = sext i32 %i.0 to i64
-  %arrayidx10 = getelementptr inbounds i32, i32* %2, i64 %idxprom9
-  store i32 %add, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %2, i64 %idxprom9
+  store i32 %add, ptr %arrayidx10, align 4
   br label %for.inc
 
 for.inc:

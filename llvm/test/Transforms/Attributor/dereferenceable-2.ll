@@ -286,7 +286,7 @@ define void @multi_index_gep(ptr %ptr) {
 ; CHECK-SAME: (ptr nocapture nofree nonnull readnone dereferenceable(1) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx00 = getelementptr <4 x i8>, <4 x i8>* %ptr, i64 0, i64 0
+  %arrayidx00 = getelementptr <4 x i8>, ptr %ptr, i64 0, i64 0
   %t0 = load i8, ptr %arrayidx00
   ret void
 }

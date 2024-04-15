@@ -100,13 +100,14 @@ using ActionStmts = std::tuple<
     parser::EventPostStmt, parser::EventWaitStmt, parser::ExitStmt,
     parser::FailImageStmt, parser::FlushStmt, parser::FormTeamStmt,
     parser::GotoStmt, parser::IfStmt, parser::InquireStmt, parser::LockStmt,
-    parser::NullifyStmt, parser::OpenStmt, parser::PointerAssignmentStmt,
-    parser::PrintStmt, parser::ReadStmt, parser::ReturnStmt, parser::RewindStmt,
-    parser::StopStmt, parser::SyncAllStmt, parser::SyncImagesStmt,
-    parser::SyncMemoryStmt, parser::SyncTeamStmt, parser::UnlockStmt,
-    parser::WaitStmt, parser::WhereStmt, parser::WriteStmt,
-    parser::ComputedGotoStmt, parser::ForallStmt, parser::ArithmeticIfStmt,
-    parser::AssignStmt, parser::AssignedGotoStmt, parser::PauseStmt>;
+    parser::NotifyWaitStmt, parser::NullifyStmt, parser::OpenStmt,
+    parser::PointerAssignmentStmt, parser::PrintStmt, parser::ReadStmt,
+    parser::ReturnStmt, parser::RewindStmt, parser::StopStmt,
+    parser::SyncAllStmt, parser::SyncImagesStmt, parser::SyncMemoryStmt,
+    parser::SyncTeamStmt, parser::UnlockStmt, parser::WaitStmt,
+    parser::WhereStmt, parser::WriteStmt, parser::ComputedGotoStmt,
+    parser::ForallStmt, parser::ArithmeticIfStmt, parser::AssignStmt,
+    parser::AssignedGotoStmt, parser::PauseStmt>;
 
 using OtherStmts = std::tuple<parser::EntryStmt, parser::FormatStmt>;
 
@@ -137,7 +138,8 @@ using Directives =
     std::tuple<parser::CompilerDirective, parser::OpenACCConstruct,
                parser::OpenACCRoutineConstruct,
                parser::OpenACCDeclarativeConstruct, parser::OpenMPConstruct,
-               parser::OpenMPDeclarativeConstruct, parser::OmpEndLoopDirective>;
+               parser::OpenMPDeclarativeConstruct, parser::OmpEndLoopDirective,
+               parser::CUFKernelDoConstruct>;
 
 using DeclConstructs = std::tuple<parser::OpenMPDeclarativeConstruct,
                                   parser::OpenACCDeclarativeConstruct>;
@@ -177,7 +179,7 @@ static constexpr bool isNopConstructStmt{common::HasMember<
 template <typename A>
 static constexpr bool isExecutableDirective{common::HasMember<
     A, std::tuple<parser::CompilerDirective, parser::OpenACCConstruct,
-                  parser::OpenMPConstruct>>};
+                  parser::OpenMPConstruct, parser::CUFKernelDoConstruct>>};
 
 template <typename A>
 static constexpr bool isFunctionLike{common::HasMember<
@@ -462,6 +464,9 @@ struct Variable {
     return *std::get<Nominal>(var).symbol;
   }
 
+  /// Is this variable a compiler generated global to describe derived types?
+  bool isRuntimeTypeInfoData() const;
+
   /// Return the aggregate store.
   const AggregateStore &getAggregateStore() const {
     assert(isAggregateStore());
@@ -708,6 +713,8 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// Primary result for function subprograms with alternate entries. This
   /// is one of the largest result values, not necessarily the first one.
   const semantics::Symbol *primaryResult{nullptr};
+  bool hasIeeeAccess{false};
+  bool mayModifyHaltingMode{false};
   bool mayModifyRoundingMode{false};
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};

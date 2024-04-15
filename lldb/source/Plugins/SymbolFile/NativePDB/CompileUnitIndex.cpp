@@ -236,7 +236,7 @@ CompileUnitIndex::GetMainSourceFile(const CompilandIndexItem &item) const {
   llvm::cantFail(
       TypeDeserializer::deserializeAs<StringIdRecord>(file_cvt, file_name));
 
-  llvm::sys::path::Style style = working_dir.String.startswith("/")
+  llvm::sys::path::Style style = working_dir.String.starts_with("/")
                                      ? llvm::sys::path::Style::posix
                                      : llvm::sys::path::Style::windows;
   if (llvm::sys::path::is_absolute(file_name.String, style))

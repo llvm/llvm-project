@@ -87,58 +87,58 @@ void call_bools_and_chars() {
 
 // Returning structs that fit into a register.
 Small small_return() { return Small(); }
-// LINUX-LABEL: define{{.*}} void @_Z12small_returnv(ptr noalias sret(%struct.Small) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z12small_returnv(ptr dead_on_unwind noalias writable sret(%struct.Small) align 4 %agg.result)
 // WIN32: define dso_local i32 @"?small_return@@YA?AUSmall@@XZ"()
 // WIN64: define dso_local i32 @"?small_return@@YA?AUSmall@@XZ"()
 // WOA64: define dso_local i32 @"?small_return@@YA?AUSmall@@XZ"()
 
 Medium medium_return() { return Medium(); }
-// LINUX-LABEL: define{{.*}} void @_Z13medium_returnv(ptr noalias sret(%struct.Medium) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z13medium_returnv(ptr dead_on_unwind noalias writable sret(%struct.Medium) align 4 %agg.result)
 // WIN32: define dso_local i64 @"?medium_return@@YA?AUMedium@@XZ"()
 // WIN64: define dso_local i64 @"?medium_return@@YA?AUMedium@@XZ"()
 // WOA64: define dso_local i64 @"?medium_return@@YA?AUMedium@@XZ"()
 
 // Returning structs that fit into a register but are not POD.
 SmallCpp11NotCpp03Pod small_non_pod_return() { return SmallCpp11NotCpp03Pod(); }
-// LINUX-LABEL: define{{.*}} void @_Z20small_non_pod_returnv(ptr noalias sret(%struct.SmallCpp11NotCpp03Pod) align 4 %agg.result)
-// WIN32: define dso_local void @"?small_non_pod_return@@YA?AUSmallCpp11NotCpp03Pod@@XZ"(ptr noalias sret(%struct.SmallCpp11NotCpp03Pod) align 4 %agg.result)
-// WIN64: define dso_local void @"?small_non_pod_return@@YA?AUSmallCpp11NotCpp03Pod@@XZ"(ptr noalias sret(%struct.SmallCpp11NotCpp03Pod) align 4 %agg.result)
-// WOA64: define dso_local void @"?small_non_pod_return@@YA?AUSmallCpp11NotCpp03Pod@@XZ"(ptr inreg noalias sret(%struct.SmallCpp11NotCpp03Pod) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z20small_non_pod_returnv(ptr dead_on_unwind noalias writable sret(%struct.SmallCpp11NotCpp03Pod) align 4 %agg.result)
+// WIN32: define dso_local void @"?small_non_pod_return@@YA?AUSmallCpp11NotCpp03Pod@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.SmallCpp11NotCpp03Pod) align 4 %agg.result)
+// WIN64: define dso_local void @"?small_non_pod_return@@YA?AUSmallCpp11NotCpp03Pod@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.SmallCpp11NotCpp03Pod) align 4 %agg.result)
+// WOA64: define dso_local void @"?small_non_pod_return@@YA?AUSmallCpp11NotCpp03Pod@@XZ"(ptr dead_on_unwind inreg noalias writable sret(%struct.SmallCpp11NotCpp03Pod) align 4 %agg.result)
 
 SmallWithCtor small_with_ctor_return() { return SmallWithCtor(); }
-// LINUX-LABEL: define{{.*}} void @_Z22small_with_ctor_returnv(ptr noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
-// WIN32: define dso_local void @"?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(ptr noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
-// WIN64: define dso_local void @"?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(ptr noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z22small_with_ctor_returnv(ptr dead_on_unwind noalias writable sret(%struct.SmallWithCtor) align 4 %agg.result)
+// WIN32: define dso_local void @"?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.SmallWithCtor) align 4 %agg.result)
+// WIN64: define dso_local void @"?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.SmallWithCtor) align 4 %agg.result)
 // FIXME: The 'sret' mark here doesn't seem to be enough to convince LLVM to
 // preserve the hidden sret pointer in R0 across the function.
-// WOA: define dso_local arm_aapcs_vfpcc void @"?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(ptr noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
-// WOA64: define dso_local void @"?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(ptr inreg noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
+// WOA: define dso_local arm_aapcs_vfpcc void @"?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.SmallWithCtor) align 4 %agg.result)
+// WOA64: define dso_local void @"?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(ptr dead_on_unwind inreg noalias writable sret(%struct.SmallWithCtor) align 4 %agg.result)
 
 SmallWithDtor small_with_dtor_return() { return SmallWithDtor(); }
-// LINUX-LABEL: define{{.*}} void @_Z22small_with_dtor_returnv(ptr noalias sret(%struct.SmallWithDtor) align 4 %agg.result)
-// WIN32: define dso_local void @"?small_with_dtor_return@@YA?AUSmallWithDtor@@XZ"(ptr noalias sret(%struct.SmallWithDtor) align 4 %agg.result)
-// WIN64: define dso_local void @"?small_with_dtor_return@@YA?AUSmallWithDtor@@XZ"(ptr noalias sret(%struct.SmallWithDtor) align 4 %agg.result)
-// WOA64: define dso_local void @"?small_with_dtor_return@@YA?AUSmallWithDtor@@XZ"(ptr inreg noalias sret(%struct.SmallWithDtor) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z22small_with_dtor_returnv(ptr dead_on_unwind noalias writable sret(%struct.SmallWithDtor) align 4 %agg.result)
+// WIN32: define dso_local void @"?small_with_dtor_return@@YA?AUSmallWithDtor@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.SmallWithDtor) align 4 %agg.result)
+// WIN64: define dso_local void @"?small_with_dtor_return@@YA?AUSmallWithDtor@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.SmallWithDtor) align 4 %agg.result)
+// WOA64: define dso_local void @"?small_with_dtor_return@@YA?AUSmallWithDtor@@XZ"(ptr dead_on_unwind inreg noalias writable sret(%struct.SmallWithDtor) align 4 %agg.result)
 
 SmallWithVftable small_with_vftable_return() { return SmallWithVftable(); }
-// LINUX-LABEL: define{{.*}} void @_Z25small_with_vftable_returnv(ptr noalias sret(%struct.SmallWithVftable) align 4 %agg.result)
-// WIN32: define dso_local void @"?small_with_vftable_return@@YA?AUSmallWithVftable@@XZ"(ptr noalias sret(%struct.SmallWithVftable) align 4 %agg.result)
-// WIN64: define dso_local void @"?small_with_vftable_return@@YA?AUSmallWithVftable@@XZ"(ptr noalias sret(%struct.SmallWithVftable) align 8 %agg.result)
-// WOA64: define dso_local void @"?small_with_vftable_return@@YA?AUSmallWithVftable@@XZ"(ptr inreg noalias sret(%struct.SmallWithVftable) align 8 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z25small_with_vftable_returnv(ptr dead_on_unwind noalias writable sret(%struct.SmallWithVftable) align 4 %agg.result)
+// WIN32: define dso_local void @"?small_with_vftable_return@@YA?AUSmallWithVftable@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.SmallWithVftable) align 4 %agg.result)
+// WIN64: define dso_local void @"?small_with_vftable_return@@YA?AUSmallWithVftable@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.SmallWithVftable) align 8 %agg.result)
+// WOA64: define dso_local void @"?small_with_vftable_return@@YA?AUSmallWithVftable@@XZ"(ptr dead_on_unwind inreg noalias writable sret(%struct.SmallWithVftable) align 8 %agg.result)
 
 MediumWithCopyCtor medium_with_copy_ctor_return() { return MediumWithCopyCtor(); }
-// LINUX-LABEL: define{{.*}} void @_Z28medium_with_copy_ctor_returnv(ptr noalias sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
-// WIN32: define dso_local void @"?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(ptr noalias sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
-// WIN64: define dso_local void @"?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(ptr noalias sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
-// WOA: define dso_local arm_aapcs_vfpcc void @"?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(ptr noalias sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
-// WOA64: define dso_local void @"?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(ptr inreg noalias sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z28medium_with_copy_ctor_returnv(ptr dead_on_unwind noalias writable sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
+// WIN32: define dso_local void @"?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
+// WIN64: define dso_local void @"?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
+// WOA: define dso_local arm_aapcs_vfpcc void @"?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
+// WOA64: define dso_local void @"?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(ptr dead_on_unwind inreg noalias writable sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
 
 // Returning a large struct that doesn't fit into a register.
 Big big_return() { return Big(); }
-// LINUX-LABEL: define{{.*}} void @_Z10big_returnv(ptr noalias sret(%struct.Big) align 4 %agg.result)
-// WIN32: define dso_local void @"?big_return@@YA?AUBig@@XZ"(ptr noalias sret(%struct.Big) align 4 %agg.result)
-// WIN64: define dso_local void @"?big_return@@YA?AUBig@@XZ"(ptr noalias sret(%struct.Big) align 4 %agg.result)
-// WOA64: define dso_local void @"?big_return@@YA?AUBig@@XZ"(ptr noalias sret(%struct.Big) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z10big_returnv(ptr dead_on_unwind noalias writable sret(%struct.Big) align 4 %agg.result)
+// WIN32: define dso_local void @"?big_return@@YA?AUBig@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.Big) align 4 %agg.result)
+// WIN64: define dso_local void @"?big_return@@YA?AUBig@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.Big) align 4 %agg.result)
+// WOA64: define dso_local void @"?big_return@@YA?AUBig@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.Big) align 4 %agg.result)
 
 
 void small_arg(Small s) {}
@@ -197,7 +197,7 @@ void small_arg_with_dtor(SmallWithDtor s) {}
 
 // Test that the eligible non-aggregate is passed directly, but returned
 // indirectly on ARM64 Windows.
-// WOA64: define dso_local void @"?small_arg_with_private_member@@YA?AUSmallWithPrivate@@U1@@Z"(ptr inreg noalias sret(%struct.SmallWithPrivate) align 4 %agg.result, i64 %s.coerce) {{.*}} {
+// WOA64: define dso_local void @"?small_arg_with_private_member@@YA?AUSmallWithPrivate@@U1@@Z"(ptr dead_on_unwind inreg noalias writable sret(%struct.SmallWithPrivate) align 4 %agg.result, i64 %s.coerce) {{.*}} {
 SmallWithPrivate small_arg_with_private_member(SmallWithPrivate s) { return s; }
 
 // WOA64: define dso_local i32 @"?small_arg_with_small_struct_with_private_member@@YA?AUSmallWithSmallWithPrivate@@U1@@Z"(i64 %s.coerce) {{.*}} {
@@ -301,27 +301,27 @@ void pass_ref_field() {
 class Class {
  public:
   Small thiscall_method_small() { return Small(); }
-  // LINUX: define {{.*}} void @_ZN5Class21thiscall_method_smallEv(ptr noalias sret(%struct.Small) align 4 %agg.result, ptr {{[^,]*}} %this)
-  // WIN32: define {{.*}} x86_thiscallcc void @"?thiscall_method_small@Class@@QAE?AUSmall@@XZ"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.Small) align 4 %agg.result)
-  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_small@Class@@QEAA?AUSmall@@XZ"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.Small) align 4 %agg.result)
-  // WOA64: define linkonce_odr dso_local void @"?thiscall_method_small@Class@@QEAA?AUSmall@@XZ"(ptr {{[^,]*}} %this, ptr inreg noalias sret(%struct.Small) align 4 %agg.result)
+  // LINUX: define {{.*}} void @_ZN5Class21thiscall_method_smallEv(ptr dead_on_unwind noalias writable sret(%struct.Small) align 4 %agg.result, ptr {{[^,]*}} %this)
+  // WIN32: define {{.*}} x86_thiscallcc void @"?thiscall_method_small@Class@@QAE?AUSmall@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%struct.Small) align 4 %agg.result)
+  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_small@Class@@QEAA?AUSmall@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%struct.Small) align 4 %agg.result)
+  // WOA64: define linkonce_odr dso_local void @"?thiscall_method_small@Class@@QEAA?AUSmall@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind inreg noalias writable sret(%struct.Small) align 4 %agg.result)
 
   SmallWithCtor thiscall_method_small_with_ctor() { return SmallWithCtor(); }
-  // LINUX: define {{.*}} void @_ZN5Class31thiscall_method_small_with_ctorEv(ptr noalias sret(%struct.SmallWithCtor) align 4 %agg.result, ptr {{[^,]*}} %this)
-  // WIN32: define {{.*}} x86_thiscallcc void @"?thiscall_method_small_with_ctor@Class@@QAE?AUSmallWithCtor@@XZ"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
-  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_small_with_ctor@Class@@QEAA?AUSmallWithCtor@@XZ"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
-  // WOA64: define linkonce_odr dso_local void @"?thiscall_method_small_with_ctor@Class@@QEAA?AUSmallWithCtor@@XZ"(ptr {{[^,]*}} %this, ptr inreg noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
+  // LINUX: define {{.*}} void @_ZN5Class31thiscall_method_small_with_ctorEv(ptr dead_on_unwind noalias writable sret(%struct.SmallWithCtor) align 4 %agg.result, ptr {{[^,]*}} %this)
+  // WIN32: define {{.*}} x86_thiscallcc void @"?thiscall_method_small_with_ctor@Class@@QAE?AUSmallWithCtor@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%struct.SmallWithCtor) align 4 %agg.result)
+  // WIN64: define linkonce_odr dso_local void @"?thiscall_method_small_with_ctor@Class@@QEAA?AUSmallWithCtor@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%struct.SmallWithCtor) align 4 %agg.result)
+  // WOA64: define linkonce_odr dso_local void @"?thiscall_method_small_with_ctor@Class@@QEAA?AUSmallWithCtor@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind inreg noalias writable sret(%struct.SmallWithCtor) align 4 %agg.result)
 
   Small __cdecl cdecl_method_small() { return Small(); }
-  // LINUX: define {{.*}} void @_ZN5Class18cdecl_method_smallEv(ptr noalias sret(%struct.Small) align 4 %agg.result, ptr {{[^,]*}} %this)
-  // WIN32: define {{.*}} void @"?cdecl_method_small@Class@@QAA?AUSmall@@XZ"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.Small) align 4 %agg.result)
-  // WIN64: define linkonce_odr dso_local void @"?cdecl_method_small@Class@@QEAA?AUSmall@@XZ"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.Small) align 4 %agg.result)
+  // LINUX: define {{.*}} void @_ZN5Class18cdecl_method_smallEv(ptr dead_on_unwind noalias writable sret(%struct.Small) align 4 %agg.result, ptr {{[^,]*}} %this)
+  // WIN32: define {{.*}} void @"?cdecl_method_small@Class@@QAA?AUSmall@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%struct.Small) align 4 %agg.result)
+  // WIN64: define linkonce_odr dso_local void @"?cdecl_method_small@Class@@QEAA?AUSmall@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%struct.Small) align 4 %agg.result)
 
   Big __cdecl cdecl_method_big() { return Big(); }
-  // LINUX: define {{.*}} void @_ZN5Class16cdecl_method_bigEv(ptr noalias sret(%struct.Big) align 4 %agg.result, ptr {{[^,]*}} %this)
-  // WIN32: define {{.*}} void @"?cdecl_method_big@Class@@QAA?AUBig@@XZ"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.Big) align 4 %agg.result)
-  // WIN64: define linkonce_odr dso_local void @"?cdecl_method_big@Class@@QEAA?AUBig@@XZ"(ptr {{[^,]*}} %this, ptr noalias sret(%struct.Big) align 4 %agg.result)
-  // WOA64: define linkonce_odr dso_local void @"?cdecl_method_big@Class@@QEAA?AUBig@@XZ"(ptr {{[^,]*}} %this, ptr inreg noalias sret(%struct.Big) align 4 %agg.result)
+  // LINUX: define {{.*}} void @_ZN5Class16cdecl_method_bigEv(ptr dead_on_unwind noalias writable sret(%struct.Big) align 4 %agg.result, ptr {{[^,]*}} %this)
+  // WIN32: define {{.*}} void @"?cdecl_method_big@Class@@QAA?AUBig@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%struct.Big) align 4 %agg.result)
+  // WIN64: define linkonce_odr dso_local void @"?cdecl_method_big@Class@@QEAA?AUBig@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind noalias writable sret(%struct.Big) align 4 %agg.result)
+  // WOA64: define linkonce_odr dso_local void @"?cdecl_method_big@Class@@QEAA?AUBig@@XZ"(ptr {{[^,]*}} %this, ptr dead_on_unwind inreg noalias writable sret(%struct.Big) align 4 %agg.result)
 
   void thiscall_method_arg(Empty s) {}
   // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE5Empty(ptr {{[^,]*}} %this)

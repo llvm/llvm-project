@@ -821,7 +821,7 @@ PluginManager::GetPlatformCreateCallbackForPluginName(llvm::StringRef name) {
 void PluginManager::AutoCompletePlatformName(llvm::StringRef name,
                                              CompletionRequest &request) {
   for (const auto &instance : GetPlatformInstances().GetInstances()) {
-    if (instance.name.startswith(name))
+    if (instance.name.starts_with(name))
       request.AddCompletion(instance.name);
   }
 }
@@ -869,7 +869,7 @@ PluginManager::GetProcessCreateCallbackForPluginName(llvm::StringRef name) {
 void PluginManager::AutoCompleteProcessName(llvm::StringRef name,
                                             CompletionRequest &request) {
   for (const auto &instance : GetProcessInstances().GetInstances()) {
-    if (instance.name.startswith(name))
+    if (instance.name.starts_with(name))
       request.AddCompletion(instance.name, instance.description);
   }
 }
@@ -1079,6 +1079,119 @@ bool PluginManager::UnregisterPlugin(
 SymbolVendorCreateInstance
 PluginManager::GetSymbolVendorCreateCallbackAtIndex(uint32_t idx) {
   return GetSymbolVendorInstances().GetCallbackAtIndex(idx);
+}
+
+#pragma mark SymbolLocator
+
+struct SymbolLocatorInstance
+    : public PluginInstance<SymbolLocatorCreateInstance> {
+  SymbolLocatorInstance(
+      llvm::StringRef name, llvm::StringRef description,
+      CallbackType create_callback,
+      SymbolLocatorLocateExecutableObjectFile locate_executable_object_file,
+      SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file,
+      SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file,
+      SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle,
+      DebuggerInitializeCallback debugger_init_callback)
+      : PluginInstance<SymbolLocatorCreateInstance>(
+            name, description, create_callback, debugger_init_callback),
+        locate_executable_object_file(locate_executable_object_file),
+        locate_executable_symbol_file(locate_executable_symbol_file),
+        download_object_symbol_file(download_object_symbol_file),
+        find_symbol_file_in_bundle(find_symbol_file_in_bundle) {}
+
+  SymbolLocatorLocateExecutableObjectFile locate_executable_object_file;
+  SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file;
+  SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file;
+  SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle;
+};
+typedef PluginInstances<SymbolLocatorInstance> SymbolLocatorInstances;
+
+static SymbolLocatorInstances &GetSymbolLocatorInstances() {
+  static SymbolLocatorInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(
+    llvm::StringRef name, llvm::StringRef description,
+    SymbolLocatorCreateInstance create_callback,
+    SymbolLocatorLocateExecutableObjectFile locate_executable_object_file,
+    SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file,
+    SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file,
+    SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle,
+    DebuggerInitializeCallback debugger_init_callback) {
+  return GetSymbolLocatorInstances().RegisterPlugin(
+      name, description, create_callback, locate_executable_object_file,
+      locate_executable_symbol_file, download_object_symbol_file,
+      find_symbol_file_in_bundle, debugger_init_callback);
+}
+
+bool PluginManager::UnregisterPlugin(
+    SymbolLocatorCreateInstance create_callback) {
+  return GetSymbolLocatorInstances().UnregisterPlugin(create_callback);
+}
+
+SymbolLocatorCreateInstance
+PluginManager::GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx) {
+  return GetSymbolLocatorInstances().GetCallbackAtIndex(idx);
+}
+
+ModuleSpec
+PluginManager::LocateExecutableObjectFile(const ModuleSpec &module_spec) {
+  auto &instances = GetSymbolLocatorInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.locate_executable_object_file) {
+      std::optional<ModuleSpec> result =
+          instance.locate_executable_object_file(module_spec);
+      if (result)
+        return *result;
+    }
+  }
+  return {};
+}
+
+FileSpec PluginManager::LocateExecutableSymbolFile(
+    const ModuleSpec &module_spec, const FileSpecList &default_search_paths) {
+  auto &instances = GetSymbolLocatorInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.locate_executable_symbol_file) {
+      std::optional<FileSpec> result = instance.locate_executable_symbol_file(
+          module_spec, default_search_paths);
+      if (result)
+        return *result;
+    }
+  }
+  return {};
+}
+
+bool PluginManager::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
+                                                Status &error,
+                                                bool force_lookup,
+                                                bool copy_executable) {
+  auto &instances = GetSymbolLocatorInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.download_object_symbol_file) {
+      if (instance.download_object_symbol_file(module_spec, error, force_lookup,
+                                               copy_executable))
+        return true;
+    }
+  }
+  return false;
+}
+
+FileSpec PluginManager::FindSymbolFileInBundle(const FileSpec &symfile_bundle,
+                                               const UUID *uuid,
+                                               const ArchSpec *arch) {
+  auto &instances = GetSymbolLocatorInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.find_symbol_file_in_bundle) {
+      std::optional<FileSpec> result =
+          instance.find_symbol_file_in_bundle(symfile_bundle, uuid, arch);
+      if (result)
+        return *result;
+    }
+  }
+  return {};
 }
 
 #pragma mark Trace
@@ -1422,6 +1535,7 @@ void PluginManager::DebuggerInitialize(Debugger &debugger) {
   GetPlatformInstances().PerformDebuggerCallback(debugger);
   GetProcessInstances().PerformDebuggerCallback(debugger);
   GetSymbolFileInstances().PerformDebuggerCallback(debugger);
+  GetSymbolLocatorInstances().PerformDebuggerCallback(debugger);
   GetOperatingSystemInstances().PerformDebuggerCallback(debugger);
   GetStructuredDataPluginInstances().PerformDebuggerCallback(debugger);
   GetTracePluginInstances().PerformDebuggerCallback(debugger);
@@ -1549,6 +1663,7 @@ static constexpr llvm::StringLiteral kProcessPluginName("process");
 static constexpr llvm::StringLiteral kTracePluginName("trace");
 static constexpr llvm::StringLiteral kObjectFilePluginName("object-file");
 static constexpr llvm::StringLiteral kSymbolFilePluginName("symbol-file");
+static constexpr llvm::StringLiteral kSymbolLocatorPluginName("symbol-locator");
 static constexpr llvm::StringLiteral kJITLoaderPluginName("jit-loader");
 static constexpr llvm::StringLiteral
     kStructuredDataPluginName("structured-data");
@@ -1595,6 +1710,20 @@ bool PluginManager::CreateSettingForProcessPlugin(
   return CreateSettingForPlugin(debugger, kProcessPluginName,
                                 "Settings for process plug-ins", properties_sp,
                                 description, is_global_property);
+}
+
+lldb::OptionValuePropertiesSP
+PluginManager::GetSettingForSymbolLocatorPlugin(Debugger &debugger,
+                                                llvm::StringRef setting_name) {
+  return GetSettingForPlugin(debugger, setting_name, kSymbolLocatorPluginName);
+}
+
+bool PluginManager::CreateSettingForSymbolLocatorPlugin(
+    Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+    llvm::StringRef description, bool is_global_property) {
+  return CreateSettingForPlugin(debugger, kSymbolLocatorPluginName,
+                                "Settings for symbol locator plug-ins",
+                                properties_sp, description, is_global_property);
 }
 
 bool PluginManager::CreateSettingForTracePlugin(

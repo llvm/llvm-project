@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s| FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s| FileCheck -check-prefix=GCN -check-prefix=SI %s
 
 ;;;==========================================================================;;;
 ;; 16-bit integer comparisons

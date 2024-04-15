@@ -89,51 +89,43 @@ entry:
 define signext i8 @ashr_i8(i8 signext %a, i8 signext %b) {
 ; MIPS-LABEL: ashr_i8:
 ; MIPS:       # %bb.0: # %entry
-; MIPS-NEXT:    andi $1, $5, 255
 ; MIPS-NEXT:    jr $ra
-; MIPS-NEXT:    srav $2, $4, $1
+; MIPS-NEXT:    srav $2, $4, $5
 ;
 ; MIPS32-LABEL: ashr_i8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    andi $1, $5, 255
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    srav $2, $4, $1
+; MIPS32-NEXT:    srav $2, $4, $5
 ;
 ; 32R2-LABEL: ashr_i8:
 ; 32R2:       # %bb.0: # %entry
-; 32R2-NEXT:    andi $1, $5, 255
 ; 32R2-NEXT:    jr $ra
-; 32R2-NEXT:    srav $2, $4, $1
+; 32R2-NEXT:    srav $2, $4, $5
 ;
 ; 32R6-LABEL: ashr_i8:
 ; 32R6:       # %bb.0: # %entry
-; 32R6-NEXT:    andi $1, $5, 255
 ; 32R6-NEXT:    jr $ra
-; 32R6-NEXT:    srav $2, $4, $1
+; 32R6-NEXT:    srav $2, $4, $5
 ;
 ; MIPS3-LABEL: ashr_i8:
 ; MIPS3:       # %bb.0: # %entry
-; MIPS3-NEXT:    andi $1, $5, 255
 ; MIPS3-NEXT:    jr $ra
-; MIPS3-NEXT:    srav $2, $4, $1
+; MIPS3-NEXT:    srav $2, $4, $5
 ;
 ; MIPS64-LABEL: ashr_i8:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    andi $1, $5, 255
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    srav $2, $4, $1
+; MIPS64-NEXT:    srav $2, $4, $5
 ;
 ; MIPS64R2-LABEL: ashr_i8:
 ; MIPS64R2:       # %bb.0: # %entry
-; MIPS64R2-NEXT:    andi $1, $5, 255
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    srav $2, $4, $1
+; MIPS64R2-NEXT:    srav $2, $4, $5
 ;
 ; MIPS64R6-LABEL: ashr_i8:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    andi $1, $5, 255
 ; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    srav $2, $4, $1
+; MIPS64R6-NEXT:    srav $2, $4, $5
 ;
 ; MMR3-LABEL: ashr_i8:
 ; MMR3:       # %bb.0: # %entry
@@ -155,51 +147,43 @@ entry:
 define signext i16 @ashr_i16(i16 signext %a, i16 signext %b) {
 ; MIPS-LABEL: ashr_i16:
 ; MIPS:       # %bb.0: # %entry
-; MIPS-NEXT:    andi $1, $5, 65535
 ; MIPS-NEXT:    jr $ra
-; MIPS-NEXT:    srav $2, $4, $1
+; MIPS-NEXT:    srav $2, $4, $5
 ;
 ; MIPS32-LABEL: ashr_i16:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    andi $1, $5, 65535
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    srav $2, $4, $1
+; MIPS32-NEXT:    srav $2, $4, $5
 ;
 ; 32R2-LABEL: ashr_i16:
 ; 32R2:       # %bb.0: # %entry
-; 32R2-NEXT:    andi $1, $5, 65535
 ; 32R2-NEXT:    jr $ra
-; 32R2-NEXT:    srav $2, $4, $1
+; 32R2-NEXT:    srav $2, $4, $5
 ;
 ; 32R6-LABEL: ashr_i16:
 ; 32R6:       # %bb.0: # %entry
-; 32R6-NEXT:    andi $1, $5, 65535
 ; 32R6-NEXT:    jr $ra
-; 32R6-NEXT:    srav $2, $4, $1
+; 32R6-NEXT:    srav $2, $4, $5
 ;
 ; MIPS3-LABEL: ashr_i16:
 ; MIPS3:       # %bb.0: # %entry
-; MIPS3-NEXT:    andi $1, $5, 65535
 ; MIPS3-NEXT:    jr $ra
-; MIPS3-NEXT:    srav $2, $4, $1
+; MIPS3-NEXT:    srav $2, $4, $5
 ;
 ; MIPS64-LABEL: ashr_i16:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    andi $1, $5, 65535
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    srav $2, $4, $1
+; MIPS64-NEXT:    srav $2, $4, $5
 ;
 ; MIPS64R2-LABEL: ashr_i16:
 ; MIPS64R2:       # %bb.0: # %entry
-; MIPS64R2-NEXT:    andi $1, $5, 65535
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    srav $2, $4, $1
+; MIPS64R2-NEXT:    srav $2, $4, $5
 ;
 ; MIPS64R6-LABEL: ashr_i16:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    andi $1, $5, 65535
 ; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    srav $2, $4, $1
+; MIPS64R6-NEXT:    srav $2, $4, $5
 ;
 ; MMR3-LABEL: ashr_i16:
 ; MMR3:       # %bb.0: # %entry
@@ -280,7 +264,7 @@ define signext i64 @ashr_i64(i64 signext %a, i64 signext %b) {
 ; MIPS-NEXT:    srav $3, $4, $7
 ; MIPS-NEXT:  # %bb.1: # %entry
 ; MIPS-NEXT:    srlv $1, $5, $7
-; MIPS-NEXT:    not $2, $7
+; MIPS-NEXT:    xori $2, $7, 31
 ; MIPS-NEXT:    sll $4, $4, 1
 ; MIPS-NEXT:    sllv $2, $4, $2
 ; MIPS-NEXT:    or $1, $2, $1
@@ -294,7 +278,7 @@ define signext i64 @ashr_i64(i64 signext %a, i64 signext %b) {
 ; MIPS32-LABEL: ashr_i64:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    srlv $1, $5, $7
-; MIPS32-NEXT:    not $2, $7
+; MIPS32-NEXT:    xori $2, $7, 31
 ; MIPS32-NEXT:    sll $3, $4, 1
 ; MIPS32-NEXT:    sllv $2, $3, $2
 ; MIPS32-NEXT:    or $3, $2, $1
@@ -308,7 +292,7 @@ define signext i64 @ashr_i64(i64 signext %a, i64 signext %b) {
 ; 32R2-LABEL: ashr_i64:
 ; 32R2:       # %bb.0: # %entry
 ; 32R2-NEXT:    srlv $1, $5, $7
-; 32R2-NEXT:    not $2, $7
+; 32R2-NEXT:    xori $2, $7, 31
 ; 32R2-NEXT:    sll $3, $4, 1
 ; 32R2-NEXT:    sllv $2, $3, $2
 ; 32R2-NEXT:    or $3, $2, $1
@@ -328,7 +312,7 @@ define signext i64 @ashr_i64(i64 signext %a, i64 signext %b) {
 ; 32R6-NEXT:    selnez $6, $6, $3
 ; 32R6-NEXT:    or $2, $6, $2
 ; 32R6-NEXT:    srlv $5, $5, $7
-; 32R6-NEXT:    not $6, $7
+; 32R6-NEXT:    xori $6, $7, 31
 ; 32R6-NEXT:    sll $4, $4, 1
 ; 32R6-NEXT:    sllv $4, $4, $6
 ; 32R6-NEXT:    or $4, $4, $5
@@ -360,9 +344,9 @@ define signext i64 @ashr_i64(i64 signext %a, i64 signext %b) {
 ; MMR3-LABEL: ashr_i64:
 ; MMR3:       # %bb.0: # %entry
 ; MMR3-NEXT:    srlv $2, $5, $7
-; MMR3-NEXT:    not16 $3, $7
-; MMR3-NEXT:    sll16 $5, $4, 1
-; MMR3-NEXT:    sllv $3, $5, $3
+; MMR3-NEXT:    xori $1, $7, 31
+; MMR3-NEXT:    sll16 $3, $4, 1
+; MMR3-NEXT:    sllv $3, $3, $1
 ; MMR3-NEXT:    or16 $3, $2
 ; MMR3-NEXT:    srav $2, $4, $7
 ; MMR3-NEXT:    andi16 $5, $7, 32
@@ -380,7 +364,7 @@ define signext i64 @ashr_i64(i64 signext %a, i64 signext %b) {
 ; MMR6-NEXT:    selnez $6, $6, $3
 ; MMR6-NEXT:    or $2, $6, $2
 ; MMR6-NEXT:    srlv $5, $5, $7
-; MMR6-NEXT:    not16 $6, $7
+; MMR6-NEXT:    xori $6, $7, 31
 ; MMR6-NEXT:    sll16 $4, $4, 1
 ; MMR6-NEXT:    sllv $4, $4, $6
 ; MMR6-NEXT:    or $4, $4, $5
@@ -428,7 +412,6 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS-NEXT:    lwr $5, 11($1)
 ; MIPS-NEXT:    andi $2, $2, 7
 ; MIPS-NEXT:    not $6, $2
-; MIPS-NEXT:    andi $6, $6, 31
 ; MIPS-NEXT:    srlv $7, $5, $2
 ; MIPS-NEXT:    sllv $4, $4, $6
 ; MIPS-NEXT:    srlv $3, $3, $2
@@ -483,7 +466,6 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32-NEXT:    lwr $5, 11($1)
 ; MIPS32-NEXT:    andi $2, $2, 7
 ; MIPS32-NEXT:    not $6, $2
-; MIPS32-NEXT:    andi $6, $6, 31
 ; MIPS32-NEXT:    srlv $7, $5, $2
 ; MIPS32-NEXT:    sllv $4, $4, $6
 ; MIPS32-NEXT:    srlv $3, $3, $2
@@ -537,7 +519,6 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; 32R2-NEXT:    lwr $5, 11($1)
 ; 32R2-NEXT:    andi $2, $2, 7
 ; 32R2-NEXT:    not $6, $2
-; 32R2-NEXT:    andi $6, $6, 31
 ; 32R2-NEXT:    srlv $7, $5, $2
 ; 32R2-NEXT:    sllv $4, $4, $6
 ; 32R2-NEXT:    srlv $3, $3, $2
@@ -581,7 +562,6 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; 32R6-NEXT:    lw $5, 8($1)
 ; 32R6-NEXT:    andi $2, $2, 7
 ; 32R6-NEXT:    not $6, $2
-; 32R6-NEXT:    andi $6, $6, 31
 ; 32R6-NEXT:    srlv $7, $5, $2
 ; 32R6-NEXT:    sllv $4, $4, $6
 ; 32R6-NEXT:    srlv $3, $3, $2
@@ -609,7 +589,7 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS3-NEXT:  # %bb.1: # %entry
 ; MIPS3-NEXT:    dsrlv $1, $5, $7
 ; MIPS3-NEXT:    dsll $4, $4, 1
-; MIPS3-NEXT:    not $2, $2
+; MIPS3-NEXT:    xori $2, $2, 63
 ; MIPS3-NEXT:    dsllv $2, $4, $2
 ; MIPS3-NEXT:    or $1, $2, $1
 ; MIPS3-NEXT:    move $2, $3
@@ -624,7 +604,7 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS64-NEXT:    dsrlv $1, $5, $7
 ; MIPS64-NEXT:    dsll $2, $4, 1
 ; MIPS64-NEXT:    sll $5, $7, 0
-; MIPS64-NEXT:    not $3, $5
+; MIPS64-NEXT:    xori $3, $5, 63
 ; MIPS64-NEXT:    dsllv $2, $2, $3
 ; MIPS64-NEXT:    or $3, $2, $1
 ; MIPS64-NEXT:    dsrav $2, $4, $7
@@ -639,7 +619,7 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS64R2-NEXT:    dsrlv $1, $5, $7
 ; MIPS64R2-NEXT:    dsll $2, $4, 1
 ; MIPS64R2-NEXT:    sll $5, $7, 0
-; MIPS64R2-NEXT:    not $3, $5
+; MIPS64R2-NEXT:    xori $3, $5, 63
 ; MIPS64R2-NEXT:    dsllv $2, $2, $3
 ; MIPS64R2-NEXT:    or $3, $2, $1
 ; MIPS64R2-NEXT:    dsrav $2, $4, $7
@@ -661,7 +641,7 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS64R6-NEXT:    or $2, $8, $2
 ; MIPS64R6-NEXT:    dsrlv $5, $5, $7
 ; MIPS64R6-NEXT:    dsll $4, $4, 1
-; MIPS64R6-NEXT:    not $3, $3
+; MIPS64R6-NEXT:    xori $3, $3, 63
 ; MIPS64R6-NEXT:    dsllv $3, $4, $3
 ; MIPS64R6-NEXT:    or $3, $3, $5
 ; MIPS64R6-NEXT:    seleqz $3, $3, $6

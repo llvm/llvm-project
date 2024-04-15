@@ -286,13 +286,6 @@ void FormatEntity::Entry::AppendText(const char *cstr) {
   return AppendText(llvm::StringRef(cstr));
 }
 
-Status FormatEntity::Parse(const llvm::StringRef &format_str, Entry &entry) {
-  entry.Clear();
-  entry.type = Entry::Type::Root;
-  llvm::StringRef modifiable_format(format_str);
-  return ParseInternal(modifiable_format, entry, 0);
-}
-
 #define ENUM_TO_CSTR(eee)                                                      \
   case FormatEntity::Entry::Type::eee:                                         \
     return #eee
@@ -933,7 +926,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     s.PutChar('[');
 
     if (index_higher < 0)
-      index_higher = valobj->GetNumChildren() - 1;
+      index_higher = valobj->GetNumChildrenIgnoringErrors() - 1;
 
     uint32_t max_num_children =
         target->GetTargetSP()->GetMaximumNumberOfChildrenToDisplay();
@@ -1100,6 +1093,19 @@ static void PrettyPrintFunctionNameWithArgs(Stream &out_stream,
     out_stream.PutChar(')');
 }
 
+static void FormatInlinedBlock(Stream &out_stream, Block *block) {
+  if (!block)
+    return;
+  Block *inline_block = block->GetContainingInlinedBlock();
+  if (inline_block) {
+    if (const InlineFunctionInfo *inline_info =
+            inline_block->GetInlinedFunctionInfo()) {
+      out_stream.PutCString(" [inlined] ");
+      inline_info->GetName().Dump(&out_stream);
+    }
+  }
+}
+
 bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
                                    const SymbolContext *sc,
                                    const ExecutionContext *exe_ctx,
@@ -1252,9 +1258,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
             llvm::Triple::OSType ostype = arch.IsValid()
                                               ? arch.GetTriple().getOS()
                                               : llvm::Triple::UnknownOS;
-            if ((ostype == llvm::Triple::FreeBSD) ||
-                (ostype == llvm::Triple::Linux) ||
-                (ostype == llvm::Triple::NetBSD)) {
+            if (ostype == llvm::Triple::FreeBSD ||
+                ostype == llvm::Triple::Linux ||
+                ostype == llvm::Triple::NetBSD ||
+                ostype == llvm::Triple::OpenBSD) {
               format = "%" PRIu64;
             }
           } else {
@@ -1598,18 +1605,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
       if (name) {
         s.PutCString(name);
-
-        if (sc->block) {
-          Block *inline_block = sc->block->GetContainingInlinedBlock();
-          if (inline_block) {
-            const InlineFunctionInfo *inline_info =
-                sc->block->GetInlinedFunctionInfo();
-            if (inline_info) {
-              s.PutCString(" [inlined] ");
-              inline_info->GetName().Dump(&s);
-            }
-          }
-        }
+        FormatInlinedBlock(s, sc->block);
         return true;
       }
     }
@@ -1644,6 +1640,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
         name = sc->symbol->GetNameNoArguments();
       if (name) {
         s.PutCString(name.GetCString());
+        FormatInlinedBlock(s, sc->block);
         return true;
       }
     }
@@ -1684,7 +1681,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
             if (inline_block) {
               get_function_vars = false;
-              inline_info = sc->block->GetInlinedFunctionInfo();
+              inline_info = inline_block->GetInlinedFunctionInfo();
               if (inline_info)
                 variable_list_sp = inline_block->GetBlockVariableList(true);
             }
@@ -1739,14 +1736,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (!name)
       return false;
     s.PutCString(name);
-
-    if (sc->block && sc->block->GetContainingInlinedBlock()) {
-      if (const InlineFunctionInfo *inline_info =
-              sc->block->GetInlinedFunctionInfo()) {
-        s.PutCString(" [inlined] ");
-        inline_info->GetName().Dump(&s);
-      }
-    }
+    FormatInlinedBlock(s, sc->block);
     return true;
   }
   case Entry::Type::FunctionAddrOffset:
@@ -1802,7 +1792,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (sc && sc->line_entry.IsValid()) {
       Module *module = sc->module_sp.get();
       if (module) {
-        if (DumpFile(s, sc->line_entry.file, (FileKind)entry.number))
+        if (DumpFile(s, sc->line_entry.GetFile(), (FileKind)entry.number))
           return true;
       }
     }
@@ -1991,8 +1981,8 @@ static const Definition *FindEntry(const llvm::StringRef &format_str,
   return parent;
 }
 
-Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
-                                   uint32_t depth) {
+static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
+                            uint32_t depth) {
   Status error;
   while (!format.empty() && error.Success()) {
     const size_t non_special_chars = format.find_first_of("${}\\");
@@ -2017,7 +2007,7 @@ Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
     case '{': {
       format = format.drop_front(); // Skip the '{'
       Entry scope_entry(Entry::Type::Scope);
-      error = FormatEntity::ParseInternal(format, scope_entry, depth + 1);
+      error = ParseInternal(format, scope_entry, depth + 1);
       if (error.Fail())
         return error;
       parent_entry.AppendEntry(std::move(scope_entry));
@@ -2161,11 +2151,7 @@ Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
             if (entry.printf_format.find('%') == std::string::npos) {
               bool clear_printf = false;
 
-              if (FormatManager::GetFormatFromCString(
-                      entry.printf_format.c_str(), false, entry.fmt)) {
-                // We have an LLDB format, so clear the printf format
-                clear_printf = true;
-              } else if (entry.printf_format.size() == 1) {
+              if (entry.printf_format.size() == 1) {
                 switch (entry.printf_format[0]) {
                 case '@': // if this is an @ sign, print ObjC description
                   entry.number = ValueObject::
@@ -2208,20 +2194,20 @@ Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
                       eValueObjectRepresentationStyleExpressionPath;
                   clear_printf = true;
                   break;
-                default:
+                }
+              }
+
+              if (entry.number == 0) {
+                if (FormatManager::GetFormatFromCString(
+                        entry.printf_format.c_str(), entry.fmt)) {
+                  clear_printf = true;
+                } else if (entry.printf_format == "tid") {
+                  verify_is_thread_id = true;
+                } else {
                   error.SetErrorStringWithFormat("invalid format: '%s'",
                                                  entry.printf_format.c_str());
                   return error;
                 }
-              } else if (FormatManager::GetFormatFromCString(
-                             entry.printf_format.c_str(), true, entry.fmt)) {
-                clear_printf = true;
-              } else if (entry.printf_format == "tid") {
-                verify_is_thread_id = true;
-              } else {
-                error.SetErrorStringWithFormat("invalid format: '%s'",
-                                               entry.printf_format.c_str());
-                return error;
               }
 
               // Our format string turned out to not be a printf style format
@@ -2466,4 +2452,11 @@ void FormatEntity::PrettyPrintFunctionArguments(
     } else
       out_stream.Printf("%s=<unavailable>", var_name);
   }
+}
+
+Status FormatEntity::Parse(const llvm::StringRef &format_str, Entry &entry) {
+  entry.Clear();
+  entry.type = Entry::Type::Root;
+  llvm::StringRef modifiable_format(format_str);
+  return ParseInternal(modifiable_format, entry, 0);
 }

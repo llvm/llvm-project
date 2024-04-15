@@ -1,15 +1,15 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass machine-scheduler  -verify-machineinstrs  -o - %s | FileCheck %s
 
 --- |
-  define i64 @load_imp-def(i64* nocapture %P, i32 %v) {
+  define i64 @load_imp-def(ptr nocapture %P, i32 %v) {
   entry:
-    %0 = bitcast i64* %P to i32*
-    %1 = load i32, i32* %0
+    %0 = bitcast ptr %P to ptr
+    %1 = load i32, ptr %0
     %conv = zext i32 %1 to i64
-    %arrayidx19 = getelementptr inbounds i64, i64* %P, i64 1
-    %arrayidx1 = bitcast i64* %arrayidx19 to i32*
-    store i32 %v, i32* %arrayidx1
-    %2 = load i64, i64* %arrayidx19
+    %arrayidx19 = getelementptr inbounds i64, ptr %P, i64 1
+    %arrayidx1 = bitcast ptr %arrayidx19 to ptr
+    store i32 %v, ptr %arrayidx1
+    %2 = load i64, ptr %arrayidx19
     %and = and i64 %2, 4294967295
     %add = add nuw nsw i64 %and, %conv
     ret i64 %add

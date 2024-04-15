@@ -21,6 +21,7 @@
 #include "test_allocator.h"
 #include "test_iterators.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 template <class Alloc, class It>
 TEST_CONSTEXPR_CXX20 void test(It first, It last) {
@@ -37,6 +38,7 @@ TEST_CONSTEXPR_CXX20 void test(It first, It last) {
   }
   assert(s2.get_allocator() == Alloc());
   assert(s2.capacity() >= s2.size());
+  LIBCPP_ASSERT(is_string_asan_correct(s2));
 }
 
 template <class Alloc, class It>
@@ -54,6 +56,7 @@ TEST_CONSTEXPR_CXX20 void test(It first, It last, const Alloc& a) {
   }
   assert(s2.get_allocator() == a);
   assert(s2.capacity() >= s2.size());
+  LIBCPP_ASSERT(is_string_asan_correct(s2));
 }
 
 template <class Alloc>

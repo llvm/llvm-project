@@ -9,6 +9,8 @@
 #include "flang/Runtime/iostat.h"
 
 namespace Fortran::runtime::io {
+RT_OFFLOAD_API_GROUP_BEGIN
+
 const char *IostatErrorString(int iostat) {
   switch (iostat) {
   case IostatOk:
@@ -115,9 +117,13 @@ const char *IostatErrorString(int iostat) {
     return "NEWUNIT= without FILE= or STATUS='SCRATCH'";
   case IostatBadListDirectedInputSeparator:
     return "List-directed input value has trailing unused characters";
+  case IostatNonExternalDefinedUnformattedIo:
+    return "Defined unformatted I/O without an external unit";
   default:
     return nullptr;
   }
 }
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime::io

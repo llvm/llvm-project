@@ -52,7 +52,7 @@ TEST(Descriptor, Primitives) {
   ASSERT_FALSE(GlobalDesc->asRecordDecl());
 
   // Still true because this is a global variable.
-  ASSERT_TRUE(GlobalDesc->getMetadataSize() == 0);
+  ASSERT_TRUE(GlobalDesc->getMetadataSize() == sizeof(InlineDescriptor));
   ASSERT_FALSE(GlobalDesc->isPrimitiveArray());
   ASSERT_FALSE(GlobalDesc->isCompositeArray());
   ASSERT_FALSE(GlobalDesc->isZeroSizeArray());
@@ -114,8 +114,8 @@ TEST(Descriptor, Primitives) {
   ASSERT_TRUE(F4->Desc->ElemDesc->isPrimitiveArray());
 
   // Check pointer stuff.
-  // Global variables have no inline descriptor (yet).
-  ASSERT_TRUE(GlobalPtr.isRoot());
+  // Global variables have an inline descriptor.
+  ASSERT_FALSE(GlobalPtr.isRoot());
   ASSERT_TRUE(GlobalPtr.isLive());
   ASSERT_FALSE(GlobalPtr.isZero());
   ASSERT_FALSE(GlobalPtr.isField());

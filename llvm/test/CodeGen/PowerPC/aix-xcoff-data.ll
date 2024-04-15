@@ -45,8 +45,8 @@
 
 ; CHECK-NOT: .toc
 
-; CHECK:      .csect [PR],5
-; CHECK-NEXT:  .file
+; CHECK:  .file
+; CHECK-NEXT:      .csect ..text..[PR],5
 
 ; CHECK:      .csect .data[RW],5
 ; CHECK-NEXT: .globl  ivar
@@ -147,7 +147,7 @@
 ; CHECK-NEXT: .comm   over_aligned_comm[RW],8,5
 ; CHECK-NEXT: .comm   array[RW],33,0
 
-; OBJ:      File: {{.*}}aix-xcoff-data.ll.tmp.o
+; OBJ:      File: 
 ; OBJ-NEXT: Format: aixcoff-rs6000
 ; OBJ-NEXT: Arch: powerpc
 ; OBJ-NEXT: AddressSize: 32bit
@@ -156,7 +156,7 @@
 ; OBJ-NEXT:   NumberOfSections: 3
 ; OBJ-NEXT:   TimeStamp:
 ; OBJ-NEXT:   SymbolTableOffset: 0x10C
-; OBJ-NEXT:   SymbolTableEntries: 45
+; OBJ-NEXT:   SymbolTableEntries: 47
 ; OBJ-NEXT:   OptionalHeaderSize: 0x0
 ; OBJ-NEXT:   Flags: 0x0
 ; OBJ-NEXT: }
@@ -208,14 +208,26 @@
 ; SYMS:      Symbols [
 ; SYMS-NEXT:   Symbol {
 ; SYMS-NEXT:     Index: 0
-; SYMS-NEXT:     Name: <stdin>
+; SYMS-NEXT:     Name: .file
 ; SYMS-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYMS-NEXT:     Section: N_DEBUG
 ; SYMS-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
 ; SYMS32-NEXT:   CPU Version ID: TCPU_COM (0x3)
 ; SYMS64-NEXT:   CPU Version ID: TCPU_PPC64 (0x2)
 ; SYMS-NEXT:     StorageClass: C_FILE (0x67)
-; SYMS-NEXT:     NumberOfAuxEntries: 0
+; SYMS-NEXT:     NumberOfAuxEntries: 2
+; SYMS-NEXT:     File Auxiliary Entry {
+; SYMS-NEXT:       Index: 1
+; SYMS-NEXT:       Name:
+; SYMS-NEXT:       Type: XFT_FN (0x0)
+; SYMS64-NEXT:     Auxiliary Type: AUX_FILE (0xFC)
+; SYMS-NEXT:     }
+; SYMS-NEXT:     File Auxiliary Entry {
+; SYMS-NEXT:       Index: 2
+; SYMS-NEXT:       Name: LLVM
+; SYMS-NEXT:       Type: XFT_CV (0x2)
+; SYMS64-NEXT:     Auxiliary Type: AUX_FILE (0xFC)
+; SYMS-NEXT:     }
 ; SYMS-NEXT:   }
 ; SYMS-NEXT:   Symbol {
 ; SYMS-NEXT:     Index: [[#INDX:]]
@@ -710,7 +722,7 @@
 ; OBJ64-NEXT:   NumberOfSections: 3
 ; OBJ64-NEXT:   TimeStamp: None (0x0)
 ; OBJ64-NEXT:   SymbolTableOffset: 0x170
-; OBJ64-NEXT:   SymbolTableEntries: 45
+; OBJ64-NEXT:   SymbolTableEntries: 47
 ; OBJ64-NEXT:   OptionalHeaderSize: 0x0
 ; OBJ64-NEXT:   Flags: 0x0
 ; OBJ64-NEXT: }

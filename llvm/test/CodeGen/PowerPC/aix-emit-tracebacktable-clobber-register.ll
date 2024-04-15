@@ -99,12 +99,12 @@ entry:
 ; COMMON-NEXT:  .align  2
 ; COMMON-NEXT:  .vbyte  4, 0
 ; COMMON-NEXT:  .vbyte  4, 0
-; CHECK-ASM-NEXT:   .csect [PR],5
+; CHECK-ASM-NEXT:   .csect ..text..[PR],5
 ; CHECK-FUNC-NEXT:  .csect .foov[PR],5
 ; COMMON-NEXT:                                         # -- End function
 ; COMMON:       .toc
 ; COMMON:      L..C2:
-; COMMON-NEXT:  .tc __ehinfo.1[TC],__ehinfo.1
+; COMMON-NEXT:  .tc __ehinfo.1[TE],__ehinfo.1
 
 
 ; OBJ-DIS:      9c: 00 00 00 00  	# Traceback table start

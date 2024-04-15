@@ -103,8 +103,8 @@ bool StaticInitGVIterator::isStaticInitGlobal(GlobalValue &GV) {
     // FIXME: These section checks are too strict: We should match first and
     // second word split by comma.
     if (GV.hasSection() &&
-        (GV.getSection().startswith("__DATA,__objc_classlist") ||
-         GV.getSection().startswith("__DATA,__objc_selrefs")))
+        (GV.getSection().starts_with("__DATA,__objc_classlist") ||
+         GV.getSection().starts_with("__DATA,__objc_selrefs")))
       return true;
   }
 
@@ -218,19 +218,23 @@ void ItaniumCXAAtExitSupport::runAtExits(void *DSOHandle) {
 }
 
 DynamicLibrarySearchGenerator::DynamicLibrarySearchGenerator(
-    sys::DynamicLibrary Dylib, char GlobalPrefix, SymbolPredicate Allow)
+    sys::DynamicLibrary Dylib, char GlobalPrefix, SymbolPredicate Allow,
+    AddAbsoluteSymbolsFn AddAbsoluteSymbols)
     : Dylib(std::move(Dylib)), Allow(std::move(Allow)),
+      AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)),
       GlobalPrefix(GlobalPrefix) {}
 
 Expected<std::unique_ptr<DynamicLibrarySearchGenerator>>
 DynamicLibrarySearchGenerator::Load(const char *FileName, char GlobalPrefix,
-                                    SymbolPredicate Allow) {
+                                    SymbolPredicate Allow,
+                                    AddAbsoluteSymbolsFn AddAbsoluteSymbols) {
   std::string ErrMsg;
   auto Lib = sys::DynamicLibrary::getPermanentLibrary(FileName, &ErrMsg);
   if (!Lib.isValid())
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
   return std::make_unique<DynamicLibrarySearchGenerator>(
-      std::move(Lib), GlobalPrefix, std::move(Allow));
+      std::move(Lib), GlobalPrefix, std::move(Allow),
+      std::move(AddAbsoluteSymbols));
 }
 
 Error DynamicLibrarySearchGenerator::tryToGenerate(
@@ -261,6 +265,8 @@ Error DynamicLibrarySearchGenerator::tryToGenerate(
   if (NewSymbols.empty())
     return Error::success();
 
+  if (AddAbsoluteSymbols)
+    return AddAbsoluteSymbols(JD, std::move(NewSymbols));
   return JD.define(absoluteSymbols(std::move(NewSymbols)));
 }
 
@@ -284,7 +290,7 @@ StaticLibraryDefinitionGenerator::Load(
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
-  if (auto *UB = cast<object::MachOUniversalBinary>(B->getBinary())) {
+  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(B->getBinary())) {
 
     const auto &TT = L.getExecutionSession().getTargetTriple();
 
@@ -347,7 +353,7 @@ StaticLibraryDefinitionGenerator::Create(
 
   // If this is a universal binary then search for a slice matching the given
   // Triple.
-  if (auto *UB = cast<object::MachOUniversalBinary>(B->get())) {
+  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(B->get())) {
 
     const auto &TT = L.getExecutionSession().getTargetTriple();
 
@@ -503,7 +509,7 @@ Error DLLImportDefinitionGenerator::tryToGenerate(
   DenseMap<StringRef, SymbolLookupFlags> ToLookUpSymbols;
   for (auto &KV : Symbols) {
     StringRef Deinterned = *KV.first;
-    if (Deinterned.startswith(getImpPrefix()))
+    if (Deinterned.starts_with(getImpPrefix()))
       Deinterned = Deinterned.drop_front(StringRef(getImpPrefix()).size());
     // Don't degrade the required state
     if (ToLookUpSymbols.count(Deinterned) &&
@@ -539,7 +545,7 @@ DLLImportDefinitionGenerator::getTargetPointerSize(const Triple &TT) {
 }
 
 Expected<llvm::endianness>
-DLLImportDefinitionGenerator::getTargetEndianness(const Triple &TT) {
+DLLImportDefinitionGenerator::getEndianness(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::x86_64:
     return llvm::endianness::little;
@@ -556,7 +562,7 @@ DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
   auto PointerSize = getTargetPointerSize(TT);
   if (!PointerSize)
     return PointerSize.takeError();
-  auto Endianness = getTargetEndianness(TT);
+  auto Endianness = getEndianness(TT);
   if (!Endianness)
     return Endianness.takeError();
 

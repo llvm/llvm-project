@@ -170,18 +170,18 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   StringRef Hardware;
   StringRef Part;
   for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].startswith("CPU implementer"))
+    if (Lines[I].starts_with("CPU implementer"))
       Implementer = Lines[I].substr(15).ltrim("\t :");
-    if (Lines[I].startswith("Hardware"))
+    if (Lines[I].starts_with("Hardware"))
       Hardware = Lines[I].substr(8).ltrim("\t :");
-    if (Lines[I].startswith("CPU part"))
+    if (Lines[I].starts_with("CPU part"))
       Part = Lines[I].substr(8).ltrim("\t :");
   }
 
   if (Implementer == "0x41") { // ARM Ltd.
     // MSM8992/8994 may give cpu part for the core that the kernel is running on,
     // which is undeterministic and wrong. Always return cortex-a53 for these SoC.
-    if (Hardware.endswith("MSM8994") || Hardware.endswith("MSM8996"))
+    if (Hardware.ends_with("MSM8994") || Hardware.ends_with("MSM8996"))
       return "cortex-a53";
 
 
@@ -196,31 +196,53 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xb36", "arm1136j-s")
         .Case("0xb56", "arm1156t2-s")
         .Case("0xb76", "arm1176jz-s")
+        .Case("0xc05", "cortex-a5")
+        .Case("0xc07", "cortex-a7")
         .Case("0xc08", "cortex-a8")
         .Case("0xc09", "cortex-a9")
         .Case("0xc0f", "cortex-a15")
+        .Case("0xc0e", "cortex-a17")
         .Case("0xc20", "cortex-m0")
         .Case("0xc23", "cortex-m3")
         .Case("0xc24", "cortex-m4")
+        .Case("0xc27", "cortex-m7")
+        .Case("0xd20", "cortex-m23")
+        .Case("0xd21", "cortex-m33")
+        .Case("0xd24", "cortex-m52")
         .Case("0xd22", "cortex-m55")
+        .Case("0xd23", "cortex-m85")
+        .Case("0xc18", "cortex-r8")
+        .Case("0xd13", "cortex-r52")
+        .Case("0xd15", "cortex-r82")
         .Case("0xd02", "cortex-a34")
         .Case("0xd04", "cortex-a35")
         .Case("0xd03", "cortex-a53")
         .Case("0xd05", "cortex-a55")
         .Case("0xd46", "cortex-a510")
+        .Case("0xd80", "cortex-a520")
+        .Case("0xd88", "cortex-a520ae")
         .Case("0xd07", "cortex-a57")
+        .Case("0xd06", "cortex-a65")
+        .Case("0xd43", "cortex-a65ae")
         .Case("0xd08", "cortex-a72")
         .Case("0xd09", "cortex-a73")
         .Case("0xd0a", "cortex-a75")
         .Case("0xd0b", "cortex-a76")
+        .Case("0xd0e", "cortex-a76ae")
         .Case("0xd0d", "cortex-a77")
         .Case("0xd41", "cortex-a78")
+        .Case("0xd42", "cortex-a78ae")
+        .Case("0xd4b", "cortex-a78c")
         .Case("0xd47", "cortex-a710")
         .Case("0xd4d", "cortex-a715")
+        .Case("0xd81", "cortex-a720")
+        .Case("0xd89", "cortex-a720ae")
         .Case("0xd44", "cortex-x1")
         .Case("0xd4c", "cortex-x1c")
         .Case("0xd48", "cortex-x2")
         .Case("0xd4e", "cortex-x3")
+        .Case("0xd82", "cortex-x4")
+        .Case("0xd4a", "neoverse-e1")
         .Case("0xd0c", "neoverse-n1")
         .Case("0xd49", "neoverse-n2")
         .Case("0xd40", "neoverse-v1")
@@ -306,10 +328,18 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     }
   }
 
+  if (Implementer == "0x6d") { // Microsoft Corporation.
+    // The Microsoft Azure Cobalt 100 CPU is handled as a Neoverse N2.
+    return StringSwitch<const char *>(Part)
+        .Case("0xd49", "neoverse-n2")
+        .Default("generic");
+  }
+
   if (Implementer == "0xc0") { // Ampere Computing
     return StringSwitch<const char *>(Part)
         .Case("0xac3", "ampere1")
         .Case("0xac4", "ampere1a")
+        .Case("0xac5", "ampere1b")
         .Default("generic");
   }
 
@@ -363,7 +393,7 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
   // Look for the CPU features.
   SmallVector<StringRef, 32> CPUFeatures;
   for (unsigned I = 0, E = Lines.size(); I != E; ++I)
-    if (Lines[I].startswith("features")) {
+    if (Lines[I].starts_with("features")) {
       size_t Pos = Lines[I].find(':');
       if (Pos != StringRef::npos) {
         Lines[I].drop_front(Pos + 1).split(CPUFeatures, ' ');
@@ -382,7 +412,7 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
 
   // Now check the processor machine type.
   for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].startswith("processor ")) {
+    if (Lines[I].starts_with("processor ")) {
       size_t Pos = Lines[I].find("machine = ");
       if (Pos != StringRef::npos) {
         Pos += sizeof("machine = ") - 1;
@@ -405,7 +435,7 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
   // Look for uarch line to determine cpu name
   StringRef UArch;
   for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].startswith("uarch")) {
+    if (Lines[I].starts_with("uarch")) {
       UArch = Lines[I].substr(5).ltrim("\t :");
       break;
     }
@@ -1127,37 +1157,59 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
   case 23:
     CPU = "znver1";
     *Type = X86::AMDFAM17H;
-    if ((Model >= 0x30 && Model <= 0x3f) || Model == 0x71) {
+    if ((Model >= 0x30 && Model <= 0x3f) || (Model == 0x47) ||
+        (Model >= 0x60 && Model <= 0x67) || (Model >= 0x68 && Model <= 0x6f) ||
+        (Model >= 0x70 && Model <= 0x7f) || (Model >= 0x84 && Model <= 0x87) ||
+        (Model >= 0x90 && Model <= 0x97) || (Model >= 0x98 && Model <= 0x9f) ||
+        (Model >= 0xa0 && Model <= 0xaf)) {
+      // Family 17h Models 30h-3Fh (Starship) Zen 2
+      // Family 17h Models 47h (Cardinal) Zen 2
+      // Family 17h Models 60h-67h (Renoir) Zen 2
+      // Family 17h Models 68h-6Fh (Lucienne) Zen 2
+      // Family 17h Models 70h-7Fh (Matisse) Zen 2
+      // Family 17h Models 84h-87h (ProjectX) Zen 2
+      // Family 17h Models 90h-97h (VanGogh) Zen 2
+      // Family 17h Models 98h-9Fh (Mero) Zen 2
+      // Family 17h Models A0h-AFh (Mendocino) Zen 2
       CPU = "znver2";
       *Subtype = X86::AMDFAM17H_ZNVER2;
-      break; // 30h-3fh, 71h: Zen2
+      break;
     }
-    if (Model <= 0x0f) {
+    if ((Model >= 0x10 && Model <= 0x1f) || (Model >= 0x20 && Model <= 0x2f)) {
+      // Family 17h Models 10h-1Fh (Raven1) Zen
+      // Family 17h Models 10h-1Fh (Picasso) Zen+
+      // Family 17h Models 20h-2Fh (Raven2 x86) Zen
       *Subtype = X86::AMDFAM17H_ZNVER1;
-      break; // 00h-0Fh: Zen1
+      break;
     }
     break;
   case 25:
     CPU = "znver3";
     *Type = X86::AMDFAM19H;
-    if (Model <= 0x0f || (Model >= 0x20 && Model <= 0x5f)) {
-      // Family 19h Models 00h-0Fh - Zen3
-      // Family 19h Models 20h-2Fh - Zen3
-      // Family 19h Models 30h-3Fh - Zen3
-      // Family 19h Models 40h-4Fh - Zen3+
-      // Family 19h Models 50h-5Fh - Zen3+
+    if (Model <= 0x0f || (Model >= 0x20 && Model <= 0x2f) ||
+        (Model >= 0x30 && Model <= 0x3f) || (Model >= 0x40 && Model <= 0x4f) ||
+        (Model >= 0x50 && Model <= 0x5f)) {
+      // Family 19h Models 00h-0Fh (Genesis, Chagall) Zen 3
+      // Family 19h Models 20h-2Fh (Vermeer) Zen 3
+      // Family 19h Models 30h-3Fh (Badami) Zen 3
+      // Family 19h Models 40h-4Fh (Rembrandt) Zen 3+
+      // Family 19h Models 50h-5Fh (Cezanne) Zen 3
       *Subtype = X86::AMDFAM19H_ZNVER3;
       break;
     }
-    if ((Model >= 0x10 && Model <= 0x1f) ||
-        (Model >= 0x60 && Model <= 0x74) ||
-        (Model >= 0x78 && Model <= 0x7b) ||
-        (Model >= 0xA0 && Model <= 0xAf)) {
+    if ((Model >= 0x10 && Model <= 0x1f) || (Model >= 0x60 && Model <= 0x6f) ||
+        (Model >= 0x70 && Model <= 0x77) || (Model >= 0x78 && Model <= 0x7f) ||
+        (Model >= 0xa0 && Model <= 0xaf)) {
+      // Family 19h Models 10h-1Fh (Stones; Storm Peak) Zen 4
+      // Family 19h Models 60h-6Fh (Raphael) Zen 4
+      // Family 19h Models 70h-77h (Phoenix, Hawkpoint1) Zen 4
+      // Family 19h Models 78h-7Fh (Phoenix 2, Hawkpoint2) Zen 4
+      // Family 19h Models A0h-AFh (Stones-Dense) Zen 4
       CPU = "znver4";
       *Subtype = X86::AMDFAM19H_ZNVER4;
       break; //  "znver4"
     }
-    break; // family 19h
+    break;
   default:
     break; // Unknown AMD CPU.
   }
@@ -1431,6 +1483,8 @@ StringRef sys::getHostCPUName() {
 #define CPUFAMILY_ARM_VORTEX_TEMPEST 0x07d34b9f
 #define CPUFAMILY_ARM_LIGHTNING_THUNDER 0x462504d2
 #define CPUFAMILY_ARM_FIRESTORM_ICESTORM 0x1b588bb3
+#define CPUFAMILY_ARM_BLIZZARD_AVALANCHE 0xda33d83d
+#define CPUFAMILY_ARM_EVEREST_SAWTOOTH 0x8765edea
 
 StringRef sys::getHostCPUName() {
   uint32_t Family;
@@ -1456,9 +1510,13 @@ StringRef sys::getHostCPUName() {
     return "apple-a13";
   case CPUFAMILY_ARM_FIRESTORM_ICESTORM:
     return "apple-m1";
+  case CPUFAMILY_ARM_BLIZZARD_AVALANCHE:
+    return "apple-m2";
+  case CPUFAMILY_ARM_EVEREST_SAWTOOTH:
+    return "apple-m3";
   default:
     // Default to the newest CPU we know about.
-    return "apple-m1";
+    return "apple-m3";
   }
 }
 #elif defined(_AIX)
@@ -1498,7 +1556,8 @@ StringRef sys::getHostCPUName() {
   // Use processor id to detect cpu name.
   uint32_t processor_id;
   __asm__("cpucfg %[prid], $zero\n\t" : [prid] "=r"(processor_id));
-  switch (processor_id & 0xff00) {
+  // Refer PRID_SERIES_MASK in linux kernel: arch/loongarch/include/asm/cpu.h.
+  switch (processor_id & 0xf000) {
   case 0xc000: // Loongson 64bit, 4-issue
     return "la464";
   // TODO: Others.
@@ -1532,7 +1591,7 @@ StringRef sys::detail::getHostCPUNameForSPARC(StringRef ProcCpuinfoContent) {
   // Look for cpu line to determine cpu name
   StringRef Cpu;
   for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].startswith("cpu")) {
+    if (Lines[I].starts_with("cpu")) {
       Cpu = Lines[I].substr(5).ltrim("\t :");
       break;
     }
@@ -1811,6 +1870,13 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
   Features["avx10.1-256"] = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
+  bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
+  Features["egpr"] = HasAPXF;
+  Features["push2pop2"] = HasAPXF;
+  Features["ppx"] = HasAPXF;
+  Features["ndd"] = HasAPXF;
+  Features["ccmp"] = HasAPXF;
+  Features["cf"] = HasAPXF;
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
@@ -1849,7 +1915,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
 
   // Look for the CPU features.
   for (unsigned I = 0, E = Lines.size(); I != E; ++I)
-    if (Lines[I].startswith("Features")) {
+    if (Lines[I].starts_with("Features")) {
       Lines[I].split(CPUFeatures, ' ');
       break;
     }

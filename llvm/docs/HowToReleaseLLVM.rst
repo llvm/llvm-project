@@ -40,16 +40,16 @@ Release                         Approx. Date
 =============================== =========================
 *release branch: even releases* *4th Tue in January*
 *release branch: odd releases*  *4th Tue in July*
-X.0.0-rc1                       3 days after branch.
-X.0.0-rc2                       2 weeks after branch.
-X.0.0-rc3                       4 weeks after branch
-**X.0.0-final**                 **6 weeks after branch**
-**X.0.1**                       **8 weeks after branch**
-**X.0.2**                       **10 weeks after branch**
-**X.0.3**                       **12 weeks after branch**
-**X.0.4**                       **14 weeks after branch**
-**X.0.5**                       **16 weeks after branch**
-**X.0.6 (if necessary)**        **18 weeks after branch**
+X.1.0-rc1                       3 days after branch.
+X.1.0-rc2                       2 weeks after branch.
+X.1.0-rc3                       4 weeks after branch
+**X.1.0-final**                 **6 weeks after branch**
+**X.1.1**                       **8 weeks after branch**
+**X.1.2**                       **10 weeks after branch**
+**X.1.3**                       **12 weeks after branch**
+**X.1.4**                       **14 weeks after branch**
+**X.1.5**                       **16 weeks after branch**
+**X.1.6 (if necessary)**        **18 weeks after branch**
 =============================== =========================
 
 Release Process Summary
@@ -77,7 +77,7 @@ Release Process Summary
 
 * Announce bug fix release schedule to the LLVM community and update the website.
 
-* Do bug-fix releases every two weeks until X.0.5 or X.0.6 (if necessary).
+* Do bug-fix releases every two weeks until X.1.5 or X.1.6 (if necessary).
 
 Release Process
 ===============
@@ -122,6 +122,9 @@ Branch the Git trunk using the following procedure:
 #. Create the release branch from the last known good revision from before the
    version bump.  The branch's name is release/X.x where ``X`` is the major version
    number and ``x`` is just the letter ``x``.
+
+#. On the newly-created release branch, immediately bump the version
+   to X.1.0git (where ``X`` is the major version of the branch.)
 
 #. All tags and branches need to be created in both the llvm/llvm-project and
    llvm/llvm-test-suite repos.
@@ -406,13 +409,13 @@ Announce the Release
 ^^^^^^^^^^^^^^^^^^^^
 
 Create a new post in the `Announce Category <https://discourse.llvm.org/c/announce>`_
-once all the release tasks are complete.  For X.0.0 releases, make sure to include a
-link to the release notes in the post.  For X.0.1+ releases, generate a changelog
+once all the release tasks are complete.  For X.1.0 releases, make sure to include a
+link to the release notes in the post.  For X.1.1+ releases, generate a changelog
 using this command and add it to the post.
 
 ::
 
-  $ git log --format="- %aN: [%s (%h)](https://github.com/llvm/llvm-project/commit/%H)" llvmorg-X.0.N-1..llvmorg-X.0.N
+  $ git log --format="- %aN: [%s (%h)](https://github.com/llvm/llvm-project/commit/%H)" llvmorg-X.1.N-1..llvmorg-X.1.N
 
 Once the release has been announced add a link to the announcement on the llvm
 homepage (from the llvm-www repo) in the "Release Emails" section.

@@ -29,12 +29,14 @@ static_library("Breakpoint") {
     "BreakpointResolverName.cpp",
     "BreakpointResolverScripted.cpp",
     "BreakpointSite.cpp",
-    "BreakpointSiteList.cpp",
+    "StopPointSiteList.cpp",
     "Stoppoint.cpp",
     "StoppointCallbackContext.cpp",
     "StoppointSite.cpp",
     "Watchpoint.cpp",
+    "WatchpointAlgorithms.cpp",
     "WatchpointList.cpp",
     "WatchpointOptions.cpp",
+    "WatchpointResource.cpp",
   ]
 }

@@ -451,7 +451,7 @@ std::unique_ptr<Logger> makeLogger(llvm::StringRef LogPrefix,
       void log(Level L, const char *Fmt,
                const llvm::formatv_object_base &Message) override {
         if (Context::current().get(CurrentRequest) == nullptr ||
-            llvm::StringRef(Fmt).startswith("[public]"))
+            llvm::StringRef(Fmt).starts_with("[public]"))
           return StreamLogger::log(L, Fmt, Message);
         if (L >= Error)
           return StreamLogger::log(L, Fmt,

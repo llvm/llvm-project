@@ -145,7 +145,8 @@ def CharacterConversion : Pass<"character-conversion"> {
   ];
 }
 
-def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
+class CFGConversionBase<string optExt, string operation>
+  : Pass<"cfg-conversion-on-" # optExt # "-opt", operation> {
   let summary = "Convert FIR structured control flow ops to CFG ops.";
   let description = [{
     Transform the `fir.do_loop`, `fir.if`, `fir.iterate_while` and
@@ -154,7 +155,6 @@ def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
 
     This pass is required before code gen to the LLVM IR dialect.
   }];
-  let constructor = "::fir::createFirToCfgPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
@@ -163,6 +163,14 @@ def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
            /*default=*/"false",
            "force the body of a loop to execute at least once">
   ];
+}
+
+def CFGConversionOnFunc : CFGConversionBase<"func", "mlir::func::FuncOp"> {
+  let constructor = "::fir::createFirToCfgOnFuncPass()";
+}
+
+def CFGConversionOnReduction : CFGConversionBase<"reduce", "mlir::omp::DeclareReductionOp"> {
+  let constructor = "::fir::createFirToCfgOnReductionPass()";
 }
 
 def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
@@ -318,16 +326,16 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def OMPEarlyOutliningPass
-    : Pass<"omp-early-target-outlining", "mlir::ModuleOp"> {
-  let summary = "Outlines all target ops into separate functions";
+def OMPDescriptorMapInfoGenPass
+    : Pass<"omp-descriptor-map-info-gen", "mlir::func::FuncOp"> {
+  let summary = "expands OpenMP MapInfo operations containing descriptors";
   let description = [{
-    This pass outlines all omp.target operations into individual functions.
-    It is invoked in the front end after the initial FIR has been constructed.
-    This pass is only needed when compiling for the target device to prevent
-    the optimizer to perform transforms across target region boundaries.
+    Expands MapInfo operations containing descriptor types into multiple 
+    MapInfo's for each pointer element in the descriptor that requires 
+    explicit individual mapping by the OpenMP runtime.
   }];
-  let constructor = "::fir::createOMPEarlyOutliningPass()";
+  let constructor = "::fir::createOMPDescriptorMapInfoGenPass()";
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
 def OMPMarkDeclareTargetPass
@@ -342,7 +350,8 @@ def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
                 "for the target device.";
   let constructor = "::fir::createOMPFunctionFilteringPass()";
   let dependentDialects = [
-    "mlir::func::FuncDialect"
+    "mlir::func::FuncDialect",
+    "fir::FIROpsDialect"
   ];
 }
 
@@ -358,6 +367,42 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
            "vector scale range">,
   ];
   let constructor = "::fir::createVScaleAttrPass()";
+}
+
+def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
+  let summary = "Pass that adds function attributes expected at LLVM IR level";
+  let description = [{ This feature introduces a general attribute aimed at
+     customizing function characteristics. 
+     Options include:
+     Add "frame-pointer" attribute to functions: Set an attribute for the frame 
+     pointer on functions, to avoid saving the frame pointer in a register in 
+     functions where it is unnecessary. This eliminates the need for
+     instructions to save, establish, and restore frame pointers, while also
+     freeing up an additional register in numerous functions. However, this
+     approach can make debugging unfeasible on certain machines.
+  }];
+  let options = [
+    Option<"framePointerKind", "frame-pointer",
+           "mlir::LLVM::framePointerKind::FramePointerKind", 
+           /*default=*/"mlir::LLVM::framePointerKind::FramePointerKind{}",
+           "frame pointer">,
+    Option<"noInfsFPMath", "no-infs-fp-math",
+           "bool", /*default=*/"false",
+           "Set the no-infs-fp-math attribute on functions in the module.">,
+    Option<"noNaNsFPMath", "no-nans-fp-math",
+           "bool", /*default=*/"false",
+           "Set the no-nans-fp-math attribute on functions in the module.">,
+    Option<"approxFuncFPMath", "approx-func-fp-math",
+           "bool", /*default=*/"false",
+           "Set the approx-func-fp-math attribute on functions in the module.">,
+    Option<"noSignedZerosFPMath", "no-signed-zeros-fp-math",
+           "bool", /*default=*/"false",
+           "Set the no-signed-zeros-fp-math attribute on functions in the module.">,
+    Option<"unsafeFPMath", "unsafe-fp-math",
+           "bool", /*default=*/"false",
+           "Set the unsafe-fp-math attribute on functions in the module.">,
+  ];
+  let constructor = "::fir::createFunctionAttrPass()";
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

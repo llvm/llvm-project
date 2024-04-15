@@ -6,15 +6,15 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
 
   // CHECK-DAG: @_QMtest_0Earray_1d = global [3 x i32] [i32 1, i32 2, i32 3]
   // CHECK-DAG: @_QMtest_0Earray_1d_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Earray_1d
-  // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [36 x i8] c"_QMtest_0Earray_1d_decl_tgt_ref_ptr\00"
-  // CHECK-DAG: @.omp_offloading.entry._QMtest_0Earray_1d_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Earray_1d_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [36 x i8] c"_QMtest_0Earray_1d_decl_tgt_ref_ptr\00"
+  // CHECK-DAG: @.offloading.entry._QMtest_0Earray_1d_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Earray_1d_decl_tgt_ref_ptr, ptr @.offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Earray_1d_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
   llvm.mlir.global external @_QMtest_0Earray_1d(dense<[1, 2, 3]> : tensor<3xi32>) {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : !llvm.array<3 x i32>
 
   // CHECK-DAG: @_QMtest_0Earray_2d = global [2 x [2 x i32]] {{.*}}
   // CHECK-DAG: @_QMtest_0Earray_2d_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Earray_2d
-  // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [36 x i8] c"_QMtest_0Earray_2d_decl_tgt_ref_ptr\00"
-  // CHECK-DAG: @.omp_offloading.entry._QMtest_0Earray_2d_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Earray_2d_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [36 x i8] c"_QMtest_0Earray_2d_decl_tgt_ref_ptr\00"
+  // CHECK-DAG: @.offloading.entry._QMtest_0Earray_2d_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Earray_2d_decl_tgt_ref_ptr, ptr @.offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Earray_2d_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
   llvm.mlir.global external @_QMtest_0Earray_2d() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : !llvm.array<2 x array<2 x i32>> {
     %0 = llvm.mlir.undef : !llvm.array<2 x array<2 x i32>>
@@ -33,8 +33,8 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
 
   // CHECK-DAG:  @_QMtest_0Edata_extended_link_1 = global float 2.000000e+00
   // CHECK-DAG:  @_QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Edata_extended_link_1
-  // CHECK-DAG:  @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [48 x i8] c"_QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr\00"
-  // CHECK-DAG:  @.omp_offloading.entry._QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG:  @.offloading.entry_name{{.*}} = internal unnamed_addr constant [48 x i8] c"_QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr\00"
+  // CHECK-DAG:  @.offloading.entry._QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr, ptr @.offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG:  !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_extended_link_1_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
   llvm.mlir.global external @_QMtest_0Edata_extended_link_1() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : f32 {
     %0 = llvm.mlir.constant(2.000000e+00 : f32) : f32
@@ -43,8 +43,8 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
 
   // CHECK-DAG:  @_QMtest_0Edata_extended_link_2 = global float 3.000000e+00
   // CHECK-DAG:  @_QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Edata_extended_link_2
-  // CHECK-DAG:  @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [48 x i8] c"_QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr\00"
-  // CHECK-DAG:  @.omp_offloading.entry._QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG:  @.offloading.entry_name{{.*}} = internal unnamed_addr constant [48 x i8] c"_QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr\00"
+  // CHECK-DAG:  @.offloading.entry._QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr, ptr @.offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG:  !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_extended_link_2_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
   llvm.mlir.global external @_QMtest_0Edata_extended_link_2() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : f32 {
     %0 = llvm.mlir.constant(3.000000e+00 : f32) : f32
@@ -52,55 +52,91 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
   }
 
   // CHECK-DAG: @_QMtest_0Edata_extended_to_1 = global float 2.000000e+00
-  // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [29 x i8] c"_QMtest_0Edata_extended_to_1\00"
-  // CHECK-DAG: @.omp_offloading.entry._QMtest_0Edata_extended_to_1 = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_extended_to_1, ptr @.omp_offloading.entry_name{{.*}}, i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [29 x i8] c"_QMtest_0Edata_extended_to_1\00"
+  // CHECK-DAG: @.offloading.entry._QMtest_0Edata_extended_to_1 = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_extended_to_1, ptr @.offloading.entry_name{{.*}}, i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_extended_to_1", i32 {{.*}}, i32 {{.*}}}
   llvm.mlir.global external @_QMtest_0Edata_extended_to_1() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : f32 {
     %0 = llvm.mlir.constant(2.000000e+00 : f32) : f32
     llvm.return %0 : f32
   }
 
+  // CHECK-DAG: @_QMtest_0Edata_extended_enter_1 = global float 2.000000e+00
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [32 x i8] c"_QMtest_0Edata_extended_enter_1\00"
+  // CHECK-DAG: @.offloading.entry._QMtest_0Edata_extended_enter_1 = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_extended_enter_1, ptr @.offloading.entry_name{{.*}}, i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_extended_enter_1", i32 {{.*}}, i32 {{.*}}}
+  llvm.mlir.global external @_QMtest_0Edata_extended_enter_1() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} : f32 {
+    %0 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+    llvm.return %0 : f32
+  }
+
   // CHECK-DAG: @_QMtest_0Edata_extended_to_2 = global float 3.000000e+00
-  // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [29 x i8] c"_QMtest_0Edata_extended_to_2\00"
-  // CHECK-DAG: @.omp_offloading.entry._QMtest_0Edata_extended_to_2 = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_extended_to_2, ptr @.omp_offloading.entry_name{{.*}}, i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [29 x i8] c"_QMtest_0Edata_extended_to_2\00"
+  // CHECK-DAG: @.offloading.entry._QMtest_0Edata_extended_to_2 = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_extended_to_2, ptr @.offloading.entry_name{{.*}}, i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_extended_to_2", i32 {{.*}}, i32 {{.*}}}
   llvm.mlir.global external @_QMtest_0Edata_extended_to_2() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : f32 {
     %0 = llvm.mlir.constant(3.000000e+00 : f32) : f32
     llvm.return %0 : f32
   }
 
+  // CHECK-DAG: @_QMtest_0Edata_extended_enter_2 = global float 3.000000e+00
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [32 x i8] c"_QMtest_0Edata_extended_enter_2\00"
+  // CHECK-DAG: @.offloading.entry._QMtest_0Edata_extended_enter_2 = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_extended_enter_2, ptr @.offloading.entry_name{{.*}}, i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_extended_enter_2", i32 {{.*}}, i32 {{.*}}}
+  llvm.mlir.global external @_QMtest_0Edata_extended_enter_2() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} : f32 {
+    %0 = llvm.mlir.constant(3.000000e+00 : f32) : f32
+    llvm.return %0 : f32
+  }
+
   // CHECK-DAG: @_QMtest_0Edata_int = global i32 1
   // CHECK-DAG: @_QMtest_0Edata_int_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Edata_int
-  // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [36 x i8] c"_QMtest_0Edata_int_decl_tgt_ref_ptr\00"
-  // CHECK-DAG: @.omp_offloading.entry._QMtest_0Edata_int_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_int_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [36 x i8] c"_QMtest_0Edata_int_decl_tgt_ref_ptr\00"
+  // CHECK-DAG: @.offloading.entry._QMtest_0Edata_int_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_int_decl_tgt_ref_ptr, ptr @.offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_int_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
   llvm.mlir.global external @_QMtest_0Edata_int() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : i32 {
     %0 = llvm.mlir.constant(10 : i32) : i32
     llvm.return %0 : i32
   }
 
-  // CHECK-DAG: @_QMtest_0Edata_int_clauseless = global i32 1
-  // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [30 x i8] c"_QMtest_0Edata_int_clauseless\00"
-  // CHECK-DAG: @.omp_offloading.entry._QMtest_0Edata_int_clauseless = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_int_clauseless, ptr @.omp_offloading.entry_name{{.*}}, i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
-  // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_int_clauseless", i32 {{.*}}, i32 {{.*}}}
-  llvm.mlir.global external @_QMtest_0Edata_int_clauseless() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : i32 {
+  // CHECK-DAG: @_QMtest_0Edata_int_clauseless_to = global i32 1
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [33 x i8] c"_QMtest_0Edata_int_clauseless_to\00"
+  // CHECK-DAG: @.offloading.entry._QMtest_0Edata_int_clauseless_to = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_int_clauseless_to, ptr @.offloading.entry_name{{.*}}, i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_int_clauseless_to", i32 {{.*}}, i32 {{.*}}}
+  llvm.mlir.global external @_QMtest_0Edata_int_clauseless_to() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : i32 {
+    %0 = llvm.mlir.constant(1 : i32) : i32
+    llvm.return %0 : i32
+  }
+
+  // CHECK-DAG: @_QMtest_0Edata_int_clauseless_enter = global i32 1
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [36 x i8] c"_QMtest_0Edata_int_clauseless_enter\00"
+  // CHECK-DAG: @.offloading.entry._QMtest_0Edata_int_clauseless_enter = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_int_clauseless_enter, ptr @.offloading.entry_name{{.*}}, i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_int_clauseless_enter", i32 {{.*}}, i32 {{.*}}}
+  llvm.mlir.global external @_QMtest_0Edata_int_clauseless_enter() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} : i32 {
     %0 = llvm.mlir.constant(1 : i32) : i32
     llvm.return %0 : i32
   }
 
   // CHECK-DAG: @_QMtest_0Edata_int_to = global i32 5
-  // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [22 x i8] c"_QMtest_0Edata_int_to\00"
-  // CHECK-DAG: @.omp_offloading.entry._QMtest_0Edata_int_to = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_int_to, ptr @.omp_offloading.entry_name{{.*}}, i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [22 x i8] c"_QMtest_0Edata_int_to\00"
+  // CHECK-DAG: @.offloading.entry._QMtest_0Edata_int_to = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_int_to, ptr @.offloading.entry_name{{.*}}, i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_int_to", i32 {{.*}}, i32 {{.*}}}
   llvm.mlir.global external @_QMtest_0Edata_int_to() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : i32 {
     %0 = llvm.mlir.constant(5 : i32) : i32
     llvm.return %0 : i32
   }
 
+  // CHECK-DAG: @_QMtest_0Edata_int_enter = global i32 5
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [25 x i8] c"_QMtest_0Edata_int_enter\00"
+  // CHECK-DAG: @.offloading.entry._QMtest_0Edata_int_enter = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Edata_int_enter, ptr @.offloading.entry_name{{.*}}, i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Edata_int_enter", i32 {{.*}}, i32 {{.*}}}
+  llvm.mlir.global external @_QMtest_0Edata_int_enter() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} : i32 {
+    %0 = llvm.mlir.constant(5 : i32) : i32
+    llvm.return %0 : i32
+  }
+
   // CHECK-DAG: @_QMtest_0Ept1 = global { ptr, i64, i32, i8, i8, i8, i8 } { ptr null, i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 9, i8 1, i8 0 }
   // CHECK-DAG: @_QMtest_0Ept1_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Ept1
-  // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [31 x i8] c"_QMtest_0Ept1_decl_tgt_ref_ptr\00"
-  // CHECK-DAG: @.omp_offloading.entry._QMtest_0Ept1_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Ept1_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [31 x i8] c"_QMtest_0Ept1_decl_tgt_ref_ptr\00"
+  // CHECK-DAG: @.offloading.entry._QMtest_0Ept1_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Ept1_decl_tgt_ref_ptr, ptr @.offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Ept1_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
   llvm.mlir.global external @_QMtest_0Ept1() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {
     %0 = llvm.mlir.zero : !llvm.ptr
@@ -130,8 +166,8 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
 
   // CHECK-DAG: @_QMtest_0Ept2_tar = global i32 5
   // CHECK-DAG: @_QMtest_0Ept2_tar_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Ept2_tar
-  // CHECK-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [35 x i8] c"_QMtest_0Ept2_tar_decl_tgt_ref_ptr\00"
-  // CHECK-DAG: @.omp_offloading.entry._QMtest_0Ept2_tar_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Ept2_tar_decl_tgt_ref_ptr, ptr @.omp_offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
+  // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [35 x i8] c"_QMtest_0Ept2_tar_decl_tgt_ref_ptr\00"
+  // CHECK-DAG: @.offloading.entry._QMtest_0Ept2_tar_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { ptr @_QMtest_0Ept2_tar_decl_tgt_ref_ptr, ptr @.offloading.entry_name{{.*}}, i64 8, i32 1, i32 0 }, section "omp_offloading_entries", align 1
   // CHECK-DAG: !{{.*}} = !{i32 {{.*}}, !"_QMtest_0Ept2_tar_decl_tgt_ref_ptr", i32 {{.*}}, i32 {{.*}}}
   llvm.mlir.global external @_QMtest_0Ept2_tar() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : i32 {
     %0 = llvm.mlir.constant(5 : i32) : i32

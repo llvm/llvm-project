@@ -1,15 +1,20 @@
 ; Test for handling of asm constraints in MSan instrumentation.
+; RUN: opt < %s -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | \
+; RUN:   FileCheck %s
+; RUN: opt < %s -msan-check-access-address=0 -S -passes=msan 2>&1 | \
+; RUN:   FileCheck --check-prefixes=CHECK,USER-CONS %s
 ; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
-; RUN: -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | FileCheck        \
-; RUN: "-check-prefix=CHECK" %s
+; RUN:   -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | FileCheck      \
+; RUN:   --check-prefixes=CHECK,KMSAN %s
 ; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
-; RUN: -msan-handle-asm-conservative=1 -S -passes=msan 2>&1 | FileCheck        \
-; RUN: "-check-prefixes=CHECK,CHECK-CONS" %s
+; RUN:   -msan-handle-asm-conservative=1 -S -passes=msan 2>&1 | FileCheck      \
+; RUN:   --check-prefixes=CHECK,KMSAN,CHECK-CONS %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 %struct.pair = type { i32, i32 }
+%struct.large = type { [33 x i8] }
 
 @id1 = common dso_local global i32 0, align 4
 @is1 = common dso_local global i32 0, align 4
@@ -24,6 +29,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @memcpy_d2 = common dso_local global ptr null, align 8
 @memcpy_s1 = common dso_local global ptr null, align 8
 @memcpy_s2 = common dso_local global ptr null, align 8
+@large = common dso_local global %struct.pair zeroinitializer, align 4
 
 ; The functions below were generated from a C source that contains declarations like follows:
 ;   void f1() {
@@ -46,9 +52,9 @@ entry:
 ; CHECK: [[IS1_F1:%.*]] = load i32, ptr @is1, align 4
 ; CHECK: call void @__msan_warning
 ; CHECK: call i32 asm "",{{.*}}(i32 [[IS1_F1]])
-; CHECK: [[PACK1_F1:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
-; CHECK: [[EXT1_F1:%.*]] = extractvalue { ptr, ptr } [[PACK1_F1]], 0
-; CHECK: store i32 0, ptr [[EXT1_F1]]
+; KMSAN: [[PACK1_F1:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
+; KMSAN: [[EXT1_F1:%.*]] = extractvalue { ptr, ptr } [[PACK1_F1]], 0
+; KMSAN: store i32 0, ptr [[EXT1_F1]]
 
 
 ; Two input registers, two output registers:
@@ -69,14 +75,14 @@ entry:
 ; CHECK: [[IS1_F2:%.*]] = load i32, ptr @is1, align 4
 ; CHECK: [[IS2_F2:%.*]] = load i32, ptr @is2, align 4
 ; CHECK: call void @__msan_warning
-; CHECK: call void @__msan_warning
+; KMSAN: call void @__msan_warning
 ; CHECK: call { i32, i32 } asm "",{{.*}}(i32 [[IS1_F2]], i32 [[IS2_F2]])
-; CHECK: [[PACK1_F2:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
-; CHECK: [[EXT1_F2:%.*]] = extractvalue { ptr, ptr } [[PACK1_F2]], 0
-; CHECK: store i32 0, ptr [[EXT1_F2]]
-; CHECK: [[PACK2_F2:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id2{{.*}})
-; CHECK: [[EXT2_F2:%.*]] = extractvalue { ptr, ptr } [[PACK2_F2]], 0
-; CHECK: store i32 0, ptr [[EXT2_F2]]
+; KMSAN: [[PACK1_F2:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
+; KMSAN: [[EXT1_F2:%.*]] = extractvalue { ptr, ptr } [[PACK1_F2]], 0
+; KMSAN: store i32 0, ptr [[EXT1_F2]]
+; KMSAN: [[PACK2_F2:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id2{{.*}})
+; KMSAN: [[EXT2_F2:%.*]] = extractvalue { ptr, ptr } [[PACK2_F2]], 0
+; KMSAN: store i32 0, ptr [[EXT2_F2]]
 
 ; Input same as output, used twice:
 ;   asm("" : "=r" (id1), "=r" (id2) : "r" (id1), "r" (id2));
@@ -96,14 +102,14 @@ entry:
 ; CHECK: [[ID1_F3:%.*]] = load i32, ptr @id1, align 4
 ; CHECK: [[ID2_F3:%.*]] = load i32, ptr @id2, align 4
 ; CHECK: call void @__msan_warning
-; CHECK: call void @__msan_warning
+; KMSAN: call void @__msan_warning
 ; CHECK: call { i32, i32 } asm "",{{.*}}(i32 [[ID1_F3]], i32 [[ID2_F3]])
-; CHECK: [[PACK1_F3:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
-; CHECK: [[EXT1_F3:%.*]] = extractvalue { ptr, ptr } [[PACK1_F3]], 0
-; CHECK: store i32 0, ptr [[EXT1_F3]]
-; CHECK: [[PACK2_F3:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id2{{.*}})
-; CHECK: [[EXT2_F3:%.*]] = extractvalue { ptr, ptr } [[PACK2_F3]], 0
-; CHECK: store i32 0, ptr [[EXT2_F3]]
+; KMSAN: [[PACK1_F3:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
+; KMSAN: [[EXT1_F3:%.*]] = extractvalue { ptr, ptr } [[PACK1_F3]], 0
+; KMSAN: store i32 0, ptr [[EXT1_F3]]
+; KMSAN: [[PACK2_F3:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id2{{.*}})
+; KMSAN: [[EXT2_F3:%.*]] = extractvalue { ptr, ptr } [[PACK2_F3]], 0
+; KMSAN: store i32 0, ptr [[EXT2_F3]]
 
 
 ; One of the input registers is also an output:
@@ -124,14 +130,14 @@ entry:
 ; CHECK: [[ID1_F4:%.*]] = load i32, ptr @id1, align 4
 ; CHECK: [[IS1_F4:%.*]] = load i32, ptr @is1, align 4
 ; CHECK: call void @__msan_warning
-; CHECK: call void @__msan_warning
+; KMSAN: call void @__msan_warning
 ; CHECK: call { i32, i32 } asm "",{{.*}}(i32 [[ID1_F4]], i32 [[IS1_F4]])
-; CHECK: [[PACK1_F4:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
-; CHECK: [[EXT1_F4:%.*]] = extractvalue { ptr, ptr } [[PACK1_F4]], 0
-; CHECK: store i32 0, ptr [[EXT1_F4]]
-; CHECK: [[PACK2_F4:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id2{{.*}})
-; CHECK: [[EXT2_F4:%.*]] = extractvalue { ptr, ptr } [[PACK2_F4]], 0
-; CHECK: store i32 0, ptr [[EXT2_F4]]
+; KMSAN: [[PACK1_F4:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
+; KMSAN: [[EXT1_F4:%.*]] = extractvalue { ptr, ptr } [[PACK1_F4]], 0
+; KMSAN: store i32 0, ptr [[EXT1_F4]]
+; KMSAN: [[PACK2_F4:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id2{{.*}})
+; KMSAN: [[EXT2_F4:%.*]] = extractvalue { ptr, ptr } [[PACK2_F4]], 0
+; KMSAN: store i32 0, ptr [[EXT2_F4]]
 
 
 ; One input register, three output registers:
@@ -153,15 +159,15 @@ entry:
 ; CHECK: [[IS1_F5:%.*]] = load i32, ptr @is1, align 4
 ; CHECK: call void @__msan_warning
 ; CHECK: call { i32, i32, i32 } asm "",{{.*}}(i32 [[IS1_F5]])
-; CHECK: [[PACK1_F5:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
-; CHECK: [[EXT1_F5:%.*]] = extractvalue { ptr, ptr } [[PACK1_F5]], 0
-; CHECK: store i32 0, ptr [[EXT1_F5]]
-; CHECK: [[PACK2_F5:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id2{{.*}})
-; CHECK: [[EXT2_F5:%.*]] = extractvalue { ptr, ptr } [[PACK2_F5]], 0
-; CHECK: store i32 0, ptr [[EXT2_F5]]
-; CHECK: [[PACK3_F5:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id3{{.*}})
-; CHECK: [[EXT3_F5:%.*]] = extractvalue { ptr, ptr } [[PACK3_F5]], 0
-; CHECK: store i32 0, ptr [[EXT3_F5]]
+; KMSAN: [[PACK1_F5:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
+; KMSAN: [[EXT1_F5:%.*]] = extractvalue { ptr, ptr } [[PACK1_F5]], 0
+; KMSAN: store i32 0, ptr [[EXT1_F5]]
+; KMSAN: [[PACK2_F5:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id2{{.*}})
+; KMSAN: [[EXT2_F5:%.*]] = extractvalue { ptr, ptr } [[PACK2_F5]], 0
+; KMSAN: store i32 0, ptr [[EXT2_F5]]
+; KMSAN: [[PACK3_F5:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id3{{.*}})
+; KMSAN: [[EXT3_F5:%.*]] = extractvalue { ptr, ptr } [[PACK3_F5]], 0
+; KMSAN: store i32 0, ptr [[EXT3_F5]]
 
 
 ; 2 input memory args, 2 output memory args:
@@ -173,6 +179,8 @@ entry:
 }
 
 ; CHECK-LABEL: @f_2i_2o_mem
+; USER-CONS:  store i32 0, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @id1 to i64), i64 87960930222080) to ptr), align 1
+; USER-CONS:  store i32 0, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @id2 to i64), i64 87960930222080) to ptr), align 1
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id1{{.*}}, i64 4)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id2{{.*}}, i64 4)
 ; CHECK: call void asm "", "=*m,=*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @id1, ptr elementtype(i32) @id2, ptr elementtype(i32) @is1, ptr elementtype(i32) @is2)
@@ -190,10 +198,10 @@ entry:
 
 ; CHECK-LABEL: @f_1i_1o_memreg
 ; CHECK: [[IS1_F7:%.*]] = load i32, ptr @is1, align 4
+; USER-CONS:  store i32 0, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @id1 to i64), i64 87960930222080) to ptr), align 1
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id1{{.*}}, i64 4)
 ; CHECK: call void @__msan_warning
 ; CHECK: call i32 asm "", "=r,=*m,r,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @id1, i32 [[IS1_F7]], ptr elementtype(i32) @is1)
-
 
 ; Three outputs, first and last returned via regs, second via mem:
 ;  asm("" : "=r" (id1), "=m"(id2), "=r" (id3):);
@@ -208,6 +216,7 @@ entry:
 }
 
 ; CHECK-LABEL: @f_3o_reg_mem_reg
+; USER-CONS:  store i32 0, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @id2 to i64), i64 87960930222080) to ptr), align 1
 ; CHECK-CONS: call void @__msan_instrument_asm_store(ptr @id2, i64 4)
 ; CHECK: call { i32, i32 } asm "", "=r,=*m,=r,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @id2)
 
@@ -232,10 +241,11 @@ entry:
 ; CHECK: [[PAIR1_F9:%.*]] = load {{.*}} @pair1
 ; CHECK: [[C1_F9:%.*]] = load {{.*}} @c1
 ; CHECK: [[MEMCPY_S1_F9:%.*]] = load {{.*}} @memcpy_s1
+; USER-CONS:  store { i32, i32 } zeroinitializer, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @pair2 to i64), i64 87960930222080) to ptr), align 1
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@pair2{{.*}}, i64 8)
 ; CHECK: call void @__msan_warning
-; CHECK: call void @__msan_warning
-; CHECK: call void @__msan_warning
+; KMSAN: call void @__msan_warning
+; KMSAN: call void @__msan_warning
 ; CHECK: call { i8, ptr } asm "", "=*r,=r,=r,r,r,r,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(%struct.pair) @pair2, {{.*}}[[PAIR1_F9]], i8 [[C1_F9]], {{.*}} [[MEMCPY_S1_F9]])
 
 ; Three inputs and three outputs of different types: a pair, a char, a function pointer.
@@ -248,11 +258,25 @@ entry:
 }
 
 ; CHECK-LABEL: @f_3i_3o_complex_mem
-; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@pair2{{.*}}, i64 8)
-; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@c2{{.*}}, i64 1)
-; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@memcpy_d1{{.*}}, i64 8)
+; USER-CONS:       store { i32, i32 } zeroinitializer, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @pair2 to i64), i64 87960930222080) to ptr), align 1
+; USER-CONS-NEXT:  store i8 0, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @c2 to i64), i64 87960930222080) to ptr), align 1
+; USER-CONS-NEXT:  store i64 0, ptr inttoptr (i64 xor (i64 ptrtoint (ptr @memcpy_d1 to i64), i64 87960930222080) to ptr), align 1
+; CHECK-CONS:      call void @__msan_instrument_asm_store({{.*}}@pair2{{.*}}, i64 8)
+; CHECK-CONS:      call void @__msan_instrument_asm_store({{.*}}@c2{{.*}}, i64 1)
+; CHECK-CONS:      call void @__msan_instrument_asm_store({{.*}}@memcpy_d1{{.*}}, i64 8)
 ; CHECK: call void asm "", "=*m,=*m,=*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(%struct.pair) @pair2, ptr elementtype(i8) @c2, ptr elementtype(ptr) @memcpy_d1, ptr elementtype(%struct.pair) @pair1, ptr elementtype(i8) @c1, ptr elementtype(ptr) @memcpy_s1)
 
+; Use memset when the size is larger.
+define dso_local void @f_1i_1o_mem_large() sanitize_memory {
+entry:
+  %0 = call i32 asm "", "=r,=*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(%struct.large) @large, ptr elementtype(%struct.large) @large)
+  store i32 %0, ptr @id1, align 4
+  ret void
+}
+; CHECK-LABEL: @f_1i_1o_mem_large(
+; USER-CONS:  call void @llvm.memset.p0.i64(ptr align 1 inttoptr (i64 xor (i64 ptrtoint (ptr @large to i64), i64 87960930222080) to ptr), i8 0, i64 33, i1 false)
+; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@large{{.*}}, i64 33)
+; CHECK: call i32 asm "", "=r,=*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(%struct.large) @large, ptr elementtype(%struct.large) @large)
 
 ; A simple asm goto construct to check that callbr is handled correctly:
 ;  int asm_goto(int n) {
@@ -278,8 +302,8 @@ cleanup:                                          ; preds = %entry, %skip_label
 }
 
 ; CHECK-LABEL: @asm_goto
-; CHECK: [[LOAD_ARG:%.*]] = load {{.*}} %_msarg
-; CHECK: [[CMP:%.*]] = icmp ne {{.*}} [[LOAD_ARG]], 0
-; CHECK: br {{.*}} [[CMP]], label %[[LABEL:.*]], label
-; CHECK: [[LABEL]]:
-; CHECK-NEXT: call void @__msan_warning
+; KMSAN: [[LOAD_ARG:%.*]] = load {{.*}} %_msarg
+; KMSAN: [[CMP:%.*]] = icmp ne {{.*}} [[LOAD_ARG]], 0
+; KMSAN: br {{.*}} [[CMP]], label %[[LABEL:.*]], label
+; KMSAN: [[LABEL]]:
+; KMSAN-NEXT: call void @__msan_warning

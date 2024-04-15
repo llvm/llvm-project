@@ -1,4 +1,4 @@
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | fir-opt --fir-polymorphic-op | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | fir-opt --fir-polymorphic-op | FileCheck %s
 module select_type_2
   type p1
     integer :: a

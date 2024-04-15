@@ -18,7 +18,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
-#include <map>
 
 #undef  DEBUG_TYPE
 #define DEBUG_TYPE "bolt-prof"
@@ -55,7 +54,7 @@ bool hasVolatileName(const BinaryFunction &BF) {
 /// Return standard escaped name of the function possibly renamed by BOLT.
 std::string normalizeName(StringRef NameRef) {
   // Strip "PG." prefix used for globalized locals.
-  NameRef = NameRef.startswith("PG.") ? NameRef.substr(2) : NameRef;
+  NameRef = NameRef.starts_with("PG.") ? NameRef.substr(2) : NameRef;
   return getEscapedName(NameRef);
 }
 
@@ -698,7 +697,8 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
       if (!BC.MIB->isNoop(Instr))
         break;
 
-      Offset += BC.MIB->getAnnotationWithDefault<uint32_t>(Instr, "Size");
+      if (std::optional<uint32_t> Size = BC.MIB->getSize(Instr))
+        Offset += *Size;
     }
 
     if (To == Offset)

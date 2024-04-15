@@ -53,6 +53,8 @@ sub canon_arch($) {
 			$arch = "ppc64le";
         } elsif ( $arch =~ m{\Appc64} ) {
         	$arch = "ppc64";
+        } elsif ( $arch =~ m{\Aaarch64_32} ) {
+                $arch = "aarch64_32";
         } elsif ( $arch =~ m{\Aaarch64} ) {
                 $arch = "aarch64";
         } elsif ( $arch =~ m{\Amic} ) {
@@ -65,6 +67,8 @@ sub canon_arch($) {
             $arch = "riscv64";
         } elsif ( $arch =~ m{\Aloongarch64} ) {
             $arch = "loongarch64";
+        } elsif ( $arch =~ m{\As390x} ) {
+            $arch = "s390x";
         } else {
             $arch = undef;
         }; # if
@@ -95,6 +99,7 @@ sub canon_mic_arch($) {
         "32e" => "Intel(R) 64",
         "arm" => "ARM",
         "aarch64" => "AArch64",
+        "aarch64_32" => "AArch64_32",
         "loongarch64" => "LoongArch64",
         "mic" => "Intel(R) Many Integrated Core Architecture",
         "mips" => "MIPS",
@@ -220,6 +225,8 @@ sub target_options() {
         $_host_arch = "ppc64le";
     } elsif ( $hardware_platform eq "ppc64" ) {
         $_host_arch = "ppc64";
+    } elsif ( $hardware_platform eq "aarch64_32" ) {
+        $_host_arch = "aarch64_32";
     } elsif ( $hardware_platform eq "aarch64" ) {
         $_host_arch = "aarch64";
     } elsif ( $hardware_platform eq "mips64" ) {
@@ -230,6 +237,8 @@ sub target_options() {
         $_host_arch = "riscv64";
     } elsif ( $hardware_platform eq "loongarch64" ) {
         $_host_arch = "loongarch64";
+    } elsif ( $hardware_platform eq "s390x" ) {
+        $_host_arch = "s390x";
     } else {
         die "Unsupported host hardware platform: \"$hardware_platform\"; stopped";
     }; # if
@@ -419,7 +428,7 @@ the script assumes host architecture is target one.
 
 Input string is an architecture name to canonize. The function recognizes many variants, for example:
 C<32e>, C<Intel64>, C<Intel(R) 64>, etc. Returned string is a canonized architecture name,
-one of: C<32>, C<32e>, C<64>, C<arm>, C<ppc64le>, C<ppc64>, C<mic>, C<mips>, C<mips64>, C<riscv64>, C<loongarch64> or C<undef> is input string is not recognized.
+one of: C<32>, C<32e>, C<64>, C<arm>, C<ppc64le>, C<ppc64>, C<mic>, C<mips>, C<mips64>, C<riscv64>, C<loongarch64>, C<s390x>, or C<undef> is input string is not recognized.
 
 =item B<legal_arch( $arch )>
 

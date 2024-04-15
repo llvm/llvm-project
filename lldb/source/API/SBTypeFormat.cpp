@@ -157,7 +157,7 @@ bool SBTypeFormat::CopyOnWrite_Impl(Type type) {
   if (!IsValid())
     return false;
 
-  if (m_opaque_sp.unique() &&
+  if (m_opaque_sp.use_count() == 1 &&
       ((type == Type::eTypeKeepSame) ||
        (type == Type::eTypeFormat &&
         m_opaque_sp->GetType() == TypeFormatImpl::Type::eTypeFormat) ||

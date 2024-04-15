@@ -658,7 +658,7 @@ LogicalResult {0}::fold(FoldAdaptor,
 }
 void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
-      if (hasTensorSemantics()) return;
+      if (hasPureTensorSemantics()) return;
       getGenericEffectsImpl(effects,
         getOperation()->getResults(), getDpsInputs(), getDpsInits());
 }
@@ -869,7 +869,7 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
           assert(arg.indexAttrMap);
           for (auto [idx, result] :
                llvm::enumerate(arg.indexAttrMap->affineMap().getResults())) {
-            if (auto symbol = result.dyn_cast<AffineSymbolExpr>()) {
+            if (auto symbol = dyn_cast<AffineSymbolExpr>(result)) {
               std::string argName = arg.name;
               argName[0] = toupper(argName[0]);
               symbolBindings[symbol.getPosition()] =
@@ -1008,7 +1008,7 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b,
                         Block &block, ArrayRef<NamedAttribute> attrs) {{
   assert({1} > 0 && block.getNumArguments() == {1} &&
          "{0} regionBuilder expects {1} (>=0) args");
-  RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
+  RegionBuilderHelper helper(b, block);
   SmallVector<Value> yields;
   {2}
   {3}

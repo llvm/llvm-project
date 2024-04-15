@@ -1,28 +1,20 @@
-//
 // NOTE: this test requires gpu-sm80
 //
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:    --sparse-compiler="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
+// DEFINE:   --sparsifier="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
 // DEFINE: %{run} = mlir-cpu-runner \
 // DEFINE:   --shared-libs=%mlir_cuda_runtime \
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
 // DEFINE:   --e main --entry-point-result=void \
 // DEFINE: | FileCheck %s
 //
-//
 // with RT lib (SoA COO):
 //
-// RUN:  %{compile} enable-runtime-library=true" | %{run}
-// RUN:  %{compile} enable-runtime-library=true gpu-data-transfer-strategy=pinned-dma" | %{run}
-// Tracker #64316
-// RUNNOT: %{compile} enable-runtime-library=true gpu-data-transfer-strategy=zero-copy" | %{run}
+// RUN: %{compile} enable-runtime-library=true"  | %{run}
 //
 // without RT lib (AoS COO): note, may fall back to CPU
 //
 // RUN: %{compile} enable-runtime-library=false" | %{run}
-// RUN: %{compile} enable-runtime-library=false gpu-data-transfer-strategy=pinned-dma" | %{run}
-// Tracker #64316
-// RUNNOT: %{compile} enable-runtime-library=false gpu-data-transfer-strategy=zero-copy" | %{run}
 
 #SortedCOO = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
@@ -74,32 +66,16 @@ module {
     return %D: tensor<8x8xf32>
   }
 
+  // Helper to dump dense tensor as series of vectors.
   func.func @dump(%mat: tensor<8x8xf32>) {
     %f0 = arith.constant 0.0 : f32
     %c0 = arith.constant 0   : index
     %c1 = arith.constant 1   : index
-    %c2 = arith.constant 2   : index
-    %c3 = arith.constant 3   : index
-    %c4 = arith.constant 4   : index
-    %c5 = arith.constant 5   : index
-    %c6 = arith.constant 6   : index
-    %c7 = arith.constant 7   : index
-    %r0 = vector.transfer_read %mat[%c0,%c0], %f0 : tensor<8x8xf32>, vector<8xf32>
-    vector.print %r0 : vector<8xf32>
-    %r1 = vector.transfer_read %mat[%c1,%c0], %f0 : tensor<8x8xf32>, vector<8xf32>
-    vector.print %r1 : vector<8xf32>
-    %r2 = vector.transfer_read %mat[%c2,%c0], %f0 : tensor<8x8xf32>, vector<8xf32>
-    vector.print %r2 : vector<8xf32>
-    %r3 = vector.transfer_read %mat[%c3,%c0], %f0 : tensor<8x8xf32>, vector<8xf32>
-    vector.print %r3 : vector<8xf32>
-    %r4 = vector.transfer_read %mat[%c4,%c0], %f0 : tensor<8x8xf32>, vector<8xf32>
-    vector.print %r4 : vector<8xf32>
-    %r5 = vector.transfer_read %mat[%c5,%c0], %f0 : tensor<8x8xf32>, vector<8xf32>
-    vector.print %r5 : vector<8xf32>
-    %r6 = vector.transfer_read %mat[%c6,%c0], %f0 : tensor<8x8xf32>, vector<8xf32>
-    vector.print %r6 : vector<8xf32>
-    %r7 = vector.transfer_read %mat[%c7,%c0], %f0 : tensor<8x8xf32>, vector<8xf32>
-    vector.print %r7 : vector<8xf32>
+    %c8 = arith.constant 8   : index
+    scf.for %i = %c0 to %c8 step %c1 {
+      %v = vector.transfer_read %mat[%i,%c0], %f0 : tensor<8x8xf32>, vector<8xf32>
+      vector.print %v : vector<8xf32>
+    }
     return
   }
 

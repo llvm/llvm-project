@@ -24,7 +24,6 @@
 
 using namespace mlir;
 using namespace mlir::LLVM;
-using mlir::LLVM::detail::createIntrinsicCall;
 using mlir::LLVM::detail::getLLVMConstant;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
@@ -172,6 +171,24 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
   return success();
 }
 
+static void convertLinkerOptionsOp(ArrayAttr options,
+                                   llvm::IRBuilderBase &builder,
+                                   LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::LLVMContext &context = llvmModule->getContext();
+  llvm::NamedMDNode *linkerMDNode =
+      llvmModule->getOrInsertNamedMetadata("llvm.linker.options");
+  SmallVector<llvm::Metadata *> MDNodes;
+  MDNodes.reserve(options.size());
+  for (auto s : options.getAsRange<StringAttr>()) {
+    auto *MDNode = llvm::MDString::get(context, s.getValue());
+    MDNodes.push_back(MDNode);
+  }
+
+  auto *listMDNode = llvm::MDTuple::get(context, MDNodes);
+  linkerMDNode->addOperand(listMDNode);
+}
+
 static LogicalResult
 convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
@@ -200,6 +217,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call = builder.CreateCall(calleeType, operandsRef.front(),
                                 operandsRef.drop_front());
     }
+    call->setCallingConv(convertCConvToLLVM(callOp.getCConv()));
     moduleTranslation.setAccessGroupsMetadata(callOp, call);
     moduleTranslation.setAliasScopeMetadata(callOp, call);
     moduleTranslation.setTBAAMetadata(callOp, call);
@@ -275,7 +293,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   if (auto invOp = dyn_cast<LLVM::InvokeOp>(opInst)) {
     auto operands = moduleTranslation.lookupValues(invOp.getCalleeOperands());
     ArrayRef<llvm::Value *> operandsRef(operands);
-    llvm::Instruction *result;
+    llvm::InvokeInst *result;
     if (auto attr = opInst.getAttrOfType<FlatSymbolRefAttr>("callee")) {
       result = builder.CreateInvoke(
           moduleTranslation.lookupFunction(attr.getValue()),
@@ -290,6 +308,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupBlock(invOp.getSuccessor(1)),
           operandsRef.drop_front());
     }
+    result->setCallingConv(convertCConvToLLVM(invOp.getCConv()));
     moduleTranslation.mapBranch(invOp, result);
     // InvokeOp can only have 0 or 1 result
     if (invOp->getNumResults() != 0) {

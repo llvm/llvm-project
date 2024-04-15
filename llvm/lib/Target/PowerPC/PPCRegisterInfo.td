@@ -270,12 +270,15 @@ def CR7 : CR<7, "cr7", [CR7LT, CR7GT, CR7EQ, CR7UN]>, DwarfRegNum<[75, 75]>;
 
 // Link register
 def LR  : SPR<8, "lr">, DwarfRegNum<[-2, 65]>;
-//let Aliases = [LR] in
-def LR8 : SPR<8, "lr">, DwarfRegNum<[65, -2]>;
+def LR8 : SPR<8, "lr">, DwarfRegNum<[65, -2]> {
+  let Aliases = [LR];
+}
 
 // Count register
 def CTR  : SPR<9, "ctr">, DwarfRegNum<[-2, 66]>;
-def CTR8 : SPR<9, "ctr">, DwarfRegNum<[66, -2]>;
+def CTR8 : SPR<9, "ctr">, DwarfRegNum<[66, -2]> {
+  let Aliases = [CTR];
+}
 
 // VRsave register
 def VRSAVE: SPR<256, "vrsave">, DwarfRegNum<[109]>;
@@ -798,6 +801,7 @@ def directbrtarget : Operand<OtherVT> {
 def absdirectbrtarget : Operand<OtherVT> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsDirectBrEncoding";
+  let DecoderMethod = "decodeDirectBrTarget";
   let ParserMatchClass = PPCDirectBrAsmOperand;
 }
 def PPCCondBrAsmOperand : AsmOperandClass {
@@ -814,6 +818,7 @@ def condbrtarget : Operand<OtherVT> {
 def abscondbrtarget : Operand<OtherVT> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsCondBrEncoding";
+  let DecoderMethod = "decodeCondBrTarget";
   let ParserMatchClass = PPCCondBrAsmOperand;
 }
 def calltarget : Operand<iPTR> {
@@ -826,6 +831,7 @@ def calltarget : Operand<iPTR> {
 def abscalltarget : Operand<iPTR> {
   let PrintMethod = "printAbsBranchOperand";
   let EncoderMethod = "getAbsDirectBrEncoding";
+  let DecoderMethod = "decodeDirectBrTarget";
   let ParserMatchClass = PPCDirectBrAsmOperand;
 }
 def PPCCRBitMaskOperand : AsmOperandClass {

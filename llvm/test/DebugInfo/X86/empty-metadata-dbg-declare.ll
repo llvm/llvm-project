@@ -1,4 +1,5 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - | FileCheck %s --implicit-check-not=DBG
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - | FileCheck %s --implicit-check-not=DBG
 
 ;; Check that a single "empty metadata" dbg.declare doesn't accidentally cause
 ;; other dbg.declares in the function to go missing.

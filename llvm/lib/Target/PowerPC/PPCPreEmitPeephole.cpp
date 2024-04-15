@@ -14,7 +14,6 @@
 #include "PPC.h"
 #include "PPCInstrInfo.h"
 #include "PPCSubtarget.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -240,7 +239,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
         return false;
 
       // Finally return true only if the GOT flag is present.
-      return (SymbolOp.getTargetFlags() & PPCII::MO_GOT_FLAG);
+      return PPCInstrInfo::hasGOTFlag(SymbolOp.getTargetFlags());
     }
 
     bool addLinkerOpt(MachineBasicBlock &MBB, const TargetRegisterInfo *TRI) {

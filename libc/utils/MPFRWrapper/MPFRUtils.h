@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H
-#define LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H
+#ifndef LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H
+#define LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "test/UnitTest/RoundingModeUtils.h"
@@ -37,6 +37,7 @@ enum class Operation : int {
   Erf,
   Exp,
   Exp2,
+  Exp2m1,
   Exp10,
   Expm1,
   Floor,
@@ -48,6 +49,7 @@ enum class Operation : int {
   ModPIOver2,
   ModPIOver4,
   Round,
+  RoundEven,
   Sin,
   Sinh,
   Sqrt,
@@ -68,8 +70,10 @@ enum class Operation : int {
   // input and produce a single floating point number of the same type as
   // output.
   BeginBinaryOperationsSingleOutput,
+  Atan2,
   Fmod,
   Hypot,
+  Pow,
   EndBinaryOperationsSingleOutput,
 
   // Operations which take two floating point numbers of the same type as
@@ -425,4 +429,4 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
     }                                                                          \
   }
 
-#endif // LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H
+#endif // LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H

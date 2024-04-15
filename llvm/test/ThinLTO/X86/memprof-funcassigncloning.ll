@@ -176,7 +176,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	Clones: [[ENEW1CLONE:0x[a-z0-9]+]]
 
 ; DUMP: Node [[D:0x[a-z0-9]+]]
-; DUMP: 	Callee: 10758063066234039248 (_Z1EPPcS0_) Clones: 0 StackIds: 0 (clone 0)
+; DUMP: 	Callee: 16147627620923572899 (_Z1EPPcS0_) Clones: 0 StackIds: 0 (clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 1 6
 ; DUMP: 	CalleeEdges:
@@ -185,7 +185,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[C]]
-; DUMP: 	Callee: 10758063066234039248 (_Z1EPPcS0_) Clones: 0 StackIds: 1 (clone 0)
+; DUMP: 	Callee: 16147627620923572899 (_Z1EPPcS0_) Clones: 0 StackIds: 1 (clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
 ; DUMP: 	ContextIds: 2 5
 ; DUMP: 	CalleeEdges:
@@ -194,7 +194,7 @@ attributes #0 = { noinline optnone }
 ; DUMP: 	CallerEdges:
 
 ; DUMP: Node [[B]]
-; DUMP: 	Callee: 10758063066234039248 (_Z1EPPcS0_) Clones: 0 StackIds: 2 (clone 0)
+; DUMP: 	Callee: 16147627620923572899 (_Z1EPPcS0_) Clones: 0 StackIds: 2 (clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 3 4
 ; DUMP: 	CalleeEdges:

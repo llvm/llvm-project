@@ -15,18 +15,8 @@
 #ifndef LLVM_CLANG_LIB_FORMAT_UNWRAPPEDLINEPARSER_H
 #define LLVM_CLANG_LIB_FORMAT_UNWRAPPEDLINEPARSER_H
 
-#include "Encoding.h"
-#include "FormatToken.h"
 #include "Macros.h"
-#include "clang/Basic/IdentifierTable.h"
-#include "clang/Format/Format.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/Regex.h"
-#include <list>
 #include <stack>
-#include <vector>
 
 namespace clang {
 namespace format {
@@ -151,8 +141,7 @@ private:
                               bool *HasDoWhile = nullptr,
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
-  bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
-                       tok::TokenKind ClosingBraceKind = tok::r_brace);
+  bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
   bool parseParens(TokenType AmpAmpTokenType = TT_Unknown);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();
@@ -326,6 +315,7 @@ private:
   llvm::BitVector DeclarationScopeStack;
 
   const FormatStyle &Style;
+  bool IsCpp;
   const AdditionalKeywords &Keywords;
 
   llvm::Regex CommentPragmasRegex;
@@ -421,6 +411,8 @@ struct UnwrappedLineNode {
   FormatToken *Tok;
   SmallVector<UnwrappedLine, 0> Children;
 };
+
+std::ostream &operator<<(std::ostream &Stream, const UnwrappedLine &Line);
 
 } // end namespace format
 } // end namespace clang

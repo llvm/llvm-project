@@ -290,8 +290,26 @@ public:
   /// that correspond to the lookup order. If a required symbol is not
   /// found then this method will return an error. If a weakly referenced
   /// symbol is not found then it be assigned a '0' value.
-  virtual Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<LookupRequest> Request) = 0;
+  Expected<std::vector<tpctypes::LookupResult>>
+  lookupSymbols(ArrayRef<LookupRequest> Request) {
+    std::promise<MSVCPExpected<std::vector<tpctypes::LookupResult>>> RP;
+    auto RF = RP.get_future();
+    lookupSymbolsAsync(Request,
+                       [&RP](auto Result) { RP.set_value(std::move(Result)); });
+    return RF.get();
+  }
+
+  using SymbolLookupCompleteFn =
+      unique_function<void(Expected<std::vector<tpctypes::LookupResult>>)>;
+
+  /// Search for symbols in the target process.
+  ///
+  /// The result of the lookup is a 2-dimensional array of target addresses
+  /// that correspond to the lookup order. If a required symbol is not
+  /// found then this method will return an error. If a weakly referenced
+  /// symbol is not found then it be assigned a '0' value.
+  virtual void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                                  SymbolLookupCompleteFn F) = 0;
 
   /// Run function with a main-like signature.
   virtual Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
@@ -462,8 +480,8 @@ public:
     llvm_unreachable("Unsupported");
   }
 
-  Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<LookupRequest> Request) override {
+  void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                          SymbolLookupCompleteFn F) override {
     llvm_unreachable("Unsupported");
   }
 
@@ -510,8 +528,8 @@ public:
 
   Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
 
-  Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<LookupRequest> Request) override;
+  void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                          SymbolLookupCompleteFn F) override;
 
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;

@@ -26,12 +26,12 @@
 # RUN: echo "TooManyPreds10 TooManyPreds 11" >> %t.call_graph
 # RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph --call-graph-profile-sort=hfsort -o %t2
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s
-## --call-graph-profile-sort=hfsort is the default.
-# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph -o %t2b
-# RUN: cmp %t2 %t2b
 
 # RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph --call-graph-profile-sort=cdsort -o %t2
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefix=CDSORT
+## --call-graph-profile-sort=cdsort is the default.
+# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph -o %t2b
+# RUN: cmp %t2 %t2b
 
 # RUN: not ld.lld -e A %t --call-graph-ordering-file %t.call_graph --call-graph-profile-sort=sort \
 # RUN:   -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNKNOWN

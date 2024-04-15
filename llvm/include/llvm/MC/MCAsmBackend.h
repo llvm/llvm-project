@@ -21,6 +21,7 @@ class MCAlignFragment;
 class MCDwarfCallFrameFragment;
 class MCDwarfLineAddrFragment;
 class MCFragment;
+class MCLEBFragment;
 class MCRelaxableFragment;
 class MCSymbol;
 class MCAsmLayout;
@@ -100,7 +101,8 @@ public:
   /// Hook to check if a relocation is needed for some target specific reason.
   virtual bool shouldForceRelocation(const MCAssembler &Asm,
                                      const MCFixup &Fixup,
-                                     const MCValue &Target) {
+                                     const MCValue &Target,
+                                     const MCSubtargetInfo *STI) {
     return false;
   }
 
@@ -123,7 +125,8 @@ public:
   virtual bool evaluateTargetFixup(const MCAssembler &Asm,
                                    const MCAsmLayout &Layout,
                                    const MCFixup &Fixup, const MCFragment *DF,
-                                   const MCValue &Target, uint64_t &Value,
+                                   const MCValue &Target,
+                                   const MCSubtargetInfo *STI, uint64_t &Value,
                                    bool &WasForced) {
     llvm_unreachable("Need to implement hook if target has custom fixups");
   }
@@ -191,6 +194,13 @@ public:
   virtual bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF, MCAsmLayout &Layout,
                              bool &WasRelaxed) const {
     return false;
+  }
+
+  // Defined by linker relaxation targets to possibly emit LEB128 relocations
+  // and set Value at the relocated location.
+  virtual std::pair<bool, bool>
+  relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout, int64_t &Value) const {
+    return std::make_pair(false, false);
   }
 
   /// @}

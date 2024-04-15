@@ -52,16 +52,19 @@ inline bool pureCall(mlir::Operation *op) {
 /// Get or create a FuncOp in a module.
 ///
 /// If `module` already contains FuncOp `name`, it is returned. Otherwise, a new
-/// FuncOp is created, and that new FuncOp is returned.
-mlir::func::FuncOp
-createFuncOp(mlir::Location loc, mlir::ModuleOp module, llvm::StringRef name,
-             mlir::FunctionType type,
-             llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+/// FuncOp is created, and that new FuncOp is returned. A symbol table can
+/// be provided to speed-up the lookups.
+mlir::func::FuncOp createFuncOp(mlir::Location loc, mlir::ModuleOp module,
+                                llvm::StringRef name, mlir::FunctionType type,
+                                llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                                const mlir::SymbolTable *symbolTable = nullptr);
 
-/// Get or create a GlobalOp in a module.
+/// Get or create a GlobalOp in a module. A symbol table can be provided to
+/// speed-up the lookups.
 fir::GlobalOp createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
                              llvm::StringRef name, mlir::Type type,
-                             llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+                             llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                             const mlir::SymbolTable *symbolTable = nullptr);
 
 /// Attribute to mark Fortran entities with the CONTIGUOUS attribute.
 constexpr llvm::StringRef getContiguousAttrName() { return "fir.contiguous"; }
@@ -71,6 +74,19 @@ constexpr llvm::StringRef getOptionalAttrName() { return "fir.optional"; }
 
 /// Attribute to mark Fortran entities with the TARGET attribute.
 static constexpr llvm::StringRef getTargetAttrName() { return "fir.target"; }
+
+/// Attribute to mark Fortran entities with the CUDA attribute.
+static constexpr llvm::StringRef getCUDAAttrName() { return "fir.cuda_attr"; }
+
+/// Attribute to carry CUDA launch_bounds values.
+static constexpr llvm::StringRef getCUDALaunchBoundsAttrName() {
+  return "fir.cuda_launch_bounds";
+}
+
+/// Attribute to carry CUDA cluster_dims values.
+static constexpr llvm::StringRef getCUDAClusterDimsAttrName() {
+  return "fir.cuda_cluster_dims";
+}
 
 /// Attribute to mark that a function argument is a character dummy procedure.
 /// Character dummy procedure have special ABI constraints.
@@ -91,6 +107,12 @@ static constexpr llvm::StringRef getHostAssocAttrName() {
 /// Attribute to mark an internal procedure.
 static constexpr llvm::StringRef getInternalProcedureAttrName() {
   return "fir.internal_proc";
+}
+
+/// Attribute containing the original name of a function from before the
+/// ExternalNameConverision pass runs
+static constexpr llvm::StringRef getInternalFuncNameAttrName() {
+  return "fir.internal_name";
 }
 
 /// Does the function, \p func, have a host-associations tuple argument?
@@ -133,12 +155,22 @@ bool valueMayHaveFirAttributes(mlir::Value value,
 bool anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr);
 
 /// Unwrap integer constant from an mlir::Value.
-inline std::optional<std::int64_t> getIntIfConstant(mlir::Value value) {
-  if (auto *definingOp = value.getDefiningOp())
-    if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
-      if (auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>())
-        return intAttr.getInt();
-  return {};
+std::optional<std::int64_t> getIntIfConstant(mlir::Value value);
+
+static constexpr llvm::StringRef getAdaptToByRefAttrName() {
+  return "adapt.valuebyref";
+}
+
+// Attribute for an alloca that is a trivial adaptor for converting a value to
+// pass-by-ref semantics for a VALUE parameter. The optimizer may be able to
+// eliminate these.
+// Template is used to avoid compiler errors in places that don't include
+// FIRBuilder.h
+template <typename Builder>
+inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
+  return {mlir::StringAttr::get(builder.getContext(),
+                                fir::getAdaptToByRefAttrName()),
+          builder.getUnitAttr()};
 }
 
 } // namespace fir

@@ -3,12 +3,16 @@ cmake_minimum_required(VERSION 3.26)
 project(libc++-modules LANGUAGES CXX)
 
 # Enable CMake's module support
-if(CMAKE_VERSION VERSION_LESS "3.27.0")
-  set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+if(CMAKE_VERSION VERSION_LESS "3.28.0")
+  if(CMAKE_VERSION VERSION_LESS "3.27.0")
+    set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+  else()
+    set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
+  endif()
+  set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP 1)
 else()
-  set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
+  cmake_policy(VERSION 3.28)
 endif()
-set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP 1)
 
 # Default to C++ extensions being off. Libc++'s modules support have trouble
 # with extensions right now.
@@ -29,6 +33,8 @@ macro(compile_define_if condition def)
   endif()
 endmacro()
 
+### STD
+
 add_library(std)
 target_sources(std
   PUBLIC FILE_SET cxx_modules TYPE CXX_MODULES FILES
@@ -44,11 +50,47 @@ endif()
 target_compile_options(std
   PUBLIC
     -nostdinc++
-    -Wno-reserved-module-identifier
-    -Wno-reserved-user-defined-literal
     @LIBCXX_COMPILE_FLAGS@
 )
+target_compile_options(std
+  PRIVATE
+    -Wno-reserved-module-identifier
+    -Wno-reserved-user-defined-literal
+)
+target_link_options(std PUBLIC -nostdlib++ -Wl,-rpath,@LIBCXX_LIBRARY_DIR@ -L@LIBCXX_LIBRARY_DIR@)
+target_link_libraries(std c++)
 set_target_properties(std
   PROPERTIES
     OUTPUT_NAME   "c++std"
 )
+
+### STD.COMPAT
+
+add_library(std.compat)
+target_sources(std.compat
+  PUBLIC FILE_SET cxx_modules TYPE CXX_MODULES FILES
+    std.compat.cppm
+)
+
+target_include_directories(std.compat SYSTEM PUBLIC @LIBCXX_CONFIGURED_INCLUDE_DIRS@)
+
+if (NOT @LIBCXX_ENABLE_EXCEPTIONS@)
+  target_compile_options(std.compat PUBLIC -fno-exceptions)
+endif()
+
+target_compile_options(std.compat
+  PUBLIC
+    -nostdinc++
+    @LIBCXX_COMPILE_FLAGS@
+)
+target_compile_options(std.compat
+ PRIVATE
+    -Wno-reserved-module-identifier
+    -Wno-reserved-user-defined-literal
+)
+set_target_properties(std.compat
+  PROPERTIES
+    OUTPUT_NAME   "c++std.compat"
+)
+add_dependencies(std.compat std)
+target_link_libraries(std.compat PUBLIC std c++)

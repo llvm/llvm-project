@@ -480,11 +480,11 @@ HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
 
 static bool consumeNameSuffix(StringRef &FullName, StringRef Suffix) {
   StringRef Name = FullName;
-  if (!Name.endswith(Suffix))
+  if (!Name.ends_with(Suffix))
     return false;
   Name = Name.drop_back(Suffix.size());
   if (!Name.empty()) {
-    if (!Name.endswith("::"))
+    if (!Name.ends_with("::"))
       return false;
     Name = Name.drop_back(2);
   }
@@ -530,7 +530,7 @@ public:
   PatternSet(ArrayRef<std::string> Names) {
     Patterns.reserve(Names.size());
     for (StringRef Name : Names)
-      Patterns.push_back({Name, Name.startswith("::")});
+      Patterns.push_back({Name, Name.starts_with("::")});
   }
 
   /// Consumes the name suffix from each pattern in the set and removes the ones
@@ -652,11 +652,11 @@ bool HasNameMatcher::matchesNodeFullSlow(const NamedDecl &Node) const {
     const StringRef FullName = OS.str();
 
     for (const StringRef Pattern : Names) {
-      if (Pattern.startswith("::")) {
+      if (Pattern.starts_with("::")) {
         if (FullName == Pattern)
           return true;
-      } else if (FullName.endswith(Pattern) &&
-                 FullName.drop_back(Pattern.size()).endswith("::")) {
+      } else if (FullName.ends_with(Pattern) &&
+                 FullName.drop_back(Pattern.size()).ends_with("::")) {
         return true;
       }
     }
@@ -893,6 +893,7 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXOperatorCallExpr>
     cxxOperatorCallExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXRewrittenBinaryOperator>
     cxxRewrittenBinaryOperator;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXFoldExpr> cxxFoldExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, Expr> expr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr> declRefExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCIvarRefExpr> objcIvarRefExpr;

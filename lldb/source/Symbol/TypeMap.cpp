@@ -91,6 +91,12 @@ TypeSP TypeMap::GetTypeAtIndex(uint32_t idx) {
   return TypeSP();
 }
 
+lldb::TypeSP TypeMap::FirstType() const {
+  if (m_types.empty())
+    return TypeSP();
+  return m_types.begin()->second;
+}
+
 void TypeMap::ForEach(
     std::function<bool(const lldb::TypeSP &type_sp)> const &callback) const {
   for (auto pos = m_types.begin(), end = m_types.end(); pos != end; ++pos) {
@@ -121,10 +127,10 @@ bool TypeMap::Remove(const lldb::TypeSP &type_sp) {
   return false;
 }
 
-void TypeMap::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
-  for (iterator pos = m_types.begin(), end = m_types.end(); pos != end; ++pos) {
-    pos->second->Dump(s, show_context, level);
-  }
+void TypeMap::Dump(Stream *s, bool show_context,
+                   lldb::DescriptionLevel level) const {
+  for (const auto &pair : m_types)
+    pair.second->Dump(s, show_context, level);
 }
 
 void TypeMap::RemoveMismatchedTypes(llvm::StringRef type_scope,

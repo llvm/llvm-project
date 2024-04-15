@@ -72,7 +72,7 @@ define i32 @test7(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[A1:%.*]] = and i32 [[A:%.*]], 7
 ; CHECK-NEXT:    [[B1:%.*]] = and i32 [[B:%.*]], 128
-; CHECK-NEXT:    [[C11:%.*]] = or i32 [[A1]], [[B1]]
+; CHECK-NEXT:    [[C11:%.*]] = or disjoint i32 [[A1]], [[B1]]
 ; CHECK-NEXT:    ret i32 [[C11]]
 ;
   %A1 = and i32 %A, 7
@@ -122,7 +122,7 @@ define <2 x i1> @test9vec(<2 x i8> %a) {
 define i8 @test10(i8 %A) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[B:%.*]] = and i8 [[A:%.*]], 3
-; CHECK-NEXT:    [[C1:%.*]] = or i8 [[B]], 4
+; CHECK-NEXT:    [[C1:%.*]] = or disjoint i8 [[B]], 4
 ; CHECK-NEXT:    ret i8 [[C1]]
 ;
   %B = and i8 %A, 3
@@ -133,7 +133,7 @@ define i8 @test10(i8 %A) {
 define i8 @test11(i8 %A) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[B:%.*]] = and i8 [[A:%.*]], -13
-; CHECK-NEXT:    [[C:%.*]] = or i8 [[B]], 8
+; CHECK-NEXT:    [[C:%.*]] = or disjoint i8 [[B]], 8
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %B = or i8 %A, 12
@@ -1394,4 +1394,62 @@ define i32 @ctlz_pow2_wrong_const(i32 %x) {
   %z = call i32 @llvm.ctlz.i32(i32 %a, i1 true) ; 0 is poison
   %r = xor i32 %z, 30
   ret i32 %r
+}
+
+; Tests from PR70582
+define i32 @tryFactorization_xor_ashr_lshr(i32 %a) {
+; CHECK-LABEL: @tryFactorization_xor_ashr_lshr(
+; CHECK-NEXT:    [[XOR:%.*]] = ashr i32 -8, [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %not = ashr i32 -3, %a
+  %shr1 = lshr i32 5, %a
+  %xor = xor i32 %not, %shr1
+  ret i32 %xor
+}
+
+define i32 @tryFactorization_xor_lshr_ashr(i32 %a) {
+; CHECK-LABEL: @tryFactorization_xor_lshr_ashr(
+; CHECK-NEXT:    [[XOR:%.*]] = ashr i32 -8, [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %not = ashr i32 -3, %a
+  %shr1 = lshr i32 5, %a
+  %xor = xor i32 %shr1, %not
+  ret i32 %xor
+}
+
+define i32 @tryFactorization_xor_ashr_lshr_negative_lhs(i32 %a) {
+; CHECK-LABEL: @tryFactorization_xor_ashr_lshr_negative_lhs(
+; CHECK-NEXT:    [[NOT:%.*]] = ashr i32 -3, [[A:%.*]]
+; CHECK-NEXT:    [[SHR1:%.*]] = lshr i32 -5, [[A]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[NOT]], [[SHR1]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %not = ashr i32 -3, %a
+  %shr1 = lshr i32 -5, %a
+  %xor = xor i32 %not, %shr1
+  ret i32 %xor
+}
+
+define i32 @tryFactorization_xor_lshr_lshr(i32 %a) {
+; CHECK-LABEL: @tryFactorization_xor_lshr_lshr(
+; CHECK-NEXT:    [[XOR:%.*]] = lshr i32 -8, [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %not = lshr i32 -3, %a
+  %shr1 = lshr i32 5, %a
+  %xor = xor i32 %not, %shr1
+  ret i32 %xor
+}
+
+define i32 @tryFactorization_xor_ashr_ashr(i32 %a) {
+; CHECK-LABEL: @tryFactorization_xor_ashr_ashr(
+; CHECK-NEXT:    [[XOR:%.*]] = lshr i32 6, [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %not = ashr i32 -3, %a
+  %shr1 = ashr i32 -5, %a
+  %xor = xor i32 %not, %shr1
+  ret i32 %xor
 }

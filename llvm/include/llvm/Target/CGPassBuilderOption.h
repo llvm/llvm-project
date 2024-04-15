@@ -14,7 +14,6 @@
 #ifndef LLVM_TARGET_CGPASSBUILDEROPTION_H
 #define LLVM_TARGET_CGPASSBUILDEROPTION_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
 
@@ -32,8 +31,10 @@ struct CGPassBuilderOption {
   bool DisableVerify = false;
   bool EnableImplicitNullChecks = false;
   bool EnableBlockPlacementStats = false;
+  bool EnableMachineFunctionSplitter = false;
   bool MISchedPostRA = false;
   bool EarlyLiveIntervals = false;
+  bool GCEmptyBlocks = false;
 
   bool DisableLSR = false;
   bool DisableCGP = false;
@@ -42,17 +43,25 @@ struct CGPassBuilderOption {
   bool DisablePartialLibcallInlining = false;
   bool DisableConstantHoisting = false;
   bool DisableSelectOptimize = true;
+  bool DisableAtExitBasedGlobalDtorLowering = false;
+  bool DisableExpandReductions = false;
+  bool DisableRAFSProfileLoader = false;
+  bool DisableCFIFixup = false;
+  bool PrintAfterISel = false;
   bool PrintISelInput = false;
-  bool PrintGCInfo = false;
   bool RequiresCodeGenSCCOrder = false;
 
   RunOutliner EnableMachineOutliner = RunOutliner::TargetDefault;
-  RegAllocType RegAlloc = RegAllocType::Default;
+  StringRef RegAlloc = "default";
   std::optional<GlobalISelAbortMode> EnableGlobalISelAbort;
+  std::string FSProfileFile;
+  std::string FSRemappingFile;
 
   std::optional<bool> VerifyMachineCode;
   std::optional<bool> EnableFastISelOption;
   std::optional<bool> EnableGlobalISelOption;
+  std::optional<bool> DebugifyAndStripAll;
+  std::optional<bool> DebugifyCheckAndStripAll;
 };
 
 CGPassBuilderOption getCGPassBuilderOption();

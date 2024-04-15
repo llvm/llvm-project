@@ -26,34 +26,34 @@
   target triple = "x86_64-unknown-unknown"
 
   ; Function Attrs: norecurse nounwind uwtable
-  define dso_local void @debug(<4 x float>* noalias nocapture %p1, <4 x float>* noalias nocapture %p2) local_unnamed_addr #0 !dbg !10 {
+  define dso_local void @debug(ptr noalias nocapture %p1, ptr noalias nocapture %p2) local_unnamed_addr #0 !dbg !10 {
   entry:
-    call void @llvm.dbg.value(metadata <4 x float>* %p1, metadata !21, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata <4 x float>* %p2, metadata !22, metadata !DIExpression()), !dbg !25
-    %0 = bitcast <4 x float>* %p1 to i8*, !dbg !26
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    store i8 0, i8* %0, align 1, !dbg !27
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    call void @llvm.dbg.value(metadata i8* %0, metadata !23, metadata !DIExpression()), !dbg !25
-    %1 = load <4 x float>, <4 x float>* %p1, align 16, !dbg !28
+    call void @llvm.dbg.value(metadata ptr %p1, metadata !21, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %p2, metadata !22, metadata !DIExpression()), !dbg !25
+    %0 = bitcast ptr %p1 to ptr, !dbg !26
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    store i8 0, ptr %0, align 1, !dbg !27
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %0, metadata !23, metadata !DIExpression()), !dbg !25
+    %1 = load <4 x float>, ptr %p1, align 16, !dbg !28
     call void @llvm.dbg.value(metadata <4 x float> %1, metadata !24, metadata !DIExpression()), !dbg !25
-    store <4 x float> %1, <4 x float>* %p2, align 16, !dbg !29
+    store <4 x float> %1, ptr %p2, align 16, !dbg !29
     ret void, !dbg !30
   }
 
@@ -61,7 +61,7 @@
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
 
   attributes #0 = { norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { nounwind readnone speculatable }

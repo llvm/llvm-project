@@ -17,7 +17,6 @@
 #include "llvm/ExecutionEngine/JITLink/aarch32.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 
@@ -32,10 +31,13 @@ namespace llvm {
 namespace jitlink {
 
 /// Translate from ELF relocation type to JITLink-internal edge kind.
-Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType) {
+Expected<aarch32::EdgeKind_aarch32>
+getJITLinkEdgeKind(uint32_t ELFType, const aarch32::ArmConfig &ArmCfg) {
   switch (ELFType) {
   case ELF::R_ARM_ABS32:
     return aarch32::Data_Pointer32;
+  case ELF::R_ARM_GOT_PREL:
+    return aarch32::Data_RequestGOTAndTransformToDelta32;
   case ELF::R_ARM_REL32:
     return aarch32::Data_Delta32;
   case ELF::R_ARM_CALL:
@@ -46,6 +48,13 @@ Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType) {
     return aarch32::Arm_MovwAbsNC;
   case ELF::R_ARM_MOVT_ABS:
     return aarch32::Arm_MovtAbs;
+  case ELF::R_ARM_NONE:
+    return aarch32::None;
+  case ELF::R_ARM_PREL31:
+    return aarch32::Data_PRel31;
+  case ELF::R_ARM_TARGET1:
+    return (ArmCfg.Target1Rel) ? aarch32::Data_Delta32
+                               : aarch32::Data_Pointer32;
   case ELF::R_ARM_THM_CALL:
     return aarch32::Thumb_Call;
   case ELF::R_ARM_THM_JUMP24:
@@ -54,6 +63,10 @@ Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType) {
     return aarch32::Thumb_MovwAbsNC;
   case ELF::R_ARM_THM_MOVT_ABS:
     return aarch32::Thumb_MovtAbs;
+  case ELF::R_ARM_THM_MOVW_PREL_NC:
+    return aarch32::Thumb_MovwPrelNC;
+  case ELF::R_ARM_THM_MOVT_PREL:
+    return aarch32::Thumb_MovtPrel;
   }
 
   return make_error<JITLinkError>(
@@ -68,6 +81,10 @@ Expected<uint32_t> getELFRelocationType(Edge::Kind Kind) {
     return ELF::R_ARM_REL32;
   case aarch32::Data_Pointer32:
     return ELF::R_ARM_ABS32;
+  case aarch32::Data_PRel31:
+    return ELF::R_ARM_PREL31;
+  case aarch32::Data_RequestGOTAndTransformToDelta32:
+    return ELF::R_ARM_GOT_PREL;
   case aarch32::Arm_Call:
     return ELF::R_ARM_CALL;
   case aarch32::Arm_Jump24:
@@ -84,6 +101,12 @@ Expected<uint32_t> getELFRelocationType(Edge::Kind Kind) {
     return ELF::R_ARM_THM_MOVW_ABS_NC;
   case aarch32::Thumb_MovtAbs:
     return ELF::R_ARM_THM_MOVT_ABS;
+  case aarch32::Thumb_MovwPrelNC:
+    return ELF::R_ARM_THM_MOVW_PREL_NC;
+  case aarch32::Thumb_MovtPrel:
+    return ELF::R_ARM_THM_MOVT_PREL;
+  case aarch32::None:
+    return ELF::R_ARM_NONE;
   }
 
   return make_error<JITLinkError>(formatv("Invalid aarch32 edge {0:d}: ",
@@ -121,16 +144,6 @@ private:
   using ELFT = ELFType<DataEndianness, false>;
   using Base = ELFLinkGraphBuilder<ELFT>;
 
-  bool excludeSection(const typename ELFT::Shdr &Sect) const override {
-    // TODO: An .ARM.exidx (Exception Index table) entry is 8-bytes in size and
-    // consists of 2 words. It might be sufficient to process only relocations
-    // in the the second word (offset 4). Please find more details in: Exception
-    // Handling ABI for the Arm® Architecture -> Index table entries
-    if (Sect.sh_type == ELF::SHT_ARM_EXIDX)
-      return true;
-    return false;
-  }
-
   Error addRelocations() override {
     LLVM_DEBUG(dbgs() << "Processing relocations:\n");
     using Self = ELFLinkGraphBuilder_aarch32<DataEndianness>;
@@ -160,20 +173,19 @@ private:
           inconvertibleErrorCode());
 
     uint32_t Type = Rel.getType(false);
-    Expected<aarch32::EdgeKind_aarch32> Kind = getJITLinkEdgeKind(Type);
+    Expected<aarch32::EdgeKind_aarch32> Kind = getJITLinkEdgeKind(Type, ArmCfg);
     if (!Kind)
       return Kind.takeError();
 
     auto FixupAddress = orc::ExecutorAddr(FixupSect.sh_addr) + Rel.r_offset;
     Edge::OffsetT Offset = FixupAddress - BlockToFix.getAddress();
-    Edge E(*Kind, Offset, *GraphSymbol, 0);
 
     Expected<int64_t> Addend =
-        aarch32::readAddend(*Base::G, BlockToFix, E, ArmCfg);
+        aarch32::readAddend(*Base::G, BlockToFix, Offset, *Kind, ArmCfg);
     if (!Addend)
       return Addend.takeError();
 
-    E.setAddend(*Addend);
+    Edge E(*Kind, Offset, *GraphSymbol, *Addend);
     LLVM_DEBUG({
       dbgs() << "    ";
       printEdge(dbgs(), BlockToFix, E, getELFAArch32EdgeKindName(*Kind));
@@ -210,12 +222,15 @@ public:
         ArmCfg(std::move(ArmCfg)) {}
 };
 
-template <aarch32::StubsFlavor Flavor>
+template <typename StubsManagerType>
 Error buildTables_ELF_aarch32(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
-  aarch32::StubsManager<Flavor> PLT;
-  visitExistingEdges(G, PLT);
+  StubsManagerType StubsManager;
+  visitExistingEdges(G, StubsManager);
+  aarch32::GOTBuilder GOT;
+  visitExistingEdges(G, GOT);
+
   return Error::success();
 }
 
@@ -244,21 +259,8 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   // Resolve our internal configuration for the target. If at some point the
   // CPUArch alone becomes too unprecise, we can find more details in the
   // Tag_CPU_arch_profile.
-  aarch32::ArmConfig ArmCfg;
-  using namespace ARMBuildAttrs;
-  auto Arch = static_cast<CPUArch>(ARM::getArchAttr(AK));
-  switch (Arch) {
-  case v7:
-  case v8_A:
-    ArmCfg = aarch32::getArmConfigForCPUArch(Arch);
-    assert(ArmCfg.Stubs != aarch32::Unsupported &&
-           "Provide a config for each supported CPU");
-    break;
-  default:
-    return make_error<JITLinkError>(
-        "Failed to build ELF link graph: Unsupported CPU arch " +
-        StringRef(aarch32::getCPUArchName(Arch)));
-  }
+  auto Arch = static_cast<ARMBuildAttrs::CPUArch>(ARM::getArchAttr(AK));
+  aarch32::ArmConfig ArmCfg = aarch32::getArmConfigForCPUArch(Arch);
 
   // Populate the link-graph.
   switch (TT.getArch()) {
@@ -303,11 +305,15 @@ void link_ELF_aarch32(std::unique_ptr<LinkGraph> G,
       PassCfg.PrePrunePasses.push_back(markAllSymbolsLive);
 
     switch (ArmCfg.Stubs) {
-    case aarch32::Thumbv7:
+    case aarch32::StubsFlavor::pre_v7:
       PassCfg.PostPrunePasses.push_back(
-          buildTables_ELF_aarch32<aarch32::Thumbv7>);
+          buildTables_ELF_aarch32<aarch32::StubsManager_prev7>);
       break;
-    case aarch32::Unsupported:
+    case aarch32::StubsFlavor::v7:
+      PassCfg.PostPrunePasses.push_back(
+          buildTables_ELF_aarch32<aarch32::StubsManager_v7>);
+      break;
+    case aarch32::StubsFlavor::Undefined:
       llvm_unreachable("Check before building graph");
     }
   }

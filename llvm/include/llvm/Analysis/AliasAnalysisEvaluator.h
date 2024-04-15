@@ -29,7 +29,6 @@
 namespace llvm {
 class AAResults;
 class Function;
-class FunctionPass;
 
 class AAEvaluator : public PassInfoMixin<AAEvaluator> {
   int64_t FunctionCount = 0;
@@ -54,15 +53,8 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
-  // Allow the legacy pass to run this using an internal API.
-  friend class AAEvalLegacyPass;
-
   void runInternal(Function &F, AAResults &AA);
 };
-
-/// Create a wrapper of the above for the legacy pass manager.
-FunctionPass *createAAEvalPass();
-
 }
 
 #endif

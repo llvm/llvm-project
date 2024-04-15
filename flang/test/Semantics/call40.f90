@@ -16,7 +16,7 @@ subroutine val_errors(array, string, polymorphic, derived)
   !ERROR: %VAL argument must be a scalar numerical or logical expression
   call foo3(%val(derived))
   !ERROR: %VAL argument must be a scalar numerical or logical expression
-  !ERROR: Assumed type argument requires an explicit interface
+  !ERROR: Assumed type actual argument requires an explicit interface
   call foo4(%val(polymorphic))
 end subroutine
 

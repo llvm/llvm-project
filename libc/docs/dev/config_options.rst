@@ -66,7 +66,7 @@ example, the option-dictionary is:
    {
      "LIBC_CONF_PRINTF_DISABLE_FLOAT": {
        "value": false,
-       "doc": 
+       "doc":
      },
      ...
    }

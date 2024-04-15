@@ -16,10 +16,12 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 
@@ -181,7 +183,7 @@ private:
   /// block is expected to have 2 arguments. The gpu.yield return the
   /// accumulated value of the same type.
   AccumulatorFactory getFactory(Region &body) {
-    return AccumulatorFactory([&](Value lhs, Value rhs) {
+    return [&body, this](Value lhs, Value rhs) -> Value {
       Block *block = rewriter.getInsertionBlock();
       Block *split = rewriter.splitBlock(block, rewriter.getInsertionPoint());
 
@@ -209,56 +211,14 @@ private:
       // Return accumulator result.
       rewriter.setInsertionPointToStart(split);
       return split->addArgument(lhs.getType(), lhs.getLoc());
-    });
+    };
   }
 
   /// Returns an accumulator factory that creates an op specified by opName.
   AccumulatorFactory getFactory(gpu::AllReduceOperation opName) {
-    bool isFloatingPoint = isa<FloatType>(valueType);
-    switch (opName) {
-    case gpu::AllReduceOperation::ADD:
-      return isFloatingPoint ? getFactory<arith::AddFOp>()
-                             : getFactory<arith::AddIOp>();
-    case gpu::AllReduceOperation::MUL:
-      return isFloatingPoint ? getFactory<arith::MulFOp>()
-                             : getFactory<arith::MulIOp>();
-    case gpu::AllReduceOperation::AND:
-      return getFactory<arith::AndIOp>();
-    case gpu::AllReduceOperation::OR:
-      return getFactory<arith::OrIOp>();
-    case gpu::AllReduceOperation::XOR:
-      return getFactory<arith::XOrIOp>();
-    case gpu::AllReduceOperation::MAX:
-      return isFloatingPoint
-                 ? getCmpFactory<arith::CmpFOp, arith::CmpFPredicate,
-                                 arith::CmpFPredicate::UGT>()
-                 : getCmpFactory<arith::CmpIOp, arith::CmpIPredicate,
-                                 arith::CmpIPredicate::ugt>();
-    case gpu::AllReduceOperation::MIN:
-      return isFloatingPoint
-                 ? getCmpFactory<arith::CmpFOp, arith::CmpFPredicate,
-                                 arith::CmpFPredicate::ULT>()
-                 : getCmpFactory<arith::CmpIOp, arith::CmpIPredicate,
-                                 arith::CmpIPredicate::ult>();
-    }
-    llvm_unreachable("unknown GPU AllReduceOperation");
-  }
-
-  /// Returns an accumulator factory that creates an op of type T.
-  template <typename T>
-  AccumulatorFactory getFactory() {
-    return [&](Value lhs, Value rhs) {
-      return create<T>(lhs.getType(), lhs, rhs);
-    };
-  }
-
-  /// Returns an accumulator for comparison such as min, max. T is the type
-  /// of the compare op.
-  template <typename T, typename PredicateEnum, PredicateEnum predicate>
-  AccumulatorFactory getCmpFactory() const {
-    return [&](Value lhs, Value rhs) {
-      Value cmp = rewriter.create<T>(loc, predicate, lhs, rhs);
-      return rewriter.create<arith::SelectOp>(loc, cmp, lhs, rhs);
+    return [opName, this](Value lhs, Value rhs) {
+      return vector::makeArithReduction(rewriter, loc,
+                                        convertReductionKind(opName), lhs, rhs);
     };
   }
 

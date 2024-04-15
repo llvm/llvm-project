@@ -9,7 +9,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUGLOBALISELUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUGLOBALISELUTILS_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/Register.h"
 #include <utility>
 
@@ -25,9 +24,8 @@ namespace AMDGPU {
 /// Returns base register and constant offset.
 std::pair<Register, unsigned>
 getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
-                          GISelKnownBits *KnownBits = nullptr);
-
-bool hasAtomicFaddRtnForTy(const GCNSubtarget &Subtarget, const LLT &Ty);
+                          GISelKnownBits *KnownBits = nullptr,
+                          bool CheckNUW = false);
 }
 }
 

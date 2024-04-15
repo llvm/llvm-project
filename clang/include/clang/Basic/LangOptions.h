@@ -30,27 +30,6 @@
 
 namespace clang {
 
-/// Bitfields of LangOptions, split out from LangOptions in order to ensure that
-/// this large collection of bitfields is a trivial class type.
-class LangOptionsBase {
-  friend class CompilerInvocation;
-  friend class CompilerInvocationBase;
-
-public:
-  // Define simple language options (with no accessors).
-#define LANGOPT(Name, Bits, Default, Description) unsigned Name : Bits;
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)
-#include "clang/Basic/LangOptions.def"
-
-protected:
-  // Define language options of enumeration type. These are private, and will
-  // have accessors (below).
-#define LANGOPT(Name, Bits, Default, Description)
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
-  unsigned Name : Bits;
-#include "clang/Basic/LangOptions.def"
-};
-
 /// In the Microsoft ABI, this controls the placement of virtual displacement
 /// members used to implement virtual inheritance.
 enum class MSVtorDispMode { Never, ForVBaseOverride, ForVFTable };
@@ -78,9 +57,12 @@ enum class ShaderStage {
   Invalid,
 };
 
-/// Keeps track of the various options that can be
-/// enabled, which controls the dialect of C or C++ that is accepted.
-class LangOptions : public LangOptionsBase {
+/// Bitfields of LangOptions, split out from LangOptions in order to ensure that
+/// this large collection of bitfields is a trivial class type.
+class LangOptionsBase {
+  friend class CompilerInvocation;
+  friend class CompilerInvocationBase;
+
 public:
   using Visibility = clang::Visibility;
   using RoundingMode = llvm::RoundingMode;
@@ -152,6 +134,7 @@ public:
     MSVC2019 = 1920,
     MSVC2019_5 = 1925,
     MSVC2019_8 = 1928,
+    MSVC2022_3 = 1933,
   };
 
   enum SYCLMajorVersion {
@@ -380,6 +363,28 @@ public:
     All,
   };
 
+  enum class VisibilityForcedKinds {
+    /// Force hidden visibility
+    ForceHidden,
+    /// Force protected visibility
+    ForceProtected,
+    /// Force default visibility
+    ForceDefault,
+    /// Don't alter the visibility
+    Source,
+  };
+
+  enum class VisibilityFromDLLStorageClassKinds {
+    /// Keep the IR-gen assigned visibility.
+    Keep,
+    /// Override the IR-gen assigned visibility with default visibility.
+    Default,
+    /// Override the IR-gen assigned visibility with hidden visibility.
+    Hidden,
+    /// Override the IR-gen assigned visibility with protected visibility.
+    Protected,
+  };
+
   enum class StrictFlexArraysLevelKind {
     /// Any trailing array member is a FAM.
     Default = 0,
@@ -391,6 +396,57 @@ public:
     IncompleteOnly = 3,
   };
 
+  /// Controls the various implementations for complex multiplication and
+  // division.
+  enum ComplexRangeKind {
+    /// Implementation of complex division and multiplication using a call to
+    ///  runtime library functions(generally the case, but the BE might
+    /// sometimes replace the library call if it knows enough about the
+    /// potential range of the inputs). Overflow and non-finite values are
+    /// handled by the library implementation. This is the default value.
+    CX_Full,
+
+    /// Implementation of complex division offering an improved handling
+    /// for overflow in intermediate calculations with no special handling for
+    /// NaN and infinite values.
+    CX_Improved,
+
+    /// Implementation of complex division using algebraic formulas at
+    /// higher precision. Overflow is handled. Non-finite values are handled in
+    /// some cases. If the target hardware does not have native support for a
+    /// higher precision data type, an implementation for the complex operation
+    /// will be used to provide improved guards against intermediate overflow,
+    /// but overflow and underflow may still occur in some cases. NaN and
+    /// infinite values are not handled.
+    CX_Promoted,
+
+    /// Implementation of complex division and multiplication using
+    /// algebraic formulas at source precision. No special handling to avoid
+    /// overflow. NaN and infinite values are not handled.
+    CX_Basic,
+
+    /// No range rule is enabled.
+    CX_None
+  };
+
+  // Define simple language options (with no accessors).
+#define LANGOPT(Name, Bits, Default, Description) unsigned Name : Bits;
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)
+#include "clang/Basic/LangOptions.def"
+
+protected:
+  // Define language options of enumeration type. These are private, and will
+  // have accessors (below).
+#define LANGOPT(Name, Bits, Default, Description)
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
+  LLVM_PREFERRED_TYPE(Type) \
+  unsigned Name : Bits;
+#include "clang/Basic/LangOptions.def"
+};
+
+/// Keeps track of the various options that can be
+/// enabled, which controls the dialect of C or C++ that is accepted.
+class LangOptions : public LangOptionsBase {
 public:
   /// The used language standard.
   LangStandard::Kind LangStd;
@@ -502,6 +558,11 @@ public:
   // received as a result of a standard operator new (-fcheck-new)
   bool CheckNew = false;
 
+  // In OpenACC mode, contains a user provided override for the _OPENACC macro.
+  // This exists so that we can override the macro value and test our incomplete
+  // implementation on real-world examples.
+  std::string OpenACCMacroOverride;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -528,11 +589,6 @@ public:
   /// Are we compiling a module?
   bool isCompilingModule() const {
     return getCompilingModule() != CMK_None;
-  }
-
-  /// Are we compiling a standard c++ module interface?
-  bool isCompilingModuleInterface() const {
-    return getCompilingModule() == CMK_ModuleInterface;
   }
 
   /// Are we compiling a module implementation?
@@ -597,6 +653,9 @@ public:
     return !requiresStrictPrototypes() && !OpenCL;
   }
 
+  /// Returns true if the language supports calling the 'atexit' function.
+  bool hasAtExit() const { return !(OpenMP && OpenMPIsTargetDevice); }
+
   /// Returns true if implicit int is part of the language requirements.
   bool isImplicitIntRequired() const { return !CPlusPlus && !C99; }
 
@@ -649,6 +708,26 @@ public:
   bool isAllDefaultVisibilityExportMapping() const {
     return getDefaultVisibilityExportMapping() ==
            DefaultVisiblityExportMapping::All;
+  }
+
+  bool hasGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() !=
+           VisibilityForcedKinds::Source;
+  }
+
+  bool hasDefaultGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceDefault;
+  }
+
+  bool hasProtectedGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceProtected;
+  }
+
+  bool hasHiddenGlobalAllocationFunctionVisibility() const {
+    return getGlobalAllocationFunctionVisibility() ==
+           VisibilityForcedKinds::ForceHidden;
   }
 
   /// Remap path prefix according to -fmacro-prefix-path option.
@@ -732,6 +811,7 @@ public:
       setAllowFEnvAccess(true);
     else
       setAllowFEnvAccess(LangOptions::FPM_Off);
+    setComplexRange(LO.getComplexRange());
   }
 
   bool allowFPContractWithinStatement() const {
@@ -939,8 +1019,8 @@ enum TranslationUnitKind {
   /// not complete.
   TU_Prefix,
 
-  /// The translation unit is a module.
-  TU_Module,
+  /// The translation unit is a clang module.
+  TU_ClangModule,
 
   /// The translation unit is a is a complete translation unit that we might
   /// incrementally extend later.

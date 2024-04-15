@@ -24,7 +24,6 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/AsmParser/SlotMapping.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -35,11 +34,13 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -1175,19 +1176,10 @@ bool MIParser::parse(MachineInstr *&MI) {
   MI = MF.CreateMachineInstr(MCID, DebugLocation, /*NoImplicit=*/true);
   MI->setFlags(Flags);
 
-  unsigned NumExplicitOps = 0;
-  for (const auto &Operand : Operands) {
-    bool IsImplicitOp = Operand.Operand.isReg() && Operand.Operand.isImplicit();
-    if (!IsImplicitOp) {
-      if (!MCID.isVariadic() && NumExplicitOps >= MCID.getNumOperands() &&
-          !Operand.Operand.isValidExcessOperand())
-        return error(Operand.Begin, "too many operands for instruction");
-
-      ++NumExplicitOps;
-    }
-
+  // Don't check the operands make sense, let the verifier catch any
+  // improprieties.
+  for (const auto &Operand : Operands)
     MI->addOperand(MF, Operand.Operand);
-  }
 
   if (assignRegisterTies(*MI, Operands))
     return true;
@@ -1479,7 +1471,9 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
          Token.is(MIToken::kw_exact) ||
          Token.is(MIToken::kw_nofpexcept) ||
          Token.is(MIToken::kw_noconvergent) ||
-         Token.is(MIToken::kw_unpredictable)) {
+         Token.is(MIToken::kw_unpredictable) ||
+         Token.is(MIToken::kw_nneg) ||
+         Token.is(MIToken::kw_disjoint)) {
     // clang-format on
     // Mine frame and fast math flags
     if (Token.is(MIToken::kw_frame_setup))
@@ -1512,6 +1506,10 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
       Flags |= MachineInstr::Unpredictable;
     if (Token.is(MIToken::kw_noconvergent))
       Flags |= MachineInstr::NoConvergent;
+    if (Token.is(MIToken::kw_nneg))
+      Flags |= MachineInstr::NonNeg;
+    if (Token.is(MIToken::kw_disjoint))
+      Flags |= MachineInstr::Disjoint;
 
     lex();
   }
@@ -1927,10 +1925,13 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 
   if (Token.range().front() == 's') {
     auto ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
-    if (!verifyScalarSize(ScalarSize))
-      return error("invalid size for scalar type");
-
-    Ty = LLT::scalar(ScalarSize);
+    if (ScalarSize) {
+      if (!verifyScalarSize(ScalarSize))
+        return error("invalid size for scalar type");
+      Ty = LLT::scalar(ScalarSize);
+    } else {
+      Ty = LLT::token();
+    }
     lex();
     return false;
   } else if (Token.range().front() == 'p') {
@@ -1946,12 +1947,28 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 
   // Now we're looking for a vector.
   if (Token.isNot(MIToken::less))
-    return error(Loc,
-                 "expected sN, pA, <M x sN>, or <M x pA> for GlobalISel type");
+    return error(Loc, "expected sN, pA, <M x sN>, <M x pA>, <vscale x M x sN>, "
+                      "or <vscale x M x pA> for GlobalISel type");
   lex();
 
-  if (Token.isNot(MIToken::IntegerLiteral))
+  bool HasVScale =
+      Token.is(MIToken::Identifier) && Token.stringValue() == "vscale";
+  if (HasVScale) {
+    lex();
+    if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "x")
+      return error("expected <vscale x M x sN> or <vscale x M x pA>");
+    lex();
+  }
+
+  auto GetError = [this, &HasVScale, Loc]() {
+    if (HasVScale)
+      return error(
+          Loc, "expected <vscale x M x sN> or <vscale M x pA> for vector type");
     return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+  };
+
+  if (Token.isNot(MIToken::IntegerLiteral))
+    return GetError();
   uint64_t NumElements = Token.integerValue().getZExtValue();
   if (!verifyVectorElementCount(NumElements))
     return error("invalid number of vector elements");
@@ -1959,11 +1976,12 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   lex();
 
   if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "x")
-    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+    return GetError();
   lex();
 
   if (Token.range().front() != 's' && Token.range().front() != 'p')
-    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+    return GetError();
+
   StringRef SizeStr = Token.range().drop_front();
   if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
     return error("expected integers after 's'/'p' type character");
@@ -1971,7 +1989,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   if (Token.range().front() == 's') {
     auto ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
     if (!verifyScalarSize(ScalarSize))
-      return error("invalid size for scalar type");
+      return error("invalid size for scalar element in vector");
     Ty = LLT::scalar(ScalarSize);
   } else if (Token.range().front() == 'p') {
     const DataLayout &DL = MF.getDataLayout();
@@ -1981,14 +1999,15 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 
     Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
   } else
-    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+    return GetError();
   lex();
 
   if (Token.isNot(MIToken::greater))
-    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+    return GetError();
+
   lex();
 
-  Ty = LLT::fixed_vector(NumElements, Ty);
+  Ty = LLT::vector(ElementCount::get(NumElements, HasVScale), Ty);
   return false;
 }
 
@@ -2171,10 +2190,10 @@ static bool parseGlobalValue(const MIToken &Token,
     unsigned GVIdx;
     if (getUnsigned(Token, GVIdx, ErrCB))
       return true;
-    if (GVIdx >= PFS.IRSlots.GlobalValues.size())
+    GV = PFS.IRSlots.GlobalValues.get(GVIdx);
+    if (!GV)
       return ErrCB(Token.location(), Twine("use of undefined global value '@") +
                                          Twine(GVIdx) + "'");
-    GV = PFS.IRSlots.GlobalValues[GVIdx];
     break;
   }
   default:

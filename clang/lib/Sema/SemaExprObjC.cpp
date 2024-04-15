@@ -71,7 +71,7 @@ ExprResult Sema::ParseObjCStringLiteral(SourceLocation *AtLocs,
     QualType StrTy = Context.getConstantArrayType(
         CAT->getElementType(), llvm::APInt(32, StrBuf.size() + 1), nullptr,
         CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
-    S = StringLiteral::Create(Context, StrBuf, StringLiteral::Ordinary,
+    S = StringLiteral::Create(Context, StrBuf, StringLiteralKind::Ordinary,
                               /*Pascal=*/false, StrTy, &StrLocs[0],
                               StrLocs.size());
   }
@@ -285,15 +285,15 @@ static ObjCMethodDecl *getNSNumberFactoryMethod(Sema &S, SourceLocation Loc,
   if (!Method && S.getLangOpts().DebuggerObjCLiteral) {
     // create a stub definition this NSNumber factory method.
     TypeSourceInfo *ReturnTInfo = nullptr;
-    Method =
-        ObjCMethodDecl::Create(CX, SourceLocation(), SourceLocation(), Sel,
-                               S.NSNumberPointer, ReturnTInfo, S.NSNumberDecl,
-                               /*isInstance=*/false, /*isVariadic=*/false,
-                               /*isPropertyAccessor=*/false,
-                               /*isSynthesizedAccessorStub=*/false,
-                               /*isImplicitlyDeclared=*/true,
-                               /*isDefined=*/false, ObjCMethodDecl::Required,
-                               /*HasRelatedResultType=*/false);
+    Method = ObjCMethodDecl::Create(
+        CX, SourceLocation(), SourceLocation(), Sel, S.NSNumberPointer,
+        ReturnTInfo, S.NSNumberDecl,
+        /*isInstance=*/false, /*isVariadic=*/false,
+        /*isPropertyAccessor=*/false,
+        /*isSynthesizedAccessorStub=*/false,
+        /*isImplicitlyDeclared=*/true,
+        /*isDefined=*/false, ObjCImplementationControl::Required,
+        /*HasRelatedResultType=*/false);
     ParmVarDecl *value = ParmVarDecl::Create(S.Context, Method,
                                              SourceLocation(), SourceLocation(),
                                              &CX.Idents.get("value"),
@@ -321,20 +321,20 @@ ExprResult Sema::BuildObjCNumericLiteral(SourceLocation AtLoc, Expr *Number) {
     // In C, character literals have type 'int'. That's not the type we want
     // to use to determine the Objective-c literal kind.
     switch (Char->getKind()) {
-    case CharacterLiteral::Ascii:
-    case CharacterLiteral::UTF8:
+    case CharacterLiteralKind::Ascii:
+    case CharacterLiteralKind::UTF8:
       NumberType = Context.CharTy;
       break;
 
-    case CharacterLiteral::Wide:
+    case CharacterLiteralKind::Wide:
       NumberType = Context.getWideCharType();
       break;
 
-    case CharacterLiteral::UTF16:
+    case CharacterLiteralKind::UTF16:
       NumberType = Context.Char16Ty;
       break;
 
-    case CharacterLiteral::UTF32:
+    case CharacterLiteralKind::UTF32:
       NumberType = Context.Char32Ty;
       break;
     }
@@ -568,7 +568,7 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
               /*isPropertyAccessor=*/false,
               /*isSynthesizedAccessorStub=*/false,
               /*isImplicitlyDeclared=*/true,
-              /*isDefined=*/false, ObjCMethodDecl::Required,
+              /*isDefined=*/false, ObjCImplementationControl::Required,
               /*HasRelatedResultType=*/false);
           QualType ConstCharType = Context.CharTy.withConst();
           ParmVarDecl *value =
@@ -611,20 +611,20 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
       // In C, character literals have type 'int'. That's not the type we want
       // to use to determine the Objective-c literal kind.
       switch (Char->getKind()) {
-      case CharacterLiteral::Ascii:
-      case CharacterLiteral::UTF8:
+      case CharacterLiteralKind::Ascii:
+      case CharacterLiteralKind::UTF8:
         ValueType = Context.CharTy;
         break;
 
-      case CharacterLiteral::Wide:
+      case CharacterLiteralKind::Wide:
         ValueType = Context.getWideCharType();
         break;
 
-      case CharacterLiteral::UTF16:
+      case CharacterLiteralKind::UTF16:
         ValueType = Context.Char16Ty;
         break;
 
-      case CharacterLiteral::UTF32:
+      case CharacterLiteralKind::UTF32:
         ValueType = Context.Char32Ty;
         break;
       }
@@ -663,10 +663,8 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
     }
 
     if (!ValueWithBytesObjCTypeMethod) {
-      IdentifierInfo *II[] = {
-        &Context.Idents.get("valueWithBytes"),
-        &Context.Idents.get("objCType")
-      };
+      const IdentifierInfo *II[] = {&Context.Idents.get("valueWithBytes"),
+                                    &Context.Idents.get("objCType")};
       Selector ValueWithBytesObjCType = Context.Selectors.getSelector(2, II);
 
       // Look for the appropriate method within NSValue.
@@ -682,7 +680,7 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
             /*isPropertyAccessor=*/false,
             /*isSynthesizedAccessorStub=*/false,
             /*isImplicitlyDeclared=*/true,
-            /*isDefined=*/false, ObjCMethodDecl::Required,
+            /*isDefined=*/false, ObjCImplementationControl::Required,
             /*HasRelatedResultType=*/false);
 
         SmallVector<ParmVarDecl *, 2> Params;
@@ -816,7 +814,7 @@ ExprResult Sema::BuildObjCArrayLiteral(SourceRange SR, MultiExprArg Elements) {
           false /*isVariadic*/,
           /*isPropertyAccessor=*/false, /*isSynthesizedAccessorStub=*/false,
           /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
-          ObjCMethodDecl::Required, false);
+          ObjCImplementationControl::Required, false);
       SmallVector<ParmVarDecl *, 2> Params;
       ParmVarDecl *objects = ParmVarDecl::Create(Context, Method,
                                                  SourceLocation(),
@@ -978,7 +976,7 @@ ExprResult Sema::BuildObjCDictionaryLiteral(SourceRange SR,
           /*isPropertyAccessor=*/false,
           /*isSynthesizedAccessorStub=*/false,
           /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
-          ObjCMethodDecl::Required, false);
+          ObjCImplementationControl::Required, false);
       SmallVector<ParmVarDecl *, 3> Params;
       ParmVarDecl *objects = ParmVarDecl::Create(Context, Method,
                                                  SourceLocation(),
@@ -1347,7 +1345,8 @@ ExprResult Sema::ParseObjCSelectorExpression(Selector Sel,
   }
 
   if (Method &&
-      Method->getImplementationControl() != ObjCMethodDecl::Optional &&
+      Method->getImplementationControl() !=
+          ObjCImplementationControl::Optional &&
       !getSourceManager().isInSystemHeader(Method->getLocation()))
     ReferencedSelectors.insert(std::make_pair(Sel, AtLoc));
 
@@ -2154,13 +2153,12 @@ HandleExprPropertyRefExpr(const ObjCObjectPointerType *OPT,
   return ExprError();
 }
 
-ExprResult Sema::
-ActOnClassPropertyRefExpr(IdentifierInfo &receiverName,
-                          IdentifierInfo &propertyName,
-                          SourceLocation receiverNameLoc,
-                          SourceLocation propertyNameLoc) {
+ExprResult Sema::ActOnClassPropertyRefExpr(const IdentifierInfo &receiverName,
+                                           const IdentifierInfo &propertyName,
+                                           SourceLocation receiverNameLoc,
+                                           SourceLocation propertyNameLoc) {
 
-  IdentifierInfo *receiverNamePtr = &receiverName;
+  const IdentifierInfo *receiverNamePtr = &receiverName;
   ObjCInterfaceDecl *IFace = getObjCInterfaceDecl(receiverNamePtr,
                                                   receiverNameLoc);
 

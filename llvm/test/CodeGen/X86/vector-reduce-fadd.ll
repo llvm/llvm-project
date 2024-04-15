@@ -1901,17 +1901,17 @@ define double @test_v16f64_undef(<16 x double> %a0) {
 define float @PR64627() {
 ; SSE-LABEL: PR64627:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movss {{.*#+}} xmm0 = [5.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR64627:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = [5.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: PR64627:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = [5.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; AVX512-NEXT:    retq
   %1 = bitcast i5 0 to <5 x i1>
   %2 = select <5 x i1> %1, <5 x float> zeroinitializer, <5 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>

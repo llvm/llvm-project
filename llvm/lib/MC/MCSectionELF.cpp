@@ -90,8 +90,6 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << 'e';
   if (Flags & ELF::SHF_EXECINSTR)
     OS << 'x';
-  if (Flags & ELF::SHF_GROUP)
-    OS << 'G';
   if (Flags & ELF::SHF_WRITE)
     OS << 'w';
   if (Flags & ELF::SHF_MERGE)
@@ -102,6 +100,8 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << 'T';
   if (Flags & ELF::SHF_LINK_ORDER)
     OS << 'o';
+  if (Flags & ELF::SHF_GROUP)
+    OS << 'G';
   if (Flags & ELF::SHF_GNU_RETAIN)
     OS << 'R';
 
@@ -123,6 +123,9 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   } else if (Arch == Triple::hexagon) {
     if (Flags & ELF::SHF_HEX_GPREL)
       OS << 's';
+  } else if (Arch == Triple::x86_64) {
+    if (Flags & ELF::SHF_X86_64_LARGE)
+      OS << 'l';
   }
 
   OS << '"';
@@ -180,19 +183,19 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << "," << EntrySize;
   }
 
-  if (Flags & ELF::SHF_GROUP) {
-    OS << ",";
-    printName(OS, Group.getPointer()->getName());
-    if (isComdat())
-      OS << ",comdat";
-  }
-
   if (Flags & ELF::SHF_LINK_ORDER) {
     OS << ",";
     if (LinkedToSym)
       printName(OS, LinkedToSym->getName());
     else
       OS << '0';
+  }
+
+  if (Flags & ELF::SHF_GROUP) {
+    OS << ",";
+    printName(OS, Group.getPointer()->getName());
+    if (isComdat())
+      OS << ",comdat";
   }
 
   if (isUnique())

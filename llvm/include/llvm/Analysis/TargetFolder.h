@@ -191,6 +191,15 @@ public:
     return nullptr;
   }
 
+  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
+                             Instruction *FMFSource) const override {
+    auto *C1 = dyn_cast<Constant>(LHS);
+    auto *C2 = dyn_cast<Constant>(RHS);
+    if (C1 && C2)
+      return ConstantFoldBinaryIntrinsic(ID, C1, C2, Ty, FMFSource);
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//

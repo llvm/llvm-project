@@ -11,7 +11,7 @@ import shlex
 from pathlib import Path
 
 from libcxx.test.dsl import *
-from libcxx.test.features import _isMSVC
+from libcxx.test.features import _isClang, _isAppleClang, _isGCC, _isMSVC
 
 
 _warningFlags = [
@@ -39,7 +39,7 @@ _warningFlags = [
     "-Wno-literal-suffix",  # GCC
     "-Wno-user-defined-literals",  # Clang
     # GCC warns about this when TEST_IS_CONSTANT_EVALUATED is used on a non-constexpr
-    # function. (This mostely happens in C++11 mode.)
+    # function. (This mostly happens in C++11 mode.)
     # TODO(mordante) investigate a solution for this issue.
     "-Wno-tautological-compare",
     # -Wstringop-overread and -Wstringop-overflow seem to be a bit buggy currently
@@ -88,6 +88,59 @@ def getStdFlag(cfg, std):
     return None
 
 
+def getSpeedOptimizationFlag(cfg):
+    if _isClang(cfg) or _isAppleClang(cfg) or _isGCC(cfg):
+        return "-O3"
+    elif _isMSVC(cfg):
+        return "/O2"
+    else:
+        raise RuntimeError(
+            "Can't figure out what compiler is used in the configuration"
+        )
+
+
+def getSizeOptimizationFlag(cfg):
+    if _isClang(cfg) or _isAppleClang(cfg) or _isGCC(cfg):
+        return "-Os"
+    elif _isMSVC(cfg):
+        return "/O1"
+    else:
+        raise RuntimeError(
+            "Can't figure out what compiler is used in the configuration"
+        )
+
+
+def testClangTidy(cfg, version, executable):
+    try:
+        if version in commandOutput(cfg, [f"{executable} --version"]):
+            return executable
+    except ConfigurationRuntimeError:
+        return None
+
+
+def getSuitableClangTidy(cfg):
+    # If we didn't build the libcxx-tidy plugin via CMake, we can't run the clang-tidy tests.
+    if (
+        runScriptExitCode(
+            cfg, ["stat %{test-tools-dir}/clang_tidy_checks/libcxx-tidy.plugin"]
+        )
+        != 0
+    ):
+        return None
+
+    version = "{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(
+        **compilerMacros(cfg)
+    )
+    exe = testClangTidy(
+        cfg, version, "clang-tidy-{__clang_major__}".format(**compilerMacros(cfg))
+    )
+
+    if not exe:
+        exe = testClangTidy(cfg, version, "clang-tidy")
+
+    return exe
+
+
 # fmt: off
 DEFAULT_PARAMETERS = [
     Parameter(
@@ -114,9 +167,21 @@ DEFAULT_PARAMETERS = [
         ),
         actions=lambda std: [
             AddFeature(std),
-            AddSubstitution("%{cxx_std}", re.sub("\+", "x", std)),
+            AddSubstitution("%{cxx_std}", re.sub(r"\+", "x", std)),
             AddCompileFlag(lambda cfg: getStdFlag(cfg, std)),
         ],
+    ),
+    Parameter(
+        name="optimization",
+        choices=["none", "speed", "size"],
+        type=str,
+        help="The optimization level to use when compiling the test suite.",
+        default="none",
+        actions=lambda opt: filter(None, [
+            AddCompileFlag(lambda cfg: getSpeedOptimizationFlag(cfg)) if opt == "speed" else None,
+            AddCompileFlag(lambda cfg: getSizeOptimizationFlag(cfg)) if opt == "size" else None,
+            AddFeature(f'optimization={opt}'),
+        ]),
     ),
     Parameter(
         name="enable_modules",
@@ -187,7 +252,7 @@ DEFAULT_PARAMETERS = [
                 AddFeature("stdlib={}".format(stdlib)),
                 # Also add an umbrella feature 'stdlib=libc++' for all flavors of libc++, to simplify
                 # the test suite.
-                AddFeature("stdlib=libc++") if re.match(".+-libc\+\+", stdlib) else None,
+                AddFeature("stdlib=libc++") if re.match(r".+-libc\+\+", stdlib) else None,
             ],
         ),
     ),
@@ -267,6 +332,7 @@ DEFAULT_PARAMETERS = [
             AddFeature("libcpp-has-no-incomplete-pstl"),
             AddFeature("libcpp-has-no-experimental-stop_token"),
             AddFeature("libcpp-has-no-incomplete-tzdb"),
+            AddFeature("libcpp-has-no-experimental-syncstream"),
         ],
     ),
     Parameter(
@@ -287,17 +353,18 @@ DEFAULT_PARAMETERS = [
     ),
     Parameter(
         name="hardening_mode",
-        choices=["unchecked", "hardened", "safe", "debug"],
+        choices=["none", "fast", "extensive", "debug"],
         type=str,
-        default="unchecked",
+        default="none",
         help="Whether to enable one of the hardening modes when compiling the test suite. This is only "
         "meaningful when running the tests against libc++.",
         actions=lambda hardening_mode: filter(
             None,
             [
-                AddCompileFlag("-D_LIBCPP_ENABLE_HARDENED_MODE=1") if hardening_mode == "hardened" else None,
-                AddCompileFlag("-D_LIBCPP_ENABLE_SAFE_MODE=1")     if hardening_mode == "safe" else None,
-                AddCompileFlag("-D_LIBCPP_ENABLE_DEBUG_MODE=1")    if hardening_mode == "debug" else None,
+                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE")      if hardening_mode == "none" else None,
+                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST")      if hardening_mode == "fast" else None,
+                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE") if hardening_mode == "extensive" else None,
+                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")     if hardening_mode == "debug" else None,
                 AddFeature("libcpp-hardening-mode={}".format(hardening_mode)),
             ],
         ),
@@ -330,6 +397,16 @@ DEFAULT_PARAMETERS = [
         default=f"{shlex.quote(sys.executable)} {shlex.quote(str(Path(__file__).resolve().parent.parent.parent / 'run.py'))}",
         help="Custom executor to use instead of the configured default.",
         actions=lambda executor: [AddSubstitution("%{executor}", executor)],
-    )
+    ),
+    Parameter(
+        name='clang-tidy-executable',
+        type=str,
+        default=lambda cfg: getSuitableClangTidy(cfg),
+        help="Selects the clang-tidy executable to use.",
+        actions=lambda exe: [] if exe is None else [
+            AddFeature('has-clang-tidy'),
+            AddSubstitution('%{clang-tidy}', exe),
+        ]
+    ),
 ]
 # fmt: on

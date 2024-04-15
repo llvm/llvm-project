@@ -215,3 +215,26 @@ func.func @buffer_loop_hoisting(%lb: index, %ub: index, %step: index, %f: f32, %
   }
   return
 }
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %alloc_tensor = transform.structured.match ops{["bufferization.alloc_tensor"]} in %arg1
+      : (!transform.any_op) -> !transform.op<"bufferization.alloc_tensor">
+    %2, %new = transform.structured.bufferize_to_allocation %alloc_tensor 
+      {alloc_op = "memref.alloca"} 
+        : !transform.op<"bufferization.alloc_tensor">
+    transform.yield
+  }
+}
+
+// Expect `bufferization.bufferize_to_allocation` to create an alloc.
+//  CHECK-LABEL: func.func @empty_to_tensor_alloc()
+func.func @empty_to_tensor_alloc() -> tensor<2x2xf32> {
+  // CHECK-NEXT: %[[alloca:.*]] = memref.alloca() : memref<2x2xf32>
+  // CHECK-NEXT: %[[tensor:.*]] = bufferization.to_tensor %[[alloca]] restrict writable : memref<2x2xf32>
+  // CHECK-NEXT: return %[[tensor]] : tensor<2x2xf32>
+  %0 = bufferization.alloc_tensor() : tensor<2x2xf32>
+  return %0 : tensor<2x2xf32>
+}

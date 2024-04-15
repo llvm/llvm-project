@@ -132,6 +132,7 @@ def INT_BARRIER_SYNC_CNT_II : NVPTXInst<(outs), (ins i32imm:$id, i32imm:$cnt),
                  "barrier.sync \t$id, $cnt;",
                  [(int_nvvm_barrier_sync_cnt imm:$id, imm:$cnt)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
+
 class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
                           list<Predicate> Preds = [hasPTX<78>, hasSM<90>]>:
         NVPTXInst<(outs), (ins), "barrier.cluster."# variant #";", [(Intr)]>,
@@ -144,6 +145,15 @@ def barrier_cluster_arrive_relaxed:
         int_nvvm_barrier_cluster_arrive_relaxed, [hasPTX<80>, hasSM<90>]>;
 def barrier_cluster_wait:
         INT_BARRIER_CLUSTER<"wait", int_nvvm_barrier_cluster_wait>;
+
+// 'aligned' versions of the cluster barrier intrinsics
+def barrier_cluster_arrive_aligned:
+        INT_BARRIER_CLUSTER<"arrive.aligned", int_nvvm_barrier_cluster_arrive_aligned>;
+def barrier_cluster_arrive_relaxed_aligned:
+        INT_BARRIER_CLUSTER<"arrive.relaxed.aligned",
+        int_nvvm_barrier_cluster_arrive_relaxed_aligned, [hasPTX<80>, hasSM<90>]>;
+def barrier_cluster_wait_aligned:
+        INT_BARRIER_CLUSTER<"wait.aligned", int_nvvm_barrier_cluster_wait_aligned>;
 
 class SHFL_INSTR<bit sync, string mode, string reg, bit return_pred,
                  bit offset_imm, bit mask_imm, bit threadmask_imm>
@@ -252,6 +262,12 @@ multiclass MATCH_ANY_SYNC<NVPTXRegClass regclass, string ptxtype, Intrinsic IntO
               [(set Int32Regs:$dest, (IntOp Int32Regs:$mask, regclass:$value))]>,
            Requires<[hasPTX<60>, hasSM<70>]>;
 }
+
+// activemask.b32
+def ACTIVEMASK : NVPTXInst<(outs Int32Regs:$dest), (ins),
+                    "activemask.b32 \t$dest;", 
+                    [(set Int32Regs:$dest, (int_nvvm_activemask))]>,
+                 Requires<[hasPTX<62>, hasSM<30>]>;
 
 defm MATCH_ANY_SYNC_32 : MATCH_ANY_SYNC<Int32Regs, "b32", int_nvvm_match_any_sync_i32,
                                         i32imm>;
@@ -400,6 +416,22 @@ def CP_ASYNC_WAIT_ALL :
   NVPTXInst<(outs), (ins), "cp.async.wait_all;",
   [(int_nvvm_cp_async_wait_all)]>,
   Requires<[hasPTX<70>, hasSM<80>]>;
+
+// cp.async.bulk variants of the commit/wait group
+def CP_ASYNC_BULK_COMMIT_GROUP :
+  NVPTXInst<(outs), (ins), "cp.async.bulk.commit_group;",
+  [(int_nvvm_cp_async_bulk_commit_group)]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
+
+def CP_ASYNC_BULK_WAIT_GROUP :
+  NVPTXInst<(outs), (ins i32imm:$n), "cp.async.bulk.wait_group $n;",
+  [(int_nvvm_cp_async_bulk_wait_group (i32 timm:$n))]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
+
+def CP_ASYNC_BULK_WAIT_GROUP_READ :
+  NVPTXInst<(outs), (ins i32imm:$n), "cp.async.bulk.wait_group.read $n;",
+  [(int_nvvm_cp_async_bulk_wait_group_read (i32 timm:$n))]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
 
 //-----------------------------------
 // MBarrier Functions
@@ -608,6 +640,12 @@ class F_MATH_3<string OpcStr, NVPTXRegClass t_regclass,
 def INT_NVVM_PRMT : F_MATH_3<"prmt.b32 \t$dst, $src0, $src1, $src2;", Int32Regs,
   Int32Regs, Int32Regs, Int32Regs, int_nvvm_prmt>;
 
+def INT_NVVM_NANOSLEEP_I : NVPTXInst<(outs), (ins i32imm:$i), "nanosleep.u32 \t$i;",
+                             [(int_nvvm_nanosleep imm:$i)]>,
+        Requires<[hasPTX<63>, hasSM<70>]>;
+def INT_NVVM_NANOSLEEP_R : NVPTXInst<(outs), (ins Int32Regs:$i), "nanosleep.u32 \t$i;",
+                             [(int_nvvm_nanosleep Int32Regs:$i)]>,
+        Requires<[hasPTX<63>, hasSM<70>]>;
 //
 // Min Max
 //
@@ -760,11 +798,14 @@ defm INT_NVVM_FMAN : MIN_MAX<"max">;
 // Multiplication
 //
 
+def INT_NVVM_MULHI_S : F_MATH_2<"mul.hi.s16 \t$dst, $src0, $src1;", Int16Regs,
+  Int16Regs, Int16Regs, int_nvvm_mulhi_s>;
+def INT_NVVM_MULHI_US : F_MATH_2<"mul.hi.u16 \t$dst, $src0, $src1;", Int16Regs,
+  Int16Regs, Int16Regs, int_nvvm_mulhi_us>;
 def INT_NVVM_MULHI_I : F_MATH_2<"mul.hi.s32 \t$dst, $src0, $src1;", Int32Regs,
   Int32Regs, Int32Regs, int_nvvm_mulhi_i>;
 def INT_NVVM_MULHI_UI : F_MATH_2<"mul.hi.u32 \t$dst, $src0, $src1;", Int32Regs,
   Int32Regs, Int32Regs, int_nvvm_mulhi_ui>;
-
 def INT_NVVM_MULHI_LL : F_MATH_2<"mul.hi.s64 \t$dst, $src0, $src1;", Int64Regs,
   Int64Regs, Int64Regs, int_nvvm_mulhi_ll>;
 def INT_NVVM_MULHI_ULL : F_MATH_2<"mul.hi.u64 \t$dst, $src0, $src1;", Int64Regs,
@@ -841,10 +882,18 @@ def INT_NVVM_DIV_RP_D : F_MATH_2<"div.rp.f64 \t$dst, $src0, $src1;",
 // Sad
 //
 
+def INT_NVVM_SAD_S : F_MATH_3<"sad.s16 \t$dst, $src0, $src1, $src2;",
+  Int16Regs, Int16Regs, Int16Regs, Int16Regs, int_nvvm_sad_s>;
+def INT_NVVM_SAD_US : F_MATH_3<"sad.u16 \t$dst, $src0, $src1, $src2;",
+  Int16Regs, Int16Regs, Int16Regs, Int16Regs, int_nvvm_sad_us>;
 def INT_NVVM_SAD_I : F_MATH_3<"sad.s32 \t$dst, $src0, $src1, $src2;",
   Int32Regs, Int32Regs, Int32Regs, Int32Regs, int_nvvm_sad_i>;
 def INT_NVVM_SAD_UI : F_MATH_3<"sad.u32 \t$dst, $src0, $src1, $src2;",
   Int32Regs, Int32Regs, Int32Regs, Int32Regs, int_nvvm_sad_ui>;
+def INT_NVVM_SAD_LL : F_MATH_3<"sad.s64 \t$dst, $src0, $src1, $src2;",
+  Int64Regs, Int64Regs, Int64Regs, Int64Regs, int_nvvm_sad_ll>;
+def INT_NVVM_SAD_ULL : F_MATH_3<"sad.u64 \t$dst, $src0, $src1, $src2;",
+  Int64Regs, Int64Regs, Int64Regs, Int64Regs, int_nvvm_sad_ull>;
 
 //
 // Floor  Ceil
@@ -1471,7 +1520,7 @@ multiclass F_ATOMIC_2_imp<ValueType ptrT, NVPTXRegClass ptrclass,
   def imm : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, IMMType:$b),
     !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b;", ""),
     [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), IMM:$b))]>,
-  Requires<Pred>;
+  Requires<!if(!eq(TypeStr, ".f16"), [Predicate<"false">], Pred)>;
 }
 multiclass F_ATOMIC_2<ValueType regT, NVPTXRegClass regclass, string SpaceStr, string TypeStr,
   string OpcStr, PatFrag IntOp, Operand IMMType, SDNode IMM,
@@ -1580,6 +1629,13 @@ defm INT_PTX_ATOM_ADD_GEN_64 : F_ATOMIC_2<i64, Int64Regs, "", ".u64", ".add",
   atomic_load_add_64_gen, i64imm, imm>;
 defm INT_PTX_ATOM_ADD_GEN_64_USE_G : F_ATOMIC_2<i64, Int64Regs, ".global", ".u64",
   ".add", atomic_load_add_64_gen, i64imm, imm>;
+
+defm INT_PTX_ATOM_ADD_G_F16 : F_ATOMIC_2<f16, Int16Regs, ".global", ".f16", ".add.noftz",
+  atomic_load_add_g, f16imm, fpimm, [hasSM<70>, hasPTX<63>]>;
+defm INT_PTX_ATOM_ADD_S_F16 : F_ATOMIC_2<f16, Int16Regs, ".shared", ".f16", ".add.noftz",
+  atomic_load_add_s, f16imm, fpimm, [hasSM<70>, hasPTX<63>]>;
+defm INT_PTX_ATOM_ADD_GEN_F16 : F_ATOMIC_2<f16, Int16Regs, "", ".f16", ".add.noftz",
+  atomic_load_add_gen, f16imm, fpimm, [hasSM<70>, hasPTX<63>]>;
 
 defm INT_PTX_ATOM_ADD_G_F32 : F_ATOMIC_2<f32, Float32Regs, ".global", ".f32", ".add",
   atomic_load_add_g, f32imm, fpimm>;
@@ -1959,6 +2015,9 @@ multiclass ATOM2P_impl<string AsmStr,  Intrinsic Intr,
                        list<Predicate> Preds> {
   let AddedComplexity = 1 in {
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
+                      (ins Int16Regs:$src, regclass:$b),
+                      (Intr (i16 Int16Regs:$src), (regT regclass:$b))>;
+    def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                       (ins Int32Regs:$src, regclass:$b),
                       (Intr (i32 Int32Regs:$src), (regT regclass:$b))>;
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
@@ -1968,6 +2027,9 @@ multiclass ATOM2P_impl<string AsmStr,  Intrinsic Intr,
   // tablegen can't infer argument types from Intrinsic (though it can
   // from Instruction) so we have to enforce specific type on
   // immediates via explicit cast to ImmTy.
+  def : ATOM23_impl<AsmStr, regT, regclass, Preds,
+                    (ins Int16Regs:$src, ImmType:$b),
+                    (Intr (i16 Int16Regs:$src), (ImmTy Imm:$b))>;
   def : ATOM23_impl<AsmStr, regT, regclass, Preds,
                     (ins Int32Regs:$src, ImmType:$b),
                     (Intr (i32 Int32Regs:$src), (ImmTy Imm:$b))>;
@@ -2087,6 +2149,8 @@ multiclass ATOM2_add_impl<string OpStr> {
    defm _s32  : ATOM2S_impl<OpStr, "i", "s32", i32, Int32Regs, i32imm, imm, i32, []>;
    defm _u32  : ATOM2S_impl<OpStr, "i", "u32", i32, Int32Regs, i32imm, imm, i32, []>;
    defm _u64  : ATOM2S_impl<OpStr, "i", "u64", i64, Int64Regs, i64imm, imm, i64, []>;
+   defm _f16  : ATOM2S_impl<OpStr, "f", "f16", f16, Int16Regs, f16imm, fpimm, f16,
+                            [hasSM<70>, hasPTX<63>]>;
    defm _f32  : ATOM2S_impl<OpStr, "f", "f32", f32, Float32Regs, f32imm, fpimm, f32,
                             []>;
    defm _f64  : ATOM2S_impl<OpStr, "f", "f64", f64, Float64Regs, f64imm, fpimm, f64,
@@ -3753,6 +3817,62 @@ defm TEX_UNIFIED_CUBE_ARRAY_S32_F32_LEVEL
 defm TEX_UNIFIED_CUBE_ARRAY_U32_F32_LEVEL
   : TEX_UNIFIED_CUBE_ARRAY_LEVEL<"tex.level.acube.v4.u32.f32",
                                  Int32Regs, Float32Regs>;
+
+class TEX_UNIFIED_CUBE_GRAD_base<string inst, NVPTXRegClass outtype,
+                                 NVPTXRegClass intype, dag tex>
+    : NVPTXInst<(outs outtype:$r, outtype:$g,
+                      outtype:$b, outtype:$a),
+                 !con(tex, (ins intype:$x, intype:$y, intype:$z,
+                                intype:$gradx0, intype:$gradx1,
+                                intype:$gradx2, intype:$grady0,
+                                intype:$grady1, intype:$grady2)),
+                 inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$x, $y, $z, $z\\}],"
+                        " \\{$gradx0, $gradx1, $gradx2, $gradx2\\},"
+                        " \\{$grady0, $grady1, $grady2, $grady2\\};",
+                 []>;
+
+multiclass TEX_UNIFIED_CUBE_GRAD<string inst, NVPTXRegClass outtype,
+                                 NVPTXRegClass intype> {
+  def _R : TEX_UNIFIED_CUBE_GRAD_base<inst, outtype, intype, (ins Int64Regs:$t)>;
+  def _I : TEX_UNIFIED_CUBE_GRAD_base<inst, outtype, intype, (ins i64imm:$t)>;
+}
+
+defm TEX_UNIFIED_CUBE_F32_F32_GRAD
+  : TEX_UNIFIED_CUBE_GRAD<"tex.grad.cube.v4.f32.f32", Float32Regs, Float32Regs>;
+defm TEX_UNIFIED_CUBE_S32_F32_GRAD
+  : TEX_UNIFIED_CUBE_GRAD<"tex.grad.cube.v4.s32.f32", Int32Regs, Float32Regs>;
+defm TEX_UNIFIED_CUBE_U32_F32_GRAD
+  : TEX_UNIFIED_CUBE_GRAD<"tex.grad.cube.v4.u32.f32", Int32Regs, Float32Regs>;
+
+class TEX_UNIFIED_CUBE_ARRAY_GRAD_base<string inst, NVPTXRegClass outtype,
+                                       NVPTXRegClass intype, dag tex>
+    : NVPTXInst<(outs outtype:$r, outtype:$g,
+                      outtype:$b, outtype:$a),
+                 !con(tex, (ins Int32Regs:$l, intype:$x, intype:$y, intype:$z,
+                                intype:$gradx0, intype:$gradx1,
+                                intype:$gradx2, intype:$grady0,
+                                intype:$grady1, intype:$grady2)),
+                 inst # " \t\\{$r, $g, $b, $a\\}, [$t, \\{$l, $x, $y, $z\\}],"
+                        " \\{$gradx0, $gradx1, $gradx2, $gradx2\\},"
+                        " \\{$grady0, $grady1, $grady2, $grady2\\};",
+                 []>;
+multiclass TEX_UNIFIED_CUBE_ARRAY_GRAD<string inst, NVPTXRegClass outtype,
+                                       NVPTXRegClass intype> {
+  def _R : TEX_UNIFIED_CUBE_ARRAY_GRAD_base<inst, outtype, intype,
+                                            (ins Int64Regs:$t)>;
+  def _I : TEX_UNIFIED_CUBE_ARRAY_GRAD_base<inst, outtype, intype,
+                                            (ins i64imm:$t)>;
+}
+
+defm TEX_UNIFIED_CUBE_ARRAY_F32_F32_GRAD
+  : TEX_UNIFIED_CUBE_ARRAY_GRAD<"tex.grad.acube.v4.f32.f32",
+                                Float32Regs, Float32Regs>;
+defm TEX_UNIFIED_CUBE_ARRAY_S32_F32_GRAD
+  : TEX_UNIFIED_CUBE_ARRAY_GRAD<"tex.grad.acube.v4.s32.f32",
+                                Int32Regs, Float32Regs>;
+defm TEX_UNIFIED_CUBE_ARRAY_U32_F32_GRAD
+  : TEX_UNIFIED_CUBE_ARRAY_GRAD<"tex.grad.acube.v4.u32.f32",
+                                Int32Regs, Float32Regs>;
 
 class TLD4_UNIFIED_2D_base<string inst, NVPTXRegClass outtype,
                            NVPTXRegClass intype, dag tex>
@@ -6267,10 +6387,17 @@ def INT_PTX_SREG_LANEMASK_GE :
 def INT_PTX_SREG_LANEMASK_GT :
     PTX_READ_SREG_R32<"lanemask_gt", int_nvvm_read_ptx_sreg_lanemask_gt>;
 
+let hasSideEffects = 1 in {
 def INT_PTX_SREG_CLOCK :
     PTX_READ_SREG_R32<"clock", int_nvvm_read_ptx_sreg_clock>;
 def INT_PTX_SREG_CLOCK64 :
     PTX_READ_SREG_R64<"clock64", int_nvvm_read_ptx_sreg_clock64>;
+def INT_PTX_SREG_GLOBALTIMER :
+    PTX_READ_SREG_R64<"globaltimer", int_nvvm_read_ptx_sreg_globaltimer>;
+}
+
+def: Pat <(i64 (readcyclecounter)), (INT_PTX_SREG_CLOCK64)>;
+def: Pat <(i64 (readsteadycounter)), (INT_PTX_SREG_GLOBALTIMER)>;
 
 def INT_PTX_SREG_PM0 : PTX_READ_SREG_R32<"pm0", int_nvvm_read_ptx_sreg_pm0>;
 def INT_PTX_SREG_PM1 : PTX_READ_SREG_R32<"pm1", int_nvvm_read_ptx_sreg_pm1>;
@@ -6727,3 +6854,19 @@ def is_explicit_cluster: NVPTXInst<(outs Int1Regs:$d), (ins),
               "mov.pred\t$d, %is_explicit_cluster;",
               [(set Int1Regs:$d, (int_nvvm_is_explicit_cluster))]>,
     Requires<[hasSM<90>, hasPTX<78>]>;
+
+// setmaxnreg inc/dec intrinsics
+let isConvergent = true in {
+multiclass SET_MAXNREG<string Action, Intrinsic Intr> {
+  def : NVPTXInst<(outs), (ins i32imm:$reg_count),
+          "setmaxnreg." # Action # ".sync.aligned.u32 $reg_count;",
+          [(Intr timm:$reg_count)]>,
+    Requires<[hasSM90a, hasPTX<80>]>;
+}
+
+defm INT_SET_MAXNREG_INC : SET_MAXNREG<"inc", int_nvvm_setmaxnreg_inc_sync_aligned_u32>;
+defm INT_SET_MAXNREG_DEC : SET_MAXNREG<"dec", int_nvvm_setmaxnreg_dec_sync_aligned_u32>;
+
+} // isConvergent
+
+def INT_EXIT : NVPTXInst<(outs), (ins), "exit;", [(int_nvvm_exit)]>;

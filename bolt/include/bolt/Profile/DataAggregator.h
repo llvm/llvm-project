@@ -225,6 +225,10 @@ private:
   /// Aggregation statistics
   uint64_t NumInvalidTraces{0};
   uint64_t NumLongRangeTraces{0};
+  /// Specifies how many samples were recorded in cold areas if we are dealing
+  /// with profiling data collected in a bolted binary. For LBRs, incremented
+  /// for the source of the branch to avoid counting cold activity twice (one
+  /// for source and another for destination).
   uint64_t NumColdSamples{0};
 
   /// Looks into system PATH for Linux Perf and set up the aggregator to use it
@@ -245,14 +249,12 @@ private:
   /// disassembled BinaryFunctions
   BinaryFunction *getBinaryFunctionContainingAddress(uint64_t Address) const;
 
+  /// Perform BAT translation for a given \p Func and return the parent
+  /// BinaryFunction or nullptr.
+  BinaryFunction *getBATParentFunction(const BinaryFunction &Func) const;
+
   /// Retrieve the location name to be used for samples recorded in \p Func.
-  /// If doing BAT translation, link cold parts to the hot part  names (used by
-  /// the original binary).  \p Count specifies how many samples were recorded
-  /// at that location, so we can tally total activity in cold areas if we are
-  /// dealing with profiling data collected in a bolted binary. For LBRs,
-  /// \p Count should only be used for the source of the branch to avoid
-  /// counting cold activity twice (one for source and another for destination).
-  StringRef getLocationName(BinaryFunction &Func, uint64_t Count);
+  StringRef getLocationName(const BinaryFunction &Func) const;
 
   /// Semantic actions - parser hooks to interpret parsed perf samples
   /// Register a sample (non-LBR mode), i.e. a new hit at \p Address
@@ -301,7 +303,7 @@ private:
   ErrorOr<AggregatedLBREntry> parseAggregatedLBREntry();
 
   /// Parse either buildid:offset or just offset, representing a location in the
-  /// binary. Used exclusevely for pre-aggregated LBR samples.
+  /// binary. Used exclusively for pre-aggregated LBR samples.
   ErrorOr<Location> parseLocationOrOffset();
 
   /// Check if a field separator is the next char to parse and, if yes, consume
@@ -462,6 +464,10 @@ private:
 
   /// Dump data structures into a file readable by llvm-bolt
   std::error_code writeAggregatedFile(StringRef OutputFilename) const;
+
+  /// Dump translated data structures into YAML
+  std::error_code writeBATYAML(BinaryContext &BC,
+                               StringRef OutputFilename) const;
 
   /// Filter out binaries based on PID
   void filterBinaryMMapInfo();

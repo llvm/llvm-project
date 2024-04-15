@@ -2,7 +2,7 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
 // RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang_cc1 -extract-api -triple arm64-apple-macosx \
+// RUN: %clang_cc1 -extract-api --pretty-sgf -triple arm64-apple-macosx \
 // RUN:   -x c++-header %t/input.h -o %t/output.json -verify
 
 // Generator version is not consistent across test runs, normalize it.
@@ -106,8 +106,8 @@ public:
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 1
+          "character": 6,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -161,8 +161,8 @@ public:
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 3
+          "character": 6,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -225,8 +225,8 @@ public:
       },
       "location": {
         "position": {
-          "character": 15,
-          "line": 4
+          "character": 14,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -281,8 +281,8 @@ public:
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 7
+          "character": 6,
+          "line": 6
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -337,8 +337,8 @@ public:
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 10
+          "character": 6,
+          "line": 9
         },
         "uri": "file://INPUT_DIR/input.h"
       },

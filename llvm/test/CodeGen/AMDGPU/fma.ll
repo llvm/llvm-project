@@ -1,13 +1,13 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX906 -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cedar -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=juniper -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=sumo -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=barts -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=caicos -verify-machineinstrs < %s
-; RUN:  not llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=turks -verify-machineinstrs < %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX906 -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=cedar -verify-machineinstrs < %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=juniper -verify-machineinstrs < %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=redwood -verify-machineinstrs < %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=sumo -verify-machineinstrs < %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=barts -verify-machineinstrs < %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=caicos -verify-machineinstrs < %s
+; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=turks -verify-machineinstrs < %s
 
 declare float @llvm.fma.f32(float, float, float) nounwind readnone
 declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>) nounwind readnone

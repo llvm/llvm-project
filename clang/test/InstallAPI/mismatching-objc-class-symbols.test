@@ -1,0 +1,269 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+; RUN: yaml2obj %t/swift-objc-class.yaml -o %t/libswift-objc.dylib
+
+// Try out dylib that only has 1 symbol for a ObjCClass, with no declarations in header. 
+; RUN: clang-installapi -target arm64-apple-macos14 -dynamiclib \
+; RUN: -install_name tmp.dylib --verify-against=%t/libswift-objc.dylib \
+; RUN: -I%t/usr/include %t/inputs.json -o %t/missing.tbd \
+; RUN: --verify-mode=ErrorsAndWarnings 2>&1 | FileCheck --check-prefix MISSING_DECL %s
+; RUN: llvm-readtapi --compare %t/missing.tbd %t/missing-expected.tbd 
+
+// Try out a dylib that only has 1 symbol for a ObjCClass, 
+// but a complete ObjCClass decl in header.
+; RUN: clang-installapi -target arm64-apple-macos14 -dynamiclib \
+; RUN: -install_name tmp.dylib --verify-against=%t/libswift-objc.dylib \
+; RUN: -I%t/usr/include %t/inputs.json -o %t/mismatching.tbd \
+; RUN: --verify-mode=Pedantic -DFULL_DECL 2>&1 | FileCheck --check-prefix MISMATCH_DECL %s
+; RUN: llvm-readtapi -compare %t/mismatching.tbd  %t/mismatching-expected.tbd
+
+// Try out a dylib that only has 1 symbol for a ObjCClass, but is represented in header. 
+; RUN: clang-installapi -target arm64-apple-macos14 \
+; RUN: -install_name tmp.dylib --verify-against=%t/libswift-objc.dylib \
+; RUN: -I%t/usr/include %t/inputs.json -o %t/matching.tbd \
+; RUN: --verify-mode=Pedantic \
+; RUN: -DHAS_META_DECL 2>&1 | FileCheck --allow-empty %s
+
+; MISSING_DECL:        violations found for arm64
+; MISSING_DECL-NEXT:   warning: no declaration was found for exported symbol 'Metaclass of Suggestion' in dynamic library
+
+; MISMATCH_DECL:       violations found for arm64-apple-macos14
+; MISMATCH_DECL:       warning: declaration has external linkage, but dynamic library doesn't have symbol 'Class of Suggestion'
+
+; CHECK-NOT:           error
+; CHECK-NOT:           warning 
+
+
+;--- usr/include/mismatch.h
+#if HAS_META_DECL
+int metaclass __asm("_OBJC_METACLASS_$_Suggestion");
+#endif 
+
+#if FULL_DECL
+@interface Suggestion 
+@end
+#endif
+
+;--- inputs.json.in
+{
+  "headers": [ {
+    "path" : "DSTROOT/usr/include/mismatch.h",
+    "type" : "public"
+  }
+  ],
+  "version": "3"
+}
+
+;--- missing-expected.tbd
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ arm64-macos ]
+flags:           [ not_app_extension_safe ]
+install-name:    tmp.dylib
+current-version: 0
+compatibility-version: 0
+...
+
+;--- mismatching-expected.tbd
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ arm64-macos ]
+flags:           [ not_app_extension_safe ]
+install-name:    tmp.dylib
+current-version: 0
+compatibility-version: 0
+exports:
+  - targets:         [ arm64-macos ]
+    objc-classes:    [ Suggestion ]
+...
+
+;--- swift-objc-class.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x6
+  ncmds:           13
+  sizeofcmds:      752
+  flags:           0x100085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x330
+        size:            0
+        offset:          0x330
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         ''
+      - sectname:        __const
+        segname:         __TEXT
+        addr:            0x330
+        size:            1
+        offset:          0x330
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '61'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          16384
+    vmsize:          416
+    fileoff:         16384
+    filesize:        416
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      16384
+    export_size:     40
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          16432
+    nsyms:           2
+    stroff:          16464
+    strsize:         48
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      1
+    iundefsym:       1
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         40
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 0
+      compatibility_version: 0
+    Content:         tmp.dylib
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            4C4C4443-5555-3144-A142-97179769CBE0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           917504
+    sdk:             983040
+    ntools:          1
+    Tools:
+      - tool:            4
+        version:         1245184
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         96
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 197656576
+      compatibility_version: 19660800
+    Content:         '/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation'
+    ZeroPadBytes:    3
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 88473600
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         16424
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         16432
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         16512
+    datasize:        288
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    3
+        NodeOffset:      32
+        Name:            '_OBJC_METACLASS_$_Suggestion'
+        Flags:           0x0
+        Address:         0x330
+        Other:           0x0
+        ImportName:      ''
+  NameList:
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         816
+    - n_strx:          31
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          512
+      n_value:         0
+  StringTable:
+    - ' '
+    - '_OBJC_METACLASS_$_Suggestion'
+    - dyld_stub_binder
+  FunctionStarts:  [ 0x330 ]
+...
+// Generated from: 
+// xcrun -sdk macosx clang tmp.c -dynamiclib -install_name tmp.dylib
+// tmp.c: 
+// __attribute__((visibility("default")))
+// const char Meta __asm("_OBJC_METACLASS_$_Suggestion") = 'a';

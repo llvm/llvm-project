@@ -34,6 +34,8 @@
 // RUN:   FileCheck --check-prefix=FULL-MANGLED-METHOD %s
 // RUN: lldb-test symbols --name=foo --context=context --find=function --function-flags=base %t | \
 // RUN:   FileCheck --check-prefix=CONTEXT %s
+// RUN: lldb-test symbols --compiler-context=Struct:sbar,Function:foo -language=c++ -find=function -function-flags=method %t | \
+// RUN:   FileCheck --check-prefix=COMPILER-CONTEXT %s
 // RUN: lldb-test symbols --name=not_there --find=function %t | \
 // RUN:   FileCheck --check-prefix=EMPTY %s
 
@@ -83,6 +85,10 @@
 
 // CONTEXT: Found 1 functions:
 // CONTEXT-DAG: name = "bar::foo()", mangled = "_ZN3bar3fooEv", decl_context = {Namespace(bar)}
+
+// COMPILER-CONTEXT: Found 2 functions:
+// COMPILER-CONTEXT-DAG: name = "sbar::foo()", mangled = "_ZN4sbar3fooEv"
+// COMPILER-CONTEXT-DAG: name = "sbar::foo(int)", mangled = "_ZN4sbar3fooEi"
 
 // EMPTY: Found 0 functions:
 

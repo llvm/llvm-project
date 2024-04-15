@@ -1,12 +1,13 @@
 add_clang_library(clangAnalysisFlowSensitive
+  AdornedCFG.cpp
   Arena.cpp
-  ControlFlowContext.cpp
   DataflowAnalysisContext.cpp
   DataflowEnvironment.cpp
   Formula.cpp
   HTMLLogger.cpp
   Logger.cpp
   RecordOps.cpp
+  SimplifyConstraints.cpp
   Transfer.cpp
   TypeErasedDataflowAnalysis.cpp
   Value.cpp

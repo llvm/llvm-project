@@ -144,20 +144,21 @@ llvm::Expected<uint32_t> DynamicRegisterInfo::ByteOffsetFromComposite(
   uint32_t composite_offset = UINT32_MAX;
   for (uint32_t composite_idx = 0; composite_idx < num_composite_regs;
        ++composite_idx) {
-    llvm::StringRef composite_reg_name;
-    if (!composite_reg_list.GetItemAtIndexAsString(composite_idx, composite_reg_name))
+    std::optional<llvm::StringRef> maybe_composite_reg_name =
+        composite_reg_list.GetItemAtIndexAsString(composite_idx);
+    if (!maybe_composite_reg_name)
       return llvm::createStringError(
           llvm::inconvertibleErrorCode(),
           "\"composite\" list value is not a Python string at index %d",
           composite_idx);
 
     const RegisterInfo *composite_reg_info =
-        GetRegisterInfo(composite_reg_name);
+        GetRegisterInfo(*maybe_composite_reg_name);
     if (!composite_reg_info)
       return llvm::createStringError(
           llvm::inconvertibleErrorCode(),
           "failed to find composite register by name: \"%s\"",
-          composite_reg_name.str().c_str());
+          maybe_composite_reg_name->str().c_str());
 
     composite_offset =
         std::min(composite_offset, composite_reg_info->byte_offset);
@@ -205,10 +206,11 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
   if (dict.GetValueForKeyAsArray("sets", sets)) {
     const uint32_t num_sets = sets->GetSize();
     for (uint32_t i = 0; i < num_sets; ++i) {
-      llvm::StringRef set_name;
-      if (sets->GetItemAtIndexAsString(i, set_name) && !set_name.empty()) {
+      std::optional<llvm::StringRef> maybe_set_name =
+          sets->GetItemAtIndexAsString(i);
+      if (maybe_set_name && !maybe_set_name->empty()) {
         m_sets.push_back(
-            {ConstString(set_name).AsCString(), nullptr, 0, nullptr});
+            {ConstString(*maybe_set_name).AsCString(), nullptr, 0, nullptr});
       } else {
         Clear();
         printf("error: register sets must have valid names\n");
@@ -229,13 +231,15 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
   //        InvalidateNameMap;
   //        InvalidateNameMap invalidate_map;
   for (uint32_t i = 0; i < num_regs; ++i) {
-    StructuredData::Dictionary *reg_info_dict = nullptr;
-    if (!regs->GetItemAtIndexAsDictionary(i, reg_info_dict)) {
+    std::optional<StructuredData::Dictionary *> maybe_reg_info_dict =
+        regs->GetItemAtIndexAsDictionary(i);
+    if (!maybe_reg_info_dict) {
       Clear();
       printf("error: items in the 'registers' array must be dictionaries\n");
       regs->DumpToStdout();
       return 0;
     }
+    StructuredData::Dictionary *reg_info_dict = *maybe_reg_info_dict;
 
     // { 'name':'rcx'       , 'bitsize' :  64, 'offset' :  16,
     // 'encoding':'uint' , 'format':'hex'         , 'set': 0, 'ehframe' : 2,
@@ -345,12 +349,10 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
       const size_t num_regs = invalidate_reg_list->GetSize();
       if (num_regs > 0) {
         for (uint32_t idx = 0; idx < num_regs; ++idx) {
-          llvm::StringRef invalidate_reg_name;
-          uint64_t invalidate_reg_num;
-          if (invalidate_reg_list->GetItemAtIndexAsString(
-                  idx, invalidate_reg_name)) {
+          if (auto maybe_invalidate_reg_name =
+                  invalidate_reg_list->GetItemAtIndexAsString(idx)) {
             const RegisterInfo *invalidate_reg_info =
-                GetRegisterInfo(invalidate_reg_name);
+                GetRegisterInfo(*maybe_invalidate_reg_name);
             if (invalidate_reg_info) {
               m_invalidate_regs_map[i].push_back(
                   invalidate_reg_info->kinds[eRegisterKindLLDB]);
@@ -359,12 +361,13 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
               // format
               printf("error: failed to find a 'invalidate-regs' register for "
                      "\"%s\" while parsing register \"%s\"\n",
-                     invalidate_reg_name.str().c_str(), reg_info.name);
+                     maybe_invalidate_reg_name->str().c_str(), reg_info.name);
             }
-          } else if (invalidate_reg_list->GetItemAtIndexAsInteger(
-                         idx, invalidate_reg_num)) {
-            if (invalidate_reg_num != UINT64_MAX)
-              m_invalidate_regs_map[i].push_back(invalidate_reg_num);
+          } else if (auto maybe_invalidate_reg_num =
+                         invalidate_reg_list->GetItemAtIndexAsInteger<uint64_t>(
+                             idx)) {
+            if (*maybe_invalidate_reg_num != UINT64_MAX)
+              m_invalidate_regs_map[i].push_back(*maybe_invalidate_reg_num);
             else
               printf("error: 'invalidate-regs' list value wasn't a valid "
                      "integer\n");

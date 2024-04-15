@@ -48,7 +48,6 @@
 #include <cassert>
 #include <iterator>
 #include <map>
-#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -95,7 +94,7 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
       // Since most private -> public mappings happen in a verbatim way, we
       // check textually here. This might go wrong in presence of symlinks or
       // header mappings. But that's not different than rest of the places.
-      if (AST.tuPath().endswith(PHeader))
+      if (AST.tuPath().ends_with(PHeader))
         return false;
     }
   }
@@ -112,21 +111,15 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
 
 std::vector<Diag> generateMissingIncludeDiagnostics(
     ParsedAST &AST, llvm::ArrayRef<MissingIncludeDiagInfo> MissingIncludes,
-    llvm::StringRef Code, HeaderFilter IgnoreHeaders) {
+    llvm::StringRef Code, HeaderFilter IgnoreHeaders, const ThreadsafeFS &TFS) {
   std::vector<Diag> Result;
   const SourceManager &SM = AST.getSourceManager();
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
 
-  auto FileStyle = format::getStyle(
-      format::DefaultFormatStyle, AST.tuPath(), format::DefaultFallbackStyle,
-      Code, &SM.getFileManager().getVirtualFileSystem());
-  if (!FileStyle) {
-    elog("Couldn't infer style", FileStyle.takeError());
-    FileStyle = format::getLLVMStyle();
-  }
+  auto FileStyle = getFormatStyleForFile(AST.tuPath(), Code, TFS, false);
 
   tooling::HeaderIncludes HeaderIncludes(AST.tuPath(), Code,
-                                         FileStyle->IncludeStyle);
+                                         FileStyle.IncludeStyle);
   for (const auto &SymbolWithMissingInclude : MissingIncludes) {
     llvm::StringRef ResolvedPath =
         SymbolWithMissingInclude.Providers.front().resolvedPath();
@@ -237,18 +230,6 @@ removeAllUnusedIncludes(llvm::ArrayRef<Diag> UnusedIncludes) {
                            Diag.Fixes.front().Edits.begin(),
                            Diag.Fixes.front().Edits.end());
   }
-
-  // TODO(hokein): emit a suitable text for the label.
-  ChangeAnnotation Annotation = {/*label=*/"",
-                                 /*needsConfirmation=*/true,
-                                 /*description=*/""};
-  static const ChangeAnnotationIdentifier RemoveAllUnusedID =
-      "RemoveAllUnusedIncludes";
-  for (unsigned I = 0; I < RemoveAll.Edits.size(); ++I) {
-    ChangeAnnotationIdentifier ID = RemoveAllUnusedID + std::to_string(I);
-    RemoveAll.Edits[I].annotationId = ID;
-    RemoveAll.Annotations.push_back({ID, Annotation});
-  }
   return RemoveAll;
 }
 
@@ -268,20 +249,8 @@ addAllMissingIncludes(llvm::ArrayRef<Diag> MissingIncludeDiags) {
       Edits.try_emplace(Edit.newText, Edit);
     }
   }
-  // FIXME(hokein): emit used symbol reference in the annotation.
-  ChangeAnnotation Annotation = {/*label=*/"",
-                                 /*needsConfirmation=*/true,
-                                 /*description=*/""};
-  static const ChangeAnnotationIdentifier AddAllMissingID =
-      "AddAllMissingIncludes";
-  unsigned I = 0;
-  for (auto &It : Edits) {
-    ChangeAnnotationIdentifier ID = AddAllMissingID + std::to_string(I++);
+  for (auto &It : Edits)
     AddAllMissing.Edits.push_back(std::move(It.second));
-    AddAllMissing.Edits.back().annotationId = ID;
-
-    AddAllMissing.Annotations.push_back({ID, Annotation});
-  }
   return AddAllMissing;
 }
 Fix fixAll(const Fix &RemoveAllUnused, const Fix &AddAllMissing) {
@@ -292,11 +261,6 @@ Fix fixAll(const Fix &RemoveAllUnused, const Fix &AddAllMissing) {
     FixAll.Edits.push_back(F);
   for (const auto &F : AddAllMissing.Edits)
     FixAll.Edits.push_back(F);
-
-  for (const auto &A : RemoveAllUnused.Annotations)
-    FixAll.Annotations.push_back(A);
-  for (const auto &A : AddAllMissing.Annotations)
-    FixAll.Annotations.push_back(A);
   return FixAll;
 }
 
@@ -311,7 +275,7 @@ getUnused(ParsedAST &AST,
     auto IncludeID = static_cast<IncludeStructure::HeaderID>(*MFI.HeaderID);
     if (ReferencedFiles.contains(IncludeID))
       continue;
-    if (!mayConsiderUnused(MFI, AST, AST.getPragmaIncludes().get())) {
+    if (!mayConsiderUnused(MFI, AST, &AST.getPragmaIncludes())) {
       dlog("{0} was not used, but is not eligible to be diagnosed as unused",
            MFI.Written);
       continue;
@@ -397,13 +361,13 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   std::vector<MissingIncludeDiagInfo> MissingIncludes;
   llvm::DenseSet<IncludeStructure::HeaderID> Used;
   trace::Span Tracer("include_cleaner::walkUsed");
-  const DirectoryEntry *ResourceDir = AST.getPreprocessor()
-                                .getHeaderSearchInfo()
-                                .getModuleMap()
-                                .getBuiltinDir();
+  OptionalDirectoryEntryRef ResourceDir = AST.getPreprocessor()
+                                              .getHeaderSearchInfo()
+                                              .getModuleMap()
+                                              .getBuiltinDir();
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), /*MacroRefs=*/Macros,
-      AST.getPragmaIncludes().get(), AST.getPreprocessor(),
+      &AST.getPragmaIncludes(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         bool Satisfied = false;
@@ -489,6 +453,7 @@ bool isPreferredProvider(const Inclusion &Inc,
 std::vector<Diag>
 issueIncludeCleanerDiagnostics(ParsedAST &AST, llvm::StringRef Code,
                                const IncludeCleanerFindings &Findings,
+                               const ThreadsafeFS &TFS,
                                HeaderFilter IgnoreHeaders) {
   trace::Span Tracer("IncludeCleaner::issueIncludeCleanerDiagnostics");
   std::vector<Diag> UnusedIncludes = generateUnusedIncludeDiagnostics(
@@ -496,7 +461,7 @@ issueIncludeCleanerDiagnostics(ParsedAST &AST, llvm::StringRef Code,
   std::optional<Fix> RemoveAllUnused = removeAllUnusedIncludes(UnusedIncludes);
 
   std::vector<Diag> MissingIncludeDiags = generateMissingIncludeDiagnostics(
-      AST, Findings.MissingIncludes, Code, IgnoreHeaders);
+      AST, Findings.MissingIncludes, Code, IgnoreHeaders, TFS);
   std::optional<Fix> AddAllMissing = addAllMissingIncludes(MissingIncludeDiags);
 
   std::optional<Fix> FixAll;

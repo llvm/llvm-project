@@ -23,6 +23,10 @@
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/ArrayRef.h"
 
+namespace mlir {
+class SymbolTable;
+}
+
 namespace fir {
 class KindMapping;
 class FirOpBuilder;
@@ -47,17 +51,21 @@ class CharBlock;
 }
 namespace semantics {
 class Symbol;
+class Scope;
 class DerivedTypeSpec;
 } // namespace semantics
 
 namespace lower {
 class SymMap;
+struct SymbolBox;
 namespace pft {
 struct Variable;
 }
 
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
+using TypeConstructionStack =
+    llvm::DenseMap<const Fortran::semantics::Scope *, mlir::Type>;
 class StatementContext;
 
 using ExprToValueMap = llvm::DenseMap<const SomeExpr *, mlir::Value>;
@@ -117,6 +125,13 @@ public:
   virtual void copyHostAssociateVar(
       const Fortran::semantics::Symbol &sym,
       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
+
+  virtual void copyVar(mlir::Location loc, mlir::Value dst,
+                       mlir::Value src) = 0;
+
+  /// For a given symbol, check if it is present in the inner-most
+  /// level of the symbol map.
+  virtual bool isPresentShallowLookup(Fortran::semantics::Symbol &sym) = 0;
 
   /// Collect the set of symbols with \p flag in \p eval
   /// region if \p collectSymbols is true. Likewise, collect the
@@ -227,6 +242,10 @@ public:
                    const Fortran::semantics::DerivedTypeSpec &typeSpec,
                    fir::RecordType type) = 0;
 
+  /// Get stack of derived type in construction. This is an internal entry point
+  /// for the type conversion utility to allow lowering recursive derived types.
+  virtual TypeConstructionStack &getTypeConstructionStack() = 0;
+
   //===--------------------------------------------------------------------===//
   // Locations
   //===--------------------------------------------------------------------===//
@@ -276,10 +295,28 @@ public:
   // Miscellaneous
   //===--------------------------------------------------------------------===//
 
+  /// Generate IR for Evaluation \p eval.
+  virtual void genEval(pft::Evaluation &eval,
+                       bool unstructuredContext = true) = 0;
+
   /// Return options controlling lowering behavior.
   const Fortran::lower::LoweringOptions &getLoweringOptions() const {
     return loweringOptions;
   }
+
+  /// Find the symbol in one level up of symbol map such as for host-association
+  /// in OpenMP code or return null.
+  virtual Fortran::lower::SymbolBox
+  lookupOneLevelUpSymbol(const Fortran::semantics::Symbol &sym) = 0;
+
+  /// Return the mlir::SymbolTable associated to the ModuleOp.
+  /// Look-ups are faster using it than using module.lookup<>,
+  /// but the module op should be queried in case of failure
+  /// because this symbol table is not guaranteed to contain
+  /// all the symbols from the ModuleOp (the symbol table should
+  /// always be provided to the builder helper creating globals and
+  /// functions in order to be in sync).
+  virtual mlir::SymbolTable *getMLIRSymbolTable() = 0;
 
 private:
   /// Options controlling lowering behavior.

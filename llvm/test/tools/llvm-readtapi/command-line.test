@@ -1,0 +1,20 @@
+; RUN: llvm-readtapi --help 2>&1 | FileCheck %s 
+; RUN: llvm-readtapi -help 2>&1 | FileCheck %s 
+// Check mutually exclusive options.
+; RUN: not llvm-readtapi -merge -compare -compact %t/tmp.tbd %t/tmp2.tbd 2>&1 | FileCheck %s --check-prefix MULTI_ACTION
+// Check unsupported file output format.
+; RUN: not llvm-readtapi -merge -compact %t/tmp.tbd %t/tmp2.tbd --filetype=tbd-v2 2>&1 | FileCheck %s --check-prefix FILE_FORMAT 
+// Check version printing.
+; RUN: llvm-readtapi -v 2>&1 | FileCheck %s --check-prefix VERSION
+; RUN: llvm-readtapi --version 2>&1 | FileCheck %s --check-prefix VERSION
+
+; CHECK: OVERVIEW: LLVM TAPI file reader and transformer 
+; CHECK: USAGE: llvm-readtapi <command> [-arch <architecture> <options>]* <inputs> [-o <output>]*
+; CHECK: COMMANDS:
+; CHECK: OPTIONS:
+; CHECK:   -help    display this help
+
+; MULTI_ACTION: error: only one of the following actions can be specified: -merge -compare
+; FILE_FORMAT: error: deprecated filetype 'tbd-v2' is not supported to write
+
+; VERSION: {{ version }}

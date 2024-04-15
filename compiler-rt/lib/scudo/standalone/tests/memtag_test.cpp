@@ -12,11 +12,16 @@
 #include "platform.h"
 #include "tests/scudo_unit_test.h"
 
+extern "C" void __hwasan_init() __attribute__((weak));
+
 #if SCUDO_LINUX
 namespace scudo {
 
 TEST(MemtagBasicDeathTest, Unsupported) {
   if (archSupportsMemoryTagging())
+    GTEST_SKIP();
+  // Skip when running with HWASan.
+  if (&__hwasan_init != 0)
     GTEST_SKIP();
 
   EXPECT_DEATH(archMemoryTagGranuleSize(), "not supported");
@@ -120,7 +125,15 @@ TEST_F(MemtagTest, SelectRandomTag) {
     uptr Tags = 0;
     for (uptr I = 0; I < 100000; ++I)
       Tags = Tags | (1u << extractTag(selectRandomTag(Ptr, 0)));
-    EXPECT_EQ(0xfffeull, Tags);
+    // std::popcnt is C++20
+    int PopCnt = 0;
+    while (Tags) {
+      PopCnt += Tags & 1;
+      Tags >>= 1;
+    }
+    // Random tags are not always very random, and this test is not about PRNG
+    // quality.  Anything above half would be satisfactory.
+    EXPECT_GE(PopCnt, 8);
   }
 }
 

@@ -55,11 +55,12 @@ static const SymbolHeaderMapping *getMappingPerLang(Lang L) {
 }
 
 static int countSymbols(Lang Language) {
-  ArrayRef<const char*> Symbols;
+  ArrayRef<const char *> Symbols;
 #define SYMBOL(Name, NS, Header) #NS #Name,
   switch (Language) {
   case Lang::C: {
     static constexpr const char *CSymbols[] = {
+#include "CSpecialSymbolMap.inc"
 #include "CSymbolMap.inc"
     };
     Symbols = CSymbols;
@@ -141,10 +142,13 @@ static int initialize(Lang Language) {
     unsigned NSLen;
     const char *HeaderName;
   };
-#define SYMBOL(Name, NS, Header) {#NS #Name, StringRef(#NS).size(), #Header},
+#define SYMBOL(Name, NS, Header)                                               \
+  {#NS #Name, static_cast<decltype(Symbol::NSLen)>(StringRef(#NS).size()),     \
+   #Header},
   switch (Language) {
   case Lang::C: {
     static constexpr Symbol CSymbols[] = {
+#include "CSpecialSymbolMap.inc"
 #include "CSymbolMap.inc"
     };
     for (const Symbol &S : CSymbols)

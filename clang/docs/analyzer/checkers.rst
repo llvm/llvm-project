@@ -213,9 +213,8 @@ Check for undefined results of binary operators.
 
 core.VLASize (C)
 """"""""""""""""
-Check for declarations of Variable Length Arrays of undefined or zero size.
-
- Check for declarations of VLA of undefined or zero size.
+Check for declarations of Variable Length Arrays (VLA) of undefined, zero or negative
+size.
 
 .. code-block:: c
 
@@ -228,6 +227,28 @@ Check for declarations of Variable Length Arrays of undefined or zero size.
    int x = 0;
    int vla2[x]; // warn: zero size
  }
+
+
+The checker also gives warning if the `TaintPropagation` checker is switched on
+and an unbound, attacker controlled (tainted) value is used to define
+the size of the VLA.
+
+.. code-block:: c
+
+ void taintedVLA(void) {
+   int x;
+   scanf("%d", &x);
+   int vla[x]; // Declared variable-length array (VLA) has tainted (attacker controlled) size, that can be 0 or negative
+ }
+
+ void taintedVerfieidVLA(void) {
+   int x;
+   scanf("%d", &x);
+   if (x<1)
+     return;
+   int vla[x]; // no-warning. The analyzer can prove that x must be positive.
+ }
+
 
 .. _core-uninitialized-ArraySubscript:
 
@@ -318,6 +339,51 @@ cplusplus
 ^^^^^^^^^
 
 C++ Checkers.
+
+.. _cplusplus-ArrayDelete:
+
+cplusplus.ArrayDelete (C++)
+"""""""""""""""""""""""""""
+
+Reports destructions of arrays of polymorphic objects that are destructed as
+their base class. If the dynamic type of the array is different from its static
+type, calling `delete[]` is undefined.
+
+This checker corresponds to the SEI CERT rule `EXP51-CPP: Do not delete an array through a pointer of the incorrect type <https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP51-CPP.+Do+not+delete+an+array+through+a+pointer+of+the+incorrect+type>`_.
+
+.. code-block:: cpp
+
+ class Base {
+ public:
+   virtual ~Base() {}
+ };
+ class Derived : public Base {};
+
+ Base *create() {
+   Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
+   return x;
+ }
+
+ void foo() {
+   Base *x = create();
+   delete[] x; // warn: Deleting an array of 'Derived' objects as their base class 'Base' is undefined
+ }
+
+**Limitations**
+
+The checker does not emit note tags when casting to and from reference types,
+even though the pointer values are tracked across references.
+
+.. code-block:: cpp
+
+ void foo() {
+   Derived *d = new Derived[10];
+   Derived &dref = *d;
+
+   Base &bref = static_cast<Base&>(dref); // no note
+   Base *b = &bref;
+   delete[] b; // warn: Deleting an array of 'Derived' objects as their base class 'Base' is undefined
+ }
 
 .. _cplusplus-InnerPointer:
 
@@ -535,6 +601,52 @@ optin
 
 Checkers for portability, performance or coding style specific rules.
 
+.. _optin-core-EnumCastOutOfRange:
+
+optin.core.EnumCastOutOfRange (C, C++)
+""""""""""""""""""""""""""""""""""""""
+Check for integer to enumeration casts that would produce a value with no
+corresponding enumerator. This is not necessarily undefined behavior, but can
+lead to nasty surprises, so projects may decide to use a coding standard that
+disallows these "unusual" conversions.
+
+Note that no warnings are produced when the enum type (e.g. `std::byte`) has no
+enumerators at all.
+
+.. code-block:: cpp
+
+ enum WidgetKind { A=1, B, C, X=99 };
+
+ void foo() {
+   WidgetKind c = static_cast<WidgetKind>(3);  // OK
+   WidgetKind x = static_cast<WidgetKind>(99); // OK
+   WidgetKind d = static_cast<WidgetKind>(4);  // warn
+ }
+
+**Limitations**
+
+This checker does not accept the coding pattern where an enum type is used to
+store combinations of flag values:
+
+.. code-block:: cpp
+
+ enum AnimalFlags
+ {
+     HasClaws   = 1,
+     CanFly     = 2,
+     EatsFish   = 4,
+     Endangered = 8
+ };
+
+ AnimalFlags operator|(AnimalFlags a, AnimalFlags b)
+ {
+     return static_cast<AnimalFlags>(static_cast<int>(a) | static_cast<int>(b));
+ }
+
+ auto flags = HasClaws | CanFly;
+
+Projects that use this pattern should not enable this optin checker.
+
 .. _optin-cplusplus-UninitializedObject:
 
 optin.cplusplus.UninitializedObject (C++)
@@ -737,9 +849,88 @@ Check for performance anti-patterns when using Grand Central Dispatch.
 
 .. _optin-performance-Padding:
 
-optin.performance.Padding
-"""""""""""""""""""""""""
+optin.performance.Padding (C, C++, ObjC)
+""""""""""""""""""""""""""""""""""""""""
 Check for excessively padded structs.
+
+This checker detects structs with excessive padding, which can lead to wasted
+memory thus decreased performance by reducing the effectiveness of the
+processor cache. Padding bytes are added by compilers to align data accesses
+as some processors require data to be aligned to certain boundaries. On others,
+unaligned data access are possible, but impose significantly larger latencies.
+
+To avoid padding bytes, the fields of a struct should be ordered by decreasing
+by alignment. Usually, its easier to think of the ``sizeof`` of the fields, and
+ordering the fields by ``sizeof`` would usually also lead to the same optimal
+layout.
+
+In rare cases, one can use the ``#pragma pack(1)`` directive to enforce a packed
+layout too, but it can significantly increase the access times, so reordering the
+fields is usually a better solution.
+
+
+.. code-block:: cpp
+
+ // warn: Excessive padding in 'struct NonOptimal' (35 padding bytes, where 3 is optimal)
+ struct NonOptimal {
+   char c1;
+   // 7 bytes of padding
+   std::int64_t big1; // 8 bytes
+   char c2;
+   // 7 bytes of padding
+   std::int64_t big2; // 8 bytes
+   char c3;
+   // 7 bytes of padding
+   std::int64_t big3; // 8 bytes
+   char c4;
+   // 7 bytes of padding
+   std::int64_t big4; // 8 bytes
+   char c5;
+   // 7 bytes of padding
+ };
+ static_assert(sizeof(NonOptimal) == 4*8+5+5*7);
+
+ // no-warning: The fields are nicely aligned to have the minimal amount of padding bytes.
+ struct Optimal {
+   std::int64_t big1; // 8 bytes
+   std::int64_t big2; // 8 bytes
+   std::int64_t big3; // 8 bytes
+   std::int64_t big4; // 8 bytes
+   char c1;
+   char c2;
+   char c3;
+   char c4;
+   char c5;
+   // 3 bytes of padding
+ };
+ static_assert(sizeof(Optimal) == 4*8+5+3);
+
+ // no-warning: Bit packing representation is also accepted by this checker, but
+ // it can significantly increase access times, so prefer reordering the fields.
+ #pragma pack(1)
+ struct BitPacked {
+   char c1;
+   std::int64_t big1; // 8 bytes
+   char c2;
+   std::int64_t big2; // 8 bytes
+   char c3;
+   std::int64_t big3; // 8 bytes
+   char c4;
+   std::int64_t big4; // 8 bytes
+   char c5;
+ };
+ static_assert(sizeof(BitPacked) == 4*8+5);
+
+The ``AllowedPad`` option can be used to specify a threshold for the number
+padding bytes raising the warning. If the number of padding bytes of the struct
+and the optimal number of padding bytes differ by more than the threshold value,
+a warning will be raised.
+
+By default, the ``AllowedPad`` threshold is 24 bytes.
+
+To override this threshold to e.g. 4 bytes, use the
+``-analyzer-config optin.performance.Padding:AllowedPad=4`` option.
+
 
 .. _optin-portability-UnixAPI:
 
@@ -754,6 +945,75 @@ security
 ^^^^^^^^
 
 Security related checkers.
+
+.. _security-cert-env-InvalidPtr:
+
+security.cert.env.InvalidPtr
+""""""""""""""""""""""""""""""""""
+
+Corresponds to SEI CERT Rules `ENV31-C <https://wiki.sei.cmu.edu/confluence/display/c/ENV31-C.+Do+not+rely+on+an+environment+pointer+following+an+operation+that+may+invalidate+it>`_ and `ENV34-C <https://wiki.sei.cmu.edu/confluence/display/c/ENV34-C.+Do+not+store+pointers+returned+by+certain+functions>`_.
+
+* **ENV31-C**:
+  Rule is about the possible problem with ``main`` function's third argument, environment pointer,
+  "envp". When environment array is modified using some modification function
+  such as ``putenv``, ``setenv`` or others, It may happen that memory is reallocated,
+  however "envp" is not updated to reflect the changes and points to old memory
+  region.
+
+* **ENV34-C**:
+  Some functions return a pointer to a statically allocated buffer.
+  Consequently, subsequent call of these functions will invalidate previous
+  pointer. These functions include: ``getenv``, ``localeconv``, ``asctime``, ``setlocale``, ``strerror``
+
+.. code-block:: c
+
+  int main(int argc, const char *argv[], const char *envp[]) {
+    if (setenv("MY_NEW_VAR", "new_value", 1) != 0) {
+      // setenv call may invalidate 'envp'
+      /* Handle error */
+    }
+    if (envp != NULL) {
+      for (size_t i = 0; envp[i] != NULL; ++i) {
+        puts(envp[i]);
+        // envp may no longer point to the current environment
+        // this program has unanticipated behavior, since envp
+        // does not reflect changes made by setenv function.
+      }
+    }
+    return 0;
+  }
+
+  void previous_call_invalidation() {
+    char *p, *pp;
+
+    p = getenv("VAR");
+    setenv("SOMEVAR", "VALUE", /*overwrite = */1);
+    // call to 'setenv' may invalidate p
+
+    *p;
+    // dereferencing invalid pointer
+  }
+
+
+The ``InvalidatingGetEnv`` option is available for treating ``getenv`` calls as
+invalidating. When enabled, the checker issues a warning if ``getenv`` is called
+multiple times and their results are used without first creating a copy.
+This level of strictness might be considered overly pedantic for the commonly
+used ``getenv`` implementations.
+
+To enable this option, use:
+``-analyzer-config security.cert.env.InvalidPtr:InvalidatingGetEnv=true``.
+
+By default, this option is set to *false*.
+
+When this option is enabled, warnings will be generated for scenarios like the
+following:
+
+.. code-block:: c
+
+  char* p = getenv("VAR");
+  char* pp = getenv("VAR2"); // assumes this call can invalidate `env`
+  strlen(p); // warns about accessing invalid ptr
 
 .. _security-FloatLoopCounter:
 
@@ -910,7 +1170,7 @@ security.insecureAPI.vfork (C)
 
 security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""
- Warn on occurrences of unsafe or deprecated buffer handling functions, which now have a secure variant: ``sprintf, vsprintf, scanf, wscanf, fscanf, fwscanf, vscanf, vwscanf, vfscanf, vfwscanf, sscanf, swscanf, vsscanf, vswscanf, swprintf, snprintf, vswprintf, vsnprintf, memcpy, memmove, strncpy, strncat, memset``
+ Warn on occurrences of unsafe or deprecated buffer handling functions, which now have a secure variant: ``sprintf, fprintf, vsprintf, scanf, wscanf, fscanf, fwscanf, vscanf, vwscanf, vfscanf, vfwscanf, sscanf, swscanf, vsscanf, vswscanf, swprintf, snprintf, vswprintf, vsnprintf, memcpy, memmove, strncpy, strncat, memset``
 
 .. code-block:: c
 
@@ -933,6 +1193,76 @@ Check calls to various UNIX/Posix functions: ``open, pthread_once, calloc, mallo
 
 .. literalinclude:: checkers/unix_api_example.c
     :language: c
+
+.. _unix-Errno:
+
+unix.Errno (C)
+""""""""""""""
+
+Check for improper use of ``errno``.
+This checker implements partially CERT rule
+`ERR30-C. Set errno to zero before calling a library function known to set errno,
+and check errno only after the function returns a value indicating failure
+<https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152351>`_.
+The checker can find the first read of ``errno`` after successful standard
+function calls.
+
+The C and POSIX standards often do not define if a standard library function
+may change value of ``errno`` if the call does not fail.
+Therefore, ``errno`` should only be used if it is known from the return value
+of a function that the call has failed.
+There are exceptions to this rule (for example ``strtol``) but the affected
+functions are not yet supported by the checker.
+The return values for the failure cases are documented in the standard Linux man
+pages of the functions and in the `POSIX standard <https://pubs.opengroup.org/onlinepubs/9699919799/>`_.
+
+.. code-block:: c
+
+ int unsafe_errno_read(int sock, void *data, int data_size) {
+   if (send(sock, data, data_size, 0) != data_size) {
+     // 'send' can be successful even if not all data was sent
+     if (errno == 1) { // An undefined value may be read from 'errno'
+       return 0;
+     }
+   }
+   return 1;
+ }
+
+The checker :ref:`unix-StdCLibraryFunctions` must be turned on to get the
+warnings from this checker. The supported functions are the same as by
+:ref:`unix-StdCLibraryFunctions`. The ``ModelPOSIX`` option of that
+checker affects the set of checked functions.
+
+**Parameters**
+
+The ``AllowErrnoReadOutsideConditionExpressions`` option allows read of the
+errno value if the value is not used in a condition (in ``if`` statements,
+loops, conditional expressions, ``switch`` statements). For example ``errno``
+can be stored into a variable without getting a warning by the checker.
+
+.. code-block:: c
+
+ int unsafe_errno_read(int sock, void *data, int data_size) {
+   if (send(sock, data, data_size, 0) != data_size) {
+     int err = errno;
+     // warning if 'AllowErrnoReadOutsideConditionExpressions' is false
+     // no warning if 'AllowErrnoReadOutsideConditionExpressions' is true
+   }
+   return 1;
+ }
+
+Default value of this option is ``true``. This allows save of the errno value
+for possible later error handling.
+
+**Limitations**
+
+ - Only the very first usage of ``errno`` is checked after an affected function
+   call. Value of ``errno`` is not followed when it is stored into a variable
+   or returned from a function.
+ - Documentation of function ``lseek`` is not clear about what happens if the
+   function returns different value than the expected file position but not -1.
+   To avoid possible false-positives ``errno`` is allowed to be used in this
+   case.
 
 .. _unix-Malloc:
 
@@ -1098,7 +1428,7 @@ state of the value ``errno`` if applicable to the analysis. Many system
 functions set the ``errno`` value only if an error occurs (together with a
 specific return value of the function), otherwise it becomes undefined. This
 checker changes the analysis state to contain such information. This data is
-used by other checkers, for example :ref:`alpha-unix-Errno`.
+used by other checkers, for example :ref:`unix-Errno`.
 
 **Limitations**
 
@@ -1114,10 +1444,23 @@ range of the argument.
 
 **Parameters**
 
-The checker models functions (and emits diagnostics) from the C standard by
-default. The ``ModelPOSIX`` option enables modeling (and emit diagnostics) of
-additional functions that are defined in the POSIX standard. This option is
-disabled by default.
+The ``ModelPOSIX`` option controls if functions from the POSIX standard are
+recognized by the checker.
+
+With ``ModelPOSIX=true``, many POSIX functions are modeled according to the
+`POSIX standard`_. This includes ranges of parameters and possible return
+values. Furthermore the behavior related to ``errno`` in the POSIX case is
+often that ``errno`` is set only if a function call fails, and it becomes
+undefined after a successful function call.
+
+With ``ModelPOSIX=false``, this checker follows the C99 language standard and
+only models the functions that are described there. It is possible that the
+same functions are modeled differently in the two cases because differences in
+the standards. The C standard specifies less aspects of the functions, for
+example exact ``errno`` behavior is often unspecified (and not modeled by the
+checker).
+
+Default value of the option is ``true``.
 
 .. _osx-checkers:
 
@@ -1705,28 +2048,6 @@ the locking/unlocking of ``mtx_t`` mutexes.
    mtx_lock(&mtx1); // warn: This lock has already been acquired
  }
 
-.. _alpha-core-CallAndMessageUnInitRefArg:
-
-alpha.core.CallAndMessageUnInitRefArg (C,C++, ObjC)
-"""""""""""""""""""""""""""""""""""""""""""""""""""
-Check for logical errors for function calls and Objective-C
-message expressions (e.g., uninitialized arguments, null function pointers, and pointer to undefined variables).
-
-.. code-block:: c
-
- void test(void) {
-   int t;
-   int &p = t;
-   int &s = p;
-   int &q = s;
-   foo(q); // warn
- }
-
- void test(void) {
-   int x;
-   foo(&x); // warn
- }
-
 .. _alpha-core-CastSize:
 
 alpha.core.CastSize (C)
@@ -1910,6 +2231,21 @@ This checker is a part of ``core.StackAddressEscape``, but is temporarily disabl
                  //       returned block
  }
 
+.. _alpha-core-StdVariant:
+
+alpha.core.StdVariant (C++)
+"""""""""""""""""""""""""""
+Check if a value of active type is retrieved from an ``std::variant`` instance with ``std::get``.
+In case of bad variant type access (the accessed type differs from the active type)
+a warning is emitted. Currently, this checker does not take exception handling into account.
+
+.. code-block:: cpp
+
+ void test() {
+   std::variant<int, char> v = 25;
+   char c = stg::get<char>(v); // warn: "int" is the active alternative
+ }
+
 .. _alpha-core-TestAfterDivZero:
 
 alpha.core.TestAfterDivZero (C)
@@ -1926,30 +2262,6 @@ Either the comparison is useless or there is division by zero.
 
 alpha.cplusplus
 ^^^^^^^^^^^^^^^
-
-.. _alpha-cplusplus-ArrayDelete:
-
-alpha.cplusplus.ArrayDelete (C++)
-"""""""""""""""""""""""""""""""""
-Reports destructions of arrays of polymorphic objects that are destructed as their base class.
-This checker corresponds to the CERT rule `EXP51-CPP: Do not delete an array through a pointer of the incorrect type <https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP51-CPP.+Do+not+delete+an+array+through+a+pointer+of+the+incorrect+type>`_.
-
-.. code-block:: cpp
-
- class Base {
-   virtual ~Base() {}
- };
- class Derived : public Base {}
-
- Base *create() {
-   Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
-   return x;
- }
-
- void foo() {
-   Base *x = create();
-   delete[] x; // warn: Deleting an array of 'Derived' objects as their base class 'Base' is undefined
- }
 
 .. _alpha-cplusplus-DeleteWithNonVirtualDtor:
 
@@ -1973,23 +2285,6 @@ Reports destructions of polymorphic objects with a non-virtual destructor in the
    delete x; // warn: destruction of a polymorphic object with no virtual
              //       destructor
  }
-
-.. _alpha-cplusplus-EnumCastOutOfRange:
-
-alpha.cplusplus.EnumCastOutOfRange (C++)
-""""""""""""""""""""""""""""""""""""""""
-Check for integer to enumeration casts that could result in undefined values.
-
-.. code-block:: cpp
-
- enum TestEnum {
-   A = 0
- };
-
- void foo() {
-   TestEnum t = static_cast(-1);
-       // warn: the value provided to the cast expression is not in
-       //       the valid range of values for the enum
 
 .. _alpha-cplusplus-InvalidatedIterator:
 
@@ -2479,75 +2774,6 @@ alpha.security.cert.env
 
 SEI CERT checkers of `Environment C coding rules <https://wiki.sei.cmu.edu/confluence/x/JdcxBQ>`_.
 
-.. _alpha-security-cert-env-InvalidPtr:
-
-alpha.security.cert.env.InvalidPtr
-""""""""""""""""""""""""""""""""""
-
-Corresponds to SEI CERT Rules ENV31-C and ENV34-C.
-
-ENV31-C:
-Rule is about the possible problem with `main` function's third argument, environment pointer,
-"envp". When environment array is modified using some modification function
-such as putenv, setenv or others, It may happen that memory is reallocated,
-however "envp" is not updated to reflect the changes and points to old memory
-region.
-
-ENV34-C:
-Some functions return a pointer to a statically allocated buffer.
-Consequently, subsequent call of these functions will invalidate previous
-pointer. These functions include: getenv, localeconv, asctime, setlocale, strerror
-
-.. code-block:: c
-
-  int main(int argc, const char *argv[], const char *envp[]) {
-    if (setenv("MY_NEW_VAR", "new_value", 1) != 0) {
-      // setenv call may invalidate 'envp'
-      /* Handle error */
-    }
-    if (envp != NULL) {
-      for (size_t i = 0; envp[i] != NULL; ++i) {
-        puts(envp[i]);
-        // envp may no longer point to the current environment
-        // this program has unanticipated behavior, since envp
-        // does not reflect changes made by setenv function.
-      }
-    }
-    return 0;
-  }
-
-  void previous_call_invalidation() {
-    char *p, *pp;
-
-    p = getenv("VAR");
-    setenv("SOMEVAR", "VALUE", /*overwrite = */1);
-    // call to 'setenv' may invalidate p
-
-    *p;
-    // dereferencing invalid pointer
-  }
-
-
-The ``InvalidatingGetEnv`` option is available for treating getenv calls as
-invalidating. When enabled, the checker issues a warning if getenv is called
-multiple times and their results are used without first creating a copy.
-This level of strictness might be considered overly pedantic for the commonly
-used getenv implementations.
-
-To enable this option, use:
-``-analyzer-config alpha.security.cert.env.InvalidPtr:InvalidatingGetEnv=true``.
-
-By default, this option is set to *false*.
-
-When this option is enabled, warnings will be generated for scenarios like the
-following:
-
-.. code-block:: c
-
-  char* p = getenv("VAR");
-  char* pp = getenv("VAR2"); // assumes this call can invalidate `env`
-  strlen(p); // warns about accessing invalid ptr
-
 alpha.security.taint
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -2826,76 +3052,6 @@ Check improper use of chroot.
    f(); // warn: no call of chdir("/") immediately after chroot
  }
 
-.. _alpha-unix-Errno:
-
-alpha.unix.Errno (C)
-""""""""""""""""""""
-
-Check for improper use of ``errno``.
-This checker implements partially CERT rule
-`ERR30-C. Set errno to zero before calling a library function known to set errno,
-and check errno only after the function returns a value indicating failure
-<https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152351>`_.
-The checker can find the first read of ``errno`` after successful standard
-function calls.
-
-The C and POSIX standards often do not define if a standard library function
-may change value of ``errno`` if the call does not fail.
-Therefore, ``errno`` should only be used if it is known from the return value
-of a function that the call has failed.
-There are exceptions to this rule (for example ``strtol``) but the affected
-functions are not yet supported by the checker.
-The return values for the failure cases are documented in the standard Linux man
-pages of the functions and in the `POSIX standard <https://pubs.opengroup.org/onlinepubs/9699919799/>`_.
-
-.. code-block:: c
-
- int unsafe_errno_read(int sock, void *data, int data_size) {
-   if (send(sock, data, data_size, 0) != data_size) {
-     // 'send' can be successful even if not all data was sent
-     if (errno == 1) { // An undefined value may be read from 'errno'
-       return 0;
-     }
-   }
-   return 1;
- }
-
-The checker :ref:`unix-StdCLibraryFunctions` must be turned on to get the
-warnings from this checker. The supported functions are the same as by
-:ref:`unix-StdCLibraryFunctions`. The ``ModelPOSIX`` option of that
-checker affects the set of checked functions.
-
-**Parameters**
-
-The ``AllowErrnoReadOutsideConditionExpressions`` option allows read of the
-errno value if the value is not used in a condition (in ``if`` statements,
-loops, conditional expressions, ``switch`` statements). For example ``errno``
-can be stored into a variable without getting a warning by the checker.
-
-.. code-block:: c
-
- int unsafe_errno_read(int sock, void *data, int data_size) {
-   if (send(sock, data, data_size, 0) != data_size) {
-     int err = errno;
-     // warning if 'AllowErrnoReadOutsideConditionExpressions' is false
-     // no warning if 'AllowErrnoReadOutsideConditionExpressions' is true
-   }
-   return 1;
- }
-
-Default value of this option is ``true``. This allows save of the errno value
-for possible later error handling.
-
-**Limitations**
-
- - Only the very first usage of ``errno`` is checked after an affected function
-   call. Value of ``errno`` is not followed when it is stored into a variable
-   or returned from a function.
- - Documentation of function ``lseek`` is not clear about what happens if the
-   function returns different value than the expected file position but not -1.
-   To avoid possible false-positives ``errno`` is allowed to be used in this
-   case.
-
 .. _alpha-unix-PthreadLock:
 
 alpha.unix.PthreadLock (C)
@@ -2964,43 +3120,94 @@ Check for misuses of stream APIs. Check for misuses of stream APIs: ``fopen, fcl
 
 alpha.unix.Stream (C)
 """""""""""""""""""""
-Check stream handling functions: ``fopen, tmpfile, fclose, fread, fwrite, fseek, ftell, rewind, fgetpos,``
-``fsetpos, clearerr, feof, ferror, fileno``.
+Check C stream handling functions:
+``fopen, fdopen, freopen, tmpfile, fclose, fread, fwrite, fgetc, fgets, fputc, fputs, fprintf, fscanf, ungetc, getdelim, getline, fseek, fseeko, ftell, ftello, fflush, rewind, fgetpos, fsetpos, clearerr, feof, ferror, fileno``.
+
+The checker maintains information about the C stream objects (``FILE *``) and
+can detect error conditions related to use of streams. The following conditions
+are detected:
+
+* The ``FILE *`` pointer passed to the function is NULL (the single exception is
+  ``fflush`` where NULL is allowed).
+* Use of stream after close.
+* Opened stream is not closed.
+* Read from a stream after end-of-file. (This is not a fatal error but reported
+  by the checker. Stream remains in EOF state and the read operation fails.)
+* Use of stream when the file position is indeterminate after a previous failed
+  operation. Some functions (like ``ferror``, ``clearerr``, ``fseek``) are
+  allowed in this state.
+* Invalid 3rd ("``whence``") argument to ``fseek``.
+
+The stream operations are by this checker usually split into two cases, a success
+and a failure case. However, in the case of write operations (like ``fwrite``,
+``fprintf`` and even ``fsetpos``) this behavior could produce a large amount of
+unwanted reports on projects that don't have error checks around the write
+operations, so by default the checker assumes that write operations always succeed.
+This behavior can be controlled by the ``Pedantic`` flag: With
+``-analyzer-config alpha.unix.Stream:Pedantic=true`` the checker will model the
+cases where a write operation fails and report situations where this leads to
+erroneous behavior. (The default is ``Pedantic=false``, where write operations
+are assumed to succeed.)
 
 .. code-block:: c
 
- void test() {
+ void test1() {
    FILE *p = fopen("foo", "r");
  } // warn: opened file is never closed
 
- void test() {
+ void test2() {
    FILE *p = fopen("foo", "r");
    fseek(p, 1, SEEK_SET); // warn: stream pointer might be NULL
    fclose(p);
  }
 
- void test() {
+ void test3() {
    FILE *p = fopen("foo", "r");
-
-   if (p)
-     fseek(p, 1, 3);
-      // warn: third arg should be SEEK_SET, SEEK_END, or SEEK_CUR
-
-   fclose(p);
+   if (p) {
+     fseek(p, 1, 3); // warn: third arg should be SEEK_SET, SEEK_END, or SEEK_CUR
+     fclose(p);
+   }
  }
 
- void test() {
+ void test4() {
    FILE *p = fopen("foo", "r");
+   if (!p)
+     return;
+
    fclose(p);
-   fclose(p); // warn: already closed
+   fclose(p); // warn: stream already closed
  }
 
- void test() {
-   FILE *p = tmpfile();
-   ftell(p); // warn: stream pointer might be NULL
+ void test5() {
+   FILE *p = fopen("foo", "r");
+   if (!p)
+     return;
+
+   fgetc(p);
+   if (!ferror(p))
+     fgetc(p); // warn: possible read after end-of-file
+
    fclose(p);
  }
 
+ void test6() {
+   FILE *p = fopen("foo", "r");
+   if (!p)
+     return;
+
+   fgetc(p);
+   if (!feof(p))
+     fgetc(p); // warn: file position may be indeterminate after I/O error
+
+   fclose(p);
+ }
+
+**Limitations**
+
+The checker does not track the correspondence between integer file descriptors
+and ``FILE *`` pointers. Operations on standard streams like ``stdin`` are not
+treated specially and are therefore often not recognized (because these streams
+are usually not opened explicitly by the program, and are global variables).
 
 .. _alpha-unix-cstring-BufferOverlap:
 

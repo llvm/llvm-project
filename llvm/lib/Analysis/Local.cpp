@@ -36,16 +36,10 @@ Value *llvm::emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
       Result = Offset;
   };
 
-  // Build a mask for high order bits.
-  unsigned IntPtrWidth = IntIdxTy->getScalarType()->getIntegerBitWidth();
-  uint64_t PtrSizeMask =
-      std::numeric_limits<uint64_t>::max() >> (64 - IntPtrWidth);
-
   gep_type_iterator GTI = gep_type_begin(GEP);
   for (User::op_iterator i = GEP->op_begin() + 1, e = GEP->op_end(); i != e;
        ++i, ++GTI) {
     Value *Op = *i;
-    uint64_t Size = DL.getTypeAllocSize(GTI.getIndexedType()) & PtrSizeMask;
     if (Constant *OpC = dyn_cast<Constant>(Op)) {
       if (OpC->isZeroValue())
         continue;
@@ -53,7 +47,7 @@ Value *llvm::emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
       // Handle a struct index, which adds its field offset to the pointer.
       if (StructType *STy = GTI.getStructTypeOrNull()) {
         uint64_t OpValue = OpC->getUniqueInteger().getZExtValue();
-        Size = DL.getStructLayout(STy)->getElementOffset(OpValue);
+        uint64_t Size = DL.getStructLayout(STy)->getElementOffset(OpValue);
         if (!Size)
           continue;
 
@@ -65,15 +59,19 @@ Value *llvm::emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
     // Splat the index if needed.
     if (IntIdxTy->isVectorTy() && !Op->getType()->isVectorTy())
       Op = Builder->CreateVectorSplat(
-          cast<FixedVectorType>(IntIdxTy)->getNumElements(), Op);
+          cast<VectorType>(IntIdxTy)->getElementCount(), Op);
 
     // Convert to correct type.
     if (Op->getType() != IntIdxTy)
       Op = Builder->CreateIntCast(Op, IntIdxTy, true, Op->getName() + ".c");
-    if (Size != 1) {
+    TypeSize TSize = GTI.getSequentialElementStride(DL);
+    if (TSize != TypeSize::getFixed(1)) {
+      Value *Scale = Builder->CreateTypeSize(IntIdxTy->getScalarType(), TSize);
+      if (IntIdxTy->isVectorTy())
+        Scale = Builder->CreateVectorSplat(
+            cast<VectorType>(IntIdxTy)->getElementCount(), Scale);
       // We'll let instcombine(mul) convert this to a shl if possible.
-      Op = Builder->CreateMul(Op, ConstantInt::get(IntIdxTy, Size),
-                              GEP->getName() + ".idx", false /*NUW*/,
+      Op = Builder->CreateMul(Op, Scale, GEP->getName() + ".idx", false /*NUW*/,
                               isInBounds /*NSW*/);
     }
     AddOffset(Op);

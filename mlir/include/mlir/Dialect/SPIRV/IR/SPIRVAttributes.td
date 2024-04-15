@@ -48,7 +48,7 @@ def SPIRV_CapabilityArrayAttr : TypedArrayAttrBase<
 
 def SPIRV_LinkageAttributesAttr : SPIRV_Attr<"LinkageAttributes", "linkage_attributes"> {
   let parameters = (ins
-    "std::string":$linkage_name,
+    "StringAttr":$linkage_name,
     "mlir::spirv::LinkageTypeAttr":$linkage_type
   );
   let assemblyFormat = "`<` struct(params) `>`";

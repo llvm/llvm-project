@@ -156,6 +156,18 @@ func.func @clone_and_cast(%arg0: memref<?xf32>) -> memref<32xf32> {
 
 // -----
 
+// CHECK-LABEL: @clone_incompatible
+func.func @clone_incompatible(%arg0: memref<32xf32, strided<[2]>>) -> memref<32xf32> {
+  %0 = bufferization.clone %arg0 : memref<32xf32, strided<[2]>> to memref<32xf32>
+  memref.dealloc %arg0 : memref<32xf32, strided<[2]>>
+  return %0 : memref<32xf32>
+}
+// CHECK-SAME: %[[ARG:.*]]: memref<32xf32, strided<[2]>>
+// CHECK-NEXT: bufferization.clone %[[ARG]] : memref<32xf32, strided<[2]>> to memref<32xf32>
+// CHECK-NOT: memref.cast
+
+// -----
+
 // CHECK-LABEL: @alias_is_freed
 func.func @alias_is_freed(%arg0 : memref<?xf32>) {
   %0 = memref.cast %arg0 : memref<?xf32> to memref<32xf32>
@@ -217,6 +229,18 @@ func.func @clone_and_realloc(%arg0: memref<?xf32>) {
   %1 = memref.realloc %0 : memref<32xf32> to memref<64xf32>
   memref.dealloc %1 : memref<64xf32>
   return
+}
+// CHECK-SAME: %[[ARG:.*]]: memref<?xf32>
+// CHECK-NOT: %cast = memref.cast %[[ARG]]
+
+// -----
+
+// Verify SimplifyClones skips clones with preceding deallocation.
+// CHECK-LABEL: @clone_and_preceding_dealloc
+func.func @clone_and_preceding_dealloc(%arg0: memref<?xf32>) -> memref<32xf32> {
+  memref.dealloc %arg0 : memref<?xf32>
+  %0 = bufferization.clone %arg0 : memref<?xf32> to memref<32xf32>
+  return %0 : memref<32xf32>
 }
 // CHECK-SAME: %[[ARG:.*]]: memref<?xf32>
 // CHECK-NOT: %cast = memref.cast %[[ARG]]
@@ -351,3 +375,16 @@ func.func @dealloc_base_memref_extract_of_alloc(%arg0: memref<2xi32>) {
 //  CHECK-SAME:([[ARG0:%.+]]: memref<2xi32>)
 //   CHECK-NOT: memref.alloc(
 //       CHECK: bufferization.dealloc ([[ARG0]] : memref<2xi32>) if (%true
+
+// -----
+
+// CHECK-LABEL: func @negative_input
+func.func @negative_input() -> tensor<?x?x?xf16> {
+  %idx27 = index.constant 27
+  %idx-3 = index.constant -3  // negative integer?
+  %c10 = arith.constant 10 : index
+// CHECK: bufferization.alloc_tensor
+// CHECK-SAME: tensor<10x?x27xf16>
+  %11 = bufferization.alloc_tensor(%c10, %idx-3, %idx27) : tensor<?x?x?xf16>
+  return %11 : tensor<?x?x?xf16>
+}

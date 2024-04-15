@@ -497,7 +497,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
 void REPL::IOHandlerComplete(IOHandler &io_handler,
                              CompletionRequest &request) {
   // Complete an LLDB command if the first character is a colon...
-  if (request.GetRawLine().startswith(":")) {
+  if (request.GetRawLine().starts_with(":")) {
     Debugger &debugger = m_target.GetDebugger();
 
     // auto complete LLDB commands

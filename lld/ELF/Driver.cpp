@@ -46,6 +46,7 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -105,6 +106,7 @@ void Ctx::reset() {
   whyExtractRecords.clear();
   backwardReferences.clear();
   auxiliaryFiles.clear();
+  internalFile = nullptr;
   hasSympart.store(false, std::memory_order_relaxed);
   hasTlsIe.store(false, std::memory_order_relaxed);
   needsTlsLd.store(false, std::memory_order_relaxed);
@@ -199,6 +201,7 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef emul) {
           .Case("msp430elf", {ELF32LEKind, EM_MSP430})
           .Case("elf64_amdgpu", {ELF64LEKind, EM_AMDGPU})
           .Case("elf64loongarch", {ELF64LEKind, EM_LOONGARCH})
+          .Case("elf64_s390", {ELF64BEKind, EM_S390})
           .Default({ELFNoneKind, EM_NONE});
 
   if (ret.first == ELFNoneKind)
@@ -459,6 +462,8 @@ static void checkOptions() {
       error("-z force-bti only supported on AArch64");
     if (config->zBtiReport != "none")
       error("-z bti-report only supported on AArch64");
+    if (config->zPauthReport != "none")
+      error("-z pauth-report only supported on AArch64");
   }
 
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
@@ -473,126 +478,95 @@ static const char *getReproduceOption(opt::InputArgList &args) {
 }
 
 static bool hasZOption(opt::InputArgList &args, StringRef key) {
+  bool ret = false;
   for (auto *arg : args.filtered(OPT_z))
-    if (key == arg->getValue())
-      return true;
-  return false;
+    if (key == arg->getValue()) {
+      ret = true;
+      arg->claim();
+    }
+  return ret;
 }
 
 static bool getZFlag(opt::InputArgList &args, StringRef k1, StringRef k2,
-                     bool Default) {
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
-    if (k1 == arg->getValue())
-      return true;
-    if (k2 == arg->getValue())
-      return false;
+                     bool defaultValue) {
+  for (auto *arg : args.filtered(OPT_z)) {
+    StringRef v = arg->getValue();
+    if (k1 == v)
+      defaultValue = true;
+    else if (k2 == v)
+      defaultValue = false;
+    else
+      continue;
+    arg->claim();
   }
-  return Default;
+  return defaultValue;
 }
 
 static SeparateSegmentKind getZSeparate(opt::InputArgList &args) {
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
+  auto ret = SeparateSegmentKind::None;
+  for (auto *arg : args.filtered(OPT_z)) {
     StringRef v = arg->getValue();
     if (v == "noseparate-code")
-      return SeparateSegmentKind::None;
-    if (v == "separate-code")
-      return SeparateSegmentKind::Code;
-    if (v == "separate-loadable-segments")
-      return SeparateSegmentKind::Loadable;
+      ret = SeparateSegmentKind::None;
+    else if (v == "separate-code")
+      ret = SeparateSegmentKind::Code;
+    else if (v == "separate-loadable-segments")
+      ret = SeparateSegmentKind::Loadable;
+    else
+      continue;
+    arg->claim();
   }
-  return SeparateSegmentKind::None;
+  return ret;
 }
 
 static GnuStackKind getZGnuStack(opt::InputArgList &args) {
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
-    if (StringRef("execstack") == arg->getValue())
-      return GnuStackKind::Exec;
-    if (StringRef("noexecstack") == arg->getValue())
-      return GnuStackKind::NoExec;
-    if (StringRef("nognustack") == arg->getValue())
-      return GnuStackKind::None;
+  auto ret = GnuStackKind::NoExec;
+  for (auto *arg : args.filtered(OPT_z)) {
+    StringRef v = arg->getValue();
+    if (v == "execstack")
+      ret = GnuStackKind::Exec;
+    else if (v == "noexecstack")
+      ret = GnuStackKind::NoExec;
+    else if (v == "nognustack")
+      ret = GnuStackKind::None;
+    else
+      continue;
+    arg->claim();
   }
-
-  return GnuStackKind::NoExec;
+  return ret;
 }
 
 static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
+  uint8_t ret = STV_PROTECTED;
+  for (auto *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
     if (kv.first == "start-stop-visibility") {
+      arg->claim();
       if (kv.second == "default")
-        return STV_DEFAULT;
+        ret = STV_DEFAULT;
       else if (kv.second == "internal")
-        return STV_INTERNAL;
+        ret = STV_INTERNAL;
       else if (kv.second == "hidden")
-        return STV_HIDDEN;
+        ret = STV_HIDDEN;
       else if (kv.second == "protected")
-        return STV_PROTECTED;
-      error("unknown -z start-stop-visibility= value: " + StringRef(kv.second));
+        ret = STV_PROTECTED;
+      else
+        error("unknown -z start-stop-visibility= value: " +
+              StringRef(kv.second));
     }
   }
-  return STV_PROTECTED;
-}
-
-constexpr const char *knownZFlags[] = {
-    "combreloc",
-    "copyreloc",
-    "defs",
-    "execstack",
-    "force-bti",
-    "force-ibt",
-    "global",
-    "hazardplt",
-    "ifunc-noplt",
-    "initfirst",
-    "interpose",
-    "keep-text-section-prefix",
-    "lazy",
-    "muldefs",
-    "nocombreloc",
-    "nocopyreloc",
-    "nodefaultlib",
-    "nodelete",
-    "nodlopen",
-    "noexecstack",
-    "nognustack",
-    "nokeep-text-section-prefix",
-    "nopack-relative-relocs",
-    "norelro",
-    "noseparate-code",
-    "nostart-stop-gc",
-    "notext",
-    "now",
-    "origin",
-    "pac-plt",
-    "pack-relative-relocs",
-    "rel",
-    "rela",
-    "relro",
-    "retpolineplt",
-    "rodynamic",
-    "separate-code",
-    "separate-loadable-segments",
-    "shstk",
-    "start-stop-gc",
-    "text",
-    "undefs",
-    "wxneeded",
-};
-
-static bool isKnownZFlag(StringRef s) {
-  return llvm::is_contained(knownZFlags, s) ||
-         s.starts_with("common-page-size=") || s.starts_with("bti-report=") ||
-         s.starts_with("cet-report=") ||
-         s.starts_with("dead-reloc-in-nonalloc=") ||
-         s.starts_with("max-page-size=") || s.starts_with("stack-size=") ||
-         s.starts_with("start-stop-visibility=");
+  return ret;
 }
 
 // Report a warning for an unknown -z option.
 static void checkZOptions(opt::InputArgList &args) {
+  // This function is called before getTarget(), when certain options are not
+  // initialized yet. Claim them here.
+  args::getZOptionValue(args, OPT_z, "max-page-size", 0);
+  args::getZOptionValue(args, OPT_z, "common-page-size", 0);
+  getZFlag(args, "rel", "rela", false);
   for (auto *arg : args.filtered(OPT_z))
-    if (!isKnownZFlag(arg->getValue()))
+    if (!arg->isClaimed())
       warn("unknown -z value: " + StringRef(arg->getValue()));
 }
 
@@ -610,7 +584,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false) &&
       !args.hasArg(OPT_no_warnings);
   errorHandler().suppressWarnings = args.hasArg(OPT_no_warnings);
-  checkZOptions(args);
 
   // Handle -help
   if (args.hasArg(OPT_help)) {
@@ -653,6 +626,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   readConfigs(args);
+  checkZOptions(args);
 
   // The behavior of -v or --version is a bit strange, but this is
   // needed for compatibility with GNU linkers.
@@ -679,7 +653,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (errorCount())
       return;
 
-    link(args);
+    invokeELFT(link, args);
   }
 
   if (config->timeTraceEnabled) {
@@ -734,6 +708,9 @@ static void setUnresolvedSymbolPolicy(opt::InputArgList &args) {
         diagRegular = true;
       else if (StringRef(arg->getValue()) == "undefs")
         diagRegular = false;
+      else
+        break;
+      arg->claim();
       break;
     case OPT_allow_shlib_undefined:
       diagShlib = false;
@@ -1081,7 +1058,11 @@ static void ltoValidateAllVtablesHaveTypeInfos(opt::InputArgList &args) {
       error("--lto-known-safe-vtables=: expected symbol to start with _ZTV, "
             "but got " +
             knownSafeName);
-    vtableSymbolsWithNoRTTI.remove(knownSafeName);
+    Expected<GlobPattern> pat = GlobPattern::create(knownSafeName);
+    if (!pat)
+      error("--lto-known-safe-vtables=: " + toString(pat.takeError()));
+    vtableSymbolsWithNoRTTI.remove_if(
+        [&](StringRef s) { return pat->match(s); });
   }
 
   ctx.ltoAllVtablesHaveTypeInfos = vtableSymbolsWithNoRTTI.empty();
@@ -1095,7 +1076,7 @@ static void ltoValidateAllVtablesHaveTypeInfos(opt::InputArgList &args) {
 }
 
 static CGProfileSortKind getCGProfileSortKind(opt::InputArgList &args) {
-  StringRef s = args.getLastArgValue(OPT_call_graph_profile_sort, "hfsort");
+  StringRef s = args.getLastArgValue(OPT_call_graph_profile_sort, "cdsort");
   if (s == "hfsort")
     return CGProfileSortKind::Hfsort;
   if (s == "cdsort")
@@ -1158,20 +1139,22 @@ static SmallVector<StringRef, 0> getSymbolOrderingFile(MemoryBufferRef mb) {
 }
 
 static bool getIsRela(opt::InputArgList &args) {
+  // The psABI specifies the default relocation entry format.
+  bool rela = is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH,
+                            EM_PPC, EM_PPC64, EM_RISCV, EM_S390, EM_X86_64},
+                           config->emachine);
   // If -z rel or -z rela is specified, use the last option.
-  for (auto *arg : args.filtered_reverse(OPT_z)) {
+  for (auto *arg : args.filtered(OPT_z)) {
     StringRef s(arg->getValue());
     if (s == "rel")
-      return false;
-    if (s == "rela")
-      return true;
+      rela = false;
+    else if (s == "rela")
+      rela = true;
+    else
+      continue;
+    arg->claim();
   }
-
-  // Otherwise use the psABI defined relocation entry format.
-  uint16_t m = config->emachine;
-  return m == EM_AARCH64 || m == EM_AMDGPU || m == EM_HEXAGON ||
-         m == EM_LOONGARCH || m == EM_PPC || m == EM_PPC64 || m == EM_RISCV ||
-         m == EM_X86_64;
+  return rela;
 }
 
 static void parseClangOption(StringRef opt, const Twine &msg) {
@@ -1216,9 +1199,9 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasArg(OPT_visual_studio_diagnostics_format, false);
 
   config->allowMultipleDefinition =
+      hasZOption(args, "muldefs") ||
       args.hasFlag(OPT_allow_multiple_definition,
-                   OPT_no_allow_multiple_definition, false) ||
-      hasZOption(args, "muldefs");
+                   OPT_no_allow_multiple_definition, false);
   config->androidMemtagHeap =
       args.hasFlag(OPT_android_memtag_heap, OPT_no_android_memtag_heap, false);
   config->androidMemtagStack = args.hasFlag(OPT_android_memtag_stack,
@@ -1244,9 +1227,10 @@ static void readConfigs(opt::InputArgList &args) {
   config->checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   config->chroot = args.getLastArgValue(OPT_chroot);
-  config->compressDebugSections = getCompressionType(
-      args.getLastArgValue(OPT_compress_debug_sections, "none"),
-      "--compress-debug-sections");
+  if (auto *arg = args.getLastArg(OPT_compress_debug_sections)) {
+    config->compressDebugSections =
+        getCompressionType(arg->getValue(), "--compress-debug-sections");
+  }
   config->cref = args.hasArg(OPT_cref);
   config->optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
@@ -1319,6 +1303,9 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   config->ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
+  config->ltoBBAddrMap =
+      args.hasFlag(OPT_lto_basic_block_address_map,
+                   OPT_no_lto_basic_block_address_map, false);
   config->ltoBasicBlockSections =
       args.getLastArgValue(OPT_lto_basic_block_sections);
   config->ltoUniqueBasicBlockSectionNames =
@@ -1364,6 +1351,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->printArchiveStats = args.getLastArgValue(OPT_print_archive_stats);
   config->printSymbolOrder =
       args.getLastArgValue(OPT_print_symbol_order);
+  config->rejectMismatch = !args.hasArg(OPT_no_warn_mismatch);
   config->relax = args.hasFlag(OPT_relax, OPT_no_relax, true);
   config->relaxGP = args.hasFlag(OPT_relax_gp, OPT_no_relax_gp, false);
   config->rpath = getRpath(args);
@@ -1453,6 +1441,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->zInterpose = hasZOption(args, "interpose");
   config->zKeepTextSectionPrefix = getZFlag(
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
+  config->zLrodataAfterBss =
+      getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
   config->zNodefaultlib = hasZOption(args, "nodefaultlib");
   config->zNodelete = hasZOption(args, "nodelete");
   config->zNodlopen = hasZOption(args, "nodlopen");
@@ -1514,13 +1504,15 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   auto reports = {std::make_pair("bti-report", &config->zBtiReport),
-                  std::make_pair("cet-report", &config->zCetReport)};
+                  std::make_pair("cet-report", &config->zCetReport),
+                  std::make_pair("pauth-report", &config->zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
     for (auto reportArg : reports) {
       if (option.first != reportArg.first)
         continue;
+      arg->claim();
       if (!isValidReportString(option.second)) {
         error(Twine("-z ") + reportArg.first + "= parameter " + option.second +
               " is not recognized");
@@ -1530,11 +1522,29 @@ static void readConfigs(opt::InputArgList &args) {
     }
   }
 
+  for (opt::Arg *arg : args.filtered(OPT_compress_sections)) {
+    SmallVector<StringRef, 0> fields;
+    StringRef(arg->getValue()).split(fields, '=');
+    if (fields.size() != 2 || fields[1].empty()) {
+      error(arg->getSpelling() +
+            ": parse error, not 'section-glob=[none|zlib|zstd]'");
+      continue;
+    }
+    auto type = getCompressionType(fields[1], arg->getSpelling());
+    if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
+      config->compressSections.emplace_back(std::move(*pat), type);
+    } else {
+      error(arg->getSpelling() + ": " + toString(pat.takeError()));
+      continue;
+    }
+  }
+
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
     if (option.first != "dead-reloc-in-nonalloc")
       continue;
+    arg->claim();
     constexpr StringRef errPrefix = "-z dead-reloc-in-nonalloc=: ";
     std::pair<StringRef, StringRef> kv = option.second.split('=');
     if (kv.first.empty() || kv.second.empty()) {
@@ -1794,6 +1804,37 @@ static void setConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, m == EM_PPC64);
   config->pcRelOptimize =
       args.hasFlag(OPT_pcrel_optimize, OPT_no_pcrel_optimize, m == EM_PPC64);
+
+  if (!args.hasArg(OPT_hash_style)) {
+    if (config->emachine == EM_MIPS)
+      config->sysvHash = true;
+    else
+      config->sysvHash = config->gnuHash = true;
+  }
+
+  // Set default entry point and output file if not specified by command line or
+  // linker scripts.
+  config->warnMissingEntry =
+      (!config->entry.empty() || (!config->shared && !config->relocatable));
+  if (config->entry.empty() && !config->relocatable)
+    config->entry = config->emachine == EM_MIPS ? "__start" : "_start";
+  if (config->outputFile.empty())
+    config->outputFile = "a.out";
+
+  // Fail early if the output file or map file is not writable. If a user has a
+  // long link, e.g. due to a large LTO link, they do not wish to run it and
+  // find that it failed because there was a mistake in their command-line.
+  {
+    llvm::TimeTraceScope timeScope("Create output files");
+    if (auto e = tryCreateFile(config->outputFile))
+      error("cannot open output file " + config->outputFile + ": " +
+            e.message());
+    if (auto e = tryCreateFile(config->mapFile))
+      error("cannot open map file " + config->mapFile + ": " + e.message());
+    if (auto e = tryCreateFile(config->whyExtract))
+      error("cannot open --why-extract= file " + config->whyExtract + ": " +
+            e.message());
+  }
 }
 
 static bool isFormatBinary(StringRef s) {
@@ -2077,14 +2118,11 @@ static void handleUndefinedGlob(StringRef arg) {
 
 static void handleLibcall(StringRef name) {
   Symbol *sym = symtab.find(name);
-  if (!sym || !sym->isLazy())
-    return;
-
-  MemoryBufferRef mb;
-  mb = cast<LazyObject>(sym)->file->mb;
-
-  if (isBitcode(mb))
+  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file)) {
+    if (!config->whyExtract.empty())
+      ctx.whyExtractRecords.emplace_back("<libcall>", sym->file, *sym);
     sym->extract();
+  }
 }
 
 static void writeArchiveStats() {
@@ -2296,7 +2334,7 @@ static void findKeepUniqueSections(opt::InputArgList &args) {
       const uint8_t *cur = contents.begin();
       while (cur != contents.end()) {
         unsigned size;
-        const char *err;
+        const char *err = nullptr;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
         if (err)
           fatal(toString(f) + ": could not decode addrsig section: " + err);
@@ -2321,9 +2359,9 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   Symbol *sym;
   const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
   if (rels.areRelocsRel())
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.rels[0]);
+    sym = &s->file->getRelocTargetSym(rels.rels[0]);
   else
-    sym = &s->getFile<ELFT>()->getRelocTargetSym(rels.relas[0]);
+    sym = &s->file->getRelocTargetSym(rels.relas[0]);
   if (!isa<Defined>(sym) || !sym->includeInDynsym())
     return;
 
@@ -2360,11 +2398,6 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   Partition &newPart = partitions.back();
   newPart.name = partName;
   sym->partition = newPart.getNumber();
-}
-
-static Symbol *addUnusedUndefined(StringRef name,
-                                  uint8_t binding = STB_GLOBAL) {
-  return symtab.addSymbol(Undefined{nullptr, name, binding, STV_DEFAULT, 0});
 }
 
 static void markBuffersAsDontNeed(bool skipLinkedOutput) {
@@ -2453,15 +2486,15 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
       continue;
 
     Symbol *wrap =
-        addUnusedUndefined(saver().save("__wrap_" + name), sym->binding);
+        symtab.addUnusedUndefined(saver().save("__wrap_" + name), sym->binding);
 
     // If __real_ is referenced, pull in the symbol if it is lazy. Do this after
     // processing __wrap_ as that may have referenced __real_.
     StringRef realName = saver().save("__real_" + name);
     if (symtab.find(realName))
-      addUnusedUndefined(name, sym->binding);
+      symtab.addUnusedUndefined(name, sym->binding);
 
-    Symbol *real = addUnusedUndefined(realName);
+    Symbol *real = symtab.addUnusedUndefined(realName);
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten
@@ -2570,14 +2603,17 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
     symtab.wrap(w.sym, w.real, w.wrap);
 }
 
+static void reportMissingFeature(StringRef config, const Twine &report) {
+  if (config == "error")
+    error(report);
+  else if (config == "warning")
+    warn(report);
+}
+
 static void checkAndReportMissingFeature(StringRef config, uint32_t features,
                                          uint32_t mask, const Twine &report) {
-  if (!(features & mask)) {
-    if (config == "error")
-      error(report);
-    else if (config == "warning")
-      warn(report);
-  }
+  if (!(features & mask))
+    reportMissingFeature(config, report);
 }
 
 // To enable CET (x86's hardware-assisted control flow enforcement), each
@@ -2588,12 +2624,28 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
 //
 // This is also the case with AARCH64's BTI and PAC which use the similar
 // GNU_PROPERTY_AARCH64_FEATURE_1_AND mechanism.
-static uint32_t getAndFeatures() {
+//
+// For AArch64 PAuth-enabled object files, the core info of all of them must
+// match. Missing info for some object files with matching info for remaining
+// ones can be allowed (see -z pauth-report).
+static void readSecurityNotes() {
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
       config->emachine != EM_AARCH64)
-    return 0;
+    return;
 
-  uint32_t ret = -1;
+  config->andFeatures = -1;
+
+  StringRef referenceFileName;
+  if (config->emachine == EM_AARCH64) {
+    auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
+      return !f->aarch64PauthAbiCoreInfo.empty();
+    });
+    if (it != ctx.objectFiles.end()) {
+      ctx.aarch64PauthAbiCoreInfo = (*it)->aarch64PauthAbiCoreInfo;
+      referenceFileName = (*it)->getName();
+    }
+  }
+
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
@@ -2629,14 +2681,31 @@ static uint32_t getAndFeatures() {
                          "GNU_PROPERTY_AARCH64_FEATURE_1_PAC property");
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
     }
-    ret &= features;
+    config->andFeatures &= features;
+
+    if (ctx.aarch64PauthAbiCoreInfo.empty())
+      continue;
+
+    if (f->aarch64PauthAbiCoreInfo.empty()) {
+      reportMissingFeature(config->zPauthReport,
+                           toString(f) +
+                               ": -z pauth-report: file does not have AArch64 "
+                               "PAuth core info while '" +
+                               referenceFileName + "' has one");
+      continue;
+    }
+
+    if (ctx.aarch64PauthAbiCoreInfo != f->aarch64PauthAbiCoreInfo)
+      errorOrWarn("incompatible values of AArch64 PAuth core info found\n>>> " +
+                  referenceFileName + ": 0x" +
+                  toHex(ctx.aarch64PauthAbiCoreInfo, /*LowerCase=*/true) +
+                  "\n>>> " + toString(f) + ": 0x" +
+                  toHex(f->aarch64PauthAbiCoreInfo, /*LowerCase=*/true));
   }
 
   // Force enable Shadow Stack.
   if (config->zShstk)
-    ret |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
-
-  return ret;
+    config->andFeatures |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
@@ -2679,90 +2748,24 @@ static void postParseObjectFile(ELFFileBase *file) {
 
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
-void LinkerDriver::link(opt::InputArgList &args) {
+template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   llvm::TimeTraceScope timeScope("Link", StringRef("LinkerDriver::Link"));
-  // If a --hash-style option was not given, set to a default value,
-  // which varies depending on the target.
-  if (!args.hasArg(OPT_hash_style)) {
-    if (config->emachine == EM_MIPS)
-      config->sysvHash = true;
-    else
-      config->sysvHash = config->gnuHash = true;
-  }
-
-  // Default output filename is "a.out" by the Unix tradition.
-  if (config->outputFile.empty())
-    config->outputFile = "a.out";
-
-  // Fail early if the output file or map file is not writable. If a user has a
-  // long link, e.g. due to a large LTO link, they do not wish to run it and
-  // find that it failed because there was a mistake in their command-line.
-  {
-    llvm::TimeTraceScope timeScope("Create output files");
-    if (auto e = tryCreateFile(config->outputFile))
-      error("cannot open output file " + config->outputFile + ": " +
-            e.message());
-    if (auto e = tryCreateFile(config->mapFile))
-      error("cannot open map file " + config->mapFile + ": " + e.message());
-    if (auto e = tryCreateFile(config->whyExtract))
-      error("cannot open --why-extract= file " + config->whyExtract + ": " +
-            e.message());
-  }
-  if (errorCount())
-    return;
-
-  // Use default entry point name if no name was given via the command
-  // line nor linker scripts. For some reason, MIPS entry point name is
-  // different from others.
-  config->warnMissingEntry =
-      (!config->entry.empty() || (!config->shared && !config->relocatable));
-  if (config->entry.empty() && !config->relocatable)
-    config->entry = (config->emachine == EM_MIPS) ? "__start" : "_start";
 
   // Handle --trace-symbol.
   for (auto *arg : args.filtered(OPT_trace_symbol))
     symtab.insert(arg->getValue())->traced = true;
 
+  ctx.internalFile = createInternalFile("<internal>");
+
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.
   for (StringRef name : config->undefined)
-    addUnusedUndefined(name)->referenced = true;
+    symtab.addUnusedUndefined(name)->referenced = true;
 
-  // Add all files to the symbol table. This will add almost all
-  // symbols that we need to the symbol table. This process might
-  // add files to the link, via autolinking, these files are always
-  // appended to the Files vector.
-  {
-    llvm::TimeTraceScope timeScope("Parse input files");
-    for (size_t i = 0; i < files.size(); ++i) {
-      llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
-      parseFile(files[i]);
-    }
-    if (armCmseImpLib)
-      parseArmCMSEImportLib(*armCmseImpLib);
-  }
+  parseFiles(files, armCmseImpLib);
 
-  // Now that we have every file, we can decide if we will need a
-  // dynamic symbol table.
-  // We need one if we were asked to export dynamic symbols or if we are
-  // producing a shared library.
-  // We also need one if any shared libraries are used and for pie executables
-  // (probably because the dynamic linker needs it).
-  config->hasDynSymTab =
-      !ctx.sharedFiles.empty() || config->isPic || config->exportDynamic;
-
-  // Some symbols (such as __ehdr_start) are defined lazily only when there
-  // are undefined symbols for them, so we add these to trigger that logic.
-  for (StringRef name : script->referencedSymbols) {
-    Symbol *sym = addUnusedUndefined(name);
-    sym->isUsedInRegularObj = true;
-    sym->referenced = true;
-  }
-
-  // Prevent LTO from removing any definition referenced by -u.
-  for (StringRef name : config->undefined)
-    if (Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name)))
-      sym->isUsedInRegularObj = true;
+  // Create dynamic sections for dynamic linking and static PIE.
+  config->hasDynSymTab = !ctx.sharedFiles.empty() || config->isPic;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = symtab.find(config->entry))
@@ -2771,6 +2774,16 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Handle the `--undefined-glob <pattern>` options.
   for (StringRef pat : args::getStrings(args, OPT_undefined_glob))
     handleUndefinedGlob(pat);
+
+  // After potential archive member extraction involving ENTRY and
+  // -u/--undefined-glob, check whether PROVIDE symbols should be defined (the
+  // RHS may refer to definitions in just extracted object files).
+  script->addScriptReferencedSymbolsToSymTable();
+
+  // Prevent LTO from removing any definition referenced by -u.
+  for (StringRef name : config->undefined)
+    if (Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name)))
+      sym->isUsedInRegularObj = true;
 
   // Mark -init and -fini symbols so that the LTO doesn't eliminate them.
   if (Symbol *sym = dyn_cast_or_null<Defined>(symtab.find(config->init)))
@@ -2870,7 +2883,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Handle --lto-validate-all-vtables-have-type-infos.
   if (config->ltoValidateAllVtablesHaveTypeInfos)
-    invokeELFT(ltoValidateAllVtablesHaveTypeInfos, args);
+    ltoValidateAllVtablesHaveTypeInfos<ELFT>(args);
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
@@ -2878,7 +2891,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // With this the symbol table should be complete. After this, no new names
   // except a few linker-synthesized ones will be added to the symbol table.
   const size_t numObjsBeforeLTO = ctx.objectFiles.size();
-  invokeELFT(compileBitcodeFiles, skipLinkedOutput);
+  compileBitcodeFiles<ELFT>(skipLinkedOutput);
 
   // Symbol resolution finished. Report backward reference problems,
   // --print-archive-stats=, and --why-extract=.
@@ -2943,7 +2956,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
       llvm::erase_if(ctx.inputSections, [](InputSectionBase *s) {
         if (s->type != SHT_LLVM_SYMPART)
           return false;
-        invokeELFT(readSymbolPartitionSection, s);
+        readSymbolPartitionSection<ELFT>(s);
         return true;
       });
     }
@@ -2974,7 +2987,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
-  config->andFeatures = getAndFeatures();
+  readSecurityNotes();
 
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent
@@ -3001,10 +3014,10 @@ void LinkerDriver::link(opt::InputArgList &args) {
     ctx.inputSections.push_back(createCommentSection());
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
-  invokeELFT(splitSections,);
+  splitSections<ELFT>();
 
   // Garbage collection and removal of shared symbols from unused shared objects.
-  invokeELFT(markLive,);
+  markLive<ELFT>();
 
   // Make copies of any input sections that need to be copied into each
   // partition.
@@ -3017,7 +3030,7 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create synthesized sections such as .got and .plt. This is called before
   // processSectionCommands() so that they can be placed by SECTIONS commands.
-  invokeELFT(createSyntheticSections,);
+  createSyntheticSections<ELFT>();
 
   // Some input sections that are used for exception handling need to be moved
   // into synthetic sections. Do that now so that they aren't assigned to
@@ -3057,8 +3070,8 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Two input sections with different output sections should not be folded.
   // ICF runs after processSectionCommands() so that we know the output sections.
   if (config->icf != ICFLevel::None) {
-    invokeELFT(findKeepUniqueSections, args);
-    invokeELFT(doIcf,);
+    findKeepUniqueSections<ELFT>(args);
+    doIcf<ELFT>();
   }
 
   // Read the callgraph now that we know what was gced or icfed
@@ -3066,9 +3079,9 @@ void LinkerDriver::link(opt::InputArgList &args) {
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
       if (std::optional<MemoryBufferRef> buffer = readFile(arg->getValue()))
         readCallGraph(*buffer);
-    invokeELFT(readCallGraphsFromObjectFiles,);
+    readCallGraphsFromObjectFiles<ELFT>();
   }
 
   // Write the result to the file.
-  invokeELFT(writeResult,);
+  writeResult<ELFT>();
 }

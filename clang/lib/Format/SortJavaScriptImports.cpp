@@ -468,10 +468,10 @@ private:
       // URL = TokenText without the quotes.
       Reference.URL =
           Current->TokenText.substr(1, Current->TokenText.size() - 2);
-      if (Reference.URL.startswith("..")) {
+      if (Reference.URL.starts_with("..")) {
         Reference.Category =
             JsModuleReference::ReferenceCategory::RELATIVE_PARENT;
-      } else if (Reference.URL.startswith(".")) {
+      } else if (Reference.URL.starts_with(".")) {
         Reference.Category = JsModuleReference::ReferenceCategory::RELATIVE;
       } else {
         Reference.Category = JsModuleReference::ReferenceCategory::ABSOLUTE;

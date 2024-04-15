@@ -1,3 +1,4 @@
+## Variables with line number information
 .file 1 "dir/undef-debug.s"
 .loc 1 3
         .quad zed3

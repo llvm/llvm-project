@@ -6,8 +6,7 @@ target triple = "aarch64-linux-gnu"
 define <vscale x 16 x i8> @test_sclamp_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) #0 {
 ; CHECK-LABEL: test_sclamp_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sclamp z2.b, z0.b, z1.b
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    sclamp z0.b, z1.b, z2.b
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x i8> @llvm.aarch64.sve.sclamp.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c)
   ret <vscale x 16 x i8> %res
@@ -16,8 +15,7 @@ define <vscale x 16 x i8> @test_sclamp_i8(<vscale x 16 x i8> %a, <vscale x 16 x 
 define <vscale x 8 x i16> @test_sclamp_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) #0 {
 ; CHECK-LABEL: test_sclamp_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sclamp z2.h, z0.h, z1.h
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    sclamp z0.h, z1.h, z2.h
 ; CHECK-NEXT:    ret
   %res = call <vscale x  8 x i16> @llvm.aarch64.sve.sclamp.nxv8i16(<vscale x  8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c)
   ret <vscale x 8 x i16> %res
@@ -26,8 +24,7 @@ define <vscale x 8 x i16> @test_sclamp_i16(<vscale x 8 x i16> %a, <vscale x 8 x 
 define <vscale x 4 x i32> @test_sclamp_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) #0 {
 ; CHECK-LABEL: test_sclamp_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sclamp z2.s, z0.s, z1.s
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    sclamp z0.s, z1.s, z2.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i32> @llvm.aarch64.sve.sclamp.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c)
   ret <vscale x 4 x i32> %res
@@ -36,8 +33,7 @@ define <vscale x 4 x i32> @test_sclamp_i32(<vscale x 4 x i32> %a, <vscale x 4 x 
 define <vscale x 2 x i64> @test_sclamp_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) #0 {
 ; CHECK-LABEL: test_sclamp_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sclamp z2.d, z0.d, z1.d
-; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    sclamp z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x i64> @llvm.aarch64.sve.sclamp.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c)
   ret <vscale x 2 x i64> %res

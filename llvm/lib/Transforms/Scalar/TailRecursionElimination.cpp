@@ -369,8 +369,14 @@ static bool canTransformAccumulatorRecursion(Instruction *I, CallInst *CI) {
   if (!I->isAssociative() || !I->isCommutative())
     return false;
 
-  assert(I->getNumOperands() == 2 &&
-         "Associative/commutative operations should have 2 args!");
+  assert(I->getNumOperands() >= 2 &&
+         "Associative/commutative operations should have at least 2 args!");
+
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+    // Accumulators must have an identity.
+    if (!ConstantExpr::getIntrinsicIdentity(II->getIntrinsicID(), I->getType()))
+      return false;
+  }
 
   // Exactly one operand should be the result of the call instruction.
   if ((I->getOperand(0) == CI && I->getOperand(1) == CI) ||
@@ -503,8 +509,10 @@ void TailRecursionEliminator::createTailRecurseLoopHeader(CallInst *CI) {
   BasicBlock *NewEntry = BasicBlock::Create(F.getContext(), "", &F, HeaderBB);
   NewEntry->takeName(HeaderBB);
   HeaderBB->setName("tailrecurse");
-  BranchInst *BI = BranchInst::Create(HeaderBB, NewEntry);
-  BI->setDebugLoc(CI->getDebugLoc());
+  BranchInst::Create(HeaderBB, NewEntry);
+  // If the new branch preserves the debug location of CI, it could result in
+  // misleading stepping, if CI is located in a conditional branch.
+  // So, here we don't give any debug location to the new branch.
 
   // Move all fixed sized allocas from HeaderBB to NewEntry.
   for (BasicBlock::iterator OEBI = HeaderBB->begin(), E = HeaderBB->end(),
@@ -569,8 +577,8 @@ void TailRecursionEliminator::insertAccumulator(Instruction *AccRecInstr) {
   for (pred_iterator PI = PB; PI != PE; ++PI) {
     BasicBlock *P = *PI;
     if (P == &F.getEntryBlock()) {
-      Constant *Identity = ConstantExpr::getBinOpIdentity(
-          AccRecInstr->getOpcode(), AccRecInstr->getType());
+      Constant *Identity =
+          ConstantExpr::getIdentity(AccRecInstr, AccRecInstr->getType());
       AccPN->addIncoming(Identity, P);
     } else {
       AccPN->addIncoming(AccPN, P);
@@ -595,7 +603,7 @@ void TailRecursionEliminator::copyByValueOperandIntoLocalTemp(CallInst *CI,
   // Put alloca into the entry block.
   Value *NewAlloca = new AllocaInst(
       AggTy, DL.getAllocaAddrSpace(), nullptr, Alignment,
-      CI->getArgOperand(OpndIdx)->getName(), &*F.getEntryBlock().begin());
+      CI->getArgOperand(OpndIdx)->getName(), F.getEntryBlock().begin());
 
   IRBuilder<> Builder(CI);
   Value *Size = Builder.getInt64(DL.getTypeAllocSize(AggTy));
@@ -708,8 +716,9 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
       // We found a return value we want to use, insert a select instruction to
       // select it if we don't already know what our return value will be and
       // store the result in our return value PHI node.
-      SelectInst *SI = SelectInst::Create(
-          RetKnownPN, RetPN, Ret->getReturnValue(), "current.ret.tr", Ret);
+      SelectInst *SI =
+          SelectInst::Create(RetKnownPN, RetPN, Ret->getReturnValue(),
+                             "current.ret.tr", Ret->getIterator());
       RetSelects.push_back(SI);
 
       RetPN->addIncoming(SI, BB);
@@ -722,7 +731,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
 
   // Now that all of the PHI nodes are in place, remove the call and
   // ret instructions, replacing them with an unconditional branch.
-  BranchInst *NewBI = BranchInst::Create(HeaderBB, Ret);
+  BranchInst *NewBI = BranchInst::Create(HeaderBB, Ret->getIterator());
   NewBI->setDebugLoc(CI->getDebugLoc());
 
   Ret->eraseFromParent();  // Remove return.
@@ -781,8 +790,9 @@ void TailRecursionEliminator::cleanupAndFinalize() {
         if (!RI)
           continue;
 
-        SelectInst *SI = SelectInst::Create(
-            RetKnownPN, RetPN, RI->getOperand(0), "current.ret.tr", RI);
+        SelectInst *SI =
+            SelectInst::Create(RetKnownPN, RetPN, RI->getOperand(0),
+                               "current.ret.tr", RI->getIterator());
         RetSelects.push_back(SI);
         RI->setOperand(0, SI);
       }

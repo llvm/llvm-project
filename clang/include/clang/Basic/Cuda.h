@@ -39,15 +39,21 @@ enum class CudaVersion {
   CUDA_118,
   CUDA_120,
   CUDA_121,
-  FULLY_SUPPORTED = CUDA_118,
+  CUDA_122,
+  CUDA_123,
+  FULLY_SUPPORTED = CUDA_123,
   PARTIALLY_SUPPORTED =
-      CUDA_121, // Partially supported. Proceed with a warning.
+      CUDA_123, // Partially supported. Proceed with a warning.
   NEW = 10000,  // Too new. Issue a warning, but allow using it.
 };
 const char *CudaVersionToString(CudaVersion V);
 // Input is "Major.Minor"
 CudaVersion CudaStringToVersion(const llvm::Twine &S);
 
+// We have a name conflict with sys/mac.h on AIX
+#ifdef SM_32
+#undef SM_32
+#endif
 enum class CudaArch {
   UNUSED,
   UNKNOWN,
@@ -71,6 +77,7 @@ enum class CudaArch {
   SM_87,
   SM_89,
   SM_90,
+  SM_90a,
   GFX600,
   GFX601,
   GFX602,
@@ -113,12 +120,22 @@ enum class CudaArch {
   GFX1103,
   GFX1150,
   GFX1151,
+  GFX1200,
+  GFX1201,
   Generic, // A processor model named 'generic' if the target backend defines a
            // public one.
   LAST,
 
   CudaDefault = CudaArch::SM_52,
-  HIPDefault = CudaArch::GFX803,
+  HIPDefault = CudaArch::GFX906,
+};
+
+enum class CUDAFunctionTarget {
+  Device,
+  Global,
+  Host,
+  HostDevice,
+  InvalidTarget
 };
 
 static inline bool IsNVIDIAGpuArch(CudaArch A) {

@@ -89,16 +89,18 @@ in order to update the last commit with all pending changes.
   ``clang/tools/clang-format/git-clang-format``.
 
 The LLVM project has migrated to GitHub Pull Requests as its review process.
-We still have an active :ref:`Phabricator <phabricator-reviews>`
-instance for the duration of the migration. If you want to contribute to LLVM
-now, please use GitHub. For more information about the workflow of using GitHub
-Pull Requests see our :ref:`GitHub <github-reviews>` documentation.
+For more information about the workflow of using GitHub Pull Requests see our
+:ref:`GitHub <github-reviews>` documentation. We still have an read-only
+`LLVM's Phabricator <https://reviews.llvm.org>`_ instance.
 
 To make sure the right people see your patch, please select suitable reviewers
 and add them to your patch when requesting a review. Suitable reviewers are the
 code owner (see CODE_OWNERS.txt) and other people doing work in the area your
 patch touches. Github will normally suggest some reviewers based on rules or
-people that have worked on the code before.
+people that have worked on the code before. If you are a new contributor, you
+will not be able to select reviewers in such a way, in which case you can still
+get the attention of potential reviewers by CC'ing them in a comment -- just
+@name them.
 
 A reviewer may request changes or ask questions during the review. If you are
 uncertain on how to provide test cases, documentation, etc., feel free to ask
@@ -110,7 +112,7 @@ access, please let people know during the review and someone should commit it
 on your behalf.
 
 If you have received no comments on your patch for a week, you can request a
-review by 'ping'ing the GitHub PR with "Ping." The common courtesy 'ping' rate
+review by 'ping'ing the GitHub PR with "Ping". The common courtesy 'ping' rate
 is once a week. Please remember that you are asking for valuable time from other
 professional developers.
 
@@ -182,5 +184,5 @@ of LLVM's high-level design, as well as its internals:
 .. _clang-format-diff.py: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/clang-format-diff.py
 .. _git-clang-format: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/git-clang-format
 .. _LLVM's GitHub: https://github.com/llvm/llvm-project
-.. _LLVM's Phabricator (deprecated): https://reviews.llvm.org/
+.. _LLVM's Phabricator (read-only): https://reviews.llvm.org/
 .. _LLVM's Open Projects page: https://llvm.org/OpenProjects.html#what

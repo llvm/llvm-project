@@ -146,7 +146,9 @@ public:
     case 'R': // Integer constant (Range: -6 to 5)
       Info.setRequiresImmediate(-6, 5);
       return true;
-    case 'G': // Floating point constant
+    case 'G': // Floating point constant 0.0
+      Info.setRequiresImmediate(0);
+      return true;
     case 'Q': // A memory address based on Y or Z pointer with displacement.
       return true;
     }

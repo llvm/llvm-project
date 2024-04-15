@@ -2,8 +2,8 @@
 
 // CHECK-LABEL: func.func @create_mask_2d_trailing_scalable(
 // CHECK-SAME: %[[arg:.*]]: index) -> vector<3x[4]xi1> {
-// CHECK-NEXT: %[[zero_mask_1d:.*]] = arith.constant dense<false> : vector<[4]xi1>
-// CHECK-NEXT: %[[zero_mask_2d:.*]] = arith.constant dense<false> : vector<3x[4]xi1>
+// CHECK-DAG: %[[zero_mask_1d:.*]] = arith.constant dense<false> : vector<[4]xi1>
+// CHECK-DAG: %[[zero_mask_2d:.*]] = arith.constant dense<false> : vector<3x[4]xi1>
 // CHECK-NEXT: %[[create_mask_1d:.*]] = vector.create_mask %[[arg]] : vector<[4]xi1>
 // CHECK-NEXT: %[[res_0:.*]] = vector.insert %[[create_mask_1d]], %[[zero_mask_2d]] [0] : vector<[4]xi1> into vector<3x[4]xi1>
 // CHECK-NEXT: %[[res_1:.*]] = vector.insert %[[create_mask_1d]], %[[res_0]] [1] : vector<[4]xi1> into vector<3x[4]xi1>

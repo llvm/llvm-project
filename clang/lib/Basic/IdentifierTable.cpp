@@ -36,7 +36,7 @@ using namespace clang;
 // A check to make sure the ObjCOrBuiltinID has sufficient room to store the
 // largest possible target/aux-target combination. If we exceed this, we likely
 // need to just change the ObjCOrBuiltinIDBits value in IdentifierTable.h.
-static_assert(2 * LargestBuiltinID < (2 << (ObjCOrBuiltinIDBits - 1)),
+static_assert(2 * LargestBuiltinID < (2 << (InterestingIdentifierBits - 1)),
               "Insufficient ObjCOrBuiltinID Bits");
 
 //===----------------------------------------------------------------------===//
@@ -108,7 +108,8 @@ namespace {
     KEYSYCL       = 0x800000,
     KEYCUDA       = 0x1000000,
     KEYHLSL       = 0x2000000,
-    KEYMAX        = KEYHLSL, // The maximum key
+    KEYFIXEDPOINT = 0x4000000,
+    KEYMAX        = KEYFIXEDPOINT, // The maximum key
     KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
     KEYALL = (KEYMAX | (KEYMAX-1)) & ~KEYNOMS18 &
              ~KEYNOOPENCL // KEYNOMS18 and KEYNOOPENCL are used to exclude.
@@ -210,6 +211,8 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
   case KEYNOMS18:
     // The disable behavior for this is handled in getKeywordStatus.
     return KS_Unknown;
+  case KEYFIXEDPOINT:
+    return LangOpts.FixedPoint ? KS_Enabled : KS_Disabled;
   default:
     llvm_unreachable("Unknown KeywordStatus flag");
   }
@@ -277,13 +280,13 @@ static void AddObjCKeyword(StringRef Name,
   Table.get(Name).setObjCKeywordID(ObjCID);
 }
 
-static void AddInterestingIdentifier(StringRef Name,
-                                     tok::InterestingIdentifierKind BTID,
-                                     IdentifierTable &Table) {
-  // Don't add 'not_interesting' identifier.
-  if (BTID != tok::not_interesting) {
+static void AddNotableIdentifier(StringRef Name,
+                                 tok::NotableIdentifierKind BTID,
+                                 IdentifierTable &Table) {
+  // Don't add 'not_notable' identifier.
+  if (BTID != tok::not_notable) {
     IdentifierInfo &Info = Table.get(Name, tok::identifier);
-    Info.setInterestingIdentifierID(BTID);
+    Info.setNotableIdentifierID(BTID);
   }
 }
 
@@ -303,8 +306,8 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
 #define OBJC_AT_KEYWORD(NAME)  \
   if (LangOpts.ObjC)           \
     AddObjCKeyword(StringRef(#NAME), tok::objc_##NAME, *this);
-#define INTERESTING_IDENTIFIER(NAME)                                           \
-  AddInterestingIdentifier(StringRef(#NAME), tok::NAME, *this);
+#define NOTABLE_IDENTIFIER(NAME)                                               \
+  AddNotableIdentifier(StringRef(#NAME), tok::NAME, *this);
 
 #define TESTING_KEYWORD(NAME, FLAGS)
 #include "clang/Basic/TokenKinds.def"
@@ -538,7 +541,8 @@ unsigned Selector::getNumArgs() const {
   return SI->getNumArgs();
 }
 
-IdentifierInfo *Selector::getIdentifierInfoForSlot(unsigned argIndex) const {
+const IdentifierInfo *
+Selector::getIdentifierInfoForSlot(unsigned argIndex) const {
   if (getIdentifierInfoFlag() < MultiArg) {
     assert(argIndex == 0 && "illegal keyword index");
     return getAsIdentifierInfo();
@@ -550,7 +554,7 @@ IdentifierInfo *Selector::getIdentifierInfoForSlot(unsigned argIndex) const {
 }
 
 StringRef Selector::getNameForSlot(unsigned int argIndex) const {
-  IdentifierInfo *II = getIdentifierInfoForSlot(argIndex);
+  const IdentifierInfo *II = getIdentifierInfoForSlot(argIndex);
   return II ? II->getName() : StringRef();
 }
 
@@ -571,7 +575,7 @@ std::string Selector::getAsString() const {
     return "<null selector>";
 
   if (getIdentifierInfoFlag() < MultiArg) {
-    IdentifierInfo *II = getAsIdentifierInfo();
+    const IdentifierInfo *II = getAsIdentifierInfo();
 
     if (getNumArgs() == 0) {
       assert(II && "If the number of arguments is 0 then II is guaranteed to "
@@ -601,11 +605,11 @@ LLVM_DUMP_METHOD void Selector::dump() const { print(llvm::errs()); }
 static bool startsWithWord(StringRef name, StringRef word) {
   if (name.size() < word.size()) return false;
   return ((name.size() == word.size() || !isLowercase(name[word.size()])) &&
-          name.startswith(word));
+          name.starts_with(word));
 }
 
 ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
-  IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return OMF_None;
 
   StringRef name = first->getName();
@@ -625,8 +629,7 @@ ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
     return OMF_performSelector;
 
   // The other method families may begin with a prefix of underscores.
-  while (!name.empty() && name.front() == '_')
-    name = name.substr(1);
+  name = name.ltrim('_');
 
   if (name.empty()) return OMF_None;
   switch (name.front()) {
@@ -653,7 +656,7 @@ ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
 }
 
 ObjCInstanceTypeFamily Selector::getInstTypeMethodFamily(Selector sel) {
-  IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return OIT_None;
 
   StringRef name = first->getName();
@@ -681,7 +684,7 @@ ObjCInstanceTypeFamily Selector::getInstTypeMethodFamily(Selector sel) {
 }
 
 ObjCStringFormatFamily Selector::getStringFormatFamilyImpl(Selector sel) {
-  IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return SFF_None;
 
   StringRef name = first->getName();
@@ -739,7 +742,7 @@ SelectorTable::constructSetterSelector(IdentifierTable &Idents,
 
 std::string SelectorTable::getPropertyNameFromSetterSelector(Selector Sel) {
   StringRef Name = Sel.getNameForSlot(0);
-  assert(Name.startswith("set") && "invalid setter name");
+  assert(Name.starts_with("set") && "invalid setter name");
   return (Twine(toLowercase(Name[3])) + Name.drop_front(4)).str();
 }
 
@@ -748,7 +751,8 @@ size_t SelectorTable::getTotalMemory() const {
   return SelTabImpl.Allocator.getTotalMemory();
 }
 
-Selector SelectorTable::getSelector(unsigned nKeys, IdentifierInfo **IIV) {
+Selector SelectorTable::getSelector(unsigned nKeys,
+                                    const IdentifierInfo **IIV) {
   if (nKeys < 2)
     return Selector(IIV[0], nKeys);
 

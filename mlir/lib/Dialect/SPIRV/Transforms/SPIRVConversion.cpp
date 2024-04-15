@@ -469,6 +469,12 @@ static Type convertBoolMemrefType(const spirv::TargetEnv &targetEnv,
     return wrapInStructAndGetPointer(arrayType, storageClass);
   }
 
+  if (type.getNumElements() == 0) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: zero-element memrefs are not supported\n");
+    return nullptr;
+  }
+
   int64_t memrefSize = llvm::divideCeil(type.getNumElements() * numBoolBits, 8);
   int64_t arrayElemCount = llvm::divideCeil(memrefSize, *arrayElemSize);
   int64_t stride = needsExplicitLayout(storageClass) ? *arrayElemSize : 0;
@@ -498,6 +504,12 @@ static Type convertSubByteMemrefType(const spirv::TargetEnv &targetEnv,
     // For Vulkan we need extra wrapping struct and array to satisfy interface
     // needs.
     return wrapInStructAndGetPointer(arrayType, storageClass);
+  }
+
+  if (type.getNumElements() == 0) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: zero-element memrefs are not supported\n");
+    return nullptr;
   }
 
   int64_t memrefSize =
@@ -979,15 +991,16 @@ Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
   // broken down into progressive small steps so we can have intermediate steps
   // using other dialects. At the moment SPIR-V is the final sink.
 
-  Value linearizedIndex = builder.create<spirv::ConstantOp>(
+  Value linearizedIndex = builder.createOrFold<spirv::ConstantOp>(
       loc, integerType, IntegerAttr::get(integerType, offset));
   for (const auto &index : llvm::enumerate(indices)) {
-    Value strideVal = builder.create<spirv::ConstantOp>(
+    Value strideVal = builder.createOrFold<spirv::ConstantOp>(
         loc, integerType,
         IntegerAttr::get(integerType, strides[index.index()]));
-    Value update = builder.create<spirv::IMulOp>(loc, strideVal, index.value());
+    Value update =
+        builder.createOrFold<spirv::IMulOp>(loc, index.value(), strideVal);
     linearizedIndex =
-        builder.create<spirv::IAddOp>(loc, linearizedIndex, update);
+        builder.createOrFold<spirv::IAddOp>(loc, update, linearizedIndex);
   }
   return linearizedIndex;
 }

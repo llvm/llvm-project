@@ -12,10 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget.h"
-#include "omptargetplugin.h"
+
+#include "Shared/PluginAPI.h"
+
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <cstdint>
 #include <cstdlib>
 
 using namespace llvm;
@@ -54,8 +57,8 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm-omp-kernel-replay\n");
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> KernelInfoMB =
-      MemoryBuffer::getFile(InputFilename, /* isText */ true,
-                            /* RequiresNullTerminator */ true);
+      MemoryBuffer::getFile(InputFilename, /*isText=*/true,
+                            /*RequiresNullTerminator=*/true);
   if (!KernelInfoMB)
     report_fatal_error("Error reading the kernel info json file");
   Expected<json::Value> JsonKernelInfo =
@@ -97,8 +100,8 @@ int main(int argc, char **argv) {
   KernelEntry.addr = (void *)0x1;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> ImageMB =
-      MemoryBuffer::getFile(KernelEntryName + ".image", /* isText */ false,
-                            /* RequiresNullTerminator */ false);
+      MemoryBuffer::getFile(KernelEntryName + ".image", /*isText=*/false,
+                            /*RequiresNullTerminator=*/false);
   if (!ImageMB)
     report_fatal_error("Error reading the kernel image.");
 
@@ -124,20 +127,21 @@ int main(int argc, char **argv) {
   int32_t DeviceId = (DeviceIdOpt > -1 ? DeviceIdOpt : DeviceIdJson.value());
 
   // TODO: do we need requires?
-  //__tgt_register_requires(/* Flags */1);
+  //__tgt_register_requires(/*Flags=*/1);
 
   __tgt_register_lib(&Desc);
 
+  uint64_t ReqPtrArgOffset = 0;
   int Rc = __tgt_activate_record_replay(DeviceId, DeviceMemorySize, BAllocStart,
-                                        false, VerifyOpt);
+                                        false, VerifyOpt, ReqPtrArgOffset);
 
   if (Rc != OMP_TGT_SUCCESS) {
     report_fatal_error("Cannot activate record replay\n");
   }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> DeviceMemoryMB =
-      MemoryBuffer::getFile(KernelEntryName + ".memory", /* isText */ false,
-                            /* RequiresNullTerminator */ false);
+      MemoryBuffer::getFile(KernelEntryName + ".memory", /*isText=*/false,
+                            /*RequiresNullTerminator=*/false);
 
   if (!DeviceMemoryMB)
     report_fatal_error("Error reading the kernel input device memory.");
@@ -147,10 +151,22 @@ int main(int argc, char **argv) {
   uint8_t *recored_data = new uint8_t[DeviceMemoryMB.get()->getBufferSize()];
   std::memcpy(recored_data,
               const_cast<char *>(DeviceMemoryMB.get()->getBuffer().data()),
-              DeviceMemorySizeJson.value() * sizeof(uint8_t));
+              DeviceMemoryMB.get()->getBufferSize());
+
+  // If necessary, adjust pointer arguments.
+  if (ReqPtrArgOffset) {
+    for (auto *&Arg : TgtArgs) {
+      auto ArgInt = uintptr_t(Arg);
+      // Try to find pointer arguments.
+      if (ArgInt < uintptr_t(BAllocStart) ||
+          ArgInt >= uintptr_t(BAllocStart) + DeviceMemorySize)
+        continue;
+      Arg = reinterpret_cast<void *>(ArgInt - ReqPtrArgOffset);
+    }
+  }
 
   __tgt_target_kernel_replay(
-      /* Loc */ nullptr, DeviceId, KernelEntry.addr, (char *)recored_data,
+      /*Loc=*/nullptr, DeviceId, KernelEntry.addr, (char *)recored_data,
       DeviceMemoryMB.get()->getBufferSize(), TgtArgs.data(),
       TgtArgOffsets.data(), NumArgs.value(), NumTeams, NumThreads,
       LoopTripCount.value());
@@ -158,15 +174,15 @@ int main(int argc, char **argv) {
   if (VerifyOpt) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> OriginalOutputMB =
         MemoryBuffer::getFile(KernelEntryName + ".original.output",
-                              /* isText */ false,
-                              /* RequiresNullTerminator */ false);
+                              /*isText=*/false,
+                              /*RequiresNullTerminator=*/false);
     if (!OriginalOutputMB)
       report_fatal_error("Error reading the kernel original output file, make "
                          "sure LIBOMPTARGET_SAVE_OUTPUT is set when recording");
     ErrorOr<std::unique_ptr<MemoryBuffer>> ReplayOutputMB =
         MemoryBuffer::getFile(KernelEntryName + ".replay.output",
-                              /* isText */ false,
-                              /* RequiresNullTerminator */ false);
+                              /*isText=*/false,
+                              /*RequiresNullTerminator=*/false);
     if (!ReplayOutputMB)
       report_fatal_error("Error reading the kernel replay output file");
 
@@ -180,10 +196,6 @@ int main(int argc, char **argv) {
   }
 
   delete[] recored_data;
-
-  // TODO: calling unregister lib causes plugin deinit error for nextgen
-  // plugins.
-  //__tgt_unregister_lib(&Desc);
 
   return 0;
 }

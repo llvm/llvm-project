@@ -22,7 +22,11 @@
 //  template<class ElementType, class... Integrals>
 //    requires((is_convertible_v<Integrals, size_t> && ...) && sizeof...(Integrals) > 0)
 //    explicit mdspan(ElementType*, Integrals...)
-//      -> mdspan<ElementType, dextents<size_t, sizeof...(Integrals)>>;
+//      -> mdspan<ElementType, dextents<size_t, sizeof...(Integrals)>>;            // until C++26
+//  template<class ElementType, class... Integrals>
+//    requires((is_convertible_v<Integrals, size_t> && ...) && sizeof...(Integrals) > 0)
+//    explicit mdspan(ElementType*, Integrals...)
+//      -> mdspan<ElementType, extents<size_t, maybe-static-ext<Integrals>...>>;  // since C++26
 //
 //  template<class ElementType, class OtherIndexType, size_t N>
 //    mdspan(ElementType*, span<OtherIndexType, N>)
@@ -80,10 +84,10 @@ template <class H, class L, class A>
 constexpr void mixin_extents(const H& handle, const L& layout, const A& acc) {
   constexpr size_t D = std::dynamic_extent;
   test_mdspan_types(handle, construct_mapping(layout, std::extents<int>()), acc);
-  test_mdspan_types(handle, construct_mapping(layout, std::extents<char, D>(7)), acc);
+  test_mdspan_types(handle, construct_mapping(layout, std::extents<signed char, D>(7)), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<unsigned, 7>()), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<size_t, D, 4, D>(2, 3)), acc);
-  test_mdspan_types(handle, construct_mapping(layout, std::extents<char, D, 7, D>(0, 3)), acc);
+  test_mdspan_types(handle, construct_mapping(layout, std::extents<signed char, D, 7, D>(0, 3)), acc);
   test_mdspan_types(handle, construct_mapping(layout, std::extents<int64_t, D, 7, D, 4, D, D>(1, 2, 3, 2)), acc);
 }
 
@@ -101,6 +105,18 @@ constexpr bool test_no_layout_deduction_guides(const H& handle, const A&) {
   ASSERT_SAME_TYPE(decltype(std::mdspan(handle)), std::mdspan<T, std::extents<size_t>>);
   // deduction from pointer and integral like
   ASSERT_SAME_TYPE(decltype(std::mdspan(handle, 5, SizeTIntType(6))), std::mdspan<T, std::dextents<size_t, 2>>);
+
+#if _LIBCPP_STD_VER >= 26
+  // P3029R1: deduction from `integral_constant`
+  ASSERT_SAME_TYPE(
+      decltype(std::mdspan(handle, std::integral_constant<size_t, 5>{})), std::mdspan<T, std::extents<size_t, 5>>);
+  ASSERT_SAME_TYPE(decltype(std::mdspan(handle, std::integral_constant<size_t, 5>{}, std::dynamic_extent)),
+                   std::mdspan<T, std::extents<size_t, 5, std::dynamic_extent>>);
+  ASSERT_SAME_TYPE(
+      decltype(std::mdspan(
+          handle, std::integral_constant<size_t, 5>{}, std::dynamic_extent, std::integral_constant<size_t, 7>{})),
+      std::mdspan<T, std::extents<size_t, 5, std::dynamic_extent, 7>>);
+#endif
 
   std::array<char, 3> exts;
   // deduction from pointer and array

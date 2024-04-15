@@ -24,6 +24,10 @@ static bool isELFGOTSection(Section &S) { return S.getName() == "$__GOT"; }
 
 static bool isELFStubsSection(Section &S) { return S.getName() == "$__STUBS"; }
 
+static bool isELFAArch32StubsSection(Section &S) {
+  return S.getName().starts_with("__llvm_jitlink_aarch32_STUBS_");
+}
+
 static Expected<Edge &> getFirstRelocationEdge(LinkGraph &G, Block &B) {
   auto EItr =
       llvm::find_if(B.edges(), [](Edge &E) { return E.isRelocation(); });
@@ -55,13 +59,43 @@ static Expected<Symbol &> getELFStubTarget(LinkGraph &G, Block &B) {
   if (!E)
     return E.takeError();
   auto &GOTSym = E->getTarget();
-  if (!GOTSym.isDefined() || !isELFGOTSection(GOTSym.getBlock().getSection()))
+  if (!GOTSym.isDefined())
+    return make_error<StringError>("Stubs entry in " + G.getName() +
+                                       " does not point to GOT entry",
+                                   inconvertibleErrorCode());
+  if (!isELFGOTSection(GOTSym.getBlock().getSection()))
     return make_error<StringError>(
         "Stubs entry in " + G.getName() + ", \"" +
             GOTSym.getBlock().getSection().getName() +
             "\" does not point to GOT entry",
         inconvertibleErrorCode());
   return getELFGOTTarget(G, GOTSym.getBlock());
+}
+
+static Expected<Symbol &> getELFAArch32StubTarget(LinkGraph &G, Block &B) {
+  auto E = getFirstRelocationEdge(G, B);
+  if (!E)
+    return E.takeError();
+  return E->getTarget();
+}
+
+enum SectionType { GOT, Stubs, AArch32Stubs, Other };
+
+static Error registerSymbol(LinkGraph &G, Symbol &Sym, Session::FileInfo &FI,
+                            SectionType SecType) {
+  switch (SecType) {
+  case GOT:
+    if (Sym.getSize() == 0)
+      return Error::success(); // Skip the GOT start symbol
+    return FI.registerGOTEntry(G, Sym, getELFGOTTarget);
+  case Stubs:
+    return FI.registerStubEntry(G, Sym, getELFStubTarget);
+  case AArch32Stubs:
+    return FI.registerMultiStubEntry(G, Sym, getELFAArch32StubTarget);
+  case Other:
+    return Error::success();
+  }
+  llvm_unreachable("Unhandled SectionType enum");
 }
 
 namespace llvm {
@@ -96,8 +130,16 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
                                          "\"",
                                      inconvertibleErrorCode());
 
-    bool isGOTSection = isELFGOTSection(Sec);
-    bool isStubsSection = isELFStubsSection(Sec);
+    SectionType SecType;
+    if (isELFGOTSection(Sec)) {
+      SecType = GOT;
+    } else if (isELFStubsSection(Sec)) {
+      SecType = Stubs;
+    } else if (isELFAArch32StubsSection(Sec)) {
+      SecType = AArch32Stubs;
+    } else {
+      SecType = Other;
+    }
 
     bool SectionContainsContent = false;
     bool SectionContainsZeroFill = false;
@@ -110,33 +152,9 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
       if (Sym->getAddress() > LastSym->getAddress())
         LastSym = Sym;
 
-      if (isGOTSection) {
-        if (Sym->isSymbolZeroFill())
-          return make_error<StringError>("zero-fill atom in GOT section",
-                                         inconvertibleErrorCode());
-
-        // If this is a GOT symbol with size (i.e. not the GOT start symbol)
-        // then add it to the GOT entry info table.
-        if (Sym->getSize() != 0) {
-          if (auto TS = getELFGOTTarget(G, Sym->getBlock()))
-            FileInfo.GOTEntryInfos[TS->getName()] = {
-                Sym->getSymbolContent(), Sym->getAddress().getValue(),
-                Sym->getTargetFlags()};
-          else
-            return TS.takeError();
-        }
-        SectionContainsContent = true;
-      } else if (isStubsSection) {
-        if (Sym->isSymbolZeroFill())
-          return make_error<StringError>("zero-fill atom in Stub section",
-                                         inconvertibleErrorCode());
-
-        if (auto TS = getELFStubTarget(G, Sym->getBlock()))
-          FileInfo.StubInfos[TS->getName()] = {Sym->getSymbolContent(),
-                                               Sym->getAddress().getValue(),
-                                               Sym->getTargetFlags()};
-        else
-          return TS.takeError();
+      if (SecType != Other) {
+        if (Error Err = registerSymbol(G, *Sym, FileInfo, SecType))
+          return Err;
         SectionContainsContent = true;
       }
 

@@ -16,8 +16,6 @@
 #include <locale>
 #include <string>
 
-#include "test_macros.h"
-
 struct Char {
   Char() = default;
   Char(char c) : underlying_(c) {}
@@ -73,15 +71,53 @@ struct char_traits<Char> {
   static int_type eof() { return char_traits<char>::eof(); }
 };
 
+// This ctype specialization treats all characters as spaces
 template <>
-class ctype<Char> : public locale::facet {
+class ctype<Char> : public locale::facet, public ctype_base {
 public:
+  using char_type = Char;
   static locale::id id;
-  Char toupper(Char c) const { return Char(std::toupper(c.underlying_)); }
-  const char* widen(const char* first, const char* last, Char* dst) const {
-    for (; first != last;)
-      *dst++ = Char(*first++);
-    return last;
+  explicit ctype(std::size_t refs = 0) : locale::facet(refs) {}
+
+  bool is(mask m, char_type) const { return m & ctype_base::space; }
+  const char_type* is(const char_type* low, const char_type* high, mask* vec) const {
+    for (; low != high; ++low)
+      *vec++ = ctype_base::space;
+    return high;
+  }
+
+  const char_type* scan_is(mask m, const char_type* beg, const char_type* end) const {
+    for (; beg != end; ++beg)
+      if (this->is(m, *beg))
+        return beg;
+    return end;
+  }
+
+  const char_type* scan_not(mask m, const char_type* beg, const char_type* end) const {
+    for (; beg != end; ++beg)
+      if (!this->is(m, *beg))
+        return beg;
+    return end;
+  }
+
+  char_type toupper(char_type c) const { return c; }
+  const char_type* toupper(char_type*, const char_type* end) const { return end; }
+
+  char_type tolower(char_type c) const { return c; }
+  const char_type* tolower(char_type*, const char_type* end) const { return end; }
+
+  char_type widen(char c) const { return char_type(c); }
+  const char* widen(const char* beg, const char* end, char_type* dst) const {
+    for (; beg != end; ++beg, ++dst)
+      *dst = char_type(*beg);
+    return end;
+  }
+
+  char narrow(char_type c, char /*dflt*/) const { return c.underlying_; }
+  const char_type* narrow(const char_type* beg, const char_type* end, char /*dflt*/, char* dst) const {
+    for (; beg != end; ++beg, ++dst)
+      *dst = beg->underlying_;
+    return end;
   }
 };
 

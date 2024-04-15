@@ -39,7 +39,6 @@
 
 // Check x86_64-unknown-haiku, X86_64
 // RUN: %clang -### %s 2>&1 --target=x86_64-unknown-haiku \
-// RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/haiku_x86_64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-X86_64 %s
 // CHECK-LD-X86_64: "-cc1" "-triple" "x86_64-unknown-haiku"
@@ -63,7 +62,6 @@
 
 // Check the right flags are present with -shared
 // RUN: %clang -### %s -shared 2>&1 --target=x86_64-unknown-haiku \
-// RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/haiku_x86_64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-X86_64-SHARED %s
 // CHECK-X86_64-SHARED: "-cc1" "-triple" "x86_64-unknown-haiku"
@@ -75,3 +73,13 @@
 // RUN: %clang -### %s 2>&1 --target=arm-unknown-haiku \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM-CPU %s
 // CHECK-ARM-CPU: "-target-cpu" "arm1176jzf-s"
+
+// Check that the -X and --no-relax flags are passed to the linker on riscv64
+// RUN: %clang --target=riscv64-unknown-haiku -mno-relax -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=RISCV64-FLAGS %s
+// RISCV64-FLAGS: "-X" "--no-relax"
+
+// Check passing LTO flags to the linker
+// RUN: %clang --target=x86_64-unknown-haiku -flto -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LTO-FLAGS %s
+// CHECK-LTO-FLAGS: "-plugin-opt=mcpu=x86-64"

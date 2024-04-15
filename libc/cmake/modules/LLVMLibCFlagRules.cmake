@@ -129,14 +129,151 @@ function(get_fq_dep_list_without_flag output_list flag)
   set(${output_list} ${fq_dep_no_flag_list} PARENT_SCOPE)
 endfunction(get_fq_dep_list_without_flag)
 
+# Check if a `flag` is set
+function(check_flag result flag_name)
+  list(FIND ARGN ${flag_name} has_flag)
+  if(${has_flag} LESS 0)
+    list(FIND ARGN "${flag_name}__ONLY" has_flag)
+  endif()
+  if(${has_flag} GREATER -1)
+    set(${result} TRUE PARENT_SCOPE)
+  else()
+    set(${result} FALSE PARENT_SCOPE)
+  endif()
+endfunction(check_flag)
+
+# Generate all flags' combinations and call the corresponding function provided
+# by `CREATE_TARGET` to create a target for each combination.
+function(expand_flags_for_target target_name flags)
+  cmake_parse_arguments(
+    "EXPAND_FLAGS"
+    "" # Optional arguments
+    "CREATE_TARGET" # Single-value arguments
+    "DEPENDS;FLAGS" # Multi-value arguments
+    ${ARGN}
+  )
+
+  list(LENGTH flags nflags)
+  if(NOT ${nflags})
+    cmake_language(CALL ${EXPAND_FLAGS_CREATE_TARGET}
+      ${target_name}
+      ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
+      DEPENDS ${EXPAND_FLAGS_DEPENDS}
+      FLAGS ${EXPAND_FLAGS_FLAGS}
+    )
+    return()
+  endif()
+
+  list(GET flags 0 flag)
+  list(REMOVE_AT flags 0)
+  extract_flag_modifier(${flag} real_flag modifier)
+
+  if(NOT "${modifier}" STREQUAL "NO")
+    expand_flags_for_target(
+      ${target_name}
+      "${flags}"
+      DEPENDS ${EXPAND_FLAGS_DEPENDS}
+      FLAGS ${EXPAND_FLAGS_FLAGS}
+      CREATE_TARGET ${EXPAND_FLAGS_CREATE_TARGET}
+      ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
+    )
+  endif()
+
+  if("${real_flag}" STREQUAL "" OR "${modifier}" STREQUAL "ONLY")
+    return()
+  endif()
+
+  set(NEW_FLAGS ${EXPAND_FLAGS_FLAGS})
+  list(REMOVE_ITEM NEW_FLAGS ${flag})
+  get_fq_dep_list_without_flag(NEW_DEPS ${real_flag} ${EXPAND_FLAGS_DEPENDS})
+
+  # Only target with `flag` has `.__NO_flag` target, `flag__NO` and
+  # `flag__ONLY` do not.
+  if("${modifier}" STREQUAL "")
+    set(TARGET_NAME "${target_name}.__NO_${flag}")
+  else()
+    set(TARGET_NAME "${target_name}")
+  endif()
+
+  expand_flags_for_target(
+    ${TARGET_NAME}
+    "${flags}"
+    DEPENDS ${NEW_DEPS}
+    FLAGS ${NEW_FLAGS}
+    CREATE_TARGET ${EXPAND_FLAGS_CREATE_TARGET}
+    ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
+  )
+endfunction(expand_flags_for_target)
+
+# Collect all flags from a target's dependency, and then forward to
+# `expand_flags_for_target to generate all flags' combinations and call
+# the corresponding function provided by `CREATE_TARGET` to create a target for
+# each combination.
+function(add_target_with_flags target_name)
+  cmake_parse_arguments(
+    "ADD_TO_EXPAND"
+    "" # Optional arguments
+    "CREATE_TARGET;" # Single value arguments
+    "DEPENDS;FLAGS;ADD_FLAGS" # Multi-value arguments
+    ${ARGN}
+  )
+
+  if(NOT target_name)
+    message(FATAL_ERROR "Bad target name")
+  endif()
+
+  if(NOT ADD_TO_EXPAND_CREATE_TARGET)
+    message(FATAL_ERROR "Missing function to create targets.  Please specify "
+                        "`CREATE_TARGET <function>`")
+  endif()
+
+  get_fq_target_name(${target_name} fq_target_name)
+
+  if(ADD_TO_EXPAND_DEPENDS AND ("${SHOW_INTERMEDIATE_OBJECTS}" STREQUAL "DEPS"))
+    message(STATUS "Gathering FLAGS from dependencies for ${fq_target_name}")
+  endif()
+
+  get_fq_deps_list(fq_deps_list ${ADD_TO_EXPAND_DEPENDS})
+  get_flags_from_dep_list(deps_flag_list ${fq_deps_list})
+
+  # Appending ADD_FLAGS before flags from dependency.
+  if(ADD_TO_EXPAND_ADD_FLAGS)
+    list(APPEND ADD_TO_EXPAND_FLAGS ${ADD_TO_EXPAND_ADD_FLAGS})
+  endif()
+  list(APPEND ADD_TO_EXPAND_FLAGS ${deps_flag_list})
+  remove_duplicated_flags("${ADD_TO_EXPAND_FLAGS}" flags)
+  list(SORT flags)
+
+  if(SHOW_INTERMEDIATE_OBJECTS AND flags)
+    message(STATUS "Target ${fq_target_name} has FLAGS: ${flags}")
+  endif()
+
+  expand_flags_for_target(
+    ${fq_target_name}
+    "${flags}"
+    DEPENDS "${fq_deps_list}"
+    FLAGS "${flags}"
+    CREATE_TARGET ${ADD_TO_EXPAND_CREATE_TARGET}
+    ${ADD_TO_EXPAND_UNPARSED_ARGUMENTS}
+  )
+endfunction(add_target_with_flags)
+
 # Special flags
 set(FMA_OPT_FLAG "FMA_OPT")
 set(ROUND_OPT_FLAG "ROUND_OPT")
+# This flag controls whether we use explicit SIMD instructions or not.
+set(EXPLICIT_SIMD_OPT_FLAG "EXPLICIT_SIMD_OPT")
 
 # Skip FMA_OPT flag for targets that don't support fma.
 if(NOT((LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "FMA")) OR
        LIBC_TARGET_ARCHITECTURE_IS_RISCV64))
   set(SKIP_FLAG_EXPANSION_FMA_OPT TRUE)
+endif()
+
+# Skip EXPLICIT_SIMD_OPT flag for targets that don't support SSE2.
+# Note: one may want to revisit it if they want to control other explicit SIMD
+if(NOT(LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "SSE2")))
+  set(SKIP_FLAG_EXPANSION_EXPLICIT_SIMD_OPT TRUE)
 endif()
 
 # Skip ROUND_OPT flag for targets that don't support SSE 4.2.

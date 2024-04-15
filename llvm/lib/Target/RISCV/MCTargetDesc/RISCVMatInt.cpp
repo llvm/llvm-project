@@ -9,6 +9,7 @@
 #include "RISCVMatInt.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/MathExtras.h"
 using namespace llvm;
 
@@ -45,13 +46,12 @@ static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
 }
 
 // Recursively generate a sequence for materializing an integer.
-static void generateInstSeqImpl(int64_t Val,
-                                const FeatureBitset &ActiveFeatures,
+static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
                                 RISCVMatInt::InstSeq &Res) {
-  bool IsRV64 = ActiveFeatures[RISCV::Feature64Bit];
+  bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
 
   // Use BSETI for a single bit that can't be expressed by a single LUI or ADDI.
-  if (ActiveFeatures[RISCV::FeatureStdExtZbs] && isPowerOf2_64(Val) &&
+  if (STI.hasFeature(RISCV::FeatureStdExtZbs) && isPowerOf2_64(Val) &&
       (!isInt<32>(Val) || Val == 0x800)) {
     Res.emplace_back(RISCV::BSETI, Log2_64(Val));
     return;
@@ -122,7 +122,7 @@ static void generateInstSeqImpl(int64_t Val,
         ShiftAmount -= 12;
         Val = (uint64_t)Val << 12;
       } else if (isUInt<32>((uint64_t)Val << 12) &&
-                 ActiveFeatures[RISCV::FeatureStdExtZba]) {
+                 STI.hasFeature(RISCV::FeatureStdExtZba)) {
         // Reduce the shift amount and add zeros to the LSBs so it will match
         // LUI, then shift left with SLLI.UW to clear the upper 32 set bits.
         ShiftAmount -= 12;
@@ -133,7 +133,7 @@ static void generateInstSeqImpl(int64_t Val,
 
     // Try to use SLLI_UW for Val when it is uint32 but not int32.
     if (isUInt<32>((uint64_t)Val) && !isInt<32>((uint64_t)Val) &&
-        ActiveFeatures[RISCV::FeatureStdExtZba]) {
+        STI.hasFeature(RISCV::FeatureStdExtZba)) {
       // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with
       // SLLI_UW.
       Val = ((uint64_t)Val) | (0xffffffffull << 32);
@@ -141,7 +141,7 @@ static void generateInstSeqImpl(int64_t Val,
     }
   }
 
-  generateInstSeqImpl(Val, ActiveFeatures, Res);
+  generateInstSeqImpl(Val, STI, Res);
 
   // Skip shift if we were able to use LUI directly.
   if (ShiftAmount) {
@@ -171,8 +171,7 @@ static unsigned extractRotateInfo(int64_t Val) {
   return 0;
 }
 
-static void generateInstSeqLeadingZeros(int64_t Val,
-                                        const FeatureBitset &ActiveFeatures,
+static void generateInstSeqLeadingZeros(int64_t Val, const MCSubtargetInfo &STI,
                                         RISCVMatInt::InstSeq &Res) {
   assert(Val > 0 && "Expected postive val");
 
@@ -184,7 +183,7 @@ static void generateInstSeqLeadingZeros(int64_t Val,
   ShiftedVal |= maskTrailingOnes<uint64_t>(LeadingZeros);
 
   RISCVMatInt::InstSeq TmpSeq;
-  generateInstSeqImpl(ShiftedVal, ActiveFeatures, TmpSeq);
+  generateInstSeqImpl(ShiftedVal, STI, TmpSeq);
 
   // Keep the new sequence if it is an improvement or the original is empty.
   if ((TmpSeq.size() + 1) < Res.size() ||
@@ -196,7 +195,7 @@ static void generateInstSeqLeadingZeros(int64_t Val,
   // Some cases can benefit from filling the lower bits with zeros instead.
   ShiftedVal &= maskTrailingZeros<uint64_t>(LeadingZeros);
   TmpSeq.clear();
-  generateInstSeqImpl(ShiftedVal, ActiveFeatures, TmpSeq);
+  generateInstSeqImpl(ShiftedVal, STI, TmpSeq);
 
   // Keep the new sequence if it is an improvement or the original is empty.
   if ((TmpSeq.size() + 1) < Res.size() ||
@@ -207,11 +206,11 @@ static void generateInstSeqLeadingZeros(int64_t Val,
 
   // If we have exactly 32 leading zeros and Zba, we can try using zext.w at
   // the end of the sequence.
-  if (LeadingZeros == 32 && ActiveFeatures[RISCV::FeatureStdExtZba]) {
+  if (LeadingZeros == 32 && STI.hasFeature(RISCV::FeatureStdExtZba)) {
     // Try replacing upper bits with 1.
     uint64_t LeadingOnesVal = Val | maskLeadingOnes<uint64_t>(LeadingZeros);
     TmpSeq.clear();
-    generateInstSeqImpl(LeadingOnesVal, ActiveFeatures, TmpSeq);
+    generateInstSeqImpl(LeadingOnesVal, STI, TmpSeq);
 
     // Keep the new sequence if it is an improvement.
     if ((TmpSeq.size() + 1) < Res.size() ||
@@ -223,9 +222,9 @@ static void generateInstSeqLeadingZeros(int64_t Val,
 }
 
 namespace llvm::RISCVMatInt {
-InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
+InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
   RISCVMatInt::InstSeq Res;
-  generateInstSeqImpl(Val, ActiveFeatures, Res);
+  generateInstSeqImpl(Val, STI, Res);
 
   // If the low 12 bits are non-zero, the first expansion may end with an ADDI
   // or ADDIW. If there are trailing zeros, try generating a sign extended
@@ -238,9 +237,9 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     // NOTE: We don't check for C extension to minimize differences in generated
     // code.
     bool IsShiftedCompressible =
-              isInt<6>(ShiftedVal) && !ActiveFeatures[RISCV::TuneLUIADDIFusion];
+        isInt<6>(ShiftedVal) && !STI.hasFeature(RISCV::TuneLUIADDIFusion);
     RISCVMatInt::InstSeq TmpSeq;
-    generateInstSeqImpl(ShiftedVal, ActiveFeatures, TmpSeq);
+    generateInstSeqImpl(ShiftedVal, STI, TmpSeq);
 
     // Keep the new sequence if it is an improvement.
     if ((TmpSeq.size() + 1) < Res.size() || IsShiftedCompressible) {
@@ -254,7 +253,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   if (Res.size() <= 2)
     return Res;
 
-  assert(ActiveFeatures[RISCV::Feature64Bit] &&
+  assert(STI.hasFeature(RISCV::Feature64Bit) &&
          "Expected RV32 to only need 2 instructions");
 
   // If the lower 13 bits are something like 0x17ff, try to add 1 to change the
@@ -266,7 +265,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     int64_t Imm12 = -(0x800 - (Val & 0xfff));
     int64_t AdjustedVal = Val - Imm12;
     RISCVMatInt::InstSeq TmpSeq;
-    generateInstSeqImpl(AdjustedVal, ActiveFeatures, TmpSeq);
+    generateInstSeqImpl(AdjustedVal, STI, TmpSeq);
 
     // Keep the new sequence if it is an improvement.
     if ((TmpSeq.size() + 1) < Res.size()) {
@@ -278,7 +277,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   // If the constant is positive we might be able to generate a shifted constant
   // with no leading zeros and use a final SRLI to restore them.
   if (Val > 0 && Res.size() > 2) {
-    generateInstSeqLeadingZeros(Val, ActiveFeatures, Res);
+    generateInstSeqLeadingZeros(Val, STI, Res);
   }
 
   // If the constant is negative, trying inverting and using our trailing zero
@@ -286,7 +285,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   if (Val < 0 && Res.size() > 3) {
     uint64_t InvertedVal = ~(uint64_t)Val;
     RISCVMatInt::InstSeq TmpSeq;
-    generateInstSeqLeadingZeros(InvertedVal, ActiveFeatures, TmpSeq);
+    generateInstSeqLeadingZeros(InvertedVal, STI, TmpSeq);
 
     // Keep it if we found a sequence that is smaller after inverting.
     if (!TmpSeq.empty() && (TmpSeq.size() + 1) < Res.size()) {
@@ -298,12 +297,12 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   // If the Low and High halves are the same, use pack. The pack instruction
   // packs the XLEN/2-bit lower halves of rs1 and rs2 into rd, with rs1 in the
   // lower half and rs2 in the upper half.
-  if (Res.size() > 2 && ActiveFeatures[RISCV::FeatureStdExtZbkb]) {
+  if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZbkb)) {
     int64_t LoVal = SignExtend64<32>(Val);
     int64_t HiVal = SignExtend64<32>(Val >> 32);
     if (LoVal == HiVal) {
       RISCVMatInt::InstSeq TmpSeq;
-      generateInstSeqImpl(LoVal, ActiveFeatures, TmpSeq);
+      generateInstSeqImpl(LoVal, STI, TmpSeq);
       if ((TmpSeq.size() + 1) < Res.size()) {
         TmpSeq.emplace_back(RISCV::PACK, 0);
         Res = TmpSeq;
@@ -312,7 +311,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   }
 
   // Perform optimization with BCLRI/BSETI in the Zbs extension.
-  if (Res.size() > 2 && ActiveFeatures[RISCV::FeatureStdExtZbs]) {
+  if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZbs)) {
     // 1. For values in range 0xffffffff 7fffffff ~ 0xffffffff 00000000,
     //    call generateInstSeqImpl with Val|0x80000000 (which is expected be
     //    an int32), then emit (BCLRI r, 31).
@@ -330,7 +329,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     }
     if (isInt<32>(NewVal)) {
       RISCVMatInt::InstSeq TmpSeq;
-      generateInstSeqImpl(NewVal, ActiveFeatures, TmpSeq);
+      generateInstSeqImpl(NewVal, STI, TmpSeq);
       if ((TmpSeq.size() + 1) < Res.size()) {
         TmpSeq.emplace_back(Opc, 31);
         Res = TmpSeq;
@@ -344,7 +343,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     uint32_t Hi = Hi_32(Val);
     Opc = 0;
     RISCVMatInt::InstSeq TmpSeq;
-    generateInstSeqImpl(Lo, ActiveFeatures, TmpSeq);
+    generateInstSeqImpl(Lo, STI, TmpSeq);
     // Check if it is profitable to use BCLRI/BSETI.
     if (Lo > 0 && TmpSeq.size() + llvm::popcount(Hi) < Res.size()) {
       Opc = RISCV::BSETI;
@@ -365,7 +364,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   }
 
   // Perform optimization with SH*ADD in the Zba extension.
-  if (Res.size() > 2 && ActiveFeatures[RISCV::FeatureStdExtZba]) {
+  if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZba)) {
     int64_t Div = 0;
     unsigned Opc = 0;
     RISCVMatInt::InstSeq TmpSeq;
@@ -382,7 +381,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     }
     // Build the new instruction sequence.
     if (Div > 0) {
-      generateInstSeqImpl(Val / Div, ActiveFeatures, TmpSeq);
+      generateInstSeqImpl(Val / Div, STI, TmpSeq);
       if ((TmpSeq.size() + 1) < Res.size()) {
         TmpSeq.emplace_back(Opc, 0);
         Res = TmpSeq;
@@ -409,7 +408,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
         assert(Lo12 != 0 &&
                "unexpected instruction sequence for immediate materialisation");
         assert(TmpSeq.empty() && "Expected empty TmpSeq");
-        generateInstSeqImpl(Hi52 / Div, ActiveFeatures, TmpSeq);
+        generateInstSeqImpl(Hi52 / Div, STI, TmpSeq);
         if ((TmpSeq.size() + 2) < Res.size()) {
           TmpSeq.emplace_back(Opc, 0);
           TmpSeq.emplace_back(RISCV::ADDI, Lo12);
@@ -421,14 +420,14 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
 
   // Perform optimization with rori in the Zbb and th.srri in the XTheadBb
   // extension.
-  if (Res.size() > 2 && (ActiveFeatures[RISCV::FeatureStdExtZbb] ||
-                         ActiveFeatures[RISCV::FeatureVendorXTHeadBb])) {
+  if (Res.size() > 2 && (STI.hasFeature(RISCV::FeatureStdExtZbb) ||
+                         STI.hasFeature(RISCV::FeatureVendorXTHeadBb))) {
     if (unsigned Rotate = extractRotateInfo(Val)) {
       RISCVMatInt::InstSeq TmpSeq;
       uint64_t NegImm12 = llvm::rotl<uint64_t>(Val, Rotate);
       assert(isInt<12>(NegImm12));
       TmpSeq.emplace_back(RISCV::ADDI, NegImm12);
-      TmpSeq.emplace_back(ActiveFeatures[RISCV::FeatureStdExtZbb]
+      TmpSeq.emplace_back(STI.hasFeature(RISCV::FeatureStdExtZbb)
                               ? RISCV::RORI
                               : RISCV::TH_SRRI,
                           Rotate);
@@ -438,7 +437,44 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   return Res;
 }
 
-InstSeq generateTwoRegInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures,
+void generateMCInstSeq(int64_t Val, const MCSubtargetInfo &STI,
+                       MCRegister DestReg, SmallVectorImpl<MCInst> &Insts) {
+  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Val, STI);
+
+  MCRegister SrcReg = RISCV::X0;
+  for (RISCVMatInt::Inst &Inst : Seq) {
+    switch (Inst.getOpndKind()) {
+    case RISCVMatInt::Imm:
+      Insts.push_back(MCInstBuilder(Inst.getOpcode())
+                          .addReg(DestReg)
+                          .addImm(Inst.getImm()));
+      break;
+    case RISCVMatInt::RegX0:
+      Insts.push_back(MCInstBuilder(Inst.getOpcode())
+                          .addReg(DestReg)
+                          .addReg(SrcReg)
+                          .addReg(RISCV::X0));
+      break;
+    case RISCVMatInt::RegReg:
+      Insts.push_back(MCInstBuilder(Inst.getOpcode())
+                          .addReg(DestReg)
+                          .addReg(SrcReg)
+                          .addReg(SrcReg));
+      break;
+    case RISCVMatInt::RegImm:
+      Insts.push_back(MCInstBuilder(Inst.getOpcode())
+                          .addReg(DestReg)
+                          .addReg(SrcReg)
+                          .addImm(Inst.getImm()));
+      break;
+    }
+
+    // Only the first instruction has X0 as its source.
+    SrcReg = DestReg;
+  }
+}
+
+InstSeq generateTwoRegInstSeq(int64_t Val, const MCSubtargetInfo &STI,
                               unsigned &ShiftAmt, unsigned &AddOpc) {
   int64_t LoVal = SignExtend64<32>(Val);
   if (LoVal == 0)
@@ -459,23 +495,23 @@ InstSeq generateTwoRegInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures,
   AddOpc = RISCV::ADD;
 
   if (Tmp == ((uint64_t)LoVal << ShiftAmt))
-    return RISCVMatInt::generateInstSeq(LoVal, ActiveFeatures);
+    return RISCVMatInt::generateInstSeq(LoVal, STI);
 
   // If we have Zba, we can use (ADD_UW X, (SLLI X, 32)).
-  if (ActiveFeatures[RISCV::FeatureStdExtZba] && Lo_32(Val) == Hi_32(Val)) {
+  if (STI.hasFeature(RISCV::FeatureStdExtZba) && Lo_32(Val) == Hi_32(Val)) {
     ShiftAmt = 32;
     AddOpc = RISCV::ADD_UW;
-    return RISCVMatInt::generateInstSeq(LoVal, ActiveFeatures);
+    return RISCVMatInt::generateInstSeq(LoVal, STI);
   }
 
   return RISCVMatInt::InstSeq();
 }
 
-int getIntMatCost(const APInt &Val, unsigned Size,
-                  const FeatureBitset &ActiveFeatures, bool CompressionCost) {
-  bool IsRV64 = ActiveFeatures[RISCV::Feature64Bit];
-  bool HasRVC = CompressionCost && (ActiveFeatures[RISCV::FeatureStdExtC] ||
-                                    ActiveFeatures[RISCV::FeatureStdExtZca]);
+int getIntMatCost(const APInt &Val, unsigned Size, const MCSubtargetInfo &STI,
+                  bool CompressionCost) {
+  bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
+  bool HasRVC = CompressionCost && (STI.hasFeature(RISCV::FeatureStdExtC) ||
+                                    STI.hasFeature(RISCV::FeatureStdExtZca));
   int PlatRegSize = IsRV64 ? 64 : 32;
 
   // Split the constant into platform register sized chunks, and calculate cost
@@ -483,7 +519,7 @@ int getIntMatCost(const APInt &Val, unsigned Size,
   int Cost = 0;
   for (unsigned ShiftVal = 0; ShiftVal < Size; ShiftVal += PlatRegSize) {
     APInt Chunk = Val.ashr(ShiftVal).sextOrTrunc(PlatRegSize);
-    InstSeq MatSeq = generateInstSeq(Chunk.getSExtValue(), ActiveFeatures);
+    InstSeq MatSeq = generateInstSeq(Chunk.getSExtValue(), STI);
     Cost += getInstSeqCost(MatSeq, HasRVC);
   }
   return std::max(1, Cost);

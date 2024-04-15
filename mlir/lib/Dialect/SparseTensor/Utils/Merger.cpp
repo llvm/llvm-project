@@ -220,19 +220,19 @@ TensorExp::TensorExp(TensorExp::Kind k, unsigned x, ExprId y, Value v,
   llvm_unreachable("unexpected kind");
 }
 
-Merger::Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
-               unsigned numFilterLoops, unsigned maxLvlRank)
+Merger::Merger(unsigned numInputOutputTensors, unsigned numLoops,
+               unsigned maxLvlRank)
     : outTensor(numInputOutputTensors - 1),
       syntheticTensor(numInputOutputTensors),
-      numTensors(numInputOutputTensors + 1), numNativeLoops(numNativeLoops),
-      numLoops(numNativeLoops + numFilterLoops), hasSparseOut(false),
+      numTensors(numInputOutputTensors + 1), numLoops(numLoops),
+      hasSparseOut(false),
       lvlTypes(numTensors,
-               std::vector<DimLevelType>(numLoops, DimLevelType::Undef)),
+               std::vector<LevelType>(numLoops, LevelFormat::Undef)),
       loopToLvl(numTensors,
                 std::vector<std::optional<Level>>(numLoops, std::nullopt)),
       lvlToLoop(numTensors,
                 std::vector<std::optional<LoopId>>(maxLvlRank, std::nullopt)),
-      loopToUnresolvedLvls(numLoops, std::vector<std::optional<LvlDLTPair>>(
+      loopToUnresolvedLvls(numLoops, std::vector<std::optional<LvlLTPair>>(
                                          numTensors, std::nullopt)),
       levelToDependentLoop(numTensors,
                            std::vector<std::vector<LoopCoeffPair>>(
@@ -476,7 +476,7 @@ BitVector Merger::simplifyCond(LatSetId s0, LatPointId p0) {
     // Starts resetting from a dense level, so that the first bit (if kept)
     // is not undefined level-type.
     for (unsigned b = 0; b < be; b++) {
-      if (simple[b] && isDenseDLT(getLvlType(TensorLoopId{b}))) {
+      if (simple[b] && getLvlType(TensorLoopId{b}).hasDenseSemantic()) {
         offset = be - b - 1; // relative to the end
         break;
       }
@@ -488,9 +488,8 @@ BitVector Merger::simplifyCond(LatSetId s0, LatPointId p0) {
        b = b == 0 ? be - 1 : b - 1, i++) {
     // Slice on dense level has `locate` property as well, and can be optimized.
     if (simple[b] && !isSparseLvlWithNonTrivialIdxExp(b)) {
-      const auto dlt = getLvlType(b);
-      if (!isCompressedDLT(dlt) && !isSingletonDLT(dlt) &&
-          !isLooseCompressedDLT(dlt)) {
+      const auto lt = getLvlType(b);
+      if (!lt.hasSparseSemantic()) {
         if (reset)
           simple.reset(b);
         reset = true;
@@ -669,9 +668,8 @@ bool Merger::isSingleCondition(TensorId t, ExprId e) const {
 
 bool Merger::hasAnySparse(const BitVector &bits) const {
   for (TensorLoopId b : bits.set_bits()) {
-    const auto dlt = getLvlType(b);
-    if (isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
-        isLooseCompressedDLT(dlt))
+    const auto lt = getLvlType(b);
+    if (lt.hasSparseSemantic())
       return true;
   }
   return hasSparseIdxReduction(bits);
@@ -919,11 +917,11 @@ void Merger::dumpBits(const BitVector &bits) const {
     if (bits[b]) {
       const TensorId t = tensor(b);
       const LoopId i = loop(b);
-      const auto dlt = lvlTypes[t][i];
+      const auto lt = lvlTypes[t][i];
       if (isLvlWithNonTrivialIdxExp(b))
         llvm::dbgs() << " DEP_" << t << "_" << i;
       else
-        llvm::dbgs() << " i_" << t << "_" << i << "_" << toMLIRString(dlt);
+        llvm::dbgs() << " i_" << t << "_" << i << "_" << toMLIRString(lt);
     }
   }
 }
@@ -1033,7 +1031,7 @@ LatSetId Merger::buildLattices(ExprId e, LoopId i) {
       // invariant on the right.
       Block &absentBlock = absentRegion.front();
       YieldOp absentYield = cast<YieldOp>(absentBlock.getTerminator());
-      const Value absentVal = absentYield.getResult();
+      const Value absentVal = absentYield.getSingleResult();
       const ExprId rhs = addInvariantExp(absentVal);
       return disjSet(e, child0, buildLattices(rhs, i), unop);
     }
@@ -1219,7 +1217,7 @@ Type Merger::inferType(ExprId e, Value src) const {
   return dtp;
 }
 
-/// Ensures that sparse compiler can generate code for expression.
+/// Ensures that the sparsifier can generate code for expression.
 static bool isAdmissibleBranchExp(Operation *op, Block *block, Value v) {
   // Arguments are always admissible.
   if (isa<BlockArgument>(v))
@@ -1239,7 +1237,7 @@ static bool isAdmissibleBranchExp(Operation *op, Block *block, Value v) {
   return true;
 }
 
-/// Ensures that sparse compiler can generate code for branch.
+/// Ensures that the sparsifier can generate code for branch.
 static bool isAdmissibleBranch(Operation *op, Region &region) {
   if (region.empty())
     return true;
@@ -1502,7 +1500,7 @@ static Value insertYieldOp(RewriterBase &rewriter, Location loc, Region &region,
   // Merge cloned block and return yield value.
   Operation *placeholder = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   rewriter.inlineBlockBefore(&tmpRegion.front(), placeholder, vals);
-  Value val = clonedYield.getResult();
+  Value val = clonedYield.getSingleResult();
   rewriter.eraseOp(clonedYield);
   rewriter.eraseOp(placeholder);
   return val;

@@ -1,5 +1,7 @@
 ; RUN: opt %s -S -passes=instcombine -o - \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=instcombine -o - \
+; RUN: | FileCheck %s
 
 ;; Check that when instcombine sinks an instruction used by a dbg.assign, the
 ;; usual debug intrinsic updating doesn't take place (i.e. do not
@@ -63,7 +65,7 @@ entry:
   %i = alloca %struct.a, align 8, !DIAssignID !40
   call void @llvm.dbg.assign(metadata i1 undef, metadata !39, metadata !DIExpression(), metadata !40, metadata ptr %i, metadata !DIExpression()), !dbg !41
   %0 = bitcast ptr %i to ptr, !dbg !42
-  call void @llvm.lifetime.start.p0i8(i64 8, ptr nonnull %0) #5, !dbg !42
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %0) #5, !dbg !42
   %b = getelementptr inbounds %struct.a, ptr %i, i64 0, i32 0, !dbg !43
   call void @llvm.dbg.assign(metadata ptr null, metadata !39, metadata !DIExpression(), metadata !44, metadata ptr %b, metadata !DIExpression()), !dbg !41
   %call.i = tail call i32 (...) @e() #5, !dbg !45
@@ -78,13 +80,13 @@ f.exit:                                           ; preds = %entry
   store ptr null, ptr %b, align 8, !dbg !49, !DIAssignID !53
   call void @llvm.dbg.assign(metadata ptr null, metadata !39, metadata !DIExpression(), metadata !53, metadata ptr %b, metadata !DIExpression()), !dbg !41
   call void @g(ptr nonnull %i) #5, !dbg !54
-  call void @llvm.lifetime.end.p0i8(i64 8, ptr nonnull %0) #5, !dbg !55
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %0) #5, !dbg !55
   ret void, !dbg !55
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #3
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #3
 declare dso_local void @g(...) local_unnamed_addr #1
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #3
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #3
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #4
 
 !llvm.dbg.cu = !{!2}

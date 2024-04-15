@@ -137,6 +137,9 @@ def mattr_EQ : Joined<["--"], "mattr=">,
   MetaVarName<"a1,+a2,-a3,...">,
   HelpText<"Target specific attributes (--mattr=help for details)">;
 
+def mllvm : Separate<["-"], "mllvm">, HelpText<"Specify an argument to forward to LLVM's CommandLine library">, MetaVarName<"<arg>">;
+def : Joined<["-"], "mllvm=">, Alias<mllvm>;
+
 def no_show_raw_insn : Flag<["--"], "no-show-raw-insn">,
   HelpText<"When disassembling instructions, "
            "do not print the instruction bytes.">;
@@ -206,6 +209,10 @@ def : Flag<["-"], "t">, Alias<syms>, HelpText<"Alias for --syms">;
 
 def symbolize_operands : Flag<["--"], "symbolize-operands">,
   HelpText<"Symbolize instruction operands when disassembling">;
+
+def pretty_pgo_analysis_map : Flag<["--"], "pretty-pgo-analysis-map">,
+                              HelpText<"Display PGO analysis values with "
+                                       "formatting rather than raw numbers">;
 
 def dynamic_syms : Flag<["--"], "dynamic-syms">,
   HelpText<"Display the contents of the dynamic symbol table">;

@@ -28,6 +28,7 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   llvm.unreachable
 ^bb2:
   llvm.intr.stackrestore %stack : !llvm.ptr
+  llvm.call_intrinsic "llvm.x86.sse41.round.ss"() : () -> (vector<8xf32>)
   return %1 : i32
 }
 
@@ -50,6 +51,7 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
 // CHECK: llvm.inline_asm has_side_effects "foo", "bar"
 // CHECK: llvm.unreachable
 // CHECK: llvm.intr.stackrestore %[[STACK]]
+// CHECK: llvm.call_intrinsic "llvm.x86.sse41.round.ss"(
 func.func @test_inline(%ptr : !llvm.ptr) -> i32 {
   %0 = call @inner_func_inlinable(%ptr) : (!llvm.ptr) -> i32
   return %0 : i32
@@ -82,7 +84,7 @@ llvm.func internal fastcc @callee() -> (i32) attributes { function_entry_count =
 // CHECK-NEXT: llvm.return %[[CST]]
 llvm.func @caller() -> (i32) {
   // Include all call attributes that don't prevent inlining.
-  %0 = llvm.call @callee() { fastmathFlags = #llvm.fastmath<nnan, ninf>, branch_weights = dense<42> : vector<1xi32> } : () -> (i32)
+  %0 = llvm.call fastcc @callee() { fastmathFlags = #llvm.fastmath<nnan, ninf>, branch_weights = dense<42> : vector<1xi32> } : () -> (i32)
   llvm.return %0 : i32
 }
 
@@ -318,6 +320,53 @@ llvm.func @test_inline(%cond0 : i1, %cond1 : i1, %funcArg : f32) -> f32 {
   llvm.br ^bb3(%funcArg: f32)
 ^bb3(%blockArg: f32):
   llvm.return %blockArg : f32
+}
+
+// -----
+
+llvm.func @static_alloca() -> f32 {
+  %0 = llvm.mlir.constant(4 : i32) : i32
+  %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> f32
+  llvm.return %2 : f32
+}
+
+// CHECK-LABEL: llvm.func @test_inline
+llvm.func @test_inline(%cond0 : i1) {
+  // Verify the alloca is relocated to the entry block of the parent function
+  // if the region operation is neither marked as isolated from above or
+  // automatic allocation scope.
+  // CHECK: %[[ALLOCA:.+]] = llvm.alloca
+  // CHECK: "test.one_region_op"() ({
+  "test.one_region_op"() ({
+    %0 = llvm.call @static_alloca() : () -> f32
+    // CHECK-NEXT: llvm.intr.lifetime.start 4, %[[ALLOCA]]
+    // CHECK-NEXT: %[[RES:.+]] = llvm.load %[[ALLOCA]]
+    // CHECK-NEXT: llvm.intr.lifetime.end 4, %[[ALLOCA]]
+    // CHECK-NEXT: test.region_yield %[[RES]]
+    test.region_yield %0 : f32
+  }) : () -> ()
+  // Verify the alloca is not relocated out of operations that are marked as
+  // isolated from above.
+  // CHECK-NOT: llvm.alloca
+  // CHECK: test.isolated_regions
+  test.isolated_regions {
+    // CHECK: %[[ALLOCA:.+]] = llvm.alloca
+    %0 = llvm.call @static_alloca() : () -> f32
+    // CHECK: test.region_yield
+    test.region_yield %0 : f32
+  }
+  // Verify the alloca is not relocated out of operations that are marked as
+  // automatic allocation scope.
+  // CHECK-NOT: llvm.alloca
+  // CHECK: test.alloca_scope_region
+  test.alloca_scope_region {
+    // CHECK: %[[ALLOCA:.+]] = llvm.alloca
+    %0 = llvm.call @static_alloca() : () -> f32
+    // CHECK: test.region_yield
+    test.region_yield %0 : f32
+  }
+  llvm.return
 }
 
 // -----
@@ -594,4 +643,29 @@ llvm.func @caller(%ptr : !llvm.ptr) -> i32 {
   %0 = llvm.call @inlinee(%ptr) { access_groups = [#caller] } : (!llvm.ptr) -> (i32)
   llvm.store %c5, %ptr { access_groups = [#caller] } : i32, !llvm.ptr
   llvm.return %0 : i32
+}
+
+// -----
+
+llvm.func @vararg_func(...) {
+  llvm.return
+}
+
+llvm.func @vararg_intrinrics() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %list = llvm.alloca %0 x !llvm.struct<"struct.va_list_opaque", (ptr)> : (i32) -> !llvm.ptr
+  // The vararg intinriscs should normally be part of a variadic function.
+  // However, this test uses a non-variadic function to ensure the presence of
+  // the intrinsic alone suffices to prevent inlining.
+  llvm.intr.vastart %list : !llvm.ptr
+  llvm.return
+}
+
+// CHECK-LABEL: func @caller
+llvm.func @caller() {
+  // CHECK-NEXT: llvm.call @vararg_func()
+  llvm.call @vararg_func() vararg(!llvm.func<void (...)>) : () -> ()
+  // CHECK-NEXT: llvm.call @vararg_intrinrics()
+  llvm.call @vararg_intrinrics() : () -> ()
+  llvm.return
 }

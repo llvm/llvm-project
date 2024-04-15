@@ -1,6 +1,11 @@
 ; RUN: llc < %s -O0 -mtriple x86_64-apple-darwin | FileCheck %s
 ; RUN: llc < %s -O0 -mtriple x86_64-apple-darwin -filetype=obj \
 ; RUN:     | llvm-dwarfdump -v - --debug-info | FileCheck %s --check-prefix=DWARF
+
+; RUN: llc --try-experimental-debuginfo-iterators < %s -O0 -mtriple x86_64-apple-darwin | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators < %s -O0 -mtriple x86_64-apple-darwin -filetype=obj \
+; RUN:     | llvm-dwarfdump -v - --debug-info | FileCheck %s --check-prefix=DWARF
+
 ; <rdar://problem/11134152>
 
 ; CHECK-LABEL: _foo:

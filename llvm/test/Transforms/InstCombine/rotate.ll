@@ -147,6 +147,17 @@ define <2 x i32> @rotr_v2i32_constant_nonsplat_undef0(<2 x i32> %x) {
   ret <2 x i32> %r
 }
 
+define <2 x i32> @rotr_v2i32_constant_nonsplat_poison0(<2 x i32> %x) {
+; CHECK-LABEL: @rotr_v2i32_constant_nonsplat_poison0(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[X]], <2 x i32> <i32 poison, i32 19>)
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %shl = shl <2 x i32> %x, <i32 poison, i32 19>
+  %shr = lshr <2 x i32> %x, <i32 15, i32 13>
+  %r = or <2 x i32> %shl, %shr
+  ret <2 x i32> %r
+}
+
 define <2 x i32> @rotr_v2i32_constant_nonsplat_undef1(<2 x i32> %x) {
 ; CHECK-LABEL: @rotr_v2i32_constant_nonsplat_undef1(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[X]], <2 x i32> <i32 17, i32 0>)
@@ -956,4 +967,25 @@ define i8 @unmasked_shlop_unmasked_shift_amount(i32 %x, i32 %shamt) {
   %t7 = or i32 %t5, %t6
   %t8 = trunc i32 %t7 to i8
   ret i8 %t8
+}
+
+define i16 @check_rotate_masked_16bit(i8 %shamt, i32 %cond) {
+; CHECK-LABEL: @check_rotate_masked_16bit(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[SHAMT:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[COND:%.*]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = and i16 [[TMP2]], 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = call i16 @llvm.fshr.i16(i16 [[TMP3]], i16 [[TMP3]], i16 [[TMP1]])
+; CHECK-NEXT:    ret i16 [[TRUNC]]
+;
+  %maskx = and i32 %cond, 1
+  %masky = and i8 %shamt, 15
+  %z = zext i8 %masky to i32
+  %shr = lshr i32 %maskx, %z
+  %sub = sub i8 0, %shamt
+  %maskw = and i8 %sub, 15
+  %z2 = zext i8 %maskw to i32
+  %shl = shl nuw nsw i32 %maskx, %z2
+  %or = or i32 %shr, %shl
+  %trunc = trunc i32 %or to i16
+  ret i16 %trunc
 }

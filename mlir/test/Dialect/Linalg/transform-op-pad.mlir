@@ -41,8 +41,9 @@ module attributes {transform.with_named_sequence} {
       padding_dimensions=[0, 1, 2],
       pack_paddings=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.op<"bufferization.materialize_in_destination">)
+    %p = transform.num_associations %copy_back : (!transform.op<"bufferization.materialize_in_destination">) -> !transform.param<i64>
     // expected-remark @below {{1}}
-    transform.test_print_number_of_associated_payload_ir_ops %copy_back : !transform.op<"bufferization.materialize_in_destination">
+    transform.debug.emit_param_as_remark %p : !transform.param<i64>
     transform.yield
   }
 }

@@ -356,7 +356,11 @@ class CrashLog(symbolication.Symbolicator):
             # Keep track of unresolved source paths.
             unavailable_source_paths = set()
             if os.path.exists(self.dsymForUUIDBinary):
-                dsym_for_uuid_command = "%s %s" % (self.dsymForUUIDBinary, uuid_str)
+                dsym_for_uuid_command = (
+                    "{} --copyExecutable --ignoreNegativeCache {}".format(
+                        self.dsymForUUIDBinary, uuid_str
+                    )
+                )
                 s = subprocess.check_output(dsym_for_uuid_command, shell=True)
                 if s:
                     try:
@@ -845,10 +849,10 @@ class JSONCrashLogParser(CrashLogParser):
 
 class TextCrashLogParser(CrashLogParser):
     parent_process_regex = re.compile(r"^Parent Process:\s*(.*)\[(\d+)\]")
-    thread_state_regex = re.compile(r"^Thread \d+ crashed with")
+    thread_state_regex = re.compile(r"^Thread (\d+ crashed with|State)")
     thread_instrs_regex = re.compile(r"^Thread \d+ instruction stream")
-    thread_regex = re.compile(r"^Thread (\d+).*:")
-    app_backtrace_regex = re.compile(r"^Application Specific Backtrace (\d+).*:")
+    thread_regex = re.compile(r"^Thread (\d+).*")
+    app_backtrace_regex = re.compile(r"^Application Specific Backtrace (\d+).*")
 
     class VersionRegex:
         version = r"\(.+\)|(?:arm|x86_)[0-9a-z]+"
@@ -1077,7 +1081,10 @@ class TextCrashLogParser(CrashLogParser):
             if thread_state_match:
                 self.app_specific_backtrace = False
                 thread_state_match = self.thread_regex.search(line)
-                thread_idx = int(thread_state_match.group(1))
+                if thread_state_match:
+                    thread_idx = int(thread_state_match.group(1))
+                else:
+                    thread_idx = self.crashlog.crashed_thread_idx
                 self.parse_mode = self.CrashLogParseMode.THREGS
                 self.thread = self.crashlog.threads[thread_idx]
                 return

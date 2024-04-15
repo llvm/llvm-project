@@ -61,6 +61,20 @@ csrrs t1, instret, zero
 # uimm12
 csrrs t2, 0xC02, zero
 
+# ssp
+# name
+# CHECK-INST: csrrs t1, ssp, zero
+# CHECK-ENC:  encoding: [0x73,0x23,0x10,0x01]
+# CHECK-INST-ALIAS: csrr t1, ssp
+# uimm12
+# CHECK-INST: csrrs t2, ssp, zero
+# CHECK-ENC:  encoding: [0xf3,0x23,0x10,0x01]
+# CHECK-INST-ALIAS: csrr t2, ssp
+# name
+csrrs t1, ssp, zero
+# uimm12
+csrrs t2, 0x011, zero
+
 # hpmcounter3
 # name
 # CHECK-INST: csrrs t1, hpmcounter3, zero

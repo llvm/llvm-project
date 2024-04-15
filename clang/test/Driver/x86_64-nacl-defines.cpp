@@ -1,4 +1,4 @@
-// RUN: %clang -target x86_64-unknown-nacl -### %s -emit-llvm-only -c -o %t.o 2>&1 | FileCheck %s -check-prefix=ECHO
+// RUN: %clang --target=x86_64-unknown-nacl -### %s -c -o %t.o 2>&1 | FileCheck %s -check-prefix=ECHO
 // RUN: %clang -target x86_64-unknown-nacl %s -emit-llvm -S -c -o - | FileCheck %s
 // RUN: %clang -target x86_64-unknown-nacl %s -emit-llvm -S -c -pthread -o - | FileCheck %s -check-prefix=THREADS
 

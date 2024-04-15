@@ -37,14 +37,14 @@ SUPPORTED PLATFORMS
 only), MIPS, and PowerPC (PowerPC64LE only) on Linux for benchmarking. Not all
 benchmarking functionality is guaranteed to work on every platform.
 :program:`llvm-exegesis` also has a separate analysis mode that is supported
-on every platform on which LLVM is.
+on every platform that LLVM is.
 
 SNIPPET ANNOTATIONS
 -------------------
 
 :program:`llvm-exegesis` supports benchmarking arbitrary snippets of assembly.
 However, benchmarking these snippets often requires some setup so that they
-can execute properly. :program:`llvm-exegesis` has two annotations and some
+can execute properly. :program:`llvm-exegesis` has five annotations and some
 additional utilities to help with setup so that snippets can be benchmarked
 properly.
 
@@ -69,10 +69,11 @@ properly.
   specifying memory definitions that can later be mapped into the execution
   process of a snippet with the `LLVM-EXEGESIS-MEM-MAP` annotation. Each
   value is named using the `<value name>` argument so that it can be referenced
-  later within a map annotation. The size is specified in bytes the the value
-  is taken in hexadecimal. If the size of the value is less than the specified
-  size, the value will be repeated until it fills the entire section of memory.
-  Using this annotation requires using the subprocess execution mode.
+  later within a map annotation. The size is specified in a decimal number of
+  bytes and the value is given in hexadecimal. If the size of the value is less
+  than the specified size, the value will be repeated until it fills the entire
+  section of memory. Using this annotation requires using the subprocess execution
+  mode.
 * `LLVM-EXEGESIS-MEM-MAP <value name> <address>` - This annotation allows for
   mapping previously defined memory definitions into the execution context of a
   process. The value name refers to a previously defined memory definition and
@@ -80,6 +81,22 @@ properly.
   definition should start at. Note that a single memory definition can be
   mapped multiple times. Using this annotation requires the subprocess
   execution mode.
+* `LLVM-EXEGESIS-SNIPPET-ADDRESS <address>` - This annotation allows for
+  setting the address where the beginning of the snippet to be executed will
+  be mapped in at. The address is given in hexadecimal. Note that the snippet
+  also includes setup code, so the instruction exactly at the specified
+  address will not be the first instruction in the snippet. Using this
+  annotation requires the subprocess execution mode. This is useful in
+  cases where the memory accessed by the snippet depends on the location
+  of the snippet, like RIP-relative addressing.
+* `LLVM-EXEGESIS-LOOP-REGISTER <register name>` - This annotation specifies
+  the loop register to use for keeping track of the current iteration when
+  using the loop repetition mode. :program:`llvm-exegesis` needs to keep track
+  of the current loop iteration within the loop repetition mode in a performant
+  manner (i.e., no memory accesses), and uses a register to do this. This register
+  has an architecture specific default (e.g., `R8` on X86), but this might conflict
+  with some snippets. This annotation allows changing the register to prevent
+  interference between the loop index register and the snippet.
 
 EXAMPLE 1: benchmarking instructions
 ------------------------------------
@@ -174,7 +191,7 @@ annotations added to the snippet:
 
 .. code-block:: none
 
-  # LLVM-EXEGESIS-MEM-DEF test1 4096 2147483647
+  # LLVM-EXEGESIS-MEM-DEF test1 4096 7fffffff
   # LLVM-EXEGESIS-MEM-MAP test1 8192
 
   movq $8192, %rax
@@ -292,25 +309,29 @@ OPTIONS
   enabled can help determine the effects of the frontend and can be used to
   improve latency and throughput estimates.
 
-.. option:: --repetition-mode=[duplicate|loop|min]
+.. option:: --repetition-mode=[duplicate|loop|min|middle-half-duplicate|middle-half-loop]
 
  Specify the repetition mode. `duplicate` will create a large, straight line
- basic block with `num-repetitions` instructions (repeating the snippet
- `num-repetitions`/`snippet size` times). `loop` will, optionally, duplicate the
+ basic block with `min-instructions` instructions (repeating the snippet
+ `min-instructions`/`snippet size` times). `loop` will, optionally, duplicate the
  snippet until the loop body contains at least `loop-body-size` instructions,
- and then wrap the result in a loop which will execute `num-repetitions`
+ and then wrap the result in a loop which will execute `min-instructions`
  instructions (thus, again, repeating the snippet
- `num-repetitions`/`snippet size` times). The `loop` mode, especially with loop
+ `min-instructions`/`snippet size` times). The `loop` mode, especially with loop
  unrolling tends to better hide the effects of the CPU frontend on architectures
  that cache decoded instructions, but consumes a register for counting
  iterations. If performing an analysis over many opcodes, it may be best to
  instead use the `min` mode, which will run each other mode,
- and produce the minimal measured result.
+ and produce the minimal measured result. The middle half repetition modes
+ will either duplicate or run the snippet in a loop depending upon the specific
+ mode. The middle half repetition modes will run two benchmarks, one twice the
+ length of the first one, and then subtract the difference between them to get
+ values without overhead.
 
-.. option:: --num-repetitions=<Number of repetitions>
+.. option:: --min-instructions=<Number of instructions>
 
  Specify the target number of executed instructions. Note that the actual
- repetition count of the snippet will be `num-repetitions`/`snippet size`.
+ repetition count of the snippet will be `min-instructions`/`snippet size`.
  Higher values lead to more accurate measurements but lengthen the benchmark.
 
 .. option:: --loop-body-size=<Preferred loop body size>
@@ -423,6 +444,23 @@ OPTIONS
   mode is the default. The `subprocess` execution mode allows for additional
   features such as memory annotations but is currently restricted to X86-64
   on Linux.
+
+.. option:: --benchmark-repeat-count=<repeat-count>
+
+  This option enables specifying the number of times to repeat the measurement
+  when performing latency measurements. By default, llvm-exegesis will repeat
+  a latency measurement enough times to balance run-time and noise reduction.
+
+.. option:: --validation-counter=[instructions-retired,l1d-cache-load-misses,
+   l1d-cache-store-misses,l1i-cache-load-misses,data-tlb-load-misses,
+   data-tld-store-misses,instruction-tlb-load-misses]
+
+   This option enables the use of validation counters, which measure additional
+   microarchitectural events like cache misses to validate snippet execution
+   conditions. These events are measured using the perf subsystem in a group
+   with the performance counter used to measure the value of interest. This
+   flag can be specified multiple times to measure multiple events. The maximum
+   number of validation counters is platform dependent.
 
 EXIT STATUS
 -----------

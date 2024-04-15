@@ -13,6 +13,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <optional>
 
@@ -155,6 +156,26 @@ void llvm::createMemCpyLoopKnownSize(
          "Bytes copied should match size in the call!");
 }
 
+// \returns \p Len udiv \p OpSize, checking for optimization opportunities.
+static Value *getRuntimeLoopCount(const DataLayout &DL, IRBuilderBase &B,
+                                  Value *Len, Value *OpSize,
+                                  unsigned OpSizeVal) {
+  // For powers of 2, we can lshr by log2 instead of using udiv.
+  if (isPowerOf2_32(OpSizeVal))
+    return B.CreateLShr(Len, Log2_32(OpSizeVal));
+  return B.CreateUDiv(Len, OpSize);
+}
+
+// \returns \p Len urem \p OpSize, checking for optimization opportunities.
+static Value *getRuntimeLoopRemainder(const DataLayout &DL, IRBuilderBase &B,
+                                      Value *Len, Value *OpSize,
+                                      unsigned OpSizeVal) {
+  // For powers of 2, we can and by (OpSizeVal - 1) instead of using urem.
+  if (isPowerOf2_32(OpSizeVal))
+    return B.CreateAnd(Len, OpSizeVal - 1);
+  return B.CreateURem(Len, OpSize);
+}
+
 void llvm::createMemCpyLoopUnknownSize(
     Instruction *InsertBefore, Value *SrcAddr, Value *DstAddr, Value *CopyLen,
     Align SrcAlign, Align DstAlign, bool SrcIsVolatile, bool DstIsVolatile,
@@ -194,9 +215,11 @@ void llvm::createMemCpyLoopUnknownSize(
   Type *Int8Type = Type::getInt8Ty(Ctx);
   bool LoopOpIsInt8 = LoopOpType == Int8Type;
   ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
-  Value *RuntimeLoopCount = LoopOpIsInt8 ?
-                            CopyLen :
-                            PLBuilder.CreateUDiv(CopyLen, CILoopOpSize);
+  Value *RuntimeLoopCount = LoopOpIsInt8
+                                ? CopyLen
+                                : getRuntimeLoopCount(DL, PLBuilder, CopyLen,
+                                                      CILoopOpSize, LoopOpSize);
+
   BasicBlock *LoopBB =
       BasicBlock::Create(Ctx, "loop-memcpy-expansion", ParentFunc, PostLoopBB);
   IRBuilder<> LoopBuilder(LoopBB);
@@ -239,8 +262,8 @@ void llvm::createMemCpyLoopUnknownSize(
     assert((ResLoopOpSize == AtomicElementSize ? *AtomicElementSize : 1) &&
            "Store size is expected to match type size");
 
-    // Add in the
-    Value *RuntimeResidual = PLBuilder.CreateURem(CopyLen, CILoopOpSize);
+    Value *RuntimeResidual = getRuntimeLoopRemainder(DL, PLBuilder, CopyLen,
+                                                     CILoopOpSize, LoopOpSize);
     Value *RuntimeBytesCopied = PLBuilder.CreateSub(CopyLen, RuntimeResidual);
 
     // Loop body for the residual copy.
@@ -361,10 +384,10 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   // SplitBlockAndInsertIfThenElse conveniently creates the basic if-then-else
   // structure. Its block terminators (unconditional branches) are replaced by
   // the appropriate conditional branches when the loop is built.
-  ICmpInst *PtrCompare = new ICmpInst(InsertBefore, ICmpInst::ICMP_ULT,
+  ICmpInst *PtrCompare = new ICmpInst(InsertBefore->getIterator(), ICmpInst::ICMP_ULT,
                                       SrcAddr, DstAddr, "compare_src_dst");
   Instruction *ThenTerm, *ElseTerm;
-  SplitBlockAndInsertIfThenElse(PtrCompare, InsertBefore, &ThenTerm,
+  SplitBlockAndInsertIfThenElse(PtrCompare, InsertBefore->getIterator(), &ThenTerm,
                                 &ElseTerm);
 
   // Each part of the function consists of two blocks:
@@ -386,7 +409,7 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   // Initial comparison of n == 0 that lets us skip the loops altogether. Shared
   // between both backwards and forward copy clauses.
   ICmpInst *CompareN =
-      new ICmpInst(OrigBB->getTerminator(), ICmpInst::ICMP_EQ, CopyLen,
+      new ICmpInst(OrigBB->getTerminator()->getIterator(), ICmpInst::ICMP_EQ, CopyLen,
                    ConstantInt::get(TypeOfCopyLen, 0), "compare_n_to_0");
 
   // Copying backwards.
@@ -408,7 +431,7 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
       ExitBB, LoopBB);
   LoopPhi->addIncoming(IndexPtr, LoopBB);
   LoopPhi->addIncoming(CopyLen, CopyBackwardsBB);
-  BranchInst::Create(ExitBB, LoopBB, CompareN, ThenTerm);
+  BranchInst::Create(ExitBB, LoopBB, CompareN, ThenTerm->getIterator());
   ThenTerm->eraseFromParent();
 
   // Copying forward.
@@ -428,7 +451,7 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   FwdCopyPhi->addIncoming(FwdIndexPtr, FwdLoopBB);
   FwdCopyPhi->addIncoming(ConstantInt::get(TypeOfCopyLen, 0), CopyForwardBB);
 
-  BranchInst::Create(ExitBB, FwdLoopBB, CompareN, ElseTerm);
+  BranchInst::Create(ExitBB, FwdLoopBB, CompareN, ElseTerm->getIterator());
   ElseTerm->eraseFromParent();
 }
 
@@ -445,11 +468,6 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
     = BasicBlock::Create(F->getContext(), "loadstoreloop", F, NewBB);
 
   IRBuilder<> Builder(OrigBB->getTerminator());
-
-  // Cast pointer to the type of value getting stored
-  unsigned dstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
-  DstAddr = Builder.CreateBitCast(DstAddr,
-                                  PointerType::get(SetValue->getType(), dstAS));
 
   Builder.CreateCondBr(
       Builder.CreateICmpEQ(ConstantInt::get(TypeOfCopyLen, 0), CopyLen), NewBB,

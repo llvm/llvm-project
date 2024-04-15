@@ -19,6 +19,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
 
@@ -120,12 +121,15 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
                                        SmallVectorImpl<MCFixup> &Fixups,
                                        const MCSubtargetInfo &STI) const {
   assert(MO.isExpr() && "getExprOpValue expects only expressions");
+  bool RelaxCandidate = false;
+  bool EnableRelax = STI.hasFeature(LoongArch::FeatureRelax);
   const MCExpr *Expr = MO.getExpr();
   MCExpr::ExprKind Kind = Expr->getKind();
   LoongArch::Fixups FixupKind = LoongArch::fixup_loongarch_invalid;
   if (Kind == MCExpr::Target) {
     const LoongArchMCExpr *LAExpr = cast<LoongArchMCExpr>(Expr);
 
+    RelaxCandidate = LAExpr->getRelaxHint();
     switch (LAExpr->getKind()) {
     case LoongArchMCExpr::VK_LoongArch_None:
     case LoongArchMCExpr::VK_LoongArch_Invalid:
@@ -237,6 +241,9 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
     case LoongArchMCExpr::VK_LoongArch_TLS_GD_HI20:
       FixupKind = LoongArch::fixup_loongarch_tls_gd_hi20;
       break;
+    case LoongArchMCExpr::VK_LoongArch_CALL36:
+      FixupKind = LoongArch::fixup_loongarch_call36;
+      break;
     }
   } else if (Kind == MCExpr::SymbolRef &&
              cast<MCSymbolRefExpr>(Expr)->getKind() ==
@@ -259,6 +266,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
       FixupKind = LoongArch::fixup_loongarch_b21;
       break;
     case LoongArch::B:
+    case LoongArch::BL:
       FixupKind = LoongArch::fixup_loongarch_b26;
       break;
     }
@@ -269,6 +277,15 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
 
   Fixups.push_back(
       MCFixup::create(0, Expr, MCFixupKind(FixupKind), MI.getLoc()));
+
+  // Emit an R_LARCH_RELAX if linker relaxation is enabled and LAExpr has relax
+  // hint.
+  if (EnableRelax && RelaxCandidate) {
+    const MCConstantExpr *Dummy = MCConstantExpr::create(0, Ctx);
+    Fixups.push_back(MCFixup::create(
+        0, Dummy, MCFixupKind(LoongArch::fixup_loongarch_relax), MI.getLoc()));
+  }
+
   return 0;
 }
 

@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple loongarch64 -target-feature +f -target-feature +d -target-abi lp64d -emit-llvm %s -o - -x c++ | \
 // RUN:   FileCheck --check-prefix=CHECK-CXX %s
 
-// Fields containing empty structs or unions are ignored when flattening
+// Fields containing empty structs are ignored when flattening
 // structs to examine whether the structs can be passed via FARs, even in C++.
 // But there is an exception that non-zero-length array of empty structures are
 // not ignored in C++. These rules are not documented in psABI <https://www.github.com/loongson/la-abi-specs>
@@ -93,7 +93,7 @@ struct s9 test_s9(struct s9 a) {
 }
 
 // CHECK-C: define{{.*}} void @test_s10()
-// CHECK-CXX: define{{.*}} void @_Z8test_s103s10()
+// CHECK-CXX: define{{.*}} i64 @_Z8test_s103s10(i64 {{.*}})
 struct s10 { };
 struct s10 test_s10(struct s10 a) {
   return a;
@@ -128,14 +128,14 @@ struct s14 test_s14(struct s14 a) {
 }
 
 // CHECK-C: define{{.*}} void @test_s15()
-// CHECK-CXX: define{{.*}} void @_Z8test_s153s15()
+// CHECK-CXX: define{{.*}} i64 @_Z8test_s153s15(i64 {{.*}})
 struct s15 { int : 0; };
 struct s15 test_s15(struct s15 a) {
   return a;
 }
 
-// CHECK-C: define{{.*}} void @test_s16()
-// CHECK-CXX: define{{.*}} void @_Z8test_s163s16()
+// CHECK-C: define{{.*}} i64 @test_s16(i64 {{.*}})
+// CHECK-CXX: define{{.*}} i64 @_Z8test_s163s16(i64 {{.*}})
 struct s16 { int : 1; };
 struct s16 test_s16(struct s16 a) {
   return a;

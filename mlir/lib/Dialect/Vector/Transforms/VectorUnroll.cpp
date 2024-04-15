@@ -37,7 +37,7 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
                                                OpBuilder &builder) {
   MLIRContext *ctx = builder.getContext();
   auto isBroadcast = [](AffineExpr expr) {
-    if (auto constExpr = expr.dyn_cast<AffineConstantExpr>())
+    if (auto constExpr = dyn_cast<AffineConstantExpr>(expr))
       return constExpr.getValue() == 0;
     return false;
   };
@@ -46,7 +46,7 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
   for (const auto &dim : llvm::enumerate(permutationMap.getResults())) {
     if (isBroadcast(dim.value()))
       continue;
-    unsigned pos = dim.value().cast<AffineDimExpr>().getPosition();
+    unsigned pos = cast<AffineDimExpr>(dim.value()).getPosition();
     auto expr = getAffineDimExpr(0, builder.getContext()) +
                 getAffineConstantExpr(elementOffsets[dim.index()], ctx);
     auto map = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, expr);
@@ -311,7 +311,7 @@ struct UnrollContractionPattern
           applyPermutationMap(accPermutationMap, ArrayRef<int64_t>(offsets));
       // If a version of the accumulator has already been computed, use it
       // otherwise extract the first version from the original operand.
-      auto accIt = accCache.find(accOffets);
+      auto *accIt = accCache.find(accOffets);
       if (accIt != accCache.end())
         slicesOperands[2] = accIt->second;
       else
@@ -387,7 +387,7 @@ struct UnrollMultiReductionPattern
       SmallVector<int64_t> accStrides(destOffset.size(), 1);
       // If a version of the accumulator has already been computed, use it
       // otherwise extract the first version from the original operand.
-      auto accIt = accCache.find(destOffset);
+      auto *accIt = accCache.find(destOffset);
       if (accIt != accCache.end())
         acc = accIt->second;
       else
@@ -537,8 +537,7 @@ struct UnrollTransposePattern : public OpRewritePattern<vector::TransposeOp> {
     // Prepare the result vector;
     Value result = rewriter.create<arith::ConstantOp>(
         loc, originalVectorType, rewriter.getZeroAttr(originalVectorType));
-    SmallVector<int64_t> permutation;
-    transposeOp.getTransp(permutation);
+    ArrayRef<int64_t> permutation = transposeOp.getPermutation();
 
     // Unroll the computation.
     for (SmallVector<int64_t> elementOffsets :

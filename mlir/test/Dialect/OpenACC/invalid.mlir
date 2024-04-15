@@ -1,58 +1,72 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop gang {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop worker {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], worker = [#acc.device_type<none>]}
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop vector {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>]}
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop gang worker {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], worker = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop gang vector {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop worker vector {
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>], worker = [#acc.device_type<none>]}
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{gang, worker or vector cannot appear with the seq attr}}
-acc.loop gang worker vector {
+acc.loop {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
-} attributes {seq}
+} attributes {seq = [#acc.device_type<none>], vector = [#acc.device_type<none>], worker = [#acc.device_type<none>], gang = [#acc.device_type<none>]}
 
 // -----
 
@@ -62,10 +76,33 @@ acc.loop {
 
 // -----
 
-// expected-error@+1 {{only one of "auto", "independent", "seq" can be present at the same time}}
+// expected-error@+1 {{'acc.loop' op duplicate device_type found in gang attribute}}
 acc.loop {
   acc.yield
-} attributes {auto_, seq}
+} attributes {gang = [#acc.device_type<none>, #acc.device_type<none>]}
+
+// -----
+
+// expected-error@+1 {{'acc.loop' op duplicate device_type found in worker attribute}}
+acc.loop {
+  acc.yield
+} attributes {worker = [#acc.device_type<none>, #acc.device_type<none>]}
+
+// -----
+
+// expected-error@+1 {{'acc.loop' op duplicate device_type found in vector attribute}}
+acc.loop {
+  acc.yield
+} attributes {vector = [#acc.device_type<none>, #acc.device_type<none>]}
+
+// -----
+
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
+// expected-error@+1 {{only one of "auto", "independent", "seq" can be present at the same time}}
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+  acc.yield
+} attributes {auto_ = [#acc.device_type<none>], seq = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
 
 // -----
 
@@ -92,16 +129,8 @@ acc.update
 %cst = arith.constant 1 : index
 %value = memref.alloc() : memref<f32>
 %0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
-// expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
-acc.update wait_devnum(%cst: index) dataOperands(%0: memref<f32>)
-
-// -----
-
-%cst = arith.constant 1 : index
-%value = memref.alloc() : memref<f32>
-%0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
-acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
+acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async = [#acc.device_type<none>]} 
 
 // -----
 
@@ -109,7 +138,7 @@ acc.update async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
 %value = memref.alloc() : memref<f32>
 %0 = acc.update_device varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{wait attribute cannot appear with waitOperands}}
-acc.update wait(%cst: index) dataOperands(%0: memref<f32>) attributes {wait}
+acc.update wait({%cst: index}) dataOperands(%0: memref<f32>) attributes {waitOnly = [#acc.device_type<none>]} 
 
 // -----
 
@@ -133,11 +162,13 @@ acc.parallel {
 
 // -----
 
-acc.loop {
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32){
 // expected-error@+1 {{'acc.init' op cannot be nested in a compute operation}}
   acc.init
   acc.yield
-}
+} attributes {inclusiveUpperbound = array<i1: true>}
 
 // -----
 
@@ -149,21 +180,25 @@ acc.parallel {
 
 // -----
 
-acc.loop {
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
 // expected-error@+1 {{'acc.shutdown' op cannot be nested in a compute operation}}
   acc.shutdown
   acc.yield
-}
+} attributes {inclusiveUpperbound = array<i1: true>}
 
 // -----
 
-acc.loop {
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
+acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() ({
     // expected-error@+1 {{'acc.shutdown' op cannot be nested in a compute operation}}
     acc.shutdown
   }) : () -> ()
   acc.yield
-}
+} attributes {inclusiveUpperbound = array<i1: true>}
 
 // -----
 
@@ -262,31 +297,29 @@ acc.kernels dataOperands(%value : memref<10xf32>) {
 // -----
 
 // expected-error@+1 {{expects non-empty init region}}
-acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
+acc.private.recipe @privatization_i32 : !llvm.ptr init {
 }
 
 // -----
 
 // expected-error@+1 {{expects init region first argument of the privatization type}}
-acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
-^bb0(%arg0 : !llvm.ptr<f32>):
+acc.private.recipe @privatization_i32 : !llvm.ptr init {
+^bb0(%arg0 : i32):
   %c1 = arith.constant 1 : i32
-  %c0 = arith.constant 0 : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<i32>
-  llvm.store %c0, %0 : !llvm.ptr<i32>
-  acc.yield %0 : !llvm.ptr<i32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  acc.yield %0 : !llvm.ptr
 }
 
 // -----
 
 // expected-error@+1 {{expects destroy region first argument of the privatization type}}
-acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
-^bb0(%arg0 : !llvm.ptr<i32>):
+acc.private.recipe @privatization_i32 : !llvm.ptr init {
+^bb0(%arg0 : !llvm.ptr):
   %c1 = arith.constant 1 : i32
   %c0 = arith.constant 0 : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<i32>
-  llvm.store %c0, %0 : !llvm.ptr<i32>
-  acc.yield %0 : !llvm.ptr<i32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  llvm.store %c0, %0 : i32, !llvm.ptr
+  acc.yield %0 : !llvm.ptr
 } destroy {
 ^bb0(%arg0 : f32):
   "test.openacc_dummy_op"(%arg0) : (f32) -> ()
@@ -295,44 +328,42 @@ acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
 // -----
 
 // expected-error@+1 {{expects non-empty init region}}
-acc.firstprivate.recipe @privatization_i32 : !llvm.ptr<i32> init {
+acc.firstprivate.recipe @privatization_i32 : !llvm.ptr init {
 } copy {}
 
 // -----
 
 // expected-error@+1 {{expects init region first argument of the privatization type}}
-acc.firstprivate.recipe @privatization_i32 : !llvm.ptr<i32> init {
-^bb0(%arg0 : !llvm.ptr<f32>):
+acc.firstprivate.recipe @privatization_i32 : !llvm.ptr init {
+^bb0(%arg0 : i32):
   %c1 = arith.constant 1 : i32
-  %c0 = arith.constant 0 : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<i32>
-  llvm.store %c0, %0 : !llvm.ptr<i32>
-  acc.yield %0 : !llvm.ptr<i32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  acc.yield %0 : !llvm.ptr
 } copy {}
 
 // -----
 
 // expected-error@+1 {{expects non-empty copy region}}
-acc.firstprivate.recipe @privatization_i32 : !llvm.ptr<i32> init {
-^bb0(%arg0 : !llvm.ptr<i32>):
+acc.firstprivate.recipe @privatization_i32 : !llvm.ptr init {
+^bb0(%arg0 : !llvm.ptr):
   %c1 = arith.constant 1 : i32
   %c0 = arith.constant 0 : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<i32>
-  llvm.store %c0, %0 : !llvm.ptr<i32>
-  acc.yield %0 : !llvm.ptr<i32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  llvm.store %c0, %0 : i32, !llvm.ptr
+  acc.yield %0 : !llvm.ptr
 } copy {
 }
 
 // -----
 
 // expected-error@+1 {{expects copy region with two arguments of the privatization type}}
-acc.firstprivate.recipe @privatization_i32 : !llvm.ptr<i32> init {
-^bb0(%arg0 : !llvm.ptr<i32>):
+acc.firstprivate.recipe @privatization_i32 : !llvm.ptr init {
+^bb0(%arg0 : !llvm.ptr):
   %c1 = arith.constant 1 : i32
   %c0 = arith.constant 0 : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<i32>
-  llvm.store %c0, %0 : !llvm.ptr<i32>
-  acc.yield %0 : !llvm.ptr<i32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  llvm.store %c0, %0 : i32, !llvm.ptr
+  acc.yield %0 : !llvm.ptr
 } copy {
 ^bb0(%arg0 : f32):
   "test.openacc_dummy_op"(%arg0) : (f32) -> ()
@@ -341,13 +372,13 @@ acc.firstprivate.recipe @privatization_i32 : !llvm.ptr<i32> init {
 // -----
 
 // expected-error@+1 {{expects copy region with two arguments of the privatization type}}
-acc.firstprivate.recipe @privatization_i32 : !llvm.ptr<i32> init {
-^bb0(%arg0 : !llvm.ptr<i32>):
+acc.firstprivate.recipe @privatization_i32 : !llvm.ptr init {
+^bb0(%arg0 : !llvm.ptr):
   %c1 = arith.constant 1 : i32
   %c0 = arith.constant 0 : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<i32>
-  llvm.store %c0, %0 : !llvm.ptr<i32>
-  acc.yield %0 : !llvm.ptr<i32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  llvm.store %c0, %0 : i32, !llvm.ptr
+  acc.yield %0 : !llvm.ptr
 } copy {
 ^bb0(%arg0 : f32, %arg1 : i32):
   "test.openacc_dummy_op"(%arg0) : (f32) -> ()
@@ -361,8 +392,8 @@ acc.firstprivate.recipe @privatization_i32 : i32 init {
   %0 = arith.constant 1 : i32
   acc.yield %0 : i32
 } copy {
-^bb0(%arg0 : i32, %arg1 : !llvm.ptr<i32>):
-  llvm.store %arg0, %arg1 : !llvm.ptr<i32>
+^bb0(%arg0 : i32, %arg1 : !llvm.ptr):
+  llvm.store %arg0, %arg1 : i32, !llvm.ptr
   acc.yield
 } destroy {
 ^bb0(%arg0 : f32):
@@ -371,8 +402,10 @@ acc.firstprivate.recipe @privatization_i32 : i32 init {
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{expected ')'}}
-acc.loop gang(static=%i64Value: i64, num=%i64Value: i64 {
+acc.loop gang({static=%i64Value: i64, num=%i64Value: i64} control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 }
@@ -440,17 +473,19 @@ acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 
 // -----
 
+%1 = arith.constant 1 : i32
+%2 = arith.constant 10 : i32
 // expected-error@+1 {{new value expected after comma}}
-acc.loop gang(static=%i64Value: i64, ) {
+acc.loop gang({static=%i64Value: i64, ) control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 }
 
 // -----
 
-func.func @fct1(%0 : !llvm.ptr<i32>) -> () {
+func.func @fct1(%0 : !llvm.ptr) -> () {
   // expected-error@+1 {{expected symbol reference @privatization_i32 to point to a private declaration}}
-  acc.serial private(@privatization_i32 -> %0 : !llvm.ptr<i32>) {
+  acc.serial private(@privatization_i32 -> %0 : !llvm.ptr) {
   }
   return
 }
@@ -458,7 +493,7 @@ func.func @fct1(%0 : !llvm.ptr<i32>) -> () {
 // -----
 
 // expected-error@+1 {{expect at least one of num, dim or static values}}
-acc.loop gang() {
+acc.loop gang({}) {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 }
@@ -466,8 +501,8 @@ acc.loop gang() {
 // -----
 
 %i64value = arith.constant 1 : i64
-// expected-error@+1 {{num_gangs expects a maximum of 3 values}}
-acc.parallel num_gangs(%i64value, %i64value, %i64value, %i64value : i64, i64, i64, i64) {
+// expected-error@+1 {{num_gangs expects a maximum of 3 values per segment}}
+acc.parallel num_gangs({%i64value: i64, %i64value : i64, %i64value : i64, %i64value : i64}) {
 }
 
 // -----
@@ -475,7 +510,7 @@ acc.parallel num_gangs(%i64value, %i64value, %i64value, %i64value : i64, i64, i6
 %i64value = arith.constant 1 : i64
 acc.parallel {
 // expected-error@+1 {{'acc.set' op cannot be nested in a compute operation}}
-  acc.set device_type(%i64value : i64)
+  acc.set attributes {device_type = #acc.device_type<nvidia>}
   acc.yield
 }
 
@@ -702,4 +737,44 @@ func.func @acc_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
     acc.atomic.write %y = %expr : memref<i32>, i32
     acc.terminator
   }
+}
+
+// -----
+
+func.func @acc_combined() {
+  // expected-error @below {{expected 'loop'}}
+  acc.parallel combined() {
+  }
+
+  return
+}
+
+// -----
+
+func.func @acc_combined() {
+  // expected-error @below {{expected compute construct name}}
+  acc.loop combined(loop) {
+  }
+
+  return
+}
+
+// -----
+
+func.func @acc_combined() {
+  // expected-error @below {{expected 'loop'}}
+  acc.parallel combined(parallel loop) {
+  }
+
+  return
+}
+
+// -----
+
+func.func @acc_combined() {
+  // expected-error @below {{expected ')'}}
+  acc.loop combined(parallel loop) {
+  }
+
+  return
 }

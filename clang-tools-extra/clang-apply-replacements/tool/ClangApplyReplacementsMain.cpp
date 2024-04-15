@@ -141,9 +141,9 @@ int main(int argc, char **argv) {
 
   tooling::ApplyChangesSpec Spec;
   Spec.Cleanup = true;
-  Spec.Style = FormatStyle;
   Spec.Format = DoFormat ? tooling::ApplyChangesSpec::kAll
                          : tooling::ApplyChangesSpec::kNone;
+  Spec.Style = DoFormat ? FormatStyle : format::getNoStyle();
 
   for (const auto &FileChange : Changes) {
     FileEntryRef Entry = FileChange.first;

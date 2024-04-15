@@ -1439,3 +1439,30 @@ func.func @max.oneval(%arg0: index) -> index {
   // CHECK: return %arg0 : index
   return %max: index
 }
+
+// -----
+
+// CHECK-LABEL: func @mod_of_mod(
+//       CHECK:   %[[c0:.*]] = arith.constant 0
+//       CHECK:   return %[[c0]], %[[c0]]
+func.func @mod_of_mod(%lb: index, %ub: index, %step: index) -> (index, index) {
+  // Simplify: (ub - ub % step) % step == 0
+  %0 = affine.apply affine_map<()[s0, s1] -> ((s0 - (s0 mod s1)) mod s1)> ()[%ub, %step]
+  // Simplify: (ub - (ub - lb) % step - lb) % step == 0
+  %1 = affine.apply affine_map<()[s0, s1, s2] -> ((s0 - ((s0 - s2) mod s1) - s2) mod s1)> ()[%ub, %step, %lb]
+  return %0, %1 : index, index
+}
+
+// -----
+
+// CHECK-LABEL:  func.func @prefetch_canonicalize
+// CHECK-SAME:   ([[PARAM_0_:%.+]]: memref<512xf32>) {
+func.func @prefetch_canonicalize(%arg0: memref<512xf32>) -> () {
+  // CHECK: affine.for [[I_0_:%.+]] = 0 to 8 {
+  affine.for %arg3 = 0 to 8  {
+    %1 = affine.apply affine_map<()[s0] -> (s0 * 64)>()[%arg3]
+    // CHECK: affine.prefetch [[PARAM_0_]][symbol([[I_0_]]) * 64], read, locality<3>, data : memref<512xf32>
+    affine.prefetch %arg0[%1], read, locality<3>, data : memref<512xf32>
+  }
+  return
+}

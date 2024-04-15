@@ -3,7 +3,7 @@
 
 define <1 x i8> @test1(<8 x i8> %in) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <8 x i8> [[IN:%.*]], <8 x i8> undef, <1 x i32> <i32 5>
+; CHECK-NEXT:    [[VEC:%.*]] = shufflevector <8 x i8> [[IN:%.*]], <8 x i8> poison, <1 x i32> <i32 5>
 ; CHECK-NEXT:    ret <1 x i8> [[VEC]]
 ;
   %val = extractelement <8 x i8> %in, i32 5

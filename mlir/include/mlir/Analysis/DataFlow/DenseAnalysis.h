@@ -27,8 +27,9 @@ namespace dataflow {
 // CallControlFlowAction
 //===----------------------------------------------------------------------===//
 
-/// Indicates whether the control enters or exits the callee.
-enum class CallControlFlowAction { EnterCallee, ExitCallee };
+/// Indicates whether the control enters, exits, or skips over the callee (in
+/// the case of external functions).
+enum class CallControlFlowAction { EnterCallee, ExitCallee, ExternalCallee };
 
 //===----------------------------------------------------------------------===//
 // AbstractDenseLattice
@@ -131,14 +132,21 @@ protected:
 
   /// Propagate the dense lattice forward along the call control flow edge,
   /// which can be either entering or exiting the callee. Default implementation
-  /// just meets the states, meaning that operations implementing
-  /// `CallOpInterface` don't have any effect on the lattice that isn't already
-  /// expressed by the interface itself.
+  /// for enter and exit callee actions just meets the states, meaning that
+  /// operations implementing `CallOpInterface` don't have any effect on the
+  /// lattice that isn't already expressed by the interface itself. Default
+  /// implementation for the external callee action additionally sets the
+  /// "after" lattice to the entry state.
   virtual void visitCallControlFlowTransfer(CallOpInterface call,
                                             CallControlFlowAction action,
                                             const AbstractDenseLattice &before,
                                             AbstractDenseLattice *after) {
     join(after, before);
+    // Note that `setToEntryState` may be a "partial fixpoint" for some
+    // lattices, e.g., lattices that are lists of maps of other lattices will
+    // only set fixpoint for "known" lattices.
+    if (action == CallControlFlowAction::ExternalCallee)
+      setToEntryState(after);
   }
 
   /// Visit a program point within a region branch operation with predecessors
@@ -155,7 +163,9 @@ private:
 
   /// Visit an operation for which the data flow is described by the
   /// `CallOpInterface`.
-  void visitCallOperation(CallOpInterface call, AbstractDenseLattice *after);
+  void visitCallOperation(CallOpInterface call,
+                          const AbstractDenseLattice &before,
+                          AbstractDenseLattice *after);
 };
 
 //===----------------------------------------------------------------------===//
@@ -361,14 +371,22 @@ protected:
 
   /// Propagate the dense lattice backwards along the call control flow edge,
   /// which can be either entering or exiting the callee. Default implementation
-  /// just meets the states, meaning that operations implementing
-  /// `CallOpInterface` don't have any effect on hte lattice that isn't already
-  /// expressed by the interface itself.
+  /// for enter and exit callee action just meets the states, meaning that
+  /// operations implementing `CallOpInterface` don't have any effect on the
+  /// lattice that isn't already expressed by the interface itself. Default
+  /// implementation for external callee action additional sets the result to
+  /// the exit (fixpoint) state.
   virtual void visitCallControlFlowTransfer(CallOpInterface call,
                                             CallControlFlowAction action,
                                             const AbstractDenseLattice &after,
                                             AbstractDenseLattice *before) {
     meet(before, after);
+
+    // Note that `setToExitState` may be a "partial fixpoint" for some lattices,
+    // e.g., lattices that are lists of maps of other lattices will only
+    // set fixpoint for "known" lattices.
+    if (action == CallControlFlowAction::ExternalCallee)
+      setToExitState(before);
   }
 
 private:
@@ -394,7 +412,9 @@ private:
   ///     otherwise,
   ///   - meet that state with the state before the call-like op, or use the
   ///     custom logic if overridden by concrete analyses.
-  void visitCallOperation(CallOpInterface call, AbstractDenseLattice *before);
+  void visitCallOperation(CallOpInterface call,
+                          const AbstractDenseLattice &after,
+                          AbstractDenseLattice *before);
 
   /// Symbol table for call-level control flow.
   SymbolTableCollection &symbolTable;

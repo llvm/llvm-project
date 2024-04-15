@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
@@ -91,6 +92,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              ArrayRef<Register> ResRegs,
                              ArrayRef<ArrayRef<Register>> ArgRegs,
                              Register SwiftErrorVReg,
+                             Register ConvergenceCtrlToken,
                              std::function<unsigned()> GetCalleeReg) const {
   CallLoweringInfo Info;
   const DataLayout &DL = MIRBuilder.getDataLayout();
@@ -121,7 +123,6 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
     CanBeTailCalled = false;
   }
 
-
   // First step is to marshall all the function's parameters into the correct
   // physregs and memory locations. Gather the sequence of argument types that
   // we'll pass to the assigner function.
@@ -144,9 +145,20 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   // Try looking through a bitcast from one function type to another.
   // Commonly happens with calls to objc_msgSend().
   const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
-  if (const Function *F = dyn_cast<Function>(CalleeV))
-    Info.Callee = MachineOperand::CreateGA(F, 0);
-  else
+  if (const Function *F = dyn_cast<Function>(CalleeV)) {
+    if (F->hasFnAttribute(Attribute::NonLazyBind)) {
+      LLT Ty = getLLTForType(*F->getType(), DL);
+      Register Reg = MIRBuilder.buildGlobalValue(Ty, F).getReg(0);
+      Info.Callee = MachineOperand::CreateReg(Reg, false);
+    } else {
+      Info.Callee = MachineOperand::CreateGA(F, 0);
+    }
+  } else if (isa<GlobalIFunc>(CalleeV) || isa<GlobalAlias>(CalleeV)) {
+    // IR IFuncs and Aliases can't be forward declared (only defined), so the
+    // callee must be in the same TU and therefore we can direct-call it without
+    // worrying about it being out of range.
+    Info.Callee = MachineOperand::CreateGA(cast<GlobalValue>(CalleeV), 0);
+  } else
     Info.Callee = MachineOperand::CreateReg(GetCalleeReg(), false);
 
   Register ReturnHintAlignReg;
@@ -176,13 +188,14 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Info.KnownCallees = CB.getMetadata(LLVMContext::MD_callees);
   Info.CallConv = CallConv;
   Info.SwiftErrorVReg = SwiftErrorVReg;
+  Info.ConvergenceCtrlToken = ConvergenceCtrlToken;
   Info.IsMustTailCall = CB.isMustTailCall();
   Info.IsTailCall = CanBeTailCalled;
   Info.IsVarArg = IsVarArg;
   if (!lowerCall(MIRBuilder, Info))
     return false;
 
-  if (ReturnHintAlignReg && !Info.IsTailCall) {
+  if (ReturnHintAlignReg && !Info.LoweredTailCall) {
     MIRBuilder.buildAssertAlign(ResRegs[0], ReturnHintAlignReg,
                                 ReturnHintAlign);
   }
@@ -358,7 +371,7 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
   if (PartLLT.isVector() == LLTy.isVector() &&
       PartLLT.getScalarSizeInBits() > LLTy.getScalarSizeInBits() &&
       (!PartLLT.isVector() ||
-       PartLLT.getNumElements() == LLTy.getNumElements()) &&
+       PartLLT.getElementCount() == LLTy.getElementCount()) &&
       OrigRegs.size() == 1 && Regs.size() == 1) {
     Register SrcReg = Regs[0];
 
@@ -406,7 +419,8 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     // If PartLLT is a mismatched vector in both number of elements and element
     // size, e.g. PartLLT == v2s64 and LLTy is v3s32, then first coerce it to
     // have the same elt type, i.e. v4s32.
-    if (PartLLT.getSizeInBits() > LLTy.getSizeInBits() &&
+    // TODO: Extend this coersion to element multiples other than just 2.
+    if (TypeSize::isKnownGT(PartLLT.getSizeInBits(), LLTy.getSizeInBits()) &&
         PartLLT.getScalarSizeInBits() == LLTy.getScalarSizeInBits() * 2 &&
         Regs.size() == 1) {
       LLT NewTy = PartLLT.changeElementType(LLTy.getElementType())
@@ -472,9 +486,43 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
   } else {
     // Vector was split, and elements promoted to a wider type.
     // FIXME: Should handle floating point promotions.
-    LLT BVType = LLT::fixed_vector(LLTy.getNumElements(), PartLLT);
-    auto BV = B.buildBuildVector(BVType, Regs);
-    B.buildTrunc(OrigRegs[0], BV);
+    unsigned NumElts = LLTy.getNumElements();
+    LLT BVType = LLT::fixed_vector(NumElts, PartLLT);
+
+    Register BuildVec;
+    if (NumElts == Regs.size())
+      BuildVec = B.buildBuildVector(BVType, Regs).getReg(0);
+    else {
+      // Vector elements are packed in the inputs.
+      // e.g. we have a <4 x s16> but 2 x s32 in regs.
+      assert(NumElts > Regs.size());
+      LLT SrcEltTy = MRI.getType(Regs[0]);
+
+      LLT OriginalEltTy = MRI.getType(OrigRegs[0]).getElementType();
+
+      // Input registers contain packed elements.
+      // Determine how many elements per reg.
+      assert((SrcEltTy.getSizeInBits() % OriginalEltTy.getSizeInBits()) == 0);
+      unsigned EltPerReg =
+          (SrcEltTy.getSizeInBits() / OriginalEltTy.getSizeInBits());
+
+      SmallVector<Register, 0> BVRegs;
+      BVRegs.reserve(Regs.size() * EltPerReg);
+      for (Register R : Regs) {
+        auto Unmerge = B.buildUnmerge(OriginalEltTy, R);
+        for (unsigned K = 0; K < EltPerReg; ++K)
+          BVRegs.push_back(B.buildAnyExt(PartLLT, Unmerge.getReg(K)).getReg(0));
+      }
+
+      // We may have some more elements in BVRegs, e.g. if we have 2 s32 pieces
+      // for a <3 x s16> vector. We should have less than EltPerReg extra items.
+      if (BVRegs.size() > NumElts) {
+        assert((BVRegs.size() - NumElts) < EltPerReg);
+        BVRegs.truncate(NumElts);
+      }
+      BuildVec = B.buildBuildVector(BVType, BVRegs).getReg(0);
+    }
+    B.buildTrunc(OrigRegs[0], BuildVec);
   }
 }
 
@@ -489,7 +537,7 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   // We could just insert a regular copy, but this is unreachable at the moment.
   assert(SrcTy != PartTy && "identical part types shouldn't reach here");
 
-  const unsigned PartSize = PartTy.getSizeInBits();
+  const TypeSize PartSize = PartTy.getSizeInBits();
 
   if (PartTy.isVector() == SrcTy.isVector() &&
       PartTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits()) {
@@ -499,7 +547,7 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   }
 
   if (SrcTy.isVector() && !PartTy.isVector() &&
-      PartSize > SrcTy.getElementType().getSizeInBits()) {
+      TypeSize::isKnownGT(PartSize, SrcTy.getElementType().getSizeInBits())) {
     // Vector was scalarized, and the elements extended.
     auto UnmergeToEltTy = B.buildUnmerge(SrcTy.getElementType(), SrcReg);
     for (int i = 0, e = DstRegs.size(); i != e; ++i)
@@ -508,9 +556,10 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   }
 
   if (SrcTy.isVector() && PartTy.isVector() &&
-      PartTy.getScalarSizeInBits() == SrcTy.getScalarSizeInBits() &&
-      SrcTy.getNumElements() < PartTy.getNumElements()) {
-    // A coercion like: v2f32 -> v4f32.
+      PartTy.getSizeInBits() == SrcTy.getSizeInBits() &&
+      ElementCount::isKnownLT(SrcTy.getElementCount(),
+                              PartTy.getElementCount())) {
+    // A coercion like: v2f32 -> v4f32 or nxv2f32 -> nxv4f32
     Register DstReg = DstRegs.front();
     B.buildPadVectorWithUndefElements(DstReg, SrcReg);
     return;
@@ -688,7 +737,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         DelayedOutgoingRegAssignments.emplace_back(Thunk);
       if (!NumArgRegs)
         return false;
-      j += NumArgRegs;
+      j += (NumArgRegs - 1);
       continue;
     }
 

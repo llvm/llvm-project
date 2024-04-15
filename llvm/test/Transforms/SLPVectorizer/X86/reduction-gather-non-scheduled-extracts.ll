@@ -9,14 +9,13 @@ define void @tes() {
 ; CHECK:       1:
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 false, i1 false, i1 false
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i1> zeroinitializer, <2 x i1> [[TMP0]], <4 x i32> <i32 0, i32 0, i32 0, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 false, i1 [[TMP5]], i1 false
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP3]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 false, i1 [[TMP4]], i1 false
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TMP2]], i1 [[OP_RDX]], i1 false
-; CHECK-NEXT:    br i1 [[OP_RDX1]], label [[TMP6:%.*]], label [[TMP7:%.*]]
-; CHECK:       6:
+; CHECK-NEXT:    br i1 [[OP_RDX1]], label [[TMP5:%.*]], label [[TMP6:%.*]]
+; CHECK:       5:
 ; CHECK-NEXT:    ret void
-; CHECK:       7:
+; CHECK:       6:
 ; CHECK-NEXT:    ret void
 ;
 entry:

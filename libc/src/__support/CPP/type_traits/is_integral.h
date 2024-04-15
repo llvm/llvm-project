@@ -11,6 +11,7 @@
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/CPP/type_traits/remove_cv.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
 namespace LIBC_NAMESPACE::cpp {
 
@@ -25,7 +26,7 @@ private:
 public:
   LIBC_INLINE_VAR static constexpr bool value = __is_unqualified_any_of<
       T,
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
       __int128_t, __uint128_t,
 #endif
       char, signed char, unsigned char, short, unsigned short, int,

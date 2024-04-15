@@ -44,6 +44,24 @@ void ScalarBitSetTraits<XCOFF::SectionTypeFlags>::bitset(
 #undef ECase
 }
 
+void ScalarEnumerationTraits<XCOFF::DwarfSectionSubtypeFlags>::enumeration(
+    IO &IO, XCOFF::DwarfSectionSubtypeFlags &Value) {
+#define ECase(X) IO.enumCase(Value, #X, XCOFF::X)
+  ECase(SSUBTYP_DWINFO);
+  ECase(SSUBTYP_DWLINE);
+  ECase(SSUBTYP_DWPBNMS);
+  ECase(SSUBTYP_DWPBTYP);
+  ECase(SSUBTYP_DWARNGE);
+  ECase(SSUBTYP_DWABREV);
+  ECase(SSUBTYP_DWSTR);
+  ECase(SSUBTYP_DWRNGES);
+  ECase(SSUBTYP_DWLOC);
+  ECase(SSUBTYP_DWFRAME);
+  ECase(SSUBTYP_DWMAC);
+#undef ECase
+  IO.enumFallback<Hex32>(Value);
+}
+
 void ScalarEnumerationTraits<XCOFF::StorageClass>::enumeration(
     IO &IO, XCOFF::StorageClass &Value) {
 #define ECase(X) IO.enumCase(Value, #X, XCOFF::X)
@@ -125,6 +143,17 @@ void ScalarEnumerationTraits<XCOFF::StorageMappingClass>::enumeration(
   ECase(XMC_UL);
   ECase(XMC_TE);
 #undef ECase
+}
+
+void ScalarEnumerationTraits<XCOFF::SymbolType>::enumeration(
+    IO &IO, XCOFF::SymbolType &Value) {
+#define ECase(X) IO.enumCase(Value, #X, XCOFF::X)
+  ECase(XTY_ER);
+  ECase(XTY_SD);
+  ECase(XTY_LD);
+  ECase(XTY_CM);
+#undef ECase
+  IO.enumFallback<Hex8>(Value);
 }
 
 void ScalarEnumerationTraits<XCOFFYAML::AuxSymbolType>::enumeration(
@@ -221,6 +250,7 @@ void MappingTraits<XCOFFYAML::Section>::mapping(IO &IO,
   IO.mapOptional("NumberOfRelocations", Sec.NumberOfRelocations);
   IO.mapOptional("NumberOfLineNumbers", Sec.NumberOfLineNumbers);
   IO.mapOptional("Flags", NC->Flags);
+  IO.mapOptional("DWARFSectionSubtype", Sec.SectionSubtype);
   IO.mapOptional("SectionData", Sec.SectionData);
   IO.mapOptional("Relocations", Sec.Relocations);
 }
@@ -229,6 +259,8 @@ static void auxSymMapping(IO &IO, XCOFFYAML::CsectAuxEnt &AuxSym, bool Is64) {
   IO.mapOptional("ParameterHashIndex", AuxSym.ParameterHashIndex);
   IO.mapOptional("TypeChkSectNum", AuxSym.TypeChkSectNum);
   IO.mapOptional("SymbolAlignmentAndType", AuxSym.SymbolAlignmentAndType);
+  IO.mapOptional("SymbolType", AuxSym.SymbolType);
+  IO.mapOptional("SymbolAlignment", AuxSym.SymbolAlignment);
   IO.mapOptional("StorageMappingClass", AuxSym.StorageMappingClass);
   if (Is64) {
     IO.mapOptional("SectionOrLengthLo", AuxSym.SectionOrLengthLo);
@@ -280,47 +312,60 @@ static void auxSymMapping(IO &IO, XCOFFYAML::SectAuxEntForStat &AuxSym) {
   IO.mapOptional("NumberOfLineNum", AuxSym.NumberOfLineNum);
 }
 
+template <typename AuxEntT>
+static void ResetAuxSym(IO &IO,
+                        std::unique_ptr<XCOFFYAML::AuxSymbolEnt> &AuxSym) {
+  if (!IO.outputting())
+    AuxSym.reset(new AuxEntT);
+}
+
 void MappingTraits<std::unique_ptr<XCOFFYAML::AuxSymbolEnt>>::mapping(
     IO &IO, std::unique_ptr<XCOFFYAML::AuxSymbolEnt> &AuxSym) {
-  assert(!IO.outputting() && "We don't dump aux symbols currently.");
   const bool Is64 =
       static_cast<XCOFFYAML::Object *>(IO.getContext())->Header.Magic ==
       (llvm::yaml::Hex16)XCOFF::XCOFF64;
+
   XCOFFYAML::AuxSymbolType AuxType;
+  if (IO.outputting())
+    AuxType = AuxSym.get()->Type;
   IO.mapRequired("Type", AuxType);
   switch (AuxType) {
   case XCOFFYAML::AUX_EXCEPT:
-    if (!Is64)
+    if (!Is64) {
       IO.setError("an auxiliary symbol of type AUX_EXCEPT cannot be defined in "
                   "XCOFF32");
-    AuxSym.reset(new XCOFFYAML::ExcpetionAuxEnt());
+      return;
+    }
+    ResetAuxSym<XCOFFYAML::ExcpetionAuxEnt>(IO, AuxSym);
     auxSymMapping(IO, *cast<XCOFFYAML::ExcpetionAuxEnt>(AuxSym.get()));
     break;
   case XCOFFYAML::AUX_FCN:
-    AuxSym.reset(new XCOFFYAML::FunctionAuxEnt());
+    ResetAuxSym<XCOFFYAML::FunctionAuxEnt>(IO, AuxSym);
     auxSymMapping(IO, *cast<XCOFFYAML::FunctionAuxEnt>(AuxSym.get()), Is64);
     break;
   case XCOFFYAML::AUX_SYM:
-    AuxSym.reset(new XCOFFYAML::BlockAuxEnt());
+    ResetAuxSym<XCOFFYAML::BlockAuxEnt>(IO, AuxSym);
     auxSymMapping(IO, *cast<XCOFFYAML::BlockAuxEnt>(AuxSym.get()), Is64);
     break;
   case XCOFFYAML::AUX_FILE:
-    AuxSym.reset(new XCOFFYAML::FileAuxEnt());
+    ResetAuxSym<XCOFFYAML::FileAuxEnt>(IO, AuxSym);
     auxSymMapping(IO, *cast<XCOFFYAML::FileAuxEnt>(AuxSym.get()));
     break;
   case XCOFFYAML::AUX_CSECT:
-    AuxSym.reset(new XCOFFYAML::CsectAuxEnt());
+    ResetAuxSym<XCOFFYAML::CsectAuxEnt>(IO, AuxSym);
     auxSymMapping(IO, *cast<XCOFFYAML::CsectAuxEnt>(AuxSym.get()), Is64);
     break;
   case XCOFFYAML::AUX_SECT:
-    AuxSym.reset(new XCOFFYAML::SectAuxEntForDWARF());
+    ResetAuxSym<XCOFFYAML::SectAuxEntForDWARF>(IO, AuxSym);
     auxSymMapping(IO, *cast<XCOFFYAML::SectAuxEntForDWARF>(AuxSym.get()));
     break;
   case XCOFFYAML::AUX_STAT:
-    if (Is64)
+    if (Is64) {
       IO.setError(
           "an auxiliary symbol of type AUX_STAT cannot be defined in XCOFF64");
-    AuxSym.reset(new XCOFFYAML::SectAuxEntForStat());
+      return;
+    }
+    ResetAuxSym<XCOFFYAML::SectAuxEntForStat>(IO, AuxSym);
     auxSymMapping(IO, *cast<XCOFFYAML::SectAuxEntForStat>(AuxSym.get()));
     break;
   }
@@ -334,11 +379,11 @@ void MappingTraits<XCOFFYAML::Symbol>::mapping(IO &IO, XCOFFYAML::Symbol &S) {
   IO.mapOptional("Type", S.Type);
   IO.mapOptional("StorageClass", S.StorageClass);
   IO.mapOptional("NumberOfAuxEntries", S.NumberOfAuxEntries);
-  if (!IO.outputting())
-    IO.mapOptional("AuxEntries", S.AuxEntries);
+  IO.mapOptional("AuxEntries", S.AuxEntries);
 }
 
-void MappingTraits<XCOFFYAML::StringTable>::mapping(IO &IO, XCOFFYAML::StringTable &Str) {
+void MappingTraits<XCOFFYAML::StringTable>::mapping(
+    IO &IO, XCOFFYAML::StringTable &Str) {
   IO.mapOptional("ContentSize", Str.ContentSize);
   IO.mapOptional("Length", Str.Length);
   IO.mapOptional("Strings", Str.Strings);

@@ -132,7 +132,7 @@ define <2 x i64> @vector_test(i1 %c) {
 ; CHECK-SAME: (i1 [[C:%.*]]) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], <2 x i64> <i64 64, i64 64>, <2 x i64> <i64 1, i64 1>
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[C]] to i64
-; CHECK-NEXT:    [[VEC0:%.*]] = insertelement <2 x i64> undef, i64 [[EXT]], i64 0
+; CHECK-NEXT:    [[VEC0:%.*]] = insertelement <2 x i64> poison, i64 [[EXT]], i64 0
 ; CHECK-NEXT:    [[VEC1:%.*]] = shufflevector <2 x i64> [[VEC0]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i64> [[SEL]], [[VEC1]]
 ; CHECK-NEXT:    ret <2 x i64> [[ADD]]

@@ -13,6 +13,8 @@ add_llvm_component_library(LLVMObjectYAML
   DXContainerYAML.cpp
   ELFEmitter.cpp
   ELFYAML.cpp
+  GOFFEmitter.cpp
+  GOFFYAML.cpp
   MachOEmitter.cpp
   MachOYAML.cpp
   ObjectYAML.cpp

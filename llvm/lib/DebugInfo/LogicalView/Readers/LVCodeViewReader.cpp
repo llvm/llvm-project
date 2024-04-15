@@ -217,11 +217,9 @@ Error LVCodeViewReader::resolveSymbolName(const coff_section *CoffSection,
 // and they are printed only if the command line option 'internal=system'.
 bool LVCodeViewReader::isSystemEntry(LVElement *Element, StringRef Name) const {
   Name = Name.empty() ? Element->getName() : Name;
-  auto Find = [=](const char *String) -> bool {
-    return StringRef::npos != Name.find(String);
-  };
+  auto Find = [=](const char *String) -> bool { return Name.contains(String); };
   auto Starts = [=](const char *Pattern) -> bool {
-    return Name.startswith(Pattern);
+    return Name.starts_with(Pattern);
   };
   auto CheckExclude = [&]() -> bool {
     if (Starts("__") || Starts("_PMD") || Starts("_PMFN"))

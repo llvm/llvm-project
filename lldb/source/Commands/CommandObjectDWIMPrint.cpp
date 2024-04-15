@@ -23,7 +23,6 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #include <regex>
 
@@ -37,8 +36,7 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
                        "dwim-print [<variable-name> | <expression>]",
                        eCommandProcessMustBePaused | eCommandTryTargetAPILock) {
 
-  CommandArgumentData var_name_arg(eArgTypeVarName, eArgRepeatPlain);
-  m_arguments.push_back({var_name_arg});
+  AddSimpleArgumentList(eArgTypeVarName);
 
   m_option_group.Append(&m_format_options,
                         OptionGroupFormat::OPTION_GROUP_FORMAT |
@@ -52,13 +50,7 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
 
 Options *CommandObjectDWIMPrint::GetOptions() { return &m_option_group; }
 
-void CommandObjectDWIMPrint::HandleArgumentCompletion(
-    CompletionRequest &request, OptionElementVector &opt_element_vector) {
-  lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
-      GetCommandInterpreter(), lldb::eVariablePathCompletion, request, nullptr);
-}
-
-bool CommandObjectDWIMPrint::DoExecute(StringRef command,
+void CommandObjectDWIMPrint::DoExecute(StringRef command,
                                        CommandReturnObject &result) {
   m_option_group.NotifyOptionParsingStarting(&m_exe_ctx);
   OptionsWithRaw args{command};
@@ -67,13 +59,13 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
   if (expr.empty()) {
     result.AppendErrorWithFormatv("'{0}' takes a variable or expression",
                                   m_cmd_name);
-    return false;
+    return;
   }
 
   if (args.HasArgs()) {
     if (!ParseOptionsAndNotify(args.GetArgs(), result, m_option_group,
                                m_exe_ctx))
-      return false;
+      return;
   }
 
   // If the user has not specified, default to disabling persistent results.
@@ -137,6 +129,19 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
     }
   };
 
+  // Dump `valobj` according to whether `po` was requested or not.
+  auto dump_val_object = [&](ValueObject &valobj) {
+    if (is_po) {
+      StreamString temp_result_stream;
+      valobj.Dump(temp_result_stream, dump_options);
+      llvm::StringRef output = temp_result_stream.GetString();
+      maybe_add_hint(output);
+      result.GetOutputStream() << output;
+    } else {
+      valobj.Dump(result.GetOutputStream(), dump_options);
+    }
+  };
+
   // First, try `expr` as the name of a frame variable.
   if (frame) {
     auto valobj_sp = frame->FindVariable(ConstString(expr));
@@ -154,21 +159,23 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
                                         flags, expr);
       }
 
-      if (is_po) {
-        StreamString temp_result_stream;
-        valobj_sp->Dump(temp_result_stream, dump_options);
-        llvm::StringRef output = temp_result_stream.GetString();
-        maybe_add_hint(output);
-        result.GetOutputStream() << output;
-      } else {
-        valobj_sp->Dump(result.GetOutputStream(), dump_options);
-      }
+      dump_val_object(*valobj_sp);
       result.SetStatus(eReturnStatusSuccessFinishResult);
-      return true;
+      return;
     }
   }
 
-  // Second, also lastly, try `expr` as a source expression to evaluate.
+  // Second, try `expr` as a persistent variable.
+  if (expr.starts_with("$"))
+    if (auto *state = target.GetPersistentExpressionStateForLanguage(language))
+      if (auto var_sp = state->GetVariable(expr))
+        if (auto valobj_sp = var_sp->GetValueObject()) {
+          dump_val_object(*valobj_sp);
+          result.SetStatus(eReturnStatusSuccessFinishResult);
+          return;
+        }
+
+  // Third, and lastly, try `expr` as a source expression to evaluate.
   {
     auto *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
     ValueObjectSP valobj_sp;
@@ -194,17 +201,8 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
                                         expr);
       }
 
-      if (valobj_sp->GetError().GetError() != UserExpression::kNoResult) {
-        if (is_po) {
-          StreamString temp_result_stream;
-          valobj_sp->Dump(temp_result_stream, dump_options);
-          llvm::StringRef output = temp_result_stream.GetString();
-          maybe_add_hint(output);
-          result.GetOutputStream() << output;
-        } else {
-          valobj_sp->Dump(result.GetOutputStream(), dump_options);
-        }
-      }
+      if (valobj_sp->GetError().GetError() != UserExpression::kNoResult)
+        dump_val_object(*valobj_sp);
 
       if (suppress_result)
         if (auto result_var_sp =
@@ -216,14 +214,12 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
         }
 
       result.SetStatus(eReturnStatusSuccessFinishResult);
-      return true;
     } else {
       if (valobj_sp)
         result.SetError(valobj_sp->GetError());
       else
         result.AppendErrorWithFormatv(
             "unknown error evaluating expression `{0}`", expr);
-      return false;
     }
   }
 }

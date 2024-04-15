@@ -1,4 +1,5 @@
 ; RUN: opt -S -loop-reduce %s -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S -loop-reduce %s -o - | FileCheck %s
 ; REQUIRES: x86-registered-target
 
 ;; Ensure that we retain debuginfo for the induction variable and dependant

@@ -25,7 +25,7 @@ namespace clangd {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &Stream,
                               const InlayHint &Hint) {
-  return Stream << Hint.label << "@" << Hint.range;
+  return Stream << Hint.joinLabels() << "@" << Hint.range;
 }
 
 namespace {
@@ -57,10 +57,11 @@ struct ExpectedHint {
 
 MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
   llvm::StringRef ExpectedView(Expected.Label);
-  if (arg.label != ExpectedView.trim(" ") ||
-      arg.paddingLeft != ExpectedView.startswith(" ") ||
-      arg.paddingRight != ExpectedView.endswith(" ")) {
-    *result_listener << "label is '" << arg.label << "'";
+  std::string ResultLabel = arg.joinLabels();
+  if (ResultLabel != ExpectedView.trim(" ") ||
+      arg.paddingLeft != ExpectedView.starts_with(" ") ||
+      arg.paddingRight != ExpectedView.ends_with(" ")) {
+    *result_listener << "label is '" << ResultLabel << "'";
     return false;
   }
   if (arg.range != Code.range(Expected.RangeName)) {
@@ -72,7 +73,7 @@ MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
   return true;
 }
 
-MATCHER_P(labelIs, Label, "") { return arg.label == Label; }
+MATCHER_P(labelIs, Label, "") { return arg.joinLabels() == Label; }
 
 Config noHintsConfig() {
   Config C;
@@ -1709,7 +1710,8 @@ TEST(DesignatorHints, NoCrash) {
     void test() {
       Foo f{A(), $b[[1]]};
     }
-  )cpp", ExpectedHint{".b=", "b"});
+  )cpp",
+                        ExpectedHint{".b=", "b"});
 }
 
 TEST(InlayHints, RestrictRange) {
@@ -1722,6 +1724,38 @@ TEST(InlayHints, RestrictRange) {
   auto AST = TestTU::withCode(Code.code()).build();
   EXPECT_THAT(inlayHints(AST, Code.range()),
               ElementsAre(labelIs(": int"), labelIs(": char")));
+}
+
+TEST(ParameterHints, PseudoObjectExpr) {
+  Annotations Code(R"cpp(
+    struct S {
+      __declspec(property(get=GetX, put=PutX)) int x[];
+      int GetX(int y, int z) { return 42 + y; }
+      void PutX(int) { }
+
+      // This is a PseudoObjectExpression whose syntactic form is a binary
+      // operator.
+      void Work(int y) { x = y; } // Not `x = y: y`.
+    };
+
+    int printf(const char *Format, ...);
+
+    int main() {
+      S s;
+      __builtin_dump_struct(&s, printf); // Not `Format: __builtin_dump_struct()`
+      printf($Param[["Hello, %d"]], 42); // Normal calls are not affected.
+      // This builds a PseudoObjectExpr, but here it's useful for showing the
+      // arguments from the semantic form.
+      return s.x[ $one[[1]] ][ $two[[2]] ]; // `x[y: 1][z: 2]`
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs.push_back("-fms-extensions");
+  auto AST = TU.build();
+  EXPECT_THAT(inlayHints(AST, std::nullopt),
+              ElementsAre(HintMatcher(ExpectedHint{"Format: ", "Param"}, Code),
+                          HintMatcher(ExpectedHint{"y: ", "one"}, Code),
+                          HintMatcher(ExpectedHint{"z: ", "two"}, Code)));
 }
 
 TEST(ParameterHints, ArgPacksAndConstructors) {
@@ -2170,6 +2204,19 @@ TEST(BlockEndHints, Macro) {
     RBRACE;
   )cpp",
                       ExpectedHint{" // struct S1", "S1"});
+}
+
+TEST(BlockEndHints, PointerToMemberFunction) {
+  // Do not crash trying to summarize `a->*p`.
+  assertBlockEndHints(R"cpp(
+    class A {};
+    using Predicate = bool(A::*)();
+    void foo(A* a, Predicate p) {
+      if ((a->*p)()) {
+      $ptrmem[[}]]
+    } // suppress
+  )cpp",
+                      ExpectedHint{" // if", "ptrmem"});
 }
 
 // FIXME: Low-hanging fruit where we could omit a type hint:

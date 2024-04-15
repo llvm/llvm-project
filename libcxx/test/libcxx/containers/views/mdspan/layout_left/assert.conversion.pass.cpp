@@ -8,8 +8,8 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-hardening-mode=unchecked
-// XFAIL: availability-verbose_abort-missing
+// UNSUPPORTED: libcpp-hardening-mode=none
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <mdspan>
 
@@ -52,7 +52,7 @@ int main(int, char**) {
     [[maybe_unused]] std::extents<char, D, 5> e(arg_exts);
     // but the product is not, so we can't use it for layout_left
     TEST_LIBCPP_ASSERT_FAILURE(
-        ([=] { std::layout_left::template mapping<std::extents<char, D, 5>> m(arg); }()),
+        ([=] { std::layout_left::mapping<std::extents<char, D, 5>> m(arg); }()),
         "layout_left::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
   return 0;

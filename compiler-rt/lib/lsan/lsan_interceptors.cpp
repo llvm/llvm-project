@@ -490,9 +490,9 @@ INTERCEPTOR(int, pthread_detach, void *thread) {
   return result;
 }
 
-INTERCEPTOR(int, pthread_exit, void *retval) {
+INTERCEPTOR(void, pthread_exit, void *retval) {
   GetThreadArgRetval().Finish(GetThreadSelf(), retval);
-  return REAL(pthread_exit)(retval);
+  REAL(pthread_exit)(retval);
 }
 
 #  if SANITIZER_INTERCEPT_TRYJOIN
@@ -543,6 +543,7 @@ namespace __lsan {
 void InitializeInterceptors() {
   // Fuchsia doesn't use interceptors that require any setup.
 #if !SANITIZER_FUCHSIA
+  __interception::DoesNotSupportStaticLinking();
   InitializeSignalInterceptors();
 
   INTERCEPT_FUNCTION(malloc);

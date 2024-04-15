@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT
+// MSVC warning C4242: '+=': conversion from 'const _Ty' to 'size_t', possible loss of data
+// MSVC warning C4244: 'argument': conversion from 'std::streamsize' to 'size_t', possible loss of data
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4242 /wd4244
 // UNSUPPORTED: c++03
 
 // <fstream>
@@ -45,7 +48,7 @@
 template <class BufferPolicy>
 void test_write(BufferPolicy policy, const std::vector<std::streamsize>& payload_sizes) {
   std::size_t previously_written = 0;
-  std::streamsize total_size     = std::accumulate(payload_sizes.begin(), payload_sizes.end(), 0);
+  std::streamsize total_size     = std::accumulate(payload_sizes.begin(), payload_sizes.end(), std::streamsize{0});
   std::vector<char> data(total_size);
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = static_cast<char>(i % (1 << 8 * sizeof(char)));
@@ -97,7 +100,7 @@ void test_write(BufferPolicy policy, const std::vector<std::streamsize>& payload
 template <class BufferPolicy>
 void test_write_codecvt(BufferPolicy policy, const std::vector<std::streamsize>& payload_sizes) {
   std::size_t previously_written = 0;
-  std::streamsize total_size     = std::accumulate(payload_sizes.begin(), payload_sizes.end(), 0);
+  std::streamsize total_size     = std::accumulate(payload_sizes.begin(), payload_sizes.end(), std::streamsize{0});
   std::vector<wchar_t> data(total_size);
   for (std::size_t i = 0; i < data.size(); ++i) {
     data[i] = static_cast<wchar_t>(i);

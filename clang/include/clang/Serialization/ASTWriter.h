@@ -166,6 +166,10 @@ private:
   /// Indicates that the AST contained compiler errors.
   bool ASTHasCompilerErrors = false;
 
+  /// Indicates that we're going to generate the reduced BMI for C++20
+  /// named modules.
+  bool GeneratingReducedBMI = false;
+
   /// Mapping from input file entries to the index into the
   /// offset table where information about that input file is stored.
   llvm::DenseMap<const FileEntry *, uint32_t> InputFileIDs;
@@ -196,6 +200,16 @@ private:
 
   /// The declarations and types to emit.
   std::queue<DeclOrType> DeclTypesToEmit;
+
+  /// The delayed namespace to emit. Only meaningful for reduced BMI.
+  ///
+  /// In reduced BMI, we want to elide the unreachable declarations in
+  /// the global module fragment. However, in ASTWriterDecl, when we see
+  /// a namespace, all the declarations in the namespace would be emitted.
+  /// So the optimization become meaningless. To solve the issue, we
+  /// delay recording all the declarations until we emit all the declarations.
+  /// Then we can safely record the reached declarations only.
+  llvm::SmallVector<NamespaceDecl *, 16> DelayedNamespace;
 
   /// The first ID number we can use for our own declarations.
   serialization::DeclID FirstDeclID = serialization::NUM_PREDEF_DECL_IDS;
@@ -467,10 +481,10 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
-  /// Collects input files that didn't affect compilation of the current module,
+  /// Computes input files that didn't affect compilation of the current module,
   /// and initializes data structures necessary for leaving those files out
   /// during \c SourceManager serialization.
-  void collectNonAffectingInputFiles();
+  void computeNonAffectingInputFiles();
 
   /// Returns an adjusted \c FileID, accounting for any non-affecting input
   /// files.
@@ -525,7 +539,8 @@ private:
   void WriteType(QualType T);
 
   bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
-  bool isLookupResultEntirelyExternal(StoredDeclsList &Result, DeclContext *DC);
+  bool isLookupResultEntirelyExternalOrUnreachable(StoredDeclsList &Result,
+                                                   DeclContext *DC);
 
   void GenerateNameLookupTable(const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
@@ -538,6 +553,7 @@ private:
   void WriteReferencedSelectorsPool(Sema &SemaRef);
   void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver &IdResolver,
                             bool IsModule);
+  void WriteDeclAndTypes(ASTContext &Context);
   void WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord);
   void WriteDeclContextVisibleUpdate(const DeclContext *DC);
   void WriteFPPragmaOptions(const FPOptionsOverride &Opts);
@@ -564,11 +580,25 @@ private:
   unsigned DeclEnumAbbrev = 0;
   unsigned DeclObjCIvarAbbrev = 0;
   unsigned DeclCXXMethodAbbrev = 0;
+  unsigned DeclDependentNonTemplateCXXMethodAbbrev = 0;
+  unsigned DeclTemplateCXXMethodAbbrev = 0;
+  unsigned DeclMemberSpecializedCXXMethodAbbrev = 0;
+  unsigned DeclTemplateSpecializedCXXMethodAbbrev = 0;
+  unsigned DeclDependentSpecializationCXXMethodAbbrev = 0;
+  unsigned DeclTemplateTypeParmAbbrev = 0;
+  unsigned DeclUsingShadowAbbrev = 0;
 
   unsigned DeclRefExprAbbrev = 0;
   unsigned CharacterLiteralAbbrev = 0;
   unsigned IntegerLiteralAbbrev = 0;
   unsigned ExprImplicitCastAbbrev = 0;
+  unsigned BinaryOperatorAbbrev = 0;
+  unsigned CompoundAssignOperatorAbbrev = 0;
+  unsigned CallExprAbbrev = 0;
+  unsigned CXXOperatorCallExprAbbrev = 0;
+  unsigned CXXMemberCallExprAbbrev = 0;
+
+  unsigned CompoundStmtAbbrev = 0;
 
   void WriteDeclAbbrevs();
   void WriteDecl(ASTContext &Context, Decl *D);
@@ -582,7 +612,8 @@ public:
   ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
             InMemoryModuleCache &ModuleCache,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-            bool IncludeTimestamps = true, bool BuildingImplicitModule = false);
+            bool IncludeTimestamps = true, bool BuildingImplicitModule = false,
+            bool GeneratingReducedBMI = false);
   ~ASTWriter() override;
 
   ASTContext &getASTContext() const {
@@ -684,6 +715,15 @@ public:
   /// declaration.
   serialization::DeclID getDeclID(const Decl *D);
 
+  /// Whether or not the declaration got emitted. If not, it wouldn't be
+  /// emitted.
+  ///
+  /// This may only be called after we've done the job to write the
+  /// declarations (marked by DoneWritingDeclsAndTypes).
+  ///
+  /// A declaration may only be omitted in reduced BMI.
+  bool wasDeclEmitted(const Decl *D) const;
+
   unsigned getAnonymousDeclarationNumber(const NamedDecl *D);
 
   /// Add a string to the given record.
@@ -735,19 +775,52 @@ public:
   unsigned getDeclFieldAbbrev() const { return DeclFieldAbbrev; }
   unsigned getDeclEnumAbbrev() const { return DeclEnumAbbrev; }
   unsigned getDeclObjCIvarAbbrev() const { return DeclObjCIvarAbbrev; }
-  unsigned getDeclCXXMethodAbbrev() const { return DeclCXXMethodAbbrev; }
+  unsigned getDeclCXXMethodAbbrev(FunctionDecl::TemplatedKind Kind) const {
+    switch (Kind) {
+    case FunctionDecl::TK_NonTemplate:
+      return DeclCXXMethodAbbrev;
+    case FunctionDecl::TK_FunctionTemplate:
+      return DeclTemplateCXXMethodAbbrev;
+    case FunctionDecl::TK_MemberSpecialization:
+      return DeclMemberSpecializedCXXMethodAbbrev;
+    case FunctionDecl::TK_FunctionTemplateSpecialization:
+      return DeclTemplateSpecializedCXXMethodAbbrev;
+    case FunctionDecl::TK_DependentNonTemplate:
+      return DeclDependentNonTemplateCXXMethodAbbrev;
+    case FunctionDecl::TK_DependentFunctionTemplateSpecialization:
+      return DeclDependentSpecializationCXXMethodAbbrev;
+    }
+    llvm_unreachable("Unknwon Template Kind!");
+  }
+  unsigned getDeclTemplateTypeParmAbbrev() const {
+    return DeclTemplateTypeParmAbbrev;
+  }
+  unsigned getDeclUsingShadowAbbrev() const { return DeclUsingShadowAbbrev; }
 
   unsigned getDeclRefExprAbbrev() const { return DeclRefExprAbbrev; }
   unsigned getCharacterLiteralAbbrev() const { return CharacterLiteralAbbrev; }
   unsigned getIntegerLiteralAbbrev() const { return IntegerLiteralAbbrev; }
   unsigned getExprImplicitCastAbbrev() const { return ExprImplicitCastAbbrev; }
+  unsigned getBinaryOperatorAbbrev() const { return BinaryOperatorAbbrev; }
+  unsigned getCompoundAssignOperatorAbbrev() const {
+    return CompoundAssignOperatorAbbrev;
+  }
+  unsigned getCallExprAbbrev() const { return CallExprAbbrev; }
+  unsigned getCXXOperatorCallExprAbbrev() { return CXXOperatorCallExprAbbrev; }
+  unsigned getCXXMemberCallExprAbbrev() { return CXXMemberCallExprAbbrev; }
+
+  unsigned getCompoundStmtAbbrev() const { return CompoundStmtAbbrev; }
 
   bool hasChain() const { return Chain; }
   ASTReader *getChain() const { return Chain; }
 
   bool isWritingStdCXXNamedModules() const {
-    return WritingModule && WritingModule->isModulePurview();
+    return WritingModule && WritingModule->isNamedModule();
   }
+
+  bool isGeneratingReducedBMI() const { return GeneratingReducedBMI; }
+
+  bool getDoneWritingDeclsAndTypes() const { return DoneWritingDeclsAndTypes; }
 
 private:
   // ASTDeserializationListener implementation
@@ -798,7 +871,7 @@ private:
 /// AST and semantic-analysis consumer that generates a
 /// precompiled header from the parsed source code.
 class PCHGenerator : public SemaConsumer {
-  const Preprocessor &PP;
+  Preprocessor &PP;
   std::string OutputFile;
   std::string isysroot;
   Sema *SemaPtr;
@@ -813,14 +886,25 @@ protected:
   const ASTWriter &getWriter() const { return Writer; }
   SmallVectorImpl<char> &getPCH() const { return Buffer->Data; }
 
+  bool isComplete() const { return Buffer->IsComplete; }
+  PCHBuffer *getBufferPtr() { return Buffer.get(); }
+  StringRef getOutputFile() const { return OutputFile; }
+  DiagnosticsEngine &getDiagnostics() const {
+    return SemaPtr->getDiagnostics();
+  }
+  Preprocessor &getPreprocessor() { return PP; }
+
+  virtual Module *getEmittingModule(ASTContext &Ctx);
+
 public:
-  PCHGenerator(const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+  PCHGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                StringRef OutputFile, StringRef isysroot,
                std::shared_ptr<PCHBuffer> Buffer,
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
                bool BuildingImplicitModule = false,
-               bool ShouldCacheASTInMemory = false);
+               bool ShouldCacheASTInMemory = false,
+               bool GeneratingReducedBMI = false);
   ~PCHGenerator() override;
 
   void InitializeSema(Sema &S) override { SemaPtr = &S; }
@@ -828,6 +912,63 @@ public:
   ASTMutationListener *GetASTMutationListener() override;
   ASTDeserializationListener *GetASTDeserializationListener() override;
   bool hasEmittedPCH() const { return Buffer->IsComplete; }
+};
+
+class ReducedBMIGenerator : public PCHGenerator {
+protected:
+  virtual Module *getEmittingModule(ASTContext &Ctx) override;
+
+public:
+  ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                      StringRef OutputFile);
+
+  void HandleTranslationUnit(ASTContext &Ctx) override;
+};
+
+/// If we can elide the definition of \param D in reduced BMI.
+///
+/// Generally, we can elide the definition of a declaration if it won't affect
+/// the ABI. e.g., the non-inline function bodies.
+bool CanElideDeclDef(const Decl *D);
+
+/// A simple helper class to pack several bits in order into (a) 32 bit
+/// integer(s).
+class BitsPacker {
+  constexpr static uint32_t BitIndexUpbound = 32u;
+
+public:
+  BitsPacker() = default;
+  BitsPacker(const BitsPacker &) = delete;
+  BitsPacker(BitsPacker &&) = delete;
+  BitsPacker operator=(const BitsPacker &) = delete;
+  BitsPacker operator=(BitsPacker &&) = delete;
+  ~BitsPacker() = default;
+
+  bool canWriteNextNBits(uint32_t BitsWidth) const {
+    return CurrentBitIndex + BitsWidth < BitIndexUpbound;
+  }
+
+  void reset(uint32_t Value) {
+    UnderlyingValue = Value;
+    CurrentBitIndex = 0;
+  }
+
+  void addBit(bool Value) { addBits(Value, 1); }
+  void addBits(uint32_t Value, uint32_t BitsWidth) {
+    assert(BitsWidth < BitIndexUpbound);
+    assert((Value < (1u << BitsWidth)) && "Passing narrower bit width!");
+    assert(canWriteNextNBits(BitsWidth) &&
+           "Inserting too much bits into a value!");
+
+    UnderlyingValue |= Value << CurrentBitIndex;
+    CurrentBitIndex += BitsWidth;
+  }
+
+  operator uint32_t() { return UnderlyingValue; }
+
+private:
+  uint32_t UnderlyingValue = 0;
+  uint32_t CurrentBitIndex = 0;
 };
 
 } // namespace clang

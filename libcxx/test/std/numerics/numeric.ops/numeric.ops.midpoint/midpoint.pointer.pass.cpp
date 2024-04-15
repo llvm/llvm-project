@@ -7,6 +7,11 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// MSVC warning C5215: a function parameter with a volatile qualified type is deprecated in C++20
+// MSVC warning C5216: a volatile qualified return type is deprecated in C++20
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd5215 /wd5216
+
 // <numeric>
 
 // template <class _Tp>
@@ -54,6 +59,12 @@ void runtime_test()
     assert(std::midpoint(array +    9, array) == array + 5);
     assert(std::midpoint(array +   10, array) == array + 5);
     assert(std::midpoint(array +   11, array) == array + 6);
+
+    // explicit instantiation
+    ASSERT_SAME_TYPE(decltype(std::midpoint<T>(array, array)), T*);
+    ASSERT_NOEXCEPT(std::midpoint<T>(array, array));
+    assert(std::midpoint<T>(array, array) == array);
+    assert(std::midpoint<T>(array, array + 1000) == array + 500);
 }
 
 template <typename T>

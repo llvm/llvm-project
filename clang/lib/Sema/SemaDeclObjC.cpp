@@ -296,7 +296,7 @@ static void DiagnoseObjCImplementedDeprecations(Sema &S, const NamedDecl *ND,
         RealizedPlatform = S.Context.getTargetInfo().getPlatformName();
       // Warn about implementing unavailable methods, unless the unavailable
       // is for an app extension.
-      if (RealizedPlatform.endswith("_app_extension"))
+      if (RealizedPlatform.ends_with("_app_extension"))
         return;
       S.Diag(ImplLoc, diag::warn_unavailable_def);
       S.Diag(ND->getLocation(), diag::note_method_declared_at)
@@ -1072,6 +1072,7 @@ ObjCInterfaceDecl *Sema::ActOnStartClassInterface(
 
   ProcessDeclAttributeList(TUScope, IDecl, AttrList);
   AddPragmaAttributes(TUScope, IDecl);
+  ProcessAPINotes(IDecl);
 
   // Merge attributes from previous declarations.
   if (PrevIDecl)
@@ -1273,6 +1274,7 @@ ObjCProtocolDecl *Sema::ActOnStartProtocolInterface(
 
   ProcessDeclAttributeList(TUScope, PDecl, AttrList);
   AddPragmaAttributes(TUScope, PDecl);
+  ProcessAPINotes(PDecl);
 
   // Merge attributes from previous declarations.
   if (PrevDecl)
@@ -1623,7 +1625,7 @@ void Sema::actOnObjCTypeArgsOrProtocolQualifiers(
     }
 
     // Convert this to a type.
-    return ActOnTypeName(S, D);
+    return ActOnTypeName(D);
   };
 
   // Local function that updates the declaration specifiers with
@@ -1816,9 +1818,9 @@ Sema::ActOnForwardProtocolDeclaration(SourceLocation AtProtocolLoc,
 }
 
 ObjCCategoryDecl *Sema::ActOnStartCategoryInterface(
-    SourceLocation AtInterfaceLoc, IdentifierInfo *ClassName,
+    SourceLocation AtInterfaceLoc, const IdentifierInfo *ClassName,
     SourceLocation ClassLoc, ObjCTypeParamList *typeParamList,
-    IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
+    const IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
     Decl *const *ProtoRefs, unsigned NumProtoRefs,
     const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
     const ParsedAttributesView &AttrList) {
@@ -1914,9 +1916,9 @@ ObjCCategoryDecl *Sema::ActOnStartCategoryInterface(
 /// category implementation declaration and build an ObjCCategoryImplDecl
 /// object.
 ObjCCategoryImplDecl *Sema::ActOnStartCategoryImplementation(
-    SourceLocation AtCatImplLoc, IdentifierInfo *ClassName,
-    SourceLocation ClassLoc, IdentifierInfo *CatName, SourceLocation CatLoc,
-    const ParsedAttributesView &Attrs) {
+    SourceLocation AtCatImplLoc, const IdentifierInfo *ClassName,
+    SourceLocation ClassLoc, const IdentifierInfo *CatName,
+    SourceLocation CatLoc, const ParsedAttributesView &Attrs) {
   ObjCInterfaceDecl *IDecl = getObjCInterfaceDecl(ClassName, ClassLoc, true);
   ObjCCategoryDecl *CatIDecl = nullptr;
   if (IDecl && IDecl->hasDefinition()) {
@@ -1980,8 +1982,8 @@ ObjCCategoryImplDecl *Sema::ActOnStartCategoryImplementation(
 }
 
 ObjCImplementationDecl *Sema::ActOnStartClassImplementation(
-    SourceLocation AtClassImplLoc, IdentifierInfo *ClassName,
-    SourceLocation ClassLoc, IdentifierInfo *SuperClassname,
+    SourceLocation AtClassImplLoc, const IdentifierInfo *ClassName,
+    SourceLocation ClassLoc, const IdentifierInfo *SuperClassname,
     SourceLocation SuperClassLoc, const ParsedAttributesView &Attrs) {
   ObjCInterfaceDecl *IDecl = nullptr;
   // Check for another declaration kind with the same name.
@@ -2231,12 +2233,16 @@ void Sema::CheckImplementationIvars(ObjCImplementationDecl *ImpDecl,
     Diag(IVI->getLocation(), diag::err_inconsistent_ivar_count);
 }
 
+static bool shouldWarnUndefinedMethod(const ObjCMethodDecl *M) {
+  // No point warning no definition of method which is 'unavailable'.
+  return M->getAvailability() != AR_Unavailable;
+}
+
 static void WarnUndefinedMethod(Sema &S, ObjCImplDecl *Impl,
                                 ObjCMethodDecl *method, bool &IncompleteImpl,
                                 unsigned DiagID,
                                 NamedDecl *NeededFor = nullptr) {
-  // No point warning no definition of method which is 'unavailable'.
-  if (method->getAvailability() == AR_Unavailable)
+  if (!shouldWarnUndefinedMethod(method))
     return;
 
   // FIXME: For now ignore 'IncompleteImpl'.
@@ -2632,7 +2638,8 @@ void Sema::WarnExactTypedMethods(ObjCMethodDecl *ImpMethodDecl,
   // don't issue warning when protocol method is optional because primary
   // class is not required to implement it and it is safe for protocol
   // to implement it.
-  if (MethodDecl->getImplementationControl() == ObjCMethodDecl::Optional)
+  if (MethodDecl->getImplementationControl() ==
+      ObjCImplementationControl::Optional)
     return;
   // don't issue warning when primary class's method is
   // deprecated/unavailable.
@@ -2744,7 +2751,7 @@ static void CheckProtocolMethodDefs(
     // implemented in the class, we should not issue "Method definition not
     // found" warnings.
     // FIXME: Use a general GetUnarySelector method for this.
-    IdentifierInfo* II = &S.Context.Idents.get("forwardInvocation");
+    const IdentifierInfo *II = &S.Context.Idents.get("forwardInvocation");
     Selector fISelector = S.Context.Selectors.getSelector(1, &II);
     if (InsMap.count(fISelector))
       // Is IDecl derived from 'NSProxy'? If so, no instance methods
@@ -2765,45 +2772,43 @@ static void CheckProtocolMethodDefs(
   // check unimplemented instance methods.
   if (!NSIDecl)
     for (auto *method : PDecl->instance_methods()) {
-      if (method->getImplementationControl() != ObjCMethodDecl::Optional &&
+      if (method->getImplementationControl() !=
+              ObjCImplementationControl::Optional &&
           !method->isPropertyAccessor() &&
           !InsMap.count(method->getSelector()) &&
-          (!Super || !Super->lookupMethod(method->getSelector(),
-                                          true /* instance */,
-                                          false /* shallowCategory */,
-                                          true /* followsSuper */,
-                                          nullptr /* category */))) {
-            // If a method is not implemented in the category implementation but
-            // has been declared in its primary class, superclass,
-            // or in one of their protocols, no need to issue the warning.
-            // This is because method will be implemented in the primary class
-            // or one of its super class implementation.
+          (!Super || !Super->lookupMethod(
+                         method->getSelector(), true /* instance */,
+                         false /* shallowCategory */, true /* followsSuper */,
+                         nullptr /* category */))) {
+        // If a method is not implemented in the category implementation but
+        // has been declared in its primary class, superclass,
+        // or in one of their protocols, no need to issue the warning.
+        // This is because method will be implemented in the primary class
+        // or one of its super class implementation.
 
-            // Ugly, but necessary. Method declared in protocol might have
-            // have been synthesized due to a property declared in the class which
-            // uses the protocol.
-            if (ObjCMethodDecl *MethodInClass =
-                  IDecl->lookupMethod(method->getSelector(),
-                                      true /* instance */,
-                                      true /* shallowCategoryLookup */,
-                                      false /* followSuper */))
-              if (C || MethodInClass->isPropertyAccessor())
-                continue;
-            unsigned DIAG = diag::warn_unimplemented_protocol_method;
-            if (!S.Diags.isIgnored(DIAG, Impl->getLocation())) {
-              WarnUndefinedMethod(S, Impl, method, IncompleteImpl, DIAG, PDecl);
-            }
-          }
+        // Ugly, but necessary. Method declared in protocol might have
+        // have been synthesized due to a property declared in the class which
+        // uses the protocol.
+        if (ObjCMethodDecl *MethodInClass = IDecl->lookupMethod(
+                method->getSelector(), true /* instance */,
+                true /* shallowCategoryLookup */, false /* followSuper */))
+          if (C || MethodInClass->isPropertyAccessor())
+            continue;
+        unsigned DIAG = diag::warn_unimplemented_protocol_method;
+        if (!S.Diags.isIgnored(DIAG, Impl->getLocation())) {
+          WarnUndefinedMethod(S, Impl, method, IncompleteImpl, DIAG, PDecl);
+        }
+      }
     }
   // check unimplemented class methods
   for (auto *method : PDecl->class_methods()) {
-    if (method->getImplementationControl() != ObjCMethodDecl::Optional &&
+    if (method->getImplementationControl() !=
+            ObjCImplementationControl::Optional &&
         !ClsMap.count(method->getSelector()) &&
-        (!Super || !Super->lookupMethod(method->getSelector(),
-                                        false /* class method */,
-                                        false /* shallowCategoryLookup */,
-                                        true  /* followSuper */,
-                                        nullptr /* category */))) {
+        (!Super || !Super->lookupMethod(
+                       method->getSelector(), false /* class method */,
+                       false /* shallowCategoryLookup */,
+                       true /* followSuper */, nullptr /* category */))) {
       // See above comment for instance method lookups.
       if (C && IDecl->lookupMethod(method->getSelector(),
                                    false /* class */,
@@ -3885,7 +3890,7 @@ static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
     if (IvarTy->isIncompleteArrayType()) {
       S.Diag(ivar->getLocation(), diag::err_flexible_array_not_at_end)
           << ivar->getDeclName() << IvarTy
-          << TTK_Class; // Use "class" for Obj-C.
+          << llvm::to_underlying(TagTypeKind::Class); // Use "class" for Obj-C.
       IsInvalidIvar = true;
     } else if (const RecordType *RecordTy = IvarTy->getAs<RecordType>()) {
       if (RecordTy->getDecl()->hasFlexibleArrayMember()) {
@@ -4759,8 +4764,9 @@ Decl *Sema::ActOnMethodDeclaration(
       MethodType == tok::minus, isVariadic,
       /*isPropertyAccessor=*/false, /*isSynthesizedAccessorStub=*/false,
       /*isImplicitlyDeclared=*/false, /*isDefined=*/false,
-      MethodDeclKind == tok::objc_optional ? ObjCMethodDecl::Optional
-                                           : ObjCMethodDecl::Required,
+      MethodDeclKind == tok::objc_optional
+          ? ObjCImplementationControl::Optional
+          : ObjCImplementationControl::Required,
       HasRelatedResultType);
 
   SmallVector<ParmVarDecl*, 16> Params;
@@ -4807,6 +4813,7 @@ Decl *Sema::ActOnMethodDeclaration(
     // Apply the attributes to the parameter.
     ProcessDeclAttributeList(TUScope, Param, ArgInfo[i].ArgAttrs);
     AddPragmaAttributes(TUScope, Param);
+    ProcessAPINotes(Param);
 
     if (Param->hasAttr<BlocksAttr>()) {
       Diag(Param->getLocation(), diag::err_block_on_nonlocal);
@@ -4837,6 +4844,7 @@ Decl *Sema::ActOnMethodDeclaration(
 
   ProcessDeclAttributeList(TUScope, ObjCMethod, AttrList);
   AddPragmaAttributes(TUScope, ObjCMethod);
+  ProcessAPINotes(ObjCMethod);
 
   // Add the method now.
   const ObjCMethodDecl *PrevMethod = nullptr;
@@ -5097,8 +5105,8 @@ bool Sema::CheckObjCDeclScope(Decl *D) {
 /// Called whenever \@defs(ClassName) is encountered in the source.  Inserts the
 /// instance variables of ClassName into Decls.
 void Sema::ActOnDefs(Scope *S, Decl *TagD, SourceLocation DeclStart,
-                     IdentifierInfo *ClassName,
-                     SmallVectorImpl<Decl*> &Decls) {
+                     const IdentifierInfo *ClassName,
+                     SmallVectorImpl<Decl *> &Decls) {
   // Check that ClassName is a valid class
   ObjCInterfaceDecl *Class = getObjCInterfaceDecl(ClassName, DeclStart);
   if (!Class) {
@@ -5140,8 +5148,7 @@ void Sema::ActOnDefs(Scope *S, Decl *TagD, SourceLocation DeclStart,
 VarDecl *Sema::BuildObjCExceptionDecl(TypeSourceInfo *TInfo, QualType T,
                                       SourceLocation StartLoc,
                                       SourceLocation IdLoc,
-                                      IdentifierInfo *Id,
-                                      bool Invalid) {
+                                      const IdentifierInfo *Id, bool Invalid) {
   // ISO/IEC TR 18037 S6.7.3: "The type of an object with automatic storage
   // duration shall not be qualified by an address-space qualifier."
   // Since all parameters have automatic store duration, they can not have
@@ -5211,7 +5218,7 @@ Decl *Sema::ActOnObjCExceptionDecl(Scope *S, Declarator &D) {
   if (getLangOpts().CPlusPlus)
     CheckExtraCXXDefaultArguments(D);
 
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType ExceptionType = TInfo->getType();
 
   VarDecl *New = BuildObjCExceptionDecl(TInfo, ExceptionType,

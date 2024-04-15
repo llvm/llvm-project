@@ -167,6 +167,17 @@ conventions used by the C and C++ front-ends.
 Debug information descriptors are `specialized metadata nodes
 <LangRef.html#specialized-metadata>`_, first-class subclasses of ``Metadata``.
 
+There are two models for defining the values of source variables at different
+states of the program and tracking these values through optimization and code
+generation: :ref:`intrinsic function calls <format_common_intrinsics>`, the
+current default, and :ref:`debug records <debug_records>`, which are a new
+non-instruction-based model
+(for an explanation of how this works and why it is desirable, see the
+`RemoveDIs <RemoveDIsDebugInfo.html>`_ document). Each module must use one or
+the other; they may never be mixed within an IR module. To enable writing debug
+records instead of intrinsic calls, use the flag
+``--write-experimental-debuginfo``.
+
 .. _format_common_intrinsics:
 
 Debugger intrinsic functions
@@ -267,6 +278,61 @@ The formal LLVM-IR signature is:
 
 
 See :doc:`AssignmentTracking` for more info.
+
+.. _debug_records:
+
+Debug Records
+----------------------------
+
+LLVM also has an alternative to intrinsic functions, debug records, which
+function similarly but are not instructions. The basic syntax for debug records
+is:
+
+.. code-block:: llvm
+
+    #dbg_<kind>([<arg>, ]* <DILocation>)
+  ; Using the intrinsic model, the above is equivalent to:
+  call void llvm.dbg.<kind>([metadata <arg>, ]*), !dbg <DILocation>
+
+A debug intrinsic function can be converted to a debug record with the
+following steps:
+
+1. Add an extra level of indentation.
+2. Replace everything prior to the intrinsic kind (declare/value/assign) with
+   ``#dbg_``.
+3. Remove the leading ``metadata`` from the intrinsic's arguments.
+4. Transfer the ``!dbg`` attachment to be an argument, dropping the leading
+   ``!dbg``.
+
+For each kind of intrinsic function, there is an equivalent debug record.
+
+``#dbg_declare``
+^^^^^^^^^^^^^^^^
+
+.. code-block:: llvm
+
+    #dbg_declare([Value|MDNode], DILocalVariable, DIExpression, DILocation)
+
+Equivalent to the ``llvm.dbg.declare`` intrinsic.
+
+``#dbg_value``
+^^^^^^^^^^^^^^
+
+.. code-block:: llvm
+
+    #dbg_value([Value|DIArgList|MDNode], DILocalVariable, DIExpression, DILocation)
+
+Equivalent to the ``llvm.dbg.value`` intrinsic.
+
+``#dbg_assign``
+^^^^^^^^^^^^^^^
+
+.. code-block:: llvm
+
+    #dbg_assign([Value|DIArgList|MDNode], DILocalVariable, DIExpression,
+                DIAssignID, [Value|MDNode], DIExpression, DILocation)
+
+Equivalent to the ``llvm.dbg.assign`` intrinsic.
 
 Object lifetimes and scoping
 ============================
@@ -641,7 +707,7 @@ And has the following operands:
    operand of the ``DBG_VALUE`` instruction above. These variable location
    operands are inserted into the final DWARF Expression in positions indicated
    by the DW_OP_LLVM_arg operator in the `DIExpression
-   <LangRef.html#diexpression>`.
+   <LangRef.html#diexpression>`_.
 
 The position at which the DBG_VALUEs are inserted should correspond to the
 positions of their matching ``llvm.dbg.value`` intrinsics in the IR block.  As
@@ -841,7 +907,7 @@ presents several difficulties:
   falsebr:
     call void @llvm.dbg.value(metadata i32 %input, metadata !30, metadata !DIExpression()), !dbg !24
     call void @llvm.dbg.value(metadata i32 2, metadata !23, metadata !DIExpression()), !dbg !24
-    %value = add i32 %input, 2
+    %value2 = add i32 %input, 2
     br label %bb1
 
   exit:

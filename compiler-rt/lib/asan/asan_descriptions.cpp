@@ -245,11 +245,11 @@ static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
   InternalScopedString str;
   str.AppendF("    [%zd, %zd)", var.beg, var_end);
   // Render variable name.
-  str.AppendF(" '");
+  str.Append(" '");
   for (uptr i = 0; i < var.name_len; ++i) {
     str.AppendF("%c", var.name_pos[i]);
   }
-  str.AppendF("'");
+  str.Append("'");
   if (var.line > 0) {
     str.AppendF(" (line %zd)", var.line);
   }
@@ -260,7 +260,7 @@ static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
     str.AppendF("%s <== Memory access at offset %zd %s this variable%s\n",
                 d.Location(), addr, pos_descr, d.Default());
   } else {
-    str.AppendF("\n");
+    str.Append("\n");
   }
   Printf("%s", str.data());
 }
@@ -291,7 +291,7 @@ static void DescribeAddressRelativeToGlobal(uptr addr, uptr access_size,
   }
   str.AppendF(" global variable '%s' defined in '",
               MaybeDemangleGlobalName(g.name));
-  PrintGlobalLocation(&str, g);
+  PrintGlobalLocation(&str, g, /*print_module_name=*/false);
   str.AppendF("' (0x%zx) of size %zu\n", g.beg, g.size);
   str.Append(d.Default());
   PrintGlobalNameIfASCII(&str, g);

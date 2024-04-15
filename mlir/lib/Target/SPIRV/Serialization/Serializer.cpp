@@ -197,33 +197,37 @@ void Serializer::processExtension() {
 }
 
 void Serializer::processMemoryModel() {
+  StringAttr memoryModelName = module.getMemoryModelAttrName();
   auto mm = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::MemoryModelAttr>("memory_model").getValue());
+      module->getAttrOfType<spirv::MemoryModelAttr>(memoryModelName)
+          .getValue());
+
+  StringAttr addressingModelName = module.getAddressingModelAttrName();
   auto am = static_cast<uint32_t>(
-      module->getAttrOfType<spirv::AddressingModelAttr>("addressing_model")
+      module->getAttrOfType<spirv::AddressingModelAttr>(addressingModelName)
           .getValue());
 
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
 }
 
-LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
-                                            NamedAttribute attr) {
-  auto attrName = attr.getName().strref();
-  auto decorationName =
-      llvm::convertToCamelFromSnakeCase(attrName, /*capitalizeFirst=*/true);
-  auto decoration = spirv::symbolizeDecoration(decorationName);
-  if (!decoration) {
-    return emitError(
-               loc, "non-argument attributes expected to have snake-case-ified "
-                    "decoration name, unhandled attribute with name : ")
-           << attrName;
-  }
+static std::string getDecorationName(StringRef attrName) {
+  // convertToCamelFromSnakeCase will convert this to FpFastMathMode instead of
+  // expected FPFastMathMode.
+  if (attrName == "fp_fast_math_mode")
+    return "FPFastMathMode";
+
+  return llvm::convertToCamelFromSnakeCase(attrName, /*capitalizeFirst=*/true);
+}
+
+LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
+                                                Decoration decoration,
+                                                Attribute attr) {
   SmallVector<uint32_t, 1> args;
-  switch (*decoration) {
+  switch (decoration) {
   case spirv::Decoration::LinkageAttributes: {
     // Get the value of the Linkage Attributes
     // e.g., LinkageAttributes=["linkageName", linkageType].
-    auto linkageAttr = llvm::dyn_cast<spirv::LinkageAttributesAttr>(attr.getValue());
+    auto linkageAttr = llvm::dyn_cast<spirv::LinkageAttributesAttr>(attr);
     auto linkageName = linkageAttr.getLinkageName();
     auto linkageType = linkageAttr.getLinkageType().getValue();
     // Encode the Linkage Name (string literal to uint32_t).
@@ -232,40 +236,74 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
     args.push_back(static_cast<uint32_t>(linkageType));
     break;
   }
+  case spirv::Decoration::FPFastMathMode:
+    if (auto intAttr = dyn_cast<FPFastMathModeAttr>(attr)) {
+      args.push_back(static_cast<uint32_t>(intAttr.getValue()));
+      break;
+    }
+    return emitError(loc, "expected FPFastMathModeAttr attribute for ")
+           << stringifyDecoration(decoration);
   case spirv::Decoration::Binding:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Location:
-    if (auto intAttr = dyn_cast<IntegerAttr>(attr.getValue())) {
+    if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
       args.push_back(intAttr.getValue().getZExtValue());
       break;
     }
-    return emitError(loc, "expected integer attribute for ") << attrName;
+    return emitError(loc, "expected integer attribute for ")
+           << stringifyDecoration(decoration);
   case spirv::Decoration::BuiltIn:
-    if (auto strAttr = dyn_cast<StringAttr>(attr.getValue())) {
+    if (auto strAttr = dyn_cast<StringAttr>(attr)) {
       auto enumVal = spirv::symbolizeBuiltIn(strAttr.getValue());
       if (enumVal) {
         args.push_back(static_cast<uint32_t>(*enumVal));
         break;
       }
       return emitError(loc, "invalid ")
-             << attrName << " attribute " << strAttr.getValue();
+             << stringifyDecoration(decoration) << " decoration attribute "
+             << strAttr.getValue();
     }
-    return emitError(loc, "expected string attribute for ") << attrName;
+    return emitError(loc, "expected string attribute for ")
+           << stringifyDecoration(decoration);
   case spirv::Decoration::Aliased:
+  case spirv::Decoration::AliasedPointer:
   case spirv::Decoration::Flat:
   case spirv::Decoration::NonReadable:
   case spirv::Decoration::NonWritable:
   case spirv::Decoration::NoPerspective:
-  case spirv::Decoration::Restrict:
+  case spirv::Decoration::NoSignedWrap:
+  case spirv::Decoration::NoUnsignedWrap:
   case spirv::Decoration::RelaxedPrecision:
-    // For unit attributes, the args list has no values so we do nothing
-    if (auto unitAttr = dyn_cast<UnitAttr>(attr.getValue()))
+  case spirv::Decoration::Restrict:
+  case spirv::Decoration::RestrictPointer:
+  case spirv::Decoration::NoContraction:
+    // For unit attributes and decoration attributes, the args list
+    // has no values so we do nothing.
+    if (isa<UnitAttr, DecorationAttr>(attr))
       break;
-    return emitError(loc, "expected unit attribute for ") << attrName;
+    return emitError(loc,
+                     "expected unit attribute or decoration attribute for ")
+           << stringifyDecoration(decoration);
   default:
-    return emitError(loc, "unhandled decoration ") << decorationName;
+    return emitError(loc, "unhandled decoration ")
+           << stringifyDecoration(decoration);
   }
-  return emitDecoration(resultID, *decoration, args);
+  return emitDecoration(resultID, decoration, args);
+}
+
+LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
+                                            NamedAttribute attr) {
+  StringRef attrName = attr.getName().strref();
+  std::string decorationName = getDecorationName(attrName);
+  std::optional<Decoration> decoration =
+      spirv::symbolizeDecoration(decorationName);
+  if (!decoration) {
+    return emitError(
+               loc, "non-argument attributes expected to have snake-case-ified "
+                    "decoration name, unhandled attribute with name : ")
+           << attrName;
+  }
+  return processDecorationAttr(loc, resultID, *decoration, attr.getValue());
 }
 
 LogicalResult Serializer::processName(uint32_t resultID, StringRef name) {
@@ -612,26 +650,6 @@ LogicalResult Serializer::prepareBasicType(
         getConstantOp(cooperativeMatrixType.getRows()),
         getConstantOp(cooperativeMatrixType.getColumns()),
         getConstantOp(static_cast<uint32_t>(cooperativeMatrixType.getUse())));
-    return success();
-  }
-
-  if (auto cooperativeMatrixType =
-          dyn_cast<spirv::CooperativeMatrixNVType>(type)) {
-    uint32_t elementTypeID = 0;
-    if (failed(processTypeImpl(loc, cooperativeMatrixType.getElementType(),
-                               elementTypeID, serializationCtx))) {
-      return failure();
-    }
-    typeEnum = spirv::Opcode::OpTypeCooperativeMatrixNV;
-    auto getConstantOp = [&](uint32_t id) {
-      auto attr = IntegerAttr::get(IntegerType::get(type.getContext(), 32), id);
-      return prepareConstantInt(loc, attr);
-    };
-    llvm::append_values(
-        operands, elementTypeID,
-        getConstantOp(static_cast<uint32_t>(cooperativeMatrixType.getScope())),
-        getConstantOp(cooperativeMatrixType.getRows()),
-        getConstantOp(cooperativeMatrixType.getColumns()));
     return success();
   }
 
@@ -1014,9 +1032,9 @@ Serializer::processBlock(Block *block, bool omitLabel,
   // into multiple basic blocks. If that's the case, we need to emit the merge
   // right now and then create new blocks for further serialization of the ops
   // in this block.
-  if (emitMerge && llvm::any_of(block->getOperations(), [](Operation &op) {
-        return isa<spirv::LoopOp, spirv::SelectionOp>(op);
-      })) {
+  if (emitMerge &&
+      llvm::any_of(block->getOperations(),
+                   llvm::IsaPred<spirv::LoopOp, spirv::SelectionOp>)) {
     if (failed(emitMerge()))
       return failure();
     emitMerge = nullptr;
@@ -1028,7 +1046,7 @@ Serializer::processBlock(Block *block, bool omitLabel,
   }
 
   // Process each op in this block except the terminator.
-  for (auto &op : llvm::make_range(block->begin(), std::prev(block->end()))) {
+  for (Operation &op : llvm::drop_end(*block)) {
     if (failed(processOperation(&op)))
       return failure();
   }

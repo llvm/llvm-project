@@ -68,6 +68,22 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
+template <typename SubPattern_t> struct AllowReassoc_match {
+  SubPattern_t SubPattern;
+
+  AllowReassoc_match(const SubPattern_t &SP) : SubPattern(SP) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    auto *I = dyn_cast<FPMathOperator>(V);
+    return I && I->hasAllowReassoc() && SubPattern.match(I);
+  }
+};
+
+template <typename T>
+inline AllowReassoc_match<T> m_AllowReassoc(const T &SubPattern) {
+  return SubPattern;
+}
+
 template <typename Class> struct class_match {
   template <typename ITy> bool match(ITy *V) { return isa<Class>(V); }
 };
@@ -564,6 +580,19 @@ inline api_pred_ty<is_negated_power2> m_NegatedPower2(const APInt *&V) {
   return V;
 }
 
+struct is_negated_power2_or_zero {
+  bool isValue(const APInt &C) { return !C || C.isNegatedPowerOf2(); }
+};
+/// Match a integer or vector negated power-of-2.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_negated_power2_or_zero> m_NegatedPower2OrZero() {
+  return cst_pred_ty<is_negated_power2_or_zero>();
+}
+inline api_pred_ty<is_negated_power2_or_zero>
+m_NegatedPower2OrZero(const APInt *&V) {
+  return V;
+}
+
 struct is_power2_or_zero {
   bool isValue(const APInt &C) { return !C || C.isPowerOf2(); }
 };
@@ -594,6 +623,18 @@ inline cst_pred_ty<is_lowbit_mask> m_LowBitMask() {
   return cst_pred_ty<is_lowbit_mask>();
 }
 inline api_pred_ty<is_lowbit_mask> m_LowBitMask(const APInt *&V) { return V; }
+
+struct is_lowbit_mask_or_zero {
+  bool isValue(const APInt &C) { return !C || C.isMask(); }
+};
+/// Match an integer or vector with only the low bit(s) set.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_lowbit_mask_or_zero> m_LowBitMaskOrZero() {
+  return cst_pred_ty<is_lowbit_mask_or_zero>();
+}
+inline api_pred_ty<is_lowbit_mask_or_zero> m_LowBitMaskOrZero(const APInt *&V) {
+  return V;
+}
 
 struct icmp_pred_with_threshold {
   ICmpInst::Predicate Pred;
@@ -843,9 +884,9 @@ struct bind_const_intval_ty {
 /// Match a specified integer value or vector of all elements of that
 /// value.
 template <bool AllowUndefs> struct specific_intval {
-  APInt Val;
+  const APInt &Val;
 
-  specific_intval(APInt V) : Val(std::move(V)) {}
+  specific_intval(const APInt &V) : Val(V) {}
 
   template <typename ITy> bool match(ITy *V) {
     const auto *CI = dyn_cast<ConstantInt>(V);
@@ -857,22 +898,37 @@ template <bool AllowUndefs> struct specific_intval {
   }
 };
 
+template <bool AllowUndefs> struct specific_intval64 {
+  uint64_t Val;
+
+  specific_intval64(uint64_t V) : Val(V) {}
+
+  template <typename ITy> bool match(ITy *V) {
+    const auto *CI = dyn_cast<ConstantInt>(V);
+    if (!CI && V->getType()->isVectorTy())
+      if (const auto *C = dyn_cast<Constant>(V))
+        CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue(AllowUndefs));
+
+    return CI && CI->getValue() == Val;
+  }
+};
+
 /// Match a specific integer value or vector with all elements equal to
 /// the value.
-inline specific_intval<false> m_SpecificInt(APInt V) {
-  return specific_intval<false>(std::move(V));
+inline specific_intval<false> m_SpecificInt(const APInt &V) {
+  return specific_intval<false>(V);
 }
 
-inline specific_intval<false> m_SpecificInt(uint64_t V) {
-  return m_SpecificInt(APInt(64, V));
+inline specific_intval64<false> m_SpecificInt(uint64_t V) {
+  return specific_intval64<false>(V);
 }
 
-inline specific_intval<true> m_SpecificIntAllowUndef(APInt V) {
-  return specific_intval<true>(std::move(V));
+inline specific_intval<true> m_SpecificIntAllowUndef(const APInt &V) {
+  return specific_intval<true>(V);
 }
 
-inline specific_intval<true> m_SpecificIntAllowUndef(uint64_t V) {
-  return m_SpecificIntAllowUndef(APInt(64, V));
+inline specific_intval64<true> m_SpecificIntAllowUndef(uint64_t V) {
+  return specific_intval64<true>(V);
 }
 
 /// Match a ConstantInt and bind to its value.  This does not match
@@ -1129,7 +1185,7 @@ inline BinaryOp_match<LHS, RHS, Instruction::AShr> m_AShr(const LHS &L,
 }
 
 template <typename LHS_t, typename RHS_t, unsigned Opcode,
-          unsigned WrapFlags = 0>
+          unsigned WrapFlags = 0, bool Commutable = false>
 struct OverflowingBinaryOp_match {
   LHS_t L;
   RHS_t R;
@@ -1147,7 +1203,9 @@ struct OverflowingBinaryOp_match {
       if ((WrapFlags & OverflowingBinaryOperator::NoSignedWrap) &&
           !Op->hasNoSignedWrap())
         return false;
-      return L.match(Op->getOperand(0)) && R.match(Op->getOperand(1));
+      return (L.match(Op->getOperand(0)) && R.match(Op->getOperand(1))) ||
+             (Commutable && L.match(Op->getOperand(1)) &&
+              R.match(Op->getOperand(0)));
     }
     return false;
   }
@@ -1194,6 +1252,16 @@ m_NUWAdd(const LHS &L, const RHS &R) {
                                    OverflowingBinaryOperator::NoUnsignedWrap>(
       L, R);
 }
+
+template <typename LHS, typename RHS>
+inline OverflowingBinaryOp_match<
+    LHS, RHS, Instruction::Add, OverflowingBinaryOperator::NoUnsignedWrap, true>
+m_c_NUWAdd(const LHS &L, const RHS &R) {
+  return OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                                   OverflowingBinaryOperator::NoUnsignedWrap,
+                                   true>(L, R);
+}
+
 template <typename LHS, typename RHS>
 inline OverflowingBinaryOp_match<LHS, RHS, Instruction::Sub,
                                  OverflowingBinaryOperator::NoUnsignedWrap>
@@ -1239,10 +1307,70 @@ inline SpecificBinaryOp_match<LHS, RHS> m_BinOp(unsigned Opcode, const LHS &L,
   return SpecificBinaryOp_match<LHS, RHS>(Opcode, L, R);
 }
 
+template <typename LHS, typename RHS, bool Commutable = false>
+struct DisjointOr_match {
+  LHS L;
+  RHS R;
+
+  DisjointOr_match(const LHS &L, const RHS &R) : L(L), R(R) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *PDI = dyn_cast<PossiblyDisjointInst>(V)) {
+      assert(PDI->getOpcode() == Instruction::Or && "Only or can be disjoint");
+      if (!PDI->isDisjoint())
+        return false;
+      return (L.match(PDI->getOperand(0)) && R.match(PDI->getOperand(1))) ||
+             (Commutable && L.match(PDI->getOperand(1)) &&
+              R.match(PDI->getOperand(0)));
+    }
+    return false;
+  }
+};
+
+template <typename LHS, typename RHS>
+inline DisjointOr_match<LHS, RHS> m_DisjointOr(const LHS &L, const RHS &R) {
+  return DisjointOr_match<LHS, RHS>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline DisjointOr_match<LHS, RHS, true> m_c_DisjointOr(const LHS &L,
+                                                       const RHS &R) {
+  return DisjointOr_match<LHS, RHS, true>(L, R);
+}
+
+/// Match either "add" or "or disjoint".
+template <typename LHS, typename RHS>
+inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Add>,
+                        DisjointOr_match<LHS, RHS>>
+m_AddLike(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_Add(L, R), m_DisjointOr(L, R));
+}
+
+/// Match either "add nsw" or "or disjoint"
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                              OverflowingBinaryOperator::NoSignedWrap>,
+    DisjointOr_match<LHS, RHS>>
+m_NSWAddLike(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_NSWAdd(L, R), m_DisjointOr(L, R));
+}
+
+/// Match either "add nuw" or "or disjoint"
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                              OverflowingBinaryOperator::NoUnsignedWrap>,
+    DisjointOr_match<LHS, RHS>>
+m_NUWAddLike(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_NUWAdd(L, R), m_DisjointOr(L, R));
+}
+
 //===----------------------------------------------------------------------===//
 // Class that matches a group of binary opcodes.
 //
-template <typename LHS_t, typename RHS_t, typename Predicate>
+template <typename LHS_t, typename RHS_t, typename Predicate,
+          bool Commutable = false>
 struct BinOpPred_match : Predicate {
   LHS_t L;
   RHS_t R;
@@ -1251,8 +1379,10 @@ struct BinOpPred_match : Predicate {
 
   template <typename OpTy> bool match(OpTy *V) {
     if (auto *I = dyn_cast<Instruction>(V))
-      return this->isOpType(I->getOpcode()) && L.match(I->getOperand(0)) &&
-             R.match(I->getOperand(1));
+      return this->isOpType(I->getOpcode()) &&
+             ((L.match(I->getOperand(0)) && R.match(I->getOperand(1))) ||
+              (Commutable && L.match(I->getOperand(1)) &&
+               R.match(I->getOperand(0))));
     return false;
   }
 };
@@ -1317,6 +1447,13 @@ template <typename LHS, typename RHS>
 inline BinOpPred_match<LHS, RHS, is_bitwiselogic_op>
 m_BitwiseLogic(const LHS &L, const RHS &R) {
   return BinOpPred_match<LHS, RHS, is_bitwiselogic_op>(L, R);
+}
+
+/// Matches bitwise logic operations in either order.
+template <typename LHS, typename RHS>
+inline BinOpPred_match<LHS, RHS, is_bitwiselogic_op, true>
+m_c_BitwiseLogic(const LHS &L, const RHS &R) {
+  return BinOpPred_match<LHS, RHS, is_bitwiselogic_op, true>(L, R);
 }
 
 /// Matches integer division operations.
@@ -1456,6 +1593,36 @@ struct ThreeOps_match {
   }
 };
 
+/// Matches instructions with Opcode and any number of operands
+template <unsigned Opcode, typename... OperandTypes> struct AnyOps_match {
+  std::tuple<OperandTypes...> Operands;
+
+  AnyOps_match(const OperandTypes &...Ops) : Operands(Ops...) {}
+
+  // Operand matching works by recursively calling match_operands, matching the
+  // operands left to right. The first version is called for each operand but
+  // the last, for which the second version is called. The second version of
+  // match_operands is also used to match each individual operand.
+  template <int Idx, int Last>
+  std::enable_if_t<Idx != Last, bool> match_operands(const Instruction *I) {
+    return match_operands<Idx, Idx>(I) && match_operands<Idx + 1, Last>(I);
+  }
+
+  template <int Idx, int Last>
+  std::enable_if_t<Idx == Last, bool> match_operands(const Instruction *I) {
+    return std::get<Idx>(Operands).match(I->getOperand(Idx));
+  }
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (V->getValueID() == Value::InstructionVal + Opcode) {
+      auto *I = cast<Instruction>(V);
+      return I->getNumOperands() == sizeof...(OperandTypes) &&
+             match_operands<0, sizeof...(OperandTypes) - 1>(I);
+    }
+    return false;
+  }
+};
+
 /// Matches SelectInst.
 template <typename Cond, typename LHS, typename RHS>
 inline ThreeOps_match<Cond, LHS, RHS, Instruction::Select>
@@ -1545,6 +1712,21 @@ struct m_SplatOrUndefMask {
   }
 };
 
+template <typename PointerOpTy, typename OffsetOpTy> struct PtrAdd_match {
+  PointerOpTy PointerOp;
+  OffsetOpTy OffsetOp;
+
+  PtrAdd_match(const PointerOpTy &PointerOp, const OffsetOpTy &OffsetOp)
+      : PointerOp(PointerOp), OffsetOp(OffsetOp) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    auto *GEP = dyn_cast<GEPOperator>(V);
+    return GEP && GEP->getSourceElementType()->isIntegerTy(8) &&
+           PointerOp.match(GEP->getPointerOperand()) &&
+           OffsetOp.match(GEP->idx_begin()->get());
+  }
+};
+
 /// Matches ShuffleVectorInst independently of mask value.
 template <typename V1_t, typename V2_t>
 inline TwoOps_match<V1_t, V2_t, Instruction::ShuffleVector>
@@ -1572,18 +1754,43 @@ m_Store(const ValueOpTy &ValueOp, const PointerOpTy &PointerOp) {
                                                                   PointerOp);
 }
 
+/// Matches GetElementPtrInst.
+template <typename... OperandTypes>
+inline auto m_GEP(const OperandTypes &...Ops) {
+  return AnyOps_match<Instruction::GetElementPtr, OperandTypes...>(Ops...);
+}
+
+/// Matches GEP with i8 source element type
+template <typename PointerOpTy, typename OffsetOpTy>
+inline PtrAdd_match<PointerOpTy, OffsetOpTy>
+m_PtrAdd(const PointerOpTy &PointerOp, const OffsetOpTy &OffsetOp) {
+  return PtrAdd_match<PointerOpTy, OffsetOpTy>(PointerOp, OffsetOp);
+}
+
 //===----------------------------------------------------------------------===//
 // Matchers for CastInst classes
 //
 
-template <typename Op_t, unsigned Opcode> struct CastClass_match {
+template <typename Op_t, unsigned Opcode> struct CastOperator_match {
   Op_t Op;
 
-  CastClass_match(const Op_t &OpMatch) : Op(OpMatch) {}
+  CastOperator_match(const Op_t &OpMatch) : Op(OpMatch) {}
 
   template <typename OpTy> bool match(OpTy *V) {
     if (auto *O = dyn_cast<Operator>(V))
       return O->getOpcode() == Opcode && Op.match(O->getOperand(0));
+    return false;
+  }
+};
+
+template <typename Op_t, typename Class> struct CastInst_match {
+  Op_t Op;
+
+  CastInst_match(const Op_t &OpMatch) : Op(OpMatch) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<Class>(V))
+      return Op.match(I->getOperand(0));
     return false;
   }
 };
@@ -1605,16 +1812,58 @@ template <typename Op_t> struct PtrToIntSameSize_match {
   }
 };
 
+template <typename Op_t> struct NNegZExt_match {
+  Op_t Op;
+
+  NNegZExt_match(const Op_t &OpMatch) : Op(OpMatch) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<ZExtInst>(V))
+      return I->hasNonNeg() && Op.match(I->getOperand(0));
+    return false;
+  }
+};
+
 /// Matches BitCast.
 template <typename OpTy>
-inline CastClass_match<OpTy, Instruction::BitCast> m_BitCast(const OpTy &Op) {
-  return CastClass_match<OpTy, Instruction::BitCast>(Op);
+inline CastOperator_match<OpTy, Instruction::BitCast>
+m_BitCast(const OpTy &Op) {
+  return CastOperator_match<OpTy, Instruction::BitCast>(Op);
+}
+
+template <typename Op_t> struct ElementWiseBitCast_match {
+  Op_t Op;
+
+  ElementWiseBitCast_match(const Op_t &OpMatch) : Op(OpMatch) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    BitCastInst *I = dyn_cast<BitCastInst>(V);
+    if (!I)
+      return false;
+    Type *SrcType = I->getSrcTy();
+    Type *DstType = I->getType();
+    // Make sure the bitcast doesn't change between scalar and vector and
+    // doesn't change the number of vector elements.
+    if (SrcType->isVectorTy() != DstType->isVectorTy())
+      return false;
+    if (VectorType *SrcVecTy = dyn_cast<VectorType>(SrcType);
+        SrcVecTy && SrcVecTy->getElementCount() !=
+                        cast<VectorType>(DstType)->getElementCount())
+      return false;
+    return Op.match(I->getOperand(0));
+  }
+};
+
+template <typename OpTy>
+inline ElementWiseBitCast_match<OpTy> m_ElementWiseBitCast(const OpTy &Op) {
+  return ElementWiseBitCast_match<OpTy>(Op);
 }
 
 /// Matches PtrToInt.
 template <typename OpTy>
-inline CastClass_match<OpTy, Instruction::PtrToInt> m_PtrToInt(const OpTy &Op) {
-  return CastClass_match<OpTy, Instruction::PtrToInt>(Op);
+inline CastOperator_match<OpTy, Instruction::PtrToInt>
+m_PtrToInt(const OpTy &Op) {
+  return CastOperator_match<OpTy, Instruction::PtrToInt>(Op);
 }
 
 template <typename OpTy>
@@ -1625,90 +1874,102 @@ inline PtrToIntSameSize_match<OpTy> m_PtrToIntSameSize(const DataLayout &DL,
 
 /// Matches IntToPtr.
 template <typename OpTy>
-inline CastClass_match<OpTy, Instruction::IntToPtr> m_IntToPtr(const OpTy &Op) {
-  return CastClass_match<OpTy, Instruction::IntToPtr>(Op);
+inline CastOperator_match<OpTy, Instruction::IntToPtr>
+m_IntToPtr(const OpTy &Op) {
+  return CastOperator_match<OpTy, Instruction::IntToPtr>(Op);
 }
 
 /// Matches Trunc.
 template <typename OpTy>
-inline CastClass_match<OpTy, Instruction::Trunc> m_Trunc(const OpTy &Op) {
-  return CastClass_match<OpTy, Instruction::Trunc>(Op);
+inline CastOperator_match<OpTy, Instruction::Trunc> m_Trunc(const OpTy &Op) {
+  return CastOperator_match<OpTy, Instruction::Trunc>(Op);
 }
 
 template <typename OpTy>
-inline match_combine_or<CastClass_match<OpTy, Instruction::Trunc>, OpTy>
+inline match_combine_or<CastOperator_match<OpTy, Instruction::Trunc>, OpTy>
 m_TruncOrSelf(const OpTy &Op) {
   return m_CombineOr(m_Trunc(Op), Op);
 }
 
 /// Matches SExt.
 template <typename OpTy>
-inline CastClass_match<OpTy, Instruction::SExt> m_SExt(const OpTy &Op) {
-  return CastClass_match<OpTy, Instruction::SExt>(Op);
+inline CastInst_match<OpTy, SExtInst> m_SExt(const OpTy &Op) {
+  return CastInst_match<OpTy, SExtInst>(Op);
 }
 
 /// Matches ZExt.
 template <typename OpTy>
-inline CastClass_match<OpTy, Instruction::ZExt> m_ZExt(const OpTy &Op) {
-  return CastClass_match<OpTy, Instruction::ZExt>(Op);
+inline CastInst_match<OpTy, ZExtInst> m_ZExt(const OpTy &Op) {
+  return CastInst_match<OpTy, ZExtInst>(Op);
 }
 
 template <typename OpTy>
-inline match_combine_or<CastClass_match<OpTy, Instruction::ZExt>, OpTy>
+inline NNegZExt_match<OpTy> m_NNegZExt(const OpTy &Op) {
+  return NNegZExt_match<OpTy>(Op);
+}
+
+template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, ZExtInst>, OpTy>
 m_ZExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_ZExt(Op), Op);
 }
 
 template <typename OpTy>
-inline match_combine_or<CastClass_match<OpTy, Instruction::SExt>, OpTy>
+inline match_combine_or<CastInst_match<OpTy, SExtInst>, OpTy>
 m_SExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_SExt(Op), Op);
 }
 
+/// Match either "sext" or "zext nneg".
 template <typename OpTy>
-inline match_combine_or<CastClass_match<OpTy, Instruction::ZExt>,
-                        CastClass_match<OpTy, Instruction::SExt>>
+inline match_combine_or<CastInst_match<OpTy, SExtInst>, NNegZExt_match<OpTy>>
+m_SExtLike(const OpTy &Op) {
+  return m_CombineOr(m_SExt(Op), m_NNegZExt(Op));
+}
+
+template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, ZExtInst>,
+                        CastInst_match<OpTy, SExtInst>>
 m_ZExtOrSExt(const OpTy &Op) {
   return m_CombineOr(m_ZExt(Op), m_SExt(Op));
 }
 
 template <typename OpTy>
-inline match_combine_or<
-    match_combine_or<CastClass_match<OpTy, Instruction::ZExt>,
-                     CastClass_match<OpTy, Instruction::SExt>>,
-    OpTy>
+inline match_combine_or<match_combine_or<CastInst_match<OpTy, ZExtInst>,
+                                         CastInst_match<OpTy, SExtInst>>,
+                        OpTy>
 m_ZExtOrSExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_ZExtOrSExt(Op), Op);
 }
 
 template <typename OpTy>
-inline CastClass_match<OpTy, Instruction::UIToFP> m_UIToFP(const OpTy &Op) {
-  return CastClass_match<OpTy, Instruction::UIToFP>(Op);
+inline CastInst_match<OpTy, UIToFPInst> m_UIToFP(const OpTy &Op) {
+  return CastInst_match<OpTy, UIToFPInst>(Op);
 }
 
 template <typename OpTy>
-inline CastClass_match<OpTy, Instruction::SIToFP> m_SIToFP(const OpTy &Op) {
-  return CastClass_match<OpTy, Instruction::SIToFP>(Op);
+inline CastInst_match<OpTy, SIToFPInst> m_SIToFP(const OpTy &Op) {
+  return CastInst_match<OpTy, SIToFPInst>(Op);
 }
 
 template <typename OpTy>
-inline CastClass_match<OpTy, Instruction::FPToUI> m_FPToUI(const OpTy &Op) {
-  return CastClass_match<OpTy, Instruction::FPToUI>(Op);
+inline CastInst_match<OpTy, FPToUIInst> m_FPToUI(const OpTy &Op) {
+  return CastInst_match<OpTy, FPToUIInst>(Op);
 }
 
 template <typename OpTy>
-inline CastClass_match<OpTy, Instruction::FPToSI> m_FPToSI(const OpTy &Op) {
-  return CastClass_match<OpTy, Instruction::FPToSI>(Op);
+inline CastInst_match<OpTy, FPToSIInst> m_FPToSI(const OpTy &Op) {
+  return CastInst_match<OpTy, FPToSIInst>(Op);
 }
 
 template <typename OpTy>
-inline CastClass_match<OpTy, Instruction::FPTrunc> m_FPTrunc(const OpTy &Op) {
-  return CastClass_match<OpTy, Instruction::FPTrunc>(Op);
+inline CastInst_match<OpTy, FPTruncInst> m_FPTrunc(const OpTy &Op) {
+  return CastInst_match<OpTy, FPTruncInst>(Op);
 }
 
 template <typename OpTy>
-inline CastClass_match<OpTy, Instruction::FPExt> m_FPExt(const OpTy &Op) {
-  return CastClass_match<OpTy, Instruction::FPExt>(Op);
+inline CastInst_match<OpTy, FPExtInst> m_FPExt(const OpTy &Op) {
+  return CastInst_match<OpTy, FPExtInst>(Op);
 }
 
 //===----------------------------------------------------------------------===//

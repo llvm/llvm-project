@@ -71,7 +71,7 @@ define void @test2(ptr %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; AVX512-NEXT:    movq (%rdi,%rsi,8), %rax
 ; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
-; AVX512-NEXT:    vbroadcastsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0 {%k1}
+; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm0 {%k1} = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX512-NEXT:    vmovupd %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -329,18 +329,18 @@ define void @vselect_concat_splat() {
 ; AVX512:       ## %bb.0: ## %entry
 ; AVX512-NEXT:    vmovups (%rax), %ymm0
 ; AVX512-NEXT:    vmovups (%rax), %xmm1
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm2 = [0,3,6,9]
-; AVX512-NEXT:    vpermi2ps %ymm1, %ymm0, %ymm2
-; AVX512-NEXT:    vmovups 32, %xmm3
-; AVX512-NEXT:    vmovups 0, %ymm4
-; AVX512-NEXT:    vxorps %xmm5, %xmm5, %xmm5
-; AVX512-NEXT:    vcmpneqps %xmm5, %xmm2, %k0
+; AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [0,3,6,9,1,4,7,10]
+; AVX512-NEXT:    vmovaps %ymm2, %ymm3
+; AVX512-NEXT:    vpermi2ps %ymm1, %ymm0, %ymm3
+; AVX512-NEXT:    vmovups 32, %xmm4
+; AVX512-NEXT:    vmovups 0, %ymm5
+; AVX512-NEXT:    vxorps %xmm6, %xmm6, %xmm6
+; AVX512-NEXT:    vcmpneqps %xmm6, %xmm3, %k0
 ; AVX512-NEXT:    kshiftlw $4, %k0, %k1
 ; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [0,3,6,9,1,4,7,10]
-; AVX512-NEXT:    vpermt2ps %ymm3, %ymm2, %ymm4
+; AVX512-NEXT:    vpermt2ps %ymm4, %ymm2, %ymm5
 ; AVX512-NEXT:    vpermt2ps %ymm1, %ymm2, %ymm0
-; AVX512-NEXT:    vmovaps %ymm4, %ymm0 {%k1}
+; AVX512-NEXT:    vmovaps %ymm5, %ymm0 {%k1}
 ; AVX512-NEXT:    vmovups %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

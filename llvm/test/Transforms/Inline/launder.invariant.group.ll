@@ -7,7 +7,7 @@
 ; This test checks if value returned from the launder is considered aliasing
 ; with its argument.  Due to bug caused by handling launder in capture tracking
 ; sometimes it would be considered noalias.
-; CHECK-LABEL: define i32 @bar(ptr noalias
+; CHECK-LABEL: define {{(noundef )?}}i32 @bar(ptr noalias
 define i32 @bar(ptr noalias) {
 ; CHECK-NOT: noalias
   %2 = call ptr @llvm.launder.invariant.group.p0(ptr %0)
@@ -18,7 +18,7 @@ define i32 @bar(ptr noalias) {
   ret i32 %5
 }
 
-; CHECK-LABEL: define i32 @foo(ptr noalias
+; CHECK-LABEL: define {{(noundef )?}}i32 @foo(ptr noalias
 define i32 @foo(ptr noalias)  {
   ; CHECK-NOT: call i32 @bar(
   ; CHECK-NOT: !noalias

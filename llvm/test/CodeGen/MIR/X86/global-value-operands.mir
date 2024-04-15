@@ -8,14 +8,14 @@
 
   define i32 @inc() {
   entry:
-    %a = load i32, i32* @G
+    %a = load i32, ptr @G
     %b = add i32 %a, 1
     ret i32 %b
   }
 
   define i32 @inc2() {
   entry:
-    %a = load i32, i32* @0
+    %a = load i32, ptr @0
     %b = add i32 %a, 1
     ret i32 %b
   }
@@ -27,10 +27,10 @@
 
   define i32 @test() {
   entry:
-    %a = load i32, i32* @.$0
-    store i32 %a, i32* @-_-
-    %b = load i32, i32* @_-_a
-    store i32 %b, i32* @$.-B
+    %a = load i32, ptr @.$0
+    store i32 %a, ptr @-_-
+    %b = load i32, ptr @_-_a
+    store i32 %b, ptr @$.-B
     ret i32 %b
   }
 
@@ -38,22 +38,22 @@
 
   define i32 @test2() {
   entry:
-    %a = load i32, i32* @"\01Hello@$%09 \\ World,"
+    %a = load i32, ptr @"\01Hello@$%09 \\ World,"
     ret i32 %a
   }
 
   define i32 @test3() {
   entry:
-    %a = load i32, i32* @.$0
-    store i32 %a, i32* @-_-
-    %b = load i32, i32* @_-_a
-    store i32 %b, i32* @$.-B
+    %a = load i32, ptr @.$0
+    store i32 %a, ptr @-_-
+    %b = load i32, ptr @_-_a
+    store i32 %b, ptr @$.-B
     ret i32 %b
   }
 
   define i32 @tf() {
   entry:
-    %a = load i32, i32* @G
+    %a = load i32, ptr @G
     %b = add i32 %a, 1
     ret i32 %b
   }

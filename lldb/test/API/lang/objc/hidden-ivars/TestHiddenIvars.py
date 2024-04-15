@@ -3,6 +3,7 @@
 
 import subprocess
 
+import unittest
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -57,7 +58,7 @@ class HiddenIvarsTestCase(TestBase):
             self.build()
             self.frame_var(False)
 
-    @expectedFailure("rdar://18683637")
+    @unittest.expectedFailure  # rdar://18683637
     def test_frame_variable_across_modules(self):
         if self.getArchitecture() == "i386":
             self.skipTest("requires modern objc runtime")

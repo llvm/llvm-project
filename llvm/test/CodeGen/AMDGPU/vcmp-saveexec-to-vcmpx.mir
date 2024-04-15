@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass=si-optimize-exec-masking -verify-machineinstrs %s -o - | FileCheck --check-prefixes=GCN,GFX1010 %s
-# RUN: llc -march=amdgcn -mcpu=gfx1030 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass=si-optimize-exec-masking -verify-machineinstrs %s -o - | FileCheck --check-prefixes=GCN,GFX1030 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass=si-optimize-exec-masking -verify-machineinstrs %s -o - | FileCheck --check-prefixes=GCN,GFX1010 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass=si-optimize-exec-masking -verify-machineinstrs %s -o - | FileCheck --check-prefixes=GCN,GFX1030 %s
 ---
 
 # After the Optimize exec masking (post-RA) pass, there's a change of having v_cmpx instructions

@@ -9,6 +9,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 #define LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 
+#include "BreakpointBase.h"
 #include "DAPForward.h"
 #include "lldb/API/SBModule.h"
 #include "llvm/ADT/StringRef.h"
@@ -167,30 +168,6 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
 void FillResponse(const llvm::json::Object &request,
                   llvm::json::Object &response);
 
-/// Emplace the string value from an SBValue into the supplied object
-/// using \a key as the key that will contain the value.
-///
-/// The value is what we will display in VS Code. Some SBValue objects
-/// can have a value and/or a summary. If a value has both, we
-/// combine the value and the summary into one string. If we only have a
-/// value or summary, then that is considered the value. If there is
-/// no value and no summary then the value is the type name followed by
-/// the address of the type if it has an address.
-///
-///
-/// \param[in] v
-///     A lldb::SBValue object to extract the string value from
-///
-///
-/// \param[in] object
-///     The object to place the value object into
-///
-///
-/// \param[in] key
-///     The key name to use when inserting the value object we create
-void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
-                    llvm::StringRef key);
-
 /// Converts \a bp to a JSON value and appends the first valid location to the
 /// \a breakpoints array.
 ///
@@ -215,7 +192,7 @@ void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
 ///     provided by the setBreakpoints request are returned to the IDE as a
 ///     fallback.
 void AppendBreakpoint(
-    lldb::SBBreakpoint &bp, llvm::json::Array &breakpoints,
+    BreakpointBase *bp, llvm::json::Array &breakpoints,
     std::optional<llvm::StringRef> request_path = std::nullopt,
     std::optional<uint32_t> request_line = std::nullopt);
 
@@ -247,7 +224,7 @@ void AppendBreakpoint(
 ///     A "Breakpoint" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Value
-CreateBreakpoint(lldb::SBBreakpoint &bp,
+CreateBreakpoint(BreakpointBase *bp,
                  std::optional<llvm::StringRef> request_path = std::nullopt,
                  std::optional<uint32_t> request_line = std::nullopt,
                  std::optional<uint32_t> request_column = std::nullopt);
@@ -397,6 +374,42 @@ const char *GetNonNullVariableName(lldb::SBValue value);
 /// Otherwise, we fallback to the variable address or register location.
 std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
                                                bool is_name_duplicated);
+
+/// Helper struct that parses the metadata of an \a lldb::SBValue and produces
+/// a canonical set of properties that can be sent to DAP clients.
+struct VariableDescription {
+  // The error message if SBValue.GetValue() fails.
+  std::optional<std::string> error;
+  // The display description to show on the IDE.
+  std::string display_value;
+  // The display name to show on the IDE.
+  std::string name;
+  // The variable path for this variable.
+  std::string evaluate_name;
+  // The output of SBValue.GetValue() if it doesn't fail. It might be empty.
+  std::string value;
+  // The summary string of this variable. It might be empty.
+  std::string summary;
+  // The auto summary if using `enableAutoVariableSummaries`.
+  std::optional<std::string> auto_summary;
+  // The type of this variable.
+  lldb::SBType type_obj;
+  // The display type name of this variable.
+  std::string display_type_name;
+  /// The SBValue for this variable.
+  lldb::SBValue v;
+
+  VariableDescription(lldb::SBValue v, bool format_hex = false,
+                      bool is_name_duplicated = false,
+                      std::optional<std::string> custom_name = {});
+
+  /// Create a JSON object that represents these extensions to the DAP variable
+  /// response.
+  llvm::json::Object GetVariableExtensionsJSON();
+
+  /// Returns a description of the value appropriate for the specified context.
+  std::string GetResult(llvm::StringRef context);
+};
 
 /// Create a "Variable" object for a LLDB thread object.
 ///

@@ -1,34 +1,34 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 module m0
   real, pointer, contiguous :: p1(:) ! ok
   real, pointer :: p2(:)
 end
 module m
   use m0
-  !ERROR: Cannot change CONTIGUOUS attribute on use-associated 'p1'
+  !WARNING: Use-associated 'p1' already has 'CONTIGUOUS' attribute
   contiguous p1
   !ERROR: Cannot change CONTIGUOUS attribute on use-associated 'p2'
   contiguous p2
-  !ERROR: CONTIGUOUS entity 'x' must be an array pointer, assumed-shape, or assumed-rank
+  !PORTABILITY: CONTIGUOUS entity 'x' should be an array pointer, assumed-shape, or assumed-rank
   real, contiguous :: x
-  !ERROR: CONTIGUOUS entity 'scalar' must be an array pointer, assumed-shape, or assumed-rank
+  !PORTABILITY: CONTIGUOUS entity 'scalar' should be an array pointer, assumed-shape, or assumed-rank
   real, contiguous, pointer :: scalar
-  !ERROR: CONTIGUOUS entity 'allocatable' must be an array pointer, assumed-shape, or assumed-rank
+  !PORTABILITY: CONTIGUOUS entity 'allocatable' should be an array pointer, assumed-shape, or assumed-rank
   real, contiguous, allocatable :: allocatable
  contains
-  !ERROR: CONTIGUOUS entity 'func' must be an array pointer, assumed-shape, or assumed-rank
+  !PORTABILITY: CONTIGUOUS entity 'func' should be an array pointer, assumed-shape, or assumed-rank
   function func(ashape,arank) result(r)
     real, contiguous :: ashape(:) ! ok
     real, contiguous :: arank(..) ! ok
-    !ERROR: CONTIGUOUS entity 'r' must be an array pointer, assumed-shape, or assumed-rank
+    !PORTABILITY: CONTIGUOUS entity 'r' should be an array pointer, assumed-shape, or assumed-rank
     real :: r(10)
-    !ERROR: CONTIGUOUS entity 'r2' must be an array pointer, assumed-shape, or assumed-rank
+    !PORTABILITY: CONTIGUOUS entity 'r2' should be an array pointer, assumed-shape, or assumed-rank
     real :: r2(10)
     contiguous func
     contiguous r
     contiguous e
     contiguous r2
-    !ERROR: CONTIGUOUS entity 'e' must be an array pointer, assumed-shape, or assumed-rank
+    !PORTABILITY: CONTIGUOUS entity 'e' should be an array pointer, assumed-shape, or assumed-rank
     entry e() result(r2)
   end
   function fp()

@@ -3,6 +3,14 @@ RUN: llvm-dwarfdump -v %t | FileCheck --check-prefixes=CHECK,NOTYP %s
 RUN: llvm-objdump -h %t | FileCheck --check-prefix=NOTYPOBJ %s
 RUN: llvm-dwp %p/../Inputs/simple/types/a.dwo %p/../Inputs/simple/types/b.dwo -o - \
 RUN:   | llvm-dwarfdump -v - | FileCheck --check-prefixes=CHECK,TYPES %s
+RUN: llvm-dwp %p/../Inputs/simple/notypes/a.dwo %p/../Inputs/simple/notypes/b.dwo -o %t     --continue-on-cu-index-overflow
+RUN: llvm-dwp %p/../Inputs/simple/notypes/a.dwo %p/../Inputs/simple/notypes/b.dwo -o %t     --continue-on-cu-index-overflow=continue
+RUN: llvm-dwp %p/../Inputs/simple/notypes/a.dwo %p/../Inputs/simple/notypes/b.dwo -o %t     --continue-on-cu-index-overflow=soft-stop
+RUN: not llvm-dwp %p/../Inputs/simple/notypes/a.dwo %p/../Inputs/simple/notypes/b.dwo -o %t --continue-on-cu-index-overflow=foobar
+RUN: llvm-dwp %p/../Inputs/simple/notypes/a.dwo %p/../Inputs/simple/notypes/b.dwo -o %t     -continue-on-cu-index-overflow
+RUN: llvm-dwp %p/../Inputs/simple/notypes/a.dwo %p/../Inputs/simple/notypes/b.dwo -o %t     -continue-on-cu-index-overflow=continue
+RUN: llvm-dwp %p/../Inputs/simple/notypes/a.dwo %p/../Inputs/simple/notypes/b.dwo -o %t     -continue-on-cu-index-overflow=soft-stop
+RUN: not llvm-dwp %p/../Inputs/simple/notypes/a.dwo %p/../Inputs/simple/notypes/b.dwo -o %t -continue-on-cu-index-overflow=foobar
 
 DWP from non-type-unit debug info for these two translation units:
 a.cpp:

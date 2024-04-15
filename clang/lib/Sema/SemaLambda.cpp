@@ -9,17 +9,18 @@
 //  This file implements semantic analysis for C++ lambda expressions.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/SemaLambda.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
-#include "clang/Sema/SemaLambda.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
@@ -916,7 +917,7 @@ static TypeSourceInfo *getLambdaType(Sema &S, LambdaIntroducer &Intro,
       }
     }
 
-    MethodTyInfo = S.GetTypeForDeclarator(ParamInfo, CurScope);
+    MethodTyInfo = S.GetTypeForDeclarator(ParamInfo);
     assert(MethodTyInfo && "no type from lambda-declarator");
 
     // Check for unexpanded parameter packs in the method type.
@@ -1393,7 +1394,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // CUDA lambdas get implicit host and device attributes.
   if (getLangOpts().CUDA)
-    CUDASetLambdaAttrs(Method);
+    CUDA().SetLambdaAttrs(Method);
 
   // OpenMP lambdas might get assumumption attributes.
   if (LangOpts.OpenMP)
@@ -1444,7 +1445,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
       for (const auto &Capture : Intro.Captures) {
         if (Capture.Id == TP->getIdentifier()) {
           Diag(Capture.Loc, diag::err_template_param_shadow) << Capture.Id;
-          Diag(TP->getLocation(), diag::note_template_param_here);
+          NoteTemplateParameterLocation(*TP);
         }
       }
     }
@@ -1885,8 +1886,7 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
   return InitSeq.Perform(*this, Entity, InitKind, InitExpr);
 }
 
-ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body,
-                                 Scope *CurScope) {
+ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
   return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);
@@ -2137,7 +2137,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       CaptureInits.push_back(Init.get());
 
       if (LangOpts.CUDA)
-        CUDACheckLambdaCapture(CallOperator, From);
+        CUDA().CheckLambdaCapture(CallOperator, From);
     }
 
     Class->setCaptures(Context, Captures);

@@ -23,7 +23,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGINLINESCALAROPERANDS
+#define GEN_PASS_DEF_LINALGINLINESCALAROPERANDSPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -35,7 +35,7 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!genericOp.hasTensorSemantics())
+    if (!genericOp.hasPureTensorSemantics())
       return failure();
 
     SmallVector<size_t> scalarOperands;
@@ -101,8 +101,10 @@ void mlir::linalg::populateInlineConstantOperandsPatterns(
 namespace {
 /// Pass that removes unit-extent dims within generic ops.
 struct LinalgInlineScalarOperandsPass
-    : public impl::LinalgInlineScalarOperandsBase<
+    : public impl::LinalgInlineScalarOperandsPassBase<
           LinalgInlineScalarOperandsPass> {
+  using impl::LinalgInlineScalarOperandsPassBase<
+      LinalgInlineScalarOperandsPass>::LinalgInlineScalarOperandsPassBase;
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext &ctx = getContext();
@@ -112,7 +114,3 @@ struct LinalgInlineScalarOperandsPass
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createLinalgInlineScalarOperandsPass() {
-  return std::make_unique<LinalgInlineScalarOperandsPass>();
-}

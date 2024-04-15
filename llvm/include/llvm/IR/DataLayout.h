@@ -337,7 +337,7 @@ public:
     case MM_WinCOFF:
       return ".L";
     case MM_GOFF:
-      return "@";
+      return "L#";
     case MM_Mips:
       return "$";
     case MM_MachO:
@@ -673,9 +673,10 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   assert(Ty->isSized() && "Cannot getTypeInfo() on a type that is unsized!");
   switch (Ty->getTypeID()) {
   case Type::LabelTyID:
-    return TypeSize::Fixed(getPointerSizeInBits(0));
+    return TypeSize::getFixed(getPointerSizeInBits(0));
   case Type::PointerTyID:
-    return TypeSize::Fixed(getPointerSizeInBits(Ty->getPointerAddressSpace()));
+    return TypeSize::getFixed(
+        getPointerSizeInBits(Ty->getPointerAddressSpace()));
   case Type::ArrayTyID: {
     ArrayType *ATy = cast<ArrayType>(Ty);
     return ATy->getNumElements() *
@@ -685,24 +686,24 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
     // Get the layout annotation... which is lazily created on demand.
     return getStructLayout(cast<StructType>(Ty))->getSizeInBits();
   case Type::IntegerTyID:
-    return TypeSize::Fixed(Ty->getIntegerBitWidth());
+    return TypeSize::getFixed(Ty->getIntegerBitWidth());
   case Type::HalfTyID:
   case Type::BFloatTyID:
-    return TypeSize::Fixed(16);
+    return TypeSize::getFixed(16);
   case Type::FloatTyID:
-    return TypeSize::Fixed(32);
+    return TypeSize::getFixed(32);
   case Type::DoubleTyID:
   case Type::X86_MMXTyID:
-    return TypeSize::Fixed(64);
+    return TypeSize::getFixed(64);
   case Type::PPC_FP128TyID:
   case Type::FP128TyID:
-    return TypeSize::Fixed(128);
+    return TypeSize::getFixed(128);
   case Type::X86_AMXTyID:
-    return TypeSize::Fixed(8192);
+    return TypeSize::getFixed(8192);
   // In memory objects this is always aligned to a higher boundary, but
   // only 80 bits contain information.
   case Type::X86_FP80TyID:
-    return TypeSize::Fixed(80);
+    return TypeSize::getFixed(80);
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID: {
     VectorType *VTy = cast<VectorType>(Ty);

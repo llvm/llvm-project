@@ -371,9 +371,9 @@ private:
 template <typename CGSCCPassT>
 ModuleToPostOrderCGSCCPassAdaptor
 createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT &&Pass) {
-  using PassModelT = detail::PassModel<LazyCallGraph::SCC, CGSCCPassT,
-                                       PreservedAnalyses, CGSCCAnalysisManager,
-                                       LazyCallGraph &, CGSCCUpdateResult &>;
+  using PassModelT =
+      detail::PassModel<LazyCallGraph::SCC, CGSCCPassT, CGSCCAnalysisManager,
+                        LazyCallGraph &, CGSCCUpdateResult &>;
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
   return ModuleToPostOrderCGSCCPassAdaptor(
@@ -518,8 +518,7 @@ createCGSCCToFunctionPassAdaptor(FunctionPassT &&Pass,
                                  bool EagerlyInvalidate = false,
                                  bool NoRerun = false) {
   using PassModelT =
-      detail::PassModel<Function, FunctionPassT, PreservedAnalyses,
-                        FunctionAnalysisManager>;
+      detail::PassModel<Function, FunctionPassT, FunctionAnalysisManager>;
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
   return CGSCCToFunctionPassAdaptor(
@@ -588,9 +587,9 @@ private:
 template <typename CGSCCPassT>
 DevirtSCCRepeatedPass createDevirtSCCRepeatedPass(CGSCCPassT &&Pass,
                                                   int MaxIterations) {
-  using PassModelT = detail::PassModel<LazyCallGraph::SCC, CGSCCPassT,
-                                       PreservedAnalyses, CGSCCAnalysisManager,
-                                       LazyCallGraph &, CGSCCUpdateResult &>;
+  using PassModelT =
+      detail::PassModel<LazyCallGraph::SCC, CGSCCPassT, CGSCCAnalysisManager,
+                        LazyCallGraph &, CGSCCUpdateResult &>;
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
   return DevirtSCCRepeatedPass(

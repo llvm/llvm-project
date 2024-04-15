@@ -50,16 +50,6 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
-* The `llvm.stacksave` and `llvm.stackrestore` intrinsics now use
-  an overloaded pointer type to support non-0 address spaces.
-* The constant expression variants of the following instructions have been
-  removed:
-
-  * ``and``
-  * ``or``
-
-* Added `llvm.exp10` intrinsic.
-
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -69,12 +59,7 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
-* Added constructs for debugging TableGen files:
-
-  * `dump` keyword to dump messages to standard error, see
-     https://github.com/llvm/llvm-project/pull/68793.
-  * `!repr` bang operator to inspect the content of values, see
-     https://github.com/llvm/llvm-project/pull/68716.
+- We can define type aliases via new keyword ``deftype``.
 
 Changes to Interprocedural Optimizations
 ----------------------------------------
@@ -82,18 +67,16 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
+* Added support for Cortex-A78AE, Cortex-A520AE and Cortex-A720AE CPUs.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
-* `llvm.sqrt.f32` is now lowered correctly. Use `llvm.amdgcn.sqrt.f32`
-  for raw instruction access.
-
-* Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.
-
-* Implemented :ref:`llvm.get.rounding <int_get_rounding>`
+* Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
 
 Changes to the ARM Backend
 --------------------------
+* FEAT_F32MM is no longer activated by default when using `+sve` on v8.6-A or greater. The feature is still available and can be used by adding `+f32mm` to the command line options.
 
 Changes to the AVR Backend
 --------------------------
@@ -116,8 +99,17 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-* The Zfa extension version was upgraded to 1.0 and is no longer experimental.
-* Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
+* Added full support for the experimental Zabha (Byte and
+  Halfword Atomic Memory Operations) extension.
+* Added assembler/disassembler support for the experimenatl Zalasr
+  (Load-Acquire and Store-Release) extension.
+* The names of the majority of the S-prefixed (supervisor-level) extension
+  names in the RISC-V profiles specification are now recognised.
+* Codegen support was added for the Zimop (May-Be-Operations) extension.
+* The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
+* The experimental Ssqosid extension is supported.
+* Zacas is no longer experimental.
+* Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -125,24 +117,8 @@ Changes to the WebAssembly Backend
 Changes to the Windows Target
 -----------------------------
 
-* The LLVM filesystem class ``UniqueID`` and function ``equivalent()``
-  no longer determine that distinct different path names for the same
-  hard linked file actually are equal. This is an intentional tradeoff in a
-  bug fix, where the bug used to cause distinct files to be considered
-  equivalent on some file systems. This change fixed the issues
-  https://github.com/llvm/llvm-project/issues/61401 and
-  https://github.com/llvm/llvm-project/issues/22079.
-
 Changes to the X86 Backend
 --------------------------
-
-* The ``i128`` type now matches GCC and clang's ``__int128`` type. This mainly
-  benefits external projects such as Rust which aim to be binary compatible
-  with C, but also fixes code generation where LLVM already assumed that the
-  type matched and called into libgcc helper functions.
-* Support ISA of ``USER_MSR``.
-* Support ISA of ``AVX10.1-256`` and ``AVX10.1-512``.
-* ``-mcpu=pantherlake`` and ``-mcpu=clearwaterforest`` are now supported.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -150,34 +126,31 @@ Changes to the OCaml bindings
 Changes to the Python bindings
 ------------------------------
 
-* The python bindings have been removed.
-
-
 Changes to the C API
 --------------------
 
-* Added ``LLVMGetTailCallKind`` and ``LLVMSetTailCallKind`` to
-  allow getting and setting ``tail``, ``musttail``, and ``notail``
-  attributes on call instructions.
-* The following functions for creating constant expressions have been removed,
-  because the underlying constant expressions are no longer supported. Instead,
-  an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
-  constant fold the operands if possible and create an instruction otherwise:
+* Added ``LLVMGetBlockAddressFunction`` and ``LLVMGetBlockAddressBasicBlock``
+  functions for accessing the values in a blockaddress constant.
 
-  * ``LLVMConstAnd``
-  * ``LLVMConstOr``
+* Added ``LLVMConstStringInContext2`` function, which better matches the C++
+  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``. 
+
+* Added the following functions for accessing a function's prefix data:
+
+  * ``LLVMHasPrefixData``
+  * ``LLVMGetPrefixData``
+  * ``LLVMSetPrefixData``
+
+* Added the following functions for accessing a function's prologue data:
+
+  * ``LLVMHasPrologueData``
+  * ``LLVMGetPrologueData``
+  * ``LLVMSetPrologueData``
+
+* Deprecated ``LLVMConstNUWNeg`` and ``LLVMBuildNUWNeg``.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
-
-* ``PrologEpilogInserter`` no longer supports register scavenging
-  during forwards frame index elimination. Targets should use
-  backwards frame index elimination instead.
-
-* ``RegScavenger`` no longer supports forwards register
-  scavenging. Clients should use backwards register scavenging
-  instead, which is preferred because it does not depend on accurate
-  kill flags.
 
 Changes to the Metadata Info
 ---------------------------------
@@ -187,56 +160,47 @@ Changes to the Debug Info
 
 Changes to the LLVM tools
 ---------------------------------
+* llvm-nm and llvm-objdump can now print symbol information from linked
+  WebAssembly binaries, using information from exports or the "name"
+  section for functions, globals and data segments. Symbol addresses and sizes
+  are printed as offsets in the file, allowing for binary size analysis. Wasm
+  files using reference types and GC are also supported (but also only for
+  functions, globals, and data, and only for listing symbols and names).
 
-* llvm-symbolizer now treats invalid input as an address for which source
-  information is not found.
-* llvm-readelf now supports ``--extra-sym-info`` (``-X``) to display extra
-  information (section name) when showing symbols.
+* llvm-ar now utilizes LLVM_DEFAULT_TARGET_TRIPLE to determine the archive format
+  if it's not specified with the ``--format`` argument and cannot be inferred from
+  input files.
 
-* ``llvm-nm`` now supports the ``--line-numbers`` (``-l``) option to use
-  debugging information to print symbols' filenames and line numbers.
+* llvm-ar now allows specifying COFF archive format with ``--format`` argument
+  and uses it by default for COFF targets.
+
+* llvm-ranlib now supports ``-V`` as an alias for ``--version``.
+  ``-v`` (``--verbose`` in llvm-ar) has been removed.
+  (`#87661 <https://github.com/llvm/llvm-project/pull/87661>`_)
+
+* llvm-objcopy now supports ``--set-symbol-visibility`` and
+  ``--set-symbols-visibility`` options for ELF input to change the
+  visibility of symbols.
+
+* llvm-objcopy now supports ``--skip-symbol`` and ``--skip-symbols`` options
+  for ELF input to skip the specified symbols when executing other options
+  that can change a symbol's name, binding or visibility.
+
+* llvm-profgen now supports COFF+DWARF binaries. This enables Sample-based PGO
+  on Windows using Intel VTune's SEP. For details on usage, see the `end-user
+  documentation for SPGO
+  <https://clang.llvm.org/docs/UsersManual.html#using-sampling-profilers>`_.
 
 Changes to LLDB
 ---------------------------------
 
-* Methods in SBHostOS related to threads have had their implementations
-  removed. These methods will return a value indicating failure.
-* ``SBType::FindDirectNestedType`` function is added. It's useful
-  for formatters to quickly find directly nested type when it's known
-  where to search for it, avoiding more expensive global search via
-  ``SBTarget::FindFirstType``.
-* ``lldb-vscode`` was renamed to ``lldb-dap`` and and its installation
-  instructions have been updated to reflect this. The underlying functionality
-  remains unchanged.
-* The ``mte_ctrl`` register can now be read from AArch64 Linux core files.
-
-* LLDB now supports debugging the Scalable Matrix Extension (SME) on AArch64
-  Linux for both running processes and core files. For details refer to the
-  `AArch64 Linux documentation <https://lldb.llvm.org/use/aarch64-linux.html>`_.
-
 Changes to Sanitizers
 ---------------------
-* HWASan now defaults to detecting use-after-scope bugs.
 
 Other Changes
 -------------
 
-* The ``Flags`` field of ``llvm::opt::Option`` has been split into ``Flags``
-  and ``Visibility`` to simplify option sharing between various drivers (such
-  as ``clang``, ``clang-cl``, or ``flang``) that rely on Clang's Options.td.
-  Overloads of ``llvm::opt::OptTable`` that use ``FlagsToInclude`` have been
-  deprecated. There is a script and instructions on how to resolve conflicts -
-  see https://reviews.llvm.org/D157150 and https://reviews.llvm.org/D157151 for
-  details.
-
-* On Linux, FreeBSD, and NetBSD, setting the environment variable
-  ``LLVM_ENABLE_SYMBOLIZER_MARKUP`` causes tools to print stacktraces using
-  :doc:`Symbolizer Markup <SymbolizerMarkupFormat>`.
-  This works even if the tools have no embedded symbol information (i.e. are
-  fully stripped); :doc:`llvm-symbolizer <CommandGuide/llvm-symbolizer>` can
-  symbolize the markup afterwards using ``debuginfod``.
-
-External Open Source Projects Using LLVM 15
+External Open Source Projects Using LLVM 19
 ===========================================
 
 * A project...

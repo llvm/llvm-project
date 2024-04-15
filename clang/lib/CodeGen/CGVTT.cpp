@@ -77,9 +77,18 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
        llvm::ConstantInt::get(CGM.Int32Ty, AddressPoint.AddressPointIndex),
      };
 
+     // Add inrange attribute to indicate that only the VTableIndex can be
+     // accessed.
+     unsigned ComponentSize =
+         CGM.getDataLayout().getTypeAllocSize(getVTableComponentType());
+     unsigned VTableSize = CGM.getDataLayout().getTypeAllocSize(
+         cast<llvm::StructType>(VTable->getValueType())
+             ->getElementType(AddressPoint.VTableIndex));
+     unsigned Offset = ComponentSize * AddressPoint.AddressPointIndex;
+     llvm::ConstantRange InRange(llvm::APInt(32, -Offset, true),
+                                 llvm::APInt(32, VTableSize - Offset, true));
      llvm::Constant *Init = llvm::ConstantExpr::getGetElementPtr(
-         VTable->getValueType(), VTable, Idxs, /*InBounds=*/true,
-         /*InRangeIndex=*/1);
+         VTable->getValueType(), VTable, Idxs, /*InBounds=*/true, InRange);
 
      VTTComponents.push_back(Init);
   }
@@ -93,6 +102,11 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
 
   if (CGM.supportsCOMDAT() && VTT->isWeakForLinker())
     VTT->setComdat(CGM.getModule().getOrInsertComdat(VTT->getName()));
+
+  // Set the visibility. This will already have been set on the VTT declaration.
+  // Set it again, now that we have a definition, as the implicit visibility can
+  // apply differently to definitions.
+  CGM.setGVProperties(VTT, RD);
 }
 
 llvm::GlobalVariable *CodeGenVTables::GetAddrOfVTT(const CXXRecordDecl *RD) {

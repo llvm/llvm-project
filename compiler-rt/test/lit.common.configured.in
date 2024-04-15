@@ -27,6 +27,7 @@ set_default("compiler_id", "@COMPILER_RT_TEST_COMPILER_ID@")
 set_default("python_executable", "@Python3_EXECUTABLE@")
 set_default("compiler_rt_debug", @COMPILER_RT_DEBUG_PYBOOL@)
 set_default("compiler_rt_intercept_libdispatch", @COMPILER_RT_INTERCEPT_LIBDISPATCH_PYBOOL@)
+set_default("compiler_rt_output_dir", "@COMPILER_RT_RESOLVED_OUTPUT_DIR@")
 set_default("compiler_rt_libdir", "@COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR@")
 set_default("emulator", "@COMPILER_RT_EMULATOR@")
 set_default("asan_shadow_scale", "@COMPILER_RT_ASAN_SHADOW_SCALE@")
@@ -50,6 +51,8 @@ set_default("gwp_asan", @COMPILER_RT_HAS_GWP_ASAN_PYBOOL@)
 set_default("expensive_checks", @LLVM_ENABLE_EXPENSIVE_CHECKS_PYBOOL@)
 set_default("test_standalone_build_libs", @COMPILER_RT_TEST_STANDALONE_BUILD_LIBS_PYBOOL@)
 set_default("has_compiler_rt_libatomic", @COMPILER_RT_BUILD_STANDALONE_LIBATOMIC_PYBOOL@)
+set_default("aarch64_sme", @COMPILER_RT_HAS_AARCH64_SME_PYBOOL@)
+set_default("darwin_linker_version", "@COMPILER_RT_DARWIN_LINKER_VERSION@")
 # True iff the test suite supports ignoring the test compiler's runtime library path
 # and using `config.compiler_rt_libdir` instead. This only matters when the runtime
 # library paths differ.

@@ -1,5 +1,5 @@
-! RUN: bbc --use-desc-for-alloc=false --emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false --emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 ! Test intrinsic module procedure c_loc
 
@@ -177,20 +177,37 @@ end
 ! CHECK:         %[[VAL_2:.*]] = fir.zero_bits !fir.ptr<i32>
 ! CHECK:         fir.store %[[VAL_2]] to %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>
 ! CHECK:         %[[VAL_3:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = "ptr", uniq_name = "_QFc_loc_non_save_pointer_scalarEptr"}
-! CHECK:         %[[VAL_4:.*]] = fir.allocmem i32 {fir.must_be_heap = true, uniq_name = "_QFc_loc_non_save_pointer_scalarEi.alloc"}
-! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.heap<i32>) -> !fir.ptr<i32>
-! CHECK:         fir.store %[[VAL_5]] to %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>
-! CHECK:         %[[VAL_6:.*]] = arith.constant 10 : i32
-! CHECK:         %[[VAL_7:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>
-! CHECK:         fir.store %[[VAL_6]] to %[[VAL_7]] : !fir.ptr<i32>
-! CHECK:         %[[VAL_8:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>
-! CHECK:         %[[VAL_9:.*]] = fir.embox %[[VAL_8]] : (!fir.ptr<i32>) -> !fir.box<i32>
-! CHECK:         %[[VAL_10:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK-DAG:         %[[VAL_11:.*]] = fir.box_addr %[[VAL_9]] : (!fir.box<i32>) -> !fir.ref<i32>
-! CHECK-DAG:         %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<i32>) -> i64
-! CHECK-DAG:         %[[VAL_13:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK-DAG:         %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_10]], %[[VAL_13]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
-! CHECK:         fir.store %[[VAL_12]] to %[[VAL_14]] : !fir.ref<i64>
+! CHECK:         %[[VAL_false:.*]] = arith.constant false
+! CHECK:         %[[VAL_4:.*]] = fir.absent !fir.box<none>
+! CHECK:         %[[VAL_5:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+! CHECK:         %[[C_LN:.*]] = arith.constant {{.*}} : i32
+! CHECK:         %[[VAL_6:.*]] = fir.zero_bits !fir.ptr<i32>
+! CHECK:         %[[VAL_7:.*]] = fir.embox %[[VAL_6:.*]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
+! CHECK:         fir.store %[[VAL_7:.*]] to %[[VAL_0:.*]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:         %[[VAL_8:.*]] = fir.convert %[[VAL_0:.*]] : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:         %[[VAL_9:.*]] = fir.convert %[[VAL_5:.*]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
+! CHECK:         %[[VAL_10:.*]] = fir.call @_FortranAPointerAllocate(%[[VAL_8:.*]], %[[VAL_false:.*]], %[[VAL_4:.*]], %[[VAL_9:.*]], %[[C_LN:.*]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:         %[[VAL_11:.*]] = fir.load %[[VAL_0:.*]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:         %[[VAL_12:.*]] = fir.box_addr %[[VAL_11:.*]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+! CHECK:         fir.store %[[VAL_12:.*]] to %[[VAL_1:.*]] : !fir.ref<!fir.ptr<i32>>
+! CHECK:         %[[C_10:.*]] = arith.constant 10 : i32
+! CHECK:         %[[VAL_13:.*]] = fir.load %[[VAL_1:.*]] : !fir.ref<!fir.ptr<i32>>
+! CHECK:         fir.store %[[C_10]] to %[[VAL_13:.*]] : !fir.ptr<i32>
+! CHECK:         %[[VAL_14:.*]] = fir.load %[[VAL_1:.*]] : !fir.ref<!fir.ptr<i32>>
+! CHECK:         %[[VAL_15:.*]] = fir.embox %[[VAL_14:.*]] : (!fir.ptr<i32>) -> !fir.box<i32>
+! CHECK:         %[[VAL_16:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+! CHECK:         %[[VAL_17:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+! CHECK:         %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_16:.*]], %[[VAL_17:.*]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK:         %[[VAL_19:.*]] = fir.box_addr %[[VAL_15:.*]] : (!fir.box<i32>) -> !fir.ref<i32>
+! CHECK:         %[[VAL_20:.*]] = fir.convert %[[VAL_19:.*]] : (!fir.ref<i32>) -> i64
+! CHECK:         fir.store %[[VAL_20:.*]] to %[[VAL_18:.*]] : !fir.ref<i64>
+! CHECK:         %[[VAL_21:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+! CHECK:         %[[VAL_22:.*]] = fir.coordinate_of %[[VAL_16:.*]], %[[VAL_21:.*]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK:         %[[VAL_23:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+! CHECK:         %[[VAL_24:.*]] = fir.coordinate_of %[[VAL_3:.*]], %[[VAL_23:.*]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK:         %[[VAL_25:.*]] = fir.load %[[VAL_22:.*]] : !fir.ref<i64>
+! CHECK:         fir.store %[[VAL_25:.*]] to %[[VAL_24:.*]] : !fir.ref<i64>
+! CHECK:         return
 ! CHECK:       }
 
 subroutine c_loc_non_save_pointer_scalar()

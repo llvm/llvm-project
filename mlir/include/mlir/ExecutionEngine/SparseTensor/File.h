@@ -1,4 +1,4 @@
-//===- File.h - Reading sparse tensors from files --------------*- C++ -*-===//
+//===- File.h - Reading sparse tensors from files ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -115,10 +115,12 @@ public:
     SparseTensorReader *reader = new SparseTensorReader(filename);
     reader->openFile();
     reader->readHeader();
-    if (!reader->canReadAs(valTp))
-      MLIR_SPARSETENSOR_FATAL(
-          "Tensor element type %d not compatible with values in file %s\n",
-          static_cast<int>(valTp), filename);
+    if (!reader->canReadAs(valTp)) {
+      fprintf(stderr,
+              "Tensor element type %d not compatible with values in file %s\n",
+              static_cast<int>(valTp), filename);
+      exit(1);
+    }
     reader->assertMatchesShape(dimRank, dimShape);
     return reader;
   }
@@ -197,14 +199,14 @@ public:
   template <typename P, typename I, typename V>
   SparseTensorStorage<P, I, V> *
   readSparseTensor(uint64_t lvlRank, const uint64_t *lvlSizes,
-                   const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                   const LevelType *lvlTypes, const uint64_t *dim2lvl,
                    const uint64_t *lvl2dim) {
     const uint64_t dimRank = getRank();
     MapRef map(dimRank, lvlRank, dim2lvl, lvl2dim);
     auto *lvlCOO = readCOO<V>(map, lvlSizes);
     auto *tensor = SparseTensorStorage<P, I, V>::newFromCOO(
         dimRank, getDimSizes(), lvlRank, lvlSizes, lvlTypes, dim2lvl, lvl2dim,
-        *lvlCOO);
+        lvlCOO);
     delete lvlCOO;
     return tensor;
   }

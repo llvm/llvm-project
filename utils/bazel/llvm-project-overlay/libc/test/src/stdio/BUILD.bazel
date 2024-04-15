@@ -61,7 +61,6 @@ libc_test(
     ],
     deps = [
         "//libc:__support_fputil_fp_bits",
-        "//libc:__support_fputil_platform_defs",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -119,5 +118,17 @@ libc_test(
     srcs = ["vfprintf_test.cpp"],
     libc_function_deps = [
         "//libc:vfprintf",
+    ],
+)
+
+libc_test(
+    name = "remove_test",
+    srcs = ["remove_test.cpp"],
+    libc_function_deps = [
+        "//libc:remove",
+        "//libc:open",
+        "//libc:mkdirat",
+        "//libc:access",
+        "//libc:close",
     ],
 )

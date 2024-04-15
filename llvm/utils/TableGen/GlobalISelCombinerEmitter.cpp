@@ -26,17 +26,24 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
-#include "GlobalISel/CodeExpander.h"
-#include "GlobalISel/CodeExpansions.h"
-#include "GlobalISel/CombinerUtils.h"
-#include "GlobalISelMatchTable.h"
-#include "GlobalISelMatchTableExecutorEmitter.h"
-#include "SubtargetFeatureInfo.h"
+#include "Basic/CodeGenIntrinsics.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/GlobalISel/CXXPredicates.h"
+#include "Common/GlobalISel/CodeExpander.h"
+#include "Common/GlobalISel/CodeExpansions.h"
+#include "Common/GlobalISel/CombinerUtils.h"
+#include "Common/GlobalISel/GlobalISelMatchTable.h"
+#include "Common/GlobalISel/GlobalISelMatchTableExecutorEmitter.h"
+#include "Common/GlobalISel/MatchDataInfo.h"
+#include "Common/GlobalISel/PatternParser.h"
+#include "Common/GlobalISel/Patterns.h"
+#include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -68,25 +75,14 @@ cl::opt<bool> DebugCXXPreds(
     "gicombiner-debug-cxxpreds",
     cl::desc("Add Contextual/Debug comments to all C++ predicates"),
     cl::cat(GICombinerEmitterCat));
+cl::opt<bool> DebugTypeInfer("gicombiner-debug-typeinfer",
+                             cl::desc("Print type inference debug logs"),
+                             cl::cat(GICombinerEmitterCat));
 
 constexpr StringLiteral CXXApplyPrefix = "GICXXCustomAction_CombineApply";
 constexpr StringLiteral CXXPredPrefix = "GICXXPred_MI_Predicate_";
-constexpr StringLiteral PatFragClassName = "GICombinePatFrag";
-constexpr StringLiteral BuiltinInstClassName = "GIBuiltinInst";
 
-std::string getIsEnabledPredicateEnumName(unsigned CombinerRuleID) {
-  return "GICXXPred_Simple_IsRule" + to_string(CombinerRuleID) + "Enabled";
-}
-
-/// Copies a StringRef into a static pool to make sure it has a static lifetime.
-StringRef insertStrRef(StringRef S) {
-  if (S.empty())
-    return {};
-
-  static StringSet<> Pool;
-  auto [It, Inserted] = Pool.insert(S);
-  return It->getKey();
-}
+//===- CodeExpansions Helpers  --------------------------------------------===//
 
 void declareInstExpansion(CodeExpansions &CE, const InstructionMatcher &IM,
                           StringRef Name) {
@@ -111,9 +107,7 @@ void declareTempRegExpansion(CodeExpansions &CE, unsigned TempRegID,
   CE.declare(Name, "State.TempRegisters[" + to_string(TempRegID) + "]");
 }
 
-std::string makeAnonPatName(StringRef Prefix, unsigned Idx) {
-  return ("__" + Prefix + "_" + Twine(Idx)).str();
-}
+//===- Misc. Helpers  -----------------------------------------------------===//
 
 template <typename Container> auto keys(Container &&C) {
   return map_range(C, [](auto &Entry) -> auto & { return Entry.first; });
@@ -123,1329 +117,26 @@ template <typename Container> auto values(Container &&C) {
   return map_range(C, [](auto &Entry) -> auto & { return Entry.second; });
 }
 
-LLTCodeGen getLLTCodeGenFromRecord(const Record *Ty) {
-  assert(Ty->isSubClassOf("ValueType"));
-  return LLTCodeGen(*MVTToLLT(getValueType(Ty)));
+std::string getIsEnabledPredicateEnumName(unsigned CombinerRuleID) {
+  return "GICXXPred_Simple_IsRule" + to_string(CombinerRuleID) + "Enabled";
 }
 
-//===- MatchData Handling -------------------------------------------------===//
+//===- MatchTable Helpers  ------------------------------------------------===//
 
-/// Represents MatchData defined by the match stage and required by the apply
-/// stage.
-///
-/// This allows the plumbing of arbitrary data from C++ predicates between the
-/// stages.
-///
-/// When this class is initially created, it only has a pattern symbol and a
-/// type. When all of the MatchDatas declarations of a given pattern have been
-/// parsed, `AssignVariables` must be called to assign storage variable names to
-/// each MatchDataInfo.
-class MatchDataInfo {
-  StringRef PatternSymbol;
-  StringRef Type;
-  std::string VarName;
-
-public:
-  static constexpr StringLiteral StructTypeName = "MatchInfosTy";
-  static constexpr StringLiteral StructName = "MatchInfos";
-
-  MatchDataInfo(StringRef PatternSymbol, StringRef Type)
-      : PatternSymbol(PatternSymbol), Type(Type.trim()) {}
-
-  StringRef getPatternSymbol() const { return PatternSymbol; };
-  StringRef getType() const { return Type; };
-
-  bool hasVariableName() const { return !VarName.empty(); }
-  void setVariableName(StringRef Name) { VarName = Name; }
-  StringRef getVariableName() const;
-
-  std::string getQualifiedVariableName() const {
-    return StructName.str() + "." + getVariableName().str();
-  }
-
-  void print(raw_ostream &OS) const;
-  void dump() const { print(dbgs()); }
-};
-
-StringRef MatchDataInfo::getVariableName() const {
-  assert(hasVariableName());
-  return VarName;
+LLTCodeGen getLLTCodeGen(const PatternType &PT) {
+  return *MVTToLLT(getValueType(PT.getLLTRecord()));
 }
 
-void MatchDataInfo::print(raw_ostream &OS) const {
-  OS << "(MatchDataInfo pattern_symbol:" << PatternSymbol << " type:'" << Type
-     << "' var_name:" << (VarName.empty() ? "<unassigned>" : VarName) << ")";
-}
-
-/// Pool of type -> variables used to emit MatchData variables declarations.
-///
-/// e.g. if the map contains "int64_t" -> ["MD0", "MD1"], then two variable
-/// declarations must be emitted: `int64_t MD0` and `int64_t MD1`.
-///
-/// This has a static lifetime and will outlive all the `MatchDataInfo` objects
-/// by design. It needs to persist after all `CombineRuleBuilder` objects died
-/// so we can emit the variable declarations.
-StringMap<std::vector<std::string>> AllMatchDataVars;
-
-// Assign variable names to all MatchDatas used by a pattern. This must be
-// called after all MatchData decls have been parsed inside a rule.
-//
-// Requires an array of MatchDataInfo so we can handle cases where a pattern
-// uses multiple instances of the same MatchData type.
-void AssignMatchDataVariables(MutableArrayRef<MatchDataInfo> Infos) {
-  static unsigned NextVarID = 0;
-
-  StringMap<unsigned> SeenTypes;
-  for (auto &Info : Infos) {
-    unsigned &NumSeen = SeenTypes[Info.getType()];
-    auto &ExistingVars = AllMatchDataVars[Info.getType()];
-
-    if (NumSeen == ExistingVars.size())
-      ExistingVars.push_back("MDInfo" + to_string(NextVarID++));
-
-    Info.setVariableName(ExistingVars[NumSeen++]);
-  }
-}
-
-//===- C++ Predicates Handling --------------------------------------------===//
-
-/// Entry into the static pool of all CXX Predicate code. This contains
-/// fully expanded C++ code.
-///
-/// The static pool is hidden inside the object and can be accessed through
-/// getAllMatchCode/getAllApplyCode
-///
-/// Note that CXXPattern trims C++ code, so the Code is already expected to be
-/// free of leading/trailing whitespace.
-class CXXPredicateCode {
-  using CXXPredicateCodePool =
-      DenseMap<hash_code, std::unique_ptr<CXXPredicateCode>>;
-  static CXXPredicateCodePool AllCXXMatchCode;
-  static CXXPredicateCodePool AllCXXApplyCode;
-
-  /// Sorts a `CXXPredicateCodePool` by their IDs and returns it.
-  static std::vector<const CXXPredicateCode *>
-  getSorted(const CXXPredicateCodePool &Pool) {
-    std::vector<const CXXPredicateCode *> Out;
-    std::transform(Pool.begin(), Pool.end(), std::back_inserter(Out),
-                   [&](auto &Elt) { return Elt.second.get(); });
-    sort(Out, [](const auto *A, const auto *B) { return A->ID < B->ID; });
-    return Out;
-  }
-
-  /// Gets an instance of `CXXPredicateCode` for \p Code, or returns an already
-  /// existing one.
-  static const CXXPredicateCode &get(CXXPredicateCodePool &Pool,
-                                     std::string Code) {
-    // Check if we already have an identical piece of code, if not, create an
-    // entry in the pool.
-    const auto CodeHash = hash_value(Code);
-    if (auto It = Pool.find(CodeHash); It != Pool.end())
-      return *It->second;
-
-    const auto ID = Pool.size();
-    auto OwnedData = std::unique_ptr<CXXPredicateCode>(
-        new CXXPredicateCode(std::move(Code), ID));
-    const auto &DataRef = *OwnedData;
-    Pool[CodeHash] = std::move(OwnedData);
-    return DataRef;
-  }
-
-  CXXPredicateCode(std::string Code, unsigned ID)
-      : Code(Code), ID(ID), BaseEnumName("GICombiner" + to_string(ID)) {
-    // Don't assert if ErrorsPrinted is set. This may mean CodeExpander failed,
-    // and it may add spaces in such cases.
-    assert((ErrorsPrinted || StringRef(Code).trim() == Code) &&
-           "Code was expected to be trimmed!");
-  }
-
-public:
-  static const CXXPredicateCode &getMatchCode(std::string Code) {
-    return get(AllCXXMatchCode, std::move(Code));
-  }
-
-  static const CXXPredicateCode &getApplyCode(std::string Code) {
-    return get(AllCXXApplyCode, std::move(Code));
-  }
-
-  static std::vector<const CXXPredicateCode *> getAllMatchCode() {
-    return getSorted(AllCXXMatchCode);
-  }
-
-  static std::vector<const CXXPredicateCode *> getAllApplyCode() {
-    return getSorted(AllCXXApplyCode);
-  }
-
-  const std::string Code;
-  const unsigned ID;
-  const std::string BaseEnumName;
-
-  bool needsUnreachable() const {
-    return !StringRef(Code).starts_with("return");
-  }
-
-  std::string getEnumNameWithPrefix(StringRef Prefix) const {
-    return Prefix.str() + BaseEnumName;
-  }
-};
-
-CXXPredicateCode::CXXPredicateCodePool CXXPredicateCode::AllCXXMatchCode;
-CXXPredicateCode::CXXPredicateCodePool CXXPredicateCode::AllCXXApplyCode;
-
-//===- Pattern Base Class -------------------------------------------------===//
-
-/// Base class for all patterns that can be written in an `apply`, `match` or
-/// `pattern` DAG operator.
-///
-/// For example:
-///
-///     (apply (G_ZEXT $x, $y), (G_ZEXT $y, $z), "return isFoo(${z})")
-///
-/// Creates 3 Pattern objects:
-///   - Two CodeGenInstruction Patterns
-///   - A CXXPattern
-class Pattern {
-public:
-  enum {
-    K_AnyOpcode,
-    K_CXX,
-
-    K_CodeGenInstruction,
-    K_PatFrag,
-    K_Builtin,
-  };
-
-  virtual ~Pattern() = default;
-
-  unsigned getKind() const { return Kind; }
-  const char *getKindName() const;
-
-  bool hasName() const { return !Name.empty(); }
-  StringRef getName() const { return Name; }
-
-  virtual void print(raw_ostream &OS, bool PrintName = true) const = 0;
-  void dump() const { return print(dbgs()); }
-
-protected:
-  Pattern(unsigned Kind, StringRef Name)
-      : Kind(Kind), Name(insertStrRef(Name)) {
-    assert(!Name.empty() && "unnamed pattern!");
-  }
-
-  void printImpl(raw_ostream &OS, bool PrintName,
-                 function_ref<void()> ContentPrinter) const;
-
-private:
-  unsigned Kind;
-  StringRef Name;
-};
-
-const char *Pattern::getKindName() const {
-  switch (Kind) {
-  case K_AnyOpcode:
-    return "AnyOpcodePattern";
-  case K_CXX:
-    return "CXXPattern";
-  case K_CodeGenInstruction:
-    return "CodeGenInstructionPattern";
-  case K_PatFrag:
-    return "PatFragPattern";
-  case K_Builtin:
-    return "BuiltinPattern";
-  }
-
-  llvm_unreachable("unknown pattern kind!");
-}
-
-void Pattern::printImpl(raw_ostream &OS, bool PrintName,
-                        function_ref<void()> ContentPrinter) const {
-  OS << "(" << getKindName() << " ";
-  if (PrintName)
-    OS << "name:" << getName() << " ";
-  ContentPrinter();
-  OS << ")";
-}
-
-//===- AnyOpcodePattern ---------------------------------------------------===//
-
-/// `wip_match_opcode` patterns.
-/// This matches one or more opcodes, and does not check any operands
-/// whatsoever.
-///
-/// TODO: Long-term, this needs to be removed. It's a hack around MIR
-///       pattern matching limitations.
-class AnyOpcodePattern : public Pattern {
-public:
-  AnyOpcodePattern(StringRef Name) : Pattern(K_AnyOpcode, Name) {}
-
-  static bool classof(const Pattern *P) { return P->getKind() == K_AnyOpcode; }
-
-  void addOpcode(const CodeGenInstruction *I) { Insts.push_back(I); }
-  const auto &insts() const { return Insts; }
-
-  void print(raw_ostream &OS, bool PrintName = true) const override;
-
-private:
-  SmallVector<const CodeGenInstruction *, 4> Insts;
-};
-
-void AnyOpcodePattern::print(raw_ostream &OS, bool PrintName) const {
-  printImpl(OS, PrintName, [&OS, this]() {
-    OS << "["
-       << join(map_range(Insts,
-                         [](const auto *I) { return I->TheDef->getName(); }),
-               ", ")
-       << "]";
-  });
-}
-
-//===- CXXPattern ---------------------------------------------------------===//
-
-/// Represents raw C++ code which may need some expansions.
-///
-///   e.g. [{ return isFooBux(${src}.getReg()); }]
-///
-/// For the expanded code, \see CXXPredicateCode. CXXPredicateCode objects are
-/// created through `expandCode`.
-///
-/// \see CodeExpander and \see CodeExpansions for more information on code
-/// expansions.
-///
-/// This object has two purposes:
-///   - Represent C++ code as a pattern entry.
-///   - Be a factory for expanded C++ code.
-///     - It's immutable and only holds the raw code so we can expand the same
-///       CXX pattern multiple times if we need to.
-///
-/// Note that the code is always trimmed in the constructor, so leading and
-/// trailing whitespaces are removed. This removes bloat in the output, avoids
-/// formatting issues, but also allows us to check things like
-/// `.startswith("return")` trivially without worrying about spaces.
-class CXXPattern : public Pattern {
-public:
-  CXXPattern(const StringInit &Code, StringRef Name)
-      : CXXPattern(Code.getAsUnquotedString(), Name) {}
-
-  CXXPattern(StringRef Code, StringRef Name)
-      : Pattern(K_CXX, Name), RawCode(Code.trim().str()) {}
-
-  static bool classof(const Pattern *P) { return P->getKind() == K_CXX; }
-
-  void setIsApply(bool Value = true) { IsApply = Value; }
-  StringRef getRawCode() const { return RawCode; }
-
-  /// Expands raw code, replacing things such as `${foo}` with their
-  /// substitution in \p CE.
-  ///
-  /// \param CE     Map of Code Expansions
-  /// \param Locs   SMLocs for the Code Expander, in case it needs to emit
-  ///               diagnostics.
-  /// \param AddComment If DebugCXXPreds is enabled, this is called to emit a
-  ///                   comment before the expanded code.
-  ///
-  /// \return A CXXPredicateCode object that contains the expanded code. Note
-  /// that this may or may not insert a new object. All CXXPredicateCode objects
-  /// are held in a set to avoid emitting duplicate C++ code.
-  const CXXPredicateCode &
-  expandCode(const CodeExpansions &CE, ArrayRef<SMLoc> Locs,
-             function_ref<void(raw_ostream &)> AddComment = {}) const;
-
-  void print(raw_ostream &OS, bool PrintName = true) const override;
-
-private:
-  bool IsApply = false;
-  std::string RawCode;
-};
-
-const CXXPredicateCode &
-CXXPattern::expandCode(const CodeExpansions &CE, ArrayRef<SMLoc> Locs,
-                       function_ref<void(raw_ostream &)> AddComment) const {
-  std::string Result;
-  raw_string_ostream OS(Result);
-
-  if (DebugCXXPreds && AddComment)
-    AddComment(OS);
-
-  CodeExpander Expander(RawCode, CE, Locs, /*ShowExpansions*/ false);
-  Expander.emit(OS);
-  if (IsApply)
-    return CXXPredicateCode::getApplyCode(std::move(Result));
-  return CXXPredicateCode::getMatchCode(std::move(Result));
-}
-
-void CXXPattern::print(raw_ostream &OS, bool PrintName) const {
-  printImpl(OS, PrintName, [&OS, this] {
-    OS << (IsApply ? "apply" : "match") << " code:\"";
-    printEscapedString(getRawCode(), OS);
-    OS << "\"";
-  });
-}
-
-//===- InstructionPattern ---------------------------------------------===//
-
-/// An operand for an InstructionPattern.
-///
-/// Operands are composed of three elements:
-///   - (Optional) Value
-///   - (Optional) Name
-///   - (Optional) Type
-///
-/// Some examples:
-///   (i32 0):$x -> V=int(0), Name='x', Type=i32
-///   0:$x -> V=int(0), Name='x'
-///   $x -> Name='x'
-///   i32:$x -> Name='x', Type = i32
-class InstructionOperand {
-public:
-  using IntImmTy = int64_t;
-
-  InstructionOperand(IntImmTy Imm, StringRef Name, const Record *Type)
-      : Value(Imm), Name(insertStrRef(Name)), Type(Type) {
-    assert(!Type || Type->isSubClassOf("ValueType"));
-  }
-
-  InstructionOperand(StringRef Name, const Record *Type)
-      : Name(insertStrRef(Name)), Type(Type) {}
-
-  bool isNamedImmediate() const { return hasImmValue() && isNamedOperand(); }
-
-  bool hasImmValue() const { return Value.has_value(); }
-  IntImmTy getImmValue() const { return *Value; }
-
-  bool isNamedOperand() const { return !Name.empty(); }
-  StringRef getOperandName() const {
-    assert(isNamedOperand() && "Operand is unnamed");
-    return Name;
-  }
-
-  InstructionOperand withNewName(StringRef NewName) const {
-    InstructionOperand Result = *this;
-    Result.Name = insertStrRef(NewName);
-    return Result;
-  }
-
-  void setIsDef(bool Value = true) { Def = Value; }
-  bool isDef() const { return Def; }
-
-  void setType(const Record *R) {
-    assert((!Type || (Type == R)) && "Overwriting type!");
-    Type = R;
-  }
-  const Record *getType() const { return Type; }
-
-  std::string describe() const {
-    if (!hasImmValue())
-      return "MachineOperand $" + getOperandName().str() + "";
-    std::string Str = "imm " + to_string(getImmValue());
-    if (isNamedImmediate())
-      Str += ":$" + getOperandName().str() + "";
-    return Str;
-  }
-
-  void print(raw_ostream &OS) const {
-    if (isDef())
-      OS << "<def>";
-
-    bool NeedsColon = true;
-    if (const Record *Ty = getType()) {
-      if (hasImmValue())
-        OS << "(" << Ty->getName() << " " << getImmValue() << ")";
-      else
-        OS << Ty->getName();
-    } else if (hasImmValue())
-      OS << getImmValue();
-    else
-      NeedsColon = false;
-
-    if (isNamedOperand())
-      OS << (NeedsColon ? ":" : "") << "$" << getOperandName();
-  }
-
-  void dump() const { return print(dbgs()); }
-
-private:
-  std::optional<int64_t> Value;
-  StringRef Name;
-  const Record *Type = nullptr;
-  bool Def = false;
-};
-
-/// Base class for CodeGenInstructionPattern & PatFragPattern, which handles all
-/// the boilerplate for patterns that have a list of operands for some (pseudo)
-/// instruction.
-class InstructionPattern : public Pattern {
-public:
-  virtual ~InstructionPattern() = default;
-
-  static bool classof(const Pattern *P) {
-    return P->getKind() == K_CodeGenInstruction || P->getKind() == K_PatFrag ||
-           P->getKind() == K_Builtin;
-  }
-
-  template <typename... Ty> void addOperand(Ty &&...Init) {
-    Operands.emplace_back(std::forward<Ty>(Init)...);
-  }
-
-  auto &operands() { return Operands; }
-  const auto &operands() const { return Operands; }
-  unsigned operands_size() const { return Operands.size(); }
-  InstructionOperand &getOperand(unsigned K) { return Operands[K]; }
-  const InstructionOperand &getOperand(unsigned K) const { return Operands[K]; }
-
-  /// When this InstructionPattern is used as the match root, returns the
-  /// operands that must be redefined in the 'apply' pattern for the rule to be
-  /// valid.
-  ///
-  /// For most patterns, this just returns the defs.
-  /// For PatFrag this only returns the root of the PF.
-  ///
-  /// Returns an empty array on error.
-  virtual ArrayRef<InstructionOperand> getApplyDefsNeeded() const {
-    return {operands().begin(), getNumInstDefs()};
-  }
-
-  auto named_operands() {
-    return make_filter_range(Operands,
-                             [&](auto &O) { return O.isNamedOperand(); });
-  }
-
-  auto named_operands() const {
-    return make_filter_range(Operands,
-                             [&](auto &O) { return O.isNamedOperand(); });
-  }
-
-  virtual bool isVariadic() const { return false; }
-  virtual unsigned getNumInstOperands() const = 0;
-  virtual unsigned getNumInstDefs() const = 0;
-
-  bool hasAllDefs() const { return operands_size() >= getNumInstDefs(); }
-
-  virtual StringRef getInstName() const = 0;
-
-  void reportUnreachable(ArrayRef<SMLoc> Locs) const;
-  virtual bool checkSemantics(ArrayRef<SMLoc> Loc);
-
-  void print(raw_ostream &OS, bool PrintName = true) const override;
-
-protected:
-  InstructionPattern(unsigned K, StringRef Name) : Pattern(K, Name) {}
-
-  SmallVector<InstructionOperand, 4> Operands;
-};
-
-void InstructionPattern::reportUnreachable(ArrayRef<SMLoc> Locs) const {
-  PrintError(Locs, "pattern '" + getName() + "' ('" + getInstName() +
-                       "') is unreachable from the pattern root!");
-}
-
-bool InstructionPattern::checkSemantics(ArrayRef<SMLoc> Loc) {
-  unsigned NumExpectedOperands = getNumInstOperands();
-
-  if (isVariadic()) {
-    if (Operands.size() < NumExpectedOperands) {
-      PrintError(Loc, +"'" + getInstName() + "' expected at least " +
-                          Twine(NumExpectedOperands) + " operands, got " +
-                          Twine(Operands.size()));
-      return false;
-    }
-  } else if (NumExpectedOperands != Operands.size()) {
-    PrintError(Loc, +"'" + getInstName() + "' expected " +
-                        Twine(NumExpectedOperands) + " operands, got " +
-                        Twine(Operands.size()));
-    return false;
-  }
-
-  unsigned OpIdx = 0;
-  unsigned NumDefs = getNumInstDefs();
-  for (auto &Op : Operands)
-    Op.setIsDef(OpIdx++ < NumDefs);
-
-  return true;
-}
-
-void InstructionPattern::print(raw_ostream &OS, bool PrintName) const {
-  printImpl(OS, PrintName, [&OS, this] {
-    OS << getInstName() << " operands:[";
-    StringRef Sep = "";
-    for (const auto &Op : Operands) {
-      OS << Sep;
-      Op.print(OS);
-      Sep = ", ";
-    }
-    OS << "]";
-  });
-}
-
-//===- OperandTable -------------------------------------------------------===//
-
-/// Maps InstructionPattern operands to their definitions. This allows us to tie
-/// different patterns of a (apply), (match) or (patterns) set of patterns
-/// together.
-template <typename DefTy = InstructionPattern> class OperandTable {
-public:
-  static_assert(std::is_base_of_v<InstructionPattern, DefTy>,
-                "DefTy should be a derived class from InstructionPattern");
-
-  bool addPattern(DefTy *P, function_ref<void(StringRef)> DiagnoseRedef) {
-    for (const auto &Op : P->named_operands()) {
-      StringRef OpName = Op.getOperandName();
-
-      // We always create an entry in the OperandTable, even for uses.
-      // Uses of operands that don't have a def (= live-ins) will remain with a
-      // nullptr as the Def.
-      //
-      // This allows us tell whether an operand exists in a pattern or not. If
-      // there is no entry for it, it doesn't exist, if there is an entry, it's
-      // used/def'd at least once.
-      auto &Def = Table[OpName];
-
-      if (!Op.isDef())
-        continue;
-
-      if (Def) {
-        DiagnoseRedef(OpName);
-        return false;
-      }
-
-      Def = P;
-    }
-
-    return true;
-  }
-
-  struct LookupResult {
-    LookupResult() = default;
-    LookupResult(DefTy *Def) : Found(true), Def(Def) {}
-
-    bool Found = false;
-    DefTy *Def = nullptr;
-
-    bool isLiveIn() const { return Found && !Def; }
-  };
-
-  LookupResult lookup(StringRef OpName) const {
-    if (auto It = Table.find(OpName); It != Table.end())
-      return LookupResult(It->second);
-    return LookupResult();
-  }
-
-  DefTy *getDef(StringRef OpName) const { return lookup(OpName).Def; }
-
-  void print(raw_ostream &OS, StringRef Name = "",
-             StringRef Indent = "") const {
-    OS << Indent << "(OperandTable ";
-    if (!Name.empty())
-      OS << Name << " ";
-    if (Table.empty()) {
-      OS << "<empty>)\n";
-      return;
-    }
-
-    SmallVector<StringRef, 0> Keys(Table.keys());
-    sort(Keys);
-
-    OS << "\n";
-    for (const auto &Key : Keys) {
-      const auto *Def = Table.at(Key);
-      OS << Indent << "  " << Key << " -> "
-         << (Def ? Def->getName() : "<live-in>") << "\n";
-    }
-    OS << Indent << ")\n";
-  }
-
-  auto begin() const { return Table.begin(); }
-  auto end() const { return Table.end(); }
-
-  void dump() const { print(dbgs()); }
-
-private:
-  StringMap<DefTy *> Table;
-};
-
-//===- CodeGenInstructionPattern ------------------------------------------===//
-
-/// Matches an instruction, e.g. `G_ADD $x, $y, $z`.
-class CodeGenInstructionPattern : public InstructionPattern {
-public:
-  CodeGenInstructionPattern(const CodeGenInstruction &I, StringRef Name)
-      : InstructionPattern(K_CodeGenInstruction, Name), I(I) {}
-
-  static bool classof(const Pattern *P) {
-    return P->getKind() == K_CodeGenInstruction;
-  }
-
-  bool is(StringRef OpcodeName) const {
-    return I.TheDef->getName() == OpcodeName;
-  }
-
-  bool hasVariadicDefs() const;
-  bool isVariadic() const override { return I.Operands.isVariadic; }
-  unsigned getNumInstDefs() const override;
-  unsigned getNumInstOperands() const override;
-
-  const CodeGenInstruction &getInst() const { return I; }
-  StringRef getInstName() const override { return I.TheDef->getName(); }
-
-private:
-  const CodeGenInstruction &I;
-};
-
-bool CodeGenInstructionPattern::hasVariadicDefs() const {
-  // Note: we cannot use variadicOpsAreDefs, it's not set for
-  // GenericInstructions.
-  if (!isVariadic())
-    return false;
-
-  if (I.variadicOpsAreDefs)
-    return true;
-
-  DagInit *OutOps = I.TheDef->getValueAsDag("OutOperandList");
-  if (OutOps->arg_empty())
-    return false;
-
-  auto *LastArgTy = dyn_cast<DefInit>(OutOps->getArg(OutOps->arg_size() - 1));
-  return LastArgTy && LastArgTy->getDef()->getName() == "variable_ops";
-}
-
-unsigned CodeGenInstructionPattern::getNumInstDefs() const {
-  if (!isVariadic() || !hasVariadicDefs())
-    return I.Operands.NumDefs;
-  unsigned NumOuts = I.Operands.size() - I.Operands.NumDefs;
-  assert(Operands.size() > NumOuts);
-  return std::max<unsigned>(I.Operands.NumDefs, Operands.size() - NumOuts);
-}
-
-unsigned CodeGenInstructionPattern::getNumInstOperands() const {
-  unsigned NumCGIOps = I.Operands.size();
-  return isVariadic() ? std::max<unsigned>(NumCGIOps, Operands.size())
-                      : NumCGIOps;
-}
-
-//===- OperandTypeChecker -------------------------------------------------===//
-
-/// This is a trivial type checker for all operands in a set of
-/// InstructionPatterns.
-///
-/// It infers the type of each operand, check it's consistent with the known
-/// type of the operand, and then sets all of the types in all operands in
-/// setAllOperandTypes.
-class OperandTypeChecker {
-public:
-  OperandTypeChecker(ArrayRef<SMLoc> DiagLoc) : DiagLoc(DiagLoc) {}
-
-  bool check(InstructionPattern *P);
-
-  void setAllOperandTypes();
-
-private:
-  struct OpTypeInfo {
-    const Record *Type = nullptr;
-    InstructionPattern *TypeSrc = nullptr;
-  };
-
-  ArrayRef<SMLoc> DiagLoc;
-  StringMap<OpTypeInfo> Types;
-
-  SmallVector<InstructionPattern *, 16> Pats;
-};
-
-bool OperandTypeChecker::check(InstructionPattern *P) {
-  Pats.push_back(P);
-
-  for (auto &Op : P->named_operands()) {
-    const Record *Ty = Op.getType();
-    if (!Ty)
-      continue;
-
-    auto &Info = Types[Op.getOperandName()];
-
-    if (!Info.Type) {
-      Info.Type = Ty;
-      Info.TypeSrc = P;
-      continue;
-    }
-
-    if (Info.Type != Ty) {
-      PrintError(DiagLoc, "conflicting types for operand '" +
-                              Op.getOperandName() + "': first seen with '" +
-                              Info.Type->getName() + "' in '" +
-                              Info.TypeSrc->getName() + ", now seen with '" +
-                              Ty->getName() + "' in '" + P->getName() + "'");
-      return false;
-    }
-  }
-
-  return true;
-}
-
-void OperandTypeChecker::setAllOperandTypes() {
-  for (auto *Pat : Pats) {
-    for (auto &Op : Pat->named_operands()) {
-      if (auto &Info = Types[Op.getOperandName()]; Info.Type)
-        Op.setType(Info.Type);
-    }
-  }
-}
-
-//===- PatFrag ------------------------------------------------------------===//
-
-/// Represents a parsed GICombinePatFrag. This can be thought of as the
-/// equivalent of a CodeGenInstruction, but for PatFragPatterns.
-///
-/// PatFrags are made of 3 things:
-///   - Out parameters (defs)
-///   - In parameters
-///   - A set of pattern lists (alternatives).
-///
-/// If the PatFrag uses instruction patterns, the root must be one of the defs.
-///
-/// Note that this DOES NOT represent the use of the PatFrag, only its
-/// definition. The use of the PatFrag in a Pattern is represented by
-/// PatFragPattern.
-///
-/// PatFrags use the term "parameter" instead of operand because they're
-/// essentially macros, and using that name avoids confusion. Other than that,
-/// they're structured similarly to a MachineInstruction  - all parameters
-/// (operands) are in the same list, with defs at the start. This helps mapping
-/// parameters to values, because, param N of a PatFrag is always operand N of a
-/// PatFragPattern.
-class PatFrag {
-public:
-  enum ParamKind {
-    PK_Root,
-    PK_MachineOperand,
-    PK_Imm,
-  };
-
-  struct Param {
-    StringRef Name;
-    ParamKind Kind;
-  };
-
-  using ParamVec = SmallVector<Param, 4>;
-  using ParamIt = ParamVec::const_iterator;
-
-  /// Represents an alternative of the PatFrag. When parsing a GICombinePatFrag,
-  /// this is created from its "Alternatives" list. Each alternative is a list
-  /// of patterns written wrapped in a  `(pattern ...)` dag init.
-  ///
-  /// Each argument to the `pattern` DAG operator is parsed into a Pattern
-  /// instance.
-  struct Alternative {
-    OperandTable<> OpTable;
-    SmallVector<std::unique_ptr<Pattern>, 4> Pats;
-  };
-
-  explicit PatFrag(const Record &Def) : Def(Def) {
-    assert(Def.isSubClassOf(PatFragClassName));
-  }
-
-  static StringRef getParamKindStr(ParamKind OK);
-
-  StringRef getName() const { return Def.getName(); }
-
-  const Record &getDef() const { return Def; }
-  ArrayRef<SMLoc> getLoc() const { return Def.getLoc(); }
-
-  Alternative &addAlternative() { return Alts.emplace_back(); }
-  const Alternative &getAlternative(unsigned K) const { return Alts[K]; }
-  unsigned num_alternatives() const { return Alts.size(); }
-
-  void addInParam(StringRef Name, ParamKind Kind);
-  iterator_range<ParamIt> in_params() const;
-  unsigned num_in_params() const { return Params.size() - NumOutParams; }
-
-  void addOutParam(StringRef Name, ParamKind Kind);
-  iterator_range<ParamIt> out_params() const;
-  unsigned num_out_params() const { return NumOutParams; }
-
-  unsigned num_roots() const;
-  unsigned num_params() const { return num_in_params() + num_out_params(); }
-
-  /// Finds the operand \p Name and returns its index or -1 if not found.
-  /// Remember that all params are part of the same list, with out params at the
-  /// start. This means that the index returned can be used to access operands
-  /// of InstructionPatterns.
-  unsigned getParamIdx(StringRef Name) const;
-  const Param &getParam(unsigned K) const { return Params[K]; }
-
-  bool canBeMatchRoot() const { return num_roots() == 1; }
-
-  void print(raw_ostream &OS, StringRef Indent = "") const;
-  void dump() const { print(dbgs()); }
-
-  /// Checks if the in-param \p ParamName can be unbound or not.
-  /// \p ArgName is the name of the argument passed to the PatFrag.
-  ///
-  /// An argument can be unbound only if, for all alternatives:
-  ///   - There is no CXX pattern, OR:
-  ///   - There is an InstructionPattern that binds the parameter.
-  ///
-  /// e.g. in (MyPatFrag $foo), if $foo has never been seen before (= it's
-  /// unbound), this checks if MyPatFrag supports it or not.
-  bool handleUnboundInParam(StringRef ParamName, StringRef ArgName,
-                            ArrayRef<SMLoc> DiagLoc) const;
-
-  bool checkSemantics();
-  bool buildOperandsTables();
-
-private:
-  static void printParamsList(raw_ostream &OS, iterator_range<ParamIt> Params);
-
-  void PrintError(Twine Msg) const { ::PrintError(&Def, Msg); }
-
-  const Record &Def;
-  unsigned NumOutParams = 0;
-  ParamVec Params;
-  SmallVector<Alternative, 2> Alts;
-};
-
-StringRef PatFrag::getParamKindStr(ParamKind OK) {
-  switch (OK) {
-  case PK_Root:
-    return "root";
-  case PK_MachineOperand:
-    return "machine_operand";
-  case PK_Imm:
-    return "imm";
-  }
-
-  llvm_unreachable("Unknown operand kind!");
-}
-
-void PatFrag::addInParam(StringRef Name, ParamKind Kind) {
-  Params.emplace_back(Param{insertStrRef(Name), Kind});
-}
-
-iterator_range<PatFrag::ParamIt> PatFrag::in_params() const {
-  return {Params.begin() + NumOutParams, Params.end()};
-}
-
-void PatFrag::addOutParam(StringRef Name, ParamKind Kind) {
-  assert(NumOutParams == Params.size() &&
-         "Adding out-param after an in-param!");
-  Params.emplace_back(Param{insertStrRef(Name), Kind});
-  ++NumOutParams;
-}
-
-iterator_range<PatFrag::ParamIt> PatFrag::out_params() const {
-  return {Params.begin(), Params.begin() + NumOutParams};
-}
-
-unsigned PatFrag::num_roots() const {
-  return count_if(out_params(),
-                  [&](const auto &P) { return P.Kind == PK_Root; });
-}
-
-unsigned PatFrag::getParamIdx(StringRef Name) const {
-  for (const auto &[Idx, Op] : enumerate(Params)) {
-    if (Op.Name == Name)
-      return Idx;
-  }
-
-  return -1;
-}
-
-bool PatFrag::checkSemantics() {
-  for (const auto &Alt : Alts) {
-    for (const auto &Pat : Alt.Pats) {
-      switch (Pat->getKind()) {
-      case Pattern::K_AnyOpcode:
-        PrintError("wip_match_opcode cannot be used in " + PatFragClassName);
-        return false;
-      case Pattern::K_Builtin:
-        PrintError("Builtin instructions cannot be used in " +
-                   PatFragClassName);
-        return false;
-      case Pattern::K_CXX:
-      case Pattern::K_CodeGenInstruction:
-        continue;
-      case Pattern::K_PatFrag:
-        // TODO: It's just that the emitter doesn't handle it but technically
-        // there is no reason why we can't. We just have to be careful with
-        // operand mappings, it could get complex.
-        PrintError("nested " + PatFragClassName + " are not supported");
-        return false;
-      }
-    }
-  }
-
-  StringSet<> SeenOps;
-  for (const auto &Op : in_params()) {
-    if (SeenOps.count(Op.Name)) {
-      PrintError("duplicate parameter '" + Op.Name + "'");
-      return false;
-    }
-
-    // Check this operand is NOT defined in any alternative's patterns.
-    for (const auto &Alt : Alts) {
-      if (Alt.OpTable.lookup(Op.Name).Def) {
-        PrintError("input parameter '" + Op.Name + "' cannot be redefined!");
-        return false;
-      }
-    }
-
-    if (Op.Kind == PK_Root) {
-      PrintError("input parameterr '" + Op.Name + "' cannot be a root!");
-      return false;
-    }
-
-    SeenOps.insert(Op.Name);
-  }
-
-  for (const auto &Op : out_params()) {
-    if (Op.Kind != PK_Root && Op.Kind != PK_MachineOperand) {
-      PrintError("output parameter '" + Op.Name +
-                 "' must be 'root' or 'gi_mo'");
-      return false;
-    }
-
-    if (SeenOps.count(Op.Name)) {
-      PrintError("duplicate parameter '" + Op.Name + "'");
-      return false;
-    }
-
-    // Check this operand is defined in all alternative's patterns.
-    for (const auto &Alt : Alts) {
-      const auto *OpDef = Alt.OpTable.getDef(Op.Name);
-      if (!OpDef) {
-        PrintError("output parameter '" + Op.Name +
-                   "' must be defined by all alternative patterns in '" +
-                   Def.getName() + "'");
-        return false;
-      }
-
-      if (Op.Kind == PK_Root && OpDef->getNumInstDefs() != 1) {
-        // The instruction that defines the root must have a single def.
-        // Otherwise we'd need to support multiple roots and it gets messy.
-        //
-        // e.g. this is not supported:
-        //   (pattern (G_UNMERGE_VALUES $x, $root, $vec))
-        PrintError("all instructions that define root '" + Op.Name + "' in '" +
-                   Def.getName() + "' can only have a single output operand");
-        return false;
-      }
-    }
-
-    SeenOps.insert(Op.Name);
-  }
-
-  if (num_out_params() != 0 && num_roots() == 0) {
-    PrintError(PatFragClassName + " must have one root in its 'out' operands");
-    return false;
-  }
-
-  if (num_roots() > 1) {
-    PrintError(PatFragClassName + " can only have one root");
-    return false;
-  }
-
-  // TODO: find unused params
-
-  // Now, typecheck all alternatives.
-  for (auto &Alt : Alts) {
-    OperandTypeChecker OTC(Def.getLoc());
-    for (auto &Pat : Alt.Pats) {
-      if (auto *IP = dyn_cast<InstructionPattern>(Pat.get())) {
-        if (!OTC.check(IP))
-          return false;
-      }
-    }
-    OTC.setAllOperandTypes();
-  }
-
-  return true;
-}
-
-bool PatFrag::handleUnboundInParam(StringRef ParamName, StringRef ArgName,
-                                   ArrayRef<SMLoc> DiagLoc) const {
-  // The parameter must be a live-in of all alternatives for this to work.
-  // Otherwise, we risk having unbound parameters being used (= crashes).
-  //
-  // Examples:
-  //
-  // in (ins $y), (patterns (G_FNEG $dst, $y), "return matchFnegOp(${y})")
-  //    even if $y is unbound, we'll lazily bind it when emitting the G_FNEG.
-  //
-  // in (ins $y), (patterns "return matchFnegOp(${y})")
-  //    if $y is unbound when this fragment is emitted, C++ code expansion will
-  //    fail.
-  for (const auto &Alt : Alts) {
-    auto &OT = Alt.OpTable;
-    if (!OT.lookup(ParamName).Found) {
-      ::PrintError(DiagLoc, "operand '" + ArgName + "' (for parameter '" +
-                                ParamName + "' of '" + getName() +
-                                "') cannot be unbound");
-      PrintNote(
-          DiagLoc,
-          "one or more alternatives of '" + getName() + "' do not bind '" +
-              ParamName +
-              "' to an instruction operand; either use a bound operand or "
-              "ensure '" +
-              Def.getName() + "' binds '" + ParamName +
-              "' in all alternatives");
-      return false;
-    }
-  }
-
-  return true;
-}
-
-bool PatFrag::buildOperandsTables() {
-  // enumerate(...) doesn't seem to allow lvalues so we need to count the old
-  // way.
-  unsigned Idx = 0;
-
-  const auto DiagnoseRedef = [this, &Idx](StringRef OpName) {
-    PrintError("Operand '" + OpName +
-               "' is defined multiple times in patterns of alternative #" +
-               to_string(Idx));
-  };
-
-  for (auto &Alt : Alts) {
-    for (auto &Pat : Alt.Pats) {
-      auto *IP = dyn_cast<InstructionPattern>(Pat.get());
-      if (!IP)
-        continue;
-
-      if (!Alt.OpTable.addPattern(IP, DiagnoseRedef))
-        return false;
-    }
-
-    ++Idx;
-  }
-
-  return true;
-}
-
-void PatFrag::print(raw_ostream &OS, StringRef Indent) const {
-  OS << Indent << "(PatFrag name:" << getName() << "\n";
-  if (!in_params().empty()) {
-    OS << Indent << "  (ins ";
-    printParamsList(OS, in_params());
-    OS << ")\n";
-  }
-
-  if (!out_params().empty()) {
-    OS << Indent << "  (outs ";
-    printParamsList(OS, out_params());
-    OS << ")\n";
-  }
-
-  // TODO: Dump OperandTable as well.
-  OS << Indent << "  (alternatives [\n";
-  for (const auto &Alt : Alts) {
-    OS << Indent << "    [\n";
-    for (const auto &Pat : Alt.Pats) {
-      OS << Indent << "      ";
-      Pat->print(OS, /*PrintName=*/true);
-      OS << ",\n";
-    }
-    OS << Indent << "    ],\n";
-  }
-  OS << Indent << "  ])\n";
-
-  OS << Indent << ')';
-}
-
-void PatFrag::printParamsList(raw_ostream &OS, iterator_range<ParamIt> Params) {
-  OS << '['
-     << join(map_range(Params,
-                       [](auto &O) {
-                         return (O.Name + ":" + getParamKindStr(O.Kind)).str();
-                       }),
-             ", ")
-     << ']';
-}
-
-//===- PatFragPattern -----------------------------------------------------===//
-
-class PatFragPattern : public InstructionPattern {
-public:
-  PatFragPattern(const PatFrag &PF, StringRef Name)
-      : InstructionPattern(K_PatFrag, Name), PF(PF) {}
-
-  static bool classof(const Pattern *P) { return P->getKind() == K_PatFrag; }
-
-  const PatFrag &getPatFrag() const { return PF; }
-  StringRef getInstName() const override { return PF.getName(); }
-
-  unsigned getNumInstDefs() const override { return PF.num_out_params(); }
-  unsigned getNumInstOperands() const override { return PF.num_params(); }
-
-  ArrayRef<InstructionOperand> getApplyDefsNeeded() const override;
-
-  bool checkSemantics(ArrayRef<SMLoc> DiagLoc) override;
-
-  /// Before emitting the patterns inside the PatFrag, add all necessary code
-  /// expansions to \p PatFragCEs imported from \p ParentCEs.
-  ///
-  /// For a MachineOperand PatFrag parameter, this will fetch the expansion for
-  /// that operand from \p ParentCEs and add it to \p PatFragCEs. Errors can be
-  /// emitted if the MachineOperand reference is unbound.
-  ///
-  /// For an Immediate PatFrag parameter this simply adds the integer value to
-  /// \p PatFragCEs as an expansion.
-  ///
-  /// \param ParentCEs Contains all of the code expansions declared by the other
-  ///                  patterns emitted so far in the pattern list containing
-  ///                  this PatFragPattern.
-  /// \param PatFragCEs Output Code Expansions (usually empty)
-  /// \param DiagLoc    Diagnostic loc in case an error occurs.
-  /// \return `true` on success, `false` on failure.
-  bool mapInputCodeExpansions(const CodeExpansions &ParentCEs,
-                              CodeExpansions &PatFragCEs,
-                              ArrayRef<SMLoc> DiagLoc) const;
-
-private:
-  const PatFrag &PF;
-};
-
-ArrayRef<InstructionOperand> PatFragPattern::getApplyDefsNeeded() const {
-  assert(PF.num_roots() == 1);
-  // Only roots need to be redef.
-  for (auto [Idx, Param] : enumerate(PF.out_params())) {
-    if (Param.Kind == PatFrag::PK_Root)
-      return getOperand(Idx);
-  }
-  llvm_unreachable("root not found!");
-}
-
-bool PatFragPattern::checkSemantics(ArrayRef<SMLoc> DiagLoc) {
-  if (!InstructionPattern::checkSemantics(DiagLoc))
-    return false;
-
-  for (const auto &[Idx, Op] : enumerate(Operands)) {
-    switch (PF.getParam(Idx).Kind) {
-    case PatFrag::PK_Imm:
-      if (!Op.hasImmValue()) {
-        PrintError(DiagLoc, "expected operand " + to_string(Idx) + " of '" +
-                                getInstName() + "' to be an immediate; got " +
-                                Op.describe());
-        return false;
-      }
-      if (Op.isNamedImmediate()) {
-        PrintError(DiagLoc, "operand " + to_string(Idx) + " of '" +
-                                getInstName() +
-                                "' cannot be a named immediate");
-        return false;
-      }
-      break;
-    case PatFrag::PK_Root:
-    case PatFrag::PK_MachineOperand:
-      if (!Op.isNamedOperand() || Op.isNamedImmediate()) {
-        PrintError(DiagLoc, "expected operand " + to_string(Idx) + " of '" +
-                                getInstName() +
-                                "' to be a MachineOperand; got " +
-                                Op.describe());
-        return false;
-      }
-      break;
-    }
-  }
-
-  return true;
-}
-
-bool PatFragPattern::mapInputCodeExpansions(const CodeExpansions &ParentCEs,
-                                            CodeExpansions &PatFragCEs,
-                                            ArrayRef<SMLoc> DiagLoc) const {
-  for (const auto &[Idx, Op] : enumerate(operands())) {
-    StringRef ParamName = PF.getParam(Idx).Name;
-
-    // Operands to a PFP can only be named, or be an immediate, but not a named
-    // immediate.
-    assert(!Op.isNamedImmediate());
-
-    if (Op.isNamedOperand()) {
-      StringRef ArgName = Op.getOperandName();
-      // Map it only if it's been defined.
-      auto It = ParentCEs.find(ArgName);
-      if (It == ParentCEs.end()) {
-        if (!PF.handleUnboundInParam(ParamName, ArgName, DiagLoc))
-          return false;
-      } else
-        PatFragCEs.declare(ParamName, It->second);
-      continue;
-    }
-
-    if (Op.hasImmValue()) {
-      PatFragCEs.declare(ParamName, to_string(Op.getImmValue()));
-      continue;
-    }
-
-    llvm_unreachable("Unknown Operand Type!");
-  }
-
-  return true;
-}
-
-//===- BuiltinPattern -----------------------------------------------------===//
-
-enum BuiltinKind {
-  BI_ReplaceReg,
-  BI_EraseRoot,
-};
-
-class BuiltinPattern : public InstructionPattern {
-  struct BuiltinInfo {
-    StringLiteral DefName;
-    BuiltinKind Kind;
-    unsigned NumOps;
-    unsigned NumDefs;
-  };
-
-  static constexpr std::array<BuiltinInfo, 2> KnownBuiltins = {{
-      {"GIReplaceReg", BI_ReplaceReg, 2, 1},
-      {"GIEraseRoot", BI_EraseRoot, 0, 0},
-  }};
-
-public:
-  BuiltinPattern(const Record &Def, StringRef Name)
-      : InstructionPattern(K_Builtin, Name), I(getBuiltinInfo(Def)) {}
-
-  static bool classof(const Pattern *P) { return P->getKind() == K_Builtin; }
-
-  unsigned getNumInstOperands() const override { return I.NumOps; }
-  unsigned getNumInstDefs() const override { return I.NumDefs; }
-  StringRef getInstName() const override { return I.DefName; }
-  BuiltinKind getBuiltinKind() const { return I.Kind; }
-
-  bool checkSemantics(ArrayRef<SMLoc> Loc) override;
-
-private:
-  static BuiltinInfo getBuiltinInfo(const Record &Def);
-
-  BuiltinInfo I;
-};
-
-BuiltinPattern::BuiltinInfo BuiltinPattern::getBuiltinInfo(const Record &Def) {
-  assert(Def.isSubClassOf(BuiltinInstClassName));
-
-  StringRef Name = Def.getName();
-  for (const auto &KBI : KnownBuiltins) {
-    if (KBI.DefName == Name)
-      return KBI;
-  }
-
-  PrintFatalError(Def.getLoc(), "Unimplemented " + BuiltinInstClassName +
-                                    " def '" + Name + "'");
-}
-
-bool BuiltinPattern::checkSemantics(ArrayRef<SMLoc> Loc) {
-  if (!InstructionPattern::checkSemantics(Loc))
-    return false;
-
-  // For now all builtins just take names, no immediates.
-  for (const auto &[Idx, Op] : enumerate(operands())) {
-    if (!Op.isNamedOperand() || Op.isNamedImmediate()) {
-      PrintError(Loc, "expected operand " + to_string(Idx) + " of '" +
-                          getInstName() + "' to be a name");
-      return false;
-    }
-  }
-
-  return true;
+LLTCodeGenOrTempType getLLTCodeGenOrTempType(const PatternType &PT,
+                                             RuleMatcher &RM) {
+  assert(!PT.isNone());
+
+  if (PT.isLLT())
+    return getLLTCodeGen(PT);
+
+  assert(PT.isTypeOf());
+  auto &OM = RM.getOperandMatcher(PT.getTypeOfOpName());
+  return OM.getTempTypeIdx(RM);
 }
 
 //===- PrettyStackTrace Helpers  ------------------------------------------===//
@@ -1459,11 +150,11 @@ public:
   void print(raw_ostream &OS) const override {
     if (Def.isSubClassOf("GICombineRule"))
       OS << "Parsing GICombineRule '" << Def.getName() << "'";
-    else if (Def.isSubClassOf(PatFragClassName))
-      OS << "Parsing " << PatFragClassName << " '" << Def.getName() << "'";
+    else if (Def.isSubClassOf(PatFrag::ClassName))
+      OS << "Parsing " << PatFrag::ClassName << " '" << Def.getName() << "'";
     else
       OS << "Parsing '" << Def.getName() << "'";
-    OS << "\n";
+    OS << '\n';
   }
 };
 
@@ -1478,16 +169,441 @@ public:
   void print(raw_ostream &OS) const override {
     if (Def.isSubClassOf("GICombineRule"))
       OS << "Emitting GICombineRule '" << Def.getName() << "'";
-    else if (Def.isSubClassOf(PatFragClassName))
-      OS << "Emitting " << PatFragClassName << " '" << Def.getName() << "'";
+    else if (Def.isSubClassOf(PatFrag::ClassName))
+      OS << "Emitting " << PatFrag::ClassName << " '" << Def.getName() << "'";
     else
       OS << "Emitting '" << Def.getName() << "'";
 
     if (Pat)
       OS << " [" << Pat->getKindName() << " '" << Pat->getName() << "']";
-    OS << "\n";
+    OS << '\n';
   }
 };
+
+//===- CombineRuleOperandTypeChecker --------------------------------------===//
+
+/// This is a wrapper around OperandTypeChecker specialized for Combiner Rules.
+/// On top of doing the same things as OperandTypeChecker, this also attempts to
+/// infer as many types as possible for temporary register defs & immediates in
+/// apply patterns.
+///
+/// The inference is trivial and leverages the MCOI OperandTypes encoded in
+/// CodeGenInstructions to infer types across patterns in a CombineRule. It's
+/// thus very limited and only supports CodeGenInstructions (but that's the main
+/// use case so it's fine).
+///
+/// We only try to infer untyped operands in apply patterns when they're temp
+/// reg defs, or immediates. Inference always outputs a `TypeOf<$x>` where $x is
+/// a named operand from a match pattern.
+class CombineRuleOperandTypeChecker : private OperandTypeChecker {
+public:
+  CombineRuleOperandTypeChecker(const Record &RuleDef,
+                                const OperandTable &MatchOpTable)
+      : OperandTypeChecker(RuleDef.getLoc()), RuleDef(RuleDef),
+        MatchOpTable(MatchOpTable) {}
+
+  /// Records and checks a 'match' pattern.
+  bool processMatchPattern(InstructionPattern &P);
+
+  /// Records and checks an 'apply' pattern.
+  bool processApplyPattern(InstructionPattern &P);
+
+  /// Propagates types, then perform type inference and do a second round of
+  /// propagation in the apply patterns only if any types were inferred.
+  void propagateAndInferTypes();
+
+private:
+  /// TypeEquivalenceClasses are groups of operands of an instruction that share
+  /// a common type.
+  ///
+  /// e.g. [[a, b], [c, d]] means a and b have the same type, and c and
+  /// d have the same type too. b/c and a/d don't have to have the same type,
+  /// though.
+  using TypeEquivalenceClasses = EquivalenceClasses<StringRef>;
+
+  /// \returns true for `OPERAND_GENERIC_` 0 through 5.
+  /// These are the MCOI types that can be registers. The other MCOI types are
+  /// either immediates, or fancier operands used only post-ISel, so we don't
+  /// care about them for combiners.
+  static bool canMCOIOperandTypeBeARegister(StringRef MCOIType) {
+    // Assume OPERAND_GENERIC_0 through 5 can be registers. The other MCOI
+    // OperandTypes are either never used in gMIR, or not relevant (e.g.
+    // OPERAND_GENERIC_IMM, which is definitely never a register).
+    return MCOIType.drop_back(1).ends_with("OPERAND_GENERIC_");
+  }
+
+  /// Finds the "MCOI::"" operand types for each operand of \p CGP.
+  ///
+  /// This is a bit trickier than it looks because we need to handle variadic
+  /// in/outs.
+  ///
+  /// e.g. for
+  ///   (G_BUILD_VECTOR $vec, $x, $y) ->
+  ///   [MCOI::OPERAND_GENERIC_0, MCOI::OPERAND_GENERIC_1,
+  ///    MCOI::OPERAND_GENERIC_1]
+  ///
+  /// For unknown types (which can happen in variadics where varargs types are
+  /// inconsistent), a unique name is given, e.g. "unknown_type_0".
+  static std::vector<std::string>
+  getMCOIOperandTypes(const CodeGenInstructionPattern &CGP);
+
+  /// Adds the TypeEquivalenceClasses for \p P in \p OutTECs.
+  void getInstEqClasses(const InstructionPattern &P,
+                        TypeEquivalenceClasses &OutTECs) const;
+
+  /// Calls `getInstEqClasses` on all patterns of the rule to produce the whole
+  /// rule's TypeEquivalenceClasses.
+  TypeEquivalenceClasses getRuleEqClasses() const;
+
+  /// Tries to infer the type of the \p ImmOpIdx -th operand of \p IP using \p
+  /// TECs.
+  ///
+  /// This is achieved by trying to find a named operand in \p IP that shares
+  /// the same type as \p ImmOpIdx, and using \ref inferNamedOperandType on that
+  /// operand instead.
+  ///
+  /// \returns the inferred type or an empty PatternType if inference didn't
+  /// succeed.
+  PatternType inferImmediateType(const InstructionPattern &IP,
+                                 unsigned ImmOpIdx,
+                                 const TypeEquivalenceClasses &TECs) const;
+
+  /// Looks inside \p TECs to infer \p OpName's type.
+  ///
+  /// \returns the inferred type or an empty PatternType if inference didn't
+  /// succeed.
+  PatternType inferNamedOperandType(const InstructionPattern &IP,
+                                    StringRef OpName,
+                                    const TypeEquivalenceClasses &TECs,
+                                    bool AllowSelf = false) const;
+
+  const Record &RuleDef;
+  SmallVector<InstructionPattern *, 8> MatchPats;
+  SmallVector<InstructionPattern *, 8> ApplyPats;
+
+  const OperandTable &MatchOpTable;
+};
+
+bool CombineRuleOperandTypeChecker::processMatchPattern(InstructionPattern &P) {
+  MatchPats.push_back(&P);
+  return check(P, /*CheckTypeOf*/ [](const auto &) {
+    // GITypeOf in 'match' is currently always rejected by the
+    // CombineRuleBuilder after inference is done.
+    return true;
+  });
+}
+
+bool CombineRuleOperandTypeChecker::processApplyPattern(InstructionPattern &P) {
+  ApplyPats.push_back(&P);
+  return check(P, /*CheckTypeOf*/ [&](const PatternType &Ty) {
+    // GITypeOf<"$x"> can only be used if "$x" is a matched operand.
+    const auto OpName = Ty.getTypeOfOpName();
+    if (MatchOpTable.lookup(OpName).Found)
+      return true;
+
+    PrintError(RuleDef.getLoc(), "'" + OpName + "' ('" + Ty.str() +
+                                     "') does not refer to a matched operand!");
+    return false;
+  });
+}
+
+void CombineRuleOperandTypeChecker::propagateAndInferTypes() {
+  /// First step here is to propagate types using the OperandTypeChecker. That
+  /// way we ensure all uses of a given register have consistent types.
+  propagateTypes();
+
+  /// Build the TypeEquivalenceClasses for the whole rule.
+  const TypeEquivalenceClasses TECs = getRuleEqClasses();
+
+  /// Look at the apply patterns and find operands that need to be
+  /// inferred. We then try to find an equivalence class that they're a part of
+  /// and select the best operand to use for the `GITypeOf` type. We prioritize
+  /// defs of matched instructions because those are guaranteed to be registers.
+  bool InferredAny = false;
+  for (auto *Pat : ApplyPats) {
+    for (unsigned K = 0; K < Pat->operands_size(); ++K) {
+      auto &Op = Pat->getOperand(K);
+
+      // We only want to take a look at untyped defs or immediates.
+      if ((!Op.isDef() && !Op.hasImmValue()) || Op.getType())
+        continue;
+
+      // Infer defs & named immediates.
+      if (Op.isDef() || Op.isNamedImmediate()) {
+        // Check it's not a redefinition of a matched operand.
+        // In such cases, inference is not necessary because we just copy
+        // operands and don't create temporary registers.
+        if (MatchOpTable.lookup(Op.getOperandName()).Found)
+          continue;
+
+        // Inference is needed here, so try to do it.
+        if (PatternType Ty =
+                inferNamedOperandType(*Pat, Op.getOperandName(), TECs)) {
+          if (DebugTypeInfer)
+            errs() << "INFER: " << Op.describe() << " -> " << Ty.str() << '\n';
+          Op.setType(Ty);
+          InferredAny = true;
+        }
+
+        continue;
+      }
+
+      // Infer immediates
+      if (Op.hasImmValue()) {
+        if (PatternType Ty = inferImmediateType(*Pat, K, TECs)) {
+          if (DebugTypeInfer)
+            errs() << "INFER: " << Op.describe() << " -> " << Ty.str() << '\n';
+          Op.setType(Ty);
+          InferredAny = true;
+        }
+        continue;
+      }
+    }
+  }
+
+  // If we've inferred any types, we want to propagate them across the apply
+  // patterns. Type inference only adds GITypeOf types that point to Matched
+  // operands, so we definitely don't want to propagate types into the match
+  // patterns as well, otherwise bad things happen.
+  if (InferredAny) {
+    OperandTypeChecker OTC(RuleDef.getLoc());
+    for (auto *Pat : ApplyPats) {
+      if (!OTC.check(*Pat, [&](const auto &) { return true; }))
+        PrintFatalError(RuleDef.getLoc(),
+                        "OperandTypeChecker unexpectedly failed on '" +
+                            Pat->getName() + "' during Type Inference");
+    }
+    OTC.propagateTypes();
+
+    if (DebugTypeInfer) {
+      errs() << "Apply patterns for rule " << RuleDef.getName()
+             << " after inference:\n";
+      for (auto *Pat : ApplyPats) {
+        errs() << "  ";
+        Pat->print(errs(), /*PrintName*/ true);
+        errs() << '\n';
+      }
+      errs() << '\n';
+    }
+  }
+}
+
+PatternType CombineRuleOperandTypeChecker::inferImmediateType(
+    const InstructionPattern &IP, unsigned ImmOpIdx,
+    const TypeEquivalenceClasses &TECs) const {
+  // We can only infer CGPs (except intrinsics).
+  const auto *CGP = dyn_cast<CodeGenInstructionPattern>(&IP);
+  if (!CGP || CGP->isIntrinsic())
+    return {};
+
+  // For CGPs, we try to infer immediates by trying to infer another named
+  // operand that shares its type.
+  //
+  // e.g.
+  //    Pattern: G_BUILD_VECTOR $x, $y, 0
+  //    MCOIs:   [MCOI::OPERAND_GENERIC_0, MCOI::OPERAND_GENERIC_1,
+  //              MCOI::OPERAND_GENERIC_1]
+  //    $y has the same type as 0, so we can infer $y and get the type 0 should
+  //    have.
+
+  // We infer immediates by looking for a named operand that shares the same
+  // MCOI type.
+  const auto MCOITypes = getMCOIOperandTypes(*CGP);
+  StringRef ImmOpTy = MCOITypes[ImmOpIdx];
+
+  for (const auto &[Idx, Ty] : enumerate(MCOITypes)) {
+    if (Idx != ImmOpIdx && Ty == ImmOpTy) {
+      const auto &Op = IP.getOperand(Idx);
+      if (!Op.isNamedOperand())
+        continue;
+
+      // Named operand with the same name, try to infer that.
+      if (PatternType InferTy = inferNamedOperandType(IP, Op.getOperandName(),
+                                                      TECs, /*AllowSelf=*/true))
+        return InferTy;
+    }
+  }
+
+  return {};
+}
+
+PatternType CombineRuleOperandTypeChecker::inferNamedOperandType(
+    const InstructionPattern &IP, StringRef OpName,
+    const TypeEquivalenceClasses &TECs, bool AllowSelf) const {
+  // This is the simplest possible case, we just need to find a TEC that
+  // contains OpName. Look at all operands in equivalence class and try to
+  // find a suitable one. If `AllowSelf` is true, the operand itself is also
+  // considered suitable.
+
+  // Check for a def of a matched pattern. This is guaranteed to always
+  // be a register so we can blindly use that.
+  StringRef GoodOpName;
+  for (auto It = TECs.findLeader(OpName); It != TECs.member_end(); ++It) {
+    if (!AllowSelf && *It == OpName)
+      continue;
+
+    const auto LookupRes = MatchOpTable.lookup(*It);
+    if (LookupRes.Def) // Favor defs
+      return PatternType::getTypeOf(*It);
+
+    // Otherwise just save this in case we don't find any def.
+    if (GoodOpName.empty() && LookupRes.Found)
+      GoodOpName = *It;
+  }
+
+  if (!GoodOpName.empty())
+    return PatternType::getTypeOf(GoodOpName);
+
+  // No good operand found, give up.
+  return {};
+}
+
+std::vector<std::string> CombineRuleOperandTypeChecker::getMCOIOperandTypes(
+    const CodeGenInstructionPattern &CGP) {
+  // FIXME?: Should we cache this? We call it twice when inferring immediates.
+
+  static unsigned UnknownTypeIdx = 0;
+
+  std::vector<std::string> OpTypes;
+  auto &CGI = CGP.getInst();
+  Record *VarArgsTy = CGI.TheDef->isSubClassOf("GenericInstruction")
+                          ? CGI.TheDef->getValueAsOptionalDef("variadicOpsType")
+                          : nullptr;
+  std::string VarArgsTyName =
+      VarArgsTy ? ("MCOI::" + VarArgsTy->getValueAsString("OperandType")).str()
+                : ("unknown_type_" + Twine(UnknownTypeIdx++)).str();
+
+  // First, handle defs.
+  for (unsigned K = 0; K < CGI.Operands.NumDefs; ++K)
+    OpTypes.push_back(CGI.Operands[K].OperandType);
+
+  // Then, handle variadic defs if there are any.
+  if (CGP.hasVariadicDefs()) {
+    for (unsigned K = CGI.Operands.NumDefs; K < CGP.getNumInstDefs(); ++K)
+      OpTypes.push_back(VarArgsTyName);
+  }
+
+  // If we had variadic defs, the op idx in the pattern won't match the op idx
+  // in the CGI anymore.
+  int CGIOpOffset = int(CGI.Operands.NumDefs) - CGP.getNumInstDefs();
+  assert(CGP.hasVariadicDefs() ? (CGIOpOffset <= 0) : (CGIOpOffset == 0));
+
+  // Handle all remaining use operands, including variadic ones.
+  for (unsigned K = CGP.getNumInstDefs(); K < CGP.getNumInstOperands(); ++K) {
+    unsigned CGIOpIdx = K + CGIOpOffset;
+    if (CGIOpIdx >= CGI.Operands.size()) {
+      assert(CGP.isVariadic());
+      OpTypes.push_back(VarArgsTyName);
+    } else {
+      OpTypes.push_back(CGI.Operands[CGIOpIdx].OperandType);
+    }
+  }
+
+  assert(OpTypes.size() == CGP.operands_size());
+  return OpTypes;
+}
+
+void CombineRuleOperandTypeChecker::getInstEqClasses(
+    const InstructionPattern &P, TypeEquivalenceClasses &OutTECs) const {
+  // Determine the TypeEquivalenceClasses by:
+  //    - Getting the MCOI Operand Types.
+  //    - Creating a Map of MCOI Type -> [Operand Indexes]
+  //    - Iterating over the map, filtering types we don't like, and just adding
+  //      the array of Operand Indexes to \p OutTECs.
+
+  // We can only do this on CodeGenInstructions that aren't intrinsics. Other
+  // InstructionPatterns have no type inference information associated with
+  // them.
+  // TODO: We could try to extract some info from CodeGenIntrinsic to
+  //       guide inference.
+
+  // TODO: Could we add some inference information to builtins at least? e.g.
+  // ReplaceReg should always replace with a reg of the same type, for instance.
+  // Though, those patterns are often used alone so it might not be worth the
+  // trouble to infer their types.
+  auto *CGP = dyn_cast<CodeGenInstructionPattern>(&P);
+  if (!CGP || CGP->isIntrinsic())
+    return;
+
+  const auto MCOITypes = getMCOIOperandTypes(*CGP);
+  assert(MCOITypes.size() == P.operands_size());
+
+  DenseMap<StringRef, std::vector<unsigned>> TyToOpIdx;
+  for (const auto &[Idx, Ty] : enumerate(MCOITypes))
+    TyToOpIdx[Ty].push_back(Idx);
+
+  if (DebugTypeInfer)
+    errs() << "\tGroups for " << P.getName() << ":\t";
+
+  for (const auto &[Ty, Idxs] : TyToOpIdx) {
+    if (!canMCOIOperandTypeBeARegister(Ty))
+      continue;
+
+    if (DebugTypeInfer)
+      errs() << '[';
+    StringRef Sep = "";
+
+    // We only collect named operands.
+    StringRef Leader;
+    for (unsigned Idx : Idxs) {
+      const auto &Op = P.getOperand(Idx);
+      if (!Op.isNamedOperand())
+        continue;
+
+      const auto OpName = Op.getOperandName();
+      if (DebugTypeInfer) {
+        errs() << Sep << OpName;
+        Sep = ", ";
+      }
+
+      if (Leader.empty())
+        OutTECs.insert((Leader = OpName));
+      else
+        OutTECs.unionSets(Leader, OpName);
+    }
+
+    if (DebugTypeInfer)
+      errs() << "] ";
+  }
+
+  if (DebugTypeInfer)
+    errs() << '\n';
+}
+
+CombineRuleOperandTypeChecker::TypeEquivalenceClasses
+CombineRuleOperandTypeChecker::getRuleEqClasses() const {
+  StringMap<unsigned> OpNameToEqClassIdx;
+  TypeEquivalenceClasses TECs;
+
+  if (DebugTypeInfer)
+    errs() << "Rule Operand Type Equivalence Classes for " << RuleDef.getName()
+           << ":\n";
+
+  for (const auto *Pat : MatchPats)
+    getInstEqClasses(*Pat, TECs);
+  for (const auto *Pat : ApplyPats)
+    getInstEqClasses(*Pat, TECs);
+
+  if (DebugTypeInfer) {
+    errs() << "Final Type Equivalence Classes: ";
+    for (auto ClassIt = TECs.begin(); ClassIt != TECs.end(); ++ClassIt) {
+      // only print non-empty classes.
+      if (auto MembIt = TECs.member_begin(ClassIt);
+          MembIt != TECs.member_end()) {
+        errs() << '[';
+        StringRef Sep = "";
+        for (; MembIt != TECs.member_end(); ++MembIt) {
+          errs() << Sep << *MembIt;
+          Sep = ", ";
+        }
+        errs() << "] ";
+      }
+    }
+    errs() << '\n';
+  }
+
+  return TECs;
+}
 
 //===- CombineRuleBuilder -------------------------------------------------===//
 
@@ -1512,8 +628,9 @@ public:
                      SubtargetFeatureInfoMap &SubtargetFeatures,
                      Record &RuleDef, unsigned ID,
                      std::vector<RuleMatcher> &OutRMs)
-      : CGT(CGT), SubtargetFeatures(SubtargetFeatures), RuleDef(RuleDef),
-        RuleID(ID), OutRMs(OutRMs) {}
+      : Parser(CGT, RuleDef.getLoc()), CGT(CGT),
+        SubtargetFeatures(SubtargetFeatures), RuleDef(RuleDef), RuleID(ID),
+        OutRMs(OutRMs) {}
 
   /// Parses all fields in the RuleDef record.
   bool parseAll();
@@ -1591,24 +708,6 @@ private:
   bool buildRuleOperandsTable();
 
   bool parseDefs(const DagInit &Def);
-  bool
-  parsePatternList(const DagInit &List,
-                   function_ref<bool(std::unique_ptr<Pattern>)> ParseAction,
-                   StringRef Operator, ArrayRef<SMLoc> DiagLoc,
-                   StringRef AnonPatNamePrefix) const;
-
-  std::unique_ptr<Pattern> parseInstructionPattern(const Init &Arg,
-                                                   StringRef PatName) const;
-  std::unique_ptr<Pattern> parseWipMatchOpcodeMatcher(const Init &Arg,
-                                                      StringRef PatName) const;
-  bool parseInstructionPatternOperand(InstructionPattern &IP,
-                                      const Init *OpInit,
-                                      const StringInit *OpName) const;
-  std::unique_ptr<PatFrag> parsePatFragImpl(const Record *Def) const;
-  bool parsePatFragParamList(
-      ArrayRef<SMLoc> DiagLoc, const DagInit &OpsList,
-      function_ref<bool(StringRef, PatFrag::ParamKind)> ParseAction) const;
-  const PatFrag *parsePatFrag(const Record *Def) const;
 
   bool emitMatchPattern(CodeExpansions &CE, const PatternAlternatives &Alts,
                         const InstructionPattern &IP);
@@ -1652,6 +751,7 @@ private:
       DenseSet<const Pattern *> &SeenPats, OperandDefLookupFn LookupOperandDef,
       OperandMapperFnRef OperandMapper = [](const auto &O) { return O; });
 
+  PatternParser Parser;
   const CodeGenTarget &CGT;
   SubtargetFeatureInfoMap &SubtargetFeatures;
   Record &RuleDef;
@@ -1670,8 +770,8 @@ private:
   PatternMap ApplyPats;
 
   /// Operand tables to tie match/apply patterns together.
-  OperandTable<> MatchOpTable;
-  OperandTable<> ApplyOpTable;
+  OperandTable MatchOpTable;
+  OperandTable ApplyOpTable;
 
   /// Set by findRoots.
   Pattern *MatchRoot = nullptr;
@@ -1679,9 +779,6 @@ private:
 
   SmallVector<MatchDataInfo, 2> MatchDatas;
   SmallVector<PatternAlternatives, 1> PermutationsToEmit;
-
-  // print()/debug-only members.
-  mutable SmallPtrSet<const PatFrag *, 2> SeenPatFrags;
 };
 
 bool CombineRuleBuilder::parseAll() {
@@ -1690,16 +787,16 @@ bool CombineRuleBuilder::parseAll() {
   if (!parseDefs(*RuleDef.getValueAsDag("Defs")))
     return false;
 
-  if (!parsePatternList(
+  if (!Parser.parsePatternList(
           *RuleDef.getValueAsDag("Match"),
           [this](auto Pat) { return addMatchPattern(std::move(Pat)); }, "match",
-          RuleDef.getLoc(), (RuleDef.getName() + "_match").str()))
+          (RuleDef.getName() + "_match").str()))
     return false;
 
-  if (!parsePatternList(
+  if (!Parser.parsePatternList(
           *RuleDef.getValueAsDag("Apply"),
           [this](auto Pat) { return addApplyPattern(std::move(Pat)); }, "apply",
-          RuleDef.getLoc(), (RuleDef.getName() + "_apply").str()))
+          (RuleDef.getName() + "_apply").str()))
     return false;
 
   if (!buildRuleOperandsTable() || !typecheckPatterns() || !findRoots() ||
@@ -1743,23 +840,24 @@ bool CombineRuleBuilder::emitRuleMatchers() {
 
 void CombineRuleBuilder::print(raw_ostream &OS) const {
   OS << "(CombineRule name:" << RuleDef.getName() << " id:" << RuleID
-     << " root:" << RootName << "\n";
+     << " root:" << RootName << '\n';
 
   if (!MatchDatas.empty()) {
     OS << "  (MatchDatas\n";
     for (const auto &MD : MatchDatas) {
       OS << "    ";
       MD.print(OS);
-      OS << "\n";
+      OS << '\n';
     }
     OS << "  )\n";
   }
 
-  if (!SeenPatFrags.empty()) {
+  const auto &SeenPFs = Parser.getSeenPatFrags();
+  if (!SeenPFs.empty()) {
     OS << "  (PatFrags\n";
-    for (const auto *PF : SeenPatFrags) {
+    for (const auto *PF : Parser.getSeenPatFrags()) {
       PF->print(OS, /*Indent=*/"    ");
-      OS << "\n";
+      OS << '\n';
     }
     OS << "  )\n";
   }
@@ -1771,7 +869,7 @@ void CombineRuleBuilder::print(raw_ostream &OS) const {
       return;
     }
 
-    OS << "\n";
+    OS << '\n';
     for (const auto &[Name, Pat] : Pats) {
       OS << "    ";
       if (Pat.get() == MatchRoot)
@@ -1781,7 +879,7 @@ void CombineRuleBuilder::print(raw_ostream &OS) const {
         OS << "<apply_root>";
       OS << Name << ":";
       Pat->print(OS, /*PrintName=*/false);
-      OS << "\n";
+      OS << '\n';
     }
     OS << "  )\n";
   };
@@ -1822,9 +920,9 @@ void CombineRuleBuilder::verify() const {
       // Both strings are allocated in the pool using insertStrRef.
       if (Name.data() != Pat->getName().data()) {
         dbgs() << "Map StringRef: '" << Name << "' @ "
-               << (const void *)Name.data() << "\n";
+               << (const void *)Name.data() << '\n';
         dbgs() << "Pat String: '" << Pat->getName() << "' @ "
-               << (const void *)Pat->getName().data() << "\n";
+               << (const void *)Pat->getName().data() << '\n';
         PrintFatalError("StringRef stored in the PatternMap is not referencing "
                         "the same string as its Pattern!");
       }
@@ -1877,7 +975,7 @@ bool CombineRuleBuilder::addApplyPattern(std::unique_ptr<Pattern> Pat) {
   }
 
   if (isa<PatFragPattern>(Pat.get())) {
-    PrintError("'" + Name + "': using " + PatFragClassName +
+    PrintError("'" + Name + "': using " + PatFrag::ClassName +
                " is not supported in apply patterns");
     return false;
   }
@@ -1920,12 +1018,14 @@ void CombineRuleBuilder::addCXXPredicate(RuleMatcher &M,
   // FIXME: Hack so C++ code is executed last. May not work for more complex
   // patterns.
   auto &IM = *std::prev(M.insnmatchers().end());
+  auto Loc = RuleDef.getLoc();
+  const auto AddComment = [&](raw_ostream &OS) {
+    OS << "// Pattern Alternatives: ";
+    print(OS, Alts);
+    OS << '\n';
+  };
   const auto &ExpandedCode =
-      P.expandCode(CE, RuleDef.getLoc(), [&](raw_ostream &OS) {
-        OS << "// Pattern Alternatives: ";
-        print(OS, Alts);
-        OS << "\n";
-      });
+      DebugCXXPreds ? P.expandCode(CE, Loc, AddComment) : P.expandCode(CE, Loc);
   IM->addPredicate<GenericInstructionPredicateMatcher>(
       ExpandedCode.getEnumNameWithPrefix(CXXPredPrefix));
 }
@@ -1952,23 +1052,35 @@ bool CombineRuleBuilder::hasEraseRoot() const {
 }
 
 bool CombineRuleBuilder::typecheckPatterns() {
-  OperandTypeChecker OTC(RuleDef.getLoc());
+  CombineRuleOperandTypeChecker OTC(RuleDef, MatchOpTable);
 
   for (auto &Pat : values(MatchPats)) {
     if (auto *IP = dyn_cast<InstructionPattern>(Pat.get())) {
-      if (!OTC.check(IP))
+      if (!OTC.processMatchPattern(*IP))
         return false;
     }
   }
 
   for (auto &Pat : values(ApplyPats)) {
     if (auto *IP = dyn_cast<InstructionPattern>(Pat.get())) {
-      if (!OTC.check(IP))
+      if (!OTC.processApplyPattern(*IP))
         return false;
     }
   }
 
-  OTC.setAllOperandTypes();
+  OTC.propagateAndInferTypes();
+
+  // Always check this after in case inference adds some special types to the
+  // match patterns.
+  for (auto &Pat : values(MatchPats)) {
+    if (auto *IP = dyn_cast<InstructionPattern>(Pat.get())) {
+      if (IP->diagnoseAllSpecialTypes(
+              RuleDef.getLoc(), PatternType::SpecialTyClassName +
+                                    " is not supported in 'match' patterns")) {
+        return false;
+      }
+    }
+  }
   return true;
 }
 
@@ -2038,6 +1150,19 @@ bool CombineRuleBuilder::checkSemantics() {
       continue;
     }
 
+    // MIFlags in match cannot use the following syntax: (MIFlags $mi)
+    if (const auto *CGP = dyn_cast<CodeGenInstructionPattern>(Pat)) {
+      if (auto *FI = CGP->getMIFlagsInfo()) {
+        if (!FI->copy_flags().empty()) {
+          PrintError(
+              "'match' patterns cannot refer to flags from other instructions");
+          PrintNote("MIFlags in '" + CGP->getName() +
+                    "' refer to: " + join(FI->copy_flags(), ", "));
+          return false;
+        }
+      }
+    }
+
     const auto *AOP = dyn_cast<AnyOpcodePattern>(Pat);
     if (!AOP)
       continue;
@@ -2062,6 +1187,28 @@ bool CombineRuleBuilder::checkSemantics() {
       return false;
     }
 
+    // Check that the insts mentioned in copy_flags exist.
+    if (const auto *CGP = dyn_cast<CodeGenInstructionPattern>(IP)) {
+      if (auto *FI = CGP->getMIFlagsInfo()) {
+        for (auto InstName : FI->copy_flags()) {
+          auto It = MatchPats.find(InstName);
+          if (It == MatchPats.end()) {
+            PrintError("unknown instruction '$" + InstName +
+                       "' referenced in MIFlags of '" + CGP->getName() + "'");
+            return false;
+          }
+
+          if (!isa<CodeGenInstructionPattern>(It->second.get())) {
+            PrintError(
+                "'$" + InstName +
+                "' does not refer to a CodeGenInstruction in MIFlags of '" +
+                CGP->getName() + "'");
+            return false;
+          }
+        }
+      }
+    }
+
     const auto *BIP = dyn_cast<BuiltinPattern>(IP);
     if (!BIP)
       continue;
@@ -2078,8 +1225,8 @@ bool CombineRuleBuilder::checkSemantics() {
 
       const auto *IRoot = dyn_cast<CodeGenInstructionPattern>(MatchRoot);
       if (!IRoot) {
-        PrintError(Name +
-                   " can only be used if the root is a CodeGenInstruction");
+        PrintError(Name + " can only be used if the root is a "
+                          "CodeGenInstruction or Intrinsic");
         return false;
       }
 
@@ -2322,325 +1469,13 @@ bool CombineRuleBuilder::parseDefs(const DagInit &Def) {
   return true;
 }
 
-bool CombineRuleBuilder::parsePatternList(
-    const DagInit &List,
-    function_ref<bool(std::unique_ptr<Pattern>)> ParseAction,
-    StringRef Operator, ArrayRef<SMLoc> DiagLoc,
-    StringRef AnonPatNamePrefix) const {
-  if (List.getOperatorAsDef(RuleDef.getLoc())->getName() != Operator) {
-    ::PrintError(DiagLoc, "Expected " + Operator + " operator");
-    return false;
-  }
-
-  if (List.getNumArgs() == 0) {
-    ::PrintError(DiagLoc, Operator + " pattern list is empty");
-    return false;
-  }
-
-  // The match section consists of a list of matchers and predicates. Parse each
-  // one and add the equivalent GIMatchDag nodes, predicates, and edges.
-  for (unsigned I = 0; I < List.getNumArgs(); ++I) {
-    Init *Arg = List.getArg(I);
-    std::string Name = List.getArgName(I)
-                           ? List.getArgName(I)->getValue().str()
-                           : makeAnonPatName(AnonPatNamePrefix, I);
-
-    if (auto Pat = parseInstructionPattern(*Arg, Name)) {
-      if (!ParseAction(std::move(Pat)))
-        return false;
-      continue;
-    }
-
-    if (auto Pat = parseWipMatchOpcodeMatcher(*Arg, Name)) {
-      if (!ParseAction(std::move(Pat)))
-        return false;
-      continue;
-    }
-
-    // Parse arbitrary C++ code
-    if (const auto *StringI = dyn_cast<StringInit>(Arg)) {
-      auto CXXPat = std::make_unique<CXXPattern>(*StringI, Name);
-      if (!ParseAction(std::move(CXXPat)))
-        return false;
-      continue;
-    }
-
-    ::PrintError(DiagLoc,
-                 "Failed to parse pattern: '" + Arg->getAsString() + "'");
-    return false;
-  }
-
-  return true;
-}
-
-std::unique_ptr<Pattern>
-CombineRuleBuilder::parseInstructionPattern(const Init &Arg,
-                                            StringRef Name) const {
-  const DagInit *DagPat = dyn_cast<DagInit>(&Arg);
-  if (!DagPat)
-    return nullptr;
-
-  std::unique_ptr<InstructionPattern> Pat;
-  if (const DagInit *IP = getDagWithOperatorOfSubClass(Arg, "Instruction")) {
-    auto &Instr = CGT.getInstruction(IP->getOperatorAsDef(RuleDef.getLoc()));
-    Pat = std::make_unique<CodeGenInstructionPattern>(Instr, Name);
-  } else if (const DagInit *PFP =
-                 getDagWithOperatorOfSubClass(Arg, PatFragClassName)) {
-    const Record *Def = PFP->getOperatorAsDef(RuleDef.getLoc());
-    const PatFrag *PF = parsePatFrag(Def);
-    if (!PF)
-      return nullptr; // Already diagnosed by parsePatFrag
-    Pat = std::make_unique<PatFragPattern>(*PF, Name);
-  } else if (const DagInit *BP =
-                 getDagWithOperatorOfSubClass(Arg, BuiltinInstClassName)) {
-    Pat = std::make_unique<BuiltinPattern>(
-        *BP->getOperatorAsDef(RuleDef.getLoc()), Name);
-  } else {
-    return nullptr;
-  }
-
-  for (unsigned K = 0; K < DagPat->getNumArgs(); ++K) {
-    if (!parseInstructionPatternOperand(*Pat, DagPat->getArg(K),
-                                        DagPat->getArgName(K)))
-      return nullptr;
-  }
-
-  if (!Pat->checkSemantics(RuleDef.getLoc()))
-    return nullptr;
-
-  return std::move(Pat);
-}
-
-std::unique_ptr<Pattern>
-CombineRuleBuilder::parseWipMatchOpcodeMatcher(const Init &Arg,
-                                               StringRef Name) const {
-  const DagInit *Matcher = getDagWithSpecificOperator(Arg, "wip_match_opcode");
-  if (!Matcher)
-    return nullptr;
-
-  if (Matcher->getNumArgs() == 0) {
-    PrintError("Empty wip_match_opcode");
-    return nullptr;
-  }
-
-  // Each argument is an opcode that can match.
-  auto Result = std::make_unique<AnyOpcodePattern>(Name);
-  for (const auto &Arg : Matcher->getArgs()) {
-    Record *OpcodeDef = getDefOfSubClass(*Arg, "Instruction");
-    if (OpcodeDef) {
-      Result->addOpcode(&CGT.getInstruction(OpcodeDef));
-      continue;
-    }
-
-    PrintError("Arguments to wip_match_opcode must be instructions");
-    return nullptr;
-  }
-
-  return std::move(Result);
-}
-
-bool CombineRuleBuilder::parseInstructionPatternOperand(
-    InstructionPattern &IP, const Init *OpInit,
-    const StringInit *OpName) const {
-  const auto ParseErr = [&]() {
-    PrintError("cannot parse operand '" + OpInit->getAsUnquotedString() + "' ");
-    if (OpName)
-      PrintNote("operand name is '" + OpName->getAsUnquotedString() + "'");
-    return false;
-  };
-
-  // untyped immediate, e.g. 0
-  if (const auto *IntImm = dyn_cast<IntInit>(OpInit)) {
-    std::string Name = OpName ? OpName->getAsUnquotedString() : "";
-    IP.addOperand(IntImm->getValue(), Name, /*Type=*/nullptr);
-    return true;
-  }
-
-  // typed immediate, e.g. (i32 0)
-  if (const auto *DagOp = dyn_cast<DagInit>(OpInit)) {
-    if (DagOp->getNumArgs() != 1)
-      return ParseErr();
-
-    Record *ImmTy = DagOp->getOperatorAsDef(RuleDef.getLoc());
-    if (!ImmTy->isSubClassOf("ValueType")) {
-      PrintError("cannot parse immediate '" + OpInit->getAsUnquotedString() +
-                 "', '" + ImmTy->getName() + "' is not a ValueType!");
-      return false;
-    }
-
-    if (!IP.hasAllDefs()) {
-      PrintError("out operand of '" + IP.getInstName() +
-                 "' cannot be an immediate");
-      return false;
-    }
-
-    const auto *Val = dyn_cast<IntInit>(DagOp->getArg(0));
-    if (!Val)
-      return ParseErr();
-
-    std::string Name = OpName ? OpName->getAsUnquotedString() : "";
-    IP.addOperand(Val->getValue(), Name, ImmTy);
-    return true;
-  }
-
-  // Typed operand e.g. $x/$z in (G_FNEG $x, $z)
-  if (auto *DefI = dyn_cast<DefInit>(OpInit)) {
-    if (!OpName) {
-      PrintError("expected an operand name after '" + OpInit->getAsString() +
-                 "'");
-      return false;
-    }
-    const Record *Def = DefI->getDef();
-    if (!Def->isSubClassOf("ValueType")) {
-      PrintError("invalid operand type: '" + Def->getName() +
-                 "' is not a ValueType");
-      return false;
-    }
-    IP.addOperand(OpName->getAsUnquotedString(), Def);
-    return true;
-  }
-
-  // Untyped operand e.g. $x/$z in (G_FNEG $x, $z)
-  if (isa<UnsetInit>(OpInit)) {
-    assert(OpName && "Unset w/ no OpName?");
-    IP.addOperand(OpName->getAsUnquotedString(), /*Type=*/nullptr);
-    return true;
-  }
-
-  return ParseErr();
-}
-
-std::unique_ptr<PatFrag>
-CombineRuleBuilder::parsePatFragImpl(const Record *Def) const {
-  auto StackTrace = PrettyStackTraceParse(*Def);
-  if (!Def->isSubClassOf(PatFragClassName))
-    return nullptr;
-
-  const DagInit *Ins = Def->getValueAsDag("InOperands");
-  if (Ins->getOperatorAsDef(Def->getLoc())->getName() != "ins") {
-    ::PrintError(Def, "expected 'ins' operator for " + PatFragClassName +
-                          " in operands list");
-    return nullptr;
-  }
-
-  const DagInit *Outs = Def->getValueAsDag("OutOperands");
-  if (Outs->getOperatorAsDef(Def->getLoc())->getName() != "outs") {
-    ::PrintError(Def, "expected 'outs' operator for " + PatFragClassName +
-                          " out operands list");
-    return nullptr;
-  }
-
-  auto Result = std::make_unique<PatFrag>(*Def);
-  if (!parsePatFragParamList(Def->getLoc(), *Outs,
-                             [&](StringRef Name, PatFrag::ParamKind Kind) {
-                               Result->addOutParam(Name, Kind);
-                               return true;
-                             }))
-    return nullptr;
-
-  if (!parsePatFragParamList(Def->getLoc(), *Ins,
-                             [&](StringRef Name, PatFrag::ParamKind Kind) {
-                               Result->addInParam(Name, Kind);
-                               return true;
-                             }))
-    return nullptr;
-
-  const ListInit *Alts = Def->getValueAsListInit("Alternatives");
-  unsigned AltIdx = 0;
-  for (const Init *Alt : *Alts) {
-    const auto *PatDag = dyn_cast<DagInit>(Alt);
-    if (!PatDag) {
-      ::PrintError(Def, "expected dag init for PatFrag pattern alternative");
-      return nullptr;
-    }
-
-    PatFrag::Alternative &A = Result->addAlternative();
-    const auto AddPat = [&](std::unique_ptr<Pattern> Pat) {
-      A.Pats.push_back(std::move(Pat));
-      return true;
-    };
-
-    if (!parsePatternList(
-            *PatDag, AddPat, "pattern", Def->getLoc(),
-            /*AnonPatPrefix*/
-            (Def->getName() + "_alt" + Twine(AltIdx++) + "_pattern").str()))
-      return nullptr;
-  }
-
-  if (!Result->buildOperandsTables() || !Result->checkSemantics())
-    return nullptr;
-
-  return Result;
-}
-
-bool CombineRuleBuilder::parsePatFragParamList(
-    ArrayRef<SMLoc> DiagLoc, const DagInit &OpsList,
-    function_ref<bool(StringRef, PatFrag::ParamKind)> ParseAction) const {
-  for (unsigned K = 0; K < OpsList.getNumArgs(); ++K) {
-    const StringInit *Name = OpsList.getArgName(K);
-    const Init *Ty = OpsList.getArg(K);
-
-    if (!Name) {
-      ::PrintError(DiagLoc, "all operands must be named'");
-      return false;
-    }
-    const std::string NameStr = Name->getAsUnquotedString();
-
-    PatFrag::ParamKind OpKind;
-    if (isSpecificDef(*Ty, "gi_imm"))
-      OpKind = PatFrag::PK_Imm;
-    else if (isSpecificDef(*Ty, "root"))
-      OpKind = PatFrag::PK_Root;
-    else if (isa<UnsetInit>(Ty) ||
-             isSpecificDef(*Ty, "gi_mo")) // no type = gi_mo.
-      OpKind = PatFrag::PK_MachineOperand;
-    else {
-      ::PrintError(
-          DiagLoc,
-          "'" + NameStr +
-              "' operand type was expected to be 'root', 'gi_imm' or 'gi_mo'");
-      return false;
-    }
-
-    if (!ParseAction(NameStr, OpKind))
-      return false;
-  }
-
-  return true;
-}
-
-const PatFrag *CombineRuleBuilder::parsePatFrag(const Record *Def) const {
-  // Cache already parsed PatFrags to avoid doing extra work.
-  static DenseMap<const Record *, std::unique_ptr<PatFrag>> ParsedPatFrags;
-
-  auto It = ParsedPatFrags.find(Def);
-  if (It != ParsedPatFrags.end()) {
-    SeenPatFrags.insert(It->second.get());
-    return It->second.get();
-  }
-
-  std::unique_ptr<PatFrag> NewPatFrag = parsePatFragImpl(Def);
-  if (!NewPatFrag) {
-    ::PrintError(Def, "Could not parse " + PatFragClassName + " '" +
-                          Def->getName() + "'");
-    // Put a nullptr in the map so we don't attempt parsing this again.
-    ParsedPatFrags[Def] = nullptr;
-    return nullptr;
-  }
-
-  const auto *Res = NewPatFrag.get();
-  ParsedPatFrags[Def] = std::move(NewPatFrag);
-  SeenPatFrags.insert(Res);
-  return Res;
-}
-
 bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
                                           const PatternAlternatives &Alts,
                                           const InstructionPattern &IP) {
   auto StackTrace = PrettyStackTraceEmit(RuleDef, &IP);
 
   auto &M = addRuleMatcher(Alts);
-  InstructionMatcher &IM = M.addInstructionMatcher("root");
+  InstructionMatcher &IM = M.addInstructionMatcher(IP.getName());
   declareInstExpansion(CE, IM, IP.getName());
 
   DenseSet<const Pattern *> SeenPats;
@@ -2809,7 +1644,8 @@ bool CombineRuleBuilder::emitPatFragMatchPattern(
     if (PIdx == (unsigned)-1) {
       // This is a temp of the PatFragPattern, prefix the name to avoid
       // conflicts.
-      return O.withNewName((PFP.getName() + "." + ParamName).str());
+      return O.withNewName(
+          insertStrRef((PFP.getName() + "." + ParamName).str()));
     }
 
     // The operand will be added to PatFragCEs's code expansions using the
@@ -2823,8 +1659,8 @@ bool CombineRuleBuilder::emitPatFragMatchPattern(
       StringRef PFName = PF.getName();
       PrintWarning("impossible type constraints: operand " + Twine(PIdx) +
                    " of '" + PFP.getName() + "' has type '" +
-                   ArgOp.getType()->getName() + "', but '" + PFName +
-                   "' constrains it to '" + O.getType()->getName() + "'");
+                   ArgOp.getType().str() + "', but '" + PFName +
+                   "' constrains it to '" + O.getType().str() + "'");
       if (ArgOp.isNamedOperand())
         PrintNote("operand " + Twine(PIdx) + " of '" + PFP.getName() +
                   "' is '" + ArgOp.getOperandName() + "'");
@@ -2936,6 +1772,11 @@ bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
     }
   }
 
+  // Erase the root.
+  unsigned RootInsnID =
+      M.getInsnVarID(M.getInstructionMatcher(MatchRoot->getName()));
+  M.addAction<EraseInstAction>(RootInsnID);
+
   return true;
 }
 
@@ -2983,7 +1824,18 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
   auto &DstMI =
       M.addAction<BuildMIAction>(M.allocateOutputInsnID(), &CGIP.getInst());
 
+  bool HasEmittedIntrinsicID = false;
+  const auto EmitIntrinsicID = [&]() {
+    assert(CGIP.isIntrinsic());
+    DstMI.addRenderer<IntrinsicIDRenderer>(CGIP.getIntrinsic());
+    HasEmittedIntrinsicID = true;
+  };
+
   for (auto &Op : P.operands()) {
+    // Emit the intrinsic ID after the last def.
+    if (CGIP.isIntrinsic() && !Op.isDef() && !HasEmittedIntrinsicID)
+      EmitIntrinsicID();
+
     if (Op.isNamedImmediate()) {
       PrintError("invalid output operand '" + Op.getOperandName() +
                  "': output immediates cannot be named");
@@ -3055,24 +1907,45 @@ bool CombineRuleBuilder::emitInstructionApplyPattern(
       // This is a brand new register.
       TempRegID = M.allocateTempRegID();
       OperandToTempRegID[OpName] = TempRegID;
-      const Record *Ty = Op.getType();
+      const auto Ty = Op.getType();
       if (!Ty) {
         PrintError("def of a new register '" + OpName +
                    "' in the apply patterns must have a type");
         return false;
       }
+
       declareTempRegExpansion(CE, TempRegID, OpName);
       // Always insert the action at the beginning, otherwise we may end up
       // using the temp reg before it's available.
       M.insertAction<MakeTempRegisterAction>(
-          M.actions_begin(), getLLTCodeGenFromRecord(Ty), TempRegID);
+          M.actions_begin(), getLLTCodeGenOrTempType(Ty, M), TempRegID);
     }
 
-    DstMI.addRenderer<TempRegRenderer>(TempRegID);
+    DstMI.addRenderer<TempRegRenderer>(TempRegID, /*IsDef=*/true);
   }
 
-  // TODO: works?
-  DstMI.chooseInsnToMutate(M);
+  // Some intrinsics have no in operands, ensure the ID is still emitted in such
+  // cases.
+  if (CGIP.isIntrinsic() && !HasEmittedIntrinsicID)
+    EmitIntrinsicID();
+
+  // Render MIFlags
+  if (const auto *FI = CGIP.getMIFlagsInfo()) {
+    for (StringRef InstName : FI->copy_flags())
+      DstMI.addCopiedMIFlags(M.getInstructionMatcher(InstName));
+    for (StringRef F : FI->set_flags())
+      DstMI.addSetMIFlags(F);
+    for (StringRef F : FI->unset_flags())
+      DstMI.addUnsetMIFlags(F);
+  }
+
+  // Don't allow mutating opcodes for GISel combiners. We want a more precise
+  // handling of MIFlags so we require them to be explicitly preserved.
+  //
+  // TODO: We don't mutate very often, if at all in combiners, but it'd be nice
+  // to re-enable this. We'd then need to always clear MIFlags when mutating
+  // opcodes, and never mutate an inst that we copy flags from.
+  // DstMI.chooseInsnToMutate(M);
   declareInstExpansion(CE, DstMI, P.getName());
 
   return true;
@@ -3088,7 +1961,7 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
   // G_CONSTANT is a special case and needs a CImm though so this is likely a
   // mistake.
   const bool isGConstant = P.is("G_CONSTANT");
-  const Record *Ty = O.getType();
+  const auto Ty = O.getType();
   if (!Ty) {
     if (isGConstant) {
       PrintError("'G_CONSTANT' immediate must be typed!");
@@ -3101,16 +1974,17 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
     return true;
   }
 
-  LLTCodeGen LLT = getLLTCodeGenFromRecord(Ty);
+  auto ImmTy = getLLTCodeGenOrTempType(Ty, M);
+
   if (isGConstant) {
-    DstMI.addRenderer<ImmRenderer>(O.getImmValue(), LLT);
+    DstMI.addRenderer<ImmRenderer>(O.getImmValue(), ImmTy);
     return true;
   }
 
   unsigned TempRegID = M.allocateTempRegID();
   // Ensure MakeTempReg & the BuildConstantAction occur at the beginning.
-  auto InsertIt =
-      M.insertAction<MakeTempRegisterAction>(M.actions_begin(), LLT, TempRegID);
+  auto InsertIt = M.insertAction<MakeTempRegisterAction>(M.actions_begin(),
+                                                         ImmTy, TempRegID);
   M.insertAction<BuildConstantAction>(++InsertIt, TempRegID, O.getImmValue());
   DstMI.addRenderer<TempRegRenderer>(TempRegID);
   return true;
@@ -3152,12 +2026,6 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
     // checkSemantics should have ensured that we can only rewrite the root.
     // Ensure we're deleting it.
     assert(MatchOpTable.getDef(Old) == MatchRoot);
-    // TODO: We could avoid adding the action again if it's already in. The
-    // MatchTable is smart enough to only emit one opcode even if
-    // EraseInstAction is present multiple times. I think searching for a copy
-    // is more expensive than just blindly adding it though.
-    M.addAction<EraseInstAction>(/*InsnID*/ 0);
-
     return true;
   }
   }
@@ -3190,7 +2058,26 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
   IM.addPredicate<InstructionOpcodeMatcher>(&P.getInst());
   declareInstExpansion(CE, IM, P.getName());
 
-  for (const auto &[Idx, OriginalO] : enumerate(P.operands())) {
+  // If this is an intrinsic, check the intrinsic ID.
+  if (P.isIntrinsic()) {
+    // The IntrinsicID's operand is the first operand after the defs.
+    OperandMatcher &OM = IM.addOperand(P.getNumInstDefs(), "$intrinsic_id",
+                                       AllocatedTemporariesBaseID++);
+    OM.addPredicate<IntrinsicIDOperandMatcher>(P.getIntrinsic());
+  }
+
+  // Check flags if needed.
+  if (const auto *FI = P.getMIFlagsInfo()) {
+    assert(FI->copy_flags().empty());
+
+    if (const auto &SetF = FI->set_flags(); !SetF.empty())
+      IM.addPredicate<MIFlagsInstructionPredicateMatcher>(SetF.getArrayRef());
+    if (const auto &UnsetF = FI->unset_flags(); !UnsetF.empty())
+      IM.addPredicate<MIFlagsInstructionPredicateMatcher>(UnsetF.getArrayRef(),
+                                                          /*CheckNot=*/true);
+  }
+
+  for (auto [Idx, OriginalO] : enumerate(P.operands())) {
     // Remap the operand. This is used when emitting InstructionPatterns inside
     // PatFrags, so it can remap them to the arguments passed to the pattern.
     //
@@ -3205,8 +2092,17 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
 
     const auto OpName =
         RemappedO.isNamedOperand() ? RemappedO.getOperandName().str() : "";
+
+    // For intrinsics, the first use operand is the intrinsic id, so the true
+    // operand index is shifted by 1.
+    //
+    // From now on:
+    //    Idx = index in the pattern operand list.
+    //    RealIdx = expected index in the MachineInstr.
+    const unsigned RealIdx =
+        (P.isIntrinsic() && !OriginalO.isDef()) ? (Idx + 1) : Idx;
     OperandMatcher &OM =
-        IM.addOperand(Idx, OpName, AllocatedTemporariesBaseID++);
+        IM.addOperand(RealIdx, OpName, AllocatedTemporariesBaseID++);
     if (!OpName.empty())
       declareOperandExpansion(CE, OM, OriginalO.getOperandName());
 
@@ -3227,8 +2123,14 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
     // Always emit a check for unnamed operands.
     if (OpName.empty() ||
         !M.getOperandMatcher(OpName).contains<LLTOperandMatcher>()) {
-      if (const Record *Ty = RemappedO.getType())
-        OM.addPredicate<LLTOperandMatcher>(getLLTCodeGenFromRecord(Ty));
+      if (const auto Ty = RemappedO.getType()) {
+        // TODO: We could support GITypeOf here on the condition that the
+        // OperandMatcher exists already. Though it's clunky to make this work
+        // and isn't all that useful so it's just rejected in typecheckPatterns
+        // at this time.
+        assert(Ty.isLLT() && "Only LLTs are supported in match patterns!");
+        OM.addPredicate<LLTOperandMatcher>(getLLTCodeGen(Ty));
+      }
     }
 
     // Stop here if the operand is a def, or if it had no name.
@@ -3557,7 +2459,8 @@ void GICombinerEmitter::emitRunCustomAction(raw_ostream &OS) {
     OS << "  switch(ApplyID) {\n";
     for (const auto &Apply : ApplyCode) {
       OS << "  case " << Apply->getEnumNameWithPrefix(CXXApplyPrefix) << ":{\n"
-         << "    " << join(split(Apply->Code, "\n"), "\n    ") << "\n"
+         << "    Helper.getBuilder().setInstrAndDebugLoc(*State.MIs[0]);\n"
+         << "    " << join(split(Apply->Code, '\n'), "\n    ") << '\n'
          << "    return;\n";
       OS << "  }\n";
     }

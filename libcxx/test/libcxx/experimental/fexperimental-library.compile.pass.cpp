@@ -27,3 +27,7 @@
 #ifdef _LIBCPP_HAS_NO_INCOMPLETE_TZDB
 #  error "-fexperimental-library should enable the chrono TZDB"
 #endif
+
+#ifdef _LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM
+#  error "-fexperimental-library should enable the syncstream header"
+#endif

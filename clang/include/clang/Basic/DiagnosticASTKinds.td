@@ -317,7 +317,7 @@ def note_constexpr_memcpy_unsupported : Note<
   "source is not a contiguous array of at least %4 elements of type %3|"
   "destination is not a contiguous array of at least %4 elements of type %3}2">;
 def note_constexpr_bit_cast_unsupported_type : Note<
-  "constexpr bit_cast involving type %0 is not yet supported">;
+  "constexpr bit cast involving type %0 is not yet supported">;
 def note_constexpr_bit_cast_unsupported_bitfield : Note<
   "constexpr bit_cast involving bit-field is not yet supported">;
 def note_constexpr_bit_cast_invalid_type : Note<
@@ -326,6 +326,9 @@ def note_constexpr_bit_cast_invalid_type : Note<
   "%select{type|member}1 is not allowed in a constant expression">;
 def note_constexpr_bit_cast_invalid_subtype : Note<
   "invalid type %0 is a %select{member|base}1 of %2">;
+def note_constexpr_bit_cast_invalid_vector : Note<
+  "bit_cast involving type %0 is not allowed in a constant expression; "
+  "element size %1 * element count %2 is not a multiple of the byte size %3">;
 def note_constexpr_bit_cast_indet_dest : Note<
   "indeterminate value can only initialize an object of type 'unsigned char'"
   "%select{, 'char',|}1 or 'std::byte'; %0 is invalid">;
@@ -396,6 +399,8 @@ def note_constexpr_unsupported_flexible_array : Note<
   "flexible array initialization is not yet supported">;
 def note_constexpr_non_const_vectorelements : Note<
   "cannot determine number of elements for sizeless vectors in a constant expression">;
+def note_constexpr_assumption_failed : Note<
+  "assumption evaluated to false">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 
@@ -995,6 +1000,16 @@ def warn_npot_ms_struct : Warning<
   "data types with sizes that aren't a power of two">,
   DefaultError, InGroup<IncompatibleMSStruct>;
 
+// -Wpadded-bitfield
+def warn_padded_struct_bitfield : Warning<
+  "padding %select{struct|interface|class}0 %1 with %2 "
+  "%select{byte|bit}3%s2 to align %4">,
+  InGroup<PaddedBitField>, DefaultIgnore;
+def warn_padded_struct_anon_bitfield : Warning<
+  "padding %select{struct|interface|class}0 %1 with %2 "
+  "%select{byte|bit}3%s2 to align anonymous bit-field">,
+  InGroup<PaddedBitField>, DefaultIgnore;
+
 // -Wpadded, -Wpacked
 def warn_padded_struct_field : Warning<
   "padding %select{struct|interface|class}0 %1 with %2 "
@@ -1002,7 +1017,7 @@ def warn_padded_struct_field : Warning<
   InGroup<Padded>, DefaultIgnore;
 def warn_padded_struct_anon_field : Warning<
   "padding %select{struct|interface|class}0 %1 with %2 "
-  "%select{byte|bit}3%s2 to align anonymous bit-field">,
+  "%select{byte|bit}3%s2 to align anonymous field">,
   InGroup<Padded>, DefaultIgnore;
 def warn_padded_struct_size : Warning<
   "padding size of %0 with %1 %select{byte|bit}2%s1 to alignment boundary">,

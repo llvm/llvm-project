@@ -1,4 +1,4 @@
-! RUN: bbc --emit-fir %s -o - | FileCheck %s
+! RUN: bbc --emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Test generation of dense attributed global array. Also, make sure there are
 ! no dead ssa assignments.

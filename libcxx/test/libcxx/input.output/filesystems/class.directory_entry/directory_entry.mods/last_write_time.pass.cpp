@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: availability-filesystem-missing
 // UNSUPPORTED: no-filesystem
-// ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../../../src
+// ADDITIONAL_COMPILE_FLAGS: -I %{libcxx-dir}/src
 
 // This test relies on calling functions from the libcxx internal headers
 // of <filesystem>; the Windows implementation uses different
@@ -18,13 +18,13 @@
 // UNSUPPORTED: windows
 
 // This test assumes that time is stored as a 64 bit value when on MVS it is stored as 32 bit
-// UNSUPPORTED: target={{.+}}-zos{{.*}}
+// XFAIL: target={{.+}}-zos{{.*}}
 
 // <filesystem>
 
 // class directory_entry
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
@@ -34,6 +34,7 @@
 
 #include "filesystem/time_utils.h"
 
+namespace fs = std::filesystem;
 using namespace fs::detail;
 
 static void last_write_time_not_representable_error() {

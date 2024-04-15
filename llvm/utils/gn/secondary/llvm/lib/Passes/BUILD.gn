@@ -8,6 +8,7 @@ static_library("Passes") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Transforms/AggressiveInstCombine",
+    "//llvm/lib/Transforms/CFGuard",
     "//llvm/lib/Transforms/Coroutines",
     "//llvm/lib/Transforms/HipStdPar",
     "//llvm/lib/Transforms/IPO",
@@ -19,6 +20,7 @@ static_library("Passes") {
     "//llvm/lib/Transforms/Vectorize",
   ]
   sources = [
+    "CodeGenPassBuilder.cpp",
     "OptimizationLevel.cpp",
     "PassBuilder.cpp",
     "PassBuilderBindings.cpp",

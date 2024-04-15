@@ -57,7 +57,7 @@ void Generator::parseCommandArgs(llvm::StringRef ArgStr, ArgVector &Args) {
   ArgStr.split(Args, ",");
   for (llvm::StringRef &A : Args) {
     A = A.trim(' ');
-    if (A.startswith(ParamNamePrefix) && A.endswith(ParamNameSuffix)) {
+    if (A.starts_with(ParamNamePrefix) && A.ends_with(ParamNameSuffix)) {
       A = A.drop_front(ParamNamePrefixSize).drop_back(ParamNameSuffixSize);
       A = ArgMap[std::string(A)];
     }
@@ -80,15 +80,23 @@ void Generator::generate(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
     Content = P.second;
 
     llvm::StringRef Line = P.first.trim(' ');
-    if (Line.startswith(CommandPrefix)) {
+    if (Line.starts_with(CommandPrefix)) {
       Line = Line.drop_front(CommandPrefixSize);
 
       P = Line.split("(");
+      // It's possible that we have windows line endings, so strip off the extra
+      // CR.
+      P.second = P.second.trim();
       if (P.second.empty() || P.second[P.second.size() - 1] != ')') {
         SrcMgr.PrintMessage(llvm::SMLoc::getFromPointer(P.second.data()),
                             llvm::SourceMgr::DK_Error,
                             "Command argument list should begin with '(' "
                             "and end with ')'.");
+        SrcMgr.PrintMessage(llvm::SMLoc::getFromPointer(P.second.data()),
+                            llvm::SourceMgr::DK_Error, P.second.data());
+        SrcMgr.PrintMessage(llvm::SMLoc::getFromPointer(P.second.data()),
+                            llvm::SourceMgr::DK_Error,
+                            std::to_string(P.second.size()));
         std::exit(1);
       }
       llvm::StringRef CommandName = P.first;
@@ -107,7 +115,7 @@ void Generator::generate(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
       Command::ErrorReporter Reporter(
           llvm::SMLoc::getFromPointer(CommandName.data()), SrcMgr);
       Cmd->run(OS, Args, StdHeader, Records, Reporter);
-    } else if (!Line.startswith(CommentPrefix)) {
+    } else if (!Line.starts_with(CommentPrefix)) {
       // There is no comment or command on this line so we just write it as is.
       OS << P.first << "\n";
     }

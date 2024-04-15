@@ -37,22 +37,22 @@ target triple = "dxil-pc-shadermodel6.0-library"
 
 !hlsl.uavs = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9}
 
-!0 = !{ptr @Zero, !"RWBuffer<half>", i32 10, i32 0, i32 0}
-!1 = !{ptr @One, !"Buffer<vector<float,4>>", i32 10, i32 1, i32 0}
-!2 = !{ptr @Two, !"Buffer<double>", i32 10, i32 2, i32 0}
-!3 = !{ptr @Three, !"Buffer<bool>", i32 10, i32 3, i32 0}
-!4 = !{ptr @Four, !"ByteAddressBuffer<int16_t>", i32 11, i32 5, i32 0}
-!5 = !{ptr @Five, !"StructuredBuffer<uint16_t>", i32 12, i32 6, i32 0}
-!6 = !{ptr @Six, !"RasterizerOrderedBuffer<int32_t>", i32 10, i32 7, i32 0}
-!7 = !{ptr @Seven, !"RasterizerOrderedStructuredBuffer<uint32_t>", i32 12, i32 8, i32 0}
-!8 = !{ptr @Eight, !"RasterizerOrderedByteAddressBuffer<int64_t>", i32 11, i32 9, i32 0}
-!9 = !{ptr @Nine, !"RWBuffer<uint64_t>", i32 10, i32 10, i32 2}
+!0 = !{ptr @Zero, i32 10, i32 8, i1 false, i32 0, i32 0}
+!1 = !{ptr @One, i32 10, i32 9, i1 false, i32 1, i32 0}
+!2 = !{ptr @Two, i32 10, i32 10, i1 false, i32 2, i32 0}
+!3 = !{ptr @Three, i32 10, i32 1, i1 false, i32 3, i32 0}
+!4 = !{ptr @Four, i32 11, i32 2, i1 false, i32 5, i32 0}
+!5 = !{ptr @Five, i32 12, i32 3, i1 false, i32 6, i32 0}
+!6 = !{ptr @Six, i32 10, i32 4, i1 true, i32 7, i32 0}
+!7 = !{ptr @Seven, i32 12, i32 5, i1 true, i32 8, i32 0}
+!8 = !{ptr @Eight, i32 11, i32 6, i1 true, i32 9, i32 0}
+!9 = !{ptr @Nine, i32 10, i32 7, i1 false, i32 10, i32 2}
 
 ; CHECK: !dx.resources = !{[[ResList:[!][0-9]+]]}
 
 ; CHECK: [[ResList]] = !{null, [[UAVList:[!][0-9]+]], null, null}
 ; CHECK: [[UAVList]] = !{[[Zero:[!][0-9]+]], [[One:[!][0-9]+]],
-; CHECK-SAME: [[Two:[!][0-9]+]], [[Three:[!][0-9]+]], [[Four:[!][0-9]+]], 
+; CHECK-SAME: [[Two:[!][0-9]+]], [[Three:[!][0-9]+]], [[Four:[!][0-9]+]],
 ; CHECK-SAME: [[Five:[!][0-9]+]], [[Six:[!][0-9]+]], [[Seven:[!][0-9]+]],
 ; CHECK-SAME: [[Eight:[!][0-9]+]], [[Nine:[!][0-9]+]]}
 ; CHECK: [[Zero]] = !{i32 0, ptr @Zero, !"", i32 0, i32 0, i32 1, i32 10, i1 false, i1 false, i1 false, [[Half:[!][0-9]+]]}

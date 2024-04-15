@@ -56,7 +56,7 @@
          "true" "false" "null" "undef" "zeroinitializer" "none" "c" "asm" "blockaddress" "poison"
 
          ;; Calling conventions
-         "ccc" "fastcc" "coldcc" "webkit_jscc" "anyregcc" "preserve_mostcc" "preserve_allcc"
+         "ccc" "fastcc" "coldcc" "anyregcc" "preserve_mostcc" "preserve_allcc"
          "cxx_fast_tlscc" "swiftcc" "tailcc" "swifttailcc" "cfguard_checkcc"
          ;; Visibility styles
          "default" "hidden" "protected"

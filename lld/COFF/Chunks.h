@@ -18,6 +18,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/WindowsMachineFlag.h"
 #include <utility>
 #include <vector>
 
@@ -116,7 +117,8 @@ public:
   bool isHotPatchable() const;
 
   MachineTypes getMachine() const;
-  chpe_range_type getArm64ECRangeType() const;
+  llvm::Triple::ArchType getArch() const;
+  std::optional<chpe_range_type> getArm64ECRangeType() const;
 
 protected:
   Chunk(Kind k = OtherKind) : chunkKind(k), hasData(true), p2Align(0) {}
@@ -178,6 +180,16 @@ public:
 
 protected:
   NonSectionChunk(Kind k = OtherKind) : Chunk(k) {}
+};
+
+class NonSectionCodeChunk : public NonSectionChunk {
+public:
+  virtual uint32_t getOutputCharacteristics() const override {
+    return llvm::COFF::IMAGE_SCN_MEM_READ | llvm::COFF::IMAGE_SCN_MEM_EXECUTE;
+  }
+
+protected:
+  NonSectionCodeChunk(Kind k = OtherKind) : NonSectionChunk(k) {}
 };
 
 // MinGW specific; information about one individual location in the image
@@ -427,7 +439,15 @@ inline MachineTypes Chunk::getMachine() const {
   return static_cast<const NonSectionChunk *>(this)->getMachine();
 }
 
-inline chpe_range_type Chunk::getArm64ECRangeType() const {
+inline llvm::Triple::ArchType Chunk::getArch() const {
+  return llvm::getMachineArchType(getMachine());
+}
+
+inline std::optional<chpe_range_type> Chunk::getArm64ECRangeType() const {
+  // Data sections don't need codemap entries.
+  if (!(getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE))
+    return std::nullopt;
+
   switch (getMachine()) {
   case AMD64:
     return chpe_range_type::Amd64;
@@ -508,10 +528,10 @@ static const uint8_t importThunkARM64[] = {
 // Windows-specific.
 // A chunk for DLL import jump table entry. In a final output, its
 // contents will be a JMP instruction to some __imp_ symbol.
-class ImportThunkChunk : public NonSectionChunk {
+class ImportThunkChunk : public NonSectionCodeChunk {
 public:
   ImportThunkChunk(COFFLinkerContext &ctx, Defined *s)
-      : NonSectionChunk(ImportThunkKind), impSymbol(s), ctx(ctx) {}
+      : NonSectionCodeChunk(ImportThunkKind), impSymbol(s), ctx(ctx) {}
   static bool classof(const Chunk *c) { return c->kind() == ImportThunkKind; }
 
 protected:
@@ -560,7 +580,7 @@ public:
   MachineTypes getMachine() const override { return ARM64; }
 };
 
-class RangeExtensionThunkARM : public NonSectionChunk {
+class RangeExtensionThunkARM : public NonSectionCodeChunk {
 public:
   explicit RangeExtensionThunkARM(COFFLinkerContext &ctx, Defined *t)
       : target(t), ctx(ctx) {
@@ -576,7 +596,7 @@ private:
   COFFLinkerContext &ctx;
 };
 
-class RangeExtensionThunkARM64 : public NonSectionChunk {
+class RangeExtensionThunkARM64 : public NonSectionCodeChunk {
 public:
   explicit RangeExtensionThunkARM64(COFFLinkerContext &ctx, Defined *t)
       : target(t), ctx(ctx) {
@@ -687,6 +707,27 @@ public:
   EmptyChunk() {}
   size_t getSize() const override { return 0; }
   void writeTo(uint8_t *buf) const override {}
+};
+
+class ECCodeMapEntry {
+public:
+  ECCodeMapEntry(Chunk *first, Chunk *last, chpe_range_type type)
+      : first(first), last(last), type(type) {}
+  Chunk *first;
+  Chunk *last;
+  chpe_range_type type;
+};
+
+// This is a chunk containing CHPE code map on EC targets. It's a table
+// of address ranges and their types.
+class ECCodeMapChunk : public NonSectionChunk {
+public:
+  ECCodeMapChunk(std::vector<ECCodeMapEntry> &map) : map(map) {}
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) const override;
+
+private:
+  std::vector<ECCodeMapEntry> &map;
 };
 
 // MinGW specific, for the "automatic import of variables from DLLs" feature.

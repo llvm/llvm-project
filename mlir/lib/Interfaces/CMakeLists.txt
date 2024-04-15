@@ -16,6 +16,7 @@ set(LLVM_OPTIONAL_SOURCES
   RuntimeVerifiableOpInterface.cpp
   ShapedOpInterfaces.cpp
   SideEffectInterfaces.cpp
+  SubsetOpInterface.cpp
   TilingInterface.cpp
   ValueBoundsOpInterface.cpp
   VectorInterfaces.cpp
@@ -82,7 +83,38 @@ add_mlir_interface_library(ParallelCombiningOpInterface)
 add_mlir_interface_library(RuntimeVerifiableOpInterface)
 add_mlir_interface_library(ShapedOpInterfaces)
 add_mlir_interface_library(SideEffectInterfaces)
-add_mlir_interface_library(TilingInterface)
+
+add_mlir_library(MLIRSubsetOpInterface
+  SubsetOpInterface.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+
+  DEPENDS
+  MLIRDestinationStyleOpInterface
+  MLIRSubsetOpInterfaceIncGen
+  MLIRValueBoundsOpInterface
+
+  LINK_LIBS PUBLIC
+  MLIRDestinationStyleOpInterface
+  MLIRIR
+  MLIRValueBoundsOpInterface
+  )
+
+add_mlir_library(MLIRTilingInterface
+  TilingInterface.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+
+  DEPENDS
+  MLIRTilingInterfaceIncGen
+  MLIRDialectUtils
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+)
+
 add_mlir_interface_library(VectorInterfaces)
 add_mlir_interface_library(ViewLikeInterface)
 
@@ -95,6 +127,7 @@ add_mlir_library(MLIRValueBoundsOpInterface
   DEPENDS
   MLIRDestinationStyleOpInterface
   MLIRValueBoundsOpInterfaceIncGen
+  MLIRViewLikeInterface
 
   LINK_LIBS PUBLIC
   MLIRAnalysis

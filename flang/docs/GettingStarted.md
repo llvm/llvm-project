@@ -88,6 +88,10 @@ cmake \
 ninja
 ```
 
+On Darwin, to make flang able to link binaries with the default sysroot without
+having to specify additional flags, use the `DEFAULT_SYSROOT` CMake flag, e.g.
+`-DDEFAULT_SYSROOT="$(xcrun --show-sdk-path)"`.
+
 By default flang tests that do not specify an explicit `--target` flag use
 LLVM's default target triple. For these tests, if there is a need to test on a
 different triple by overriding the default, the following needs to be added to
@@ -247,7 +251,7 @@ code.  Note that the packaging of the libraries is different
 between [Clang](https://clang.llvm.org/docs/OffloadingDesign.html#linking-target-device-code) and NVCC, so the library must be linked using
 compatible compiler drivers.
 
-### Bulding in-tree
+#### Building in-tree
 One may build Flang runtime library along with building Flang itself
 by providing these additional CMake variables on top of the Flang in-tree
 build config:
@@ -299,6 +303,16 @@ The resulting library may be linked to user programs using
 Clang-like device linking pipeline.
 
 The same set of CMake variables works for Flang in-tree build.
+
+### Build options
+
+One may provide optional CMake variables to customize the build. Available options:
+
+* `-DFLANG_RUNTIME_F128_MATH_LIB=libquadmath`: enables build of
+  `FortranFloat128Math` library that provides `REAL(16)` math APIs
+  for intrinsics such as `SIN`, `COS`, etc. GCC `libquadmath`'s header file
+  `quadmath.h` must be available to the build compiler.
+  [More details](Real16MathSupport.md).
 
 ## Supported C++ compilers
 

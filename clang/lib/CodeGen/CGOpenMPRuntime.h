@@ -1068,13 +1068,12 @@ public:
   /// \param Loc Location of the reference to threadprivate var.
   /// \return Address of the threadprivate variable for the current thread.
   virtual Address getAddrOfThreadPrivate(CodeGenFunction &CGF,
-                                         const VarDecl *VD,
-                                         Address VDAddr,
+                                         const VarDecl *VD, Address VDAddr,
                                          SourceLocation Loc);
 
   /// Returns the address of the variable marked as declare target with link
   /// clause OR as declare target with to clause and unified memory.
-  virtual Address getAddrOfDeclareTargetVar(const VarDecl *VD);
+  virtual ConstantAddress getAddrOfDeclareTargetVar(const VarDecl *VD);
 
   /// Emit a code for initialization of threadprivate variable. It emits
   /// a call to runtime library which adds initial value to the newly created
@@ -1088,14 +1087,6 @@ public:
   emitThreadPrivateVarDefinition(const VarDecl *VD, Address VDAddr,
                                  SourceLocation Loc, bool PerformInit,
                                  CodeGenFunction *CGF = nullptr);
-
-  /// Emit a code for initialization of declare target variable.
-  /// \param VD Declare target variable.
-  /// \param Addr Address of the global variable \a VD.
-  /// \param PerformInit true if initialization expression is not constant.
-  virtual bool emitDeclareTargetVarDefinition(const VarDecl *VD,
-                                              llvm::GlobalVariable *Addr,
-                                              bool PerformInit);
 
   /// Emit code for handling declare target functions in the runtime.
   /// \param FD Declare target function.
@@ -1414,10 +1405,6 @@ public:
   /// if it was emitted successfully.
   /// \param GD Global to scan.
   virtual bool emitTargetGlobal(GlobalDecl GD);
-
-  /// Creates and returns a registration function for when at least one
-  /// requires directives was used in the current module.
-  llvm::Function *emitRequiresDirectiveRegFun();
 
   /// Creates all the offload entries in the current compilation unit
   /// along with the associated metadata.

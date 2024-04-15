@@ -115,6 +115,8 @@ public:
            const SourceLocation *Locs, ASTContext &Ctx);
 };
 
+enum class ObjCImplementationControl { None, Required, Optional };
+
 /// ObjCMethodDecl - Represents an instance or class method declaration.
 /// ObjC methods can be declared within 4 contexts: class interfaces,
 /// categories, protocols, and class implementations. While C++ member
@@ -139,10 +141,6 @@ class ObjCMethodDecl : public NamedDecl, public DeclContext {
   // This class stores some data in DeclContext::ObjCMethodDeclBits
   // to save some space. Use the provided accessors to access it.
 
-public:
-  enum ImplementationControl { None, Required, Optional };
-
-private:
   /// Return type of this method.
   QualType MethodDeclType;
 
@@ -168,14 +166,14 @@ private:
   /// constructed by createImplicitParams.
   ImplicitParamDecl *CmdDecl = nullptr;
 
-  ObjCMethodDecl(SourceLocation beginLoc, SourceLocation endLoc,
-                 Selector SelInfo, QualType T, TypeSourceInfo *ReturnTInfo,
-                 DeclContext *contextDecl, bool isInstance = true,
-                 bool isVariadic = false, bool isPropertyAccessor = false,
-                 bool isSynthesizedAccessorStub = false,
-                 bool isImplicitlyDeclared = false, bool isDefined = false,
-                 ImplementationControl impControl = None,
-                 bool HasRelatedResultType = false);
+  ObjCMethodDecl(
+      SourceLocation beginLoc, SourceLocation endLoc, Selector SelInfo,
+      QualType T, TypeSourceInfo *ReturnTInfo, DeclContext *contextDecl,
+      bool isInstance = true, bool isVariadic = false,
+      bool isPropertyAccessor = false, bool isSynthesizedAccessorStub = false,
+      bool isImplicitlyDeclared = false, bool isDefined = false,
+      ObjCImplementationControl impControl = ObjCImplementationControl::None,
+      bool HasRelatedResultType = false);
 
   SelectorLocationsKind getSelLocsKind() const {
     return static_cast<SelectorLocationsKind>(ObjCMethodDeclBits.SelLocsKind);
@@ -235,7 +233,7 @@ public:
          bool isVariadic = false, bool isPropertyAccessor = false,
          bool isSynthesizedAccessorStub = false,
          bool isImplicitlyDeclared = false, bool isDefined = false,
-         ImplementationControl impControl = None,
+         ObjCImplementationControl impControl = ObjCImplementationControl::None,
          bool HasRelatedResultType = false);
 
   static ObjCMethodDecl *CreateDeserialized(ASTContext &C, unsigned ID);
@@ -495,16 +493,17 @@ public:
   const ObjCPropertyDecl *findPropertyDecl(bool CheckOverrides = true) const;
 
   // Related to protocols declared in  \@protocol
-  void setDeclImplementation(ImplementationControl ic) {
-    ObjCMethodDeclBits.DeclImplementation = ic;
+  void setDeclImplementation(ObjCImplementationControl ic) {
+    ObjCMethodDeclBits.DeclImplementation = llvm::to_underlying(ic);
   }
 
-  ImplementationControl getImplementationControl() const {
-    return ImplementationControl(ObjCMethodDeclBits.DeclImplementation);
+  ObjCImplementationControl getImplementationControl() const {
+    return static_cast<ObjCImplementationControl>(
+        ObjCMethodDeclBits.DeclImplementation);
   }
 
   bool isOptional() const {
-    return getImplementationControl() == Optional;
+    return getImplementationControl() == ObjCImplementationControl::Optional;
   }
 
   /// Returns true if this specific method declaration is marked with the
@@ -581,6 +580,7 @@ class ObjCTypeParamDecl : public TypedefNameDecl {
   unsigned Index : 14;
 
   /// The variance of the type parameter.
+  LLVM_PREFERRED_TYPE(ObjCTypeParamVariance)
   unsigned Variance : 2;
 
   /// The location of the variance, if any.
@@ -742,10 +742,13 @@ private:
 
   QualType DeclType;
   TypeSourceInfo *DeclTypeSourceInfo;
+  LLVM_PREFERRED_TYPE(ObjCPropertyAttribute::Kind)
   unsigned PropertyAttributes : NumObjCPropertyAttrsBits;
+  LLVM_PREFERRED_TYPE(ObjCPropertyAttribute::Kind)
   unsigned PropertyAttributesAsWritten : NumObjCPropertyAttrsBits;
 
   // \@required/\@optional
+  LLVM_PREFERRED_TYPE(PropertyControl)
   unsigned PropertyImplementation : 2;
 
   // getter name of NULL if no getter
@@ -769,7 +772,7 @@ private:
   // Synthesize ivar for this property
   ObjCIvarDecl *PropertyIvarDecl = nullptr;
 
-  ObjCPropertyDecl(DeclContext *DC, SourceLocation L, IdentifierInfo *Id,
+  ObjCPropertyDecl(DeclContext *DC, SourceLocation L, const IdentifierInfo *Id,
                    SourceLocation AtLocation, SourceLocation LParenLocation,
                    QualType T, TypeSourceInfo *TSI, PropertyControl propControl)
       : NamedDecl(ObjCProperty, DC, L, Id), AtLoc(AtLocation),
@@ -779,10 +782,12 @@ private:
         PropertyImplementation(propControl) {}
 
 public:
-  static ObjCPropertyDecl *
-  Create(ASTContext &C, DeclContext *DC, SourceLocation L, IdentifierInfo *Id,
-         SourceLocation AtLocation, SourceLocation LParenLocation, QualType T,
-         TypeSourceInfo *TSI, PropertyControl propControl = None);
+  static ObjCPropertyDecl *Create(ASTContext &C, DeclContext *DC,
+                                  SourceLocation L, const IdentifierInfo *Id,
+                                  SourceLocation AtLocation,
+                                  SourceLocation LParenLocation, QualType T,
+                                  TypeSourceInfo *TSI,
+                                  PropertyControl propControl = None);
 
   static ObjCPropertyDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
@@ -949,7 +954,7 @@ class ObjCContainerDecl : public NamedDecl, public DeclContext {
   void anchor() override;
 
 public:
-  ObjCContainerDecl(Kind DK, DeclContext *DC, IdentifierInfo *Id,
+  ObjCContainerDecl(Kind DK, DeclContext *DC, const IdentifierInfo *Id,
                     SourceLocation nameLoc, SourceLocation atStartLoc);
 
   // Iterator access to instance/class properties.
@@ -1179,14 +1184,17 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
 
     /// Indicates that the contents of this Objective-C class will be
     /// completed by the external AST source when required.
+    LLVM_PREFERRED_TYPE(bool)
     mutable unsigned ExternallyCompleted : 1;
 
     /// Indicates that the ivar cache does not yet include ivars
     /// declared in the implementation.
+    LLVM_PREFERRED_TYPE(bool)
     mutable unsigned IvarListMissingImplementation : 1;
 
     /// Indicates that this interface decl contains at least one initializer
     /// marked with the 'objc_designated_initializer' attribute.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasDesignatedInitializers : 1;
 
     enum InheritedDesignatedInitializersState {
@@ -1202,9 +1210,11 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
     };
 
     /// One of the \c InheritedDesignatedInitializersState enumeratos.
+    LLVM_PREFERRED_TYPE(InheritedDesignatedInitializersState)
     mutable unsigned InheritedDesignatedInitializers : 2;
 
     /// Tracks whether a ODR hash has been computed for this interface.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasODRHash : 1;
 
     /// A hash of parts of the class to help in ODR checking.
@@ -1232,7 +1242,7 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
   llvm::PointerIntPair<DefinitionData *, 1, bool> Data;
 
   ObjCInterfaceDecl(const ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
-                    IdentifierInfo *Id, ObjCTypeParamList *typeParamList,
+                    const IdentifierInfo *Id, ObjCTypeParamList *typeParamList,
                     SourceLocation CLoc, ObjCInterfaceDecl *PrevDecl,
                     bool IsInternal);
 
@@ -1263,13 +1273,11 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
   }
 
 public:
-  static ObjCInterfaceDecl *Create(const ASTContext &C, DeclContext *DC,
-                                   SourceLocation atLoc,
-                                   IdentifierInfo *Id,
-                                   ObjCTypeParamList *typeParamList,
-                                   ObjCInterfaceDecl *PrevDecl,
-                                   SourceLocation ClassLoc = SourceLocation(),
-                                   bool isInternal = false);
+  static ObjCInterfaceDecl *
+  Create(const ASTContext &C, DeclContext *DC, SourceLocation atLoc,
+         const IdentifierInfo *Id, ObjCTypeParamList *typeParamList,
+         ObjCInterfaceDecl *PrevDecl,
+         SourceLocation ClassLoc = SourceLocation(), bool isInternal = false);
 
   static ObjCInterfaceDecl *CreateDeserialized(const ASTContext &C, unsigned ID);
 
@@ -1330,7 +1338,8 @@ public:
   ObjCImplementationDecl *getImplementation() const;
   void setImplementation(ObjCImplementationDecl *ImplD);
 
-  ObjCCategoryDecl *FindCategoryDeclaration(IdentifierInfo *CategoryId) const;
+  ObjCCategoryDecl *
+  FindCategoryDeclaration(const IdentifierInfo *CategoryId) const;
 
   // Get the local instance/class method declared in a category.
   ObjCMethodDecl *getCategoryInstanceMethod(Selector Sel) const;
@@ -1786,9 +1795,9 @@ public:
     data().CategoryList = category;
   }
 
-  ObjCPropertyDecl
-    *FindPropertyVisibleInPrimaryClass(IdentifierInfo *PropertyId,
-                                       ObjCPropertyQueryKind QueryKind) const;
+  ObjCPropertyDecl *
+  FindPropertyVisibleInPrimaryClass(const IdentifierInfo *PropertyId,
+                                    ObjCPropertyQueryKind QueryKind) const;
 
   void collectPropertiesToImplement(PropertyMap &PM) const override;
 
@@ -1946,8 +1955,8 @@ public:
 
 private:
   ObjCIvarDecl(ObjCContainerDecl *DC, SourceLocation StartLoc,
-               SourceLocation IdLoc, IdentifierInfo *Id,
-               QualType T, TypeSourceInfo *TInfo, AccessControl ac, Expr *BW,
+               SourceLocation IdLoc, const IdentifierInfo *Id, QualType T,
+               TypeSourceInfo *TInfo, AccessControl ac, Expr *BW,
                bool synthesized)
       : FieldDecl(ObjCIvar, DC, StartLoc, IdLoc, Id, T, TInfo, BW,
                   /*Mutable=*/false, /*HasInit=*/ICIS_NoInit),
@@ -1956,10 +1965,9 @@ private:
 public:
   static ObjCIvarDecl *Create(ASTContext &C, ObjCContainerDecl *DC,
                               SourceLocation StartLoc, SourceLocation IdLoc,
-                              IdentifierInfo *Id, QualType T,
-                              TypeSourceInfo *TInfo,
-                              AccessControl ac, Expr *BW = nullptr,
-                              bool synthesized=false);
+                              const IdentifierInfo *Id, QualType T,
+                              TypeSourceInfo *TInfo, AccessControl ac,
+                              Expr *BW = nullptr, bool synthesized = false);
 
   static ObjCIvarDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
@@ -2008,7 +2016,9 @@ private:
   ObjCIvarDecl *NextIvar = nullptr;
 
   // NOTE: VC++ treats enums as signed, avoid using the AccessControl enum
+  LLVM_PREFERRED_TYPE(AccessControl)
   unsigned DeclAccess : 3;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Synthesized : 1;
 };
 
@@ -2075,6 +2085,7 @@ class ObjCProtocolDecl : public ObjCContainerDecl,
     ObjCProtocolList ReferencedProtocols;
 
     /// Tracks whether a ODR hash has been computed for this protocol.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasODRHash : 1;
 
     /// A hash of parts of the class to help in ODR checking.
@@ -2332,7 +2343,7 @@ class ObjCCategoryDecl : public ObjCContainerDecl {
 
   ObjCCategoryDecl(DeclContext *DC, SourceLocation AtLoc,
                    SourceLocation ClassNameLoc, SourceLocation CategoryNameLoc,
-                   IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
+                   const IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
                    ObjCTypeParamList *typeParamList,
                    SourceLocation IvarLBraceLoc = SourceLocation(),
                    SourceLocation IvarRBraceLoc = SourceLocation());
@@ -2343,15 +2354,13 @@ public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
 
-  static ObjCCategoryDecl *Create(ASTContext &C, DeclContext *DC,
-                                  SourceLocation AtLoc,
-                                  SourceLocation ClassNameLoc,
-                                  SourceLocation CategoryNameLoc,
-                                  IdentifierInfo *Id,
-                                  ObjCInterfaceDecl *IDecl,
-                                  ObjCTypeParamList *typeParamList,
-                                  SourceLocation IvarLBraceLoc=SourceLocation(),
-                                  SourceLocation IvarRBraceLoc=SourceLocation());
+  static ObjCCategoryDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
+         SourceLocation ClassNameLoc, SourceLocation CategoryNameLoc,
+         const IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
+         ObjCTypeParamList *typeParamList,
+         SourceLocation IvarLBraceLoc = SourceLocation(),
+         SourceLocation IvarRBraceLoc = SourceLocation());
   static ObjCCategoryDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
   ObjCInterfaceDecl *getClassInterface() { return ClassInterface; }
@@ -2461,10 +2470,9 @@ class ObjCImplDecl : public ObjCContainerDecl {
   void anchor() override;
 
 protected:
-  ObjCImplDecl(Kind DK, DeclContext *DC,
-               ObjCInterfaceDecl *classInterface,
-               IdentifierInfo *Id,
-               SourceLocation nameLoc, SourceLocation atStartLoc)
+  ObjCImplDecl(Kind DK, DeclContext *DC, ObjCInterfaceDecl *classInterface,
+               const IdentifierInfo *Id, SourceLocation nameLoc,
+               SourceLocation atStartLoc)
       : ObjCContainerDecl(DK, DC, Id, nameLoc, atStartLoc),
         ClassInterface(classInterface) {}
 
@@ -2532,12 +2540,12 @@ class ObjCCategoryImplDecl : public ObjCImplDecl {
   // Category name location
   SourceLocation CategoryNameLoc;
 
-  ObjCCategoryImplDecl(DeclContext *DC, IdentifierInfo *Id,
+  ObjCCategoryImplDecl(DeclContext *DC, const IdentifierInfo *Id,
                        ObjCInterfaceDecl *classInterface,
                        SourceLocation nameLoc, SourceLocation atStartLoc,
                        SourceLocation CategoryNameLoc)
-      : ObjCImplDecl(ObjCCategoryImpl, DC, classInterface, Id,
-                     nameLoc, atStartLoc),
+      : ObjCImplDecl(ObjCCategoryImpl, DC, classInterface, Id, nameLoc,
+                     atStartLoc),
         CategoryNameLoc(CategoryNameLoc) {}
 
   void anchor() override;
@@ -2546,12 +2554,10 @@ public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
 
-  static ObjCCategoryImplDecl *Create(ASTContext &C, DeclContext *DC,
-                                      IdentifierInfo *Id,
-                                      ObjCInterfaceDecl *classInterface,
-                                      SourceLocation nameLoc,
-                                      SourceLocation atStartLoc,
-                                      SourceLocation CategoryNameLoc);
+  static ObjCCategoryImplDecl *
+  Create(ASTContext &C, DeclContext *DC, const IdentifierInfo *Id,
+         ObjCInterfaceDecl *classInterface, SourceLocation nameLoc,
+         SourceLocation atStartLoc, SourceLocation CategoryNameLoc);
   static ObjCCategoryImplDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
   ObjCCategoryDecl *getCategoryDecl() const;
@@ -2597,9 +2603,11 @@ class ObjCImplementationDecl : public ObjCImplDecl {
 
   /// Do the ivars of this class require initialization other than
   /// zero-initialization?
+  LLVM_PREFERRED_TYPE(bool)
   bool HasNonZeroConstructors : 1;
 
   /// Do the ivars of this class require non-trivial destruction?
+  LLVM_PREFERRED_TYPE(bool)
   bool HasDestructors : 1;
 
   ObjCImplementationDecl(DeclContext *DC,

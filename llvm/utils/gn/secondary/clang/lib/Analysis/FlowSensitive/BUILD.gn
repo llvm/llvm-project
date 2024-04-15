@@ -23,8 +23,8 @@ static_library("FlowSensitive") {
     target_gen_dir,
   ]
   sources = [
+    "AdornedCFG.cpp",
     "Arena.cpp",
-    "ControlFlowContext.cpp",
     "DataflowAnalysisContext.cpp",
     "DataflowEnvironment.cpp",
     "DebugSupport.cpp",
@@ -32,6 +32,7 @@ static_library("FlowSensitive") {
     "HTMLLogger.cpp",
     "Logger.cpp",
     "RecordOps.cpp",
+    "SimplifyConstraints.cpp",
     "Transfer.cpp",
     "TypeErasedDataflowAnalysis.cpp",
     "Value.cpp",

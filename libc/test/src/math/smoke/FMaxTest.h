@@ -1,4 +1,4 @@
-//===-- Utility class to test fmin[f|l] -------------------------*- C++ -*-===//
+//===-- Utility class to test fmax[f|l] -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXTEST_H
+
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <math.h>
 
 template <typename T> class FMaxTest : public LIBC_NAMESPACE::testing::Test {
 
@@ -52,15 +53,17 @@ public:
   }
 
   void testRange(FMaxFunc func) {
-    constexpr UIntType COUNT = 100'001;
-    constexpr UIntType STEP = UIntType(-1) / COUNT;
-    for (UIntType i = 0, v = 0, w = UIntType(-1); i <= COUNT;
+    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType STEP = STORAGE_MAX / COUNT;
+    for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
-      if (isnan(x) || isinf(x))
+      FPBits xbits(v), ybits(w);
+      if (xbits.is_inf_or_nan())
         continue;
-      if (isnan(y) || isinf(y))
+      if (ybits.is_inf_or_nan())
         continue;
+      T x = xbits.get_val();
+      T y = ybits.get_val();
       if ((x == 0) && (y == 0))
         continue;
 
@@ -80,3 +83,5 @@ public:
   TEST_F(LlvmLibcFMaxTest, NegInfArg) { testNegInfArg(&func); }                \
   TEST_F(LlvmLibcFMaxTest, BothZero) { testBothZero(&func); }                  \
   TEST_F(LlvmLibcFMaxTest, Range) { testRange(&func); }
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXTEST_H

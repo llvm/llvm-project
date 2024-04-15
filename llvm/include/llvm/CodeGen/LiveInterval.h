@@ -520,8 +520,9 @@ namespace llvm {
         endIndex() < End.getBoundaryIndex();
     }
 
-    /// Remove the specified segment from this range.  Note that the segment
-    /// must be a single Segment in its entirety.
+    /// Remove the specified interval from this live range.
+    /// Does nothing if interval is not part of this live range.
+    /// Note that the interval must be within a single Segment in its entirety.
     void removeSegment(SlotIndex Start, SlotIndex End,
                        bool RemoveDeadValNo = false);
 
@@ -730,6 +731,12 @@ namespace llvm {
       T *P;
 
     public:
+      using difference_type = ptrdiff_t;
+      using value_type = T;
+      using pointer = T *;
+      using reference = T &;
+      using iterator_category = std::forward_iterator_tag;
+
       SingleLinkedListIterator(T *P) : P(P) {}
 
       SingleLinkedListIterator<T> &operator++() {

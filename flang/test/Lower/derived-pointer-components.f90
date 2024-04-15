@@ -1,5 +1,5 @@
 ! Test lowering of pointer components
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module pcomp
   implicit none
@@ -613,26 +613,56 @@ end subroutine
 subroutine deallocate_real(p0_0, p1_0, p0_1, p1_1)
   type(real_p0) :: p0_0, p0_1(100)
   type(real_p1) :: p1_0, p1_1(100)
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p0_0]], %[[fld]]
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %false = arith.constant false
+  ! CHECK: %[[VAL_0:.*]] = fir.absent !fir.box<none>
+  ! CHECK: %[[VAL_1:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<{{.*}}>>
+  ! CHECK: %[[LINE_0:.*]] = arith.constant {{.*}} : i32
+  ! CHECK: %[[VAL_2:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>
+  ! CHECK: %[[VAL_3:.*]] = fir.coordinate_of %arg0, %[[VAL_2]] : (!fir.ref<!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  ! CHECK: %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<none>>
+  ! CHECK: %[[VAL_5:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
+  ! CHECK: %[[VAL_6:.*]] = fir.call @_FortranAPointerDeallocate(%[[VAL_4]], %false, %[[VAL_0]], %[[VAL_5]], %[[LINE_0]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
   deallocate(p0_0%p)
 
-  ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p0_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %false_0 = arith.constant false
+  ! CHECK: %[[VAL_7:.*]] = fir.absent !fir.box<none>
+  ! CHECK: %[[VAL_8:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<{{.*}}>>
+  ! CHECK: %[[LINE_1:.*]] = arith.constant {{.*}} : i32
+  ! CHECK: %[[CON_5:.*]] = arith.constant 5 : i64
+  ! CHECK: %[[CON_1:.*]] = arith.constant 1 : i64
+  ! CHECK: %[[VAL_9:.*]] = arith.subi %[[CON_5]], %[[CON_1]] : i64
+  ! CHECK: %[[VAL_10:.*]] = fir.coordinate_of %arg2, %[[VAL_9:.*]] : (!fir.ref<!fir.array<100x!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>>, i64) -> !fir.ref<!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>
+  ! CHECK: %[[VAL_11:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>
+  ! CHECK: %[[VAL_12:.*]] = fir.coordinate_of %[[VAL_10]], %[[VAL_11]] : (!fir.ref<!fir.type<_QMpcompTreal_p0{p:!fir.box<!fir.ptr<f32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  ! CHECK: %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<none>>
+  ! CHECK: %[[VAL_14:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
+  ! CHECK: %[[VAL_15:.*]] = fir.call @_FortranAPointerDeallocate(%[[VAL_13]], %false_0, %[[VAL_7]], %[[VAL_14]], %[[LINE_1]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
   deallocate(p0_1(5)%p)
 
-  ! CHECK: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[p1_0]], %[[fld]]
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %false_1 = arith.constant false
+  ! CHECK: %[[VAL_16:.*]] = fir.absent !fir.box<none>
+  ! CHECK: %[[VAL_17:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+  ! CHECK: %[[LINE_2:.*]] = arith.constant {{.*}} : i32
+  ! CHECK: %[[VAL_18:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
+  ! CHECK: %[[VAL_19:.*]] = fir.coordinate_of %arg1, %[[VAL_18]] : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  ! CHECK: %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
+  ! CHECK: %[[VAL_21:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
+  ! CHECK: %[[VAL_22:.*]] = fir.call @_FortranAPointerDeallocate(%[[VAL_20]], %false_1, %[[VAL_16]], %[[VAL_21]], %[[LINE_2]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
   deallocate(p1_0%p)
 
-  ! CHECK-DAG: %[[coor0:.*]] = fir.coordinate_of %[[p1_1]], %{{.*}}
-  ! CHECK-DAG: %[[fld:.*]] = fir.field_index p
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[coor0]], %[[fld]]
-  ! CHECK: fir.store {{.*}} to %[[coor]]
+  ! CHECK: %false_2 = arith.constant false
+  ! CHECK: %[[VAL_23:.*]] = fir.absent !fir.box<none>
+  ! CHECK: %[[VAL_24:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+  ! CHECK: %[[LINE_3:.*]] = arith.constant {{.*}} : i32
+  ! CHECK: %[[CON_5A:.*]] = arith.constant 5 : i64
+  ! CHECK: %[[CON_1A:.*]] = arith.constant 1 : i64
+  ! CHECK: %[[VAL_25:.*]] = arith.subi %[[CON_5A]], %[[CON_1A]] : i64
+  ! CHECK: %[[VAL_26:.*]] = fir.coordinate_of %arg3, %[[VAL_25]] : (!fir.ref<!fir.array<100x!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>, i64) -> !fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
+  ! CHECK: %[[VAL_27:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
+  ! CHECK: %[[VAL_28:.*]] = fir.coordinate_of %[[VAL_26]], %[[VAL_27]] : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  ! CHECK: %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
+  ! CHECK: %[[VAL_30:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
+  ! CHECK: %[[VAL_31:.*]] = fir.call @_FortranAPointerDeallocate(%[[VAL_29]], %false_2, %[[VAL_23]], %[[VAL_30]], %[[LINE_3]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
   deallocate(p1_1(5)%p)
 end subroutine
 

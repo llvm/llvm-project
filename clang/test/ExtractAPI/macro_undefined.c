@@ -2,7 +2,7 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
 // RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang -extract-api --product-name=Macros -target arm64-apple-macosx \
+// RUN: %clang -extract-api --pretty-sgf --product-name=Macros -target arm64-apple-macosx \
 // RUN: -x objective-c-header %t/input.h -o %t/output.json | FileCheck -allow-empty %s
 
 // Generator version is not consistent across test runs, normalize it.
@@ -89,8 +89,8 @@ FUNC_GEN(bar, const int *, unsigned);
       },
       "location": {
         "position": {
-          "character": 1,
-          "line": 3
+          "character": 0,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -241,8 +241,8 @@ FUNC_GEN(bar, const int *, unsigned);
       },
       "location": {
         "position": {
-          "character": 1,
-          "line": 4
+          "character": 0,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -291,8 +291,8 @@ FUNC_GEN(bar, const int *, unsigned);
       },
       "location": {
         "position": {
-          "character": 9,
-          "line": 1
+          "character": 8,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },

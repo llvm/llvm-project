@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-gpu-to-nvvm='index-bitwidth=32 use-opaque-pointers=1' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-gpu-to-nvvm='index-bitwidth=32' -split-input-file | FileCheck %s
 
 // RUN: mlir-opt %s -transform-interpreter | FileCheck %s
 

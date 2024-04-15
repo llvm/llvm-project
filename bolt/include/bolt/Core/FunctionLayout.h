@@ -25,7 +25,6 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include <iterator>
-#include <utility>
 
 namespace llvm {
 namespace bolt {
@@ -63,6 +62,7 @@ public:
 
   static constexpr FragmentNum main() { return FragmentNum(0); }
   static constexpr FragmentNum cold() { return FragmentNum(1); }
+  static constexpr FragmentNum warm() { return FragmentNum(2); }
 };
 
 /// A freestanding subset of contiguous blocks of a function.

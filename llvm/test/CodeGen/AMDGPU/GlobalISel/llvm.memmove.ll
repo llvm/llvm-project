@@ -12,11 +12,12 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-NEXT:    s_xor_b64 s[4:5], exec, s[0:1]
 ; LOOP-NEXT:    s_cbranch_execz .LBB0_3
 ; LOOP-NEXT:  ; %bb.1: ; %copy_forward
-; LOOP-NEXT:    s_mov_b64 s[0:1], 0
+; LOOP-NEXT:    s_mov_b64 s[6:7], 0
 ; LOOP-NEXT:    s_mov_b32 s2, 0
 ; LOOP-NEXT:    s_mov_b32 s3, 0xf000
-; LOOP-NEXT:    v_mov_b32_e32 v5, s1
-; LOOP-NEXT:    v_mov_b32_e32 v4, s0
+; LOOP-NEXT:    s_mov_b64 s[0:1], 0
+; LOOP-NEXT:    v_mov_b32_e32 v4, s6
+; LOOP-NEXT:    v_mov_b32_e32 v5, s7
 ; LOOP-NEXT:  .LBB0_2: ; %copy_forward_loop
 ; LOOP-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; LOOP-NEXT:    v_add_i32_e32 v6, vcc, v2, v4
@@ -35,11 +36,11 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-NEXT:    s_andn2_saveexec_b64 s[0:1], s[4:5]
 ; LOOP-NEXT:    s_cbranch_execz .LBB0_6
 ; LOOP-NEXT:  ; %bb.4: ; %copy_backwards
-; LOOP-NEXT:    s_mov_b32 s0, -4
 ; LOOP-NEXT:    v_add_i32_e32 v0, vcc, 3, v0
 ; LOOP-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; LOOP-NEXT:    v_add_i32_e32 v2, vcc, 3, v2
 ; LOOP-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; LOOP-NEXT:    s_mov_b32 s0, -4
 ; LOOP-NEXT:    s_mov_b32 s6, 0
 ; LOOP-NEXT:    s_mov_b32 s7, 0xf000
 ; LOOP-NEXT:    s_mov_b64 s[4:5], 0

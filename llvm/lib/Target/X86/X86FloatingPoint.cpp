@@ -26,12 +26,11 @@
 #include "X86InstrInfo.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/EdgeBundles.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -463,8 +462,7 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
 
     // Check to see if any of the values defined by this instruction are dead
     // after definition.  If so, pop them.
-    for (unsigned i = 0, e = DeadRegs.size(); i != e; ++i) {
-      unsigned Reg = DeadRegs[i];
+    for (unsigned Reg : DeadRegs) {
       // Check if Reg is live on the stack. An inline-asm register operand that
       // is in the clobber list and marked dead might not be live on the stack.
       static_assert(X86::FP7 - X86::FP0 == 7, "sequential FP regnumbers");
@@ -1753,7 +1751,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
 void FPS::setKillFlags(MachineBasicBlock &MBB) const {
   const TargetRegisterInfo &TRI =
       *MBB.getParent()->getSubtarget().getRegisterInfo();
-  LivePhysRegs LPR(TRI);
+  LiveRegUnits LPR(TRI);
 
   LPR.addLiveOuts(MBB);
 
@@ -1775,14 +1773,14 @@ void FPS::setKillFlags(MachineBasicBlock &MBB) const {
 
       if (MO.isDef()) {
         Defs.set(Reg);
-        if (!LPR.contains(MO.getReg()))
+        if (LPR.available(MO.getReg()))
           MO.setIsDead();
       } else
         Uses.push_back(&MO);
     }
 
     for (auto *MO : Uses)
-      if (Defs.test(getFPReg(*MO)) || !LPR.contains(MO->getReg()))
+      if (Defs.test(getFPReg(*MO)) || LPR.available(MO->getReg()))
         MO->setIsKill();
 
     LPR.stepBackward(MI);

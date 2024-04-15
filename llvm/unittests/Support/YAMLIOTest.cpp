@@ -2623,6 +2623,9 @@ template <> struct MappingContextTraits<SimpleMap, MappingContext> {
     ++Context.A;
     io.mapRequired("Context", Context.A);
   }
+  static std::string validate(IO &io, SimpleMap &sm, MappingContext &Context) {
+    return "";
+  }
 };
 
 template <> struct MappingTraits<NestedMap> {

@@ -144,9 +144,8 @@ static bool runIPSCCP(
     // Assume the function is called.
     Solver.markBlockExecutable(&F.front());
 
-    // Assume nothing about the incoming arguments.
     for (Argument &AI : F.args())
-      Solver.markOverdefined(&AI);
+      Solver.trackValueOfArgument(&AI);
   }
 
   // Determine if we can track any of the module's global variables. If so, add
@@ -236,11 +235,11 @@ static bool runIPSCCP(
     // nodes in executable blocks we found values for. The function's entry
     // block is not part of BlocksToErase, so we have to handle it separately.
     for (BasicBlock *BB : BlocksToErase) {
-      NumInstRemoved += changeToUnreachable(BB->getFirstNonPHI(),
+      NumInstRemoved += changeToUnreachable(BB->getFirstNonPHIOrDbg(),
                                             /*PreserveLCSSA=*/false, &DTU);
     }
     if (!Solver.isBlockExecutable(&F.front()))
-      NumInstRemoved += changeToUnreachable(F.front().getFirstNonPHI(),
+      NumInstRemoved += changeToUnreachable(F.front().getFirstNonPHIOrDbg(),
                                             /*PreserveLCSSA=*/false, &DTU);
 
     BasicBlock *NewUnreachableBB = nullptr;

@@ -462,7 +462,7 @@ define <2 x i1> @ne_and_shl_one_commute(<2 x i8> %x, <2 x i8> %y) {
 define i1 @ne_and_lshr_minval(i8 %px, i8 %y) {
 ; CHECK-LABEL: @ne_and_lshr_minval(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[PX:%.*]], [[PX]]
-; CHECK-NEXT:    [[POW2:%.*]] = lshr i8 -128, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2:%.*]] = lshr exact i8 -128, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[POW2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -477,7 +477,7 @@ define i1 @ne_and_lshr_minval(i8 %px, i8 %y) {
 define i1 @eq_and_lshr_minval_commute(i8 %px, i8 %y) {
 ; CHECK-LABEL: @eq_and_lshr_minval_commute(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[PX:%.*]], [[PX]]
-; CHECK-NEXT:    [[POW2:%.*]] = lshr i8 -128, [[Y:%.*]]
+; CHECK-NEXT:    [[POW2:%.*]] = lshr exact i8 -128, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[POW2]])
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[POW2]]
 ; CHECK-NEXT:    call void @use(i8 [[AND]])
@@ -519,4 +519,90 @@ define i1 @slt_and_shl_one(i8 %x, i8 %y) {
   %and = and i8 %x, %pow2
   %cmp = icmp slt i8 %and, %pow2
   ret i1 %cmp
+}
+
+define i1 @fold_eq_lhs(i8 %x, i8 %y) {
+; CHECK-LABEL: @fold_eq_lhs(
+; CHECK-NEXT:    [[AND:%.*]] = lshr i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i8 -1, %x
+  %and = and i8 %shl, %y
+  %r = icmp eq i8 %and, 0
+  ret i1 %r
+}
+
+define i1 @fold_eq_lhs_fail_eq_nonzero(i8 %x, i8 %y) {
+; CHECK-LABEL: @fold_eq_lhs_fail_eq_nonzero(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 -1, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SHL]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i8 -1, %x
+  %and = and i8 %shl, %y
+  %r = icmp eq i8 %and, 1
+  ret i1 %r
+}
+
+define i1 @fold_eq_lhs_fail_multiuse_shl(i8 %x, i8 %y) {
+; CHECK-LABEL: @fold_eq_lhs_fail_multiuse_shl(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 -1, [[X:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[SHL]])
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SHL]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i8 -1, %x
+  call void @use(i8 %shl)
+  %and = and i8 %shl, %y
+  %r = icmp eq i8 %and, 0
+  ret i1 %r
+}
+
+define i1 @fold_ne_rhs(i8 %x, i8 %yy) {
+; CHECK-LABEL: @fold_ne_rhs(
+; CHECK-NEXT:    [[Y:%.*]] = xor i8 [[YY:%.*]], 123
+; CHECK-NEXT:    [[AND:%.*]] = lshr i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = xor i8 %yy, 123
+  %shl = shl i8 -1, %x
+  %and = and i8 %y, %shl
+  %r = icmp ne i8 %and, 0
+  ret i1 %r
+}
+
+define i1 @fold_ne_rhs_fail_multiuse_and(i8 %x, i8 %yy) {
+; CHECK-LABEL: @fold_ne_rhs_fail_multiuse_and(
+; CHECK-NEXT:    [[Y:%.*]] = xor i8 [[YY:%.*]], 123
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 -1, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Y]], [[SHL]]
+; CHECK-NEXT:    call void @use(i8 [[AND]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = xor i8 %yy, 123
+  %shl = shl i8 -1, %x
+  %and = and i8 %y, %shl
+  call void @use(i8 %and)
+  %r = icmp ne i8 %and, 0
+  ret i1 %r
+}
+
+define i1 @fold_ne_rhs_fail_shift_not_1s(i8 %x, i8 %yy) {
+; CHECK-LABEL: @fold_ne_rhs_fail_shift_not_1s(
+; CHECK-NEXT:    [[Y:%.*]] = xor i8 [[YY:%.*]], 122
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 -2, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[Y]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = xor i8 %yy, 123
+  %shl = shl i8 -2, %x
+  %and = and i8 %y, %shl
+  %r = icmp ne i8 %and, 0
+  ret i1 %r
 }

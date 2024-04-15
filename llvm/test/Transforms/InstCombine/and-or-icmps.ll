@@ -369,16 +369,12 @@ define void @simplify_before_foldAndOfICmps(ptr %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[L7]], -1
 ; CHECK-NEXT:    [[B11:%.*]] = zext i1 [[TMP1]] to i16
 ; CHECK-NEXT:    [[C10:%.*]] = icmp ugt i16 [[L7]], [[B11]]
-; CHECK-NEXT:    [[C5:%.*]] = icmp slt i16 [[L7]], 1
 ; CHECK-NEXT:    [[C7:%.*]] = icmp slt i16 [[L7]], 0
-; CHECK-NEXT:    [[B15:%.*]] = xor i1 [[C7]], [[C10]]
-; CHECK-NEXT:    [[C6:%.*]] = xor i1 [[B15]], true
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[C5]], [[C6]]
-; CHECK-NEXT:    [[C3:%.*]] = and i1 [[TMP2]], [[C10]]
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[C10]], true
-; CHECK-NEXT:    [[C18:%.*]] = or i1 [[C7]], [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[C3]] to i64
-; CHECK-NEXT:    [[G26:%.*]] = getelementptr i1, ptr null, i64 [[TMP4]]
+; CHECK-NEXT:    [[C3:%.*]] = and i1 [[C7]], [[C10]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[C10]], true
+; CHECK-NEXT:    [[C18:%.*]] = or i1 [[C7]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C3]] to i64
+; CHECK-NEXT:    [[G26:%.*]] = getelementptr i1, ptr null, i64 [[TMP3]]
 ; CHECK-NEXT:    store i16 [[L7]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    store i1 [[C18]], ptr [[P]], align 1
 ; CHECK-NEXT:    store ptr [[G26]], ptr [[P]], align 8
@@ -3015,10 +3011,8 @@ define i32 @icmp_x_slt_0_and_icmp_y_sgt_neg1_i32_fail(i32 %x, i32 %y) {
 
 define i32 @icmp_slt_0_xor_icmp_sge_neg2_i32_fail(i32 %x) {
 ; CHECK-LABEL: @icmp_slt_0_xor_icmp_sge_neg2_i32_fail(
-; CHECK-NEXT:    [[A:%.*]] = icmp sgt i32 [[X:%.*]], -3
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP1]], [[A]]
-; CHECK-NEXT:    [[D:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X:%.*]], -2
+; CHECK-NEXT:    [[D:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %A = icmp sge i32 %x, -2
@@ -3043,4 +3037,64 @@ define i32 @icmp_slt_0_or_icmp_add_1_sge_100_i32_fail(i32 %x) {
   %C = lshr i32 %x, 31
   %D = or i32 %C, %B
   ret i32 %D
+}
+
+define i1 @logical_and_icmps1(i32 %a, i1 %other_cond) {
+; CHECK-LABEL: @logical_and_icmps1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[A:%.*]], 10086
+; CHECK-NEXT:    [[RET2:%.*]] = select i1 [[RET1:%.*]], i1 [[CMP3]], i1 false
+; CHECK-NEXT:    ret i1 [[RET2]]
+;
+entry:
+  %cmp1 = icmp sgt i32 %a, -1
+  %logical_and = select i1 %other_cond, i1 %cmp1, i1 false
+  %cmp2 = icmp slt i32 %a, 10086
+  %ret = select i1 %logical_and, i1 %cmp2, i1 false
+  ret i1 %ret
+}
+
+define i1 @logical_and_icmps2(i32 %a, i1 %other_cond) {
+; CHECK-LABEL: @logical_and_icmps2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp1 = icmp slt i32 %a, -1
+  %logical_and = select i1 %other_cond, i1 %cmp1, i1 false
+  %cmp2 = icmp eq i32 %a, 10086
+  %ret = select i1 %logical_and, i1 %cmp2, i1 false
+  ret i1 %ret
+}
+
+define <4 x i1> @logical_and_icmps_vec1(<4 x i32> %a, <4 x i1> %other_cond) {
+; CHECK-LABEL: @logical_and_icmps_vec1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult <4 x i32> [[A:%.*]], <i32 10086, i32 10086, i32 10086, i32 10086>
+; CHECK-NEXT:    [[RET2:%.*]] = select <4 x i1> [[RET1:%.*]], <4 x i1> [[CMP3]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[RET2]]
+;
+entry:
+  %cmp1 = icmp sgt <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1 >
+  %logical_and = select <4 x i1> %other_cond, <4 x i1> %cmp1, <4 x i1> zeroinitializer
+  %cmp2 = icmp slt <4 x i32> %a, <i32  10086, i32 10086, i32 10086, i32 10086 >
+  %ret = select <4 x i1> %logical_and, <4 x i1> %cmp2, <4 x i1> zeroinitializer
+  ret <4 x i1> %ret
+}
+
+define i1 @logical_and_icmps_fail1(i32 %a, i32 %b, i1 %other_cond) {
+; CHECK-LABEL: @logical_and_icmps_fail1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[LOGICAL_AND:%.*]] = select i1 [[OTHER_COND:%.*]], i1 [[CMP1]], i1 false
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[LOGICAL_AND]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+entry:
+  %cmp1 = icmp sgt i32 %a, -1
+  %logical_and = select i1 %other_cond, i1 %cmp1, i1 false
+  %cmp2 = icmp slt i32 %a, %b
+  %ret = select i1 %logical_and, i1 %cmp2, i1 false
+  ret i1 %ret
 }

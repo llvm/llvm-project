@@ -14,15 +14,15 @@
 #ifndef LLVM_TEXTAPI_INTERFACEFILE_H
 #define LLVM_TEXTAPI_INTERFACEFILE_H
 
-#include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/TextAPI/ArchitectureSet.h"
+#include "llvm/TextAPI/FileTypes.h"
 #include "llvm/TextAPI/PackedVersion.h"
 #include "llvm/TextAPI/Platform.h"
+#include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/TextAPI/Symbol.h"
 #include "llvm/TextAPI/SymbolSet.h"
 #include "llvm/TextAPI/Target.h"
@@ -47,44 +47,6 @@ enum class ObjCConstraintType : unsigned {
   /// Garbage Collection.
   GC = 4,
 };
-
-// clang-format off
-
-/// Defines the file type this file represents.
-enum FileType : unsigned {
-  /// Invalid file type.
-  Invalid = 0U,
-
-  /// \brief MachO Dynamic Library file.
-  MachO_DynamicLibrary      = 1U <<  0,
-
-  /// \brief MachO Dynamic Library Stub file.
-  MachO_DynamicLibrary_Stub = 1U <<  1,
-
-  /// \brief MachO Bundle file.
-  MachO_Bundle              = 1U <<  2,
-
-  /// Text-based stub file (.tbd) version 1.0
-  TBD_V1                    = 1U <<  3,
-
-  /// Text-based stub file (.tbd) version 2.0
-  TBD_V2                    = 1U <<  4,
-
-  /// Text-based stub file (.tbd) version 3.0
-  TBD_V3                    = 1U <<  5,
-
-  /// Text-based stub file (.tbd) version 4.0
-  TBD_V4                    = 1U <<  6,
-
-  /// Text-based stub file (.tbd) version 5.0
-  TBD_V5                    = 1U <<  7,
-
-  All                       = ~0U,
-
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/All),
-};
-
-// clang-format on
 
 /// Reference to an interface file.
 class InterfaceFileRef {
@@ -248,6 +210,14 @@ public:
   /// Check if the library uses two-level namespace.
   bool isTwoLevelNamespace() const { return IsTwoLevelNamespace; }
 
+  /// Specify if the library is an OS library but not shared cache eligible.
+  void setOSLibNotForSharedCache(bool V = true) {
+    IsOSLibNotForSharedCache = V;
+  }
+
+  /// Check if the library is an OS library that is not shared cache eligible.
+  bool isOSLibNotForSharedCache() const { return IsOSLibNotForSharedCache; }
+
   /// Specify if the library is application extension safe (or not).
   void setApplicationExtensionSafe(bool V = true) { IsAppExtensionSafe = V; }
 
@@ -329,9 +299,9 @@ public:
   }
 
   /// Set the runpath search paths.
-  /// \param InputTarget The target applicable to runpath search path.
   /// \param RPath The name of runpath.
-  void addRPath(const Target &InputTarget, StringRef RPath);
+  /// \param InputTarget The target applicable to runpath search path.
+  void addRPath(StringRef RPath, const Target &InputTarget);
 
   /// Get the list of runpath search paths.
   ///
@@ -344,9 +314,11 @@ public:
   ///
   /// \param Kind The kind of global symbol to record.
   /// \param Name The name of the symbol.
-  std::optional<const Symbol *> getSymbol(SymbolKind Kind,
-                                          StringRef Name) const {
-    if (auto *Sym = SymbolsSet->findSymbol(Kind, Name))
+  /// \param ObjCIF The ObjCInterface symbol type, if applicable.
+  std::optional<const Symbol *>
+  getSymbol(EncodeKind Kind, StringRef Name,
+            ObjCIFSymbolKind ObjCIF = ObjCIFSymbolKind::None) const {
+    if (auto *Sym = SymbolsSet->findSymbol(Kind, Name, ObjCIF))
       return Sym;
     return std::nullopt;
   }
@@ -354,7 +326,7 @@ public:
   /// Add a symbol to the symbols list or extend an existing one.
   template <typename RangeT, typename ElT = std::remove_reference_t<
                                  decltype(*std::begin(std::declval<RangeT>()))>>
-  void addSymbol(SymbolKind Kind, StringRef Name, RangeT &&Targets,
+  void addSymbol(EncodeKind Kind, StringRef Name, RangeT &&Targets,
                  SymbolFlags Flags = SymbolFlags::None) {
     SymbolsSet->addGlobal(Kind, Name, Flags, Targets);
   }
@@ -365,7 +337,7 @@ public:
   /// \param Name The name of the symbol.
   /// \param Targets The list of targets the symbol is defined in.
   /// \param Flags The properties the symbol holds.
-  void addSymbol(SymbolKind Kind, StringRef Name, TargetList &&Targets,
+  void addSymbol(EncodeKind Kind, StringRef Name, TargetList &&Targets,
                  SymbolFlags Flags = SymbolFlags::None) {
     SymbolsSet->addGlobal(Kind, Name, Flags, Targets);
   }
@@ -376,7 +348,7 @@ public:
   /// \param Name The name of the symbol.
   /// \param Target The target the symbol is defined in.
   /// \param Flags The properties the symbol holds.
-  void addSymbol(SymbolKind Kind, StringRef Name, Target &Target,
+  void addSymbol(EncodeKind Kind, StringRef Name, Target &Target,
                  SymbolFlags Flags = SymbolFlags::None) {
     SymbolsSet->addGlobal(Kind, Name, Flags, Target);
   }
@@ -428,6 +400,14 @@ public:
   void inlineLibrary(std::shared_ptr<InterfaceFile> Library,
                      bool Overwrite = false);
 
+  /// Set InterfaceFile properties from pre-gathered binary attributes,
+  /// if they are not set already.
+  ///
+  /// \param BA Attributes typically represented in load commands.
+  /// \param Targ MachO Target slice to add attributes to.
+  void setFromBinaryAttrs(const RecordsSlice::BinaryAttrs &BA,
+                          const Target &Targ);
+
   /// The equality is determined by attributes that impact linking
   /// compatibilities. Path, & FileKind are irrelevant since these by
   /// itself should not impact linking.
@@ -455,6 +435,7 @@ private:
   PackedVersion CompatibilityVersion;
   uint8_t SwiftABIVersion{0};
   bool IsTwoLevelNamespace{false};
+  bool IsOSLibNotForSharedCache{false};
   bool IsAppExtensionSafe{false};
   bool HasSimSupport{false};
   ObjCConstraintType ObjcConstraint = ObjCConstraintType::None;

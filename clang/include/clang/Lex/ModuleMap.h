@@ -82,7 +82,7 @@ class ModuleMap {
 
   /// The directory used for Clang-supplied, builtin include headers,
   /// such as "stdint.h".
-  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr BuiltinIncludeDir;
+  OptionalDirectoryEntryRef BuiltinIncludeDir;
 
   /// Language options used to parse the module map itself.
   ///
@@ -232,16 +232,20 @@ private:
   /// The set of attributes that can be attached to a module.
   struct Attributes {
     /// Whether this is a system module.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsSystem : 1;
 
     /// Whether this is an extern "C" module.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsExternC : 1;
 
     /// Whether this is an exhaustive set of configuration macros.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsExhaustive : 1;
 
     /// Whether files in this module can only include non-modular headers
     /// and headers from used modules.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned NoUndeclaredIncludes : 1;
 
     Attributes()
@@ -252,14 +256,15 @@ private:
   /// A directory for which framework modules can be inferred.
   struct InferredDirectory {
     /// Whether to infer modules from this directory.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned InferModules : 1;
 
     /// The attributes to use for inferred modules.
     Attributes Attrs;
 
     /// If \c InferModules is non-zero, the module map file that allowed
-    /// inferred modules.  Otherwise, nullopt.
-    OptionalFileEntryRef ModuleMapFile;
+    /// inferred modules.  Otherwise, invalid.
+    FileID ModuleMapFID;
 
     /// The names of modules that cannot be inferred within this
     /// directory.
@@ -274,8 +279,7 @@ private:
 
   /// A mapping from an inferred module to the module map that allowed the
   /// inference.
-  // FIXME: Consider making the values non-optional.
-  llvm::DenseMap<const Module *, OptionalFileEntryRef> InferredModuleAllowedBy;
+  llvm::DenseMap<const Module *, FileID> InferredModuleAllowedBy;
 
   llvm::DenseMap<const Module *, AdditionalModMapsSet> AdditionalModMaps;
 
@@ -403,16 +407,12 @@ public:
   /// Set the target information.
   void setTarget(const TargetInfo &Target);
 
-  /// Set the directory that contains Clang-supplied include
-  /// files, such as our stdarg.h or tgmath.h.
-  void setBuiltinIncludeDir(DirectoryEntryRef Dir) {
-    BuiltinIncludeDir = Dir;
-  }
+  /// Set the directory that contains Clang-supplied include files, such as our
+  /// stdarg.h or tgmath.h.
+  void setBuiltinIncludeDir(DirectoryEntryRef Dir) { BuiltinIncludeDir = Dir; }
 
   /// Get the directory that contains Clang-supplied include files.
-  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr getBuiltinDir() const {
-    return BuiltinIncludeDir;
-  }
+  OptionalDirectoryEntryRef getBuiltinDir() const { return BuiltinIncludeDir; }
 
   /// Is this a compiler builtin header?
   bool isBuiltinHeader(FileEntryRef File);
@@ -551,8 +551,8 @@ public:
   /// parent.
   Module *createGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
                                                   Module *Parent = nullptr);
-  Module *createImplicitGlobalModuleFragmentForModuleUnit(
-      SourceLocation Loc, bool IsExported, Module *Parent = nullptr);
+  Module *createImplicitGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
+                                                          Module *Parent);
 
   /// Create a global module fragment for a C++ module interface unit.
   Module *createPrivateModuleFragmentForInterfaceUnit(Module *Parent,
@@ -617,8 +617,9 @@ public:
   ///
   /// \param Module The module whose module map file will be returned, if known.
   ///
-  /// \returns The file entry for the module map file containing the given
-  /// module, or nullptr if the module definition was inferred.
+  /// \returns The FileID for the module map file containing the given module,
+  /// invalid if the module definition was inferred.
+  FileID getContainingModuleMapFileID(const Module *Module) const;
   OptionalFileEntryRef getContainingModuleMapFile(const Module *Module) const;
 
   /// Get the module map file that (along with the module name) uniquely
@@ -630,9 +631,10 @@ public:
   /// of inferred modules, returns the module map that allowed the inference
   /// (e.g. contained 'module *'). Otherwise, returns
   /// getContainingModuleMapFile().
+  FileID getModuleMapFileIDForUniquing(const Module *M) const;
   OptionalFileEntryRef getModuleMapFileForUniquing(const Module *M) const;
 
-  void setInferredModuleAllowedBy(Module *M, OptionalFileEntryRef ModMap);
+  void setInferredModuleAllowedBy(Module *M, FileID ModMapFID);
 
   /// Canonicalize \p Path in a manner suitable for a module map file. In
   /// particular, this canonicalizes the parent directory separately from the

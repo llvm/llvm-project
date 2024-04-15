@@ -165,15 +165,15 @@ public:
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
     switch (K) {
     case TargetTransformInfo::RGK_Scalar:
-      return TypeSize::Fixed(32);
+      return TypeSize::getFixed(32);
     case TargetTransformInfo::RGK_FixedWidthVector:
       if (ST->hasNEON())
-        return TypeSize::Fixed(128);
+        return TypeSize::getFixed(128);
       if (ST->hasMVEIntegerOps())
-        return TypeSize::Fixed(128);
-      return TypeSize::Fixed(0);
+        return TypeSize::getFixed(128);
+      return TypeSize::getFixed(0);
     case TargetTransformInfo::RGK_ScalableVector:
-      return TypeSize::Scalable(0);
+      return TypeSize::getScalable(0);
     }
     llvm_unreachable("Unsupported register kind");
   }
@@ -220,7 +220,8 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt);
+                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 const Instruction *CxtI = nullptr);
 
   bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                              TTI::ReductionFlags Flags) const;

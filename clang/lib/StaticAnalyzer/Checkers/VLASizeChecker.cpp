@@ -34,8 +34,10 @@ namespace {
 class VLASizeChecker
     : public Checker<check::PreStmt<DeclStmt>,
                      check::PreStmt<UnaryExprOrTypeTraitExpr>> {
-  mutable std::unique_ptr<BugType> BT;
-  mutable std::unique_ptr<BugType> TaintBT;
+  const BugType BT{this, "Dangerous variable-length array (VLA) declaration"};
+  const BugType TaintBT{this,
+                        "Dangerous variable-length array (VLA) declaration",
+                        categories::TaintedData};
   enum VLASize_Kind { VLA_Garbage, VLA_Zero, VLA_Negative, VLA_Overflow };
 
   /// Check a VLA for validity.
@@ -162,12 +164,6 @@ ProgramStateRef VLASizeChecker::checkVLAIndexSize(CheckerContext &C,
   if (SizeV.isUnknown())
     return nullptr;
 
-  // Check if the size is tainted.
-  if (isTainted(State, SizeV)) {
-    reportTaintBug(SizeE, State, C, SizeV);
-    return nullptr;
-  }
-
   // Check if the size is zero.
   DefinedSVal SizeD = SizeV.castAs<DefinedSVal>();
 
@@ -188,11 +184,12 @@ ProgramStateRef VLASizeChecker::checkVLAIndexSize(CheckerContext &C,
   QualType SizeTy = SizeE->getType();
   DefinedOrUnknownSVal Zero = SVB.makeZeroVal(SizeTy);
 
-  SVal LessThanZeroVal = SVB.evalBinOp(State, BO_LT, SizeD, Zero, SizeTy);
+  SVal LessThanZeroVal =
+      SVB.evalBinOp(State, BO_LT, SizeD, Zero, SVB.getConditionType());
+  ProgramStateRef StatePos, StateNeg;
   if (std::optional<DefinedSVal> LessThanZeroDVal =
           LessThanZeroVal.getAs<DefinedSVal>()) {
     ConstraintManager &CM = C.getConstraintManager();
-    ProgramStateRef StatePos, StateNeg;
 
     std::tie(StateNeg, StatePos) = CM.assumeDual(State, *LessThanZeroDVal);
     if (StateNeg && !StatePos) {
@@ -200,6 +197,12 @@ ProgramStateRef VLASizeChecker::checkVLAIndexSize(CheckerContext &C,
       return nullptr;
     }
     State = StatePos;
+  }
+
+  // Check if the size is tainted.
+  if ((StateNeg || StateZero) && isTainted(State, SizeV)) {
+    reportTaintBug(SizeE, State, C, SizeV);
+    return nullptr;
   }
 
   return State;
@@ -212,17 +215,12 @@ void VLASizeChecker::reportTaintBug(const Expr *SizeE, ProgramStateRef State,
   if (!N)
     return;
 
-  if (!TaintBT)
-    TaintBT.reset(
-        new BugType(this, "Dangerous variable-length array (VLA) declaration",
-                    categories::TaintedData));
-
   SmallString<256> buf;
   llvm::raw_svector_ostream os(buf);
   os << "Declared variable-length array (VLA) ";
-  os << "has tainted size";
+  os << "has tainted (attacker controlled) size that can be 0 or negative";
 
-  auto report = std::make_unique<PathSensitiveBugReport>(*TaintBT, os.str(), N);
+  auto report = std::make_unique<PathSensitiveBugReport>(TaintBT, os.str(), N);
   report->addRange(SizeE->getSourceRange());
   bugreporter::trackExpressionValue(N, SizeE, *report);
   // The vla size may be a complex expression where multiple memory locations
@@ -238,11 +236,6 @@ void VLASizeChecker::reportBug(VLASize_Kind Kind, const Expr *SizeE,
   ExplodedNode *N = C.generateErrorNode(State);
   if (!N)
     return;
-
-  if (!BT)
-    BT.reset(new BugType(this,
-                         "Dangerous variable-length array (VLA) declaration",
-                         categories::LogicError));
 
   SmallString<256> buf;
   llvm::raw_svector_ostream os(buf);
@@ -262,7 +255,7 @@ void VLASizeChecker::reportBug(VLASize_Kind Kind, const Expr *SizeE,
     break;
   }
 
-  auto report = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), N);
+  auto report = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
   report->addRange(SizeE->getSourceRange());
   bugreporter::trackExpressionValue(N, SizeE, *report);
   C.emitReport(std::move(report));

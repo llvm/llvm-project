@@ -14,8 +14,6 @@
 #include "llvm/CodeGen/MachineStableHash.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -202,7 +200,7 @@ stable_hash llvm::stableHashValue(const MachineInstr &MI, bool HashVRegs,
   for (const auto *Op : MI.memoperands()) {
     if (!HashMemOperands)
       break;
-    HashComponents.push_back(static_cast<unsigned>(Op->getSize()));
+    HashComponents.push_back(static_cast<unsigned>(Op->getSize().getValue()));
     HashComponents.push_back(static_cast<unsigned>(Op->getFlags()));
     HashComponents.push_back(static_cast<unsigned>(Op->getOffset()));
     HashComponents.push_back(static_cast<unsigned>(Op->getSuccessOrdering()));

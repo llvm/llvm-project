@@ -34,7 +34,7 @@ def IsFixedVectorTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
                                   !::llvm::cast<VectorType>($_self).isScalable()}]>;
 
 // Whether a type is a scalable VectorType.
-def IsVectorTypeWithAnyDimScalablePred 
+def IsVectorTypeWithAnyDimScalablePred
         : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
                   ::llvm::cast<VectorType>($_self).isScalable()}]>;
 
@@ -168,24 +168,28 @@ def NoneType : Type<CPred<"::llvm::isa<::mlir::NoneType>($_self)">, "none type",
       BuildableType<"$_builder.getType<::mlir::NoneType>()">;
 
 // Any type from the given list
-class AnyTypeOf<list<Type> allowedTypes, string summary = "",
+class AnyTypeOf<list<Type> allowedTypeList, string summary = "",
                 string cppClassName = "::mlir::Type"> : Type<
     // Satisfy any of the allowed types' conditions.
-    Or<!foreach(allowedtype, allowedTypes, allowedtype.predicate)>,
+    Or<!foreach(allowedtype, allowedTypeList, allowedtype.predicate)>,
     !if(!eq(summary, ""),
-        !interleave(!foreach(t, allowedTypes, t.summary), " or "),
+        !interleave(!foreach(t, allowedTypeList, t.summary), " or "),
         summary),
-    cppClassName>;
+    cppClassName> {
+  list<Type> allowedTypes = allowedTypeList;
+}
 
 // A type that satisfies the constraints of all given types.
-class AllOfType<list<Type> allowedTypes, string summary = "",
+class AllOfType<list<Type> allowedTypeList, string summary = "",
                 string cppClassName = "::mlir::Type"> : Type<
-    // Satisfy all of the allowedf types' conditions.
-    And<!foreach(allowedType, allowedTypes, allowedType.predicate)>,
+    // Satisfy all of the allowed types' conditions.
+    And<!foreach(allowedType, allowedTypeList, allowedType.predicate)>,
     !if(!eq(summary, ""),
-        !interleave(!foreach(t, allowedTypes, t.summary), " and "),
+        !interleave(!foreach(t, allowedTypeList, t.summary), " and "),
         summary),
-    cppClassName>;
+    cppClassName> {
+  list<Type> allowedTypes = allowedTypeList;
+}
 
 // A type that satisfies additional predicates.
 class ConfinedType<Type type, list<Pred> predicates, string summary = "",

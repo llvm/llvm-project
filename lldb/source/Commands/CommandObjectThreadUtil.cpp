@@ -21,8 +21,7 @@ CommandObjectIterateOverThreads::CommandObjectIterateOverThreads(
     const char *syntax, uint32_t flags)
     : CommandObjectParsed(interpreter, name, help, syntax, flags) {
   // These commands all take thread ID's as arguments.
-  CommandArgumentData thread_arg{eArgTypeThreadIndex, eArgRepeatStar};
-  m_arguments.push_back({thread_arg});
+  AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatStar);
 }
 
 CommandObjectMultipleThreads::CommandObjectMultipleThreads(
@@ -30,20 +29,19 @@ CommandObjectMultipleThreads::CommandObjectMultipleThreads(
     const char *syntax, uint32_t flags)
     : CommandObjectParsed(interpreter, name, help, syntax, flags) {
   // These commands all take thread ID's as arguments.
-  CommandArgumentData thread_arg{eArgTypeThreadIndex, eArgRepeatStar};
-  m_arguments.push_back({thread_arg});
+  AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatStar);
 }
 
-bool CommandObjectIterateOverThreads::DoExecute(Args &command,
+void CommandObjectIterateOverThreads::DoExecute(Args &command,
                                                 CommandReturnObject &result) {
   result.SetStatus(m_success_return);
 
   bool all_threads = false;
   if (command.GetArgumentCount() == 0) {
     Thread *thread = m_exe_ctx.GetThreadPtr();
-    if (!thread || !HandleOneThread(thread->GetID(), result))
-      return false;
-    return result.Succeeded();
+    if (thread)
+      HandleOneThread(thread->GetID(), result);
+    return;
   } else if (command.GetArgumentCount() == 1) {
     all_threads = ::strcmp(command.GetArgumentAtIndex(0), "all") == 0;
     m_unique_stacks = ::strcmp(command.GetArgumentAtIndex(0), "unique") == 0;
@@ -71,7 +69,7 @@ bool CommandObjectIterateOverThreads::DoExecute(Args &command,
       if (!llvm::to_integer(command.GetArgumentAtIndex(i), thread_idx)) {
         result.AppendErrorWithFormat("invalid thread specification: \"%s\"\n",
                                      command.GetArgumentAtIndex(i));
-        return false;
+        return;
       }
 
       ThreadSP thread =
@@ -80,7 +78,7 @@ bool CommandObjectIterateOverThreads::DoExecute(Args &command,
       if (!thread) {
         result.AppendErrorWithFormat("no thread with index: \"%s\"\n",
                                      command.GetArgumentAtIndex(i));
-        return false;
+        return;
       }
 
       tids.push_back(thread->GetID());
@@ -92,7 +90,7 @@ bool CommandObjectIterateOverThreads::DoExecute(Args &command,
     std::set<UniqueStack> unique_stacks;
     for (const lldb::tid_t &tid : tids) {
       if (!BucketThread(tid, unique_stacks, result)) {
-        return false;
+        return;
       }
     }
 
@@ -114,7 +112,7 @@ bool CommandObjectIterateOverThreads::DoExecute(Args &command,
       ThreadSP thread = process->GetThreadList().FindThreadByIndexID(
           representative_thread_id);
       if (!HandleOneThread(thread->GetID(), result)) {
-        return false;
+        return;
       }
     }
   } else {
@@ -124,12 +122,11 @@ bool CommandObjectIterateOverThreads::DoExecute(Args &command,
         result.AppendMessage("");
 
       if (!HandleOneThread(tid, result))
-        return false;
+        return;
 
       ++idx;
     }
   }
-  return result.Succeeded();
 }
 
 bool CommandObjectIterateOverThreads::BucketThread(
@@ -167,7 +164,7 @@ bool CommandObjectIterateOverThreads::BucketThread(
   return true;
 }
 
-bool CommandObjectMultipleThreads::DoExecute(Args &command,
+void CommandObjectMultipleThreads::DoExecute(Args &command,
                                              CommandReturnObject &result) {
   Process &process = m_exe_ctx.GetProcessRef();
 
@@ -191,7 +188,7 @@ bool CommandObjectMultipleThreads::DoExecute(Args &command,
       if (!llvm::to_integer(command.GetArgumentAtIndex(i), thread_idx)) {
         result.AppendErrorWithFormat("invalid thread specification: \"%s\"\n",
                                      command.GetArgumentAtIndex(i));
-        return false;
+        return;
       }
 
       ThreadSP thread = process.GetThreadList().FindThreadByIndexID(thread_idx);
@@ -199,12 +196,12 @@ bool CommandObjectMultipleThreads::DoExecute(Args &command,
       if (!thread) {
         result.AppendErrorWithFormat("no thread with index: \"%s\"\n",
                                      command.GetArgumentAtIndex(i));
-        return false;
+        return;
       }
 
       tids.push_back(thread->GetID());
     }
   }
 
-  return DoExecuteOnThreads(command, result, tids);
+  DoExecuteOnThreads(command, result, tids);
 }

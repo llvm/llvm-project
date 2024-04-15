@@ -11,7 +11,7 @@
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 
@@ -66,7 +66,7 @@ struct GpuIdBuilder {
 
   GpuIdBuilder() = default;
   GpuIdBuilder(MLIRContext *ctx, bool useLinearMapping,
-               MappingIdBuilderFnType builder);
+               const MappingIdBuilderFnType &builder);
 
   /// The mapping attributes targeted by this generator.
   SmallVector<DeviceMappingAttrInterface> mappingAttributes;

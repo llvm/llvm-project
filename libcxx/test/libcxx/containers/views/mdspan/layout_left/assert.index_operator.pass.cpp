@@ -8,8 +8,8 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// REQUIRES: libcpp-hardening-mode={{safe|debug}}
-// XFAIL: availability-verbose_abort-missing
+// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <mdspan>
 
@@ -31,35 +31,35 @@
 int main(int, char**) {
   // value out of range
   {
-    std::layout_left::template mapping<std::extents<unsigned char, 5>> m;
+    std::layout_left::mapping<std::extents<unsigned char, 5>> m;
     TEST_LIBCPP_ASSERT_FAILURE(m(-1), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(-130), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(5), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(1000), "layout_left::mapping: out of bounds indexing");
   }
   {
-    std::layout_left::template mapping<std::extents<signed char, 5>> m;
+    std::layout_left::mapping<std::extents<signed char, 5>> m;
     TEST_LIBCPP_ASSERT_FAILURE(m(-1), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(-130), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(5), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(1000), "layout_left::mapping: out of bounds indexing");
   }
   {
-    std::layout_left::template mapping<std::dextents<unsigned char, 1>> m(std::dextents<unsigned char, 1>(5));
+    std::layout_left::mapping<std::dextents<unsigned char, 1>> m(std::dextents<unsigned char, 1>(5));
     TEST_LIBCPP_ASSERT_FAILURE(m(-1), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(-130), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(5), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(1000), "layout_left::mapping: out of bounds indexing");
   }
   {
-    std::layout_left::template mapping<std::dextents<signed char, 1>> m(std::dextents<signed char, 1>(5));
+    std::layout_left::mapping<std::dextents<signed char, 1>> m(std::dextents<signed char, 1>(5));
     TEST_LIBCPP_ASSERT_FAILURE(m(-1), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(-130), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(5), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(1000), "layout_left::mapping: out of bounds indexing");
   }
   {
-    std::layout_left::template mapping<std::dextents<int, 3>> m(std::dextents<int, 3>(5, 7, 9));
+    std::layout_left::mapping<std::dextents<int, 3>> m(std::dextents<int, 3>(5, 7, 9));
     TEST_LIBCPP_ASSERT_FAILURE(m(-1, -1, -1), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(-1, 0, 0), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(0, -1, 0), "layout_left::mapping: out of bounds indexing");
@@ -70,7 +70,7 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(m(5, 7, 9), "layout_left::mapping: out of bounds indexing");
   }
   {
-    std::layout_left::template mapping<std::dextents<unsigned, 3>> m(std::dextents<int, 3>(5, 7, 9));
+    std::layout_left::mapping<std::dextents<unsigned, 3>> m(std::dextents<int, 3>(5, 7, 9));
     TEST_LIBCPP_ASSERT_FAILURE(m(-1, -1, -1), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(-1, 0, 0), "layout_left::mapping: out of bounds indexing");
     TEST_LIBCPP_ASSERT_FAILURE(m(0, -1, 0), "layout_left::mapping: out of bounds indexing");

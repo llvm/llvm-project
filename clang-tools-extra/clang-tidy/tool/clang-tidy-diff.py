@@ -173,6 +173,12 @@ def main():
         help="checks filter, when not specified, use clang-tidy " "default",
         default="",
     )
+    parser.add_argument(
+        "-config-file",
+        dest="config_file",
+        help="Specify the path of .clang-tidy or custom config file",
+        default="",
+    )
     parser.add_argument("-use-color", action="store_true", help="Use colors in output")
     parser.add_argument(
         "-path", dest="build_path", help="Path used to read a compile command database."
@@ -313,6 +319,8 @@ def main():
         common_clang_tidy_args.append("-fix")
     if args.checks != "":
         common_clang_tidy_args.append("-checks=" + args.checks)
+    if args.config_file != "":
+        common_clang_tidy_args.append("-config-file=" + args.config_file)
     if args.quiet:
         common_clang_tidy_args.append("-quiet")
     if args.build_path is not None:

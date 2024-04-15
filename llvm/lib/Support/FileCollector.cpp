@@ -71,7 +71,7 @@ void FileCollector::PathCanonicalizer::updateWithRealPath(
     // cases? What if there is nothing on disk?
     if (sys::fs::real_path(Directory, RealPath))
       return;
-    CachedDirs[Directory] = std::string(RealPath.str());
+    CachedDirs[Directory] = std::string(RealPath);
   } else {
     RealPath = DirWithSymlink->second;
   }
@@ -281,7 +281,7 @@ public:
   }
 
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override {
+                              SmallVectorImpl<char> &Output) override {
     auto EC = FS->getRealPath(Path, Output);
     if (!EC) {
       Collector->addFile(Path);
