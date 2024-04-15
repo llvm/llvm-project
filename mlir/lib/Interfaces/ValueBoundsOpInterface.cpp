@@ -202,6 +202,28 @@ int64_t ValueBoundsConstraintSet::insert(bool isSymbol) {
   return pos;
 }
 
+int64_t ValueBoundsConstraintSet::insert(AffineMap map, ValueDimList operands,
+                                         bool isSymbol) {
+  assert(map.getNumResults() == 1 && "expected affine map with one result");
+  int64_t pos = insert(isSymbol);
+
+  // Add map and operands to the constraint set. Dimensions are converted to
+  // symbols. All operands are added to the worklist (unless they were already
+  // processed).
+  auto mapper = [&](std::pair<Value, std::optional<int64_t>> v) {
+    return getExpr(v.first, v.second);
+  };
+  SmallVector<AffineExpr> dimReplacements = llvm::to_vector(
+      llvm::map_range(ArrayRef(operands).take_front(map.getNumDims()), mapper));
+  SmallVector<AffineExpr> symReplacements = llvm::to_vector(
+      llvm::map_range(ArrayRef(operands).drop_front(map.getNumDims()), mapper));
+  addBound(
+      presburger::BoundType::EQ, pos,
+      map.getResult(0).replaceDimsAndSymbols(dimReplacements, symReplacements));
+
+  return pos;
+}
+
 int64_t ValueBoundsConstraintSet::getPos(Value value,
                                          std::optional<int64_t> dim) const {
 #ifndef NDEBUG
@@ -222,6 +244,13 @@ AffineExpr ValueBoundsConstraintSet::getPosExpr(int64_t pos) {
   return pos < cstr.getNumDimVars()
              ? builder.getAffineDimExpr(pos)
              : builder.getAffineSymbolExpr(pos - cstr.getNumDimVars());
+}
+
+bool ValueBoundsConstraintSet::isMapped(Value value,
+                                        std::optional<int64_t> dim) const {
+  auto it =
+      valueDimToPosition.find(std::make_pair(value, dim.value_or(kIndexValue)));
+  return it != valueDimToPosition.end();
 }
 
 static Operation *getOwnerOfValue(Value value) {
@@ -560,27 +589,10 @@ void ValueBoundsConstraintSet::populateConstraints(Value value,
 
 int64_t ValueBoundsConstraintSet::populateConstraints(AffineMap map,
                                                       ValueDimList operands) {
-  assert(map.getNumResults() == 1 && "expected affine map with one result");
-  int64_t pos = insert(/*isSymbol=*/false);
-
-  // Add map and operands to the constraint set. Dimensions are converted to
-  // symbols. All operands are added to the worklist (unless they were already
-  // processed).
-  auto mapper = [&](std::pair<Value, std::optional<int64_t>> v) {
-    return getExpr(v.first, v.second);
-  };
-  SmallVector<AffineExpr> dimReplacements = llvm::to_vector(
-      llvm::map_range(ArrayRef(operands).take_front(map.getNumDims()), mapper));
-  SmallVector<AffineExpr> symReplacements = llvm::to_vector(
-      llvm::map_range(ArrayRef(operands).drop_front(map.getNumDims()), mapper));
-  addBound(
-      presburger::BoundType::EQ, pos,
-      map.getResult(0).replaceDimsAndSymbols(dimReplacements, symReplacements));
-
+  int64_t pos = insert(map, operands, /*isSymbol=*/false);
   // Process the backward slice of `operands` (i.e., reverse use-def chain)
   // until `stopCondition` is met.
   processWorklist();
-
   return pos;
 }
 
@@ -600,9 +612,18 @@ ValueBoundsConstraintSet::computeConstantDelta(Value value1, Value value2,
                               {{value1, dim1}, {value2, dim2}});
 }
 
-bool ValueBoundsConstraintSet::compare(Value lhs, std::optional<int64_t> lhsDim,
-                                       ComparisonOperator cmp, Value rhs,
-                                       std::optional<int64_t> rhsDim) {
+bool ValueBoundsConstraintSet::compareValueDims(OpFoldResult lhs,
+                                                std::optional<int64_t> lhsDim,
+                                                ComparisonOperator cmp,
+                                                OpFoldResult rhs,
+                                                std::optional<int64_t> rhsDim) {
+#ifndef NDEBUG
+  if (auto lhsVal = dyn_cast<Value>(lhs))
+    assertValidValueDim(lhsVal, lhsDim);
+  if (auto rhsVal = dyn_cast<Value>(rhs))
+    assertValidValueDim(rhsVal, rhsDim);
+#endif // NDEBUG
+
   // This function returns "true" if "lhs CMP rhs" is proven to hold.
   //
   // Example for ComparisonOperator::LE and index-typed values: We would like to
@@ -621,24 +642,32 @@ bool ValueBoundsConstraintSet::compare(Value lhs, std::optional<int64_t> lhsDim,
 
   // EQ can be expressed as LE and GE.
   if (cmp == EQ)
-    return compare(lhs, lhsDim, ComparisonOperator::LE, rhs, rhsDim) &&
-           compare(lhs, lhsDim, ComparisonOperator::GE, rhs, rhsDim);
+    return compareValueDims(lhs, lhsDim, ComparisonOperator::LE, rhs, rhsDim) &&
+           compareValueDims(lhs, lhsDim, ComparisonOperator::GE, rhs, rhsDim);
 
   // Construct inequality. For the above example: lhs > rhs.
   // `IntegerRelation` inequalities are expressed in the "flattened" form and
   // with ">= 0". I.e., lhs - rhs - 1 >= 0.
-  SmallVector<int64_t> eq(cstr.getNumDimAndSymbolVars() + 1, 0);
+  SmallVector<int64_t> eq(cstr.getNumCols(), 0);
+  auto addToEq = [&](OpFoldResult ofr, std::optional<int64_t> dim,
+                     int64_t factor) {
+    if (auto constVal = ::getConstantIntValue(ofr)) {
+      eq[cstr.getNumCols() - 1] += *constVal * factor;
+    } else {
+      eq[getPos(cast<Value>(ofr), dim)] += factor;
+    }
+  };
   if (cmp == LT || cmp == LE) {
-    ++eq[getPos(lhs, lhsDim)];
-    --eq[getPos(rhs, rhsDim)];
+    addToEq(lhs, lhsDim, 1);
+    addToEq(rhs, rhsDim, -1);
   } else if (cmp == GT || cmp == GE) {
-    --eq[getPos(lhs, lhsDim)];
-    ++eq[getPos(rhs, rhsDim)];
+    addToEq(lhs, lhsDim, -1);
+    addToEq(rhs, rhsDim, 1);
   } else {
     llvm_unreachable("unsupported comparison operator");
   }
   if (cmp == LE || cmp == GE)
-    eq[cstr.getNumDimAndSymbolVars()] -= 1;
+    eq[cstr.getNumCols() - 1] -= 1;
 
   // Add inequality to the constraint set and check if it made the constraint
   // set empty.
@@ -649,40 +678,128 @@ bool ValueBoundsConstraintSet::compare(Value lhs, std::optional<int64_t> lhsDim,
   return isEmpty;
 }
 
-FailureOr<bool>
-ValueBoundsConstraintSet::areEqual(Value value1, Value value2,
-                                   std::optional<int64_t> dim1,
-                                   std::optional<int64_t> dim2) {
-  // Subtract the two values/dimensions from each other. If the result is 0,
-  // both are equal.
-  FailureOr<int64_t> delta = computeConstantDelta(value1, value2, dim1, dim2);
-  if (failed(delta))
-    return failure();
-  return *delta == 0;
+bool ValueBoundsConstraintSet::comparePos(int64_t lhsPos,
+                                          ComparisonOperator cmp,
+                                          int64_t rhsPos) {
+  // This function returns "true" if "lhs CMP rhs" is proven to hold. For
+  // detailed documentation, see `compareValueDims`.
+
+  // EQ can be expressed as LE and GE.
+  if (cmp == EQ)
+    return comparePos(lhsPos, ComparisonOperator::LE, rhsPos) &&
+           comparePos(lhsPos, ComparisonOperator::GE, rhsPos);
+
+  // Construct inequality.
+  SmallVector<int64_t> eq(cstr.getNumCols(), 0);
+  if (cmp == LT || cmp == LE) {
+    ++eq[lhsPos];
+    --eq[rhsPos];
+  } else if (cmp == GT || cmp == GE) {
+    --eq[lhsPos];
+    ++eq[rhsPos];
+  } else {
+    llvm_unreachable("unsupported comparison operator");
+  }
+  if (cmp == LE || cmp == GE)
+    eq[cstr.getNumCols() - 1] -= 1;
+
+  // Add inequality to the constraint set and check if it made the constraint
+  // set empty.
+  int64_t ineqPos = cstr.getNumInequalities();
+  cstr.addInequality(eq);
+  bool isEmpty = cstr.isEmpty();
+  cstr.removeInequality(ineqPos);
+  return isEmpty;
 }
 
-FailureOr<bool> ValueBoundsConstraintSet::areEqual(OpFoldResult ofr1,
-                                                   OpFoldResult ofr2) {
-  Builder b(ofr1.getContext());
-  AffineMap map =
-      AffineMap::get(/*dimCount=*/0, /*symbolCount=*/2,
-                     b.getAffineSymbolExpr(0) - b.getAffineSymbolExpr(1));
-  SmallVector<OpFoldResult> ofrOperands;
-  ofrOperands.push_back(ofr1);
-  ofrOperands.push_back(ofr2);
-  SmallVector<Value> valueOperands;
-  AffineMap foldedMap =
-      foldAttributesIntoMap(b, map, ofrOperands, valueOperands);
-  ValueDimList valueDims;
-  for (Value v : valueOperands) {
-    assert(v.getType().isIndex() && "expected index type");
-    valueDims.emplace_back(v, std::nullopt);
-  }
-  FailureOr<int64_t> delta =
-      computeConstantBound(presburger::BoundType::EQ, foldedMap, valueDims);
-  if (failed(delta))
-    return failure();
-  return *delta == 0;
+bool ValueBoundsConstraintSet::populateAndCompare(
+    OpFoldResult lhs, std::optional<int64_t> lhsDim, ComparisonOperator cmp,
+    OpFoldResult rhs, std::optional<int64_t> rhsDim) {
+#ifndef NDEBUG
+  if (auto lhsVal = dyn_cast<Value>(lhs))
+    assertValidValueDim(lhsVal, lhsDim);
+  if (auto rhsVal = dyn_cast<Value>(rhs))
+    assertValidValueDim(rhsVal, rhsDim);
+#endif // NDEBUG
+
+  if (auto lhsVal = dyn_cast<Value>(lhs))
+    populateConstraints(lhsVal, lhsDim);
+  if (auto rhsVal = dyn_cast<Value>(rhs))
+    populateConstraints(rhsVal, rhsDim);
+
+  return compareValueDims(lhs, lhsDim, cmp, rhs, rhsDim);
+}
+
+bool ValueBoundsConstraintSet::compare(OpFoldResult lhs,
+                                       std::optional<int64_t> lhsDim,
+                                       ComparisonOperator cmp, OpFoldResult rhs,
+                                       std::optional<int64_t> rhsDim) {
+  auto stopCondition = [&](Value v, std::optional<int64_t> dim,
+                           ValueBoundsConstraintSet &cstr) {
+    // Keep processing as long as lhs/rhs are not mapped.
+    if (auto lhsVal = dyn_cast<Value>(lhs))
+      if (!cstr.isMapped(lhsVal, dim))
+        return false;
+    if (auto rhsVal = dyn_cast<Value>(rhs))
+      if (!cstr.isMapped(rhsVal, dim))
+        return false;
+    // Keep processing as long as the relation cannot be proven.
+    return cstr.compareValueDims(lhs, lhsDim, cmp, rhs, rhsDim);
+  };
+
+  ValueBoundsConstraintSet cstr(lhs.getContext(), stopCondition);
+  return cstr.populateAndCompare(lhs, lhsDim, cmp, rhs, rhsDim);
+}
+
+bool ValueBoundsConstraintSet::compare(AffineMap lhs, ValueDimList lhsOperands,
+                                       ComparisonOperator cmp, AffineMap rhs,
+                                       ValueDimList rhsOperands) {
+  int64_t lhsPos = -1, rhsPos = -1;
+  auto stopCondition = [&](Value v, std::optional<int64_t> dim,
+                           ValueBoundsConstraintSet &cstr) {
+    // Keep processing as long as lhs/rhs were not processed.
+    if (size_t(lhsPos) >= cstr.positionToValueDim.size() ||
+        size_t(rhsPos) >= cstr.positionToValueDim.size())
+      return false;
+    // Keep processing as long as the relation cannot be proven.
+    return cstr.comparePos(lhsPos, cmp, rhsPos);
+  };
+  ValueBoundsConstraintSet cstr(lhs.getContext(), stopCondition);
+  lhsPos = cstr.insert(lhs, lhsOperands);
+  rhsPos = cstr.insert(rhs, rhsOperands);
+  cstr.processWorklist();
+  return cstr.comparePos(lhsPos, cmp, rhsPos);
+}
+
+bool ValueBoundsConstraintSet::compare(AffineMap lhs,
+                                       ArrayRef<Value> lhsOperands,
+                                       ComparisonOperator cmp, AffineMap rhs,
+                                       ArrayRef<Value> rhsOperands) {
+  ValueDimList lhsValueDimOperands =
+      llvm::map_to_vector(lhsOperands, [](Value v) {
+        return std::make_pair(v, std::optional<int64_t>());
+      });
+  ValueDimList rhsValueDimOperands =
+      llvm::map_to_vector(rhsOperands, [](Value v) {
+        return std::make_pair(v, std::optional<int64_t>());
+      });
+  return ValueBoundsConstraintSet::compare(lhs, lhsValueDimOperands, cmp, rhs,
+                                           rhsValueDimOperands);
+}
+
+FailureOr<bool>
+ValueBoundsConstraintSet::areEqual(OpFoldResult value1, OpFoldResult value2,
+                                   std::optional<int64_t> dim1,
+                                   std::optional<int64_t> dim2) {
+  if (ValueBoundsConstraintSet::compare(value1, dim1, ComparisonOperator::EQ,
+                                        value2, dim2))
+    return true;
+  if (ValueBoundsConstraintSet::compare(value1, dim1, ComparisonOperator::LT,
+                                        value2, dim2) ||
+      ValueBoundsConstraintSet::compare(value1, dim1, ComparisonOperator::GT,
+                                        value2, dim2))
+    return false;
+  return failure();
 }
 
 FailureOr<bool>

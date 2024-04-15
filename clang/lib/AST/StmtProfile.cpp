@@ -61,7 +61,7 @@ namespace {
     virtual void VisitName(DeclarationName Name, bool TreatAsDecl = false) = 0;
 
     /// Visit identifiers that are not in Decl's or Type's.
-    virtual void VisitIdentifierInfo(IdentifierInfo *II) = 0;
+    virtual void VisitIdentifierInfo(const IdentifierInfo *II) = 0;
 
     /// Visit a nested-name-specifier that occurs within an expression
     /// or statement.
@@ -163,7 +163,7 @@ namespace {
       ID.AddPointer(Name.getAsOpaquePtr());
     }
 
-    void VisitIdentifierInfo(IdentifierInfo *II) override {
+    void VisitIdentifierInfo(const IdentifierInfo *II) override {
       ID.AddPointer(II);
     }
 
@@ -211,7 +211,7 @@ namespace {
       }
       Hash.AddDeclarationName(Name, TreatAsDecl);
     }
-    void VisitIdentifierInfo(IdentifierInfo *II) override {
+    void VisitIdentifierInfo(const IdentifierInfo *II) override {
       ID.AddBoolean(II);
       if (II) {
         Hash.AddIdentifierInfo(II);
@@ -2445,9 +2445,10 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
 namespace {
 class OpenACCClauseProfiler
     : public OpenACCClauseVisitor<OpenACCClauseProfiler> {
+  StmtProfiler &Profiler;
 
 public:
-  OpenACCClauseProfiler() = default;
+  OpenACCClauseProfiler(StmtProfiler &P) : Profiler(P) {}
 
   void VisitOpenACCClauseList(ArrayRef<const OpenACCClause *> Clauses) {
     for (const OpenACCClause *Clause : Clauses) {
@@ -2456,12 +2457,22 @@ public:
       Visit(Clause);
     }
   }
-  void VisitOpenACCDefaultClause(const OpenACCDefaultClause &Clause);
+
+#define VISIT_CLAUSE(CLAUSE_NAME)                                              \
+  void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &Clause);
+
+#include "clang/Basic/OpenACCClauses.def"
 };
 
 /// Nothing to do here, there are no sub-statements.
-void OpenACCClauseProfiler::VisitOpenACCDefaultClause(
+void OpenACCClauseProfiler::VisitDefaultClause(
     const OpenACCDefaultClause &Clause) {}
+
+void OpenACCClauseProfiler::VisitIfClause(const OpenACCIfClause &Clause) {
+  assert(Clause.hasConditionExpr() &&
+         "if clause requires a valid condition expr");
+  Profiler.VisitStmt(Clause.getConditionExpr());
+}
 } // namespace
 
 void StmtProfiler::VisitOpenACCComputeConstruct(
@@ -2469,7 +2480,7 @@ void StmtProfiler::VisitOpenACCComputeConstruct(
   // VisitStmt handles children, so the AssociatedStmt is handled.
   VisitStmt(S);
 
-  OpenACCClauseProfiler P;
+  OpenACCClauseProfiler P{*this};
   P.VisitOpenACCClauseList(S->clauses());
 }
 

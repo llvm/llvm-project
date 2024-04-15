@@ -2115,6 +2115,9 @@ def OMP_scope : Directive<"scope"> {
   let association = AS_Block;
 }
 def OMP_Workshare : Directive<"workshare"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>
+  ];
   let association = AS_Block;
 }
 def OMP_ParallelWorkshare : Directive<"parallel workshare"> {
