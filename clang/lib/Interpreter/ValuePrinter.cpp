@@ -633,7 +633,7 @@ std::string printRecordValue(const Value &V, const CXXRecordDecl *RecordDecl) {
           dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
       if (specDecl) {
         const TemplateArgumentList &tplArgs = specDecl->getTemplateArgs();
-        assert(tplArgs.size != 0);
+        assert(tplArgs.size() != 0);
         const TemplateArgument &tplArg = tplArgs[0];
         if (tplArg.getKind() == TemplateArgument::Type) {
           if (const BuiltinType *BT =
