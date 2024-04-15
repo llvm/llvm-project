@@ -21,6 +21,7 @@
 #include "SPIRVInstrInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/TypedPointerType.h"
 
 namespace llvm {
 using SPIRVType = const MachineInstr;
@@ -57,6 +58,9 @@ class SPIRVGlobalRegistry {
 
   SmallPtrSet<const Type *, 4> TypesInProcessing;
   DenseMap<const Type *, SPIRVType *> ForwardPointerTypes;
+
+  // if a function returns a pointer, this is to map it into TypedPointerType
+  DenseMap<const Function *, TypedPointerType *> FunResPointerTypes;
 
   // Number of bits pointers and size_t integers require.
   const unsigned PointerSize;
@@ -133,6 +137,16 @@ public:
 
   void setBound(unsigned V) { Bound = V; }
   unsigned getBound() { return Bound; }
+
+  // Add a record to the map of function return pointer types.
+  void addReturnType(const Function *ArgF, TypedPointerType *DerivedTy) {
+    FunResPointerTypes[ArgF] = DerivedTy;
+  }
+  // Find a record in the map of function return pointer types.
+  const TypedPointerType *findReturnType(const Function *ArgF) {
+    auto It = FunResPointerTypes.find(ArgF);
+    return It == FunResPointerTypes.end() ? nullptr : It->second;
+  }
 
   // Deduced element types of untyped pointers and composites:
   // - Add a record to the map of deduced element types.
@@ -276,8 +290,12 @@ public:
           SPIRV::AccessQualifier::ReadWrite);
 
   // Return the SPIR-V type instruction corresponding to the given VReg, or
-  // nullptr if no such type instruction exists.
-  SPIRVType *getSPIRVTypeForVReg(Register VReg) const;
+  // nullptr if no such type instruction exists. The second argument MF
+  // allows to search for the association in a context of the machine functions
+  // than the current one, without switching between different "current" machine
+  // functions.
+  SPIRVType *getSPIRVTypeForVReg(Register VReg,
+                                 const MachineFunction *MF = nullptr) const;
 
   // Whether the given VReg has a SPIR-V type mapped to it yet.
   bool hasSPIRVTypeForVReg(Register VReg) const {
