@@ -33,7 +33,4 @@ add_flang_unittest(FlangRuntimeTests
 target_link_libraries(FlangRuntimeTests
   PRIVATE
   FortranRuntime
-  stdc++fs
 )
-
-set_property(TARGET FlangRuntimeTests PROPERTY CXX_STANDARD 17)
