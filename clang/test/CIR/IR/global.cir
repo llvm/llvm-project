@@ -63,6 +63,12 @@ module {
   cir.global external tls_local_dyn @model1 = #cir.int<0> : !s32i
   cir.global external tls_init_exec @model2 = #cir.int<0> : !s32i
   cir.global external tls_local_exec @model3 = #cir.int<0> : !s32i
+
+  cir.global "private" external tls_dyn @batata : !s32i
+  cir.func @f35() {
+    %0 = cir.get_global thread_local @batata : cir.ptr <!s32i>
+    cir.return
+  }
 }
 
 // CHECK: cir.global external @a = #cir.int<3> : !s32i
@@ -92,3 +98,9 @@ module {
 // CHECK: cir.global external tls_local_dyn @model1 = #cir.int<0> : !s32i
 // CHECK: cir.global external tls_init_exec @model2 = #cir.int<0> : !s32i
 // CHECK: cir.global external tls_local_exec @model3 = #cir.int<0> : !s32i
+
+// CHECK: cir.global "private" external tls_dyn @batata : !s32i
+// CHECK: cir.func @f35() {
+// CHECK:   %0 = cir.get_global thread_local @batata : cir.ptr <!s32i>
+// CHECK:   cir.return
+// CHECK: }
