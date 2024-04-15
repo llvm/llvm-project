@@ -3045,14 +3045,18 @@ public:
   void ActOnDocumentableDecls(ArrayRef<Decl *> Group);
 
   enum class FnBodyKind {
-    /// C++ [dcl.fct.def.general]p1
+    /// C++26 [dcl.fct.def.general]p1
     /// function-body:
     ///   ctor-initializer[opt] compound-statement
     ///   function-try-block
     Other,
     ///   = default ;
     Default,
+    ///   deleted-function-body
+    ///
+    /// deleted-function-body:
     ///   = delete ;
+    ///   = delete ( unevaluated-string ) ;
     Delete
   };
 
@@ -4751,10 +4755,12 @@ public:
                                SourceLocation EqualLoc);
 
   void ActOnPureSpecifier(Decl *D, SourceLocation PureSpecLoc);
-  void SetDeclDeleted(Decl *dcl, SourceLocation DelLoc);
+  void SetDeclDeleted(Decl *dcl, SourceLocation DelLoc,
+                      StringLiteral *Message = nullptr);
   void SetDeclDefaulted(Decl *dcl, SourceLocation DefaultLoc);
 
-  void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind);
+  void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
+                           StringLiteral *DeletedMessage = nullptr);
   void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
   ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);
   ExprResult ActOnRequiresClause(ExprResult ConstraintExpr);
@@ -5446,8 +5452,7 @@ public:
 
   ExprResult BuildDeclarationNameExpr(const CXXScopeSpec &SS, LookupResult &R,
                                       bool NeedsADL,
-                                      bool AcceptInvalidDecl = false,
-                                      bool NeedUnresolved = false);
+                                      bool AcceptInvalidDecl = false);
   ExprResult BuildDeclarationNameExpr(
       const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo, NamedDecl *D,
       NamedDecl *FoundD = nullptr,
@@ -6590,10 +6595,7 @@ public:
                             SourceLocation RParenLoc);
 
   //// ActOnCXXThis -  Parse 'this' pointer.
-  ExprResult ActOnCXXThis(SourceLocation Loc);
-
-  /// Check whether the type of 'this' is valid in the current context.
-  bool CheckCXXThisType(SourceLocation Loc, QualType Type);
+  ExprResult ActOnCXXThis(SourceLocation loc);
 
   /// Build a CXXThisExpr and mark it referenced in the current context.
   Expr *BuildCXXThisExpr(SourceLocation Loc, QualType Type, bool IsImplicit);
@@ -7016,14 +7018,10 @@ private:
   ///@{
 
 public:
-  /// Check whether an expression might be an implicit class member access.
-  bool isPotentialImplicitMemberAccess(const CXXScopeSpec &SS, LookupResult &R,
-                                       bool IsAddressOfOperand);
-
   ExprResult BuildPossibleImplicitMemberExpr(
       const CXXScopeSpec &SS, SourceLocation TemplateKWLoc, LookupResult &R,
-      const TemplateArgumentListInfo *TemplateArgs, const Scope *S);
-
+      const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
+      UnresolvedLookupExpr *AsULE = nullptr);
   ExprResult
   BuildImplicitMemberExpr(const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
                           LookupResult &R,
@@ -8093,6 +8091,11 @@ public:
   bool IsFunctionConversion(QualType FromType, QualType ToType,
                             QualType &ResultTy);
   bool DiagnoseMultipleUserDefinedConversion(Expr *From, QualType ToType);
+  void DiagnoseUseOfDeletedFunction(SourceLocation Loc, SourceRange Range,
+                                    DeclarationName Name,
+                                    OverloadCandidateSet &CandidateSet,
+                                    FunctionDecl *Fn, MultiExprArg Args,
+                                    bool IsMember = false);
 
   ExprResult InitializeExplicitObjectArgument(Sema &S, Expr *Obj,
                                               FunctionDecl *Fun);
