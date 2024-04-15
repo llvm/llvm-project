@@ -350,57 +350,32 @@ void NewArrayInit() {
   // CHECK-NEXT:    br label %return
 }
 
-namespace std {
-  typedef decltype(sizeof(int)) size_t;
-
-  // libc++'s implementation
-  template <class _E>
-  class initializer_list
-  {
-    const _E* __begin_;
-    size_t    __size_;
-    initializer_list(const _E* __b, size_t __s);
-  };
-}
-
-class Object {
-public:
-  Object() = default;
-  struct KV;
-  Object(std::initializer_list<KV>);
-  Object(KV);
-};
-
-class Value {
-public:
-  Value(std::initializer_list<Value>);
-  Value(const char *V);
-  ~Value();
-};
-
-class ObjectKey {
-public:
-  ObjectKey(const char *S);
-  ~ObjectKey();
-};
-
-struct Object::KV {
-  ObjectKey K;
-  Value V;
-};
-
 void DestroyInConditionalCleanup() {
   // EH-LABEL: DestroyInConditionalCleanupv()
   // NOEH-LABEL: DestroyInConditionalCleanupv()
+  struct A {
+    A() {}
+    ~A() {}
+  };
+
+  struct Value {
+    Value(A) {}
+    ~Value() {}
+  };
+
+  struct V2 {
+    Value K;
+    Value V;
+  };
   // Verify we use conditional cleanups.
-  foo() ? Object{{"key1", {"val1", "val2"}}} : Object{{"key2", "val2"}};
+  (void)(foo() ? V2{A(), A()} : V2{A(), A()});
   // NOEH:   cond.true:
-  // NOEH:      call void @_ZN9ObjectKeyC1EPKc
-  // NOEH:      store ptr %K, ptr %cond-cleanup.save
+  // NOEH:      call void @_ZZ27DestroyInConditionalCleanupvEN1AC1Ev
+  // NOEH:      store ptr %{{.*}}, ptr %cond-cleanup.save
 
   // EH:   cond.true:
-  // EH:        invoke void @_ZN9ObjectKeyC1EPKc
-  // EH:        store ptr %K, ptr %cond-cleanup.save
+  // EH:        invoke void @_ZZ27DestroyInConditionalCleanupvEN1AC1Ev
+  // EH:        store ptr %{{.*}}, ptr %cond-cleanup.save
 }
 
 void ArrayInitWithContinue() {
