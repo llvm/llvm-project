@@ -3217,26 +3217,20 @@ template <class ELFT> void DebugNamesSection<ELFT>::finalizeContents() {
   });
 }
 
+// Skim through the CUs reading the unit lengths & types to find correct
+// starting offsets for CUs (before relocation).
 template <class ELFT>
 void DebugNamesSection<ELFT>::updateMultiCuOffsets(OutputChunk &chunk) {
-  auto infoData = toStringRef(chunk.infoSec->contentMaybeDecompress());
-  const char *p = infoData.data();
-
-  // Skim through the CUs reading the unit lengths & types to find correct
-  // starting offsets for CUs (before relocation).
+  ArrayRef<uint8_t> infoData = chunk.infoSec->contentMaybeDecompress();
   uint32_t nextCu = 0;
   for (size_t i = 1, end = chunk.compUnits.size(); i < end; ++i) {
     if (chunk.compUnits[i] == 0) {
       // Skip to start of next CU and read the type & size.
-      p = infoData.data() + nextCu;
-      uint32_t unit_length =
-          endian::readNext<uint32_t, ELFT::Endianness, unaligned>(p);
-      [[maybe_unused]] uint16_t version =
-          endian::readNext<uint16_t, ELFT::Endianness, unaligned>(p);
-      uint8_t unitType =
-          endian::readNext<uint8_t, ELFT::Endianness, unaligned>(p);
+      auto *p = infoData.data() + nextCu;
+      uint32_t unitLength = endian::read32<ELFT::Endianness>(p);
+      uint8_t unitType = p[6];
       if (unitType == dwarf::DW_UT_compile)
-        nextCu += unit_length + 4;
+        nextCu += unitLength + 4;
     }
     chunk.compUnits[i] += nextCu;
   }
