@@ -60,6 +60,7 @@
 ! HELP-NEXT: -fno-lto                Disable LTO mode (default)
 ! HELP-NEXT: -fno-ppc-native-vector-element-order
 ! HELP-NEXT:                         Specifies PowerPC non-native vector element order
+! HELP-NEXT:  -fno-rtlib-add-rpath Do not add -rpath with architecture-specific resource directory to the linker flags. When --hip-link is specified, do not add -rpath with HIP runtime library directory to the linker flags
 ! HELP-NEXT: -fno-signed-zeros       Allow optimizations that ignore the sign of floating point zeros
 ! HELP-NEXT: -fno-stack-arrays       Allocate array temporaries on the heap (default)
 ! HELP-NEXT: -fno-version-loops-for-stride
@@ -81,6 +82,7 @@
 ! HELP-NEXT:                         Specifies PowerPC native vector element order (default)
 ! HELP-NEXT: -freciprocal-math       Allow division operations to be reassociated
 ! HELP-NEXT: -fropi                  Generate read-only position independent code (ARM only)
+! HELP-NEXT: -frtlib-add-rpath Add -rpath with architecture-specific resource directory to the linker flags. When --hip-link is specified, also add -rpath with HIP runtime library directory to the linker flags
 ! HELP-NEXT: -frwpi                  Generate read-write position independent code (ARM only)
 ! HELP-NEXT: -fsave-optimization-record=<format>
 ! HELP-NEXT:                         Generate an optimization record file in a specific format
