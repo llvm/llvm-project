@@ -76,3 +76,5 @@ add_proxy_header_library(
     libc.include.sys_epoll
     libc.include.llvm-libc-macros.sys_epoll_macros
 )
+
+add_subdirectory(types)
