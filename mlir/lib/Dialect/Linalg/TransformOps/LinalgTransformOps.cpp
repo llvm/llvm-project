@@ -3312,7 +3312,7 @@ transform::HoistRedundantVectorTransfersOp::applyToOne(
 
 DiagnosedSilenceableFailure
 transform::HoistRedundantVectorBroadcastsOp::applyToOne(
-    transform::TransformRewriter &rewriter, func::FuncOp target,
+    transform::TransformRewriter &rewriter, mlir::Operation *target,
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   linalg::hoistRedundantVectorBroadcasts(target);
