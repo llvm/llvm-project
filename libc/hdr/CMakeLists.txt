@@ -51,6 +51,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  float_macros
+  HDRS
+    float_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.float_macros
+    libc.incude.float
+)
+
+add_proxy_header_library(
   signal_macros
   HDRS
     signal_macros.h
@@ -67,5 +76,3 @@ add_proxy_header_library(
     libc.include.sys_epoll
     libc.include.llvm-libc-macros.sys_epoll_macros
 )
-
-add_subdirectory(types)
