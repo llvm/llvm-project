@@ -769,8 +769,8 @@ KnownBits KnownBits::avgFloorS(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
-  APInt Zero = APIntOps::avgFloorS(LHS.Zero, RHS.Zero);
-  APInt One = APIntOps::avgFloorS(LHS.One, RHS.One);
+  APInt Zero = APIntOps::avgFloorU(LHS.Zero, RHS.Zero);
+  APInt One = APIntOps::avgFloorU(LHS.One, RHS.One);
   return KnownBits(Zero, One);
 }
 
