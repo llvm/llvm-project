@@ -5099,34 +5099,6 @@ public:
     /// example, in a for-range initializer).
     bool InLifetimeExtendingContext = false;
 
-    /// Whether we are currently in a context in which all temporaries must be
-    /// materialized.
-    ///
-    /// [class.temporary]/p2:
-    /// The materialization of a temporary object is generally delayed as long
-    /// as possible in order to avoid creating unnecessary temporary objects.
-    ///
-    /// Temporary objects are materialized:
-    ///   (2.1) when binding a reference to a prvalue ([dcl.init.ref],
-    ///   [expr.type.conv], [expr.dynamic.cast], [expr.static.cast],
-    ///   [expr.const.cast], [expr.cast]),
-    ///
-    ///   (2.2) when performing member access on a class prvalue ([expr.ref],
-    ///   [expr.mptr.oper]),
-    ///
-    ///   (2.3) when performing an array-to-pointer conversion or subscripting
-    ///   on an array prvalue ([conv.array], [expr.sub]),
-    ///
-    ///   (2.4) when initializing an object of type
-    ///   std​::​initializer_list<T> from a braced-init-list
-    ///   ([dcl.init.list]),
-    ///
-    ///   (2.5) for certain unevaluated operands ([expr.typeid], [expr.sizeof])
-    ///
-    ///   (2.6) when a prvalue that has type other than cv void appears as a
-    ///   discarded-value expression ([expr.context]).
-    bool InMaterializeTemporaryObjectContext = false;
-
     // When evaluating immediate functions in the initializer of a default
     // argument or default member initializer, this is the declaration whose
     // default initializer is being evaluated and the location of the call
@@ -6398,19 +6370,6 @@ public:
     }
   }
 
-  /// keepInMaterializeTemporaryObjectContext - Pull down
-  /// InMaterializeTemporaryObjectContext flag from previous context.
-  void keepInMaterializeTemporaryObjectContext() {
-    if (ExprEvalContexts.size() > 2 &&
-        ExprEvalContexts[ExprEvalContexts.size() - 2]
-            .InMaterializeTemporaryObjectContext) {
-      auto &LastRecord = ExprEvalContexts.back();
-      auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
-      LastRecord.InMaterializeTemporaryObjectContext =
-          PrevRecord.InMaterializeTemporaryObjectContext;
-    }
-  }
-
   DefaultedComparisonKind getDefaultedComparisonKind(const FunctionDecl *FD) {
     return getDefaultedFunctionKind(FD).asComparison();
   }
@@ -6553,12 +6512,6 @@ public:
   /// that could not be proven as to whether they mismatch with new-expression
   /// used in initializer of the field.
   llvm::MapVector<FieldDecl *, DeleteLocs> DeleteExprs;
-
-  bool isInMaterializeTemporaryObjectContext() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    return ExprEvalContexts.back().InMaterializeTemporaryObjectContext;
-  }
 
   ParsedType getInheritingConstructorName(CXXScopeSpec &SS,
                                           SourceLocation NameLoc,
