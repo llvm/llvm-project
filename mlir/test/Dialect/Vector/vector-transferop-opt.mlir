@@ -374,7 +374,6 @@ func.func @forward_dead_constant_splat_store_with_masking(%buffer : memref<?x?xf
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %c512 = arith.constant 512 : index
-  %vscale = vector.vscale
   vector.transfer_write %cst, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
   %0 = vector.transfer_read %buffer[%c0, %c0], %cst_f32, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<[8]x[8]xf32>
   %x = scf.for %arg2 = %c0 to %c512 step %c1 iter_args(%acc = %0) -> (vector<[8]x[8]xf32>) {
@@ -400,7 +399,6 @@ func.func @forward_dead_constant_splat_store_with_masking_negative(%buffer : mem
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %c512 = arith.constant 512 : index
-  %vscale = vector.vscale
   vector.transfer_write %cst, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
   %0 = vector.transfer_read %buffer[%c0, %c0], %cst_f32, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<[8]x[8]xf32>
   %x = scf.for %arg2 = %c0 to %c512 step %c1 iter_args(%acc = %0) -> (vector<[8]x[8]xf32>) {
