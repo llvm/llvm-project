@@ -105,9 +105,8 @@ def GEN_BarrierOp : GEN_Op<"barrier"> {
 
 def IntegerOrFloatType : AnyTypeOf<[AnySignlessInteger, AnyFloat]>;
 
-def GEN_SubGroupShuffleOp : GEN_Op<"sub_group_shuffle", [
-      TypesMatchWith<"result and value have the same type",
-                     "res", "value", "$_self">]>,
+def GEN_SubGroupShuffleOp
+    : GEN_Op<"sub_group_shuffle", [Pure, AllTypesMatch<["res", "value"]>]>,
   Results<(outs IntegerOrFloatType:$res)>,
   Arguments<(ins IntegerOrFloatType:$value,
                  I32:$mask,
