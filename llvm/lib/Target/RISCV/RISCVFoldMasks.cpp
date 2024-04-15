@@ -123,7 +123,6 @@ bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI) const {
                                            TRI->lookThruCopyLike(FalseReg, MRI))
     return false;
 
-  // assert(MI.getOperand(4).isReg() && MI.getOperand(4).getReg() == RISCV::V0);
   if (!isAllOnesMask(MI.getOperand(4)))
     return false;
 
