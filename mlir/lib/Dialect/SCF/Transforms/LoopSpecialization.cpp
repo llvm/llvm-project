@@ -186,8 +186,8 @@ static bool hasVectorSizeEqualToStep(ForOp forOp, Operation *op,
                           ? cast<vector::TransferWriteOp>(op).getVectorType()
                           : cast<vector::TransferReadOp>(op).getVectorType();
     auto indices = isa<vector::TransferWriteOp>(op)
-                          ? cast<vector::TransferWriteOp>(op).getIndices()
-                          : cast<vector::TransferReadOp>(op).getIndices();
+                       ? cast<vector::TransferWriteOp>(op).getIndices()
+                       : cast<vector::TransferReadOp>(op).getIndices();
 
     if (vectorType.getRank() != 1)
       return false;
