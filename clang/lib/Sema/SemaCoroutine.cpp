@@ -817,12 +817,9 @@ ExprResult Sema::BuildOperatorCoawaitLookupExpr(Scope *S, SourceLocation Loc) {
 
   assert(!Operators.isAmbiguous() && "Operator lookup cannot be ambiguous");
   const auto &Functions = Operators.asUnresolvedSet();
-  bool IsOverloaded =
-      Functions.size() > 1 ||
-      (Functions.size() == 1 && isa<FunctionTemplateDecl>(*Functions.begin()));
   Expr *CoawaitOp = UnresolvedLookupExpr::Create(
       Context, /*NamingClass*/ nullptr, NestedNameSpecifierLoc(),
-      DeclarationNameInfo(OpName, Loc), /*RequiresADL*/ true, IsOverloaded,
+      DeclarationNameInfo(OpName, Loc), /*RequiresADL*/ true,
       Functions.begin(), Functions.end(), /*KnownDependent=*/false);
   assert(CoawaitOp);
   return CoawaitOp;

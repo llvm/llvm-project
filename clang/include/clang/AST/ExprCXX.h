@@ -3198,7 +3198,6 @@ class UnresolvedLookupExpr final
                        NestedNameSpecifierLoc QualifierLoc,
                        SourceLocation TemplateKWLoc,
                        const DeclarationNameInfo &NameInfo, bool RequiresADL,
-                       bool Overloaded,
                        const TemplateArgumentListInfo *TemplateArgs,
                        UnresolvedSetIterator Begin, UnresolvedSetIterator End,
                        bool KnownDependent);
@@ -3218,7 +3217,7 @@ public:
   static UnresolvedLookupExpr *
   Create(const ASTContext &Context, CXXRecordDecl *NamingClass,
          NestedNameSpecifierLoc QualifierLoc,
-         const DeclarationNameInfo &NameInfo, bool RequiresADL, bool Overloaded,
+         const DeclarationNameInfo &NameInfo, bool RequiresADL,
          UnresolvedSetIterator Begin, UnresolvedSetIterator End,
          bool KnownDependent);
 
@@ -3240,9 +3239,6 @@ public:
   /// True if this declaration should be extended by
   /// argument-dependent lookup.
   bool requiresADL() const { return UnresolvedLookupExprBits.RequiresADL; }
-
-  /// True if this lookup is overloaded.
-  bool isOverloaded() const { return UnresolvedLookupExprBits.Overloaded; }
 
   /// Gets the 'naming class' (in the sense of C++0x
   /// [class.access.base]p5) of the lookup.  This is the scope

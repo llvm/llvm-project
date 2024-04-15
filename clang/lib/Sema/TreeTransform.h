@@ -10434,7 +10434,7 @@ TreeTransform<Derived>::TransformOMPReductionClause(OMPReductionClause *C) {
       UnresolvedReductions.push_back(UnresolvedLookupExpr::Create(
           SemaRef.Context, /*NamingClass=*/nullptr,
           ReductionIdScopeSpec.getWithLocInContext(SemaRef.Context), NameInfo,
-          /*ADL=*/true, ULE->isOverloaded(), Decls.begin(), Decls.end(),
+          /*ADL=*/true, Decls.begin(), Decls.end(),
           /*KnownDependent=*/false));
     } else
       UnresolvedReductions.push_back(nullptr);
@@ -10481,7 +10481,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPTaskReductionClause(
       UnresolvedReductions.push_back(UnresolvedLookupExpr::Create(
           SemaRef.Context, /*NamingClass=*/nullptr,
           ReductionIdScopeSpec.getWithLocInContext(SemaRef.Context), NameInfo,
-          /*ADL=*/true, ULE->isOverloaded(), Decls.begin(), Decls.end(),
+          /*ADL=*/true, Decls.begin(), Decls.end(),
           /*KnownDependent=*/false));
     } else
       UnresolvedReductions.push_back(nullptr);
@@ -10527,7 +10527,7 @@ TreeTransform<Derived>::TransformOMPInReductionClause(OMPInReductionClause *C) {
       UnresolvedReductions.push_back(UnresolvedLookupExpr::Create(
           SemaRef.Context, /*NamingClass=*/nullptr,
           ReductionIdScopeSpec.getWithLocInContext(SemaRef.Context), NameInfo,
-          /*ADL=*/true, ULE->isOverloaded(), Decls.begin(), Decls.end(),
+          /*ADL=*/true, Decls.begin(), Decls.end(),
           /*KnownDependent=*/false));
     } else
       UnresolvedReductions.push_back(nullptr);
@@ -10709,8 +10709,8 @@ bool transformOMPMappableExprListClause(
       UnresolvedMappers.push_back(UnresolvedLookupExpr::Create(
           TT.getSema().Context, /*NamingClass=*/nullptr,
           MapperIdScopeSpec.getWithLocInContext(TT.getSema().Context),
-          MapperIdInfo, /*ADL=*/true, ULE->isOverloaded(), Decls.begin(),
-          Decls.end(), /*KnownDependent=*/false));
+          MapperIdInfo, /*ADL=*/true, Decls.begin(), Decls.end(),
+          /*KnownDependent=*/false));
     } else {
       UnresolvedMappers.push_back(nullptr);
     }

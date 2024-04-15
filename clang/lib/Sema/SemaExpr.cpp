@@ -3457,8 +3457,7 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
 
   UnresolvedLookupExpr *ULE = UnresolvedLookupExpr::Create(
       Context, R.getNamingClass(), SS.getWithLocInContext(Context),
-      R.getLookupNameInfo(), NeedsADL, R.isOverloadedResult(), R.begin(),
-      R.end(), NeedUnresolved);
+      R.getLookupNameInfo(), NeedsADL, R.begin(), R.end(), NeedUnresolved);
 
   return ULE;
 }
