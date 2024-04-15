@@ -686,10 +686,11 @@ define float @fdiv_constant_numerator_fmul_fast(float %x) {
 
 define float @fdiv_constant_numerator_fmul_precdiv(float %x) {
 ; CHECK-LABEL: @fdiv_constant_numerator_fmul_precdiv(
-; CHECK-NEXT:    [[T4:%.*]] = fdiv reassoc float 1.200000e+07, [[X:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = fdiv float 2.000000e+03, [[X:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = fmul reassoc float [[T1]], 6.000000e+03
 ; CHECK-NEXT:    ret float [[T4]]
 ;
-  %t1 = fdiv reassoc float 2.0e+3, %x
+  %t1 = fdiv float 2.0e+3, %x
   %t3 = fmul reassoc float %t1, 6.0e+3
   ret float %t3
 }
