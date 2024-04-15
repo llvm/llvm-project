@@ -139,6 +139,7 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64MacroFusion.cpp",
     "AArch64PBQPRegAlloc.cpp",
     "AArch64PointerAuth.cpp",
+    "AArch64PostCoalescerPass.cpp",
     "AArch64PromoteConstant.cpp",
     "AArch64RedundantCopyElimination.cpp",
     "AArch64RegisterInfo.cpp",
