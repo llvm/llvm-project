@@ -626,6 +626,7 @@ void GCNIterativeRPTracker::reset(const MachineRegisterInfo *MRI_,
   MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
 }
 
+// Mostly copy+paste from GCNUpwardRPTracker::recede
 void GCNIterativeUpwardRPTracker::recede(const MachineInstr &MI,
                                          LiveIntervals *LIS) {
   assert(MRI && "call reset first");
@@ -669,6 +670,8 @@ void GCNIterativeUpwardRPTracker::recede(const MachineInstr &MI,
   assert(CurPressure == getRegPressure(*MRI, LiveRegs));
 }
 
+// Mostly copy+paste from GCNDownwardRPTracker::(advanceBeforeNext +
+// advanceToNext)
 void GCNIterativeDownwardRPTracker::advance(const MachineInstr &MI,
                                             LiveIntervals *LIS) {
   assert(MRI && "call reset first");
@@ -693,9 +696,9 @@ void GCNIterativeDownwardRPTracker::advance(const MachineInstr &MI,
   for (auto &MO : MI.operands()) {
     if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
-    if (MO.isUse() && !MO.readsReg())
+    if (!MO.isUse())
       continue;
-    if (MO.isDef())
+    if (!MO.readsReg())
       continue;
     if (!SeenRegs.insert(MO.getReg()).second)
       continue;
