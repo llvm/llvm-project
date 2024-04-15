@@ -20,22 +20,34 @@ namespace interp {
 class FunctionPointer final {
 private:
   const Function *Func;
+  bool Valid;
 
 public:
-  // FIXME: We might want to track the fact that the Function pointer
-  // has been created from an integer and is most likely garbage anyway.
-  FunctionPointer(int IntVal = 0, const Descriptor *Desc = nullptr)
-      : Func(reinterpret_cast<const Function *>(IntVal)) {}
+  FunctionPointer(const Function *Func) : Func(Func), Valid(true) {
+    assert(Func);
+  }
 
-  FunctionPointer(const Function *Func) : Func(Func) { assert(Func); }
+  FunctionPointer(uintptr_t IntVal = 0, const Descriptor *Desc = nullptr)
+      : Func(reinterpret_cast<const Function *>(IntVal)), Valid(false) {}
 
   const Function *getFunction() const { return Func; }
   bool isZero() const { return !Func; }
+  bool isWeak() const {
+    if (!Func || !Valid)
+      return false;
+
+    return Func->getDecl()->isWeak();
+  }
 
   APValue toAPValue() const {
     if (!Func)
       return APValue(static_cast<Expr *>(nullptr), CharUnits::Zero(), {},
                      /*OnePastTheEnd=*/false, /*IsNull=*/true);
+
+    if (!Valid)
+      return APValue(static_cast<Expr *>(nullptr),
+                     CharUnits::fromQuantity(getIntegerRepresentation()), {},
+                     /*OnePastTheEnd=*/false, /*IsNull=*/false);
 
     return APValue(Func->getDecl(), CharUnits::Zero(), {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
@@ -43,8 +55,10 @@ public:
 
   void print(llvm::raw_ostream &OS) const {
     OS << "FnPtr(";
-    if (Func)
+    if (Func && Valid)
       OS << Func->getName();
+    else if (Func)
+      OS << reinterpret_cast<uintptr_t>(Func);
     else
       OS << "nullptr";
     OS << ")";

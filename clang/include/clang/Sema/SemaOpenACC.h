@@ -19,6 +19,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
+#include <variant>
 
 namespace clang {
 class OpenACCClause;
@@ -35,7 +36,15 @@ public:
     SourceRange ClauseRange;
     SourceLocation LParenLoc;
 
-    // TODO OpenACC: Add variant here to store details of individual clauses.
+    struct DefaultDetails {
+      OpenACCDefaultClauseKind DefaultClauseKind;
+    };
+
+    struct ConditionDetails {
+      Expr *ConditionExpr;
+    };
+
+    std::variant<DefaultDetails, ConditionDetails> Details;
 
   public:
     OpenACCParsedClause(OpenACCDirectiveKind DirKind,
@@ -52,8 +61,42 @@ public:
 
     SourceLocation getEndLoc() const { return ClauseRange.getEnd(); }
 
+    OpenACCDefaultClauseKind getDefaultClauseKind() const {
+      assert(ClauseKind == OpenACCClauseKind::Default &&
+             "Parsed clause is not a default clause");
+      return std::get<DefaultDetails>(Details).DefaultClauseKind;
+    }
+
+    const Expr *getConditionExpr() const {
+      return const_cast<OpenACCParsedClause *>(this)->getConditionExpr();
+    }
+
+    Expr *getConditionExpr() {
+      assert(ClauseKind == OpenACCClauseKind::If &&
+             "Parsed clause kind does not have a condition expr");
+      return std::get<ConditionDetails>(Details).ConditionExpr;
+    }
+
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
     void setEndLoc(SourceLocation EndLoc) { ClauseRange.setEnd(EndLoc); }
+
+    void setDefaultDetails(OpenACCDefaultClauseKind DefKind) {
+      assert(ClauseKind == OpenACCClauseKind::Default &&
+             "Parsed clause is not a default clause");
+      Details = DefaultDetails{DefKind};
+    }
+
+    void setConditionDetails(Expr *ConditionExpr) {
+      assert(ClauseKind == OpenACCClauseKind::If &&
+             "Parsed clause kind does not have a condition expr");
+      // In C++ we can count on this being a 'bool', but in C this gets left as
+      // some sort of scalar that codegen will have to take care of converting.
+      assert((!ConditionExpr || ConditionExpr->isInstantiationDependent() ||
+              ConditionExpr->getType()->isScalarType()) &&
+             "Condition expression type not scalar/dependent");
+
+      Details = ConditionDetails{ConditionExpr};
+    }
   };
 
   SemaOpenACC(Sema &S);
