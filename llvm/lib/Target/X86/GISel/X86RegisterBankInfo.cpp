@@ -372,19 +372,17 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case TargetOpcode::G_LOAD: {
-    bool IsFP = false;
     // Check if that load feeds fp instructions.
     // In that case, we want the default mapping to be on FPR
     // instead of blind map every scalar to GPR.
-    if (any_of(MRI.use_nodbg_instructions(cast<GLoad>(MI).getDstReg()),
+    bool IsFP = any_of(MRI.use_nodbg_instructions(cast<GLoad>(MI).getDstReg()),
                [&](const MachineInstr &UseMI) {
                  // If we have at least one direct use in a FP instruction,
                  // assume this was a floating point load in the IR. If it
                  // was not, we would have had a bitcast before reaching
                  // that instruction.
                  return onlyUsesFP(UseMI, MRI, TRI);
-               }))
-      IsFP = true;
+               });
     getInstrPartialMappingIdxs(MI, MRI, IsFP, OpRegBankIdx);
     break;
   }
