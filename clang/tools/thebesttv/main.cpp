@@ -431,11 +431,13 @@ void saveAsJson(int fromLine, int toLine,
     }
 }
 
-static void findPathBetween(const VarLocResult &from, int fromLine,
-                            VarLocResult to, int toLine,
-                            const std::vector<VarLocResult> &_pointsToPass,
-                            const std::vector<VarLocResult> &_pointsToAvoid,
-                            const std::string &type, ordered_json &jResults) {
+/*
+ * 返回生成路径的个数
+ */
+int findPathBetween(const VarLocResult &from, int fromLine, VarLocResult to,
+                    int toLine, const std::vector<VarLocResult> &_pointsToPass,
+                    const std::vector<VarLocResult> &_pointsToAvoid,
+                    const std::string &type, ordered_json &jResults) {
     requireTrue(from.isValid(), "FROM location is invalid");
     requireTrue(to.isValid(), "TO location is invalid");
 
@@ -458,6 +460,7 @@ static void findPathBetween(const VarLocResult &from, int fromLine,
     pFinder.search(u, v, pointsToPass, pointsToAvoid, 3);
 
     saveAsJson(fromLine, toLine, pFinder.results, type, jResults);
+    return pFinder.results.size();
 }
 
 void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
