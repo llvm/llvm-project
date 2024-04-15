@@ -175,21 +175,25 @@ static void setInBoundsForVectorReadWrite(RewriterBase &b, Operation *op) {
     read.setInBoundsAttr(b.getBoolArrayAttr({true}));
 }
 
-static bool hasVectorSizeEqualToStep(Operation *op,
+static bool hasVectorSizeEqualToStep(ForOp forOp, Operation *op,
                                      std::optional<int64_t> step) {
   if (!step)
     return false;
 
   if (isa<vector::TransferWriteOp, vector::TransferReadOp>(op)) {
+    Value IV = forOp.getInductionVar();
     auto vectorType = isa<vector::TransferWriteOp>(op)
                           ? cast<vector::TransferWriteOp>(op).getVectorType()
                           : cast<vector::TransferReadOp>(op).getVectorType();
+    auto indices = isa<vector::TransferWriteOp>(op)
+                          ? cast<vector::TransferWriteOp>(op).getIndices()
+                          : cast<vector::TransferReadOp>(op).getIndices();
 
     if (vectorType.getRank() != 1)
       return false;
 
     auto vectorSize = vectorType.getShape()[0];
-    if (vectorSize == *step)
+    if ((vectorSize == *step) && (indices[indices.size() - 1] == IV))
       return true;
   }
 
@@ -203,7 +207,7 @@ static void rewriteVectorizedLoopAfterPeeling(RewriterBase &rewriter,
   forOp.walk([&](Operation *op) {
     if (!isa<vector::TransferWriteOp, vector::TransferReadOp>(op))
       return WalkResult::advance();
-    if (!hasVectorSizeEqualToStep(op, stepInt))
+    if (!hasVectorSizeEqualToStep(forOp, op, stepInt))
       return WalkResult::advance();
     setInBoundsForVectorReadWrite(rewriter, op);
     return WalkResult::advance();
