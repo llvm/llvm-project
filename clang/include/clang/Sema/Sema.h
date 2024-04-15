@@ -3431,7 +3431,8 @@ public:
       bool ConstexprSupported, bool CLinkageMayDiffer);
 
   /// type checking declaration initializers (C99 6.7.8)
-  bool CheckForConstantInitializer(Expr *Init, unsigned DiagID);
+  bool CheckForConstantInitializer(
+      Expr *Init, unsigned DiagID = diag::err_init_element_not_constant);
 
   QualType deduceVarTypeFromInitializer(VarDecl *VDecl, DeclarationName Name,
                                         QualType Type, TypeSourceInfo *TSI,

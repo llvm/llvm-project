@@ -13804,7 +13804,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // OpenCL v1.2 s6.5.3: __constant locals must be constant-initialized.
     // This is true even in C++ for OpenCL.
     } else if (VDecl->getType().getAddressSpace() == LangAS::opencl_constant) {
-      CheckForConstantInitializer(Init, diag::err_init_element_not_constant);
+      CheckForConstantInitializer(Init);
 
       // Otherwise, C++ does not restrict the initializer.
     } else if (getLangOpts().CPlusPlus) {
@@ -13813,7 +13813,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // C99 6.7.8p4: All the expressions in an initializer for an object that has
     // static storage duration shall be constant expressions or string literals.
     } else if (VDecl->getStorageClass() == SC_Static) {
-      CheckForConstantInitializer(Init, diag::err_init_element_not_constant);
+      CheckForConstantInitializer(Init);
 
       // C89 is stricter than C99 for aggregate initializers.
       // C89 6.5.7p3: All the expressions [...] in an initializer list
@@ -13954,7 +13954,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // Avoid duplicate diagnostics for constexpr variables.
     if (!getLangOpts().CPlusPlus && !VDecl->isInvalidDecl() &&
         !VDecl->isConstexpr())
-      CheckForConstantInitializer(Init, diag::err_init_element_not_constant);
+      CheckForConstantInitializer(Init);
   }
 
   QualType InitType = Init->getType();
