@@ -236,6 +236,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
 
 def ParallelOp : OpenMP_Op<"parallel", [
                  AutomaticAllocationScope, AttrSizedOperandSegments,
+                 DeclareOpInterfaceMethods<LoopWrapperInterface>,
                  DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>,
                  RecursiveMemoryEffects, ReductionClauseInterface]> {
   let summary = "parallel construct";
@@ -530,8 +531,6 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
 
 def LoopNestOp : OpenMP_Op<"loop_nest", [SameVariadicOperandSize,
                         AllTypesMatch<["lowerBound", "upperBound", "step"]>,
-                        ParentOneOf<["DistributeOp", "SimdLoopOp", "TaskloopOp",
-                                     "WsloopOp"]>,
                         RecursiveMemoryEffects]> {
   let summary = "rectangular loop nest";
   let description = [{
@@ -586,6 +585,10 @@ def LoopNestOp : OpenMP_Op<"loop_nest", [SameVariadicOperandSize,
 
     /// Returns the induction variables of the loop nest.
     ArrayRef<BlockArgument> getIVs() { return getRegion().getArguments(); }
+
+    /// Fills a list of wrapper operations around this loop nest. Wrappers
+    /// in the resulting vector will be sorted from innermost to outermost.
+    void gatherWrappers(SmallVectorImpl<LoopWrapperInterface> &wrappers);
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -598,6 +601,7 @@ def LoopNestOp : OpenMP_Op<"loop_nest", [SameVariadicOperandSize,
 
 def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                          AllTypesMatch<["lowerBound", "upperBound", "step"]>,
+                         DeclareOpInterfaceMethods<LoopWrapperInterface>,
                          RecursiveMemoryEffects, ReductionClauseInterface]> {
   let summary = "worksharing-loop construct";
   let description = [{
@@ -719,7 +723,9 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
 //===----------------------------------------------------------------------===//
 
 def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
-                         AllTypesMatch<["lowerBound", "upperBound", "step"]>]> {
+                         AllTypesMatch<["lowerBound", "upperBound", "step"]>,
+                         DeclareOpInterfaceMethods<LoopWrapperInterface>,
+                         RecursiveMemoryEffects]> {
  let summary = "simd loop construct";
   let description = [{
     The simd construct can be applied to a loop to indicate that the loop can be
@@ -833,7 +839,8 @@ def YieldOp : OpenMP_Op<"yield",
 // Distribute construct [2.9.4.1]
 //===----------------------------------------------------------------------===//
 def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
-                              MemoryEffects<[MemWrite]>]> {
+                             DeclareOpInterfaceMethods<LoopWrapperInterface>,
+                             RecursiveMemoryEffects]> {
   let summary = "distribute construct";
   let description = [{
     The distribute construct specifies that the iterations of one or more loops
@@ -1011,6 +1018,7 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
 def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
                            AutomaticAllocationScope, RecursiveMemoryEffects,
                            AllTypesMatch<["lowerBound", "upperBound", "step"]>,
+                           DeclareOpInterfaceMethods<LoopWrapperInterface>,
                            ReductionClauseInterface]> {
   let summary = "taskloop construct";
   let description = [{

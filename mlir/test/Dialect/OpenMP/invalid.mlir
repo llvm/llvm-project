@@ -88,8 +88,22 @@ func.func @proc_bind_once() {
 // -----
 
 func.func @invalid_parent(%lb : index, %ub : index, %step : index) {
-  // expected-error@+1 {{op expects parent op to be one of 'omp.distribute, omp.simdloop, omp.taskloop, omp.wsloop'}}
+  // expected-error@+1 {{op expects parent op to be a valid loop wrapper}}
   omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+    omp.yield
+  }
+}
+
+// -----
+
+func.func @invalid_wrapper(%lb : index, %ub : index, %step : index) {
+  // TODO Remove induction variables from omp.wsloop.
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    %0 = arith.constant 0 : i32
+    // expected-error@+1 {{op expects parent op to be a valid loop wrapper}}
+    omp.loop_nest (%iv2) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
     omp.yield
   }
 }
