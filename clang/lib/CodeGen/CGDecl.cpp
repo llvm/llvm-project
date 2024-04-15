@@ -2216,8 +2216,11 @@ void CodeGenFunction::pushDestroyAndDeferDeactivation(
 void CodeGenFunction::pushDestroyAndDeferDeactivation(
     CleanupKind cleanupKind, Address addr, QualType type, Destroyer *destroyer,
     bool useEHCleanupForArray) {
-  pushCleanupAndDeferDeactivation<DestroyObject>(
-      cleanupKind, addr, type, destroyer, useEHCleanupForArray);
+  llvm::Instruction *DominatingIP =
+      Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
+  pushDestroy(cleanupKind, addr, type, destroyer, useEHCleanupForArray);
+  DeferredDeactivationCleanupStack.push_back(
+      {EHStack.stable_begin(), DominatingIP});
 }
 
 void CodeGenFunction::pushStackRestore(CleanupKind Kind, Address SPMem) {
