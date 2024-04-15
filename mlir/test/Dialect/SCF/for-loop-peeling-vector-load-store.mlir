@@ -10,10 +10,11 @@ func.func @vector_read_write(%a : memref<100xi32>, %b : memref<100xi32>, %ub: in
 // CHECK-SAME:   %[[A:.*]]: memref<100xi32>, %[[B:.*]]: memref<100xi32>, %[[UB:.*]]: index
 //      CHECK:   %[[LB:.*]] = arith.constant 0 : index
 //      CHECK:   %[[STEP:.*]] = arith.constant 64 : index
+//      CHECK:   %[[PAD:.*]] = arith.constant 0 : i32
 //      CHECK:   %[[NEW_UB:.*]] = affine.apply #[[MAP0]]
 //      CHECK:   scf.for %[[IV:.*]] = %[[LB]] to %[[NEW_UB]] step %[[STEP]] {
-//      CHECK:     %[[VAL:.*]] = vector.load %[[B]][%[[IV]]]
-//      CHECK:     vector.store %[[VAL]], %[[A]][%[[IV]]]
+//      CHECK:     %[[VAL:.*]] = vector.transfer_read %[[B]][%[[IV]]], %[[PAD]] {in_bounds = [true]}
+//      CHECK:     vector.transfer_write %[[VAL]], %[[A]][%[[IV]]] {in_bounds = [true]}
 //      CHECK:   }
 //      CHECK:   scf.for %[[IV:.*]] = %[[NEW_UB]] to %[[UB]] step %[[STEP]] {
 //      CHECK:     %[[VAL:.*]] = vector.transfer_read %[[B]][%[[IV]]]

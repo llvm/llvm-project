@@ -167,15 +167,12 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   return success();
 }
 
-static void rewriteVectorReadWriteToLoadStore(RewriterBase &b, Operation *op) {
-  b.setInsertionPoint(op);
-  if (auto write = dyn_cast<vector::TransferWriteOp>(op)) {
-    b.replaceOpWithNewOp<vector::StoreOp>(
-        op, write.getVector(), write.getSource(), write.getIndices());
-  } else if (auto read = dyn_cast<vector::TransferReadOp>(op)) {
-    b.replaceOpWithNewOp<vector::LoadOp>(op, read.getVectorType(),
-                                         read.getSource(), read.getIndices());
-  }
+// set InBounds attribute to lower vector read/write to vector load/store.
+static void setInBoundsForVectorReadWrite(RewriterBase &b, Operation *op) {
+  if (auto write = dyn_cast<vector::TransferWriteOp>(op))
+    write.setInBoundsAttr(b.getBoolArrayAttr({true}));
+  else if (auto read = dyn_cast<vector::TransferReadOp>(op))
+    read.setInBoundsAttr(b.getBoolArrayAttr({true}));
 }
 
 static bool hasVectorSizeEqualToStep(Operation *Op,
@@ -208,7 +205,7 @@ static void rewriteVectorizedLoopAfterPeeling(RewriterBase &rewriter,
       return WalkResult::advance();
     if (!hasVectorSizeEqualToStep(affineOp, stepInt))
       return WalkResult::advance();
-    rewriteVectorReadWriteToLoadStore(rewriter, affineOp);
+    setInBoundsForVectorReadWrite(rewriter, affineOp);
     return WalkResult::advance();
   });
 }
