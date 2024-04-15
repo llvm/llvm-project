@@ -975,6 +975,9 @@ void JSONNodeDumper::VisitFunctionDecl(const FunctionDecl *FD) {
   if (FD->isDefaulted())
     JOS.attribute("explicitlyDefaulted",
                   FD->isDeleted() ? "deleted" : "default");
+
+  if (StringLiteral *Msg = FD->getDeletedMessage())
+    JOS.attribute("deletedMessage", Msg->getString());
 }
 
 void JSONNodeDumper::VisitEnumDecl(const EnumDecl *ED) {
