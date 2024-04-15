@@ -49,6 +49,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
@@ -272,8 +273,11 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
         Diag(Loc, diag::err_deleted_inherited_ctor_use)
             << Ctor->getParent()
             << Ctor->getInheritedConstructor().getConstructor()->getParent();
-      else
-        Diag(Loc, diag::err_deleted_function_use);
+      else {
+        StringLiteral *Msg = FD->getDeletedMessage();
+        Diag(Loc, diag::err_deleted_function_use)
+            << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef());
+      }
       NoteDeletedFunction(FD);
       return true;
     }
@@ -308,7 +312,7 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
         DeduceReturnType(FD, Loc))
       return true;
 
-    if (getLangOpts().CUDA && !CheckCUDACall(Loc, FD))
+    if (getLangOpts().CUDA && !CUDA().CheckCall(Loc, FD))
       return true;
 
   }
@@ -2913,9 +2917,26 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // to get this right here so that we don't end up making a
   // spuriously dependent expression if we're inside a dependent
   // instance method.
-  if (isPotentialImplicitMemberAccess(SS, R, IsAddressOfOperand))
-    return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs,
-                                           S);
+  if (getLangOpts().CPlusPlus && !R.empty() &&
+      (*R.begin())->isCXXClassMember()) {
+    bool MightBeImplicitMember;
+    if (!IsAddressOfOperand)
+      MightBeImplicitMember = true;
+    else if (!SS.isEmpty())
+      MightBeImplicitMember = false;
+    else if (R.isOverloadedResult())
+      MightBeImplicitMember = false;
+    else if (R.isUnresolvableResult())
+      MightBeImplicitMember = true;
+    else
+      MightBeImplicitMember = isa<FieldDecl>(R.getFoundDecl()) ||
+                              isa<IndirectFieldDecl>(R.getFoundDecl()) ||
+                              isa<MSPropertyDecl>(R.getFoundDecl());
+
+    if (MightBeImplicitMember)
+      return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc,
+                                             R, TemplateArgs, S);
+  }
 
   if (TemplateArgs || TemplateKWLoc.isValid()) {
 
@@ -3426,11 +3447,10 @@ static bool ShouldLookupResultBeMultiVersionOverload(const LookupResult &R) {
 
 ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                           LookupResult &R, bool NeedsADL,
-                                          bool AcceptInvalidDecl,
-                                          bool NeedUnresolved) {
+                                          bool AcceptInvalidDecl) {
   // If this is a single, fully-resolved result and we don't need ADL,
   // just build an ordinary singleton decl ref.
-  if (!NeedUnresolved && !NeedsADL && R.isSingleResult() &&
+  if (!NeedsADL && R.isSingleResult() &&
       !R.getAsSingle<FunctionTemplateDecl>() &&
       !ShouldLookupResultBeMultiVersionOverload(R))
     return BuildDeclarationNameExpr(SS, R.getLookupNameInfo(), R.getFoundDecl(),
@@ -17307,7 +17327,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
   // CUDA device code does not support varargs.
   if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
     if (const FunctionDecl *F = dyn_cast<FunctionDecl>(CurContext)) {
-      CUDAFunctionTarget T = IdentifyCUDATarget(F);
+      CUDAFunctionTarget T = CUDA().IdentifyTarget(F);
       if (T == CUDAFunctionTarget::Global || T == CUDAFunctionTarget::Device ||
           T == CUDAFunctionTarget::HostDevice)
         return ExprError(Diag(E->getBeginLoc(), diag::err_va_arg_in_device));
@@ -18961,7 +18981,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
     checkSpecializationReachability(Loc, Func);
 
   if (getLangOpts().CUDA)
-    CheckCUDACall(Loc, Func);
+    CUDA().CheckCall(Loc, Func);
 
   // If we need a definition, try to create one.
   if (NeedDefinition && !Func->getBody()) {
@@ -19108,7 +19128,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   // side. Therefore keep trying until it is recorded.
   if (LangOpts.OffloadImplicitHostDeviceTemplates && LangOpts.CUDAIsDevice &&
       !getASTContext().CUDAImplicitHostDeviceFunUsedByDevice.count(Func))
-    CUDARecordImplicitHostDeviceFuncUsedByDevice(Func);
+    CUDA().RecordImplicitHostDeviceFuncUsedByDevice(Func);
 
   // If this is the first "real" use, act on that.
   if (OdrUse == OdrUseContext::Used && !Func->isUsed(/*CheckUsedAttr=*/false)) {
@@ -19181,9 +19201,9 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
 
   if (SemaRef.LangOpts.CUDA && Var->hasGlobalStorage()) {
     auto *FD = dyn_cast_or_null<FunctionDecl>(SemaRef.CurContext);
-    auto VarTarget = SemaRef.IdentifyCUDATarget(Var);
-    auto UserTarget = SemaRef.IdentifyCUDATarget(FD);
-    if (VarTarget == Sema::CVT_Host &&
+    auto VarTarget = SemaRef.CUDA().IdentifyTarget(Var);
+    auto UserTarget = SemaRef.CUDA().IdentifyTarget(FD);
+    if (VarTarget == SemaCUDA::CVT_Host &&
         (UserTarget == CUDAFunctionTarget::Device ||
          UserTarget == CUDAFunctionTarget::HostDevice ||
          UserTarget == CUDAFunctionTarget::Global)) {
@@ -19199,7 +19219,7 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
                                ? diag::note_cuda_const_var_unpromoted
                                : diag::note_cuda_host_var);
       }
-    } else if (VarTarget == Sema::CVT_Device &&
+    } else if (VarTarget == SemaCUDA::CVT_Device &&
                !Var->hasAttr<CUDASharedAttr>() &&
                (UserTarget == CUDAFunctionTarget::Host ||
                 UserTarget == CUDAFunctionTarget::HostDevice)) {
