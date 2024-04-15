@@ -14,6 +14,7 @@ User Guide for the DirectX Target
    :hidden:
 
    DirectX/DXILArchitecture
+   DirectX/RootSignature
 
 Introduction
 ============
