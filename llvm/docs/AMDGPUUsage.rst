@@ -1373,9 +1373,10 @@ bitfield. A 0 value is equivalent to removing the metadata.
   ; Indicates the access does not access peer device memory.
   %old2 = atomicrmw sub ptr %ptr2, i32 1 acquire, !amdgpu.no.access.location.types !2
 
-  !0 = !{i32 3}
-  !1 = !{i32 1}
-  !2 = !{i32 2}
+  !0 = !{i32 3} ; no_fine_grained_memory_access | no_remote_memory_access
+  !1 = !{i32 1} ; no_fine_grained_memory_access
+  !2 = !{i32 2} ; no_remote_memory_access
+
 
 LLVM IR Attributes
 ==================
