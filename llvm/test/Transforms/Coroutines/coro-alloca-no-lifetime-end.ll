@@ -11,17 +11,16 @@ declare void @consume.i8.array(ptr)
 define void @foo() presplitcoroutine {
 ; CHECK-LABEL: define void @foo() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TESTVAL:%.*]] = alloca [[I8_ARRAY:%.*]], align 8
 ; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @foo.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @foo.resume, ptr [[VFRAME]], align 8
 ; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds [[FOO_FRAME:%.*]], ptr [[VFRAME]], i32 0, i32 1
 ; CHECK-NEXT:    store ptr @foo.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 100, ptr [[TESTVAL]])
-; CHECK-NEXT:    call void @consume.i8.array(ptr [[TESTVAL]])
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds [[FOO_FRAME]], ptr [[VFRAME]], i32 0, i32 2
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
+; CHECK-NEXT:    call void @consume.i8.array(ptr [[INDEX_ADDR1]])
+; CHECK-NEXT:    [[INDEX_ADDR2:%.*]] = getelementptr inbounds [[FOO_FRAME]], ptr [[VFRAME]], i32 0, i32 3
+; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR2]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:

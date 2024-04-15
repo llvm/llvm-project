@@ -1550,6 +1550,8 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
   }
 
   void visitIntrinsicInst(IntrinsicInst &II) {
+    if (II.getIntrinsicID() == Intrinsic::lifetime_end)
+      HasExplicitLifetimeEnd = true;
     // When we found the lifetime markers refers to a
     // subrange of the original alloca, ignore the lifetime
     // markers to avoid misleading the analysis.
@@ -1596,6 +1598,7 @@ private:
   SmallPtrSet<IntrinsicInst *, 2> LifetimeStarts{};
   bool MayWriteBeforeCoroBegin{false};
   bool ShouldUseLifetimeStartInfo{true};
+  bool HasExplicitLifetimeEnd{false};
 
   mutable std::optional<bool> ShouldLiveOnFrame{};
 
@@ -1614,6 +1617,10 @@ private:
       // suspend point between lifetime markers. This should also cover the
       // case of a single lifetime.start intrinsic in a loop with suspend point.
       if (PI.isEscaped()) {
+        // If there is no explicit lifetime.end, then assume the address can
+        // cross suspension points.
+        if (!HasExplicitLifetimeEnd)
+          return true;
         for (auto *A : LifetimeStarts) {
           for (auto *B : LifetimeStarts) {
             if (Checker.hasPathOrLoopCrossingSuspendPoint(A->getParent(),
