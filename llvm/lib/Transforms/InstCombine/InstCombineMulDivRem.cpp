@@ -698,10 +698,14 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
 
   Value *Z;
   if (match(&I,
-            m_c_FMul(m_OneUse(m_FDiv(m_Value(X), m_Value(Y))), m_Value(Z)))) {
+            m_c_FMul(m_AllowReassoc(m_OneUse(m_FDiv(m_Value(X), m_Value(Y)))),
+                     m_Value(Z)))) {
     // Sink division: (X / Y) * Z --> (X * Z) / Y
-    Value *NewFMul = Builder.CreateFMulFMF(X, Z, &I);
-    return BinaryOperator::CreateFDivFMF(NewFMul, Y, &I);
+    auto *NewFMul = cast<Instruction>(Builder.CreateFMulFMF(X, Z, &I));
+    NewFMul->andIRFlags(Op0);
+    auto *NewDiv = BinaryOperator::CreateFDivFMF(NewFMul, Y, &I);
+    NewDiv->andIRFlags(Op0);
+    return NewDiv;
   }
 
   // sqrt(X) * sqrt(Y) -> sqrt(X * Y)
