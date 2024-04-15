@@ -2065,24 +2065,13 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         // it meaningfully. So we fall back to printing the error out and
         // disassembling the failed region as bytes, assuming that the target
         // detected the failure before printing anything.
-        //
-        // Regardless of whether onSymbolStart returned an Error or true, 'Size'
-        // will have been set to the amount of data covered by whatever prologue
-        // the target identified. So we advance our own position to beyond that.
-        // Sometimes that will be the entire distance to the next symbol, and
-        // sometimes it will be just a prologue and we should start
-        // disassembling instructions from where it left off.
-
         if (!RespondedOrErr) {
-          std::string ErrMsgStr = toString(RespondedOrErr.takeError());
-          StringRef ErrMsg = ErrMsgStr;
-          do {
-            StringRef Line;
-            std::tie(Line, ErrMsg) = ErrMsg.split('\n');
-            outs() << DT->Context->getAsmInfo()->getCommentString()
-                   << " error decoding " << SymNamesHere[SHI] << ": " << Line
-                   << '\n';
-          } while (!ErrMsg.empty());
+          outs() << DT->Context->getAsmInfo()->getCommentString()
+                 << " error decoding " << SymNamesHere[SHI] << ": "
+                 << StringRef(toString(RespondedOrErr.takeError()))
+                        .split('\n')
+                        .first
+                 << '\n';
 
           if (Size) {
             outs() << DT->Context->getAsmInfo()->getCommentString()
@@ -2093,6 +2082,12 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           }
         }
 
+        // Regardless of whether onSymbolStart returned an Error or true, 'Size'
+        // will have been set to the amount of data covered by whatever prologue
+        // the target identified. So we advance our own position to beyond that.
+        // Sometimes that will be the entire distance to the next symbol, and
+        // sometimes it will be just a prologue and we should start
+        // disassembling instructions from where it left off.
         Start += Size;
         break;
       }
