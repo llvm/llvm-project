@@ -695,10 +695,10 @@ LIBC_INLINE FloatConvertReturn<T> decimal_exp_to_float(
     // If the mantissa is truncated, then the result may be off by the LSB, so
     // check if rounding the mantissa up changes the result. If not, then it's
     // safe, else use the fallback.
-    auto secound_output = eisel_lemire<T>({mantissa + 1, exp10}, round);
-    if (secound_output.has_value()) {
-      if (opt_output->mantissa == secound_output->mantissa &&
-          opt_output->exponent == secound_output->exponent) {
+    auto second_output = eisel_lemire<T>({mantissa + 1, exp10}, round);
+    if (second_output.has_value()) {
+      if (opt_output->mantissa == second_output->mantissa &&
+          opt_output->exponent == second_output->exponent) {
         return {opt_output.value(), 0};
       }
     }

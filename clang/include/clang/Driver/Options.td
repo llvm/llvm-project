@@ -1341,7 +1341,8 @@ def hip_link : Flag<["--"], "hip-link">, Group<opencl_Group>,
   HelpText<"Link clang-offload-bundler bundles for HIP">;
 def no_hip_rt: Flag<["-"], "no-hip-rt">, Group<hip_Group>,
   HelpText<"Do not link against HIP runtime libraries">;
-def rocm_path_EQ : Joined<["--"], "rocm-path=">, Group<hip_Group>,
+def rocm_path_EQ : Joined<["--"], "rocm-path=">,
+  Visibility<[FlangOption]>, Group<hip_Group>,
   HelpText<"ROCm installation path, used for finding and automatically linking required bitcode libraries.">;
 def hip_path_EQ : Joined<["--"], "hip-path=">, Group<hip_Group>,
   HelpText<"HIP runtime installation path, used for finding HIP version and adding HIP include path.">;
@@ -3035,6 +3036,7 @@ defm prebuilt_implicit_modules : BoolFOption<"prebuilt-implicit-modules",
 
 def fmodule_output_EQ : Joined<["-"], "fmodule-output=">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<FrontendOpts<"ModuleOutputPath">>,
   HelpText<"Save intermediate module file results when compiling a standard C++ module unit.">;
 def fmodule_output : Flag<["-"], "fmodule-output">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option]>,
@@ -3047,6 +3049,11 @@ defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
   NegFlag<SetFalse, [], [CC1Option],
           "Perform ODR checks for decls in the global module fragment.">>,
   Group<f_Group>;
+
+def modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Generate the reduced BMI">,
+  MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
 
 def fmodules_prune_interval : Joined<["-"], "fmodules-prune-interval=">, Group<i_Group>,
   Visibility<[ClangOption, CC1Option]>, MetaVarName<"<seconds>">,

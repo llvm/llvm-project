@@ -2663,7 +2663,7 @@ int APInt::tcDivide(WordType *lhs, const WordType *rhs,
   return false;
 }
 
-/// Shift a bignum left Cound bits in-place. Shifted in bits are zero. There are
+/// Shift a bignum left Count bits in-place. Shifted in bits are zero. There are
 /// no restrictions on Count.
 void APInt::tcShiftLeft(WordType *Dst, unsigned Words, unsigned Count) {
   // Don't bother performing a no-op shift.
