@@ -1624,7 +1624,7 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
     return false;
   if (!this->emitLoad(*LT, E))
     return false;
-  if (*LT != *LHSComputationT) {
+  if (LT != LHSComputationT) {
     if (!this->emitCast(*LT, *LHSComputationT, E))
       return false;
   }
@@ -1680,7 +1680,7 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   }
 
   // And now cast from LHSComputationT to ResultT.
-  if (*ResultT != *LHSComputationT) {
+  if (ResultT != LHSComputationT) {
     if (!this->emitCast(*LHSComputationT, *ResultT, E))
       return false;
   }
