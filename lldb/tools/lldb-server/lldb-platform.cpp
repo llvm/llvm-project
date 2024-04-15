@@ -282,17 +282,10 @@ int main_platform(int argc, char *argv[]) {
     }
   }
 
+  GDBRemoteCommunicationServerPlatform platform(
+      acceptor_up->GetSocketProtocol(), acceptor_up->GetSocketScheme());
+
   do {
-    GDBRemoteCommunicationServerPlatform platform(
-        acceptor_up->GetSocketProtocol(), acceptor_up->GetSocketScheme());
-
-    if (port_offset > 0)
-      platform.SetPortOffset(port_offset);
-
-    if (!gdbserver_portmap.empty()) {
-      platform.SetPortMap(std::move(gdbserver_portmap));
-    }
-
     const bool children_inherit_accept_socket = true;
     Connection *conn = nullptr;
     error = acceptor_up->Accept(children_inherit_accept_socket, conn);
@@ -301,13 +294,31 @@ int main_platform(int argc, char *argv[]) {
       exit(socket_error);
     }
     printf("Connection established.\n");
+
+    std::optional<uint16_t> port = 0;
     if (g_server) {
       // Collect child zombie processes.
 #if !defined(_WIN32)
-      while (waitpid(-1, nullptr, WNOHANG) > 0)
-        ;
+      auto waitResult = waitpid(-1, nullptr, WNOHANG);
+      while (waitResult > 0) {
+        // waitResult is the child pid
+        gdbserver_portmap.FreePortForProcess(waitResult);
+        waitResult = waitpid(-1, nullptr, WNOHANG);
+      }
 #endif
-      if (fork()) {
+      llvm::Expected<uint16_t> available_port =
+          gdbserver_portmap.GetNextAvailablePort();
+      if (available_port)
+        port = *available_port;
+
+      else {
+        fprintf(stderr, "no available port for connection - dropping...\n");
+        delete conn;
+        continue;
+      }
+      auto childPid = fork();
+      if (childPid) {
+        gdbserver_portmap.AssociatePortWithProcess(*available_port, childPid);
         // Parent doesn't need a connection to the lldb client
         delete conn;
 
@@ -324,6 +335,10 @@ int main_platform(int argc, char *argv[]) {
       // connections while a connection is active.
       acceptor_up.reset();
     }
+
+    GDBRemoteCommunicationServerPlatform::PortMap portmap_for_child;
+    portmap_for_child.AllowPort(*port);
+    platform.SetPortMap(std::move(portmap_for_child));
     platform.SetConnection(std::unique_ptr<Connection>(conn));
 
     if (platform.IsConnected()) {
