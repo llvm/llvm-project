@@ -102,7 +102,6 @@ Improvements to clang-tidy
   similar fashion to what `-header-filter` does for header files.
 - Improved :program:`check_clang_tidy.py` script. Added argument `-export-fixes`
   to aid in clang-tidy and test development.
-- Fixed an issue with `bugprone-forwarding-reference-overload` where it would incorrectly flag deleted constructors
 
 New checks
 ^^^^^^^^^^
@@ -286,6 +285,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/static-definition-in-anonymous-namespace>`
   check by resolving fix-it overlaps in template code by disregarding implicit
   instances.
+
+- Improved :doc:`bugprone-forwarding-reference-overload
+  <clang-tidy/checks/bugprone/forwarding-reference-overload>`
+  check to not flag deleted constructors which are unable to hide anything.
 
 Removed checks
 ^^^^^^^^^^^^^^
