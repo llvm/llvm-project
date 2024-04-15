@@ -119,9 +119,10 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
     step = addOp.getRhs();
   } else if (addOp.getRhs() == inductionVarAfter) {
     step = addOp.getLhs();
-  } else {
-    return rewriter.notifyMatchFailure(loop, "Invalid 'addi' form");
   }
+
+  if (!step || !dom.properlyDominates(step, loop))
+    return rewriter.notifyMatchFailure(loop, "Invalid 'addi' form");
 
   Value lb = loop.getInits()[argNumber];
 
