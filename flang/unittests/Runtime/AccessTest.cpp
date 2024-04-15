@@ -12,9 +12,9 @@
 #include "CrashHandlerFixture.h"
 #include "gtest/gtest.h"
 #include "flang/Runtime/extensions.h"
+#include "llvm/ADT/Twine.h"
 
 #include <fcntl.h>
-#include <filesystem>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -42,10 +42,42 @@ static std::string addPIDSuffix(const char *name) {
   return ss.str();
 }
 
-static std::filesystem::path createTemporaryFile(
+static bool exists(const std::string &path) {
+  return access(path.c_str(), F_OK) == 0;
+}
+
+// Implementation of std::filesystem::temp_directory_path adapted from libcxx
+// See llvm-project/libcxx/src/filesystem/operations.cpp
+// Using std::filesystem is inconvenient because the required flags are not
+// consistent accross compilers and CMake doesn't have built in support to
+// determine the correct flags.
+static const char *temp_directory_path() {
+  // TODO: Windows
+  const char *env_paths[] = {"TMPDIR", "TMP", "TEMP", "TEMPDIR"};
+  const char *ret = nullptr;
+
+  for (auto &ep : env_paths) {
+    if ((ret = getenv(ep))) {
+      break;
+    }
+  }
+
+  if (ret == nullptr) {
+#if defined(__ANDROID__)
+    ret = "/data/local/tmp";
+#else
+    ret = "/tmp";
+#endif
+  }
+
+  assert(exists(ret));
+  return ret;
+}
+
+static std::string createTemporaryFile(
     const char *name, const AccessType &accessType) {
-  std::filesystem::path path{
-      std::filesystem::temp_directory_path() / addPIDSuffix(name)};
+  std::string path =
+      (llvm::Twine{temp_directory_path()} + "/" + addPIDSuffix(name)).str();
 
   // O_CREAT | O_EXCL enforces that this file is newly created by this call.
   // This feels risky. If we don't have permission to create files in the
@@ -74,7 +106,7 @@ static std::filesystem::path createTemporaryFile(
 }
 
 static std::int64_t callAccess(
-    const std::filesystem::path &path, const AccessType &accessType) {
+    const std::string &path, const AccessType &accessType) {
   const char *cpath{path.c_str()};
   std::int64_t pathlen = std::strlen(cpath);
 
@@ -102,19 +134,19 @@ TEST(AccessTests, TestExists) {
   AccessType accessType;
   accessType.exists = true;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_EQ(res, 0);
 }
 
 TEST(AccessTests, TestNotExists) {
-  std::filesystem::path nonExistant{addPIDSuffix(__func__)};
-  ASSERT_FALSE(std::filesystem::exists(nonExistant));
+  std::string nonExistant{addPIDSuffix(__func__)};
+  ASSERT_FALSE(exists(nonExistant));
 
   AccessType accessType;
   accessType.exists = true;
@@ -127,12 +159,12 @@ TEST(AccessTests, TestRead) {
   AccessType accessType;
   accessType.read = true;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_EQ(res, 0);
 }
@@ -141,13 +173,13 @@ TEST(AccessTests, TestNotRead) {
   AccessType accessType;
   accessType.read = false;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   accessType.read = true;
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_NE(res, 0);
 }
@@ -156,12 +188,12 @@ TEST(AccessTests, TestWrite) {
   AccessType accessType;
   accessType.write = true;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_EQ(res, 0);
 }
@@ -170,13 +202,13 @@ TEST(AccessTests, TestNotWrite) {
   AccessType accessType;
   accessType.write = false;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   accessType.write = true;
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_NE(res, 0);
 }
@@ -186,12 +218,12 @@ TEST(AccessTests, TestReadWrite) {
   accessType.read = true;
   accessType.write = true;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_EQ(res, 0);
 }
@@ -201,14 +233,14 @@ TEST(AccessTests, TestNotReadWrite0) {
   accessType.read = false;
   accessType.write = false;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   accessType.read = true;
   accessType.write = true;
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_NE(res, 0);
 }
@@ -218,14 +250,14 @@ TEST(AccessTests, TestNotReadWrite1) {
   accessType.read = true;
   accessType.write = false;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   accessType.read = true;
   accessType.write = true;
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_NE(res, 0);
 }
@@ -235,14 +267,14 @@ TEST(AccessTests, TestNotReadWrite2) {
   accessType.read = false;
   accessType.write = true;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   accessType.read = true;
   accessType.write = true;
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_NE(res, 0);
 }
@@ -251,12 +283,12 @@ TEST(AccessTests, TestExecute) {
   AccessType accessType;
   accessType.execute = true;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_EQ(res, 0);
 }
@@ -265,13 +297,13 @@ TEST(AccessTests, TestNotExecute) {
   AccessType accessType;
   accessType.execute = false;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   accessType.execute = true;
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_NE(res, 0);
 }
@@ -282,12 +314,12 @@ TEST(AccessTests, TestRWX) {
   accessType.write = true;
   accessType.execute = true;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_EQ(res, 0);
 }
@@ -298,7 +330,7 @@ TEST(AccessTests, TestNotRWX0) {
   accessType.write = false;
   accessType.execute = false;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   accessType.read = true;
@@ -306,7 +338,7 @@ TEST(AccessTests, TestNotRWX0) {
   accessType.execute = true;
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_NE(res, 0);
 }
@@ -317,7 +349,7 @@ TEST(AccessTests, TestNotRWX1) {
   accessType.write = false;
   accessType.execute = false;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   accessType.read = true;
@@ -325,7 +357,7 @@ TEST(AccessTests, TestNotRWX1) {
   accessType.execute = true;
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_NE(res, 0);
 }
@@ -336,7 +368,7 @@ TEST(AccessTests, TestNotRWX2) {
   accessType.write = true;
   accessType.execute = false;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   accessType.read = true;
@@ -344,7 +376,7 @@ TEST(AccessTests, TestNotRWX2) {
   accessType.execute = true;
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_NE(res, 0);
 }
@@ -355,7 +387,7 @@ TEST(AccessTests, TestNotRWX3) {
   accessType.write = false;
   accessType.execute = true;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   accessType.read = true;
@@ -363,7 +395,7 @@ TEST(AccessTests, TestNotRWX3) {
   accessType.execute = true;
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_NE(res, 0);
 }
@@ -374,7 +406,7 @@ TEST(AccessTests, TestNotRWX4) {
   accessType.write = true;
   accessType.execute = true;
 
-  std::filesystem::path path = createTemporaryFile(__func__, accessType);
+  std::string path = createTemporaryFile(__func__, accessType);
   ASSERT_FALSE(path.empty());
 
   accessType.read = true;
@@ -382,7 +414,7 @@ TEST(AccessTests, TestNotRWX4) {
   accessType.execute = true;
   std::int64_t res = callAccess(path, accessType);
 
-  std::filesystem::remove(path);
+  ASSERT_EQ(unlink(path.c_str()), 0);
 
   ASSERT_NE(res, 0);
 }
