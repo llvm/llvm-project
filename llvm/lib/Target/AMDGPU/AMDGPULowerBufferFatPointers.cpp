@@ -801,7 +801,7 @@ Value *FatPtrConstMaterializer::materialize(Value *V) {
         Ops.push_back(cast<Constant>(U.get()));
       auto *NewGEP = ConstantExpr::getGetElementPtr(
           NewSrcTy, Ops[0], ArrayRef<Constant *>(Ops).slice(1),
-          GEPO->isInBounds(), GEPO->getInRangeIndex());
+          GEPO->isInBounds(), GEPO->getInRange());
       LLVM_DEBUG(dbgs() << "p7-getting GEP: " << *GEPO << " becomes " << *NewGEP
                         << "\n");
       Value *FurtherMap = materialize(NewGEP);
@@ -1086,7 +1086,7 @@ void SplitPtrStructs::processConditionals() {
       if (MaybeRsrc)
         for (Value *V : Seen)
           FoundRsrcs[cast<Instruction>(V)] = NewRsrc;
-    } else if (auto *SI = dyn_cast<SelectInst>(I)) {
+    } else if (isa<SelectInst>(I)) {
       if (MaybeRsrc) {
         ConditionalTemps.push_back(cast<Instruction>(Rsrc));
         Rsrc->replaceAllUsesWith(*MaybeRsrc);
@@ -1671,7 +1671,7 @@ PtrParts SplitPtrStructs::visitSelectInst(SelectInst &SI) {
   auto [TrueRsrc, TrueOff] = getPtrParts(True);
   auto [FalseRsrc, FalseOff] = getPtrParts(False);
 
-  Value *RsrcRes = RsrcRes =
+  Value *RsrcRes =
       IRB.CreateSelect(Cond, TrueRsrc, FalseRsrc, SI.getName() + ".rsrc", &SI);
   copyMetadata(RsrcRes, &SI);
   Conditionals.push_back(&SI);
@@ -1777,8 +1777,8 @@ void SplitPtrStructs::processFunction(Function &F) {
     Originals.push_back(&I);
   for (Instruction *I : Originals) {
     auto [Rsrc, Off] = visit(I);
-    assert((Rsrc && Off) ||
-           (!Rsrc && !Off) && "Can't have a resource but no offset");
+    assert(((Rsrc && Off) || (!Rsrc && !Off)) &&
+           "Can't have a resource but no offset");
     if (Rsrc)
       RsrcParts[I] = Rsrc;
     if (Off)
@@ -1841,6 +1841,7 @@ static Function *moveFunctionAdaptingType(Function *OldF, FunctionType *NewTy,
   bool IsIntrinsic = OldF->isIntrinsic();
   Function *NewF =
       Function::Create(NewTy, OldF->getLinkage(), OldF->getAddressSpace());
+  NewF->IsNewDbgInfoFormat = OldF->IsNewDbgInfoFormat;
   NewF->copyAttributesFrom(OldF);
   NewF->copyMetadata(OldF, 0);
   NewF->takeName(OldF);

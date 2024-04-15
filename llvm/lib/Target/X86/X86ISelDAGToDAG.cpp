@@ -3090,13 +3090,19 @@ bool X86DAGToDAGISel::selectLEAAddr(SDValue N,
 bool X86DAGToDAGISel::selectTLSADDRAddr(SDValue N, SDValue &Base,
                                         SDValue &Scale, SDValue &Index,
                                         SDValue &Disp, SDValue &Segment) {
-  assert(N.getOpcode() == ISD::TargetGlobalTLSAddress);
-  auto *GA = cast<GlobalAddressSDNode>(N);
+  assert(N.getOpcode() == ISD::TargetGlobalTLSAddress ||
+         N.getOpcode() == ISD::TargetExternalSymbol);
 
   X86ISelAddressMode AM;
-  AM.GV = GA->getGlobal();
-  AM.Disp += GA->getOffset();
-  AM.SymbolFlags = GA->getTargetFlags();
+  if (auto *GA = dyn_cast<GlobalAddressSDNode>(N)) {
+    AM.GV = GA->getGlobal();
+    AM.Disp += GA->getOffset();
+    AM.SymbolFlags = GA->getTargetFlags();
+  } else {
+    auto *SA = cast<ExternalSymbolSDNode>(N);
+    AM.ES = SA->getSymbol();
+    AM.SymbolFlags = SA->getTargetFlags();
+  }
 
   if (Subtarget->is32Bit()) {
     AM.Scale = 1;
@@ -6133,14 +6139,18 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
     MachineSDNode *CNode;
     if (NeedMask) {
-      unsigned ROpc = Subtarget->hasAVX() ? X86::VPCMPISTRMrr : X86::PCMPISTRMrr;
-      unsigned MOpc = Subtarget->hasAVX() ? X86::VPCMPISTRMrm : X86::PCMPISTRMrm;
+      unsigned ROpc =
+          Subtarget->hasAVX() ? X86::VPCMPISTRMrri : X86::PCMPISTRMrri;
+      unsigned MOpc =
+          Subtarget->hasAVX() ? X86::VPCMPISTRMrmi : X86::PCMPISTRMrmi;
       CNode = emitPCMPISTR(ROpc, MOpc, MayFoldLoad, dl, MVT::v16i8, Node);
       ReplaceUses(SDValue(Node, 1), SDValue(CNode, 0));
     }
     if (NeedIndex || !NeedMask) {
-      unsigned ROpc = Subtarget->hasAVX() ? X86::VPCMPISTRIrr : X86::PCMPISTRIrr;
-      unsigned MOpc = Subtarget->hasAVX() ? X86::VPCMPISTRIrm : X86::PCMPISTRIrm;
+      unsigned ROpc =
+          Subtarget->hasAVX() ? X86::VPCMPISTRIrri : X86::PCMPISTRIrri;
+      unsigned MOpc =
+          Subtarget->hasAVX() ? X86::VPCMPISTRIrmi : X86::PCMPISTRIrmi;
       CNode = emitPCMPISTR(ROpc, MOpc, MayFoldLoad, dl, MVT::i32, Node);
       ReplaceUses(SDValue(Node, 0), SDValue(CNode, 0));
     }
@@ -6168,15 +6178,19 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
     MachineSDNode *CNode;
     if (NeedMask) {
-      unsigned ROpc = Subtarget->hasAVX() ? X86::VPCMPESTRMrr : X86::PCMPESTRMrr;
-      unsigned MOpc = Subtarget->hasAVX() ? X86::VPCMPESTRMrm : X86::PCMPESTRMrm;
-      CNode = emitPCMPESTR(ROpc, MOpc, MayFoldLoad, dl, MVT::v16i8, Node,
-                           InGlue);
+      unsigned ROpc =
+          Subtarget->hasAVX() ? X86::VPCMPESTRMrri : X86::PCMPESTRMrri;
+      unsigned MOpc =
+          Subtarget->hasAVX() ? X86::VPCMPESTRMrmi : X86::PCMPESTRMrmi;
+      CNode =
+          emitPCMPESTR(ROpc, MOpc, MayFoldLoad, dl, MVT::v16i8, Node, InGlue);
       ReplaceUses(SDValue(Node, 1), SDValue(CNode, 0));
     }
     if (NeedIndex || !NeedMask) {
-      unsigned ROpc = Subtarget->hasAVX() ? X86::VPCMPESTRIrr : X86::PCMPESTRIrr;
-      unsigned MOpc = Subtarget->hasAVX() ? X86::VPCMPESTRIrm : X86::PCMPESTRIrm;
+      unsigned ROpc =
+          Subtarget->hasAVX() ? X86::VPCMPESTRIrri : X86::PCMPESTRIrri;
+      unsigned MOpc =
+          Subtarget->hasAVX() ? X86::VPCMPESTRIrmi : X86::PCMPESTRIrmi;
       CNode = emitPCMPESTR(ROpc, MOpc, MayFoldLoad, dl, MVT::i32, Node, InGlue);
       ReplaceUses(SDValue(Node, 0), SDValue(CNode, 0));
     }

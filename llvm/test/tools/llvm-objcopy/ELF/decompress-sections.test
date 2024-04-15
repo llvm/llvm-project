@@ -1,0 +1,36 @@
+# REQUIRES: zlib
+## Test decompression for different sections.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --decompress-debug-sections %t %t.de
+# RUN: llvm-readelf -S %t.de | FileCheck %s
+
+# CHECK:        Name              Type            Address          Off      Size     ES Flg Lk Inf Al
+# CHECK:        .debug_alloc      PROGBITS        0000000000000000 [[#%x,]] [[#%x,]] 00  AC  0   0  0
+# CHECK-NEXT:   .debug_nonalloc   PROGBITS        0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  1
+# CHECK-NEXT:   .debugx           PROGBITS        0000000000000000 [[#%x,]] [[#%x,]] 00      0   0  1
+# CHECK-NEXT:   nodebug           PROGBITS        0000000000000000 [[#%x,]] [[#%x,]] 00   C  0   0  0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:      .debug_alloc
+    Type:      SHT_PROGBITS
+    Flags:     [ SHF_ALLOC, SHF_COMPRESSED ]
+    Content:   010000000000000040000000000000000100000000000000789cd36280002d3269002f800151
+  - Name:      .debug_nonalloc
+    Type:      SHT_PROGBITS
+    Flags:     [ SHF_COMPRESSED ]
+    Content:   010000000000000040000000000000000100000000000000789cd36280002d3269002f800151
+  - Name:      .debugx
+    Type:      SHT_PROGBITS
+    Flags:     [ SHF_COMPRESSED ]
+    Content:   010000000000000040000000000000000100000000000000789cd36280002d3269002f800151
+  - Name:      nodebug
+    Type:      SHT_PROGBITS
+    Flags:     [ SHF_COMPRESSED ]
+    Content:   010000000000000040000000000000000100000000000000789cd36280002d3269002f800151

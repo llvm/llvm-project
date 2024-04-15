@@ -14,8 +14,7 @@ define i1 @test1(i32 %c) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 20
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[SWITCH_TABLEIDX]] to i20
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i20 -490991, [[SWITCH_CAST]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i20 [[SWITCH_DOWNSHIFT]], 1
-; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = icmp ne i20 [[TMP1]], 0
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i20 [[SWITCH_DOWNSHIFT]] to i1
 ; CHECK-NEXT:    [[I_0:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
 ; CHECK-NEXT:    ret i1 [[I_0]]
 ;

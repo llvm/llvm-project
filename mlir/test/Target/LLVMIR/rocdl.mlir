@@ -88,7 +88,37 @@ llvm.func @rocdl.bpermute(%src : i32) -> i32 {
   llvm.return %0 : i32
 }
 
+llvm.func @rocdl.ballot32(%pred : i1) -> i32 {
+  // CHECK-LABEL: rocdl.ballot32
+  // CHECK: call i32 @llvm.amdgcn.ballot
+  %0 = rocdl.ballot %pred : i32
+  llvm.return %0 : i32
+}
+
+llvm.func @rocdl.ballot64(%pred : i1) -> i64 {
+  // CHECK-LABEL: rocdl.ballot64
+  // CHECK: call i64 @llvm.amdgcn.ballot
+  %0 = rocdl.ballot %pred : i64
+  llvm.return %0 : i64
+}
+
+llvm.func @rocdl.waitcnt() {
+  // CHECK-LABEL: rocdl.waitcnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.waitcnt(i32 0)
+  rocdl.waitcnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier() {
+  // CHECK-LABEL: rocdl.s.barrier
+  // CHECK-NEXT: call void @llvm.amdgcn.s.barrier()
+  rocdl.s.barrier
+  llvm.return
+}
+
+
 llvm.func @rocdl.barrier() {
+  // CHECK-LABEL: rocdl.barrier
   // CHECK:      fence syncscope("workgroup") release
   // CHECK-NEXT: call void @llvm.amdgcn.s.barrier()
   // CHECK-NEXT: fence syncscope("workgroup") acquire

@@ -370,8 +370,8 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
       scalarReplacements.push_back(
           residualGenericOpBody->getArgument(num + origNumInputs));
     bool allUsesReplaced = false;
-    rewriter.replaceUsesWithinBlock(peeledScalarOperation, scalarReplacements,
-                                    residualGenericOpBody, &allUsesReplaced);
+    rewriter.replaceOpUsesWithinBlock(peeledScalarOperation, scalarReplacements,
+                                      residualGenericOpBody, &allUsesReplaced);
     assert(!allUsesReplaced &&
            "peeled scalar operation is erased when it wasnt expected to be");
   }

@@ -29,18 +29,6 @@ namespace LLVM {
 /// interpret pointee types as consistently as possible.
 std::unique_ptr<Pass> createTypeConsistencyPass();
 
-/// Transforms uses of pointers to a whole struct to uses of pointers to the
-/// first element of a struct. This is achieved by inserting a GEP to the first
-/// element when possible.
-template <class User>
-class AddFieldGetterToStructDirectUse : public OpRewritePattern<User> {
-public:
-  using OpRewritePattern<User>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(User user,
-                                PatternRewriter &rewriter) const override;
-};
-
 /// Canonicalizes GEPs of which the base type and the pointer's type hint do not
 /// match. This is done by replacing the original GEP into a GEP with the type
 /// hint as a base type when an element of the hinted type aligns with the
@@ -66,17 +54,6 @@ public:
 
   LogicalResult matchAndRewrite(StoreOp store,
                                 PatternRewriter &rewrite) const override;
-};
-
-/// Transforms type-inconsistent stores, aka stores where the type hint of
-/// the address contradicts the value stored, by inserting a bitcast if
-/// possible.
-class BitcastStores : public OpRewritePattern<StoreOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(StoreOp store,
-                                PatternRewriter &rewriter) const override;
 };
 
 /// Splits GEPs with more than two indices into multiple GEPs with exactly

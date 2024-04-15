@@ -497,7 +497,7 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   // Is X in [IntMin, 0]?  NOTE: INT_MIN is fine!
   if (Range.getSignedMax().isNonPositive()) {
     IRBuilder<> B(II);
-    Value *NegX = B.CreateNeg(X, II->getName(), /*HasNUW=*/false,
+    Value *NegX = B.CreateNeg(X, II->getName(),
                               /*HasNSW=*/IsIntMinPoison);
     ++NumAbs;
     II->replaceAllUsesWith(NegX);
@@ -1105,13 +1105,10 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
     return false;
 
   Instruction::BinaryOps Opcode = BinOp->getOpcode();
-  Value *LHS = BinOp->getOperand(0);
-  Value *RHS = BinOp->getOperand(1);
-
-  ConstantRange LRange =
-      LVI->getConstantRange(LHS, BinOp, /*UndefAllowed*/ false);
-  ConstantRange RRange =
-      LVI->getConstantRange(RHS, BinOp, /*UndefAllowed*/ false);
+  ConstantRange LRange = LVI->getConstantRangeAtUse(BinOp->getOperandUse(0),
+                                                    /*UndefAllowed=*/false);
+  ConstantRange RRange = LVI->getConstantRangeAtUse(BinOp->getOperandUse(1),
+                                                    /*UndefAllowed=*/false);
 
   bool Changed = false;
   bool NewNUW = false, NewNSW = false;

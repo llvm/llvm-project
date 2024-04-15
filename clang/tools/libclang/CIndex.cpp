@@ -28,6 +28,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtVisitor.h"
@@ -1778,6 +1779,10 @@ bool CursorVisitor::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   return Visit(TL.getModifiedLoc());
 }
 
+bool CursorVisitor::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
+  return Visit(TL.getInnerLoc());
+}
+
 bool CursorVisitor::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
 }
@@ -1919,6 +1924,7 @@ DEFAULT_TYPELOC_IMPL(ConstantArray, ArrayType)
 DEFAULT_TYPELOC_IMPL(IncompleteArray, ArrayType)
 DEFAULT_TYPELOC_IMPL(VariableArray, ArrayType)
 DEFAULT_TYPELOC_IMPL(DependentSizedArray, ArrayType)
+DEFAULT_TYPELOC_IMPL(ArrayParameter, ConstantArrayType)
 DEFAULT_TYPELOC_IMPL(DependentAddressSpace, Type)
 DEFAULT_TYPELOC_IMPL(DependentVector, Type)
 DEFAULT_TYPELOC_IMPL(DependentSizedExtVector, Type)
@@ -2110,6 +2116,7 @@ public:
 };
 class EnqueueVisitor : public ConstStmtVisitor<EnqueueVisitor, void>,
                        public ConstAttrVisitor<EnqueueVisitor, void> {
+  friend class OpenACCClauseEnqueue;
   friend class OMPClauseEnqueue;
   VisitorWorkList &WL;
   CXCursor Parent;
@@ -2166,6 +2173,7 @@ public:
   void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
   void VisitRequiresExpr(const RequiresExpr *E);
   void VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
+  void VisitOpenACCComputeConstruct(const OpenACCComputeConstruct *D);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
@@ -2264,6 +2272,7 @@ private:
   void AddDecl(const Decl *D, bool isFirst = true);
   void AddTypeLoc(TypeSourceInfo *TI);
   void EnqueueChildren(const Stmt *S);
+  void EnqueueChildren(const OpenACCClause *S);
   void EnqueueChildren(const OMPClause *S);
   void EnqueueChildren(const AnnotateAttr *A);
 };
@@ -2758,6 +2767,37 @@ void EnqueueVisitor::EnqueueChildren(const OMPClause *S) {
   unsigned size = WL.size();
   OMPClauseEnqueue Visitor(this);
   Visitor.Visit(S);
+  if (size == WL.size())
+    return;
+  // Now reverse the entries we just added.  This will match the DFS
+  // ordering performed by the worklist.
+  VisitorWorkList::iterator I = WL.begin() + size, E = WL.end();
+  std::reverse(I, E);
+}
+
+namespace {
+class OpenACCClauseEnqueue : public OpenACCClauseVisitor<OpenACCClauseEnqueue> {
+  EnqueueVisitor &Visitor;
+
+public:
+  OpenACCClauseEnqueue(EnqueueVisitor &V) : Visitor(V) {}
+
+#define VISIT_CLAUSE(CLAUSE_NAME)                                              \
+  void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &C);
+#include "clang/Basic/OpenACCClauses.def"
+};
+
+void OpenACCClauseEnqueue::VisitDefaultClause(const OpenACCDefaultClause &C) {}
+void OpenACCClauseEnqueue::VisitIfClause(const OpenACCIfClause &C) {
+  Visitor.AddStmt(C.getConditionExpr());
+}
+} // namespace
+
+void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {
+  unsigned size = WL.size();
+  OpenACCClauseEnqueue Visitor(*this);
+  Visitor.Visit(C);
+
   if (size == WL.size())
     return;
   // Now reverse the entries we just added.  This will match the DFS
@@ -3379,6 +3419,13 @@ void EnqueueVisitor::VisitOMPTargetTeamsDistributeParallelForSimdDirective(
 void EnqueueVisitor::VisitOMPTargetTeamsDistributeSimdDirective(
     const OMPTargetTeamsDistributeSimdDirective *D) {
   VisitOMPLoopDirective(D);
+}
+
+void EnqueueVisitor::VisitOpenACCComputeConstruct(
+    const OpenACCComputeConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
 }
 
 void EnqueueVisitor::VisitAnnotateAttr(const AnnotateAttr *A) {

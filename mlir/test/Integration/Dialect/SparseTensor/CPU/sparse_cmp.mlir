@@ -10,7 +10,7 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -96,7 +96,7 @@ module {
   // Main driver that constructs matrix and calls the sparse kernel to perform
   // element-wise comparison.
   //
-  func.func @entry() {
+  func.func @main() {
     %d0 = arith.constant 0 : i8
     %c0 = arith.constant 0 : index
 
@@ -124,33 +124,44 @@ module {
             : (tensor<4x4xf64, #DCSR>, tensor<4x4xf64, #DCSR>) -> tensor<4x4xi8, #DCSR>
 
     //
-    // All should have the same result.
+    // All should have the same boolean values.
     //
-    // CHECK-COUNT-3: ( ( 0, 1, 0, 1 ), ( 1, 0, 0, 0 ), ( 1, 0, 0, 1 ), ( 0, 0, 0, 0 ) )
+    // CHECK: ( ( 0, 1, 0, 1 ), ( 1, 0, 0, 0 ), ( 1, 0, 0, 1 ), ( 0, 0, 0, 0 ) )
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 16
+    // CHECK-NEXT: dim = ( 4, 4 )
+    // CHECK-NEXT: lvl = ( 4, 4 )
+    // CHECK-NEXT: pos[0] : ( 0, 4
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
+    // CHECK-NEXT: pos[1] : ( 0, 4, 8, 12, 16
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+    // CHECK-NEXT: values : ( 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0
+    // CHECK-NEXT: ----
+    //
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 11
+    // CHECK-NEXT: dim = ( 4, 4 )
+    // CHECK-NEXT: lvl = ( 4, 4 )
+    // CHECK-NEXT: pos[0] : ( 0, 4
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
+    // CHECK-NEXT: pos[1] : ( 0, 3, 5, 9, 11
+    // CHECK-NEXT: crd[1] : ( 1, 2, 3, 0, 1, 0, 1, 2, 3, 0, 1
+    // CHECK-NEXT: values : ( 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0
+    // CHECK-NEXT: ----
+    //
     %v = vector.transfer_read %all_dn_out[%c0, %c0], %d0
        : tensor<4x4xi8>, vector<4x4xi8>
     vector.print %v : vector<4x4xi8>
-
-    %lhs_sp_ret = sparse_tensor.convert %lhs_sp_out
-      : tensor<4x4xi8, #DCSR> to tensor<4x4xi8>
-    %v1 = vector.transfer_read %lhs_sp_ret[%c0, %c0], %d0
-      : tensor<4x4xi8>, vector<4x4xi8>
-    vector.print %v1 : vector<4x4xi8>
-
-    %rhs_sp_ret = sparse_tensor.convert %all_sp_out
-      : tensor<4x4xi8, #DCSR> to tensor<4x4xi8>
-    %v2 = vector.transfer_read %rhs_sp_ret[%c0, %c0], %d0
-      : tensor<4x4xi8>, vector<4x4xi8>
-    vector.print %v2 : vector<4x4xi8>
-
+    sparse_tensor.print %lhs_sp_out : tensor<4x4xi8, #DCSR>
+    sparse_tensor.print %all_sp_out : tensor<4x4xi8, #DCSR>
 
     bufferization.dealloc_tensor %lhs_sp : tensor<4x4xf64, #DCSR>
     bufferization.dealloc_tensor %rhs_sp : tensor<4x4xf64, #DCSR>
     bufferization.dealloc_tensor %all_dn_out : tensor<4x4xi8>
     bufferization.dealloc_tensor %lhs_sp_out : tensor<4x4xi8, #DCSR>
     bufferization.dealloc_tensor %all_sp_out : tensor<4x4xi8, #DCSR>
-    bufferization.dealloc_tensor %lhs_sp_ret : tensor<4x4xi8>
-    bufferization.dealloc_tensor %rhs_sp_ret : tensor<4x4xi8>
+
     return
   }
 }

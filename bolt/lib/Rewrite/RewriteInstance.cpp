@@ -81,8 +81,10 @@ extern cl::list<std::string> HotTextMoveSections;
 extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
 extern cl::opt<JumpTableSupportLevel> JumpTables;
+extern cl::opt<bool> KeepNops;
 extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
+extern cl::opt<bool> TerminalTrap;
 extern cl::opt<bool> TimeBuild;
 
 cl::opt<bool> AllowStripped("allow-stripped",
@@ -199,10 +201,7 @@ static cl::opt<cl::boolOrDefault> RelocationMode(
     "relocs", cl::desc("use relocations in the binary (default=autodetect)"),
     cl::cat(BoltCategory));
 
-static cl::opt<std::string>
-SaveProfile("w",
-  cl::desc("save recorded profile to a file"),
-  cl::cat(BoltOutputCategory));
+extern cl::opt<std::string> SaveProfile;
 
 static cl::list<std::string>
 SkipFunctionNames("skip-funcs",
@@ -269,6 +268,10 @@ namespace bolt {
 
 extern const char *BoltRevision;
 
+// Weird location for createMCPlusBuilder, but this is here to avoid a
+// cyclic dependency of libCore (its natural place) and libTarget. libRewrite
+// can depend on libTarget, but not libCore. Since libRewrite is the only
+// user of this function, we define it here.
 MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCInstrAnalysis *Analysis,
                                    const MCInstrInfo *Info,
@@ -346,8 +349,21 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
   Stderr.SetUnbuffered();
   LLVM_DEBUG(dbgs().SetUnbuffered());
 
+  // Read RISCV subtarget features from input file
+  std::unique_ptr<SubtargetFeatures> Features;
+  Triple TheTriple = File->makeTriple();
+  if (TheTriple.getArch() == llvm::Triple::riscv64) {
+    Expected<SubtargetFeatures> FeaturesOrErr = File->getFeatures();
+    if (auto E = FeaturesOrErr.takeError()) {
+      Err = std::move(E);
+      return;
+    } else {
+      Features.reset(new SubtargetFeatures(*FeaturesOrErr));
+    }
+  }
+
   auto BCOrErr = BinaryContext::createBinaryContext(
-      File, IsPIC,
+      TheTriple, File->getFileName(), Features.get(), IsPIC,
       DWARFContext::create(*File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, opts::DWPPathName,
                            WithColor::defaultErrorHandler,
@@ -540,7 +556,7 @@ Error RewriteInstance::discoverStorage() {
     if (Error E = SectionNameOrErr.takeError())
       return E;
     StringRef SectionName = SectionNameOrErr.get();
-    if (SectionName == ".text") {
+    if (SectionName == BC->getMainCodeSectionName()) {
       BC->OldTextSectionAddress = Section.getAddress();
       BC->OldTextSectionSize = Section.getSize();
 
@@ -732,6 +748,13 @@ Error RewriteInstance::run() {
   // Skip disassembling if we have a translation table and we are running an
   // aggregation job.
   if (opts::AggregateOnly && BAT->enabledFor(InputFile)) {
+    // YAML profile in BAT mode requires CFG for .bolt.org.text functions
+    if (!opts::SaveProfile.empty() ||
+        opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
+      selectFunctionsToProcess();
+      disassembleFunctions();
+      buildFunctionsCFG();
+    }
     processProfileData();
     return Error::success();
   }
@@ -1841,7 +1864,8 @@ Error RewriteInstance::readSpecialSections() {
                   "Use -update-debug-sections to keep it.\n";
   }
 
-  HasTextRelocations = (bool)BC->getUniqueSectionByName(".rela.text");
+  HasTextRelocations = (bool)BC->getUniqueSectionByName(
+      ".rela" + std::string(BC->getMainCodeSectionName()));
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
   BuildIDSection = BC->getUniqueSectionByName(".note.gnu.build-id");
@@ -2028,12 +2052,13 @@ void RewriteInstance::adjustCommandLineOptions() {
   if (opts::Lite)
     BC->outs() << "BOLT-INFO: enabling lite mode\n";
 
-  if (!opts::SaveProfile.empty() && BAT->enabledFor(InputFile)) {
-    BC->errs()
-        << "BOLT-ERROR: unable to save profile in YAML format for input "
-           "file processed by BOLT. Please remove -w option and use branch "
-           "profile.\n";
-    exit(1);
+  if (BC->IsLinuxKernel) {
+    if (!opts::KeepNops.getNumOccurrences())
+      opts::KeepNops = true;
+
+    // Linux kernel may resume execution after a trap instruction in some cases.
+    if (!opts::TerminalTrap.getNumOccurrences())
+      opts::TerminalTrap = false;
   }
 }
 
@@ -2281,9 +2306,13 @@ void RewriteInstance::processRelocations() {
     return;
 
   for (const SectionRef &Section : InputFile->sections()) {
-    if (cantFail(Section.getRelocatedSection()) != InputFile->section_end() &&
-        !BinarySection(*BC, Section).isAllocatable())
-      readRelocations(Section);
+    section_iterator SecIter = cantFail(Section.getRelocatedSection());
+    if (SecIter == InputFile->section_end())
+      continue;
+    if (BinarySection(*BC, Section).isAllocatable())
+      continue;
+
+    readRelocations(Section);
   }
 
   if (NumFailedRelocations)
@@ -3126,12 +3155,13 @@ void RewriteInstance::processProfileData() {
     }
   }
 
-  if (!opts::SaveProfile.empty()) {
+  if (!opts::SaveProfile.empty() && !BAT->enabledFor(InputFile)) {
     YAMLProfileWriter PW(opts::SaveProfile);
     PW.writeProfile(*this);
   }
   if (opts::AggregateOnly &&
-      opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
+      opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML &&
+      !BAT->enabledFor(InputFile)) {
     YAMLProfileWriter PW(opts::OutputFilename);
     PW.writeProfile(*this);
   }
@@ -3416,7 +3446,8 @@ void RewriteInstance::emitAndLink() {
   ErrorOr<BinarySection &> TextSection =
       BC->getUniqueSectionByName(BC->getMainCodeSectionName());
   if (BC->HasRelocations && TextSection)
-    BC->renameSection(*TextSection, getOrgSecPrefix() + ".text");
+    BC->renameSection(*TextSection,
+                      getOrgSecPrefix() + BC->getMainCodeSectionName());
 
   //////////////////////////////////////////////////////////////////////////////
   // Assign addresses to new sections.
@@ -4273,7 +4304,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   for (auto &SectionKV : OutputSections) {
     ELFShdrTy &Section = SectionKV.second;
 
-    // Ignore TLS sections as they don't take any space in the file.
+    // Ignore NOBITS sections as they don't take any space in the file.
     if (Section.sh_type == ELF::SHT_NOBITS)
       continue;
 
@@ -4281,10 +4312,9 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     // placed in different loadable segments.
     if (PrevSection &&
         PrevSection->sh_offset + PrevSection->sh_size > Section.sh_offset) {
-      if (opts::Verbosity > 1) {
+      if (opts::Verbosity > 1)
         BC->outs() << "BOLT-INFO: adjusting size for section "
                    << PrevBinSec->getOutputName() << '\n';
-      }
       PrevSection->sh_size = Section.sh_offset - PrevSection->sh_offset;
     }
 
@@ -4392,6 +4422,7 @@ void RewriteInstance::patchELFSectionHeaderTable(ELFObjectFile<ELFT> *File) {
   raw_fd_ostream &OS = Out->os();
   const ELFFile<ELFT> &Obj = File->getELFFile();
 
+  // Mapping from old section indices to new ones
   std::vector<uint32_t> NewSectionIndex;
   std::vector<ELFShdrTy> OutputSections =
       getOutputSections(File, NewSectionIndex);
@@ -4409,10 +4440,8 @@ void RewriteInstance::patchELFSectionHeaderTable(ELFObjectFile<ELFT> *File) {
   // Write all section header entries while patching section references.
   for (ELFShdrTy &Section : OutputSections) {
     Section.sh_link = NewSectionIndex[Section.sh_link];
-    if (Section.sh_type == ELF::SHT_REL || Section.sh_type == ELF::SHT_RELA) {
-      if (Section.sh_info)
-        Section.sh_info = NewSectionIndex[Section.sh_info];
-    }
+    if (Section.sh_type == ELF::SHT_REL || Section.sh_type == ELF::SHT_RELA)
+      Section.sh_info = NewSectionIndex[Section.sh_info];
     OS.write(reinterpret_cast<const char *>(&Section), sizeof(Section));
   }
 

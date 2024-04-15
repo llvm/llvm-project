@@ -14,7 +14,6 @@
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Rewrite/RewriteInstance.h"
-#include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -283,10 +282,9 @@ public:
   DIEStreamer(DIEBuilder *DIEBldr, DWARFRewriter &Rewriter,
               DWARFLinkerBase::OutputFileType OutFileType,
               raw_pwrite_stream &OutFile,
-              std::function<StringRef(StringRef Input)> Translator,
               DWARFLinkerBase::MessageHandlerTy Warning)
-      : DwarfStreamer(OutFileType, OutFile, Translator, Warning),
-        DIEBldr(DIEBldr), Rewriter(Rewriter){};
+      : DwarfStreamer(OutFileType, OutFile, Warning), DIEBldr(DIEBldr),
+        Rewriter(Rewriter){};
 
   using DwarfStreamer::emitCompileUnitHeader;
 
@@ -376,12 +374,11 @@ static cl::opt<bool> AlwaysConvertToRanges(
 extern cl::opt<std::string> CompDirOverride;
 } // namespace opts
 
-static bool getLowAndHighPC(const DIE &Die, const DWARFUnit &DU,
-                            uint64_t &LowPC, uint64_t &HighPC,
-                            uint64_t &SectionIndex) {
+/// If DW_AT_low_pc exists sets LowPC and returns true.
+static bool getLowPC(const DIE &Die, const DWARFUnit &DU, uint64_t &LowPC,
+                     uint64_t &SectionIndex) {
   DIEValue DvalLowPc = Die.findAttribute(dwarf::DW_AT_low_pc);
-  DIEValue DvalHighPc = Die.findAttribute(dwarf::DW_AT_high_pc);
-  if (!DvalLowPc || !DvalHighPc)
+  if (!DvalLowPc)
     return false;
 
   dwarf::Form Form = DvalLowPc.getForm();
@@ -404,12 +401,37 @@ static bool getLowAndHighPC(const DIE &Die, const DWARFUnit &DU,
     LowPC = LowPcValue;
     SectionIndex = 0;
   }
+  return true;
+}
+
+/// If DW_AT_high_pc exists sets HighPC and returns true.
+static bool getHighPC(const DIE &Die, const uint64_t LowPC, uint64_t &HighPC) {
+  DIEValue DvalHighPc = Die.findAttribute(dwarf::DW_AT_high_pc);
+  if (!DvalHighPc)
+    return false;
   if (DvalHighPc.getForm() == dwarf::DW_FORM_addr)
     HighPC = DvalHighPc.getDIEInteger().getValue();
   else
     HighPC = LowPC + DvalHighPc.getDIEInteger().getValue();
-
   return true;
+}
+
+/// If DW_AT_low_pc and DW_AT_high_pc exist sets LowPC and HighPC and returns
+/// true.
+static bool getLowAndHighPC(const DIE &Die, const DWARFUnit &DU,
+                            uint64_t &LowPC, uint64_t &HighPC,
+                            uint64_t &SectionIndex) {
+  uint64_t TempLowPC = LowPC;
+  uint64_t TempHighPC = HighPC;
+  uint64_t TempSectionIndex = SectionIndex;
+  if (getLowPC(Die, DU, TempLowPC, TempSectionIndex) &&
+      getHighPC(Die, TempLowPC, TempHighPC)) {
+    LowPC = TempLowPC;
+    HighPC = TempHighPC;
+    SectionIndex = TempSectionIndex;
+    return true;
+  }
+  return false;
 }
 
 static Expected<llvm::DWARFAddressRangesVector>
@@ -469,7 +491,6 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
 
   std::unique_ptr<DIEStreamer> Streamer = std::make_unique<DIEStreamer>(
       &DIEBldr, Rewriter, DWARFLinkerBase::OutputFileType::Object, OutFile,
-      [](StringRef Input) -> StringRef { return Input; },
       [&](const Twine &Warning, StringRef Context, const DWARFDie *) {});
   Error Err = Streamer->init(TheTriple, Swift5ReflectionSegmentName);
   if (Err)
@@ -1250,10 +1271,9 @@ void DWARFRewriter::updateUnitDebugInfo(
           }
         }
       } else if (LowPCAttrInfo) {
-        const std::optional<uint64_t> Result =
-            LowPCAttrInfo.getDIEInteger().getValue();
-        if (Result.has_value()) {
-          const uint64_t Address = Result.value();
+        uint64_t Address = 0;
+        uint64_t SectionIndex = 0;
+        if (getLowPC(*Die, Unit, Address, SectionIndex)) {
           uint64_t NewAddress = 0;
           if (const BinaryFunction *Function =
                   BC.getBinaryFunctionContainingAddress(Address)) {
@@ -1664,7 +1684,7 @@ namespace {
 std::unique_ptr<BinaryContext>
 createDwarfOnlyBC(const object::ObjectFile &File) {
   return cantFail(BinaryContext::createBinaryContext(
-      &File, false,
+      File.makeTriple(), File.getFileName(), nullptr, false,
       DWARFContext::create(File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, "", WithColor::defaultErrorHandler,
                            WithColor::defaultWarningHandler),

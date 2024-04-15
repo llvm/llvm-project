@@ -1255,28 +1255,6 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,
     emitRRI(Mips::SD, GPReg, Mips::SP, RegOrOffset, SMLoc(), &STI);
   }
 
-#if 0
-  // We haven't support -mabicalls -mno-shared yet.
-  if (-mno-shared) {
-    MCSymbol *GPSym = MCA.getContext().getOrCreateSymbol("__gnu_local_gp");
-    const MipsMCExpr *HiExpr = MipsMCExpr::create(
-        MipsMCExpr::MEK_HI, MCSymbolRefExpr::create(GPSym, MCA.getContext()),
-        MCA.getContext());
-    const MipsMCExpr *LoExpr = MipsMCExpr::create(
-        MipsMCExpr::MEK_LO, MCSymbolRefExpr::create(GPSym, MCA.getContext()),
-        MCA.getContext());
-
-    // lui $gp, %hi(__gnu_local_gp)
-    emitRX(Mips::LUi, GPReg, MCOperand::createExpr(HiExpr), SMLoc(), &STI);
-
-    // addiu  $gp, $gp, %lo(__gnu_local_gp)
-    emitRRX(Mips::ADDiu, GPReg, GPReg, MCOperand::createExpr(LoExpr), SMLoc(),
-            &STI);
-
-    return;
-  }
-#endif
-
   const MipsMCExpr *HiExpr = MipsMCExpr::createGpOff(
       MipsMCExpr::MEK_HI, MCSymbolRefExpr::create(&Sym, MCA.getContext()),
       MCA.getContext());

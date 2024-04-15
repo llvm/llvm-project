@@ -99,6 +99,13 @@ static unsigned log2LdstWidth(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case RISCV::LBU:
+  case RISCV::SB:
+    return 0;
+  case RISCV::LH:
+  case RISCV::LHU:
+  case RISCV::SH:
+    return 1;
   case RISCV::LW:
   case RISCV::SW:
   case RISCV::FLW:
@@ -112,17 +119,47 @@ static unsigned log2LdstWidth(unsigned Opcode) {
   }
 }
 
+// Return bit field size of immediate operand of Opcode.
+static unsigned offsetMask(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case RISCV::LBU:
+  case RISCV::SB:
+    return maskTrailingOnes<unsigned>(2U);
+  case RISCV::LH:
+  case RISCV::LHU:
+  case RISCV::SH:
+    return maskTrailingOnes<unsigned>(1U);
+  case RISCV::LW:
+  case RISCV::SW:
+  case RISCV::FLW:
+  case RISCV::FSW:
+  case RISCV::LD:
+  case RISCV::SD:
+  case RISCV::FLD:
+  case RISCV::FSD:
+    return maskTrailingOnes<unsigned>(5U);
+  }
+}
+
 // Return a mask for the offset bits of a non-stack-pointer based compressed
 // load/store.
 static uint8_t compressedLDSTOffsetMask(unsigned Opcode) {
-  return 0x1f << log2LdstWidth(Opcode);
+  return offsetMask(Opcode) << log2LdstWidth(Opcode);
 }
 
 // Return true if Offset fits within a compressed stack-pointer based
 // load/store.
 static bool compressibleSPOffset(int64_t Offset, unsigned Opcode) {
-  return log2LdstWidth(Opcode) == 2 ? isShiftedUInt<6, 2>(Offset)
-                                    : isShiftedUInt<6, 3>(Offset);
+  // Compressed sp-based loads and stores only work for 32/64 bits.
+  switch (log2LdstWidth(Opcode)) {
+  case 2:
+    return isShiftedUInt<6, 2>(Offset);
+  case 3:
+    return isShiftedUInt<6, 3>(Offset);
+  }
+  return false;
 }
 
 // Given an offset for a load/store, return the adjustment required to the base
@@ -147,6 +184,10 @@ static bool isCompressibleLoad(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     return false;
+  case RISCV::LBU:
+  case RISCV::LH:
+  case RISCV::LHU:
+    return STI.hasStdExtZcb();
   case RISCV::LW:
   case RISCV::LD:
     return STI.hasStdExtCOrZca();
@@ -164,6 +205,9 @@ static bool isCompressibleStore(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     return false;
+  case RISCV::SB:
+  case RISCV::SH:
+    return STI.hasStdExtZcb();
   case RISCV::SW:
   case RISCV::SD:
     return STI.hasStdExtCOrZca();

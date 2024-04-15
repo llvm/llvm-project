@@ -49,6 +49,7 @@ struct StaticDiagInfoDescriptionStringTable {
 #include "clang/Basic/DiagnosticSemaKinds.inc"
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
+#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
   // clang-format on
 #undef DIAG
 };
@@ -70,7 +71,8 @@ const StaticDiagInfoDescriptionStringTable StaticDiagInfoDescriptions = {
 #include "clang/Basic/DiagnosticSemaKinds.inc"
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
-  // clang-format on
+#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
+// clang-format on
 #undef DIAG
 };
 
@@ -95,7 +97,8 @@ const uint32_t StaticDiagInfoDescriptionOffsets[] = {
 #include "clang/Basic/DiagnosticSemaKinds.inc"
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
-  // clang-format on
+#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
+// clang-format on
 #undef DIAG
 };
 
@@ -173,6 +176,7 @@ VALIDATE_DIAG_SIZE(CROSSTU)
 VALIDATE_DIAG_SIZE(SEMA)
 VALIDATE_DIAG_SIZE(ANALYSIS)
 VALIDATE_DIAG_SIZE(REFACTORING)
+VALIDATE_DIAG_SIZE(INSTALLAPI)
 #undef VALIDATE_DIAG_SIZE
 #undef STRINGIFY_NAME
 
@@ -204,6 +208,7 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
 #include "clang/Basic/DiagnosticSemaKinds.inc"
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
+#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
 // clang-format on
 #undef DIAG
 };
@@ -246,6 +251,7 @@ CATEGORY(CROSSTU, COMMENT)
 CATEGORY(SEMA, CROSSTU)
 CATEGORY(ANALYSIS, SEMA)
 CATEGORY(REFACTORING, ANALYSIS)
+CATEGORY(INSTALLAPI, REFACTORING)
 #undef CATEGORY
 
   // Avoid out of bounds reads.
@@ -855,10 +861,18 @@ bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
   if (isARCDiagnostic(DiagID))
     return false;
 
+  if (isCodegenABICheckDiagnostic(DiagID))
+    return false;
+
   return true;
 }
 
 bool DiagnosticIDs::isARCDiagnostic(unsigned DiagID) {
   unsigned cat = getCategoryNumberForDiag(DiagID);
   return DiagnosticIDs::getCategoryNameFromID(cat).starts_with("ARC ");
+}
+
+bool DiagnosticIDs::isCodegenABICheckDiagnostic(unsigned DiagID) {
+  unsigned cat = getCategoryNumberForDiag(DiagID);
+  return DiagnosticIDs::getCategoryNameFromID(cat) == "Codegen ABI Check";
 }

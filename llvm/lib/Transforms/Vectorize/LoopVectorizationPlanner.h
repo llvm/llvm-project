@@ -68,6 +68,7 @@ class VPBuilder {
 public:
   VPBuilder() = default;
   VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }
+  VPBuilder(VPRecipeBase *InsertPt) { setInsertPoint(InsertPt); }
 
   /// Clear the insertion point: created instructions will not be inserted into
   /// a block.
@@ -78,6 +79,13 @@ public:
 
   VPBasicBlock *getInsertBlock() const { return BB; }
   VPBasicBlock::iterator getInsertPoint() const { return InsertPt; }
+
+  /// Create a VPBuilder to insert after \p R.
+  static VPBuilder getToInsertAfter(VPRecipeBase *R) {
+    VPBuilder B;
+    B.setInsertPoint(R->getParent(), std::next(R->getIterator()));
+    return B;
+  }
 
   /// InsertPoint - A saved insertion point.
   class VPInsertPoint {
@@ -131,8 +139,9 @@ public:
 
   /// Create an N-ary operation with \p Opcode, \p Operands and set \p Inst as
   /// its underlying Instruction.
-  VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        Instruction *Inst = nullptr, const Twine &Name = "") {
+  VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                              Instruction *Inst = nullptr,
+                              const Twine &Name = "") {
     DebugLoc DL;
     if (Inst)
       DL = Inst->getDebugLoc();
@@ -140,8 +149,8 @@ public:
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
-  VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        DebugLoc DL, const Twine &Name = "") {
+  VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                              DebugLoc DL, const Twine &Name = "") {
     return createInstruction(Opcode, Operands, DL, Name);
   }
 
@@ -164,7 +173,10 @@ public:
 
   VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
                     const Twine &Name = "") {
-    return createInstruction(Instruction::BinaryOps::Or, {LHS, RHS}, DL, Name);
+
+    return tryInsertInstruction(new VPInstruction(
+        Instruction::BinaryOps::Or, {LHS, RHS},
+        VPRecipeWithIRFlags::DisjointFlagsTy(false), DL, Name));
   }
 
   VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,

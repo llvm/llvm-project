@@ -47,7 +47,7 @@ public:
 
   ConstString GetQualifiedTypeName() override;
 
-  uint32_t CalculateNumChildren(uint32_t max) override;
+  llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
   ValueObject *CreateChildAtIndex(size_t idx, bool synthetic_array_member,
                                   int32_t synthetic_index) override;
@@ -95,7 +95,7 @@ public:
 
   ConstString GetTypeName() override;
 
-  uint32_t CalculateNumChildren(uint32_t max) override;
+  llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
   bool SetValueFromCString(const char *value_str, Status &error) override;
 

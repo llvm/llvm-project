@@ -81,12 +81,13 @@ if (FLANG_STANDALONE_BUILD)
     mark_as_advanced(LLVM_ENABLE_ASSERTIONS)
   endif()
 
-  # We need a pre-built/installed version of LLVM.
-  find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
   # If the user specifies a relative path to LLVM_DIR, the calls to include
   # LLVM modules fail. Append the absolute path to LLVM_DIR instead.
-  get_filename_component(LLVM_DIR_ABSOLUTE ${LLVM_DIR} REALPATH)
+  get_filename_component(LLVM_DIR_ABSOLUTE ${LLVM_DIR}
+    REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR_ABSOLUTE})
+  # We need a pre-built/installed version of LLVM.
+  find_package(LLVM REQUIRED HINTS "${LLVM_DIR_ABSOLUTE}")
 
   # Users might specify a path to CLANG_DIR that's:
   #   * a full path, or
@@ -97,7 +98,7 @@ if (FLANG_STANDALONE_BUILD)
     CLANG_DIR_ABSOLUTE
     ${CLANG_DIR}
     REALPATH
-    ${CMAKE_CURRENT_SOURCE_DIR})
+    BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
   list(APPEND CMAKE_MODULE_PATH ${CLANG_DIR_ABSOLUTE})
 
   # TODO: Remove when libclangDriver is lifted out of Clang
@@ -124,13 +125,14 @@ if (FLANG_STANDALONE_BUILD)
   include(AddClang)
 
   include(TableGen)
-  find_package(MLIR REQUIRED CONFIG)
-  # Use SYSTEM for the same reasons as for LLVM includes
-  include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
   # If the user specifies a relative path to MLIR_DIR, the calls to include
   # MLIR modules fail. Append the absolute path to MLIR_DIR instead.
-  get_filename_component(MLIR_DIR_ABSOLUTE ${MLIR_DIR} REALPATH)
+  get_filename_component(MLIR_DIR_ABSOLUTE ${MLIR_DIR}
+    REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
   list(APPEND CMAKE_MODULE_PATH ${MLIR_DIR_ABSOLUTE})
+  find_package(MLIR REQUIRED CONFIG HINTS ${MLIR_DIR_ABSOLUTE})
+  # Use SYSTEM for the same reasons as for LLVM includes
+  include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
   include(AddMLIR)
   find_program(MLIR_TABLEGEN_EXE "mlir-tblgen" ${LLVM_TOOLS_BINARY_DIR}
     NO_DEFAULT_PATH)
@@ -411,6 +413,14 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-semantic-interposition")
   endif()
 
+endif()
+
+# Clang on Darwin enables non-POSIX extensions by default, which allows the
+# macro HUGE to leak out of <math.h> even when it is never directly included,
+# conflicting with Flang's HUGE symbols.
+# Set _POSIX_C_SOURCE to avoid including these extensions.
+if (APPLE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_POSIX_C_SOURCE=200809")
 endif()
 
 list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS)

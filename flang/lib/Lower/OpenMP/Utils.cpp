@@ -11,9 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Utils.h"
+#include "Clauses.h"
 
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
+#include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
@@ -34,19 +36,33 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 
-void genObjectList(const Fortran::parser::OmpObjectList &objectList,
+void genObjectList(const ObjectList &objects,
                    Fortran::lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands) {
+  for (const Object &object : objects) {
+    const Fortran::semantics::Symbol *sym = object.id();
+    assert(sym && "Expected Symbol");
+    if (mlir::Value variable = converter.getSymbolAddress(*sym)) {
+      operands.push_back(variable);
+    } else if (const auto *details =
+                   sym->detailsIf<Fortran::semantics::HostAssocDetails>()) {
+      operands.push_back(converter.getSymbolAddress(details->symbol()));
+      converter.copySymbolBinding(details->symbol(), *sym);
+    }
+  }
+}
+
+void genObjectList2(const Fortran::parser::OmpObjectList &objectList,
+                    Fortran::lower::AbstractConverter &converter,
+                    llvm::SmallVectorImpl<mlir::Value> &operands) {
   auto addOperands = [&](Fortran::lower::SymbolRef sym) {
     const mlir::Value variable = converter.getSymbolAddress(sym);
     if (variable) {
       operands.push_back(variable);
-    } else {
-      if (const auto *details =
-              sym->detailsIf<Fortran::semantics::HostAssocDetails>()) {
-        operands.push_back(converter.getSymbolAddress(details->symbol()));
-        converter.copySymbolBinding(details->symbol(), sym);
-      }
+    } else if (const auto *details =
+                   sym->detailsIf<Fortran::semantics::HostAssocDetails>()) {
+      operands.push_back(converter.getSymbolAddress(details->symbol()));
+      converter.copySymbolBinding(details->symbol(), sym);
     }
   };
   for (const Fortran::parser::OmpObject &ompObject : objectList.v) {
@@ -55,25 +71,29 @@ void genObjectList(const Fortran::parser::OmpObjectList &objectList,
   }
 }
 
-void gatherFuncAndVarSyms(
-    const Fortran::parser::OmpObjectList &objList,
-    mlir::omp::DeclareTargetCaptureClause clause,
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause) {
-  for (const Fortran::parser::OmpObject &ompObject : objList.v) {
-    Fortran::common::visit(
-        Fortran::common::visitors{
-            [&](const Fortran::parser::Designator &designator) {
-              if (const Fortran::parser::Name *name =
-                      Fortran::semantics::getDesignatorNameIfDataRef(
-                          designator)) {
-                symbolAndClause.emplace_back(clause, *name->symbol);
-              }
-            },
-            [&](const Fortran::parser::Name &name) {
-              symbolAndClause.emplace_back(clause, *name.symbol);
-            }},
-        ompObject.u);
+mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
+                          std::size_t loopVarTypeSize) {
+  // OpenMP runtime requires 32-bit or 64-bit loop variables.
+  loopVarTypeSize = loopVarTypeSize * 8;
+  if (loopVarTypeSize < 32) {
+    loopVarTypeSize = 32;
+  } else if (loopVarTypeSize > 64) {
+    loopVarTypeSize = 64;
+    mlir::emitWarning(converter.getCurrentLocation(),
+                      "OpenMP loop iteration variable cannot have more than 64 "
+                      "bits size and will be narrowed into 64 bits.");
   }
+  assert((loopVarTypeSize == 32 || loopVarTypeSize == 64) &&
+         "OpenMP loop iteration variable size must be transformed into 32-bit "
+         "or 64-bit");
+  return converter.getFirOpBuilder().getIntegerType(loopVarTypeSize);
+}
+
+void gatherFuncAndVarSyms(
+    const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
+    llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause) {
+  for (const Object &object : objects)
+    symbolAndClause.emplace_back(clause, *object.id());
 }
 
 Fortran::semantics::Symbol *

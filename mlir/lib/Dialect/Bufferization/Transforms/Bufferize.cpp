@@ -182,6 +182,11 @@ parseHeuristicOption(const std::string &s) {
     return OneShotBufferizationOptions::AnalysisHeuristic::BottomUp;
   if (s == "top-down")
     return OneShotBufferizationOptions::AnalysisHeuristic::TopDown;
+  if (s == "bottom-up-from-terminators")
+    return OneShotBufferizationOptions::AnalysisHeuristic::
+        BottomUpFromTerminators;
+  if (s == "fuzzer")
+    return OneShotBufferizationOptions::AnalysisHeuristic::Fuzzer;
   llvm_unreachable("invalid analysisheuristic option");
 }
 
@@ -453,7 +458,7 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   // canonicalize away (or canonicalize to more precise layouts).
   SmallVector<Operation *> worklist;
   op->walk<WalkOrder::PostOrder>([&](Operation *op) {
-    if (hasTensorSemantics(op))
+    if (options.isOpAllowed(op) && hasTensorSemantics(op))
       worklist.push_back(op);
   });
 
@@ -471,8 +476,6 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
     // Skip ops that are not bufferizable or not allowed.
     auto bufferizableOp = options.dynCastBufferizableOp(nextOp);
     if (!bufferizableOp)
-      continue;
-    if (!options.isOpAllowed(nextOp))
       continue;
     // Skip ops that no longer have tensor semantics.
     if (!hasTensorSemantics(nextOp))
