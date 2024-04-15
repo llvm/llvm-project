@@ -697,9 +697,11 @@ public:
     return create<mlir::cir::GlobalOp>(loc, uniqueName, type, isConst, linkage);
   }
 
-  mlir::Value createGetGlobal(mlir::cir::GlobalOp global) {
-    return create<mlir::cir::GetGlobalOp>(
-        global.getLoc(), getPointerTo(global.getSymType()), global.getName());
+  mlir::Value createGetGlobal(mlir::cir::GlobalOp global,
+                              bool threadLocal = false) {
+    return create<mlir::cir::GetGlobalOp>(global.getLoc(),
+                                          getPointerTo(global.getSymType()),
+                                          global.getName(), threadLocal);
   }
 
   mlir::Value createGetBitfield(mlir::Location loc, mlir::Type resultType,

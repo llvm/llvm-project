@@ -836,11 +836,12 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *D, mlir::Type Ty,
   if (!Ty)
     Ty = getTypes().convertTypeForMem(ASTTy);
 
+  bool tlsAccess = D->getTLSKind() != VarDecl::TLS_None;
   auto g = buildGlobal(D, Ty, IsForDefinition);
   auto ptrTy =
       mlir::cir::PointerType::get(builder.getContext(), g.getSymType());
-  return builder.create<mlir::cir::GetGlobalOp>(getLoc(D->getSourceRange()),
-                                                ptrTy, g.getSymName());
+  return builder.create<mlir::cir::GetGlobalOp>(
+      getLoc(D->getSourceRange()), ptrTy, g.getSymName(), tlsAccess);
 }
 
 mlir::cir::GlobalViewAttr
