@@ -2191,9 +2191,9 @@ def ForwardBufferOp : TEST_Op<"forward_buffer", [Pure]> {
 def ReifyBoundOp : TEST_Op<"reify_bound", [Pure]> {
   let description = [{
     Reify a bound for the given index-typed value or dimension size of a shaped
-    value. "LB", "EQ" and "UB" bounds are supported. If `scalable` is set, a
-    bound in terms of "vector.vscale" is computed. `vscale_min` and `vscale_max`
-    must be specified in that case.
+    value. "LB", "EQ" and "UB" bounds are supported. If `scalable` is set, 
+    `vscale_min` and `vscale_max` must be provided, which allows computing
+    a bound in terms of "vector.vscale" for a given range of vscale.
   }];
 
   let arguments = (ins AnyType:$var,
