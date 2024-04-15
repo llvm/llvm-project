@@ -988,6 +988,7 @@ if (current_toolchain == default_toolchain) {
       "errno.h",
       "exception",
       "execution",
+      "expected",
       "experimental/__config",
       "experimental/__simd/aligned_tag.h",
       "experimental/__simd/declaration.h",
