@@ -6617,7 +6617,7 @@ cc_library(
         ":PolynomialAttributesIncGen",
         ":PolynomialIncGen",
         ":Support",
-        "//third_party/llvm/llvm-project/llvm:Support",
+        "//llvm:Support",
     ],
 )
 
