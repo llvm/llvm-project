@@ -1434,7 +1434,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
 // Sparse Tensor Iteration Operations.
 //===----------------------------------------------------------------------===//
 
-def ExtractIterSpaceOp : SparseTensor_Op<"iteration.extract_space",
+def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
     [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
 
   let arguments = (ins AnySparseTensor:$tensor,

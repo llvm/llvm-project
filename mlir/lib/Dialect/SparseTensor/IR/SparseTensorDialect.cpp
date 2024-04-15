@@ -1974,6 +1974,8 @@ IteratorType IterSpaceType::getIteratorType() const {
   return IteratorType::get(getContext(), getEncoding(), getLoLvl(), getHiLvl());
 }
 
+/// Parses a level range in the form "$lo `to` $hi"
+/// or simply "$lo" if $hi - $lo = 1
 static ParseResult parseLevelRange(AsmParser &parser, Level &lvlLo,
                                    Level &lvlHi) {
   if (parser.parseInteger(lvlLo))
@@ -1993,6 +1995,8 @@ static ParseResult parseLevelRange(AsmParser &parser, Level &lvlLo,
   return success();
 }
 
+/// Parses a level range in the form "$lo `to` $hi"
+/// or simply "$lo" if $hi - $lo = 1
 static ParseResult parseLevelRange(OpAsmParser &parser, IntegerAttr &lvlLoAttr,
                                    IntegerAttr &lvlHiAttr) {
   Level lvlLo, lvlHi;
@@ -2004,6 +2008,8 @@ static ParseResult parseLevelRange(OpAsmParser &parser, IntegerAttr &lvlLoAttr,
   return success();
 }
 
+/// Prints a level range in the form "$lo `to` $hi"
+/// or simply "$lo" if $hi - $lo = 1
 static void printLevelRange(AsmPrinter &p, Level lo, Level hi) {
 
   if (lo + 1 == hi)
@@ -2012,6 +2018,8 @@ static void printLevelRange(AsmPrinter &p, Level lo, Level hi) {
     p << lo << " to " << hi;
 }
 
+/// Prints a level range in the form "$lo `to` $hi"
+/// or simply "$lo" if $hi - $lo = 1
 static void printLevelRange(OpAsmPrinter &p, Operation *, IntegerAttr lvlLo,
                             IntegerAttr lvlHi) {
   unsigned lo = lvlLo.getValue().getZExtValue();
