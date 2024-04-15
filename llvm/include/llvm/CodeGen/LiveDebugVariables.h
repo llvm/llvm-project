@@ -17,8 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_LIVEDEBUGVARIABLES_H
-#define LLVM_LIB_CODEGEN_LIVEDEBUGVARIABLES_H
+#ifndef LLVM_CODEGEN_LIVEDEBUGVARIABLES_H
+#define LLVM_CODEGEN_LIVEDEBUGVARIABLES_H
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/Compiler.h"
@@ -29,7 +29,7 @@ template <typename T> class ArrayRef;
 class LiveIntervals;
 class VirtRegMap;
 
-class LLVM_LIBRARY_VISIBILITY LiveDebugVariables : public MachineFunctionPass {
+class LiveDebugVariables : public MachineFunctionPass {
   void *pImpl = nullptr;
 
 public:
@@ -65,4 +65,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_LIVEDEBUGVARIABLES_H
+#endif // LLVM_CODEGEN_LIVEDEBUGVARIABLES_H
