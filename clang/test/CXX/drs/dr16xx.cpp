@@ -483,7 +483,7 @@ namespace cwg1696 { // cwg1696: 7
   //   cxx11-note@#cwg1696-D1-a {{initializing field 'a' with default member initializer}}
     const A &a = A(); // #cwg1696-D1-a
   };
-  D1 d1 = {}; // #dr1696-d1
+  D1 d1 = {}; // #cwg1696-d1
 
   struct D2 {
     const A &a = A(); // #cwg1696-D2-a
