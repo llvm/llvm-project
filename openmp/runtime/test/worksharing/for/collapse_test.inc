@@ -107,12 +107,19 @@ int test() {
   unsigned uselessThreadsOpenMP = 0;
   unsigned usefulThreadsOpenMP = 0;
 
-  // Use half of the available threads/logical processor.
+  // Use half of the available threads/logical processors.
   unsigned num_threads = omp_get_max_threads() / 2;
+
+  // Make sure num_threads is not 0 after the division in case
+  // omp_get_max_threads() returns 1.
+  if (num_threads == 0)
+    num_threads = 1;
+
   if (num_threads > MAX_THREADS)
     num_threads = MAX_THREADS;
 
-  unsigned *chunkSizesOpenmp = malloc(sizeof(unsigned) * num_threads);
+  unsigned *chunkSizesOpenmp =
+      (unsigned *)malloc(sizeof(unsigned) * num_threads);
   memset(chunkSizesOpenmp, 0, sizeof(unsigned) * num_threads);
 
   // count iterations and allocate space
@@ -199,5 +206,6 @@ int test() {
   // clean up space
   FreeSpace(openmpSpace);
   FreeSpace(scalarSpace);
+  free(chunkSizesOpenmp);
   return pass;
 }
