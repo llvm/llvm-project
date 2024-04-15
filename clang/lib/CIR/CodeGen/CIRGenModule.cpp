@@ -609,16 +609,33 @@ void CIRGenModule::replaceGlobal(mlir::cir::GlobalOp Old,
   Old.erase();
 }
 
+mlir::cir::TLS_Model CIRGenModule::GetDefaultCIRTLSModel() const {
+  switch (getCodeGenOpts().getDefaultTLSModel()) {
+  case CodeGenOptions::GeneralDynamicTLSModel:
+    return mlir::cir::TLS_Model::GeneralDynamic;
+  case CodeGenOptions::LocalDynamicTLSModel:
+    return mlir::cir::TLS_Model::LocalDynamic;
+  case CodeGenOptions::InitialExecTLSModel:
+    return mlir::cir::TLS_Model::InitialExec;
+  case CodeGenOptions::LocalExecTLSModel:
+    return mlir::cir::TLS_Model::LocalExec;
+  }
+  llvm_unreachable("Invalid TLS model!");
+}
+
 void CIRGenModule::setTLSMode(mlir::Operation *Op, const VarDecl &D) const {
   assert(D.getTLSKind() && "setting TLS mode on non-TLS var!");
-  llvm_unreachable("NYI");
+
+  auto TLM = GetDefaultCIRTLSModel();
 
   // Override the TLS model if it is explicitly specified.
   if (const TLSModelAttr *Attr = D.getAttr<TLSModelAttr>()) {
     llvm_unreachable("NYI");
   }
 
-  llvm_unreachable("NYI");
+  auto global = dyn_cast<mlir::cir::GlobalOp>(Op);
+  assert(global && "NYI for other operations");
+  global.setTlsModel(TLM);
 }
 
 /// If the specified mangled name is not in the module,
@@ -1115,9 +1132,10 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
 
   // TODO(cir): setNonAliasAttributes(D, GV);
 
-  // TODO(cir): handle TLSKind if GV is not thread local
-  if (D->getTLSKind()) { // && !GV->isThreadLocal())
-    assert(0 && "not implemented");
+  if (D->getTLSKind() && !GV.getTlsModelAttr()) {
+    if (D->getTLSKind() == VarDecl::TLS_Dynamic)
+      llvm_unreachable("NYI");
+    setTLSMode(GV, *D);
   }
 
   // TODO(cir): maybeSetTrivialComdat(*D, *GV);

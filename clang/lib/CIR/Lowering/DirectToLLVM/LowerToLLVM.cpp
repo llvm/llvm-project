@@ -1727,9 +1727,12 @@ public:
   inline void setupRegionInitializedLLVMGlobalOp(
       mlir::cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const {
     const auto llvmType = getTypeConverter()->convertType(op.getSymType());
+    SmallVector<mlir::NamedAttribute> attributes;
     auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
         op, llvmType, op.getConstant(), convertLinkage(op.getLinkage()),
-        op.getSymName(), nullptr);
+        op.getSymName(), nullptr, /*alignment*/ 0, /*addrSpace*/ 0,
+        /*dsoLocal*/ false, /*threadLocal*/ (bool)op.getTlsModelAttr(),
+        /*comdat*/ mlir::SymbolRefAttr(), attributes);
     newGlobalOp.getRegion().push_back(new mlir::Block());
     rewriter.setInsertionPointToEnd(newGlobalOp.getInitializerBlock());
   }
@@ -1757,7 +1760,7 @@ public:
       rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
           op, llvmType, isConst, linkage, symbol, mlir::Attribute(),
           /*alignment*/ 0, /*addrSpace*/ 0,
-          /*dsoLocal*/ false, /*threadLocal*/ false,
+          /*dsoLocal*/ false, /*threadLocal*/ (bool)op.getTlsModelAttr(),
           /*comdat*/ mlir::SymbolRefAttr(), attributes);
       return mlir::success();
     }
@@ -1837,7 +1840,7 @@ public:
     rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
         op, llvmType, isConst, linkage, symbol, init.value(),
         /*alignment*/ 0, /*addrSpace*/ 0,
-        /*dsoLocal*/ false, /*threadLocal*/ false,
+        /*dsoLocal*/ false, /*threadLocal*/ (bool)op.getTlsModelAttr(),
         /*comdat*/ mlir::SymbolRefAttr(), attributes);
     return mlir::success();
   }
