@@ -37,7 +37,7 @@ namespace fir {
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
-#define DEBUG_TYPE "flang-add-debug-foundation"
+#define DEBUG_TYPE "flang-add-debug-info"
 
 namespace {
 
