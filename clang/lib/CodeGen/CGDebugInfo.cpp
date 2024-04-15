@@ -5391,10 +5391,10 @@ bool CGDebugInfo::HasReconstitutableArgs(
     switch (TA.getKind()) {
     case TemplateArgument::Template:
       // Easy to reconstitute - the value of the parameter in the debug
-      // info is the string name of the template. (so the template name
+      // info is the string name of the template. The template name
       // itself won't benefit from any name rebuilding, but that's a
       // representational limitation - maybe DWARF could be
-      // changed/improved to use some more structural representation)
+      // changed/improved to use some more structural representation.
       return true;
     case TemplateArgument::Declaration:
       // Reference and pointer non-type template parameters point to
