@@ -733,10 +733,6 @@ operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI constexpr basic_string<_CharT, _Traits, _Allocator>
-operator+(basic_string<_CharT, _Traits, _Allocator>&& __lhs, type_identity_t<basic_string_view<_CharT, _Traits>> __rhs);
-
-template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI constexpr basic_string<_CharT, _Traits, _Allocator>
 operator+(type_identity_t<basic_string_view<_CharT, _Traits>> __lhs,
           const basic_string<_CharT, _Traits, _Allocator>& __rhs);
 
@@ -2179,26 +2175,7 @@ private:
   friend _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string operator+ <>(const basic_string&, const value_type*);
   friend _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string operator+ <>(const basic_string&, value_type);
 #if _LIBCPP_STD_VER >= 26
-  // friend constexpr basic_string operator+ <>(const basic_string&, const __self_view&);
-
-  // friend constexpr basic_string operator+ <>(const __self_view&, const basic_string&);
-
-  // friend constexpr operator+ <>(type_identity_t<__self_view> __lhs,
-  //                               const basic_string& __rhs);
-
-  // friend constexpr basic_string operator+
-  //     <>(type_identity_t<basic_string_view<_CharT2, _Traits2>> __lhs,
-  //        const basic_string<_CharT2, _Traits2, _Allocator2>& __rhs);
-
-  // template <class _CharT2, class _Traits2, class _Allocator2>
-  // friend constexpr basic_string<_CharT2, _Traits2, _Allocator2>
-  // operator+(type_identity_t<basic_string_view<_CharT2, _Traits2>>, const basic_string<_CharT2, _Traits2, _Allocator2>&);
-
-
-  // friend constexpr basic_string operator+ <>(type_identity_t<basic_string_view>, const basic_string&);
-
   friend constexpr basic_string operator+ <>(const basic_string&, type_identity_t<__self_view>);
-  friend constexpr basic_string operator+ <>(basic_string&&, type_identity_t<__self_view>);
   friend constexpr basic_string operator+ <>(type_identity_t<__self_view>, const basic_string&);
   friend constexpr basic_string operator+ <>(type_identity_t<__self_view>, basic_string&&);
 #endif
@@ -4098,9 +4075,6 @@ template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI constexpr basic_string<_CharT, _Traits, _Allocator>
 operator+(type_identity_t<basic_string_view<_CharT, _Traits>> __lhs,
           const basic_string<_CharT, _Traits, _Allocator>& __rhs) {
-  // basic_string<_CharT, _Traits, _Allocator> __r = __rhs;
-  // __r.insert(0, __lhs);
-  // return __r;
   using _String                        = basic_string<_CharT, _Traits, _Allocator>;
   typename _String::size_type __lhs_sz = __lhs.size();
   typename _String::size_type __rhs_sz = __rhs.size();
@@ -4118,8 +4092,6 @@ template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI constexpr basic_string<_CharT, _Traits, _Allocator>
 operator+(type_identity_t<basic_string_view<_CharT, _Traits>> __lhs,
           basic_string<_CharT, _Traits, _Allocator>&& __rhs) {
-  // __rhs.insert(0, __lhs);
-  // return std::move(__rhs);
   using _String                        = basic_string<_CharT, _Traits, _Allocator>;
   typename _String::size_type __lhs_sz = __lhs.size();
   typename _String::size_type __rhs_sz = __rhs.size();

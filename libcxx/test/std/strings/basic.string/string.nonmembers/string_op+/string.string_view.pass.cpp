@@ -38,6 +38,7 @@
 #include "constexpr_char_traits.h"
 #include "make_string.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 #include "test_macros.h"
 
 #define CS(S) MAKE_CSTRING(CharT, S)
@@ -138,32 +139,17 @@ constexpr bool test() {
   test<CharT, std::char_traits<CharT>>();
   test<CharT, std::char_traits<CharT>, min_allocator<CharT>>();
   test<CharT, std::char_traits<CharT>, safe_allocator<CharT>>();
+  test<CharT, std::char_traits<CharT>, test_allocator<CharT>>();
 
   test<CharT, constexpr_char_traits<CharT>>();
   test<CharT, constexpr_char_traits<CharT>, min_allocator<CharT>>();
   test<CharT, constexpr_char_traits<CharT>, safe_allocator<CharT>>();
+  test<CharT, constexpr_char_traits<CharT>, test_allocator<CharT>>();
 
   return true;
 }
 
-// constexpr bool test() {
-//   test<char>();
-// #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-//   test<wchar_t>();
-// #endif
-// #ifndef TEST_HAS_NO_CHAR8_T
-//   test<char8_t>();
-// #endif
-//   test<char16_t>();
-//   test<char32_t>();
-
-//   return true;
-// }
-
 int main(int, char**) {
-  // test();
-  // static_assert(test());
-
   test<char>();
   static_assert(test<char>());
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
