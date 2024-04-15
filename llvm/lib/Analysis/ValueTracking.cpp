@@ -1624,14 +1624,31 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
         Known = KnownBits::ssub_sat(Known, Known2);
         break;
-        // for min/max reduce, any bit common to each element in the input vec
-        // is set in the output.
+        // for min/max/and/or reduce, any bit common to each element in the
+        // input vec is set in the output.
+      case Intrinsic::vector_reduce_and:
+      case Intrinsic::vector_reduce_or:
       case Intrinsic::vector_reduce_umax:
       case Intrinsic::vector_reduce_umin:
       case Intrinsic::vector_reduce_smax:
       case Intrinsic::vector_reduce_smin:
         computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
         break;
+      case Intrinsic::vector_reduce_xor: {
+        computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+        // The zeros common to all vecs are zero in the output.
+        // If the number of elements is odd, then the common ones remain. If the
+        // number of elements is even, then the common ones becomes zeros.
+        auto *VecTy = cast<VectorType>(I->getOperand(0)->getType());
+        // Even, so the ones become zeros.
+        bool EvenCnt = VecTy->getElementCount().isKnownEven();
+        if (EvenCnt)
+          Known.Zero |= Known.One;
+        // Maybe even element count so need to clear ones.
+        if (VecTy->isScalableTy() || EvenCnt)
+          Known.One.clearAllBits();
+        break;
+      }
       case Intrinsic::umin:
         computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
         computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
@@ -2901,7 +2918,8 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         return isNonZeroAdd(DemandedElts, Depth, Q, BitWidth,
                             II->getArgOperand(0), II->getArgOperand(1),
                             /*NSW=*/true, /* NUW=*/false);
-        // umin/smin/smax/smin of all non-zero elements is always non-zero.
+        // umin/smin/smax/smin/or of all non-zero elements is always non-zero.
+      case Intrinsic::vector_reduce_or:
       case Intrinsic::vector_reduce_umax:
       case Intrinsic::vector_reduce_umin:
       case Intrinsic::vector_reduce_smax:
@@ -3016,7 +3034,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
       // Must be non-zero due to null test above.
       return true;
 
-    // For constant vectors, check that all elements are undefined or known
+    // For constant vectors, check that all elements are poison or known
     // non-zero to determine that the whole vector is known non-zero.
     if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
       for (unsigned i = 0, e = VecTy->getNumElements(); i != e; ++i) {
@@ -3025,7 +3043,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
         Constant *Elt = C->getAggregateElement(i);
         if (!Elt || Elt->isNullValue())
           return false;
-        if (!isa<UndefValue>(Elt) && !isa<ConstantInt>(Elt))
+        if (!isa<PoisonValue>(Elt) && !isa<ConstantInt>(Elt))
           return false;
       }
       return true;

@@ -2917,9 +2917,26 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // to get this right here so that we don't end up making a
   // spuriously dependent expression if we're inside a dependent
   // instance method.
-  if (isPotentialImplicitMemberAccess(SS, R, IsAddressOfOperand))
-    return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs,
-                                           S);
+  if (getLangOpts().CPlusPlus && !R.empty() &&
+      (*R.begin())->isCXXClassMember()) {
+    bool MightBeImplicitMember;
+    if (!IsAddressOfOperand)
+      MightBeImplicitMember = true;
+    else if (!SS.isEmpty())
+      MightBeImplicitMember = false;
+    else if (R.isOverloadedResult())
+      MightBeImplicitMember = false;
+    else if (R.isUnresolvableResult())
+      MightBeImplicitMember = true;
+    else
+      MightBeImplicitMember = isa<FieldDecl>(R.getFoundDecl()) ||
+                              isa<IndirectFieldDecl>(R.getFoundDecl()) ||
+                              isa<MSPropertyDecl>(R.getFoundDecl());
+
+    if (MightBeImplicitMember)
+      return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc,
+                                             R, TemplateArgs, S);
+  }
 
   if (TemplateArgs || TemplateKWLoc.isValid()) {
 
@@ -3430,11 +3447,10 @@ static bool ShouldLookupResultBeMultiVersionOverload(const LookupResult &R) {
 
 ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                           LookupResult &R, bool NeedsADL,
-                                          bool AcceptInvalidDecl,
-                                          bool NeedUnresolved) {
+                                          bool AcceptInvalidDecl) {
   // If this is a single, fully-resolved result and we don't need ADL,
   // just build an ordinary singleton decl ref.
-  if (!NeedUnresolved && !NeedsADL && R.isSingleResult() &&
+  if (!NeedsADL && R.isSingleResult() &&
       !R.getAsSingle<FunctionTemplateDecl>() &&
       !ShouldLookupResultBeMultiVersionOverload(R))
     return BuildDeclarationNameExpr(SS, R.getLookupNameInfo(), R.getFoundDecl(),
