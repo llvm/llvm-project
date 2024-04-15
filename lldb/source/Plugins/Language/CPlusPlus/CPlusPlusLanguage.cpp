@@ -762,6 +762,12 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "^std::__[[:alnum:]]+::slice_array<.+>$", stl_deref_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
+      lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEndCreator,
+      "libc++ synthetic children for the valarray proxy arrays",
+      "^std::__[[:alnum:]]+::(gslice|mask|indirect)_array<.+>$",
+      stl_deref_flags, true);
+  AddCXXSynthetic(
+      cpp_category_sp,
       lldb_private::formatters::LibcxxStdForwardListSyntheticFrontEndCreator,
       "libc++ std::forward_list synthetic children",
       "^std::__[[:alnum:]]+::forward_list<.+>$", stl_synth_flags, true);
@@ -890,6 +896,11 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libc++ std::slice_array summary provider",
                 "^std::__[[:alnum:]]+::slice_array<.+>$", stl_summary_flags,
                 true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxContainerSummaryProvider,
+                "libc++ summary provider for the valarray proxy arrays",
+                "^std::__[[:alnum:]]+::(gslice|mask|indirect)_array<.+>$",
+                stl_summary_flags, true);
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::LibcxxContainerSummaryProvider,
       "libc++ std::list summary provider",
