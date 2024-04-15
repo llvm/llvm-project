@@ -4124,8 +4124,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
           }
         }
 
-        if (Function->hasAttr<ExcludeFromExplicitInstantiationAttr>() &&
-            !Instantiation->isLocalClass())
+        if (Function->hasAttr<ExcludeFromExplicitInstantiationAttr>())
           continue;
 
         MemberSpecializationInfo *MSInfo =
@@ -4170,8 +4169,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
         continue;
 
       if (Var->isStaticDataMember()) {
-        if (Var->hasAttr<ExcludeFromExplicitInstantiationAttr>() &&
-            !Instantiation->isLocalClass())
+        if (Var->hasAttr<ExcludeFromExplicitInstantiationAttr>())
           continue;
 
         MemberSpecializationInfo *MSInfo = Var->getMemberSpecializationInfo();
@@ -4205,8 +4203,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
         }
       }
     } else if (auto *Record = dyn_cast<CXXRecordDecl>(D)) {
-      if (Record->hasAttr<ExcludeFromExplicitInstantiationAttr>() &&
-          !Instantiation->isLocalClass())
+      if (Record->hasAttr<ExcludeFromExplicitInstantiationAttr>())
         continue;
 
       // Always skip the injected-class-name, along with any
