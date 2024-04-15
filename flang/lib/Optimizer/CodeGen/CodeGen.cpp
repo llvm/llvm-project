@@ -3589,7 +3589,7 @@ public:
                                                           pattern);
     // Math operations that have not been converted yet must be converted
     // to Libm.
-    mlir::populateMathToLibmConversionPatterns(pattern);
+    mlir::populateMathToLibmConversionPatterns(typeConverter, pattern);
     mlir::populateComplexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateVectorToLLVMConversionPatterns(typeConverter, pattern);
 
