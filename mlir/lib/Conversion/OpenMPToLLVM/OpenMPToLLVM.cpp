@@ -256,15 +256,14 @@ void mlir::configureOpenMPToLLVMConversionLegality(
       mlir::omp::SimdOp, mlir::omp::MasterOp, mlir::omp::SectionOp,
       mlir::omp::SectionsOp, mlir::omp::SingleOp, mlir::omp::TaskgroupOp,
       mlir::omp::TaskOp, mlir::omp::DeclareReductionOp,
-      mlir::omp::PrivateClauseOp>(
-      [&](Operation *op) {
-        return std::all_of(op->getRegions().begin(), op->getRegions().end(),
-                           [&](Region &region) {
-                             return typeConverter.isLegal(&region);
-                           }) &&
-               typeConverter.isLegal(op->getOperandTypes()) &&
-               typeConverter.isLegal(op->getResultTypes());
-      });
+      mlir::omp::PrivateClauseOp>([&](Operation *op) {
+    return std::all_of(op->getRegions().begin(), op->getRegions().end(),
+                       [&](Region &region) {
+                         return typeConverter.isLegal(&region);
+                       }) &&
+           typeConverter.isLegal(op->getOperandTypes()) &&
+           typeConverter.isLegal(op->getResultTypes());
+  });
 }
 
 void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,

@@ -1688,12 +1688,12 @@ static void createSimd(Fortran::lower::AbstractConverter &converter,
     return genLoopVars(op, converter, loc, iv);
   };
 
-  createBodyOfOp(
-      *loopOp, OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval,
-                                 OpWithBodyGenInfo::OpKind::Loop)
-                   .setClauses(&loopOpClauseList)
-                   .setDataSharingProcessor(&dsp)
-                   .setGenRegionEntryCb(ivCallback));
+  createBodyOfOp(*loopOp,
+                 OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval,
+                                   OpWithBodyGenInfo::OpKind::Loop)
+                     .setClauses(&loopOpClauseList)
+                     .setDataSharingProcessor(&dsp)
+                     .setGenRegionEntryCb(ivCallback));
 }
 
 static void createWsloop(Fortran::lower::AbstractConverter &converter,
