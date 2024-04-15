@@ -678,7 +678,7 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
     physical layouts change in register. Due to the VNNI transformation, A and B operands
     are represented as 3D vector, with the last dimension representing the VNNI factor,
     which is computed as `32/bit_width_of_elem_type`. Therefore, `A: vector<8x16xf16>`
-    is represented as `A: vector<4x8x2xf16>`, and `B:vector<16x16xf16>` is
+    is represented as `A: vector<8x8x2xf16>`, and `B: vector<16x16xf16>` is
     represented as `B: vector<8x16x2xf16>`.
 
     Note: on PVC, the hardware can perform load with VNN transformation when data
