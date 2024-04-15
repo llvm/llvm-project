@@ -1792,6 +1792,8 @@ bool RISCVInstrInfo::hasReassociableVectorSibling(const MachineInstr &Inst,
                                                   bool &Commuted) const {
   const MachineBasicBlock *MBB = Inst.getParent();
   const MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+  assert(RISCVII::isFirstDefTiedToFirstUse(get(Inst.getOpcode())) &&
+         "Expect the present of passthrough operand.");
   MachineInstr *MI1 = MRI.getUniqueVRegDef(Inst.getOperand(2).getReg());
   MachineInstr *MI2 = MRI.getUniqueVRegDef(Inst.getOperand(3).getReg());
 
