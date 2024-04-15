@@ -1,0 +1,48 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @foo(%arg0: !s32i) -> !s32i {
+    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    cir.if %4 {
+      %5 = cir.const(#cir.int<1> : !s32i) : !s32i
+      cir.return %5 : !s32i
+    } else {
+      %5 = cir.const(#cir.int<0> : !s32i) : !s32i
+      cir.return %5 : !s32i
+    }
+    cir.return %arg0 : !s32i
+  }
+//      CHECK: cir.func @foo(%arg0: !s32i) -> !s32i {
+// CHECK-NEXT:   %0 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+// CHECK-NEXT:   cir.brcond %0 ^bb2, ^bb1
+// CHECK-NEXT: ^bb1:  // pred: ^bb0
+// CHECK-NEXT:   %1 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK-NEXT:   cir.return %1 : !s32i
+// CHECK-NEXT: ^bb2:  // pred: ^bb0
+// CHECK-NEXT:   %2 = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK-NEXT:   cir.return %2 : !s32i
+// CHECK-NEXT: ^bb3:  // no predecessors
+// CHECK-NEXT:   cir.return %arg0 : !s32i
+// CHECK-NEXT: }
+
+  cir.func @onlyIf(%arg0: !s32i) -> !s32i {
+    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    cir.if %4 {
+      %5 = cir.const(#cir.int<1> : !s32i) : !s32i
+      cir.return %5 : !s32i
+    }
+    cir.return %arg0 : !s32i
+  }
+//      CHECK: cir.func @onlyIf(%arg0: !s32i) -> !s32i {
+// CHECK-NEXT:   %0 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+// CHECK-NEXT:   cir.brcond %0 ^bb1, ^bb2
+// CHECK-NEXT: ^bb1:  // pred: ^bb0
+// CHECK-NEXT:   %1 = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK-NEXT:   cir.return %1 : !s32i
+// CHECK-NEXT: ^bb2:  // pred: ^bb0
+// CHECK-NEXT:   cir.return %arg0 : !s32i
+// CHECK-NEXT: }
+
+}

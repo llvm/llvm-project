@@ -24,7 +24,7 @@ int foo(void) {
 // CIRFLAT:  IR Dump After FlattenCFG (cir-flatten-cfg)
 // CIRFLAT:  IR Dump After DropAST (cir-drop-ast)
 // CIRFLAT:  cir.func @foo() -> !s32i
-// LLVM: IR Dump After cir::direct::ConvertCIRToLLVMPass (cir-to-llvm-internal)
+// LLVM: IR Dump After cir::direct::ConvertCIRToLLVMPass (cir-flat-to-llvm)
 // LLVM: llvm.func @foo() -> i32
 // LLVM: IR Dump After
 // LLVM: define i32 @foo()

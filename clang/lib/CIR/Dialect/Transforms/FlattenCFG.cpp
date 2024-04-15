@@ -30,8 +30,70 @@ struct FlattenCFGPass : public FlattenCFGBase<FlattenCFGPass> {
   void runOnOperation() override;
 };
 
+struct CIRIfFlattening : public OpRewritePattern<IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::IfOp ifOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    auto loc = ifOp.getLoc();
+    auto emptyElse = ifOp.getElseRegion().empty();
+
+    auto *currentBlock = rewriter.getInsertionBlock();
+    auto *remainingOpsBlock =
+        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+    mlir::Block *continueBlock;
+    if (ifOp->getResults().size() == 0)
+      continueBlock = remainingOpsBlock;
+    else
+      llvm_unreachable("NYI");
+
+    // Inline then region
+    auto *thenBeforeBody = &ifOp.getThenRegion().front();
+    auto *thenAfterBody = &ifOp.getThenRegion().back();
+    rewriter.inlineRegionBefore(ifOp.getThenRegion(), continueBlock);
+
+    rewriter.setInsertionPointToEnd(thenAfterBody);
+    if (auto thenYieldOp =
+            dyn_cast<mlir::cir::YieldOp>(thenAfterBody->getTerminator())) {
+      rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+          thenYieldOp, thenYieldOp.getArgs(), continueBlock);
+    }
+
+    rewriter.setInsertionPointToEnd(continueBlock);
+
+    // Has else region: inline it.
+    mlir::Block *elseBeforeBody = nullptr;
+    mlir::Block *elseAfterBody = nullptr;
+    if (!emptyElse) {
+      elseBeforeBody = &ifOp.getElseRegion().front();
+      elseAfterBody = &ifOp.getElseRegion().back();
+      rewriter.inlineRegionBefore(ifOp.getElseRegion(), thenAfterBody);
+    } else {
+      elseBeforeBody = elseAfterBody = continueBlock;
+    }
+
+    rewriter.setInsertionPointToEnd(currentBlock);
+    rewriter.create<mlir::cir::BrCondOp>(loc, ifOp.getCondition(),
+                                         thenBeforeBody, elseBeforeBody);
+
+    if (!emptyElse) {
+      rewriter.setInsertionPointToEnd(elseAfterBody);
+      if (auto elseYieldOp =
+              dyn_cast<mlir::cir::YieldOp>(elseAfterBody->getTerminator())) {
+        rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+            elseYieldOp, elseYieldOp.getArgs(), continueBlock);
+      }
+    }
+
+    rewriter.replaceOp(ifOp, continueBlock->getArguments());
+    return mlir::success();
+  }
+};
+
 void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
-  // TODO: add patterns here
+  patterns.add<CIRIfFlattening>(patterns.getContext());
 }
 
 void FlattenCFGPass::runOnOperation() {
@@ -41,7 +103,8 @@ void FlattenCFGPass::runOnOperation() {
   // Collect operations to apply patterns.
   SmallVector<Operation *, 16> ops;
   getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
-    // TODO: push back operations here
+    if (isa<IfOp>(op))
+      ops.push_back(op);
   });
 
   // Apply patterns.
