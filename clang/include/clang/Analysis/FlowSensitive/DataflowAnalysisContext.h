@@ -62,13 +62,6 @@ FieldSet getObjectFields(QualType Type);
 bool containsSameFields(const FieldSet &Fields,
                         const RecordStorageLocation::FieldToLoc &FieldLocs);
 
-/// Returns the fields of a `RecordDecl` that are initialized by an
-/// `InitListExpr`, in the order in which they appear in
-/// `InitListExpr::inits()`.
-/// `Init->getType()` must be a record type.
-std::vector<const FieldDecl *>
-getFieldsForInitListExpr(const InitListExpr *InitList);
-
 /// Helper class for initialization of a record with an `InitListExpr`.
 /// `InitListExpr::inits()` contains the initializers for both the base classes
 /// and the fields of the record; this helper class separates these out into two
@@ -98,15 +91,22 @@ private:
   std::optional<ImplicitValueInitExpr> ImplicitValueInitForUnion;
 };
 
-struct FieldsGlobalsAndFuncs {
+// A collection of several types of declarations, all referenced from the same
+// function.
+struct ReferencedDecls {
+  // Fields includes non-static data members.
   FieldSet Fields;
   // Globals includes all variables with global storage, notably including
   // static data members and static variables declared within a function.
   llvm::DenseSet<const VarDecl *> Globals;
-  llvm::DenseSet<const FunctionDecl *> Funcs;
+  // Functions includes free functions and member functions which are
+  // referenced, but not necessarily called.
+  llvm::DenseSet<const FunctionDecl *> Functions;
 };
 
-FieldsGlobalsAndFuncs getFieldsGlobalsAndFuncs(const FunctionDecl &FD);
+/// Collects and returns fields, global variables and functions that are
+/// declared in or referenced from `FD`.
+ReferencedDecls getReferencedDecls(const FunctionDecl &FD);
 
 struct ContextSensitiveOptions {
   /// The maximum depth to analyze. A value of zero is equivalent to disabling

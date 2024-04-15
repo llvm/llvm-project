@@ -561,7 +561,7 @@ void Environment::initialize() {
 void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
   assert(FuncDecl->doesThisDeclarationHaveABody());
 
-  FieldsGlobalsAndFuncs FGF = getFieldsGlobalsAndFuncs(*FuncDecl);
+  ReferencedDecls FGF = getReferencedDecls(*FuncDecl);
 
   // These have to be added before the lines that follow to ensure that
   // `create*` work correctly for structs.
@@ -579,7 +579,7 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
     setStorageLocation(*D, createObject(*D, nullptr));
   }
 
-  for (const FunctionDecl *FD : FGF.Funcs) {
+  for (const FunctionDecl *FD : FGF.Functions) {
     if (getStorageLocation(*FD) != nullptr)
       continue;
     auto &Loc = createStorageLocation(*FD);

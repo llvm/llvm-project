@@ -55,7 +55,11 @@ FieldSet DataflowAnalysisContext::getModeledFields(QualType Type) {
   return llvm::set_intersection(getObjectFields(Type), ModeledFields);
 }
 
-std::vector<const FieldDecl *>
+/// Returns the fields of a `RecordDecl` that are initialized by an
+/// `InitListExpr`, in the order in which they appear in
+/// `InitListExpr::inits()`.
+/// `Init->getType()` must be a record type.
+static std::vector<const FieldDecl *>
 getFieldsForInitListExpr(const InitListExpr *InitList) {
   const RecordDecl *RD = InitList->getType()->getAsRecordDecl();
   assert(RD != nullptr);
@@ -141,10 +145,9 @@ static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
   return nullptr;
 }
 
-static void
-getFieldsGlobalsAndFuncs(const Decl &D, FieldSet &Fields,
-                         llvm::DenseSet<const VarDecl *> &Vars,
-                         llvm::DenseSet<const FunctionDecl *> &Funcs) {
+static void getReferencedDecls(const Decl &D, FieldSet &Fields,
+                               llvm::DenseSet<const VarDecl *> &Vars,
+                               llvm::DenseSet<const FunctionDecl *> &Funcs) {
   insertIfGlobal(D, Vars);
   insertIfFunction(D, Funcs);
   if (const auto *Decomp = dyn_cast<DecompositionDecl>(&D))
@@ -158,24 +161,23 @@ getFieldsGlobalsAndFuncs(const Decl &D, FieldSet &Fields,
 /// Traverses `S` and inserts into `Fields`, `Vars` and `Funcs` any fields,
 /// global variables and functions that are declared in or referenced from
 /// sub-statements.
-static void
-getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
-                         llvm::DenseSet<const VarDecl *> &Vars,
-                         llvm::DenseSet<const FunctionDecl *> &Funcs) {
+static void getReferencedDecls(const Stmt &S, FieldSet &Fields,
+                               llvm::DenseSet<const VarDecl *> &Vars,
+                               llvm::DenseSet<const FunctionDecl *> &Funcs) {
   for (auto *Child : S.children())
     if (Child != nullptr)
-      getFieldsGlobalsAndFuncs(*Child, Fields, Vars, Funcs);
+      getReferencedDecls(*Child, Fields, Vars, Funcs);
   if (const auto *DefaultArg = dyn_cast<CXXDefaultArgExpr>(&S))
-    getFieldsGlobalsAndFuncs(*DefaultArg->getExpr(), Fields, Vars, Funcs);
+    getReferencedDecls(*DefaultArg->getExpr(), Fields, Vars, Funcs);
   if (const auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(&S))
-    getFieldsGlobalsAndFuncs(*DefaultInit->getExpr(), Fields, Vars, Funcs);
+    getReferencedDecls(*DefaultInit->getExpr(), Fields, Vars, Funcs);
 
   if (auto *DS = dyn_cast<DeclStmt>(&S)) {
     if (DS->isSingleDecl())
-      getFieldsGlobalsAndFuncs(*DS->getSingleDecl(), Fields, Vars, Funcs);
+      getReferencedDecls(*DS->getSingleDecl(), Fields, Vars, Funcs);
     else
       for (auto *D : DS->getDeclGroup())
-        getFieldsGlobalsAndFuncs(*D, Fields, Vars, Funcs);
+        getReferencedDecls(*D, Fields, Vars, Funcs);
   } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
     insertIfGlobal(*E->getDecl(), Vars);
     insertIfFunction(*E->getDecl(), Funcs);
@@ -199,10 +201,8 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
   }
 }
 
-/// Collects and returns fields, global variables and functions that are
-/// declared in or referenced from `FD`.
-FieldsGlobalsAndFuncs getFieldsGlobalsAndFuncs(const FunctionDecl &FD) {
-  FieldsGlobalsAndFuncs Result;
+ReferencedDecls getReferencedDecls(const FunctionDecl &FD) {
+  ReferencedDecls Result;
   // Look for global variable and field references in the
   // constructor-initializers.
   if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(&FD)) {
@@ -215,16 +215,15 @@ FieldsGlobalsAndFuncs getFieldsGlobalsAndFuncs(const FunctionDecl &FD) {
       }
       const Expr *E = Init->getInit();
       assert(E != nullptr);
-      getFieldsGlobalsAndFuncs(*E, Result.Fields, Result.Globals, Result.Funcs);
+      getReferencedDecls(*E, Result.Fields, Result.Globals, Result.Functions);
     }
     // Add all fields mentioned in default member initializers.
     for (const FieldDecl *F : CtorDecl->getParent()->fields())
       if (const auto *I = F->getInClassInitializer())
-        getFieldsGlobalsAndFuncs(*I, Result.Fields, Result.Globals,
-                                 Result.Funcs);
+        getReferencedDecls(*I, Result.Fields, Result.Globals, Result.Functions);
   }
-  getFieldsGlobalsAndFuncs(*FD.getBody(), Result.Fields, Result.Globals,
-                           Result.Funcs);
+  getReferencedDecls(*FD.getBody(), Result.Fields, Result.Globals,
+                     Result.Functions);
 
   return Result;
 }
