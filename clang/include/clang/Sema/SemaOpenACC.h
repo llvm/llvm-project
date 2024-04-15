@@ -19,15 +19,91 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
+#include <variant>
 
 namespace clang {
+class OpenACCClause;
 
 class SemaOpenACC : public SemaBase {
 public:
+  /// A type to represent all the data for an OpenACC Clause that has been
+  /// parsed, but not yet created/semantically analyzed. This is effectively a
+  /// discriminated union on the 'Clause Kind', with all of the individual
+  /// clause details stored in a std::variant.
+  class OpenACCParsedClause {
+    OpenACCDirectiveKind DirKind;
+    OpenACCClauseKind ClauseKind;
+    SourceRange ClauseRange;
+    SourceLocation LParenLoc;
+
+    struct DefaultDetails {
+      OpenACCDefaultClauseKind DefaultClauseKind;
+    };
+
+    struct ConditionDetails {
+      Expr *ConditionExpr;
+    };
+
+    std::variant<DefaultDetails, ConditionDetails> Details;
+
+  public:
+    OpenACCParsedClause(OpenACCDirectiveKind DirKind,
+                        OpenACCClauseKind ClauseKind, SourceLocation BeginLoc)
+        : DirKind(DirKind), ClauseKind(ClauseKind), ClauseRange(BeginLoc, {}) {}
+
+    OpenACCDirectiveKind getDirectiveKind() const { return DirKind; }
+
+    OpenACCClauseKind getClauseKind() const { return ClauseKind; }
+
+    SourceLocation getBeginLoc() const { return ClauseRange.getBegin(); }
+
+    SourceLocation getLParenLoc() const { return LParenLoc; }
+
+    SourceLocation getEndLoc() const { return ClauseRange.getEnd(); }
+
+    OpenACCDefaultClauseKind getDefaultClauseKind() const {
+      assert(ClauseKind == OpenACCClauseKind::Default &&
+             "Parsed clause is not a default clause");
+      return std::get<DefaultDetails>(Details).DefaultClauseKind;
+    }
+
+    const Expr *getConditionExpr() const {
+      return const_cast<OpenACCParsedClause *>(this)->getConditionExpr();
+    }
+
+    Expr *getConditionExpr() {
+      assert(ClauseKind == OpenACCClauseKind::If &&
+             "Parsed clause kind does not have a condition expr");
+      return std::get<ConditionDetails>(Details).ConditionExpr;
+    }
+
+    void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
+    void setEndLoc(SourceLocation EndLoc) { ClauseRange.setEnd(EndLoc); }
+
+    void setDefaultDetails(OpenACCDefaultClauseKind DefKind) {
+      assert(ClauseKind == OpenACCClauseKind::Default &&
+             "Parsed clause is not a default clause");
+      Details = DefaultDetails{DefKind};
+    }
+
+    void setConditionDetails(Expr *ConditionExpr) {
+      assert(ClauseKind == OpenACCClauseKind::If &&
+             "Parsed clause kind does not have a condition expr");
+      // In C++ we can count on this being a 'bool', but in C this gets left as
+      // some sort of scalar that codegen will have to take care of converting.
+      assert((!ConditionExpr || ConditionExpr->isInstantiationDependent() ||
+              ConditionExpr->getType()->isScalarType()) &&
+             "Condition expression type not scalar/dependent");
+
+      Details = ConditionDetails{ConditionExpr};
+    }
+  };
+
   SemaOpenACC(Sema &S);
 
   /// Called after parsing an OpenACC Clause so that it can be checked.
-  bool ActOnClause(OpenACCClauseKind ClauseKind, SourceLocation StartLoc);
+  OpenACCClause *ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                             OpenACCParsedClause &Clause);
 
   /// Called after the construct has been parsed, but clauses haven't been
   /// parsed.  This allows us to diagnose not-implemented, as well as set up any
@@ -53,7 +129,10 @@ public:
   /// declaration group or associated statement.
   StmtResult ActOnEndStmtDirective(OpenACCDirectiveKind K,
                                    SourceLocation StartLoc,
-                                   SourceLocation EndLoc, StmtResult AssocStmt);
+                                   SourceLocation EndLoc,
+                                   ArrayRef<OpenACCClause *> Clauses,
+                                   StmtResult AssocStmt);
+
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
   DeclGroupRef ActOnEndDeclDirective();
