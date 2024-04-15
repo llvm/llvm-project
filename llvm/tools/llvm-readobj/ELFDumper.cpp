@@ -2833,13 +2833,9 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
                     llvm::endianness::little);
     break;
   case EM_ARM:
-    if (Obj.isLE())
-      printAttributes(ELF::SHT_ARM_ATTRIBUTES,
-                      std::make_unique<ARMAttributeParser>(&W),
-                      llvm::endianness::little);
-    else
-      reportUniqueWarning("attribute printing not implemented for big-endian "
-                          "ARM objects");
+    printAttributes(
+        ELF::SHT_ARM_ATTRIBUTES, std::make_unique<ARMAttributeParser>(&W),
+        Obj.isLE() ? llvm::endianness::little : llvm::endianness::big);
     break;
   case EM_RISCV:
     if (Obj.isLE())
