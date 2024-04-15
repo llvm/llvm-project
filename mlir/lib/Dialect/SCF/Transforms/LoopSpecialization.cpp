@@ -175,15 +175,15 @@ static void setInBoundsForVectorReadWrite(RewriterBase &b, Operation *op) {
     read.setInBoundsAttr(b.getBoolArrayAttr({true}));
 }
 
-static bool hasVectorSizeEqualToStep(Operation *Op,
+static bool hasVectorSizeEqualToStep(Operation *op,
                                      std::optional<int64_t> step) {
   if (!step)
     return false;
 
-  if (isa<vector::TransferWriteOp, vector::TransferReadOp>(Op)) {
-    auto vectorType = isa<vector::TransferWriteOp>(Op)
-                          ? cast<vector::TransferWriteOp>(Op).getVectorType()
-                          : cast<vector::TransferReadOp>(Op).getVectorType();
+  if (isa<vector::TransferWriteOp, vector::TransferReadOp>(op)) {
+    auto vectorType = isa<vector::TransferWriteOp>(op)
+                          ? cast<vector::TransferWriteOp>(op).getVectorType()
+                          : cast<vector::TransferReadOp>(op).getVectorType();
 
     if (vectorType.getRank() != 1)
       return false;
