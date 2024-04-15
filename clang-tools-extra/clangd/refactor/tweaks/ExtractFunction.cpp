@@ -70,8 +70,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/raw_os_ostream.h"
 #include <optional>
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -475,7 +475,7 @@ std::string NewFunction::renderDeclarationName(FunctionDeclKind K) const {
 
 // Renders the HoistSet to a comma separated list or a single named decl.
 std::string renderHoistSet(const HoistSet &ToHoist) {
-  std::string Res{};
+  std::string Res;
   bool NeedsComma = false;
 
   for (const NamedDecl *DeclToHoist : ToHoist) {
@@ -492,8 +492,8 @@ std::string renderHoistSet(const HoistSet &ToHoist) {
 }
 
 std::string NewFunction::renderHoistedCall() const {
-  auto HoistedVarDecls = std::string{};
-  auto ExplicitUnpacking = std::string{};
+  std::string HoistedVarDecls;
+  std::string ExplicitUnpacking;
   const auto HasStructuredBinding = LangOpts->CPlusPlus17;
 
   if (ToHoist.size() > 1) {
@@ -554,8 +554,8 @@ std::string NewFunction::getFuncBody(const SourceManager &SM) const {
   // - hoist decls
   // - add return statement
   // - Add semicolon
-  auto Body = toSourceCode(SM, BodyRange).str() +
-              (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
+  std::string Body = toSourceCode(SM, BodyRange).str() +
+                     (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
 
   if (ToHoist.empty())
     return Body;
@@ -588,7 +588,7 @@ struct CapturedZoneInfo {
     // FIXME: Capture mutation information
     DeclInformation(const Decl *TheDecl, ZoneRelative DeclaredIn,
                     unsigned DeclIndex)
-        : TheDecl(TheDecl), DeclaredIn(DeclaredIn), DeclIndex(DeclIndex){};
+        : TheDecl(TheDecl), DeclaredIn(DeclaredIn), DeclIndex(DeclIndex) {};
     // Marks the occurence of a reference for this declaration
     void markOccurence(ZoneRelative ReferenceLoc);
   };
