@@ -32,6 +32,7 @@ static_library("CPlusPlus") {
     "LibCxxInitializerList.cpp",
     "LibCxxList.cpp",
     "LibCxxMap.cpp",
+    "LibCxxProxyArray.cpp",
     "LibCxxQueue.cpp",
     "LibCxxRangesRefView.cpp",
     "LibCxxSliceArray.cpp",
