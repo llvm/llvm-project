@@ -331,6 +331,9 @@ bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
         if (Mask[i + j] != -1)
           return false;
       }
+      if (!isLegalOrBeforeLegalizer(
+              {TargetOpcode::G_IMPLICIT_DEF, {ConcatSrcTy}}))
+        return false;
       Ops.push_back(0);
     } else if (Mask[i] % ConcatSrcNumElt == 0) {
       for (unsigned j = 1; j < ConcatSrcNumElt; j++) {
@@ -352,8 +355,6 @@ bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
     }
   }
 
-  if (!isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {ConcatSrcTy}}))
-    return false;
   if (!isLegalOrBeforeLegalizer(
           {TargetOpcode::G_CONCAT_VECTORS,
            {MRI.getType(MI.getOperand(0).getReg()), ConcatSrcTy}}))
