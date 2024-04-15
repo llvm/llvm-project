@@ -122,11 +122,14 @@ define <16 x i8> @bitcast_shuf_uses(<4 x i32> %v) {
 }
 
 ; shuffle of 2 operands removes bitcasts
+; TODO - can we remove the empty bitcast(bitcast()) ?
 
 define <4 x i64> @bitcast_shuf_remove_bitcasts(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: @bitcast_shuf_remove_bitcasts(
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i64> [[A0:%.*]], <2 x i64> [[A1:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    ret <4 x i64> [[R]]
+; CHECK-NEXT:    [[SHUF:%.*]] = bitcast <4 x i64> [[R]] to <8 x i32>
+; CHECK-NEXT:    [[R1:%.*]] = bitcast <8 x i32> [[SHUF]] to <4 x i64>
+; CHECK-NEXT:    ret <4 x i64> [[R1]]
 ;
   %bc0 = bitcast <2 x i64> %a0 to <4 x i32>
   %bc1 = bitcast <2 x i64> %a1 to <4 x i32>
