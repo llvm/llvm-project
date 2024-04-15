@@ -100,7 +100,7 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     LLVM_DEBUG(dbgs() << "Function name: " << Function.getPrintName() << "\n");
     LLVM_DEBUG(dbgs() << " Address reference: 0x"
                       << Twine::utohexstr(Function.getOutputAddress()) << "\n");
-    LLVM_DEBUG(dbgs() << formatv(" Hash: {0:x}\n", getBFHash(OutputAddress)));
+    LLVM_DEBUG(dbgs() << formatv(" Hash: {0:x}\n", getBFHash(InputAddress)));
     LLVM_DEBUG(dbgs() << " Secondary Entry Points: " << NumSecondaryEntryPoints
                       << '\n');
 
@@ -199,8 +199,9 @@ void BoltAddressTranslation::writeMaps(std::map<uint64_t, MapTy> &Maps,
             : 0;
     uint32_t Skew = 0;
     if (Cold) {
-      size_t HotIndex =
-          std::distance(ColdPartSource.begin(), ColdPartSource.find(Address));
+      auto HotEntryIt = Maps.find(ColdPartSource[Address]);
+      assert(HotEntryIt != Maps.end());
+      size_t HotIndex = std::distance(Maps.begin(), HotEntryIt);
       encodeULEB128(HotIndex - PrevIndex, OS);
       PrevIndex = HotIndex;
       // Skew of all input offsets for cold fragments is simply the first input
@@ -427,7 +428,7 @@ void BoltAddressTranslation::dump(raw_ostream &OS) {
   for (const auto &MapEntry : Maps) {
     const uint64_t Address = MapEntry.first;
     const uint64_t HotAddress = fetchParentAddress(Address);
-    bool IsHotFunction = HotAddress == 0;
+    const bool IsHotFunction = HotAddress == 0;
     OS << "Function Address: 0x" << Twine::utohexstr(Address);
     if (IsHotFunction)
       OS << formatv(", hash: {0:x}", getBFHash(Address));
@@ -581,26 +582,6 @@ void BoltAddressTranslation::saveMetadata(BinaryContext &BC) {
       BBHashMap.addEntry(BB.getInputOffset(), BB.getIndex(), BB.getHash());
     NumBasicBlocksMap.emplace(BF.getAddress(), BF.size());
   }
-}
-
-std::unordered_map<uint32_t, std::vector<uint32_t>>
-BoltAddressTranslation::getBFBranches(uint64_t OutputAddress) const {
-  std::unordered_map<uint32_t, std::vector<uint32_t>> Branches;
-  auto FuncIt = Maps.find(OutputAddress);
-  assert(FuncIt != Maps.end());
-  std::vector<uint32_t> InputOffsets;
-  for (const auto &KV : FuncIt->second)
-    InputOffsets.emplace_back(KV.second);
-  // Sort with LSB BRANCHENTRY bit.
-  llvm::sort(InputOffsets);
-  uint32_t BBOffset{0};
-  for (uint32_t InOffset : InputOffsets) {
-    if (InOffset & BRANCHENTRY)
-      Branches[BBOffset].push_back(InOffset >> 1);
-    else
-      BBOffset = InOffset >> 1;
-  }
-  return Branches;
 }
 
 unsigned
