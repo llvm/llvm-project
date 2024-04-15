@@ -4516,6 +4516,35 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         }
       }
     }
+
+    // Optimize
+    //    (setcc (shift N00, N01C), 0, eq/ne) -> (setcc N00, 0, eq/ne)
+    // If all shifted out bits are known to be zero, then the zero'd ness
+    // doesn't change and we can omit the shift.
+    // If all shifted out bits are equal to at least one bit that isn't
+    // shifted out, then the zero'd ness doesn't change and we can omit the
+    // shift.
+    if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) && C1.isZero() &&
+        N0.hasOneUse() &&
+        (N0.getOpcode() == ISD::SHL || N0.getOpcode() == ISD::SRL ||
+         N0.getOpcode() == ISD::SRA)) {
+      bool IsRightShift = N0.getOpcode() != ISD::SHL;
+      SDValue N00 = N0.getOperand(0);
+      // Quick checks based on exact/nuw/nsw flags.
+      if (IsRightShift ? N0->getFlags().hasExact()
+                       : (N0->getFlags().hasNoUnsignedWrap() ||
+                          N0->getFlags().hasNoSignedWrap()))
+        return DAG.getSetCC(dl, VT, N00, N1, Cond);
+      // More expensive checks based on known bits.
+      if (const APInt *ShAmt = DAG.getValidMaximumShiftAmountConstant(N0)) {
+        KnownBits Known = DAG.computeKnownBits(N00);
+        if (IsRightShift)
+          Known = Known.reverseBits();
+        if (ShAmt->ule(Known.countMinLeadingZeros()) ||
+            ShAmt->ult(Known.countMinSignBits()))
+          return DAG.getSetCC(dl, VT, N00, N1, Cond);
+      }
+    }
   }
 
   // FIXME: Support vectors.

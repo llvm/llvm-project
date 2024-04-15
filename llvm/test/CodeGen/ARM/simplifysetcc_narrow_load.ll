@@ -311,7 +311,7 @@ define i1 @test_48_16_8(ptr %y) {
 ; CHECK-LE-LABEL: test_48_16_8:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    ldrh r0, [r0, #1]
-; CHECK-LE-NEXT:    lsls r0, r0, #8
+; CHECK-LE-NEXT:    cmp r0, #0
 ; CHECK-LE-NEXT:    movne r0, #1
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
@@ -559,28 +559,28 @@ define i1 @test_24_8_8(ptr %y) {
 ; CHECK-LE-LABEL: test_24_8_8:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    ldrb r0, [r0, #1]
-; CHECK-LE-NEXT:    lsls r0, r0, #8
+; CHECK-LE-NEXT:    cmp r0, #0
 ; CHECK-LE-NEXT:    movne r0, #1
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
 ; CHECK-V7-LE-LABEL: test_24_8_8:
 ; CHECK-V7-LE:       @ %bb.0:
 ; CHECK-V7-LE-NEXT:    ldrb r0, [r0, #1]
-; CHECK-V7-LE-NEXT:    lsls r0, r0, #8
+; CHECK-V7-LE-NEXT:    cmp r0, #0
 ; CHECK-V7-LE-NEXT:    movwne r0, #1
 ; CHECK-V7-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: test_24_8_8:
 ; CHECK-BE:       @ %bb.0:
 ; CHECK-BE-NEXT:    ldrb r0, [r0, #1]
-; CHECK-BE-NEXT:    lsls r0, r0, #8
+; CHECK-BE-NEXT:    cmp r0, #0
 ; CHECK-BE-NEXT:    movne r0, #1
 ; CHECK-BE-NEXT:    mov pc, lr
 ;
 ; CHECK-V7-BE-LABEL: test_24_8_8:
 ; CHECK-V7-BE:       @ %bb.0:
 ; CHECK-V7-BE-NEXT:    ldrb r0, [r0, #1]
-; CHECK-V7-BE-NEXT:    lsls r0, r0, #8
+; CHECK-V7-BE-NEXT:    cmp r0, #0
 ; CHECK-V7-BE-NEXT:    movwne r0, #1
 ; CHECK-V7-BE-NEXT:    bx lr
   %a = load i24, ptr %y
@@ -633,28 +633,28 @@ define i1 @test_24_8_16(ptr %y) {
 ; CHECK-LE-LABEL: test_24_8_16:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    ldrb r0, [r0, #2]
-; CHECK-LE-NEXT:    lsls r0, r0, #16
+; CHECK-LE-NEXT:    cmp r0, #0
 ; CHECK-LE-NEXT:    movne r0, #1
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
 ; CHECK-V7-LE-LABEL: test_24_8_16:
 ; CHECK-V7-LE:       @ %bb.0:
 ; CHECK-V7-LE-NEXT:    ldrb r0, [r0, #2]
-; CHECK-V7-LE-NEXT:    lsls r0, r0, #16
+; CHECK-V7-LE-NEXT:    cmp r0, #0
 ; CHECK-V7-LE-NEXT:    movwne r0, #1
 ; CHECK-V7-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: test_24_8_16:
 ; CHECK-BE:       @ %bb.0:
 ; CHECK-BE-NEXT:    ldrb r0, [r0]
-; CHECK-BE-NEXT:    lsls r0, r0, #16
+; CHECK-BE-NEXT:    cmp r0, #0
 ; CHECK-BE-NEXT:    movne r0, #1
 ; CHECK-BE-NEXT:    mov pc, lr
 ;
 ; CHECK-V7-BE-LABEL: test_24_8_16:
 ; CHECK-V7-BE:       @ %bb.0:
 ; CHECK-V7-BE-NEXT:    ldrb r0, [r0]
-; CHECK-V7-BE-NEXT:    lsls r0, r0, #16
+; CHECK-V7-BE-NEXT:    cmp r0, #0
 ; CHECK-V7-BE-NEXT:    movwne r0, #1
 ; CHECK-V7-BE-NEXT:    bx lr
   %a = load i24, ptr %y

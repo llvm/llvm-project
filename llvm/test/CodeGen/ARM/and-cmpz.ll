@@ -89,12 +89,12 @@ false:
 }
 
 ; CHECK-LABEL: i16_cmpz:
-; T1:      uxth    r0, r0
-; T1-NEXT: lsrs    r0, r0, #9
+; T1:      lsls    r0, r0, #16
+; T1-NEXT: lsrs    r0, r0, #25
 ; T1-NEXT: bne
-; T2:      uxth    r0, r0
-; T2-NEXT: movs    r2, #0
-; T2-NEXT: cmp.w   r2, r0, lsr #9
+; T2:      tst.w   r0, #65024
+; T2-NEXT: it
+; T2-NEXT: bxne
 define void @i16_cmpz(i16 %x, ptr %foo) {
 entry:
   %cmp = icmp ult i16 %x, 512
