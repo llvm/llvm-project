@@ -67,6 +67,7 @@ public:
 
   CompilerInstance *getCI() { return CI.get(); }
   CodeGenerator *getCodeGen() const;
+  Parser &getParser() const { return *P; }
 
   /// Parses incremental input by creating an in-memory file.
   ///\returns a \c PartialTranslationUnit which holds information about the

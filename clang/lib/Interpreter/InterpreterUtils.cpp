@@ -102,7 +102,7 @@ NamedDecl *LookupNamed(Sema &S, llvm::StringRef Name,
   return nullptr;
 }
 
-std::string GetFullTypeName(ASTContext &Ctx, QualType QT) {
+std::string GetFullTypeName(const ASTContext &Ctx, QualType QT) {
   PrintingPolicy Policy(Ctx.getPrintingPolicy());
   Policy.SuppressScope = false;
   Policy.AnonymousTagLocations = false;

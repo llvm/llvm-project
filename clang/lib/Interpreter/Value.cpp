@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Interpreter/Value.h"
+#include "InterpreterUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
 #include "clang/Interpreter/Interpreter.h"
@@ -222,6 +223,7 @@ void Value::clear() {
   OpaqueType = nullptr;
   Interp = nullptr;
   IsManuallyAlloc = false;
+  Name = "";
 }
 
 Value::~Value() { clear(); }
@@ -241,7 +243,7 @@ Interpreter &Value::getInterpreter() {
   return *Interp;
 }
 
-const Interpreter &Value::getInterpreter() const {
+Interpreter &Value::getInterpreter() const {
   assert(Interp != nullptr &&
          "Can't get interpreter from a default constructed value");
   return *Interp;
@@ -256,14 +258,17 @@ const ASTContext &Value::getASTContext() const {
 void Value::dump() const { print(llvm::outs()); }
 
 void Value::printType(llvm::raw_ostream &Out) const {
-  Out << "Not implement yet.\n";
+  Out << "(" << GetFullTypeName(getASTContext(), getType()) << ")\n";
 }
+
 void Value::printData(llvm::raw_ostream &Out) const {
-  Out << "Not implement yet.\n";
+  Out << printValueInternal() << "\n";
 }
+
 void Value::print(llvm::raw_ostream &Out) const {
   assert(OpaqueType != nullptr && "Can't print default Value");
-  Out << "Not implement yet.\n";
+  Out << "(" << GetFullTypeName(getASTContext(), getType()) << ")" << ' '
+      << printValueInternal() << "\n";
 }
 
 } // namespace clang

@@ -149,6 +149,8 @@ public:
   CompilerInstance *getCompilerInstance();
   llvm::Expected<llvm::orc::LLJIT &> getExecutionEngine();
 
+  Sema &getSema() const;
+
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
   llvm::Error Execute(PartialTranslationUnit &T);
   llvm::Error ParseAndExecute(llvm::StringRef Code, Value *V = nullptr);
