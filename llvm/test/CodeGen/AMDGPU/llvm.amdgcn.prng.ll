@@ -2,6 +2,8 @@
 ; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx950 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG %s
 ; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SDAG %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 declare i32 @llvm.amdgcn.prng.b32(i32) #0
 
