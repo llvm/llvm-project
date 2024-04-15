@@ -751,7 +751,7 @@ def XeGPU_AllocNbarrierOp: XeGPU_Op<"alloc_nbarrier", []> {
   let description = [{AllocNbarrier is to create a set of named barriers as
   specified by `nbarrier_num`. Named barriers are workgroup level resources,
     and are shared by all threads in the workgroup. For example, there are
-    up to 32 barriers (range 0-31) for each Xecore on PVC. A typical use case
+    up to 32 barriers (range 0-31) for each XeCore on PVC. A typical use case
     is that a workgroup is partitioned into N subgroups of threads (N <= 32),
     and each subgroup coordinating their work with a separate barrier with id
     range from 0 to N respectively.}];
