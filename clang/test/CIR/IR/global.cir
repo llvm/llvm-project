@@ -58,6 +58,11 @@ module {
   cir.func @f34() global_dtor(777) {
     cir.return
   }
+
+  cir.global external tls_dyn @model0 = #cir.int<0> : !s32i
+  cir.global external tls_local_dyn @model1 = #cir.int<0> : !s32i
+  cir.global external tls_init_exec @model2 = #cir.int<0> : !s32i
+  cir.global external tls_local_exec @model3 = #cir.int<0> : !s32i
 }
 
 // CHECK: cir.global external @a = #cir.int<3> : !s32i
@@ -82,3 +87,8 @@ module {
 // CHECK: cir.func @f32() global_ctor(777)
 // CHECK: cir.func @f33() global_dtor
 // CHECK: cir.func @f34() global_dtor(777)
+
+// CHECK: cir.global external tls_dyn @model0 = #cir.int<0> : !s32i
+// CHECK: cir.global external tls_local_dyn @model1 = #cir.int<0> : !s32i
+// CHECK: cir.global external tls_init_exec @model2 = #cir.int<0> : !s32i
+// CHECK: cir.global external tls_local_exec @model3 = #cir.int<0> : !s32i
