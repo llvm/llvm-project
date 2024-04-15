@@ -211,7 +211,7 @@ static inline bool recomputeLiveIns(MachineBasicBlock &MBB) {
 
 /// Convenience function for recomputing live-in's for a set of MBBs until the
 /// computation converges.
-static inline void
+inline void
 fullyRecomputeLiveIns(ArrayRef<MachineBasicBlock *> MBBs) {
   bool AnyChange;
   do {
