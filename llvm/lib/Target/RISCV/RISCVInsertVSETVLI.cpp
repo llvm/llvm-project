@@ -27,6 +27,7 @@
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -807,6 +808,7 @@ public:
     AU.addPreserved<LiveIntervals>();
     AU.addRequired<SlotIndexes>();
     AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<LiveDebugVariables>();
     AU.addPreserved<LiveStacks>();
 
     MachineFunctionPass::getAnalysisUsage(AU);
