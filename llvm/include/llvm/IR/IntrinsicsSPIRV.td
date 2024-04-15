@@ -57,4 +57,5 @@ let TargetPrefix = "spv" in {
   def int_spv_create_handle : ClangBuiltin<"__builtin_hlsl_create_handle">,
       Intrinsic<[ llvm_ptr_ty ], [llvm_i8_ty], [IntrWillReturn]>;
   def int_spv_all : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty]>;
+  def int_spv_any : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty]>;
 }
