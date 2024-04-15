@@ -544,7 +544,8 @@ bool TargetLowering::ShrinkDemandedConstant(SDValue Op,
     if (!C.isSubsetOf(DemandedBits)) {
       EVT VT = Op.getValueType();
       SDValue NewC = TLO.DAG.getConstant(DemandedBits & C, DL, VT);
-      SDValue NewOp = TLO.DAG.getNode(Opcode, DL, VT, Op.getOperand(0), NewC);
+      SDValue NewOp = TLO.DAG.getNode(Opcode, DL, VT, Op.getOperand(0), NewC,
+                                      Op->getFlags());
       return TLO.CombineTo(Op, NewOp);
     }
 
