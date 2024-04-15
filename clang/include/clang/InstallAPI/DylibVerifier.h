@@ -106,7 +106,7 @@ public:
   void setTarget(const Target &T);
 
   /// Release ownership over exports.
-  std::unique_ptr<SymbolSet> getExports();
+  std::unique_ptr<SymbolSet> takeExports();
 
   /// Get result of verification.
   Result getState() const { return Ctx.FrontendState; }

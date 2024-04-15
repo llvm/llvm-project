@@ -978,7 +978,7 @@ bool DylibVerifier::verifyBinaryAttrs(const ArrayRef<Target> ProvidedTargets,
   return true;
 }
 
-std::unique_ptr<SymbolSet> DylibVerifier::getExports() {
+std::unique_ptr<SymbolSet> DylibVerifier::takeExports() {
   for (const auto &[Alias, Base] : Aliases) {
     TargetList Targets;
     SymbolFlags Flags = SymbolFlags::None;
