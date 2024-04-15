@@ -10,7 +10,7 @@
 # RUN: not ld.lld --debug-names %t1.o -o /dev/null 2>&1 \
 # RUN:   | FileCheck -DFILE=%t1.o --implicit-check-not=error: %s
 
-# CHECK: error: [[FILE]]:(.debug_names): unsupported DWARF64
+# CHECK: error: [[FILE]]:(.debug_names): found DWARF64, which is currently unsupported
 
 	.text
 	.globl	main                            # -- Begin function main

@@ -2752,22 +2752,21 @@ void DebugNamesBaseSection::parseDebugNames(
     NameData &nd = inputChunk.nameData.emplace_back();
     nd.hdr = ni.getHeader();
     if (nd.hdr.Format != DwarfFormat::DWARF32) {
-      errorOrWarn(toString(namesSec.sec) + Twine(": unsupported DWARF64"));
+      errorOrWarn(toString(namesSec.sec) +
+                  Twine(": found DWARF64, which is currently unsupported"));
       return;
     }
     if (nd.hdr.Version != 5) {
-      errorOrWarn(toString(namesSec.sec) + Twine(": unsupported version ") +
+      errorOrWarn(toString(namesSec.sec) + Twine(": unsupported version: ") +
                   Twine(nd.hdr.Version));
       return;
     }
     const uint32_t dwarfSize =
         dwarf::getDwarfOffsetByteSize(DwarfFormat::DWARF32);
-    const uint32_t hdrSize =
-        getDebugNamesHeaderSize(nd.hdr.AugmentationStringSize);
-    auto locs = findDebugNamesOffsets(hdrSize, nd.hdr);
+    DWARFDebugNames::DWARFDebugNamesOffsets locs = ni.getOffsets();
     if (locs.EntriesBase + niOffset > namesExtractor.getData().size()) {
       errorOrWarn(toString(namesSec.sec) +
-                  Twine(": index entry is out of bounds"));
+                  Twine(": entry pool start is beyond end of section"));
       return;
     }
 
@@ -3179,9 +3178,9 @@ template <class ELFT> DebugNamesSection<ELFT>::DebugNamesSection() {
           p = namesData + niOffset + locs.EntryOffsetsBase;
           SmallVector<uint32_t, 0> entryOffsets;
           entryOffsets.resize_for_overwrite(hdr.NameCount);
-          for (auto i : seq(hdr.NameCount))
-            entryOffsets[i] =
-                endian::readNext<uint32_t, ELFT::Endianness, unaligned>(p);
+
+          for (auto &offset : entryOffsets)
+            offset = endian::readNext<uint32_t, ELFT::Endianness, unaligned>(p);
           return entryOffsets;
         });
   });

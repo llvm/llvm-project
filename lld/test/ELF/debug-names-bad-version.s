@@ -9,7 +9,7 @@
 # RUN: not ld.lld --debug-names a.o b.o 2>&1 \
 # RUN:    | FileCheck -DFILE=a.o %s --implicit-check-not=error:
 
-# CHECK: error: [[FILE]]:(.debug_names): unsupported version 4
+# CHECK: error: [[FILE]]:(.debug_names): unsupported version: 4
 
 #--- a.s
 	.text

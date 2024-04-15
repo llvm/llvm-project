@@ -1,7 +1,7 @@
-# ppc-debug-names.s was generated with:
+# ppc32-debug-names.s was generated with:
 
-# - clang++ --target=powerpc -g -O0 -gpubnames \
-#     -fdebug-compilation-dir='/self/proc/cwd' -S a.cpp -o a.s
+# clang++ --target=powerpc -g -gpubnames \
+#    -fdebug-compilation-dir='/self/proc/cwd' -S a.cpp -o a.s
 
 # a.cpp contents:
 
