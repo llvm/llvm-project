@@ -497,9 +497,10 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
         }
     } else {
         logger.info("Handle unknown type: {}", type);
+        requireTrue(from.isValid());
         if (!to.isValid()) {
             logger.warn("Missing sink! Using exit of source instead");
-            to = sourceExit;
+            to = getExit(from);
             toLine = INT_MAX;
         }
         findPathBetween(from, fromLine, to, toLine, path, {}, type, jResults);
