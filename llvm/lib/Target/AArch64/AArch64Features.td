@@ -514,6 +514,9 @@ def FeatureSMEFA64 : SubtargetFeature<"sme-fa64", "HasSMEFA64", "true",
 def FeatureSME2 : SubtargetFeature<"sme2", "HasSME2", "true",
   "Enable Scalable Matrix Extension 2 (SME2) instructions", [FeatureSME]>;
 
+def FeatureSMEF16F16 : SubtargetFeature<"sme-f16f16", "HasSMEF16F16", "true",
+  "Enable SME non-widening Float16 instructions (FEAT_SME_F16F16)", [FeatureSME2]>;
+
 def FeatureSME2p1 : SubtargetFeature<"sme2p1", "HasSME2p1", "true",
   "Enable Scalable Matrix Extension 2.1 (FEAT_SME2p1) instructions", [FeatureSME2]>;
 
