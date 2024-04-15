@@ -42,6 +42,7 @@ size_t IndexedAllocationInfo::serializedSize(IndexedVersion Version) const {
 }
 
 static size_t serializedSizeV0(const IndexedMemProfRecord &Record) {
+  // The number of alloc sites to serialize.
   size_t Result = sizeof(uint64_t);
   for (const IndexedAllocationInfo &N : Record.AllocSites)
     Result += N.serializedSize(Version0);
@@ -57,6 +58,7 @@ static size_t serializedSizeV0(const IndexedMemProfRecord &Record) {
 }
 
 static size_t serializedSizeV2(const IndexedMemProfRecord &Record) {
+  // The number of alloc sites to serialize.
   size_t Result = sizeof(uint64_t);
   for (const IndexedAllocationInfo &N : Record.AllocSites)
     Result += N.serializedSize(Version2);
