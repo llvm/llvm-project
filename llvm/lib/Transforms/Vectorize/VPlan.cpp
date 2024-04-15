@@ -1440,7 +1440,7 @@ std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
     std::string Name;
     raw_string_ostream S(Name);
     UV->printAsOperand(S, false);
-    return (Twine("ir<%") + Name + ">").str();
+    return (Twine("ir<") + Name + ">").str();
   }
 
   return "<badref>";
