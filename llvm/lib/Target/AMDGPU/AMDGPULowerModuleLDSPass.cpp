@@ -1074,7 +1074,8 @@ public:
             for (auto &ExternalCallRecord : *CG.getExternalCallingNode()) {
               Function *PotentialCallee =
                   ExternalCallRecord.second->getFunction();
-              if (PotentialCallee && !isKernelLDS(PotentialCallee))
+              assert(PotentialCallee);
+              if (!isKernelLDS(PotentialCallee))
                 PotentialCallee->removeFnAttr("amdgpu-no-lds-kernel-id");
             }
           }
