@@ -3433,8 +3433,40 @@ bool GDBRemoteCommunicationClient::CalculateMD5(
       return false;
     if (response.Peek() && *response.Peek() == 'x')
       return false;
-    low = response.GetHexMaxU64(false, UINT64_MAX);
-    high = response.GetHexMaxU64(false, UINT64_MAX);
+
+    // GDBRemoteCommunicationServerCommon::Handle_vFile_MD5 concatenates low and
+    // high hex strings. We can't use response.GetHexMaxU64 because that can't
+    // handle the concatenated hex string. What would happen is parsing the low
+    // would consume the whole response packet - which is a bug. Instead, we get
+    // the byte string for each low and high hex separately, and parse them.
+    //
+    // An alternate way to handle this is to change the server to put a
+    // delimiter between the low/high parts, and change the client to parse the
+    // delimiter. However, we choose not to do this so existing lldb-servers
+    // don't have to be patched
+
+    // Get low part
+    auto part = response.GetStringRef().substr(response.GetFilePos(),
+                                               sizeof(uint64_t) * 2);
+    if (part.size() != sizeof(uint64_t) * 2)
+      return false;
+    response.SetFilePos(response.GetFilePos() + part.size());
+
+    bool conversionErrored = part.getAsInteger(16, low);
+    if (conversionErrored)
+      return false;
+
+    // Get high part
+    part = response.GetStringRef().substr(response.GetFilePos(),
+                                          sizeof(uint64_t) * 2);
+    if (part.size() != sizeof(uint64_t) * 2)
+      return false;
+    response.SetFilePos(response.GetFilePos() + part.size());
+
+    conversionErrored = part.getAsInteger(16, high);
+    if (conversionErrored)
+      return false;
+
     return true;
   }
   return false;
