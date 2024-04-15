@@ -52,6 +52,10 @@ int main(int argc, char **argv) {
       });
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createFlattenCFGPass();
+  });
+
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
     return mlir::createReconcileUnrealizedCastsPass();
   });
 

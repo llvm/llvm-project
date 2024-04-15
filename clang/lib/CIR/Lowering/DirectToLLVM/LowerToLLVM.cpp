@@ -62,7 +62,9 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
+#include <deque>
 #include <optional>
+#include <set>
 
 using namespace cir;
 using namespace llvm;
@@ -561,13 +563,25 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::BrCondOp brOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto condition = adaptor.getCond();
-    auto i1Condition = rewriter.create<mlir::LLVM::TruncOp>(
-        brOp.getLoc(), rewriter.getI1Type(), condition);
+    mlir::Value i1Condition;
+
+    if (auto defOp = adaptor.getCond().getDefiningOp()) {
+      if (auto zext = dyn_cast<mlir::LLVM::ZExtOp>(defOp)) {
+        if (zext->use_empty() &&
+            zext->getOperand(0).getType() == rewriter.getI1Type()) {
+          i1Condition = zext->getOperand(0);
+          rewriter.eraseOp(zext);
+        }
+      }
+    }
+
+    if (!i1Condition)
+      i1Condition = rewriter.create<mlir::LLVM::TruncOp>(
+          brOp.getLoc(), rewriter.getI1Type(), adaptor.getCond());
+
     rewriter.replaceOpWithNewOp<mlir::LLVM::CondBrOp>(
-        brOp, i1Condition.getResult(), brOp.getDestTrue(),
-        adaptor.getDestOperandsTrue(), brOp.getDestFalse(),
-        adaptor.getDestOperandsFalse());
+        brOp, i1Condition, brOp.getDestTrue(), adaptor.getDestOperandsTrue(),
+        brOp.getDestFalse(), adaptor.getDestOperandsFalse());
 
     return mlir::success();
   }
@@ -771,90 +785,6 @@ public:
   }
 };
 
-class CIRIfLowering : public mlir::OpConversionPattern<mlir::cir::IfOp> {
-public:
-  using mlir::OpConversionPattern<mlir::cir::IfOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(mlir::cir::IfOp ifOp, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::OpBuilder::InsertionGuard guard(rewriter);
-    auto loc = ifOp.getLoc();
-    auto emptyElse = ifOp.getElseRegion().empty();
-
-    auto *currentBlock = rewriter.getInsertionBlock();
-    auto *remainingOpsBlock =
-        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
-    mlir::Block *continueBlock;
-    if (ifOp->getResults().size() == 0)
-      continueBlock = remainingOpsBlock;
-    else
-      llvm_unreachable("NYI");
-
-    // Inline then region
-    auto *thenBeforeBody = &ifOp.getThenRegion().front();
-    auto *thenAfterBody = &ifOp.getThenRegion().back();
-    rewriter.inlineRegionBefore(ifOp.getThenRegion(), continueBlock);
-
-    rewriter.setInsertionPointToEnd(thenAfterBody);
-    if (auto thenYieldOp =
-            dyn_cast<mlir::cir::YieldOp>(thenAfterBody->getTerminator())) {
-      rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
-          thenYieldOp, thenYieldOp.getArgs(), continueBlock);
-    }
-
-    rewriter.setInsertionPointToEnd(continueBlock);
-
-    // Has else region: inline it.
-    mlir::Block *elseBeforeBody = nullptr;
-    mlir::Block *elseAfterBody = nullptr;
-    if (!emptyElse) {
-      elseBeforeBody = &ifOp.getElseRegion().front();
-      elseAfterBody = &ifOp.getElseRegion().back();
-      rewriter.inlineRegionBefore(ifOp.getElseRegion(), thenAfterBody);
-    } else {
-      elseBeforeBody = elseAfterBody = continueBlock;
-    }
-
-    rewriter.setInsertionPointToEnd(currentBlock);
-
-    // FIXME: CIR always lowers !cir.bool to i8 type.
-    // In this reason CIR CodeGen often emits the redundant zext + trunc
-    // sequence that prevents lowering of llvm.expect in
-    // LowerExpectIntrinsicPass.
-    // We should fix that in a more appropriate way. But as a temporary solution
-    // just avoid the redundant casts here.
-    mlir::Value condition;
-    auto zext =
-        dyn_cast<mlir::LLVM::ZExtOp>(adaptor.getCondition().getDefiningOp());
-    if (zext && zext->getOperand(0).getType() == rewriter.getI1Type()) {
-      condition = zext->getOperand(0);
-      if (zext->use_empty())
-        rewriter.eraseOp(zext);
-    } else {
-      auto trunc = rewriter.create<mlir::LLVM::TruncOp>(
-          loc, rewriter.getI1Type(), adaptor.getCondition());
-      condition = trunc.getRes();
-    }
-
-    rewriter.create<mlir::LLVM::CondBrOp>(loc, condition, thenBeforeBody,
-                                          elseBeforeBody);
-
-    if (!emptyElse) {
-      rewriter.setInsertionPointToEnd(elseAfterBody);
-      if (auto elseYieldOp =
-              dyn_cast<mlir::cir::YieldOp>(elseAfterBody->getTerminator())) {
-        rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
-            elseYieldOp, elseYieldOp.getArgs(), continueBlock);
-      }
-    }
-
-    rewriter.replaceOp(ifOp, continueBlock->getArguments());
-
-    return mlir::success();
-  }
-};
-
 class CIRScopeOpLowering
     : public mlir::OpConversionPattern<mlir::cir::ScopeOp> {
 public:
@@ -937,9 +867,7 @@ struct ConvertCIRToLLVMPass
   }
   void runOnOperation() final;
 
-  virtual StringRef getArgument() const override {
-    return "cir-to-llvm-internal";
-  }
+  virtual StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
 
 class CIRCallLowering : public mlir::OpConversionPattern<mlir::cir::CallOp> {
@@ -3081,7 +3009,7 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRLoopOpInterfaceLowering, CIRBrCondOpLowering, CIRPtrStrideOpLowering,
       CIRCallLowering, CIRUnaryOpLowering, CIRBinOpLowering, CIRShiftOpLowering,
       CIRLoadLowering, CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
-      CIRFuncLowering, CIRScopeOpLowering, CIRCastOpLowering, CIRIfLowering,
+      CIRFuncLowering, CIRScopeOpLowering, CIRCastOpLowering,
       CIRGlobalOpLowering, CIRGetGlobalOpLowering, CIRVAStartLowering,
       CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering, CIRBrOpLowering,
       CIRTernaryOpLowering, CIRGetMemberOpLowering, CIRSwitchOpLowering,
@@ -3241,6 +3169,64 @@ static void buildCtorDtorList(
   builder.create<mlir::LLVM::ReturnOp>(loc, result);
 }
 
+// The unreachable code is not lowered by applyPartialConversion function
+// since it traverses blocks in the dominance order. At the same time we
+// do need to lower such code - otherwise verification errors occur.
+// For instance, the next CIR code:
+//
+//    cir.func @foo(%arg0: !s32i) -> !s32i {
+//      %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+//      cir.if %4 {
+//        %5 = cir.const(#cir.int<1> : !s32i) : !s32i
+//        cir.return %5 : !s32i
+//      } else {
+//        %5 = cir.const(#cir.int<0> : !s32i) : !s32i
+//       cir.return %5 : !s32i
+//      }
+//     cir.return %arg0 : !s32i
+//    }
+//
+// contains an unreachable return operation (the last one). After the flattening
+// pass it will be placed into the unreachable block. And the possible error
+// after the lowering pass is: error: 'cir.return' op expects parent op to be
+// one of 'cir.func, cir.scope, cir.if ... The reason that this operation was
+// not lowered and the new parent is lllvm.func.
+//
+// In the future we may want to get rid of this function and use DCE pass or
+// something similar. But now we need to guarantee the absence of the dialect
+// verification errors.
+void collect_unreachable(mlir::Operation *parent,
+                         llvm::SmallVector<mlir::Operation *> &ops) {
+
+  llvm::SmallVector<mlir::Block *> unreachable_blocks;
+  parent->walk([&](mlir::Block *blk) { // check
+    if (blk->hasNoPredecessors() && !blk->isEntryBlock())
+      unreachable_blocks.push_back(blk);
+  });
+
+  std::set<mlir::Block *> visited;
+  for (auto *root : unreachable_blocks) {
+    // We create a work list for each unreachable block.
+    // Thus we traverse operations in some order.
+    std::deque<mlir::Block *> workList;
+    workList.push_back(root);
+
+    while (!workList.empty()) {
+      auto *blk = workList.back();
+      workList.pop_back();
+      if (visited.count(blk))
+        continue;
+      visited.emplace(blk);
+
+      for (auto &op : *blk)
+        ops.push_back(&op);
+
+      for (auto it = blk->succ_begin(); it != blk->succ_end(); ++it)
+        workList.push_back(*it);
+    }
+  }
+}
+
 void ConvertCIRToLLVMPass::runOnOperation() {
   auto module = getOperation();
   mlir::DataLayout dataLayout(module);
@@ -3280,7 +3266,11 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   getOperation()->removeAttr("cir.sob");
   getOperation()->removeAttr("cir.lang");
 
-  if (failed(applyPartialConversion(module, target, std::move(patterns))))
+  llvm::SmallVector<mlir::Operation *> ops;
+  ops.push_back(module);
+  collect_unreachable(module, ops);
+
+  if (failed(applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
 
   // Emit the llvm.global_ctors array.
