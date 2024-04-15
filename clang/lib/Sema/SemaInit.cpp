@@ -9769,8 +9769,8 @@ bool InitializationSequence::Diagnose(Sema &S,
     }
     case OR_Deleted: {
       OverloadCandidateSet::iterator Best;
-      OverloadingResult Ovl
-        = FailedCandidateSet.BestViableFunction(S, Kind.getLocation(), Best);
+      OverloadingResult Ovl =
+          FailedCandidateSet->BestViableFunction(S, Kind.getLocation(), Best);
 
       StringLiteral *Msg = Best->Function->getDeletedMessage();
       S.Diag(Kind.getLocation(), diag::err_typecheck_deleted_function)
