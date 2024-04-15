@@ -40,4 +40,45 @@ TypeSize LoongArchTTIImpl::getRegisterBitWidth(
   llvm_unreachable("Unsupported register kind");
 }
 
+unsigned LoongArchTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
+  switch (ClassID) {
+  case LoongArchRegisterClass::GPRRC:
+    // 30 = 32 GPRs - r0 (zero register) - r21 (non-allocatable)
+    return 30;
+  case LoongArchRegisterClass::FPRRC:
+    return ST->hasBasicF() ? 32 : 0;
+  case LoongArchRegisterClass::VRRC:
+    return ST->hasExtLSX() ? 32 : 0;
+  }
+  llvm_unreachable("unknown register class");
+}
+
+unsigned LoongArchTTIImpl::getRegisterClassForType(bool Vector,
+                                                   Type *Ty) const {
+  if (Vector)
+    return LoongArchRegisterClass::VRRC;
+  if (!Ty)
+    return LoongArchRegisterClass::GPRRC;
+
+  Type *ScalarTy = Ty->getScalarType();
+  if ((ScalarTy->isFloatTy() && ST->hasBasicF()) ||
+      (ScalarTy->isDoubleTy() && ST->hasBasicD())) {
+    return LoongArchRegisterClass::FPRRC;
+  }
+
+  return LoongArchRegisterClass::GPRRC;
+}
+
+const char *LoongArchTTIImpl::getRegisterClassName(unsigned ClassID) const {
+  switch (ClassID) {
+  case LoongArchRegisterClass::GPRRC:
+    return "LoongArch::GPRRC";
+  case LoongArchRegisterClass::FPRRC:
+    return "LoongArch::FPRRC";
+  case LoongArchRegisterClass::VRRC:
+    return "LoongArch::VRRC";
+  }
+  llvm_unreachable("unknown register class");
+}
+
 // TODO: Implement more hooks to provide TTI machinery for LoongArch.

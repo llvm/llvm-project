@@ -12,7 +12,8 @@
 // RUN:   -emit-module-interface -DSKIP_ODR_CHECK_IN_GMF -o %t/b.pcm -verify
 
 // RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/a.cppm -o %t/a.pcm
-// RUN: %clang_cc1 -std=c++20 %t/b.cppm -fprebuilt-module-path=%t -emit-reduced-module-interface -o %t/b.pcm -verify
+// RUN: %clang_cc1 -std=c++20 %t/b.cppm -fprebuilt-module-path=%t -emit-reduced-module-interface \
+// RUN:     -o %t/b.pcm -verify -DREDUCED
 
 //--- foo.h
 
@@ -53,18 +54,26 @@ module;
 #include "foo.h"
 #include "bar.h"
 export module a;
+export namespace std {
+  using std::variant;
+  using std::_Traits;
+  using std::operator&&;
+}
 
 //--- b.cppm
 module;
 #include "bar.h"
 export module b;
 import a;
+export namespace std {
+  using std::variant;
+  using std::_Traits;
+  using std::operator&&;
+}
 
 #ifdef SKIP_ODR_CHECK_IN_GMF
 // expected-no-diagnostics
 #else
 // expected-error@* {{has different definitions in different modules; first difference is defined here found data member '_S_copy_ctor' with an initializer}}
 // expected-note@* {{but in 'a.<global>' found data member '_S_copy_ctor' with a different initializer}}
-// expected-error@* {{from module 'a.<global>' is not present in definition of 'variant<_Types...>' provided earlier}}
-// expected-note@* {{declaration of 'swap' does not match}}
 #endif
