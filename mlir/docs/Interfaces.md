@@ -310,7 +310,11 @@ must eventually be provided.
   }
 ```
 Now attempting to use the interface, e.g in a cast, without a prior
-registration of the external model will lead to a runtime error.
+registration of the external model will lead to a runtime error that will
+look similar to this:
+```
+LLVM ERROR: checking for an interface (`SomeInterface`) that was promised by dialect 'mydialect' but never implemented. This is generally an indication that the dialect extension implementing the interface was never registered.
+```
 
 #### Dialect Fallback for OpInterface
 
