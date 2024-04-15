@@ -17,7 +17,6 @@
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/AllocatorBase.h"
-#include "llvm/Support/DJB.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <initializer_list>
 #include <iterator>

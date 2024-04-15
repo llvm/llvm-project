@@ -720,10 +720,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   if (LangOpts.CPlusPlus20) {
     Builder.defineMacro("__cpp_aggregate_paren_init", "201902L");
 
-    // P0848 is implemented, but we're still waiting for other concepts
-    // issues to be addressed before bumping __cpp_concepts up to 202002L.
-    // Refer to the discussion of this at https://reviews.llvm.org/D128619.
-    Builder.defineMacro("__cpp_concepts", "201907L");
+    Builder.defineMacro("__cpp_concepts", "202002");
     Builder.defineMacro("__cpp_conditional_explicit", "201806L");
     Builder.defineMacro("__cpp_consteval", "202211L");
     Builder.defineMacro("__cpp_constexpr_dynamic_alloc", "201907L");
@@ -749,6 +746,9 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_static_call_operator", "202207L");
   Builder.defineMacro("__cpp_named_character_escapes", "202207L");
   Builder.defineMacro("__cpp_placeholder_variables", "202306L");
+
+  // C++26 features supported in earlier language modes.
+  Builder.defineMacro("__cpp_deleted_function", "202403L");
 
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");

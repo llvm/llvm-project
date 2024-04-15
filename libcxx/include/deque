@@ -191,6 +191,7 @@ template <class T, class Allocator, class Predicate>
 #include <__assert>
 #include <__availability>
 #include <__config>
+#include <__debug_utils/sanitizers.h>
 #include <__format/enable_insertable.h>
 #include <__fwd/deque.h>
 #include <__iterator/distance.h>
@@ -864,33 +865,6 @@ private:
     __asan_back_moved,
   };
 
-  // The following functions are no-ops outside of AddressSanitizer mode.
-  // We call annotations for every allocator, unless explicitly disabled.
-  //
-  // To disable annotations for a particular allocator, change value of
-  // __asan_annotate_container_with_allocator to false.
-  // For more details, see the "Using libc++" documentation page or
-  // the documentation for __sanitizer_annotate_contiguous_container.
-  _LIBCPP_HIDE_FROM_ABI void __annotate_double_ended_contiguous_container(
-      const void* __beg,
-      const void* __end,
-      const void* __old_con_beg,
-      const void* __old_con_end,
-      const void* __new_con_beg,
-      const void* __new_con_end) const {
-    (void)__beg;
-    (void)__end;
-    (void)__old_con_beg;
-    (void)__old_con_end;
-    (void)__new_con_beg;
-    (void)__new_con_end;
-#ifndef _LIBCPP_HAS_NO_ASAN
-    if (__beg != nullptr && __asan_annotate_container_with_allocator<_Allocator>::value)
-      __sanitizer_annotate_double_ended_contiguous_container(
-          __beg, __end, __old_con_beg, __old_con_end, __new_con_beg, __new_con_end);
-#endif
-  }
-
   _LIBCPP_HIDE_FROM_ABI void __annotate_from_to(
       size_type __beg,
       size_type __end,
@@ -990,7 +964,8 @@ private:
       const void* __new_beg = __front ? __new_edge : __old_edge;
       const void* __new_end = __front ? __old_edge : __new_edge;
 
-      __annotate_double_ended_contiguous_container(__mem_beg, __mem_end, __old_beg, __old_end, __new_beg, __new_end);
+      std::__annotate_double_ended_contiguous_container<_Allocator>(
+          __mem_beg, __mem_end, __old_beg, __old_end, __new_beg, __new_end);
     }
 #endif // !_LIBCPP_HAS_NO_ASAN
   }
@@ -1051,11 +1026,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_poison_block(const void* __beginning, const void* __end) const _NOEXCEPT {
-    (void)__beginning;
-    (void)__end;
-#ifndef _LIBCPP_HAS_NO_ASAN
-    __annotate_double_ended_contiguous_container(__beginning, __end, __beginning, __end, __end, __end);
-#endif
+    std::__annotate_double_ended_contiguous_container<_Allocator>(__beginning, __end, __beginning, __end, __end, __end);
   }
 
   _LIBCPP_HIDE_FROM_ABI void
@@ -1070,7 +1041,7 @@ private:
     if (__annotation_type == __asan_poison)
       __annotate_poison_block(__block_start, __block_end);
     else {
-      __annotate_double_ended_contiguous_container(
+      std::__annotate_double_ended_contiguous_container<_Allocator>(
           __block_start, __block_end, __block_start, __block_start, __block_start, __block_end);
     }
 #endif
