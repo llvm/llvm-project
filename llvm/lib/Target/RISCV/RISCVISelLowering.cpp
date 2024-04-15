@@ -8742,11 +8742,7 @@ static SDValue lowerCttzElts(SDNode *N, SelectionDAG &DAG,
   // Convert -1 to VL.
   SDValue Setcc =
       DAG.getSetCC(DL, XLenVT, Res, DAG.getConstant(0, DL, XLenVT), ISD::SETLT);
-  // We need to use vscale rather than X0 for scalable vectors.
-  if (!OpVT.isFixedLengthVector())
-    VL = DAG.getVScale(
-        DL, XLenVT,
-        APInt(XLenVT.getSizeInBits(), OpVT.getVectorMinNumElements()));
+  VL = DAG.getElementCount(DL, XLenVT, OpVT.getVectorElementCount());
   return DAG.getSelect(DL, XLenVT, Setcc, VL, Res);
 }
 
