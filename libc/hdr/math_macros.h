@@ -17,6 +17,27 @@
 
 #include <math.h>
 
+// Some older math.h header does not have FP_INT_* constants yet.
+#ifndef FP_INT_UPWARD
+#define FP_INT_UPWARD 0
+#endif // FP_INT_UPWARD
+
+#ifndef FP_INT_DOWNWARD
+#define FP_INT_DOWNWARD 1
+#endif // FP_INT_DOWNWARD
+
+#ifndef FP_INT_TOWARDZERO
+#define FP_INT_TOWARDZERO 2
+#endif // FP_INT_TOWARDZERO
+
+#ifndef FP_INT_TONEARESTFROMZERO
+#define FP_INT_TONEARESTFROMZERO 3
+#endif // FP_INT_TONEARESTFROMZERO
+
+#ifndef FP_INT_TONEAREST
+#define FP_INT_TONEAREST 4
+#endif // FP_INT_TONEAREST
+
 #endif // LLVM_LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_MATH_MACROS_H

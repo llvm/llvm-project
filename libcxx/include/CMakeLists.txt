@@ -291,6 +291,7 @@ set(files
   __chrono/parser_std_format_spec.h
   __chrono/statically_widen.h
   __chrono/steady_clock.h
+  __chrono/sys_info.h
   __chrono/system_clock.h
   __chrono/time_point.h
   __chrono/time_zone.h
@@ -344,6 +345,7 @@ set(files
   __coroutine/noop_coroutine_handle.h
   __coroutine/trivial_awaitables.h
   __debug_utils/randomize_range.h
+  __debug_utils/sanitizers.h
   __debug_utils/strict_weak_ordering_check.h
   __exception/exception.h
   __exception/exception_ptr.h
@@ -395,6 +397,7 @@ set(files
   __format/formatter_pointer.h
   __format/formatter_string.h
   __format/formatter_tuple.h
+  __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
   __format/range_default_formatter.h
   __format/range_formatter.h
@@ -861,6 +864,7 @@ set(files
   __utility/pair.h
   __utility/piecewise_construct.h
   __utility/priority_tag.h
+  __utility/private_constructor_tag.h
   __utility/rel_ops.h
   __utility/small_buffer.h
   __utility/swap.h

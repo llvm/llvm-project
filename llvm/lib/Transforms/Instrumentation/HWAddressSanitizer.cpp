@@ -21,6 +21,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
@@ -186,9 +187,9 @@ static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
                                           cl::desc("Hot percentile cuttoff."));
 
 static cl::opt<float>
-    ClRandomSkipRate("hwasan-random-skip-rate",
+    ClRandomSkipRate("hwasan-random-rate",
                      cl::desc("Probability value in the range [0.0, 1.0] "
-                              "to skip instrumentation of a function."));
+                              "to keep instrumentation of a function."));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
@@ -1492,23 +1493,42 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
   return true;
 }
 
+static void emitRemark(const Function &F, OptimizationRemarkEmitter &ORE,
+                       bool Skip) {
+  if (Skip) {
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "Skip", &F)
+             << "Skipped: F=" << ore::NV("Function", &F);
+    });
+  } else {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "Sanitize", &F)
+             << "Sanitized: F=" << ore::NV("Function", &F);
+    });
+  }
+}
+
 bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     Function &F, FunctionAnalysisManager &FAM) const {
-  if (ClRandomSkipRate.getNumOccurrences()) {
-    std::bernoulli_distribution D(ClRandomSkipRate);
-    return (D(*Rng));
-  }
-  if (!ClHotPercentileCutoff.getNumOccurrences())
-    return false;
-  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  ProfileSummaryInfo *PSI =
-      MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  if (!PSI || !PSI->hasProfileSummary()) {
-    ++NumNoProfileSummaryFuncs;
-    return false;
-  }
-  return PSI->isFunctionHotInCallGraphNthPercentile(
-      ClHotPercentileCutoff, &F, FAM.getResult<BlockFrequencyAnalysis>(F));
+  bool Skip = [&]() {
+    if (ClRandomSkipRate.getNumOccurrences()) {
+      std::bernoulli_distribution D(ClRandomSkipRate);
+      return !D(*Rng);
+    }
+    if (!ClHotPercentileCutoff.getNumOccurrences())
+      return false;
+    auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    ProfileSummaryInfo *PSI =
+        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+    if (!PSI || !PSI->hasProfileSummary()) {
+      ++NumNoProfileSummaryFuncs;
+      return false;
+    }
+    return PSI->isFunctionHotInCallGraphNthPercentile(
+        ClHotPercentileCutoff, &F, FAM.getResult<BlockFrequencyAnalysis>(F));
+  }();
+  emitRemark(F, FAM.getResult<OptimizationRemarkEmitterAnalysis>(F), Skip);
+  return Skip;
 }
 
 void HWAddressSanitizer::sanitizeFunction(Function &F,
