@@ -885,7 +885,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     std::error_code EC;
     FileOS.emplace(OutputFileName, EC);
     if (EC) {
-      llvm::errs() << llvm::errorCodeToError(EC) << '\n';
+      llvm::errs() << "Failed to open output file '" << OutputFileName
+                   << "': " << llvm::errorCodeToError(EC) << '\n';
       std::exit(1);
     }
     return *FileOS;
