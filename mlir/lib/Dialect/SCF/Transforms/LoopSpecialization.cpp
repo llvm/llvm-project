@@ -200,12 +200,12 @@ static void rewriteVectorizedLoopAfterPeeling(RewriterBase &rewriter,
                                               ForOp forOp) {
   auto stepInt = getConstantIntValue(forOp.getStep());
 
-  forOp.walk([&](Operation *affineOp) {
-    if (!isa<vector::TransferWriteOp, vector::TransferReadOp>(affineOp))
+  forOp.walk([&](Operation *op) {
+    if (!isa<vector::TransferWriteOp, vector::TransferReadOp>(op))
       return WalkResult::advance();
-    if (!hasVectorSizeEqualToStep(affineOp, stepInt))
+    if (!hasVectorSizeEqualToStep(op, stepInt))
       return WalkResult::advance();
-    setInBoundsForVectorReadWrite(rewriter, affineOp);
+    setInBoundsForVectorReadWrite(rewriter, op);
     return WalkResult::advance();
   });
 }
