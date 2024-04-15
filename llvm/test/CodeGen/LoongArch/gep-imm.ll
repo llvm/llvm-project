@@ -4,12 +4,8 @@
 define void @test(ptr %sp, ptr %t, i32 %n) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ld.d $a0, $a0, 0
 ; CHECK-NEXT:    move $a3, $zero
-; CHECK-NEXT:    ld.d $a4, $a0, 0
-; CHECK-NEXT:    lu12i.w $a0, 1
-; CHECK-NEXT:    ori $a5, $a0, 3904
-; CHECK-NEXT:    add.d $a0, $a1, $a5
-; CHECK-NEXT:    add.d $a1, $a4, $a5
 ; CHECK-NEXT:    addi.w $a2, $a2, 0
 ; CHECK-NEXT:    addi.w $a4, $a3, 0
 ; CHECK-NEXT:    bge $a4, $a2, .LBB0_2
@@ -17,10 +13,10 @@ define void @test(ptr %sp, ptr %t, i32 %n) {
 ; CHECK-NEXT:  .LBB0_1: # %while_body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    addi.d $a4, $a3, 1
-; CHECK-NEXT:    st.w $a4, $a1, 0
-; CHECK-NEXT:    st.w $a3, $a1, 4
-; CHECK-NEXT:    st.w $a4, $a0, 0
-; CHECK-NEXT:    st.w $a3, $a0, 4
+; CHECK-NEXT:    stptr.w $a4, $a0, 8000
+; CHECK-NEXT:    stptr.w $a3, $a0, 8004
+; CHECK-NEXT:    stptr.w $a4, $a1, 8000
+; CHECK-NEXT:    stptr.w $a3, $a1, 8004
 ; CHECK-NEXT:    move $a3, $a4
 ; CHECK-NEXT:    addi.w $a4, $a3, 0
 ; CHECK-NEXT:    blt $a4, $a2, .LBB0_1
