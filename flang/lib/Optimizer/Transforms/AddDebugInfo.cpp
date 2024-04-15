@@ -1,4 +1,4 @@
-//===- AddDebugFoundation.cpp -- add basic debug linetable info -----------===//
+//===-------------- AddDebugInfo.cpp -- add debug info -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,8 +32,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace fir {
-#define GEN_PASS_DEF_ADDDEBUGFOUNDATION
-#define GEN_PASS_DECL_ADDDEBUGFOUNDATION
+#define GEN_PASS_DEF_ADDDEBUGINFO
+#define GEN_PASS_DECL_ADDDEBUGINFO
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
@@ -41,15 +41,14 @@ namespace fir {
 
 namespace {
 
-class AddDebugFoundationPass
-    : public fir::impl::AddDebugFoundationBase<AddDebugFoundationPass> {
+class AddDebugInfoPass : public fir::impl::AddDebugInfoBase<AddDebugInfoPass> {
 public:
   void runOnOperation() override;
 };
 
 } // namespace
 
-void AddDebugFoundationPass::runOnOperation() {
+void AddDebugInfoPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
@@ -113,6 +112,6 @@ void AddDebugFoundationPass::runOnOperation() {
   });
 }
 
-std::unique_ptr<mlir::Pass> fir::createAddDebugFoundationPass() {
-  return std::make_unique<AddDebugFoundationPass>();
+std::unique_ptr<mlir::Pass> fir::createAddDebugInfoPass() {
+  return std::make_unique<AddDebugInfoPass>();
 }
