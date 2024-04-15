@@ -2738,16 +2738,13 @@ void DebugNamesBaseSection::parseDebugNames(
     InputChunk &inputChunk, OutputChunk &chunk,
     DWARFDataExtractor &namesExtractor, DataExtractor &strExtractor,
     function_ref<SmallVector<uint32_t, 0>(
-        uint32_t numCus, uint32_t niOffset, const DWARFDebugNames::Header &,
+        uint32_t numCus, const DWARFDebugNames::Header &,
         const DWARFDebugNames::DWARFDebugNamesOffsets &)>
         readOffsets) {
   const LLDDWARFSection namesSec = inputChunk.section;
   DenseMap<uint32_t, IndexEntry *> offsetMap;
   // Number of CUs seen in previous NameIndex sections within current chunk.
   uint32_t numCus = 0;
-  // Offset of current NameIndex section from start of .debug_names section in
-  // current chunk.
-  uint32_t niOffset = 0;
   for (const DWARFDebugNames::NameIndex &ni : *inputChunk.llvmDebugNames) {
     NameData &nd = inputChunk.nameData.emplace_back();
     nd.hdr = ni.getHeader();
@@ -2764,21 +2761,20 @@ void DebugNamesBaseSection::parseDebugNames(
     const uint32_t dwarfSize =
         dwarf::getDwarfOffsetByteSize(DwarfFormat::DWARF32);
     DWARFDebugNames::DWARFDebugNamesOffsets locs = ni.getOffsets();
-    if (locs.EntriesBase + niOffset > namesExtractor.getData().size()) {
+    if (locs.EntriesBase > namesExtractor.getData().size()) {
       errorOrWarn(toString(namesSec.sec) +
                   Twine(": entry pool start is beyond end of section"));
       return;
     }
 
-    SmallVector<uint32_t, 0> entryOffsets =
-        readOffsets(numCus, niOffset, nd.hdr, locs);
+    SmallVector<uint32_t, 0> entryOffsets = readOffsets(numCus, nd.hdr, locs);
 
     // Read the entry pool.
     offsetMap.clear();
     nd.nameEntries.resize(nd.hdr.NameCount);
     for (auto i : seq(nd.hdr.NameCount)) {
       NameEntry &ne = nd.nameEntries[i];
-      uint64_t strOffset = locs.StringOffsetsBase + niOffset + i * dwarfSize;
+      uint64_t strOffset = locs.StringOffsetsBase + i * dwarfSize;
       ne.stringOffset = strOffset;
       uint64_t strp = namesExtractor.getRelocatedValue(dwarfSize, &strOffset);
       StringRef name = strExtractor.getCStrRef(&strp);
@@ -2787,7 +2783,7 @@ void DebugNamesBaseSection::parseDebugNames(
 
       // Read a series of index entries that end with abbreviation code 0.
       const char *errMsg = nullptr;
-      uint64_t offset = locs.EntriesBase + niOffset + entryOffsets[i];
+      uint64_t offset = locs.EntriesBase + entryOffsets[i];
       while (offset < namesSec.Data.size() && namesSec.Data[offset] != 0) {
         // Read & store all entries (for the same string).
         auto ie = makeThreadLocal<IndexEntry>();
@@ -2875,7 +2871,6 @@ void DebugNamesBaseSection::parseDebugNames(
       for (IndexEntry &ie : ne.entries())
         ie.parentEntry = offsetMap.lookup(ie.parentOffset);
     numCus += nd.hdr.CompUnitCount;
-    niOffset += nd.hdr.UnitLength + 4;
   }
 }
 
@@ -3164,18 +3159,17 @@ template <class ELFT> DebugNamesSection<ELFT>::DebugNamesSection() {
     parseDebugNames(
         inputChunk, chunk, namesExtractor, strExtractor,
         [&chunk, namesData = dobj.getNamesSection().Data.data()](
-            uint32_t numCus, uint32_t niOffset,
-            const DWARFDebugNames::Header &hdr,
+            uint32_t numCus, const DWARFDebugNames::Header &hdr,
             const DWARFDebugNames::DWARFDebugNamesOffsets &locs) {
           // Read CU offsets.
-          const char *p = namesData + niOffset + locs.CUsBase;
+          const char *p = namesData + locs.CUsBase;
           chunk.compUnits.resize_for_overwrite(numCus + hdr.CompUnitCount);
           for (auto i : seq(hdr.CompUnitCount))
             chunk.compUnits[i + numCus] =
                 endian::readNext<uint32_t, ELFT::Endianness, unaligned>(p);
 
           // Read entry offsets.
-          p = namesData + niOffset + locs.EntryOffsetsBase;
+          p = namesData + locs.EntryOffsetsBase;
           SmallVector<uint32_t, 0> entryOffsets;
           entryOffsets.resize_for_overwrite(hdr.NameCount);
 

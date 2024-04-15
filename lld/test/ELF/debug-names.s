@@ -24,6 +24,11 @@
 # RUN: llvm-dwarfdump -debug-names out | FileCheck %s --check-prefix=DWARF
 # RUN: llvm-readelf -SW out | FileCheck %s --check-prefix=READELF
 
+## Test we can handle concatenated .debug_names.
+# RUN: ld.lld -r a.o b.o -o ab.o
+# RUN: ld.lld --debug-names ab.o -o out1
+# RUN: llvm-dwarfdump -debug-names out1 | FileCheck %s --check-prefix=DWARF
+
 # READELF: Name              Type     Address          Off      Size   ES Flg Lk Inf Al
 # READELF: .debug_names      PROGBITS 0000000000000000 [[#%x,]] 0000cc 00      0   0  4
 
