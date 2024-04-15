@@ -25,6 +25,9 @@ See the main ``config/config.json``, and the platform and architecture specific
 overrides in ``config/<platform>/config.json`` and ``config/<platform>/<arch>/config.json,``
 to learn about the defaults for your platform and target.
 
+* **"codegen" options**
+    - ``LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR``: Enable -fstack-protector-strong to defend against stack smashing attack.
+    - ``LIBC_CONF_KEEP_FRAME_POINTER``: Keep frame pointer in functions for better debugging experience.
 * **"printf" options**
     - ``LIBC_CONF_PRINTF_DISABLE_FIXED_POINT``: Disable printing fixed point values in printf and friends.
     - ``LIBC_CONF_PRINTF_DISABLE_FLOAT``: Disable printing floating point values in printf and friends.

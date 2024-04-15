@@ -927,13 +927,19 @@ public:
   }
 };
 
-/// Instruction that can have a nneg flag (only zext).
+/// Instruction that can have a nneg flag (zext/uitofp).
 class PossiblyNonNegInst : public CastInst {
 public:
   enum { NonNeg = (1 << 0) };
 
   static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::ZExt;
+    switch (I->getOpcode()) {
+    case Instruction::ZExt:
+    case Instruction::UIToFP:
+      return true;
+    default:
+      return false;
+    }
   }
 
   static bool classof(const Value *V) {
