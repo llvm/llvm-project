@@ -22,6 +22,7 @@ let isCodeGenOnly=1 in {
   def GET_pID: Pseudo<(outs pID:$dst_id), (ins ANYID:$src)>;
   def GET_vID: Pseudo<(outs vID:$dst_id), (ins ANYID:$src)>;
   def GET_vfID: Pseudo<(outs vfID:$dst_id), (ins ANYID:$src)>;
+  def GET_vpID: Pseudo<(outs vpID:$dst_id), (ins ANYID:$src)>;
 }
 
 def SPVTypeBin : SDTypeProfile<1, 2, []>;
@@ -55,7 +56,7 @@ multiclass BinOpTypedGen<string name, bits<16> opCode, SDNode node, bit genF = 0
   }
 }
 
-multiclass TernOpTypedGen<string name, bits<16> opCode, SDNode node, bit genI = 1, bit genF = 0, bit genV = 0> {
+multiclass TernOpTypedGen<string name, bits<16> opCode, SDNode node, bit genP = 1, bit genI = 1, bit genF = 0, bit genV = 0> {
   if genF then {
     def SFSCond: TernOpTyped<name, opCode, ID, fID, node>;
     def SFVCond: TernOpTyped<name, opCode, vID, fID, node>;
@@ -63,6 +64,10 @@ multiclass TernOpTypedGen<string name, bits<16> opCode, SDNode node, bit genI = 
   if genI then {
     def SISCond: TernOpTyped<name, opCode, ID, ID, node>;
     def SIVCond: TernOpTyped<name, opCode, vID, ID, node>;
+  }
+  if genP then {
+    def SPSCond: TernOpTyped<name, opCode, ID, pID, node>;
+    def SPVCond: TernOpTyped<name, opCode, vID, pID, node>;
   }
   if genV then {
     if genF then {
@@ -72,6 +77,10 @@ multiclass TernOpTypedGen<string name, bits<16> opCode, SDNode node, bit genI = 
     if genI then {
       def VISCond: TernOpTyped<name, opCode, ID, vID, node>;
       def VIVCond: TernOpTyped<name, opCode, vID, vID, node>;
+    }
+    if genP then {
+      def VPSCond: TernOpTyped<name, opCode, ID, vpID, node>;
+      def VPVCond: TernOpTyped<name, opCode, vID, vpID, node>;
     }
   }
 }
@@ -552,7 +561,7 @@ def OpLogicalOr: BinOp<"OpLogicalOr", 166>;
 def OpLogicalAnd: BinOp<"OpLogicalAnd", 167>;
 def OpLogicalNot: UnOp<"OpLogicalNot", 168>;
 
-defm OpSelect: TernOpTypedGen<"OpSelect", 169, select, 1, 1, 1>;
+defm OpSelect: TernOpTypedGen<"OpSelect", 169, select, 1, 1, 1, 1>;
 
 def OpIEqual: BinOp<"OpIEqual", 170>;
 def OpINotEqual: BinOp<"OpINotEqual", 171>;

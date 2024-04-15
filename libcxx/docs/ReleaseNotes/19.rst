@@ -43,10 +43,12 @@ Implemented Papers
 - P2819R2 - Add ``tuple`` protocol to ``complex``
 - P2495R3 - Interfacing ``stringstream``\s with ``string_view``
 - P2867R2 - Remove Deprecated ``strstream``\s From C++26
+- P2869R4 - Remove Deprecated ``shared_ptr`` Atomic Access APIs from C++26
 - P2872R3 - Remove ``wstring_convert`` From C++26
 - P3142R0 - Printing Blank Lines with ``println`` (as DR against C++23)
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
+- P3029R1 - Better ``mdspan``'s CTAD
 
 Improvements and New Features
 -----------------------------
@@ -61,6 +63,9 @@ Improvements and New Features
   up to 100x.
 
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM`` macro has been added to make the declarations in ``<strstream>`` available.
+
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS`` macro has been added to make the declarations in ``<memory>``
+  available.
 
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT`` macro has been added to make the declarations in ``<locale>``
   available.
@@ -131,3 +136,6 @@ Build System Changes
 
 - The ``LIBCXX_EXECUTOR`` and ``LIBCXXABI_EXECUTOR`` CMake variables have been removed. Please
   set ``LIBCXX_TEST_PARAMS`` to ``executor=<...>`` instead.
+
+- The Cmake variable ``LIBCXX_ENABLE_CLANG_TIDY`` has been removed. The build system has been changed
+  to automatically detect the presence of ``clang-tidy`` and the required ``Clang`` libraries.
