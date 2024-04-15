@@ -23,7 +23,7 @@ using namespace mlir::polynomial;
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/Polynomial/IR/PolynomialTypes.cpp.inc"
 #define GET_OP_CLASSES
-#include "mlir/Dialect/Polynomial/IR/PolynomialOps.cpp.inc"
+#include "mlir/Dialect/Polynomial/IR/Polynomial.cpp.inc"
 
 void PolynomialDialect::initialize() {
   addAttributes<
@@ -36,6 +36,6 @@ void PolynomialDialect::initialize() {
       >();
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/Polynomial/IR/PolynomialOps.cpp.inc"
+#include "mlir/Dialect/Polynomial/IR/Polynomial.cpp.inc"
       >();
 }

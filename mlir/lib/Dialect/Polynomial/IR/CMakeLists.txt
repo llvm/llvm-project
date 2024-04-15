@@ -8,9 +8,7 @@ add_mlir_dialect_library(MLIRPolynomialDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Polynomial
 
   DEPENDS
-  MLIRPolynomialOpsIncGen
-  MLIRPolynomialTypesIncGen
-  MLIRPolynomialDialectIncGen
+  MLIRPolynomialIncGen
   MLIRPolynomialAttributesIncGen
   MLIRBuiltinAttributesIncGen
 

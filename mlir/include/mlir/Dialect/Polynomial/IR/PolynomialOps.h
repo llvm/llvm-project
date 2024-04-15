@@ -16,6 +16,6 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/Polynomial/IR/PolynomialOps.h.inc"
+#include "mlir/Dialect/Polynomial/IR/Polynomial.h.inc"
 
 #endif // MLIR_INCLUDE_MLIR_DIALECT_POLYNOMIAL_IR_POLYNOMIALOPS_H_

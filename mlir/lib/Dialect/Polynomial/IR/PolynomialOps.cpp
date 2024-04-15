@@ -12,4 +12,4 @@ using namespace mlir;
 using namespace mlir::polynomial;
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/Polynomial/IR/PolynomialOps.cpp.inc"
+#include "mlir/Dialect/Polynomial/IR/Polynomial.cpp.inc"
