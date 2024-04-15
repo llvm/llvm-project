@@ -627,8 +627,7 @@ private:
   };
 
   bool HasReconstitutableArgs(ArrayRef<TemplateArgument> Args) const;
-  std::string GetName(const Decl *, bool Qualified = false,
-                      const Type *Ty = nullptr) const;
+  std::string GetName(const Decl *, bool Qualified = false) const;
 
   /// Build up structure info for the byref.  See \a BuildByRefType.
   BlockByRefType EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
