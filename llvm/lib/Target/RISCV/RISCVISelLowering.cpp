@@ -12367,9 +12367,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
     case Intrinsic::experimental_cttz_elts: {
-      EVT VT = N->getValueType(0);
       SDValue Res = lowerCttzElts(N, DAG, Subtarget);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Res));
+      Results.push_back(
+          DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), Res));
       return;
     }
     case Intrinsic::riscv_orc_b:
