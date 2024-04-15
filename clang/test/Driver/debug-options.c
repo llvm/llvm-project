@@ -466,14 +466,12 @@
 // RUN: %clang -### -target x86_64 -c -g %s 2>&1 | FileCheck --check-prefix=FULL_TEMP_NAMES --implicit-check-not=debug-forward-template-params %s
 // FULL_TEMP_NAMES-NOT: -gsimple-template-names
 
-//// Test -g[no-]template-alias (enabled by default with SCE debugger tuning). Requires DWARFv5.
+//// Test -g[no-]template-alias (enabled by default with SCE debugger tuning and DWARFv5).
 // RUN: %clang -### -target x86_64 -c -gdwarf-5 -gsce %s 2>&1 | FileCheck %s --check-prefixes=TEMPLATE-ALIAS
+// RUN: %clang -### -target x86_64 -c -gdwarf-4 -gsce %s 2>&1 | FileCheck %s --check-prefixes=NO-TEMPLATE-ALIAS
 // RUN: %clang -### -target x86_64 -c -gdwarf-5 -gsce -gtemplate-alias %s 2>&1 | FileCheck %s --check-prefixes=TEMPLATE-ALIAS
 // RUN: %clang -### -target x86_64 -c -gdwarf-5 -gsce -gno-template-alias %s 2>&1 | FileCheck %s --check-prefixes=NO-TEMPLATE-ALIAS
-// RUN: %clang -### -target x86_64 -c -gdwarf-5 -gtemplate-alias %s 2>&1 | FileCheck %s --check-prefixes="TEMPLATE-ALIAS,NO-TEMPLATE-ALIAS-WARN"
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 -gtemplate-alias %s 2>&1 | FileCheck %s --check-prefixes=TEMPLATE-ALIAS
 // RUN: %clang -### -target x86_64 -c -gdwarf-5 -gtemplate-alias -gno-template-alias %s 2>&1 | FileCheck %s --check-prefixes=NO-TEMPLATE-ALIAS
-// RUN: %clang -### -target x86_64 -c -gdwarf-4 -gtemplate-alias %s 2>&1 | FileCheck %s --check-prefixes=TEMPLATE-ALIAS-WARN
 // TEMPLATE-ALIAS: "-gtemplate-alias"
 // NO-TEMPLATE-ALIAS-NOT: "-gtemplate-alias"
-// TEMPLATE-ALIAS-WARN: warning: debug information option '-gtemplate-alias' is not supported and will be ignored; requires at least DWARF-5 but -gdwarf-4 has been specified
-// NO-TEMPLATE-ALIAS-WARN-NOT: warning:
