@@ -858,6 +858,10 @@ public:
     // Pointer to the .debug_info section that contains compile units, used to
     // compute the relocated CU offsets.
     InputSection *infoSec;
+    // This initially holds section offsets, which may not be consecutive if
+    // there are multiple name indices in an input .debug_names section. After
+    // relocation, the section offsets are changed to CU offsets relative to the
+    // output section.
     SmallVector<uint32_t, 0> compUnits;
   };
 
@@ -872,8 +876,7 @@ protected:
                   llvm::DWARFDataExtractor &namesExtractor,
                   llvm::DataExtractor &strExtractor,
                   llvm::function_ref<SmallVector<uint32_t, 0>(
-                      uint32_t numCUs,
-                      const llvm::DWARFDebugNames::Header &hdr,
+                      uint32_t numCUs, const llvm::DWARFDebugNames::Header &hdr,
                       const llvm::DWARFDebugNames::DWARFDebugNamesOffsets &)>
                       readOffsets);
   void computeHdrAndAbbrevTable(MutableArrayRef<InputChunk> inputChunks);
@@ -909,8 +912,6 @@ public:
   template <class RelTy>
   void getNameRelocs(InputSection *sec, ArrayRef<RelTy> rels,
                      llvm::DenseMap<uint32_t, uint32_t> &relocs);
-
-  void updateMultiCuOffsets(OutputChunk &chunk);
 
 private:
   static void readOffsets(InputChunk &inputChunk, OutputChunk &chunk,

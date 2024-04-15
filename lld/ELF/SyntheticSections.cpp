@@ -3161,19 +3161,18 @@ template <class ELFT> DebugNamesSection<ELFT>::DebugNamesSection() {
         [&chunk, namesData = dobj.getNamesSection().Data.data()](
             uint32_t numCus, const DWARFDebugNames::Header &hdr,
             const DWARFDebugNames::DWARFDebugNamesOffsets &locs) {
-          // Read CU offsets.
-          const char *p = namesData + locs.CUsBase;
+          // Read CU offsets, which are relocated by .debug_info + X
+          // relocations. Record the section offset to be relocated by
+          // `finalizeContents`.
           chunk.compUnits.resize_for_overwrite(numCus + hdr.CompUnitCount);
           for (auto i : seq(hdr.CompUnitCount))
-            chunk.compUnits[i + numCus] =
-                endian::readNext<uint32_t, ELFT::Endianness, unaligned>(p);
+            chunk.compUnits[numCus + i] = locs.CUsBase + i * 4;
 
           // Read entry offsets.
-          p = namesData + locs.EntryOffsetsBase;
+          const char *p = namesData + locs.EntryOffsetsBase;
           SmallVector<uint32_t, 0> entryOffsets;
           entryOffsets.resize_for_overwrite(hdr.NameCount);
-
-          for (auto &offset : entryOffsets)
+          for (uint32_t &offset : entryOffsets)
             offset = endian::readNext<uint32_t, ELFT::Endianness, unaligned>(p);
           return entryOffsets;
         });
@@ -3201,32 +3200,18 @@ template <class ELFT> void DebugNamesSection<ELFT>::finalizeContents() {
       getNameRelocs(sec, rels.rels, relocs.get()[i]);
     else
       getNameRelocs(sec, rels.relas, relocs.get()[i]);
+
+    // Relocate CU offsets with .debug_info + X relocations.
+    OutputChunk &chunk = chunks.get()[i];
+    for (auto [j, cuOffset] : enumerate(chunk.compUnits))
+      cuOffset = relocs.get()[i].lookup(cuOffset);
   });
 
-  // Relocate string offsets in the name table.
+  // Relocate string offsets in the name table with .debug_str + X relocations.
   parallelForEach(nameVecs, [&](auto &nameVec) {
     for (NameEntry &ne : nameVec)
-      ne.stringOffset = relocs.get()[ne.chunkIdx][ne.stringOffset];
+      ne.stringOffset = relocs.get()[ne.chunkIdx].lookup(ne.stringOffset);
   });
-}
-
-// Skim through the CUs reading the unit lengths & types to find correct
-// starting offsets for CUs (before relocation).
-template <class ELFT>
-void DebugNamesSection<ELFT>::updateMultiCuOffsets(OutputChunk &chunk) {
-  ArrayRef<uint8_t> infoData = chunk.infoSec->contentMaybeDecompress();
-  uint32_t nextCu = 0;
-  for (size_t i = 1, end = chunk.compUnits.size(); i < end; ++i) {
-    if (chunk.compUnits[i] == 0) {
-      // Skip to start of next CU and read the type & size.
-      auto *p = infoData.data() + nextCu;
-      uint32_t unitLength = endian::read32<ELFT::Endianness>(p);
-      uint8_t unitType = p[6];
-      if (unitType == dwarf::DW_UT_compile)
-        nextCu += unitLength + 4;
-    }
-    chunk.compUnits[i] += nextCu;
-  }
 }
 
 template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
@@ -3247,15 +3232,9 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
   buf += hdr.AugmentationStringSize;
 
   // Write the CU list.
-  for (auto i : seq(numChunks)) {
-    OutputChunk &chunk = chunks[i];
-    if (chunk.compUnits.size() > 1)
-      updateMultiCuOffsets(chunk);
-    for (uint32_t cuOffset : chunk.compUnits) {
-      endian::writeNext<uint32_t, ELFT::Endianness>(
-          buf, chunk.infoSec->outSecOff + cuOffset);
-    }
-  }
+  for (auto i : seq(numChunks))
+    for (uint32_t cuOffset : chunks[i].compUnits)
+      endian::writeNext<uint32_t, ELFT::Endianness>(buf, cuOffset);
 
   // Write the local TU list, then the foreign TU list..
   // TODO: Fix this, once we get everything working without TUs.
