@@ -379,8 +379,11 @@ struct OperationFormat {
   std::vector<TypeResolution> operandTypes, resultTypes;
 
   /// The set of attributes explicitly used within the format.
-  SmallVector<const NamedAttribute *, 8> usedAttributes;
+  llvm::SmallSetVector<const NamedAttribute *, 8> usedAttributes;
   llvm::StringSet<> inferredAttributes;
+
+  /// The set of properties explicitly used within the format.
+  llvm::SmallSetVector<const NamedProperty *, 8> usedProperties;
 };
 } // namespace
 
@@ -1183,6 +1186,105 @@ static void genAttrParser(AttributeVariable *attr, MethodBody &body,
   }
 }
 
+// Generates the 'setPropertiesFromParsedAttr' used to set properties from a
+// 'prop-dict' dictionary attr.
+static void genParsedAttrPropertiesSetter(OperationFormat &fmt, Operator &op,
+                                          OpClass &opClass) {
+  // Not required unless 'prop-dict' is present.
+  if (!fmt.hasPropDict)
+    return;
+
+  SmallVector<MethodParameter> paramList;
+  paramList.emplace_back("Properties &", "prop");
+  paramList.emplace_back("::mlir::Attribute", "attr");
+  paramList.emplace_back("::llvm::function_ref<::mlir::InFlightDiagnostic()>",
+                         "emitError");
+
+  Method *method = opClass.addStaticMethod("::mlir::LogicalResult",
+                                           "setPropertiesFromParsedAttr",
+                                           std::move(paramList));
+  MethodBody &body = method->body().indent();
+
+  body << R"decl(
+::mlir::DictionaryAttr dict = ::llvm::dyn_cast<::mlir::DictionaryAttr>(attr);
+if (!dict) {
+  emitError() << "expected DictionaryAttr to set properties";
+  return ::mlir::failure();
+}
+)decl";
+
+  // TODO: properties might be optional as well.
+  const char *propFromAttrFmt = R"decl(
+auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
+         ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {{
+  {0};
+};
+auto attr = dict.get("{1}");
+if (!attr) {{
+  emitError() << "expected key entry for {1} in DictionaryAttr to set "
+             "Properties.";
+  return ::mlir::failure();
+}
+if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
+  return ::mlir::failure();
+)decl";
+
+  // Generate the setter for any property not parsed elsewhere.
+  for (const NamedProperty &namedProperty : op.getProperties()) {
+    if (fmt.usedProperties.contains(&namedProperty))
+      continue;
+
+    auto scope = body.scope("{\n", "}\n", /*indent=*/true);
+
+    StringRef name = namedProperty.name;
+    const Property &prop = namedProperty.prop;
+    FmtContext fctx;
+    body << formatv(propFromAttrFmt,
+                    tgfmt(prop.getConvertFromAttributeCall(),
+                          &fctx.addSubst("_attr", "propAttr")
+                               .addSubst("_storage", "propStorage")
+                               .addSubst("_diag", "emitError")),
+                    name);
+  }
+
+  // Generate the setter for any attribute not parsed elsewhere.
+  for (const NamedAttribute &namedAttr : op.getAttributes()) {
+    if (fmt.usedAttributes.contains(&namedAttr))
+      continue;
+
+    const Attribute &attr = namedAttr.attr;
+    // Derived attributes do not need to be parsed.
+    if (attr.isDerivedAttr())
+      continue;
+
+    auto scope = body.scope("{\n", "}\n", /*indent=*/true);
+
+    // If the attribute has a default value or is optional, it does not need to
+    // be present in the parsed dictionary attribute.
+    bool isRequired = !attr.isOptional() && !attr.hasDefaultValue();
+    body << formatv(R"decl(
+auto &propStorage = prop.{0};
+auto attr = dict.get("{0}");
+if (attr || /*isRequired=*/{1}) {{
+  if (!attr) {{
+    emitError() << "expected key entry for {0} in DictionaryAttr to set "
+               "Properties.";
+    return ::mlir::failure();
+  }
+  auto convertedAttr = ::llvm::dyn_cast<std::remove_reference_t<decltype(propStorage)>>(attr);
+  if (convertedAttr) {{
+    propStorage = convertedAttr;
+  } else {{
+    emitError() << "Invalid attribute `{0}` in property conversion: " << attr;
+    return ::mlir::failure();
+  }
+}
+)decl",
+                    namedAttr.name, isRequired);
+  }
+  body << "return ::mlir::success();\n";
+}
+
 void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   SmallVector<MethodParameter> paramList;
   paramList.emplace_back("::mlir::OpAsmParser &", "parser");
@@ -1214,6 +1316,8 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   genParserTypeResolution(op, body);
 
   body << "  return ::mlir::success();\n";
+
+  genParsedAttrPropertiesSetter(*this, op, opClass);
 }
 
 void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
@@ -1776,6 +1880,11 @@ const char *enumAttrBeginPrinterCode = R"(
 static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body) {
   body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedProps;\n";
+  for (const NamedProperty *namedProperty : fmt.usedProperties)
+    body << "  elidedProps.push_back(\"" << namedProperty->name << "\");\n";
+  for (const NamedAttribute *namedAttr : fmt.usedAttributes)
+    body << "  elidedProps.push_back(\"" << namedAttr->name << "\");\n";
+
   // Add code to check attributes for equality with the default value
   // for attributes with the elidePrintingDefaultValue bit set.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
@@ -2543,7 +2652,7 @@ private:
   llvm::DenseSet<const NamedTypeConstraint *> seenOperands;
   llvm::DenseSet<const NamedRegion *> seenRegions;
   llvm::DenseSet<const NamedSuccessor *> seenSuccessors;
-  llvm::DenseSet<const NamedProperty *> seenProperties;
+  llvm::SmallSetVector<const NamedProperty *, 8> seenProperties;
 };
 } // namespace
 
@@ -2589,7 +2698,8 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
     return failure();
 
   // Collect the set of used attributes in the format.
-  fmt.usedAttributes = seenAttrs.takeVector();
+  fmt.usedAttributes = std::move(seenAttrs);
+  fmt.usedProperties = std::move(seenProperties);
 
   // Set whether prop-dict is used in the format
   fmt.hasPropDict = hasPropDict;
@@ -3042,7 +3152,7 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
         return emitError(loc, "property '" + name +
                                   "' must be bound before it is referenced");
     } else {
-      if (!seenProperties.insert(property).second)
+      if (!seenProperties.insert(property))
         return emitError(loc, "property '" + name + "' is already bound");
     }
 
