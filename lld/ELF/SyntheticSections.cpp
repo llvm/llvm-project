@@ -3219,20 +3219,13 @@ template <class ELFT> void DebugNamesSection<ELFT>::finalizeContents() {
 
 template <class ELFT>
 void DebugNamesSection<ELFT>::updateMultiCuOffsets(OutputChunk &chunk) {
-  // Find the .debug_info section data for this chunk.
-  auto *file = cast<ObjFile<ELFT>>(chunk.infoSec->file);
-  DWARFContext dwarf(std::make_unique<LLDDwarfObj<ELFT>>(file));
-  auto &dobj = static_cast<const LLDDwarfObj<ELFT> &>(dwarf.getDWARFObj());
-  InputSection *infoSec = dobj.getInfoSection();
-  auto infoData = toStringRef(infoSec->contentMaybeDecompress());
+  auto infoData = toStringRef(chunk.infoSec->contentMaybeDecompress());
   const char *p = infoData.data();
 
   // Skim through the CUs reading the unit lengths & types to find correct
   // starting offsets for CUs (before relocation).
   uint32_t nextCu = 0;
   for (size_t i = 1, end = chunk.compUnits.size(); i < end; ++i) {
-    // First CU offset for each new (appended) .debug_names section starts at
-    // zero.
     if (chunk.compUnits[i] == 0) {
       // Skip to start of next CU and read the type & size.
       p = infoData.data() + nextCu;
