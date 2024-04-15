@@ -466,31 +466,35 @@ int findPathBetween(const VarLocResult &from, int fromLine, VarLocResult to,
 void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
                       int toLine, const std::vector<VarLocResult> &path,
                       const std::string &type, ordered_json &jResults) {
-    int fromFid = from.fid;
 
-    VarLocResult sourceExit(fromFid,
-                            Global.icfg.entryExitOfFunction[fromFid].second);
-    // 位于 source 所在函数的路径
-    std::vector<VarLocResult> pathInSourceFunction;
-    for (auto &p : path)
-        if (p.fid == fromFid)
-            pathInSourceFunction.push_back(p);
+    // 获取 loc 所在函数的出口
+    auto getExit = [](const VarLocResult &loc) {
+        requireTrue(loc.isValid());
+        int fid = loc.fid;
+        return VarLocResult(fid, Global.icfg.entryExitOfFunction[fid].second);
+    };
 
     if (type == "npe") {
         logger.info("Handle known type: {}", type);
+        requireTrue(from.isValid());
+        requireTrue(to.isValid());
 
         logger.info("Generating NPE bug version ...");
         findPathBetween(from, fromLine, to, toLine, path, {}, "npe-bug",
                         jResults);
 
+        // 无缺陷版本：source -> sink 所在函数的出口
+        // 尽量符合原始缺陷路径。如果找不到，就一步步减小路径
         logger.info("Generating NPE fix version ...");
-        findPathBetween(
-            from, fromLine,
-            // 如果中间路径中没有 source 所在函数中的语句，就用 exit
-            // 否则，用中间路径的最后一条
-            pathInSourceFunction.empty() ? sourceExit
-                                         : pathInSourceFunction.back(),
-            INT_MAX, pathInSourceFunction, {to}, "npe-fix", jResults);
+        auto sinkExit = getExit(to);
+        std::vector<VarLocResult> p = path;
+        while (true) {
+            int result = findPathBetween(from, fromLine, sinkExit, INT_MAX, p,
+                                         {to}, "npe-fix", jResults);
+            if (result || p.empty())
+                break;
+            p.pop_back();
+        }
     } else {
         logger.info("Handle unknown type: {}", type);
         if (!to.isValid()) {
