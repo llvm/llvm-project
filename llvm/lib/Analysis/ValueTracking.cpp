@@ -3034,7 +3034,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
       // Must be non-zero due to null test above.
       return true;
 
-    // For constant vectors, check that all elements are undefined or known
+    // For constant vectors, check that all elements are poison or known
     // non-zero to determine that the whole vector is known non-zero.
     if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
       for (unsigned i = 0, e = VecTy->getNumElements(); i != e; ++i) {
@@ -3043,7 +3043,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
         Constant *Elt = C->getAggregateElement(i);
         if (!Elt || Elt->isNullValue())
           return false;
-        if (!isa<UndefValue>(Elt) && !isa<ConstantInt>(Elt))
+        if (!isa<PoisonValue>(Elt) && !isa<ConstantInt>(Elt))
           return false;
       }
       return true;
