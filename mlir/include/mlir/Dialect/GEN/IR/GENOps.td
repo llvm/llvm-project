@@ -95,7 +95,7 @@ def GEN_NumWorkGroupsOp : GEN_3DNDRangeOp<"num_work_groups"> {
 def GEN_BarrierOp : GEN_Op<"barrier"> {
   let summary = "Work-group barrier";
 
-  string baseDescription = [{
+  let description = [{
     The `gen.barrier` operation performs a work-group barrier and ensures all
     outstanding memory transaction using local or global memory are complete.
   }];
@@ -113,7 +113,7 @@ def GEN_SubGroupShuffleOp : GEN_Op<"sub_group_shuffle", [
                  I32:$mask,
                  GEN_ShflKindAttr:$kind)> {
   let summary = "Sub-group shuffle";
-  string baseDescription = [{
+  let description = [{
     The `gen.sub_group_shuffle` operation is invoked by different work items
     with different values, given by $value. Different work items have different
     sub-group local IDs. The shuffle kind, $kind, is given to determine how to
