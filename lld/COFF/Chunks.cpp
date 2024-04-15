@@ -652,6 +652,13 @@ void SectionChunk::getRuntimePseudoRelocs(
         dyn_cast_or_null<Defined>(file->getSymbol(rel.SymbolTableIndex));
     if (!target || !target->isRuntimePseudoReloc)
       continue;
+    // If the target doesn't have a chunk allocated, it may be a
+    // DefinedImportData symbol which ended up unnecessary after GC.
+    // Normally we wouldn't eliminate section chunks that are referenced, but
+    // references within DWARF sections don't count for keeping section chunks
+    // alive. Thus such dangling references in DWARF sections are expected.
+    if (!target->getChunk())
+      continue;
     int sizeInBits =
         getRuntimePseudoRelocSize(rel.Type, file->ctx.config.machine);
     if (sizeInBits == 0) {
