@@ -7774,7 +7774,7 @@ static APInt getDemandedSrcElements(SDValue Op, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::s390_vperm:
-      SrcDemE = APInt(NumElts, 1);
+      SrcDemE = APInt(NumElts, -1);
       break;
     default:
       llvm_unreachable("Unhandled intrinsic.");
