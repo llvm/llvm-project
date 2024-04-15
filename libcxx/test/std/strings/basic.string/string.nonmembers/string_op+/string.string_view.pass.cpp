@@ -110,9 +110,9 @@ constexpr void test(const CharT* x, const CharT* y, const CharT* expected) {
   }
 }
 
-template <typename CharT, typename TraitsT = std::char_traits<CharT>, typename AllocT = std::allocator<CharT>>
+template <typename CharT, typename TraitsT, typename AllocT = std::allocator<CharT>>
 constexpr void test() {
-  // Concatinate with an empty `string`/`string_view`
+  // Concatenate with an empty `string`/`string_view`
   test<CharT, TraitsT, AllocT>(CS(""), CS(""), CS(""));
   test<CharT, TraitsT, AllocT>(CS(""), CS("short"), CS("short"));
   test<CharT, TraitsT, AllocT>(CS(""), CS("not so short"), CS("not so short"));
@@ -133,23 +133,51 @@ constexpr void test() {
       CS("this is a much longer string+which is so much better"));
 }
 
+template <typename CharT>
 constexpr bool test() {
-  test<char, std::char_traits<char>>();
-  test<char, std::char_traits<char>, min_allocator<char>>();
-  test<char, std::char_traits<char>, safe_allocator<char>>();
+  test<CharT, std::char_traits<CharT>>();
+  test<CharT, std::char_traits<CharT>, min_allocator<CharT>>();
+  test<CharT, std::char_traits<CharT>, safe_allocator<CharT>>();
 
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test<wchar_t, std::char_traits<wchar_t>>();
-  test<wchar_t, std::char_traits<wchar_t>, min_allocator<wchar_t>>();
-  test<wchar_t, std::char_traits<wchar_t>, safe_allocator<wchar_t>>();
-#endif
+  test<CharT, constexpr_char_traits<CharT>>();
+  test<CharT, constexpr_char_traits<CharT>, min_allocator<CharT>>();
+  test<CharT, constexpr_char_traits<CharT>, safe_allocator<CharT>>();
 
   return true;
 }
 
+// constexpr bool test() {
+//   test<char>();
+// #ifndef TEST_HAS_NO_WIDE_CHARACTERS
+//   test<wchar_t>();
+// #endif
+// #ifndef TEST_HAS_NO_CHAR8_T
+//   test<char8_t>();
+// #endif
+//   test<char16_t>();
+//   test<char32_t>();
+
+//   return true;
+// }
+
 int main(int, char**) {
-  test();
-  static_assert(test());
+  // test();
+  // static_assert(test());
+
+  test<char>();
+  static_assert(test<char>());
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  test<wchar_t>();
+  static_assert(test<wchar_t>());
+#endif
+#ifndef TEST_HAS_NO_CHAR8_T
+  test<char8_t>();
+  static_assert(test<char8_t>());
+#endif
+  test<char16_t>();
+  static_assert(test<char16_t>());
+  test<char32_t>();
+  static_assert(test<char32_t>());
 
   return 0;
 }
