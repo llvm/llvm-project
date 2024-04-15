@@ -299,6 +299,19 @@ owner of the dialect containing the object nor the owner of the interface are
 aware of an interface implementation, which can lead to duplicate or
 diverging implementations.
 
+Forgetting to register an external model can lead to bugs which are hard
+to track down. The `declarePromisedInterface` function can be used
+to declare that an external model implementation for an operation
+must eventually be provided.
+```
+  void MyDialect::initialize() {
+    declarePromisedInterface<SomeInterface, SomeOp>();
+     ...
+  }
+```
+Now attempting to use the interface, e.g in a cast, without a prior
+registration of the external model will lead to a runtime error.
+
 #### Dialect Fallback for OpInterface
 
 Some dialects have an open ecosystem and don't register all of the possible
