@@ -638,10 +638,9 @@ const Stmt *ExprMutationAnalyzer::findFunctionArgMutation(const Expr *Exp) {
       if (!RefType->getPointeeType().getQualifiers() &&
           RefType->getPointeeType()->getAs<TemplateTypeParmType>()) {
         std::unique_ptr<FunctionParmMutationAnalyzer> &Analyzer =
-            CrossAnalysisCache->FuncParmAnalyzer[Func];
+            FuncParmAnalyzer[Func];
         if (!Analyzer)
-          Analyzer.reset(new FunctionParmMutationAnalyzer(*Func, Context,
-                                                          CrossAnalysisCache));
+          Analyzer.reset(new FunctionParmMutationAnalyzer(*Func, Context));
         if (Analyzer->findMutation(Parm))
           return Exp;
         continue;
@@ -654,15 +653,13 @@ const Stmt *ExprMutationAnalyzer::findFunctionArgMutation(const Expr *Exp) {
 }
 
 FunctionParmMutationAnalyzer::FunctionParmMutationAnalyzer(
-    const FunctionDecl &Func, ASTContext &Context,
-    std::shared_ptr<ExprMutationAnalyzer::Cache> CrossAnalysisCache)
-    : BodyAnalyzer(*Func.getBody(), Context, CrossAnalysisCache) {
+    const FunctionDecl &Func, ASTContext &Context)
+    : BodyAnalyzer(*Func.getBody(), Context) {
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(&Func)) {
     // CXXCtorInitializer might also mutate Param but they're not part of
     // function body, check them eagerly here since they're typically trivial.
     for (const CXXCtorInitializer *Init : Ctor->inits()) {
-      ExprMutationAnalyzer InitAnalyzer(*Init->getInit(), Context,
-                                        CrossAnalysisCache);
+      ExprMutationAnalyzer InitAnalyzer(*Init->getInit(), Context);
       for (const ParmVarDecl *Parm : Ctor->parameters()) {
         if (Results.contains(Parm))
           continue;
@@ -678,14 +675,11 @@ FunctionParmMutationAnalyzer::findMutation(const ParmVarDecl *Parm) {
   const auto Memoized = Results.find(Parm);
   if (Memoized != Results.end())
     return Memoized->second;
-  // To handle call A -> call B -> call A. Assume parameters of A is not mutated
-  // before analyzing parameters of A. Then when analyzing the second "call A",
-  // FunctionParmMutationAnalyzer can use this memoized value to avoid infinite
-  // recursion.
-  Results[Parm] = nullptr;
+
   if (const Stmt *S = BodyAnalyzer.findMutation(Parm))
     return Results[Parm] = S;
-  return Results[Parm];
+
+  return Results[Parm] = nullptr;
 }
 
 } // namespace clang
