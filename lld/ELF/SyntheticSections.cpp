@@ -3217,44 +3217,39 @@ template <class ELFT> void DebugNamesSection<ELFT>::finalizeContents() {
   });
 }
 
+// Skim through the CUs reading the unit lengths & types to find correct
+// starting offsets for CUs (before relocation).
 template <class ELFT>
 void DebugNamesSection<ELFT>::updateMultiCuOffsets(OutputChunk &chunk) {
-  auto infoData = toStringRef(chunk.infoSec->contentMaybeDecompress());
-  const char *p = infoData.data();
-
-  // Skim through the CUs reading the unit lengths & types to find correct
-  // starting offsets for CUs (before relocation).
+  ArrayRef<uint8_t> infoData = chunk.infoSec->contentMaybeDecompress();
   uint32_t nextCu = 0;
   for (size_t i = 1, end = chunk.compUnits.size(); i < end; ++i) {
     if (chunk.compUnits[i] == 0) {
       // Skip to start of next CU and read the type & size.
-      p = infoData.data() + nextCu;
-      uint32_t unit_length =
-          endian::readNext<uint32_t, ELFT::Endianness, unaligned>(p);
-      [[maybe_unused]] uint16_t version =
-          endian::readNext<uint16_t, ELFT::Endianness, unaligned>(p);
-      uint8_t unitType =
-          endian::readNext<uint8_t, ELFT::Endianness, unaligned>(p);
+      auto *p = infoData.data() + nextCu;
+      uint32_t unitLength = endian::read32<ELFT::Endianness>(p);
+      uint8_t unitType = p[6];
       if (unitType == dwarf::DW_UT_compile)
-        nextCu += unit_length + 4;
+        nextCu += unitLength + 4;
     }
     chunk.compUnits[i] += nextCu;
   }
 }
 
 template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
-  [[maybe_unused]] uint8_t *oldBuf = buf;
+  [[maybe_unused]] const uint8_t *const beginBuf = buf;
   // Write the header.
-  endian::write32<ELFT::Endianness>(buf + 0, hdr.UnitLength);
-  endian::write16<ELFT::Endianness>(buf + 4, hdr.Version);
-  endian::write32<ELFT::Endianness>(buf + 8, hdr.CompUnitCount);
-  endian::write32<ELFT::Endianness>(buf + 12, hdr.LocalTypeUnitCount);
-  endian::write32<ELFT::Endianness>(buf + 16, hdr.ForeignTypeUnitCount);
-  endian::write32<ELFT::Endianness>(buf + 20, hdr.BucketCount);
-  endian::write32<ELFT::Endianness>(buf + 24, hdr.NameCount);
-  endian::write32<ELFT::Endianness>(buf + 28, hdr.AbbrevTableSize);
-  endian::write32<ELFT::Endianness>(buf + 32, hdr.AugmentationStringSize);
-  buf += 36;
+  endian::writeNext<uint32_t, ELFT::Endianness>(buf, hdr.UnitLength);
+  endian::writeNext<uint16_t, ELFT::Endianness>(buf, hdr.Version);
+  buf += 2; // padding
+  endian::writeNext<uint32_t, ELFT::Endianness>(buf, hdr.CompUnitCount);
+  endian::writeNext<uint32_t, ELFT::Endianness>(buf, hdr.LocalTypeUnitCount);
+  endian::writeNext<uint32_t, ELFT::Endianness>(buf, hdr.ForeignTypeUnitCount);
+  endian::writeNext<uint32_t, ELFT::Endianness>(buf, hdr.BucketCount);
+  endian::writeNext<uint32_t, ELFT::Endianness>(buf, hdr.NameCount);
+  endian::writeNext<uint32_t, ELFT::Endianness>(buf, hdr.AbbrevTableSize);
+  endian::writeNext<uint32_t, ELFT::Endianness>(buf,
+                                                hdr.AugmentationStringSize);
   memcpy(buf, hdr.AugmentationString.c_str(), hdr.AugmentationString.size());
   buf += hdr.AugmentationStringSize;
 
@@ -3264,9 +3259,8 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
     if (chunk.compUnits.size() > 1)
       updateMultiCuOffsets(chunk);
     for (uint32_t cuOffset : chunk.compUnits) {
-      endian::write32<ELFT::Endianness>(buf,
-                                        chunk.infoSec->outSecOff + cuOffset);
-      buf += 4;
+      endian::writeNext<uint32_t, ELFT::Endianness>(
+          buf, chunk.infoSec->outSecOff + cuOffset);
     }
   }
 
@@ -3291,31 +3285,22 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
     bucketIdx += bucket.size();
   }
   // Write the hashes.
-  for (const SmallVector<NameEntry *, 0> &bucket : buckets) {
-    for (const NameEntry *e : bucket) {
-      endian::write32<ELFT::Endianness>(buf, e->hashValue);
-      buf += 4;
-    }
-  }
+  for (const SmallVector<NameEntry *, 0> &bucket : buckets)
+    for (const NameEntry *e : bucket)
+      endian::writeNext<uint32_t, ELFT::Endianness>(buf, e->hashValue);
 
   // Write the name table. The name entries are ordered by bucket_idx and
   // correspond one-to-one with the hash lookup table.
   //
   // First, write the relocated string offsets.
-  for (const SmallVector<NameEntry *, 0> &bucket : buckets) {
-    for (const NameEntry *ne : bucket) {
-      endian::write32<ELFT::Endianness>(buf, ne->stringOffset);
-      buf += 4;
-    }
-  }
+  for (const SmallVector<NameEntry *, 0> &bucket : buckets)
+    for (const NameEntry *ne : bucket)
+      endian::writeNext<uint32_t, ELFT::Endianness>(buf, ne->stringOffset);
 
   // Then write the entry offsets.
-  for (const SmallVector<NameEntry *, 0> &bucket : buckets) {
-    for (const NameEntry *ne : bucket) {
-      endian::write32<ELFT::Endianness>(buf, ne->entryOffset);
-      buf += 4;
-    }
-  }
+  for (const SmallVector<NameEntry *, 0> &bucket : buckets)
+    for (const NameEntry *ne : bucket)
+      endian::writeNext<uint32_t, ELFT::Endianness>(buf, ne->entryOffset);
 
   // Write the abbrev table.
   memcpy(buf, abbrevTableBuf.data(), abbrevTableBuf.size());
@@ -3331,24 +3316,23 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
         for (AttrValue value : ie.attrValues) {
           switch (value.attrSize) {
           case 1:
-            *buf = value.attrValue;
+            *buf++ = value.attrValue;
             break;
           case 2:
-            endian::write16<ELFT::Endianness>(buf, value.attrValue);
+            endian::writeNext<uint16_t, ELFT::Endianness>(buf, value.attrValue);
             break;
           case 4:
-            endian::write32<ELFT::Endianness>(buf, value.attrValue);
+            endian::writeNext<uint32_t, ELFT::Endianness>(buf, value.attrValue);
             break;
           default:
             llvm_unreachable("invalid attrSize");
           }
-          buf += value.attrSize;
         }
       }
       ++buf; // index entry sentinel
     }
   }
-  assert(uint64_t(buf - oldBuf) == size);
+  assert(uint64_t(buf - beginBuf) == size);
 }
 
 GdbIndexSection::GdbIndexSection()
