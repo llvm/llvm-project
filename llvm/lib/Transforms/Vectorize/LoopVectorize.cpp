@@ -5815,7 +5815,8 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
     if (!blockNeedsPredicationForAnyReason(BB))
       continue;
     for (Instruction &I : *BB)
-      if (isScalarWithPredication(&I, VF)) {
+      if (isScalarWithPredication(&I, VF) &&
+          !isScalarAfterVectorization(&I, VF)) {
         ScalarCostsTy ScalarCosts;
         // Do not apply discount if scalable, because that would lead to
         // invalid scalarization costs.
