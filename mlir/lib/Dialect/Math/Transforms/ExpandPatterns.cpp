@@ -615,6 +615,24 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   return success();
 }
 
+// Convert `math.rsqrt` into `arith.divf` + `math.sqrt`
+static LogicalResult convertRsqrtOp(math::RsqrtOp op,
+                                    PatternRewriter &rewriter) {
+
+  auto operand = op.getOperand();
+  auto operandTy = operand.getType();
+  auto eTy = getElementTypeOrSelf(operandTy);
+  if (!isa<FloatType>(eTy))
+    return failure();
+
+  Location loc = op->getLoc();
+  auto constOneFloat = createFloatConst(loc, operandTy, 1.0, rewriter);
+  auto sqrtOp = rewriter.create<math::SqrtOp>(loc, op->getOperand(0));
+  rewriter.replaceOpWithNewOp<arith::DivFOp>(op, operandTy,
+                                             ValueRange{constOneFloat, sqrtOp});
+  return success();
+}
+
 void mlir::populateExpandCtlzPattern(RewritePatternSet &patterns) {
   patterns.add(convertCtlzOp);
 }
@@ -677,4 +695,8 @@ void mlir::populateExpandFloorFPattern(RewritePatternSet &patterns) {
 
 void mlir::populateExpandRoundEvenPattern(RewritePatternSet &patterns) {
   patterns.add(convertRoundEvenOp);
+}
+
+void mlir::populateExpandRsqrtPattern(RewritePatternSet &patterns) {
+  patterns.add(convertRsqrtOp);
 }
