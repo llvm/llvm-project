@@ -171,8 +171,8 @@ gpu.func @nbarrier_wait(%nbarrier : !xegpu.nbarrier) {
 
 // CHECK-LABEL: gpu.func @fence({{.*}}) {
 gpu.func @fence() {
-  //CHECK: xegpu.fence memory_kind = global, fence_scope = "local"
-  xegpu.fence memory_kind = global, fence_scope = "local"
+  //CHECK: xegpu.fence memory_kind = global, fence_scope = "Workgroup"
+  xegpu.fence memory_kind = global, fence_scope = "Workgroup"
   gpu.return
 }
 
