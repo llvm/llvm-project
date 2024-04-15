@@ -447,14 +447,14 @@ class VPBasicBlock;
 /// This class can be used to assign names to VPValues. For VPValues without
 /// underlying value, assign consecutive numbers and use those as names (wrapped
 /// in vp<>). Otherwise, use the name from the underlying value (wrapped in
-/// ir<>), apending a .V version number if there are multiple uses of the same
-/// name. Allows querying names for VPValues for  printing, similar to the
+/// ir<>), appending a .V version number if there are multiple uses of the same
+/// name. Allows querying names for VPValues for printing, similar to the
 /// ModuleSlotTracker for IR values.
 class VPSlotTracker {
   /// Keep track of versioned names assigned to VPValues with underlying IR
-  /// values
+  /// values.
   DenseMap<const VPValue *, std::string> VPValue2Name;
-  /// Keep track of the next number to use to deduplicate the base name.
+  /// Keep track of the next number to use to version the base name.
   StringMap<unsigned> BaseName2Version;
 
   /// Number to assign to the next VPValue without underlying value.

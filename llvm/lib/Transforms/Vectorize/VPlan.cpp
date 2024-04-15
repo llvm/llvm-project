@@ -1431,6 +1431,7 @@ std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
   // VPValues not associated with a VPlan, instead of constructing names ad-hoc
   // here.
   const VPRecipeBase *DefR = V->getDefiningRecipe();
+  (void)DefR;
   assert((!DefR || !DefR->getParent() || !DefR->getParent()->getPlan()) &&
          "VPValue defined by a recipe in a VPlan?");
 
