@@ -3593,7 +3593,7 @@ multiclass VPseudoConversion<VReg RetClass,
                              int sew = 0,
                              int TargetConstraintType = 1> {
   defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
-  let VLMul = MInfo.value in {
+  let VLMul = MInfo.value, SEW=sew in {
     def suffix : VPseudoUnaryNoMask<RetClass, Op1Class, Constraint, TargetConstraintType>;
     def suffix # "_MASK" : VPseudoUnaryMask<RetClass, Op1Class,
                                             Constraint, TargetConstraintType>,
@@ -3607,7 +3607,7 @@ multiclass VPseudoConversionRoundingMode<VReg RetClass,
                              string Constraint = "",
                              int sew = 0,
                              int TargetConstraintType = 1> {
-  let VLMul = MInfo.value in {
+  let VLMul = MInfo.value, SEW=sew in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
     def suffix : VPseudoUnaryNoMaskRoundingMode<RetClass, Op1Class, Constraint, TargetConstraintType>;
     def suffix # "_MASK" : VPseudoUnaryMaskRoundingMode<RetClass, Op1Class,
@@ -3624,7 +3624,7 @@ multiclass VPseudoConversionRM<VReg RetClass,
                                string Constraint = "",
                                int sew = 0,
                                int TargetConstraintType = 1> {
-  let VLMul = MInfo.value in {
+  let VLMul = MInfo.value, SEW=sew in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
     def suffix : VPseudoUnaryNoMask_FRM<RetClass, Op1Class,
                                         Constraint, TargetConstraintType>;
