@@ -69,7 +69,7 @@ add_entrypoint_object(
   HDRS
     fetestexceptflag.h
   DEPENDS
-    libc.include.fenv
+    libc.hdr.types.fexcept_t
     libc.src.__support.FPUtil.fenv_impl
   COMPILE_OPTIONS
     -O2
