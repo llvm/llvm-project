@@ -575,6 +575,7 @@
 {'is_defined': True, 'name': '__ZNKSt3__118__time_get_storageIcE15__do_date_orderEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__118__time_get_storageIwE15__do_date_orderEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__119__shared_weak_count13__get_deleterERKSt9type_info', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__119bad_expected_accessIvE4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__120__codecvt_utf8_utf16IDiE10do_unshiftER11__mbstate_tPcS4_RS4_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__120__codecvt_utf8_utf16IDiE11do_encodingEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__120__codecvt_utf8_utf16IDiE13do_max_lengthEv', 'type': 'FUNC'}
