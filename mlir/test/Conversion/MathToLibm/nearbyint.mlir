@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --pass-pipeline='builtin.module(convert-math-to-libm{allow-c23-features=0 rounding-mode-is-default}, canonicalize)' | FileCheck %s
 
-// CHECK-DAG: @nearbyint(f64) -> f64 attributes {libm, llvm.readnone}
-// CHECK-DAG: @nearbyintf(f32) -> f32 attributes {libm, llvm.readnone}
+// CHECK-DAG: @nearbyint(f64) -> f64 attributes {llvm.readnone}
+// CHECK-DAG: @nearbyintf(f32) -> f32 attributes {llvm.readnone}
 
 // CHECK-LABEL: func @nearbyint_caller
 // CHECK-SAME: %[[FLOAT:.*]]: f32
