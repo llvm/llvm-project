@@ -145,7 +145,13 @@ private:
   bool selectAddrSpaceCast(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I) const;
 
+  bool selectAnyOrAll(Register ResVReg, const SPIRVType *ResType,
+                      MachineInstr &I, unsigned OpType) const;
+
   bool selectAll(Register ResVReg, const SPIRVType *ResType,
+                 MachineInstr &I) const;
+
+  bool selectAny(Register ResVReg, const SPIRVType *ResType,
                  MachineInstr &I) const;
 
   bool selectBitreverse(Register ResVReg, const SPIRVType *ResType,
@@ -1160,9 +1166,10 @@ static unsigned getBoolCmpOpcode(unsigned PredNum) {
   }
 }
 
-bool SPIRVInstructionSelector::selectAll(Register ResVReg,
-                                         const SPIRVType *ResType,
-                                         MachineInstr &I) const {
+bool SPIRVInstructionSelector::selectAnyOrAll(Register ResVReg,
+                                              const SPIRVType *ResType,
+                                              MachineInstr &I,
+                                              unsigned OpAnyOrAll) const {
   assert(I.getNumOperands() == 3);
   assert(I.getOperand(2).isReg());
   MachineBasicBlock &BB = *I.getParent();
@@ -1212,11 +1219,23 @@ bool SPIRVInstructionSelector::selectAll(Register ResVReg,
   if (!IsVectorTy)
     return true;
 
-  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAll))
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(OpAnyOrAll))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(SpvBoolScalarTy))
       .addUse(NotEqualReg)
       .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectAll(Register ResVReg,
+                                         const SPIRVType *ResType,
+                                         MachineInstr &I) const {
+  return selectAnyOrAll(ResVReg, ResType, I, SPIRV::OpAll);
+}
+
+bool SPIRVInstructionSelector::selectAny(Register ResVReg,
+                                         const SPIRVType *ResType,
+                                         MachineInstr &I) const {
+  return selectAnyOrAll(ResVReg, ResType, I, SPIRV::OpAny);
 }
 
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
@@ -1877,6 +1896,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectSpvThreadId(ResVReg, ResType, I);
   case Intrinsic::spv_all:
     return selectAll(ResVReg, ResType, I);
+  case Intrinsic::spv_any:
+    return selectAny(ResVReg, ResType, I);
   case Intrinsic::spv_lifetime_start:
   case Intrinsic::spv_lifetime_end: {
     unsigned Op = IID == Intrinsic::spv_lifetime_start ? SPIRV::OpLifetimeStart
