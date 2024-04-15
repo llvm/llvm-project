@@ -53,17 +53,21 @@ def CIR_IntType : CIR_Type<"Int", "int",
     std::string getAlias() const {
       return (isSigned() ? 's' : 'u') + std::to_string(getWidth()) + 'i';
     };
+    /// Return true if this is a primitive integer type (i.e. signed or unsigned
+    /// integer types whose bit width is 8, 16, 32, or 64).
+    bool isPrimitive() const {
+      return isValidPrimitiveIntBitwidth(getWidth());
+    }
 
     /// Returns a minimum bitwidth of cir::IntType
-    static unsigned minBitwidth() { return 8; }
+    static unsigned minBitwidth() { return 1; }
     /// Returns a maximum bitwidth of cir::IntType
     static unsigned maxBitwidth() { return 64; }
 
-    /// Returns true if cir::IntType can be constructed from the provided bitwidth
-    static bool isValidBitwidth(unsigned width) {
-      return width >= minBitwidth()
-        && width <= maxBitwidth()
-        && llvm::isPowerOf2_32(width);
+    /// Returns true if cir::IntType that represents a primitive integer type
+    /// can be constructed from the provided bitwidth.
+    static bool isValidPrimitiveIntBitwidth(unsigned width) {
+      return width == 8 || width == 16 || width == 32 || width == 64;
     }
   }];
   let genVerifyDecl = 1;
@@ -109,35 +113,15 @@ def SInt16 : SInt<16>;
 def SInt32 : SInt<32>;
 def SInt64 : SInt<64>;
 
-// A type constraint that allows unsigned integer type whose width is among the
-// specified list of possible widths.
-class UIntOfWidths<list<int> widths>
-  : Type<And<[
-            CPred<"$_self.isa<::mlir::cir::IntType>()">,
-            CPred<"$_self.cast<::mlir::cir::IntType>().isUnsigned()">,
-            Or<!foreach(
-              w, widths,
-              CPred<"$_self.cast<::mlir::cir::IntType>().getWidth() == " # w>
-            )>
-        ]>,
-        !interleave(!foreach(w, widths, w # "-bit"), " or ") # " uint",
-        "::mlir::cir::IntType"
-    > {}
-
-// A type constraint that allows unsigned integer type whose width is among the
-// specified list of possible widths.
-class SIntOfWidths<list<int> widths>
-  : Type<And<[
-            CPred<"$_self.isa<::mlir::cir::IntType>()">,
-            CPred<"$_self.cast<::mlir::cir::IntType>().isSigned()">,
-            Or<!foreach(
-              w, widths,
-              CPred<"$_self.cast<::mlir::cir::IntType>().getWidth() == " # w>
-            )>
-        ]>,
-        !interleave(!foreach(w, widths, w # "-bit"), " or ") # " sint",
-        "::mlir::cir::IntType"
-    > {}
+def PrimitiveUInt
+    : AnyTypeOf<[UInt8, UInt16, UInt32, UInt64], "primitive unsigned int",
+                "::mlir::cir::IntType">;
+def PrimitiveSInt
+    : AnyTypeOf<[SInt8, SInt16, SInt32, SInt64], "primitive signed int",
+                "::mlir::cir::IntType">;
+def PrimitiveInt
+    : AnyTypeOf<[UInt8, UInt16, UInt32, UInt64, SInt8, SInt16, SInt32, SInt64],
+                "primitive int", "::mlir::cir::IntType">;
 
 //===----------------------------------------------------------------------===//
 // FloatType
@@ -374,8 +358,8 @@ def VoidPtr : Type<
       "mlir::cir::VoidType::get($_builder.getContext()))"> {
 }
 
-// Pointer to int, float or double
-def IntOrFPPtr : Type<
+// Pointer to a primitive int, float or double
+def PrimitiveIntOrFPPtr : Type<
     And<[
       CPred<"$_self.isa<::mlir::cir::PointerType>()">,
       CPred<"$_self.cast<::mlir::cir::PointerType>()"
@@ -429,6 +413,9 @@ def IntegerVector : Type<
       CPred<"$_self.isa<::mlir::cir::VectorType>()">,
       CPred<"$_self.cast<::mlir::cir::VectorType>()"
             ".getEltType().isa<::mlir::cir::IntType>()">,
+      CPred<"$_self.cast<::mlir::cir::VectorType>()"
+            ".getEltType().cast<::mlir::cir::IntType>()"
+            ".isPrimitive()">
     ]>, "!cir.vector of !cir.int"> {
 }
 

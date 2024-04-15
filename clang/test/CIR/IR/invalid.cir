@@ -564,17 +564,8 @@ module {
 // // -----
 
 module {
-  // expected-error@below {{expected integer width to be from 8 up to 64}}
+  // expected-error@below {{expected integer width to be from 1 up to 64}}
   cir.func @l0(%arg0: !cir.int<s, 128>) -> () {
-    cir.return
-  }
-}
-
-// -----
-
-module {
-  // expected-error@below {{expected integer width to be a multiple of 8}}
-  cir.func @l0(%arg0: !cir.int<s, 13>) -> () {
     cir.return
   }
 }
@@ -803,7 +794,7 @@ module {
 !s32i = !cir.int<s, 32>
 module {
   cir.func @tmp(%arg0: !cir.float) {
-    // expected-error@+1 {{operand #0 must be Integer type}}
+    // expected-error@+1 {{operand #0 must be primitive int}}
     %0 = cir.alloca !s32i, cir.ptr <!s32i>, %arg0 : !cir.float, ["tmp"]
     cir.return
   }
@@ -917,7 +908,7 @@ module {
 !u32i = !cir.int<u, 32>
 
 cir.func @clrsb_invalid_input_ty(%arg0 : !u32i) -> () {
-  // expected-error@+1 {{'cir.bit.clrsb' op operand #0 must be 32-bit or 64-bit sint, but got '!cir.int<u, 32>'}}
+  // expected-error@+1 {{'cir.bit.clrsb' op operand #0 must be 32-bit signed integer or 64-bit signed integer, but got '!cir.int<u, 32>'}}
   %0 = cir.bit.clrsb(%arg0 : !u32i) : !s32i
   cir.return
 }
@@ -938,7 +929,7 @@ cir.func @clrsb_invalid_result_ty(%arg0 : !s32i) -> () {
 !s32i = !cir.int<s, 32>
 
 cir.func @clz_invalid_input_ty(%arg0 : !s32i) -> () {
-  // expected-error@+1 {{'cir.bit.clz' op operand #0 must be 16-bit or 32-bit or 64-bit uint, but got '!cir.int<s, 32>'}}
+  // expected-error@+1 {{'cir.bit.clz' op operand #0 must be 16-bit unsigned integer or 32-bit unsigned integer or 64-bit unsigned integer, but got '!cir.int<s, 32>'}}
   %0 = cir.bit.clz(%arg0 : !s32i) : !s32i
   cir.return
 }
@@ -958,7 +949,7 @@ cir.func @clz_invalid_result_ty(%arg0 : !u32i) -> () {
 !s32i = !cir.int<s, 32>
 
 cir.func @ctz_invalid_input_ty(%arg0 : !s32i) -> () {
-  // expected-error@+1 {{'cir.bit.ctz' op operand #0 must be 16-bit or 32-bit or 64-bit uint, but got '!cir.int<s, 32>'}}
+  // expected-error@+1 {{'cir.bit.ctz' op operand #0 must be 16-bit unsigned integer or 32-bit unsigned integer or 64-bit unsigned integer, but got '!cir.int<s, 32>'}}
   %0 = cir.bit.ctz(%arg0 : !s32i) : !s32i
   cir.return
 }
@@ -979,7 +970,7 @@ cir.func @ctz_invalid_result_ty(%arg0 : !u32i) -> () {
 !u32i = !cir.int<u, 32>
 
 cir.func @ffs_invalid_input_ty(%arg0 : !u32i) -> () {
-  // expected-error@+1 {{'cir.bit.ffs' op operand #0 must be 32-bit or 64-bit sint, but got '!cir.int<u, 32>'}}
+  // expected-error@+1 {{'cir.bit.ffs' op operand #0 must be 32-bit signed integer or 64-bit signed integer, but got '!cir.int<u, 32>'}}
   %0 = cir.bit.ffs(%arg0 : !u32i) : !s32i
   cir.return
 }
@@ -1000,7 +991,7 @@ cir.func @ffs_invalid_result_ty(%arg0 : !s32i) -> () {
 !s32i = !cir.int<s, 32>
 
 cir.func @parity_invalid_input_ty(%arg0 : !s32i) -> () {
-  // expected-error@+1 {{'cir.bit.parity' op operand #0 must be 32-bit or 64-bit uint, but got '!cir.int<s, 32>'}}
+  // expected-error@+1 {{'cir.bit.parity' op operand #0 must be 32-bit unsigned integer or 64-bit unsigned integer, but got '!cir.int<s, 32>'}}
   %0 = cir.bit.parity(%arg0 : !s32i) : !s32i
   cir.return
 }
@@ -1020,7 +1011,7 @@ cir.func @parity_invalid_result_ty(%arg0 : !u32i) -> () {
 !s32i = !cir.int<s, 32>
 
 cir.func @popcount_invalid_input_ty(%arg0 : !s32i) -> () {
-  // expected-error@+1 {{'cir.bit.popcount' op operand #0 must be 16-bit or 32-bit or 64-bit uint, but got '!cir.int<s, 32>'}}
+  // expected-error@+1 {{'cir.bit.popcount' op operand #0 must be 16-bit unsigned integer or 32-bit unsigned integer or 64-bit unsigned integer, but got '!cir.int<s, 32>'}}
   %0 = cir.bit.popcount(%arg0 : !s32i) : !s32i
   cir.return
 }

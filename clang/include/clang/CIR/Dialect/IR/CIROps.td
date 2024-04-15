@@ -144,7 +144,7 @@ def ObjSizeOp : CIR_Op<"objsize", [Pure]> {
 
   let arguments = (ins CIR_PointerType:$ptr, SizeInfoType:$kind,
                    UnitAttr:$dynamic);
-  let results = (outs CIR_IntType:$result);
+  let results = (outs PrimitiveInt:$result);
 
   let assemblyFormat = [{
     `(`
@@ -180,7 +180,7 @@ def PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
     ```
   }];
 
-  let results = (outs CIR_IntType:$result);
+  let results = (outs PrimitiveInt:$result);
   let arguments = (ins CIR_PointerType:$lhs, CIR_PointerType:$rhs);
 
   let assemblyFormat = [{
@@ -208,7 +208,7 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
     ```
   }];
 
-  let arguments = (ins CIR_PointerType:$base, CIR_IntType:$stride);
+  let arguments = (ins CIR_PointerType:$base, PrimitiveInt:$stride);
   let results = (outs CIR_PointerType:$result);
 
   let assemblyFormat = [{
@@ -337,7 +337,7 @@ def AllocaOp : CIR_Op<"alloca", [
   }];
 
   let arguments = (ins
-    Optional<CIR_IntType>:$dynAllocSize,
+    Optional<PrimitiveInt>:$dynAllocSize,
     TypeAttr:$allocaType,
     StrAttr:$name,
     UnitAttr:$init,
@@ -1034,7 +1034,7 @@ class CIR_BitOp<string mnemonic, TypeConstraint inputTy>
   }];
 }
 
-def BitClrsbOp : CIR_BitOp<"bit.clrsb", SIntOfWidths<[32, 64]>> {
+def BitClrsbOp : CIR_BitOp<"bit.clrsb", AnyTypeOf<[SInt32, SInt64]>> {
   let summary = "Get the number of leading redundant sign bits in the input";
   let description = [{
     Compute the number of leading redundant sign bits in the input integer.
@@ -1065,7 +1065,7 @@ def BitClrsbOp : CIR_BitOp<"bit.clrsb", SIntOfWidths<[32, 64]>> {
   }];
 }
 
-def BitClzOp : CIR_BitOp<"bit.clz", UIntOfWidths<[16, 32, 64]>> {
+def BitClzOp : CIR_BitOp<"bit.clz", AnyTypeOf<[UInt16, UInt32, UInt64]>> {
   let summary = "Get the number of leading 0-bits in the input";
   let description = [{
     Compute the number of leading 0-bits in the input.
@@ -1090,7 +1090,7 @@ def BitClzOp : CIR_BitOp<"bit.clz", UIntOfWidths<[16, 32, 64]>> {
   }];
 }
 
-def BitCtzOp : CIR_BitOp<"bit.ctz", UIntOfWidths<[16, 32, 64]>> {
+def BitCtzOp : CIR_BitOp<"bit.ctz", AnyTypeOf<[UInt16, UInt32, UInt64]>> {
   let summary = "Get the number of trailing 0-bits in the input";
   let description = [{
     Compute the number of trailing 0-bits in the input.
@@ -1115,7 +1115,7 @@ def BitCtzOp : CIR_BitOp<"bit.ctz", UIntOfWidths<[16, 32, 64]>> {
   }];
 }
 
-def BitFfsOp : CIR_BitOp<"bit.ffs", SIntOfWidths<[32, 64]>> {
+def BitFfsOp : CIR_BitOp<"bit.ffs", AnyTypeOf<[SInt32, SInt64]>> {
   let summary = "Get the position of the least significant 1-bit of input";
   let description = [{
     Compute the position of the least significant 1-bit of the input.
@@ -1138,7 +1138,7 @@ def BitFfsOp : CIR_BitOp<"bit.ffs", SIntOfWidths<[32, 64]>> {
   }];
 }
 
-def BitParityOp : CIR_BitOp<"bit.parity", UIntOfWidths<[32, 64]>> {
+def BitParityOp : CIR_BitOp<"bit.parity", AnyTypeOf<[UInt32, UInt64]>> {
   let summary = "Get the parity of input";
   let description = [{
     Compute the parity of the input. The parity of an integer is the number of
@@ -1160,7 +1160,8 @@ def BitParityOp : CIR_BitOp<"bit.parity", UIntOfWidths<[32, 64]>> {
   }];
 }
 
-def BitPopcountOp : CIR_BitOp<"bit.popcount", UIntOfWidths<[16, 32, 64]>> {
+def BitPopcountOp
+    : CIR_BitOp<"bit.popcount", AnyTypeOf<[UInt16, UInt32, UInt64]>> {
   let summary = "Get the number of 1-bits in input";
   let description = [{
     Compute the number of 1-bits in the input.
@@ -1208,7 +1209,7 @@ def ByteswapOp : CIR_Op<"bswap", [Pure, SameOperandsAndResultType]> {
   }];
 
   let results = (outs CIR_IntType:$result);
-  let arguments = (ins UIntOfWidths<[16, 32, 64]>:$input);
+  let arguments = (ins AnyTypeOf<[UInt16, UInt32, UInt64]>:$input);
 
   let assemblyFormat = [{
     `(` $input `:` type($input) `)` `:` type($result) attr-dict
@@ -1252,7 +1253,7 @@ def CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
     ```
   }];
 
-  let results = (outs CIR_IntType:$result);
+  let results = (outs PrimitiveSInt:$result);
   let arguments = (ins CIR_AnyType:$lhs, CIR_AnyType:$rhs,
                        CmpThreeWayInfoAttr:$info);
 
@@ -1261,7 +1262,7 @@ def CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
     `:` type($result) attr-dict
   }];
 
-  let hasVerifier = 1;
+  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2122,7 +2123,7 @@ def VecInsertOp : CIR_Op<"vec.insert", [Pure,
     element is returned.
   }];
 
-  let arguments = (ins CIR_VectorType:$vec, AnyType:$value, CIR_IntType:$index);
+  let arguments = (ins CIR_VectorType:$vec, AnyType:$value, PrimitiveInt:$index);
   let results = (outs CIR_VectorType:$result);
 
   let assemblyFormat = [{
@@ -2147,7 +2148,7 @@ def VecExtractOp : CIR_Op<"vec.extract", [Pure,
     from a vector object.
   }];
 
-  let arguments = (ins CIR_VectorType:$vec, CIR_IntType:$index);
+  let arguments = (ins CIR_VectorType:$vec, PrimitiveInt:$index);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
@@ -2935,7 +2936,7 @@ def CopyOp : CIR_Op<"copy", [SameTypeOperands]> {
 def MemCpyOp : CIR_Op<"libc.memcpy"> {
   let arguments = (ins Arg<CIR_PointerType, "", [MemWrite]>:$dst,
                        Arg<CIR_PointerType, "", [MemRead]>:$src,
-                       CIR_IntType:$len);
+                       PrimitiveInt:$len);
   let summary = "Equivalent to libc's `memcpy`";
   let description = [{
     Given two CIR pointers, `src` and `dst`, `cir.libc.memcpy` will copy `len`
@@ -3115,10 +3116,10 @@ def ExpectOp : CIR_Op<"expect",
     where probability = $prob.
   }];
 
-  let arguments = (ins CIR_IntType:$val,
-                       CIR_IntType:$expected,
+  let arguments = (ins PrimitiveInt:$val,
+                       PrimitiveInt:$expected,
                        OptionalAttr<F64Attr>:$prob);
-  let results = (outs CIR_IntType:$result);
+  let results = (outs PrimitiveInt:$result);
   let assemblyFormat = [{
     `(` $val`,` $expected (`,` $prob^)? `)` `:` type($val) attr-dict
   }];
@@ -3524,7 +3525,7 @@ def AtomicFetch : CIR_Op<"atomic.fetch",
     of the computation (`__atomic_binop_fetch`).
   }];
   let results = (outs CIR_AnyIntOrFloat:$result);
-  let arguments = (ins IntOrFPPtr:$ptr, CIR_AnyIntOrFloat:$val,
+  let arguments = (ins PrimitiveIntOrFPPtr:$ptr, CIR_AnyIntOrFloat:$val,
                        AtomicFetchKind:$binop,
                        Arg<MemOrder, "memory order">:$mem_order,
                        UnitAttr:$is_volatile,

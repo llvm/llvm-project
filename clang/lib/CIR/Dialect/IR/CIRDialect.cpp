@@ -64,6 +64,10 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       return AliasResult::OverridableAlias;
     }
     if (auto intType = type.dyn_cast<IntType>()) {
+      // We only provide alias for standard integer types (i.e. integer types
+      // whose width is divisible by 8).
+      if (intType.getWidth() % 8 != 0)
+        return AliasResult::NoAlias;
       os << intType.getAlias();
       return AliasResult::OverridableAlias;
     }
@@ -938,20 +942,6 @@ Block *BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
   if (IntegerAttr condAttr = operands.front().dyn_cast_or_null<IntegerAttr>())
     return condAttr.getValue().isOne() ? getDestTrue() : getDestFalse();
   return nullptr;
-}
-
-//===----------------------------------------------------------------------===//
-// CmpThreeWayOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult CmpThreeWayOp::verify() {
-  // Type of the result must be a signed integer type.
-  if (!getType().isSigned()) {
-    emitOpError() << "result type of cir.cmp3way must be a signed integer type";
-    return failure();
-  }
-
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

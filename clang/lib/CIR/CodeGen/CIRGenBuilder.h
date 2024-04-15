@@ -328,7 +328,7 @@ public:
     case 64:
       return getUInt64Ty();
     default:
-      llvm_unreachable("Unknown bit-width");
+      return mlir::cir::IntType::get(getContext(), N, false);
     }
   }
 
@@ -343,7 +343,7 @@ public:
     case 64:
       return getSInt64Ty();
     default:
-      llvm_unreachable("Unknown bit-width");
+      return mlir::cir::IntType::get(getContext(), N, true);
     }
   }
 
