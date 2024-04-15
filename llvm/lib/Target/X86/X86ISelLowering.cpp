@@ -3532,14 +3532,6 @@ static bool isAnyZero(ArrayRef<int> Mask) {
   return llvm::any_of(Mask, [](int M) { return M == SM_SentinelZero; });
 }
 
-/// Return true if the value of any element in Mask is the zero or undef
-/// sentinel values.
-static bool isAnyZeroOrUndef(ArrayRef<int> Mask) {
-  return llvm::any_of(Mask, [](int M) {
-    return M == SM_SentinelZero || M == SM_SentinelUndef;
-  });
-}
-
 /// Return true if Val is undef or if its value falls within the
 /// specified range (L, H].
 static bool isUndefOrInRange(int Val, int Low, int Hi) {
