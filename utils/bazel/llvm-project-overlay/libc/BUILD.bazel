@@ -3417,6 +3417,15 @@ libc_function(
 
 ############################## sys/epoll targets ###############################
 
+libc_support_library(
+  name = "types_sigset_t",
+  hdrs = ["hdr/types/sigset_t.h"],
+)
+libc_support_library(
+  name = "types_struct_epoll_event",
+  hdrs = ["hdr/types/struct_epoll_event.h"],
+)
+
 libc_function(
     name = "epoll_wait",
     srcs = ["src/sys/epoll/linux/epoll_wait.cpp"],
@@ -3429,6 +3438,8 @@ libc_function(
     deps = [
         ":__support_osutil_syscall",
         ":errno",
+        ":types_sigset_t",
+        ":types_struct_epoll_event",
     ],
 )
 
@@ -3444,6 +3455,8 @@ libc_function(
     deps = [
         ":__support_osutil_syscall",
         ":errno",
+        ":types_sigset_t",
+        ":types_struct_epoll_event",
     ],
 )
 
