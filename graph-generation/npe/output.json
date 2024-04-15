@@ -34,11 +34,13 @@
             "type": "test-no-sink",
             "nodes": [
                 7,
-                26,
-                25,
+                29,
+                28,
+                27,
                 4,
                 3,
                 2,
+                26,
                 24,
                 23,
                 6,
@@ -68,18 +70,38 @@
                 {
                     "type": "entry",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
-                    "beginLine": 3,
+                    "beginLine": 5,
                     "beginColumn": 1,
-                    "endLine": 6,
+                    "endLine": 12,
                     "endColumn": 2,
-                    "content": "int useAlias(const A &alias) {\n    int value = alias.getValue();\n    return valu ..."
+                    "content": "int useAlias(const A &alias) {\n    int value;\n    if (branch > 0)\n        value  ..."
                 },
                 {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
-                    "beginLine": 4,
+                    "beginLine": 6,
+                    "beginColumn": 5,
+                    "endLine": 6,
+                    "endColumn": 15,
+                    "content": "int value;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 7,
+                    "beginColumn": 9,
+                    "endLine": 7,
+                    "endColumn": 19,
+                    "content": "branch > 0",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 8,
                     "beginColumn": 17,
-                    "endLine": 4,
+                    "endLine": 8,
                     "endColumn": 33,
                     "content": "alias.getValue()",
                     "stmtKind": "CXXMemberCallExpr"
@@ -115,19 +137,19 @@
                 {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
-                    "beginLine": 4,
-                    "beginColumn": 5,
-                    "endLine": 4,
-                    "endColumn": 34,
-                    "content": "int value = alias.getValue();",
-                    "stmtKind": "DeclStmt"
+                    "beginLine": 8,
+                    "beginColumn": 9,
+                    "endLine": 8,
+                    "endColumn": 33,
+                    "content": "value = alias.getValue()",
+                    "stmtKind": "BinaryOperator"
                 },
                 {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
-                    "beginLine": 5,
+                    "beginLine": 11,
                     "beginColumn": 5,
-                    "endLine": 5,
+                    "endLine": 11,
                     "endColumn": 17,
                     "content": "return value",
                     "stmtKind": "ReturnStmt"
@@ -135,11 +157,11 @@
                 {
                     "type": "exit",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
-                    "beginLine": 3,
+                    "beginLine": 5,
                     "beginColumn": 1,
-                    "endLine": 6,
+                    "endLine": 12,
                     "endColumn": 2,
-                    "content": "int useAlias(const A &alias) {\n    int value = alias.getValue();\n    return valu ..."
+                    "content": "int useAlias(const A &alias) {\n    int value;\n    if (branch > 0)\n        value  ..."
                 },
                 {
                     "type": "stmt",
@@ -174,12 +196,13 @@
                 16,
                 15,
                 7,
-                26,
-                25,
+                29,
+                28,
+                27,
                 4,
                 3,
                 2,
-                24
+                26
             ],
             "locations": [
                 {
@@ -313,18 +336,38 @@
                 {
                     "type": "entry",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
-                    "beginLine": 3,
+                    "beginLine": 5,
                     "beginColumn": 1,
-                    "endLine": 6,
+                    "endLine": 12,
                     "endColumn": 2,
-                    "content": "int useAlias(const A &alias) {\n    int value = alias.getValue();\n    return valu ..."
+                    "content": "int useAlias(const A &alias) {\n    int value;\n    if (branch > 0)\n        value  ..."
                 },
                 {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
-                    "beginLine": 4,
+                    "beginLine": 6,
+                    "beginColumn": 5,
+                    "endLine": 6,
+                    "endColumn": 15,
+                    "content": "int value;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 7,
+                    "beginColumn": 9,
+                    "endLine": 7,
+                    "endColumn": 19,
+                    "content": "branch > 0",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 8,
                     "beginColumn": 17,
-                    "endLine": 4,
+                    "endLine": 8,
                     "endColumn": 33,
                     "content": "alias.getValue()",
                     "stmtKind": "CXXMemberCallExpr"
@@ -360,22 +403,12 @@
                 {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
-                    "beginLine": 4,
-                    "beginColumn": 5,
-                    "endLine": 4,
-                    "endColumn": 34,
-                    "content": "int value = alias.getValue();",
-                    "stmtKind": "DeclStmt"
-                },
-                {
-                    "type": "stmt",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
-                    "beginLine": 5,
-                    "beginColumn": 5,
-                    "endLine": 5,
-                    "endColumn": 17,
-                    "content": "return value",
-                    "stmtKind": "ReturnStmt"
+                    "beginLine": 8,
+                    "beginColumn": 9,
+                    "endLine": 8,
+                    "endColumn": 33,
+                    "content": "value = alias.getValue()",
+                    "stmtKind": "BinaryOperator"
                 }
             ]
         },
@@ -383,9 +416,19 @@
             "type": "npe-fix",
             "nodes": [
                 8,
+                22,
+                21,
+                20,
+                19,
+                18,
+                16,
+                15,
                 7,
-                6,
-                5
+                29,
+                28,
+                25,
+                24,
+                23
             ],
             "locations": [
                 {
@@ -409,6 +452,94 @@
                     "stmtKind": "CallExpr"
                 },
                 {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 19,
+                    "beginColumn": 1,
+                    "endLine": 28,
+                    "endColumn": 2,
+                    "content": "void modifyPointer(A *&ptr) {\n    // ptr->data = getPtr(); // source\n    int x = ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 21,
+                    "beginColumn": 5,
+                    "endLine": 21,
+                    "endColumn": 16,
+                    "content": "int x = 10;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 22,
+                    "beginColumn": 5,
+                    "endLine": 22,
+                    "endColumn": 11,
+                    "content": "x += 1",
+                    "stmtKind": "CompoundAssignOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 23,
+                    "beginColumn": 5,
+                    "endLine": 23,
+                    "endColumn": 11,
+                    "content": "x += 2",
+                    "stmtKind": "CompoundAssignOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 24,
+                    "beginColumn": 5,
+                    "endLine": 24,
+                    "endColumn": 11,
+                    "content": "x += 3",
+                    "stmtKind": "CompoundAssignOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 25,
+                    "beginColumn": 5,
+                    "endLine": 25,
+                    "endColumn": 13,
+                    "content": "getPtr()",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 26,
+                    "beginColumn": 5,
+                    "endLine": 26,
+                    "endColumn": 21,
+                    "content": "ASSIGN_NULL(ptr)",
+                    "stmtKind": "CXXBoolLiteralExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 27,
+                    "beginColumn": 5,
+                    "endLine": 27,
+                    "endColumn": 11,
+                    "content": "return",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 19,
+                    "beginColumn": 1,
+                    "endLine": 28,
+                    "endColumn": 2,
+                    "content": "void modifyPointer(A *&ptr) {\n    // ptr->data = getPtr(); // source\n    int x = ..."
+                },
+                {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
                     "beginLine": 9,
@@ -429,23 +560,62 @@
                     "stmtKind": "CallExpr"
                 },
                 {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 5,
+                    "beginColumn": 1,
+                    "endLine": 12,
+                    "endColumn": 2,
+                    "content": "int useAlias(const A &alias) {\n    int value;\n    if (branch > 0)\n        value  ..."
+                },
+                {
                     "type": "stmt",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
-                    "beginLine": 13,
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 6,
                     "beginColumn": 5,
-                    "endLine": 13,
-                    "endColumn": 13,
-                    "content": "return 0",
+                    "endLine": 6,
+                    "endColumn": 15,
+                    "content": "int value;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 7,
+                    "beginColumn": 9,
+                    "endLine": 7,
+                    "endColumn": 19,
+                    "content": "branch > 0",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 10,
+                    "beginColumn": 9,
+                    "endLine": 10,
+                    "endColumn": 18,
+                    "content": "value = 0",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 11,
+                    "beginColumn": 5,
+                    "endLine": 11,
+                    "endColumn": 17,
+                    "content": "return value",
                     "stmtKind": "ReturnStmt"
                 },
                 {
                     "type": "exit",
-                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
-                    "beginLine": 3,
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
+                    "beginLine": 5,
                     "beginColumn": 1,
-                    "endLine": 14,
+                    "endLine": 12,
                     "endColumn": 2,
-                    "content": "int main() {\n    int x = 42;\n    A *p = new A(&x);\n\n    modifyPointer(p);\n\n    A ..."
+                    "content": "int useAlias(const A &alias) {\n    int value;\n    if (branch > 0)\n        value  ..."
                 }
             ]
         }

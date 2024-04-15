@@ -66,8 +66,8 @@
                 {
                     "type": "sink",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/useAlias.cpp",
-                    "line": 5,
-                    "column": 12
+                    "line": 8,
+                    "column": 9
                 }
             ]
         }
