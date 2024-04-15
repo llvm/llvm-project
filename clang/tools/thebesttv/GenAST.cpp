@@ -191,6 +191,7 @@ std::unique_ptr<ASTUnit> loadFromASTDump(std::string AstDumpPath) {
     auto Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
     auto HSOpts = std::make_shared<HeaderSearchOptions>();
 
+    // TODO: 如果是 diag::err_pch_different_branch，就删除 AST，试图重新生成
     return ASTUnit::LoadFromASTFile(
         AstDumpPath, PCHContainerOps->getRawReader(), ASTUnit::LoadEverything,
         Diags, FileSystemOptions(), HSOpts);
