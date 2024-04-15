@@ -18,9 +18,9 @@
 namespace __sanitizer {
 
 enum memory_order {
-  // If the __atomic atomic builtins are supported (Clang/GCC), use the
-  // compiler provided macro values so that we can map the atomic operations
-  // to __atomic_* directly.
+// If the __atomic atomic builtins are supported (Clang/GCC), use the
+// compiler provided macro values so that we can map the atomic operations
+// to __atomic_* directly.
 #ifdef __ATOMIC_SEQ_CST
   memory_order_relaxed = __ATOMIC_RELAXED,
   memory_order_consume = __ATOMIC_CONSUME,
