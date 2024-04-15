@@ -47,14 +47,21 @@
 // Functions to unpoison memory
 //-----------------------------------------------------------------------------
 
-#if defined(LIBC_HAVE_MEMORY_SANITIZER) && __has_builtin(__builtin_constant_p)
-// Only perform MSAN unpoison in non-constexpr context.
+#if defined(LIBC_HAVE_MEMORY_SANITIZER)
+// Only perform MSAN unpoison in non-constexpr context and silence
+// '-Wconstant-evaluated' when MSAN_UNPOISON is called from manifestly constant
+// contexts.
 #include <sanitizer/msan_interface.h>
 #define MSAN_UNPOISON(addr, size)                                              \
   do {                                                                         \
-    if (!__builtin_constant_p(*addr)) {                                        \
+    _Pragma("GCC diagnostic push \"-Wconstant-evaluated\"");                   \
+    _Pragma("GCC diagnostic ignored \"-Wconstant-evaluated\"");                \
+    _Pragma("clang diagnostic push \"-Wconstant-evaluated\"");                 \
+    _Pragma("clang diagnostic ignored \"-Wconstant-evaluated\"");              \
+    if constexpr (!__builtin_is_constant_evaluated())                          \
       __msan_unpoison(addr, size);                                             \
-    }                                                                          \
+    _Pragma("clang diagnostic pop");                                           \
+    _Pragma("GCC diagnostic pop");                                             \
   } while (0)
 #else
 #define MSAN_UNPOISON(ptr, size)
