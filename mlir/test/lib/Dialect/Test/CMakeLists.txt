@@ -85,6 +85,7 @@ add_mlir_library(MLIRTestDialect
   MLIRTensorDialect
   MLIRTransformUtils
   MLIRTransforms
+  MLIRValueBoundsOpInterface
 )
 
 add_mlir_translation_library(MLIRTestFromLLVMIRTranslation

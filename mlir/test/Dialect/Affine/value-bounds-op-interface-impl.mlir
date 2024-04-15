@@ -74,7 +74,7 @@ func.func @composed_affine_apply(%i1 : index) -> (index) {
   %i2 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16)>(%i1)
   %i3 = affine.apply affine_map<(d0) -> ((d0 floordiv 32) * 16 + 8)>(%i1)
   %s = affine.apply affine_map<()[s0, s1] -> (s0 - s1)>()[%i2, %i3]
-  %reified = "test.reify_constant_bound"(%s) {type = "EQ"} : (index) -> (index)
+  %reified = "test.reify_bound"(%s) {type = "EQ", constant} : (index) -> (index)
   return %reified : index
 }
 
