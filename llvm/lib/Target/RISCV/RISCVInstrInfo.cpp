@@ -1986,7 +1986,7 @@ genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
       MRI.getUniqueVRegDef(AddMI->getOperand(AddOpIdx).getReg());
 
   unsigned InnerShiftAmt = ShiftMI->getOperand(2).getImm();
-  assert(InnerShiftAmt > OuterShiftAmt && "Unexpected shift amount");
+  assert(InnerShiftAmt >= OuterShiftAmt && "Unexpected shift amount");
 
   unsigned InnerOpc;
   switch (InnerShiftAmt - OuterShiftAmt) {
