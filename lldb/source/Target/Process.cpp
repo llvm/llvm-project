@@ -63,6 +63,7 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -6452,4 +6453,26 @@ Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
     return Status("no valid address ranges found for core style");
 
   return Status(); // Success!
+}
+
+void Process::SetAddressableBitMasks(AddressableBits bit_masks) {
+  uint32_t low_memory_addr_bits = bit_masks.GetLowmemAddressableBits();
+  uint32_t high_memory_addr_bits = bit_masks.GetHighmemAddressableBits();
+
+  if (low_memory_addr_bits == 0 && high_memory_addr_bits == 0)
+    return;
+
+  if (low_memory_addr_bits != 0) {
+    addr_t low_addr_mask =
+        AddressableBits::AddressableBitToMask(low_memory_addr_bits);
+    SetCodeAddressMask(low_addr_mask);
+    SetDataAddressMask(low_addr_mask);
+  }
+
+  if (high_memory_addr_bits != 0) {
+    addr_t high_addr_mask =
+        AddressableBits::AddressableBitToMask(high_memory_addr_bits);
+    SetHighmemCodeAddressMask(high_addr_mask);
+    SetHighmemDataAddressMask(high_addr_mask);
+  }
 }

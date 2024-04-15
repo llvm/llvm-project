@@ -615,10 +615,12 @@ bool Sema::SetupConstraintScope(
     // reference the original primary template.
     // We walk up the instantiated template chain so that nested lambdas get
     // handled properly.
-    for (FunctionTemplateDecl *FromMemTempl =
-             PrimaryTemplate->getInstantiatedFromMemberTemplate();
-         FromMemTempl;
-         FromMemTempl = FromMemTempl->getInstantiatedFromMemberTemplate()) {
+    // We should only collect instantiated parameters from the primary template.
+    // Otherwise, we may have mismatched template parameter depth!
+    if (FunctionTemplateDecl *FromMemTempl =
+            PrimaryTemplate->getInstantiatedFromMemberTemplate()) {
+      while (FromMemTempl->getInstantiatedFromMemberTemplate())
+        FromMemTempl = FromMemTempl->getInstantiatedFromMemberTemplate();
       if (addInstantiatedParametersToScope(FD, FromMemTempl->getTemplatedDecl(),
                                            Scope, MLTAL))
         return true;
@@ -692,11 +694,15 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
   // A lambda conversion operator has the same constraints as the call operator
   // and constraints checking relies on whether we are in a lambda call operator
   // (and may refer to its parameters), so check the call operator instead.
+  // Note that the declarations outside of the lambda should also be
+  // considered. Turning on the 'ForOverloadResolution' flag results in the
+  // LocalInstantiationScope not looking into its parents, but we can still
+  // access Decls from the parents while building a lambda RAII scope later.
   if (const auto *MD = dyn_cast<CXXConversionDecl>(FD);
       MD && isLambdaConversionOperator(const_cast<CXXConversionDecl *>(MD)))
     return CheckFunctionConstraints(MD->getParent()->getLambdaCallOperator(),
                                     Satisfaction, UsageLoc,
-                                    ForOverloadResolution);
+                                    /*ShouldAddDeclsFromParentScope=*/true);
 
   DeclContext *CtxToSave = const_cast<FunctionDecl *>(FD);
 
@@ -1265,10 +1271,20 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
                     : SourceLocation()));
     Atomic.ParameterMapping.emplace(TempArgs,  OccurringIndices.count());
   }
+  SourceLocation InstLocBegin =
+      ArgsAsWritten->arguments().empty()
+          ? ArgsAsWritten->getLAngleLoc()
+          : ArgsAsWritten->arguments().front().getSourceRange().getBegin();
+  SourceLocation InstLocEnd =
+      ArgsAsWritten->arguments().empty()
+          ? ArgsAsWritten->getRAngleLoc()
+          : ArgsAsWritten->arguments().front().getSourceRange().getEnd();
   Sema::InstantiatingTemplate Inst(
-      S, ArgsAsWritten->arguments().front().getSourceRange().getBegin(),
+      S, InstLocBegin,
       Sema::InstantiatingTemplate::ParameterMappingSubstitution{}, Concept,
-      ArgsAsWritten->arguments().front().getSourceRange());
+      {InstLocBegin, InstLocEnd});
+  if (Inst.isInvalid())
+    return true;
   if (S.SubstTemplateArguments(*Atomic.ParameterMapping, MLTAL, SubstArgs))
     return true;
 
@@ -1342,6 +1358,8 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
           S, CSE->getExprLoc(),
           Sema::InstantiatingTemplate::ConstraintNormalization{}, D,
           CSE->getSourceRange());
+      if (Inst.isInvalid())
+        return std::nullopt;
       // C++ [temp.constr.normal]p1.1
       // [...]
       // The normal form of an id-expression of the form C<A1, A2, ..., AN>,

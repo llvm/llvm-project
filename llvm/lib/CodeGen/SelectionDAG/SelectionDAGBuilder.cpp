@@ -1245,63 +1245,65 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
     }
   }
 
-  // We must skip DPValues if they've already been processed above as we
-  // have just emitted the debug values resulting from assignment tracking
-  // analysis, making any existing DPValues redundant (and probably less
-  // correct). We still need to process DPLabels. This does sink DPLabels
-  // to the bottom of the group of debug records. That sholdn't be important
-  // as it does so deterministcally and ordering between DPLabels and DPValues
-  // is immaterial (other than for MIR/IR printing).
-  bool SkipDPValues = DAG.getFunctionVarLocs();
+  // We must skip DbgVariableRecords if they've already been processed above as
+  // we have just emitted the debug values resulting from assignment tracking
+  // analysis, making any existing DbgVariableRecords redundant (and probably
+  // less correct). We still need to process DbgLabelRecords. This does sink
+  // DbgLabelRecords to the bottom of the group of debug records. That sholdn't
+  // be important as it does so deterministcally and ordering between
+  // DbgLabelRecords and DbgVariableRecords is immaterial (other than for MIR/IR
+  // printing).
+  bool SkipDbgVariableRecords = DAG.getFunctionVarLocs();
   // Is there is any debug-info attached to this instruction, in the form of
   // DbgRecord non-instruction debug-info records.
   for (DbgRecord &DR : I.getDbgRecordRange()) {
-    if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-      assert(DPL->getLabel() && "Missing label");
+    if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+      assert(DLR->getLabel() && "Missing label");
       SDDbgLabel *SDV =
-          DAG.getDbgLabel(DPL->getLabel(), DPL->getDebugLoc(), SDNodeOrder);
+          DAG.getDbgLabel(DLR->getLabel(), DLR->getDebugLoc(), SDNodeOrder);
       DAG.AddDbgLabel(SDV);
       continue;
     }
 
-    if (SkipDPValues)
+    if (SkipDbgVariableRecords)
       continue;
-    DPValue &DPV = cast<DPValue>(DR);
-    DILocalVariable *Variable = DPV.getVariable();
-    DIExpression *Expression = DPV.getExpression();
+    DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
+    DILocalVariable *Variable = DVR.getVariable();
+    DIExpression *Expression = DVR.getExpression();
     dropDanglingDebugInfo(Variable, Expression);
 
-    if (DPV.getType() == DPValue::LocationType::Declare) {
-      if (FuncInfo.PreprocessedDPVDeclares.contains(&DPV))
+    if (DVR.getType() == DbgVariableRecord::LocationType::Declare) {
+      if (FuncInfo.PreprocessedDVRDeclares.contains(&DVR))
         continue;
-      LLVM_DEBUG(dbgs() << "SelectionDAG visiting dbg_declare: " << DPV
+      LLVM_DEBUG(dbgs() << "SelectionDAG visiting dbg_declare: " << DVR
                         << "\n");
-      handleDebugDeclare(DPV.getVariableLocationOp(0), Variable, Expression,
-                         DPV.getDebugLoc());
+      handleDebugDeclare(DVR.getVariableLocationOp(0), Variable, Expression,
+                         DVR.getDebugLoc());
       continue;
     }
 
-    // A DPValue with no locations is a kill location.
-    SmallVector<Value *, 4> Values(DPV.location_ops());
+    // A DbgVariableRecord with no locations is a kill location.
+    SmallVector<Value *, 4> Values(DVR.location_ops());
     if (Values.empty()) {
-      handleKillDebugValue(Variable, Expression, DPV.getDebugLoc(),
+      handleKillDebugValue(Variable, Expression, DVR.getDebugLoc(),
                            SDNodeOrder);
       continue;
     }
 
-    // A DPValue with an undef or absent location is also a kill location.
+    // A DbgVariableRecord with an undef or absent location is also a kill
+    // location.
     if (llvm::any_of(Values,
                      [](Value *V) { return !V || isa<UndefValue>(V); })) {
-      handleKillDebugValue(Variable, Expression, DPV.getDebugLoc(),
+      handleKillDebugValue(Variable, Expression, DVR.getDebugLoc(),
                            SDNodeOrder);
       continue;
     }
 
-    bool IsVariadic = DPV.hasArgList();
-    if (!handleDebugValue(Values, Variable, Expression, DPV.getDebugLoc(),
+    bool IsVariadic = DVR.hasArgList();
+    if (!handleDebugValue(Values, Variable, Expression, DVR.getDebugLoc(),
                           SDNodeOrder, IsVariadic)) {
       addDanglingDebugInfo(Values, Variable, Expression, IsVariadic,
-                           DPV.getDebugLoc(), SDNodeOrder);
+                           DVR.getDebugLoc(), SDNodeOrder);
     }
   }
 }
@@ -3037,7 +3039,8 @@ static SDValue getLoadStackGuard(SelectionDAG &DAG, const SDLoc &DL,
     auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
                  MachineMemOperand::MODereferenceable;
     MachineMemOperand *MemRef = MF.getMachineMemOperand(
-        MPInfo, Flags, PtrTy.getSizeInBits() / 8, DAG.getEVTAlign(PtrTy));
+        MPInfo, Flags, LocationSize::precise(PtrTy.getSizeInBits() / 8),
+        DAG.getEVTAlign(PtrTy));
     DAG.setNodeMemRefs(Node, {MemRef});
   }
   if (PtrTy != PtrMemTy)
@@ -3328,7 +3331,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
           EHPadMBB->setMachineBlockAddressTaken();
       break;
     case Intrinsic::experimental_patchpoint_void:
-    case Intrinsic::experimental_patchpoint_i64:
+    case Intrinsic::experimental_patchpoint:
       visitPatchpoint(I, EHPadBB);
       break;
     case Intrinsic::experimental_gc_statepoint:
@@ -3879,7 +3882,11 @@ void SelectionDAGBuilder::visitUIToFP(const User &I) {
   SDValue N = getValue(I.getOperand(0));
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getNode(ISD::UINT_TO_FP, getCurSDLoc(), DestVT, N));
+  SDNodeFlags Flags;
+  if (auto *PNI = dyn_cast<PossiblyNonNegInst>(&I))
+    Flags.setNonNeg(PNI->hasNonNeg());
+
+  setValue(&I, DAG.getNode(ISD::UINT_TO_FP, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitSIToFP(const User &I) {
@@ -4751,9 +4758,13 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
 
   EVT VT = Src0.getValueType();
 
+  auto MMOFlags = MachineMemOperand::MOStore;
+  if (I.hasMetadata(LLVMContext::MD_nontemporal))
+    MMOFlags |= MachineMemOperand::MONonTemporal;
+
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
-      MemoryLocation::UnknownSize, Alignment, I.getAAMetadata());
+      MachinePointerInfo(PtrOperand), MMOFlags,
+      LocationSize::beforeOrAfterPointer(), Alignment, I.getAAMetadata());
   SDValue StoreNode =
       DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask, VT, MMO,
                          ISD::UNINDEXED, false /* Truncating */, IsCompressing);
@@ -4857,9 +4868,7 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
   unsigned AS = Ptr->getType()->getScalarType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MachineMemOperand::MOStore,
-      // TODO: Make MachineMemOperands aware of scalable
-      // vectors.
-      MemoryLocation::UnknownSize, Alignment, I.getAAMetadata());
+      LocationSize::beforeOrAfterPointer(), Alignment, I.getAAMetadata());
   if (!UniformBase) {
     Base = DAG.getConstant(0, sdl, TLI.getPointerTy(DAG.getDataLayout()));
     Index = getValue(Ptr);
@@ -4923,9 +4932,13 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
 
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
 
+  auto MMOFlags = MachineMemOperand::MOLoad;
+  if (I.hasMetadata(LLVMContext::MD_nontemporal))
+    MMOFlags |= MachineMemOperand::MONonTemporal;
+
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
-      MemoryLocation::UnknownSize, Alignment, AAInfo, Ranges);
+      MachinePointerInfo(PtrOperand), MMOFlags,
+      LocationSize::beforeOrAfterPointer(), Alignment, AAInfo, Ranges);
 
   SDValue Load =
       DAG.getMaskedLoad(VT, sdl, InChain, Ptr, Offset, Mask, Src0, VT, MMO,
@@ -4961,9 +4974,8 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   unsigned AS = Ptr->getType()->getScalarType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MachineMemOperand::MOLoad,
-      // TODO: Make MachineMemOperands aware of scalable
-      // vectors.
-      MemoryLocation::UnknownSize, Alignment, I.getAAMetadata(), Ranges);
+      LocationSize::beforeOrAfterPointer(), Alignment, I.getAAMetadata(),
+      Ranges);
 
   if (!UniformBase) {
     Base = DAG.getConstant(0, sdl, TLI.getPointerTy(DAG.getDataLayout()));
@@ -5003,9 +5015,9 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, SuccessOrdering,
-      FailureOrdering);
+      MachinePointerInfo(I.getPointerOperand()), Flags,
+      LocationSize::precise(MemVT.getStoreSize()), DAG.getEVTAlign(MemVT),
+      AAMDNodes(), nullptr, SSID, SuccessOrdering, FailureOrdering);
 
   SDValue L = DAG.getAtomicCmpSwap(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS,
                                    dl, MemVT, VTs, InChain,
@@ -5057,8 +5069,9 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, Ordering);
+      MachinePointerInfo(I.getPointerOperand()), Flags,
+      LocationSize::precise(MemVT.getStoreSize()), DAG.getEVTAlign(MemVT),
+      AAMDNodes(), nullptr, SSID, Ordering);
 
   SDValue L =
     DAG.getAtomic(NT, dl, MemVT, InChain,
@@ -5103,8 +5116,9 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   auto Flags = TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), AAMDNodes(), nullptr, SSID, Order);
+      MachinePointerInfo(I.getPointerOperand()), Flags,
+      LocationSize::precise(MemVT.getStoreSize()), I.getAlign(), AAMDNodes(),
+      nullptr, SSID, Order);
 
   InChain = TLI.prepareVolatileOrAtomicLoad(InChain, dl, DAG);
 
@@ -5140,8 +5154,9 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), AAMDNodes(), nullptr, SSID, Ordering);
+      MachinePointerInfo(I.getPointerOperand()), Flags,
+      LocationSize::precise(MemVT.getStoreSize()), I.getAlign(), AAMDNodes(),
+      nullptr, SSID, Ordering);
 
   SDValue Val = getValue(I.getValueOperand());
   if (Val.getValueType() != MemVT)
@@ -6004,12 +6019,15 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     // incorrect hoisting of the DBG_VALUE to the function entry).
     // Notice that we allow one dbg.value per IR level argument, to accommodate
     // for the situation with fragments above.
+    // If there is no node for the value being handled, we return true to skip
+    // the normal generation of debug info, as it would kill existing debug
+    // info for the parameter in case of duplicates.
     if (VariableIsFunctionInputArg) {
       unsigned ArgNo = Arg->getArgNo();
       if (ArgNo >= FuncInfo.DescribedArgs.size())
         FuncInfo.DescribedArgs.resize(ArgNo + 1, false);
       else if (!IsInPrologue && FuncInfo.DescribedArgs.test(ArgNo))
-        return false;
+        return !NodeMap[V].getNode();
       FuncInfo.DescribedArgs.set(ArgNo);
     }
   }
@@ -6904,7 +6922,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       auto MPI =
           MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
       MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-          MPI, MachineMemOperand::MOStore, MemoryLocation::UnknownSize,
+          MPI, MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer(),
           TempAlign);
       Chain = DAG.getGetFPEnv(Chain, sdl, Temp, EnvVT, MMO);
       Res = DAG.getLoad(EnvVT, sdl, Chain, Temp, MPI);
@@ -6933,7 +6951,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       Chain = DAG.getStore(Chain, sdl, Env, Temp, MPI, TempAlign,
                            MachineMemOperand::MOStore);
       MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-          MPI, MachineMemOperand::MOLoad, MemoryLocation::UnknownSize,
+          MPI, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
           TempAlign);
       Chain = DAG.getSetFPEnv(Chain, sdl, Temp, EnvVT, MMO);
     }
@@ -7320,6 +7338,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
 
+  case Intrinsic::allow_runtime_check:
+  case Intrinsic::allow_ubsan_check:
+    setValue(&I, getValue(ConstantInt::getTrue(I.getType())));
+    return;
+
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
   case Intrinsic::usub_with_overflow:
@@ -7442,7 +7465,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     visitStackmap(I);
     return;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     visitPatchpoint(I);
     return;
   case Intrinsic::experimental_gc_statepoint:
@@ -8087,7 +8110,7 @@ void SelectionDAGBuilder::visitVPLoad(
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
-      MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
   LD = DAG.getLoadVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
                      MMO, false /*IsExpanding */);
   if (AddToChain)
@@ -8110,8 +8133,8 @@ void SelectionDAGBuilder::visitVPGather(
   unsigned AS =
     PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-     MachinePointerInfo(AS), MachineMemOperand::MOLoad,
-     MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
+      MachinePointerInfo(AS), MachineMemOperand::MOLoad,
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
   SDValue Base, Index, Scale;
   ISD::MemIndexType IndexType;
   bool UniformBase = getUniformBase(PtrOperand, Base, Index, IndexType, Scale,
@@ -8151,7 +8174,7 @@ void SelectionDAGBuilder::visitVPStore(
   SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
-      MemoryLocation::UnknownSize, *Alignment, AAInfo);
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
   ST = DAG.getStoreVP(getMemoryRoot(), DL, OpValues[0], Ptr, Offset,
                       OpValues[2], OpValues[3], VT, MMO, ISD::UNINDEXED,
                       /* IsTruncating */ false, /*IsCompressing*/ false);
@@ -8174,7 +8197,7 @@ void SelectionDAGBuilder::visitVPScatter(
       PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MachineMemOperand::MOStore,
-      MemoryLocation::UnknownSize, *Alignment, AAInfo);
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
   SDValue Base, Index, Scale;
   ISD::MemIndexType IndexType;
   bool UniformBase = getUniformBase(PtrOperand, Base, Index, IndexType, Scale,
@@ -8217,7 +8240,7 @@ void SelectionDAGBuilder::visitVPStridedLoad(
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MachineMemOperand::MOLoad,
-      MemoryLocation::UnknownSize, *Alignment, AAInfo, Ranges);
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
 
   SDValue LD = DAG.getStridedLoadVP(VT, DL, InChain, OpValues[0], OpValues[1],
                                     OpValues[2], OpValues[3], MMO,
@@ -8240,7 +8263,7 @@ void SelectionDAGBuilder::visitVPStridedStore(
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MachineMemOperand::MOStore,
-      MemoryLocation::UnknownSize, *Alignment, AAInfo);
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
 
   SDValue ST = DAG.getStridedStoreVP(
       getMemoryRoot(), DL, OpValues[0], OpValues[1],
@@ -8601,8 +8624,6 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
   if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_convergencectrl)) {
     auto *Token = Bundle->Inputs[0].get();
     ConvControlToken = getValue(Token);
-  } else {
-    ConvControlToken = DAG.getUNDEF(MVT::Untyped);
   }
 
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -10254,12 +10275,12 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
 /// Lower llvm.experimental.patchpoint directly to its target opcode.
 void SelectionDAGBuilder::visitPatchpoint(const CallBase &CB,
                                           const BasicBlock *EHPadBB) {
-  // void|i64 @llvm.experimental.patchpoint.void|i64(i64 <id>,
-  //                                                 i32 <numBytes>,
-  //                                                 i8* <target>,
-  //                                                 i32 <numArgs>,
-  //                                                 [Args...],
-  //                                                 [live variables...])
+  // <ty> @llvm.experimental.patchpoint.<ty>(i64 <id>,
+  //                                         i32 <numBytes>,
+  //                                         i8* <target>,
+  //                                         i32 <numArgs>,
+  //                                         [Args...],
+  //                                         [live variables...])
 
   CallingConv::ID CC = CB.getCallingConv();
   bool IsAnyRegCC = CC == CallingConv::AnyReg;
@@ -10498,14 +10519,14 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   CLI.Ins.clear();
   Type *OrigRetTy = CLI.RetTy;
   SmallVector<EVT, 4> RetTys;
-  SmallVector<uint64_t, 4> Offsets;
+  SmallVector<TypeSize, 4> Offsets;
   auto &DL = CLI.DAG.getDataLayout();
-  ComputeValueVTs(*this, DL, CLI.RetTy, RetTys, &Offsets, 0);
+  ComputeValueVTs(*this, DL, CLI.RetTy, RetTys, &Offsets);
 
   if (CLI.IsPostTypeLegalization) {
     // If we are lowering a libcall after legalization, split the return type.
     SmallVector<EVT, 4> OldRetTys;
-    SmallVector<uint64_t, 4> OldOffsets;
+    SmallVector<TypeSize, 4> OldOffsets;
     RetTys.swap(OldRetTys);
     Offsets.swap(OldOffsets);
 
@@ -10517,7 +10538,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       unsigned RegisterVTByteSZ = RegisterVT.getSizeInBits() / 8;
       RetTys.append(NumRegs, RegisterVT);
       for (unsigned j = 0; j != NumRegs; ++j)
-        Offsets.push_back(Offset + j * RegisterVTByteSZ);
+        Offsets.push_back(TypeSize::getFixed(Offset + j * RegisterVTByteSZ));
     }
   }
 

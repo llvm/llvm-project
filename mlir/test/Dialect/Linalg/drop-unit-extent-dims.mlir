@@ -1033,3 +1033,23 @@ func.func @do_not_drop_non_constant_padding(%arg0: tensor<1x1x3x1x1xf32>, %pad: 
 // CHECK-SLICES-LABEL: func @do_not_drop_non_constant_padding
 //       CHECK-SLICES:   tensor.pad %{{.*}} low[0, 1, 0, %c0, 0] high[0, 0, 0, %c0, 2]
 //       CHECK-SLICES:   } : tensor<1x1x3x1x1xf32> to tensor<1x2x3x1x3xf32>
+
+// -----
+
+func.func @drop_known_unit_constant_low_high(%arg0: tensor<1x383x128xf32>) -> tensor<1x384x128xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %padded = tensor.pad %arg0 low[%c0, %c1, %c0] high[%c0, %c0, %c0] {
+  ^bb0(%arg1: index, %arg2: index, %arg3: index):
+    tensor.yield %cst : f32
+  } : tensor<1x383x128xf32> to tensor<1x384x128xf32>
+  return %padded : tensor<1x384x128xf32>
+}
+// CHECK-LABEL: func @drop_known_unit_constant_low_high
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape
+//  CHECK-SAME:     {{\[}}[0, 1], [2]] : tensor<1x383x128xf32> into tensor<383x128xf32>
+//       CHECK:   %[[PADDED:.+]] = tensor.pad %[[COLLAPSE]] low[1, 0] high[0, 0]
+//       CHECK:   } : tensor<383x128xf32> to tensor<384x128xf32>
+//       CHECK:   tensor.expand_shape %[[PADDED]]
+//  CHECK-SAME:     {{\[}}[0, 1], [2]] : tensor<384x128xf32> into tensor<1x384x128xf32>

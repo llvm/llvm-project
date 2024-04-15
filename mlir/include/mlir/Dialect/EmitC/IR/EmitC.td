@@ -51,8 +51,8 @@ class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
 def CExpression : NativeOpTrait<"emitc::CExpression">;
 
 // Types only used in binary arithmetic operations.
-def IntegerIndexOrOpaqueType : AnyTypeOf<[AnyInteger, Index, EmitC_OpaqueType]>;
-def FloatIntegerIndexOrOpaqueType : AnyTypeOf<[AnyFloat, IntegerIndexOrOpaqueType]>;
+def IntegerIndexOrOpaqueType : AnyTypeOf<[EmitCIntegerType, Index, EmitC_OpaqueType]>;
+def FloatIntegerIndexOrOpaqueType : AnyTypeOf<[EmitCFloatType, IntegerIndexOrOpaqueType]>;
 
 def EmitC_AddOp : EmitC_BinaryOp<"add", [CExpression]> {
   let summary = "Addition operation";
@@ -347,9 +347,8 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
     %0 = "emitc.constant"(){value = 42 : i32} : () -> i32
 
     // Constant emitted as `char = CHAR_MIN;`
-    %1 = "emitc.constant"()
-        {value = #emitc.opaque<"CHAR_MIN"> : !emitc.opaque<"char">}
-        : () -> !emitc.opaque<"char">
+    %1 = "emitc.constant"() {value = #emitc.opaque<"CHAR_MIN">}
+      : () -> !emitc.opaque<"char">
     ```
   }];
 
@@ -992,9 +991,8 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
     %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
 
     // Variable emitted as `int32_t* = NULL;`
-    %1 = "emitc.variable"()
-        {value = #emitc.opaque<"NULL"> : !emitc.opaque<"int32_t*">}
-        : () -> !emitc.opaque<"int32_t*">
+    %1 = "emitc.variable"() {value = #emitc.opaque<"NULL">} 
+      : () -> !emitc.ptr<!emitc.opaque<"int32_t">>
     ```
 
     Since folding is not supported, it can be used with pointers.
@@ -1154,5 +1152,43 @@ def EmitC_IfOp : EmitC_Op<"if",
   }];
   let hasCustomAssemblyFormat = 1;
 }
+
+def EmitC_SubscriptOp : EmitC_Op<"subscript", []> {
+  let summary = "Subscript operation";
+  let description = [{
+    With the `subscript` operation the subscript operator `[]` can be applied
+    to variables or arguments of array, pointer and opaque type.
+
+    Example:
+
+    ```mlir
+    %i = index.constant 1
+    %j = index.constant 7
+    %0 = emitc.subscript %arg0[%i, %j] : !emitc.array<4x8xf32>, index, index
+    %1 = emitc.subscript %arg1[%i] : !emitc.ptr<i32>, index
+    ```
+  }];
+  let arguments = (ins Arg<AnyTypeOf<[
+      EmitC_ArrayType,
+      EmitC_OpaqueType,
+      EmitC_PointerType]>,
+    "the value to subscript">:$value,
+    Variadic<AnyType>:$indices);
+  let results = (outs AnyType:$result);
+
+  let builders = [
+    OpBuilder<(ins "TypedValue<ArrayType>":$array, "ValueRange":$indices), [{
+      build($_builder, $_state, array.getType().getElementType(), array, indices);
+    }]>,
+    OpBuilder<(ins "TypedValue<PointerType>":$pointer, "Value":$index), [{
+      build($_builder, $_state, pointer.getType().getPointee(), pointer,
+            ValueRange{index});
+    }]>
+  ];
+
+  let hasVerifier = 1;
+  let assemblyFormat = "$value `[` $indices `]` attr-dict `:` functional-type(operands, results)";
+}
+
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

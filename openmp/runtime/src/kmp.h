@@ -819,6 +819,7 @@ private:
 typedef KMPAffinity::Mask kmp_affin_mask_t;
 extern KMPAffinity *__kmp_affinity_dispatch;
 
+#ifndef KMP_OS_AIX
 class kmp_affinity_raii_t {
   kmp_affin_mask_t *mask;
   bool restored;
@@ -843,6 +844,7 @@ public:
   }
   ~kmp_affinity_raii_t() { restore(); }
 };
+#endif // !KMP_OS_AIX
 
 // Declare local char buffers with this size for printing debug and info
 // messages, using __kmp_affinity_print_mask().
@@ -1402,19 +1404,9 @@ extern void __kmp_query_cpuid(kmp_cpuinfo_t *p);
 // subleaf is only needed for cache and topology discovery and can be set to
 // zero in most cases
 static inline void __kmp_x86_cpuid(int leaf, int subleaf, struct kmp_cpuid *p) {
-#if KMP_ARCH_X86 && (defined(__pic__) || defined(__PIC__))
-  // on i386 arch, the ebx reg. is used by pic, thus we need to preserve from
-  // being trashed beforehand
-  __asm__ __volatile__("mov %%ebx, %%edi\n"
-                       "cpuid\n"
-                       "xchg %%edi, %%ebx\n"
-                       : "=a"(p->eax), "=b"(p->ebx), "=c"(p->ecx), "=d"(p->edx)
-                       : "a"(leaf), "c"(subleaf));
-#else
   __asm__ __volatile__("cpuid"
                        : "=a"(p->eax), "=b"(p->ebx), "=c"(p->ecx), "=d"(p->edx)
                        : "a"(leaf), "c"(subleaf));
-#endif
 }
 // Load p into FPU control word
 static inline void __kmp_load_x87_fpu_control_word(const kmp_int16 *p) {
@@ -3920,7 +3912,8 @@ extern void __kmp_balanced_affinity(kmp_info_t *th, int team_size);
 #if KMP_WEIGHTED_ITERATIONS_SUPPORTED
 extern int __kmp_get_first_osid_with_ecore(void);
 #endif
-#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||     \
+    KMP_OS_AIX
 extern int kmp_set_thread_affinity_mask_initial(void);
 #endif
 static inline void __kmp_assign_root_init_mask() {

@@ -104,7 +104,7 @@ public:
   virtual ~GenericGlobalHandlerTy() {}
 
   /// Helper function for getting an ELF from a device image.
-  Expected<ELF64LEObjectFile> getELFObjectFile(DeviceImageTy &Image);
+  Expected<std::unique_ptr<ObjectFile>> getELFObjectFile(DeviceImageTy &Image);
 
   /// Returns whether the symbol named \p SymName is present in the given \p
   /// Image.

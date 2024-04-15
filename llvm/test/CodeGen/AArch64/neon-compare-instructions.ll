@@ -2870,6 +2870,107 @@ define <2 x i64> @fcmune2xdouble(<2 x double> %A, <2 x double> %B) {
   ret <2 x i64> %tmp4
 }
 
+define <2 x i32> @fcmal2xfloat(<2 x float> %A, <2 x float> %B) {
+; CHECK-SD-LABEL: fcmal2xfloat:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmal2xfloat:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v0.2s, #1
+; CHECK-GI-NEXT:    shl v0.2s, v0.2s, #31
+; CHECK-GI-NEXT:    sshr v0.2s, v0.2s, #31
+; CHECK-GI-NEXT:    ret
+  %tmp3 = fcmp true <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmal4xfloat(<4 x float> %A, <4 x float> %B) {
+; CHECK-SD-LABEL: fcmal4xfloat:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmal4xfloat:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-GI-NEXT:    mov v0.h[1], v0.h[0]
+; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-GI-NEXT:    shl v0.4s, v1.4s, #31
+; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #31
+; CHECK-GI-NEXT:    ret
+  %tmp3 = fcmp true <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+define <2 x i64> @fcmal2xdouble(<2 x double> %A, <2 x double> %B) {
+; CHECK-SD-LABEL: fcmal2xdouble:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmal2xdouble:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI221_0
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI221_0]
+; CHECK-GI-NEXT:    shl v0.2d, v0.2d, #63
+; CHECK-GI-NEXT:    sshr v0.2d, v0.2d, #63
+; CHECK-GI-NEXT:    ret
+  %tmp3 = fcmp true <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
+define <2 x i32> @fcmnv2xfloat(<2 x float> %A, <2 x float> %B) {
+; CHECK-LABEL: fcmnv2xfloat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ret
+  %tmp3 = fcmp false <2 x float> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
+  ret <2 x i32> %tmp4
+}
+
+define <4 x i32> @fcmnv4xfloat(<4 x float> %A, <4 x float> %B) {
+; CHECK-SD-LABEL: fcmnv4xfloat:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fcmnv4xfloat:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v1.16b, v0.16b
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[0]
+; CHECK-GI-NEXT:    mov v0.h[1], v0.h[0]
+; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-GI-NEXT:    shl v0.4s, v1.4s, #31
+; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #31
+; CHECK-GI-NEXT:    ret
+  %tmp3 = fcmp false <4 x float> %A, %B
+  %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
+  ret <4 x i32> %tmp4
+}
+define <2 x i64> @fcmnv2xdouble(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: fcmnv2xdouble:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ret
+  %tmp3 = fcmp false <2 x double> %A, %B
+  %tmp4 = sext <2 x i1> %tmp3 to <2 x i64>
+  ret <2 x i64> %tmp4
+}
+
 define <2 x i32> @fcmoeqz2xfloat(<2 x float> %A) {
 ; CHECK-LABEL: fcmoeqz2xfloat:
 ; CHECK:       // %bb.0:

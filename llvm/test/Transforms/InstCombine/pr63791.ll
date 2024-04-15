@@ -15,7 +15,7 @@ define void @y() {
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    br i1 poison, label [[FOR_COND_I]], label [[FOR_COND5_PREHEADER_I]]
 ; CHECK:       for.cond5.preheader.i:
-; CHECK-NEXT:    br i1 false, label [[FOR_INC19_I:%.*]], label [[FOR_COND1_LOOPEXIT_I:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FOR_COND1_LOOPEXIT_I:%.*]], label [[FOR_INC19_I:%.*]]
 ; CHECK:       for.inc19.i:
 ; CHECK-NEXT:    br i1 poison, label [[FOR_INC19_I]], label [[FOR_COND1_LOOPEXIT_I]]
 ;

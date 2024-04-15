@@ -3287,6 +3287,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // FIXME: Hack to recognize setneb as setne.
   if (PatchedName.starts_with("set") && PatchedName.ends_with("b") &&
+      PatchedName != "setzub" && PatchedName != "setzunb" &&
       PatchedName != "setb" && PatchedName != "setnb")
     PatchedName = PatchedName.substr(0, Name.size()-1);
 
@@ -4068,7 +4069,7 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
 
   if (UseApxExtendedReg && !X86II::canUseApxExtendedReg(MCID))
     return Match_Unsupported;
-  if (ForcedNoFlag != !!(MCID.TSFlags & X86II::EVEX_NF))
+  if (ForcedNoFlag == !(MCID.TSFlags & X86II::EVEX_NF) && !X86::isCFCMOVCC(Opc))
     return Match_Unsupported;
 
   if (ForcedVEXEncoding == VEXEncoding_EVEX &&

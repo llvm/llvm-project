@@ -14,12 +14,12 @@
 #include "Options.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/InstallAPI/Frontend.h"
 #include "clang/InstallAPI/FrontendRecords.h"
+#include "clang/InstallAPI/InstallAPIDiagnostic.h"
 #include "clang/InstallAPI/MachO.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -92,28 +92,24 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   IntrusiveRefCntPtr<clang::FileManager> FM(
       new FileManager(clang::FileSystemOptions(), OverlayFileSystem));
 
-  // Set up driver to parse input arguments.
-  auto DriverArgs = llvm::ArrayRef(Args).slice(1);
-  clang::driver::Driver Driver(ProgName, llvm::sys::getDefaultTargetTriple(),
-                               *Diag, "clang installapi tool");
-  auto TargetAndMode =
-      clang::driver::ToolChain::getTargetAndModeFromProgramName(ProgName);
-  Driver.setTargetAndMode(TargetAndMode);
-  bool HasError = false;
-  llvm::opt::InputArgList ArgList =
-      Driver.ParseArgStrings(DriverArgs, /*UseDriverMode=*/true, HasError);
-  if (HasError)
-    return EXIT_FAILURE;
-  Driver.setCheckInputsExist(false);
-
-  // Capture InstallAPI specific options and diagnose any option errors.
-  Options Opts(*Diag, FM.get(), ArgList);
+  // Capture all options and diagnose any errors.
+  Options Opts(*Diag, FM.get(), Args, ProgName);
   if (Diag->hasErrorOccurred())
     return EXIT_FAILURE;
 
   InstallAPIContext Ctx = Opts.createContext();
   if (Diag->hasErrorOccurred())
     return EXIT_FAILURE;
+
+  if (!Opts.DriverOpts.DylibToVerify.empty()) {
+    TargetList Targets;
+    llvm::for_each(Opts.DriverOpts.Targets,
+                   [&](const auto &T) { Targets.push_back(T.first); });
+    if (!Ctx.Verifier->verifyBinaryAttrs(Targets, Ctx.BA, Ctx.Reexports,
+                                         Opts.LinkerOpts.AllowableClients,
+                                         Opts.LinkerOpts.RPaths, Ctx.FT))
+      return EXIT_FAILURE;
+  };
 
   // Set up compilation.
   std::unique_ptr<CompilerInstance> CI(new CompilerInstance());
@@ -122,21 +118,25 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   if (!CI->hasDiagnostics())
     return EXIT_FAILURE;
 
-  // Execute and gather AST results.
+  // Execute, verify and gather AST results.
   // An invocation is ran for each unique target triple and for each header
   // access level.
-  Records FrontendResults;
+  Records FrontendRecords;
   for (const auto &[Targ, Trip] : Opts.DriverOpts.Targets) {
+    Ctx.Verifier->setTarget(Targ);
+    Ctx.Slice = std::make_shared<FrontendRecordsSlice>(Trip);
     for (const HeaderType Type :
          {HeaderType::Public, HeaderType::Private, HeaderType::Project}) {
-      Ctx.Slice = std::make_shared<FrontendRecordsSlice>(Trip);
       Ctx.Type = Type;
       if (!runFrontend(ProgName, Opts.DriverOpts.Verbose, Ctx,
                        InMemoryFileSystem.get(), Opts.getClangFrontendArgs()))
         return EXIT_FAILURE;
-      FrontendResults.emplace_back(std::move(Ctx.Slice));
     }
+    FrontendRecords.emplace_back(std::move(Ctx.Slice));
   }
+
+  if (Ctx.Verifier->verifyRemainingSymbols() == DylibVerifier::Result::Invalid)
+    return EXIT_FAILURE;
 
   // After symbols have been collected, prepare to write output.
   auto Out = CI->createOutputFile(Ctx.OutputLoc, /*Binary=*/false,
@@ -147,21 +147,31 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
     return EXIT_FAILURE;
 
   // Assign attributes for serialization.
-  auto Symbols = std::make_unique<SymbolSet>();
-  for (const auto &FR : FrontendResults) {
-    SymbolConverter Converter(Symbols.get(), FR->getTarget());
-    FR->visit(Converter);
-  }
-
-  InterfaceFile IF(std::move(Symbols));
+  InterfaceFile IF(Ctx.Verifier->getExports());
+  // Assign attributes that are the same per slice first.
   for (const auto &TargetInfo : Opts.DriverOpts.Targets) {
     IF.addTarget(TargetInfo.first);
     IF.setFromBinaryAttrs(Ctx.BA, TargetInfo.first);
   }
+  // Then assign potentially different attributes per slice after.
+  auto assignLibAttrs =
+      [&IF](
+          const auto &Attrs,
+          std::function<void(InterfaceFile *, StringRef, const Target &)> Add) {
+        for (const auto &Lib : Attrs)
+          for (const auto &T : IF.targets(Lib.getValue()))
+            Add(&IF, Lib.getKey(), T);
+      };
+
+  assignLibAttrs(Opts.LinkerOpts.AllowableClients,
+                 &InterfaceFile::addAllowableClient);
+  assignLibAttrs(Opts.LinkerOpts.RPaths, &InterfaceFile::addRPath);
+  assignLibAttrs(Ctx.Reexports, &InterfaceFile::addReexportedLibrary);
 
   // Write output file and perform CI cleanup.
   if (auto Err = TextAPIWriter::writeToStream(*Out, IF, Ctx.FT)) {
-    Diag->Report(diag::err_cannot_open_file) << Ctx.OutputLoc;
+    Diag->Report(diag::err_cannot_write_file)
+        << Ctx.OutputLoc << std::move(Err);
     CI->clearOutputFiles(/*EraseFiles=*/true);
     return EXIT_FAILURE;
   }

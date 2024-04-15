@@ -10,7 +10,6 @@
 #include "Error.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Threading.h"
 #include <cerrno>
 
 #ifdef __linux__
@@ -25,6 +24,13 @@ namespace exegesis {
 
 #if defined(__linux__) && !defined(__ANDROID__)
 
+long SubprocessMemory::getCurrentTID() {
+  // We're using the raw syscall here rather than the gettid() function provided
+  // by most libcs for compatibility as gettid() was only added to glibc in
+  // version 2.30.
+  return syscall(SYS_gettid);
+}
+
 Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
   // Add the PID to the shared memory name so that if we're running multiple
   // processes at the same time, they won't interfere with each other.
@@ -32,7 +38,7 @@ Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
   // llvm-lit. Additionally add the TID so that downstream consumers
   // using multiple threads don't run into conflicts.
   std::string AuxiliaryMemoryName =
-      formatv("/{0}auxmem{1}", get_threadid(), ProcessID);
+      formatv("/{0}auxmem{1}", getCurrentTID(), ProcessID);
   int AuxiliaryMemoryFD = shm_open(AuxiliaryMemoryName.c_str(),
                                    O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   if (AuxiliaryMemoryFD == -1)
@@ -53,10 +59,14 @@ Error SubprocessMemory::addMemoryDefinition(
   SharedMemoryNames.reserve(MemoryDefinitions.size());
   for (auto &[Name, MemVal] : MemoryDefinitions) {
     std::string SharedMemoryName =
-        formatv("/{0}t{1}memdef{2}", ProcessPID, get_threadid(), MemVal.Index);
+        formatv("/{0}t{1}memdef{2}", ProcessPID, getCurrentTID(), MemVal.Index);
     SharedMemoryNames.push_back(SharedMemoryName);
     int SharedMemoryFD =
         shm_open(SharedMemoryName.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (SharedMemoryFD == -1)
+      return make_error<Failure>(
+          "Failed to create shared memory object for memory definition: " +
+          Twine(strerror(errno)));
     if (ftruncate(SharedMemoryFD, MemVal.SizeBytes) != 0) {
       return make_error<Failure>("Truncating a memory definiton failed: " +
                                  Twine(strerror(errno)));
@@ -87,14 +97,15 @@ Error SubprocessMemory::addMemoryDefinition(
 
 Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
     std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-    pid_t ParentPID, uint64_t ParentTID, int CounterFileDescriptor) {
+    pid_t ParentPID, long ParentTID, int CounterFileDescriptor) {
   std::string AuxiliaryMemoryName =
       formatv("/{0}auxmem{1}", ParentTID, ParentPID);
   int AuxiliaryMemoryFileDescriptor =
       shm_open(AuxiliaryMemoryName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
   if (AuxiliaryMemoryFileDescriptor == -1)
     return make_error<Failure>(
-        "Getting file descriptor for auxiliary memory failed");
+        "Getting file descriptor for auxiliary memory failed: " +
+        Twine(strerror(errno)));
   // set up memory value file descriptors
   int *AuxiliaryMemoryMapping =
       (int *)mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED,
@@ -139,7 +150,7 @@ Error SubprocessMemory::addMemoryDefinition(
 
 Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
     std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-    pid_t ParentPID, uint64_t ParentTID, int CounterFileDescriptor) {
+    pid_t ParentPID, long ParentTID, int CounterFileDescriptor) {
   return make_error<Failure>(
       "setupAuxiliaryMemoryInSubprocess is only supported on Linux");
 }

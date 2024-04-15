@@ -17,6 +17,12 @@
 #define FP_SUBNORMAL 3
 #define FP_NORMAL 4
 
+#define FP_INT_UPWARD 0
+#define FP_INT_DOWNWARD 1
+#define FP_INT_TOWARDZERO 2
+#define FP_INT_TONEARESTFROMZERO 3
+#define FP_INT_TONEAREST 4
+
 #define MATH_ERRNO 1
 #define MATH_ERREXCEPT 2
 
@@ -25,14 +31,15 @@
 #define NAN __builtin_nanf("")
 
 #define FP_ILOGB0 (-INT_MAX - 1)
-#define FP_ILOGBNAN INT_MAX
-
 #define FP_LLOGB0 (-LONG_MAX - 1)
-#define FP_LLOGBNAN LONG_MAX
 
-#define isfinite(x) __builtin_isfinite(x)
-#define isinf(x) __builtin_isinf(x)
-#define isnan(x) __builtin_isnan(x)
+#ifdef __FP_LOGBNAN_MIN
+#define FP_ILOGBNAN (-INT_MAX - 1)
+#define FP_LLOGBNAN (-LONG_MAX - 1)
+#else
+#define FP_ILOGBNAN INT_MAX
+#define FP_LLOGBNAN LONG_MAX
+#endif
 
 #ifdef __FAST_MATH__
 #define math_errhandling 0
@@ -43,5 +50,10 @@
 #else
 #define math_errhandling (MATH_ERRNO | MATH_ERREXCEPT)
 #endif
+
+// TODO: Move generic functional math macros to a separate header file.
+#define isfinite(x) __builtin_isfinite(x)
+#define isinf(x) __builtin_isinf(x)
+#define isnan(x) __builtin_isnan(x)
 
 #endif // LLVM_LIBC_MACROS_MATH_MACROS_H

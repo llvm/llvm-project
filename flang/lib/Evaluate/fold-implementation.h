@@ -39,7 +39,7 @@
 #include <type_traits>
 #include <variant>
 
-// Some environments, viz. glibc 2.17, allow the macro HUGE
+// Some environments, viz. glibc 2.17 and *BSD, allow the macro HUGE
 // to leak out of <math.h>.
 #undef HUGE
 
@@ -1969,7 +1969,7 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
       // NaN, and Inf respectively.
       bool isCanonicalNaNOrInf{false};
       if constexpr (T::category == TypeCategory::Real) {
-        if (folded->second.IsZero() && context.inModuleFile()) {
+        if (folded->second.IsZero() && context.moduleFileName().has_value()) {
           using IntType = typename T::Scalar::Word;
           auto intNumerator{folded->first.template ToInteger<IntType>()};
           isCanonicalNaNOrInf = intNumerator.flags == RealFlags{} &&

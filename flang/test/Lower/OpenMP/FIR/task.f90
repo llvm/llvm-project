@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 !RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
 
 !CHECK-LABEL: func @_QPomp_task_simple() {
@@ -63,7 +65,7 @@ end subroutine omp_task_priority
 subroutine task_allocate()
   use omp_lib
   integer :: x
-  !CHECK: omp.task allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>) {
+  !CHECK: omp.task allocate(%{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>) {
   !$omp task allocate(omp_high_bw_mem_alloc: x) private(x)
   !CHECK: arith.addi
   x = x + 12
@@ -217,7 +219,7 @@ subroutine task_multiple_clauses()
   integer :: x, y, z
   logical :: buzz
 
-  !CHECK: omp.task if(%{{.+}}) final(%{{.+}}) priority(%{{.+}}) allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>) {
+  !CHECK: omp.task if(%{{.+}}) final(%{{.+}}) priority(%{{.+}}) allocate(%{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>) {
   !$omp task if(buzz) final(buzz) priority(z) allocate(omp_high_bw_mem_alloc: x) private(x) firstprivate(y)
 
   !CHECK: %[[x_priv:.+]] = fir.alloca i32

@@ -19,3 +19,12 @@ const _Complex float FC = {0.0f, 0.0f};
 _Static_assert(!FC, "");
 const _Complex float FI = {0, 0};
 _Static_assert(!FI, "");
+
+
+/// Make sure we're stripping the _Atomic part from the
+/// complex type.
+void testComplexFloat(_Atomic(_Complex float) *fp) {
+  _Atomic(_Complex float) x = 2.0f;
+  _Complex float f = *fp;
+  *fp = f;
+}

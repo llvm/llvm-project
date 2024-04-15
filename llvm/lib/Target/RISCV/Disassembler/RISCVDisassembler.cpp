@@ -595,6 +595,14 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     TRY_TO_DECODE_FEATURE(
         RISCV::FeatureVendorXSfvfnrclipxfqf, DecoderTableXSfvfnrclipxfqf32,
         "SiFive FP32-to-int8 Ranged Clip Instructions opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSiFivecdiscarddlone,
+                          DecoderTableXSiFivecdiscarddlone32,
+                          "SiFive sf.cdiscard.d.l1 custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSiFivecflushdlone,
+                          DecoderTableXSiFivecflushdlone32,
+                          "SiFive sf.cflush.d.l1 custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfcease, DecoderTableXSfcease32,
+                          "SiFive sf.cease custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbitmanip,
                           DecoderTableXCVbitmanip32,
                           "CORE-V Bit Manipulation custom opcode table");

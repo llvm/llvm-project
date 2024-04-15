@@ -394,8 +394,10 @@ private:
                                      const CallEvent &Call, CheckerContext &C)>;
 
   const CallDescriptionMap<CheckFn> PreFnMap{
-      {{{"getline"}, 3}, &MallocChecker::preGetdelim},
-      {{{"getdelim"}, 4}, &MallocChecker::preGetdelim},
+      // NOTE: the following CallDescription also matches the C++ standard
+      // library function std::getline(); the callback will filter it out.
+      {{CDM::CLibrary, {"getline"}, 3}, &MallocChecker::preGetdelim},
+      {{CDM::CLibrary, {"getdelim"}, 4}, &MallocChecker::preGetdelim},
   };
 
   const CallDescriptionMap<CheckFn> FreeingMemFnMap{
@@ -446,8 +448,11 @@ private:
        std::bind(&MallocChecker::checkRealloc, _1, _2, _3, false)},
       {{{"g_realloc_n"}, 3}, &MallocChecker::checkReallocN},
       {{{"g_try_realloc_n"}, 3}, &MallocChecker::checkReallocN},
-      {{{"getline"}, 3}, &MallocChecker::checkGetdelim},
-      {{{"getdelim"}, 4}, &MallocChecker::checkGetdelim},
+
+      // NOTE: the following CallDescription also matches the C++ standard
+      // library function std::getline(); the callback will filter it out.
+      {{CDM::CLibrary, {"getline"}, 3}, &MallocChecker::checkGetdelim},
+      {{CDM::CLibrary, {"getdelim"}, 4}, &MallocChecker::checkGetdelim},
   };
 
   bool isMemCall(const CallEvent &Call) const;
@@ -1435,13 +1440,21 @@ void MallocChecker::checkGMallocN0(const CallEvent &Call,
   C.addTransition(State);
 }
 
+static bool isFromStdNamespace(const CallEvent &Call) {
+  const Decl *FD = Call.getDecl();
+  assert(FD && "a CallDescription cannot match a call without a Decl");
+  return FD->isInStdNamespace();
+}
+
 void MallocChecker::preGetdelim(const CallEvent &Call,
                                 CheckerContext &C) const {
-  if (!Call.isGlobalCFunction())
+  // Discard calls to the C++ standard library function std::getline(), which
+  // is completely unrelated to the POSIX getline() that we're checking.
+  if (isFromStdNamespace(Call))
     return;
 
   ProgramStateRef State = C.getState();
-  const auto LinePtr = getPointeeDefVal(Call.getArgSVal(0), State);
+  const auto LinePtr = getPointeeVal(Call.getArgSVal(0), State);
   if (!LinePtr)
     return;
 
@@ -1458,7 +1471,9 @@ void MallocChecker::preGetdelim(const CallEvent &Call,
 
 void MallocChecker::checkGetdelim(const CallEvent &Call,
                                   CheckerContext &C) const {
-  if (!Call.isGlobalCFunction())
+  // Discard calls to the C++ standard library function std::getline(), which
+  // is completely unrelated to the POSIX getline() that we're checking.
+  if (isFromStdNamespace(Call))
     return;
 
   ProgramStateRef State = C.getState();
@@ -1470,8 +1485,10 @@ void MallocChecker::checkGetdelim(const CallEvent &Call,
 
   SValBuilder &SVB = C.getSValBuilder();
 
-  const auto LinePtr = getPointeeDefVal(Call.getArgSVal(0), State);
-  const auto Size = getPointeeDefVal(Call.getArgSVal(1), State);
+  const auto LinePtr =
+      getPointeeVal(Call.getArgSVal(0), State)->getAs<DefinedSVal>();
+  const auto Size =
+      getPointeeVal(Call.getArgSVal(1), State)->getAs<DefinedSVal>();
   if (!LinePtr || !Size || !LinePtr->getAsRegion())
     return;
 

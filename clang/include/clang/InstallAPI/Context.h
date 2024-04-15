@@ -11,6 +11,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/InstallAPI/DylibVerifier.h"
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/InstallAPI/MachO.h"
 #include "llvm/ADT/DenseMap.h"
@@ -26,6 +27,9 @@ struct InstallAPIContext {
 
   /// Library attributes that are typically passed as linker inputs.
   BinaryAttrs BA;
+
+  /// Install names of reexported libraries of a library.
+  LibAttrs Reexports;
 
   /// All headers that represent a library.
   HeaderSeq InputHeaders;
@@ -44,6 +48,9 @@ struct InstallAPIContext {
 
   /// DiagnosticsEngine for all error reporting.
   DiagnosticsEngine *Diags = nullptr;
+
+  /// Verifier when binary dylib is passed as input.
+  std::unique_ptr<DylibVerifier> Verifier = nullptr;
 
   /// File Path of output location.
   llvm::StringRef OutputLoc{};
@@ -76,6 +83,20 @@ private:
   llvm::DenseMap<StringRef, HeaderType> KnownIncludes;
 };
 
+/// Lookup the dylib or TextAPI file location for a system library or framework.
+/// The search paths provided are searched in order.
+/// @rpath based libraries are not supported.
+///
+/// \param InstallName The install name for the library.
+/// \param FrameworkSearchPaths Search paths to look up frameworks with.
+/// \param LibrarySearchPaths Search paths to look up dylibs with.
+/// \param SearchPaths Fallback search paths if library was not found in earlier
+/// paths.
+/// \return The full path of the library.
+std::string findLibrary(StringRef InstallName, FileManager &FM,
+                        ArrayRef<std::string> FrameworkSearchPaths,
+                        ArrayRef<std::string> LibrarySearchPaths,
+                        ArrayRef<std::string> SearchPaths);
 } // namespace installapi
 } // namespace clang
 

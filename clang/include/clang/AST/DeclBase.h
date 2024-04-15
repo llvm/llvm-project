@@ -669,9 +669,8 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
-  /// FIXME: Implement discarding declarations actually in global module
-  /// fragment. See [module.global.frag]p3,4 for details.
-  bool isDiscardedInGlobalModuleFragment() const { return false; }
+  /// Whether this declaration comes from explicit global module.
+  bool isFromExplicitGlobalModule() const;
 
   /// Check if we should skip checking ODRHash for declaration \param D.
   ///
@@ -1740,7 +1739,7 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsExplicitlyDefaulted : 1;
     LLVM_PREFERRED_TYPE(bool)
-    uint64_t HasDefaultedFunctionInfo : 1;
+    uint64_t HasDefaultedOrDeletedInfo : 1;
 
     /// For member functions of complete types, whether this is an ineligible
     /// special member function or an unselected destructor. See

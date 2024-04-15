@@ -2637,9 +2637,9 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI = CloneIfNew(MI);
     WorkingMI->setDesc(get(Opc));
     break;
-  case X86::CMOV16rr:
-  case X86::CMOV32rr:
-  case X86::CMOV64rr: {
+  CASE_ND(CMOV16rr)
+  CASE_ND(CMOV32rr)
+  CASE_ND(CMOV64rr) {
     WorkingMI = CloneIfNew(MI);
     unsigned OpNo = MI.getDesc().getNumOperands() - 1;
     X86::CondCode CC = static_cast<X86::CondCode>(MI.getOperand(OpNo).getImm());
@@ -3120,7 +3120,8 @@ bool X86InstrInfo::hasCommutePreference(MachineInstr &MI, bool &Commute) const {
 
 int X86::getCondSrcNoFromDesc(const MCInstrDesc &MCID) {
   unsigned Opcode = MCID.getOpcode();
-  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode)))
+  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode) ||
+        X86::isCFCMOVCC(Opcode)))
     return -1;
   // Assume that condition code is always the last use operand.
   unsigned NumUses = MCID.getNumOperands() - MCID.getNumDefs();
@@ -3149,6 +3150,11 @@ X86::CondCode X86::getCondFromSETCC(const MachineInstr &MI) {
 X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
   return X86::isCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
                                        : X86::COND_INVALID;
+}
+
+X86::CondCode X86::getCondFromCFCMov(const MachineInstr &MI) {
+  return X86::isCFCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
+                                         : X86::COND_INVALID;
 }
 
 /// Return the inverse of the specified condition,
@@ -3312,16 +3318,21 @@ X86::getX86ConditionCode(CmpInst::Predicate Predicate) {
 }
 
 /// Return a cmov opcode for the given register size in bytes, and operand type.
-unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand) {
+unsigned X86::getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand,
+                            bool HasNDD) {
   switch (RegBytes) {
   default:
     llvm_unreachable("Illegal register size!");
+#define GET_ND_IF_ENABLED(OPC) (HasNDD ? OPC##_ND : OPC)
   case 2:
-    return HasMemoryOperand ? X86::CMOV16rm : X86::CMOV16rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV16rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV16rr);
   case 4:
-    return HasMemoryOperand ? X86::CMOV32rm : X86::CMOV32rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV32rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV32rr);
   case 8:
-    return HasMemoryOperand ? X86::CMOV64rm : X86::CMOV64rr;
+    return HasMemoryOperand ? GET_ND_IF_ENABLED(X86::CMOV64rm)
+                            : GET_ND_IF_ENABLED(X86::CMOV64rr);
   }
 }
 
@@ -4047,8 +4058,9 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
   const TargetRegisterClass &RC = *MRI.getRegClass(DstReg);
   assert(Cond.size() == 1 && "Invalid Cond array");
-  unsigned Opc = X86::getCMovOpcode(TRI.getRegSizeInBits(RC) / 8,
-                                    false /*HasMemoryOperand*/);
+  unsigned Opc =
+      X86::getCMovOpcode(TRI.getRegSizeInBits(RC) / 8,
+                         false /*HasMemoryOperand*/, Subtarget.hasNDD());
   BuildMI(MBB, I, DL, get(Opc), DstReg)
       .addReg(FalseReg)
       .addReg(TrueReg)
@@ -5583,9 +5595,13 @@ static unsigned convertALUrr2ALUri(unsigned Opc) {
   case X86::FROM:                                                              \
     return X86::TO;
     FROM_TO(TEST64rr, TEST64ri32)
+    FROM_TO(CTEST64rr, CTEST64ri32)
     FROM_TO(CMP64rr, CMP64ri32)
+    FROM_TO(CCMP64rr, CCMP64ri32)
     FROM_TO(TEST32rr, TEST32ri)
+    FROM_TO(CTEST32rr, CTEST32ri)
     FROM_TO(CMP32rr, CMP32ri)
+    FROM_TO(CCMP32rr, CCMP32ri)
 #undef FROM_TO
   }
 }
@@ -5685,7 +5701,8 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       UseMI.findRegisterUseOperandIdx(Reg) != 2)
     return false;
   // For CMP instructions the immediate can only be at index 1.
-  if ((NewOpc == X86::CMP64ri32 || NewOpc == X86::CMP32ri) &&
+  if (((NewOpc == X86::CMP64ri32 || NewOpc == X86::CMP32ri) ||
+       (NewOpc == X86::CCMP64ri32 || NewOpc == X86::CCMP32ri)) &&
       UseMI.findRegisterUseOperandIdx(Reg) != 1)
     return false;
 
@@ -5730,7 +5747,7 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       unsigned Op1 = 1, Op2 = CommuteAnyOperandIndex;
       unsigned ImmOpNum = 2;
       if (!UseMI.getOperand(0).isDef()) {
-        Op1 = 0; // TEST, CMP
+        Op1 = 0; // TEST, CMP, CTEST, CCMP
         ImmOpNum = 1;
       }
       if (Opc == TargetOpcode::COPY)
@@ -6259,10 +6276,10 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
   case X86::RCPSSm:
   case X86::RCPSSr_Int:
   case X86::RCPSSm_Int:
-  case X86::ROUNDSDr:
-  case X86::ROUNDSDm:
-  case X86::ROUNDSSr:
-  case X86::ROUNDSSm:
+  case X86::ROUNDSDri:
+  case X86::ROUNDSDmi:
+  case X86::ROUNDSSri:
+  case X86::ROUNDSSmi:
   case X86::RSQRTSSr:
   case X86::RSQRTSSm:
   case X86::RSQRTSSr_Int:
@@ -6761,14 +6778,14 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VRCPSSr_Int:
   case X86::VRCPSSm:
   case X86::VRCPSSm_Int:
-  case X86::VROUNDSDr:
-  case X86::VROUNDSDm:
-  case X86::VROUNDSDr_Int:
-  case X86::VROUNDSDm_Int:
-  case X86::VROUNDSSr:
-  case X86::VROUNDSSm:
-  case X86::VROUNDSSr_Int:
-  case X86::VROUNDSSm_Int:
+  case X86::VROUNDSDri:
+  case X86::VROUNDSDmi:
+  case X86::VROUNDSDri_Int:
+  case X86::VROUNDSDmi_Int:
+  case X86::VROUNDSSri:
+  case X86::VROUNDSSmi:
+  case X86::VROUNDSSri_Int:
+  case X86::VROUNDSSmi_Int:
   case X86::VRSQRTSSr:
   case X86::VRSQRTSSr_Int:
   case X86::VRSQRTSSm:
@@ -7499,8 +7516,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VRCPSSr_Int:
     case X86::RSQRTSSr_Int:
     case X86::VRSQRTSSr_Int:
-    case X86::ROUNDSSr_Int:
-    case X86::VROUNDSSr_Int:
+    case X86::ROUNDSSri_Int:
+    case X86::VROUNDSSri_Int:
     case X86::COMISSrr_Int:
     case X86::VCOMISSrr_Int:
     case X86::VCOMISSZrr_Int:
@@ -7668,8 +7685,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VCVTSD2USI64Zrr_Int:
     case X86::VCVTTSD2USIZrr_Int:
     case X86::VCVTTSD2USI64Zrr_Int:
-    case X86::ROUNDSDr_Int:
-    case X86::VROUNDSDr_Int:
+    case X86::ROUNDSDri_Int:
+    case X86::VROUNDSDri_Int:
     case X86::COMISDrr_Int:
     case X86::VCOMISDrr_Int:
     case X86::VCOMISDZrr_Int:
@@ -10561,19 +10578,19 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
 }
 
 bool X86InstrInfo::getMachineCombinerPatterns(
-    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
+    MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
   unsigned Opc = Root.getOpcode();
   switch (Opc) {
-  default:
-    return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
-                                                       DoRegPressureReduce);
   case X86::VPDPWSSDrr:
   case X86::VPDPWSSDrm:
   case X86::VPDPWSSDYrr:
   case X86::VPDPWSSDYrm: {
-    Patterns.push_back(MachineCombinerPattern::DPWSSD);
-    return true;
+    if (!Subtarget.hasFastDPWSSD()) {
+      Patterns.push_back(X86MachineCombinerPattern::DPWSSD);
+      return true;
+    }
+    break;
   }
   case X86::VPDPWSSDZ128r:
   case X86::VPDPWSSDZ128m:
@@ -10581,11 +10598,15 @@ bool X86InstrInfo::getMachineCombinerPatterns(
   case X86::VPDPWSSDZ256m:
   case X86::VPDPWSSDZr:
   case X86::VPDPWSSDZm: {
-    if (Subtarget.hasBWI())
-      Patterns.push_back(MachineCombinerPattern::DPWSSD);
-    return true;
+   if (Subtarget.hasBWI() && !Subtarget.hasFastDPWSSD()) {
+     Patterns.push_back(X86MachineCombinerPattern::DPWSSD);
+     return true;
+    }
+    break;
   }
   }
+  return TargetInstrInfo::getMachineCombinerPatterns(Root,
+                                                     Patterns, DoRegPressureReduce);
 }
 
 static void
@@ -10679,7 +10700,7 @@ genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
 }
 
 void X86InstrInfo::genAlternativeCodeSequence(
-    MachineInstr &Root, MachineCombinerPattern Pattern,
+    MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
@@ -10689,7 +10710,7 @@ void X86InstrInfo::genAlternativeCodeSequence(
     TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
                                                 DelInstrs, InstrIdxForVirtReg);
     return;
-  case MachineCombinerPattern::DPWSSD:
+  case X86MachineCombinerPattern::DPWSSD:
     genAlternativeDpCodeSequence(Root, *this, InsInstrs, DelInstrs,
                                  InstrIdxForVirtReg);
     return;

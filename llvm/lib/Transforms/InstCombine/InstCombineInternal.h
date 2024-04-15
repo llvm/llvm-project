@@ -98,6 +98,7 @@ public:
   Instruction *visitSub(BinaryOperator &I);
   Instruction *visitFSub(BinaryOperator &I);
   Instruction *visitMul(BinaryOperator &I);
+  Instruction *foldPowiReassoc(BinaryOperator &I);
   Instruction *foldFMulReassoc(BinaryOperator &I);
   Instruction *visitFMul(BinaryOperator &I);
   Instruction *visitURem(BinaryOperator &I);
@@ -757,10 +758,9 @@ public:
   void tryToSinkInstructionDbgValues(
       Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
       BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers);
-  void tryToSinkInstructionDPValues(Instruction *I,
-                                    BasicBlock::iterator InsertPos,
-                                    BasicBlock *SrcBlock, BasicBlock *DestBlock,
-                                    SmallVectorImpl<DPValue *> &DPUsers);
+  void tryToSinkInstructionDbgVariableRecords(
+      Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
+      BasicBlock *DestBlock, SmallVectorImpl<DbgVariableRecord *> &DPUsers);
 
   bool removeInstructionsBeforeUnreachable(Instruction &I);
   void addDeadEdge(BasicBlock *From, BasicBlock *To,

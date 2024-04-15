@@ -26,6 +26,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -628,6 +629,10 @@ void Parser::ParseGNUAttributeArgs(
   } else if (attributeIsTypeArgAttr(*AttrName)) {
     ParseAttributeWithTypeArg(*AttrName, AttrNameLoc, Attrs, ScopeName,
                               ScopeLoc, Form);
+    return;
+  } else if (AttrKind == ParsedAttr::AT_CountedBy) {
+    ParseBoundsAttribute(*AttrName, AttrNameLoc, Attrs, ScopeName, ScopeLoc,
+                         Form);
     return;
   }
 
@@ -2660,7 +2665,8 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     }
   }
 
-  Sema::CUDATargetContextRAII X(Actions, Sema::CTCK_InitGlobalVar, ThisDecl);
+  SemaCUDA::CUDATargetContextRAII X(Actions.CUDA(),
+                                    SemaCUDA::CTCK_InitGlobalVar, ThisDecl);
   switch (TheInitKind) {
   // Parse declarator '=' initializer.
   case InitKind::Equal: {
@@ -2672,6 +2678,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
           << 1 /* delete */;
       else
         Diag(ConsumeToken(), diag::err_deleted_non_function);
+      SkipDeletedFunctionBody();
     } else if (Tok.is(tok::kw_default)) {
       if (D.isFunctionDeclarator())
         Diag(ConsumeToken(), diag::err_default_delete_in_multiple_declaration)
@@ -3248,6 +3255,54 @@ void Parser::ParseAlignmentSpecifier(ParsedAttributes &Attrs,
     Attrs.addNew(KWName, KWLoc, nullptr, KWLoc, ArgExprs.data(), 1, Kind,
                  EllipsisLoc);
   }
+}
+
+/// Bounds attributes (e.g., counted_by):
+///   AttrName '(' expression ')'
+void Parser::ParseBoundsAttribute(IdentifierInfo &AttrName,
+                                  SourceLocation AttrNameLoc,
+                                  ParsedAttributes &Attrs,
+                                  IdentifierInfo *ScopeName,
+                                  SourceLocation ScopeLoc,
+                                  ParsedAttr::Form Form) {
+  assert(Tok.is(tok::l_paren) && "Attribute arg list not starting with '('");
+
+  BalancedDelimiterTracker Parens(*this, tok::l_paren);
+  Parens.consumeOpen();
+
+  if (Tok.is(tok::r_paren)) {
+    Diag(Tok.getLocation(), diag::err_argument_required_after_attribute);
+    Parens.consumeClose();
+    return;
+  }
+
+  ArgsVector ArgExprs;
+  // Don't evaluate argument when the attribute is ignored.
+  using ExpressionKind =
+      Sema::ExpressionEvaluationContextRecord::ExpressionKind;
+  EnterExpressionEvaluationContext EC(
+      Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, nullptr,
+      ExpressionKind::EK_BoundsAttrArgument);
+
+  ExprResult ArgExpr(
+      Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
+
+  if (ArgExpr.isInvalid()) {
+    Parens.skipToEnd();
+    return;
+  }
+
+  ArgExprs.push_back(ArgExpr.get());
+  Parens.consumeClose();
+
+  ASTContext &Ctx = Actions.getASTContext();
+
+  ArgExprs.push_back(IntegerLiteral::Create(
+      Ctx, llvm::APInt(Ctx.getTypeSize(Ctx.getSizeType()), 0),
+      Ctx.getSizeType(), SourceLocation()));
+
+  Attrs.addNew(&AttrName, SourceRange(AttrNameLoc, Parens.getCloseLocation()),
+               ScopeName, ScopeLoc, ArgExprs.data(), ArgExprs.size(), Form);
 }
 
 ExprResult Parser::ParseExtIntegerArgument() {
@@ -4679,6 +4734,39 @@ void Parser::ParseDeclarationSpecifiers(
   }
 }
 
+static void DiagnoseCountAttributedTypeInUnnamedAnon(ParsingDeclSpec &DS,
+                                                     Parser &P) {
+
+  if (DS.getTypeSpecType() != DeclSpec::TST_struct)
+    return;
+
+  auto *RD = dyn_cast<RecordDecl>(DS.getRepAsDecl());
+  // We're only interested in unnamed, non-anonymous struct
+  if (!RD || !RD->getName().empty() || RD->isAnonymousStructOrUnion())
+    return;
+
+  for (auto *I : RD->decls()) {
+    auto *VD = dyn_cast<ValueDecl>(I);
+    if (!VD)
+      continue;
+
+    auto *CAT = VD->getType()->getAs<CountAttributedType>();
+    if (!CAT)
+      continue;
+
+    for (const auto &DD : CAT->dependent_decls()) {
+      if (!RD->containsDecl(DD.getDecl())) {
+        P.Diag(VD->getBeginLoc(),
+               diag::err_flexible_array_count_not_in_same_struct)
+            << DD.getDecl();
+        P.Diag(DD.getDecl()->getBeginLoc(),
+               diag::note_flexible_array_counted_by_attr_field)
+            << DD.getDecl();
+      }
+    }
+  }
+}
+
 /// ParseStructDeclaration - Parse a struct declaration without the terminating
 /// semicolon.
 ///
@@ -4758,6 +4846,11 @@ void Parser::ParseStructDeclaration(
       ParseDeclarator(DeclaratorInfo.D);
     } else
       DeclaratorInfo.D.SetIdentifier(nullptr, Tok.getLocation());
+
+    // Here, we now know that the unnamed struct is not an anonymous struct.
+    // Report an error if a counted_by attribute refers to a field in a
+    // different named struct.
+    DiagnoseCountAttributedTypeInUnnamedAnon(DS, *this);
 
     if (TryConsumeToken(tok::colon)) {
       ExprResult Res(ParseConstantExpression());
@@ -7610,7 +7703,7 @@ void Parser::ParseParameterDeclarationClause(
     }
 
     // Remember this parsed parameter in ParamInfo.
-    IdentifierInfo *ParmII = ParmDeclarator.getIdentifier();
+    const IdentifierInfo *ParmII = ParmDeclarator.getIdentifier();
 
     // DefArgToks is used when the parsing of default arguments needs
     // to be delayed.

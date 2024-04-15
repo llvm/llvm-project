@@ -517,7 +517,7 @@ static bool doesNotRequireEntrySafepointBefore(CallBase *Call) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::experimental_gc_statepoint:
     case Intrinsic::experimental_patchpoint_void:
-    case Intrinsic::experimental_patchpoint_i64:
+    case Intrinsic::experimental_patchpoint:
       // The can wrap an actual call which may grow the stack by an unbounded
       // amount or run forever.
       return false;

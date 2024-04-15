@@ -409,10 +409,6 @@ def add_test_categories(cat):
     cat = test_categories.validate(cat, True)
 
     def impl(func):
-        if isinstance(func, type) and issubclass(func, unittest.TestCase):
-            raise Exception(
-                "@add_test_categories can only be used to decorate a test method"
-            )
         try:
             if hasattr(func, "categories"):
                 cat.extend(func.categories)

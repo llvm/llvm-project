@@ -1091,6 +1091,29 @@ CursorKind.OMP_ARRAY_SECTION_EXPR = CursorKind(147)
 # Represents an @available(...) check.
 CursorKind.OBJC_AVAILABILITY_CHECK_EXPR = CursorKind(148)
 
+# Fixed point literal.
+CursorKind.FIXED_POINT_LITERAL = CursorKind(149)
+
+# OpenMP 5.0 [2.1.4, Array Shaping].
+CursorKind.OMP_ARRAY_SHAPING_EXPR = CursorKind(150)
+
+# OpenMP 5.0 [2.1.6 Iterators].
+CursorKind.OMP_ITERATOR_EXPR = CursorKind(151)
+
+# OpenCL's addrspace_cast<> expression.
+CursorKind.CXX_ADDRSPACE_CAST_EXPR = CursorKind(152)
+
+# Expression that references a C++20 concept.
+CursorKind.CONCEPT_SPECIALIZATION_EXPR = CursorKind(153)
+
+# Expression that references a C++20 requires expression.
+CursorKind.REQUIRES_EXPR = CursorKind(154)
+
+# Expression that references a C++20 parenthesized list aggregate initializer.
+CursorKind.CXX_PAREN_LIST_INIT_EXPR = CursorKind(155)
+
+# Represents a C++26 pack indexing expression.
+CursorKind.PACK_INDEXING_EXPR = CursorKind(156)
 
 # A statement whose specific kind is not exposed via this interface.
 #
@@ -1312,6 +1335,114 @@ CursorKind.OMP_TARGET_SIMD_DIRECTIVE = CursorKind(270)
 # OpenMP teams distribute directive.
 CursorKind.OMP_TEAMS_DISTRIBUTE_DIRECTIVE = CursorKind(271)
 
+# OpenMP teams distribute simd directive.
+CursorKind.OMP_TEAMS_DISTRIBUTE_DIRECTIVE = CursorKind(272)
+
+# OpenMP teams distribute parallel for simd directive.
+CursorKind.OMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_DIRECTIVE = CursorKind(273)
+
+# OpenMP teams distribute parallel for directive.
+CursorKind.OMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_DIRECTIVE = CursorKind(274)
+
+# OpenMP target teams directive.
+CursorKind.OMP_TARGET_TEAMS_DIRECTIVE = CursorKind(275)
+
+# OpenMP target teams distribute directive.
+CursorKind.OMP_TARGET_TEAMS_DISTRIBUTE_DIRECTIVE = CursorKind(276)
+
+# OpenMP target teams distribute parallel for directive.
+CursorKind.OMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_DIRECTIVE = CursorKind(277)
+
+# OpenMP target teams distribute parallel for simd directive.
+CursorKind.OMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_DIRECTIVE = CursorKind(278)
+
+# OpenMP target teams distribute simd directive.
+CursorKind.OMP_TARGET_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE = CursorKind(279)
+
+# C++2a std::bit_cast expression.
+CursorKind.BUILTIN_BIT_CAST_EXPR = CursorKind(280)
+
+# OpenMP master taskloop directive.
+CursorKind.OMP_MASTER_TASK_LOOP_DIRECTIVE = CursorKind(281)
+
+# OpenMP parallel master taskloop directive.
+CursorKind.OMP_PARALLEL_MASTER_TASK_LOOP_DIRECTIVE = CursorKind(282)
+
+# OpenMP master taskloop simd directive.
+CursorKind.OMP_MASTER_TASK_LOOP_SIMD_DIRECTIVE = CursorKind(283)
+
+# OpenMP parallel master taskloop simd directive.
+CursorKind.OMP_PARALLEL_MASTER_TASK_LOOP_SIMD_DIRECTIVE = CursorKind(284)
+
+# OpenMP parallel master directive.
+CursorKind.OMP_PARALLEL_MASTER_DIRECTIVE = CursorKind(285)
+
+# OpenMP depobj directive.
+CursorKind.OMP_DEPOBJ_DIRECTIVE = CursorKind(286)
+
+# OpenMP scan directive.
+CursorKind.OMP_SCAN_DIRECTIVE = CursorKind(287)
+
+# OpenMP tile directive.
+CursorKind.OMP_TILE_DIRECTIVE = CursorKind(288)
+
+# OpenMP canonical loop.
+CursorKind.OMP_CANONICAL_LOOP = CursorKind(289)
+
+# OpenMP interop directive.
+CursorKind.OMP_INTEROP_DIRECTIVE = CursorKind(290)
+
+# OpenMP dispatch directive.
+CursorKind.OMP_DISPATCH_DIRECTIVE = CursorKind(291)
+
+# OpenMP masked directive.
+CursorKind.OMP_MASKED_DIRECTIVE = CursorKind(292)
+
+# OpenMP unroll directive.
+CursorKind.OMP_UNROLL_DIRECTIVE = CursorKind(293)
+
+# OpenMP metadirective directive.
+CursorKind.OMP_META_DIRECTIVE = CursorKind(294)
+
+# OpenMP loop directive.
+CursorKind.OMP_GENERIC_LOOP_DIRECTIVE = CursorKind(295)
+
+# OpenMP teams loop directive.
+CursorKind.OMP_TEAMS_GENERIC_LOOP_DIRECTIVE = CursorKind(296)
+
+# OpenMP target teams loop directive.
+CursorKind.OMP_TARGET_TEAMS_GENERIC_LOOP_DIRECTIVE = CursorKind(297)
+
+# OpenMP parallel loop directive.
+CursorKind.OMP_PARALLEL_GENERIC_LOOP_DIRECTIVE = CursorKind(298)
+
+# OpenMP target parallel loop directive.
+CursorKind.OMP_TARGET_PARALLEL_GENERIC_LOOP_DIRECTIVE = CursorKind(299)
+
+# OpenMP parallel masked directive.
+CursorKind.OMP_PARALLEL_MASKED_DIRECTIVE = CursorKind(300)
+
+# OpenMP masked taskloop directive.
+CursorKind.OMP_MASKED_TASK_LOOP_DIRECTIVE = CursorKind(301)
+
+# OpenMP masked taskloop simd directive.
+CursorKind.OMP_MASKED_TASK_LOOP_SIMD_DIRECTIVE = CursorKind(302)
+
+# OpenMP parallel masked taskloop directive.
+CursorKind.OMP_PARALLEL_MASKED_TASK_LOOP_DIRECTIVE = CursorKind(303)
+
+# OpenMP parallel masked taskloop simd directive.
+CursorKind.OMP_PARALLEL_MASKED_TASK_LOOP_SIMD_DIRECTIVE = CursorKind(304)
+
+# OpenMP error directive.
+CursorKind.OMP_ERROR_DIRECTIVE = CursorKind(305)
+
+# OpenMP scope directive.
+CursorKind.OMP_SCOPE_DIRECTIVE = CursorKind(306)
+
+# OpenACC Compute Construct.
+CursorKind.OPEN_ACC_COMPUTE_DIRECTIVE = CursorKind(320)
+
 ###
 # Other Kinds
 
@@ -1349,6 +1480,24 @@ CursorKind.VISIBILITY_ATTR = CursorKind(417)
 
 CursorKind.DLLEXPORT_ATTR = CursorKind(418)
 CursorKind.DLLIMPORT_ATTR = CursorKind(419)
+CursorKind.NS_RETURNS_RETAINED = CursorKind(420)
+CursorKind.NS_RETURNS_NOT_RETAINED = CursorKind(421)
+CursorKind.NS_RETURNS_AUTORELEASED = CursorKind(422)
+CursorKind.NS_CONSUMES_SELF = CursorKind(423)
+CursorKind.NS_CONSUMED = CursorKind(424)
+CursorKind.OBJC_EXCEPTION = CursorKind(425)
+CursorKind.OBJC_NSOBJECT = CursorKind(426)
+CursorKind.OBJC_INDEPENDENT_CLASS = CursorKind(427)
+CursorKind.OBJC_PRECISE_LIFETIME = CursorKind(428)
+CursorKind.OBJC_RETURNS_INNER_POINTER = CursorKind(429)
+CursorKind.OBJC_REQUIRES_SUPER = CursorKind(430)
+CursorKind.OBJC_ROOT_CLASS = CursorKind(431)
+CursorKind.OBJC_SUBCLASSING_RESTRICTED = CursorKind(432)
+CursorKind.OBJC_EXPLICIT_PROTOCOL_IMPL = CursorKind(433)
+CursorKind.OBJC_DESIGNATED_INITIALIZER = CursorKind(434)
+CursorKind.OBJC_RUNTIME_VISIBLE = CursorKind(435)
+CursorKind.OBJC_BOXABLE = CursorKind(436)
+CursorKind.FLAG_ENUM = CursorKind(437)
 CursorKind.CONVERGENT_ATTR = CursorKind(438)
 CursorKind.WARN_UNUSED_ATTR = CursorKind(439)
 CursorKind.WARN_UNUSED_RESULT_ATTR = CursorKind(440)
@@ -1395,6 +1544,11 @@ TemplateArgumentKind.TYPE = TemplateArgumentKind(1)
 TemplateArgumentKind.DECLARATION = TemplateArgumentKind(2)
 TemplateArgumentKind.NULLPTR = TemplateArgumentKind(3)
 TemplateArgumentKind.INTEGRAL = TemplateArgumentKind(4)
+TemplateArgumentKind.TEMPLATE = TemplateArgumentKind(5)
+TemplateArgumentKind.TEMPLATE_EXPANSION = TemplateArgumentKind(6)
+TemplateArgumentKind.EXPRESSION = TemplateArgumentKind(7)
+TemplateArgumentKind.PACK = TemplateArgumentKind(8)
+TemplateArgumentKind.INVALID = TemplateArgumentKind(9)
 
 ### Exception Specification Kinds ###
 class ExceptionSpecificationKind(BaseEnumeration):
@@ -2240,9 +2394,26 @@ TypeKind.OCLEVENT = TypeKind(158)
 TypeKind.OCLQUEUE = TypeKind(159)
 TypeKind.OCLRESERVEID = TypeKind(160)
 
+TypeKind.OBJCOBJECT = TypeKind(161)
+TypeKind.OBJCCLASS = TypeKind(162)
+TypeKind.ATTRIBUTED = TypeKind(163)
+
+TypeKind.OCLINTELSUBGROUPAVCMCEPAYLOAD = TypeKind(164)
+TypeKind.OCLINTELSUBGROUPAVCIMEPAYLOAD = TypeKind(165)
+TypeKind.OCLINTELSUBGROUPAVCREFPAYLOAD = TypeKind(166)
+TypeKind.OCLINTELSUBGROUPAVCSICPAYLOAD = TypeKind(167)
+TypeKind.OCLINTELSUBGROUPAVCMCERESULT = TypeKind(168)
+TypeKind.OCLINTELSUBGROUPAVCIMERESULT = TypeKind(169)
+TypeKind.OCLINTELSUBGROUPAVCREFRESULT = TypeKind(170)
+TypeKind.OCLINTELSUBGROUPAVCSICRESULT = TypeKind(171)
+TypeKind.OCLINTELSUBGROUPAVCIMERESULTSINGLEREFERENCESTREAMOUT = TypeKind(172)
+TypeKind.OCLINTELSUBGROUPAVCIMERESULTSDUALREFERENCESTREAMOUT = TypeKind(173)
+TypeKind.OCLINTELSUBGROUPAVCIMERESULTSSINGLEREFERENCESTREAMIN = TypeKind(174)
+TypeKind.OCLINTELSUBGROUPAVCIMEDUALREFERENCESTREAMIN = TypeKind(175)
+
 TypeKind.EXTVECTOR = TypeKind(176)
 TypeKind.ATOMIC = TypeKind(177)
-
+TypeKind.BTFTAGATTRIBUTED = TypeKind(178)
 
 class RefQualifierKind(BaseEnumeration):
     """Describes a specific ref-qualifier of a type."""

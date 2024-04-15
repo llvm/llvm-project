@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-def AArch64_smstart : SDNode<"AArch64ISD::SMSTART", SDTypeProfile<0, 3,
-                             [SDTCisInt<0>, SDTCisInt<0>, SDTCisInt<0>]>,
+def AArch64_smstart : SDNode<"AArch64ISD::SMSTART", SDTypeProfile<0, 2,
+                             [SDTCisInt<0>, SDTCisInt<0>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64_smstop  : SDNode<"AArch64ISD::SMSTOP", SDTypeProfile<0, 3,
-                             [SDTCisInt<0>, SDTCisInt<0>, SDTCisInt<0>]>,
+def AArch64_smstop  : SDNode<"AArch64ISD::SMSTOP", SDTypeProfile<0, 2,
+                             [SDTCisInt<0>, SDTCisInt<0>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue, SDNPOutGlue]>;
 def AArch64_restore_za : SDNode<"AArch64ISD::RESTORE_ZA", SDTypeProfile<0, 3,
@@ -29,7 +29,7 @@ def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
                              [SDTCisInt<0>, SDTCisPtrTy<1>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPMayStore]>;
 def AArch64CoalescerBarrier
-    : SDNode<"AArch64ISD::COALESCER_BARRIER", SDTypeProfile<1, 1, []>, []>;
+    : SDNode<"AArch64ISD::COALESCER_BARRIER", SDTypeProfile<1, 1, []>, [SDNPOptInGlue, SDNPOutGlue]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
@@ -158,39 +158,13 @@ def : Pat<(AArch64_restore_za
             (i64 GPR64:$tpidr2_el0), (i64 GPR64sp:$tpidr2obj), (i64 texternalsym:$restore_routine)),
           (RestoreZAPseudo GPR64:$tpidr2_el0, GPR64sp:$tpidr2obj, texternalsym:$restore_routine)>;
 
-// Scenario A:
-//
-//   %pstate.before.call = 1
-//   if (%pstate.before.call != 0)
-//     smstop (pstate_za|pstate_sm)
-//   call fn()
-//   if (%pstate.before.call != 0)
-//     smstart (pstate_za|pstate_sm)
-//
-def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 1), (i64 0)),   // before call
-          (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
-def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 1), (i64 0)),  // after call
-          (MSRpstatesvcrImm1 svcr_op:$pstate, 0b1)>;
-
-// Scenario B:
-//
-//   %pstate.before.call = 0
-//   if (%pstate.before.call != 1)
-//     smstart (pstate_za|pstate_sm)
-//   call fn()
-//   if (%pstate.before.call != 1)
-//     smstop (pstate_za|pstate_sm)
-//
-def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 0), (i64 1)),  // before call
-          (MSRpstatesvcrImm1 svcr_op:$pstate, 0b1)>;
-def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 0), (i64 1)),   // after call
-          (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
-
 // Read and write TPIDR2_EL0
 def : Pat<(int_aarch64_sme_set_tpidr2 i64:$val),
           (MSR 0xde85, GPR64:$val)>;
 def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
           (MRS 0xde85)>;
+
+} // End let Predicates = [HasSME]
 
 multiclass CoalescerBarrierPseudo<RegisterClass rc, list<ValueType> vts> {
   def NAME : Pseudo<(outs rc:$dst), (ins rc:$src), []>, Sched<[]> {
@@ -211,8 +185,6 @@ multiclass CoalescerBarriers {
 
 defm COALESCER_BARRIER : CoalescerBarriers;
 
-} // End let Predicates = [HasSME]
-
 // Pseudo to match to smstart/smstop. This expands:
 //
 //  pseudonode (pstate_za|pstate_sm), before_call, expected_value
@@ -230,17 +202,24 @@ defm COALESCER_BARRIER : CoalescerBarriers;
 // SME instructions.
 def MSRpstatePseudo :
   Pseudo<(outs),
-           (ins svcr_op:$pstatefield, timm0_1:$imm, GPR64:$rtpstate, timm0_1:$expected_pstate, variable_ops), []>,
+           (ins svcr_op:$pstatefield, timm0_1:$imm, timm0_31:$condition, variable_ops), []>,
     Sched<[WriteSys]> {
   let hasPostISelHook = 1;
   let Uses = [VG];
   let Defs = [VG];
 }
 
-def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 GPR64:$rtpstate), (i64 timm0_1:$expected_pstate)),
-          (MSRpstatePseudo svcr_op:$pstate, 0b1, GPR64:$rtpstate, timm0_1:$expected_pstate)>;
-def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 GPR64:$rtpstate), (i64 timm0_1:$expected_pstate)),
-          (MSRpstatePseudo svcr_op:$pstate, 0b0, GPR64:$rtpstate, timm0_1:$expected_pstate)>;
+def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 timm0_31:$condition)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b1, timm0_31:$condition)>;
+def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 timm0_31:$condition)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b0, timm0_31:$condition)>;
+
+// Unconditional start/stop
+def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0)),
+          (MSRpstatesvcrImm1 svcr_op:$pstate, 0b1)>;
+def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0)),
+          (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
+
 
 //===----------------------------------------------------------------------===//
 // SME2 Instructions

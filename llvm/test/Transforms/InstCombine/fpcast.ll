@@ -347,3 +347,88 @@ define double @masked_uint_to_fpext3(i32 %x) {
   %r = fpext float %f to double
   ret double %r
 }
+
+define i32 @fptosi_nonnorm(float nofpclass(norm) %x) {
+; CHECK-LABEL: @fptosi_nonnorm(
+; CHECK-NEXT:    ret i32 0
+;
+  %ret = fptosi float %x to i32
+  ret i32 %ret
+}
+
+define i32 @fptoui_nonnorm(float nofpclass(pnorm) %x) {
+; CHECK-LABEL: @fptoui_nonnorm(
+; CHECK-NEXT:    ret i32 0
+;
+  %ret = fptoui float %x to i32
+  ret i32 %ret
+}
+
+define i32 @fptosi_nonnnorm(float nofpclass(nnorm) %x) {
+; CHECK-LABEL: @fptosi_nonnnorm(
+; CHECK-NEXT:    [[RET:%.*]] = fptosi float [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %ret = fptosi float %x to i32
+  ret i32 %ret
+}
+
+define i32 @fptoui_nonnnorm(float nofpclass(nnorm) %x) {
+; CHECK-LABEL: @fptoui_nonnnorm(
+; CHECK-NEXT:    [[RET:%.*]] = fptoui float [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %ret = fptoui float %x to i32
+  ret i32 %ret
+}
+
+define i32 @fptosi_nonnorm_copysign(float %x) {
+; CHECK-LABEL: @fptosi_nonnorm_copysign(
+; CHECK-NEXT:    ret i32 0
+;
+  %val = call float @llvm.copysign.f32(float 0.0, float %x)
+  %ret = fptosi float %val to i32
+  ret i32 %ret
+}
+
+define <2 x i32> @fptosi_nonnorm_copysign_vec(<2 x float> %x) {
+; CHECK-LABEL: @fptosi_nonnorm_copysign_vec(
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+;
+  %val = call <2 x float> @llvm.copysign.v2f32(<2 x float> zeroinitializer, <2 x float> %x)
+  %ret = fptosi <2 x float> %val to <2 x i32>
+  ret <2 x i32> %ret
+}
+
+define i32 @fptosi_nonnorm_fmul(float %x) {
+; CHECK-LABEL: @fptosi_nonnorm_fmul(
+; CHECK-NEXT:    [[SEL:%.*]] = fmul float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[RET:%.*]] = fptosi float [[SEL]] to i32
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %sel = fmul float %x, 0.000000e+00
+  %ret = fptosi float %sel to i32
+  ret i32 %ret
+}
+
+define i32 @fptosi_select(i1 %cond) {
+; CHECK-LABEL: @fptosi_select(
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[COND:%.*]], i32 1, i32 -1
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %sel = select i1 %cond, float 1.0, float -1.0
+  %ret = fptosi float %sel to i32
+  ret i32 %ret
+}
+
+define i32 @mul_pos_zero_convert(i32 %a) {
+; CHECK-LABEL: @mul_pos_zero_convert(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %fp = sitofp i32 %a to float
+  %ret = fmul float %fp, 0.000000e+00
+  %conv = fptosi float %ret to i32
+  ret i32 %conv
+}

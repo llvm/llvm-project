@@ -1192,7 +1192,7 @@ def : GCNPat <
 class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
                                                string opName = ps.Mnemonic,
                                                bit hasGDS = true>
-    : DS_Real<ps, opName>, SIMCInstr <ps.Mnemonic, ef> {
+    : DS_Real<ps, opName>, SIMCInstr <ps.PseudoInstr, ef> {
 
   let Inst{7-0}   = !if(ps.has_offset0, offset0, 0);
   let Inst{15-8}  = !if(ps.has_offset1, offset1, 0);
@@ -1557,7 +1557,7 @@ defm DS_MAX_SRC2_F64        : DS_Real_gfx6_gfx7_gfx10<0x0d3>;
 
 class DS_Real_vi <bits<8> op, DS_Pseudo ps> :
   DS_Real <ps>,
-  SIMCInstr <ps.Mnemonic, SIEncodingFamily.VI> {
+  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.VI> {
   let AssemblerPredicate = isGFX8GFX9;
   let DecoderNamespace = "GFX8";
 
@@ -1735,14 +1735,12 @@ def DS_WRITE_B128_vi      : DS_Real_vi<0xdf, DS_WRITE_B128>;
 def DS_READ_B96_vi        : DS_Real_vi<0xfe, DS_READ_B96>;
 def DS_READ_B128_vi       : DS_Real_vi<0xff, DS_READ_B128>;
 
-let SubtargetPredicate = isGFX90APlus in {
-  def DS_ADD_F64_vi     : DS_Real_vi<0x5c, DS_ADD_F64>;
-  def DS_ADD_RTN_F64_vi : DS_Real_vi<0x7c, DS_ADD_RTN_F64>;
-} // End SubtargetPredicate = isGFX90APlus
+// GFX90A+.
+def DS_ADD_F64_vi     : DS_Real_vi<0x5c, DS_ADD_F64>;
+def DS_ADD_RTN_F64_vi : DS_Real_vi<0x7c, DS_ADD_RTN_F64>;
 
-let SubtargetPredicate = isGFX940Plus in {
-  def DS_PK_ADD_F16_vi     : DS_Real_vi<0x17, DS_PK_ADD_F16>;
-  def DS_PK_ADD_RTN_F16_vi : DS_Real_vi<0xb7, DS_PK_ADD_RTN_F16>;
-  def DS_PK_ADD_BF16_vi     : DS_Real_vi<0x18, DS_PK_ADD_BF16>;
-  def DS_PK_ADD_RTN_BF16_vi : DS_Real_vi<0xb8, DS_PK_ADD_RTN_BF16>;
-} // End SubtargetPredicate = isGFX940Plus
+// GFX940+.
+def DS_PK_ADD_F16_vi     : DS_Real_vi<0x17, DS_PK_ADD_F16>;
+def DS_PK_ADD_RTN_F16_vi : DS_Real_vi<0xb7, DS_PK_ADD_RTN_F16>;
+def DS_PK_ADD_BF16_vi     : DS_Real_vi<0x18, DS_PK_ADD_BF16>;
+def DS_PK_ADD_RTN_BF16_vi : DS_Real_vi<0xb8, DS_PK_ADD_RTN_BF16>;

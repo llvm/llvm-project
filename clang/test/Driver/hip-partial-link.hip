@@ -47,7 +47,7 @@
 // OBJ:  D __hip_gpubin_handle_[[ID2]]
 
 // RUN: %clang -v --target=x86_64-unknown-linux-gnu --no-offload-new-driver \
-// RUN:   --hip-link -no-hip-rt -fgpu-rdc --offload-arch=gfx906 \
+// RUN:   --hip-link -fgpu-rdc --offload-arch=gfx906 \
 // RUN:   -fuse-ld=lld -nostdlib -r %t.main.o %t.lib.o -o %t.final.o \
 // RUN:   2>&1 | FileCheck -check-prefix=LINK-O %s
 // LINK-O-NOT: Found undefined HIP {{.*}}symbol

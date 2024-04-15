@@ -1604,27 +1604,40 @@ specifies availability for the current target platform, the availability
 attributes are ignored. Supported platforms are:
 
 ``ios``
-  Apple's iOS operating system. The minimum deployment target is specified by
-  the ``-mios-version-min=*version*`` or ``-miphoneos-version-min=*version*``
-  command-line arguments.
+  Apple's iOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-ios*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=ios*version*``
+  command-line argument.
 
 ``macos``
-  Apple's macOS operating system. The minimum deployment target is
-  specified by the ``-mmacosx-version-min=*version*`` command-line argument.
-  ``macosx`` is supported for backward-compatibility reasons, but it is
-  deprecated.
+  Apple's macOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-macos*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=macos*version*``
+  command-line argument. ``macosx`` is supported for
+  backward-compatibility reasons, but it is deprecated.
 
 ``tvos``
-  Apple's tvOS operating system. The minimum deployment target is specified by
-  the ``-mtvos-version-min=*version*`` command-line argument.
+  Apple's tvOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-tvos*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=tvos*version*``
+  command-line argument.
 
 ``watchos``
-  Apple's watchOS operating system. The minimum deployment target is specified by
-  the ``-mwatchos-version-min=*version*`` command-line argument.
+  Apple's watchOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-watchos*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=watchos*version*``
+  command-line argument.
+
+``visionos``
+  Apple's visionOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-visionos*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=visionos*version*``
+  command-line argument.
 
 ``driverkit``
   Apple's DriverKit userspace kernel extensions. The minimum deployment target
-  is specified as part of the triple.
+  is specified as part of the ``-target *arch*-apple-driverkit*version*``
+  command line argument.
 
 A declaration can typically be used even when deploying back to a platform
 version prior to when the declaration was introduced. When this happens, the
@@ -4151,6 +4164,20 @@ non-underscored keywords. For example:
       @property (assign, nullable) NSView *superview;
       @property (readonly, nonnull) NSArray *subviews;
     @end
+
+As well as built-in pointer types, the nullability attributes can be attached
+to C++ classes marked with the ``_Nullable`` attribute.
+
+The following C++ standard library types are considered nullable:
+``unique_ptr``, ``shared_ptr``, ``auto_ptr``, ``exception_ptr``, ``function``,
+``move_only_function`` and ``coroutine_handle``.
+
+Types should be marked nullable only where the type itself leaves nullability
+ambiguous. For example, ``std::optional`` is not marked ``_Nullable``, because
+``optional<int> _Nullable`` is redundant and ``optional<int> _Nonnull`` is
+not a useful type. ``std::weak_ptr`` is not nullable, because its nullability
+can change with no visible modification, so static annotation is unlikely to be
+unhelpful.
   }];
 }
 
@@ -4185,6 +4212,17 @@ The ``_Nullable`` nullability qualifier indicates that a value of the
     int fetch_or_zero(int * _Nullable ptr);
 
 a caller of ``fetch_or_zero`` can provide null.
+
+The ``_Nullable`` attribute on classes indicates that the given class can
+represent null values, and so the ``_Nullable``, ``_Nonnull`` etc qualifiers
+make sense for this type. For example:
+
+  .. code-block:: c
+
+    class _Nullable ArenaPointer { ... };
+
+    ArenaPointer _Nonnull x = ...;
+    ArenaPointer _Nullable y = nullptr;
   }];
 }
 
@@ -5137,10 +5175,11 @@ that does not. A single parameter may not have multiple ABI treatment
 attributes.
 
 Support for this feature is target-dependent, although it should be
-supported on every target that Swift supports. Query for this support
-with ``__has_attribute(swiftcall)``. This implies support for the
-``swift_context``, ``swift_error_result``, and ``swift_indirect_result``
-attributes.
+supported on every target that Swift supports. Query for this attribute
+with ``__has_attribute(swiftcall)``. Query if the target supports the
+calling convention with ``__has_extension(swiftcc)``. This implies
+support for the ``swift_context``, ``swift_error_result``, and
+``swift_indirect_result`` attributes.
   }];
 }
 
@@ -5187,6 +5226,10 @@ the following:
   semantically be performed after a guaranteed tail call, such as the
   non-trivial destruction of a local variable or temporary,
   then the program is ill-formed.
+
+Query for this attribute with ``__has_attribute(swiftasynccall)``. Query if
+the target supports the calling convention with
+``__has_extension(swiftasynccc)``.
   }];
 }
 
@@ -5487,6 +5530,17 @@ C intrinsic functions; it is intended for use only inside ``arm_*.h`` and
 ``riscv_*.h`` and is not a general mechanism for declaring arbitrary aliases
 for clang builtin functions.
   }];
+}
+
+def RISCVVectorCCDocs : Documentation {
+ let Category = DocCatCallingConvs;
+ let Heading = "riscv::vector_cc, riscv_vector_cc, clang::riscv_vector_cc";
+ let Content = [{
+The ``riscv_vector_cc`` attribute can be applied to a function. It preserves 15
+registers namely, v1-v7 and v24-v31 as callee-saved. Callers thus don't need
+to save these registers before function calls, and callees only need to save
+them if they use them.
+ }];
 }
 
 def PreferredNameDocs : Documentation {
@@ -6064,6 +6118,9 @@ def AlwaysDestroyDocs : Documentation {
 The ``always_destroy`` attribute specifies that a variable with static or thread
 storage duration should have its exit-time destructor run. This attribute is the
 default unless clang was invoked with -fno-c++-static-destructors.
+
+If a variable is explicitly declared with this attribute, Clang will silence
+otherwise applicable ``-Wexit-time-destructors`` warnings.
   }];
 }
 
@@ -7465,7 +7522,7 @@ means that it can e.g no longer be part of an initializer expression.
 
       /* This may print something else than "6 * 7 = 42",
          if there is a non-weak definition of "ANSWER" in
-	 an object linked in */
+         an object linked in */
       printf("6 * 7 = %d\n", ANSWER);
 
       return 0;

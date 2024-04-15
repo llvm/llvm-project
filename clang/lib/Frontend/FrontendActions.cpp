@@ -281,6 +281,13 @@ GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
   if (Consumers.empty())
     return nullptr;
 
+  if (CI.getFrontendOpts().GenReducedBMI &&
+      !CI.getFrontendOpts().ModuleOutputPath.empty()) {
+    Consumers.push_back(std::make_unique<ReducedBMIGenerator>(
+        CI.getPreprocessor(), CI.getModuleCache(),
+        CI.getFrontendOpts().ModuleOutputPath));
+  }
+
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
@@ -450,6 +457,8 @@ private:
       return "BuildingBuiltinDumpStructCall";
     case CodeSynthesisContext::BuildingDeductionGuides:
       return "BuildingDeductionGuides";
+    case CodeSynthesisContext::TypeAliasTemplateInstantiation:
+      return "TypeAliasTemplateInstantiation";
     }
     return "";
   }
@@ -1083,6 +1092,7 @@ void PrintPreambleAction::ExecuteAction() {
   case Language::CUDA:
   case Language::HIP:
   case Language::HLSL:
+  case Language::CIR:
     break;
 
   case Language::Unknown:

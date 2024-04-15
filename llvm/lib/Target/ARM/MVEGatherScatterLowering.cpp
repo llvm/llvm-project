@@ -780,8 +780,9 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingGatScat(
   // Make sure the offsets are scaled correctly
   Instruction *ScaledOffsets = BinaryOperator::Create(
       Instruction::Shl, OffsetsIncoming,
-      Builder.CreateVectorSplat(Ty->getNumElements(), Builder.getInt32(TypeScale)),
-      "ScaledIndex", I);
+      Builder.CreateVectorSplat(Ty->getNumElements(),
+                                Builder.getInt32(TypeScale)),
+      "ScaledIndex", I->getIterator());
   // Add the base to the offsets
   OffsetsIncoming = BinaryOperator::Create(
       Instruction::Add, ScaledOffsets,
@@ -790,7 +791,7 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingGatScat(
           Builder.CreatePtrToInt(
               BasePtr,
               cast<VectorType>(ScaledOffsets->getType())->getElementType())),
-      "StartIndex", I);
+      "StartIndex", I->getIterator());
 
   if (I->getIntrinsicID() == Intrinsic::masked_gather)
     return tryCreateMaskedGatherBase(I, OffsetsIncoming, Builder, Immediate);
@@ -838,7 +839,8 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingWBGatScat(
   Instruction *ScaledOffsets = BinaryOperator::Create(
       Instruction::Shl, Phi->getIncomingValue(1 - IncrementIndex),
       Builder.CreateVectorSplat(NumElems, Builder.getInt32(TypeScale)),
-      "ScaledIndex", &Phi->getIncomingBlock(1 - IncrementIndex)->back());
+      "ScaledIndex",
+      Phi->getIncomingBlock(1 - IncrementIndex)->back().getIterator());
   // Add the base to the offsets
   OffsetsIncoming = BinaryOperator::Create(
       Instruction::Add, ScaledOffsets,
@@ -847,13 +849,14 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingWBGatScat(
           Builder.CreatePtrToInt(
               BasePtr,
               cast<VectorType>(ScaledOffsets->getType())->getElementType())),
-      "StartIndex", &Phi->getIncomingBlock(1 - IncrementIndex)->back());
+      "StartIndex",
+      Phi->getIncomingBlock(1 - IncrementIndex)->back().getIterator());
   // The gather is pre-incrementing
   OffsetsIncoming = BinaryOperator::Create(
       Instruction::Sub, OffsetsIncoming,
       Builder.CreateVectorSplat(NumElems, Builder.getInt32(Immediate)),
       "PreIncrementStartIndex",
-      &Phi->getIncomingBlock(1 - IncrementIndex)->back());
+      Phi->getIncomingBlock(1 - IncrementIndex)->back().getIterator());
   Phi->setIncomingValue(1 - IncrementIndex, OffsetsIncoming);
 
   Builder.SetInsertPoint(I);
@@ -886,8 +889,8 @@ void MVEGatherScatterLowering::pushOutAdd(PHINode *&Phi,
                                           Value *OffsSecondOperand,
                                           unsigned StartIndex) {
   LLVM_DEBUG(dbgs() << "masked gathers/scatters: optimising add instruction\n");
-  Instruction *InsertionPoint =
-        &cast<Instruction>(Phi->getIncomingBlock(StartIndex)->back());
+  BasicBlock::iterator InsertionPoint =
+      Phi->getIncomingBlock(StartIndex)->back().getIterator();
   // Initialize the phi with a vector that contains a sum of the constants
   Instruction *NewIndex = BinaryOperator::Create(
       Instruction::Add, Phi->getIncomingValue(StartIndex), OffsSecondOperand,
@@ -911,8 +914,8 @@ void MVEGatherScatterLowering::pushOutMulShl(unsigned Opcode, PHINode *&Phi,
 
   // Create a new scalar add outside of the loop and transform it to a splat
   // by which loop variable can be incremented
-  Instruction *InsertionPoint = &cast<Instruction>(
-        Phi->getIncomingBlock(LoopIncrement == 1 ? 0 : 1)->back());
+  BasicBlock::iterator InsertionPoint =
+      Phi->getIncomingBlock(LoopIncrement == 1 ? 0 : 1)->back().getIterator();
 
   // Create a new index
   Value *StartIndex =
@@ -923,11 +926,14 @@ void MVEGatherScatterLowering::pushOutMulShl(unsigned Opcode, PHINode *&Phi,
   Instruction *Product =
       BinaryOperator::Create((Instruction::BinaryOps)Opcode, IncrementPerRound,
                              OffsSecondOperand, "Product", InsertionPoint);
+
+  BasicBlock::iterator NewIncrInsertPt =
+      Phi->getIncomingBlock(LoopIncrement)->back().getIterator();
+  NewIncrInsertPt = std::prev(NewIncrInsertPt);
+
   // Increment NewIndex by Product instead of the multiplication
   Instruction *NewIncrement = BinaryOperator::Create(
-      Instruction::Add, Phi, Product, "IncrementPushedOutMul",
-      cast<Instruction>(Phi->getIncomingBlock(LoopIncrement)->back())
-          .getPrevNode());
+      Instruction::Add, Phi, Product, "IncrementPushedOutMul", NewIncrInsertPt);
 
   Phi->addIncoming(StartIndex,
                    Phi->getIncomingBlock(LoopIncrement == 1 ? 0 : 1));
@@ -1054,7 +1060,7 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
       // our phi, we need to copy it
       IncInstruction = BinaryOperator::Create(
           Instruction::BinaryOps(IncInstruction->getOpcode()), Phi,
-          IncrementPerRound, "LoopIncrement", IncInstruction);
+          IncrementPerRound, "LoopIncrement", IncInstruction->getIterator());
       Phi->setIncomingValue(IncrementingBlock, IncInstruction);
     }
     NewPhi = Phi;
@@ -1066,7 +1072,7 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
                         Phi->getIncomingBlock(IncrementingBlock == 1 ? 0 : 1));
     IncInstruction = BinaryOperator::Create(
         Instruction::BinaryOps(IncInstruction->getOpcode()), NewPhi,
-        IncrementPerRound, "LoopIncrement", IncInstruction);
+        IncrementPerRound, "LoopIncrement", IncInstruction->getIterator());
     NewPhi->addIncoming(IncInstruction,
                         Phi->getIncomingBlock(IncrementingBlock));
     IncrementingBlock = 1;
@@ -1229,7 +1235,7 @@ bool MVEGatherScatterLowering::optimiseAddress(Value *Address, BasicBlock *BB,
         BaseTy = FixedVectorType::get(BaseTy, VecTy);
       GetElementPtrInst *NewAddress = GetElementPtrInst::Create(
           Builder.getInt8Ty(), Builder.CreateBitCast(Base, BaseTy), Offsets,
-          "gep.merged", GEP);
+          "gep.merged", GEP->getIterator());
       LLVM_DEBUG(dbgs() << "Folded GEP: " << *GEP
                         << "\n      new :  " << *NewAddress << "\n");
       GEP->replaceAllUsesWith(

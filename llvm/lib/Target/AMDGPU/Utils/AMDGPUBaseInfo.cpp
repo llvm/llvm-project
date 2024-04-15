@@ -182,6 +182,8 @@ unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion) {
     return 4;
   case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
     return 5;
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V6:
+    return 6;
   default:
     return getDefaultAMDHSACodeObjectVersion();
   }
@@ -318,6 +320,7 @@ struct MUBUFInfo {
   bool has_srsrc;
   bool has_soffset;
   bool IsBufferInv;
+  bool tfe;
 };
 
 struct MTBUFInfo {
@@ -466,6 +469,11 @@ bool getMUBUFIsBufferInv(unsigned Opc) {
   return Info ? Info->IsBufferInv : false;
 }
 
+bool getMUBUFTfe(unsigned Opc) {
+  const MUBUFInfo *Info = getMUBUFOpcodeHelper(Opc);
+  return Info ? Info->tfe : false;
+}
+
 bool getSMEMIsBuffer(unsigned Opc) {
   const SMInfo *Info = getSMEMOpcodeHelper(Opc);
   return Info ? Info->IsBuffer : false;
@@ -490,9 +498,7 @@ bool isVOPC64DPP(unsigned Opc) {
   return isVOPC64DPPOpcodeHelper(Opc) || isVOPC64DPP8OpcodeHelper(Opc);
 }
 
-bool isVOPCAsmOnly(unsigned Opc) {
-  return isVOPCAsmOnlyOpcodeHelper(Opc) || isVOP3CAsmOnlyOpcodeHelper(Opc);
-}
+bool isVOPCAsmOnly(unsigned Opc) { return isVOPCAsmOnlyOpcodeHelper(Opc); }
 
 bool getMAIIsDGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
@@ -1081,7 +1087,7 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
 
-  if (STI->getFeatureBits().test(FeatureGFX11FullVGPRs))
+  if (STI->getFeatureBits().test(Feature1_5xVGPRs))
     return IsWave32 ? 24 : 12;
 
   if (hasGFX10_3Insts(*STI))
@@ -1108,7 +1114,7 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   if (!isGFX10Plus(*STI))
     return 256;
   bool IsWave32 = STI->getFeatureBits().test(FeatureWavefrontSize32);
-  if (STI->getFeatureBits().test(FeatureGFX11FullVGPRs))
+  if (STI->getFeatureBits().test(Feature1_5xVGPRs))
     return IsWave32 ? 1536 : 768;
   return IsWave32 ? 1024 : 512;
 }
@@ -1213,47 +1219,6 @@ void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
       S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
       S_00B848_MEM_ORDERED(1);
   }
-}
-
-amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
-    const MCSubtargetInfo *STI) {
-  IsaVersion Version = getIsaVersion(STI->getCPU());
-
-  amdhsa::kernel_descriptor_t KD;
-  memset(&KD, 0, sizeof(KD));
-
-  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                  amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64,
-                  amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE);
-  if (Version.Major >= 12) {
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN, 0);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_DISABLE_PERF, 0);
-  } else {
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_DX10_CLAMP, 1);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX6_GFX11_ENABLE_IEEE_MODE, 1);
-  }
-  AMDHSA_BITS_SET(KD.compute_pgm_rsrc2,
-                  amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, 1);
-  if (Version.Major >= 10) {
-    AMDHSA_BITS_SET(KD.kernel_code_properties,
-                    amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
-                    STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1 : 0);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE,
-                    STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED, 1);
-  }
-  if (AMDGPU::isGFX90A(*STI)) {
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc3,
-                    amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
-                    STI->getFeatureBits().test(FeatureTgSplit) ? 1 : 0);
-  }
-  return KD;
 }
 
 bool isGroupSegment(const GlobalValue *GV) {
@@ -3053,6 +3018,11 @@ bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
 
 bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
   return hasAny64BitVGPROperands(OpDesc);
+}
+
+unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
+  // Currently this is 128 for all subtargets
+  return 128;
 }
 
 } // namespace AMDGPU

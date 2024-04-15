@@ -24,6 +24,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
@@ -101,6 +102,12 @@ void Function::setIsNewDbgInfoFormat(bool NewFlag) {
     convertToNewDbgValues();
   else if (!NewFlag && IsNewDbgInfoFormat)
     convertFromNewDbgValues();
+}
+void Function::setNewDbgInfoFormatFlag(bool NewFlag) {
+  for (auto &BB : *this) {
+    BB.setNewDbgInfoFormatFlag(NewFlag);
+  }
+  IsNewDbgInfoFormat = NewFlag;
 }
 
 //===----------------------------------------------------------------------===//
@@ -254,6 +261,13 @@ uint64_t Argument::getDereferenceableOrNullBytes() const {
 
 FPClassTest Argument::getNoFPClass() const {
   return getParent()->getParamNoFPClass(getArgNo());
+}
+
+std::optional<ConstantRange> Argument::getRange() const {
+  const Attribute RangeAttr = getAttribute(llvm::Attribute::Range);
+  if (RangeAttr.isValid())
+    return RangeAttr.getRange();
+  return std::nullopt;
 }
 
 bool Argument::hasNestAttr() const {
@@ -1156,6 +1170,10 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   case IIT_V4:
     OutputTable.push_back(IITDescriptor::getVector(4, IsScalableVector));
+    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    return;
+  case IIT_V6:
+    OutputTable.push_back(IITDescriptor::getVector(6, IsScalableVector));
     DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;
   case IIT_V8:

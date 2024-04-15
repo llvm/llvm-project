@@ -86,7 +86,7 @@ class BUF_Pseudo <string opName, dag outs, dag ins,
   bits<1> has_soffset = 1;
   bits<1> has_offset  = 1;
   bits<1> has_slc     = 1;
-  bits<1> tfe         = ?;
+  bits<1> tfe         = 0;
   bits<4> elements    = 0;
   bits<1> has_sccb    = 1;
   bits<1> sccb_value  = 0;
@@ -323,6 +323,7 @@ class MUBUF_Pseudo <string opName, dag outs, dag ins,
   Instruction BaseOpcode = !cast<Instruction>(MUBUFGetBaseOpcode<NAME>.ret);
   let MUBUF = 1;
   let AsmMatchConverter = "cvtMubuf";
+  let usesCustomInserter = 1;
 }
 
 class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
@@ -2616,7 +2617,6 @@ defm BUFFER_ATOMIC_CMPSWAP_X2     : MUBUF_Real_Atomic_gfx11_gfx12<0x042, "buffer
 defm BUFFER_ATOMIC_FCMPSWAP       : MUBUF_Real_Atomic_gfx11<0x050, "buffer_atomic_cmpswap_f32">;
 defm BUFFER_ATOMIC_COND_SUB_U32   : MUBUF_Real_Atomic_gfx12<0x050>;
 defm BUFFER_ATOMIC_CSUB           : MUBUF_Real_Atomic_gfx11_gfx12<0x037, "buffer_atomic_sub_clamp_u32", "buffer_atomic_csub_u32">;
-def : Mnem_gfx11_gfx12<"buffer_atomic_csub", "buffer_atomic_csub_u32">;
 defm BUFFER_ATOMIC_DEC            : MUBUF_Real_Atomic_gfx11_gfx12<0x040, "buffer_atomic_dec_u32">;
 defm BUFFER_ATOMIC_DEC_X2         : MUBUF_Real_Atomic_gfx11_gfx12<0x04D, "buffer_atomic_dec_u64">;
 defm BUFFER_ATOMIC_INC            : MUBUF_Real_Atomic_gfx11_gfx12<0x03F, "buffer_atomic_inc_u32">;
@@ -3370,7 +3370,7 @@ def MUBUFInfoTable : GenericTable {
   let CppTypeName = "MUBUFInfo";
   let Fields = [
     "Opcode", "BaseOpcode", "elements", "has_vaddr", "has_srsrc", "has_soffset",
-    "IsBufferInv"
+    "IsBufferInv", "tfe"
   ];
 
   let PrimaryKey = ["Opcode"];
