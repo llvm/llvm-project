@@ -1659,6 +1659,22 @@ def SignedOverflowBehaviorEnum : I32EnumAttr<
   let cppNamespace = "::mlir::cir::sob";
 }
 
+/// Definition of TLS related kinds.
+def TLS_GeneralDynamic :
+  I32EnumAttrCase<"GeneralDynamic", 0, "tls_dyn">;
+def TLS_LocalDynamic :
+  I32EnumAttrCase<"LocalDynamic", 1, "tls_local_dyn">;
+def TLS_InitialExec :
+  I32EnumAttrCase<"InitialExec", 2, "tls_init_exec">;
+def TLS_LocalExec :
+  I32EnumAttrCase<"LocalExec", 3, "tls_local_exec">;
+
+def TLSModel : I32EnumAttr<
+    "TLS_Model",
+    "TLS model",
+    [TLS_GeneralDynamic, TLS_LocalDynamic, TLS_InitialExec, TLS_LocalExec]> {
+  let cppNamespace = "::mlir::cir";
+}
 
 def GlobalOp : CIR_Op<"global", [Symbol, DeclareOpInterfaceMethods<RegionBranchOpInterface>, NoRegionArguments]> {
   let summary = "Declares or defines a global variable";
@@ -1694,6 +1710,7 @@ def GlobalOp : CIR_Op<"global", [Symbol, DeclareOpInterfaceMethods<RegionBranchO
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        Arg<GlobalLinkageKind, "linkage type">:$linkage,
+                       OptionalAttr<TLSModel>:$tls_model,
                        // Note this can also be a FlatSymbolRefAttr
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$constant,
@@ -1706,6 +1723,7 @@ def GlobalOp : CIR_Op<"global", [Symbol, DeclareOpInterfaceMethods<RegionBranchO
        ($sym_visibility^)?
        (`constant` $constant^)?
        $linkage
+       ($tls_model^)?
        $sym_name
        custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value, $ctorRegion, $dtorRegion)
        attr-dict
