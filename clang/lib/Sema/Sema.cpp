@@ -41,6 +41,7 @@
 #include "clang/Sema/RISCVIntrinsicManager.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
@@ -92,9 +93,8 @@ DarwinSDKInfo *Sema::getDarwinSDKInfoForAvailabilityChecking() {
   return nullptr;
 }
 
-IdentifierInfo *
-Sema::InventAbbreviatedTemplateParameterTypeName(IdentifierInfo *ParamName,
-                                                 unsigned int Index) {
+IdentifierInfo *Sema::InventAbbreviatedTemplateParameterTypeName(
+    const IdentifierInfo *ParamName, unsigned int Index) {
   std::string InventedName;
   llvm::raw_string_ostream OS(InventedName);
 
@@ -200,6 +200,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
       OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
       CurScope(nullptr), Ident_super(nullptr),
+      CUDAPtr(std::make_unique<SemaCUDA>(*this)),
       HLSLPtr(std::make_unique<SemaHLSL>(*this)),
       OpenACCPtr(std::make_unique<SemaOpenACC>(*this)),
       SYCLPtr(std::make_unique<SemaSYCL>(*this)),
@@ -1636,15 +1637,15 @@ bool Sema::hasUncompilableErrorOccurred() const {
 // Print notes showing how we can reach FD starting from an a priori
 // known-callable function.
 static void emitCallStackNotes(Sema &S, const FunctionDecl *FD) {
-  auto FnIt = S.DeviceKnownEmittedFns.find(FD);
-  while (FnIt != S.DeviceKnownEmittedFns.end()) {
+  auto FnIt = S.CUDA().DeviceKnownEmittedFns.find(FD);
+  while (FnIt != S.CUDA().DeviceKnownEmittedFns.end()) {
     // Respect error limit.
     if (S.Diags.hasFatalErrorOccurred())
       return;
     DiagnosticBuilder Builder(
         S.Diags.Report(FnIt->second.Loc, diag::note_called_by));
     Builder << FnIt->second.FD;
-    FnIt = S.DeviceKnownEmittedFns.find(FnIt->second.FD);
+    FnIt = S.CUDA().DeviceKnownEmittedFns.find(FnIt->second.FD);
   }
 }
 
@@ -1748,7 +1749,7 @@ public:
         (ShouldEmitRootNode || InOMPDeviceContext))
       S.finalizeOpenMPDelayedAnalysis(Caller, FD, Loc);
     if (Caller)
-      S.DeviceKnownEmittedFns[FD] = {Caller, Loc};
+      S.CUDA().DeviceKnownEmittedFns[FD] = {Caller, Loc};
     // Always emit deferred diagnostics for the direct users. This does not
     // lead to explosion of diagnostics since each user is visited at most
     // twice.
@@ -1837,8 +1838,8 @@ void Sema::emitDeferredDiags() {
 // which other not-known-emitted functions.
 //
 // When we see something which is illegal if the current function is emitted
-// (usually by way of CUDADiagIfDeviceCode, CUDADiagIfHostCode, or
-// CheckCUDACall), we first check if the current function is known-emitted.  If
+// (usually by way of DiagIfDeviceCode, DiagIfHostCode, or
+// CheckCall), we first check if the current function is known-emitted.  If
 // so, we immediately output the diagnostic.
 //
 // Otherwise, we "defer" the diagnostic.  It sits in Sema::DeviceDeferredDiags
@@ -1901,8 +1902,8 @@ Sema::targetDiag(SourceLocation Loc, unsigned DiagID, const FunctionDecl *FD) {
                ? diagIfOpenMPDeviceCode(Loc, DiagID, FD)
                : diagIfOpenMPHostCode(Loc, DiagID, FD);
   if (getLangOpts().CUDA)
-    return getLangOpts().CUDAIsDevice ? CUDADiagIfDeviceCode(Loc, DiagID)
-                                      : CUDADiagIfHostCode(Loc, DiagID);
+    return getLangOpts().CUDAIsDevice ? CUDA().DiagIfDeviceCode(Loc, DiagID)
+                                      : CUDA().DiagIfHostCode(Loc, DiagID);
 
   if (getLangOpts().SYCLIsDevice)
     return SYCL().DiagIfDeviceCode(Loc, DiagID);

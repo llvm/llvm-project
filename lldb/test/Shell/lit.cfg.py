@@ -52,6 +52,8 @@ llvm_config.with_system_environment(
 # Enable sanitizer runtime flags.
 config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
 config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
+if platform.system() == "Darwin":
+    config.environment["MallocNanoZone"] = "0"
 
 # Support running the test suite under the lldb-repro wrapper. This makes it
 # possible to capture a test suite run and then rerun all the test from the

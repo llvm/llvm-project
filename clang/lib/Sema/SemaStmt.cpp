@@ -33,10 +33,12 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2275,11 +2277,9 @@ Sema::CheckObjCForCollectionOperand(SourceLocation forLoc, Expr *collection) {
     // Otherwise, if we have any useful type information, check that
     // the type declares the appropriate method.
   } else if (iface || !objectType->qual_empty()) {
-    IdentifierInfo *selectorIdents[] = {
-      &Context.Idents.get("countByEnumeratingWithState"),
-      &Context.Idents.get("objects"),
-      &Context.Idents.get("count")
-    };
+    const IdentifierInfo *selectorIdents[] = {
+        &Context.Idents.get("countByEnumeratingWithState"),
+        &Context.Idents.get("objects"), &Context.Idents.get("count")};
     Selector selector = Context.Selectors.getSelector(3, &selectorIdents[0]);
 
     ObjCMethodDecl *method = nullptr;
@@ -4575,8 +4575,8 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
 
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
-    CUDADiagIfDeviceCode(TryLoc, diag::err_cuda_device_exceptions)
-        << "try" << CurrentCUDATarget();
+    CUDA().DiagIfDeviceCode(TryLoc, diag::err_cuda_device_exceptions)
+        << "try" << llvm::to_underlying(CUDA().CurrentTarget());
 
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(TryLoc, diag::err_omp_simd_region_cannot_use_stmt) << "try";

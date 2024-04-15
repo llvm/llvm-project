@@ -1103,16 +1103,26 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     FD->setHasODRHash(true);
   }
 
-  if (FD->isDefaulted()) {
-    if (unsigned NumLookups = Record.readInt()) {
+  if (FD->isDefaulted() || FD->isDeletedAsWritten()) {
+    // If 'Info' is nonzero, we need to read an DefaultedOrDeletedInfo; if,
+    // additionally, the second bit is also set, we also need to read
+    // a DeletedMessage for the DefaultedOrDeletedInfo.
+    if (auto Info = Record.readInt()) {
+      bool HasMessage = Info & 2;
+      StringLiteral *DeletedMessage =
+          HasMessage ? cast<StringLiteral>(Record.readExpr()) : nullptr;
+
+      unsigned NumLookups = Record.readInt();
       SmallVector<DeclAccessPair, 8> Lookups;
       for (unsigned I = 0; I != NumLookups; ++I) {
         NamedDecl *ND = Record.readDeclAs<NamedDecl>();
         AccessSpecifier AS = (AccessSpecifier)Record.readInt();
         Lookups.push_back(DeclAccessPair::make(ND, AS));
       }
-      FD->setDefaultedFunctionInfo(FunctionDecl::DefaultedFunctionInfo::Create(
-          Reader.getContext(), Lookups));
+
+      FD->setDefaultedOrDeletedInfo(
+          FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+              Reader.getContext(), Lookups, DeletedMessage));
     }
   }
 
@@ -2715,6 +2725,7 @@ void ASTDeclReader::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
 
 void ASTDeclReader::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
   VisitTemplateDecl(D);
+  D->setDeclaredWithTypename(Record.readBool());
   // TemplateParmPosition.
   D->setDepth(Record.readInt());
   D->setPosition(Record.readInt());
@@ -3198,7 +3209,7 @@ inline void ASTReader::LoadedDecl(unsigned Index, Decl *D) {
 /// This routine should return true for anything that might affect
 /// code generation, e.g., inline function definitions, Objective-C
 /// declarations with metadata, etc.
-static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
+bool ASTReader::isConsumerInterestedIn(Decl *D) {
   // An ObjCMethodDecl is never considered as "interesting" because its
   // implementation container always is.
 
@@ -3207,7 +3218,7 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
   if (isPartOfPerModuleInitializer(D)) {
     auto *M = D->getImportedOwningModule();
     if (M && M->Kind == Module::ModuleMapModule &&
-        Ctx.DeclMustBeEmitted(D))
+        getContext().DeclMustBeEmitted(D))
       return false;
   }
 
@@ -3222,7 +3233,7 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
            (Var->isThisDeclarationADefinition() == VarDecl::Definition ||
             OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(Var));
   if (const auto *Func = dyn_cast<FunctionDecl>(D))
-    return Func->doesThisDeclarationHaveABody() || HasBody;
+    return Func->doesThisDeclarationHaveABody() || PendingBodies.count(D);
 
   if (auto *ES = D->getASTContext().getExternalSource())
     if (ES->hasExternalDefinitions(D) == ExternalASTSource::EK_Never)
@@ -4124,6 +4135,15 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   // offsets for its tables of lexical and visible declarations.
   if (auto *DC = dyn_cast<DeclContext>(D)) {
     std::pair<uint64_t, uint64_t> Offsets = Reader.VisitDeclContext(DC);
+
+    // Get the lexical and visible block for the delayed namespace.
+    // It is sufficient to judge if ID is in DelayedNamespaceOffsetMap.
+    // But it may be more efficient to filter the other cases.
+    if (!Offsets.first && !Offsets.second && isa<NamespaceDecl>(D))
+      if (auto Iter = DelayedNamespaceOffsetMap.find(ID);
+          Iter != DelayedNamespaceOffsetMap.end())
+        Offsets = Iter->second;
+
     if (Offsets.first &&
         ReadLexicalDeclContextStorage(*Loc.F, DeclsCursor, Offsets.first, DC))
       return nullptr;
@@ -4173,7 +4193,7 @@ void ASTReader::PassInterestingDeclsToConsumer() {
   while (!PotentiallyInterestingDecls.empty()) {
     Decl *D = PotentiallyInterestingDecls.front();
     PotentiallyInterestingDecls.pop_front();
-    if (isConsumerInterestedIn(getContext(), D, PendingBodies.count(D)))
+    if (isConsumerInterestedIn(D))
       PassInterestingDeclToConsumer(D);
   }
 }
@@ -4197,8 +4217,7 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
     // the declaration, then we know it was interesting and we skip the call
     // to isConsumerInterestedIn because it is unsafe to call in the
     // current ASTReader state.
-    bool WasInteresting =
-        Record.JustLoaded || isConsumerInterestedIn(getContext(), D, false);
+    bool WasInteresting = Record.JustLoaded || isConsumerInterestedIn(D);
     for (auto &FileAndOffset : UpdateOffsets) {
       ModuleFile *F = FileAndOffset.first;
       uint64_t Offset = FileAndOffset.second;
@@ -4230,8 +4249,7 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
 
       // We might have made this declaration interesting. If so, remember that
       // we need to hand it off to the consumer.
-      if (!WasInteresting &&
-          isConsumerInterestedIn(getContext(), D, PendingBodies.count(D))) {
+      if (!WasInteresting && isConsumerInterestedIn(D)) {
         PotentiallyInterestingDecls.push_back(D);
         WasInteresting = true;
       }

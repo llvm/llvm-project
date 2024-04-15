@@ -1273,12 +1273,12 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
 
       // if X non-zero and NoOverflow(X * Y)
       //    (icmp eq/ne Y)
-      if (!XKnown.One.isZero() || isKnownNonZero(X, DL, 0, Q.AC, Q.CxtI, Q.DT))
+      if (!XKnown.One.isZero() || isKnownNonZero(X, /*Depth=*/0, Q))
         return new ICmpInst(Pred, Y, Cmp.getOperand(1));
 
       // if Y non-zero and NoOverflow(X * Y)
       //    (icmp eq/ne X)
-      if (!YKnown.One.isZero() || isKnownNonZero(Y, DL, 0, Q.AC, Q.CxtI, Q.DT))
+      if (!YKnown.One.isZero() || isKnownNonZero(Y, /*Depth=*/0, Q))
         return new ICmpInst(Pred, X, Cmp.getOperand(1));
     }
     // Note, we are skipping cases:
@@ -3087,7 +3087,7 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
   // (X + -1) <u C --> X <=u C (if X is never null)
   if (Pred == CmpInst::ICMP_ULT && C2->isAllOnes()) {
     const SimplifyQuery Q = SQ.getWithInstruction(&Cmp);
-    if (llvm::isKnownNonZero(X, DL, 0, Q.AC, Q.CxtI, Q.DT))
+    if (llvm::isKnownNonZero(X, /*Depth=*/0, Q))
       return new ICmpInst(ICmpInst::ICMP_ULE, X, ConstantInt::get(Ty, C));
   }
 
@@ -4275,8 +4275,7 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst::Predicate Pred, Value *Op0,
 
       // Look for: x & ~Mask pred ~Mask
       if (isMaskOrZero(X, /*Not=*/true, Q)) {
-        return !ICmpInst::isSigned(Pred) ||
-               isKnownNonZero(X, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
+        return !ICmpInst::isSigned(Pred) || isKnownNonZero(X, /*Depth=*/0, Q);
       }
       return false;
     }
@@ -4780,8 +4779,7 @@ static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
   // icmp (X ^ Y_NonZero) s>= X --> icmp (X ^ Y_NonZero) s> X
   // icmp (X ^ Y_NonZero) s<= X --> icmp (X ^ Y_NonZero) s< X
   CmpInst::Predicate PredOut = CmpInst::getStrictPredicate(Pred);
-  if (PredOut != Pred &&
-      isKnownNonZero(A, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+  if (PredOut != Pred && isKnownNonZero(A, /*Depth=*/0, Q))
     return new ICmpInst(PredOut, Op0, Op1);
 
   return nullptr;
@@ -5064,11 +5062,11 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     return new ICmpInst(Pred, C, D);
   // (A - B) u>=/u< A --> B u>/u<= A  iff B != 0
   if (A == Op1 && (Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_ULT) &&
-      isKnownNonZero(B, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+      isKnownNonZero(B, /*Depth=*/0, Q))
     return new ICmpInst(CmpInst::getFlippedStrictnessPredicate(Pred), B, A);
   // C u<=/u> (C - D) --> C u</u>= D  iff B != 0
   if (C == Op0 && (Pred == ICmpInst::ICMP_ULE || Pred == ICmpInst::ICMP_UGT) &&
-      isKnownNonZero(D, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+      isKnownNonZero(D, /*Depth=*/0, Q))
     return new ICmpInst(CmpInst::getFlippedStrictnessPredicate(Pred), C, D);
 
   // icmp (A-B), (C-B) -> icmp A, C for equalities or if there is no overflow.
@@ -5110,14 +5108,13 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
         //    X * Z eq/ne Y * Z -> X eq/ne Y
         if (ZKnown.countMaxTrailingZeros() == 0)
           return new ICmpInst(Pred, X, Y);
-        NonZero = !ZKnown.One.isZero() ||
-                  isKnownNonZero(Z, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
+        NonZero = !ZKnown.One.isZero() || isKnownNonZero(Z, /*Depth=*/0, Q);
         // if Z != 0 and nsw(X * Z) and nsw(Y * Z)
         //    X * Z eq/ne Y * Z -> X eq/ne Y
         if (NonZero && BO0 && BO1 && Op0HasNSW && Op1HasNSW)
           return new ICmpInst(Pred, X, Y);
       } else
-        NonZero = isKnownNonZero(Z, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
+        NonZero = isKnownNonZero(Z, /*Depth=*/0, Q);
 
       // If Z != 0 and nuw(X * Z) and nuw(Y * Z)
       //    X * Z u{lt/le/gt/ge}/eq/ne Y * Z -> X u{lt/le/gt/ge}/eq/ne Y
@@ -7162,6 +7159,40 @@ Instruction *InstCombinerImpl::foldICmpCommutative(ICmpInst::Predicate Pred,
   const SimplifyQuery Q = SQ.getWithInstruction(&CxtI);
   if (Value *V = foldICmpWithLowBitMaskedVal(Pred, Op0, Op1, Q, *this))
     return replaceInstUsesWith(CxtI, V);
+
+  // Folding (X / Y) pred X => X swap(pred) 0 for constant Y other than 0 or 1
+  {
+    const APInt *Divisor;
+    if (match(Op0, m_UDiv(m_Specific(Op1), m_APInt(Divisor))) &&
+        Divisor->ugt(1)) {
+      return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                          Constant::getNullValue(Op1->getType()));
+    }
+
+    if (!ICmpInst::isUnsigned(Pred) &&
+        match(Op0, m_SDiv(m_Specific(Op1), m_APInt(Divisor))) &&
+        Divisor->ugt(1)) {
+      return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                          Constant::getNullValue(Op1->getType()));
+    }
+  }
+
+  // Another case of this fold is (X >> Y) pred X => X swap(pred) 0 if Y != 0
+  {
+    const APInt *Shift;
+    if (match(Op0, m_LShr(m_Specific(Op1), m_APInt(Shift))) &&
+        !Shift->isZero()) {
+      return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                          Constant::getNullValue(Op1->getType()));
+    }
+
+    if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SGE) &&
+        match(Op0, m_AShr(m_Specific(Op1), m_APInt(Shift))) &&
+        !Shift->isZero()) {
+      return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                          Constant::getNullValue(Op1->getType()));
+    }
+  }
 
   return nullptr;
 }

@@ -4045,6 +4045,24 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   // module fragment.
   CmdArgs.push_back("-fskip-odr-check-in-gmf");
 
+  if (Args.hasArg(options::OPT_modules_reduced_bmi) &&
+      (Input.getType() == driver::types::TY_CXXModule ||
+       Input.getType() == driver::types::TY_PP_CXXModule)) {
+    CmdArgs.push_back("-fexperimental-modules-reduced-bmi");
+
+    if (Args.hasArg(options::OPT_fmodule_output_EQ))
+      Args.AddLastArg(CmdArgs, options::OPT_fmodule_output_EQ);
+    else
+      CmdArgs.push_back(Args.MakeArgString(
+          "-fmodule-output=" +
+          getCXX20NamedModuleOutputPath(Args, Input.getBaseInput())));
+  }
+
+  // Noop if we see '-fexperimental-modules-reduced-bmi' with other translation
+  // units than module units. This is more user friendly to allow end uers to
+  // enable this feature without asking for help from build systems.
+  Args.ClaimAllArgs(options::OPT_modules_reduced_bmi);
+
   // We need to include the case the input file is a module file here.
   // Since the default compilation model for C++ module interface unit will
   // create temporary module file and compile the temporary module file

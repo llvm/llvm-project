@@ -1384,7 +1384,7 @@ void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
   // For each dimension stores its QualType and corresponding
   // size-expression Value.
   SmallVector<CodeGenFunction::VlaSizePair, 4> Dimensions;
-  SmallVector<IdentifierInfo *, 4> VLAExprNames;
+  SmallVector<const IdentifierInfo *, 4> VLAExprNames;
 
   // Break down the array into individual dimensions.
   QualType Type1D = D.getType();
@@ -1421,7 +1421,7 @@ void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
       MD = llvm::ConstantAsMetadata::get(C);
     else {
       // Create an artificial VarDecl to generate debug info for.
-      IdentifierInfo *NameIdent = VLAExprNames[NameIdx++];
+      const IdentifierInfo *NameIdent = VLAExprNames[NameIdx++];
       auto QT = getContext().getIntTypeForBitwidth(
           SizeTy->getScalarSizeInBits(), false);
       auto *ArtificialDecl = VarDecl::Create(
@@ -2216,8 +2216,11 @@ void CodeGenFunction::pushDestroyAndDeferDeactivation(
 void CodeGenFunction::pushDestroyAndDeferDeactivation(
     CleanupKind cleanupKind, Address addr, QualType type, Destroyer *destroyer,
     bool useEHCleanupForArray) {
-  pushCleanupAndDeferDeactivation<DestroyObject>(
-      cleanupKind, addr, type, destroyer, useEHCleanupForArray);
+  llvm::Instruction *DominatingIP =
+      Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
+  pushDestroy(cleanupKind, addr, type, destroyer, useEHCleanupForArray);
+  DeferredDeactivationCleanupStack.push_back(
+      {EHStack.stable_begin(), DominatingIP});
 }
 
 void CodeGenFunction::pushStackRestore(CleanupKind Kind, Address SPMem) {
