@@ -600,7 +600,7 @@ __str_rfind(const _CharT* __p, _SizeT __sz, const _CharT* __s, _SizeT __pos, _Si
     __pos += __n;
   else
     __pos = __sz;
-  const _CharT* __r = std::__find_end_classic(__p, __p + __pos, __s, __s + __n, _Traits::eq);
+  const _CharT* __r = std::find_end(__p, __p + __pos, __s, __s + __n, _Traits::eq);
   if (__n > 0 && __r == __p + __pos)
     return __npos;
   return static_cast<_SizeT>(__r - __p);
