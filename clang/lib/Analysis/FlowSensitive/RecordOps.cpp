@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
 
 #define DEBUG_TYPE "dataflow"
 
@@ -131,6 +132,42 @@ bool recordsEqual(const RecordStorageLocation &Loc1, const Environment &Env1,
   }
 
   return true;
+}
+
+RecordInitListHelper::RecordInitListHelper(const InitListExpr *InitList) {
+  auto *RD = InitList->getType()->getAsCXXRecordDecl();
+  assert(RD != nullptr);
+
+  std::vector<const FieldDecl *> Fields = getFieldsForInitListExpr(InitList);
+  ArrayRef<Expr *> Inits = InitList->inits();
+
+  // Unions initialized with an empty initializer list need special treatment.
+  // For structs/classes initialized with an empty initializer list, Clang
+  // puts `ImplicitValueInitExpr`s in `InitListExpr::inits()`, but for unions,
+  // it doesn't do this -- so we create an `ImplicitValueInitExpr` ourselves.
+  SmallVector<Expr *> InitsForUnion;
+  if (InitList->getType()->isUnionType() && Inits.empty()) {
+    assert(Fields.size() == 1);
+    ImplicitValueInitForUnion.emplace(Fields.front()->getType());
+    InitsForUnion.push_back(&*ImplicitValueInitForUnion);
+    Inits = InitsForUnion;
+  }
+
+  size_t InitIdx = 0;
+
+  assert(Fields.size() + RD->getNumBases() == Inits.size());
+  for (const CXXBaseSpecifier &Base : RD->bases()) {
+    assert(InitIdx < Inits.size());
+    Expr *Init = Inits[InitIdx++];
+    BaseInits.emplace_back(&Base, Init);
+  }
+
+  assert(Fields.size() == Inits.size() - InitIdx);
+  for (const FieldDecl *Field : Fields) {
+    assert(InitIdx < Inits.size());
+    Expr *Init = Inits[InitIdx++];
+    FieldInits.emplace_back(Field, Init);
+  }
 }
 
 } // namespace clang::dataflow

@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/Arena.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
@@ -30,83 +31,10 @@
 #include <cassert>
 #include <memory>
 #include <optional>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
 namespace clang {
 namespace dataflow {
 class Logger;
-
-/// Skip past nodes that the CFG does not emit. These nodes are invisible to
-/// flow-sensitive analysis, and should be ignored as they will effectively not
-/// exist.
-///
-///   * `ParenExpr` - The CFG takes the operator precedence into account, but
-///   otherwise omits the node afterwards.
-///
-///   * `ExprWithCleanups` - The CFG will generate the appropriate calls to
-///   destructors and then omit the node.
-///
-const Expr &ignoreCFGOmittedNodes(const Expr &E);
-const Stmt &ignoreCFGOmittedNodes(const Stmt &S);
-
-/// A set of `FieldDecl *`. Use `SmallSetVector` to guarantee deterministic
-/// iteration order.
-using FieldSet = llvm::SmallSetVector<const FieldDecl *, 4>;
-
-/// Returns the set of all fields in the type.
-FieldSet getObjectFields(QualType Type);
-
-/// Returns whether `Fields` and `FieldLocs` contain the same fields.
-bool containsSameFields(const FieldSet &Fields,
-                        const RecordStorageLocation::FieldToLoc &FieldLocs);
-
-/// Helper class for initialization of a record with an `InitListExpr`.
-/// `InitListExpr::inits()` contains the initializers for both the base classes
-/// and the fields of the record; this helper class separates these out into two
-/// different lists. In addition, it deals with special cases associated with
-/// unions.
-class RecordInitListHelper {
-public:
-  // `InitList` must have record type.
-  RecordInitListHelper(const InitListExpr *InitList);
-
-  // Base classes with their associated initializer expressions.
-  ArrayRef<std::pair<const CXXBaseSpecifier *, Expr *>> base_inits() const {
-    return BaseInits;
-  }
-
-  // Fields with their associated initializer expressions.
-  ArrayRef<std::pair<const FieldDecl *, Expr *>> field_inits() const {
-    return FieldInits;
-  }
-
-private:
-  SmallVector<std::pair<const CXXBaseSpecifier *, Expr *>> BaseInits;
-  SmallVector<std::pair<const FieldDecl *, Expr *>> FieldInits;
-
-  // We potentially synthesize an `ImplicitValueInitExpr` for unions. It's a
-  // member variable because we store a pointer to it in `FieldInits`.
-  std::optional<ImplicitValueInitExpr> ImplicitValueInitForUnion;
-};
-
-// A collection of several types of declarations, all referenced from the same
-// function.
-struct ReferencedDecls {
-  // Fields includes non-static data members.
-  FieldSet Fields;
-  // Globals includes all variables with global storage, notably including
-  // static data members and static variables declared within a function.
-  llvm::DenseSet<const VarDecl *> Globals;
-  // Functions includes free functions and member functions which are
-  // referenced, but not necessarily called.
-  llvm::DenseSet<const FunctionDecl *> Functions;
-};
-
-/// Collects and returns fields, global variables and functions that are
-/// declared in or referenced from `FD`.
-ReferencedDecls getReferencedDecls(const FunctionDecl &FD);
 
 struct ContextSensitiveOptions {
   /// The maximum depth to analyze. A value of zero is equivalent to disabling
