@@ -1,4 +1,4 @@
-// RUN: %clangxx %s -pie -fPIE -o %t && %run %t
+// RUN: %clang %s -pie -fPIE -o %t && %run %t
 // REQUIRES: x86_64-target-arch
 
 #include <assert.h>
