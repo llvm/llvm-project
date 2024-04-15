@@ -107,7 +107,7 @@ struct LinkerOptions {
   /// \brief Additional library search paths.
   PathSeq LibPaths;
 
-  /// \brief List of aliased symbol exports.
+  /// \brief List of alias symbol files.
   PathSeq AliasLists;
 
   /// \brief The install name to use for the dynamic library.
