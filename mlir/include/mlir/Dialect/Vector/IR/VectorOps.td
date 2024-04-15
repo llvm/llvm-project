@@ -444,7 +444,7 @@ def Vector_ShuffleOp :
       mask values must be within range, viz. given two k-D operands v1 and v2
       above, all mask values are in the range [0,s_1+t_1)
 
-    Note, at the moment only fixed-width vectors are supported.
+    Note, scalable vectors are not supported.
 
     Example:
 
