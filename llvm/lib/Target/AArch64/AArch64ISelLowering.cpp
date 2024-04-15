@@ -5035,8 +5035,8 @@ static inline SDValue getPTrue(SelectionDAG &DAG, SDLoc DL, EVT VT,
                      DAG.getTargetConstant(Pattern, DL, MVT::i32));
 }
 
-static SDValue optimizeWhile(SDValue Op, SelectionDAG &DAG, bool IsSigned,
-                             bool IsLess, bool IsEqual) {
+static SDValue optimizeIncrementingWhile(SDValue Op, SelectionDAG &DAG,
+                                         bool IsSigned, bool IsEqual) {
   if (!isa<ConstantSDNode>(Op.getOperand(1)) ||
       !isa<ConstantSDNode>(Op.getOperand(2)))
     return SDValue();
@@ -5044,12 +5044,9 @@ static SDValue optimizeWhile(SDValue Op, SelectionDAG &DAG, bool IsSigned,
   SDLoc dl(Op);
   APInt X = Op.getConstantOperandAPInt(1);
   APInt Y = Op.getConstantOperandAPInt(2);
-  APInt NumActiveElems;
   bool Overflow;
-  if (IsLess)
-    NumActiveElems = IsSigned ? Y.ssub_ov(X, Overflow) : Y.usub_ov(X, Overflow);
-  else
-    NumActiveElems = IsSigned ? X.ssub_ov(Y, Overflow) : X.usub_ov(Y, Overflow);
+  APInt NumActiveElems =
+      IsSigned ? Y.ssub_ov(X, Overflow) : Y.usub_ov(X, Overflow);
 
   if (Overflow)
     return SDValue();
@@ -5396,29 +5393,17 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return SDValue();
   }
   case Intrinsic::aarch64_sve_whilelo:
-    return optimizeWhile(Op, DAG, /*IsSigned=*/false, /*IsLess=*/true,
-                         /*IsEqual=*/false);
+    return optimizeIncrementingWhile(Op, DAG, /*IsSigned=*/false,
+                                     /*IsEqual=*/false);
   case Intrinsic::aarch64_sve_whilelt:
-    return optimizeWhile(Op, DAG, /*IsSigned=*/true, /*IsLess=*/true,
-                         /*IsEqual=*/false);
+    return optimizeIncrementingWhile(Op, DAG, /*IsSigned=*/true,
+                                     /*IsEqual=*/false);
   case Intrinsic::aarch64_sve_whilels:
-    return optimizeWhile(Op, DAG, /*IsSigned=*/false, /*IsLess=*/true,
-                         /*IsEqual=*/true);
+    return optimizeIncrementingWhile(Op, DAG, /*IsSigned=*/false,
+                                     /*IsEqual=*/true);
   case Intrinsic::aarch64_sve_whilele:
-    return optimizeWhile(Op, DAG, /*IsSigned=*/true, /*IsLess=*/true,
-                         /*IsEqual=*/true);
-  case Intrinsic::aarch64_sve_whilege:
-    return optimizeWhile(Op, DAG, /*IsSigned=*/true, /*IsLess=*/false,
-                         /*IsEqual=*/true);
-  case Intrinsic::aarch64_sve_whilegt:
-    return optimizeWhile(Op, DAG, /*IsSigned=*/true, /*IsLess=*/false,
-                         /*IsEqual=*/false);
-  case Intrinsic::aarch64_sve_whilehs:
-    return optimizeWhile(Op, DAG, /*IsSigned=*/false, /*IsLess=*/false,
-                         /*IsEqual=*/true);
-  case Intrinsic::aarch64_sve_whilehi:
-    return optimizeWhile(Op, DAG, /*IsSigned=*/false, /*IsLess=*/false,
-                         /*IsEqual=*/false);
+    return optimizeIncrementingWhile(Op, DAG, /*IsSigned=*/true,
+                                     /*IsEqual=*/true);
   case Intrinsic::aarch64_sve_sunpkhi:
     return DAG.getNode(AArch64ISD::SUNPKHI, dl, Op.getValueType(),
                        Op.getOperand(1));
@@ -27883,3 +27868,46 @@ bool AArch64TargetLowering::hasInlineStackProbe(
   return !Subtarget->isTargetWindows() &&
          MF.getInfo<AArch64FunctionInfo>()->hasStackProbing();
 }
+
+#ifndef NDEBUG
+void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
+  switch (N->getOpcode()) {
+  default:
+    break;
+  case AArch64ISD::SUNPKLO:
+  case AArch64ISD::SUNPKHI:
+  case AArch64ISD::UUNPKLO:
+  case AArch64ISD::UUNPKHI: {
+    assert(N->getNumValues() == 1 && "Expected one result!");
+    assert(N->getNumOperands() == 1 && "Expected one operand!");
+    EVT VT = N->getValueType(0);
+    EVT OpVT = N->getOperand(0).getValueType();
+    assert(OpVT.isVector() && VT.isVector() && OpVT.isInteger() &&
+           VT.isInteger() && "Expected integer vectors!");
+    assert(OpVT.getSizeInBits() == VT.getSizeInBits() &&
+           "Expected vectors of equal size!");
+    // TODO: Enable assert once bogus creations have been fixed.
+    // assert(OpVT.getVectorElementCount() == VT.getVectorElementCount()*2 &&
+    //       "Expected result vector with half the lanes of its input!");
+    break;
+  }
+  case AArch64ISD::TRN1:
+  case AArch64ISD::TRN2:
+  case AArch64ISD::UZP1:
+  case AArch64ISD::UZP2:
+  case AArch64ISD::ZIP1:
+  case AArch64ISD::ZIP2: {
+    assert(N->getNumValues() == 1 && "Expected one result!");
+    assert(N->getNumOperands() == 2 && "Expected two operands!");
+    EVT VT = N->getValueType(0);
+    EVT Op0VT = N->getOperand(0).getValueType();
+    EVT Op1VT = N->getOperand(1).getValueType();
+    assert(VT.isVector() && Op0VT.isVector() && Op1VT.isVector() &&
+           "Expected vectors!");
+    // TODO: Enable assert once bogus creations have been fixed.
+    // assert(VT == Op0VT && VT == Op1VT && "Expected matching vectors!");
+    break;
+  }
+  }
+}
+#endif

@@ -18194,7 +18194,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
         /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
-        Intrinsic::dx_any, ArrayRef<Value *>{Op0}, nullptr, "dx.any");
+        CGM.getHLSLRuntime().getAnyIntrinsic(), ArrayRef<Value *>{Op0}, nullptr,
+        "hlsl.any");
   }
   case Builtin::BI__builtin_hlsl_elementwise_clamp: {
     Value *OpX = EmitScalarExpr(E->getArg(0));
@@ -18303,9 +18304,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("rcp operand must have a float representation");
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/Op0->getType(), Intrinsic::dx_rcp,
-        ArrayRef<Value *>{Op0}, nullptr, "dx.rcp");
+    llvm::Type *Ty = Op0->getType();
+    llvm::Type *EltTy = Ty->getScalarType();
+    Constant *One =
+        Ty->isVectorTy()
+            ? ConstantVector::getSplat(
+                  ElementCount::getFixed(
+                      dyn_cast<FixedVectorType>(Ty)->getNumElements()),
+                  ConstantFP::get(EltTy, 1.0))
+            : ConstantFP::get(EltTy, 1.0);
+    return Builder.CreateFDiv(One, Op0, "hlsl.rcp");
   }
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

@@ -9530,7 +9530,8 @@ static SDValue combineShiftOfShiftedLogic(SDNode *Shift, SelectionDAG &DAG) {
   SDValue ShiftSumC = DAG.getConstant(*C0Val + C1Val, DL, ShiftAmtVT);
   SDValue NewShift1 = DAG.getNode(ShiftOpcode, DL, VT, X, ShiftSumC);
   SDValue NewShift2 = DAG.getNode(ShiftOpcode, DL, VT, Y, C1);
-  return DAG.getNode(LogicOpcode, DL, VT, NewShift1, NewShift2);
+  return DAG.getNode(LogicOpcode, DL, VT, NewShift1, NewShift2,
+                     LogicOp->getFlags());
 }
 
 /// Handle transforms common to the three shifts, when the shift amount is a
@@ -23428,7 +23429,10 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
   // If X is a build_vector itself, the concat can become a larger build_vector.
   // TODO: Maybe this is useful for non-splat too?
   if (!LegalOperations) {
-    if (SDValue Splat = cast<BuildVectorSDNode>(N)->getSplatValue()) {
+    SDValue Splat = cast<BuildVectorSDNode>(N)->getSplatValue();
+    // Only change build_vector to a concat_vector if the splat value type is
+    // same as the vector element type.
+    if (Splat && Splat.getValueType() == VT.getVectorElementType()) {
       Splat = peekThroughBitcasts(Splat);
       EVT SrcVT = Splat.getValueType();
       if (SrcVT.isVector()) {
@@ -23437,8 +23441,8 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
                                      SrcVT.getVectorElementType(), NumElts);
         if (!LegalTypes || TLI.isTypeLegal(NewVT)) {
           SmallVector<SDValue, 8> Ops(N->getNumOperands(), Splat);
-          SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N),
-                                       NewVT, Ops);
+          SDValue Concat =
+              DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), NewVT, Ops);
           return DAG.getBitcast(VT, Concat);
         }
       }
@@ -24459,6 +24463,23 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     if (DAG.isConstantValueOfAnyType(V.getOperand(0)) || V.hasOneUse())
       if (!LegalOperations || TLI.isOperationLegal(ISD::SPLAT_VECTOR, NVT))
         return DAG.getSplatVector(NVT, DL, V.getOperand(0));
+
+  // extract_subvector(insert_subvector(x,y,c1),c2)
+  //  --> extract_subvector(y,c2-c1)
+  // iff we're just extracting from the inserted subvector.
+  if (V.getOpcode() == ISD::INSERT_SUBVECTOR) {
+    SDValue InsSub = V.getOperand(1);
+    EVT InsSubVT = InsSub.getValueType();
+    unsigned NumInsElts = InsSubVT.getVectorMinNumElements();
+    unsigned InsIdx = V.getConstantOperandVal(2);
+    unsigned NumSubElts = NVT.getVectorMinNumElements();
+    if (InsIdx <= ExtIdx && (ExtIdx + NumSubElts) <= (InsIdx + NumInsElts) &&
+        TLI.isExtractSubvectorCheap(NVT, InsSubVT, ExtIdx - InsIdx)) {
+      SDLoc DL(N);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, InsSub,
+                         DAG.getVectorIdxConstant(ExtIdx - InsIdx, DL));
+    }
+  }
 
   // Try to move vector bitcast after extract_subv by scaling extraction index:
   // extract_subv (bitcast X), Index --> bitcast (extract_subv X, Index')

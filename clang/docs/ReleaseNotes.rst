@@ -98,7 +98,8 @@ C++20 Feature Support
   behavior can use the flag '-Xclang -fno-skip-odr-check-in-gmf'.
   (#GH79240).
 
-- Implemented the `__is_layout_compatible` intrinsic to support
+- Implemented the `__is_layout_compatible` and `__is_pointer_interconvertible_base_of`
+  intrinsics to support
   `P0466R5: Layout-compatibility and Pointer-interconvertibility Traits <https://wg21.link/P0466R5>`_.
 
 - Clang now implements [module.import]p7 fully. Clang now will import module
@@ -127,6 +128,8 @@ C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Implemented `P2662R3 Pack Indexing <https://wg21.link/P2662R3>`_.
+
+- Implemented `P2573R2: = delete("should have a reason"); <https://wg21.link/P2573R2>`_
 
 
 Resolutions to C++ Defect Reports
@@ -360,6 +363,9 @@ Improvements to Clang's diagnostics
   Added the ``-Wtentative-definition-array`` warning group to cover this.
   Fixes #GH87766
 
+- Clang now uses the correct type-parameter-key (``class`` or ``typename``) when printing
+  template template parameter declarations.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -535,6 +541,7 @@ Bug Fixes to C++ Support
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
+- The presence of the ``typename`` keyword is now stored in ``TemplateTemplateParmDecl``.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^

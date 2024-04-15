@@ -10,7 +10,7 @@
 // expected-no-diagnostics
 #endif
 
-namespace dr2406 { // dr2406: 5
+namespace cwg2406 { // cwg2406: 5
 #if __cplusplus >= 201703L
 void fallthrough(int n) {
   void g(), h(), i();
@@ -45,7 +45,7 @@ void fallthrough(int n) {
 #endif
 }
 
-namespace dr2450 { // dr2450: 18 review P2308R1
+namespace cwg2450 { // cwg2450: 18 review P2308R1
 #if __cplusplus >= 202302L
 struct S {int a;};
 template <S s>
@@ -59,7 +59,7 @@ f<{.a= 0}>();
 #endif
 }
 
-namespace dr2459 { // dr2459: 18 drafting P2308R1
+namespace cwg2459 { // cwg2459: 18 drafting P2308R1
 #if __cplusplus >= 202302L
 struct A {
   constexpr A(float) {}
@@ -69,7 +69,7 @@ X<1> x;
 #endif
 }
 
-namespace dr2445 { // dr2445: 19
+namespace cwg2445 { // cwg2445: 19
 #if __cplusplus >= 202002L
   template <typename> constexpr bool F = false;
   template <typename T> struct A { };

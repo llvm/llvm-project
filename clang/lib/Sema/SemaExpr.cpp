@@ -49,10 +49,12 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -271,8 +273,11 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
         Diag(Loc, diag::err_deleted_inherited_ctor_use)
             << Ctor->getParent()
             << Ctor->getInheritedConstructor().getConstructor()->getParent();
-      else
-        Diag(Loc, diag::err_deleted_function_use);
+      else {
+        StringLiteral *Msg = FD->getDeletedMessage();
+        Diag(Loc, diag::err_deleted_function_use)
+            << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef());
+      }
       NoteDeletedFunction(FD);
       return true;
     }
@@ -307,7 +312,7 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
         DeduceReturnType(FD, Loc))
       return true;
 
-    if (getLangOpts().CUDA && !CheckCUDACall(Loc, FD))
+    if (getLangOpts().CUDA && !CUDA().CheckCall(Loc, FD))
       return true;
 
   }
@@ -14874,8 +14879,8 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
       return QualType();
   } else if (ResType->isAnyComplexType()) {
     // C99 does not support ++/-- on complex types, we allow as an extension.
-    S.Diag(OpLoc, diag::ext_integer_increment_complex)
-      << ResType << Op->getSourceRange();
+    S.Diag(OpLoc, diag::ext_increment_complex)
+      << IsInc << Op->getSourceRange();
   } else if (ResType->isPlaceholderType()) {
     ExprResult PR = S.CheckPlaceholderExpr(Op);
     if (PR.isInvalid()) return QualType();
@@ -17322,8 +17327,9 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
   // CUDA device code does not support varargs.
   if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
     if (const FunctionDecl *F = dyn_cast<FunctionDecl>(CurContext)) {
-      CUDAFunctionTarget T = IdentifyCUDATarget(F);
-      if (T == CFT_Global || T == CFT_Device || T == CFT_HostDevice)
+      CUDAFunctionTarget T = CUDA().IdentifyTarget(F);
+      if (T == CUDAFunctionTarget::Global || T == CUDAFunctionTarget::Device ||
+          T == CUDAFunctionTarget::HostDevice)
         return ExprError(Diag(E->getBeginLoc(), diag::err_va_arg_in_device));
     }
   }
@@ -18975,7 +18981,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
     checkSpecializationReachability(Loc, Func);
 
   if (getLangOpts().CUDA)
-    CheckCUDACall(Loc, Func);
+    CUDA().CheckCall(Loc, Func);
 
   // If we need a definition, try to create one.
   if (NeedDefinition && !Func->getBody()) {
@@ -19122,7 +19128,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   // side. Therefore keep trying until it is recorded.
   if (LangOpts.OffloadImplicitHostDeviceTemplates && LangOpts.CUDAIsDevice &&
       !getASTContext().CUDAImplicitHostDeviceFunUsedByDevice.count(Func))
-    CUDARecordImplicitHostDeviceFuncUsedByDevice(Func);
+    CUDA().RecordImplicitHostDeviceFuncUsedByDevice(Func);
 
   // If this is the first "real" use, act on that.
   if (OdrUse == OdrUseContext::Used && !Func->isUsed(/*CheckUsedAttr=*/false)) {
@@ -19195,26 +19201,28 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
 
   if (SemaRef.LangOpts.CUDA && Var->hasGlobalStorage()) {
     auto *FD = dyn_cast_or_null<FunctionDecl>(SemaRef.CurContext);
-    auto VarTarget = SemaRef.IdentifyCUDATarget(Var);
-    auto UserTarget = SemaRef.IdentifyCUDATarget(FD);
-    if (VarTarget == Sema::CVT_Host &&
-        (UserTarget == Sema::CFT_Device || UserTarget == Sema::CFT_HostDevice ||
-         UserTarget == Sema::CFT_Global)) {
+    auto VarTarget = SemaRef.CUDA().IdentifyTarget(Var);
+    auto UserTarget = SemaRef.CUDA().IdentifyTarget(FD);
+    if (VarTarget == SemaCUDA::CVT_Host &&
+        (UserTarget == CUDAFunctionTarget::Device ||
+         UserTarget == CUDAFunctionTarget::HostDevice ||
+         UserTarget == CUDAFunctionTarget::Global)) {
       // Diagnose ODR-use of host global variables in device functions.
       // Reference of device global variables in host functions is allowed
       // through shadow variables therefore it is not diagnosed.
       if (SemaRef.LangOpts.CUDAIsDevice && !SemaRef.LangOpts.HIPStdPar) {
         SemaRef.targetDiag(Loc, diag::err_ref_bad_target)
-            << /*host*/ 2 << /*variable*/ 1 << Var << UserTarget;
+            << /*host*/ 2 << /*variable*/ 1 << Var
+            << llvm::to_underlying(UserTarget);
         SemaRef.targetDiag(Var->getLocation(),
                            Var->getType().isConstQualified()
                                ? diag::note_cuda_const_var_unpromoted
                                : diag::note_cuda_host_var);
       }
-    } else if (VarTarget == Sema::CVT_Device &&
+    } else if (VarTarget == SemaCUDA::CVT_Device &&
                !Var->hasAttr<CUDASharedAttr>() &&
-               (UserTarget == Sema::CFT_Host ||
-                UserTarget == Sema::CFT_HostDevice)) {
+               (UserTarget == CUDAFunctionTarget::Host ||
+                UserTarget == CUDAFunctionTarget::HostDevice)) {
       // Record a CUDA/HIP device side variable if it is ODR-used
       // by host code. This is done conservatively, when the variable is
       // referenced in any of the following contexts:
@@ -20720,7 +20728,7 @@ static void FixDependencyOfIdExpressionsInLambdaWithDependentObjectParameter(
       if (MD->getType().isNull())
         continue;
 
-      const auto *Ty = cast<FunctionProtoType>(MD->getType());
+      const auto *Ty = MD->getType()->getAs<FunctionProtoType>();
       if (!Ty || !MD->isExplicitObjectMemberFunction() ||
           !Ty->getParamType(0)->isDependentType())
         continue;

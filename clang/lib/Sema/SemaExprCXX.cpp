@@ -38,12 +38,14 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
@@ -883,8 +885,8 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
 
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
-    CUDADiagIfDeviceCode(OpLoc, diag::err_cuda_device_exceptions)
-        << "throw" << CurrentCUDATarget();
+    CUDA().DiagIfDeviceCode(OpLoc, diag::err_cuda_device_exceptions)
+        << "throw" << llvm::to_underlying(CUDA().CurrentTarget());
 
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
@@ -1472,7 +1474,7 @@ void Sema::MarkThisReferenced(CXXThisExpr *This) {
         if (MD->getType().isNull())
           return false;
 
-        const auto *Ty = cast<FunctionProtoType>(MD->getType());
+        const auto *Ty = MD->getType()->getAs<FunctionProtoType>();
         return Ty && MD->isExplicitObjectMemberFunction() &&
                Ty->getParamType(0)->isDependentType();
       }
@@ -1691,17 +1693,17 @@ bool Sema::isUsualDeallocationFunction(const CXXMethodDecl *Method) {
   // [CUDA] Ignore this function, if we can't call it.
   const FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true);
   if (getLangOpts().CUDA) {
-    auto CallPreference = IdentifyCUDAPreference(Caller, Method);
+    auto CallPreference = CUDA().IdentifyPreference(Caller, Method);
     // If it's not callable at all, it's not the right function.
-    if (CallPreference < CFP_WrongSide)
+    if (CallPreference < SemaCUDA::CFP_WrongSide)
       return false;
-    if (CallPreference == CFP_WrongSide) {
+    if (CallPreference == SemaCUDA::CFP_WrongSide) {
       // Maybe. We have to check if there are better alternatives.
       DeclContext::lookup_result R =
           Method->getDeclContext()->lookup(Method->getDeclName());
       for (const auto *D : R) {
         if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-          if (IdentifyCUDAPreference(Caller, FD) > CFP_WrongSide)
+          if (CUDA().IdentifyPreference(Caller, FD) > SemaCUDA::CFP_WrongSide)
             return false;
         }
       }
@@ -1720,7 +1722,7 @@ bool Sema::isUsualDeallocationFunction(const CXXMethodDecl *Method) {
   return llvm::none_of(PreventedBy, [&](const FunctionDecl *FD) {
     assert(FD->getNumParams() == 1 &&
            "Only single-operand functions should be in PreventedBy");
-    return IdentifyCUDAPreference(Caller, FD) >= CFP_HostDevice;
+    return CUDA().IdentifyPreference(Caller, FD) >= SemaCUDA::CFP_HostDevice;
   });
 }
 
@@ -1757,7 +1759,7 @@ namespace {
     UsualDeallocFnInfo(Sema &S, DeclAccessPair Found)
         : Found(Found), FD(dyn_cast<FunctionDecl>(Found->getUnderlyingDecl())),
           Destroying(false), HasSizeT(false), HasAlignValT(false),
-          CUDAPref(Sema::CFP_Native) {
+          CUDAPref(SemaCUDA::CFP_Native) {
       // A function template declaration is never a usual deallocation function.
       if (!FD)
         return;
@@ -1783,7 +1785,7 @@ namespace {
 
       // In CUDA, determine how much we'd like / dislike to call this.
       if (S.getLangOpts().CUDA)
-        CUDAPref = S.IdentifyCUDAPreference(
+        CUDAPref = S.CUDA().IdentifyPreference(
             S.getCurFunctionDecl(/*AllowLambda=*/true), FD);
     }
 
@@ -1814,7 +1816,7 @@ namespace {
     DeclAccessPair Found;
     FunctionDecl *FD;
     bool Destroying, HasSizeT, HasAlignValT;
-    Sema::CUDAFunctionPreference CUDAPref;
+    SemaCUDA::CUDAFunctionPreference CUDAPref;
   };
 }
 
@@ -1838,7 +1840,7 @@ static UsualDeallocFnInfo resolveDeallocationOverload(
   for (auto I = R.begin(), E = R.end(); I != E; ++I) {
     UsualDeallocFnInfo Info(S, I.getPair());
     if (!Info || !isNonPlacementDeallocationFunction(S, Info.FD) ||
-        Info.CUDAPref == Sema::CFP_Never)
+        Info.CUDAPref == SemaCUDA::CFP_Never)
       continue;
 
     if (!Best) {
@@ -2698,13 +2700,9 @@ static bool resolveAllocationOverload(
     return true;
 
   case OR_Deleted: {
-    if (Diagnose) {
-      Candidates.NoteCandidates(
-          PartialDiagnosticAt(R.getNameLoc(),
-                              S.PDiag(diag::err_ovl_deleted_call)
-                                  << R.getLookupName() << Range),
-          S, OCD_AllCandidates, Args);
-    }
+    if (Diagnose)
+      S.DiagnoseUseOfDeletedFunction(R.getNameLoc(), Range, R.getLookupName(),
+                                     Candidates, Best->Function, Args);
     return true;
   }
   }
@@ -2939,8 +2937,8 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
     }
 
     if (getLangOpts().CUDA)
-      EraseUnwantedCUDAMatches(getCurFunctionDecl(/*AllowLambda=*/true),
-                               Matches);
+      CUDA().EraseUnwantedMatches(getCurFunctionDecl(/*AllowLambda=*/true),
+                                  Matches);
   } else {
     // C++1y [expr.new]p22:
     //   For a non-placement allocation function, the normal deallocation
@@ -3358,7 +3356,9 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
     // FIXME: DiagnoseUseOfDecl?
     if (Operator->isDeleted()) {
       if (Diagnose) {
-        Diag(StartLoc, diag::err_deleted_function_use);
+        StringLiteral *Msg = Operator->getDeletedMessage();
+        Diag(StartLoc, diag::err_deleted_function_use)
+            << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef());
         NoteDeletedFunction(Operator);
       }
       return true;
@@ -3962,13 +3962,10 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
         S, OCD_AmbiguousCandidates, Args);
     return true;
 
-  case OR_Deleted: {
-    Candidates.NoteCandidates(
-        PartialDiagnosticAt(R.getNameLoc(), S.PDiag(diag::err_ovl_deleted_call)
-                                                << R.getLookupName() << Range),
-        S, OCD_AllCandidates, Args);
+  case OR_Deleted:
+    S.DiagnoseUseOfDeletedFunction(R.getNameLoc(), Range, R.getLookupName(),
+                                   Candidates, Best->Function, Args);
     return true;
-  }
   }
   llvm_unreachable("Unreachable, bad result from BestViableFunction");
 }
@@ -4994,6 +4991,20 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   return From;
 }
 
+/// Checks that type T is not a VLA.
+///
+/// @returns @c true if @p T is VLA and a diagnostic was emitted,
+/// @c false otherwise.
+static bool DiagnoseVLAInCXXTypeTrait(Sema &S, const TypeSourceInfo *T,
+                                      clang::tok::TokenKind TypeTraitID) {
+  if (!T->getType()->isVariableArrayType())
+    return false;
+
+  S.Diag(T->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
+      << 1 << TypeTraitID;
+  return true;
+}
+
 /// Check the completeness of a type in a unary type trait.
 ///
 /// If the particular type trait requires a complete type, tries to complete
@@ -5170,7 +5181,9 @@ static bool HasNoThrowOperator(const RecordType *RT, OverloadedOperatorKind Op,
 }
 
 static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
-                                   SourceLocation KeyLoc, QualType T) {
+                                   SourceLocation KeyLoc,
+                                   TypeSourceInfo *TInfo) {
+  QualType T = TInfo->getType();
   assert(!T->isDependentType() && "Cannot evaluate traits of dependent type");
 
   ASTContext &C = Self.Context;
@@ -5187,21 +5200,13 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsArray:
     return T->isArrayType();
   case UTT_IsBoundedArray:
-    if (!T->isVariableArrayType()) {
-      return T->isArrayType() && !T->isIncompleteArrayType();
-    }
-
-    Self.Diag(KeyLoc, diag::err_vla_unsupported)
-        << 1 << tok::kw___is_bounded_array;
-    return false;
+    if (DiagnoseVLAInCXXTypeTrait(Self, TInfo, tok::kw___is_bounded_array))
+      return false;
+    return T->isArrayType() && !T->isIncompleteArrayType();
   case UTT_IsUnboundedArray:
-    if (!T->isVariableArrayType()) {
-      return T->isIncompleteArrayType();
-    }
-
-    Self.Diag(KeyLoc, diag::err_vla_unsupported)
-        << 1 << tok::kw___is_unbounded_array;
-    return false;
+    if (DiagnoseVLAInCXXTypeTrait(Self, TInfo, tok::kw___is_unbounded_array))
+      return false;
+    return T->isIncompleteArrayType();
   case UTT_IsPointer:
     return T->isAnyPointerType();
   case UTT_IsNullPointer:
@@ -5613,7 +5618,7 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     return false;
 
   if (Kind <= UTT_Last)
-    return EvaluateUnaryTypeTrait(S, Kind, KWLoc, Args[0]->getType());
+    return EvaluateUnaryTypeTrait(S, Kind, KWLoc, Args[0]);
 
   // Evaluate ReferenceBindsToTemporary and ReferenceConstructsFromTemporary
   // alongside the IsConstructible traits to avoid duplication.
@@ -6075,13 +6080,24 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
       Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
                                diag::err_incomplete_type);
 
-    if (LhsT->isVariableArrayType())
-      Self.Diag(Lhs->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
-          << 1 << tok::kw___is_layout_compatible;
-    if (RhsT->isVariableArrayType())
-      Self.Diag(Rhs->getTypeLoc().getBeginLoc(), diag::err_vla_unsupported)
-          << 1 << tok::kw___is_layout_compatible;
+    DiagnoseVLAInCXXTypeTrait(Self, Lhs, tok::kw___is_layout_compatible);
+    DiagnoseVLAInCXXTypeTrait(Self, Rhs, tok::kw___is_layout_compatible);
+
     return Self.IsLayoutCompatible(LhsT, RhsT);
+  }
+  case BTT_IsPointerInterconvertibleBaseOf: {
+    if (LhsT->isStructureOrClassType() && RhsT->isStructureOrClassType() &&
+        !Self.getASTContext().hasSameUnqualifiedType(LhsT, RhsT)) {
+      Self.RequireCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT,
+                               diag::err_incomplete_type);
+    }
+
+    DiagnoseVLAInCXXTypeTrait(Self, Lhs,
+                              tok::kw___is_pointer_interconvertible_base_of);
+    DiagnoseVLAInCXXTypeTrait(Self, Rhs,
+                              tok::kw___is_pointer_interconvertible_base_of);
+
+    return Self.IsPointerInterconvertibleBaseOf(Lhs, Rhs);
   }
     default: llvm_unreachable("not a BTT");
   }

@@ -2635,7 +2635,7 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
         addUsedGlobal(F);
       if (auto *SA = D->getAttr<PragmaClangTextSectionAttr>())
         if (!D->getAttr<SectionAttr>())
-          F->addFnAttr("implicit-section-name", SA->getName());
+          F->setSection(SA->getName());
 
       llvm::AttrBuilder Attrs(F->getContext());
       if (GetCPUAndFeaturesAttributes(GD, Attrs)) {
@@ -3952,7 +3952,8 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
   // behavior may break ABI compatibility of the current unit.
   if (const Module *M = F->getOwningModule();
       M && M->getTopLevelModule()->isNamedModule() &&
-      getContext().getCurrentNamedModule() != M->getTopLevelModule())
+      getContext().getCurrentNamedModule() != M->getTopLevelModule() &&
+      !F->hasAttr<AlwaysInlineAttr>())
     return false;
 
   if (F->hasAttr<NoInlineAttr>())

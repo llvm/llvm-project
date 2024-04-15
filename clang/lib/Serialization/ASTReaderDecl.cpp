@@ -1103,16 +1103,26 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     FD->setHasODRHash(true);
   }
 
-  if (FD->isDefaulted()) {
-    if (unsigned NumLookups = Record.readInt()) {
+  if (FD->isDefaulted() || FD->isDeletedAsWritten()) {
+    // If 'Info' is nonzero, we need to read an DefaultedOrDeletedInfo; if,
+    // additionally, the second bit is also set, we also need to read
+    // a DeletedMessage for the DefaultedOrDeletedInfo.
+    if (auto Info = Record.readInt()) {
+      bool HasMessage = Info & 2;
+      StringLiteral *DeletedMessage =
+          HasMessage ? cast<StringLiteral>(Record.readExpr()) : nullptr;
+
+      unsigned NumLookups = Record.readInt();
       SmallVector<DeclAccessPair, 8> Lookups;
       for (unsigned I = 0; I != NumLookups; ++I) {
         NamedDecl *ND = Record.readDeclAs<NamedDecl>();
         AccessSpecifier AS = (AccessSpecifier)Record.readInt();
         Lookups.push_back(DeclAccessPair::make(ND, AS));
       }
-      FD->setDefaultedFunctionInfo(FunctionDecl::DefaultedFunctionInfo::Create(
-          Reader.getContext(), Lookups));
+
+      FD->setDefaultedOrDeletedInfo(
+          FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+              Reader.getContext(), Lookups, DeletedMessage));
     }
   }
 
@@ -2715,6 +2725,7 @@ void ASTDeclReader::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
 
 void ASTDeclReader::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
   VisitTemplateDecl(D);
+  D->setDeclaredWithTypename(Record.readBool());
   // TemplateParmPosition.
   D->setDepth(Record.readInt());
   D->setPosition(Record.readInt());
@@ -4124,6 +4135,15 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   // offsets for its tables of lexical and visible declarations.
   if (auto *DC = dyn_cast<DeclContext>(D)) {
     std::pair<uint64_t, uint64_t> Offsets = Reader.VisitDeclContext(DC);
+
+    // Get the lexical and visible block for the delayed namespace.
+    // It is sufficient to judge if ID is in DelayedNamespaceOffsetMap.
+    // But it may be more efficient to filter the other cases.
+    if (!Offsets.first && !Offsets.second && isa<NamespaceDecl>(D))
+      if (auto Iter = DelayedNamespaceOffsetMap.find(ID);
+          Iter != DelayedNamespaceOffsetMap.end())
+        Offsets = Iter->second;
+
     if (Offsets.first &&
         ReadLexicalDeclContextStorage(*Loc.F, DeclsCursor, Offsets.first, DC))
       return nullptr;

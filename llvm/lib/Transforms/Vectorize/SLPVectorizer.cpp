@@ -190,6 +190,10 @@ static cl::opt<bool>
     ViewSLPTree("view-slp-tree", cl::Hidden,
                 cl::desc("Display the SLP trees with Graphviz"));
 
+static cl::opt<bool> VectorizeNonPowerOf2(
+    "slp-vectorize-non-power-of-2", cl::init(false), cl::Hidden,
+    cl::desc("Try to vectorize with non-power-of-2 number of elements."));
+
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -305,7 +309,32 @@ static bool isCommutative(Instruction *I) {
   if (auto *Cmp = dyn_cast<CmpInst>(I))
     return Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
-    return BO->isCommutative();
+    return BO->isCommutative() ||
+           (BO->getOpcode() == Instruction::Sub &&
+            !BO->hasNUsesOrMore(UsesLimit) &&
+            all_of(
+                BO->uses(),
+                [](const Use &U) {
+                  // Commutative, if icmp eq/ne sub, 0
+                  ICmpInst::Predicate Pred;
+                  if (match(U.getUser(),
+                            m_ICmp(Pred, m_Specific(U.get()), m_Zero())) &&
+                      (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE))
+                    return true;
+                  // Commutative, if abs(sub nsw, true) or abs(sub, false).
+                  ConstantInt *Flag;
+                  return match(U.getUser(),
+                               m_Intrinsic<Intrinsic::abs>(
+                                   m_Specific(U.get()), m_ConstantInt(Flag))) &&
+                         (!cast<Instruction>(U.get())->hasNoSignedWrap() ||
+                          Flag->isOne());
+                })) ||
+           (BO->getOpcode() == Instruction::FSub &&
+            !BO->hasNUsesOrMore(UsesLimit) &&
+            all_of(BO->uses(), [](const Use &U) {
+              return match(U.getUser(),
+                           m_Intrinsic<Intrinsic::fabs>(m_Specific(U.get())));
+            }));
   return I->isCommutative();
 }
 
@@ -2804,6 +2833,14 @@ private:
                           SmallVectorImpl<Value *> *OpScalars = nullptr,
                           SmallVectorImpl<Value *> *AltScalars = nullptr) const;
 
+    /// Return true if this is a non-power-of-2 node.
+    bool isNonPowOf2Vec() const {
+      bool IsNonPowerOf2 = !isPowerOf2_32(Scalars.size());
+      assert((!IsNonPowerOf2 || ReuseShuffleIndices.empty()) &&
+             "Reshuffling not supported with non-power-of-2 vectors yet.");
+      return IsNonPowerOf2;
+    }
+
 #ifndef NDEBUG
     /// Debug printer.
     LLVM_DUMP_METHOD void dump() const {
@@ -2969,9 +3006,11 @@ private:
       MustGather.insert(VL.begin(), VL.end());
     }
 
-    if (UserTreeIdx.UserTE)
+    if (UserTreeIdx.UserTE) {
       Last->UserTreeIndices.push_back(UserTreeIdx);
-
+      assert((!Last->isNonPowOf2Vec() || Last->ReorderIndices.empty()) &&
+             "Reordering isn't implemented for non-power-of-2 nodes yet");
+    }
     return Last;
   }
 
@@ -4231,6 +4270,13 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   auto *VecTy = FixedVectorType::get(ScalarTy, Sz);
   // Check the order of pointer operands or that all pointers are the same.
   bool IsSorted = sortPtrAccesses(PointerOps, ScalarTy, *DL, *SE, Order);
+  // FIXME: Reordering isn't implemented for non-power-of-2 nodes yet.
+  if (!Order.empty() && !isPowerOf2_32(VL.size())) {
+    assert(VectorizeNonPowerOf2 && "non-power-of-2 number of loads only "
+                                   "supported with VectorizeNonPowerOf2");
+    return LoadsState::Gather;
+  }
+
   Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
   if (!IsSorted && Sz > MinProfitableStridedLoads && TTI->isTypeLegal(VecTy) &&
       TTI->isLegalStridedLoadStore(VecTy, CommonAlignment) &&
@@ -4550,6 +4596,10 @@ static bool areTwoInsertFromSameBuildVector(
 
 std::optional<BoUpSLP::OrdersType>
 BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
+  // FIXME: Vectorizing is not supported yet for non-power-of-2 ops.
+  if (TE.isNonPowOf2Vec())
+    return std::nullopt;
+
   // No need to reorder if need to shuffle reuses, still need to shuffle the
   // node.
   if (!TE.ReuseShuffleIndices.empty()) {
@@ -4870,14 +4920,10 @@ void BoUpSLP::reorderTopToBottom() {
   // Maps a TreeEntry to the reorder indices of external users.
   DenseMap<const TreeEntry *, SmallVector<OrdersType, 1>>
       ExternalUserReorderMap;
-  // FIXME: Workaround for syntax error reported by MSVC buildbots.
-  TargetTransformInfo &TTIRef = *TTI;
   // Find all reorderable nodes with the given VF.
   // Currently the are vectorized stores,loads,extracts + some gathering of
   // extracts.
-  for_each(VectorizableTree, [this, &TTIRef, &VFToOrderedEntries,
-                              &GathersToOrders, &ExternalUserReorderMap,
-                              &AltShufflesToOrders, &PhisToOrders](
+  for_each(VectorizableTree, [&, &TTIRef = *TTI](
                                  const std::unique_ptr<TreeEntry> &TE) {
     // Look for external users that will probably be vectorized.
     SmallVector<OrdersType, 1> ExternalUserReorderIndices =
@@ -5124,6 +5170,10 @@ bool BoUpSLP::canReorderOperands(
     TreeEntry *UserTE, SmallVectorImpl<std::pair<unsigned, TreeEntry *>> &Edges,
     ArrayRef<TreeEntry *> ReorderableGathers,
     SmallVectorImpl<TreeEntry *> &GatherOps) {
+  // FIXME: Reordering isn't implemented for non-power-of-2 nodes yet.
+  if (UserTE->isNonPowOf2Vec())
+    return false;
+
   for (unsigned I = 0, E = UserTE->getNumOperands(); I < E; ++I) {
     if (any_of(Edges, [I](const std::pair<unsigned, TreeEntry *> &OpData) {
           return OpData.first == I &&
@@ -5297,6 +5347,9 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         }
         auto Res = OrdersUses.insert(std::make_pair(OrdersType(), 0));
         const auto AllowsReordering = [&](const TreeEntry *TE) {
+          // FIXME: Reordering isn't implemented for non-power-of-2 nodes yet.
+          if (TE->isNonPowOf2Vec())
+            return false;
           if (!TE->ReorderIndices.empty() || !TE->ReuseShuffleIndices.empty() ||
               (TE->State == TreeEntry::Vectorize && TE->isAltShuffle()) ||
               (IgnoreReorder && TE->Idx == 0))
@@ -5923,6 +5976,9 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::ExtractValue:
   case Instruction::ExtractElement: {
     bool Reuse = canReuseExtract(VL, VL0, CurrentOrder);
+    // FIXME: Vectorizing is not supported yet for non-power-of-2 ops.
+    if (!isPowerOf2_32(VL.size()))
+      return TreeEntry::NeedToGather;
     if (Reuse || !CurrentOrder.empty())
       return TreeEntry::Vectorize;
     LLVM_DEBUG(dbgs() << "SLP: Gather extract sequence.\n");
@@ -6237,6 +6293,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     if (NumUniqueScalarValues == VL.size()) {
       ReuseShuffleIndicies.clear();
     } else {
+      // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
+      if (UserTreeIdx.UserTE && UserTreeIdx.UserTE->isNonPowOf2Vec()) {
+        LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
+                             "for nodes with padding.\n");
+        newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
+        return false;
+      }
       LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
       if (NumUniqueScalarValues <= 1 ||
           (UniquePositions.size() == 1 && all_of(UniqueValues,
@@ -6838,7 +6901,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       // Sort operands of the instructions so that each side is more likely to
       // have the same opcode.
-      if (isa<BinaryOperator>(VL0) && VL0->isCommutative()) {
+      if (isa<BinaryOperator>(VL0) && isCommutative(VL0)) {
         ValueList Left, Right;
         reorderInputsAccordingToOpcode(VL, Left, Right, *this);
         TE->setOperand(0, Left);
@@ -7847,7 +7910,8 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         for (unsigned I = 0, End = VL.size(); I < End; I += VF) {
           if (VectorizedLoads.contains(VL[I]))
             continue;
-          GatherCost += getBuildVectorCost(VL.slice(I, VF), Root);
+          GatherCost +=
+              getBuildVectorCost(VL.slice(I, std::min(End - I, VF)), Root);
         }
         // Exclude potentially vectorized loads from list of gathered
         // scalars.
@@ -9020,6 +9084,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         VecOpcode =
             SrcIt->second.second ? Instruction::SExt : Instruction::ZExt;
       }
+    } else if (VecOpcode == Instruction::SIToFP && SrcIt != MinBWs.end() &&
+               !SrcIt->second.second) {
+      VecOpcode = Instruction::UIToFP;
     }
     auto GetScalarCost = [&](unsigned Idx) -> InstructionCost {
       auto *VI = cast<Instruction>(UniqueValues[Idx]);
@@ -9260,11 +9327,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       (void)E;
       return TTI->getInstructionCost(VI, CostKind);
     };
-    // FIXME: Workaround for syntax error reported by MSVC buildbots.
-    TargetTransformInfo &TTIRef = *TTI;
     // Need to clear CommonCost since the final shuffle cost is included into
     // vector cost.
-    auto GetVectorCost = [&](InstructionCost) {
+    auto GetVectorCost = [&, &TTIRef = *TTI](InstructionCost) {
       // VecCost is equal to sum of the cost of creating 2 vectors
       // and the cost of creating shuffle.
       InstructionCost VecCost = 0;
@@ -10655,6 +10720,9 @@ BoUpSLP::isGatherShuffledEntry(
   Entries.clear();
   // No need to check for the topmost gather node.
   if (TE == VectorizableTree.front().get())
+    return {};
+  // FIXME: Gathering for non-power-of-2 nodes not implemented yet.
+  if (TE->isNonPowOf2Vec())
     return {};
   Mask.assign(VL.size(), PoisonMaskElem);
   assert(TE->UserTreeIndices.size() == 1 &&
@@ -12398,6 +12466,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           VecOpcode =
               SrcIt->second.second ? Instruction::SExt : Instruction::ZExt;
         }
+      } else if (VecOpcode == Instruction::SIToFP && SrcIt != MinBWs.end() &&
+                 !SrcIt->second.second) {
+        VecOpcode = Instruction::UIToFP;
       }
       Value *V = (VecOpcode != ShuffleOrOp && VecOpcode == Instruction::BitCast)
                      ? InVec
@@ -12560,8 +12631,15 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS,
           RHS);
       propagateIRFlags(V, E->Scalars, VL0, It == MinBWs.end());
-      if (auto *I = dyn_cast<Instruction>(V))
+      if (auto *I = dyn_cast<Instruction>(V)) {
         V = propagateMetadata(I, E->Scalars);
+        // Drop nuw flags for abs(sub(commutative), true).
+        if (!MinBWs.contains(E) && ShuffleOrOp == Instruction::Sub &&
+            any_of(E->Scalars, [](Value *V) {
+              return isCommutative(cast<Instruction>(V));
+            }))
+          I->setHasNoUnsignedWrap(/*b=*/false);
+      }
 
       V = FinalShuffle(V, E, VecTy);
 
@@ -12887,6 +12965,19 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
 
       propagateIRFlags(V0, OpScalars, E->getMainOp(), It == MinBWs.end());
       propagateIRFlags(V1, AltScalars, E->getAltOp(), It == MinBWs.end());
+      auto DropNuwFlag = [&](Value *Vec, unsigned Opcode) {
+        // Drop nuw flags for abs(sub(commutative), true).
+        if (auto *I = dyn_cast<Instruction>(Vec);
+            I && Opcode == Instruction::Sub && !MinBWs.contains(E) &&
+            any_of(E->Scalars, [](Value *V) {
+              auto *IV = cast<Instruction>(V);
+              return IV->getOpcode() == Instruction::Sub &&
+                     isCommutative(cast<Instruction>(IV));
+            }))
+          I->setHasNoUnsignedWrap(/*b=*/false);
+      };
+      DropNuwFlag(V0, E->getOpcode());
+      DropNuwFlag(V1, E->getAltOpcode());
 
       Value *V = Builder.CreateShuffleVector(V0, V1, Mask);
       if (auto *I = dyn_cast<Instruction>(V)) {
@@ -14950,8 +15041,13 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
   unsigned VF = Chain.size();
 
-  if (!isPowerOf2_32(Sz) || !isPowerOf2_32(VF) || VF < 2 || VF < MinVF)
-    return false;
+  if (!isPowerOf2_32(Sz) || !isPowerOf2_32(VF) || VF < 2 || VF < MinVF) {
+    // Check if vectorizing with a non-power-of-2 VF should be considered. At
+    // the moment, only consider cases where VF + 1 is a power-of-2, i.e. almost
+    // all vector lanes are used.
+    if (!VectorizeNonPowerOf2 || (VF < MinVF && VF + 1 != MinVF))
+      return false;
+  }
 
   LLVM_DEBUG(dbgs() << "SLP: Analyzing " << VF << " stores at offset " << Idx
                     << "\n");
@@ -15041,7 +15137,7 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
       if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
         ValueTy = Trunc->getSrcTy();
       unsigned MinVF = TTI->getStoreMinimumVF(
-          R.getMinVF(DL->getTypeSizeInBits(ValueTy)), StoreTy, ValueTy);
+          R.getMinVF(DL->getTypeSizeInBits(StoreTy)), StoreTy, ValueTy);
 
       if (MaxVF < MinVF) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
@@ -15050,14 +15146,22 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         continue;
       }
 
+      unsigned NonPowerOf2VF = 0;
+      if (VectorizeNonPowerOf2) {
+        // First try vectorizing with a non-power-of-2 VF. At the moment, only
+        // consider cases where VF + 1 is a power-of-2, i.e. almost all vector
+        // lanes are used.
+        unsigned CandVF = Operands.size();
+        if (isPowerOf2_32(CandVF + 1) && CandVF <= MaxVF)
+          NonPowerOf2VF = CandVF;
+      }
+
       unsigned Sz = 1 + Log2_32(MaxVF) - Log2_32(MinVF);
-      SmallVector<unsigned> CandidateVFs(Sz);
-      // FIXME: Is division-by-2 the correct step? Should we assert that the
-      // register size is a power-of-2?
-      unsigned Size = MaxVF;
-      for_each(CandidateVFs, [&](unsigned &VF) {
-        VF = Size;
-        Size /= 2;
+      SmallVector<unsigned> CandidateVFs(Sz + (NonPowerOf2VF > 0 ? 1 : 0));
+      unsigned Size = MinVF;
+      for_each(reverse(CandidateVFs), [&](unsigned &VF) {
+        VF = Size > MaxVF ? NonPowerOf2VF : Size;
+        Size *= 2;
       });
       unsigned StartIdx = 0;
       for (unsigned Size : CandidateVFs) {
