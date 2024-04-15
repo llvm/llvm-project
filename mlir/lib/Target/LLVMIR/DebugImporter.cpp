@@ -56,10 +56,14 @@ DIBasicTypeAttr DebugImporter::translateImpl(llvm::DIBasicType *node) {
 DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
   std::optional<DIEmissionKind> emissionKind =
       symbolizeDIEmissionKind(node->getEmissionKind());
+  std::optional<DINameTableKind> nameTableKind = symbolizeDINameTableKind(
+      static_cast<
+          std::underlying_type_t<llvm::DICompileUnit::DebugNameTableKind>>(
+          node->getNameTableKind()));
   return DICompileUnitAttr::get(
       context, getOrCreateDistinctID(node), node->getSourceLanguage(),
       translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
-      node->isOptimized(), emissionKind.value());
+      node->isOptimized(), emissionKind.value(), nameTableKind.value());
 }
 
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
@@ -374,7 +378,7 @@ DebugImporter::RecursionPruner::finalizeTranslation(llvm::DINode *node,
 
   // Insert the result into our internal cache if it's not self-contained.
   if (!state.unboundSelfRefs.empty()) {
-    auto [_, inserted] = dependentCache.try_emplace(
+    [[maybe_unused]] auto [_, inserted] = dependentCache.try_emplace(
         node, DependentTranslation{result, state.unboundSelfRefs});
     assert(inserted && "invalid state: caching the same DINode twice");
     return {result, false};
