@@ -251,7 +251,11 @@ mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
   mlir::Type convertedType = ConvertType(qualType);
 
   assert(!forBitField && "Bit fields NYI");
-  assert(!qualType->isBitIntType() && "BitIntType NYI");
+
+  // If this is a bit-precise integer type in a bitfield representation, map
+  // this integer to the target-specified size.
+  if (forBitField && qualType->isBitIntType())
+    assert(!qualType->isBitIntType() && "Bit field with type _BitInt NYI");
 
   return convertedType;
 }
@@ -728,7 +732,9 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     break;
   }
   case Type::BitInt: {
-    assert(0 && "not implemented");
+    const auto *bitIntTy = cast<BitIntType>(Ty);
+    ResultType = mlir::cir::IntType::get(
+        Builder.getContext(), bitIntTy->getNumBits(), bitIntTy->isSigned());
     break;
   }
   }

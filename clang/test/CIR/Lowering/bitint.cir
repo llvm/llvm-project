@@ -1,0 +1,30 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir  | FileCheck %s -check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @ParamPassing(%arg0: !cir.int<s, 15>, %arg1: !cir.int<s, 31>) -> !cir.int<s, 2> {
+    %0 = cir.cast(integral, %arg0 : !cir.int<s, 15>), !s32i
+    %1 = cir.cast(integral, %arg1 : !cir.int<s, 31>), !s32i
+    %2 = cir.binop(add, %0, %1) : !s32i
+    %3 = cir.cast(integral, %2 : !s32i), !cir.int<s, 2>
+    cir.return %3 : !cir.int<s, 2>
+  }
+}
+
+//      MLIR: llvm.func @ParamPassing(%arg0: i15, %arg1: i31) -> i2
+// MLIR-NEXT:   %0 = llvm.sext %arg0 : i15 to i32
+// MLIR-NEXT:   %1 = llvm.sext %arg1 : i31 to i32
+// MLIR-NEXT:   %2 = llvm.add %0, %1  : i32
+// MLIR-NEXT:   %3 = llvm.trunc %2 : i32 to i2
+// MLIR-NEXT:   llvm.return %3 : i2
+// MLIR-NEXT: }
+
+//      LLVM: define i2 @ParamPassing(i15 %0, i31 %1) !dbg !3 {
+// LLVM-NEXT:   %3 = sext i15 %0 to i32, !dbg !6
+// LLVM-NEXT:   %4 = sext i31 %1 to i32, !dbg !7
+// LLVM-NEXT:   %5 = add i32 %3, %4, !dbg !8
+// LLVM-NEXT:   %6 = trunc i32 %5 to i2, !dbg !9
+// LLVM-NEXT:   ret i2 %6, !dbg !10
+// LLVM-NEXT: }
