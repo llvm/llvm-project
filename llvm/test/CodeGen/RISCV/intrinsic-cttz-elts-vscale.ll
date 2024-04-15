@@ -207,9 +207,34 @@ define i32 @ctz_v16i1_poison(<16 x i1> %pg, <16 x i1> %a) {
   ret i32 %res
 }
 
+define i16 @ctz_v8i1_i16_ret(<8 x i1> %a) {
+; RV32-LABEL: ctz_v8i1_i16_ret:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vfirst.m a0, v0
+; RV32-NEXT:    bgez a0, .LBB6_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a0, 8
+; RV32-NEXT:  .LBB6_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: ctz_v8i1_i16_ret:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vfirst.m a0, v0
+; RV64-NEXT:    bgez a0, .LBB6_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    li a0, 8
+; RV64-NEXT:  .LBB6_2:
+; RV64-NEXT:    ret
+  %res = call i16 @llvm.experimental.cttz.elts.i16.v8i1(<8 x i1> %a, i1 0)
+  ret i16 %res
+}
+
 declare i64 @llvm.experimental.cttz.elts.i64.nxv8i16(<vscale x 8 x i16>, i1)
 declare i32 @llvm.experimental.cttz.elts.i32.nxv16i1(<vscale x 16 x i1>, i1)
 declare i32 @llvm.experimental.cttz.elts.i32.nxv4i32(<vscale x 4 x i32>, i1)
 declare i32 @llvm.experimental.cttz.elts.i32.v16i1(<16 x i1>, i1)
+declare i16 @llvm.experimental.cttz.elts.i16.v16i1(<8 x i1>, i1)
 
 attributes #0 = { vscale_range(2,1024) }
