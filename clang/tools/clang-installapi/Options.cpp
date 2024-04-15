@@ -104,7 +104,7 @@ bool Options::processDriverOptions(InputArgList &Args) {
   auto *ArgArch = Args.getLastArgNoClaim(drv::OPT_arch);
   auto *ArgTarget = Args.getLastArgNoClaim(drv::OPT_target);
   auto *ArgTargetVariant =
-      Args.getLastArgNoClaim(drv::OPT_darwin_target_variant_triple);
+      Args.getLastArgNoClaim(drv::OPT_darwin_target_variant);
   if (ArgArch && (ArgTarget || ArgTargetVariant)) {
     Diags->Report(clang::diag::err_drv_argument_not_allowed_with)
         << ArgArch->getAsString(Args)
@@ -133,6 +133,53 @@ bool Options::processDriverOptions(InputArgList &Args) {
       }
       DriverOpts.Targets[TAPITarget] = TargetTriple;
     }
+  }
+
+  // Capture target variants.
+  DriverOpts.Zippered = ArgTargetVariant != nullptr;
+  for (Arg *A : Args.filtered(drv::OPT_darwin_target_variant)) {
+    A->claim();
+    Triple Variant(A->getValue());
+    if (Variant.getVendor() != Triple::Apple) {
+      Diags->Report(diag::err_unsupported_vendor)
+          << Variant.getVendorName() << A->getAsString(Args);
+      return false;
+    }
+
+    switch (Variant.getOS()) {
+    default:
+      Diags->Report(diag::err_unsupported_os)
+          << Variant.getOSName() << A->getAsString(Args);
+      return false;
+    case Triple::MacOSX:
+    case Triple::IOS:
+      break;
+    }
+
+    switch (Variant.getEnvironment()) {
+    default:
+      Diags->Report(diag::err_unsupported_environment)
+          << Variant.getEnvironmentName() << A->getAsString(Args);
+      return false;
+    case Triple::UnknownEnvironment:
+    case Triple::MacABI:
+      break;
+    }
+
+    Target TAPIVariant(Variant);
+    // See if there is a matching --target option for this --target-variant
+    // option.
+    auto It = find_if(DriverOpts.Targets, [&](const auto &T) {
+      return (T.first.Arch == TAPIVariant.Arch) &&
+             (T.first.Platform != PlatformType::PLATFORM_UNKNOWN);
+    });
+
+    if (It == DriverOpts.Targets.end()) {
+      Diags->Report(diag::err_no_matching_target) << Variant.str();
+      return false;
+    }
+
+    DriverOpts.Targets[TAPIVariant] = Variant;
   }
 
   DriverOpts.Verbose = Args.hasArgNoClaim(drv::OPT_v);
@@ -325,7 +372,7 @@ bool Options::addFilePaths(InputArgList &Args, PathSeq &Headers,
       }
       // Sort headers to ensure deterministic behavior.
       sort(*InputHeadersOrErr);
-      for (std::string &H : *InputHeadersOrErr)
+      for (StringRef H : *InputHeadersOrErr)
         Headers.emplace_back(std::move(H));
     } else
       Headers.emplace_back(Path);
@@ -643,7 +690,7 @@ InstallAPIContext Options::createContext() {
     FrameworkName = getFrameworkNameFromInstallName(LinkerOpts.InstallName);
 
   // Process inputs.
-  for (const std::string &ListPath : DriverOpts.FileLists) {
+  for (const StringRef ListPath : DriverOpts.FileLists) {
     auto Buffer = FM->getBufferForFile(ListPath);
     if (auto Err = Buffer.getError()) {
       Diags->Report(diag::err_cannot_open_file) << ListPath << Err.message();
@@ -803,7 +850,8 @@ InstallAPIContext Options::createContext() {
 
   Ctx.Verifier = std::make_unique<DylibVerifier>(
       std::move(*Slices), std::move(ReexportedIFs), Diags,
-      DriverOpts.VerifyMode, DriverOpts.Demangle, DriverOpts.DSYMPath);
+      DriverOpts.VerifyMode, DriverOpts.Zippered, DriverOpts.Demangle,
+      DriverOpts.DSYMPath);
   return Ctx;
 }
 

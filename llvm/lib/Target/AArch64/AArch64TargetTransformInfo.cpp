@@ -3932,6 +3932,19 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
       }))
     return 0;
 
+  // Check for other shuffles that are not SK_ kinds but we have native
+  // instructions for, for example ZIP and UZP.
+  unsigned Unused;
+  if (LT.second.isFixedLengthVector() &&
+      LT.second.getVectorNumElements() == Mask.size() &&
+      (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
+      (isZIPMask(Mask, LT.second, Unused) ||
+       isUZPMask(Mask, LT.second, Unused) ||
+       // Check for non-zero lane splats
+       all_of(drop_begin(Mask),
+              [&Mask](int M) { return M < 0 || M == Mask[0]; })))
+    return 1;
+
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
       Kind == TTI::SK_Reverse || Kind == TTI::SK_Splice) {

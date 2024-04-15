@@ -1537,7 +1537,8 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
       for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
         Instruction *CtxI = PN.getIncomingBlock(I)->getTerminator();
         Value *VA = PN.getIncomingValue(I);
-        if (isKnownNonZero(VA, DL, 0, &AC, CtxI, &DT)) {
+        if (isKnownNonZero(VA, 0,
+                           getSimplifyQuery().getWithInstruction(CtxI))) {
           if (!NonZeroConst)
             NonZeroConst = getAnyNonZeroConstInt(PN);
           if (NonZeroConst != VA) {
