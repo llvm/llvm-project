@@ -50,6 +50,10 @@ const char *CudaVersionToString(CudaVersion V);
 // Input is "Major.Minor"
 CudaVersion CudaStringToVersion(const llvm::Twine &S);
 
+// We have a name conflict with sys/mac.h on AIX
+#ifdef SM_32
+#undef SM_32
+#endif
 enum class CudaArch {
   UNUSED,
   UNKNOWN,
@@ -124,6 +128,14 @@ enum class CudaArch {
 
   CudaDefault = CudaArch::SM_52,
   HIPDefault = CudaArch::GFX906,
+};
+
+enum class CUDAFunctionTarget {
+  Device,
+  Global,
+  Host,
+  HostDevice,
+  InvalidTarget
 };
 
 static inline bool IsNVIDIAGpuArch(CudaArch A) {
