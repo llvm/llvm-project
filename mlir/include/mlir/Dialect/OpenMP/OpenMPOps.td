@@ -783,7 +783,7 @@ def SimdOp : OpenMP_Op<"simd", [AttrSizedOperandSegments,
   let regions = (region AnyRegion:$region);
 
   let builders = [
-    OpBuilder<(ins CArg<"const SimdLoopClauseOps &">:$clauses)>
+    OpBuilder<(ins CArg<"const SimdClauseOps &">:$clauses)>
   ];
 
   let assemblyFormat = [{

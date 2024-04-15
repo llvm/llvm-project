@@ -1605,7 +1605,7 @@ void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
 //===----------------------------------------------------------------------===//
 
 void SimdOp::build(OpBuilder &builder, OperationState &state,
-                       const SimdClauseOps &clauses) {
+                   const SimdClauseOps &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, reductionByRefAttr, reductionVars,
   // privatizers, reductionDeclSymbols.
@@ -1622,8 +1622,7 @@ LogicalResult SimdOp::verify() {
            << "simdlen clause and safelen clause are both present, but the "
               "simdlen value is not less than or equal to safelen value";
 
-  if (verifyAlignedClause(*this, getAlignmentValues(),
-                          getAlignedVars())
+  if (verifyAlignedClause(*this, getAlignmentValues(), getAlignedVars())
           .failed())
     return failure();
 

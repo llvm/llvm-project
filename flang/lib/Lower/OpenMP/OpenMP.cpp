@@ -452,10 +452,14 @@ struct OpWithBodyGenInfo {
       std::function<llvm::SmallVector<const Fortran::semantics::Symbol *>(
           mlir::Operation *)>;
 
+  enum class OpKind { Default, Loop, Parallel };
+
   OpWithBodyGenInfo(Fortran::lower::AbstractConverter &converter,
                     Fortran::semantics::SemanticsContext &semaCtx,
-                    mlir::Location loc, Fortran::lower::pft::Evaluation &eval)
-      : converter(converter), semaCtx(semaCtx), loc(loc), eval(eval) {}
+                    mlir::Location loc, Fortran::lower::pft::Evaluation &eval,
+                    OpKind kind = OpKind::Default)
+      : converter(converter), semaCtx(semaCtx), loc(loc), eval(eval),
+        kind(kind) {}
 
   OpWithBodyGenInfo &setGenNested(bool value) {
     genNested = value;
@@ -498,6 +502,8 @@ struct OpWithBodyGenInfo {
   mlir::Location loc;
   /// [in] current PFT node/evaluation.
   Fortran::lower::pft::Evaluation &eval;
+  /// [in] kind of operation.
+  OpKind kind;
   /// [in] whether to generate FIR for nested evaluations
   bool genNested = true;
   /// [in] is this an outer operation - prevents privatization.
@@ -520,7 +526,6 @@ struct OpWithBodyGenInfo {
 ///
 /// \param [in]   op - the operation the body belongs to.
 /// \param [in] info - options controlling code-gen for the construction.
-template <typename Op>
 static void createBodyOfOp(mlir::Operation &op, OpWithBodyGenInfo &info) {
   fir::FirOpBuilder &firOpBuilder = info.converter.getFirOpBuilder();
 
@@ -555,8 +560,7 @@ static void createBodyOfOp(mlir::Operation &op, OpWithBodyGenInfo &info) {
 
   // Start with privatization, so that the lowering of the nested
   // code will use the right symbols.
-  constexpr bool isLoop = std::is_same_v<Op, mlir::omp::WsloopOp> ||
-                          std::is_same_v<Op, mlir::omp::SimdOp>;
+  bool isLoop = info.kind == OpWithBodyGenInfo::OpKind::Loop;
   bool privatize = info.clauses && !info.outerCombined;
 
   firOpBuilder.setInsertionPoint(marker);
@@ -568,7 +572,7 @@ static void createBodyOfOp(mlir::Operation &op, OpWithBodyGenInfo &info) {
     }
   }
 
-  if constexpr (std::is_same_v<Op, mlir::omp::ParallelOp>) {
+  if (info.kind == OpWithBodyGenInfo::OpKind::Parallel) {
     threadPrivatizeVars(info.converter, info.eval);
     if (info.clauses) {
       firOpBuilder.setInsertionPoint(marker);
@@ -732,7 +736,7 @@ template <typename OpTy, typename... Args>
 static OpTy genOpWithBody(OpWithBodyGenInfo &info, Args &&...args) {
   auto op = info.converter.getFirOpBuilder().create<OpTy>(
       info.loc, std::forward<Args>(args)...);
-  createBodyOfOp<OpTy>(*op, info);
+  createBodyOfOp(*op, info);
   return op;
 }
 
@@ -806,7 +810,8 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   };
 
   OpWithBodyGenInfo genInfo =
-      OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval)
+      OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval,
+                        OpWithBodyGenInfo::OpKind::Parallel)
           .setGenNested(genNested)
           .setOuterCombined(outerCombined)
           .setClauses(&clauseList)
@@ -1649,7 +1654,7 @@ static void createSimd(Fortran::lower::AbstractConverter &converter,
   dsp.processStep1();
 
   Fortran::lower::StatementContext stmtCtx;
-  mlir::omp::SimdLoopClauseOps simdClauseOps;
+  mlir::omp::SimdClauseOps simdClauseOps;
   mlir::omp::LoopNestClauseOps loopClauseOps;
   llvm::SmallVector<const Fortran::semantics::Symbol *> iv;
 
@@ -1666,8 +1671,7 @@ static void createSimd(Fortran::lower::AbstractConverter &converter,
                  clause::Nontemporal, clause::Order>(loc, ompDirective);
 
   // Create omp.simd wrapper.
-  auto simdOp = firOpBuilder.create<mlir::omp::SimdOp>(
-      loc, simdClauseOps);
+  auto simdOp = firOpBuilder.create<mlir::omp::SimdOp>(loc, simdClauseOps);
 
   // TODO Add reduction-related arguments to the wrapper's entry block.
   firOpBuilder.createBlock(&simdOp.getRegion());
@@ -1675,8 +1679,7 @@ static void createSimd(Fortran::lower::AbstractConverter &converter,
       Fortran::lower::genOpenMPTerminator(firOpBuilder, simdOp, loc));
 
   // Create nested omp.loop_nest and fill body with loop contents.
-  auto loopOp = firOpBuilder.create<mlir::omp::LoopNestOp>(
-      loc, loopClauseOps);
+  auto loopOp = firOpBuilder.create<mlir::omp::LoopNestOp>(loc, loopClauseOps);
 
   auto *nestedEval = getCollapsedLoopEval(
       eval, Fortran::lower::getCollapseValue(loopOpClauseList));
@@ -1685,8 +1688,9 @@ static void createSimd(Fortran::lower::AbstractConverter &converter,
     return genLoopVars(op, converter, loc, iv);
   };
 
-  createBodyOfOp<mlir::omp::SimdOp>(
-      *loopOp, OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval)
+  createBodyOfOp(
+      *loopOp, OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval,
+                                 OpWithBodyGenInfo::OpKind::Loop)
                    .setClauses(&loopOpClauseList)
                    .setDataSharingProcessor(&dsp)
                    .setGenRegionEntryCb(ivCallback));
@@ -1742,7 +1746,8 @@ static void createWsloop(Fortran::lower::AbstractConverter &converter,
   };
 
   genOpWithBody<mlir::omp::WsloopOp>(
-      OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval)
+      OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval,
+                        OpWithBodyGenInfo::OpKind::Loop)
           .setClauses(&beginClauseList)
           .setDataSharingProcessor(&dsp)
           .setReductions(&reductionSyms, &reductionTypes)
@@ -2135,7 +2140,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                                                       global.getSymName()));
   }();
   auto genInfo = OpWithBodyGenInfo(converter, semaCtx, currentLocation, eval);
-  createBodyOfOp<mlir::omp::CriticalOp>(*criticalOp, genInfo);
+  createBodyOfOp(*criticalOp, genInfo);
 }
 
 static void
