@@ -32,7 +32,7 @@ target triple = "x86_64-apple-macosx10.12"
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 
 Compiled with: llc -filetype=obj %p/../Inputs/swift-dwarf-loc.ll -mtriple x86_64-apple-darwin
-Linked with: ld -dylib %T/swift-dwarf-loc.o -arch x86_64 -lSystem -macosx_version_min 10.9.0
+Linked with: ld -dylib %T/swift-dwarf-loc.o -arch x86_64 -lSystem -macos_version_min 10.9.0
 
 CHECK: __var,
 CHECK-NOT: __var,{{.*}}binAddr: 0x0000000000000000

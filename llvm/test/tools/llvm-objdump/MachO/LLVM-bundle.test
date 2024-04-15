@@ -23,7 +23,7 @@
 # CHECK:   </dylibs>
 # CHECK:   <link-options>
 # CHECK:    <option>-execute</option>
-# CHECK:    <option>-macosx_version_min</option>
+# CHECK:    <option>-macos_version_min</option>
 # CHECK:    <option>10.11.0</option>
 # CHECK:    <option>-e</option>
 # CHECK:    <option>_main</option>

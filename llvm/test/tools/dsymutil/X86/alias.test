@@ -20,4 +20,4 @@
 # Compile with:
 #   $ clang -g -O0 bar.c -c -o bar.o
 #   $ clang -g -O0 foo.c -c -o foo.o
-#   $ ld -arch x86_64 -macosx_version_min 10.13.0 foo.o bar.o -lSystem -alias _foo _bar -o foobar
+#   $ ld -arch x86_64 -macos_version_min 10.13.0 foo.o bar.o -lSystem -alias _foo _bar -o foobar

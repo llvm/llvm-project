@@ -25,7 +25,7 @@
 #
 # To generate the debug map:
 #
-#   $ ld -arch x86_64 -macosx_version_min 10.13.0 -lSystem null_die.o -o null_die
+#   $ ld -arch x86_64 -macos_version_min 10.13.0 -lSystem null_die.o -o null_die
 #   $ dsymutil -dump-debug-map null_die
 
 ---

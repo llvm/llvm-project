@@ -7,7 +7,7 @@
 # RUN: %lld --version \
 # RUN:   -dynamic \
 # RUN:   -lto_library /lib/foo \
-# RUN:   -macosx_version_min 0 \
+# RUN:   -macos_version_min 0 \
 # RUN:   -no_dtrace_dof \
 # RUN:   -dependency_info /path/to/dependency_info.dat \
 # RUN:   -lto_library ../lib/libLTO.dylib \

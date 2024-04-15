@@ -26,5 +26,5 @@
 // ARM64_NEW-INV: "-platform_version" "macos" "11.0.0" "10.15"
 // ARM64_NEW-INV-SAME: "-platform_version" "mac catalyst" "14.0.0" "13.1"
 
-// ARM64_OLD: "-maccatalyst_version_min" "14.0.0" "-macosx_version_min" "11.0.0"
-// ARM64_OLD-INV:  "-macosx_version_min" "11.0.0" "-maccatalyst_version_min" "14.0.0"
+// ARM64_OLD: "-maccatalyst_version_min" "14.0.0" "-macos_version_min" "11.0.0"
+// ARM64_OLD-INV:  "-macos_version_min" "11.0.0" "-maccatalyst_version_min" "14.0.0"

@@ -34,12 +34,12 @@
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=ARM64_NEW_1 %s
 
-// LINKER-OLD: "-macosx_version_min" "10.13.0"
+// LINKER-OLD: "-macos_version_min" "10.13.0"
 // LINKER-NEW: "-platform_version" "macos" "10.13.0" "10.14"
 
 // ARM64_NEW: "-platform_version" "macos" "11.0.0" "10.14"
 // ARM64_NEW_1: "-platform_version" "macos" "11.1.0" "10.14"
-// ARM64_OLD: "-macosx_version_min" "11.0.0"
+// ARM64_OLD: "-macos_version_min" "11.0.0"
 
 // RUN: %clang -target x86_64-apple-macos10.13 -mlinker-version=520 \
 // RUN:   -### %t.o 2>&1 \

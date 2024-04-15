@@ -73,4 +73,4 @@
 // CHECK-MACOSX: "-cc1"
 // CHECK-MACOSX: "-triple" "x86_64-apple-macosx10.10.0"
 // CHECK-MACOSX: ld
-// CHECK-MACOSX: "-macosx_version_min" "10.10.0"
+// CHECK-MACOSX: "-macos_version_min" "10.10.0"

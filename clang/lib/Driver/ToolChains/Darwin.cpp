@@ -3143,7 +3143,7 @@ void Darwin::addMinVersionArgs(const ArgList &Args,
     CmdArgs.push_back("-maccatalyst_version_min");
   else {
     assert(isTargetMacOS() && "unexpected target");
-    CmdArgs.push_back("-macosx_version_min");
+    CmdArgs.push_back("-macos_version_min");
   }
 
   VersionTuple MinTgtVers = getEffectiveTriple().getMinimumSupportedOSVersion();
@@ -3154,7 +3154,7 @@ void Darwin::addMinVersionArgs(const ArgList &Args,
     assert(isTargetMacOSBased() && "unexpected target");
     VersionTuple VariantTargetVersion;
     if (TargetVariantTriple->isMacOSX()) {
-      CmdArgs.push_back("-macosx_version_min");
+      CmdArgs.push_back("-macos_version_min");
       TargetVariantTriple->getMacOSXVersion(VariantTargetVersion);
     } else {
       assert(TargetVariantTriple->isiOS() &&

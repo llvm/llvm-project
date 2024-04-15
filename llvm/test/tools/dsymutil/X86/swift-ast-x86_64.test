@@ -14,7 +14,7 @@ let x = 1
 
 Compiled with:
   swiftc /tmp/test.swift -Onone -target x86_64-apple-macosx10.9 -c
-  ld swift-ast.o -add_ast_path Inputs/swift-ast.swiftmodule -arch x86_64 -lSystem -macosx_version_min 10.9.0
+  ld swift-ast.o -add_ast_path Inputs/swift-ast.swiftmodule -arch x86_64 -lSystem -macos_version_min 10.9.0
 
 DSYMUTIL: filename:{{.*}}swift-ast.swiftmodule
 DSYMUTIL-NOT: The file was not recognized as a valid object file

@@ -15,13 +15,13 @@
 // RUN: FileCheck %s < %t.log
 
 // CHECK: {{ld(.exe)?"}}
-// CHECK: -macosx_version_min
+// CHECK: -macos_version_min
 // CHECK: 10.4.0
 // CHECK: {{ld(.exe)?"}}
-// CHECK: -macosx_version_min
+// CHECK: -macos_version_min
 // CHECK: 10.5.0
 // CHECK: {{ld(.exe)?"}}
-// CHECK: -macosx_version_min
+// CHECK: -macos_version_min
 // CHECK: 10.7.0
 // CHECK: {{ld(.exe)?"}}
 // CHECK: -iphoneos_version_min
