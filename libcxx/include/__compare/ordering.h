@@ -42,6 +42,7 @@ struct _CmpUnspecifiedParam {
           __zero == 0, "Only literal 0 is allowed as the operand of a comparison with one of the ordering types")))
 #  endif
   {
+    (void)__zero;
   }
 };
 
