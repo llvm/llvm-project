@@ -537,6 +537,7 @@ Bug Fixes to C++ Support
 - Clang now correctly tracks type dependence of by-value captures in lambdas with an explicit
   object parameter.
   Fixes (#GH70604), (#GH79754), (#GH84163), (#GH84425), (#GH86054), (#GH86398), and (#GH86399).
+- Fix a crash when deducing ``auto`` from an invalid dereference (#GH88329).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
