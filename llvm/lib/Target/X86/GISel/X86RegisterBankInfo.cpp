@@ -369,7 +369,8 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ isFPTrunc || isFPAnyExt,
                                OpRegBankIdx);
-  } break;
+    break;
+  }
   case TargetOpcode::G_LOAD: {
     bool IsFP = false;
     // Check if that load feeds fp instructions.
@@ -385,7 +386,8 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                }))
       IsFP = true;
     getInstrPartialMappingIdxs(MI, MRI, IsFP, OpRegBankIdx);
-  } break;
+    break;
+  }
   case TargetOpcode::G_STORE: {
     // Check if that store is fed by fp instructions.
     Register VReg = cast<GStore>(MI).getValueReg();
@@ -394,7 +396,8 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     MachineInstr *DefMI = MRI.getVRegDef(VReg);
     bool IsFP = onlyDefinesFP(*DefMI, MRI, TRI);
     getInstrPartialMappingIdxs(MI, MRI, IsFP, OpRegBankIdx);
-  } break;
+    break;
+  }
   default:
     // Track the bank of each register, use NotFP mapping (all scalars in
     // GPRs)
