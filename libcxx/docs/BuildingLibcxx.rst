@@ -210,7 +210,7 @@ libc++ specific options
 
   **Default**: ``OFF``
 
-  Toggle the installation of the experimental libc++ module sources..
+  Toggle the installation of the experimental libc++ module sources.
 
 .. option:: LIBCXX_ENABLE_SHARED:BOOL
 
