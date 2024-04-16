@@ -27,9 +27,10 @@ TEST(LlvmLibcPThreadCondAttrTest, GetDefaultValues) {
   int pshared = 42;
 
   ASSERT_EQ(pthread_condattr_init(&cond), 0);
-  ASSERT_EQ(pthread_condattr_getclock(&cond, &clock), CLOCK_REALTIME);
-  ASSERT_EQ(pthread_condattr_getpshared(&cond, &pshared),
-            PTHREAD_PROCESS_PRIVATE);
+  ASSERT_EQ(pthread_condattr_getclock(&cond, &clock), 0);
+  ASSERT_EQ(clock, CLOCK_REALTIME);
+  ASSERT_EQ(pthread_condattr_getpshared(&cond, &pshared), 0);
+  ASSERT_EQ(pshared, PTHREAD_PROCESS_PRIVATE);
   ASSERT_EQ(pthread_condattr_destroy(&cond), 0);
 }
 
