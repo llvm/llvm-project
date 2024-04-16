@@ -4359,6 +4359,11 @@ multiclass sme2_mova_array_to_vec_vg2_multi<bits<3> opc, string mnemonic> {
   }
 }
 
+multiclass sme2_movaz_array_to_vec_vg2_multi<string mnemonic> {
+  def NAME : sme2_mova_array_to_vec_vg2_multi<0b010, mnemonic>;
+  def NAME # _PSEUDO : sme2_movaz_to_tile_multi_pseudo
+}
+
 // move array to vector, four registers
 multiclass sme2_mova_array_to_vec_vg4_multi<bits<4> opc, string mnemonic> {
   def NAME : sme2_mova_array_to_vec_vg24_multi<opc, ZZZZ_d_mul_r, MatrixOp64,
