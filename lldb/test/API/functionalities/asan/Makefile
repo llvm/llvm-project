@@ -1,8 +1,4 @@
 C_SOURCES := main.c
-asan: CFLAGS_EXTRAS := -fsanitize=address -g -gcolumn-info
-asan: all
-
-libsanitizers: CFLAGS_EXTRAS := -fsanitize=address -fsanitize-stable-abi -g -gcolumn-info
-libsanitizers: all
+CFLAGS_EXTRAS := -fsanitize=address -g -gcolumn-info
 
 include Makefile.rules
