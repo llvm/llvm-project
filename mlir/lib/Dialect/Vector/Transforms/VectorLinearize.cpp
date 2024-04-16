@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LogicalResult.h"
@@ -404,18 +405,15 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
 void mlir::vector::populateVectorLinearizeToShuffleRewritePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target, unsigned int targetBitWidth) {
-  target.markUnknownOpDynamicallyLegal(
-      [=](Operation *op) -> std::optional<bool> {
-        if (isa<vector::ShuffleOp>(op)) {
-          return (isLessThanTargetBitWidth(op, targetBitWidth)
-                      ? (typeConverter.isLegal(op) &&
-                         op->getResult(0)
-                                 .getType()
-                                 .cast<mlir::VectorType>()
-                                 .getRank() == 1)
-                      : true);
-        }
-        return std::nullopt;
+  target.addDynamicallyLegalOp<vector::ShuffleOp>(
+      [=](vector::ShuffleOp shuffleOp) -> bool {
+        return isLessThanTargetBitWidth(shuffleOp, targetBitWidth)
+                   ? (typeConverter.isLegal(shuffleOp) &&
+                      shuffleOp.getResult()
+                              .getType()
+                              .cast<mlir::VectorType>()
+                              .getRank() == 1)
+                   : true;
       });
   patterns.add<LinearizeVectorShuffle, LinearizeVectorExtract,
                LinearizeVectorExtractStridedSlice>(
