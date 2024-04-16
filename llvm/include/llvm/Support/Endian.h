@@ -80,8 +80,8 @@ template <typename value_type, std::size_t alignment, typename CharT>
   return ret;
 }
 
-template <typename value_type, endianness endian, std::size_t alignment,
-          typename CharT>
+template <typename value_type, endianness endian,
+          std::size_t alignment = unaligned, typename CharT>
 [[nodiscard]] inline value_type readNext(const CharT *&memory) {
   return readNext<value_type, alignment, CharT>(memory, endian);
 }
