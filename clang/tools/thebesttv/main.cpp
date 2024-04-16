@@ -22,11 +22,11 @@ class FunctionAccumulator : public RecursiveASTVisitor<FunctionAccumulator> {
         : functionsInFile(functionsInFile) {}
 
     bool VisitFunctionDecl(FunctionDecl *D) {
-        FunctionInfo *fi = FunctionInfo::fromDecl(D);
+        auto fi = FunctionInfo::fromDecl(D);
         if (fi == nullptr)
             return true;
 
-        functionsInFile[fi->file].insert(fi);
+        functionsInFile[fi->file].insert(std::move(fi));
 
         return true;
     }
@@ -87,7 +87,7 @@ struct VarLocResult {
 
     VarLocResult() : fid(-1), bid(-1) {}
     VarLocResult(int fid, int bid) : fid(fid), bid(bid) {}
-    VarLocResult(const FunctionInfo *fi, const CFGBlock *block)
+    VarLocResult(const std::unique_ptr<FunctionInfo> &fi, const CFGBlock *block)
         : fid(Global.getIdOfFunction(fi->signature)), bid(block->getBlockID()) {
     }
 
@@ -102,7 +102,7 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                             bool requireExact = true) {
     FindVarVisitor visitor;
 
-    for (const FunctionInfo *fi : functionsInFile.at(file)) {
+    for (const auto &fi : functionsInFile.at(file)) {
         // function is defined later than targetLoc
         if (fi->line > line)
             continue;
@@ -302,7 +302,7 @@ void dumpICFGNode(int u, ordered_json &jPath) {
     requireTrue(!TUD->isUnavailable());
     FunctionAccumulator(functionsInFile).TraverseDecl(TUD);
 
-    for (const FunctionInfo *fi : functionsInFile.at(loc.file)) {
+    for (const auto &fi : functionsInFile.at(loc.file)) {
         if (fi->signature != Global.functionLocations[fid].name)
             continue;
         for (auto BI = fi->cfg->begin(); BI != fi->cfg->end(); ++BI) {

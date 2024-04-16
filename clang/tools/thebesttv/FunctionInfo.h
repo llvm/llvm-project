@@ -13,7 +13,7 @@ struct FunctionInfo {
     std::unique_ptr<CFG> cfg;
     std::vector<std::pair<const Stmt *, const CFGBlock *>> stmtBlockPairs;
 
-    static FunctionInfo *fromDecl(FunctionDecl *D) {
+    static std::unique_ptr<FunctionInfo> fromDecl(FunctionDecl *D) {
         // ensure that the function has a body
         if (!D->hasBody())
             return nullptr;
@@ -33,7 +33,7 @@ struct FunctionInfo {
         if (!cfg)
             return nullptr;
 
-        FunctionInfo *fi = new FunctionInfo();
+        auto fi = std::make_unique<FunctionInfo>();
         fi->D = D;
         fi->signature = getFullSignature(D);
         fi->file = pLoc->file;

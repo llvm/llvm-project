@@ -42,7 +42,7 @@ using namespace llvm;
 namespace fs = std::filesystem;
 
 struct FunctionInfo;
-typedef std::map<std::string, std::set<const FunctionInfo *>> fif;
+typedef std::map<std::string, std::set<std::unique_ptr<FunctionInfo>>> fif;
 
 /*****************************************************************
  * Global Variables
