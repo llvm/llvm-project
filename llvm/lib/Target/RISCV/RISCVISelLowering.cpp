@@ -13432,7 +13432,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // (2^(1,2,3) * 3,5,9 + 1 -> (shXadd (shYadd x, x), x)
+  // 2^(1,2,3) * 3,5,9 + 1 -> (shXadd (shYadd x, x), x)
   // Matched in tablegen, avoid perturbing patterns.
   switch (MulAmt) {
   case 11: case 13: case 19: case 21: case 25: case 27: case 29:
