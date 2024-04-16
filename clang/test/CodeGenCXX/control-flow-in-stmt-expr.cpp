@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 --std=c++20 -fexceptions -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefixes=EH %s
-// RUN: %clang_cc1 --std=c++20 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefixes=NOEH,CHECK %s
+// RUN: %clang_cc1 --std=c++20 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
 
 struct Printy {
   Printy(const char *name) : name(name) {}
@@ -348,34 +347,6 @@ void NewArrayInit() {
 
   // CHECK:       arraydestroy.done{{.*}}:                               ; preds = %arraydestroy.body, %if.then
   // CHECK-NEXT:    br label %return
-}
-
-void DestroyInConditionalCleanup() {
-  // EH-LABEL: DestroyInConditionalCleanupv()
-  // NOEH-LABEL: DestroyInConditionalCleanupv()
-  struct A {
-    A() {}
-    ~A() {}
-  };
-
-  struct Value {
-    Value(A) {}
-    ~Value() {}
-  };
-
-  struct V2 {
-    Value K;
-    Value V;
-  };
-  // Verify we use conditional cleanups.
-  (void)(foo() ? V2{A(), A()} : V2{A(), A()});
-  // NOEH:   cond.true:
-  // NOEH:      call void @_ZZ27DestroyInConditionalCleanupvEN1AC1Ev
-  // NOEH:      store ptr %{{.*}}, ptr %cond-cleanup.save
-
-  // EH:   cond.true:
-  // EH:        invoke void @_ZZ27DestroyInConditionalCleanupvEN1AC1Ev
-  // EH:        store ptr %{{.*}}, ptr %cond-cleanup.save
 }
 
 void ArrayInitWithContinue() {
