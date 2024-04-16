@@ -169,16 +169,16 @@ The layout could be look like this for the MyRS in above example:
 
     struct {
 
-      RootConstants b0;
+      ContainerRootDescriptor b0;
 
       ContainerRootDescriptor t1;
 
       ContainerRootDescriptor u1;
 
-      ContainerRootDescriptor tab0; // tab0.DescriptorRangesOffset points to ranges[0]
+      ContainerRootDescriptorTable tab0; // tab0.DescriptorRangesOffset points to ranges[0]
                                     // tab0.NumDescriptorRanges = 2
 
-      ContainerRootDescriptor tab1; // tab1.DescriptorRangesOffset points to ranges[2]
+      ContainerRootDescriptorTable tab1; // tab1.DescriptorRangesOffset points to ranges[2]
                                     // tab1.NumDescriptorRanges = 1
 
       RootConstants b10;
