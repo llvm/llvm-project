@@ -244,7 +244,10 @@ public:
   void SetInstDebugLocation(Instruction *I) const;
 
   /// Add all entries in MetadataToCopy to \p I.
-  void AddMetadataToInst(Instruction *I) const;
+  void AddMetadataToInst(Instruction *I) const {
+    for (const auto &KV : MetadataToCopy)
+      I->setMetadata(KV.first, KV.second);
+  }
 
   /// Get the return type of the current function that we're emitting
   /// into.

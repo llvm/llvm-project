@@ -498,8 +498,7 @@ void Instruction::dropUBImplyingAttrsAndMetadata() {
   // !noundef and various AA metadata must be dropped, as it generally produces
   // immediate undefined behavior.
   unsigned KnownIDs[] = {LLVMContext::MD_annotation, LLVMContext::MD_range,
-                         LLVMContext::MD_nonnull, LLVMContext::MD_align,
-                         LLVMContext::MD_mmra};
+                         LLVMContext::MD_nonnull, LLVMContext::MD_align};
   dropUBImplyingAttrsAndUnknownMetadata(KnownIDs);
 }
 

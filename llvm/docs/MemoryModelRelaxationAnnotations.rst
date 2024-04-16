@@ -16,9 +16,9 @@ by the memory model. For example:
   memory operations to be reordered across ``acquire`` or ``release``
   operations.
 * OpenCL APIs expose primitives to only fence a specific set of address
-  spaces, carrying that information to the backend can enable the
+  spaces. Carrying that information to the backend can enable the
   use of faster synchronization instructions, rather than fencing all
-  address spaces.
+  address spaces everytime.
 
 MMRAs offer an opt-in system for targets to relax the default LLVM
 memory model.
@@ -44,7 +44,7 @@ tag
     An operation may have multiple tags that each represent a different
     property.
 
-    A tag is composed of a pair of metadata string: a *prefix and a *suffix*.
+    A tag is composed of a pair of metadata string: a *prefix* and a *suffix*.
 
     In LLVM IR, the pair is represented using a metadata tuple.
     In other cases (comments, documentation, etc.), we may use the
@@ -142,57 +142,58 @@ Synchronization
     synchronizes-with and participates in the  ``seq_cst`` order with
     other operations is target dependent.
 
+    Whether the following example synchronizes with another sequence depends
+    on the target-defined semantics of ``foo:bar`` and ``foo:bux``.
+
     .. code-block::
 
-       ; Depending on the semantics of foo:bar & foo:bux, this may not
-       ; synchronize with another sequence.
        fence release               # foo:bar
        store atomic %ptr1          # foo:bux
 
 Examples
 --------
 
-.. code-block:: text
-  :caption: Example 1
+Example 1:
+    .. code-block::
 
-   A: store ptr addrspace(1) %ptr2                  # sync-as:1 vulkan:nonprivate
-   B: store atomic release ptr addrspace(1) %ptr3   # sync-as:0 vulkan:nonprivate
+      A: store ptr addrspace(1) %ptr2                  # sync-as:1 vulkan:nonprivate
+      B: store atomic release ptr addrspace(1) %ptr3   # sync-as:0 vulkan:nonprivate
 
-A and B are not ordered relative to each other
-(no *happens-before*) because their sets of tags are not compatible.
+    A and B are not ordered relative to each other
+    (no *happens-before*) because their sets of tags are not compatible.
 
-Note that the ``sync-as`` value does not have to match the ``addrspace`` value.
-e.g. In Example 1, a store-release to a location in ``addrspace(1)`` wants to
-only synchronize with operations happening in ``addrspace(0)``.
+    Note that the ``sync-as`` value does not have to match the ``addrspace`` value.
+    e.g. In Example 1, a store-release to a location in ``addrspace(1)`` wants to
+    only synchronize with operations happening in ``addrspace(0)``.
 
-.. code-block:: text
-  :caption: Example 2
+Example 2:
+    .. code-block::
 
-   A: store ptr addrspace(1) %ptr2                 # sync-as:1 vulkan:nonprivate
-   B: store atomic release ptr addrspace(1) %ptr3  # sync-as:1 vulkan:nonprivate
+      A: store ptr addrspace(1) %ptr2                 # sync-as:1 vulkan:nonprivate
+      B: store atomic release ptr addrspace(1) %ptr3  # sync-as:1 vulkan:nonprivate
 
-The ordering of A and B is unaffected because their set of tags are
-compatible.
+    The ordering of A and B is unaffected because their set of tags are
+    compatible.
 
-Note that A and B may or may not be in *happens-before* due to other reasons.
+    Note that A and B may or may not be in *happens-before* due to other reasons.
 
-.. code-block:: text
-  :caption: Example 3
+Example 3:
+    .. code-block::
 
-   A: store ptr addrspace(1) %ptr2                 # sync-as:1 vulkan:nonprivate
-   B: store atomic release ptr addrspace(1) %ptr3  # vulkan:nonprivate
+      A: store ptr addrspace(1) %ptr2                 # sync-as:1 vulkan:nonprivate
+      B: store atomic release ptr addrspace(1) %ptr3  # vulkan:nonprivate
 
-The ordering of A and B is unaffected because their set of tags are
-compatible.
+    The ordering of A and B is unaffected because their set of tags are
+    compatible.
 
-.. code-block:: text
-  :caption: Example 3
+Example 4:
+    .. code-block::
 
-   A: store ptr addrspace(1) %ptr2                 # sync-as:1
-   B: store atomic release ptr addrspace(1) %ptr3  # sync-as:2
+      A: store ptr addrspace(1) %ptr2                 # sync-as:1
+      B: store atomic release ptr addrspace(1) %ptr3  # sync-as:2
 
-A and B do not have to be ordered relative to each other
-(no *happens-before*) because their sets of tags are not compatible.
+    A and B do not have to be ordered relative to each other
+    (no *happens-before*) because their sets of tags are not compatible.
 
 Use-cases
 =========
@@ -314,7 +315,7 @@ pass information about which address spaces are synchronized by the
 execution of a synchronizing operation.
 
 .. note::
-  Address spaces are used here as a common example, but this concept isn't
+  Address spaces are used here as a common example, but this concept
   can apply for other "memory types". What "memory types" means here is
   up to the target.
 
@@ -427,8 +428,8 @@ Combining Operations
 --------------------
 
 If a pass can combine multiple memory or synchronizing operations
-into one, then the metadata of the new instruction(s) shall be a
-prefix-wise union of the metadata of the source instructions.
+into one, it needs to be able to combine MMRAs. One possible way to
+achieve this is by doing a prefix-wise union of the tag sets.
 
 Let A and B be two tags set, and U be the prefix-wise union of A and B.
 For every unique tag prefix P present in A or B:
