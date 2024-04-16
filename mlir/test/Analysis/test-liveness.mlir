@@ -493,3 +493,59 @@ func.func @nested_region3(
   }
   return %1 : i32
 }
+
+// -----
+
+// CHECK-LABEL: Testing : nested_region4
+
+func.func @nested_region4(%arg0: index, %arg1: index, %arg2: index) {
+  // CHECK: Block: 0
+  // CHECK-NEXT: LiveIn:
+  // CHECK-NEXT: LiveOut:
+  // CHECK-NEXT: BeginLivenessIntervals
+  // CHECK-NEXT: val_3
+  // CHECK-NEXT: %c0_i32 = arith.constant 0
+  // CHECK-NEXT: %c1_i32 = arith.constant 1
+  // CHECK-NEXT: %0 = scf.for
+  // COM: Skipping the body of the scf.for...
+  // CHECK:      val_4
+  // CHECK-NEXT: %c1_i32 = arith.constant 1
+  // CHECK-NEXT: %0 = scf.for
+  // COM: Skipping the body of the scf.for...
+  // CHECK:      // %1 = arith.addi
+  // CHECK-NEXT: val_5
+  // CHECK-NEXT: %0 = scf.for
+  // COM: Skipping the body of the scf.for...
+  // CHECK:      EndLivenessIntervals
+  // CHECK-NEXT: BeginCurrentlyLive
+  // CHECK-NEXT: %c0_i32 = arith.constant 0
+  // CHECK-SAME: arg0@0 arg1@0 arg2@0 val_3
+  // CHECK-NEXT: %c1_i32 = arith.constant 1
+  // CHECK-SAME: arg0@0 arg1@0 arg2@0 val_3 val_4
+  // CHECK-NEXT: %0 = scf.for
+  // COM: Skipping the body of the scf.for...
+  // CHECK:      arg0@0 arg1@0 arg2@0 val_3 val_4 val_5
+  // CHECK-NEXT: EndCurrentlyLive
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+
+  %0 = scf.for %arg3 = %arg0 to %arg1 step %arg2 iter_args(%arg4 = %c0_i32) -> (i32) {
+    // CHECK-NEXT: Block: 1
+    // CHECK-NEXT: LiveIn: val_4
+    // CHECK-NEXT: LiveOut:
+    // CHECK-NEXT: BeginLivenessIntervals
+    // CHECK-NEXT: val_8
+    // CHECK-NEXT: %1 = arith.addi
+    // CHECK-NEXT: scf.yield %1
+    // CHECK-NEXT: EndLivenessIntervals
+    // CHECK-NEXT: BeginCurrentlyLive
+    // CHECK-NEXT: %1 = arith.addi
+    // CHECK-SAME: val_4 arg0@1 arg1@1 val_8
+    // CHECK-NEXT: scf.yield %1
+    // CHECK-SAME: val_8
+    // CHECK-NEXT: EndCurrentlyLive
+    %1 = arith.addi %arg4, %c1_i32 : i32
+    scf.yield %1 : i32
+  }
+  return
+}
