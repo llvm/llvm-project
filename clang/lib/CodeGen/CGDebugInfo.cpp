@@ -1335,7 +1335,24 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
   SourceLocation Loc = AliasDecl->getLocation();
 
   if (CGM.getCodeGenOpts().DebugTemplateAlias) {
-    TemplateArgs Args = {TD->getTemplateParameters(), Ty->template_arguments()};
+    // TemplateSpecializationType doesn't know if its template args are
+    // being substitued into a parameter pack. We can find out if that's
+    // the case now by inspecting the TypeAliasTemplateDecl template.
+    // parameters. Insert Ty's template args into SpecArgs, bundling args
+    // passed to a parameter pack into a TemplateArgument::Pack.
+    SmallVector<TemplateArgument> SpecArgs;
+    {
+      ArrayRef SubstArgs = Ty->template_arguments();
+      for (const NamedDecl *P : TD->getTemplateParameters()->asArray()) {
+        if (P->isParameterPack()) {
+          SpecArgs.push_back(TemplateArgument(SubstArgs));
+          break;
+        }
+        SpecArgs.push_back(SubstArgs.front());
+        SubstArgs = SubstArgs.drop_front();
+      }
+    }
+    TemplateArgs Args = {TD->getTemplateParameters(), SpecArgs};
 
     // FIXME: Respect DebugTemplateNameKind::Mangled, e.g. by using GetName.
     // Note we can't use GetName without additional work: TypeAliasTemplateDecl
