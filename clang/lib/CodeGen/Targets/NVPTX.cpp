@@ -215,7 +215,13 @@ void NVPTXABIInfo::computeInfo(CGFunctionInfo &FI) const {
 
 Address NVPTXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                 QualType Ty) const {
-  llvm_unreachable("NVPTX does not support varargs");
+  // TODO: Work out to what extent this correlates with ptx
+  // doubles get passed with 8 byte alignment and C promotes smaller integer
+  // types to int. Printf doesn't really do structs so hard to guess what
+  // the right thing is for that.
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, false,
+                          getContext().getTypeInfoInChars(Ty),
+                          CharUnits::fromQuantity(4), true);
 }
 
 void NVPTXTargetCodeGenInfo::setTargetAttributes(

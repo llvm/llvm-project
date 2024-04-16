@@ -115,7 +115,13 @@ void AMDGPUABIInfo::computeInfo(CGFunctionInfo &FI) const {
 
 Address AMDGPUABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                  QualType Ty) const {
-  llvm_unreachable("AMDGPU does not support varargs");
+  const bool IsIndirect = false;
+  const bool AllowHigherAlign = true;
+  // Would rather not naturally align values
+  // Splitting {char, short} into two separate arguments makes that difficult.
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
+                          getContext().getTypeInfoInChars(Ty),
+                          CharUnits::fromQuantity(1), AllowHigherAlign);
 }
 
 ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
