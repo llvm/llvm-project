@@ -195,10 +195,29 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     Register ScratchReg = DestReg;
     if (DestReg == SrcReg)
       ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    TII->getVLENFactoredAmount(MF, MBB, II, DL, ScratchReg, ScalableValue, Flag);
-    BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
-      .addReg(SrcReg).addReg(ScratchReg, RegState::Kill)
-      .setMIFlag(Flag);
+
+    assert(ScalableValue > 0 && "There is no need to get VLEN scaled value.");
+    assert(ScalableValue % 8 == 0 &&
+           "Reserve the stack by the multiple of one vector size.");
+    assert(isInt<32>(ScalableValue / 8) &&
+           "Expect the number of vector registers within 32-bits.");
+    uint32_t NumOfVReg = ScalableValue / 8;
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), ScratchReg)
+        .setMIFlag(Flag);
+
+    if (ScalableAdjOpc == RISCV::ADD && ST.hasStdExtZba() &&
+        (NumOfVReg == 2 || NumOfVReg == 4 || NumOfVReg == 8)) {
+      unsigned Opc = NumOfVReg == 2 ? RISCV::SH1ADD :
+        (NumOfVReg == 4 ? RISCV::SH2ADD : RISCV::SH3ADD);
+      BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
+          .addReg(ScratchReg, RegState::Kill).addReg(SrcReg)
+          .setMIFlag(Flag);
+    } else {
+      TII->mulImm(MF, MBB, II, DL, ScratchReg, NumOfVReg, Flag);
+      BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
+          .addReg(SrcReg).addReg(ScratchReg, RegState::Kill)
+          .setMIFlag(Flag);
+    }
     SrcReg = DestReg;
     KillSrcReg = true;
   }
@@ -237,6 +256,31 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
         .addImm(Val)
         .setMIFlag(Flag);
     return;
+  }
+
+  // Use shNadd if doing so lets us materialize a 12 bit immediate with a single
+  // instruction.  This saves 1 instruction over the full lui/addi+add fallback
+  // path.  We avoid anything which can be done with a single lui as it might
+  // be compressible.  Note that the sh1add case is fully covered by the 2x addi
+  // case just above and is thus ommitted.
+  if (ST.hasStdExtZba() && (Val & 0xFFF) != 0) {
+    unsigned Opc = 0;
+    if (isShiftedInt<12, 3>(Val)) {
+      Opc = RISCV::SH3ADD;
+      Val = Val >> 3;
+    } else if (isShiftedInt<12, 2>(Val)) {
+      Opc = RISCV::SH2ADD;
+      Val = Val >> 2;
+    }
+    if (Opc) {
+      Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      TII->movImm(MBB, II, DL, ScratchReg, Val, Flag);
+      BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
+          .addReg(ScratchReg, RegState::Kill)
+          .addReg(SrcReg, getKillRegState(KillSrcReg))
+          .setMIFlag(Flag);
+      return;
+    }
   }
 
   unsigned Opc = RISCV::ADD;

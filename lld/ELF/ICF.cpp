@@ -239,16 +239,17 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, ArrayRef<RelTy> ra,
                            const InputSection *secB, ArrayRef<RelTy> rb) {
   if (ra.size() != rb.size())
     return false;
-  for (size_t i = 0; i < ra.size(); ++i) {
-    if (ra[i].r_offset != rb[i].r_offset ||
-        ra[i].getType(config->isMips64EL) != rb[i].getType(config->isMips64EL))
+  auto rai = ra.begin(), rae = ra.end(), rbi = rb.begin();
+  for (; rai != rae; ++rai, ++rbi) {
+    if (rai->r_offset != rbi->r_offset ||
+        rai->getType(config->isMips64EL) != rbi->getType(config->isMips64EL))
       return false;
 
-    uint64_t addA = getAddend<ELFT>(ra[i]);
-    uint64_t addB = getAddend<ELFT>(rb[i]);
+    uint64_t addA = getAddend<ELFT>(*rai);
+    uint64_t addB = getAddend<ELFT>(*rbi);
 
-    Symbol &sa = secA->file->getRelocTargetSym(ra[i]);
-    Symbol &sb = secB->file->getRelocTargetSym(rb[i]);
+    Symbol &sa = secA->file->getRelocTargetSym(*rai);
+    Symbol &sb = secB->file->getRelocTargetSym(*rbi);
     if (&sa == &sb) {
       if (addA == addB)
         continue;
@@ -336,10 +337,11 @@ bool ICF<ELFT>::variableEq(const InputSection *secA, ArrayRef<RelTy> ra,
                            const InputSection *secB, ArrayRef<RelTy> rb) {
   assert(ra.size() == rb.size());
 
-  for (size_t i = 0; i < ra.size(); ++i) {
+  auto rai = ra.begin(), rae = ra.end(), rbi = rb.begin();
+  for (; rai != rae; ++rai, ++rbi) {
     // The two sections must be identical.
-    Symbol &sa = secA->file->getRelocTargetSym(ra[i]);
-    Symbol &sb = secB->file->getRelocTargetSym(rb[i]);
+    Symbol &sa = secA->file->getRelocTargetSym(*rai);
+    Symbol &sb = secB->file->getRelocTargetSym(*rbi);
     if (&sa == &sb)
       continue;
 
