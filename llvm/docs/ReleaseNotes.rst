@@ -149,6 +149,9 @@ Changes to the C API
 
 * Deprecated ``LLVMConstNUWNeg`` and ``LLVMBuildNUWNeg``.
 
+* Added ``LLVMAtomicRMWBinOpUIncWrap`` and ``LLVMAtomicRMWBinOpUDecWrap`` to
+  ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
