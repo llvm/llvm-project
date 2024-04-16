@@ -1348,6 +1348,13 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
           SpecArgs.push_back(TemplateArgument(SubstArgs));
           break;
         }
+        // Skip defaulted args.
+        if (SubstArgs.empty()) {
+          // If SubstArgs is now empty (we're taking from it each iteration) and
+          // this template parameter isn't a pack, then that should mean we're
+          // using default values for the remaining template parameters.
+          break;
+        }
         SpecArgs.push_back(SubstArgs.front());
         SubstArgs = SubstArgs.drop_front();
       }
