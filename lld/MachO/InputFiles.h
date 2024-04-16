@@ -20,6 +20,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
@@ -28,9 +29,6 @@
 #include <vector>
 
 namespace llvm {
-namespace lto {
-class InputFile;
-} // namespace lto
 namespace MachO {
 class InterfaceFile;
 } // namespace MachO

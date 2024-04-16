@@ -105,7 +105,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
     return false;
   if (ia->relocs.size() != ib->relocs.size())
     return false;
-  auto f = [](const Reloc &ra, const Reloc &rb) {
+  auto f = [](const macho::Reloc &ra, const macho::Reloc &rb) {
     if (ra.type != rb.type)
       return false;
     if (ra.pcrel != rb.pcrel)
@@ -178,7 +178,7 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
   if (verboseDiagnostics)
     ++equalsVariableCount;
   assert(ia->relocs.size() == ib->relocs.size());
-  auto f = [this](const Reloc &ra, const Reloc &rb) {
+  auto f = [this](const macho::Reloc &ra, const macho::Reloc &rb) {
     // We already filtered out mismatching values/addends in equalsConstant.
     if (ra.referent == rb.referent)
       return true;
@@ -286,7 +286,7 @@ void ICF::run() {
   for (icfPass = 0; icfPass < 2; ++icfPass) {
     parallelForEach(icfInputs, [&](ConcatInputSection *isec) {
       uint32_t hash = isec->icfEqClass[icfPass % 2];
-      for (const Reloc &r : isec->relocs) {
+      for (const macho::Reloc &r : isec->relocs) {
         if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
           if (auto *defined = dyn_cast<Defined>(sym)) {
             if (defined->isec) {
