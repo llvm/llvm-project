@@ -4694,11 +4694,11 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     AggValueSlot Slot = args.isUsingInAlloca()
         ? createPlaceholderSlot(*this, type) : CreateAggTemp(type, "agg.tmp");
 
-    bool DestroyedInCallee = true, NeedsCleanup = true;
+    bool DestroyedInCallee = true, NeedsEHCleanup = true;
     if (const auto *RD = type->getAsCXXRecordDecl())
       DestroyedInCallee = RD->hasNonTrivialDestructor();
     else
-      NeedsCleanup = type.isDestructedType();
+      NeedsEHCleanup = needsEHCleanup(type.isDestructedType());
 
     if (DestroyedInCallee)
       Slot.setExternallyDestructed();
@@ -4707,15 +4707,14 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     RValue RV = Slot.asRValue();
     args.add(RV, type);
 
-    if (DestroyedInCallee && NeedsCleanup) {
+    if (DestroyedInCallee && NeedsEHCleanup) {
       // Create a no-op GEP between the placeholder and the cleanup so we can
       // RAUW it successfully.  It also serves as a marker of the first
       // instruction where the cleanup is active.
-      pushFullExprCleanup<DestroyUnpassedArg>(NormalAndEHCleanup,
-                                              Slot.getAddress(), type);
+      pushFullExprCleanup<DestroyUnpassedArg>(EHCleanup, Slot.getAddress(),
+                                              type);
       // This unreachable is a temporary marker which will be removed later.
-      llvm::Instruction *IsActive =
-          Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
+      llvm::Instruction *IsActive = Builder.CreateUnreachable();
       args.addArgCleanupDeactivation(EHStack.stable_begin(), IsActive);
     }
     return;

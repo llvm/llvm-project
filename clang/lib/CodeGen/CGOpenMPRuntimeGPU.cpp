@@ -3466,7 +3466,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::SM_20:
       case CudaArch::SM_21:
       case CudaArch::SM_30:
-      case CudaArch::SM_32:
+      case CudaArch::SM_32_:
       case CudaArch::SM_35:
       case CudaArch::SM_37:
       case CudaArch::SM_50:
