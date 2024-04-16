@@ -488,37 +488,6 @@ markDeclareTarget(mlir::Operation *op,
   declareTargetOp.setDeclareTarget(deviceType, captureClause);
 }
 
-static mlir::Operation *
-findReductionChain(mlir::Value loadVal, mlir::Value *reductionVal = nullptr) {
-  for (mlir::OpOperand &loadOperand : loadVal.getUses()) {
-    if (mlir::Operation *reductionOp = loadOperand.getOwner()) {
-      if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(reductionOp)) {
-        for (mlir::OpOperand &convertOperand : convertOp.getRes().getUses()) {
-          if (mlir::Operation *reductionOp = convertOperand.getOwner())
-            return reductionOp;
-        }
-      }
-      for (mlir::OpOperand &reductionOperand : reductionOp->getUses()) {
-        if (auto store =
-                mlir::dyn_cast<fir::StoreOp>(reductionOperand.getOwner())) {
-          if (store.getMemref() == *reductionVal) {
-            store.erase();
-            return reductionOp;
-          }
-        }
-        if (auto assign =
-                mlir::dyn_cast<hlfir::AssignOp>(reductionOperand.getOwner())) {
-          if (assign.getLhs() == *reductionVal) {
-            assign.erase();
-            return reductionOp;
-          }
-        }
-      }
-    }
-    ++it;
-  }
-}
-
 /// Split a combined directive into an outer leaf directive and the (possibly
 /// combined) rest of the combined directive. Composite directives and
 /// non-compound directives are not split, in which case it will return the
