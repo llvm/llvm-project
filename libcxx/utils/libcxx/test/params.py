@@ -50,16 +50,7 @@ _warningFlags = [
     "-Wno-local-type-template-args",
     "-Wno-c++11-extensions",
     "-Wno-ignored-attributes",
-    # TODO(philnik) This fails with the PSTL.
-
-    # Don't fail compilation in case the compiler fails to perform the requested
-    # loop vectorization.
-
-
-    # TODO: Find out why GCC warns in lots of places (is this a problem with always_inline?)
-
-
-    # This doesn't make sense in real code, but we have to test it because the standard requires us to not break
+    "-Wno-attributes"
 
 ]
 
