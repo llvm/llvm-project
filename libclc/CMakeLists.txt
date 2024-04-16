@@ -94,10 +94,11 @@ if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
   endforeach()
 endif()
 
-if( NOT TARGET libclc::clang OR NOT TARGET libclc::opt
-    OR NOT TARGET libclc::llvm-as OR NOT TARGET libclc::llvm-link )
-  message( FATAL_ERROR "libclc toolchain incomplete!" )
-endif()
+foreach( tool IN ITEMS clang opt llvm-as llvm-link )
+  if( NOT TARGET libclc::${tool} )
+    message( FATAL_ERROR "libclc toolchain incomplete - missing tool ${tool}!" )
+  endif()
+endforeach()
 
 # llvm-spirv is an optional dependency, used to build spirv-* targets.
 find_program( LLVM_SPIRV llvm-spirv PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
