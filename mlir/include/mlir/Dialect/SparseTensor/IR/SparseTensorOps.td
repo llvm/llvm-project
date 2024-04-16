@@ -58,37 +58,35 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
     Arguments<(ins Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$levels,
                    TensorOf<[AnyType]>:$values)>,
     Results<(outs AnySparseTensor: $result)> {
-  let summary = "Returns a sparse tensor assembled from the given values and levels";
+  let summary = "Returns a sparse tensor assembled from the given levels and values";
 
   let description = [{
-    Assembles the values and per-level coordinate or postion arrays into a sparse tensor.
-    The order and types of provided levels must be consistent with the actual storage
-    layout of the returned sparse tensor described below.
+    Assembles the per-level position and coordinate arrays together with
+    the values arrays into a sparse tensor. The order and types of the
+    provided levels must be consistent with the actual storage layout of
+    the returned sparse tensor described below.
 
-    - `values : tensor<? x V>`
-      supplies the value for each stored element in the sparse tensor.
     - `levels: [tensor<? x iType>, ...]`
-      each supplies the sparse tensor coordinates scheme in the sparse tensor for
-      the corresponding level as specifed by `sparse_tensor::StorageLayout`.
+      supplies the sparse tensor position and coordinate arrays
+      of the sparse tensor for the corresponding level as specifed by
+      `sparse_tensor::StorageLayout`.
+    - `values : tensor<? x V>`
+      supplies the values array for the stored elements in the sparse tensor.
 
-    This operation can be used to assemble a sparse tensor from external
-    sources; e.g., when passing two numpy arrays from Python.
-
-    Disclaimer: This is the user's responsibility to provide input that can be
-    correctly interpreted by the sparsifier, which does not perform
-    any sanity test during runtime to verify data integrity.
-
-    TODO: The returned tensor is allowed (in principle) to have non-identity
-    dimOrdering/higherOrdering mappings.  However, the current implementation
-    does not yet support them.
+    This operation can be used to assemble a sparse tensor from an
+    external source; e.g., by passing numpy arrays from Python. It
+    is the user's responsibility to provide input that can be correctly
+    interpreted by the sparsifier, which does not perform any sanity
+    test to verify data integrity.
 
     Example:
 
     ```mlir
-    %values      = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
-    %coordinates = arith.constant dense<[[0,0], [1,2], [1,3]]> : tensor<3x2xindex>
-    %st = sparse_tensor.assemble %values, %coordinates
-        : tensor<3xf64>, tensor<3x2xindex> to tensor<3x4xf64, #COO>
+    %pos    = arith.constant dense<[0, 3]>                : tensor<2xindex>
+    %index  = arith.constant dense<[[0,0], [1,2], [1,3]]> : tensor<3x2xindex>
+    %values = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
+    %s = sparse_tensor.assemble (%pos, %index), %values
+       : (tensor<2xindex>, tensor<3x2xindex>), tensor<3xf64> to tensor<3x4xf64, #COO>
     // yields COO format |1.1, 0.0, 0.0, 0.0|
     //     of 3x4 matrix |0.0, 0.0, 2.2, 3.3|
     //                   |0.0, 0.0, 0.0, 0.0|
@@ -96,8 +94,8 @@ def SparseTensor_AssembleOp : SparseTensor_Op<"assemble", [Pure]>,
   }];
 
   let assemblyFormat =
-    "` ` `(` $levels `)` `,` $values attr-dict"
-    " `:` `(` type($levels) `)` `,` type($values) `to` type($result)";
+    "` ` `(` $levels       `)` `,` $values attr-dict `:`"
+    "    `(` type($levels) `)` `,` type($values) `to` type($result)";
 
   let hasVerifier = 1;
 }
@@ -110,21 +108,20 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
                   TensorOf<[AnyType]>:$ret_values,
                   Variadic<AnyIndexingScalarLike>:$lvl_lens,
                   AnyIndexingScalarLike:$val_len)> {
-  let summary = "Returns the (values, coordinates) pair disassembled from the input tensor";
+  let summary = "Copies the levels and values of the given sparse tensor";
 
   let description = [{
     The disassemble operation is the inverse of `sparse_tensor::assemble`.
-    It returns the values and per-level position and coordinate array to the
-    user from the sparse tensor along with the actual length of the memory used
-    in each returned buffer. This operation can be used for returning an
-    disassembled MLIR sparse tensor to frontend; e.g., returning two numpy arrays
-    to Python.
+    It copies the per-level position and coordinate arrays together with
+    the values array of the given sparse tensor into the user-supplied buffers
+    along with the actual length of the memory used in each returned buffer.
 
-    Disclaimer: This is the user's responsibility to allocate large enough buffers
-    to hold the sparse tensor. The sparsifier simply copies each fields
-    of the sparse tensor into the user-supplied buffer without bound checking.
-
-    TODO: the current implementation does not yet support non-identity mappings.
+    This operation can be used for returning a disassembled MLIR sparse tensor;
+    e.g., copying the sparse tensor contents into pre-allocated numpy arrays
+    back to Python. It is the user's responsibility to allocate large enough
+    buffers of the appropriate types to hold the sparse tensor contents.
+    The sparsifier simply copies all fields of the sparse tensor into the
+    user-supplied buffers without any sanity test to verify data integrity.
 
     Example:
 
@@ -132,26 +129,26 @@ def SparseTensor_DisassembleOp : SparseTensor_Op<"disassemble", [Pure, SameVaria
     // input COO format |1.1, 0.0, 0.0, 0.0|
     //    of 3x4 matrix |0.0, 0.0, 2.2, 3.3|
     //                  |0.0, 0.0, 0.0, 0.0|
-    %v, %p, %c, %v_len, %p_len, %c_len =
-        sparse_tensor.disassemble %sp : tensor<3x4xf64, #COO>
-          out_lvls(%op, %oi) : tensor<2xindex>, tensor<3x2xindex>,
-          out_vals(%od) : tensor<3xf64> ->
-          tensor<3xf64>, (tensor<2xindex>, tensor<3x2xindex>), index, (index, index)
-    // %v = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
+    %p, %c, %v, %p_len, %c_len, %v_len =
+      sparse_tensor.disassemble %s : tensor<3x4xf64, #COO>
+         out_lvls(%op, %oi : tensor<2xindex>, tensor<3x2xindex>)
+         out_vals(%od : tensor<3xf64>) ->
+           (tensor<2xindex>, tensor<3x2xindex>), tensor<3xf64>, (index, index), index
     // %p = arith.constant dense<[ 0,              3 ]> : tensor<2xindex>
     // %c = arith.constant dense<[[0,0], [1,2], [1,3]]> : tensor<3x2xindex>
-    // %v_len = 3
+    // %v = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
     // %p_len = 2
     // %c_len = 6 (3x2)
+    // %v_len = 3
     ```
   }];
 
   let assemblyFormat =
-    "$tensor `:` type($tensor) "
+    "$tensor attr-dict `:` type($tensor)"
     "`out_lvls` `(` $out_levels `:` type($out_levels) `)` "
-    "`out_vals` `(` $out_values `:` type($out_values) `)` attr-dict"
-    "`->` `(` type($ret_levels) `)` `,` type($ret_values) `,` "
-    "`(` type($lvl_lens) `)` `,` type($val_len)";
+    "`out_vals` `(` $out_values `:` type($out_values) `)` `->`"
+    "`(` type($ret_levels) `)` `,` type($ret_values) `,` "
+    "`(` type($lvl_lens)   `)` `,` type($val_len)";
 
   let hasVerifier = 1;
 }
@@ -1431,6 +1428,66 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
                        "    `:` type($tensor) (`,` type($initArgs)^)?"
                        "  (`->` type($results)^)?  `do` $region";
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Iteration Operations.
+//===----------------------------------------------------------------------===//
+
+def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
+    [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+
+  let arguments = (ins AnySparseTensor:$tensor,
+                       Optional<AnySparseIterator>:$parentIter,
+                       LevelAttr:$loLvl, LevelAttr:$hiLvl);
+
+  let results = (outs AnySparseIterSpace:$resultSpace);
+
+  let summary = "Extracts an iteration space from a sparse tensor between certain levels";
+  let description = [{
+      Extracts a `!sparse_tensor.iter_space` from a sparse tensor between
+      certain (consecutive) levels. For sparse levels, it is usually done by
+      loading a postion range from the underlying sparse tensor storage.
+      E.g., for a compressed level, the iteration space is extracted by
+      [pos[i], pos[i+1]) supposing the the parent iterator points at `i`.
+
+      `tensor`: the input sparse tensor that defines the iteration space.
+      `parentIter`: the iterator for the previous level, at which the iteration space
+      at the current levels will be extracted.
+      `loLvl`, `hiLvl`: the level range between [loLvl, hiLvl) in the input tensor that
+      the returned iteration space covers. `hiLvl - loLvl` defines the dimension of the
+      iteration space.
+
+      The type of returned the value is automatically inferred to
+      `!sparse_tensor.iter_space<#INPUT_ENCODING, lvls = $loLvl to $hiLvl>`.
+      The returned iteration space can then be iterated over by
+      `sparse_tensor.iterate` operations to visit every stored element
+      (usually nonzeros) in the input sparse tensor.
+
+      Example:
+      ```mlir
+      // Extracts a 1-D iteration space from a COO tensor at level 1.
+      %space = sparse_tensor.iteration.extract_space %sp at %it1 lvls = 1
+        : tensor<4x8xf32, #COO>, !sparse_tensor.iterator<#COO, lvls = 0>
+      ```
+  }];
+
+
+  let extraClassDeclaration = [{
+    std::pair<Level, Level> getLvlRange() {
+      return std::make_pair(getLoLvl(), getHiLvl());
+    }
+    unsigned getSpaceDim() {
+      return getHiLvl() - getLoLvl();
+    }
+    ArrayRef<::mlir::sparse_tensor::LevelType> getSpaceLvlTypes() {
+      return getResultSpace().getType().getLvlTypes();
+    }
+  }];
+
+  let hasVerifier = 1;
+  let assemblyFormat = "$tensor (`at` $parentIter^)? `lvls` `=` custom<LevelRange>($loLvl, $hiLvl) "
+                       " attr-dict `:` type($tensor) (`,` type($parentIter)^)?";
 }
 
 //===----------------------------------------------------------------------===//

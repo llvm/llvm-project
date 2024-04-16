@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_AST_OPENACCCLAUSE_H
 #define LLVM_CLANG_AST_OPENACCCLAUSE_H
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/StmtIterator.h"
 #include "clang/Basic/OpenACCKinds.h"
 
 namespace clang {
@@ -34,6 +35,17 @@ public:
 
   static bool classof(const OpenACCClause *) { return true; }
 
+  using child_iterator = StmtIterator;
+  using const_child_iterator = ConstStmtIterator;
+  using child_range = llvm::iterator_range<child_iterator>;
+  using const_child_range = llvm::iterator_range<const_child_iterator>;
+
+  child_range children();
+  const_child_range children() const {
+    auto Children = const_cast<OpenACCClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   virtual ~OpenACCClause() = default;
 };
 
@@ -49,6 +61,99 @@ protected:
 
 public:
   SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
+/// A 'default' clause, has the optional 'none' or 'present' argument.
+class OpenACCDefaultClause : public OpenACCClauseWithParams {
+  friend class ASTReaderStmt;
+  friend class ASTWriterStmt;
+
+  OpenACCDefaultClauseKind DefaultClauseKind;
+
+protected:
+  OpenACCDefaultClause(OpenACCDefaultClauseKind K, SourceLocation BeginLoc,
+                       SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OpenACCClauseWithParams(OpenACCClauseKind::Default, BeginLoc, LParenLoc,
+                                EndLoc),
+        DefaultClauseKind(K) {
+    assert((DefaultClauseKind == OpenACCDefaultClauseKind::None ||
+            DefaultClauseKind == OpenACCDefaultClauseKind::Present) &&
+           "Invalid Clause Kind");
+  }
+
+public:
+  OpenACCDefaultClauseKind getDefaultClauseKind() const {
+    return DefaultClauseKind;
+  }
+
+  static OpenACCDefaultClause *Create(const ASTContext &C,
+                                      OpenACCDefaultClauseKind K,
+                                      SourceLocation BeginLoc,
+                                      SourceLocation LParenLoc,
+                                      SourceLocation EndLoc);
+};
+
+/// Represents one of the handful of classes that has an optional/required
+/// 'condition' expression as an argument.
+class OpenACCClauseWithCondition : public OpenACCClauseWithParams {
+  Expr *ConditionExpr = nullptr;
+
+protected:
+  OpenACCClauseWithCondition(OpenACCClauseKind K, SourceLocation BeginLoc,
+                             SourceLocation LParenLoc, Expr *ConditionExpr,
+                             SourceLocation EndLoc)
+      : OpenACCClauseWithParams(K, BeginLoc, LParenLoc, EndLoc),
+        ConditionExpr(ConditionExpr) {}
+
+public:
+  bool hasConditionExpr() const { return ConditionExpr; }
+  const Expr *getConditionExpr() const { return ConditionExpr; }
+  Expr *getConditionExpr() { return ConditionExpr; }
+
+  child_range children() {
+    if (ConditionExpr)
+      return child_range(reinterpret_cast<Stmt **>(&ConditionExpr),
+                         reinterpret_cast<Stmt **>(&ConditionExpr + 1));
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    if (ConditionExpr)
+      return const_child_range(
+          reinterpret_cast<Stmt *const *>(&ConditionExpr),
+          reinterpret_cast<Stmt *const *>(&ConditionExpr + 1));
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
+/// An 'if' clause, which has a required condition expression.
+class OpenACCIfClause : public OpenACCClauseWithCondition {
+protected:
+  OpenACCIfClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                  Expr *ConditionExpr, SourceLocation EndLoc);
+
+public:
+  static OpenACCIfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                 SourceLocation LParenLoc, Expr *ConditionExpr,
+                                 SourceLocation EndLoc);
+};
+
+/// A 'self' clause, which has an optional condition expression.
+class OpenACCSelfClause : public OpenACCClauseWithCondition {
+  OpenACCSelfClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    Expr *ConditionExpr, SourceLocation EndLoc);
+
+public:
+  static OpenACCSelfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   Expr *ConditionExpr, SourceLocation EndLoc);
 };
 
 template <class Impl> class OpenACCClauseVisitor {
@@ -65,53 +170,25 @@ public:
       return;
 
     switch (C->getClauseKind()) {
-    case OpenACCClauseKind::Default:
-    case OpenACCClauseKind::Finalize:
-    case OpenACCClauseKind::IfPresent:
-    case OpenACCClauseKind::Seq:
-    case OpenACCClauseKind::Independent:
-    case OpenACCClauseKind::Auto:
-    case OpenACCClauseKind::Worker:
-    case OpenACCClauseKind::Vector:
-    case OpenACCClauseKind::NoHost:
-    case OpenACCClauseKind::If:
-    case OpenACCClauseKind::Self:
-    case OpenACCClauseKind::Copy:
-    case OpenACCClauseKind::UseDevice:
-    case OpenACCClauseKind::Attach:
-    case OpenACCClauseKind::Delete:
-    case OpenACCClauseKind::Detach:
-    case OpenACCClauseKind::Device:
-    case OpenACCClauseKind::DevicePtr:
-    case OpenACCClauseKind::DeviceResident:
-    case OpenACCClauseKind::FirstPrivate:
-    case OpenACCClauseKind::Host:
-    case OpenACCClauseKind::Link:
-    case OpenACCClauseKind::NoCreate:
-    case OpenACCClauseKind::Present:
-    case OpenACCClauseKind::Private:
-    case OpenACCClauseKind::CopyOut:
-    case OpenACCClauseKind::CopyIn:
-    case OpenACCClauseKind::Create:
-    case OpenACCClauseKind::Reduction:
-    case OpenACCClauseKind::Collapse:
-    case OpenACCClauseKind::Bind:
-    case OpenACCClauseKind::VectorLength:
-    case OpenACCClauseKind::NumGangs:
-    case OpenACCClauseKind::NumWorkers:
-    case OpenACCClauseKind::DeviceNum:
-    case OpenACCClauseKind::DefaultAsync:
-    case OpenACCClauseKind::DeviceType:
-    case OpenACCClauseKind::DType:
-    case OpenACCClauseKind::Async:
-    case OpenACCClauseKind::Tile:
-    case OpenACCClauseKind::Gang:
-    case OpenACCClauseKind::Wait:
-    case OpenACCClauseKind::Invalid:
+#define VISIT_CLAUSE(CLAUSE_NAME)                                              \
+  case OpenACCClauseKind::CLAUSE_NAME:                                         \
+    Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
+    return;
+#include "clang/Basic/OpenACCClauses.def"
+
+    default:
       llvm_unreachable("Clause visitor not yet implemented");
     }
     llvm_unreachable("Invalid Clause kind");
   }
+
+#define VISIT_CLAUSE(CLAUSE_NAME)                                              \
+  void Visit##CLAUSE_NAME##Clause(                                             \
+      const OpenACC##CLAUSE_NAME##Clause &Clause) {                            \
+    return getDerived().Visit##CLAUSE_NAME##Clause(Clause);                    \
+  }
+
+#include "clang/Basic/OpenACCClauses.def"
 };
 
 class OpenACCClausePrinter final
@@ -128,6 +205,10 @@ public:
     }
   }
   OpenACCClausePrinter(raw_ostream &OS) : OS(OS) {}
+
+#define VISIT_CLAUSE(CLAUSE_NAME)                                              \
+  void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &Clause);
+#include "clang/Basic/OpenACCClauses.def"
 };
 
 } // namespace clang

@@ -151,9 +151,8 @@ mlir::Value
 ReductionProcessor::getReductionOperation(fir::FirOpBuilder &builder,
                                           mlir::Type type, mlir::Location loc,
                                           mlir::Value op1, mlir::Value op2) {
-  assert(type.isIntOrIndexOrFloat() ||
-         fir::isa_complex(type) &&
-             "only integer, float and complex types are currently supported");
+  assert((type.isIntOrIndexOrFloat() || fir::isa_complex(type)) &&
+         "only integer, float and complex types are currently supported");
   if (type.isIntOrIndex())
     return builder.create<IntegerOp>(loc, op1, op2);
   if (fir::isa_real(type))

@@ -472,6 +472,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(NEARBYINT_F);
   case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
     RTLIBCASE(ROUNDEVEN_F);
+  case TargetOpcode::G_INTRINSIC_LRINT:
+    RTLIBCASE(LRINT_F);
   }
   llvm_unreachable("Unknown libcall function");
 }
@@ -1058,6 +1060,25 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     if (Status != Legalized)
       return Status;
     break;
+  }
+  case TargetOpcode::G_INTRINSIC_LRINT: {
+    LLT LLTy = MRI.getType(MI.getOperand(1).getReg());
+    unsigned Size = LLTy.getSizeInBits();
+    Type *HLTy = getFloatTypeForLLT(Ctx, LLTy);
+    Type *ITy = IntegerType::get(
+        Ctx, MRI.getType(MI.getOperand(0).getReg()).getSizeInBits());
+    if (!HLTy || (Size != 32 && Size != 64 && Size != 80 && Size != 128)) {
+      LLVM_DEBUG(dbgs() << "No libcall available for type " << LLTy << ".\n");
+      return UnableToLegalize;
+    }
+    auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
+    LegalizeResult Status =
+        createLibcall(MIRBuilder, Libcall, {MI.getOperand(0).getReg(), ITy, 0},
+                      {{MI.getOperand(1).getReg(), HLTy, 0}}, LocObserver, &MI);
+    if (Status != Legalized)
+      return Status;
+    MI.eraseFromParent();
+    return Legalized;
   }
   case TargetOpcode::G_FPOWI: {
     LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
@@ -2639,6 +2660,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_INTRINSIC_LRINT:
   case TargetOpcode::G_IS_FPCLASS:
     Observer.changingInstr(MI);
 
@@ -4264,6 +4286,10 @@ LegalizerHelper::fewerElementsVectorPhi(GenericMachineInstr &MI,
       Phi.add(MI.getOperand(1 + j * 2 + 1));
     }
   }
+
+  // Set the insert point after the existing PHIs
+  MachineBasicBlock &MBB = *MI.getParent();
+  MIRBuilder.setInsertPt(MBB, MBB.getFirstNonPHI());
 
   // Merge small outputs into MI's def.
   if (NumLeftovers) {
