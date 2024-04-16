@@ -930,16 +930,12 @@ transform::AsScopeOp::apply(transform::TransformRewriter &rewriter,
   else
     rewriter.setInsertionPointAfter(wherePayload);
 
-#define WRAP_IN_EXECUTE_REGION
-#ifdef WRAP_IN_EXECUTE_REGION
   TypeRange noTypes;
   ValueRange noValues;
   auto executeRegion = rewriter.create<scf::ExecuteRegionOp>(
       wherePayload->getLoc(), noTypes, noValues);
   Block &executeRegionBody = executeRegion.getRegion().emplaceBlock();
   rewriter.setInsertionPointToStart(&executeRegionBody);
-#endif
-
   auto scope = rewriter.create<scf::ScopeOp>(wherePayload->getLoc(),
                                              resultTypes, liveIns);
   Region *scopeBody = &scope.getBody();
@@ -988,23 +984,11 @@ transform::AsScopeOp::apply(transform::TransformRewriter &rewriter,
         return DiagnosedSilenceableFailure::definiteFailure();
     }
 
-#ifdef WRAP_IN_EXECUTE_REGION
     // Since the transformations applied may have replaced the scope, get the
     // current scope from the wrapping scf.execute_region.
     scope = dyn_cast<scf::ScopeOp>(*executeRegionBody.getOperations().begin());
     scope->moveAfter(executeRegion);
     rewriter.eraseOp(executeRegion);
-#else
-    // Since the transformations applied may have replaced the scope, get the
-    // updated payload of the block argument.
-    auto newPayloadOps = state.getPayloadOps(body.front().getArgument(0));
-    if (llvm::range_size(newPayloadOps) != 1) {
-      LLVM_DEBUG(DBGS() << "expected a single scope post transformation\n");
-      return DiagnosedSilenceableFailure::definiteFailure();
-    }
-    Operation *newPayloadOp = *newPayloadOps.begin();
-    scope = dyn_cast<scf::ScopeOp>(newPayloadOp);
-#endif
     if (!scope) {
       LLVM_DEBUG(DBGS() << "scope missing post transformation\n");
       return DiagnosedSilenceableFailure::definiteFailure();
