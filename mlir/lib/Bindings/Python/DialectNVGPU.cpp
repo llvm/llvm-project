@@ -1,0 +1,46 @@
+//===- DialectLinalg.cpp - Pybind module for Nvgpu dialect API support --===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "IRModule.h"
+#include "mlir-c/Dialect/NVGPU.h"
+#include "mlir-c/IR.h"
+#include "mlir/Bindings/Python/PybindAdaptors.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cstdint>
+#include <pybind11/pybind11.h>
+
+namespace py = pybind11;
+using namespace llvm;
+using namespace mlir;
+using namespace mlir::python;
+using namespace mlir::python::adaptors;
+
+static void populateDialectNvgpuSubmodule(const pybind11::module &m) {
+  auto nvgpuTensorMapDescriptorType = mlir_type_subclass(
+      m, "TensorMapDescriptorType", mlirTypeIsANVGPUTensorMapDescriptorType);
+
+  nvgpuTensorMapDescriptorType.def_classmethod(
+      "get",
+      [](py::object cls, MlirType tensorType, int swizzle, int l2promo, int oob,
+         int interleave, MlirContext ctx) {
+        return cls(mlirNVGPUTensorMapDescriptorTypeGet(
+            ctx, tensorType, swizzle, l2promo, oob, interleave));
+      },
+      "Gets an instance of RangeType in the same context as the provided "
+      "element type.",
+      py::arg("cls"), py::arg("tensor_type"), py::arg("swizzle"),
+      py::arg("l2promo"), py::arg("oob"), py::arg("interleave"),
+      py::arg("ctx") = py::none());
+}
+
+PYBIND11_MODULE(_mlirDialectsNvgpu, m) {
+  m.doc() = "MLIR NVGPU dialect.";
+
+  populateDialectNvgpuSubmodule(m);
+}

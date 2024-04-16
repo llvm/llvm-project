@@ -9,5 +9,23 @@
 #include "mlir-c/Dialect/NVGPU.h"
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/IR/BuiltinTypes.h"
+
+using namespace mlir;
+using namespace mlir::nvgpu;
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(NVGPU, nvgpu, mlir::nvgpu::NVGPUDialect)
+
+bool mlirTypeIsANVGPUTensorMapDescriptorType(MlirType type) {
+  return isa<nvgpu::TensorMapDescriptorType>(unwrap(type));
+}
+
+MlirType mlirNVGPUTensorMapDescriptorTypeGet(MlirContext ctx,
+                                             MlirType tensorType, int swizzle,
+                                             int l2promo, int oob,
+                                             int interleave) {
+  return wrap(nvgpu::TensorMapDescriptorType::get(
+      unwrap(ctx), cast<MemRefType>(unwrap(tensorType)),
+      TensorMapSwizzleKind(swizzle), TensorMapL2PromoKind(l2promo),
+      TensorMapOOBKind(oob), TensorMapInterleaveKind(interleave)));
+}
