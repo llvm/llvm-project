@@ -153,10 +153,9 @@ namespace cwg1645 { // cwg1645: 3.9
 
 namespace cwg1652 { // cwg1652: 3.6
   int a, b;
-  int arr[&a + 1 == &b ? 1 : 2];
-  // expected-error@-1 {{variable length arrays in C++ are a Clang extension}}
+  static_assert(&a + 1 == &b, "");
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
   //   expected-note@-2 {{comparison against pointer '&a + 1' that points past the end of a complete object has unspecified value}}
-  // expected-error@-3 {{variable length array declaration not allowed at file scope}}
 }
 
 namespace cwg1653 { // cwg1653: 4 c++17
