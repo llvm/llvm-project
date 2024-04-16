@@ -129,10 +129,9 @@ struct LinearizeVectorExtractStridedSlice final
     auto loc = extractOp.getLoc();
     if (!dstType)
       return rewriter.notifyMatchFailure(loc, "cannot convert type.");
-    if (extractOp.getVector().getType().isScalable() ||
-        dstType.cast<VectorType>().isScalable())
-      return rewriter.notifyMatchFailure(loc,
-                                         "scalable vectors are not supported.");
+    assert(!(extractOp.getVector().getType().isScalable() ||
+             dstType.cast<VectorType>().isScalable()) &&
+           "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(extractOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
@@ -235,11 +234,10 @@ struct LinearizeVectorShuffle final
     auto loc = shuffleOp.getLoc();
     if (!dstType)
       return rewriter.notifyMatchFailure(loc, "cannot convert type.");
-    if (shuffleOp.getV1VectorType().isScalable() ||
-        shuffleOp.getV2VectorType().isScalable() ||
-        dstType.cast<VectorType>().isScalable())
-      return rewriter.notifyMatchFailure(loc,
-                                         "scalable vectors are not supported.");
+    assert(!(shuffleOp.getV1VectorType().isScalable() ||
+             shuffleOp.getV2VectorType().isScalable() ||
+             dstType.cast<VectorType>().isScalable()) &&
+           "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(shuffleOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           shuffleOp, "Can't flatten since targetBitWidth <= OpSize");
@@ -303,10 +301,9 @@ struct LinearizeVectorExtract final
     if (!dstTy)
       return rewriter.notifyMatchFailure(extractOp, "cannot convert type.");
 
-    if (extractOp.getVector().getType().isScalable() ||
-        dstTy.cast<VectorType>().isScalable())
-      return rewriter.notifyMatchFailure(extractOp,
-                                         "scalable vectors are not supported.");
+    assert(!(extractOp.getVector().getType().isScalable() ||
+             dstTy.cast<VectorType>().isScalable()) &&
+           "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(extractOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
