@@ -266,13 +266,21 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                                      {s32, p0, s16, 16},
                                      {s32, p0, s32, 32},
                                      {p0, p0, sXLen, XLen},
-                                     {nxv1s8, p0, nxv1s8, 8},
                                      {nxv2s8, p0, nxv2s8, 8},
                                      {nxv4s8, p0, nxv4s8, 8},
                                      {nxv8s8, p0, nxv8s8, 8},
-                                     {nxv16s8, p0, nxv16s8, 8}})
-          .widenScalarToNextPow2(0, /* MinSize = */ 8)
-          .lowerIfMemSizeNotByteSizePow2();
+                                     {nxv16s8, p0, nxv16s8, 8},
+                                     {nxv32s8, p0, nxv32s8, 8},
+                                     {nxv64s8, p0, nxv64s8, 8},
+                                     {nxv2s16, p0, nxv2s16, 16},
+                                     {nxv4s16, p0, nxv4s16, 16},
+                                     {nxv8s16, p0, nxv8s16, 16},
+                                     {nxv16s16, p0, nxv16s16, 16},
+                                     {nxv32s16, p0, nxv32s16, 16},
+                                     {nxv2s32, p0, nxv2s32, 32},
+                                     {nxv4s32, p0, nxv4s32, 32},
+                                     {nxv8s32, p0, nxv8s32, 32},
+                                     {nxv16s32, p0, nxv16s32, 32}});
 
   auto &ExtLoadActions =
       getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
@@ -287,6 +295,18 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   } else if (ST.hasStdExtD()) {
     LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s64, 64}});
   }
+  if (ST.getELen() == 64)
+    LoadStoreActions.legalForTypesWithMemDesc({{nxv1s8, p0, nxv1s8, 8},
+                                               {nxv1s16, p0, nxv1s16, 16},
+                                               {nxv1s32, p0, nxv1s32, 32}});
+  if (ST.hasVInstructionsI64())
+    LoadStoreActions.legalForTypesWithMemDesc({{nxv1s64, p0, nxv1s64, 64},
+                                               {nxv2s64, p0, nxv2s64, 64},
+                                               {nxv4s64, p0, nxv4s64, 64},
+                                               {nxv8s64, p0, nxv8s64, 64}});
+  LoadStoreActions.widenScalarToNextPow2(0, /* MinSize = */ 8)
+      .lowerIfMemSizeNotByteSizePow2();
+
   LoadStoreActions.clampScalar(0, s32, sXLen).lower();
   ExtLoadActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen).lower();
 
