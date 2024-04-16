@@ -10312,6 +10312,25 @@ bool Sema::CheckFunctionTemplateSpecialization(
   return false;
 }
 
+static bool IsMoreConstrainedFunction(Sema &S, FunctionDecl *FD1,
+                                      FunctionDecl *FD2) {
+  if (FunctionDecl *MF = FD1->getInstantiatedFromMemberFunction())
+    FD1 = MF;
+  if (FunctionDecl *MF = FD2->getInstantiatedFromMemberFunction())
+    FD2 = MF;
+  llvm::SmallVector<const Expr *, 3> AC1, AC2;
+  FD1->getAssociatedConstraints(AC1);
+  FD2->getAssociatedConstraints(AC2);
+  bool AtLeastAsConstrained1, AtLeastAsConstrained2;
+  if (S.IsAtLeastAsConstrained(FD1, AC1, FD2, AC2, AtLeastAsConstrained1))
+    return false;
+  if (S.IsAtLeastAsConstrained(FD2, AC2, FD1, AC1, AtLeastAsConstrained2))
+    return false;
+  if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
+    return false;
+  return AtLeastAsConstrained1;
+}
+
 /// Perform semantic analysis for the given non-template member
 /// specialization.
 ///
@@ -10346,15 +10365,26 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
         QualType Adjusted = Function->getType();
         if (!hasExplicitCallingConv(Adjusted))
           Adjusted = adjustCCAndNoReturn(Adjusted, Method->getType());
+        if (!Context.hasSameType(Adjusted, Method->getType()))
+          continue;
+        if (Method->getTrailingRequiresClause()) {
+          ConstraintSatisfaction Satisfaction;
+          if (CheckFunctionConstraints(Method, Satisfaction,
+                                       /*UsageLoc=*/Member->getLocation(),
+                                       /*ForOverloadResolution=*/true) ||
+              !Satisfaction.IsSatisfied)
+            continue;
+          if (Instantiation &&
+              !IsMoreConstrainedFunction(*this, Method,
+                                         cast<CXXMethodDecl>(Instantiation)))
+            continue;
+        }
         // This doesn't handle deduced return types, but both function
         // declarations should be undeduced at this point.
-        if (Context.hasSameType(Adjusted, Method->getType())) {
-          FoundInstantiation = *I;
-          Instantiation = Method;
-          InstantiatedFrom = Method->getInstantiatedFromMemberFunction();
-          MSInfo = Method->getMemberSpecializationInfo();
-          break;
-        }
+        FoundInstantiation = *I;
+        Instantiation = Method;
+        InstantiatedFrom = Method->getInstantiatedFromMemberFunction();
+        MSInfo = Method->getMemberSpecializationInfo();
       }
     }
   } else if (isa<VarDecl>(Member)) {

@@ -1303,6 +1303,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   if (New->isMSVCRTEntryPoint())
     return false;
 
+  NamedDecl *OldDecl = Old;
+  NamedDecl *NewDecl = New;
   FunctionTemplateDecl *OldTemplate = Old->getDescribedFunctionTemplate();
   FunctionTemplateDecl *NewTemplate = New->getDescribedFunctionTemplate();
 
@@ -1347,6 +1349,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   // references to non-instantiated entities during constraint substitution.
   // GH78101.
   if (NewTemplate) {
+    OldDecl = OldTemplate;
+    NewDecl = NewTemplate;
     // C++ [temp.over.link]p4:
     //   The signature of a function template consists of its function
     //   signature, its return type and its template parameter list. The names
@@ -1506,13 +1510,14 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     }
   }
 
-  if (!UseOverrideRules) {
+  if (!UseOverrideRules &&
+      New->getTemplateSpecializationKind() != TSK_ExplicitSpecialization) {
     Expr *NewRC = New->getTrailingRequiresClause(),
          *OldRC = Old->getTrailingRequiresClause();
     if ((NewRC != nullptr) != (OldRC != nullptr))
       return true;
-
-    if (NewRC && !SemaRef.AreConstraintExpressionsEqual(Old, OldRC, New, NewRC))
+    if (NewRC &&
+        !SemaRef.AreConstraintExpressionsEqual(OldDecl, OldRC, NewDecl, NewRC))
       return true;
   }
 

@@ -275,6 +275,10 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
                                      TemplateArgs->asArray(),
                                      /*Final=*/false);
 
+    if (RelativeToPrimary &&
+        Function->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+      return Response::UseNextDecl(Function);
+
     // If this function was instantiated from a specialized member that is
     // a function template, we're done.
     assert(Function->getPrimaryTemplate() && "No function template?");
