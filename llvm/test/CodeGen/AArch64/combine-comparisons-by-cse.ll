@@ -13,10 +13,10 @@ define i32 @combine_gt_ge_10() #0 {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
-; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmp w8, #10
+; CHECK-NEXT:    ldr w9, [x8]
 ; CHECK-NEXT:    adrp x8, :got:b
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
+; CHECK-NEXT:    cmp w9, #10
 ; CHECK-NEXT:    b.le .LBB0_3
 ; CHECK-NEXT:  // %bb.1: // %land.lhs.true
 ; CHECK-NEXT:    adrp x9, :got:c
@@ -29,18 +29,17 @@ define i32 @combine_gt_ge_10() #0 {
 ; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_3: // %lor.lhs.false
-; CHECK-NEXT:    b.lt .LBB0_6
+; CHECK-NEXT:    cmp w9, #10
+; CHECK-NEXT:    b.lt .LBB0_5
 ; CHECK-NEXT:  .LBB0_4: // %land.lhs.true3
 ; CHECK-NEXT:    adrp x9, :got:d
 ; CHECK-NEXT:    ldr x9, [x9, :got_lo12:d]
 ; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    ldr w9, [x9]
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB0_6
-; CHECK-NEXT:  // %bb.5:
-; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_6: // %if.end
+; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 entry:
@@ -145,10 +144,10 @@ define i32 @combine_lt_ge_5() #0 {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
-; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmp w8, #5
+; CHECK-NEXT:    ldr w9, [x8]
 ; CHECK-NEXT:    adrp x8, :got:b
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
+; CHECK-NEXT:    cmp w9, #5
 ; CHECK-NEXT:    b.ge .LBB2_3
 ; CHECK-NEXT:  // %bb.1: // %land.lhs.true
 ; CHECK-NEXT:    adrp x9, :got:c
@@ -161,18 +160,17 @@ define i32 @combine_lt_ge_5() #0 {
 ; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB2_3: // %lor.lhs.false
-; CHECK-NEXT:    b.gt .LBB2_6
+; CHECK-NEXT:    cmp w9, #5
+; CHECK-NEXT:    b.gt .LBB2_5
 ; CHECK-NEXT:  .LBB2_4: // %land.lhs.true3
 ; CHECK-NEXT:    adrp x9, :got:d
 ; CHECK-NEXT:    ldr x9, [x9, :got_lo12:d]
 ; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    ldr w9, [x9]
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB2_6
-; CHECK-NEXT:  // %bb.5:
-; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB2_6: // %if.end
+; CHECK-NEXT:  .LBB2_5:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 entry:
@@ -499,24 +497,17 @@ define i32 @do_nothing_if_resultant_opcodes_would_differ() #0 {
 ; CHECK-NEXT:  // %bb.3: // %while.cond.while.end_crit_edge
 ; CHECK-NEXT:    ldr w8, [x19]
 ; CHECK-NEXT:  .LBB7_4: // %while.end
-; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    b.gt .LBB7_7
-; CHECK-NEXT:  // %bb.5: // %land.lhs.true
-; CHECK-NEXT:    adrp x8, :got:b
-; CHECK-NEXT:    adrp x9, :got:d
-; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
-; CHECK-NEXT:    ldr x9, [x9, :got_lo12:d]
-; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    ldr w9, [x9]
-; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB7_7
-; CHECK-NEXT:  // %bb.6:
-; CHECK-NEXT:    mov w0, #123 // =0x7b
-; CHECK-NEXT:    b .LBB7_8
-; CHECK-NEXT:  .LBB7_7: // %if.end
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:  .LBB7_8: // %return
+; CHECK-NEXT:    adrp x9, :got:b
+; CHECK-NEXT:    adrp x10, :got:d
+; CHECK-NEXT:    ldr x9, [x9, :got_lo12:b]
+; CHECK-NEXT:    ldr x10, [x10, :got_lo12:d]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr w9, [x9]
+; CHECK-NEXT:    ldr w10, [x10]
+; CHECK-NEXT:    cmp w9, w10
+; CHECK-NEXT:    ccmp w8, #2, #0, eq
+; CHECK-NEXT:    mov w8, #123 // =0x7b
+; CHECK-NEXT:    csel w0, w8, wzr, lt
 ; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w19
@@ -564,52 +555,42 @@ return:                                           ; preds = %if.end, %land.lhs.t
 define i32 @do_nothing_if_compares_can_not_be_adjusted_to_each_other() #0 {
 ; CHECK-LABEL: do_nothing_if_compares_can_not_be_adjusted_to_each_other:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    adrp x8, :got:a
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
 ; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    b.gt .LBB8_3
+; CHECK-NEXT:    b.gt .LBB8_4
 ; CHECK-NEXT:  // %bb.1: // %while.body.preheader
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    sub w19, w8, #1
 ; CHECK-NEXT:  .LBB8_2: // %while.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    bl do_something
 ; CHECK-NEXT:    adds w19, w19, #1
 ; CHECK-NEXT:    b.mi .LBB8_2
-; CHECK-NEXT:  .LBB8_3: // %while.end
-; CHECK-NEXT:    adrp x8, :got:c
-; CHECK-NEXT:    ldr x8, [x8, :got_lo12:c]
-; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    cmn w8, #2
-; CHECK-NEXT:    b.lt .LBB8_6
-; CHECK-NEXT:  // %bb.4: // %land.lhs.true
+; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w19
+; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:  .LBB8_4: // %while.end
 ; CHECK-NEXT:    adrp x8, :got:b
 ; CHECK-NEXT:    adrp x9, :got:d
+; CHECK-NEXT:    adrp x10, :got:c
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
 ; CHECK-NEXT:    ldr x9, [x9, :got_lo12:d]
+; CHECK-NEXT:    ldr x10, [x10, :got_lo12:c]
 ; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    ldr w9, [x9]
+; CHECK-NEXT:    ldr w10, [x10]
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB8_6
-; CHECK-NEXT:  // %bb.5:
-; CHECK-NEXT:    mov w0, #123 // =0x7b
-; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-NEXT:    .cfi_restore w19
-; CHECK-NEXT:    .cfi_restore w30
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB8_6: // %if.end
-; CHECK-NEXT:    .cfi_restore_state
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-NEXT:    .cfi_restore w19
-; CHECK-NEXT:    .cfi_restore w30
+; CHECK-NEXT:    mov w8, #-3 // =0xfffffffd
+; CHECK-NEXT:    ccmp w10, w8, #4, eq
+; CHECK-NEXT:    mov w8, #123 // =0x7b
+; CHECK-NEXT:    csel w0, w8, wzr, gt
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i32, ptr @a, align 4
@@ -782,12 +763,14 @@ define i32 @combine_gt_ge_sel(i64 %v, ptr %p) #0 {
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel x9, x0, xzr, gt
 ; CHECK-NEXT:    str x9, [x1]
-; CHECK-NEXT:    b.le .LBB11_2
+; CHECK-NEXT:    b.le .LBB11_3
 ; CHECK-NEXT:  // %bb.1: // %lor.lhs.false
 ; CHECK-NEXT:    cmp w8, #2
-; CHECK-NEXT:    b.ge .LBB11_4
-; CHECK-NEXT:    b .LBB11_6
-; CHECK-NEXT:  .LBB11_2: // %land.lhs.true
+; CHECK-NEXT:    b.ge .LBB11_5
+; CHECK-NEXT:  // %bb.2:
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB11_3: // %land.lhs.true
 ; CHECK-NEXT:    adrp x8, :got:b
 ; CHECK-NEXT:    adrp x9, :got:c
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
@@ -795,11 +778,11 @@ define i32 @combine_gt_ge_sel(i64 %v, ptr %p) #0 {
 ; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    ldr w9, [x9]
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB11_4
-; CHECK-NEXT:  // %bb.3:
+; CHECK-NEXT:    b.ne .LBB11_5
+; CHECK-NEXT:  // %bb.4:
 ; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB11_4: // %land.lhs.true3
+; CHECK-NEXT:  .LBB11_5: // %land.lhs.true3
 ; CHECK-NEXT:    adrp x8, :got:b
 ; CHECK-NEXT:    adrp x9, :got:d
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:b]
@@ -807,12 +790,7 @@ define i32 @combine_gt_ge_sel(i64 %v, ptr %p) #0 {
 ; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    ldr w9, [x9]
 ; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne .LBB11_6
-; CHECK-NEXT:  // %bb.5:
-; CHECK-NEXT:    mov w0, #1 // =0x1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB11_6: // %if.end
-; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i32, ptr @a, align 4
