@@ -25,6 +25,9 @@ static_assert(std::same_as<decltype(std::ranges::repeat_view(10, 1)), std::range
 static_assert(std::same_as<decltype(std::ranges::repeat_view(10, 1U)), std::ranges::repeat_view<int, unsigned>>);
 static_assert(std::same_as<decltype(std::ranges::repeat_view(10, 1UL)), std::ranges::repeat_view<int, unsigned long>>);
 
-// LWG4053 and LWG4054 "Repeating a repeat_view should repeat the view"
-static_assert(std::same_as<decltype(std::views::repeat(std::views::repeat(1))), std::ranges::repeat_view<std::ranges::repeat_view<int>>>);
+using RPV = std::ranges::repeat_view<const char*>;
+static_assert(std::same_as<decltype(std::ranges::repeat_view("foo", std::unreachable_sentinel)), RPV>);  // OK
+static_assert(std::same_as<decltype(std::ranges::repeat_view(+"foo", std::unreachable_sentinel)), RPV>); // OK
+static_assert(std::same_as<decltype(std::ranges::repeat_view("foo")), RPV>);                             // OK since LWG4053
+static_assert(std::same_as<decltype(std::ranges::repeat_view(+"foo")), RPV>);                            // OK
 // clang-format on
