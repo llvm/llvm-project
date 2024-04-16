@@ -1346,7 +1346,7 @@ scope <amdgpu-memory-scopes>` atomic operations on some subtargets. An
 :ref:`atomicrmw <i_atomicrmw>` without metadata will be treated
 conservatively as required to preserve the operation behavior in all
 cases. This will typically be used in conjunction with
-:ref:`!amdgpu.no.remote.memory.access<amdgpu_no_remote_memory_access>`.
+:ref:`\!amdgpu.no.remote.memory.access<amdgpu_no_remote_memory_access>`.
 
 .. code-block:: llvm
 
@@ -1372,7 +1372,7 @@ for some :ref:`system scope <amdgpu-memory-scopes>` atomic operations
 on some subtargets. An :ref:`atomicrmw <i_atomicrmw>` without metadata
 will be treated conservatively as required to preserve the operation
 behavior in all cases. This will typically be used in conjunction with
-:ref:`!amdgpu.no.fine.grained.host.memory<amdgpu_no_fine_grained_host_memory>`.
+:ref:`\!amdgpu.no.fine.grained.host.memory<amdgpu_no_fine_grained_host_memory>`.
 
 
 .. code-block:: llvm
