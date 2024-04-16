@@ -127,6 +127,7 @@ public:
         VOPDInst.addImm(BitOp2);
     }
 
+    SII->fixImplicitOperands(*VOPDInst);
     for (auto CompIdx : VOPD::COMPONENTS)
       VOPDInst.copyImplicitOps(*MI[CompIdx]);
 

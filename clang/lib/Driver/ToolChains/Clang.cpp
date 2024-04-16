@@ -346,11 +346,14 @@ static bool addExceptionArgs(const ArgList &Args, types::ID InputType,
   bool EH = Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions,
                          false);
 
-  bool EHa = Args.hasFlag(options::OPT_fasync_exceptions,
-                          options::OPT_fno_async_exceptions, false);
-  if (EHa) {
-    CmdArgs.push_back("-fasync-exceptions");
-    EH = true;
+  // Async exceptions are Windows MSVC only.
+  if (Triple.isWindowsMSVCEnvironment()) {
+    bool EHa = Args.hasFlag(options::OPT_fasync_exceptions,
+                            options::OPT_fno_async_exceptions, false);
+    if (EHa) {
+      CmdArgs.push_back("-fasync-exceptions");
+      EH = true;
+    }
   }
 
   // Obj-C exceptions are enabled by default, regardless of -fexceptions. This
@@ -8102,7 +8105,8 @@ struct EHFlags {
 ///      The 'a' modifier is unimplemented and fundamentally hard in LLVM IR.
 /// - c: Assume that extern "C" functions are implicitly nounwind.
 /// The default is /EHs-c-, meaning cleanups are disabled.
-static EHFlags parseClangCLEHFlags(const Driver &D, const ArgList &Args) {
+static EHFlags parseClangCLEHFlags(const Driver &D, const ArgList &Args,
+                                   bool isWindowsMSVC) {
   EHFlags EH;
 
   std::vector<std::string> EHArgs =
@@ -8112,8 +8116,15 @@ static EHFlags parseClangCLEHFlags(const Driver &D, const ArgList &Args) {
       switch (EHVal[I]) {
       case 'a':
         EH.Asynch = maybeConsumeDash(EHVal, I);
-        if (EH.Asynch)
+        if (EH.Asynch) {
+          // Async exceptions are Windows MSVC only.
+          if (!isWindowsMSVC) {
+            EH.Asynch = false;
+            D.Diag(clang::diag::warn_drv_unused_argument) << "/EHa" << EHVal;
+            continue;
+          }
           EH.Synch = false;
+        }
         continue;
       case 'c':
         EH.NoUnwindC = maybeConsumeDash(EHVal, I);
@@ -8177,7 +8188,8 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
 
   const Driver &D = getToolChain().getDriver();
 
-  EHFlags EH = parseClangCLEHFlags(D, Args);
+  bool IsWindowsMSVC = getToolChain().getTriple().isWindowsMSVCEnvironment();
+  EHFlags EH = parseClangCLEHFlags(D, Args, IsWindowsMSVC);
   if (!isNVPTX && (EH.Synch || EH.Asynch)) {
     if (types::isCXX(InputType))
       CmdArgs.push_back("-fcxx-exceptions");

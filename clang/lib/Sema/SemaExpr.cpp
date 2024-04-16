@@ -52,6 +52,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -360,9 +361,9 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
   //  at the same location.
   // [OpenMP 5.2] Also allow iterator declared variables.
   if (LangOpts.OpenMP && isa<VarDecl>(D) &&
-      !isOpenMPDeclareMapperVarDeclAllowed(cast<VarDecl>(D))) {
+      !OpenMP().isOpenMPDeclareMapperVarDeclAllowed(cast<VarDecl>(D))) {
     Diag(Loc, diag::err_omp_declare_mapper_wrong_var)
-        << getOpenMPDeclareMapperVarName();
+        << OpenMP().getOpenMPDeclareMapperVarName();
     Diag(D->getLocation(), diag::note_entity_declared_at) << D;
     return true;
   }
@@ -2267,7 +2268,7 @@ NonOdrUseReason Sema::getNonOdrUseReasonInCurrentContext(ValueDecl *D) {
   //   be loaded from the captured.
   if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
     if (VD->getType()->isReferenceType() &&
-        !(getLangOpts().OpenMP && isOpenMPCapturedDecl(D)) &&
+        !(getLangOpts().OpenMP && OpenMP().isOpenMPCapturedDecl(D)) &&
         !isCapturingReferenceToHostVarInCUDADeviceLambda(*this, VD) &&
         VD->isUsableInConstantExpressions(Context))
       return NOUR_Constant;
@@ -5080,9 +5081,10 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
 
   if (base && !base->getType().isNull() &&
       base->hasPlaceholderType(BuiltinType::OMPArraySection))
-    return ActOnOMPArraySectionExpr(base, lbLoc, ArgExprs.front(), SourceLocation(),
-                                    SourceLocation(), /*Length*/ nullptr,
-                                    /*Stride=*/nullptr, rbLoc);
+    return OpenMP().ActOnOMPArraySectionExpr(base, lbLoc, ArgExprs.front(),
+                                             SourceLocation(), SourceLocation(),
+                                             /*Length*/ nullptr,
+                                             /*Stride=*/nullptr, rbLoc);
 
   // Since this might be a postfix expression, get rid of ParenListExprs.
   if (isa<ParenListExpr>(base)) {
@@ -5352,558 +5354,6 @@ void Sema::CheckSubscriptAccessOfNoDeref(const ArraySubscriptExpr *E) {
     if (Ptr->getPointeeType()->hasAttr(attr::NoDeref))
       LastRecord.PossibleDerefs.insert(E);
   }
-}
-
-ExprResult Sema::ActOnOMPArraySectionExpr(Expr *Base, SourceLocation LBLoc,
-                                          Expr *LowerBound,
-                                          SourceLocation ColonLocFirst,
-                                          SourceLocation ColonLocSecond,
-                                          Expr *Length, Expr *Stride,
-                                          SourceLocation RBLoc) {
-  if (Base->hasPlaceholderType() &&
-      !Base->hasPlaceholderType(BuiltinType::OMPArraySection)) {
-    ExprResult Result = CheckPlaceholderExpr(Base);
-    if (Result.isInvalid())
-      return ExprError();
-    Base = Result.get();
-  }
-  if (LowerBound && LowerBound->getType()->isNonOverloadPlaceholderType()) {
-    ExprResult Result = CheckPlaceholderExpr(LowerBound);
-    if (Result.isInvalid())
-      return ExprError();
-    Result = DefaultLvalueConversion(Result.get());
-    if (Result.isInvalid())
-      return ExprError();
-    LowerBound = Result.get();
-  }
-  if (Length && Length->getType()->isNonOverloadPlaceholderType()) {
-    ExprResult Result = CheckPlaceholderExpr(Length);
-    if (Result.isInvalid())
-      return ExprError();
-    Result = DefaultLvalueConversion(Result.get());
-    if (Result.isInvalid())
-      return ExprError();
-    Length = Result.get();
-  }
-  if (Stride && Stride->getType()->isNonOverloadPlaceholderType()) {
-    ExprResult Result = CheckPlaceholderExpr(Stride);
-    if (Result.isInvalid())
-      return ExprError();
-    Result = DefaultLvalueConversion(Result.get());
-    if (Result.isInvalid())
-      return ExprError();
-    Stride = Result.get();
-  }
-
-  // Build an unanalyzed expression if either operand is type-dependent.
-  if (Base->isTypeDependent() ||
-      (LowerBound &&
-       (LowerBound->isTypeDependent() || LowerBound->isValueDependent())) ||
-      (Length && (Length->isTypeDependent() || Length->isValueDependent())) ||
-      (Stride && (Stride->isTypeDependent() || Stride->isValueDependent()))) {
-    return new (Context) OMPArraySectionExpr(
-        Base, LowerBound, Length, Stride, Context.DependentTy, VK_LValue,
-        OK_Ordinary, ColonLocFirst, ColonLocSecond, RBLoc);
-  }
-
-  // Perform default conversions.
-  QualType OriginalTy = OMPArraySectionExpr::getBaseOriginalType(Base);
-  QualType ResultTy;
-  if (OriginalTy->isAnyPointerType()) {
-    ResultTy = OriginalTy->getPointeeType();
-  } else if (OriginalTy->isArrayType()) {
-    ResultTy = OriginalTy->getAsArrayTypeUnsafe()->getElementType();
-  } else {
-    return ExprError(
-        Diag(Base->getExprLoc(), diag::err_omp_typecheck_section_value)
-        << Base->getSourceRange());
-  }
-  // C99 6.5.2.1p1
-  if (LowerBound) {
-    auto Res = PerformOpenMPImplicitIntegerConversion(LowerBound->getExprLoc(),
-                                                      LowerBound);
-    if (Res.isInvalid())
-      return ExprError(Diag(LowerBound->getExprLoc(),
-                            diag::err_omp_typecheck_section_not_integer)
-                       << 0 << LowerBound->getSourceRange());
-    LowerBound = Res.get();
-
-    if (LowerBound->getType()->isSpecificBuiltinType(BuiltinType::Char_S) ||
-        LowerBound->getType()->isSpecificBuiltinType(BuiltinType::Char_U))
-      Diag(LowerBound->getExprLoc(), diag::warn_omp_section_is_char)
-          << 0 << LowerBound->getSourceRange();
-  }
-  if (Length) {
-    auto Res =
-        PerformOpenMPImplicitIntegerConversion(Length->getExprLoc(), Length);
-    if (Res.isInvalid())
-      return ExprError(Diag(Length->getExprLoc(),
-                            diag::err_omp_typecheck_section_not_integer)
-                       << 1 << Length->getSourceRange());
-    Length = Res.get();
-
-    if (Length->getType()->isSpecificBuiltinType(BuiltinType::Char_S) ||
-        Length->getType()->isSpecificBuiltinType(BuiltinType::Char_U))
-      Diag(Length->getExprLoc(), diag::warn_omp_section_is_char)
-          << 1 << Length->getSourceRange();
-  }
-  if (Stride) {
-    ExprResult Res =
-        PerformOpenMPImplicitIntegerConversion(Stride->getExprLoc(), Stride);
-    if (Res.isInvalid())
-      return ExprError(Diag(Stride->getExprLoc(),
-                            diag::err_omp_typecheck_section_not_integer)
-                       << 1 << Stride->getSourceRange());
-    Stride = Res.get();
-
-    if (Stride->getType()->isSpecificBuiltinType(BuiltinType::Char_S) ||
-        Stride->getType()->isSpecificBuiltinType(BuiltinType::Char_U))
-      Diag(Stride->getExprLoc(), diag::warn_omp_section_is_char)
-          << 1 << Stride->getSourceRange();
-  }
-
-  // C99 6.5.2.1p1: "shall have type "pointer to *object* type". Similarly,
-  // C++ [expr.sub]p1: The type "T" shall be a completely-defined object
-  // type. Note that functions are not objects, and that (in C99 parlance)
-  // incomplete types are not object types.
-  if (ResultTy->isFunctionType()) {
-    Diag(Base->getExprLoc(), diag::err_omp_section_function_type)
-        << ResultTy << Base->getSourceRange();
-    return ExprError();
-  }
-
-  if (RequireCompleteType(Base->getExprLoc(), ResultTy,
-                          diag::err_omp_section_incomplete_type, Base))
-    return ExprError();
-
-  if (LowerBound && !OriginalTy->isAnyPointerType()) {
-    Expr::EvalResult Result;
-    if (LowerBound->EvaluateAsInt(Result, Context)) {
-      // OpenMP 5.0, [2.1.5 Array Sections]
-      // The array section must be a subset of the original array.
-      llvm::APSInt LowerBoundValue = Result.Val.getInt();
-      if (LowerBoundValue.isNegative()) {
-        Diag(LowerBound->getExprLoc(), diag::err_omp_section_not_subset_of_array)
-            << LowerBound->getSourceRange();
-        return ExprError();
-      }
-    }
-  }
-
-  if (Length) {
-    Expr::EvalResult Result;
-    if (Length->EvaluateAsInt(Result, Context)) {
-      // OpenMP 5.0, [2.1.5 Array Sections]
-      // The length must evaluate to non-negative integers.
-      llvm::APSInt LengthValue = Result.Val.getInt();
-      if (LengthValue.isNegative()) {
-        Diag(Length->getExprLoc(), diag::err_omp_section_length_negative)
-            << toString(LengthValue, /*Radix=*/10, /*Signed=*/true)
-            << Length->getSourceRange();
-        return ExprError();
-      }
-    }
-  } else if (ColonLocFirst.isValid() &&
-             (OriginalTy.isNull() || (!OriginalTy->isConstantArrayType() &&
-                                      !OriginalTy->isVariableArrayType()))) {
-    // OpenMP 5.0, [2.1.5 Array Sections]
-    // When the size of the array dimension is not known, the length must be
-    // specified explicitly.
-    Diag(ColonLocFirst, diag::err_omp_section_length_undefined)
-        << (!OriginalTy.isNull() && OriginalTy->isArrayType());
-    return ExprError();
-  }
-
-  if (Stride) {
-    Expr::EvalResult Result;
-    if (Stride->EvaluateAsInt(Result, Context)) {
-      // OpenMP 5.0, [2.1.5 Array Sections]
-      // The stride must evaluate to a positive integer.
-      llvm::APSInt StrideValue = Result.Val.getInt();
-      if (!StrideValue.isStrictlyPositive()) {
-        Diag(Stride->getExprLoc(), diag::err_omp_section_stride_non_positive)
-            << toString(StrideValue, /*Radix=*/10, /*Signed=*/true)
-            << Stride->getSourceRange();
-        return ExprError();
-      }
-    }
-  }
-
-  if (!Base->hasPlaceholderType(BuiltinType::OMPArraySection)) {
-    ExprResult Result = DefaultFunctionArrayLvalueConversion(Base);
-    if (Result.isInvalid())
-      return ExprError();
-    Base = Result.get();
-  }
-  return new (Context) OMPArraySectionExpr(
-      Base, LowerBound, Length, Stride, Context.OMPArraySectionTy, VK_LValue,
-      OK_Ordinary, ColonLocFirst, ColonLocSecond, RBLoc);
-}
-
-ExprResult Sema::ActOnOMPArrayShapingExpr(Expr *Base, SourceLocation LParenLoc,
-                                          SourceLocation RParenLoc,
-                                          ArrayRef<Expr *> Dims,
-                                          ArrayRef<SourceRange> Brackets) {
-  if (Base->hasPlaceholderType()) {
-    ExprResult Result = CheckPlaceholderExpr(Base);
-    if (Result.isInvalid())
-      return ExprError();
-    Result = DefaultLvalueConversion(Result.get());
-    if (Result.isInvalid())
-      return ExprError();
-    Base = Result.get();
-  }
-  QualType BaseTy = Base->getType();
-  // Delay analysis of the types/expressions if instantiation/specialization is
-  // required.
-  if (!BaseTy->isPointerType() && Base->isTypeDependent())
-    return OMPArrayShapingExpr::Create(Context, Context.DependentTy, Base,
-                                       LParenLoc, RParenLoc, Dims, Brackets);
-  if (!BaseTy->isPointerType() ||
-      (!Base->isTypeDependent() &&
-       BaseTy->getPointeeType()->isIncompleteType()))
-    return ExprError(Diag(Base->getExprLoc(),
-                          diag::err_omp_non_pointer_type_array_shaping_base)
-                     << Base->getSourceRange());
-
-  SmallVector<Expr *, 4> NewDims;
-  bool ErrorFound = false;
-  for (Expr *Dim : Dims) {
-    if (Dim->hasPlaceholderType()) {
-      ExprResult Result = CheckPlaceholderExpr(Dim);
-      if (Result.isInvalid()) {
-        ErrorFound = true;
-        continue;
-      }
-      Result = DefaultLvalueConversion(Result.get());
-      if (Result.isInvalid()) {
-        ErrorFound = true;
-        continue;
-      }
-      Dim = Result.get();
-    }
-    if (!Dim->isTypeDependent()) {
-      ExprResult Result =
-          PerformOpenMPImplicitIntegerConversion(Dim->getExprLoc(), Dim);
-      if (Result.isInvalid()) {
-        ErrorFound = true;
-        Diag(Dim->getExprLoc(), diag::err_omp_typecheck_shaping_not_integer)
-            << Dim->getSourceRange();
-        continue;
-      }
-      Dim = Result.get();
-      Expr::EvalResult EvResult;
-      if (!Dim->isValueDependent() && Dim->EvaluateAsInt(EvResult, Context)) {
-        // OpenMP 5.0, [2.1.4 Array Shaping]
-        // Each si is an integral type expression that must evaluate to a
-        // positive integer.
-        llvm::APSInt Value = EvResult.Val.getInt();
-        if (!Value.isStrictlyPositive()) {
-          Diag(Dim->getExprLoc(), diag::err_omp_shaping_dimension_not_positive)
-              << toString(Value, /*Radix=*/10, /*Signed=*/true)
-              << Dim->getSourceRange();
-          ErrorFound = true;
-          continue;
-        }
-      }
-    }
-    NewDims.push_back(Dim);
-  }
-  if (ErrorFound)
-    return ExprError();
-  return OMPArrayShapingExpr::Create(Context, Context.OMPArrayShapingTy, Base,
-                                     LParenLoc, RParenLoc, NewDims, Brackets);
-}
-
-ExprResult Sema::ActOnOMPIteratorExpr(Scope *S, SourceLocation IteratorKwLoc,
-                                      SourceLocation LLoc, SourceLocation RLoc,
-                                      ArrayRef<OMPIteratorData> Data) {
-  SmallVector<OMPIteratorExpr::IteratorDefinition, 4> ID;
-  bool IsCorrect = true;
-  for (const OMPIteratorData &D : Data) {
-    TypeSourceInfo *TInfo = nullptr;
-    SourceLocation StartLoc;
-    QualType DeclTy;
-    if (!D.Type.getAsOpaquePtr()) {
-      // OpenMP 5.0, 2.1.6 Iterators
-      // In an iterator-specifier, if the iterator-type is not specified then
-      // the type of that iterator is of int type.
-      DeclTy = Context.IntTy;
-      StartLoc = D.DeclIdentLoc;
-    } else {
-      DeclTy = GetTypeFromParser(D.Type, &TInfo);
-      StartLoc = TInfo->getTypeLoc().getBeginLoc();
-    }
-
-    bool IsDeclTyDependent = DeclTy->isDependentType() ||
-                             DeclTy->containsUnexpandedParameterPack() ||
-                             DeclTy->isInstantiationDependentType();
-    if (!IsDeclTyDependent) {
-      if (!DeclTy->isIntegralType(Context) && !DeclTy->isAnyPointerType()) {
-        // OpenMP 5.0, 2.1.6 Iterators, Restrictions, C/C++
-        // The iterator-type must be an integral or pointer type.
-        Diag(StartLoc, diag::err_omp_iterator_not_integral_or_pointer)
-            << DeclTy;
-        IsCorrect = false;
-        continue;
-      }
-      if (DeclTy.isConstant(Context)) {
-        // OpenMP 5.0, 2.1.6 Iterators, Restrictions, C/C++
-        // The iterator-type must not be const qualified.
-        Diag(StartLoc, diag::err_omp_iterator_not_integral_or_pointer)
-            << DeclTy;
-        IsCorrect = false;
-        continue;
-      }
-    }
-
-    // Iterator declaration.
-    assert(D.DeclIdent && "Identifier expected.");
-    // Always try to create iterator declarator to avoid extra error messages
-    // about unknown declarations use.
-    auto *VD = VarDecl::Create(Context, CurContext, StartLoc, D.DeclIdentLoc,
-                               D.DeclIdent, DeclTy, TInfo, SC_None);
-    VD->setImplicit();
-    if (S) {
-      // Check for conflicting previous declaration.
-      DeclarationNameInfo NameInfo(VD->getDeclName(), D.DeclIdentLoc);
-      LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
-                            ForVisibleRedeclaration);
-      Previous.suppressDiagnostics();
-      LookupName(Previous, S);
-
-      FilterLookupForScope(Previous, CurContext, S, /*ConsiderLinkage=*/false,
-                           /*AllowInlineNamespace=*/false);
-      if (!Previous.empty()) {
-        NamedDecl *Old = Previous.getRepresentativeDecl();
-        Diag(D.DeclIdentLoc, diag::err_redefinition) << VD->getDeclName();
-        Diag(Old->getLocation(), diag::note_previous_definition);
-      } else {
-        PushOnScopeChains(VD, S);
-      }
-    } else {
-      CurContext->addDecl(VD);
-    }
-
-    /// Act on the iterator variable declaration.
-    ActOnOpenMPIteratorVarDecl(VD);
-
-    Expr *Begin = D.Range.Begin;
-    if (!IsDeclTyDependent && Begin && !Begin->isTypeDependent()) {
-      ExprResult BeginRes =
-          PerformImplicitConversion(Begin, DeclTy, AA_Converting);
-      Begin = BeginRes.get();
-    }
-    Expr *End = D.Range.End;
-    if (!IsDeclTyDependent && End && !End->isTypeDependent()) {
-      ExprResult EndRes = PerformImplicitConversion(End, DeclTy, AA_Converting);
-      End = EndRes.get();
-    }
-    Expr *Step = D.Range.Step;
-    if (!IsDeclTyDependent && Step && !Step->isTypeDependent()) {
-      if (!Step->getType()->isIntegralType(Context)) {
-        Diag(Step->getExprLoc(), diag::err_omp_iterator_step_not_integral)
-            << Step << Step->getSourceRange();
-        IsCorrect = false;
-        continue;
-      }
-      std::optional<llvm::APSInt> Result =
-          Step->getIntegerConstantExpr(Context);
-      // OpenMP 5.0, 2.1.6 Iterators, Restrictions
-      // If the step expression of a range-specification equals zero, the
-      // behavior is unspecified.
-      if (Result && Result->isZero()) {
-        Diag(Step->getExprLoc(), diag::err_omp_iterator_step_constant_zero)
-            << Step << Step->getSourceRange();
-        IsCorrect = false;
-        continue;
-      }
-    }
-    if (!Begin || !End || !IsCorrect) {
-      IsCorrect = false;
-      continue;
-    }
-    OMPIteratorExpr::IteratorDefinition &IDElem = ID.emplace_back();
-    IDElem.IteratorDecl = VD;
-    IDElem.AssignmentLoc = D.AssignLoc;
-    IDElem.Range.Begin = Begin;
-    IDElem.Range.End = End;
-    IDElem.Range.Step = Step;
-    IDElem.ColonLoc = D.ColonLoc;
-    IDElem.SecondColonLoc = D.SecColonLoc;
-  }
-  if (!IsCorrect) {
-    // Invalidate all created iterator declarations if error is found.
-    for (const OMPIteratorExpr::IteratorDefinition &D : ID) {
-      if (Decl *ID = D.IteratorDecl)
-        ID->setInvalidDecl();
-    }
-    return ExprError();
-  }
-  SmallVector<OMPIteratorHelperData, 4> Helpers;
-  if (!CurContext->isDependentContext()) {
-    // Build number of ityeration for each iteration range.
-    // Ni = ((Stepi > 0) ? ((Endi + Stepi -1 - Begini)/Stepi) :
-    // ((Begini-Stepi-1-Endi) / -Stepi);
-    for (OMPIteratorExpr::IteratorDefinition &D : ID) {
-      // (Endi - Begini)
-      ExprResult Res = CreateBuiltinBinOp(D.AssignmentLoc, BO_Sub, D.Range.End,
-                                          D.Range.Begin);
-      if(!Res.isUsable()) {
-        IsCorrect = false;
-        continue;
-      }
-      ExprResult St, St1;
-      if (D.Range.Step) {
-        St = D.Range.Step;
-        // (Endi - Begini) + Stepi
-        Res = CreateBuiltinBinOp(D.AssignmentLoc, BO_Add, Res.get(), St.get());
-        if (!Res.isUsable()) {
-          IsCorrect = false;
-          continue;
-        }
-        // (Endi - Begini) + Stepi - 1
-        Res =
-            CreateBuiltinBinOp(D.AssignmentLoc, BO_Sub, Res.get(),
-                               ActOnIntegerConstant(D.AssignmentLoc, 1).get());
-        if (!Res.isUsable()) {
-          IsCorrect = false;
-          continue;
-        }
-        // ((Endi - Begini) + Stepi - 1) / Stepi
-        Res = CreateBuiltinBinOp(D.AssignmentLoc, BO_Div, Res.get(), St.get());
-        if (!Res.isUsable()) {
-          IsCorrect = false;
-          continue;
-        }
-        St1 = CreateBuiltinUnaryOp(D.AssignmentLoc, UO_Minus, D.Range.Step);
-        // (Begini - Endi)
-        ExprResult Res1 = CreateBuiltinBinOp(D.AssignmentLoc, BO_Sub,
-                                             D.Range.Begin, D.Range.End);
-        if (!Res1.isUsable()) {
-          IsCorrect = false;
-          continue;
-        }
-        // (Begini - Endi) - Stepi
-        Res1 =
-            CreateBuiltinBinOp(D.AssignmentLoc, BO_Add, Res1.get(), St1.get());
-        if (!Res1.isUsable()) {
-          IsCorrect = false;
-          continue;
-        }
-        // (Begini - Endi) - Stepi - 1
-        Res1 =
-            CreateBuiltinBinOp(D.AssignmentLoc, BO_Sub, Res1.get(),
-                               ActOnIntegerConstant(D.AssignmentLoc, 1).get());
-        if (!Res1.isUsable()) {
-          IsCorrect = false;
-          continue;
-        }
-        // ((Begini - Endi) - Stepi - 1) / (-Stepi)
-        Res1 =
-            CreateBuiltinBinOp(D.AssignmentLoc, BO_Div, Res1.get(), St1.get());
-        if (!Res1.isUsable()) {
-          IsCorrect = false;
-          continue;
-        }
-        // Stepi > 0.
-        ExprResult CmpRes =
-            CreateBuiltinBinOp(D.AssignmentLoc, BO_GT, D.Range.Step,
-                               ActOnIntegerConstant(D.AssignmentLoc, 0).get());
-        if (!CmpRes.isUsable()) {
-          IsCorrect = false;
-          continue;
-        }
-        Res = ActOnConditionalOp(D.AssignmentLoc, D.AssignmentLoc, CmpRes.get(),
-                                 Res.get(), Res1.get());
-        if (!Res.isUsable()) {
-          IsCorrect = false;
-          continue;
-        }
-      }
-      Res = ActOnFinishFullExpr(Res.get(), /*DiscardedValue=*/false);
-      if (!Res.isUsable()) {
-        IsCorrect = false;
-        continue;
-      }
-
-      // Build counter update.
-      // Build counter.
-      auto *CounterVD =
-          VarDecl::Create(Context, CurContext, D.IteratorDecl->getBeginLoc(),
-                          D.IteratorDecl->getBeginLoc(), nullptr,
-                          Res.get()->getType(), nullptr, SC_None);
-      CounterVD->setImplicit();
-      ExprResult RefRes =
-          BuildDeclRefExpr(CounterVD, CounterVD->getType(), VK_LValue,
-                           D.IteratorDecl->getBeginLoc());
-      // Build counter update.
-      // I = Begini + counter * Stepi;
-      ExprResult UpdateRes;
-      if (D.Range.Step) {
-        UpdateRes = CreateBuiltinBinOp(
-            D.AssignmentLoc, BO_Mul,
-            DefaultLvalueConversion(RefRes.get()).get(), St.get());
-      } else {
-        UpdateRes = DefaultLvalueConversion(RefRes.get());
-      }
-      if (!UpdateRes.isUsable()) {
-        IsCorrect = false;
-        continue;
-      }
-      UpdateRes = CreateBuiltinBinOp(D.AssignmentLoc, BO_Add, D.Range.Begin,
-                                     UpdateRes.get());
-      if (!UpdateRes.isUsable()) {
-        IsCorrect = false;
-        continue;
-      }
-      ExprResult VDRes =
-          BuildDeclRefExpr(cast<VarDecl>(D.IteratorDecl),
-                           cast<VarDecl>(D.IteratorDecl)->getType(), VK_LValue,
-                           D.IteratorDecl->getBeginLoc());
-      UpdateRes = CreateBuiltinBinOp(D.AssignmentLoc, BO_Assign, VDRes.get(),
-                                     UpdateRes.get());
-      if (!UpdateRes.isUsable()) {
-        IsCorrect = false;
-        continue;
-      }
-      UpdateRes =
-          ActOnFinishFullExpr(UpdateRes.get(), /*DiscardedValue=*/true);
-      if (!UpdateRes.isUsable()) {
-        IsCorrect = false;
-        continue;
-      }
-      ExprResult CounterUpdateRes =
-          CreateBuiltinUnaryOp(D.AssignmentLoc, UO_PreInc, RefRes.get());
-      if (!CounterUpdateRes.isUsable()) {
-        IsCorrect = false;
-        continue;
-      }
-      CounterUpdateRes =
-          ActOnFinishFullExpr(CounterUpdateRes.get(), /*DiscardedValue=*/true);
-      if (!CounterUpdateRes.isUsable()) {
-        IsCorrect = false;
-        continue;
-      }
-      OMPIteratorHelperData &HD = Helpers.emplace_back();
-      HD.CounterVD = CounterVD;
-      HD.Upper = Res.get();
-      HD.Update = UpdateRes.get();
-      HD.CounterUpdate = CounterUpdateRes.get();
-    }
-  } else {
-    Helpers.assign(ID.size(), {});
-  }
-  if (!IsCorrect) {
-    // Invalidate all created iterator declarations if error is found.
-    for (const OMPIteratorExpr::IteratorDefinition &D : ID) {
-      if (Decl *ID = D.IteratorDecl)
-        ID->setInvalidDecl();
-    }
-    return ExprError();
-  }
-  return OMPIteratorExpr::Create(Context, Context.OMPIteratorTy, IteratorKwLoc,
-                                 LLoc, RLoc, ID, Helpers);
 }
 
 ExprResult
@@ -7190,8 +6640,8 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   }
 
   if (LangOpts.OpenMP)
-    Call = ActOnOpenMPCall(Call, Scope, LParenLoc, ArgExprs, RParenLoc,
-                           ExecConfig);
+    Call = OpenMP().ActOnOpenMPCall(Call, Scope, LParenLoc, ArgExprs, RParenLoc,
+                                    ExecConfig);
   if (LangOpts.CPlusPlus) {
     if (const auto *CE = dyn_cast<CallExpr>(Call.get()))
       DiagnosedUnqualifiedCallsToStdFunctions(*this, CE);
@@ -19193,7 +18643,7 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
   }
   QualType CaptureType, DeclRefType;
   if (SemaRef.LangOpts.OpenMP)
-    SemaRef.tryCaptureOpenMPLambdas(V);
+    SemaRef.OpenMP().tryCaptureOpenMPLambdas(V);
   SemaRef.tryCaptureVariable(V, Loc, Sema::TryCapture_Implicit,
                              /*EllipsisLoc*/ SourceLocation(),
                              /*BuildAndDiagnose*/ true, CaptureType,
@@ -19474,7 +18924,7 @@ static bool captureInBlock(BlockScopeInfo *BSI, ValueDecl *Var,
 
   const bool HasBlocksAttr = Var->hasAttr<BlocksAttr>();
   if (HasBlocksAttr || CaptureType->isReferenceType() ||
-      (S.getLangOpts().OpenMP && S.isOpenMPCapturedDecl(Var))) {
+      (S.getLangOpts().OpenMP && S.OpenMP().isOpenMPCapturedDecl(Var))) {
     // Block capture by reference does not change the capture or
     // declaration reference types.
     ByRef = true;
@@ -19504,7 +18954,7 @@ static bool captureInCapturedRegion(
     ByRef = (Kind == Sema::TryCapture_ExplicitByRef);
   } else if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
     // Using an LValue reference type is consistent with Lambdas (see below).
-    if (S.isOpenMPCapturedDecl(Var)) {
+    if (S.OpenMP().isOpenMPCapturedDecl(Var)) {
       bool HasConst = DeclRefType.isConstQualified();
       DeclRefType = DeclRefType.getUnqualifiedType();
       // Don't lose diagnostics about assignments to const.
@@ -19512,11 +18962,11 @@ static bool captureInCapturedRegion(
         DeclRefType.addConst();
     }
     // Do not capture firstprivates in tasks.
-    if (S.isOpenMPPrivateDecl(Var, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel) !=
-        OMPC_unknown)
+    if (S.OpenMP().isOpenMPPrivateDecl(Var, RSI->OpenMPLevel,
+                                       RSI->OpenMPCaptureLevel) != OMPC_unknown)
       return true;
-    ByRef = S.isOpenMPCapturedByRef(Var, RSI->OpenMPLevel,
-                                    RSI->OpenMPCaptureLevel);
+    ByRef = S.OpenMP().isOpenMPCapturedByRef(Var, RSI->OpenMPLevel,
+                                             RSI->OpenMPCaptureLevel);
   }
 
   if (ByRef)
@@ -19777,9 +19227,9 @@ bool Sema::tryCaptureVariable(
   // Capture global variables if it is required to use private copy of this
   // variable.
   bool IsGlobal = !VD->hasLocalStorage();
-  if (IsGlobal &&
-      !(LangOpts.OpenMP && isOpenMPCapturedDecl(Var, /*CheckScopeInfo=*/true,
-                                                MaxFunctionScopesIndex)))
+  if (IsGlobal && !(LangOpts.OpenMP &&
+                    OpenMP().isOpenMPCapturedDecl(Var, /*CheckScopeInfo=*/true,
+                                                  MaxFunctionScopesIndex)))
     return true;
 
   if (isa<VarDecl>(Var))
@@ -19897,7 +19347,7 @@ bool Sema::tryCaptureVariable(
             }
             return true;
           }
-          OpenMPClauseKind IsOpenMPPrivateDecl = isOpenMPPrivateDecl(
+          OpenMPClauseKind IsOpenMPPrivateDecl = OpenMP().isOpenMPPrivateDecl(
               Var, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel);
           // If the variable is private (i.e. not captured) and has variably
           // modified type, we still need to capture the type for correct
@@ -19908,7 +19358,8 @@ bool Sema::tryCaptureVariable(
             QualType QTy = Var->getType();
             if (ParmVarDecl *PVD = dyn_cast_or_null<ParmVarDecl>(Var))
               QTy = PVD->getOriginalType();
-            for (int I = 1, E = getNumberOfConstructScopes(RSI->OpenMPLevel);
+            for (int I = 1,
+                     E = OpenMP().getNumberOfConstructScopes(RSI->OpenMPLevel);
                  I < E; ++I) {
               auto *OuterRSI = cast<CapturedRegionScopeInfo>(
                   FunctionScopes[FunctionScopesIndex - I]);
@@ -19920,18 +19371,19 @@ bool Sema::tryCaptureVariable(
           }
           bool IsTargetCap =
               IsOpenMPPrivateDecl != OMPC_private &&
-              isOpenMPTargetCapturedDecl(Var, RSI->OpenMPLevel,
-                                         RSI->OpenMPCaptureLevel);
+              OpenMP().isOpenMPTargetCapturedDecl(Var, RSI->OpenMPLevel,
+                                                  RSI->OpenMPCaptureLevel);
           // Do not capture global if it is not privatized in outer regions.
           bool IsGlobalCap =
-              IsGlobal && isOpenMPGlobalCapturedDecl(Var, RSI->OpenMPLevel,
-                                                     RSI->OpenMPCaptureLevel);
+              IsGlobal && OpenMP().isOpenMPGlobalCapturedDecl(
+                              Var, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel);
 
           // When we detect target captures we are looking from inside the
           // target region, therefore we need to propagate the capture from the
           // enclosing region. Therefore, the capture is not initially nested.
           if (IsTargetCap)
-            adjustOpenMPTargetScopeIndex(FunctionScopesIndex, RSI->OpenMPLevel);
+            OpenMP().adjustOpenMPTargetScopeIndex(FunctionScopesIndex,
+                                                  RSI->OpenMPLevel);
 
           if (IsTargetCap || IsOpenMPPrivateDecl == OMPC_private ||
               (IsGlobal && !IsGlobalCap)) {
@@ -20753,8 +20205,8 @@ static void
 MarkExprReferenced(Sema &SemaRef, SourceLocation Loc, Decl *D, Expr *E,
                    bool MightBeOdrUse,
                    llvm::DenseMap<const VarDecl *, int> &RefsMinusAssignments) {
-  if (SemaRef.isInOpenMPDeclareTargetContext())
-    SemaRef.checkDeclIsAllowedInOpenMPTarget(E, D);
+  if (SemaRef.OpenMP().isInOpenMPDeclareTargetContext())
+    SemaRef.OpenMP().checkDeclIsAllowedInOpenMPTarget(E, D);
 
   if (VarDecl *Var = dyn_cast<VarDecl>(D)) {
     DoMarkVarDeclReferenced(SemaRef, Loc, Var, E, RefsMinusAssignments);

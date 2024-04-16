@@ -114,8 +114,7 @@ public:
   // They may be used later on to create the block_arguments for some of the
   // target directives that require it.
   bool processMap(
-      mlir::Location currentLocation, const llvm::omp::Directive &directive,
-      Fortran::lower::StatementContext &stmtCtx,
+      mlir::Location currentLocation, Fortran::lower::StatementContext &stmtCtx,
       mlir::omp::MapClauseOps &result,
       llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSyms =
           nullptr,
