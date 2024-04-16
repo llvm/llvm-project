@@ -18,6 +18,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cstdint>
 
 namespace llvm {
@@ -477,6 +478,10 @@ void hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
 /// Given a constant, create a debug information expression.
 DIExpression *getExpressionForConstant(DIBuilder &DIB, const Constant &C,
                                        Type &Ty);
+
+/// Remap the debug intrinsic instructions in the \p Mapping using the
+/// \p Inst as a criteria.
+void remapDebugVariable(ValueToValueMapTy &Mapping, Instruction *Inst);
 
 //===----------------------------------------------------------------------===//
 //  Intrinsic pattern matching
