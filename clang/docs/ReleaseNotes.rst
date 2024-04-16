@@ -417,6 +417,8 @@ Bug Fixes in This Version
 - Fixed a regression in CTAD that a friend declaration that befriends itself may cause
   incorrect constraint substitution. (#GH86769).
 
+- Fixed an assertion failure on invalid InitListExpr in C89 mode (#GH88008).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
