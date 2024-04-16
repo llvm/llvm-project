@@ -93,6 +93,9 @@ struct AliasAnalysis {
 
   /// Return the memory source of a value.
   Source getSource(mlir::Value);
+
+  /// Return true if `v` is a dummy argument.
+  static bool isDummyArgument(mlir::Value v);
 };
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
