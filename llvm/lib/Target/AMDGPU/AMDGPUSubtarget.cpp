@@ -167,9 +167,10 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 }
 
 void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
+  LLVMContext &Ctx = F.getContext();
   if (hasFeature(AMDGPU::FeatureWavefrontSize32) ==
       hasFeature(AMDGPU::FeatureWavefrontSize64)) {
-    F.getContext().diagnose(DiagnosticInfoUnsupported(
+    Ctx.diagnose(DiagnosticInfoUnsupported(
         F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
   }
 }
