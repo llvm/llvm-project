@@ -58,24 +58,16 @@ struct ForOpInterface
     Value iterArg = forOp.getRegionIterArg(iterArgIdx);
     Value initArg = forOp.getInitArgs()[iterArgIdx];
 
-    // Populate constraints for the yielded value.
-    cstr.populateConstraints(yieldedValue, dim);
-    // Populate constraints for the iter_arg. This is just to ensure that the
-    // iter_arg is mapped in the constraint set, which is a prerequisite for
-    // `compare`. It may lead to a recursive call to this function in case the
-    // iter_arg was not visited when the constraints for the yielded value were
-    // populated, but no additional work is done.
-    cstr.populateConstraints(iterArg, dim);
-
     // An EQ constraint can be added if the yielded value (dimension size)
     // equals the corresponding block argument (dimension size).
-    if (cstr.compare(yieldedValue, dim,
-                     ValueBoundsConstraintSet::ComparisonOperator::EQ, iterArg,
-                     dim)) {
+    if (cstr.populateAndCompare(
+            /*lhs=*/{yieldedValue, dim},
+            ValueBoundsConstraintSet::ComparisonOperator::EQ,
+            /*rhs=*/{iterArg, dim})) {
       if (dim.has_value()) {
         cstr.bound(value)[*dim] == cstr.getExpr(initArg, dim);
       } else {
-        cstr.bound(value) == initArg;
+        cstr.bound(value) == cstr.getExpr(initArg);
       }
     }
   }
@@ -113,10 +105,6 @@ struct IfOpInterface
     Value thenValue = ifOp.thenYield().getResults()[resultNum];
     Value elseValue = ifOp.elseYield().getResults()[resultNum];
 
-    // Populate constraints for the yielded value (and all values on the
-    // backward slice, as long as the current stop condition is not satisfied).
-    cstr.populateConstraints(thenValue, dim);
-    cstr.populateConstraints(elseValue, dim);
     auto boundsBuilder = cstr.bound(value);
     if (dim)
       boundsBuilder[*dim];
@@ -125,9 +113,10 @@ struct IfOpInterface
     // If thenValue <= elseValue:
     // * result <= elseValue
     // * result >= thenValue
-    if (cstr.compare(thenValue, dim,
-                     ValueBoundsConstraintSet::ComparisonOperator::LE,
-                     elseValue, dim)) {
+    if (cstr.populateAndCompare(
+            /*lhs=*/{thenValue, dim},
+            ValueBoundsConstraintSet::ComparisonOperator::LE,
+            /*rhs=*/{elseValue, dim})) {
       if (dim) {
         cstr.bound(value)[*dim] >= cstr.getExpr(thenValue, dim);
         cstr.bound(value)[*dim] <= cstr.getExpr(elseValue, dim);
@@ -139,9 +128,10 @@ struct IfOpInterface
     // If elseValue <= thenValue:
     // * result <= thenValue
     // * result >= elseValue
-    if (cstr.compare(elseValue, dim,
-                     ValueBoundsConstraintSet::ComparisonOperator::LE,
-                     thenValue, dim)) {
+    if (cstr.populateAndCompare(
+            /*lhs=*/{elseValue, dim},
+            ValueBoundsConstraintSet::ComparisonOperator::LE,
+            /*rhs=*/{thenValue, dim})) {
       if (dim) {
         cstr.bound(value)[*dim] >= cstr.getExpr(elseValue, dim);
         cstr.bound(value)[*dim] <= cstr.getExpr(thenValue, dim);

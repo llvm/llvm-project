@@ -38,6 +38,7 @@
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/BitmaskEnum.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/Cuda.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/Module.h"
@@ -60,6 +61,7 @@
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -182,8 +184,10 @@ class Preprocessor;
 class PseudoDestructorTypeStorage;
 class PseudoObjectExpr;
 class QualType;
+class SemaCUDA;
 class SemaHLSL;
 class SemaOpenACC;
+class SemaSYCL;
 class StandardConversionSequence;
 class Stmt;
 class StringLiteral;
@@ -422,6 +426,17 @@ enum class TemplateDeductionResult {
   AlreadyDiagnosed
 };
 
+/// Kinds of C++ special members.
+enum class CXXSpecialMemberKind {
+  DefaultConstructor,
+  CopyConstructor,
+  MoveConstructor,
+  CopyAssignment,
+  MoveAssignment,
+  Destructor,
+  Invalid
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -465,9 +480,7 @@ class Sema final : public SemaBase {
   // 35. Code Completion (SemaCodeComplete.cpp)
   // 36. FixIt Helpers (SemaFixItUtils.cpp)
   // 37. Name Lookup for RISC-V Vector Intrinsic (SemaRISCVVectorLookup.cpp)
-  // 38. CUDA (SemaCUDA.cpp)
-  // 39. OpenMP Directives and Clauses (SemaOpenMP.cpp)
-  // 40. SYCL Constructs (SemaSYCL.cpp)
+  // 38. OpenMP Directives and Clauses (SemaOpenMP.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -568,7 +581,7 @@ public:
 
   /// Invent a new identifier for parameters of abbreviated templates.
   IdentifierInfo *
-  InventAbbreviatedTemplateParameterTypeName(IdentifierInfo *ParamName,
+  InventAbbreviatedTemplateParameterTypeName(const IdentifierInfo *ParamName,
                                              unsigned Index);
 
   void emitAndClearUnusedLocalTypedefWarnings();
@@ -961,8 +974,18 @@ public:
     return DelayedDiagnostics.push(pool);
   }
 
+  /// Diagnostics that are emitted only if we discover that the given function
+  /// must be codegen'ed.  Because handling these correctly adds overhead to
+  /// compilation, this is currently only enabled for CUDA compilations.
+  SemaDiagnosticBuilder::DeferredDiagnosticsType DeviceDeferredDiags;
+
   /// CurContext - This is the current declaration context of parsing.
   DeclContext *CurContext;
+
+  SemaCUDA &CUDA() {
+    assert(CUDAPtr);
+    return *CUDAPtr;
+  }
 
   SemaHLSL &HLSL() {
     assert(HLSLPtr);
@@ -972,6 +995,11 @@ public:
   SemaOpenACC &OpenACC() {
     assert(OpenACCPtr);
     return *OpenACCPtr;
+  }
+
+  SemaSYCL &SYCL() {
+    assert(SYCLPtr);
+    return *SYCLPtr;
   }
 
 protected:
@@ -1004,8 +1032,10 @@ private:
 
   mutable IdentifierInfo *Ident_super;
 
+  std::unique_ptr<SemaCUDA> CUDAPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaOpenACC> OpenACCPtr;
+  std::unique_ptr<SemaSYCL> SYCLPtr;
 
   ///@}
 
@@ -1969,6 +1999,8 @@ public:
   };
 
   bool IsLayoutCompatible(QualType T1, QualType T2) const;
+  bool IsPointerInterconvertibleBaseOf(const TypeSourceInfo *Base,
+                                       const TypeSourceInfo *Derived);
 
   bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                          const FunctionProtoType *Proto);
@@ -2934,13 +2966,6 @@ public:
                                       QualType NewT, QualType OldT);
   void CheckMain(FunctionDecl *FD, const DeclSpec &D);
   void CheckMSVCRTEntryPoint(FunctionDecl *FD);
-  void ActOnHLSLTopLevelFunction(FunctionDecl *FD);
-  void CheckHLSLEntryPoint(FunctionDecl *FD);
-  void CheckHLSLSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
-                                   const HLSLAnnotationAttr *AnnotationAttr);
-  void DiagnoseHLSLAttrStageMismatch(
-      const Attr *A, HLSLShaderAttr::ShaderType Stage,
-      std::initializer_list<HLSLShaderAttr::ShaderType> AllowedStages);
   Attr *getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
                                                    bool IsDefinition);
   void CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D);
@@ -2952,9 +2977,9 @@ public:
                                                   SourceLocation NameLoc,
                                                   TypeSourceInfo *TSInfo);
   ParmVarDecl *CheckParameter(DeclContext *DC, SourceLocation StartLoc,
-                              SourceLocation NameLoc, IdentifierInfo *Name,
-                              QualType T, TypeSourceInfo *TSInfo,
-                              StorageClass SC);
+                              SourceLocation NameLoc,
+                              const IdentifierInfo *Name, QualType T,
+                              TypeSourceInfo *TSInfo, StorageClass SC);
 
   // Contexts where using non-trivial C union types can be disallowed. This is
   // passed to err_non_trivial_c_union_in_invalid_context.
@@ -3020,14 +3045,18 @@ public:
   void ActOnDocumentableDecls(ArrayRef<Decl *> Group);
 
   enum class FnBodyKind {
-    /// C++ [dcl.fct.def.general]p1
+    /// C++26 [dcl.fct.def.general]p1
     /// function-body:
     ///   ctor-initializer[opt] compound-statement
     ///   function-try-block
     Other,
     ///   = default ;
     Default,
+    ///   deleted-function-body
+    ///
+    /// deleted-function-body:
     ///   = delete ;
+    ///   = delete ( unevaluated-string ) ;
     Delete
   };
 
@@ -3359,7 +3388,7 @@ public:
   /// variable.
   void DiagnoseUnusedButSetDecl(const VarDecl *VD, DiagReceiverTy DiagReceiver);
 
-  ObjCInterfaceDecl *getObjCInterfaceDecl(IdentifierInfo *&Id,
+  ObjCInterfaceDecl *getObjCInterfaceDecl(const IdentifierInfo *&Id,
                                           SourceLocation IdLoc,
                                           bool TypoCorrection = false);
 
@@ -3436,8 +3465,9 @@ public:
   /// VerifyBitField - verifies that a bit field expression is an ICE and has
   /// the correct width, and that the field type is valid.
   /// Returns false on success.
-  ExprResult VerifyBitField(SourceLocation FieldLoc, IdentifierInfo *FieldName,
-                            QualType FieldTy, bool IsMsStruct, Expr *BitWidth);
+  ExprResult VerifyBitField(SourceLocation FieldLoc,
+                            const IdentifierInfo *FieldName, QualType FieldTy,
+                            bool IsMsStruct, Expr *BitWidth);
 
   /// IsValueInFlagEnum - Determine if a value is allowed as part of a flag
   /// enum. If AllowMask is true, then we also allow the complement of a valid
@@ -3651,20 +3681,12 @@ public:
   InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D,
                                                 const InternalLinkageAttr &AL);
 
-  enum CUDAFunctionTarget {
-    CFT_Device,
-    CFT_Global,
-    CFT_Host,
-    CFT_HostDevice,
-    CFT_InvalidTarget
-  };
-
   /// Check validaty of calling convention attribute \p attr. If \p FD
   /// is not null pointer, use \p FD to determine the CUDA/HIP host/device
   /// target. Otherwise, it is specified by \p CFT.
-  bool CheckCallingConvAttr(const ParsedAttr &attr, CallingConv &CC,
-                            const FunctionDecl *FD = nullptr,
-                            CUDAFunctionTarget CFT = CFT_InvalidTarget);
+  bool CheckCallingConvAttr(
+      const ParsedAttr &attr, CallingConv &CC, const FunctionDecl *FD = nullptr,
+      CUDAFunctionTarget CFT = CUDAFunctionTarget::InvalidTarget);
 
   void AddParameterABIAttr(Decl *D, const AttributeCommonInfo &CI,
                            ParameterABI ABI);
@@ -3701,14 +3723,6 @@ public:
                           StringRef UuidAsWritten, MSGuidDecl *GuidDecl);
 
   BTFDeclTagAttr *mergeBTFDeclTagAttr(Decl *D, const BTFDeclTagAttr &AL);
-  HLSLNumThreadsAttr *mergeHLSLNumThreadsAttr(Decl *D,
-                                              const AttributeCommonInfo &AL,
-                                              int X, int Y, int Z);
-  HLSLShaderAttr *mergeHLSLShaderAttr(Decl *D, const AttributeCommonInfo &AL,
-                                      HLSLShaderAttr::ShaderType ShaderType);
-  HLSLParamModifierAttr *
-  mergeHLSLParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
-                             HLSLParamModifierAttr::Spelling Spelling);
 
   WebAssemblyImportNameAttr *
   mergeImportNameAttr(Decl *D, const WebAssemblyImportNameAttr &AL);
@@ -4085,22 +4099,11 @@ public:
       SourceRange SpecificationRange, ArrayRef<ParsedType> DynamicExceptions,
       ArrayRef<SourceRange> DynamicExceptionRanges, Expr *NoexceptExpr);
 
-  /// Kinds of C++ special members.
-  enum CXXSpecialMember {
-    CXXDefaultConstructor,
-    CXXCopyConstructor,
-    CXXMoveConstructor,
-    CXXCopyAssignment,
-    CXXMoveAssignment,
-    CXXDestructor,
-    CXXInvalid
-  };
-
   class InheritedConstructorInfo;
 
   /// Determine if a special member function should have a deleted
   /// definition when it is defaulted.
-  bool ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMember CSM,
+  bool ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
                                  InheritedConstructorInfo *ICI = nullptr,
                                  bool Diagnose = false);
 
@@ -4466,7 +4469,7 @@ public:
   void CheckExplicitlyDefaultedFunction(Scope *S, FunctionDecl *MD);
 
   bool CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
-                                             CXXSpecialMember CSM,
+                                             CXXSpecialMemberKind CSM,
                                              SourceLocation DefaultLoc);
   void CheckDelayedMemberExceptionSpecs();
 
@@ -4626,13 +4629,14 @@ public:
   void CheckCXXDefaultArguments(FunctionDecl *FD);
   void CheckExtraCXXDefaultArguments(Declarator &D);
 
-  CXXSpecialMember getSpecialMember(const CXXMethodDecl *MD) {
+  CXXSpecialMemberKind getSpecialMember(const CXXMethodDecl *MD) {
     return getDefaultedFunctionKind(MD).asSpecialMember();
   }
 
   VarDecl *BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
                                      SourceLocation StartLoc,
-                                     SourceLocation IdLoc, IdentifierInfo *Id);
+                                     SourceLocation IdLoc,
+                                     const IdentifierInfo *Id);
 
   Decl *ActOnExceptionDeclarator(Scope *S, Declarator &D);
 
@@ -4652,7 +4656,8 @@ public:
                                    AccessSpecifier AS,
                                    const ParsedAttr &MSPropertyAttr);
 
-  void DiagnoseNontrivial(const CXXRecordDecl *Record, CXXSpecialMember CSM);
+  void DiagnoseNontrivial(const CXXRecordDecl *Record,
+                          CXXSpecialMemberKind CSM);
 
   enum TrivialABIHandling {
     /// The triviality of a method unaffected by "trivial_abi".
@@ -4662,26 +4667,31 @@ public:
     TAH_ConsiderTrivialABI
   };
 
-  bool SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMember CSM,
+  bool SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
                               TrivialABIHandling TAH = TAH_IgnoreTrivialABI,
                               bool Diagnose = false);
 
   /// For a defaulted function, the kind of defaulted function that it is.
   class DefaultedFunctionKind {
+    LLVM_PREFERRED_TYPE(CXXSpecialMemberKind)
     unsigned SpecialMember : 8;
     unsigned Comparison : 8;
 
   public:
     DefaultedFunctionKind()
-        : SpecialMember(CXXInvalid),
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
           Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
-    DefaultedFunctionKind(CXXSpecialMember CSM)
-        : SpecialMember(CSM),
+    DefaultedFunctionKind(CXXSpecialMemberKind CSM)
+        : SpecialMember(llvm::to_underlying(CSM)),
           Comparison(llvm::to_underlying(DefaultedComparisonKind::None)) {}
     DefaultedFunctionKind(DefaultedComparisonKind Comp)
-        : SpecialMember(CXXInvalid), Comparison(llvm::to_underlying(Comp)) {}
+        : SpecialMember(llvm::to_underlying(CXXSpecialMemberKind::Invalid)),
+          Comparison(llvm::to_underlying(Comp)) {}
 
-    bool isSpecialMember() const { return SpecialMember != CXXInvalid; }
+    bool isSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember) !=
+             CXXSpecialMemberKind::Invalid;
+    }
     bool isComparison() const {
       return static_cast<DefaultedComparisonKind>(Comparison) !=
              DefaultedComparisonKind::None;
@@ -4691,8 +4701,8 @@ public:
       return isSpecialMember() || isComparison();
     }
 
-    CXXSpecialMember asSpecialMember() const {
-      return static_cast<CXXSpecialMember>(SpecialMember);
+    CXXSpecialMemberKind asSpecialMember() const {
+      return static_cast<CXXSpecialMemberKind>(SpecialMember);
     }
     DefaultedComparisonKind asComparison() const {
       return static_cast<DefaultedComparisonKind>(Comparison);
@@ -4700,7 +4710,8 @@ public:
 
     /// Get the index of this function kind for use in diagnostics.
     unsigned getDiagnosticIndex() const {
-      static_assert(CXXInvalid > CXXDestructor,
+      static_assert(llvm::to_underlying(CXXSpecialMemberKind::Invalid) >
+                        llvm::to_underlying(CXXSpecialMemberKind::Destructor),
                     "invalid should have highest index");
       static_assert((unsigned)DefaultedComparisonKind::None == 0,
                     "none should be equal to zero");
@@ -4744,10 +4755,12 @@ public:
                                SourceLocation EqualLoc);
 
   void ActOnPureSpecifier(Decl *D, SourceLocation PureSpecLoc);
-  void SetDeclDeleted(Decl *dcl, SourceLocation DelLoc);
+  void SetDeclDeleted(Decl *dcl, SourceLocation DelLoc,
+                      StringLiteral *Message = nullptr);
   void SetDeclDefaulted(Decl *dcl, SourceLocation DefaultLoc);
 
-  void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind);
+  void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
+                           StringLiteral *DeletedMessage = nullptr);
   void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
   ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);
   ExprResult ActOnRequiresClause(ExprResult ConstraintExpr);
@@ -4806,7 +4819,7 @@ public:
   /// definition in this translation unit.
   llvm::MapVector<NamedDecl *, SourceLocation> UndefinedButUsed;
 
-  typedef llvm::PointerIntPair<CXXRecordDecl *, 3, CXXSpecialMember>
+  typedef llvm::PointerIntPair<CXXRecordDecl *, 3, CXXSpecialMemberKind>
       SpecialMemberDecl;
 
   /// The C++ special members which we are currently in the process of
@@ -5085,34 +5098,6 @@ public:
     /// lifetime-extended, even if they're not bound to a reference (for
     /// example, in a for-range initializer).
     bool InLifetimeExtendingContext = false;
-
-    /// Whether we are currently in a context in which all temporaries must be
-    /// materialized.
-    ///
-    /// [class.temporary]/p2:
-    /// The materialization of a temporary object is generally delayed as long
-    /// as possible in order to avoid creating unnecessary temporary objects.
-    ///
-    /// Temporary objects are materialized:
-    ///   (2.1) when binding a reference to a prvalue ([dcl.init.ref],
-    ///   [expr.type.conv], [expr.dynamic.cast], [expr.static.cast],
-    ///   [expr.const.cast], [expr.cast]),
-    ///
-    ///   (2.2) when performing member access on a class prvalue ([expr.ref],
-    ///   [expr.mptr.oper]),
-    ///
-    ///   (2.3) when performing an array-to-pointer conversion or subscripting
-    ///   on an array prvalue ([conv.array], [expr.sub]),
-    ///
-    ///   (2.4) when initializing an object of type
-    ///   std​::​initializer_list<T> from a braced-init-list
-    ///   ([dcl.init.list]),
-    ///
-    ///   (2.5) for certain unevaluated operands ([expr.typeid], [expr.sizeof])
-    ///
-    ///   (2.6) when a prvalue that has type other than cv void appears as a
-    ///   discarded-value expression ([expr.context]).
-    bool InMaterializeTemporaryObjectContext = false;
 
     // When evaluating immediate functions in the initializer of a default
     // argument or default member initializer, this is the declaration whose
@@ -5454,15 +5439,6 @@ public:
   ExprResult BuildPredefinedExpr(SourceLocation Loc, PredefinedIdentKind IK);
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
   ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
-
-  ExprResult BuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                           SourceLocation LParen,
-                                           SourceLocation RParen,
-                                           TypeSourceInfo *TSI);
-  ExprResult ActOnSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                           SourceLocation LParen,
-                                           SourceLocation RParen,
-                                           ParsedType ParsedTy);
 
   bool CheckLoopHintExpr(Expr *E, SourceLocation Loc);
 
@@ -6394,19 +6370,6 @@ public:
     }
   }
 
-  /// keepInMaterializeTemporaryObjectContext - Pull down
-  /// InMaterializeTemporaryObjectContext flag from previous context.
-  void keepInMaterializeTemporaryObjectContext() {
-    if (ExprEvalContexts.size() > 2 &&
-        ExprEvalContexts[ExprEvalContexts.size() - 2]
-            .InMaterializeTemporaryObjectContext) {
-      auto &LastRecord = ExprEvalContexts.back();
-      auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
-      LastRecord.InMaterializeTemporaryObjectContext =
-          PrevRecord.InMaterializeTemporaryObjectContext;
-    }
-  }
-
   DefaultedComparisonKind getDefaultedComparisonKind(const FunctionDecl *FD) {
     return getDefaultedFunctionKind(FD).asComparison();
   }
@@ -6550,20 +6513,14 @@ public:
   /// used in initializer of the field.
   llvm::MapVector<FieldDecl *, DeleteLocs> DeleteExprs;
 
-  bool isInMaterializeTemporaryObjectContext() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    return ExprEvalContexts.back().InMaterializeTemporaryObjectContext;
-  }
-
   ParsedType getInheritingConstructorName(CXXScopeSpec &SS,
                                           SourceLocation NameLoc,
-                                          IdentifierInfo &Name);
+                                          const IdentifierInfo &Name);
 
-  ParsedType getConstructorName(IdentifierInfo &II, SourceLocation NameLoc,
-                                Scope *S, CXXScopeSpec &SS,
-                                bool EnteringContext);
-  ParsedType getDestructorName(IdentifierInfo &II, SourceLocation NameLoc,
+  ParsedType getConstructorName(const IdentifierInfo &II,
+                                SourceLocation NameLoc, Scope *S,
+                                CXXScopeSpec &SS, bool EnteringContext);
+  ParsedType getDestructorName(const IdentifierInfo &II, SourceLocation NameLoc,
                                Scope *S, CXXScopeSpec &SS,
                                ParsedType ObjectType, bool EnteringContext);
 
@@ -6963,7 +6920,7 @@ public:
   concepts::Requirement *ActOnTypeRequirement(SourceLocation TypenameKWLoc,
                                               CXXScopeSpec &SS,
                                               SourceLocation NameLoc,
-                                              IdentifierInfo *TypeName,
+                                              const IdentifierInfo *TypeName,
                                               TemplateIdAnnotation *TemplateId);
   concepts::Requirement *ActOnCompoundRequirement(Expr *E,
                                                   SourceLocation NoexceptLoc);
@@ -7501,7 +7458,7 @@ public:
   };
 
   SpecialMemberOverloadResult
-  LookupSpecialMember(CXXRecordDecl *D, CXXSpecialMember SM, bool ConstArg,
+  LookupSpecialMember(CXXRecordDecl *D, CXXSpecialMemberKind SM, bool ConstArg,
                       bool VolatileArg, bool RValueThis, bool ConstThis,
                       bool VolatileThis);
 
@@ -8087,6 +8044,11 @@ public:
   bool IsFunctionConversion(QualType FromType, QualType ToType,
                             QualType &ResultTy);
   bool DiagnoseMultipleUserDefinedConversion(Expr *From, QualType ToType);
+  void DiagnoseUseOfDeletedFunction(SourceLocation Loc, SourceRange Range,
+                                    DeclarationName Name,
+                                    OverloadCandidateSet &CandidateSet,
+                                    FunctionDecl *Fn, MultiExprArg Args,
+                                    bool IsMember = false);
 
   ExprResult InitializeExplicitObjectArgument(Sema &S, Expr *Obj,
                                               FunctionDecl *Fun);
@@ -9065,7 +9027,7 @@ public:
                                            Expr *DefaultArg);
   NamedDecl *ActOnTemplateTemplateParameter(
       Scope *S, SourceLocation TmpLoc, TemplateParameterList *Params,
-      SourceLocation EllipsisLoc, IdentifierInfo *ParamName,
+      bool Typename, SourceLocation EllipsisLoc, IdentifierInfo *ParamName,
       SourceLocation ParamNameLoc, unsigned Depth, unsigned Position,
       SourceLocation EqualLoc, ParsedTemplateArgument DefaultArg);
 
@@ -9119,7 +9081,7 @@ public:
 
   TypeResult
   ActOnTemplateIdType(Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-                      TemplateTy Template, IdentifierInfo *TemplateII,
+                      TemplateTy Template, const IdentifierInfo *TemplateII,
                       SourceLocation TemplateIILoc, SourceLocation LAngleLoc,
                       ASTTemplateArgsPtr TemplateArgs, SourceLocation RAngleLoc,
                       bool IsCtorOrDtorName = false, bool IsClassName = false,
@@ -9460,7 +9422,7 @@ public:
   TypeResult
   ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
                     const CXXScopeSpec &SS, SourceLocation TemplateLoc,
-                    TemplateTy TemplateName, IdentifierInfo *TemplateII,
+                    TemplateTy TemplateName, const IdentifierInfo *TemplateII,
                     SourceLocation TemplateIILoc, SourceLocation LAngleLoc,
                     ASTTemplateArgsPtr TemplateArgs, SourceLocation RAngleLoc);
 
@@ -9538,14 +9500,15 @@ public:
 
   Decl *ActOnConceptDefinition(Scope *S,
                                MultiTemplateParamsArg TemplateParameterLists,
-                               IdentifierInfo *Name, SourceLocation NameLoc,
-                               Expr *ConstraintExpr);
+                               const IdentifierInfo *Name,
+                               SourceLocation NameLoc, Expr *ConstraintExpr);
 
   void CheckConceptRedefinition(ConceptDecl *NewDecl, LookupResult &Previous,
                                 bool &AddToScope);
 
   TypeResult ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
-                               const CXXScopeSpec &SS, IdentifierInfo *Name,
+                               const CXXScopeSpec &SS,
+                               const IdentifierInfo *Name,
                                SourceLocation TagLoc, SourceLocation NameLoc);
 
   void MarkAsLateParsedTemplate(FunctionDecl *FD, Decl *FnD,
@@ -10021,7 +9984,7 @@ public:
       unsigned NumCallArgs;
 
       /// The special member being declared or defined.
-      CXXSpecialMember SpecialMember;
+      CXXSpecialMemberKind SpecialMember;
     };
 
     ArrayRef<TemplateArgument> template_arguments() const {
@@ -11991,22 +11954,22 @@ public:
       SkipBodyInfo *SkipBody);
 
   ObjCCategoryDecl *ActOnStartCategoryInterface(
-      SourceLocation AtInterfaceLoc, IdentifierInfo *ClassName,
+      SourceLocation AtInterfaceLoc, const IdentifierInfo *ClassName,
       SourceLocation ClassLoc, ObjCTypeParamList *typeParamList,
-      IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
+      const IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
       Decl *const *ProtoRefs, unsigned NumProtoRefs,
       const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
       const ParsedAttributesView &AttrList);
 
   ObjCImplementationDecl *ActOnStartClassImplementation(
-      SourceLocation AtClassImplLoc, IdentifierInfo *ClassName,
-      SourceLocation ClassLoc, IdentifierInfo *SuperClassname,
+      SourceLocation AtClassImplLoc, const IdentifierInfo *ClassName,
+      SourceLocation ClassLoc, const IdentifierInfo *SuperClassname,
       SourceLocation SuperClassLoc, const ParsedAttributesView &AttrList);
 
   ObjCCategoryImplDecl *ActOnStartCategoryImplementation(
-      SourceLocation AtCatImplLoc, IdentifierInfo *ClassName,
-      SourceLocation ClassLoc, IdentifierInfo *CatName, SourceLocation CatLoc,
-      const ParsedAttributesView &AttrList);
+      SourceLocation AtCatImplLoc, const IdentifierInfo *ClassName,
+      SourceLocation ClassLoc, const IdentifierInfo *CatName,
+      SourceLocation CatLoc, const ParsedAttributesView &AttrList);
 
   DeclGroupPtrTy ActOnFinishObjCImplementation(Decl *ObjCImpDecl,
                                                ArrayRef<Decl *> Decls);
@@ -12189,11 +12152,13 @@ public:
   bool CheckObjCDeclScope(Decl *D);
 
   void ActOnDefs(Scope *S, Decl *TagD, SourceLocation DeclStart,
-                 IdentifierInfo *ClassName, SmallVectorImpl<Decl *> &Decls);
+                 const IdentifierInfo *ClassName,
+                 SmallVectorImpl<Decl *> &Decls);
 
   VarDecl *BuildObjCExceptionDecl(TypeSourceInfo *TInfo, QualType ExceptionType,
                                   SourceLocation StartLoc, SourceLocation IdLoc,
-                                  IdentifierInfo *Id, bool Invalid = false);
+                                  const IdentifierInfo *Id,
+                                  bool Invalid = false);
 
   Decl *ActOnObjCExceptionDecl(Scope *S, Declarator &D);
 
@@ -12310,8 +12275,8 @@ public:
                                        SourceLocation SuperLoc,
                                        QualType SuperType, bool Super);
 
-  ExprResult ActOnClassPropertyRefExpr(IdentifierInfo &receiverName,
-                                       IdentifierInfo &propertyName,
+  ExprResult ActOnClassPropertyRefExpr(const IdentifierInfo &receiverName,
+                                       const IdentifierInfo &propertyName,
                                        SourceLocation receiverNameLoc,
                                        SourceLocation propertyNameLoc);
 
@@ -12786,18 +12751,18 @@ public:
                                    bool IsParameter);
   void CodeCompleteObjCMessageReceiver(Scope *S);
   void CodeCompleteObjCSuperMessage(Scope *S, SourceLocation SuperLoc,
-                                    ArrayRef<IdentifierInfo *> SelIdents,
+                                    ArrayRef<const IdentifierInfo *> SelIdents,
                                     bool AtArgumentExpression);
   void CodeCompleteObjCClassMessage(Scope *S, ParsedType Receiver,
-                                    ArrayRef<IdentifierInfo *> SelIdents,
+                                    ArrayRef<const IdentifierInfo *> SelIdents,
                                     bool AtArgumentExpression,
                                     bool IsSuper = false);
-  void CodeCompleteObjCInstanceMessage(Scope *S, Expr *Receiver,
-                                       ArrayRef<IdentifierInfo *> SelIdents,
-                                       bool AtArgumentExpression,
-                                       ObjCInterfaceDecl *Super = nullptr);
+  void CodeCompleteObjCInstanceMessage(
+      Scope *S, Expr *Receiver, ArrayRef<const IdentifierInfo *> SelIdents,
+      bool AtArgumentExpression, ObjCInterfaceDecl *Super = nullptr);
   void CodeCompleteObjCForCollection(Scope *S, DeclGroupPtrTy IterationVar);
-  void CodeCompleteObjCSelector(Scope *S, ArrayRef<IdentifierInfo *> SelIdents);
+  void CodeCompleteObjCSelector(Scope *S,
+                                ArrayRef<const IdentifierInfo *> SelIdents);
   void
   CodeCompleteObjCProtocolReferences(ArrayRef<IdentifierLocPair> Protocols);
   void CodeCompleteObjCProtocolDecl(Scope *S);
@@ -12817,11 +12782,11 @@ public:
   void CodeCompleteObjCMethodDecl(Scope *S,
                                   std::optional<bool> IsInstanceMethod,
                                   ParsedType ReturnType);
-  void CodeCompleteObjCMethodDeclSelector(Scope *S, bool IsInstanceMethod,
-                                          bool AtParameterName,
-                                          ParsedType ReturnType,
-                                          ArrayRef<IdentifierInfo *> SelIdents);
-  void CodeCompleteObjCClassPropertyRefExpr(Scope *S, IdentifierInfo &ClassName,
+  void CodeCompleteObjCMethodDeclSelector(
+      Scope *S, bool IsInstanceMethod, bool AtParameterName,
+      ParsedType ReturnType, ArrayRef<const IdentifierInfo *> SelIdents);
+  void CodeCompleteObjCClassPropertyRefExpr(Scope *S,
+                                            const IdentifierInfo &ClassName,
                                             SourceLocation ClassNameLoc,
                                             bool IsBaseExprStatement);
   void CodeCompletePreprocessorDirective(bool InConditional);
@@ -12896,257 +12861,6 @@ public:
 
 private:
   std::unique_ptr<sema::RISCVIntrinsicManager> RVIntrinsicManager;
-
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name CUDA
-  /// Implementations are in SemaCUDA.cpp
-  ///@{
-
-public:
-  /// Increments our count of the number of times we've seen a pragma forcing
-  /// functions to be __host__ __device__.  So long as this count is greater
-  /// than zero, all functions encountered will be __host__ __device__.
-  void PushForceCUDAHostDevice();
-
-  /// Decrements our count of the number of times we've seen a pragma forcing
-  /// functions to be __host__ __device__.  Returns false if the count is 0
-  /// before incrementing, so you can emit an error.
-  bool PopForceCUDAHostDevice();
-
-  ExprResult ActOnCUDAExecConfigExpr(Scope *S, SourceLocation LLLLoc,
-                                     MultiExprArg ExecConfig,
-                                     SourceLocation GGGLoc);
-
-  /// Diagnostics that are emitted only if we discover that the given function
-  /// must be codegen'ed.  Because handling these correctly adds overhead to
-  /// compilation, this is currently only enabled for CUDA compilations.
-  SemaDiagnosticBuilder::DeferredDiagnosticsType DeviceDeferredDiags;
-
-  /// A pair of a canonical FunctionDecl and a SourceLocation.  When used as the
-  /// key in a hashtable, both the FD and location are hashed.
-  struct FunctionDeclAndLoc {
-    CanonicalDeclPtr<const FunctionDecl> FD;
-    SourceLocation Loc;
-  };
-
-  /// FunctionDecls and SourceLocations for which CheckCUDACall has emitted a
-  /// (maybe deferred) "bad call" diagnostic.  We use this to avoid emitting the
-  /// same deferred diag twice.
-  llvm::DenseSet<FunctionDeclAndLoc> LocsWithCUDACallDiags;
-
-  /// An inverse call graph, mapping known-emitted functions to one of their
-  /// known-emitted callers (plus the location of the call).
-  ///
-  /// Functions that we can tell a priori must be emitted aren't added to this
-  /// map.
-  llvm::DenseMap</* Callee = */ CanonicalDeclPtr<const FunctionDecl>,
-                 /* Caller = */ FunctionDeclAndLoc>
-      DeviceKnownEmittedFns;
-
-  /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
-  /// context is "used as device code".
-  ///
-  /// - If CurContext is a __host__ function, does not emit any diagnostics
-  ///   unless \p EmitOnBothSides is true.
-  /// - If CurContext is a __device__ or __global__ function, emits the
-  ///   diagnostics immediately.
-  /// - If CurContext is a __host__ __device__ function and we are compiling for
-  ///   the device, creates a diagnostic which is emitted if and when we realize
-  ///   that the function will be codegen'ed.
-  ///
-  /// Example usage:
-  ///
-  ///  // Variable-length arrays are not allowed in CUDA device code.
-  ///  if (CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget())
-  ///    return ExprError();
-  ///  // Otherwise, continue parsing as normal.
-  SemaDiagnosticBuilder CUDADiagIfDeviceCode(SourceLocation Loc,
-                                             unsigned DiagID);
-
-  /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
-  /// context is "used as host code".
-  ///
-  /// Same as CUDADiagIfDeviceCode, with "host" and "device" switched.
-  SemaDiagnosticBuilder CUDADiagIfHostCode(SourceLocation Loc, unsigned DiagID);
-
-  /// Determines whether the given function is a CUDA device/host/kernel/etc.
-  /// function.
-  ///
-  /// Use this rather than examining the function's attributes yourself -- you
-  /// will get it wrong.  Returns CFT_Host if D is null.
-  CUDAFunctionTarget IdentifyCUDATarget(const FunctionDecl *D,
-                                        bool IgnoreImplicitHDAttr = false);
-  CUDAFunctionTarget IdentifyCUDATarget(const ParsedAttributesView &Attrs);
-
-  enum CUDAVariableTarget {
-    CVT_Device,  /// Emitted on device side with a shadow variable on host side
-    CVT_Host,    /// Emitted on host side only
-    CVT_Both,    /// Emitted on both sides with different addresses
-    CVT_Unified, /// Emitted as a unified address, e.g. managed variables
-  };
-  /// Determines whether the given variable is emitted on host or device side.
-  CUDAVariableTarget IdentifyCUDATarget(const VarDecl *D);
-
-  /// Defines kinds of CUDA global host/device context where a function may be
-  /// called.
-  enum CUDATargetContextKind {
-    CTCK_Unknown,       /// Unknown context
-    CTCK_InitGlobalVar, /// Function called during global variable
-                        /// initialization
-  };
-
-  /// Define the current global CUDA host/device context where a function may be
-  /// called. Only used when a function is called outside of any functions.
-  struct CUDATargetContext {
-    CUDAFunctionTarget Target = CFT_HostDevice;
-    CUDATargetContextKind Kind = CTCK_Unknown;
-    Decl *D = nullptr;
-  } CurCUDATargetCtx;
-
-  struct CUDATargetContextRAII {
-    Sema &S;
-    CUDATargetContext SavedCtx;
-    CUDATargetContextRAII(Sema &S_, CUDATargetContextKind K, Decl *D);
-    ~CUDATargetContextRAII() { S.CurCUDATargetCtx = SavedCtx; }
-  };
-
-  /// Gets the CUDA target for the current context.
-  CUDAFunctionTarget CurrentCUDATarget() {
-    return IdentifyCUDATarget(dyn_cast<FunctionDecl>(CurContext));
-  }
-
-  static bool isCUDAImplicitHostDeviceFunction(const FunctionDecl *D);
-
-  // CUDA function call preference. Must be ordered numerically from
-  // worst to best.
-  enum CUDAFunctionPreference {
-    CFP_Never,      // Invalid caller/callee combination.
-    CFP_WrongSide,  // Calls from host-device to host or device
-                    // function that do not match current compilation
-                    // mode.
-    CFP_HostDevice, // Any calls to host/device functions.
-    CFP_SameSide,   // Calls from host-device to host or device
-                    // function matching current compilation mode.
-    CFP_Native,     // host-to-host or device-to-device calls.
-  };
-
-  /// Identifies relative preference of a given Caller/Callee
-  /// combination, based on their host/device attributes.
-  /// \param Caller function which needs address of \p Callee.
-  ///               nullptr in case of global context.
-  /// \param Callee target function
-  ///
-  /// \returns preference value for particular Caller/Callee combination.
-  CUDAFunctionPreference IdentifyCUDAPreference(const FunctionDecl *Caller,
-                                                const FunctionDecl *Callee);
-
-  /// Determines whether Caller may invoke Callee, based on their CUDA
-  /// host/device attributes.  Returns false if the call is not allowed.
-  ///
-  /// Note: Will return true for CFP_WrongSide calls.  These may appear in
-  /// semantically correct CUDA programs, but only if they're never codegen'ed.
-  bool IsAllowedCUDACall(const FunctionDecl *Caller,
-                         const FunctionDecl *Callee) {
-    return IdentifyCUDAPreference(Caller, Callee) != CFP_Never;
-  }
-
-  /// May add implicit CUDAHostAttr and CUDADeviceAttr attributes to FD,
-  /// depending on FD and the current compilation settings.
-  void maybeAddCUDAHostDeviceAttrs(FunctionDecl *FD,
-                                   const LookupResult &Previous);
-
-  /// May add implicit CUDAConstantAttr attribute to VD, depending on VD
-  /// and current compilation settings.
-  void MaybeAddCUDAConstantAttr(VarDecl *VD);
-
-  /// Check whether we're allowed to call Callee from the current context.
-  ///
-  /// - If the call is never allowed in a semantically-correct program
-  ///   (CFP_Never), emits an error and returns false.
-  ///
-  /// - If the call is allowed in semantically-correct programs, but only if
-  ///   it's never codegen'ed (CFP_WrongSide), creates a deferred diagnostic to
-  ///   be emitted if and when the caller is codegen'ed, and returns true.
-  ///
-  ///   Will only create deferred diagnostics for a given SourceLocation once,
-  ///   so you can safely call this multiple times without generating duplicate
-  ///   deferred errors.
-  ///
-  /// - Otherwise, returns true without emitting any diagnostics.
-  bool CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee);
-
-  void CUDACheckLambdaCapture(CXXMethodDecl *D, const sema::Capture &Capture);
-
-  /// Set __device__ or __host__ __device__ attributes on the given lambda
-  /// operator() method.
-  ///
-  /// CUDA lambdas by default is host device function unless it has explicit
-  /// host or device attribute.
-  void CUDASetLambdaAttrs(CXXMethodDecl *Method);
-
-  /// Record \p FD if it is a CUDA/HIP implicit host device function used on
-  /// device side in device compilation.
-  void CUDARecordImplicitHostDeviceFuncUsedByDevice(const FunctionDecl *FD);
-
-  /// Finds a function in \p Matches with highest calling priority
-  /// from \p Caller context and erases all functions with lower
-  /// calling priority.
-  void EraseUnwantedCUDAMatches(
-      const FunctionDecl *Caller,
-      SmallVectorImpl<std::pair<DeclAccessPair, FunctionDecl *>> &Matches);
-
-  /// Given a implicit special member, infer its CUDA target from the
-  /// calls it needs to make to underlying base/field special members.
-  /// \param ClassDecl the class for which the member is being created.
-  /// \param CSM the kind of special member.
-  /// \param MemberDecl the special member itself.
-  /// \param ConstRHS true if this is a copy operation with a const object on
-  ///        its RHS.
-  /// \param Diagnose true if this call should emit diagnostics.
-  /// \return true if there was an error inferring.
-  /// The result of this call is implicit CUDA target attribute(s) attached to
-  /// the member declaration.
-  bool inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
-                                               CXXSpecialMember CSM,
-                                               CXXMethodDecl *MemberDecl,
-                                               bool ConstRHS, bool Diagnose);
-
-  /// \return true if \p CD can be considered empty according to CUDA
-  /// (E.2.3.1 in CUDA 7.5 Programming guide).
-  bool isEmptyCudaConstructor(SourceLocation Loc, CXXConstructorDecl *CD);
-  bool isEmptyCudaDestructor(SourceLocation Loc, CXXDestructorDecl *CD);
-
-  // \brief Checks that initializers of \p Var satisfy CUDA restrictions. In
-  // case of error emits appropriate diagnostic and invalidates \p Var.
-  //
-  // \details CUDA allows only empty constructors as initializers for global
-  // variables (see E.2.3.1, CUDA 7.5). The same restriction also applies to all
-  // __shared__ variables whether they are local or not (they all are implicitly
-  // static in CUDA). One exception is that CUDA allows constant initializers
-  // for __constant__ and __device__ variables.
-  void checkAllowedCUDAInitializer(VarDecl *VD);
-
-  /// Check whether NewFD is a valid overload for CUDA. Emits
-  /// diagnostics and invalidates NewFD if not.
-  void checkCUDATargetOverload(FunctionDecl *NewFD,
-                               const LookupResult &Previous);
-  /// Copies target attributes from the template TD to the function FD.
-  void inheritCUDATargetAttrs(FunctionDecl *FD, const FunctionTemplateDecl &TD);
-
-  /// Returns the name of the launch configuration function.  This is the name
-  /// of the function that will be called to configure kernel call, with the
-  /// parameters specified via <<<>>>.
-  std::string getCudaConfigureFuncName() const;
-
-private:
-  unsigned ForceCUDAHostDeviceDepth = 0;
 
   ///@}
 
@@ -14516,44 +14230,6 @@ private:
                         OpenMPDirectiveKind CancelRegion);
 
   ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name SYCL Constructs
-  /// Implementations are in SemaSYCL.cpp
-  ///@{
-
-public:
-  /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
-  /// context is "used as device code".
-  ///
-  /// - If CurLexicalContext is a kernel function or it is known that the
-  ///   function will be emitted for the device, emits the diagnostics
-  ///   immediately.
-  /// - If CurLexicalContext is a function and we are compiling
-  ///   for the device, but we don't know that this function will be codegen'ed
-  ///   for devive yet, creates a diagnostic which is emitted if and when we
-  ///   realize that the function will be codegen'ed.
-  ///
-  /// Example usage:
-  ///
-  /// Diagnose __float128 type usage only from SYCL device code if the current
-  /// target doesn't support it
-  /// if (!S.Context.getTargetInfo().hasFloat128Type() &&
-  ///     S.getLangOpts().SYCLIsDevice)
-  ///   SYCLDiagIfDeviceCode(Loc, diag::err_type_unsupported) << "__float128";
-  SemaDiagnosticBuilder SYCLDiagIfDeviceCode(SourceLocation Loc,
-                                             unsigned DiagID);
-
-  void deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
-                                  llvm::DenseSet<QualType> Visited,
-                                  ValueDecl *DeclToCheck);
-
-  ///@}
 };
 
 DeductionFailureInfo
@@ -14579,33 +14255,5 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
 std::unique_ptr<sema::RISCVIntrinsicManager>
 CreateRISCVIntrinsicManager(Sema &S);
 } // end namespace clang
-
-namespace llvm {
-// Hash a FunctionDeclAndLoc by looking at both its FunctionDecl and its
-// SourceLocation.
-template <> struct DenseMapInfo<clang::Sema::FunctionDeclAndLoc> {
-  using FunctionDeclAndLoc = clang::Sema::FunctionDeclAndLoc;
-  using FDBaseInfo =
-      DenseMapInfo<clang::CanonicalDeclPtr<const clang::FunctionDecl>>;
-
-  static FunctionDeclAndLoc getEmptyKey() {
-    return {FDBaseInfo::getEmptyKey(), clang::SourceLocation()};
-  }
-
-  static FunctionDeclAndLoc getTombstoneKey() {
-    return {FDBaseInfo::getTombstoneKey(), clang::SourceLocation()};
-  }
-
-  static unsigned getHashValue(const FunctionDeclAndLoc &FDL) {
-    return hash_combine(FDBaseInfo::getHashValue(FDL.FD),
-                        FDL.Loc.getHashValue());
-  }
-
-  static bool isEqual(const FunctionDeclAndLoc &LHS,
-                      const FunctionDeclAndLoc &RHS) {
-    return LHS.FD == RHS.FD && LHS.Loc == RHS.Loc;
-  }
-};
-} // namespace llvm
 
 #endif

@@ -822,9 +822,14 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
 
   if (D->isPureVirtual())
     Out << " = 0";
-  else if (D->isDeletedAsWritten())
+  else if (D->isDeletedAsWritten()) {
     Out << " = delete";
-  else if (D->isExplicitlyDefaulted())
+    if (const StringLiteral *M = D->getDeletedMessage()) {
+      Out << "(";
+      M->outputString(Out);
+      Out << ")";
+    }
+  } else if (D->isExplicitlyDefaulted())
     Out << " = default";
   else if (D->doesThisDeclarationHaveABody()) {
     if (!Policy.TerseOutput) {
@@ -1218,7 +1223,10 @@ void DeclPrinter::VisitTemplateDecl(const TemplateDecl *D) {
 
   if (const TemplateTemplateParmDecl *TTP =
         dyn_cast<TemplateTemplateParmDecl>(D)) {
-    Out << "class";
+    if (TTP->wasDeclaredWithTypename())
+      Out << "typename";
+    else
+      Out << "class";
 
     if (TTP->isParameterPack())
       Out << " ...";

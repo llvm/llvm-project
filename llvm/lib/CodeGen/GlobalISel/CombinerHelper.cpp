@@ -6273,8 +6273,21 @@ bool CombinerHelper::matchShiftsTooBig(MachineInstr &MI) {
 }
 
 bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) {
-  Register LHS = MI.getOperand(1).getReg();
-  Register RHS = MI.getOperand(2).getReg();
+  unsigned LHSOpndIdx = 1;
+  unsigned RHSOpndIdx = 2;
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_SADDO:
+  case TargetOpcode::G_UMULO:
+  case TargetOpcode::G_SMULO:
+    LHSOpndIdx = 2;
+    RHSOpndIdx = 3;
+    break;
+  default:
+    break;
+  }
+  Register LHS = MI.getOperand(LHSOpndIdx).getReg();
+  Register RHS = MI.getOperand(RHSOpndIdx).getReg();
   if (!getIConstantVRegVal(LHS, MRI)) {
     // Skip commuting if LHS is not a constant. But, LHS may be a
     // G_CONSTANT_FOLD_BARRIER. If so we commute as long as we don't already
@@ -6300,10 +6313,23 @@ bool CombinerHelper::matchCommuteFPConstantToRHS(MachineInstr &MI) {
 
 void CombinerHelper::applyCommuteBinOpOperands(MachineInstr &MI) {
   Observer.changingInstr(MI);
-  Register LHSReg = MI.getOperand(1).getReg();
-  Register RHSReg = MI.getOperand(2).getReg();
-  MI.getOperand(1).setReg(RHSReg);
-  MI.getOperand(2).setReg(LHSReg);
+  unsigned LHSOpndIdx = 1;
+  unsigned RHSOpndIdx = 2;
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_SADDO:
+  case TargetOpcode::G_UMULO:
+  case TargetOpcode::G_SMULO:
+    LHSOpndIdx = 2;
+    RHSOpndIdx = 3;
+    break;
+  default:
+    break;
+  }
+  Register LHSReg = MI.getOperand(LHSOpndIdx).getReg();
+  Register RHSReg = MI.getOperand(RHSOpndIdx).getReg();
+  MI.getOperand(LHSOpndIdx).setReg(RHSReg);
+  MI.getOperand(RHSOpndIdx).setReg(LHSReg);
   Observer.changedInstr(MI);
 }
 
