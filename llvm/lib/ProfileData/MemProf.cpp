@@ -222,8 +222,6 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
   llvm_unreachable("unsupported MemProf version");
 }
 
-// Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to translate
-// CallStackId to call stacks with frames inline.
 MemProfRecord IndexedMemProfRecord::toMemProfRecord(
     std::function<const llvm::SmallVector<Frame>(const CallStackId)> Callback)
     const {

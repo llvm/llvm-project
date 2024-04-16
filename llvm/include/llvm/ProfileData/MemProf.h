@@ -394,6 +394,8 @@ struct IndexedMemProfRecord {
                                           const unsigned char *Buffer,
                                           IndexedVersion Version);
 
+  // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
+  // translate CallStackId to call stacks with frames inline.
   MemProfRecord toMemProfRecord(
       std::function<const llvm::SmallVector<Frame>(const CallStackId)> Callback)
       const;
