@@ -669,19 +669,8 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
-  /// FIXME: Implement discarding declarations actually in global module
-  /// fragment. See [module.global.frag]p3,4 for details.
-  bool isDiscardedInGlobalModuleFragment() const { return false; }
-
-  /// Check if we should skip checking ODRHash for declaration \param D.
-  ///
-  /// The existing ODRHash mechanism seems to be not stable enough and
-  /// the false positive ODR violation reports are annoying and we rarely see
-  /// true ODR violation reports. Also we learned that MSVC disabled ODR checks
-  /// for declarations in GMF. So we try to disable ODR checks in the GMF to
-  /// get better user experiences before we make the ODR violation checks stable
-  /// enough.
-  bool shouldSkipCheckingODR() const;
+  /// Whether this declaration comes from explicit global module.
+  bool isFromExplicitGlobalModule() const;
 
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
@@ -1740,7 +1729,7 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsExplicitlyDefaulted : 1;
     LLVM_PREFERRED_TYPE(bool)
-    uint64_t HasDefaultedFunctionInfo : 1;
+    uint64_t HasDefaultedOrDeletedInfo : 1;
 
     /// For member functions of complete types, whether this is an ineligible
     /// special member function or an unselected destructor. See

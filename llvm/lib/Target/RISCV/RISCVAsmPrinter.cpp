@@ -14,6 +14,7 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
+#include "MCTargetDesc/RISCVMatInt.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
 #include "RISCV.h"
 #include "RISCVMachineFunctionInfo.h"
@@ -80,7 +81,8 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
-  void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
+  // Returns whether Inst is compressed.
+  bool EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);
 
@@ -152,7 +154,34 @@ void RISCVAsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
 
   PatchPointOpers Opers(&MI);
 
+  const MachineOperand &CalleeMO = Opers.getCallTarget();
   unsigned EncodedBytes = 0;
+
+  if (CalleeMO.isImm()) {
+    uint64_t CallTarget = CalleeMO.getImm();
+    if (CallTarget) {
+      assert((CallTarget & 0xFFFF'FFFF'FFFF) == CallTarget &&
+             "High 16 bits of call target should be zero.");
+      // Materialize the jump address:
+      SmallVector<MCInst, 8> Seq;
+      RISCVMatInt::generateMCInstSeq(CallTarget, *STI, RISCV::X1, Seq);
+      for (MCInst &Inst : Seq) {
+        bool Compressed = EmitToStreamer(OutStreamer, Inst);
+        EncodedBytes += Compressed ? 2 : 4;
+      }
+      bool Compressed = EmitToStreamer(OutStreamer, MCInstBuilder(RISCV::JALR)
+                                                        .addReg(RISCV::X1)
+                                                        .addReg(RISCV::X1)
+                                                        .addImm(0));
+      EncodedBytes += Compressed ? 2 : 4;
+    }
+  } else if (CalleeMO.isGlobal()) {
+    MCOperand CallTargetMCOp;
+    lowerOperand(CalleeMO, CallTargetMCOp);
+    EmitToStreamer(OutStreamer,
+                   MCInstBuilder(RISCV::PseudoCALL).addOperand(CallTargetMCOp));
+    EncodedBytes += 8;
+  }
 
   // Emit padding.
   unsigned NumBytes = Opers.getNumPatchBytes();
@@ -172,6 +201,35 @@ void RISCVAsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
     assert(PatchBytes % NOPBytes == 0 &&
            "Invalid number of NOP bytes requested!");
     emitNops(PatchBytes / NOPBytes);
+  } else {
+    // Lower call target and choose correct opcode
+    const MachineOperand &CallTarget = SOpers.getCallTarget();
+    MCOperand CallTargetMCOp;
+    switch (CallTarget.getType()) {
+    case MachineOperand::MO_GlobalAddress:
+    case MachineOperand::MO_ExternalSymbol:
+      lowerOperand(CallTarget, CallTargetMCOp);
+      EmitToStreamer(
+          OutStreamer,
+          MCInstBuilder(RISCV::PseudoCALL).addOperand(CallTargetMCOp));
+      break;
+    case MachineOperand::MO_Immediate:
+      CallTargetMCOp = MCOperand::createImm(CallTarget.getImm());
+      EmitToStreamer(OutStreamer, MCInstBuilder(RISCV::JAL)
+                                      .addReg(RISCV::X1)
+                                      .addOperand(CallTargetMCOp));
+      break;
+    case MachineOperand::MO_Register:
+      CallTargetMCOp = MCOperand::createReg(CallTarget.getReg());
+      EmitToStreamer(OutStreamer, MCInstBuilder(RISCV::JALR)
+                                      .addReg(RISCV::X1)
+                                      .addOperand(CallTargetMCOp)
+                                      .addImm(0));
+      break;
+    default:
+      llvm_unreachable("Unsupported operand type in statepoint call target");
+      break;
+    }
   }
 
   auto &Ctx = OutStreamer.getContext();
@@ -180,12 +238,13 @@ void RISCVAsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
   SM.recordStatepoint(*MILabel, MI);
 }
 
-void RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
+bool RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
   bool Res = RISCVRVC::compress(CInst, Inst, *STI);
   if (Res)
     ++RISCVNumInstrsCompressed;
   AsmPrinter::EmitToStreamer(*OutStreamer, Res ? CInst : Inst);
+  return Res;
 }
 
 // Simple pseudo-instructions have their lowering (with expansion to real

@@ -1062,7 +1062,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
                             ISD::EXTRACT_SUBVECTOR, ISD::SCALAR_TO_VECTOR},
                            VT, Custom);
-        setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+        if (Subtarget.hasStdExtZfhminOrZhinxmin())
+          setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
         // load/store
         setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
 
@@ -1427,6 +1428,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR,
                          ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
                          ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
+                         ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
                          ISD::INSERT_VECTOR_ELT, ISD::ABS});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
@@ -1480,6 +1482,11 @@ bool RISCVTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,
   // VF must be a power of 2.
   unsigned MaxVF = (RISCV::RVVBitsPerBlock / 8) * 8;
   return VF > MaxVF || !isPowerOf2_32(VF);
+}
+
+bool RISCVTargetLowering::shouldExpandCttzElements(EVT VT) const {
+  return !Subtarget.hasVInstructions() ||
+         VT.getVectorElementType() != MVT::i1 || !isTypeLegal(VT);
 }
 
 bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
@@ -4622,17 +4629,33 @@ static SDValue getWideningInterleave(SDValue EvenV, SDValue OddV,
   SDValue Passthru = DAG.getUNDEF(WideContainerVT);
 
   SDValue Interleaved;
-  if (Subtarget.hasStdExtZvbb()) {
+  if (OddV.isUndef()) {
+    // If OddV is undef, this is a zero extend.
+    // FIXME: Not only does this optimize the code, it fixes some correctness
+    // issues because MIR does not have freeze.
+    Interleaved =
+        DAG.getNode(RISCVISD::VZEXT_VL, DL, WideContainerVT, EvenV, Mask, VL);
+  } else if (Subtarget.hasStdExtZvbb()) {
     // Interleaved = (OddV << VecVT.getScalarSizeInBits()) + EvenV.
     SDValue OffsetVec =
-        DAG.getSplatVector(VecContainerVT, DL,
-                           DAG.getConstant(VecVT.getScalarSizeInBits(), DL,
-                                           Subtarget.getXLenVT()));
+        DAG.getConstant(VecVT.getScalarSizeInBits(), DL, VecContainerVT);
     Interleaved = DAG.getNode(RISCVISD::VWSLL_VL, DL, WideContainerVT, OddV,
                               OffsetVec, Passthru, Mask, VL);
-    Interleaved = DAG.getNode(RISCVISD::VWADDU_W_VL, DL, WideContainerVT,
-                              Interleaved, EvenV, Passthru, Mask, VL);
+    if (!EvenV.isUndef())
+      Interleaved = DAG.getNode(RISCVISD::VWADDU_W_VL, DL, WideContainerVT,
+                                Interleaved, EvenV, Passthru, Mask, VL);
+  } else if (EvenV.isUndef()) {
+    Interleaved =
+        DAG.getNode(RISCVISD::VZEXT_VL, DL, WideContainerVT, OddV, Mask, VL);
+
+    SDValue OffsetVec =
+        DAG.getConstant(VecVT.getScalarSizeInBits(), DL, WideContainerVT);
+    Interleaved = DAG.getNode(RISCVISD::SHL_VL, DL, WideContainerVT,
+                              Interleaved, OffsetVec, Passthru, Mask, VL);
   } else {
+    // FIXME: We should freeze the odd vector here. We already handled the case
+    // of provably undef/poison above.
+
     // Widen EvenV and OddV with 0s and add one copy of OddV to EvenV with
     // vwaddu.vv
     Interleaved = DAG.getNode(RISCVISD::VWADDU_VL, DL, WideContainerVT, EvenV,
@@ -8700,6 +8723,29 @@ static SDValue lowerGetVectorLength(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), Res);
 }
 
+static SDValue lowerCttzElts(SDNode *N, SelectionDAG &DAG,
+                             const RISCVSubtarget &Subtarget) {
+  SDValue Op0 = N->getOperand(1);
+  MVT OpVT = Op0.getSimpleValueType();
+  MVT ContainerVT = OpVT;
+  if (OpVT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(DAG, OpVT, Subtarget);
+    Op0 = convertToScalableVector(ContainerVT, Op0, DAG, Subtarget);
+  }
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDLoc DL(N);
+  auto [Mask, VL] = getDefaultVLOps(OpVT, ContainerVT, DL, DAG, Subtarget);
+  SDValue Res = DAG.getNode(RISCVISD::VFIRST_VL, DL, XLenVT, Op0, Mask, VL);
+  if (isOneConstant(N->getOperand(2)))
+    return Res;
+
+  // Convert -1 to VL.
+  SDValue Setcc =
+      DAG.getSetCC(DL, XLenVT, Res, DAG.getConstant(0, DL, XLenVT), ISD::SETLT);
+  VL = DAG.getElementCount(DL, XLenVT, OpVT.getVectorElementCount());
+  return DAG.getSelect(DL, XLenVT, Setcc, VL, Res);
+}
+
 static inline void promoteVCIXScalar(const SDValue &Op,
                                      SmallVectorImpl<SDValue> &Operands,
                                      SelectionDAG &DAG) {
@@ -8895,6 +8941,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::experimental_get_vector_length:
     return lowerGetVectorLength(Op.getNode(), DAG, Subtarget);
+  case Intrinsic::experimental_cttz_elts:
+    return lowerCttzElts(Op.getNode(), DAG, Subtarget);
   case Intrinsic::riscv_vmv_x_s: {
     SDValue Res = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, Op.getOperand(1));
     return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Res);
@@ -10385,14 +10433,10 @@ RISCVTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
   if (MinVLMAX == MaxVLMAX && MinVLMAX == VT.getVectorNumElements() &&
       getLMUL1VT(ContainerVT).bitsLE(ContainerVT)) {
     MachineMemOperand *MMO = Load->getMemOperand();
-    MachineFunction &MF = DAG.getMachineFunction();
-    MMO = MF.getMachineMemOperand(
-        MMO, MMO->getPointerInfo(),
-        MMO->getMemoryType().isValid()
-            ? LLT::scalable_vector(1, MMO->getMemoryType().getSizeInBits())
-            : MMO->getMemoryType());
     SDValue NewLoad =
-        DAG.getLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(), MMO);
+        DAG.getLoad(ContainerVT, DL, Load->getChain(), Load->getBasePtr(),
+                    MMO->getPointerInfo(), MMO->getBaseAlign(), MMO->getFlags(),
+                    MMO->getAAInfo(), MMO->getRanges());
     SDValue Result = convertFromScalableVector(VT, NewLoad, DAG, Subtarget);
     return DAG.getMergeValues({Result, NewLoad.getValue(1)}, DL);
   }
@@ -10452,14 +10496,9 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
   if (MinVLMAX == MaxVLMAX && MinVLMAX == VT.getVectorNumElements() &&
       getLMUL1VT(ContainerVT).bitsLE(ContainerVT)) {
     MachineMemOperand *MMO = Store->getMemOperand();
-    MachineFunction &MF = DAG.getMachineFunction();
-    MMO = MF.getMachineMemOperand(
-        MMO, MMO->getPointerInfo(),
-        MMO->getMemoryType().isValid()
-            ? LLT::scalable_vector(1, MMO->getMemoryType().getSizeInBits())
-            : MMO->getMemoryType());
     return DAG.getStore(Store->getChain(), DL, NewValue, Store->getBasePtr(),
-                        MMO);
+                        MMO->getPointerInfo(), MMO->getBaseAlign(),
+                        MMO->getFlags(), MMO->getAAInfo());
   }
 
   SDValue VL = getVLOp(VT.getVectorNumElements(), ContainerVT, DL, DAG,
@@ -12318,6 +12357,12 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
+    case Intrinsic::experimental_cttz_elts: {
+      SDValue Res = lowerCttzElts(N, DAG, Subtarget);
+      Results.push_back(
+          DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), Res));
+      return;
+    }
     case Intrinsic::riscv_orc_b:
     case Intrinsic::riscv_brev8:
     case Intrinsic::riscv_sha256sig0:
@@ -12936,12 +12981,14 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
 // add (zext, zext) -> zext (add (zext, zext))
 // sub (zext, zext) -> sext (sub (zext, zext))
 // mul (zext, zext) -> zext (mul (zext, zext))
+// sdiv (zext, zext) -> zext (sdiv (zext, zext))
+// udiv (zext, zext) -> zext (udiv (zext, zext))
+// srem (zext, zext) -> zext (srem (zext, zext))
+// urem (zext, zext) -> zext (urem (zext, zext))
 //
 // where the sum of the extend widths match, and the the range of the bin op
 // fits inside the width of the narrower bin op. (For profitability on rvv, we
 // use a power of two for both inner and outer extend.)
-//
-// TODO: Extend this to other binary ops
 static SDValue combineBinOpOfZExt(SDNode *N, SelectionDAG &DAG) {
 
   EVT VT = N->getValueType(0);
@@ -13343,10 +13390,56 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
-static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG) {
+// Try to expand a scalar multiply to a faster sequence.
+static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
+                         TargetLowering::DAGCombinerInfo &DCI,
+                         const RISCVSubtarget &Subtarget) {
+
+  EVT VT = N->getValueType(0);
+
+  // LI + MUL is usually smaller than the alternative sequence.
+  if (DAG.getMachineFunction().getFunction().hasMinSize())
+    return SDValue();
+
+  if (DCI.isBeforeLegalize() || DCI.isCalledByLegalizer())
+    return SDValue();
+
+  if (VT != Subtarget.getXLenVT())
+    return SDValue();
+
+  if (!Subtarget.hasStdExtZba())
+    return SDValue();
+
+  ConstantSDNode *CNode = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!CNode)
+    return SDValue();
+  uint64_t MulAmt = CNode->getZExtValue();
+
+  // If this is a power 2 + 2/4/8, we can use a shift followed by a single
+  // shXadd. First check if this a sum of two power of 2s because that's
+  // easy. Then count how many zeros are up to the first bit.
+  if (isPowerOf2_64(MulAmt & (MulAmt - 1))) {
+    unsigned ScaleShift = llvm::countr_zero(MulAmt);
+    if (ScaleShift >= 1 && ScaleShift < 4) {
+      unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
+      SDLoc DL(N);
+      SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                                   DAG.getConstant(ShiftAmt, DL, VT));
+      SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                                   DAG.getConstant(ScaleShift, DL, VT));
+      return DAG.getNode(ISD::ADD, DL, VT, Shift1, Shift2);
+    }
+  }
+  return SDValue();
+}
+
+
+static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const RISCVSubtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   if (!VT.isVector())
-    return SDValue();
+    return expandMul(N, DAG, DCI, Subtarget);
 
   SDLoc DL(N);
   SDValue N0 = N->getOperand(0);
@@ -13527,9 +13620,10 @@ struct CombineResult;
 enum ExtKind : uint8_t { ZExt = 1 << 0, SExt = 1 << 1, FPExt = 1 << 2 };
 /// Helper class for folding sign/zero extensions.
 /// In particular, this class is used for the following combines:
-/// add | add_vl -> vwadd(u) | vwadd(u)_w
+/// add | add_vl | or disjoint -> vwadd(u) | vwadd(u)_w
 /// sub | sub_vl -> vwsub(u) | vwsub(u)_w
 /// mul | mul_vl -> vwmul(u) | vwmul_su
+/// shl | shl_vl -> vwsll
 /// fadd -> vfwadd | vfwadd_w
 /// fsub -> vfwsub | vfwsub_w
 /// fmul -> vfwmul
@@ -13539,7 +13633,7 @@ enum ExtKind : uint8_t { ZExt = 1 << 0, SExt = 1 << 1, FPExt = 1 << 2 };
 /// NodeExtensionHelper for `a` and one for `b`.
 ///
 /// This class abstracts away how the extension is materialized and
-/// how its Mask, VL, number of users affect the combines.
+/// how its number of users affect the combines.
 ///
 /// In particular:
 /// - VWADD_W is conceptually == add(op0, sext(op1))
@@ -13563,15 +13657,6 @@ struct NodeExtensionHelper {
   /// This boolean captures whether we care if this operand would still be
   /// around after the folding happens.
   bool EnforceOneUse;
-  /// Records if this operand's mask needs to match the mask of the operation
-  /// that it will fold into.
-  bool CheckMask;
-  /// Value of the Mask for this operand.
-  /// It may be SDValue().
-  SDValue Mask;
-  /// Value of the vector length operand.
-  /// It may be SDValue().
-  SDValue VL;
   /// Original value that this NodeExtensionHelper represents.
   SDValue OrigOperand;
 
@@ -13592,7 +13677,8 @@ struct NodeExtensionHelper {
 
   /// Check if this instance represents a splat.
   bool isSplat() const {
-    return OrigOperand.getOpcode() == RISCVISD::VMV_V_X_VL;
+    return OrigOperand.getOpcode() == RISCVISD::VMV_V_X_VL ||
+           OrigOperand.getOpcode() == ISD::SPLAT_VECTOR;
   }
 
   /// Get the extended opcode.
@@ -13636,6 +13722,8 @@ struct NodeExtensionHelper {
     case RISCVISD::VZEXT_VL:
     case RISCVISD::FP_EXTEND_VL:
       return DAG.getNode(ExtOpc, DL, NarrowVT, Source, Mask, VL);
+    case ISD::SPLAT_VECTOR:
+      return DAG.getSplat(NarrowVT, DL, Source.getOperand(0));
     case RISCVISD::VMV_V_X_VL:
       return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, NarrowVT,
                          DAG.getUNDEF(NarrowVT), Source.getOperand(1), VL);
@@ -13675,6 +13763,7 @@ struct NodeExtensionHelper {
     case RISCVISD::ADD_VL:
     case RISCVISD::VWADD_W_VL:
     case RISCVISD::VWADDU_W_VL:
+    case ISD::OR:
       return RISCVISD::VWADD_VL;
     case ISD::SUB:
     case RISCVISD::SUB_VL:
@@ -13697,6 +13786,7 @@ struct NodeExtensionHelper {
     case RISCVISD::ADD_VL:
     case RISCVISD::VWADD_W_VL:
     case RISCVISD::VWADDU_W_VL:
+    case ISD::OR:
       return RISCVISD::VWADDU_VL;
     case ISD::SUB:
     case RISCVISD::SUB_VL:
@@ -13706,6 +13796,9 @@ struct NodeExtensionHelper {
     case ISD::MUL:
     case RISCVISD::MUL_VL:
       return RISCVISD::VWMULU_VL;
+    case ISD::SHL:
+    case RISCVISD::SHL_VL:
+      return RISCVISD::VWSLL_VL;
     default:
       llvm_unreachable("Unexpected opcode");
     }
@@ -13742,6 +13835,7 @@ struct NodeExtensionHelper {
     switch (Opcode) {
     case ISD::ADD:
     case RISCVISD::ADD_VL:
+    case ISD::OR:
       return SupportsExt == ExtKind::SExt ? RISCVISD::VWADD_W_VL
                                           : RISCVISD::VWADDU_W_VL;
     case ISD::SUB:
@@ -13765,6 +13859,47 @@ struct NodeExtensionHelper {
   /// Check if this node needs to be fully folded or extended for all users.
   bool needToPromoteOtherUsers() const { return EnforceOneUse; }
 
+  void fillUpExtensionSupportForSplat(SDNode *Root, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+    unsigned Opc = OrigOperand.getOpcode();
+    MVT VT = OrigOperand.getSimpleValueType();
+
+    assert((Opc == ISD::SPLAT_VECTOR || Opc == RISCVISD::VMV_V_X_VL) &&
+           "Unexpected Opcode");
+
+    // The pasthru must be undef for tail agnostic.
+    if (Opc == RISCVISD::VMV_V_X_VL && !OrigOperand.getOperand(0).isUndef())
+      return;
+
+    // Get the scalar value.
+    SDValue Op = Opc == ISD::SPLAT_VECTOR ? OrigOperand.getOperand(0)
+                                          : OrigOperand.getOperand(1);
+
+    // See if we have enough sign bits or zero bits in the scalar to use a
+    // widening opcode by splatting to smaller element size.
+    unsigned EltBits = VT.getScalarSizeInBits();
+    unsigned ScalarBits = Op.getValueSizeInBits();
+    // Make sure we're getting all element bits from the scalar register.
+    // FIXME: Support implicit sign extension of vmv.v.x?
+    if (ScalarBits < EltBits)
+      return;
+
+    unsigned NarrowSize = VT.getScalarSizeInBits() / 2;
+    // If the narrow type cannot be expressed with a legal VMV,
+    // this is not a valid candidate.
+    if (NarrowSize < 8)
+      return;
+
+    if (DAG.ComputeMaxSignificantBits(Op) <= NarrowSize)
+      SupportsSExt = true;
+
+    if (DAG.MaskedValueIsZero(Op,
+                              APInt::getBitsSetFrom(ScalarBits, NarrowSize)))
+      SupportsZExt = true;
+
+    EnforceOneUse = false;
+  }
+
   /// Helper method to set the various fields of this struct based on the
   /// type of \p Root.
   void fillUpExtensionSupport(SDNode *Root, SelectionDAG &DAG,
@@ -13773,8 +13908,10 @@ struct NodeExtensionHelper {
     SupportsSExt = false;
     SupportsFPExt = false;
     EnforceOneUse = true;
-    CheckMask = true;
     unsigned Opc = OrigOperand.getOpcode();
+    // For the nodes we handle below, we end up using their inputs directly: see
+    // getSource(). However since they either don't have a passthru or we check
+    // that their passthru is undef, we can safely ignore their mask and VL.
     switch (Opc) {
     case ISD::ZERO_EXTEND:
     case ISD::SIGN_EXTEND: {
@@ -13790,77 +13927,38 @@ struct NodeExtensionHelper {
 
       SupportsZExt = Opc == ISD::ZERO_EXTEND;
       SupportsSExt = Opc == ISD::SIGN_EXTEND;
-
-      SDLoc DL(Root);
-      std::tie(Mask, VL) = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
       break;
     }
     case RISCVISD::VZEXT_VL:
       SupportsZExt = true;
-      Mask = OrigOperand.getOperand(1);
-      VL = OrigOperand.getOperand(2);
       break;
     case RISCVISD::VSEXT_VL:
       SupportsSExt = true;
-      Mask = OrigOperand.getOperand(1);
-      VL = OrigOperand.getOperand(2);
       break;
     case RISCVISD::FP_EXTEND_VL:
       SupportsFPExt = true;
-      Mask = OrigOperand.getOperand(1);
-      VL = OrigOperand.getOperand(2);
       break;
-    case RISCVISD::VMV_V_X_VL: {
-      // Historically, we didn't care about splat values not disappearing during
-      // combines.
-      EnforceOneUse = false;
-      CheckMask = false;
-      VL = OrigOperand.getOperand(2);
-
-      // The operand is a splat of a scalar.
-
-      // The pasthru must be undef for tail agnostic.
-      if (!OrigOperand.getOperand(0).isUndef())
-        break;
-
-      // Get the scalar value.
-      SDValue Op = OrigOperand.getOperand(1);
-
-      // See if we have enough sign bits or zero bits in the scalar to use a
-      // widening opcode by splatting to smaller element size.
-      MVT VT = Root->getSimpleValueType(0);
-      unsigned EltBits = VT.getScalarSizeInBits();
-      unsigned ScalarBits = Op.getValueSizeInBits();
-      // Make sure we're getting all element bits from the scalar register.
-      // FIXME: Support implicit sign extension of vmv.v.x?
-      if (ScalarBits < EltBits)
-        break;
-
-      unsigned NarrowSize = VT.getScalarSizeInBits() / 2;
-      // If the narrow type cannot be expressed with a legal VMV,
-      // this is not a valid candidate.
-      if (NarrowSize < 8)
-        break;
-
-      if (DAG.ComputeMaxSignificantBits(Op) <= NarrowSize)
-        SupportsSExt = true;
-      if (DAG.MaskedValueIsZero(Op,
-                                APInt::getBitsSetFrom(ScalarBits, NarrowSize)))
-        SupportsZExt = true;
+    case ISD::SPLAT_VECTOR:
+    case RISCVISD::VMV_V_X_VL:
+      fillUpExtensionSupportForSplat(Root, DAG, Subtarget);
       break;
-    }
     default:
       break;
     }
   }
 
   /// Check if \p Root supports any extension folding combines.
-  static bool isSupportedRoot(const SDNode *Root) {
+  static bool isSupportedRoot(const SDNode *Root,
+                              const RISCVSubtarget &Subtarget) {
     switch (Root->getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
     case ISD::MUL: {
       return Root->getValueType(0).isScalableVector();
+    }
+    case ISD::OR: {
+      return Root->getValueType(0).isScalableVector() &&
+             Root->getFlags().hasDisjoint();
     }
     // Vector Widening Integer Add/Sub/Mul Instructions
     case RISCVISD::ADD_VL:
@@ -13877,6 +13975,11 @@ struct NodeExtensionHelper {
     case RISCVISD::VFWADD_W_VL:
     case RISCVISD::VFWSUB_W_VL:
       return true;
+    case ISD::SHL:
+      return Root->getValueType(0).isScalableVector() &&
+             Subtarget.hasStdExtZvbb();
+    case RISCVISD::SHL_VL:
+      return Subtarget.hasStdExtZvbb();
     default:
       return false;
     }
@@ -13885,8 +13988,9 @@ struct NodeExtensionHelper {
   /// Build a NodeExtensionHelper for \p Root.getOperand(\p OperandIdx).
   NodeExtensionHelper(SDNode *Root, unsigned OperandIdx, SelectionDAG &DAG,
                       const RISCVSubtarget &Subtarget) {
-    assert(isSupportedRoot(Root) && "Trying to build an helper with an "
-                                    "unsupported root");
+    assert(isSupportedRoot(Root, Subtarget) &&
+           "Trying to build an helper with an "
+           "unsupported root");
     assert(OperandIdx < 2 && "Requesting something else than LHS or RHS");
     assert(DAG.getTargetLoweringInfo().isTypeLegal(Root->getValueType(0)));
     OrigOperand = Root->getOperand(OperandIdx);
@@ -13910,8 +14014,6 @@ struct NodeExtensionHelper {
             Opc == RISCVISD::VWADD_W_VL || Opc == RISCVISD::VWSUB_W_VL;
         SupportsFPExt =
             Opc == RISCVISD::VFWADD_W_VL || Opc == RISCVISD::VFWSUB_W_VL;
-        std::tie(Mask, VL) = getMaskAndVL(Root, DAG, Subtarget);
-        CheckMask = true;
         // There's no existing extension here, so we don't have to worry about
         // making sure it gets removed.
         EnforceOneUse = false;
@@ -13924,25 +14026,17 @@ struct NodeExtensionHelper {
     }
   }
 
-  /// Check if this operand is compatible with the given vector length \p VL.
-  bool isVLCompatible(SDValue VL) const {
-    return this->VL != SDValue() && this->VL == VL;
-  }
-
-  /// Check if this operand is compatible with the given \p Mask.
-  bool isMaskCompatible(SDValue Mask) const {
-    return !CheckMask || (this->Mask != SDValue() && this->Mask == Mask);
-  }
-
   /// Helper function to get the Mask and VL from \p Root.
   static std::pair<SDValue, SDValue>
   getMaskAndVL(const SDNode *Root, SelectionDAG &DAG,
                const RISCVSubtarget &Subtarget) {
-    assert(isSupportedRoot(Root) && "Unexpected root");
+    assert(isSupportedRoot(Root, Subtarget) && "Unexpected root");
     switch (Root->getOpcode()) {
     case ISD::ADD:
     case ISD::SUB:
-    case ISD::MUL: {
+    case ISD::MUL:
+    case ISD::OR:
+    case ISD::SHL: {
       SDLoc DL(Root);
       MVT VT = Root->getSimpleValueType(0);
       return getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
@@ -13952,19 +14046,13 @@ struct NodeExtensionHelper {
     }
   }
 
-  /// Check if the Mask and VL of this operand are compatible with \p Root.
-  bool areVLAndMaskCompatible(SDNode *Root, SelectionDAG &DAG,
-                              const RISCVSubtarget &Subtarget) const {
-    auto [Mask, VL] = getMaskAndVL(Root, DAG, Subtarget);
-    return isMaskCompatible(Mask) && isVLCompatible(VL);
-  }
-
   /// Helper function to check if \p N is commutative with respect to the
   /// foldings that are supported by this class.
   static bool isCommutative(const SDNode *N) {
     switch (N->getOpcode()) {
     case ISD::ADD:
     case ISD::MUL:
+    case ISD::OR:
     case RISCVISD::ADD_VL:
     case RISCVISD::MUL_VL:
     case RISCVISD::VWADD_W_VL:
@@ -13979,6 +14067,8 @@ struct NodeExtensionHelper {
     case RISCVISD::VWSUBU_W_VL:
     case RISCVISD::FSUB_VL:
     case RISCVISD::VFWSUB_W_VL:
+    case ISD::SHL:
+    case RISCVISD::SHL_VL:
       return false;
     default:
       llvm_unreachable("Unexpected opcode");
@@ -14031,6 +14121,8 @@ struct CombineResult {
     case ISD::ADD:
     case ISD::SUB:
     case ISD::MUL:
+    case ISD::OR:
+    case ISD::SHL:
       Merge = DAG.getUNDEF(Root->getValueType(0));
       break;
     }
@@ -14056,9 +14148,6 @@ canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
                                  const NodeExtensionHelper &RHS,
                                  uint8_t AllowExtMask, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
-  if (!LHS.areVLAndMaskCompatible(Root, DAG, Subtarget) ||
-      !RHS.areVLAndMaskCompatible(Root, DAG, Subtarget))
-    return std::nullopt;
   if ((AllowExtMask & ExtKind::ZExt) && LHS.SupportsZExt && RHS.SupportsZExt)
     return CombineResult(NodeExtensionHelper::getZExtOpcode(Root->getOpcode()),
                          Root, LHS, /*LHSExt=*/{ExtKind::ZExt}, RHS,
@@ -14067,7 +14156,7 @@ canFoldToVWWithSameExtensionImpl(SDNode *Root, const NodeExtensionHelper &LHS,
     return CombineResult(NodeExtensionHelper::getSExtOpcode(Root->getOpcode()),
                          Root, LHS, /*LHSExt=*/{ExtKind::SExt}, RHS,
                          /*RHSExt=*/{ExtKind::SExt});
-  if ((AllowExtMask & ExtKind::FPExt) && RHS.SupportsFPExt)
+  if ((AllowExtMask & ExtKind::FPExt) && LHS.SupportsFPExt && RHS.SupportsFPExt)
     return CombineResult(NodeExtensionHelper::getFPExtOpcode(Root->getOpcode()),
                          Root, LHS, /*LHSExt=*/{ExtKind::FPExt}, RHS,
                          /*RHSExt=*/{ExtKind::FPExt});
@@ -14097,9 +14186,6 @@ static std::optional<CombineResult>
 canFoldToVW_W(SDNode *Root, const NodeExtensionHelper &LHS,
               const NodeExtensionHelper &RHS, SelectionDAG &DAG,
               const RISCVSubtarget &Subtarget) {
-  if (!RHS.areVLAndMaskCompatible(Root, DAG, Subtarget))
-    return std::nullopt;
-
   if (RHS.SupportsFPExt)
     return CombineResult(
         NodeExtensionHelper::getWOpcode(Root->getOpcode(), ExtKind::FPExt),
@@ -14167,9 +14253,6 @@ canFoldToVW_SU(SDNode *Root, const NodeExtensionHelper &LHS,
 
   if (!LHS.SupportsSExt || !RHS.SupportsZExt)
     return std::nullopt;
-  if (!LHS.areVLAndMaskCompatible(Root, DAG, Subtarget) ||
-      !RHS.areVLAndMaskCompatible(Root, DAG, Subtarget))
-    return std::nullopt;
   return CombineResult(NodeExtensionHelper::getSUOpcode(Root->getOpcode()),
                        Root, LHS, /*LHSExt=*/{ExtKind::SExt}, RHS,
                        /*RHSExt=*/{ExtKind::ZExt});
@@ -14181,6 +14264,7 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
   switch (Root->getOpcode()) {
   case ISD::ADD:
   case ISD::SUB:
+  case ISD::OR:
   case RISCVISD::ADD_VL:
   case RISCVISD::SUB_VL:
   case RISCVISD::FADD_VL:
@@ -14199,6 +14283,11 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
     Strategies.push_back(canFoldToVWWithSameExtension);
     // mul -> vwmulsu
     Strategies.push_back(canFoldToVW_SU);
+    break;
+  case ISD::SHL:
+  case RISCVISD::SHL_VL:
+    // shl -> vwsll
+    Strategies.push_back(canFoldToVWWithZEXT);
     break;
   case RISCVISD::VWADD_W_VL:
   case RISCVISD::VWSUB_W_VL:
@@ -14224,9 +14313,10 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
 
 /// Combine a binary operation to its equivalent VW or VW_W form.
 /// The supported combines are:
-/// add_vl -> vwadd(u) | vwadd(u)_w
-/// sub_vl -> vwsub(u) | vwsub(u)_w
-/// mul_vl -> vwmul(u) | vwmul_su
+/// add | add_vl | or disjoint -> vwadd(u) | vwadd(u)_w
+/// sub | sub_vl -> vwsub(u) | vwsub(u)_w
+/// mul | mul_vl -> vwmul(u) | vwmul_su
+/// shl | shl_vl -> vwsll
 /// fadd_vl ->  vfwadd | vfwadd_w
 /// fsub_vl ->  vfwsub | vfwsub_w
 /// fmul_vl ->  vfwmul
@@ -14241,7 +14331,7 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
   if (DCI.isBeforeLegalize())
     return SDValue();
 
-  if (!NodeExtensionHelper::isSupportedRoot(N))
+  if (!NodeExtensionHelper::isSupportedRoot(N, Subtarget))
     return SDValue();
 
   SmallVector<SDNode *> Worklist;
@@ -14252,7 +14342,7 @@ static SDValue combineBinOp_VLToVWBinOp_VL(SDNode *N,
 
   while (!Worklist.empty()) {
     SDNode *Root = Worklist.pop_back_val();
-    if (!NodeExtensionHelper::isSupportedRoot(Root))
+    if (!NodeExtensionHelper::isSupportedRoot(Root, Subtarget))
       return SDValue();
 
     NodeExtensionHelper LHS(N, 0, DAG, Subtarget);
@@ -15886,14 +15976,24 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::AND:
     return performANDCombine(N, DCI, Subtarget);
-  case ISD::OR:
+  case ISD::OR: {
+    if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
+      return V;
     return performORCombine(N, DCI, Subtarget);
+  }
   case ISD::XOR:
     return performXORCombine(N, DAG, Subtarget);
   case ISD::MUL:
     if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
       return V;
-    return performMULCombine(N, DAG);
+    return performMULCombine(N, DAG, DCI, Subtarget);
+  case ISD::SDIV:
+  case ISD::UDIV:
+  case ISD::SREM:
+  case ISD::UREM:
+    if (SDValue V = combineBinOpOfZExt(N, DAG))
+      return V;
+    break;
   case ISD::FADD:
   case ISD::UMAX:
   case ISD::UMIN:
@@ -16337,9 +16437,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                               VPSN->getMemOperand(), IndexType);
     break;
   }
+  case RISCVISD::SHL_VL:
+    if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
+      return V;
+    [[fallthrough]];
   case RISCVISD::SRA_VL:
-  case RISCVISD::SRL_VL:
-  case RISCVISD::SHL_VL: {
+  case RISCVISD::SRL_VL: {
     SDValue ShAmt = N->getOperand(1);
     if (ShAmt.getOpcode() == RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL) {
       // We don't need the upper 32 bits of a 64-bit element for a shift amount.
@@ -16359,6 +16462,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     [[fallthrough]];
   case ISD::SRL:
   case ISD::SHL: {
+    if (N->getOpcode() == ISD::SHL) {
+      if (SDValue V = combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget))
+        return V;
+    }
     SDValue ShAmt = N->getOperand(1);
     if (ShAmt.getOpcode() == RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL) {
       // We don't need the upper 32 bits of a 64-bit element for a shift amount.
@@ -17608,8 +17715,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
 static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
                                                     MachineBasicBlock *BB,
-                                                    unsigned CVTXOpc,
-                                                    unsigned CVTFOpc) {
+                                                    unsigned CVTXOpc) {
   DebugLoc DL = MI.getDebugLoc();
 
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
@@ -17640,6 +17746,85 @@ static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
                                      /*IsImp*/ true));
 
   // Emit a VFCVT_F_X
+  RISCVII::VLMUL LMul = RISCVII::getLMul(MI.getDesc().TSFlags);
+  unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+  // There is no E8 variant for VFCVT_F_X.
+  assert(Log2SEW >= 4);
+  // Since MI (VFROUND) isn't SEW specific, we cannot use a macro to make
+  // handling of different (LMUL, SEW) pairs easier because we need to pull the
+  // SEW immediate from MI, and that information is not avaliable during macro
+  // expansion.
+  unsigned CVTFOpc;
+  if (Log2SEW == 4) {
+    switch (LMul) {
+    case RISCVII::LMUL_1:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M1_E16_MASK;
+      break;
+    case RISCVII::LMUL_2:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M2_E16_MASK;
+      break;
+    case RISCVII::LMUL_4:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M4_E16_MASK;
+      break;
+    case RISCVII::LMUL_8:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M8_E16_MASK;
+      break;
+    case RISCVII::LMUL_F2:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_MF2_E16_MASK;
+      break;
+    case RISCVII::LMUL_F4:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_MF4_E16_MASK;
+      break;
+    case RISCVII::LMUL_F8:
+    case RISCVII::LMUL_RESERVED:
+      llvm_unreachable("Unexpected LMUL and SEW combination value for MI.");
+    }
+  } else if (Log2SEW == 5) {
+    switch (LMul) {
+    case RISCVII::LMUL_1:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M1_E32_MASK;
+      break;
+    case RISCVII::LMUL_2:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M2_E32_MASK;
+      break;
+    case RISCVII::LMUL_4:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M4_E32_MASK;
+      break;
+    case RISCVII::LMUL_8:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M8_E32_MASK;
+      break;
+    case RISCVII::LMUL_F2:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_MF2_E32_MASK;
+      break;
+    case RISCVII::LMUL_F4:
+    case RISCVII::LMUL_F8:
+    case RISCVII::LMUL_RESERVED:
+      llvm_unreachable("Unexpected LMUL and SEW combination value for MI.");
+    }
+  } else if (Log2SEW == 6) {
+    switch (LMul) {
+    case RISCVII::LMUL_1:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M1_E64_MASK;
+      break;
+    case RISCVII::LMUL_2:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M2_E64_MASK;
+      break;
+    case RISCVII::LMUL_4:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M4_E64_MASK;
+      break;
+    case RISCVII::LMUL_8:
+      CVTFOpc = RISCV::PseudoVFCVT_F_X_V_M8_E64_MASK;
+      break;
+    case RISCVII::LMUL_F2:
+    case RISCVII::LMUL_F4:
+    case RISCVII::LMUL_F8:
+    case RISCVII::LMUL_RESERVED:
+      llvm_unreachable("Unexpected LMUL and SEW combination value for MI.");
+    }
+  } else {
+    llvm_unreachable("Unexpected LMUL and SEW combination value for MI.");
+  }
+
   BuildMI(*BB, MI, DL, TII.get(CVTFOpc))
       .add(MI.getOperand(0))
       .add(MI.getOperand(1))
@@ -17849,23 +18034,17 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                          Subtarget);
 
   case RISCV::PseudoVFROUND_NOEXCEPT_V_M1_MASK:
-    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M1_MASK,
-                                     RISCV::PseudoVFCVT_F_X_V_M1_MASK);
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M1_MASK);
   case RISCV::PseudoVFROUND_NOEXCEPT_V_M2_MASK:
-    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M2_MASK,
-                                     RISCV::PseudoVFCVT_F_X_V_M2_MASK);
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M2_MASK);
   case RISCV::PseudoVFROUND_NOEXCEPT_V_M4_MASK:
-    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M4_MASK,
-                                     RISCV::PseudoVFCVT_F_X_V_M4_MASK);
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M4_MASK);
   case RISCV::PseudoVFROUND_NOEXCEPT_V_M8_MASK:
-    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M8_MASK,
-                                     RISCV::PseudoVFCVT_F_X_V_M8_MASK);
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M8_MASK);
   case RISCV::PseudoVFROUND_NOEXCEPT_V_MF2_MASK:
-    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF2_MASK,
-                                     RISCV::PseudoVFCVT_F_X_V_MF2_MASK);
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF2_MASK);
   case RISCV::PseudoVFROUND_NOEXCEPT_V_MF4_MASK:
-    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF4_MASK,
-                                     RISCV::PseudoVFCVT_F_X_V_MF4_MASK);
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF4_MASK);
   case RISCV::PseudoFROUND_H:
   case RISCV::PseudoFROUND_H_INX:
   case RISCV::PseudoFROUND_S:
@@ -17875,6 +18054,17 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::PseudoFROUND_D_IN32X:
     return emitFROUND(MI, BB, Subtarget);
   case TargetOpcode::STATEPOINT:
+    // STATEPOINT is a pseudo instruction which has no implicit defs/uses
+    // while jal call instruction (where statepoint will be lowered at the end)
+    // has implicit def. This def is early-clobber as it will be set at
+    // the moment of the call and earlier than any use is read.
+    // Add this implicit dead def here as a workaround.
+    MI.addOperand(*MI.getMF(),
+                  MachineOperand::CreateReg(
+                      RISCV::X1, /*isDef*/ true,
+                      /*isImp*/ true, /*isKill*/ false, /*isDead*/ true,
+                      /*isUndef*/ false, /*isEarlyClobber*/ true));
+    [[fallthrough]];
   case TargetOpcode::STACKMAP:
   case TargetOpcode::PATCHPOINT:
     if (!Subtarget.is64Bit())

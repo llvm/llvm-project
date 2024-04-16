@@ -319,19 +319,12 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   }
 
   // abs(X) * abs(X) -> X * X
-  // nabs(X) * nabs(X) -> X * X
-  if (Op0 == Op1) {
-    Value *X, *Y;
-    SelectPatternFlavor SPF = matchSelectPattern(Op0, X, Y).Flavor;
-    if (SPF == SPF_ABS || SPF == SPF_NABS)
-      return BinaryOperator::CreateMul(X, X);
-
-    if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
-      return BinaryOperator::CreateMul(X, X);
-  }
+  Value *X;
+  if (Op0 == Op1 && match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
+    return BinaryOperator::CreateMul(X, X);
 
   {
-    Value *X, *Y;
+    Value *Y;
     // abs(X) * abs(Y) -> abs(X * Y)
     if (I.hasNoSignedWrap() &&
         match(Op0,
@@ -344,7 +337,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   }
 
   // -X * C --> X * -C
-  Value *X, *Y;
+  Value *Y;
   Constant *Op1C;
   if (match(Op0, m_Neg(m_Value(X))) && match(Op1, m_Constant(Op1C)))
     return BinaryOperator::CreateMul(X, ConstantExpr::getNeg(Op1C));
@@ -1572,8 +1565,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     // -X / C --> X / -C (if the negation doesn't overflow).
     // TODO: This could be enhanced to handle arbitrary vector constants by
     //       checking if all elements are not the min-signed-val.
-    if (!Op1C->isMinSignedValue() &&
-        match(Op0, m_NSWSub(m_Zero(), m_Value(X)))) {
+    if (!Op1C->isMinSignedValue() && match(Op0, m_NSWNeg(m_Value(X)))) {
       Constant *NegC = ConstantInt::get(Ty, -(*Op1C));
       Instruction *BO = BinaryOperator::CreateSDiv(X, NegC);
       BO->setIsExact(I.isExact());
@@ -1583,7 +1575,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
 
   // -X / Y --> -(X / Y)
   Value *Y;
-  if (match(&I, m_SDiv(m_OneUse(m_NSWSub(m_Zero(), m_Value(X))), m_Value(Y))))
+  if (match(&I, m_SDiv(m_OneUse(m_NSWNeg(m_Value(X))), m_Value(Y))))
     return BinaryOperator::CreateNSWNeg(
         Builder.CreateSDiv(X, Y, I.getName(), I.isExact()));
 
@@ -2173,7 +2165,7 @@ Instruction *InstCombinerImpl::visitSRem(BinaryOperator &I) {
 
   // -X srem Y --> -(X srem Y)
   Value *X, *Y;
-  if (match(&I, m_SRem(m_OneUse(m_NSWSub(m_Zero(), m_Value(X))), m_Value(Y))))
+  if (match(&I, m_SRem(m_OneUse(m_NSWNeg(m_Value(X))), m_Value(Y))))
     return BinaryOperator::CreateNSWNeg(Builder.CreateSRem(X, Y));
 
   // If the sign bits of both operands are zero (i.e. we can prove they are

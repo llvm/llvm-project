@@ -10,18 +10,18 @@
 // expected-no-diagnostics
 #endif
 
-namespace dr873 { // dr873: 3.0
+namespace cwg873 { // cwg873: 3.0
 #if __cplusplus >= 201103L
 template <typename T> void f(T &&);
-template <> void f(int &) = delete;  // #dr873-lvalue-ref
-template <> void f(int &&) = delete; // #dr873-rvalue-ref
+template <> void f(int &) = delete;  // #cwg873-lvalue-ref
+template <> void f(int &&) = delete; // #cwg873-rvalue-ref
 void g(int i) {
   f(i); // calls f<int&>(int&)
   // since-cxx11-error@-1 {{call to deleted function 'f'}}
-  //   since-cxx11-note@#dr873-lvalue-ref {{candidate function [with T = int &] has been implicitly deleted}}
+  //   since-cxx11-note@#cwg873-lvalue-ref {{candidate function [with T = int &] has been implicitly deleted}}
   f(0); // calls f<int>(int&&)
   // since-cxx11-error@-1 {{call to deleted function 'f'}}
-  //   since-cxx11-note@#dr873-rvalue-ref {{candidate function [with T = int] has been implicitly deleted}}
+  //   since-cxx11-note@#cwg873-rvalue-ref {{candidate function [with T = int] has been implicitly deleted}}
 }
 #endif
-} // namespace dr873
+} // namespace cwg873

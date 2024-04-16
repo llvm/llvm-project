@@ -307,10 +307,16 @@ multiclass VPseudoVC_X<LMULInfo m, DAGOperand RS1Class,
                        Operand OpClass = payload2> {
   let VLMul = m.value in {
     let Defs = [VCIX_STATE], Uses = [VCIX_STATE] in {
-      def "PseudoVC_" # NAME # "_SE_" # m.MX : VPseudoVC_X<OpClass, RS1Class>;
-      def "PseudoVC_V_" # NAME # "_SE_" # m.MX : VPseudoVC_V_X<OpClass, m.vrclass, RS1Class>;
+      def "PseudoVC_" # NAME # "_SE_" # m.MX
+        : VPseudoVC_X<OpClass, RS1Class>,
+          Sched<[!cast<SchedWrite>("WriteVC_" # NAME # "_" # m.MX)]>;
+      def "PseudoVC_V_" # NAME # "_SE_" # m.MX
+        : VPseudoVC_V_X<OpClass, m.vrclass, RS1Class>,
+          Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
     }
-    def "PseudoVC_V_" # NAME # "_" # m.MX : VPseudoVC_V_X<OpClass, m.vrclass, RS1Class>;
+    def "PseudoVC_V_" # NAME # "_" # m.MX
+      : VPseudoVC_V_X<OpClass, m.vrclass, RS1Class>,
+        Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
   }
 }
 
@@ -318,10 +324,16 @@ multiclass VPseudoVC_XV<LMULInfo m, DAGOperand RS1Class,
                         Operand OpClass = payload2> {
   let VLMul = m.value in {
     let Defs = [VCIX_STATE], Uses = [VCIX_STATE] in {
-      def "PseudoVC_" # NAME # "_SE_" # m.MX : VPseudoVC_XV<OpClass, m.vrclass, RS1Class>;
-      def "PseudoVC_V_" # NAME # "_SE_" # m.MX : VPseudoVC_V_XV<OpClass, m.vrclass, m.vrclass, RS1Class>;
+      def "PseudoVC_" # NAME # "_SE_" # m.MX
+        : VPseudoVC_XV<OpClass, m.vrclass, RS1Class>,
+          Sched<[!cast<SchedWrite>("WriteVC_" # NAME # "_" # m.MX)]>;
+      def "PseudoVC_V_" # NAME # "_SE_" # m.MX
+        : VPseudoVC_V_XV<OpClass, m.vrclass, m.vrclass, RS1Class>,
+          Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
     }
-    def "PseudoVC_V_" # NAME # "_" # m.MX : VPseudoVC_V_XV<OpClass, m.vrclass, m.vrclass, RS1Class>;
+    def "PseudoVC_V_" # NAME # "_" # m.MX
+      : VPseudoVC_V_XV<OpClass, m.vrclass, m.vrclass, RS1Class>,
+        Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
   }
 }
 
@@ -329,10 +341,16 @@ multiclass VPseudoVC_XVV<LMULInfo m, DAGOperand RS1Class,
                          Operand OpClass = payload2> {
   let VLMul = m.value in {
     let Defs = [VCIX_STATE], Uses = [VCIX_STATE] in {
-      def "PseudoVC_" # NAME # "_SE_" # m.MX : VPseudoVC_XVV<OpClass, m.vrclass, m.vrclass, RS1Class>;
-      def "PseudoVC_V_" # NAME # "_SE_" # m.MX : VPseudoVC_V_XVV<OpClass, m.vrclass, m.vrclass, RS1Class>;
+      def "PseudoVC_" # NAME # "_SE_" # m.MX
+        : VPseudoVC_XVV<OpClass, m.vrclass, m.vrclass, RS1Class>,
+          Sched<[!cast<SchedWrite>("WriteVC_" # NAME # "_" # m.MX)]>;
+      def "PseudoVC_V_" # NAME # "_SE_" # m.MX
+        : VPseudoVC_V_XVV<OpClass, m.vrclass, m.vrclass, RS1Class>,
+          Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
     }
-    def "PseudoVC_V_" # NAME # "_" # m.MX : VPseudoVC_V_XVV<OpClass, m.vrclass, m.vrclass, RS1Class>;
+    def "PseudoVC_V_" # NAME # "_" # m.MX
+      : VPseudoVC_V_XVV<OpClass, m.vrclass, m.vrclass, RS1Class>,
+        Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
   }
 }
 
@@ -340,11 +358,17 @@ multiclass VPseudoVC_XVW<LMULInfo m, DAGOperand RS1Class,
                          Operand OpClass = payload2> {
   let VLMul = m.value in {
     let Defs = [VCIX_STATE], Uses = [VCIX_STATE] in
-    def "PseudoVC_" # NAME # "_SE_" # m.MX : VPseudoVC_XVV<OpClass, m.wvrclass, m.vrclass, RS1Class>;
+    def "PseudoVC_" # NAME # "_SE_" # m.MX
+      : VPseudoVC_XVV<OpClass, m.wvrclass, m.vrclass, RS1Class>,
+        Sched<[!cast<SchedWrite>("WriteVC_" # NAME # "_" # m.MX)]>;
     let Constraints = "@earlyclobber $rd, $rd = $rs3" in {
       let Defs = [VCIX_STATE], Uses = [VCIX_STATE] in
-      def "PseudoVC_V_" # NAME # "_SE_" # m.MX : VPseudoVC_V_XVV<OpClass, m.wvrclass, m.vrclass, RS1Class>;
-      def "PseudoVC_V_" # NAME # "_" # m.MX : VPseudoVC_V_XVV<OpClass, m.wvrclass, m.vrclass, RS1Class>;
+      def "PseudoVC_V_" # NAME # "_SE_" # m.MX
+        : VPseudoVC_V_XVV<OpClass, m.wvrclass, m.vrclass, RS1Class>,
+          Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
+      def "PseudoVC_V_" # NAME # "_" # m.MX
+        : VPseudoVC_V_XVV<OpClass, m.wvrclass, m.vrclass, RS1Class>,
+          Sched<[!cast<SchedWrite>("WriteVC_V_" # NAME # "_" # m.MX)]>;
     }
   }
 }

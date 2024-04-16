@@ -57,6 +57,7 @@ static_library("IPO") {
     "SCCP.cpp",
     "SampleContextTracker.cpp",
     "SampleProfile.cpp",
+    "SampleProfileMatcher.cpp",
     "SampleProfileProbe.cpp",
     "StripDeadPrototypes.cpp",
     "StripSymbols.cpp",
