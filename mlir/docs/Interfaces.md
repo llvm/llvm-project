@@ -314,7 +314,8 @@ registration of the external model will lead to a runtime error that will
 look similar to this:
 ```
 LLVM ERROR: checking for an interface (`SomeInterface`) that was promised by dialect 'mydialect' but never implemented. This is generally an indication that the dialect extension implementing the interface was never registered.
-```
+
+If you encounter this error for a dialect and an interface provided by MLIR, you may look for a method that will be named like `register<Dialect><Interface>ExternalModels(DialectRegistry &registry);` ; try to find it with `git grep 'register.*SomeInterface.*Model' mlir`. 
 
 #### Dialect Fallback for OpInterface
 
