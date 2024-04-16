@@ -1,0 +1,58 @@
+module(
+    name = "bzlmod-example",
+    version = "0.0.0",
+    compatibility_level = 0,
+)
+
+bazel_dep(name = "llvm-raw", version = "main")
+
+LLVM_COMMIT="0000000000000000000000000000000000000000"
+
+# Add the dependencies from "utils/bazel/MODULE.bazel" but name the module
+# "llvm-raw". This way you don't need to fetch the llvm sources twice and retain
+# compatibility for third-party dependents as module overrides are ignored in
+# non-root modules.
+archive_override(
+    module_name = "llvm-raw",
+    strip_prefix = "llvm-project-{}".format(LLVM_COMMIT),
+    patch_cmds = [
+        '''printf 'module(name=\"llvm-raw\")
+bazel_dep(name = "apple_support", version = "1.17.1")
+bazel_dep(name = "bazel_skylib", version = "1.7.1")
+bazel_dep(name = "platforms", version = "0.0.11")
+bazel_dep(name = "robin-map", version = "1.3.0")
+bazel_dep(name = "rules_cc", version = "0.0.17")
+bazel_dep(name = "rules_foreign_cc", version = "0.13.0")
+bazel_dep(name = "rules_python", version = "1.1.0")
+bazel_dep(name = "zlib-ng", version = "2.0.7")
+bazel_dep(name = "zstd", version = "1.5.6")' > MODULE.bazel'''
+    ],
+    build_file_content = "# Empty.",
+    integrity = "sha256-0000000000000000000000000000000000000000000=",
+    urls = [
+        "https://github.com/llvm/llvm-project/archive/{}.zip".format(
+            LLVM_COMMIT,
+        ),
+    ],
+)
+
+llvm_project_overlay = use_extension(
+    "@llvm-raw//utils/bazel:extensions.bzl",
+    "llvm_project_overlay",
+)
+
+llvm_project_overlay.configure()
+
+use_repo(
+    llvm_project_overlay,
+    "llvm-project",
+
+    # Vendored.
+    "vulkan_headers",
+    "vulkan_sdk",
+    "gmp",
+    "mpfr",
+    "pfm",
+    "pybind11",
+    "nanobind",
+)

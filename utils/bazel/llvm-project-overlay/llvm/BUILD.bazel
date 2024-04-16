@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
@@ -355,10 +355,10 @@ cc_library(
         ":config",
     ] + select({
         "//config:LLVM_ENABLE_ZLIB_disabled": [],
-        "//conditions:default": ["@llvm_zlib//:zlib"],
+        "//conditions:default": ["@zlib-ng"],
     }) + select({
         "//config:LLVM_ENABLE_ZSTD_disabled": [],
-        "//conditions:default": ["@llvm_zstd//:zstd"],
+        "//conditions:default": ["@zstd"],
     }),
 )
 

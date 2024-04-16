@@ -31,10 +31,10 @@ DEFAULT_TARGETS = [
 ]
 
 def _overlay_directories(repository_ctx):
-    src_path = repository_ctx.path(Label("@llvm-raw//:WORKSPACE")).dirname
-    bazel_path = src_path.get_child("utils").get_child("bazel")
-    overlay_path = bazel_path.get_child("llvm-project-overlay")
-    script_path = bazel_path.get_child("overlay_directories.py")
+    workspace_path = repository_ctx.path(Label("@llvm-raw//utils/bazel:WORKSPACE")).dirname
+    src_path = workspace_path.get_child("../..")
+    overlay_path = workspace_path.get_child("llvm-project-overlay")
+    script_path = workspace_path.get_child("overlay_directories.py")
 
     python_bin = repository_ctx.which("python3")
     if not python_bin:
@@ -81,7 +81,7 @@ def _extract_cmake_settings(repository_ctx, llvm_cmake):
 
     # It would be easier to use external commands like sed(1) and python.
     # For portability, the parser should run on Starlark.
-    llvm_cmake_path = repository_ctx.path(Label("//:" + llvm_cmake))
+    llvm_cmake_path = repository_ctx.path(Label("@llvm-raw//:" + llvm_cmake))
     for line in repository_ctx.read(llvm_cmake_path).splitlines():
         # Extract "set ( FOO bar ... "
         setfoo = line.partition("(")

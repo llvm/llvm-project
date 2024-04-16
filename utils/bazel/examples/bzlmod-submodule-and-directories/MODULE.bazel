@@ -1,0 +1,75 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Since the llvm project doesn't have `MODULE.bazel` and `BUILD.bazel` files in
+# its root directory you need to create an override for the `llvm-raw` sources
+# and then inject it into the `llvm-project-overlay` module extension.
+
+module(
+    name = "bzlmod-example",
+    version = "0.0.0",
+    compatibility_level = 0,
+)
+
+new_local_repository = use_repo_rule(
+    "@bazel_tools//tools/build_defs/repo:local.bzl",
+    "new_local_repository",
+)
+
+# WARNING: This is not a module override. If a third party depends on your
+#          repository this repository will get lifted to the root module and
+#          treated as if it was in the third party module.
+#
+#          This means that if your repo is the top level module this behaves as
+#          you'd expect, but third parties need to create another
+#          repository in conjunction with a `repo_override` so that the `path`
+#          attribute doesn't point to unexpected locations.
+#
+#          See: https://bazel.build/rules/lib/repo/local#new_local_repository
+#               https://bazel.build/rules/lib/repo/http#http_archive
+#               https://bazel.build/rules/lib/globals/module#override_repo
+new_local_repository(
+    name = "llvm-raw",
+    path = "third_party/llvm-project",
+    build_file_content = "# Empty.",
+)
+
+bazel_dep(name = "llvm-project-overlay", version = "main")
+
+# WARNING: Sice this is a module override it'll be ignored if a third party
+#          depends on your project.
+#
+#          This means that if your repo is the top level module this behaves as
+#          you'd expect, but third parties need to create a new module override
+#          as described in https://bazel.build/rules/lib/globals/module.
+local_path_override(
+    module_name = "llvm-project-overlay",
+    path = "third_party/llvm-project/utils/bazel",
+)
+
+llvm_project_overlay = use_extension(
+    "@llvm-project-overlay//:extensions.bzl",
+    "llvm_project_overlay",
+)
+
+inject_repo(
+    llvm_project_overlay,
+    "llvm-raw",
+)
+
+llvm_project_overlay.configure()
+
+use_repo(
+    llvm_project_overlay,
+    "llvm-project",
+
+    # Vendored.
+    "vulkan_headers",
+    "vulkan_sdk",
+    "gmp",
+    "mpfr",
+    "pfm",
+    "pybind11",
+    "nanobind",
+)

@@ -113,10 +113,10 @@ cc_library(
         "//llvm:config",
     ] + select({
         "//config:LLVM_ENABLE_ZLIB_disabled": [],
-        "//conditions:default": ["@llvm_zlib//:zlib"],
+        "//conditions:default": ["@zlib-ng"],
     }) + select({
         "//config:LLVM_ENABLE_ZSTD_disabled": [],
-        "//conditions:default": ["@llvm_zstd//:zstd"],
+        "//conditions:default": ["@zstd"],
     }),
 )
 

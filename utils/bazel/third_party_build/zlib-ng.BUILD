@@ -19,7 +19,7 @@ genrule(
 )
 
 cc_library(
-    name = "zlib",
+    name = "zlib-ng",
     srcs = [
         "adler32.c",
         "adler32_p.h",

@@ -9,7 +9,9 @@
 
 # Flip off to disable MODULE.bazel until we're ready.
 # https://github.com/llvm/llvm-project/issues/55924
-common --enable_bzlmod=false --enable_workspace
+# 
+# WARNING: This option will be removed soon. Please migrate to bzlmod.
+common:deprecated_workspace --enable_bzlmod=false --enable_workspace
 
 # TODO: Remove lit test reliance on this
 common --legacy_external_runfiles

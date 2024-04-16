@@ -495,7 +495,7 @@ cc_library(
         "//llvm:config",
     ] + select({
         "//config:LLVM_ENABLE_ZLIB_disabled": [],
-        "//conditions:default": ["@llvm_zlib//:zlib"],
+        "//conditions:default": ["@zlib-ng"],
     }),
 )
 
@@ -1420,7 +1420,7 @@ cc_library(
         "//llvm:config",
     ] + select({
         "//config:LLVM_ENABLE_ZLIB_disabled": [],
-        "//conditions:default": ["@llvm_zlib//:zlib"],
+        "//conditions:default": ["@zlib-ng"],
     }),
 )
 
