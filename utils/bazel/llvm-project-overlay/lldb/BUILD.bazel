@@ -755,7 +755,13 @@ cc_binary(
     data = [
         ":lldb-argdumper",
     ] + select({
-        "@platforms//os:macos": [":debugserver"],
+        "@platforms//os:macos": [
+            ":debugserver",
+            ":lldb-server",
+        ],
+        "@platforms//os:linux": [
+            ":lldb-server",
+        ],
         "//conditions:default": [],
     }),
     deps = [
@@ -876,6 +882,7 @@ cc_binary(
     ]),
     target_compatible_with = select({
         "@platforms//os:linux": [],
+        "@platforms//os:macos": [],
         # TODO: This can theoretically support more platforms, but it hasn't been tested yet
         "//conditions:default": ["@platforms//:incompatible"],
     }),
@@ -907,6 +914,9 @@ cc_binary(
         "@platforms//os:linux": [
             "//lldb/source/Plugins:PluginObjectFileELF",
             "//lldb/source/Plugins:PluginProcessLinux",
+        ],
+        "@platforms//os:macos": [
+            "//lldb/source/Plugins:PluginObjectFileMachO",
         ],
         "//conditions:default": [],
     }),
