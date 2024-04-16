@@ -25,6 +25,7 @@ add_clang_unittest(ToolingTests
   QualTypeNamesTest.cpp
   RangeSelectorTest.cpp
   DependencyScanning/DependencyScannerTest.cpp
+  DependencyScanning/DependencyScanningFilesystemTest.cpp
   RecursiveASTVisitorTests/Attr.cpp
   RecursiveASTVisitorTests/BitfieldInitializer.cpp
   RecursiveASTVisitorTests/CallbacksLeaf.cpp

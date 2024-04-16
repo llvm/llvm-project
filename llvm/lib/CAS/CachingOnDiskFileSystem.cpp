@@ -101,7 +101,7 @@ public:
   }
 
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const final;
+                              SmallVectorImpl<char> &Output) final;
   ErrorOr<vfs::directory_iterator> getDirectoryIterator(const Twine &Dir);
 
   std::error_code setCurrentWorkingDirectory(const Twine &Path) final;
@@ -455,7 +455,7 @@ CachingOnDiskFileSystemImpl::getDirectoryEntry(const Twine &Path,
 
 std::error_code
 CachingOnDiskFileSystemImpl::getRealPath(const Twine &Path,
-                                         SmallVectorImpl<char> &Output) const {
+                                         SmallVectorImpl<char> &Output) {
   // We can get the real path, but it's not a const operation.
   const vfs::CachedDirectoryEntry *Entry = nullptr;
   if (Error E =
