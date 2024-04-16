@@ -372,7 +372,7 @@ bool Options::addFilePaths(InputArgList &Args, PathSeq &Headers,
       }
       // Sort headers to ensure deterministic behavior.
       sort(*InputHeadersOrErr);
-      for (std::string &H : *InputHeadersOrErr)
+      for (StringRef H : *InputHeadersOrErr)
         Headers.emplace_back(std::move(H));
     } else
       Headers.emplace_back(Path);
@@ -690,7 +690,7 @@ InstallAPIContext Options::createContext() {
     FrameworkName = getFrameworkNameFromInstallName(LinkerOpts.InstallName);
 
   // Process inputs.
-  for (const std::string &ListPath : DriverOpts.FileLists) {
+  for (const StringRef ListPath : DriverOpts.FileLists) {
     auto Buffer = FM->getBufferForFile(ListPath);
     if (auto Err = Buffer.getError()) {
       Diags->Report(diag::err_cannot_open_file) << ListPath << Err.message();

@@ -834,31 +834,49 @@ define i64 @adduw_imm(i32 signext %0) nounwind {
 }
 
 define i64 @mul258(i64 %a) {
-; CHECK-LABEL: mul258:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 258
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul258:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 258
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul258:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a0, 8
+; RV64ZBA-NEXT:    sh1add a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 258
   ret i64 %c
 }
 
 define i64 @mul260(i64 %a) {
-; CHECK-LABEL: mul260:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 260
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul260:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 260
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul260:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a0, 8
+; RV64ZBA-NEXT:    sh2add a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 260
   ret i64 %c
 }
 
 define i64 @mul264(i64 %a) {
-; CHECK-LABEL: mul264:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 264
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul264:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 264
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul264:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a0, 8
+; RV64ZBA-NEXT:    sh3add a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 264
   ret i64 %c
 }
@@ -2388,4 +2406,27 @@ define i64 @array_index_sh4_sh3(ptr %p, i64 %idx1, i64 %idx2) {
   %a = getelementptr inbounds [16 x i64], ptr %p, i64 %idx1, i64 %idx2
   %b = load i64, ptr %a, align 8
   ret i64 %b
+}
+
+define ptr @test_gep_gep_dont_crash(ptr %p, i64 %a1, i64 %a2) {
+; RV64I-LABEL: test_gep_gep_dont_crash:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a2, a2, 6
+; RV64I-NEXT:    slli a2, a2, 3
+; RV64I-NEXT:    slli a1, a1, 3
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: test_gep_gep_dont_crash:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    srliw a2, a2, 6
+; RV64ZBA-NEXT:    add a1, a2, a1
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+  %lshr = lshr i64 %a2, 6
+  %and = and i64 %lshr, 67108863
+  %gep1 = getelementptr i64, ptr %p, i64 %and
+  %gep2 = getelementptr i64, ptr %gep1, i64 %a1
+  ret ptr %gep2
 }

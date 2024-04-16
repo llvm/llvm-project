@@ -612,13 +612,6 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Reserve null register - it shall never be allocated
   reserveRegisterTuples(Reserved, AMDGPU::SGPR_NULL64);
 
-  // Disallow vcc_hi allocation in wave32. It may be allocated but most likely
-  // will result in bugs.
-  if (isWave32) {
-    Reserved.set(AMDGPU::VCC);
-    Reserved.set(AMDGPU::VCC_HI);
-  }
-
   // Reserve SGPRs.
   //
   unsigned MaxNumSGPRs = ST.getMaxNumSGPRs(MF);

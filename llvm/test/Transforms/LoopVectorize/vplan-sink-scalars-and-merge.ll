@@ -986,8 +986,8 @@ define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%addr>, vp<[[STEPS]]>
-; CHECK-NEXT:     REPLICATE store ir<1.000000e+01>, ir<%gep>
+; CHECK-NEXT:     REPLICATE ir<%gep>.1 = getelementptr ir<%addr>, vp<[[STEPS]]>
+; CHECK-NEXT:     REPLICATE store ir<1.000000e+01>, ir<%gep>.1
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
@@ -1129,8 +1129,8 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
-; CHECK-NEXT:       REPLICATE ir<%ptr.iv.next> = getelementptr inbounds vp<[[PTR_IV]]>, ir<-1>
-; CHECK-NEXT:       REPLICATE store ir<95>, ir<%ptr.iv.next>
+; CHECK-NEXT:       REPLICATE ir<%ptr.iv.next>.1 = getelementptr inbounds vp<[[PTR_IV]]>, ir<-1>
+; CHECK-NEXT:       REPLICATE store ir<95>, ir<%ptr.iv.next>.1
 ; CHECK-NEXT:     Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.continue:
