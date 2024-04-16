@@ -104,8 +104,7 @@ C++20 Feature Support
 
 - Clang now implements [module.import]p7 fully. Clang now will import module
   units transitively for the module units coming from the same module of the
-  current module units.
-  Fixes `#84002 <https://github.com/llvm/llvm-project/issues/84002>`_.
+  current module units. Fixes #GH84002
 
 - Initial support for class template argument deduction (CTAD) for type alias
   templates (`P1814R0 <https://wg21.link/p1814r0>`_).
@@ -135,8 +134,7 @@ C++2c Feature Support
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Substitute template parameter pack, when it is not explicitly specified
-  in the template parameters, but is deduced from a previous argument.
-  (`#78449: <https://github.com/llvm/llvm-project/issues/78449>`_).
+  in the template parameters, but is deduced from a previous argument. (#GH78449)
 
 - Type qualifications are now ignored when evaluating layout compatibility
   of two types.
@@ -176,8 +174,7 @@ C23 Feature Support
 
 - Clang now generates predefined macros of the form ``__TYPE_FMTB__`` and
   ``__TYPE_FMTb__`` (e.g., ``__UINT_FAST64_FMTB__``) in C23 mode for use with
-  macros typically exposed from ``<inttypes.h>``, such as ``PRIb8``.
-  (`#81896: <https://github.com/llvm/llvm-project/issues/81896>`_).
+  macros typically exposed from ``<inttypes.h>``, such as ``PRIb8``. (#GH81896)
 
 - Clang now supports `N3018 The constexpr specifier for object definitions`
   <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3018.htm>`_.
@@ -215,7 +212,7 @@ New Compiler Flags
 
 - ``-Wmissing-designated-field-initializers``, grouped under ``-Wmissing-field-initializers``.
   This diagnostic can be disabled to make ``-Wmissing-field-initializers`` behave
-  like it did before Clang 18.x. Fixes (`#56628 <https://github.com/llvm/llvm-project/issues/68933>`_)
+  like it did before Clang 18.x. Fixes #GH56628
 
 Deprecated Compiler Flags
 -------------------------
@@ -254,8 +251,7 @@ Removed Compiler Flags
 
 - The ``-freroll-loops`` flag has been removed. It had no effect since Clang 13.
 - ``-m[no-]unaligned-access`` is removed for RISC-V and LoongArch.
-  ``-m[no-]strict-align``, also supported by GCC, should be used instead.
-  (`#85350 <https://github.com/llvm/llvm-project/pull/85350>`_.)
+  ``-m[no-]strict-align``, also supported by GCC, should be used instead. (#GH85350)
 
 Attribute Changes in Clang
 --------------------------
@@ -325,8 +321,7 @@ Improvements to Clang's diagnostics
   Fixes #GH82512.
 
 - Clang now provides improved warnings for the ``cleanup`` attribute to detect misuse scenarios,
-  such as attempting to call ``free`` on an unallocated object. Fixes
-  `#79443 <https://github.com/llvm/llvm-project/issues/79443>`_.
+  such as attempting to call ``free`` on an unallocated object. Fixes #GH79443.
 
 - Clang no longer warns when the ``bitand`` operator is used with boolean
   operands, distinguishing it from potential typographical errors or unintended
@@ -372,11 +367,10 @@ Improvements to Clang's time-trace
 Bug Fixes in This Version
 -------------------------
 - Clang's ``-Wundefined-func-template`` no longer warns on pure virtual
-  functions.
-  (`#74016 <https://github.com/llvm/llvm-project/issues/74016>`_)
+  functions. (#GH74016)
 
 - Fixed missing warnings when comparing mismatched enumeration constants
-  in C (`#29217 <https://github.com/llvm/llvm-project/issues/29217>`).
+  in C (#GH29217)
 
 - Clang now accepts elaborated-type-specifiers that explicitly specialize
   a member class template for an implicit instantiation of a class template.
@@ -415,7 +409,7 @@ Bug Fixes in This Version
   type only rather than to the complex type (e.g. ``_Complex float / int`` is now evaluated
   as ``_Complex float / float`` rather than ``_Complex float / _Complex float``), as mandated
   by the C standard. This significantly improves codegen of `*` and `/` especially.
-  Fixes (`#31205 <https://github.com/llvm/llvm-project/issues/31205>`_).
+  Fixes #GH31205.
 
 - Fixes an assertion failure on invalid code when trying to define member
   functions in lambdas.
@@ -464,8 +458,7 @@ Bug Fixes to C++ Support
 - Fix a crash when trying to call a varargs function that also has an explicit object parameter. (#GH80971)
 - Fixed a bug where abbreviated function templates would append their invented template parameters to
   an empty template parameter lists.
-- Fix parsing of abominable function types inside type traits.
-  Fixes (`#77585 <https://github.com/llvm/llvm-project/issues/77585>`_)
+- Fix parsing of abominable function types inside type traits. Fixes #GH77585
 - Clang now classifies aggregate initialization in C++17 and newer as constant
   or non-constant more accurately. Previously, only a subset of the initializer
   elements were considered, misclassifying some initializers as constant. Partially fixes
@@ -506,9 +499,7 @@ Bug Fixes to C++ Support
 - Fix a bug where overload resolution falsely reported an ambiguity when it was comparing
   a member-function against a non member function or a member-function with an
   explicit object parameter against a member function with no explicit object parameter
-  when one of the function had more specialized templates.
-  Fixes (`#82509 <https://github.com/llvm/llvm-project/issues/82509>`_)
-  and (`#74494 <https://github.com/llvm/llvm-project/issues/74494>`_)
+  when one of the function had more specialized templates. Fixes #GH82509 and #GH74494
 - Clang now supports direct lambda calls inside of a type alias template declarations.
   This addresses (#GH70601), (#GH76674), (#GH79555), (#GH81145) and (#GH82104).
 - Allow access to a public template alias declaration that refers to friend's
@@ -530,8 +521,7 @@ Bug Fixes to C++ Support
 - Fixed a bug that prevented member function templates of class templates declared with a deduced return type
   from being explicitly specialized for a given implicit instantiation of the class template.
 
-- Fix crash when inheriting from a cv-qualified type. Fixes:
-  (`#35603 <https://github.com/llvm/llvm-project/issues/35603>`_)
+- Fix crash when inheriting from a cv-qualified type. Fixes #GH35603
 - Fix a crash when the using enum declaration uses an anonymous enumeration. Fixes (#GH86790).
 - Handled an edge case in ``getFullyPackExpandedSize`` so that we now avoid a false-positive diagnostic. (#GH84220)
 - Clang now correctly tracks type dependence of by-value captures in lambdas with an explicit
@@ -539,8 +529,7 @@ Bug Fixes to C++ Support
   Fixes (#GH70604), (#GH79754), (#GH84163), (#GH84425), (#GH86054), (#GH86398), and (#GH86399).
 - Fix a crash when deducing ``auto`` from an invalid dereference (#GH88329).
 - Fix a crash in requires expression with templated base class member function. Fixes (#GH84020).
-- placement new initializes typedef array with correct size
-  (`#GH41441 <https://github.com/llvm/llvm-project/issues/41441>`_)
+- Placement new initializes typedef array with correct size (#GH41441)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -554,8 +543,7 @@ Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Do not attempt to dump the layout of dependent types or invalid declarations
-  when ``-fdump-record-layouts-complete`` is passed.
-  Fixes (`#83684 <https://github.com/llvm/llvm-project/issues/83684>`_).
+  when ``-fdump-record-layouts-complete`` is passed. Fixes #GH83684.
 
 OpenACC Specific Changes
 ------------------------
@@ -605,8 +593,7 @@ Windows Support
   would only be included if AVX was enabled at compile time. This was done to work
   around include times from MSVC STL including ``intrin.h`` under clang-cl.
   Clang-cl now provides ``intrin0.h`` for MSVC STL and therefore all intrinsic
-  features without requiring enablement at compile time.
-  Fixes: (`#53520 <https://github.com/llvm/llvm-project/issues/53520>`_)
+  features without requiring enablement at compile time. Fixes #GH53520
 
 - Improved compile times with MSVC STL. MSVC provides ``intrin0.h`` which is a
   header that only includes intrinsics that are used by MSVC STL to avoid the
