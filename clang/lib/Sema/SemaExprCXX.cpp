@@ -2571,7 +2571,7 @@ static bool resolveAllocationOverload(
     Sema &S, LookupResult &R, SourceRange Range, SmallVectorImpl<Expr *> &Args,
     bool &PassAlignment, FunctionDecl *&Operator,
     OverloadCandidateSet *AlignedCandidates, Expr *AlignArg, bool Diagnose) {
-  OverloadCandidateSet Candidates(S.getASTContext(), R.getNameLoc(),
+  OverloadCandidateSet Candidates(R.getNameLoc(),
                                   OverloadCandidateSet::CSK_Normal);
   for (LookupResult::iterator Alloc = R.begin(), AllocEnd = R.end();
        Alloc != AllocEnd; ++Alloc) {
@@ -3902,7 +3902,7 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
   R.suppressDiagnostics();
 
   SmallVector<Expr *, 8> Args(TheCall->arguments());
-  OverloadCandidateSet Candidates(S.getASTContext(), R.getNameLoc(),
+  OverloadCandidateSet Candidates(R.getNameLoc(),
                                   OverloadCandidateSet::CSK_Normal);
   for (LookupResult::iterator FnOvl = R.begin(), FnOvlEnd = R.end();
        FnOvl != FnOvlEnd; ++FnOvl) {
@@ -6487,7 +6487,7 @@ static bool TryClassUnification(Sema &Self, Expr *From, Expr *To,
 static bool FindConditionalOverload(Sema &Self, ExprResult &LHS, ExprResult &RHS,
                                     SourceLocation QuestionLoc) {
   Expr *Args[2] = { LHS.get(), RHS.get() };
-  OverloadCandidateSet CandidateSet(Self.getASTContext(), QuestionLoc,
+  OverloadCandidateSet CandidateSet(QuestionLoc,
                                     OverloadCandidateSet::CSK_Operator);
   Self.AddBuiltinOperatorCandidates(OO_Conditional, QuestionLoc, Args,
                                     CandidateSet);

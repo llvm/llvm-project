@@ -8200,8 +8200,7 @@ private:
     // we've already found there is no viable 'operator<=>' candidate (and are
     // considering synthesizing a '<=>' from '==' and '<').
     OverloadCandidateSet CandidateSet(
-        S.getASTContext(), FD->getLocation(),
-        OverloadCandidateSet::CSK_Operator,
+        FD->getLocation(), OverloadCandidateSet::CSK_Operator,
         OverloadCandidateSet::OperatorRewriteInfo(
             OO, FD->getLocation(),
             /*AllowRewrittenCandidates=*/!SpaceshipCandidates));
@@ -17413,7 +17412,7 @@ bool Sema::EvaluateStaticAssertMessageAsString(Expr *Message,
     LookupResult MemberLookup(*this, DN, Loc, Sema::LookupMemberName);
     LookupQualifiedName(MemberLookup, RD);
     Empty = MemberLookup.empty();
-    OverloadCandidateSet Candidates(Context, MemberLookup.getNameLoc(),
+    OverloadCandidateSet Candidates(MemberLookup.getNameLoc(),
                                     OverloadCandidateSet::CSK_Normal);
     if (MemberLookup.empty())
       return std::nullopt;

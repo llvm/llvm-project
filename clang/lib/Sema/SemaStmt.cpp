@@ -2946,7 +2946,7 @@ StmtResult Sema::BuildCXXForRangeStmt(
         return StmtError();
       }
     } else {
-      OverloadCandidateSet CandidateSet(Context, RangeLoc,
+      OverloadCandidateSet CandidateSet(RangeLoc,
                                         OverloadCandidateSet::CSK_Normal);
       BeginEndFunction BEFFailure;
       ForRangeStatus RangeStatus = BuildNonArrayForRange(

@@ -2505,7 +2505,7 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
 
         // If there's a best viable function among the results, only mention
         // that one in the notes.
-        OverloadCandidateSet Candidates(Context, R.getNameLoc(),
+        OverloadCandidateSet Candidates(R.getNameLoc(),
                                         OverloadCandidateSet::CSK_Normal);
         AddOverloadedCallCandidates(R, ExplicitTemplateArgs, Args, Candidates);
         OverloadCandidateSet::iterator Best;
@@ -2553,7 +2553,7 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
     NamedDecl *ND = Corrected.getFoundDecl();
     if (ND) {
       if (Corrected.isOverloaded()) {
-        OverloadCandidateSet OCS(Context, R.getNameLoc(),
+        OverloadCandidateSet OCS(R.getNameLoc(),
                                  OverloadCandidateSet::CSK_Normal);
         OverloadCandidateSet::iterator Best;
         for (NamedDecl *CD : Corrected) {
@@ -5970,8 +5970,7 @@ static TypoCorrection TryTypoCorrectionForCall(Sema &S, Expr *Fn,
           Sema::CTK_ErrorRecovery)) {
     if (NamedDecl *ND = Corrected.getFoundDecl()) {
       if (Corrected.isOverloaded()) {
-        OverloadCandidateSet OCS(S.getASTContext(), NameLoc,
-                                 OverloadCandidateSet::CSK_Normal);
+        OverloadCandidateSet OCS(NameLoc, OverloadCandidateSet::CSK_Normal);
         OverloadCandidateSet::iterator Best;
         for (NamedDecl *CD : Corrected) {
           if (FunctionDecl *FD = dyn_cast<FunctionDecl>(CD))

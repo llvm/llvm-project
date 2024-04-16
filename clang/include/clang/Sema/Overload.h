@@ -1078,7 +1078,6 @@ class Sema;
     };
 
   private:
-    ASTContext &Ctx;
     SmallVector<OverloadCandidate, 4> Candidates;
     llvm::SmallPtrSet<uintptr_t, 4> Functions;
 
@@ -1092,10 +1091,9 @@ class Sema;
     void destroyCandidates();
 
   public:
-    OverloadCandidateSet(ASTContext &Ctx, SourceLocation Loc,
-                         CandidateSetKind CSK,
+    OverloadCandidateSet(SourceLocation Loc, CandidateSetKind CSK,
                          OperatorRewriteInfo RewriteInfo = {})
-        : Ctx(Ctx), Loc(Loc), Kind(CSK), RewriteInfo(RewriteInfo) {}
+        : Loc(Loc), Kind(CSK), RewriteInfo(RewriteInfo) {}
     OverloadCandidateSet(const OverloadCandidateSet &) = delete;
     OverloadCandidateSet &operator=(const OverloadCandidateSet &) = delete;
     ~OverloadCandidateSet() { destroyCandidates(); }
@@ -1138,11 +1136,7 @@ class Sema;
     ConversionSequenceList
     allocateConversionSequences(unsigned NumConversions) {
       ImplicitConversionSequence *Conversions =
-          Ctx.Allocate<ImplicitConversionSequence>(NumConversions);
-
-      // Construct the new objects.
-      std::uninitialized_default_construct(Conversions,
-                                           Conversions + NumConversions);
+          new ImplicitConversionSequence[NumConversions];
       return ConversionSequenceList(Conversions, NumConversions);
     }
 

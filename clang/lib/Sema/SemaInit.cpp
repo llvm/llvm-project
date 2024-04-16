@@ -6113,10 +6113,9 @@ static bool TryOCLZeroOpaqueTypeInitialization(Sema &S,
 InitializationSequence::InitializationSequence(
     Sema &S, const InitializedEntity &Entity, const InitializationKind &Kind,
     MultiExprArg Args, bool TopLevelOfInitList, bool TreatUnavailableAsInvalid)
-    : FailedOverloadResult(OR_Success), FailedCandidateSet(nullptr) {
-  FailedCandidateSet = S.getASTContext().Allocate<OverloadCandidateSet>();
-  FailedCandidateSet = new (FailedCandidateSet) OverloadCandidateSet(
-      S.getASTContext(), Kind.getLocation(), OverloadCandidateSet::CSK_Normal);
+    : FailedOverloadResult(OR_Success),
+      FailedCandidateSet(new OverloadCandidateSet(
+          Kind.getLocation(), OverloadCandidateSet::CSK_Normal)) {
   InitializeFrom(S, Entity, Kind, Args, TopLevelOfInitList,
                  TreatUnavailableAsInvalid);
 }
@@ -6600,7 +6599,6 @@ void InitializationSequence::InitializeFrom(Sema &S,
 InitializationSequence::~InitializationSequence() {
   for (auto &S : Steps)
     S.Destroy();
-  FailedCandidateSet->~OverloadCandidateSet();
 }
 
 //===----------------------------------------------------------------------===//
@@ -6811,8 +6809,7 @@ static ExprResult CopyObject(Sema &S,
   // Perform overload resolution using the class's constructors. Per
   // C++11 [dcl.init]p16, second bullet for class types, this initialization
   // is direct-initialization.
-  OverloadCandidateSet CandidateSet(S.getASTContext(), Loc,
-                                    OverloadCandidateSet::CSK_Normal);
+  OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
   DeclContext::lookup_result Ctors = S.LookupConstructors(Class);
 
   OverloadCandidateSet::iterator Best;
@@ -6953,8 +6950,7 @@ static void CheckCXX98CompatAccessibleCopy(Sema &S,
     return;
 
   // Find constructors which would have been considered.
-  OverloadCandidateSet CandidateSet(S.getASTContext(), Loc,
-                                    OverloadCandidateSet::CSK_Normal);
+  OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
   DeclContext::lookup_result Ctors =
       S.LookupConstructors(cast<CXXRecordDecl>(Record->getDecl()));
 
@@ -10830,7 +10826,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   //
   // Since we know we're initializing a class type of a type unrelated to that
   // of the initializer, this reduces to something fairly reasonable.
-  OverloadCandidateSet Candidates(Context, Kind.getLocation(),
+  OverloadCandidateSet Candidates(Kind.getLocation(),
                                   OverloadCandidateSet::CSK_Normal);
   OverloadCandidateSet::iterator Best;
 
