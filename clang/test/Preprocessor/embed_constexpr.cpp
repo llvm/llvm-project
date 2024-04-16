@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify -Wno-c23-extensions
-// RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify=fixme -fexperimental-new-constant-interpreter -Wno-c23-extensions
+// RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify -fexperimental-new-constant-interpreter -Wno-c23-extensions
 // expected-no-diagnostics
 
 constexpr int value(int a, int b) {
@@ -35,7 +35,7 @@ constexpr int template_args() {
 constexpr int ExpectedValue = 'j' + 'k';
 static_assert(func_call() == ExpectedValue);
 static_assert(init_list_expr() == ExpectedValue);
-static_assert(template_args() == ExpectedValue); // fixme-error {{static assertion expression is not an integral constant expression}}
+static_assert(template_args() == ExpectedValue);
 
 static_assert(
 #embed <jk.txt> limit(1) suffix(== 'j')
