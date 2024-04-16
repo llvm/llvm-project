@@ -645,7 +645,8 @@ NewArchiveMember ObjectFactory::createWeakExternal(StringRef Sym,
 Error writeImportLibrary(StringRef ImportName, StringRef Path,
                          ArrayRef<COFFShortExport> Exports,
                          MachineTypes Machine, bool MinGW,
-                         ArrayRef<COFFShortExport> NativeExports) {
+                         ArrayRef<COFFShortExport> NativeExports,
+                         bool AddUnderscores) {
 
   MachineTypes NativeMachine = Machine;
   if (isArm64EC(Machine)) {
@@ -691,10 +692,15 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
       }
 
       if (!E.ImportName.empty() && Name != E.ImportName) {
+        StringRef Prefix = "";
+        if (Machine == IMAGE_FILE_MACHINE_I386 && AddUnderscores)
+          Prefix = "_";
+
         if (ImportType == IMPORT_CODE)
-          Members.push_back(
-              OF.createWeakExternal(E.ImportName, Name, false, M));
-        Members.push_back(OF.createWeakExternal(E.ImportName, Name, true, M));
+          Members.push_back(OF.createWeakExternal((Prefix + E.ImportName).str(),
+                                                  Name, false, M));
+        Members.push_back(OF.createWeakExternal((Prefix + E.ImportName).str(),
+                                                Name, true, M));
         continue;
       }
 
