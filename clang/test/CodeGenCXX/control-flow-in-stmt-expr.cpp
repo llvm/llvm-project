@@ -391,3 +391,19 @@ void ArrayInitWithContinue() {
                      })};
   }
 }
+
+struct [[clang::trivial_abi]] HasTrivialABI {
+  HasTrivialABI();
+  ~HasTrivialABI();
+};
+void AcceptTrivialABI(HasTrivialABI, int);
+void TrivialABI() {
+  // CHECK-LABEL: define dso_local void @_Z10TrivialABIv()
+  AcceptTrivialABI(HasTrivialABI(), ({
+                     if (foo()) return;
+                     // CHECK:      if.then:
+                     // CHECK-NEXT:   call void @_ZN13HasTrivialABID1Ev
+                     // CHECK-NEXT:   br label %return
+                     0;
+                   }));
+}
