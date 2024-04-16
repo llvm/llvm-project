@@ -11,7 +11,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
-    ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(s16) = G_FMAXIMUM [[C]], [[COPY]]
+    ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(s16) = G_FMAXIMUM [[COPY]], [[C]]
     ; CHECK-NEXT: $h0 = COPY [[FMAXIMUM]](s16)
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:_(s16) = COPY $h0
@@ -33,7 +33,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(s32) = G_FMAXIMUM [[C]], [[COPY]]
+    ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(s32) = G_FMAXIMUM [[COPY]], [[C]]
     ; CHECK-NEXT: $s0 = COPY [[FMAXIMUM]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:_(s32) = COPY $s0
@@ -55,7 +55,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
-    ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(s64) = G_FMAXIMUM [[C]], [[COPY]]
+    ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(s64) = G_FMAXIMUM [[COPY]], [[C]]
     ; CHECK-NEXT: $d0 = COPY [[FMAXIMUM]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(s64) = COPY $d0
@@ -77,7 +77,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
-    ; CHECK-NEXT: [[FMINIMUM:%[0-9]+]]:_(s64) = G_FMINIMUM [[C]], [[COPY]]
+    ; CHECK-NEXT: [[FMINIMUM:%[0-9]+]]:_(s64) = G_FMINIMUM [[COPY]], [[C]]
     ; CHECK-NEXT: $d0 = COPY [[FMINIMUM]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(s64) = COPY $d0
@@ -100,7 +100,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16), [[C]](s16)
-    ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(<8 x s16>) = G_FMAXIMUM [[BUILD_VECTOR]], [[COPY]]
+    ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(<8 x s16>) = G_FMAXIMUM [[COPY]], [[BUILD_VECTOR]]
     ; CHECK-NEXT: $q0 = COPY [[FMAXIMUM]](<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<8 x s16>) = COPY $q0
@@ -125,7 +125,7 @@ body:             |
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(<4 x s32>) = G_FMAXIMUM [[BUILD_VECTOR]], [[BITCAST]]
+    ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(<4 x s32>) = G_FMAXIMUM [[BITCAST]], [[BUILD_VECTOR]]
     ; CHECK-NEXT: $q0 = COPY [[FMAXIMUM]](<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %1:_(<2 x s64>) = COPY $q0
@@ -150,7 +150,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(<2 x s64>) = G_FMAXIMUM [[BUILD_VECTOR]], [[COPY]]
+    ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(<2 x s64>) = G_FMAXIMUM [[COPY]], [[BUILD_VECTOR]]
     ; CHECK-NEXT: $q0 = COPY [[FMAXIMUM]](<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<2 x s64>) = COPY $q0
@@ -174,7 +174,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK-NEXT: [[FMINIMUM:%[0-9]+]]:_(<2 x s64>) = G_FMINIMUM [[BUILD_VECTOR]], [[COPY]]
+    ; CHECK-NEXT: [[FMINIMUM:%[0-9]+]]:_(<2 x s64>) = G_FMINIMUM [[COPY]], [[BUILD_VECTOR]]
     ; CHECK-NEXT: $q0 = COPY [[FMINIMUM]](<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<2 x s64>) = COPY $q0
