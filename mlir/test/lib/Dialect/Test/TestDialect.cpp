@@ -594,7 +594,7 @@ LogicalResult CompareOp::verify() {
         "'compose' not supported when 'lhs_map' or 'rhs_map' is present");
   int64_t expectedNumOperands = getLhsMap() ? getLhsMap()->getNumInputs() : 1;
   expectedNumOperands += getRhsMap() ? getRhsMap()->getNumInputs() : 1;
-  if (getVarOperands().size() != expectedNumOperands)
+  if (getVarOperands().size() != size_t(expectedNumOperands))
     return emitOpError("expected ")
            << expectedNumOperands << " operands, but got "
            << getVarOperands().size();
