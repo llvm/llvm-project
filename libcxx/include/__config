@@ -16,17 +16,6 @@
 #  pragma GCC system_header
 #endif
 
-#if defined(_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES) && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
-#  pragma clang deprecated(                                                                                            \
-      _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES,                                                                           \
-      "_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES is deprecated in LLVM 18 and will be removed in LLVM 19")
-#endif
-#if defined(_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES) && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
-#  pragma clang deprecated(                                                                                            \
-      _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES,                                                                           \
-      "_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES is deprecated in LLVM 18 and will be removed in LLVM 19")
-#endif
-
 #if defined(__apple_build_version__)
 // Given AppleClang XX.Y.Z, _LIBCPP_APPLE_CLANG_VER is XXYZ (e.g. AppleClang 14.0.3 => 1403)
 #  define _LIBCPP_COMPILER_CLANG_BASED
@@ -1229,21 +1218,6 @@ typedef __char32_t char32_t;
 #  else
 #    define _LIBCPP_IF_WIDE_CHARACTERS(...) __VA_ARGS__
 #  endif
-
-#  if defined(_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES)
-#    define _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR
-#    define _LIBCPP_ENABLE_CXX17_REMOVED_BINDERS
-#    define _LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE
-#    define _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
-#    define _LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
-#  endif // _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES
-
-#  if defined(_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES)
-#    define _LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS
-#    define _LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS
-#    define _LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR
-#    define _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
-#  endif // _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES
 
 // clang-format off
 #  define _LIBCPP_PUSH_MACROS _Pragma("push_macro(\"min\")") _Pragma("push_macro(\"max\")") _Pragma("push_macro(\"refresh\")") _Pragma("push_macro(\"move\")") _Pragma("push_macro(\"erase\")")
