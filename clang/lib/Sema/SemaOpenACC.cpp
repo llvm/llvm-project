@@ -15,6 +15,7 @@
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/Casting.h"
 
 using namespace clang;
 
@@ -174,9 +175,7 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     // TODO OpenACC: When we add these two to other constructs, we might not
     // want to warn on this (for example, 'update').
     const auto *Itr =
-        llvm::find_if(ExistingClauses, [](const OpenACCClause *C) {
-          return C->getClauseKind() == OpenACCClauseKind::Self;
-        });
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSelfClause>);
     if (Itr != ExistingClauses.end()) {
       Diag(Clause.getBeginLoc(), diag::warn_acc_if_self_conflict);
       Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
@@ -209,9 +208,7 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     // TODO OpenACC: When we add these two to other constructs, we might not
     // want to warn on this (for example, 'update').
     const auto *Itr =
-        llvm::find_if(ExistingClauses, [](const OpenACCClause *C) {
-          return C->getClauseKind() == OpenACCClauseKind::If;
-        });
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCIfClause>);
     if (Itr != ExistingClauses.end()) {
       Diag(Clause.getBeginLoc(), diag::warn_acc_if_self_conflict);
       Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);

@@ -849,10 +849,9 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
         Diag(DefKindTok, diag::err_acc_invalid_default_clause_kind);
         Parens.skipToEnd();
         return OpenACCCanContinue();
-      } else {
-        ParsedClause.setDefaultDetails(DefKind);
       }
 
+      ParsedClause.setDefaultDetails(DefKind);
       break;
     }
     case OpenACCClauseKind::If: {
