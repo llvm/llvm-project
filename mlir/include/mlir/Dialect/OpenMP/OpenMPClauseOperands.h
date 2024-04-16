@@ -285,10 +285,9 @@ using TaskgroupClauseOps =
 
 using TaskloopClauseOps =
     detail::Clauses<AllocateClauseOps, FinalClauseOps, GrainsizeClauseOps,
-                    IfClauseOps, InReductionClauseOps, LoopRelatedOps,
-                    MergeableClauseOps, NogroupClauseOps, NumTasksClauseOps,
-                    PriorityClauseOps, PrivateClauseOps, ReductionClauseOps,
-                    UntiedClauseOps>;
+                    IfClauseOps, InReductionClauseOps, MergeableClauseOps,
+                    NogroupClauseOps, NumTasksClauseOps, PriorityClauseOps,
+                    PrivateClauseOps, ReductionClauseOps, UntiedClauseOps>;
 
 using TaskwaitClauseOps = detail::Clauses<DependClauseOps, NowaitClauseOps>;
 
