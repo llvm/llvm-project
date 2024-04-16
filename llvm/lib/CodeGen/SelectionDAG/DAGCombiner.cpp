@@ -24477,11 +24477,10 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     unsigned InsIdx = V.getConstantOperandVal(2);
     unsigned NumSubElts = NVT.getVectorMinNumElements();
     if (InsIdx <= ExtIdx && (ExtIdx + NumSubElts) <= (InsIdx + NumInsElts) &&
-        TLI.isExtractSubvectorCheap(NVT, InsSubVT, ExtIdx - InsIdx)) {
-      SDLoc DL(N);
+        TLI.isExtractSubvectorCheap(NVT, InsSubVT, ExtIdx - InsIdx) &&
+        InsSubVT.isFixedLengthVector() && NVT.isFixedLengthVector())
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, InsSub,
                          DAG.getVectorIdxConstant(ExtIdx - InsIdx, DL));
-    }
   }
 
   // Try to move vector bitcast after extract_subv by scaling extraction index:

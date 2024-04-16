@@ -86,7 +86,7 @@ llvm::SmallVector<SegmentEntry> readSegmentEntries(const char *Ptr) {
   using namespace support;
 
   const uint64_t NumItemsToRead =
-      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   llvm::SmallVector<SegmentEntry> Items;
   for (uint64_t I = 0; I < NumItemsToRead; I++) {
     Items.push_back(*reinterpret_cast<const SegmentEntry *>(
@@ -100,11 +100,11 @@ readMemInfoBlocks(const char *Ptr) {
   using namespace support;
 
   const uint64_t NumItemsToRead =
-      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>> Items;
   for (uint64_t I = 0; I < NumItemsToRead; I++) {
     const uint64_t Id =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     const MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
     Items.push_back({Id, MIB});
     // Only increment by size of MIB since readNext implicitly increments.
@@ -117,20 +117,20 @@ CallStackMap readStackInfo(const char *Ptr) {
   using namespace support;
 
   const uint64_t NumItemsToRead =
-      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   CallStackMap Items;
 
   for (uint64_t I = 0; I < NumItemsToRead; I++) {
     const uint64_t StackId =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     const uint64_t NumPCs =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
     SmallVector<uint64_t> CallStack;
     CallStack.reserve(NumPCs);
     for (uint64_t J = 0; J < NumPCs; J++) {
       CallStack.push_back(
-          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr));
+          endian::readNext<uint64_t, llvm::endianness::little>(Ptr));
     }
 
     Items[StackId] = CallStack;
@@ -182,6 +182,28 @@ std::string getBuildIdString(const SegmentEntry &Entry) {
   return OS.str();
 }
 } // namespace
+
+MemProfReader::MemProfReader(
+    llvm::DenseMap<FrameId, Frame> FrameIdMap,
+    llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
+    : IdToFrame(std::move(FrameIdMap)),
+      FunctionProfileData(std::move(ProfData)) {
+  // Populate CSId in each IndexedAllocationInfo and IndexedMemProfRecord
+  // while storing CallStack in CSIdToCallStack.
+  for (auto &KV : FunctionProfileData) {
+    IndexedMemProfRecord &Record = KV.second;
+    for (auto &AS : Record.AllocSites) {
+      CallStackId CSId = hashCallStack(AS.CallStack);
+      AS.CSId = CSId;
+      CSIdToCallStack.insert({CSId, AS.CallStack});
+    }
+    for (auto &CS : Record.CallSites) {
+      CallStackId CSId = hashCallStack(CS);
+      Record.CallSiteIds.push_back(CSId);
+      CSIdToCallStack.insert({CSId, CS});
+    }
+  }
+}
 
 Expected<std::unique_ptr<RawMemProfReader>>
 RawMemProfReader::create(const Twine &Path, const StringRef ProfiledBinary,
@@ -445,6 +467,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     }
 
     CallStackId CSId = hashCallStack(Callstack);
+    CSIdToCallStack.insert({CSId, Callstack});
 
     // We attach the memprof record to each function bottom-up including the
     // first non-inline frame.
@@ -467,7 +490,10 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     auto Result = FunctionProfileData.insert({Id, IndexedMemProfRecord()});
     IndexedMemProfRecord &Record = Result.first->second;
     for (LocationPtr Loc : Locs) {
+      CallStackId CSId = hashCallStack(*Loc);
+      CSIdToCallStack.insert({CSId, *Loc});
       Record.CallSites.push_back(*Loc);
+      Record.CallSiteIds.push_back(CSId);
     }
   }
 

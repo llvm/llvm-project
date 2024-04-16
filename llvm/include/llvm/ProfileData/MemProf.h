@@ -16,6 +16,8 @@
 namespace llvm {
 namespace memprof {
 
+struct MemProfRecord;
+
 // The versions of the indexed MemProf format
 enum IndexedVersion : uint64_t {
   // Version 0: This version didn't have a version field.
@@ -66,7 +68,7 @@ struct PortableMemInfoBlock {
       switch (Id) {
 #define MIBEntryDef(NameTag, Name, Type)                                       \
   case Meta::Name: {                                                           \
-    Name = endian::readNext<Type, llvm::endianness::little, unaligned>(Ptr);   \
+    Name = endian::readNext<Type, llvm::endianness::little>(Ptr);              \
   } break;
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
@@ -221,13 +223,12 @@ struct Frame {
     using namespace support;
 
     const uint64_t F =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     const uint32_t L =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
     const uint32_t C =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
-    const bool I =
-        endian::readNext<bool, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
+    const bool I = endian::readNext<bool, llvm::endianness::little>(Ptr);
     return Frame(/*Function=*/F, /*LineOffset=*/L, /*Column=*/C,
                  /*IsInlineFrame=*/I);
   }
@@ -392,6 +393,12 @@ struct IndexedMemProfRecord {
                                           const unsigned char *Buffer,
                                           IndexedVersion Version);
 
+  // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
+  // translate CallStackId to call stacks with frames inline.
+  MemProfRecord toMemProfRecord(
+      std::function<const llvm::SmallVector<Frame>(const CallStackId)> Callback)
+      const;
+
   // Returns the GUID for the function name after canonicalization. For
   // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
   // mapped to functions using this GUID.
@@ -474,16 +481,15 @@ public:
     using namespace support;
 
     offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     offset_type DataLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);
   }
 
   uint64_t ReadKey(const unsigned char *D, offset_type /*Unused*/) {
     using namespace support;
-    return endian::readNext<external_key_type, llvm::endianness::little,
-                            unaligned>(D);
+    return endian::readNext<external_key_type, llvm::endianness::little>(D);
   }
 
   data_type ReadData(uint64_t K, const unsigned char *D,
@@ -615,16 +621,15 @@ public:
     using namespace support;
 
     offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     offset_type DataLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);
   }
 
   uint64_t ReadKey(const unsigned char *D, offset_type /*Unused*/) {
     using namespace support;
-    return endian::readNext<external_key_type, llvm::endianness::little,
-                            unaligned>(D);
+    return endian::readNext<external_key_type, llvm::endianness::little>(D);
   }
 
   data_type ReadData(uint64_t K, const unsigned char *D,

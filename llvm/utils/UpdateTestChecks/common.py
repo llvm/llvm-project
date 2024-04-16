@@ -980,10 +980,6 @@ class NamelessValue:
     def is_local_def_ir_value(self):
         return self.ir_prefix == "%"
 
-    # Return true if this kind of IR value is "global", basically if it matches '#{{.*}}'.
-    def is_global_scope_ir_value_match(self, match):
-        return self.global_ir_rhs_regexp is not None
-
     # Return the IR prefix and check prefix we use for this kind or IR value,
     # e.g., (%, TMP) for locals. If the IR prefix is a regex, return the prefix
     # used in the IR output

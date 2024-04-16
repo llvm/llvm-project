@@ -6188,7 +6188,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   BitsPacker DefinitionBits;
 
-  bool ShouldSkipCheckingODR = D->shouldSkipCheckingODR();
+  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
   DefinitionBits.addBit(ShouldSkipCheckingODR);
 
 #define FIELD(Name, Width, Merge)                                              \
@@ -7524,6 +7524,14 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     AddStmt(const_cast<Expr *>(IC->getConditionExpr()));
     return;
   }
+  case OpenACCClauseKind::Self: {
+    const auto *SC = cast<OpenACCIfClause>(C);
+    writeSourceLocation(SC->getLParenLoc());
+    writeBool(SC->hasConditionExpr());
+    if (SC->hasConditionExpr())
+      AddStmt(const_cast<Expr *>(SC->getConditionExpr()));
+    return;
+  }
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
@@ -7532,7 +7540,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::Self:
   case OpenACCClauseKind::Copy:
   case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::Attach:

@@ -1223,7 +1223,7 @@ define i8 @known_reduce_and(<2 x i8> %xx) {
 ; CHECK-NEXT:    ret i8 1
 ;
   %x = or <2 x i8> %xx, <i8 5, i8 3>
-  %v = call i8 @llvm.vector.reduce.or(<2 x i8> %x)
+  %v = call i8 @llvm.vector.reduce.and(<2 x i8> %x)
   %r = and i8 %v, 1
   ret i8 %r
 }
@@ -1231,12 +1231,12 @@ define i8 @known_reduce_and(<2 x i8> %xx) {
 define i8 @known_reduce_and_fail(<2 x i8> %xx) {
 ; CHECK-LABEL: @known_reduce_and_fail(
 ; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 5, i8 3>
-; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.and.v2i8(<2 x i8> [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x = or <2 x i8> %xx, <i8 5, i8 3>
-  %v = call i8 @llvm.vector.reduce.or(<2 x i8> %x)
+  %v = call i8 @llvm.vector.reduce.and(<2 x i8> %x)
   %r = and i8 %v, 2
   ret i8 %r
 }
