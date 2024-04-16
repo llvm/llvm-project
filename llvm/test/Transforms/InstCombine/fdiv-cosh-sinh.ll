@@ -35,8 +35,8 @@ define double @fdiv_reassoc_cosh_strict_sinh_strict(double %a, ptr dereferenceab
 ;
   %cosh = call double @cosh(double %a)
   %sinh = call double @sinh(double %a)
-  %div = fdiv reassoc double %1, %2
-  ret double %div %cosh, %sinh
+  %div = fdiv reassoc double %cosh, %sinh
+  ret double %div
 }
 
 define double @fdiv_reassoc_cosh_reassoc_sinh_strict(double %a) {

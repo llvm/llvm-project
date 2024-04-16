@@ -47,7 +47,7 @@ define double @fdiv_sin_cos_reassoc_multiple_uses_sinh(double %a) {
   %sinh = call reassoc double @sinh(double %a)
   %cosh = call reassoc double @cosh(double %a)
   %div = fdiv reassoc double %sinh, %cosh
-  call void @use(double %cosh)
+  call void @use(double %sinh)
   ret double %div
 }
 
@@ -62,7 +62,7 @@ define double @fdiv_sin_cos_reassoc_multiple_uses_cosh(double %a) {
   %sinh = call reassoc double @sinh(double %a)
   %cosh = call reassoc double @cosh(double %a)
   %div = fdiv reassoc double %sinh, %cosh
-  call void @use(double %2)
+  call void @use(double %cosh)
   ret double %div
 }
 
