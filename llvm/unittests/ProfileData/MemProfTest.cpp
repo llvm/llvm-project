@@ -436,6 +436,47 @@ TEST(MemProf, BaseMemProfReader) {
               FrameContains("bar", 10U, 2U, false));
 }
 
+TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
+  llvm::DenseMap<FrameId, Frame> FrameIdMap;
+  Frame F1(/*Hash=*/IndexedMemProfRecord::getGUID("foo"), /*LineOffset=*/20,
+           /*Column=*/5, /*IsInlineFrame=*/true);
+  Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
+           /*Column=*/2, /*IsInlineFrame=*/false);
+  FrameIdMap.insert({F1.hash(), F1});
+  FrameIdMap.insert({F2.hash(), F2});
+
+  llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdMap;
+  llvm::SmallVector<FrameId> CallStack = {F1.hash(), F2.hash()};
+  CallStackId CSId = llvm::memprof::hashCallStack(CallStack);
+  CSIdMap.insert({CSId, CallStack});
+
+  llvm::MapVector<llvm::GlobalValue::GUID, IndexedMemProfRecord> ProfData;
+  IndexedMemProfRecord FakeRecord;
+  MemInfoBlock Block;
+  Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
+  Block.TotalLifetime = 200001;
+  FakeRecord.AllocSites.emplace_back(
+      /*CS=*/llvm::SmallVector<FrameId>(),
+      /*CSId=*/llvm::memprof::hashCallStack(CallStack),
+      /*MB=*/Block);
+  ProfData.insert({F1.hash(), FakeRecord});
+
+  MemProfReader Reader(FrameIdMap, CSIdMap, ProfData);
+
+  llvm::SmallVector<MemProfRecord, 1> Records;
+  for (const auto &KeyRecordPair : Reader) {
+    Records.push_back(KeyRecordPair.second);
+  }
+
+  ASSERT_THAT(Records, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(2));
+  EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
+              FrameContains("foo", 20U, 5U, true));
+  EXPECT_THAT(Records[0].AllocSites[0].CallStack[1],
+              FrameContains("bar", 10U, 2U, false));
+}
+
 TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   // Verify that MemProfRecord can be constructed from IndexedMemProfRecord with
   // CallStackIds only.

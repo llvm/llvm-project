@@ -98,6 +98,15 @@ public:
       llvm::DenseMap<FrameId, Frame> FrameIdMap,
       llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData);
 
+  // Initialize the MemProfReader with the frame mappings, call stack mappings,
+  // and profile contents.
+  MemProfReader(
+      llvm::DenseMap<FrameId, Frame> FrameIdMap,
+      llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdMap,
+      llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
+      : IdToFrame(std::move(FrameIdMap)), CSIdToCallStack(std::move(CSIdMap)),
+        FunctionProfileData(std::move(ProfData)) {}
+
 protected:
   // A helper method to extract the frame from the IdToFrame map.
   const Frame &idToFrame(const FrameId Id) const {
