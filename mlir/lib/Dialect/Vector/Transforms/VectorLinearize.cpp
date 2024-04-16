@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -136,9 +137,6 @@ struct LinearizeVectorExtractStridedSlice final
   matchAndRewrite(vector::ExtractStridedSliceOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto dstType = getTypeConverter()->convertType(extractOp.getType());
-    auto loc = extractOp.getLoc();
-    if (!dstType)
-      return rewriter.notifyMatchFailure(loc, "cannot convert type.");
     assert(!(extractOp.getVector().getType().isScalable() ||
              dstType.cast<VectorType>().isScalable()) &&
            "scalable vectors are not supported.");
@@ -146,9 +144,9 @@ struct LinearizeVectorExtractStridedSlice final
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
 
-    auto offsets = extractOp.getOffsets().getValue();
-    auto sizes = extractOp.getSizes().getValue();
-    auto strides = extractOp.getStrides().getValue();
+    auto offsets = extractOp.getOffsets();
+    auto sizes = extractOp.getSizes();
+    auto strides = extractOp.getStrides();
     if (!isConstantIntValue(strides[0], 1))
       return rewriter.notifyMatchFailure(
           extractOp, "Strided slice with stride != 1 is not supported.");
@@ -156,32 +154,35 @@ struct LinearizeVectorExtractStridedSlice final
     // If kD offsets are specified for nd source vector (n > k), the granularity
     // of the extraction is greater than 1. In this case last (n-k) dimensions
     // form the extraction granularity.
-    // example :
-    //  %0 = vector.extract_strided_slice %src { offsets = [0, 0], sizes = [2,
-    //  2],
-    //     strides = [1, 1]} : vector<4x8x8xf32> to vector<2x2x8xf32>
+    // Example :
+    //  vector.extract_strided_slice %src {
+    //      offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} :
+    //      vector<4x8x8xf32> to vector<2x2x8xf32>
     // Here, extraction granularity is 8.
-    int64_t extractSliceLen = 1;
+    int64_t extractGranularitySize = 1;
     auto n = extractOp.getSourceVectorType().getRank();
     int64_t k = (int64_t)offsets.size();
     if (n > k) {
       for (unsigned i = 0; i < n - k; i++) {
-        extractSliceLen *= extractOp.getSourceVectorType().getShape()[i + k];
+        extractGranularitySize *=
+            extractOp.getSourceVectorType().getShape()[i + k];
       }
     }
     // Get total number of extracted slices.
     int64_t nExtractedSlices = 1;
-    for (auto size : sizes) {
+    llvm::for_each(sizes, [&](Attribute size) {
       nExtractedSlices *= size.cast<IntegerAttr>().getInt();
-    }
+    });
     // Compute the strides of the source vector considering first k dimensions.
-    llvm::SmallVector<int64_t, 4> sourceStrides(k, extractSliceLen);
+    llvm::SmallVector<int64_t, 4> sourceStrides(k, extractGranularitySize);
     for (int i = k - 2; i >= 0; --i) {
       sourceStrides[i] = sourceStrides[i + 1] *
                          extractOp.getSourceVectorType().getShape()[i + 1];
     }
-    // Final shuffle indices has nExtractedElems * extractSliceLen elements.
-    llvm::SmallVector<int64_t, 4> indices(nExtractedSlices * extractSliceLen);
+    // Final shuffle indices has nExtractedElems * extractGranularitySize
+    // elements.
+    llvm::SmallVector<int64_t, 4> indices(nExtractedSlices *
+                                          extractGranularitySize);
     // Compute the strides of the extracted kD vector.
     llvm::SmallVector<int64_t, 4> extractedStrides(k, 1);
     // Compute extractedStrides.
@@ -209,9 +210,9 @@ struct LinearizeVectorExtractStridedSlice final
             sourceStrides[j];
       }
       // Fill the indices array form linearizedIndex to linearizedIndex +
-      // sliceLen.
-      for (int64_t j = 0; j < extractSliceLen; ++j) {
-        indices[i * extractSliceLen + j] = linearizedIndex + j;
+      // extractGranularitySize.
+      for (int64_t j = 0; j < extractGranularitySize; ++j) {
+        indices[i * extractGranularitySize + j] = linearizedIndex + j;
       }
     }
     // Perform a shuffle to extract the kD vector.
@@ -250,9 +251,6 @@ struct LinearizeVectorShuffle final
   matchAndRewrite(vector::ShuffleOp shuffleOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto dstType = getTypeConverter()->convertType(shuffleOp.getType());
-    auto loc = shuffleOp.getLoc();
-    if (!dstType)
-      return rewriter.notifyMatchFailure(loc, "cannot convert type.");
     assert(!(shuffleOp.getV1VectorType().isScalable() ||
              shuffleOp.getV2VectorType().isScalable() ||
              dstType.cast<VectorType>().isScalable()) &&
@@ -324,9 +322,6 @@ struct LinearizeVectorExtract final
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto dstTy = getTypeConverter()->convertType(extractOp.getType());
-    if (!dstTy)
-      return rewriter.notifyMatchFailure(extractOp, "cannot convert type.");
-
     assert(!(extractOp.getVector().getType().isScalable() ||
              dstTy.cast<VectorType>().isScalable()) &&
            "scalable vectors are not supported.");
