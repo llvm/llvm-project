@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c11 -fsyntax-only -verify -Wformat-nonliteral %s
 
 // Test that -Wformat=0 works:
-// RUN: %clang_cc1 -std=c11 -fsyntax-only -Werror -Wformat=0 -Wno-format-pedantic %s
+// RUN: %clang_cc1 -std=c11 -fsyntax-only -Werror -Wformat=0 %s
 
 #include <stdarg.h>
 typedef __SIZE_TYPE__ size_t;

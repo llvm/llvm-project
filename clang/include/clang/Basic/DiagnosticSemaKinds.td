@@ -9826,7 +9826,7 @@ def warn_scanf_nonzero_width : Warning<
 def warn_format_conversion_argument_type_mismatch : Warning<
   "format specifies type %0 but the argument has "
   "%select{type|underlying type}2 %1">,
-  InGroup<FormatPedantic>;
+  InGroup<Format>;
 def warn_format_conversion_argument_type_mismatch_pedantic : Extension<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatPedantic>;
@@ -9839,7 +9839,7 @@ def warn_format_conversion_argument_type_mismatch_confusion : Warning<
 def warn_format_argument_needs_cast : Warning<
   "%select{values of type|enum values with underlying type}2 '%0' should not "
   "be used as format arguments; add an explicit cast to %1 instead">,
-  InGroup<FormatPedantic>;
+  InGroup<Format>;
 def warn_format_argument_needs_cast_pedantic : Warning<
   warn_format_argument_needs_cast.Summary>,
   InGroup<FormatPedantic>, DefaultIgnore;
