@@ -11,14 +11,16 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/Sema/SemaOpenACC.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/DiagnosticSema.h"
-#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/Casting.h"
 
 using namespace clang;
 
 namespace {
-bool diagnoseConstructAppertainment(Sema &S, OpenACCDirectiveKind K,
+bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
                                     SourceLocation StartLoc, bool IsStmt) {
   switch (K) {
   default:
@@ -35,19 +37,197 @@ bool diagnoseConstructAppertainment(Sema &S, OpenACCDirectiveKind K,
   }
   return false;
 }
+
+bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
+                                OpenACCClauseKind ClauseKind) {
+  switch (ClauseKind) {
+    // FIXME: For each clause as we implement them, we can add the
+    // 'legalization' list here.
+  case OpenACCClauseKind::Default:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+    case OpenACCDirectiveKind::Data:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::If:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::EnterData:
+    case OpenACCDirectiveKind::ExitData:
+    case OpenACCDirectiveKind::HostData:
+    case OpenACCDirectiveKind::Init:
+    case OpenACCDirectiveKind::Shutdown:
+    case OpenACCDirectiveKind::Set:
+    case OpenACCDirectiveKind::Update:
+    case OpenACCDirectiveKind::Wait:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::Self:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Update:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  default:
+    // Do nothing so we can go to the 'unimplemented' diagnostic instead.
+    return true;
+  }
+  llvm_unreachable("Invalid clause kind");
+}
+
+bool checkAlreadyHasClauseOfKind(
+    SemaOpenACC &S, ArrayRef<const OpenACCClause *> ExistingClauses,
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  const auto *Itr = llvm::find_if(ExistingClauses, [&](const OpenACCClause *C) {
+    return C->getClauseKind() == Clause.getClauseKind();
+  });
+  if (Itr != ExistingClauses.end()) {
+    S.Diag(Clause.getBeginLoc(), diag::err_acc_duplicate_clause_disallowed)
+        << Clause.getDirectiveKind() << Clause.getClauseKind();
+    S.Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    return true;
+  }
+  return false;
+}
+
 } // namespace
 
-bool Sema::ActOnOpenACCClause(OpenACCClauseKind ClauseKind,
-                              SourceLocation StartLoc) {
-  if (ClauseKind == OpenACCClauseKind::Invalid)
-    return false;
-  // For now just diagnose that it is unsupported and leave the parsing to do
-  // whatever it can do. This function will eventually need to start returning
-  // some sort of Clause AST type, but for now just return true/false based on
-  // success.
-  return Diag(StartLoc, diag::warn_acc_clause_unimplemented) << ClauseKind;
+SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
+
+OpenACCClause *
+SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                         OpenACCParsedClause &Clause) {
+  if (Clause.getClauseKind() == OpenACCClauseKind::Invalid)
+    return nullptr;
+
+  // Diagnose that we don't support this clause on this directive.
+  if (!doesClauseApplyToDirective(Clause.getDirectiveKind(),
+                                  Clause.getClauseKind())) {
+    Diag(Clause.getBeginLoc(), diag::err_acc_clause_appertainment)
+        << Clause.getDirectiveKind() << Clause.getClauseKind();
+    return nullptr;
+  }
+
+  switch (Clause.getClauseKind()) {
+  case OpenACCClauseKind::Default: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // Don't add an invalid clause to the AST.
+    if (Clause.getDefaultClauseKind() == OpenACCDefaultClauseKind::Invalid)
+      return nullptr;
+
+    // OpenACC 3.3, Section 2.5.4:
+    // At most one 'default' clause may appear, and it must have a value of
+    // either 'none' or 'present'.
+    // Second half of the sentence is diagnosed during parsing.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    return OpenACCDefaultClause::Create(
+        getASTContext(), Clause.getDefaultClauseKind(), Clause.getBeginLoc(),
+        Clause.getLParenLoc(), Clause.getEndLoc());
+  }
+
+  case OpenACCClauseKind::If: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // There is no prose in the standard that says duplicates aren't allowed,
+    // but this diagnostic is present in other compilers, as well as makes
+    // sense.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    // The parser has ensured that we have a proper condition expr, so there
+    // isn't really much to do here.
+
+    // If the 'if' clause is true, it makes the 'self' clause have no effect,
+    // diagnose that here.
+    // TODO OpenACC: When we add these two to other constructs, we might not
+    // want to warn on this (for example, 'update').
+    const auto *Itr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSelfClause>);
+    if (Itr != ExistingClauses.end()) {
+      Diag(Clause.getBeginLoc(), diag::warn_acc_if_self_conflict);
+      Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    }
+
+    return OpenACCIfClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getConditionExpr(), Clause.getEndLoc());
+  }
+
+  case OpenACCClauseKind::Self: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // TODO OpenACC: When we implement this for 'update', this takes a
+    // 'var-list' instead of a condition expression, so semantics/handling has
+    // to happen differently here.
+
+    // There is no prose in the standard that says duplicates aren't allowed,
+    // but this diagnostic is present in other compilers, as well as makes
+    // sense.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    // If the 'if' clause is true, it makes the 'self' clause have no effect,
+    // diagnose that here.
+    // TODO OpenACC: When we add these two to other constructs, we might not
+    // want to warn on this (for example, 'update').
+    const auto *Itr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCIfClause>);
+    if (Itr != ExistingClauses.end()) {
+      Diag(Clause.getBeginLoc(), diag::warn_acc_if_self_conflict);
+      Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    }
+
+    return OpenACCSelfClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getConditionExpr(), Clause.getEndLoc());
+  }
+  default:
+    break;
+  }
+
+  Diag(Clause.getBeginLoc(), diag::warn_acc_clause_unimplemented)
+      << Clause.getClauseKind();
+  return nullptr;
 }
-void Sema::ActOnOpenACCConstruct(OpenACCDirectiveKind K,
+
+void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
                                  SourceLocation StartLoc) {
   switch (K) {
   case OpenACCDirectiveKind::Invalid:
@@ -68,14 +248,15 @@ void Sema::ActOnOpenACCConstruct(OpenACCDirectiveKind K,
   }
 }
 
-bool Sema::ActOnStartOpenACCStmtDirective(OpenACCDirectiveKind K,
+bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
-StmtResult Sema::ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
+StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
                                               SourceLocation StartLoc,
                                               SourceLocation EndLoc,
+                                              ArrayRef<OpenACCClause *> Clauses,
                                               StmtResult AssocStmt) {
   switch (K) {
   default:
@@ -85,14 +266,15 @@ StmtResult Sema::ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
+    // TODO OpenACC: Add clauses to the construct here.
     return OpenACCComputeConstruct::Create(
-        getASTContext(), K, StartLoc, EndLoc,
+        getASTContext(), K, StartLoc, EndLoc, Clauses,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
   llvm_unreachable("Unhandled case in directive handling?");
 }
 
-StmtResult Sema::ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
+StmtResult SemaOpenACC::ActOnAssociatedStmt(OpenACCDirectiveKind K,
                                             StmtResult AssocStmt) {
   switch (K) {
   default:
@@ -114,9 +296,9 @@ StmtResult Sema::ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
   llvm_unreachable("Invalid associated statement application");
 }
 
-bool Sema::ActOnStartOpenACCDeclDirective(OpenACCDirectiveKind K,
+bool SemaOpenACC::ActOnStartDeclDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/false);
 }
 
-DeclGroupRef Sema::ActOnEndOpenACCDeclDirective() { return DeclGroupRef{}; }
+DeclGroupRef SemaOpenACC::ActOnEndDeclDirective() { return DeclGroupRef{}; }

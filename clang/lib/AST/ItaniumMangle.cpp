@@ -2398,6 +2398,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Complex:
   case Type::Adjusted:
   case Type::Decayed:
+  case Type::ArrayParameter:
   case Type::Pointer:
   case Type::BlockPointer:
   case Type::LValueReference:
@@ -3445,6 +3446,7 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_PreserveAll:
   case CC_M68kRTD:
   case CC_PreserveNone:
+  case CC_RISCVVectorCall:
     // FIXME: we should be mangling all of the above.
     return "";
 
@@ -4443,6 +4445,10 @@ void CXXNameMangler::mangleType(const DependentBitIntType *T) {
   Out << "D" << (T->isUnsigned() ? "U" : "B");
   mangleExpression(T->getNumBitsExpr());
   Out << "_";
+}
+
+void CXXNameMangler::mangleType(const ArrayParameterType *T) {
+  mangleType(cast<ConstantArrayType>(T));
 }
 
 void CXXNameMangler::mangleIntegerLiteral(QualType T,

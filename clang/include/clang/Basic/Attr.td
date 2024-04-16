@@ -324,13 +324,10 @@ class Spelling<string name, string variety, int version = 1> {
 }
 
 class GNU<string name> : Spelling<name, "GNU">;
-class Declspec<string name> : Spelling<name, "Declspec"> {
-  bit PrintOnLeft = 1;
-}
+class Declspec<string name> : Spelling<name, "Declspec">;
 class Microsoft<string name> : Spelling<name, "Microsoft">;
 class CXX11<string namespace, string name, int version = 1>
     : Spelling<name, "CXX11", version> {
-  bit CanPrintOnLeft = 0;
   string Namespace = namespace;
 }
 class C23<string namespace, string name, int version = 1>
@@ -596,12 +593,6 @@ class AttrSubjectMatcherAggregateRule<AttrSubject subject> {
 def SubjectMatcherForNamed : AttrSubjectMatcherAggregateRule<Named>;
 
 class Attr {
-  // Specifies that when printed, this attribute is meaningful on the
-  // 'left side' of the declaration.
-  bit CanPrintOnLeft = 1;
-  // Specifies that when printed, this attribute is required to be printed on
-  // the 'left side' of the declaration.
-  bit PrintOnLeft = 0;
   // The various ways in which an attribute can be spelled in source
   list<Spelling> Spellings;
   // The things to which an attribute can appertain
@@ -937,7 +928,6 @@ def AVRSignal : InheritableAttr, TargetSpecificAttr<TargetAVR> {
 }
 
 def AsmLabel : InheritableAttr {
-  let CanPrintOnLeft = 0;
   let Spellings = [CustomKeyword<"asm">, CustomKeyword<"__asm__">];
   let Args = [
     // Label specifies the mangled name for the decl.
@@ -1534,7 +1524,6 @@ def AllocSize : InheritableAttr {
 }
 
 def EnableIf : InheritableAttr {
-  let CanPrintOnLeft = 0;
   // Does not have a [[]] spelling because this attribute requires the ability
   // to parse function arguments but the attribute is not written in the type
   // position.
@@ -2178,9 +2167,10 @@ def TypeNonNull : TypeAttr {
   let Documentation = [TypeNonNullDocs];
 }
 
-def TypeNullable : TypeAttr {
+def TypeNullable : DeclOrTypeAttr {
   let Spellings = [CustomKeyword<"_Nullable">];
   let Documentation = [TypeNullableDocs];
+//  let Subjects = SubjectList<[CXXRecord], ErrorDiag>;
 }
 
 def TypeNullableResult : TypeAttr {
@@ -3011,6 +3001,13 @@ def PreserveNone : DeclOrTypeAttr, TargetSpecificAttr<TargetAnyX86> {
   let Documentation = [PreserveNoneDocs];
 }
 
+def RISCVVectorCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
+ let Spellings = [CXX11<"riscv", "vector_cc">,
+                  C23<"riscv", "vector_cc">,
+                  Clang<"riscv_vector_cc">];
+ let Documentation = [RISCVVectorCCDocs];
+}
+
 def Target : InheritableAttr {
   let Spellings = [GCC<"target">];
   let Args = [StringArgument<"featuresStr">];
@@ -3088,6 +3085,20 @@ def TargetClones : InheritableAttr {
     StringRef getFeatureStr(unsigned Index) const {
       return *(featuresStrs_begin() + Index);
     }
+    bool isDefaultVersion(unsigned Index) const {
+      return getFeatureStr(Index) == "default";
+    }
+    void getFeatures(llvm::SmallVectorImpl<StringRef> &Out,
+                     unsigned Index) const {
+      if (isDefaultVersion(Index)) return;
+      StringRef Features = getFeatureStr(Index);
+      SmallVector<StringRef, 8> AttrFeatures;
+      Features.split(AttrFeatures, "+");
+      for (auto &Feature : AttrFeatures) {
+        Feature = Feature.trim();
+        Out.push_back(Feature);
+      }
+    }
     // Given an index into the 'featuresStrs' sequence, compute a unique
     // ID to be used with function name mangling for the associated variant.
     // This mapping is necessary due to a requirement that the mangling ID
@@ -3149,7 +3160,6 @@ def Unavailable : InheritableAttr {
 }
 
 def DiagnoseIf : InheritableAttr {
-  let CanPrintOnLeft = 0;
   // Does not have a [[]] spelling because this attribute requires the ability
   // to parse function arguments but the attribute is not written in the type
   // position.

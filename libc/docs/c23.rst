@@ -20,7 +20,7 @@ Additions:
 
 * fenv.h
 
-  * fesetexcept
+  * fesetexcept |check|
   * fetestexceptflag
   * fegetmode
   * fesetmode
@@ -54,7 +54,7 @@ Additions:
   * pown*
   * powr*
   * rootn*
-  * roundeven*
+  * roundeven* |check|
   * fromfp*
   * ufromfp*
   * fromfpx*

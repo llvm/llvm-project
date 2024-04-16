@@ -292,8 +292,11 @@ void StmtPrinter::VisitLabelStmt(LabelStmt *Node) {
 }
 
 void StmtPrinter::VisitAttributedStmt(AttributedStmt *Node) {
-  for (const auto *Attr : Node->getAttrs()) {
+  llvm::ArrayRef<const Attr *> Attrs = Node->getAttrs();
+  for (const auto *Attr : Attrs) {
     Attr->printPretty(OS, Policy);
+    if (Attr != Attrs.back())
+      OS << ' ';
   }
 
   PrintStmt(Node->getSubStmt(), 0);
@@ -1142,7 +1145,13 @@ void StmtPrinter::VisitOMPTargetParallelGenericLoopDirective(
 //===----------------------------------------------------------------------===//
 void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
   Indent() << "#pragma acc " << S->getDirectiveKind();
-  // TODO OpenACC: Print Clauses.
+
+  if (!S->clauses().empty()) {
+    OS << ' ';
+    OpenACCClausePrinter Printer(OS);
+    Printer.VisitClauseList(S->clauses());
+  }
+
   PrintStmt(S->getStructuredBlock());
 }
 
@@ -1445,7 +1454,7 @@ void StmtPrinter::VisitOffsetOfExpr(OffsetOfExpr *Node) {
       continue;
 
     // Field or identifier node.
-    IdentifierInfo *Id = ON.getFieldName();
+    const IdentifierInfo *Id = ON.getFieldName();
     if (!Id)
       continue;
 
@@ -2346,7 +2355,7 @@ void StmtPrinter::VisitCXXPseudoDestructorExpr(CXXPseudoDestructorExpr *E) {
     E->getQualifier()->print(OS, Policy);
   OS << "~";
 
-  if (IdentifierInfo *II = E->getDestroyedTypeIdentifier())
+  if (const IdentifierInfo *II = E->getDestroyedTypeIdentifier())
     OS << II->getName();
   else
     E->getDestroyedType().print(OS, Policy);

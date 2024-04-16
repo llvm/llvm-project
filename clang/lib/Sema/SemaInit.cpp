@@ -31,6 +31,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -213,7 +214,7 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
   // Get the length of the string as parsed.
   auto *ConstantArrayTy =
       cast<ConstantArrayType>(Str->getType()->getAsArrayTypeUnsafe());
-  uint64_t StrLength = ConstantArrayTy->getSize().getZExtValue();
+  uint64_t StrLength = ConstantArrayTy->getZExtSize();
 
   if (CheckC23ConstexprInit)
     if (const StringLiteral *SL = dyn_cast<StringLiteral>(Str->IgnoreParens()))
@@ -246,14 +247,13 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
     }
 
     // [dcl.init.string]p2
-    if (StrLength > CAT->getSize().getZExtValue())
+    if (StrLength > CAT->getZExtSize())
       S.Diag(Str->getBeginLoc(),
              diag::err_initializer_string_for_char_array_too_long)
-          << CAT->getSize().getZExtValue() << StrLength
-          << Str->getSourceRange();
+          << CAT->getZExtSize() << StrLength << Str->getSourceRange();
   } else {
     // C99 6.7.8p14.
-    if (StrLength-1 > CAT->getSize().getZExtValue())
+    if (StrLength - 1 > CAT->getZExtSize())
       S.Diag(Str->getBeginLoc(),
              diag::ext_initializer_string_for_char_array_too_long)
           << Str->getSourceRange();
@@ -879,7 +879,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
   if (const ArrayType *AType = SemaRef.Context.getAsArrayType(ILE->getType())) {
     ElementType = AType->getElementType();
     if (const auto *CAType = dyn_cast<ConstantArrayType>(AType))
-      NumElements = CAType->getSize().getZExtValue();
+      NumElements = CAType->getZExtSize();
     // For an array new with an unknown bound, ask for one additional element
     // in order to populate the array filler.
     if (Entity.isVariableLengthArrayNew())
@@ -1016,7 +1016,7 @@ int InitListChecker::numArrayElements(QualType DeclType) {
   int maxElements = 0x7FFFFFFF;
   if (const ConstantArrayType *CAT =
         SemaRef.Context.getAsConstantArrayType(DeclType)) {
-    maxElements = static_cast<int>(CAT->getSize().getZExtValue());
+    maxElements = static_cast<int>(CAT->getZExtSize());
   }
   return maxElements;
 }
@@ -2330,11 +2330,11 @@ void InitListChecker::CheckStructUnionTypes(
       break;
     }
 
-    // We've already initialized a member of a union. We're done.
+    // We've already initialized a member of a union. We can stop entirely.
     if (InitializedSomething && RD->isUnion())
-      break;
+      return;
 
-    // If we've hit the flexible array member at the end, we're done.
+    // Stop if we've hit a flexible array member.
     if (Field->getType()->isIncompleteArrayType())
       break;
 
@@ -2457,6 +2457,11 @@ void InitListChecker::CheckStructUnionTypes(
   else
     CheckImplicitInitList(MemberEntity, IList, Field->getType(), Index,
                           StructuredList, StructuredIndex);
+
+  if (RD->isUnion() && StructuredList) {
+    // Initialize the first field within the union.
+    StructuredList->setInitializedFieldInUnion(*Field);
+  }
 }
 
 /// Expand a field designator that refers to a member of an
@@ -3101,7 +3106,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       // Get the length of the string.
       uint64_t StrLen = SL->getLength();
       if (cast<ConstantArrayType>(AT)->getSize().ult(StrLen))
-        StrLen = cast<ConstantArrayType>(AT)->getSize().getZExtValue();
+        StrLen = cast<ConstantArrayType>(AT)->getZExtSize();
       StructuredList->resizeInits(Context, StrLen);
 
       // Build a literal for each character in the string, and put them into
@@ -3124,7 +3129,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       // Get the length of the string.
       uint64_t StrLen = Str.size();
       if (cast<ConstantArrayType>(AT)->getSize().ult(StrLen))
-        StrLen = cast<ConstantArrayType>(AT)->getSize().getZExtValue();
+        StrLen = cast<ConstantArrayType>(AT)->getZExtSize();
       StructuredList->resizeInits(Context, StrLen);
 
       // Build a literal for each character in the string, and put them into
@@ -3283,7 +3288,7 @@ InitListChecker::createInitListExpr(QualType CurrentObjectType,
   if (const ArrayType *AType
       = SemaRef.Context.getAsArrayType(CurrentObjectType)) {
     if (const ConstantArrayType *CAType = dyn_cast<ConstantArrayType>(AType)) {
-      NumElements = CAType->getSize().getZExtValue();
+      NumElements = CAType->getZExtSize();
       // Simple heuristic so that we don't allocate a very large
       // initializer with many empty entries at the end.
       if (NumElements > ExpectedNumInits)
@@ -5492,7 +5497,7 @@ static void TryOrBuildParenListInitialization(
     //   having k elements.
     if (const ConstantArrayType *CAT =
             S.getASTContext().getAsConstantArrayType(Entity.getType())) {
-      ArrayLength = CAT->getSize().getZExtValue();
+      ArrayLength = CAT->getZExtSize();
       ResultType = Entity.getType();
     } else if (const VariableArrayType *VAT =
                    S.getASTContext().getAsVariableArrayType(Entity.getType())) {
@@ -6265,7 +6270,10 @@ void InitializationSequence::InitializeFrom(Sema &S,
   //       initializer is a string literal, see 8.5.2.
   //     - Otherwise, if the destination type is an array, the program is
   //       ill-formed.
-  if (const ArrayType *DestAT = Context.getAsArrayType(DestType)) {
+  //     - Except in HLSL, where non-decaying array parameters behave like
+  //       non-array types for initialization.
+  if (DestType->isArrayType() && !DestType->isArrayParameterType()) {
+    const ArrayType *DestAT = Context.getAsArrayType(DestType);
     if (Initializer && isa<VariableArrayType>(DestAT)) {
       SetFailed(FK_VariableLengthArrayHasInitializer);
       return;
@@ -7074,6 +7082,11 @@ PerformConstructorInitialization(Sema &S,
       Kind.AllowExplicit() && !Kind.isCopyInit() && Args.size() == 1 &&
       hasCopyOrMoveCtorParam(S.Context,
                              getConstructorInfo(Step.Function.FoundDecl));
+
+  // A smart pointer constructed from a nullable pointer is nullable.
+  if (NumArgs == 1 && !Kind.isExplicitCast())
+    S.diagnoseNullableToNonnullConversion(
+        Entity.getType(), Args.front()->getType(), Kind.getLocation());
 
   // Determine the arguments required to actually perform the constructor
   // call.
@@ -9750,12 +9763,15 @@ bool InitializationSequence::Diagnose(Sema &S,
       break;
     }
     case OR_Deleted: {
-      S.Diag(Kind.getLocation(), diag::err_typecheck_deleted_function)
-        << OnlyArg->getType() << DestType.getNonReferenceType()
-        << Args[0]->getSourceRange();
       OverloadCandidateSet::iterator Best;
       OverloadingResult Ovl
         = FailedCandidateSet.BestViableFunction(S, Kind.getLocation(), Best);
+
+      StringLiteral *Msg = Best->Function->getDeletedMessage();
+      S.Diag(Kind.getLocation(), diag::err_typecheck_deleted_function)
+          << OnlyArg->getType() << DestType.getNonReferenceType()
+          << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef())
+          << Args[0]->getSourceRange();
       if (Ovl == OR_Deleted) {
         S.NoteDeletedFunction(Best->Function);
       } else {
@@ -10011,11 +10027,15 @@ bool InitializationSequence::Diagnose(Sema &S,
         // implicit.
         if (S.isImplicitlyDeleted(Best->Function))
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_special_init)
-            << S.getSpecialMember(cast<CXXMethodDecl>(Best->Function))
-            << DestType << ArgsRange;
-        else
-          S.Diag(Kind.getLocation(), diag::err_ovl_deleted_init)
+              << llvm::to_underlying(
+                     S.getSpecialMember(cast<CXXMethodDecl>(Best->Function)))
               << DestType << ArgsRange;
+        else {
+          StringLiteral *Msg = Best->Function->getDeletedMessage();
+          S.Diag(Kind.getLocation(), diag::err_ovl_deleted_init)
+              << DestType << (Msg != nullptr)
+              << (Msg ? Msg->getString() : StringRef()) << ArgsRange;
+        }
 
         S.NoteDeletedFunction(Best->Function);
         break;
@@ -10918,32 +10938,16 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
                   Context.getLValueReferenceType(ElementTypes[I].withConst());
           }
 
-        llvm::FoldingSetNodeID ID;
-        ID.AddPointer(Template);
-        for (auto &T : ElementTypes)
-          T.getCanonicalType().Profile(ID);
-        unsigned Hash = ID.ComputeHash();
-        if (AggregateDeductionCandidates.count(Hash) == 0) {
-          if (FunctionTemplateDecl *TD =
-                  DeclareImplicitDeductionGuideFromInitList(
-                      Template, ElementTypes,
-                      TSInfo->getTypeLoc().getEndLoc())) {
-            auto *GD = cast<CXXDeductionGuideDecl>(TD->getTemplatedDecl());
-            GD->setDeductionCandidateKind(DeductionCandidate::Aggregate);
-            AggregateDeductionCandidates[Hash] = GD;
-            addDeductionCandidate(TD, GD, DeclAccessPair::make(TD, AS_public),
-                                  OnlyListConstructors,
-                                  /*AllowAggregateDeductionCandidate=*/true);
-          }
-        } else {
-          CXXDeductionGuideDecl *GD = AggregateDeductionCandidates[Hash];
-          FunctionTemplateDecl *TD = GD->getDescribedFunctionTemplate();
-          assert(TD && "aggregate deduction candidate is function template");
+        if (FunctionTemplateDecl *TD =
+                DeclareAggregateDeductionGuideFromInitList(
+                    LookupTemplateDecl, ElementTypes,
+                    TSInfo->getTypeLoc().getEndLoc())) {
+          auto *GD = cast<CXXDeductionGuideDecl>(TD->getTemplatedDecl());
           addDeductionCandidate(TD, GD, DeclAccessPair::make(TD, AS_public),
                                 OnlyListConstructors,
                                 /*AllowAggregateDeductionCandidate=*/true);
+          HasAnyDeductionGuide = true;
         }
-        HasAnyDeductionGuide = true;
       }
     };
 
@@ -11063,6 +11067,9 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   }
 
   case OR_Deleted: {
+    // FIXME: There are no tests for this diagnostic, and it doesn't seem
+    // like we ever get here; attempts to trigger this seem to yield a
+    // generic c'all to deleted function' diagnostic instead.
     Diag(Kind.getLocation(), diag::err_deduced_class_template_deleted)
       << TemplateName;
     NoteDeletedFunction(Best->Function);

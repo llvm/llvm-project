@@ -188,6 +188,8 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   assert(UseBitFieldTypeAlignment && "bitfields affect type alignment");
   UseZeroLengthBitfieldAlignment = true;
 
+  HasUnalignedAccess = true;
+
   // AArch64 targets default to using the ARM C++ ABI.
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
 
@@ -496,7 +498,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasPAuthLR)
     Builder.defineMacro("__ARM_FEATURE_PAUTH_LR", "1");
 
-  if (HasUnaligned)
+  if (HasUnalignedAccess)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
   if ((FPU & NeonMode) && HasFullFP16)
@@ -921,7 +923,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSM4 = true;
     }
     if (Feature == "+strict-align")
-      HasUnaligned = false;
+      HasUnalignedAccess = false;
+
     // All predecessor archs are added but select the latest one for ArchKind.
     if (Feature == "+v8a" && ArchInfo->Version < llvm::AArch64::ARMV8A.Version)
       ArchInfo = &llvm::AArch64::ARMV8A;
@@ -1540,10 +1543,13 @@ WindowsARM64TargetInfo::getBuiltinVaListKind() const {
 TargetInfo::CallingConvCheckResult
 WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   switch (CC) {
+  case CC_X86VectorCall:
+    if (getTriple().isWindowsArm64EC())
+      return CCCR_OK;
+    return CCCR_Ignore;
   case CC_X86StdCall:
   case CC_X86ThisCall:
   case CC_X86FastCall:
-  case CC_X86VectorCall:
     return CCCR_Ignore;
   case CC_C:
   case CC_OpenCLKernel:

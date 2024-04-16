@@ -30,6 +30,9 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
@@ -2098,7 +2101,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
           // replace this call to ActOnOpenACCArraySectionExpr in the future.
           // Eventually we'll genericize the OPenMPArraySectionExpr type as
           // well.
-          LHS = Actions.ActOnOMPArraySectionExpr(
+          LHS = Actions.OpenMP().ActOnOMPArraySectionExpr(
               LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
               ColonLocFirst, ColonLocSecond, Length.get(), Stride.get(), RLoc);
         } else {
@@ -2153,10 +2156,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         }
 
         if (!LHS.isInvalid()) {
-          ExprResult ECResult = Actions.ActOnCUDAExecConfigExpr(getCurScope(),
-                                    OpenLoc,
-                                    ExecConfigExprs,
-                                    CloseLoc);
+          ExprResult ECResult = Actions.CUDA().ActOnExecConfigExpr(
+              getCurScope(), OpenLoc, ExecConfigExprs, CloseLoc);
           if (ECResult.isInvalid())
             LHS = ExprError();
           else
@@ -2516,8 +2517,8 @@ ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
   if (T.consumeClose())
     return ExprError();
 
-  return Actions.ActOnSYCLUniqueStableNameExpr(OpLoc, T.getOpenLocation(),
-                                               T.getCloseLocation(), Ty.get());
+  return Actions.SYCL().ActOnUniqueStableNameExpr(
+      OpLoc, T.getOpenLocation(), T.getCloseLocation(), Ty.get());
 }
 
 /// Parse a sizeof or alignof expression.
@@ -3307,7 +3308,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
     if (ErrorFound) {
       Result = ExprError();
     } else if (!Result.isInvalid()) {
-      Result = Actions.ActOnOMPArrayShapingExpr(
+      Result = Actions.OpenMP().ActOnOMPArrayShapingExpr(
           Result.get(), OpenLoc, RParenLoc, OMPDimensions, OMPBracketsRanges);
     }
     return Result;

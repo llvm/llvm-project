@@ -171,7 +171,7 @@ define i32 @test5(i32 %A) {
 define i32 @test6(i64 %A) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[A:%.*]], 32
-; CHECK-NEXT:    [[D:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[D:%.*]] = trunc nuw i64 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %B = zext i64 %A to i128
@@ -459,7 +459,7 @@ define <2 x i64> @test12_vec_undef(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i128>
 ; CHECK-NEXT:    [[E:%.*]] = and <2 x i128> [[D]], <i128 31, i128 undef>
 ; CHECK-NEXT:    [[F:%.*]] = lshr <2 x i128> [[C]], [[E]]
-; CHECK-NEXT:    [[G:%.*]] = trunc <2 x i128> [[F]] to <2 x i64>
+; CHECK-NEXT:    [[G:%.*]] = trunc nuw nsw <2 x i128> [[F]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[G]]
 ;
   %C = zext <2 x i32> %A to <2 x i128>
@@ -524,7 +524,7 @@ define <2 x i64> @test13_vec_undef(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    [[D:%.*]] = zext <2 x i32> [[B:%.*]] to <2 x i128>
 ; CHECK-NEXT:    [[E:%.*]] = and <2 x i128> [[D]], <i128 31, i128 undef>
 ; CHECK-NEXT:    [[F:%.*]] = ashr <2 x i128> [[C]], [[E]]
-; CHECK-NEXT:    [[G:%.*]] = trunc <2 x i128> [[F]] to <2 x i64>
+; CHECK-NEXT:    [[G:%.*]] = trunc nsw <2 x i128> [[F]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[G]]
 ;
   %C = sext <2 x i32> %A to <2 x i128>
@@ -1020,4 +1020,41 @@ define i16 @PR44545(i32 %t0, i32 %data) {
   %cast = trunc i32 %ffs to i16
   %sub = add nsw i16 %cast, -1
   ret i16 %sub
+}
+
+; Make sure that SimplifyDemandedBits drops the nowrap flags
+define i8 @drop_nsw_trunc(i16 %x, i16 %y) {
+; CHECK-LABEL: @drop_nsw_trunc(
+; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = trunc i16 [[AND2]] to i8
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %and = and i16 %x, 255
+  %and2 = and i16 %and, %y
+  %res = trunc nsw i16 %and2 to i8
+  ret i8 %res
+}
+
+define i8 @drop_nuw_trunc(i16 %x, i16 %y) {
+; CHECK-LABEL: @drop_nuw_trunc(
+; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = trunc i16 [[AND2]] to i8
+; CHECK-NEXT:    ret i8 [[B]]
+;
+  %and = and i16 %x, 255
+  %and2 = and i16 %and, %y
+  %res = trunc nuw i16 %and2 to i8
+  ret i8 %res
+}
+
+define i8 @drop_both_trunc(i16 %x, i16 %y) {
+; CHECK-LABEL: @drop_both_trunc(
+; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = trunc i16 [[AND2]] to i8
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %and = and i16 %x, 255
+  %and2 = and i16 %and, %y
+  %res = trunc nuw nsw i16 %and2 to i8
+  ret i8 %res
 }

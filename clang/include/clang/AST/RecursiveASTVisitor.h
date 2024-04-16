@@ -509,6 +509,7 @@ private:
   bool TraverseOpenACCConstructStmt(OpenACCConstructStmt *S);
   bool
   TraverseOpenACCAssociatedStmtConstruct(OpenACCAssociatedStmtConstruct *S);
+  bool VisitOpenACCClauseList(ArrayRef<const OpenACCClause *>);
 };
 
 template <typename Derived>
@@ -993,6 +994,12 @@ DEF_TRAVERSE_TYPE(ConstantArrayType, {
     TRY_TO(TraverseStmt(const_cast<Expr*>(T->getSizeExpr())));
 })
 
+DEF_TRAVERSE_TYPE(ArrayParameterType, {
+  TRY_TO(TraverseType(T->getElementType()));
+  if (T->getSizeExpr())
+    TRY_TO(TraverseStmt(const_cast<Expr *>(T->getSizeExpr())));
+})
+
 DEF_TRAVERSE_TYPE(IncompleteArrayType,
                   { TRY_TO(TraverseType(T->getElementType())); })
 
@@ -1256,6 +1263,11 @@ bool RecursiveASTVisitor<Derived>::TraverseArrayTypeLocHelper(ArrayTypeLoc TL) {
 }
 
 DEF_TRAVERSE_TYPELOC(ConstantArrayType, {
+  TRY_TO(TraverseTypeLoc(TL.getElementLoc()));
+  TRY_TO(TraverseArrayTypeLocHelper(TL));
+})
+
+DEF_TRAVERSE_TYPELOC(ArrayParameterType, {
   TRY_TO(TraverseTypeLoc(TL.getElementLoc()));
   TRY_TO(TraverseArrayTypeLocHelper(TL));
 })
@@ -3930,8 +3942,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPXBareClause(OMPXBareClause *C) {
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseOpenACCConstructStmt(
-    OpenACCConstructStmt *) {
-  // TODO OpenACC: When we implement clauses, ensure we traverse them here.
+    OpenACCConstructStmt *C) {
+  TRY_TO(VisitOpenACCClauseList(C->clauses()));
   return true;
 }
 
@@ -3940,6 +3952,14 @@ bool RecursiveASTVisitor<Derived>::TraverseOpenACCAssociatedStmtConstruct(
     OpenACCAssociatedStmtConstruct *S) {
   TRY_TO(TraverseOpenACCConstructStmt(S));
   TRY_TO(TraverseStmt(S->getAssociatedStmt()));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOpenACCClauseList(
+    ArrayRef<const OpenACCClause *>) {
+  // TODO OpenACC: When we have Clauses with expressions, we should visit them
+  // here.
   return true;
 }
 
