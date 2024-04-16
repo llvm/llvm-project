@@ -43,6 +43,9 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
   if (getTargetTriple().getArch() != Triple::x86_64)
     return false;
 
+  // Remaining logic below is ELF-specific. For other object file formats where
+  // the large code model is mostly used for JIT compilation, just look at the
+  // code model.
   if (!getTargetTriple().isOSBinFormatELF())
     return getCodeModel() == CodeModel::Large;
 
