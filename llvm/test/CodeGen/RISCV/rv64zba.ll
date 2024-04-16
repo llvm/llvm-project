@@ -598,31 +598,52 @@ define i64 @mul125(i64 %a) {
 }
 
 define i64 @mul131(i64 %a) {
-; CHECK-LABEL: mul131:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 131
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul131:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 131
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul131:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh1add a1, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 7
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 131
   ret i64 %c
 }
 
 define i64 @mul133(i64 %a) {
-; CHECK-LABEL: mul133:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 133
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul133:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 133
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul133:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh2add a1, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 7
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 133
   ret i64 %c
 }
 
 define i64 @mul137(i64 %a) {
-; CHECK-LABEL: mul137:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 137
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul137:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 137
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul137:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh3add a1, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 7
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 137
   ret i64 %c
 }
