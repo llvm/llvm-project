@@ -257,6 +257,8 @@ class DWARFUnit {
 
   std::shared_ptr<DWARFUnit> DWO;
 
+  bool DieExtractionSuccess;
+
 protected:
   friend dwarf_linker::parallel::CompileUnit;
 
@@ -442,9 +444,9 @@ public:
 
   DWARFDie getUnitDIE(bool ExtractUnitDIEOnly = true) {
     extractDIEsIfNeeded(ExtractUnitDIEOnly);
-    if (DieArray.empty())
+    if (!DieExtractionSuccess)
       return DWARFDie();
-    return DWARFDie(this, &DieArray[0]);
+    return DWARFDie(this, DieArray.empty() ? nullptr : &DieArray[0]);
   }
 
   DWARFDie getNonSkeletonUnitDIE(bool ExtractUnitDIEOnly = true,

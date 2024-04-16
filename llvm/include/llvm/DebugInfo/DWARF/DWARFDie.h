@@ -48,6 +48,7 @@ public:
   DWARFDie(DWARFUnit *Unit, const DWARFDebugInfoEntry *D) : U(Unit), Die(D) {}
 
   bool isValid() const { return U && Die; }
+  bool isValidUnit() const { return !!U; }
   explicit operator bool() const { return isValid(); }
   const DWARFDebugInfoEntry *getDebugInfoEntry() const { return Die; }
   DWARFUnit *getDwarfUnit() const { return U; }

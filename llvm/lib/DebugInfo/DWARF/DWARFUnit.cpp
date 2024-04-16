@@ -370,6 +370,7 @@ void DWARFUnit::clear() {
   SU = nullptr;
   clearDIEs(false);
   AddrDieMap.clear();
+  DieExtractionSuccess = true;
   if (DWO)
     DWO->clear();
   DWO.reset();
@@ -400,6 +401,10 @@ void DWARFUnit::extractDIEsToVector(
   assert(
       ((AppendCUDie && Dies.empty()) || (!AppendCUDie && Dies.size() == 1)) &&
       "Dies array is not empty");
+
+  if (DIEOffset == NextCUOffset) {
+    return;
+  }
 
   // Fill Parents and Siblings stacks with initial value.
   Parents.push_back(UINT32_MAX);
@@ -468,8 +473,10 @@ void DWARFUnit::extractDIEsToVector(
 }
 
 void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
-  if (Error e = tryExtractDIEsIfNeeded(CUDieOnly))
+  if (Error e = tryExtractDIEsIfNeeded(CUDieOnly)) {
+    DieExtractionSuccess = false;
     Context.getRecoverableErrorHandler()(std::move(e));
+  }
 }
 
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
