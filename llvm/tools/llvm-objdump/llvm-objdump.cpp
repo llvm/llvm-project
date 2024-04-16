@@ -2066,12 +2066,15 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         // disassembling the failed region as bytes, assuming that the target
         // detected the failure before printing anything.
         if (!RespondedOrErr) {
-          outs() << DT->Context->getAsmInfo()->getCommentString()
-                 << " error decoding " << SymNamesHere[SHI] << ": "
-                 << StringRef(toString(RespondedOrErr.takeError()))
-                        .split('\n')
-                        .first
-                 << '\n';
+          std::string ErrMsgStr = toString(RespondedOrErr.takeError());
+          StringRef ErrMsg = ErrMsgStr;
+          do {
+            StringRef Line;
+            std::tie(Line, ErrMsg) = ErrMsg.split('\n');
+            outs() << DT->Context->getAsmInfo()->getCommentString()
+                   << " error decoding " << SymNamesHere[SHI] << ": " << Line
+                   << '\n';
+          } while (!ErrMsg.empty());
 
           if (Size) {
             outs() << DT->Context->getAsmInfo()->getCommentString()
