@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// TODO TZDB review the test based on review comments in
+// https://github.com/llvm/llvm-project/pull/85619
+
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23, c++26
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
 // XFAIL: libcpp-has-no-incomplete-tzdb
