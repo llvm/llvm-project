@@ -885,7 +885,8 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   else
     SafeToSpeculate = isSafeToSpeculativelyExecuteWithOpcode(
         *FunctionalOpcode, &VPI, nullptr, &AC, &DT);
-  if (!SafeToSpeculate && !isKnownNonZero(EVL, *DL, 0, &AC, &VPI, &DT))
+  if (!SafeToSpeculate &&
+      !isKnownNonZero(EVL, /*Depth=*/0, SimplifyQuery(*DL, &DT, &AC, &VPI)))
     return false;
 
   Value *ScalarVal =
@@ -1482,6 +1483,12 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   unsigned NumDstElts = CastDstTy->getNumElements();
   assert((NumDstElts == NumSrcElts || Opcode == Instruction::BitCast) &&
          "Only bitcasts expected to alter src/dst element counts");
+
+  // Check for bitcasting of unscalable vector types.
+  // e.g. <32 x i40> -> <40 x i32>
+  if (NumDstElts != NumSrcElts && (NumSrcElts % NumDstElts) != 0 &&
+      (NumDstElts % NumSrcElts) != 0)
+    return false;
 
   SmallVector<int, 16> NewMask;
   if (NumSrcElts >= NumDstElts) {

@@ -65,6 +65,7 @@
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTReader.h"
@@ -185,8 +186,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     if (!File)
       continue;
 
-    const HeaderFileInfo *HFI =
-        HS.getExistingFileInfo(*File, /*WantExternal*/ false);
+    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
     if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
       continue;
 
@@ -870,6 +870,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(WEAK_UNDECLARED_IDENTIFIERS);
   RECORD(PENDING_IMPLICIT_INSTANTIATIONS);
   RECORD(UPDATE_VISIBLE);
+  RECORD(DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD);
   RECORD(DECL_UPDATE_OFFSETS);
   RECORD(DECL_UPDATES);
   RECORD(CUDA_SPECIAL_DECL_REFS);
@@ -2052,14 +2053,12 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     if (!File)
       continue;
 
-    // Get the file info. This will load info from the external source if
-    // necessary. Skip emitting this file if we have no information on it
-    // as a header file (in which case HFI will be null) or if it hasn't
+    // Get the file info. Skip emitting this file if we have no information on
+    // it as a header file (in which case HFI will be null) or if it hasn't
     // changed since it was loaded. Also skip it if it's for a modular header
     // from a different module; in that case, we rely on the module(s)
     // containing the header to provide this information.
-    const HeaderFileInfo *HFI =
-        HS.getExistingFileInfo(*File, /*WantExternal*/!Chain);
+    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
     if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
       continue;
 
@@ -3029,10 +3028,12 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
       Stream.EmitRecordWithBlob(ConfigMacroAbbrev, Record, CM);
     }
 
-    // Emit the initializers, if any.
+    // Emit the reachable initializers.
+    // The initializer may only be unreachable in reduced BMI.
     RecordData Inits;
     for (Decl *D : Context->getModuleInitializers(Mod))
-      Inits.push_back(GetDeclRef(D));
+      if (wasDeclEmitted(D))
+        Inits.push_back(GetDeclRef(D));
     if (!Inits.empty())
       Stream.EmitRecord(SUBMODULE_INITIALIZERS, Inits);
 
@@ -3211,6 +3212,9 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
   uint64_t Offset = Stream.GetCurrentBitNo();
   SmallVector<uint32_t, 128> KindDeclPairs;
   for (const auto *D : DC->decls()) {
+    if (DoneWritingDeclsAndTypes && !wasDeclEmitted(D))
+      continue;
+
     KindDeclPairs.push_back(D->getKind());
     KindDeclPairs.push_back(GetDeclRef(D));
   }
@@ -3865,8 +3869,14 @@ public:
   data_type getData(const Coll &Decls) {
     unsigned Start = DeclIDs.size();
     for (NamedDecl *D : Decls) {
-      DeclIDs.push_back(
-          Writer.GetDeclRef(getDeclForLocalLookup(Writer.getLangOpts(), D)));
+      NamedDecl *DeclForLocalLookup =
+          getDeclForLocalLookup(Writer.getLangOpts(), D);
+
+      if (Writer.getDoneWritingDeclsAndTypes() &&
+          !Writer.wasDeclEmitted(DeclForLocalLookup))
+        continue;
+
+      DeclIDs.push_back(Writer.GetDeclRef(DeclForLocalLookup));
     }
     return std::make_pair(Start, DeclIDs.size());
   }
@@ -3975,11 +3985,20 @@ bool ASTWriter::isLookupResultExternal(StoredDeclsList &Result,
          DC->hasNeedToReconcileExternalVisibleStorage();
 }
 
-bool ASTWriter::isLookupResultEntirelyExternal(StoredDeclsList &Result,
-                                               DeclContext *DC) {
-  for (auto *D : Result.getLookupResult())
-    if (!getDeclForLocalLookup(getLangOpts(), D)->isFromASTFile())
-      return false;
+bool ASTWriter::isLookupResultEntirelyExternalOrUnreachable(
+    StoredDeclsList &Result, DeclContext *DC) {
+  for (auto *D : Result.getLookupResult()) {
+    auto *LocalD = getDeclForLocalLookup(getLangOpts(), D);
+    if (LocalD->isFromASTFile())
+      continue;
+
+    // We can only be sure whether the local declaration is reachable
+    // after we done writing the declarations and types.
+    if (DoneWritingDeclsAndTypes && !wasDeclEmitted(LocalD))
+      continue;
+
+    return false;
+  }
 
   return true;
 }
@@ -4017,8 +4036,17 @@ ASTWriter::GenerateNameLookupTable(const DeclContext *ConstDC,
     // don't need to write an entry for the name at all. If we can't
     // write out a lookup set without performing more deserialization,
     // just skip this entry.
-    if (isLookupResultExternal(Result, DC) &&
-        isLookupResultEntirelyExternal(Result, DC))
+    //
+    // Also in reduced BMI, we'd like to avoid writing unreachable
+    // declarations in GMF, so we need to avoid writing declarations
+    // that entirely external or unreachable.
+    //
+    // FIMXE: It looks sufficient to test
+    // isLookupResultEntirelyExternalOrUnreachable here. But due to bug we have
+    // to test isLookupResultExternal here. See
+    // https://github.com/llvm/llvm-project/issues/61065 for details.
+    if ((GeneratingReducedBMI || isLookupResultExternal(Result, DC)) &&
+        isLookupResultEntirelyExternalOrUnreachable(Result, DC))
       continue;
 
     // We also skip empty results. If any of the results could be external and
@@ -4209,9 +4237,15 @@ uint64_t ASTWriter::WriteDeclContextVisibleBlock(ASTContext &Context,
         continue;
       }
 
-      for (NamedDecl *ND : Result)
-        if (!ND->isFromASTFile())
-          GetDeclRef(ND);
+      for (NamedDecl *ND : Result) {
+        if (ND->isFromASTFile())
+          continue;
+
+        if (DoneWritingDeclsAndTypes && !wasDeclEmitted(ND))
+          continue;
+
+        GetDeclRef(ND);
+      }
     }
 
     return 0;
@@ -4302,8 +4336,8 @@ void ASTWriter::WriteOpenCLExtensions(Sema &SemaRef) {
   Stream.EmitRecord(OPENCL_EXTENSIONS, Record);
 }
 void ASTWriter::WriteCUDAPragmas(Sema &SemaRef) {
-  if (SemaRef.ForceCUDAHostDeviceDepth > 0) {
-    RecordData::value_type Record[] = {SemaRef.ForceCUDAHostDeviceDepth};
+  if (SemaRef.CUDA().ForceHostDeviceDepth > 0) {
+    RecordData::value_type Record[] = {SemaRef.CUDA().ForceHostDeviceDepth};
     Stream.EmitRecord(CUDA_PRAGMA_FORCE_HOST_DEVICE_DEPTH, Record);
   }
 }
@@ -4979,9 +5013,18 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
 
   // Force all top level declarations to be emitted.
-  for (const auto *D : TU->noload_decls())
-    if (!D->isFromASTFile())
-      GetDeclRef(D);
+  //
+  // We start emitting top level declarations from the module purview to
+  // implement the eliding unreachable declaration feature.
+  for (const auto *D : TU->noload_decls()) {
+    if (D->isFromASTFile())
+      continue;
+
+    if (GeneratingReducedBMI && D->isFromExplicitGlobalModule())
+      continue;
+
+    GetDeclRef(D);
+  }
 
   // If the translation unit has an anonymous namespace, and we don't already
   // have an update block for it, write it as an update block.
@@ -5291,24 +5334,59 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
         WriteDecl(Context, DOT.getDecl());
     }
   } while (!DeclUpdates.empty());
-  Stream.ExitBlock();
 
   DoneWritingDeclsAndTypes = true;
+
+  // DelayedNamespace is only meaningful in reduced BMI.
+  // See the comments of DelayedNamespace for details.
+  assert(DelayedNamespace.empty() || GeneratingReducedBMI);
+  RecordData DelayedNamespaceRecord;
+  for (NamespaceDecl *NS : DelayedNamespace) {
+    uint64_t LexicalOffset = WriteDeclContextLexicalBlock(Context, NS);
+    uint64_t VisibleOffset = WriteDeclContextVisibleBlock(Context, NS);
+
+    // Write the offset relative to current block.
+    if (LexicalOffset)
+      LexicalOffset -= DeclTypesBlockStartOffset;
+
+    if (VisibleOffset)
+      VisibleOffset -= DeclTypesBlockStartOffset;
+
+    DelayedNamespaceRecord.push_back(getDeclID(NS));
+    DelayedNamespaceRecord.push_back(LexicalOffset);
+    DelayedNamespaceRecord.push_back(VisibleOffset);
+  }
+
+  // The process of writing lexical and visible block for delayed namespace
+  // shouldn't introduce any new decls, types or update to emit.
+  assert(DeclTypesToEmit.empty());
+  assert(DeclUpdates.empty());
+
+  Stream.ExitBlock();
 
   // These things can only be done once we've written out decls and types.
   WriteTypeDeclOffsets();
   if (!DeclUpdatesOffsetsRecord.empty())
     Stream.EmitRecord(DECL_UPDATE_OFFSETS, DeclUpdatesOffsetsRecord);
 
+  if (!DelayedNamespaceRecord.empty())
+    Stream.EmitRecord(DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD,
+                      DelayedNamespaceRecord);
+
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
   // Create a lexical update block containing all of the declarations in the
   // translation unit that do not come from other AST files.
   SmallVector<uint32_t, 128> NewGlobalKindDeclPairs;
   for (const auto *D : TU->noload_decls()) {
-    if (!D->isFromASTFile()) {
-      NewGlobalKindDeclPairs.push_back(D->getKind());
-      NewGlobalKindDeclPairs.push_back(GetDeclRef(D));
-    }
+    if (D->isFromASTFile())
+      continue;
+
+    // In reduced BMI, skip unreached declarations.
+    if (!wasDeclEmitted(D))
+      continue;
+
+    NewGlobalKindDeclPairs.push_back(D->getKind());
+    NewGlobalKindDeclPairs.push_back(GetDeclRef(D));
   }
 
   auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
@@ -5815,6 +5893,21 @@ DeclID ASTWriter::getDeclID(const Decl *D) {
 
   assert(DeclIDs.contains(D) && "Declaration not emitted!");
   return DeclIDs[D];
+}
+
+bool ASTWriter::wasDeclEmitted(const Decl *D) const {
+  assert(D);
+
+  assert(DoneWritingDeclsAndTypes &&
+         "wasDeclEmitted should only be called after writing declarations");
+
+  if (D->isFromASTFile())
+    return true;
+
+  bool Emitted = DeclIDs.contains(D);
+  assert((Emitted || GeneratingReducedBMI) &&
+         "The declaration can only be omitted in reduced BMI.");
+  return Emitted;
 }
 
 void ASTWriter::associateDeclWithFile(const Decl *D, DeclID ID) {
@@ -7425,6 +7518,12 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeEnum(DC->getDefaultClauseKind());
     return;
   }
+  case OpenACCClauseKind::If: {
+    const auto *IC = cast<OpenACCIfClause>(C);
+    writeSourceLocation(IC->getLParenLoc());
+    AddStmt(const_cast<Expr *>(IC->getConditionExpr()));
+    return;
+  }
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
@@ -7433,7 +7532,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::If:
   case OpenACCClauseKind::Self:
   case OpenACCClauseKind::Copy:
   case OpenACCClauseKind::UseDevice:
