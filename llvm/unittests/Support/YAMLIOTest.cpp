@@ -2906,6 +2906,71 @@ TEST(YAMLIO, Numeric) {
 }
 
 //===----------------------------------------------------------------------===//
+//  Test writing and reading escaped keys
+//===----------------------------------------------------------------------===//
+
+// Struct with dynamic string key
+struct QuotedKeyStruct {
+  int unquoted;
+  int numeric;
+  int just_space;
+  int unprintable;
+};
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<QuotedKeyStruct> {
+  static void mapping(IO &io, QuotedKeyStruct &map) {
+    io.mapRequired("unquoted", map.unquoted);
+    io.mapRequired("42", map.numeric);
+    io.mapRequired(" ", map.just_space);
+    char unprintableKey[] = {/* \f, form-feed */ 0xC, 0};
+    io.mapRequired(unprintableKey, map.unprintable);
+  }
+};
+} // namespace yaml
+} // namespace llvm
+
+TEST(YAMLIO, TestQuotedKeyRead) {
+  QuotedKeyStruct map = {};
+  Input yin("---\nunquoted:  1\n'42':  2\n' ':  3\n\"\\f\":  4\n...\n");
+  yin >> map;
+
+  EXPECT_FALSE(yin.error());
+  EXPECT_EQ(map.unquoted, 1);
+  EXPECT_EQ(map.numeric, 2);
+  EXPECT_EQ(map.just_space, 3);
+  EXPECT_EQ(map.unprintable, 4);
+}
+
+TEST(YAMLIO, TestQuotedKeyWriteRead) {
+  std::string intermediate;
+  {
+    QuotedKeyStruct map = {1, 2, 3, 4};
+    llvm::raw_string_ostream ostr(intermediate);
+    Output yout(ostr);
+    yout << map;
+  }
+
+  EXPECT_NE(llvm::StringRef::npos, intermediate.find("unquoted:"));
+  EXPECT_NE(llvm::StringRef::npos, intermediate.find("'42':"));
+  EXPECT_NE(llvm::StringRef::npos, intermediate.find("' '"));
+  EXPECT_NE(llvm::StringRef::npos, intermediate.find("\"\\f\":"));
+
+  {
+    Input yin(intermediate);
+    QuotedKeyStruct map;
+    yin >> map;
+
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(map.unquoted, 1);
+    EXPECT_EQ(map.numeric, 2);
+    EXPECT_EQ(map.just_space, 3);
+    EXPECT_EQ(map.unprintable, 4);
+  }
+}
+
+//===----------------------------------------------------------------------===//
 //  Test PolymorphicTraits and TaggedScalarTraits
 //===----------------------------------------------------------------------===//
 
