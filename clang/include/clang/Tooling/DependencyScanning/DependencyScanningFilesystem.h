@@ -421,6 +421,10 @@ private:
   llvm::ErrorOr<std::string> WorkingDirForCacheLookup;
 
   void updateWorkingDirForCacheLookup();
+
+  llvm::ErrorOr<StringRef>
+  tryGetFilenameForLookup(StringRef OriginalFilename,
+                          llvm::SmallVectorImpl<char> &PathBuf) const;
 };
 
 } // end namespace dependencies
