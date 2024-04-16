@@ -58,7 +58,8 @@ static int testRoundtripEncoding(MlirContext ctx) {
   fprintf(stderr, "crdWidth: %d\n", crdWidth);
 
   // CHECK: explicitVal: 1 : i64
-  MlirAttribute explicitVal = mlirSparseTensorEncodingAttrGetExplicitVal(originalAttr);
+  MlirAttribute explicitVal =
+      mlirSparseTensorEncodingAttrGetExplicitVal(originalAttr);
   fprintf(stderr, "explicitVal: ");
   mlirAttributeDump(explicitVal);
   // CHECK: implicitVal: <<NULL ATTRIBUTE>>
@@ -68,7 +69,8 @@ static int testRoundtripEncoding(MlirContext ctx) {
   mlirAttributeDump(implicitVal);
 
   MlirAttribute newAttr = mlirSparseTensorEncodingAttrGet(
-      ctx, lvlRank, lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth, explicitVal, implicitVal);
+      ctx, lvlRank, lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth,
+      explicitVal, implicitVal);
   mlirAttributeDump(newAttr); // For debugging filecheck output.
   // CHECK: equal: 1
   fprintf(stderr, "equal: %d\n", mlirAttributeEqual(originalAttr, newAttr));
