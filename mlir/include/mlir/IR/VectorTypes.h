@@ -16,17 +16,29 @@
 namespace mlir {
 namespace vector {
 
+/// A vector type containing at least one scalable dimension
 class ScalableVectorType : public VectorType {
 public:
   using VectorType::VectorType;
 
-  static bool classof(Type type);
+  static bool classof(Type type) {
+    auto vecTy = llvm::dyn_cast<VectorType>(type);
+    if (!vecTy)
+      return false;
+    return vecTy.isScalable();
+  }
 };
 
+/// A vector type with no scalable dimensions
 class FixedWidthVectorType : public VectorType {
 public:
   using VectorType::VectorType;
-  static bool classof(Type type);
+  static bool classof(Type type) {
+    auto vecTy = llvm::dyn_cast<VectorType>(type);
+    if (!vecTy)
+      return false;
+    return !vecTy.isScalable();
+  }
 };
 
 } // namespace vector
