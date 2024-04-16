@@ -982,6 +982,7 @@ if (current_toolchain == default_toolchain) {
       "ctgmath",
       "ctime",
       "ctype.h",
+      "cuchar",
       "cwchar",
       "cwctype",
       "deque",
