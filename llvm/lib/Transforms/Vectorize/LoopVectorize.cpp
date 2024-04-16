@@ -7067,6 +7067,10 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
         SrcVecTy = smallestIntegerVectorType(SrcVecTy, MinVecTy);
         VectorTy =
             largestIntegerVectorType(ToVectorTy(I->getType(), VF), MinVecTy);
+        // The truncation is unnecessary if the source is smaller than the
+        // destination.
+        if (SrcVecTy->getScalarSizeInBits() <= VectorTy->getScalarSizeInBits())
+          return 0;
       } else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt) {
         // Leave SrcVecTy unchanged - we only shrink the destination element
         // type.
