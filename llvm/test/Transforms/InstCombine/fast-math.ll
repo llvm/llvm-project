@@ -562,7 +562,7 @@ define float @fdiv1(float %x) {
 ; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast float [[X:%.*]], 0x3FD7303B60000000
 ; CHECK-NEXT:    ret float [[DIV1]]
 ;
-  %div = fdiv float %x, 0x3FF3333340000000
+  %div = fdiv fast float %x, 0x3FF3333340000000
   %div1 = fdiv fast float %div, 0x4002666660000000
   ret float %div1
 ; 0x3FF3333340000000 = 1.2f
@@ -603,7 +603,7 @@ define float @fdiv3(float %x) {
 ; CHECK-NEXT:    [[DIV1:%.*]] = fdiv fast float [[TMP1]], 0x47EFFFFFE0000000
 ; CHECK-NEXT:    ret float [[DIV1]]
 ;
-  %div = fdiv float %x, 0x47EFFFFFE0000000
+  %div = fdiv fast float %x, 0x47EFFFFFE0000000
   %div1 = fdiv fast float %div, 0x4002666660000000
   ret float %div1
 }
