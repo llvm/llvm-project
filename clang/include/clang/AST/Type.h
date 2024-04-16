@@ -52,6 +52,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -423,8 +424,9 @@ public:
   // Deserialize qualifiers from an opaque representation.
   static Qualifiers fromOpaqueValue(uint64_t Opaque) {
     Qualifiers Qs;
-    Qs.Mask = uint32_t(Opaque);
-    Qs.PtrAuth = PointerAuthQualifier::fromOpaqueValue(uint32_t(Opaque >> 32));
+    constexpr uint32_t U32Max = std::numeric_limits<uint32_t>::max();
+    Qs.Mask = Opaque & U32Max;
+    Qs.PtrAuth = PointerAuthQualifier::fromOpaqueValue((Opaque >> 32) & U32Max);
     return Qs;
   }
 
