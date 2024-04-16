@@ -343,10 +343,10 @@ public:
   /// Returns the position-overhead bitwidth, defaulting to zero.
   unsigned getPosWidth() const { return enc ? enc.getPosWidth() : 0; }
 
-  /// Returns the explicit value, defaulting to empty Attribute.
+  /// Returns the explicit value, defaulting to null Attribute for unset.
   Attribute getExplicitVal() const { return enc.getExplicitVal(); }
 
-  /// Returns the implicit value, defaulting to empty Attribute.
+  /// Returns the implicit value, defaulting to null Attribute for 0.
   Attribute getImplicitVal() const { return enc.getImplicitVal(); }
 
   /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.

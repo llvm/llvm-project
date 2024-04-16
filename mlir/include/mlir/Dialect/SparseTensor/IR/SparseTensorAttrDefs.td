@@ -167,7 +167,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     - **soa** : only applicable to singleton levels, fuses the singleton
       level in SoA (structure of arrays) scheme.
 
-    In addition to the map, the following two fields are optional:
+    In addition to the map, the following four fields are optional:
 
     - The required bitwidth for position storage (integral offsets
       into the sparse storage scheme).  A narrow width reduces the memory
@@ -183,11 +183,11 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       coordinate over all levels).  The choices are `8`, `16`, `32`,
       `64`, or, the default, `0` to indicate a native bitwidth.
 
-    - The required explicit value for the sparse tensor. If explicitVal is set,
+    - The explicit value for the sparse tensor. If explicitVal is set,
       then all the non-zero values in the tensor have the same explicit value.
       The default value Attribute() indicates that it is not set.
 
-    - The required implicit value for the sparse tensor. If implicitVal is set,
+    - The implicit value for the sparse tensor. If implicitVal is set,
       then the "zero" value in the tensor is equal to the implicit value.
       For now, we only support `0` as the implicit value but it could be
       extended in the future. The default value Attribute() indicates that
