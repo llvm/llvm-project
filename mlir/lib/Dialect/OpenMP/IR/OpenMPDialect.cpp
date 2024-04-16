@@ -1656,6 +1656,17 @@ LogicalResult DistributeOp::verify() {
     return emitError(
         "expected equal sizes for allocate and allocator variables");
 
+  if (!isWrapper())
+    return emitOpError() << "must be a loop wrapper";
+
+  if (LoopWrapperInterface nested = getNestedWrapper()) {
+    // Check for the allowed leaf constructs that may appear in a composite
+    // construct directly after DISTRIBUTE.
+    if (!isa<ParallelOp, SimdLoopOp>(nested))
+      return emitError() << "only supported nested wrappers are 'omp.parallel' "
+                            "and 'omp.simdloop'";
+  }
+
   return success();
 }
 
