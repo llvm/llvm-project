@@ -526,7 +526,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
   BitsPacker EnumDeclBits;
   EnumDeclBits.addBits(D->getNumPositiveBits(), /*BitWidth=*/8);
   EnumDeclBits.addBits(D->getNumNegativeBits(), /*BitWidth=*/8);
-  bool ShouldSkipCheckingODR = D->shouldSkipCheckingODR();
+  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
   EnumDeclBits.addBit(ShouldSkipCheckingODR);
   EnumDeclBits.addBit(D->isScoped());
   EnumDeclBits.addBit(D->isScopedUsingClassTag());
@@ -552,7 +552,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
       !D->isTopLevelDeclInObjCContainer() &&
       !CXXRecordDecl::classofKind(D->getKind()) &&
       !D->getIntegerTypeSourceInfo() && !D->getMemberSpecializationInfo() &&
-      !needsAnonymousDeclarationNumber(D) && !D->shouldSkipCheckingODR() &&
+      !needsAnonymousDeclarationNumber(D) && !shouldSkipCheckingODR(D) &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier)
     AbbrevToUse = Writer.getDeclEnumAbbrev();
 
@@ -718,7 +718,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   // FIXME: stable encoding
   FunctionDeclBits.addBits(llvm::to_underlying(D->getLinkageInternal()), 3);
   FunctionDeclBits.addBits((uint32_t)D->getStorageClass(), /*BitWidth=*/3);
-  bool ShouldSkipCheckingODR = D->shouldSkipCheckingODR();
+  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
   FunctionDeclBits.addBit(ShouldSkipCheckingODR);
   FunctionDeclBits.addBit(D->isInlineSpecified());
   FunctionDeclBits.addBit(D->isInlined());
@@ -1559,7 +1559,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
       D->getFirstDecl() == D->getMostRecentDecl() && !D->isInvalidDecl() &&
       !D->hasAttrs() && !D->isTopLevelDeclInObjCContainer() &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier &&
-      !D->shouldSkipCheckingODR() && !D->hasExtInfo() &&
+      !shouldSkipCheckingODR(D) && !D->hasExtInfo() &&
       !D->isExplicitlyDefaulted()) {
     if (D->getTemplatedKind() == FunctionDecl::TK_NonTemplate ||
         D->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate ||
