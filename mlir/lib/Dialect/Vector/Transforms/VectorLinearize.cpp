@@ -300,7 +300,7 @@ private:
   unsigned targetVectorBitWidth;
 };
 
-/// This pattern converts the ExtractOp to a ShuffleOp that works on a 
+/// This pattern converts the ExtractOp to a ShuffleOp that works on a
 /// linearized vector.
 /// Following,
 ///   vector.extract %source [ position ]
