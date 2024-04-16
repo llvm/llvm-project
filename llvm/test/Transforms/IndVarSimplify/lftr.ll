@@ -525,7 +525,7 @@ define float @wide_trip_count_test3(ptr %b,
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[INDVARS_IV]], 20
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TEMP:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CONV]], [[TEMP]]
 ; CHECK-NEXT:    [[ADD1]] = fadd float [[SUM_07]], [[MUL]]
@@ -584,7 +584,7 @@ define float @wide_trip_count_test4(ptr %b,
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 20
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TEMP:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CONV]], [[TEMP]]
 ; CHECK-NEXT:    [[ADD1]] = fadd float [[SUM_07]], [[MUL]]
