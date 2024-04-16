@@ -1106,11 +1106,6 @@ bool Decl::isFromExplicitGlobalModule() const {
   return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
 }
 
-bool Decl::shouldSkipCheckingODR() const {
-  return getASTContext().getLangOpts().SkipODRCheckInGMF &&
-         isFromExplicitGlobalModule();
-}
-
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
 static Decl::Kind getKind(const DeclContext *DC) { return DC->getDeclKind(); }
 
