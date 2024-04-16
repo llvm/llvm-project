@@ -89,7 +89,7 @@ DisableOption(ExternalNameConversion, "external-name-interop",
 
 // TODO: remove once these are used for non-codegen passes
 #if !defined(FLANG_EXCLUDE_CODEGEN)
-using PassConstructor = std::function<std::unique_ptr<mlir::Pass>()>;
+using PassConstructor = llvm::function_ref<std::unique_ptr<mlir::Pass>()>;
 
 template <typename OP>
 void addNestedPassToOps(mlir::PassManager &pm, PassConstructor ctor) {
