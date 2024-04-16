@@ -319,19 +319,12 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   }
 
   // abs(X) * abs(X) -> X * X
-  // nabs(X) * nabs(X) -> X * X
-  if (Op0 == Op1) {
-    Value *X, *Y;
-    SelectPatternFlavor SPF = matchSelectPattern(Op0, X, Y).Flavor;
-    if (SPF == SPF_ABS || SPF == SPF_NABS)
-      return BinaryOperator::CreateMul(X, X);
-
-    if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
-      return BinaryOperator::CreateMul(X, X);
-  }
+  Value *X;
+  if (Op0 == Op1 && match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
+    return BinaryOperator::CreateMul(X, X);
 
   {
-    Value *X, *Y;
+    Value *Y;
     // abs(X) * abs(Y) -> abs(X * Y)
     if (I.hasNoSignedWrap() &&
         match(Op0,
@@ -344,7 +337,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   }
 
   // -X * C --> X * -C
-  Value *X, *Y;
+  Value *Y;
   Constant *Op1C;
   if (match(Op0, m_Neg(m_Value(X))) && match(Op1, m_Constant(Op1C)))
     return BinaryOperator::CreateMul(X, ConstantExpr::getNeg(Op1C));
