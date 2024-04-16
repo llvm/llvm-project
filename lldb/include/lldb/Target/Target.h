@@ -878,9 +878,6 @@ public:
   // the address of its previous instruction and return that address.
   lldb::addr_t GetBreakableLoadAddress(lldb::addr_t addr);
 
-  void UpdateBreakpoints(ModuleList &module_list, bool added,
-                         bool delete_locations);
-
   void ModulesDidLoad(ModuleList &module_list);
 
   void ModulesDidUnload(ModuleList &module_list, bool delete_locations);

@@ -575,12 +575,10 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadInterpreterModule() {
                                                     true /* notify */)) {
     UpdateLoadedSections(module_sp, LLDB_INVALID_ADDRESS, m_interpreter_base,
                          false);
-    m_interpreter_module = module_sp;
-    // Manually update breakpoints after updating loaded sections, because they
-    // cannot be resolve at the time when creating this module.
     ModuleList module_list;
     module_list.Append(module_sp);
-    m_process->GetTarget().UpdateBreakpoints(module_list, true, false);
+    target.ModulesDidLoad(module_list);
+    m_interpreter_module = module_sp;
     return module_sp;
   }
   return nullptr;

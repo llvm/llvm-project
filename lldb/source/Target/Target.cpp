@@ -1687,13 +1687,6 @@ void Target::NotifyModulesRemoved(lldb_private::ModuleList &module_list) {
   ModulesDidUnload(module_list, false);
 }
 
-void Target::UpdateBreakpoints(ModuleList &module_list, bool added,
-                               bool delete_locations) {
-  m_breakpoint_list.UpdateBreakpoints(module_list, added, delete_locations);
-  m_internal_breakpoint_list.UpdateBreakpoints(module_list, added,
-                                               delete_locations);
-}
-
 void Target::ModulesDidLoad(ModuleList &module_list) {
   const size_t num_images = module_list.GetSize();
   if (m_valid && num_images) {
@@ -1701,7 +1694,8 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
       ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
       LoadScriptingResourceForModule(module_sp, this);
     }
-    UpdateBreakpoints(module_list, true, false);
+    m_breakpoint_list.UpdateBreakpoints(module_list, true, false);
+    m_internal_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     if (m_process_sp) {
       m_process_sp->ModulesDidLoad(module_list);
     }
@@ -1719,7 +1713,8 @@ void Target::SymbolsDidLoad(ModuleList &module_list) {
       }
     }
 
-    UpdateBreakpoints(module_list, true, false);
+    m_breakpoint_list.UpdateBreakpoints(module_list, true, false);
+    m_internal_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     auto data_sp =
         std::make_shared<TargetEventData>(shared_from_this(), module_list);
     BroadcastEvent(eBroadcastBitSymbolsLoaded, data_sp);
@@ -1732,7 +1727,9 @@ void Target::ModulesDidUnload(ModuleList &module_list, bool delete_locations) {
     auto data_sp =
         std::make_shared<TargetEventData>(shared_from_this(), module_list);
     BroadcastEvent(eBroadcastBitModulesUnloaded, data_sp);
-    UpdateBreakpoints(module_list, false, delete_locations);
+    m_breakpoint_list.UpdateBreakpoints(module_list, false, delete_locations);
+    m_internal_breakpoint_list.UpdateBreakpoints(module_list, false,
+                                                 delete_locations);
 
     // If a module was torn down it will have torn down the 'TypeSystemClang's
     // that we used as source 'ASTContext's for the persistent variables in
