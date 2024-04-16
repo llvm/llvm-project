@@ -13435,16 +13435,25 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   // 2^(1,2,3) * 3,5,9 + 1 -> (shXadd (shYadd x, x), x)
   // Matched in tablegen, avoid perturbing patterns.
   switch (MulAmt) {
-  case 11: case 13: case 19: case 21: case 25: case 27: case 29:
-  case 37: case 41: case 45: case 73: case 91:
+  case 11:
+  case 13:
+  case 19:
+  case 21:
+  case 25:
+  case 27:
+  case 29:
+  case 37:
+  case 41:
+  case 45:
+  case 73:
+  case 91:
     return SDValue();
   default:
     break;
   }
 
   // 2^n + 2/4/8 + 1 -> (add (shl X, C1), (shXadd X, X))
-  if (MulAmt > 2 &&
-      isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {
+  if (MulAmt > 2 && isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {
     unsigned ScaleShift = llvm::countr_zero(MulAmt - 1);
     if (ScaleShift >= 1 && ScaleShift < 4) {
       unsigned ShiftAmt = Log2_64(((MulAmt - 1) & (MulAmt - 2)));
@@ -13453,9 +13462,9 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
                                    DAG.getConstant(ShiftAmt, DL, VT));
       SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
                                    DAG.getConstant(ScaleShift, DL, VT));
-      return DAG.getNode(ISD::ADD, DL, VT, Shift1,
-                         DAG.getNode(ISD::ADD, DL, VT, Shift2,
-                                     N->getOperand(0)));
+      return DAG.getNode(
+          ISD::ADD, DL, VT, Shift1,
+          DAG.getNode(ISD::ADD, DL, VT, Shift2, N->getOperand(0)));
     }
   }
 
