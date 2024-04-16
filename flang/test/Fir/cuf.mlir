@@ -7,10 +7,12 @@ func.func @_QPsub1() {
   %4:2 = hlfir.declare %0 {cuda_attr = #fir.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub1Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
   %11 = fir.convert %4#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
   %13 = fir.cuda_allocate %11 : !fir.ref<!fir.box<none>> {cuda_attr = #fir.cuda<device>} -> i32
+  %14 = fir.cuda_deallocate %11 : !fir.ref<!fir.box<none>> {cuda_attr = #fir.cuda<device>} -> i32
   return
 }
 
 // CHECK: fir.cuda_allocate %{{.*}} : !fir.ref<!fir.box<none>> {cuda_attr = #fir.cuda<device>} -> i32
+// CHECK: fir.cuda_deallocate %{{.*}} : !fir.ref<!fir.box<none>> {cuda_attr = #fir.cuda<device>} -> i32
 
 // -----
 
@@ -66,5 +68,9 @@ func.func @_QPsub1() {
   %11 = fir.convert %4#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
   %16 = fir.convert %9 : (!fir.box<!fir.char<1,100>>) -> !fir.box<none>
   %13 = fir.cuda_allocate %11 : !fir.ref<!fir.box<none>> errmsg(%16 : !fir.box<none>) {cuda_attr = #fir.cuda<device>, hasStat} -> i32
+  %14 = fir.cuda_deallocate %11 : !fir.ref<!fir.box<none>> errmsg(%16 : !fir.box<none>) {cuda_attr = #fir.cuda<device>, hasStat} -> i32
   return
 }
+
+// CHECK: fir.cuda_allocate %{{.*}} : !fir.ref<!fir.box<none>> errmsg(%{{.*}} : !fir.box<none>) {cuda_attr = #fir.cuda<device>, hasStat} -> i32
+// CHECK: fir.cuda_deallocate %{{.*}} : !fir.ref<!fir.box<none>> errmsg(%{{.*}} : !fir.box<none>) {cuda_attr = #fir.cuda<device>, hasStat} -> i32
