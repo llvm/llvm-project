@@ -14,6 +14,7 @@
 
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Logger.h"
@@ -359,55 +360,3 @@ DataflowAnalysisContext::~DataflowAnalysisContext() = default;
 
 } // namespace dataflow
 } // namespace clang
-
-using namespace clang;
-
-const Expr &clang::dataflow::ignoreCFGOmittedNodes(const Expr &E) {
-  const Expr *Current = &E;
-  if (auto *EWC = dyn_cast<ExprWithCleanups>(Current)) {
-    Current = EWC->getSubExpr();
-    assert(Current != nullptr);
-  }
-  Current = Current->IgnoreParens();
-  assert(Current != nullptr);
-  return *Current;
-}
-
-const Stmt &clang::dataflow::ignoreCFGOmittedNodes(const Stmt &S) {
-  if (auto *E = dyn_cast<Expr>(&S))
-    return ignoreCFGOmittedNodes(*E);
-  return S;
-}
-
-// FIXME: Does not precisely handle non-virtual diamond inheritance. A single
-// field decl will be modeled for all instances of the inherited field.
-static void getFieldsFromClassHierarchy(QualType Type,
-                                        clang::dataflow::FieldSet &Fields) {
-  if (Type->isIncompleteType() || Type->isDependentType() ||
-      !Type->isRecordType())
-    return;
-
-  for (const FieldDecl *Field : Type->getAsRecordDecl()->fields())
-    Fields.insert(Field);
-  if (auto *CXXRecord = Type->getAsCXXRecordDecl())
-    for (const CXXBaseSpecifier &Base : CXXRecord->bases())
-      getFieldsFromClassHierarchy(Base.getType(), Fields);
-}
-
-/// Gets the set of all fields in the type.
-clang::dataflow::FieldSet clang::dataflow::getObjectFields(QualType Type) {
-  FieldSet Fields;
-  getFieldsFromClassHierarchy(Type, Fields);
-  return Fields;
-}
-
-bool clang::dataflow::containsSameFields(
-    const clang::dataflow::FieldSet &Fields,
-    const clang::dataflow::RecordStorageLocation::FieldToLoc &FieldLocs) {
-  if (Fields.size() != FieldLocs.size())
-    return false;
-  for ([[maybe_unused]] auto [Field, Loc] : FieldLocs)
-    if (!Fields.contains(cast_or_null<FieldDecl>(Field)))
-      return false;
-  return true;
-}
