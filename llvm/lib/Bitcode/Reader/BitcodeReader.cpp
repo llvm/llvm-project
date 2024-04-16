@@ -2325,7 +2325,7 @@ Error BitcodeReader::parseAttributeGroupBlock() {
 
           ConstantRangeList CRL(64, false);
           int RangeSize = Record[++i];
-          assert(i + RangeSize < e);
+          assert(i + 2 * RangeSize < e);
           for (int Idx = 0; Idx < RangeSize; ++Idx) {
             int64_t Start = BitcodeReader::decodeSignRotatedValue(Record[++i]);
             int64_t End = BitcodeReader::decodeSignRotatedValue(Record[++i]);

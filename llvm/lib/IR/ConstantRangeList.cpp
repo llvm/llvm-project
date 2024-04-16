@@ -30,46 +30,53 @@ ConstantRangeList::ConstantRangeList(uint32_t BitWidth, bool Full) {
   Ranges.push_back(ConstantRange(Lower, Lower));
 }
 
-void ConstantRangeList::insert(const ConstantRange &Range) {
-  assert(Range.getLower().slt(Range.getUpper()));
-  assert(getBitWidth() == Range.getBitWidth());
+void ConstantRangeList::insert(const ConstantRange &NewRange) {
+  assert(NewRange.getLower().slt(NewRange.getUpper()));
+  assert(getBitWidth() == NewRange.getBitWidth());
+  // Handle common cases.
   if (isFullSet())
     return;
   if (isEmptySet()) {
-    Ranges[0] = Range;
+    Ranges[0] = NewRange;
+    return;
+  }
+  if (Ranges.back().getUpper().slt(NewRange.getLower())) {
+    Ranges.push_back(NewRange);
+    return;
+  }
+  if (NewRange.getUpper().slt(Ranges.front().getLower())) {
+    Ranges.insert(Ranges.begin(), NewRange);
     return;
   }
 
-  ConstantRange RangeToInsert = Range;
+  // Slow insert.
   SmallVector<ConstantRange, 2> ExistingRanges(Ranges.begin(), Ranges.end());
-  Ranges.clear();
-  for (size_t i = 0; i < ExistingRanges.size(); i++) {
-    const ConstantRange &CurRange = ExistingRanges[i];
-    if (CurRange.getUpper().slt(RangeToInsert.getLower())) {
-      // Case1: No overlap and CurRange is before ToInsert.
-      // |--CurRange--|
-      //                 |--ToInsert--|
-      Ranges.push_back(CurRange);
-      continue;
-    } else if (RangeToInsert.getUpper().slt(CurRange.getLower())) {
-      // Case2: No overlap and CurRange is after ToInsert.
-      //                                 |--CurRange--|
-      //                 |--ToInsert--|
-      // insert the range.
-      Ranges.push_back(RangeToInsert);
-      for (size_t j = i; j < ExistingRanges.size(); j++)
-        Ranges.push_back(ExistingRanges[j]);
-      return;
+  auto LowerBound =
+      std::lower_bound(ExistingRanges.begin(), ExistingRanges.end(), NewRange,
+                       [](const ConstantRange &a, const ConstantRange &b) {
+                         return a.getLower().slt(b.getLower());
+                       });
+  Ranges.erase(Ranges.begin() + (LowerBound - ExistingRanges.begin()),
+               Ranges.end());
+  if (!Ranges.empty() && NewRange.getLower().slt(Ranges.back().getUpper())) {
+    APInt NewLower = Ranges.back().getLower();
+    APInt NewUpper =
+        APIntOps::smax(NewRange.getUpper(), Ranges.back().getUpper());
+    Ranges.back() = ConstantRange(NewLower, NewUpper);
+  } else {
+    Ranges.push_back(NewRange);
+  }
+  for (auto Iter = LowerBound; Iter != ExistingRanges.end(); Iter++) {
+    if (Ranges.back().getUpper().slt(Iter->getLower())) {
+      Ranges.push_back(*Iter);
     } else {
-      // Case3: Overlap.
-      APInt NewLower =
-          APIntOps::smin(CurRange.getLower(), RangeToInsert.getLower());
+      APInt NewLower = Ranges.back().getLower();
       APInt NewUpper =
-          APIntOps::smax(CurRange.getUpper(), RangeToInsert.getUpper());
-      RangeToInsert = ConstantRange(NewLower, NewUpper);
+          APIntOps::smax(Iter->getUpper(), Ranges.back().getUpper());
+      Ranges.back() = ConstantRange(NewLower, NewUpper);
     }
   }
-  Ranges.push_back(RangeToInsert);
+  return;
 }
 
 void ConstantRangeList::print(raw_ostream &OS) const {

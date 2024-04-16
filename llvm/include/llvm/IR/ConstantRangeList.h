@@ -76,7 +76,7 @@ public:
 
   /// Insert a range to Ranges. Keep the list ordered
   /// and no overlapping (merge ranges if needed).
-  void insert(const ConstantRange &Range);
+  void insert(const ConstantRange &NewRange);
   void insert(int64_t Lower, int64_t Upper) {
     insert(ConstantRange(APInt(64, Lower, /*isSigned=*/true),
                          APInt(64, Upper, /*isSigned=*/true)));
