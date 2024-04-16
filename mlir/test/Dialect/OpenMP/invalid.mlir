@@ -1866,11 +1866,43 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
 
 // -----
 
-func.func @omp_distribute(%data_var : memref<i32>) -> () {
+func.func @omp_distribute_schedule(%chunk_size : i32) -> () {
+  // expected-error @below {{op chunk size set without dist_schedule_static being present}}
+  "omp.distribute"(%chunk_size) <{operandSegmentSizes = array<i32: 1, 0, 0>}> ({
+      "omp.terminator"() : () -> ()
+    }) : (i32) -> ()
+}
+
+// -----
+
+func.func @omp_distribute_allocate(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
   "omp.distribute"(%data_var) <{operandSegmentSizes = array<i32: 0, 1, 0>}> ({
       "omp.terminator"() : () -> ()
     }) : (memref<i32>) -> ()
+}
+
+// -----
+
+func.func @omp_distribute_wrapper() -> () {
+  // expected-error @below {{op must be a loop wrapper}}
+  "omp.distribute"() ({
+      %0 = arith.constant 0 : i32
+      "omp.terminator"() : () -> ()
+    }) : () -> ()
+}
+
+// -----
+
+func.func @omp_distribute_nested_wrapper(%data_var : memref<i32>) -> () {
+  // expected-error @below {{only supported nested wrappers are 'omp.parallel' and 'omp.simdloop'}}
+  "omp.distribute"() ({
+      "omp.wsloop"() ({
+        %0 = arith.constant 0 : i32
+        "omp.terminator"() : () -> ()
+      }) : () -> ()
+      "omp.terminator"() : () -> ()
+    }) : () -> ()
 }
 
 // -----
