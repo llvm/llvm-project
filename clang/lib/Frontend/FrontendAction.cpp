@@ -758,7 +758,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // IR files bypass the rest of initialization.
   if (Input.getKind().getLanguage() == Language::LLVM_IR) {
     if (!hasIRSupport()) {
-      CI.getDiagnostics().Report(diag::err_ast_action_on_unparsable_source)
+      CI.getDiagnostics().Report(diag::err_ast_action_on_llvm_ir)
           << Input.getFile();
       return false;
     }
