@@ -15155,8 +15155,8 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
       Type *ValueTy = StoreTy;
       if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
         ValueTy = Trunc->getSrcTy();
-      unsigned MinVF = TTI->getStoreMinimumVF(
-          R.getMinVF(DL->getTypeSizeInBits(StoreTy)), StoreTy, ValueTy);
+      unsigned MinVF = PowerOf2Ceil(TTI->getStoreMinimumVF(
+          R.getMinVF(DL->getTypeStoreSizeInBits(StoreTy)), StoreTy, ValueTy));
 
       if (MaxVF < MinVF) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
