@@ -118,6 +118,11 @@ static cl::opt<int>
                      cl::desc("Only vectorize if you gain more than this "
                               "number "));
 
+static cl::opt<bool> SLPSkipEarlyProfitabilityCheck(
+    "slp-skip-early-profitability-check", cl::init(false), cl::Hidden,
+    cl::desc("When true, SLP vectorizer bypasses profitability checks based on "
+             "heuristics and makes vectorization decision via cost modeling."));
+
 static cl::opt<bool>
 ShouldVectorizeHor("slp-vectorize-hor", cl::init(true), cl::Hidden,
                    cl::desc("Attempt to vectorize horizontal reductions"));
@@ -5509,6 +5514,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
 
 void BoUpSLP::buildExternalUses(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues) {
+  DenseMap<Value *, unsigned> ScalarToExtUses;
   // Collect the values that we need to extract from the tree.
   for (auto &TEPtr : VectorizableTree) {
     TreeEntry *Entry = TEPtr.get();
@@ -5522,13 +5528,18 @@ void BoUpSLP::buildExternalUses(
       Value *Scalar = Entry->Scalars[Lane];
       if (!isa<Instruction>(Scalar))
         continue;
-      int FoundLane = Entry->findLaneForValue(Scalar);
+      // All uses must be replaced already? No need to do it again.
+      auto It = ScalarToExtUses.find(Scalar);
+      if (It != ScalarToExtUses.end() && !ExternalUses[It->second].User)
+        continue;
 
       // Check if the scalar is externally used as an extra arg.
       const auto *ExtI = ExternallyUsedValues.find(Scalar);
       if (ExtI != ExternallyUsedValues.end()) {
+        int FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract: Extra arg from lane "
-                          << Lane << " from " << *Scalar << ".\n");
+                          << FoundLane << " from " << *Scalar << ".\n");
+        ScalarToExtUses.try_emplace(Scalar, ExternalUses.size());
         ExternalUses.emplace_back(Scalar, nullptr, FoundLane);
       }
       for (User *U : Scalar->users()) {
@@ -5556,12 +5567,20 @@ void BoUpSLP::buildExternalUses(
             continue;
           }
           U = nullptr;
+          if (It != ScalarToExtUses.end()) {
+            ExternalUses[It->second].User = nullptr;
+            break;
+          }
         }
 
+        int FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract:" << *UserInst
-                          << " from lane " << Lane << " from " << *Scalar
+                          << " from lane " << FoundLane << " from " << *Scalar
                           << ".\n");
+        It = ScalarToExtUses.try_emplace(Scalar, ExternalUses.size()).first;
         ExternalUses.emplace_back(Scalar, U, FoundLane);
+        if (!U)
+          break;
       }
     }
   }
@@ -6250,7 +6269,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       LLVM_DEBUG(dbgs() << "SLP: ShuffleVector are not vectorized.\n");
       return TreeEntry::NeedToGather;
     }
-    if (!areAltOperandsProfitable(S, VL)) {
+    if (!SLPSkipEarlyProfitabilityCheck && !areAltOperandsProfitable(S, VL)) {
       LLVM_DEBUG(
           dbgs()
           << "SLP: ShuffleVector not vectorized, operands are buildvector and "
