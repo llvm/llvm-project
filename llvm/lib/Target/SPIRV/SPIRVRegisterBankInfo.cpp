@@ -39,6 +39,8 @@ SPIRVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
     return SPIRV::vIDRegBank;
   case SPIRV::vfIDRegClassID:
     return SPIRV::vfIDRegBank;
+  case SPIRV::vpIDRegClassID:
+    return SPIRV::vpIDRegBank;
   case SPIRV::ANYIDRegClassID:
   case SPIRV::ANYRegClassID:
     return SPIRV::IDRegBank;

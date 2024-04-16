@@ -4178,7 +4178,6 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
       Construct->isListInitialization());
 
   getSema().keepInLifetimeExtendingContext();
-  getSema().keepInLifetimeExtendingContext();
   SmallVector<Expr*, 8> NewArgs;
   bool ArgChanged = false;
   if (getDerived().TransformExprs(Construct->getArgs(), Construct->getNumArgs(),
@@ -8752,10 +8751,6 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
   if (getSema().getLangOpts().CPlusPlus23) {
     auto &LastRecord = getSema().ExprEvalContexts.back();
     LastRecord.InLifetimeExtendingContext = true;
-
-    // Materialize non-`cv void` prvalue temporaries in discarded
-    // expressions. These materialized temporaries may be lifetime-extented.
-    LastRecord.InMaterializeTemporaryObjectContext = true;
   }
   StmtResult Init =
       S->getInit() ? getDerived().TransformStmt(S->getInit()) : StmtResult();
@@ -11099,6 +11094,20 @@ OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
     ParsedClause.setDefaultDetails(
         cast<OpenACCDefaultClause>(OldClause)->getDefaultClauseKind());
     break;
+  case OpenACCClauseKind::If: {
+    Expr *Cond = const_cast<Expr *>(
+        cast<OpenACCIfClause>(OldClause)->getConditionExpr());
+    assert(Cond && "If constructed with invalid Condition");
+    Sema::ConditionResult Res =
+        TransformCondition(Cond->getExprLoc(), /*Var=*/nullptr, Cond,
+                           Sema::ConditionKind::Boolean);
+
+    if (Res.isInvalid() || !Res.get().second)
+      return nullptr;
+
+    ParsedClause.setConditionDetails(Res.get().second);
+    break;
+  }
   default:
     assert(false && "Unhandled OpenACC clause in TreeTransform");
     return nullptr;

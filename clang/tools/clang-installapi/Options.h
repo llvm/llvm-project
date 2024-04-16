@@ -75,6 +75,9 @@ struct DriverOptions {
   /// \brief Verification mode for comparing symbols.
   VerificationMode VerifyMode = VerificationMode::Pedantic;
 
+  /// \brief Whether the library is zippered.
+  bool Zippered = false;
+
   /// \brief Print demangled symbols when reporting errors.
   bool Demangle = false;
 

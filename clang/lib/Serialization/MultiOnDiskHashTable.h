@@ -200,11 +200,11 @@ public:
     storage_type Ptr = Data;
 
     uint32_t BucketOffset =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
 
     // Read the list of overridden files.
     uint32_t NumFiles =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
     // FIXME: Add a reserve() to TinyPtrVector so that we don't need to make
     // an additional copy.
     llvm::SmallVector<file_type, 16> OverriddenFiles;

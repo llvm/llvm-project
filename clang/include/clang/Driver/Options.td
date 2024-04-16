@@ -1341,7 +1341,8 @@ def hip_link : Flag<["--"], "hip-link">, Group<opencl_Group>,
   HelpText<"Link clang-offload-bundler bundles for HIP">;
 def no_hip_rt: Flag<["-"], "no-hip-rt">, Group<hip_Group>,
   HelpText<"Do not link against HIP runtime libraries">;
-def rocm_path_EQ : Joined<["--"], "rocm-path=">, Group<hip_Group>,
+def rocm_path_EQ : Joined<["--"], "rocm-path=">,
+  Visibility<[FlangOption]>, Group<hip_Group>,
   HelpText<"ROCm installation path, used for finding and automatically linking required bitcode libraries.">;
 def hip_path_EQ : Joined<["--"], "hip-path=">, Group<hip_Group>,
   HelpText<"HIP runtime installation path, used for finding HIP version and adding HIP include path.">;
@@ -3035,6 +3036,7 @@ defm prebuilt_implicit_modules : BoolFOption<"prebuilt-implicit-modules",
 
 def fmodule_output_EQ : Joined<["-"], "fmodule-output=">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<FrontendOpts<"ModuleOutputPath">>,
   HelpText<"Save intermediate module file results when compiling a standard C++ module unit.">;
 def fmodule_output : Flag<["-"], "fmodule-output">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option]>,
@@ -3047,6 +3049,11 @@ defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
   NegFlag<SetFalse, [], [CC1Option],
           "Perform ODR checks for decls in the global module fragment.">>,
   Group<f_Group>;
+
+def modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Generate the reduced BMI">,
+  MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
 
 def fmodules_prune_interval : Joined<["-"], "fmodules-prune-interval=">, Group<i_Group>,
   Visibility<[ClangOption, CC1Option]>, MetaVarName<"<seconds>">,
@@ -5464,21 +5471,23 @@ def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>;
 def resource_dir : Separate<["-"], "resource-dir">,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
   HelpText<"The directory which holds the compiler resource files">,
   MarshallingInfoString<HeaderSearchOpts<"ResourceDir">>;
 def resource_dir_EQ : Joined<["-"], "resource-dir=">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   Alias<resource_dir>;
 def rpath : Separate<["-"], "rpath">, Flags<[LinkerInput]>, Group<Link_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def rtlib_EQ : Joined<["-", "--"], "rtlib=">, Visibility<[ClangOption, CLOption]>,
   HelpText<"Compiler runtime library to use">;
 def frtlib_add_rpath: Flag<["-"], "frtlib-add-rpath">, Flags<[NoArgumentUnused]>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Add -rpath with architecture-specific resource directory to the linker flags. "
   "When --hip-link is specified, also add -rpath with HIP runtime library directory to the linker flags">;
 def fno_rtlib_add_rpath: Flag<["-"], "fno-rtlib-add-rpath">,
   Flags<[NoArgumentUnused]>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Do not add -rpath with architecture-specific resource directory to the linker flags. "
   "When --hip-link is specified, do not add -rpath with HIP runtime library directory to the linker flags">;
 def offload_add_rpath: Flag<["--"], "offload-add-rpath">,
