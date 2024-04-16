@@ -310,4 +310,30 @@ template <typename T> struct FPTest : public Test {
     }                                                                          \
   } while (0)
 
+#define EXPECT_FP_EQ_ALL_ROUNDING_WITH_ERRNO_EXCEPTION(expected, actual,       \
+                                                       errno, exception)       \
+  do {                                                                         \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
+    ForceRoundingMode __r1(RoundingMode::Nearest);                             \
+    if (__r1.success) {                                                        \
+      EXPECT_FP_EQ_WITH_ERRNO_EXCEPTION((expected), (actual), (errno),         \
+                                        (exception));                          \
+    }                                                                          \
+    ForceRoundingMode __r2(RoundingMode::Upward);                              \
+    if (__r2.success) {                                                        \
+      EXPECT_FP_EQ_WITH_ERRNO_EXCEPTION((expected), (actual), (errno),         \
+                                        (exception));                          \
+    }                                                                          \
+    ForceRoundingMode __r3(RoundingMode::Downward);                            \
+    if (__r3.success) {                                                        \
+      EXPECT_FP_EQ_WITH_ERRNO_EXCEPTION((expected), (actual), (errno),         \
+                                        (exception));                          \
+    }                                                                          \
+    ForceRoundingMode __r4(RoundingMode::TowardZero);                          \
+    if (__r4.success) {                                                        \
+      EXPECT_FP_EQ_WITH_ERRNO_EXCEPTION((expected), (actual), (errno),         \
+                                        (exception));                          \
+    }                                                                          \
+  } while (0)
+
 #endif // LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H

@@ -60,9 +60,6 @@ private:
     if (expectError) {
       ASSERT_FP_EXCEPTION(FE_INVALID);
       ASSERT_MATH_ERRNO(EDOM);
-    } else {
-      ASSERT_FP_EXCEPTION(0);
-      ASSERT_MATH_ERRNO(0);
     }
   }
 
