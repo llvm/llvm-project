@@ -476,7 +476,7 @@ func.func @parallel_invalid_yield(
 
 func.func @yield_invalid_parent_op() {
   "my.op"() ({
-   // expected-error@+1 {{'scf.yield' op expects parent op to be one of 'scf.execute_region, scf.for, scf.if, scf.index_switch, scf.while'}}
+   // expected-error@+1 {{'scf.yield' op expects parent op to be one of 'scf.execute_region, scf.for, scf.if, scf.index_switch, scf.scope, scf.while'}}
    scf.yield
   }) : () -> ()
   return
@@ -747,3 +747,28 @@ func.func @parallel_missing_terminator(%0 : index) {
   return
 }
 
+// -----
+
+func.func @scope_not_isolated_from_above(%arg0 : i32, %arg1 : i32) -> (i32) {
+  // expected-note @below {{required by region isolation constraints}}
+  %p = scf.scope : () -> (i32) {
+  ^bb0():
+    // expected-error @below {{'arith.addi' op using value defined outside the region}}
+    %add = arith.addi %arg0, %arg1 : i32
+    scf.yield %add : i32
+  }
+  return %p : i32
+}
+
+// -----
+
+func.func @scope_yield_results_mismatch(%arg0 : i32, %arg1 : i32) -> (i32) {
+  // expected-error @below {{'scf.scope' op expects terminator operands to have the same type as results of the operation}}
+  %p = scf.scope %arg0, %arg1 : (i32, i32) -> (i32) {
+  ^bb0(%k : i32, %t : i32):
+    %add = arith.addi %k, %t : i32
+    // expected-note @below {{terminator}}
+    scf.yield %add, %add : i32, i32
+  }
+  return %p : i32
+}
