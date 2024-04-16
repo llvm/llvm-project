@@ -462,7 +462,11 @@ void InputSection::copyRelocations(uint8_t *buf,
         addend += sec->getFile<ELFT>()->mipsGp0;
       }
 
-      if (RelTy::IsRela)
+      if (config->emachine == EM_LOONGARCH && type == R_LARCH_ALIGN)
+        // LoongArch psABI v2.30, the R_LARCH_ALIGN requires symbol index.
+        // If it use the section symbol, the addend should not be changed.
+        p->r_addend = addend;
+      else if (RelTy::IsRela)
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
       // For SHF_ALLOC sections relocated by REL, append a relocation to
       // sec->relocations so that relocateAlloc transitively called by
