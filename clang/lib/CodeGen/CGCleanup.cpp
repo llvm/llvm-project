@@ -634,19 +634,12 @@ static void destroyOptimisticNormalEntry(CodeGenFunction &CGF,
 /// Pops a cleanup block.  If the block includes a normal cleanup, the
 /// current insertion point is threaded through the cleanup, as are
 /// any branch fixups on the cleanup.
-void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
-                                      bool ForDeactivation) {
+void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   assert(!EHStack.empty() && "cleanup stack is empty!");
   assert(isa<EHCleanupScope>(*EHStack.begin()) && "top not a cleanup!");
   EHCleanupScope &Scope = cast<EHCleanupScope>(*EHStack.begin());
   assert(Scope.getFixupDepth() <= EHStack.getNumBranchFixups());
 
-  // If we are deactivating a normal cleanup, we need to pretend that the
-  // fallthrough is unreachable. We restore this IP before returning.
-  CGBuilderTy::InsertPoint NormalDeactivateOrigIP;
-  if (ForDeactivation && (Scope.isNormalCleanup() || !getLangOpts().EHAsynch)) {
-    NormalDeactivateOrigIP = Builder.saveAndClearIP();
-  }
   // Remember activation information.
   bool IsActive = Scope.isActive();
   Address NormalActiveFlag =
@@ -674,8 +667,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
 
   // - whether there's a fallthrough
   llvm::BasicBlock *FallthroughSource = Builder.GetInsertBlock();
-  bool HasFallthrough =
-      FallthroughSource != nullptr && (IsActive || HasExistingBranches);
+  bool HasFallthrough = (FallthroughSource != nullptr && IsActive);
 
   // Branch-through fall-throughs leave the insertion point set to the
   // end of the last cleanup, which points to the current scope.  The
@@ -700,11 +692,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
 
   // If we have a prebranched fallthrough into an inactive normal
   // cleanup, rewrite it so that it leads to the appropriate place.
-  if (Scope.isNormalCleanup() && HasPrebranchedFallthrough &&
-      !RequiresNormalCleanup) {
-    // FIXME: Come up with a program which would need forwarding prebranched
-    // fallthrough and add tests. Otherwise delete this and assert against it.
-    assert(!IsActive);
+  if (Scope.isNormalCleanup() && HasPrebranchedFallthrough && !IsActive) {
     llvm::BasicBlock *prebranchDest;
 
     // If the prebranch is semantically branching through the next
@@ -736,8 +724,6 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
     EHStack.popCleanup(); // safe because there are no fixups
     assert(EHStack.getNumBranchFixups() == 0 ||
            EHStack.hasNormalCleanups());
-    if (NormalDeactivateOrigIP.isSet())
-      Builder.restoreIP(NormalDeactivateOrigIP);
     return;
   }
 
@@ -774,19 +760,11 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
   if (!RequiresNormalCleanup) {
     // Mark CPP scope end for passed-by-value Arg temp
     //   per Windows ABI which is "normally" Cleanup in callee
-    if (IsEHa && getInvokeDest()) {
-      // If we are deactivating a normal cleanup then we don't have a
-      // fallthrough. Restore original IP to emit CPP scope ends in the correct
-      // block.
-      if (NormalDeactivateOrigIP.isSet())
-        Builder.restoreIP(NormalDeactivateOrigIP);
-      if (Personality.isMSVCXXPersonality() && Builder.GetInsertBlock())
+    if (IsEHa && getInvokeDest() && Builder.GetInsertBlock()) {
+      if (Personality.isMSVCXXPersonality())
         EmitSehCppScopeEnd();
-      if (NormalDeactivateOrigIP.isSet())
-        NormalDeactivateOrigIP = Builder.saveAndClearIP();
     }
     destroyOptimisticNormalEntry(*this, Scope);
-    Scope.MarkEmitted();
     EHStack.popCleanup();
   } else {
     // If we have a fallthrough and no other need for the cleanup,
@@ -803,7 +781,6 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
       }
 
       destroyOptimisticNormalEntry(*this, Scope);
-      Scope.MarkEmitted();
       EHStack.popCleanup();
 
       EmitCleanup(*this, Fn, cleanupFlags, NormalActiveFlag);
@@ -939,7 +916,6 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
       }
 
       // IV.  Pop the cleanup and emit it.
-      Scope.MarkEmitted();
       EHStack.popCleanup();
       assert(EHStack.hasNormalCleanups() == HasEnclosingCleanups);
 
@@ -1008,8 +984,6 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
     }
   }
 
-  if (NormalDeactivateOrigIP.isSet())
-    Builder.restoreIP(NormalDeactivateOrigIP);
   assert(EHStack.hasNormalCleanups() || EHStack.getNumBranchFixups() == 0);
 
   // Emit the EH cleanup if required.
@@ -1299,8 +1273,17 @@ void CodeGenFunction::DeactivateCleanupBlock(EHScopeStack::stable_iterator C,
   // to the current RunCleanupsScope.
   if (C == EHStack.stable_begin() &&
       CurrentCleanupScopeDepth.strictlyEncloses(C)) {
-    PopCleanupBlock(/*FallthroughIsBranchThrough=*/false,
-                    /*ForDeactivation=*/true);
+    // Per comment below, checking EHAsynch is not really necessary
+    // it's there to assure zero-impact w/o EHAsynch option
+    if (!Scope.isNormalCleanup() && getLangOpts().EHAsynch) {
+      PopCleanupBlock();
+    } else {
+      // If it's a normal cleanup, we need to pretend that the
+      // fallthrough is unreachable.
+      CGBuilderTy::InsertPoint SavedIP = Builder.saveAndClearIP();
+      PopCleanupBlock();
+      Builder.restoreIP(SavedIP);
+    }
     return;
   }
 
