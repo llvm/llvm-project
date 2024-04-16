@@ -1220,7 +1220,10 @@ void DeclPrinter::VisitTemplateDecl(const TemplateDecl *D) {
 
   if (const TemplateTemplateParmDecl *TTP =
         dyn_cast<TemplateTemplateParmDecl>(D)) {
-    Out << "class";
+    if (TTP->wasDeclaredWithTypename())
+      Out << "typename";
+    else
+      Out << "class";
 
     if (TTP->isParameterPack())
       Out << " ...";
