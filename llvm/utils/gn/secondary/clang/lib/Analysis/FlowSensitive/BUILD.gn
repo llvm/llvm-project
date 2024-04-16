@@ -23,6 +23,7 @@ static_library("FlowSensitive") {
     target_gen_dir,
   ]
   sources = [
+    "ASTOps.cpp",
     "AdornedCFG.cpp",
     "Arena.cpp",
     "DataflowAnalysisContext.cpp",
