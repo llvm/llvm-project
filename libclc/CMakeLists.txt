@@ -326,7 +326,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         # Generated files are given just as file names, which we must make
         # absolute to the binary directory.
         set( input_file ${CMAKE_CURRENT_BINARY_DIR}/${file} )
-        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${file}.o" )
+        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${file}.bc" )
       else()
         # Other files are originally relative to each SOURCE file, which are
         # then make relative to the libclc root directory. We must normalize
@@ -336,7 +336,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         get_filename_component( abs_path ${file} ABSOLUTE BASE_DIR ${PROJECT_SOURCE_DIR} )
         file( RELATIVE_PATH root_rel_path ${PROJECT_SOURCE_DIR} ${abs_path} )
         set( input_file ${PROJECT_SOURCE_DIR}/${file} )
-        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${root_rel_path}.o" )
+        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${root_rel_path}.bc" )
       endif()
 
       get_filename_component( file_dir ${file} DIRECTORY )
