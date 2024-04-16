@@ -6,14 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <functional>
+#include <expected>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-bad_function_call::~bad_function_call() noexcept {}
-
-#ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
-const char* bad_function_call::what() const noexcept { return "std::bad_function_call"; }
-#endif
-
+const char* bad_expected_access<void>::what() const noexcept { return "bad access to std::expected"; }
 _LIBCPP_END_NAMESPACE_STD

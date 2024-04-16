@@ -120,14 +120,11 @@
 #    define _LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB
 #    define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
 #    define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
-// Define a key function for `bad_function_call` in the library, to centralize
-// its vtable and typeinfo to libc++ rather than having all other libraries
-// using that class define their own copies.
-#    define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
-// Override the default return value of exception::what() for
-// bad_function_call::what() with a string that is specific to
-// bad_function_call (see http://wg21.link/LWG2233). This is an ABI break
-// because it changes the vtable layout of bad_function_call.
+// Override the default return value of exception::what() for bad_function_call::what()
+// with a string that is specific to bad_function_call (see http://wg21.link/LWG2233).
+// This is an ABI break on platforms that sign and authenticate vtable function pointers
+// because it changes the mangling of the virtual function located in the vtable, which
+// changes how it gets signed.
 #    define _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
 // Enable optimized version of __do_get_(un)signed which avoids redundant copies.
 #    define _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
@@ -197,19 +194,6 @@
 #    if defined(__FreeBSD__) && __FreeBSD__ < 14
 #      define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #    endif
-// For XCOFF linkers, we have problems if we see a weak hidden version of a symbol
-// in user code (like you get with -fvisibility-inlines-hidden) and then a strong def
-// in the library, so we need to always rely on the library version.
-#    if defined(_AIX)
-#      define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
-#    endif
-#  endif
-
-#  if defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_ABI_VERSION >= 2
-// Define a key function for `bad_function_call` in the library, to centralize
-// its vtable and typeinfo to libc++ rather than having all other libraries
-// using that class define their own copies.
-#    define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #  endif
 
 // We had some bugs where we use [[no_unique_address]] together with construct_at,
