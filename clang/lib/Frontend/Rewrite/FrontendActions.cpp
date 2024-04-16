@@ -255,6 +255,7 @@ public:
         Filename, InputKind(Language::Unknown, InputKind::Precompiled));
     Instance.getFrontendOpts().ModuleFiles.clear();
     Instance.getFrontendOpts().ModuleMapFiles.clear();
+    Instance.getFrontendOpts().LateModuleMapFiles.clear();
     // Don't recursively rewrite imports. We handle them all at the top level.
     Instance.getPreprocessorOutputOpts().RewriteImports = false;
 

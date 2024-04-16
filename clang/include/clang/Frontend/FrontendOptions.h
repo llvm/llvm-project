@@ -536,6 +536,9 @@ public:
   /// The list of module map files to load before processing the input.
   std::vector<std::string> ModuleMapFiles;
 
+  /// \brief The list of module map files to load after ModuleFile.
+  std::vector<std::string> LateModuleMapFiles;
+
   /// The list of additional prebuilt module files to load before
   /// processing the input.
   std::vector<std::string> ModuleFiles;

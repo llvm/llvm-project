@@ -3179,6 +3179,12 @@ def fmodule_map_file : Joined<["-"], "fmodule-map-file=">,
   MetaVarName<"<file>">,
   HelpText<"Load this module map file">,
   MarshallingInfoStringVector<FrontendOpts<"ModuleMapFiles">>;
+def flate_module_map_file : Joined<["-"], "flate-module-map-file=">,
+  Group<f_Group>,
+  Visibility<[CC1Option]>,
+  MetaVarName<"<file>">,
+  HelpText<"Load this module map file after all modules">,
+  MarshallingInfoStringVector<FrontendOpts<"LateModuleMapFiles">>;
 def fmodule_file : Joined<["-"], "fmodule-file=">,
   Group<i_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
