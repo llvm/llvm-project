@@ -508,6 +508,11 @@ public:
         isa<CXXStdInitializerListExpr>(E)) {
       return;
     }
+    if (auto *Op = dyn_cast<BinaryOperator>(E);
+        Op && Op->getOpcode() == BO_Cmp) {
+      // Builtin `<=>` returns a `std::strong_ordering` object.
+      return;
+    }
 
     if (auto *InitList = dyn_cast<InitListExpr>(E)) {
       if (!InitList->isSemanticForm())
