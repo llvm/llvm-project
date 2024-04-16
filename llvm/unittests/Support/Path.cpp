@@ -1300,13 +1300,13 @@ TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
   std::string Buf(5, '?');
   Expected<fs::file_t> FD = fs::openNativeFileForRead(TestDirectory);
 #ifdef _WIN32
-  ASSERT_EQ(errorToErrorCode(BytesRead.takeError()), errc::is_a_directory);
+  EXPECT_EQ(errorToErrorCode(FD.takeError()), errc::is_a_directory);
 #else
   ASSERT_THAT_EXPECTED(FD, Succeeded());
   auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
   Expected<size_t> BytesRead =
       fs::readNativeFile(*FD, MutableArrayRef(&*Buf.begin(), Buf.size()));
-  ASSERT_EQ(errorToErrorCode(BytesRead.takeError()), errc::is_a_directory);
+  EXPECT_EQ(errorToErrorCode(BytesRead.takeError()), errc::is_a_directory);
 #endif
 }
 
@@ -1315,7 +1315,7 @@ TEST_F(FileSystemTest, OpenDirectoryAsFileForWrite) {
   std::error_code EC = fs::openFileForWrite(Twine(TestDirectory), FD);
   if (!EC)
     ::close(FD);
-  ASSERT_EQ(EC, errc::is_a_directory);
+  EXPECT_EQ(EC, errc::is_a_directory);
 }
 
 TEST_F(FileSystemTest, Remove) {
