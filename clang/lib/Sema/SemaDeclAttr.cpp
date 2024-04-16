@@ -2001,6 +2001,8 @@ static void markUsedForAliasOrIfunc(Sema &S, Decl *D, const ParsedAttr &AL,
   LookupResult LR(S, Target, Sema::LookupOrdinaryName);
   if (S.LookupName(LR, S.TUScope)) {
     for (NamedDecl *ND : LR) {
+      if (!isa<FunctionDecl>(ND) && !isa<VarDecl>(ND))
+        continue;
       if (MC->shouldMangleDeclName(ND)) {
         llvm::raw_svector_ostream Out(Name);
         Name.clear();
