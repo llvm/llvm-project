@@ -832,8 +832,8 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 bool ClauseProcessor::processMap(
-    mlir::Location currentLocation, const llvm::omp::Directive &directive,
-    Fortran::lower::StatementContext &stmtCtx, mlir::omp::MapClauseOps &result,
+    mlir::Location currentLocation, Fortran::lower::StatementContext &stmtCtx,
+    mlir::omp::MapClauseOps &result,
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSyms,
     llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes) const {
