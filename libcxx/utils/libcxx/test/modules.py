@@ -26,8 +26,6 @@ SkipDeclarations["cwchar"] = ["std::FILE"]
 # The operators are added for private types like __iom_t10.
 SkipDeclarations["iomanip"] = ["std::operator<<", "std::operator>>"]
 
-SkipDeclarations["iosfwd"] = ["std::ios_base", "std::vector"]
-
 # This header also provides declarations in the namespace that might be
 # an error.
 SkipDeclarations["filesystem"] = [
