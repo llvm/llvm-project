@@ -37,6 +37,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <utility>
 
 namespace clang {
@@ -874,7 +875,8 @@ class Sema;
     ConversionFixItGenerator Fix;
 
     /// Viable - True to indicate that this overload candidate is viable.
-    bool Viable : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned Viable : 1;
 
     /// Whether this candidate is the best viable function, or tied for being
     /// the best viable function.
@@ -883,12 +885,14 @@ class Sema;
     /// was part of the ambiguity kernel: the minimal non-empty set of viable
     /// candidates such that all elements of the ambiguity kernel are better
     /// than all viable candidates not in the ambiguity kernel.
-    bool Best : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned Best : 1;
 
     /// IsSurrogate - True to indicate that this candidate is a
     /// surrogate for a conversion to a function pointer or reference
     /// (C++ [over.call.object]).
-    bool IsSurrogate : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsSurrogate : 1;
 
     /// IgnoreObjectArgument - True to indicate that the first
     /// argument's conversion, which for this function represents the
@@ -897,18 +901,20 @@ class Sema;
     /// implicit object argument is just a placeholder) or a
     /// non-static member function when the call doesn't have an
     /// object argument.
-    bool IgnoreObjectArgument : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IgnoreObjectArgument : 1;
 
     /// True if the candidate was found using ADL.
-    CallExpr::ADLCallKind IsADLCandidate : 1;
+    LLVM_PREFERRED_TYPE(CallExpr::ADLCallKind)
+    unsigned IsADLCandidate : 1;
 
     /// Whether this is a rewritten candidate, and if so, of what kind?
     LLVM_PREFERRED_TYPE(OverloadCandidateRewriteKind)
     unsigned RewriteKind : 2;
 
     /// FailureKind - The reason why this candidate is not viable.
-    /// Actually an OverloadFailureKind.
-    unsigned char FailureKind;
+    LLVM_PREFERRED_TYPE(OverloadFailureKind)
+    unsigned FailureKind : 5;
 
     /// The number of call arguments that were explicitly provided,
     /// to be used while performing partial ordering of function templates.
@@ -972,7 +978,9 @@ class Sema;
   private:
     friend class OverloadCandidateSet;
     OverloadCandidate()
-        : IsSurrogate(false), IsADLCandidate(CallExpr::NotADL), RewriteKind(CRK_None) {}
+        : IsSurrogate(false),
+          IsADLCandidate(static_cast<unsigned>(CallExpr::NotADL)),
+          RewriteKind(CRK_None) {}
   };
 
   /// OverloadCandidateSet - A set of overload candidates, used in C++
@@ -1070,50 +1078,15 @@ class Sema;
     };
 
   private:
-    SmallVector<OverloadCandidate, 16> Candidates;
-    llvm::SmallPtrSet<uintptr_t, 16> Functions;
-
-    // Allocator for ConversionSequenceLists. We store the first few of these
-    // inline to avoid allocation for small sets.
-    llvm::BumpPtrAllocator SlabAllocator;
+    SmallVector<OverloadCandidate, 4> Candidates;
+    llvm::SmallPtrSet<uintptr_t, 4> Functions;
 
     SourceLocation Loc;
     CandidateSetKind Kind;
     OperatorRewriteInfo RewriteInfo;
 
-    constexpr static unsigned NumInlineBytes =
-        24 * sizeof(ImplicitConversionSequence);
-    unsigned NumInlineBytesUsed = 0;
-    alignas(void *) char InlineSpace[NumInlineBytes];
-
     // Address space of the object being constructed.
     LangAS DestAS = LangAS::Default;
-
-    /// If we have space, allocates from inline storage. Otherwise, allocates
-    /// from the slab allocator.
-    /// FIXME: It would probably be nice to have a SmallBumpPtrAllocator
-    /// instead.
-    /// FIXME: Now that this only allocates ImplicitConversionSequences, do we
-    /// want to un-generalize this?
-    template <typename T>
-    T *slabAllocate(unsigned N) {
-      // It's simpler if this doesn't need to consider alignment.
-      static_assert(alignof(T) == alignof(void *),
-                    "Only works for pointer-aligned types.");
-      static_assert(std::is_trivial<T>::value ||
-                        std::is_same<ImplicitConversionSequence, T>::value,
-                    "Add destruction logic to OverloadCandidateSet::clear().");
-
-      unsigned NBytes = sizeof(T) * N;
-      if (NBytes > NumInlineBytes - NumInlineBytesUsed)
-        return SlabAllocator.Allocate<T>(N);
-      char *FreeSpaceStart = InlineSpace + NumInlineBytesUsed;
-      assert(uintptr_t(FreeSpaceStart) % alignof(void *) == 0 &&
-             "Misaligned storage!");
-
-      NumInlineBytesUsed += NBytes;
-      return reinterpret_cast<T *>(FreeSpaceStart);
-    }
 
     void destroyCandidates();
 
@@ -1163,12 +1136,7 @@ class Sema;
     ConversionSequenceList
     allocateConversionSequences(unsigned NumConversions) {
       ImplicitConversionSequence *Conversions =
-          slabAllocate<ImplicitConversionSequence>(NumConversions);
-
-      // Construct the new objects.
-      for (unsigned I = 0; I != NumConversions; ++I)
-        new (&Conversions[I]) ImplicitConversionSequence();
-
+          new ImplicitConversionSequence[NumConversions];
       return ConversionSequenceList(Conversions, NumConversions);
     }
 
