@@ -1134,6 +1134,7 @@ public:
     MustGather.clear();
     EntryToLastInstruction.clear();
     ExternalUses.clear();
+    ExternalUsesAsGEPs.clear();
     for (auto &Iter : BlocksSchedules) {
       BlockScheduling *BS = Iter.second.get();
       BS->clear();
@@ -3153,6 +3154,10 @@ private:
   /// can be nullptr, it means that this Internal Scalar will be used later,
   /// after vectorization.
   UserList ExternalUses;
+
+  /// A list of GEPs which can be reaplced by scalar GEPs instead of
+  /// extractelement instructions.
+  SmallPtrSet<Value *, 4> ExternalUsesAsGEPs;
 
   /// Values used only by @llvm.assume calls.
   SmallPtrSet<const Value *, 32> EphValues;
@@ -5541,6 +5546,7 @@ void BoUpSLP::buildExternalUses(
                           << FoundLane << " from " << *Scalar << ".\n");
         ScalarToExtUses.try_emplace(Scalar, ExternalUses.size());
         ExternalUses.emplace_back(Scalar, nullptr, FoundLane);
+        continue;
       }
       for (User *U : Scalar->users()) {
         LLVM_DEBUG(dbgs() << "SLP: Checking user:" << *U << ".\n");
@@ -9925,6 +9931,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   SmallVector<APInt> DemandedElts;
   SmallDenseSet<Value *, 4> UsedInserts;
   DenseSet<std::pair<const TreeEntry *, Type *>> VectorCasts;
+  std::optional<DenseMap<Value *, unsigned>> ValueToExtUses;
   for (ExternalUser &EU : ExternalUses) {
     // We only add extract cost once for the same scalar.
     if (!isa_and_nonnull<InsertElementInst>(EU.User) &&
@@ -10033,12 +10040,40 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         }
       }
     }
+    // Leave the GEPs as is, they are free in most cases and better to keep them
+    // as GEPs.
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(EU.Scalar)) {
+      if (!ValueToExtUses) {
+        ValueToExtUses.emplace();
+        for_each(enumerate(ExternalUses), [&](const auto &P) {
+          ValueToExtUses->try_emplace(P.value().Scalar, P.index());
+        });
+      }
+      // Can use original GEP, if no operands vectorized or they are marked as
+      // externally used already.
+      bool CanBeUsedAsGEP = all_of(GEP->operands(), [&](Value *V) {
+        if (!getTreeEntry(V))
+          return true;
+        auto It = ValueToExtUses->find(V);
+        if (It != ValueToExtUses->end()) {
+          // Replace all uses to avoid compiler crash.
+          ExternalUses[It->second].User = nullptr;
+          return true;
+        }
+        return false;
+      });
+      if (CanBeUsedAsGEP) {
+        ExtractCost += TTI->getInstructionCost(GEP, CostKind);
+        ExternalUsesAsGEPs.insert(EU.Scalar);
+        continue;
+      }
+    }
 
     // If we plan to rewrite the tree in a smaller type, we will need to sign
     // extend the extracted value back to the original type. Here, we account
     // for the extract and the added cost of the sign extend if needed.
     auto *VecTy = FixedVectorType::get(EU.Scalar->getType(), BundleWidth);
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     auto It = MinBWs.find(getTreeEntry(EU.Scalar));
     if (It != MinBWs.end()) {
       auto *MinTy = IntegerType::get(F->getContext(), It->second.first);
@@ -13161,6 +13196,8 @@ Value *BoUpSLP::vectorizeTree(
       if (Scalar->getType() != Vec->getType()) {
         Value *Ex = nullptr;
         Value *ExV = nullptr;
+        auto *GEP = dyn_cast<GetElementPtrInst>(Scalar);
+        bool ReplaceGEP = GEP && ExternalUsesAsGEPs.contains(GEP);
         auto It = ScalarToEEs.find(Scalar);
         if (It != ScalarToEEs.end()) {
           // No need to emit many extracts, just move the only one in the
@@ -13186,6 +13223,15 @@ Value *BoUpSLP::vectorizeTree(
             if (const TreeEntry *ETE = getTreeEntry(V))
               V = ETE->VectorizedValue;
             Ex = Builder.CreateExtractElement(V, ES->getIndexOperand());
+          } else if (ReplaceGEP) {
+            // Leave the GEPs as is, they are free in most cases and better to
+            // keep them as GEPs.
+            auto *CloneGEP = GEP->clone();
+            CloneGEP->insertBefore(*Builder.GetInsertBlock(),
+                                   Builder.GetInsertPoint());
+            if (GEP->hasName())
+              CloneGEP->takeName(GEP);
+            Ex = CloneGEP;
           } else {
             Ex = Builder.CreateExtractElement(Vec, Lane);
           }
@@ -13224,6 +13270,8 @@ Value *BoUpSLP::vectorizeTree(
       assert((ExternallyUsedValues.count(Scalar) ||
               any_of(Scalar->users(),
                      [&](llvm::User *U) {
+                       if (ExternalUsesAsGEPs.contains(U))
+                         return true;
                        TreeEntry *UseEntry = getTreeEntry(U);
                        return UseEntry &&
                               (UseEntry->State == TreeEntry::Vectorize ||
