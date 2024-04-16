@@ -11158,6 +11158,29 @@ void OpenACCClauseTransform<Derived>::VisitSelfClause(
       ParsedClause.getLParenLoc(), ParsedClause.getConditionExpr(),
       ParsedClause.getEndLoc());
 }
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitNumWorkersClause(
+    const OpenACCNumWorkersClause &C) {
+  Expr *IntExpr = const_cast<Expr *>(C.getIntExpr());
+  assert(IntExpr && "num_workers clause constructed with invalid int expr");
+
+  ExprResult Res = Self.TransformExpr(IntExpr);
+  if (!Res.isUsable())
+    return;
+
+  Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                              C.getClauseKind(),
+                                              C.getBeginLoc(), Res.get());
+  if (!Res.isUsable())
+    return;
+
+  ParsedClause.setIntExprDetails(Res.get());
+  NewClause = OpenACCNumWorkersClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getIntExprs()[0],
+      ParsedClause.getEndLoc());
+}
 } // namespace
 template <typename Derived>
 OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
