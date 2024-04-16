@@ -159,7 +159,7 @@ struct DijPathFinder : public ICFGPathFinder {
         bool operator<(const Node &b) const { return d > b.d; }
     };
 
-    void dij(int s, const std::set<int> &pointsToAvoid) {
+    void dij(int s, int target, const std::set<int> &pointsToAvoid) {
         std::fill(d.begin(), d.end(), INF);
         d[s] = 0;
 
@@ -176,6 +176,10 @@ struct DijPathFinder : public ICFGPathFinder {
                 continue;
 
             fa[u] = p.fa;
+
+            // 找到 s -> target 的最短后就退出
+            if (u == target)
+                break;
 
             for (const auto &e : icfg.G[u]) {
                 int v = e.target;
@@ -253,7 +257,7 @@ struct DijPathFinder : public ICFGPathFinder {
         std::vector<int> path;
         for (int i = 0; i < ptp.size() - 1; i++) {
             int u = ptp[i], v = ptp[i + 1];
-            dij(u, pointsToAvoid);
+            dij(u, v, pointsToAvoid);
             if (d[v] == INF) {
                 logger.warn("No path from {} to {}", u, v);
                 return;
