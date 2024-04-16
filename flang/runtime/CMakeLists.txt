@@ -224,7 +224,7 @@ set(supported_files
   utf.cpp
   )
 
-enable_cuda_compilation("${supported_files}")
+enable_cuda_compilation(FortranRuntime "${supported_files}")
 enable_omp_offload_compilation("${supported_files}")
 
 if (NOT TARGET FortranFloat128Math)
