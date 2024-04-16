@@ -213,7 +213,7 @@ void test_printf_unsigned_priX16(uint16_t x) {
   printf("PRIX16: %" "X" /*PRIX16*/ "\n", x); // no-warning
 }
 
-// Verify that we can not suppress a -Wformat-signedness warning by ignoring
+// Verify that we can suppress a -Wformat-signedness warning by ignoring
 // -Wformat (gcc compat).
 void test_suppress(int x)
 {
