@@ -12,9 +12,10 @@ define protected amdgpu_kernel void @swdev456865(ptr addrspace(1) %out0, ptr add
 ; CHECK-LABEL: define protected amdgpu_kernel void @swdev456865(
 ; CHECK-SAME: ptr addrspace(1) nocapture writeonly [[OUT0:%.*]], ptr addrspace(1) nocapture writeonly [[OUT1:%.*]], ptr addrspace(1) nocapture writeonly [[OUT2:%.*]], float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I_I:%.*]] = tail call float asm "pseudo-libcall-sin [[TMP0:%.*]], %1", "=v,v"(float noundef [[X]]) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    [[I_I1:%.*]] = tail call float asm "pseudo-libcall-cos [[TMP0]], %1", "=v,v"(float noundef [[X]]) #[[ATTR1]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[I_I]], [[I_I1]]
+; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
+; CHECK-NEXT:    [[I_I:%.*]] = call float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[I_I2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[I_I]], [[I_I2]]
 ; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[X]] to double
 ; CHECK-NEXT:    [[CONV5:%.*]] = fpext float [[ADD]] to double
 ; CHECK-NEXT:    store double [[CONV]], ptr addrspace(1) [[OUT0]], align 8
