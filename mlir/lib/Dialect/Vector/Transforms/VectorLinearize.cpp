@@ -110,8 +110,17 @@ private:
   unsigned targetVectorBitWidth;
 };
 
-/// This pattern converts the vector.extract_strided_slice operation to a
-/// vector.shuffle operation that works on a linearized vector.
+/// This pattern converts the ExtractStridedSliceOp into a ShuffleOp that works
+/// on a linearized vector.
+/// Following,
+///   vector.extract_strided_slice %source
+///         { offsets = [..], strides = [..], sizes = [..] }
+/// is converted to :
+///   %source_1d = vector.shape_cast %source
+///   %out_1d = vector.shuffle %source_1d, %source_1d [ shuffle_indices_1d ]
+///   %out_nd = vector.shape_cast %out_1d
+/// `shuffle_indices_1d` is computed using the offsets and sizes of the
+/// extraction.
 struct LinearizeVectorExtractStridedSlice final
     : public mlir::OpConversionPattern<mlir::vector::ExtractStridedSliceOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -150,7 +159,7 @@ struct LinearizeVectorExtractStridedSlice final
     //  %0 = vector.extract_strided_slice %src { offsets = [0, 0], sizes = [2,
     //  2],
     //     strides = [1, 1]} : vector<4x8x8xf32> to vector<2x2x8xf32>
-    // here, extraction granularity is 8.
+    // Here, extraction granularity is 8.
     int64_t extractSliceLen = 1;
     auto n = extractOp.getSourceVectorType().getRank();
     int64_t k = (int64_t)offsets.size();
@@ -217,6 +226,15 @@ private:
 
 /// This pattern converts the vector.shuffle operation that works on nD (n > 1)
 /// vectors to a vector.shuffle operation that works on linearized vectors.
+/// Following,
+///   vector.shuffle %v1, %v2 [ shuffle_indices ]
+/// is converted to :
+///   %v1_1d = vector.shape_cast %v1
+///   %v2_1d = vector.shape_cast %v2
+///   %out_1d = vector.shuffle %v1_1d, %v2_1d [ shuffle_indices_1d ]
+///   %out_nd = vector.shape_cast %out_1d
+// `shuffle_indices_1d` is computed using the sizes and `shuffle_indices`
+/// of the original shuffle operation.
 struct LinearizeVectorShuffle final
     : public OpConversionPattern<vector::ShuffleOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -285,6 +303,13 @@ private:
 
 /// This pattern converts the vector.extract operation to a vector.shuffle
 /// operation that works on a linearized vector.
+/// Following,
+///   vector.extract %source [ position ]
+/// is converted to :
+///   %source_1d = vector.shape_cast %source
+///   %out_1d = vector.shuffle %source_1d, %source_1d [ shuffle_indices_1d ]
+///   %out_nd = vector.shape_cast %out_1d
+/// `shuffle_indices_1d` is computed using the position of the original extract.
 struct LinearizeVectorExtract final
     : public OpConversionPattern<vector::ExtractOp> {
   using OpConversionPattern::OpConversionPattern;
