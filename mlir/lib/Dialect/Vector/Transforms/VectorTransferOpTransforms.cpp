@@ -107,8 +107,8 @@ Value skipFullyAliasingOperations(Value source) {
   return source;
 }
 
-/// Checks if two (memref) values are are the same, or are statically known to
-/// alias the same region of memory.
+/// Checks if two (memref) values are the same or are statically known to alias
+/// the same region of memory.
 bool isSameViewOrTrivialAlias(Value a, Value b) {
   return skipFullyAliasingOperations(a) == skipFullyAliasingOperations(b);
 }
