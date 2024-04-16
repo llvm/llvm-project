@@ -956,6 +956,9 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return getRISCVInstructionCost(Op, DstLT.second, CostKind);
   }
   case ISD::TRUNCATE:
+    // Early return for invalid operation
+    if (Dst->getScalarSizeInBits() >= Src->getScalarSizeInBits())
+      break;
     if (Dst->getScalarSizeInBits() == 1) {
       // We do not use several vncvt to truncate to mask vector. So we could
       // not use PowDiff to calculate it.
@@ -968,6 +971,13 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     [[fallthrough]];
   case ISD::FP_EXTEND:
   case ISD::FP_ROUND: {
+    // Early return for invalid operation
+    if ((ISD == ISD::FP_ROUND) &&
+        Dst->getScalarSizeInBits() >= Src->getScalarSizeInBits())
+      break;
+    if ((ISD == ISD::FP_EXTEND) &&
+        Src->getScalarSizeInBits() >= Dst->getScalarSizeInBits())
+      break;
     // Counts of narrow/widen instructions.
     unsigned SrcEltSize = Src->getScalarSizeInBits();
     unsigned DstEltSize = Dst->getScalarSizeInBits();
