@@ -1336,7 +1336,7 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
 
   if (CGM.getCodeGenOpts().DebugTemplateAlias) {
     // TemplateSpecializationType doesn't know if its template args are
-    // being substitued into a parameter pack. We can find out if that's
+    // being substituted into a parameter pack. We can find out if that's
     // the case now by inspecting the TypeAliasTemplateDecl template
     // parameters. Insert Ty's template args into SpecArgs, bundling args
     // passed to a parameter pack into a TemplateArgument::Pack.
