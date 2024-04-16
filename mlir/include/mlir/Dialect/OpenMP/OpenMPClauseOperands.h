@@ -252,9 +252,9 @@ using SectionsClauseOps = detail::Clauses<AllocateClauseOps, NowaitClauseOps,
 
 // TODO `linear` clause.
 using SimdClauseOps =
-    detail::Clauses<AlignedClauseOps, IfClauseOps, LoopRelatedOps,
-                    NontemporalClauseOps, OrderClauseOps, PrivateClauseOps,
-                    ReductionClauseOps, SafelenClauseOps, SimdlenClauseOps>;
+    detail::Clauses<AlignedClauseOps, IfClauseOps, NontemporalClauseOps,
+                    OrderClauseOps, PrivateClauseOps, ReductionClauseOps,
+                    SafelenClauseOps, SimdlenClauseOps>;
 
 using SingleClauseOps = detail::Clauses<AllocateClauseOps, CopyprivateClauseOps,
                                         NowaitClauseOps, PrivateClauseOps>;
