@@ -22,60 +22,46 @@ body:             |
   bb.0.entry:
     liveins: $x3
     ; SAVEONE-LABEL: name: CRAllSave
-    ; SAVEONE: liveins: $x3, $x29, $cr2, $cr4
+    ; SAVEONE: liveins: $x3, $cr2, $cr4
     ; SAVEONE-NEXT: {{  $}}
     ; SAVEONE-NEXT: $x12 = MFCR8 implicit killed $cr2, implicit killed $cr4
     ; SAVEONE-NEXT: STW8 killed $x12, 8, $x1
-    ; SAVEONE-NEXT: STD killed $x29, -24, $x1 :: (store (s64) into %fixed-stack.0)
-    ; SAVEONE-NEXT: renamable $x29 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
+    ; SAVEONE-NEXT: renamable $x3 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
     ; SAVEONE-NEXT: renamable $cr2lt = COPY $cr0gt
     ; SAVEONE-NEXT: renamable $cr4lt = COPY $cr0gt
-    ; SAVEONE-NEXT: renamable $x3 = COPY $x29
-    ; SAVEONE-NEXT: $x29 = LD -24, $x1 :: (load (s64) from %fixed-stack.0)
     ; SAVEONE-NEXT: $x12 = LWZ8 8, $x1
     ; SAVEONE-NEXT: $cr2 = MTOCRF8 $x12
     ; SAVEONE-NEXT: $cr4 = MTOCRF8 killed $x12
     ; SAVEONE-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     ;
     ; SAVEALL-LABEL: name: CRAllSave
-    ; SAVEALL: liveins: $x3, $x29, $cr2, $cr4
+    ; SAVEALL: liveins: $x3, $cr2, $cr4
     ; SAVEALL-NEXT: {{  $}}
     ; SAVEALL-NEXT: $x12 = MFCR8 implicit killed $cr2, implicit killed $cr4
     ; SAVEALL-NEXT: STW8 killed $x12, 8, $x1
-    ; SAVEALL-NEXT: STD killed $x29, -24, $x1 :: (store (s64) into %fixed-stack.0)
-    ; SAVEALL-NEXT: renamable $x29 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
+    ; SAVEALL-NEXT: renamable $x3 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
     ; SAVEALL-NEXT: renamable $cr2lt = COPY $cr0gt
     ; SAVEALL-NEXT: renamable $cr4lt = COPY $cr0gt
-    ; SAVEALL-NEXT: renamable $x3 = COPY $x29
-    ; SAVEALL-NEXT: $x29 = LD -24, $x1 :: (load (s64) from %fixed-stack.0)
     ; SAVEALL-NEXT: $x12 = LWZ8 8, $x1
     ; SAVEALL-NEXT: $cr2 = MTOCRF8 $x12
     ; SAVEALL-NEXT: $cr4 = MTOCRF8 killed $x12
     ; SAVEALL-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     ;
     ; SAVEALL-AIX-LABEL: name: CRAllSave
-    ; SAVEALL-AIX: liveins: $x3, $x29, $x30, $x31, $cr2, $cr4
+    ; SAVEALL-AIX: liveins: $x3, $cr2, $cr4
     ; SAVEALL-AIX-NEXT: {{  $}}
     ; SAVEALL-AIX-NEXT: $x12 = MFCR8 implicit killed $cr2, implicit killed $cr4
     ; SAVEALL-AIX-NEXT: STW8 killed $x12, 8, $x1
-    ; SAVEALL-AIX-NEXT: STD killed $x29, -24, $x1 :: (store (s64) into %fixed-stack.2)
-    ; SAVEALL-AIX-NEXT: STD killed $x30, -16, $x1 :: (store (s64) into %fixed-stack.1, align 16)
-    ; SAVEALL-AIX-NEXT: STD killed $x31, -8, $x1 :: (store (s64) into %fixed-stack.0)
-    ; SAVEALL-AIX-NEXT: renamable $x29 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
+    ; SAVEALL-AIX-NEXT: renamable $x3 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
     ; SAVEALL-AIX-NEXT: renamable $cr2lt = COPY $cr0gt
     ; SAVEALL-AIX-NEXT: renamable $cr4lt = COPY $cr0gt
-    ; SAVEALL-AIX-NEXT: renamable $x3 = COPY $x29
-    ; SAVEALL-AIX-NEXT: $x31 = LD -8, $x1 :: (load (s64) from %fixed-stack.0)
-    ; SAVEALL-AIX-NEXT: $x30 = LD -16, $x1 :: (load (s64) from %fixed-stack.1, align 16)
-    ; SAVEALL-AIX-NEXT: $x29 = LD -24, $x1 :: (load (s64) from %fixed-stack.2)
     ; SAVEALL-AIX-NEXT: $x12 = LWZ8 8, $x1
     ; SAVEALL-AIX-NEXT: $cr2 = MTOCRF8 $x12
     ; SAVEALL-AIX-NEXT: $cr4 = MTOCRF8 killed $x12
     ; SAVEALL-AIX-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
-    renamable $x29 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
+    renamable $x3 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
     renamable $cr2lt = COPY $cr0gt
     renamable $cr4lt = COPY $cr0gt
-    renamable $x3 = COPY $x29
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
 
@@ -93,83 +79,39 @@ body:             |
   bb.0.entry:
     liveins: $x3
     ; SAVEONE-LABEL: name: CR2Save
-    ; SAVEONE: liveins: $x3, $x14, $cr2
+    ; SAVEONE: liveins: $x3, $cr2
     ; SAVEONE-NEXT: {{  $}}
     ; SAVEONE-NEXT: $x12 = MFOCRF8 killed $cr2
     ; SAVEONE-NEXT: STW8 killed $x12, 8, $x1
-    ; SAVEONE-NEXT: STD killed $x14, -144, $x1 :: (store (s64) into %fixed-stack.0, align 16)
-    ; SAVEONE-NEXT: renamable $x14 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
+    ; SAVEONE-NEXT: renamable $x3 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
     ; SAVEONE-NEXT: renamable $cr2lt = COPY $cr0gt
-    ; SAVEONE-NEXT: renamable $x3 = COPY $x14
-    ; SAVEONE-NEXT: $x14 = LD -144, $x1 :: (load (s64) from %fixed-stack.0, align 16)
     ; SAVEONE-NEXT: $x12 = LWZ8 8, $x1
     ; SAVEONE-NEXT: $cr2 = MTOCRF8 killed $x12
     ; SAVEONE-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     ;
     ; SAVEALL-LABEL: name: CR2Save
-    ; SAVEALL: liveins: $x3, $x14, $cr2
+    ; SAVEALL: liveins: $x3, $cr2
     ; SAVEALL-NEXT: {{  $}}
     ; SAVEALL-NEXT: $x12 = MFCR8 implicit killed $cr2
     ; SAVEALL-NEXT: STW8 killed $x12, 8, $x1
-    ; SAVEALL-NEXT: STD killed $x14, -144, $x1 :: (store (s64) into %fixed-stack.0, align 16)
-    ; SAVEALL-NEXT: renamable $x14 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
+    ; SAVEALL-NEXT: renamable $x3 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
     ; SAVEALL-NEXT: renamable $cr2lt = COPY $cr0gt
-    ; SAVEALL-NEXT: renamable $x3 = COPY $x14
-    ; SAVEALL-NEXT: $x14 = LD -144, $x1 :: (load (s64) from %fixed-stack.0, align 16)
     ; SAVEALL-NEXT: $x12 = LWZ8 8, $x1
     ; SAVEALL-NEXT: $cr2 = MTOCRF8 killed $x12
     ; SAVEALL-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     ;
     ; SAVEALL-AIX-LABEL: name: CR2Save
-    ; SAVEALL-AIX: liveins: $x3, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $x29, $x30, $x31, $cr2
+    ; SAVEALL-AIX: liveins: $x3, $cr2
     ; SAVEALL-AIX-NEXT: {{  $}}
     ; SAVEALL-AIX-NEXT: $x12 = MFCR8 implicit killed $cr2
     ; SAVEALL-AIX-NEXT: STW8 killed $x12, 8, $x1
-    ; SAVEALL-AIX-NEXT: STD killed $x14, -144, $x1 :: (store (s64) into %fixed-stack.17, align 16)
-    ; SAVEALL-AIX-NEXT: STD killed $x15, -136, $x1 :: (store (s64) into %fixed-stack.16)
-    ; SAVEALL-AIX-NEXT: STD killed $x16, -128, $x1 :: (store (s64) into %fixed-stack.15, align 16)
-    ; SAVEALL-AIX-NEXT: STD killed $x17, -120, $x1 :: (store (s64) into %fixed-stack.14)
-    ; SAVEALL-AIX-NEXT: STD killed $x18, -112, $x1 :: (store (s64) into %fixed-stack.13, align 16)
-    ; SAVEALL-AIX-NEXT: STD killed $x19, -104, $x1 :: (store (s64) into %fixed-stack.12)
-    ; SAVEALL-AIX-NEXT: STD killed $x20, -96, $x1 :: (store (s64) into %fixed-stack.11, align 16)
-    ; SAVEALL-AIX-NEXT: STD killed $x21, -88, $x1 :: (store (s64) into %fixed-stack.10)
-    ; SAVEALL-AIX-NEXT: STD killed $x22, -80, $x1 :: (store (s64) into %fixed-stack.9, align 16)
-    ; SAVEALL-AIX-NEXT: STD killed $x23, -72, $x1 :: (store (s64) into %fixed-stack.8)
-    ; SAVEALL-AIX-NEXT: STD killed $x24, -64, $x1 :: (store (s64) into %fixed-stack.7, align 16)
-    ; SAVEALL-AIX-NEXT: STD killed $x25, -56, $x1 :: (store (s64) into %fixed-stack.6)
-    ; SAVEALL-AIX-NEXT: STD killed $x26, -48, $x1 :: (store (s64) into %fixed-stack.5, align 16)
-    ; SAVEALL-AIX-NEXT: STD killed $x27, -40, $x1 :: (store (s64) into %fixed-stack.4)
-    ; SAVEALL-AIX-NEXT: STD killed $x28, -32, $x1 :: (store (s64) into %fixed-stack.3, align 16)
-    ; SAVEALL-AIX-NEXT: STD killed $x29, -24, $x1 :: (store (s64) into %fixed-stack.2)
-    ; SAVEALL-AIX-NEXT: STD killed $x30, -16, $x1 :: (store (s64) into %fixed-stack.1, align 16)
-    ; SAVEALL-AIX-NEXT: STD killed $x31, -8, $x1 :: (store (s64) into %fixed-stack.0)
-    ; SAVEALL-AIX-NEXT: renamable $x14 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
+    ; SAVEALL-AIX-NEXT: renamable $x3 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
     ; SAVEALL-AIX-NEXT: renamable $cr2lt = COPY $cr0gt
-    ; SAVEALL-AIX-NEXT: renamable $x3 = COPY $x14
-    ; SAVEALL-AIX-NEXT: $x31 = LD -8, $x1 :: (load (s64) from %fixed-stack.0)
-    ; SAVEALL-AIX-NEXT: $x30 = LD -16, $x1 :: (load (s64) from %fixed-stack.1, align 16)
-    ; SAVEALL-AIX-NEXT: $x29 = LD -24, $x1 :: (load (s64) from %fixed-stack.2)
-    ; SAVEALL-AIX-NEXT: $x28 = LD -32, $x1 :: (load (s64) from %fixed-stack.3, align 16)
-    ; SAVEALL-AIX-NEXT: $x27 = LD -40, $x1 :: (load (s64) from %fixed-stack.4)
-    ; SAVEALL-AIX-NEXT: $x26 = LD -48, $x1 :: (load (s64) from %fixed-stack.5, align 16)
-    ; SAVEALL-AIX-NEXT: $x25 = LD -56, $x1 :: (load (s64) from %fixed-stack.6)
-    ; SAVEALL-AIX-NEXT: $x24 = LD -64, $x1 :: (load (s64) from %fixed-stack.7, align 16)
-    ; SAVEALL-AIX-NEXT: $x23 = LD -72, $x1 :: (load (s64) from %fixed-stack.8)
-    ; SAVEALL-AIX-NEXT: $x22 = LD -80, $x1 :: (load (s64) from %fixed-stack.9, align 16)
-    ; SAVEALL-AIX-NEXT: $x21 = LD -88, $x1 :: (load (s64) from %fixed-stack.10)
-    ; SAVEALL-AIX-NEXT: $x20 = LD -96, $x1 :: (load (s64) from %fixed-stack.11, align 16)
-    ; SAVEALL-AIX-NEXT: $x19 = LD -104, $x1 :: (load (s64) from %fixed-stack.12)
-    ; SAVEALL-AIX-NEXT: $x18 = LD -112, $x1 :: (load (s64) from %fixed-stack.13, align 16)
-    ; SAVEALL-AIX-NEXT: $x17 = LD -120, $x1 :: (load (s64) from %fixed-stack.14)
-    ; SAVEALL-AIX-NEXT: $x16 = LD -128, $x1 :: (load (s64) from %fixed-stack.15, align 16)
-    ; SAVEALL-AIX-NEXT: $x15 = LD -136, $x1 :: (load (s64) from %fixed-stack.16)
-    ; SAVEALL-AIX-NEXT: $x14 = LD -144, $x1 :: (load (s64) from %fixed-stack.17, align 16)
     ; SAVEALL-AIX-NEXT: $x12 = LWZ8 8, $x1
     ; SAVEALL-AIX-NEXT: $cr2 = MTOCRF8 killed $x12
     ; SAVEALL-AIX-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
-    renamable $x14 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
+    renamable $x3 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
     renamable $cr2lt = COPY $cr0gt
-    renamable $x3 = COPY $x14
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
 
