@@ -717,7 +717,7 @@ void mlirOperationMoveBefore(MlirOperation op, MlirOperation other) {
   return unwrap(op)->moveBefore(unwrap(other));
 }
 
-static mlir::WalkResult translateWalkResult(MlirWalkResult result) {
+static mlir::WalkResult unwrap(MlirWalkResult result) {
   switch (result) {
   case MlirWalkResultAdvance:
     return mlir::WalkResult::advance();
@@ -737,13 +737,13 @@ void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
   case MlirWalkPreOrder:
     unwrap(op)->walk<mlir::WalkOrder::PreOrder>(
         [callback, userData](Operation *op) {
-          return translateWalkResult(callback(wrap(op), userData));
+          return unwrap(callback(wrap(op), userData));
         });
     break;
   case MlirWalkPostOrder:
     unwrap(op)->walk<mlir::WalkOrder::PostOrder>(
         [callback, userData](Operation *op) {
-          return translateWalkResult(callback(wrap(op), userData));
+          return unwrap(callback(wrap(op), userData));
         });
   }
 }
