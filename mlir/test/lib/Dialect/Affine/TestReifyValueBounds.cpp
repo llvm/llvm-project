@@ -109,7 +109,7 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
     FailureOr<OpFoldResult> reified = failure();
     if (constant) {
       auto reifiedConst = ValueBoundsConstraintSet::computeConstantBound(
-          boundType, value, dim, /*stopCondition=*/nullptr);
+          boundType, {value, dim}, /*stopCondition=*/nullptr);
       if (succeeded(reifiedConst))
         reified = FailureOr<OpFoldResult>(rewriter.getIndexAttr(*reifiedConst));
     } else if (scalable) {
@@ -128,22 +128,12 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
             rewriter, loc, reifiedScalable->map, vscaleOperand);
       }
     } else {
-      if (dim) {
-        if (useArithOps) {
-          reified = arith::reifyShapedValueDimBound(
-              rewriter, op->getLoc(), boundType, value, *dim, stopCondition);
-        } else {
-          reified = reifyShapedValueDimBound(rewriter, op->getLoc(), boundType,
-                                             value, *dim, stopCondition);
-        }
+      if (useArithOps) {
+        reified = arith::reifyValueBound(rewriter, op->getLoc(), boundType,
+                                         op.getVariable(), stopCondition);
       } else {
-        if (useArithOps) {
-          reified = arith::reifyIndexValueBound(
-              rewriter, op->getLoc(), boundType, value, stopCondition);
-        } else {
-          reified = reifyIndexValueBound(rewriter, op->getLoc(), boundType,
-                                         value, stopCondition);
-        }
+        reified = reifyValueBound(rewriter, op->getLoc(), boundType,
+                                  op.getVariable(), stopCondition);
       }
     }
     if (failed(reified)) {
@@ -188,9 +178,7 @@ static LogicalResult testEquality(func::FuncOp funcOp) {
     }
 
     auto compare = [&](ValueBoundsConstraintSet::ComparisonOperator cmp) {
-      return ValueBoundsConstraintSet::compare(
-          /*lhs=*/op.getLhs(), /*lhsDim=*/std::nullopt, cmp,
-          /*rhs=*/op.getRhs(), /*rhsDim=*/std::nullopt);
+      return ValueBoundsConstraintSet::compare(op.getLhs(), cmp, op.getRhs());
     };
     if (compare(cmpType)) {
       op->emitRemark("true");
