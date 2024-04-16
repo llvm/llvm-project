@@ -13447,7 +13447,6 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   case 21:
   case 25:
   case 27:
-  case 29:
   case 37:
   case 41:
   case 45:
@@ -13470,6 +13469,23 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
                                    DAG.getConstant(ScaleShift, DL, VT));
       return DAG.getNode(
           ISD::ADD, DL, VT, Shift1,
+          DAG.getNode(ISD::ADD, DL, VT, Shift2, N->getOperand(0)));
+    }
+  }
+
+  // 2^N - 3/5/9 --> (sub (shl X, C1), (shXadd X, x))
+  for (uint64_t Offset : {3, 5, 9}) {
+    if ((VT == MVT::i64 || MulAmt + Offset <= UINT32_MAX) &&
+        isPowerOf2_64(MulAmt + Offset)) {
+      SDLoc DL(N);
+      SDValue Shift1 =
+          DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                      DAG.getConstant(Log2_64(MulAmt + Offset), DL, VT));
+      SDValue Shift2 =
+          DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                      DAG.getConstant(Log2_64(Offset - 1), DL, VT));
+      return DAG.getNode(
+          ISD::SUB, DL, VT, Shift1,
           DAG.getNode(ISD::ADD, DL, VT, Shift2, N->getOperand(0)));
     }
   }
