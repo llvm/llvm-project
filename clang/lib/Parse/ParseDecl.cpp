@@ -2552,6 +2552,13 @@ Decl *Parser::ParseDeclarationAfterDeclarator(
   return ParseDeclarationAfterDeclaratorAndAttributes(D, TemplateInfo);
 }
 
+static bool isConstexprVariable(const Decl *D) {
+  if (const VarDecl *Var = dyn_cast_or_null<VarDecl>(D))
+    return Var->isConstexpr();
+
+  return false;
+}
+
 Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     Declarator &D, const ParsedTemplateInfo &TemplateInfo, ForRangeInit *FRI) {
   // RAII type used to track whether we're inside an initializer.
@@ -2559,9 +2566,12 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     Parser &P;
     Declarator &D;
     Decl *ThisDecl;
+    llvm::SaveAndRestore<bool> ConstantContext;
 
     InitializerScopeRAII(Parser &P, Declarator &D, Decl *ThisDecl)
-        : P(P), D(D), ThisDecl(ThisDecl) {
+        : P(P), D(D), ThisDecl(ThisDecl),
+          ConstantContext(P.Actions.isConstantEvaluatedOverride,
+                          isConstexprVariable(ThisDecl)) {
       if (ThisDecl && P.getLangOpts().CPlusPlus) {
         Scope *S = nullptr;
         if (D.getCXXScopeSpec().isSet()) {
