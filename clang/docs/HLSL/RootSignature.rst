@@ -274,7 +274,7 @@ This subobject is declared with the syntax
       Exports
   };
 
-The local/global root siganture in above example could be used like this:
+The local/global root signature in above example could be used like this:
 
 .. code-block::
 
