@@ -1213,10 +1213,13 @@ void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
 
 void TypePrinter::printPackIndexingBefore(const PackIndexingType *T,
                                           raw_ostream &OS) {
-  if (T->hasSelectedType())
+  if (T->hasSelectedType()) {
     OS << T->getSelectedType();
-  else
-    OS << T->getPattern() << "...[" << T->getIndexExpr() << "]";
+  } else {
+    OS << T->getPattern() << "...[";
+    T->getIndexExpr()->printPretty(OS, nullptr, Policy);
+    OS << "]";
+  }
   spaceBeforePlaceHolder(OS);
 }
 
@@ -1746,14 +1749,15 @@ void TypePrinter::printPackExpansionAfter(const PackExpansionType *T,
 static void printCountAttributedImpl(const CountAttributedType *T,
                                      raw_ostream &OS,
                                      const PrintingPolicy &Policy) {
+  OS << ' ';
   if (T->isCountInBytes() && T->isOrNull())
-    OS << " __sized_by_or_null(";
+    OS << "__sized_by_or_null(";
   else if (T->isCountInBytes())
-    OS << " __sized_by(";
+    OS << "__sized_by(";
   else if (T->isOrNull())
-    OS << " __counted_by_or_null(";
+    OS << "__counted_by_or_null(";
   else
-    OS << " __counted_by(";
+    OS << "__counted_by(";
   if (T->getCountExpr())
     T->getCountExpr()->printPretty(OS, nullptr, Policy);
   OS << ')';
@@ -1762,14 +1766,14 @@ static void printCountAttributedImpl(const CountAttributedType *T,
 void TypePrinter::printCountAttributedBefore(const CountAttributedType *T,
                                              raw_ostream &OS) {
   printBefore(T->desugar(), OS);
-  if (!T->desugar()->isArrayType())
+  if (!T->isArrayType())
     printCountAttributedImpl(T, OS, Policy);
 }
 
 void TypePrinter::printCountAttributedAfter(const CountAttributedType *T,
                                             raw_ostream &OS) {
   printAfter(T->desugar(), OS);
-  if (T->desugar()->isArrayType())
+  if (T->isArrayType())
     printCountAttributedImpl(T, OS, Policy);
 }
 

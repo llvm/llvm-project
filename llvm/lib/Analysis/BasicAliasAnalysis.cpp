@@ -1283,7 +1283,8 @@ AliasResult BasicAAResult::aliasGEP(
     // VarIndex = Scale*V.
     const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
     if (Var.Val.TruncBits == 0 &&
-        isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT)) {
+        isKnownNonZero(Var.Val.V, /*Depth=*/0,
+                       SimplifyQuery(DL, DT, &AC, Var.CxtI))) {
       // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
       // potentially wrapping math.
       auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {

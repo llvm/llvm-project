@@ -909,8 +909,7 @@ struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
 };
 
 /// No-op machine function pass which does nothing.
-struct NoOpMachineFunctionPass
-    : public MachinePassInfoMixin<NoOpMachineFunctionPass> {
+struct NoOpMachineFunctionPass : public PassInfoMixin<NoOpMachineFunctionPass> {
   PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
     return PreservedAnalyses::all();
   }
