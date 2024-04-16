@@ -11088,6 +11088,77 @@ OMPClause *TreeTransform<Derived>::TransformOMPXBareClause(OMPXBareClause *C) {
 //===----------------------------------------------------------------------===//
 // OpenACC transformation
 //===----------------------------------------------------------------------===//
+namespace {
+template <typename Derived>
+class OpenACCClauseTransform final
+    : public OpenACCClauseVisitor<OpenACCClauseTransform<Derived>> {
+  TreeTransform<Derived> &Self;
+  SemaOpenACC::OpenACCParsedClause &ParsedClause;
+  OpenACCClause *NewClause = nullptr;
+
+public:
+  OpenACCClauseTransform(TreeTransform<Derived> &Self,
+                         SemaOpenACC::OpenACCParsedClause &PC)
+      : Self(Self), ParsedClause(PC) {}
+
+  OpenACCClause *CreatedClause() const { return NewClause; }
+
+#define VISIT_CLAUSE(CLAUSE_NAME)                                              \
+  void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &Clause);
+#include "clang/Basic/OpenACCClauses.def"
+};
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDefaultClause(
+    const OpenACCDefaultClause &C) {
+  ParsedClause.setDefaultDetails(C.getDefaultClauseKind());
+
+  NewClause = OpenACCDefaultClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getDefaultClauseKind(),
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitIfClause(const OpenACCIfClause &C) {
+  Expr *Cond = const_cast<Expr *>(C.getConditionExpr());
+  assert(Cond && "If constructed with invalid Condition");
+  Sema::ConditionResult Res = Self.TransformCondition(
+      Cond->getExprLoc(), /*Var=*/nullptr, Cond, Sema::ConditionKind::Boolean);
+
+  if (Res.isInvalid() || !Res.get().second)
+    return;
+
+  ParsedClause.setConditionDetails(Res.get().second);
+
+  NewClause = OpenACCIfClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getConditionExpr(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitSelfClause(
+    const OpenACCSelfClause &C) {
+
+  if (C.hasConditionExpr()) {
+    Expr *Cond = const_cast<Expr *>(C.getConditionExpr());
+    Sema::ConditionResult Res =
+        Self.TransformCondition(Cond->getExprLoc(), /*Var=*/nullptr, Cond,
+                                Sema::ConditionKind::Boolean);
+
+    if (Res.isInvalid() || !Res.get().second)
+      return;
+
+    ParsedClause.setConditionDetails(Res.get().second);
+  }
+
+  NewClause = OpenACCSelfClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getConditionExpr(),
+      ParsedClause.getEndLoc());
+}
+} // namespace
 template <typename Derived>
 OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
     ArrayRef<const OpenACCClause *> ExistingClauses,
@@ -11100,33 +11171,10 @@ OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
   if (const auto *WithParms = dyn_cast<OpenACCClauseWithParams>(OldClause))
     ParsedClause.setLParenLoc(WithParms->getLParenLoc());
 
-  switch (OldClause->getClauseKind()) {
-  case OpenACCClauseKind::Default:
-    // There is nothing to do here as nothing dependent can appear in this
-    // clause. So just set the values so Sema can set the right value.
-    ParsedClause.setDefaultDetails(
-        cast<OpenACCDefaultClause>(OldClause)->getDefaultClauseKind());
-    break;
-  case OpenACCClauseKind::If: {
-    Expr *Cond = const_cast<Expr *>(
-        cast<OpenACCIfClause>(OldClause)->getConditionExpr());
-    assert(Cond && "If constructed with invalid Condition");
-    Sema::ConditionResult Res =
-        TransformCondition(Cond->getExprLoc(), /*Var=*/nullptr, Cond,
-                           Sema::ConditionKind::Boolean);
+  OpenACCClauseTransform<Derived> Transform{*this, ParsedClause};
+  Transform.Visit(OldClause);
 
-    if (Res.isInvalid() || !Res.get().second)
-      return nullptr;
-
-    ParsedClause.setConditionDetails(Res.get().second);
-    break;
-  }
-  default:
-    assert(false && "Unhandled OpenACC clause in TreeTransform");
-    return nullptr;
-  }
-
-  return getSema().OpenACC().ActOnClause(ExistingClauses, ParsedClause);
+  return Transform.CreatedClause();
 }
 
 template <typename Derived>
