@@ -190,8 +190,8 @@ MemProfReader::MemProfReader(
       FunctionProfileData(std::move(ProfData)) {
   // Populate CSId in each IndexedAllocationInfo and IndexedMemProfRecord
   // while storing CallStack in CSIdToCallStack.
-  for (auto &[GUID, Record] : FunctionProfileData) {
-    (void)GUID;
+  for (auto &KV : FunctionProfileData) {
+    IndexedMemProfRecord &Record = KV.second;
     for (auto &AS : Record.AllocSites) {
       CallStackId CSId = hashCallStack(AS.CallStack);
       AS.CSId = CSId;

@@ -38,6 +38,7 @@ using ::llvm::memprof::SegmentEntry;
 using ::llvm::object::SectionedAddress;
 using ::llvm::symbolize::SymbolizableModule;
 using ::testing::Return;
+using ::testing::SizeIs;
 
 class MockSymbolizer : public SymbolizableModule {
 public:
@@ -497,23 +498,23 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   MemProfRecord Record = IndexedRecord.toMemProfRecord(Callback);
 
   // Make sure that all lookups are successful.
-  ASSERT_EQ(CSIdMissing, false);
-  ASSERT_EQ(FrameIdMissing, false);
+  ASSERT_FALSE(CSIdMissing);
+  ASSERT_FALSE(FrameIdMissing);
 
   // Verify the contents of Record.
-  ASSERT_EQ(Record.AllocSites.size(), 2U);
-  ASSERT_EQ(Record.AllocSites[0].CallStack.size(), 2U);
-  ASSERT_EQ(Record.AllocSites[0].CallStack[0].hash(), F1.hash());
-  ASSERT_EQ(Record.AllocSites[0].CallStack[1].hash(), F2.hash());
-  ASSERT_EQ(Record.AllocSites[1].CallStack.size(), 2U);
-  ASSERT_EQ(Record.AllocSites[1].CallStack[0].hash(), F1.hash());
-  ASSERT_EQ(Record.AllocSites[1].CallStack[1].hash(), F3.hash());
-  ASSERT_EQ(Record.CallSites.size(), 2U);
-  ASSERT_EQ(Record.CallSites[0].size(), 2U);
-  ASSERT_EQ(Record.CallSites[0][0].hash(), F2.hash());
-  ASSERT_EQ(Record.CallSites[0][1].hash(), F3.hash());
-  ASSERT_EQ(Record.CallSites[1].size(), 2U);
-  ASSERT_EQ(Record.CallSites[1][0].hash(), F2.hash());
-  ASSERT_EQ(Record.CallSites[1][1].hash(), F4.hash());
+  ASSERT_THAT(Record.AllocSites, SizeIs(2));
+  ASSERT_THAT(Record.AllocSites[0].CallStack, SizeIs(2));
+  EXPECT_EQ(Record.AllocSites[0].CallStack[0].hash(), F1.hash());
+  EXPECT_EQ(Record.AllocSites[0].CallStack[1].hash(), F2.hash());
+  ASSERT_THAT(Record.AllocSites[1].CallStack, SizeIs(2));
+  EXPECT_EQ(Record.AllocSites[1].CallStack[0].hash(), F1.hash());
+  EXPECT_EQ(Record.AllocSites[1].CallStack[1].hash(), F3.hash());
+  ASSERT_THAT(Record.CallSites, SizeIs(2));
+  ASSERT_THAT(Record.CallSites[0], SizeIs(2));
+  EXPECT_EQ(Record.CallSites[0][0].hash(), F2.hash());
+  EXPECT_EQ(Record.CallSites[0][1].hash(), F3.hash());
+  ASSERT_THAT(Record.CallSites[1], SizeIs(2));
+  EXPECT_EQ(Record.CallSites[1][0].hash(), F2.hash());
+  EXPECT_EQ(Record.CallSites[1][1].hash(), F4.hash());
 }
 } // namespace
