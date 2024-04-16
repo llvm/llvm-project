@@ -326,7 +326,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         # Generated files are given just as file names, which we must make
         # absolute to the binary directory.
         set( input_file ${CMAKE_CURRENT_BINARY_DIR}/${file} )
-        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${file}.o" )
+        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${file}.bc" )
       else()
         # Other files are originally relative to each SOURCE file, which are
         # then make relative to the libclc root directory. We must normalize
@@ -336,7 +336,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         get_filename_component( abs_path ${file} ABSOLUTE BASE_DIR ${PROJECT_SOURCE_DIR} )
         file( RELATIVE_PATH root_rel_path ${PROJECT_SOURCE_DIR} ${abs_path} )
         set( input_file ${PROJECT_SOURCE_DIR}/${file} )
-        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${root_rel_path}.o" )
+        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${root_rel_path}.bc" )
       endif()
 
       get_filename_component( file_dir ${file} DIRECTORY )
@@ -364,7 +364,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       set( spv_suffix ${arch_suffix}.spv )
       add_custom_command( OUTPUT ${spv_suffix}
         COMMAND ${LLVM_SPIRV} ${spvflags} -o ${spv_suffix} ${builtins_link_lib}
-        DEPENDS ${builtins_link_lib_tgt}
+        DEPENDS ${builtins_link_lib}
       )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
@@ -376,7 +376,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       add_custom_command( OUTPUT ${builtins_opt_lib_tgt}.bc
         COMMAND libclc::opt ${opt_flags} -o ${builtins_opt_lib_tgt}.bc
           ${builtins_link_lib}
-        DEPENDS libclc::opt ${builtins_link_lib_tgt}
+        DEPENDS libclc::opt ${builtins_link_lib}
       )
       add_custom_target( ${builtins_opt_lib_tgt}
         ALL DEPENDS ${builtins_opt_lib_tgt}.bc
@@ -385,12 +385,13 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         PROPERTIES TARGET_FILE ${builtins_opt_lib_tgt}.bc
       )
 
+      set( builtins_opt_lib $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE> )
+
       # Add prepare target
       set( obj_suffix ${arch_suffix}.bc )
       add_custom_command( OUTPUT ${obj_suffix}
-        COMMAND prepare_builtins -o ${obj_suffix}
-          $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE>
-        DEPENDS ${builtins_opt_lib_tgt} prepare_builtins )
+        COMMAND prepare_builtins -o ${obj_suffix} ${builtins_opt_lib}
+        DEPENDS ${builtins_opt_lib} prepare_builtins )
       add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${obj_suffix} )
 
       # nvptx-- targets don't include workitem builtins

@@ -17,6 +17,10 @@ def Reg3Opnd : Operand<OtherVT> {
   let MIOperandInfo = (ops R32, R32, P1);
 }
 
+// The following checks verify that 'MCInstrDesc' entry for 'InstA' has the
+// expected 'NumOperands' and 'NumDefs', i.e. 'InstA' should have 3 defs out of
+// 4 operands.
+
 // CHECK: archInstrTable {{.* = \{}}
 // CHECK: {{\{}}
 // CHECK: {{\{}} [[ID:[0-9]+]], 4, 3, 13, {{.+\}, \/\/}}

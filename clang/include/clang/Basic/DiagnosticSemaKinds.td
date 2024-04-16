@@ -12274,4 +12274,8 @@ def note_acc_branch_into_compute_construct
     : Note<"invalid branch into OpenACC Compute Construct">;
 def note_acc_branch_out_of_compute_construct
     : Note<"invalid branch out of OpenACC Compute Construct">;
+def warn_acc_if_self_conflict
+    : Warning<"OpenACC construct 'self' has no effect when an 'if' clause "
+              "evaluates to true">,
+      InGroup<DiagGroup<"openacc-self-if-potential-conflict">>;
 } // end of sema component.

@@ -32,6 +32,7 @@ public:
 
   const Function *getFunction() const { return Func; }
   bool isZero() const { return !Func; }
+  bool isValid() const { return Valid; }
   bool isWeak() const {
     if (!Func || !Valid)
       return false;
