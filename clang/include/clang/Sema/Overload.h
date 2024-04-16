@@ -37,6 +37,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <utility>
 
 namespace clang {
@@ -1140,9 +1141,8 @@ class Sema;
           Ctx.Allocate<ImplicitConversionSequence>(NumConversions);
 
       // Construct the new objects.
-      for (unsigned I = 0; I != NumConversions; ++I)
-        new (&Conversions[I]) ImplicitConversionSequence();
-
+      std::uninitialized_default_construct(Conversions,
+                                           Conversions + NumConversions);
       return ConversionSequenceList(Conversions, NumConversions);
     }
 
