@@ -1774,6 +1774,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Instruction *I = moveAddAfterMinMax(II, Builder))
       return I;
 
+    // minmax (X & NegPow2C, Y & NegPow2C) --> minmax(X, Y) & NegPow2C
+    const APInt *RHSC;
+    if (match(I0, m_OneUse(m_And(m_Value(X), m_NegatedPower2(RHSC)))) &&
+        match(I1, m_OneUse(m_And(m_Value(Y), m_SpecificInt(*RHSC)))))
+      return BinaryOperator::CreateAnd(Builder.CreateBinaryIntrinsic(IID, X, Y),
+                                       ConstantInt::get(II->getType(), *RHSC));
+
     // smax(X, -X) --> abs(X)
     // smin(X, -X) --> -abs(X)
     // umax(X, -X) --> -abs(X)
@@ -1815,7 +1822,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
        return NewMinMax;
 
     // Try to fold minmax with constant RHS based on range information
-    const APInt *RHSC;
     if (match(I1, m_APIntAllowUndef(RHSC))) {
       ICmpInst::Predicate Pred =
           ICmpInst::getNonStrictPredicate(MinMaxIntrinsic::getPredicate(IID));
@@ -1979,8 +1985,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (ModuloC != ShAmtC)
         return replaceOperand(*II, 2, ModuloC);
 
-      assert(ConstantExpr::getICmp(ICmpInst::ICMP_UGT, WidthC, ShAmtC) ==
-                 ConstantInt::getTrue(CmpInst::makeCmpResultType(Ty)) &&
+      assert(match(ConstantExpr::getICmp(ICmpInst::ICMP_UGT, WidthC, ShAmtC),
+                   m_One()) &&
              "Shift amount expected to be modulo bitwidth");
 
       // Canonicalize funnel shift right by constant to funnel shift left. This
@@ -3406,6 +3412,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::is_fpclass: {
     if (Instruction *I = foldIntrinsicIsFPClass(*II))
       return I;
+    break;
+  }
+  case Intrinsic::threadlocal_address: {
+    Align MinAlign = getKnownAlignment(II->getArgOperand(0), DL, II, &AC, &DT);
+    MaybeAlign Align = II->getRetAlign();
+    if (MinAlign > Align.valueOrOne()) {
+      II->addRetAttr(Attribute::getWithAlignment(II->getContext(), MinAlign));
+      return II;
+    }
     break;
   }
   default: {
