@@ -32,6 +32,16 @@
 # READELF: Name              Type     Address          Off      Size   ES Flg Lk Inf Al
 # READELF: .debug_names      PROGBITS 0000000000000000 [[#%x,]] 0000cc 00      0   0  4
 
+## Test we can handle compressed input and --compress-debug-sections compresses output .debug_names.
+# RUN: %if zlib %{ llvm-objcopy --compress-debug-sections=zlib a.o a.zlib.o %}
+# RUN: %if zlib %{ ld.lld --debug-names --compress-debug-sections=zlib a.zlib.o b.o -o out.zlib %}
+# RUN: %if zlib %{ llvm-readelf -S out.zlib | FileCheck %s --check-prefix=READELF-ZLIB %}
+# RUN: %if zlib %{ llvm-objcopy --decompress-debug-sections out.zlib out.zlib.de %}
+# RUN: %if zlib %{ llvm-dwarfdump -debug-names out.zlib.de | FileCheck %s --check-prefix=DWARF %}
+
+# READELF-ZLIB: Name              Type     Address          Off      Size     ES Flg Lk Inf Al
+# READELF-ZLIB: .debug_names      PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 00   C  0   0  1
+
 # DWARF:      .debug_names contents:
 # DWARF:      Name Index @ 0x0 {
 # DWARF-NEXT:   Header {
