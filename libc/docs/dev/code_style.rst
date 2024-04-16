@@ -227,24 +227,35 @@ Coding in high level languages such as C++ provides benefits relative to low
 level languages like Assembly, such as:
 
 * Improved safety
+* Compile time diagnostics
 * Instrumentation
 
   * Code coverage
   * Profile collection
 * Sanitization
-* Debug info
+* Automatic generation of debug info
 
 While it's not impossible to have Assembly code that correctly provides all of
 the above, we do not wish to maintain such Assembly sources in llvm-libc.
 
 That said, there a few functions provided by llvm-libc that are more difficult
-to implement or maintain in C++ than Assembly. We do use inline or out-of-line
-Assembly in an intentionally minimal set of places; typically places where the
-stack or individual register state must be manipulated very carefully for
-correctness.
+to implement or maintain in C++ than Assembly.
 
-Contributions adding Assembly for performance are not welcome. Contributors
-should strive to stick with C++ for as long as it remains reasonable to do so.
-llvm-libc maintainers reserve the right to reject Assembly contributions that
-they feel could be better maintained if rewritten in C++, and to revisit this
-policy in the future.
+We do use inline or out-of-line Assembly in an intentionally minimal set of
+places; typically places where the stack or individual register state must be
+manipulated very carefully for correctness, or instances where a specific
+instruction sequence does not have a corresponding compiler builtin function
+today.
+
+Contributions adding functions implemented purely in Assembly for performance
+are not welcome.
+
+Contributors should strive to stick with C++ for as long as it remains
+reasonable to do so. Ideally, bugs should be filed against compiler vendors,
+and links to those bug reports should appear in commit messages or comments
+that seek to add Assembly to llvm-libc.
+
+Patches containing any amount of Assembly ideally should be approved by 2
+maintainers. llvm-libc maintainers reserve the right to reject Assembly
+contributions that they feel could be better maintained if rewritten in C++,
+and to revisit this policy in the future.
