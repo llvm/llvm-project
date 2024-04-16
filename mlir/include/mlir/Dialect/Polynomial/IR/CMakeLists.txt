@@ -1,5 +1,5 @@
 add_mlir_dialect(Polynomial polynomial)
-add_mlir_doc(Polynomial PolynomialDialect Polynomial/ -gen-dialect-doc)
+add_mlir_doc(Polynomial PolynomialDialect Polynomial/ -gen-dialect-doc -dialect=polynomial)
 add_mlir_doc(Polynomial PolynomialOps Polynomial/ -gen-op-doc)
 add_mlir_doc(Polynomial PolynomialAttributes Dialects/ -gen-attrdef-doc)
 add_mlir_doc(Polynomial PolynomialTypes Dialects/ -gen-typedef-doc)
