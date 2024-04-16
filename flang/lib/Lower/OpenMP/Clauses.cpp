@@ -1005,12 +1005,28 @@ ProcBind make(const parser::OmpClause::ProcBind &inp,
 Reduction make(const parser::OmpClause::Reduction &inp,
                semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpReductionClause
-  auto &t0 = std::get<parser::OmpReductionOperator>(inp.v.t);
-  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  using wrapped = parser::OmpReductionClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, wrapped::ReductionModifier, Reduction::ReductionModifier,
+      // clang-format off
+      MS(Inscan,  Inscan)
+      MS(Task,    Task)
+      MS(Default, Default)
+      // clang-format on
+  );
+
+  auto &t0 =
+      std::get<std::optional<parser::OmpReductionClause::ReductionModifier>>(
+          inp.v.t);
+  auto &t1 = std::get<parser::OmpReductionOperator>(inp.v.t);
+  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
   return Reduction{
-      {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
-       /*ReductionModifier=*/std::nullopt,
-       /*List=*/makeObjects(t1, semaCtx)}};
+      {/*ReductionModifier=*/t0
+           ? std::make_optional<Reduction::ReductionModifier>(convert(*t0))
+           : std::nullopt,
+       /*ReductionIdentifiers=*/{makeReductionOperator(t1, semaCtx)},
+       /*List=*/makeObjects(t2, semaCtx)}};
 }
 
 // Relaxed: empty

@@ -42,7 +42,8 @@ size_t IndexedAllocationInfo::serializedSize(IndexedVersion Version) const {
 }
 
 static size_t serializedSizeV0(const IndexedMemProfRecord &Record) {
-  size_t Result = sizeof(GlobalValue::GUID);
+  // The number of alloc sites to serialize.
+  size_t Result = sizeof(uint64_t);
   for (const IndexedAllocationInfo &N : Record.AllocSites)
     Result += N.serializedSize(Version0);
 
@@ -57,7 +58,8 @@ static size_t serializedSizeV0(const IndexedMemProfRecord &Record) {
 }
 
 static size_t serializedSizeV2(const IndexedMemProfRecord &Record) {
-  size_t Result = sizeof(GlobalValue::GUID);
+  // The number of alloc sites to serialize.
+  size_t Result = sizeof(uint64_t);
   for (const IndexedAllocationInfo &N : Record.AllocSites)
     Result += N.serializedSize(Version2);
 
@@ -220,6 +222,24 @@ IndexedMemProfRecord::deserialize(const MemProfSchema &Schema,
     return deserializeV2(Schema, Ptr);
   }
   llvm_unreachable("unsupported MemProf version");
+}
+
+MemProfRecord IndexedMemProfRecord::toMemProfRecord(
+    std::function<const llvm::SmallVector<Frame>(const CallStackId)> Callback)
+    const {
+  MemProfRecord Record;
+
+  for (const memprof::IndexedAllocationInfo &IndexedAI : AllocSites) {
+    memprof::AllocationInfo AI;
+    AI.Info = IndexedAI.Info;
+    AI.CallStack = Callback(IndexedAI.CSId);
+    Record.AllocSites.push_back(AI);
+  }
+
+  for (memprof::CallStackId CSId : CallSiteIds)
+    Record.CallSites.push_back(Callback(CSId));
+
+  return Record;
 }
 
 GlobalValue::GUID IndexedMemProfRecord::getGUID(const StringRef FunctionName) {

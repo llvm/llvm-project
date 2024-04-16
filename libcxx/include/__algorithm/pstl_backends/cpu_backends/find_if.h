@@ -16,6 +16,7 @@
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -33,7 +34,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Index, class _Brick, class _Compare>
+template <class _Backend, class _Index, class _Brick, class _Compare>
 _LIBCPP_HIDE_FROM_ABI optional<_Index>
 __parallel_find(_Index __first, _Index __last, _Brick __f, _Compare __comp, bool __b_first) {
   typedef typename std::iterator_traits<_Index>::difference_type _DifferenceType;
@@ -41,8 +42,8 @@ __parallel_find(_Index __first, _Index __last, _Brick __f, _Compare __comp, bool
   _DifferenceType __initial_dist = __b_first ? __n : -1;
   std::atomic<_DifferenceType> __extremum(__initial_dist);
   // TODO: find out what is better here: parallel_for or parallel_reduce
-  auto __res =
-      __par_backend::__parallel_for(__first, __last, [__comp, __f, __first, &__extremum](_Index __i, _Index __j) {
+  auto __res = __pstl::__cpu_traits<_Backend>::__for_each(
+      __first, __last, [__comp, __f, __first, &__extremum](_Index __i, _Index __j) {
         // See "Reducing Contention Through Priority Updates", PPoPP '13, for discussion of
         // why using a shared variable scales fairly well in this situation.
         if (__comp(__i - __first, __extremum)) {
@@ -61,12 +62,12 @@ __parallel_find(_Index __first, _Index __last, _Brick __f, _Compare __comp, bool
   return __extremum.load() != __initial_dist ? __first + __extremum.load() : __last;
 }
 
-template <class _Index, class _DifferenceType, class _Compare>
+template <class _Backend, class _Index, class _DifferenceType, class _Compare>
 _LIBCPP_HIDE_FROM_ABI _Index
 __simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Compare __comp) noexcept {
   // Experiments show good block sizes like this
-  const _DifferenceType __block_size                        = 8;
-  alignas(__lane_size) _DifferenceType __lane[__block_size] = {0};
+  const _DifferenceType __block_size                                                        = 8;
+  alignas(__pstl::__cpu_traits<_Backend>::__lane_size) _DifferenceType __lane[__block_size] = {0};
   while (__end - __begin >= __block_size) {
     _DifferenceType __found = 0;
     _PSTL_PRAGMA_SIMD_REDUCTION(| : __found) for (_DifferenceType __i = __begin; __i < __begin + __block_size; ++__i) {
@@ -102,7 +103,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
 __pstl_find_if(__cpu_backend_tag, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-    return std::__parallel_find(
+    return std::__parallel_find<__cpu_backend_tag>(
         __first,
         __last,
         [&__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
@@ -116,9 +117,10 @@ __pstl_find_if(__cpu_backend_tag, _ForwardIterator __first, _ForwardIterator __l
   } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                        __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
     using __diff_t = __iter_diff_t<_ForwardIterator>;
-    return std::__simd_first(__first, __diff_t(0), __last - __first, [&__pred](_ForwardIterator __iter, __diff_t __i) {
-      return __pred(__iter[__i]);
-    });
+    return std::__simd_first<__cpu_backend_tag>(
+        __first, __diff_t(0), __last - __first, [&__pred](_ForwardIterator __iter, __diff_t __i) {
+          return __pred(__iter[__i]);
+        });
   } else {
     return std::find_if(__first, __last, __pred);
   }

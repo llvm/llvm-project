@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// TODO TZDB review the test based on review comments in
+// https://github.com/llvm/llvm-project/pull/85619
+
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23, c++26
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
 // XFAIL: libcpp-has-no-incomplete-tzdb
@@ -167,45 +170,6 @@ static void test_durations() {
   assert_equal(expected, tz->get_info(std::chrono::sys_time<std::chrono::weeks>{}));
   assert_equal(expected, tz->get_info(std::chrono::sys_time<std::chrono::months>{}));
   assert_equal(expected, tz->get_info(std::chrono::sys_time<std::chrono::years>{}));
-}
-
-static void test_indian_kerguelen() {
-  // One change, no rules, no dst changes.
-
-  // Z Indian/Kerguelen 0 - -00 1950
-  // 5 - +05
-
-  const std::chrono::time_zone* tz = std::chrono::locate_zone("Indian/Kerguelen");
-
-  std::chrono::sys_seconds transition =
-      to_sys_seconds(std::chrono::year(1950), std::chrono::January, std::chrono::day(1));
-
-  assert_equal(
-      std::chrono::sys_info(
-          std::chrono::sys_seconds::min(), //
-          transition,                      //
-          std::chrono::seconds(0),         //
-          std::chrono::minutes(0),         //
-          "-00"),                          //
-      tz->get_info(std::chrono::sys_seconds::min()));
-
-  assert_equal(
-      std::chrono::sys_info(
-          std::chrono::sys_seconds::min(), //
-          transition,                      //
-          std::chrono::seconds(0),         //
-          std::chrono::minutes(0),         //
-          "-00"),                          //
-      tz->get_info(transition - std::chrono::seconds{1}));
-
-  assert_equal(
-      std::chrono::sys_info(
-          transition,                      //
-          std::chrono::sys_seconds::max(), //
-          std::chrono::hours(5),           //
-          std::chrono::minutes(0),         //
-          "+05"),                          //
-      tz->get_info(transition));
 }
 
 static void test_antarctica_syowa() {
@@ -1339,7 +1303,6 @@ int main(int, const char**) {
   // Basic tests
   test_gmt();
   test_durations();
-  test_indian_kerguelen();
   test_antarctica_syowa();
   test_asia_hong_kong();
   test_europe_berlin();

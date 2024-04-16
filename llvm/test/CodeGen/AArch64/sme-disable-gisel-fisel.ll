@@ -331,9 +331,9 @@ define fp128 @f128_call_sm(fp128 %a, fp128 %b) "aarch64_pstate_sm_enabled" nounw
 ; CHECK-COMMON-NEXT:    stp d11, d10, [sp, #64] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    stp d9, d8, [sp, #80] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    str x30, [sp, #96] // 8-byte Folded Spill
-; CHECK-COMMON-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
+; CHECK-COMMON-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstop sm
-; CHECK-COMMON-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
 ; CHECK-COMMON-NEXT:    bl __addtf3
 ; CHECK-COMMON-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstart sm
@@ -392,9 +392,9 @@ define float @frem_call_sm(float %a, float %b) "aarch64_pstate_sm_enabled" nounw
 ; CHECK-COMMON-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
-; CHECK-COMMON-NEXT:    stp s1, s0, [sp, #8] // 8-byte Folded Spill
+; CHECK-COMMON-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstop sm
-; CHECK-COMMON-NEXT:    ldp s1, s0, [sp, #8] // 8-byte Folded Reload
+; CHECK-COMMON-NEXT:    ldp s0, s1, [sp, #8] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    bl fmodf
 ; CHECK-COMMON-NEXT:    str s0, [sp, #12] // 4-byte Folded Spill
 ; CHECK-COMMON-NEXT:    smstart sm
@@ -422,9 +422,7 @@ define float @frem_call_sm_compat(float %a, float %b) "aarch64_pstate_sm_compati
 ; CHECK-COMMON-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; CHECK-COMMON-NEXT:    stp s0, s1, [sp, #8] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    bl __arm_sme_state
-; CHECK-COMMON-NEXT:    ldp s2, s0, [sp, #8] // 8-byte Folded Reload
 ; CHECK-COMMON-NEXT:    and x19, x0, #0x1
-; CHECK-COMMON-NEXT:    stp s2, s0, [sp, #8] // 8-byte Folded Spill
 ; CHECK-COMMON-NEXT:    tbz w19, #0, .LBB12_2
 ; CHECK-COMMON-NEXT:  // %bb.1:
 ; CHECK-COMMON-NEXT:    smstop sm
