@@ -149,13 +149,6 @@ struct AMDGPUFunctionArgInfo {
   ArgDescriptor WorkGroupIDZ;
   ArgDescriptor WorkGroupInfo;
   ArgDescriptor PrivateSegmentWaveByteOffset;
-  ArgDescriptor ClusterWorkGroupIDX;
-  ArgDescriptor ClusterWorkGroupIDY;
-  ArgDescriptor ClusterWorkGroupIDZ;
-  ArgDescriptor ClusterWorkGroupMaxIDX;
-  ArgDescriptor ClusterWorkGroupMaxIDY;
-  ArgDescriptor ClusterWorkGroupMaxIDZ;
-  ArgDescriptor ClusterWorkGroupMaxFlatID;
 
   // Pointer with offset from kernargsegmentptr to where special ABI arguments
   // are passed to callable functions.
