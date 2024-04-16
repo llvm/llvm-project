@@ -33,7 +33,7 @@ TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
                                                LIBC_NAMESPACE::atanhf(-0.0f));
 
   EXPECT_FP_EQ_ALL_ROUNDING_WITH_ERRNO_EXCEPTION(
-      inf, LIBC_NAMESPACE::atanhf(1.0f) ERANGE, FE_DIVBYZERO);
+      inf, LIBC_NAMESPACE::atanhf(1.0f), ERANGE, FE_DIVBYZERO);
 
   EXPECT_FP_EQ_ALL_ROUNDING_WITH_ERRNO_EXCEPTION(
       neg_inf, LIBC_NAMESPACE::atanhf(-1.0f), ERANGE, FE_DIVBYZERO);
