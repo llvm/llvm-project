@@ -1406,7 +1406,7 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     if ((ValTy->getScalarSizeInBits() == 16) && !ST->hasVInstructionsF16()) {
       // pre-widening Op1 and Op2 to f32 before comparison
       VectorType *VecF32Ty =
-          VectorType::get(Type::getDoubleTy(ValTy->getContext()),
+          VectorType::get(Type::getFloatTy(ValTy->getContext()),
                           cast<VectorType>(ValTy)->getElementCount());
       std::pair<InstructionCost, MVT> VecF32LT =
           getTypeLegalizationCost(VecF32Ty);
@@ -1446,8 +1446,7 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
       return LT.first *
              getRISCVInstructionCost(RISCV::VMFLT_VV, LT.second, CostKind);
     default:
-      return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                       I);
+      break;
     }
   }
 
