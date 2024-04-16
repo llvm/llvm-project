@@ -10,8 +10,8 @@ define i8 @f(<16 x i8> %vec, i32 %idx) {
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    sub w8, w8, w0
-; CHECK-NEXT:    orr x8, x9, x8
-; CHECK-NEXT:    ldrb w0, [x8]
+; CHECK-NEXT:    bfxil x9, x8, #0, #4
+; CHECK-NEXT:    ldrb w0, [x9]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %sub = sub nuw i32 1, %idx
