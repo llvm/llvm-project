@@ -429,7 +429,6 @@ LogicalResult DpasOp::verify() {
   return success();
 }
 
-
 } // namespace xegpu
 } // namespace mlir
 
