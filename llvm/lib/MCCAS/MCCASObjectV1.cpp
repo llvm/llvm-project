@@ -1982,14 +1982,16 @@ private:
   bool IsLittleEndian;
   uint8_t AddressSize;
 
-  Error convertInNewDIEBlock(
-      DWARFDie DIE, DistinctDataWriter &DistinctWriter,
-      AbbrevSetWriter &AbbrevWriter,
-      SmallVectorImpl<std::unique_ptr<DIEDataWriter>> &DIEWriters);
+  struct ParentAndChildDIE {
+    DWARFDie Parent;
+    bool ParentAlreadyWritten;
+    DIEDataWriter &Writer;
+    std::optional<DWARFDie> Child;
+  };
 
   Error
-  convertImpl(DWARFDie &DIE, DIEDataWriter &DIEWriter,
-              DistinctDataWriter &DistinctWriter, AbbrevSetWriter &AbbrevWriter,
+  convertImpl(DWARFDie DIE, DistinctDataWriter &DistinctWriter,
+              AbbrevSetWriter &AbbrevWriter,
               SmallVectorImpl<std::unique_ptr<DIEDataWriter>> &DIEWriters);
 };
 
@@ -3006,6 +3008,12 @@ static void writeDIEAttrs(DWARFDie &DIE, ArrayRef<char> DebugInfoData,
   }
 }
 
+static void
+pushNewDIEWriter(SmallVectorImpl<std::unique_ptr<DIEDataWriter>> &DIEWriters) {
+  auto DIEWriter = std::make_unique<DIEDataWriter>();
+  DIEWriters.push_back(std::move(DIEWriter));
+}
+
 /// Creates an abbreviation for DIE using AbbrevWriter.
 /// Stores the contents of the DIE using DistinctWriter and DIEWriter following
 /// the format:
@@ -3021,50 +3029,44 @@ static void writeDIEAttrs(DWARFDie &DIE, ArrayRef<char> DebugInfoData,
 /// DIEAbbrevSetRef block. In this case, raw_data should be interpreted
 /// according to the corresponding DIEAbbrevRefs block.
 Error DIEToCASConverter::convertImpl(
-    DWARFDie &DIE, DIEDataWriter &DIEWriter, DistinctDataWriter &DistinctWriter,
-    AbbrevSetWriter &AbbrevWriter,
-    SmallVectorImpl<std::unique_ptr<DIEDataWriter>> &DIEWriters) {
-  Expected<unsigned> MaybeAbbrevIndex =
-      AbbrevWriter.createAbbrevEntry(DIE, CASBuilder);
-  if (!MaybeAbbrevIndex)
-    return MaybeAbbrevIndex.takeError();
-
-  DistinctWriter.writeULEB128(encodeAbbrevIndex(*MaybeAbbrevIndex));
-  writeDIEAttrs(DIE, DebugInfoData, DIEWriter, DistinctWriter, IsLittleEndian,
-                AddressSize);
-
-  for (DWARFDie Child = DIE.getFirstChild(); Child;
-       Child = Child.getSibling()) {
-    dwarf::Tag ChildTag = Child.getTag();
-    if (ChildTag == dwarf::Tag::DW_TAG_null) {
-      DistinctWriter.writeULEB128(getEndOfDIESiblingsMarker());
-      break;
-    }
-
-    // FIXME: don't use recursion.
-    if (shouldCreateSeparateBlockFor(Child)) {
-      DistinctWriter.writeULEB128(getDIEInAnotherBlockMarker());
-      if (auto E = convertInNewDIEBlock(Child, DistinctWriter, AbbrevWriter,
-                                        DIEWriters))
-        return E;
-      continue;
-    }
-    if (auto E = convertImpl(Child, DIEWriter, DistinctWriter, AbbrevWriter,
-                             DIEWriters))
-      return E;
-  }
-  return Error::success();
-}
-
-Error DIEToCASConverter::convertInNewDIEBlock(
     DWARFDie DIE, DistinctDataWriter &DistinctWriter,
     AbbrevSetWriter &AbbrevWriter,
     SmallVectorImpl<std::unique_ptr<DIEDataWriter>> &DIEWriters) {
-  auto DIEWriter = std::make_unique<DIEDataWriter>();
-  DIEWriters.push_back(std::move(DIEWriter));
-  if (auto E = convertImpl(DIE, *DIEWriters.back(), DistinctWriter,
-                           AbbrevWriter, DIEWriters))
-    return E;
+  SmallVector<ParentAndChildDIE> DIEStack;
+  pushNewDIEWriter(DIEWriters);
+  DIEStack.push_back({DIE, false, *DIEWriters.back(), std::nullopt});
+  while (!DIEStack.empty()) {
+    auto ParentAndChild = DIEStack.pop_back_val();
+    DWARFDie CurrDIE = ParentAndChild.Parent;
+
+    if (!ParentAndChild.ParentAlreadyWritten) {
+      Expected<unsigned> MaybeAbbrevIndex =
+          AbbrevWriter.createAbbrevEntry(CurrDIE, CASBuilder);
+      if (!MaybeAbbrevIndex)
+        return MaybeAbbrevIndex.takeError();
+
+      DistinctWriter.writeULEB128(encodeAbbrevIndex(*MaybeAbbrevIndex));
+      writeDIEAttrs(CurrDIE, DebugInfoData, ParentAndChild.Writer,
+                    DistinctWriter, IsLittleEndian, AddressSize);
+    }
+
+    DWARFDie Child = ParentAndChild.Child ? ParentAndChild.Child->getSibling()
+                                          : CurrDIE.getFirstChild();
+    if (Child) {
+      dwarf::Tag ChildTag = Child.getTag();
+      if (ChildTag == dwarf::Tag::DW_TAG_null)
+        DistinctWriter.writeULEB128(getEndOfDIESiblingsMarker());
+      else if (shouldCreateSeparateBlockFor(Child)) {
+        DistinctWriter.writeULEB128(getDIEInAnotherBlockMarker());
+        DIEStack.push_back({CurrDIE, true, ParentAndChild.Writer, Child});
+        pushNewDIEWriter(DIEWriters);
+        DIEStack.push_back({Child, false, *DIEWriters.back(), std::nullopt});
+      } else {
+        DIEStack.push_back({CurrDIE, true, ParentAndChild.Writer, Child});
+        DIEStack.push_back({Child, false, ParentAndChild.Writer, std::nullopt});
+      }
+    }
+  }
   return Error::success();
 }
 
@@ -3074,8 +3076,7 @@ DIEToCASConverter::convert(DWARFDie DIE, ArrayRef<char> HeaderData,
   DistinctDataWriter DistinctWriter;
   DistinctWriter.writeData(HeaderData);
   SmallVector<std::unique_ptr<DIEDataWriter>> DIEWriters;
-  if (Error E =
-          convertInNewDIEBlock(DIE, DistinctWriter, AbbrevWriter, DIEWriters))
+  if (Error E = convertImpl(DIE, DistinctWriter, AbbrevWriter, DIEWriters))
     return std::move(E);
 
   Expected<DIEAbbrevSetRef> MaybeAbbrevSet =
