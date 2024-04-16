@@ -758,7 +758,7 @@ inline bool CmpHelperEQ<FunctionPointer>(InterpState &S, CodePtr OpPC,
 
   // We cannot compare against weak declarations at compile time.
   for (const auto &FP : {LHS, RHS}) {
-    if (!FP.isZero() && FP.getFunction()->getDecl()->isWeak()) {
+    if (FP.isWeak()) {
       const SourceInfo &Loc = S.Current->getSource(OpPC);
       S.FFDiag(Loc, diag::note_constexpr_pointer_weak_comparison)
           << FP.toDiagnosticString(S.getCtx());
@@ -2236,6 +2236,10 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
         << const_cast<Expr *>(E) << E->getSourceRange();
     return false;
   }
+
+  if (!FuncPtr.isValid())
+    return false;
+
   assert(F);
 
   // Check argument nullability state.

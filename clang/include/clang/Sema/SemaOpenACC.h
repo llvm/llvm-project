@@ -40,7 +40,12 @@ public:
       OpenACCDefaultClauseKind DefaultClauseKind;
     };
 
-    std::variant<DefaultDetails> Details;
+    struct ConditionDetails {
+      Expr *ConditionExpr;
+    };
+
+    std::variant<std::monostate, DefaultDetails, ConditionDetails> Details =
+        std::monostate{};
 
   public:
     OpenACCParsedClause(OpenACCDirectiveKind DirKind,
@@ -63,6 +68,25 @@ public:
       return std::get<DefaultDetails>(Details).DefaultClauseKind;
     }
 
+    const Expr *getConditionExpr() const {
+      return const_cast<OpenACCParsedClause *>(this)->getConditionExpr();
+    }
+
+    Expr *getConditionExpr() {
+      assert((ClauseKind == OpenACCClauseKind::If ||
+              (ClauseKind == OpenACCClauseKind::Self &&
+               DirKind != OpenACCDirectiveKind::Update)) &&
+             "Parsed clause kind does not have a condition expr");
+
+      // 'self' has an optional ConditionExpr, so be tolerant of that. This will
+      // assert in variant otherwise.
+      if (ClauseKind == OpenACCClauseKind::Self &&
+          std::holds_alternative<std::monostate>(Details))
+        return nullptr;
+
+      return std::get<ConditionDetails>(Details).ConditionExpr;
+    }
+
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
     void setEndLoc(SourceLocation EndLoc) { ClauseRange.setEnd(EndLoc); }
 
@@ -70,6 +94,20 @@ public:
       assert(ClauseKind == OpenACCClauseKind::Default &&
              "Parsed clause is not a default clause");
       Details = DefaultDetails{DefKind};
+    }
+
+    void setConditionDetails(Expr *ConditionExpr) {
+      assert((ClauseKind == OpenACCClauseKind::If ||
+              (ClauseKind == OpenACCClauseKind::Self &&
+               DirKind != OpenACCDirectiveKind::Update)) &&
+             "Parsed clause kind does not have a condition expr");
+      // In C++ we can count on this being a 'bool', but in C this gets left as
+      // some sort of scalar that codegen will have to take care of converting.
+      assert((!ConditionExpr || ConditionExpr->isInstantiationDependent() ||
+              ConditionExpr->getType()->isScalarType()) &&
+             "Condition expression type not scalar/dependent");
+
+      Details = ConditionDetails{ConditionExpr};
     }
   };
 

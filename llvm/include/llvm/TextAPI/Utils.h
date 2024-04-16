@@ -21,7 +21,7 @@
 
 #if !defined(PATH_MAX)
 #define PATH_MAX 1024
-#endif
+#endif // !defined(PATH_MAX)
 
 #define MACCATALYST_PREFIX_PATH "/System/iOSSupport"
 #define DRIVERKIT_PREFIX_PATH "/System/DriverKit"

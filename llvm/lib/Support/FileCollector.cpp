@@ -281,7 +281,7 @@ public:
   }
 
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override {
+                              SmallVectorImpl<char> &Output) override {
     auto EC = FS->getRealPath(Path, Output);
     if (!EC) {
       Collector->addFile(Path);
