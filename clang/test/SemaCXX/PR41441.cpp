@@ -1,4 +1,4 @@
-// RUN: %clang -S -fno-discard-value-names -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang --target=x86_64-pc-linux -S -fno-discard-value-names -emit-llvm -o - %s | FileCheck %s
 
 #include <new>
 
