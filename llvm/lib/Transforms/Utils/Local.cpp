@@ -1019,12 +1019,14 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
                                 const SmallPtrSetImpl<BasicBlock *> &SuccPreds,
                                 BasicBlock *&CommonPred) {
 
-  // There must be phis in BB, otherwise BB will be merged into Succ directly
-  if (BB->phis().empty() || Succ->phis().empty())
+  // When Succ has no phis, BB may be merged into Succ directly. We don't need
+  // to redirect the predecessors of BB in this case.
+  if (Succ->phis().empty())
     return false;
 
-  // BB must have predecessors not shared that can be redirected to Succ
-  if (!BB->hasNPredecessorsOrMore(2))
+  // BB must have multiple different predecessors, so that at least one of
+  // predecessors can be redirected to Succ, except the common predecessor.
+  if (BB->getUniquePredecessor() || pred_empty(BB))
     return false;
 
   // Get single common predecessors of both BB and Succ
@@ -3627,10 +3629,12 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
     return createIntegerExpression(C);
 
   auto *FP = dyn_cast<ConstantFP>(&C);
-  if (FP && (Ty.isFloatTy() || Ty.isDoubleTy())) {
+  if (FP && Ty.isFloatingPointTy() && Ty.getScalarSizeInBits() <= 64) {
     const APFloat &APF = FP->getValueAPF();
-    return DIB.createConstantValueExpression(
-        APF.bitcastToAPInt().getZExtValue());
+    APInt const &API = APF.bitcastToAPInt();
+    if (auto Temp = API.getZExtValue())
+      return DIB.createConstantValueExpression(static_cast<uint64_t>(Temp));
+    return DIB.createConstantValueExpression(*API.getRawData());
   }
 
   if (!Ty.isPointerTy())

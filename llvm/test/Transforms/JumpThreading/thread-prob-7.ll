@@ -14,15 +14,15 @@ define i32 @func0(i32 %a0, i32 %a1) !prof !0 {
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BB_JOIN_THREAD:%.*]], label [[TEST2_FALSE:%.*]], !prof [[PROF2:![0-9]+]]
 ; CHECK:       test2_false:
 ; CHECK-NEXT:    call void @foobar()
-; CHECK-NEXT:    br label [[TMP0:%.*]]
+; CHECK-NEXT:    br label [[BB_JOIN_THREAD]]
 ; CHECK:       bb_join:
 ; CHECK-NEXT:    [[C:%.*]] = phi i1 [ [[CX]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[C]]
-; CHECK-NEXT:    br i1 [[COND_FR]], label [[BB_JOIN_THREAD]], label [[TMP0]], !prof [[PROF3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COND_FR]], label [[BB_JOIN_THREAD1:%.*]], label [[BB_JOIN_THREAD]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       bb_join.thread:
-; CHECK-NEXT:    br label [[TMP0]]
+; CHECK-NEXT:    br label [[BB_JOIN_THREAD]]
 ; CHECK:       0:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 42, [[BB_JOIN_THREAD]] ], [ 7, [[BB_JOIN]] ], [ 7, [[TEST2_FALSE]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 7, [[BB_JOIN]] ], [ 7, [[TEST2_FALSE]] ], [ 42, [[TEST2]] ], [ 42, [[BB_JOIN_THREAD1]] ]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:

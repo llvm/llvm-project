@@ -165,6 +165,35 @@ int getNumberOfSMETilesForVectorType(VectorType type) {
   return (vectorRows * vectorCols) / (minNumElts * minNumElts);
 }
 
+/// Legalize `arith.constant dense<value>` splat operations to fit within SME
+/// tiles by decomposing them into tile-sized operations.
+struct LegalizeArithConstantOpsByDecomposition
+    : public OneToNOpConversionPattern<arith::ConstantOp> {
+  using OneToNOpConversionPattern::OneToNOpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ConstantOp constantOp, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
+    auto vectorType = dyn_cast<VectorType>(constantOp.getType());
+    auto denseAttr = dyn_cast<DenseElementsAttr>(constantOp.getValueAttr());
+    if (!vectorType || !denseAttr || !denseAttr.isSplat())
+      return failure();
+
+    if (!isMultipleOfSMETileVectorType(vectorType))
+      return rewriter.notifyMatchFailure(constantOp,
+                                         kMatchFailureNotSMETileTypeMultiple);
+
+    auto smeTileType = getSMETileTypeForElement(vectorType.getElementType());
+    auto tileCount = getNumberOfSMETilesForVectorType(vectorType);
+    auto tileSplat = rewriter.create<arith::ConstantOp>(
+        constantOp.getLoc(), denseAttr.resizeSplat(smeTileType));
+    rewriter.replaceOp(constantOp, SmallVector<Value>(tileCount, tileSplat),
+                       adaptor.getResultMapping());
+
+    return success();
+  }
+};
+
 /// Legalize `vector.outerproduct` operations to fit within SME tiles by
 /// decomposing them into tile-sized operations.
 struct LegalizeVectorOuterProductOpsByDecomposition
@@ -637,7 +666,8 @@ struct VectorLegalizationPass
     // Note: High benefit to ensure masked outer products are lowered first.
     patterns.add<LegalizeMaskedVectorOuterProductOpsByDecomposition>(
         converter, context, 1024);
-    patterns.add<LegalizeVectorOuterProductOpsByDecomposition,
+    patterns.add<LegalizeArithConstantOpsByDecomposition,
+                 LegalizeVectorOuterProductOpsByDecomposition,
                  LegalizeTransferReadOpsByDecomposition,
                  LegalizeTransferWriteOpsByDecomposition>(converter, context);
     populateFuncTypeConversionPatterns(converter, patterns);
