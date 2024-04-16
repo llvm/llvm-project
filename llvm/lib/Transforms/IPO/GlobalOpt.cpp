@@ -2323,38 +2323,38 @@ OptimizeGlobalAliases(Module &M,
 
 static Function *
 FindAtExitLibFunc(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI, LibFunc Func) {
-    // Hack to get a default TLI before we have actual Function.
-    auto FuncIter = M.begin();
-    if (FuncIter == M.end())
-        return nullptr;
-    auto *TLI = &GetTLI(*FuncIter);
+  // Hack to get a default TLI before we have actual Function.
+  auto FuncIter = M.begin();
+  if (FuncIter == M.end())
+    return nullptr;
+  auto *TLI = &GetTLI(*FuncIter);
 
-    LibFunc F = Func;
-    if (!TLI->has(F))
-        return nullptr;
+  LibFunc F = Func;
+  if (!TLI->has(F))
+    return nullptr;
 
-    Function *Fn = M.getFunction(TLI->getName(F));
-    if (!Fn)
-        return nullptr;
+  Function *Fn = M.getFunction(TLI->getName(F));
+  if (!Fn)
+    return nullptr;
 
-    // Now get the actual TLI for Fn.
-    TLI = &GetTLI(*Fn);
+  // Now get the actual TLI for Fn.
+  TLI = &GetTLI(*Fn);
 
-    // Make sure that the function has the correct prototype.
-    if (!TLI->getLibFunc(*Fn, F) || F != Func)
-        return nullptr;
+  // Make sure that the function has the correct prototype.
+  if (!TLI->getLibFunc(*Fn, F) || F != Func)
+    return nullptr;
 
-    return Fn;
+  return Fn;
 }
 
 static Function *
 FindCXAAtExit(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
-    return FindAtExitLibFunc(M, GetTLI, LibFunc_cxa_atexit);
+  return FindAtExitLibFunc(M, GetTLI, LibFunc_cxa_atexit);
 }
 
 static Function *
 FindAtExit(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
-    return FindAtExitLibFunc(M, GetTLI, LibFunc_atexit);
+  return FindAtExitLibFunc(M, GetTLI, LibFunc_atexit);
 }
 
 /// Returns whether the given function is an empty C++ destructor or atexit handler
@@ -2412,9 +2412,9 @@ static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
     CI->eraseFromParent();
 
     if (isCXX)
-        ++NumCXXDtorsRemoved;
+      ++NumCXXDtorsRemoved;
     else
-        ++NumAtExitRemoved;
+      ++NumAtExitRemoved;
 
     Changed |= true;
   }
@@ -2533,10 +2533,10 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
     // Try to remove trivial global destructors if they are not removed
     // already.
     if (Function *CXAAtExitFn = FindCXAAtExit(M, GetTLI))
-        LocalChange |= OptimizeEmptyGlobalAtExitDtors(CXAAtExitFn, true);
+      LocalChange |= OptimizeEmptyGlobalAtExitDtors(CXAAtExitFn, true);
 
     if (Function *AtExitFn = FindAtExit(M, GetTLI))
-        LocalChange |= OptimizeEmptyGlobalAtExitDtors(AtExitFn, false);
+      LocalChange |= OptimizeEmptyGlobalAtExitDtors(AtExitFn, false);
 
     // Optimize IFuncs whose callee's are statically known.
     LocalChange |= OptimizeStaticIFuncs(M);
