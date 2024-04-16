@@ -13408,8 +13408,8 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   if (VT != Subtarget.getXLenVT())
     return SDValue();
 
-  if (!Subtarget.hasStdExtZba() && !Subtarget.hasVendorXTHeadBa())
-    return SDValue();
+  const bool HasShlAdd =
+      Subtarget.hasStdExtZba() || Subtarget.hasVendorXTHeadBa();
 
   ConstantSDNode *CNode = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (!CNode)
@@ -13418,14 +13418,15 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
 
   // 3/5/9 * 2^N -> shXadd (sll X, C), (sll X, C)
   // Matched in tablegen, avoid perturbing patterns.
-  for (uint64_t Divisor : {3, 5, 9})
-    if (MulAmt % Divisor == 0 && isPowerOf2_64(MulAmt / Divisor))
-      return SDValue();
+  if (HasShlAdd)
+    for (uint64_t Divisor : {3, 5, 9})
+      if (MulAmt % Divisor == 0 && isPowerOf2_64(MulAmt / Divisor))
+        return SDValue();
 
   // If this is a power 2 + 2/4/8, we can use a shift followed by a single
   // shXadd. First check if this a sum of two power of 2s because that's
   // easy. Then count how many zeros are up to the first bit.
-  if (isPowerOf2_64(MulAmt & (MulAmt - 1))) {
+  if (HasShlAdd && isPowerOf2_64(MulAmt & (MulAmt - 1))) {
     unsigned ScaleShift = llvm::countr_zero(MulAmt);
     if (ScaleShift >= 1 && ScaleShift < 4) {
       unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
@@ -13440,26 +13441,27 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
 
   // 2^(1,2,3) * 3,5,9 + 1 -> (shXadd (shYadd x, x), x)
   // Matched in tablegen, avoid perturbing patterns.
-  switch (MulAmt) {
-  case 11:
-  case 13:
-  case 19:
-  case 21:
-  case 25:
-  case 27:
-  case 29:
-  case 37:
-  case 41:
-  case 45:
-  case 73:
-  case 91:
-    return SDValue();
-  default:
-    break;
-  }
+  if (HasShlAdd)
+    switch (MulAmt) {
+    case 11:
+    case 13:
+    case 19:
+    case 21:
+    case 25:
+    case 27:
+    case 29:
+    case 37:
+    case 41:
+    case 45:
+    case 73:
+    case 91:
+      return SDValue();
+    default:
+      break;
+    }
 
   // 2^n + 2/4/8 + 1 -> (add (shl X, C1), (shXadd X, X))
-  if (MulAmt > 2 && isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {
+  if (HasShlAdd && MulAmt > 2 && isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {
     unsigned ScaleShift = llvm::countr_zero(MulAmt - 1);
     if (ScaleShift >= 1 && ScaleShift < 4) {
       unsigned ShiftAmt = Log2_64(((MulAmt - 1) & (MulAmt - 2)));
@@ -13472,6 +13474,19 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
           ISD::ADD, DL, VT, Shift1,
           DAG.getNode(ISD::ADD, DL, VT, Shift2, N->getOperand(0)));
     }
+  }
+
+  // 2^N - 2^M -> (sub (shl X, C1), (shl X, C2))
+  uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
+  if (isPowerOf2_64(MulAmt + MulAmtLowBit)) {
+    uint64_t ShiftAmt1 = MulAmt + MulAmtLowBit;
+    SDLoc DL(N);
+    SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                                 DAG.getConstant(Log2_64(ShiftAmt1), DL, VT));
+    SDValue Shift2 =
+        DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                    DAG.getConstant(Log2_64(MulAmtLowBit), DL, VT));
+    return DAG.getNode(ISD::SUB, DL, VT, Shift1, Shift2);
   }
 
   return SDValue();
