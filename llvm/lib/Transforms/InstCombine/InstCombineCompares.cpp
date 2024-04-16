@@ -8103,7 +8103,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // fcmp (fadd X, 0.0), Y --> fcmp X, Y
   if (match(Op0, m_FAdd(m_Value(X), m_AnyZeroFP())))
     return new FCmpInst(Pred, X, Op1, "", &I);
-  
+
   // fcmp X, (fadd Y, 0.0) --> fcmp X, Y
   if (match(Op1, m_FAdd(m_Value(Y), m_AnyZeroFP())))
     return new FCmpInst(Pred, Op0, Y, "", &I);
