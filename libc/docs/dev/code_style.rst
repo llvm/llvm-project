@@ -238,8 +238,9 @@ level languages like Assembly, such as:
 While it's not impossible to have Assembly code that correctly provides all of
 the above, we do not wish to maintain such Assembly sources in llvm-libc.
 
-That said, there a few functions provided by llvm-libc that are more difficult
-to implement or maintain in C++ than Assembly.
+That said, there a few functions provided by llvm-libc that are impossible
+to reliably implement in C++ for all compilers supported for building
+llvm-libc.
 
 We do use inline or out-of-line Assembly in an intentionally minimal set of
 places; typically places where the stack or individual register state must be
