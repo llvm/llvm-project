@@ -3279,9 +3279,7 @@ ItaniumRTTIBuilder::GetAddrOfExternalRTTIDescriptor(QualType Ty) {
 
     GV = new llvm::GlobalVariable(
         CGM.getModule(), CGM.GlobalsInt8PtrTy,
-        /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, nullptr, Name,
-        nullptr, llvm::GlobalValue::NotThreadLocal,
-        CGM.GlobalsInt8PtrTy->getAddressSpace());
+        /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, nullptr, Name);
     const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
     CGM.setGVProperties(GV, RD);
     // Import the typeinfo symbol when all non-inline virtual methods are
@@ -3675,17 +3673,8 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
   if (CGM.getItaniumVTableContext().isRelativeLayout())
     VTable = CGM.getModule().getNamedAlias(VTableName);
   if (!VTable) {
-    VTable = CGM.GetGlobalValue(VTableName);
-    if (!VTable) {
-      llvm::Type *Ty = llvm::ArrayType::get(CGM.GlobalsInt8PtrTy, 0);
-      // FIXME: External StdLib VTables should be constant as well, but changing
-      //        it *might* constitute a very subtle ABI break.
-      VTable = new llvm::GlobalVariable(
-          CGM.getModule(), Ty,
-          /*isConstant=*/false, llvm::GlobalVariable::ExternalLinkage, nullptr,
-          VTableName, nullptr, llvm::GlobalValue::NotThreadLocal,
-          CGM.GlobalsInt8PtrTy->getAddressSpace());
-    }
+    llvm::Type *Ty = llvm::ArrayType::get(CGM.GlobalsInt8PtrTy, 0);
+    VTable = CGM.getModule().getOrInsertGlobal(VTableName, Ty);
   }
 
   CGM.setDSOLocal(cast<llvm::GlobalValue>(VTable->stripPointerCasts()));
@@ -3945,9 +3934,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   llvm::GlobalVariable *OldGV = M.getNamedGlobal(Name);
   llvm::GlobalVariable *GV =
       new llvm::GlobalVariable(M, Init->getType(),
-                               /*isConstant=*/true, Linkage, Init, Name,
-                               nullptr, llvm::GlobalValue::NotThreadLocal,
-                               CGM.GlobalsInt8PtrTy->getAddressSpace());
+                               /*isConstant=*/true, Linkage, Init, Name);
 
   // Export the typeinfo in the same circumstances as the vtable is exported.
   auto GVDLLStorageClass = DLLStorageClass;

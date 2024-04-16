@@ -371,8 +371,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   const llvm::DataLayout &DL = M.getDataLayout();
   AllocaInt8PtrTy =
       llvm::PointerType::get(LLVMContext, DL.getAllocaAddrSpace());
-  GlobalsInt8PtrTy = llvm::PointerType::get(
-      LLVMContext, C.getTargetAddressSpace(GetGlobalVarAddressSpace(nullptr)));
+  GlobalsInt8PtrTy =
+      llvm::PointerType::get(LLVMContext, DL.getDefaultGlobalsAddressSpace());
   ConstGlobalsPtrTy = llvm::PointerType::get(
       LLVMContext, C.getTargetAddressSpace(GetGlobalConstantAddressSpace()));
   ASTAllocaAddressSpace = getTargetCodeGenInfo().getASTAllocaAddressSpace();
@@ -3590,10 +3590,8 @@ ConstantAddress CodeGenModule::GetAddrOfTemplateParamObject(
       isExternallyVisible(TPO->getLinkageAndVisibility().getLinkage())
           ? llvm::GlobalValue::LinkOnceODRLinkage
           : llvm::GlobalValue::InternalLinkage;
-  auto *GV = new llvm::GlobalVariable(
-      getModule(), Init->getType(),
-      /*isConstant=*/true, Linkage, Init, Name, nullptr,
-      llvm::GlobalValue::NotThreadLocal, GlobalsInt8PtrTy->getAddressSpace());
+  auto *GV = new llvm::GlobalVariable(getModule(), Init->getType(),
+                                      /*isConstant=*/true, Linkage, Init, Name);
   setGVProperties(GV, TPO);
   if (supportsCOMDAT())
     GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));
@@ -5044,9 +5042,8 @@ llvm::GlobalVariable *CodeGenModule::CreateOrReplaceCXXRuntimeVariable(
   }
 
   // Create a new variable.
-  GV = new llvm::GlobalVariable(
-      getModule(), Ty, /*isConstant=*/true, Linkage, nullptr, Name, nullptr,
-      llvm::GlobalValue::NotThreadLocal, GlobalsInt8PtrTy->getAddressSpace());
+  GV = new llvm::GlobalVariable(getModule(), Ty, /*isConstant=*/true,
+                                Linkage, nullptr, Name);
 
   if (OldGV) {
     // Replace occurrences of the old variable if needed.
@@ -5161,7 +5158,7 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
     return LangAS::cuda_device;
   }
 
-  if (LangOpts.OpenMP && OpenMPRuntime) {
+  if (LangOpts.OpenMP) {
     LangAS AS;
     if (OpenMPRuntime->hasAllocateAttributeForGlobalVar(D, AS))
       return AS;
