@@ -129,6 +129,8 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1210"},   {"gfx1210"}, GK_GFX1210, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
     {{"gfx1300"},   {"gfx1300"}, GK_GFX1300, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+    {{"gfx1301"},   {"gfx1301"}, GK_GFX1301, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+    {{"gfx1302"},   {"gfx1302"}, GK_GFX1302, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
 
     {{"gfx9-generic"},      {"gfx9-generic"},    GK_GFX9_GENERIC,    FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
     {{"gfx10-1-generic"},   {"gfx10-1-generic"}, GK_GFX10_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
@@ -280,6 +282,8 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1201: return {12, 0, 1};
   case GK_GFX1210: return {12, 1, 0};
   case GK_GFX1300: return {13, 0, 0};
+  case GK_GFX1301: return {13, 0, 1};
+  case GK_GFX1302: return {13, 0, 2};
 
   // Generic targets return the lowest common denominator
   // within their family. That is, the ISA that is the most
@@ -316,6 +320,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
   // XXX - What does the member GPU mean if device name string passed here?
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX1302:
+    case GK_GFX1301:
     case GK_GFX1300:
       Features["gfx13-insts"] = true;
       [[fallthrough]];
@@ -572,6 +578,8 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
   // XXX - What does the member GPU mean if device name string passed here?
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX1302:
+    case GK_GFX1301:
     case GK_GFX1300:
     case GK_GFX1210:
     case GK_GFX1201:
