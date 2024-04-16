@@ -353,7 +353,8 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   if (ISAInfo->hasExtension("zfh") || ISAInfo->hasExtension("zhinx"))
     HasLegalHalfType = true;
 
-  FastUnalignedAccess = llvm::is_contained(Features, "+unaligned-scalar-mem");
+  FastUnalignedAccess = llvm::is_contained(Features, "+unaligned-scalar-mem") &&
+                        llvm::is_contained(Features, "+unaligned-vector-mem");
 
   if (llvm::is_contained(Features, "+experimental"))
     HasExperimental = true;

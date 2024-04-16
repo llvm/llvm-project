@@ -68,8 +68,10 @@ static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
           << A->getSpelling() << Mcpu;
   }
 
-  if (llvm::RISCV::hasFastUnalignedAccess(Mcpu))
+  if (llvm::RISCV::hasFastUnalignedAccess(Mcpu)) {
     Features.push_back("+unaligned-scalar-mem");
+    Features.push_back("+unaligned-vector-mem");
+  }
 }
 
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
