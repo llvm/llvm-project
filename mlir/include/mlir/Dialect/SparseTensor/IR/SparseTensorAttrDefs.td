@@ -183,6 +183,16 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       coordinate over all levels).  The choices are `8`, `16`, `32`,
       `64`, or, the default, `0` to indicate a native bitwidth.
 
+    - The required explicit value for the sparse tensor. If explicitVal is set,
+      then all the non-zero values in the tensor have the same explicit value.
+      The default value Attribute() indicates that it is not set.
+
+    - The required implicit value for the sparse tensor. If implicitVal is set,
+      then the "zero" value in the tensor is equal to the implicit value.
+      For now, we only support `0` as the implicit value but it could be
+      extended in the future. The default value Attribute() indicates that
+      the implicit value is `0` (same type as the tensor element type).
+
     Examples:
 
     ```mlir
@@ -225,6 +235,15 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       crdWidth = 8
     }>
     ... tensor<8x8xf64, #DCSC> ...
+
+    // Doubly compressed sparse column storage with specific
+    // explicit and implicit values.
+    #DCSC = #sparse_tensor.encoding<{
+      map = (i, j) -> (j : compressed, i : compressed),
+      explicitVal = 1 : i64,
+      implicitVal = 0 : i64
+    }>
+    ... tensor<8x8xi64, #DCSC> ...
 
     // Block sparse row storage (2x3 blocks).
     #BSR = #sparse_tensor.encoding<{
@@ -307,6 +326,12 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // The required bitwidth for coordinate storage.
     "unsigned":$crdWidth,
 
+    // The required explicit value.
+    "::mlir::Attribute":$explicitVal,
+
+    // The required implicit value.
+    "::mlir::Attribute":$implicitVal,
+
     // A slice attribute for each dimension of the tensor type.
     ArrayRefParameter<
       "::mlir::sparse_tensor::SparseTensorDimSliceAttr",
@@ -319,7 +344,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
                      CArg<"AffineMap", "{}">:$dimToLvl,
                      CArg<"AffineMap", "{}">:$lvlToDim,
                      CArg<"unsigned", "0">:$posWidth,
-                     CArg<"unsigned", "0">:$crdWidth), [{
+                     CArg<"unsigned", "0">:$crdWidth,
+                     CArg<"::mlir::Attribute", "{}">:$explicitVal,
+                     CArg<"::mlir::Attribute", "{}">:$implicitVal), [{
       if (!dimToLvl) {
         dimToLvl = ::mlir::AffineMap::getMultiDimIdentityMap(lvlTypes.size(), $_ctxt);
       }
@@ -327,6 +354,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
         lvlToDim = ::mlir::sparse_tensor::inferLvlToDim(dimToLvl, $_ctxt);
       }
       return $_get($_ctxt, lvlTypes, dimToLvl, lvlToDim, posWidth, crdWidth,
+        explicitVal, implicitVal,
         ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr>{});
     }]>
   ];
@@ -352,6 +380,22 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// Constructs a new encoding with the pointer and index bitwidths
     /// reset to the default, and all other fields inherited from `this`.
     SparseTensorEncodingAttr withoutBitWidths() const;
+
+    /// Constructs a new encoding with the given explicit value
+    /// and all other fields inherited from `this`.
+    SparseTensorEncodingAttr withExplicitVal(Attribute explicitVal) const;
+
+    /// Constructs a new encoding with the explicit value
+    /// reset to the default, and all other fields inherited from `this`.
+    SparseTensorEncodingAttr withoutExplicitVal() const;
+
+    /// Constructs a new encoding with the given implicit value
+    /// and all other fields inherited from `this`.
+    SparseTensorEncodingAttr withImplicitVal(Attribute implicitVal) const;
+
+    /// Constructs a new encoding with the implicit value
+    /// reset to the default, and all other fields inherited from `this`.
+    SparseTensorEncodingAttr withoutImplicitVal() const;
 
     /// Constructs a new encoding with the given dimSlices, and all
     /// other fields inherited from `this`.

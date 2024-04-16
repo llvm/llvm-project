@@ -18,10 +18,11 @@ def testEncodingAttr1D():
             "#sparse_tensor.encoding<{"
             "  map = (d0) -> (d0 : compressed),"
             "  posWidth = 16,"
-            "  crdWidth = 32"
+            "  crdWidth = 32,"
+            "  explicitVal = 1.0 : f64"
             "}>"
         )
-        # CHECK: #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed), posWidth = 16, crdWidth = 32 }>
+        # CHECK: #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed), posWidth = 16, crdWidth = 32, explicitVal = 1.000000e+00 : f64 }>
         print(parsed)
 
         casted = st.EncodingAttr(parsed)
@@ -38,9 +39,14 @@ def testEncodingAttr1D():
         print(f"pos_width: {casted.pos_width}")
         # CHECK: crd_width: 32
         print(f"crd_width: {casted.crd_width}")
+        # CHECK: explicit_val: 1.000000e+00
+        print(f"explicit_val: {casted.explicit_val}")
+        # CHECK: implicit_val: None
+        print(f"implicit_val: {casted.implicit_val}")
 
-        created = st.EncodingAttr.get(casted.lvl_types, None, None, 0, 0)
-        # CHECK: #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
+        new_explicit_val = FloatAttr.get_f64(1.0)
+        created = st.EncodingAttr.get(casted.lvl_types, None, None, 0, 0, new_explicit_val)
+        # CHECK: #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed), explicitVal = 1.000000e+00 : f64 }>
         print(created)
         # CHECK: created_equal: False
         print(f"created_equal: {created == casted}")
