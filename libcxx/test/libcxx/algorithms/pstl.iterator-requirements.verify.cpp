@@ -8,6 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 // REQUIRES: stdlib=libc++
+// UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 // <algorithm>
 // <numeric>
