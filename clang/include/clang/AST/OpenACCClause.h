@@ -145,6 +145,17 @@ public:
                                  SourceLocation EndLoc);
 };
 
+/// A 'self' clause, which has an optional condition expression.
+class OpenACCSelfClause : public OpenACCClauseWithCondition {
+  OpenACCSelfClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    Expr *ConditionExpr, SourceLocation EndLoc);
+
+public:
+  static OpenACCSelfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   Expr *ConditionExpr, SourceLocation EndLoc);
+};
+
 template <class Impl> class OpenACCClauseVisitor {
   Impl &getDerived() { return static_cast<Impl &>(*this); }
 
@@ -159,62 +170,22 @@ public:
       return;
 
     switch (C->getClauseKind()) {
-    case OpenACCClauseKind::Default:
-      VisitOpenACCDefaultClause(*cast<OpenACCDefaultClause>(C));
-      return;
-    case OpenACCClauseKind::If:
-      VisitOpenACCIfClause(*cast<OpenACCIfClause>(C));
-      return;
-    case OpenACCClauseKind::Finalize:
-    case OpenACCClauseKind::IfPresent:
-    case OpenACCClauseKind::Seq:
-    case OpenACCClauseKind::Independent:
-    case OpenACCClauseKind::Auto:
-    case OpenACCClauseKind::Worker:
-    case OpenACCClauseKind::Vector:
-    case OpenACCClauseKind::NoHost:
-    case OpenACCClauseKind::Self:
-    case OpenACCClauseKind::Copy:
-    case OpenACCClauseKind::UseDevice:
-    case OpenACCClauseKind::Attach:
-    case OpenACCClauseKind::Delete:
-    case OpenACCClauseKind::Detach:
-    case OpenACCClauseKind::Device:
-    case OpenACCClauseKind::DevicePtr:
-    case OpenACCClauseKind::DeviceResident:
-    case OpenACCClauseKind::FirstPrivate:
-    case OpenACCClauseKind::Host:
-    case OpenACCClauseKind::Link:
-    case OpenACCClauseKind::NoCreate:
-    case OpenACCClauseKind::Present:
-    case OpenACCClauseKind::Private:
-    case OpenACCClauseKind::CopyOut:
-    case OpenACCClauseKind::CopyIn:
-    case OpenACCClauseKind::Create:
-    case OpenACCClauseKind::Reduction:
-    case OpenACCClauseKind::Collapse:
-    case OpenACCClauseKind::Bind:
-    case OpenACCClauseKind::VectorLength:
-    case OpenACCClauseKind::NumGangs:
-    case OpenACCClauseKind::NumWorkers:
-    case OpenACCClauseKind::DeviceNum:
-    case OpenACCClauseKind::DefaultAsync:
-    case OpenACCClauseKind::DeviceType:
-    case OpenACCClauseKind::DType:
-    case OpenACCClauseKind::Async:
-    case OpenACCClauseKind::Tile:
-    case OpenACCClauseKind::Gang:
-    case OpenACCClauseKind::Wait:
-    case OpenACCClauseKind::Invalid:
+#define VISIT_CLAUSE(CLAUSE_NAME)                                              \
+  case OpenACCClauseKind::CLAUSE_NAME:                                         \
+    Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
+    return;
+#include "clang/Basic/OpenACCClauses.def"
+
+    default:
       llvm_unreachable("Clause visitor not yet implemented");
     }
     llvm_unreachable("Invalid Clause kind");
   }
 
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
-  void VisitOpenACC##CLAUSE_NAME##Clause(                                      \
+  void Visit##CLAUSE_NAME##Clause(                                             \
       const OpenACC##CLAUSE_NAME##Clause &Clause) {                            \
-    return getDerived().VisitOpenACC##CLAUSE_NAME##Clause(Clause);             \
+    return getDerived().Visit##CLAUSE_NAME##Clause(Clause);                    \
   }
 
 #include "clang/Basic/OpenACCClauses.def"
@@ -236,8 +207,7 @@ public:
   OpenACCClausePrinter(raw_ostream &OS) : OS(OS) {}
 
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
-  void VisitOpenACC##CLAUSE_NAME##Clause(                                      \
-      const OpenACC##CLAUSE_NAME##Clause &Clause);
+  void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &Clause);
 #include "clang/Basic/OpenACCClauses.def"
 };
 

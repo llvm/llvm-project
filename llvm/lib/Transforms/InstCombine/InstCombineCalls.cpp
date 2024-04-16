@@ -601,8 +601,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
   // then change the 'ZeroIsPoison' parameter to 'true'
   // because we know the zero behavior can't affect the result.
   if (!Known.One.isZero() ||
-      isKnownNonZero(Op0, /*Depth=*/0,
-                     IC.getSimplifyQuery().getWithInstruction(&II))) {
+      isKnownNonZero(Op0, IC.getSimplifyQuery().getWithInstruction(&II))) {
     if (!match(II.getArgOperand(1), m_One()))
       return IC.replaceOperand(II, 1, IC.Builder.getTrue());
   }
@@ -1774,6 +1773,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Instruction *I = moveAddAfterMinMax(II, Builder))
       return I;
 
+    // minmax (X & NegPow2C, Y & NegPow2C) --> minmax(X, Y) & NegPow2C
+    const APInt *RHSC;
+    if (match(I0, m_OneUse(m_And(m_Value(X), m_NegatedPower2(RHSC)))) &&
+        match(I1, m_OneUse(m_And(m_Value(Y), m_SpecificInt(*RHSC)))))
+      return BinaryOperator::CreateAnd(Builder.CreateBinaryIntrinsic(IID, X, Y),
+                                       ConstantInt::get(II->getType(), *RHSC));
+
     // smax(X, -X) --> abs(X)
     // smin(X, -X) --> -abs(X)
     // umax(X, -X) --> -abs(X)
@@ -1815,7 +1821,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
        return NewMinMax;
 
     // Try to fold minmax with constant RHS based on range information
-    const APInt *RHSC;
     if (match(I1, m_APIntAllowUndef(RHSC))) {
       ICmpInst::Predicate Pred =
           ICmpInst::getNonStrictPredicate(MinMaxIntrinsic::getPredicate(IID));
@@ -1979,8 +1984,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (ModuloC != ShAmtC)
         return replaceOperand(*II, 2, ModuloC);
 
-      assert(ConstantExpr::getICmp(ICmpInst::ICMP_UGT, WidthC, ShAmtC) ==
-                 ConstantInt::getTrue(CmpInst::makeCmpResultType(Ty)) &&
+      assert(match(ConstantExpr::getICmp(ICmpInst::ICMP_UGT, WidthC, ShAmtC),
+                   m_One()) &&
              "Shift amount expected to be modulo bitwidth");
 
       // Canonicalize funnel shift right by constant to funnel shift left. This
@@ -2061,8 +2066,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // See if we can deduce non-null.
     if (!CI.hasRetAttr(Attribute::NonNull) &&
         (Known.isNonZero() ||
-         isKnownNonZero(II, /*Depth=*/0,
-                        getSimplifyQuery().getWithInstruction(II)))) {
+         isKnownNonZero(II, getSimplifyQuery().getWithInstruction(II)))) {
       CI.addRetAttr(Attribute::NonNull);
       Changed = true;
     }
@@ -3408,6 +3412,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return I;
     break;
   }
+  case Intrinsic::threadlocal_address: {
+    Align MinAlign = getKnownAlignment(II->getArgOperand(0), DL, II, &AC, &DT);
+    MaybeAlign Align = II->getRetAlign();
+    if (MinAlign > Align.valueOrOne()) {
+      II->addRetAttr(Attribute::getWithAlignment(II->getContext(), MinAlign));
+      return II;
+    }
+    break;
+  }
   default: {
     // Handle target specific intrinsics
     std::optional<Instruction *> V = targetInstCombineIntrinsic(*II);
@@ -3649,8 +3662,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   for (Value *V : Call.args()) {
     if (V->getType()->isPointerTy() &&
         !Call.paramHasAttr(ArgNo, Attribute::NonNull) &&
-        isKnownNonZero(V, /*Depth=*/0,
-                       getSimplifyQuery().getWithInstruction(&Call)))
+        isKnownNonZero(V, getSimplifyQuery().getWithInstruction(&Call)))
       ArgNos.push_back(ArgNo);
     ArgNo++;
   }
@@ -3830,7 +3842,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
 
         // isKnownNonNull -> nonnull attribute
         if (!GCR.hasRetAttr(Attribute::NonNull) &&
-            isKnownNonZero(DerivedPtr, /*Depth=*/0,
+            isKnownNonZero(DerivedPtr,
                            getSimplifyQuery().getWithInstruction(&Call))) {
           GCR.addRetAttr(Attribute::NonNull);
           // We discovered new fact, re-check users.
