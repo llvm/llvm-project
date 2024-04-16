@@ -78,67 +78,13 @@ define void @test1(ptr %p, ptr noalias %s, i32 %stride) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[STR:%.*]] = zext i32 [[STRIDE:%.*]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [48 x float], ptr [[P:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[I:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 30
-; CHECK-NEXT:    [[I1:%.*]] = load float, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = fsub fast float [[I1]], [[I]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[S:%.*]], i64 0
-; CHECK-NEXT:    store float [[ADD]], ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[STR]]
-; CHECK-NEXT:    [[I2:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 26
-; CHECK-NEXT:    [[I3:%.*]] = load float, ptr [[ARRAYIDX6]], align 4
-; CHECK-NEXT:    [[ADD7:%.*]] = fsub fast float [[I3]], [[I2]]
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr [[S]], i64 1
-; CHECK-NEXT:    store float [[ADD7]], ptr [[ARRAYIDX9]], align 4
-; CHECK-NEXT:    [[ST1:%.*]] = mul i64 [[STR]], 2
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[ST1]]
-; CHECK-NEXT:    [[I4:%.*]] = load float, ptr [[ARRAYIDX11]], align 4
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 22
-; CHECK-NEXT:    [[I5:%.*]] = load float, ptr [[ARRAYIDX13]], align 4
-; CHECK-NEXT:    [[ADD14:%.*]] = fsub fast float [[I5]], [[I4]]
-; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds float, ptr [[S]], i64 2
-; CHECK-NEXT:    store float [[ADD14]], ptr [[ARRAYIDX16]], align 4
-; CHECK-NEXT:    [[ST2:%.*]] = mul i64 [[STR]], 3
-; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[ST2]]
-; CHECK-NEXT:    [[I6:%.*]] = load float, ptr [[ARRAYIDX18]], align 4
-; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 18
-; CHECK-NEXT:    [[I7:%.*]] = load float, ptr [[ARRAYIDX20]], align 4
-; CHECK-NEXT:    [[ADD21:%.*]] = fsub fast float [[I7]], [[I6]]
-; CHECK-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds float, ptr [[S]], i64 3
-; CHECK-NEXT:    store float [[ADD21]], ptr [[ARRAYIDX23]], align 4
-; CHECK-NEXT:    [[ST3:%.*]] = mul i64 [[STR]], 4
-; CHECK-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[ST3]]
-; CHECK-NEXT:    [[I8:%.*]] = load float, ptr [[ARRAYIDX25]], align 4
-; CHECK-NEXT:    [[ARRAYIDX27:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 14
-; CHECK-NEXT:    [[I9:%.*]] = load float, ptr [[ARRAYIDX27]], align 4
-; CHECK-NEXT:    [[ADD28:%.*]] = fsub fast float [[I9]], [[I8]]
-; CHECK-NEXT:    [[ARRAYIDX30:%.*]] = getelementptr inbounds float, ptr [[S]], i64 4
-; CHECK-NEXT:    store float [[ADD28]], ptr [[ARRAYIDX30]], align 4
-; CHECK-NEXT:    [[ST4:%.*]] = mul i64 [[STR]], 5
-; CHECK-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[ST4]]
-; CHECK-NEXT:    [[I10:%.*]] = load float, ptr [[ARRAYIDX32]], align 4
-; CHECK-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 10
-; CHECK-NEXT:    [[I11:%.*]] = load float, ptr [[ARRAYIDX34]], align 4
-; CHECK-NEXT:    [[ADD35:%.*]] = fsub fast float [[I11]], [[I10]]
-; CHECK-NEXT:    [[ARRAYIDX37:%.*]] = getelementptr inbounds float, ptr [[S]], i64 5
-; CHECK-NEXT:    store float [[ADD35]], ptr [[ARRAYIDX37]], align 4
-; CHECK-NEXT:    [[ST5:%.*]] = mul i64 [[STR]], 6
-; CHECK-NEXT:    [[ARRAYIDX39:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[ST5]]
-; CHECK-NEXT:    [[I12:%.*]] = load float, ptr [[ARRAYIDX39]], align 4
-; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 6
-; CHECK-NEXT:    [[I13:%.*]] = load float, ptr [[ARRAYIDX41]], align 4
-; CHECK-NEXT:    [[ADD42:%.*]] = fsub fast float [[I13]], [[I12]]
-; CHECK-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds float, ptr [[S]], i64 6
-; CHECK-NEXT:    store float [[ADD42]], ptr [[ARRAYIDX44]], align 4
-; CHECK-NEXT:    [[ST6:%.*]] = mul i64 [[STR]], 7
-; CHECK-NEXT:    [[ARRAYIDX46:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[ST6]]
-; CHECK-NEXT:    [[I14:%.*]] = load float, ptr [[ARRAYIDX46]], align 4
-; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 2
-; CHECK-NEXT:    [[I15:%.*]] = load float, ptr [[ARRAYIDX48]], align 4
-; CHECK-NEXT:    [[ADD49:%.*]] = fsub fast float [[I15]], [[I14]]
-; CHECK-NEXT:    [[ARRAYIDX51:%.*]] = getelementptr inbounds float, ptr [[S]], i64 7
-; CHECK-NEXT:    store float [[ADD49]], ptr [[ARRAYIDX51]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[STR]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.experimental.vp.strided.load.v8f32.p0.i64(ptr align 4 [[ARRAYIDX]], i64 [[TMP0]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @llvm.experimental.vp.strided.load.v8f32.p0.i64(ptr align 4 [[ARRAYIDX1]], i64 -16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <8 x float> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    store <8 x float> [[TMP3]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -215,38 +161,12 @@ define void @test2(ptr %p, ptr noalias %s, i32 %stride) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [48 x float], ptr [[P:%.*]], i64 0, i64 2
 ; CHECK-NEXT:    [[ST6:%.*]] = mul i64 [[STR]], 7
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[ST6]]
-; CHECK-NEXT:    [[I1:%.*]] = load float, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[S:%.*]], i64 0
-; CHECK-NEXT:    [[ST5:%.*]] = mul i64 [[STR]], 6
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[ST5]]
-; CHECK-NEXT:    [[I3:%.*]] = load float, ptr [[ARRAYIDX6]], align 4
-; CHECK-NEXT:    [[ST4:%.*]] = mul i64 [[STR]], 5
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[ST4]]
-; CHECK-NEXT:    [[I5:%.*]] = load float, ptr [[ARRAYIDX13]], align 4
-; CHECK-NEXT:    [[ST3:%.*]] = mul i64 [[STR]], 4
-; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[ST3]]
-; CHECK-NEXT:    [[I7:%.*]] = load float, ptr [[ARRAYIDX20]], align 4
-; CHECK-NEXT:    [[ST2:%.*]] = mul i64 [[STR]], 3
-; CHECK-NEXT:    [[ARRAYIDX27:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[ST2]]
-; CHECK-NEXT:    [[I9:%.*]] = load float, ptr [[ARRAYIDX27]], align 4
-; CHECK-NEXT:    [[ST1:%.*]] = mul i64 [[STR]], 2
-; CHECK-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[ST1]]
-; CHECK-NEXT:    [[I11:%.*]] = load float, ptr [[ARRAYIDX34]], align 4
-; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 [[STR]]
-; CHECK-NEXT:    [[I13:%.*]] = load float, ptr [[ARRAYIDX41]], align 4
-; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [48 x float], ptr [[P]], i64 0, i64 0
-; CHECK-NEXT:    [[I15:%.*]] = load float, ptr [[ARRAYIDX48]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x float> @llvm.experimental.vp.strided.load.v8f32.p0.i64(ptr align 4 [[ARRAYIDX]], i64 16, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x float> poison, float [[I1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x float> [[TMP1]], float [[I3]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x float> [[TMP2]], float [[I5]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x float> [[TMP3]], float [[I7]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x float> [[TMP4]], float [[I9]], i32 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x float> [[TMP5]], float [[I11]], i32 5
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x float> [[TMP6]], float [[I13]], i32 6
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x float> [[TMP7]], float [[I15]], i32 7
-; CHECK-NEXT:    [[TMP9:%.*]] = fsub fast <8 x float> [[TMP8]], [[TMP0]]
-; CHECK-NEXT:    store <8 x float> [[TMP9]], ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[STR]], -4
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @llvm.experimental.vp.strided.load.v8f32.p0.i64(ptr align 4 [[ARRAYIDX1]], i64 [[TMP1]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <8 x float> [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    store <8 x float> [[TMP3]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

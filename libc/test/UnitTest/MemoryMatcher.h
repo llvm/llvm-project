@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_UNITTEST_MEMORY_MATCHER_H
-#define LLVM_LIBC_UTILS_UNITTEST_MEMORY_MATCHER_H
+#ifndef LLVM_LIBC_TEST_UNITTEST_MEMORYMATCHER_H
+#define LLVM_LIBC_TEST_UNITTEST_MEMORYMATCHER_H
 
 #include "src/__support/CPP/span.h"
 
@@ -66,4 +66,4 @@ public:
 
 #endif
 
-#endif // LLVM_LIBC_UTILS_UNITTEST_MEMORY_MATCHER_H
+#endif // LLVM_LIBC_TEST_UNITTEST_MEMORYMATCHER_H

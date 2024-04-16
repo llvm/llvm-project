@@ -166,6 +166,10 @@ private:
   /// Indicates that the AST contained compiler errors.
   bool ASTHasCompilerErrors = false;
 
+  /// Indicates that we're going to generate the reduced BMI for C++20
+  /// named modules.
+  bool GeneratingReducedBMI = false;
+
   /// Mapping from input file entries to the index into the
   /// offset table where information about that input file is stored.
   llvm::DenseMap<const FileEntry *, uint32_t> InputFileIDs;
@@ -196,6 +200,16 @@ private:
 
   /// The declarations and types to emit.
   std::queue<DeclOrType> DeclTypesToEmit;
+
+  /// The delayed namespace to emit. Only meaningful for reduced BMI.
+  ///
+  /// In reduced BMI, we want to elide the unreachable declarations in
+  /// the global module fragment. However, in ASTWriterDecl, when we see
+  /// a namespace, all the declarations in the namespace would be emitted.
+  /// So the optimization become meaningless. To solve the issue, we
+  /// delay recording all the declarations until we emit all the declarations.
+  /// Then we can safely record the reached declarations only.
+  llvm::SmallVector<NamespaceDecl *, 16> DelayedNamespace;
 
   /// The first ID number we can use for our own declarations.
   serialization::DeclID FirstDeclID = serialization::NUM_PREDEF_DECL_IDS;
@@ -525,7 +539,8 @@ private:
   void WriteType(QualType T);
 
   bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
-  bool isLookupResultEntirelyExternal(StoredDeclsList &Result, DeclContext *DC);
+  bool isLookupResultEntirelyExternalOrUnreachable(StoredDeclsList &Result,
+                                                   DeclContext *DC);
 
   void GenerateNameLookupTable(const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
@@ -538,6 +553,7 @@ private:
   void WriteReferencedSelectorsPool(Sema &SemaRef);
   void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver &IdResolver,
                             bool IsModule);
+  void WriteDeclAndTypes(ASTContext &Context);
   void WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord);
   void WriteDeclContextVisibleUpdate(const DeclContext *DC);
   void WriteFPPragmaOptions(const FPOptionsOverride &Opts);
@@ -596,7 +612,8 @@ public:
   ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
             InMemoryModuleCache &ModuleCache,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
-            bool IncludeTimestamps = true, bool BuildingImplicitModule = false);
+            bool IncludeTimestamps = true, bool BuildingImplicitModule = false,
+            bool GeneratingReducedBMI = false);
   ~ASTWriter() override;
 
   ASTContext &getASTContext() const {
@@ -698,6 +715,15 @@ public:
   /// declaration.
   serialization::DeclID getDeclID(const Decl *D);
 
+  /// Whether or not the declaration got emitted. If not, it wouldn't be
+  /// emitted.
+  ///
+  /// This may only be called after we've done the job to write the
+  /// declarations (marked by DoneWritingDeclsAndTypes).
+  ///
+  /// A declaration may only be omitted in reduced BMI.
+  bool wasDeclEmitted(const Decl *D) const;
+
   unsigned getAnonymousDeclarationNumber(const NamedDecl *D);
 
   /// Add a string to the given record.
@@ -792,6 +818,10 @@ public:
     return WritingModule && WritingModule->isNamedModule();
   }
 
+  bool isGeneratingReducedBMI() const { return GeneratingReducedBMI; }
+
+  bool getDoneWritingDeclsAndTypes() const { return DoneWritingDeclsAndTypes; }
+
 private:
   // ASTDeserializationListener implementation
   void ReaderInitialized(ASTReader *Reader) override;
@@ -841,7 +871,7 @@ private:
 /// AST and semantic-analysis consumer that generates a
 /// precompiled header from the parsed source code.
 class PCHGenerator : public SemaConsumer {
-  const Preprocessor &PP;
+  Preprocessor &PP;
   std::string OutputFile;
   std::string isysroot;
   Sema *SemaPtr;
@@ -856,14 +886,25 @@ protected:
   const ASTWriter &getWriter() const { return Writer; }
   SmallVectorImpl<char> &getPCH() const { return Buffer->Data; }
 
+  bool isComplete() const { return Buffer->IsComplete; }
+  PCHBuffer *getBufferPtr() { return Buffer.get(); }
+  StringRef getOutputFile() const { return OutputFile; }
+  DiagnosticsEngine &getDiagnostics() const {
+    return SemaPtr->getDiagnostics();
+  }
+  Preprocessor &getPreprocessor() { return PP; }
+
+  virtual Module *getEmittingModule(ASTContext &Ctx);
+
 public:
-  PCHGenerator(const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+  PCHGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                StringRef OutputFile, StringRef isysroot,
                std::shared_ptr<PCHBuffer> Buffer,
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
                bool BuildingImplicitModule = false,
-               bool ShouldCacheASTInMemory = false);
+               bool ShouldCacheASTInMemory = false,
+               bool GeneratingReducedBMI = false);
   ~PCHGenerator() override;
 
   void InitializeSema(Sema &S) override { SemaPtr = &S; }
@@ -872,6 +913,23 @@ public:
   ASTDeserializationListener *GetASTDeserializationListener() override;
   bool hasEmittedPCH() const { return Buffer->IsComplete; }
 };
+
+class ReducedBMIGenerator : public PCHGenerator {
+protected:
+  virtual Module *getEmittingModule(ASTContext &Ctx) override;
+
+public:
+  ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                      StringRef OutputFile);
+
+  void HandleTranslationUnit(ASTContext &Ctx) override;
+};
+
+/// If we can elide the definition of \param D in reduced BMI.
+///
+/// Generally, we can elide the definition of a declaration if it won't affect
+/// the ABI. e.g., the non-inline function bodies.
+bool CanElideDeclDef(const Decl *D);
 
 /// A simple helper class to pack several bits in order into (a) 32 bit
 /// integer(s).

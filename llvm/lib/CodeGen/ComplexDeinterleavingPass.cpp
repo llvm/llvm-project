@@ -1975,7 +1975,7 @@ Value *ComplexDeinterleavingGraph::replaceNode(IRBuilderBase &Builder,
     // It is filled later when the ReductionOperation is processed.
     auto *VTy = cast<VectorType>(Node->Real->getType());
     auto *NewVTy = VectorType::getDoubleElementsVectorType(VTy);
-    auto *NewPHI = PHINode::Create(NewVTy, 0, "", BackEdge->getFirstNonPHI());
+    auto *NewPHI = PHINode::Create(NewVTy, 0, "", BackEdge->getFirstNonPHIIt());
     OldToNewPHI[dyn_cast<PHINode>(Node->Real)] = NewPHI;
     ReplacementNode = NewPHI;
     break;

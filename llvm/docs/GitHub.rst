@@ -33,7 +33,7 @@ documentation refer to `GitHub's documentation <https://docs.github.com/pull-req
 .. note::
    If you are using a Pull Request for purposes other than review
    (eg: precommit CI results, convenient web-based reverts, etc)
-   `skip-precommit-approval<https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`
+   `skip-precommit-approval <https://github.com/llvm/llvm-project/labels?q=skip-precommit-approval>`_
    label to the PR.
 
 GitHub Tools

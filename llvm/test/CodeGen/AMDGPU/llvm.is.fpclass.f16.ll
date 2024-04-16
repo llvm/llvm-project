@@ -1259,17 +1259,17 @@ define <4 x i1> @isnan_v4f16(<4 x half> %x) nounwind {
 ; GFX10SELDAG-LABEL: isnan_v4f16:
 ; GFX10SELDAG:       ; %bb.0:
 ; GFX10SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10SELDAG-NEXT:    v_mov_b32_e32 v2, 3
-; GFX10SELDAG-NEXT:    v_cmp_class_f16_e64 s5, v0, 3
-; GFX10SELDAG-NEXT:    v_cmp_class_f16_sdwa s4, v1, v2 src0_sel:WORD_1 src1_sel:DWORD
-; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s5
-; GFX10SELDAG-NEXT:    v_cmp_class_f16_sdwa s5, v0, v2 src0_sel:WORD_1 src1_sel:DWORD
+; GFX10SELDAG-NEXT:    v_cmp_class_f16_e64 s4, v0, 3
+; GFX10SELDAG-NEXT:    v_mov_b32_e32 v3, 3
+; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v5, 0, 1, s4
+; GFX10SELDAG-NEXT:    v_cmp_class_f16_e64 s4, v1, 3
+; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s4
+; GFX10SELDAG-NEXT:    v_cmp_class_f16_sdwa s4, v0, v3 src0_sel:WORD_1 src1_sel:DWORD
+; GFX10SELDAG-NEXT:    v_mov_b32_e32 v0, v5
+; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s4
+; GFX10SELDAG-NEXT:    v_cmp_class_f16_sdwa s4, v1, v3 src0_sel:WORD_1 src1_sel:DWORD
+; GFX10SELDAG-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s4
-; GFX10SELDAG-NEXT:    v_mov_b32_e32 v0, v4
-; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v5, 0, 1, s5
-; GFX10SELDAG-NEXT:    v_cmp_class_f16_e64 s5, v1, 3
-; GFX10SELDAG-NEXT:    v_mov_b32_e32 v1, v5
-; GFX10SELDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s5
 ; GFX10SELDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10GLISEL-LABEL: isnan_v4f16:

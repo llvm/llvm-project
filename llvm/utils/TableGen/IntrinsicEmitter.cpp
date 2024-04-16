@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenIntrinsics.h"
-#include "SequenceToOffsetTable.h"
+#include "Basic/CodeGenIntrinsics.h"
+#include "Basic/SequenceToOffsetTable.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -637,7 +637,7 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
       std::map<std::string, std::string> &BIM =
           BuiltinMap[Ints[i].TargetPrefix];
 
-      if (!BIM.insert(std::make_pair(BuiltinName, Ints[i].EnumName)).second)
+      if (!BIM.insert(std::pair(BuiltinName, Ints[i].EnumName)).second)
         PrintFatalError(Ints[i].TheDef->getLoc(),
                         "Intrinsic '" + Ints[i].TheDef->getName() +
                             "': duplicate " + CompilerName + " builtin name!");

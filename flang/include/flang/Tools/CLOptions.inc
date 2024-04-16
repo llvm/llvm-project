@@ -123,7 +123,9 @@ static void addCanonicalizerPassWithoutRegionSimplification(
 
 inline void addCfgConversionPass(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(
-      pm, disableCfgConversion, fir::createFirToCfgPass);
+      pm, disableCfgConversion, fir::createFirToCfgOnFuncPass);
+  addNestedPassConditionally<mlir::omp::DeclareReductionOp>(
+      pm, disableCfgConversion, fir::createFirToCfgOnReductionPass);
 }
 
 inline void addAVC(
@@ -153,9 +155,9 @@ inline void addTargetRewritePass(mlir::PassManager &pm) {
   });
 }
 
-inline void addDebugFoundationPass(mlir::PassManager &pm) {
+inline void addDebugInfoPass(mlir::PassManager &pm) {
   addPassConditionally(pm, disableDebugFoundation,
-      [&]() { return fir::createAddDebugFoundationPass(); });
+      [&]() { return fir::createAddDebugInfoPass(); });
 }
 
 inline void addFIRToLLVMPass(
@@ -286,7 +288,7 @@ inline void createDebugPasses(
   // Currently only -g1, -g, -gline-tables-only supported
   switch (debugLevel) {
   case llvm::codegenoptions::DebugLineTablesOnly:
-    addDebugFoundationPass(pm);
+    addDebugInfoPass(pm);
     return;
   case llvm::codegenoptions::NoDebugInfo:
     return;
@@ -294,7 +296,7 @@ inline void createDebugPasses(
     // TODO: Add cases and passes for other debug options.
     // All other debug options not implemented yet, currently emits warning
     // and generates as much debug information as possible.
-    addDebugFoundationPass(pm);
+    addDebugInfoPass(pm);
     return;
   }
 }

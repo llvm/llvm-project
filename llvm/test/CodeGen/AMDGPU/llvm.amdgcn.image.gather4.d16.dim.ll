@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx9-generic --amdhsa-code-object-version=6 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX10 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx10.1-generic --amdhsa-code-object-version=6  -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx10-1-generic --amdhsa-code-object-version=6  -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX10 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX10 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx11-generic --amdhsa-code-object-version=6 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX10 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX12 %s

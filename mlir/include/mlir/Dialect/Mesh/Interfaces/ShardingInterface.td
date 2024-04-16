@@ -26,16 +26,35 @@ def ShardingInterface : OpInterface<"ShardingInterface"> {
           output tensors.
 
           Example 1: A gemm op has 3 loops, M, N and K. Their loop iterator
-          types are parallel, parallel, reduction-sum. This indicates that M and
+          types are parallel, parallel, reduction. This indicates that M and
           N are traversed in parallel, while the K dimension is used for
           reduction.
-
-          Example 2: A softmax op's loop iterator types are parallel and
-          invalid. The second dimension is considered as invalid because it is
-          neither parallel nor any kind of reduction. 
         }],
-        /*retType=*/"SmallVector<::mlir::mesh::IteratorType>",
+        /*retType=*/"SmallVector<mlir::utils::IteratorType>",
         /*methodName=*/"getLoopIteratorTypes",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return {};"
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return the kind of all reduction loop iterators.
+          The order is the same as the same as the result from
+          `getLoopIteratorTypes`.
+
+          Example 1:
+          iterator types =  (parallel, reduction, parallel, reduction)
+                                             ||                   ||
+          reduction kinds = (                sum,                 max)
+
+          Example 2:
+          A softmax op's loop iterator types are parallel and
+          reduction.
+          The reduction iterator will be of kind `generic`, since it is non of
+          the available presets.
+        }],
+        /*retType=*/"SmallVector<ReductionKind>",
+        /*methodName=*/"getReductionLoopIteratorKinds",
         /*args=*/(ins),
         /*methodBody=*/"",
         /*defaultImplementation=*/"return {};"

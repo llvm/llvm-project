@@ -282,6 +282,11 @@ DataLayoutEntryListRef DataLayoutSpecAttr::getEntries() const {
 }
 
 StringAttr
+DataLayoutSpecAttr::getEndiannessIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(DLTIDialect::kDataLayoutEndiannessKey);
+}
+
+StringAttr
 DataLayoutSpecAttr::getAllocaMemorySpaceIdentifier(MLIRContext *context) const {
   return Builder(context).getStringAttr(
       DLTIDialect::kDataLayoutAllocaMemorySpaceKey);

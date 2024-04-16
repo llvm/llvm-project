@@ -13,6 +13,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -215,6 +216,8 @@ void GPUDialect::initialize() {
 #include "mlir/Dialect/GPU/IR/GPUOpsAttributes.cpp.inc"
       >();
   addInterfaces<GPUInlinerInterface>();
+  declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
+                           TerminatorOp>();
 }
 
 static std::string getSparseHandleKeyword(SparseHandleKind kind) {
@@ -648,6 +651,8 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
                      TypeRange workgroupAttributions,
                      TypeRange privateAttributions, Value clusterSizeX,
                      Value clusterSizeY, Value clusterSizeZ) {
+  OpBuilder::InsertionGuard g(builder);
+
   // Add a WorkGroup attribution attribute. This attribute is required to
   // identify private attributions in the list of block argguments.
   result.addAttribute(getNumWorkgroupAttributionsAttrName(),
@@ -674,7 +679,7 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
   // attributions, where the first kNumConfigRegionAttributes arguments have
   // `index` type and the rest have the same types as the data operands.
   Region *kernelRegion = result.addRegion();
-  Block *body = new Block();
+  Block *body = builder.createBlock(kernelRegion);
   // TODO: Allow passing in proper locations here.
   for (unsigned i = 0; i < kNumConfigRegionAttributes; ++i)
     body->addArgument(builder.getIndexType(), result.location);
@@ -683,7 +688,6 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
     body->addArgument(argTy, result.location);
   for (Type argTy : privateAttributions)
     body->addArgument(argTy, result.location);
-  kernelRegion->push_back(body);
   // Fill OperandSegmentSize Attribute.
   SmallVector<int32_t, 11> segmentSizes(11, 1);
   segmentSizes.front() = asyncDependencies.size();
@@ -1325,6 +1329,8 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
                       TypeRange workgroupAttributions,
                       TypeRange privateAttributions,
                       ArrayRef<NamedAttribute> attrs) {
+  OpBuilder::InsertionGuard g(builder);
+
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
   result.addAttribute(getFunctionTypeAttrName(result.name),
@@ -1333,7 +1339,7 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
                       builder.getI64IntegerAttr(workgroupAttributions.size()));
   result.addAttributes(attrs);
   Region *body = result.addRegion();
-  Block *entryBlock = new Block;
+  Block *entryBlock = builder.createBlock(body);
 
   // TODO: Allow passing in proper locations here.
   for (Type argTy : type.getInputs())
@@ -1342,8 +1348,6 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
     entryBlock->addArgument(argTy, result.location);
   for (Type argTy : privateAttributions)
     entryBlock->addArgument(argTy, result.location);
-
-  body->getBlocks().push_back(entryBlock);
 }
 
 /// Parses a GPU function memory attribution.

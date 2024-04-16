@@ -42,6 +42,11 @@ public:
   void GetCompleteObjCClass(
       ConstString class_name, bool must_be_implementation,
       llvm::function_ref<bool(DWARFDIE die)> callback) override;
+
+  /// Uses DWARF5's IDX_parent fields, when available, to speed up this query.
+  void GetFullyQualifiedType(
+      const DWARFDeclContext &context,
+      llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetTypes(ConstString name,
                 llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetTypes(const DWARFDeclContext &context,
@@ -82,6 +87,10 @@ private:
   std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry) const;
   bool ProcessEntry(const DebugNames::Entry &entry,
                     llvm::function_ref<bool(DWARFDIE die)> callback);
+
+  /// Returns true if `parent_entries` have identical names to `parent_names`.
+  bool SameParentChain(llvm::ArrayRef<llvm::StringRef> parent_names,
+                       llvm::ArrayRef<DebugNames::Entry> parent_entries) const;
 
   static void MaybeLogLookupError(llvm::Error error,
                                   const DebugNames::NameIndex &ni,

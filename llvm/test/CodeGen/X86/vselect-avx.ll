@@ -71,7 +71,7 @@ define void @test2(ptr %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; AVX512-NEXT:    movq (%rdi,%rsi,8), %rax
 ; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
-; AVX512-NEXT:    vbroadcastsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0 {%k1}
+; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm0 {%k1} = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX512-NEXT:    vmovupd %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

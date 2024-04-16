@@ -1397,6 +1397,14 @@ FunClone:
     }
     LLVMDisposeValueMetadataEntries(AllMetadata);
 
+    // Copy any prefix data that may be on the function
+    if (LLVMHasPrefixData(Cur))
+      LLVMSetPrefixData(Fun, clone_constant(LLVMGetPrefixData(Cur), M));
+
+    // Copy any prologue data that may be on the function
+    if (LLVMHasPrologueData(Cur))
+      LLVMSetPrologueData(Fun, clone_constant(LLVMGetPrologueData(Cur), M));
+
     FunCloner FC(Cur, Fun);
     FC.CloneBBs(Cur);
 

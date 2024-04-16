@@ -90,8 +90,8 @@ class SBDataAPICase(TestBase):
         self.assertTrue(
             (low == 9 and high == 0) or (low == 0 and high == 9), "foo[0].b == 9"
         )
-        self.assertTrue(
-            fabs(data.GetFloat(error, offset) - 3.14) < 1, "foo[0].c == 3.14"
+        self.assertLess(
+            fabs(data.GetFloat(error, offset) - 3.14), 1, "foo[0].c == 3.14"
         )
         self.assertSuccess(error)
         offset += 4
@@ -151,7 +151,7 @@ class SBDataAPICase(TestBase):
         self.assertEqual(data.uint32[0], 8, "then foo[1].a == 8")
         self.assertEqual(data.uint32[1], 7, "then foo[1].b == 7")
         # exploiting that sizeof(uint32) == sizeof(float)
-        self.assertTrue(fabs(data.float[2] - 3.14) < 1, "foo[1].c == 3.14")
+        self.assertLess(fabs(data.float[2] - 3.14), 1, "foo[1].c == 3.14")
 
         self.runCmd("n")
 
@@ -160,8 +160,8 @@ class SBDataAPICase(TestBase):
         offset += 4
         self.assert_data(data.GetUnsignedInt32, offset, 7)
         offset += 4
-        self.assertTrue(
-            fabs(data.GetFloat(error, offset) - 3.14) < 1, "foo[1].c == 3.14"
+        self.assertLess(
+            fabs(data.GetFloat(error, offset) - 3.14), 1, "foo[1].c == 3.14"
         )
         self.assertSuccess(error)
 
@@ -172,8 +172,8 @@ class SBDataAPICase(TestBase):
         offset += 4
         self.assert_data(data.GetUnsignedInt32, offset, 7)
         offset += 4
-        self.assertTrue(
-            fabs(data.GetFloat(error, offset) - 6.28) < 1, "foo[1].c == 6.28"
+        self.assertLess(
+            fabs(data.GetFloat(error, offset) - 6.28), 1, "foo[1].c == 6.28"
         )
         self.assertSuccess(error)
 
@@ -187,14 +187,14 @@ class SBDataAPICase(TestBase):
         offset += 4
         self.assert_data(data.GetUnsignedInt32, offset, 2)
         offset += 4
-        self.assertTrue(fabs(data.GetFloat(error, offset) - 3) < 1, "barfoo[0].c == 3")
+        self.assertLess(fabs(data.GetFloat(error, offset) - 3), 1, "barfoo[0].c == 3")
         self.assertSuccess(error)
         offset += 4
         self.assert_data(data.GetUnsignedInt32, offset, 4)
         offset += 4
         self.assert_data(data.GetUnsignedInt32, offset, 5)
         offset += 4
-        self.assertTrue(fabs(data.GetFloat(error, offset) - 6) < 1, "barfoo[1].c == 6")
+        self.assertLess(fabs(data.GetFloat(error, offset) - 6), 1, "barfoo[1].c == 6")
         self.assertSuccess(error)
 
         new_object = barfoo.CreateValueFromData(
@@ -332,16 +332,16 @@ class SBDataAPICase(TestBase):
         data2 = lldb.SBData.CreateDataFromDoubleArray(
             process.GetByteOrder(), process.GetAddressByteSize(), [3.14, 6.28, 2.71]
         )
-        self.assertTrue(
-            fabs(data2.GetDouble(error, 0) - 3.14) < 0.5, "double data2[0] = 3.14"
+        self.assertLess(
+            fabs(data2.GetDouble(error, 0) - 3.14), 0.5, "double data2[0] = 3.14"
         )
         self.assertSuccess(error)
-        self.assertTrue(
-            fabs(data2.GetDouble(error, 8) - 6.28) < 0.5, "double data2[1] = 6.28"
+        self.assertLess(
+            fabs(data2.GetDouble(error, 8) - 6.28), 0.5, "double data2[1] = 6.28"
         )
         self.assertSuccess(error)
-        self.assertTrue(
-            fabs(data2.GetDouble(error, 16) - 2.71) < 0.5, "double data2[2] = 2.71"
+        self.assertLess(
+            fabs(data2.GetDouble(error, 16) - 2.71), 0.5, "double data2[2] = 2.71"
         )
         self.assertSuccess(error)
 
@@ -380,8 +380,9 @@ class SBDataAPICase(TestBase):
             data2.uint64[4], 5, "read_data_helper failure: set data2[4] = 5"
         )
 
-        self.assertTrue(
-            data2.uint64[0:2] == [1, 2],
+        self.assertEqual(
+            data2.uint64[0:2],
+            [1, 2],
             "read_data_helper failure: set data2[0:2] = [1,2]",
         )
 
@@ -417,26 +418,29 @@ class SBDataAPICase(TestBase):
         )
 
         data2.SetDataFromDoubleArray([3.14, 6.28, 2.71])
-        self.assertTrue(
-            fabs(data2.GetDouble(error, 0) - 3.14) < 0.5, "set double data2[0] = 3.14"
+        self.assertLess(
+            fabs(data2.GetDouble(error, 0) - 3.14), 0.5, "set double data2[0] = 3.14"
         )
-        self.assertTrue(
-            fabs(data2.GetDouble(error, 8) - 6.28) < 0.5, "set double data2[1] = 6.28"
+        self.assertLess(
+            fabs(data2.GetDouble(error, 8) - 6.28), 0.5, "set double data2[1] = 6.28"
         )
-        self.assertTrue(
-            fabs(data2.GetDouble(error, 16) - 2.71) < 0.5, "set double data2[2] = 2.71"
+        self.assertLess(
+            fabs(data2.GetDouble(error, 16) - 2.71), 0.5, "set double data2[2] = 2.71"
         )
 
-        self.assertTrue(
-            fabs(data2.double[0] - 3.14) < 0.5,
+        self.assertLess(
+            fabs(data2.double[0] - 3.14),
+            0.5,
             "read_data_helper failure: set double data2[0] = 3.14",
         )
-        self.assertTrue(
-            fabs(data2.double[1] - 6.28) < 0.5,
+        self.assertLess(
+            fabs(data2.double[1] - 6.28),
+            0.5,
             "read_data_helper failure: set double data2[1] = 6.28",
         )
-        self.assertTrue(
-            fabs(data2.double[2] - 2.71) < 0.5,
+        self.assertLess(
+            fabs(data2.double[2] - 2.71),
+            0.5,
             "read_data_helper failure: set double data2[2] = 2.71",
         )
 
@@ -452,7 +456,8 @@ class SBDataAPICase(TestBase):
                 "%s(error, %s) did not succeed: %s"
                 % (func.__name__, arg, stream.GetData()),
             )
-        self.assertTrue(
-            expected == result,
+        self.assertEqual(
+            expected,
+            result,
             "%s(error, %s) == %s != %s" % (func.__name__, arg, result, expected),
         )

@@ -34,6 +34,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -56,6 +57,8 @@
 #include <vector>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "instrprof"
 
 static cl::opt<bool> StaticFuncFullModulePrefix(
     "static-func-full-module-prefix", cl::init(true), cl::Hidden,
@@ -388,7 +391,7 @@ std::string getPGOName(const GlobalVariable &V, bool InLTO) {
   // PGONameMetadata should be set by compiler at profile use time
   // and read by symtab creation to look up symbols corresponding to
   // a MD5 hash.
-  return getIRPGOObjectName(V, InLTO, nullptr /* PGONameMetadata */);
+  return getIRPGOObjectName(V, InLTO, /*PGONameMetadata=*/nullptr);
 }
 
 // See getIRPGOObjectName() for a discription of the format.
@@ -475,16 +478,13 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
 
   SmallVector<MDNode *, 2> Types;
   for (GlobalVariable &G : M.globals()) {
-    if (!G.hasName())
-      continue;
-    Types.clear();
-    G.getMetadata(LLVMContext::MD_type, Types);
-    if (Types.empty())
+    if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
       continue;
     if (Error E = addVTableWithName(
               G, getIRPGOObjectName(G, InLTO, /* PGONameMetadata */ nullptr)))
         return E;
   }
+
   Sorted = false;
   finalizeSymtab();
   return Error::success();
@@ -499,7 +499,11 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
     // called by compiler and tools with LLVM IR.
     if (Error E = addSymbolName(Name))
       return E;
-    MD5VTableMap.emplace_back(GlobalValue::getGUID(Name), &VTable);
+
+    bool Inserted = true;
+    std::tie(std::ignore, Inserted) = MD5VTableMap.try_emplace(GlobalValue::getGUID(Name), &VTable);
+    if (!Inserted)
+      LLVM_DEBUG(dbgs() << "GUID conflict within one module");
     return Error::success();
   };
   if (Error E = mapName(VTablePGOName))
@@ -511,7 +515,6 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
 
   return Error::success();
 }
-                                         
 
 /// \c NameStrings is a string composed of one of more possibly encoded
 /// sub-strings. The substrings are separated by 0 or more zero bytes. This
@@ -629,25 +632,9 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
 }
 
 uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
-  finalizeSymtab();
-  auto It = lower_bound(
-      VTableAddrRangeToMD5Map, Address,
-      [](std::pair<std::pair<uint64_t, uint64_t>, uint64_t> VTableRangeAddr,
-         uint64_t Addr) {
-        // Find the first address range of which end address is larger than
-        // `Addr`. Smaller-than-or-equal-to is used because the profiled address
-        // within a vtable should be [start-address, end-address).
-        return VTableRangeAddr.first.second <= Addr;
-      });
-
-  // Returns the MD5 hash if Address is within the address range of an entry.
-  if (It != VTableAddrRangeToMD5Map.end() && It->first.first <= Address) {
-    return It->second;
-  }
-  // The virtual table address collected from value profiler could be defined
-  // in another module that is not instrumented. Force the value to be 0 in
-  // this case.
-  return 0;
+  // Given a runtime address, look up the hash value in the interval map, and
+  // fallback to value 0 if a hash value is not found.
+  return VTableAddrMap.lookup(Address, 0);
 }
 
 uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
@@ -729,9 +716,8 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
 Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
                            std::string &Result, bool doCompression) {
   std::vector<std::string> VTableNameStrs;
-  for (auto *VTable : VTables) {
+  for (auto *VTable : VTables)
     VTableNameStrs.push_back(getPGOName(*VTable));
-  }
   return collectGlobalObjectNameStrings(
       VTableNameStrs, compression::zlib::isAvailable() && doCompression,
       Result);
@@ -1422,8 +1408,8 @@ void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
   F.setMetadata(getPGOFuncNameMetadataName(), N);
 }
 
-bool needsComdatForCounter(const GlobalValue &GV, const Module &M) {
-  if (GV.hasComdat())
+bool needsComdatForCounter(const GlobalObject &GO, const Module &M) {
+  if (GO.hasComdat())
     return true;
 
   if (!Triple(M.getTargetTriple()).supportsCOMDAT())
@@ -1439,7 +1425,7 @@ bool needsComdatForCounter(const GlobalValue &GV, const Module &M) {
   // available_externally functions will end up being duplicated in raw profile
   // data. This can result in distorted profile as the counts of those dups
   // will be accumulated by the profile merger.
-  GlobalValue::LinkageTypes Linkage = GV.getLinkage();
+  GlobalValue::LinkageTypes Linkage = GO.getLinkage();
   if (Linkage != GlobalValue::ExternalWeakLinkage &&
       Linkage != GlobalValue::AvailableExternallyLinkage)
     return false;

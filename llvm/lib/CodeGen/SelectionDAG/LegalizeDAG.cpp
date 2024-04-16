@@ -118,14 +118,7 @@ private:
   void LegalizeLoadOps(SDNode *Node);
   void LegalizeStoreOps(SDNode *Node);
 
-  /// Some targets cannot handle a variable
-  /// insertion index for the INSERT_VECTOR_ELT instruction.  In this case, it
-  /// is necessary to spill the vector being inserted into to memory, perform
-  /// the insert there, and then read the result back.
-  SDValue PerformInsertVectorEltInMemory(SDValue Vec, SDValue Val, SDValue Idx,
-                                         const SDLoc &dl);
-  SDValue ExpandINSERT_VECTOR_ELT(SDValue Vec, SDValue Val, SDValue Idx,
-                                  const SDLoc &dl);
+  SDValue ExpandINSERT_VECTOR_ELT(SDValue Op);
 
   /// Return a vector shuffle operation which
   /// performs the same shuffe in terms of order or result bytes, but on a type
@@ -259,6 +252,21 @@ public:
 
 } // end anonymous namespace
 
+// Helper function that generates an MMO that considers the alignment of the
+// stack, and the size of the stack object
+static MachineMemOperand *getStackAlignedMMO(SDValue StackPtr,
+                                             MachineFunction &MF,
+                                             bool isObjectScalable) {
+  auto &MFI = MF.getFrameInfo();
+  int FI = cast<FrameIndexSDNode>(StackPtr)->getIndex();
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
+  LocationSize ObjectSize = isObjectScalable
+                                ? LocationSize::beforeOrAfterPointer()
+                                : LocationSize::precise(MFI.getObjectSize(FI));
+  return MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
+                                 ObjectSize, MFI.getObjectAlign(FI));
+}
+
 /// Return a vector shuffle operation which
 /// performs the same shuffle in terms of order or result bytes, but on a type
 /// whose vector element type is narrower than the original shuffle type.
@@ -363,49 +371,12 @@ SDValue SelectionDAGLegalize::ExpandConstant(ConstantSDNode *CP) {
   return Result;
 }
 
-/// Some target cannot handle a variable insertion index for the
-/// INSERT_VECTOR_ELT instruction.  In this case, it
-/// is necessary to spill the vector being inserted into to memory, perform
-/// the insert there, and then read the result back.
-SDValue SelectionDAGLegalize::PerformInsertVectorEltInMemory(SDValue Vec,
-                                                             SDValue Val,
-                                                             SDValue Idx,
-                                                             const SDLoc &dl) {
-  SDValue Tmp1 = Vec;
-  SDValue Tmp2 = Val;
-  SDValue Tmp3 = Idx;
+SDValue SelectionDAGLegalize::ExpandINSERT_VECTOR_ELT(SDValue Op) {
+  SDValue Vec = Op.getOperand(0);
+  SDValue Val = Op.getOperand(1);
+  SDValue Idx = Op.getOperand(2);
+  SDLoc dl(Op);
 
-  // If the target doesn't support this, we have to spill the input vector
-  // to a temporary stack slot, update the element, then reload it.  This is
-  // badness.  We could also load the value into a vector register (either
-  // with a "move to register" or "extload into register" instruction, then
-  // permute it into place, if the idx is a constant and if the idx is
-  // supported by the target.
-  EVT VT    = Tmp1.getValueType();
-  EVT EltVT = VT.getVectorElementType();
-  SDValue StackPtr = DAG.CreateStackTemporary(VT);
-
-  int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
-
-  // Store the vector.
-  SDValue Ch = DAG.getStore(
-      DAG.getEntryNode(), dl, Tmp1, StackPtr,
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI));
-
-  SDValue StackPtr2 = TLI.getVectorElementPointer(DAG, StackPtr, VT, Tmp3);
-
-  // Store the scalar value.
-  Ch = DAG.getTruncStore(
-      Ch, dl, Tmp2, StackPtr2,
-      MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()), EltVT);
-  // Load the updated vector.
-  return DAG.getLoad(VT, dl, Ch, StackPtr, MachinePointerInfo::getFixedStack(
-                                               DAG.getMachineFunction(), SPFI));
-}
-
-SDValue SelectionDAGLegalize::ExpandINSERT_VECTOR_ELT(SDValue Vec, SDValue Val,
-                                                      SDValue Idx,
-                                                      const SDLoc &dl) {
   if (ConstantSDNode *InsertPos = dyn_cast<ConstantSDNode>(Idx)) {
     // SCALAR_TO_VECTOR requires that the type of the value being inserted
     // match the element type of the vector being created, except for
@@ -427,7 +398,7 @@ SDValue SelectionDAGLegalize::ExpandINSERT_VECTOR_ELT(SDValue Vec, SDValue Val,
       return DAG.getVectorShuffle(Vec.getValueType(), dl, Vec, ScVec, ShufOps);
     }
   }
-  return PerformInsertVectorEltInMemory(Vec, Val, Idx, dl);
+  return ExpandInsertToVectorThroughStack(Op);
 }
 
 SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
@@ -1034,6 +1005,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
                                     Node->getOperand(0).getValueType());
     break;
   case ISD::STRICT_FP_TO_FP16:
+  case ISD::STRICT_FP_TO_BF16:
   case ISD::STRICT_SINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
   case ISD::STRICT_LRINT:
@@ -1379,19 +1351,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   }
 }
 
-// Helper function that generates an MMO that considers the alignment of the
-// stack, and the size of the stack object
-static MachineMemOperand *getStackAlignedMMO(SDValue StackPtr,
-                                             MachineFunction &MF,
-                                             bool isObjectScalable) {
-  auto &MFI = MF.getFrameInfo();
-  int FI = cast<FrameIndexSDNode>(StackPtr)->getIndex();
-  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
-  uint64_t ObjectSize = isObjectScalable ? ~UINT64_C(0) : MFI.getObjectSize(FI);
-  return MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
-                                 ObjectSize, MFI.getObjectAlign(FI));
-}
-
 SDValue SelectionDAGLegalize::ExpandExtractFromVectorThroughStack(SDValue Op) {
   SDValue Vec = Op.getOperand(0);
   SDValue Idx = Op.getOperand(1);
@@ -1487,7 +1446,7 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
 
   // Store the value to a temporary stack slot, then LOAD the returned part.
   EVT VecVT = Vec.getValueType();
-  EVT SubVecVT = Part.getValueType();
+  EVT PartVT = Part.getValueType();
   SDValue StackPtr = DAG.CreateStackTemporary(VecVT);
   int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
   MachinePointerInfo PtrInfo =
@@ -1496,14 +1455,28 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   // First store the whole vector.
   SDValue Ch = DAG.getStore(DAG.getEntryNode(), dl, Vec, StackPtr, PtrInfo);
 
-  // Then store the inserted part.
-  SDValue SubStackPtr =
-      TLI.getVectorSubVecPointer(DAG, StackPtr, VecVT, SubVecVT, Idx);
+  // Freeze the index so we don't poison the clamping code we're about to emit.
+  Idx = DAG.getFreeze(Idx);
 
-  // Store the subvector.
-  Ch = DAG.getStore(
-      Ch, dl, Part, SubStackPtr,
-      MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
+  // Then store the inserted part.
+  if (PartVT.isVector()) {
+    SDValue SubStackPtr =
+        TLI.getVectorSubVecPointer(DAG, StackPtr, VecVT, PartVT, Idx);
+
+    // Store the subvector.
+    Ch = DAG.getStore(
+        Ch, dl, Part, SubStackPtr,
+        MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
+  } else {
+    SDValue SubStackPtr =
+        TLI.getVectorElementPointer(DAG, StackPtr, VecVT, Idx);
+
+    // Store the scalar value.
+    Ch = DAG.getTruncStore(
+        Ch, dl, Part, SubStackPtr,
+        MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()),
+        VecVT.getVectorElementType());
+  }
 
   // Finally, load the updated vector.
   return DAG.getLoad(Op.getValueType(), dl, Ch, StackPtr, PtrInfo);
@@ -3217,10 +3190,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   case ISD::FP_ROUND: {
-    EVT VT = Node->getValueType(0);
-    if (VT.getScalarType() == MVT::bf16) {
-      Results.push_back(
-          DAG.getNode(ISD::FP_TO_BF16, SDLoc(Node), VT, Node->getOperand(0)));
+    if ((Tmp1 = TLI.expandFP_ROUND(Node, DAG))) {
+      Results.push_back(Tmp1);
       break;
     }
 
@@ -3293,6 +3264,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (Op.getValueType() != MVT::f32)
       Op = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, Op,
                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+    // Certain SNaNs will turn into infinities if we do a simple shift right.
+    if (!DAG.isKnownNeverSNaN(Op)) {
+      Op = DAG.getNode(ISD::FCANONICALIZE, dl, MVT::f32, Op, Node->getFlags());
+    }
     Op = DAG.getNode(
         ISD::SRL, dl, MVT::i32, DAG.getNode(ISD::BITCAST, dl, MVT::i32, Op),
         DAG.getConstant(16, dl,
@@ -3415,9 +3390,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(ExpandSCALAR_TO_VECTOR(Node));
     break;
   case ISD::INSERT_VECTOR_ELT:
-    Results.push_back(ExpandINSERT_VECTOR_ELT(Node->getOperand(0),
-                                              Node->getOperand(1),
-                                              Node->getOperand(2), dl));
+    Results.push_back(ExpandINSERT_VECTOR_ELT(SDValue(Node, 0)));
     break;
   case ISD::VECTOR_SHUFFLE: {
     SmallVector<int, 32> NewMask;
@@ -3643,14 +3616,14 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
           DAG.getNode(ISD::FP_EXTEND, dl, Node->getValueType(0), Res));
     }
     break;
+  case ISD::STRICT_BF16_TO_FP:
   case ISD::STRICT_FP16_TO_FP:
     if (Node->getValueType(0) != MVT::f32) {
       // We can extend to types bigger than f32 in two steps without changing
       // the result. Since "f16 -> f32" is much more commonly available, give
       // CodeGen the option of emitting that before resorting to a libcall.
-      SDValue Res =
-          DAG.getNode(ISD::STRICT_FP16_TO_FP, dl, {MVT::f32, MVT::Other},
-                      {Node->getOperand(0), Node->getOperand(1)});
+      SDValue Res = DAG.getNode(Node->getOpcode(), dl, {MVT::f32, MVT::Other},
+                                {Node->getOperand(0), Node->getOperand(1)});
       Res = DAG.getNode(ISD::STRICT_FP_EXTEND, dl,
                         {Node->getValueType(0), MVT::Other},
                         {Res.getValue(1), Res});
@@ -4649,6 +4622,16 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
       Results.push_back(ExpandLibCall(RTLIB::FPEXT_F16_F32, Node, false).first);
     }
     break;
+  case ISD::STRICT_BF16_TO_FP:
+    if (Node->getValueType(0) == MVT::f32) {
+      TargetLowering::MakeLibCallOptions CallOptions;
+      std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(
+          DAG, RTLIB::FPEXT_BF16_F32, MVT::f32, Node->getOperand(1),
+          CallOptions, SDLoc(Node), Node->getOperand(0));
+      Results.push_back(Tmp.first);
+      Results.push_back(Tmp.second);
+    }
+    break;
   case ISD::STRICT_FP16_TO_FP: {
     if (Node->getValueType(0) == MVT::f32) {
       TargetLowering::MakeLibCallOptions CallOptions;
@@ -4790,12 +4773,17 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   }
   case ISD::STRICT_FP_EXTEND:
-  case ISD::STRICT_FP_TO_FP16: {
-    RTLIB::Libcall LC =
-        Node->getOpcode() == ISD::STRICT_FP_TO_FP16
-            ? RTLIB::getFPROUND(Node->getOperand(1).getValueType(), MVT::f16)
-            : RTLIB::getFPEXT(Node->getOperand(1).getValueType(),
-                              Node->getValueType(0));
+  case ISD::STRICT_FP_TO_FP16:
+  case ISD::STRICT_FP_TO_BF16: {
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+    if (Node->getOpcode() == ISD::STRICT_FP_TO_FP16)
+      LC = RTLIB::getFPROUND(Node->getOperand(1).getValueType(), MVT::f16);
+    else if (Node->getOpcode() == ISD::STRICT_FP_TO_BF16)
+      LC = RTLIB::getFPROUND(Node->getOperand(1).getValueType(), MVT::bf16);
+    else
+      LC = RTLIB::getFPEXT(Node->getOperand(1).getValueType(),
+                           Node->getValueType(0));
+
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unable to legalize as libcall");
 
     TargetLowering::MakeLibCallOptions CallOptions;

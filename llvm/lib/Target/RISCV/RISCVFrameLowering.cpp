@@ -291,9 +291,7 @@ static Register getMaxPushPopReg(const MachineFunction &MF,
                                  const std::vector<CalleeSavedInfo> &CSI) {
   Register MaxPushPopReg = RISCV::NoRegister;
   for (auto &CS : CSI) {
-    // RISCVRegisterInfo::hasReservedSpillSlot assigns negative frame indices to
-    // registers which can be saved by Zcmp Push.
-    if (CS.getFrameIdx() < 0)
+    if (llvm::is_contained(AllPopRegs, CS.getReg().id()))
       MaxPushPopReg = std::max(MaxPushPopReg.id(), CS.getReg().id());
   }
   // if rlist is {rs, s0-s10}, then s11 will also be included
@@ -390,6 +388,21 @@ getUnmanagedCSI(const MachineFunction &MF,
   return NonLibcallCSI;
 }
 
+static SmallVector<CalleeSavedInfo, 8>
+getRVVCalleeSavedInfo(const MachineFunction &MF,
+                      const std::vector<CalleeSavedInfo> &CSI) {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  SmallVector<CalleeSavedInfo, 8> RVVCSI;
+
+  for (auto &CS : CSI) {
+    int FI = CS.getFrameIdx();
+    if (FI >= 0 && MFI.getStackID(FI) == TargetStackID::ScalableVector)
+      RVVCSI.push_back(CS);
+  }
+
+  return RVVCSI;
+}
+
 void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
                                            MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MBBI,
@@ -401,9 +414,9 @@ void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
 
   // Optimize compile time offset case
   StackOffset Offset = StackOffset::getScalable(Amount);
-  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
+  if (auto VLEN = STI.getRealVLen()) {
     // 1. Multiply the number of v-slots by the (constant) length of register
-    const int64_t VLENB = STI.getRealMinVLen() / 8;
+    const int64_t VLENB = *VLEN / 8;
     assert(Amount % 8 == 0 &&
            "Reserve the stack by the multiple of one vector size.");
     const int64_t NumOfVReg = Amount / 8;
@@ -532,8 +545,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
 
   // FIXME (note copied from Lanai): This appears to be overallocating.  Needs
   // investigation. Get the number of bytes to allocate from the FrameInfo.
-  uint64_t StackSize = getStackSizeWithRVVPadding(MF);
-  uint64_t RealStackSize = StackSize + RVFI->getReservedSpillsSize();
+  uint64_t RealStackSize = getStackSizeWithRVVPadding(MF);
+  uint64_t StackSize = RealStackSize - RVFI->getReservedSpillsSize();
   uint64_t RVVStackSize = RVFI->getRVVStackSize();
 
   // Early exit if there is no need to allocate on the stack
@@ -556,8 +569,10 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   if (RVFI->isPushable(MF) && FirstFrameSetup != MBB.end() &&
       FirstFrameSetup->getOpcode() == RISCV::CM_PUSH) {
     // Use available stack adjustment in push instruction to allocate additional
-    // stack space.
-    uint64_t Spimm = std::min(StackSize, (uint64_t)48);
+    // stack space. Align the stack size down to a multiple of 16. This is
+    // needed for RVE.
+    // FIXME: Can we increase the stack size to a multiple of 16 instead?
+    uint64_t Spimm = std::min(alignDown(StackSize, 16), (uint64_t)48);
     FirstFrameSetup->getOperand(1).setImm(Spimm);
     StackSize -= Spimm;
   }
@@ -590,20 +605,11 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // directives.
   for (const auto &Entry : CSI) {
     int FrameIdx = Entry.getFrameIdx();
-    int64_t Offset;
-    // Offsets for objects with fixed locations (IE: those saved by libcall) are
-    // simply calculated from the frame index.
-    if (FrameIdx < 0) {
-      if (RVFI->isPushable(MF)) {
-        // Callee-saved register stored by Zcmp push is in reverse order.
-        Offset = -(FrameIdx + RVFI->getRVPushRegs() + 1) *
-                 (int64_t)STI.getXLen() / 8;
-      } else {
-        Offset = FrameIdx * (int64_t)STI.getXLen() / 8;
-      }
-    } else {
-      Offset = MFI.getObjectOffset(FrameIdx) - RVFI->getReservedSpillsSize();
-    }
+    if (FrameIdx >= 0 &&
+        MFI.getStackID(FrameIdx) == TargetStackID::ScalableVector)
+      continue;
+
+    int64_t Offset = MFI.getObjectOffset(FrameIdx);
     Register Reg = Entry.getReg();
     unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
         nullptr, RI->getDwarfRegNum(Reg, true), Offset));
@@ -739,15 +745,15 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
 
   const auto &CSI = getUnmanagedCSI(MF, MFI.getCalleeSavedInfo());
 
-  // Skip to before the restores of callee-saved registers
+  // Skip to before the restores of scalar callee-saved registers
   // FIXME: assumes exactly one instruction is used to restore each
   // callee-saved register.
   auto LastFrameDestroy = MBBI;
   if (!CSI.empty())
     LastFrameDestroy = std::prev(MBBI, CSI.size());
 
-  uint64_t StackSize = getStackSizeWithRVVPadding(MF);
-  uint64_t RealStackSize = StackSize + RVFI->getReservedSpillsSize();
+  uint64_t RealStackSize = getStackSizeWithRVVPadding(MF);
+  uint64_t StackSize = RealStackSize - RVFI->getReservedSpillsSize();
   uint64_t FPOffset = RealStackSize - RVFI->getVarArgsSaveSize();
   uint64_t RVVStackSize = RVFI->getRVVStackSize();
 
@@ -791,8 +797,10 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   if (RVFI->isPushable(MF) && MBBI != MBB.end() &&
       MBBI->getOpcode() == RISCV::CM_POP) {
     // Use available stack adjustment in pop instruction to deallocate stack
-    // space.
-    uint64_t Spimm = std::min(StackSize, (uint64_t)48);
+    // space. Align the stack size down to a multiple of 16. This is needed for
+    // RVE.
+    // FIXME: Can we increase the stack size to a multiple of 16 instead?
+    uint64_t Spimm = std::min(alignDown(StackSize, 16), (uint64_t)48);
     MBBI->getOperand(1).setImm(Spimm);
     StackSize -= Spimm;
   }
@@ -897,8 +905,6 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
 
   if (FrameReg == getFPReg(STI)) {
     Offset += StackOffset::getFixed(RVFI->getVarArgsSaveSize());
-    if (FI >= 0)
-      Offset -= StackOffset::getFixed(RVFI->getReservedSpillsSize());
     // When using FP to access scalable vector objects, we need to minus
     // the frame size.
     //
@@ -965,8 +971,7 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     if (MFI.isFixedObjectIndex(FI)) {
       assert(!RI->hasStackRealignment(MF) &&
              "Can't index across variable sized realign");
-      Offset += StackOffset::get(getStackSizeWithRVVPadding(MF) +
-                                     RVFI->getReservedSpillsSize(),
+      Offset += StackOffset::get(getStackSizeWithRVVPadding(MF),
                                  RVFI->getRVVStackSize());
     } else {
       Offset += StackOffset::getFixed(MFI.getStackSize());
@@ -996,46 +1001,6 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Mark BP as used if function has dedicated base pointer.
   if (hasBP(MF))
     SavedRegs.set(RISCVABI::getBPReg());
-
-  // If interrupt is enabled and there are calls in the handler,
-  // unconditionally save all Caller-saved registers and
-  // all FP registers, regardless whether they are used.
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
-
-  if (MF.getFunction().hasFnAttribute("interrupt") && MFI.hasCalls()) {
-
-    static const MCPhysReg CSRegs[] = { RISCV::X1,      /* ra */
-      RISCV::X5, RISCV::X6, RISCV::X7,                  /* t0-t2 */
-      RISCV::X10, RISCV::X11,                           /* a0-a1, a2-a7 */
-      RISCV::X12, RISCV::X13, RISCV::X14, RISCV::X15, RISCV::X16, RISCV::X17,
-      RISCV::X28, RISCV::X29, RISCV::X30, RISCV::X31 /* t3-t6 */
-    };
-
-    for (auto Reg : CSRegs)
-      SavedRegs.set(Reg);
-
-    // According to psABI, if ilp32e/lp64e ABIs are used with an ISA that
-    // has any of the registers x16-x31 and f0-f31, then these registers are
-    // considered temporaries, so we should also save x16-x31 here.
-    if (STI.getTargetABI() == RISCVABI::ABI_ILP32E ||
-        STI.getTargetABI() == RISCVABI::ABI_LP64E) {
-      for (MCPhysReg Reg = RISCV::X16; Reg <= RISCV::X31; Reg++)
-        SavedRegs.set(Reg);
-    }
-
-    if (Subtarget.hasStdExtF()) {
-
-      // If interrupt is enabled, this list contains all FP registers.
-      const MCPhysReg * Regs = MF.getRegInfo().getCalleeSavedRegs();
-
-      for (unsigned i = 0; Regs[i]; ++i)
-        if (RISCV::FPR16RegClass.contains(Regs[i]) ||
-            RISCV::FPR32RegClass.contains(Regs[i]) ||
-            RISCV::FPR64RegClass.contains(Regs[i]))
-          SavedRegs.set(Regs[i]);
-    }
-  }
 }
 
 std::pair<int64_t, Align>
@@ -1043,15 +1008,24 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
   // Create a buffer of RVV objects to allocate.
   SmallVector<int, 8> ObjectsToAllocate;
-  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
-    unsigned StackID = MFI.getStackID(I);
-    if (StackID != TargetStackID::ScalableVector)
-      continue;
-    if (MFI.isDeadObjectIndex(I))
-      continue;
+  auto pushRVVObjects = [&](int FIBegin, int FIEnd) {
+    for (int I = FIBegin, E = FIEnd; I != E; ++I) {
+      unsigned StackID = MFI.getStackID(I);
+      if (StackID != TargetStackID::ScalableVector)
+        continue;
+      if (MFI.isDeadObjectIndex(I))
+        continue;
 
-    ObjectsToAllocate.push_back(I);
-  }
+      ObjectsToAllocate.push_back(I);
+    }
+  };
+  // First push RVV Callee Saved object, then push RVV stack object
+  std::vector<CalleeSavedInfo> &CSI = MF.getFrameInfo().getCalleeSavedInfo();
+  const auto &RVVCSI = getRVVCalleeSavedInfo(MF, CSI);
+  if (!RVVCSI.empty())
+    pushRVVObjects(RVVCSI[0].getFrameIdx(),
+                   RVVCSI[RVVCSI.size() - 1].getFrameIdx() + 1);
+  pushRVVObjects(0, MFI.getObjectIndexEnd() - RVVCSI.size());
 
   // The minimum alignment is 16 bytes.
   Align RVVStackAlign(16);
@@ -1243,45 +1217,15 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
       RVFI->setBranchRelaxationScratchFrameIndex(FI);
   }
 
-  if (MFI.getCalleeSavedInfo().empty() || RVFI->useSaveRestoreLibCalls(MF) ||
-      RVFI->isPushable(MF)) {
-    RVFI->setCalleeSavedStackSize(0);
-    return;
-  }
-
-  unsigned Size = 0;
+  unsigned Size = RVFI->getReservedSpillsSize();
   for (const auto &Info : MFI.getCalleeSavedInfo()) {
     int FrameIdx = Info.getFrameIdx();
-    if (MFI.getStackID(FrameIdx) != TargetStackID::Default)
+    if (FrameIdx < 0 || MFI.getStackID(FrameIdx) != TargetStackID::Default)
       continue;
 
     Size += MFI.getObjectSize(FrameIdx);
   }
   RVFI->setCalleeSavedStackSize(Size);
-}
-
-void RISCVFrameLowering::processFunctionBeforeFrameIndicesReplaced(
-    MachineFunction &MF, RegScavenger *RS) const {
-  // Remove CalleeSavedInfo for registers saved by Zcmp or save/restore
-  // libcalls.
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
-  if (!RVFI->isPushable(MF) && !RVFI->useSaveRestoreLibCalls(MF))
-    return;
-  const std::vector<CalleeSavedInfo> &CSIs = MFI.getCalleeSavedInfo();
-  std::vector<CalleeSavedInfo> NewCSIs;
-  for (const auto &CSI : CSIs) {
-    // Skip CSRs that have fake a frame index.
-    int ReservedFI = 0;
-    if (TRI->hasReservedSpillSlot(MF, CSI.getReg(), ReservedFI)) {
-      assert(CSI.getFrameIdx() == ReservedFI &&
-             "Reserved CSR spill slot frame index mismatch in CSI");
-      continue;
-    }
-    NewCSIs.push_back(CSI);
-  }
-  MFI.setCalleeSavedInfo(std::move(NewCSIs));
 }
 
 // Not preserve stack space within prologue for outgoing variables when the
@@ -1403,6 +1347,93 @@ RISCVFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
   return 0;
 }
 
+// Offsets which need to be scale by XLen representing locations of CSRs which
+// are given a fixed location by save/restore libcalls or Zcmp Push/Pop.
+static const std::pair<MCPhysReg, int8_t> FixedCSRFIMap[] = {
+    {/*ra*/ RISCV::X1, -1},   {/*s0*/ RISCV::X8, -2},
+    {/*s1*/ RISCV::X9, -3},   {/*s2*/ RISCV::X18, -4},
+    {/*s3*/ RISCV::X19, -5},  {/*s4*/ RISCV::X20, -6},
+    {/*s5*/ RISCV::X21, -7},  {/*s6*/ RISCV::X22, -8},
+    {/*s7*/ RISCV::X23, -9},  {/*s8*/ RISCV::X24, -10},
+    {/*s9*/ RISCV::X25, -11}, {/*s10*/ RISCV::X26, -12},
+    {/*s11*/ RISCV::X27, -13}};
+
+bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
+    MachineFunction &MF, const TargetRegisterInfo *TRI,
+    std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
+    unsigned &MaxCSFrameIndex) const {
+  // Early exit if no callee saved registers are modified!
+  if (CSI.empty())
+    return true;
+
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+
+  if (RVFI->isPushable(MF)) {
+    // Determine how many GPRs we need to push and save it to RVFI.
+    Register MaxReg = getMaxPushPopReg(MF, CSI);
+    if (MaxReg != RISCV::NoRegister) {
+      auto [RegEnc, PushedRegNum] = getPushPopEncodingAndNum(MaxReg);
+      RVFI->setRVPushRegs(PushedRegNum);
+      RVFI->setRVPushStackSize(alignTo((STI.getXLen() / 8) * PushedRegNum, 16));
+
+      // Use encoded number to represent registers to spill.
+      RVFI->setRVPushRlist(RegEnc);
+    }
+  }
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
+
+  for (auto &CS : CSI) {
+    unsigned Reg = CS.getReg();
+    const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
+    unsigned Size = RegInfo->getSpillSize(*RC);
+
+    // This might need a fixed stack slot.
+    if (RVFI->useSaveRestoreLibCalls(MF) || RVFI->isPushable(MF)) {
+      const auto *FII = llvm::find_if(
+          FixedCSRFIMap, [&](auto P) { return P.first == CS.getReg(); });
+      if (FII != std::end(FixedCSRFIMap)) {
+        int64_t Offset;
+        if (RVFI->isPushable(MF))
+          Offset = -((FII->second + RVFI->getRVPushRegs() + 1) * (int64_t)Size);
+        else
+          Offset = FII->second * (int64_t)Size;
+
+        int FrameIdx = MFI.CreateFixedSpillStackObject(Size, Offset);
+        assert(FrameIdx < 0);
+        CS.setFrameIdx(FrameIdx);
+        continue;
+      }
+    }
+
+    // Not a fixed slot.
+    Align Alignment = RegInfo->getSpillAlign(*RC);
+    // We may not be able to satisfy the desired alignment specification of
+    // the TargetRegisterClass if the stack alignment is smaller. Use the
+    // min.
+    Alignment = std::min(Alignment, getStackAlign());
+    int FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
+    if ((unsigned)FrameIdx < MinCSFrameIndex)
+      MinCSFrameIndex = FrameIdx;
+    if ((unsigned)FrameIdx > MaxCSFrameIndex)
+      MaxCSFrameIndex = FrameIdx;
+    CS.setFrameIdx(FrameIdx);
+  }
+
+  // Allocate a fixed object that covers the full push or libcall size.
+  if (RVFI->isPushable(MF)) {
+    if (int64_t PushSize = RVFI->getRVPushStackSize())
+      MFI.CreateFixedSpillStackObject(PushSize, -PushSize);
+  } else if (int LibCallRegs = getLibCallID(MF, CSI) + 1) {
+    int64_t LibCallFrameSize =
+        alignTo((STI.getXLen() / 8) * LibCallRegs, getStackAlign());
+    MFI.CreateFixedSpillStackObject(LibCallFrameSize, -LibCallFrameSize);
+  }
+
+  return true;
+}
+
 bool RISCVFrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
@@ -1418,14 +1449,10 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
   // Emit CM.PUSH with base SPimm & evaluate Push stack
   RISCVMachineFunctionInfo *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->isPushable(*MF)) {
-    Register MaxReg = getMaxPushPopReg(*MF, CSI);
-    if (MaxReg != RISCV::NoRegister) {
-      auto [RegEnc, PushedRegNum] = getPushPopEncodingAndNum(MaxReg);
-      RVFI->setRVPushRegs(PushedRegNum);
-      RVFI->setRVPushStackSize(alignTo((STI.getXLen() / 8) * PushedRegNum, 16));
-
+    unsigned PushedRegNum = RVFI->getRVPushRegs();
+    if (PushedRegNum > 0) {
       // Use encoded number to represent registers to spill.
-      RVFI->setRVPushRlist(RegEnc);
+      int RegEnc = RVFI->getRVPushRlist();
       MachineInstrBuilder PushBuilder =
           BuildMI(MBB, MI, DL, TII.get(RISCV::CM_PUSH))
               .setMIFlag(MachineInstr::FrameSetup);
@@ -1448,13 +1475,19 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
 
   // Manually spill values not spilled by libcall & Push/Pop.
   const auto &UnmanagedCSI = getUnmanagedCSI(*MF, CSI);
-  for (auto &CS : UnmanagedCSI) {
-    // Insert the spill to the stack frame.
-    Register Reg = CS.getReg();
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(MBB, MI, Reg, !MBB.isLiveIn(Reg), CS.getFrameIdx(),
-                            RC, TRI, Register());
-  }
+  const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
+
+  auto storeRegToStackSlot = [&](decltype(UnmanagedCSI) CSInfo) {
+    for (auto &CS : CSInfo) {
+      // Insert the spill to the stack frame.
+      Register Reg = CS.getReg();
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      TII.storeRegToStackSlot(MBB, MI, Reg, !MBB.isLiveIn(Reg),
+                              CS.getFrameIdx(), RC, TRI, Register());
+    }
+  };
+  storeRegToStackSlot(UnmanagedCSI);
+  storeRegToStackSlot(RVVCSI);
 
   return true;
 }
@@ -1472,19 +1505,26 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
     DL = MI->getDebugLoc();
 
   // Manually restore values not restored by libcall & Push/Pop.
-  // Keep the same order as in the prologue. There is no need to reverse the
-  // order in the epilogue. In addition, the return address will be restored
-  // first in the epilogue. It increases the opportunity to avoid the
-  // load-to-use data hazard between loading RA and return by RA.
-  // loadRegFromStackSlot can insert multiple instructions.
+  // Reverse the restore order in epilog.  In addition, the return
+  // address will be restored first in the epilogue. It increases
+  // the opportunity to avoid the load-to-use data hazard between
+  // loading RA and return by RA.  loadRegFromStackSlot can insert
+  // multiple instructions.
   const auto &UnmanagedCSI = getUnmanagedCSI(*MF, CSI);
-  for (auto &CS : UnmanagedCSI) {
-    Register Reg = CS.getReg();
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI,
-                             Register());
-    assert(MI != MBB.begin() && "loadRegFromStackSlot didn't insert any code!");
-  }
+  const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, CSI);
+
+  auto loadRegFromStackSlot = [&](decltype(UnmanagedCSI) CSInfo) {
+    for (auto &CS : CSInfo) {
+      Register Reg = CS.getReg();
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+      TII.loadRegFromStackSlot(MBB, MI, Reg, CS.getFrameIdx(), RC, TRI,
+                               Register());
+      assert(MI != MBB.begin() &&
+             "loadRegFromStackSlot didn't insert any code!");
+    }
+  };
+  loadRegFromStackSlot(RVVCSI);
+  loadRegFromStackSlot(UnmanagedCSI);
 
   RISCVMachineFunctionInfo *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->isPushable(*MF)) {

@@ -1236,7 +1236,7 @@ define <2 x i64> @v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; AVX512BW-NEXT:    kxorw %k1, %k0, %k1
 ; AVX512BW-NEXT:    vpcmpgtq %xmm1, %xmm2, %k2
 ; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [9223372036854775808,9223372036854775808]
-; AVX512BW-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k2}
+; AVX512BW-NEXT:    vpbroadcastq {{.*#+}} xmm0 {%k2} = [9223372036854775807,9223372036854775807]
 ; AVX512BW-NEXT:    vmovdqa64 %xmm0, %xmm1 {%k1}
 ; AVX512BW-NEXT:    vmovdqa %xmm1, %xmm0
 ; AVX512BW-NEXT:    retq

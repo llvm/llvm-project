@@ -62,7 +62,7 @@ class LogTestCase(TestBase):
             contents = f.read()
 
         # check that it got removed
-        self.assertEquals(contents.find("bacon"), -1)
+        self.assertEqual(contents.find("bacon"), -1)
 
     # Check that lldb can append to a log file
     def test_log_append(self):
@@ -79,7 +79,7 @@ class LogTestCase(TestBase):
             contents = f.read()
 
         # check that it is still there
-        self.assertEquals(contents.find("bacon"), 0)
+        self.assertEqual(contents.find("bacon"), 0)
 
     # Enable all log options and check that nothing crashes.
     @skipIfWindows
