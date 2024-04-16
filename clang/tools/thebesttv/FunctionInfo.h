@@ -10,7 +10,7 @@ struct FunctionInfo {
     int line;
     int column;
 
-    const CFG *cfg;
+    std::unique_ptr<CFG> cfg;
     std::vector<std::pair<const Stmt *, const CFGBlock *>> stmtBlockPairs;
 
     static FunctionInfo *fromDecl(FunctionDecl *D) {
@@ -25,9 +25,9 @@ struct FunctionInfo {
             return nullptr;
 
         // build CFG
-        CFG *cfg = CFG::buildCFG(D, D->getBody(), &D->getASTContext(),
-                                 CFG::BuildOptions())
-                       .release();
+
+        auto cfg = CFG::buildCFG(D, D->getBody(), &D->getASTContext(),
+                                 CFG::BuildOptions());
         // CFG may be null (may be because the function is in STL, e.g.
         // "std::destroy_at")
         if (!cfg)
@@ -39,7 +39,7 @@ struct FunctionInfo {
         fi->file = pLoc->file;
         fi->line = pLoc->line;
         fi->column = pLoc->column;
-        fi->cfg = cfg;
+        fi->cfg = std::move(cfg);
         fi->buildStmtBlockPairs();
         return fi;
     }
