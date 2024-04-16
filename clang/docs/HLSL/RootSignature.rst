@@ -79,6 +79,80 @@ Root signature could also used in form of StateObject like this:
   };
 
 
+
+GlobalRootSignature
+===================
+
+A GlobalRootSignature corresponds to a D3D12_GLOBAL_ROOT_SIGNATURE structure.
+
+The fields consist of some number of strings describing the parts of the root signature.
+The string should follow Root Signature Grammar.
+
+.. code-block::
+
+  GlobalRootSignature MyGlobalRootSignature =
+  {
+      "DescriptorTable(UAV(u0)),"                     // Output texture
+      "SRV(t0),"                                      // Acceleration structure
+      "CBV(b0),"                                      // Scene constants
+      "DescriptorTable(SRV(t1, numDescriptors = 2))"  // Static index and vertex buffers
+  };
+
+
+LocalRootSignature
+==================
+
+A LocalRootSignature corresponds to a D3D12_LOCAL_ROOT_SIGNATURE structure.
+
+Just like the global root signature subobject, the fields consist of some
+number of strings describing the parts of the root signature.
+The string should follow Root Signature Grammar.
+
+.. code-block::
+
+  LocalRootSignature MyLocalRootSignature =
+  {
+      "RootConstants(num32BitConstants = 4, b1)"  // Cube constants
+  };
+
+
+SubobjectToExportsAssociation
+=============================
+
+By default, a subobject merely declared in the same library as an export is
+able to apply to that export.
+However, applications have the ability to override that and get specific about
+what subobject goes with which export. In HLSL, this "explicit association" is
+done using SubobjectToExportsAssociation.
+
+A SubobjectToExportsAssociation corresponds to a
+D3D12_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION structure.
+
+This subobject is declared with the syntax
+.. code-block::
+
+  SubobjectToExportsAssociation Name =
+  {
+      SubobjectName,
+      Exports
+  };
+
+The local/global root signature in above example could be used like this:
+
+.. code-block::
+
+  SubobjectToExportsAssociation MyLocalRootSignatureAssociation =
+  {
+      "MyLocalRootSignature",    // Subobject name
+      "MyHitGroup;MyMissShader"  // Exports association
+  };
+  SubobjectToExportsAssociation MyGlobalRootSignatureAssociation =
+  {
+      "MyGlobalRootSignature",    // Subobject name
+      "MyHitGroup;MyMissShader"  // Exports association
+  };
+
+
 Root Signature Grammar
 ======================
 
@@ -216,76 +290,3 @@ Root Signature Grammar
     STATIC_BORDER_COLOR : 'STATIC_BORDER_COLOR_TRANSPARENT_BLACK' |
                           'STATIC_BORDER_COLOR_OPAQUE_BLACK' |
                           'STATIC_BORDER_COLOR_OPAQUE_WHITE'
-
-GlobalRootSignature
-===================
-
-A GlobalRootSignature corresponds to a D3D12_GLOBAL_ROOT_SIGNATURE structure.
-
-The fields consist of some number of strings describing the parts of the root signature.
-The string should follow Root Signature Grammar.
-
-.. code-block::
-
-  GlobalRootSignature MyGlobalRootSignature =
-  {
-      "DescriptorTable(UAV(u0)),"                     // Output texture
-      "SRV(t0),"                                      // Acceleration structure
-      "CBV(b0),"                                      // Scene constants
-      "DescriptorTable(SRV(t1, numDescriptors = 2))"  // Static index and vertex buffers
-  };
-
-
-LocalRootSignature
-==================
-
-A LocalRootSignature corresponds to a D3D12_LOCAL_ROOT_SIGNATURE structure.
-
-Just like the global root signature subobject, the fields consist of some
-number of strings describing the parts of the root signature.
-The string should follow Root Signature Grammar.
-
-.. code-block::
-
-  LocalRootSignature MyLocalRootSignature =
-  {
-      "RootConstants(num32BitConstants = 4, b1)"  // Cube constants
-  };
-
-
-SubobjectToExportsAssociation
-=============================
-
-By default, a subobject merely declared in the same library as an export is
-able to apply to that export.
-However, applications have the ability to override that and get specific about
-what subobject goes with which export. In HLSL, this "explicit association" is
-done using SubobjectToExportsAssociation.
-
-A SubobjectToExportsAssociation corresponds to a
-D3D12_DXIL_SUBOBJECT_TO_EXPORTS_ASSOCIATION structure.
-
-This subobject is declared with the syntax
-.. code-block::
-
-  SubobjectToExportsAssociation Name =
-  {
-      SubobjectName,
-      Exports
-  };
-
-The local/global root signature in above example could be used like this:
-
-.. code-block::
-
-  SubobjectToExportsAssociation MyLocalRootSignatureAssociation =
-  {
-      "MyLocalRootSignature",    // Subobject name
-      "MyHitGroup;MyMissShader"  // Exports association
-  };
-  SubobjectToExportsAssociation MyGlobalRootSignatureAssociation =
-  {
-      "MyGlobalRootSignature",    // Subobject name
-      "MyHitGroup;MyMissShader"  // Exports association
-  };
-
