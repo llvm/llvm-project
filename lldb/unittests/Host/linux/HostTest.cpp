@@ -40,6 +40,12 @@ TEST_F(HostTest, GetProcessInfo) {
   ASSERT_TRUE(Info.ParentProcessIDIsValid());
   EXPECT_EQ(lldb::pid_t(getppid()), Info.GetParentProcessID());
 
+  ASSERT_TRUE(Info.ProcessGroupIDIsValid());
+  EXPECT_EQ(lldb::pid_t(getpgrp()), Info.GetProcessGroupID());
+
+  ASSERT_TRUE(Info.ProcessSessionIDIsValid());
+  EXPECT_EQ(lldb::pid_t(getsid(getpid())), Info.GetProcessSessionID());
+
   ASSERT_TRUE(Info.EffectiveUserIDIsValid());
   EXPECT_EQ(geteuid(), Info.GetEffectiveUserID());
 
