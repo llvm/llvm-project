@@ -1268,6 +1268,18 @@ TEST(Local, ExpressionForConstant) {
   Expr = createExpression(ConstantExpr::getIntToPtr(K2, PtrTy), PtrTy);
   EXPECT_NE(Expr, nullptr);
   EXPECT_EQ(Expr->getElement(1), 5678U);
+
+  Type *FP128Ty = Type::getFP128Ty(Context);
+  Expr = createExpression(ConstantFP::get(FP128Ty, 32), FP128Ty);
+  EXPECT_EQ(Expr, nullptr);
+
+  Type *X86_FP80Ty = Type::getX86_FP80Ty(Context);
+  Expr = createExpression(ConstantFP::get(X86_FP80Ty, 32), X86_FP80Ty);
+  EXPECT_EQ(Expr, nullptr);
+
+  Type *PPC_FP128Ty = Type::getPPC_FP128Ty(Context);
+  Expr = createExpression(ConstantFP::get(PPC_FP128Ty, 32), PPC_FP128Ty);
+  EXPECT_EQ(Expr, nullptr);
 }
 
 TEST(Local, ReplaceDPValue) {
