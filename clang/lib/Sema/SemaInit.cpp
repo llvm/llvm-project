@@ -6600,6 +6600,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
 InitializationSequence::~InitializationSequence() {
   for (auto &S : Steps)
     S.Destroy();
+  FailedCandidateSet->~OverloadCandidateSet();
 }
 
 //===----------------------------------------------------------------------===//
