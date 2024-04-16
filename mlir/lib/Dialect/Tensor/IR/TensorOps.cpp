@@ -1580,6 +1580,48 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
           getResult().getType()))
     return reshapedSource;
+
+  auto source = getSource();
+  auto sourceTy = dyn_cast<RankedTensorType>(source.getType());
+  auto resultTy = dyn_cast<RankedTensorType>(getType());
+
+  if (!sourceTy || !resultTy || sourceTy != resultTy)
+    return {};
+
+  if (auto fromElements = getShape().getDefiningOp<tensor::FromElementsOp>()) {
+    auto elements = fromElements.getElements();
+    bool dynamicNoop =
+        sourceTy.getRank() == static_cast<int64_t>(elements.size());
+    for (auto [id, element] : llvm::enumerate(elements)) {
+      APSInt cstElement;
+      if (matchPattern(element, m_ConstantInt(&cstElement))) {
+        if (cstElement.getExtValue() != sourceTy.getDimSize(id)) {
+          dynamicNoop = false;
+          break;
+        }
+        continue;
+      }
+
+      if (auto dimOp = element.getDefiningOp<tensor::DimOp>()) {
+        if (dimOp.getSource() != source) {
+          dynamicNoop = false;
+          break;
+        }
+
+        APSInt dim;
+        if (!matchPattern(dimOp.getIndex(), m_ConstantInt(&dim)) ||
+            dim.getExtValue() != static_cast<int64_t>(id)) {
+          dynamicNoop = false;
+          break;
+        }
+        continue;
+      }
+    }
+
+    if (dynamicNoop)
+      return source;
+  }
+
   return {};
 }
 
