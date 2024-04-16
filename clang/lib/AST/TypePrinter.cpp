@@ -999,9 +999,15 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
   T->printExceptionSpecification(OS, Policy);
 
   const FunctionEffectsRef FX = T->getFunctionEffects();
-  for (const auto &CFE : FX)
-    OS << " __attribute__((clang_" << CFE.Effect.name() << "))";
-  // $$$ TODO: Conditions ???
+  for (const auto &CFE : FX) {
+    OS << " __attribute__((clang_" << CFE.Effect.name();
+    if (CFE.Cond) {
+      OS << '(';
+      CFE.Cond->printPretty(OS, nullptr, Policy);
+      OS << ')';
+    }
+    OS << "))";
+  }
 
   if (T->hasTrailingReturn()) {
     OS << " -> ";
@@ -1873,15 +1879,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     // without the arguments so that we know at least that we had _some_
     // annotation on the type.
     OS << " [[clang::annotate_type(...)]]";
-    return;
-  }
-
-  if (T->getAttrKind() == attr::NonBlocking) {
-    OS << " [[clang::nonblocking(...)]]";
-    return;
-  }
-  if (T->getAttrKind() == attr::NonAllocating) {
-    OS << " [[clang::nonallocating(...)]]";
     return;
   }
 

@@ -3650,6 +3650,7 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     ArrayRef<FunctionEffectCondition> SrcConds =
         epi.FunctionEffects.conditions();
     if (!SrcConds.empty()) {
+      ExtraBits.EffectsHaveConditions = true;
       auto *DestConds = getTrailingObjects<FunctionEffectCondition>();
       std::copy(SrcConds.begin(), SrcConds.end(), DestConds);
     }

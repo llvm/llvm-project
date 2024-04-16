@@ -8088,20 +8088,6 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
     TPState.setParsedNonAllocating(NewState);
   }
 
-  if (NewState == BoolAttrState::Dependent) {
-    // nonblocking(expr)/nonallocating(expr) are represented as AttributedType
-    // sugar, using those attributes. TODO: Currently no one else tries to find
-    // it there, and this may turn out to be the wrong place.
-    Attr *A = nullptr;
-    if (isNonBlocking) {
-      A = NonBlockingAttr::Create(S.Context, CondExpr);
-    } else {
-      A = NonAllocatingAttr::Create(S.Context, CondExpr);
-    }
-    QT = TPState.getAttributedType(A, QT, QT);
-    return true;
-  }
-
   if (NewState == BoolAttrState::False) {
     // blocking and allocating are represented as AttributedType sugar,
     // using those attributes.
@@ -8115,16 +8101,15 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
     return true;
   }
 
-  // nonblocking(true) and nonallocating(true) are represented as
-  // FunctionEffects, in a FunctionEffectsRef attached to a
-  // FunctionProtoType.
+  // nonblocking/nonallocating(true/expr) are represented in a
+  // FunctionEffectsRef attached to a FunctionProtoType.
   const FunctionEffect NewEffect(isNonBlocking
                                      ? FunctionEffect::Kind::NonBlocking
                                      : FunctionEffect::Kind::NonAllocating);
 
   FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
   FunctionEffectSet FX(EPI.FunctionEffects);
-  FX.insert(NewEffect, nullptr);
+  FX.insert(NewEffect, NewState == BoolAttrState::Dependent ? CondExpr : nullptr);
   EPI.FunctionEffects = FunctionEffectsRef(FX);
 
   QualType newtype = S.Context.getFunctionType(FPT->getReturnType(),

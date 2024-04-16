@@ -52,11 +52,18 @@ decltype(nl1) nl3;
 
 // Attribute propagates from base class virtual method to overrides.
 struct Base {
-	virtual void nl_method() [[clang::nonblocking]];
+	virtual void nb_method() [[clang::nonblocking]];
 };
 struct Derived : public Base {
-	void nl_method() override;
-	// CHECK: CXXMethodDecl {{.*}} nl_method 'void () __attribute__((clang_nonblocking))'
+	void nb_method() override;
+	// CHECK: CXXMethodDecl {{.*}} nb_method 'void () __attribute__((clang_nonblocking))'
+};
+
+// Dependent expression
+template <bool V>
+struct Dependent {
+	void nb_method2() [[clang::nonblocking(V)]];
+	// CHECK: CXXMethodDecl {{.*}} nb_method2 'void () __attribute__((clang_nonblocking(V)))'
 };
 
 // --- Blocks ---
