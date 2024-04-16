@@ -2791,6 +2791,10 @@ void OpenACCClauseEnqueue::VisitDefaultClause(const OpenACCDefaultClause &C) {}
 void OpenACCClauseEnqueue::VisitIfClause(const OpenACCIfClause &C) {
   Visitor.AddStmt(C.getConditionExpr());
 }
+void OpenACCClauseEnqueue::VisitSelfClause(const OpenACCSelfClause &C) {
+  if (C.hasConditionExpr())
+    Visitor.AddStmt(C.getConditionExpr());
+}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {

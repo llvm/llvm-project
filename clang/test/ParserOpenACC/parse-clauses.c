@@ -376,16 +376,13 @@ void SelfClause() {
 #pragma acc serial self(i > j, seq
   for(;;){}
 
-  // expected-warning@+2{{left operand of comma operator has no effect}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
+  // expected-warning@+1{{left operand of comma operator has no effect}}
 #pragma acc serial self(i, j)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
 #pragma acc serial self(i > j)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'self' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial self(1+5>3), seq
   for(;;){}

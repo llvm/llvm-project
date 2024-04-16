@@ -2491,6 +2491,11 @@ void OpenACCClauseProfiler::VisitIfClause(const OpenACCIfClause &Clause) {
          "if clause requires a valid condition expr");
   Profiler.VisitStmt(Clause.getConditionExpr());
 }
+
+void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
+  if (Clause.hasConditionExpr())
+    Profiler.VisitStmt(Clause.getConditionExpr());
+}
 } // namespace
 
 void StmtProfiler::VisitOpenACCComputeConstruct(

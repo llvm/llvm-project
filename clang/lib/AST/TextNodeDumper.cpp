@@ -398,6 +398,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       OS << '(' << cast<OpenACCDefaultClause>(C)->getDefaultClauseKind() << ')';
       break;
     case OpenACCClauseKind::If:
+    case OpenACCClauseKind::Self:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";

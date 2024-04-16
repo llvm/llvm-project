@@ -48,6 +48,26 @@ OpenACCIfClause::OpenACCIfClause(SourceLocation BeginLoc,
          "Condition expression type not scalar/dependent");
 }
 
+OpenACCSelfClause *OpenACCSelfClause::Create(const ASTContext &C,
+                                             SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             Expr *ConditionExpr,
+                                             SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCIfClause), alignof(OpenACCIfClause));
+  return new (Mem)
+      OpenACCSelfClause(BeginLoc, LParenLoc, ConditionExpr, EndLoc);
+}
+
+OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
+                                     SourceLocation LParenLoc,
+                                     Expr *ConditionExpr, SourceLocation EndLoc)
+    : OpenACCClauseWithCondition(OpenACCClauseKind::Self, BeginLoc, LParenLoc,
+                                 ConditionExpr, EndLoc) {
+  assert((!ConditionExpr || ConditionExpr->isInstantiationDependent() ||
+          ConditionExpr->getType()->isScalarType()) &&
+         "Condition expression type not scalar/dependent");
+}
+
 OpenACCClause::child_range OpenACCClause::children() {
   switch (getClauseKind()) {
   default:
@@ -71,4 +91,10 @@ void OpenACCClausePrinter::VisitDefaultClause(const OpenACCDefaultClause &C) {
 
 void OpenACCClausePrinter::VisitIfClause(const OpenACCIfClause &C) {
   OS << "if(" << C.getConditionExpr() << ")";
+}
+
+void OpenACCClausePrinter::VisitSelfClause(const OpenACCSelfClause &C) {
+  OS << "self";
+  if (const Expr *CondExpr = C.getConditionExpr())
+    OS << "(" << CondExpr << ")";
 }
