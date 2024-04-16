@@ -26,3 +26,4 @@ endmacro()
 
 add_subdirectory(deviceinfo)
 add_subdirectory(kernelreplay)
+add_subdirectory(offload-tblgen)
