@@ -2110,8 +2110,7 @@ TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
   )");
   const DataLayout &DL = M->getDataLayout();
   AssumptionCache AC(*F);
-  EXPECT_TRUE(isKnownNonZero(A, /*Depth=*/0,
-                             SimplifyQuery(DL, /*DT=*/nullptr, &AC, CxtI)));
+  EXPECT_TRUE(isKnownNonZero(A, SimplifyQuery(DL, /*DT=*/nullptr, &AC, CxtI)));
 }
 
 TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
@@ -2135,9 +2134,8 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
   DominatorTree DT(*F);
   const DataLayout &DL = M->getDataLayout();
   const SimplifyQuery SQ(DL, &DT, &AC);
-  EXPECT_EQ(isKnownNonZero(A, /*Depth=*/0, SQ.getWithInstruction(CxtI)), true);
-  EXPECT_EQ(isKnownNonZero(A, /*Depth=*/0, SQ.getWithInstruction(CxtI2)),
-            false);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI)), true);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI2)), false);
 }
 
 TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond2) {
@@ -2161,9 +2159,8 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond2) {
   DominatorTree DT(*F);
   const DataLayout &DL = M->getDataLayout();
   const SimplifyQuery SQ(DL, &DT, &AC);
-  EXPECT_EQ(isKnownNonZero(A, /*Depth=*/0, SQ.getWithInstruction(CxtI)), true);
-  EXPECT_EQ(isKnownNonZero(A, /*Depth=*/0, SQ.getWithInstruction(CxtI2)),
-            false);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI)), true);
+  EXPECT_EQ(isKnownNonZero(A, SQ.getWithInstruction(CxtI2)), false);
 }
 
 TEST_F(ValueTrackingTest, IsImpliedConditionAnd) {

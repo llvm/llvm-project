@@ -4124,8 +4124,7 @@ static bool isProvablyNull(llvm::Value *addr) {
 }
 
 static bool isProvablyNonNull(Address Addr, CodeGenFunction &CGF) {
-  return llvm::isKnownNonZero(Addr.getBasePointer(), /*Depth=*/0,
-                              CGF.CGM.getDataLayout());
+  return llvm::isKnownNonZero(Addr.getBasePointer(), CGF.CGM.getDataLayout());
 }
 
 /// Emit the actual writing-back of a writeback.

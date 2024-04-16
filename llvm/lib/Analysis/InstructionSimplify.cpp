@@ -1586,10 +1586,10 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
     if (match(UnsignedICmp,
               m_c_ICmp(UnsignedPred, m_Specific(Y), m_Specific(A)))) {
       if (UnsignedPred == ICmpInst::ICMP_UGE && IsAnd &&
-          EqPred == ICmpInst::ICMP_NE && isKnownNonZero(B, /*Depth=*/0, Q))
+          EqPred == ICmpInst::ICMP_NE && isKnownNonZero(B, Q))
         return UnsignedICmp;
       if (UnsignedPred == ICmpInst::ICMP_ULT && !IsAnd &&
-          EqPred == ICmpInst::ICMP_EQ && isKnownNonZero(B, /*Depth=*/0, Q))
+          EqPred == ICmpInst::ICMP_EQ && isKnownNonZero(B, Q))
         return UnsignedICmp;
     }
   }
@@ -1607,13 +1607,13 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
   // X > Y && Y == 0  -->  Y == 0  iff X != 0
   // X > Y || Y == 0  -->  X > Y   iff X != 0
   if (UnsignedPred == ICmpInst::ICMP_UGT && EqPred == ICmpInst::ICMP_EQ &&
-      isKnownNonZero(X, /*Depth=*/0, Q))
+      isKnownNonZero(X, Q))
     return IsAnd ? ZeroICmp : UnsignedICmp;
 
   // X <= Y && Y != 0  -->  X <= Y  iff X != 0
   // X <= Y || Y != 0  -->  Y != 0  iff X != 0
   if (UnsignedPred == ICmpInst::ICMP_ULE && EqPred == ICmpInst::ICMP_NE &&
-      isKnownNonZero(X, /*Depth=*/0, Q))
+      isKnownNonZero(X, Q))
     return IsAnd ? UnsignedICmp : ZeroICmp;
 
   // The transforms below here are expected to be handled more generally with
@@ -2817,10 +2817,9 @@ static Constant *computePointerICmp(CmpInst::Predicate Pred, Value *LHS,
     // the other operand can not be based on the alloc - if it were, then
     // the cmp itself would be a capture.
     Value *MI = nullptr;
-    if (isAllocLikeFn(LHS, TLI) && llvm::isKnownNonZero(RHS, /*Depth=*/0, Q))
+    if (isAllocLikeFn(LHS, TLI) && llvm::isKnownNonZero(RHS, Q))
       MI = LHS;
-    else if (isAllocLikeFn(RHS, TLI) &&
-             llvm::isKnownNonZero(LHS, /*Depth=*/0, Q))
+    else if (isAllocLikeFn(RHS, TLI) && llvm::isKnownNonZero(LHS, Q))
       MI = RHS;
     if (MI) {
       // FIXME: This is incorrect, see PR54002. While we can assume that the
@@ -2976,12 +2975,12 @@ static Value *simplifyICmpWithZero(CmpInst::Predicate Pred, Value *LHS,
     return getTrue(ITy);
   case ICmpInst::ICMP_EQ:
   case ICmpInst::ICMP_ULE:
-    if (isKnownNonZero(LHS, /*Depth=*/0, Q))
+    if (isKnownNonZero(LHS, Q))
       return getFalse(ITy);
     break;
   case ICmpInst::ICMP_NE:
   case ICmpInst::ICMP_UGT:
-    if (isKnownNonZero(LHS, /*Depth=*/0, Q))
+    if (isKnownNonZero(LHS, Q))
       return getTrue(ITy);
     break;
   case ICmpInst::ICMP_SLT: {
@@ -2996,7 +2995,7 @@ static Value *simplifyICmpWithZero(CmpInst::Predicate Pred, Value *LHS,
     KnownBits LHSKnown = computeKnownBits(LHS, /* Depth */ 0, Q);
     if (LHSKnown.isNegative())
       return getTrue(ITy);
-    if (LHSKnown.isNonNegative() && isKnownNonZero(LHS, /*Depth=*/0, Q))
+    if (LHSKnown.isNonNegative() && isKnownNonZero(LHS, Q))
       return getFalse(ITy);
     break;
   }
@@ -3012,7 +3011,7 @@ static Value *simplifyICmpWithZero(CmpInst::Predicate Pred, Value *LHS,
     KnownBits LHSKnown = computeKnownBits(LHS, /* Depth */ 0, Q);
     if (LHSKnown.isNegative())
       return getFalse(ITy);
-    if (LHSKnown.isNonNegative() && isKnownNonZero(LHS, /*Depth=*/0, Q))
+    if (LHSKnown.isNonNegative() && isKnownNonZero(LHS, Q))
       return getTrue(ITy);
     break;
   }
@@ -3165,7 +3164,7 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
   const APInt *C;
   if ((match(LBO, m_LShr(m_Specific(RHS), m_APInt(C))) && *C != 0) ||
       (match(LBO, m_UDiv(m_Specific(RHS), m_APInt(C))) && *C != 1)) {
-    if (isKnownNonZero(RHS, /*Depth=*/0, Q)) {
+    if (isKnownNonZero(RHS, Q)) {
       switch (Pred) {
       default:
         break;
@@ -3398,7 +3397,7 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
       bool NUW = Q.IIQ.hasNoUnsignedWrap(LBO) && Q.IIQ.hasNoUnsignedWrap(RBO);
       bool NSW = Q.IIQ.hasNoSignedWrap(LBO) && Q.IIQ.hasNoSignedWrap(RBO);
       if (!NUW || (ICmpInst::isSigned(Pred) && !NSW) ||
-          !isKnownNonZero(LBO->getOperand(0), /*Depth=*/0, Q))
+          !isKnownNonZero(LBO->getOperand(0), Q))
         break;
       if (Value *V = simplifyICmpInst(Pred, LBO->getOperand(1),
                                       RBO->getOperand(1), Q, MaxRecurse - 1))

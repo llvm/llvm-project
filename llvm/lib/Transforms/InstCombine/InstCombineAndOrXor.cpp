@@ -1039,9 +1039,9 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
       match(ZeroCmpOp, m_c_Add(m_Specific(A), m_Value(B))) &&
       (ZeroICmp->hasOneUse() || UnsignedICmp->hasOneUse())) {
     auto GetKnownNonZeroAndOther = [&](Value *&NonZero, Value *&Other) {
-      if (!isKnownNonZero(NonZero, /*Depth=*/0, Q))
+      if (!isKnownNonZero(NonZero, Q))
         std::swap(NonZero, Other);
-      return isKnownNonZero(NonZero, /*Depth=*/0, Q);
+      return isKnownNonZero(NonZero, Q);
     };
 
     // Given  ZeroCmpOp = (A + B)
