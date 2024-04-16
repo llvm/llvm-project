@@ -2490,3 +2490,25 @@ define ptr @test_gep_gep_dont_crash(ptr %p, i64 %a1, i64 %a2) {
   %gep2 = getelementptr i64, ptr %gep1, i64 %a1
   ret ptr %gep2
 }
+
+define i64 @regression(i32 signext %x, i32 signext %y) {
+; RV64I-LABEL: regression:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    li a1, 3
+; RV64I-NEXT:    slli a1, a1, 35
+; RV64I-NEXT:    mulhu a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: regression:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    subw a0, a0, a1
+; RV64ZBA-NEXT:    slli.uw a0, a0, 3
+; RV64ZBA-NEXT:    sh1add a0, a0, a0
+; RV64ZBA-NEXT:    ret
+  %sub = sub i32 %x, %y
+  %ext = zext i32 %sub to i64
+  %res = mul nuw nsw i64 %ext, 24
+  ret i64 %res
+}
