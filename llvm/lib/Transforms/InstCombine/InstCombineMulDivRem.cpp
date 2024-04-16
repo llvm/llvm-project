@@ -624,31 +624,38 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
   Value *Op1 = I.getOperand(1);
   Value *X, *Y;
   Constant *C;
+  BinaryOperator *Op0BinOp;
 
   // Reassociate constant RHS with another constant to form constant
   // expression.
-  if (match(Op1, m_Constant(C)) && C->isFiniteNonZeroFP()) {
+  if (match(Op1, m_Constant(C)) && C->isFiniteNonZeroFP() &&
+      match(Op0, m_AllowReassoc(m_BinOp(Op0BinOp)))) {
+    // Everything in this scope folds I with Op0, intersecting their FMF.
+    FastMathFlags FMF = I.getFastMathFlags() & Op0BinOp->getFastMathFlags();
+    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+    Builder.setFastMathFlags(FMF);
     Constant *C1;
     if (match(Op0, m_OneUse(m_FDiv(m_Constant(C1), m_Value(X))))) {
       // (C1 / X) * C --> (C * C1) / X
       Constant *CC1 =
           ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL);
       if (CC1 && CC1->isNormalFP())
-        return BinaryOperator::CreateFDivFMF(CC1, X, &I);
+        return BinaryOperator::CreateFDivFMF(CC1, X, FMF);
     }
     if (match(Op0, m_FDiv(m_Value(X), m_Constant(C1)))) {
+      // FIXME: This seems like it should also be checking for arcp
       // (X / C1) * C --> X * (C / C1)
       Constant *CDivC1 =
           ConstantFoldBinaryOpOperands(Instruction::FDiv, C, C1, DL);
       if (CDivC1 && CDivC1->isNormalFP())
-        return BinaryOperator::CreateFMulFMF(X, CDivC1, &I);
+        return BinaryOperator::CreateFMulFMF(X, CDivC1, FMF);
 
       // If the constant was a denormal, try reassociating differently.
       // (X / C1) * C --> X / (C1 / C)
       Constant *C1DivC =
           ConstantFoldBinaryOpOperands(Instruction::FDiv, C1, C, DL);
       if (C1DivC && Op0->hasOneUse() && C1DivC->isNormalFP())
-        return BinaryOperator::CreateFDivFMF(X, C1DivC, &I);
+        return BinaryOperator::CreateFDivFMF(X, C1DivC, FMF);
     }
 
     // We do not need to match 'fadd C, X' and 'fsub X, C' because they are
@@ -658,26 +665,33 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
       // (X + C1) * C --> (X * C) + (C * C1)
       if (Constant *CC1 =
               ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL)) {
-        Value *XC = Builder.CreateFMulFMF(X, C, &I);
-        return BinaryOperator::CreateFAddFMF(XC, CC1, &I);
+        Value *XC = Builder.CreateFMul(X, C);
+        return BinaryOperator::CreateFAddFMF(XC, CC1, FMF);
       }
     }
     if (match(Op0, m_OneUse(m_FSub(m_Constant(C1), m_Value(X))))) {
       // (C1 - X) * C --> (C * C1) - (X * C)
       if (Constant *CC1 =
               ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL)) {
-        Value *XC = Builder.CreateFMulFMF(X, C, &I);
-        return BinaryOperator::CreateFSubFMF(CC1, XC, &I);
+        Value *XC = Builder.CreateFMul(X, C);
+        return BinaryOperator::CreateFSubFMF(CC1, XC, FMF);
       }
     }
   }
 
   Value *Z;
   if (match(&I,
-            m_c_FMul(m_OneUse(m_FDiv(m_Value(X), m_Value(Y))), m_Value(Z)))) {
-    // Sink division: (X / Y) * Z --> (X * Z) / Y
-    Value *NewFMul = Builder.CreateFMulFMF(X, Z, &I);
-    return BinaryOperator::CreateFDivFMF(NewFMul, Y, &I);
+            m_c_FMul(m_AllowReassoc(m_OneUse(m_FDiv(m_Value(X), m_Value(Y)))),
+                     m_Value(Z)))) {
+    BinaryOperator *DivOp = cast<BinaryOperator>(((Z == Op0) ? Op1 : Op0));
+    FastMathFlags FMF = I.getFastMathFlags() & DivOp->getFastMathFlags();
+    if (FMF.allowReassoc()) {
+      // Sink division: (X / Y) * Z --> (X * Z) / Y
+      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+      Builder.setFastMathFlags(FMF);
+      auto *NewFMul = Builder.CreateFMul(X, Z);
+      return BinaryOperator::CreateFDivFMF(NewFMul, Y, FMF);
+    }
   }
 
   // sqrt(X) * sqrt(Y) -> sqrt(X * Y)
