@@ -8130,7 +8130,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
                                  I->getDebugLoc());
 
   StoreInst *Store = cast<StoreInst>(I);
-  return new VPWidenStoreRecipe(*Store, Operands[0], Ptr, Mask, Consecutive,
+  return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
                                 Reverse, I->getDebugLoc());
 }
 
@@ -9404,7 +9404,6 @@ static Instruction *lowerLoadUsingVectorIntrinsics(IRBuilderBase &Builder,
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
-  // Attempt to issue a wide load.
   auto *LI = cast<LoadInst>(&Ingredient);
 
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
@@ -9413,7 +9412,6 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;
-  // Handle loads.
   State.setDebugLocFrom(getDebugLoc());
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Value *NewLI;
@@ -9471,7 +9469,7 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
   auto *SI = cast<StoreInst>(&Ingredient);
 
-  VPValue *StoredValue = getStoredValue();
+  VPValue *StoredVPValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
 
@@ -9489,7 +9487,15 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
         Mask = Builder.CreateVectorReverse(Mask, "reverse");
     }
 
-    Value *StoredVal = State.get(StoredValue, Part);
+    Value *StoredVal = State.get(StoredVPValue, Part);
+    if (isReverse()) {
+      assert(!State.EVL && "reversing not yet implemented with EVL");
+      // If we store to reverse consecutive memory locations, then we need
+      // to reverse the order of elements in the stored value.
+      StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
+      // We don't want to update the value in the map as it might be used in
+      // another expression. So don't call resetVectorValue(StoredVal).
+    }
     // TODO: split this into several classes for better design.
     if (State.EVL) {
       assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
@@ -9512,13 +9518,6 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
       NewSI =
           Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment, Mask);
     } else {
-      if (isReverse()) {
-        // If we store to reverse consecutive memory locations, then we need
-        // to reverse the order of elements in the stored value.
-        StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
-        // We don't want to update the value in the map as it might be used in
-        // another expression. So don't call resetVectorValue(StoredVal).
-      }
       auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
       if (Mask)
         NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment, Mask);

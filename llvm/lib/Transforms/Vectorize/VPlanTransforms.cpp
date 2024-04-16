@@ -68,7 +68,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
               Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenStoreRecipe(
-              *Store, Ingredient.getOperand(0), Ingredient.getOperand(1),
+              *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
               nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/,
               Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
@@ -1048,9 +1048,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
                "Only ICmps should not need extending the result.");
 
       assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
-      if (isa<VPWidenLoadRecipe>(&R)) {
+      if (isa<VPWidenLoadRecipe>(&R))
         continue;
-      }
 
       // Shrink operands by introducing truncates as needed.
       unsigned StartIdx = isa<VPWidenSelectRecipe>(&R) ? 1 : 0;

@@ -63,8 +63,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenCastSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
-  case VPWidenPHISC:
   case VPWidenLoadSC:
+  case VPWidenPHISC:
   case VPWidenSC:
   case VPWidenSelectSC: {
     const Instruction *I =
@@ -88,8 +88,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayReadFromMemory();
   case VPBranchOnMaskSC:
-  case VPScalarIVStepsSC:
   case VPPredInstPHISC:
+  case VPScalarIVStepsSC:
   case VPWidenStoreSC:
     return false;
   case VPBlendSC:

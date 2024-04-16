@@ -2325,18 +2325,18 @@ public:
     return R && classof(R);
   }
 
-  /// Returns true if the recipe is masked.
-  bool isMasked() const { return IsMasked; }
-
-  /// Return the address accessed by this recipe.
-  VPValue *getAddr() const { return getOperand(0); }
-
   /// Return whether the loaded-from / stored-to addresses are consecutive.
   bool isConsecutive() const { return Consecutive; }
 
   /// Return whether the consecutive loaded/stored addresses are in reverse
   /// order.
   bool isReverse() const { return Reverse; }
+
+  /// Return the address accessed by this recipe.
+  VPValue *getAddr() const { return getOperand(0); }
+
+  /// Returns true if the recipe is masked.
+  bool isMasked() const { return IsMasked; }
 
   /// Return the mask used by this recipe. Note that a full mask is represented
   /// by a nullptr.
@@ -2372,7 +2372,7 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
 
   VP_CLASSOF_IMPL(VPDef::VPWidenLoadSC);
 
-  /// Generate the wide load/store.
+  /// Generate a wide load or gather.
   void execute(VPTransformState &State) override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2395,7 +2395,7 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
 /// A recipe for widening store operations, using the stored value, the address
 /// to store to and an optional mask.
 struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
-  VPWidenStoreRecipe(StoreInst &Store, VPValue *StoredVal, VPValue *Addr,
+  VPWidenStoreRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
                      VPValue *Mask, bool Consecutive, bool Reverse, DebugLoc DL)
       : VPWidenMemoryRecipe(VPDef::VPWidenStoreSC, Store, {Addr, StoredVal},
                             Consecutive, Reverse, DL) {
@@ -2403,9 +2403,9 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   }
 
   VPWidenStoreRecipe *clone() override {
-    return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getStoredValue(),
-                                  getAddr(), getMask(), Consecutive, Reverse,
-                                  getDebugLoc());
+    return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
+                                  getStoredValue(), getMask(), Consecutive,
+                                  Reverse, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenStoreSC);
@@ -2413,7 +2413,7 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   /// Return the value stored by this recipe.
   VPValue *getStoredValue() const { return getOperand(1); }
 
-  /// Generate the wide load/store.
+  /// Generate a wide store or scatter.
   void execute(VPTransformState &State) override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
