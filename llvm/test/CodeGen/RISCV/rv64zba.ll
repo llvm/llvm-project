@@ -567,6 +567,66 @@ define i64 @mul96(i64 %a) {
   ret i64 %c
 }
 
+define i64 @mul119(i64 %a) {
+; CHECK-LABEL: mul119:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 119
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 119
+  ret i64 %c
+}
+
+define i64 @mul123(i64 %a) {
+; CHECK-LABEL: mul123:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 123
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 123
+  ret i64 %c
+}
+
+define i64 @mul125(i64 %a) {
+; CHECK-LABEL: mul125:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 125
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 125
+  ret i64 %c
+}
+
+define i64 @mul131(i64 %a) {
+; CHECK-LABEL: mul131:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 131
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 131
+  ret i64 %c
+}
+
+define i64 @mul133(i64 %a) {
+; CHECK-LABEL: mul133:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 133
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 133
+  ret i64 %c
+}
+
+define i64 @mul137(i64 %a) {
+; CHECK-LABEL: mul137:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 137
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 137
+  ret i64 %c
+}
+
 define i64 @mul160(i64 %a) {
 ; RV64I-LABEL: mul160:
 ; RV64I:       # %bb.0:
