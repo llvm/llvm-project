@@ -312,9 +312,10 @@ public:
     return BO;
   }
 
-  static BinaryOperator *
-  CreateWithFMF(BinaryOps Opc, Value *V1, Value *V2, FastMathFlags FMF,
-                const Twine &Name = "", Instruction *InsertBefore = nullptr) {
+  static BinaryOperator *CreateWithFMF(BinaryOps Opc, Value *V1, Value *V2,
+                                       FastMathFlags FMF,
+                                       const Twine &Name = "",
+                                       Instruction *InsertBefore = nullptr) {
     BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);
     BO->setFastMathFlags(FMF);
     return BO;
