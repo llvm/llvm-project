@@ -50,7 +50,8 @@ _warningFlags = [
     "-Wno-local-type-template-args",
     "-Wno-c++11-extensions",
     "-Wno-ignored-attributes",
-    "-Wno-attributes"
+    "-Wno-attributes",
+    "-Wno-atomic-alignment"
 
 ]
 
