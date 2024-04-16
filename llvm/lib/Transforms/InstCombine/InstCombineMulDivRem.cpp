@@ -1924,13 +1924,11 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
 
         Instruction *Replacement = replaceInstUsesWith(I, Res);
 
-        if (!Op0AsCallBase->use_empty())
-          Op0AsCallBase->replaceAllUsesWith(
-              PoisonValue::get(Op0AsCallBase->getType()));
+        Op0AsCallBase->replaceAllUsesWith(
+            PoisonValue::get(Op0AsCallBase->getType()));
 
-        if (!Op1AsCallBase->use_empty())
-          Op1AsCallBase->replaceAllUsesWith(
-              PoisonValue::get(Op1AsCallBase->getType()));
+        Op1AsCallBase->replaceAllUsesWith(
+            PoisonValue::get(Op1AsCallBase->getType()));
 
         Op0AsCallBase->eraseFromParent();
         Op1AsCallBase->eraseFromParent();
