@@ -1,0 +1,201 @@
+{
+    "project": "demo",
+    "root": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64",
+    "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/compile_commands.json",
+    "results": [
+        {
+            "type": "npe-bug",
+            "nodes": [
+                2,
+                0,
+                15,
+                13,
+                12,
+                11,
+                9
+            ],
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 10,
+                    "beginColumn": 9,
+                    "endLine": 10,
+                    "endColumn": 23,
+                    "content": "return nullptr",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 7,
+                    "beginColumn": 1,
+                    "endLine": 13,
+                    "endColumn": 2,
+                    "content": "tempStru *getPrt(int flag)\n{\n    if (flag == 0) {\n        return nullptr; // src ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 33,
+                    "beginColumn": 5,
+                    "endLine": 33,
+                    "endColumn": 32,
+                    "content": "tempStru *p = getPrt(flag);",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 34,
+                    "beginColumn": 5,
+                    "endLine": 34,
+                    "endColumn": 18,
+                    "content": "usePtr2(p, 0)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 21,
+                    "beginColumn": 1,
+                    "endLine": 29,
+                    "endColumn": 2,
+                    "content": "void usePtr2(tempStru *p, int flag)\n{\n    if (isOpen(flag) != true) {\n        re ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 23,
+                    "beginColumn": 9,
+                    "endLine": 23,
+                    "endColumn": 21,
+                    "content": "isOpen(flag)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 23,
+                    "beginColumn": 9,
+                    "endLine": 23,
+                    "endColumn": 29,
+                    "content": "isOpen(flag) != true",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 27,
+                    "beginColumn": 5,
+                    "endLine": 27,
+                    "endColumn": 13,
+                    "content": "p->a = 1",
+                    "stmtKind": "BinaryOperator"
+                }
+            ]
+        },
+        {
+            "type": "npe-fix",
+            "nodes": [
+                2,
+                0,
+                15,
+                13,
+                12,
+                11,
+                10,
+                8
+            ],
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 10,
+                    "beginColumn": 9,
+                    "endLine": 10,
+                    "endColumn": 23,
+                    "content": "return nullptr",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 7,
+                    "beginColumn": 1,
+                    "endLine": 13,
+                    "endColumn": 2,
+                    "content": "tempStru *getPrt(int flag)\n{\n    if (flag == 0) {\n        return nullptr; // src ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 33,
+                    "beginColumn": 5,
+                    "endLine": 33,
+                    "endColumn": 32,
+                    "content": "tempStru *p = getPrt(flag);",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 34,
+                    "beginColumn": 5,
+                    "endLine": 34,
+                    "endColumn": 18,
+                    "content": "usePtr2(p, 0)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "entry",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 21,
+                    "beginColumn": 1,
+                    "endLine": 29,
+                    "endColumn": 2,
+                    "content": "void usePtr2(tempStru *p, int flag)\n{\n    if (isOpen(flag) != true) {\n        re ..."
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 23,
+                    "beginColumn": 9,
+                    "endLine": 23,
+                    "endColumn": 21,
+                    "content": "isOpen(flag)",
+                    "stmtKind": "CallExpr"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 23,
+                    "beginColumn": 9,
+                    "endLine": 23,
+                    "endColumn": 29,
+                    "content": "isOpen(flag) != true",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 24,
+                    "beginColumn": 9,
+                    "endLine": 24,
+                    "endColumn": 15,
+                    "content": "return",
+                    "stmtKind": "ReturnStmt"
+                },
+                {
+                    "type": "exit",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "beginLine": 21,
+                    "beginColumn": 1,
+                    "endLine": 29,
+                    "endColumn": 2,
+                    "content": "void usePtr2(tempStru *p, int flag)\n{\n    if (isOpen(flag) != true) {\n        re ..."
+                }
+            ]
+        }
+    ]
+}
