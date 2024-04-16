@@ -1057,7 +1057,7 @@ bool OverloadCandidateSet::OperatorRewriteInfo::shouldAddReversed(
 
 void OverloadCandidateSet::destroyCandidates() {
   for (iterator i = begin(), e = end(); i != e; ++i) {
-    delete [] i->Conversions.data();
+    delete[] i->Conversions.data();
     if (!i->Viable && i->FailureKind == ovl_fail_bad_deduction)
       i->DeductionFailure.Destroy();
   }
