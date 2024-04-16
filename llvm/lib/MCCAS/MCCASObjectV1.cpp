@@ -1809,6 +1809,12 @@ Expected<SmallVector<char, 0>> MCCASBuilder::mergeMCFragmentContents(
   for (const MCFragment &Fragment : FragmentList) {
     if (const auto *DataFragment = dyn_cast<MCDataFragment>(&Fragment))
       llvm::append_range(mergedData, DataFragment->getContents());
+    else if (const auto *CompactEncodedInstFragment =
+                 dyn_cast<MCCompactEncodedInstFragment>(&Fragment))
+      llvm::append_range(mergedData, CompactEncodedInstFragment->getContents());
+    else if (const auto *RelaxableFragment =
+                 dyn_cast<MCRelaxableFragment>(&Fragment))
+      llvm::append_range(mergedData, RelaxableFragment->getContents());
     else if (const auto *DwarfLineAddrFrag =
                  dyn_cast<MCDwarfLineAddrFragment>(&Fragment))
       if (IsDebugLineSection)
@@ -1817,9 +1823,29 @@ Expected<SmallVector<char, 0>> MCCASBuilder::mergeMCFragmentContents(
         return createStringError(
             inconvertibleErrorCode(),
             "Invalid MCDwarfLineAddrFragment in a non debug line section");
-    else
-      return createStringError(inconvertibleErrorCode(),
-                               "Invalid fragment type");
+    else if (const auto *DwarfCallFrameFragment =
+                 dyn_cast<MCDwarfCallFrameFragment>(&Fragment))
+      llvm::append_range(mergedData, DwarfCallFrameFragment->getContents());
+    else if (const auto *CVDefRangeFragment =
+                 dyn_cast<MCCVDefRangeFragment>(&Fragment))
+      llvm::append_range(mergedData, CVDefRangeFragment->getContents());
+    else if (const auto *PseudoProbeAddrFragment =
+                 dyn_cast<MCPseudoProbeAddrFragment>(&Fragment))
+      llvm::append_range(mergedData, PseudoProbeAddrFragment->getContents());
+    else if (const auto *LEBFragment = dyn_cast<MCLEBFragment>(&Fragment))
+      llvm::append_range(mergedData, LEBFragment->getContents());
+    else if (const auto *CVInlineLineTableFragment =
+                 dyn_cast<MCCVInlineLineTableFragment>(&Fragment))
+      llvm::append_range(mergedData, CVInlineLineTableFragment->getContents());
+    else if (const auto *AlignFragment = dyn_cast<MCAlignFragment>(&Fragment)) {
+      auto FragmentSize = Asm.computeFragmentSize(Layout, Fragment);
+      raw_svector_ostream OS(mergedData);
+      if (auto E = writeAlignFragment(*this, *AlignFragment, OS, FragmentSize))
+        return std::move(E);
+    } else
+      // All other fragment types can be considered empty, see
+      // getFragmentContents() for all fragments that have contents.
+      continue;
   }
   return mergedData;
 }
