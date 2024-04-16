@@ -32,7 +32,7 @@ class GEN_Op<string mnemonic, list<Trait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 class GEN_3DNDRangeOp<string mnemonic, list<Trait> traits = []>
-    : GEN_Op<mnemonic, [Pure] # traits> {
+    : GEN_Op<mnemonic, [NoMemoryEffect] # traits> {
   let arguments = (ins I32:$dim);
   let results = (outs Index:$res);
 
