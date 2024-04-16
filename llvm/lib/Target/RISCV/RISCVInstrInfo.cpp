@@ -1725,8 +1725,11 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &MI1,
       }
 
       if (It->definesRegister(RISCV::V0, TRI)) {
-        Register SrcReg =
-            TRI->lookThruCopyLike(It->getOperand(1).getReg(), MRI);
+        Register SrcReg = It->getOperand(1).getReg();
+        // If it's not VReg it'll be more difficult to track its defs, so
+        // bailing out here just to be safe.
+        if (!SrcReg.isVirtual())
+          return false;
 
         if (!MI1VReg.isValid()) {
           // This is the V0 def for MI1.
