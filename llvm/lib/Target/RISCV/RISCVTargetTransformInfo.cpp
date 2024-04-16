@@ -1335,8 +1335,8 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                      I);
 
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
   if (Opcode == Instruction::Select && ValTy->isVectorTy()) {
-    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
     if (CondTy->isVectorTy()) {
       if (ValTy->getScalarSizeInBits() == 1) {
         // vmandn.mm v8, v8, v9
@@ -1375,14 +1375,15 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                           LT.second, CostKind);
   }
 
-  if ((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
-      ValTy->isVectorTy()) {
-    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
+  if ((Opcode == Instruction::ICmp) && ValTy->isVectorTy() &&
+      CmpInst::isIntPredicate(VecPred)) {
+    // Use VMSLT_VV to represent VMSEQ, VMSNE, VMSLTU, VMSLEU, VMSLT, VMSLE
+    // provided they incur the same cost across all implementations
+    return LT.first *
+           getRISCVInstructionCost(RISCV::VMSLT_VV, LT.second, CostKind);
+  }
 
-    // Support natively.
-    if (CmpInst::isIntPredicate(VecPred))
-      return LT.first * 1;
-
+  if ((Opcode == Instruction::FCmp) && ValTy->isVectorTy()) {
     // If we do not support the input floating point vector type, use the base
     // one which will calculate as:
     // ScalarizeCost + Num * Cost for fixed vector,
