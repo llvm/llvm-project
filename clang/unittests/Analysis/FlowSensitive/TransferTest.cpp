@@ -3098,6 +3098,58 @@ TEST(TransferTest, ResultObjectLocationForCXXOperatorCallExpr) {
       });
 }
 
+// Check that the `std::strong_ordering` object returned by builtin `<=>` has a
+// correctly modeled result object location.
+TEST(TransferTest, ResultObjectLocationForBuiltinSpaceshipOperator) {
+  std::string Code = R"(
+    namespace std {
+      // This is the minimal definition required to get
+      // `Sema::CheckComparisonCategoryType()` to accept this fake.
+      struct strong_ordering {
+        enum class ordering { less, equal, greater };
+        ordering o;
+        static const strong_ordering less;
+        static const strong_ordering equivalent;
+        static const strong_ordering equal;
+        static const strong_ordering greater;
+      };
+
+      inline constexpr strong_ordering strong_ordering::less =
+        { strong_ordering::ordering::less };
+      inline constexpr strong_ordering strong_ordering::equal =
+        { strong_ordering::ordering::equal };
+      inline constexpr strong_ordering strong_ordering::equivalent =
+        { strong_ordering::ordering::equal };
+      inline constexpr strong_ordering strong_ordering::greater =
+        { strong_ordering::ordering::greater };
+    }
+    void target(int i, int j) {
+      auto ordering = i <=> j;
+      // [[p]]
+    }
+  )";
+  using ast_matchers::binaryOperator;
+  using ast_matchers::hasOperatorName;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  using ast_matchers::traverse;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Spaceship = selectFirst<BinaryOperator>(
+            "op",
+            match(binaryOperator(hasOperatorName("<=>")).bind("op"), ASTCtx));
+
+        EXPECT_EQ(
+            &Env.getResultObjectLocation(*Spaceship),
+            &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "ordering"));
+      },
+      LangStandard::lang_cxx20);
+}
+
 TEST(TransferTest, ResultObjectLocationForStdInitializerListExpr) {
   std::string Code = R"(
     namespace std {
