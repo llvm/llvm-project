@@ -179,7 +179,7 @@ struct LinearizeVectorExtractStridedSlice final
       sourceStrides[i] = sourceStrides[i + 1] *
                          extractOp.getSourceVectorType().getShape()[i + 1];
     }
-    // Final shuffle indices has nExtractedElems * extractGranularitySize
+    // Final shuffle indices has nExtractedSlices * extractGranularitySize
     // elements.
     llvm::SmallVector<int64_t, 4> indices(nExtractedSlices *
                                           extractGranularitySize);
@@ -190,7 +190,7 @@ struct LinearizeVectorExtractStridedSlice final
       extractedStrides[i] =
           extractedStrides[i + 1] * sizes[i + 1].cast<IntegerAttr>().getInt();
     }
-    // Iterate over all extracted slices from 0 to nExtractedElems-1
+    // Iterate over all extracted slices from 0 to nExtractedSlices - 1
     // and compute the multi-dimensional index and the corresponding linearized
     // index within the source vector.
     for (int64_t i = 0; i < nExtractedSlices; ++i) {
