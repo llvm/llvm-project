@@ -19,7 +19,6 @@
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
-#include "clang/Analysis/FlowSensitive/RecordOps.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -563,13 +562,13 @@ void Environment::initialize() {
 void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
   assert(FuncDecl->doesThisDeclarationHaveABody());
 
-  ReferencedDecls FGF = getReferencedDecls(*FuncDecl);
+  ReferencedDecls Referenced = getReferencedDecls(*FuncDecl);
 
   // These have to be added before the lines that follow to ensure that
   // `create*` work correctly for structs.
-  DACtx->addModeledFields(FGF.Fields);
+  DACtx->addModeledFields(Referenced.Fields);
 
-  for (const VarDecl *D : FGF.Globals) {
+  for (const VarDecl *D : Referenced.Globals) {
     if (getStorageLocation(*D) != nullptr)
       continue;
 
@@ -581,7 +580,7 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
     setStorageLocation(*D, createObject(*D, nullptr));
   }
 
-  for (const FunctionDecl *FD : FGF.Functions) {
+  for (const FunctionDecl *FD : Referenced.Functions) {
     if (getStorageLocation(*FD) != nullptr)
       continue;
     auto &Loc = createStorageLocation(*FD);

@@ -22,6 +22,7 @@
 
 namespace clang {
 namespace dataflow {
+
 /// Skip past nodes that the CFG does not emit. These nodes are invisible to
 /// flow-sensitive analysis, and should be ignored as they will effectively not
 /// exist.
@@ -46,29 +47,51 @@ FieldSet getObjectFields(QualType Type);
 bool containsSameFields(const FieldSet &Fields,
                         const RecordStorageLocation::FieldToLoc &FieldLocs);
 
-/// Returns the fields of a `RecordDecl` that are initialized by an
-/// `InitListExpr`, in the order in which they appear in
-/// `InitListExpr::inits()`.
-/// `Init->getType()` must be a record type.
-std::vector<const FieldDecl *>
-getFieldsForInitListExpr(const InitListExpr *InitList);
+/// Helper class for initialization of a record with an `InitListExpr`.
+/// `InitListExpr::inits()` contains the initializers for both the base classes
+/// and the fields of the record; this helper class separates these out into two
+/// different lists. In addition, it deals with special cases associated with
+/// unions.
+class RecordInitListHelper {
+public:
+  // `InitList` must have record type.
+  RecordInitListHelper(const InitListExpr *InitList);
 
-// A collection of several types of declarations, all referenced from the same
-// function.
+  // Base classes with their associated initializer expressions.
+  ArrayRef<std::pair<const CXXBaseSpecifier *, Expr *>> base_inits() const {
+    return BaseInits;
+  }
+
+  // Fields with their associated initializer expressions.
+  ArrayRef<std::pair<const FieldDecl *, Expr *>> field_inits() const {
+    return FieldInits;
+  }
+
+private:
+  SmallVector<std::pair<const CXXBaseSpecifier *, Expr *>> BaseInits;
+  SmallVector<std::pair<const FieldDecl *, Expr *>> FieldInits;
+
+  // We potentially synthesize an `ImplicitValueInitExpr` for unions. It's a
+  // member variable because we store a pointer to it in `FieldInits`.
+  std::optional<ImplicitValueInitExpr> ImplicitValueInitForUnion;
+};
+
+/// A collection of several types of declarations, all referenced from the same
+/// function.
 struct ReferencedDecls {
-  // Fields includes non-static data members.
+  /// Non-static member variables.
   FieldSet Fields;
-  // Globals includes all variables with global storage, notably including
-  // static data members and static variables declared within a function.
+  /// All variables with static storage duration, notably including static
+  /// member variables and static variables declared within a function.
   llvm::DenseSet<const VarDecl *> Globals;
-  // Functions includes free functions and member functions which are
-  // referenced, but not necessarily called.
+  /// Free functions and member functions which are referenced (but not
+  /// necessarily called).
   llvm::DenseSet<const FunctionDecl *> Functions;
 };
 
-/// Collects and returns fields, global variables and functions that are
-/// declared in or referenced from `FD`.
+/// Returns declarations that are declared in or referenced from `FD`.
 ReferencedDecls getReferencedDecls(const FunctionDecl &FD);
+
 } // namespace dataflow
 } // namespace clang
 
