@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 --std=c++20 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 --std=c++20 -fexceptions -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefixes=EH %s
+// RUN: %clang_cc1 --std=c++20 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefixes=NOEH,CHECK %s
 
 struct Printy {
   Printy(const char *name) : name(name) {}
@@ -349,6 +350,34 @@ void NewArrayInit() {
   // CHECK-NEXT:    br label %return
 }
 
+void DestroyInConditionalCleanup() {
+  // EH-LABEL: DestroyInConditionalCleanupv()
+  // NOEH-LABEL: DestroyInConditionalCleanupv()
+  struct A {
+    A() {}
+    ~A() {}
+  };
+
+  struct Value {
+    Value(A) {}
+    ~Value() {}
+  };
+
+  struct V2 {
+    Value K;
+    Value V;
+  };
+  // Verify we use conditional cleanups.
+  (void)(foo() ? V2{A(), A()} : V2{A(), A()});
+  // NOEH:   cond.true:
+  // NOEH:      call void @_ZZ27DestroyInConditionalCleanupvEN1AC1Ev
+  // NOEH:      store ptr %{{.*}}, ptr %cond-cleanup.save
+
+  // EH:   cond.true:
+  // EH:        invoke void @_ZZ27DestroyInConditionalCleanupvEN1AC1Ev
+  // EH:        store ptr %{{.*}}, ptr %cond-cleanup.save
+}
+
 void ArrayInitWithContinue() {
   // CHECK-LABEL: @_Z21ArrayInitWithContinuev
   // Verify that we start to emit the array destructor.
@@ -361,4 +390,20 @@ void ArrayInitWithContinue() {
                        "b";
                      })};
   }
+}
+
+struct [[clang::trivial_abi]] HasTrivialABI {
+  HasTrivialABI();
+  ~HasTrivialABI();
+};
+void AcceptTrivialABI(HasTrivialABI, int);
+void TrivialABI() {
+  // CHECK-LABEL: define dso_local void @_Z10TrivialABIv()
+  AcceptTrivialABI(HasTrivialABI(), ({
+                     if (foo()) return;
+                     // CHECK:      if.then:
+                     // CHECK-NEXT:   call void @_ZN13HasTrivialABID1Ev
+                     // CHECK-NEXT:   br label %return
+                     0;
+                   }));
 }

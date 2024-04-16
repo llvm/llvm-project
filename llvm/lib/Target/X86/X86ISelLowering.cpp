@@ -3532,14 +3532,6 @@ static bool isAnyZero(ArrayRef<int> Mask) {
   return llvm::any_of(Mask, [](int M) { return M == SM_SentinelZero; });
 }
 
-/// Return true if the value of any element in Mask is the zero or undef
-/// sentinel values.
-static bool isAnyZeroOrUndef(ArrayRef<int> Mask) {
-  return llvm::any_of(Mask, [](int M) {
-    return M == SM_SentinelZero || M == SM_SentinelUndef;
-  });
-}
-
 /// Return true if Val is undef or if its value falls within the
 /// specified range (L, H].
 static bool isUndefOrInRange(int Val, int Low, int Hi) {
@@ -10595,15 +10587,6 @@ static bool matchShuffleAsBlend(MVT VT, SDValue V1, SDValue V2,
     BlendMask |= LaneBlendMask << (Lane * NumEltsPerLane);
   }
   return true;
-}
-
-static uint64_t scaleVectorShuffleBlendMask(uint64_t BlendMask, int Size,
-                                            int Scale) {
-  uint64_t ScaledMask = 0;
-  for (int i = 0; i != Size; ++i)
-    if (BlendMask & (1ull << i))
-      ScaledMask |= ((1ull << Scale) - 1) << (i * Scale);
-  return ScaledMask;
 }
 
 /// Try to emit a blend instruction for a shuffle.
@@ -40547,14 +40530,15 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
       MVT SrcVT = N0.getOperand(0).getSimpleValueType();
       if ((VT.getScalarSizeInBits() % SrcVT.getScalarSizeInBits()) == 0 &&
           SrcVT.getScalarSizeInBits() >= 32) {
-        unsigned BlendMask = N.getConstantOperandVal(2);
         unsigned Size = VT.getVectorNumElements();
-        unsigned Scale = VT.getScalarSizeInBits() / SrcVT.getScalarSizeInBits();
-        BlendMask = scaleVectorShuffleBlendMask(BlendMask, Size, Scale);
+        unsigned NewSize = SrcVT.getVectorNumElements();
+        APInt BlendMask = N.getConstantOperandAPInt(2).zextOrTrunc(Size);
+        APInt NewBlendMask = APIntOps::ScaleBitMask(BlendMask, NewSize);
         return DAG.getBitcast(
             VT, DAG.getNode(X86ISD::BLENDI, DL, SrcVT, N0.getOperand(0),
                             N1.getOperand(0),
-                            DAG.getTargetConstant(BlendMask, DL, MVT::i8)));
+                            DAG.getTargetConstant(NewBlendMask.getZExtValue(),
+                                                  DL, MVT::i8)));
       }
     }
     return SDValue();
