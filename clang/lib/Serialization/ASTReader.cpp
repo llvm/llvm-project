@@ -9785,7 +9785,7 @@ void ASTReader::finishPendingActions() {
             !NonConstDefn->isLateTemplateParsed() &&
             // We only perform ODR checks for decls not in the explicit
             // global module fragment.
-            !FD->shouldSkipCheckingODR() &&
+            !shouldSkipCheckingODR(FD) &&
             FD->getODRHash() != NonConstDefn->getODRHash()) {
           if (!isa<CXXMethodDecl>(FD)) {
             PendingFunctionOdrMergeFailures[FD].push_back(NonConstDefn);
