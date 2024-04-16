@@ -65,6 +65,7 @@
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTReader.h"
@@ -4335,8 +4336,8 @@ void ASTWriter::WriteOpenCLExtensions(Sema &SemaRef) {
   Stream.EmitRecord(OPENCL_EXTENSIONS, Record);
 }
 void ASTWriter::WriteCUDAPragmas(Sema &SemaRef) {
-  if (SemaRef.ForceCUDAHostDeviceDepth > 0) {
-    RecordData::value_type Record[] = {SemaRef.ForceCUDAHostDeviceDepth};
+  if (SemaRef.CUDA().ForceHostDeviceDepth > 0) {
+    RecordData::value_type Record[] = {SemaRef.CUDA().ForceHostDeviceDepth};
     Stream.EmitRecord(CUDA_PRAGMA_FORCE_HOST_DEVICE_DEPTH, Record);
   }
 }
@@ -6187,7 +6188,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   BitsPacker DefinitionBits;
 
-  bool ShouldSkipCheckingODR = D->shouldSkipCheckingODR();
+  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
   DefinitionBits.addBit(ShouldSkipCheckingODR);
 
 #define FIELD(Name, Width, Merge)                                              \
@@ -7517,6 +7518,20 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeEnum(DC->getDefaultClauseKind());
     return;
   }
+  case OpenACCClauseKind::If: {
+    const auto *IC = cast<OpenACCIfClause>(C);
+    writeSourceLocation(IC->getLParenLoc());
+    AddStmt(const_cast<Expr *>(IC->getConditionExpr()));
+    return;
+  }
+  case OpenACCClauseKind::Self: {
+    const auto *SC = cast<OpenACCIfClause>(C);
+    writeSourceLocation(SC->getLParenLoc());
+    writeBool(SC->hasConditionExpr());
+    if (SC->hasConditionExpr())
+      AddStmt(const_cast<Expr *>(SC->getConditionExpr()));
+    return;
+  }
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
@@ -7525,8 +7540,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::If:
-  case OpenACCClauseKind::Self:
   case OpenACCClauseKind::Copy:
   case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::Attach:

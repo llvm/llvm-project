@@ -305,6 +305,10 @@ bool Module::directlyUses(const Module *Requested) {
   if (Requested->fullModuleNameIs({"_Builtin_stddef", "max_align_t"}) ||
       Requested->fullModuleNameIs({"_Builtin_stddef_wint_t"}))
     return true;
+  // Darwin is allowed is to use our builtin 'ptrauth.h' and its accompanying
+  // module.
+  if (!Requested->Parent && Requested->Name == "ptrauth")
+    return true;
 
   if (NoUndeclaredIncludes)
     UndeclaredUses.insert(Requested);

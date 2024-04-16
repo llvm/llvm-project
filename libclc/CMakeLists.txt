@@ -50,7 +50,7 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
   endif()
 
   # Import required tools as targets
-  foreach( tool clang llvm-as llvm-link opt )
+  foreach( tool IN ITEMS clang llvm-as llvm-link opt )
     find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
     add_executable( libclc::${tool} IMPORTED GLOBAL )
     set_target_properties( libclc::${tool} PROPERTIES IMPORTED_LOCATION ${LLVM_TOOL_${tool}} )
@@ -68,7 +68,7 @@ else()
     message(FATAL_ERROR "Clang is not enabled, but is required to build libclc in-tree")
   endif()
 
-  foreach( tool clang llvm-as llvm-link opt )
+  foreach( tool IN ITEMS clang llvm-as llvm-link opt )
     add_executable(libclc::${tool} ALIAS ${tool})
   endforeach()
 endif()
@@ -181,7 +181,7 @@ install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc DESTINATION "${CMAKE_INSTAL
 install( DIRECTORY generic/include/clc DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" )
 
 if( ENABLE_RUNTIME_SUBNORMAL )
-  foreach( file subnormal_use_default subnormal_disable )
+  foreach( file IN ITEMS subnormal_use_default subnormal_disable )
     link_bc(
        TARGET ${file}
        INPUTS ${PROJECT_SOURCE_DIR}/generic/lib/${file}.ll
@@ -326,7 +326,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         # Generated files are given just as file names, which we must make
         # absolute to the binary directory.
         set( input_file ${CMAKE_CURRENT_BINARY_DIR}/${file} )
-        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${file}.o" )
+        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${file}.bc" )
       else()
         # Other files are originally relative to each SOURCE file, which are
         # then make relative to the libclc root directory. We must normalize
@@ -336,7 +336,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         get_filename_component( abs_path ${file} ABSOLUTE BASE_DIR ${PROJECT_SOURCE_DIR} )
         file( RELATIVE_PATH root_rel_path ${PROJECT_SOURCE_DIR} ${abs_path} )
         set( input_file ${PROJECT_SOURCE_DIR}/${file} )
-        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${root_rel_path}.o" )
+        set( output_file "${LIBCLC_ARCH_OBJFILE_DIR}/${root_rel_path}.bc" )
       endif()
 
       get_filename_component( file_dir ${file} DIRECTORY )
@@ -364,7 +364,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       set( spv_suffix ${arch_suffix}.spv )
       add_custom_command( OUTPUT ${spv_suffix}
         COMMAND ${LLVM_SPIRV} ${spvflags} -o ${spv_suffix} ${builtins_link_lib}
-        DEPENDS ${builtins_link_lib_tgt}
+        DEPENDS ${builtins_link_lib}
       )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
@@ -376,7 +376,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       add_custom_command( OUTPUT ${builtins_opt_lib_tgt}.bc
         COMMAND libclc::opt ${opt_flags} -o ${builtins_opt_lib_tgt}.bc
           ${builtins_link_lib}
-        DEPENDS libclc::opt ${builtins_link_lib_tgt}
+        DEPENDS libclc::opt ${builtins_link_lib}
       )
       add_custom_target( ${builtins_opt_lib_tgt}
         ALL DEPENDS ${builtins_opt_lib_tgt}.bc
@@ -385,12 +385,13 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         PROPERTIES TARGET_FILE ${builtins_opt_lib_tgt}.bc
       )
 
+      set( builtins_opt_lib $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE> )
+
       # Add prepare target
       set( obj_suffix ${arch_suffix}.bc )
       add_custom_command( OUTPUT ${obj_suffix}
-        COMMAND prepare_builtins -o ${obj_suffix}
-          $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE>
-        DEPENDS ${builtins_opt_lib_tgt} prepare_builtins )
+        COMMAND prepare_builtins -o ${obj_suffix} ${builtins_opt_lib}
+        DEPENDS ${builtins_opt_lib} prepare_builtins )
       add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${obj_suffix} )
 
       # nvptx-- targets don't include workitem builtins

@@ -10,13 +10,18 @@
 typedef __SIZE_TYPE__ size_t;
 // cxx98-error@-1 0-1 {{'long long' is a C++11 extension}}
 
-#if __cplusplus < 201103L
-#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
-#else
-#define fold
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
 
-namespace dr200 { // dr200: dup 214
+#if __cplusplus == 199711L
+#define __enable_constant_folding(x) (__builtin_constant_p(x) ? (x) : (x))
+#else
+#define __enable_constant_folding
+#endif
+
+namespace cwg200 { // cwg200: dup 214
   template <class T> T f(int);
   template <class T, class U> T f(U) = delete;
   // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
@@ -26,29 +31,29 @@ namespace dr200 { // dr200: dup 214
   }
 }
 
-// dr201 is in dr201.cpp
+// cwg201 is in cwg201.cpp
 
-namespace dr202 { // dr202: 3.1
+namespace cwg202 { // cwg202: 3.1
   template<typename T> T f();
   template<int (*g)()> struct X {
-    int arr[fold(g == &f<int>) ? 1 : -1];
+    static_assert(__enable_constant_folding(g == &f<int>), "");
   };
   template struct X<f>;
 }
 
-// FIXME (export) dr204: no
+// FIXME (export) cwg204: no
 
-namespace dr206 { // dr206: yes
-  struct S; // #dr206-S
+namespace cwg206 { // cwg206: yes
+  struct S; // #cwg206-S
   template<typename T> struct Q { S s; };
   // expected-error@-1 {{field has incomplete type 'S'}}
-  //   expected-note@#dr206-S {{forward declaration of 'dr206::S'}}
+  //   expected-note@#cwg206-S {{forward declaration of 'cwg206::S'}}
   template<typename T> void f() { S s; }
   // expected-error@-1 {{variable has incomplete type 'S'}}
-  //   expected-note@#dr206-S {{forward declaration of 'dr206::S'}}
+  //   expected-note@#cwg206-S {{forward declaration of 'cwg206::S'}}
 }
 
-namespace dr207 { // dr207: yes
+namespace cwg207 { // cwg207: yes
   class A {
   protected:
     static void f() {}
@@ -63,22 +68,22 @@ namespace dr207 { // dr207: yes
   };
 }
 
-// dr208 FIXME: write codegen test
+// cwg208 FIXME: write codegen test
 
-namespace dr209 { // dr209: 3.2
+namespace cwg209 { // cwg209: 3.2
   class A {
-    void f(); // #dr209-A-f
+    void f(); // #cwg209-A-f
   };
   class B {
     friend void A::f();
-    // expected-error@-1 {{friend function 'f' is a private member of 'dr209::A'}}
-    //   expected-note@#dr209-A-f {{implicitly declared private here}}
+    // expected-error@-1 {{friend function 'f' is a private member of 'cwg209::A'}}
+    //   expected-note@#cwg209-A-f {{implicitly declared private here}}
   };
 }
 
-// dr210 is in dr210.cpp
+// cwg210 is in cwg210.cpp
 
-namespace dr211 { // dr211: yes
+namespace cwg211 { // cwg211: yes
   struct A {
     A() try {
       throw 0;
@@ -89,26 +94,26 @@ namespace dr211 { // dr211: yes
   };
 }
 
-namespace dr213 { // dr213: yes
+namespace cwg213 { // cwg213: yes
   template <class T> struct A : T {
     void h(T t) {
       char &r1 = f(t);
       int &r2 = g(t);
       // expected-error@-1 {{explicit qualification required to use member 'g' from dependent base class}}
-      //   expected-note@#dr213-instantiation {{in instantiation of member function 'dr213::A<dr213::B>::h' requested here}}
-      //   expected-note@#dr213-B-g {{member is declared here}}
+      //   expected-note@#cwg213-instantiation {{in instantiation of member function 'cwg213::A<cwg213::B>::h' requested here}}
+      //   expected-note@#cwg213-B-g {{member is declared here}}
     }
   };
   struct B {
     int &f(B);
-    int &g(B); // #dr213-B-g
+    int &g(B); // #cwg213-B-g
   };
   char &f(B);
 
-  template void A<B>::h(B); // #dr213-instantiation
+  template void A<B>::h(B); // #cwg213-instantiation
 }
 
-namespace dr214 { // dr214: yes
+namespace cwg214 { // cwg214: yes
   template<typename T, typename U> T checked_cast(U from) { U::error; }
   template<typename T, typename U> T checked_cast(U *from);
   class C {};
@@ -121,7 +126,7 @@ namespace dr214 { // dr214: yes
   }
 }
 
-namespace dr215 { // dr215: 2.9
+namespace cwg215 { // cwg215: 2.9
   template<typename T> class X {
     friend void T::foo();
     int n;
@@ -131,7 +136,7 @@ namespace dr215 { // dr215: 2.9
   };
 }
 
-namespace dr216 { // dr216: no
+namespace cwg216 { // cwg216: no
   // FIXME: Should reject this: 'f' has linkage but its type does not,
   // and 'f' is odr-used but not defined in this TU.
   typedef enum { e } *E;
@@ -147,7 +152,7 @@ namespace dr216 { // dr216: no
   void g(S s, S::E e) { s.f(e); }
 }
 
-namespace dr217 { // dr217: yes
+namespace cwg217 { // cwg217: yes
   template<typename T> struct S {
     void f(int);
   };
@@ -155,7 +160,7 @@ namespace dr217 { // dr217: yes
   // expected-error@-1 {{default arguments cannot be added to an out-of-line definition of a member of a class template}}
 }
 
-namespace dr218 { // dr218: yes
+namespace cwg218 { // cwg218: yes
                   // NB: also dup 405
   namespace A {
     struct S {};
@@ -219,12 +224,12 @@ namespace dr218 { // dr218: yes
   void testG(G::C<G::X::A, G::Y::B> gc) { f(gc); }
 }
 
-// dr219: na
-// dr220: na
+// cwg219: na
+// cwg220: na
 
-namespace dr221 { // dr221: 3.6
-  struct A { // #dr221-S
-    A &operator=(int&); // #dr221-S-copy-assign
+namespace cwg221 { // cwg221: 3.6
+  struct A { // #cwg221-S
+    A &operator=(int&); // #cwg221-S-copy-assign
     A &operator+=(int&);
     static A &operator=(A&, double&);
     // expected-error@-1 {{overloaded 'operator=' cannot be a static member function}}
@@ -243,20 +248,20 @@ namespace dr221 { // dr221: 3.6
     a += n;
     a = c;
     // expected-error@-1 {{no viable overloaded '='}}
-    //   expected-note@#dr221-S-copy-assign {{candidate function not viable: no known conversion from 'char' to 'int &' for 1st argument}}
-    //   since-cxx11-note@#dr221-S {{candidate function (the implicit move assignment operator) not viable: no known conversion from 'char' to 'A' for 1st argument}}
-    //   expected-note@#dr221-S {{candidate function (the implicit copy assignment operator) not viable: no known conversion from 'char' to 'const A' for 1st argument}}
+    //   expected-note@#cwg221-S-copy-assign {{candidate function not viable: no known conversion from 'char' to 'int &' for 1st argument}}
+    //   since-cxx11-note@#cwg221-S {{candidate function (the implicit move assignment operator) not viable: no known conversion from 'char' to 'A' for 1st argument}}
+    //   expected-note@#cwg221-S {{candidate function (the implicit copy assignment operator) not viable: no known conversion from 'char' to 'const A' for 1st argument}}
     a += c;
     a = f;
     // expected-error@-1 {{no viable overloaded '='}}
-    //   expected-note@#dr221-S-copy-assign {{candidate function not viable: no known conversion from 'float' to 'int &' for 1st argument}}
-    //   since-cxx11-note@#dr221-S {{candidate function (the implicit move assignment operator) not viable: no known conversion from 'float' to 'A' for 1st argument}}
-    //   expected-note@#dr221-S {{candidate function (the implicit copy assignment operator) not viable: no known conversion from 'float' to 'const A' for 1st argument}}
+    //   expected-note@#cwg221-S-copy-assign {{candidate function not viable: no known conversion from 'float' to 'int &' for 1st argument}}
+    //   since-cxx11-note@#cwg221-S {{candidate function (the implicit move assignment operator) not viable: no known conversion from 'float' to 'A' for 1st argument}}
+    //   expected-note@#cwg221-S {{candidate function (the implicit copy assignment operator) not viable: no known conversion from 'float' to 'const A' for 1st argument}}
     a += f;
   }
 }
 
-namespace dr222 { // dr222: dup 637
+namespace cwg222 { // cwg222: dup 637
   void f(int a, int b, int c, int *x) {
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Wunsequenced"
@@ -276,9 +281,9 @@ namespace dr222 { // dr222: dup 637
   }
 }
 
-// dr223: na
+// cwg223: na
 
-namespace dr224 { // dr224: 16
+namespace cwg224 { // cwg224: 16
   namespace example1 {
     template <class T> class A {
       typedef int type;
@@ -286,7 +291,7 @@ namespace dr224 { // dr224: 16
       A<T>::type b;
       A<T*>::type c;
       // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name A<T *>::type; implicit 'typename' is a C++20 extension}}
-      ::dr224::example1::A<T>::type d;
+      ::cwg224::example1::A<T>::type d;
 
       class B {
         typedef int type;
@@ -295,7 +300,7 @@ namespace dr224 { // dr224: 16
         A<T>::type b;
         A<T*>::type c;
         // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name A<T *>::type; implicit 'typename' is a C++20 extension}}
-        ::dr224::example1::A<T>::type d;
+        ::cwg224::example1::A<T>::type d;
 
         B::type e;
         A<T>::B::type f;
@@ -348,15 +353,15 @@ namespace dr224 { // dr224: 16
   }
 }
 
-// dr225: yes
-template<typename T> void dr225_f(T t) { dr225_g(t); }
-// expected-error@-1 {{call to function 'dr225_g' that is neither visible in the template definition nor found by argument-dependent lookup}}
-//   expected-note@#dr225-f {{in instantiation of function template specialization 'dr225_f<int>' requested here}}
-//   expected-note@#dr225-g {{'dr225_g' should be declared prior to the call site}}
-void dr225_g(int); // #dr225-g
-template void dr225_f(int); // #dr225-f
+// cwg225: yes
+template<typename T> void cwg225_f(T t) { cwg225_g(t); }
+// expected-error@-1 {{call to function 'cwg225_g' that is neither visible in the template definition nor found by argument-dependent lookup}}
+//   expected-note@#cwg225-f {{in instantiation of function template specialization 'cwg225_f<int>' requested here}}
+//   expected-note@#cwg225-g {{'cwg225_g' should be declared prior to the call site}}
+void cwg225_g(int); // #cwg225-g
+template void cwg225_f(int); // #cwg225-f
 
-namespace dr226 { // dr226: no
+namespace cwg226 { // cwg226: no
   // FIXME: This appears to be wrong: default arguments for function templates
   // are listed as a defect (in c++98) not an extension. EDG accepts them in
   // strict c++98 mode.
@@ -406,14 +411,14 @@ namespace dr226 { // dr226: no
   int x = foo(0, 0);
 }
 
-void dr227(bool b) { // dr227: yes
+void cwg227(bool b) { // cwg227: yes
   if (b)
     int n;
   else
     int n;
 }
 
-namespace dr228 { // dr228: yes
+namespace cwg228 { // cwg228: yes
   template <class T> struct X {
     void f();
   };
@@ -422,50 +427,50 @@ namespace dr228 { // dr228: yes
   };
 }
 
-namespace dr229 { // dr229: 2.9
+namespace cwg229 { // cwg229: 2.9
   template<typename T> void f();
   template<typename T> void f<T*>() {}
   // expected-error@-1 {{function template partial specialization is not allowed}}
   template<> void f<int>() {}
 }
 
-namespace dr230 { // dr230: 3.0
+namespace cwg230 { // cwg230: 3.0
   struct S {
     S() { f(); }
-    // expected-warning@-1 {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the constructor of 'dr230::S'}}
-    //   expected-note@#dr230-f {{'f' declared here}}
-    virtual void f() = 0; // #dr230-f
+    // expected-warning@-1 {{call to pure virtual member function 'f' has undefined behavior; overrides of 'f' in subclasses are not available in the constructor of 'cwg230::S'}}
+    //   expected-note@#cwg230-f {{'f' declared here}}
+    virtual void f() = 0; // #cwg230-f
   };
 }
 
-namespace dr231 { // dr231: yes
+namespace cwg231 { // cwg231: yes
   namespace outer {
     namespace inner {
-      int i; // #dr231-i
+      int i; // #cwg231-i
     }
     void f() { using namespace inner; }
     int j = i;
     // expected-error@-1 {{use of undeclared identifier 'i'; did you mean 'inner::i'?}}
-    //   expected-note@#dr231-i {{'inner::i' declared here}}
+    //   expected-note@#cwg231-i {{'inner::i' declared here}}
   }
 }
 
-// dr234: na
-// dr235: na
+// cwg234: na
+// cwg235: na
 
-namespace dr236 { // dr236: 3.2
+namespace cwg236 { // cwg236: 3.2
   void *p = int();
   // cxx98-warning@-1 {{expression which evaluates to zero treated as a null pointer constant of type 'void *'}}
   // since-cxx11-error@-2 {{cannot initialize a variable of type 'void *' with an rvalue of type 'int'}}
 }
 
-namespace dr237 { // dr237: dup 470
+namespace cwg237 { // cwg237: dup 470
   template<typename T> struct A { void f() { T::error; } };
   template<typename T> struct B : A<T> {};
   template struct B<int>; // ok
 }
 
-namespace dr239 { // dr239: yes
+namespace cwg239 { // cwg239: yes
   namespace NS {
     class T {};
     void f(T);
@@ -481,64 +486,64 @@ namespace dr239 { // dr239: yes
   }
 }
 
-// dr240: dup 616
+// cwg240: dup 616
 
-namespace dr241 { // dr241: yes
+namespace cwg241 { // cwg241: yes
   namespace A {
     struct B {};
-    template <int X> void f(); // #dr241-A-f
+    template <int X> void f(); // #cwg241-A-f
     template <int X> void g(B);
   }
   namespace C {
-    template <class T> void f(T t); // #dr241-C-f
-    template <class T> void g(T t); // #dr241-C-g
+    template <class T> void f(T t); // #cwg241-C-f
+    template <class T> void g(T t); // #cwg241-C-g
   }
   void h(A::B b) {
     f<3>(b);
     // expected-error@-1 {{no matching function for call to 'f'}}
-    //   expected-note@#dr241-A-f {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
+    //   expected-note@#cwg241-A-f {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
     // cxx98-17-error@-3 {{use of function template name with no prior declaration in function call with explicit template arguments is a C++20 extension}}
     g<3>(b);
     // cxx98-17-error@-1 {{use of function template name with no prior declaration in function call with explicit template arguments is a C++20 extension}}
     A::f<3>(b);
     // expected-error@-1 {{no matching function for call to 'f'}}
-    //   expected-note@#dr241-A-f {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
+    //   expected-note@#cwg241-A-f {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
     A::g<3>(b);
     C::f<3>(b);
     // expected-error@-1 {{no matching function for call to 'f'}}
-    //   expected-note@#dr241-C-f {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
+    //   expected-note@#cwg241-C-f {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
     C::g<3>(b);
     // expected-error@-1 {{no matching function for call to 'g'}}
-    //   expected-note@#dr241-C-g {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
+    //   expected-note@#cwg241-C-g {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
     using C::f;
     using C::g;
     f<3>(b);
     // expected-error@-1 {{no matching function for call to 'f'}}
-    //   expected-note@#dr241-C-f {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
-    //   expected-note@#dr241-A-f {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
+    //   expected-note@#cwg241-C-f {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
+    //   expected-note@#cwg241-A-f {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
     g<3>(b);
   }
 }
 
-namespace dr243 { // dr243: yes
+namespace cwg243 { // cwg243: yes
   struct B;
   struct A {
-    A(B); // #dr243-A
+    A(B); // #cwg243-A
   };
   struct B {
-    operator A() = delete; // #dr243-B
+    operator A() = delete; // #cwg243-B
     // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
   } b;
   A a1(b);
   A a2 = b;
   // expected-error@-1 {{conversion from 'struct B' to 'A' is ambiguous}}
-  //   expected-note@#dr243-A {{candidate constructor}}
-  //   expected-note@#dr243-B {{candidate function has been explicitly deleted}}
+  //   expected-note@#cwg243-A {{candidate constructor}}
+  //   expected-note@#cwg243-B {{candidate function has been explicitly deleted}}
 }
 
-namespace dr244 { // dr244: 11
-                  // NB: this test is reused by dr399
-  struct B {}; // #dr244-B
+namespace cwg244 { // cwg244: 11
+                  // NB: this test is reused by cwg399
+  struct B {}; // #cwg244-B
   struct D : B {};
 
   D D_object;
@@ -547,18 +552,18 @@ namespace dr244 { // dr244: 11
 
   void f() {
     D_object.~B();
-    // expected-error@-1 {{destructor type 'dr244::B' in object destruction expression does not match the type 'D' of the object being destroyed}}
-    //   expected-note@#dr244-B {{type 'dr244::B' found by destructor name lookup}}
+    // expected-error@-1 {{destructor type 'cwg244::B' in object destruction expression does not match the type 'D' of the object being destroyed}}
+    //   expected-note@#cwg244-B {{type 'cwg244::B' found by destructor name lookup}}
     D_object.B::~B();
     D_object.D::~B(); // FIXME: Missing diagnostic for this.
     B_ptr->~B();
     B_ptr->~B_alias();
     B_ptr->B_alias::~B();
     B_ptr->B_alias::~B_alias();
-    B_ptr->dr244::~B();
-    // expected-error@-1 {{qualified member access refers to a member in namespace 'dr244'}}
-    B_ptr->dr244::~B_alias();
-    // expected-error@-1 {{qualified member access refers to a member in namespace 'dr244'}}
+    B_ptr->cwg244::~B();
+    // expected-error@-1 {{qualified member access refers to a member in namespace 'cwg244'}}
+    B_ptr->cwg244::~B_alias();
+    // expected-error@-1 {{qualified member access refers to a member in namespace 'cwg244'}}
   }
 
   template<typename T, typename U>
@@ -570,10 +575,10 @@ namespace dr244 { // dr244: 11
     B_ptr->~B_alias();
     B_ptr->B_alias::~B();
     B_ptr->B_alias::~B_alias();
-    B_ptr->dr244::~B();
-    // expected-error@-1 {{'dr244' does not refer to a type name in pseudo-destructor expression; expected the name of type 'T'}}
-    B_ptr->dr244::~B_alias();
-    // expected-error@-1 {{'dr244' does not refer to a type name in pseudo-destructor expression; expected the name of type 'T'}}
+    B_ptr->cwg244::~B();
+    // expected-error@-1 {{'cwg244' does not refer to a type name in pseudo-destructor expression; expected the name of type 'T'}}
+    B_ptr->cwg244::~B_alias();
+    // expected-error@-1 {{'cwg244' does not refer to a type name in pseudo-destructor expression; expected the name of type 'T'}}
   }
   template void f<B, D>(B*, D);
 
@@ -582,7 +587,7 @@ namespace dr244 { // dr244: 11
     typedef E<int> F;
   }
   void g(N::F f) {
-    typedef N::F G; // #dr244-G
+    typedef N::F G; // #cwg244-G
     f.~G();
     f.G::~E();
     // expected-error@-1 {{ISO C++ requires the name after '::~' to be found in the same scope as the name before '::~'}}
@@ -601,7 +606,7 @@ namespace dr244 { // dr244: 11
     // Rejecting this seems correct, but most compilers accept, so we do also.
     f.N::F::~G();
     // expected-error@-1 {{qualified destructor name only found in lexical scope; omit the qualifier to find this type name by unqualified lookup}}
-    //   expected-note@#dr244-G {{type 'G' (aka 'E<int>') found by destructor name lookup}}
+    //   expected-note@#cwg244-G {{type 'G' (aka 'E<int>') found by destructor name lookup}}
   }
 
   // Bizarrely, compilers perform lookup in the scope for qualified destructor
@@ -613,46 +618,46 @@ namespace dr244 { // dr244: 11
     }
     template <typename U> void f(typename N::S<U>::Inner *p) {
       typedef typename N::S<U>::Inner T;
-      p->::dr244::QualifiedLookupInScope::N::S<U>::Inner::~T();
-      // expected-error@-1 {{no type named 'T' in 'dr244::QualifiedLookupInScope::N::S<int>'}}
-      //   expected-note@#dr244-f {{in instantiation of function template specialization 'dr244::QualifiedLookupInScope::f<int>' requested here}}
+      p->::cwg244::QualifiedLookupInScope::N::S<U>::Inner::~T();
+      // expected-error@-1 {{no type named 'T' in 'cwg244::QualifiedLookupInScope::N::S<int>'}}
+      //   expected-note@#cwg244-f {{in instantiation of function template specialization 'cwg244::QualifiedLookupInScope::f<int>' requested here}}
     }
-    template void f<int>(N::S<int>::Inner *); // #dr244-f
+    template void f<int>(N::S<int>::Inner *); // #cwg244-f
 
     template <typename U> void g(U *p) {
       typedef U T;
       p->T::~T();
       p->U::~T();
-      p->::dr244::QualifiedLookupInScope::N::S<int>::Inner::~T();
+      p->::cwg244::QualifiedLookupInScope::N::S<int>::Inner::~T();
       // expected-error@-1 {{'T' does not refer to a type name in pseudo-destructor expression; expected the name of type 'U'}}
     }
     template void g(N::S<int>::Inner *);
   }
 }
 
-namespace dr245 { // dr245: yes
+namespace cwg245 { // cwg245: yes
   struct S {
-    enum E {}; // #dr245-E
+    enum E {}; // #cwg245-E
     class E *p;
     // expected-error@-1 {{use of 'E' with tag type that does not match previous declaration}}
-    //   expected-note@#dr245-E {{previous use is here}}
+    //   expected-note@#cwg245-E {{previous use is here}}
   };
 }
 
-namespace dr246 { // dr246: 3.2
+namespace cwg246 { // cwg246: 3.2
   struct S {
-    S() try { // #dr246-try
+    S() try { // #cwg246-try
       throw 0;
 X: ;
     } catch (int) {
       goto X;
       // expected-error@-1 {{cannot jump from this goto statement to its label}}
-      //   expected-note@#dr246-try {{jump bypasses initialization of try block}}
+      //   expected-note@#cwg246-try {{jump bypasses initialization of try block}}
     }
   };
 }
 
-namespace dr247 { // dr247: yes
+namespace cwg247 { // cwg247: yes
   struct A {};
   struct B : A {
     void f();
@@ -678,16 +683,16 @@ namespace dr247 { // dr247: yes
   void (F::*i)() = &F::f;
 }
 
-namespace dr248 { // dr248: sup P1949
+namespace cwg248 { // cwg248: sup P1949
   int \u040d\u040e = 0;
 }
 
-namespace dr249 { // dr249: yes
+namespace cwg249 { // cwg249: yes
   template<typename T> struct X { void f(); };
   template<typename T> void X<T>::f() {}
 }
 
-namespace dr250 { // dr250: yes
+namespace cwg250 { // cwg250: yes
   typedef void (*FPtr)(double x[]);
 
   template<int I> void f(double x[]);
@@ -698,49 +703,49 @@ namespace dr250 { // dr250: yes
   FPtr gp = &g<>;
 }
 
-namespace dr252 { // dr252: 3.1
+namespace cwg252 { // cwg252: 3.1
   struct A {
-    void operator delete(void*); // #dr252-A
+    void operator delete(void*); // #cwg252-A
   };
   struct B {
-    void operator delete(void*); // #dr252-B
+    void operator delete(void*); // #cwg252-B
   };
   struct C : A, B {
     virtual ~C();
   };
   C::~C() {}
   // expected-error@-1 {{member 'operator delete' found in multiple base classes of different types}}
-  //   expected-note@#dr252-A {{member found by ambiguous name lookup}}
-  //   expected-note@#dr252-B {{member found by ambiguous name lookup}}
+  //   expected-note@#cwg252-A {{member found by ambiguous name lookup}}
+  //   expected-note@#cwg252-B {{member found by ambiguous name lookup}}
 
   struct D {
-    void operator delete(void*, int); // #dr252-D
+    void operator delete(void*, int); // #cwg252-D
     virtual ~D();
   };
   D::~D() {}
   // expected-error@-1 {{no suitable member 'operator delete' in 'D'}}
-  //   expected-note@#dr252-D {{member 'operator delete' declared here}}
+  //   expected-note@#cwg252-D {{member 'operator delete' declared here}}
 
   struct E {
     void operator delete(void*, int);
-    void operator delete(void*) = delete; // #dr252-E
+    void operator delete(void*) = delete; // #cwg252-E
     // cxx98-error@-1 {{deleted function definitions are a C++11 extension}} 
     virtual ~E();
   };
   E::~E() {}
   // expected-error@-1 {{attempt to use a deleted function}}
-  //   expected-note@#dr252-E {{'operator delete' has been explicitly marked deleted here}}
+  //   expected-note@#cwg252-E {{'operator delete' has been explicitly marked deleted here}}
 
   struct F {
     // If both functions are available, the first one is a placement delete.
     void operator delete(void*, size_t);
-    void operator delete(void*) = delete; // #dr252-F
+    void operator delete(void*) = delete; // #cwg252-F
     // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
     virtual ~F();
   };
   F::~F() {}
   // expected-error@-1 {{attempt to use a deleted function}}
-  //   expected-note@#dr252-F {{'operator delete' has been explicitly marked deleted here}}
+  //   expected-note@#cwg252-F {{'operator delete' has been explicitly marked deleted here}}
 
   struct G {
     void operator delete(void*, size_t);
@@ -749,33 +754,33 @@ namespace dr252 { // dr252: 3.1
   G::~G() {}
 }
 
-namespace dr254 { // dr254: 2.9
+namespace cwg254 { // cwg254: 2.9
   template<typename T> struct A {
     typedef typename T::type type; // ok even if this is a typedef-name, because
                                    // it's not an elaborated-type-specifier
     typedef struct T::type foo;
     // expected-error@-1 {{typedef 'type' cannot be referenced with a struct specifier}}
-    //   expected-note@#dr254-instantiation {{in instantiation of template class 'dr254::A<dr254::C>' requested here}}
-    //   expected-note@#dr254-C {{declared here}}
+    //   expected-note@#cwg254-instantiation {{in instantiation of template class 'cwg254::A<cwg254::C>' requested here}}
+    //   expected-note@#cwg254-C {{declared here}}
   };
   struct B { struct type {}; };
-  struct C { typedef struct {} type; }; // #dr254-C
+  struct C { typedef struct {} type; }; // #cwg254-C
   A<B>::type n;
-  A<C>::type n; // #dr254-instantiation
+  A<C>::type n; // #cwg254-instantiation
 }
 
-namespace dr255 { // dr255: yes
+namespace cwg255 { // cwg255: yes
 struct S {
   void operator delete(void *){};
   void operator delete(void *, int){};
 };
 void f(S *p) { delete p; }
-} // namespace dr255
+} // namespace cwg255
 
-// dr256: dup 624
+// cwg256: dup 624
 
-namespace dr257 { // dr257: 3.4
-  struct A { A(int); }; // #dr257-A
+namespace cwg257 { // cwg257: 3.4
+  struct A { A(int); }; // #cwg257-A
   struct B : virtual A {
     B() {}
     virtual void f() = 0;
@@ -785,13 +790,13 @@ namespace dr257 { // dr257: 3.4
   };
   struct D : B {
     D() {}
-    // expected-error@-1 {{constructor for 'dr257::D' must explicitly initialize the base class 'A' which does not have a default constructor}}
-    //   expected-note@#dr257-A {{'dr257::A' declared here}}
+    // expected-error@-1 {{constructor for 'cwg257::D' must explicitly initialize the base class 'A' which does not have a default constructor}}
+    //   expected-note@#cwg257-A {{'cwg257::A' declared here}}
     void f();
   };
 }
 
-namespace dr258 { // dr258: 2.8
+namespace cwg258 { // cwg258: 2.8
   struct A {
     void f(const int);
     template<typename> void g(int);
@@ -802,13 +807,13 @@ namespace dr258 { // dr258: 2.8
     using A::g;
     using A::h;
     int &f(int);
-    template<int> int &g(int); // #dr258-B-g
+    template<int> int &g(int); // #cwg258-B-g
     int &h();
   } b;
   int &w = b.f(0);
   int &x = b.g<int>(0);
   // expected-error@-1 {{no matching member function for call to 'g'}}
-  //   expected-note@#dr258-B-g {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  //   expected-note@#cwg258-B-g {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
   int &y = b.h();
   float &z = const_cast<const B&>(b).h();
 
@@ -820,53 +825,53 @@ namespace dr258 { // dr258: 2.8
   } d;
 
   struct E {
-    virtual void f() = 0; // #dr258-E-f
+    virtual void f() = 0; // #cwg258-E-f
   };
   struct F : E {
     void f() const {}
   } f;
   // expected-error@-1 {{variable type 'struct F' is an abstract class}}
-  //   expected-note@#dr258-E-f {{unimplemented pure virtual method 'f' in 'F'}}
+  //   expected-note@#cwg258-E-f {{unimplemented pure virtual method 'f' in 'F'}}
 }
 
-namespace dr259 { // dr259: 4
+namespace cwg259 { // cwg259: 4
   template<typename T> struct A {};
-  template struct A<int>; // #dr259-A-int 
+  template struct A<int>; // #cwg259-A-int 
   template struct A<int>;
   // expected-error@-1 {{duplicate explicit instantiation of 'A<int>'}}
-  //   expected-note@#dr259-A-int {{previous explicit instantiation is here}}
+  //   expected-note@#cwg259-A-int {{previous explicit instantiation is here}}
 
-  template<> struct A<float>; // #dr259-A-float
+  template<> struct A<float>; // #cwg259-A-float
   template struct A<float>;
   // expected-warning@-1 {{explicit instantiation of 'A<float>' that occurs after an explicit specialization has no effect}}
-  //   expected-note@#dr259-A-float {{previous template specialization is here}}
+  //   expected-note@#cwg259-A-float {{previous template specialization is here}}
 
-  template struct A<char>; // #dr259-A-char
+  template struct A<char>; // #cwg259-A-char
   template<> struct A<char>;
-  // expected-error@-1 {{explicit specialization of 'dr259::A<char>' after instantiation}}
-  //   expected-note@#dr259-A-char {{explicit instantiation first required here}}
+  // expected-error@-1 {{explicit specialization of 'cwg259::A<char>' after instantiation}}
+  //   expected-note@#cwg259-A-char {{explicit instantiation first required here}}
 
   template<> struct A<double>;
   template<> struct A<double>;
-  template<> struct A<double> {}; // #dr259-A-double
+  template<> struct A<double> {}; // #cwg259-A-double
   template<> struct A<double> {};
   // expected-error@-1 {{redefinition of 'A<double>'}}
-  //   expected-note@#dr259-A-double {{previous definition is here}}
+  //   expected-note@#cwg259-A-double {{previous definition is here}}
 
-  template<typename T> struct B; // #dr259-B
+  template<typename T> struct B; // #cwg259-B
   template struct B<int>;
-  // expected-error@-1 {{explicit instantiation of undefined template 'dr259::B<int>'}}
-  //   expected-note@#dr259-B {{template is declared here}}
+  // expected-error@-1 {{explicit instantiation of undefined template 'cwg259::B<int>'}}
+  //   expected-note@#cwg259-B {{template is declared here}}
 
-  template<> struct B<float>; // #dr259-B-float
+  template<> struct B<float>; // #cwg259-B-float
   template struct B<float>;
   // expected-warning@-1 {{explicit instantiation of 'B<float>' that occurs after an explicit specialization has no effect}}
-  //   expected-note@#dr259-B-float {{previous template specialization is here}}
+  //   expected-note@#cwg259-B-float {{previous template specialization is here}}
 }
 
-// FIXME: When dr260 is resolved, also add tests for DR507.
+// FIXME: When cwg260 is resolved, also add tests for CWG507.
 
-namespace dr261 { // dr261: no
+namespace cwg261 { // cwg261: no
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Wused-but-marked-unused"
 
@@ -901,14 +906,14 @@ namespace dr261 { // dr261: no
 #pragma clang diagnostic pop
 }
 
-namespace dr262 { // dr262: yes
+namespace cwg262 { // cwg262: yes
   int f(int = 0, ...);
   int k = f();
   int l = f(0);
   int m = f(0, 0);
 }
 
-namespace dr263 { // dr263: 3.3
+namespace cwg263 { // cwg263: 3.3
   struct X {};
   struct Y {
 #if __cplusplus < 201103L
@@ -928,12 +933,12 @@ namespace dr263 { // dr263: 3.3
   };
 }
 
-// dr265: dup 353
-// dr266: na
-// dr269: na
-// dr270: na
+// cwg265: dup 353
+// cwg266: na
+// cwg269: na
+// cwg270: na
 
-namespace dr272 { // dr272: yes
+namespace cwg272 { // cwg272: yes
   struct X {
     void f() {
       this->~X();
@@ -946,7 +951,7 @@ namespace dr272 { // dr272: yes
 
 #include <stdarg.h>
 #include <stddef.h>
-namespace dr273 { // dr273: yes
+namespace cwg273 { // cwg273: yes
   struct A {
     int n;
   };
@@ -959,12 +964,12 @@ namespace dr273 { // dr273: yes
   }
 }
 
-// dr274: na
+// cwg274: na
 
-namespace dr275 { // dr275: no
+namespace cwg275 { // cwg275: no
   namespace N {
-    template <class T> void f(T) {} // #dr275-N-f
-    template <class T> void g(T) {} // #dr275-N-g
+    template <class T> void f(T) {} // #cwg275-N-f
+    template <class T> void g(T) {} // #cwg275-N-g
     template <> void f(int);
     template <> void f(char);
     template <> void f(double);
@@ -980,19 +985,19 @@ namespace dr275 { // dr275: no
     template <> void g(char) {}
     // FIXME: this should be rejected in c++98 too
     template void f(long);
-    // since-cxx11-error@-1 {{explicit instantiation of 'dr275::N::f' must occur in namespace 'N'}}
-    //   since-cxx11-note@#dr275-N-f {{explicit instantiation refers here}}
+    // since-cxx11-error@-1 {{explicit instantiation of 'cwg275::N::f' must occur in namespace 'N'}}
+    //   since-cxx11-note@#cwg275-N-f {{explicit instantiation refers here}}
     // FIXME: this should be rejected in c++98 too
     template void N::f(unsigned long);
     // since-cxx11-error@-1 {{explicit instantiation of 'f' not in a namespace enclosing 'N'}}
-    //   since-cxx11-note@#dr275-N-f {{explicit instantiation refers here}}
+    //   since-cxx11-note@#cwg275-N-f {{explicit instantiation refers here}}
     template void h(long);
     // expected-error@-1 {{explicit instantiation of 'h' does not refer to a function template, variable template, member function, member class, or static data member}}
     template <> void f(double) {}
     // expected-error@-1 {{no function template matches function template specialization 'f'}}
   }
 
-  template <class T> void g(T) {} // #dr275-g 
+  template <class T> void g(T) {} // #cwg275-g 
 
   template <> void N::f(char) {}
   template <> void f(int) {}
@@ -1000,87 +1005,87 @@ namespace dr275 { // dr275: no
 
   // FIXME: this should be rejected in c++98 too
   template void f(short);
-  // since-cxx11-error@-1 {{explicit instantiation of 'dr275::N::f' must occur in namespace 'N'}}
-  //   since-cxx11-note@#dr275-N-f {{explicit instantiation refers here}}
+  // since-cxx11-error@-1 {{explicit instantiation of 'cwg275::N::f' must occur in namespace 'N'}}
+  //   since-cxx11-note@#cwg275-N-f {{explicit instantiation refers here}}
   template void N::f(unsigned short);
 
   // FIXME: this should probably be valid. the wording from the issue
   // doesn't clarify this, but it follows from the usual rules.
   template void g(int);
   // expected-error@-1 {{partial ordering for explicit instantiation of 'g' is ambiguous}}
-  //   expected-note@#dr275-g {{explicit instantiation candidate function 'dr275::g<int>' template here [with T = int]}}
-  //   expected-note@#dr275-N-g {{explicit instantiation candidate function 'dr275::N::g<int>' template here [with T = int]}}
+  //   expected-note@#cwg275-g {{explicit instantiation candidate function 'cwg275::g<int>' template here [with T = int]}}
+  //   expected-note@#cwg275-N-g {{explicit instantiation candidate function 'cwg275::N::g<int>' template here [with T = int]}}
 
   // FIXME: likewise, this should also be valid.
-  template<typename T> void f(T) {} // #dr275-f
+  template<typename T> void f(T) {} // #cwg275-f
   template void f(short);
   // expected-error@-1 {{partial ordering for explicit instantiation of 'f' is ambiguous}}
-  //   expected-note@#dr275-f {{explicit instantiation candidate function 'dr275::f<short>' template here [with T = short]}}
-  //   expected-note@#dr275-N-f {{explicit instantiation candidate function 'dr275::N::f<short>' template here [with T = short]}}
+  //   expected-note@#cwg275-f {{explicit instantiation candidate function 'cwg275::f<short>' template here [with T = short]}}
+  //   expected-note@#cwg275-N-f {{explicit instantiation candidate function 'cwg275::N::f<short>' template here [with T = short]}}
 }
 
-// dr276: na
+// cwg276: na
 
-namespace dr277 { // dr277: 3.1
+namespace cwg277 { // cwg277: 3.1
   typedef int *intp;
   int *p = intp();
-  int a[fold(intp() ? -1 : 1)];
+  static_assert(__enable_constant_folding(!intp()), "");
 }
 
-namespace dr280 { // dr280: 2.9
+namespace cwg280 { // cwg280: 2.9
   typedef void f0();
   typedef void f1(int);
   typedef void f2(int, int);
   typedef void f3(int, int, int);
   struct A {
-    operator f1*(); // #dr280-A-f1
+    operator f1*(); // #cwg280-A-f1
     operator f2*();
   };
   struct B {
-    operator f0*(); // #dr280-B-f0
+    operator f0*(); // #cwg280-B-f0
   private:
-    operator f3*(); // #dr280-B-f3
+    operator f3*(); // #cwg280-B-f3
   };
   struct C {
-    operator f0*(); // #dr280-C-f0
-    operator f1*(); // #dr280-C-f1
-    operator f2*(); // #dr280-C-f2
-    operator f3*(); // #dr280-C-f3
+    operator f0*(); // #cwg280-C-f0
+    operator f1*(); // #cwg280-C-f1
+    operator f2*(); // #cwg280-C-f2
+    operator f3*(); // #cwg280-C-f3
   };
-  struct D : private A, B { // #dr280-D
-    operator f2*(); // #dr280-D-f2
+  struct D : private A, B { // #cwg280-D
+    operator f2*(); // #cwg280-D-f2
   } d;
   struct E : C, D {} e;
   void g() {
     d(); // ok, public
     d(0);
-    // expected-error@-1 {{'operator void (*)(int)' is a private member of 'dr280::A'}}
-    //   expected-note@#dr280-D {{constrained by private inheritance here}}
-    //   expected-note@#dr280-A-f1 {{member is declared here}}
+    // expected-error@-1 {{'operator void (*)(int)' is a private member of 'cwg280::A'}}
+    //   expected-note@#cwg280-D {{constrained by private inheritance here}}
+    //   expected-note@#cwg280-A-f1 {{member is declared here}}
     d(0, 0); // ok, suppressed by member in D
     d(0, 0, 0);
-    // expected-error@-1 {{'operator void (*)(int, int, int)' is a private member of 'dr280::B'}}
-    //   expected-note@#dr280-B-f3 {{declared private here}}
+    // expected-error@-1 {{'operator void (*)(int, int, int)' is a private member of 'cwg280::B'}}
+    //   expected-note@#cwg280-B-f3 {{declared private here}}
     e();
     // expected-error@-1 {{call to object of type 'struct E' is ambiguous}}
-    //   expected-note@#dr280-B-f0 {{conversion candidate of type 'void (*)()'}}
-    //   expected-note@#dr280-C-f0 {{conversion candidate of type 'void (*)()'}}
+    //   expected-note@#cwg280-B-f0 {{conversion candidate of type 'void (*)()'}}
+    //   expected-note@#cwg280-C-f0 {{conversion candidate of type 'void (*)()'}}
     e(0);
     // expected-error@-1 {{call to object of type 'struct E' is ambiguous}}
-    //   expected-note@#dr280-A-f1 {{conversion candidate of type 'void (*)(int)'}}
-    //   expected-note@#dr280-C-f1 {{conversion candidate of type 'void (*)(int)'}}
+    //   expected-note@#cwg280-A-f1 {{conversion candidate of type 'void (*)(int)'}}
+    //   expected-note@#cwg280-C-f1 {{conversion candidate of type 'void (*)(int)'}}
     e(0, 0);
     // expected-error@-1 {{call to object of type 'struct E' is ambiguous}}
-    //   expected-note@#dr280-C-f2 {{conversion candidate of type 'void (*)(int, int)'}}
-    //   expected-note@#dr280-D-f2 {{conversion candidate of type 'void (*)(int, int)'}}
+    //   expected-note@#cwg280-C-f2 {{conversion candidate of type 'void (*)(int, int)'}}
+    //   expected-note@#cwg280-D-f2 {{conversion candidate of type 'void (*)(int, int)'}}
     e(0, 0, 0);
     // expected-error@-1 {{call to object of type 'struct E' is ambiguous}}
-    //   expected-note@#dr280-B-f3 {{conversion candidate of type 'void (*)(int, int, int)'}}
-    //   expected-note@#dr280-C-f3 {{conversion candidate of type 'void (*)(int, int, int)'}}
+    //   expected-note@#cwg280-B-f3 {{conversion candidate of type 'void (*)(int, int, int)'}}
+    //   expected-note@#cwg280-C-f3 {{conversion candidate of type 'void (*)(int, int, int)'}}
   }
 }
 
-namespace dr281 { // dr281: no
+namespace cwg281 { // cwg281: no
   void a();
   inline void b();
 
@@ -1097,19 +1102,19 @@ namespace dr281 { // dr281: no
   };
 }
 
-namespace dr283 { // dr283: yes
-  template<typename T> // #dr283-template
+namespace cwg283 { // cwg283: yes
+  template<typename T> // #cwg283-template
   struct S {
     friend class T;
     // expected-error@-1 {{declaration of 'T' shadows template parameter}}
-    //   expected-note@#dr283-template {{template parameter is declared here}}
+    //   expected-note@#cwg283-template {{template parameter is declared here}}
     class T;
     // expected-error@-1 {{declaration of 'T' shadows template parameter}}
-    //   expected-note@#dr283-template {{template parameter is declared here}}
+    //   expected-note@#cwg283-template {{template parameter is declared here}}
   };
 }
 
-namespace dr284 { // dr284: no
+namespace cwg284 { // cwg284: no
   namespace A {
     struct X;
     enum Y {};
@@ -1122,11 +1127,11 @@ namespace dr284 { // dr284: no
     using A::Z;
   }
   struct B::V {};
-  // expected-error@-1 {{no struct named 'V' in namespace 'dr284::B'}}
+  // expected-error@-1 {{no struct named 'V' in namespace 'cwg284::B'}}
   struct B::W {};
   struct B::X {}; // FIXME: ill-formed
-  enum B::Y e; // ok per dr417
-  class B::Z z; // ok per dr417
+  enum B::Y e; // ok per cwg417
+  class B::Z z; // ok per cwg417
 
   struct C {
     struct X;
@@ -1140,26 +1145,26 @@ namespace dr284 { // dr284: no
     using C::Z;
   };
   struct D::V {};
-  // expected-error@-1 {{no struct named 'V' in 'dr284::D'}}
+  // expected-error@-1 {{no struct named 'V' in 'cwg284::D'}}
   struct D::W {};
   struct D::X {}; // FIXME: ill-formed
-  enum D::Y e2; // ok per dr417
-  class D::Z z2; // ok per dr417
+  enum D::Y e2; // ok per cwg417
+  class D::Z z2; // ok per cwg417
 }
 
-namespace dr285 { // dr285: yes
-  template<typename T> void f(T, int); // #dr285-f-T-int
-  template<typename T> void f(int, T); // #dr285-f-int-T
+namespace cwg285 { // cwg285: yes
+  template<typename T> void f(T, int); // #cwg285-f-T-int
+  template<typename T> void f(int, T); // #cwg285-f-int-T
   template<> void f<int>(int, int) {}
   // expected-error@-1 {{function template specialization 'f' ambiguously refers to more than one function template; explicitly specify additional template arguments to identify a particular function template}}
-  //   expected-note@#dr285-f-int-T {{function template 'dr285::f<int>' matches specialization [with T = int]}}
-  //   expected-note@#dr285-f-T-int {{function template 'dr285::f<int>' matches specialization [with T = int]}}
+  //   expected-note@#cwg285-f-int-T {{function template 'cwg285::f<int>' matches specialization [with T = int]}}
+  //   expected-note@#cwg285-f-T-int {{function template 'cwg285::f<int>' matches specialization [with T = int]}}
 }
 
-namespace dr286 { // dr286: 2.8
+namespace cwg286 { // cwg286: 2.8
   template<class T> struct A {
     class C {
-      template<class T2> struct B {}; // #dr286-B 
+      template<class T2> struct B {}; // #cwg286-B 
     };
   };
 
@@ -1168,29 +1173,29 @@ namespace dr286 { // dr286: 2.8
   struct A<T>::C::B<T2*> { };
 
   A<short>::C::B<int*> absip;
-  // expected-error@-1 {{'B' is a private member of 'dr286::A<short>::C'}}
-  //   expected-note@#dr286-B {{implicitly declared private here}}
+  // expected-error@-1 {{'B' is a private member of 'cwg286::A<short>::C'}}
+  //   expected-note@#cwg286-B {{implicitly declared private here}}
 }
 
-// dr288: na
+// cwg288: na
 
-namespace dr289 { // dr289: yes
-  struct A; // #dr289-A
+namespace cwg289 { // cwg289: yes
+  struct A; // #cwg289-A
   struct B : A {};
   // expected-error@-1 {{base class has incomplete type}}
-  //   expected-note@#dr289-A {{forward declaration of 'dr289::A'}}
+  //   expected-note@#cwg289-A {{forward declaration of 'cwg289::A'}}
 
   template<typename T> struct C { typename T::error error; };
   // expected-error@-1 {{type 'int' cannot be used prior to '::' because it has no members}}
-  //   expected-note@#dr289-C-int {{in instantiation of template class 'dr289::C<int>' requested here}}
-  struct D : C<int> {}; // #dr289-C-int
+  //   expected-note@#cwg289-C-int {{in instantiation of template class 'cwg289::C<int>' requested here}}
+  struct D : C<int> {}; // #cwg289-C-int
 }
 
-// dr290: na
-// dr291: dup 391
-// dr292 is in dr292.cpp
+// cwg290: na
+// cwg291: dup 391
+// cwg292 is in cwg292.cpp
 
-namespace dr294 { // dr294: no
+namespace cwg294 { // cwg294: no
   void f() throw(int);
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
   //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
@@ -1218,7 +1223,7 @@ namespace dr294 { // dr294: no
   }
 }
 
-namespace dr295 { // dr295: 3.7
+namespace cwg295 { // cwg295: 3.7
   typedef int f();
   const f g;
   // expected-warning@-1 {{'const' qualifier on function type 'f' (aka 'int ()') has no effect}}
@@ -1237,21 +1242,21 @@ namespace dr295 { // dr295: 3.7
   // expected-warning@-1 {{'volatile' qualifier on function type 'U' (aka 'int ()') has no effect}}
 }
 
-namespace dr296 { // dr296: yes
+namespace cwg296 { // cwg296: yes
   struct A {
     static operator int() { return 0; }
     // expected-error@-1 {{conversion function must be a non-static member function}}
   };
 }
 
-namespace dr298 { // dr298: 3.1
+namespace cwg298 { // cwg298: 3.1
   struct A {
     typedef int type;
     A();
     ~A();
   };
-  typedef A B; // #dr298-B
-  typedef const A C; // #dr298-C
+  typedef A B; // #cwg298-B
+  typedef const A C; // #cwg298-C
 
   A::type i1;
   B::type i2;
@@ -1260,21 +1265,21 @@ namespace dr298 { // dr298: 3.1
   struct A a;
   struct B b;
   // expected-error@-1 {{typedef 'B' cannot be referenced with a struct specifier}}
-  //   expected-note@#dr298-B {{declared here}}
+  //   expected-note@#cwg298-B {{declared here}}
   struct C c;
   // expected-error@-1 {{typedef 'C' cannot be referenced with a struct specifier}}
-  //   expected-note@#dr298-C {{declared here}}
+  //   expected-note@#cwg298-C {{declared here}}
 
   B::B() {}
   // expected-error@-1 {{a type specifier is required for all declarations}}
   B::A() {} // ok
   C::~C() {}
-  // expected-error@-1 {{destructor cannot be declared using a typedef 'C' (aka 'const dr298::A') of the class name}}
+  // expected-error@-1 {{destructor cannot be declared using a typedef 'C' (aka 'const cwg298::A') of the class name}}
 
-  typedef struct D E; // #dr298-E
+  typedef struct D E; // #cwg298-E
   struct E {};
   // expected-error@-1 {{definition of type 'E' conflicts with typedef of the same name}}
-  //   expected-note@#dr298-E {{'E' declared here}}
+  //   expected-note@#cwg298-E {{'E' declared here}}
 
   struct F {
     ~F();
@@ -1283,22 +1288,22 @@ namespace dr298 { // dr298: 3.1
   G::~F() {} // ok
 }
 
-namespace dr299 { // dr299: 2.8 c++11
+namespace cwg299 { // cwg299: 2.8 c++11
   struct S {
     operator int();
   };
   struct T {
-    operator int(); // #dr299-int
-    operator unsigned short(); // #dr299-ushort
+    operator int(); // #cwg299-int
+    operator unsigned short(); // #cwg299-ushort
   };
   // FIXME: should this apply to c++98 mode?
   int *p = new int[S()];
   // cxx98-error@-1 {{implicit conversion from array size expression of type 'S' to integral type 'int' is a C++11 extension}}
-  int *q = new int[T()]; // #dr299-q
-  // cxx98-11-error@#dr299-q {{ambiguous conversion of array size expression of type 'T' to an integral or enumeration type}}
-  //  cxx98-11-note@#dr299-int {{conversion to integral type 'int' declared here}}
-  //  cxx98-11-note@#dr299-ushort {{conversion to integral type 'unsigned short' declared here}}
-  // since-cxx14-error-re@#dr299-q {{{{conversion from 'T' to 'unsigned (long long|long|int)' is ambiguous}}}}
-  //  since-cxx14-note@#dr299-int {{candidate function}}
-  //  since-cxx14-note@#dr299-ushort {{candidate function}}
+  int *q = new int[T()]; // #cwg299-q
+  // cxx98-11-error@#cwg299-q {{ambiguous conversion of array size expression of type 'T' to an integral or enumeration type}}
+  //  cxx98-11-note@#cwg299-int {{conversion to integral type 'int' declared here}}
+  //  cxx98-11-note@#cwg299-ushort {{conversion to integral type 'unsigned short' declared here}}
+  // since-cxx14-error-re@#cwg299-q {{{{conversion from 'T' to 'unsigned (long long|long|int)' is ambiguous}}}}
+  //  since-cxx14-note@#cwg299-int {{candidate function}}
+  //  since-cxx14-note@#cwg299-ushort {{candidate function}}
 }

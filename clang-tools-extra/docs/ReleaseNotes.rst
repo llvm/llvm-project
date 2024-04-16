@@ -100,6 +100,8 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` script. Added argument `-source-filter`
   to filter source files from the compilation database, via a RegEx. In a
   similar fashion to what `-header-filter` does for header files.
+- Improved :program:`check_clang_tidy.py` script. Added argument `-export-fixes`
+  to aid in clang-tidy and test development.
 
 New checks
 ^^^^^^^^^^
@@ -296,6 +298,10 @@ Miscellaneous
 - Fixed incorrect formatting in :program:`clang-apply-replacements` when no
   ``--format`` option is specified. Now :program:`clang-apply-replacements`
   applies formatting only with the option.
+
+- Fixed the :doc:`linuxkernel-must-check-errs
+  <clang-tidy/checks/linuxkernel/must-check-errs>` documentation to consistently
+  use the check's proper name.
 
 Improvements to include-fixer
 -----------------------------

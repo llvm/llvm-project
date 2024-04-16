@@ -42,7 +42,9 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -961,8 +963,8 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     CurContext->addHiddenDecl(New);
   }
 
-  if (isInOpenMPDeclareTargetContext())
-    checkDeclIsAllowedInOpenMPTarget(nullptr, New);
+  if (OpenMP().isInOpenMPDeclareTargetContext())
+    OpenMP().checkDeclIsAllowedInOpenMPTarget(nullptr, New);
 
   return New;
 }
@@ -7981,7 +7983,7 @@ public:
   DefaultedComparisonVisitor(Sema &S, CXXRecordDecl *RD, FunctionDecl *FD,
                              DefaultedComparisonKind DCK)
       : S(S), RD(RD), FD(FD), DCK(DCK) {
-    if (auto *Info = FD->getDefaultedFunctionInfo()) {
+    if (auto *Info = FD->getDefalutedOrDeletedInfo()) {
       // FIXME: Change CreateOverloadedBinOp to take an ArrayRef instead of an
       // UnresolvedSet to avoid this copy.
       Fns.assign(Info->getUnqualifiedLookups().begin(),
@@ -8849,8 +8851,9 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
     UnresolvedSet<32> Operators;
     lookupOperatorsForDefaultedComparison(*this, S, Operators,
                                           FD->getOverloadedOperator());
-    FD->setDefaultedFunctionInfo(FunctionDecl::DefaultedFunctionInfo::Create(
-        Context, Operators.pairs()));
+    FD->setDefaultedOrDeletedInfo(
+        FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+            Context, Operators.pairs()));
   }
 
   // C++2a [class.compare.default]p1:
@@ -9876,15 +9879,15 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
     // failed.
     // For inherited constructors (non-null ICI), CSM may be passed so that MD
     // is treated as certain special member, which may not reflect what special
-    // member MD really is. However inferCUDATargetForImplicitSpecialMember
+    // member MD really is. However inferTargetForImplicitSpecialMember
     // expects CSM to match MD, therefore recalculate CSM.
     assert(ICI || CSM == getSpecialMember(MD));
     auto RealCSM = CSM;
     if (ICI)
       RealCSM = getSpecialMember(MD);
 
-    return inferCUDATargetForImplicitSpecialMember(RD, RealCSM, MD,
-                                                   SMI.ConstArg, Diagnose);
+    return CUDA().inferTargetForImplicitSpecialMember(RD, RealCSM, MD,
+                                                      SMI.ConstArg, Diagnose);
   }
 
   return false;
@@ -14055,7 +14058,7 @@ CXXConstructorDecl *Sema::DeclareImplicitDefaultConstructor(
   setupImplicitSpecialMemberType(DefaultCon, Context.VoidTy, std::nullopt);
 
   if (getLangOpts().CUDA)
-    inferCUDATargetForImplicitSpecialMember(
+    CUDA().inferTargetForImplicitSpecialMember(
         ClassDecl, CXXSpecialMemberKind::DefaultConstructor, DefaultCon,
         /* ConstRHS */ false,
         /* Diagnose */ false);
@@ -14341,7 +14344,7 @@ CXXDestructorDecl *Sema::DeclareImplicitDestructor(CXXRecordDecl *ClassDecl) {
   setupImplicitSpecialMemberType(Destructor, Context.VoidTy, std::nullopt);
 
   if (getLangOpts().CUDA)
-    inferCUDATargetForImplicitSpecialMember(
+    CUDA().inferTargetForImplicitSpecialMember(
         ClassDecl, CXXSpecialMemberKind::Destructor, Destructor,
         /* ConstRHS */ false,
         /* Diagnose */ false);
@@ -14983,7 +14986,7 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
   setupImplicitSpecialMemberType(CopyAssignment, RetType, ArgType);
 
   if (getLangOpts().CUDA)
-    inferCUDATargetForImplicitSpecialMember(
+    CUDA().inferTargetForImplicitSpecialMember(
         ClassDecl, CXXSpecialMemberKind::CopyAssignment, CopyAssignment,
         /* ConstRHS */ Const,
         /* Diagnose */ false);
@@ -15335,7 +15338,7 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
   setupImplicitSpecialMemberType(MoveAssignment, RetType, ArgType);
 
   if (getLangOpts().CUDA)
-    inferCUDATargetForImplicitSpecialMember(
+    CUDA().inferTargetForImplicitSpecialMember(
         ClassDecl, CXXSpecialMemberKind::MoveAssignment, MoveAssignment,
         /* ConstRHS */ false,
         /* Diagnose */ false);
@@ -15733,7 +15736,7 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
   setupImplicitSpecialMemberType(CopyConstructor, Context.VoidTy, ArgType);
 
   if (getLangOpts().CUDA)
-    inferCUDATargetForImplicitSpecialMember(
+    CUDA().inferTargetForImplicitSpecialMember(
         ClassDecl, CXXSpecialMemberKind::CopyConstructor, CopyConstructor,
         /* ConstRHS */ Const,
         /* Diagnose */ false);
@@ -15878,7 +15881,7 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
   setupImplicitSpecialMemberType(MoveConstructor, Context.VoidTy, ArgType);
 
   if (getLangOpts().CUDA)
-    inferCUDATargetForImplicitSpecialMember(
+    CUDA().inferTargetForImplicitSpecialMember(
         ClassDecl, CXXSpecialMemberKind::MoveConstructor, MoveConstructor,
         /* ConstRHS */ false,
         /* Diagnose */ false);
@@ -16184,7 +16187,7 @@ ExprResult Sema::BuildCXXConstructExpr(
              DeclInitType->getBaseElementTypeUnsafe()->getAsCXXRecordDecl()) &&
          "given constructor for wrong type");
   MarkFunctionReferenced(ConstructLoc, Constructor);
-  if (getLangOpts().CUDA && !CheckCUDACall(ConstructLoc, Constructor))
+  if (getLangOpts().CUDA && !CUDA().CheckCall(ConstructLoc, Constructor))
     return ExprError();
 
   return CheckForImmediateInvocation(
@@ -18158,7 +18161,8 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
   return ND;
 }
 
-void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc) {
+void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc,
+                          StringLiteral *Message) {
   AdjustDeclIfTemplate(Dcl);
 
   FunctionDecl *Fn = dyn_cast_or_null<FunctionDecl>(Dcl);
@@ -18207,7 +18211,7 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc) {
   // C++11 [dcl.fct.def.delete]p4:
   //  A deleted function is implicitly inline.
   Fn->setImplicitlyInline();
-  Fn->setDeletedAsWritten();
+  Fn->setDeletedAsWritten(true, Message);
 }
 
 void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
@@ -18320,11 +18324,11 @@ void Sema::DiagnoseReturnInConstructorExceptionHandler(CXXTryStmt *TryBlock) {
   }
 }
 
-void Sema::SetFunctionBodyKind(Decl *D, SourceLocation Loc,
-                               FnBodyKind BodyKind) {
+void Sema::SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
+                               StringLiteral *DeletedMessage) {
   switch (BodyKind) {
   case FnBodyKind::Delete:
-    SetDeclDeleted(D, Loc);
+    SetDeclDeleted(D, Loc, DeletedMessage);
     break;
   case FnBodyKind::Default:
     SetDeclDefaulted(D, Loc);
@@ -18651,8 +18655,8 @@ void Sema::MarkVTableUsed(SourceLocation Loc, CXXRecordDecl *Class,
   // Do not mark as used if compiling for the device outside of the target
   // region.
   if (TUKind != TU_Prefix && LangOpts.OpenMP && LangOpts.OpenMPIsTargetDevice &&
-      !isInOpenMPDeclareTargetContext() &&
-      !isInOpenMPTargetExecutionDirective()) {
+      !OpenMP().isInOpenMPDeclareTargetContext() &&
+      !OpenMP().isInOpenMPTargetExecutionDirective()) {
     if (!DefinitionRequired)
       MarkVirtualMembersReferenced(Loc, Class);
     return;

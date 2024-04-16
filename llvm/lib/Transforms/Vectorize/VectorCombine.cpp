@@ -886,7 +886,7 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
     SafeToSpeculate = isSafeToSpeculativelyExecuteWithOpcode(
         *FunctionalOpcode, &VPI, nullptr, &AC, &DT);
   if (!SafeToSpeculate &&
-      !isKnownNonZero(EVL, /*Depth=*/0, SimplifyQuery(*DL, &DT, &AC, &VPI)))
+      !isKnownNonZero(EVL, SimplifyQuery(*DL, &DT, &AC, &VPI)))
     return false;
 
   Value *ScalarVal =
