@@ -1386,6 +1386,26 @@ behavior in all cases. This will typically be used in conjunction with
 
   !0 = !{}
 
+'``amdgpu.ignore.denormal.mode``' Metadata
+------------------------------------------
+
+For use with :ref:`atomicrmw <i_atomicrmw>` floating-point
+operations. Indicates the handling of denormal inputs and results is
+insignificant and may be inconsistent with the expected floating-point
+mode. This is necessary to emit a native atomic instruction on some
+targets for some address spaces. This is typically used in conjunction
+with :ref:`\!amdgpu.no.remote.memory.access<amdgpu_no_remote_memory_access>`
+and :ref:`\!amdgpu.no.fine.grained.host.memory<amdgpu_no_fine_grained_host_memory>`
+
+
+.. code-block:: llvm
+
+  %res0 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
+  %res1 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0
+
+  !0 = !{}
+
+
 LLVM IR Attributes
 ==================
 
