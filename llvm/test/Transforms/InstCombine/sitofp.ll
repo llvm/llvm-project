@@ -256,7 +256,7 @@ define i25 @consider_lowbits_masked_input(i25 %A) {
 define i32 @overflow_masked_input(i32 %A) {
 ; CHECK-LABEL: @overflow_masked_input(
 ; CHECK-NEXT:    [[M:%.*]] = and i32 [[A:%.*]], 16777217
-; CHECK-NEXT:    [[B:%.*]] = uitofp i32 [[M]] to float
+; CHECK-NEXT:    [[B:%.*]] = uitofp nneg i32 [[M]] to float
 ; CHECK-NEXT:    [[C:%.*]] = fptoui float [[B]] to i32
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
