@@ -51,3 +51,11 @@ class GenICFGAction : public clang::ASTFrontendAction {
     CreateASTConsumer(clang::CompilerInstance &Compiler,
                       llvm::StringRef InFile) override;
 };
+
+bool updateICFGWithASTDump(const std::string &file);
+
+/**
+ * 生成全程序调用图
+ */
+void generateICFG(const CompilationDatabase &cb);
+void generateICFGParallel(const CompilationDatabase &cb, int numThreads = 0);

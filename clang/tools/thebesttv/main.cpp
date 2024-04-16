@@ -507,24 +507,6 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
     }
 }
 
-/**
- * 生成全程序调用图
- */
-void generateICFG(const std::vector<std::string> &allFiles) {
-    logger.info("--- Generating whole program call graph ---");
-    ProgressBar bar("Gen ICFG", allFiles.size());
-    for (auto &file : allFiles) {
-        auto AST = getASTOfFile(file);
-        if (AST) {
-            auto &Context = AST->getASTContext();
-            GenICFGVisitor visitor(&Context, file);
-            visitor.TraverseDecl(Context.getTranslationUnitDecl());
-        }
-        bar.tick();
-    }
-    bar.done();
-}
-
 void generatePathFromOneEntry(const ordered_json &result,
                               FunctionLocator &locator, ordered_json &output) {
     std::string type = result["type"].template get<std::string>();
@@ -630,9 +612,8 @@ int main(int argc, const char **argv) {
     fixCompilationDatabase(compile_commands);
     Global.cb = getCompilationDatabaseWithASTEmit(compile_commands);
 
-    generateASTDump(*Global.cb);
-
-    generateICFG(Global.cb->getAllFiles());
+    // generateICFG(*Global.cb);
+    generateICFGParallel(*Global.cb);
 
     {
         int m = 0;

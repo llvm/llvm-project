@@ -1,6 +1,9 @@
 #include "GenICFG.h"
+#include "GenAST.h"
 #include "ICFG.h"
 #include "utils.h"
+
+#include "lib/BS_thread_pool.hpp"
 
 std::string GenICFGVisitor::getMangledName(const FunctionDecl *decl) {
     auto mangleContext = Context->createMangleContext();
@@ -135,4 +138,72 @@ GenICFGAction::CreateASTConsumer(clang::CompilerInstance &Compiler,
 
     return std::make_unique<GenICFGConsumer>(&Compiler.getASTContext(),
                                              filePath);
+}
+
+std::mutex icfgMtx;
+bool updateICFGWithASTDump(const std::string &file) {
+    auto AST = getASTOfFile(file);
+    if (AST) {
+        icfgMtx.lock();
+        auto &Context = AST->getASTContext();
+        GenICFGVisitor visitor(&Context, file);
+        visitor.TraverseDecl(Context.getTranslationUnitDecl());
+        icfgMtx.unlock();
+        return true;
+    }
+    return false;
+}
+
+void generateICFG(const CompilationDatabase &cb) {
+    logger.info("--- Generating whole program call graph ---");
+
+    auto allCmds = cb.getAllCompileCommands();
+    ProgressBar bar("Gen ICFG", allCmds.size());
+    int badCnt = 0, goodCnt = 0;
+    for (auto &cmd : allCmds) {
+        int ret = generateASTDump(cmd);
+        if (ret == 0) {
+            goodCnt++;
+            bool result = updateICFGWithASTDump(cmd.Filename);
+            requireTrue(result == true);
+        } else {
+            badCnt++;
+        }
+        bar.tick();
+    }
+    bar.done();
+
+    logger.info("ICFG generation finished with {} success and {} failure",
+                goodCnt, badCnt);
+}
+
+void generateICFGParallel(const CompilationDatabase &cb, int numThreads) {
+    logger.info("--- Generating whole program call graph (parallel) ---");
+
+    BS::thread_pool pool(numThreads);
+    std::vector<std::future<int>> tasks;
+
+    auto allCmds = cb.getAllCompileCommands();
+    ProgressBar bar("Gen ICFG", allCmds.size());
+    for (const auto &cmd : allCmds) {
+        tasks.push_back(pool.submit_task([cmd, &bar] {
+            int ret = generateASTDump(cmd);
+            if (ret == 0) {
+                bool result = updateICFGWithASTDump(cmd.Filename);
+                requireTrue(result == true);
+            }
+            bar.tick();
+            return ret;
+        }));
+    }
+
+    int badCnt = 0, goodCnt = 0;
+    for (auto &task : tasks) {
+        int ret = task.get();
+        ret == 0 ? goodCnt++ : badCnt++;
+    }
+    bar.done();
+
+    logger.info("ICFG generation finished with {} success and {} failure",
+                goodCnt, badCnt);
 }

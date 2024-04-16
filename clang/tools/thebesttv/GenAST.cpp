@@ -1,7 +1,6 @@
 #include <regex>
 
 #include "GenAST.h"
-#include "lib/BS_thread_pool.hpp"
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
@@ -154,34 +153,6 @@ int generateASTDump(const CompileCommand &cmd) {
         logger.error("Error generating AST dump for: {}", cmd.Filename);
     }
     return ret;
-}
-
-void generateASTDump(const CompilationDatabase &cb) {
-    logger.info("Generating AST dump ...");
-
-    BS::thread_pool pool;
-    std::vector<std::future<int>> tasks;
-
-    auto allCmds = cb.getAllCompileCommands();
-    ProgressBar bar("Gen AST", allCmds.size());
-    for (const auto &cmd : allCmds) {
-        tasks.push_back(pool.submit_task([cmd, &bar] {
-            int ret = generateASTDump(cmd);
-            bar.tick();
-            return ret;
-        }));
-    }
-
-    int badCnt = 0, goodCnt = 0;
-    for (auto &task : tasks) {
-        int ret = task.get();
-        ret == 0 ? goodCnt++ : badCnt++;
-    }
-
-    bar.done();
-
-    logger.info("AST dump generation finished, {} success, {} failed", goodCnt,
-                badCnt);
 }
 
 std::unique_ptr<ASTUnit> loadFromASTDump(std::string AstDumpPath) {
