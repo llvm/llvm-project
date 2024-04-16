@@ -55,6 +55,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
 #include "clang/Sema/SemaConcept.h"
+#include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -3427,7 +3428,8 @@ public:
       bool ConstexprSupported, bool CLinkageMayDiffer);
 
   /// type checking declaration initializers (C99 6.7.8)
-  bool CheckForConstantInitializer(Expr *e, QualType t);
+  bool CheckForConstantInitializer(
+      Expr *Init, unsigned DiagID = diag::err_init_element_not_constant);
 
   QualType deduceVarTypeFromInitializer(VarDecl *VDecl, DeclarationName Name,
                                         QualType Type, TypeSourceInfo *TSI,
