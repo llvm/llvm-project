@@ -133,9 +133,9 @@ define <vscale x 16 x i1> @select_nxv16i1(i1 zeroext %c, <vscale x 16 x i1> %a, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
-; CHECK-NEXT:    vmsne.vi v9, v10, 0
-; CHECK-NEXT:    vmandn.mm v8, v8, v9
-; CHECK-NEXT:    vmand.mm v9, v0, v9
+; CHECK-NEXT:    vmsne.vi v2, v10, 0
+; CHECK-NEXT:    vmandn.mm v8, v8, v2
+; CHECK-NEXT:    vmand.mm v9, v0, v2
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b
@@ -149,9 +149,9 @@ define <vscale x 16 x i1> @selectcc_nxv16i1(i1 signext %a, i1 signext %b, <vscal
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
-; CHECK-NEXT:    vmsne.vi v9, v10, 0
-; CHECK-NEXT:    vmandn.mm v8, v8, v9
-; CHECK-NEXT:    vmand.mm v9, v0, v9
+; CHECK-NEXT:    vmsne.vi v2, v10, 0
+; CHECK-NEXT:    vmandn.mm v8, v8, v2
+; CHECK-NEXT:    vmand.mm v9, v0, v2
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %cmp = icmp ne i1 %a, %b
@@ -164,9 +164,9 @@ define <vscale x 32 x i1> @select_nxv32i1(i1 zeroext %c, <vscale x 32 x i1> %a, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vmsne.vi v9, v12, 0
-; CHECK-NEXT:    vmandn.mm v8, v8, v9
-; CHECK-NEXT:    vmand.mm v9, v0, v9
+; CHECK-NEXT:    vmsne.vi v4, v12, 0
+; CHECK-NEXT:    vmandn.mm v8, v8, v4
+; CHECK-NEXT:    vmand.mm v9, v0, v4
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <vscale x 32 x i1> %a, <vscale x 32 x i1> %b
@@ -180,9 +180,9 @@ define <vscale x 32 x i1> @selectcc_nxv32i1(i1 signext %a, i1 signext %b, <vscal
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vmsne.vi v9, v12, 0
-; CHECK-NEXT:    vmandn.mm v8, v8, v9
-; CHECK-NEXT:    vmand.mm v9, v0, v9
+; CHECK-NEXT:    vmsne.vi v4, v12, 0
+; CHECK-NEXT:    vmandn.mm v8, v8, v4
+; CHECK-NEXT:    vmand.mm v9, v0, v4
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %cmp = icmp ne i1 %a, %b
@@ -195,9 +195,9 @@ define <vscale x 64 x i1> @select_nxv64i1(i1 zeroext %c, <vscale x 64 x i1> %a, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v16, a0
-; CHECK-NEXT:    vmsne.vi v9, v16, 0
-; CHECK-NEXT:    vmandn.mm v8, v8, v9
-; CHECK-NEXT:    vmand.mm v9, v0, v9
+; CHECK-NEXT:    vmsne.vi v16, v16, 0
+; CHECK-NEXT:    vmandn.mm v8, v8, v16
+; CHECK-NEXT:    vmand.mm v9, v0, v16
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <vscale x 64 x i1> %a, <vscale x 64 x i1> %b
@@ -211,9 +211,9 @@ define <vscale x 64 x i1> @selectcc_nxv64i1(i1 signext %a, i1 signext %b, <vscal
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v16, a0
-; CHECK-NEXT:    vmsne.vi v9, v16, 0
-; CHECK-NEXT:    vmandn.mm v8, v8, v9
-; CHECK-NEXT:    vmand.mm v9, v0, v9
+; CHECK-NEXT:    vmsne.vi v16, v16, 0
+; CHECK-NEXT:    vmandn.mm v8, v8, v16
+; CHECK-NEXT:    vmand.mm v9, v0, v16
 ; CHECK-NEXT:    vmor.mm v0, v9, v8
 ; CHECK-NEXT:    ret
   %cmp = icmp ne i1 %a, %b

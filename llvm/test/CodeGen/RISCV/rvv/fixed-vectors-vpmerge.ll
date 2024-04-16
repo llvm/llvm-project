@@ -26,8 +26,8 @@ define <4 x i1> @vpmerge_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 ze
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vid.v v10
-; RV64-NEXT:    vmsltu.vx v12, v10, a0
-; RV64-NEXT:    vmand.mm v9, v9, v12
+; RV64-NEXT:    vmsltu.vx v2, v10, a0
+; RV64-NEXT:    vmand.mm v9, v9, v2
 ; RV64-NEXT:    vmandn.mm v8, v8, v9
 ; RV64-NEXT:    vmand.mm v9, v0, v9
 ; RV64-NEXT:    vmor.mm v0, v9, v8
@@ -48,8 +48,8 @@ define <4 x i1> @vpmerge_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 ze
 ; RV64ZVFHMIN:       # %bb.0:
 ; RV64ZVFHMIN-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64ZVFHMIN-NEXT:    vid.v v10
-; RV64ZVFHMIN-NEXT:    vmsltu.vx v12, v10, a0
-; RV64ZVFHMIN-NEXT:    vmand.mm v9, v9, v12
+; RV64ZVFHMIN-NEXT:    vmsltu.vx v2, v10, a0
+; RV64ZVFHMIN-NEXT:    vmand.mm v9, v9, v2
 ; RV64ZVFHMIN-NEXT:    vmandn.mm v8, v8, v9
 ; RV64ZVFHMIN-NEXT:    vmand.mm v9, v0, v9
 ; RV64ZVFHMIN-NEXT:    vmor.mm v0, v9, v8

@@ -1126,8 +1126,8 @@ define <vscale x 7 x i64> @vp_bswap_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 
 ; RV64-NEXT:    vsll.vx v24, v8, a2, v0.t
 ; RV64-NEXT:    lui a3, 16
 ; RV64-NEXT:    addiw a3, a3, -256
-; RV64-NEXT:    li a4, 40
 ; RV64-NEXT:    vand.vx v16, v8, a3, v0.t
+; RV64-NEXT:    li a4, 40
 ; RV64-NEXT:    vsll.vx v16, v16, a4, v0.t
 ; RV64-NEXT:    vor.vv v16, v24, v16, v0.t
 ; RV64-NEXT:    addi a5, sp, 16
@@ -1369,8 +1369,8 @@ define <vscale x 8 x i64> @vp_bswap_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 
 ; RV64-NEXT:    vsll.vx v24, v8, a2, v0.t
 ; RV64-NEXT:    lui a3, 16
 ; RV64-NEXT:    addiw a3, a3, -256
-; RV64-NEXT:    li a4, 40
 ; RV64-NEXT:    vand.vx v16, v8, a3, v0.t
+; RV64-NEXT:    li a4, 40
 ; RV64-NEXT:    vsll.vx v16, v16, a4, v0.t
 ; RV64-NEXT:    vor.vv v16, v24, v16, v0.t
 ; RV64-NEXT:    addi a5, sp, 16

@@ -162,8 +162,7 @@ define <vscale x 16 x i1> @test_vp_reverse_nxv16i1_masked(<vscale x 16 x i1> %sr
 ; CHECK-NEXT:    vrsub.vx v12, v12, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v16, v10, v12, v0.t
-; CHECK-NEXT:    vmsne.vi v8, v16, 0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmsne.vi v0, v16, 0, v0.t
 ; CHECK-NEXT:    ret
   %dst = call <vscale x 16 x i1> @llvm.experimental.vp.reverse.nxv16i1(<vscale x 16 x i1> %src, <vscale x 16 x i1> %mask, i32 %evl)
   ret <vscale x 16 x i1> %dst
@@ -200,8 +199,7 @@ define <vscale x 32 x i1> @test_vp_reverse_nxv32i1_masked(<vscale x 32 x i1> %sr
 ; CHECK-NEXT:    vrsub.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v24, v12, v16, v0.t
-; CHECK-NEXT:    vmsne.vi v8, v24, 0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmsne.vi v0, v24, 0, v0.t
 ; CHECK-NEXT:    ret
   %dst = call <vscale x 32 x i1> @llvm.experimental.vp.reverse.nxv32i1(<vscale x 32 x i1> %src, <vscale x 32 x i1> %mask, i32 %evl)
   ret <vscale x 32 x i1> %dst
@@ -245,8 +243,7 @@ define <vscale x 64 x i1> @test_vp_reverse_nxv64i1_masked(<vscale x 64 x i1> %sr
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vslidedown.vx v16, v16, a1, v0.t
-; CHECK-NEXT:    vmsne.vi v8, v16, 0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmsne.vi v0, v16, 0, v0.t
 ; CHECK-NEXT:    ret
   %dst = call <vscale x 64 x i1> @llvm.experimental.vp.reverse.nxv64i1(<vscale x 64 x i1> %src, <vscale x 64 x i1> %mask, i32 %evl)
   ret <vscale x 64 x i1> %dst

@@ -167,8 +167,8 @@ define void @splat_v32i1(ptr %x, i1 %y) {
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vmsne.vi v10, v8, 0
-; CHECK-NEXT:    vsm.v v10, (a0)
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vsm.v v0, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <32 x i1> poison, i1 %y, i32 0
   %b = shufflevector <32 x i1> %a, <32 x i1> poison, <32 x i32> zeroinitializer
@@ -201,8 +201,8 @@ define void @splat_v64i1(ptr %x, i1 %y) {
 ; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vmsne.vi v12, v8, 0
-; CHECK-NEXT:    vsm.v v12, (a0)
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vsm.v v0, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <64 x i1> poison, i1 %y, i32 0
   %b = shufflevector <64 x i1> %a, <64 x i1> poison, <64 x i32> zeroinitializer

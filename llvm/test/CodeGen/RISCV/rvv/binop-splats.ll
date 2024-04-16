@@ -88,11 +88,11 @@ define <vscale x 16 x i1> @nxv16i1(i1 %x, i1 %y) {
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmsne.vi v10, v8, 0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vmsne.vi v11, v8, 0
-; CHECK-NEXT:    vmxor.mm v0, v10, v11
+; CHECK-NEXT:    vmsne.vi v2, v8, 0
+; CHECK-NEXT:    vmxor.mm v0, v0, v2
 ; CHECK-NEXT:    ret
   %head.x = insertelement <vscale x 16 x i1> poison, i1 %x, i32 0
   %splat.x = shufflevector <vscale x 16 x i1> %head.x, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
@@ -108,11 +108,11 @@ define <vscale x 32 x i1> @nxv32i1(i1 %x, i1 %y) {
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmsne.vi v12, v8, 0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vmsne.vi v13, v8, 0
-; CHECK-NEXT:    vmxor.mm v0, v12, v13
+; CHECK-NEXT:    vmsne.vi v4, v8, 0
+; CHECK-NEXT:    vmxor.mm v0, v0, v4
 ; CHECK-NEXT:    ret
   %head.x = insertelement <vscale x 32 x i1> poison, i1 %x, i32 0
   %splat.x = shufflevector <vscale x 32 x i1> %head.x, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
@@ -128,11 +128,11 @@ define <vscale x 64 x i1> @nxv64i1(i1 %x, i1 %y) {
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vmsne.vi v16, v8, 0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vmsne.vi v17, v8, 0
-; CHECK-NEXT:    vmxor.mm v0, v16, v17
+; CHECK-NEXT:    vmsne.vi v8, v8, 0
+; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %head.x = insertelement <vscale x 64 x i1> poison, i1 %x, i32 0
   %splat.x = shufflevector <vscale x 64 x i1> %head.x, <vscale x 64 x i1> poison, <vscale x 64 x i32> zeroinitializer

@@ -52,8 +52,8 @@ define void @setgt_vv_v64i8(ptr %x, ptr %y, ptr %z) {
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v12, (a1)
-; CHECK-NEXT:    vmslt.vv v16, v12, v8
-; CHECK-NEXT:    vsm.v v16, (a2)
+; CHECK-NEXT:    vmslt.vv v0, v12, v8
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, ptr %x
   %b = load <64 x i8>, ptr %y
@@ -69,8 +69,8 @@ define void @setlt_vv_v128i8(ptr %x, ptr %y, ptr %z) {
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v16, (a1)
-; CHECK-NEXT:    vmslt.vv v24, v8, v16
-; CHECK-NEXT:    vsm.v v24, (a2)
+; CHECK-NEXT:    vmslt.vv v0, v8, v16
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
   %b = load <128 x i8>, ptr %y
@@ -118,8 +118,8 @@ define void @setugt_vv_v32i8(ptr %x, ptr %y, ptr %z) {
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v10, (a1)
-; CHECK-NEXT:    vmsltu.vv v12, v10, v8
-; CHECK-NEXT:    vsm.v v12, (a2)
+; CHECK-NEXT:    vmsltu.vv v0, v10, v8
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, ptr %x
   %b = load <32 x i8>, ptr %y
@@ -135,8 +135,8 @@ define void @setult_vv_v64i8(ptr %x, ptr %y, ptr %z) {
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v12, (a1)
-; CHECK-NEXT:    vmsltu.vv v16, v8, v12
-; CHECK-NEXT:    vsm.v v16, (a2)
+; CHECK-NEXT:    vmsltu.vv v0, v8, v12
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, ptr %x
   %b = load <64 x i8>, ptr %y
@@ -152,8 +152,8 @@ define void @setuge_vv_v128i8(ptr %x, ptr %y, ptr %z) {
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v16, (a1)
-; CHECK-NEXT:    vmsleu.vv v24, v16, v8
-; CHECK-NEXT:    vsm.v v24, (a2)
+; CHECK-NEXT:    vmsleu.vv v0, v16, v8
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
   %b = load <128 x i8>, ptr %y
@@ -200,8 +200,8 @@ define void @setne_vx_v32i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsne.vx v10, v8, a1
-; CHECK-NEXT:    vsm.v v10, (a2)
+; CHECK-NEXT:    vmsne.vx v0, v8, a1
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, ptr %x
   %b = insertelement <32 x i8> poison, i8 %y, i32 0
@@ -217,8 +217,8 @@ define void @setgt_vx_v64i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsgt.vx v12, v8, a1
-; CHECK-NEXT:    vsm.v v12, (a2)
+; CHECK-NEXT:    vmsgt.vx v0, v8, a1
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, ptr %x
   %b = insertelement <64 x i8> poison, i8 %y, i32 0
@@ -234,8 +234,8 @@ define void @setlt_vx_v128i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmslt.vx v16, v8, a1
-; CHECK-NEXT:    vsm.v v16, (a2)
+; CHECK-NEXT:    vmslt.vx v0, v8, a1
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
   %b = insertelement <128 x i8> poison, i8 %y, i32 0
@@ -284,8 +284,8 @@ define void @setugt_vx_v32i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsgtu.vx v10, v8, a1
-; CHECK-NEXT:    vsm.v v10, (a2)
+; CHECK-NEXT:    vmsgtu.vx v0, v8, a1
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, ptr %x
   %b = insertelement <32 x i8> poison, i8 %y, i32 0
@@ -301,8 +301,8 @@ define void @setult_vx_v64i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsltu.vx v12, v8, a1
-; CHECK-NEXT:    vsm.v v12, (a2)
+; CHECK-NEXT:    vmsltu.vx v0, v8, a1
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, ptr %x
   %b = insertelement <64 x i8> poison, i8 %y, i32 0
@@ -319,8 +319,8 @@ define void @setuge_vx_v128i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmv.v.x v16, a1
-; CHECK-NEXT:    vmsleu.vv v24, v16, v8
-; CHECK-NEXT:    vsm.v v24, (a2)
+; CHECK-NEXT:    vmsleu.vv v0, v16, v8
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
   %b = insertelement <128 x i8> poison, i8 %y, i32 0
@@ -368,8 +368,8 @@ define void @setne_xv_v32i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsne.vx v10, v8, a1
-; CHECK-NEXT:    vsm.v v10, (a2)
+; CHECK-NEXT:    vmsne.vx v0, v8, a1
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, ptr %x
   %b = insertelement <32 x i8> poison, i8 %y, i32 0
@@ -385,8 +385,8 @@ define void @setgt_xv_v64i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmslt.vx v12, v8, a1
-; CHECK-NEXT:    vsm.v v12, (a2)
+; CHECK-NEXT:    vmslt.vx v0, v8, a1
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, ptr %x
   %b = insertelement <64 x i8> poison, i8 %y, i32 0
@@ -402,8 +402,8 @@ define void @setlt_xv_v128i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsgt.vx v16, v8, a1
-; CHECK-NEXT:    vsm.v v16, (a2)
+; CHECK-NEXT:    vmsgt.vx v0, v8, a1
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
   %b = insertelement <128 x i8> poison, i8 %y, i32 0
@@ -452,8 +452,8 @@ define void @setugt_xv_v32i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsltu.vx v10, v8, a1
-; CHECK-NEXT:    vsm.v v10, (a2)
+; CHECK-NEXT:    vmsltu.vx v0, v8, a1
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, ptr %x
   %b = insertelement <32 x i8> poison, i8 %y, i32 0
@@ -469,8 +469,8 @@ define void @setult_xv_v64i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-NEXT:    li a3, 64
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsgtu.vx v12, v8, a1
-; CHECK-NEXT:    vsm.v v12, (a2)
+; CHECK-NEXT:    vmsgtu.vx v0, v8, a1
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, ptr %x
   %b = insertelement <64 x i8> poison, i8 %y, i32 0
@@ -486,8 +486,8 @@ define void @setuge_xv_v128i8(ptr %x, i8 %y, ptr %z) {
 ; CHECK-NEXT:    li a3, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsleu.vx v16, v8, a1
-; CHECK-NEXT:    vsm.v v16, (a2)
+; CHECK-NEXT:    vmsleu.vx v0, v8, a1
+; CHECK-NEXT:    vsm.v v0, (a2)
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
   %b = insertelement <128 x i8> poison, i8 %y, i32 0
@@ -534,8 +534,8 @@ define void @setne_vi_v32i8(ptr %x, ptr %z) {
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsne.vi v10, v8, 0
-; CHECK-NEXT:    vsm.v v10, (a1)
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vsm.v v0, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, ptr %x
   %d = icmp ne <32 x i8> %a, splat (i8 0)
@@ -549,8 +549,8 @@ define void @setgt_vi_v64i8(ptr %x, ptr %z) {
 ; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsgt.vi v12, v8, 0
-; CHECK-NEXT:    vsm.v v12, (a1)
+; CHECK-NEXT:    vmsgt.vi v0, v8, 0
+; CHECK-NEXT:    vsm.v v0, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, ptr %x
   %d = icmp sgt <64 x i8> %a, splat (i8 0)
@@ -564,8 +564,8 @@ define void @setgt_vi_v64i8_nonzero(ptr %x, ptr %z) {
 ; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsgt.vi v12, v8, 5
-; CHECK-NEXT:    vsm.v v12, (a1)
+; CHECK-NEXT:    vmsgt.vi v0, v8, 5
+; CHECK-NEXT:    vsm.v v0, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, ptr %x
   %d = icmp sgt <64 x i8> %a, splat (i8 5)
@@ -579,8 +579,8 @@ define void @setlt_vi_v128i8(ptr %x, ptr %z) {
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsle.vi v16, v8, -1
-; CHECK-NEXT:    vsm.v v16, (a1)
+; CHECK-NEXT:    vmsle.vi v0, v8, -1
+; CHECK-NEXT:    vsm.v v0, (a1)
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
   %d = icmp slt <128 x i8> %a, splat (i8 0)
@@ -622,8 +622,8 @@ define void @setugt_vi_v32i8(ptr %x, ptr %z) {
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsgtu.vi v10, v8, 5
-; CHECK-NEXT:    vsm.v v10, (a1)
+; CHECK-NEXT:    vmsgtu.vi v0, v8, 5
+; CHECK-NEXT:    vsm.v v0, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, ptr %x
   %d = icmp ugt <32 x i8> %a, splat (i8 5)
@@ -637,8 +637,8 @@ define void @setult_vi_v64i8(ptr %x, ptr %z) {
 ; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsleu.vi v12, v8, 4
-; CHECK-NEXT:    vsm.v v12, (a1)
+; CHECK-NEXT:    vmsleu.vi v0, v8, 4
+; CHECK-NEXT:    vsm.v v0, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, ptr %x
   %d = icmp ult <64 x i8> %a, splat (i8 5)
@@ -652,8 +652,8 @@ define void @setuge_vi_v128i8(ptr %x, ptr %z) {
 ; CHECK-NEXT:    li a2, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsgtu.vi v16, v8, 4
-; CHECK-NEXT:    vsm.v v16, (a1)
+; CHECK-NEXT:    vmsgtu.vi v0, v8, 4
+; CHECK-NEXT:    vsm.v v0, (a1)
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
   %d = icmp uge <128 x i8> %a, splat (i8 5)

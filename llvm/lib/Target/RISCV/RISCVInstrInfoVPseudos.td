@@ -143,22 +143,24 @@ class PseudoToVInst<string PseudoInst> {
 
 // This class describes information associated to the LMUL.
 class LMULInfo<int lmul, int oct, VReg regclass, VReg wregclass,
-               VReg f2regclass, VReg f4regclass, VReg f8regclass, string mx> {
+               VReg f2regclass, VReg f4regclass, VReg f8regclass, string mx,
+               VReg moutregclass = VMM1> {
   bits<3> value = lmul; // This is encoded as the vlmul field of vtype.
   VReg vrclass = regclass;
   VReg wvrclass = wregclass;
   VReg f8vrclass = f8regclass;
   VReg f4vrclass = f4regclass;
   VReg f2vrclass = f2regclass;
+  VReg moutclass = moutregclass;
   string MX = mx;
   int octuple = oct;
 }
 
 // Associate LMUL with tablegen records of register classes.
 def V_M1  : LMULInfo<0b000,  8,   VR,        VRM2,   VR,   VR, VR, "M1">;
-def V_M2  : LMULInfo<0b001, 16, VRM2,        VRM4,   VR,   VR, VR, "M2">;
-def V_M4  : LMULInfo<0b010, 32, VRM4,        VRM8, VRM2,   VR, VR, "M4">;
-def V_M8  : LMULInfo<0b011, 64, VRM8,/*NoVReg*/VR, VRM4, VRM2, VR, "M8">;
+def V_M2  : LMULInfo<0b001, 16, VRM2,        VRM4,   VR,   VR, VR, "M2", VMM2>;
+def V_M4  : LMULInfo<0b010, 32, VRM4,        VRM8, VRM2,   VR, VR, "M4", VMM4>;
+def V_M8  : LMULInfo<0b011, 64, VRM8,/*NoVReg*/VR, VRM4, VRM2, VR, "M8", VMM8>;
 
 def V_MF8 : LMULInfo<0b101, 1, VR, VR,/*NoVReg*/VR,/*NoVReg*/VR,/*NoVReg*/VR, "MF8">;
 def V_MF4 : LMULInfo<0b110, 2, VR, VR,          VR,/*NoVReg*/VR,/*NoVReg*/VR, "MF4">;
@@ -2668,25 +2670,21 @@ multiclass PseudoVEXT_VF8 {
 // With LMUL<=1 the source and dest occupy a single register so any overlap
 // is in the lowest-numbered part.
 multiclass VPseudoBinaryM_VV<LMULInfo m, int TargetConstraintType = 1> {
-  defm _VV : VPseudoBinaryM<VR, m.vrclass, m.vrclass, m,
-                            !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""), TargetConstraintType>;
+  defm _VV : VPseudoBinaryM<m.moutclass, m.vrclass, m.vrclass, m, "", TargetConstraintType>;
 }
 
 multiclass VPseudoBinaryM_VX<LMULInfo m, int TargetConstraintType = 1> {
   defm "_VX" :
-    VPseudoBinaryM<VR, m.vrclass, GPR, m,
-                   !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""), TargetConstraintType>;
+    VPseudoBinaryM<m.moutclass, m.vrclass, GPR, m, "", TargetConstraintType>;
 }
 
 multiclass VPseudoBinaryM_VF<LMULInfo m, FPR_Info f, int TargetConstraintType = 1> {
   defm "_V" # f.FX :
-    VPseudoBinaryM<VR, m.vrclass, f.fprclass, m,
-                   !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""), TargetConstraintType>;
+    VPseudoBinaryM<m.moutclass, m.vrclass, f.fprclass, m, "", TargetConstraintType>;
 }
 
 multiclass VPseudoBinaryM_VI<LMULInfo m, int TargetConstraintType = 1> {
-  defm _VI : VPseudoBinaryM<VR, m.vrclass, simm5, m,
-                            !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""), TargetConstraintType>;
+  defm _VI : VPseudoBinaryM<m.moutclass, m.vrclass, simm5, m, "", TargetConstraintType>;
 }
 
 multiclass VPseudoVGTR_VV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
