@@ -183,13 +183,13 @@ TEST(MemProf, FillsValue) {
   // We expect 4 records. We attach alloc site data to foo and bar, i.e.
   // all frames bottom up until we find a non-inline frame. We attach call site
   // data to bar, xyz and abc.
-  ASSERT_EQ(Records.size(), 4U);
+  ASSERT_THAT(Records, SizeIs(4));
 
   // Check the memprof record for foo.
   const llvm::GlobalValue::GUID FooId = IndexedMemProfRecord::getGUID("foo");
   ASSERT_EQ(Records.count(FooId), 1U);
   const MemProfRecord &Foo = Records[FooId];
-  ASSERT_EQ(Foo.AllocSites.size(), 1U);
+  ASSERT_THAT(Foo.AllocSites, SizeIs(1));
   EXPECT_EQ(Foo.AllocSites[0].Info.getAllocCount(), 1U);
   EXPECT_THAT(Foo.AllocSites[0].CallStack[0],
               FrameContains("foo", 5U, 30U, true));
@@ -205,7 +205,7 @@ TEST(MemProf, FillsValue) {
   const llvm::GlobalValue::GUID BarId = IndexedMemProfRecord::getGUID("bar");
   ASSERT_EQ(Records.count(BarId), 1U);
   const MemProfRecord &Bar = Records[BarId];
-  ASSERT_EQ(Bar.AllocSites.size(), 1U);
+  ASSERT_THAT(Bar.AllocSites, SizeIs(1));
   EXPECT_EQ(Bar.AllocSites[0].Info.getAllocCount(), 1U);
   EXPECT_THAT(Bar.AllocSites[0].CallStack[0],
               FrameContains("foo", 5U, 30U, true));
@@ -216,8 +216,8 @@ TEST(MemProf, FillsValue) {
   EXPECT_THAT(Bar.AllocSites[0].CallStack[3],
               FrameContains("abc", 5U, 30U, false));
 
-  ASSERT_EQ(Bar.CallSites.size(), 1U);
-  ASSERT_EQ(Bar.CallSites[0].size(), 2U);
+  ASSERT_THAT(Bar.CallSites, SizeIs(1));
+  ASSERT_THAT(Bar.CallSites[0], SizeIs(2));
   EXPECT_THAT(Bar.CallSites[0][0], FrameContains("foo", 5U, 30U, true));
   EXPECT_THAT(Bar.CallSites[0][1], FrameContains("bar", 51U, 20U, false));
 
@@ -225,8 +225,8 @@ TEST(MemProf, FillsValue) {
   const llvm::GlobalValue::GUID XyzId = IndexedMemProfRecord::getGUID("xyz");
   ASSERT_EQ(Records.count(XyzId), 1U);
   const MemProfRecord &Xyz = Records[XyzId];
-  ASSERT_EQ(Xyz.CallSites.size(), 1U);
-  ASSERT_EQ(Xyz.CallSites[0].size(), 2U);
+  ASSERT_THAT(Xyz.CallSites, SizeIs(1));
+  ASSERT_THAT(Xyz.CallSites[0], SizeIs(2));
   // Expect the entire frame even though in practice we only need the first
   // entry here.
   EXPECT_THAT(Xyz.CallSites[0][0], FrameContains("xyz", 5U, 30U, true));
@@ -237,8 +237,8 @@ TEST(MemProf, FillsValue) {
   ASSERT_EQ(Records.count(AbcId), 1U);
   const MemProfRecord &Abc = Records[AbcId];
   EXPECT_TRUE(Abc.AllocSites.empty());
-  ASSERT_EQ(Abc.CallSites.size(), 1U);
-  ASSERT_EQ(Abc.CallSites[0].size(), 2U);
+  ASSERT_THAT(Abc.CallSites, SizeIs(1));
+  ASSERT_THAT(Abc.CallSites[0], SizeIs(2));
   EXPECT_THAT(Abc.CallSites[0][0], FrameContains("xyz", 5U, 30U, true));
   EXPECT_THAT(Abc.CallSites[0][1], FrameContains("abc", 5U, 30U, false));
 }
@@ -393,9 +393,9 @@ TEST(MemProf, SymbolizationFilter) {
     Records.push_back(KeyRecordPair.second);
   }
 
-  ASSERT_EQ(Records.size(), 1U);
-  ASSERT_EQ(Records[0].AllocSites.size(), 1U);
-  ASSERT_EQ(Records[0].AllocSites[0].CallStack.size(), 1U);
+  ASSERT_THAT(Records, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(1));
   EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
               FrameContains("foo", 5U, 30U, false));
 }
@@ -427,9 +427,9 @@ TEST(MemProf, BaseMemProfReader) {
     Records.push_back(KeyRecordPair.second);
   }
 
-  ASSERT_EQ(Records.size(), 1U);
-  ASSERT_EQ(Records[0].AllocSites.size(), 1U);
-  ASSERT_EQ(Records[0].AllocSites[0].CallStack.size(), 2U);
+  ASSERT_THAT(Records, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(2));
   EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
               FrameContains("foo", 20U, 5U, true));
   EXPECT_THAT(Records[0].AllocSites[0].CallStack[1],
