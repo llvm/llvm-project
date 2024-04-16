@@ -18,7 +18,7 @@ or `D3D12_ROOT_SIGNATURE_DESC1 (for rootsig_1_1)
 <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_signature_desc1>`_
 structure in the Direct3D 12 API. (With the pointers translated to offsets.)
 
-It will be look like this:
+It will look like this:
 
 .. code-block:: c++
 
@@ -105,7 +105,7 @@ It will be look like this:
 The binary representation begins with a **ContainerRootSignatureDesc**
 object.
 
-The object is succeeded by an array of **ContainerRootParameter** objects
+The object is followed by an array of **ContainerRootParameter** objects
 located at **ContainerRootSignatureDesc::RootParametersOffset**, which
 corresponds to the size of **ContainerRootSignatureDesc**.
 
