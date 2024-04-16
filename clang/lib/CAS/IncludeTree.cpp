@@ -832,10 +832,13 @@ llvm::Error IncludeTree::APINotes::forEachAPINotes(
 }
 
 llvm::Error IncludeTreeRoot::print(llvm::raw_ostream &OS, unsigned Indent) {
-  if (std::optional<ObjectRef> PCHRef = getPCHRef()) {
+  std::optional<IncludeTree::File> PCH;
+  if (llvm::Error E = getPCH().moveInto(PCH))
+    return E;
+  if (PCH) {
     OS.indent(Indent) << "(PCH) ";
-    getCAS().getID(*PCHRef).print(OS);
-    OS << '\n';
+    if (llvm::Error E = PCH->print(OS))
+      return E;
   }
   std::optional<cas::IncludeTree> MainTree;
   if (llvm::Error E = getMainFileTree().moveInto(MainTree))

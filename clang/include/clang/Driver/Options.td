@@ -8218,6 +8218,11 @@ defm casid_output : BoolFOption<"casid-output",
                          " write a CASID for the output file.">,
     NegFlag<SetFalse>>;
 
+defm include_tree_preserve_pch_path : BoolFOption<"include-tree-preserve-pch-path",
+    FrontendOpts<"IncludeTreePreservePCHPath">, DefaultFalse,
+    PosFlag<SetTrue, [], [], "Keep the original PCH path in include-tree rather than canonicalizing">,
+    NegFlag<SetFalse>>;
+
 /// BEGIN MCCAS
 defm cas_backend : BoolFOption<"cas-backend",
     CodeGenOpts<"UseCASBackend">, DefaultFalse,

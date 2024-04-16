@@ -53,7 +53,7 @@
 // CHECK:   3:1 (Module) Mod_Private
 
 // CHECK-LABEL: TRANSLATION UNIT
-// CHECK: (PCH) llvmcas://
+// CHECK: (PCH) <PCH> llvmcas://
 // CHECK: [[PREFIX]]/tu.m llvmcas://
 // CHECK: 1:1 <built-in> llvmcas://
 // CHECK: 2:1 (Module) Mod_Private
