@@ -15237,39 +15237,60 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         Size *= 2;
       });
       unsigned StartIdx = 0;
-      for (unsigned Size : CandidateVFs) {
-        for (unsigned Cnt = StartIdx, E = Operands.size(); Cnt + Size <= E;) {
-          ArrayRef<Value *> Slice = ArrayRef(Operands).slice(Cnt, Size);
-          assert(
-              all_of(
-                  Slice,
-                  [&](Value *V) {
-                    return cast<StoreInst>(V)->getValueOperand()->getType() ==
-                           cast<StoreInst>(Slice.front())
-                               ->getValueOperand()
-                               ->getType();
-                  }) &&
-              "Expected all operands of same type.");
-          if (!VectorizedStores.count(Slice.front()) &&
-              !VectorizedStores.count(Slice.back()) &&
-              TriedSequences.insert(std::make_pair(Slice.front(), Slice.back()))
-                  .second &&
-              vectorizeStoreChain(Slice, R, Cnt, MinVF)) {
-            // Mark the vectorized stores so that we don't vectorize them again.
-            VectorizedStores.insert(Slice.begin(), Slice.end());
-            Changed = true;
-            // If we vectorized initial block, no need to try to vectorize it
-            // again.
-            if (Cnt == StartIdx)
-              StartIdx += Size;
-            Cnt += Size;
-            continue;
+      unsigned Repeat = 0;
+      constexpr unsigned MaxAttempts = 2;
+      while (true) {
+        ++Repeat;
+        for (unsigned Size : CandidateVFs) {
+          for (unsigned Cnt = StartIdx, E = Operands.size(); Cnt + Size <= E;) {
+            ArrayRef<Value *> Slice = ArrayRef(Operands).slice(Cnt, Size);
+            assert(
+                all_of(
+                    Slice,
+                    [&](Value *V) {
+                      return cast<StoreInst>(V)->getValueOperand()->getType() ==
+                             cast<StoreInst>(Slice.front())
+                                 ->getValueOperand()
+                                 ->getType();
+                    }) &&
+                "Expected all operands of same type.");
+            if (!VectorizedStores.count(Slice.front()) &&
+                !VectorizedStores.count(Slice.back()) &&
+                TriedSequences
+                    .insert(std::make_pair(Slice.front(), Slice.back()))
+                    .second &&
+                vectorizeStoreChain(Slice, R, Cnt, MinVF)) {
+              // Mark the vectorized stores so that we don't vectorize them
+              // again.
+              VectorizedStores.insert(Slice.begin(), Slice.end());
+              Changed = true;
+              // If we vectorized initial block, no need to try to vectorize
+              // it again.
+              if (Cnt == StartIdx)
+                StartIdx += Size;
+              Cnt += Size;
+              continue;
+            }
+            ++Cnt;
           }
-          ++Cnt;
+          // Check if the whole array was vectorized already - exit.
+          if (StartIdx >= Operands.size()) {
+            Repeat = MaxAttempts;
+            break;
+          }
         }
-        // Check if the whole array was vectorized already - exit.
-        if (StartIdx >= Operands.size())
+        // Check if tried all attempts or no need for the last attempts at all.
+        if (Repeat >= MaxAttempts)
           break;
+        const unsigned MaxTotalNum = bit_floor(Operands.size() - StartIdx);
+        if (MaxVF >= MaxTotalNum)
+          break;
+        // Last attempt to vectorize max number of elements, if all previous
+        // attempts were unsuccessful because of the cost issues.
+        CandidateVFs.clear();
+        for (unsigned Size = MaxTotalNum; Size > MaxVF; Size /= 2) {
+          CandidateVFs.push_back(Size);
+        }
       }
     }
   };
