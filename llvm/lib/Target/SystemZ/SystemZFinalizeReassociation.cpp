@@ -1,4 +1,4 @@
-//===---- SystemZFinalizeReassociation.cpp - Finalize FP reassociation ----===//
+//===----- SystemZFinalizeReassociation.cpp - Finalize reassociation ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,12 +11,13 @@
 //
 // 1. Instruction selection: Disable reg/mem folding for any operations that
 //    are reassociable since MachineCombiner will not succeed otherwise.
-//    Select a reg/reg pseudo that pretends to clobber CC since the reg/mem
+//    Select a reg/reg pseudo that pretends to clobber CC if the reg/mem
 //    opcode clobbers it.
 //
-// 2. MachineCombiner: Performs reassociation with the reg/reg instructions.
+// 2. MachineCombiner: reassociation with the reg/reg instructions.
 //
-// 3. PeepholeOptimizer: Fold loads into reg/mem instructions.
+// 3. PeepholeOptimizer: Fold loads and reg/reg pseudos into reg/mem
+//                       instructions.
 //
 // 4. This pass: Convert any remaining reg/reg pseudos.
 //
@@ -33,8 +34,7 @@ namespace {
 class SystemZFinalizeReassociation : public MachineFunctionPass {
 public:
   static char ID;
-  SystemZFinalizeReassociation()
-    : MachineFunctionPass(ID), TII(nullptr) {
+  SystemZFinalizeReassociation() : MachineFunctionPass(ID), TII(nullptr) {
     initializeSystemZFinalizeReassociationPass(*PassRegistry::getPassRegistry());
   }
 
@@ -42,7 +42,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
-
   bool visitMBB(MachineBasicBlock &MBB);
 
   const SystemZInstrInfo *TII;
@@ -55,8 +54,8 @@ char SystemZFinalizeReassociation::ID = 0;
 INITIALIZE_PASS(SystemZFinalizeReassociation, "systemz-finalize-reassoc",
                 "SystemZ Finalize Reassociation", false, false)
 
-FunctionPass *llvm::
-createSystemZFinalizeReassociationPass(SystemZTargetMachine &TM) {
+FunctionPass *
+llvm::createSystemZFinalizeReassociationPass(SystemZTargetMachine &TM) {
   return new SystemZFinalizeReassociation();
 }
 
@@ -70,18 +69,17 @@ bool SystemZFinalizeReassociation::visitMBB(MachineBasicBlock &MBB) {
   for (MachineInstr &MI : MBB) {
     unsigned PseudoOpcode = MI.getOpcode();
     unsigned TargetOpcode =
-      PseudoOpcode == SystemZ::WFADB_CCPseudo    ? SystemZ::WFADB
-      : PseudoOpcode == SystemZ::WFASB_CCPseudo  ? SystemZ::WFASB
-      : PseudoOpcode == SystemZ::WFSDB_CCPseudo  ? SystemZ::WFSDB
-      : PseudoOpcode == SystemZ::WFSSB_CCPseudo  ? SystemZ::WFSSB
-      : PseudoOpcode == SystemZ::WFMADB_CCPseudo ? SystemZ::WFMADB
-      : PseudoOpcode == SystemZ::WFMASB_CCPseudo ? SystemZ::WFMASB
-      : 0;
+        PseudoOpcode == SystemZ::WFADB_CCPseudo   ? SystemZ::WFADB
+        : PseudoOpcode == SystemZ::WFASB_CCPseudo ? SystemZ::WFASB
+        : PseudoOpcode == SystemZ::WFSDB_CCPseudo ? SystemZ::WFSDB
+        : PseudoOpcode == SystemZ::WFSSB_CCPseudo ? SystemZ::WFSSB
+                                                  : 0;
     if (TargetOpcode) {
-        MI.setDesc(TII->get(TargetOpcode));
-        int CCIdx = MI.findRegisterDefOperandIdx(SystemZ::CC);
-        MI.removeOperand(CCIdx);
-        Changed = true;
+      MI.setDesc(TII->get(TargetOpcode));
+      int CCIdx = MI.findRegisterDefOperandIdx(SystemZ::CC, /*isDead=*/true);
+      assert(CCIdx != -1 && "Expected dead CC-def.");
+      MI.removeOperand(CCIdx);
+      Changed = true;
     }
   }
   return Changed;

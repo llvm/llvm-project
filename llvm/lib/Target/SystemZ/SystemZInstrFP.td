@@ -501,10 +501,8 @@ let Uses = [FPC], mayRaiseFPException = 1 in {
   def MAEBR : TernaryRRD<"maebr", 0xB30E, z_any_fma, FP32, FP32>;
   def MADBR : TernaryRRD<"madbr", 0xB31E, z_any_fma, FP64, FP64>;
 
-  defm MAEB : TernaryRXFAndPseudo<"maeb", 0xED0E, z_any_fma_noreassoc, FP32,
-                                  FP32, z_load, 4>;
-  defm MADB : TernaryRXFAndPseudo<"madb", 0xED1E, z_any_fma_noreassoc, FP64,
-                                  FP64, z_load, 8>;
+  defm MAEB : TernaryRXFAndPseudo<"maeb", 0xED0E, z_any_fma, FP32, FP32, z_load, 4>;
+  defm MADB : TernaryRXFAndPseudo<"madb", 0xED1E, z_any_fma, FP64, FP64, z_load, 8>;
 }
 
 // Fused multiply-subtract.

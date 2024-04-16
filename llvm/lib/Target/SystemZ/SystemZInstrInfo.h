@@ -254,8 +254,6 @@ public:
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
                     Register FalseReg) const override;
-  void transferMIFlag(MachineInstr *OldMI, MachineInstr *NewMI,
-                      MachineInstr::MIFlag Flag) const;
   MachineInstr *optimizeLoadInstr(MachineInstr &MI,
                                   MachineRegisterInfo *MRI,
                                   Register &FoldAsLoadDefReg,
@@ -294,34 +292,12 @@ public:
                                       LiveIntervals *LIS) const override;
 
   bool useMachineCombiner() const override { return true; }
-  bool IsReassociableFMA(const MachineInstr *MI) const;
-  bool IsReassociableAdd(const MachineInstr *MI) const;
-  bool getFMAPatterns(MachineInstr &Root,
-                      SmallVectorImpl<MachineCombinerPattern> &P,
-                      bool DoRegPressureReduce) const;
-  bool getMachineCombinerPatterns(MachineInstr &Root,
-                                  SmallVectorImpl<MachineCombinerPattern> &P,
-                                  bool DoRegPressureReduce) const override;
   void
-  finalizeInsInstrs(MachineInstr &Root, MachineCombinerPattern &P,
+  finalizeInsInstrs(MachineInstr &Root, unsigned &P,
                     SmallVectorImpl<MachineInstr *> &InsInstrs) const override;
   bool isAssociativeAndCommutative(const MachineInstr &Inst,
                                    bool Invert) const override;
   std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
-  void genAlternativeCodeSequence(
-      MachineInstr &Root, MachineCombinerPattern Pattern,
-      SmallVectorImpl<MachineInstr *> &InsInstrs,
-      SmallVectorImpl<MachineInstr *> &DelInstrs,
-      DenseMap<unsigned, unsigned> &InstIdxForVirtReg) const override;
-  void reassociateFMA(
-      MachineInstr &Root, MachineCombinerPattern Pattern,
-      SmallVectorImpl<MachineInstr *> &InsInstrs,
-      SmallVectorImpl<MachineInstr *> &DelInstrs,
-      DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
-  bool accumulateInstrSeqToRootLatency(MachineInstr &Root) const override;
-  // SystemZ specific version of setSpecialOperandAttr that copies Flags to
-  // MI and clears nuw, nsw, and exact flags.
-  void setSpecialOperandAttr(MachineInstr &MI, uint32_t Flags) const;
 
   MachineInstr *
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,

@@ -30,10 +30,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-EnableMachineCombinerPass("systemz-machine-combiner",
-                          cl::desc("Enable the machine combiner pass"),
-                          cl::init(true), cl::Hidden);
+static cl::opt<bool> EnableMachineCombinerPass(
+    "systemz-machine-combiner",
+    cl::desc("Enable the machine combiner pass"),
+    cl::init(true), cl::Hidden);
 
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {

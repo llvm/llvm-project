@@ -2053,8 +2053,7 @@ bool SystemZDAGToDAGISel::shouldSelectForReassoc(SDNode *N) const {
   EVT VT = N->getValueType(0);
   assert(VT.isFloatingPoint() && "Expected FP SDNode");
   return N->getFlags().hasAllowReassociation() &&
-         N->getFlags().hasNoSignedZeros() &&
-         Subtarget->hasVector() &&
+         N->getFlags().hasNoSignedZeros() && Subtarget->hasVector() &&
          (VT != MVT::f32 || Subtarget->hasVectorEnhancements1()) &&
          !N->isStrictFPOpcode();
 }

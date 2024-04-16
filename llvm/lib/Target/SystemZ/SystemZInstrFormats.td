@@ -5537,6 +5537,9 @@ multiclass StringRRE<string mnemonic, bits<16> opcode,
                                                  GR32:$char))]>;
 }
 
+// Duplicate the instruction with a pseudo that defines CC that will be
+// selected in cases where reassociation is enabled. The CC operand is needed
+// in order to do later reg/mem folding into instructions that clobber CC.
 multiclass BinaryVRRcAndCCPseudo<string mnemonic, bits<16> opcode,
                                  SDPatternOperator operator,
                                  SDPatternOperator reassoc_operator,
@@ -5550,20 +5553,4 @@ multiclass BinaryVRRcAndCCPseudo<string mnemonic, bits<16> opcode,
                            [(set (tr1.vt tr1.op:$V1),
                                  (reassoc_operator (tr2.vt tr2.op:$V2),
                                                    (tr2.vt tr2.op:$V3)))]>;
-}
-
-multiclass TernaryVRReAndCCPseudo<string mnemonic, bits<16> opcode,
-                                  SDPatternOperator operator,
-                                  SDPatternOperator reassoc_operator,
-                                  TypedReg tr1, TypedReg tr2, bits<4> m5 = 0,
-                                  bits<4> type = 0, string fp_mnemonic = ""> {
-  def "" : TernaryVRRe<mnemonic, opcode, operator, tr1, tr2, m5, type,
-                       fp_mnemonic>;
-  let Defs = [CC], AddedComplexity = 1 in // Win over "".
-    def _CCPseudo : Pseudo<(outs tr1.op:$V1),
-                           (ins tr2.op:$V2, tr2.op:$V3, tr1.op:$V4),
-                           [(set (tr1.vt tr1.op:$V1),
-                                 (reassoc_operator (tr2.vt tr2.op:$V2),
-                                                   (tr2.vt tr2.op:$V3),
-                                                   (tr1.vt tr1.op:$V4)))]>;
 }

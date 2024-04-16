@@ -119,7 +119,7 @@ define double @f7(ptr %ptr0) {
   ret double %add10
 }
 
-; Check that reassociation flags do not get in the way of adb.
+; Check that reassociation flags do not get in the way of ADB.
 define double @f8(ptr %x) {
 ; CHECK-LABEL: f8:
 ; CHECK: ld %f0
