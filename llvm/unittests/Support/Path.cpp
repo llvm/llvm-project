@@ -1312,8 +1312,7 @@ TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
 
 TEST_F(FileSystemTest, OpenDirectoryAsFileForWrite) {
   int FD;
-  std::error_code EC;
-  EC = fs::openFileForWrite(Twine(TestDirectory), FD);
+  std::error_code EC = fs::openFileForWrite(Twine(TestDirectory), FD);
   if (!EC)
     ::close(FD);
   ASSERT_EQ(EC, errc::is_a_directory);
