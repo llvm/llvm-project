@@ -4015,7 +4015,7 @@ mlir::LogicalResult fir::CUDAAllocateOp::verify() {
 mlir::LogicalResult fir::CUDADeallocateOp::verify() {
   if (!fir::unwrapRefType(getBox().getType()).isa<fir::BaseBoxType>())
     return emitOpError(
-        "expect box to be a reference to/or a class or box type value");
+        "expect box to be a reference to class or box type value");
   if (getErrmsg() &&
       !fir::unwrapRefType(getErrmsg().getType()).isa<fir::BoxType>())
     return emitOpError(

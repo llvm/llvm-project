@@ -3231,7 +3231,7 @@ def fir_CUDADeallocateOp : fir_Op<"cuda_deallocate",
     of the data of an allocatable.
   }];
 
-  let arguments = (ins Arg<AnyRefOrBoxType, "", [MemWrite]>:$box,
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
                        Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
                        fir_CUDADataAttributeAttr:$cuda_attr,
                        UnitAttr:$hasStat);

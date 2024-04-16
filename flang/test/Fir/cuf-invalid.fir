@@ -53,7 +53,7 @@ func.func @_QPsub1() {
 
 func.func @_QPsub1() {
   %1 = fir.alloca i32
-  // expected-error@+1{{'fir.cuda_deallocate' op expect box to be a reference to/or a class or box type value}}
+  // expected-error@+1{{'fir.cuda_deallocate' op expect box to be a reference to class or box type value}}
   %2 = fir.cuda_deallocate %1 : !fir.ref<i32> {cuda_attr = #fir.cuda<device>} -> i32
   return
 }
