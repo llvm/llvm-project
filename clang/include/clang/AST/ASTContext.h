@@ -2201,9 +2201,9 @@ public:
     assert(!Ty.getPointerAuth());
     assert(PointerAuth);
 
-    Qualifiers qs;
-    qs.setPointerAuth(PointerAuth);
-    return getQualifiedType(Ty, qs);
+    Qualifiers Qs;
+    Qs.setPointerAuth(PointerAuth);
+    return getQualifiedType(Ty, Qs);
   }
 
   unsigned char getFixedPointScale(QualType Ty) const;

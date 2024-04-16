@@ -174,7 +174,7 @@ class PointerAuthQualifier {
   //           |Enabled|Address|AuthenticationMode|ISA pointer|
   // bits:     |5                |6..15|   16...31   |
   //           |AuthenticatesNull|Key  |Discriminator|
-  uint32_t Data;
+  uint32_t Data = 0;
 
   // The following static assertions check that each of the 32 bits is present
   // exactly in one of the constants.
@@ -224,7 +224,7 @@ public:
   };
 
 public:
-  PointerAuthQualifier() : Data(0) {}
+  PointerAuthQualifier() = default;
 
   static PointerAuthQualifier
   Create(unsigned Key, bool IsAddressDiscriminated, unsigned ExtraDiscriminator,
@@ -295,9 +295,9 @@ public:
 
   // Deserialize pointer-auth qualifiers from an opaque representation.
   static PointerAuthQualifier fromOpaqueValue(uint32_t Opaque) {
-    PointerAuthQualifier result;
-    result.Data = Opaque;
-    return result;
+    PointerAuthQualifier Result;
+    Result.Data = Opaque;
+    return Result;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddInteger(Data); }
@@ -357,8 +357,6 @@ public:
     /// The fast qualifier mask.
     FastMask = (1 << FastWidth) - 1
   };
-
-  Qualifiers() : Mask(0), PtrAuth() {}
 
   /// Returns the common set of qualifiers while removing them from
   /// the given sets.
