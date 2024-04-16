@@ -48,31 +48,13 @@ define i32 @ctz_v2i1_poison(<2 x i1> %a) {
 ; RV32-LABEL: ctz_v2i1_poison:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vmerge.vim v8, v8, -1, v0
-; RV32-NEXT:    vid.v v9
-; RV32-NEXT:    vrsub.vi v9, v9, 2
-; RV32-NEXT:    vand.vv v8, v8, v9
-; RV32-NEXT:    vredmaxu.vs v8, v8, v8
-; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:    li a1, 2
-; RV32-NEXT:    sub a1, a1, a0
-; RV32-NEXT:    andi a0, a1, 255
+; RV32-NEXT:    vfirst.m a0, v0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ctz_v2i1_poison:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vmerge.vim v8, v8, -1, v0
-; RV64-NEXT:    vid.v v9
-; RV64-NEXT:    vrsub.vi v9, v9, 2
-; RV64-NEXT:    vand.vv v8, v8, v9
-; RV64-NEXT:    vredmaxu.vs v8, v8, v8
-; RV64-NEXT:    vmv.x.s a0, v8
-; RV64-NEXT:    li a1, 2
-; RV64-NEXT:    subw a1, a1, a0
-; RV64-NEXT:    andi a0, a1, 255
+; RV64-NEXT:    vfirst.m a0, v0
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.v2i1(<2 x i1> %a, i1 1)
   ret i32 %res
