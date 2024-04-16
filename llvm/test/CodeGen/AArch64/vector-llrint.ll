@@ -532,6 +532,143 @@ define <16 x i64> @llrint_v16i64_v16f32(<16 x float> %x) {
 }
 declare <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float>)
 
+define <32 x i64> @llrint_v32i64_v32f32(<32 x float> %x) {
+; CHECK-LABEL: llrint_v32i64_v32f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v16.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    ext v20.16b, v5.16b, v5.16b, #8
+; CHECK-NEXT:    ext v17.16b, v3.16b, v3.16b, #8
+; CHECK-NEXT:    ext v18.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    ext v19.16b, v4.16b, v4.16b, #8
+; CHECK-NEXT:    ext v21.16b, v6.16b, v6.16b, #8
+; CHECK-NEXT:    ext v22.16b, v7.16b, v7.16b, #8
+; CHECK-NEXT:    frintx s24, s16
+; CHECK-NEXT:    mov s28, v20.s[1]
+; CHECK-NEXT:    frintx s25, s17
+; CHECK-NEXT:    frintx s26, s18
+; CHECK-NEXT:    frintx s27, s19
+; CHECK-NEXT:    frintx s29, s20
+; CHECK-NEXT:    mov s30, v21.s[1]
+; CHECK-NEXT:    frintx s20, s21
+; CHECK-NEXT:    frintx s21, s22
+; CHECK-NEXT:    mov s23, v22.s[1]
+; CHECK-NEXT:    mov s19, v19.s[1]
+; CHECK-NEXT:    mov s17, v17.s[1]
+; CHECK-NEXT:    fcvtzs x12, s24
+; CHECK-NEXT:    frintx s24, s28
+; CHECK-NEXT:    fcvtzs x13, s25
+; CHECK-NEXT:    mov s25, v7.s[1]
+; CHECK-NEXT:    fcvtzs x9, s26
+; CHECK-NEXT:    fcvtzs x11, s27
+; CHECK-NEXT:    fcvtzs x14, s20
+; CHECK-NEXT:    fcvtzs x15, s21
+; CHECK-NEXT:    frintx s26, s1
+; CHECK-NEXT:    frintx s23, s23
+; CHECK-NEXT:    frintx s27, s7
+; CHECK-NEXT:    frintx s22, s30
+; CHECK-NEXT:    fmov d20, x12
+; CHECK-NEXT:    fcvtzs x12, s24
+; CHECK-NEXT:    mov s24, v6.s[1]
+; CHECK-NEXT:    frintx s25, s25
+; CHECK-NEXT:    frintx s6, s6
+; CHECK-NEXT:    fcvtzs x10, s29
+; CHECK-NEXT:    fmov d7, x11
+; CHECK-NEXT:    fmov d21, x13
+; CHECK-NEXT:    frintx s28, s5
+; CHECK-NEXT:    fcvtzs x11, s23
+; CHECK-NEXT:    fmov d23, x14
+; CHECK-NEXT:    fcvtzs x14, s26
+; CHECK-NEXT:    fmov d26, x15
+; CHECK-NEXT:    fcvtzs x15, s27
+; CHECK-NEXT:    frintx s24, s24
+; CHECK-NEXT:    mov s27, v5.s[1]
+; CHECK-NEXT:    fcvtzs x13, s22
+; CHECK-NEXT:    fcvtzs x17, s25
+; CHECK-NEXT:    frintx s25, s4
+; CHECK-NEXT:    fcvtzs x18, s6
+; CHECK-NEXT:    fmov d6, x10
+; CHECK-NEXT:    frintx s22, s2
+; CHECK-NEXT:    mov v26.d[1], x11
+; CHECK-NEXT:    fmov d5, x14
+; CHECK-NEXT:    fcvtzs x10, s24
+; CHECK-NEXT:    fmov d24, x15
+; CHECK-NEXT:    fcvtzs x14, s28
+; CHECK-NEXT:    frintx s27, s27
+; CHECK-NEXT:    mov v23.d[1], x13
+; CHECK-NEXT:    mov s4, v4.s[1]
+; CHECK-NEXT:    fcvtzs x13, s25
+; CHECK-NEXT:    fmov d25, x18
+; CHECK-NEXT:    mov s16, v16.s[1]
+; CHECK-NEXT:    mov v24.d[1], x17
+; CHECK-NEXT:    fcvtzs x16, s22
+; CHECK-NEXT:    frintx s22, s3
+; CHECK-NEXT:    mov s3, v3.s[1]
+; CHECK-NEXT:    frintx s19, s19
+; CHECK-NEXT:    mov s2, v2.s[1]
+; CHECK-NEXT:    mov v25.d[1], x10
+; CHECK-NEXT:    fcvtzs x10, s27
+; CHECK-NEXT:    frintx s4, s4
+; CHECK-NEXT:    mov v6.d[1], x12
+; CHECK-NEXT:    frintx s17, s17
+; CHECK-NEXT:    mov s18, v18.s[1]
+; CHECK-NEXT:    stp q24, q26, [x8, #224]
+; CHECK-NEXT:    fmov d24, x14
+; CHECK-NEXT:    fcvtzs x11, s22
+; CHECK-NEXT:    ext v22.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov s1, v1.s[1]
+; CHECK-NEXT:    frintx s3, s3
+; CHECK-NEXT:    stp q25, q23, [x8, #192]
+; CHECK-NEXT:    frintx s2, s2
+; CHECK-NEXT:    fcvtzs x12, s4
+; CHECK-NEXT:    mov v24.d[1], x10
+; CHECK-NEXT:    fcvtzs x10, s19
+; CHECK-NEXT:    mov s19, v0.s[1]
+; CHECK-NEXT:    frintx s16, s16
+; CHECK-NEXT:    frintx s0, s0
+; CHECK-NEXT:    fmov d4, x11
+; CHECK-NEXT:    mov s27, v22.s[1]
+; CHECK-NEXT:    frintx s22, s22
+; CHECK-NEXT:    frintx s1, s1
+; CHECK-NEXT:    fcvtzs x11, s3
+; CHECK-NEXT:    fcvtzs x14, s2
+; CHECK-NEXT:    frintx s2, s18
+; CHECK-NEXT:    stp q24, q6, [x8, #160]
+; CHECK-NEXT:    fmov d6, x13
+; CHECK-NEXT:    fcvtzs x13, s17
+; CHECK-NEXT:    frintx s17, s19
+; CHECK-NEXT:    fmov d23, x16
+; CHECK-NEXT:    mov v7.d[1], x10
+; CHECK-NEXT:    frintx s3, s27
+; CHECK-NEXT:    fcvtzs x10, s22
+; CHECK-NEXT:    fcvtzs x15, s1
+; CHECK-NEXT:    mov v6.d[1], x12
+; CHECK-NEXT:    fcvtzs x12, s16
+; CHECK-NEXT:    mov v4.d[1], x11
+; CHECK-NEXT:    mov v21.d[1], x13
+; CHECK-NEXT:    fcvtzs x13, s0
+; CHECK-NEXT:    mov v23.d[1], x14
+; CHECK-NEXT:    fcvtzs x14, s17
+; CHECK-NEXT:    fcvtzs x11, s3
+; CHECK-NEXT:    fmov d0, x10
+; CHECK-NEXT:    mov v5.d[1], x15
+; CHECK-NEXT:    stp q6, q7, [x8, #128]
+; CHECK-NEXT:    mov v20.d[1], x12
+; CHECK-NEXT:    fcvtzs x12, s2
+; CHECK-NEXT:    stp q4, q21, [x8, #96]
+; CHECK-NEXT:    fmov d1, x13
+; CHECK-NEXT:    fmov d2, x9
+; CHECK-NEXT:    mov v0.d[1], x11
+; CHECK-NEXT:    stp q23, q20, [x8, #64]
+; CHECK-NEXT:    mov v1.d[1], x14
+; CHECK-NEXT:    mov v2.d[1], x12
+; CHECK-NEXT:    stp q5, q0, [x8, #32]
+; CHECK-NEXT:    stp q1, q2, [x8]
+; CHECK-NEXT:    ret
+  %a = call <32 x i64> @llvm.llrint.v32i64.v32f32(<32 x float> %x)
+  ret <32 x i64> %a
+}
+declare <32 x i64> @llvm.llrint.v32i64.v32f32(<32 x float>)
+
 define <1 x i64> @llrint_v1i64_v1f64(<1 x double> %x) {
 ; CHECK-LABEL: llrint_v1i64_v1f64:
 ; CHECK:       // %bb.0:
@@ -619,3 +756,201 @@ define <8 x i64> @llrint_v8i64_v8f64(<8 x double> %x) {
   ret <8 x i64> %a
 }
 declare <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double>)
+
+define <16 x i64> @llrint_v16f64(<16 x double> %x) {
+; CHECK-LABEL: llrint_v16f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov d16, v0.d[1]
+; CHECK-NEXT:    mov d17, v1.d[1]
+; CHECK-NEXT:    frintx d0, d0
+; CHECK-NEXT:    frintx d1, d1
+; CHECK-NEXT:    frintx d18, d2
+; CHECK-NEXT:    mov d2, v2.d[1]
+; CHECK-NEXT:    frintx d19, d3
+; CHECK-NEXT:    mov d3, v3.d[1]
+; CHECK-NEXT:    frintx d16, d16
+; CHECK-NEXT:    frintx d17, d17
+; CHECK-NEXT:    fcvtzs x8, d0
+; CHECK-NEXT:    frintx d0, d4
+; CHECK-NEXT:    mov d4, v4.d[1]
+; CHECK-NEXT:    fcvtzs x9, d1
+; CHECK-NEXT:    frintx d1, d5
+; CHECK-NEXT:    mov d5, v5.d[1]
+; CHECK-NEXT:    fcvtzs x12, d18
+; CHECK-NEXT:    frintx d2, d2
+; CHECK-NEXT:    fcvtzs x13, d19
+; CHECK-NEXT:    frintx d18, d3
+; CHECK-NEXT:    fcvtzs x10, d16
+; CHECK-NEXT:    mov d16, v6.d[1]
+; CHECK-NEXT:    fcvtzs x11, d17
+; CHECK-NEXT:    mov d17, v7.d[1]
+; CHECK-NEXT:    frintx d6, d6
+; CHECK-NEXT:    frintx d7, d7
+; CHECK-NEXT:    frintx d4, d4
+; CHECK-NEXT:    frintx d5, d5
+; CHECK-NEXT:    fcvtzs x14, d0
+; CHECK-NEXT:    fcvtzs x15, d1
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    frintx d16, d16
+; CHECK-NEXT:    fcvtzs x9, d2
+; CHECK-NEXT:    fmov d2, x12
+; CHECK-NEXT:    frintx d17, d17
+; CHECK-NEXT:    fcvtzs x8, d6
+; CHECK-NEXT:    fcvtzs x12, d7
+; CHECK-NEXT:    fmov d3, x13
+; CHECK-NEXT:    fcvtzs x13, d18
+; CHECK-NEXT:    fcvtzs x16, d4
+; CHECK-NEXT:    fcvtzs x17, d5
+; CHECK-NEXT:    fmov d4, x14
+; CHECK-NEXT:    fmov d5, x15
+; CHECK-NEXT:    fcvtzs x18, d16
+; CHECK-NEXT:    mov v0.d[1], x10
+; CHECK-NEXT:    mov v1.d[1], x11
+; CHECK-NEXT:    fcvtzs x0, d17
+; CHECK-NEXT:    fmov d6, x8
+; CHECK-NEXT:    fmov d7, x12
+; CHECK-NEXT:    mov v2.d[1], x9
+; CHECK-NEXT:    mov v3.d[1], x13
+; CHECK-NEXT:    mov v4.d[1], x16
+; CHECK-NEXT:    mov v5.d[1], x17
+; CHECK-NEXT:    mov v6.d[1], x18
+; CHECK-NEXT:    mov v7.d[1], x0
+; CHECK-NEXT:    ret
+  %a = call <16 x i64> @llvm.llrint.v16i64.v16f64(<16 x double> %x)
+  ret <16 x i64> %a
+}
+declare <16 x i64> @llvm.llrint.v16i64.v16f64(<16 x double>)
+
+define <32 x i64> @llrint_v32f64(<32 x double> %x) {
+; CHECK-LABEL: llrint_v32f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frintx d20, d0
+; CHECK-NEXT:    frintx d22, d3
+; CHECK-NEXT:    frintx d21, d4
+; CHECK-NEXT:    ldp q19, q18, [sp, #64]
+; CHECK-NEXT:    frintx d23, d5
+; CHECK-NEXT:    ldp q27, q26, [sp, #96]
+; CHECK-NEXT:    mov d4, v4.d[1]
+; CHECK-NEXT:    ldp q16, q17, [sp, #32]
+; CHECK-NEXT:    mov d5, v5.d[1]
+; CHECK-NEXT:    fcvtzs x9, d20
+; CHECK-NEXT:    frintx d20, d6
+; CHECK-NEXT:    fcvtzs x11, d22
+; CHECK-NEXT:    frintx d22, d19
+; CHECK-NEXT:    fcvtzs x12, d21
+; CHECK-NEXT:    fcvtzs x10, d23
+; CHECK-NEXT:    mov d21, v26.d[1]
+; CHECK-NEXT:    frintx d23, d27
+; CHECK-NEXT:    mov d27, v27.d[1]
+; CHECK-NEXT:    frintx d24, d16
+; CHECK-NEXT:    mov d19, v19.d[1]
+; CHECK-NEXT:    frintx d25, d17
+; CHECK-NEXT:    fcvtzs x13, d20
+; CHECK-NEXT:    mov d20, v18.d[1]
+; CHECK-NEXT:    frintx d18, d18
+; CHECK-NEXT:    fcvtzs x16, d22
+; CHECK-NEXT:    frintx d22, d26
+; CHECK-NEXT:    mov d16, v16.d[1]
+; CHECK-NEXT:    frintx d21, d21
+; CHECK-NEXT:    fcvtzs x17, d23
+; CHECK-NEXT:    frintx d23, d27
+; CHECK-NEXT:    fcvtzs x14, d24
+; CHECK-NEXT:    frintx d26, d19
+; CHECK-NEXT:    fmov d19, x11
+; CHECK-NEXT:    frintx d20, d20
+; CHECK-NEXT:    mov d27, v17.d[1]
+; CHECK-NEXT:    fcvtzs x15, d25
+; CHECK-NEXT:    ldp q25, q24, [sp]
+; CHECK-NEXT:    fcvtzs x11, d22
+; CHECK-NEXT:    fmov d17, x12
+; CHECK-NEXT:    fcvtzs x12, d21
+; CHECK-NEXT:    fcvtzs x0, d23
+; CHECK-NEXT:    fmov d23, x14
+; CHECK-NEXT:    fcvtzs x14, d18
+; CHECK-NEXT:    fmov d18, x17
+; CHECK-NEXT:    fcvtzs x17, d20
+; CHECK-NEXT:    frintx d21, d7
+; CHECK-NEXT:    fcvtzs x18, d26
+; CHECK-NEXT:    fmov d20, x11
+; CHECK-NEXT:    frintx d22, d25
+; CHECK-NEXT:    frintx d26, d27
+; CHECK-NEXT:    frintx d16, d16
+; CHECK-NEXT:    mov v18.d[1], x0
+; CHECK-NEXT:    mov d25, v25.d[1]
+; CHECK-NEXT:    mov d7, v7.d[1]
+; CHECK-NEXT:    mov d6, v6.d[1]
+; CHECK-NEXT:    mov d0, v0.d[1]
+; CHECK-NEXT:    mov v20.d[1], x12
+; CHECK-NEXT:    fcvtzs x11, d21
+; CHECK-NEXT:    fmov d21, x15
+; CHECK-NEXT:    fcvtzs x12, d22
+; CHECK-NEXT:    fmov d22, x16
+; CHECK-NEXT:    fcvtzs x15, d26
+; CHECK-NEXT:    fmov d26, x14
+; CHECK-NEXT:    fcvtzs x14, d16
+; CHECK-NEXT:    frintx d25, d25
+; CHECK-NEXT:    frintx d7, d7
+; CHECK-NEXT:    mov d16, v1.d[1]
+; CHECK-NEXT:    mov d3, v3.d[1]
+; CHECK-NEXT:    stp q18, q20, [x8, #224]
+; CHECK-NEXT:    mov d18, v24.d[1]
+; CHECK-NEXT:    mov v22.d[1], x18
+; CHECK-NEXT:    mov v26.d[1], x17
+; CHECK-NEXT:    frintx d24, d24
+; CHECK-NEXT:    mov v21.d[1], x15
+; CHECK-NEXT:    mov v23.d[1], x14
+; CHECK-NEXT:    frintx d20, d2
+; CHECK-NEXT:    mov d2, v2.d[1]
+; CHECK-NEXT:    frintx d6, d6
+; CHECK-NEXT:    frintx d5, d5
+; CHECK-NEXT:    frintx d4, d4
+; CHECK-NEXT:    frintx d18, d18
+; CHECK-NEXT:    frintx d1, d1
+; CHECK-NEXT:    frintx d3, d3
+; CHECK-NEXT:    stp q22, q26, [x8, #192]
+; CHECK-NEXT:    fmov d22, x10
+; CHECK-NEXT:    fcvtzs x10, d24
+; CHECK-NEXT:    stp q23, q21, [x8, #160]
+; CHECK-NEXT:    fmov d21, x11
+; CHECK-NEXT:    fmov d24, x13
+; CHECK-NEXT:    frintx d2, d2
+; CHECK-NEXT:    fcvtzs x13, d6
+; CHECK-NEXT:    frintx d6, d16
+; CHECK-NEXT:    fcvtzs x11, d18
+; CHECK-NEXT:    fmov d18, x12
+; CHECK-NEXT:    fcvtzs x12, d25
+; CHECK-NEXT:    fmov d23, x10
+; CHECK-NEXT:    fcvtzs x10, d7
+; CHECK-NEXT:    fcvtzs x14, d5
+; CHECK-NEXT:    frintx d0, d0
+; CHECK-NEXT:    fcvtzs x15, d3
+; CHECK-NEXT:    mov v24.d[1], x13
+; CHECK-NEXT:    fcvtzs x13, d2
+; CHECK-NEXT:    fmov d2, x9
+; CHECK-NEXT:    mov v23.d[1], x11
+; CHECK-NEXT:    fcvtzs x11, d4
+; CHECK-NEXT:    mov v18.d[1], x12
+; CHECK-NEXT:    fcvtzs x12, d20
+; CHECK-NEXT:    mov v21.d[1], x10
+; CHECK-NEXT:    fcvtzs x10, d1
+; CHECK-NEXT:    mov v22.d[1], x14
+; CHECK-NEXT:    fcvtzs x14, d6
+; CHECK-NEXT:    mov v19.d[1], x15
+; CHECK-NEXT:    stp q18, q23, [x8, #128]
+; CHECK-NEXT:    mov v17.d[1], x11
+; CHECK-NEXT:    fcvtzs x11, d0
+; CHECK-NEXT:    stp q24, q21, [x8, #96]
+; CHECK-NEXT:    fmov d0, x12
+; CHECK-NEXT:    fmov d1, x10
+; CHECK-NEXT:    stp q17, q22, [x8, #64]
+; CHECK-NEXT:    mov v0.d[1], x13
+; CHECK-NEXT:    mov v1.d[1], x14
+; CHECK-NEXT:    mov v2.d[1], x11
+; CHECK-NEXT:    stp q0, q19, [x8, #32]
+; CHECK-NEXT:    stp q2, q1, [x8]
+; CHECK-NEXT:    ret
+  %a = call <32 x i64> @llvm.llrint.v32i64.v16f64(<32 x double> %x)
+  ret <32 x i64> %a
+}
+declare <32 x i64> @llvm.llrint.v32i64.v32f64(<32 x double>)
