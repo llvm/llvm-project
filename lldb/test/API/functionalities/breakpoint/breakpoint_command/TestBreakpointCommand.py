@@ -681,10 +681,10 @@ class BreakpointCommandTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         self.runCmd("target create %s" % exe)
-        bpid = lldbutil.run_break_set_by_symbol(self, "_dl_debug_state",
-                                                num_expected_locations=0)
+        bpid = lldbutil.run_break_set_by_symbol(
+            self, "_dl_debug_state", num_expected_locations=0
+        )
         self.runCmd("run")
         self.assertIsNotNone(
-            lldbutil.get_one_thread_stopped_at_breakpoint_id(self.process(),
-                                                             bpid)
+            lldbutil.get_one_thread_stopped_at_breakpoint_id(self.process(), bpid)
         )
