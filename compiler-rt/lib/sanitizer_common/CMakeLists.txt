@@ -122,9 +122,6 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_asm.h
   sanitizer_atomic.h
   sanitizer_atomic_clang.h
-  sanitizer_atomic_clang_mips.h
-  sanitizer_atomic_clang_other.h
-  sanitizer_atomic_clang_x86.h
   sanitizer_atomic_msvc.h
   sanitizer_bitvector.h
   sanitizer_bvgraph.h
