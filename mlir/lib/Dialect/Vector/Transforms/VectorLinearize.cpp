@@ -226,8 +226,8 @@ private:
   unsigned targetVectorBitWidth;
 };
 
-/// This pattern converts the vector.shuffle operation that works on nD (n > 1)
-/// vectors to a vector.shuffle operation that works on linearized vectors.
+/// This pattern converts the ShuffleOp that works on nD (n > 1)
+/// vectors to a ShuffleOp that works on linearized vectors.
 /// Following,
 ///   vector.shuffle %v1, %v2 [ shuffle_indices ]
 /// is converted to :
@@ -300,8 +300,8 @@ private:
   unsigned targetVectorBitWidth;
 };
 
-/// This pattern converts the vector.extract operation to a vector.shuffle
-/// operation that works on a linearized vector.
+/// This pattern converts the ExtractOp to a ShuffleOp that works on a 
+/// linearized vector.
 /// Following,
 ///   vector.extract %source [ position ]
 /// is converted to :
