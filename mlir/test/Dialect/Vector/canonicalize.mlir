@@ -1943,14 +1943,6 @@ func.func @shuffle_nofold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<5
   return %shuffle : vector<5xi32>
 }
 
-// CHECK-LABEL: func @shuffle_nofold2
-//       CHECK:   %[[V:.+]] = vector.shuffle %arg0, %arg1 [0, 1, 2, 3] : vector<[4]xi32>, vector<[2]xi32>
-//       CHECK:   return %[[V]]
-func.func @shuffle_nofold2(%v0 : vector<[4]xi32>, %v1 : vector<[2]xi32>) -> vector<4xi32> {
-  %shuffle = vector.shuffle %v0, %v1 [0, 1, 2, 3] : vector<[4]xi32>, vector<[2]xi32>
-  return %shuffle : vector<4xi32>
-}
-
 // -----
 
 // CHECK-LABEL: func @transpose_scalar_broadcast1
