@@ -2322,7 +2322,9 @@ OptimizeGlobalAliases(Module &M,
 }
 
 static Function *
-FindAtExitLibFunc(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI, LibFunc Func) {
+FindAtExitLibFunc(Module &M,
+                  function_ref<TargetLibraryInfo &(Function &)> GetTLI,
+                  LibFunc Func) {
   // Hack to get a default TLI before we have actual Function.
   auto FuncIter = M.begin();
   if (FuncIter == M.end())
@@ -2357,10 +2359,10 @@ FindAtExit(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   return FindAtExitLibFunc(M, GetTLI, LibFunc_atexit);
 }
 
-/// Returns whether the given function is an empty C++ destructor or atexit handler
-/// and can therefore be eliminated.
-/// Note that we assume that other optimization passes have already simplified
-/// the code so we simply check for 'ret'.
+/// Returns whether the given function is an empty C++ destructor or atexit
+/// handler and can therefore be eliminated. Note that we assume that other
+/// optimization passes have already simplified the code so we simply check for
+/// 'ret'.
 static bool IsEmptyAtExitFunction(const Function &Fn) {
   // FIXME: We could eliminate C++ destructors if they're readonly/readnone and
   // nounwind, but that doesn't seem worth doing.
@@ -2390,8 +2392,8 @@ static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
   ///   registered before this one. It returns zero if registration is
   ///   successful, nonzero on failure.
 
-  // This pass will look for calls to __cxa_atexit or atexit where the function is trivial
-  // and remove them.
+  // This pass will look for calls to __cxa_atexit or atexit where the function
+  // is trivial and remove them.
   bool Changed = false;
 
   for (User *U : llvm::make_early_inc_range(CXAAtExitFn->users())) {
