@@ -1,16 +1,9 @@
-# REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
-# RUN: not ld.lld --debug-names %t.o -o /dev/null 2>&1 | \
-# RUN:   FileCheck -DFILE=%t.o --implicit-check-not=error: %s
-
-# CHECK: error: [[FILE]]:(.debug_names): found DWARF64, which is currently unsupported
-
 .ifdef GEN
-//--- a.cc
+#--- a.cc
 struct t1 {};
 extern "C" void _start(t1) {}
-//--- gen
-clang -S -g -gpubnames -gdwarf64 a.cc -o -
+#--- gen
+clang -S -g -gpubnames a.cc -o -
 .endif
 	.text
 	.file	"a.cc"
@@ -112,24 +105,23 @@ _start:                                 # @_start
 	.byte	0                               # EOM(3)
 	.section	.debug_info,"",@progbits
 .Lcu_begin0:
-	.long	4294967295                      # DWARF64 Mark
-	.quad	.Ldebug_info_end0-.Ldebug_info_start0 # Length of Unit
+	.long	.Ldebug_info_end0-.Ldebug_info_start0 # Length of Unit
 .Ldebug_info_start0:
 	.short	5                               # DWARF version number
 	.byte	1                               # DWARF Unit Type
 	.byte	8                               # Address Size (in bytes)
-	.quad	.debug_abbrev                   # Offset Into Abbrev. Section
-	.byte	1                               # Abbrev [1] 0x18:0x40 DW_TAG_compile_unit
+	.long	.debug_abbrev                   # Offset Into Abbrev. Section
+	.byte	1                               # Abbrev [1] 0xc:0x34 DW_TAG_compile_unit
 	.byte	0                               # DW_AT_producer
 	.short	33                              # DW_AT_language
 	.byte	1                               # DW_AT_name
-	.quad	.Lstr_offsets_base0             # DW_AT_str_offsets_base
-	.quad	.Lline_table_start0             # DW_AT_stmt_list
+	.long	.Lstr_offsets_base0             # DW_AT_str_offsets_base
+	.long	.Lline_table_start0             # DW_AT_stmt_list
 	.byte	2                               # DW_AT_comp_dir
 	.byte	0                               # DW_AT_low_pc
 	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
-	.quad	.Laddr_table_base0              # DW_AT_addr_base
-	.byte	2                               # Abbrev [2] 0x3b:0x16 DW_TAG_subprogram
+	.long	.Laddr_table_base0              # DW_AT_addr_base
+	.byte	2                               # Abbrev [2] 0x23:0x16 DW_TAG_subprogram
 	.byte	0                               # DW_AT_low_pc
 	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
 	.byte	1                               # DW_AT_frame_base
@@ -138,15 +130,15 @@ _start:                                 # @_start
 	.byte	0                               # DW_AT_decl_file
 	.byte	2                               # DW_AT_decl_line
                                         # DW_AT_external
-	.byte	3                               # Abbrev [3] 0x46:0xa DW_TAG_formal_parameter
+	.byte	3                               # Abbrev [3] 0x2e:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	127
 	.byte	0                               # DW_AT_decl_file
 	.byte	2                               # DW_AT_decl_line
-	.long	81                              # DW_AT_type
+	.long	57                              # DW_AT_type
 	.byte	0                               # End Of Children Mark
-	.byte	4                               # Abbrev [4] 0x51:0x6 DW_TAG_structure_type
+	.byte	4                               # Abbrev [4] 0x39:0x6 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.byte	4                               # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
@@ -155,8 +147,7 @@ _start:                                 # @_start
 	.byte	0                               # End Of Children Mark
 .Ldebug_info_end0:
 	.section	.debug_str_offsets,"",@progbits
-	.long	4294967295                      # DWARF64 Mark
-	.quad	44                              # Length of String Offsets Set
+	.long	24                              # Length of String Offsets Set
 	.short	5
 	.short	0
 .Lstr_offsets_base0:
@@ -172,14 +163,13 @@ _start:                                 # @_start
 .Linfo_string4:
 	.asciz	"t1"                            # string offset=28
 	.section	.debug_str_offsets,"",@progbits
-	.quad	.Linfo_string0
-	.quad	.Linfo_string1
-	.quad	.Linfo_string2
-	.quad	.Linfo_string3
-	.quad	.Linfo_string4
+	.long	.Linfo_string0
+	.long	.Linfo_string1
+	.long	.Linfo_string2
+	.long	.Linfo_string3
+	.long	.Linfo_string4
 	.section	.debug_addr,"",@progbits
-	.long	4294967295                      # DWARF64 Mark
-	.quad	.Ldebug_addr_end0-.Ldebug_addr_start0 # Length of contribution
+	.long	.Ldebug_addr_end0-.Ldebug_addr_start0 # Length of contribution
 .Ldebug_addr_start0:
 	.short	5                               # DWARF version number
 	.byte	8                               # Address size
@@ -188,8 +178,7 @@ _start:                                 # @_start
 	.quad	.Lfunc_begin0
 .Ldebug_addr_end0:
 	.section	.debug_names,"",@progbits
-	.long	4294967295                      # DWARF64 Mark
-	.quad	.Lnames_end0-.Lnames_start0     # Header: unit length
+	.long	.Lnames_end0-.Lnames_start0     # Header: unit length
 .Lnames_start0:
 	.short	5                               # Header: version
 	.short	0                               # Header: padding
@@ -201,15 +190,15 @@ _start:                                 # @_start
 	.long	.Lnames_abbrev_end0-.Lnames_abbrev_start0 # Header: abbreviation table size
 	.long	8                               # Header: augmentation string size
 	.ascii	"LLVM0700"                      # Header: augmentation string
-	.quad	.Lcu_begin0                     # Compilation unit 0
+	.long	.Lcu_begin0                     # Compilation unit 0
 	.long	1                               # Bucket 0
 	.long	0                               # Bucket 1
 	.long	5863786                         # Hash in Bucket 0
 	.long	-304389582                      # Hash in Bucket 0
-	.quad	.Linfo_string4                  # String in Bucket 0: t1
-	.quad	.Linfo_string3                  # String in Bucket 0: _start
-	.quad	.Lnames1-.Lnames_entries0       # Offset in Bucket 0
-	.quad	.Lnames0-.Lnames_entries0       # Offset in Bucket 0
+	.long	.Linfo_string4                  # String in Bucket 0: t1
+	.long	.Linfo_string3                  # String in Bucket 0: _start
+	.long	.Lnames1-.Lnames_entries0       # Offset in Bucket 0
+	.long	.Lnames0-.Lnames_entries0       # Offset in Bucket 0
 .Lnames_abbrev_start0:
 	.byte	1                               # Abbrev code
 	.byte	19                              # DW_TAG_structure_type
@@ -233,13 +222,13 @@ _start:                                 # @_start
 .Lnames1:
 .L1:
 	.byte	1                               # Abbreviation code
-	.long	81                              # DW_IDX_die_offset
+	.long	57                              # DW_IDX_die_offset
 	.byte	0                               # DW_IDX_parent
                                         # End of list: t1
 .Lnames0:
 .L0:
 	.byte	2                               # Abbreviation code
-	.long	59                              # DW_IDX_die_offset
+	.long	35                              # DW_IDX_die_offset
 	.byte	0                               # DW_IDX_parent
                                         # End of list: _start
 	.p2align	2, 0x0
