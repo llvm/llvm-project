@@ -1869,6 +1869,10 @@ public:
     DL.MethodTyInfo = TS;
   }
 
+  void setLambdaDependencyKind(unsigned Kind) {
+    getLambdaData().DependencyKind = Kind;
+  }
+
   void setLambdaIsGeneric(bool IsGeneric) {
     assert(DefinitionData && DefinitionData->IsLambda &&
            "setting lambda property of non-lambda class");

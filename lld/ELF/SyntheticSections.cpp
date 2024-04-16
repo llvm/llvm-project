@@ -314,22 +314,42 @@ GnuPropertySection::GnuPropertySection()
                        config->wordsize, ".note.gnu.property") {}
 
 void GnuPropertySection::writeTo(uint8_t *buf) {
+  write32(buf, 4);                          // Name size
+  write32(buf + 4, getSize() - 16);         // Content size
+  write32(buf + 8, NT_GNU_PROPERTY_TYPE_0); // Type
+  memcpy(buf + 12, "GNU", 4);               // Name string
+
   uint32_t featureAndType = config->emachine == EM_AARCH64
                                 ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
                                 : GNU_PROPERTY_X86_FEATURE_1_AND;
 
-  write32(buf, 4);                                   // Name size
-  write32(buf + 4, config->is64 ? 16 : 12);          // Content size
-  write32(buf + 8, NT_GNU_PROPERTY_TYPE_0);          // Type
-  memcpy(buf + 12, "GNU", 4);                        // Name string
-  write32(buf + 16, featureAndType);                 // Feature type
-  write32(buf + 20, 4);                              // Feature size
-  write32(buf + 24, config->andFeatures);            // Feature flags
-  if (config->is64)
-    write32(buf + 28, 0); // Padding
+  unsigned offset = 16;
+  if (config->andFeatures != 0) {
+    write32(buf + offset + 0, featureAndType);      // Feature type
+    write32(buf + offset + 4, 4);                   // Feature size
+    write32(buf + offset + 8, config->andFeatures); // Feature flags
+    if (config->is64)
+      write32(buf + offset + 12, 0); // Padding
+    offset += 16;
+  }
+
+  if (!ctx.aarch64PauthAbiCoreInfo.empty()) {
+    write32(buf + offset + 0, GNU_PROPERTY_AARCH64_FEATURE_PAUTH);
+    write32(buf + offset + 4, ctx.aarch64PauthAbiCoreInfo.size());
+    memcpy(buf + offset + 8, ctx.aarch64PauthAbiCoreInfo.data(),
+           ctx.aarch64PauthAbiCoreInfo.size());
+  }
 }
 
-size_t GnuPropertySection::getSize() const { return config->is64 ? 32 : 28; }
+size_t GnuPropertySection::getSize() const {
+  uint32_t contentSize = 0;
+  if (config->andFeatures != 0)
+    contentSize += config->is64 ? 16 : 12;
+  if (!ctx.aarch64PauthAbiCoreInfo.empty())
+    contentSize += 4 + 4 + ctx.aarch64PauthAbiCoreInfo.size();
+  assert(contentSize != 0);
+  return contentSize + 16;
+}
 
 BuildIdSection::BuildIdSection()
     : SyntheticSection(SHF_ALLOC, SHT_NOTE, 4, ".note.gnu.build-id"),
@@ -415,7 +435,7 @@ void EhFrameSection::addRecords(EhInputSection *sec, ArrayRef<RelTy> rels) {
   for (EhSectionPiece &cie : sec->cies)
     offsetToCie[cie.inputOff] = addCie<ELFT>(cie, rels);
   for (EhSectionPiece &fde : sec->fdes) {
-    uint32_t id = endian::read32<ELFT::TargetEndianness>(fde.data().data() + 4);
+    uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
     CieRecord *rec = offsetToCie[fde.inputOff + 4 - id];
     if (!rec)
       fatal(toString(sec) + ": invalid CIE reference");
@@ -448,7 +468,7 @@ void EhFrameSection::iterateFDEWithLSDAAux(
     if (hasLSDA(cie))
       ciesWithLSDA.insert(cie.inputOff);
   for (EhSectionPiece &fde : sec.fdes) {
-    uint32_t id = endian::read32<ELFT::TargetEndianness>(fde.data().data() + 4);
+    uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
     if (!ciesWithLSDA.contains(fde.inputOff + 4 - id))
       continue;
 
@@ -1633,7 +1653,8 @@ void RelocationBaseSection::partitionRels() {
     return;
   const RelType relativeRel = target->relativeRel;
   numRelativeRelocs =
-      llvm::partition(relocs, [=](auto &r) { return r.type == relativeRel; }) -
+      std::stable_partition(relocs.begin(), relocs.end(),
+                            [=](auto &r) { return r.type == relativeRel; }) -
       relocs.begin();
 }
 
@@ -1666,7 +1687,7 @@ void RelocationBaseSection::computeRels() {
   parallelForEach(relocs,
                   [symTab](DynamicReloc &rel) { rel.computeRaw(symTab); });
 
-  auto irelative = std::partition(
+  auto irelative = std::stable_partition(
       relocs.begin() + numRelativeRelocs, relocs.end(),
       [t = target->iRelativeRel](auto &r) { return r.type != t; });
 
@@ -2748,7 +2769,8 @@ readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
 
   SmallVector<GdbIndexSection::NameAttrEntry, 0> ret;
   for (const LLDDWARFSection *pub : {&pubNames, &pubTypes}) {
-    DWARFDataExtractor data(obj, *pub, config->isLE, config->wordsize);
+    DWARFDataExtractor data(obj, *pub, ELFT::Endianness == endianness::little,
+                            ELFT::Is64Bits ? 8 : 4);
     DWARFDebugPubTable table;
     table.extract(data, /*GnuStyle=*/true, [&](Error e) {
       warn(toString(pub->sec) + ": " + toString(std::move(e)));
@@ -2851,7 +2873,8 @@ createSymbols(
 }
 
 // Returns a newly-created .gdb_index section.
-template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
+template <class ELFT>
+std::unique_ptr<GdbIndexSection> GdbIndexSection::create() {
   llvm::TimeTraceScope timeScope("Create gdb index");
 
   // Collect InputFiles with .debug_info. See the comment in
@@ -2897,7 +2920,7 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
     nameAttrs[i] = readPubNamesAndTypes<ELFT>(dobj, chunks[i].compilationUnits);
   });
 
-  auto *ret = make<GdbIndexSection>();
+  auto ret = std::make_unique<GdbIndexSection>();
   ret->chunks = std::move(chunks);
   std::tie(ret->symbols, ret->size) = createSymbols(nameAttrs, ret->chunks);
 
@@ -3722,8 +3745,9 @@ template <typename ELFT> void elf::writeEhdr(uint8_t *buf, Partition &part) {
   memcpy(buf, "\177ELF", 4);
 
   auto *eHdr = reinterpret_cast<typename ELFT::Ehdr *>(buf);
-  eHdr->e_ident[EI_CLASS] = config->is64 ? ELFCLASS64 : ELFCLASS32;
-  eHdr->e_ident[EI_DATA] = config->isLE ? ELFDATA2LSB : ELFDATA2MSB;
+  eHdr->e_ident[EI_CLASS] = ELFT::Is64Bits ? ELFCLASS64 : ELFCLASS32;
+  eHdr->e_ident[EI_DATA] =
+      ELFT::Endianness == endianness::little ? ELFDATA2LSB : ELFDATA2MSB;
   eHdr->e_ident[EI_VERSION] = EV_CURRENT;
   eHdr->e_ident[EI_OSABI] = config->osabi;
   eHdr->e_ident[EI_ABIVERSION] = getAbiVersion();
@@ -3839,10 +3863,32 @@ void InStruct::reset() {
   ppc32Got2.reset();
   ibtPlt.reset();
   relaPlt.reset();
+  gdbIndex.reset();
   shStrTab.reset();
   strTab.reset();
   symTab.reset();
   symTabShndx.reset();
+}
+
+static bool needsInterpSection() {
+  return !config->relocatable && !config->shared &&
+         !config->dynamicLinker.empty() && script->needsInterpSection();
+}
+
+bool elf::hasMemtag() {
+  return config->emachine == EM_AARCH64 &&
+         config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE;
+}
+
+// Fully static executables don't support MTE globals at this point in time, as
+// we currently rely on:
+//   - A dynamic loader to process relocations, and
+//   - Dynamic entries.
+// This restriction could be removed in future by re-using some of the ideas
+// that ifuncs use in fully static executables.
+bool elf::canHaveMemtagGlobals() {
+  return hasMemtag() &&
+         (config->relocatable || config->shared || needsInterpSection());
 }
 
 constexpr char kMemtagAndroidNoteName[] = "Android";
@@ -3960,30 +4006,303 @@ size_t MemtagGlobalDescriptors::getSize() const {
   return createMemtagGlobalDescriptors(symbols);
 }
 
+static OutputSection *findSection(StringRef name) {
+  for (SectionCommand *cmd : script->sectionCommands)
+    if (auto *osd = dyn_cast<OutputDesc>(cmd))
+      if (osd->osec.name == name)
+        return &osd->osec;
+  return nullptr;
+}
+
+static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
+                                   uint64_t val, uint8_t stOther = STV_HIDDEN) {
+  Symbol *s = symtab.find(name);
+  if (!s || s->isDefined() || s->isCommon())
+    return nullptr;
+
+  s->resolve(Defined{ctx.internalFile, StringRef(), STB_GLOBAL, stOther,
+                     STT_NOTYPE, val,
+                     /*size=*/0, sec});
+  s->isUsedInRegularObj = true;
+  return cast<Defined>(s);
+}
+
+template <class ELFT> void elf::createSyntheticSections() {
+  // Initialize all pointers with NULL. This is needed because
+  // you can call lld::elf::main more than once as a library.
+  Out::tlsPhdr = nullptr;
+  Out::preinitArray = nullptr;
+  Out::initArray = nullptr;
+  Out::finiArray = nullptr;
+
+  // Add the .interp section first because it is not a SyntheticSection.
+  // The removeUnusedSyntheticSections() function relies on the
+  // SyntheticSections coming last.
+  if (needsInterpSection()) {
+    for (size_t i = 1; i <= partitions.size(); ++i) {
+      InputSection *sec = createInterpSection();
+      sec->partition = i;
+      ctx.inputSections.push_back(sec);
+    }
+  }
+
+  auto add = [](SyntheticSection &sec) { ctx.inputSections.push_back(&sec); };
+
+  in.shStrTab = std::make_unique<StringTableSection>(".shstrtab", false);
+
+  Out::programHeaders = make<OutputSection>("", 0, SHF_ALLOC);
+  Out::programHeaders->addralign = config->wordsize;
+
+  if (config->strip != StripPolicy::All) {
+    in.strTab = std::make_unique<StringTableSection>(".strtab", false);
+    in.symTab = std::make_unique<SymbolTableSection<ELFT>>(*in.strTab);
+    in.symTabShndx = std::make_unique<SymtabShndxSection>();
+  }
+
+  in.bss = std::make_unique<BssSection>(".bss", 0, 1);
+  add(*in.bss);
+
+  // If there is a SECTIONS command and a .data.rel.ro section name use name
+  // .data.rel.ro.bss so that we match in the .data.rel.ro output section.
+  // This makes sure our relro is contiguous.
+  bool hasDataRelRo = script->hasSectionsCommand && findSection(".data.rel.ro");
+  in.bssRelRo = std::make_unique<BssSection>(
+      hasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
+  add(*in.bssRelRo);
+
+  // Add MIPS-specific sections.
+  if (config->emachine == EM_MIPS) {
+    if (!config->shared && config->hasDynSymTab) {
+      in.mipsRldMap = std::make_unique<MipsRldMapSection>();
+      add(*in.mipsRldMap);
+    }
+    if ((in.mipsAbiFlags = MipsAbiFlagsSection<ELFT>::create()))
+      add(*in.mipsAbiFlags);
+    if ((in.mipsOptions = MipsOptionsSection<ELFT>::create()))
+      add(*in.mipsOptions);
+    if ((in.mipsReginfo = MipsReginfoSection<ELFT>::create()))
+      add(*in.mipsReginfo);
+  }
+
+  StringRef relaDynName = config->isRela ? ".rela.dyn" : ".rel.dyn";
+
+  const unsigned threadCount = config->threadCount;
+  for (Partition &part : partitions) {
+    auto add = [&](SyntheticSection &sec) {
+      sec.partition = part.getNumber();
+      ctx.inputSections.push_back(&sec);
+    };
+
+    if (!part.name.empty()) {
+      part.elfHeader = std::make_unique<PartitionElfHeaderSection<ELFT>>();
+      part.elfHeader->name = part.name;
+      add(*part.elfHeader);
+
+      part.programHeaders =
+          std::make_unique<PartitionProgramHeadersSection<ELFT>>();
+      add(*part.programHeaders);
+    }
+
+    if (config->buildId != BuildIdKind::None) {
+      part.buildId = std::make_unique<BuildIdSection>();
+      add(*part.buildId);
+    }
+
+    part.dynStrTab = std::make_unique<StringTableSection>(".dynstr", true);
+    part.dynSymTab =
+        std::make_unique<SymbolTableSection<ELFT>>(*part.dynStrTab);
+    part.dynamic = std::make_unique<DynamicSection<ELFT>>();
+
+    if (hasMemtag()) {
+      part.memtagAndroidNote = std::make_unique<MemtagAndroidNote>();
+      add(*part.memtagAndroidNote);
+      if (canHaveMemtagGlobals()) {
+        part.memtagGlobalDescriptors =
+            std::make_unique<MemtagGlobalDescriptors>();
+        add(*part.memtagGlobalDescriptors);
+      }
+    }
+
+    if (config->androidPackDynRelocs)
+      part.relaDyn = std::make_unique<AndroidPackedRelocationSection<ELFT>>(
+          relaDynName, threadCount);
+    else
+      part.relaDyn = std::make_unique<RelocationSection<ELFT>>(
+          relaDynName, config->zCombreloc, threadCount);
+
+    if (config->hasDynSymTab) {
+      add(*part.dynSymTab);
+
+      part.verSym = std::make_unique<VersionTableSection>();
+      add(*part.verSym);
+
+      if (!namedVersionDefs().empty()) {
+        part.verDef = std::make_unique<VersionDefinitionSection>();
+        add(*part.verDef);
+      }
+
+      part.verNeed = std::make_unique<VersionNeedSection<ELFT>>();
+      add(*part.verNeed);
+
+      if (config->gnuHash) {
+        part.gnuHashTab = std::make_unique<GnuHashTableSection>();
+        add(*part.gnuHashTab);
+      }
+
+      if (config->sysvHash) {
+        part.hashTab = std::make_unique<HashTableSection>();
+        add(*part.hashTab);
+      }
+
+      add(*part.dynamic);
+      add(*part.dynStrTab);
+    }
+    add(*part.relaDyn);
+
+    if (config->relrPackDynRelocs) {
+      part.relrDyn = std::make_unique<RelrSection<ELFT>>(threadCount);
+      add(*part.relrDyn);
+    }
+
+    if (!config->relocatable) {
+      if (config->ehFrameHdr) {
+        part.ehFrameHdr = std::make_unique<EhFrameHeader>();
+        add(*part.ehFrameHdr);
+      }
+      part.ehFrame = std::make_unique<EhFrameSection>();
+      add(*part.ehFrame);
+
+      if (config->emachine == EM_ARM) {
+        // This section replaces all the individual .ARM.exidx InputSections.
+        part.armExidx = std::make_unique<ARMExidxSyntheticSection>();
+        add(*part.armExidx);
+      }
+    }
+
+    if (!config->packageMetadata.empty()) {
+      part.packageMetadataNote = std::make_unique<PackageMetadataNote>();
+      add(*part.packageMetadataNote);
+    }
+  }
+
+  if (partitions.size() != 1) {
+    // Create the partition end marker. This needs to be in partition number 255
+    // so that it is sorted after all other partitions. It also has other
+    // special handling (see createPhdrs() and combineEhSections()).
+    in.partEnd =
+        std::make_unique<BssSection>(".part.end", config->maxPageSize, 1);
+    in.partEnd->partition = 255;
+    add(*in.partEnd);
+
+    in.partIndex = std::make_unique<PartitionIndexSection>();
+    addOptionalRegular("__part_index_begin", in.partIndex.get(), 0);
+    addOptionalRegular("__part_index_end", in.partIndex.get(),
+                       in.partIndex->getSize());
+    add(*in.partIndex);
+  }
+
+  // Add .got. MIPS' .got is so different from the other archs,
+  // it has its own class.
+  if (config->emachine == EM_MIPS) {
+    in.mipsGot = std::make_unique<MipsGotSection>();
+    add(*in.mipsGot);
+  } else {
+    in.got = std::make_unique<GotSection>();
+    add(*in.got);
+  }
+
+  if (config->emachine == EM_PPC) {
+    in.ppc32Got2 = std::make_unique<PPC32Got2Section>();
+    add(*in.ppc32Got2);
+  }
+
+  if (config->emachine == EM_PPC64) {
+    in.ppc64LongBranchTarget = std::make_unique<PPC64LongBranchTargetSection>();
+    add(*in.ppc64LongBranchTarget);
+  }
+
+  in.gotPlt = std::make_unique<GotPltSection>();
+  add(*in.gotPlt);
+  in.igotPlt = std::make_unique<IgotPltSection>();
+  add(*in.igotPlt);
+  // Add .relro_padding if DATA_SEGMENT_RELRO_END is used; otherwise, add the
+  // section in the absence of PHDRS/SECTIONS commands.
+  if (config->zRelro &&
+      ((script->phdrsCommands.empty() && !script->hasSectionsCommand) ||
+       script->seenRelroEnd)) {
+    in.relroPadding = std::make_unique<RelroPaddingSection>();
+    add(*in.relroPadding);
+  }
+
+  if (config->emachine == EM_ARM) {
+    in.armCmseSGSection = std::make_unique<ArmCmseSGSection>();
+    add(*in.armCmseSGSection);
+  }
+
+  // _GLOBAL_OFFSET_TABLE_ is defined relative to either .got.plt or .got. Treat
+  // it as a relocation and ensure the referenced section is created.
+  if (ElfSym::globalOffsetTable && config->emachine != EM_MIPS) {
+    if (target->gotBaseSymInGotPlt)
+      in.gotPlt->hasGotPltOffRel = true;
+    else
+      in.got->hasGotOffRel = true;
+  }
+
+  // We always need to add rel[a].plt to output if it has entries.
+  // Even for static linking it can contain R_[*]_IRELATIVE relocations.
+  in.relaPlt = std::make_unique<RelocationSection<ELFT>>(
+      config->isRela ? ".rela.plt" : ".rel.plt", /*sort=*/false,
+      /*threadCount=*/1);
+  add(*in.relaPlt);
+
+  if ((config->emachine == EM_386 || config->emachine == EM_X86_64) &&
+      (config->andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
+    in.ibtPlt = std::make_unique<IBTPltSection>();
+    add(*in.ibtPlt);
+  }
+
+  if (config->emachine == EM_PPC)
+    in.plt = std::make_unique<PPC32GlinkSection>();
+  else
+    in.plt = std::make_unique<PltSection>();
+  add(*in.plt);
+  in.iplt = std::make_unique<IpltSection>();
+  add(*in.iplt);
+
+  if (config->andFeatures || !ctx.aarch64PauthAbiCoreInfo.empty())
+    add(*make<GnuPropertySection>());
+
+  if (config->gdbIndex) {
+    in.gdbIndex = GdbIndexSection::create<ELFT>();
+    add(*in.gdbIndex);
+  }
+
+  // .note.GNU-stack is always added when we are creating a re-linkable
+  // object file. Other linkers are using the presence of this marker
+  // section to control the executable-ness of the stack area, but that
+  // is irrelevant these days. Stack area should always be non-executable
+  // by default. So we emit this section unconditionally.
+  if (config->relocatable)
+    add(*make<GnuStackSection>());
+
+  if (in.symTab)
+    add(*in.symTab);
+  if (in.symTabShndx)
+    add(*in.symTabShndx);
+  add(*in.shStrTab);
+  if (in.strTab)
+    add(*in.strTab);
+}
+
 InStruct elf::in;
 
 std::vector<Partition> elf::partitions;
 Partition *elf::mainPart;
 
-template GdbIndexSection *GdbIndexSection::create<ELF32LE>();
-template GdbIndexSection *GdbIndexSection::create<ELF32BE>();
-template GdbIndexSection *GdbIndexSection::create<ELF64LE>();
-template GdbIndexSection *GdbIndexSection::create<ELF64BE>();
-
 template void elf::splitSections<ELF32LE>();
 template void elf::splitSections<ELF32BE>();
 template void elf::splitSections<ELF64LE>();
 template void elf::splitSections<ELF64BE>();
-
-template class elf::MipsAbiFlagsSection<ELF32LE>;
-template class elf::MipsAbiFlagsSection<ELF32BE>;
-template class elf::MipsAbiFlagsSection<ELF64LE>;
-template class elf::MipsAbiFlagsSection<ELF64BE>;
-
-template class elf::MipsOptionsSection<ELF32LE>;
-template class elf::MipsOptionsSection<ELF32BE>;
-template class elf::MipsOptionsSection<ELF64LE>;
-template class elf::MipsOptionsSection<ELF64BE>;
 
 template void EhFrameSection::iterateFDEWithLSDA<ELF32LE>(
     function_ref<void(InputSection &)>);
@@ -3994,40 +4313,10 @@ template void EhFrameSection::iterateFDEWithLSDA<ELF64LE>(
 template void EhFrameSection::iterateFDEWithLSDA<ELF64BE>(
     function_ref<void(InputSection &)>);
 
-template class elf::MipsReginfoSection<ELF32LE>;
-template class elf::MipsReginfoSection<ELF32BE>;
-template class elf::MipsReginfoSection<ELF64LE>;
-template class elf::MipsReginfoSection<ELF64BE>;
-
-template class elf::DynamicSection<ELF32LE>;
-template class elf::DynamicSection<ELF32BE>;
-template class elf::DynamicSection<ELF64LE>;
-template class elf::DynamicSection<ELF64BE>;
-
-template class elf::RelocationSection<ELF32LE>;
-template class elf::RelocationSection<ELF32BE>;
-template class elf::RelocationSection<ELF64LE>;
-template class elf::RelocationSection<ELF64BE>;
-
-template class elf::AndroidPackedRelocationSection<ELF32LE>;
-template class elf::AndroidPackedRelocationSection<ELF32BE>;
-template class elf::AndroidPackedRelocationSection<ELF64LE>;
-template class elf::AndroidPackedRelocationSection<ELF64BE>;
-
-template class elf::RelrSection<ELF32LE>;
-template class elf::RelrSection<ELF32BE>;
-template class elf::RelrSection<ELF64LE>;
-template class elf::RelrSection<ELF64BE>;
-
 template class elf::SymbolTableSection<ELF32LE>;
 template class elf::SymbolTableSection<ELF32BE>;
 template class elf::SymbolTableSection<ELF64LE>;
 template class elf::SymbolTableSection<ELF64BE>;
-
-template class elf::VersionNeedSection<ELF32LE>;
-template class elf::VersionNeedSection<ELF32BE>;
-template class elf::VersionNeedSection<ELF64LE>;
-template class elf::VersionNeedSection<ELF64BE>;
 
 template void elf::writeEhdr<ELF32LE>(uint8_t *Buf, Partition &Part);
 template void elf::writeEhdr<ELF32BE>(uint8_t *Buf, Partition &Part);
@@ -4039,12 +4328,7 @@ template void elf::writePhdrs<ELF32BE>(uint8_t *Buf, Partition &Part);
 template void elf::writePhdrs<ELF64LE>(uint8_t *Buf, Partition &Part);
 template void elf::writePhdrs<ELF64BE>(uint8_t *Buf, Partition &Part);
 
-template class elf::PartitionElfHeaderSection<ELF32LE>;
-template class elf::PartitionElfHeaderSection<ELF32BE>;
-template class elf::PartitionElfHeaderSection<ELF64LE>;
-template class elf::PartitionElfHeaderSection<ELF64BE>;
-
-template class elf::PartitionProgramHeadersSection<ELF32LE>;
-template class elf::PartitionProgramHeadersSection<ELF32BE>;
-template class elf::PartitionProgramHeadersSection<ELF64LE>;
-template class elf::PartitionProgramHeadersSection<ELF64BE>;
+template void elf::createSyntheticSections<ELF32LE>();
+template void elf::createSyntheticSections<ELF32BE>();
+template void elf::createSyntheticSections<ELF64LE>();
+template void elf::createSyntheticSections<ELF64BE>();

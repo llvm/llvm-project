@@ -3028,7 +3028,7 @@ define bfloat @test_atomicrmw_fadd_bf16_global_system_align4(ptr addrspace(1) %p
 
 define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bfloat %value) #2 {
 ; CI-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; CI-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; CI-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4) #[[ATTR6]]
 ; CI-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; CI-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
 ; CI-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
@@ -3041,7 +3041,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; CI-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; CI-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CI-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
-; CI-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
+; CI-NEXT:    [[NEW:%.*]] = call bfloat @llvm.experimental.constrained.fadd.bf16(bfloat [[TMP4]], bfloat [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR6]]
 ; CI-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; CI-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
 ; CI-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
@@ -3058,7 +3058,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; CI-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX9-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; GFX9-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX9-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4) #[[ATTR6]]
 ; GFX9-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; GFX9-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
 ; GFX9-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
@@ -3071,7 +3071,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX9-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX9-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX9-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
-; GFX9-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
+; GFX9-NEXT:    [[NEW:%.*]] = call bfloat @llvm.experimental.constrained.fadd.bf16(bfloat [[TMP4]], bfloat [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR6]]
 ; GFX9-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX9-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
 ; GFX9-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
@@ -3088,7 +3088,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX9-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; GFX908-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX908-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4) #[[ATTR6]]
 ; GFX908-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; GFX908-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
 ; GFX908-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
@@ -3101,7 +3101,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX908-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX908-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX908-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
-; GFX908-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
+; GFX908-NEXT:    [[NEW:%.*]] = call bfloat @llvm.experimental.constrained.fadd.bf16(bfloat [[TMP4]], bfloat [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR6]]
 ; GFX908-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX908-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
 ; GFX908-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
@@ -3118,7 +3118,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX908-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; GFX90A-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX90A-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4) #[[ATTR6:[0-9]+]]
 ; GFX90A-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; GFX90A-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
 ; GFX90A-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
@@ -3131,7 +3131,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX90A-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX90A-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
+; GFX90A-NEXT:    [[NEW:%.*]] = call bfloat @llvm.experimental.constrained.fadd.bf16(bfloat [[TMP4]], bfloat [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR6]]
 ; GFX90A-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX90A-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
 ; GFX90A-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
@@ -3148,7 +3148,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX90A-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; GFX940-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX940-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4) #[[ATTR6:[0-9]+]]
 ; GFX940-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; GFX940-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
 ; GFX940-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
@@ -3161,7 +3161,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX940-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX940-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX940-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
-; GFX940-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
+; GFX940-NEXT:    [[NEW:%.*]] = call bfloat @llvm.experimental.constrained.fadd.bf16(bfloat [[TMP4]], bfloat [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR6]]
 ; GFX940-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX940-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
 ; GFX940-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
@@ -3178,7 +3178,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX940-NEXT:    ret bfloat [[TMP7]]
 ;
 ; GFX11-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; GFX11-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GFX11-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4) #[[ATTR6]]
 ; GFX11-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; GFX11-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
 ; GFX11-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
@@ -3191,7 +3191,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; GFX11-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GFX11-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GFX11-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
-; GFX11-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
+; GFX11-NEXT:    [[NEW:%.*]] = call bfloat @llvm.experimental.constrained.fadd.bf16(bfloat [[TMP4]], bfloat [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR6]]
 ; GFX11-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; GFX11-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
 ; GFX11-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]

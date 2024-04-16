@@ -105,7 +105,7 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
   if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_One(), m_AllOnes())),
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
-    Value *Neg = Builder.CreateNeg(OtherOp, "", false, HasAnyNoWrap);
+    Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
     return Builder.CreateSelect(Cond, OtherOp, Neg);
   }
   // mul (select Cond, -1, 1), OtherOp --> select Cond, -OtherOp, OtherOp
@@ -113,7 +113,7 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
   if (match(&I, m_c_Mul(m_OneUse(m_Select(m_Value(Cond), m_AllOnes(), m_One())),
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
-    Value *Neg = Builder.CreateNeg(OtherOp, "", false, HasAnyNoWrap);
+    Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
     return Builder.CreateSelect(Cond, Neg, OtherOp);
   }
 
@@ -319,19 +319,12 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   }
 
   // abs(X) * abs(X) -> X * X
-  // nabs(X) * nabs(X) -> X * X
-  if (Op0 == Op1) {
-    Value *X, *Y;
-    SelectPatternFlavor SPF = matchSelectPattern(Op0, X, Y).Flavor;
-    if (SPF == SPF_ABS || SPF == SPF_NABS)
-      return BinaryOperator::CreateMul(X, X);
-
-    if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
-      return BinaryOperator::CreateMul(X, X);
-  }
+  Value *X;
+  if (Op0 == Op1 && match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
+    return BinaryOperator::CreateMul(X, X);
 
   {
-    Value *X, *Y;
+    Value *Y;
     // abs(X) * abs(Y) -> abs(X * Y)
     if (I.hasNoSignedWrap() &&
         match(Op0,
@@ -344,7 +337,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   }
 
   // -X * C --> X * -C
-  Value *X, *Y;
+  Value *Y;
   Constant *Op1C;
   if (match(Op0, m_Neg(m_Value(X))) && match(Op1, m_Constant(Op1C)))
     return BinaryOperator::CreateMul(X, ConstantExpr::getNeg(Op1C));
@@ -452,9 +445,8 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   // mul Y, (sext X) -> select X, -Y, 0
   if (match(&I, m_c_Mul(m_OneUse(m_SExt(m_Value(X))), m_Value(Y))) &&
       X->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(
-        X, Builder.CreateNeg(Y, "", /*HasNUW=*/false, I.hasNoSignedWrap()),
-        ConstantInt::getNullValue(Op0->getType()));
+    return SelectInst::Create(X, Builder.CreateNeg(Y, "", I.hasNoSignedWrap()),
+                              ConstantInt::getNullValue(Op0->getType()));
 
   Constant *ImmC;
   if (match(Op1, m_ImmConstant(ImmC))) {
@@ -611,6 +603,18 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
                                                              m_Value(Z)))) &&
       Y->getType() == Z->getType())
     return createPowiExpr(I, *this, X, Y, Z);
+
+  // powi(X, Y) / X --> powi(X, Y-1)
+  // This is legal when (Y - 1) can't wraparound, in which case reassoc and nnan
+  // are required.
+  // TODO: Multi-use may be also better off creating Powi(x,y-1)
+  if (I.hasAllowReassoc() && I.hasNoNaNs() &&
+      match(Op0, m_OneUse(m_AllowReassoc(m_Intrinsic<Intrinsic::powi>(
+                     m_Specific(Op1), m_Value(Y))))) &&
+      willNotOverflowSignedSub(Y, ConstantInt::get(Y->getType(), 1), I)) {
+    Constant *NegOne = ConstantInt::getAllOnesValue(Y->getType());
+    return createPowiExpr(I, *this, Op1, Y, NegOne);
+  }
 
   return nullptr;
 }
@@ -1561,8 +1565,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     // -X / C --> X / -C (if the negation doesn't overflow).
     // TODO: This could be enhanced to handle arbitrary vector constants by
     //       checking if all elements are not the min-signed-val.
-    if (!Op1C->isMinSignedValue() &&
-        match(Op0, m_NSWSub(m_Zero(), m_Value(X)))) {
+    if (!Op1C->isMinSignedValue() && match(Op0, m_NSWNeg(m_Value(X)))) {
       Constant *NegC = ConstantInt::get(Ty, -(*Op1C));
       Instruction *BO = BinaryOperator::CreateSDiv(X, NegC);
       BO->setIsExact(I.isExact());
@@ -1572,7 +1575,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
 
   // -X / Y --> -(X / Y)
   Value *Y;
-  if (match(&I, m_SDiv(m_OneUse(m_NSWSub(m_Zero(), m_Value(X))), m_Value(Y))))
+  if (match(&I, m_SDiv(m_OneUse(m_NSWNeg(m_Value(X))), m_Value(Y))))
     return BinaryOperator::CreateNSWNeg(
         Builder.CreateSDiv(X, Y, I.getName(), I.isExact()));
 
@@ -1905,20 +1908,8 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
     return replaceInstUsesWith(I, Pow);
   }
 
-  // powi(X, Y) / X --> powi(X, Y-1)
-  // This is legal when (Y - 1) can't wraparound, in which case reassoc and nnan
-  // are required.
-  // TODO: Multi-use may be also better off creating Powi(x,y-1)
-  if (I.hasAllowReassoc() && I.hasNoNaNs() &&
-      match(Op0, m_OneUse(m_Intrinsic<Intrinsic::powi>(m_Specific(Op1),
-                                                       m_Value(Y)))) &&
-      willNotOverflowSignedSub(Y, ConstantInt::get(Y->getType(), 1), I)) {
-    Constant *NegOne = ConstantInt::getAllOnesValue(Y->getType());
-    Value *Y1 = Builder.CreateAdd(Y, NegOne);
-    Type *Types[] = {Op1->getType(), Y1->getType()};
-    Value *Pow = Builder.CreateIntrinsic(Intrinsic::powi, Types, {Op1, Y1}, &I);
-    return replaceInstUsesWith(I, Pow);
-  }
+  if (Instruction *FoldedPowi = foldPowiReassoc(I))
+    return FoldedPowi;
 
   return nullptr;
 }
@@ -2174,7 +2165,7 @@ Instruction *InstCombinerImpl::visitSRem(BinaryOperator &I) {
 
   // -X srem Y --> -(X srem Y)
   Value *X, *Y;
-  if (match(&I, m_SRem(m_OneUse(m_NSWSub(m_Zero(), m_Value(X))), m_Value(Y))))
+  if (match(&I, m_SRem(m_OneUse(m_NSWNeg(m_Value(X))), m_Value(Y))))
     return BinaryOperator::CreateNSWNeg(Builder.CreateSRem(X, Y));
 
   // If the sign bits of both operands are zero (i.e. we can prove they are

@@ -3079,6 +3079,11 @@ void MicrosoftCXXNameMangler::mangleArrayType(const ArrayType *T) {
   mangleType(ElementTy, SourceRange(), QMM_Escape);
 }
 
+void MicrosoftCXXNameMangler::mangleType(const ArrayParameterType *T,
+                                         Qualifiers, SourceRange) {
+  mangleArrayType(cast<ConstantArrayType>(T));
+}
+
 // <type>                   ::= <pointer-to-member-type>
 // <pointer-to-member-type> ::= <pointer-cvr-qualifiers> <cvr-qualifiers>
 //                                                          <class name> <type>
@@ -4023,10 +4028,8 @@ void MicrosoftMangleContextImpl::mangleStringLiteral(const StringLiteral *SL,
   // char bar[42] = "foobar";
   // Where it is truncated or zero-padded to fit the array. This is the length
   // used for mangling, and any trailing null-bytes also need to be mangled.
-  unsigned StringLength = getASTContext()
-                              .getAsConstantArrayType(SL->getType())
-                              ->getSize()
-                              .getZExtValue();
+  unsigned StringLength =
+      getASTContext().getAsConstantArrayType(SL->getType())->getZExtSize();
   unsigned StringByteLength = StringLength * SL->getCharByteWidth();
 
   // <char-type>: The "kind" of string literal is encoded into the mangled name.

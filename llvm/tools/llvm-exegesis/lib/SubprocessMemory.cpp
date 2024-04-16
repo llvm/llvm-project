@@ -22,7 +22,7 @@
 namespace llvm {
 namespace exegesis {
 
-#if defined(__linux__) && !defined(__ANDROID__)
+#if defined(__linux__)
 
 long SubprocessMemory::getCurrentTID() {
   // We're using the raw syscall here rather than the gettid() function provided
@@ -30,6 +30,8 @@ long SubprocessMemory::getCurrentTID() {
   // version 2.30.
   return syscall(SYS_gettid);
 }
+
+#if !defined(__ANDROID__)
 
 Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
   // Add the PID to the shared memory name so that if we're running multiple
@@ -63,6 +65,10 @@ Error SubprocessMemory::addMemoryDefinition(
     SharedMemoryNames.push_back(SharedMemoryName);
     int SharedMemoryFD =
         shm_open(SharedMemoryName.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (SharedMemoryFD == -1)
+      return make_error<Failure>(
+          "Failed to create shared memory object for memory definition: " +
+          Twine(strerror(errno)));
     if (ftruncate(SharedMemoryFD, MemVal.SizeBytes) != 0) {
       return make_error<Failure>("Truncating a memory definiton failed: " +
                                  Twine(strerror(errno)));
@@ -100,7 +106,8 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
       shm_open(AuxiliaryMemoryName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
   if (AuxiliaryMemoryFileDescriptor == -1)
     return make_error<Failure>(
-        "Getting file descriptor for auxiliary memory failed");
+        "Getting file descriptor for auxiliary memory failed: " +
+        Twine(strerror(errno)));
   // set up memory value file descriptors
   int *AuxiliaryMemoryMapping =
       (int *)mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED,
@@ -152,7 +159,8 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
 
 SubprocessMemory::~SubprocessMemory() {}
 
-#endif // defined(__linux__) && !defined(__ANDROID__)
+#endif // !defined(__ANDROID__)
+#endif // defined(__linux__)
 
 } // namespace exegesis
 } // namespace llvm

@@ -290,6 +290,73 @@ def GetResultPtrElementType : OpInterface<"GetResultPtrElementType"> {
   ];
 }
 
+def FPExceptionBehaviorOpInterface : OpInterface<"FPExceptionBehaviorOpInterface"> {
+  let description = [{
+    An interface for operations receiving an exception behavior attribute
+    controlling FP exception behavior.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns a FPExceptionBehavior attribute for the operation",
+      /*returnType=*/  "FPExceptionBehaviorAttr",
+      /*methodName=*/  "getFPExceptionBehaviorAttr",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getFpExceptionBehaviorAttr();
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*desc=*/        [{Returns the name of the FPExceptionBehaviorAttr
+                        attribute for the operation}],
+      /*returnType=*/  "StringRef",
+      /*methodName=*/  "getFPExceptionBehaviorAttrName",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        return "fpExceptionBehavior";
+      }]
+    >
+  ];
+}
+
+def RoundingModeOpInterface : OpInterface<"RoundingModeOpInterface"> {
+  let description = [{
+    An interface for operations receiving a rounding mode attribute
+    controlling FP rounding mode.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns a RoundingMode attribute for the operation",
+      /*returnType=*/  "RoundingModeAttr",
+      /*methodName=*/  "getRoundingModeAttr",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getRoundingmodeAttr();
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*desc=*/        [{Returns the name of the RoundingModeAttr attribute
+                         for the operation}],
+      /*returnType=*/  "StringRef",
+      /*methodName=*/  "getRoundingModeAttrName",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        return "roundingmode";
+      }]
+    >,
+  ];
+}
 
 //===----------------------------------------------------------------------===//
 // LLVM dialect type interfaces.

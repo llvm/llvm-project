@@ -1493,6 +1493,7 @@ Conditional ``explicit``                     __cpp_conditional_explicit       C+
 ``if consteval``                             __cpp_if_consteval               C++23         C++20
 ``static operator()``                        __cpp_static_call_operator       C++23         C++03
 Attributes on Lambda-Expressions                                              C++23         C++11
+``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
 -------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                C99           C89
 Array & element qualification (N2607)                                         C23           C89
@@ -1610,6 +1611,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_pod`` (C++, GNU, Microsoft, Embarcadero):
   Note, the corresponding standard trait was deprecated in C++20.
 * ``__is_pointer`` (C++, Embarcadero)
+* ``__is_pointer_interconvertible_base_of`` (C++, GNU, Microsoft)
 * ``__is_polymorphic`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_reference`` (C++, Embarcadero)
 * ``__is_referenceable`` (C++, GNU, Microsoft, Embarcadero):
@@ -5420,10 +5422,12 @@ The following builtin intrinsics can be used in constant expressions:
 * ``__builtin_clzl``
 * ``__builtin_clzll``
 * ``__builtin_clzs``
+* ``__builtin_clzg``
 * ``__builtin_ctz``
 * ``__builtin_ctzl``
 * ``__builtin_ctzll``
 * ``__builtin_ctzs``
+* ``__builtin_ctzg``
 * ``__builtin_ffs``
 * ``__builtin_ffsl``
 * ``__builtin_ffsll``

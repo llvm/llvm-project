@@ -757,6 +757,51 @@ func.func @truncFPConstant() -> bf16 {
   return %0 : bf16
 }
 
+// CHECK-LABEL: @truncFPToNearestEvenConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : bf16
+//       CHECK:   return %[[cres]]
+func.func @truncFPToNearestEvenConstant() -> bf16 {
+  %cst = arith.constant 1.000000e+00 : f32
+  %0 = arith.truncf %cst to_nearest_even : f32 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: @truncFPDownwardConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : bf16
+//       CHECK:   return %[[cres]]
+func.func @truncFPDownwardConstant() -> bf16 {
+  %cst = arith.constant 1.000000e+00 : f32
+  %0 = arith.truncf %cst downward : f32 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: @truncFPUpwardConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : bf16
+//       CHECK:   return %[[cres]]
+func.func @truncFPUpwardConstant() -> bf16 {
+  %cst = arith.constant 1.000000e+00 : f32
+  %0 = arith.truncf %cst upward : f32 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: @truncFPTowardZeroConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : bf16
+//       CHECK:   return %[[cres]]
+func.func @truncFPTowardZeroConstant() -> bf16 {
+  %cst = arith.constant 1.000000e+00 : f32
+  %0 = arith.truncf %cst toward_zero : f32 to bf16
+  return %0 : bf16
+}
+
+// CHECK-LABEL: @truncFPToNearestAwayConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 1.000000e+00 : bf16
+//       CHECK:   return %[[cres]]
+func.func @truncFPToNearestAwayConstant() -> bf16 {
+  %cst = arith.constant 1.000000e+00 : f32
+  %0 = arith.truncf %cst to_nearest_away : f32 to bf16
+  return %0 : bf16
+}
+
 // CHECK-LABEL: @truncFPVectorConstant
 //       CHECK:   %[[cres:.+]] = arith.constant dense<[0.000000e+00, 1.000000e+00]> : vector<2xbf16>
 //       CHECK:   return %[[cres]]

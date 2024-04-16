@@ -233,7 +233,7 @@ Clang-Tidy Checks
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
    :doc:`hicpp-no-assembler <hicpp/no-assembler>`,
    :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
-   :doc:`linuxkernel-must-use-errs <linuxkernel/must-use-errs>`,
+   :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
    :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
@@ -352,6 +352,7 @@ Clang-Tidy Checks
    :doc:`readability-delete-null-pointer <readability/delete-null-pointer>`, "Yes"
    :doc:`readability-duplicate-include <readability/duplicate-include>`, "Yes"
    :doc:`readability-else-after-return <readability/else-after-return>`, "Yes"
+   :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes"
    :doc:`readability-function-cognitive-complexity <readability/function-cognitive-complexity>`,
    :doc:`readability-function-size <readability/function-size>`,
    :doc:`readability-identifier-length <readability/identifier-length>`,
