@@ -25,7 +25,6 @@ template<>            struct char_traits<wchar_t>;
 
 template<class T>     class allocator;
 
-class ios_base;
 template <class charT, class traits = char_traits<charT> > class basic_ios;
 
 template <class charT, class traits = char_traits<charT> > class basic_streambuf;
@@ -123,8 +122,6 @@ using wosyncstream = basic_osyncstream<wchar_t>;  // C++20
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-class _LIBCPP_EXPORTED_FROM_ABI ios_base;
 
 template <class _CharT, class _Traits = char_traits<_CharT> >
 class _LIBCPP_TEMPLATE_VIS istreambuf_iterator;
