@@ -116,6 +116,7 @@ static bool isTypeTag(uint16_t Tag) {
   case dwarf::DW_TAG_string_type:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_subroutine_type:
+  case dwarf::DW_TAG_template_alias:
   case dwarf::DW_TAG_typedef:
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_ptr_to_member_type:
