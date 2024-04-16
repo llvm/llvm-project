@@ -5798,6 +5798,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     break;
   }
+  case Intrinsic::vastart: {
+    Check(Call.getFunction()->isVarArg(),
+          "va_start called in a non-varargs function");
+    break;
+  }
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_xor:
