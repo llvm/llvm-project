@@ -35,7 +35,6 @@ public:
     AGVK_Max,
     AGVK_ExtraSGPRs,
     AGVK_TotalNumVGPRs,
-    AGVK_TotalNumVGPRs90A,
     AGVK_AlignTo,
     AGVK_Occupancy
   };
@@ -49,6 +48,15 @@ private:
   AMDGPUVariadicMCExpr(VariadicKind Kind, ArrayRef<const MCExpr *> Args,
                        MCContext &Ctx);
   ~AMDGPUVariadicMCExpr();
+
+  bool evaluateExtraSGPRs(MCValue &Res, const MCAsmLayout *Layout,
+                          const MCFixup *Fixup) const;
+  bool evaluateTotalNumVGPR(MCValue &Res, const MCAsmLayout *Layout,
+                            const MCFixup *Fixup) const;
+  bool evaluateAlignTo(MCValue &Res, const MCAsmLayout *Layout,
+                       const MCFixup *Fixup) const;
+  bool evaluateOccupancy(MCValue &Res, const MCAsmLayout *Layout,
+                         const MCFixup *Fixup) const;
 
 public:
   static const AMDGPUVariadicMCExpr *
@@ -64,13 +72,12 @@ public:
     return create(VariadicKind::AGVK_Max, Args, Ctx);
   }
 
-  static const AMDGPUVariadicMCExpr *
-  createExtraSGPRs(const MCExpr *VCCUsed, const MCExpr *FlatScrUsed,
-                   unsigned MajorVersion, bool hasArchitectedFlatScratch,
-                   bool XNACKUsed, MCContext &Ctx);
+  static const AMDGPUVariadicMCExpr *createExtraSGPRs(const MCExpr *VCCUsed,
+                                                      const MCExpr *FlatScrUsed,
+                                                      bool XNACKUsed,
+                                                      MCContext &Ctx);
 
-  static const AMDGPUVariadicMCExpr *createTotalNumVGPR(bool has90AInsts,
-                                                        const MCExpr *NumAGPR,
+  static const AMDGPUVariadicMCExpr *createTotalNumVGPR(const MCExpr *NumAGPR,
                                                         const MCExpr *NumVGPR,
                                                         MCContext &Ctx);
 
