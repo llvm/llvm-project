@@ -5,22 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads
-// UNSUPPORTED: c++03, c++11
 
-// Until we drop support for the synchronization library in C++11/14/17
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+#include <expected>
 
-// <latch>
-
-#include <latch>
-#include <cassert>
-
-#include "test_macros.h"
-
-int main(int, char**)
-{
-  static_assert(std::latch::max() > 0, "");
-  return 0;
-}
+_LIBCPP_BEGIN_NAMESPACE_STD
+const char* bad_expected_access<void>::what() const noexcept { return "bad access to std::expected"; }
+_LIBCPP_END_NAMESPACE_STD

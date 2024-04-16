@@ -50,7 +50,7 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
   endif()
 
   # Import required tools as targets
-  foreach( tool clang llvm-as llvm-link opt )
+  foreach( tool IN ITEMS clang llvm-as llvm-link opt )
     find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
     add_executable( libclc::${tool} IMPORTED GLOBAL )
     set_target_properties( libclc::${tool} PROPERTIES IMPORTED_LOCATION ${LLVM_TOOL_${tool}} )
@@ -68,7 +68,7 @@ else()
     message(FATAL_ERROR "Clang is not enabled, but is required to build libclc in-tree")
   endif()
 
-  foreach( tool clang llvm-as llvm-link opt )
+  foreach( tool IN ITEMS clang llvm-as llvm-link opt )
     add_executable(libclc::${tool} ALIAS ${tool})
   endforeach()
 endif()
@@ -181,7 +181,7 @@ install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc DESTINATION "${CMAKE_INSTAL
 install( DIRECTORY generic/include/clc DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" )
 
 if( ENABLE_RUNTIME_SUBNORMAL )
-  foreach( file subnormal_use_default subnormal_disable )
+  foreach( file IN ITEMS subnormal_use_default subnormal_disable )
     link_bc(
        TARGET ${file}
        INPUTS ${PROJECT_SOURCE_DIR}/generic/lib/${file}.ll
