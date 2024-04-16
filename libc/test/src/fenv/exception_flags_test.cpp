@@ -50,16 +50,26 @@ TEST(LlvmLibcFenvTest, GetSetTestExceptFlag) {
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   }
 
-  // Next, we will raise one exception and save the flags.
+  // Next, we will raise one exception, save the flag and clear all exceptions.
   LIBC_NAMESPACE::fputil::raise_except(FE_INVALID);
-  fexcept_t eflags;
-  LIBC_NAMESPACE::fegetexceptflag(&eflags, FE_ALL_EXCEPT);
-  ASSERT_EQ(LIBC_NAMESPACE::fetestexceptflag(&eflags, FE_ALL_EXCEPT),
+  fexcept_t invalid_flag;
+  LIBC_NAMESPACE::fegetexceptflag(&invalid_flag, FE_ALL_EXCEPT);
+  ASSERT_EQ(LIBC_NAMESPACE::fetestexceptflag(&invalid_flag, FE_ALL_EXCEPT),
             FE_INVALID);
-  // Clear all exceptions and raise two other exceptions.
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+
+  // Raise two other exceptions and verify that they are set.
   LIBC_NAMESPACE::fputil::raise_except(FE_OVERFLOW | FE_INEXACT);
+  fexcept_t overflow_and_inexact_flag;
+  LIBC_NAMESPACE::fegetexceptflag(&overflow_and_inexact_flag, FE_ALL_EXCEPT);
+  ASSERT_EQ(LIBC_NAMESPACE::fetestexceptflag(&overflow_and_inexact_flag,
+                                             FE_ALL_EXCEPT),
+            FE_OVERFLOW | FE_INEXACT);
+  ASSERT_EQ(LIBC_NAMESPACE::fetestexceptflag(&overflow_and_inexact_flag,
+                                             FE_OVERFLOW | FE_INEXACT),
+            FE_OVERFLOW | FE_INEXACT);
+
   // When we set the flags and test, we should only see FE_INVALID.
-  LIBC_NAMESPACE::fesetexceptflag(&eflags, FE_ALL_EXCEPT);
+  LIBC_NAMESPACE::fesetexceptflag(&invalid_flag, FE_ALL_EXCEPT);
   EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT), FE_INVALID);
 }
