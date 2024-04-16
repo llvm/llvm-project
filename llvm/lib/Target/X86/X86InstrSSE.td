@@ -5688,6 +5688,13 @@ let Predicates = [UseSSE41, OptForSize] in {
 // SSE4.1 - Packed Bit Test
 //===----------------------------------------------------------------------===//
 
+// ptest is commutable if only the Z flag is used. If the C flag is used,
+// commuting would change which operand is inverted.
+def X86ptest_commutable : PatFrag<(ops node:$src1, node:$src2),
+                                  (X86ptest node:$src1, node:$src2), [{
+  return onlyUsesZeroFlag(SDValue(Node, 0));
+}]>;
+
 // ptest instruction we'll lower to this in X86ISelLowering primarily from
 // the intel intrinsic that corresponds to this.
 let Defs = [EFLAGS], Predicates = [HasAVX] in {
@@ -5721,6 +5728,17 @@ def PTESTrm : SS48I<0x17, MRMSrcMem, (outs), (ins VR128:$src1, f128mem:$src2),
               "ptest\t{$src2, $src1|$src1, $src2}",
               [(set EFLAGS, (X86ptest VR128:$src1, (memopv2i64 addr:$src2)))]>,
               Sched<[SchedWriteVecTest.XMM.Folded, SchedWriteVecTest.XMM.ReadAfterFold]>;
+}
+
+let Predicates = [HasAVX] in {
+  def : Pat<(X86ptest_commutable (loadv2i64 addr:$src2), VR128:$src1),
+            (VPTESTrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86ptest_commutable (loadv4i64 addr:$src2), VR256:$src1),
+            (VPTESTYrm VR256:$src1, addr:$src2)>;
+}
+let Predicates = [UseSSE41] in {
+  def : Pat<(X86ptest_commutable (memopv2i64 addr:$src2), VR128:$src1),
+            (PTESTrm VR128:$src1, addr:$src2)>;
 }
 
 // The bit test instructions below are AVX only
