@@ -9,8 +9,8 @@ $"??1A@@QEAA@XZ" = comdat any
 
 ; CHECK-NOT: call i32 @atexit
 
-define internal void @"??__Eg@@YAXXZ"() #0 {
-  %1 = call i32 @atexit(ptr @"??__Fg@@YAXXZ") #2
+define internal void @"??__Eg@@YAXXZ"() {
+  %1 = call i32 @atexit(ptr @"??__Fg@@YAXXZ")
   ret void
 }
 
@@ -18,14 +18,29 @@ define linkonce_odr dso_local void @"??1A@@QEAA@XZ"(ptr noundef nonnull align 4 
   ret void
 }
 
-define internal void @"??__Fg@@YAXXZ"() #0 {
+define internal void @"??__Fg@@YAXXZ"() {
   call void @"??1A@@QEAA@XZ"(ptr @"?g@@3UA@@A")
   ret void
 }
 
-declare dso_local i32 @atexit(ptr) #2
+declare dso_local i32 @atexit(ptr)
 
-define internal void @_GLOBAL__sub_I_atexit-dtor() #0 {
+define internal void @_GLOBAL__sub_I_atexit-dtor() {
   call void @"??__Eg@@YAXXZ"()
   ret void
+}
+
+define dso_local void @atexit_handler() {
+  ret void
+}
+
+; CHECK-NOT: call i32 @atexit
+
+; Check that a removed `atexit` call returns `0` which is the value that denotes success.
+define dso_local noundef i32 @register_atexit_handler() {
+  %1 = alloca i32, align 4
+  store i32 0, ptr %1, align 4
+  %2 = call i32 @atexit(ptr @"atexit_handler")
+; CHECK: ret i32 0
+  ret i32 %2
 }
