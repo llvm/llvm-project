@@ -50,11 +50,13 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
   endif()
 
   # Import required tools as targets
-  foreach( tool IN ITEMS clang llvm-as llvm-link opt )
-    find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
-    add_executable( libclc::${tool} IMPORTED GLOBAL )
-    set_target_properties( libclc::${tool} PROPERTIES IMPORTED_LOCATION ${LLVM_TOOL_${tool}} )
-  endforeach()
+  if( NOT EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
+    foreach( tool IN ITEMS clang llvm-as llvm-link opt )
+      find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+      add_executable( libclc::${tool} IMPORTED GLOBAL )
+      set_target_properties( libclc::${tool} PROPERTIES IMPORTED_LOCATION ${LLVM_TOOL_${tool}} )
+    endforeach()
+  endif()
 else()
   # In-tree configuration
   set( LIBCLC_STANDALONE_BUILD FALSE )
@@ -68,8 +70,27 @@ else()
     message(FATAL_ERROR "Clang is not enabled, but is required to build libclc in-tree")
   endif()
 
+  if( NOT EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
+    foreach( tool IN ITEMS clang llvm-as llvm-link opt )
+      add_executable(libclc::${tool} ALIAS ${tool})
+    endforeach()
+  endif()
+endif()
+
+if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
+  message( WARNING "Using custom LLVM tools to build libclc: "
+    "${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR}, "
+    " ensure the tools are up to date." )
+  # Note - use a differently named variable than LLVM_TOOL_${tool} as above, as
+  # the variable name is used to cache the result of find_program. If we used
+  # the same name, a user wouldn't be able to switch a build between default
+  # and custom tools.
   foreach( tool IN ITEMS clang llvm-as llvm-link opt )
-    add_executable(libclc::${tool} ALIAS ${tool})
+    find_program( LLVM_CUSTOM_TOOL_${tool} ${tool}
+      PATHS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+    add_executable( libclc::${tool} IMPORTED GLOBAL )
+    set_target_properties( libclc::${tool} PROPERTIES
+      IMPORTED_LOCATION ${LLVM_CUSTOM_TOOL_${tool}} )
   endforeach()
 endif()
 
