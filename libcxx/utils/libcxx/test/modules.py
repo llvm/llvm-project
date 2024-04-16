@@ -52,17 +52,12 @@ SkipDeclarations["random"] = [
     "std::operator==",
 ]
 
-# Declared in the forward header since std::string uses std::allocator
-SkipDeclarations["string"] = ["std::allocator"]
 # TODO MODULES remove zombie names
 # https://libcxx.llvm.org/Status/Cxx20.html#note-p0619
 SkipDeclarations["memory"] = [
     "std::return_temporary_buffer",
     "std::get_temporary_buffer",
 ]
-
-# TODO MODULES this should be part of ios instead
-SkipDeclarations["streambuf"] = ["std::basic_ios"]
 
 # include/__type_traits/is_swappable.h
 SkipDeclarations["type_traits"] = [
