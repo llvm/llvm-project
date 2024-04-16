@@ -3070,7 +3070,7 @@ bool LLParser::parseInitializesAttr(AttrBuilder &B) {
   if (parseToken(lltok::lparen, "expected '('"))
     return true;
 
-  ConstantRangeList CRL(64, false);
+  ConstantRangeList CRL;
   // Parse each constant range.
   do {
     APInt Lower, Upper;

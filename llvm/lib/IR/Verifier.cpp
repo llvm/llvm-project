@@ -2036,10 +2036,8 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
   if (Attrs.hasAttribute(Attribute::Initializes)) {
     auto Inits = Attrs.getAttribute(Attribute::Initializes)
                      .getValueAsConstantRangeList();
-    Check(!Inits.isEmptySet(),
-          "Attribute 'initializes' does not support empty list", V);
-    Check(!Inits.isFullSet(),
-          "Attribute 'initializes' does not support full list", V);
+    Check(!Inits.empty(), "Attribute 'initializes' does not support empty list",
+          V);
 
     Check(Inits.getRange(0).getLower().slt(Inits.getRange(0).getUpper()),
           "Attribute 'initializes' requires interval lower less than upper", V);

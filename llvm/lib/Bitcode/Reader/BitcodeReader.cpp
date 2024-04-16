@@ -2323,7 +2323,7 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           if (!Attribute::isConstantRangeListAttrKind(Kind))
             return error("Not a constant range list attribute");
 
-          ConstantRangeList CRL(64, false);
+          ConstantRangeList CRL;
           int RangeSize = Record[++i];
           assert(i + 2 * RangeSize < e);
           for (int Idx = 0; Idx < RangeSize; ++Idx) {

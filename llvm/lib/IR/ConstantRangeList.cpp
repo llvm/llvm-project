@@ -9,13 +9,7 @@
 // Represent a list of signed ConstantRange and do NOT support wrap around the
 // end of the numeric range. Ranges in the list are ordered and no overlapping.
 // Ranges should have the same bitwidth. Each range's lower should be less than
-// its upper. Special lists (take 8-bit as an example):
-//
-// {[0, 0)}     = Empty set
-// {[255, 255)} = Full Set
-//
-// For EmptySet or FullSet, the list size is 1 but it's not allowed to access
-// the range.
+// its upper.
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,23 +18,14 @@
 
 using namespace llvm;
 
-ConstantRangeList::ConstantRangeList(uint32_t BitWidth, bool Full) {
-  APInt Lower =
-      Full ? APInt::getMaxValue(BitWidth) : APInt::getMinValue(BitWidth);
-  Ranges.push_back(ConstantRange(Lower, Lower));
-}
-
 void ConstantRangeList::insert(const ConstantRange &NewRange) {
+  if (NewRange.isEmptySet())
+    return;
+  assert(!NewRange.isFullSet() && "Do not support full set");
   assert(NewRange.getLower().slt(NewRange.getUpper()));
   assert(getBitWidth() == NewRange.getBitWidth());
   // Handle common cases.
-  if (isFullSet())
-    return;
-  if (isEmptySet()) {
-    Ranges[0] = NewRange;
-    return;
-  }
-  if (Ranges.back().getUpper().slt(NewRange.getLower())) {
+  if (empty() || Ranges.back().getUpper().slt(NewRange.getLower())) {
     Ranges.push_back(NewRange);
     return;
   }
@@ -80,11 +65,6 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
 }
 
 void ConstantRangeList::print(raw_ostream &OS) const {
-  if (isFullSet())
-    OS << "full-set";
-  else if (isEmptySet())
-    OS << "empty-set";
-  else
-    for (const auto &Range : Ranges)
-      Range.print(OS);
+  for (const auto &Range : Ranges)
+    Range.print(OS);
 }

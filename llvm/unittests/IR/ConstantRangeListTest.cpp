@@ -13,41 +13,27 @@ using namespace llvm;
 
 namespace {
 
-class ConstantRangeListTest : public ::testing::Test {
-protected:
-  static ConstantRangeList Full;
-  static ConstantRangeList Empty;
-};
-
-ConstantRangeList ConstantRangeListTest::Full(64, true);
-ConstantRangeList ConstantRangeListTest::Empty(64, false);
+using ConstantRangeListTest = ::testing::Test;
 
 TEST_F(ConstantRangeListTest, Basics) {
-  EXPECT_TRUE(Full.isFullSet());
-  EXPECT_FALSE(Full.isEmptySet());
-
-  EXPECT_FALSE(Empty.isFullSet());
-  EXPECT_TRUE(Empty.isEmptySet());
-
-  ConstantRangeList CRL1(64, false);
+  ConstantRangeList CRL1;
   CRL1.insert(0, 4);
   CRL1.insert(8, 12);
-  EXPECT_FALSE(CRL1.isFullSet());
-  EXPECT_FALSE(CRL1.isEmptySet());
+  EXPECT_FALSE(CRL1.empty());
 
-  ConstantRangeList CRL2(64, false);
+  ConstantRangeList CRL2;
   CRL2.insert(0, 4);
   CRL2.insert(8, 12);
   EXPECT_TRUE(CRL1 == CRL2);
 
-  ConstantRangeList CRL3(64, false);
+  ConstantRangeList CRL3;
   CRL3.insert(-4, 0);
   CRL3.insert(8, 12);
   EXPECT_TRUE(CRL1 != CRL3);
 }
 
 TEST_F(ConstantRangeListTest, Insert) {
-  ConstantRangeList CRL(64, false);
+  ConstantRangeList CRL;
   CRL.insert(0, 4);
   CRL.insert(8, 12);
   // No overlap, left
@@ -65,7 +51,7 @@ TEST_F(ConstantRangeListTest, Insert) {
   // Overlap cross ranges
   CRL.insert(2, 14);
 
-  ConstantRangeList Expected(64, false);
+  ConstantRangeList Expected;
   Expected.insert(-8, -2);
   Expected.insert(0, 20);
   EXPECT_TRUE(CRL == Expected);

@@ -666,13 +666,9 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     raw_string_ostream OS(Result);
     ConstantRangeList CRL = getValueAsConstantRangeList();
     OS << "initializes(";
-    size_t i = 0;
-    for (auto &CR : CRL) {
+    interleaveComma(CRL, OS, [&](ConstantRange CR) {
       OS << "(" << CR.getLower() << "," << CR.getUpper() << ")";
-      if (i != CRL.size() - 1)
-        OS << ",";
-      i++;
-    }
+    });
     OS << ")";
     OS.flush();
     return Result;
