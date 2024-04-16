@@ -1,5 +1,5 @@
-// RUN: %clang -S -fno-discard-value-names -emit-llvm -o - %s | FileCheck %s
-// Issue no: 41441
+// RUN: %clang --target=x86_64-pc-linux -S -fno-discard-value-names -emit-llvm -o - %s | FileCheck %s
+
 #include <new>
 
 // CHECK: call void @llvm.memset.p0.i64(ptr align 1 %x, i8 0, i64 8, i1 false)
