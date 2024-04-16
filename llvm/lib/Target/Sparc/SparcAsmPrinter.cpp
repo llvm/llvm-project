@@ -434,6 +434,50 @@ bool SparcAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     default:
       // See if this is a generic print operand
       return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O);
+    case 'L': // Low order register of a twin word register operand
+    case 'H': // High order register of a twin word register operand
+    {
+      const SparcSubtarget &Subtarget = MF->getSubtarget<SparcSubtarget>();
+      const MachineOperand &MO = MI->getOperand(OpNo);
+      const SparcRegisterInfo *RegisterInfo = Subtarget.getRegisterInfo();
+      Register MOReg = MO.getReg();
+
+      Register HiReg, LoReg;
+      if (!SP::IntPairRegClass.contains(MOReg)) {
+        // If we aren't given a register pair already, find out which pair it
+        // belongs to. Note that here, the specified register operand, which
+        // refers to the high part of the twinword, needs to be an even-numbered
+        // register.
+        MOReg = RegisterInfo->getMatchingSuperReg(MOReg, SP::sub_even,
+                                                  &SP::IntPairRegClass);
+        if (!MOReg) {
+          SMLoc Loc;
+          OutContext.reportError(
+              Loc, "Hi part of pair should point to an even-numbered register");
+          OutContext.reportError(
+              Loc, "(note that in some cases it might be necessary to manually "
+                   "bind the input/output registers instead of relying on "
+                   "automatic allocation)");
+          return true;
+        }
+      }
+
+      HiReg = RegisterInfo->getSubReg(MOReg, SP::sub_even);
+      LoReg = RegisterInfo->getSubReg(MOReg, SP::sub_odd);
+
+      Register Reg;
+      switch (ExtraCode[0]) {
+      case 'L':
+        Reg = LoReg;
+        break;
+      case 'H':
+        Reg = HiReg;
+        break;
+      }
+
+      O << '%' << SparcInstPrinter::getRegisterName(Reg);
+      return false;
+    }
     case 'f':
     case 'r':
      break;

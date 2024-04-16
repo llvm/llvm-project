@@ -770,6 +770,10 @@ const CXXRecordDecl *getCXXRecordDecl(ProgramStateRef State,
     Type = RefT->getPointeeType();
   }
 
+  if (const auto *PtrT = Type->getAs<PointerType>()) {
+    Type = PtrT->getPointeeType();
+  }
+
   return Type->getUnqualifiedDesugaredType()->getAsCXXRecordDecl();
 }
 

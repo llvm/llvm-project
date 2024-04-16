@@ -19,9 +19,15 @@ def err_no_such_header_file : Error<"no such %select{public|private|project}1 he
 def warn_no_such_excluded_header_file : Warning<"no such excluded %select{public|private}0 header file: '%1'">, InGroup<InstallAPIViolation>;
 def warn_glob_did_not_match: Warning<"glob '%0' did not match any header file">, InGroup<InstallAPIViolation>;
 def err_no_such_umbrella_header_file : Error<"%select{public|private|project}1 umbrella header file not found in input: '%0'">;
+def err_cannot_find_reexport : Error<"cannot find re-exported %select{framework|library}0: '%1'">;
+def err_no_matching_target : Error<"no matching target found for target variant '%0'">;
+def err_unsupported_vendor : Error<"vendor '%0' is not supported: '%1'">;
+def err_unsupported_environment : Error<"environment '%0' is not supported: '%1'">;
+def err_unsupported_os : Error<"os '%0' is not supported: '%1'">;
 } // end of command line category.
 
 let CategoryName = "Verification" in {
+// Diagnostics about symbols.
 def warn_target: Warning<"violations found for %0">, InGroup<InstallAPIViolation>;
 def err_library_missing_symbol : Error<"declaration has external linkage, but dynamic library doesn't have symbol '%0'">;
 def warn_library_missing_symbol : Warning<"declaration has external linkage, but dynamic library doesn't have symbol '%0'">, InGroup<InstallAPIViolation>;
@@ -43,6 +49,25 @@ def err_dylib_symbol_flags_mismatch : Error<"dynamic library symbol '%0' is "
   "%select{weak defined|thread local}1, but its declaration is not">;
 def err_header_symbol_flags_mismatch : Error<"declaration '%0' is "
   "%select{weak defined|thread local}1, but symbol is not in dynamic library">;
+
+// Diagnostics about load commands.
+def err_architecture_mismatch : Error<"architectures do not match: '%0' (provided) vs '%1' (found)">;
+def warn_platform_mismatch : Warning<"platform does not match: '%0' (provided) vs '%1' (found)">, InGroup<InstallAPIViolation>;
+def err_platform_mismatch : Error<"platform does not match: '%0' (provided) vs '%1' (found)">;
+def err_install_name_mismatch : Error<"install_name does not match: '%0' (provided) vs '%1' (found)">;
+def err_current_version_mismatch : Error<"current_version does not match: '%0' (provided) vs '%1' (found)">;
+def err_compatibility_version_mismatch : Error<"compatibility_version does not match: '%0' (provided) vs '%1' (found)">;
+def err_appextension_safe_mismatch : Error<"ApplicationExtensionSafe flag does not match: '%0' (provided) vs '%1' (found)">;
+def err_shared_cache_eligiblity_mismatch : Error<"NotForDyldSharedCache flag does not match: '%0' (provided) vs '%1' (found)">;
+def err_no_twolevel_namespace : Error<"flat namespace libraries are not supported">;
+def err_parent_umbrella_missing: Error<"parent umbrella missing from %0: '%1'">;
+def err_parent_umbrella_mismatch : Error<"parent umbrella does not match: '%0' (provided) vs '%1' (found)">;
+def err_reexported_libraries_missing : Error<"re-exported library missing from %0: '%1'">;
+def err_reexported_libraries_mismatch : Error<"re-exported libraries do not match: '%0' (provided) vs '%1' (found)">;
+def err_allowable_clients_missing : Error<"allowable client missing from %0: '%1'">;
+def err_allowable_clients_mismatch : Error<"allowable clients do not match: '%0' (provided) vs '%1' (found)">;
+def warn_rpaths_missing : Warning<"runpath search paths missing from %0: '%1'">, InGroup<InstallAPIViolation>;
+def warn_rpaths_mismatch : Warning<"runpath search paths do not match: '%0' (provided) vs '%1' (found)">, InGroup<InstallAPIViolation>;
 } // end of Verification category.
 
 } // end of InstallAPI component

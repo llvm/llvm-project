@@ -11,7 +11,6 @@
 
 #include "bolt/Passes/DataflowAnalysis.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Timer.h"
 
 namespace opts {
 extern llvm::cl::opt<bool> TimeOpts;

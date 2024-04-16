@@ -112,7 +112,7 @@ class DSDIR_Real<DSDIR_Pseudo lds, dag ins, string asm, int subtarget> :
                lds.Mnemonic # asm,
                ins,
                lds.is_direct>,
-  SIMCInstr <lds.Mnemonic, subtarget> {
+  SIMCInstr <lds.PseudoInstr, subtarget> {
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
