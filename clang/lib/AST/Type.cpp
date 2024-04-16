@@ -5050,8 +5050,8 @@ StringRef FunctionEffect::name() const {
 }
 
 bool FunctionEffect::shouldDiagnoseConversion(
-    bool Adding, QualType OldType, const FunctionTypeEffectsRef &OldFX,
-    QualType NewType, const FunctionTypeEffectsRef &NewFX) const {
+    bool Adding, QualType OldType, const FunctionEffectsRef &OldFX,
+    QualType NewType, const FunctionEffectsRef &NewFX) const {
 
   switch (kind()) {
   case Kind::NonAllocating:
@@ -5075,8 +5075,8 @@ bool FunctionEffect::shouldDiagnoseConversion(
 
 bool FunctionEffect::shouldDiagnoseRedeclaration(
     bool Adding, const FunctionDecl &OldFunction,
-    const FunctionTypeEffectsRef &OldFX, const FunctionDecl &NewFunction,
-    const FunctionTypeEffectsRef &NewFX) const {
+    const FunctionEffectsRef &OldFX, const FunctionDecl &NewFunction,
+    const FunctionEffectsRef &NewFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking:
@@ -5091,8 +5091,8 @@ bool FunctionEffect::shouldDiagnoseRedeclaration(
 
 FunctionEffect::OverrideResult FunctionEffect::shouldDiagnoseMethodOverride(
     bool Adding, const CXXMethodDecl &OldMethod,
-    const FunctionTypeEffectsRef &OldFX, const CXXMethodDecl &NewMethod,
-    const FunctionTypeEffectsRef &NewFX) const {
+    const FunctionEffectsRef &OldFX, const CXXMethodDecl &NewMethod,
+    const FunctionEffectsRef &NewFX) const {
   switch (kind()) {
   case Kind::NonAllocating:
   case Kind::NonBlocking:
@@ -5163,7 +5163,7 @@ bool FunctionEffect::shouldDiagnoseFunctionCall(
 
 // =====
 
-void FunctionTypeEffectsRef::Profile(llvm::FoldingSetNodeID &ID) const {
+void FunctionEffectsRef::Profile(llvm::FoldingSetNodeID &ID) const {
   const bool HasConds = !Conditions.empty();
 
   ID.AddInteger(size() | (HasConds << 31u));
@@ -5174,7 +5174,7 @@ void FunctionTypeEffectsRef::Profile(llvm::FoldingSetNodeID &ID) const {
   }
 }
 
-void FunctionTypeEffectSet::insert(FunctionEffect Effect, const Expr *Cond) {
+void FunctionEffectSet::insert(FunctionEffect Effect, const Expr *Cond) {
   // lower_bound would be overkill
   unsigned Idx = 0;
   for (unsigned Count = Effects.size(); Idx != Count; ++Idx) {
@@ -5196,39 +5196,38 @@ void FunctionTypeEffectSet::insert(FunctionEffect Effect, const Expr *Cond) {
   Effects.insert(Effects.begin() + Idx, Effect);
 }
 
-void FunctionTypeEffectSet::insert(const FunctionTypeEffectsRef &Set) {
+void FunctionEffectSet::insert(const FunctionEffectsRef &Set) {
   for (const auto &Item : Set)
     insert(Item.Effect, Item.Cond);
 }
 
-void FunctionTypeEffectSet::insertIgnoringConditions(
-    const FunctionTypeEffectsRef &Set) {
+void FunctionEffectSet::insertIgnoringConditions(
+    const FunctionEffectsRef &Set) {
   for (const auto &Item : Set)
     insert(Item.Effect, nullptr);
 }
 
-FunctionTypeEffectSet
-FunctionTypeEffectSet::getUnion(FunctionTypeEffectsRef LHS,
-                                FunctionTypeEffectsRef RHS) {
+FunctionEffectSet FunctionEffectSet::getUnion(FunctionEffectsRef LHS,
+                                              FunctionEffectsRef RHS) {
   // Optimize for either of the two sets being empty (very common).
   if (LHS.empty())
-    return FunctionTypeEffectSet(RHS);
+    return FunctionEffectSet(RHS);
 
-  FunctionTypeEffectSet Result(LHS);
+  FunctionEffectSet Result(LHS);
   Result.insert(RHS);
   return Result;
 }
 
-FunctionTypeEffectSet::Differences
-FunctionTypeEffectSet::differences(const FunctionTypeEffectsRef &Old,
-                                   const FunctionTypeEffectsRef &New) {
+FunctionEffectSet::Differences
+FunctionEffectSet::differences(const FunctionEffectsRef &Old,
+                               const FunctionEffectsRef &New) {
 
-  FunctionTypeEffectSet::Differences Result;
+  FunctionEffectSet::Differences Result;
 
-  FunctionTypeEffectsRef::iterator POld = Old.begin();
-  FunctionTypeEffectsRef::iterator OldEnd = Old.end();
-  FunctionTypeEffectsRef::iterator PNew = New.begin();
-  FunctionTypeEffectsRef::iterator NewEnd = New.end();
+  FunctionEffectsRef::iterator POld = Old.begin();
+  FunctionEffectsRef::iterator OldEnd = Old.end();
+  FunctionEffectsRef::iterator PNew = New.begin();
+  FunctionEffectsRef::iterator NewEnd = New.end();
 
   auto compare = [](const CondFunctionEffect &LHS,
                     const CondFunctionEffect &RHS) {
@@ -5272,24 +5271,24 @@ FunctionTypeEffectSet::differences(const FunctionTypeEffectsRef &Old,
 }
 
 #if 0
-FunctionTypeEffectSet
-FunctionTypeEffectSet::difference(FunctionTypeEffectsRef LHS,
-                                  FunctionTypeEffectsRef RHS) {
-  FunctionTypeEffectSet Result;
+FunctionEffectSet
+FunctionEffectSet::difference(FunctionEffectsRef LHS,
+                                  FunctionEffectsRef RHS) {
+  FunctionEffectSet Result;
   std::set_difference(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
                       std::back_inserter(Result.Impl));
   return Result;
 }
 
-void FunctionTypeEffectSet::insert(FunctionTypeEffectsRef Arr) {
+void FunctionEffectSet::insert(FunctionEffectsRef Arr) {
   // TODO: For large RHS sets, use set_union or a custom insert-in-place
   for (const auto &CFE : Arr) {
     insert(CFE);
   }
 }
 
-void FunctionTypeEffectSet::insertIgnoringConditions(
-    FunctionTypeEffectsRef Arr) {
+void FunctionEffectSet::insertIgnoringConditions(
+    FunctionEffectsRef Arr) {
   // TODO: For large RHS sets, use set_union or a custom insert-in-place
   for (const auto &CFE : Arr) {
     insert(CondFunctionEffect(CFE.effect().kind(), nullptr));
@@ -5297,8 +5296,7 @@ void FunctionTypeEffectSet::insertIgnoringConditions(
 }
 #endif
 
-LLVM_DUMP_METHOD void
-FunctionTypeEffectsRef::dump(llvm::raw_ostream &OS) const {
+LLVM_DUMP_METHOD void FunctionEffectsRef::dump(llvm::raw_ostream &OS) const {
   OS << "Effects{";
   bool First = true;
   for (const auto &CFE : *this) {
@@ -5312,12 +5310,12 @@ FunctionTypeEffectsRef::dump(llvm::raw_ostream &OS) const {
   OS << "}";
 }
 
-LLVM_DUMP_METHOD void FunctionTypeEffectSet::dump(llvm::raw_ostream &OS) const {
-  FunctionTypeEffectsRef(*this).dump(OS);
+LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
+  FunctionEffectsRef(*this).dump(OS);
 }
 
 // TODO: inline?
-FunctionTypeEffectsRef FunctionTypeEffectsRef::get(QualType QT) {
+FunctionEffectsRef FunctionEffectsRef::get(QualType QT) {
   if (QT->isReferenceType())
     QT = QT.getNonReferenceType();
   if (QT->isPointerType())

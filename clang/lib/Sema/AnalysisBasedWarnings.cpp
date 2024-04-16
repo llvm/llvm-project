@@ -2456,10 +2456,10 @@ static bool functionIsVerifiable(const FunctionDecl *FD) {
 #if 0
 /// A mutable set of FunctionEffect, for use in places where any conditions
 /// have been resolved or can be ignored.
-class FunctionEffectSet {
+class EffectSet {
   SmallVector<FunctionEffect, 4> Impl;
 public:
-  FunctionEffectSet() = default;
+  EffectSet() = default;
 
   operator ArrayRef<FunctionEffect>() const { return Impl; }
 
@@ -2468,12 +2468,12 @@ public:
   iterator end() const { return Impl.end(); }
 
   void insert(const FunctionEffect &Effect);
-  void insert(const FunctionEffectSet &Set);
+  void insert(const EffectSet &Set);
   void insertIgnoringConditions(ArrayRef<CondFunctionEffect> Arr);
 
   void dump(llvm::raw_ostream &OS) const;
 
-  static FunctionEffectSet difference(ArrayRef<FunctionEffect> LHS, ArrayRef<FunctionEffect> RHS);
+  static EffectSet difference(ArrayRef<FunctionEffect> LHS, ArrayRef<FunctionEffect> RHS);
 };
 #endif
 
@@ -2483,7 +2483,7 @@ public:
 // byte, and there are only 2 possible effects, this is more than sufficient. In
 // AnalysisBasedWarnings, we hold one of these for every function visited,
 // which, due to inference, can be many more functions than have effects.)
-class FunctionEffectSet {
+class EffectSet {
   template <typename T, typename SizeT, SizeT Capacity> struct FixedVector {
     SizeT Count = 0;
     T Items[Capacity] = {};
@@ -2515,7 +2515,7 @@ class FunctionEffectSet {
   FixedVector<FunctionEffect, uint8_t, 7> Impl;
 
 public:
-  FunctionEffectSet() = default;
+  EffectSet() = default;
 
   operator ArrayRef<FunctionEffect>() const {
     return ArrayRef(Impl.cbegin(), Impl.cend());
@@ -2526,16 +2526,16 @@ public:
   iterator end() const { return Impl.cend(); }
 
   void insert(const FunctionEffect &Effect);
-  void insert(const FunctionEffectSet &Set);
-  void insertIgnoringConditions(const FunctionTypeEffectsRef &FX);
+  void insert(const EffectSet &Set);
+  void insertIgnoringConditions(const FunctionEffectsRef &FX);
 
   void dump(llvm::raw_ostream &OS) const;
 
-  static FunctionEffectSet difference(ArrayRef<FunctionEffect> LHS,
-                                      ArrayRef<FunctionEffect> RHS);
+  static EffectSet difference(ArrayRef<FunctionEffect> LHS,
+                              ArrayRef<FunctionEffect> RHS);
 };
 
-void FunctionEffectSet::insert(const FunctionEffect &Effect) {
+void EffectSet::insert(const FunctionEffect &Effect) {
   FunctionEffect *Iter = Impl.begin();
   FunctionEffect *End = Impl.end();
   // lower_bound is overkill for a tiny vector like this
@@ -2548,18 +2548,17 @@ void FunctionEffectSet::insert(const FunctionEffect &Effect) {
   Impl.insert(Iter, Effect);
 }
 
-void FunctionEffectSet::insert(const FunctionEffectSet &Set) {
+void EffectSet::insert(const EffectSet &Set) {
   for (auto &Item : Set)
     insert(Item);
 }
 
-void FunctionEffectSet::insertIgnoringConditions(
-    const FunctionTypeEffectsRef &FX) {
+void EffectSet::insertIgnoringConditions(const FunctionEffectsRef &FX) {
   for (const auto &Item : FX)
     insert(Item.Effect);
 }
 
-LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
+LLVM_DUMP_METHOD void EffectSet::dump(llvm::raw_ostream &OS) const {
   OS << "Effects{";
   bool First = true;
   for (const auto &Effect : *this) {
@@ -2572,9 +2571,9 @@ LLVM_DUMP_METHOD void FunctionEffectSet::dump(llvm::raw_ostream &OS) const {
   OS << "}";
 }
 
-FunctionEffectSet FunctionEffectSet::difference(ArrayRef<FunctionEffect> LHS,
-                                                ArrayRef<FunctionEffect> RHS) {
-  FunctionEffectSet Result;
+EffectSet EffectSet::difference(ArrayRef<FunctionEffect> LHS,
+                                ArrayRef<FunctionEffect> RHS) {
+  EffectSet Result;
   std::set_difference(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
                       std::back_inserter(Result.Impl));
   return Result;
@@ -2588,13 +2587,13 @@ struct CallableInfo {
   mutable std::optional<std::string>
       MaybeName; // mutable because built on demand in const method
   SpecialFuncType FuncType = SpecialFuncType::None;
-  FunctionEffectSet Effects;
+  EffectSet Effects;
   CallType CType = CallType::Unknown;
 
   CallableInfo(const Decl &CD, SpecialFuncType FT = SpecialFuncType::None)
       : CDecl(&CD), FuncType(FT) {
     // llvm::errs() << "CallableInfo " << name() << "\n";
-    FunctionTypeEffectsRef FX;
+    FunctionEffectsRef FX;
 
     if (auto *FD = dyn_cast<FunctionDecl>(CDecl)) {
       // Use the function's definition, if any.
@@ -2613,7 +2612,7 @@ struct CallableInfo {
       FX = BD->getFunctionEffects();
     } else if (auto *VD = dyn_cast<ValueDecl>(CDecl)) {
       // ValueDecl is function, enum, or variable, so just look at its type.
-      FX = FunctionTypeEffectsRef::get(VD->getType());
+      FX = FunctionEffectsRef::get(VD->getType());
     }
     Effects.insertIgnoringConditions(FX);
   }
@@ -2708,7 +2707,7 @@ private:
 // ----------
 // State pertaining to a function whose AST is walked. Since there are
 // potentially a large number of these objects, it needs care about size.
-// TODO: FunctionEffectSet could be made much smaller.
+// TODO: EffectSet could be made much smaller.
 class PendingFunctionAnalysis {
   friend class CompleteFunctionAnalysis;
 
@@ -2732,8 +2731,8 @@ public:
   // We always have two disjoint sets of effects to verify:
   // 1. Effects declared explicitly by this function.
   // 2. All other inferrable effects needing verification.
-  FunctionEffectSet DeclaredVerifiableEffects;
-  FunctionEffectSet FXToInfer;
+  EffectSet DeclaredVerifiableEffects;
+  EffectSet FXToInfer;
 
 private:
   // Diagnostics pertaining to the function's explicit effects. Use a unique_ptr
@@ -2753,7 +2752,7 @@ public:
     DeclaredVerifiableEffects = CInfo.Effects;
 
     // Check for effects we are not allowed to infer
-    FunctionEffectSet FX;
+    EffectSet FX;
 
     for (const auto &effect : AllInferrableEffectsToVerify) {
       if (effect.canInferOnFunction(*CInfo.CDecl)) {
@@ -2769,7 +2768,7 @@ public:
       }
     }
     // FX is now the set of inferrable effects which are not prohibited
-    FXToInfer = FunctionEffectSet::difference(FX, DeclaredVerifiableEffects);
+    FXToInfer = EffectSet::difference(FX, DeclaredVerifiableEffects);
   }
 
   // Hide the way that diagnostics for explicitly required effects vs. inferred
@@ -2843,7 +2842,7 @@ public:
   // ones which have been successfully inferred. These are all considered
   // "verified" for the purposes of callers; any issue with verifying declared
   // effects has already been reported and is not the problem of any caller.
-  FunctionEffectSet VerifiedEffects;
+  EffectSet VerifiedEffects;
 
 private:
   // This is used to generate notes about failed inference.
@@ -2852,7 +2851,7 @@ private:
 public:
   CompleteFunctionAnalysis(
       ASTContext &Ctx, PendingFunctionAnalysis &pending,
-      const FunctionEffectSet &funcFX,
+      const EffectSet &funcFX,
       ArrayRef<FunctionEffect> AllInferrableEffectsToVerify) {
     VerifiedEffects.insert(funcFX);
     for (const auto &effect : AllInferrableEffectsToVerify) {
@@ -2897,7 +2896,7 @@ class Analyzer {
   //  SmallVector<const Decl *> CallablesWithEffectsToVerify
 
   // Subset of Sema.AllEffectsToVerify
-  FunctionEffectSet AllInferrableEffectsToVerify;
+  EffectSet AllInferrableEffectsToVerify;
 
   using FuncAnalysisPtr =
       llvm::PointerUnion<PendingFunctionAnalysis *, CompleteFunctionAnalysis *>;
@@ -3138,7 +3137,7 @@ private:
     const bool DirectCall = Callee.isDirectCall();
 
     // These will be its declared effects.
-    FunctionEffectSet CalleeEffects = Callee.Effects;
+    EffectSet CalleeEffects = Callee.Effects;
 
     bool IsInferencePossible = DirectCall;
 
@@ -3444,7 +3443,7 @@ private:
       const auto CalleeType = CalleeExpr->getType();
       auto *FPT =
           CalleeType->getAs<FunctionProtoType>(); // null if FunctionType
-      FunctionEffectSet CalleeFX;
+      EffectSet CalleeFX;
       if (FPT)
         CalleeFX.insertIgnoringConditions(FPT->getFunctionEffects());
       static_assert(sizeof(FunctionEffect) == 1);
@@ -3725,7 +3724,7 @@ private:
       }
     }
 
-    static FunctionTypeEffectsRef functionEffectsForDecl(const Decl *D) {
+    static FunctionEffectsRef functionEffectsForDecl(const Decl *D) {
       if (auto *FD = D->getAsFunction()) {
         return FD->getFunctionEffects();
       }

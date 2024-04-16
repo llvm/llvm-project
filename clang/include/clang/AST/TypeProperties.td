@@ -374,7 +374,7 @@ let Class = FunctionProtoType in {
     epi.ExtParameterInfos =
       extParameterInfo.empty() ? nullptr : extParameterInfo.data();
     epi.AArch64SMEAttributes = AArch64SMEAttributes;
-    epi.FunctionEffects = FunctionTypeEffectsRef(functionEffects, functionEffectConds);
+    epi.FunctionEffects = FunctionEffectsRef(functionEffects, functionEffectConds);
     return ctx.getFunctionType(returnType, parameters, epi);
   }]>;
 }

@@ -18329,7 +18329,7 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
   const auto NewFX = New->getFunctionEffects();
 
   if (OldFX != NewFX) {
-    const auto Diffs = FunctionTypeEffectSet::differences(OldFX, NewFX);
+    const auto Diffs = FunctionEffectSet::differences(OldFX, NewFX);
     bool AnyDiags = false;
 
     for (const auto &Item : Diffs) {
@@ -18347,10 +18347,10 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
         AnyDiags = true;
         break;
       case FunctionEffect::OverrideResult::Merge: {
-        auto MergedFX = FunctionTypeEffectSet::getUnion(OldFX, NewFX);
+        auto MergedFX = FunctionEffectSet::getUnion(OldFX, NewFX);
 
         FunctionProtoType::ExtProtoInfo EPI = NewFT->getExtProtoInfo();
-        EPI.FunctionEffects = FunctionTypeEffectsRef(MergedFX);
+        EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
         QualType ModQT = Context.getFunctionType(NewFT->getReturnType(),
                                                  NewFT->getParamTypes(), EPI);
         New->setType(ModQT);

@@ -3924,7 +3924,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   const auto NewFX = New->getFunctionEffects();
   QualType OldQTypeForComparison = OldQType;
   if (OldFX != NewFX) {
-    const auto Diffs = FunctionTypeEffectSet::differences(OldFX, NewFX);
+    const auto Diffs = FunctionEffectSet::differences(OldFX, NewFX);
     for (const auto &Item : Diffs) {
       const FunctionEffect &Effect = Item.first.Effect;
       const bool Adding = Item.second;
@@ -3940,10 +3940,10 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     // declaration, but that would trigger an additional "conflicting types"
     // error.
     if (const auto *NewFPT = NewQType->getAs<FunctionProtoType>()) {
-      auto MergedFX = FunctionTypeEffectSet::getUnion(OldFX, NewFX);
+      auto MergedFX = FunctionEffectSet::getUnion(OldFX, NewFX);
 
       FunctionProtoType::ExtProtoInfo EPI = NewFPT->getExtProtoInfo();
-      EPI.FunctionEffects = FunctionTypeEffectsRef(MergedFX);
+      EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
       QualType ModQT = Context.getFunctionType(NewFPT->getReturnType(),
                                                NewFPT->getParamTypes(), EPI);
 
@@ -3954,7 +3954,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       // so as not to fail due to differences later.
       if (const auto *OldFPT = OldQType->getAs<FunctionProtoType>()) {
         EPI = OldFPT->getExtProtoInfo();
-        EPI.FunctionEffects = FunctionTypeEffectsRef(MergedFX);
+        EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
         OldQTypeForComparison = Context.getFunctionType(
             OldFPT->getReturnType(), OldFPT->getParamTypes(), EPI);
       }
@@ -11129,7 +11129,7 @@ Attr *Sema::getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
 // Should only be called when getFunctionEffects() returns a non-empty set.
 // Decl should be a FunctionDecl or BlockDecl.
 void Sema::maybeAddDeclWithEffects(const Decl *D,
-                                   const FunctionTypeEffectsRef &FX) {
+                                   const FunctionEffectsRef &FX) {
   if (!D->hasBody()) {
     if (const auto *FD = D->getAsFunction()) {
       if (!FD->willHaveBody()) {

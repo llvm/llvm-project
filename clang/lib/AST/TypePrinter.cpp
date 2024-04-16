@@ -998,7 +998,7 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
   }
   T->printExceptionSpecification(OS, Policy);
 
-  const FunctionTypeEffectsRef FX = T->getFunctionEffects();
+  const FunctionEffectsRef FX = T->getFunctionEffects();
   for (const auto &CFE : FX)
     OS << " __attribute__((clang_" << CFE.Effect.name() << "))";
   // $$$ TODO: Conditions ???

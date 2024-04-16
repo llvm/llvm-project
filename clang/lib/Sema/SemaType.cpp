@@ -8116,16 +8116,16 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   }
 
   // nonblocking(true) and nonallocating(true) are represented as
-  // FunctionEffects, in a FunctionTypeEffectsRef attached to a
+  // FunctionEffects, in a FunctionEffectsRef attached to a
   // FunctionProtoType.
   const FunctionEffect NewEffect(isNonBlocking
                                      ? FunctionEffect::Kind::NonBlocking
                                      : FunctionEffect::Kind::NonAllocating);
 
   FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-  FunctionTypeEffectSet FX(EPI.FunctionEffects);
+  FunctionEffectSet FX(EPI.FunctionEffects);
   FX.insert(NewEffect, nullptr);
-  EPI.FunctionEffects = FunctionTypeEffectsRef(FX);
+  EPI.FunctionEffects = FunctionEffectsRef(FX);
 
   QualType newtype = S.Context.getFunctionType(FPT->getReturnType(),
                                                FPT->getParamTypes(), EPI);
