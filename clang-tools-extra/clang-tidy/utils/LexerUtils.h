@@ -89,6 +89,10 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
   }
 }
 
+SourceLocation findNextTokenKind(SourceLocation Start, const SourceManager &SM,
+                                 const LangOptions &LangOpts,
+                                 tok::TokenKind TK);
+
 std::optional<Token>
 findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
                                const LangOptions &LangOpts);

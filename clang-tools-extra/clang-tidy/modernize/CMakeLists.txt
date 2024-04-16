@@ -48,6 +48,7 @@ add_clang_library(clangTidyModernizeModule
   UseTrailingReturnTypeCheck.cpp
   UseTransparentFunctorsCheck.cpp
   UseUncaughtExceptionsCheck.cpp
+  UseUniformInitializerCheck.cpp
   UseUsingCheck.cpp
 
   LINK_LIBS
