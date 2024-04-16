@@ -251,8 +251,8 @@ public:
     return FunctionEffect(static_cast<FunctionEffect::Kind>(value));
   }
 
-  FunctionEffectCondExpr readFunctionEffectCondExpr() {
-    return FunctionEffectCondExpr{asImpl().readExprRef()};
+  FunctionEffectCondition readFunctionEffectCondition() {
+    return FunctionEffectCondition{asImpl().readExprRef()};
   }
 
   NestedNameSpecifier *readNestedNameSpecifier() {

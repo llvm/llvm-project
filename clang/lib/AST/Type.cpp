@@ -3647,10 +3647,10 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     auto *DestFX = getTrailingObjects<FunctionEffect>();
     std::copy(SrcFX.begin(), SrcFX.end(), DestFX);
 
-    ArrayRef<FunctionEffectCondExpr> SrcConds =
+    ArrayRef<FunctionEffectCondition> SrcConds =
         epi.FunctionEffects.conditions();
     if (!SrcConds.empty()) {
-      auto *DestConds = getTrailingObjects<FunctionEffectCondExpr>();
+      auto *DestConds = getTrailingObjects<FunctionEffectCondition>();
       std::copy(SrcConds.begin(), SrcConds.end(), DestConds);
     }
   }
@@ -5191,7 +5191,7 @@ void FunctionTypeEffectSet::insert(FunctionEffect Effect, const Expr *Cond) {
   if (Cond != nullptr) {
     if (Conditions.empty() && !Effects.empty())
       Conditions.resize(Effects.size());
-    Conditions.insert(Conditions.begin() + Idx, FunctionEffectCondExpr{Cond});
+    Conditions.insert(Conditions.begin() + Idx, FunctionEffectCondition{Cond});
   }
   Effects.insert(Effects.begin() + Idx, Effect);
 }

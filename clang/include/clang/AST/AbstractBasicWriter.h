@@ -228,7 +228,7 @@ public:
     asImpl().writeUInt32(llvm::to_underlying(E.kind()));
   }
 
-  void writeFunctionEffectCondExpr(FunctionEffectCondExpr CE) {
+  void writeFunctionEffectCondition(FunctionEffectCondition CE) {
     asImpl().writeExprRef(CE.Cond);
   }
 

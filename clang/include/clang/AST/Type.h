@@ -4447,9 +4447,9 @@ class FunctionTypeEffectSet;
 
   - Keep FunctionEffect itself here but make it more minimal. Don't define flags
   or any behaviors, just the Kind and an accessor.
-  - Keep FunctionEffectCondExpr here.
+  - Keep FunctionEffectCondition here.
   - Make FunctionProtoType and ExtProtoInfo use only ArrayRef<FunctionEffect>
-  and ArrayRef<FunctionEffectCondExpr>.
+  and ArrayRef<FunctionEffectCondition>.
   - Somewhere in Sema, define ExtFunctionEffect, which holds a FunctionEffect
     and has all the behavior-related methods.
   - There too, define the containers. FunctionTypeEffectsRef can have a
@@ -4578,10 +4578,10 @@ public:
 
 /// Wrap a function effect's condition expression in another struct so
 /// that FunctionProtoType's TrailingObjects can treat it separately.
-struct FunctionEffectCondExpr {
+struct FunctionEffectCondition {
   const Expr *Cond = nullptr; // if null, unconditional
 
-  bool operator==(const FunctionEffectCondExpr &RHS) const {
+  bool operator==(const FunctionEffectCondition &RHS) const {
     return Cond == RHS.Cond;
   }
 };
@@ -4595,7 +4595,7 @@ struct CondFunctionEffect {
 };
 
 /// Support iteration in parallel through a pair of FunctionEffect and
-/// FunctionEffectCondExpr containers.
+/// FunctionEffectCondition containers.
 template <typename Container> class FunctionEffectIterator {
   const Container &Outer;
   size_t Idx;
@@ -4631,7 +4631,7 @@ class FunctionTypeEffectsRef {
 
   // The array of conditions is either empty or has the same size
   // as the array of effects.
-  ArrayRef<FunctionEffectCondExpr> Conditions;
+  ArrayRef<FunctionEffectCondition> Conditions;
 
 public:
   /// Extract the effects from a Type if it is a function, block, or member
@@ -4642,14 +4642,14 @@ public:
 
   // The arrays are expected to have been sorted by the caller.
   FunctionTypeEffectsRef(ArrayRef<FunctionEffect> FX,
-                         ArrayRef<FunctionEffectCondExpr> Conds)
+                         ArrayRef<FunctionEffectCondition> Conds)
       : Effects(FX), Conditions(Conds) {}
 
   bool empty() const { return Effects.empty(); }
   size_t size() const { return Effects.size(); }
 
   ArrayRef<FunctionEffect> effects() const { return Effects; }
-  ArrayRef<FunctionEffectCondExpr> conditions() const { return Conditions; }
+  ArrayRef<FunctionEffectCondition> conditions() const { return Conditions; }
 
   using iterator = FunctionEffectIterator<FunctionTypeEffectsRef>;
   friend iterator;
@@ -4675,7 +4675,7 @@ class FunctionTypeEffectSet {
   SmallVector<FunctionEffect> Effects;
   // The vector of conditions is either empty or has the same size
   // as the vector of effects.
-  SmallVector<FunctionEffectCondExpr> Conditions;
+  SmallVector<FunctionEffectCondition> Conditions;
 
 public:
   FunctionTypeEffectSet() = default;
@@ -4727,7 +4727,7 @@ class FunctionProtoType final
           FunctionType::FunctionTypeExtraBitfields,
           FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
           Expr *, FunctionDecl *, FunctionType::ExtParameterInfo,
-          FunctionEffect, FunctionEffectCondExpr, Qualifiers> {
+          FunctionEffect, FunctionEffectCondition, Qualifiers> {
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
@@ -4761,7 +4761,7 @@ class FunctionProtoType final
   // * Optionally, an array of getNumFunctionEffects() FunctionEffect.
   //   Present only when getNumFunctionEffects() > 0
   //
-  // * Optionally, an array of getNumFunctionEffects() FunctionEffectCondExpr.
+  // * Optionally, an array of getNumFunctionEffects() FunctionEffectCondition.
   //   Present only when getNumFunctionEffectConditions() > 0.
   //
   // * Optionally a Qualifiers object to represent extra qualifiers that can't
@@ -4893,7 +4893,7 @@ private:
     return getNumFunctionEffects();
   }
 
-  unsigned numTrailingObjects(OverloadToken<FunctionEffectCondExpr>) const {
+  unsigned numTrailingObjects(OverloadToken<FunctionEffectCondition>) const {
     return getNumFunctionEffectConditions();
   }
 
@@ -5238,11 +5238,11 @@ public:
   }
 
   // For serialization.
-  ArrayRef<FunctionEffectCondExpr> getFunctionEffectConditions() const {
+  ArrayRef<FunctionEffectCondition> getFunctionEffectConditions() const {
     if (hasExtraBitfields()) {
       const auto *Bitfields = getTrailingObjects<FunctionTypeExtraBitfields>();
       if (Bitfields->EffectsHaveConditions)
-        return {getTrailingObjects<FunctionEffectCondExpr>(),
+        return {getTrailingObjects<FunctionEffectCondition>(),
                 Bitfields->NumFunctionEffects};
     }
     return {};
@@ -5259,7 +5259,7 @@ public:
         return FunctionTypeEffectsRef(
             {getTrailingObjects<FunctionEffect>(),
              Bitfields->NumFunctionEffects},
-            {NumConds ? getTrailingObjects<FunctionEffectCondExpr>() : nullptr,
+            {NumConds ? getTrailingObjects<FunctionEffectCondition>() : nullptr,
              NumConds});
       }
     }
