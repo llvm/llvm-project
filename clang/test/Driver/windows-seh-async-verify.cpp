@@ -1,7 +1,7 @@
-// RUN: %clang --target=x86_64-pc-windows -fasync-exceptions -fsyntax-only %s -### 2>&1 | FileCheck %s
-// RUN: %clang_cl --target=x86_64-pc-windows /EHa -fsyntax-only %s -### 2>&1 | FileCheck %s
-// RUN: %clang --target=x86_64-pc-windows-gnu -fasync-exceptions -fsyntax-only %s -### 2>&1 | FileCheck %s --check-prefixes=GNU-ALL,GNU
-// RUN: %clang_cl --target=x86_64-pc-windows-gnu /EHa -fsyntax-only %s -### 2>&1 | FileCheck %s --check-prefixes=GNU-ALL,CL-GNU
+// RUN: %clang --target=x86_64-pc-windows -fasync-exceptions -fsyntax-only -### %s 2>&1 | FileCheck %s
+// RUN: %clang_cl --target=x86_64-pc-windows /EHa -fsyntax-only -### -- %s 2>&1 | FileCheck %s
+// RUN: %clang --target=x86_64-pc-windows-gnu -fasync-exceptions -fsyntax-only -### %s 2>&1 | FileCheck %s --check-prefixes=GNU-ALL,GNU
+// RUN: %clang_cl --target=x86_64-pc-windows-gnu /EHa -fsyntax-only -### -- %s 2>&1 | FileCheck %s --check-prefixes=GNU-ALL,CL-GNU
 
 // CHECK-NOT: warning
 // GNU: warning: argument unused during compilation: '-fasync-exceptions' [-Wunused-command-line-argument]
