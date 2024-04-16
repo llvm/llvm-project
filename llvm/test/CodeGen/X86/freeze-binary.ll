@@ -202,27 +202,13 @@ define <4 x i32> @freeze_add_vec(<4 x i32> %a0) nounwind {
 define <4 x i32> @freeze_add_vec_undef(<4 x i32> %a0) nounwind {
 ; X86-LABEL: freeze_add_vec_undef:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $3, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $2, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $1, (%esp)
-; X86-NEXT:    paddd (%esp), %xmm0
 ; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_add_vec_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    movabsq $8589934593, %rax # imm = 0x200000001
-; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl $3, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    vpaddd -{{[0-9]+}}(%rsp), %xmm0, %xmm0
+; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = add <4 x i32> %a0, <i32 1, i32 2, i32 3, i32 undef>
@@ -287,27 +273,13 @@ define <4 x i32> @freeze_sub_vec(<4 x i32> %a0) nounwind {
 define <4 x i32> @freeze_sub_vec_undef(<4 x i32> %a0) nounwind {
 ; X86-LABEL: freeze_sub_vec_undef:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $3, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $2, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $1, (%esp)
-; X86-NEXT:    psubd (%esp), %xmm0
 ; X86-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_sub_vec_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    movabsq $8589934593, %rax # imm = 0x200000001
-; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl $3, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    vpsubd -{{[0-9]+}}(%rsp), %xmm0, %xmm0
+; X64-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = sub <4 x i32> %a0, <i32 1, i32 2, i32 3, i32 undef>
@@ -373,29 +345,13 @@ define <8 x i16> @freeze_mul_vec(<8 x i16> %a0) nounwind {
 define <8 x i16> @freeze_mul_vec_undef(<8 x i16> %a0) nounwind {
 ; X86-LABEL: freeze_mul_vec_undef:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movw $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $196612, {{[0-9]+}}(%esp) # imm = 0x30004
-; X86-NEXT:    movl $262147, {{[0-9]+}}(%esp) # imm = 0x40003
-; X86-NEXT:    movl $131073, (%esp) # imm = 0x20001
-; X86-NEXT:    pmullw (%esp), %xmm0
 ; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_mul_vec_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    movabsq $1125912791875585, %rax # imm = 0x4000300020001
-; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movw $1, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movl $196612, -{{[0-9]+}}(%rsp) # imm = 0x30004
-; X64-NEXT:    vpmullw -{{[0-9]+}}(%rsp), %xmm0, %xmm0
+; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = mul <8 x i16> %a0, <i16 1, i16 2, i16 3, i16 4, i16 4, i16 3, i16 undef, i16 1>
