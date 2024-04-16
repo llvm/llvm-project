@@ -1,4 +1,4 @@
-//===- DialectLinalg.cpp - Pybind module for Nvgpu dialect API support --===//
+//===--- DialectNvgpu.cpp - Pybind module for Nvgpu dialect API support ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IRModule.h"
 #include "mlir-c/Dialect/NVGPU.h"
 #include "mlir-c/IR.h"
 #include "mlir/Bindings/Python/PybindAdaptors.h"
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cstdint>
 #include <pybind11/pybind11.h>
 
 namespace py = pybind11;
@@ -32,8 +28,7 @@ static void populateDialectNvgpuSubmodule(const pybind11::module &m) {
         return cls(mlirNVGPUTensorMapDescriptorTypeGet(
             ctx, tensorType, swizzle, l2promo, oob, interleave));
       },
-      "Gets an instance of RangeType in the same context as the provided "
-      "element type.",
+      "Gets an instance of TensorMapDescriptorType in the same context",
       py::arg("cls"), py::arg("tensor_type"), py::arg("swizzle"),
       py::arg("l2promo"), py::arg("oob"), py::arg("interleave"),
       py::arg("ctx") = py::none());
