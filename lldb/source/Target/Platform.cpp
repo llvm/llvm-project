@@ -1209,8 +1209,7 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
       if (!local_md5) {
         LLDB_LOGF(log, "[PutFile] couldn't get md5 sum of source");
       } else {
-        uint64_t local_md5_high, local_md5_low;
-        std::tie(local_md5_high, local_md5_low) = local_md5->words();
+        const auto [local_md5_high, local_md5_low] = local_md5->words();
         LLDB_LOGF(log, "[PutFile] destination md5: %016" PRIx64 "%016" PRIx64,
                   dest_md5_high, dest_md5_low);
         LLDB_LOGF(log, "[PutFile]       local md5: %016" PRIx64 "%016" PRIx64,

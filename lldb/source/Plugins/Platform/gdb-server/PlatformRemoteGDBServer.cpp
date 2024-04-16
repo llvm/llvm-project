@@ -686,11 +686,10 @@ Status PlatformRemoteGDBServer::RunShellCommand(
 
 bool PlatformRemoteGDBServer::CalculateMD5(const FileSpec &file_spec,
                                            uint64_t &low, uint64_t &high) {
-  if (IsConnected()) {
-    // Note that high/low are switched in the gdb remote communication client
-    return m_gdb_client_up->CalculateMD5(file_spec, high, low);
+  if (!IsConnected()) {
+    return false;
   }
-  return false;
+  return m_gdb_client_up->CalculateMD5(file_spec, low, high);
 }
 
 void PlatformRemoteGDBServer::CalculateTrapHandlerSymbolNames() {

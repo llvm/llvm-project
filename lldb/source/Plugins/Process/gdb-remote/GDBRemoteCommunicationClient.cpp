@@ -3419,7 +3419,7 @@ bool GDBRemoteCommunicationClient::GetFileExists(
 }
 
 bool GDBRemoteCommunicationClient::CalculateMD5(
-    const lldb_private::FileSpec &file_spec, uint64_t &high, uint64_t &low) {
+    const lldb_private::FileSpec &file_spec, uint64_t &low, uint64_t &high) {
   std::string path(file_spec.GetPath(false));
   lldb_private::StreamString stream;
   stream.PutCString("vFile:MD5:");
@@ -3445,26 +3445,29 @@ bool GDBRemoteCommunicationClient::CalculateMD5(
     // delimiter. However, we choose not to do this so existing lldb-servers
     // don't have to be patched
 
+    // The checksum is 128 bits encoded as hex
+    // This means low/high are halves of 64 bits each, in otherwords, 8 bytes.
+    // Each byte takes 2 hex characters in the response.
+    const size_t MD5_HALF_LENGTH = sizeof(uint64_t) * 2;
+
     // Get low part
-    auto part = response.GetStringRef().substr(response.GetFilePos(),
-                                               sizeof(uint64_t) * 2);
-    if (part.size() != sizeof(uint64_t) * 2)
+    auto part =
+        response.GetStringRef().substr(response.GetFilePos(), MD5_HALF_LENGTH);
+    if (part.size() != MD5_HALF_LENGTH)
       return false;
     response.SetFilePos(response.GetFilePos() + part.size());
 
-    bool conversionErrored = part.getAsInteger(16, low);
-    if (conversionErrored)
+    if (part.getAsInteger(/*radix=*/16, low))
       return false;
 
     // Get high part
-    part = response.GetStringRef().substr(response.GetFilePos(),
-                                          sizeof(uint64_t) * 2);
-    if (part.size() != sizeof(uint64_t) * 2)
+    part =
+        response.GetStringRef().substr(response.GetFilePos(), MD5_HALF_LENGTH);
+    if (part.size() != MD5_HALF_LENGTH)
       return false;
     response.SetFilePos(response.GetFilePos() + part.size());
 
-    conversionErrored = part.getAsInteger(16, high);
-    if (conversionErrored)
+    if (part.getAsInteger(/*radix=*/16, high))
       return false;
 
     return true;
