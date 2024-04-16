@@ -46,6 +46,9 @@ constexpr unsigned WeightsIdx = 1;
 // the minimum number of operands for MD_prof nodes with branch weights
 constexpr unsigned MinBWOps = 3;
 
+// the minimum number of operands for MD_prof nodes with value profiles
+constexpr unsigned MinVPOps = 5;
+
 // We may want to add support for other MD_prof types, so provide an abstraction
 // for checking the metadata type.
 bool isTargetMD(const MDNode *ProfData, const char *Name, unsigned MinOps) {
@@ -77,9 +80,23 @@ bool isBranchWeightMD(const MDNode *ProfileData) {
   return isTargetMD(ProfileData, "branch_weights", MinBWOps);
 }
 
+bool isValueProfileMD(const MDNode *ProfileData) {
+  return isTargetMD(ProfileData, "VP", MinVPOps);
+}
+
 bool hasBranchWeightMD(const Instruction &I) {
   auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
   return isBranchWeightMD(ProfileData);
+}
+
+bool hasCountTypeMD(const Instruction &I) {
+  auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
+  // Value profiles record count-type information.
+  if (isValueProfileMD(ProfileData))
+    return true;
+  // Only a CallBase (CallInst or InvokeInst) uses branch weights to carry
+  // count information.
+  return isa<CallBase>(I) && !isBranchWeightMD(ProfileData);
 }
 
 bool hasValidBranchWeightMD(const Instruction &I) {
@@ -201,11 +218,7 @@ void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
                         !ProfDataName->getString().equals("VP")))
     return;
 
-  // If an instruction is a call and its branch weight has more than two
-  // operands, it represents taken vs not-taken branch probabilities and doesn't
-  // need scaling.
-  if (isa<CallBase>(&I) && ProfDataName->getString().equals("branch_weights") &&
-      ProfileData->getNumOperands() > 2)
+  if (!hasCountTypeMD(I))
     return;
 
   LLVMContext &C = I.getContext();
@@ -216,8 +229,8 @@ void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
   APInt APS(128, S), APT(128, T);
 
   // Scale the counts associated with calls.
-  if (isa<CallBase>(&I) && ProfDataName->getString().equals("branch_weights") &&
-      ProfileData->getNumOperands() == 2) {
+  if (ProfDataName->getString().equals("branch_weights") &&
+      ProfileData->getNumOperands() > 0) {
     // Using APInt::div may be expensive, but most cases should fit 64 bits.
     APInt Val(128, mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1))
                        ->getValue()
