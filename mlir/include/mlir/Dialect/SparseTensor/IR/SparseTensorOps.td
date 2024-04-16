@@ -1443,10 +1443,13 @@ def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
 
   let results = (outs AnySparseIterSpace:$resultSpace);
 
-  let summary = "Extract an iteration space from a sparse tensor between certain levels";
+  let summary = "Extracts an iteration space from a sparse tensor between certain levels";
   let description = [{
       Extracts a `!sparse_tensor.iter_space` from a sparse tensor between
-      certian (consecutive) levels.
+      certain (consecutive) levels. For sparse levels, it is usually done by
+      loading a postion range from the underlying sparse tensor storage.
+      E.g., for a compressed level, the iteration space is extracted by
+      [pos[i], pos[i+1]) supposing the the parent iterator points at `i`.
 
       `tensor`: the input sparse tensor that defines the iteration space.
       `parentIter`: the iterator for the previous level, at which the iteration space
@@ -1454,6 +1457,12 @@ def ExtractIterSpaceOp : SparseTensor_Op<"extract_iteration_space",
       `loLvl`, `hiLvl`: the level range between [loLvl, hiLvl) in the input tensor that
       the returned iteration space covers. `hiLvl - loLvl` defines the dimension of the
       iteration space.
+
+      The type of returned the value is automatically inferred to
+      `!sparse_tensor.iter_space<#INPUT_ENCODING, lvls = $loLvl to $hiLvl>`.
+      The returned iteration space can then be iterated over by
+      `sparse_tensor.iterate` operations to visit every stored element
+      (usually nonzeros) in the input sparse tensor.
 
       Example:
       ```mlir

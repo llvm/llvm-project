@@ -81,7 +81,9 @@ def SparseTensor_IterSpace : SparseTensor_Type<"IterSpace"> {
 
   let description = [{
     A sparse iteration space that represents an abstract N-D (sparse) iteration space
-    extracted from a sparse tensor.
+    extracted from a sparse tensor, i.e., a set of (crd_0, crd_1, ..., crd_N) for
+    every stored element (usually nonzeros) in a sparse tensor between the specified
+    [$loLvl, $hiLvl) levels.
 
     Examples:
 
