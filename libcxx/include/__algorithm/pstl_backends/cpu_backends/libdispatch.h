@@ -85,7 +85,7 @@ template <>
 struct __cpu_traits<__libdispatch_backend_tag> {
   template <class _RandomAccessIterator, class _Functor>
   _LIBCPP_HIDE_FROM_ABI static optional<__empty>
-  __parallel_for(_RandomAccessIterator __first, _RandomAccessIterator __last, _Functor __func) {
+  __for_each(_RandomAccessIterator __first, _RandomAccessIterator __last, _Functor __func) {
     return __libdispatch::__dispatch_parallel_for(
         __libdispatch::__partition_chunks(__last - __first), std::move(__first), std::move(__func));
   }
@@ -105,14 +105,14 @@ struct __cpu_traits<__libdispatch_backend_tag> {
             typename _RandomAccessIterator3,
             typename _Compare,
             typename _LeafMerge>
-  _LIBCPP_HIDE_FROM_ABI static optional<__empty> __parallel_merge(
-      _RandomAccessIterator1 __first1,
-      _RandomAccessIterator1 __last1,
-      _RandomAccessIterator2 __first2,
-      _RandomAccessIterator2 __last2,
-      _RandomAccessIterator3 __result,
-      _Compare __comp,
-      _LeafMerge __leaf_merge) noexcept {
+  _LIBCPP_HIDE_FROM_ABI static optional<__empty>
+  __merge(_RandomAccessIterator1 __first1,
+          _RandomAccessIterator1 __last1,
+          _RandomAccessIterator2 __first2,
+          _RandomAccessIterator2 __last2,
+          _RandomAccessIterator3 __result,
+          _Compare __comp,
+          _LeafMerge __leaf_merge) noexcept {
     __libdispatch::__chunk_partitions __partitions =
         __libdispatch::__partition_chunks(std::max<ptrdiff_t>(__last1 - __first1, __last2 - __first2));
 
@@ -201,7 +201,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
   }
 
   template <class _RandomAccessIterator, class _Transform, class _Value, class _Combiner, class _Reduction>
-  _LIBCPP_HIDE_FROM_ABI static optional<_Value> __parallel_transform_reduce(
+  _LIBCPP_HIDE_FROM_ABI static optional<_Value> __transform_reduce(
       _RandomAccessIterator __first,
       _RandomAccessIterator __last,
       _Transform __transform,
@@ -248,8 +248,8 @@ struct __cpu_traits<__libdispatch_backend_tag> {
   }
 
   template <class _RandomAccessIterator, class _Comp, class _LeafSort>
-  _LIBCPP_HIDE_FROM_ABI static optional<__empty> __parallel_stable_sort(
-      _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp, _LeafSort __leaf_sort) {
+  _LIBCPP_HIDE_FROM_ABI static optional<__empty>
+  __stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp, _LeafSort __leaf_sort) {
     const auto __size = __last - __first;
     auto __partitions = __libdispatch::__partition_chunks(__size);
 

@@ -50,7 +50,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> __pstl_transform(
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-    __pstl::__cpu_traits<__cpu_backend_tag>::__parallel_for(
+    __pstl::__cpu_traits<__cpu_backend_tag>::__for_each(
         __first, __last, [__op, __first, __result](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
           auto __res = std::__pstl_transform<__remove_parallel_policy_t<_ExecutionPolicy>>(
               __cpu_backend_tag{}, __brick_first, __brick_last, __result + (__brick_first - __first), __op);
@@ -98,7 +98,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> __pstl_transform(
                 __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-    auto __res = __pstl::__cpu_traits<__cpu_backend_tag>::__parallel_for(
+    auto __res = __pstl::__cpu_traits<__cpu_backend_tag>::__for_each(
         __first1,
         __last1,
         [__op, __first1, __first2, __result](_ForwardIterator1 __brick_first, _ForwardIterator1 __brick_last) {

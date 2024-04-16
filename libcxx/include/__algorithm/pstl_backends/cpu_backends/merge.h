@@ -46,7 +46,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> __pstl_merge(
                 __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-    auto __res = __pstl::__cpu_traits<__cpu_backend_tag>::__parallel_merge(
+    auto __res = __pstl::__cpu_traits<__cpu_backend_tag>::__merge(
         __first1,
         __last1,
         __first2,

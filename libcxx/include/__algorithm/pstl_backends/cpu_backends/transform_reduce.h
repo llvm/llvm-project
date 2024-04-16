@@ -120,7 +120,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_Tp> __pstl_transform_reduce(
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
-    return __pstl::__cpu_traits<__cpu_backend_tag>::__parallel_transform_reduce(
+    return __pstl::__cpu_traits<__cpu_backend_tag>::__transform_reduce(
         __first1,
         std::move(__last1),
         [__first1, __first2, __transform](_ForwardIterator1 __iter) {
@@ -167,7 +167,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_Tp> __pstl_transform_reduce(
     _UnaryOperation __transform) {
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-    return __pstl::__cpu_traits<__cpu_backend_tag>::__parallel_transform_reduce(
+    return __pstl::__cpu_traits<__cpu_backend_tag>::__transform_reduce(
         std::move(__first),
         std::move(__last),
         [__transform](_ForwardIterator __iter) { return __transform(*__iter); },
