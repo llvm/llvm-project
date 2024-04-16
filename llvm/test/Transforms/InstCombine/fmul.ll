@@ -814,7 +814,7 @@ define float @fmul_fadd_distribute(float %x) {
 ; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc float [[TMP1]], 6.000000e+00
 ; CHECK-NEXT:    ret float [[T3]]
 ;
-  %t2 = fadd float %x, 2.0
+  %t2 = fadd reassoc float %x, 2.0
   %t3 = fmul reassoc float %t2, 3.0
   ret float %t3
 }
@@ -825,7 +825,7 @@ define <2 x float> @fmul_fadd_distribute_vec(<2 x float> %x) {
 ; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <2 x float> [[TMP1]], <float 1.200000e+07, float 1.200000e+07>
 ; CHECK-NEXT:    ret <2 x float> [[T3]]
 ;
-  %t1 = fadd <2 x float> <float 2.0e+3, float 2.0e+3>, %x
+  %t1 = fadd reassoc <2 x float> <float 2.0e+3, float 2.0e+3>, %x
   %t3 = fmul reassoc <2 x float> %t1, <float 6.0e+3, float 6.0e+3>
   ret <2 x float> %t3
 }
@@ -836,7 +836,7 @@ define <vscale x 2 x float> @fmul_fadd_distribute_scalablevec(<vscale x 2 x floa
 ; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <vscale x 2 x float> [[TMP1]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 1.200000e+07, i64 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[T3]]
 ;
-  %t1 = fadd <vscale x 2 x float> splat (float 2.0e+3), %x
+  %t1 = fadd reassoc <vscale x 2 x float> splat (float 2.0e+3), %x
   %t3 = fmul reassoc <vscale x 2 x float> %t1, splat (float 6.0e+3)
 
 
@@ -851,7 +851,7 @@ define float @fmul_fsub_distribute1(float %x) {
 ; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc float [[TMP1]], -6.000000e+00
 ; CHECK-NEXT:    ret float [[T3]]
 ;
-  %t2 = fsub float %x, 2.0
+  %t2 = fsub reassoc float %x, 2.0
   %t3 = fmul reassoc float %t2, 3.0
   ret float %t3
 }
@@ -864,7 +864,7 @@ define float @fmul_fsub_distribute2(float %x) {
 ; CHECK-NEXT:    [[T3:%.*]] = fsub reassoc float 6.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    ret float [[T3]]
 ;
-  %t2 = fsub float 2.0, %x
+  %t2 = fsub reassoc float 2.0, %x
   %t3 = fmul reassoc float %t2, 3.0
   ret float %t3
 }
@@ -878,8 +878,8 @@ define float @fmul_fadd_fmul_distribute(float %x) {
 ; CHECK-NEXT:    [[T3:%.*]] = fadd fast float [[TMP1]], 1.000000e+01
 ; CHECK-NEXT:    ret float [[T3]]
 ;
-  %t1 = fmul float %x, 6.0
-  %t2 = fadd float %t1, 2.0
+  %t1 = fmul fast float %x, 6.0
+  %t2 = fadd fast float %t1, 2.0
   %t3 = fmul fast float %t2, 5.0
   ret float %t3
 }
@@ -940,8 +940,8 @@ define float @fmul_fsub_fmul_distribute(float %x) {
 ; CHECK-NEXT:    [[T3:%.*]] = fsub fast float 1.000000e+01, [[TMP1]]
 ; CHECK-NEXT:    ret float [[T3]]
 ;
-  %t1 = fmul float %x, 6.0
-  %t2 = fsub float 2.0, %t1
+  %t1 = fmul fast float %x, 6.0
+  %t2 = fsub fast float 2.0, %t1
   %t3 = fmul fast float %t2, 5.0
   ret float %t3
 }
@@ -970,8 +970,8 @@ define float @fmul_fsub_fmul_distribute2(float %x) {
 ; CHECK-NEXT:    [[T3:%.*]] = fadd fast float [[TMP1]], -1.000000e+01
 ; CHECK-NEXT:    ret float [[T3]]
 ;
-  %t1 = fmul float %x, 6.0
-  %t2 = fsub float %t1, 2.0
+  %t1 = fmul fast float %x, 6.0
+  %t2 = fsub fast float %t1, 2.0
   %t3 = fmul fast float %t2, 5.0
   ret float %t3
 }
