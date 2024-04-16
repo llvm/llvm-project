@@ -15,6 +15,8 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_condattr_destroy, (pthread_condattr_t * attr)) {
+  // Initializing a pthread_condattr_t acquires no resources, so this is a
+  // no-op.
   return 0;
 }
 
