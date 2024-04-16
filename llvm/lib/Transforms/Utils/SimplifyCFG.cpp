@@ -6783,9 +6783,11 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
           return SwitchLookupTable::WouldFitInRegister(
               DL, UpperBound, KV.second /* ResultType */);
         })) {
+      // There may be some case index larger than the UpperBound (unreachable
+      // case), so make sure the table size does not get smaller.
+      TableSize = std::max(UpperBound, TableSize);
       // The default branch is unreachable after we enlarge the lookup table.
       // Adjust DefaultIsReachable to reuse code path.
-      TableSize = UpperBound;
       DefaultIsReachable = false;
     }
   }

@@ -273,8 +273,11 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
         Diag(Loc, diag::err_deleted_inherited_ctor_use)
             << Ctor->getParent()
             << Ctor->getInheritedConstructor().getConstructor()->getParent();
-      else
-        Diag(Loc, diag::err_deleted_function_use);
+      else {
+        StringLiteral *Msg = FD->getDeletedMessage();
+        Diag(Loc, diag::err_deleted_function_use)
+            << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef());
+      }
       NoteDeletedFunction(FD);
       return true;
     }
@@ -2914,9 +2917,26 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // to get this right here so that we don't end up making a
   // spuriously dependent expression if we're inside a dependent
   // instance method.
-  if (isPotentialImplicitMemberAccess(SS, R, IsAddressOfOperand))
-    return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs,
-                                           S);
+  if (getLangOpts().CPlusPlus && !R.empty() &&
+      (*R.begin())->isCXXClassMember()) {
+    bool MightBeImplicitMember;
+    if (!IsAddressOfOperand)
+      MightBeImplicitMember = true;
+    else if (!SS.isEmpty())
+      MightBeImplicitMember = false;
+    else if (R.isOverloadedResult())
+      MightBeImplicitMember = false;
+    else if (R.isUnresolvableResult())
+      MightBeImplicitMember = true;
+    else
+      MightBeImplicitMember = isa<FieldDecl>(R.getFoundDecl()) ||
+                              isa<IndirectFieldDecl>(R.getFoundDecl()) ||
+                              isa<MSPropertyDecl>(R.getFoundDecl());
+
+    if (MightBeImplicitMember)
+      return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc,
+                                             R, TemplateArgs, S);
+  }
 
   if (TemplateArgs || TemplateKWLoc.isValid()) {
 
@@ -3427,11 +3447,10 @@ static bool ShouldLookupResultBeMultiVersionOverload(const LookupResult &R) {
 
 ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                           LookupResult &R, bool NeedsADL,
-                                          bool AcceptInvalidDecl,
-                                          bool NeedUnresolved) {
+                                          bool AcceptInvalidDecl) {
   // If this is a single, fully-resolved result and we don't need ADL,
   // just build an ordinary singleton decl ref.
-  if (!NeedUnresolved && !NeedsADL && R.isSingleResult() &&
+  if (!NeedsADL && R.isSingleResult() &&
       !R.getAsSingle<FunctionTemplateDecl>() &&
       !ShouldLookupResultBeMultiVersionOverload(R))
     return BuildDeclarationNameExpr(SS, R.getLookupNameInfo(), R.getFoundDecl(),
@@ -6295,7 +6314,6 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
       // Pass down lifetime extending flag, and collect temporaries in
       // CreateMaterializeTemporaryExpr when we rewrite the call argument.
       keepInLifetimeExtendingContext();
-      keepInMaterializeTemporaryObjectContext();
       EnsureImmediateInvocationInDefaultArgs Immediate(*this);
       ExprResult Res;
       runWithSufficientStackSpace(CallLoc, [&] {
@@ -18662,9 +18680,9 @@ void Sema::PopExpressionEvaluationContext() {
   // Append the collected materialized temporaries into previous context before
   // exit if the previous also is a lifetime extending context.
   auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
-  if (getLangOpts().CPlusPlus23 && isInLifetimeExtendingContext() &&
-      PrevRecord.InLifetimeExtendingContext && !ExprEvalContexts.empty()) {
-    auto &PrevRecord = ExprEvalContexts[ExprEvalContexts.size() - 2];
+  if (getLangOpts().CPlusPlus23 && Rec.InLifetimeExtendingContext &&
+      PrevRecord.InLifetimeExtendingContext &&
+      !Rec.ForRangeLifetimeExtendTemps.empty()) {
     PrevRecord.ForRangeLifetimeExtendTemps.append(
         Rec.ForRangeLifetimeExtendTemps);
   }

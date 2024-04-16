@@ -2380,10 +2380,6 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       if (getLangOpts().CPlusPlus23) {
         auto &LastRecord = Actions.ExprEvalContexts.back();
         LastRecord.InLifetimeExtendingContext = true;
-
-        // Materialize non-`cv void` prvalue temporaries in discarded
-        // expressions. These materialized temporaries may be lifetime-extented.
-        LastRecord.InMaterializeTemporaryObjectContext = true;
       }
 
       if (getLangOpts().OpenMP)
@@ -2678,6 +2674,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
           << 1 /* delete */;
       else
         Diag(ConsumeToken(), diag::err_deleted_non_function);
+      SkipDeletedFunctionBody();
     } else if (Tok.is(tok::kw_default)) {
       if (D.isFunctionDeclarator())
         Diag(ConsumeToken(), diag::err_default_delete_in_multiple_declaration)

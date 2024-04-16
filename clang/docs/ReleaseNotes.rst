@@ -129,6 +129,8 @@ C++2c Feature Support
 
 - Implemented `P2662R3 Pack Indexing <https://wg21.link/P2662R3>`_.
 
+- Implemented `P2573R2: = delete("should have a reason"); <https://wg21.link/P2573R2>`_
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -527,8 +529,6 @@ Bug Fixes to C++ Support
 - Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
 - Fixed a bug that prevented member function templates of class templates declared with a deduced return type
   from being explicitly specialized for a given implicit instantiation of the class template.
-- Fixed a crash when ``this`` is used in a dependent class scope function template specialization
-  that instantiates to a static member function.
 
 - Fix crash when inheriting from a cv-qualified type. Fixes:
   (`#35603 <https://github.com/llvm/llvm-project/issues/35603>`_)
@@ -537,6 +537,7 @@ Bug Fixes to C++ Support
 - Clang now correctly tracks type dependence of by-value captures in lambdas with an explicit
   object parameter.
   Fixes (#GH70604), (#GH79754), (#GH84163), (#GH84425), (#GH86054), (#GH86398), and (#GH86399).
+- Fix a crash when deducing ``auto`` from an invalid dereference (#GH88329).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
