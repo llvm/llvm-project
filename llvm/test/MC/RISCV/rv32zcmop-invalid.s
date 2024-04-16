@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+zc.mop < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple riscv32 -mattr=+zcmop < %s 2>&1 | FileCheck %s
 
 c.mop.0 # CHECK: :[[@LINE]]:1: error: unrecognized instruction mnemonic
 
