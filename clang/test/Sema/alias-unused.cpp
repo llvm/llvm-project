@@ -14,24 +14,26 @@ extern typeof(foo) bar __attribute__((unused, alias("foo")));
 /// We report a warning in C++ mode because the internal linkage `resolver` gets
 /// mangled as it does not have a language linkage. GCC does not mangle
 /// `resolver` or report a warning.
-static int (*resolver(void))(void) { return f; } // expected-warning{{unused function 'resolver'}}
+static int (*resolver(void))(void) { return f; } // cxx-warning{{unused function 'resolver'}}
 int ifunc(void) __attribute__((ifunc("resolver")));
 
-static int __attribute__((overloadable)) f0(int x) { return x; } // expected-warning{{unused function 'f0'}}
+static int __attribute__((overloadable)) f0(int x) { return x; }
 static float __attribute__((overloadable)) f0(float x) { return x; } // expected-warning{{unused function 'f0'}}
 int g0(void) __attribute__((alias("_ZL2f0i")));
 
 #ifdef __cplusplus
-static int f1() { return 42; } // expected-warning{{unused function 'f1'}}
+static int f1() { return 42; }
 int g1(void) __attribute__((alias("_ZL2f1v")));
 }
 
-static int f2(int) { return 42; } // expected-warning{{unused function 'f2'}}
-static int f2() { return 42; } // expected-warning{{unused function 'f2'}}
+/// We demangle alias/ifunc target and mark all found functions as used.
+
+static int f2(int) { return 42; } // cxx-warning{{unused function 'f2'}}
+static int f2() { return 42; }
 int g2() __attribute__((alias("_ZL2f2v")));
 
-static int (*resolver1())() { return f; } // expected-warning{{unused function 'resolver1'}}
-static int (*resolver1(int))() { return f; } // expected-warning{{unused function 'resolver1'}}
+static int (*resolver1())() { return f; } // cxx-warning{{unused function 'resolver1'}}
+static int (*resolver1(int))() { return f; }
 int ifunc1() __attribute__((ifunc("_ZL9resolver1i")));
 
 /// TODO: We should report "unused function" for f3(int).
