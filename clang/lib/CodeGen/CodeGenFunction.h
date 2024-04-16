@@ -5081,7 +5081,7 @@ public:
   // convergence instructions.
   template <typename CallType>
   CallType *addControlledConvergenceToken(CallType *Input) {
-    return dyn_cast<CallType>(
+    return cast<CallType>(
         addConvergenceControlToken(Input, ConvergenceTokenStack.back()));
   }
 
