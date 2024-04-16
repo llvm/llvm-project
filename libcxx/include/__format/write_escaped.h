@@ -12,6 +12,7 @@
 
 #include <__algorithm/ranges_copy.h>
 #include <__algorithm/ranges_for_each.h>
+#include <__assert>
 #include <__charconv/to_chars_integral.h>
 #include <__charconv/to_chars_result.h>
 #include <__chrono/statically_widen.h>
@@ -20,11 +21,13 @@
 #include <__format/parser_std_format_spec.h>
 #include <__format/unicode.h>
 #include <__iterator/back_insert_iterator.h>
+#include <__iterator/concepts.h>
 #include <__memory/addressof.h>
+#include <__string_view/basic_string_view.h>
 #include <__system_error/errc.h>
 #include <__type_traits/make_unsigned.h>
 #include <__utility/move.h>
-#include <string_view>
+#include <string>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

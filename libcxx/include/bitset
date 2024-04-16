@@ -133,11 +133,11 @@ template <size_t N> struct hash<std::bitset<N>>;
 #include <__config>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
+#include <__string_view/basic_string_view.h>
 #include <__type_traits/is_char_like_type.h>
 #include <climits>
 #include <cstddef>
 #include <stdexcept>
-#include <string_view>
 #include <version>
 
 // standard-mandated includes
@@ -963,6 +963,7 @@ _LIBCPP_POP_MACROS
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <concepts>
 #  include <cstdlib>
+#  include <string_view>
 #  include <type_traits>
 #endif
 

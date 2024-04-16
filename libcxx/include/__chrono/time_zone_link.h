@@ -18,9 +18,9 @@
 
 #  include <__compare/strong_order.h>
 #  include <__config>
+#  include <__string_view/basic_string_view.h>
 #  include <__utility/private_constructor_tag.h>
 #  include <string>
-#  include <string_view>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

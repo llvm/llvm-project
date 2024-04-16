@@ -572,6 +572,7 @@ inline constexpr bool std::ranges::enable_view<std::filesystem::recursive_direct
 #  include <iosfwd>
 #  include <new>
 #  include <system_error>
+#  include <string_view>
 #endif
 
 #endif // _LIBCPP_FILESYSTEM

@@ -124,6 +124,7 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #  include <functional>
 #  include <new>
 #  include <system_error>
+#  include <string_view>
 #  include <type_traits>
 #endif
 

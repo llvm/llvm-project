@@ -12,8 +12,9 @@
 
 #include <__config>
 #include <__format/format_error.h>
+#include <__string_view/basic_string_view.h>
 #include <__type_traits/is_constant_evaluated.h>
-#include <string_view>
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

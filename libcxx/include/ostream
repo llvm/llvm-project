@@ -196,6 +196,7 @@ void vprint_nonunicode(ostream& os, string_view fmt, format_args args);         
 #  include <iterator>
 #  include <print>
 #  include <stdexcept>
+#  include <string_view>
 #  include <type_traits>
 #endif
 

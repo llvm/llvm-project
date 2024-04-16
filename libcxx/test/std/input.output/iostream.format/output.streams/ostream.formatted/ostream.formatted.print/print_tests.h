@@ -8,6 +8,8 @@
 #ifndef TEST_STD_INPUT_OUTPUT_IOSTREAM_FORMAT_OUTPUT_STREAMS_OSTREAM_FORMATTED_OSTREAM_FORMATTED_PRINT_PRINT_TESTS_H
 #define TEST_STD_INPUT_OUTPUT_IOSTREAM_FORMAT_OUTPUT_STREAMS_OSTREAM_FORMATTED_OSTREAM_FORMATTED_PRINT_PRINT_TESTS_H
 
+#include <string_view>
+
 template <class TestFunction, class ExceptionTest>
 void print_tests(TestFunction check, ExceptionTest check_exception) {
   // *** Test escaping  ***

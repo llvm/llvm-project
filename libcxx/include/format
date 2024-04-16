@@ -252,6 +252,7 @@ namespace std {
 #  include <locale>
 #  include <queue>
 #  include <stack>
+#  include <string_view>
 #endif
 
 #endif // _LIBCPP_FORMAT

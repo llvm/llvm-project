@@ -18,14 +18,15 @@
 #include <__functional/invoke.h>
 #include <__fwd/format.h>
 #include <__memory/addressof.h>
+#include <__string_view/basic_string_view.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/remove_const.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <__variant/monostate.h>
+#include <cstddef>
 #include <cstdint>
-#include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

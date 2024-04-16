@@ -62,14 +62,14 @@ void test() {
   // These diagnostics are issued for
   // - Every invalid ordering
   // - Every type
-  // expected-error-re@string_view:* 15 {{static assertion failed{{.*}}return type is not a comparison category type}}
+  // expected-error-re@*:* 15 {{static assertion failed{{.*}}return type is not a comparison category type}}
 
   // This diagnostic is not issued for Ordering == void.
-  // expected-error@string_view:* 10 {{no matching conversion for static_cast from}}
+  // expected-error@*:* 10 {{no matching conversion for static_cast from}}
 #else
   // One less test run when wchar_t is unavailable.
-  // expected-error-re@string_view:* 12 {{static assertion failed{{.*}}return type is not a comparison category type}}
-  // expected-error@string_view:* 8 {{no matching conversion for static_cast from}}
+  // expected-error-re@*:* 12 {{static assertion failed{{.*}}return type is not a comparison category type}}
+  // expected-error@*:* 8 {{no matching conversion for static_cast from}}
 #endif
     type{} <=> type{};
 }

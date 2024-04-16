@@ -31,13 +31,13 @@
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h> // iter_value_t
 #include <__memory/addressof.h>
+#include <__string_view/basic_string_view.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <__variant/monostate.h>
 #include <cstdint>
 #include <string>
-#include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

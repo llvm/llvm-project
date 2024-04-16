@@ -17,6 +17,7 @@
 #include <__algorithm/ranges_copy_n.h>
 #include <__algorithm/transform.h>
 #include <__algorithm/unwrap_iter.h>
+#include <__assert>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/concepts.h>
@@ -33,12 +34,12 @@
 #include <__memory/construct_at.h>
 #include <__memory/ranges_construct_at.h>
 #include <__memory/uninitialized_algorithms.h>
+#include <__string_view/basic_string_view.h>
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/conditional.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <cstddef>
-#include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

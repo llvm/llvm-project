@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__exception/operations.h>
+#include <__fwd/string_view.h>
 #include <__memory/shared_ptr.h>
 #include <__memory/unique_ptr.h>
 #include <__system_error/error_code.h>
@@ -25,7 +26,6 @@
 #include <locale>
 #include <new> // for __throw_bad_alloc
 #include <streambuf>
-#include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

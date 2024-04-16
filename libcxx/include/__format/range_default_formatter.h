@@ -26,10 +26,11 @@
 #include <__ranges/data.h>
 #include <__ranges/from_range.h>
 #include <__ranges/size.h>
+#include <__string_view/basic_string_view.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/pair.h>
-#include <string_view>
+#include <string>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

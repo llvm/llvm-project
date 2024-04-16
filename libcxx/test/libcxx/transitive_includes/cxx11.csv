@@ -85,6 +85,7 @@ bitset climits
 bitset concepts
 bitset cstddef
 bitset cstdint
+bitset cstdio
 bitset cstdlib
 bitset cstring
 bitset cwchar
@@ -269,10 +270,12 @@ format clocale
 format cmath
 format cstddef
 format cstdint
+format cstdio
 format cstdlib
 format cstring
 format cwchar
 format initializer_list
+format iosfwd
 format limits
 format locale
 format new
@@ -609,6 +612,7 @@ ostream cstdint
 ostream cstdio
 ostream cstdlib
 ostream cstring
+ostream cwchar
 ostream format
 ostream initializer_list
 ostream ios
@@ -889,11 +893,13 @@ thread clocale
 thread compare
 thread cstddef
 thread cstdint
+thread cstdio
 thread cstdlib
 thread cstring
 thread ctime
 thread cwchar
 thread functional
+thread initializer_list
 thread iosfwd
 thread limits
 thread locale
@@ -1011,6 +1017,7 @@ vector compare
 vector concepts
 vector cstddef
 vector cstdint
+vector cstdio
 vector cstdlib
 vector cstring
 vector cwchar

@@ -687,6 +687,8 @@ set(files
   __string/char_traits.h
   __string/constexpr_c_functions.h
   __string/extern_template_lists.h
+  __string_view/basic_string_view.h
+  __string_view/literals.h
   __support/ibm/gettod_zos.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h

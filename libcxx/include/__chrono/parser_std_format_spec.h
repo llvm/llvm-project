@@ -16,7 +16,7 @@
 #include <__format/format_parse_context.h>
 #include <__format/formatter_string.h>
 #include <__format/parser_std_format_spec.h>
-#include <string_view>
+#include <__string_view/basic_string_view.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -618,6 +618,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__ranges/size.h>
 #include <__string/char_traits.h>
 #include <__string/extern_template_lists.h>
+#include <__string_view/basic_string_view.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_array.h>
@@ -643,7 +644,6 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <cstring>
 #include <limits>
 #include <stdexcept>
-#include <string_view>
 #include <version>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -4297,6 +4297,7 @@ _LIBCPP_POP_MACROS
 #  include <cstdlib>
 #  include <iterator>
 #  include <new>
+#  include <string_view>
 #  include <type_traits>
 #  include <typeinfo>
 #  include <utility>

@@ -2983,6 +2983,7 @@ _LIBCPP_POP_MACROS
 #  if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #    include <locale>
 #  endif
+#  include <string_view>
 #  include <tuple>
 #  include <type_traits>
 #  include <typeinfo>

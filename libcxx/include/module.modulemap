@@ -1807,7 +1807,13 @@ module std_private_string_constexpr_c_functions [system] {
 module std_private_string_extern_template_lists [system] { header "__string/extern_template_lists.h" }
 module std_private_string_string_fwd            [system] { header "__fwd/string.h" }
 
-module std_private_string_view_string_view_fwd [system] { header "__fwd/string_view.h" }
+module std_private_string_view_basic_string_view [system] {
+  header "__string_view/basic_string_view.h"
+  export std_private_string_char_traits
+  export std_private_string_view_string_view_fwd
+}
+module std_private_string_view_literals          [system] { header "__string_view/literals.h" }
+module std_private_string_view_string_view_fwd   [system] { header "__fwd/string_view.h" }
 
 module std_private_system_error_errc            [system] { header "__system_error/errc.h" }
 module std_private_system_error_error_category  [system] { header "__system_error/error_category.h" }
