@@ -459,85 +459,19 @@ TypeSystemClang::ConvertAccessTypeToAccessSpecifier(AccessType access) {
   return AS_none;
 }
 
-static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
+static void ParseLangArgs(LangOptions &Opts, ArchSpec arch) {
   // FIXME: Cleanup per-file based stuff.
 
-  // Set some properties which depend solely on the input kind; it would be
-  // nice to move these to the language standard, and have the driver resolve
-  // the input kind + language standard.
-  if (IK.getLanguage() == clang::Language::Asm) {
-    Opts.AsmPreprocessor = 1;
-  } else if (IK.isObjectiveC()) {
-    Opts.ObjC = 1;
-  }
-
-  LangStandard::Kind LangStd = LangStandard::lang_unspecified;
-
-  if (LangStd == LangStandard::lang_unspecified) {
-    // Based on the base language, pick one.
-    switch (IK.getLanguage()) {
-    case clang::Language::Unknown:
-    case clang::Language::CIR:
-    case clang::Language::LLVM_IR:
-    case clang::Language::RenderScript:
-      llvm_unreachable("Invalid input kind!");
-    case clang::Language::OpenCL:
-      LangStd = LangStandard::lang_opencl10;
-      break;
-    case clang::Language::OpenCLCXX:
-      LangStd = LangStandard::lang_openclcpp10;
-      break;
-    case clang::Language::Asm:
-    case clang::Language::C:
-    case clang::Language::ObjC:
-      LangStd = LangStandard::lang_gnu99;
-      break;
-    case clang::Language::CXX:
-    case clang::Language::ObjCXX:
-      LangStd = LangStandard::lang_gnucxx98;
-      break;
-    case clang::Language::CUDA:
-    case clang::Language::HIP:
-      LangStd = LangStandard::lang_gnucxx17;
-      break;
-    case clang::Language::HLSL:
-      LangStd = LangStandard::lang_hlsl;
-      break;
-    }
-  }
-
-  const LangStandard &Std = LangStandard::getLangStandardForKind(LangStd);
-  Opts.LineComment = Std.hasLineComments();
-  Opts.C99 = Std.isC99();
-  Opts.CPlusPlus = Std.isCPlusPlus();
-  Opts.CPlusPlus11 = Std.isCPlusPlus11();
-  Opts.CPlusPlus14 = Std.isCPlusPlus14();
-  Opts.CPlusPlus17 = Std.isCPlusPlus17();
-  Opts.CPlusPlus20 = Std.isCPlusPlus20();
-  Opts.Digraphs = Std.hasDigraphs();
-  Opts.GNUMode = Std.isGNUMode();
-  Opts.GNUInline = !Std.isC99();
-  Opts.HexFloats = Std.hasHexFloats();
-
-  Opts.WChar = true;
-
-  // OpenCL has some additional defaults.
-  if (LangStd == LangStandard::lang_opencl10) {
-    Opts.OpenCL = 1;
-    Opts.AltiVec = 1;
-    Opts.CXXOperatorNames = 1;
-    Opts.setLaxVectorConversions(LangOptions::LaxVectorConversionKind::All);
-  }
-
-  // OpenCL and C++ both have bool, true, false keywords.
-  Opts.Bool = Opts.OpenCL || Opts.CPlusPlus;
+  std::vector<std::string> Includes;
+  LangOptions::setLangDefaults(Opts, clang::Language::ObjCXX, arch.GetTriple(),
+                               Includes, clang::LangStandard::lang_gnucxx98);
 
   Opts.setValueVisibilityMode(DefaultVisibility);
 
   // Mimicing gcc's behavior, trigraphs are only enabled if -trigraphs is
   // specified, or -std is set to a conforming mode.
   Opts.Trigraphs = !Opts.GNUMode;
-  Opts.CharIsSigned = ArchSpec(triple).CharIsSignedByDefault();
+  Opts.CharIsSigned = arch.CharIsSignedByDefault();
   Opts.OptimizeSize = 0;
 
   // FIXME: Eliminate this dependency.
@@ -727,8 +661,7 @@ void TypeSystemClang::CreateASTContext() {
   m_ast_owned = true;
 
   m_language_options_up = std::make_unique<LangOptions>();
-  ParseLangArgs(*m_language_options_up, clang::Language::ObjCXX,
-                GetTargetTriple());
+  ParseLangArgs(*m_language_options_up, ArchSpec(GetTargetTriple()));
 
   m_identifier_table_up =
       std::make_unique<IdentifierTable>(*m_language_options_up, nullptr);
@@ -1682,10 +1615,11 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
   // type that includes a template template argument. Only the name matters for
   // this purpose, so we use dummy values for the other characteristics of the
   // type.
-  return TemplateTemplateParmDecl::Create(
-      ast, decl_ctx, SourceLocation(),
-      /*Depth*/ 0, /*Position*/ 0,
-      /*IsParameterPack*/ false, &identifier_info, template_param_list);
+  return TemplateTemplateParmDecl::Create(ast, decl_ctx, SourceLocation(),
+                                          /*Depth=*/0, /*Position=*/0,
+                                          /*IsParameterPack=*/false,
+                                          &identifier_info, /*Typename=*/false,
+                                          template_param_list);
 }
 
 ClassTemplateSpecializationDecl *
@@ -7910,14 +7844,14 @@ bool TypeSystemClang::AddObjCClassProperty(
   if (property_setter_name) {
     std::string property_setter_no_colon(property_setter_name,
                                          strlen(property_setter_name) - 1);
-    clang::IdentifierInfo *setter_ident =
+    const clang::IdentifierInfo *setter_ident =
         &clang_ast.Idents.get(property_setter_no_colon);
     setter_sel = clang_ast.Selectors.getSelector(1, &setter_ident);
   } else if (!(property_attributes & DW_APPLE_PROPERTY_readonly)) {
     std::string setter_sel_string("set");
     setter_sel_string.push_back(::toupper(property_name[0]));
     setter_sel_string.append(&property_name[1]);
-    clang::IdentifierInfo *setter_ident =
+    const clang::IdentifierInfo *setter_ident =
         &clang_ast.Idents.get(setter_sel_string);
     setter_sel = clang_ast.Selectors.getSelector(1, &setter_ident);
   }
@@ -7925,11 +7859,12 @@ bool TypeSystemClang::AddObjCClassProperty(
   property_decl->setPropertyAttributes(ObjCPropertyAttribute::kind_setter);
 
   if (property_getter_name != nullptr) {
-    clang::IdentifierInfo *getter_ident =
+    const clang::IdentifierInfo *getter_ident =
         &clang_ast.Idents.get(property_getter_name);
     getter_sel = clang_ast.Selectors.getSelector(0, &getter_ident);
   } else {
-    clang::IdentifierInfo *getter_ident = &clang_ast.Idents.get(property_name);
+    const clang::IdentifierInfo *getter_ident =
+        &clang_ast.Idents.get(property_name);
     getter_sel = clang_ast.Selectors.getSelector(0, &getter_ident);
   }
   property_decl->setGetterName(getter_sel);
@@ -8091,7 +8026,7 @@ clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
     return nullptr;
 
   selector_start++;
-  llvm::SmallVector<clang::IdentifierInfo *, 12> selector_idents;
+  llvm::SmallVector<const clang::IdentifierInfo *, 12> selector_idents;
 
   size_t len = 0;
   const char *start;
