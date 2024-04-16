@@ -20774,7 +20774,7 @@ static void FixDependencyOfIdExpressionsInLambdaWithDependentObjectParameter(
       if (MD->getType().isNull())
         continue;
 
-      const auto *Ty = cast<FunctionProtoType>(MD->getType());
+      const auto *Ty = MD->getType()->getAs<FunctionProtoType>();
       if (!Ty || !MD->isExplicitObjectMemberFunction() ||
           !Ty->getParamType(0)->isDependentType())
         continue;
