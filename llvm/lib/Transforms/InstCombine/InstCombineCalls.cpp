@@ -3408,6 +3408,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return I;
     break;
   }
+  case Intrinsic::threadlocal_address: {
+    Align MinAlign = getKnownAlignment(II->getArgOperand(0), DL, II, &AC, &DT);
+    MaybeAlign Align = II->getRetAlign();
+    if (MinAlign > Align.valueOrOne()) {
+      II->addRetAttr(Attribute::getWithAlignment(II->getContext(), MinAlign));
+      return II;
+    }
+    break;
+  }
   default: {
     // Handle target specific intrinsics
     std::optional<Instruction *> V = targetInstCombineIntrinsic(*II);
