@@ -618,7 +618,7 @@ void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
     }
   }
 
-  // For uses just copy the copy the information from LIS.
+  // For uses just copy the information from LIS.
   for (auto &[RegUnit, LaneMask] : Uses)
     LaneMask = getLiveLanesAt(LIS, MRI, true, RegUnit, Pos.getBaseIndex());
 
