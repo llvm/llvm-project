@@ -1613,16 +1613,7 @@ public:
 
     auto type = getTypeConverter()->convertType(op.getType());
     auto symbol = op.getName();
-    mlir::Operation *newop =
-        rewriter.create<mlir::LLVM::AddressOfOp>(op.getLoc(), type, symbol);
-
-    if (op.getTls()) {
-      // Handle access to TLS via intrinsic.
-      newop = rewriter.create<mlir::LLVM::ThreadlocalAddressOp>(
-          op.getLoc(), type, newop->getResult(0));
-    }
-
-    rewriter.replaceOp(op, newop);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(op, type, symbol);
     return mlir::success();
   }
 };
@@ -2282,6 +2273,36 @@ public:
     auto one = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), resTy, 1);
     auto res = rewriter.create<mlir::LLVM::SubOp>(op.getLoc(), clz, one);
     rewriter.replaceOp(op, res);
+
+    return mlir::LogicalResult::success();
+  }
+};
+
+class CIRObjSizeOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::ObjSizeOp> {
+public:
+  using OpConversionPattern<mlir::cir::ObjSizeOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::ObjSizeOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto llvmResTy = getTypeConverter()->convertType(op.getType());
+    auto loc = op->getLoc();
+
+    auto llvmIntrinNameAttr =
+        mlir::StringAttr::get(rewriter.getContext(), "llvm.objectsize");
+    mlir::cir::SizeInfoType kindInfo = op.getKind();
+    auto falseValue = rewriter.create<mlir::LLVM::ConstantOp>(
+        loc, rewriter.getI1Type(), false);
+    auto trueValue = rewriter.create<mlir::LLVM::ConstantOp>(
+        loc, rewriter.getI1Type(), true);
+
+    rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+        op, llvmResTy, llvmIntrinNameAttr,
+        mlir::ValueRange{adaptor.getPtr(),
+                         kindInfo == mlir::cir::SizeInfoType::max ? falseValue
+                                                                  : trueValue,
+                         trueValue, op.getDynamic() ? trueValue : falseValue});
 
     return mlir::LogicalResult::success();
   }
@@ -3033,8 +3054,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRVectorShuffleVecLowering, CIRStackSaveLowering,
       CIRStackRestoreLowering, CIRUnreachableLowering, CIRTrapLowering,
       CIRInlineAsmOpLowering, CIRSetBitfieldLowering, CIRGetBitfieldLowering,
-      CIRPrefetchLowering, CIRIsConstantOpLowering>(converter,
-                                                    patterns.getContext());
+      CIRPrefetchLowering, CIRObjSizeOpLowering, CIRIsConstantOpLowering>(
+      converter, patterns.getContext());
 }
 
 namespace {
