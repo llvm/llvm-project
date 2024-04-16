@@ -249,13 +249,13 @@ void GOFFState::writeHeader(GOFFYAML::FileHeader &FileHdr) {
 void GOFFState::writeSymbol(GOFFYAML::Symbol Sym) {
   SmallString<80> SymName;
   if (std::error_code EC = ConverterEBCDIC::convertToEBCDIC(Sym.Name, SymName))
-    reportError("conversion error on " + Sym.Name);
+    reportError("conversion error on " + Sym.Name + ": " + EC.message());
   size_t SymNameLength = SymName.size();
   if (SymNameLength > GOFF::MaxDataLength)
     reportError("symbol name is too long: " + Twine(SymNameLength) +
                 ". Max length is: " + Twine(GOFF::MaxDataLength));
 
-  unsigned NameLengthOffset = 69;
+  const unsigned NameLengthOffset = 69;
   GW.makeNewRecord(GOFF::RT_ESD, NameLengthOffset + SymNameLength);
   GW << binaryBe(Sym.Type)          // Symbol type
      << binaryBe(Sym.ID)            // ESDID
@@ -308,11 +308,14 @@ bool GOFFState::writeObject() {
   if (HasError)
     return false;
   // Iterate over all records.
-  for (const std::unique_ptr<llvm::GOFFYAML::RecordBase> &Rec : Doc.Records)
+  unsigned RecordNum = 0;
+  for (const std::unique_ptr<llvm::GOFFYAML::RecordBase> &Rec : Doc.Records) {
     if (const auto *Sym = dyn_cast<GOFFYAML::Symbol>(Rec.get()))
       writeSymbol(*Sym);
     else
-      reportError("unknown record type");
+      reportError("unknown record type on record index" + Twine(RecordNum));
+    RecordNum++;
+  }
   writeEnd();
   return true;
 }

@@ -176,9 +176,6 @@ void ScalarBitSetTraits<GOFFYAML::GOFF_BAFLAGS>::bitset(
   BCase(ESD_BA_COMMON);
   BCase(ESD_BA_Indirect);
 }
-#undef BCase
-#undef BCaseMask
-#undef ECase
 
 void MappingTraits<GOFFYAML::Symbol>::mapping(IO &IO, GOFFYAML::Symbol &Sym) {
   IO.mapRequired("Name", Sym.Name);
