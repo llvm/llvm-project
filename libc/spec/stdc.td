@@ -180,6 +180,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<FExceptTPtr>, ArgSpec<IntType>]
           >,
           FunctionSpec<
+              "fesetexcept",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
               "fesetexceptflag",
               RetValSpec<IntType>,
               [ArgSpec<ConstFExceptTPtr>, ArgSpec<IntType>]
@@ -534,6 +539,8 @@ def StdC : StandardSpec<"stdc"> {
 
           FunctionSpec<"exp2", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"exp2f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+
+          FunctionSpec<"exp2m1f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
           FunctionSpec<"expm1", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"expm1f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,

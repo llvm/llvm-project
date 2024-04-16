@@ -54,6 +54,9 @@ public:
     // Note: RHS is not transposed.
     mlir::VectorType lhsType = op.getLhsType();
     mlir::VectorType rhsType = op.getRhsType();
+    // Avoid 0-D vectors and 1-D rhs:
+    if (!lhsType.hasRank() || !rhsType.hasRank() || rhsType.getRank() < 2)
+      return failure();
     auto dimM = lhsType.getRank() == 1 ? 1 : lhsType.getDimSize(0);
     auto dimN = rhsType.getDimSize(0);
     auto dimK = rhsType.getDimSize(1);
