@@ -94,8 +94,8 @@ bool hasCountTypeMD(const Instruction &I) {
   // Value profiles record count-type information.
   if (isValueProfileMD(ProfileData))
     return true;
-  // Only a CallBase (CallInst or InvokeInst) uses branch weights to carry
-  // count information.
+  // Conservatively assume non CallBase instruction only get taken/not-taken
+  // branch probability, so not interpret them as count.
   return isa<CallBase>(I) && !isBranchWeightMD(ProfileData);
 }
 
@@ -228,7 +228,6 @@ void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
   Vals.push_back(ProfileData->getOperand(0));
   APInt APS(128, S), APT(128, T);
 
-  // Scale the counts associated with calls.
   if (ProfDataName->getString().equals("branch_weights") &&
       ProfileData->getNumOperands() > 0) {
     // Using APInt::div may be expensive, but most cases should fit 64 bits.

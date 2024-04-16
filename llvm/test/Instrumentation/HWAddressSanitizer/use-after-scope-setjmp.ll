@@ -54,7 +54,6 @@ define dso_local noundef i1 @_Z6targetv() sanitize_hwaddress {
 ; CHECK:       sw.bb1:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess(ptr [[TMP16]], ptr @stackbuf, i32 19)
 ; CHECK-NEXT:    store ptr [[BUF_HWASAN]], ptr @stackbuf, align 8
 ; CHECK-NEXT:    call void @may_jump()
 ; CHECK-NEXT:    br label [[RETURN]]

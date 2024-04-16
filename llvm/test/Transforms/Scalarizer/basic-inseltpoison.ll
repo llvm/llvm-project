@@ -836,6 +836,5 @@ define <2 x i32> @f23_crash(<2 x i32> %srcvec, i32 %v1) {
 !2 = !{ !"set2", !0 }
 !3 = !{ !3, !{!"llvm.loop.parallel_accesses", !13} }
 !4 = !{ float 4.0 }
-!5 = !{ i64 0, i64 8, !6 }
-!6 = !{ !1, !1, i64 0 }
+!5 = !{ i64 0, i64 8, null }
 !13 = distinct !{}

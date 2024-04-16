@@ -22,8 +22,10 @@ entry:
           to label %try.cont unwind label %lpad
 
 ; CHECK:    entry.split.split:
-; CHECK:      %__threwValue.val = load i32, ptr @__threwValue
-; CHECK-NEXT: %[[CMP:.*]] = icmp ne i32 %__THREW__.val, 0
+; CHECK:      %[[CMP0:.*]] = icmp ne i32 %__THREW__.val, 0
+; CHECK-NEXT: %__threwValue.val = load i32, ptr @__threwValue
+; CHECK-NEXT: %[[CMP1:.*]] = icmp ne i32 %__threwValue.val, 0
+; CHECK-NEXT: %[[CMP:.*]] = and i1 %[[CMP0]], %[[CMP1]]
 ; CHECK-NEXT: br i1 %[[CMP]], label %if.then1, label %if.else1
 
 ; This is exception checking part. %if.else1 leads here
@@ -119,7 +121,6 @@ if.end:                                           ; preds = %entry
 ; CHECK-NEXT: unreachable
 
 ; CHECK:    normal:
-; CHECK-NEXT: %__threwValue.val = load i32, ptr @__threwValue, align 4
 ; CHECK-NEXT: icmp ne i32 %__THREW__.val, 0
 
 return:                                           ; preds = %if.end, %entry

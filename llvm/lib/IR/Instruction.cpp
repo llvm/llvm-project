@@ -370,11 +370,17 @@ bool Instruction::isOnlyUserOfAnyOperand() {
 }
 
 void Instruction::setHasNoUnsignedWrap(bool b) {
-  cast<OverflowingBinaryOperator>(this)->setHasNoUnsignedWrap(b);
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    Inst->setHasNoUnsignedWrap(b);
+  else
+    cast<TruncInst>(this)->setHasNoUnsignedWrap(b);
 }
 
 void Instruction::setHasNoSignedWrap(bool b) {
-  cast<OverflowingBinaryOperator>(this)->setHasNoSignedWrap(b);
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    Inst->setHasNoSignedWrap(b);
+  else
+    cast<TruncInst>(this)->setHasNoSignedWrap(b);
 }
 
 void Instruction::setIsExact(bool b) {
@@ -382,21 +388,27 @@ void Instruction::setIsExact(bool b) {
 }
 
 void Instruction::setNonNeg(bool b) {
-  assert(isa<PossiblyNonNegInst>(this) && "Must be zext");
+  assert(isa<PossiblyNonNegInst>(this) && "Must be zext/uitofp");
   SubclassOptionalData = (SubclassOptionalData & ~PossiblyNonNegInst::NonNeg) |
                          (b * PossiblyNonNegInst::NonNeg);
 }
 
 bool Instruction::hasNoUnsignedWrap() const {
-  return cast<OverflowingBinaryOperator>(this)->hasNoUnsignedWrap();
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    return Inst->hasNoUnsignedWrap();
+
+  return cast<TruncInst>(this)->hasNoUnsignedWrap();
 }
 
 bool Instruction::hasNoSignedWrap() const {
-  return cast<OverflowingBinaryOperator>(this)->hasNoSignedWrap();
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    return Inst->hasNoSignedWrap();
+
+  return cast<TruncInst>(this)->hasNoSignedWrap();
 }
 
 bool Instruction::hasNonNeg() const {
-  assert(isa<PossiblyNonNegInst>(this) && "Must be zext");
+  assert(isa<PossiblyNonNegInst>(this) && "Must be zext/uitofp");
   return (SubclassOptionalData & PossiblyNonNegInst::NonNeg) != 0;
 }
 
@@ -429,8 +441,14 @@ void Instruction::dropPoisonGeneratingFlags() {
     cast<GetElementPtrInst>(this)->setIsInBounds(false);
     break;
 
+  case Instruction::UIToFP:
   case Instruction::ZExt:
     setNonNeg(false);
+    break;
+
+  case Instruction::Trunc:
+    cast<TruncInst>(this)->setHasNoUnsignedWrap(false);
+    cast<TruncInst>(this)->setHasNoSignedWrap(false);
     break;
   }
 
@@ -623,6 +641,13 @@ void Instruction::andIRFlags(const Value *V) {
     if (isa<OverflowingBinaryOperator>(this)) {
       setHasNoSignedWrap(hasNoSignedWrap() && OB->hasNoSignedWrap());
       setHasNoUnsignedWrap(hasNoUnsignedWrap() && OB->hasNoUnsignedWrap());
+    }
+  }
+
+  if (auto *TI = dyn_cast<TruncInst>(V)) {
+    if (isa<TruncInst>(this)) {
+      setHasNoSignedWrap(hasNoSignedWrap() && TI->hasNoSignedWrap());
+      setHasNoUnsignedWrap(hasNoUnsignedWrap() && TI->hasNoUnsignedWrap());
     }
   }
 

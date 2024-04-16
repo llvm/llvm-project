@@ -2068,11 +2068,17 @@ public:
     return CreateCast(Instruction::FPToSI, V, DestTy, Name);
   }
 
-  Value *CreateUIToFP(Value *V, Type *DestTy, const Twine &Name = ""){
+  Value *CreateUIToFP(Value *V, Type *DestTy, const Twine &Name = "",
+                      bool IsNonNeg = false) {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(Intrinsic::experimental_constrained_uitofp,
                                      V, DestTy, nullptr, Name);
-    return CreateCast(Instruction::UIToFP, V, DestTy, Name);
+    if (Value *Folded = Folder.FoldCast(Instruction::UIToFP, V, DestTy))
+      return Folded;
+    Instruction *I = Insert(new UIToFPInst(V, DestTy), Name);
+    if (IsNonNeg)
+      I->setNonNeg();
+    return I;
   }
 
   Value *CreateSIToFP(Value *V, Type *DestTy, const Twine &Name = ""){
@@ -2708,6 +2714,7 @@ public:
   IRBuilder(const IRBuilder &) = delete;
 
   InserterTy &getInserter() { return Inserter; }
+  const InserterTy &getInserter() const { return Inserter; }
 };
 
 template <typename FolderTy, typename InserterTy>

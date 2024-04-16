@@ -235,9 +235,9 @@ set(COMPILER_RT_SUPPORTED_ARCH)
 # Try to compile a very simple source file to ensure we can target the given
 # platform. We use the results of these tests to build only the various target
 # runtime libraries supported by our current compilers cross-compiling
-# abilities. Avoids using libc as that may not be available yet.
+# abilities.
 set(SIMPLE_SOURCE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/simple.cc)
-file(WRITE ${SIMPLE_SOURCE} "int main(void) { return 0; }\n")
+file(WRITE ${SIMPLE_SOURCE} "#include <stdlib.h>\n#include <stdio.h>\nint main(void) { printf(\"hello, world\"); }\n")
 
 # Detect whether the current target platform is 32-bit or 64-bit, and setup
 # the correct commandline flags needed to attempt to target 32-bit and 64-bit.
@@ -463,9 +463,11 @@ if(APPLE)
 
   set(DEFAULT_SANITIZER_MIN_OSX_VERSION 10.13)
   set(DARWIN_osx_MIN_VER_FLAG "-mmacosx-version-min")
+
+  string(REGEX MATCH "${DARWIN_osx_MIN_VER_FLAG}=([.0-9]+)"
+         MACOSX_VERSION_MIN_FLAG "${CMAKE_CXX_FLAGS}")
+
   if(NOT SANITIZER_MIN_OSX_VERSION)
-    string(REGEX MATCH "${DARWIN_osx_MIN_VER_FLAG}=([.0-9]+)"
-           MACOSX_VERSION_MIN_FLAG "${CMAKE_CXX_FLAGS}")
     if(MACOSX_VERSION_MIN_FLAG)
       set(MIN_OSX_VERSION "${CMAKE_MATCH_1}")
     elseif(CMAKE_OSX_DEPLOYMENT_TARGET)

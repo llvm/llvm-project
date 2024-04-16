@@ -553,9 +553,9 @@ bool ClangUserExpression::PrepareForParsing(
 }
 
 bool ClangUserExpression::TryParse(
-    DiagnosticManager &diagnostic_manager, ExecutionContextScope *exe_scope,
-    ExecutionContext &exe_ctx, lldb_private::ExecutionPolicy execution_policy,
-    bool keep_result_in_memory, bool generate_debug_info) {
+    DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
+    lldb_private::ExecutionPolicy execution_policy, bool keep_result_in_memory,
+    bool generate_debug_info) {
   m_materializer_up = std::make_unique<Materializer>();
 
   ResetDeclMap(exe_ctx, m_result_delegate, keep_result_in_memory);
@@ -574,7 +574,8 @@ bool ClangUserExpression::TryParse(
   }
 
   m_parser = std::make_unique<ClangExpressionParser>(
-      exe_scope, *this, generate_debug_info, m_include_directories, m_filename);
+      exe_ctx.GetBestExecutionContextScope(), *this, generate_debug_info,
+      m_include_directories, m_filename);
 
   unsigned num_errors = m_parser->Parse(diagnostic_manager);
 
@@ -669,15 +670,8 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   // Parse the expression
   //
 
-  Process *process = exe_ctx.GetProcessPtr();
-  ExecutionContextScope *exe_scope = process;
-
-  if (!exe_scope)
-    exe_scope = exe_ctx.GetTargetPtr();
-
-  bool parse_success = TryParse(diagnostic_manager, exe_scope, exe_ctx,
-                                execution_policy, keep_result_in_memory,
-                                generate_debug_info);
+  bool parse_success = TryParse(diagnostic_manager, exe_ctx, execution_policy,
+                                keep_result_in_memory, generate_debug_info);
   // If the expression failed to parse, check if retrying parsing with a loaded
   // C++ module is possible.
   if (!parse_success && shouldRetryWithCppModule(*target, execution_policy)) {
@@ -695,9 +689,8 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       // so recreate those.
       CreateSourceCode(retry_manager, exe_ctx, m_imported_cpp_modules,
                        /*for_completion*/ false);
-      parse_success = TryParse(retry_manager, exe_scope, exe_ctx,
-                               execution_policy, keep_result_in_memory,
-                               generate_debug_info);
+      parse_success = TryParse(retry_manager, exe_ctx, execution_policy,
+                               keep_result_in_memory, generate_debug_info);
       // Return the parse diagnostics if we were successful.
       if (parse_success)
         diagnostic_manager = std::move(retry_manager);
@@ -759,6 +752,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     }
   }
 
+  Process *process = exe_ctx.GetProcessPtr();
   if (process && m_jit_start_addr != LLDB_INVALID_ADDRESS)
     m_jit_process_wp = lldb::ProcessWP(process->shared_from_this());
   return true;
@@ -840,13 +834,8 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
     DeclMap()->SetLookupsEnabled(true);
   }
 
-  Process *process = exe_ctx.GetProcessPtr();
-  ExecutionContextScope *exe_scope = process;
-
-  if (!exe_scope)
-    exe_scope = exe_ctx.GetTargetPtr();
-
-  ClangExpressionParser parser(exe_scope, *this, false);
+  ClangExpressionParser parser(exe_ctx.GetBestExecutionContextScope(), *this,
+                               false);
 
   // We have to find the source code location where the user text is inside
   // the transformed expression code. When creating the transformed text, we

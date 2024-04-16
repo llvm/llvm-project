@@ -800,8 +800,8 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
     // Add a vtable pointer, if we need one and it hasn't already been added.
     if (Layout.hasOwnVFPtr()) {
       llvm::Constant *VTableAddressPoint =
-          CGM.getCXXABI().getVTableAddressPointForConstExpr(
-              BaseSubobject(CD, Offset), VTableClass);
+          CGM.getCXXABI().getVTableAddressPoint(BaseSubobject(CD, Offset),
+                                                VTableClass);
       if (!AppendBytes(Offset, VTableAddressPoint))
         return false;
     }
@@ -1226,6 +1226,7 @@ public:
     case CK_ZeroToOCLOpaqueType:
     case CK_MatrixCast:
     case CK_HLSLVectorTruncation:
+    case CK_HLSLArrayRValue:
       return nullptr;
     }
     llvm_unreachable("Invalid CastKind");

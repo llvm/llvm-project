@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -split-input-file -test-vector-linearize | FileCheck %s --check-prefixes=ALL,DEFAULT
-// RUN: mlir-opt %s -split-input-file -test-vector-linearize=target-vector-bitwidth=128 | FileCheck %s --check-prefixes=ALL,BW-128
+// RUN: mlir-opt %s -split-input-file -test-vector-linearize -verify-diagnostics | FileCheck %s --check-prefixes=ALL,DEFAULT
+// RUN: mlir-opt %s -split-input-file -test-vector-linearize=target-vector-bitwidth=128  -verify-diagnostics | FileCheck %s --check-prefixes=ALL,BW-128
 // RUN: mlir-opt %s -split-input-file -test-vector-linearize=target-vector-bitwidth=0 | FileCheck %s --check-prefixes=ALL,BW-0
 
 // ALL-LABEL: test_linearize
@@ -96,4 +96,60 @@ func.func @test_tensor_no_linearize(%arg0: tensor<2x2xf32>, %arg1: tensor<2x2xf3
     %0 = arith.mulf %arg0, %arg1 : tensor<2x2xf32>
 
     return %0, %arg0 : tensor<2x2xf32>, tensor<2x2xf32>
+}
+
+// -----
+
+// ALL-LABEL:   func.func @test_scalable_linearize(
+// ALL-SAME:    %[[ARG_0:.*]]: vector<2x[2]xf32>) -> vector<2x[2]xf32> {
+func.func @test_scalable_linearize(%arg0: vector<2x[2]xf32>) -> vector<2x[2]xf32> {
+  // DEFAULT:  %[[SC:.*]] = vector.shape_cast %[[ARG_0]] : vector<2x[2]xf32> to vector<[4]xf32>
+  // DEFAULT:  %[[CST:.*]] = arith.constant dense<3.000000e+00> : vector<[4]xf32>
+  // BW-128:  %[[SC:.*]] = vector.shape_cast %[[ARG_0]] : vector<2x[2]xf32> to vector<[4]xf32>
+  // BW-128:  %[[CST:.*]] = arith.constant dense<3.000000e+00> : vector<[4]xf32>
+  // BW-0:  %[[CST:.*]] = arith.constant dense<3.000000e+00> : vector<2x[2]xf32>
+  %0 = arith.constant dense<[[3., 3.], [3., 3.]]> : vector<2x[2]xf32>
+
+  // DEFAULT: %[[SIN:.*]] = math.sin %[[SC]] : vector<[4]xf32>
+  // BW-128: %[[SIN:.*]] = math.sin %[[SC]] : vector<[4]xf32>
+  // BW-0: %[[SIN:.*]] = math.sin %[[ARG_0]] : vector<2x[2]xf32>
+  %1 = math.sin %arg0 : vector<2x[2]xf32>
+
+  // DEFAULT: %[[ADDF:.*]] = arith.addf %[[SIN]], %[[CST]] : vector<[4]xf32>
+  // BW-128: %[[ADDF:.*]] = arith.addf %[[SIN]], %[[CST]] : vector<[4]xf32>
+  // BW-0: %[[RES:.*]] = arith.addf %[[CST]], %[[SIN]] : vector<2x[2]xf32>
+  %2 = arith.addf %0, %1 : vector<2x[2]xf32>
+
+  // DEFAULT: %[[RES:.*]] = vector.shape_cast %[[ADDF]] : vector<[4]xf32> to vector<2x[2]xf32>
+  // BW-128: %[[RES:.*]] = vector.shape_cast %[[ADDF]] : vector<[4]xf32> to vector<2x[2]xf32>
+  // ALL: return %[[RES]] : vector<2x[2]xf32>
+  return %2 : vector<2x[2]xf32>
+}
+
+// -----
+
+// ALL-LABEL:   func.func @test_scalable_no_linearize(
+// ALL-SAME:     %[[VAL_0:.*]]: vector<[2]x[2]xf32>) -> vector<[2]x[2]xf32> {
+func.func @test_scalable_no_linearize(%arg0: vector<[2]x[2]xf32>) -> vector<[2]x[2]xf32> {
+  // ALL: %[[CST:.*]] = arith.constant dense<2.000000e+00> : vector<[2]x[2]xf32>
+  %0 = arith.constant dense<[[2., 2.], [2., 2.]]> : vector<[2]x[2]xf32>
+
+  // ALL: %[[SIN:.*]] = math.sin %[[VAL_0]] : vector<[2]x[2]xf32>
+  %1 = math.sin %arg0 : vector<[2]x[2]xf32>
+
+  // ALL: %[[RES:.*]] = arith.addf %[[CST]], %[[SIN]] : vector<[2]x[2]xf32>
+  %2 = arith.addf %0, %1 : vector<[2]x[2]xf32>
+
+  // ALL: return %[[RES]] : vector<[2]x[2]xf32>
+  return %2 : vector<[2]x[2]xf32>
+}
+
+// -----
+
+// ALL-LABEL: func.func @test_0d_vector
+func.func @test_0d_vector() -> vector<f32> {
+  // ALL: %[[CST:.+]] = arith.constant dense<0.000000e+00> : vector<f32>
+  %0 = arith.constant dense<0.0> : vector<f32>
+  // ALL: return %[[CST]]
+  return %0 : vector<f32>
 }
