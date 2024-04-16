@@ -398,6 +398,35 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return true;
   }
 
+  case CK_VectorSplat: {
+    assert(!classify(CE->getType()));
+    assert(classify(SubExpr->getType()));
+    assert(CE->getType()->isVectorType());
+
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
+    assert(Initializing); // FIXME: Not always correct.
+    const auto *VT = CE->getType()->getAs<VectorType>();
+    PrimType ElemT = classifyPrim(SubExpr);
+    unsigned ElemOffset = allocateLocalPrimitive(
+        SubExpr, ElemT, /*IsConst=*/true, /*IsExtended=*/false);
+
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitSetLocal(ElemT, ElemOffset, CE))
+      return false;
+
+    for (unsigned I = 0; I != VT->getNumElements(); ++I) {
+      if (!this->emitGetLocal(ElemT, ElemOffset, CE))
+        return false;
+      if (!this->emitInitElem(ElemT, I, CE))
+        return false;
+    }
+
+    return true;
+  }
+
   case CK_ToVoid:
     return discard(SubExpr);
 
