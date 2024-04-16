@@ -16,16 +16,15 @@
 using namespace mlir;
 using namespace mlir::affine;
 
-static FailureOr<OpFoldResult>
-reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
-                Value value, std::optional<int64_t> dim,
-                ValueBoundsConstraintSet::StopConditionFn stopCondition,
-                bool closedUB) {
+FailureOr<OpFoldResult> mlir::affine::reifyValueBound(
+    OpBuilder &b, Location loc, presburger::BoundType type,
+    const ValueBoundsConstraintSet::Variable &var,
+    ValueBoundsConstraintSet::StopConditionFn stopCondition, bool closedUB) {
   // Compute bound.
   AffineMap boundMap;
   ValueDimList mapOperands;
   if (failed(ValueBoundsConstraintSet::computeBound(
-          boundMap, mapOperands, type, value, dim, stopCondition, closedUB)))
+          boundMap, mapOperands, type, var, stopCondition, closedUB)))
     return failure();
 
   // Reify bound.
@@ -93,7 +92,7 @@ FailureOr<OpFoldResult> mlir::affine::reifyShapedValueDimBound(
     // the owner of `value`.
     return v != value;
   };
-  return reifyValueBound(b, loc, type, value, dim,
+  return reifyValueBound(b, loc, type, {value, dim},
                          stopCondition ? stopCondition : reifyToOperands,
                          closedUB);
 }
@@ -105,7 +104,7 @@ FailureOr<OpFoldResult> mlir::affine::reifyIndexValueBound(
                              ValueBoundsConstraintSet &cstr) {
     return v != value;
   };
-  return reifyValueBound(b, loc, type, value, /*dim=*/std::nullopt,
+  return reifyValueBound(b, loc, type, value,
                          stopCondition ? stopCondition : reifyToOperands,
                          closedUB);
 }

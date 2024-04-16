@@ -154,7 +154,7 @@ bool mlir::tensor::isCastLikeInsertSliceOp(InsertSliceOp op) {
       continue;
     }
     FailureOr<bool> equalDimSize = ValueBoundsConstraintSet::areEqual(
-        op.getSource(), op.getResult(), srcDim, resultDim);
+        {op.getSource(), srcDim}, {op.getResult(), resultDim});
     if (failed(equalDimSize) || !*equalDimSize)
       return false;
     ++srcDim;
@@ -178,7 +178,7 @@ bool mlir::tensor::isCastLikeExtractSliceOp(ExtractSliceOp op) {
       continue;
     }
     FailureOr<bool> equalDimSize = ValueBoundsConstraintSet::areEqual(
-        op.getSource(), op.getResult(), dim, resultDim);
+        {op.getSource(), dim}, {op.getResult(), resultDim});
     if (failed(equalDimSize) || !*equalDimSize)
       return false;
     ++resultDim;
