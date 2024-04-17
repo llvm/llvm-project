@@ -49,6 +49,15 @@ def create_parser():
             """Specify the compiler(s) used to build the inferior executables. The compiler path can be an executable basename or a full path to a compiler executable. This option can be specified multiple times."""
         ),
     )
+    group.add_argument(
+        "--sysroot",
+        metavar="sysroot",
+        dest="sysroot",
+        default="",
+        help=textwrap.dedent(
+            """Specify the path to sysroot. This overrides apple_sdk sysroot."""
+        ),
+    )
     if sys.platform == "darwin":
         group.add_argument(
             "--apple-sdk",
