@@ -533,6 +533,12 @@ def VR : VReg<!listconcat(VM1VTs, VMaskVTs),
               (add (sequence "V%u", 8, 31),
                    (sequence "V%u", 7, 0)), 1>;
 
+// V0 is likely to be used as mask, so we move it in front of allocation order.
+def VMM1 : VReg<VMaskVTs, (add (sequence "V%u", 0, 31)), 1>;
+def VMM2 : VReg<VMaskVTs, (add (sequence "V%u", 0, 31, 2)), 1>;
+def VMM4 : VReg<VMaskVTs, (add (sequence "V%u", 0, 31, 4)), 1>;
+def VMM8 : VReg<VMaskVTs, (add (sequence "V%u", 0, 31, 8)), 1>;
+
 def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0), 1>;
 
 def VRM2 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),

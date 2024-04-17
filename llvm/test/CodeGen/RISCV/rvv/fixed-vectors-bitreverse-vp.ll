@@ -1793,8 +1793,8 @@ define <15 x i64> @vp_bitreverse_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroex
 ; RV64-NEXT:    vsll.vx v24, v8, a2, v0.t
 ; RV64-NEXT:    lui a3, 16
 ; RV64-NEXT:    addiw a3, a3, -256
-; RV64-NEXT:    li a4, 40
 ; RV64-NEXT:    vand.vx v16, v8, a3, v0.t
+; RV64-NEXT:    li a4, 40
 ; RV64-NEXT:    vsll.vx v16, v16, a4, v0.t
 ; RV64-NEXT:    vor.vv v16, v24, v16, v0.t
 ; RV64-NEXT:    addi a5, sp, 16
@@ -2157,8 +2157,8 @@ define <16 x i64> @vp_bitreverse_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroex
 ; RV64-NEXT:    vsll.vx v24, v8, a2, v0.t
 ; RV64-NEXT:    lui a3, 16
 ; RV64-NEXT:    addiw a3, a3, -256
-; RV64-NEXT:    li a4, 40
 ; RV64-NEXT:    vand.vx v16, v8, a3, v0.t
+; RV64-NEXT:    li a4, 40
 ; RV64-NEXT:    vsll.vx v16, v16, a4, v0.t
 ; RV64-NEXT:    vor.vv v16, v24, v16, v0.t
 ; RV64-NEXT:    addi a5, sp, 16
