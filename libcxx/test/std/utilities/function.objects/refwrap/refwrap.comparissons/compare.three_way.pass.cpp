@@ -21,9 +21,43 @@
 #include <cassert>
 #include <functional>
 
+#include "test_comparisons.h"
 #include "test_macros.h"
 
-constexpr bool test() { return true; }
+template <typename Order>
+constexpr void test() {
+  int integer = 47;
+
+  int bigger  = 94;
+  int smaller = 82;
+
+  // Identical contents
+  {
+    std::reference_wrapper<int> rw1{integer};
+    std::reference_wrapper<int> rw2{integer};
+    assert(testOrder(rw1, rw2, Order::equivalent));
+  }
+  // Less
+  {
+    std::reference_wrapper<int> rw1{smaller};
+    std::reference_wrapper<int> rw2{bigger};
+    assert(testOrder(rw1, rw2, Order::less));
+  }
+  // Greater
+  {
+    std::reference_wrapper<int> rw1{bigger};
+    std::reference_wrapper<int> rw2{smaller};
+    assert(testOrder(rw1, rw2, Order::greater));
+  }
+}
+
+constexpr bool test() {
+  test<std::strong_ordering>();
+  test<std::weak_ordering>();
+  test<std::partial_ordering>();
+
+  return true;
+}
 
 int main(int, char**) {
   test();
