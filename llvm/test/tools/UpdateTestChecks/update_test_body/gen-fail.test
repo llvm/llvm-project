@@ -1,0 +1,8 @@
+# RUN: cp %s %t && %update_test_body %t 2>&1 | FileCheck %s
+
+# CHECK: 'gen' failed
+
+.ifdef GEN
+#--- gen
+false
+.endif
