@@ -54,6 +54,18 @@ define float @returned_poison() {
   ret float poison
 }
 
+; Know nothing
+define float @returned_freeze_poison() {
+; CHECK-LABEL: define noundef float @returned_freeze_poison() {
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    [[FREEZE_POISON:%.*]] = freeze float poison
+; CHECK-NEXT:    ret float [[FREEZE_POISON]]
+;
+  call void @unknown()
+  %freeze.poison = freeze float poison
+  ret float %freeze.poison
+}
+
 define double @returned_snan() {
 ; CHECK-LABEL: define noundef nofpclass(qnan inf zero sub norm) double @returned_snan() {
 ; CHECK-NEXT:    call void @unknown()
@@ -1802,7 +1814,7 @@ define float @shufflevector_extractelt3(<2 x float> %arg0, <2 x float> nofpclass
 
 define float @shufflevector_constantdatavector_demanded0() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @shufflevector_constantdatavector_demanded0
+; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @shufflevector_constantdatavector_demanded0
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x float> <float 1.000000e+00, float 0x7FF8000000000000, float 0.000000e+00>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[SHUFFLE]], i32 0
@@ -1815,7 +1827,7 @@ define float @shufflevector_constantdatavector_demanded0() {
 
 define float @shufflevector_constantdatavector_demanded1() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(snan inf nzero sub nnorm) float @shufflevector_constantdatavector_demanded1
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @shufflevector_constantdatavector_demanded1
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x float> <float 1.000000e+00, float 0x7FF8000000000000, float 0.000000e+00>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[SHUFFLE]], i32 1

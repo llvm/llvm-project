@@ -149,6 +149,9 @@ Changes to the C API
 
 * Deprecated ``LLVMConstNUWNeg`` and ``LLVMBuildNUWNeg``.
 
+* Added ``LLVMAtomicRMWBinOpUIncWrap`` and ``LLVMAtomicRMWBinOpUDecWrap`` to
+  ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -185,6 +188,10 @@ Changes to the LLVM tools
 * llvm-objcopy now supports ``--skip-symbol`` and ``--skip-symbols`` options
   for ELF input to skip the specified symbols when executing other options
   that can change a symbol's name, binding or visibility.
+
+* llvm-objcopy now supports ``--compress-sections`` to compress or decompress
+  arbitrary sections not within a segment.
+  (`#85036 <https://github.com/llvm/llvm-project/pull/85036>`_.)
 
 * llvm-profgen now supports COFF+DWARF binaries. This enables Sample-based PGO
   on Windows using Intel VTune's SEP. For details on usage, see the `end-user

@@ -100,6 +100,71 @@ add_entrypoint_object(
     libc.src.pthread.pthread_attr_setstacksize
 )
 
+add_entrypoint_object(
+  pthread_condattr_destroy
+  SRCS
+    pthread_condattr_destroy.cpp
+  HDRS
+    pthread_condattr_destroy.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_condattr_getclock
+  SRCS
+    pthread_condattr_getclock.cpp
+  HDRS
+    pthread_condattr_getclock.h
+  DEPENDS
+    libc.include.pthread
+    libc.include.sys_types
+)
+
+add_entrypoint_object(
+  pthread_condattr_getpshared
+  SRCS
+    pthread_condattr_getpshared.cpp
+  HDRS
+    pthread_condattr_getpshared.h
+  DEPENDS
+    libc.include.pthread
+)
+
+add_entrypoint_object(
+  pthread_condattr_init
+  SRCS
+    pthread_condattr_init.cpp
+  HDRS
+    pthread_condattr_init.h
+  DEPENDS
+    libc.include.pthread
+    libc.include.time
+)
+
+add_entrypoint_object(
+  pthread_condattr_setclock
+  SRCS
+    pthread_condattr_setclock.cpp
+  HDRS
+    pthread_condattr_setclock.h
+  DEPENDS
+    libc.include.errno
+    libc.include.pthread
+    libc.include.sys_types
+    libc.include.time
+)
+
+add_entrypoint_object(
+  pthread_condattr_setpshared
+  SRCS
+    pthread_condattr_setpshared.cpp
+  HDRS
+    pthread_condattr_setpshared.h
+  DEPENDS
+    libc.include.pthread
+)
+
 add_header_library(
   pthread_mutexattr
   HDRS

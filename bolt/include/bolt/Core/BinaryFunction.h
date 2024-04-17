@@ -1402,7 +1402,8 @@ public:
 
   /// Return true if the function has CFI instructions
   bool hasCFI() const {
-    return !FrameInstructions.empty() || !CIEFrameInstructions.empty();
+    return !FrameInstructions.empty() || !CIEFrameInstructions.empty() ||
+           IsInjected;
   }
 
   /// Return unique number associated with the function.

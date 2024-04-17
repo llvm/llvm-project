@@ -17,11 +17,11 @@ define <2 x i32> @zero_dividend_vector(<2 x i32> %A) {
   ret <2 x i32> %B
 }
 
-define <2 x i32> @zero_dividend_vector_undef_elt(<2 x i32> %A) {
-; CHECK-LABEL: @zero_dividend_vector_undef_elt(
+define <2 x i32> @zero_dividend_vector_poison_elt(<2 x i32> %A) {
+; CHECK-LABEL: @zero_dividend_vector_poison_elt(
 ; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
-  %B = urem <2 x i32> <i32 undef, i32 0>, %A
+  %B = urem <2 x i32> <i32 poison, i32 0>, %A
   ret <2 x i32> %B
 }
 

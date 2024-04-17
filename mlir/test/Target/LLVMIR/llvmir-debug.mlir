@@ -37,7 +37,8 @@ llvm.func @func_no_debug() {
 >
 #cu = #llvm.di_compile_unit<
   id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
-  producer = "MLIR", isOptimized = true, emissionKind = Full
+  producer = "MLIR", isOptimized = true, emissionKind = Full,
+  nameTableKind = None
 >
 #composite = #llvm.di_composite_type<
   tag = DW_TAG_structure_type, name = "composite", file = #file,
@@ -127,7 +128,7 @@ llvm.func @empty_types() {
   llvm.return
 } loc(fused<#sp1>["foo.mlir":2:1])
 
-// CHECK: ![[CU_LOC:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[CU_FILE_LOC:.*]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+// CHECK: ![[CU_LOC:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[CU_FILE_LOC:.*]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, nameTableKind: None)
 // CHECK: ![[CU_FILE_LOC]] = !DIFile(filename: "foo.mlir", directory: "/test/")
 
 // CHECK: ![[FUNC_LOC]] = distinct !DISubprogram(name: "func_with_debug", linkageName: "func_with_debug", scope: ![[NESTED_NAMESPACE:.*]], file: ![[CU_FILE_LOC]], line: 3, type: ![[FUNC_TYPE:.*]], scopeLine: 3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: ![[CU_LOC]])
@@ -441,12 +442,16 @@ llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} 
 #di_subprogram = #llvm.di_subprogram<scope = #di_file, file = #di_file, subprogramFlags = Optimized, type = #di_subroutine_type>
 #di_composite_type = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = distinct[0]<>, scope = #di_subprogram>
 
-#di_global_variable = #llvm.di_global_variable<file = #di_file, line = 1, type = #di_composite_type>
+// Use the inner type standalone outside too. Ensures it's not cached wrong.
+#di_var_type = #llvm.di_subroutine_type<types = #di_composite_type, #di_composite_type_inner>
+#di_global_variable = #llvm.di_global_variable<file = #di_file, line = 1, type = #di_var_type>
 #di_global_variable_expression = #llvm.di_global_variable_expression<var = #di_global_variable>
 
 llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} : !llvm.struct<()>
 
-// CHECK: distinct !DIGlobalVariable({{.*}}type: ![[COMP:[0-9]+]],
+// CHECK: distinct !DIGlobalVariable({{.*}}type: ![[VAR:[0-9]+]],
+// CHECK: ![[VAR]] = !DISubroutineType(types: ![[COMPS:[0-9]+]])
+// CHECK: ![[COMPS]] = !{![[COMP:[0-9]+]],
 // CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]],
 // CHECK: ![[SCOPE]] = !DISubprogram({{.*}}type: ![[SUBROUTINE:[0-9]+]],
 // CHECK: ![[SUBROUTINE]] = !DISubroutineType(types: ![[SR_TYPES:[0-9]+]])

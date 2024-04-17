@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -114,10 +115,9 @@ readBinaryIdsInternal(const MemoryBuffer &DataBuffer,
 
     uint64_t BILen = 0;
     if (Endian == llvm::endianness::little)
-      BILen =
-          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(BI);
+      BILen = endian::readNext<uint64_t, llvm::endianness::little>(BI);
     else
-      BILen = endian::readNext<uint64_t, llvm::endianness::big, unaligned>(BI);
+      BILen = endian::readNext<uint64_t, llvm::endianness::big>(BI);
 
     if (BILen == 0)
       return make_error<InstrProfError>(instrprof_error::malformed,
@@ -922,8 +922,7 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     // Read hash.
     if (D + sizeof(uint64_t) >= End)
       return data_type();
-    uint64_t Hash =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(D);
+    uint64_t Hash = endian::readNext<uint64_t, llvm::endianness::little>(D);
 
     // Initialize number of counters for GET_VERSION(FormatVersion) == 1.
     uint64_t CountsSize = N / sizeof(uint64_t) - 1;
@@ -931,8 +930,7 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     if (GET_VERSION(FormatVersion) != IndexedInstrProf::ProfVersion::Version1) {
       if (D + sizeof(uint64_t) > End)
         return data_type();
-      CountsSize =
-          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(D);
+      CountsSize = endian::readNext<uint64_t, llvm::endianness::little>(D);
     }
     // Read counter values.
     if (D + CountsSize * sizeof(uint64_t) > End)
@@ -942,15 +940,14 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     CounterBuffer.reserve(CountsSize);
     for (uint64_t J = 0; J < CountsSize; ++J)
       CounterBuffer.push_back(
-          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(D));
+          endian::readNext<uint64_t, llvm::endianness::little>(D));
 
     // Read bitmap bytes for GET_VERSION(FormatVersion) > 10.
     if (GET_VERSION(FormatVersion) > IndexedInstrProf::ProfVersion::Version10) {
       uint64_t BitmapBytes = 0;
       if (D + sizeof(uint64_t) > End)
         return data_type();
-      BitmapBytes =
-          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(D);
+      BitmapBytes = endian::readNext<uint64_t, llvm::endianness::little>(D);
       // Read bitmap byte values.
       if (D + BitmapBytes * sizeof(uint8_t) > End)
         return data_type();
@@ -958,8 +955,7 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
       BitmapByteBuffer.reserve(BitmapBytes);
       for (uint64_t J = 0; J < BitmapBytes; ++J)
         BitmapByteBuffer.push_back(static_cast<uint8_t>(
-            endian::readNext<uint64_t, llvm::endianness::little, unaligned>(
-                D)));
+            endian::readNext<uint64_t, llvm::endianness::little>(D)));
     }
 
     DataBuffer.emplace_back(K, Hash, std::move(CounterBuffer),
@@ -1255,8 +1251,7 @@ Error IndexedInstrProfReader::readHeader() {
     // memprof::MemProfVersion0 or the MemProf version number in
     // memprof::MemProfVersion1.
     const uint64_t FirstWord =
-        support::endian::readNext<uint64_t, llvm::endianness::little,
-                                  unaligned>(Ptr);
+        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
     memprof::IndexedVersion Version = memprof::Version0;
     if (FirstWord == memprof::Version1) {
@@ -1281,17 +1276,15 @@ Error IndexedInstrProfReader::readHeader() {
     const uint64_t RecordTableOffset =
         Version == memprof::Version0
             ? FirstWord
-            : support::endian::readNext<uint64_t, llvm::endianness::little,
-                                        unaligned>(Ptr);
+            : support::endian::readNext<uint64_t, llvm::endianness::little>(
+                  Ptr);
     // The offset in the stream right before invoking
     // FrameTableGenerator.Emit.
     const uint64_t FramePayloadOffset =
-        support::endian::readNext<uint64_t, llvm::endianness::little,
-                                  unaligned>(Ptr);
+        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     // The value returned from FrameTableGenerator.Emit.
     const uint64_t FrameTableOffset =
-        support::endian::readNext<uint64_t, llvm::endianness::little,
-                                  unaligned>(Ptr);
+        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
     // Read the schema.
     auto SchemaOr = memprof::readMemProfSchema(Ptr);
@@ -1329,8 +1322,7 @@ Error IndexedInstrProfReader::readHeader() {
     const unsigned char *Ptr = Start + BinaryIdOffset;
     // Read binary ids size.
     BinaryIdsSize =
-        support::endian::readNext<uint64_t, llvm::endianness::little,
-                                  unaligned>(Ptr);
+        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     if (BinaryIdsSize % sizeof(uint64_t))
       return error(instrprof_error::bad_header);
     // Set the binary ids start.
@@ -1347,8 +1339,7 @@ Error IndexedInstrProfReader::readHeader() {
     const unsigned char *Ptr = Start + VTableNamesOffset;
 
     CompressedVTableNamesLen =
-        support::endian::readNext<uint64_t, llvm::endianness::little,
-                                  unaligned>(Ptr);
+        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
     // Writer first writes the length of compressed string, and then the actual
     // content.
@@ -1368,29 +1359,24 @@ Error IndexedInstrProfReader::readHeader() {
     if (Ptr + 2 * sizeof(uint64_t) > PtrEnd)
       return error(instrprof_error::truncated);
     const uint64_t NumTraces =
-        support::endian::readNext<uint64_t, llvm::endianness::little,
-                                  unaligned>(Ptr);
+        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     TemporalProfTraceStreamSize =
-        support::endian::readNext<uint64_t, llvm::endianness::little,
-                                  unaligned>(Ptr);
+        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     for (unsigned i = 0; i < NumTraces; i++) {
       // Expect at least two 64 bit fields: Weight and NumFunctions
       if (Ptr + 2 * sizeof(uint64_t) > PtrEnd)
         return error(instrprof_error::truncated);
       TemporalProfTraceTy Trace;
       Trace.Weight =
-          support::endian::readNext<uint64_t, llvm::endianness::little,
-                                    unaligned>(Ptr);
+          support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
       const uint64_t NumFunctions =
-          support::endian::readNext<uint64_t, llvm::endianness::little,
-                                    unaligned>(Ptr);
+          support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
       // Expect at least NumFunctions 64 bit fields
       if (Ptr + NumFunctions * sizeof(uint64_t) > PtrEnd)
         return error(instrprof_error::truncated);
       for (unsigned j = 0; j < NumFunctions; j++) {
         const uint64_t NameRef =
-            support::endian::readNext<uint64_t, llvm::endianness::little,
-                                      unaligned>(Ptr);
+            support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
         Trace.FunctionNameRefs.push_back(NameRef);
       }
       TemporalProfTraces.push_back(std::move(Trace));
@@ -1506,13 +1492,11 @@ IndexedInstrProfReader::getMemProfRecord(const uint64_t FuncNameHash) {
 
   // Setup a callback to convert from frame ids to frame using the on-disk
   // FrameData hash table.
-  memprof::FrameId LastUnmappedFrameId = 0;
-  bool HasFrameMappingError = false;
+  std::optional<memprof::FrameId> LastUnmappedFrameId;
   auto IdToFrameCallback = [&](const memprof::FrameId Id) {
     auto FrIter = MemProfFrameTable->find(Id);
     if (FrIter == MemProfFrameTable->end()) {
       LastUnmappedFrameId = Id;
-      HasFrameMappingError = true;
       return memprof::Frame(0, 0, 0, false);
     }
     return *FrIter;
@@ -1521,10 +1505,10 @@ IndexedInstrProfReader::getMemProfRecord(const uint64_t FuncNameHash) {
   memprof::MemProfRecord Record(*Iter, IdToFrameCallback);
 
   // Check that all frame ids were successfully converted to frames.
-  if (HasFrameMappingError) {
+  if (LastUnmappedFrameId) {
     return make_error<InstrProfError>(instrprof_error::hash_mismatch,
                                       "memprof frame not found for frame id " +
-                                          Twine(LastUnmappedFrameId));
+                                          Twine(*LastUnmappedFrameId));
   }
   return Record;
 }

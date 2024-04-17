@@ -889,8 +889,17 @@ static LogicalResult inlineReductionCleanup(
 
     // map the argument to the cleanup region
     Block &entry = cleanupRegion.front();
-    moduleTranslation.mapValue(entry.getArgument(0),
-                               privateReductionVariables[i]);
+
+    llvm::Instruction *potentialTerminator =
+        builder.GetInsertBlock()->empty() ? nullptr
+                                          : &builder.GetInsertBlock()->back();
+    if (potentialTerminator && potentialTerminator->isTerminator())
+      builder.SetInsertPoint(potentialTerminator);
+    llvm::Value *reductionVar = builder.CreateLoad(
+        moduleTranslation.convertType(entry.getArgument(0).getType()),
+        privateReductionVariables[i]);
+
+    moduleTranslation.mapValue(entry.getArgument(0), reductionVar);
 
     if (failed(inlineConvertOmpRegions(cleanupRegion, "omp.reduction.cleanup",
                                        builder, moduleTranslation)))
@@ -1397,9 +1406,10 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
 
 /// Converts an OpenMP simd loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
-convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
-                   LLVM::ModuleTranslation &moduleTranslation) {
-  auto loop = cast<omp::SimdLoopOp>(opInst);
+convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
+               LLVM::ModuleTranslation &moduleTranslation) {
+  auto simdOp = cast<omp::SimdOp>(opInst);
+  auto loopOp = cast<omp::LoopNestOp>(simdOp.getWrappedLoop());
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
@@ -1412,33 +1422,34 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip, llvm::Value *iv) {
     // Make sure further conversions know about the induction variable.
     moduleTranslation.mapValue(
-        loop.getRegion().front().getArgument(loopInfos.size()), iv);
+        loopOp.getRegion().front().getArgument(loopInfos.size()), iv);
 
     // Capture the body insertion point for use in nested loops. BodyIP of the
     // CanonicalLoopInfo always points to the beginning of the entry block of
     // the body.
     bodyInsertPoints.push_back(ip);
 
-    if (loopInfos.size() != loop.getNumLoops() - 1)
+    if (loopInfos.size() != loopOp.getNumLoops() - 1)
       return;
 
     // Convert the body of the loop.
     builder.restoreIP(ip);
-    convertOmpOpRegions(loop.getRegion(), "omp.simdloop.region", builder,
+    convertOmpOpRegions(loopOp.getRegion(), "omp.simd.region", builder,
                         moduleTranslation, bodyGenStatus);
   };
 
   // Delegate actual loop construction to the OpenMP IRBuilder.
-  // TODO: this currently assumes SimdLoop is semantically similar to SCF loop,
-  // i.e. it has a positive step, uses signed integer semantics. Reconsider
-  // this code when SimdLoop clearly supports more cases.
+  // TODO: this currently assumes omp.loop_nest is semantically similar to SCF
+  // loop, i.e. it has a positive step, uses signed integer semantics.
+  // Reconsider this code when the nested loop operation clearly supports more
+  // cases.
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  for (unsigned i = 0, e = loop.getNumLoops(); i < e; ++i) {
+  for (unsigned i = 0, e = loopOp.getNumLoops(); i < e; ++i) {
     llvm::Value *lowerBound =
-        moduleTranslation.lookupValue(loop.getLowerBound()[i]);
+        moduleTranslation.lookupValue(loopOp.getLowerBound()[i]);
     llvm::Value *upperBound =
-        moduleTranslation.lookupValue(loop.getUpperBound()[i]);
-    llvm::Value *step = moduleTranslation.lookupValue(loop.getStep()[i]);
+        moduleTranslation.lookupValue(loopOp.getUpperBound()[i]);
+    llvm::Value *step = moduleTranslation.lookupValue(loopOp.getStep()[i]);
 
     // Make sure loop trip count are emitted in the preheader of the outermost
     // loop at the latest so that they are all available for the new collapsed
@@ -1464,18 +1475,18 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
       ompBuilder->collapseLoops(ompLoc.DL, loopInfos, {});
 
   llvm::ConstantInt *simdlen = nullptr;
-  if (std::optional<uint64_t> simdlenVar = loop.getSimdlen())
+  if (std::optional<uint64_t> simdlenVar = simdOp.getSimdlen())
     simdlen = builder.getInt64(simdlenVar.value());
 
   llvm::ConstantInt *safelen = nullptr;
-  if (std::optional<uint64_t> safelenVar = loop.getSafelen())
+  if (std::optional<uint64_t> safelenVar = simdOp.getSafelen())
     safelen = builder.getInt64(safelenVar.value());
 
   llvm::MapVector<llvm::Value *, llvm::Value *> alignedVars;
   ompBuilder->applySimd(
       loopInfo, alignedVars,
-      loop.getIfExpr() ? moduleTranslation.lookupValue(loop.getIfExpr())
-                       : nullptr,
+      simdOp.getIfExpr() ? moduleTranslation.lookupValue(simdOp.getIfExpr())
+                         : nullptr,
       llvm::omp::OrderKind::OMP_ORDER_unknown, simdlen, safelen);
 
   builder.restoreIP(afterIP);
@@ -3189,8 +3200,8 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
       .Case([&](omp::WsloopOp) {
         return convertOmpWsloop(*op, builder, moduleTranslation);
       })
-      .Case([&](omp::SimdLoopOp) {
-        return convertOmpSimdLoop(*op, builder, moduleTranslation);
+      .Case([&](omp::SimdOp) {
+        return convertOmpSimd(*op, builder, moduleTranslation);
       })
       .Case([&](omp::AtomicReadOp) {
         return convertOmpAtomicRead(*op, builder, moduleTranslation);
@@ -3412,7 +3423,6 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       return convertTargetOpsInNest(op, builder, moduleTranslation);
     }
   }
-
   return convertHostOrTargetOperation(op, builder, moduleTranslation);
 }
 

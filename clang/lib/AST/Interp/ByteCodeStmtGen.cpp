@@ -110,7 +110,7 @@ bool ByteCodeStmtGen<Emitter>::emitLambdaStaticInvokerBody(
   // one here, and we don't need one either because the lambda cannot have
   // any captures, as verified above. Emit a null pointer. This is then
   // special-cased when interpreting to not emit any misleading diagnostics.
-  if (!this->emitNullPtr(MD))
+  if (!this->emitNullPtr(nullptr, MD))
     return false;
 
   // Forward all arguments from the static invoker to the lambda call operator.

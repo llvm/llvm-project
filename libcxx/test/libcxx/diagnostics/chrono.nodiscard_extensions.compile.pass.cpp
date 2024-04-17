@@ -50,6 +50,7 @@ void test() {
 
   {
     tz.name();
+    tz.get_info(std::chrono::sys_seconds{});
     operator==(tz, tz);
     operator<=>(tz, tz);
   }

@@ -577,6 +577,7 @@ mlir_c_api_cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":IR",
         ":NVGPUDialect",
     ],
 )
@@ -1549,58 +1550,6 @@ cc_library(
         ":IR",
         ":SideEffectInterfaces",
         "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "AMDGPUTransformOps",
-    srcs = glob([
-        "lib/Dialect/AMDGPU/TransformOps/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/mlir/Dialect/AMDGPU/TransformOps/*.h",
-    ]),
-    includes = ["include"],
-    deps = [
-        ":AMDGPUDialect",
-        ":AMDGPUTransformOpsIncGen",
-        ":AMDGPUTransforms",
-        ":AffineDialect",
-        ":FuncDialect",
-        ":IR",
-        ":TransformDialect",
-        ":TransformDialectInterfaces",
-        ":VectorDialect",
-    ],
-)
-
-td_library(
-    name = "AMDGPUTransformOpsTdFiles",
-    srcs = glob([
-        "include/mlir/Dialect/AMDGPU/TransformOps/*.td",
-    ]),
-    includes = ["include"],
-    deps = [
-        ":TransformDialectTdFiles",
-    ],
-)
-
-gentbl_cc_library(
-    name = "AMDGPUTransformOpsIncGen",
-    tbl_outs = [
-        (
-            ["-gen-op-decls"],
-            "include/mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.h.inc",
-        ),
-        (
-            ["-gen-op-defs"],
-            "include/mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.cpp.inc",
-        ),
-    ],
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/AMDGPU/TransformOps/AMDGPUTransformOps.td",
-    deps = [
-        ":AMDGPUTransformOpsTdFiles",
     ],
 )
 
@@ -4787,7 +4736,6 @@ cc_library(
     name = "AllExtensions",
     hdrs = ["include/mlir/InitAllExtensions.h"],
     deps = [
-        ":AMDGPUTransformOps",
         ":AffineTransformOps",
         ":ArithToLLVM",
         ":BufferizationTransformOps",
@@ -6653,6 +6601,109 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/PDLInterp/IR/PDLInterpOps.td",
     deps = [":PDLInterpOpsTdFiles"],
+)
+
+cc_library(
+    name = "PolynomialDialect",
+    srcs = glob([
+        "lib/Dialect/Polynomial/IR/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/Polynomial/IR/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":InferTypeOpInterface",
+        ":PolynomialAttributesIncGen",
+        ":PolynomialIncGen",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "PolynomialTdFiles",
+    srcs = ["include/mlir/Dialect/Polynomial/IR/Polynomial.td"],
+    includes = ["include"],
+    deps = [
+        ":BuiltinDialectTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "PolynomialIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/Polynomial/IR/Polynomial.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/Polynomial/IR/Polynomial.cpp.inc",
+        ),
+        (
+            [
+                "-gen-dialect-decls",
+                "-dialect=polynomial",
+            ],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialDialect.h.inc",
+        ),
+        (
+            [
+                "-gen-dialect-defs",
+                "-dialect=polynomial",
+            ],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialDialect.cpp.inc",
+        ),
+        (
+            [
+                "--gen-typedef-decls",
+                "-typedefs-dialect=polynomial",
+            ],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialTypes.h.inc",
+        ),
+        (
+            [
+                "--gen-typedef-defs",
+                "-typedefs-dialect=polynomial",
+            ],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialTypes.cpp.inc",
+        ),
+        (
+            ["-gen-op-doc"],
+            "g3doc/Dialects/Polynomial/Polynomial.md",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Polynomial/IR/Polynomial.td",
+    deps = [":PolynomialTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "PolynomialAttributesIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=polynomial",
+            ],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=polynomial",
+            ],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialAttributes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Polynomial/IR/Polynomial.td",
+    deps = [":PolynomialTdFiles"],
 )
 
 td_library(
@@ -9033,7 +9084,6 @@ cc_library(
     deps = [
         ":AMDGPUDialect",
         ":AMDGPUToROCDL",
-        ":AMDGPUTransformOps",
         ":AMDGPUTransforms",
         ":AMXDialect",
         ":AMXTransforms",
@@ -9130,6 +9180,7 @@ cc_library(
         ":PDLDialect",
         ":PDLInterpDialect",
         ":PDLToPDLInterp",
+        ":PolynomialDialect",
         ":QuantOps",
         ":ROCDLDialect",
         ":ROCDLTarget",
@@ -11581,6 +11632,7 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
+        ":InferTypeOpInterface",
         ":LinalgDialect",
         ":MathDialect",
         ":Pass",
