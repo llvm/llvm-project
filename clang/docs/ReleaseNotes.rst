@@ -214,6 +214,9 @@ New Compiler Flags
   This diagnostic can be disabled to make ``-Wmissing-field-initializers`` behave
   like it did before Clang 18.x. Fixes #GH56628
 
+- ``-fexperimental-modules-reduced-bmi`` enables the Reduced BMI for C++20 named modules.
+  See the document of standard C++ modules for details.
+
 Deprecated Compiler Flags
 -------------------------
 
