@@ -301,12 +301,12 @@ bool InstrProfWriter::addMemProfCallStack(
     const memprof::CallStackId CSId,
     const llvm::SmallVector<memprof::FrameId> &CallStack,
     function_ref<void(Error)> Warn) {
-  auto Result = MemProfCallStackData.insert({CSId, CallStack});
+  auto [Iter, Inserted] = MemProfCallStackData.insert({CSId, CallStack});
   // If a mapping already exists for the current call stack id and it does not
   // match the new mapping provided then reset the existing contents and bail
   // out. We don't support the merging of memprof data whose CallStack -> Id
   // mapping across profiles is inconsistent.
-  if (!Result.second && Result.first->second != CallStack) {
+  if (!Inserted && Iter->second != CallStack) {
     Warn(make_error<InstrProfError>(instrprof_error::malformed,
                                     "call stack to id mapping mismatch"));
     return false;

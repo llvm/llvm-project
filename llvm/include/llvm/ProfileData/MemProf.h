@@ -653,7 +653,7 @@ public:
     endian::Writer LE(Out, llvm::endianness::little);
     offset_type N = sizeof(K);
     LE.write<offset_type>(N);
-    offset_type M = sizeof(CallStackId) * V.size();
+    offset_type M = sizeof(FrameId) * V.size();
     LE.write<offset_type>(M);
     return std::make_pair(N, M);
   }
@@ -712,7 +712,7 @@ public:
     using namespace support;
     llvm::SmallVector<FrameId> CS;
     // Derive the number of frames from the data length.
-    uint64_t NumFrames = Length / sizeof(CallStackId);
+    uint64_t NumFrames = Length / sizeof(FrameId);
     assert(Length % sizeof(CallStackId) == 0);
     CS.reserve(NumFrames);
     for (size_t I = 0; I != NumFrames; ++I) {

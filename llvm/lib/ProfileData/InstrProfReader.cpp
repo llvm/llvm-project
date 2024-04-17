@@ -1531,7 +1531,7 @@ IndexedInstrProfReader::getMemProfRecord(const uint64_t FuncNameHash) {
     llvm::SmallVector<memprof::Frame> Frames;
     auto CSIter = MemProfCallStackTable->find(CSId);
     if (CSIter == MemProfCallStackTable->end()) {
-      LastUnmappedFrameId = CSId;
+      LastUnmappedCSId = CSId;
     } else {
       const llvm::SmallVector<memprof::FrameId> &CS = *CSIter;
       Frames.reserve(CS.size());
