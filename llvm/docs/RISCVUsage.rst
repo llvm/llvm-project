@@ -119,6 +119,7 @@ on support follow.
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
+     ``Zama16b``       Supported
      ``Zawrs``         Assembly Support
      ``Zba``           Supported
      ``Zbb``           Supported
