@@ -153,7 +153,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-lambda-function-name
   <clang-tidy/checks/bugprone/lambda-function-name>` check by ignoring
-  ``__func__`` macro in lambda captures.
+  ``__func__`` macro in lambda captures and nested function declaration.
 
 - Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by

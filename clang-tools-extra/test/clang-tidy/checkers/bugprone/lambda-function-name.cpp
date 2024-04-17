@@ -19,7 +19,6 @@ void Positives() {
   // CHECK-MESSAGES-NO-CONFIG: :[[@LINE-1]]:8: warning: inside a lambda, '__FUNCTION__' expands to the name of the function call operator; consider capturing the name of the enclosing function explicitly [bugprone-lambda-function-name]
   [] { EMBED_IN_ANOTHER_MACRO1; }();
   // CHECK-MESSAGES-NO-CONFIG: :[[@LINE-1]]:8: warning: inside a lambda, '__func__' expands to the name of the function call operator; consider capturing the name of the enclosing function explicitly [bugprone-lambda-function-name]
-  [func=__func__] { func; }();
 }
 
 #define FUNC_MACRO_WITH_FILE_AND_LINE Foo(__func__, __FILE__, __LINE__)
@@ -41,4 +40,14 @@ void Negatives() {
   [] { FUNC_MACRO_WITH_FILE_AND_LINE; }();
   [] { FUNCTION_MACRO_WITH_FILE_AND_LINE; }();
   [] { EMBED_IN_ANOTHER_MACRO2; }();
+
+  [] (const char* func = __func__) { func; }();
+  [func=__func__] { func; }();
+  [] {
+    struct S {
+      void f() {
+        __func__;
+      }
+    };
+  }();
 }

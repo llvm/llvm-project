@@ -8,7 +8,9 @@
 
 #include "LambdaFunctionNameCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -71,8 +73,13 @@ void LambdaFunctionNameCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void LambdaFunctionNameCheck::registerMatchers(MatchFinder *Finder) {
-  auto IsInsideALambda = hasAncestor(cxxMethodDecl(isInLambda()));
-  Finder->addMatcher(predefinedExpr(IsInsideALambda).bind("E"), this);
+  Finder->addMatcher(
+      functionDecl(cxxMethodDecl(isInLambda()),
+                   hasBody(hasDescendant(expr(
+                       predefinedExpr(hasAncestor(functionDecl().bind("fn")))
+                           .bind("E")))),
+                   functionDecl(equalsBoundNode("fn"))),
+      this);
 }
 
 void LambdaFunctionNameCheck::registerPPCallbacks(
