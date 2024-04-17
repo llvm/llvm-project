@@ -573,7 +573,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
           .Case("csky", Triple::csky)
           .Case("loongarch32", Triple::loongarch32)
           .Case("loongarch64", Triple::loongarch64)
-          .Case("dxil", Triple::dxil)
+          .StartsWith("dxil", Triple::dxil)
           .Case("xtensa", Triple::xtensa)
           .Default(Triple::UnknownArch);
 
