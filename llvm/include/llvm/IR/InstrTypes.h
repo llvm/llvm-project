@@ -24,6 +24,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
@@ -309,6 +310,32 @@ public:
     BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);
     BO->copyIRFlags(CopyO);
     return BO;
+  }
+
+  static BinaryOperator *CreateWithFMF(BinaryOps Opc, Value *V1, Value *V2,
+                                       FastMathFlags FMF,
+                                       const Twine &Name = "",
+                                       Instruction *InsertBefore = nullptr) {
+    BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);
+    BO->setFastMathFlags(FMF);
+    return BO;
+  }
+
+  static BinaryOperator *CreateFAddFMF(Value *V1, Value *V2, FastMathFlags FMF,
+                                       const Twine &Name = "") {
+    return CreateWithFMF(Instruction::FAdd, V1, V2, FMF, Name);
+  }
+  static BinaryOperator *CreateFSubFMF(Value *V1, Value *V2, FastMathFlags FMF,
+                                       const Twine &Name = "") {
+    return CreateWithFMF(Instruction::FSub, V1, V2, FMF, Name);
+  }
+  static BinaryOperator *CreateFMulFMF(Value *V1, Value *V2, FastMathFlags FMF,
+                                       const Twine &Name = "") {
+    return CreateWithFMF(Instruction::FMul, V1, V2, FMF, Name);
+  }
+  static BinaryOperator *CreateFDivFMF(Value *V1, Value *V2, FastMathFlags FMF,
+                                       const Twine &Name = "") {
+    return CreateWithFMF(Instruction::FDiv, V1, V2, FMF, Name);
   }
 
   static BinaryOperator *CreateFAddFMF(Value *V1, Value *V2,

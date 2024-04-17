@@ -835,19 +835,23 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::Default: {
       Token DefKindTok = getCurToken();
 
-      if (expectIdentifierOrKeyword(*this))
-        break;
+      if (expectIdentifierOrKeyword(*this)) {
+        Parens.skipToEnd();
+        return OpenACCCanContinue();
+      }
 
       ConsumeToken();
 
       OpenACCDefaultClauseKind DefKind =
           getOpenACCDefaultClauseKind(DefKindTok);
 
-      if (DefKind == OpenACCDefaultClauseKind::Invalid)
+      if (DefKind == OpenACCDefaultClauseKind::Invalid) {
         Diag(DefKindTok, diag::err_acc_invalid_default_clause_kind);
-      else
-        ParsedClause.setDefaultDetails(DefKind);
+        Parens.skipToEnd();
+        return OpenACCCanContinue();
+      }
 
+      ParsedClause.setDefaultDetails(DefKind);
       break;
     }
     case OpenACCClauseKind::If: {
@@ -977,6 +981,8 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       case OpenACCClauseKind::Self: {
         assert(DirKind != OpenACCDirectiveKind::Update);
         ExprResult CondExpr = ParseOpenACCConditionExpr();
+        ParsedClause.setConditionDetails(CondExpr.isUsable() ? CondExpr.get()
+                                                             : nullptr);
 
         if (CondExpr.isInvalid()) {
           Parens.skipToEnd();

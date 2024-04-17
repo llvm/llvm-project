@@ -1019,14 +1019,12 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
                                 const SmallPtrSetImpl<BasicBlock *> &SuccPreds,
                                 BasicBlock *&CommonPred) {
 
-  // When Succ has no phis, BB may be merged into Succ directly. We don't need
-  // to redirect the predecessors of BB in this case.
-  if (Succ->phis().empty())
+  // There must be phis in BB, otherwise BB will be merged into Succ directly
+  if (BB->phis().empty() || Succ->phis().empty())
     return false;
 
-  // BB must have multiple different predecessors, so that at least one of
-  // predecessors can be redirected to Succ, except the common predecessor.
-  if (BB->getUniquePredecessor() || pred_empty(BB))
+  // BB must have predecessors not shared that can be redirected to Succ
+  if (!BB->hasNPredecessorsOrMore(2))
     return false;
 
   // Get single common predecessors of both BB and Succ
