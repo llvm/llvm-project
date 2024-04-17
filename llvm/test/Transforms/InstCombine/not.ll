@@ -430,9 +430,9 @@ define <3 x i5> @not_or_neg_commute_vec(<3 x i5> %x, <3 x i5> %p)  {
 ; CHECK-NEXT:    ret <3 x i5> [[NOT]]
 ;
   %y = mul <3 x i5> %p, <i5 1, i5 2, i5 3> ; thwart complexity-based-canonicalization
-  %s = sub <3 x i5> <i5 0, i5 0, i5 undef>, %x
+  %s = sub <3 x i5> <i5 0, i5 0, i5 poison>, %x
   %o = or <3 x i5> %y, %s
-  %not = xor <3 x i5> %o, <i5 -1, i5 undef, i5 -1>
+  %not = xor <3 x i5> %o, <i5 -1, i5 poison, i5 -1>
   ret <3 x i5> %not
 }
 

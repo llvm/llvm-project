@@ -3200,7 +3200,7 @@ def fir_CUDAAllocateOp : fir_Op<"cuda_allocate", [AttrSizedOperandSegments,
     is initialized before with the standard flang runtime calls.
   }];
 
-  let arguments = (ins Arg<AnyRefOrBoxType, "", [MemWrite]>:$box,
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
                        Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
                        Optional<AnyIntegerType>:$stream,
                        Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
@@ -3216,6 +3216,31 @@ def fir_CUDAAllocateOp : fir_Op<"cuda_allocate", [AttrSizedOperandSegments,
     ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
     ( `stream` `(` $stream^ `:` type($stream) `)` )?
     ( `pinned` `(` $pinned^ `:` type($pinned) `)` )?
+    attr-dict `->` type($stat)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_CUDADeallocateOp : fir_Op<"cuda_deallocate",
+    [MemoryEffects<[MemFree<DefaultResource>]>]> {
+  let summary = "Perform the device deallocation of data of an allocatable";
+
+  let description = [{
+    The fir.cuda_deallocate operation performs the deallocation on the device
+    of the data of an allocatable.
+  }];
+
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+                       fir_CUDADataAttributeAttr:$cuda_attr,
+                       UnitAttr:$hasStat);
+
+  let results = (outs AnyIntegerType:$stat);
+
+  let assemblyFormat = [{
+    $box `:` qualified(type($box))
+    ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
     attr-dict `->` type($stat)
   }];
 

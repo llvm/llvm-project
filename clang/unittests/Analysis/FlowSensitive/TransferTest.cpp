@@ -3182,6 +3182,58 @@ TEST(TransferTest, ResultObjectLocationForStdInitializerListExpr) {
       });
 }
 
+TEST(TransferTest, ResultObjectLocationForStmtExpr) {
+  std::string Code = R"(
+    struct S {};
+    void target() {
+      S s = ({ S(); });
+      // [[p]]
+    }
+  )";
+  using ast_matchers::cxxConstructExpr;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  using ast_matchers::traverse;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Construct = selectFirst<CXXConstructExpr>(
+            "construct", match(cxxConstructExpr().bind("construct"), ASTCtx));
+
+        EXPECT_EQ(&Env.getResultObjectLocation(*Construct),
+                  &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "s"));
+      });
+}
+
+TEST(TransferTest, ResultObjectLocationForBuiltinBitCastExpr) {
+  std::string Code = R"(
+    struct S { int i; };
+    void target(int i) {
+      S s = __builtin_bit_cast(S, i);
+      // [[p]]
+    }
+  )";
+  using ast_matchers::explicitCastExpr;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  using ast_matchers::traverse;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *BuiltinBitCast = selectFirst<BuiltinBitCastExpr>(
+            "cast", match(explicitCastExpr().bind("cast"), ASTCtx));
+
+        EXPECT_EQ(&Env.getResultObjectLocation(*BuiltinBitCast),
+                  &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "s"));
+      });
+}
+
 TEST(TransferTest, ResultObjectLocationPropagatesThroughConditionalOperator) {
   std::string Code = R"(
     struct A {

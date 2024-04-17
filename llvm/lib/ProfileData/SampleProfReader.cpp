@@ -503,7 +503,7 @@ ErrorOr<T> SampleProfileReaderBinary::readUnencodedNumber() {
   }
 
   using namespace support;
-  T Val = endian::readNext<T, llvm::endianness::little, unaligned>(Data);
+  T Val = endian::readNext<T, llvm::endianness::little>(Data);
   return Val;
 }
 

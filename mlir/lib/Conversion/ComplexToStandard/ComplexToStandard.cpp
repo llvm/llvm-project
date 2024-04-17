@@ -1289,13 +1289,14 @@ struct AngleOpConversion : public OpConversionPattern<complex::AngleOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     auto type = op.getType();
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
 
     Value real =
         rewriter.create<complex::ReOp>(loc, type, adaptor.getComplex());
     Value imag =
         rewriter.create<complex::ImOp>(loc, type, adaptor.getComplex());
 
-    rewriter.replaceOpWithNewOp<math::Atan2Op>(op, imag, real);
+    rewriter.replaceOpWithNewOp<math::Atan2Op>(op, imag, real, fmf);
 
     return success();
   }

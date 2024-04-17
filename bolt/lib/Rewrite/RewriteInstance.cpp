@@ -5767,10 +5767,3 @@ bool RewriteInstance::isDebugSection(StringRef SectionName) {
 
   return false;
 }
-
-bool RewriteInstance::isKSymtabSection(StringRef SectionName) {
-  if (SectionName.starts_with("__ksymtab"))
-    return true;
-
-  return false;
-}
