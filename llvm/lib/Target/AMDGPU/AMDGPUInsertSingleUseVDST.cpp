@@ -108,7 +108,7 @@ public:
 
           // Reset uses count when a register is no longer live.
           for (const MCRegUnit &Unit : RegUnits)
-            RegisterUseCount[Unit] = 0;
+            RegisterUseCount.erase(Unit);
         }
         if (AllProducerOperandsAreSingleUse && SIInstrInfo::isVALU(MI)) {
           // TODO: Replace with candidate logging for instruction grouping
