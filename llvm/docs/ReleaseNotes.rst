@@ -435,6 +435,12 @@ Changes to Sanitizers
 ---------------------
 * HWASan now defaults to detecting use-after-scope bugs.
 
+* ``SpecialCaseList`` used by sanitizer ignore lists (e.g. ``*_ignorelist.txt``
+  in the Clang resource directory) now uses glob patterns instead of a variant
+  of POSIX Extended Regular Expression (where ``*`` is translated to ``.*``) by
+  default. Search for ``|`` to find patterns that may have different meanings
+  now.
+
 Changes to the Profile Runtime
 ------------------------------
 
