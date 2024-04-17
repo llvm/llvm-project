@@ -1276,6 +1276,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FDIV,        MVT::v2f64, Legal);
   }
 
+  if (Subtarget.hasGFNI()) {
+    setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
+    setOperationAction(ISD::BITREVERSE, MVT::i16, Custom);
+    setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
+    setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
+  }
+
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSSE3()) {
     setOperationAction(ISD::ABS,                MVT::v16i8, Legal);
     setOperationAction(ISD::ABS,                MVT::v8i16, Legal);
@@ -1284,13 +1291,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
       setOperationAction(ISD::BITREVERSE,       VT, Custom);
       setOperationAction(ISD::CTLZ,             VT, Custom);
-    }
-
-    if (Subtarget.hasGFNI()) {
-      setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
-      setOperationAction(ISD::BITREVERSE, MVT::i16, Custom);
-      setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
-      setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
     }
 
     // These might be better off as horizontal vector ops.
