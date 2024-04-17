@@ -7,7 +7,6 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-import re
 
 
 class ModuleLoadedNotifysTestCase(TestBase):
@@ -71,7 +70,6 @@ class ModuleLoadedNotifysTestCase(TestBase):
         total_modules_added_events = 0
         total_modules_removed_events = 0
         already_loaded_modules = []
-        ld_name_pattern = re.compile("^ld.*\.so")
         while listener.GetNextEvent(event):
             if lldb.SBTarget.EventIsTargetEvent(event):
                 if event.GetType() == lldb.SBTarget.eBroadcastBitModulesLoaded:
@@ -85,14 +83,8 @@ class ModuleLoadedNotifysTestCase(TestBase):
                         # will be loaded again when dyld moves itself into the
                         # shared cache. Use the basename so this also works
                         # when reading dyld from the expanded shared cache.
-                        # On linux, ld.so will be loaded only once, but the
-                        # broadcaster event will be sent twice.
-                        module.file.basename
                         exe_basename = lldb.SBFileSpec(exe).basename
-                        if module.file.basename not in [
-                            "dyld",
-                            exe_basename,
-                        ] and not ld_name_pattern.match(module.file.basename):
+                        if module.file.basename not in ["dyld", exe_basename]:
                             self.assertNotIn(
                                 module,
                                 already_loaded_modules,

@@ -572,9 +572,11 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadInterpreterModule() {
   ModuleSpec module_spec(file, target.GetArchitecture());
 
   if (ModuleSP module_sp = target.GetOrCreateModule(module_spec,
-                                                    true /* notify */)) {
+                                                    false /* notify */)) {
     UpdateLoadedSections(module_sp, LLDB_INVALID_ADDRESS, m_interpreter_base,
                          false);
+    // Manually notify that dynamic linker is loaded after updating load section
+    // addersses so that breakpoints can be resolved.
     ModuleList module_list;
     module_list.Append(module_sp);
     target.ModulesDidLoad(module_list);
