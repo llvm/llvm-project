@@ -205,8 +205,12 @@ void InvalidPtrChecker::postPreviousReturnInvalidatingCall(
       CE, LCtx, CE->getType(), C.blockCount());
   State = State->BindExpr(CE, LCtx, RetVal);
 
+  const auto *SymRegOfRetVal =
+      dyn_cast_or_null<SymbolicRegion>(RetVal.getAsRegion());
+  if (!SymRegOfRetVal)
+    return;
+
   // Remember to this region.
-  const auto *SymRegOfRetVal = cast<SymbolicRegion>(RetVal.getAsRegion());
   const MemRegion *MR = SymRegOfRetVal->getBaseRegion();
   State = State->set<PreviousCallResultMap>(FD, MR);
 
