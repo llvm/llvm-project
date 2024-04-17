@@ -295,27 +295,31 @@ int main_platform(int argc, char *argv[]) {
     }
     printf("Connection established.\n");
 
-    std::optional<uint16_t> port = 0;
     if (g_server) {
       // Collect child zombie processes.
 #if !defined(_WIN32)
-      auto waitResult = waitpid(-1, nullptr, WNOHANG);
-      while (waitResult > 0) {
+      ::pid_t waitResult;
+      while ((waitResult = waitpid(-1, nullptr, WNOHANG)) > 0) {
         // waitResult is the child pid
         gdbserver_portmap.FreePortForProcess(waitResult);
-        waitResult = waitpid(-1, nullptr, WNOHANG);
       }
 #endif
+      // TODO: Clean up portmap for Windows when children die
+
+      // After collecting zombie ports, get the next available
+      GDBRemoteCommunicationServerPlatform::PortMap portmap_for_child;
       llvm::Expected<uint16_t> available_port =
           gdbserver_portmap.GetNextAvailablePort();
       if (available_port)
-        port = *available_port;
-
+        portmap_for_child.AllowPort(*available_port);
       else {
-        fprintf(stderr, "no available port for connection - dropping...\n");
+        fprintf(stderr,
+                "no available gdbserver port for connection - dropping...\n");
         delete conn;
         continue;
       }
+      platform.SetPortMap(std::move(portmap_for_child));
+
       auto childPid = fork();
       if (childPid) {
         gdbserver_portmap.AssociatePortWithProcess(*available_port, childPid);
@@ -334,11 +338,11 @@ int main_platform(int argc, char *argv[]) {
       // If not running as a server, this process will not accept
       // connections while a connection is active.
       acceptor_up.reset();
+
+      // When not running in server mode, use all available ports
+      platform.SetPortMap(std::move(gdbserver_portmap));
     }
 
-    GDBRemoteCommunicationServerPlatform::PortMap portmap_for_child;
-    portmap_for_child.AllowPort(*port);
-    platform.SetPortMap(std::move(portmap_for_child));
     platform.SetConnection(std::unique_ptr<Connection>(conn));
 
     if (platform.IsConnected()) {
