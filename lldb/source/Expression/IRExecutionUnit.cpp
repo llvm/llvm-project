@@ -13,6 +13,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -279,10 +280,13 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   llvm::EngineBuilder builder(std::move(m_module_up));
   llvm::Triple triple(m_module->getTargetTriple());
 
+  // PIC needed for ELF to avoid generating 32-bit relocations (which overflow
+  // if the object is loaded into high memory).
+  bool want_pic = triple.isOSBinFormatMachO() || triple.isOSBinFormatELF();
+
   builder.setEngineKind(llvm::EngineKind::JIT)
       .setErrorStr(&error_string)
-      .setRelocationModel(triple.isOSBinFormatMachO() ? llvm::Reloc::PIC_
-                                                      : llvm::Reloc::Static)
+      .setRelocationModel(want_pic ? llvm::Reloc::PIC_ : llvm::Reloc::Static)
       .setMCJITMemoryManager(std::make_unique<MemoryManager>(*this))
       .setOptLevel(llvm::CodeGenOptLevel::Less);
 
