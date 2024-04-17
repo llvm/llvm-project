@@ -792,10 +792,15 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   llvm::cl::PrintOptionValues();
 
+  // Expand response files in advance, so that we can "see" all the arguments
+  // when adjusting below.
+  auto ResponseExpander = expandResponseFiles(std::move(Compilations),
+                                              llvm::vfs::getRealFileSystem());
+
   // The command options are rewritten to run Clang in preprocessor only mode.
   auto AdjustingCompilations =
       std::make_unique<tooling::ArgumentsAdjustingCompilations>(
-          std::move(Compilations));
+          std::move(ResponseExpander));
   ResourceDirectoryCache ResourceDirCache;
 
   AdjustingCompilations->appendArgumentsAdjuster(
