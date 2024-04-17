@@ -3012,20 +3012,15 @@ private:
         if (!isConstant(V)) {
           auto *I = dyn_cast<CastInst>(V);
           AllConstsOrCasts &= I && I->getType()->isIntegerTy();
-          ValueToGatherNodes.try_emplace(V).first->getSecond().insert(Last);
+          if (GatheredLoadsEntriesFirst == NoGatheredLoads ||
+              Last->Idx < GatheredLoadsEntriesFirst || UserTreeIdx.UserTE ||
+              S.getOpcode() != Instruction::Load)
+            ValueToGatherNodes.try_emplace(V).first->getSecond().insert(Last);
         }
       if (AllConstsOrCasts)
         CastMaxMinBWSizes =
             std::make_pair(std::numeric_limits<unsigned>::max(), 1);
       MustGather.insert(VL.begin(), VL.end());
-      if (GatheredLoadsEntriesFirst == NoGatheredLoads ||
-          Last->Idx < GatheredLoadsEntriesFirst || UserTreeIdx.UserTE ||
-          S.getOpcode() != Instruction::Load) {
-        // Build a map for gathered scalars to the nodes where they are used.
-        for (Value *V : VL)
-          if (!isConstant(V))
-            ValueToGatherNodes.try_emplace(V).first->getSecond().insert(Last);
-      }
     }
 
     if (UserTreeIdx.UserTE) {
@@ -5618,8 +5613,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
         if (CurrentEntry->getOpcode() == Instruction::Call) {
           auto *CI = cast<CallInst>(CurrentEntry->getMainOp());
           Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-          if (I >= CI->arg_size() ||
-              isVectorIntrinsicWithScalarOpAtArg(ID, I))
+          if (I >= CI->arg_size() || isVectorIntrinsicWithScalarOpAtArg(ID, I))
             continue;
         }
         const TreeEntry *Op = getOperandEntry(CurrentEntry, I);
@@ -6066,9 +6060,10 @@ void BoUpSLP::tryToVectorizeGatheredLoads() {
     return L1.second > L2.second;
   };
 
-  auto GetVectorizedRanges = [this](ArrayRef<LoadInst *> Loads,
-                                    BoUpSLP::ValueSet &VectorizedLoads,
-                                    SmallVectorImpl<LoadInst *> &NonVectorized) {
+  auto GetVectorizedRanges = [this](
+                                 ArrayRef<LoadInst *> Loads,
+                                 BoUpSLP::ValueSet &VectorizedLoads,
+                                 SmallVectorImpl<LoadInst *> &NonVectorized) {
     SmallVector<std::pair<ArrayRef<Value *>, LoadsState>> Results;
     unsigned StartIdx = 0;
     SmallVector<int> CandidateVFs;
@@ -13634,9 +13629,9 @@ Value *BoUpSLP::vectorizeTree(
   // gathered loads.
   for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
     if (GatheredLoadsEntriesFirst != NoGatheredLoads &&
-               TE->Idx >= GatheredLoadsEntriesFirst &&
-               (TE->State != TreeEntry::NeedToGather ||
-                !TE->UserTreeIndices.empty())) {
+        TE->Idx >= GatheredLoadsEntriesFirst &&
+        (TE->State != TreeEntry::NeedToGather ||
+         !TE->UserTreeIndices.empty())) {
       assert((!TE->UserTreeIndices.empty() ||
               (TE->getOpcode() == Instruction::Load &&
                TE->State != TreeEntry::NeedToGather)) &&
