@@ -1454,11 +1454,15 @@ class Base(unittest.TestCase):
     def build(
         self,
         debug_info=None,
+        target_os=None,
         architecture=None,
         compiler=None,
         dictionary=None,
         make_targets=None,
     ):
+        if not target_os and configuration.target_os:
+            target_os = configuration.target_os
+
         """Platform specific way to build binaries."""
         if not architecture and configuration.arch:
             architecture = configuration.arch

@@ -266,6 +266,8 @@ def parseOptionsAndInitTestdirs():
                     configuration.compiler = candidate
                     break
 
+    if args.make:
+        configuration.make_path = args.make
     if args.dsymutil:
         configuration.dsymutil = args.dsymutil
     elif platform_system == "Darwin":
@@ -304,13 +306,18 @@ def parseOptionsAndInitTestdirs():
         lldbtest_config.out_of_tree_debugserver = args.out_of_tree_debugserver
 
     # Set SDKROOT if we are using an Apple SDK
-    if platform_system == "Darwin" and args.apple_sdk:
+    if args.sysroot is not None:
+        configuration.sdkroot = args.sysroot
+    elif platform_system == "Darwin" and args.apple_sdk:
         configuration.sdkroot = seven.get_command_output(
             'xcrun --sdk "%s" --show-sdk-path 2> /dev/null' % (args.apple_sdk)
         )
         if not configuration.sdkroot:
             logging.error("No SDK found with the name %s; aborting...", args.apple_sdk)
             sys.exit(-1)
+
+    if args.target_os:
+        configuration.target_os = args.target_os
 
     if args.arch:
         configuration.arch = args.arch

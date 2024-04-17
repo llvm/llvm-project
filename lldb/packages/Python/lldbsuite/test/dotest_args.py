@@ -32,6 +32,15 @@ def create_parser():
     # C and Python toolchain options
     group = parser.add_argument_group("Toolchain options")
     group.add_argument(
+        "--target-os",
+        metavar="target_os",
+        dest="target_os",
+        default="",
+        help=textwrap.dedent(
+            """Specify target os for test compilation. This is useful for cross-compilation."""
+        ),
+    )
+    group.add_argument(
         "-A",
         "--arch",
         metavar="arch",
@@ -47,6 +56,15 @@ def create_parser():
         dest="compiler",
         help=textwrap.dedent(
             """Specify the compiler(s) used to build the inferior executables. The compiler path can be an executable basename or a full path to a compiler executable. This option can be specified multiple times."""
+        ),
+    )
+    group.add_argument(
+        "--sysroot",
+        metavar="sysroot",
+        dest="sysroot",
+        default="",
+        help=textwrap.dedent(
+            """Specify the path to sysroot. This overrides apple_sdk sysroot."""
         ),
     )
     if sys.platform == "darwin":
@@ -87,6 +105,12 @@ def create_parser():
         ),
     )
 
+    group.add_argument(
+        "--make",
+        metavar="make",
+        dest="make",
+        help=textwrap.dedent("Specify which make to use."),
+    )
     group.add_argument(
         "--dsymutil",
         metavar="dsymutil",
