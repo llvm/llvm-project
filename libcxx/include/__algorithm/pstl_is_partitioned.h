@@ -10,11 +10,11 @@
 #define _LIBCPP___ALGORITHM_PSTL_IS_PARITTIONED
 
 #include <__algorithm/pstl_any_all_none_of.h>
-#include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_find.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__config>
 #include <__iterator/cpp17_iterator_concepts.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>

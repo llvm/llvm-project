@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_LIBDISPATCH_H
-#define _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_LIBDISPATCH_H
+#ifndef _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
+#define _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
 
 #include <__algorithm/inplace_merge.h>
 #include <__algorithm/lower_bound.h>
@@ -23,6 +23,7 @@
 #include <__memory/construct_at.h>
 #include <__memory/unique_ptr.h>
 #include <__numeric/reduce.h>
+#include <__pstl/configuration_fwd.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__utility/empty.h>
 #include <__utility/exception_guard.h>
@@ -39,8 +40,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
-
-struct __libdispatch_backend_tag {};
 
 namespace __libdispatch {
 // ::dispatch_apply is marked as __attribute__((nothrow)) because it doesn't let exceptions propagate, and neither do
@@ -349,4 +348,14 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_LIBDISPATCH_H
+// Implement PSTL algorithms based on the __cpu_traits specialized above
+#include <__algorithm/pstl_backends/cpu_backends/any_of.h>
+#include <__algorithm/pstl_backends/cpu_backends/fill.h>
+#include <__algorithm/pstl_backends/cpu_backends/find_if.h>
+#include <__algorithm/pstl_backends/cpu_backends/for_each.h>
+#include <__algorithm/pstl_backends/cpu_backends/merge.h>
+#include <__algorithm/pstl_backends/cpu_backends/stable_sort.h>
+#include <__algorithm/pstl_backends/cpu_backends/transform.h>
+#include <__algorithm/pstl_backends/cpu_backends/transform_reduce.h>
+
+#endif // _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H

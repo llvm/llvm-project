@@ -9,12 +9,12 @@
 #ifndef _LIBCPP___NUMERIC_PSTL_TRANSFORM_REDUCE_H
 #define _LIBCPP___NUMERIC_PSTL_TRANSFORM_REDUCE_H
 
-#include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__config>
 #include <__functional/operations.h>
 #include <__iterator/cpp17_iterator_concepts.h>
 #include <__numeric/transform_reduce.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>
 #include <optional>
