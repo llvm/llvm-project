@@ -17,10 +17,10 @@ class ModulePass;
 class OptimizationLevel;
 
 enum class ExpandVariadicsMode {
-  unspecified,
-  disable,
-  optimize,
-  lowering,
+  Unspecified, // Use the implementation defaults
+  Disable, // Disable the pass entirely
+  Optimize, // Optimise without changing ABI
+  Lowering, // Change variadic calling convention
 };
 
 class ExpandVariadicsPass : public PassInfoMixin<ExpandVariadicsPass> {

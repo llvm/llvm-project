@@ -117,8 +117,10 @@ Address AMDGPUABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                  QualType Ty) const {
   const bool IsIndirect = false;
   const bool AllowHigherAlign = true;
-  // Would rather not naturally align values
-  // Splitting {char, short} into two separate arguments makes that difficult.
+  // Would rather not naturally align values, e.g. passing double on 4 bytes
+  // Splitting {char, short} into two separate arguments makes that difficult
+  // TODO: See if forcing exactly four byte alignment on everything, struct or
+  // scalar, lowers correctly regardless of structs being split across arguments
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(1), AllowHigherAlign);

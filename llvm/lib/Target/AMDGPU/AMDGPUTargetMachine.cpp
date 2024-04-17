@@ -975,7 +975,7 @@ void AMDGPUPassConfig::addIRPasses() {
   if (isPassEnabled(EnableImageIntrinsicOptimizer))
     addPass(createAMDGPUImageIntrinsicOptimizerPass(&TM));
 
-  addPass(createExpandVariadicsPass(ExpandVariadicsMode::lowering));
+  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
 
   // Function calls are not supported, so make sure we inline everything.
   addPass(createAMDGPUAlwaysInlinePass());

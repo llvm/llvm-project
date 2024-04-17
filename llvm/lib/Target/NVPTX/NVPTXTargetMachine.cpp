@@ -325,7 +325,7 @@ void NVPTXPassConfig::addIRPasses() {
   }));
 
   // Should run before anything (else!) that adjusts calling conventions
-  addPass(createExpandVariadicsPass(ExpandVariadicsMode::lowering));
+  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
 
   // NVVMReflectPass is added in addEarlyAsPossiblePasses, so hopefully running
   // it here does nothing.  But since we need it for correctness when lowering

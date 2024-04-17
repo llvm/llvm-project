@@ -53,26 +53,27 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <cstdio>
-
 #define DEBUG_TYPE "expand-variadics"
 
 using namespace llvm;
 
 cl::opt<ExpandVariadicsMode> ExpandVariadicsModeOption(
     DEBUG_TYPE "-override", cl::desc("Override the behaviour of " DEBUG_TYPE),
-    cl::init(ExpandVariadicsMode::unspecified),
-    cl::values(clEnumValN(ExpandVariadicsMode::unspecified, "unspecified",
+    cl::init(ExpandVariadicsMode::Unspecified),
+    cl::values(clEnumValN(ExpandVariadicsMode::Unspecified, "unspecified",
                           "Use the implementation defaults"),
-               clEnumValN(ExpandVariadicsMode::disable, "disable",
+               clEnumValN(ExpandVariadicsMode::Disable, "disable",
                           "Disable the pass entirely"),
-               clEnumValN(ExpandVariadicsMode::optimize, "optimize",
+               clEnumValN(ExpandVariadicsMode::Optimize, "optimize",
                           "Optimise without changing ABI"),
-               clEnumValN(ExpandVariadicsMode::lowering, "lowering",
+               clEnumValN(ExpandVariadicsMode::Lowering, "lowering",
                           "Change variadic calling convention")));
 
 namespace {
 
+// At present Intrinsic:: has no interface to test if a declaration is in the
+// module without creating one. Inserting a declaration and then testing if it
+// has any uses and then deleting it seems a bad way to do the query.
 // Module implements getFunction() which returns nullptr on missing declaration
 // and getOrInsertFunction which creates one when absent. Intrinsics.h
 // implements getDeclaration which creates one when missing. This should be
@@ -319,7 +320,7 @@ class ExpandVariadics : public ModulePass {
   static ExpandVariadicsMode
   withCommandLineOverride(ExpandVariadicsMode LLVMRequested) {
     ExpandVariadicsMode UserRequested = ExpandVariadicsModeOption;
-    return (UserRequested == ExpandVariadicsMode::unspecified) ? LLVMRequested
+    return (UserRequested == ExpandVariadicsMode::Unspecified) ? LLVMRequested
                                                                : UserRequested;
   }
 
@@ -346,7 +347,7 @@ public:
   // Entry point
   bool runOnModule(Module &M) override;
 
-  bool rewriteABI() { return Mode == ExpandVariadicsMode::lowering; }
+  bool rewriteABI() { return Mode == ExpandVariadicsMode::Lowering; }
 
   void memcpyVAListPointers(const DataLayout &DL, IRBuilder<> &Builder,
                             Value *Dst, Value *Src) {
@@ -550,7 +551,7 @@ public:
 
 bool ExpandVariadics::runOnModule(Module &M) {
   bool Changed = false;
-  if (Mode == ExpandVariadicsMode::disable)
+  if (Mode == ExpandVariadicsMode::Disable)
     return Changed;
 
   llvm::Triple Triple(M.getTargetTriple());
@@ -562,7 +563,7 @@ bool ExpandVariadics::runOnModule(Module &M) {
 
   ABI = VariadicABIInfo::create(Triple);
   if (!ABI) {
-    if (Mode == ExpandVariadicsMode::lowering) {
+    if (Mode == ExpandVariadicsMode::Lowering) {
       report_fatal_error(
           "Requested variadic lowering is unimplemented on this target");
     }
@@ -608,7 +609,7 @@ bool ExpandVariadics::runOnModule(Module &M) {
   // and va_copy are removed. All that remains is for the lowering pass to find
   // indirect calls and rewrite those as well.
 
-  if (Mode == ExpandVariadicsMode::lowering) {
+  if (Mode == ExpandVariadicsMode::Lowering) {
     for (Function &F : llvm::make_early_inc_range(M)) {
       if (F.isDeclaration())
         continue;
@@ -637,8 +638,6 @@ bool ExpandVariadics::runOnModule(Module &M) {
 bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
                                     Function *F) {
   bool Changed = false;
-
-  // fprintf(stderr, "Called runOn: %s\n", F->getName().str().c_str());
 
   // This check might be too coarse - there are probably cases where
   // splitting a function is bad but it's usable without splitting
@@ -674,7 +673,7 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
         Value *calledOperand = CB->getCalledOperand();
         if (F == calledOperand) {
           report_fatal_error(
-              "ExpandVA abi requires eliminating call uses first\n");
+              "ExpandVA abi requires eliminating call uses first");
         }
       }
 
@@ -1049,8 +1048,8 @@ PreservedAnalyses ExpandVariadicsPass::run(Module &M, ModuleAnalysisManager &) {
 
 ExpandVariadicsPass::ExpandVariadicsPass(OptimizationLevel Level)
     : ExpandVariadicsPass(Level == OptimizationLevel::O0
-                              ? ExpandVariadicsMode::disable
-                              : ExpandVariadicsMode::optimize) {}
+                              ? ExpandVariadicsMode::Disable
+                              : ExpandVariadicsMode::Optimize) {}
 
 ExpandVariadicsPass::ExpandVariadicsPass(ExpandVariadicsMode Mode)
     : ConstructedMode(Mode) {}
