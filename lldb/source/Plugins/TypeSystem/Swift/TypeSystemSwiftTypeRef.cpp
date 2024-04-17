@@ -24,7 +24,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
-#include "lldb/Core/StreamFile.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
