@@ -19,6 +19,7 @@
 #include <__functional/invoke.h>
 #include <__ranges/concepts.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/is_class.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
@@ -41,6 +42,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // - `x | f` is equivalent to `f(x)`
 // - `f1 | f2` is an adaptor closure `g` such that `g(x)` is equivalent to `f2(f1(x))`
 template <class _Tp>
+  requires is_class_v<_Tp> && same_as<_Tp, remove_cv_t<_Tp>>
 struct __range_adaptor_closure;
 
 // Type that wraps an arbitrary function object and makes it into a range adaptor closure,
@@ -52,15 +54,21 @@ struct __range_adaptor_closure_t : _Fn, __range_adaptor_closure<__range_adaptor_
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__range_adaptor_closure_t);
 
 template <class _Tp>
-concept _RangeAdaptorClosure = derived_from<remove_cvref_t<_Tp>, __range_adaptor_closure<remove_cvref_t<_Tp>>>;
+_Tp __derived_from_range_adaptor_closure(__range_adaptor_closure<_Tp>*);
 
 template <class _Tp>
+concept _RangeAdaptorClosure = !ranges::range<remove_cvref_t<_Tp>> && requires {
+  { __derived_from_range_adaptor_closure((remove_cvref_t<_Tp>*)nullptr) } -> same_as<remove_cvref_t<_Tp>>;
+};
+
+template <class _Tp>
+  requires is_class_v<_Tp> && same_as<_Tp, remove_cv_t<_Tp>>
 struct __range_adaptor_closure {
-  template <ranges::viewable_range _View, _RangeAdaptorClosure _Closure>
-    requires same_as<_Tp, remove_cvref_t<_Closure>> && invocable<_Closure, _View>
+  template <ranges::range _Range, _RangeAdaptorClosure _Closure>
+    requires same_as<_Tp, remove_cvref_t<_Closure>> && invocable<_Closure, _Range>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
-  operator|(_View&& __view, _Closure&& __closure) noexcept(is_nothrow_invocable_v<_Closure, _View>) {
-    return std::invoke(std::forward<_Closure>(__closure), std::forward<_View>(__view));
+  operator|(_Range&& __range, _Closure&& __closure) noexcept(is_nothrow_invocable_v<_Closure, _Range>) {
+    return std::invoke(std::forward<_Closure>(__closure), std::forward<_Range>(__range));
   }
 
   template <_RangeAdaptorClosure _Closure, _RangeAdaptorClosure _OtherClosure>
@@ -72,6 +80,13 @@ struct __range_adaptor_closure {
     return __range_adaptor_closure_t(std::__compose(std::forward<_OtherClosure>(__c2), std::forward<_Closure>(__c1)));
   }
 };
+
+#  if _LIBCPP_STD_VER >= 23
+namespace ranges {
+template <class _Tp>
+using range_adaptor_closure = __range_adaptor_closure<_Tp>;
+} // namespace ranges
+#  endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP_STD_VER >= 20
 
