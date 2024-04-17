@@ -14,7 +14,7 @@ entry:
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#]]
   ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#]]
   ; CHECK: %[[#arg2:]] = OpFunctionParameter %[[#]]
-  ; CHECK: %[[#]] = OpExtInst %[[#float_16:]] %[[#op_ext_glsl:]] FMix %[[#arg0:]] %[[#arg1:]] %[[#arg2:]]
+  ; CHECK: %[[#]] = OpExtInst %[[#float_16]] %[[#op_ext_glsl]] FMix %[[#arg0]] %[[#arg1]] %[[#arg2]]
   %hlsl.lerp = call half @llvm.spv.lerp.f16(half %a, half %b, half %c)
   ret half %hlsl.lerp
 }
@@ -25,7 +25,7 @@ entry:
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#]]
   ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#]]
   ; CHECK: %[[#arg2:]] = OpFunctionParameter %[[#]]
-  ; CHECK: %[[#]] = OpExtInst %[[#float_32:]] %[[#op_ext_glsl:]] FMix %[[#arg0:]] %[[#arg1:]] %[[#arg2:]]
+  ; CHECK: %[[#]] = OpExtInst %[[#float_32]] %[[#op_ext_glsl]] FMix %[[#arg0]] %[[#arg1]] %[[#arg2]]
   %hlsl.lerp = call float @llvm.spv.lerp.f32(float %a, float %b, float %c)
   ret float %hlsl.lerp
 }
@@ -35,7 +35,7 @@ entry:
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#]]
   ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#]]
   ; CHECK: %[[#arg2:]] = OpFunctionParameter %[[#]]
-  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_16:]] %[[#op_ext_glsl:]] FMix %[[#arg0:]] %[[#arg1:]] %[[#arg2:]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_16]] %[[#op_ext_glsl]] FMix %[[#arg0]] %[[#arg1]] %[[#arg2]]
   %hlsl.lerp = call <4 x half> @llvm.spv.lerp.v4f16(<4 x half> %a, <4 x half> %b, <4 x half> %c)
   ret <4 x half> %hlsl.lerp
 }
@@ -45,7 +45,7 @@ entry:
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#]]
   ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#]]
   ; CHECK: %[[#arg2:]] = OpFunctionParameter %[[#]]
-  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32:]] %[[#op_ext_glsl:]] FMix %[[#arg0:]] %[[#arg1:]] %[[#arg2:]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] FMix %[[#arg0]] %[[#arg1]] %[[#arg2]]
   %hlsl.lerp = call <4 x float> @llvm.spv.lerp.v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c)
   ret <4 x float> %hlsl.lerp
 }
