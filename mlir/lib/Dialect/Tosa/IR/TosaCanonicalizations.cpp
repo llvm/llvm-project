@@ -514,9 +514,8 @@ OpFoldResult ArgMaxOp::fold(FoldAdaptor adaptor) {
       !outputTy.hasStaticShape())
     return {};
 
-  if (inputTy.getDimSize(getAxis()) == 1) {
+  if (inputTy.getDimSize(getAxis()) == 1)
     return DenseElementsAttr::get(outputTy, 0);
-  }
 
   return {};
 }
