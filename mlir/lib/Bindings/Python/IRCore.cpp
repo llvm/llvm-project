@@ -674,6 +674,7 @@ void PyMlirContext::clearOperationsInside(PyOperationBase &op) {
       data->rootOp.getOperation().getContext()->clearOperation(op);
     else
       data->rootSeen = true;
+    return MlirWalkResult::MlirWalkResultAdvance;
   };
   mlirOperationWalk(op.getOperation(), invalidatingCallback,
                     static_cast<void *>(&data), MlirWalkPreOrder);
@@ -1247,6 +1248,21 @@ void PyOperationBase::writeBytecode(const py::object &fileObject,
     throw py::value_error((Twine("Unable to honor desired bytecode version ") +
                            Twine(*bytecodeVersion))
                               .str());
+}
+
+void PyOperationBase::walk(
+    std::function<MlirWalkResult(MlirOperation)> callback,
+    MlirWalkOrder walkOrder) {
+  PyOperation &operation = getOperation();
+  operation.checkValid();
+  MlirOperationWalkCallback walkCallback = [](MlirOperation op,
+                                              void *userData) {
+    auto *fn =
+        static_cast<std::function<MlirWalkResult(MlirOperation)> *>(userData);
+    return (*fn)(op);
+  };
+
+  mlirOperationWalk(operation, walkCallback, &callback, walkOrder);
 }
 
 py::object PyOperationBase::getAsm(bool binary,
@@ -2511,6 +2527,15 @@ void mlir::python::populateIRCore(py::module &m) {
       .value("NOTE", MlirDiagnosticNote)
       .value("REMARK", MlirDiagnosticRemark);
 
+  py::enum_<MlirWalkOrder>(m, "WalkOrder", py::module_local())
+      .value("PRE_ORDER", MlirWalkPreOrder)
+      .value("POST_ORDER", MlirWalkPostOrder);
+
+  py::enum_<MlirWalkResult>(m, "WalkResult", py::module_local())
+      .value("ADVANCE", MlirWalkResultAdvance)
+      .value("INTERRUPT", MlirWalkResultInterrupt)
+      .value("SKIP", MlirWalkResultSkip);
+
   //----------------------------------------------------------------------------
   // Mapping of Diagnostics.
   //----------------------------------------------------------------------------
@@ -2989,8 +3014,7 @@ void mlir::python::populateIRCore(py::module &m) {
            py::arg("binary") = false, kOperationPrintStateDocstring)
       .def("print",
            py::overload_cast<std::optional<int64_t>, bool, bool, bool, bool,
-                             bool, py::object, bool>(
-               &PyOperationBase::print),
+                             bool, py::object, bool>(&PyOperationBase::print),
            // Careful: Lots of arguments must match up with print method.
            py::arg("large_elements_limit") = py::none(),
            py::arg("enable_debug_info") = false,
@@ -3038,7 +3062,9 @@ void mlir::python::populateIRCore(py::module &m) {
             return operation.createOpView();
           },
           "Detaches the operation from its parent block.")
-      .def("erase", [](PyOperationBase &self) { self.getOperation().erase(); });
+      .def("erase", [](PyOperationBase &self) { self.getOperation().erase(); })
+      .def("walk", &PyOperationBase::walk, py::arg("callback"),
+           py::arg("walk_order") = MlirWalkPostOrder);
 
   py::class_<PyOperation, PyOperationBase>(m, "Operation", py::module_local())
       .def_static("create", &PyOperation::create, py::arg("name"),
