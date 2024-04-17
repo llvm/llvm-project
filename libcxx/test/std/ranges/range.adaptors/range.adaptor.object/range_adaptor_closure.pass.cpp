@@ -17,6 +17,20 @@
 
 #include "test_range.h"
 
+template <class T>
+concept DeriveFromRangeAdaptorClosure = requires { typename std::ranges::range_adaptor_closure<T>; };
+static_assert(!DeriveFromRangeAdaptorClosure<int>);
+
+struct t {};
+static_assert(DeriveFromRangeAdaptorClosure<t>);
+static_assert(!DeriveFromRangeAdaptorClosure<t&>);
+static_assert(!DeriveFromRangeAdaptorClosure<const t>);
+static_assert(!DeriveFromRangeAdaptorClosure<volatile t>);
+static_assert(!DeriveFromRangeAdaptorClosure<const volatile t&&>);
+
+struct incomplete_t;
+static_assert(DeriveFromRangeAdaptorClosure<incomplete_t>);
+
 using range_t = std::vector<int>;
 
 template <class T>
@@ -28,6 +42,11 @@ struct callable : std::ranges::range_adaptor_closure<callable> {
   static void operator()(const range_t&) {}
 };
 static_assert(RangeAdaptorClosure<callable>);
+static_assert(RangeAdaptorClosure<const callable>);
+static_assert(RangeAdaptorClosure<callable&>);
+static_assert(RangeAdaptorClosure<const callable&>);
+static_assert(RangeAdaptorClosure<callable&&>);
+static_assert(RangeAdaptorClosure<const callable&&>);
 
 // `not_callable_1` doesn't have an `operator()`
 struct not_callable_1 : std::ranges::range_adaptor_closure<not_callable_1> {};
@@ -97,8 +116,6 @@ constexpr auto plus_1 = plus_1_fn{};
 constexpr bool test() {
   const std::vector<int> n{1, 2, 3, 4, 5};
   const std::vector<int> n_negate{-1, -2, -3, -4, -5};
-  const std::vector<int> n_negate_plus_1{0, -1, -2, -3, -4};
-  const std::vector<int> n_plus_1_negate{-2, -3, -4, -5, -6};
 
   assert(std::ranges::equal(n | negate, n_negate));
   assert(std::ranges::equal(negate(n), n_negate));
@@ -111,11 +128,13 @@ constexpr bool test() {
   assert(std::ranges::equal((negate | negate)(n), n));
   assert(std::ranges::equal(negate(negate(n)), n));
 
-  assert(std::ranges::equal(n | negate | plus_1, n_negate_plus_1));
+  const std::vector<int> n_plus_1_negate{-2, -3, -4, -5, -6};
+  assert(std::ranges::equal(n | plus_1 | negate, n_plus_1_negate));
   assert(std::ranges::equal(
       n | plus_1 | std::views::transform([](auto element) { return element; }) | negate, n_plus_1_negate));
 
-  assert(std::ranges::equal(n | plus_1 | negate, n_plus_1_negate));
+  const std::vector<int> n_negate_plus_1{0, -1, -2, -3, -4};
+  assert(std::ranges::equal(n | negate | plus_1, n_negate_plus_1));
   assert(std::ranges::equal(n | std::views::reverse | negate | plus_1 | std::views::reverse, n_negate_plus_1));
   return true;
 }
