@@ -9558,15 +9558,8 @@ AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
   MBB.addSuccessor(LoopTestMBB);
 
   // Update liveins.
-  if (MF.getRegInfo().reservedRegsFrozen()) {
-    bool anyChange = false;
-    do {
-      anyChange = recomputeLiveIns(*ExitMBB) ||
-                  recomputeLiveIns(*LoopBodyMBB) ||
-                  recomputeLiveIns(*LoopTestMBB);
-    } while (anyChange);
-    ;
-  }
+  if (MF.getRegInfo().reservedRegsFrozen())
+    fullyRecomputeLiveIns({ExitMBB, LoopBodyMBB, LoopTestMBB});
 
   return ExitMBB->begin();
 }
