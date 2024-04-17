@@ -812,6 +812,7 @@ Error RewriteInstance::run() {
 
 void RewriteInstance::keepDCPFunction() {
  BC->outs() << "keepDCPFunction!"<<"\n";
+  int FreddyNumber =0;
   for(auto &BFI : BC->getBinaryFunctions()) {
     BinaryFunction &BF = BFI.second;
     bool hasPrologue =false;
@@ -835,8 +836,14 @@ void RewriteInstance::keepDCPFunction() {
     if(BF.IsDirectCalled) dbgs() << "[keepDCPFunction] Find function which is directly called: 0x" << Twine::utohexstr(BF.getAddress()) << "\n"
     );
     if(!BF.IsDirectCalled && !hasPrologue )
-      BF.setIgnored();
+     { BF.setIgnored();
+    FreddyNumber++;}
   }
+  BC->outs() <<  "[keepDCPFunction] number of all the function in symtbl:" << BC->getBinaryFunctions().size() << "\n";
+  BC->outs() <<  "[keepDCPFunction] number of all the ignored function in symtbl:" << FreddyNumber << "\n";
+  BC->outs() <<  "[keepDCPFunction] number of all the prologue/directly-called function in symtbl:" << BC->getBinaryFunctions().size()- FreddyNumber << "\n";
+  BC->outs() <<  "[keepDCPFunction] ratio of the prologue/directly-called function:" << ((BC->getBinaryFunctions().size()- FreddyNumber)*100.0f) /BC->getBinaryFunctions().size()<< "\n";
+
 }
 void RewriteInstance::keepPrologueFunction() {
  BC->outs() << "keepPrologueFunction!"<<"\n";
