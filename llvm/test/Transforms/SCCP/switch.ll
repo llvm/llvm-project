@@ -121,7 +121,7 @@ switch.1:
 }
 
 define i32 @test_local_range(ptr %p) {
-; CHECK-LABEL: define i32 @test_local_range(
+; CHECK-LABEL: define range(i32 0, 3) i32 @test_local_range(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    switch i32 [[X]], label [[DEFAULT_UNREACHABLE:%.*]] [
@@ -164,7 +164,7 @@ switch.3:
 
 ; TODO: Determine that case i3 is dead, even though the edge is shared?
 define i32 @test_duplicate_successors(ptr %p) {
-; CHECK-LABEL: define i32 @test_duplicate_successors(
+; CHECK-LABEL: define range(i32 0, 2) i32 @test_duplicate_successors(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    switch i32 [[X]], label [[DEFAULT_UNREACHABLE:%.*]] [
@@ -206,7 +206,7 @@ switch.2:
 ; Case i32 2 is dead as well, but this cannot be determined based on
 ; range information.
 define internal i32 @test_ip_range(i32 %x) {
-; CHECK-LABEL: define internal i32 @test_ip_range(
+; CHECK-LABEL: define internal range(i32 1, 4) i32 @test_ip_range(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    switch i32 [[X]], label [[DEFAULT_UNREACHABLE:%.*]] [
 ; CHECK-NEXT:      i32 3, label [[SWITCH_3:%.*]]
@@ -247,8 +247,8 @@ switch.3:
 
 define void @call_test_ip_range() {
 ; CHECK-LABEL: define void @call_test_ip_range() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @test_ip_range(i32 1), !range [[RNG2:![0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @test_ip_range(i32 3), !range [[RNG2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @test_ip_range(i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @test_ip_range(i32 3)
 ; CHECK-NEXT:    ret void
 ;
   call i32 @test_ip_range(i32 1)
@@ -257,7 +257,7 @@ define void @call_test_ip_range() {
 }
 
 define i32 @test_switch_range_may_include_undef(i1 %c.1, i1 %c.2, i32 %x) {
-; CHECK-LABEL: define i32 @test_switch_range_may_include_undef(
+; CHECK-LABEL: define range(i32 -1, 21) i32 @test_switch_range_may_include_undef(
 ; CHECK-SAME: i1 [[C_1:%.*]], i1 [[C_2:%.*]], i32 [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_1:%.*]], label [[ELSE_1:%.*]]
@@ -379,9 +379,7 @@ return:
 
 declare void @llvm.assume(i1)
 
-; CHECK: !1 = !{!"branch_weights", i32 1, i32 5, i32 3, i32 4}
 ;.
 ; CHECK: [[RNG0]] = !{i32 0, i32 3}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 5, i32 3, i32 4}
-; CHECK: [[RNG2]] = !{i32 1, i32 4}
 ;.

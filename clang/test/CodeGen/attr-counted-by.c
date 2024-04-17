@@ -158,7 +158,7 @@ void test2(struct annotated *p, size_t index) {
   p->array[index] = __builtin_dynamic_object_size(p->array, 1);
 }
 
-// SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test2_bdos(
+// SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 -8589934592, 8589934589) i64 @test2_bdos(
 // SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
 // SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
@@ -169,7 +169,7 @@ void test2(struct annotated *p, size_t index) {
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 [[TMP1]], i64 0
 // SANITIZE-WITH-ATTR-NEXT:    ret i64 [[TMP3]]
 //
-// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test2_bdos(
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 -8589934592, 8589934589) i64 @test2_bdos(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
@@ -257,7 +257,7 @@ void test3(struct annotated *p, size_t index) {
   p->array[index] = __builtin_dynamic_object_size(p, 1);
 }
 
-// SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test3_bdos(
+// SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 0, 8589934601) i64 @test3_bdos(
 // SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
 // SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
@@ -270,7 +270,7 @@ void test3(struct annotated *p, size_t index) {
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 0
 // SANITIZE-WITH-ATTR-NEXT:    ret i64 [[TMP5]]
 //
-// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test3_bdos(
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 0, 8589934601) i64 @test3_bdos(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
@@ -441,7 +441,7 @@ void test4(struct annotated *p, int index, int fam_idx) {
   p->array[index + 2] = (unsigned char)__builtin_dynamic_object_size(&(p->array[fam_idx]), 1);
 }
 
-// SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test4_bdos(
+// SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 -17179869180, 17179869181) i64 @test4_bdos(
 // SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
 // SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
@@ -456,7 +456,7 @@ void test4(struct annotated *p, int index, int fam_idx) {
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i64 [[TMP3]], i64 0
 // SANITIZE-WITH-ATTR-NEXT:    ret i64 [[TMP7]]
 //
-// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test4_bdos(
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 -17179869180, 17179869181) i64 @test4_bdos(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
@@ -545,7 +545,7 @@ void test5(struct anon_struct *p, int index) {
   p->array[index] = __builtin_dynamic_object_size(p, 1);
 }
 
-// SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test5_bdos(
+// SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 16, 1) i64 @test5_bdos(
 // SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
 // SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
@@ -556,7 +556,7 @@ void test5(struct anon_struct *p, int index) {
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = select i1 [[DOTINV]], i64 0, i64 [[TMP1]]
 // SANITIZE-WITH-ATTR-NEXT:    ret i64 [[TMP2]]
 //
-// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test5_bdos(
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 16, 1) i64 @test5_bdos(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
@@ -797,7 +797,7 @@ void test8(struct union_of_fams *p, int index) {
   p->ints[index] = __builtin_dynamic_object_size(p->ints, 1);
 }
 
-// SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test8_bdos(
+// SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 0, 256) i64 @test8_bdos(
 // SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
 // SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
@@ -805,7 +805,7 @@ void test8(struct union_of_fams *p, int index) {
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = zext i8 [[DOT_COUNTED_BY_LOAD]] to i64
 // SANITIZE-WITH-ATTR-NEXT:    ret i64 [[TMP0]]
 //
-// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test8_bdos(
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 0, 256) i64 @test8_bdos(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
@@ -955,7 +955,7 @@ void test10(struct union_of_fams *p, int index) {
   p->bytes[index] = (unsigned char)__builtin_dynamic_object_size(p->bytes, 1);
 }
 
-// SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test10_bdos(
+// SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 -2147483648, 2147483648) i64 @test10_bdos(
 // SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
 // SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
@@ -964,7 +964,7 @@ void test10(struct union_of_fams *p, int index) {
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[NARROW]] to i64
 // SANITIZE-WITH-ATTR-NEXT:    ret i64 [[TMP0]]
 //
-// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i64 @test10_bdos(
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 -2147483648, 2147483648) i64 @test10_bdos(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef readonly [[P:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8

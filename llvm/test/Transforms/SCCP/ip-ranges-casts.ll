@@ -324,7 +324,7 @@ entry:
 }
 
 define internal i64 @f.sext_to_zext(i32 %t) {
-; CHECK-LABEL: define internal i64 @f.sext_to_zext(
+; CHECK-LABEL: define internal range(i64 0, 2) i64 @f.sext_to_zext(
 ; CHECK-SAME: i32 [[T:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = zext nneg i32 [[T]] to i64
 ; CHECK-NEXT:    ret i64 [[A]]
@@ -334,11 +334,11 @@ define internal i64 @f.sext_to_zext(i32 %t) {
 }
 
 define i64 @caller.sext_to_zext(i32 %i) {
-; CHECK-LABEL: define i64 @caller.sext_to_zext(
+; CHECK-LABEL: define range(i64 0, 2) i64 @caller.sext_to_zext(
 ; CHECK-SAME: i32 [[I:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[I]], 9
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[T:%.*]] = call i64 @f.sext_to_zext(i32 [[CONV]]), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[T:%.*]] = call i64 @f.sext_to_zext(i32 [[CONV]])
 ; CHECK-NEXT:    ret i64 [[T]]
 ;
   %cmp = icmp sle i32 %i, 9
@@ -346,6 +346,3 @@ define i64 @caller.sext_to_zext(i32 %i) {
   %t = call i64 @f.sext_to_zext(i32 %conv)
   ret i64 %t
 }
-;.
-; CHECK: [[RNG0]] = !{i64 0, i64 2}
-;.

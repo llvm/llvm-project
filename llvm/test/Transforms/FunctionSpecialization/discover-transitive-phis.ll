@@ -4,19 +4,19 @@
 ; RUN: opt -passes="ipsccp<func-spec>" -funcspec-min-function-size=20 -funcspec-for-literal-constant -funcspec-max-discovery-iterations=16 -S < %s | FileCheck %s --check-prefix=NOFUNCSPEC
 
 define i64 @bar(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5, i1 %c6, i1 %c7, i1 %c8, i1 %c9, i1 %c10) {
-; FUNCSPEC-LABEL: define i64 @bar(
+; FUNCSPEC-LABEL: define range(i64 4, 13) i64 @bar(
 ; FUNCSPEC-SAME: i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]], i1 [[C4:%.*]], i1 [[C5:%.*]], i1 [[C6:%.*]], i1 [[C7:%.*]], i1 [[C8:%.*]], i1 [[C9:%.*]], i1 [[C10:%.*]]) {
 ; FUNCSPEC-NEXT:  entry:
-; FUNCSPEC-NEXT:    [[F1:%.*]] = call i64 @foo.specialized.1(i64 3, i1 [[C1]], i1 [[C2]], i1 [[C3]], i1 [[C4]], i1 [[C5]], i1 [[C6]], i1 [[C7]], i1 [[C8]], i1 [[C9]], i1 [[C10]]), !range [[RNG0:![0-9]+]]
-; FUNCSPEC-NEXT:    [[F2:%.*]] = call i64 @foo.specialized.2(i64 4, i1 [[C1]], i1 [[C2]], i1 [[C3]], i1 [[C4]], i1 [[C5]], i1 [[C6]], i1 [[C7]], i1 [[C8]], i1 [[C9]], i1 [[C10]]), !range [[RNG1:![0-9]+]]
+; FUNCSPEC-NEXT:    [[F1:%.*]] = call i64 @foo.specialized.1(i64 3, i1 [[C1]], i1 [[C2]], i1 [[C3]], i1 [[C4]], i1 [[C5]], i1 [[C6]], i1 [[C7]], i1 [[C8]], i1 [[C9]], i1 [[C10]])
+; FUNCSPEC-NEXT:    [[F2:%.*]] = call i64 @foo.specialized.2(i64 4, i1 [[C1]], i1 [[C2]], i1 [[C3]], i1 [[C4]], i1 [[C5]], i1 [[C6]], i1 [[C7]], i1 [[C8]], i1 [[C9]], i1 [[C10]])
 ; FUNCSPEC-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[F1]], [[F2]]
 ; FUNCSPEC-NEXT:    ret i64 [[ADD]]
 ;
-; NOFUNCSPEC-LABEL: define i64 @bar(
+; NOFUNCSPEC-LABEL: define range(i64 4, 13) i64 @bar(
 ; NOFUNCSPEC-SAME: i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]], i1 [[C4:%.*]], i1 [[C5:%.*]], i1 [[C6:%.*]], i1 [[C7:%.*]], i1 [[C8:%.*]], i1 [[C9:%.*]], i1 [[C10:%.*]]) {
 ; NOFUNCSPEC-NEXT:  entry:
-; NOFUNCSPEC-NEXT:    [[F1:%.*]] = call i64 @foo(i64 3, i1 [[C1]], i1 [[C2]], i1 [[C3]], i1 [[C4]], i1 [[C5]], i1 [[C6]], i1 [[C7]], i1 [[C8]], i1 [[C9]], i1 [[C10]]), !range [[RNG0:![0-9]+]]
-; NOFUNCSPEC-NEXT:    [[F2:%.*]] = call i64 @foo(i64 4, i1 [[C1]], i1 [[C2]], i1 [[C3]], i1 [[C4]], i1 [[C5]], i1 [[C6]], i1 [[C7]], i1 [[C8]], i1 [[C9]], i1 [[C10]]), !range [[RNG0]]
+; NOFUNCSPEC-NEXT:    [[F1:%.*]] = call i64 @foo(i64 3, i1 [[C1]], i1 [[C2]], i1 [[C3]], i1 [[C4]], i1 [[C5]], i1 [[C6]], i1 [[C7]], i1 [[C8]], i1 [[C9]], i1 [[C10]])
+; NOFUNCSPEC-NEXT:    [[F2:%.*]] = call i64 @foo(i64 4, i1 [[C1]], i1 [[C2]], i1 [[C3]], i1 [[C4]], i1 [[C5]], i1 [[C6]], i1 [[C7]], i1 [[C8]], i1 [[C9]], i1 [[C10]])
 ; NOFUNCSPEC-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[F1]], [[F2]]
 ; NOFUNCSPEC-NEXT:    ret i64 [[ADD]]
 ;
@@ -28,7 +28,7 @@ entry:
 }
 
 define internal i64 @foo(i64 %n, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5, i1 %c6, i1 %c7, i1 %c8, i1 %c9, i1 %c10) {
-; NOFUNCSPEC-LABEL: define internal i64 @foo(
+; NOFUNCSPEC-LABEL: define internal range(i64 2, 7) i64 @foo(
 ; NOFUNCSPEC-SAME: i64 [[N:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]], i1 [[C4:%.*]], i1 [[C5:%.*]], i1 [[C6:%.*]], i1 [[C7:%.*]], i1 [[C8:%.*]], i1 [[C9:%.*]], i1 [[C10:%.*]]) {
 ; NOFUNCSPEC-NEXT:  entry:
 ; NOFUNCSPEC-NEXT:    br i1 [[C1]], label [[L1:%.*]], label [[L9:%.*]]
@@ -129,9 +129,3 @@ exit:
   ret i64 %res
 }
 
-;.
-; FUNCSPEC: [[RNG0]] = !{i64 2, i64 5}
-; FUNCSPEC: [[RNG1]] = !{i64 2, i64 7}
-;.
-; NOFUNCSPEC: [[RNG0]] = !{i64 2, i64 7}
-;.

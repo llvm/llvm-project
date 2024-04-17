@@ -109,7 +109,7 @@ attributes #6 = { noreturn nounwind }
 !11 = !{}
 !12 = !{!"branch_weights", i32 1048575, i32 1}
 ; CHECK: Function Attrs: minsize mustprogress nofree norecurse nosync nounwind optsize willreturn memory(none)
-; CHECK-LABEL: define dso_local noundef i32 @_Z9nothrow_ei
+; CHECK-LABEL: define dso_local noundef range(i32 0, 2) i32 @_Z9nothrow_ei
 ; CHECK-SAME: (i32 noundef [[NUM:%.*]]) #[[ATTR0:[0-9]+]] !type [[META4:![0-9]+]] !type [[META5:![0-9]+]] !type [[META6:![0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i32 [[NUM]], 0
@@ -118,7 +118,7 @@ attributes #6 = { noreturn nounwind }
 ;
 ;
 ; CHECK: Function Attrs: minsize mustprogress nofree norecurse nosync nounwind optsize willreturn memory(write, argmem: none, inaccessiblemem: none)
-; CHECK-LABEL: define dso_local noundef i32 @_Z10call_catchi
+; CHECK-LABEL: define dso_local noundef range(i32 0, 2) i32 @_Z10call_catchi
 ; CHECK-SAME: (i32 noundef [[NUM:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] !type [[META4]] !type [[META5]] !type [[META6]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store ptr @_Z9nothrow_ei.cfi_jt, ptr @catch_ptr, align 8, !tbaa [[TBAA7:![0-9]+]]
