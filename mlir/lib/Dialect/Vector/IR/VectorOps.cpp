@@ -13,11 +13,13 @@
 
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -3975,6 +3977,57 @@ Type TransferReadOp::getExpectedMaskType() {
   return inferTransferOpMaskType(getVectorType(), getPermutationMap());
 }
 
+// Determine the loop upper bound UB == s1 - ((s1 - LB) mod Step).
+// Then loop iteration = UB - LB = s1 - LB - ((s1 - LB) mod Step)
+// which is multiple of step.
+// The loop could be produced by -scf-for-loop-peeling.
+static bool isLoopIterationAsMultipleOfStep(mlir::scf::ForOp forOp) {
+  OpBuilder b(forOp.getContext());
+
+  auto UBOp = forOp.getUpperBound().getDefiningOp();
+  if (!UBOp)
+    return false;
+  auto applyOp = dyn_cast<mlir::affine::AffineApplyOp>(UBOp);
+  if (!applyOp)
+    return false;
+
+  SmallVector<Value> mapOps(applyOp.getMapOperands().begin(),
+                            applyOp.getMapOperands().end());
+  if (mapOps.size() != 3)
+    return false;
+  if (mapOps[0] != forOp.getLowerBound())
+    return false;
+  if (mapOps[2] != forOp.getStep())
+    return false;
+
+  auto UBExpr = applyOp.getAffineMap().getResult(0);
+  auto LBExpr = b.getAffineSymbolExpr(0);
+  auto sym1 = b.getAffineSymbolExpr(1);
+  auto stepExpr = b.getAffineSymbolExpr(2);
+
+  return UBExpr == (sym1 - (sym1 - LBExpr) % stepExpr);
+}
+
+template <typename TransferOp>
+static bool isLoopIterationAsMultipleOfVectorSize(TransferOp op,
+            int64_t resultIdx, int64_t indicesIdx) {
+  Value index = op.getIndices()[indicesIdx];
+  auto forOp = dyn_cast<mlir::scf::ForOp>(op->getParentOp());
+  if (!forOp)
+    return false;
+  auto constantStep = forOp.getConstantStep();
+  if (!constantStep)
+    return false;
+  if (index != forOp.getInductionVar())
+    return false;
+  if (!isLoopIterationAsMultipleOfStep(forOp))
+    return false;
+
+  int64_t vectorSize = op.getVectorType().getDimSize(resultIdx);
+
+  return vectorSize == *constantStep;
+}
+
 template <typename TransferOp>
 static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   // TODO: support more aggressive createOrFold on:
@@ -3984,7 +4037,7 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   Value index = op.getIndices()[indicesIdx];
   std::optional<int64_t> cstOp = getConstantIntValue(index);
   if (!cstOp.has_value())
-    return false;
+    return isLoopIterationAsMultipleOfVectorSize(op, resultIdx, indicesIdx);
 
   int64_t sourceSize = op.getShapedType().getDimSize(indicesIdx);
   int64_t vectorSize = op.getVectorType().getDimSize(resultIdx);
