@@ -254,7 +254,8 @@ endif()
 unset(SHOULD_ENABLE_PROJECT)
 
 # Set LLVM_RUNTIME_<project>_BUILD variables if a sub-project is enabled to be built as
-# a runtime.
+# a runtime.  As with LLVM_TOOL_<project>_BUILD, the LLVM_RUNTIME_<project>_BUILD variables
+# should be not directly used from the CMake configuration command line.
 foreach(proj ${LLVM_SUPPORTED_RUNTIMES})
   set(SHOULD_ENABLE_PROJECT FALSE)
   string(TOUPPER "${proj}" upper_proj)
