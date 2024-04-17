@@ -2923,11 +2923,10 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
 }
 
 bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
-  // Cannot use 32 bit constants to reference objects in kernel code model.
-  // Cannot use 32 bit constants to reference objects in large PIC mode since
-  // GOTOFF is 64 bits.
+  // Cannot use 32 bit constants to reference objects in kernel/large code
+  // model.
   if (TM.getCodeModel() == CodeModel::Kernel ||
-      (TM.getCodeModel() == CodeModel::Large && TM.isPositionIndependent()))
+      TM.getCodeModel() == CodeModel::Large)
     return false;
 
   // In static codegen with small code model, we can get the address of a label
