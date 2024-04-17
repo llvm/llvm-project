@@ -1313,9 +1313,8 @@ llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
   return DBuilder.createPointerType(EltTy, Size);
 }
 
-CGDebugInfo::TemplateArgs
-CGDebugInfo::GetTemplateArgs(const TemplateDecl *TD,
-                             const TemplateSpecializationType *Ty) const {
+static llvm::SmallVector<TemplateArgument>
+GetTemplateArgs(const TemplateDecl *TD, const TemplateSpecializationType *Ty) {
   assert(Ty->isTypeAlias());
   // TemplateSpecializationType doesn't know if its template args are
   // being substituted into a parameter pack. We can find out if that's
@@ -1366,7 +1365,7 @@ CGDebugInfo::GetTemplateArgs(const TemplateDecl *TD,
       break;
     }
   }
-  return {TD->getTemplateParameters(), SpecArgs};
+  return SpecArgs;
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
@@ -1391,7 +1390,8 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
   SourceLocation Loc = AliasDecl->getLocation();
 
   if (CGM.getCodeGenOpts().DebugTemplateAlias) {
-    TemplateArgs Args = GetTemplateArgs(TD, Ty);
+    auto ArgVector = ::GetTemplateArgs(TD, Ty);
+    TemplateArgs Args = {TD->getTemplateParameters(), ArgVector};
 
     // FIXME: Respect DebugTemplateNameKind::Mangled, e.g. by using GetName.
     // Note we can't use GetName without additional work: TypeAliasTemplateDecl
