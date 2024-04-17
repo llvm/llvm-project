@@ -755,7 +755,7 @@ class AllAttrOf<list<AttrConstraint> constraints> : AttrConstraint<
 
 class IntNEQValue<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() != " # n>,
-    "whose minimum value is " # n>;
+    "whose value is not " # n>;
 
 class IntMinValue<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() >= " # n>,
