@@ -1538,6 +1538,9 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
 
     if (!isVectorConfigInstr(MI)) {
       doUnion(Used, getDemanded(MI, MRI, ST));
+      if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
+          MI.modifiesRegister(RISCV::VTYPE))
+        NextMI = nullptr;
       continue;
     }
 
