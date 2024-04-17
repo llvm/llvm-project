@@ -11469,10 +11469,8 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     return;
 
   if (!DC || !DC->isRecord()) {
-    Diag(ExplicitObjectParam->getLocation(),
-         diag::err_explicit_object_parameter_nonmember)
-        << D.getSourceRange() << /*non-member=*/2 << IsLambda;
-    D.setInvalidType();
+    assert(D.isInvalidType() && "Explicit object parameter in non-member "
+                                "should have been diagnosed already");
     return;
   }
 

@@ -5,7 +5,7 @@
 void f(this); // expected-error{{variable has incomplete type 'void'}} \
               // expected-error{{invalid use of 'this' outside of a non-static member function}}
 
-void g(this auto); // expected-error{{an explicit object parameter cannot appear in a non-member function}}
+void g(this auto); // expected-error{{an explicit object parameter is not allowed here}}
 
 auto l1 = [] (this auto) static {}; // expected-error{{an explicit object parameter cannot appear in a static lambda}}
 auto l2 = [] (this auto) mutable {}; // expected-error{{a lambda with an explicit object parameter cannot be mutable}}
@@ -685,7 +685,7 @@ struct S {
   static void j(this S s); // expected-error {{an explicit object parameter cannot appear in a static function}}
 };
 
-void nonmember(this S s); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+void nonmember(this S s); // expected-error {{an explicit object parameter is not allowed here}}
 
 int test() {
   S s;
@@ -837,4 +837,22 @@ int h() {
     list = function3{}; // expected-error {{selected deleted operator '='}}
   }();
 }
+}
+
+namespace GH85992 {
+struct S {
+  int (S::*x)(this int); // expected-error {{an explicit object parameter is not allowed here}}
+  int (*y)(this int); // expected-error {{an explicit object parameter is not allowed here}}
+  int (***z)(this int); // expected-error {{an explicit object parameter is not allowed here}}
+
+  int f(this S);
+  int ((g))(this S);
+  int h(int x, int (*)(this S)); // expected-error {{an explicit object parameter is not allowed here}}
+};
+
+using T = int (*)(this int); // expected-error {{an explicit object parameter is not allowed here}}
+using U = int (S::*)(this int); // expected-error {{an explicit object parameter is not allowed here}}
+int h(this int); // expected-error {{an explicit object parameter is not allowed here}}
+
+int S::f(this S) { return 1; }
 }
