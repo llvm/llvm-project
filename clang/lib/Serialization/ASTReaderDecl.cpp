@@ -826,7 +826,7 @@ void ASTDeclReader::VisitEnumDecl(EnumDecl *ED) {
       Reader.mergeDefinitionVisibility(OldDef, ED);
       // We don't want to check the ODR hash value for declarations from global
       // module fragment.
-      if (!ED->shouldSkipCheckingODR() &&
+      if (!shouldSkipCheckingODR(ED) &&
           OldDef->getODRHash() != ED->getODRHash())
         Reader.PendingEnumOdrMergeFailures[OldDef].push_back(ED);
     } else {
@@ -868,7 +868,7 @@ void ASTDeclReader::VisitRecordDecl(RecordDecl *RD) {
   VisitRecordDeclImpl(RD);
   // We should only reach here if we're in C/Objective-C. There is no
   // global module fragment.
-  assert(!RD->shouldSkipCheckingODR());
+  assert(!shouldSkipCheckingODR(RD));
   RD->setODRHash(Record.readInt());
 
   // Maintain the invariant of a redeclaration chain containing only
@@ -2155,7 +2155,7 @@ void ASTDeclReader::MergeDefinitionData(
   }
 
   // We don't want to check ODR for decls in the global module fragment.
-  if (MergeDD.Definition->shouldSkipCheckingODR())
+  if (shouldSkipCheckingODR(MergeDD.Definition))
     return;
 
   if (D->getODRHash() != MergeDD.ODRHash) {
@@ -3530,7 +3530,7 @@ ASTDeclReader::FindExistingResult ASTDeclReader::findExisting(NamedDecl *D) {
   // same template specialization into the same CXXRecordDecl.
   auto MergedDCIt = Reader.MergedDeclContexts.find(D->getLexicalDeclContext());
   if (MergedDCIt != Reader.MergedDeclContexts.end() &&
-      !D->shouldSkipCheckingODR() && MergedDCIt->second == D->getDeclContext())
+      !shouldSkipCheckingODR(D) && MergedDCIt->second == D->getDeclContext())
     Reader.PendingOdrMergeChecks.push_back(D);
 
   return FindExistingResult(Reader, D, /*Existing=*/nullptr,

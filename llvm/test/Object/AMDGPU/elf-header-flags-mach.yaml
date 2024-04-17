@@ -267,6 +267,14 @@
 # RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1300 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1300 %s
 # RUN: obj2yaml %t.o.AMDGCN_GFX1300 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1300 %s
 
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1301/' %s | yaml2obj -o %t.o.AMDGCN_GFX1301
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1301 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1301 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1301 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1301 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1302/' %s | yaml2obj -o %t.o.AMDGCN_GFX1302
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1302 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1302 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1302 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1302 %s
+
 # ELF-R600-ALL:       Format: elf32-amdgpu
 # ELF-R600-ALL:       Arch: r600
 # ELF-R600-ALL:       AddressSize: 32bit
@@ -472,7 +480,13 @@
 
 # ELF-AMDGCN-GFX1300:   EF_AMDGPU_MACH_AMDGCN_GFX1300 (0x50)
 # YAML-AMDGCN-GFX1300:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1300 ]
-#
+
+# ELF-AMDGCN-GFX1301:   EF_AMDGPU_MACH_AMDGCN_GFX1301 (0x56)
+# YAML-AMDGCN-GFX1301:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1301 ]
+
+# ELF-AMDGCN-GFX1302:   EF_AMDGPU_MACH_AMDGCN_GFX1302 (0x57)
+# YAML-AMDGCN-GFX1302:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1302 ]
+
 # ELF-AMDGCN-GFX9_GENERIC:   EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC (0x51)
 # YAML-AMDGCN-GFX9_GENERIC:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC ]
 
