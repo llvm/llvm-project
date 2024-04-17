@@ -1247,6 +1247,78 @@ TEST_F(ValueTrackingTest, computePtrAlignment) {
   EXPECT_EQ(getKnownAlignment(A, DL, CxtI3, &AC, &DT), Align(16));
 }
 
+TEST_F(ValueTrackingTest, getUnderlyingObjectCastsAliases) {
+  parseAssembly(R"IR(
+    @gvar = global i32 0
+    @alias = alias i32, i32* @gvar
+    @alias_interposable = weak alias i32, i32* @gvar
+    define void @test() {
+      %A = call ptr @llvm.ssa.copy.p0(ptr @gvar)
+      %A2 = call ptr @llvm.ssa.copy.p0(ptr bitcast(ptr @gvar to ptr))
+      %A3 = call ptr addrspace(42) @llvm.ssa.copy.p42(ptr addrspace(42) addrspacecast(ptr @gvar to ptr addrspace(42)))
+      %A4 = call ptr @llvm.ssa.copy.p0(ptr @alias)
+      %A5 = call ptr @llvm.ssa.copy.p0(ptr @alias_interposable)
+      ret void
+    }
+)IR");
+  Value *gvar = A->getOperand(0);
+  EXPECT_EQ(getUnderlyingObject(A->getOperand(0)), gvar);
+  EXPECT_EQ(getUnderlyingObject(A2->getOperand(0)), gvar);
+  EXPECT_EQ(getUnderlyingObject(A3->getOperand(0)), gvar);
+  EXPECT_EQ(getUnderlyingObject(A4->getOperand(0)), gvar);
+  EXPECT_EQ(getUnderlyingObject(A4->getOperand(0)), gvar);
+  // should not skip interposable alias
+  EXPECT_EQ(getUnderlyingObject(A5->getOperand(0)), A5->getOperand(0));
+}
+
+TEST_F(ValueTrackingTest, getUnderlyingObjectIntrinsics) {
+  parseAssembly(R"IR(
+    define void @test(ptr %arg) {
+      ; intrinsic with Return<> arg attribute
+      %A = call ptr @llvm.objc.retain(ptr %arg)
+      %A2 = call ptr @llvm.ssa.copy(ptr %arg)
+      ; special cased intrinsics
+      %A3 = call ptr @llvm.launder.invariant.group(ptr %arg)
+      ret void
+    }
+)IR");
+  Value *arg = F->getArg(0);
+  EXPECT_EQ(getUnderlyingObject(A), arg);
+  EXPECT_EQ(getUnderlyingObject(A2), arg);
+  EXPECT_EQ(getUnderlyingObject(A3), arg);
+}
+
+TEST_F(ValueTrackingTest, getUnderlyingObjectPtrInt) {
+  parseAssembly(R"IR(
+    define void @test(i64 %arg, ptr %arg1) {
+      %A = inttoptr i64 %arg to ptr
+      %t0 = ptrtoint ptr %arg1 to i64
+      %A2 = inttoptr i64 %t0 to ptr
+      ret void
+    }
+)IR");
+  // Should not skip anything here
+  EXPECT_EQ(getUnderlyingObject(A->getOperand(0)), A->getOperand(0));
+  EXPECT_EQ(getUnderlyingObject(A2->getOperand(0)), A2->getOperand(0));
+}
+
+TEST_F(ValueTrackingTest, getUnderlyingObjectPhi) {
+  parseAssembly(R"IR(
+    @gvar = global i32 0
+    define void @test() {
+    entry:
+      %A = call ptr @llvm.ssa.copy.p0(ptr @gvar)
+      br label %block2
+
+    block2:
+      %A2 = phi ptr [ @gvar, %entry ]
+      ret void
+    }
+)IR");
+  Value *gvar = A->getOperand(0);
+  EXPECT_EQ(getUnderlyingObject(A2->getOperand(0)), gvar);
+}
+
 TEST_F(ComputeKnownBitsTest, ComputeKnownBits) {
   parseAssembly(
       "define i32 @test(i32 %a, i32 %b) {\n"
