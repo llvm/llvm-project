@@ -48,6 +48,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
@@ -6168,11 +6169,12 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
   // Check if we are in an `omp begin/end declare variant` scope. Handle this
   // declaration only if the `bind_to_declaration` extension is set.
   SmallVector<FunctionDecl *, 4> Bases;
-  if (LangOpts.OpenMP && isInOpenMPDeclareVariantScope())
-    if (getOMPTraitInfoForSurroundingScope()->isExtensionActive(llvm::omp::TraitProperty::
-              implementation_extension_bind_to_declaration))
-    ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
-        S, D, MultiTemplateParamsArg(), Bases);
+  if (LangOpts.OpenMP && OpenMP().isInOpenMPDeclareVariantScope())
+    if (OpenMP().getOMPTraitInfoForSurroundingScope()->isExtensionActive(
+            llvm::omp::TraitProperty::
+                implementation_extension_bind_to_declaration))
+      OpenMP().ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
+          S, D, MultiTemplateParamsArg(), Bases);
 
   Decl *Dcl = HandleDeclarator(S, D, MultiTemplateParamsArg());
 
@@ -6181,7 +6183,8 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
     Dcl->setTopLevelDeclInObjCContainer();
 
   if (!Bases.empty())
-    ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl, Bases);
+    OpenMP().ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl,
+                                                                        Bases);
 
   return Dcl;
 }
@@ -6568,8 +6571,8 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   if (New->getDeclName() && AddToScope)
     PushOnScopeChains(New, S);
 
-  if (isInOpenMPDeclareTargetContext())
-    checkDeclIsAllowedInOpenMPTarget(nullptr, New);
+  if (OpenMP().isInOpenMPDeclareTargetContext())
+    OpenMP().checkDeclIsAllowedInOpenMPTarget(nullptr, New);
 
   return New;
 }
@@ -12268,7 +12271,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   }
 
   if (LangOpts.OpenMP)
-    ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(NewFD);
+    OpenMP().ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(NewFD);
 
   // Semantic checking for this function declaration (in isolation).
 
@@ -12668,7 +12671,7 @@ void Sema::CheckMSVCRTEntryPoint(FunctionDecl *FD) {
   }
 }
 
-bool Sema::CheckForConstantInitializer(Expr *Init, QualType DclT) {
+bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
   // FIXME: Need strict checking.  In C89, we need to check for
   // any assignment, increment, decrement, function-calls, or
   // commas outside of a sizeof.  In C99, it's the same list,
@@ -12686,8 +12689,7 @@ bool Sema::CheckForConstantInitializer(Expr *Init, QualType DclT) {
   const Expr *Culprit;
   if (Init->isConstantInitializer(Context, false, &Culprit))
     return false;
-  Diag(Culprit->getExprLoc(), diag::err_init_element_not_constant)
-    << Culprit->getSourceRange();
+  Diag(Culprit->getExprLoc(), DiagID) << Culprit->getSourceRange();
   return true;
 }
 
@@ -13805,29 +13807,24 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // OpenCL v1.2 s6.5.3: __constant locals must be constant-initialized.
     // This is true even in C++ for OpenCL.
     } else if (VDecl->getType().getAddressSpace() == LangAS::opencl_constant) {
-      CheckForConstantInitializer(Init, DclT);
+      CheckForConstantInitializer(Init);
 
-    // Otherwise, C++ does not restrict the initializer.
+      // Otherwise, C++ does not restrict the initializer.
     } else if (getLangOpts().CPlusPlus) {
       // do nothing
 
     // C99 6.7.8p4: All the expressions in an initializer for an object that has
     // static storage duration shall be constant expressions or string literals.
     } else if (VDecl->getStorageClass() == SC_Static) {
-      CheckForConstantInitializer(Init, DclT);
+      CheckForConstantInitializer(Init);
 
-    // C89 is stricter than C99 for aggregate initializers.
-    // C89 6.5.7p3: All the expressions [...] in an initializer list
-    // for an object that has aggregate or union type shall be
-    // constant expressions.
+      // C89 is stricter than C99 for aggregate initializers.
+      // C89 6.5.7p3: All the expressions [...] in an initializer list
+      // for an object that has aggregate or union type shall be
+      // constant expressions.
     } else if (!getLangOpts().C99 && VDecl->getType()->isAggregateType() &&
                isa<InitListExpr>(Init)) {
-      const Expr *Culprit;
-      if (!Init->isConstantInitializer(Context, false, &Culprit)) {
-        Diag(Culprit->getExprLoc(),
-             diag::ext_aggregate_init_not_constant)
-          << Culprit->getSourceRange();
-      }
+      CheckForConstantInitializer(Init, diag::ext_aggregate_init_not_constant);
     }
 
     if (auto *E = dyn_cast<ExprWithCleanups>(Init))
@@ -13960,7 +13957,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     // Avoid duplicate diagnostics for constexpr variables.
     if (!getLangOpts().CPlusPlus && !VDecl->isInvalidDecl() &&
         !VDecl->isConstexpr())
-      CheckForConstantInitializer(Init, DclT);
+      CheckForConstantInitializer(Init);
   }
 
   QualType InitType = Init->getType();
@@ -14956,7 +14953,7 @@ Sema::DeclGroupPtrTy Sema::FinalizeDeclaratorGroup(Scope *S, const DeclSpec &DS,
       if (auto *VD = dyn_cast<VarDecl>(D);
           LangOpts.OpenMP && VD && VD->hasAttr<OMPDeclareTargetDeclAttr>() &&
           VD->hasGlobalStorage())
-        ActOnOpenMPDeclareTargetInitializer(D);
+        OpenMP().ActOnOpenMPDeclareTargetInitializer(D);
       // For declarators, there are some additional syntactic-ish checks we need
       // to perform.
       if (auto *DD = dyn_cast<DeclaratorDecl>(D)) {
@@ -15495,8 +15492,8 @@ Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Declarator &D,
   // specialization function under the OpenMP context defined as part of the
   // `omp begin declare variant`.
   SmallVector<FunctionDecl *, 4> Bases;
-  if (LangOpts.OpenMP && isInOpenMPDeclareVariantScope())
-    ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
+  if (LangOpts.OpenMP && OpenMP().isInOpenMPDeclareVariantScope())
+    OpenMP().ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
         ParentScope, D, TemplateParameterLists, Bases);
 
   D.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
@@ -15504,7 +15501,8 @@ Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Declarator &D,
   Decl *Dcl = ActOnStartOfFunctionDef(FnBodyScope, DP, SkipBody, BodyKind);
 
   if (!Bases.empty())
-    ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl, Bases);
+    OpenMP().ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl,
+                                                                        Bases);
 
   return Dcl;
 }
@@ -20651,7 +20649,7 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
         return FunctionEmissionStatus::OMPDiscarded;
     // If we have an explicit value for the device type, or we are in a target
     // declare context, we need to emit all extern and used symbols.
-    if (isInOpenMPDeclareTargetContext() || DevTy)
+    if (OpenMP().isInOpenMPDeclareTargetContext() || DevTy)
       if (IsEmittedForExternalSymbol())
         return FunctionEmissionStatus::Emitted;
     // Device mode only emits what it must, if it wasn't tagged yet and needed,

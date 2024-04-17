@@ -1431,7 +1431,7 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCastsFromSign(
     if (OpsKnown[OpNo].hasKnownBits() &&
         OpsKnown[OpNo].getKnownBits(SQ).isNonZero())
       return true;
-    return isKnownNonZero(IntOps[OpNo], /*Depth=*/0, SQ);
+    return isKnownNonZero(IntOps[OpNo], SQ);
   };
 
   auto IsNonNeg = [&](unsigned OpNo) -> bool {

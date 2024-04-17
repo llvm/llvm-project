@@ -24467,6 +24467,22 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
       if (!LegalOperations || TLI.isOperationLegal(ISD::SPLAT_VECTOR, NVT))
         return DAG.getSplatVector(NVT, DL, V.getOperand(0));
 
+  // extract_subvector(insert_subvector(x,y,c1),c2)
+  //  --> extract_subvector(y,c2-c1)
+  // iff we're just extracting from the inserted subvector.
+  if (V.getOpcode() == ISD::INSERT_SUBVECTOR) {
+    SDValue InsSub = V.getOperand(1);
+    EVT InsSubVT = InsSub.getValueType();
+    unsigned NumInsElts = InsSubVT.getVectorMinNumElements();
+    unsigned InsIdx = V.getConstantOperandVal(2);
+    unsigned NumSubElts = NVT.getVectorMinNumElements();
+    if (InsIdx <= ExtIdx && (ExtIdx + NumSubElts) <= (InsIdx + NumInsElts) &&
+        TLI.isExtractSubvectorCheap(NVT, InsSubVT, ExtIdx - InsIdx) &&
+        InsSubVT.isFixedLengthVector() && NVT.isFixedLengthVector())
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, InsSub,
+                         DAG.getVectorIdxConstant(ExtIdx - InsIdx, DL));
+  }
+
   // Try to move vector bitcast after extract_subv by scaling extraction index:
   // extract_subv (bitcast X), Index --> bitcast (extract_subv X, Index')
   if (V.getOpcode() == ISD::BITCAST &&
