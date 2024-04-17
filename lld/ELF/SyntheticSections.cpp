@@ -3077,11 +3077,9 @@ std::pair<uint32_t, uint32_t> DebugNamesBaseSection::computeEntryPool(
         // Abbrevs are indexed starting at 1; vector starts at 0. (abbrevCode
         // corresponds to position in the merged table vector).
         const Abbrev *abbrev = abbrevTable[ie.abbrevCode - 1];
-        for (auto i : seq(abbrev->attributes.size())) {
-          DWARFDebugNames::AttributeEncoding a = abbrev->attributes[i];
+        for (auto &[a, v] : zip_equal(abbrev->attributes, ie.attrValues))
           if (a.Index == DW_IDX_parent && a.Form == DW_FORM_ref4)
-            ie.attrValues[i].attrValue = ie.parentEntry->poolOffset;
-        }
+            v.attrValue = ie.parentEntry->poolOfset;
       }
     }
   });
@@ -3232,8 +3230,8 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
   buf += hdr.AugmentationStringSize;
 
   // Write the CU list.
-  for (auto i : seq(numChunks))
-    for (uint32_t cuOffset : chunks[i].compUnits)
+  for (OutputChunk &chunk : chunks)
+    for (uint32_t cuOffset : chunk.compUnits)
       endian::writeNext<uint32_t, ELFT::Endianness>(buf, cuOffset);
 
   // Write the local TU list, then the foreign TU list..
@@ -3275,8 +3273,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
       endian::writeNext<uint32_t, ELFT::Endianness>(buf, ne->entryOffset);
 
   // Write the abbrev table.
-  memcpy(buf, abbrevTableBuf.data(), abbrevTableBuf.size());
-  buf += abbrevTableBuf.size();
+  buf = llvm::copy(abbrevTableBuf, buf);
 
   // Write the entry pool. Unlike the name table, the name entries follow the
   // nameVecs order computed by `computeEntryPool`.

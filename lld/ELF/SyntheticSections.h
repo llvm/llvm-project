@@ -858,10 +858,8 @@ public:
     // Pointer to the .debug_info section that contains compile units, used to
     // compute the relocated CU offsets.
     InputSection *infoSec;
-    // This initially holds section offsets, which may not be consecutive if
-    // there are multiple name indices in an input .debug_names section. After
-    // relocation, the section offsets are changed to CU offsets relative to the
-    // output section.
+    // This initially holds section offsets. After relocation, the section
+    // offsets are changed to CU offsets relative the the output section.
     SmallVector<uint32_t, 0> compUnits;
   };
 
