@@ -373,8 +373,6 @@ def err_requires_clause_must_appear_after_trailing_return : Error<
   "trailing return type must appear before trailing requires clause">;
 def err_requires_clause_on_declarator_not_declaring_a_function : Error<
   "trailing requires clause can only be used when declaring a function">;
-def err_requires_clause_explicit_object_parameter: Error<
-  "a requires clause cannot have an explicit object parameter">;
 def err_requires_clause_inside_parens : Error<
   "trailing requires clause should be placed outside parentheses">;
 def ext_auto_storage_class : ExtWarn<
@@ -865,6 +863,8 @@ def err_empty_requires_expr : Error<
   "a requires expression must contain at least one requirement">;
 def err_requires_expr_parameter_list_ellipsis : Error<
   "varargs not allowed in requires expression">;
+def err_requires_expr_explicit_object_parameter: Error<
+  "a requires expression cannot have an explicit object parameter">;
 def err_expected_semi_requirement : Error<
   "expected ';' at end of requirement">;
 def err_requires_expr_missing_arrow : Error<

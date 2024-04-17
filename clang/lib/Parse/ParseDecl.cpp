@@ -7673,7 +7673,7 @@ void Parser::ParseParameterDeclarationClause(
       // The parameter-declaration-list of a requires-expression is not such
       // a context.
       if (DeclaratorCtx == DeclaratorContext::RequiresExpr)
-        Diag(ThisLoc, diag::err_requires_clause_explicit_object_parameter);
+        Diag(ThisLoc, diag::err_requires_expr_explicit_object_parameter);
     }
 
     ParseDeclarationSpecifiers(DS, /*TemplateInfo=*/ParsedTemplateInfo(),
