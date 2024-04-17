@@ -370,13 +370,8 @@ struct IndexedMemProfRecord {
   size_t serializedSize(IndexedVersion Version) const;
 
   bool operator==(const IndexedMemProfRecord &Other) const {
-    if (Other.AllocSites.size() != AllocSites.size())
+    if (Other.AllocSites != AllocSites)
       return false;
-
-    for (size_t I = 0; I < AllocSites.size(); I++) {
-      if (AllocSites[I] != Other.AllocSites[I])
-        return false;
-    }
 
     if (Other.CallSiteIds != CallSiteIds)
       return false;
