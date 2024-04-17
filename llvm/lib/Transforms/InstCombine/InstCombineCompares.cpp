@@ -8085,9 +8085,11 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       case FCmpInst::FCMP_OEQ:
       case FCmpInst::FCMP_OGE:
       case FCmpInst::FCMP_OLE: {
-        BinaryOperator *SubI = cast<BinaryOperator>(LHSI);
-        if (!isKnownNeverInfOrNaN(SubI->getOperand(0), 0, SQ) &&
-            !isKnownNeverInfOrNaN(SubI->getOperand(1), 0, SQ))
+        if (!LHSI->hasNoNaNs() && !LHSI->hasNoInfs() &&
+            !isKnownNeverInfinity(LHSI->getOperand(0), /*Depth=*/0,
+                                  getSimplifyQuery().getWithInstruction(&I)) &&
+            !isKnownNeverInfinity(LHSI->getOperand(1), /*Depth=*/0,
+                                  getSimplifyQuery().getWithInstruction(&I)))
           break;
       }
         LLVM_FALLTHROUGH;
@@ -8098,8 +8100,11 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       case FCmpInst::FCMP_UGE:
       case FCmpInst::FCMP_ULE:
         if (match(RHSC, m_AnyZeroFP()) &&
-            match(LHSI, m_FSub(m_Value(X), m_Value(Y))))
-          return new FCmpInst(Pred, X, Y, "", &I);
+            match(LHSI, m_FSub(m_Value(X), m_Value(Y)))) {
+          replaceOperand(I, 0, X);
+          replaceOperand(I, 1, Y);
+          return &I;
+        }
         break;
       }
       break;
