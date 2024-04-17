@@ -144,14 +144,14 @@ static IndexedMemProfRecord deserializeV0(const MemProfSchema &Schema,
 
   // Read the meminfo nodes.
   const uint64_t NumNodes =
-      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   for (uint64_t I = 0; I < NumNodes; I++) {
     IndexedAllocationInfo Node;
     const uint64_t NumFrames =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     for (uint64_t J = 0; J < NumFrames; J++) {
       const FrameId Id =
-          endian::readNext<FrameId, llvm::endianness::little, unaligned>(Ptr);
+          endian::readNext<FrameId, llvm::endianness::little>(Ptr);
       Node.CallStack.push_back(Id);
     }
     Node.CSId = hashCallStack(Node.CallStack);
@@ -162,15 +162,15 @@ static IndexedMemProfRecord deserializeV0(const MemProfSchema &Schema,
 
   // Read the callsite information.
   const uint64_t NumCtxs =
-      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   for (uint64_t J = 0; J < NumCtxs; J++) {
     const uint64_t NumFrames =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     llvm::SmallVector<FrameId> Frames;
     Frames.reserve(NumFrames);
     for (uint64_t K = 0; K < NumFrames; K++) {
       const FrameId Id =
-          endian::readNext<FrameId, llvm::endianness::little, unaligned>(Ptr);
+          endian::readNext<FrameId, llvm::endianness::little>(Ptr);
       Frames.push_back(Id);
     }
     Record.CallSites.push_back(Frames);
@@ -188,11 +188,10 @@ static IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
 
   // Read the meminfo nodes.
   const uint64_t NumNodes =
-      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   for (uint64_t I = 0; I < NumNodes; I++) {
     IndexedAllocationInfo Node;
-    Node.CSId =
-        endian::readNext<CallStackId, llvm::endianness::little, unaligned>(Ptr);
+    Node.CSId = endian::readNext<CallStackId, llvm::endianness::little>(Ptr);
     Node.Info.deserialize(Schema, Ptr);
     Ptr += PortableMemInfoBlock::serializedSize();
     Record.AllocSites.push_back(Node);
@@ -200,10 +199,10 @@ static IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
 
   // Read the callsite information.
   const uint64_t NumCtxs =
-      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   for (uint64_t J = 0; J < NumCtxs; J++) {
     CallStackId CSId =
-        endian::readNext<CallStackId, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<CallStackId, llvm::endianness::little>(Ptr);
     Record.CallSiteIds.push_back(CSId);
   }
 
@@ -263,7 +262,7 @@ Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer) {
 
   const unsigned char *Ptr = Buffer;
   const uint64_t NumSchemaIds =
-      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   if (NumSchemaIds > static_cast<uint64_t>(Meta::Size)) {
     return make_error<InstrProfError>(instrprof_error::malformed,
                                       "memprof schema invalid");
@@ -272,7 +271,7 @@ Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer) {
   MemProfSchema Result;
   for (size_t I = 0; I < NumSchemaIds; I++) {
     const uint64_t Tag =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     if (Tag >= static_cast<uint64_t>(Meta::Size)) {
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "memprof schema invalid");
