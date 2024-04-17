@@ -21,3 +21,21 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_timespec
 )
+
+add_proxy_header_library(
+  fenv_t
+  HDRS
+    fenv_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.fenv_t
+    libc.include.fenv
+)
+
+add_proxy_header_library(
+  fexcept_t
+  HDRS
+    fexcept_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.fexcept_t
+    libc.include.fenv
+)

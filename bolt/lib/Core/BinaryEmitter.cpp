@@ -512,7 +512,7 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
 
       // Emit sized NOPs via MCAsmBackend::writeNopData() interface on x86.
       // This is a workaround for invalid NOPs handling by asm/disasm layer.
-      if (BC.MIB->isNoop(Instr) && BC.isX86()) {
+      if (BC.isX86() && BC.MIB->isNoop(Instr)) {
         if (std::optional<uint32_t> Size = BC.MIB->getSize(Instr)) {
           SmallString<15> Code;
           raw_svector_ostream VecOS(Code);

@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -1293,18 +1294,14 @@ getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
   if (ID == Intrinsic::vector_reduce_add) {
     // Retrieve number and size of elements for the vector op.
     auto *VTy = cast<FixedVectorType>(ParamTys.front());
-    unsigned NumElements = VTy->getNumElements();
     unsigned ScalarSize = VTy->getScalarSizeInBits();
     // For scalar sizes >128 bits, we fall back to the generic cost estimate.
     if (ScalarSize > SystemZ::VectorBits)
       return -1;
-    // A single vector register can hold this many elements.
-    unsigned MaxElemsPerVector = SystemZ::VectorBits / ScalarSize;
     // This many vector regs are needed to represent the input elements (V).
     unsigned VectorRegsNeeded = getNumVectorRegs(VTy);
     // This many instructions are needed for the final sum of vector elems (S).
-    unsigned LastVectorHandling =
-        2 * Log2_32_Ceil(std::min(NumElements, MaxElemsPerVector));
+    unsigned LastVectorHandling = (ScalarSize < 32) ? 3 : 2;
     // We use vector adds to create a sum vector, which takes
     // V/2 + V/4 + ... = V - 1 operations.
     // Then, we need S operations to sum up the elements of that sum vector,
@@ -1323,4 +1320,28 @@ SystemZTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   if (Cost != -1)
     return Cost;
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+}
+
+bool SystemZTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
+  // Always expand on Subtargets without vector instructions
+  if (!ST->hasVector())
+    return true;
+
+  // Always expand for operands that do not fill one vector reg
+  auto *Type = cast<FixedVectorType>(II->getOperand(0)->getType());
+  unsigned NumElts = Type->getNumElements();
+  unsigned ScalarSize = Type->getScalarSizeInBits();
+  unsigned MaxElts = SystemZ::VectorBits / ScalarSize;
+  if (NumElts < MaxElts)
+    return true;
+
+  // Otherwise
+  switch (II->getIntrinsicID()) {
+  // Do not expand vector.reduce.add
+  case Intrinsic::vector_reduce_add:
+    // Except for i64, since the performance benefit is dubious there
+    return ScalarSize >= 64;
+  default:
+    return true;
+  }
 }

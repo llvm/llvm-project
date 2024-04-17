@@ -28,6 +28,13 @@ def is_implemented(hname: str, fname: str) -> bool:
         "src",
         hname.rstrip(".h")
     )
+
+    if not path.exists():
+        raise FileNotFoundError(f"implementation dir does not exist: {path}")
+
+    if not path.is_dir():
+        raise NotADirectoryError(f"implementation dir is not a dir: {path}")
+
     # Recursively search for the target source file in the subdirectories under
     # libc/src/{hname}.
     for _ in path.glob("**/" + fname + ".cpp"):
@@ -53,6 +60,7 @@ def print_functions(header: str, functions: Dict):
 
 
 def print_header(header: str, api: Dict):
+    print(".. include:: check.rst\n")
     fns = f"{header} Functions"
     print(fns)
     print("=" * (len(fns)))

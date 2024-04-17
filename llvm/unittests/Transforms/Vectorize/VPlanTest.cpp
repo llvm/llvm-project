@@ -1227,7 +1227,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-TEST(VPRecipeTest, dump) {
+TEST(VPRecipeTest, dumpRecipeInPlan) {
   VPBasicBlock *VPBB0 = new VPBasicBlock("preheader");
   VPBasicBlock *VPBB1 = new VPBasicBlock();
   VPlan Plan(VPBB0, VPBB1);
@@ -1280,6 +1280,175 @@ TEST(VPRecipeTest, dump) {
 
   delete AI;
 }
+
+TEST(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
+  VPBasicBlock *VPBB0 = new VPBasicBlock("preheader");
+  VPBasicBlock *VPBB1 = new VPBasicBlock();
+  VPlan Plan(VPBB0, VPBB1);
+
+  LLVMContext C;
+
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  auto *AI =
+      BinaryOperator::CreateAdd(UndefValue::get(Int32), UndefValue::get(Int32));
+  AI->setName("a");
+  SmallVector<VPValue *, 2> Args;
+  VPValue *ExtVPV1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *ExtVPV2 = Plan.getOrAddLiveIn(AI);
+  Args.push_back(ExtVPV1);
+  Args.push_back(ExtVPV2);
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2});
+  VPInstruction *I2 = new VPInstruction(Instruction::Mul, {I1, I1});
+  VPBB1->appendRecipe(I1);
+  VPBB1->appendRecipe(I2);
+
+  // Check printing I1.
+  {
+    // Use EXPECT_EXIT to capture stderr and compare against expected output.
+    //
+    // Test VPValue::dump().
+    VPValue *VPV = I1;
+    EXPECT_EXIT(
+        {
+          VPV->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
+
+    // Test VPRecipeBase::dump().
+    VPRecipeBase *R = I1;
+    EXPECT_EXIT(
+        {
+          R->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
+
+    // Test VPDef::dump().
+    VPDef *D = I1;
+    EXPECT_EXIT(
+        {
+          D->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
+  }
+  // Check printing I2.
+  {
+    // Use EXPECT_EXIT to capture stderr and compare against expected output.
+    //
+    // Test VPValue::dump().
+    VPValue *VPV = I2;
+    EXPECT_EXIT(
+        {
+          VPV->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
+
+    // Test VPRecipeBase::dump().
+    VPRecipeBase *R = I2;
+    EXPECT_EXIT(
+        {
+          R->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
+
+    // Test VPDef::dump().
+    VPDef *D = I2;
+    EXPECT_EXIT(
+        {
+          D->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
+  }
+  delete AI;
+}
+
+TEST(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
+  LLVMContext C;
+  IntegerType *Int32 = IntegerType::get(C, 32);
+  auto *AI =
+      BinaryOperator::CreateAdd(UndefValue::get(Int32), UndefValue::get(Int32));
+  AI->setName("a");
+  VPValue *ExtVPV1 = new VPValue(ConstantInt::get(Int32, 1));
+  VPValue *ExtVPV2 = new VPValue(AI);
+
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2});
+  VPInstruction *I2 = new VPInstruction(Instruction::Mul, {I1, I1});
+
+  // Check printing I1.
+  {
+    // Use EXPECT_EXIT to capture stderr and compare against expected output.
+    //
+    // Test VPValue::dump().
+    VPValue *VPV = I1;
+    EXPECT_EXIT(
+        {
+          VPV->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "EMIT <badref> = add ir<1>, ir<%a>");
+
+    // Test VPRecipeBase::dump().
+    VPRecipeBase *R = I1;
+    EXPECT_EXIT(
+        {
+          R->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "EMIT <badref> = add ir<1>, ir<%a>");
+
+    // Test VPDef::dump().
+    VPDef *D = I1;
+    EXPECT_EXIT(
+        {
+          D->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "EMIT <badref> = add ir<1>, ir<%a>");
+  }
+  // Check printing I2.
+  {
+    // Use EXPECT_EXIT to capture stderr and compare against expected output.
+    //
+    // Test VPValue::dump().
+    VPValue *VPV = I2;
+    EXPECT_EXIT(
+        {
+          VPV->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "EMIT <badref> = mul <badref>, <badref>");
+
+    // Test VPRecipeBase::dump().
+    VPRecipeBase *R = I2;
+    EXPECT_EXIT(
+        {
+          R->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "EMIT <badref> = mul <badref>, <badref>");
+
+    // Test VPDef::dump().
+    VPDef *D = I2;
+    EXPECT_EXIT(
+        {
+          D->dump();
+          exit(0);
+        },
+        testing::ExitedWithCode(0), "EMIT <badref> = mul <badref>, <badref>");
+  }
+
+  delete I2;
+  delete I1;
+  delete ExtVPV2;
+  delete ExtVPV1;
+  delete AI;
+}
+
 #endif
 
 TEST(VPRecipeTest, CastVPReductionRecipeToVPUser) {

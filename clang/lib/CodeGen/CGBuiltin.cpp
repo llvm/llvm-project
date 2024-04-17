@@ -3436,6 +3436,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Builder.CreateAssumption(ConstantInt::getTrue(getLLVMContext()), {OBD});
     return RValue::get(nullptr);
   }
+  case Builtin::BI__builtin_allow_runtime_check: {
+    StringRef Kind =
+        cast<StringLiteral>(E->getArg(0)->IgnoreParenCasts())->getString();
+    LLVMContext &Ctx = CGM.getLLVMContext();
+    llvm::Value *Allow = Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::allow_runtime_check),
+        llvm::MetadataAsValue::get(Ctx, llvm::MDString::get(Ctx, Kind)));
+    return RValue::get(Allow);
+  }
   case Builtin::BI__arithmetic_fence: {
     // Create the builtin call if FastMath is selected, and the target
     // supports the builtin, otherwise just return the argument.
@@ -18194,7 +18203,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
         /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
-        Intrinsic::dx_any, ArrayRef<Value *>{Op0}, nullptr, "dx.any");
+        CGM.getHLSLRuntime().getAnyIntrinsic(), ArrayRef<Value *>{Op0}, nullptr,
+        "hlsl.any");
   }
   case Builtin::BI__builtin_hlsl_elementwise_clamp: {
     Value *OpX = EmitScalarExpr(E->getArg(0));
@@ -18303,9 +18313,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("rcp operand must have a float representation");
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/Op0->getType(), Intrinsic::dx_rcp,
-        ArrayRef<Value *>{Op0}, nullptr, "dx.rcp");
+    llvm::Type *Ty = Op0->getType();
+    llvm::Type *EltTy = Ty->getScalarType();
+    Constant *One =
+        Ty->isVectorTy()
+            ? ConstantVector::getSplat(
+                  ElementCount::getFixed(
+                      dyn_cast<FixedVectorType>(Ty)->getNumElements()),
+                  ConstantFP::get(EltTy, 1.0))
+            : ConstantFP::get(EltTy, 1.0);
+    return Builder.CreateFDiv(One, Op0, "hlsl.rcp");
   }
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

@@ -28130,7 +28130,8 @@ Syntax:
 Arguments:
 """"""""""
 
-The first argument is a thread local :ref:`global variable <globalvars>`.
+The `llvm.threadlocal.address` intrinsic requires a global value argument (a
+:ref:`global variable <globalvars>` or alias) that is thread local.
 
 Semantics:
 """"""""""

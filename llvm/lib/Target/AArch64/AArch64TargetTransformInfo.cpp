@@ -3939,7 +3939,10 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
       LT.second.getVectorNumElements() == Mask.size() &&
       (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
       (isZIPMask(Mask, LT.second, Unused) ||
-       isUZPMask(Mask, LT.second, Unused)))
+       isUZPMask(Mask, LT.second, Unused) ||
+       // Check for non-zero lane splats
+       all_of(drop_begin(Mask),
+              [&Mask](int M) { return M < 0 || M == Mask[0]; })))
     return 1;
 
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
