@@ -185,7 +185,7 @@ private:
 
 public:
   // The native InputSection of the symbol. The symbol may be moved to another
-  // InputSection in which originalIsec->canonical() will point to the new
+  // InputSection in which case originalIsec->canonical() will point to the new
   // InputSection
   InputSection *originalIsec;
   // Contains the offset from the containing subsection. Note that this is
