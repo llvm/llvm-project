@@ -40,7 +40,7 @@ static raw_fd_ostream &unbuff_outs() {
 
 static bool LogVerbose = false;
 static void logVerbose(const llvm::Twine &message) {
-  if (VerboseLog) {
+  if (LogVerbose) {
     unbuff_outs() << message << '\n';
   }
 }
@@ -206,7 +206,8 @@ void ModuleBuildDaemonServer::listenForClients() {
         if (EC == std::errc::timed_out) {
           RunServiceLoop = false;
           logVerbose("ListeningServer::accept timed out, shutting down");
-        } else if (EC == std::errc::interrupted && RunServiceLoop == false) {
+        } else if (EC == std::errc::bad_file_descriptor &&
+                   RunServiceLoop == false) {
           logVerbose("Signal received, shutting down");
         } else
           errs() << "MBD failed to accept incoming connection: "
