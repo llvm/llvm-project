@@ -7,8 +7,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @masked_gather_base_plus_stride_v8f32(ptr %dst, ptr %src) #0 {
 ; CHECK-LABEL: masked_gather_base_plus_stride_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    index z0.s, #0, #7
+; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x1, z0.s, sxtw #2]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -21,8 +21,8 @@ define void @masked_gather_base_plus_stride_v8f32(ptr %dst, ptr %src) #0 {
 define void @masked_gather_base_plus_stride_v4f64(ptr %dst, ptr %src) #0 {
 ; CHECK-LABEL: masked_gather_base_plus_stride_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    mov x8, #-32 // =0xffffffffffffffe0
+; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    index z0.d, #-2, x8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1, z0.d, lsl #3]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]

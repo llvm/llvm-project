@@ -176,10 +176,12 @@ void test_P1361() {
 
   assert_is_formattable<std::chrono::hh_mm_ss<std::chrono::microseconds>, CharT>();
 
-  //assert_is_formattable<std::chrono::sys_info, CharT>();
+#  if !defined(TEST_HAS_NO_INCOMPLETE_TZDB)
+  assert_is_formattable<std::chrono::sys_info, CharT>();
   //assert_is_formattable<std::chrono::local_info, CharT>();
 
   //assert_is_formattable<std::chrono::zoned_time, CharT>();
+#  endif // !defined(TEST_HAS_NO_INCOMPLETE_TZDB)
 
 #endif // TEST_HAS_NO_LOCALIZATION
 }
