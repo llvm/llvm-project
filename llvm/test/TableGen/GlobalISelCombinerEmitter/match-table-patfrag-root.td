@@ -28,12 +28,12 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 
 //      CHECK: const uint8_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
-// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2(124), GIMT_Encode2(187), /*)*//*default:*//*Label 3*/ GIMT_Encode4(380),
-// CHECK-NEXT:     /*TargetOpcode::G_TRUNC*//*Label 0*/ GIMT_Encode4(262), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
-// CHECK-NEXT:     /*TargetOpcode::G_ZEXT*//*Label 1*/ GIMT_Encode4(298), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
-// CHECK-NEXT:     /*TargetOpcode::G_FPEXT*//*Label 2*/ GIMT_Encode4(344),
-// CHECK-NEXT:     // Label 0: @262
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(297), // Rule ID 1 //
+// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2({{[0-9]+}}), GIMT_Encode2({{[0-9]+}}), /*)*//*default:*//*Label 3*/ GIMT_Encode4([[L380:[0-9]+]]),
+// CHECK-NEXT:     /*TargetOpcode::G_TRUNC*//*Label 0*/ GIMT_Encode4([[L262:[0-9]+]]), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
+// CHECK-NEXT:     /*TargetOpcode::G_ZEXT*//*Label 1*/ GIMT_Encode4([[L298:[0-9]+]]), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
+// CHECK-NEXT:     /*TargetOpcode::G_FPEXT*//*Label 2*/ GIMT_Encode4([[L344:[0-9]+]]),
+// CHECK-NEXT:     // Label 0: @[[L262]]
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4([[L297:[0-9]+]]), // Rule ID 1 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
 // CHECK-NEXT:       // MIs[0] root
 // CHECK-NEXT:       // No operand predicates
@@ -47,10 +47,10 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 4: @297
+// CHECK-NEXT:     // Label 4: @[[L297]]
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     // Label 1: @298
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4(343), // Rule ID 0 //
+// CHECK-NEXT:     // Label 1: @[[L298]]
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4([[L343:[0-9]+]]), // Rule ID 0 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
 // CHECK-NEXT:       // MIs[0] root
 // CHECK-NEXT:       // No operand predicates
@@ -68,10 +68,10 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 5: @343
+// CHECK-NEXT:     // Label 5: @[[L343]]
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     // Label 2: @344
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(379), // Rule ID 2 //
+// CHECK-NEXT:     // Label 2: @[[L344]]
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4([[L379:[0-9]+]]), // Rule ID 2 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
 // CHECK-NEXT:       // MIs[0] root
 // CHECK-NEXT:       // No operand predicates
@@ -85,10 +85,10 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 6: @379
+// CHECK-NEXT:     // Label 6: @[[L379]]
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     // Label 3: @380
+// CHECK-NEXT:     // Label 3: @[[L380]]
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     }; // Size: 381 bytes
+// CHECK-NEXT:     }; // Size: {{[0-9]+}} bytes
 // CHECK-NEXT:   return MatchTable0;
 // CHECK-NEXT: }
