@@ -12,31 +12,29 @@
 #define NOTHROW noexcept(true)
 #endif
 
-namespace dr201 { // dr201: 2.8
-
-extern void full_expr_fence() NOTHROW;
+namespace cwg392 { // cwg392: 2.8
 
 struct A {
-  ~A() NOTHROW {}
+  operator bool() NOTHROW;
 };
 
-struct B {
-  B(A) NOTHROW {}
-  ~B() NOTHROW {}
+class C {
+public:
+  C() NOTHROW;
+  ~C() NOTHROW;
+  A& get() NOTHROW { return p; }
+private:
+  A p;
 };
 
-void foo() {
-  full_expr_fence();
-  B b = A();
-  full_expr_fence();
+void f()
+{
+  if (C().get()) {}
 }
 
-// CHECK-LABEL: define {{.*}} void @dr201::foo()
-// CHECK:         call void @dr201::full_expr_fence()
-// CHECK:         call void @dr201::B::B(dr201::A)
-// CHECK:         call void @dr201::A::~A()
-// CHECK:         call void @dr201::full_expr_fence()
-// CHECK:         call void @dr201::B::~B()
-// CHECK-LABEL: }
+} // namespace cwg392
 
-} // namespace dr201
+// CHECK-LABEL: define {{.*}} void @cwg392::f()()
+// CHECK:         call {{.*}} i1 @cwg392::A::operator bool()
+// CHECK:         call void @cwg392::C::~C()
+// CHECK-LABEL: }

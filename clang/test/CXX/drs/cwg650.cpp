@@ -12,26 +12,29 @@
 #define NOTHROW noexcept(true)
 #endif
 
-namespace std {
-struct type_info {
-  const char* name() const NOTHROW;
-}; 
+namespace cwg650 { // cwg650: 2.8
+
+struct Q {
+  ~Q() NOTHROW;
+};
+
+struct R {
+  ~R() NOTHROW;
+};
+
+struct S {
+  ~S() NOTHROW;
+};
+
+const S& f() {
+  Q q;
+  return (R(), S());
 }
 
-namespace dr492 { // dr492: 2.7
+} // namespace cwg650
 
-void f() {
-  typeid(int).name();
-  typeid(const int).name();
-  typeid(volatile int).name();
-  typeid(const volatile int).name();
-}
-
-} // namespace dr492
-
-// CHECK-LABEL: define {{.*}} void @dr492::f()()
-// CHECK:         {{.*}} = call {{.*}} @std::type_info::name() const({{.*}} @typeinfo for int)
-// CHECK-NEXT:    {{.*}} = call {{.*}} @std::type_info::name() const({{.*}} @typeinfo for int)
-// CHECK-NEXT:    {{.*}} = call {{.*}} @std::type_info::name() const({{.*}} @typeinfo for int)
-// CHECK-NEXT:    {{.*}} = call {{.*}} @std::type_info::name() const({{.*}} @typeinfo for int)
+// CHECK-LABEL: define {{.*}} @cwg650::f()()
+// CHECK:         call void @cwg650::S::~S()
+// CHECK:         call void @cwg650::R::~R()
+// CHECK:         call void @cwg650::Q::~Q()
 // CHECK-LABEL: }
