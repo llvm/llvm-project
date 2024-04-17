@@ -19,6 +19,7 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaObjC.h"
 #include <optional>
 
 using namespace clang;
@@ -98,11 +99,11 @@ ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,
 
   // For +new, infer availability from -init.
   if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
-    if (S.NSAPIObj && ClassReceiver) {
+    if (S.ObjC().NSAPIObj && ClassReceiver) {
       ObjCMethodDecl *Init = ClassReceiver->lookupInstanceMethod(
-          S.NSAPIObj->getInitSelector());
+          S.ObjC().NSAPIObj->getInitSelector());
       if (Init && Result == AR_Available && MD->isClassMethod() &&
-          MD->getSelector() == S.NSAPIObj->getNewSelector() &&
+          MD->getSelector() == S.ObjC().NSAPIObj->getNewSelector() &&
           MD->definedInNSObject(S.getASTContext())) {
         Result = Init->getAvailability(Message);
         D = Init;

@@ -18,6 +18,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 using namespace clang;
@@ -290,15 +291,15 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
       // Three cases. This is a message send to a type: [type foo]
       // This is a message send to super:  [super foo]
       // This is a message sent to an expr:  [super.bar foo]
-      switch (Actions.getObjCMessageKind(
+      switch (Actions.ObjC().getObjCMessageKind(
           getCurScope(), II, IILoc, II == Ident_super,
           NextToken().is(tok::period), ReceiverType)) {
-      case Sema::ObjCSuperMessage:
+      case SemaObjC::ObjCSuperMessage:
         CheckArrayDesignatorSyntax(*this, StartLoc, Desig);
         return ParseAssignmentExprWithObjCMessageExprStart(
             StartLoc, ConsumeToken(), nullptr, nullptr);
 
-      case Sema::ObjCClassMessage:
+      case SemaObjC::ObjCClassMessage:
         CheckArrayDesignatorSyntax(*this, StartLoc, Desig);
         ConsumeToken(); // the identifier
         if (!ReceiverType) {
@@ -326,7 +327,7 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
                                                            ReceiverType,
                                                            nullptr);
 
-      case Sema::ObjCInstanceMessage:
+      case SemaObjC::ObjCInstanceMessage:
         // Fall through; we'll just parse the expression and
         // (possibly) treat this like an Objective-C message send
         // later.

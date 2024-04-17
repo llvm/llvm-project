@@ -22,6 +22,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2294,7 +2295,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
   } else if (ForEach) {
     // Similarly, we need to do the semantic analysis for a for-range
     // statement immediately in order to close over temporaries correctly.
-    ForEachStmt = Actions.ActOnObjCForCollectionStmt(ForLoc,
+    ForEachStmt = Actions.ObjC().ActOnObjCForCollectionStmt(ForLoc,
                                                      FirstPart.get(),
                                                      Collection.get(),
                                                      T.getCloseLocation());
@@ -2345,7 +2346,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     return StmtError();
 
   if (ForEach)
-   return Actions.FinishObjCForCollectionStmt(ForEachStmt.get(),
+   return Actions.ObjC().FinishObjCForCollectionStmt(ForEachStmt.get(),
                                               Body.get());
 
   if (ForRangeInfo.ParsedForRangeDecl())
