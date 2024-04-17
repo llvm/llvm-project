@@ -524,6 +524,19 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
     MLIRCAPIQuant
 )
 
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.NVGPU.Pybind
+  MODULE_NAME _mlirDialectsNvgpu
+  ADD_TO_PARENT MLIRPythonSources.Dialects.nvgpu
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectNVGPU.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPINVGPU
+)
+
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.PDL.Pybind
   MODULE_NAME _mlirDialectsPDL
   ADD_TO_PARENT MLIRPythonSources.Dialects.pdl
