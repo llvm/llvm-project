@@ -56,7 +56,7 @@ bool Operator::hasPoisonGeneratingFlags() const {
   }
 }
 
-bool Operator::hasPoisonGeneratingFlagsOrMetadata() const {
+bool Operator::hasPoisonGeneratingAnnotations() const {
   if (hasPoisonGeneratingFlags())
     return true;
   auto *I = dyn_cast<Instruction>(this);

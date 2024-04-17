@@ -497,12 +497,12 @@ public:
   void dropPoisonGeneratingMetadata();
 
   /// Return true if this instruction has poison-generating flags or metadata.
-  bool hasPoisonGeneratingFlagsOrMetadata() const {
+  bool hasPoisonGeneratingAnnotations() const {
     return hasPoisonGeneratingFlags() || hasPoisonGeneratingMetadata();
   }
 
   /// Drops flags and metadata that may generate poison.
-  void dropPoisonGeneratingFlagsAndMetadata() {
+  void dropPoisonGeneratingAnnotations() {
     dropPoisonGeneratingFlags();
     dropPoisonGeneratingMetadata();
   }
