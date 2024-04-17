@@ -733,6 +733,10 @@ struct sys_info {                                                               
   string        abbrev;
 };
 
+template<class charT, class traits>                                              // C++20
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const sys_info& si);
+
 // 25.10.5, class time_zone                                                      // C++20
 enum class choose {earliest, latest};
 class time_zone {
@@ -829,6 +833,7 @@ namespace std {
   template<class charT> struct formatter<chrono::year_month_weekday_last, charT>; // C++20
   template<class Rep, class Period, class charT>
     struct formatter<chrono::hh_mm_ss<duration<Rep, Period>>, charT>;             // C++20
+  template<class charT> struct formatter<chrono::sys_info, charT>;                // C++20
 } // namespace std
 
 namespace chrono {
