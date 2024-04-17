@@ -208,6 +208,13 @@ def HasStdExtAOrZalrsc
                          "'A' (Atomic Instructions) or "
                          "'Zalrsc' (Load-Reserved/Store-Conditional)">;
 
+def FeatureStdExtZama16b
+    : SubtargetFeature<"zama16b", "HasStdExtZama16b", "true",
+                       "'Zama16b' (Atomic 16-byte misaligned loads, stores and AMOs)">;
+def HasStdExtZama16b : Predicate<"Subtarget->hasStdExtZama16b()">,
+                       AssemblerPredicate<(all_of FeatureStdExtZama16b),
+                           "'Zama16b' (Atomic 16-byte misaligned loads, stores and AMOs)">;
+
 def FeatureStdExtZawrs : SubtargetFeature<"zawrs", "HasStdExtZawrs", "true",
                                           "'Zawrs' (Wait on Reservation Set)">;
 def HasStdExtZawrs : Predicate<"Subtarget->hasStdExtZawrs()">,
