@@ -136,6 +136,11 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
+- New :doc:`cppcoreguidelines-avoid-bounds-errors
+  <clang-tidy/checks/cppcoreguidelines/avoid-bounds-errors>` check.
+
+  Flags the unsafe `operator[]` and replaces it with `at()`.
+
 - New :doc:`cppcoreguidelines-use-enum-class
   <clang-tidy/checks/cppcoreguidelines/use-enum-class>` check.
 
