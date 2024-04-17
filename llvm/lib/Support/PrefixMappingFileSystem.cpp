@@ -88,7 +88,7 @@ public:
   }
 
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override {
+                              SmallVectorImpl<char> &Output) override {
     PREFIX_MAP_PATH(Path, MappedPath)
     return ProxyFileSystem::getRealPath(MappedPath, Output);
   }
