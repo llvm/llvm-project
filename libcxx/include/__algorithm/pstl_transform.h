@@ -58,9 +58,10 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator transform(
     _ForwardIterator __last,
     _ForwardOutIterator __result,
     _UnaryOperation __op) {
-  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator);
-  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator);
-  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(_ForwardOutIterator, decltype(__op(*__first)));
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "transform requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "transform requires an OutputIterator");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(__op(*__first)), "transform requires an OutputIterator");
   auto __res = std::__transform(__policy, std::move(__first), std::move(__last), std::move(__result), std::move(__op));
   if (!__res)
     std::__throw_bad_alloc();
@@ -100,10 +101,11 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator transform(
     _ForwardIterator2 __first2,
     _ForwardOutIterator __result,
     _BinaryOperation __op) {
-  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1);
-  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2);
-  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator);
-  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(_ForwardOutIterator, decltype(__op(*__first1, *__first2)));
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "transform requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "transform requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "transform requires an OutputIterator");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(__op(*__first1, *__first2)), "transform requires an OutputIterator");
   auto __res = std::__transform(
       __policy, std::move(__first1), std::move(__last1), std::move(__first2), std::move(__result), std::move(__op));
   if (!__res)

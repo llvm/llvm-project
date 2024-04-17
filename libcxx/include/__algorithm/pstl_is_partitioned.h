@@ -14,6 +14,7 @@
 #include <__algorithm/pstl_find.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__config>
+#include <__iterator/cpp17_iterator_concepts.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
@@ -62,6 +63,7 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI bool
 is_partitioned(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "is_partitioned requires ForwardIterators");
   auto __res = std::__is_partitioned(__policy, std::move(__first), std::move(__last), std::move(__pred));
   if (!__res)
     std::__throw_bad_alloc();
