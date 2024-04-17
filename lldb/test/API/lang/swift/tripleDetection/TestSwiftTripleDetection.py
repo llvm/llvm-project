@@ -40,4 +40,4 @@ class TestSwiftTripleDetection(TestBase):
             if found == 1 and re.search('SwiftASTContextForExpressions.*setting to ".*-apple-macos.[0-9.]+"', line):
                found += 1
                break
-        self.assertEquals(found, 2)
+        self.assertEqual(found, 2)

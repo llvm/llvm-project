@@ -1,6 +1,4 @@
-# TestInOutVariables.py
-#
-# This source file is part of the Swift.org open source project
+# TestInOutVariables.py This source file is part of the Swift.org open source project
 #
 # Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
@@ -69,18 +67,18 @@ class TestInOutVariables(TestBase):
 
         ivar = x_actual.GetChildAtIndex(0).GetChildAtIndex(0)
         ovar = x_actual.GetChildAtIndex(1)
-        self.assertEquals(
+        self.assertEqual(
             ivar.GetName(), "ivar", "Name: %s is not ivar %s" %
             (ivar.GetName(), message_end))
-        self.assertEquals(
+        self.assertEqual(
             ovar.GetName(), "ovar",
             "ovar is not ovar %s" %
             (message_end))
-        self.assertEquals(
+        self.assertEqual(
             ivar.GetValue(), ivar_value,
             "ivar wrong %s" %
             (message_end))
-        self.assertEquals(
+        self.assertEqual(
             ovar.GetValue(), ovar_value,
             "ovar wrong %s" %
             (message_end))

@@ -22,7 +22,7 @@ class TestSwiftHealthCheck(TestBase):
         result = lldb.SBCommandReturnObject()
         ret_val = self.dbg.GetCommandInterpreter().HandleCommand("swift-healthcheck", result)
         log = result.GetOutput()[:-1].split(" ")[-1]
-        self.assertEquals(log[-4:], ".log")
+        self.assertEqual(log[-4:], ".log")
         import io, re
         logfile = io.open(log, "r", encoding='utf-8')
         good = 0
@@ -35,7 +35,7 @@ class TestSwiftHealthCheck(TestBase):
                 bad += 1
                 break
         self.assertGreater(good, 1)
-        self.assertEquals(bad, 0)
+        self.assertEqual(bad, 0)
 
     @swiftTest
     @skipIfDarwinEmbedded

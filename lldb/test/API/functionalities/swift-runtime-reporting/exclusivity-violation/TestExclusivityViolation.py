@@ -58,8 +58,8 @@ class SwiftRuntimeReportingExclusivityViolationTestCase(lldbtest.TestBase):
         frame = thread.GetSelectedFrame()
 
         frame_variables = frame.GetVariables(True, False, False, False)
-        self.assertEquals(frame_variables.GetSize(), 1)
-        self.assertEquals(frame_variables.GetValueAtIndex(0).GetName(), "p")
+        self.assertEqual(frame_variables.GetSize(), 1)
+        self.assertEqual(frame_variables.GetValueAtIndex(0).GetName(), "p")
 
         addr = frame_variables.GetValueAtIndex(0).GetValueAsUnsigned()
 
