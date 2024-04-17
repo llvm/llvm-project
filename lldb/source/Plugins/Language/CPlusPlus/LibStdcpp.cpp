@@ -254,6 +254,10 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
   } else
     addr_of_string =
         valobj.GetAddressOf(scalar_is_load_addr, &addr_type);
+
+  // We have to check for host address here
+  // because GetAddressOf returns INVALID for all non load addresses.
+  // But we can still format strings in host memory.
   if (addr_of_string != LLDB_INVALID_ADDRESS ||
         addr_type == eAddressTypeHost) {
     switch (addr_type) {
@@ -288,29 +292,50 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
         return true;
     } break;
     case eAddressTypeHost: {
-      // We have the host address of our std::string
-      // But we need to read the pointee data from the debugged process.
-      ProcessSP process_sp(valobj.GetProcessSP());
+
       DataExtractor data;
       Status error;
       valobj.GetData(data, error);
       if (error.Fail())
         return false;
-      // We want to read the address from std::string, which is the first 8 bytes.
+
       lldb::offset_t offset = 0;
-      lldb::addr_t addr = data.GetAddress(&offset);
-      if (!addr)
+      AddressType child_addressType = valobj.GetAddressTypeOfChildren();
+      if (child_addressType == eAddressTypeLoad)
       {
-        stream.Printf("nullptr");
+        // We have the host address of our std::string
+        // But we need to read the pointee data from the debugged process.
+        ProcessSP process_sp(valobj.GetProcessSP());
+        // We want to read the address from std::string, which is the first 8 bytes.
+        lldb::addr_t addr = data.GetAddress(&offset);
+        if (!addr)
+        {
+          stream.Printf("nullptr");
+          return true;
+        }
+        std::string contents;
+        process_sp->ReadCStringFromMemory(addr, contents, error);
+        if (error.Fail())
+          return false;
+
+        stream.Printf("%s", contents.c_str());
         return true;
       }
 
-      std::string contents;
-      process_sp->ReadCStringFromMemory(addr, contents, error);
-      if (error.Fail())
-        return false;
-      stream.Printf("%s", contents.c_str());
-      return true;
+      if (child_addressType == eAddressTypeHost)
+      {
+        lldb::offset_t size = data.GetByteSize();
+        const void* dataStart = data.GetData(&offset, size);
+        if (!dataStart)
+          return false;
+
+        const std::string* str = static_cast<const std::string*>(dataStart);
+        stream.Printf("%s", str->c_str());
+        return true;
+      }
+
+      // Fall through if the child address type is file or invalid.
+      return false;
     } break;
     case eAddressTypeInvalid:
     case eAddressTypeFile:
