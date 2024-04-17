@@ -75,6 +75,7 @@ libc_test(
     libc_function_deps = [
         "//libc:fegetexceptflag",
         "//libc:fesetexceptflag",
+        "//libc:fetestexceptflag",
     ],
     deps = [
         "//libc:__support_fputil_fenv_impl",
