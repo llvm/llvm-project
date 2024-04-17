@@ -1604,34 +1604,37 @@ void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
 // Simd construct [2.9.3.1]
 //===----------------------------------------------------------------------===//
 
-void SimdLoopOp::build(OpBuilder &builder, OperationState &state,
-                       const SimdLoopClauseOps &clauses) {
+void SimdOp::build(OpBuilder &builder, OperationState &state,
+                   const SimdClauseOps &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, reductionByRefAttr, reductionVars,
   // privatizers, reductionDeclSymbols.
-  SimdLoopOp::build(
-      builder, state, clauses.loopLBVar, clauses.loopUBVar, clauses.loopStepVar,
-      clauses.alignedVars, makeArrayAttr(ctx, clauses.alignmentAttrs),
-      clauses.ifVar, clauses.nontemporalVars, clauses.orderAttr,
-      clauses.simdlenAttr, clauses.safelenAttr, clauses.loopInclusiveAttr);
+  SimdOp::build(builder, state, clauses.alignedVars,
+                makeArrayAttr(ctx, clauses.alignmentAttrs), clauses.ifVar,
+                clauses.nontemporalVars, clauses.orderAttr, clauses.simdlenAttr,
+                clauses.safelenAttr);
 }
 
-LogicalResult SimdLoopOp::verify() {
-  if (this->getLowerBound().empty()) {
-    return emitOpError() << "empty lowerbound for simd loop operation";
-  }
-  if (this->getSimdlen().has_value() && this->getSafelen().has_value() &&
-      this->getSimdlen().value() > this->getSafelen().value()) {
+LogicalResult SimdOp::verify() {
+  if (getSimdlen().has_value() && getSafelen().has_value() &&
+      getSimdlen().value() > getSafelen().value())
     return emitOpError()
            << "simdlen clause and safelen clause are both present, but the "
               "simdlen value is not less than or equal to safelen value";
-  }
-  if (verifyAlignedClause(*this, this->getAlignmentValues(),
-                          this->getAlignedVars())
+
+  if (verifyAlignedClause(*this, getAlignmentValues(), getAlignedVars())
           .failed())
     return failure();
-  if (verifyNontemporalClause(*this, this->getNontemporalVars()).failed())
+
+  if (verifyNontemporalClause(*this, getNontemporalVars()).failed())
     return failure();
+
+  if (!isWrapper())
+    return emitOpError() << "must be a loop wrapper";
+
+  if (getNestedWrapper())
+    return emitOpError() << "must wrap an 'omp.loop_nest' directly";
+
   return success();
 }
 
@@ -1662,9 +1665,9 @@ LogicalResult DistributeOp::verify() {
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     // Check for the allowed leaf constructs that may appear in a composite
     // construct directly after DISTRIBUTE.
-    if (!isa<ParallelOp, SimdLoopOp>(nested))
+    if (!isa<ParallelOp, SimdOp>(nested))
       return emitError() << "only supported nested wrappers are 'omp.parallel' "
-                            "and 'omp.simdloop'";
+                            "and 'omp.simd'";
   }
 
   return success();
@@ -1876,8 +1879,8 @@ LogicalResult TaskloopOp::verify() {
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     // Check for the allowed leaf constructs that may appear in a composite
     // construct directly after TASKLOOP.
-    if (!isa<SimdLoopOp>(nested))
-      return emitError() << "only supported nested wrapper is 'omp.simdloop'";
+    if (!isa<SimdOp>(nested))
+      return emitError() << "only supported nested wrapper is 'omp.simd'";
   }
   return success();
 }
