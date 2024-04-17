@@ -21,6 +21,7 @@
 #include <ctime>
 #include <signal.h>
 #include <thread>
+#include <unistd.h>
 
 #ifdef _WIN32
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
