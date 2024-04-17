@@ -262,7 +262,7 @@ bool DeclPrinter::prettyPrintAttributes(const Decl *D,
     for (auto *A : Attrs) {
       if (A->isInherited() || A->isImplicit())
         continue;
-      // Don't strip out the keyword attributes, they aren't regular attributes.
+      // Print out the keyword attributes, they aren't regular attributes.
       if (Policy.PolishForDeclaration && !A->isKeywordAttribute())
         continue;
       switch (A->getKind()) {
