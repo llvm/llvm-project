@@ -42,8 +42,8 @@ struct MatmulToMatmulTransposeA final
     Value a = matmulOp.getInputs()[0];
     auto aType = cast<ShapedType>(a.getType());
     if (aType.getRank() != 2)
-      return rewriter.notifyMatchFailure(
-          matmulOp, "only 2-D matmul ops are supported");
+      return rewriter.notifyMatchFailure(matmulOp,
+                                         "only 2-D matmul ops are supported");
 
     Location loc = matmulOp.getLoc();
 
