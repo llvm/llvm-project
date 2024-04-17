@@ -1597,7 +1597,7 @@ void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
 Value mlir::linalg::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                            Value source,
                                            ArrayRef<int64_t> readShape,
-                                           Value padValue) {
+                                           Value padValue, bool doMasking) {
   assert(llvm::none_of(readShape,
                        [](int64_t s) { return s == ShapedType::kDynamic; }));
   auto sourceShape = dyn_cast<ShapedType>(source.getType()).getShape();
@@ -1606,14 +1606,21 @@ Value mlir::linalg::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   auto vectorType = VectorType::get(readShape, padValue.getType());
   int64_t readRank = readShape.size();
   auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  SmallVector<bool> inBoundsVal(readRank, true);
+  if (!doMasking) {
+    // Update the inBounds attribute.
+    for (unsigned i = 0; i < readRank; i++)
+      inBoundsVal[i] = sourceShape[i] == readShape[i];
+  }
   auto transferReadOp = builder.create<vector::TransferReadOp>(
       loc,
       /*vectorType=*/vectorType,
       /*source=*/source,
       /*indices=*/SmallVector<Value>(readRank, zero),
       /*padding=*/padValue,
-      /*inBounds=*/SmallVector<bool>(readRank, true));
-  if (llvm::equal(readShape, sourceShape)) {
+      /*inBounds=*/inBoundsVal);
+
+  if (llvm::equal(readShape, sourceShape) || !doMasking) {
     return transferReadOp;
   }
   SmallVector<OpFoldResult> mixedSourceDims =

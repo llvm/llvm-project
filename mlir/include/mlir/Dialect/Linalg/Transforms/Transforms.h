@@ -1620,7 +1620,8 @@ void populateSplitReductionPattern(
 /// vector type for the read is not the same as the type of `source`, then a
 /// mask is created on the read.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
-                             ArrayRef<int64_t> readShape, Value padValue);
+                             ArrayRef<int64_t> readShape, Value padValue,
+                             bool doMasking = true);
 } // namespace linalg
 } // namespace mlir
 
