@@ -1992,11 +1992,12 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     }
   }
 
-  if (SemaRef.CheckExprListForPPEmbedExpr(
-          IList->inits(), DeclType) == PPEmbedExpr::FoundOne) {
+  if (SemaRef.CheckExprListForPPEmbedExpr(IList->inits(), DeclType) ==
+      PPEmbedExpr::FoundOne) {
     PPEmbedExpr *PPEmbed = cast<PPEmbedExpr>(IList->inits()[0]);
     IList->setInit(0, PPEmbed->getDataStringLiteral());
   }
+
   // Check for the special-case of initializing an array with a string.
   if (Index < IList->getNumInits()) {
     if (IsStringInit(IList->getInit(Index), arrayType, SemaRef.Context) ==
@@ -9142,9 +9143,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
           : Kind.isFunctionalCast() ? CheckedConversionKind::FunctionalCast
           : Kind.isExplicitCast()   ? CheckedConversionKind::OtherCast
                                     : CheckedConversionKind::Implicit;
-      ExprResult CurInitExprRes =
-        S.PerformImplicitConversion(Init, Step->Type, *Step->ICS,
-                                    getAssignmentAction(Entity), CCK);
+      ExprResult CurInitExprRes = S.PerformImplicitConversion(
+          Init, Step->Type, *Step->ICS, getAssignmentAction(Entity), CCK);
       if (CurInitExprRes.isInvalid())
         return ExprError();
 

@@ -17138,7 +17138,6 @@ Sema::CheckExprListForPPEmbedExpr(ArrayRef<Expr *> ExprList,
 
 PPEmbedExpr::Action
 Sema::ExpandPPEmbedExprInExprList(SmallVectorImpl<Expr *> &ExprList) {
-  PPEmbedExpr::Action Action = PPEmbedExpr::NotFound;
   SmallVector<uint64_t, 4> ByteVals{};
   for (size_t I = 0; I < ExprList.size();) {
     Expr *&OriginalExpr = ExprList[I];
@@ -17153,7 +17152,6 @@ Sema::ExpandPPEmbedExprInExprList(SmallVectorImpl<Expr *> &ExprList) {
       // No ++I, we are already pointing to newest element.
       continue;
     }
-    Action = PPEmbedExpr::Expanded;
     StringLiteral *DataLiteral = PPEmbed->getDataStringLiteral();
     QualType ElementTy = PPEmbed->getType();
     const size_t TargetWidth = Context.getTypeSize(ElementTy);

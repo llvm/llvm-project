@@ -4918,9 +4918,7 @@ public:
     return T->getStmtClass() == PPEmbedExprClass;
   }
 
-  ChildElementIter<false> begin() {
-    return ChildElementIter<false>(this);
-  }
+  ChildElementIter<false> begin() { return ChildElementIter<false>(this); }
 
 private:
   friend class ASTStmtReader;
@@ -4965,13 +4963,9 @@ public:
     return T->getStmtClass() == EmbedSubscriptExprClass;
   }
 
-  PPEmbedExpr *getEmbed() const {
-    return ReferencedEmbed;
-  }
+  PPEmbedExpr *getEmbed() const { return ReferencedEmbed; }
 
-  unsigned getBegin() const {
-    return Begin;
-  }
+  unsigned getBegin() const { return Begin; }
 
   unsigned getDataElementCount() const { return NumOfElements; }
 

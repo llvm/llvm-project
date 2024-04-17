@@ -1217,7 +1217,7 @@ bool ByteCodeExprGen<Emitter>::VisitEmbedSubscriptExpr(
   PPEmbedExpr *PPEmbed = E->getEmbed();
   auto It = PPEmbed->begin() + E->getBegin();
   if (!this->Visit(*It))
-      return false;
+    return false;
   return true;
 }
 

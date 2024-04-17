@@ -1280,13 +1280,11 @@ public:
     }
 
     // Copy initializer elements.
-    SmallVector<llvm::Constant*, 16> Elts;
-    if (fillC && fillC->isNullValue()) {
+    SmallVector<llvm::Constant *, 16> Elts;
+    if (fillC && fillC->isNullValue())
       Elts.reserve(NumInitableElts + 1);
-    } else {
+    else
       Elts.reserve(NumElements);
-    }
-
 
     llvm::Type *CommonElementType = nullptr;
     auto Emit = [&](Expr *Init, unsigned ArrayIndex, bool EmbedInit) {

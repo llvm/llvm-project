@@ -11147,9 +11147,9 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
   // If the initializer might depend on the array index, run it for each
   // array element.
   if (NumEltsToInit != NumElts &&
-          MaybeElementDependentArrayFiller(ArrayFiller)) {
+      MaybeElementDependentArrayFiller(ArrayFiller)) {
     NumEltsToInit = NumElts;
-   } else {
+  } else {
     for (auto *Init : Args) {
       if (auto *EmbedS =
               dyn_cast<EmbedSubscriptExpr>(Init->IgnoreParenImpCasts())) {
@@ -11174,12 +11174,11 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
       Result.getArrayFiller() = Filler;
   }
 
-
   LValue Subobject = This;
   Subobject.addArray(Info, ExprToVisit, CAT);
   auto Eval = [&](const Expr *Init, unsigned ArrayIndex) {
-    LLVM_DEBUG(llvm::dbgs() << "Initializing element : "
-                            << ArrayIndex << ".\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "Initializing element : " << ArrayIndex << ".\n");
     if (!EvaluateInPlace(Result.getArrayInitializedElt(ArrayIndex), Info,
                          Subobject, Init) ||
         !HandleLValueArrayAdjustment(Info, Init, Subobject,

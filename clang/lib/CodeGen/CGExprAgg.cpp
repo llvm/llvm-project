@@ -601,20 +601,20 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   auto Emit = [&](Expr *Init, uint64_t ArrayIndex) {
     // Advance to the next element.
     if (ArrayIndex > 0) {
-      element = Builder.CreateInBoundsGEP(
-          llvmElementType, element, one, "arrayinit.element");
+      element = Builder.CreateInBoundsGEP(llvmElementType, element, one,
+                                          "arrayinit.element");
 
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
       // observed to be unnecessary.
-      if (endOfInit.isValid()) Builder.CreateStore(element, endOfInit);
+      if (endOfInit.isValid())
+        Builder.CreateStore(element, endOfInit);
     }
 
     LValue elementLV = CGF.MakeAddrLValue(
         Address(element, llvmElementType, elementAlign), elementType);
     EmitInitializationToLValue(Init, elementLV);
     return true;
-
   };
 
   unsigned ArrayIndex = 0;
