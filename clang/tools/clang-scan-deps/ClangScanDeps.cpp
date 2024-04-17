@@ -98,8 +98,8 @@ static bool RoundTripArgs = DoRoundTripDefault;
 static void ParseArgs(int argc, char **argv) {
   ScanDepsOptTable Tbl;
   llvm::StringRef ToolName = argv[0];
-  llvm::BumpPtrAllocator A;
-  llvm::StringSaver Saver{A};
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Saver{Alloc};
   llvm::opt::InputArgList Args =
       Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
         llvm::errs() << Msg << '\n';
@@ -186,14 +186,8 @@ static void ParseArgs(int argc, char **argv) {
     }
   }
 
-  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_compilation_database_EQ)) {
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_compilation_database_EQ))
     CompilationDB = A->getValue();
-  } else if (Format != ScanningOutputFormat::P1689) {
-    llvm::errs() << ToolName
-                 << ": for the --compiilation-database option: must be "
-                    "specified at least once!";
-    std::exit(1);
-  }
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_name_EQ))
     ModuleName = A->getValue();
@@ -225,9 +219,8 @@ static void ParseArgs(int argc, char **argv) {
 
   RoundTripArgs = Args.hasArg(OPT_round_trip_args);
 
-  if (auto *A = Args.getLastArgNoClaim(OPT_DASH_DASH))
-    CommandLine.insert(CommandLine.end(), A->getValues().begin(),
-                       A->getValues().end());
+  if (const llvm::opt::Arg *A = Args.getLastArgNoClaim(OPT_DASH_DASH))
+    CommandLine.assign(A->getValues().begin(), A->getValues().end());
 }
 
 class SharedStream {
@@ -694,38 +687,28 @@ static std::string getModuleCachePath(ArrayRef<std::string> Args) {
   return std::string(Path);
 }
 
-// getCompilationDataBase - If -compilation-database is set, load the
-// compilation database from the specified file. Otherwise if the we're
-// generating P1689 format, trying to generate the compilation database
-// form specified command line after the positional parameter "--".
+/// Attempts to construct the compilation database from '-compilation-database'
+/// or from the arguments following the positional '--'.
 static std::unique_ptr<tooling::CompilationDatabase>
-getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
+getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
   ParseArgs(argc, argv);
+
+  if (!(CommandLine.empty() ^ CompilationDB.empty())) {
+    llvm::errs() << "The compilation command line must be provided either via "
+                    "'-compilation-database' or after '--'.";
+    return nullptr;
+  }
 
   if (!CompilationDB.empty())
     return tooling::JSONCompilationDatabase::loadFromFile(
         CompilationDB, ErrorMessage,
         tooling::JSONCommandLineSyntax::AutoDetect);
 
-  if (Format != ScanningOutputFormat::P1689) {
-    llvm::errs() << "the --compilation-database option: must be specified at "
-                    "least once!";
-    return nullptr;
-  }
-
-  // Trying to get the input file, the output file and the command line options
-  // from the positional parameter "--".
-  char **DoubleDash = std::find(argv, argv + argc, StringRef("--"));
-  if (DoubleDash == argv + argc) {
-    llvm::errs() << "The command line arguments is required after '--' in "
-                    "P1689 per file mode.";
-    return nullptr;
-  }
-
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(new DiagnosticOptions);
   driver::Driver TheDriver(CommandLine[0], llvm::sys::getDefaultTargetTriple(),
                            *Diags);
+  TheDriver.setCheckInputsExist(false);
   std::unique_ptr<driver::Compilation> C(
       TheDriver.BuildCompilation(CommandLine));
   if (!C || C->getJobs().empty())
@@ -740,7 +723,8 @@ getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
 
   FrontendOptions &FEOpts = CI->getFrontendOpts();
   if (FEOpts.Inputs.size() != 1) {
-    llvm::errs() << "Only one input file is allowed in P1689 per file mode.";
+    llvm::errs()
+        << "Exactly one input file is required in the per-file mode ('--').\n";
     return nullptr;
   }
 
@@ -749,8 +733,9 @@ getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
   auto LastCmd = C->getJobs().end();
   LastCmd--;
   if (LastCmd->getOutputFilenames().size() != 1) {
-    llvm::errs() << "The command line should provide exactly one output file "
-                    "in P1689 per file mode.\n";
+    llvm::errs()
+        << "Exactly one output file is required in the per-file mode ('--').\n";
+    return nullptr;
   }
   StringRef OutputFile = LastCmd->getOutputFilenames().front();
 
@@ -790,7 +775,7 @@ getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
 int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   std::string ErrorMessage;
   std::unique_ptr<tooling::CompilationDatabase> Compilations =
-      getCompilationDataBase(argc, argv, ErrorMessage);
+      getCompilationDatabase(argc, argv, ErrorMessage);
   if (!Compilations) {
     llvm::errs() << ErrorMessage << "\n";
     return 1;
