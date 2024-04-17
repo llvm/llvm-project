@@ -140,6 +140,16 @@ static cl::opt<bool>
     ImportAllIndex("import-all-index",
                    cl::desc("Import all external functions in index."));
 
+/// Test-only option.
+/// TODO: Implement selective import (based on combined summary analysis) to
+/// ensure the imported function has a use case in the postlink pipeline.
+/// Import each function declaration as a fallback in real build may grow map
+/// size unnecessarily in the indexing step.
+static cl::opt<bool> ImportDeclaration(
+    "import-declaration", cl::init(false), cl::Hidden,
+    cl::desc("If true, import function declaration as fallback if the function "
+             "definition is not imported."));
+
 /// Pass a workload description file - an example of workload would be the
 /// functions executed to satisfy a RPC request. A workload is defined by a root
 /// function and the list of functions that are (frequently) needed to satisfy
@@ -245,8 +255,10 @@ static auto qualifyCalleeCandidates(
 }
 
 /// Given a list of possible callee implementation for a call site, select one
-/// that fits the \p Threshold. If none are found, the Reason will give the last
-/// reason for the failure (last, in the order of CalleeSummaryList entries).
+/// that fits the \p Threshold for function definition import. If none are
+/// found, the Reason will give the last reason for the failure (last, in the
+/// order of CalleeSummaryList entries). If caller wants to select eligible
+/// summary
 ///
 /// FIXME: select "best" instead of first that fits. But what is "best"?
 /// - The smallest: more likely to be inlined.
@@ -259,24 +271,32 @@ static const GlobalValueSummary *
 selectCallee(const ModuleSummaryIndex &Index,
              ArrayRef<std::unique_ptr<GlobalValueSummary>> CalleeSummaryList,
              unsigned Threshold, StringRef CallerModulePath,
+             const GlobalValueSummary *&TooLargeOrNoInlineSummary,
              FunctionImporter::ImportFailureReason &Reason) {
+  // Records the last summary with reason noinline or too-large.
+  TooLargeOrNoInlineSummary = nullptr;
   auto QualifiedCandidates =
       qualifyCalleeCandidates(Index, CalleeSummaryList, CallerModulePath);
   for (auto QualifiedValue : QualifiedCandidates) {
     Reason = QualifiedValue.first;
+    // Skip a summary if its import is not (proved to be) legal.
     if (Reason != FunctionImporter::ImportFailureReason::None)
       continue;
     auto *Summary =
         cast<FunctionSummary>(QualifiedValue.second->getBaseObject());
 
+    // Don't bother importing the definition if the chance of inlining it is
+    // not high enough (except under `--force-import-all`).
     if ((Summary->instCount() > Threshold) && !Summary->fflags().AlwaysInline &&
         !ForceImportAll) {
+      TooLargeOrNoInlineSummary = Summary;
       Reason = FunctionImporter::ImportFailureReason::TooLarge;
       continue;
     }
 
-    // Don't bother importing if we can't inline it anyway.
+    // Don't bother importing the definition if we can't inline it anyway.
     if (Summary->fflags().NoInline && !ForceImportAll) {
+      TooLargeOrNoInlineSummary = Summary;
       Reason = FunctionImporter::ImportFailureReason::NoInline;
       continue;
     }
@@ -359,12 +379,17 @@ class GlobalsImporter final {
             LocalNotInModule(GVS))
           continue;
 
+        // If there isn't an entry for GUID, insert <GUID, Definition> pair.
+        // Otherwise, definition should take precedence  over declaration.
         auto [Iter, Inserted] =
             ImportList[RefSummary->modulePath()].try_emplace(
                 VI.getGUID(), GlobalValueSummary::Definition);
         // Only update stat and exports if we haven't already imported this
         // variable.
         if (!Inserted) {
+          // FIXME: Introduce a wrapper struct around ImportType, and provide
+          // an `updateType` method for better readability, just like how we
+          // update the hotness of a call edge.
           Iter->second = std::min(GlobalValueSummary::Definition, Iter->second);
           break;
         }
@@ -776,9 +801,28 @@ static void computeImportForFunction(
       }
 
       FunctionImporter::ImportFailureReason Reason{};
-      CalleeSummary = selectCallee(Index, VI.getSummaryList(), NewThreshold,
-                                   Summary.modulePath(), Reason);
+
+      // `SummaryForDeclImport` is an summary eligible for declaration import.
+      const GlobalValueSummary *SummaryForDeclImport = nullptr;
+      CalleeSummary =
+          selectCallee(Index, VI.getSummaryList(), NewThreshold,
+                       Summary.modulePath(), SummaryForDeclImport, Reason);
       if (!CalleeSummary) {
+        // There isn't a callee for definition import but one for declaration
+        // import.
+        if (ImportDeclaration && SummaryForDeclImport) {
+          StringRef DeclSourceModule = SummaryForDeclImport->modulePath();
+
+          // Since definition takes precedence over declaration for the same VI,
+          // try emplace <VI, declaration> pair without checking insert result.
+          // If insert doesn't happen, there must be an existing entry keyed by
+          // VI.
+          if (ExportLists)
+            (*ExportLists)[DeclSourceModule].try_emplace(
+                VI, GlobalValueSummary::Declaration);
+          ImportList[DeclSourceModule].try_emplace(
+              VI.getGUID(), GlobalValueSummary::Declaration);
+        }
         // Update with new larger threshold if this was a retry (otherwise
         // we would have already inserted with NewThreshold above). Also
         // update failure info if requested.
@@ -798,6 +842,7 @@ static void computeImportForFunction(
           FailureInfo = std::make_unique<FunctionImporter::ImportFailureInfo>(
               VI, Edge.second.getHotness(), Reason, 1);
         }
+
         if (ForceImportAll) {
           std::string Msg = std::string("Failed to import function ") +
                             VI.name().str() + " due to " +

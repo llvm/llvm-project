@@ -31,8 +31,7 @@ class Module;
 /// based on the provided summary informations.
 class FunctionImporter {
 public:
-  /// Set of functions to import from a source module. Each entry is a set
-  /// containing all the GUIDs of all functions to import for a source module.
+  /// The functions to import from a source module and their import type.
   using FunctionsToImportTy =
       DenseMap<GlobalValue::GUID, GlobalValueSummary::ImportKind>;
 
