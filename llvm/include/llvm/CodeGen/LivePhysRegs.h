@@ -197,7 +197,7 @@ void computeAndAddLiveIns(LivePhysRegs &LiveRegs,
 
 /// Convenience function for recomputing live-in's for a MBB. Returns true if
 /// any changes were made.
-inline bool recomputeLiveIns(MachineBasicBlock &MBB) {
+static inline bool recomputeLiveIns(MachineBasicBlock &MBB) {
   LivePhysRegs LPR;
   std::vector<MachineBasicBlock::RegisterMaskPair> OldLiveIns;
 
@@ -205,7 +205,8 @@ inline bool recomputeLiveIns(MachineBasicBlock &MBB) {
   computeAndAddLiveIns(LPR, MBB);
   MBB.sortUniqueLiveIns();
 
-  auto NewLiveIns = MBB.getLiveIns();
+  const std::vector<MachineBasicBlock::RegisterMaskPair> &NewLiveIns =
+      MBB.getLiveIns();
   return OldLiveIns != NewLiveIns;
 }
 
