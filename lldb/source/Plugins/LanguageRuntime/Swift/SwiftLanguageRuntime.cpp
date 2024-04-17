@@ -502,7 +502,7 @@ void SwiftLanguageRuntimeImpl::ProcessModulesToAdd() {
 
   auto &target = m_process.GetTarget();
   auto exe_module = target.GetExecutableModule();
-  Progress progress("Setting up Swift reflection");
+  Progress progress("Setting up Swift reflection", {}, modules_to_add_snapshot.GetSize());
   size_t completion = 0;
 
   // Add all defered modules to reflection context that were added to
