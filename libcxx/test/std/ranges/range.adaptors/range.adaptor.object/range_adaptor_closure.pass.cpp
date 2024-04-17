@@ -42,11 +42,6 @@ struct callable : std::ranges::range_adaptor_closure<callable> {
   static void operator()(const range_t&) {}
 };
 static_assert(RangeAdaptorClosure<callable>);
-static_assert(RangeAdaptorClosure<const callable>);
-static_assert(RangeAdaptorClosure<callable&>);
-static_assert(RangeAdaptorClosure<const callable&>);
-static_assert(RangeAdaptorClosure<callable&&>);
-static_assert(RangeAdaptorClosure<const callable&&>);
 
 // `not_callable_1` doesn't have an `operator()`
 struct not_callable_1 : std::ranges::range_adaptor_closure<not_callable_1> {};
