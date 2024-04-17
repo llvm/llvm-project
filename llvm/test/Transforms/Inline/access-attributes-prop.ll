@@ -189,7 +189,7 @@ define dso_local void @foo2_through_obj(ptr %p, ptr %p2) {
 define void @prop_param_func_decl(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_param_func_decl
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @bar1(ptr [[P]])
+; CHECK-NEXT:    call void @bar1(ptr readonly [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @foo1_rdonly(ptr %p)
@@ -199,7 +199,7 @@ define void @prop_param_func_decl(ptr %p) {
 define void @prop_param_callbase_def(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_param_callbase_def
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @bar1(ptr [[P]])
+; CHECK-NEXT:    call void @bar1(ptr readonly [[P]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -211,7 +211,7 @@ define void @prop_param_callbase_def(ptr %p) {
 define void @prop_param_callbase_def_2x(ptr %p, ptr %p2) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_param_callbase_def_2x
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
-; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[P]])
+; CHECK-NEXT:    call void @bar2(ptr readonly [[P]], ptr readonly [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @foo2(ptr readonly %p, ptr %p)
@@ -223,7 +223,7 @@ define void @prop_param_callbase_def_2x_2(ptr %p, ptr %p2) {
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
 ; CHECK-NEXT:    [[PP_I:%.*]] = getelementptr i8, ptr [[P]], i64 9
 ; CHECK-NEXT:    [[P2P_I:%.*]] = getelementptr i8, ptr [[P2]], i64 123
-; CHECK-NEXT:    call void @bar2(ptr [[P2P_I]], ptr [[PP_I]])
+; CHECK-NEXT:    call void @bar2(ptr writeonly [[P2P_I]], ptr readonly [[PP_I]])
 ; CHECK-NEXT:    ret void
 ;
   call void @foo2_through_obj(ptr readonly %p, ptr writeonly %p2)
@@ -235,7 +235,7 @@ define void @prop_param_callbase_def_2x_incompat(ptr %p, ptr %p2) {
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
 ; CHECK-NEXT:    [[PP_I:%.*]] = getelementptr i8, ptr [[P]], i64 9
 ; CHECK-NEXT:    [[P2P_I:%.*]] = getelementptr i8, ptr [[P]], i64 123
-; CHECK-NEXT:    call void @bar2(ptr [[P2P_I]], ptr [[PP_I]])
+; CHECK-NEXT:    call void @bar2(ptr readonly [[P2P_I]], ptr readnone [[PP_I]])
 ; CHECK-NEXT:    ret void
 ;
   call void @foo2_through_obj(ptr readnone %p, ptr readonly %p)
@@ -245,7 +245,7 @@ define void @prop_param_callbase_def_2x_incompat(ptr %p, ptr %p2) {
 define void @prop_param_callbase_def_2x_incompat_2(ptr %p, ptr %p2) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_param_callbase_def_2x_incompat_2
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
-; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[P]])
+; CHECK-NEXT:    call void @bar2(ptr readonly [[P]], ptr readonly [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @foo2(ptr readonly %p, ptr readnone %p)
@@ -255,7 +255,7 @@ define void @prop_param_callbase_def_2x_incompat_2(ptr %p, ptr %p2) {
 define void @prop_param_callbase_def_2x_incompat_3(ptr %p, ptr %p2) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_param_callbase_def_2x_incompat_3
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
-; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[P]])
+; CHECK-NEXT:    call void @bar2(ptr readnone [[P]], ptr readnone [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @foo2_2(ptr readonly %p, ptr readnone %p)
@@ -265,7 +265,7 @@ define void @prop_param_callbase_def_2x_incompat_3(ptr %p, ptr %p2) {
 define void @prop_param_callbase_def_1x_partial(ptr %p, ptr %p2) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_param_callbase_def_1x_partial
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
-; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[P]])
+; CHECK-NEXT:    call void @bar2(ptr readonly [[P]], ptr readonly [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @foo2(ptr readonly %p, ptr %p)
@@ -285,7 +285,7 @@ define void @prop_param_callbase_def_1x_partial_2(ptr %p, ptr %p2) {
 define void @prop_param_callbase_def_1x_partial_3(ptr %p, ptr %p2) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_param_callbase_def_1x_partial_3
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
-; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[P]])
+; CHECK-NEXT:    call void @bar2(ptr readonly [[P]], ptr readnone [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @foo2_3(ptr readonly %p, ptr %p)
@@ -521,7 +521,7 @@ define void @prop_cb_def_mustprogress(ptr %p) {
 define void @prop_no_conflict_writable(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_no_conflict_writable
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @bar1(ptr writable [[P]])
+; CHECK-NEXT:    call void @bar1(ptr readonly [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @foo1_writable(ptr readonly %p)
@@ -532,7 +532,7 @@ define void @prop_no_conflict_writable(ptr %p) {
 define void @prop_no_conflict_writable2(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_no_conflict_writable2
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @bar3(ptr [[P]])
+; CHECK-NEXT:    call void @bar3(ptr readnone [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @foo3_writable(ptr readnone %p)
