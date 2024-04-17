@@ -10,7 +10,7 @@
 struct t1 {};
 extern "C" void _start(t1) {}
 //--- gen
-clang -S -g -gpubnames -gdwarf64 a.cc -o -
+clang --target=x86_64-linux -S -g -gpubnames -gdwarf64 a.cc -o -
 .endif
 	.text
 	.file	"a.cc"
