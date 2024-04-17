@@ -16062,7 +16062,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       if (HasSystemScope)
         return AtomicExpansionKind::CmpXChg;
 
-      if ((AS == AMDGPUAS::GLOBAL_ADDRESS ||
+      if ((AMDGPU::isExtendedGlobalAddrSpace(AS) ||
            AS == AMDGPUAS::BUFFER_FAT_POINTER) &&
           Ty->isFloatTy()) {
         // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940, gfx11+.
