@@ -1474,6 +1474,10 @@ Crash and bug fixes
 - Fix false positive in mutation check when using pointer to member function.
   (`#66204 <https://github.com/llvm/llvm-project/issues/66204>`_)
 
+- Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
+  matched user-defined ``strerror`` and similar library functions.
+  (`#88181 <https://github.com/llvm/llvm-project/issues/88181>`_)
+
 Improvements
 ^^^^^^^^^^^^
 
