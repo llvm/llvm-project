@@ -264,3 +264,19 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
     ++I;
   }
 }
+
+LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_BLUE, true});
+    OS << "Block " << (void *)this << "\n";
+  }
+  unsigned NPointers = 0;
+  for (const Pointer *P = Pointers; P; P = P->Next) {
+    ++NPointers;
+  }
+  OS << "  Pointers: " << NPointers << "\n";
+  OS << "  Dead: " << IsDead << "\n";
+  OS << "  Static: " << IsStatic << "\n";
+  OS << "  Extern: " << IsExtern << "\n";
+  OS << "  Initialized: " << IsInitialized << "\n";
+}

@@ -38280,9 +38280,8 @@ define <32 x bfloat> @v_vselect_v32bf16(<32 x i1> %cond, <32 x bfloat> %a, <32 x
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10-NEXT:    v_writelane_b32 v40, s34, 0
-; GFX10-NEXT:    v_writelane_b32 v40, s35, 1
-; GFX10-NEXT:    v_writelane_b32 v40, s30, 2
-; GFX10-NEXT:    v_writelane_b32 v40, s31, 3
+; GFX10-NEXT:    v_writelane_b32 v40, s30, 1
+; GFX10-NEXT:    v_writelane_b32 v40, s31, 2
 ; GFX10-NEXT:    v_and_b32_e32 v29, 1, v29
 ; GFX10-NEXT:    v_and_b32_e32 v30, 1, v30
 ; GFX10-NEXT:    v_and_b32_e32 v28, 1, v28
@@ -38377,10 +38376,10 @@ define <32 x bfloat> @v_vselect_v32bf16(<32 x i1> %cond, <32 x bfloat> %a, <32 x
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s27, 1, v13
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s28, 1, v11
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s29, 1, v7
-; GFX10-NEXT:    v_cmp_eq_u32_e64 s30, 1, v3
-; GFX10-NEXT:    v_cmp_eq_u32_e64 s31, 1, v1
-; GFX10-NEXT:    v_cmp_eq_u32_e64 s34, 1, v5
-; GFX10-NEXT:    v_cmp_eq_u32_e64 s35, 1, v9
+; GFX10-NEXT:    v_cmp_eq_u32_e64 vcc_hi, 1, v3
+; GFX10-NEXT:    v_cmp_eq_u32_e64 s30, 1, v1
+; GFX10-NEXT:    v_cmp_eq_u32_e64 s31, 1, v5
+; GFX10-NEXT:    v_cmp_eq_u32_e64 s34, 1, v9
 ; GFX10-NEXT:    s_waitcnt vmcnt(32)
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v31
 ; GFX10-NEXT:    s_waitcnt vmcnt(31)
@@ -38460,12 +38459,12 @@ define <32 x bfloat> @v_vselect_v32bf16(<32 x i1> %cond, <32 x bfloat> %a, <32 x
 ; GFX10-NEXT:    v_cndmask_b32_e64 v6, v29, v39, s27
 ; GFX10-NEXT:    v_cndmask_b32_e64 v5, v28, v26, s28
 ; GFX10-NEXT:    v_cndmask_b32_e64 v20, v51, v20, s29
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v14, v12, s31
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v55, v16, s30
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v53, v18, s34
-; GFX10-NEXT:    v_cndmask_b32_e64 v12, v24, v22, s35
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, v14, v12, s30
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v55, v16, vcc_hi
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v53, v18, s31
+; GFX10-NEXT:    v_cndmask_b32_e64 v12, v24, v22, s34
 ; GFX10-NEXT:    v_cndmask_b32_e64 v16, v4, v3, s4
-; GFX10-NEXT:    v_readlane_b32 s30, v40, 2
+; GFX10-NEXT:    v_readlane_b32 s30, v40, 1
 ; GFX10-NEXT:    v_perm_b32 v0, v0, v64, 0x5040100
 ; GFX10-NEXT:    v_perm_b32 v1, v1, v54, 0x5040100
 ; GFX10-NEXT:    v_perm_b32 v2, v2, v52, 0x5040100
@@ -38482,8 +38481,7 @@ define <32 x bfloat> @v_vselect_v32bf16(<32 x i1> %cond, <32 x bfloat> %a, <32 x
 ; GFX10-NEXT:    v_perm_b32 v13, v66, v13, 0x5040100
 ; GFX10-NEXT:    v_perm_b32 v14, v65, v17, 0x5040100
 ; GFX10-NEXT:    v_perm_b32 v15, v16, v15, 0x5040100
-; GFX10-NEXT:    v_readlane_b32 s31, v40, 3
-; GFX10-NEXT:    v_readlane_b32 s35, v40, 1
+; GFX10-NEXT:    v_readlane_b32 s31, v40, 2
 ; GFX10-NEXT:    v_readlane_b32 s34, v40, 0
 ; GFX10-NEXT:    s_or_saveexec_b32 s4, -1
 ; GFX10-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:132 ; 4-byte Folded Reload
