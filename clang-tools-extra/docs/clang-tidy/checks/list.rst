@@ -174,6 +174,7 @@ Clang-Tidy Checks
    :doc:`cert-oop58-cpp <cert/oop58-cpp>`,
    :doc:`concurrency-mt-unsafe <concurrency/mt-unsafe>`,
    :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
+   :doc:`cppcoreguidelines-avoid-bounds-errors <cppcoreguidelines/avoid-bounds-errors>`, "Yes"
    :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines <cppcoreguidelines/avoid-capturing-lambda-coroutines>`,
    :doc:`cppcoreguidelines-avoid-const-or-ref-data-members <cppcoreguidelines/avoid-const-or-ref-data-members>`,
    :doc:`cppcoreguidelines-avoid-do-while <cppcoreguidelines/avoid-do-while>`,

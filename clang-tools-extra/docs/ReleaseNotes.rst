@@ -131,6 +131,11 @@ New checks
   to reading out-of-bounds data due to inadequate or incorrect string null
   termination.
 
+- New :doc:`cppcoreguidelines-avoid-bounds-errors
+  <clang-tidy/checks/cppcoreguidelines/avoid-bounds-errors>` check.
+
+  Flags the unsafe `operator[]` and replaces it with `at()`.
+
 - New :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check.
 

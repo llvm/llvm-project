@@ -19,6 +19,7 @@
 #include "../performance/NoexceptMoveConstructorCheck.h"
 #include "../performance/NoexceptSwapCheck.h"
 #include "../readability/MagicNumbersCheck.h"
+#include "AvoidBoundsErrorsCheck.h"
 #include "AvoidCapturingLambdaCoroutinesCheck.h"
 #include "AvoidConstOrRefDataMembersCheck.h"
 #include "AvoidDoWhileCheck.h"
@@ -57,6 +58,8 @@ namespace cppcoreguidelines {
 class CppCoreGuidelinesModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AvoidBoundsErrorsCheck>(
+        "cppcoreguidelines-avoid-bounds-errors");
     CheckFactories.registerCheck<AvoidCapturingLambdaCoroutinesCheck>(
         "cppcoreguidelines-avoid-capturing-lambda-coroutines");
     CheckFactories.registerCheck<modernize::AvoidCArraysCheck>(
