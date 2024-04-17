@@ -1,9 +1,6 @@
 // RUN: %clang --target=x86_64-pc-linux -S -fno-discard-value-names -emit-llvm -o - %s | FileCheck %s
 
-namespace std {
-  using size_t = decltype(sizeof(int));
-};
-void* operator new[](std::size_t, void*) noexcept;
+#include <new>
 
 // CHECK: call void @llvm.memset.p0.i64(ptr align 1 %x, i8 0, i64 8, i1 false)
 // CHECK: call void @llvm.memset.p0.i64(ptr align 16 %x, i8 0, i64 32, i1 false)
