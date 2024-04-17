@@ -162,18 +162,18 @@ public:
 class OpenACCClauseWithIntExprs : public OpenACCClauseWithParams {
   llvm::SmallVector<Expr *> IntExprs;
 
-  protected:
-    OpenACCClauseWithIntExprs(OpenACCClauseKind K, SourceLocation BeginLoc,
-                              SourceLocation LParenLoc,
-                              ArrayRef<Expr *> IntExprs, SourceLocation EndLoc)
-        : OpenACCClauseWithParams(K, BeginLoc, LParenLoc, EndLoc),
-          IntExprs(IntExprs) {}
+protected:
+  OpenACCClauseWithIntExprs(OpenACCClauseKind K, SourceLocation BeginLoc,
+                            SourceLocation LParenLoc, ArrayRef<Expr *> IntExprs,
+                            SourceLocation EndLoc)
+      : OpenACCClauseWithParams(K, BeginLoc, LParenLoc, EndLoc),
+        IntExprs(IntExprs) {}
 
-    /// Gets the entire list of integer expressions, but leave it to the
-    /// individual clauses to expose this how they'd like.
-    llvm::ArrayRef<Expr *> getIntExprs() const { return IntExprs; }
+  /// Gets the entire list of integer expressions, but leave it to the
+  /// individual clauses to expose this how they'd like.
+  llvm::ArrayRef<Expr *> getIntExprs() const { return IntExprs; }
 
-  public:
+public:
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(IntExprs.begin()),
                        reinterpret_cast<Stmt **>(IntExprs.end()));
@@ -189,27 +189,29 @@ class OpenACCClauseWithIntExprs : public OpenACCClauseWithParams {
 /// A more restrictive version of the IntExprs version that exposes a single
 /// integer expression.
 class OpenACCClauseWithSingleIntExpr : public OpenACCClauseWithIntExprs {
-  protected:
-    OpenACCClauseWithSingleIntExpr(OpenACCClauseKind K, SourceLocation BeginLoc,
-                                   SourceLocation LParenLoc, Expr *IntExpr,
-                                   SourceLocation EndLoc)
-        : OpenACCClauseWithIntExprs(K, BeginLoc, LParenLoc, IntExpr, EndLoc) {}
+protected:
+  OpenACCClauseWithSingleIntExpr(OpenACCClauseKind K, SourceLocation BeginLoc,
+                                 SourceLocation LParenLoc, Expr *IntExpr,
+                                 SourceLocation EndLoc)
+      : OpenACCClauseWithIntExprs(K, BeginLoc, LParenLoc, IntExpr, EndLoc) {}
 
-  public:
-    bool hasIntExpr() const { return !getIntExprs().empty(); }
-    const Expr *getIntExpr() const {
-      return hasIntExpr() ? getIntExprs()[0] : nullptr;
-    }
-    Expr *getIntExpr() { return hasIntExpr() ? getIntExprs()[0] : nullptr; }
+public:
+  bool hasIntExpr() const { return !getIntExprs().empty(); }
+  const Expr *getIntExpr() const {
+    return hasIntExpr() ? getIntExprs()[0] : nullptr;
+  }
+  Expr *getIntExpr() { return hasIntExpr() ? getIntExprs()[0] : nullptr; }
 };
 
 class OpenACCNumWorkersClause : public OpenACCClauseWithSingleIntExpr {
   OpenACCNumWorkersClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                           Expr *IntExpr, SourceLocation EndLoc);
-  public:
-    static OpenACCNumWorkersClause *
-    Create(const ASTContext &C, SourceLocation BeginLoc,
-           SourceLocation LParenLoc, Expr *IntExpr, SourceLocation EndLoc);
+
+public:
+  static OpenACCNumWorkersClause *Create(const ASTContext &C,
+                                         SourceLocation BeginLoc,
+                                         SourceLocation LParenLoc,
+                                         Expr *IntExpr, SourceLocation EndLoc);
 };
 
 template <class Impl> class OpenACCClauseVisitor {

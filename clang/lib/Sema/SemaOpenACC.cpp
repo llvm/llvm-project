@@ -280,8 +280,8 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
 }
 
 ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
-                                     OpenACCClauseKind CK,
-                                     SourceLocation Loc, Expr *IntExpr) {
+                                     OpenACCClauseKind CK, SourceLocation Loc,
+                                     Expr *IntExpr) {
 
   assert(((DK != OpenACCDirectiveKind::Invalid &&
            CK == OpenACCClauseKind::Invalid) ||
@@ -361,8 +361,7 @@ ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
     return ExprError();
 
   IntExpr = IntExprResult.get();
-  if (!IntExpr->isTypeDependent() &&
-      !IntExpr->getType()->isIntegerType())
+  if (!IntExpr->isTypeDependent() && !IntExpr->getType()->isIntegerType())
     return ExprError();
 
   // TODO OpenACC: Do we want to perform usual unary conversions here? When

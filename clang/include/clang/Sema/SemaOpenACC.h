@@ -105,7 +105,7 @@ public:
     }
 
     ArrayRef<Expr *> getIntExprs() const {
-      return const_cast<OpenACCParsedClause*>(this)->getIntExprs();
+      return const_cast<OpenACCParsedClause *>(this)->getIntExprs();
     }
 
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
