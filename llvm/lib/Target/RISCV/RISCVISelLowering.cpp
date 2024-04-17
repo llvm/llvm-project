@@ -13416,6 +13416,12 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   uint64_t MulAmt = CNode->getZExtValue();
 
+  // 3/5/9 * 2^N -> shXadd (sll X, C), (sll X, C)
+  // Matched in tablegen, avoid perturbing patterns.
+  for (uint64_t Divisor : {3, 5, 9})
+    if (MulAmt % Divisor == 0 && isPowerOf2_64(MulAmt / Divisor))
+      return SDValue();
+
   // If this is a power 2 + 2/4/8, we can use a shift followed by a single
   // shXadd. First check if this a sum of two power of 2s because that's
   // easy. Then count how many zeros are up to the first bit.
