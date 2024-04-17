@@ -1164,6 +1164,12 @@ def Unreachable : Builtin {
   let Prototype = "void()";
 }
 
+def AllowRuntimeCheck : Builtin {
+  let Spellings = ["__builtin_allow_runtime_check"];
+  let Attributes = [NoThrow, Pure, Const];
+  let Prototype = "bool(char const*)";
+}
+
 def ShuffleVector : Builtin {
   let Spellings = ["__builtin_shufflevector"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
