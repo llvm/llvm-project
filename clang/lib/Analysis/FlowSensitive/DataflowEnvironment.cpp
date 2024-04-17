@@ -470,6 +470,11 @@ public:
       return;
     }
 
+    if (auto *SE = dyn_cast<StmtExpr>(E)) {
+      PropagateResultObject(cast<Expr>(SE->getSubStmt()->body_back()), Loc);
+      return;
+    }
+
     // All other expression nodes that propagate a record prvalue should have
     // exactly one child.
     SmallVector<Stmt *, 1> Children(E->child_begin(), E->child_end());
