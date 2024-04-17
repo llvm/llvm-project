@@ -204,6 +204,14 @@ if result:
 if config.have_openmp_rtl:
     config.available_features.add("openmp_runtime")
 
+# For the OpenMP tests, add a substitution that is needed in the tests to find the
+# omp_lib.{h,mod} files, depending on whether the OpenMP runtime was build as a
+# project or runtime.
+if config.openmp_module_dir:
+    config.substitutions.append(("%openmp_module_flag", f"-J {config.openmp_module_dir}"))
+else:
+    config.substitutions.append(("%openmp_module_flag", ""))
+
 # Add features and substitutions to test F128 math support.
 # %f128-lib substitution may be used to generate check prefixes
 # for LIT tests checking for F128 library support.
