@@ -206,8 +206,10 @@ VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
     // 精确匹配失败
     logger.warn("Unable to find exact match! Trying inexact matching...");
     logger.warn("  {}:{}:{}", loc.file, loc.line, loc.column);
-    return locateVariable(functionsInFile, loc.file, loc.line, loc.column,
-                          isStmt, false);
+    auto result = locateVariable(functionsInFile, loc.file, loc.line,
+                                 loc.column, isStmt, false);
+    llvm::sys::fs::remove(getASTDumpFile(loc.file));
+    return result;
 }
 
 std::string getSourceCode(SourceManager &SM, const SourceRange &range) {
@@ -320,7 +322,8 @@ void dumpICFGNode(int u, ordered_json &jPath) {
                 // TODO: content只要declaration就行，不然太大了
                 saveLocationInfo(Context, fi->D->getSourceRange(), j);
                 jPath.push_back(j);
-                return;
+
+                goto dumpICFGNodeExit;
             }
 
             // B.dump(fi->cfg, Context.getLangOpts(), true);
@@ -365,9 +368,12 @@ void dumpICFGNode(int u, ordered_json &jPath) {
                 jPath.push_back(j);
             }
 
-            return;
+            goto dumpICFGNodeExit;
         }
     }
+
+dumpICFGNodeExit:
+    llvm::sys::fs::remove(getASTDumpFile(loc.file));
 }
 
 /**

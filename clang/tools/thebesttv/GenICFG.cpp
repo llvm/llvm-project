@@ -149,6 +149,7 @@ bool updateICFGWithASTDump(const std::string &file) {
         GenICFGVisitor visitor(&Context, file);
         visitor.TraverseDecl(Context.getTranslationUnitDecl());
         icfgMtx.unlock();
+        llvm::sys::fs::remove(getASTDumpFile(file));
         return true;
     }
     return false;
