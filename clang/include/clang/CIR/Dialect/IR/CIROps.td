@@ -31,6 +31,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/IR/CommonAttrConstraints.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Ops
@@ -3329,9 +3330,13 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
     - the output variable index referenced by the input operands.
     - the index of early-clobber operand
 
-    Operand attributes is a storage of attributes, where each element corresponds
-    to the operand with the same index. The first index relates to the operation
-    result.
+    Operand attributes is a storage, where each element corresponds to the operand with
+    the same index. The first index relates to the operation result (if any). 
+    Note, the operands themselves are stored as VariadicOfVariadic in the next order:
+    output, input and then in/out operands.
+
+    Note, when several output operands are present, the result type may be represented as
+    an anon struct type.
 
     Example:
     ```C++
@@ -3341,38 +3346,58 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
     ```
     
     ```mlir
+    !ty_22anon2E022 = !cir.struct<struct "anon.0" {!cir.int<s, 32>, !cir.int<s, 32>}>
+    !ty_22anon2E122 = !cir.struct<struct "anon.1" {!cir.int<s, 32>, !cir.int<s, 32>}>
+    ...
     %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["x", init] 
     %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["y", init]
     ... 
     %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
     %3 = cir.load %1 : cir.ptr <!s32i>, !s32i
-    cir.asm(x86_att, {"foo" "~{dirflag},~{fpsr},~{flags}"}) side_effects : () -> ()
-    cir.asm(x86_att, {"bar $$42 $0" "=r,=&r,1,~{dirflag},~{fpsr},~{flags}"}) %2 : (!s32i) -> ()
-    cir.asm(x86_att, {"baz $$42 $0" "=r,=&r,0,1,~{dirflag},~{fpsr},~{flags}"}) %3, %2 : (!s32i, !s32i) -> ()
+
+    cir.asm(x86_att,
+      out = [],
+      in = [],
+      in_out = [],
+      {"foo" "~{dirflag},~{fpsr},~{flags}"}) side_effects
+
+    cir.asm(x86_att,
+      out = [],
+      in = [],
+      in_out = [%2 : !s32i],
+      {"bar $$42 $0" "=r,=&r,1,~{dirflag},~{fpsr},~{flags}"}) -> !ty_22anon2E022
+
+    cir.asm(x86_att,
+      out = [],
+      in = [%3 : !s32i],
+      in_out = [%2 : !s32i],
+      {"baz $$42 $0" "=r,=&r,0,1,~{dirflag},~{fpsr},~{flags}"}) -> !ty_22anon2E122
     ```
   }];
 
   let results = (outs Optional<CIR_AnyType>:$res);
 
   let arguments = (
-    ins Variadic<AnyType>:$operands,
+    ins VariadicOfVariadic<AnyType, "operands_segments">:$operands,
         StrAttr:$asm_string,
         StrAttr:$constraints,
         UnitAttr:$side_effects,
         AsmFlavor:$asm_flavor,
-        OptionalAttr<ArrayAttr>:$operand_attrs);
+        ArrayAttr:$operand_attrs,
+        DenseI32ArrayAttr:$operands_segments
+        );
 
-  let assemblyFormat = [{
-    `(`
-    $asm_flavor`,`
-    `{` $asm_string $constraints `}`
-    `)`
-    (`operand_attrs` `=` $operand_attrs^)?
-    (`side_effects` $side_effects^)?
-    attr-dict
-    operands `:` functional-type(operands, results)
-   }];
-
+  let builders = [OpBuilder<(ins
+    "ArrayRef<ValueRange>":$operands,
+    "StringRef":$asm_string,
+    "StringRef":$constraints,
+    "bool":$side_effects,
+    "AsmFlavor":$asm_flavor,
+    "ArrayRef<Attribute>":$operand_attrs
+  )>
+  ];
+  
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
