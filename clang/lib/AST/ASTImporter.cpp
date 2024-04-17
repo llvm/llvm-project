@@ -695,7 +695,7 @@ namespace clang {
     // Returns true if the given function has a placeholder return type and
     // that type is declared inside the body of the function.
     // E.g. auto f() { struct X{}; return X(); }
-    bool hasAutoReturnTypeDeclaredInside(FunctionDecl *D);
+    bool hasReturnTypeDeclaredInside(FunctionDecl *D);
   };
 
 template <typename InContainerTy>
@@ -3649,19 +3649,15 @@ private:
 
 /// This function checks if the function has 'auto' return type that contains
 /// a reference (in any way) to a declaration inside the same function.
-bool ASTNodeImporter::hasAutoReturnTypeDeclaredInside(FunctionDecl *D) {
+bool ASTNodeImporter::hasReturnTypeDeclaredInside(FunctionDecl *D) {
   QualType FromTy = D->getType();
   const auto *FromFPT = FromTy->getAs<FunctionProtoType>();
   assert(FromFPT && "Must be called on FunctionProtoType");
 
   QualType RetT = FromFPT->getReturnType();
-  if (isa<AutoType>(RetT.getTypePtr())) {
-    FunctionDecl *Def = D->getDefinition();
-    IsTypeDeclaredInsideVisitor Visitor(Def ? Def : D);
-    return Visitor.CheckType(RetT);
-  }
-
-  return false;
+  FunctionDecl *Def = D->getDefinition();
+  IsTypeDeclaredInsideVisitor Visitor(Def ? Def : D);
+  return Visitor.CheckType(RetT);
 }
 
 ExplicitSpecifier
@@ -3811,7 +3807,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // E.g.: auto foo() { struct X{}; return X(); }
     // To avoid an infinite recursion when importing, create the FunctionDecl
     // with a simplified return type.
-    if (hasAutoReturnTypeDeclaredInside(D)) {
+    if (hasReturnTypeDeclaredInside(D)) {
       FromReturnTy = Importer.getFromContext().VoidTy;
       UsedDifferentProtoType = true;
     }
