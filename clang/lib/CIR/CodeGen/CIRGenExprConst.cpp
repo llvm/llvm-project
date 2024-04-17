@@ -381,7 +381,11 @@ mlir::Attribute ConstantAggregateBuilder::buildFrom(
     NaturalLayout = false;
     Packed = true;
   } else if (DesiredSize > AlignedSize) {
-    llvm_unreachable("NYI");
+    // The natural layout would be too small. Add padding to fix it. (This
+    // is ignored if we choose a packed layout.)
+    UnpackedElemStorage.assign(Elems.begin(), Elems.end());
+    UnpackedElemStorage.push_back(Utils.getPadding(DesiredSize - Size));
+    UnpackedElems = UnpackedElemStorage;
   }
 
   // If we don't have a natural layout, insert padding as necessary.

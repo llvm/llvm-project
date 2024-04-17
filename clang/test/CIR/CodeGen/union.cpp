@@ -76,3 +76,16 @@ void shouldGenerateUnionAccess(union U u) {
   u.d;
   // CHECK: %[[#BASE:]] = cir.get_member %0[4] {name = "d"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!cir.double>
 }
+
+typedef union {
+  short a;
+  int b;
+} A;
+ 
+void noCrushOnDifferentSizes() {
+  A a = {0};
+  // CHECK:  %[[#TMP0:]] = cir.alloca !ty_22A22, cir.ptr <!ty_22A22>, ["a"] {alignment = 4 : i64}
+  // CHECK:  %[[#TMP1:]] = cir.cast(bitcast, %[[#TMP0]] : !cir.ptr<!ty_22A22>), !cir.ptr<!ty_anon_struct>
+  // CHECK:  %[[#TMP2:]] = cir.const(#cir.zero : !ty_anon_struct) : !ty_anon_struct
+  // CHECK:  cir.store %[[#TMP2]], %[[#TMP1]] : !ty_anon_struct, cir.ptr <!ty_anon_struct>
+}
