@@ -880,6 +880,38 @@ static Value rewriteI4ToI8SignedExt(PatternRewriter &rewriter, Location loc,
   return rewriter.create<vector::InterleaveOp>(loc, low, high);
 }
 
+/// Rewrite the i4 -> i8 unsigned extension into a sequence of shuffles and
+/// bitwise ops that take advantage of high-level information to avoid leaving
+/// LLVM to scramble with peephole optimizations.
+static Value rewriteI4ToI8UnsignedExt(PatternRewriter &rewriter, Location loc,
+                                      Value srcValue) {
+  VectorType srcVecType = cast<VectorType>(srcValue.getType());
+  assert(srcVecType.getElementType().isSignlessInteger(4) &&
+         "Expected i4 type");
+
+  // 1. Generate a bitcast vector<Xxi4> -> vector<X/2xi8>.
+  SmallVector<int64_t> i8VecShape = llvm::to_vector(srcVecType.getShape());
+  constexpr int64_t i4Toi8BitwidthFactor = 2;
+  i8VecShape.back() = i8VecShape.back() / i4Toi8BitwidthFactor;
+  auto i8VecType = VectorType::get(i8VecShape, rewriter.getI8Type());
+  Value i8Vector = rewriter.create<vector::BitCastOp>(loc, i8VecType, srcValue);
+
+  // 2 Extend the i4 elements using shifts & masking. Low i4 elemens of each
+  //  byte are place in one vector and the high i4 elements in another vector.
+  constexpr unsigned char lowBitsMask = 15; // Equivalent to [0000IIII] bit mask
+  auto lowBitsMaskValues = rewriter.create<arith::ConstantOp>(
+      loc, DenseElementsAttr::get(i8VecType, lowBitsMask));
+  Value low = rewriter.create<arith::AndIOp>(loc, i8Vector.getType(), i8Vector,
+                                             lowBitsMaskValues);
+  constexpr int8_t highBitsToShift = 4;
+  auto highShiftValues = rewriter.create<arith::ConstantOp>(
+      loc, DenseElementsAttr::get(i8VecType, highBitsToShift));
+  Value high = rewriter.create<arith::ShRSIOp>(loc, i8Vector, highShiftValues);
+
+  // 3. Interleave low and high i8 elements.
+  return rewriter.create<vector::InterleaveOp>(loc, low, high);
+}
+
 /// Rewrite the i8 -> i4 truncation into a sequence of shuffles and bitwise ops
 /// that take advantage of high-level information to avoid leaving LLVM to
 /// scramble with peephole optimizations.
@@ -1099,6 +1131,50 @@ struct RewriteAlignedSubByteIntSignedExt : OpRewritePattern<ConversionOpType> {
   }
 };
 
+/// Rewrite the i4 -> i8 part of any unsigned conversion into a sequence of
+/// shuffles and bitwise ops that take advantage of high-level information to
+/// avoid leaving LLVM to scramble with peephole optimizations.
+///
+/// For example:
+///    arith.extui %in : vector<8xi4> to vector<8xi32>
+///      is rewritten as
+///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
+///        %1 = arith.andi %0, 15 : vector<4xi8>
+///        %2 = arith.shrsi %0, 4 : vector<4xi8>
+///        %3 = vector.interleave %1, %2 : vector<4xi8>
+///        %4 = arith.extsi %3 : vector<8xi8> to vector<8xi32>
+///
+template <typename ConversionOpType>
+struct RewriteAlignedSubByteIntUnsignedExt
+    : OpRewritePattern<ConversionOpType> {
+  using OpRewritePattern<ConversionOpType>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ConversionOpType conversionOp,
+                                PatternRewriter &rewriter) const override {
+    // Verify the preconditions.
+    Value srcValue = conversionOp.getIn();
+    auto srcVecType = dyn_cast<VectorType>(srcValue.getType());
+    auto dstVecType = dyn_cast<VectorType>(conversionOp.getType());
+    if (failed(
+            commonConversionPrecondition(rewriter, dstVecType, conversionOp)))
+      return failure();
+
+    // Check general alignment preconditions.
+    if (failed(alignedConversionPrecondition(rewriter, srcVecType, dstVecType,
+                                             conversionOp)))
+      return failure();
+
+    // Perform the rewrite.
+    Value subByteExt =
+        rewriteI4ToI8UnsignedExt(rewriter, conversionOp.getLoc(), srcValue);
+
+    // Finalize the rewrite.
+    rewriter.replaceOpWithNewOp<ConversionOpType>(
+        conversionOp, conversionOp.getType(), subByteExt);
+    return success();
+  }
+};
+
 /// Rewrite the i8 -> i4 part of any truncation into a sequence of shuffles and
 /// bitwise ops that take advantage of high-level information to avoid leaving
 /// LLVM to scramble with peephole optimizations.
@@ -1233,6 +1309,8 @@ void vector::populateVectorNarrowTypeRewritePatterns(
                RewriteAlignedSubByteIntSignedExt<arith::SIToFPOp>,
                RewriteAlignedSubByteIntTrunc>(patterns.getContext(),
                                               benefit.getBenefit() + 1);
+  patterns.add<RewriteAlignedSubByteIntUnsignedExt<arith::ExtUIOp>>(
+      patterns.getContext(), benefit.getBenefit() + 1);
 }
 
 void vector::populateVectorTransposeNarrowTypeRewritePatterns(

@@ -324,6 +324,50 @@ func.func @i7_transpose(%a: vector<8x16xi7>) -> vector<16x8xi7> {
   return %0 : vector<16x8xi7>
 }
 
+// CHECK-LABEL: func.func @aligned_extui(
+func.func @aligned_extui(%a: vector<8xi4>) -> vector<8xi32> {
+// CHECK-SAME:                             %[[VAL_0:.*]]: vector<8xi4>) -> vector<8xi32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant dense<4> : vector<4xi8>
+// CHECK:           %[[VAL_2:.*]] = arith.constant dense<15> : vector<4xi8>
+// CHECK:           %[[VAL_3:.*]] = vector.bitcast %[[VAL_0]] : vector<8xi4> to vector<4xi8>
+// CHECK:           %[[VAL_4:.*]] = arith.andi %[[VAL_3]], %[[VAL_2]] : vector<4xi8>
+// CHECK:           %[[VAL_5:.*]] = arith.shrsi %[[VAL_3]], %[[VAL_1]] : vector<4xi8>
+// CHECK:           %[[VAL_6:.*]] = vector.interleave %[[VAL_4]], %[[VAL_5]] : vector<4xi8>
+// CHECK:           %[[VAL_7:.*]] = arith.extui %[[VAL_6]] : vector<8xi8> to vector<8xi32>
+  %0 = arith.extui %a : vector<8xi4> to vector<8xi32>
+  return %0 : vector<8xi32>
+}
+
+
+// CHECK-LABEL: func.func @aligned_extui_2d(
+func.func @aligned_extui_2d(%a: vector<8x32xi4>) -> vector<8x32xi32> {
+// CHECK-SAME:                                %[[VAL_0:.*]]: vector<8x32xi4>) -> vector<8x32xi32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant dense<4> : vector<8x16xi8>
+// CHECK:           %[[VAL_2:.*]] = arith.constant dense<15> : vector<8x16xi8>
+// CHECK:           %[[VAL_3:.*]] = vector.bitcast %[[VAL_0]] : vector<8x32xi4> to vector<8x16xi8>
+// CHECK:           %[[VAL_4:.*]] = arith.andi %[[VAL_3]], %[[VAL_2]] : vector<8x16xi8>
+// CHECK:           %[[VAL_5:.*]] = arith.shrsi %[[VAL_3]], %[[VAL_1]] : vector<8x16xi8>
+// CHECK:           %[[VAL_6:.*]] = vector.interleave %[[VAL_4]], %[[VAL_5]] : vector<8x16xi8>
+// CHECK:           %[[VAL_7:.*]] = arith.extui %[[VAL_6]] : vector<8x32xi8> to vector<8x32xi32>
+// CHECK:           return %[[VAL_7]] : vector<8x32xi32>
+  %0 = arith.extui %a : vector<8x32xi4> to vector<8x32xi32>
+  return %0 : vector<8x32xi32>
+}
+
+
+// CHECK-LABEL: func.func @aligned_extui_base_case(
+func.func @aligned_extui_base_case(%a: vector<8xi4>) -> vector<8xi8> {
+// CHECK-SAME:                                       %[[VAL_0:.*]]: vector<8xi4>) -> vector<8xi8> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant dense<4> : vector<4xi8>
+// CHECK:           %[[VAL_2:.*]] = arith.constant dense<15> : vector<4xi8>
+// CHECK:           %[[VAL_3:.*]] = vector.bitcast %[[VAL_0]] : vector<8xi4> to vector<4xi8>
+// CHECK:           %[[VAL_4:.*]] = arith.andi %[[VAL_3]], %[[VAL_2]] : vector<4xi8>
+// CHECK:           %[[VAL_5:.*]] = arith.shrsi %[[VAL_3]], %[[VAL_1]] : vector<4xi8>
+// CHECK:           %[[VAL_6:.*]] = vector.interleave %[[VAL_4]], %[[VAL_5]] : vector<4xi8>
+  %0 = arith.extui %a : vector<8xi4> to vector<8xi8>
+  return %0 : vector<8xi8>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op
@@ -335,4 +379,3 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-
