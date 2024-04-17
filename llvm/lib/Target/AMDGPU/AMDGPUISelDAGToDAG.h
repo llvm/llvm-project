@@ -256,7 +256,6 @@ private:
                                 SDValue &SrcMods) const;
   bool SelectVOP3PMadMixMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
-  bool subtractOffsetFromBase(SDValue *SBase, SDValue *Offset) const;
   SDValue getHi16Elt(SDValue In) const;
 
   SDValue getMaterializedScalarImm32(int64_t Val, const SDLoc &DL) const;

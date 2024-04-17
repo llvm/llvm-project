@@ -222,8 +222,6 @@ private:
 
   bool selectSmrdOffset(MachineOperand &Root, Register &Base, Register *SOffset,
                         int64_t *Offset) const;
-  bool subtractOffsetFromBase(MachineInstr *MI, MachineBasicBlock *MBB,
-                              Register &Base, int64_t *Offset) const;
 
   InstructionSelector::ComplexRendererFns
   selectSmrdImm(MachineOperand &Root) const;
