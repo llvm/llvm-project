@@ -220,6 +220,8 @@ macro(add_tablegen target project)
       set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN_EXE} PARENT_SCOPE)
 
       add_custom_target(${target}-host DEPENDS ${${project}_TABLEGEN_EXE})
+      get_subproject_title(subproject_title)
+      set_target_properties(${target}-host PROPERTIES FOLDER "${subproject_title}/Native")
       set(${project}_TABLEGEN_TARGET ${target}-host PARENT_SCOPE)
 
       # If we're using the host tablegen, and utils were not requested, we have no
