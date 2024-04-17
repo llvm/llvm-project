@@ -848,7 +848,8 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
               FindFlexibleArrayMemberField(Ctx, Record, Name, Offset)) {
         const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
         if (Layout.getFieldCount()) {
-          // A struct that holds only an inner struct won't have any fields. E.g.
+          // A struct that holds only an inner struct won't have any fields.
+          // E.g.
           //
           //     struct foo {
           //         struct bar {
