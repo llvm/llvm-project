@@ -1,0 +1,15 @@
+// RUN: cir-translate %s -cir-to-llvmir -o -  | FileCheck %s -check-prefix=LLVM
+
+!u8i = !cir.int<u, 8>
+
+module {
+  cir.global "private" internal @normal_url_char = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<1> : !u8i], trailing_zeros> : !cir.array<!u8i x 4>
+  // LLVM: @normal_url_char = internal global [4 x i8] c"\00\01\00\00"
+
+  cir.func @c0() -> !cir.ptr<!cir.array<!u8i x 4>> {
+    %0 = cir.get_global @normal_url_char : cir.ptr <!cir.array<!u8i x 4>>
+    cir.return %0 : !cir.ptr<!cir.array<!u8i x 4>>
+  }
+  // LLVM: define ptr @c0()
+  // LLVM: ret ptr @normal_url_char
+}
