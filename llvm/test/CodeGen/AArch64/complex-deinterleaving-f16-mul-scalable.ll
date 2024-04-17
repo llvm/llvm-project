@@ -15,12 +15,12 @@ define <vscale x 4 x half> @complex_mul_v4f16(<vscale x 4 x half> %a, <vscale x 
 ; CHECK-NEXT:    uzp2 z4.d, z0.d, z2.d
 ; CHECK-NEXT:    uzp1 z0.d, z0.d, z2.d
 ; CHECK-NEXT:    uzp2 z2.d, z1.d, z3.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z3.d
 ; CHECK-NEXT:    movprfx z5, z2
 ; CHECK-NEXT:    fmul z5.h, p0/m, z5.h, z0.h
-; CHECK-NEXT:    uzp1 z1.d, z1.d, z3.d
+; CHECK-NEXT:    fmul z2.h, p0/m, z2.h, z4.h
 ; CHECK-NEXT:    movprfx z3, z5
 ; CHECK-NEXT:    fmla z3.h, p0/m, z1.h, z4.h
-; CHECK-NEXT:    fmul z2.h, p0/m, z2.h, z4.h
 ; CHECK-NEXT:    fnmsb z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    zip2 z1.d, z0.d, z3.d
 ; CHECK-NEXT:    zip1 z0.d, z0.d, z3.d
