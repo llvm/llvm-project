@@ -102,12 +102,12 @@ define <2 x i1> @unary_fneg_constant_swap_pred_vec(<2 x float> %x) {
   ret <2 x i1> %cmp
 }
 
-define <2 x i1> @fneg_constant_swap_pred_vec_undef(<2 x float> %x) {
-; CHECK-LABEL: @fneg_constant_swap_pred_vec_undef(
+define <2 x i1> @fneg_constant_swap_pred_vec_poison(<2 x float> %x) {
+; CHECK-LABEL: @fneg_constant_swap_pred_vec_poison(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <2 x float> [[X:%.*]], <float -1.000000e+00, float -2.000000e+00>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
-  %neg = fsub <2 x float> <float undef, float -0.0>, %x
+  %neg = fsub <2 x float> <float poison, float -0.0>, %x
   %cmp = fcmp ogt <2 x float> %neg, <float 1.0, float 2.0>
   ret <2 x i1> %cmp
 }
@@ -234,34 +234,34 @@ define <2 x i1> @fneg_unary_fneg_swap_pred_vec(<2 x float> %x, <2 x float> %y) {
   ret <2 x i1> %cmp
 }
 
-define <2 x i1> @fneg_fneg_swap_pred_vec_undef(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @fneg_fneg_swap_pred_vec_undef(
+define <2 x i1> @fneg_fneg_swap_pred_vec_poison(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fneg_fneg_swap_pred_vec_poison(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
-  %neg1 = fsub <2 x float> <float -0.0, float undef>, %x
-  %neg2 = fsub <2 x float> <float undef, float -0.0>, %y
+  %neg1 = fsub <2 x float> <float -0.0, float poison>, %x
+  %neg2 = fsub <2 x float> <float poison, float -0.0>, %y
   %cmp = fcmp olt <2 x float> %neg1, %neg2
   ret <2 x i1> %cmp
 }
 
-define <2 x i1> @unary_fneg_fneg_swap_pred_vec_undef(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @unary_fneg_fneg_swap_pred_vec_undef(
+define <2 x i1> @unary_fneg_fneg_swap_pred_vec_poison(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @unary_fneg_fneg_swap_pred_vec_poison(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %neg1 = fneg <2 x float> %x
-  %neg2 = fsub <2 x float> <float undef, float -0.0>, %y
+  %neg2 = fsub <2 x float> <float poison, float -0.0>, %y
   %cmp = fcmp olt <2 x float> %neg1, %neg2
   ret <2 x i1> %cmp
 }
 
-define <2 x i1> @fneg_unary_fneg_swap_pred_vec_undef(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @fneg_unary_fneg_swap_pred_vec_undef(
+define <2 x i1> @fneg_unary_fneg_swap_pred_vec_poison(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fneg_unary_fneg_swap_pred_vec_poison(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
-  %neg1 = fsub <2 x float> <float -0.0, float undef>, %x
+  %neg1 = fsub <2 x float> <float -0.0, float poison>, %x
   %neg2 = fneg <2 x float> %y
   %cmp = fcmp olt <2 x float> %neg1, %neg2
   ret <2 x i1> %cmp

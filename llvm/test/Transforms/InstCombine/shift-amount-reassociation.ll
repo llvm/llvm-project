@@ -48,38 +48,38 @@ define <2 x i32> @t2_vec_nonsplat(<2 x i32> %x, <2 x i32> %y) {
 
 ; Basic vector tests
 
-define <3 x i32> @t3_vec_nonsplat_undef0(<3 x i32> %x, <3 x i32> %y) {
-; CHECK-LABEL: @t3_vec_nonsplat_undef0(
-; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 30, i32 undef, i32 30>
+define <3 x i32> @t3_vec_nonsplat_poison0(<3 x i32> %x, <3 x i32> %y) {
+; CHECK-LABEL: @t3_vec_nonsplat_poison0(
+; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 30, i32 poison, i32 30>
 ; CHECK-NEXT:    ret <3 x i32> [[T3]]
 ;
-  %t0 = sub <3 x i32> <i32 32, i32 undef, i32 32>, %y
+  %t0 = sub <3 x i32> <i32 32, i32 poison, i32 32>, %y
   %t1 = lshr <3 x i32> %x, %t0
   %t2 = add <3 x i32> %y, <i32 -2, i32 -2, i32 -2>
   %t3 = lshr <3 x i32> %t1, %t2
   ret <3 x i32> %t3
 }
 
-define <3 x i32> @t4_vec_nonsplat_undef1(<3 x i32> %x, <3 x i32> %y) {
-; CHECK-LABEL: @t4_vec_nonsplat_undef1(
-; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 30, i32 undef, i32 30>
+define <3 x i32> @t4_vec_nonsplat_poison1(<3 x i32> %x, <3 x i32> %y) {
+; CHECK-LABEL: @t4_vec_nonsplat_poison1(
+; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 30, i32 poison, i32 30>
 ; CHECK-NEXT:    ret <3 x i32> [[T3]]
 ;
   %t0 = sub <3 x i32> <i32 32, i32 32, i32 32>, %y
   %t1 = lshr <3 x i32> %x, %t0
-  %t2 = add <3 x i32> %y, <i32 -2, i32 undef, i32 -2>
+  %t2 = add <3 x i32> %y, <i32 -2, i32 poison, i32 -2>
   %t3 = lshr <3 x i32> %t1, %t2
   ret <3 x i32> %t3
 }
 
-define <3 x i32> @t5_vec_nonsplat_undef1(<3 x i32> %x, <3 x i32> %y) {
-; CHECK-LABEL: @t5_vec_nonsplat_undef1(
-; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 30, i32 undef, i32 30>
+define <3 x i32> @t5_vec_nonsplat_poison1(<3 x i32> %x, <3 x i32> %y) {
+; CHECK-LABEL: @t5_vec_nonsplat_poison1(
+; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 30, i32 poison, i32 30>
 ; CHECK-NEXT:    ret <3 x i32> [[T3]]
 ;
-  %t0 = sub <3 x i32> <i32 32, i32 undef, i32 32>, %y
+  %t0 = sub <3 x i32> <i32 32, i32 poison, i32 32>, %y
   %t1 = lshr <3 x i32> %x, %t0
-  %t2 = add <3 x i32> %y, <i32 -2, i32 undef, i32 -2>
+  %t2 = add <3 x i32> %y, <i32 -2, i32 poison, i32 -2>
   %t3 = lshr <3 x i32> %t1, %t2
   ret <3 x i32> %t3
 }
