@@ -6374,20 +6374,20 @@ TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithDoubleArgument) {
 }
 
 TEST(HasAnyTemplateArgumentLoc, BindsToExplicitSpecializationWithIntArgument) {
-  EXPECT_TRUE(
-      matches("template<typename T> class A {}; template<> class A<int> {};",
-              classTemplateSpecializationDecl(
-                  hasName("A"), hasAnyTemplateArgument(templateArgument(
-                                    refersToType(asString("int")))))));
+  EXPECT_TRUE(matches(
+      "template<typename T> class A {}; template<> class A<int> {};",
+      classTemplateSpecializationDecl(
+          hasName("A"),
+          hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc,
      BindsToExplicitSpecializationWithDoubleArgument) {
-  EXPECT_TRUE(
-      matches("template<typename T> class A {}; template<> class A<double> {};",
-              classTemplateSpecializationDecl(
-                  hasName("A"), hasAnyTemplateArgument(templateArgument(
-                                    refersToType(asString("double")))))));
+  EXPECT_TRUE(matches(
+      "template<typename T> class A {}; template<> class A<double> {};",
+      classTemplateSpecializationDecl(
+          hasName("A"),
+          hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("double")))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
@@ -6397,30 +6397,29 @@ TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
   )";
   EXPECT_TRUE(
       matches(code, classTemplateSpecializationDecl(
-                        hasName("A"), hasAnyTemplateArgument(templateArgument(
-                                          refersToType(asString("double")))))));
+                        hasName("A"), hasAnyTemplateArgumentLoc(hasTypeLoc(
+                                          loc(asString("double")))))));
 
-  EXPECT_TRUE(
-      matches(code, classTemplateSpecializationDecl(
-                        hasName("A"), hasAnyTemplateArgument(templateArgument(
-                                          refersToType(asString("int")))))));
+  EXPECT_TRUE(matches(
+      code, classTemplateSpecializationDecl(
+                hasName("A"),
+                hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc, DoesNotBindToSpecializationWithIntArgument) {
-  EXPECT_TRUE(
-      notMatches("template<typename T> class A {}; A<int> a;",
-                 classTemplateSpecializationDecl(
-                     hasName("A"), hasAnyTemplateArgument(templateArgument(
-                                       refersToType(asString("double")))))));
+  EXPECT_TRUE(notMatches("template<typename T> class A {}; A<int> a;",
+                         classTemplateSpecializationDecl(
+                             hasName("A"), hasAnyTemplateArgumentLoc(hasTypeLoc(
+                                               loc(asString("double")))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc,
      DoesNotBindToExplicitSpecializationWithIntArgument) {
-  EXPECT_TRUE(
-      notMatches("template<typename T> class A {}; template<> class A<int> {};",
-                 classTemplateSpecializationDecl(
-                     hasName("A"), hasAnyTemplateArgument(templateArgument(
-                                       refersToType(asString("double")))))));
+  EXPECT_TRUE(notMatches(
+      "template<typename T> class A {}; template<> class A<int> {};",
+      classTemplateSpecializationDecl(
+          hasName("A"),
+          hasAnyTemplateArgumentLoc(hasTypeLoc(loc(asString("double")))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToSpecializationWithIntArgument) {
@@ -6433,15 +6432,17 @@ TEST(HasTemplateArgumentLoc, BindsToSpecializationWithIntArgument) {
 }
 
 TEST(HasTemplateArgumentLoc, BindsToSpecializationWithDoubleArgument) {
-  EXPECT_TRUE(matches("template<typename T> class A {}; A<double> a;",
-      varDecl(hasName("a"),
-              hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
-                  templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                      0, hasTypeLoc(loc(asString("double")))))))))));
+  EXPECT_TRUE(
+      matches("template<typename T> class A {}; A<double> a;",
+              varDecl(hasName("a"),
+                      hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
+                          templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                              0, hasTypeLoc(loc(asString("double")))))))))));
 }
 
 TEST(HasTemplateArgumentLoc, DoesNotBindToSpecializationWithIntArgument) {
-  EXPECT_TRUE(notMatches("template<typename T> class A {}; A<int> a;",
+  EXPECT_TRUE(notMatches(
+      "template<typename T> class A {}; A<int> a;",
       varDecl(hasName("a"),
               hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
                   templateSpecializationTypeLoc(hasTemplateArgumentLoc(
@@ -6453,7 +6454,7 @@ TEST(HasTemplateArgumentLoc, BindsToExplicitSpecializationWithIntArgument) {
       "template<typename T> class A {}; template<> class A<int> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTemplateArgument(0, refersToType(asString("int"))))));
+          hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToExplicitSpecializationWithDoubleArgument) {
@@ -6461,8 +6462,7 @@ TEST(HasTemplateArgumentLoc, BindsToExplicitSpecializationWithDoubleArgument) {
       "template<typename T> class A {}; template<> class A<double> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTemplateArgument(
-              0, refersToType(asString("double"))))));
+          hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("double")))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
@@ -6472,14 +6472,12 @@ TEST(HasTemplateArgumentLoc, BindsToSpecializationWithMultipleArguments) {
   )";
   EXPECT_TRUE(matches(
       code, classTemplateSpecializationDecl(
-                hasName("A"),
-                hasTemplateArgument(
-                    0, refersToType(asString("double"))))));
+                hasName("A"), hasTemplateArgumentLoc(
+                                  0, hasTypeLoc(loc(asString("double")))))));
   EXPECT_TRUE(matches(
       code, classTemplateSpecializationDecl(
                 hasName("A"),
-                hasTemplateArgument(
-                    1, refersToType(asString("int"))))));
+                hasTemplateArgumentLoc(1, hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasTemplateArgumentLoc,
@@ -6488,8 +6486,7 @@ TEST(HasTemplateArgumentLoc,
       "template<typename T> class A {}; template<> class A<int> {};",
       classTemplateSpecializationDecl(
           hasName("A"),
-          hasTemplateArgument(
-              0, refersToType(asString("double"))))));
+          hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("double")))))));
 }
 
 TEST(HasTemplateArgumentLoc,
@@ -6500,14 +6497,12 @@ TEST(HasTemplateArgumentLoc,
   )";
   EXPECT_TRUE(notMatches(
       code, classTemplateSpecializationDecl(
-                hasName("A"),
-                hasTemplateArgument(
-                    1, refersToType(asString("double"))))));
+                hasName("A"), hasTemplateArgumentLoc(
+                                  1, hasTypeLoc(loc(asString("double")))))));
   EXPECT_TRUE(notMatches(
       code, classTemplateSpecializationDecl(
                 hasName("A"),
-                hasTemplateArgument(
-                    0, refersToType(asString("int"))))));
+                hasTemplateArgumentLoc(0, hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasTemplateArgumentLoc, DoesNotBindWithBadIndex) {
@@ -6517,14 +6512,12 @@ TEST(HasTemplateArgumentLoc, DoesNotBindWithBadIndex) {
   )";
   EXPECT_TRUE(notMatches(
       code, classTemplateSpecializationDecl(
-                hasName("A"),
-                hasTemplateArgument(
-                    -1, refersToType(asString("double"))))));
+                hasName("A"), hasTemplateArgumentLoc(
+                                  -1, hasTypeLoc(loc(asString("double")))))));
   EXPECT_TRUE(notMatches(
       code, classTemplateSpecializationDecl(
-                hasName("A"),
-                hasTemplateArgument(
-                    100, refersToType(asString("int"))))));
+                hasName("A"), hasTemplateArgumentLoc(
+                                  100, hasTypeLoc(loc(asString("int")))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToDeclRefExprWithIntArgument) {
