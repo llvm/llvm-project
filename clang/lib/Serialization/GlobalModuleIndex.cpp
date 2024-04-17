@@ -89,10 +89,8 @@ public:
   static std::pair<unsigned, unsigned>
   ReadKeyDataLength(const unsigned char*& d) {
     using namespace llvm::support;
-    unsigned KeyLen =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
-    unsigned DataLen =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
+    unsigned KeyLen = endian::readNext<uint16_t, llvm::endianness::little>(d);
+    unsigned DataLen = endian::readNext<uint16_t, llvm::endianness::little>(d);
     return std::make_pair(KeyLen, DataLen);
   }
 
@@ -113,8 +111,7 @@ public:
 
     data_type Result;
     while (DataLen > 0) {
-      unsigned ID =
-          endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
+      unsigned ID = endian::readNext<uint32_t, llvm::endianness::little>(d);
       Result.push_back(ID);
       DataLen -= 4;
     }
@@ -514,8 +511,7 @@ namespace {
       // The first bit indicates whether this identifier is interesting.
       // That's all we care about.
       using namespace llvm::support;
-      unsigned RawID =
-          endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
+      unsigned RawID = endian::readNext<uint32_t, llvm::endianness::little>(d);
       bool IsInteresting = RawID & 0x01;
       return std::make_pair(k, IsInteresting);
     }
