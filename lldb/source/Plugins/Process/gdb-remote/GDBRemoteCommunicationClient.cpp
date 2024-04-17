@@ -3437,8 +3437,9 @@ bool GDBRemoteCommunicationClient::CalculateMD5(
     // GDBRemoteCommunicationServerCommon::Handle_vFile_MD5 concatenates low and
     // high hex strings. We can't use response.GetHexMaxU64 because that can't
     // handle the concatenated hex string. What would happen is parsing the low
-    // would consume the whole response packet - which is a bug. Instead, we get
-    // the byte string for each low and high hex separately, and parse them.
+    // would consume the whole response packet which would give incorrect
+    // results. Instead, we get the byte string for each low and high hex
+    // separately, and parse them.
     //
     // An alternate way to handle this is to change the server to put a
     // delimiter between the low/high parts, and change the client to parse the
