@@ -2,6 +2,7 @@ ClangIR:
   - clang/include/clang/CIR/**/*
   - clang/lib/CIR/**/*
   - clang/tools/cir-*/**/*
+  - clang/test/CIR/**/*
 
 clang:dataflow:
   - clang/include/clang/Analysis/FlowSensitive/**/*
