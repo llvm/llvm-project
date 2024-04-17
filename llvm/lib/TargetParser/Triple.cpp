@@ -741,6 +741,19 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
         .EndsWith("v1.6", Triple::SPIRVSubArch_v16)
         .Default(Triple::NoSubArch);
 
+  if (SubArchName.starts_with("dxil"))
+    return StringSwitch<Triple::SubArchType>(SubArchName)
+        .EndsWith("v1.0", Triple::DXILSubArch_v10)
+        .EndsWith("v1.1", Triple::DXILSubArch_v11)
+        .EndsWith("v1.2", Triple::DXILSubArch_v12)
+        .EndsWith("v1.3", Triple::DXILSubArch_v13)
+        .EndsWith("v1.4", Triple::DXILSubArch_v14)
+        .EndsWith("v1.5", Triple::DXILSubArch_v15)
+        .EndsWith("v1.6", Triple::DXILSubArch_v16)
+        .EndsWith("v1.7", Triple::DXILSubArch_v17)
+        .EndsWith("v1.8", Triple::DXILSubArch_v18)
+        .Default(Triple::NoSubArch);
+
   StringRef ARMSubArch = ARM::getCanonicalArchName(SubArchName);
 
   // For now, this is the small part. Early return.
