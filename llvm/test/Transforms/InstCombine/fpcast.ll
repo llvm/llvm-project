@@ -51,13 +51,13 @@ define half @unary_fneg_fptrunc(float %a) {
   ret half %c
 }
 
-define <2 x half> @fneg_fptrunc_vec_undef(<2 x float> %a) {
-; CHECK-LABEL: @fneg_fptrunc_vec_undef(
+define <2 x half> @fneg_fptrunc_vec_poison(<2 x float> %a) {
+; CHECK-LABEL: @fneg_fptrunc_vec_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x float> [[A:%.*]] to <2 x half>
 ; CHECK-NEXT:    [[C:%.*]] = fneg <2 x half> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x half> [[C]]
 ;
-  %b = fsub <2 x float> <float -0.0, float undef>, %a
+  %b = fsub <2 x float> <float -0.0, float poison>, %a
   %c = fptrunc <2 x float> %b to <2 x half>
   ret <2 x half> %c
 }
