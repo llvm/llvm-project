@@ -713,7 +713,7 @@ module std_private_algorithm_partition_copy                              [system
 module std_private_algorithm_partition_point                             [system] { header "__algorithm/partition_point.h" }
 module std_private_algorithm_pop_heap                                    [system] { header "__algorithm/pop_heap.h" }
 module std_private_algorithm_prev_permutation                            [system] { header "__algorithm/prev_permutation.h" }
-module std_private_algorithm_pstl_any_all_none_of                        [system] { textual header "__algorithm/pstl_any_all_none_of.h" }
+module std_private_algorithm_pstl_any_all_none_of                        [system] { header "__algorithm/pstl_any_all_none_of.h" }
 module std_private_algorithm_pstl_backends_cpu_backends_any_of           [system] { textual header "__algorithm/pstl_backends/cpu_backends/any_of.h" }
 module std_private_algorithm_pstl_backends_cpu_backends_fill             [system] { textual header "__algorithm/pstl_backends/cpu_backends/fill.h" }
 module std_private_algorithm_pstl_backends_cpu_backends_find_if          [system] { textual header "__algorithm/pstl_backends/cpu_backends/find_if.h" }
