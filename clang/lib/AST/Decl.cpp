@@ -4597,7 +4597,7 @@ unsigned FieldDecl::getBitWidthValue(const ASTContext &Ctx) const {
 }
 
 bool FieldDecl::isZeroLengthBitField(const ASTContext &Ctx) const {
-  return isUnnamedBitfield() && !getBitWidth()->isValueDependent() &&
+  return isUnnamedBitField() && !getBitWidth()->isValueDependent() &&
          getBitWidthValue(Ctx) == 0;
 }
 
