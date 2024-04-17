@@ -39,6 +39,7 @@ lldb_framework_path = None
 count = 1
 
 # The 'arch' and 'compiler' can be specified via command line.
+target_os = None
 arch = None
 compiler = None
 dsymutil = None

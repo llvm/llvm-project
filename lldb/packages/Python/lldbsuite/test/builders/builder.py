@@ -36,6 +36,13 @@ class Builder:
         """Returns the ARCH_CFLAGS for the make system."""
         return []
 
+    def getTargetOsFlag(self, target_os):
+        if target_os is None:
+            target_os = configuration.target_os
+        if target_os is None:
+            return []
+        return ["OS=%s" % target_os]
+
     def getMake(self, test_subdir, test_name):
         """Returns the invocation for GNU make.
         The first argument is a tuple of the relative path to the testcase
@@ -171,6 +178,7 @@ class Builder:
         testdir=None,
         testname=None,
         make_targets=None,
+        target_os=None,
     ):
         debug_info_args = self._getDebugInfoArgs(debug_info)
         if debug_info_args is None:
@@ -182,6 +190,7 @@ class Builder:
             debug_info_args,
             make_targets,
             self.getArchCFlags(architecture),
+            self.getTargetOsFlag(target_os),
             self.getArchSpec(architecture),
             self.getCCSpec(compiler),
             self.getExtraMakeArgs(),

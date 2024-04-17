@@ -32,6 +32,15 @@ def create_parser():
     # C and Python toolchain options
     group = parser.add_argument_group("Toolchain options")
     group.add_argument(
+        "--target-os",
+        metavar="target_os",
+        dest="target_os",
+        default="",
+        help=textwrap.dedent(
+            """Specify target os for test compilation. This is useful for cross-compilation."""
+        ),
+    )
+    group.add_argument(
         "-A",
         "--arch",
         metavar="arch",

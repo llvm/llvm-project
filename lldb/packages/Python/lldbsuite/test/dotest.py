@@ -312,6 +312,9 @@ def parseOptionsAndInitTestdirs():
             logging.error("No SDK found with the name %s; aborting...", args.apple_sdk)
             sys.exit(-1)
 
+    if args.target_os:
+        configuration.target_os = args.target_os
+
     if args.arch:
         configuration.arch = args.arch
     else:
