@@ -17,17 +17,6 @@ using namespace llvm;
 
 namespace clang::tooling::cc1modbuildd {
 
-Expected<std::unique_ptr<raw_socket_stream>>
-connectToSocket(StringRef SocketPath) {
-
-  Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =
-      raw_socket_stream::createConnectedUnix(SocketPath);
-  if (!MaybeClient)
-    return MaybeClient.takeError();
-
-  return std::move(*MaybeClient);
-}
-
 Expected<std::string> readBufferFromSocket(raw_socket_stream &Socket) {
 
   constexpr unsigned short MAX_BUFFER = 4096;
@@ -45,7 +34,7 @@ Expected<std::string> readBufferFromSocket(raw_socket_stream &Socket) {
   if (Socket.has_error()) {
     std::error_code EC = Socket.error();
     Socket.clear_error();
-    return make_error<StringError>("Failed socket read: ", EC);
+    return make_error<StringError>("Failed socket read", EC);
   }
   return ReturnBuffer;
 }
@@ -56,7 +45,7 @@ Error writeBufferToSocket(raw_socket_stream &Socket, StringRef Buffer) {
   if (Socket.has_error()) {
     std::error_code EC = Socket.error();
     Socket.clear_error();
-    return make_error<StringError>("Failed socket write: ", EC);
+    return make_error<StringError>("Failed socket write", EC);
   }
 
   Socket.flush();

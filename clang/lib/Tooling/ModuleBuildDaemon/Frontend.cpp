@@ -88,7 +88,7 @@ getModuleBuildDaemon(const CompilerInvocation &Clang, const char *Argv0,
 
   if (llvm::sys::fs::exists(SocketPath)) {
     Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =
-        connectToSocket(SocketPath);
+        raw_socket_stream::createConnectedUnix(SocketPath);
     if (MaybeClient)
       return std::move(*MaybeClient);
     consumeError(MaybeClient.takeError());
@@ -103,7 +103,7 @@ getModuleBuildDaemon(const CompilerInvocation &Clang, const char *Argv0,
   do {
     if (llvm::sys::fs::exists(SocketPath)) {
       Expected<std::unique_ptr<raw_socket_stream>> MaybeClient =
-          connectToSocket(SocketPath);
+          raw_socket_stream::createConnectedUnix(SocketPath);
       if (MaybeClient) {
         Diag.Report(diag::remark_mbd_connection) << SocketPath;
         return std::move(*MaybeClient);

@@ -35,8 +35,6 @@ struct HandshakeMsg : public BaseMsg {
       : BaseMsg(Action, Status) {}
 };
 
-llvm::Expected<std::unique_ptr<llvm::raw_socket_stream>>
-connectToSocket(llvm::StringRef SocketPath);
 llvm::Expected<std::string>
 readBufferFromSocket(llvm::raw_socket_stream &Socket);
 llvm::Error writeBufferToSocket(llvm::raw_socket_stream &Socket,
