@@ -2805,6 +2805,12 @@ public:
                                      Type *Ty, unsigned AddrSpace,
                                      Instruction *I = nullptr) const;
 
+  /// Returns true if the targets addressing mode can target thread local
+  /// storage (TLS).
+  virtual bool addressingModeSupportsTLS(const GlobalValue &) const {
+    return false;
+  }
+
   /// Return the prefered common base offset.
   virtual int64_t getPreferredLargeGEPBaseOffset(int64_t MinOffset,
                                                  int64_t MaxOffset) const {
