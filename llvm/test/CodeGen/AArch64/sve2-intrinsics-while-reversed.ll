@@ -8,80 +8,96 @@ target triple = "aarch64-unknown-linux-gnu"
 ; WHILEGE
 ;
 
+; Cannot invert the while predicate when %a is MAX_INT.
 define <vscale x 16 x i1> @whilege_b_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilege_b_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilege p0.b, w0, w1
+; CHECK-NEXT:    whilele p0.b, w1, w0
+; CHECK-NEXT:    rev p0.b, p0.b
 ; CHECK-NEXT:    ret
   %while = call <vscale x 16 x i1> @llvm.aarch64.sve.whilele.nxv16i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> %while)
   ret <vscale x 16 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_INT.
 define <vscale x 16 x i1> @whilege_b_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilege_b_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilege p0.b, x0, x1
+; CHECK-NEXT:    whilele p0.b, x1, x0
+; CHECK-NEXT:    rev p0.b, p0.b
 ; CHECK-NEXT:    ret
   %while = call <vscale x 16 x i1> @llvm.aarch64.sve.whilele.nxv16i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> %while)
   ret <vscale x 16 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_INT.
 define <vscale x 8 x i1> @whilege_h_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilege_h_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilege p0.h, w0, w1
+; CHECK-NEXT:    whilele p0.h, w1, w0
+; CHECK-NEXT:    rev p0.h, p0.h
 ; CHECK-NEXT:    ret
   %while = call <vscale x 8 x i1> @llvm.aarch64.sve.whilele.nxv8i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> %while)
   ret <vscale x 8 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_INT.
 define <vscale x 8 x i1> @whilege_h_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilege_h_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilege p0.h, x0, x1
+; CHECK-NEXT:    whilele p0.h, x1, x0
+; CHECK-NEXT:    rev p0.h, p0.h
 ; CHECK-NEXT:    ret
   %while = call <vscale x 8 x i1> @llvm.aarch64.sve.whilele.nxv8i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> %while)
   ret <vscale x 8 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_INT.
 define <vscale x 4 x i1> @whilege_s_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilege_s_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilege p0.s, w0, w1
+; CHECK-NEXT:    whilele p0.s, w1, w0
+; CHECK-NEXT:    rev p0.s, p0.s
 ; CHECK-NEXT:    ret
   %while = call <vscale x 4 x i1> @llvm.aarch64.sve.whilele.nxv4i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %while)
   ret <vscale x 4 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_INT.
 define <vscale x 4 x i1> @whilege_s_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilege_s_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilege p0.s, x0, x1
+; CHECK-NEXT:    whilele p0.s, x1, x0
+; CHECK-NEXT:    rev p0.s, p0.s
 ; CHECK-NEXT:    ret
   %while = call <vscale x 4 x i1> @llvm.aarch64.sve.whilele.nxv4i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %while)
   ret <vscale x 4 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_INT.
 define <vscale x 2 x i1> @whilege_d_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilege_d_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilege p0.d, w0, w1
+; CHECK-NEXT:    whilele p0.d, w1, w0
+; CHECK-NEXT:    rev p0.d, p0.d
 ; CHECK-NEXT:    ret
   %while = call <vscale x 2 x i1> @llvm.aarch64.sve.whilele.nxv2i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> %while)
   ret <vscale x 2 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_INT.
 define <vscale x 2 x i1> @whilege_d_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilege_d_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilege p0.d, x0, x1
+; CHECK-NEXT:    whilele p0.d, x1, x0
+; CHECK-NEXT:    rev p0.d, p0.d
 ; CHECK-NEXT:    ret
   %while = call <vscale x 2 x i1> @llvm.aarch64.sve.whilele.nxv2i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> %while)
@@ -92,80 +108,96 @@ define <vscale x 2 x i1> @whilege_d_xx(i64 %a, i64 %b) {
 ; WHILEHS
 ;
 
+; Cannot invert the while predicate when %a is MAX_UINT.
 define <vscale x 16 x i1> @whilehs_b_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilehs_b_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilehs p0.b, w0, w1
+; CHECK-NEXT:    whilels p0.b, w1, w0
+; CHECK-NEXT:    rev p0.b, p0.b
 ; CHECK-NEXT:    ret
   %while = call <vscale x 16 x i1> @llvm.aarch64.sve.whilels.nxv16i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> %while)
   ret <vscale x 16 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_UINT.
 define <vscale x 16 x i1> @whilehs_b_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilehs_b_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilehs p0.b, x0, x1
+; CHECK-NEXT:    whilels p0.b, x1, x0
+; CHECK-NEXT:    rev p0.b, p0.b
 ; CHECK-NEXT:    ret
   %while = call <vscale x 16 x i1> @llvm.aarch64.sve.whilels.nxv16i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> %while)
   ret <vscale x 16 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_UINT.
 define <vscale x 8 x i1> @whilehs_h_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilehs_h_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilehs p0.h, w0, w1
+; CHECK-NEXT:    whilels p0.h, w1, w0
+; CHECK-NEXT:    rev p0.h, p0.h
 ; CHECK-NEXT:    ret
   %while = call <vscale x 8 x i1> @llvm.aarch64.sve.whilels.nxv8i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> %while)
   ret <vscale x 8 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_UINT.
 define <vscale x 8 x i1> @whilehs_h_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilehs_h_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilehs p0.h, x0, x1
+; CHECK-NEXT:    whilels p0.h, x1, x0
+; CHECK-NEXT:    rev p0.h, p0.h
 ; CHECK-NEXT:    ret
   %while = call <vscale x 8 x i1> @llvm.aarch64.sve.whilels.nxv8i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> %while)
   ret <vscale x 8 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_UINT.
 define <vscale x 4 x i1> @whilehs_s_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilehs_s_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilehs p0.s, w0, w1
+; CHECK-NEXT:    whilels p0.s, w1, w0
+; CHECK-NEXT:    rev p0.s, p0.s
 ; CHECK-NEXT:    ret
   %while = call <vscale x 4 x i1> @llvm.aarch64.sve.whilels.nxv4i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %while)
   ret <vscale x 4 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_UINT.
 define <vscale x 4 x i1> @whilehs_s_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilehs_s_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilehs p0.s, x0, x1
+; CHECK-NEXT:    whilels p0.s, x1, x0
+; CHECK-NEXT:    rev p0.s, p0.s
 ; CHECK-NEXT:    ret
   %while = call <vscale x 4 x i1> @llvm.aarch64.sve.whilels.nxv4i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %while)
   ret <vscale x 4 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_UINT.
 define <vscale x 2 x i1> @whilehs_d_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilehs_d_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilehs p0.d, w0, w1
+; CHECK-NEXT:    whilels p0.d, w1, w0
+; CHECK-NEXT:    rev p0.d, p0.d
 ; CHECK-NEXT:    ret
   %while = call <vscale x 2 x i1> @llvm.aarch64.sve.whilels.nxv2i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> %while)
   ret <vscale x 2 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MAX_UINT.
 define <vscale x 2 x i1> @whilehs_d_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilehs_d_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilehs p0.d, x0, x1
+; CHECK-NEXT:    whilels p0.d, x1, x0
+; CHECK-NEXT:    rev p0.d, p0.d
 ; CHECK-NEXT:    ret
   %while = call <vscale x 2 x i1> @llvm.aarch64.sve.whilels.nxv2i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> %while)
@@ -344,80 +376,96 @@ define <vscale x 2 x i1> @whilehi_d_xx(i64 %a, i64 %b) {
 ; WHILELE
 ;
 
+; Cannot invert the while predicate when %a is MIN_INT.
 define <vscale x 16 x i1> @whilele_b_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilele_b_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilele p0.b, w0, w1
+; CHECK-NEXT:    whilege p0.b, w1, w0
+; CHECK-NEXT:    rev p0.b, p0.b
 ; CHECK-NEXT:    ret
   %while = call <vscale x 16 x i1> @llvm.aarch64.sve.whilege.nxv16i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> %while)
   ret <vscale x 16 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_INT.
 define <vscale x 16 x i1> @whilele_b_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilele_b_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilele p0.b, x0, x1
+; CHECK-NEXT:    whilege p0.b, x1, x0
+; CHECK-NEXT:    rev p0.b, p0.b
 ; CHECK-NEXT:    ret
   %while = call <vscale x 16 x i1> @llvm.aarch64.sve.whilege.nxv16i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> %while)
   ret <vscale x 16 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_INT.
 define <vscale x 8 x i1> @whilele_h_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilele_h_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilele p0.h, w0, w1
+; CHECK-NEXT:    whilege p0.h, w1, w0
+; CHECK-NEXT:    rev p0.h, p0.h
 ; CHECK-NEXT:    ret
   %while = call <vscale x 8 x i1> @llvm.aarch64.sve.whilege.nxv8i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> %while)
   ret <vscale x 8 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_INT.
 define <vscale x 8 x i1> @whilele_h_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilele_h_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilele p0.h, x0, x1
+; CHECK-NEXT:    whilege p0.h, x1, x0
+; CHECK-NEXT:    rev p0.h, p0.h
 ; CHECK-NEXT:    ret
   %while = call <vscale x 8 x i1> @llvm.aarch64.sve.whilege.nxv8i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> %while)
   ret <vscale x 8 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_INT.
 define <vscale x 4 x i1> @whilele_s_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilele_s_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilele p0.s, w0, w1
+; CHECK-NEXT:    whilege p0.s, w1, w0
+; CHECK-NEXT:    rev p0.s, p0.s
 ; CHECK-NEXT:    ret
   %while = call <vscale x 4 x i1> @llvm.aarch64.sve.whilege.nxv4i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %while)
   ret <vscale x 4 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_INT.
 define <vscale x 4 x i1> @whilele_s_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilele_s_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilele p0.s, x0, x1
+; CHECK-NEXT:    whilege p0.s, x1, x0
+; CHECK-NEXT:    rev p0.s, p0.s
 ; CHECK-NEXT:    ret
   %while = call <vscale x 4 x i1> @llvm.aarch64.sve.whilege.nxv4i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %while)
   ret <vscale x 4 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_INT.
 define <vscale x 2 x i1> @whilele_d_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilele_d_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilele p0.d, w0, w1
+; CHECK-NEXT:    whilege p0.d, w1, w0
+; CHECK-NEXT:    rev p0.d, p0.d
 ; CHECK-NEXT:    ret
   %while = call <vscale x 2 x i1> @llvm.aarch64.sve.whilege.nxv2i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> %while)
   ret <vscale x 2 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_INT.
 define <vscale x 2 x i1> @whilele_d_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilele_d_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilele p0.d, x0, x1
+; CHECK-NEXT:    whilege p0.d, x1, x0
+; CHECK-NEXT:    rev p0.d, p0.d
 ; CHECK-NEXT:    ret
   %while = call <vscale x 2 x i1> @llvm.aarch64.sve.whilege.nxv2i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> %while)
@@ -512,80 +560,96 @@ define <vscale x 2 x i1> @whilelo_d_xx(i64 %a, i64 %b) {
 ; WHILELS
 ;
 
+; Cannot invert the while predicate when %a is MIN_UINT.
 define <vscale x 16 x i1> @whilels_b_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilels_b_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilels p0.b, w0, w1
+; CHECK-NEXT:    whilehs p0.b, w1, w0
+; CHECK-NEXT:    rev p0.b, p0.b
 ; CHECK-NEXT:    ret
   %while = call <vscale x 16 x i1> @llvm.aarch64.sve.whilehs.nxv16i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> %while)
   ret <vscale x 16 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_UINT.
 define <vscale x 16 x i1> @whilels_b_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilels_b_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilels p0.b, x0, x1
+; CHECK-NEXT:    whilehs p0.b, x1, x0
+; CHECK-NEXT:    rev p0.b, p0.b
 ; CHECK-NEXT:    ret
   %while = call <vscale x 16 x i1> @llvm.aarch64.sve.whilehs.nxv16i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 16 x i1> %while)
   ret <vscale x 16 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_UINT.
 define <vscale x 8 x i1> @whilels_h_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilels_h_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilels p0.h, w0, w1
+; CHECK-NEXT:    whilehs p0.h, w1, w0
+; CHECK-NEXT:    rev p0.h, p0.h
 ; CHECK-NEXT:    ret
   %while = call <vscale x 8 x i1> @llvm.aarch64.sve.whilehs.nxv8i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> %while)
   ret <vscale x 8 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_UINT.
 define <vscale x 8 x i1> @whilels_h_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilels_h_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilels p0.h, x0, x1
+; CHECK-NEXT:    whilehs p0.h, x1, x0
+; CHECK-NEXT:    rev p0.h, p0.h
 ; CHECK-NEXT:    ret
   %while = call <vscale x 8 x i1> @llvm.aarch64.sve.whilehs.nxv8i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> %while)
   ret <vscale x 8 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_UINT.
 define <vscale x 4 x i1> @whilels_s_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilels_s_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilels p0.s, w0, w1
+; CHECK-NEXT:    whilehs p0.s, w1, w0
+; CHECK-NEXT:    rev p0.s, p0.s
 ; CHECK-NEXT:    ret
   %while = call <vscale x 4 x i1> @llvm.aarch64.sve.whilehs.nxv4i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %while)
   ret <vscale x 4 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_UINT.
 define <vscale x 4 x i1> @whilels_s_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilels_s_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilels p0.s, x0, x1
+; CHECK-NEXT:    whilehs p0.s, x1, x0
+; CHECK-NEXT:    rev p0.s, p0.s
 ; CHECK-NEXT:    ret
   %while = call <vscale x 4 x i1> @llvm.aarch64.sve.whilehs.nxv4i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> %while)
   ret <vscale x 4 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_UINT.
 define <vscale x 2 x i1> @whilels_d_ww(i32 %a, i32 %b) {
 ; CHECK-LABEL: whilels_d_ww:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilels p0.d, w0, w1
+; CHECK-NEXT:    whilehs p0.d, w1, w0
+; CHECK-NEXT:    rev p0.d, p0.d
 ; CHECK-NEXT:    ret
   %while = call <vscale x 2 x i1> @llvm.aarch64.sve.whilehs.nxv2i1.i32(i32 %b, i32 %a)
   %while.rev = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> %while)
   ret <vscale x 2 x i1> %while.rev
 }
 
+; Cannot invert the while predicate when %a is MIN_UINT.
 define <vscale x 2 x i1> @whilels_d_xx(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilels_d_xx:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    whilels p0.d, x0, x1
+; CHECK-NEXT:    whilehs p0.d, x1, x0
+; CHECK-NEXT:    rev p0.d, p0.d
 ; CHECK-NEXT:    ret
   %while = call <vscale x 2 x i1> @llvm.aarch64.sve.whilehs.nxv2i1.i64(i64 %b, i64 %a)
   %while.rev = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> %while)
