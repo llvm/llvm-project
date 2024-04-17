@@ -8,19 +8,18 @@ define void @foo(ptr noalias noundef %0, ptr noalias noundef %1) optsize {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr noalias nocapture noundef readonly [[TMP0:%.*]], ptr noalias nocapture noundef writeonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -28
 ; CHECK-NEXT:    br label [[TMP4:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[TMP2:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[TMP4]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[TMP2]] ], [ [[VEC_IND_NEXT:%.*]], [[TMP4]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i64> [[VEC_IND]], <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i64> [[TMP6]], <i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255, i64 255>
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], <8 x i64> [[TMP3]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = tail call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP7]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nuw nsw i64 255, [[INDVARS_IV]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[INVARIANT_GEP]], i64 [[TMP3]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = load <8 x i32>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_GATHER]], <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store <8 x i32> [[TMP5]], ptr [[TMP10]], align 4
+; CHECK-NEXT:    store <8 x i32> [[TMP6]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw i64 [[INDVARS_IV]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[MIDDLE_BLOCK:%.*]], label [[TMP4]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
