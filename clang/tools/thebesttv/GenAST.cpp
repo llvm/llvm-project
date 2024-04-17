@@ -169,20 +169,22 @@ std::unique_ptr<ASTUnit> loadFromASTDump(std::string AstDumpPath) {
 std::unique_ptr<ASTUnit> getASTOfFile(const std::string &file) {
     std::string AstDumpPath = getASTDumpFile(file);
     if (!fileExists(AstDumpPath)) {
-        logger.warn("AST dump not found, generating from: {}", file);
+        // logger.warn("AST dump not found, generating from: {}", file);
         auto commands = Global.cb->getCompileCommands(file);
         if (commands.empty()) {
-            logger.error("No compile command found!");
+            logger.error("No compile command found for {}!", file);
             return nullptr;
         }
         if (commands.size() > 1) {
-            logger.warn("Multiple compile commands found, using the first one");
+            logger.warn(
+                "Multiple compile commands found for {}, using the first one",
+                file);
         }
         if (generateASTDump(commands[0]) != 0) {
-            logger.error("Failed to generate AST dump");
+            logger.error("Failed to generate AST dump for {}", file);
             return nullptr;
         }
-        logger.info("AST dump generated successfully");
+        // logger.info("AST dump generated successfully");
     }
     return loadFromASTDump(AstDumpPath);
 }
