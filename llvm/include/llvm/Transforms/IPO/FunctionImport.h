@@ -33,14 +33,8 @@ class FunctionImporter {
 public:
   /// Set of functions to import from a source module. Each entry is a set
   /// containing all the GUIDs of all functions to import for a source module.
-  using FunctionsToImportTy = DenseMap<GlobalValue::GUID, SummaryImportInfo>;
-
-  // FIXME: Remove this.
-  enum ImportStatus {
-    NotImported,
-    ImportDeclaration,
-    ImportDefinition,
-  };
+  using FunctionsToImportTy =
+      DenseMap<GlobalValue::GUID, GlobalValueSummary::ImportKind>;
 
   /// The different reasons selectCallee will chose not to import a
   /// candidate.
@@ -107,9 +101,9 @@ public:
   using ImportMapTy = DenseMap<StringRef, FunctionsToImportTy>;
 
   /// The map contains an entry for every global value the module exports, the
-  /// key being the value info, and the value is the summary-based import info.
-  /// FIXME: Does this set need to be a map?
-  using ExportSetTy = DenseMap<ValueInfo, SummaryImportInfo>;
+  /// key being the value info, and the value indicates whether the definition
+  /// or declaration is visible to another module.
+  using ExportSetTy = DenseMap<ValueInfo, GlobalValueSummary::ImportKind>;
 
   /// A function of this type is used to load modules referenced by the index.
   using ModuleLoaderTy =
