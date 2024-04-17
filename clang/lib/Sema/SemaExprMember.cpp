@@ -728,7 +728,7 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
     Sema &SemaRef;
     DeclarationNameInfo NameInfo;
     Sema::LookupNameKind LookupKind;
-    Sema::RedeclarationKind Redecl;
+    RedeclarationKind Redecl;
   };
   QueryState Q = {R.getSema(), R.getLookupNameInfo(), R.getLookupKind(),
                   R.redeclarationKind()};

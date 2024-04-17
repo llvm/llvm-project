@@ -550,7 +550,8 @@ std::unique_ptr<RuntimeInterfaceBuilder> Interpreter::FindRuntimeInterface() {
 
   auto LookupInterface = [&](Expr *&Interface, llvm::StringRef Name) {
     LookupResult R(S, &Ctx.Idents.get(Name), SourceLocation(),
-                   Sema::LookupOrdinaryName, Sema::ForVisibleRedeclaration);
+                   Sema::LookupOrdinaryName,
+                   RedeclarationKind::ForVisibleRedeclaration);
     S.LookupQualifiedName(R, Ctx.getTranslationUnitDecl());
     if (R.empty())
       return false;
