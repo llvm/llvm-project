@@ -997,6 +997,74 @@ llvm::ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
   return std::nullopt;
 }
 
+std::optional<SmallVector<APInt>>
+llvm::ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
+                       const MachineRegisterInfo &MRI) {
+  LLT Ty = MRI.getType(Op1);
+  if (Ty != MRI.getType(Op2))
+    return std::nullopt;
+
+  auto TryFoldScalar = [&MRI, Pred](Register LHS,
+                                    Register RHS) -> std::optional<APInt> {
+    auto LHSCst = getIConstantVRegVal(LHS, MRI);
+    auto RHSCst = getIConstantVRegVal(RHS, MRI);
+    if (!LHSCst || !RHSCst)
+      return std::nullopt;
+
+    switch (Pred) {
+    case CmpInst::Predicate::ICMP_EQ:
+      return APInt(/*numBits=*/1, LHSCst->eq(*RHSCst));
+    case CmpInst::Predicate::ICMP_NE:
+      return APInt(/*numBits=*/1, LHSCst->ne(*RHSCst));
+    case CmpInst::Predicate::ICMP_UGT:
+      return APInt(/*numBits=*/1, LHSCst->ugt(*RHSCst));
+    case CmpInst::Predicate::ICMP_UGE:
+      return APInt(/*numBits=*/1, LHSCst->uge(*RHSCst));
+    case CmpInst::Predicate::ICMP_ULT:
+      return APInt(/*numBits=*/1, LHSCst->ult(*RHSCst));
+    case CmpInst::Predicate::ICMP_ULE:
+      return APInt(/*numBits=*/1, LHSCst->ule(*RHSCst));
+    case CmpInst::Predicate::ICMP_SGT:
+      return APInt(/*numBits=*/1, LHSCst->sgt(*RHSCst));
+    case CmpInst::Predicate::ICMP_SGE:
+      return APInt(/*numBits=*/1, LHSCst->sge(*RHSCst));
+    case CmpInst::Predicate::ICMP_SLT:
+      return APInt(/*numBits=*/1, LHSCst->slt(*RHSCst));
+    case CmpInst::Predicate::ICMP_SLE:
+      return APInt(/*numBits=*/1, LHSCst->sle(*RHSCst));
+    default:
+      return std::nullopt;
+    }
+  };
+
+  SmallVector<APInt> FoldedICmps;
+
+  if (Ty.isVector()) {
+    // Try to constant fold each element.
+    auto *BV1 = getOpcodeDef<GBuildVector>(Op1, MRI);
+    auto *BV2 = getOpcodeDef<GBuildVector>(Op2, MRI);
+    if (!BV1 || !BV2)
+      return std::nullopt;
+    assert(BV1->getNumSources() == BV2->getNumSources() && "Invalid vectors");
+    for (unsigned I = 0; I < BV1->getNumSources(); ++I) {
+      if (auto MaybeFold =
+              TryFoldScalar(BV1->getSourceReg(I), BV2->getSourceReg(I))) {
+        FoldedICmps.emplace_back(*MaybeFold);
+        continue;
+      }
+      return std::nullopt;
+    }
+    return FoldedICmps;
+  }
+
+  if (auto MaybeCst = TryFoldScalar(Op1, Op2)) {
+    FoldedICmps.emplace_back(*MaybeCst);
+    return FoldedICmps;
+  }
+
+  return std::nullopt;
+}
+
 bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
                                   GISelKnownBits *KB) {
   std::optional<DefinitionAndSourceRegister> DefSrcReg =
@@ -1595,5 +1663,49 @@ void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
     if (!DbgUsers.empty()) {
       salvageDebugInfoForDbgValue(MRI, MI, DbgUsers);
     }
+  }
+}
+
+bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
+  switch (Opc) {
+  case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FCANONICALIZE:
+  case TargetOpcode::G_FCEIL:
+  case TargetOpcode::G_FCONSTANT:
+  case TargetOpcode::G_FCOPYSIGN:
+  case TargetOpcode::G_FCOS:
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FEXP2:
+  case TargetOpcode::G_FEXP:
+  case TargetOpcode::G_FFLOOR:
+  case TargetOpcode::G_FLOG10:
+  case TargetOpcode::G_FLOG2:
+  case TargetOpcode::G_FLOG:
+  case TargetOpcode::G_FMA:
+  case TargetOpcode::G_FMAD:
+  case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMAXNUM_IEEE:
+  case TargetOpcode::G_FMINIMUM:
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMINNUM_IEEE:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FNEARBYINT:
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPOW:
+  case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_FREM:
+  case TargetOpcode::G_FRINT:
+  case TargetOpcode::G_FSIN:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_INTRINSIC_ROUND:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+    return true;
+  default:
+    return false;
   }
 }

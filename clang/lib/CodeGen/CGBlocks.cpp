@@ -962,7 +962,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
       }
 
     // If it's a reference variable, copy the reference into the block field.
-    } else if (auto refType = type->getAs<ReferenceType>()) {
+    } else if (type->getAs<ReferenceType>()) {
       Builder.CreateStore(src.emitRawPointer(*this), blockField);
 
       // If type is const-qualified, copy the value into the block field.
@@ -1447,7 +1447,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
     selfTy = getContext().getPointerType(getContext().getAddrSpaceQualType(
         getContext().VoidTy, LangAS::opencl_generic));
 
-  IdentifierInfo *II = &CGM.getContext().Idents.get(".block_descriptor");
+  const IdentifierInfo *II = &CGM.getContext().Idents.get(".block_descriptor");
 
   ImplicitParamDecl SelfDecl(getContext(), const_cast<BlockDecl *>(blockDecl),
                              SourceLocation(), II, selfTy,
@@ -2791,7 +2791,7 @@ static void configureBlocksRuntimeObject(CodeGenModule &CGM,
   auto *GV = cast<llvm::GlobalValue>(C->stripPointerCasts());
 
   if (CGM.getTarget().getTriple().isOSBinFormatCOFF()) {
-    IdentifierInfo &II = CGM.getContext().Idents.get(C->getName());
+    const IdentifierInfo &II = CGM.getContext().Idents.get(C->getName());
     TranslationUnitDecl *TUDecl = CGM.getContext().getTranslationUnitDecl();
     DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
 

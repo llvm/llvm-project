@@ -2097,7 +2097,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlenSafelen) {
   }));
 }
 
-TEST_F(OpenMPIRBuilderTest, ApplySimdLoopIf) {
+TEST_F(OpenMPIRBuilderTest, ApplySimdIf) {
   OpenMPIRBuilder OMPBuilder(*M);
   IRBuilder<> Builder(BB);
   MapVector<Value *, Value *> AlignedVars;
@@ -6975,16 +6975,16 @@ TEST_F(OpenMPIRBuilderTest, registerTargetGlobalVariable) {
 
   // Clauses for data_int_0 with To + Any clauses for the host
   std::vector<GlobalVariable *> OffloadEntries;
-  OffloadEntries.push_back(M->getNamedGlobal(".omp_offloading.entry_name"));
+  OffloadEntries.push_back(M->getNamedGlobal(".offloading.entry_name"));
   OffloadEntries.push_back(
-      M->getNamedGlobal(".omp_offloading.entry.test_data_int_0"));
+      M->getNamedGlobal(".offloading.entry.test_data_int_0"));
 
   // Clauses for data_int_1 with Link + Any clauses for the host
   OffloadEntries.push_back(
       M->getNamedGlobal("test_data_int_1_decl_tgt_ref_ptr"));
-  OffloadEntries.push_back(M->getNamedGlobal(".omp_offloading.entry_name.1"));
-  OffloadEntries.push_back(M->getNamedGlobal(
-      ".omp_offloading.entry.test_data_int_1_decl_tgt_ref_ptr"));
+  OffloadEntries.push_back(M->getNamedGlobal(".offloading.entry_name.1"));
+  OffloadEntries.push_back(
+      M->getNamedGlobal(".offloading.entry.test_data_int_1_decl_tgt_ref_ptr"));
 
   for (unsigned I = 0; I < OffloadEntries.size(); ++I)
     EXPECT_NE(OffloadEntries[I], nullptr);

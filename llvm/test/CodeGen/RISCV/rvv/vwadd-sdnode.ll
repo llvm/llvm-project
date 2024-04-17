@@ -1396,21 +1396,229 @@ define <vscale x 1 x i64> @i1_zext(<vscale x 1 x i1> %va, <vscale x 1 x i64> %vb
 ; %x.i32 and %y.i32 are disjoint, so DAGCombiner will combine it into an or.
 ; FIXME: We should be able to recover the or into vwaddu.vv if the disjoint
 ; flag is set.
-define <vscale x 2 x i32> @disjoint_or(<vscale x 2 x i8> %x.i8, <vscale x 2 x i8> %y.i8) {
-; CHECK-LABEL: disjoint_or:
+define <vscale x 2 x i32> @vwaddu_vv_disjoint_or_add(<vscale x 2 x i8> %x.i8, <vscale x 2 x i8> %y.i8) {
+; CHECK-LABEL: vwaddu_vv_disjoint_or_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vsll.vi v8, v10, 8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vzext.vf4 v8, v9
-; CHECK-NEXT:    vor.vv v8, v10, v8
+; CHECK-NEXT:    vsll.vi v10, v10, 8
+; CHECK-NEXT:    vzext.vf2 v11, v9
+; CHECK-NEXT:    vwaddu.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %x.i16 = zext <vscale x 2 x i8> %x.i8 to <vscale x 2 x i16>
-  %x.shl = shl <vscale x 2 x i16> %x.i16, shufflevector(<vscale x 2 x i16> insertelement(<vscale x 2 x i16> poison, i16 8, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer)
+  %x.shl = shl <vscale x 2 x i16> %x.i16, splat (i16 8)
   %x.i32 = zext <vscale x 2 x i16> %x.shl to <vscale x 2 x i32>
   %y.i32 = zext <vscale x 2 x i8> %y.i8 to <vscale x 2 x i32>
   %add = add <vscale x 2 x i32> %x.i32, %y.i32
   ret <vscale x 2 x i32> %add
+}
+
+; TODO: We could select vwaddu.vv, but when both arms of the or are the same
+; DAGCombiner::hoistLogicOpWithSameOpcodeHands moves the zext above the or.
+define <vscale x 2 x i32> @vwaddu_vv_disjoint_or(<vscale x 2 x i16> %x.i16, <vscale x 2 x i16> %y.i16) {
+; CHECK-LABEL: vwaddu_vv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vor.vv v9, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    ret
+  %x.i32 = zext <vscale x 2 x i16> %x.i16 to <vscale x 2 x i32>
+  %y.i32 = zext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
+; TODO: We could select vwadd.vv, but when both arms of the or are the same
+; DAGCombiner::hoistLogicOpWithSameOpcodeHands moves the zext above the or.
+define <vscale x 2 x i32> @vwadd_vv_disjoint_or(<vscale x 2 x i16> %x.i16, <vscale x 2 x i16> %y.i16) {
+; CHECK-LABEL: vwadd_vv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vor.vv v9, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsext.vf2 v8, v9
+; CHECK-NEXT:    ret
+  %x.i32 = sext <vscale x 2 x i16> %x.i16 to <vscale x 2 x i32>
+  %y.i32 = sext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
+define <vscale x 2 x i32> @vwaddu_wv_disjoint_or(<vscale x 2 x i32> %x.i32, <vscale x 2 x i16> %y.i16) {
+; CHECK-LABEL: vwaddu_wv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwaddu.wv v8, v8, v9
+; CHECK-NEXT:    ret
+  %y.i32 = zext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
+define <vscale x 2 x i32> @vwadd_wv_disjoint_or(<vscale x 2 x i32> %x.i32, <vscale x 2 x i16> %y.i16) {
+; CHECK-LABEL: vwadd_wv_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwadd.wv v8, v8, v9
+; CHECK-NEXT:    ret
+  %y.i32 = sext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
+define <vscale x 8 x i64> @vwadd_vx_splat_zext(<vscale x 8 x i32> %va, i32 %b) {
+; RV32-LABEL: vwadd_vx_splat_zext:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw zero, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; RV32-NEXT:    vlse64.v v16, (a0), zero
+; RV32-NEXT:    vwaddu.wv v16, v16, v8
+; RV32-NEXT:    vmv8r.v v8, v16
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwadd_vx_splat_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a0, a0, -1
+; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; RV64-NEXT:    vwaddu.vx v16, v8, a0
+; RV64-NEXT:    vmv8r.v v8, v16
+; RV64-NEXT:    ret
+  %zb = zext i32 %b to i64
+  %head = insertelement <vscale x 8 x i64> poison, i64 %zb, i32 0
+  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
+  %vc = zext <vscale x 8 x i32> %va to <vscale x 8 x i64>
+  %ve = add <vscale x 8 x i64> %vc, %splat
+  ret <vscale x 8 x i64> %ve
+}
+
+define <vscale x 8 x i32> @vwadd_vx_splat_zext_i1(<vscale x 8 x i1> %va, i16 %b) {
+; RV32-LABEL: vwadd_vx_splat_zext_i1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 16
+; RV32-NEXT:    srli a0, a0, 16
+; RV32-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    vadd.vi v8, v8, 1, v0.t
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwadd_vx_splat_zext_i1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 48
+; RV64-NEXT:    srli a0, a0, 48
+; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vadd.vi v8, v8, 1, v0.t
+; RV64-NEXT:    ret
+  %zb = zext i16 %b to i32
+  %head = insertelement <vscale x 8 x i32> poison, i32 %zb, i32 0
+  %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %vc = zext <vscale x 8 x i1> %va to <vscale x 8 x i32>
+  %ve = add <vscale x 8 x i32> %vc, %splat
+  ret <vscale x 8 x i32> %ve
+}
+
+define <vscale x 8 x i64> @vwadd_wx_splat_zext(<vscale x 8 x i64> %va, i32 %b) {
+; RV32-LABEL: vwadd_wx_splat_zext:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw zero, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV32-NEXT:    vlse64.v v16, (a0), zero
+; RV32-NEXT:    vadd.vv v8, v8, v16
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwadd_wx_splat_zext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV64-NEXT:    vadd.vx v8, v8, a0
+; RV64-NEXT:    ret
+  %zb = zext i32 %b to i64
+  %head = insertelement <vscale x 8 x i64> poison, i64 %zb, i32 0
+  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
+  %ve = add <vscale x 8 x i64> %va, %splat
+  ret <vscale x 8 x i64> %ve
+}
+
+define <vscale x 8 x i64> @vwadd_vx_splat_sext(<vscale x 8 x i32> %va, i32 %b) {
+; RV32-LABEL: vwadd_vx_splat_sext:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV32-NEXT:    vmv.v.x v16, a0
+; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; RV32-NEXT:    vwadd.wv v16, v16, v8
+; RV32-NEXT:    vmv8r.v v8, v16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwadd_vx_splat_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; RV64-NEXT:    vwadd.vx v16, v8, a0
+; RV64-NEXT:    vmv8r.v v8, v16
+; RV64-NEXT:    ret
+  %sb = sext i32 %b to i64
+  %head = insertelement <vscale x 8 x i64> poison, i64 %sb, i32 0
+  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
+  %vc = sext <vscale x 8 x i32> %va to <vscale x 8 x i64>
+  %ve = add <vscale x 8 x i64> %vc, %splat
+  ret <vscale x 8 x i64> %ve
+}
+
+define <vscale x 8 x i32> @vwadd_vx_splat_sext_i1(<vscale x 8 x i1> %va, i16 %b) {
+; RV32-LABEL: vwadd_vx_splat_sext_i1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 16
+; RV32-NEXT:    srai a0, a0, 16
+; RV32-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    li a0, 1
+; RV32-NEXT:    vsub.vx v8, v8, a0, v0.t
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwadd_vx_splat_sext_i1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 48
+; RV64-NEXT:    srai a0, a0, 48
+; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    li a0, 1
+; RV64-NEXT:    vsub.vx v8, v8, a0, v0.t
+; RV64-NEXT:    ret
+  %sb = sext i16 %b to i32
+  %head = insertelement <vscale x 8 x i32> poison, i32 %sb, i32 0
+  %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+  %vc = sext <vscale x 8 x i1> %va to <vscale x 8 x i32>
+  %ve = add <vscale x 8 x i32> %vc, %splat
+  ret <vscale x 8 x i32> %ve
+}
+
+define <vscale x 8 x i64> @vwadd_wx_splat_sext(<vscale x 8 x i64> %va, i32 %b) {
+; RV32-LABEL: vwadd_wx_splat_sext:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV32-NEXT:    vadd.vx v8, v8, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwadd_wx_splat_sext:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV64-NEXT:    vadd.vx v8, v8, a0
+; RV64-NEXT:    ret
+  %sb = sext i32 %b to i64
+  %head = insertelement <vscale x 8 x i64> poison, i64 %sb, i32 0
+  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
+  %ve = add <vscale x 8 x i64> %va, %splat
+  ret <vscale x 8 x i64> %ve
 }

@@ -157,7 +157,8 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
 bool Parser::ParseOptionalCXXScopeSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
-    IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration) {
+    const IdentifierInfo **LastII, bool OnlyNamespace,
+    bool InUsingDeclaration) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
 
@@ -2626,7 +2627,7 @@ bool Parser::ParseUnqualifiedIdTemplateId(
     // UnqualifiedId.
 
     // FIXME: Store name for literal operator too.
-    IdentifierInfo *TemplateII =
+    const IdentifierInfo *TemplateII =
         Id.getKind() == UnqualifiedIdKind::IK_Identifier ? Id.Identifier
                                                          : nullptr;
     OverloadedOperatorKind OpKind =

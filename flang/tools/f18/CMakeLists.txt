@@ -17,8 +17,6 @@ set(MODULES
   "ieee_features"
   "iso_c_binding"
   "iso_fortran_env"
-  "__fortran_builtins"
-  "__fortran_type_info"
 )
 
 # Create module files directly from the top-level module source directory.
@@ -27,22 +25,20 @@ set(MODULES
 # can't be used for generating module files.
 if (NOT CMAKE_CROSSCOMPILING)
   foreach(filename ${MODULES})
-    set(base ${FLANG_INTRINSIC_MODULES_DIR}/${filename})
-    if(${filename} STREQUAL "__fortran_builtins")
-      set(depends "")
-    elseif(${filename} STREQUAL "__ppc_types")
-      set(depends "")
+    set(depends "")
+    if(${filename} STREQUAL "__fortran_builtins" OR
+       ${filename} STREQUAL "__ppc_types")
     elseif(${filename} STREQUAL "__ppc_intrinsics" OR
            ${filename} STREQUAL "mma")
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__ppc_types.mod)
     else()
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
       if(NOT ${filename} STREQUAL "__fortran_type_info")
-        set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_type_info.mod)
+        set(depends ${depends} ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_type_info.mod)
       endif()
       if(${filename} STREQUAL "ieee_arithmetic" OR
          ${filename} STREQUAL "ieee_exceptions")
-        set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_ieee_exceptions.mod)
+        set(depends ${depends} ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_ieee_exceptions.mod)
       endif()
     endif()
 
@@ -58,6 +54,7 @@ if (NOT CMAKE_CROSSCOMPILING)
       endif()
     endif()
 
+    set(base ${FLANG_INTRINSIC_MODULES_DIR}/${filename})
     # TODO: We may need to flag this with conditional, in case Flang is built w/o OpenMP support
     add_custom_command(OUTPUT ${base}.mod
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
@@ -65,11 +62,8 @@ if (NOT CMAKE_CROSSCOMPILING)
         ${FLANG_SOURCE_DIR}/module/${filename}.f90
       DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )
-    add_custom_command(OUTPUT ${base}.f18.mod
-      DEPENDS ${base}.mod
-      COMMAND ${CMAKE_COMMAND} -E copy ${base}.mod ${base}.f18.mod)
-    list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod)
-    install(FILES ${base}.mod ${base}.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+    list(APPEND MODULE_FILES ${base}.mod)
+    install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
   endforeach()
 
   # Special case for omp_lib.mod, because its source comes from openmp/runtime/src/include.

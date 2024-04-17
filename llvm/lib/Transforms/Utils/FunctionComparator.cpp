@@ -143,6 +143,18 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
         if (int Res = cmpNumbers((uint64_t)TyL, (uint64_t)TyR))
           return Res;
         continue;
+      } else if (LA.isConstantRangeAttribute() &&
+                 RA.isConstantRangeAttribute()) {
+        if (LA.getKindAsEnum() != RA.getKindAsEnum())
+          return cmpNumbers(LA.getKindAsEnum(), RA.getKindAsEnum());
+
+        ConstantRange LCR = LA.getRange();
+        ConstantRange RCR = RA.getRange();
+        if (int Res = cmpAPInts(LCR.getLower(), RCR.getLower()))
+          return Res;
+        if (int Res = cmpAPInts(LCR.getUpper(), RCR.getUpper()))
+          return Res;
+        continue;
       }
       if (LA < RA)
         return -1;

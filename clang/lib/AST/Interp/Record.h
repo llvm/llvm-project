@@ -51,7 +51,7 @@ public:
   /// Returns the underlying declaration.
   const RecordDecl *getDecl() const { return Decl; }
   /// Returns the name of the underlying declaration.
-  const std::string getName() const { return Decl->getNameAsString(); }
+  const std::string getName() const;
   /// Checks if the record is a union.
   bool isUnion() const { return getDecl()->isUnion(); }
   /// Returns the size of the record.
@@ -99,6 +99,10 @@ public:
 
   unsigned getNumVirtualBases() const { return VirtualBases.size(); }
   const Base *getVirtualBase(unsigned I) const { return &VirtualBases[I]; }
+
+  void dump(llvm::raw_ostream &OS, unsigned Indentation = 0,
+            unsigned Offset = 0) const;
+  void dump() const { dump(llvm::errs()); }
 
 private:
   /// Constructor used by Program to create record descriptors.

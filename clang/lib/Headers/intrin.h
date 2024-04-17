@@ -18,7 +18,7 @@
 #include <intrin0.h>
 
 /* First include the standard intrinsics. */
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || (defined(__x86_64__) && !defined(__arm64ec__))
 #include <x86intrin.h>
 #endif
 
@@ -26,7 +26,7 @@
 #include <armintr.h>
 #endif
 
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(__arm64ec__)
 #include <arm64intr.h>
 #endif
 
@@ -166,7 +166,7 @@ unsigned __int32 xbegin(void);
 void _xend(void);
 
 /* These additional intrinsics are turned on in x64/amd64/x86_64 mode. */
-#ifdef __x86_64__
+#if defined(__x86_64__) && !defined(__arm64ec__)
 void __addgsbyte(unsigned long, unsigned char);
 void __addgsdword(unsigned long, unsigned long);
 void __addgsqword(unsigned long, unsigned __int64);
@@ -236,7 +236,8 @@ __int64 _mul128(__int64, __int64, __int64 *);
 /*----------------------------------------------------------------------------*\
 |* movs, stos
 \*----------------------------------------------------------------------------*/
-#if defined(__i386__) || defined(__x86_64__)
+
+#if defined(__i386__) || (defined(__x86_64__) && !defined(__arm64ec__))
 static __inline__ void __DEFAULT_FN_ATTRS __movsb(unsigned char *__dst,
                                                   unsigned char const *__src,
                                                   size_t __n) {
@@ -305,7 +306,7 @@ static __inline__ void __DEFAULT_FN_ATTRS __stosw(unsigned short *__dst,
                        : "memory");
 }
 #endif
-#ifdef __x86_64__
+#if defined(__x86_64__) && !defined(__arm64ec__)
 static __inline__ void __DEFAULT_FN_ATTRS __movsq(
     unsigned long long *__dst, unsigned long long const *__src, size_t __n) {
   __asm__ __volatile__("rep movsq"
@@ -324,7 +325,7 @@ static __inline__ void __DEFAULT_FN_ATTRS __stosq(unsigned __int64 *__dst,
 /*----------------------------------------------------------------------------*\
 |* Misc
 \*----------------------------------------------------------------------------*/
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || (defined(__x86_64__) && !defined(__arm64ec__))
 static __inline__ void __DEFAULT_FN_ATTRS __halt(void) {
   __asm__ volatile("hlt");
 }
@@ -339,7 +340,7 @@ static __inline__ void __DEFAULT_FN_ATTRS __nop(void) {
 /*----------------------------------------------------------------------------*\
 |* MS AArch64 specific
 \*----------------------------------------------------------------------------*/
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(__arm64ec__)
 unsigned __int64 __getReg(int);
 long _InterlockedAdd(long volatile *Addend, long Value);
 __int64 _InterlockedAdd64(__int64 volatile *Addend, __int64 Value);
@@ -383,7 +384,7 @@ void __cdecl __prefetch(void *);
 /*----------------------------------------------------------------------------*\
 |* Privileged intrinsics
 \*----------------------------------------------------------------------------*/
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || (defined(__x86_64__) && !defined(__arm64ec__))
 static __inline__ unsigned __int64 __DEFAULT_FN_ATTRS
 __readmsr(unsigned long __register) {
   // Loads the contents of a 64-bit model specific register (MSR) specified in
@@ -397,7 +398,6 @@ __readmsr(unsigned long __register) {
   __asm__ ("rdmsr" : "=d"(__edx), "=a"(__eax) : "c"(__register));
   return (((unsigned __int64)__edx) << 32) | (unsigned __int64)__eax;
 }
-#endif
 
 static __inline__ unsigned __LPTRINT_TYPE__ __DEFAULT_FN_ATTRS __readcr3(void) {
   unsigned __LPTRINT_TYPE__ __cr3_val;
@@ -413,6 +413,7 @@ static __inline__ void __DEFAULT_FN_ATTRS
 __writecr3(unsigned __INTPTR_TYPE__ __cr3_val) {
   __asm__ ("mov {%0, %%cr3|cr3, %0}" : : "r"(__cr3_val) : "memory");
 }
+#endif
 
 #ifdef __cplusplus
 }

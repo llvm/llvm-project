@@ -35,6 +35,12 @@ def : Flag<["--"], "compress-debug-sections">, Alias<compress_debug_sections>,
       AliasArgs<["zlib"]>;
 def decompress_debug_sections : Flag<["--"], "decompress-debug-sections">,
                                 HelpText<"Decompress DWARF debug sections">;
+defm compress_sections
+    : Eq<"compress-sections",
+         "Compress or decompress sections using specified format. Supported "
+         "formats: zlib, zstd. Specify 'none' for decompression">,
+      MetaVarName<"<section-glob>=<format>">;
+
 defm split_dwo
     : Eq<"split-dwo", "Equivalent to --extract-dwo and <dwo-file> as the output file and no other options, "
                       "and then --strip-dwo on the input file">,

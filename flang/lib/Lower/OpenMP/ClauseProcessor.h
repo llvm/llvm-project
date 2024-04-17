@@ -63,6 +63,12 @@ public:
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
   bool processFinal(Fortran::lower::StatementContext &stmtCtx,
                     mlir::omp::FinalClauseOps &result) const;
+  bool
+  processHasDeviceAddr(mlir::omp::HasDeviceAddrClauseOps &result,
+                       llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
+                       llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
+                       llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+                           &isDeviceSymbols) const;
   bool processHint(mlir::omp::HintClauseOps &result) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
@@ -92,6 +98,12 @@ public:
   processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
                  mlir::omp::IfClauseOps &result) const;
+  bool
+  processIsDevicePtr(mlir::omp::IsDevicePtrClauseOps &result,
+                     llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
+                     llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
+                     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+                         &isDeviceSymbols) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
 

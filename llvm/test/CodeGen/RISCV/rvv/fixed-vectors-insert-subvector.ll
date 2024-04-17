@@ -628,6 +628,7 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV32-NEXT:    vs8r.v v8, (a0)
 ; RV32-NEXT:    vs8r.v v16, (a1)
 ; RV32-NEXT:    addi sp, s0, -80
+; RV32-NEXT:    .cfi_def_cfa sp, 80
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 80
@@ -661,6 +662,7 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV64-NEXT:    vs8r.v v8, (a0)
 ; RV64-NEXT:    vs8r.v v16, (a1)
 ; RV64-NEXT:    addi sp, s0, -80
+; RV64-NEXT:    .cfi_def_cfa sp, 80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 80
@@ -774,9 +776,9 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV64VLS-NEXT:    vl1re64.v v8, (a0)
 ; RV64VLS-NEXT:    addi a0, sp, 128
 ; RV64VLS-NEXT:    vs1r.v v8, (a0)
-; RV64VLS-NEXT:    addi a0, sp, 192
-; RV64VLS-NEXT:    vl8re64.v v8, (a0)
 ; RV64VLS-NEXT:    addi a0, sp, 64
+; RV64VLS-NEXT:    addi a2, sp, 192
+; RV64VLS-NEXT:    vl8re64.v v8, (a2)
 ; RV64VLS-NEXT:    vl8re64.v v16, (a0)
 ; RV64VLS-NEXT:    addi a0, a1, 128
 ; RV64VLS-NEXT:    vs8r.v v8, (a0)

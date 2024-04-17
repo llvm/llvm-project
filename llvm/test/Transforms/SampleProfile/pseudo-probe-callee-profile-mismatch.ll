@@ -1,7 +1,9 @@
 ; REQUIRES: x86_64-linux
 ; REQUIRES: asserts
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-callee-profile-mismatch.prof --salvage-stale-profile -S --debug-only=sample-profile,sample-profile-impl  -pass-remarks=inline 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline  -sample-profile-file=%S/Inputs/pseudo-probe-callee-profile-mismatch.prof --salvage-stale-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl  -pass-remarks=inline 2>&1 | FileCheck %s
 
+; There is no profile-checksum-mismatch attr, even the checksum is mismatched in the pseudo_probe_desc, it doesn't run the matching.
+; CHECK-NOT: Run stale profile matching for main
 
 ; CHECK: Run stale profile matching for bar
 ; CHECK: Callsite with callee:baz is matched from 4 to 2
@@ -14,7 +16,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @main() #0 {
+define available_externally i32 @main() #0 {
   %1 = call i32 @bar(), !dbg !13
   ret i32 0
 }
@@ -47,7 +49,8 @@ attributes #1 = { "profile-checksum-mismatch" "use-sample-profile" }
 !9 = distinct !DICompileUnit(language: DW_LANG_C11, file: !10, producer: "clang version 19.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 !10 = !DIFile(filename: "test2.c", directory: "/home/test", checksumkind: CSK_MD5, checksum: "553093afc026f9c73562eb3b0c5b7532")
 !11 = !{i32 2, !"Debug Info Version", i32 3}
-!12 = !{i64 -2624081020897602054, i64 281582081721716, !"main"}
+; Make a checksum mismatch in the pseudo_probe_desc
+!12 = !{i64 -2624081020897602054, i64 123456, !"main"}
 !13 = !DILocation(line: 8, column: 10, scope: !14)
 !14 = !DILexicalBlockFile(scope: !15, file: !1, discriminator: 186646591)
 !15 = distinct !DILexicalBlock(scope: !16, file: !1, line: 7, column: 40)

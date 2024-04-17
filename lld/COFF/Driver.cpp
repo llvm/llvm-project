@@ -31,7 +31,6 @@
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/COFFModuleDefinition.h"
-#include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -157,18 +156,7 @@ StringRef LinkerDriver::mangle(StringRef sym) {
 }
 
 llvm::Triple::ArchType LinkerDriver::getArch() {
-  switch (ctx.config.machine) {
-  case I386:
-    return llvm::Triple::ArchType::x86;
-  case AMD64:
-    return llvm::Triple::ArchType::x86_64;
-  case ARMNT:
-    return llvm::Triple::ArchType::arm;
-  case ARM64:
-    return llvm::Triple::ArchType::aarch64;
-  default:
-    return llvm::Triple::ArchType::UnknownArch;
-  }
+  return getMachineArchType(ctx.config.machine);
 }
 
 bool LinkerDriver::findUnderscoreMangle(StringRef sym) {
