@@ -1977,9 +1977,10 @@ LogicalResult OrderedRegionOp::verify() {
   if (getSimd())
     return failure();
 
-  if (auto container = (*this)->getParentOfType<WsloopOp>()) {
-    if (!container.getOrderedValAttr() ||
-        container.getOrderedValAttr().getInt() != 0)
+  if (auto loopOp = dyn_cast<LoopNestOp>((*this)->getParentOp())) {
+    auto wsloopOp = llvm::dyn_cast_if_present<WsloopOp>(loopOp->getParentOp());
+    if (!wsloopOp || !wsloopOp.getOrderedValAttr() ||
+        wsloopOp.getOrderedValAttr().getInt() != 0)
       return emitOpError() << "ordered region must be closely nested inside "
                            << "a worksharing-loop region with an ordered "
                            << "clause without parameter present";
@@ -2130,15 +2131,19 @@ LogicalResult CancelOp::verify() {
                          << "inside a parallel region";
   }
   if (cct == ClauseCancellationConstructType::Loop) {
-    if (!isa<WsloopOp>(parentOp)) {
-      return emitOpError() << "cancel loop must appear "
-                           << "inside a worksharing-loop region";
+    auto loopOp = dyn_cast<LoopNestOp>(parentOp);
+    auto wsloopOp = llvm::dyn_cast_if_present<WsloopOp>(
+        loopOp ? loopOp->getParentOp() : nullptr);
+
+    if (!wsloopOp) {
+      return emitOpError()
+             << "cancel loop must appear inside a worksharing-loop region";
     }
-    if (cast<WsloopOp>(parentOp).getNowaitAttr()) {
+    if (wsloopOp.getNowaitAttr()) {
       return emitError() << "A worksharing construct that is canceled "
                          << "must not have a nowait clause";
     }
-    if (cast<WsloopOp>(parentOp).getOrderedValAttr()) {
+    if (wsloopOp.getOrderedValAttr()) {
       return emitError() << "A worksharing construct that is canceled "
                          << "must not have an ordered clause";
     }
@@ -2176,7 +2181,7 @@ LogicalResult CancellationPointOp::verify() {
                          << "inside a parallel region";
   }
   if ((cct == ClauseCancellationConstructType::Loop) &&
-      !isa<WsloopOp>(parentOp)) {
+      (!isa<LoopNestOp>(parentOp) || !isa<WsloopOp>(parentOp->getParentOp()))) {
     return emitOpError() << "cancellation point loop must appear "
                          << "inside a worksharing-loop region";
   }
