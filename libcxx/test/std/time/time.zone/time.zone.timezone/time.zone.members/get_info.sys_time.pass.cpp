@@ -175,6 +175,10 @@ static void test_indian_kerguelen() {
   // Z Indian/Kerguelen 0 - -00 1950
   // 5 - +05
 
+  //  Make sure the entry is present in the database.
+  if (std::chrono::get_tzdb().version < "2024a")
+    return;
+
   const std::chrono::time_zone* tz = std::chrono::locate_zone("Indian/Kerguelen");
 
   std::chrono::sys_seconds transition =
