@@ -208,7 +208,9 @@ if config.have_openmp_rtl:
 # omp_lib.{h,mod} files, depending on whether the OpenMP runtime was build as a
 # project or runtime.
 if config.openmp_module_dir:
-    config.substitutions.append(("%openmp_module_flag", f"-J {config.openmp_module_dir}"))
+    config.substitutions.append(
+        ("%openmp_module_flag", f"-J {config.openmp_module_dir}")
+    )
 else:
     config.substitutions.append(("%openmp_module_flag", ""))
 
