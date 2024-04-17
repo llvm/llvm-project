@@ -47,9 +47,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
-  case VPWidenMemoryInstructionSC: {
-    return cast<VPWidenMemoryInstructionRecipe>(this)->isStore();
-  }
+  case VPWidenStoreSC:
+    return true;
   case VPReplicateSC:
   case VPWidenCallSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
@@ -64,6 +63,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenCastSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
+  case VPWidenLoadSC:
   case VPWidenPHISC:
   case VPWidenSC:
   case VPWidenSelectSC: {
@@ -81,16 +81,16 @@ bool VPRecipeBase::mayWriteToMemory() const {
 
 bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
-  case VPWidenMemoryInstructionSC: {
-    return !cast<VPWidenMemoryInstructionRecipe>(this)->isStore();
-  }
+  case VPWidenLoadSC:
+    return true;
   case VPReplicateSC:
   case VPWidenCallSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayReadFromMemory();
   case VPBranchOnMaskSC:
-  case VPScalarIVStepsSC:
   case VPPredInstPHISC:
+  case VPScalarIVStepsSC:
+  case VPWidenStoreSC:
     return false;
   case VPBlendSC:
   case VPReductionSC:
@@ -155,12 +155,13 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   }
   case VPInterleaveSC:
     return mayWriteToMemory();
-  case VPWidenMemoryInstructionSC:
-    assert(cast<VPWidenMemoryInstructionRecipe>(this)
-                   ->getIngredient()
-                   .mayHaveSideEffects() == mayWriteToMemory() &&
-           "mayHaveSideffects result for ingredient differs from this "
-           "implementation");
+  case VPWidenLoadSC:
+  case VPWidenStoreSC:
+    assert(
+        cast<VPWidenMemoryRecipe>(this)->getIngredient().mayHaveSideEffects() ==
+            mayWriteToMemory() &&
+        "mayHaveSideffects result for ingredient differs from this "
+        "implementation");
     return mayWriteToMemory();
   case VPReplicateSC: {
     auto *R = cast<VPReplicateRecipe>(this);
@@ -1769,16 +1770,17 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
 }
 
-void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
-                                           VPSlotTracker &SlotTracker) const {
+void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
+                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
+  printAsOperand(O, SlotTracker);
+  O << " = load ";
+  printOperands(O, SlotTracker);
+}
 
-  if (!isStore()) {
-    getVPSingleValue()->printAsOperand(O, SlotTracker);
-    O << " = ";
-  }
-  O << Instruction::getOpcodeName(Ingredient.getOpcode()) << " ";
-
+void VPWidenStoreRecipe::print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN store ";
   printOperands(O, SlotTracker);
 }
 #endif

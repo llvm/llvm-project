@@ -60,14 +60,14 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
-        // Create VPWidenMemoryInstructionRecipe for loads and stores.
+        // Create VPWidenMemoryRecipe for loads and stores.
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
-          NewRecipe = new VPWidenMemoryInstructionRecipe(
+          NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
               false /*Consecutive*/, false /*Reverse*/,
               Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
-          NewRecipe = new VPWidenMemoryInstructionRecipe(
+          NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
               nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/,
               Ingredient.getDebugLoc());
@@ -977,10 +977,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPReplicateRecipe,
-               VPWidenSelectRecipe, VPWidenMemoryInstructionRecipe>(&R))
+               VPWidenSelectRecipe, VPWidenMemoryRecipe>(&R))
         continue;
-      if (isa<VPWidenMemoryInstructionRecipe>(&R) &&
-          cast<VPWidenMemoryInstructionRecipe>(&R)->isStore())
+      if (isa<VPWidenStoreRecipe>(&R))
         continue;
 
       VPValue *ResultVPV = R.getVPSingleValue();
@@ -1048,10 +1047,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         assert(cast<VPWidenRecipe>(&R)->getOpcode() == Instruction::ICmp &&
                "Only ICmps should not need extending the result.");
 
-      if (isa<VPWidenMemoryInstructionRecipe>(&R)) {
-        assert(!cast<VPWidenMemoryInstructionRecipe>(&R)->isStore() && "stores cannot be narrowed");
+      assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
+      if (isa<VPWidenLoadRecipe>(&R))
         continue;
-      }
 
       // Shrink operands by introducing truncates as needed.
       unsigned StartIdx = isa<VPWidenSelectRecipe>(&R) ? 1 : 0;
@@ -1315,7 +1313,7 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
       ConstantInt::getTrue(CanonicalIVPHI->getScalarType()->getContext());
   VPValue *VPTrueMask = Plan.getOrAddLiveIn(TrueMask);
   replaceHeaderPredicateWith(Plan, *VPTrueMask, [](VPUser &U, unsigned) {
-    return isa<VPWidenMemoryInstructionRecipe>(U);
+    return isa<VPWidenMemoryRecipe>(U);
   });
   // Now create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
@@ -1371,8 +1369,7 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
       // instruction. Widen memory instructions involved in address computation
       // will lead to gather/scatter instructions, which don't need to be
       // handled.
-      if (isa<VPWidenMemoryInstructionRecipe>(CurRec) ||
-          isa<VPInterleaveRecipe>(CurRec) ||
+      if (isa<VPWidenMemoryRecipe>(CurRec) || isa<VPInterleaveRecipe>(CurRec) ||
           isa<VPScalarIVStepsRecipe>(CurRec) || isa<VPHeaderPHIRecipe>(CurRec))
         continue;
 
@@ -1420,7 +1417,7 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
   auto Iter = vp_depth_first_deep(Plan.getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (VPRecipeBase &Recipe : *VPBB) {
-      if (auto *WidenRec = dyn_cast<VPWidenMemoryInstructionRecipe>(&Recipe)) {
+      if (auto *WidenRec = dyn_cast<VPWidenMemoryRecipe>(&Recipe)) {
         Instruction &UnderlyingInstr = WidenRec->getIngredient();
         VPRecipeBase *AddrDef = WidenRec->getAddr()->getDefiningRecipe();
         if (AddrDef && WidenRec->isConsecutive() &&
