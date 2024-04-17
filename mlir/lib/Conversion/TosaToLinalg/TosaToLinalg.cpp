@@ -2370,8 +2370,9 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
       Value iy = builder.create<linalg::IndexOp>(loc, 3);
       Value ix = builder.create<linalg::IndexOp>(loc, 4);
 
-      // float_t angle = 2 * pi() * ( ( (iy * oy) % H) / H + ( (ix * ox) % W ) /
-      // W);
+      // Calculating angle without integer parts of components as sin/cos are
+      // periodic: angle = 2 * pi() * ( ( (iy * oy) % H) / H + ( (ix * ox) % W )
+      // / W);
       auto iyXoy = builder.create<index::MulOp>(loc, iy, oy);
       auto ixXox = builder.create<index::MulOp>(loc, ix, ox);
 
