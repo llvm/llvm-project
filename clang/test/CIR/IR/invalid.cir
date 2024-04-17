@@ -1033,3 +1033,16 @@ cir.func @bad_fetch(%x: !cir.ptr<!cir.float>, %y: !cir.float) -> () {
   %12 = cir.atomic.fetch(xor, %x : !cir.ptr<!cir.float>, %y : !cir.float, seq_cst) : !cir.float
   cir.return
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.global "private" external @batata : !s32i
+  cir.func @f35() {
+    // expected-error@+1 {{access to global not marked thread local}}
+    %0 = cir.get_global thread_local @batata : cir.ptr <!s32i>
+    cir.return
+  }
+}

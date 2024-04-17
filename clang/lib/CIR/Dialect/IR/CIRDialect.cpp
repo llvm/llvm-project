@@ -1635,9 +1635,13 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << "' does not reference a valid cir.global or cir.func";
 
   mlir::Type symTy;
-  if (auto g = dyn_cast<GlobalOp>(op))
+  if (auto g = dyn_cast<GlobalOp>(op)) {
     symTy = g.getSymType();
-  else if (auto f = dyn_cast<FuncOp>(op))
+    // Verify that for thread local global access, the global needs to
+    // be marked with tls bits.
+    if (getTls() && !g.getTlsModel())
+      return emitOpError("access to global not marked thread local");
+  } else if (auto f = dyn_cast<FuncOp>(op))
     symTy = f.getFunctionType();
   else
     llvm_unreachable("shall not get here");
