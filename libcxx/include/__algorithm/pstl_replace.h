@@ -9,13 +9,13 @@
 #ifndef _LIBCPP___ALGORITHM_PSTL_REPLACE_H
 #define _LIBCPP___ALGORITHM_PSTL_REPLACE_H
 
-#include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_for_each.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__algorithm/pstl_transform.h>
 #include <__config>
 #include <__iterator/cpp17_iterator_concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>

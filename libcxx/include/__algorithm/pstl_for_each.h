@@ -11,11 +11,11 @@
 
 #include <__algorithm/for_each.h>
 #include <__algorithm/for_each_n.h>
-#include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/cpp17_iterator_concepts.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>

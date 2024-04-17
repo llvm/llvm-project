@@ -73,18 +73,12 @@ set(files
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
   __algorithm/pstl_any_all_none_of.h
-  __algorithm/pstl_backend.h
-  __algorithm/pstl_backends/cpu_backend.h
   __algorithm/pstl_backends/cpu_backends/any_of.h
-  __algorithm/pstl_backends/cpu_backends/backend.h
   __algorithm/pstl_backends/cpu_backends/fill.h
   __algorithm/pstl_backends/cpu_backends/find_if.h
   __algorithm/pstl_backends/cpu_backends/for_each.h
-  __algorithm/pstl_backends/cpu_backends/libdispatch.h
   __algorithm/pstl_backends/cpu_backends/merge.h
-  __algorithm/pstl_backends/cpu_backends/serial.h
   __algorithm/pstl_backends/cpu_backends/stable_sort.h
-  __algorithm/pstl_backends/cpu_backends/thread.h
   __algorithm/pstl_backends/cpu_backends/transform.h
   __algorithm/pstl_backends/cpu_backends/transform_reduce.h
   __algorithm/pstl_copy.h
@@ -594,6 +588,11 @@ set(files
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
+  __pstl/backends/libdispatch.h
+  __pstl/backends/serial.h
+  __pstl/backends/std_thread.h
+  __pstl/configuration.h
+  __pstl/configuration_fwd.h
   __pstl/cpu_algos/cpu_traits.h
   __random/bernoulli_distribution.h
   __random/binomial_distribution.h

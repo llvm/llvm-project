@@ -327,7 +327,7 @@ set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
   )
 
-if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "libdispatch")
+if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
     pstl/libdispatch.cpp
     )
