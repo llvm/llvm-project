@@ -1083,10 +1083,11 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
       NNS->print(Out, Policy);
     Out << *D;
 
-    if (auto S = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+    if (auto *S = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
       const TemplateParameterList *TParams =
           S->getSpecializedTemplate()->getTemplateParameters();
-      const auto *TArgAsWritten = S->getTemplateArgsAsWritten();
+      const ASTTemplateArgumentListInfo *TArgAsWritten =
+          S->getTemplateArgsAsWritten();
       if (TArgAsWritten && !Policy.PrintCanonicalTypes)
         printTemplateArguments(TArgAsWritten->arguments(), TParams);
       else
