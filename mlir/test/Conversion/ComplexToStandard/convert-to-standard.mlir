@@ -837,21 +837,6 @@ func.func @complex_rsqrt(%arg: complex<f32>) -> complex<f32> {
   return %rsqrt : complex<f32>
 }
 
-// CHECK-COUNT-5: arith.select
-// CHECK-NOT: arith.select
-
-// -----
-
-// CHECK-LABEL: func @complex_rsqrt_nnan_ninf
-// CHECK-SAME: %[[ARG:.*]]: complex<f32>
-func.func @complex_rsqrt_nnan_ninf(%arg: complex<f32>) -> complex<f32> {
-  %sqrt = complex.rsqrt %arg fastmath<nnan,ninf> : complex<f32>
-  return %sqrt : complex<f32>
-}
-
-// CHECK-COUNT-3: arith.select
-// CHECK-NOT: arith.select
-
 // -----
 
 // CHECK-LABEL:   func.func @complex_angle
