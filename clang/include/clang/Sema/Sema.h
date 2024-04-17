@@ -352,6 +352,14 @@ private:
   llvm::function_ref<QualType()> ComputeType;
 };
 
+struct SkipBodyInfo {
+  SkipBodyInfo() = default;
+  bool ShouldSkip = false;
+  bool CheckSameAsPrevious = false;
+  NamedDecl *Previous = nullptr;
+  NamedDecl *New = nullptr;
+};
+
 /// Describes the result of template argument deduction.
 ///
 /// The TemplateDeductionResult enumeration describes the result of
@@ -2626,14 +2634,6 @@ public:
   Module *getOwningModule(const Decl *Entity) {
     return Entity->getOwningModule();
   }
-
-  struct SkipBodyInfo {
-    SkipBodyInfo() = default;
-    bool ShouldSkip = false;
-    bool CheckSameAsPrevious = false;
-    NamedDecl *Previous = nullptr;
-    NamedDecl *New = nullptr;
-  };
 
   DeclGroupPtrTy ConvertDeclToDeclGroup(Decl *Ptr, Decl *OwnedType = nullptr);
 
