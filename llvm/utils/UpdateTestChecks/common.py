@@ -1082,10 +1082,10 @@ ir_nameless_values = [
     NamelessValue(r"TBAA_STRUCT", "!", r"!tbaa.struct ", r"![0-9]+", None),
     NamelessValue(r"RNG", "!", r"!range ", r"![0-9]+", None),
     NamelessValue(r"LOOP", "!", r"!llvm.loop ", r"![0-9]+", None),
-    NamelessValue(r"META", "!", r"metadata ", r"![0-9]+", None),
     NamelessValue(r"META", "!", r"", r"![0-9]+", r"(?:distinct |)!.*"),
     NamelessValue(r"ACC_GRP", "!", r"!llvm.access.group ", r"![0-9]+", None),
     NamelessValue(r"META", "!", r"![a-z.]+ ", r"![0-9]+", None),
+    NamelessValue(r"META", "!", r"[, (]", r"![0-9]+", None),
 ]
 
 global_nameless_values = [
