@@ -786,7 +786,7 @@ libc_support_library(
         ":errno",
         ":hdr_fenv_macros",
         ":hdr_math_macros",
-	":types_fenv_t"
+        ":types_fenv_t",
     ],
 )
 
@@ -1152,6 +1152,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_fputil_fenv_impl",
+        ":types_fexcept_t",
     ],
 )
 
@@ -1272,7 +1273,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_fputil_fenv_impl",
-	":types_fexcept_t"
+        ":types_fexcept_t",
     ],
 )
 
@@ -1283,7 +1284,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_fputil_fenv_impl",
-	":types_fexcept_t",
+        ":types_fexcept_t",
     ],
 )
 
