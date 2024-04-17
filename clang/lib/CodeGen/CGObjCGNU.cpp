@@ -2925,8 +2925,8 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
       }
       // The actual types here don't matter - we're going to bitcast the
       // function anyway
-      imp = CGM.CreateRuntimeFunction(
-                   llvm::FunctionType::get(IdTy, IdTy, true), name)
+      imp = CGM.CreateRuntimeFunction(llvm::FunctionType::get(IdTy, IdTy, true),
+                                      name)
                 .getCallee();
     }
 
