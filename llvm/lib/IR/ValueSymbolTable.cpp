@@ -65,7 +65,7 @@ ValueName *ValueSymbolTable::makeUniqueName(Value *V,
     S << ++LastUnique;
 
     // Retry if MaxNameSize has been exceeded.
-    if (MaxNameSize > -1 && UniqueName.size() > (unsigned)MaxNameSize) {
+    if (MaxNameSize > 0 && UniqueName.size() > (unsigned)MaxNameSize) {
       BaseSize -= UniqueName.size() - (unsigned)MaxNameSize;
       continue;
     }
