@@ -6,7 +6,7 @@ struct t2 {};
 }
 int main() { t1 v1; ns::t2 v2; }
 #--- gen
-clang -S -g -gpubnames b.cc -o -
+clang --target=x86_64-linux -S -g -gpubnames b.cc -o -
 .endif
 	.text
 	.file	"b.cc"

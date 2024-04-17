@@ -8,7 +8,7 @@ namespace ns {
 [[gnu::used]] int vd;
 }
 //--- gen
-clang -O1 -g -gpubnames -flto b.cc c.cc d.cc -nostdlib -fuse-ld=lld -Wl,--lto-emit-asm
+clang --target=x86_64-linux -O1 -g -gpubnames -flto b.cc c.cc d.cc -nostdlib -fuse-ld=lld -Wl,--lto-emit-asm
 cat a.out.lto.s
 .endif
 	.text
