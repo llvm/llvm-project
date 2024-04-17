@@ -295,10 +295,9 @@ using TeamsClauseOps =
                     PrivateClauseOps, ReductionClauseOps, ThreadLimitClauseOps>;
 
 using WsloopClauseOps =
-    detail::Clauses<AllocateClauseOps, CollapseClauseOps, LinearClauseOps,
-                    LoopRelatedOps, NowaitClauseOps, OrderClauseOps,
-                    OrderedClauseOps, PrivateClauseOps, ReductionClauseOps,
-                    ScheduleClauseOps>;
+    detail::Clauses<AllocateClauseOps, LinearClauseOps, NowaitClauseOps,
+                    OrderClauseOps, OrderedClauseOps, PrivateClauseOps,
+                    ReductionClauseOps, ScheduleClauseOps>;
 
 } // namespace omp
 } // namespace mlir
