@@ -2151,7 +2151,7 @@ TemplateInstantiator::TransformLoopHintAttr(const LoopHintAttr *LH) {
 
   // Generate error if there is a problem with the value.
   if (getSema().CheckLoopHintExpr(TransformedExpr, LH->getLocation(),
-                                  LH->getAttrName()))
+                                  LH->getOption() == LoopHintAttr::UnrollCount))
     return LH;
 
   // Create new LoopHintValueAttr with integral expression in place of the
