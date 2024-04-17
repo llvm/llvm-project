@@ -124,7 +124,6 @@ class raw_socket_stream : public raw_fd_stream {
 #endif // _WIN32
 
 public:
-  // TODO: Should probably be private
   raw_socket_stream(int SocketFD);
   ~raw_socket_stream();
 
