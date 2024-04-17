@@ -34,7 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Backend, class _Index, class _Brick>
 _LIBCPP_HIDE_FROM_ABI optional<bool> __parallel_or(_Index __first, _Index __last, _Brick __f) {
   std::atomic<bool> __found(false);
-  auto __ret = __pstl::__cpu_traits<_Backend>::__parallel_for(__first, __last, [__f, &__found](_Index __i, _Index __j) {
+  auto __ret = __pstl::__cpu_traits<_Backend>::__for_each(__first, __last, [__f, &__found](_Index __i, _Index __j) {
     if (!__found.load(std::memory_order_relaxed) && __f(__i, __j)) {
       __found.store(true, std::memory_order_relaxed);
       __pstl::__cpu_traits<_Backend>::__cancel_execution();

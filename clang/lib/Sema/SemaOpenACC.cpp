@@ -15,6 +15,7 @@
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/Casting.h"
 
 using namespace clang;
 
@@ -76,6 +77,19 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     default:
       return false;
     }
+  case OpenACCClauseKind::Self:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Update:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
   default:
     // Do nothing so we can go to the 'unimplemented' diagnostic instead.
     return true;
@@ -121,9 +135,7 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     // Restrictions only properly implemented on 'compute' constructs, and
     // 'compute' constructs are the only construct that can do anything with
     // this yet, so skip/treat as unimplemented in this case.
-    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Parallel &&
-        Clause.getDirectiveKind() != OpenACCDirectiveKind::Serial &&
-        Clause.getDirectiveKind() != OpenACCDirectiveKind::Kernels)
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
       break;
 
     // Don't add an invalid clause to the AST.
@@ -146,9 +158,7 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     // Restrictions only properly implemented on 'compute' constructs, and
     // 'compute' constructs are the only construct that can do anything with
     // this yet, so skip/treat as unimplemented in this case.
-    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Parallel &&
-        Clause.getDirectiveKind() != OpenACCDirectiveKind::Serial &&
-        Clause.getDirectiveKind() != OpenACCDirectiveKind::Kernels)
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
       break;
 
     // There is no prose in the standard that says duplicates aren't allowed,
@@ -160,9 +170,51 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     // The parser has ensured that we have a proper condition expr, so there
     // isn't really much to do here.
 
-    // TODO OpenACC: When we implement 'self', this clauses causes us to
-    // 'ignore' the self clause, so we should implement a warning here.
+    // If the 'if' clause is true, it makes the 'self' clause have no effect,
+    // diagnose that here.
+    // TODO OpenACC: When we add these two to other constructs, we might not
+    // want to warn on this (for example, 'update').
+    const auto *Itr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSelfClause>);
+    if (Itr != ExistingClauses.end()) {
+      Diag(Clause.getBeginLoc(), diag::warn_acc_if_self_conflict);
+      Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    }
+
     return OpenACCIfClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getConditionExpr(), Clause.getEndLoc());
+  }
+
+  case OpenACCClauseKind::Self: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // TODO OpenACC: When we implement this for 'update', this takes a
+    // 'var-list' instead of a condition expression, so semantics/handling has
+    // to happen differently here.
+
+    // There is no prose in the standard that says duplicates aren't allowed,
+    // but this diagnostic is present in other compilers, as well as makes
+    // sense.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    // If the 'if' clause is true, it makes the 'self' clause have no effect,
+    // diagnose that here.
+    // TODO OpenACC: When we add these two to other constructs, we might not
+    // want to warn on this (for example, 'update').
+    const auto *Itr =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCIfClause>);
+    if (Itr != ExistingClauses.end()) {
+      Diag(Clause.getBeginLoc(), diag::warn_acc_if_self_conflict);
+      Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
+    }
+
+    return OpenACCSelfClause::Create(
         getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
         Clause.getConditionExpr(), Clause.getEndLoc());
   }
