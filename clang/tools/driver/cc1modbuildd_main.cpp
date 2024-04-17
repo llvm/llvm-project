@@ -109,16 +109,13 @@ void handleSignal(int) { DaemonPtr->shutdownDaemon(); }
 void ModuleBuildDaemonServer::setupDaemonEnv() {
 
 #ifdef _WIN32
-  if (!std::freopen("NUL", "r", stdin)) {
-    llvm::errs() << "Failed to close stdin" << '\n';
-    exit(EXIT_FAILURE);
-  }
+  if (std::freopen("NUL", "r", stdin) == NULL) {
 #else
-  if (::close(STDIN_FILENO) == -1) {
+  if (std::freopen("/dev/null", "r", stdin) == NULL) {
+#endif
     llvm::errs() << "Failed to close stdin" << '\n';
     exit(EXIT_FAILURE);
   }
-#endif
 
   if (std::freopen(Stdout.c_str(), "a", stdout) == NULL) {
     llvm::errs() << "Failed to redirect stdout to " << Stdout << '\n';
