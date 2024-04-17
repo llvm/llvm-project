@@ -1526,8 +1526,8 @@ def IterateOp : SparseTensor_Op<"iterate",
 
   let summary = "Iterate over a sparse iteration space";
   let description = [{
-      The `sparse_tensor.iterate` operations represents a loop over the
-      provided iteration space extracted from a specific sparse tensor.
+      The `sparse_tensor.iterate` operation represents a loop (nest) over
+      the provided iteration space extracted from a specific sparse tensor.
       The operation defines an SSA value for a sparse iterator that points
       to the current stored element in the sparse tensor and SSA values
       for coordinates of the stored element. The coordinates are always
