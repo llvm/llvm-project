@@ -407,3 +407,72 @@ void TrivialABI() {
                      0;
                    }));
 }
+
+namespace CleanupFlag {
+struct A {
+  A() {}
+  ~A() {}
+};
+
+struct B {
+  B(const A&) {}
+  B() {}
+  ~B() {}
+};
+
+struct S {
+  A a;
+  B b;
+};
+
+int AcceptS(S s);
+
+void Accept2(int x, int y);
+
+void InactiveNormalCleanup() {
+  // CHECK-LABEL: define {{.*}}InactiveNormalCleanupEv()
+  
+  // The first A{} below is an inactive normal cleanup which
+  // is not popped from EHStack on deactivation. This needs an
+  // "active" cleanup flag.
+
+  // CHECK: [[ACTIVE:%cleanup.isactive.*]] = alloca i1, align 1
+  // CHECK: call void [[A_CTOR:@.*AC1Ev]]
+  // CHECK: store i1 true, ptr [[ACTIVE]], align 1
+  // CHECK: call void [[A_CTOR]]
+  // CHECK: call void [[B_CTOR:@.*BC1ERKNS_1AE]]
+  // CHECK: store i1 false, ptr [[ACTIVE]], align 1
+  // CHECK: call noundef i32 [[ACCEPTS:@.*AcceptSENS_1SE]]
+  Accept2(AcceptS({.a = A{}, .b = A{}}), ({
+            if (foo()) return;
+            // CHECK: if.then:
+            // CHECK:   br label %cleanup
+            0;
+            // CHECK: if.end:
+            // CHECK:   call void [[ACCEPT2:@.*Accept2Eii]]
+            // CHECK:   br label %cleanup
+          }));
+  // CHECK: cleanup:
+  // CHECK:   call void [[S_DTOR:@.*SD1Ev]]
+  // CHECK:   call void [[A_DTOR:@.*AD1Ev]]
+  // CHECK:   %cleanup.is_active = load i1, ptr [[ACTIVE]]
+  // CHECK:   br i1 %cleanup.is_active, label %cleanup.action, label %cleanup.done
+
+  // CHECK: cleanup.action:
+  // CHECK:   call void [[A_DTOR]]
+
+  // The "active" cleanup flag is not required for unused cleanups.
+  Accept2(AcceptS({.a = A{}, .b = A{}}), 0);
+  // CHECK: cleanup.cont:
+  // CHECK:   call void [[A_CTOR]]
+  // CHECK-NOT: store i1 true
+  // CHECK:   call void [[A_CTOR]]
+  // CHECK:   call void [[B_CTOR]]
+  // CHECK-NOT: store i1 false
+  // CHECK:   call noundef i32 [[ACCEPTS]]
+  // CHECK:   call void [[ACCEPT2]]
+  // CHECK:   call void [[S_DTOR]]
+  // CHECK:   call void [[A_DTOR]]
+  // CHECK:   br label %return
+}
+}  // namespace CleanupFlag

@@ -1169,25 +1169,6 @@ void CodeGenFunction::EmitBranchThroughCleanup(JumpDest Dest) {
   Builder.ClearInsertionPoint();
 }
 
-static bool IsUsedAsNormalCleanup(EHScopeStack &EHStack,
-                                  EHScopeStack::stable_iterator C) {
-  // If we needed a normal block for any reason, that counts.
-  if (cast<EHCleanupScope>(*EHStack.find(C)).getNormalBlock())
-    return true;
-
-  // Check whether any enclosed cleanups were needed.
-  for (EHScopeStack::stable_iterator
-         I = EHStack.getInnermostNormalCleanup();
-         I != C; ) {
-    assert(C.strictlyEncloses(I));
-    EHCleanupScope &S = cast<EHCleanupScope>(*EHStack.find(I));
-    if (S.getNormalBlock()) return true;
-    I = S.getEnclosingNormalCleanup();
-  }
-
-  return false;
-}
-
 static bool IsUsedAsEHCleanup(EHScopeStack &EHStack,
                               EHScopeStack::stable_iterator cleanup) {
   // If we needed an EH block for any reason, that counts.
@@ -1236,8 +1217,7 @@ static void SetupCleanupBlockActivation(CodeGenFunction &CGF,
   // Calculate whether the cleanup was used:
 
   //   - as a normal cleanup
-  if (Scope.isNormalCleanup() &&
-      (isActivatedInConditional || IsUsedAsNormalCleanup(CGF.EHStack, C))) {
+  if (Scope.isNormalCleanup()) {
     Scope.setTestFlagInNormalCleanup();
     needFlag = true;
   }
@@ -1250,13 +1230,16 @@ static void SetupCleanupBlockActivation(CodeGenFunction &CGF,
   }
 
   // If it hasn't yet been used as either, we're done.
-  if (!needFlag) return;
+  if (!needFlag)
+    return;
 
   Address var = Scope.getActiveFlag();
   if (!var.isValid()) {
+    CodeGenFunction::AllocaTrackerRAII AllocaTracker(CGF);
     var = CGF.CreateTempAlloca(CGF.Builder.getInt1Ty(), CharUnits::One(),
                                "cleanup.isactive");
     Scope.setActiveFlag(var);
+    Scope.AddAuxAllocas(AllocaTracker.Take());
 
     assert(dominatingIP && "no existing variable and no dominating IP!");
 
