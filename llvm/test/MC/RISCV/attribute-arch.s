@@ -270,9 +270,6 @@
 .attribute arch, "rv32iza64rs1p0"
 # CHECK: attribute      5, "rv32i2p1_za64rs1p0"
 
-.attribute arch, "rv32izama16b"
-# CHECK: attribute      5, "rv32i2p1_zama16b1p0"
-
 .attribute arch, "rv32izawrs1p0"
 # CHECK: attribute      5, "rv32i2p1_zawrs1p0"
 
