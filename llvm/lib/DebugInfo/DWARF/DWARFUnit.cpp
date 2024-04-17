@@ -98,8 +98,12 @@ void DWARFUnitVector::addUnitsImpl(
         if (!IndexEntry)
           IndexEntry = Index.getFromOffset(Header.getOffset());
       }
-      if (IndexEntry && !Header.applyIndexEntry(IndexEntry))
-        return nullptr;
+      if (IndexEntry) {
+        if (Error ApplicationErr = Header.applyIndexEntry(IndexEntry)) {
+          Context.getWarningHandler()(std::move(ApplicationErr));
+          return nullptr;
+        }
+      }
       std::unique_ptr<DWARFUnit> U;
       if (Header.isTypeUnit())
         U = std::make_unique<DWARFTypeUnit>(Context, InfoSection, Header, DA,
@@ -334,21 +338,33 @@ Error DWARFUnitHeader::extract(DWARFContext &Context,
   return Error::success();
 }
 
-bool DWARFUnitHeader::applyIndexEntry(const DWARFUnitIndex::Entry *Entry) {
+Error DWARFUnitHeader::applyIndexEntry(const DWARFUnitIndex::Entry *Entry) {
   assert(Entry);
   assert(!IndexEntry);
   IndexEntry = Entry;
   if (AbbrOffset)
-    return false;
+    return createStringError(errc::invalid_argument,
+                             "DWARF package unit from offset 0x%8.8" PRIx64
+                             " has a non-zero abbreviation offset",
+                             Offset);
+
   auto *UnitContrib = IndexEntry->getContribution();
   if (!UnitContrib ||
       UnitContrib->getLength() != (getLength() + getUnitLengthFieldByteSize()))
-    return false;
+    return createStringError(errc::invalid_argument,
+                             "DWARF package unit at offset 0x%8.8" PRIx64
+                             "has an inconsistent index",
+                             Offset);
+
   auto *AbbrEntry = IndexEntry->getContribution(DW_SECT_ABBREV);
   if (!AbbrEntry)
-    return false;
+    return createStringError(errc::invalid_argument,
+                             "DWARF package unit at offset 0x%8.8 " PRIx64
+                             " mising abbreviation column",
+                             Offset);
+
   AbbrOffset = AbbrEntry->getOffset();
-  return true;
+  return Error::success();
 }
 
 Error DWARFUnit::extractRangeList(uint64_t RangeListOffset,
