@@ -2096,24 +2096,10 @@ Symbol *OmpAttributeVisitor::ResolveOmpCommonBlockName(
   if (!name) {
     return nullptr;
   }
-  // First check if the Common Block is declared in the current scope
-  if (auto *cur{GetContext().scope.FindCommonBlock(name->source)}) {
-    name->symbol = cur;
-    return cur;
-  }
-  // Then check parent scope, skipping OpenMP scopes and making sure
-  // that the top directive started its own scope.
-  DirContext &topDirContext = dirContext_.front();
-  Scope &topDirScope = topDirContext.scope;
-  assert(!topDirContext.directiveSource.empty());
-  assert(!topDirScope.sourceRange().empty());
-  if (!topDirScope.IsTopLevel() &&
-      topDirContext.directiveSource.begin() ==
-          topDirScope.sourceRange().begin()) {
-    if (auto *prev{topDirScope.parent().FindCommonBlock(name->source)}) {
-      name->symbol = prev;
-      return prev;
-    }
+  if (auto *cb{GetProgramUnitOrBlockConstructContaining(GetContext().scope)
+                   .FindCommonBlock(name->source)}) {
+    name->symbol = cb;
+    return cb;
   }
   return nullptr;
 }
