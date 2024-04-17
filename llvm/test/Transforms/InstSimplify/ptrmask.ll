@@ -40,7 +40,8 @@ define <2 x ptr addrspace(1) > @ptrmask_simplify_poison_and_zero_i32_vec_fail(<2
 define <2 x ptr> @ptrmask_simplify_undef_and_ones_vec(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_simplify_undef_and_ones_vec
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
-; CHECK-NEXT:    ret <2 x ptr> [[P]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 undef, i64 -1>)
+; CHECK-NEXT:    ret <2 x ptr> [[R]]
 ;
   %r = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 undef, i64 -1>)
   ret <2 x ptr> %r

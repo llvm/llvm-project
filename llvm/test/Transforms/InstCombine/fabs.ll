@@ -321,7 +321,7 @@ define <2 x float> @select_fcmp_nnan_ole_negzero(<2 x float> %x) {
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %lezero = fcmp ole <2 x float> %x, <float -0.0, float -0.0>
-  %negx = fsub nnan <2 x float> <float 0.0, float undef>, %x
+  %negx = fsub nnan <2 x float> <float 0.0, float poison>, %x
   %fabs = select <2 x i1> %lezero, <2 x float> %negx, <2 x float> %x
   ret <2 x float> %fabs
 }
@@ -332,7 +332,7 @@ define <2 x float> @select_nnan_fcmp_nnan_ole_negzero(<2 x float> %x) {
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %lezero = fcmp ole <2 x float> %x, <float -0.0, float -0.0>
-  %negx = fsub nnan <2 x float> <float 0.0, float undef>, %x
+  %negx = fsub nnan <2 x float> <float 0.0, float poison>, %x
   %fabs = select nnan <2 x i1> %lezero, <2 x float> %negx, <2 x float> %x
   ret <2 x float> %fabs
 }
