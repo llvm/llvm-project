@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s | FileCheck %s
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -triple %itanium_abi_triple -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s | FileCheck %s
 
 // CHECK-LABEL:       _Z19array_decompositioni:
 // CHECK-NEXT:          File 0, [[@LINE+6]]:32 -> {{[0-9]+}}:2 = #0
