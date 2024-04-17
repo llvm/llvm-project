@@ -9057,11 +9057,11 @@ ExprResult InitializationSequence::Perform(Sema &S,
         }
       }
 
-      Sema::CheckedConversionKind CCK
-        = Kind.isCStyleCast()? Sema::CCK_CStyleCast
-        : Kind.isFunctionalCast()? Sema::CCK_FunctionalCast
-        : Kind.isExplicitCast()? Sema::CCK_OtherCast
-        : Sema::CCK_ImplicitConversion;
+      CheckedConversionKind CCK =
+          Kind.isCStyleCast()       ? CheckedConversionKind::CStyleCast
+          : Kind.isFunctionalCast() ? CheckedConversionKind::FunctionalCast
+          : Kind.isExplicitCast()   ? CheckedConversionKind::OtherCast
+                                    : CheckedConversionKind::Implicit;
       ExprResult CurInitExprRes =
         S.PerformImplicitConversion(CurInit.get(), Step->Type, *Step->ICS,
                                     getAssignmentAction(Entity), CCK);

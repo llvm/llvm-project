@@ -2236,6 +2236,10 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
         << const_cast<Expr *>(E) << E->getSourceRange();
     return false;
   }
+
+  if (!FuncPtr.isValid())
+    return false;
+
   assert(F);
 
   // Check argument nullability state.

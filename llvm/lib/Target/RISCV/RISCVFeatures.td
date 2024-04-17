@@ -208,6 +208,13 @@ def HasStdExtAOrZalrsc
                          "'A' (Atomic Instructions) or "
                          "'Zalrsc' (Load-Reserved/Store-Conditional)">;
 
+def FeatureStdExtZama16b
+    : SubtargetFeature<"zama16b", "HasStdExtZama16b", "true",
+                       "'Zama16b' (Atomic 16-byte misaligned loads, stores and AMOs)">;
+def HasStdExtZama16b : Predicate<"Subtarget->hasStdExtZama16b()">,
+                       AssemblerPredicate<(all_of FeatureStdExtZama16b),
+                           "'Zama16b' (Atomic 16-byte misaligned loads, stores and AMOs)">;
+
 def FeatureStdExtZawrs : SubtargetFeature<"zawrs", "HasStdExtZawrs", "true",
                                           "'Zawrs' (Wait on Reservation Set)">;
 def HasStdExtZawrs : Predicate<"Subtarget->hasStdExtZawrs()">,
@@ -1183,10 +1190,15 @@ def FeatureTrailingSeqCstFence : SubtargetFeature<"seq-cst-trailing-fence",
                                           "true",
                                           "Enable trailing fence for seq-cst store.">;
 
-def FeatureFastUnalignedAccess
-   : SubtargetFeature<"fast-unaligned-access", "HasFastUnalignedAccess",
-                      "true", "Has reasonably performant unaligned "
-                      "loads and stores (both scalar and vector)">;
+def FeatureUnalignedScalarMem
+   : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
+                      "true", "Has reasonably performant unaligned scalar "
+                      "loads and stores">;
+
+def FeatureUnalignedVectorMem
+   : SubtargetFeature<"unaligned-vector-mem", "EnableUnalignedVectorMem",
+                      "true", "Has reasonably performant unaligned vector "
+                      "loads and stores">;
 
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
