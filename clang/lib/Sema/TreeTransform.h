@@ -12864,19 +12864,6 @@ TreeTransform<Derived>::TransformCXXNewExpr(CXXNewExpr *E) {
     ArraySize = NewArraySize.get();
   }
 
-  // Per C++0x [expr.new]p5, the type being constructed may be a
-  // typedef of an array type.
-  QualType AllocType = AllocTypeInfo->getType();
-  if (ArraySize) {
-    if (const ConstantArrayType *Array =
-            SemaRef.Context.getAsConstantArrayType(AllocType)) {
-      ArraySize = IntegerLiteral::Create(SemaRef.Context, Array->getSize(),
-                                         SemaRef.Context.getSizeType(),
-                                         E->getBeginLoc());
-      AllocType = Array->getElementType();
-    }
-  }
-
   // Transform the placement arguments (if any).
   bool ArgumentChanged = false;
   SmallVector<Expr*, 8> PlacementArgs;
@@ -12938,6 +12925,7 @@ TreeTransform<Derived>::TransformCXXNewExpr(CXXNewExpr *E) {
     return E;
   }
 
+  QualType AllocType = AllocTypeInfo->getType();
   if (!ArraySize) {
     // If no array size was specified, but the new expression was
     // instantiated with an array type (e.g., "new T" where T is
