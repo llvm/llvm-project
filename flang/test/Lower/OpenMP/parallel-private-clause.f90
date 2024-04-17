@@ -411,7 +411,8 @@ subroutine simd_loop_1
   ! FIRDialect:     %[[UB:.*]] = arith.constant 9 : i32
   ! FIRDialect:     %[[STEP:.*]] = arith.constant 1 : i32
 
-  ! FIRDialect: omp.simdloop for (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
+  ! FIRDialect: omp.simd {
+  ! FIRDialect-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   !$OMP SIMD PRIVATE(r)
   do i=1, 9
   ! FIRDialect:     fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>
