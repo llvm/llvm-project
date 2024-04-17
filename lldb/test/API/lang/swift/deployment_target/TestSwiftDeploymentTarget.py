@@ -65,4 +65,4 @@ class TestSwiftDeploymentTarget(TestBase):
         self.expect("expression f", substrs=["i = 23"])
         self.filecheck('platform shell cat ""%s"' % log, __file__)
 #       CHECK: SwiftASTContextForExpressions::SetTriple({{.*}}apple-macosx11.0.0
-#       CHECK:  SwiftASTContextForExpressions::RegisterSectionModules("a.out") retrieved 0 AST Data blobs
+#       CHECK-NOT: SwiftASTContextForExpressions::RegisterSectionModules("a.out"){{.*}} AST Data blobs

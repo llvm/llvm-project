@@ -2979,10 +2979,56 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
                                plugin_search_options.begin(),
                                plugin_search_options.end());
 
+  // Register the symbol context's module first. This makes it more
+  // likely that compatible AST blobs are found first, since then the
+  // local AST blobs overwrite any ones with the same import path from
+  // another dylib.
+  llvm::DenseSet<Module *> visited_modules;
+  llvm::StringMap<ModuleSP> all_modules;
   for (size_t mi = 0; mi != num_images; ++mi) {
-    std::vector<std::string> module_names;
-    auto module_sp = target.GetImages().GetModuleAtIndex(mi);
-    swift_ast_sp->RegisterSectionModules(*module_sp, module_names);
+    auto image_sp = target.GetImages().GetModuleAtIndex(mi);
+    std::string path = image_sp->GetSpecificationDescription();
+    all_modules.insert({path, image_sp});
+    all_modules.insert({llvm::sys::path::filename(path), image_sp});
+  }
+  std::vector<std::string> module_names;
+  std::function<void(ModuleSP, unsigned)> scan_module =
+      [&](ModuleSP cur_module_sp, unsigned indent) {
+        if (!cur_module_sp ||
+            !visited_modules.insert(cur_module_sp.get()).second)
+          return;
+        swift_ast_sp->RegisterSectionModules(*cur_module_sp, module_names);
+        if (GetLog(LLDBLog::Types)) {
+          std::string spacer(indent, '-');
+          LOG_PRINTF(GetLog(LLDBLog::Types), "+%s Dependency scan: %s",
+                     spacer.c_str(),
+                     cur_module_sp->GetSpecificationDescription().c_str());
+        }
+        if (auto object = cur_module_sp->GetObjectFile()) {
+          FileSpecList file_list;
+          object->GetDependentModules(file_list);
+          for (auto &fs : file_list) {
+            if (ModuleSP dependency = all_modules.lookup(fs.GetPath())) {
+              scan_module(dependency, indent + 1);
+            } else if (ModuleSP dependency =
+                           all_modules.lookup(fs.GetFilename())) {
+              scan_module(dependency, indent + 1);
+            } else {
+              if (GetLog(LLDBLog::Types)) {
+                std::string spacer(indent, '-');
+                LOG_PRINTF(GetLog(LLDBLog::Types),
+                           "+%s Could not find %s in images", spacer.c_str(),
+                           fs.GetPath().c_str());
+              }
+            }
+          }
+        }
+      };
+  scan_module(module_sp, 0);
+  for (size_t mi = 0; mi != num_images; ++mi) {
+    auto image_sp = target.GetImages().GetModuleAtIndex(mi);
+    if (!visited_modules.count(image_sp.get()))
+      swift_ast_sp->RegisterSectionModules(*image_sp, module_names);
   }
 
   LOG_PRINTF(GetLog(LLDBLog::Types), "((Target*)%p) = %p",
@@ -4370,6 +4416,7 @@ void SwiftASTContext::RegisterSectionModules(
 
   // Grab all the AST blobs from the symbol vendor.
   auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
+    if (ast_file_datas.size())
   LOG_PRINTF(GetLog(LLDBLog::Types),
              "(\"%s\") retrieved %zu AST Data blobs from the symbol vendor "
              "(filter=\"%s\").",
