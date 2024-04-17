@@ -1980,8 +1980,6 @@ void TypeSystemSwiftTypeRef::SetTriple(const llvm::Triple triple) {
   // This function appears to be only called via Module::SetArchitecture(ArchSpec).
   if (auto *swift_ast_context = GetSwiftASTContextOrNull(nullptr))
     swift_ast_context->SetTriple(triple);
-  else
-    m_swift_ast_context_triple = triple;
 }
 
 void TypeSystemSwiftTypeRef::ClearModuleDependentCaches() {
