@@ -1672,7 +1672,7 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
 // of each lane. If we can simplify away the shuffles to identities then
 // do so.
 bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
-  FixedVectorType *Ty = dyn_cast<FixedVectorType>(I.getType());
+  auto *Ty = dyn_cast<FixedVectorType>(I.getType());
   if (!Ty || !isa<Instruction>(I.getOperand(0)) ||
       !isa<Instruction>(I.getOperand(1)))
     return false;
@@ -1685,7 +1685,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
           cast<FixedVectorType>(SV->getOperand(0)->getType())->getNumElements();
       int M = SV->getMaskValue(Lane);
       if (M < 0)
-        return {nullptr, -1};
+        return {nullptr, PoisonMaskElem};
       else if (M < (int)NumElts) {
         V = SV->getOperand(0);
         Lane = M;
@@ -1698,12 +1698,12 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   };
 
   auto GenerateInstLaneVectorFromOperand =
-      [&LookThroughShuffles](const SmallVector<InstLane> &Item, int Op) {
+      [&LookThroughShuffles](ArrayRef<InstLane> Item, int Op) {
         SmallVector<InstLane> NItem;
         for (InstLane V : Item) {
           NItem.emplace_back(
               !V.first
-                  ? InstLane{nullptr, -1}
+                  ? InstLane{nullptr, PoisonMaskElem}
                   : LookThroughShuffles(
                         cast<Instruction>(V.first)->getOperand(Op), V.second));
         }
@@ -1751,8 +1751,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     if (!all_of(drop_begin(Item), [&](InstLane IL) {
           if (!IL.first)
             return true;
-          if (isa<Instruction>(IL.first) &&
-              !cast<Instruction>(IL.first)->hasOneUse())
+          if (auto *I = dyn_cast<Instruction>(IL.first); I && !I->hasOneUse())
             return false;
           return IL.first->getValueID() == Item[0].first->getValueID() &&
                  (!isa<IntrinsicInst>(IL.first) ||
@@ -1774,8 +1773,8 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
 
   // If we got this far, we know the shuffles are superfluous and can be
   // removed. Scan through again and generate the new tree of instructions.
-  std::function<Value *(const SmallVector<InstLane> &)> generate =
-      [&](const SmallVector<InstLane> &Item) -> Value * {
+  std::function<Value *(ArrayRef<InstLane>)> generate =
+      [&](ArrayRef<InstLane> Item) -> Value * {
     if (IdentityLeafs.contains(Item[0].first) &&
         all_of(drop_begin(enumerate(Item)), [&](const auto &E) {
           return !E.value().first || (E.value().first == Item[0].first &&
