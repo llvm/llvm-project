@@ -3077,9 +3077,9 @@ std::pair<uint32_t, uint32_t> DebugNamesBaseSection::computeEntryPool(
         // Abbrevs are indexed starting at 1; vector starts at 0. (abbrevCode
         // corresponds to position in the merged table vector).
         const Abbrev *abbrev = abbrevTable[ie.abbrevCode - 1];
-        for (auto &[a, v] : zip_equal(abbrev->attributes, ie.attrValues))
+        for (const auto &[a, v] : zip_equal(abbrev->attributes, ie.attrValues))
           if (a.Index == DW_IDX_parent && a.Form == DW_FORM_ref4)
-            v.attrValue = ie.parentEntry->poolOfset;
+            v.attrValue = ie.parentEntry->poolOffset;
       }
     }
   });
@@ -3230,8 +3230,8 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
   buf += hdr.AugmentationStringSize;
 
   // Write the CU list.
-  for (OutputChunk &chunk : chunks)
-    for (uint32_t cuOffset : chunk.compUnits)
+  for (auto i : seq(numChunks))
+    for (uint32_t cuOffset : chunks[i].compUnits)
       endian::writeNext<uint32_t, ELFT::Endianness>(buf, cuOffset);
 
   // Write the local TU list, then the foreign TU list..
