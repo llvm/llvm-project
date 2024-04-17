@@ -1,121 +1,106 @@
-# debug-names-missing-parent was generated with
-
-# clang++ -g -O0 -S -fdebug-compilation-dir='/proc/self/cwd' \
-#     -gpubnames a.cpp
-
-# a.cpp contents:
-
-# int main (int argc, char **argv) { }
-
-# Then manually edit the .s file:
-# - Remove DW_IDX_parent & DW_FORM_flag_present from DW_TAG_subprogram abbrev
-# - Remove DW_IDX_parent value from entry for 'main'
-
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t1.o
-# RUN: ld.lld --debug-names %t1.o -o %t
-# RUN: llvm-dwarfdump --debug-names %t | FileCheck %s --check-prefix=DWARF
+## Test clang-17-generated DW_TAG_subprogram, which do not contain DW_IDX_parent
+## attributes.
 
-# DWARF:      .debug_names contents:
-# DWARF:      Name Index @ 0x0 {
-# DWARF-NEXT:     Header {
-# DWARF-NEXT:       Length: 0x8A
-# DWARF-NEXT:       Format: DWARF32
-# DWARF-NEXT:       Version: 5
-# DWARF-NEXT:       CU count: 1
-# DWARF-NEXT:       Local TU count: 0
-# DWARF-NEXT:       Foreign TU count: 0
-# DWARF-NEXT:       Bucket count: 3
-# DWARF-NEXT:       Name count: 3
-# DWARF-NEXT:       Abbreviations table size: 0x13
-# DWARF-NEXT:       Augmentation: 'LLVM0700'
-# DWARF:        Compilation Unit offsets [
-# DWARF-NEXT:      CU[0]: 0x00000000
-# DWARF:        Abbreviations [
-# DWARF-NEXT:      Abbreviation 0x1 {
-# DWARF:            Tag: DW_TAG_base_type
-# DWARF-NEXT:        DW_IDX_die_offset: DW_FORM_ref4
-# DWARF-NEXT:        DW_IDX_parent: DW_FORM_flag_present
-# DWARF-NEXT:        DW_IDX_compile_unit: DW_FORM_data1
-# DWARF:          Abbreviation 0x2 {
-# DWARF-NEXT:        Tag: DW_TAG_subprogram
-# DWARF-NEXT:        DW_IDX_die_offset: DW_FORM_ref4
-# DWARF-NEXT:        DW_IDX_compile_unit: DW_FORM_data1
-# DWARF:        Bucket 0 [
-# DWARF-NEXT:      EMPTY
-# DWARF-NEXT:    ]
-# DWARF-NEXT:    Bucket 1 [
-# DWARF-NEXT:      Name 1 {
-# DWARF-NEXT:        Hash: 0x7C9A7F6A
-# DWARF-NEXT:        String: 0x0000007d "main"
-# DWARF-NEXT:        Entry @ 0x7a {
-# DWARF-NEXT:          Abbrev: 0x2
-# DWARF-NEXT:          Tag: DW_TAG_subprogram
-# DWARF-NEXT:          DW_IDX_die_offset: 0x00000023
-# DWARF-NEXT:          DW_IDX_compile_unit: 0x00
-# DWARF-NEXT:        }
-# DWARF-NEXT:        Entry @ 0x80 {
-# DWARF-NEXT:          Abbrev: 0x1
-# DWARF-NEXT:          Tag: DW_TAG_base_type
-# DWARF-NEXT:          DW_IDX_die_offset: 0x00000049
-# DWARF-NEXT:          DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:          DW_IDX_compile_unit: 0x00
-# DWARF-NEXT:        }
-# DWARF-NEXT:      }
-# DWARF-NEXT:    ]
-# DWARF-NEXT:    Bucket 2 [
-# DWARF-NEXT:      Name 2 {
-# DWARF-NEXT:        Hash: 0xB888030
-# DWARF-NEXT:        String: 0x00000082 "int"
-# DWARF-NEXT:        Entry @ 0x73 {
-# DWARF-NEXT:          Abbrev: 0x1
-# DWARF-NEXT:          Tag: DW_TAG_base_type
-# DWARF-NEXT:          DW_IDX_die_offset: 0x00000049
-# DWARF-NEXT:          DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:          DW_IDX_compile_unit: 0x00
-# DWARF-NEXT:        }
-# DWARF-NEXT:      }
-# DWARF-NEXT:      Name 3 {
-# DWARF-NEXT:        Hash: 0x7C952063
-# DWARF-NEXT:        String: 0x0000008b "char"
-# DWARF-NEXT:        Entry @ 0x87 {
-# DWARF-NEXT:          Abbrev: 0x1
-# DWARF-NEXT:          Tag: DW_TAG_base_type
-# DWARF-NEXT:          DW_IDX_die_offset: 0x00000057
-# DWARF-NEXT:          DW_IDX_parent: <parent not indexed>
-# DWARF-NEXT:          DW_IDX_compile_unit: 0x00
-# DWARF-NEXT:        }
-# DWARF-NEXT:      }
-# DWARF-NEXT:    ]
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: ld.lld --debug-names %t.o -o %t
+# RUN: llvm-dwarfdump --debug-info --debug-names %t | FileCheck %s --check-prefix=DWARF
 
-# --- a.s
+# DWARF: 0x00000023:   DW_TAG_namespace
+# DWARF: 0x00000025:     DW_TAG_subprogram
 
+# DWARF:      String: {{.*}} "fa"
+# DWARF-NEXT: Entry @ 0x71 {
+# DWARF-NEXT:   Abbrev: 0x1
+# DWARF-NEXT:   Tag: DW_TAG_subprogram
+# DWARF-NEXT:   DW_IDX_die_offset: 0x00000025
+# DWARF-NEXT:   DW_IDX_compile_unit: 0x00
+# DWARF-NEXT: }
+# DWARF:      String: {{.*}} "ns"
+# DWARF-NEXT: Entry @ 0x78 {
+# DWARF-NEXT:   Abbrev: 0x2
+# DWARF-NEXT:   Tag: DW_TAG_namespace
+# DWARF-NEXT:   DW_IDX_die_offset: 0x00000023
+# DWARF-NEXT:   DW_IDX_compile_unit: 0x00
+# DWARF-NEXT: }
+
+.ifdef GEN
+//--- a.cc
+namespace ns {
+void fa() {}
+}
+//--- gen
+clang-17 --target=x86_64-linux -S -O1 -g -gpubnames a.cc -o -
+.endif
 	.text
-	.globl	main                            # -- Begin function main
+	.file	"a.cc"
+	.globl	_ZN2ns2faEv                     # -- Begin function _ZN2ns2faEv
 	.p2align	4, 0x90
-	.type	main,@function
-main:                                   # @main
+	.type	_ZN2ns2faEv,@function
+_ZN2ns2faEv:                            # @_ZN2ns2faEv
 .Lfunc_begin0:
+	.file	0 "/proc/self/cwd" "a.cc" md5 0xb3281d5b5a0b2997d7d59d49bc912274
 	.cfi_startproc
-# %bb.0:                                # %entry
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
-	movl	%edi, -4(%rbp)
-	movq	%rsi, -16(%rbp)
-.Ltmp0:
-	xorl	%eax, %eax
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
+# %bb.0:
+	.loc	0 2 12 prologue_end             # a.cc:2:12
 	retq
-.Ltmp1:
+.Ltmp0:
 .Lfunc_end0:
-	.size	main, .Lfunc_end0-main
+	.size	_ZN2ns2faEv, .Lfunc_end0-_ZN2ns2faEv
 	.cfi_endproc
                                         # -- End function
 	.section	.debug_abbrev,"",@progbits
+	.byte	1                               # Abbreviation Code
+	.byte	17                              # DW_TAG_compile_unit
+	.byte	1                               # DW_CHILDREN_yes
+	.byte	37                              # DW_AT_producer
+	.byte	37                              # DW_FORM_strx1
+	.byte	19                              # DW_AT_language
+	.byte	5                               # DW_FORM_data2
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	114                             # DW_AT_str_offsets_base
+	.byte	23                              # DW_FORM_sec_offset
+	.byte	16                              # DW_AT_stmt_list
+	.byte	23                              # DW_FORM_sec_offset
+	.byte	27                              # DW_AT_comp_dir
+	.byte	37                              # DW_FORM_strx1
+	.byte	17                              # DW_AT_low_pc
+	.byte	27                              # DW_FORM_addrx
+	.byte	18                              # DW_AT_high_pc
+	.byte	6                               # DW_FORM_data4
+	.byte	115                             # DW_AT_addr_base
+	.byte	23                              # DW_FORM_sec_offset
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	2                               # Abbreviation Code
+	.byte	57                              # DW_TAG_namespace
+	.byte	1                               # DW_CHILDREN_yes
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	3                               # Abbreviation Code
+	.byte	46                              # DW_TAG_subprogram
+	.byte	0                               # DW_CHILDREN_no
+	.byte	17                              # DW_AT_low_pc
+	.byte	27                              # DW_FORM_addrx
+	.byte	18                              # DW_AT_high_pc
+	.byte	6                               # DW_FORM_data4
+	.byte	64                              # DW_AT_frame_base
+	.byte	24                              # DW_FORM_exprloc
+	.byte	122                             # DW_AT_call_all_calls
+	.byte	25                              # DW_FORM_flag_present
+	.byte	110                             # DW_AT_linkage_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	3                               # DW_AT_name
+	.byte	37                              # DW_FORM_strx1
+	.byte	58                              # DW_AT_decl_file
+	.byte	11                              # DW_FORM_data1
+	.byte	59                              # DW_AT_decl_line
+	.byte	11                              # DW_FORM_data1
+	.byte	63                              # DW_AT_external
+	.byte	25                              # DW_FORM_flag_present
 	.byte	0                               # EOM(1)
 	.byte	0                               # EOM(2)
 	.byte	0                               # EOM(3)
@@ -127,30 +112,63 @@ main:                                   # @main
 	.byte	1                               # DWARF Unit Type
 	.byte	8                               # Address Size (in bytes)
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
+	.byte	1                               # Abbrev [1] 0xc:0x27 DW_TAG_compile_unit
+	.byte	0                               # DW_AT_producer
+	.short	33                              # DW_AT_language
+	.byte	1                               # DW_AT_name
+	.long	.Lstr_offsets_base0             # DW_AT_str_offsets_base
+	.long	.Lline_table_start0             # DW_AT_stmt_list
+	.byte	2                               # DW_AT_comp_dir
+	.byte	0                               # DW_AT_low_pc
+	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
+	.long	.Laddr_table_base0              # DW_AT_addr_base
+	.byte	2                               # Abbrev [2] 0x23:0xf DW_TAG_namespace
+	.byte	3                               # DW_AT_name
+	.byte	3                               # Abbrev [3] 0x25:0xc DW_TAG_subprogram
+	.byte	0                               # DW_AT_low_pc
+	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
+	.byte	1                               # DW_AT_frame_base
+	.byte	87
+                                        # DW_AT_call_all_calls
+	.byte	4                               # DW_AT_linkage_name
+	.byte	5                               # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
+	.byte	2                               # DW_AT_decl_line
+                                        # DW_AT_external
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
 .Ldebug_info_end0:
 	.section	.debug_str_offsets,"",@progbits
-	.long	36                              # Length of String Offsets Set
+	.long	28                              # Length of String Offsets Set
 	.short	5
 	.short	0
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)" # string offset=0
+	.byte	0                               # string offset=0
 .Linfo_string1:
-	.asciz	"a.cpp"                         # string offset=104
+	.asciz	"a.cc"                          # string offset=1
 .Linfo_string2:
-	.asciz	"/proc/self/cwd"                # string offset=110
+	.asciz	"/proc/self/cwd"                # string offset=6
 .Linfo_string3:
-	.asciz	"main"                          # string offset=125
+	.asciz	"ns"                            # string offset=21
 .Linfo_string4:
-	.asciz	"int"                           # string offset=130
+	.asciz	"fa"                            # string offset=24
 .Linfo_string5:
-	.asciz	"argc"                          # string offset=134
-.Linfo_string6:
-	.asciz	"argv"                          # string offset=139
-.Linfo_string7:
-	.asciz	"char"                          # string offset=144
+	.asciz	"_ZN2ns2faEv"                   # string offset=27
 	.section	.debug_str_offsets,"",@progbits
+	.long	.Linfo_string0
+	.long	.Linfo_string1
+	.long	.Linfo_string2
+	.long	.Linfo_string3
+	.long	.Linfo_string5
+	.long	.Linfo_string4
+	.section	.debug_addr,"",@progbits
+	.long	.Ldebug_addr_end0-.Ldebug_addr_start0 # Length of contribution
+.Ldebug_addr_start0:
+	.short	5                               # DWARF version number
+	.byte	8                               # Address size
+	.byte	0                               # Segment selector size
 .Laddr_table_base0:
 	.quad	.Lfunc_begin0
 .Ldebug_addr_end0:
@@ -170,54 +188,46 @@ main:                                   # @main
 	.long	.Lcu_begin0                     # Compilation unit 0
 	.long	0                               # Bucket 0
 	.long	1                               # Bucket 1
-	.long	2                               # Bucket 2
-	.long	2090499946                      # Hash in Bucket 1
-	.long	193495088                       # Hash in Bucket 2
-	.long	2090147939                      # Hash in Bucket 2
-	.long	.Linfo_string3                  # String in Bucket 1: main
-	.long	.Linfo_string4                  # String in Bucket 2: int
-	.long	.Linfo_string7                  # String in Bucket 2: char
+	.long	3                               # Bucket 2
+	.long	5863372                         # Hash in Bucket 1
+	.long	5863654                         # Hash in Bucket 1
+	.long	-1413999533                     # Hash in Bucket 2
+	.long	.Linfo_string4                  # String in Bucket 1: fa
+	.long	.Linfo_string3                  # String in Bucket 1: ns
+	.long	.Linfo_string5                  # String in Bucket 2: _ZN2ns2faEv
+	.long	.Lnames1-.Lnames_entries0       # Offset in Bucket 1
 	.long	.Lnames0-.Lnames_entries0       # Offset in Bucket 1
-	.long	.Lnames1-.Lnames_entries0       # Offset in Bucket 2
 	.long	.Lnames2-.Lnames_entries0       # Offset in Bucket 2
 .Lnames_abbrev_start0:
-	.byte	1                               # Abbrev code
+	.byte	46                              # Abbrev code
 	.byte	46                              # DW_TAG_subprogram
 	.byte	3                               # DW_IDX_die_offset
 	.byte	19                              # DW_FORM_ref4
 	.byte	0                               # End of abbrev
 	.byte	0                               # End of abbrev
-	.byte	2                               # Abbrev code
-	.byte	36                              # DW_TAG_base_type
+	.byte	57                              # Abbrev code
+	.byte	57                              # DW_TAG_namespace
 	.byte	3                               # DW_IDX_die_offset
 	.byte	19                              # DW_FORM_ref4
-	.byte	4                               # DW_IDX_parent
-	.byte	25                              # DW_FORM_flag_present
 	.byte	0                               # End of abbrev
 	.byte	0                               # End of abbrev
 	.byte	0                               # End of abbrev list
 .Lnames_abbrev_end0:
 .Lnames_entries0:
-.Lnames0:
-.L1:
-	.byte	1                               # Abbreviation code
-	.long	35                              # DW_IDX_die_offset
-                                        # End of list: main
 .Lnames1:
-.L0:
-	.byte	2                               # Abbreviation code
-	.long	73                              # DW_IDX_die_offset
-	.byte	0                               # DW_IDX_parent
-                                        # End of list: int
+	.byte	46                              # Abbreviation code
+	.long	37                              # DW_IDX_die_offset
+	.byte	0                               # End of list: fa
+.Lnames0:
+	.byte	57                              # Abbreviation code
+	.long	35                              # DW_IDX_die_offset
+	.byte	0                               # End of list: ns
 .Lnames2:
-.L2:
-	.byte	2                               # Abbreviation code
-	.long	87                              # DW_IDX_die_offset
-	.byte	0                               # DW_IDX_parent
-                                        # End of list: char
+	.byte	46                              # Abbreviation code
+	.long	37                              # DW_IDX_die_offset
+	.byte	0                               # End of list: _ZN2ns2faEv
 	.p2align	2, 0x0
 .Lnames_end0:
-	.ident	"clang version 19.0.0git (git@github.com:llvm/llvm-project.git 53b14cd9ce2b57da73d173fc876d2e9e199f5640)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.section	.debug_line,"",@progbits
