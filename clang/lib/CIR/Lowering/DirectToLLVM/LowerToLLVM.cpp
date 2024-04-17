@@ -1036,7 +1036,7 @@ template <> mlir::APFloat getZeroInitFromType(mlir::Type Ty) {
   llvm_unreachable("NYI");
 }
 
-// return the nested type and quiantity of elements for cir.array type.
+// return the nested type and quantity of elements for cir.array type.
 // e.g: for !cir.array<!cir.array<!s32i x 3> x 1>
 // it returns !s32i as return value and stores 3 to elemQuantity.
 mlir::Type getNestedTypeAndElemQuantity(mlir::Type Ty, unsigned &elemQuantity) {
@@ -1071,6 +1071,19 @@ void convertToDenseElementsAttrImpl(mlir::cir::ConstArrayAttr attr,
     } else {
       llvm_unreachable("unknown element in ConstArrayAttr");
     }
+  }
+
+  // Only fill in trailing zeros at the local cir.array level where the element
+  // type isn't another array (for the mult-dim case).
+  auto numTrailingZeros = attr.getTrailingZerosNum();
+  if (numTrailingZeros) {
+    auto localArrayTy = attr.getType().dyn_cast<mlir::cir::ArrayType>();
+    assert(localArrayTy && "expected !cir.array");
+
+    auto nestTy = localArrayTy.getEltType();
+    if (!nestTy.isa<mlir::cir::ArrayType>())
+      values.insert(values.end(), localArrayTy.getSize() - numTrailingZeros,
+                    getZeroInitFromType<StorageTy>(nestTy));
   }
 }
 
