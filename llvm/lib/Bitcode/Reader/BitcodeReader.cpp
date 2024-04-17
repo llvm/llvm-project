@@ -2329,7 +2329,7 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           for (int Idx = 0; Idx < RangeSize; ++Idx) {
             int64_t Start = BitcodeReader::decodeSignRotatedValue(Record[++i]);
             int64_t End = BitcodeReader::decodeSignRotatedValue(Record[++i]);
-            CRL.insert(Start, End);
+            CRL.append(Start, End);
           }
           B.addConstantRangeListAttr(Kind, CRL);
         } else {

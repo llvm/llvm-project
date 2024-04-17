@@ -3074,7 +3074,7 @@ bool LLParser::parseInitializesAttr(AttrBuilder &B) {
   // Parse each constant range.
   do {
     APInt Lower, Upper;
-    if (parseToken(lltok::lparen, "expected'('"))
+    if (parseToken(lltok::lparen, "expected '('"))
       return true;
 
     if (ParseAPSInt(Lower) || parseToken(lltok::comma, "expected ','") ||
@@ -3087,7 +3087,7 @@ bool LLParser::parseInitializesAttr(AttrBuilder &B) {
     if (parseToken(lltok::rparen, "expected ')'"))
       return true;
 
-    CRL.insert(ConstantRange(Lower, Upper));
+    CRL.append(ConstantRange(Lower, Upper));
   } while (EatIfPresent(lltok::comma));
 
   if (parseToken(lltok::rparen, "expected ')'"))
