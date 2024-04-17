@@ -495,6 +495,8 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare i32 @__cxa_guard_acquire(%struct*)\n"
       "declare void @__cxa_guard_release(%struct*)\n"
 
+      "declare i32 @atexit(void ()*)\n"
+
       "declare i32 @__nvvm_reflect(i8*)\n"
 
       "declare i8* @__memcpy_chk(i8*, i8*, i64, i64)\n"
