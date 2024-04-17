@@ -5294,9 +5294,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // appear only as the first parameter-declaration of a
         // parameter-declaration-list of either:
         //
-        //   - a member-declarator that declares a member function [class.mem],
-        //   or
-        //   - a lambda-declarator [expr.prim.lambda].
+        // - a member-declarator that declares a member function [class.mem], or
+        // - a lambda-declarator [expr.prim.lambda].
         DeclaratorContext C = D.getContext();
         ParmVarDecl *First =
             FTI.NumParams
