@@ -70,8 +70,20 @@ public:
       Callback =
           std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
 
+    auto CallStackCallback = [&](CallStackId CSId) {
+      llvm::SmallVector<Frame> CallStack;
+      auto Iter = CSIdToCallStack.find(CSId);
+      assert(Iter != CSIdToCallStack.end());
+      for (FrameId Id : Iter->second)
+        CallStack.push_back(Callback(Id));
+      return CallStack;
+    };
+
     const IndexedMemProfRecord &IndexedRecord = Iter->second;
-    GuidRecord = {Iter->first, MemProfRecord(IndexedRecord, Callback)};
+    GuidRecord = {
+        Iter->first,
+        IndexedRecord.toMemProfRecord(CallStackCallback),
+    };
     Iter++;
     return Error::success();
   }
@@ -84,9 +96,7 @@ public:
   // Initialize the MemProfReader with the frame mappings and profile contents.
   MemProfReader(
       llvm::DenseMap<FrameId, Frame> FrameIdMap,
-      llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
-      : IdToFrame(std::move(FrameIdMap)),
-        FunctionProfileData(std::move(ProfData)) {}
+      llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData);
 
 protected:
   // A helper method to extract the frame from the IdToFrame map.
@@ -97,6 +107,8 @@ protected:
   }
   // A mapping from FrameId (a hash of the contents) to the frame.
   llvm::DenseMap<FrameId, Frame> IdToFrame;
+  // A mapping from CallStackId to the call stack.
+  llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdToCallStack;
   // A mapping from function GUID, hash of the canonical function symbol to the
   // memprof profile data for that function, i.e allocation and callsite info.
   llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> FunctionProfileData;
