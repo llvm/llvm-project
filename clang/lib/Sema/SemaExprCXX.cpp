@@ -2716,13 +2716,9 @@ static bool resolveAllocationOverload(
     return true;
 
   case OR_Deleted: {
-    if (Diagnose) {
-      Candidates.NoteCandidates(
-          PartialDiagnosticAt(R.getNameLoc(),
-                              S.PDiag(diag::err_ovl_deleted_call)
-                                  << R.getLookupName() << Range),
-          S, OCD_AllCandidates, Args);
-    }
+    if (Diagnose)
+      S.DiagnoseUseOfDeletedFunction(R.getNameLoc(), Range, R.getLookupName(),
+                                     Candidates, Best->Function, Args);
     return true;
   }
   }
@@ -3376,7 +3372,9 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
     // FIXME: DiagnoseUseOfDecl?
     if (Operator->isDeleted()) {
       if (Diagnose) {
-        Diag(StartLoc, diag::err_deleted_function_use);
+        StringLiteral *Msg = Operator->getDeletedMessage();
+        Diag(StartLoc, diag::err_deleted_function_use)
+            << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef());
         NoteDeletedFunction(Operator);
       }
       return true;
@@ -3980,13 +3978,10 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
         S, OCD_AmbiguousCandidates, Args);
     return true;
 
-  case OR_Deleted: {
-    Candidates.NoteCandidates(
-        PartialDiagnosticAt(R.getNameLoc(), S.PDiag(diag::err_ovl_deleted_call)
-                                                << R.getLookupName() << Range),
-        S, OCD_AllCandidates, Args);
+  case OR_Deleted:
+    S.DiagnoseUseOfDeletedFunction(R.getNameLoc(), Range, R.getLookupName(),
+                                   Candidates, Best->Function, Args);
     return true;
-  }
   }
   llvm_unreachable("Unreachable, bad result from BestViableFunction");
 }
