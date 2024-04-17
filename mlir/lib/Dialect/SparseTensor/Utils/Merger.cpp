@@ -1031,7 +1031,7 @@ LatSetId Merger::buildLattices(ExprId e, LoopId i) {
       // invariant on the right.
       Block &absentBlock = absentRegion.front();
       YieldOp absentYield = cast<YieldOp>(absentBlock.getTerminator());
-      const Value absentVal = absentYield.getResult();
+      const Value absentVal = absentYield.getSingleResult();
       const ExprId rhs = addInvariantExp(absentVal);
       return disjSet(e, child0, buildLattices(rhs, i), unop);
     }
@@ -1500,7 +1500,7 @@ static Value insertYieldOp(RewriterBase &rewriter, Location loc, Region &region,
   // Merge cloned block and return yield value.
   Operation *placeholder = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   rewriter.inlineBlockBefore(&tmpRegion.front(), placeholder, vals);
-  Value val = clonedYield.getResult();
+  Value val = clonedYield.getSingleResult();
   rewriter.eraseOp(clonedYield);
   rewriter.eraseOp(placeholder);
   return val;

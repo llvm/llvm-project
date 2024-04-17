@@ -58,6 +58,15 @@ TEST(ScudoVectorTest, ReallocateFails) {
   rlimit EmptyLimit = {.rlim_cur = 0, .rlim_max = Limit.rlim_max};
   EXPECT_EQ(0, setrlimit(RLIMIT_AS, &EmptyLimit));
 
+  // qemu does not honor the setrlimit, so verify before proceeding.
+  scudo::MemMapT MemMap;
+  if (MemMap.map(/*Addr=*/0U, scudo::getPageSizeCached(), "scudo:test",
+                 MAP_ALLOWNOMEM)) {
+    MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+    setrlimit(RLIMIT_AS, &Limit);
+    GTEST_SKIP() << "Limiting address space does not prevent mmap.";
+  }
+
   V.resize(capacity);
   // Set the last element so we can check it later.
   V.back() = '\0';

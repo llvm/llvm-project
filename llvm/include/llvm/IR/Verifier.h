@@ -77,6 +77,7 @@ public:
   /// Visit an instruction and return true if it is valid, return false if an
   /// invalid TBAA is attached.
   bool visitTBAAMetadata(Instruction &I, const MDNode *MD);
+  bool visitTBAAStructMetadata(Instruction &I, const MDNode *MD);
 };
 
 /// Check a function for errors, useful for use when debugging a

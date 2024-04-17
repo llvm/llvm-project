@@ -182,6 +182,8 @@ unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion) {
     return 4;
   case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
     return 5;
+  case ELF::ELFABIVERSION_AMDGPU_HSA_V6:
+    return 6;
   default:
     return getDefaultAMDHSACodeObjectVersion();
   }
@@ -496,9 +498,7 @@ bool isVOPC64DPP(unsigned Opc) {
   return isVOPC64DPPOpcodeHelper(Opc) || isVOPC64DPP8OpcodeHelper(Opc);
 }
 
-bool isVOPCAsmOnly(unsigned Opc) {
-  return isVOPCAsmOnlyOpcodeHelper(Opc) || isVOP3CAsmOnlyOpcodeHelper(Opc);
-}
+bool isVOPCAsmOnly(unsigned Opc) { return isVOPCAsmOnlyOpcodeHelper(Opc); }
 
 bool getMAIIsDGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);

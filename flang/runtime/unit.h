@@ -204,6 +204,7 @@ private:
   RT_API_ATTRS void BackspaceVariableFormattedRecord(IoErrorHandler &);
   RT_API_ATTRS bool SetVariableFormattedRecordLength();
   RT_API_ATTRS void DoImpliedEndfile(IoErrorHandler &);
+  template <bool ANY_DIR = true, Direction DIR = Direction::Output>
   RT_API_ATTRS void DoEndfile(IoErrorHandler &);
   RT_API_ATTRS void CommitWrites();
   RT_API_ATTRS bool CheckDirectAccess(IoErrorHandler &);

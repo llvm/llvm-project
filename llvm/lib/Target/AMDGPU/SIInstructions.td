@@ -618,8 +618,8 @@ def SI_RETURN : SPseudoInstSI <
 // This version is only needed so we can fill in the output register
 // in the custom inserter.
 def SI_CALL_ISEL : SPseudoInstSI <
-  (outs), (ins SSrc_b64:$src0, unknown:$callee, unknown:$token),
-  [(AMDGPUcall i64:$src0, tglobaladdr:$callee, untyped:$token)]> {
+  (outs), (ins SSrc_b64:$src0, unknown:$callee),
+  [(AMDGPUcall i64:$src0, tglobaladdr:$callee)]> {
   let Size = 4;
   let isCall = 1;
   let SchedRW = [WriteBranch];
@@ -629,8 +629,8 @@ def SI_CALL_ISEL : SPseudoInstSI <
 }
 
 def : GCNPat<
-  (AMDGPUcall i64:$src0, (i64 0), untyped:$token),
-  (SI_CALL_ISEL $src0, (i64 0), untyped:$token)
+  (AMDGPUcall i64:$src0, (i64 0)),
+  (SI_CALL_ISEL $src0, (i64 0))
 >;
 
 // Wrapper around s_swappc_b64 with extra $callee parameter to track
@@ -2087,7 +2087,7 @@ def : GCNPat <
 def : GCNPat <
   (DivergentUnaryFrag<fneg> (v2f32 VReg_64:$src)),
   (V_PK_ADD_F32 11 /* OP_SEL_1 | NEG_LO | HEG_HI */, VReg_64:$src,
-                11 /* OP_SEL_1 | NEG_LO | HEG_HI */, 0,
+                11 /* OP_SEL_1 | NEG_LO | HEG_HI */, (i64 0),
                 0, 0, 0, 0, 0)
 > {
   let SubtargetPredicate = HasPackedFP32Ops;
@@ -2999,7 +2999,7 @@ def : GCNPat<
 let SubtargetPredicate = HasPackedFP32Ops in {
 def : GCNPat<
   (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
-  (V_PK_MUL_F32 0, CONST.FP32_ONE, $src_mods, $src)
+  (V_PK_MUL_F32 0, (i64 CONST.FP32_ONE), $src_mods, $src)
 >;
 }
 
@@ -3007,7 +3007,7 @@ def : GCNPat<
 let SubtargetPredicate = isNotGFX12Plus in {
 def : GCNPat<
   (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
-  (V_MUL_F64_e64  0, CONST.FP64_ONE, $src_mods, $src)
+  (V_MUL_F64_e64  0, (i64 CONST.FP64_ONE), $src_mods, $src)
 >;
 }
 } // End AddedComplexity = -5
@@ -3369,7 +3369,7 @@ def : GCNPat <
              SRCMODS.NONE,
              (V_FRACT_F64_e64 $mods, $x),
              SRCMODS.NONE,
-             (V_MOV_B64_PSEUDO 0x3fefffffffffffff)),
+             (V_MOV_B64_PSEUDO (i64 0x3fefffffffffffff))),
          $x,
          (V_CMP_CLASS_F64_e64 SRCMODS.NONE, $x, (i32 3 /*NaN*/))))
 >;

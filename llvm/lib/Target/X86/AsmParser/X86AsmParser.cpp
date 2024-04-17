@@ -3287,6 +3287,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // FIXME: Hack to recognize setneb as setne.
   if (PatchedName.starts_with("set") && PatchedName.ends_with("b") &&
+      PatchedName != "setzub" && PatchedName != "setzunb" &&
       PatchedName != "setb" && PatchedName != "setnb")
     PatchedName = PatchedName.substr(0, Name.size()-1);
 

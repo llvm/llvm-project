@@ -140,7 +140,7 @@ func.func @omp_loop_nest(%lb : index, %ub : index, %step : index) -> () {
     // CHECK-SAME: (%{{.*}}) : index =
     // CHECK-SAME: (%{{.*}}) to (%{{.*}}) step (%{{.*}})
     "omp.loop_nest" (%lb, %ub, %step) ({
-    ^bb0(%iv2: index):
+    ^bb0(%iv: index):
       omp.yield
     }) : (index, index, index) -> ()
     omp.terminator
@@ -151,7 +151,7 @@ func.func @omp_loop_nest(%lb : index, %ub : index, %step : index) -> () {
     // CHECK-SAME: (%{{.*}}) : index =
     // CHECK-SAME: (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}})
     "omp.loop_nest" (%lb, %ub, %step) ({
-    ^bb0(%iv2: index):
+    ^bb0(%iv: index):
       omp.yield
     }) {inclusive} : (index, index, index) -> ()
     omp.terminator
@@ -162,9 +162,25 @@ func.func @omp_loop_nest(%lb : index, %ub : index, %step : index) -> () {
     // CHECK-SAME: (%{{.*}}, %{{.*}}) : index =
     // CHECK-SAME: (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}})
     "omp.loop_nest" (%lb, %lb, %ub, %ub, %step, %step) ({
-    ^bb0(%iv2: index, %iv3: index):
+    ^bb0(%iv: index, %iv3: index):
       omp.yield
     }) : (index, index, index, index, index, index) -> ()
+    omp.terminator
+  }
+
+  omp.wsloop {
+    // CHECK: omp.loop_nest
+    // CHECK-SAME: (%{{.*}}) : index =
+    // CHECK-SAME: (%{{.*}}) to (%{{.*}}) step (%{{.*}})
+    "omp.loop_nest" (%lb, %ub, %step) ({
+    ^bb0(%iv: index):
+      // CHECK: test.op1
+      "test.op1"(%lb) : (index) -> ()
+      // CHECK: test.op2
+      "test.op2"() : () -> ()
+      // CHECK: omp.yield
+      omp.yield
+    }) : (index, index, index) -> ()
     omp.terminator
   }
 
@@ -177,7 +193,7 @@ func.func @omp_loop_nest_pretty(%lb : index, %ub : index, %step : index) -> () {
     // CHECK: omp.loop_nest
     // CHECK-SAME: (%{{.*}}) : index =
     // CHECK-SAME: (%{{.*}}) to (%{{.*}}) step (%{{.*}})
-    omp.loop_nest (%iv2) : index = (%lb) to (%ub) step (%step) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       omp.yield
     }
     omp.terminator
@@ -187,7 +203,7 @@ func.func @omp_loop_nest_pretty(%lb : index, %ub : index, %step : index) -> () {
     // CHECK: omp.loop_nest
     // CHECK-SAME: (%{{.*}}) : index =
     // CHECK-SAME: (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}})
-    omp.loop_nest (%iv2) : index = (%lb) to (%ub) inclusive step (%step) {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) inclusive step (%step) {
       omp.yield
     }
     omp.terminator
@@ -197,7 +213,22 @@ func.func @omp_loop_nest_pretty(%lb : index, %ub : index, %step : index) -> () {
     // CHECK: omp.loop_nest
     // CHECK-SAME: (%{{.*}}) : index =
     // CHECK-SAME: (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}})
-    omp.loop_nest (%iv2, %iv3) : index = (%lb, %lb) to (%ub, %ub) step (%step, %step) {
+    omp.loop_nest (%iv1, %iv2) : index = (%lb, %lb) to (%ub, %ub) step (%step, %step) {
+      omp.yield
+    }
+    omp.terminator
+  }
+
+  omp.wsloop {
+    // CHECK: omp.loop_nest
+    // CHECK-SAME: (%{{.*}}) : index =
+    // CHECK-SAME: (%{{.*}}) to (%{{.*}}) step (%{{.*}})
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step)  {
+      // CHECK: test.op1
+      "test.op1"(%lb) : (index) -> ()
+      // CHECK: test.op2
+      "test.op2"() : () -> ()
+      // CHECK: omp.yield
       omp.yield
     }
     omp.terminator
@@ -278,11 +309,11 @@ func.func @omp_loop_nest_pretty_non_index(%lb1 : i32, %ub1 : i32, %step1 : i32,
 
   omp.wsloop {
     // CHECK: omp.loop_nest (%{{.*}}) : i64 = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
-    omp.loop_nest (%iv2) : i64 = (%lb2) to (%ub2) step (%step2) {
-      %2 = "test.payload"(%iv2) : (i64) -> (index)
+    omp.loop_nest (%iv) : i64 = (%lb2) to (%ub2) step (%step2) {
+      %2 = "test.payload"(%iv) : (i64) -> (index)
       cf.br ^bb1(%2: index)
     ^bb1(%arg2: index):
-      memref.store %iv2, %data2[%arg2] : memref<?xi64>
+      memref.store %iv, %data2[%arg2] : memref<?xi64>
       omp.yield
     }
     omp.terminator
@@ -630,52 +661,74 @@ func.func @omp_simd_pretty_safelen(%lb : index, %ub : index, %step : index) -> (
 }
 
 // CHECK-LABEL: omp_distribute
-func.func @omp_distribute(%chunk_size : i32, %data_var : memref<i32>) -> () {
+func.func @omp_distribute(%chunk_size : i32, %data_var : memref<i32>, %arg0 : i32) -> () {
   // CHECK: omp.distribute
   "omp.distribute" () ({
-    omp.terminator
+    "omp.loop_nest" (%arg0, %arg0, %arg0) ({
+    ^bb0(%iv: i32):
+      "omp.yield"() : () -> ()
+    }) : (i32, i32, i32) -> ()
+    "omp.terminator"() : () -> ()
   }) {} : () -> ()
   // CHECK: omp.distribute
   omp.distribute {
-    omp.terminator
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
   }
   // CHECK: omp.distribute dist_schedule_static
   omp.distribute dist_schedule_static {
-    omp.terminator
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
   }
   // CHECK: omp.distribute dist_schedule_static chunk_size(%{{.+}} : i32)
   omp.distribute dist_schedule_static chunk_size(%chunk_size : i32) {
-    omp.terminator
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
   }
   // CHECK: omp.distribute order(concurrent)
   omp.distribute order(concurrent) {
-    omp.terminator
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
   }
   // CHECK: omp.distribute allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>)
   omp.distribute allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
-    omp.terminator
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
   }
-return
+  // CHECK: omp.distribute
+  omp.distribute {
+    omp.simd {
+      omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+        omp.yield
+      }
+    }
+  }
+  return
 }
 
 
 // CHECK-LABEL: omp_target
-func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %map1: memref<?xi32>, %map2: memref<?xi32>) -> () {
+func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %device_ptr: memref<i32>, %device_addr: memref<?xi32>, %map1: memref<?xi32>, %map2: memref<?xi32>) -> () {
 
     // Test with optional operands; if_expr, device, thread_limit, private, firstprivate and nowait.
     // CHECK: omp.target if({{.*}}) device({{.*}}) thread_limit({{.*}}) nowait
     "omp.target"(%if_cond, %device, %num_threads) ({
        // CHECK: omp.terminator
        omp.terminator
-    }) {nowait, operandSegmentSizes = array<i32: 1,1,1,0,0>} : ( i1, si32, i32 ) -> ()
+    }) {nowait, operandSegmentSizes = array<i32: 1,1,1,0,0,0,0>} : ( i1, si32, i32 ) -> ()
 
     // Test with optional map clause.
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
     // CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
-    // CHECK: omp.target map_entries(%[[MAP_A]] -> {{.*}}, %[[MAP_B]] -> {{.*}} : memref<?xi32>, memref<?xi32>) {
+    // CHECK: omp.target is_device_ptr(%[[VAL_4:.*]] : memref<i32>) has_device_addr(%[[VAL_5:.*]] : memref<?xi32>) map_entries(%[[MAP_A]] -> {{.*}}, %[[MAP_B]] -> {{.*}} : memref<?xi32>, memref<?xi32>) {
     %mapv1 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(tofrom) capture(ByRef) -> memref<?xi32> {name = ""}
     %mapv2 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
-    omp.target map_entries(%mapv1 -> %arg0, %mapv2 -> %arg1 : memref<?xi32>, memref<?xi32>) {
+    omp.target map_entries(%mapv1 -> %arg0, %mapv2 -> %arg1 : memref<?xi32>, memref<?xi32>) is_device_ptr(%device_ptr : memref<i32>) has_device_addr(%device_addr : memref<?xi32>) {
     ^bb0(%arg0: memref<?xi32>, %arg1: memref<?xi32>):
       omp.terminator
     }
@@ -753,6 +806,8 @@ func.func @omp_target_pretty(%if_cond : i1, %device : si32,  %num_threads : i32)
 // CHECK: atomic
 // CHECK: ^{{.+}}(%{{.+}}: !llvm.ptr, %{{.+}}: !llvm.ptr):
 // CHECK:  omp.yield
+// CHECK: cleanup
+// CHECK:  omp.yield
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
@@ -768,6 +823,10 @@ atomic {
 ^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
   %2 = llvm.load %arg3 : !llvm.ptr -> f32
   llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
+  omp.yield
+}
+cleanup {
+^bb0(%arg: f32):
   omp.yield
 }
 
@@ -946,6 +1005,7 @@ combiner {
   omp.yield (%1 : f32)
 }
 // CHECK-NOT: atomic
+// CHECK-NOT: cleanup
 
 // CHECK-LABEL: func @wsloop_reduction2
 func.func @wsloop_reduction2(%lb : index, %ub : index, %step : index) {
@@ -2090,135 +2150,125 @@ func.func @omp_taskgroup_clauses() -> () {
 // CHECK-LABEL: @omp_taskloop
 func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
 
-  // CHECK: omp.taskloop for (%{{.+}}) : i32 = (%{{.+}}) to (%{{.+}}) step (%{{.+}}) {
-  omp.taskloop for (%i) : i32 = (%lb) to (%ub) step (%step)  {
-    // CHECK: omp.terminator
-    omp.terminator
-  }
-
-  // CHECK: omp.taskloop for (%{{.+}}) : i32 = (%{{.+}}) to (%{{.+}}) step (%{{.+}}) {
-  omp.taskloop for (%i) : i32 = (%lb) to (%ub) step (%step)  {
-    // CHECK: test.op1
-    "test.op1"(%lb) : (i32) -> ()
-    // CHECK: test.op2
-    "test.op2"() : () -> ()
-    // CHECK: omp.terminator
-    omp.terminator
-  }
-
-  // CHECK: omp.taskloop for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
-  omp.taskloop for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
-  }
-
-  // CHECK: omp.taskloop for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) inclusive step (%{{.+}}, %{{.+}}) {
-  omp.taskloop for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) inclusive step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
+  // CHECK: omp.taskloop {
+  omp.taskloop {
+    omp.loop_nest (%i) : i32 = (%lb) to (%ub) step (%step)  {
+      // CHECK: omp.yield
+      omp.yield
+    }
   }
 
   %testbool = "test.bool"() : () -> (i1)
 
-  // CHECK: omp.taskloop if(%{{[^)]+}})
-  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
-  omp.taskloop if(%testbool)
-  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
+  // CHECK: omp.taskloop if(%{{[^)]+}}) {
+  omp.taskloop if(%testbool) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
   }
 
-  // CHECK: omp.taskloop final(%{{[^)]+}})
-  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
-  omp.taskloop final(%testbool)
-  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
+  // CHECK: omp.taskloop final(%{{[^)]+}}) {
+  omp.taskloop final(%testbool) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
   }
 
-  // CHECK: omp.taskloop untied
-  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
-  omp.taskloop untied
-  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
+  // CHECK: omp.taskloop untied {
+  omp.taskloop untied {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
   }
 
-  // CHECK: omp.taskloop mergeable
-  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
-  omp.taskloop mergeable
-  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
+  // CHECK: omp.taskloop mergeable {
+  omp.taskloop mergeable {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
   }
 
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
   %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
-  // CHECK: omp.taskloop in_reduction(@add_f32 -> %{{.+}} : !llvm.ptr, @add_f32 -> %{{.+}} : !llvm.ptr)
-  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
-  omp.taskloop in_reduction(@add_f32 -> %testf32 : !llvm.ptr, @add_f32 -> %testf32_2 : !llvm.ptr)
-  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
+  // CHECK: omp.taskloop in_reduction(@add_f32 -> %{{.+}} : !llvm.ptr, @add_f32 -> %{{.+}} : !llvm.ptr) {
+  omp.taskloop in_reduction(@add_f32 -> %testf32 : !llvm.ptr, @add_f32 -> %testf32_2 : !llvm.ptr) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
   }
 
-  // CHECK: omp.taskloop reduction(@add_f32 -> %{{.+}} : !llvm.ptr, @add_f32 -> %{{.+}} : !llvm.ptr)
-  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
-  omp.taskloop reduction(@add_f32 -> %testf32 : !llvm.ptr, @add_f32 -> %testf32_2 : !llvm.ptr)
-  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
+  // CHECK: omp.taskloop reduction(@add_f32 -> %{{.+}} : !llvm.ptr, @add_f32 -> %{{.+}} : !llvm.ptr) {
+  omp.taskloop reduction(@add_f32 -> %testf32 : !llvm.ptr, @add_f32 -> %testf32_2 : !llvm.ptr) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
   }
 
-  // CHECK: omp.taskloop in_reduction(@add_f32 -> %{{.+}} : !llvm.ptr) reduction(@add_f32 -> %{{.+}} : !llvm.ptr)
-  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
-  omp.taskloop in_reduction(@add_f32 -> %testf32 : !llvm.ptr) reduction(@add_f32 -> %testf32_2 : !llvm.ptr)
-  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
+  // CHECK: omp.taskloop in_reduction(@add_f32 -> %{{.+}} : !llvm.ptr) reduction(@add_f32 -> %{{.+}} : !llvm.ptr) {
+  omp.taskloop in_reduction(@add_f32 -> %testf32 : !llvm.ptr) reduction(@add_f32 -> %testf32_2 : !llvm.ptr) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
   }
 
   %testi32 = "test.i32"() : () -> (i32)
-  // CHECK: omp.taskloop priority(%{{[^:]+}}: i32)
-  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
-  omp.taskloop priority(%testi32: i32)
-  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
+  // CHECK: omp.taskloop priority(%{{[^:]+}}: i32) {
+  omp.taskloop priority(%testi32: i32) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
   }
 
   %testmemref = "test.memref"() : () -> (memref<i32>)
-  // CHECK: omp.taskloop allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>)
-  omp.taskloop allocate(%testmemref : memref<i32> -> %testmemref : memref<i32>)
-  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
-  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
+  // CHECK: omp.taskloop allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>) {
+  omp.taskloop allocate(%testmemref : memref<i32> -> %testmemref : memref<i32>) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
   }
 
   %testi64 = "test.i64"() : () -> (i64)
-  // CHECK: omp.taskloop grain_size(%{{[^:]+}}: i64)
-  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
-  omp.taskloop grain_size(%testi64: i64)
-  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
+  // CHECK: omp.taskloop grain_size(%{{[^:]+}}: i64) {
+  omp.taskloop grain_size(%testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
   }
 
-  // CHECK: omp.taskloop num_tasks(%{{[^:]+}}: i64)
-  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
-  omp.taskloop num_tasks(%testi64: i64)
-  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
+  // CHECK: omp.taskloop num_tasks(%{{[^:]+}}: i64) {
+  omp.taskloop num_tasks(%testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
   }
 
-  // CHECK: omp.taskloop nogroup
-  // CHECK-SAME: for (%{{.+}}, %{{.+}}) : i32 = (%{{.+}}, %{{.+}}) to (%{{.+}}, %{{.+}}) step (%{{.+}}, %{{.+}}) {
-  omp.taskloop nogroup
-  for (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
-    // CHECK: omp.terminator
-    omp.terminator
+  // CHECK: omp.taskloop nogroup {
+  omp.taskloop nogroup {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+
+  // CHECK: omp.taskloop {
+  omp.taskloop {
+    omp.simd {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
   }
 
   // CHECK: return
@@ -2264,6 +2314,7 @@ func.func @opaque_pointers_atomic_rwu(%v: !llvm.ptr, %x: !llvm.ptr) {
 // CHECK-LABEL: @opaque_pointers_reduction
 // CHECK: atomic {
 // CHECK-NEXT: ^{{[[:alnum:]]+}}(%{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr):
+// CHECK-NOT: cleanup
 omp.declare_reduction @opaque_pointers_reduction : f32
 init {
 ^bb0(%arg: f32):
