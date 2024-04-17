@@ -369,7 +369,10 @@ function(llvm_ExternalProject_Add name source_dir)
     LIST_SEPARATOR |
     )
   if (ARG_FOLDER)
-    set_target_properties(${name} ${name}-clobber PROPERTIES FOLDER "${ARG_FOLDER}")
+    set_target_properties(
+      ${name} ${name}-clobber ${name}-build ${name}-configure
+      PROPERTIES FOLDER "${ARG_FOLDER}"
+    )
   endif ()
 
   if(ARG_USE_TOOLCHAIN)

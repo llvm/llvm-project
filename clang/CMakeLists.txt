@@ -480,7 +480,7 @@ add_custom_target(clang-tablegen-targets
   omp_gen
   ClangDriverOptions
   ${CLANG_TABLEGEN_TARGETS})
-set_target_properties(clang-tablegen-targets PROPERTIES FOLDER "Clang/Misc")
+set_target_properties(clang-tablegen-targets PROPERTIES FOLDER "Clang/Tablegenning/Targets")
 list(APPEND LLVM_COMMON_DEPENDS clang-tablegen-targets)
 
 # Force target to be built as soon as possible. Clang modules builds depend
@@ -543,7 +543,7 @@ endif()
 
 # Custom target to install all clang libraries.
 add_custom_target(clang-libraries)
-set_target_properties(clang-libraries PROPERTIES FOLDER "Clang/Meta")
+set_target_properties(clang-libraries PROPERTIES FOLDER "Clang/Install")
 
 if(NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-clang-libraries

@@ -55,7 +55,7 @@ function(add_flang_nongtest_unittest test_name)
   endif()
 
   add_executable(${test_name}${suffix} ${test_name}.cpp)
-  set_target_properties(${test_name}${suffix} PROPERTIES FOLDER "Flang/Tests/Unittests")
+  set_target_properties(${test_name}${suffix} PROPERTIES FOLDER "Flang/Tests/Unit")
 
   if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
     set(llvm_libs LLVM)
