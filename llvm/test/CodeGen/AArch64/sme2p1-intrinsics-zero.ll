@@ -41,10 +41,10 @@ define  void @test_svzero_za64_vg1x4_offset(i32  %slice)  #0 {
 ; CHECK-LABEL: test_svzero_za64_vg1x4_offset:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    zero za.d[w8, 0, vgx4]
+; CHECK-NEXT:    zero za.d[w8, 1, vgx4]
 ; CHECK-NEXT:    ret
 entry:
-  %slice.min = add i32 %slice, 0
+  %slice.min = add i32 %slice, 1
   tail call void @llvm.aarch64.sme.zero.za64.vg1x4(i32 %slice.min)
   ret void
 }
@@ -63,11 +63,11 @@ entry:
 define  void @test_svzero_za64_vg2x1_offset(i32  %slice)  #0 {
 ; CHECK-LABEL: test_svzero_za64_vg2x1_offset:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add w8, w0, #7
-; CHECK-NEXT:    zero za.d[w8, 0:1]
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    zero za.d[w8, 6:7]
 ; CHECK-NEXT:    ret
 entry:
-  %slice.max = add i32 %slice, 7
+  %slice.max = add i32 %slice, 6
   tail call void @llvm.aarch64.sme.zero.za64.vg2x1(i32 %slice.max)
   ret void
 }
@@ -86,11 +86,11 @@ entry:
 define  void @test_svzero_za64_vg2x2_offset(i32  %slice)  #0 {
 ; CHECK-LABEL: test_svzero_za64_vg2x2_offset:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add w8, w0, #3
-; CHECK-NEXT:    zero za.d[w8, 0:1, vgx2]
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    zero za.d[w8, 2:3, vgx2]
 ; CHECK-NEXT:    ret
 entry:
-  %slice.max = add i32 %slice, 3
+  %slice.max = add i32 %slice, 2
   tail call void @llvm.aarch64.sme.zero.za64.vg2x2(i32 %slice.max)
   ret void
 }
@@ -109,11 +109,11 @@ entry:
 define  void @test_svzero_za64_vg2x4_offset(i32  %slice)  #0 {
 ; CHECK-LABEL: test_svzero_za64_vg2x4_offset:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    add w8, w0, #1
 ; CHECK-NEXT:    zero za.d[w8, 0:1, vgx4]
 ; CHECK-NEXT:    ret
 entry:
-  %slice.min = add i32 %slice, 0
+  %slice.min = add i32 %slice, 1
   tail call void @llvm.aarch64.sme.zero.za64.vg2x4(i32 %slice.min)
   ret void
 }
@@ -132,11 +132,11 @@ entry:
 define  void @test_svzero_za64_vg4x1_offset(i32  %slice)  #0 {
 ; CHECK-LABEL: test_svzero_za64_vg4x1_offset:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add w8, w0, #3
-; CHECK-NEXT:    zero za.d[w8, 0:3]
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    zero za.d[w8, 4:7]
 ; CHECK-NEXT:    ret
 entry:
-  %slice.max = add i32 %slice, 3
+  %slice.max = add i32 %slice, 4
   tail call void @llvm.aarch64.sme.zero.za64.vg4x1(i32 %slice.max)
   ret void
 }
@@ -155,11 +155,11 @@ entry:
 define  void @test_svzero_za64_vg4x2_offset(i32  %slice)  #0 {
 ; CHECK-LABEL: test_svzero_za64_vg4x2_offset:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add w8, w0, #1
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    zero za.d[w8, 0:3, vgx2]
 ; CHECK-NEXT:    ret
 entry:
-  %slice.max = add i32 %slice, 1
+  %slice.max = add i32 %slice, 0
   tail call void @llvm.aarch64.sme.zero.za64.vg4x2(i32 %slice.max)
   ret void
 }
@@ -178,11 +178,11 @@ entry:
 define  void @test_svzero_za64_vg4x4_offset(i32  %slice)  #0 {
 ; CHECK-LABEL: test_svzero_za64_vg4x4_offset:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    add w8, w0, #1
 ; CHECK-NEXT:    zero za.d[w8, 0:3, vgx4]
 ; CHECK-NEXT:    ret
 entry:
-  %slice.min = add i32 %slice, 0
+  %slice.min = add i32 %slice, 1
   tail call void @llvm.aarch64.sme.zero.za64.vg4x4(i32 %slice.min)
   ret void
 }
