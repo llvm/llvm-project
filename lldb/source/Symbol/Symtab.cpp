@@ -275,10 +275,6 @@ static bool lldb_skip_name(llvm::StringRef mangled,
   case Mangled::eManglingSchemeSwift:
     return false;
 
-#ifdef LLDB_ENABLE_SWIFT
-  case Mangled::eManglingSchemeSwift:
-    // This is handled separately.
-#endif // LLDB_ENABLE_SWIFT
   // Don't try and demangle things we can't categorize.
   case Mangled::eManglingSchemeNone:
     return true;
