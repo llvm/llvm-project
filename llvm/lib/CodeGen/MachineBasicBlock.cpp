@@ -1728,7 +1728,8 @@ void MachineBasicBlock::clearLiveIns() {
   LiveIns.clear();
 }
 
-void MachineBasicBlock::clearLiveIns(std::vector<RegisterMaskPair> &OldLiveIns) {
+void MachineBasicBlock::clearLiveIns(
+    std::vector<RegisterMaskPair> &OldLiveIns) {
   assert(OldLiveIns.empty() && "Vector must be empty");
   std::swap(LiveIns, OldLiveIns);
 }
