@@ -2719,6 +2719,50 @@ std::string RISCVInstrInfo::createMIROperandComment(
 }
 
 // clang-format off
+#define CASE_RVV_OPCODE_UNMASK_LMUL(OP, LMUL)                                 \
+  RISCV::Pseudo##OP##_##LMUL
+
+#define CASE_RVV_OPCODE_MASK_LMUL(OP, LMUL)                                   \
+  RISCV::Pseudo##OP##_##LMUL##_MASK
+
+#define CASE_RVV_OPCODE_LMUL(OP, LMUL)                                        \
+  CASE_RVV_OPCODE_UNMASK_LMUL(OP, LMUL):                                      \
+  case CASE_RVV_OPCODE_MASK_LMUL(OP, LMUL)
+
+#define CASE_RVV_OPCODE_UNMASK_WIDEN(OP)                                      \
+  CASE_RVV_OPCODE_UNMASK_LMUL(OP, MF8):                                       \
+  case CASE_RVV_OPCODE_UNMASK_LMUL(OP, MF4):                                  \
+  case CASE_RVV_OPCODE_UNMASK_LMUL(OP, MF2):                                  \
+  case CASE_RVV_OPCODE_UNMASK_LMUL(OP, M1):                                   \
+  case CASE_RVV_OPCODE_UNMASK_LMUL(OP, M2):                                   \
+  case CASE_RVV_OPCODE_UNMASK_LMUL(OP, M4)
+
+#define CASE_RVV_OPCODE_UNMASK(OP)                                            \
+  CASE_RVV_OPCODE_UNMASK_WIDEN(OP):                                           \
+  case CASE_RVV_OPCODE_UNMASK_LMUL(OP, M8)
+
+#define CASE_RVV_OPCODE_MASK_WIDEN(OP)                                        \
+  CASE_RVV_OPCODE_MASK_LMUL(OP, MF8):                                         \
+  case CASE_RVV_OPCODE_MASK_LMUL(OP, MF4):                                    \
+  case CASE_RVV_OPCODE_MASK_LMUL(OP, MF2):                                    \
+  case CASE_RVV_OPCODE_MASK_LMUL(OP, M1):                                     \
+  case CASE_RVV_OPCODE_MASK_LMUL(OP, M2):                                     \
+  case CASE_RVV_OPCODE_MASK_LMUL(OP, M4)
+
+#define CASE_RVV_OPCODE_MASK(OP)                                              \
+  CASE_RVV_OPCODE_MASK_WIDEN(OP):                                             \
+  case CASE_RVV_OPCODE_MASK_LMUL(OP, M8)
+
+#define CASE_RVV_OPCODE_WIDEN(OP)                                             \
+  CASE_RVV_OPCODE_UNMASK_WIDEN(OP):                                           \
+  case CASE_RVV_OPCODE_MASK_WIDEN(OP)
+
+#define CASE_RVV_OPCODE(OP)                                                   \
+  CASE_RVV_OPCODE_UNMASK(OP):                                                 \
+  case CASE_RVV_OPCODE_MASK(OP)
+// clang-format on
+
+// clang-format off
 #define CASE_VMA_OPCODE_COMMON(OP, TYPE, LMUL)                                 \
   RISCV::PseudoV##OP##_##TYPE##_##LMUL
 
@@ -2798,6 +2842,28 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case RISCV::PseudoCCMOVGPR:
     // Operands 4 and 5 are commutable.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 4, 5);
+  case CASE_RVV_OPCODE(VADD_VV):
+  case CASE_RVV_OPCODE(VAND_VV):
+  case CASE_RVV_OPCODE(VOR_VV):
+  case CASE_RVV_OPCODE(VXOR_VV):
+  case CASE_RVV_OPCODE_MASK(VMSEQ_VV):
+  case CASE_RVV_OPCODE_MASK(VMSNE_VV):
+  case CASE_RVV_OPCODE(VMIN_VV):
+  case CASE_RVV_OPCODE(VMINU_VV):
+  case CASE_RVV_OPCODE(VMAX_VV):
+  case CASE_RVV_OPCODE(VMAXU_VV):
+  case CASE_RVV_OPCODE(VMUL_VV):
+  case CASE_RVV_OPCODE(VMULH_VV):
+  case CASE_RVV_OPCODE(VMULHU_VV):
+  case CASE_RVV_OPCODE_WIDEN(VWADD_VV):
+  case CASE_RVV_OPCODE_WIDEN(VWADDU_VV):
+  case CASE_RVV_OPCODE_WIDEN(VWMUL_VV):
+  case CASE_RVV_OPCODE_WIDEN(VWMULU_VV):
+  case CASE_RVV_OPCODE_WIDEN(VWMACC_VV):
+  case CASE_RVV_OPCODE_WIDEN(VWMACCU_VV):
+  case CASE_RVV_OPCODE_UNMASK(VADC_VVM):
+    // Operands 2 and 3 are commutable.
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3);
   case CASE_VFMA_SPLATS(FMADD):
   case CASE_VFMA_SPLATS(FMSUB):
   case CASE_VFMA_SPLATS(FMACC):
