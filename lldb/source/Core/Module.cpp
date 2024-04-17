@@ -1185,7 +1185,9 @@ bool Module::IsSwiftCxxInteropEnabled() {
     auto *sym_file = GetSymbolFile();
     if (sym_file) {
       auto options = sym_file->GetCompileOptions();
-      for (auto &[_, args] : options) {
+      for (auto &[cu, args] : options) {
+        if (cu->GetLanguage() != eLanguageTypeSwift)
+          continue;
         for (const char *arg : args.GetArgumentArrayRef()) {
           if (strcmp(arg, "-enable-experimental-cxx-interop") == 0) {
             m_is_swift_cxx_interop_enabled = eLazyBoolYes;

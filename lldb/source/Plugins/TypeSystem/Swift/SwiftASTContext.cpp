@@ -2197,6 +2197,41 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   return swift_ast_sp;
 }
 
+/// Determine whether this CU was compiled with C++ interop enabled.
+static bool ShouldEnableCXXInterop(CompileUnit *cu) {
+  AutoBool interop_enabled =
+    ModuleList::GetGlobalModuleListProperties().GetSwiftEnableCxxInterop();
+  switch (interop_enabled) {
+  case AutoBool::True:
+    return true;
+  case AutoBool::False:
+    return false;
+  case AutoBool::Auto: {
+    if (!cu)
+      return false;
+    lldb::ModuleSP module = cu->CalculateSymbolContextModule();
+    if (!module)
+      return false;
+    // Look for the "-enable-experimental-cxx-interop" compile flag in the
+    // args of the compile units this module is composed of.
+    auto *sym_file = module->GetSymbolFile();
+    if (!sym_file)
+      return false;
+    auto options = sym_file->GetCompileOptions();
+    for (auto &[unit, args] : options) {
+      if (unit.get() == cu) {
+        if (cu->GetLanguage() == eLanguageTypeSwift)
+          for (const char *arg : args.GetArgumentArrayRef())
+            if (strcmp(arg, "-enable-experimental-cxx-interop") == 0)
+              return true;
+        return false;
+      }
+    }
+  }
+  }
+  return false;
+}
+
 static bool IsUnitTestExecutable(lldb_private::Module &module) {
   static ConstString s_xctest("xctest");
   static ConstString s_XCTRunner("XCTRunner");
@@ -2753,7 +2788,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   swift_ast_sp->m_is_scratch_context = true;
 
   swift_ast_sp->GetLanguageOptions().EnableCXXInterop =
-      target.IsSwiftCxxInteropEnabled();
+      ShouldEnableCXXInterop(cu);
 
   if (target.IsEmbeddedSwift())
     swift_ast_sp->GetLanguageOptions().enableFeature(swift::Feature::Embedded);
