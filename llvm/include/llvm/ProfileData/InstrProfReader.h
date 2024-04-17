@@ -508,9 +508,9 @@ public:
     using namespace support;
 
     offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     offset_type DataLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);
   }
 

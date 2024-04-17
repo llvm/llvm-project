@@ -468,6 +468,7 @@ public:
   bool isUnknown() const { return State == Unknown; }
 
   void setAVLReg(Register Reg) {
+    assert(Reg.isVirtual() || Reg == RISCV::X0 || Reg == RISCV::NoRegister);
     AVLReg = Reg;
     State = AVLIsReg;
   }
@@ -1514,17 +1515,12 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
 
     // If the AVL is a register, we need to make sure MI's AVL dominates PrevMI.
     // For now just check that PrevMI uses the same virtual register.
-    if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
-      if (AVL.getReg().isPhysical())
-        return false;
-      if (!PrevAVL.isReg() || PrevAVL.getReg() != AVL.getReg())
-        return false;
-    }
+    if (AVL.isReg() && AVL.getReg() != RISCV::X0 &&
+        (!PrevAVL.isReg() || PrevAVL.getReg() != AVL.getReg()))
+      return false;
   }
 
-  if (!PrevMI.getOperand(2).isImm() || !MI.getOperand(2).isImm())
-    return false;
-
+  assert(PrevMI.getOperand(2).isImm() && MI.getOperand(2).isImm());
   auto PriorVType = PrevMI.getOperand(2).getImm();
   auto VType = MI.getOperand(2).getImm();
   return areCompatibleVTYPEs(PriorVType, VType, Used);
@@ -1545,9 +1541,9 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
       continue;
     }
 
-    Register VRegDef = MI.getOperand(0).getReg();
-    if (VRegDef != RISCV::X0 &&
-        !(VRegDef.isVirtual() && MRI->use_nodbg_empty(VRegDef)))
+    Register RegDef = MI.getOperand(0).getReg();
+    assert(RegDef == RISCV::X0 || RegDef.isVirtual());
+    if (RegDef != RISCV::X0 && !MRI->use_nodbg_empty(RegDef))
       Used.demandVL();
 
     if (NextMI) {
