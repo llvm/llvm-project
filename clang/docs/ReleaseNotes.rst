@@ -203,12 +203,6 @@ Non-comprehensive list of changes in this release
 - ``__typeof_unqual__`` is available in all C modes as an extension, which behaves
   like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
 
-- Improved stack usage with C++ initialization code. This allows significantly
-  more levels of recursive initialization before reaching stack exhaustion
-  limits. This will positively impact recursive template instantiation code,
-  but should also reduce memory overhead for initializations in general.
-  Fixes #GH88330
-
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
