@@ -1251,6 +1251,15 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     return this->emitConst(Size.getQuantity(), E);
   }
 
+  if (Kind == UETT_VectorElements) {
+    if (const auto *VT = E->getTypeOfArgument()->getAs<VectorType>())
+      return this->emitConst(VT->getNumElements(), E);
+
+    // FIXME: Apparently we need to catch the fact that a sizeless vector type
+    // has been passed and diagnose that (at run time).
+    assert(E->getTypeOfArgument()->isSizelessVectorType());
+  }
+
   return false;
 }
 
