@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: __builtin_ctzg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
+//  refactor this code to exclusively use __builtin_ctzg.
+
 #ifndef _LIBCPP___BIT_COUNTR_H
 #define _LIBCPP___BIT_COUNTR_H
 
@@ -37,9 +40,11 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_ct
 
 template <class _Tp>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countr_zero(_Tp __t) _NOEXCEPT {
+#if __has_builtin(__builtin_ctzg)
+  return __builtin_ctzg(__t, numeric_limits<_Tp>::digits);
+#else  // __has_builtin(__builtin_ctzg)
   if (__t == 0)
     return numeric_limits<_Tp>::digits;
-
   if (sizeof(_Tp) <= sizeof(unsigned int))
     return std::__libcpp_ctz(static_cast<unsigned int>(__t));
   else if (sizeof(_Tp) <= sizeof(unsigned long))
@@ -55,6 +60,7 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __coun
     }
     return __ret + std::__libcpp_ctz(static_cast<unsigned long long>(__t));
   }
+#endif // __has_builtin(__builtin_ctzg)
 }
 
 #if _LIBCPP_STD_VER >= 20

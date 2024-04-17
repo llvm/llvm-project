@@ -803,7 +803,8 @@
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=ndd -x c -E -dM -o - %s | FileCheck --check-prefix=NDD %s
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=ccmp -x c -E -dM -o - %s | FileCheck --check-prefix=CCMP %s
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=cf -x c -E -dM -o - %s | FileCheck --check-prefix=CF %s
-// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapxf -x c -E -dM -o - %s | FileCheck --check-prefixes=EGPR,PUSH2POP2,PPX,NDD %s
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapxf -x c -E -dM -o - %s | FileCheck --check-prefixes=EGPR,PUSH2POP2,PPX,NDD,APXF %s
+// APXF: #define __APX_F__ 1
 // CCMP: #define __CCMP__ 1
 // CF: #define __CF__ 1
 // EGPR: #define __EGPR__ 1

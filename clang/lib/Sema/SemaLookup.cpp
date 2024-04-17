@@ -37,6 +37,7 @@
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/edit_distance.h"
@@ -3243,6 +3244,10 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     case Type::Pipe:
       T = cast<PipeType>(T)->getElementType().getTypePtr();
       continue;
+
+    // Array parameter types are treated as fundamental types.
+    case Type::ArrayParameter:
+      break;
     }
 
     if (Queue.empty())
@@ -3337,21 +3342,20 @@ void Sema::LookupOverloadedOperatorName(OverloadedOperatorKind Op, Scope *S,
   Functions.append(Operators.begin(), Operators.end());
 }
 
-Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
-                                                           CXXSpecialMember SM,
-                                                           bool ConstArg,
-                                                           bool VolatileArg,
-                                                           bool RValueThis,
-                                                           bool ConstThis,
-                                                           bool VolatileThis) {
+Sema::SpecialMemberOverloadResult
+Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
+                          bool ConstArg, bool VolatileArg, bool RValueThis,
+                          bool ConstThis, bool VolatileThis) {
   assert(CanDeclareSpecialMemberFunction(RD) &&
          "doing special member lookup into record that isn't fully complete");
   RD = RD->getDefinition();
   if (RValueThis || ConstThis || VolatileThis)
-    assert((SM == CXXCopyAssignment || SM == CXXMoveAssignment) &&
+    assert((SM == CXXSpecialMemberKind::CopyAssignment ||
+            SM == CXXSpecialMemberKind::MoveAssignment) &&
            "constructors and destructors always have unqualified lvalue this");
   if (ConstArg || VolatileArg)
-    assert((SM != CXXDefaultConstructor && SM != CXXDestructor) &&
+    assert((SM != CXXSpecialMemberKind::DefaultConstructor &&
+            SM != CXXSpecialMemberKind::Destructor) &&
            "parameter-less special members can't have qualified arguments");
 
   // FIXME: Get the caller to pass in a location for the lookup.
@@ -3359,7 +3363,7 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
 
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(RD);
-  ID.AddInteger(SM);
+  ID.AddInteger(llvm::to_underlying(SM));
   ID.AddInteger(ConstArg);
   ID.AddInteger(VolatileArg);
   ID.AddInteger(RValueThis);
@@ -3378,7 +3382,7 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
   Result = new (Result) SpecialMemberOverloadResultEntry(ID);
   SpecialMemberCache.InsertNode(Result, InsertPoint);
 
-  if (SM == CXXDestructor) {
+  if (SM == CXXSpecialMemberKind::Destructor) {
     if (RD->needsImplicitDestructor()) {
       runWithSufficientStackSpace(RD->getLocation(), [&] {
         DeclareImplicitDestructor(RD);
@@ -3402,7 +3406,7 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
   QualType ArgType = CanTy;
   ExprValueKind VK = VK_LValue;
 
-  if (SM == CXXDefaultConstructor) {
+  if (SM == CXXSpecialMemberKind::DefaultConstructor) {
     Name = Context.DeclarationNames.getCXXConstructorName(CanTy);
     NumArgs = 0;
     if (RD->needsImplicitDefaultConstructor()) {
@@ -3411,7 +3415,8 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
       });
     }
   } else {
-    if (SM == CXXCopyConstructor || SM == CXXMoveConstructor) {
+    if (SM == CXXSpecialMemberKind::CopyConstructor ||
+        SM == CXXSpecialMemberKind::MoveConstructor) {
       Name = Context.DeclarationNames.getCXXConstructorName(CanTy);
       if (RD->needsImplicitCopyConstructor()) {
         runWithSufficientStackSpace(RD->getLocation(), [&] {
@@ -3449,7 +3454,8 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
     // Possibly an XValue is actually correct in the case of move, but
     // there is no semantic difference for class types in this restricted
     // case.
-    if (SM == CXXCopyConstructor || SM == CXXCopyAssignment)
+    if (SM == CXXSpecialMemberKind::CopyConstructor ||
+        SM == CXXSpecialMemberKind::CopyAssignment)
       VK = VK_LValue;
     else
       VK = VK_PRValue;
@@ -3457,7 +3463,7 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
 
   OpaqueValueExpr FakeArg(LookupLoc, ArgType, VK);
 
-  if (SM != CXXDefaultConstructor) {
+  if (SM != CXXSpecialMemberKind::DefaultConstructor) {
     NumArgs = 1;
     Arg = &FakeArg;
   }
@@ -3483,7 +3489,7 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
     // type, rather than because there's some other declared constructor.
     // Every class has a copy/move constructor, copy/move assignment, and
     // destructor.
-    assert(SM == CXXDefaultConstructor &&
+    assert(SM == CXXSpecialMemberKind::DefaultConstructor &&
            "lookup for a constructor or assignment operator was empty");
     Result->setMethod(nullptr);
     Result->setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
@@ -3501,7 +3507,8 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
     DeclAccessPair Cand = DeclAccessPair::make(CandDecl, AS_public);
     auto CtorInfo = getConstructorInfo(Cand);
     if (CXXMethodDecl *M = dyn_cast<CXXMethodDecl>(Cand->getUnderlyingDecl())) {
-      if (SM == CXXCopyAssignment || SM == CXXMoveAssignment)
+      if (SM == CXXSpecialMemberKind::CopyAssignment ||
+          SM == CXXSpecialMemberKind::MoveAssignment)
         AddMethodCandidate(M, Cand, RD, ThisTy, Classification,
                            llvm::ArrayRef(&Arg, NumArgs), OCS, true);
       else if (CtorInfo)
@@ -3513,7 +3520,8 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
                              /*SuppressUserConversions*/ true);
     } else if (FunctionTemplateDecl *Tmpl =
                  dyn_cast<FunctionTemplateDecl>(Cand->getUnderlyingDecl())) {
-      if (SM == CXXCopyAssignment || SM == CXXMoveAssignment)
+      if (SM == CXXSpecialMemberKind::CopyAssignment ||
+          SM == CXXSpecialMemberKind::MoveAssignment)
         AddMethodTemplateCandidate(Tmpl, Cand, RD, nullptr, ThisTy,
                                    Classification,
                                    llvm::ArrayRef(&Arg, NumArgs), OCS, true);
@@ -3559,8 +3567,8 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
 /// Look up the default constructor for the given class.
 CXXConstructorDecl *Sema::LookupDefaultConstructor(CXXRecordDecl *Class) {
   SpecialMemberOverloadResult Result =
-    LookupSpecialMember(Class, CXXDefaultConstructor, false, false, false,
-                        false, false);
+      LookupSpecialMember(Class, CXXSpecialMemberKind::DefaultConstructor,
+                          false, false, false, false, false);
 
   return cast_or_null<CXXConstructorDecl>(Result.getMethod());
 }
@@ -3570,9 +3578,9 @@ CXXConstructorDecl *Sema::LookupCopyingConstructor(CXXRecordDecl *Class,
                                                    unsigned Quals) {
   assert(!(Quals & ~(Qualifiers::Const | Qualifiers::Volatile)) &&
          "non-const, non-volatile qualifiers for copy ctor arg");
-  SpecialMemberOverloadResult Result =
-    LookupSpecialMember(Class, CXXCopyConstructor, Quals & Qualifiers::Const,
-                        Quals & Qualifiers::Volatile, false, false, false);
+  SpecialMemberOverloadResult Result = LookupSpecialMember(
+      Class, CXXSpecialMemberKind::CopyConstructor, Quals & Qualifiers::Const,
+      Quals & Qualifiers::Volatile, false, false, false);
 
   return cast_or_null<CXXConstructorDecl>(Result.getMethod());
 }
@@ -3580,9 +3588,9 @@ CXXConstructorDecl *Sema::LookupCopyingConstructor(CXXRecordDecl *Class,
 /// Look up the moving constructor for the given class.
 CXXConstructorDecl *Sema::LookupMovingConstructor(CXXRecordDecl *Class,
                                                   unsigned Quals) {
-  SpecialMemberOverloadResult Result =
-    LookupSpecialMember(Class, CXXMoveConstructor, Quals & Qualifiers::Const,
-                        Quals & Qualifiers::Volatile, false, false, false);
+  SpecialMemberOverloadResult Result = LookupSpecialMember(
+      Class, CXXSpecialMemberKind::MoveConstructor, Quals & Qualifiers::Const,
+      Quals & Qualifiers::Volatile, false, false, false);
 
   return cast_or_null<CXXConstructorDecl>(Result.getMethod());
 }
@@ -3614,11 +3622,10 @@ CXXMethodDecl *Sema::LookupCopyingAssignment(CXXRecordDecl *Class,
          "non-const, non-volatile qualifiers for copy assignment arg");
   assert(!(ThisQuals & ~(Qualifiers::Const | Qualifiers::Volatile)) &&
          "non-const, non-volatile qualifiers for copy assignment this");
-  SpecialMemberOverloadResult Result =
-    LookupSpecialMember(Class, CXXCopyAssignment, Quals & Qualifiers::Const,
-                        Quals & Qualifiers::Volatile, RValueThis,
-                        ThisQuals & Qualifiers::Const,
-                        ThisQuals & Qualifiers::Volatile);
+  SpecialMemberOverloadResult Result = LookupSpecialMember(
+      Class, CXXSpecialMemberKind::CopyAssignment, Quals & Qualifiers::Const,
+      Quals & Qualifiers::Volatile, RValueThis, ThisQuals & Qualifiers::Const,
+      ThisQuals & Qualifiers::Volatile);
 
   return Result.getMethod();
 }
@@ -3630,11 +3637,10 @@ CXXMethodDecl *Sema::LookupMovingAssignment(CXXRecordDecl *Class,
                                             unsigned ThisQuals) {
   assert(!(ThisQuals & ~(Qualifiers::Const | Qualifiers::Volatile)) &&
          "non-const, non-volatile qualifiers for copy assignment this");
-  SpecialMemberOverloadResult Result =
-    LookupSpecialMember(Class, CXXMoveAssignment, Quals & Qualifiers::Const,
-                        Quals & Qualifiers::Volatile, RValueThis,
-                        ThisQuals & Qualifiers::Const,
-                        ThisQuals & Qualifiers::Volatile);
+  SpecialMemberOverloadResult Result = LookupSpecialMember(
+      Class, CXXSpecialMemberKind::MoveAssignment, Quals & Qualifiers::Const,
+      Quals & Qualifiers::Volatile, RValueThis, ThisQuals & Qualifiers::Const,
+      ThisQuals & Qualifiers::Volatile);
 
   return Result.getMethod();
 }
@@ -3647,8 +3653,8 @@ CXXMethodDecl *Sema::LookupMovingAssignment(CXXRecordDecl *Class,
 /// \returns The destructor for this class.
 CXXDestructorDecl *Sema::LookupDestructor(CXXRecordDecl *Class) {
   return cast_or_null<CXXDestructorDecl>(
-      LookupSpecialMember(Class, CXXDestructor, false, false, false, false,
-                          false)
+      LookupSpecialMember(Class, CXXSpecialMemberKind::Destructor, false, false,
+                          false, false, false)
           .getMethod());
 }
 

@@ -205,10 +205,10 @@ bool InstallAPIVisitor::VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
   const ObjCInterfaceDecl *InterfaceD = D->getClassInterface();
   const StringRef InterfaceName = InterfaceD->getName();
 
-  std::pair<ObjCCategoryRecord *, FrontendAttrs *> Category =
-      Ctx.Slice->addObjCCategory(InterfaceName, CategoryName, Avail, D,
-                                 *Access);
-  recordObjCInstanceVariables(D->getASTContext(), Category.first, InterfaceName,
+  ObjCCategoryRecord *CategoryRecord =
+      Ctx.Slice->addObjCCategory(InterfaceName, CategoryName, Avail, D, *Access)
+          .first;
+  recordObjCInstanceVariables(D->getASTContext(), CategoryRecord, InterfaceName,
                               D->ivars());
   return true;
 }
