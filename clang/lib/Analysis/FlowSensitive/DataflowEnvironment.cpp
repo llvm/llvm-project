@@ -17,6 +17,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
@@ -304,93 +305,6 @@ widenKeyToValueMap(const llvm::MapVector<Key, Value *> &CurMap,
   return WidenedMap;
 }
 
-/// Initializes a global storage value.
-static void insertIfGlobal(const Decl &D,
-                           llvm::DenseSet<const VarDecl *> &Vars) {
-  if (auto *V = dyn_cast<VarDecl>(&D))
-    if (V->hasGlobalStorage())
-      Vars.insert(V);
-}
-
-static void insertIfFunction(const Decl &D,
-                             llvm::DenseSet<const FunctionDecl *> &Funcs) {
-  if (auto *FD = dyn_cast<FunctionDecl>(&D))
-    Funcs.insert(FD);
-}
-
-static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
-  // Use getCalleeDecl instead of getMethodDecl in order to handle
-  // pointer-to-member calls.
-  const auto *MethodDecl = dyn_cast_or_null<CXXMethodDecl>(C.getCalleeDecl());
-  if (!MethodDecl)
-    return nullptr;
-  auto *Body = dyn_cast_or_null<CompoundStmt>(MethodDecl->getBody());
-  if (!Body || Body->size() != 1)
-    return nullptr;
-  if (auto *RS = dyn_cast<ReturnStmt>(*Body->body_begin()))
-    if (auto *Return = RS->getRetValue())
-      return dyn_cast<MemberExpr>(Return->IgnoreParenImpCasts());
-  return nullptr;
-}
-
-static void
-getFieldsGlobalsAndFuncs(const Decl &D, FieldSet &Fields,
-                         llvm::DenseSet<const VarDecl *> &Vars,
-                         llvm::DenseSet<const FunctionDecl *> &Funcs) {
-  insertIfGlobal(D, Vars);
-  insertIfFunction(D, Funcs);
-  if (const auto *Decomp = dyn_cast<DecompositionDecl>(&D))
-    for (const auto *B : Decomp->bindings())
-      if (auto *ME = dyn_cast_or_null<MemberExpr>(B->getBinding()))
-        // FIXME: should we be using `E->getFoundDecl()`?
-        if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl()))
-          Fields.insert(FD);
-}
-
-/// Traverses `S` and inserts into `Fields`, `Vars` and `Funcs` any fields,
-/// global variables and functions that are declared in or referenced from
-/// sub-statements.
-static void
-getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
-                         llvm::DenseSet<const VarDecl *> &Vars,
-                         llvm::DenseSet<const FunctionDecl *> &Funcs) {
-  for (auto *Child : S.children())
-    if (Child != nullptr)
-      getFieldsGlobalsAndFuncs(*Child, Fields, Vars, Funcs);
-  if (const auto *DefaultArg = dyn_cast<CXXDefaultArgExpr>(&S))
-    getFieldsGlobalsAndFuncs(*DefaultArg->getExpr(), Fields, Vars, Funcs);
-  if (const auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(&S))
-    getFieldsGlobalsAndFuncs(*DefaultInit->getExpr(), Fields, Vars, Funcs);
-
-  if (auto *DS = dyn_cast<DeclStmt>(&S)) {
-    if (DS->isSingleDecl())
-      getFieldsGlobalsAndFuncs(*DS->getSingleDecl(), Fields, Vars, Funcs);
-    else
-      for (auto *D : DS->getDeclGroup())
-        getFieldsGlobalsAndFuncs(*D, Fields, Vars, Funcs);
-  } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
-    insertIfGlobal(*E->getDecl(), Vars);
-    insertIfFunction(*E->getDecl(), Funcs);
-  } else if (const auto *C = dyn_cast<CXXMemberCallExpr>(&S)) {
-    // If this is a method that returns a member variable but does nothing else,
-    // model the field of the return value.
-    if (MemberExpr *E = getMemberForAccessor(*C))
-      if (const auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl()))
-        Fields.insert(FD);
-  } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
-    // FIXME: should we be using `E->getFoundDecl()`?
-    const ValueDecl *VD = E->getMemberDecl();
-    insertIfGlobal(*VD, Vars);
-    insertIfFunction(*VD, Funcs);
-    if (const auto *FD = dyn_cast<FieldDecl>(VD))
-      Fields.insert(FD);
-  } else if (auto *InitList = dyn_cast<InitListExpr>(&S)) {
-    if (InitList->getType()->isRecordType())
-      for (const auto *FD : getFieldsForInitListExpr(InitList))
-        Fields.insert(FD);
-  }
-}
-
 namespace {
 
 // Visitor that builds a map from record prvalues to result objects.
@@ -653,36 +567,13 @@ void Environment::initialize() {
 void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
   assert(FuncDecl->doesThisDeclarationHaveABody());
 
-  FieldSet Fields;
-  llvm::DenseSet<const VarDecl *> Vars;
-  llvm::DenseSet<const FunctionDecl *> Funcs;
-
-  // Look for global variable and field references in the
-  // constructor-initializers.
-  if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FuncDecl)) {
-    for (const auto *Init : CtorDecl->inits()) {
-      if (Init->isMemberInitializer()) {
-        Fields.insert(Init->getMember());
-      } else if (Init->isIndirectMemberInitializer()) {
-        for (const auto *I : Init->getIndirectMember()->chain())
-          Fields.insert(cast<FieldDecl>(I));
-      }
-      const Expr *E = Init->getInit();
-      assert(E != nullptr);
-      getFieldsGlobalsAndFuncs(*E, Fields, Vars, Funcs);
-    }
-    // Add all fields mentioned in default member initializers.
-    for (const FieldDecl *F : CtorDecl->getParent()->fields())
-      if (const auto *I = F->getInClassInitializer())
-          getFieldsGlobalsAndFuncs(*I, Fields, Vars, Funcs);
-  }
-  getFieldsGlobalsAndFuncs(*FuncDecl->getBody(), Fields, Vars, Funcs);
+  ReferencedDecls Referenced = getReferencedDecls(*FuncDecl);
 
   // These have to be added before the lines that follow to ensure that
   // `create*` work correctly for structs.
-  DACtx->addModeledFields(Fields);
+  DACtx->addModeledFields(Referenced.Fields);
 
-  for (const VarDecl *D : Vars) {
+  for (const VarDecl *D : Referenced.Globals) {
     if (getStorageLocation(*D) != nullptr)
       continue;
 
@@ -694,7 +585,7 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
     setStorageLocation(*D, createObject(*D, nullptr));
   }
 
-  for (const FunctionDecl *FD : Funcs) {
+  for (const FunctionDecl *FD : Referenced.Functions) {
     if (getStorageLocation(*FD) != nullptr)
       continue;
     auto &Loc = createStorageLocation(*FD);
@@ -1352,64 +1243,6 @@ RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
     return nullptr;
   }
   return Env.get<RecordStorageLocation>(*Base);
-}
-
-std::vector<const FieldDecl *>
-getFieldsForInitListExpr(const InitListExpr *InitList) {
-  const RecordDecl *RD = InitList->getType()->getAsRecordDecl();
-  assert(RD != nullptr);
-
-  std::vector<const FieldDecl *> Fields;
-
-  if (InitList->getType()->isUnionType()) {
-    Fields.push_back(InitList->getInitializedFieldInUnion());
-    return Fields;
-  }
-
-  // Unnamed bitfields are only used for padding and do not appear in
-  // `InitListExpr`'s inits. However, those fields do appear in `RecordDecl`'s
-  // field list, and we thus need to remove them before mapping inits to
-  // fields to avoid mapping inits to the wrongs fields.
-  llvm::copy_if(
-      RD->fields(), std::back_inserter(Fields),
-      [](const FieldDecl *Field) { return !Field->isUnnamedBitfield(); });
-  return Fields;
-}
-
-RecordInitListHelper::RecordInitListHelper(const InitListExpr *InitList) {
-  auto *RD = InitList->getType()->getAsCXXRecordDecl();
-  assert(RD != nullptr);
-
-  std::vector<const FieldDecl *> Fields = getFieldsForInitListExpr(InitList);
-  ArrayRef<Expr *> Inits = InitList->inits();
-
-  // Unions initialized with an empty initializer list need special treatment.
-  // For structs/classes initialized with an empty initializer list, Clang
-  // puts `ImplicitValueInitExpr`s in `InitListExpr::inits()`, but for unions,
-  // it doesn't do this -- so we create an `ImplicitValueInitExpr` ourselves.
-  SmallVector<Expr *> InitsForUnion;
-  if (InitList->getType()->isUnionType() && Inits.empty()) {
-    assert(Fields.size() == 1);
-    ImplicitValueInitForUnion.emplace(Fields.front()->getType());
-    InitsForUnion.push_back(&*ImplicitValueInitForUnion);
-    Inits = InitsForUnion;
-  }
-
-  size_t InitIdx = 0;
-
-  assert(Fields.size() + RD->getNumBases() == Inits.size());
-  for (const CXXBaseSpecifier &Base : RD->bases()) {
-    assert(InitIdx < Inits.size());
-    Expr *Init = Inits[InitIdx++];
-    BaseInits.emplace_back(&Base, Init);
-  }
-
-  assert(Fields.size() == Inits.size() - InitIdx);
-  for (const FieldDecl *Field : Fields) {
-    assert(InitIdx < Inits.size());
-    Expr *Init = Inits[InitIdx++];
-    FieldInits.emplace_back(Field, Init);
-  }
 }
 
 RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env) {
