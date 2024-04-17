@@ -6,12 +6,12 @@ define void @test() {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr i32, ptr null, i64 60
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> <i64 1, i64 33, i64 7, i64 0>), i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> <i64 0, i64 7, i64 33, i64 1>), i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr <4 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr getelementptr inbounds ([4 x i32], ptr null, i64 8, i64 0), align 16
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr getelementptr inbounds ([4 x i32], ptr null, i64 8, i64 0), align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -58,14 +58,14 @@ define void @test1() {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr i32, ptr null, i64 60
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> <i64 1, i64 33, i64 7, i64 0>), i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> <i64 0, i64 7, i64 33, i64 1>), i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i32> [[TMP3]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr <4 x i64> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i64> [[TMP5]] to <4 x i32>
-; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr getelementptr inbounds ([4 x i32], ptr null, i64 8, i64 0), align 16
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr getelementptr inbounds ([4 x i32], ptr null, i64 8, i64 0), align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -112,11 +112,11 @@ define void @test_div() {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr i32, ptr null, i64 60
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> <i64 1, i64 33, i64 7, i64 0>), i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> <i64 0, i64 7, i64 33, i64 1>), i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP2]], [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = udiv <4 x i32> [[TMP3]], <i32 1, i32 2, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv <4 x i32> [[TMP2]], <i32 2, i32 1, i32 2, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr getelementptr inbounds ([4 x i32], ptr null, i64 8, i64 0), align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -164,11 +164,11 @@ define void @test_rem() {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr i32, ptr null, i64 60
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> <i64 1, i64 33, i64 7, i64 0>), i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> getelementptr (i32, <4 x ptr> zeroinitializer, <4 x i64> <i64 0, i64 7, i64 33, i64 1>), i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP2]], [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = urem <4 x i32> [[TMP3]], <i32 1, i32 2, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = urem <4 x i32> [[TMP2]], <i32 1, i32 1, i32 2, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr getelementptr inbounds ([4 x i32], ptr null, i64 8, i64 0), align 16
 ; CHECK-NEXT:    ret void
 ;

@@ -4,13 +4,13 @@
 define void @test(ptr %isec) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[ISEC:%.*]], i64 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[ISEC]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[ARRAYIDX2]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP5]], <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[ISEC]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[ISEC:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP4]], <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[ISEC]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

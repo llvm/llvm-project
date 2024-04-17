@@ -10,7 +10,7 @@
 ; YAML-NEXT:    - String:          'Stores SLP vectorized with cost '
 ; YAML-NEXT:    - Cost:            '-5'
 ; YAML-NEXT:    - String:          ' and with tree size '
-; YAML-NEXT:    - TreeSize:        '7'
+; YAML-NEXT:    - TreeSize:        '9'
 
 define void @test(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-LABEL: @test(

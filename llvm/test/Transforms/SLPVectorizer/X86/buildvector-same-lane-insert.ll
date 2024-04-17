@@ -3,16 +3,16 @@
 
 define void @test() {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr undef, i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr undef, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr undef, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x float> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp olt float [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> zeroinitializer, float 0.000000e+00, i64 0
 ; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr null, align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 3, i32 poison>
 ; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -36,16 +36,18 @@ define void @test() {
 
 define void @test1() {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr undef, i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr undef, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr undef, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x float> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp olt float [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr null, align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP8]], ptr null, align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP1]], <2 x i32> <i32 0, i32 5>
+; CHECK-NEXT:    store <2 x float> [[TMP9]], ptr null, align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x float> [[TMP10]], ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
   %1 = getelementptr inbounds float, ptr undef, i32 2

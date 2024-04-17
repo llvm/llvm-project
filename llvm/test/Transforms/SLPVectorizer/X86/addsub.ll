@@ -301,14 +301,14 @@ define void @reorder_alt_subTree() #0 {
 
 define void @reorder_alt_rightsubTree(ptr nocapture %c, ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture readonly %d) {
 ; CHECK-LABEL: @reorder_alt_rightsubTree(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[D:%.*]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x double> [[TMP7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> [[TMP9]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x double> [[TMP10]], ptr [[C:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[D:%.*]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x double> [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP4]], [[TMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> [[TMP6]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %1 = load double, ptr %a
@@ -332,24 +332,14 @@ define void @reorder_alt_rightsubTree(ptr nocapture %c, ptr noalias nocapture re
 
 define void @vec_shuff_reorder() #0 {
 ; CHECK-LABEL: @vec_shuff_reorder(
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr @fb, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr @fa, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr getelementptr inbounds ([4 x float], ptr @fa, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr getelementptr inbounds ([4 x float], ptr @fb, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x float>, ptr getelementptr inbounds ([4 x float], ptr @fb, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x float>, ptr getelementptr inbounds ([4 x float], ptr @fa, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> [[TMP11]], float [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x float> [[TMP12]], <4 x float> [[TMP13]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP15:%.*]] = fadd <4 x float> [[TMP10]], [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = fsub <4 x float> [[TMP10]], [[TMP14]]
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x float> [[TMP15]], <4 x float> [[TMP16]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    store <4 x float> [[TMP17]], ptr @fc, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @fb, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr @fa, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP1]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fsub <4 x float> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr @fc, align 4
 ; CHECK-NEXT:    ret void
 ;
   %1 = load float, ptr @fb, align 4

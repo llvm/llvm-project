@@ -11,12 +11,11 @@ define i32 @foo(ptr nocapture readonly %diff) #0 {
 ; CHECK-NEXT:    [[A_088:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[OP_RDX:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DIFF:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i64 [[TMP0]], 4
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[DIFF]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [8 x [8 x i32]], ptr [[M2]], i64 0, i64 [[INDVARS_IV]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[ARRAYIDX6]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[OP_RDX]] = add i32 [[TMP5]], [[A_088]]

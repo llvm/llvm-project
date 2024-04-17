@@ -6,14 +6,13 @@ define void @wombat(ptr %ptr, ptr %ptr1) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[PTR1:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <4 x i32> [[TMP1]], undef
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> undef, <4 x i32> [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> zeroinitializer, <4 x i32> zeroinitializer, <4 x i32> [[TMP6]]
-; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP27]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i32> [[TMP0]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i32> [[TMP3]], undef
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x i32> undef, <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> zeroinitializer, <4 x i32> zeroinitializer, <4 x i32> [[TMP5]]
+; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP27]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:

@@ -42,13 +42,13 @@ entry:
 define double @return2(ptr nocapture readonly %x) {
 ; CHECK-LABEL: @return2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds double, ptr [[X:%.*]], i32 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[X]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
-; CHECK-NEXT:    [[ADD5:%.*]] = fadd double [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
+; CHECK-NEXT:    [[ADD5:%.*]] = fadd double [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    ret double [[ADD5]]
 ;
 entry:
