@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "docgen API format",
-  "description": "This schema specifies the format used by docgen to automatically generate standard header implementation statuses for libc. See the other JSON files in $LLVM_PROJECT/libc/docgen/ for files implementing following this API format.",
+  "description": "This schema specifies the format used by docgen to automatically generate standard header implementation statuses for libc. See the other JSON files in $LLVM_PROJECT/libc/docgen/ for files implementing this API format.",
   "type": "object",
   "properties": {
     "macros": {
