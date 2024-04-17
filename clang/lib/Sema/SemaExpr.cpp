@@ -6349,6 +6349,7 @@ static bool isPlaceholderToRemoveAsArg(QualType type) {
 #include "clang/AST/BuiltinTypes.def"
     return false;
 
+  case BuiltinType::UnresolvedTemplate:
   // We cannot lower out overload sets; they might validly be resolved
   // by the call machinery.
   case BuiltinType::Overload:
@@ -21234,6 +21235,24 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
   if (!placeholderType) return E;
 
   switch (placeholderType->getKind()) {
+  case BuiltinType::UnresolvedTemplate: {
+    auto *ULE = cast<UnresolvedLookupExpr>(E);
+    const DeclarationNameInfo &NameInfo = ULE->getNameInfo();
+    NestedNameSpecifierLoc Loc = ULE->getQualifierLoc();
+    NamedDecl *Temp = *ULE->decls_begin();
+    bool IsTypeAliasTemplateDecl = isa<TypeAliasTemplateDecl>(Temp);
+    if (NestedNameSpecifier *NNS = Loc.getNestedNameSpecifier())
+      Diag(NameInfo.getLoc(), diag::err_template_kw_refers_to_type_template)
+          << NNS << NameInfo.getName().getAsString() << Loc.getSourceRange()
+          << IsTypeAliasTemplateDecl;
+    else
+      Diag(NameInfo.getLoc(), diag::err_template_kw_refers_to_type_template)
+          << "" << NameInfo.getName().getAsString() << Loc.getSourceRange()
+          << IsTypeAliasTemplateDecl;
+    Diag(Temp->getLocation(), diag::note_referenced_type_template)
+        << IsTypeAliasTemplateDecl;
+    return CreateRecoveryExpr(NameInfo.getBeginLoc(), NameInfo.getEndLoc(), {});
+  }
 
   // Overloaded expressions.
   case BuiltinType::Overload: {
