@@ -499,15 +499,46 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     return initValue;
   }
 
+  // check if an allocatable box is unallocated. If so, initialize the boxAlloca
+  // to be unallocated e.g.
+  // %box_alloca = fir.alloca !fir.box<!fir.heap<...>>
+  // %addr = fir.box_addr %box
+  // if (%addr == 0) {
+  //   %nullbox = fir.embox %addr
+  //   fir.store %nullbox to %box_alloca
+  // } else {
+  //   // ...
+  //   fir.store %something to %box_alloca
+  // }
+  // omp.yield %box_alloca
+  mlir::Value blockArg =
+      builder.loadIfRef(loc, builder.getBlock()->getArgument(0));
+  auto handleNullAllocatable = [&](mlir::Value boxAlloca) -> fir::IfOp {
+    mlir::Value addr = builder.create<fir::BoxAddrOp>(loc, blockArg);
+    mlir::Value isNotAllocated = builder.genIsNullAddr(loc, addr);
+    fir::IfOp ifOp = builder.create<fir::IfOp>(loc, isNotAllocated,
+                                               /*withElseRegion=*/true);
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    // just embox the null address and return
+    mlir::Value nullBox = builder.create<fir::EmboxOp>(loc, ty, addr);
+    builder.create<fir::StoreOp>(loc, nullBox, boxAlloca);
+    return ifOp;
+  };
+
   // all arrays are boxed
   if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(ty)) {
     assert(isByRef && "passing boxes by value is unsupported");
+    bool isAllocatable = mlir::isa<fir::HeapType>(boxTy.getEleTy());
+    mlir::Value boxAlloca = builder.create<fir::AllocaOp>(loc, ty);
     mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
     if (fir::isa_trivial(innerTy)) {
       // boxed non-sequence value e.g. !fir.box<!fir.heap<i32>>
-      if (!mlir::isa<fir::HeapType>(boxTy.getEleTy()))
+      if (!isAllocatable)
         TODO(loc, "Reduction of non-allocatable trivial typed box");
-      mlir::Value boxAlloca = builder.create<fir::AllocaOp>(loc, ty);
+
+      fir::IfOp ifUnallocated = handleNullAllocatable(boxAlloca);
+
+      builder.setInsertionPointToStart(&ifUnallocated.getElseRegion().front());
       mlir::Value valAlloc = builder.create<fir::AllocMemOp>(loc, innerTy);
       builder.createStoreWithConvert(loc, initValue, valAlloc);
       mlir::Value box = builder.create<fir::EmboxOp>(loc, ty, valAlloc);
@@ -516,13 +547,21 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
       auto insPt = builder.saveInsertionPoint();
       createReductionCleanupRegion(builder, loc, reductionDecl);
       builder.restoreInsertionPoint(insPt);
+      builder.setInsertionPointAfter(ifUnallocated);
       return boxAlloca;
     }
     innerTy = fir::extractSequenceType(boxTy);
     if (!mlir::isa<fir::SequenceType>(innerTy))
       TODO(loc, "Unsupported boxed type for reduction");
+
+    fir::IfOp ifUnallocated{nullptr};
+    if (isAllocatable) {
+      ifUnallocated = handleNullAllocatable(boxAlloca);
+      builder.setInsertionPointToStart(&ifUnallocated.getElseRegion().front());
+    }
+
     // Create the private copy from the initial fir.box:
-    hlfir::Entity source = hlfir::Entity{builder.getBlock()->getArgument(0)};
+    hlfir::Entity source = hlfir::Entity{blockArg};
 
     // Allocating on the heap in case the whole reduction is nested inside of a
     // loop
@@ -543,8 +582,7 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
       createReductionCleanupRegion(builder, loc, reductionDecl);
       builder.restoreInsertionPoint(insPt);
     } else {
-      assert(!mlir::isa<fir::HeapType>(boxTy.getEleTy()) &&
-             "Allocatable arrays must be heap allocated");
+      assert(!isAllocatable && "Allocatable arrays must be heap allocated");
     }
 
     // Put the temporary inside of a box:
@@ -552,8 +590,9 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     // hlfir::genVariableBox removes fir.heap<> around the element type
     mlir::Value convertedBox = builder.createConvert(loc, ty, box.getBase());
     builder.create<hlfir::AssignOp>(loc, initValue, convertedBox);
-    mlir::Value boxAlloca = builder.create<fir::AllocaOp>(loc, ty);
     builder.create<fir::StoreOp>(loc, convertedBox, boxAlloca);
+    if (ifUnallocated)
+      builder.setInsertionPointAfter(ifUnallocated);
     return boxAlloca;
   }
 
