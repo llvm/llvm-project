@@ -90,7 +90,10 @@ struct SIProgramInfo {
 
     SIProgramInfo() = default;
 
-    // The constructor sets the values for each member as shown in the struct. However, setting the MCExpr members to their zero value equivalent happens in reset together with (duplicated) value re-set for the non-MCExpr members.
+    // The constructor sets the values for each member as shown in the struct.
+    // However, setting the MCExpr members to their zero value equivalent
+    // happens in reset together with (duplicated) value re-set for the
+    // non-MCExpr members.
     void reset(const MachineFunction &MF);
 
     /// Compute the value of the ComputePGMRsrc1 register.
