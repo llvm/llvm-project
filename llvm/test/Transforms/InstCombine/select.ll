@@ -3109,45 +3109,46 @@ define <4 x i32> @mul_select_eq_zero_vector(<4 x i32> %x, <4 x i32> %y) {
 }
 
 ; Check that a select is folded into multiplication if condition's operand
-; is a vector consisting of zeros and undefs.
-; select (<k x elt> x == {0, undef, ...}), <k x elt> 0, <k x elt> x * y --> freeze(y) * x
-define <2 x i32> @mul_select_eq_undef_vector(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @mul_select_eq_undef_vector(
-; CHECK-NEXT:    [[Y_FR:%.*]] = freeze <2 x i32> [[Y:%.*]]
+; is a vector consisting of zeros and poisons.
+; select (<k x elt> x == {0, poison, ...}), <k x elt> 0, <k x elt> x * y --> freeze(y) * x
+define <2 x i32> @mul_select_eq_poison_vector(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @mul_select_eq_poison_vector(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[Y_FR:%.*]], <i32 0, i32 poison>
 ; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[Y_FR]], [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[M]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i32> <i32 0, i32 42>, <2 x i32> [[M]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %c = icmp eq <2 x i32> %x, <i32 0, i32 undef>
+  %c = icmp eq <2 x i32> %x, <i32 0, i32 poison>
   %m = mul <2 x i32> %x, %y
   %r = select <2 x i1> %c, <2 x i32> <i32 0, i32 42>, <2 x i32> %m
   ret <2 x i32> %r
 }
 
 ; Check that a select is folded into multiplication if other select's operand
-; is a vector consisting of zeros and undefs.
-; select (<k x elt> x == 0), <k x elt> {0, undef, ...}, <k x elt> x * y --> freeze(y) * x
-define <2 x i32> @mul_select_eq_zero_sel_undef_vector(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @mul_select_eq_zero_sel_undef_vector(
+; is a vector consisting of zeros and poisons.
+; select (<k x elt> x == 0), <k x elt> {0, poison, ...}, <k x elt> x * y --> freeze(y) * x
+define <2 x i32> @mul_select_eq_zero_sel_poison_vector(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @mul_select_eq_zero_sel_poison_vector(
 ; CHECK-NEXT:    [[Y_FR:%.*]] = freeze <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[Y_FR]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[M]]
 ;
   %c = icmp eq <2 x i32> %x, zeroinitializer
   %m = mul <2 x i32> %x, %y
-  %r = select <2 x i1> %c, <2 x i32> <i32 0, i32 undef>, <2 x i32> %m
+  %r = select <2 x i1> %c, <2 x i32> <i32 0, i32 poison>, <2 x i32> %m
   ret <2 x i32> %r
 }
 
 ; Negative test: select should not be folded into mul because
 ; condition's operand and select's operand do not merge into zero vector.
-define <2 x i32> @mul_select_eq_undef_vector_not_merging_to_zero(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @mul_select_eq_undef_vector_not_merging_to_zero(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 0, i32 undef>
+define <2 x i32> @mul_select_eq_poison_vector_not_merging_to_zero(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @mul_select_eq_poison_vector_not_merging_to_zero(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 0, i32 poison>
 ; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i32> <i32 1, i32 0>, <2 x i32> [[M]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %c = icmp eq <2 x i32> %x, <i32 0, i32 undef>
+  %c = icmp eq <2 x i32> %x, <i32 0, i32 poison>
   %m = mul <2 x i32> %x, %y
   %r = select <2 x i1> %c, <2 x i32> <i32 1, i32 0>, <2 x i32> %m
   ret <2 x i32> %r
