@@ -12760,7 +12760,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         if (BuiltinOp == Builtin::BI__c11_atomic_is_lock_free ||
             Size == CharUnits::One() ||
             E->getArg(1)->isNullPointerConstant(Info.Ctx,
-                                                Expr::NPC_NeverValueDependent))
+                                                Expr::NPC_ValueDependentIsNull))
           // OK, we will inline appropriately-aligned operations of this size,
           // and _Atomic(T) is appropriately-aligned.
           return Success(1, E);
