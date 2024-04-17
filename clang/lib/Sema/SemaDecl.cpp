@@ -5374,7 +5374,7 @@ static bool CheckAnonMemberRedeclaration(Sema &SemaRef, Scope *S,
   LookupResult R(SemaRef, Name, NameLoc,
                  Owner->isRecord() ? Sema::LookupMemberName
                                    : Sema::LookupOrdinaryName,
-                 Sema::ForVisibleRedeclaration);
+                 RedeclarationKind::ForVisibleRedeclaration);
   if (!SemaRef.LookupName(R, S)) return false;
 
   // Pick a representative declaration.
@@ -6470,7 +6470,8 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
 
     if (IsLinkageLookup) {
       Previous.clear(LookupRedeclarationWithLinkage);
-      Previous.setRedeclarationKind(ForExternalRedeclaration);
+      Previous.setRedeclarationKind(
+          RedeclarationKind::ForExternalRedeclaration);
     }
 
     LookupName(Previous, S, CreateBuiltins);
@@ -8521,7 +8522,8 @@ void Sema::CheckShadow(Scope *S, VarDecl *D) {
     return;
 
   LookupResult R(*this, D->getDeclName(), D->getLocation(),
-                 Sema::LookupOrdinaryName, Sema::ForVisibleRedeclaration);
+                 Sema::LookupOrdinaryName,
+                 RedeclarationKind::ForVisibleRedeclaration);
   LookupName(R, S);
   if (NamedDecl *ShadowedDecl = getShadowedDeclaration(D, R))
     CheckShadow(D, ShadowedDecl, R);
@@ -9161,7 +9163,7 @@ static NamedDecl *DiagnoseInvalidRedeclaration(
   LookupResult Prev(SemaRef, Name, NewFD->getLocation(),
                     IsLocalFriend ? Sema::LookupLocalFriendName
                                   : Sema::LookupOrdinaryName,
-                    Sema::ForVisibleRedeclaration);
+                    RedeclarationKind::ForVisibleRedeclaration);
 
   NewFD->setInvalidDecl();
   if (IsLocalFriend)
@@ -12406,22 +12408,12 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   }
 
   // Check if the function definition uses any AArch64 SME features without
-  // having the '+sme' feature enabled and warn user if sme locally streaming
-  // function returns or uses arguments with VL-based types.
+  // having the '+sme' feature enabled.
   if (DeclIsDefn) {
     const auto *Attr = NewFD->getAttr<ArmNewAttr>();
     bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
     bool UsesZA = Attr && Attr->isNewZA();
     bool UsesZT0 = Attr && Attr->isNewZT0();
-
-    if (NewFD->hasAttr<ArmLocallyStreamingAttr>()) {
-      if (NewFD->getReturnType()->isSizelessVectorType() ||
-          llvm::any_of(NewFD->parameters(), [](ParmVarDecl *P) {
-            return P->getOriginalType()->isSizelessVectorType();
-          }))
-        Diag(NewFD->getLocation(),
-             diag::warn_sme_locally_streaming_has_vl_args_returns);
-    }
     if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       UsesSM |=
@@ -15196,7 +15188,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
   const IdentifierInfo *II = D.getIdentifier();
   if (II) {
     LookupResult R(*this, II, D.getIdentifierLoc(), LookupOrdinaryName,
-                   ForVisibleRedeclaration);
+                   RedeclarationKind::ForVisibleRedeclaration);
     LookupName(R, S);
     if (!R.empty()) {
       NamedDecl *PrevDecl = *R.begin();
@@ -17428,7 +17420,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
 
   RedeclarationKind Redecl = forRedeclarationInCurContext();
   if (TUK == TUK_Friend || TUK == TUK_Reference)
-    Redecl = NotForRedeclaration;
+    Redecl = RedeclarationKind::NotForRedeclaration;
 
   /// Create a new tag decl in C/ObjC. Since the ODR-like semantics for ObjC/C
   /// implemented asks for structural equivalence checking, the returned decl
@@ -18589,7 +18581,7 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
   // Check to see if this name was declared as a member previously
   NamedDecl *PrevDecl = nullptr;
   LookupResult Previous(*this, II, Loc, LookupMemberName,
-                        ForVisibleRedeclaration);
+                        RedeclarationKind::ForVisibleRedeclaration);
   LookupName(Previous, S);
   switch (Previous.getResultKind()) {
     case LookupResult::Found:
@@ -18993,8 +18985,9 @@ Decl *Sema::ActOnIvar(Scope *S, SourceLocation DeclStart, Declarator &D,
     NewID->setInvalidDecl();
 
   if (II) {
-    NamedDecl *PrevDecl = LookupSingleName(S, II, Loc, LookupMemberName,
-                                           ForVisibleRedeclaration);
+    NamedDecl *PrevDecl =
+        LookupSingleName(S, II, Loc, LookupMemberName,
+                         RedeclarationKind::ForVisibleRedeclaration);
     if (PrevDecl && isDeclInScope(PrevDecl, EnclosingContext, S)
         && !isa<TagDecl>(PrevDecl)) {
       Diag(Loc, diag::err_duplicate_member) << II;
@@ -20039,7 +20032,8 @@ Decl *Sema::ActOnEnumConstant(Scope *S, Decl *theEnumDecl, Decl *lastEnumConst,
 
   // Verify that there isn't already something declared with this name in this
   // scope.
-  LookupResult R(*this, Id, IdLoc, LookupOrdinaryName, ForVisibleRedeclaration);
+  LookupResult R(*this, Id, IdLoc, LookupOrdinaryName,
+                 RedeclarationKind::ForVisibleRedeclaration);
   LookupName(R, S);
   NamedDecl *PrevDecl = R.getAsSingle<NamedDecl>();
 
