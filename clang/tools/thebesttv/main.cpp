@@ -585,9 +585,9 @@ void generateFromInput(const ordered_json &input, fs::path outputDir) {
 }
 
 int main(int argc, const char **argv) {
-    setClangPath(argv[0]);
-
     spdlog::set_level(spdlog::level::debug);
+
+    setClangPath(argv[0]);
 
     if (argc != 2) {
         logger.error("Usage: {} IR.json", argv[0]);
