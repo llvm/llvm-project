@@ -14,11 +14,13 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <cstdint>
 #include <numeric>
 
@@ -136,7 +138,7 @@ struct LinearizeVectorExtractStridedSlice final
   LogicalResult
   matchAndRewrite(vector::ExtractStridedSliceOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto dstType = getTypeConverter()->convertType(extractOp.getType());
+    Type dstType = getTypeConverter()->convertType(extractOp.getType());
     assert(!(extractOp.getVector().getType().isScalable() ||
              dstType.cast<VectorType>().isScalable()) &&
            "scalable vectors are not supported.");
@@ -144,9 +146,9 @@ struct LinearizeVectorExtractStridedSlice final
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
 
-    auto offsets = extractOp.getOffsets();
-    auto sizes = extractOp.getSizes();
-    auto strides = extractOp.getStrides();
+    ArrayAttr offsets = extractOp.getOffsets();
+    ArrayAttr sizes = extractOp.getSizes();
+    ArrayAttr strides = extractOp.getStrides();
     if (!isConstantIntValue(strides[0], 1))
       return rewriter.notifyMatchFailure(
           extractOp, "Strided slice with stride != 1 is not supported.");
@@ -160,19 +162,19 @@ struct LinearizeVectorExtractStridedSlice final
     //      vector<4x8x8xf32> to vector<2x2x8xf32>
     // Here, extraction granularity is 8.
     int64_t extractGranularitySize = 1;
-    auto n = extractOp.getSourceVectorType().getRank();
+    int64_t n = extractOp.getSourceVectorType().getRank();
     int64_t k = (int64_t)offsets.size();
     if (n > k) {
-      for (unsigned i = 0; i < n - k; i++) {
+      for (unsigned i = 0; i < n - k; ++i) {
         extractGranularitySize *=
             extractOp.getSourceVectorType().getShape()[i + k];
       }
     }
     // Get total number of extracted slices.
     int64_t nExtractedSlices = 1;
-    llvm::for_each(sizes, [&](Attribute size) {
+    for (Attribute size : sizes) {
       nExtractedSlices *= size.cast<IntegerAttr>().getInt();
-    });
+    }
     // Compute the strides of the source vector considering first k dimensions.
     llvm::SmallVector<int64_t, 4> sourceStrides(k, extractGranularitySize);
     for (int i = k - 2; i >= 0; --i) {
@@ -250,7 +252,7 @@ struct LinearizeVectorShuffle final
   LogicalResult
   matchAndRewrite(vector::ShuffleOp shuffleOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto dstType = getTypeConverter()->convertType(shuffleOp.getType());
+    Type dstType = getTypeConverter()->convertType(shuffleOp.getType());
     assert(!(shuffleOp.getV1VectorType().isScalable() ||
              shuffleOp.getV2VectorType().isScalable() ||
              dstType.cast<VectorType>().isScalable()) &&
@@ -259,8 +261,8 @@ struct LinearizeVectorShuffle final
       return rewriter.notifyMatchFailure(
           shuffleOp, "Can't flatten since targetBitWidth <= OpSize");
 
-    auto vec1 = adaptor.getV1();
-    auto vec2 = adaptor.getV2();
+    Value vec1 = adaptor.getV1();
+    Value vec2 = adaptor.getV2();
     int shuffleSliceLen = 1;
     int rank = shuffleOp.getV1().getType().getRank();
 
@@ -269,8 +271,8 @@ struct LinearizeVectorShuffle final
     // dims. Mask of the shuffle op specifies which slice to take from the
     // outermost dim.
     if (rank > 1) {
-      auto shape = shuffleOp.getV1().getType().getShape();
-      for (unsigned i = 1; i < shape.size(); i++) {
+      llvm::ArrayRef<int64_t> shape = shuffleOp.getV1().getType().getShape();
+      for (unsigned i = 1; i < shape.size(); ++i) {
         shuffleSliceLen *= shape[i];
       }
     }
@@ -279,8 +281,8 @@ struct LinearizeVectorShuffle final
     // that needs to be shuffled to the destination vector. If shuffleSliceLen >
     // 1 we need to shuffle the slices (consecutive shuffleSliceLen number of
     // elements) instead of scalars.
-    auto mask = shuffleOp.getMask();
-    auto totalSizeOfShuffledElmnts = mask.size() * shuffleSliceLen;
+    ArrayAttr mask = shuffleOp.getMask();
+    int64_t totalSizeOfShuffledElmnts = mask.size() * shuffleSliceLen;
     llvm::SmallVector<int64_t, 2> indices(totalSizeOfShuffledElmnts);
     for (auto [i, value] :
          llvm::enumerate(mask.getAsValueRange<IntegerAttr>())) {
@@ -321,7 +323,7 @@ struct LinearizeVectorExtract final
   LogicalResult
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto dstTy = getTypeConverter()->convertType(extractOp.getType());
+    Type dstTy = getTypeConverter()->convertType(extractOp.getType());
     assert(!(extractOp.getVector().getType().isScalable() ||
              dstTy.cast<VectorType>().isScalable()) &&
            "scalable vectors are not supported.");
@@ -334,12 +336,12 @@ struct LinearizeVectorExtract final
       return rewriter.notifyMatchFailure(extractOp,
                                          "dynamic position is not supported.");
 
-    auto shape = extractOp.getVector().getType().getShape();
-    auto size = extractOp.getVector().getType().getNumElements();
+    llvm::ArrayRef<int64_t> shape = extractOp.getVector().getType().getShape();
+    int64_t size = extractOp.getVector().getType().getNumElements();
 
     // Compute linearized offset.
     int64_t linearizedOffset = 0;
-    auto offsets = extractOp.getStaticPosition();
+    llvm::ArrayRef<int64_t> offsets = extractOp.getStaticPosition();
     for (auto [i, off] : llvm::enumerate(offsets)) {
       size /= shape[i];
       linearizedOffset += offsets[i] * size;
@@ -397,7 +399,7 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
       typeConverter, patterns.getContext(), targetBitWidth);
 }
 
-void mlir::vector::populateVectorLinearizeToShuffleRewritePatterns(
+void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target, unsigned int targetBitWidth) {
   target.addDynamicallyLegalOp<vector::ShuffleOp>(

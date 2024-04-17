@@ -867,7 +867,7 @@ struct TestVectorLinearize final
 
     vector::populateVectorLinearizeTypeConversionsAndLegality(
         typeConverter, patterns, target, targetVectorBitwidth);
-    vector::populateVectorLinearizeToShuffleRewritePatterns(
+    vector::populateVectorLinearizeShuffleLikeOpsPatterns(
         typeConverter, patterns, target, targetVectorBitwidth);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
