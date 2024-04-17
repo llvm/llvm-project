@@ -391,9 +391,6 @@ public:
   /// Return true if the section holds debug information.
   static bool isDebugSection(StringRef SectionName);
 
-  /// Return true if the section holds linux kernel symbol information.
-  static bool isKSymtabSection(StringRef SectionName);
-
   /// Adds Debug section to overwrite.
   static void addToDebugSectionsToOverwrite(const char *Section) {
     DebugSectionsToOverwrite.emplace_back(Section);
