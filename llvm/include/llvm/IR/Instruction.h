@@ -496,14 +496,23 @@ public:
   /// Drops metadata that may generate poison.
   void dropPoisonGeneratingMetadata();
 
-  /// Return true if this instruction has poison-generating flags or metadata.
+  /// Return true if this instruction has poison-generating attribute.
+  bool hasPoisonGeneratingAttribute() const LLVM_READONLY;
+
+  /// Drops attributes that may generate poison.
+  void dropPoisonGeneratingAttribute();
+
+  /// Return true if this instruction has poison-generating flags, attributes or
+  /// metadata.
   bool hasPoisonGeneratingAnnotations() const {
-    return hasPoisonGeneratingFlags() || hasPoisonGeneratingMetadata();
+    return hasPoisonGeneratingFlags() || hasPoisonGeneratingAttribute() ||
+           hasPoisonGeneratingMetadata();
   }
 
-  /// Drops flags and metadata that may generate poison.
+  /// Drops flags, attributes and metadata that may generate poison.
   void dropPoisonGeneratingAnnotations() {
     dropPoisonGeneratingFlags();
+    dropPoisonGeneratingAttribute();
     dropPoisonGeneratingMetadata();
   }
 

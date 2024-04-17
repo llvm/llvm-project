@@ -60,7 +60,8 @@ bool Operator::hasPoisonGeneratingAnnotations() const {
   if (hasPoisonGeneratingFlags())
     return true;
   auto *I = dyn_cast<Instruction>(this);
-  return I && I->hasPoisonGeneratingMetadata();
+  return I && (I->hasPoisonGeneratingAttribute() ||
+               I->hasPoisonGeneratingMetadata());
 }
 
 Type *GEPOperator::getSourceElementType() const {

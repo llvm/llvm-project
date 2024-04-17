@@ -1166,7 +1166,7 @@ define i32 @freeze_call_with_range_attr(i32 %a) {
 ; CHECK-LABEL: @freeze_call_with_range_attr(
 ; CHECK-NEXT:    [[Y:%.*]] = lshr i32 2047, [[A:%.*]]
 ; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y]]
-; CHECK-NEXT:    [[X:%.*]] = call range(i32 0, 2048) i32 @llvm.umax.i32(i32 [[Y_FR]], i32 50)
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.umax.i32(i32 [[Y_FR]], i32 50)
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %y = lshr i32 2047, %a
@@ -1180,7 +1180,7 @@ declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
 define ptr @freeze_ptrmask_align(ptr %p, i64 noundef %m) {
 ; CHECK-LABEL: @freeze_ptrmask_align(
 ; CHECK-NEXT:    [[P_FR:%.*]] = freeze ptr [[P:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call align 4 ptr @llvm.ptrmask.p0.i64(ptr [[P_FR]], i64 [[M:%.*]])
+; CHECK-NEXT:    [[MASK:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P_FR]], i64 [[M:%.*]])
 ; CHECK-NEXT:    ret ptr [[MASK]]
 ;
   %mask = call align(4) ptr @llvm.ptrmask.p0.i64(ptr %p, i64 %m)
@@ -1191,7 +1191,7 @@ define ptr @freeze_ptrmask_align(ptr %p, i64 noundef %m) {
 define ptr @freeze_ptrmask_nonnull(ptr %p, i64 noundef %m) {
 ; CHECK-LABEL: @freeze_ptrmask_nonnull(
 ; CHECK-NEXT:    [[P_FR:%.*]] = freeze ptr [[P:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = call nonnull ptr @llvm.ptrmask.p0.i64(ptr [[P_FR]], i64 [[M:%.*]])
+; CHECK-NEXT:    [[MASK:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P_FR]], i64 [[M:%.*]])
 ; CHECK-NEXT:    ret ptr [[MASK]]
 ;
   %mask = call nonnull ptr @llvm.ptrmask.p0.i64(ptr %p, i64 %m)

@@ -64,8 +64,8 @@ public:
   /// to evaluate to poison despite having non-poison inputs.
   bool hasPoisonGeneratingFlags() const;
 
-  /// Return true if this operator has poison-generating flags or metadata.
-  /// The latter is only possible for instructions.
+  /// Return true if this operator has poison-generating flags, attributes or
+  /// metadata. The latter two is only possible for instructions.
   bool hasPoisonGeneratingAnnotations() const;
 };
 
