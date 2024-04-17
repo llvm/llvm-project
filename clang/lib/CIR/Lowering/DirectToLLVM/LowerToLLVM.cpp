@@ -481,80 +481,6 @@ public:
   }
 };
 
-class CIRLoopOpInterfaceLowering
-    : public mlir::OpInterfaceConversionPattern<mlir::cir::LoopOpInterface> {
-public:
-  using mlir::OpInterfaceConversionPattern<
-      mlir::cir::LoopOpInterface>::OpInterfaceConversionPattern;
-
-  inline void
-  lowerConditionOp(mlir::cir::ConditionOp op, mlir::Block *body,
-                   mlir::Block *exit,
-                   mlir::ConversionPatternRewriter &rewriter) const {
-    mlir::OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPoint(op);
-    rewriter.replaceOpWithNewOp<mlir::cir::BrCondOp>(op, op.getCondition(),
-                                                     body, exit);
-  }
-
-  mlir::LogicalResult
-  matchAndRewrite(mlir::cir::LoopOpInterface op,
-                  mlir::ArrayRef<mlir::Value> operands,
-                  mlir::ConversionPatternRewriter &rewriter) const final {
-    // Setup CFG blocks.
-    auto *entry = rewriter.getInsertionBlock();
-    auto *exit = rewriter.splitBlock(entry, rewriter.getInsertionPoint());
-    auto *cond = &op.getCond().front();
-    auto *body = &op.getBody().front();
-    auto *step = (op.maybeGetStep() ? &op.maybeGetStep()->front() : nullptr);
-
-    // Setup loop entry branch.
-    rewriter.setInsertionPointToEnd(entry);
-    rewriter.create<mlir::LLVM::BrOp>(op.getLoc(), &op.getEntry().front());
-
-    // Branch from condition region to body or exit.
-    auto conditionOp = cast<mlir::cir::ConditionOp>(cond->getTerminator());
-    lowerConditionOp(conditionOp, body, exit, rewriter);
-
-    // TODO(cir): Remove the walks below. It visits operations unnecessarily,
-    // however, to solve this we would likely need a custom DialecConversion
-    // driver to customize the order that operations are visited.
-
-    // Lower continue statements.
-    mlir::Block *dest = (step ? step : cond);
-    op.walkBodySkippingNestedLoops([&](mlir::Operation *op) {
-      if (isa<mlir::cir::ContinueOp>(op))
-        lowerTerminator(op, dest, rewriter);
-    });
-
-    // Lower break statements.
-    walkRegionSkipping<mlir::cir::LoopOpInterface, mlir::cir::SwitchOp>(
-        op.getBody(), [&](mlir::Operation *op) {
-          if (isa<mlir::cir::BreakOp>(op))
-            lowerTerminator(op, exit, rewriter);
-        });
-
-    // Lower optional body region yield.
-    auto bodyYield = dyn_cast<mlir::cir::YieldOp>(body->getTerminator());
-    if (bodyYield)
-      lowerTerminator(bodyYield, (step ? step : cond), rewriter);
-
-    // Lower mandatory step region yield.
-    if (step)
-      lowerTerminator(cast<mlir::cir::YieldOp>(step->getTerminator()), cond,
-                      rewriter);
-
-    // Move region contents out of the loop op.
-    rewriter.inlineRegionBefore(op.getCond(), exit);
-    rewriter.inlineRegionBefore(op.getBody(), exit);
-    if (step)
-      rewriter.inlineRegionBefore(*op.maybeGetStep(), exit);
-
-    rewriter.eraseOp(op);
-    return mlir::success();
-  }
-};
-
 class CIRBrCondOpLowering
     : public mlir::OpConversionPattern<mlir::cir::BrCondOp> {
 public:
@@ -780,65 +706,6 @@ public:
       break;
     }
     }
-
-    return mlir::success();
-  }
-};
-
-class CIRScopeOpLowering
-    : public mlir::OpConversionPattern<mlir::cir::ScopeOp> {
-public:
-  using OpConversionPattern<mlir::cir::ScopeOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(mlir::cir::ScopeOp scopeOp, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::OpBuilder::InsertionGuard guard(rewriter);
-    auto loc = scopeOp.getLoc();
-
-    // Empty scope: just remove it.
-    if (scopeOp.getRegion().empty()) {
-      rewriter.eraseOp(scopeOp);
-      return mlir::success();
-    }
-
-    // Split the current block before the ScopeOp to create the inlining
-    // point.
-    auto *currentBlock = rewriter.getInsertionBlock();
-    auto *remainingOpsBlock =
-        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
-    mlir::Block *continueBlock;
-    if (scopeOp.getNumResults() == 0)
-      continueBlock = remainingOpsBlock;
-    else
-      llvm_unreachable("NYI");
-
-    // Inline body region.
-    auto *beforeBody = &scopeOp.getRegion().front();
-    auto *afterBody = &scopeOp.getRegion().back();
-    rewriter.inlineRegionBefore(scopeOp.getRegion(), continueBlock);
-
-    // Save stack and then branch into the body of the region.
-    rewriter.setInsertionPointToEnd(currentBlock);
-    // TODO(CIR): stackSaveOp
-    // auto stackSaveOp = rewriter.create<mlir::LLVM::StackSaveOp>(
-    //     loc, mlir::LLVM::LLVMPointerType::get(
-    //              mlir::IntegerType::get(scopeOp.getContext(), 8)));
-    rewriter.create<mlir::cir::BrOp>(loc, mlir::ValueRange(), beforeBody);
-
-    // Replace the scopeop return with a branch that jumps out of the body.
-    // Stack restore before leaving the body region.
-    rewriter.setInsertionPointToEnd(afterBody);
-    if (auto yieldOp =
-            dyn_cast<mlir::cir::YieldOp>(afterBody->getTerminator())) {
-      rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldOp, yieldOp.getArgs(),
-                                                   continueBlock);
-    }
-
-    // TODO(cir): stackrestore?
-
-    // Replace the op with values return from the body region.
-    rewriter.replaceOp(scopeOp, continueBlock->getArguments());
 
     return mlir::success();
   }
@@ -3077,23 +2944,22 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRCmpOpLowering, CIRBitClrsbOpLowering, CIRBitClzOpLowering,
       CIRBitCtzOpLowering, CIRBitFfsOpLowering, CIRBitParityOpLowering,
       CIRBitPopcountOpLowering, CIRAtomicFetchLowering, CIRByteswapOpLowering,
-      CIRLoopOpInterfaceLowering, CIRBrCondOpLowering, CIRPtrStrideOpLowering,
-      CIRCallLowering, CIRUnaryOpLowering, CIRBinOpLowering, CIRShiftOpLowering,
-      CIRLoadLowering, CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
-      CIRFuncLowering, CIRScopeOpLowering, CIRCastOpLowering,
-      CIRGlobalOpLowering, CIRGetGlobalOpLowering, CIRVAStartLowering,
-      CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering, CIRBrOpLowering,
-      CIRTernaryOpLowering, CIRGetMemberOpLowering, CIRSwitchOpLowering,
-      CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering,
-      CIRFAbsOpLowering, CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
-      CIRVectorCreateLowering, CIRVectorInsertLowering,
-      CIRVectorExtractLowering, CIRVectorCmpOpLowering, CIRVectorSplatLowering,
-      CIRVectorTernaryLowering, CIRVectorShuffleIntsLowering,
-      CIRVectorShuffleVecLowering, CIRStackSaveLowering,
-      CIRStackRestoreLowering, CIRUnreachableLowering, CIRTrapLowering,
-      CIRInlineAsmOpLowering, CIRSetBitfieldLowering, CIRGetBitfieldLowering,
-      CIRPrefetchLowering, CIRObjSizeOpLowering, CIRIsConstantOpLowering>(
-      converter, patterns.getContext());
+      CIRBrCondOpLowering, CIRPtrStrideOpLowering, CIRCallLowering,
+      CIRUnaryOpLowering, CIRBinOpLowering, CIRShiftOpLowering, CIRLoadLowering,
+      CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
+      CIRCastOpLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
+      CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering,
+      CIRBrOpLowering, CIRTernaryOpLowering, CIRGetMemberOpLowering,
+      CIRSwitchOpLowering, CIRPtrDiffOpLowering, CIRCopyOpLowering,
+      CIRMemCpyOpLowering, CIRFAbsOpLowering, CIRExpectOpLowering,
+      CIRVTableAddrPointOpLowering, CIRVectorCreateLowering,
+      CIRVectorInsertLowering, CIRVectorExtractLowering, CIRVectorCmpOpLowering,
+      CIRVectorSplatLowering, CIRVectorTernaryLowering,
+      CIRVectorShuffleIntsLowering, CIRVectorShuffleVecLowering,
+      CIRStackSaveLowering, CIRStackRestoreLowering, CIRUnreachableLowering,
+      CIRTrapLowering, CIRInlineAsmOpLowering, CIRSetBitfieldLowering,
+      CIRGetBitfieldLowering, CIRPrefetchLowering, CIRObjSizeOpLowering,
+      CIRIsConstantOpLowering>(converter, patterns.getContext());
 }
 
 namespace {
@@ -3261,7 +3127,7 @@ static void buildCtorDtorList(
 // pass it will be placed into the unreachable block. And the possible error
 // after the lowering pass is: error: 'cir.return' op expects parent op to be
 // one of 'cir.func, cir.scope, cir.if ... The reason that this operation was
-// not lowered and the new parent is lllvm.func.
+// not lowered and the new parent is llvm.func.
 //
 // In the future we may want to get rid of this function and use DCE pass or
 // something similar. But now we need to guarantee the absence of the dialect
