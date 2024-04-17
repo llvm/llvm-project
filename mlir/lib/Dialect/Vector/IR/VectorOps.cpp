@@ -4010,7 +4010,8 @@ static bool isLoopIterationAsMultipleOfStep(mlir::scf::ForOp forOp) {
 
 template <typename TransferOp>
 static bool isLoopIterationAsMultipleOfVectorSize(TransferOp op,
-            int64_t resultIdx, int64_t indicesIdx) {
+                                                  int64_t resultIdx,
+                                                  int64_t indicesIdx) {
   Value index = op.getIndices()[indicesIdx];
   auto forOp = dyn_cast<mlir::scf::ForOp>(op->getParentOp());
   if (!forOp)
