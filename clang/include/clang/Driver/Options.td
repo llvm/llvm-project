@@ -2882,6 +2882,12 @@ def flto_EQ : Joined<["-"], "flto=">,
   HelpText<"Set LTO mode">, Values<"thin,full">;
 def flto_EQ_jobserver : Flag<["-"], "flto=jobserver">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>,
   Alias<flto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode">;
+/// ClangIR-specific options - BEGIN
+def fclangir_enable : Flag<["-"], "fclangir-enable">, Visibility<[ClangOption, CC1Option]>,
+  Group<f_Group>, HelpText<"Use ClangIR pipeline to compile">,
+  MarshallingInfoFlag<FrontendOpts<"UseClangIRPipeline">>;
+def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
+  Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR, emit the .cir file">;
 def flto_EQ_auto : Flag<["-"], "flto=auto">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>,
   Alias<flto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode">;
 def flto : Flag<["-"], "flto">,
