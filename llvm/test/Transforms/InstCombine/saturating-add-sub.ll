@@ -1818,9 +1818,7 @@ define <4 x i32> @uadd_sat_constant_vec_commute(<4 x i32> %x) {
 
 define <4 x i32> @uadd_sat_constant_vec_commute_undefs(<4 x i32> %x) {
 ; CHECK-LABEL: @uadd_sat_constant_vec_commute_undefs(
-; CHECK-NEXT:    [[A:%.*]] = add <4 x i32> [[X:%.*]], <i32 42, i32 42, i32 42, i32 poison>
-; CHECK-NEXT:    [[C:%.*]] = icmp ult <4 x i32> [[X]], <i32 -43, i32 -43, i32 poison, i32 -43>
-; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[C]], <4 x i32> [[A]], <4 x i32> <i32 -1, i32 poison, i32 -1, i32 -1>
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> [[X:%.*]], <4 x i32> <i32 42, i32 42, i32 42, i32 42>)
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 poison>

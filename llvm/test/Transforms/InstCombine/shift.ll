@@ -465,10 +465,9 @@ entry:
 define <2 x i32> @test29_poison(<2 x i64> %d18) {
 ; CHECK-LABEL: @test29_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I916:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 32, i64 poison>
-; CHECK-NEXT:    [[I917:%.*]] = trunc nuw <2 x i64> [[I916]] to <2 x i32>
-; CHECK-NEXT:    [[I10:%.*]] = lshr <2 x i32> [[I917]], <i32 31, i32 poison>
-; CHECK-NEXT:    ret <2 x i32> [[I10]]
+; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 63, i64 63>
+; CHECK-NEXT:    [[I101:%.*]] = trunc nuw nsw <2 x i64> [[SUM_SHIFT]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[I101]]
 ;
 entry:
   %i916 = lshr <2 x i64> %d18, <i64 32, i64 poison>
@@ -658,8 +657,8 @@ define i8 @test39(i32 %a0) {
 ; CHECK-NEXT:    [[I51:%.*]] = xor i8 [[I50]], [[I5]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr exact i8 [[I5]], 3
 ; CHECK-NEXT:    [[I54:%.*]] = and i8 [[TMP0]], 16
-; CHECK-NEXT:    [[I551:%.*]] = or disjoint i8 [[I54]], [[I51]]
-; CHECK-NEXT:    ret i8 [[I551]]
+; CHECK-NEXT:    [[I55:%.*]] = or disjoint i8 [[I54]], [[I51]]
+; CHECK-NEXT:    ret i8 [[I55]]
 ;
 entry:
   %i4 = trunc i32 %a0 to i8
@@ -1751,14 +1750,14 @@ define void @ashr_out_of_range_1(ptr %A) {
 ; CHECK-NEXT:    [[L:%.*]] = load i177, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[L_FROZEN:%.*]] = freeze i177 [[L]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L_FROZEN]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i177 [[L_FROZEN]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -24
-; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP1]] to i64
-; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i177 [[L_FROZEN]], -1
-; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP5]], i177 0, i177 [[L_FROZEN]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i177 [[L_FROZEN]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 -24
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i1 [[TMP1]] to i64
+; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i177 [[L_FROZEN]], -1
+; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP6]], i177 0, i177 [[L_FROZEN]]
 ; CHECK-NEXT:    store i177 [[B28]], ptr [[G62]], align 4
 ; CHECK-NEXT:    ret void
 ;

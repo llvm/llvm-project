@@ -1001,8 +1001,7 @@ define <2 x i32> @PR57278_shl_vec(<2 x i32> %v1) {
 ; TODO: vector with poison should also be supported, https://alive2.llvm.org/ce/z/XYpv9q
 define <2 x i32> @PR57278_shl_vec_poison(<2 x i32> %v1) {
 ; CHECK-LABEL: @PR57278_shl_vec_poison(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[V1:%.*]], <i32 2, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw <2 x i32> [[SHL]], <i32 3, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw <2 x i32> [[V1:%.*]], <i32 12, i32 poison>
 ; CHECK-NEXT:    [[MUL:%.*]] = add nuw <2 x i32> [[TMP1]], <i32 9, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
@@ -1755,7 +1754,7 @@ define <2 x i32> @mulsub1_vec_nonuniform(<2 x i32> %a0, <2 x i32> %a1) {
 define <2 x i32> @mulsub1_vec_nonuniform_poison(<2 x i32> %a0, <2 x i32> %a1) {
 ; CHECK-LABEL: @mulsub1_vec_nonuniform_poison(
 ; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub <2 x i32> [[A0:%.*]], [[A1:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 0>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %sub = sub <2 x i32> %a1, %a0
@@ -1799,7 +1798,7 @@ define <2 x i32> @mulsub2_vec_nonuniform(<2 x i32> %a0) {
 define <2 x i32> @mulsub2_vec_nonuniform_poison(<2 x i32> %a0) {
 ; CHECK-LABEL: @mulsub2_vec_nonuniform_poison(
 ; CHECK-NEXT:    [[SUB_NEG:%.*]] = add <2 x i32> [[A0:%.*]], <i32 -16, i32 -32>
-; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 0>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %sub = sub <2 x i32> <i32 16, i32 32>, %a0
@@ -1823,7 +1822,7 @@ define i8 @mulsub_nsw(i8 %a1, i8 %a2) {
 define <2 x i8> @mulsub_nsw_poison(<2 x i8> %a1, <2 x i8> %a2) {
 ; CHECK-LABEL: @mulsub_nsw_poison(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw <2 x i8> [[A2:%.*]], [[A1:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i8> [[A_NEG]], <i8 1, i8 0>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i8> [[A_NEG]], <i8 1, i8 1>
 ; CHECK-NEXT:    ret <2 x i8> [[MUL]]
 ;
   %a = sub nsw <2 x i8> %a1, %a2
@@ -1867,7 +1866,7 @@ define <2 x i32> @muladd2_vec_nonuniform(<2 x i32> %a0) {
 define <2 x i32> @muladd2_vec_nonuniform_poison(<2 x i32> %a0) {
 ; CHECK-LABEL: @muladd2_vec_nonuniform_poison(
 ; CHECK-NEXT:    [[ADD_NEG:%.*]] = sub <2 x i32> <i32 -16, i32 -32>, [[A0:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[ADD_NEG]], <i32 2, i32 0>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[ADD_NEG]], <i32 2, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %add = add <2 x i32> %a0, <i32 16, i32 32>
@@ -2061,8 +2060,8 @@ define i32 @mul_sext_icmp_with_zero(i32 %x) {
 
 define i32 @test_mul_sext_bool(i1 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_sext_bool(
-; CHECK-NEXT:    [[Y_NEG:%.*]] = sub i32 0, [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[Y_NEG]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %sext = sext i1 %x to i32
@@ -2072,8 +2071,8 @@ define i32 @test_mul_sext_bool(i1 %x, i32 %y) {
 
 define i32 @test_mul_sext_bool_nuw(i1 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_sext_bool_nuw(
-; CHECK-NEXT:    [[Y_NEG:%.*]] = sub i32 0, [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[Y_NEG]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %sext = sext i1 %x to i32
@@ -2083,8 +2082,8 @@ define i32 @test_mul_sext_bool_nuw(i1 %x, i32 %y) {
 
 define i32 @test_mul_sext_bool_nsw(i1 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_sext_bool_nsw(
-; CHECK-NEXT:    [[Y_NEG:%.*]] = sub nsw i32 0, [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[Y_NEG]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %sext = sext i1 %x to i32
@@ -2094,8 +2093,8 @@ define i32 @test_mul_sext_bool_nsw(i1 %x, i32 %y) {
 
 define i32 @test_mul_sext_bool_nuw_nsw(i1 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_sext_bool_nuw_nsw(
-; CHECK-NEXT:    [[Y_NEG:%.*]] = sub nsw i32 0, [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[Y_NEG]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %sext = sext i1 %x to i32
@@ -2106,8 +2105,8 @@ define i32 @test_mul_sext_bool_nuw_nsw(i1 %x, i32 %y) {
 define i32 @test_mul_sext_bool_commuted(i1 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_sext_bool_commuted(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[YY_NEG1:%.*]] = add i32 [[TMP1]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[YY_NEG1]], i32 0
+; CHECK-NEXT:    [[YY_NEG:%.*]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[YY_NEG]], i32 0
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %yy = xor i32 %y, 1

@@ -891,9 +891,8 @@ define <2 x i64> @narrow_bswap_splat(<2 x i16> %x) {
 
 define <2 x i64> @narrow_bswap_splat_poison_elt(<2 x i16> %x) {
 ; CHECK-LABEL: @narrow_bswap_splat_poison_elt(
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[B:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[Z]])
-; CHECK-NEXT:    [[S:%.*]] = lshr exact <2 x i64> [[B]], <i64 48, i64 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = zext <2 x i16> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[S]]
 ;
   %z = zext <2 x i16> %x to <2 x i64>

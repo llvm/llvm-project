@@ -1408,9 +1408,8 @@ define i1 @same_signbit_use3(i8 %x, i8 %y) {
 
 define <2 x i1> @same_signbit_poison_elts(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @same_signbit_poison_elts(
-; CHECK-NEXT:    [[YPOS:%.*]] = icmp sgt <2 x i8> [[Y:%.*]], <i8 -1, i8 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i8> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[R1:%.*]] = xor <2 x i1> [[TMP1]], [[YPOS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R1:%.*]] = icmp sgt <2 x i8> [[TMP1]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[R1]]
 ;
   %xsign = lshr <2 x i8> %x, <i8 7, i8 poison>
@@ -1569,9 +1568,8 @@ define i1 @same_signbit_use3_signed(i8 %x, i8 %y) {
 
 define <2 x i1> @same_signbit_poison_elts_signed(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @same_signbit_poison_elts_signed(
-; CHECK-NEXT:    [[YPOS:%.*]] = icmp sgt <2 x i8> [[Y:%.*]], <i8 -1, i8 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i8> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[R1:%.*]] = xor <2 x i1> [[TMP1]], [[YPOS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R1:%.*]] = icmp sgt <2 x i8> [[TMP1]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[R1]]
 ;
   %xsign = ashr <2 x i8> %x, <i8 7, i8 poison>

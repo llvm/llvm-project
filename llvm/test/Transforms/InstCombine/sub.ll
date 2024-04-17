@@ -2351,9 +2351,8 @@ define <2 x i8> @sub_to_and_vector1(<2 x i8> %x) {
 
 define <2 x i8> @sub_to_and_vector2(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_to_and_vector2(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 poison>, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 120>
-; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> <i8 77, i8 77>, [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 120, i8 120>
+; CHECK-NEXT:    [[R:%.*]] = add nuw <2 x i8> [[TMP1]], <i8 13, i8 13>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %sub = sub nuw <2 x i8> <i8 71, i8 poison>, %x
@@ -2365,9 +2364,8 @@ define <2 x i8> @sub_to_and_vector2(<2 x i8> %x) {
 
 define <2 x i8> @sub_to_and_vector3(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_to_and_vector3(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 71>, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 poison>
-; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> <i8 44, i8 44>, [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 120, i8 120>
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i8> [[TMP1]], <i8 -20, i8 -20>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %sub = sub nuw <2 x i8> <i8 71, i8 71>, %x
@@ -2379,9 +2377,8 @@ define <2 x i8> @sub_to_and_vector3(<2 x i8> %x) {
 
 define <2 x i8> @sub_to_and_vector4(<2 x i8> %x) {
 ; CHECK-LABEL: @sub_to_and_vector4(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 71>, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 120>
-; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> <i8 88, i8 poison>, [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 120, i8 120>
+; CHECK-NEXT:    [[R:%.*]] = add nuw <2 x i8> [[TMP1]], <i8 24, i8 24>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %sub = sub nuw <2 x i8> <i8 71, i8 71>, %x

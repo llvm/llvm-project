@@ -152,7 +152,7 @@ define i1 @test_two_ranges(ptr nocapture readonly %arg1, ptr nocapture readonly 
 ; Values' ranges overlap each other, so it can not be simplified.
 define i1 @test_two_attribute_ranges(i32 range(i32 5, 10) %arg1, i32 range(i32 8, 16) %arg2) {
 ; CHECK-LABEL: @test_two_attribute_ranges(
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult i32 [[ARG1:%.*]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult i32 [[ARG2:%.*]], [[ARG1:%.*]]
 ; CHECK-NEXT:    ret i1 [[RVAL]]
 ;
   %rval = icmp ult i32 %arg2, %arg1
@@ -249,7 +249,7 @@ define <2 x i1> @test_two_ranges_vec_true(ptr nocapture readonly %arg1, ptr noca
 ; Values' ranges overlap each other, so it can not be simplified.
 define <2 x i1> @test_two_argument_ranges_vec(<2 x i32> range(i32 5, 10) %arg1, <2 x i32> range(i32 8, 16) %arg2) {
 ; CHECK-LABEL: @test_two_argument_ranges_vec(
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult <2 x i32> [[VAL2:%.*]], [[VAL1:%.*]]
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult <2 x i32> [[ARG2:%.*]], [[ARG1:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[RVAL]]
 ;
   %rval = icmp ult <2 x i32> %arg2, %arg1
@@ -281,9 +281,9 @@ declare range(i32 1, 6) i32 @create_range3()
 ; Values' ranges overlap each other, so it can not be simplified.
 define i1 @test_two_return_attribute_ranges_not_simplified() {
 ; CHECK-LABEL: @test_two_return_attribute_ranges_not_simplified(
-; CHECK-NEXT:    [[ARG2:%.*]] = call range(i32 5, 10) i32 @create_range1()
-; CHECK-NEXT:    [[ARG1:%.*]] = call i32 @create_range2()
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult i32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT:    [[VAL1:%.*]] = call range(i32 5, 10) i32 @create_range1()
+; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @create_range2()
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult i32 [[VAL2]], [[VAL1]]
 ; CHECK-NEXT:    ret i1 [[RVAL]]
 ;
   %val1 = call range(i32 5, 10) i32 @create_range1()
@@ -296,7 +296,7 @@ define i1 @test_two_return_attribute_ranges_not_simplified() {
 define i1 @test_two_return_attribute_ranges_one_in_call() {
 ; CHECK-LABEL: @test_two_return_attribute_ranges_one_in_call(
 ; CHECK-NEXT:    [[VAL1:%.*]] = call range(i32 1, 6) i32 @create_range1()
-; CHECK-NEXT:    [[ARG1:%.*]] = call i32 @create_range2()
+; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @create_range2()
 ; CHECK-NEXT:    ret i1 false
 ;
   %val1 = call range(i32 1, 6) i32 @create_range1()
@@ -309,7 +309,7 @@ define i1 @test_two_return_attribute_ranges_one_in_call() {
 define i1 @test_two_return_attribute_ranges() {
 ; CHECK-LABEL: @test_two_return_attribute_ranges(
 ; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @create_range3()
-; CHECK-NEXT:    [[ARG1:%.*]] = call i32 @create_range2()
+; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @create_range2()
 ; CHECK-NEXT:    ret i1 false
 ;
   %val1 = call i32 @create_range3()
@@ -899,8 +899,8 @@ define i1 @zext_sext_add_icmp_ne_minus1(i1 %a, i1 %b) {
 
 define i1 @zext_sext_add_icmp_sgt_minus1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_sgt_minus1(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[B_NOT]], [[A:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -945,8 +945,8 @@ define i1 @zext_sext_add_icmp_sgt_0(i1 %a, i1 %b) {
 define i1 @zext_sext_add_icmp_slt_0(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_slt_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
@@ -1005,8 +1005,8 @@ define i1 @zext_sext_add_icmp_slt_1(i1 %a, i1 %b) {
 define i1 @zext_sext_add_icmp_ugt_1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_ugt_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
@@ -1030,10 +1030,8 @@ define <2 x i1> @vector_zext_sext_add_icmp_slt_1(<2 x i1> %a, <2 x i1> %b) {
 
 define <2 x i1> @vector_zext_sext_add_icmp_slt_1_poison(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @vector_zext_sext_add_icmp_slt_1_poison(
-; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext <2 x i1> [[A:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[SEXT_B:%.*]] = sext <2 x i1> [[B:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i8> [[ZEXT_A]], [[SEXT_B]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i8> [[ADD]], <i8 1, i8 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %zext.a = zext <2 x i1> %a to <2 x i8>

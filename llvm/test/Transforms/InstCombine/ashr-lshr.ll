@@ -500,8 +500,8 @@ define <3 x i42> @lshr_sub_nsw_splat(<3 x i42> %x, <3 x i42> %y) {
 
 define <3 x i42> @lshr_sub_nsw_splat_poison(<3 x i42> %x, <3 x i42> %y) {
 ; CHECK-LABEL: @lshr_sub_nsw_splat_poison(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <3 x i42> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <3 x i42> [[SUB]], <i42 41, i42 poison, i42 41>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <3 x i42> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = zext <3 x i1> [[TMP1]] to <3 x i42>
 ; CHECK-NEXT:    ret <3 x i42> [[SHR]]
 ;
   %sub = sub nsw <3 x i42> %x, %y
@@ -574,8 +574,8 @@ define <3 x i43> @ashr_sub_nsw_splat(<3 x i43> %x, <3 x i43> %y) {
 
 define <3 x i43> @ashr_sub_nsw_splat_poison(<3 x i43> %x, <3 x i43> %y) {
 ; CHECK-LABEL: @ashr_sub_nsw_splat_poison(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <3 x i43> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr <3 x i43> [[SUB]], <i43 42, i43 poison, i43 42>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <3 x i43> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = sext <3 x i1> [[TMP1]] to <3 x i43>
 ; CHECK-NEXT:    ret <3 x i43> [[SHR]]
 ;
   %sub = sub nsw <3 x i43> %x, %y

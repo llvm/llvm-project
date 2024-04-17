@@ -715,7 +715,7 @@ static bool constantIsDead(const Constant *C, bool RemoveDeadUsers) {
     ReplaceableMetadataImpl::SalvageDebugInfo(*C);
     const_cast<Constant *>(C)->destroyConstant();
   }
-  
+
   return true;
 }
 
@@ -1696,14 +1696,14 @@ void ConstantVector::destroyConstantImpl() {
   getType()->getContext().pImpl->VectorConstants.remove(this);
 }
 
-Constant *Constant::getSplatValue(bool AllowUndefs) const {
+Constant *Constant::getSplatValue(bool AllowUndefs, bool AllowPoisons) const {
   assert(this->getType()->isVectorTy() && "Only valid for vectors!");
   if (isa<ConstantAggregateZero>(this))
     return getNullValue(cast<VectorType>(getType())->getElementType());
   if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
     return CV->getSplatValue();
   if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))
-    return CV->getSplatValue(AllowUndefs);
+    return CV->getSplatValue(AllowUndefs, AllowPoisons);
 
   // Check if this is a constant expression splat of the form returned by
   // ConstantVector::getSplat()
@@ -1728,7 +1728,8 @@ Constant *Constant::getSplatValue(bool AllowUndefs) const {
   return nullptr;
 }
 
-Constant *ConstantVector::getSplatValue(bool AllowUndefs) const {
+Constant *ConstantVector::getSplatValue(bool AllowUndefs,
+                                        bool AllowPoisons) const {
   // Check out first element.
   Constant *Elt = getOperand(0);
   // Then make sure all remaining elements point to the same value.
@@ -1737,16 +1738,28 @@ Constant *ConstantVector::getSplatValue(bool AllowUndefs) const {
     if (OpC == Elt)
       continue;
 
-    // Strict mode: any mismatch is not a splat.
-    if (!AllowUndefs)
+    if (!AllowPoisons && !AllowUndefs)
       return nullptr;
 
-    // Allow undefs mode: ignore undefined elements.
-    if (isa<UndefValue>(OpC))
+    if (isa<PoisonValue>(OpC)) {
+      assert(isa<UndefValue>(OpC));
+      // Strict mode: any mismatch is not a splat.
+      if (!AllowPoisons && !AllowUndefs)
+        return nullptr;
+      // Allow poisons mode: ignore poison elements.
       continue;
+    } else if (isa<UndefValue>(OpC)) {
+      // Strict mode: any mismatch is not a splat.
+      if (!AllowUndefs)
+        return nullptr;
+      // Allow undefs/poisons mode: ignore undefined elements.
+      continue;
+    }
 
     // If we do not have a defined element yet, use the current operand.
-    if (isa<UndefValue>(Elt))
+    if (AllowPoisons && isa<PoisonValue>(Elt))
+      Elt = OpC;
+    else if (AllowUndefs && isa<UndefValue>(Elt))
       Elt = OpC;
 
     if (OpC != Elt)

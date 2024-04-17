@@ -169,8 +169,7 @@ define <3 x i64> @shl_sub_i64_vec_undef_bad(<3 x i64> %x) {
 
 define <3 x i64> @shl_sub_i64_vec_poison_bad2(<3 x i64> %x) {
 ; CHECK-LABEL: @shl_sub_i64_vec_poison_bad2(
-; CHECK-NEXT:    [[S:%.*]] = sub <3 x i64> <i64 63, i64 poison, i64 63>, [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shl nuw <3 x i64> <i64 1, i64 poison, i64 1>, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact <3 x i64> <i64 -9223372036854775808, i64 -9223372036854775808, i64 -9223372036854775808>, [[X:%.*]]
 ; CHECK-NEXT:    ret <3 x i64> [[R]]
 ;
   %s = sub <3 x i64> <i64 63, i64 poison, i64 63>, %x

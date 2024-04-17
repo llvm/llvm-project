@@ -534,7 +534,8 @@ public:
   /// If all elements of the vector constant have the same value, return that
   /// value. Otherwise, return nullptr. Ignore undefined elements by setting
   /// AllowUndefs to true.
-  Constant *getSplatValue(bool AllowUndefs = false) const;
+  Constant *getSplatValue(bool AllowUndefs = false,
+                          bool AllowPoisons = false) const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {

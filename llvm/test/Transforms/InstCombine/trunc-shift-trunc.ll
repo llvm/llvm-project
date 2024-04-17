@@ -96,8 +96,8 @@ define <2 x i8> @trunc_lshr_trunc_nonuniform_outofrange(<2 x i64> %a) {
 
 define i8 @trunc_ashr_trunc(i64 %a) {
 ; CHECK-LABEL: @trunc_ashr_trunc(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[A:%.*]], 8
-; CHECK-NEXT:    [[D:%.*]] = trunc i64 [[TMP1]] to i8
+; CHECK-NEXT:    [[C1:%.*]] = lshr i64 [[A:%.*]], 8
+; CHECK-NEXT:    [[D:%.*]] = trunc i64 [[C1]] to i8
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %b = trunc i64 %a to i32
@@ -108,8 +108,8 @@ define i8 @trunc_ashr_trunc(i64 %a) {
 
 define i8 @trunc_ashr_trunc_exact(i64 %a) {
 ; CHECK-LABEL: @trunc_ashr_trunc_exact(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i64 [[A:%.*]], 8
-; CHECK-NEXT:    [[D:%.*]] = trunc i64 [[TMP1]] to i8
+; CHECK-NEXT:    [[C1:%.*]] = lshr exact i64 [[A:%.*]], 8
+; CHECK-NEXT:    [[D:%.*]] = trunc i64 [[C1]] to i8
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %b = trunc i64 %a to i32
@@ -120,8 +120,8 @@ define i8 @trunc_ashr_trunc_exact(i64 %a) {
 
 define <2 x i8> @trunc_ashr_trunc_uniform(<2 x i64> %a) {
 ; CHECK-LABEL: @trunc_ashr_trunc_uniform(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 8, i64 8>
-; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    [[C1:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 8, i64 8>
+; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i64> [[C1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[D]]
 ;
   %b = trunc <2 x i64> %a to <2 x i32>
@@ -144,7 +144,7 @@ define <2 x i8> @trunc_ashr_trunc_nonuniform(<2 x i64> %a) {
 
 define <2 x i8> @trunc_ashr_trunc_uniform_poison(<2 x i64> %a) {
 ; CHECK-LABEL: @trunc_ashr_trunc_uniform_poison(
-; CHECK-NEXT:    [[C1:%.*]] = ashr <2 x i64> [[A:%.*]], <i64 8, i64 poison>
+; CHECK-NEXT:    [[C1:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 8, i64 poison>
 ; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i64> [[C1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[D]]
 ;

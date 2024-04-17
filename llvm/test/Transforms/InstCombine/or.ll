@@ -568,10 +568,8 @@ define <2 x i1> @test37_uniform(<2 x i32> %x) {
 
 define <2 x i1> @test37_poison(<2 x i32> %x) {
 ; CHECK-LABEL: @test37_poison(
-; CHECK-NEXT:    [[ADD1:%.*]] = add <2 x i32> [[X:%.*]], <i32 7, i32 poison>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[ADD1]], <i32 30, i32 poison>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i32> [[X]], <i32 23, i32 poison>
-; CHECK-NEXT:    [[RET1:%.*]] = or <2 x i1> [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[RET1:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 31, i32 31>
 ; CHECK-NEXT:    ret <2 x i1> [[RET1]]
 ;
   %add1 = add <2 x i32> %x, <i32 7, i32 poison>
@@ -876,11 +874,9 @@ define <2 x i1> @test46_uniform(<2 x i8> %c)  {
 
 define <2 x i1> @test46_poison(<2 x i8> %c)  {
 ; CHECK-LABEL: @test46_poison(
-; CHECK-NEXT:    [[C_OFF:%.*]] = add <2 x i8> [[C:%.*]], <i8 -97, i8 poison>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i8> [[C_OFF]], <i8 26, i8 poison>
-; CHECK-NEXT:    [[C_OFF17:%.*]] = add <2 x i8> [[C]], <i8 -65, i8 poison>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult <2 x i8> [[C_OFF17]], <i8 26, i8 poison>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[C:%.*]], <i8 -33, i8 -33>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], <i8 -65, i8 -65>
+; CHECK-NEXT:    [[OR:%.*]] = icmp ult <2 x i8> [[TMP2]], <i8 26, i8 26>
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %c.off = add <2 x i8> %c, <i8 -97, i8 poison>

@@ -754,9 +754,9 @@ define <2 x i64> @test36_uniform(<2 x i32> %X) {
 
 define <2 x i64> @test36_poison(<2 x i32> %X) {
 ; CHECK-LABEL: @test36_poison(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[ZSUB:%.*]] = add nuw nsw <2 x i64> [[ZEXT]], <i64 7, i64 poison>
-; CHECK-NEXT:    [[RES:%.*]] = and <2 x i64> [[ZSUB]], <i64 240, i64 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[X:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 240, i32 240>
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %zext = zext <2 x i32> %X to <2 x i64>
@@ -1681,8 +1681,8 @@ define <2 x i8> @flip_masked_bit_uniform(<2 x i8> %A) {
 
 define <2 x i8> @flip_masked_bit_poison(<2 x i8> %A) {
 ; CHECK-LABEL: @flip_masked_bit_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[A:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[C:%.*]] = and <2 x i8> [[TMP1]], <i8 16, i8 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[A:%.*]], <i8 16, i8 poison>
+; CHECK-NEXT:    [[C:%.*]] = xor <2 x i8> [[TMP1]], <i8 16, i8 16>
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
   %B = add <2 x i8> %A, <i8 16, i8 poison>
@@ -1960,8 +1960,8 @@ define i16 @invert_signbit_splat_mask(i8 %x, i16 %y) {
 define <2 x i16> @invert_signbit_splat_mask_commute(<2 x i5> %x, <2 x i16> %p) {
 ; CHECK-LABEL: @invert_signbit_splat_mask_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i16> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i5> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[ISNEG]], <2 x i16> zeroinitializer, <2 x i16> [[Y]]
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <2 x i5> [[X:%.*]], <i5 -1, i5 -1>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[ISNOTNEG]], <2 x i16> [[Y]], <2 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y = mul <2 x i16> %p, %p ; thwart complexity-based canonicalization
@@ -2122,7 +2122,7 @@ define <3 x i16> @shl_lshr_pow2_const_case1_non_uniform_vec_negative(<3 x i16> %
 
 define <3 x i16> @shl_lshr_pow2_const_case1_poison1_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @shl_lshr_pow2_const_case1_poison1_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 8, i16 4, i16 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 4, i16 4, i16 4>
 ; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 8, i16 8, i16 8>, <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
@@ -2146,9 +2146,8 @@ define <3 x i16> @shl_lshr_pow2_const_case1_poison2_vec(<3 x i16> %x) {
 
 define <3 x i16> @shl_lshr_pow2_const_case1_poison3_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @shl_lshr_pow2_const_case1_poison3_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> <i16 16, i16 16, i16 16>, [[X:%.*]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> [[SHL]], <i16 5, i16 5, i16 5>
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[LSHR]], <i16 poison, i16 8, i16 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 4, i16 4, i16 4>
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 8, i16 8, i16 8>, <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %shl = shl <3 x i16> <i16 16, i16 16, i16 16>, %x
@@ -2418,7 +2417,7 @@ define <3 x i16> @lshr_shl_pow2_const_case1_non_uniform_vec_negative(<3 x i16> %
 
 define <3 x i16> @lshr_shl_pow2_const_case1_poison1_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @lshr_shl_pow2_const_case1_poison1_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 -1, i16 12, i16 12>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 12, i16 12, i16 12>
 ; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 128, i16 128, i16 128>, <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
@@ -2443,9 +2442,8 @@ define <3 x i16> @lshr_shl_pow2_const_case1_poison2_vec(<3 x i16> %x) {
 
 define <3 x i16> @lshr_shl_pow2_const_case1_poison3_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @lshr_shl_pow2_const_case1_poison3_vec(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, [[X:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], <i16 6, i16 6, i16 6>
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 poison, i16 128, i16 128>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 12, i16 12, i16 12>
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 128, i16 128, i16 128>, <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %lshr = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, %x
