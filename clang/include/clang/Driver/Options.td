@@ -2876,18 +2876,21 @@ def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Gr
 def flimited_precision_EQ : Joined<["-"], "flimited-precision=">, Group<f_Group>;
 def fapple_link_rtlib : Flag<["-"], "fapple-link-rtlib">, Group<f_Group>,
   HelpText<"Force linking the clang builtins runtime library">;
-def flto_EQ : Joined<["-"], "flto=">,
-  Visibility<[ClangOption, CLOption, CC1Option, FC1Option, FlangOption]>,
-  Group<f_Group>,
-  HelpText<"Set LTO mode">, Values<"thin,full">;
-def flto_EQ_jobserver : Flag<["-"], "flto=jobserver">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>,
-  Alias<flto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode">;
+
 /// ClangIR-specific options - BEGIN
 def fclangir_enable : Flag<["-"], "fclangir-enable">, Visibility<[ClangOption, CC1Option]>,
   Group<f_Group>, HelpText<"Use ClangIR pipeline to compile">,
   MarshallingInfoFlag<FrontendOpts<"UseClangIRPipeline">>;
 def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR, emit the .cir file">;
+/// ClangIR-specific options - END
+
+def flto_EQ : Joined<["-"], "flto=">,
+  Visibility<[ClangOption, CLOption, CC1Option, FC1Option, FlangOption]>,
+  Group<f_Group>,
+  HelpText<"Set LTO mode">, Values<"thin,full">;
+def flto_EQ_jobserver : Flag<["-"], "flto=jobserver">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>,
+  Alias<flto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode">;
 def flto_EQ_auto : Flag<["-"], "flto=auto">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>,
   Alias<flto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode">;
 def flto : Flag<["-"], "flto">,
