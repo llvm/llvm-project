@@ -944,3 +944,6 @@ openmp:libomptarget:
 
 bazel:
   - utils/bazel/**
+
+offload:
+  - offload/**
