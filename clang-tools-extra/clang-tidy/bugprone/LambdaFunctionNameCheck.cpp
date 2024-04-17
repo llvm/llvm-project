@@ -56,6 +56,8 @@ private:
   LambdaFunctionNameCheck::SourceRangeSet* SuppressMacroExpansions;
 };
 
+AST_MATCHER(CXXMethodDecl, isInLambda) { return Node.getParent()->isLambda(); }
+
 } // namespace
 
 LambdaFunctionNameCheck::LambdaFunctionNameCheck(StringRef Name,
@@ -69,9 +71,8 @@ void LambdaFunctionNameCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void LambdaFunctionNameCheck::registerMatchers(MatchFinder *Finder) {
-  // Match on PredefinedExprs inside a lambda.
-  Finder->addMatcher(predefinedExpr(hasAncestor(lambdaExpr())).bind("E"),
-                     this);
+  auto IsInsideALambda = hasAncestor(cxxMethodDecl(isInLambda()));
+  Finder->addMatcher(predefinedExpr(IsInsideALambda).bind("E"), this);
 }
 
 void LambdaFunctionNameCheck::registerPPCallbacks(
