@@ -168,6 +168,12 @@ enum ArchExtKind : unsigned {
   AEK_TLBIW =         74, // FEAT_TLBIW
   AEK_JSCVT =         75, // FEAT_JSCVT
   AEK_FCMA =          76, // FEAT_FCMA
+  AEK_DPB =           77, // FEAT_DPB
+  AEK_DPB2 =          78, // FEAT_DPB2
+  AEK_FLAGM2 =        79, // FEAT_FlagM2
+  AEK_FRINTTS =       80, // FEAT_FRINTTS
+  AEK_RCPC2 =         81, // FEAT_LRCPC2
+  AEK_WFXT =          82, // FEAT_WFxT
   AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
@@ -196,7 +202,7 @@ struct ExtensionInfo {
 // in AArch64AsmParser too, if supported as an extension name by binutils.
 // clang-format off
 inline constexpr ExtensionInfo Extensions[] = {
-    {"aes", AArch64::AEK_AES, "+aes", "-aes", FEAT_AES, "+fp-armv8,+neon", 150},
+    {"aes", AArch64::AEK_AES, "+aes", "-aes", FEAT_AES, "+aes,+fp-armv8,+neon", 150},
     {"b16b16", AArch64::AEK_B16B16, "+b16b16", "-b16b16", FEAT_INIT, "", 0},
     {"bf16", AArch64::AEK_BF16, "+bf16", "-bf16", FEAT_BF16, "+bf16", 280},
     {"brbe", AArch64::AEK_BRBE, "+brbe", "-brbe", FEAT_INIT, "", 0},
@@ -205,25 +211,25 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"cssc", AArch64::AEK_CSSC, "+cssc", "-cssc", FEAT_INIT, "", 0},
     {"d128", AArch64::AEK_D128, "+d128", "-d128", FEAT_INIT, "", 0},
     {"dotprod", AArch64::AEK_DOTPROD, "+dotprod", "-dotprod", FEAT_DOTPROD, "+dotprod,+fp-armv8,+neon", 104},
-    {"dpb", AArch64::AEK_NONE, {}, {}, FEAT_DPB, "+ccpp", 190},
-    {"dpb2", AArch64::AEK_NONE, {}, {}, FEAT_DPB2, "+ccpp,+ccdp", 200},
+    {"dpb", AArch64::AEK_DPB, "+ccpp", "-ccpp", FEAT_DPB, "+ccpp", 190},
+    {"dpb2", AArch64::AEK_DPB2, "+ccdp", "-ccdp", FEAT_DPB2, "+ccpp,+ccdp", 200},
     {"f32mm", AArch64::AEK_F32MM, "+f32mm", "-f32mm", FEAT_SVE_F32MM, "+sve,+f32mm,+fullfp16,+fp-armv8,+neon", 350},
     {"f64mm", AArch64::AEK_F64MM, "+f64mm", "-f64mm", FEAT_SVE_F64MM, "+sve,+f64mm,+fullfp16,+fp-armv8,+neon", 360},
     {"fcma", AArch64::AEK_FCMA, "+complxnum", "-complxnum", FEAT_FCMA, "+fp-armv8,+neon,+complxnum", 220},
     {"flagm", AArch64::AEK_FLAGM, "+flagm", "-flagm", FEAT_FLAGM, "+flagm", 20},
-    {"flagm2", AArch64::AEK_NONE, {}, {}, FEAT_FLAGM2, "+flagm,+altnzcv", 30},
-    {"fp", AArch64::AEK_FP, "+fp-armv8", "-fp-armv8", FEAT_FP, "+fp-armv8,+neon", 90},
+    {"flagm2", AArch64::AEK_FLAGM2, "+altnzcv", "-altnzcv", FEAT_FLAGM2, "+flagm,+altnzcv", 30},
+    {"fp", AArch64::AEK_FP, "+fp-armv8", "-fp-armv8", FEAT_FP, "+fp-armv8", 90},
     {"fp16", AArch64::AEK_FP16, "+fullfp16", "-fullfp16", FEAT_FP16, "+fullfp16,+fp-armv8,+neon", 170},
     {"fp16fml", AArch64::AEK_FP16FML, "+fp16fml", "-fp16fml", FEAT_FP16FML, "+fp16fml,+fullfp16,+fp-armv8,+neon", 175},
-    {"frintts", AArch64::AEK_NONE, {}, {}, FEAT_FRINTTS, "+fptoint", 250},
+    {"frintts", AArch64::AEK_FRINTTS, "+fptoint", "-fptoint", FEAT_FRINTTS, "+fptoint", 250},
     {"hbc", AArch64::AEK_HBC, "+hbc", "-hbc", FEAT_INIT, "", 0},
     {"i8mm", AArch64::AEK_I8MM, "+i8mm", "-i8mm", FEAT_I8MM, "+i8mm", 270},
     {"ite", AArch64::AEK_ITE, "+ite", "-ite", FEAT_INIT, "", 0},
     {"jscvt", AArch64::AEK_JSCVT, "+jsconv", "-jsconv", FEAT_JSCVT, "+fp-armv8,+neon,+jsconv", 210},
-    {"ls64", AArch64::AEK_LS64, "+ls64", "-ls64", FEAT_LS64, "", 520},
+    {"ls64", AArch64::AEK_LS64, "+ls64", "-ls64", FEAT_LS64, "+ls64", 520},
     {"lse", AArch64::AEK_LSE, "+lse", "-lse", FEAT_LSE, "+lse", 80},
     {"lse128", AArch64::AEK_LSE128, "+lse128", "-lse128", FEAT_INIT, "", 0},
-    {"memtag", AArch64::AEK_MTE, "+mte", "-mte", FEAT_MEMTAG, "", 440},
+    {"memtag", AArch64::AEK_MTE, "+mte", "-mte", FEAT_MEMTAG, "+mte", 440},
     {"mops", AArch64::AEK_MOPS, "+mops", "-mops", FEAT_MOPS, "+mops", 650},
     {"pauth", AArch64::AEK_PAUTH, "+pauth", "-pauth", FEAT_INIT, "", 0},
     {"pmuv3", AArch64::AEK_PERFMON, "+perfmon", "-perfmon", FEAT_INIT, "", 0},
@@ -233,7 +239,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"ras", AArch64::AEK_RAS, "+ras", "-ras", FEAT_INIT, "", 0},
     {"rasv2", AArch64::AEK_RASv2, "+rasv2", "-rasv2", FEAT_INIT, "", 0},
     {"rcpc", AArch64::AEK_RCPC, "+rcpc", "-rcpc", FEAT_RCPC, "+rcpc", 230},
-    {"rcpc2", AArch64::AEK_NONE, {}, {}, FEAT_RCPC2, "+rcpc", 240},
+    {"rcpc2", AArch64::AEK_RCPC2, "+rcpc-immo", "-rcpc-immo", FEAT_RCPC2, "+rcpc,+rcpc-immo", 240},
     {"rcpc3", AArch64::AEK_RCPC3, "+rcpc3", "-rcpc3", FEAT_RCPC3, "+rcpc,+rcpc3", 241},
     {"rdm", AArch64::AEK_RDM, "+rdm", "-rdm", FEAT_RDM, "+rdm,+fp-armv8,+neon", 108},
     {"rng", AArch64::AEK_RAND, "+rand", "-rand", FEAT_RNG, "+rand", 10},
@@ -249,7 +255,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"sme", AArch64::AEK_SME, "+sme", "-sme", FEAT_SME, "+sme,+bf16", 430},
     {"sme2", AArch64::AEK_SME2, "+sme2", "-sme2", FEAT_SME2, "+sme2,+sme,+bf16", 580},
     {"sme2p1", AArch64::AEK_SME2p1, "+sme2p1", "-sme2p1", FEAT_INIT, "+sme2p1,+sme2,+sme,+bf16", 0},
-    {"ssbs", AArch64::AEK_SSBS, "+ssbs", "-ssbs", FEAT_SSBS, "", 490},
+    {"ssbs", AArch64::AEK_SSBS, "+ssbs", "-ssbs", FEAT_SSBS, "+ssbs", 490},
     {"sve", AArch64::AEK_SVE, "+sve", "-sve", FEAT_SVE, "+sve,+fullfp16,+fp-armv8,+neon", 310},
     {"sve2-aes", AArch64::AEK_SVE2AES, "+sve2-aes", "-sve2-aes", FEAT_SVE_AES, "+sve2,+sve,+sve2-aes,+fullfp16,+fp-armv8,+neon", 380},
     {"sve2-bitperm", AArch64::AEK_SVE2BITPERM, "+sve2-bitperm", "-sve2-bitperm", FEAT_SVE_BITPERM, "+sve2,+sve,+sve2-bitperm,+fullfp16,+fp-armv8,+neon", 400},
@@ -259,7 +265,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"sve2p1", AArch64::AEK_SVE2p1, "+sve2p1", "-sve2p1", FEAT_INIT, "+sve2p1,+sve2,+sve,+fullfp16,+fp-armv8,+neon", 0},
     {"the", AArch64::AEK_THE, "+the", "-the", FEAT_INIT, "", 0},
     {"tme", AArch64::AEK_TME, "+tme", "-tme", FEAT_INIT, "", 0},
-    {"wfxt", AArch64::AEK_NONE, {}, {}, FEAT_WFXT, "+wfxt", 550},
+    {"wfxt", AArch64::AEK_WFXT, "+wfxt", "-wfxt", FEAT_WFXT, "+wfxt", 550},
     {"gcs", AArch64::AEK_GCS, "+gcs", "-gcs", FEAT_INIT, "", 0},
     {"fpmr", AArch64::AEK_FPMR, "+fpmr", "-fpmr", FEAT_INIT, "", 0},
     {"fp8", AArch64::AEK_FP8, "+fp8", "-fp8", FEAT_INIT, "+fpmr", 0},

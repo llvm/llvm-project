@@ -5,7 +5,7 @@ void __attribute__((target_clones("fp16+sve2-aes", "sb+sve2-sha3+rcpc3+mops", "r
 // expected-warning@+1 {{unsupported 'default' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
 void __attribute__((target_clones("default+sha3"))) warn1(void);
 // expected-warning@+1 {{version list contains entries that don't impact code generation}}
-void __attribute__((target_clones("ssbs+ls64"))) warn2(void);
+void __attribute__((target_clones("rpres"))) warn2(void);
 
 // expected-error@+2 {{'target_clones' and 'target_version' attributes are not compatible}}
 // expected-note@+1 {{conflicting attribute is here}}
