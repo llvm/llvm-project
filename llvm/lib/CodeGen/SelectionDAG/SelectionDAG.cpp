@@ -9915,6 +9915,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     }
     break;
   }
+  case ISD::SADDO_CARRY:
+  case ISD::UADDO_CARRY:
+  case ISD::SSUBO_CARRY:
+  case ISD::USUBO_CARRY:
+    assert(VTList.NumVTs == 2 && Ops.size() == 3 &&
+           "Invalid add/sub overflow op!");
+    assert(VTList.VTs[0].isInteger() && VTList.VTs[1].isInteger() &&
+           Ops[0].getValueType() == Ops[1].getValueType() &&
+           Ops[0].getValueType() == VTList.VTs[0] &&
+           Ops[2].getValueType().isInteger() &&
+           "Binary operator types must match!");
+    break;
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI: {
     assert(VTList.NumVTs == 2 && Ops.size() == 2 && "Invalid mul lo/hi op!");
