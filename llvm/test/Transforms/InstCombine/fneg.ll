@@ -87,24 +87,24 @@ define float @fmul_fneg_extra_use(float %x) {
   ret float %r
 }
 
-; Try a vector. Use special constants (NaN, INF, undef) because they don't change anything.
+; Try a vector. Use special constants (NaN, INF, poison) because they don't change anything.
 
 define <4 x double> @fmul_fsub_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fmul_fsub_vec(
-; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0xFFF8000000000000, double 0xFFF0000000000000, double undef>
+; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0xFFF8000000000000, double 0xFFF0000000000000, double poison>
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %m = fmul <4 x double> %x, <double 42.0, double 0x7FF8000000000000, double 0x7FF0000000000000, double undef>
+  %m = fmul <4 x double> %x, <double 42.0, double 0x7FF8000000000000, double 0x7FF0000000000000, double poison>
   %r = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
   ret <4 x double> %r
 }
 
 define <4 x double> @fmul_fneg_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fmul_fneg_vec(
-; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0xFFF8000000000000, double 0xFFF0000000000000, double undef>
+; CHECK-NEXT:    [[R:%.*]] = fmul <4 x double> [[X:%.*]], <double -4.200000e+01, double 0xFFF8000000000000, double 0xFFF0000000000000, double poison>
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %m = fmul <4 x double> %x, <double 42.0, double 0x7FF8000000000000, double 0x7FF0000000000000, double undef>
+  %m = fmul <4 x double> %x, <double 42.0, double 0x7FF8000000000000, double 0x7FF0000000000000, double poison>
   %r = fneg <4 x double> %m
   ret <4 x double> %r
 }
@@ -181,24 +181,24 @@ define float @fdiv_op1_constant_fneg_extra_use(float %x) {
   ret float %r
 }
 
-; Try a vector. Use special constants (NaN, INF, undef) because they don't change anything.
+; Try a vector. Use special constants (NaN, INF, poison) because they don't change anything.
 
 define <4 x double> @fdiv_op1_constant_fsub_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fdiv_op1_constant_fsub_vec(
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[X:%.*]], <double 4.200000e+01, double 0x7FF800000ABCD000, double 0x7FF0000000000000, double undef>
+; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[X:%.*]], <double 4.200000e+01, double 0x7FF800000ABCD000, double 0x7FF0000000000000, double poison>
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %d = fdiv <4 x double> %x, <double -42.0, double 0xFFF800000ABCD000, double 0xFFF0000000000000, double undef>
+  %d = fdiv <4 x double> %x, <double -42.0, double 0xFFF800000ABCD000, double 0xFFF0000000000000, double poison>
   %r = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %d
   ret <4 x double> %r
 }
 
 define <4 x double> @fdiv_op1_constant_fneg_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fdiv_op1_constant_fneg_vec(
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[X:%.*]], <double 4.200000e+01, double 0x7FF800000ABCD000, double 0x7FF0000000000000, double undef>
+; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[X:%.*]], <double 4.200000e+01, double 0x7FF800000ABCD000, double 0x7FF0000000000000, double poison>
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %d = fdiv <4 x double> %x, <double -42.0, double 0xFFF800000ABCD000, double 0xFFF0000000000000, double undef>
+  %d = fdiv <4 x double> %x, <double -42.0, double 0xFFF800000ABCD000, double 0xFFF0000000000000, double poison>
   %r = fneg <4 x double> %d
   ret <4 x double> %r
 }
@@ -335,24 +335,24 @@ define float @fdiv_op0_constant_fneg_extra_use(float %x) {
   ret float %r
 }
 
-; Try a vector. Use special constants (NaN, INF, undef) because they don't change anything.
+; Try a vector. Use special constants (NaN, INF, poison) because they don't change anything.
 
 define <4 x double> @fdiv_op0_constant_fsub_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fdiv_op0_constant_fsub_vec(
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0xFFF8000000000000, double 0x7FF0000000000000, double undef>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0xFFF8000000000000, double 0x7FF0000000000000, double poison>, [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %d = fdiv <4 x double> <double -42.0, double 0x7FF8000000000000, double 0xFFF0000000000000, double undef>, %x
+  %d = fdiv <4 x double> <double -42.0, double 0x7FF8000000000000, double 0xFFF0000000000000, double poison>, %x
   %r = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %d
   ret <4 x double> %r
 }
 
 define <4 x double> @fdiv_op0_constant_fneg_vec(<4 x double> %x) {
 ; CHECK-LABEL: @fdiv_op0_constant_fneg_vec(
-; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0xFFF8000000000000, double 0x7FF0000000000000, double undef>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> <double 4.200000e+01, double 0xFFF8000000000000, double 0x7FF0000000000000, double poison>, [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[R]]
 ;
-  %d = fdiv <4 x double> <double -42.0, double 0x7FF8000000000000, double 0xFFF0000000000000, double undef>, %x
+  %d = fdiv <4 x double> <double -42.0, double 0x7FF8000000000000, double 0xFFF0000000000000, double poison>, %x
   %r = fneg <4 x double> %d
   ret <4 x double> %r
 }
@@ -584,11 +584,11 @@ define <2 x float> @fneg_nsz_fadd_constant_vec(<2 x float> %x) {
 
 define <2 x float> @fake_fneg_nsz_fadd_constant_vec(<2 x float> %x) {
 ; CHECK-LABEL: @fake_fneg_nsz_fadd_constant_vec(
-; CHECK-NEXT:    [[R:%.*]] = fsub nsz <2 x float> <float -4.200000e+01, float undef>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub nsz <2 x float> <float -4.200000e+01, float poison>, [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
-  %a = fadd <2 x float> %x, <float 42.0, float undef>
-  %r = fsub nsz <2 x float> <float undef, float -0.0>, %a
+  %a = fadd <2 x float> %x, <float 42.0, float poison>
+  %r = fsub nsz <2 x float> <float poison, float -0.0>, %a
   ret <2 x float> %r
 }
 

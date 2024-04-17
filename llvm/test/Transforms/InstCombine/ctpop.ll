@@ -155,28 +155,27 @@ define <2 x i32> @_parity_of_not_vec(<2 x i32> %x) {
   ret <2 x i32> %r
 }
 
-define <2 x i32> @_parity_of_not_undef(<2 x i32> %x) {
-; CHECK-LABEL: @_parity_of_not_undef(
+define <2 x i32> @_parity_of_not_poison(<2 x i32> %x) {
+; CHECK-LABEL: @_parity_of_not_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]]), !range [[RNG1]]
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP1]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %neg = xor <2 x i32> %x, <i32 undef ,i32 -1>
+  %neg = xor <2 x i32> %x, <i32 poison ,i32 -1>
   %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %neg)
   %r = and <2 x i32> %cnt, <i32 1 ,i32 1>
   ret <2 x i32> %r
 }
 
-define <2 x i32> @_parity_of_not_undef2(<2 x i32> %x) {
-; CHECK-LABEL: @_parity_of_not_undef2(
-; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[CNT:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[NEG]]), !range [[RNG1]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[CNT]], <i32 1, i32 undef>
+define <2 x i32> @_parity_of_not_poison2(<2 x i32> %x) {
+; CHECK-LABEL: @_parity_of_not_poison2(
+; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[CNT]], <i32 1, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %neg = xor <2 x i32> %x, <i32 -1 ,i32 -1>
   %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %neg)
-  %r = and <2 x i32> %cnt, <i32 1 ,i32 undef>
+  %r = and <2 x i32> %cnt, <i32 1 ,i32 poison>
   ret <2 x i32> %r
 }
 

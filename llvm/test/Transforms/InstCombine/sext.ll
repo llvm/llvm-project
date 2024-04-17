@@ -167,39 +167,39 @@ define <2 x i32> @test10_vec_nonuniform(<2 x i32> %i) {
   ret <2 x i32> %D
 }
 
-define <2 x i32> @test10_vec_undef0(<2 x i32> %i) {
-; CHECK-LABEL: @test10_vec_undef0(
-; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], <i32 30, i32 undef>
-; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[D1]], <i32 30, i32 undef>
+define <2 x i32> @test10_vec_poison0(<2 x i32> %i) {
+; CHECK-LABEL: @test10_vec_poison0(
+; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], <i32 30, i32 poison>
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[D1]], <i32 30, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %A = trunc <2 x i32> %i to <2 x i8>
   %B = shl <2 x i8> %A, <i8 6, i8 0>
-  %C = ashr <2 x i8> %B, <i8 6, i8 undef>
+  %C = ashr <2 x i8> %B, <i8 6, i8 poison>
   %D = sext <2 x i8> %C to <2 x i32>
   ret <2 x i32> %D
 }
-define <2 x i32> @test10_vec_undef1(<2 x i32> %i) {
-; CHECK-LABEL: @test10_vec_undef1(
+define <2 x i32> @test10_vec_poison1(<2 x i32> %i) {
+; CHECK-LABEL: @test10_vec_poison1(
 ; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], <i32 30, i32 undef>
 ; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[D1]], <i32 30, i32 undef>
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %A = trunc <2 x i32> %i to <2 x i8>
-  %B = shl <2 x i8> %A, <i8 6, i8 undef>
+  %B = shl <2 x i8> %A, <i8 6, i8 poison>
   %C = ashr <2 x i8> %B, <i8 6, i8 0>
   %D = sext <2 x i8> %C to <2 x i32>
   ret <2 x i32> %D
 }
-define <2 x i32> @test10_vec_undef2(<2 x i32> %i) {
-; CHECK-LABEL: @test10_vec_undef2(
-; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], <i32 30, i32 undef>
-; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[D1]], <i32 30, i32 undef>
+define <2 x i32> @test10_vec_poison2(<2 x i32> %i) {
+; CHECK-LABEL: @test10_vec_poison2(
+; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], <i32 30, i32 poison>
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[D1]], <i32 30, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %A = trunc <2 x i32> %i to <2 x i8>
-  %B = shl <2 x i8> %A, <i8 6, i8 undef>
-  %C = ashr <2 x i8> %B, <i8 6, i8 undef>
+  %B = shl <2 x i8> %A, <i8 6, i8 poison>
+  %C = ashr <2 x i8> %B, <i8 6, i8 poison>
   %D = sext <2 x i8> %C to <2 x i32>
   ret <2 x i32> %D
 }

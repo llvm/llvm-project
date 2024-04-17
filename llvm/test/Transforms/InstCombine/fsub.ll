@@ -153,12 +153,12 @@ define <2 x float> @constant_op1_vec(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %r
 }
 
-define <2 x float> @constant_op1_vec_undef(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @constant_op1_vec_undef(
-; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[X:%.*]], <float undef, float 4.200000e+01>
+define <2 x float> @constant_op1_vec_poison(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @constant_op1_vec_poison(
+; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[X:%.*]], <float poison, float 4.200000e+01>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
-  %r = fsub <2 x float> %x, <float undef, float -42.0>
+  %r = fsub <2 x float> %x, <float poison, float -42.0>
   ret <2 x float> %r
 }
 
@@ -204,12 +204,12 @@ define <2 x float> @unary_neg_op1_vec(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %r
 }
 
-define <2 x float> @neg_op1_vec_undef(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @neg_op1_vec_undef(
+define <2 x float> @neg_op1_vec_poison(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @neg_op1_vec_poison(
 ; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
-  %negy = fsub <2 x float> <float -0.0, float undef>, %y
+  %negy = fsub <2 x float> <float -0.0, float poison>, %y
   %r = fsub <2 x float> %x, %negy
   ret <2 x float> %r
 }

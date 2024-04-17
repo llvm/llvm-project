@@ -301,15 +301,15 @@ define <2 x i32> @not_cond_vec(<2 x i1> %c, <2 x i32> %tv, <2 x i32> %fv) {
   ret <2 x i32> %r
 }
 
-; Should match vector 'not' with undef element.
+; Should match vector 'not' with poison element.
 ; The condition is inverted, and the select ops are swapped. The metadata should be swapped.
 
-define <2 x i32> @not_cond_vec_undef(<2 x i1> %c, <2 x i32> %tv, <2 x i32> %fv) {
-; CHECK-LABEL: @not_cond_vec_undef(
+define <2 x i32> @not_cond_vec_poison(<2 x i1> %c, <2 x i32> %tv, <2 x i32> %fv) {
+; CHECK-LABEL: @not_cond_vec_poison(
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i32> [[FV:%.*]], <2 x i32> [[TV:%.*]], !prof [[PROF1]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %notc = xor <2 x i1> %c, <i1 undef, i1 true>
+  %notc = xor <2 x i1> %c, <i1 poison, i1 true>
   %r = select <2 x i1> %notc, <2 x i32> %tv, <2 x i32> %fv, !prof !1
   ret <2 x i32> %r
 }
