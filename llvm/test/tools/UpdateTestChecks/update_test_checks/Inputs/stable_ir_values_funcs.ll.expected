@@ -16,9 +16,9 @@ define i32 @func({i32, i32} %x, i32 %y) {
 
 ; CHECK-LABEL: define i32 @func(
 ; CHECK-SAME: { i32, i32 } [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_I34:%.*]] = extractvalue { i32, i32 } [[X]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[X_I34]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], 3
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[X_I33:%.*]] = extractvalue { i32, i32 } [[X]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[Y]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X_I33]], [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], 3
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
