@@ -21,11 +21,11 @@ bool mlirTypeIsANVGPUTensorMapDescriptorType(MlirType type) {
 }
 
 MlirType mlirNVGPUTensorMapDescriptorTypeGet(MlirContext ctx,
-                                             MlirType tensorType, int swizzle,
-                                             int l2promo, int oob,
-                                             int interleave) {
+                                             MlirType tensorMemrefType,
+                                             int swizzle, int l2promo,
+                                             int oobFill, int interleave) {
   return wrap(nvgpu::TensorMapDescriptorType::get(
-      unwrap(ctx), cast<MemRefType>(unwrap(tensorType)),
+      unwrap(ctx), cast<MemRefType>(unwrap(tensorMemrefType)),
       TensorMapSwizzleKind(swizzle), TensorMapL2PromoKind(l2promo),
-      TensorMapOOBKind(oob), TensorMapInterleaveKind(interleave)));
+      TensorMapOOBKind(oobFill), TensorMapInterleaveKind(interleave)));
 }

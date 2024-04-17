@@ -23,14 +23,14 @@ static void populateDialectNvgpuSubmodule(const pybind11::module &m) {
 
   nvgpuTensorMapDescriptorType.def_classmethod(
       "get",
-      [](py::object cls, MlirType tensorType, int swizzle, int l2promo, int oob,
-         int interleave, MlirContext ctx) {
+      [](py::object cls, MlirType tensorMemrefType, int swizzle, int l2promo,
+         int oobFill, int interleave, MlirContext ctx) {
         return cls(mlirNVGPUTensorMapDescriptorTypeGet(
-            ctx, tensorType, swizzle, l2promo, oob, interleave));
+            ctx, tensorMemrefType, swizzle, l2promo, oobFill, interleave));
       },
       "Gets an instance of TensorMapDescriptorType in the same context",
       py::arg("cls"), py::arg("tensor_type"), py::arg("swizzle"),
-      py::arg("l2promo"), py::arg("oob"), py::arg("interleave"),
+      py::arg("l2promo"), py::arg("oob_fill"), py::arg("interleave"),
       py::arg("ctx") = py::none());
 }
 

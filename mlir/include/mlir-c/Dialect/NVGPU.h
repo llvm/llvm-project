@@ -26,8 +26,8 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(NVGPU, nvgpu);
 MLIR_CAPI_EXPORTED bool mlirTypeIsANVGPUTensorMapDescriptorType(MlirType type);
 
 MLIR_CAPI_EXPORTED MlirType mlirNVGPUTensorMapDescriptorTypeGet(
-    MlirContext ctx, MlirType tensorType, int swizzle, int l2promo, int oob,
-    int interleave);
+    MlirContext ctx, MlirType tensorMemrefType, int swizzle, int l2promo,
+    int oobFill, int interleave);
 
 #ifdef __cplusplus
 }
