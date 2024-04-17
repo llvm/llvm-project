@@ -8,4 +8,4 @@ add_lit_testsuite(check-mlgo-utils "Running mlgo-utils tests"
   DEPENDS "FileCheck" "not" "count" "split-file" "yaml2obj" "llvm-objcopy"
 )
 
-set_target_properties(check-mlgo-utils PROPERTIES FOLDER "Tests")
+set_target_properties(check-mlgo-utils PROPERTIES FOLDER "LLVM/Tests")

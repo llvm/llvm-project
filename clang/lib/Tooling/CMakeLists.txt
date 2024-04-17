@@ -75,6 +75,7 @@ else()
   add_custom_target(run-ast-api-dump-tool
       DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/ASTNodeAPI.json
   )
+  set_target_properties(run-ast-api-dump-tool PROPERTIES FOLDER "Clang/Tablegenning")
 
   add_custom_command(
       COMMENT Generate NodeIntrospection.inc
@@ -99,6 +100,7 @@ else()
       DEPENDS
       ${BINARY_INCLUDE_DIR}/NodeIntrospection.inc
   )
+  set_target_properties(run-ast-api-generate-tool PROPERTIES FOLDER "Clang/Tablegenning")
 endif()
 
 add_clang_library(clangTooling

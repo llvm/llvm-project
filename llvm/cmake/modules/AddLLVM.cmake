@@ -4,6 +4,53 @@ include(LLVMProcessSources)
 include(LLVM-Config)
 include(DetermineGCCCompatible)
 
+# Set ${outvar} to the title of the current LLVM subproject (Clang, Flang, MLIR ...)
+# 
+function(get_subproject_title outvar)
+  if (LLVM_SUBPROJECT_TITLE)
+    set(${outvar} "${LLVM_SUBPROJECT_TITLE}" PARENT_SCOPE) 
+  else ()
+    set(cur_rel_dir "${CMAKE_CURRENT_SOURCE_DIR}")
+    set(topdir "${CMAKE_SOURCE_DIR}/..")
+    cmake_path(NORMAL_PATH topdir)
+    cmake_path(RELATIVE_PATH cur_rel_dir BASE_DIRECTORY "${topdir}" )
+    string(REGEX REPLACE "/.*" "" cur_rel_topdir "${cur_rel_dir}")
+
+    set(subproject_title "Unknown ${cur_rel_topdir}")
+    if (cur_rel_topdir STREQUAL "llvm")
+      set(subproject_title "LLVM") 
+    #elseif (cur_rel_topdir STREQUAL "clang")
+    #  set(subproject_title "Clang")
+    #elseif (cur_rel_topdir STREQUAL "mlir")
+    #  set(subproject_title "MLIR")
+    #elseif (cur_rel_topdir STREQUAL "clang-tools-extra")
+    #  set(subproject_title "Clang Tools Extra") 
+    #elseif (cur_rel_topdir STREQUAL "flang")
+    #  set(subproject_title "Flang") 
+    #elseif (cur_rel_topdir STREQUAL "polly")
+    #  set(subproject_title "Polly") 
+    #elseif (cur_rel_topdir STREQUAL "cross-project-tests")
+    #  set(subproject_title "Cross-Project") 
+    #elseif (cur_rel_topdir STREQUAL "bolt")
+    #  set(subproject_title "BOLT") 
+    #elseif (cur_rel_topdir STREQUAL "lld")
+    #  set(subproject_title "LLD") 
+    #elseif (cur_rel_topdir STREQUAL "lldb")
+    #  set(subproject_title "LLDB") 
+    #elseif (cur_rel_topdir STREQUAL "libclc")
+    #  set(subproject_title "libclc") 
+    #elseif (cur_rel_topdir STREQUAL "openmp")
+    #  set(subproject_title "OpenMP") 
+    #elseif (cur_rel_topdir STREQUAL "compiler-rt")
+    #  set(subproject_title "Compiler-RT") 
+    else ()
+      message(WARNING "Unknown subproject: ${cur_rel_topdir}")
+    endif ()
+
+    set(${outvar} "${subproject_title}" PARENT_SCOPE)
+  endif ()
+endfunction(get_subproject_title)
+
 function(llvm_update_compile_flags name)
   get_property(sources TARGET ${name} PROPERTY SOURCES)
   if("${sources}" MATCHES "\\.c(;|$)")
@@ -151,7 +198,8 @@ function(add_llvm_symbol_exports target_name export_file)
   endif()
 
   add_custom_target(${target_name}_exports DEPENDS ${native_export_file})
-  set_target_properties(${target_name}_exports PROPERTIES FOLDER "Misc")
+  get_subproject_title(subproject_title)
+  set_target_properties(${target_name}_exports PROPERTIES FOLDER "${subproject_title}/Misc")
 
   get_property(srcs TARGET ${target_name} PROPERTY SOURCES)
   foreach(src ${srcs})
@@ -543,6 +591,8 @@ function(llvm_add_library name)
     endif()
   endif()
 
+  get_subproject_title(subproject_title)
+
   # Generate objlib
   if((ARG_SHARED AND ARG_STATIC) OR ARG_OBJECT)
     # Generate an obj library for both targets.
@@ -564,7 +614,7 @@ function(llvm_add_library name)
     # Bring in the target include directories from our original target.
     target_include_directories(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},INCLUDE_DIRECTORIES>)
 
-    set_target_properties(${obj_name} PROPERTIES FOLDER "Object Libraries")
+    set_target_properties(${obj_name} PROPERTIES FOLDER "${subproject_title}/Object Libraries")
     if(ARG_DEPENDS)
       add_dependencies(${obj_name} ${ARG_DEPENDS})
     endif()
@@ -603,6 +653,7 @@ function(llvm_add_library name)
       LINK_LIBS ${ARG_LINK_LIBS}
       LINK_COMPONENTS ${ARG_LINK_COMPONENTS}
       )
+    set_target_properties(${name_static} PROPERTIES FOLDER "${subproject_title}/Libraries")
 
     # Bring in the target link info from our original target.
     target_link_directories(${name_static} PRIVATE $<TARGET_PROPERTY:${name},LINK_DIRECTORIES>)
@@ -620,6 +671,7 @@ function(llvm_add_library name)
   else()
     add_library(${name} STATIC ${ALL_FILES})
   endif()
+  set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries")
 
   if(ARG_COMPONENT_LIB)
     set_target_properties(${name} PROPERTIES LLVM_COMPONENT TRUE)
@@ -796,6 +848,8 @@ function(add_llvm_install_targets target)
     endif()
   endforeach()
 
+  get_subproject_title(subproject_title)
+
   add_custom_target(${target}
                     DEPENDS ${file_dependencies}
                     COMMAND "${CMAKE_COMMAND}"
@@ -803,7 +857,7 @@ function(add_llvm_install_targets target)
                             ${prefix_option}
                             -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
                     USES_TERMINAL)
-  set_target_properties(${target} PROPERTIES FOLDER "Component Install Targets")
+  set_target_properties(${target} PROPERTIES FOLDER "${subproject_title}/Install")
   add_custom_target(${target}-stripped
                     DEPENDS ${file_dependencies}
                     COMMAND "${CMAKE_COMMAND}"
@@ -812,7 +866,7 @@ function(add_llvm_install_targets target)
                             -DCMAKE_INSTALL_DO_STRIP=1
                             -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
                     USES_TERMINAL)
-  set_target_properties(${target}-stripped PROPERTIES FOLDER "Component Install Targets (Stripped)")
+  set_target_properties(${target}-stripped PROPERTIES FOLDER "${subproject_title}/Install")
   if(target_dependencies)
     add_dependencies(${target} ${target_dependencies})
     add_dependencies(${target}-stripped ${target_dependencies})
@@ -832,6 +886,8 @@ endfunction()
 function(add_llvm_component_group name)
   cmake_parse_arguments(ARG "HAS_JIT" "" "LINK_COMPONENTS" ${ARGN})
   add_custom_target(${name})
+  get_subproject_title(subproject_title)
+  set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Component Groups")
   if(ARG_HAS_JIT)
     set_property(TARGET ${name} PROPERTY COMPONENT_HAS_JIT ON)
   endif()
@@ -865,6 +921,8 @@ function(add_llvm_component_library name)
 
   if(ARG_ADD_TO_COMPONENT)
     set_property(TARGET ${ARG_ADD_TO_COMPONENT} APPEND PROPERTY LLVM_LINK_COMPONENTS ${component_name})
+    get_subproject_title(subproject_title)
+    set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries/${ARG_ADD_TO_COMPONENT}")
   endif()
 
 endfunction()
@@ -921,10 +979,12 @@ macro(add_llvm_library name)
     endif()
     set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
   endif()
+
+  get_subproject_title(subproject_title)
   if (ARG_MODULE)
-    set_target_properties(${name} PROPERTIES FOLDER "Loadable modules")
+    set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Loadable Modules")
   else()
-    set_target_properties(${name} PROPERTIES FOLDER "Libraries")
+    set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries")
   endif()
 endmacro(add_llvm_library name)
 
@@ -948,7 +1008,8 @@ macro(generate_llvm_objects name)
       add_dependencies(${obj_name} ${ARG_DEPENDS})
     endif()
 
-    set_target_properties(${obj_name} PROPERTIES FOLDER "Object Libraries")
+    get_subproject_title(subproject_title)
+    set_target_properties(${obj_name} PROPERTIES FOLDER "${subproject_title}/Object Libraries")
   endif()
 
   if (ARG_GENERATE_DRIVER)
@@ -999,6 +1060,8 @@ macro(add_llvm_executable name)
   else()
     add_executable(${name} ${ALL_FILES})
   endif()
+  get_subproject_title(subproject_title)
+  set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Executables")
 
   setup_dependency_debugging(${name} ${LLVM_COMMON_DEPENDS})
 
@@ -1418,7 +1481,8 @@ macro(llvm_add_tool project name)
     if( LLVM_BUILD_TOOLS )
       set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
     endif()
-    set_target_properties(${name} PROPERTIES FOLDER "Tools")
+    get_subproject_title(subproject_title)
+    set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Tools")
   endif()
 endmacro(llvm_add_tool project name)
 
@@ -1435,7 +1499,8 @@ macro(add_llvm_example name)
   if( LLVM_BUILD_EXAMPLES )
     install(TARGETS ${name} RUNTIME DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}")
   endif()
-  set_target_properties(${name} PROPERTIES FOLDER "Examples")
+  get_subproject_title(subproject_title)
+  set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Examples")
 endmacro(add_llvm_example name)
 
 macro(add_llvm_example_library name)
@@ -1446,7 +1511,8 @@ macro(add_llvm_example_library name)
     add_llvm_library(${name} ${ARGN})
   endif()
 
-  set_target_properties(${name} PROPERTIES FOLDER "Examples")
+  get_subproject_title(subproject_title)
+  set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Examples")
 endmacro(add_llvm_example_library name)
 
 # This is a macro that is used to create targets for executables that are needed
@@ -1457,7 +1523,8 @@ macro(add_llvm_utility name)
   endif()
 
   add_llvm_executable(${name} DISABLE_LLVM_LINK_LLVM_DYLIB ${ARGN})
-  set_target_properties(${name} PROPERTIES FOLDER "Utils")
+  get_subproject_title(subproject_title)
+  set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Utils")
   if ( ${name} IN_LIST LLVM_TOOLCHAIN_UTILITIES OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     if (LLVM_INSTALL_UTILS AND LLVM_BUILD_UTILS)
       get_target_export_arg(${name} LLVM export_to_llvmexports)
@@ -1480,19 +1547,20 @@ endmacro(add_llvm_utility name)
 
 macro(add_llvm_fuzzer name)
   cmake_parse_arguments(ARG "" "DUMMY_MAIN" "" ${ARGN})
+  get_subproject_title(subproject_title)
   if( LLVM_LIB_FUZZING_ENGINE )
     set(LLVM_OPTIONAL_SOURCES ${ARG_DUMMY_MAIN})
     add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS})
     target_link_libraries(${name} PRIVATE ${LLVM_LIB_FUZZING_ENGINE})
-    set_target_properties(${name} PROPERTIES FOLDER "Fuzzers")
+    set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Fuzzers")
   elseif( LLVM_USE_SANITIZE_COVERAGE )
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=fuzzer")
     set(LLVM_OPTIONAL_SOURCES ${ARG_DUMMY_MAIN})
     add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS})
-    set_target_properties(${name} PROPERTIES FOLDER "Fuzzers")
+    set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Fuzzers")
   elseif( ARG_DUMMY_MAIN )
     add_llvm_executable(${name} ${ARG_DUMMY_MAIN} ${ARG_UNPARSED_ARGUMENTS})
-    set_target_properties(${name} PROPERTIES FOLDER "Fuzzers")
+    set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Fuzzers")
   endif()
 endmacro()
 
@@ -1653,6 +1721,8 @@ function(add_unittest test_suite test_name)
 
   list(APPEND LLVM_LINK_COMPONENTS Support) # gtest needs it for raw_ostream
   add_llvm_executable(${test_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${ARGN})
+  get_subproject_title(subproject_title)
+  set_target_properties(${test_name} PROPERTIES FOLDER "${subproject_title}/Tests/Unit")
 
   # The runtime benefits of LTO don't outweight the compile time costs for tests.
   if(LLVM_ENABLE_LTO)
@@ -1684,10 +1754,6 @@ function(add_unittest test_suite test_name)
   target_link_libraries(${test_name} PRIVATE llvm_gtest_main llvm_gtest ${LLVM_PTHREAD_LIB})
 
   add_dependencies(${test_suite} ${test_name})
-  get_target_property(test_suite_folder ${test_suite} FOLDER)
-  if (test_suite_folder)
-    set_property(TARGET ${test_name} PROPERTY FOLDER "${test_suite_folder}")
-  endif ()
 endfunction()
 
 # Use for test binaries that call llvm::getInputFileDirectory(). Use of this
@@ -1710,7 +1776,8 @@ function(add_benchmark benchmark_name)
   add_llvm_executable(${benchmark_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${ARGN})
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${benchmark_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
-  set_property(TARGET ${benchmark_name} PROPERTY FOLDER "Utils")
+  get_subproject_title(subproject_title)
+  set_property(TARGET ${benchmark_name} PROPERTY FOLDER "${subproject_title}/Utils")
   target_link_libraries(${benchmark_name} PRIVATE benchmark)
 endfunction()
 
@@ -1999,6 +2066,8 @@ function(add_lit_target target comment)
       COMMAND ${CMAKE_COMMAND} -E echo "${target} does nothing, no tools built.")
     message(STATUS "${target} does nothing.")
   endif()
+  get_subproject_title(subproject_title)
+  set_target_properties(${target} PROPERTIES FOLDER "${subproject_title}/Tests")
 
   if (ARG_DEPENDS)
     add_dependencies(${target} ${ARG_DEPENDS})
@@ -2080,7 +2149,8 @@ function(add_lit_testsuites project directory)
     cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "FOLDER" "PARAMS;DEPENDS;ARGS" ${ARGN})
 
     if (NOT ARG_FOLDER)
-      set(ARG_FOLDER "Test Subdirectories")
+      get_subproject_title(subproject_title)
+      set(ARG_FOLDER "${subproject_title}/Tests")
     endif()
 
     # Search recursively for test directories by assuming anything not
@@ -2282,7 +2352,8 @@ function(llvm_add_tool_symlink project link_name target)
       set(should_build_all ALL)
     endif()
     add_custom_target(${target_name} ${should_build_all} DEPENDS ${target} ${output_path})
-    set_target_properties(${target_name} PROPERTIES FOLDER Tools)
+    get_subproject_title(subproject_title)
+    set_target_properties(${target_name} PROPERTIES FOLDER "${subproject_title}/Tools")
 
     # Make sure both the link and target are toolchain tools
     if (${link_name} IN_LIST LLVM_TOOLCHAIN_TOOLS AND ${target} IN_LIST LLVM_TOOLCHAIN_TOOLS)

@@ -40,4 +40,3 @@ endif()
 add_lit_testsuite(check-gwp_asan "Running the GWP-ASan tests"
   ${GWP_ASAN_TESTSUITES}
   DEPENDS ${GWP_ASAN_TEST_DEPS})
-set_target_properties(check-gwp_asan PROPERTIES FOLDER "Compiler-RT Misc")

@@ -18,5 +18,5 @@ if (NOT WIN32 AND NOT CYGWIN)
   # it is built before the plugin.
   add_dependencies(InlineOrderPlugin intrinsics_gen)
   add_dependencies(AnalysisTests InlineOrderPlugin)
-  set_property(TARGET InlineOrderPlugin PROPERTY FOLDER "Tests/UnitTests/AnalysisTests")
+  set_property(TARGET InlineOrderPlugin PROPERTY FOLDER "Tests/Unittests/AnalysisTests")
 endif()

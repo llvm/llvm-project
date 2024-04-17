@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.20.0)
 
 project( libclc VERSION 0.2.0 LANGUAGES CXX C)
+set(LLVM_SUBPROJECT_TITLE "libclc")
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -54,7 +55,10 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
     foreach( tool IN ITEMS clang llvm-as llvm-link opt )
       find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
       add_executable( libclc::${tool} IMPORTED GLOBAL )
-      set_target_properties( libclc::${tool} PROPERTIES IMPORTED_LOCATION ${LLVM_TOOL_${tool}} )
+      set_target_properties( libclc::${tool} PROPERTIES
+        IMPORTED_LOCATION ${LLVM_TOOL_${tool}}
+        FOLDER "libclc/Tools"
+      )
     endforeach()
   endif()
 else()
@@ -168,6 +172,7 @@ if( LIBCLC_STANDALONE_BUILD )
 else()
   add_llvm_utility( prepare_builtins utils/prepare-builtins.cpp )
 endif()
+set_target_properties( prepare_builtins PROPERTIES FOLDER "libclc/Tablegenning")
 target_compile_definitions( prepare_builtins PRIVATE ${LLVM_VERSION_DEFINE} )
 # These were not properly reported in early LLVM and we don't need them
 target_compile_options( prepare_builtins PRIVATE -fno-rtti -fno-exceptions )
@@ -225,12 +230,14 @@ add_custom_command(
   COMMAND ${Python3_EXECUTABLE} ${script_loc} > convert.cl
   DEPENDS ${script_loc} )
 add_custom_target( "generate_convert.cl" DEPENDS convert.cl )
+set_target_properties( "generate_convert.cl" PROPERTIES FOLDER "libclc/Tablegenning" )
 
 add_custom_command(
   OUTPUT clspv-convert.cl
   COMMAND ${Python3_EXECUTABLE} ${script_loc} --clspv > clspv-convert.cl
   DEPENDS ${script_loc} )
 add_custom_target( "clspv-generate_convert.cl" DEPENDS clspv-convert.cl )
+set_target_properties( "clspv-generate_convert.cl" PROPERTIES FOLDER "libclc/Tablegenning" )
 
 enable_testing()
 
@@ -394,6 +401,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         DEPENDS ${builtins_link_lib}
       )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
+      set_target_properties( "prepare-${spv_suffix}" PROPERTIES FOLDER "libclc/Tablegenning" )
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
          DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
     else()
@@ -410,6 +418,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       )
       set_target_properties( ${builtins_opt_lib_tgt}
         PROPERTIES TARGET_FILE ${builtins_opt_lib_tgt}.bc
+                   FOLDER "libclc/BC Genning"
       )
 
       set( builtins_opt_lib $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE> )
@@ -420,6 +429,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         COMMAND prepare_builtins -o ${obj_suffix} ${builtins_opt_lib}
         DEPENDS ${builtins_opt_lib} prepare_builtins )
       add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${obj_suffix} )
+      set_target_properties( "prepare-${obj_suffix}" PROPERTIES FOLDER "libclc/BC Genning" )
 
       # nvptx-- targets don't include workitem builtins
       if( NOT clang_triple MATCHES ".*ptx.*--$" )
@@ -434,6 +444,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         add_custom_target( ${alias_suffix} ALL
           COMMAND ${CMAKE_COMMAND} -E create_symlink ${obj_suffix} ${alias_suffix}
           DEPENDS prepare-${obj_suffix} )
+        set_target_properties( "${alias_suffix}" PROPERTIES FOLDER "libclc/BC Genning" )
         install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${alias_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
       endforeach( a )
     endif()

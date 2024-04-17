@@ -126,6 +126,7 @@ macro(libomp_test_touch_recipe test_touch_dir)
 endmacro()
 libomp_append(libomp_test_touch_env "KMP_VERSION=1")
 add_custom_target(libomp-test-touch DEPENDS ${libomp_test_touch_targets})
+set_target_properties(libomp-test-touch PROPERTIES FOLDER "OpenMP/Tests")
 if(WIN32)
   libomp_test_touch_recipe(test-touch-mt)
   libomp_test_touch_recipe(test-touch-md)
@@ -135,6 +136,7 @@ endif()
 
 # test-relo
 add_custom_target(libomp-test-relo DEPENDS test-relo/.success)
+set_target_properties(libomp-test-relo PROPERTIES FOLDER "OpenMP/Tests")
 add_custom_command(
   OUTPUT  test-relo/.success test-relo/readelf.log
   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/test-relo
@@ -146,6 +148,7 @@ add_custom_command(
 
 # test-execstack
 add_custom_target(libomp-test-execstack DEPENDS test-execstack/.success)
+set_target_properties(libomp-test-execstack PROPERTIES FOLDER "OpenMP/Tests")
 add_custom_command(
   OUTPUT  test-execstack/.success
   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/test-execstack
@@ -157,6 +160,7 @@ add_custom_command(
 
 # test-instr
 add_custom_target(libomp-test-instr DEPENDS test-instr/.success)
+set_target_properties(libomp-test-instr PROPERTIES FOLDER "OpenMP/Tests")
 add_custom_command(
   OUTPUT  test-instr/.success
   COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/test-instr
@@ -168,6 +172,7 @@ add_custom_command(
 
 # test-deps
 add_custom_target(libomp-test-deps DEPENDS test-deps/.success)
+set_target_properties(libomp-test-deps PROPERTIES FOLDER "OpenMP/Tests")
 set(libomp_expected_library_deps)
 if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
   set(libomp_expected_library_deps libc.so.7 libthr.so.3 libm.so.5)

@@ -104,7 +104,7 @@ endforeach()
 
 # Wrap output in a target, so lldb-framework can depend on it.
 add_custom_target(liblldb-resource-headers DEPENDS ${lldb_staged_headers})
-set_target_properties(liblldb-resource-headers PROPERTIES FOLDER "lldb misc")
+set_target_properties(liblldb-resource-headers PROPERTIES FOLDER "LLDB/Resources")
 add_dependencies(liblldb liblldb-resource-headers)
 
 # At build time, copy the staged headers into the framework bundle (and do

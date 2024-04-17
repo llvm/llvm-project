@@ -173,6 +173,7 @@ function(add_ocaml_library name)
     VERBATIM)
 
   add_custom_target("ocaml_${name}" ALL DEPENDS ${ocaml_outputs} "${bin}/${name}.odoc")
+  set_target_properties("ocaml_${name}" PROPERTIES FOLDER "LLVM/Bindings/OCaml")
 
   set_target_properties("ocaml_${name}" PROPERTIES
     OCAML_FLAGS "-I;${bin}")
@@ -228,5 +229,5 @@ endfunction()
 add_custom_target(ocaml_make_directory
   COMMAND "${CMAKE_COMMAND}" "-E" "make_directory" "${LLVM_LIBRARY_DIR}/ocaml/llvm")
 add_custom_target("ocaml_all")
-set_target_properties(ocaml_all PROPERTIES FOLDER "Misc")
-set_target_properties(ocaml_make_directory PROPERTIES FOLDER "Misc")
+set_target_properties(ocaml_all PROPERTIES FOLDER "LLVM/Bindings/OCaml")
+set_target_properties(ocaml_make_directory PROPERTIES FOLDER "LLVM/Bindings/OCaml")
