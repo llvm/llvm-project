@@ -12,6 +12,12 @@
 
 libomptarget_say("Building offloading runtime library libomptarget.")
 
+if(LIBOMP_STANDALONE)
+  set(LIBOMP ${LIBOMP_STANDALONE})
+else()
+  set(LIBOMP omp)
+endif()
+
 add_llvm_library(omptarget
   SHARED
 
@@ -38,7 +44,7 @@ add_llvm_library(omptarget
 
   LINK_LIBS
   PUBLIC
-  omp
+  ${LIBOMP}
 
   NO_INSTALL_RPATH
   BUILDTREE_ONLY
