@@ -10,6 +10,8 @@
 #include <iostream>
 #include <unistd.h>
 
+#include "lib/args.hxx"
+
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PrettyStackTrace.h"
 
@@ -587,16 +589,58 @@ void generateFromInput(const ordered_json &input, fs::path outputDir) {
 int main(int argc, const char **argv) {
     spdlog::set_level(spdlog::level::debug);
 
-    setClangPath(argv[0]);
+    args::ArgumentParser argParser(
+        "Path generation tool\n"
+        "Must provide exactly one option from AST & ICFG generation.\n"
+        "Example:\n"
+        "  ./tool -j0 npe/input.json\n"
+        "  ./tool -s npe/input.json\n");
 
-    if (argc != 2) {
-        logger.error("Usage: {} IR.json", argv[0]);
+    args::HelpFlag help(argParser, "help", "Display help menu", {'h', "help"});
+
+    args::Group argICFGGroup(
+        argParser, "AST & ICFG generation:", args::Group::Validators::Xor);
+    args::Flag argSequential(argICFGGroup, "sequential",
+                             "Sequential generation", {'s', "sequential"});
+    args::ValueFlag<int> argParallel(
+        argICFGGroup, "N",
+        "Parallel generation: N means number of threads to use (0 means all)",
+        {'j'});
+
+    args::Positional<std::string> argIR(argParser, "IR", "Path to input.json",
+                                        {args::Options::Required});
+
+    try {
+        argParser.ParseCLI(argc, argv);
+    } catch (const args::Help &) {
+        std::cout << argParser;
+        return 0;
+    } catch (const args::ParseError &e) {
+        std::cerr << e.what() << std::endl;
+        std::cerr << argParser;
+        return 1;
+    } catch (const args::ValidationError &e) {
+        std::cerr << e.what() << std::endl;
+        std::cerr << argParser;
         return 1;
     }
 
+    if (argSequential) {
+        logger.info("AST & ICFG generation method: sequential");
+    } else if (argParallel) {
+        logger.info("AST & ICFG generation method: parallel with {} threads",
+                    args::get(argParallel));
+    } else {
+        requireTrue(
+            false,
+            "Must provide exactly one option from AST & ICFG generation");
+    }
+
+    setClangPath(argv[0]);
+
     llvm::InitLLVM X(argc, argv);
 
-    fs::path jsonPath = fs::absolute(argv[1]);
+    fs::path jsonPath = fs::absolute(args::get(argIR));
     std::ifstream ifs(jsonPath);
     if (!ifs.is_open()) {
         logger.error("Cannot open file {}", jsonPath);
@@ -614,8 +658,11 @@ int main(int argc, const char **argv) {
     fixCompilationDatabase(compile_commands);
     Global.cb = getCompilationDatabaseWithASTEmit(compile_commands);
 
-    // generateICFG(*Global.cb);
-    generateICFGParallel(*Global.cb);
+    if (argSequential) {
+        generateICFG(*Global.cb);
+    } else if (argParallel) {
+        generateICFGParallel(*Global.cb);
+    }
 
     {
         int m = 0;
