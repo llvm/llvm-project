@@ -585,6 +585,8 @@ void generateFromInput(const ordered_json &input, fs::path outputDir) {
 }
 
 int main(int argc, const char **argv) {
+    setClangPath(argv[0]);
+
     spdlog::set_level(spdlog::level::debug);
 
     if (argc != 2) {

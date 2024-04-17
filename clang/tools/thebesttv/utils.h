@@ -147,6 +147,8 @@ struct GlobalStat {
     }
 
     ICFG icfg;
+
+    std::string clangPath, clangppPath;
 };
 
 SourceLocation getEndOfMacroExpansion(SourceLocation loc, ASTContext &Context);
@@ -180,6 +182,11 @@ bool fileExists(const std::string &path);
  * 在指定目录运行程序，并返回程序的返回值
  */
 int run_program(const std::vector<std::string> &args, const std::string &pwd);
+
+/**
+ * 设置用于生成 AST 的 clang & clang++ 编译器路径
+ */
+void setClangPath(const char *argv0);
 
 class ProgressBar {
   private:

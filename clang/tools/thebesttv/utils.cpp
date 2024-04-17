@@ -229,6 +229,22 @@ int run_program(const std::vector<std::string> &args, const std::string &pwd) {
     }
 }
 
+void setClangPath(const char *argv0) {
+    auto binPath = fs::canonical(argv0);
+    logger.info("Binary path: {}", binPath);
+
+    auto binDir = binPath.parent_path();
+    logger.info("Using clang & clang++ under the same directory:");
+
+    Global.clangPath = binDir / "clang";
+    Global.clangppPath = binDir / "clang++";
+
+    logger.info("  clang:   {}", Global.clangPath);
+    requireTrue(fs::exists(Global.clangPath), "clang not found");
+    logger.info("  clang++: {}", Global.clangppPath);
+    requireTrue(fs::exists(Global.clangppPath), "clang not found");
+}
+
 /*****************************************************************
  * 以下是没用到的函数
  *****************************************************************/

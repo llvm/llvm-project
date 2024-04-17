@@ -115,9 +115,7 @@ ArgumentsAdjuster getEmitAstAdjuster() {
         } else {
             requireTrue(false, "Unknown compiler: " + originalCompiler);
         }
-        std::string prefix =
-            "/home/thebesttv/vul/llvm-project/build-release/bin/";
-        result[0] = prefix + (useCpp ? "clang++" : "clang");
+        result[0] = useCpp ? Global.clangppPath : Global.clangPath;
         return result;
     };
 
