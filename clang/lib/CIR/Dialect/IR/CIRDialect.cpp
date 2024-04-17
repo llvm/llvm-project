@@ -2914,9 +2914,11 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
   if (parser.parseOptionalKeyword("side_effects").succeeded())
     result.attributes.set("side_effects", UnitAttr::get(ctxt));
 
-  if (parser.parseOptionalArrow().succeeded())
-    ;
-  [[maybe_unused]] auto x = parser.parseType(resType);
+  if (parser.parseOptionalArrow().failed())
+    return mlir::failure();
+
+  if (parser.parseType(resType).failed())
+    return mlir::failure();
 
   if (parser.parseOptionalAttrDict(result.attributes))
     return mlir::failure();
