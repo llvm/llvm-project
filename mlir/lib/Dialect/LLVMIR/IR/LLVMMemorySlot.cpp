@@ -148,7 +148,6 @@ static bool areConversionCompatible(const DataLayout &layout, Type lhs,
   if (lhs == rhs)
     return true;
 
-  // Aggregate types cannot be casted.
   if (!isSupportedTypeForConversion(lhs) || !isSupportedTypeForConversion(rhs))
     return false;
   return layout.getTypeSize(lhs) <= layout.getTypeSize(rhs);
@@ -168,8 +167,10 @@ constexpr const static uint64_t kBitsInByte = 8;
 static Value createConversionSequence(RewriterBase &rewriter, Location loc,
                                       Value srcValue, Type targetType,
                                       const DataLayout &dataLayout) {
-  // Get the types of the source and destination values.
+  // Get the types of the source and target values.
   Type srcType = srcValue.getType();
+  assert(areConversionCompatible(dataLayout, targetType, srcType) &&
+         "expected that the compatibility was checked before");
 
   uint64_t srcTypeSize = dataLayout.getTypeSize(srcType);
   uint64_t targetTypeSize = dataLayout.getTypeSize(targetType);
@@ -178,26 +179,14 @@ static Value createConversionSequence(RewriterBase &rewriter, Location loc,
   if (srcType == targetType)
     return srcValue;
 
-  // The code below is currently not capable of handling aggregate types as it
-  // makes use of bitcasts. Aggregates cannot be bitcast.
-  // TODO: We should have a `LLVMAggregateType` base class to easily perform
-  // this `isa`.
-  if (isa<LLVM::LLVMArrayType, LLVM::LLVMStructType>(srcType) ||
-      isa<LLVM::LLVMArrayType, LLVM::LLVMStructType>(targetType))
-    return nullptr;
-
   // In the special case of casting one pointer to another, we want to generate
   // an address space cast. Bitcasts of pointers are not allowed and using
   // pointer to integer conversions are not equivalent due to the loss or
   // provenance.
   if (isa<LLVM::LLVMPointerType>(targetType) &&
-      isa<LLVM::LLVMPointerType>(srcType)) {
-    // Abort the conversion if the pointers have different bitwidths.
-    if (srcTypeSize != targetTypeSize)
-      return nullptr;
+      isa<LLVM::LLVMPointerType>(srcType))
     return rewriter.createOrFold<LLVM::AddrSpaceCastOp>(loc, targetType,
                                                         srcValue);
-  }
 
   IntegerType valueSizeInteger =
       rewriter.getIntegerType(srcTypeSize * kBitsInByte);
@@ -211,7 +200,7 @@ static Value createConversionSequence(RewriterBase &rewriter, Location loc,
     replacement = rewriter.createOrFold<LLVM::BitcastOp>(loc, valueSizeInteger,
                                                          replacement);
 
-  // Truncate the integer if the size of the read is less than the value.
+  // Truncate the integer if the size of the target is less than the value.
   if (targetTypeSize != srcTypeSize) {
     if (!isLittleEndian(dataLayout)) {
       uint64_t shiftAmount = (srcTypeSize - targetTypeSize) * kBitsInByte;
@@ -226,7 +215,7 @@ static Value createConversionSequence(RewriterBase &rewriter, Location loc,
         replacement);
   }
 
-  // Now cast the integer to the actual destination type if required.
+  // Now cast the integer to the actual target type if required.
   if (isa<LLVM::LLVMPointerType>(targetType))
     replacement =
         rewriter.createOrFold<LLVM::IntToPtrOp>(loc, targetType, replacement);
