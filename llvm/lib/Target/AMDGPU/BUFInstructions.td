@@ -1726,7 +1726,7 @@ let SubtargetPredicate = isGFX12Plus in {
   defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER", ["noret"]>;
 }
 
-let SubtargetPredicate = isGFX6GFX7GFX10Plus in {
+let OtherPredicates = [isGFX6GFX7GFX10Plus] in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fmin", f32, "BUFFER_ATOMIC_FMIN">;
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fmax", f32, "BUFFER_ATOMIC_FMAX">;
 }
