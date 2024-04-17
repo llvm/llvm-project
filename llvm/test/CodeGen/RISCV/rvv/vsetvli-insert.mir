@@ -516,9 +516,10 @@ body:             |
     ; CHECK-LABEL: name: postpass_modify_vl
     ; CHECK: liveins: $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $x0 = PseudoVSETIVLI 3, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 3, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $vtype
     ; CHECK-NEXT: $vl = COPY $x1
+    ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 3, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 3, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: PseudoRET
     dead $x0 = PseudoVSETIVLI 3, 216, implicit-def $vl, implicit-def $vtype
