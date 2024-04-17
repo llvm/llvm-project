@@ -1487,6 +1487,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
 
+  if (Value *R = foldOpOfXWithXEqC(&I, SQ.getWithInstruction(&I)))
+    return replaceInstUsesWith(I, R);
+
   // (A*B)+(A*C) -> A*(B+C) etc
   if (Value *V = foldUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
@@ -2091,6 +2094,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
+
+  if (Value *R = foldOpOfXWithXEqC(&I, SQ.getWithInstruction(&I)))
+    return replaceInstUsesWith(I, R);
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 

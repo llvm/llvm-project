@@ -204,6 +204,9 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
 
+  if (Value *R = foldOpOfXWithXEqC(&I, SQ.getWithInstruction(&I)))
+    return replaceInstUsesWith(I, R);
+
   if (Value *V = foldUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
 

@@ -1491,6 +1491,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(&CI);
   if (!II) return visitCallBase(CI);
 
+  if (Value *R = foldOpOfXWithXEqC(II, SQ.getWithInstruction(&CI)))
+    return replaceInstUsesWith(CI, R);
+
   // For atomic unordered mem intrinsics if len is not a positive or
   // not a multiple of element size then behavior is undefined.
   if (auto *AMI = dyn_cast<AtomicMemIntrinsic>(II))

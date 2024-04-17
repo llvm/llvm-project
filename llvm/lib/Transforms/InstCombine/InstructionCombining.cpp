@@ -4829,6 +4829,89 @@ void InstCombinerImpl::tryToSinkInstructionDbgValues(
   }
 }
 
+// If we have:
+//  `(op X, (zext/sext (icmp eq X, C)))`
+// We can transform it to:
+//  `(select (icmp eq X, C), (op C, (zext/sext 1)), (op X, 0))`
+// We do so if the `zext/sext` is one use and `(op X, 0)` simplifies.
+Value *InstCombinerImpl::foldOpOfXWithXEqC(Value *Op, const SimplifyQuery &SQ) {
+  Value *Cond;
+  Constant *C, *ExtC;
+
+  // match `(op X, (zext/sext (icmp eq X, C)))` and see if `(op X, 0)`
+  // simplifies.
+  // If we match and simplify, store the `icmp` in `Cond`, `(zext/sext C)` in
+  // `ExtC`.
+  auto MatchXWithXEqC = [&](Value *Op0, Value *Op1) -> Value * {
+    if (match(Op0, m_OneUse(m_ZExtOrSExt(m_Value(Cond))))) {
+      ICmpInst::Predicate Pred;
+      if (!match(Cond, m_ICmp(Pred, m_Specific(Op1), m_ImmConstant(C))) ||
+          Pred != ICmpInst::ICMP_EQ)
+        return nullptr;
+
+      ExtC = isa<SExtInst>(Op0) ? ConstantInt::getAllOnesValue(C->getType())
+                                : ConstantInt::get(C->getType(), 1);
+      return simplifyWithOpReplaced(Op, Op0,
+                                    Constant::getNullValue(Op1->getType()), SQ,
+                                    /*AllowRefinement=*/true);
+    }
+    return nullptr;
+  };
+
+  Value *SimpleOp = nullptr, *ConstOp = nullptr;
+  if (auto *BO = dyn_cast<BinaryOperator>(Op)) {
+    switch (BO->getOpcode()) {
+      // Potential TODO: For all of these, if Op1 is the compare, the compare
+      // must be true and we could replace Op0 with C (otherwise immediate UB).
+    case Instruction::UDiv:
+    case Instruction::SDiv:
+    case Instruction::URem:
+    case Instruction::SRem:
+      return nullptr;
+    default:
+      break;
+    }
+
+    // Try X is Op0
+    if ((SimpleOp = MatchXWithXEqC(BO->getOperand(0), BO->getOperand(1))))
+      ConstOp = Builder.CreateBinOp(BO->getOpcode(), ExtC, C);
+    // Try X is Op1
+    else if ((SimpleOp = MatchXWithXEqC(BO->getOperand(1), BO->getOperand(0))))
+      ConstOp = Builder.CreateBinOp(BO->getOpcode(), C, ExtC);
+  } else if (auto *II = dyn_cast<IntrinsicInst>(Op)) {
+    switch (II->getIntrinsicID()) {
+    default:
+      return nullptr;
+    case Intrinsic::sshl_sat:
+    case Intrinsic::ushl_sat:
+    case Intrinsic::umax:
+    case Intrinsic::umin:
+    case Intrinsic::smax:
+    case Intrinsic::smin:
+    case Intrinsic::uadd_sat:
+    case Intrinsic::usub_sat:
+    case Intrinsic::sadd_sat:
+    case Intrinsic::ssub_sat:
+      // Try X is Op0
+      if ((SimpleOp =
+               MatchXWithXEqC(II->getArgOperand(0), II->getArgOperand(1))))
+        ConstOp = Builder.CreateBinaryIntrinsic(II->getIntrinsicID(), ExtC, C);
+      // Try X is Op1
+      else if ((SimpleOp =
+                    MatchXWithXEqC(II->getArgOperand(1), II->getArgOperand(0))))
+        ConstOp = Builder.CreateBinaryIntrinsic(II->getIntrinsicID(), C, ExtC);
+      break;
+    }
+  }
+
+  assert((SimpleOp == nullptr) == (ConstOp == nullptr) &&
+         "Simplfied Op and Constant Op are de-synced!");
+  if (SimpleOp == nullptr)
+    return nullptr;
+
+  return Builder.CreateSelect(Cond, ConstOp, SimpleOp);
+}
+
 void InstCombinerImpl::tryToSinkInstructionDbgVariableRecords(
     Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
     BasicBlock *DestBlock,

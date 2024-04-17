@@ -755,6 +755,7 @@ public:
 
   Value *EvaluateInDifferentType(Value *V, Type *Ty, bool isSigned);
 
+  Value *foldOpOfXWithXEqC(Value *Op, const SimplifyQuery &SQ);
   bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
   void tryToSinkInstructionDbgValues(
       Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
