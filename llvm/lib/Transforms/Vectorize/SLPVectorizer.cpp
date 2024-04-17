@@ -118,6 +118,11 @@ static cl::opt<int>
                      cl::desc("Only vectorize if you gain more than this "
                               "number "));
 
+static cl::opt<bool> SLPSkipEarlyProfitabilityCheck(
+    "slp-skip-early-profitability-check", cl::init(false), cl::Hidden,
+    cl::desc("When true, SLP vectorizer bypasses profitability checks based on "
+             "heuristics and makes vectorization decision via cost modeling."));
+
 static cl::opt<bool>
 ShouldVectorizeHor("slp-vectorize-hor", cl::init(true), cl::Hidden,
                    cl::desc("Attempt to vectorize horizontal reductions"));
@@ -6250,7 +6255,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       LLVM_DEBUG(dbgs() << "SLP: ShuffleVector are not vectorized.\n");
       return TreeEntry::NeedToGather;
     }
-    if (!areAltOperandsProfitable(S, VL)) {
+    if (!SLPSkipEarlyProfitabilityCheck && !areAltOperandsProfitable(S, VL)) {
       LLVM_DEBUG(
           dbgs()
           << "SLP: ShuffleVector not vectorized, operands are buildvector and "
