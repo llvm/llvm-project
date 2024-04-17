@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_PSTL_BACKEND_H
-#define _LIBCPP___ALGORITHM_PSTL_BACKEND_H
+#ifndef _LIBCPP___PSTL_CONFIGURATION_FWD_H
+#define _LIBCPP___PSTL_CONFIGURATION_FWD_H
 
-#include <__algorithm/pstl_backends/cpu_backend.h>
 #include <__config>
 #include <execution>
 
@@ -191,6 +190,20 @@ into a program termination at the front-end level. When a backend returns a dise
 frontend will turn that into a call to `std::__throw_bad_alloc();` to report the internal failure to the user.
 */
 
+namespace __pstl {
+struct __libdispatch_backend_tag {};
+struct __serial_backend_tag {};
+struct __std_thread_backend_tag {};
+} // namespace __pstl
+
+#  if defined(_LIBCPP_PSTL_BACKEND_SERIAL)
+using __cpu_backend_tag = __pstl::__serial_backend_tag;
+#  elif defined(_LIBCPP_PSTL_BACKEND_STD_THREAD)
+using __cpu_backend_tag = __pstl::__std_thread_backend_tag;
+#  elif defined(_LIBCPP_PSTL_BACKEND_LIBDISPATCH)
+using __cpu_backend_tag = __pstl::__libdispatch_backend_tag;
+#  endif
+
 template <class _ExecutionPolicy>
 struct __select_backend;
 
@@ -206,8 +219,8 @@ struct __select_backend<std::execution::unsequenced_policy> {
 };
 #  endif
 
-#  if defined(_LIBCPP_PSTL_CPU_BACKEND_SERIAL) || defined(_LIBCPP_PSTL_CPU_BACKEND_THREAD) ||                          \
-      defined(_LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH)
+#  if defined(_LIBCPP_PSTL_BACKEND_SERIAL) || defined(_LIBCPP_PSTL_BACKEND_STD_THREAD) ||                              \
+      defined(_LIBCPP_PSTL_BACKEND_LIBDISPATCH)
 template <>
 struct __select_backend<std::execution::parallel_policy> {
   using type = __cpu_backend_tag;
@@ -229,4 +242,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___ALGORITHM_PSTL_BACKEND_H
+#endif // _LIBCPP___PSTL_CONFIGURATION_FWD_H

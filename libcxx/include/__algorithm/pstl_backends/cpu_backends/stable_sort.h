@@ -9,9 +9,9 @@
 #ifndef _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_STABLE_SORT_H
 #define _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_STABLE_SORT_H
 
-#include <__algorithm/pstl_backends/cpu_backends/backend.h>
 #include <__algorithm/stable_sort.h>
 #include <__config>
+#include <__pstl/configuration_fwd.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/empty.h>
