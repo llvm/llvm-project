@@ -358,6 +358,8 @@ public:
     VPWidenGEPSC,
     VPWidenLoadSC,
     VPWidenStoreSC,
+    VPWidenVPLoadSC,
+    VPWidenVPStoreSC,
     VPWidenSC,
     VPWidenSelectSC,
     VPBlendSC,
