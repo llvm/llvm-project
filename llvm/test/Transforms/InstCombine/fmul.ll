@@ -42,12 +42,12 @@ define <2 x float> @unary_neg_constant_vec(<2 x float> %x) {
   ret <2 x float> %mul
 }
 
-define <2 x float> @neg_constant_vec_undef(<2 x float> %x) {
-; CHECK-LABEL: @neg_constant_vec_undef(
+define <2 x float> @neg_constant_vec_poison(<2 x float> %x) {
+; CHECK-LABEL: @neg_constant_vec_poison(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul ninf <2 x float> [[X:%.*]], <float -2.000000e+00, float -3.000000e+00>
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
-  %sub = fsub <2 x float> <float undef, float -0.0>, %x
+  %sub = fsub <2 x float> <float poison, float -0.0>, %x
   %mul = fmul ninf <2 x float> %sub, <float 2.0, float 3.0>
   ret <2 x float> %mul
 }
@@ -162,34 +162,34 @@ define <2 x float> @neg_unary_neg_vec(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %mul
 }
 
-define <2 x float> @neg_neg_vec_undef(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @neg_neg_vec_undef(
+define <2 x float> @neg_neg_vec_poison(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @neg_neg_vec_poison(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul arcp <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
-  %sub1 = fsub <2 x float> <float -0.0, float undef>, %x
-  %sub2 = fsub <2 x float> <float undef, float -0.0>, %y
+  %sub1 = fsub <2 x float> <float -0.0, float poison>, %x
+  %sub2 = fsub <2 x float> <float poison, float -0.0>, %y
   %mul = fmul arcp <2 x float> %sub1, %sub2
   ret <2 x float> %mul
 }
 
-define <2 x float> @unary_neg_neg_vec_undef(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @unary_neg_neg_vec_undef(
+define <2 x float> @unary_neg_neg_vec_poison(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @unary_neg_neg_vec_poison(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul arcp <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
   %neg = fneg <2 x float> %x
-  %sub = fsub <2 x float> <float undef, float -0.0>, %y
+  %sub = fsub <2 x float> <float poison, float -0.0>, %y
   %mul = fmul arcp <2 x float> %neg, %sub
   ret <2 x float> %mul
 }
 
-define <2 x float> @neg_unary_neg_vec_undef(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @neg_unary_neg_vec_undef(
+define <2 x float> @neg_unary_neg_vec_poison(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @neg_unary_neg_vec_poison(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul arcp <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
-  %sub = fsub <2 x float> <float -0.0, float undef>, %x
+  %sub = fsub <2 x float> <float -0.0, float poison>, %x
   %neg = fneg <2 x float> %y
   %mul = fmul arcp <2 x float> %sub, %neg
   ret <2 x float> %mul
@@ -322,13 +322,13 @@ define <2 x float> @unary_neg_mul_vec(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %mul
 }
 
-define <2 x float> @neg_mul_vec_undef(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @neg_mul_vec_undef(
+define <2 x float> @neg_mul_vec_poison(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @neg_mul_vec_poison(
 ; CHECK-NEXT:    [[SUB:%.*]] = fneg <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[SUB]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[MUL]]
 ;
-  %sub = fsub <2 x float> <float undef, float -0.0>, %x
+  %sub = fsub <2 x float> <float poison, float -0.0>, %x
   %mul = fmul <2 x float> %sub, %y
   ret <2 x float> %mul
 }
@@ -388,9 +388,9 @@ define void @test8(ptr %inout, i1 %c1) {
 entry:
   %0 = load i32, ptr %inout, align 4
   %conv = uitofp i32 %0 to float
-  %vecinit = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef>, float %conv, i32 3
+  %vecinit = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison>, float %conv, i32 3
   %sub = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %vecinit
-  %1 = shufflevector <4 x float> %sub, <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %1 = shufflevector <4 x float> %sub, <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %mul = fmul <4 x float> zeroinitializer, %1
   br label %for.cond
 
@@ -742,7 +742,7 @@ define <4 x float> @fdiv_constant_denominator_fmul_vec_constexpr(<4 x float> %x)
 ; CHECK-NEXT:    [[T3:%.*]] = fmul reassoc <4 x float> [[X:%.*]], <float 3.000000e+00, float 2.000000e+00, float 1.000000e+00, float 1.000000e+00>
 ; CHECK-NEXT:    ret <4 x float> [[T3]]
 ;
-  %constExprMul = bitcast i128 trunc (i160 bitcast (<5 x float> <float 6.0e+3, float 6.0e+3, float 2.0e+3, float 1.0e+3, float undef> to i160) to i128) to <4 x float>
+  %constExprMul = bitcast i128 trunc (i160 bitcast (<5 x float> <float 6.0e+3, float 6.0e+3, float 2.0e+3, float 1.0e+3, float poison> to i160) to i128) to <4 x float>
   %t1 = fdiv reassoc <4 x float> %x, <float 2.0e+3, float 3.0e+3, float 2.0e+3, float 1.0e+3>
   %t3 = fmul reassoc <4 x float> %t1, %constExprMul
   ret <4 x float> %t3
@@ -1270,7 +1270,7 @@ define <vscale x 2 x float> @mul_scalable_splat_zero(<vscale x 2 x float> %z) {
 ; CHECK-LABEL: @mul_scalable_splat_zero(
 ; CHECK-NEXT:    ret <vscale x 2 x float> zeroinitializer
 ;
-  %shuf = shufflevector <vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 0.0, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  %shuf = shufflevector <vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 0.0, i32 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
   %t3 = fmul fast <vscale x 2 x float> %shuf, %z
   ret <vscale x 2 x float> %t3
 }
@@ -1393,7 +1393,7 @@ define <3 x float> @mul_neg_zero_nnan_ninf_vec(<3 x float> nofpclass(inf nan) %a
 ; CHECK-NEXT:    ret <3 x float> [[RET]]
 ;
 entry:
-  %ret = fmul <3 x float> %a, <float -0.0, float undef, float poison>
+  %ret = fmul <3 x float> %a, <float -0.0, float poison, float poison>
   ret <3 x float> %ret
 }
 
