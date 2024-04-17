@@ -171,6 +171,12 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
 //   %1 = G_GLOBAL_VALUE
 //   %2 = COPY %1
 //   %3 = G_ADDRSPACE_CAST %2
+//
+// or
+//
+//  %1 = G_ZEXT %2
+//  G_MEMCPY ... %2 ...
+//
 // New registers have no SPIRVType and no register class info.
 //
 // Set SPIRVType for GV, propagate it from GV to other instructions,
@@ -198,6 +204,24 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
         auto *Ty = TypedPointerType::get(ElementTy,
                                          Global->getType()->getAddressSpace());
         SpirvTy = GR->getOrCreateSPIRVType(Ty, MIB);
+        break;
+      }
+      case TargetOpcode::G_ZEXT: {
+        if (MI->getOperand(1).isReg()) {
+          if (MachineInstr *DefInstr =
+                  MRI.getVRegDef(MI->getOperand(1).getReg())) {
+            if (SPIRVType *Def = propagateSPIRVType(DefInstr, GR, MRI, MIB)) {
+              unsigned CurrentBW = GR->getScalarOrVectorBitWidth(Def);
+              unsigned ExpectedBW =
+                  std::max(MRI.getType(Reg).getScalarSizeInBits(), CurrentBW);
+              unsigned NumElements = GR->getScalarOrVectorComponentCount(Def);
+              SpirvTy = GR->getOrCreateSPIRVIntegerType(ExpectedBW, MIB);
+              if (NumElements > 1)
+                SpirvTy =
+                    GR->getOrCreateSPIRVVectorType(SpirvTy, NumElements, MIB);
+            }
+          }
+        }
         break;
       }
       case TargetOpcode::G_TRUNC:
@@ -415,6 +439,7 @@ static void generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         }
         insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MRI);
       } else if (MI.getOpcode() == TargetOpcode::G_TRUNC ||
+                 MI.getOpcode() == TargetOpcode::G_ZEXT ||
                  MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
                  MI.getOpcode() == TargetOpcode::COPY ||
                  MI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST) {
