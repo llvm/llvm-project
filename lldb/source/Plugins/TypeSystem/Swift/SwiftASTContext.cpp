@@ -9221,7 +9221,7 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
   }
   
   std::string category = "Importing Swift module dependencies for ";
-  category += compile_unit->GetPrimaryFile().GetFilename();
+  category += compile_unit->GetPrimaryFile().GetFilename().GetString();
   Progress progress(category, "", cu_imports.size());
   size_t completion = 0;
   for (const SourceModule &module : cu_imports) {
