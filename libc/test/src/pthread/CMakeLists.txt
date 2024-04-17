@@ -50,4 +50,10 @@ add_libc_unittest(
     libc.include.errno
     libc.include.pthread
     libc.include.time
+    libc.src.pthread.pthread_condattr_destroy
+    libc.src.pthread.pthread_condattr_getclock
+    libc.src.pthread.pthread_condattr_getpshared
+    libc.src.pthread.pthread_condattr_init
+    libc.src.pthread.pthread_condattr_setclock
+    libc.src.pthread.pthread_condattr_setpshared
   )
