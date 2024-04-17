@@ -16079,7 +16079,7 @@ unsigned AArch64TargetLowering::getNumInterleavedAccesses(
   unsigned VecSize = 128;
   unsigned ElSize = DL.getTypeSizeInBits(VecTy->getElementType());
   unsigned MinElts = VecTy->getElementCount().getKnownMinValue();
-  if (UseScalable)
+  if (UseScalable && isa<FixedVectorType>(VecTy))
     VecSize = std::max(Subtarget->getMinSVEVectorSizeInBits(), 128u);
   return std::max<unsigned>(1, (MinElts * ElSize + 127) / VecSize);
 }
