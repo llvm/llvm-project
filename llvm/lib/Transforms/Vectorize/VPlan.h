@@ -1049,6 +1049,11 @@ public:
            R->getVPDefID() == VPRecipeBase::VPVectorPointerSC;
   }
 
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
+
   /// Drop all poison-generating flags.
   void dropPoisonGeneratingFlags() {
     // NOTE: This needs to be kept in-sync with
