@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp %openmp_module_flag
 ! Semantic checks for OpenMP 5.0 standard 2.17.7 atomic Construct.
 
 use omp_lib

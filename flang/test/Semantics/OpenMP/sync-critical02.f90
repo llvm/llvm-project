@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp %openmp_module_flag
 
 ! OpenMP Version 5.0
 ! 2.17.1 critical construct

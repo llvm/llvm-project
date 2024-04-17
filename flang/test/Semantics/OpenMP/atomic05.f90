@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp %openmp_module_flag
 
 ! This tests the various semantics related to the clauses of various OpenMP atomic constructs
 

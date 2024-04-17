@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp %openmp_module_flag
 use omp_lib
 !2.11.4 Allocate Clause
 !For any list item that is specified in the allocate
