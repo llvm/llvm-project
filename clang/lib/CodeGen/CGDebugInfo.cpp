@@ -1313,6 +1313,62 @@ llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
   return DBuilder.createPointerType(EltTy, Size);
 }
 
+CGDebugInfo::TemplateArgs
+CGDebugInfo::GetTemplateArgs(const TemplateDecl *TD,
+                             const TemplateSpecializationType *Ty) const {
+  assert(Ty->isTypeAlias());
+  // TemplateSpecializationType doesn't know if its template args are
+  // being substituted into a parameter pack. We can find out if that's
+  // the case now by inspecting the TypeAliasTemplateDecl template
+  // parameters. Insert Ty's template args into SpecArgs, bundling args
+  // passed to a parameter pack into a TemplateArgument::Pack. It also
+  // doesn't know the value of any defaulted args, so collect those now
+  // too.
+  SmallVector<TemplateArgument> SpecArgs;
+  ArrayRef SubstArgs = Ty->template_arguments();
+  for (const NamedDecl *Param : TD->getTemplateParameters()->asArray()) {
+    // If Param is a parameter pack, pack the remaining arguments.
+    if (Param->isParameterPack()) {
+      SpecArgs.push_back(TemplateArgument(SubstArgs));
+      break;
+    }
+
+    // Take the next argument.
+    if (!SubstArgs.empty()) {
+      SpecArgs.push_back(SubstArgs.front());
+      SubstArgs = SubstArgs.drop_front();
+      continue;
+    }
+
+    // If SubstArgs is now empty (we're taking from it each iteration) and
+    // this template parameter isn't a pack, then that should mean we're
+    // using default values for the remaining template parameters. Push the
+    // default value for each parameter.
+    if (auto *P = dyn_cast<TemplateTypeParmDecl>(Param)) {
+      assert(P->hasDefaultArgument() &&
+             "expected defaulted template type parameter");
+      SpecArgs.push_back(TemplateArgument(P->getDefaultArgument(),
+                                          /*IsNullPtr=*/false,
+                                          /*IsDefaulted=*/true));
+    } else if (auto *P = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+      assert(P->hasDefaultArgument() &&
+             "expected defaulted template non-type parameter");
+      SpecArgs.push_back(TemplateArgument(P->getDefaultArgument(),
+                                          /*IsDefaulted=*/true));
+    } else if (auto *P = dyn_cast<TemplateTemplateParmDecl>(Param)) {
+      assert(P->hasDefaultArgument() &&
+             "expected defaulted template template parameter");
+      SpecArgs.push_back(TemplateArgument(
+          P->getDefaultArgument().getArgument().getAsTemplate(),
+          /*IsDefaulted=*/true));
+    } else {
+      llvm_unreachable("Unexpected template parameter kind");
+      break;
+    }
+  }
+  return {TD->getTemplateParameters(), SpecArgs};
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
                                       llvm::DIFile *Unit) {
   assert(Ty->isTypeAlias());
@@ -1335,58 +1391,7 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
   SourceLocation Loc = AliasDecl->getLocation();
 
   if (CGM.getCodeGenOpts().DebugTemplateAlias) {
-    // TemplateSpecializationType doesn't know if its template args are
-    // being substituted into a parameter pack. We can find out if that's
-    // the case now by inspecting the TypeAliasTemplateDecl template
-    // parameters. Insert Ty's template args into SpecArgs, bundling args
-    // passed to a parameter pack into a TemplateArgument::Pack. It also
-    // doesn't know the value of any defaulted args, so collect those now
-    // too.
-    SmallVector<TemplateArgument> SpecArgs;
-    {
-      ArrayRef SubstArgs = Ty->template_arguments();
-      for (const NamedDecl *Param : TD->getTemplateParameters()->asArray()) {
-        // If Param is a parameter pack, pack the remaining arguments.
-        if (Param->isParameterPack()) {
-          SpecArgs.push_back(TemplateArgument(SubstArgs));
-          break;
-        }
-
-        // Take the next argument.
-        if (!SubstArgs.empty()) {
-          SpecArgs.push_back(SubstArgs.front());
-          SubstArgs = SubstArgs.drop_front();
-          continue;
-        }
-
-        // If SubstArgs is now empty (we're taking from it each iteration) and
-        // this template parameter isn't a pack, then that should mean we're
-        // using default values for the remaining template parameters. Push the
-        // default value for each parameter.
-        if (auto *P = dyn_cast<TemplateTypeParmDecl>(Param)) {
-          assert(P->hasDefaultArgument() &&
-                 "expected defaulted template type parameter");
-          SpecArgs.push_back(TemplateArgument(P->getDefaultArgument(),
-                                              /*IsNullPtr=*/false,
-                                              /*IsDefaulted=*/true));
-        } else if (auto *P = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
-          assert(P->hasDefaultArgument() &&
-                 "expected defaulted template non-type parameter");
-          SpecArgs.push_back(TemplateArgument(P->getDefaultArgument(),
-                                              /*IsDefaulted=*/true));
-        } else if (auto *P = dyn_cast<TemplateTemplateParmDecl>(Param)) {
-          assert(P->hasDefaultArgument() &&
-                 "expected defaulted template template parameter");
-          SpecArgs.push_back(TemplateArgument(
-              P->getDefaultArgument().getArgument().getAsTemplate(),
-              /*IsDefaulted=*/true));
-        } else {
-          llvm_unreachable("Unexpected template parameter kind");
-          break;
-        }
-      }
-    }
-    TemplateArgs Args = {TD->getTemplateParameters(), SpecArgs};
+    TemplateArgs Args = GetTemplateArgs(TD, Ty);
 
     // FIXME: Respect DebugTemplateNameKind::Mangled, e.g. by using GetName.
     // Note we can't use GetName without additional work: TypeAliasTemplateDecl

@@ -307,6 +307,8 @@ class CGDebugInfo {
   std::optional<TemplateArgs> GetTemplateArgs(const VarDecl *) const;
   std::optional<TemplateArgs> GetTemplateArgs(const RecordDecl *) const;
   std::optional<TemplateArgs> GetTemplateArgs(const FunctionDecl *) const;
+  TemplateArgs GetTemplateArgs(const TemplateDecl *,
+                               const TemplateSpecializationType *) const;
 
   /// A helper function to collect debug info for template
   /// parameters.
