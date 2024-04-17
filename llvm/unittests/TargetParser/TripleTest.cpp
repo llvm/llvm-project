@@ -1026,7 +1026,7 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
 
   T = Triple("dxilv1.9-unknown-unknown");
-  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownArch, T.getArch());
   EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
