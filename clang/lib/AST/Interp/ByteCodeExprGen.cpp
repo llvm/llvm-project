@@ -971,6 +971,11 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
   unsigned InitIndex = 0;
   for (const Expr *Init : Inits) {
+    // Skip unnamed bitfields.
+    while (InitIndex < R->getNumFields() &&
+           R->getField(InitIndex)->Decl->isUnnamedBitField())
+      ++InitIndex;
+
     if (!this->emitDupPtr(E))
       return false;
 
