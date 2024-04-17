@@ -829,6 +829,9 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
   unsigned FieldNo = 0;
   bool IsUnion = RD->isUnion();
 
+  if (RD->isImplicit())
+    return nullptr;
+
   for (const Decl *D : RD->decls()) {
     if (const auto *Field = dyn_cast<FieldDecl>(D);
         Field && (Name.empty() || Field->getNameAsString() == Name) &&
@@ -844,7 +847,17 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
       if (const FieldDecl *Field =
               FindFlexibleArrayMemberField(Ctx, Record, Name, Offset)) {
         const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
-        Offset += Layout.getFieldOffset(FieldNo);
+        if (Layout.getFieldCount()) {
+          // A struct that holds only an inner struct won't have any fields. E.g.
+          //
+          //     struct foo {
+          //         struct bar {
+          //             int count;
+          //             int array[];
+          //         };
+          //     };
+          Offset += Layout.getFieldOffset(FieldNo);
+        }
         return Field;
       }
 
