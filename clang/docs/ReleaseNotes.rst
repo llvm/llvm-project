@@ -287,6 +287,9 @@ Attribute Changes in Clang
   This allows the ``_Nullable`` and ``_Nonnull`` family of type attributes to
   apply to this class.
 
+- Clang now warns that the ``exclude_from_explicit_instantiation`` attribute
+  is ignored when applied to a local class or a member thereof.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
