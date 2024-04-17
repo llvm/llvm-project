@@ -73,7 +73,7 @@ if (TARGET cxx_shared)
   set(generate_cxx_abilist_parameters "${LIBCXX_SOURCE_DIR}/utils/generate_abi_list.py"
             --output "${abi_list_file}"
             "$<TARGET_FILE:cxx_shared>")
-  if (EXISTS ${abi_map_file})
+  if (APPLE)
     list(APPEND generate_cxx_abilist_parameters --mapfile "${abi_map_file}")
   endif()
 

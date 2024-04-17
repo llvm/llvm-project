@@ -234,15 +234,6 @@ if (LIBCXX_ENABLE_SHARED)
     # If we are on an Apple platform, let's ask the linker to generate a map
     # that we can use to determine the size of the abi symbols (see generate-cxx-abilist target).
     target_link_libraries(cxx_shared PRIVATE "-Wl,-map,${CMAKE_CURRENT_BINARY_DIR}/../lib/abi/linker.map")
-    # Use CMAKE_CONFIGURE_DEPENDS so that CMake will regenerate if/when the map file changes.
-    # Regeneration is important because the addition of the --mapfile option (see lib/abi/CMakeLists.txt)
-    # to generate_abi_list.py depends on the file's existence. Unfortunately, there is a limitation in
-    # CMAKE_CONFIGURE_DEPENDS where regeneration is not triggered when a file that previously did
-    # not exist is generated. As a workaround, "touch" an empty file.
-    if (NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/../lib/abi/linker.map")
-      file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/../lib/abi/linker.map")
-    endif()
-    set_property(DIRECTORY . APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/../lib/abi/linker.map")
   endif()
 
   # Maybe re-export symbols from libc++abi

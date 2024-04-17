@@ -55,9 +55,15 @@ def main(argv):
         supplemental_info = libcxx.sym_check.util.extract_object_sizes_from_map(
             args.mapfile
         )
+        if len(supplemental_info) == 0:
+            print("You requested that the ABI list be built with the help of a mapfile, but the specified mapfile could not be found.")
+            return 1
 
+    # Specific to the case where there is supplemental symbol information from a mapfile ...
     if len(supplemental_info) != 0:
         for sym in symbols:
+            # Only update from the supplementatl information where the symbol has a
+            # size, that size is not 0 and its type is OBJECT.
             if "size" not in sym or sym["size"] != 0 or sym["type"] != "OBJECT":
                 continue
             if sym["name"] in supplemental_info:
@@ -66,7 +72,8 @@ def main(argv):
 
     lines = [pprint.pformat(sym, width=99999) for sym in symbols]
     args.output.writelines("\n".join(sorted(lines)))
-
+    return 0
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    result = main(sys.argv[1:])
+    sys.exit(result)

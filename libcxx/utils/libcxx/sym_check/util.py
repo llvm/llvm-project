@@ -127,8 +127,11 @@ def extract_object_sizes_from_map(mapfilename: str):
     maplines = []
     result = {}
 
-    with open(mapfilename, "r") as f:
-        maplines = f.readlines()
+    try:
+        with open(mapfilename, "r") as f:
+            maplines = f.readlines()
+    except FileNotFoundError as e:
+        return []
 
     if len(maplines) == 0:
         return {}
