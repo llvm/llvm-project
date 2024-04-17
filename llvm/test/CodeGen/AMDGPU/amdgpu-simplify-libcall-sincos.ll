@@ -884,10 +884,9 @@ entry:
 
 define float @sincos_f32_unused_result_cos(float %x) {
 ; CHECK-LABEL: define float @sincos_f32_unused_result_cos
-; CHECK-SAME: (float [[X:%.*]]) local_unnamed_addr #[[ATTR4]] {
+; CHECK-SAME: (float [[X:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call contract float @_Z3sinf(float [[X]])
 ; CHECK-NEXT:    ret float [[TMP0]]
 ;
 entry:
@@ -900,11 +899,9 @@ entry:
 
 define float @sincos_f32_unused_result_sin(float %x) {
 ; CHECK-LABEL: define float @sincos_f32_unused_result_sin
-; CHECK-SAME: (float [[X:%.*]]) local_unnamed_addr #[[ATTR4]] {
+; CHECK-SAME: (float [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call contract float @_Z3cosf(float [[X]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:
@@ -917,13 +914,11 @@ entry:
 
 define void @sincos_f32_repeated_uses(float %x, ptr addrspace(1) %sin_out, ptr addrspace(1) %cos_out) {
 ; CHECK-LABEL: define void @sincos_f32_repeated_uses
-; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) [[SIN_OUT:%.*]], ptr addrspace(1) [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) [[SIN_OUT:%.*]], ptr addrspace(1) [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
 ; CHECK-NEXT:    [[__SINCOS_3:%.*]] = alloca float, align 4, addrspace(5)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_3]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_3]], align 4
 ; CHECK-NEXT:    store volatile float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
 ; CHECK-NEXT:    store volatile float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
 ; CHECK-NEXT:    store volatile float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
