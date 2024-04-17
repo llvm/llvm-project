@@ -16,6 +16,8 @@
 namespace llvm {
 namespace memprof {
 
+struct MemProfRecord;
+
 // The versions of the indexed MemProf format
 enum IndexedVersion : uint64_t {
   // Version 0: This version didn't have a version field.
@@ -391,6 +393,12 @@ struct IndexedMemProfRecord {
   static IndexedMemProfRecord deserialize(const MemProfSchema &Schema,
                                           const unsigned char *Buffer,
                                           IndexedVersion Version);
+
+  // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
+  // translate CallStackId to call stacks with frames inline.
+  MemProfRecord toMemProfRecord(
+      std::function<const llvm::SmallVector<Frame>(const CallStackId)> Callback)
+      const;
 
   // Returns the GUID for the function name after canonicalization. For
   // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
