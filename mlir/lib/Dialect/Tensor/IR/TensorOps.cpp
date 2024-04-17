@@ -1592,9 +1592,8 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
     auto elements = fromElements.getElements();
     bool dynamicNoop =
         sourceTy.getRank() == static_cast<int64_t>(elements.size());
-    for (auto [id, element] : llvm::enumerate(elements)) {
-      if (!dynamicNoop)
-        break;
+    for (int id = 0, s = elements.size(); id < s && dynamicNoop; ++id) {
+      auto element = elements[id];
 
       APSInt cstElement;
       if (matchPattern(element, m_ConstantInt(&cstElement))) {
