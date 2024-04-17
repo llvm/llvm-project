@@ -703,7 +703,7 @@ public:
   }
 
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D) {
-    if (auto *Args = D->getTemplateArgsInfo())
+    if (auto *Args = D->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
