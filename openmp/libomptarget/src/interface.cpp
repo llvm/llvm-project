@@ -21,6 +21,8 @@
 
 #include "Utils/ExponentialBackoff.h"
 
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
+
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
@@ -218,11 +220,19 @@ EXTERN void __tgt_target_data_update_nowait_mapper(
 static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
                                        KernelArgsTy &LocalKernelArgs,
                                        int32_t NumTeams, int32_t ThreadLimit) {
-  if (KernelArgs->Version > 2)
+  if (KernelArgs->Version > OMP_KERNEL_ARG_VERSION)
     DP("Unexpected ABI version: %u\n", KernelArgs->Version);
 
-  if (KernelArgs->Version == 1) {
-    LocalKernelArgs.Version = 2;
+  uint32_t UpgradedVersion = KernelArgs->Version;
+  if (KernelArgs->Version < OMP_KERNEL_ARG_VERSION) {
+    // The upgraded version will be based on the kernel launch environment.
+    if (KernelArgs->Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
+      UpgradedVersion = OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR - 1;
+    else
+      UpgradedVersion = OMP_KERNEL_ARG_VERSION;
+  }
+  if (UpgradedVersion != KernelArgs->Version) {
+    LocalKernelArgs.Version = UpgradedVersion;
     LocalKernelArgs.NumArgs = KernelArgs->NumArgs;
     LocalKernelArgs.ArgBasePtrs = KernelArgs->ArgBasePtrs;
     LocalKernelArgs.ArgPtrs = KernelArgs->ArgPtrs;
@@ -446,10 +456,8 @@ EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
   assert(PM && "Runtime not initialized");
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
-  for (auto &R : PM->pluginAdaptors()) {
-    if (R.set_info_flag)
-      R.set_info_flag(NewInfoLevel);
-  }
+  for (auto &R : PM->pluginAdaptors())
+    R.set_info_flag(NewInfoLevel);
 }
 
 EXTERN int __tgt_print_device_info(int64_t DeviceId) {
@@ -487,7 +495,7 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   if (QueryCounter.isAboveThreshold())
     AsyncInfo->SyncType = AsyncInfoTy::SyncTy::BLOCKING;
 
-  if (const int Rc = AsyncInfo->synchronize())
+  if (AsyncInfo->synchronize())
     FATAL_MESSAGE0(1, "Error while querying the async queue for completion.\n");
   // If there are device operations still pending, return immediately without
   // deallocating the handle and increase the current thread query count.

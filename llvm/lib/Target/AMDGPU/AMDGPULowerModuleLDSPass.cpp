@@ -340,25 +340,10 @@ public:
 
     // Get uses from the current function, excluding uses by called functions
     // Two output variables to avoid walking the globals list twice
-    std::optional<bool> HasAbsoluteGVs;
     for (auto &GV : M.globals()) {
       if (!AMDGPU::isLDSVariableToLower(GV)) {
         continue;
       }
-
-      // Check if the module is consistent: either all GVs are absolute (happens
-      // when we run the pass more than once), or none are.
-      const bool IsAbsolute = GV.isAbsoluteSymbolRef();
-      if (HasAbsoluteGVs.has_value()) {
-        if (*HasAbsoluteGVs != IsAbsolute) {
-          report_fatal_error(
-              "Module cannot mix absolute and non-absolute LDS GVs");
-        }
-      } else
-        HasAbsoluteGVs = IsAbsolute;
-
-      if (IsAbsolute)
-        continue;
 
       for (User *V : GV.users()) {
         if (auto *I = dyn_cast<Instruction>(V)) {
@@ -468,6 +453,31 @@ public:
         }
       }
     }
+
+    // Verify that we fall into one of 2 cases:
+    //    - All variables are absolute: this is a re-run of the pass
+    //      so we don't have anything to do.
+    //    - No variables are absolute.
+    std::optional<bool> HasAbsoluteGVs;
+    for (auto &Map : {direct_map_kernel, indirect_map_kernel}) {
+      for (auto &[Fn, GVs] : Map) {
+        for (auto *GV : GVs) {
+          bool IsAbsolute = GV->isAbsoluteSymbolRef();
+          if (HasAbsoluteGVs.has_value()) {
+            if (*HasAbsoluteGVs != IsAbsolute) {
+              report_fatal_error(
+                  "Module cannot mix absolute and non-absolute LDS GVs");
+            }
+          } else
+            HasAbsoluteGVs = IsAbsolute;
+        }
+      }
+    }
+
+    // If we only had absolute GVs, we have nothing to do, return an empty
+    // result.
+    if (HasAbsoluteGVs && *HasAbsoluteGVs)
+      return {FunctionVariableMap(), FunctionVariableMap()};
 
     return {std::move(direct_map_kernel), std::move(indirect_map_kernel)};
   }
@@ -1042,21 +1052,18 @@ public:
   void removeNoLdsKernelIdFromReachable(CallGraph &CG, Function *KernelRoot) {
     KernelRoot->removeFnAttr("amdgpu-no-lds-kernel-id");
 
-    SmallVector<Function *> Tmp({CG[KernelRoot]->getFunction()});
-    if (!Tmp.back())
-      return;
-
+    SmallVector<Function *> WorkList({CG[KernelRoot]->getFunction()});
     SmallPtrSet<Function *, 8> Visited;
     bool SeenUnknownCall = false;
 
-    do {
-      Function *F = Tmp.pop_back_val();
+    while (!WorkList.empty()) {
+      Function *F = WorkList.pop_back_val();
 
-      for (auto &N : *CG[F]) {
-        if (!N.second)
+      for (auto &CallRecord : *CG[F]) {
+        if (!CallRecord.second)
           continue;
 
-        Function *Callee = N.second->getFunction();
+        Function *Callee = CallRecord.second->getFunction();
         if (!Callee) {
           if (!SeenUnknownCall) {
             SeenUnknownCall = true;
@@ -1064,21 +1071,21 @@ public:
             // If we see any indirect calls, assume nothing about potential
             // targets.
             // TODO: This could be refined to possible LDS global users.
-            for (auto &N : *CG.getExternalCallingNode()) {
-              Function *PotentialCallee = N.second->getFunction();
+            for (auto &ExternalCallRecord : *CG.getExternalCallingNode()) {
+              Function *PotentialCallee =
+                  ExternalCallRecord.second->getFunction();
+              assert(PotentialCallee);
               if (!isKernelLDS(PotentialCallee))
                 PotentialCallee->removeFnAttr("amdgpu-no-lds-kernel-id");
             }
-
-            continue;
           }
+        } else {
+          Callee->removeFnAttr("amdgpu-no-lds-kernel-id");
+          if (Visited.insert(Callee).second)
+            WorkList.push_back(Callee);
         }
-
-        Callee->removeFnAttr("amdgpu-no-lds-kernel-id");
-        if (Visited.insert(Callee).second)
-          Tmp.push_back(Callee);
       }
-    } while (!Tmp.empty());
+    }
   }
 
   DenseMap<Function *, GlobalVariable *> lowerDynamicLDSVariables(

@@ -61,7 +61,8 @@ if(LLVM_LIBC_FULL_BUILD OR LLVM_LIBC_GPU_BUILD)
   endif()
 endif()
 # We will build the GPU utilities if we are not doing a runtimes build.
-if(LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD)
+option(LIBC_BUILD_GPU_LOADER "Always build the GPU loader utilities" OFF)
+if(LIBC_BUILD_GPU_LOADER OR (LLVM_LIBC_GPU_BUILD AND NOT LLVM_RUNTIMES_BUILD))
   add_subdirectory(utils/gpu)
 endif()
 
@@ -134,7 +135,6 @@ option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc"
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 
-option(LIBC_GPU_BUILD "Build libc for the GPU. All CPU build options will be ignored." OFF)
 set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
@@ -381,6 +381,7 @@ endforeach()
 
 add_subdirectory(include)
 add_subdirectory(config)
+add_subdirectory(hdr)
 add_subdirectory(src)
 add_subdirectory(utils)
 

@@ -44,6 +44,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   case Triple::ppcle:
   case Triple::ppc64:
   case Triple::ppc64le:
+  case Triple::systemz:
   case Triple::x86:
   case Triple::x86_64:
     ActiveTraits.set(unsigned(TraitProperty::device_kind_cpu));

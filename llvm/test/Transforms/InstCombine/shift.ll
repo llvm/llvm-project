@@ -423,7 +423,7 @@ define i32 @test29(i64 %d18) {
 ; CHECK-LABEL: @test29(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i64 [[D18:%.*]], 63
-; CHECK-NEXT:    [[I101:%.*]] = trunc i64 [[SUM_SHIFT]] to i32
+; CHECK-NEXT:    [[I101:%.*]] = trunc nuw nsw i64 [[SUM_SHIFT]] to i32
 ; CHECK-NEXT:    ret i32 [[I101]]
 ;
 entry:
@@ -437,7 +437,7 @@ define <2 x i32> @test29_uniform(<2 x i64> %d18) {
 ; CHECK-LABEL: @test29_uniform(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 63, i64 63>
-; CHECK-NEXT:    [[I101:%.*]] = trunc <2 x i64> [[SUM_SHIFT]] to <2 x i32>
+; CHECK-NEXT:    [[I101:%.*]] = trunc nuw nsw <2 x i64> [[SUM_SHIFT]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[I101]]
 ;
 entry:
@@ -466,7 +466,7 @@ define <2 x i32> @test29_poison(<2 x i64> %d18) {
 ; CHECK-LABEL: @test29_poison(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I916:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 32, i64 poison>
-; CHECK-NEXT:    [[I917:%.*]] = trunc <2 x i64> [[I916]] to <2 x i32>
+; CHECK-NEXT:    [[I917:%.*]] = trunc nuw <2 x i64> [[I916]] to <2 x i32>
 ; CHECK-NEXT:    [[I10:%.*]] = lshr <2 x i32> [[I917]], <i32 31, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[I10]]
 ;
@@ -1751,12 +1751,11 @@ define void @ashr_out_of_range_1(ptr %A) {
 ; CHECK-NEXT:    [[L:%.*]] = load i177, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[L_FROZEN:%.*]] = freeze i177 [[L]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L_FROZEN]], -1
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[TMP1]], i177 0, i177 [[L_FROZEN]]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i177 [[B]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i177 [[L_FROZEN]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -24
-; CHECK-NEXT:    [[C17:%.*]] = icmp sgt i177 [[B]], [[L_FROZEN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[C17]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP1]] to i64
 ; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i177 [[L_FROZEN]], -1
 ; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP5]], i177 0, i177 [[L_FROZEN]]

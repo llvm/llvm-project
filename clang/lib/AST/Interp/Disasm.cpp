@@ -10,9 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Boolean.h"
 #include "Floating.h"
 #include "Function.h"
+#include "FunctionPointer.h"
+#include "Integral.h"
 #include "IntegralAP.h"
+#include "InterpFrame.h"
 #include "Opcode.h"
 #include "PrimType.h"
 #include "Program.h"
@@ -86,6 +90,40 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
 
 LLVM_DUMP_METHOD void Program::dump() const { dump(llvm::errs()); }
 
+static const char *primTypeToString(PrimType T) {
+  switch (T) {
+  case PT_Sint8:
+    return "Sint8";
+  case PT_Uint8:
+    return "Uint8";
+  case PT_Sint16:
+    return "Sint16";
+  case PT_Uint16:
+    return "Uint16";
+  case PT_Sint32:
+    return "Sint32";
+  case PT_Uint32:
+    return "Uint32";
+  case PT_Sint64:
+    return "Sint64";
+  case PT_Uint64:
+    return "Uint64";
+  case PT_IntAP:
+    return "IntAP";
+  case PT_IntAPS:
+    return "IntAPS";
+  case PT_Bool:
+    return "Bool";
+  case PT_Float:
+    return "Float";
+  case PT_Ptr:
+    return "Ptr";
+  case PT_FnPtr:
+    return "FnPtr";
+  }
+  llvm_unreachable("Unhandled PrimType");
+}
+
 LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_RED, true});
@@ -100,9 +138,10 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
   unsigned GI = 0;
   for (const Global *G : Globals) {
     const Descriptor *Desc = G->block()->getDescriptor();
-    OS << GI << ": " << (void *)G->block() << " ";
+    Pointer GP = getPtrGlobal(GI);
+
+    OS << GI << ": " << (const void *)G->block() << " ";
     {
-      Pointer GP = getPtrGlobal(GI);
       ColorScope SC(OS, true,
                     GP.isInitialized()
                         ? TerminalColor{llvm::raw_ostream::GREEN, false}
@@ -111,6 +150,15 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     }
     Desc->dump(OS);
     OS << "\n";
+    if (Desc->isPrimitive() && !Desc->isDummy()) {
+      OS << "   ";
+      {
+        ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_CYAN, false});
+        OS << primTypeToString(Desc->getPrimType()) << " ";
+      }
+      TYPE_SWITCH(Desc->getPrimType(), { GP.deref<T>().print(OS); });
+      OS << "\n";
+    }
     ++GI;
   }
 
@@ -136,7 +184,7 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BLUE, true});
     if (const auto *ND = dyn_cast_if_present<NamedDecl>(asDecl()))
-      OS << ND->getName();
+      ND->printQualifiedName(OS);
     else if (asExpr())
       OS << "expr (TODO)";
   }
@@ -158,4 +206,77 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
 
   if (isDummy())
     OS << " dummy";
+}
+
+LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
+                                        unsigned Indent) const {
+  unsigned Spaces = Indent * 2;
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BLUE, true});
+    OS.indent(Spaces);
+    if (getCallee())
+      describe(OS);
+    else
+      OS << "Frame (Depth: " << getDepth() << ")";
+    OS << "\n";
+  }
+  OS.indent(Spaces) << "Function: " << getFunction();
+  if (const Function *F = getFunction()) {
+    OS << " (" << F->getName() << ")";
+  }
+  OS << "\n";
+  OS.indent(Spaces) << "This: " << getThis() << "\n";
+  OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
+
+  while (const InterpFrame *F = this->Caller) {
+    F->dump(OS, Indent + 1);
+    F = F->Caller;
+  }
+}
+
+LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
+                                   unsigned Offset) const {
+  unsigned Indent = Indentation * 2;
+  OS.indent(Indent);
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BLUE, true});
+    OS << getName() << "\n";
+  }
+
+  unsigned I = 0;
+  for (const Record::Base &B : bases()) {
+    OS.indent(Indent) << "- Base " << I << ". Offset " << (Offset + B.Offset)
+                      << "\n";
+    B.R->dump(OS, Indentation + 1, Offset + B.Offset);
+    ++I;
+  }
+
+  // FIXME: Virtual bases.
+
+  I = 0;
+  for (const Record::Field &F : fields()) {
+    OS.indent(Indent) << "- Field " << I << ": ";
+    {
+      ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_RED, true});
+      OS << F.Decl->getName();
+    }
+    OS << ". Offset " << (Offset + F.Offset) << "\n";
+    ++I;
+  }
+}
+
+LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_BLUE, true});
+    OS << "Block " << (const void *)this << "\n";
+  }
+  unsigned NPointers = 0;
+  for (const Pointer *P = Pointers; P; P = P->Next) {
+    ++NPointers;
+  }
+  OS << "  Pointers: " << NPointers << "\n";
+  OS << "  Dead: " << IsDead << "\n";
+  OS << "  Static: " << IsStatic << "\n";
+  OS << "  Extern: " << IsExtern << "\n";
+  OS << "  Initialized: " << IsInitialized << "\n";
 }

@@ -629,6 +629,8 @@ backend:DirectX:
   - '**/*DirectX*/**'
   - '**/*DXIL*/**'
   - '**/*dxil*/**'
+  - '**/*DXContainer*'
+  - '**/*DXContainer*/**'
 
 backend:SPIR-V:
   - clang/lib/Driver/ToolChains/SPIRV.*
@@ -933,3 +935,6 @@ openmp:libomp:
 
 openmp:libomptarget:
   - any: ['openmp/**', '!openmp/runtime/**']
+
+bazel:
+  - utils/bazel/**

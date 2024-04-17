@@ -487,6 +487,9 @@ public:
       const auto namePair{
           currScope().try_emplace(name->source, Attrs{}, ProcEntityDetails{})};
       auto &newSymbol{*namePair.first->second};
+      if (context_.intrinsics().IsIntrinsic(name->ToString())) {
+        newSymbol.attrs().set(Attr::INTRINSIC);
+      }
       name->symbol = &newSymbol;
     };
     if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
@@ -1646,6 +1649,15 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
       break;
     }
   }
+  // If this symbol already has a data-sharing attribute then there is nothing
+  // to do here.
+  if (const Symbol * symbol{iv.symbol}) {
+    for (auto symMap : targetIt->objectWithDSA) {
+      if (symMap.first->name() == symbol->name()) {
+        return;
+      }
+    }
+  }
   // If this symbol is already Private or Firstprivate in the enclosing
   // OpenMP parallel or task then there is nothing to do here.
   if (auto *symbol{targetIt->scope.FindSymbol(iv.source)}) {
@@ -2008,6 +2020,11 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
               symbol->name());
         }
       }
+    }
+
+    if (Symbol * found{currScope().FindSymbol(name.source)}) {
+      if (found->test(semantics::Symbol::Flag::OmpThreadprivate))
+        return;
     }
     std::vector<Symbol *> defaultDSASymbols;
     for (int dirDepth{0}; dirDepth < (int)dirContext_.size(); ++dirDepth) {

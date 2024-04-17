@@ -1364,7 +1364,7 @@ def Tensor_PadOp : Tensor_Op<"pad", [
       unsigned count = staticAttrs.size();
       for (unsigned idx = 0; idx < count; ++idx) {
         if (ShapedType::isDynamic(staticAttrs[idx]))
-          res.push_back(values[numDynamic++]);
+          res.push_back(getAsOpFoldResult(values[numDynamic++]));
         else
           res.push_back(builder.getI64IntegerAttr(staticAttrs[idx]));
       }

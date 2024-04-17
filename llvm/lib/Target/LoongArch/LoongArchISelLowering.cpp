@@ -968,28 +968,6 @@ static SDValue checkIntrinsicImmArg(SDValue Op, unsigned ImmOp,
   return SDValue();
 }
 
-static SDValue checkAndModifyXVPERMI_QIntrinsicImmArg(SDValue Op,
-                                                      SelectionDAG &DAG) {
-  SDValue Op3 = Op->getOperand(3);
-  uint64_t Imm = Op3->getAsZExtVal();
-  // Check the range of ImmArg.
-  if (!isUInt<8>(Imm)) {
-    DAG.getContext()->emitError(Op->getOperationName(0) +
-                                ": argument out of range.");
-    return DAG.getNode(ISD::UNDEF, SDLoc(Op), Op.getValueType());
-  }
-
-  // For instruction xvpermi.q, only [1:0] and [5:4] bits of operands[3]
-  // are used. The unused bits in operands[3] need to be set to 0 to avoid
-  // causing undefined behavior on LA464.
-  if ((Imm & 0x33) != Imm) {
-    Op3 = DAG.getTargetConstant(Imm & 0x33, SDLoc(Op), Op3.getValueType());
-    DAG.UpdateNodeOperands(Op.getNode(), Op->getOperand(0), Op->getOperand(1),
-                           Op->getOperand(2), Op3);
-  }
-  return SDValue();
-}
-
 SDValue
 LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                  SelectionDAG &DAG) const {
@@ -1247,14 +1225,13 @@ LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::loongarch_lsx_vextrins_d:
   case Intrinsic::loongarch_lasx_xvshuf4i_d:
   case Intrinsic::loongarch_lasx_xvpermi_w:
+  case Intrinsic::loongarch_lasx_xvpermi_q:
   case Intrinsic::loongarch_lasx_xvbitseli_b:
   case Intrinsic::loongarch_lasx_xvextrins_b:
   case Intrinsic::loongarch_lasx_xvextrins_h:
   case Intrinsic::loongarch_lasx_xvextrins_w:
   case Intrinsic::loongarch_lasx_xvextrins_d:
     return checkIntrinsicImmArg<8>(Op, 3, DAG);
-  case Intrinsic::loongarch_lasx_xvpermi_q:
-    return checkAndModifyXVPERMI_QIntrinsicImmArg(Op, DAG);
   case Intrinsic::loongarch_lsx_vrepli_b:
   case Intrinsic::loongarch_lsx_vrepli_h:
   case Intrinsic::loongarch_lsx_vrepli_w:
@@ -4899,20 +4876,19 @@ bool LoongArchTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (AM.BaseGV)
     return false;
 
-  // Require a 12 or 14 bit signed offset.
-  if (!isInt<12>(AM.BaseOffs) || !isShiftedInt<14, 2>(AM.BaseOffs))
+  // Require a 12-bit signed offset or 14-bit signed offset left-shifted by 2
+  // with `UAL` feature.
+  if (!isInt<12>(AM.BaseOffs) &&
+      !(isShiftedInt<14, 2>(AM.BaseOffs) && Subtarget.hasUAL()))
     return false;
 
   switch (AM.Scale) {
   case 0:
-    // "i" is not allowed.
-    if (!AM.HasBaseReg)
-      return false;
-    // Otherwise we have "r+i".
+    // "r+i" or just "i", depending on HasBaseReg.
     break;
   case 1:
     // "r+r+i" is not allowed.
-    if (AM.HasBaseReg && AM.BaseOffs != 0)
+    if (AM.HasBaseReg && AM.BaseOffs)
       return false;
     // Otherwise we have "r+r" or "r+i".
     break;
@@ -4920,7 +4896,7 @@ bool LoongArchTargetLowering::isLegalAddressingMode(const DataLayout &DL,
     // "2*r+r" or "2*r+i" is not allowed.
     if (AM.HasBaseReg || AM.BaseOffs)
       return false;
-    // Otherwise we have "r+r".
+    // Allow "2*r" as "r+r".
     break;
   default:
     return false;

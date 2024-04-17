@@ -25,6 +25,7 @@
 #include <type_traits>
 
 namespace llvm {
+namespace support {
 namespace detail {
 template <typename T>
 struct use_integral_formatter
@@ -98,7 +99,8 @@ protected:
     return Default;
   }
 };
-}
+} // namespace detail
+} // namespace support
 
 /// Implementation of format_provider<T> for integral arithmetic types.
 ///
@@ -125,8 +127,8 @@ protected:
 
 template <typename T>
 struct format_provider<
-    T, std::enable_if_t<detail::use_integral_formatter<T>::value>>
-    : public detail::HelperFunctions {
+    T, std::enable_if_t<support::detail::use_integral_formatter<T>::value>>
+    : public support::detail::HelperFunctions {
 private:
 public:
   static void format(const T &V, llvm::raw_ostream &Stream, StringRef Style) {
@@ -174,8 +176,8 @@ public:
 /// cases indicates the minimum number of nibbles to print.
 template <typename T>
 struct format_provider<
-    T, std::enable_if_t<detail::use_pointer_formatter<T>::value>>
-    : public detail::HelperFunctions {
+    T, std::enable_if_t<support::detail::use_pointer_formatter<T>::value>>
+    : public support::detail::HelperFunctions {
 private:
 public:
   static void format(const T &V, llvm::raw_ostream &Stream, StringRef Style) {
@@ -199,7 +201,7 @@ public:
 
 template <typename T>
 struct format_provider<
-    T, std::enable_if_t<detail::use_string_formatter<T>::value>> {
+    T, std::enable_if_t<support::detail::use_string_formatter<T>::value>> {
   static void format(const T &V, llvm::raw_ostream &Stream, StringRef Style) {
     size_t N = StringRef::npos;
     if (!Style.empty() && Style.getAsInteger(10, N)) {
@@ -231,8 +233,8 @@ template <> struct format_provider<Twine> {
 /// character.  Otherwise, it is treated as an integer options string.
 ///
 template <typename T>
-struct format_provider<T,
-                       std::enable_if_t<detail::use_char_formatter<T>::value>> {
+struct format_provider<
+    T, std::enable_if_t<support::detail::use_char_formatter<T>::value>> {
   static void format(const char &V, llvm::raw_ostream &Stream,
                      StringRef Style) {
     if (Style.empty())
@@ -297,9 +299,9 @@ template <> struct format_provider<bool> {
 /// else.
 
 template <typename T>
-struct format_provider<T,
-                       std::enable_if_t<detail::use_double_formatter<T>::value>>
-    : public detail::HelperFunctions {
+struct format_provider<
+    T, std::enable_if_t<support::detail::use_double_formatter<T>::value>>
+    : public support::detail::HelperFunctions {
   static void format(const T &V, llvm::raw_ostream &Stream, StringRef Style) {
     FloatStyle S;
     if (Style.consume_front("P") || Style.consume_front("p"))
@@ -321,6 +323,7 @@ struct format_provider<T,
   }
 };
 
+namespace support {
 namespace detail {
 template <typename IterT>
 using IterValue = typename std::iterator_traits<IterT>::value_type;
@@ -328,8 +331,10 @@ using IterValue = typename std::iterator_traits<IterT>::value_type;
 template <typename IterT>
 struct range_item_has_provider
     : public std::integral_constant<
-          bool, !uses_missing_provider<IterValue<IterT>>::value> {};
-}
+          bool,
+          !support::detail::uses_missing_provider<IterValue<IterT>>::value> {};
+} // namespace detail
+} // namespace support
 
 /// Implementation of format_provider<T> for ranges.
 ///
@@ -393,7 +398,7 @@ template <typename IterT> class format_provider<llvm::iterator_range<IterT>> {
   }
 
 public:
-  static_assert(detail::range_item_has_provider<IterT>::value,
+  static_assert(support::detail::range_item_has_provider<IterT>::value,
                 "Range value_type does not have a format provider!");
   static void format(const llvm::iterator_range<IterT> &V,
                      llvm::raw_ostream &Stream, StringRef Style) {
@@ -403,18 +408,18 @@ public:
     auto Begin = V.begin();
     auto End = V.end();
     if (Begin != End) {
-      auto Adapter = detail::build_format_adapter(*Begin);
+      auto Adapter = support::detail::build_format_adapter(*Begin);
       Adapter.format(Stream, ArgStyle);
       ++Begin;
     }
     while (Begin != End) {
       Stream << Sep;
-      auto Adapter = detail::build_format_adapter(*Begin);
+      auto Adapter = support::detail::build_format_adapter(*Begin);
       Adapter.format(Stream, ArgStyle);
       ++Begin;
     }
   }
 };
-}
+} // namespace llvm
 
 #endif

@@ -104,7 +104,7 @@ def FeatureStdExtZihpm
                        "'Zihpm' (Hardware Performance Counters)",
                        [FeatureStdExtZicsr]>;
 
-def FeatureStdExtZimop : SubtargetFeature<"experimental-zimop", "HasStdExtZimop", "true",
+def FeatureStdExtZimop : SubtargetFeature<"zimop", "HasStdExtZimop", "true",
                                           "'Zimop' (May-Be-Operations)">;
 def HasStdExtZimop : Predicate<"Subtarget->hasStdExtZimop()">,
                      AssemblerPredicate<(all_of FeatureStdExtZimop),
@@ -390,7 +390,7 @@ def HasStdExtCOrZcfOrZce
                          "'C' (Compressed Instructions) or "
                          "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
-def FeatureStdExtZcmop : SubtargetFeature<"experimental-zcmop", "HasStdExtZcmop", "true",
+def FeatureStdExtZcmop : SubtargetFeature<"zcmop", "HasStdExtZcmop", "true",
                                           "'Zcmop' (Compressed May-Be-Operations)",
                                           [FeatureStdExtZca]>;
 def HasStdExtZcmop : Predicate<"Subtarget->hasStdExtZcmop()">,
@@ -1058,6 +1058,30 @@ def HasVendorXSfvfnrclipxfqf
       AssemblerPredicate<(all_of FeatureVendorXSfvfnrclipxfqf),
                          "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)">;
 
+def FeatureVendorXSiFivecdiscarddlone
+    : SubtargetFeature<"xsifivecdiscarddlone", "HasVendorXSiFivecdiscarddlone", "true",
+                       "'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)", []>;
+def HasVendorXSiFivecdiscarddlone
+    : Predicate<"Subtarget->hasVendorXSiFivecdiscarddlone()">,
+      AssemblerPredicate<(all_of FeatureVendorXSiFivecdiscarddlone),
+                         "'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)">;
+
+def FeatureVendorXSiFivecflushdlone
+    : SubtargetFeature<"xsifivecflushdlone", "HasVendorXSiFivecflushdlone", "true",
+                       "'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)", []>;
+def HasVendorXSiFivecflushdlone
+    : Predicate<"Subtarget->hasVendorXSiFivecflushdlone()">,
+      AssemblerPredicate<(all_of FeatureVendorXSiFivecflushdlone),
+                         "'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)">;
+
+def FeatureVendorXSfcease
+    : SubtargetFeature<"xsfcease", "HasVendorXSfcease", "true",
+                       "'XSfcease' (SiFive sf.cease Instruction)", []>;
+def HasVendorXSfcease
+    : Predicate<"Subtarget->hasVendorXSfcease()">,
+      AssemblerPredicate<(all_of FeatureVendorXSfcease),
+                         "'XSfcease' (SiFive sf.cease Instruction)">;
+
 // Core-V Extensions
 
 def FeatureVendorXCVelw
@@ -1159,10 +1183,15 @@ def FeatureTrailingSeqCstFence : SubtargetFeature<"seq-cst-trailing-fence",
                                           "true",
                                           "Enable trailing fence for seq-cst store.">;
 
-def FeatureFastUnalignedAccess
-   : SubtargetFeature<"fast-unaligned-access", "HasFastUnalignedAccess",
-                      "true", "Has reasonably performant unaligned "
-                      "loads and stores (both scalar and vector)">;
+def FeatureUnalignedScalarMem
+   : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
+                      "true", "Has reasonably performant unaligned scalar "
+                      "loads and stores">;
+
+def FeatureUnalignedVectorMem
+   : SubtargetFeature<"unaligned-vector-mem", "EnableUnalignedVectorMem",
+                      "true", "Has reasonably performant unaligned vector "
+                      "loads and stores">;
 
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
@@ -1201,6 +1230,10 @@ def TuneNoSinkSplatOperands
     : SubtargetFeature<"no-sink-splat-operands", "SinkSplatOperands",
                        "false", "Disable sink splat operands to enable .vx, .vf,"
                        ".wx, and .wf instructions">;
+
+def TunePreferWInst
+    : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
+                       "Prefer instructions with W suffix">;
 
 def TuneConditionalCompressedMoveFusion
     : SubtargetFeature<"conditional-cmv-fusion", "HasConditionalCompressedMoveFusion",

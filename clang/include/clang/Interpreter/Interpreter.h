@@ -30,6 +30,7 @@
 namespace llvm {
 namespace orc {
 class LLJIT;
+class LLJITBuilder;
 class ThreadSafeContext;
 } // namespace orc
 } // namespace llvm
@@ -96,7 +97,6 @@ class Interpreter {
   // An optional parser for CUDA offloading
   std::unique_ptr<IncrementalParser> DeviceParser;
 
-  llvm::Error CreateExecutor();
   unsigned InitPTUSize = 0;
 
   // This member holds the last result of the value printing. It's a class
@@ -114,11 +114,26 @@ protected:
   // That's useful for testing and out-of-tree clients.
   Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err);
 
+  // Create the internal IncrementalExecutor, or re-create it after calling
+  // ResetExecutor().
+  llvm::Error CreateExecutor();
+
+  // Delete the internal IncrementalExecutor. This causes a hard shutdown of the
+  // JIT engine. In particular, it doesn't run cleanup or destructors.
+  void ResetExecutor();
+
   // Lazily construct the RuntimeInterfaceBuilder. The provided instance will be
   // used for the entire lifetime of the interpreter. The default implementation
   // targets the in-process __clang_Interpreter runtime. Override this to use a
   // custom runtime.
   virtual std::unique_ptr<RuntimeInterfaceBuilder> FindRuntimeInterface();
+
+  // Lazily construct thev ORCv2 JITBuilder. This called when the internal
+  // IncrementalExecutor is created. The default implementation populates an
+  // in-process JIT with debugging support. Override this to configure the JIT
+  // engine used for execution.
+  virtual llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
+  CreateJITBuilder(CompilerInstance &CI);
 
 public:
   virtual ~Interpreter();

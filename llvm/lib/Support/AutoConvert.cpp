@@ -14,6 +14,7 @@
 #ifdef __MVS__
 
 #include "llvm/Support/AutoConvert.h"
+#include "llvm/Support/Error.h"
 #include <cassert>
 #include <fcntl.h>
 #include <sys/stat.h>

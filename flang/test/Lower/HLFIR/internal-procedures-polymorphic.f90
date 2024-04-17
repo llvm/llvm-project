@@ -1,6 +1,6 @@
 ! Test lowering of internal procedure capturing OPTIONAL polymorphic
 ! objects.
-! RUN: bbc -emit-hlfir --polymorphic-type -o - %s -I nw | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s -I nw | FileCheck %s
 
 
 module captured_optional_polymorphic

@@ -92,7 +92,7 @@ static cl::opt<std::string> AssumeFileName(
              "  Objective-C: .m .mm\n"
              "  Proto: .proto .protodevel\n"
              "  TableGen: .td\n"
-             "  TextProto: .textpb .pb.txt .textproto .asciipb\n"
+             "  TextProto: .txtpb .textpb .pb.txt .textproto .asciipb\n"
              "  Verilog: .sv .svh .v .vh"),
     cl::init("<stdin>"), cl::cat(ClangFormatCategory));
 
@@ -204,6 +204,11 @@ static cl::opt<bool>
 static cl::list<std::string> FileNames(cl::Positional,
                                        cl::desc("[@<file>] [<file> ...]"),
                                        cl::cat(ClangFormatCategory));
+
+static cl::opt<bool> FailOnIncompleteFormat(
+    "fail-on-incomplete-format",
+    cl::desc("If set, fail with exit code 1 on incomplete format."),
+    cl::init(false), cl::cat(ClangFormatCategory));
 
 namespace clang {
 namespace format {
@@ -399,7 +404,7 @@ class ClangFormatDiagConsumer : public DiagnosticConsumer {
 };
 
 // Returns true on error.
-static bool format(StringRef FileName) {
+static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   const bool IsSTDIN = FileName == "-";
   if (!OutputXML && Inplace && IsSTDIN) {
     errs() << "error: cannot use -i when reading from stdin.\n";
@@ -535,7 +540,7 @@ static bool format(StringRef FileName) {
       Rewrite.getEditBuffer(ID).write(outs());
     }
   }
-  return false;
+  return ErrorOnIncompleteFormat && !Status.FormatComplete;
 }
 
 } // namespace format
@@ -699,7 +704,7 @@ int main(int argc, const char **argv) {
   }
 
   if (FileNames.empty())
-    return clang::format::format("-");
+    return clang::format::format("-", FailOnIncompleteFormat);
 
   if (FileNames.size() > 1 &&
       (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty())) {
@@ -717,7 +722,7 @@ int main(int argc, const char **argv) {
       errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "
              << FileName << "\n";
     }
-    Error |= clang::format::format(FileName);
+    Error |= clang::format::format(FileName, FailOnIncompleteFormat);
   }
   return Error ? 1 : 0;
 }

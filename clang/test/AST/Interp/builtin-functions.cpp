@@ -24,16 +24,13 @@ namespace strcmp {
   static_assert(__builtin_strcmp("abab", "abab\0banana") == 0, "");
   static_assert(__builtin_strcmp("abab\0banana", "abab\0canada") == 0, "");
   static_assert(__builtin_strcmp(0, "abab") == 0, ""); // both-error {{not an integral constant}} \
-                                                       // both-note {{dereferenced null}} \
-                                                       // expected-note {{in call to}}
+                                                       // both-note {{dereferenced null}}
   static_assert(__builtin_strcmp("abab", 0) == 0, ""); // both-error {{not an integral constant}} \
-                                                       // both-note {{dereferenced null}} \
-                                                       // expected-note {{in call to}}
+                                                       // both-note {{dereferenced null}}
 
   static_assert(__builtin_strcmp(kFoobar, kFoobazfoobar) == -1, "");
   static_assert(__builtin_strcmp(kFoobar, kFoobazfoobar + 6) == 0, ""); // both-error {{not an integral constant}} \
-                                                                        // both-note {{dereferenced one-past-the-end}} \
-                                                                        // expected-note {{in call to}}
+                                                                        // both-note {{dereferenced one-past-the-end}}
 
   /// Used to assert because we're passing a dummy pointer to
   /// __builtin_strcmp() when evaluating the return statement.
@@ -72,14 +69,11 @@ constexpr const char *a = "foo\0quux";
   static_assert(check(c), "");
 
   constexpr int over1 = __builtin_strlen(a + 9); // both-error {{constant expression}} \
-                                                 // both-note {{one-past-the-end}} \
-                                                 // expected-note {{in call to}}
+                                                 // both-note {{one-past-the-end}}
   constexpr int over2 = __builtin_strlen(b + 9); // both-error {{constant expression}} \
-                                                 // both-note {{one-past-the-end}} \
-                                                 // expected-note {{in call to}}
+                                                 // both-note {{one-past-the-end}}
   constexpr int over3 = __builtin_strlen(c + 9); // both-error {{constant expression}} \
-                                                 // both-note {{one-past-the-end}} \
-                                                 // expected-note {{in call to}}
+                                                 // both-note {{one-past-the-end}}
 
   constexpr int under1 = __builtin_strlen(a - 1); // both-error {{constant expression}} \
                                                   // both-note {{cannot refer to element -1}}
@@ -90,8 +84,7 @@ constexpr const char *a = "foo\0quux";
 
   constexpr char d[] = { 'f', 'o', 'o' }; // no nul terminator.
   constexpr int bad = __builtin_strlen(d); // both-error {{constant expression}} \
-                                           // both-note {{one-past-the-end}} \
-                                           // expected-note {{in call to}}
+                                           // both-note {{one-past-the-end}}
 }
 
 namespace nan {
@@ -114,8 +107,7 @@ namespace nan {
   /// FIXME: Current interpreter misses diagnostics.
   constexpr char f2[] = {'0', 'x', 'A', 'E'}; /// No trailing 0 byte.
   constexpr double NaN7 = __builtin_nan(f2); // both-error {{must be initialized by a constant expression}} \
-                                             // expected-note {{read of dereferenced one-past-the-end pointer}} \
-                                             // expected-note {{in call to}}
+                                             // expected-note {{read of dereferenced one-past-the-end pointer}}
   static_assert(!__builtin_issignaling(__builtin_nan("")), "");
   static_assert(__builtin_issignaling(__builtin_nans("")), "");
 }
@@ -482,6 +474,9 @@ void test_noexcept(int *i) {
 #undef TEST_TYPE
 } // end namespace test_launder
 
+
+/// FIXME: The commented out tests here use a IntAP value and fail.
+/// This currently means we will leak the IntAP value since nothing cleans it up.
 namespace clz {
   char clz1[__builtin_clz(1) == BITSIZE(int) - 1 ? 1 : -1];
   char clz2[__builtin_clz(7) == BITSIZE(int) - 3 ? 1 : -1];
@@ -492,6 +487,63 @@ namespace clz {
   char clz7[__builtin_clzs(0x1) == BITSIZE(short) - 1 ? 1 : -1];
   char clz8[__builtin_clzs(0xf) == BITSIZE(short) - 4 ? 1 : -1];
   char clz9[__builtin_clzs(0xfff) == BITSIZE(short) - 12 ? 1 : -1];
+
+  int clz10 = __builtin_clzg((unsigned char)0);
+  char clz11[__builtin_clzg((unsigned char)0, 42) == 42 ? 1 : -1];
+  char clz12[__builtin_clzg((unsigned char)0x1) == BITSIZE(char) - 1 ? 1 : -1];
+  char clz13[__builtin_clzg((unsigned char)0x1, 42) == BITSIZE(char) - 1 ? 1 : -1];
+  char clz14[__builtin_clzg((unsigned char)0xf) == BITSIZE(char) - 4 ? 1 : -1];
+  char clz15[__builtin_clzg((unsigned char)0xf, 42) == BITSIZE(char) - 4 ? 1 : -1];
+  char clz16[__builtin_clzg((unsigned char)(1 << (BITSIZE(char) - 1))) == 0 ? 1 : -1];
+  char clz17[__builtin_clzg((unsigned char)(1 << (BITSIZE(char) - 1)), 42) == 0 ? 1 : -1];
+  int clz18 = __builtin_clzg((unsigned short)0);
+  char clz19[__builtin_clzg((unsigned short)0, 42) == 42 ? 1 : -1];
+  char clz20[__builtin_clzg((unsigned short)0x1) == BITSIZE(short) - 1 ? 1 : -1];
+  char clz21[__builtin_clzg((unsigned short)0x1, 42) == BITSIZE(short) - 1 ? 1 : -1];
+  char clz22[__builtin_clzg((unsigned short)0xf) == BITSIZE(short) - 4 ? 1 : -1];
+  char clz23[__builtin_clzg((unsigned short)0xf, 42) == BITSIZE(short) - 4 ? 1 : -1];
+  char clz24[__builtin_clzg((unsigned short)(1 << (BITSIZE(short) - 1))) == 0 ? 1 : -1];
+  char clz25[__builtin_clzg((unsigned short)(1 << (BITSIZE(short) - 1)), 42) == 0 ? 1 : -1];
+  int clz26 = __builtin_clzg(0U);
+  char clz27[__builtin_clzg(0U, 42) == 42 ? 1 : -1];
+  char clz28[__builtin_clzg(0x1U) == BITSIZE(int) - 1 ? 1 : -1];
+  char clz29[__builtin_clzg(0x1U, 42) == BITSIZE(int) - 1 ? 1 : -1];
+  char clz30[__builtin_clzg(0xfU) == BITSIZE(int) - 4 ? 1 : -1];
+  char clz31[__builtin_clzg(0xfU, 42) == BITSIZE(int) - 4 ? 1 : -1];
+  char clz32[__builtin_clzg(1U << (BITSIZE(int) - 1)) == 0 ? 1 : -1];
+  char clz33[__builtin_clzg(1U << (BITSIZE(int) - 1), 42) == 0 ? 1 : -1];
+  int clz34 = __builtin_clzg(0UL);
+  char clz35[__builtin_clzg(0UL, 42) == 42 ? 1 : -1];
+  char clz36[__builtin_clzg(0x1UL) == BITSIZE(long) - 1 ? 1 : -1];
+  char clz37[__builtin_clzg(0x1UL, 42) == BITSIZE(long) - 1 ? 1 : -1];
+  char clz38[__builtin_clzg(0xfUL) == BITSIZE(long) - 4 ? 1 : -1];
+  char clz39[__builtin_clzg(0xfUL, 42) == BITSIZE(long) - 4 ? 1 : -1];
+  char clz40[__builtin_clzg(1UL << (BITSIZE(long) - 1)) == 0 ? 1 : -1];
+  char clz41[__builtin_clzg(1UL << (BITSIZE(long) - 1), 42) == 0 ? 1 : -1];
+  int clz42 = __builtin_clzg(0ULL);
+  char clz43[__builtin_clzg(0ULL, 42) == 42 ? 1 : -1];
+  char clz44[__builtin_clzg(0x1ULL) == BITSIZE(long long) - 1 ? 1 : -1];
+  char clz45[__builtin_clzg(0x1ULL, 42) == BITSIZE(long long) - 1 ? 1 : -1];
+  char clz46[__builtin_clzg(0xfULL) == BITSIZE(long long) - 4 ? 1 : -1];
+  char clz47[__builtin_clzg(0xfULL, 42) == BITSIZE(long long) - 4 ? 1 : -1];
+  char clz48[__builtin_clzg(1ULL << (BITSIZE(long long) - 1)) == 0 ? 1 : -1];
+  char clz49[__builtin_clzg(1ULL << (BITSIZE(long long) - 1), 42) == 0 ? 1 : -1];
+#ifdef __SIZEOF_INT128__
+  // int clz50 = __builtin_clzg((unsigned __int128)0);
+  char clz51[__builtin_clzg((unsigned __int128)0, 42) == 42 ? 1 : -1];
+  char clz52[__builtin_clzg((unsigned __int128)0x1) == BITSIZE(__int128) - 1 ? 1 : -1];
+  char clz53[__builtin_clzg((unsigned __int128)0x1, 42) == BITSIZE(__int128) - 1 ? 1 : -1];
+  char clz54[__builtin_clzg((unsigned __int128)0xf) == BITSIZE(__int128) - 4 ? 1 : -1];
+  char clz55[__builtin_clzg((unsigned __int128)0xf, 42) == BITSIZE(__int128) - 4 ? 1 : -1];
+#endif
+#ifndef __AVR__
+  // int clz58 = __builtin_clzg((unsigned _BitInt(128))0);
+  char clz59[__builtin_clzg((unsigned _BitInt(128))0, 42) == 42 ? 1 : -1];
+  char clz60[__builtin_clzg((unsigned _BitInt(128))0x1) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
+  char clz61[__builtin_clzg((unsigned _BitInt(128))0x1, 42) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
+  char clz62[__builtin_clzg((unsigned _BitInt(128))0xf) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
+  char clz63[__builtin_clzg((unsigned _BitInt(128))0xf, 42) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
+#endif
 }
 
 namespace ctz {
@@ -502,6 +554,66 @@ namespace ctz {
   char ctz5[__builtin_ctzl(0x10L) == 4 ? 1 : -1];
   char ctz6[__builtin_ctzll(0x100LL) == 8 ? 1 : -1];
   char ctz7[__builtin_ctzs(1 << (BITSIZE(short) - 1)) == BITSIZE(short) - 1 ? 1 : -1];
+  int ctz8 = __builtin_ctzg((unsigned char)0);
+  char ctz9[__builtin_ctzg((unsigned char)0, 42) == 42 ? 1 : -1];
+  char ctz10[__builtin_ctzg((unsigned char)0x1) == 0 ? 1 : -1];
+  char ctz11[__builtin_ctzg((unsigned char)0x1, 42) == 0 ? 1 : -1];
+  char ctz12[__builtin_ctzg((unsigned char)0x10) == 4 ? 1 : -1];
+  char ctz13[__builtin_ctzg((unsigned char)0x10, 42) == 4 ? 1 : -1];
+  char ctz14[__builtin_ctzg((unsigned char)(1 << (BITSIZE(char) - 1))) == BITSIZE(char) - 1 ? 1 : -1];
+  char ctz15[__builtin_ctzg((unsigned char)(1 << (BITSIZE(char) - 1)), 42) == BITSIZE(char) - 1 ? 1 : -1];
+  int ctz16 = __builtin_ctzg((unsigned short)0);
+  char ctz17[__builtin_ctzg((unsigned short)0, 42) == 42 ? 1 : -1];
+  char ctz18[__builtin_ctzg((unsigned short)0x1) == 0 ? 1 : -1];
+  char ctz19[__builtin_ctzg((unsigned short)0x1, 42) == 0 ? 1 : -1];
+  char ctz20[__builtin_ctzg((unsigned short)0x10) == 4 ? 1 : -1];
+  char ctz21[__builtin_ctzg((unsigned short)0x10, 42) == 4 ? 1 : -1];
+  char ctz22[__builtin_ctzg((unsigned short)(1 << (BITSIZE(short) - 1))) == BITSIZE(short) - 1 ? 1 : -1];
+  char ctz23[__builtin_ctzg((unsigned short)(1 << (BITSIZE(short) - 1)), 42) == BITSIZE(short) - 1 ? 1 : -1];
+  int ctz24 = __builtin_ctzg(0U);
+  char ctz25[__builtin_ctzg(0U, 42) == 42 ? 1 : -1];
+  char ctz26[__builtin_ctzg(0x1U) == 0 ? 1 : -1];
+  char ctz27[__builtin_ctzg(0x1U, 42) == 0 ? 1 : -1];
+  char ctz28[__builtin_ctzg(0x10U) == 4 ? 1 : -1];
+  char ctz29[__builtin_ctzg(0x10U, 42) == 4 ? 1 : -1];
+  char ctz30[__builtin_ctzg(1U << (BITSIZE(int) - 1)) == BITSIZE(int) - 1 ? 1 : -1];
+  char ctz31[__builtin_ctzg(1U << (BITSIZE(int) - 1), 42) == BITSIZE(int) - 1 ? 1 : -1];
+  int ctz32 = __builtin_ctzg(0UL);
+  char ctz33[__builtin_ctzg(0UL, 42) == 42 ? 1 : -1];
+  char ctz34[__builtin_ctzg(0x1UL) == 0 ? 1 : -1];
+  char ctz35[__builtin_ctzg(0x1UL, 42) == 0 ? 1 : -1];
+  char ctz36[__builtin_ctzg(0x10UL) == 4 ? 1 : -1];
+  char ctz37[__builtin_ctzg(0x10UL, 42) == 4 ? 1 : -1];
+  char ctz38[__builtin_ctzg(1UL << (BITSIZE(long) - 1)) == BITSIZE(long) - 1 ? 1 : -1];
+  char ctz39[__builtin_ctzg(1UL << (BITSIZE(long) - 1), 42) == BITSIZE(long) - 1 ? 1 : -1];
+  int ctz40 = __builtin_ctzg(0ULL);
+  char ctz41[__builtin_ctzg(0ULL, 42) == 42 ? 1 : -1];
+  char ctz42[__builtin_ctzg(0x1ULL) == 0 ? 1 : -1];
+  char ctz43[__builtin_ctzg(0x1ULL, 42) == 0 ? 1 : -1];
+  char ctz44[__builtin_ctzg(0x10ULL) == 4 ? 1 : -1];
+  char ctz45[__builtin_ctzg(0x10ULL, 42) == 4 ? 1 : -1];
+  char ctz46[__builtin_ctzg(1ULL << (BITSIZE(long long) - 1)) == BITSIZE(long long) - 1 ? 1 : -1];
+  char ctz47[__builtin_ctzg(1ULL << (BITSIZE(long long) - 1), 42) == BITSIZE(long long) - 1 ? 1 : -1];
+#ifdef __SIZEOF_INT128__
+  // int ctz48 = __builtin_ctzg((unsigned __int128)0);
+  char ctz49[__builtin_ctzg((unsigned __int128)0, 42) == 42 ? 1 : -1];
+  char ctz50[__builtin_ctzg((unsigned __int128)0x1) == 0 ? 1 : -1];
+  char ctz51[__builtin_ctzg((unsigned __int128)0x1, 42) == 0 ? 1 : -1];
+  char ctz52[__builtin_ctzg((unsigned __int128)0x10) == 4 ? 1 : -1];
+  char ctz53[__builtin_ctzg((unsigned __int128)0x10, 42) == 4 ? 1 : -1];
+  char ctz54[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1)) == BITSIZE(__int128) - 1 ? 1 : -1];
+  char ctz55[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1), 42) == BITSIZE(__int128) - 1 ? 1 : -1];
+#endif
+#ifndef __AVR__
+  // int ctz56 = __builtin_ctzg((unsigned _BitInt(128))0);
+  char ctz57[__builtin_ctzg((unsigned _BitInt(128))0, 42) == 42 ? 1 : -1];
+  char ctz58[__builtin_ctzg((unsigned _BitInt(128))0x1) == 0 ? 1 : -1];
+  char ctz59[__builtin_ctzg((unsigned _BitInt(128))0x1, 42) == 0 ? 1 : -1];
+  char ctz60[__builtin_ctzg((unsigned _BitInt(128))0x10) == 4 ? 1 : -1];
+  char ctz61[__builtin_ctzg((unsigned _BitInt(128))0x10, 42) == 4 ? 1 : -1];
+  char ctz62[__builtin_ctzg((unsigned _BitInt(128))1 << (BITSIZE(_BitInt(128)) - 1)) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
+  char ctz63[__builtin_ctzg((unsigned _BitInt(128))1 << (BITSIZE(_BitInt(128)) - 1), 42) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
+#endif
 }
 
 namespace bswap {
@@ -509,4 +621,15 @@ namespace bswap {
   int h3 = __builtin_bswap16(0x1234) == 0x3412 ? 1 : f();
   int h4 = __builtin_bswap32(0x1234) == 0x34120000 ? 1 : f();
   int h5 = __builtin_bswap64(0x1234) == 0x3412000000000000 ? 1 : f();
+}
+
+#define CFSTR __builtin___CFStringMakeConstantString
+void test7(void) {
+  const void *X;
+#if !defined(_AIX)
+  X = CFSTR("\242"); // both-warning {{input conversion stopped}}
+  X = CFSTR("\0"); // no-warning
+  X = CFSTR(242); // both-error {{cannot initialize a parameter of type 'const char *' with an rvalue of type 'int'}}
+  X = CFSTR("foo", "bar"); // both-error {{too many arguments to function call}}
+#endif
 }

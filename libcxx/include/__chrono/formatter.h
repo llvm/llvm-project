@@ -79,7 +79,7 @@ namespace __formatter {
 // small). Therefore a duration uses its own conversion.
 template <class _CharT, class _Rep, class _Period>
 _LIBCPP_HIDE_FROM_ABI void
-__format_sub_seconds(const chrono::duration<_Rep, _Period>& __value, basic_stringstream<_CharT>& __sstr) {
+__format_sub_seconds(basic_stringstream<_CharT>& __sstr, const chrono::duration<_Rep, _Period>& __value) {
   __sstr << std::use_facet<numpunct<_CharT>>(__sstr.getloc()).decimal_point();
 
   using __duration = chrono::duration<_Rep, _Period>;
@@ -110,13 +110,13 @@ __format_sub_seconds(const chrono::duration<_Rep, _Period>& __value, basic_strin
 }
 
 template <class _CharT, __is_time_point _Tp>
-_LIBCPP_HIDE_FROM_ABI void __format_sub_seconds(const _Tp& __value, basic_stringstream<_CharT>& __sstr) {
-  __formatter::__format_sub_seconds(__value.time_since_epoch(), __sstr);
+_LIBCPP_HIDE_FROM_ABI void __format_sub_seconds(basic_stringstream<_CharT>& __sstr, const _Tp& __value) {
+  __formatter::__format_sub_seconds(__sstr, __value.time_since_epoch());
 }
 
 template <class _CharT, class _Duration>
 _LIBCPP_HIDE_FROM_ABI void
-__format_sub_seconds(const chrono::hh_mm_ss<_Duration>& __value, basic_stringstream<_CharT>& __sstr) {
+__format_sub_seconds(basic_stringstream<_CharT>& __sstr, const chrono::hh_mm_ss<_Duration>& __value) {
   __sstr << std::use_facet<numpunct<_CharT>>(__sstr.getloc()).decimal_point();
   if constexpr (chrono::treat_as_floating_point_v<typename _Duration::rep>)
     std::format_to(std::ostreambuf_iterator<_CharT>{__sstr},
@@ -143,7 +143,7 @@ consteval bool __use_fraction() {
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI void __format_year(int __year, basic_stringstream<_CharT>& __sstr) {
+_LIBCPP_HIDE_FROM_ABI void __format_year(basic_stringstream<_CharT>& __sstr, int __year) {
   if (__year < 0) {
     __sstr << _CharT('-');
     __year = -__year;
@@ -159,7 +159,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_year(int __year, basic_stringstream<_CharT>&
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI void __format_century(int __year, basic_stringstream<_CharT>& __sstr) {
+_LIBCPP_HIDE_FROM_ABI void __format_century(basic_stringstream<_CharT>& __sstr, int __year) {
   // TODO FMT Write an issue
   // [tab:time.format.spec]
   //   %C The year divided by 100 using floored division. If the result is a
@@ -172,7 +172,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_century(int __year, basic_stringstream<_Char
 
 template <class _CharT, class _Tp>
 _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
-    const _Tp& __value, basic_stringstream<_CharT>& __sstr, basic_string_view<_CharT> __chrono_specs) {
+    basic_stringstream<_CharT>& __sstr, const _Tp& __value, basic_string_view<_CharT> __chrono_specs) {
   tm __t              = std::__convert_to_tm<tm>(__value);
   const auto& __facet = std::use_facet<time_put<_CharT>>(__sstr.getloc());
   for (auto __it = __chrono_specs.begin(); __it != __chrono_specs.end(); ++__it) {
@@ -196,7 +196,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         // strftime's output is only defined in the range [00, 99].
         int __year = __t.tm_year + 1900;
         if (__year < 1000 || __year > 9999)
-          __formatter::__format_century(__year, __sstr);
+          __formatter::__format_century(__sstr, __year);
         else
           __facet.put(
               {__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
@@ -242,7 +242,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         __facet.put(
             {__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
         if constexpr (__use_fraction<_Tp>())
-          __formatter::__format_sub_seconds(__value, __sstr);
+          __formatter::__format_sub_seconds(__sstr, __value);
         break;
 
         // Unlike time_put and strftime the formatting library requires %Y
@@ -283,13 +283,13 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         // Depending on the platform's libc the range of supported years is
         // limited. Intead of of testing all conditions use the internal
         // implementation unconditionally.
-        __formatter::__format_year(__t.tm_year + 1900, __sstr);
+        __formatter::__format_year(__sstr, __t.tm_year + 1900);
         break;
 
       case _CharT('F'): {
         int __year = __t.tm_year + 1900;
         if (__year < 1000) {
-          __formatter::__format_year(__year, __sstr);
+          __formatter::__format_year(__sstr, __year);
           __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "-{:02}-{:02}"), __t.tm_mon + 1, __t.tm_mday);
         } else
           __facet.put(
@@ -310,7 +310,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
             ++__it;
             __facet.put(
                 {__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
-            __formatter::__format_sub_seconds(__value, __sstr);
+            __formatter::__format_sub_seconds(__sstr, __value);
             break;
           }
         }
@@ -512,7 +512,7 @@ __format_chrono(const _Tp& __value,
     if constexpr (chrono::__is_duration<_Tp>::value) {
       if (__value < __value.zero())
         __sstr << _CharT('-');
-      __formatter::__format_chrono_using_chrono_specs(chrono::abs(__value), __sstr, __chrono_specs);
+      __formatter::__format_chrono_using_chrono_specs(__sstr, chrono::abs(__value), __chrono_specs);
       // TODO FMT When keeping the precision it will truncate the string.
       // Note that the behaviour what the precision does isn't specified.
       __specs.__precision_ = -1;
@@ -556,7 +556,7 @@ __format_chrono(const _Tp& __value,
           __sstr << _CharT('-');
       }
 
-      __formatter::__format_chrono_using_chrono_specs(__value, __sstr, __chrono_specs);
+      __formatter::__format_chrono_using_chrono_specs(__sstr, __value, __chrono_specs);
     }
   }
 

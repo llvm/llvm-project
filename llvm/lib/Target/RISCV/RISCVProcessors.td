@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 defvar RVA20U64Features = [Feature64Bit,
+                           FeatureStdExtI,
                            FeatureStdExtM,
                            FeatureStdExtA,
                            FeatureStdExtF,
@@ -32,6 +33,7 @@ defvar RVA20S64Features = !listconcat(RVA20U64Features,
                                        FeatureStdExtSstvala]);
 
 defvar RVA22U64Features = [Feature64Bit,
+                           FeatureStdExtI,
                            FeatureStdExtM,
                            FeatureStdExtA,
                            FeatureStdExtF,
@@ -67,6 +69,7 @@ defvar RVA22S64Features = !listconcat(RVA22U64Features,
                                        FeatureStdExtSvinval]);
 
 defvar RVA23U64Features = [Feature64Bit,
+                           FeatureStdExtI,
                            FeatureStdExtM,
                            FeatureStdExtA,
                            FeatureStdExtF,
@@ -126,6 +129,7 @@ defvar RVA23S64Features = !listconcat(RVA23U64Features,
                                        FeatureStdExtShgatpa]);
 
 defvar RVB23U64Features = [Feature64Bit,
+                           FeatureStdExtI,
                            FeatureStdExtM,
                            FeatureStdExtA,
                            FeatureStdExtF,
@@ -171,6 +175,7 @@ defvar RVB23S64Features = !listconcat(RVB23U64Features,
                                        FeatureStdExtSsu64xl]);
 
 defvar RVM23U32Features = [Feature32Bit,
+                           FeatureStdExtI,
                            FeatureStdExtM,
                            FeatureStdExtZba,
                            FeatureStdExtZbb,
@@ -227,48 +232,32 @@ class RISCVTuneProcessorModel<string n,
                               list<SubtargetFeature> f = []>
       : ProcessorModel<n, m, f,tunef>;
 
+
 class RISCVGenericProcessorModel<string n, list<SubtargetFeature> f>
     : RISCVProcessorModel<n, NoSchedModel, f>,
       GenericTuneInfo;
 
 def GENERIC_RV32 : RISCVGenericProcessorModel<"generic-rv32",
-                                              [Feature32Bit]>;
+                                              [Feature32Bit,
+                                               FeatureStdExtI]>;
 
 def GENERIC_RV64 : RISCVGenericProcessorModel<"generic-rv64",
-                                              [Feature64Bit]>;
+                                              [Feature64Bit,
+                                               FeatureStdExtI]>;
 
-def GENERIC_RVI20U32 : RISCVGenericProcessorModel<"rvi20u32",
-                                                  [Feature32Bit]>;
-
-def GENERIC_RVI20U64 : RISCVGenericProcessorModel<"rvi20u64",
-                                                  [Feature64Bit]>;
-
-def GENERIC_RVA20U64 : RISCVGenericProcessorModel<"rva20u64",
-                                                  RVA20U64Features>;
-
-def GENERIC_RVA20S64 : RISCVGenericProcessorModel<"rva20s64",
-                                                  RVA20S64Features>;
-
-def GENERIC_RVA22U64 : RISCVGenericProcessorModel<"rva22u64",
-                                                  RVA22U64Features>;
-
-def GENERIC_RVA22S64 : RISCVGenericProcessorModel<"rva22s64", 
-                                                  RVA22S64Features>;
-
-def GENERIC_RVA23U64 : RISCVGenericProcessorModel<"rva23u64", 
-                                                  RVA23U64Features>;
-
-def GENERIC_RVA23S64 : RISCVGenericProcessorModel<"rva23s64", 
-                                                  RVA23S64Features>;
-
-def GENERIC_RVB23U64 : RISCVGenericProcessorModel<"rvb23u64",
-                                                  RVB23U64Features>;
-
-def GENERIC_RVB23S64 : RISCVGenericProcessorModel<"rvb23s64",
-                                                  RVB23S64Features>;
-
-def GENERIC_RVM23U32 : RISCVGenericProcessorModel<"rvm23u32",
-                                                  RVM23U32Features>;
+def RVI20U32 : RISCVGenericProcessorModel<"rvi20u32", [Feature32Bit,
+                                                       FeatureStdExtI]>;
+def RVI20U64 : RISCVGenericProcessorModel<"rvi20u64", [Feature64Bit,
+                                                       FeatureStdExtI]>;
+def RVA20U64 : RISCVGenericProcessorModel<"rva20u64", RVA20U64Features>;
+def RVA20S64 : RISCVGenericProcessorModel<"rva20s64", RVA20S64Features>;
+def RVA22U64 : RISCVGenericProcessorModel<"rva22u64", RVA22U64Features>;
+def RVA22S64 : RISCVGenericProcessorModel<"rva22s64", RVA22S64Features>;
+def RVA23U64 : RISCVGenericProcessorModel<"rva23u64", RVA23U64Features>;
+def RVA23S64 : RISCVGenericProcessorModel<"rva23s64", RVA23S64Features>;
+def RVB23U64 : RISCVGenericProcessorModel<"rvb23u64", RVB23U64Features>;
+def RVB23S64 : RISCVGenericProcessorModel<"rvb23s64", RVB23S64Features>;
+def RVM23U32 : RISCVGenericProcessorModel<"rvm23u32", RVM23U32Features>;
 
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
@@ -277,11 +266,13 @@ def : ProcessorModel<"generic", NoSchedModel, []>, GenericTuneInfo;
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
                                       RocketModel,
                                       [Feature32Bit,
+                                       FeatureStdExtI,
                                        FeatureStdExtZifencei,
                                        FeatureStdExtZicsr]>;
 def ROCKET_RV64 : RISCVProcessorModel<"rocket-rv64",
                                       RocketModel,
                                       [Feature64Bit,
+                                       FeatureStdExtI,
                                        FeatureStdExtZifencei,
                                        FeatureStdExtZicsr]>;
 def ROCKET : RISCVTuneProcessorModel<"rocket",
@@ -294,6 +285,7 @@ def SIFIVE_7 : RISCVTuneProcessorModel<"sifive-7-series",
 def SIFIVE_E20 : RISCVProcessorModel<"sifive-e20",
                                      RocketModel,
                                      [Feature32Bit,
+                                      FeatureStdExtI,
                                       FeatureStdExtZicsr,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtM,
@@ -302,6 +294,7 @@ def SIFIVE_E20 : RISCVProcessorModel<"sifive-e20",
 def SIFIVE_E21 : RISCVProcessorModel<"sifive-e21",
                                      RocketModel,
                                      [Feature32Bit,
+                                      FeatureStdExtI,
                                       FeatureStdExtZicsr,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtM,
@@ -311,6 +304,7 @@ def SIFIVE_E21 : RISCVProcessorModel<"sifive-e21",
 def SIFIVE_E24 : RISCVProcessorModel<"sifive-e24",
                                      RocketModel,
                                      [Feature32Bit,
+                                      FeatureStdExtI,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtM,
                                       FeatureStdExtA,
@@ -320,6 +314,7 @@ def SIFIVE_E24 : RISCVProcessorModel<"sifive-e24",
 def SIFIVE_E31 : RISCVProcessorModel<"sifive-e31",
                                      RocketModel,
                                      [Feature32Bit,
+                                      FeatureStdExtI,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtZicsr,
                                       FeatureStdExtM,
@@ -329,6 +324,7 @@ def SIFIVE_E31 : RISCVProcessorModel<"sifive-e31",
 def SIFIVE_E34 : RISCVProcessorModel<"sifive-e34",
                                      RocketModel,
                                      [Feature32Bit,
+                                      FeatureStdExtI,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtM,
                                       FeatureStdExtA,
@@ -338,6 +334,7 @@ def SIFIVE_E34 : RISCVProcessorModel<"sifive-e34",
 def SIFIVE_E76 : RISCVProcessorModel<"sifive-e76",
                                      SiFive7Model,
                                      [Feature32Bit,
+                                      FeatureStdExtI,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtM,
                                       FeatureStdExtA,
@@ -348,6 +345,7 @@ def SIFIVE_E76 : RISCVProcessorModel<"sifive-e76",
 def SIFIVE_S21 : RISCVProcessorModel<"sifive-s21",
                                      RocketModel,
                                      [Feature64Bit,
+                                      FeatureStdExtI,
                                       FeatureStdExtZicsr,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtM,
@@ -357,6 +355,7 @@ def SIFIVE_S21 : RISCVProcessorModel<"sifive-s21",
 def SIFIVE_S51 : RISCVProcessorModel<"sifive-s51",
                                      RocketModel,
                                      [Feature64Bit,
+                                      FeatureStdExtI,
                                       FeatureStdExtZicsr,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtM,
@@ -366,6 +365,7 @@ def SIFIVE_S51 : RISCVProcessorModel<"sifive-s51",
 def SIFIVE_S54 : RISCVProcessorModel<"sifive-s54",
                                       RocketModel,
                                       [Feature64Bit,
+                                       FeatureStdExtI,
                                        FeatureStdExtZifencei,
                                        FeatureStdExtM,
                                        FeatureStdExtA,
@@ -376,6 +376,7 @@ def SIFIVE_S54 : RISCVProcessorModel<"sifive-s54",
 def SIFIVE_S76 : RISCVProcessorModel<"sifive-s76",
                                      SiFive7Model,
                                      [Feature64Bit,
+                                      FeatureStdExtI,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtM,
                                       FeatureStdExtA,
@@ -388,6 +389,7 @@ def SIFIVE_S76 : RISCVProcessorModel<"sifive-s76",
 def SIFIVE_U54 : RISCVProcessorModel<"sifive-u54",
                                      RocketModel,
                                      [Feature64Bit,
+                                      FeatureStdExtI,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtM,
                                       FeatureStdExtA,
@@ -398,6 +400,7 @@ def SIFIVE_U54 : RISCVProcessorModel<"sifive-u54",
 def SIFIVE_U74 : RISCVProcessorModel<"sifive-u74",
                                      SiFive7Model,
                                      [Feature64Bit,
+                                      FeatureStdExtI,
                                       FeatureStdExtZifencei,
                                       FeatureStdExtM,
                                       FeatureStdExtA,
@@ -408,6 +411,7 @@ def SIFIVE_U74 : RISCVProcessorModel<"sifive-u74",
 
 def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                       [Feature64Bit,
+                                       FeatureStdExtI,
                                        FeatureStdExtZifencei,
                                        FeatureStdExtM,
                                        FeatureStdExtA,
@@ -425,6 +429,7 @@ def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
 
 def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
                                       [Feature64Bit,
+                                       FeatureStdExtI,
                                        FeatureStdExtZifencei,
                                        FeatureStdExtM,
                                        FeatureStdExtA,
@@ -447,14 +452,16 @@ def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
                                        FeatureStdExtZbb,
                                        FeatureStdExtZbs,
                                        FeatureStdExtZfhmin,
-                                       FeatureFastUnalignedAccess],
+                                       FeatureUnalignedScalarMem,
+                                       FeatureUnalignedVectorMem],
                                       [TuneNoDefaultUnroll,
                                        TuneConditionalCompressedMoveFusion,
                                        TuneLUIADDIFusion,
                                        TuneAUIPCADDIFusion]>;
 
-def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", NoSchedModel,
+def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                       [Feature64Bit,
+                                       FeatureStdExtI,
                                        FeatureStdExtZifencei,
                                        FeatureStdExtM,
                                        FeatureStdExtA,
@@ -484,7 +491,8 @@ def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", NoSchedModel,
                                        FeatureStdExtZvkng,
                                        FeatureStdExtZvksc,
                                        FeatureStdExtZvksg,
-                                       FeatureFastUnalignedAccess],
+                                       FeatureUnalignedScalarMem,
+                                       FeatureUnalignedVectorMem],
                                       [TuneNoDefaultUnroll,
                                        TuneConditionalCompressedMoveFusion,
                                        TuneLUIADDIFusion,
@@ -494,6 +502,7 @@ def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", NoSchedModel,
 def SYNTACORE_SCR1_BASE : RISCVProcessorModel<"syntacore-scr1-base",
                                               SyntacoreSCR1Model,
                                               [Feature32Bit,
+                                               FeatureStdExtI,
                                                FeatureStdExtZicsr,
                                                FeatureStdExtZifencei,
                                                FeatureStdExtC],
@@ -502,6 +511,7 @@ def SYNTACORE_SCR1_BASE : RISCVProcessorModel<"syntacore-scr1-base",
 def SYNTACORE_SCR1_MAX : RISCVProcessorModel<"syntacore-scr1-max",
                                              SyntacoreSCR1Model,
                                              [Feature32Bit,
+                                              FeatureStdExtI,
                                               FeatureStdExtZicsr,
                                               FeatureStdExtZifencei,
                                               FeatureStdExtM,
@@ -511,6 +521,7 @@ def SYNTACORE_SCR1_MAX : RISCVProcessorModel<"syntacore-scr1-max",
 def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
                                             NoSchedModel,
                                             [Feature64Bit,
+                                             FeatureStdExtI,
                                              FeatureStdExtZifencei,
                                              FeatureStdExtZicsr,
                                              FeatureStdExtZicntr,
@@ -540,6 +551,7 @@ def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
 def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                           XiangShanNanHuModel,
                                           [Feature64Bit,
+                                           FeatureStdExtI,
                                            FeatureStdExtZicsr,
                                            FeatureStdExtZifencei,
                                            FeatureStdExtM,

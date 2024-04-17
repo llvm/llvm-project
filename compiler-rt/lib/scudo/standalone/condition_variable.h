@@ -39,22 +39,6 @@ public:
   }
 };
 
-template <typename Config, typename = const bool>
-struct ConditionVariableState {
-  static constexpr bool enabled() { return false; }
-  // This is only used for compilation purpose so that we won't end up having
-  // many conditional compilations. If you want to use `ConditionVariableDummy`,
-  // define `ConditionVariableT` in your allocator configuration. See
-  // allocator_config.h for more details.
-  using ConditionVariableT = ConditionVariableDummy;
-};
-
-template <typename Config>
-struct ConditionVariableState<Config, decltype(Config::UseConditionVariable)> {
-  static constexpr bool enabled() { return Config::UseConditionVariable; }
-  using ConditionVariableT = typename Config::ConditionVariableT;
-};
-
 } // namespace scudo
 
 #endif // SCUDO_CONDITION_VARIABLE_H_

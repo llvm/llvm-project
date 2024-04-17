@@ -33,6 +33,7 @@ set(sources
   exp.cpp
   exponent.cpp
   floor.cpp
+  fma.cpp
   fraction.cpp
   hypot.cpp
   j0.cpp
@@ -48,6 +49,7 @@ set(sources
   nearest.cpp
   norm2.cpp
   pow.cpp
+  random.cpp
   round.cpp
   rrspacing.cpp
   scale.cpp

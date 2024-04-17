@@ -19,6 +19,7 @@
 #include "llvm/ADT/Uniformity.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -61,7 +62,6 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
-enum class MachineCombinerPattern;
 enum class MachineTraceStrategy;
 
 template <class T> class SmallVectorImpl;
@@ -204,6 +204,7 @@ public:
   /// if they exist (-1 otherwise).  Some targets use pseudo instructions in
   /// order to abstract away the difference between operating with a frame
   /// pointer and operating without, through the use of these two instructions.
+  /// A FrameSetup MI in MF implies MFI::AdjustsStack.
   ///
   unsigned getCallFrameSetupOpcode() const { return CallFrameSetupOpcode; }
   unsigned getCallFrameDestroyOpcode() const { return CallFrameDestroyOpcode; }
@@ -1190,10 +1191,9 @@ public:
   /// faster sequence.
   /// \param Root - Instruction that could be combined with one of its operands
   /// \param Patterns - Vector of possible combination patterns
-  virtual bool
-  getMachineCombinerPatterns(MachineInstr &Root,
-                             SmallVectorImpl<MachineCombinerPattern> &Patterns,
-                             bool DoRegPressureReduce) const;
+  virtual bool getMachineCombinerPatterns(MachineInstr &Root,
+                                          SmallVectorImpl<unsigned> &Patterns,
+                                          bool DoRegPressureReduce) const;
 
   /// Return true if target supports reassociation of instructions in machine
   /// combiner pass to reduce register pressure for a given BB.
@@ -1205,13 +1205,17 @@ public:
 
   /// Fix up the placeholder we may add in genAlternativeCodeSequence().
   virtual void
-  finalizeInsInstrs(MachineInstr &Root, MachineCombinerPattern &P,
+  finalizeInsInstrs(MachineInstr &Root, unsigned &Pattern,
                     SmallVectorImpl<MachineInstr *> &InsInstrs) const {}
 
   /// Return true when a code sequence can improve throughput. It
   /// should be called only for instructions in loops.
   /// \param Pattern - combiner pattern
-  virtual bool isThroughputPattern(MachineCombinerPattern Pattern) const;
+  virtual bool isThroughputPattern(unsigned Pattern) const;
+
+  /// Return the objective of a combiner pattern.
+  /// \param Pattern - combiner pattern
+  virtual CombinerObjective getCombinerObjective(unsigned Pattern) const;
 
   /// Return true if the input \P Inst is part of a chain of dependent ops
   /// that are suitable for reassociation, otherwise return false.
@@ -1255,7 +1259,7 @@ public:
   /// \param InstIdxForVirtReg - map of virtual register to instruction in
   /// InsInstr that defines it
   virtual void genAlternativeCodeSequence(
-      MachineInstr &Root, MachineCombinerPattern Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstIdxForVirtReg) const;
@@ -1269,8 +1273,7 @@ public:
 
   /// Attempt to reassociate \P Root and \P Prev according to \P Pattern to
   /// reduce critical path length.
-  void reassociateOps(MachineInstr &Root, MachineInstr &Prev,
-                      MachineCombinerPattern Pattern,
+  void reassociateOps(MachineInstr &Root, MachineInstr &Prev, unsigned Pattern,
                       SmallVectorImpl<MachineInstr *> &InsInstrs,
                       SmallVectorImpl<MachineInstr *> &DelInstrs,
                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
@@ -1280,8 +1283,7 @@ public:
   /// (new root opcode, new prev opcode) that must be used to reassociate \P
   /// Root and \P Prev accoring to \P Pattern.
   std::pair<unsigned, unsigned>
-  getReassociationOpcodes(MachineCombinerPattern Pattern,
-                          const MachineInstr &Root,
+  getReassociationOpcodes(unsigned Pattern, const MachineInstr &Root,
                           const MachineInstr &Prev) const;
 
   /// The limit on resource length extension we accept in MachineCombiner Pass.

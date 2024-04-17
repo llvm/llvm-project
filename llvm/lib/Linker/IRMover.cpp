@@ -8,6 +8,7 @@
 
 #include "llvm/Linker/IRMover.h"
 #include "LinkDiagnosticInfo.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -1546,10 +1547,11 @@ Error IRLinker::run() {
     if (Error Err = SrcM->getMaterializer()->materializeMetadata())
       return Err;
 
-  DstM.IsNewDbgInfoFormat = SrcM->IsNewDbgInfoFormat;
+  // Convert source module to match dest for the duration of the link.
+  ScopedDbgInfoFormatSetter FormatSetter(*SrcM, DstM.IsNewDbgInfoFormat);
 
-  // Inherit the target data from the source module if the destination module
-  // doesn't have one already.
+  // Inherit the target data from the source module if the destination
+  // module doesn't have one already.
   if (DstM.getDataLayout().isDefault())
     DstM.setDataLayout(SrcM->getDataLayout());
 
@@ -1605,11 +1607,6 @@ Error IRLinker::run() {
 
   // Loop over all of the linked values to compute type mappings.
   computeTypeMapping();
-
-  // Convert module level attributes to function level attributes because
-  // after merging modules the attributes might change and would have different
-  // effect on the functions as the original module would have.
-  CopyModuleAttrToFunctions(*SrcM);
 
   std::reverse(Worklist.begin(), Worklist.end());
   while (!Worklist.empty()) {
@@ -1780,8 +1777,6 @@ IRMover::IRMover(Module &M) : Composite(M) {
 Error IRMover::move(std::unique_ptr<Module> Src,
                     ArrayRef<GlobalValue *> ValuesToLink,
                     LazyCallback AddLazyFor, bool IsPerformingImport) {
-  if (getModule().IsNewDbgInfoFormat)
-    Src->convertToNewDbgValues();
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
                        IsPerformingImport);

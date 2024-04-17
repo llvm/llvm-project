@@ -363,8 +363,8 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
     for (auto &Row : SubRegFromChannelTable)
       Row.fill(AMDGPU::NoSubRegister);
     for (unsigned Idx = 1; Idx < getNumSubRegIndices(); ++Idx) {
-      unsigned Width = AMDGPUSubRegIdxRanges[Idx].Size / 32;
-      unsigned Offset = AMDGPUSubRegIdxRanges[Idx].Offset / 32;
+      unsigned Width = getSubRegIdxSize(Idx) / 32;
+      unsigned Offset = getSubRegIdxOffset(Idx) / 32;
       assert(Width < SubRegFromChannelTableWidthMap.size());
       Width = SubRegFromChannelTableWidthMap[Width];
       if (Width == 0)
@@ -611,13 +611,6 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Reserve null register - it shall never be allocated
   reserveRegisterTuples(Reserved, AMDGPU::SGPR_NULL64);
-
-  // Disallow vcc_hi allocation in wave32. It may be allocated but most likely
-  // will result in bugs.
-  if (isWave32) {
-    Reserved.set(AMDGPU::VCC);
-    Reserved.set(AMDGPU::VCC_HI);
-  }
 
   // Reserve SGPRs.
   //
@@ -1753,12 +1746,12 @@ void SIRegisterInfo::buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index,
     unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_LOAD_DWORD_SADDR
                                           : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
     buildSpillLoadStore(*SB.MBB, SB.MI, SB.DL, Opc, Index, SB.TmpVGPR, false,
-                        FrameReg, Offset * SB.EltSize, MMO, SB.RS);
+                        FrameReg, (int64_t)Offset * SB.EltSize, MMO, SB.RS);
   } else {
     unsigned Opc = ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
                                           : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
     buildSpillLoadStore(*SB.MBB, SB.MI, SB.DL, Opc, Index, SB.TmpVGPR, IsKill,
-                        FrameReg, Offset * SB.EltSize, MMO, SB.RS);
+                        FrameReg, (int64_t)Offset * SB.EltSize, MMO, SB.RS);
     // This only ever adds one VGPR spill
     SB.MFI.addToSpilledVGPRs(1);
   }
@@ -2265,10 +2258,10 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
           *MI->memoperands_begin(), RS);
-      
-      if (IsWWMRegSpill) 
+
+      if (IsWWMRegSpill)
         TII->restoreExec(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy());
-  
+
       MI->eraseFromParent();
       return true;
     }

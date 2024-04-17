@@ -508,9 +508,9 @@ public:
     using namespace support;
 
     offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     offset_type DataLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);
   }
 
@@ -626,6 +626,12 @@ public:
   InstrProfKind getProfileKind() const override;
 
   Error populateSymtab(InstrProfSymtab &Symtab) override {
+    // FIXME: the create method calls 'finalizeSymtab' and sorts a bunch of
+    // arrays/maps. Since there are other data sources other than 'HashTable' to
+    // populate a symtab, it might make sense to have something like this
+    // 1. Let each data source populate Symtab and init the arrays/maps without
+    // calling 'finalizeSymtab'
+    // 2. Call 'finalizeSymtab' once to get all arrays/maps sorted if needed.
     return Symtab.create(HashTable->keys());
   }
 };

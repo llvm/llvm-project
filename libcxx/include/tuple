@@ -210,6 +210,7 @@ template <class... Types>
 #include <__config>
 #include <__functional/invoke.h>
 #include <__fwd/array.h>
+#include <__fwd/pair.h>
 #include <__fwd/tuple.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
@@ -232,20 +233,11 @@ template <class... Types>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_copy_assignable.h>
-#include <__type_traits/is_copy_constructible.h>
-#include <__type_traits/is_default_constructible.h>
 #include <__type_traits/is_empty.h>
 #include <__type_traits/is_final.h>
 #include <__type_traits/is_implicitly_default_constructible.h>
-#include <__type_traits/is_move_assignable.h>
-#include <__type_traits/is_move_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_nothrow_copy_assignable.h>
-#include <__type_traits/is_nothrow_copy_constructible.h>
-#include <__type_traits/is_nothrow_default_constructible.h>
-#include <__type_traits/is_nothrow_move_assignable.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
@@ -259,7 +251,6 @@ template <class... Types>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
-#include <__utility/pair.h>
 #include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
 #include <cstddef>
@@ -1357,21 +1348,7 @@ tuple_cat(_Tuple0&& __t0, _Tuples&&... __tpls) {
 template <class... _Tp, class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS uses_allocator<tuple<_Tp...>, _Alloc> : true_type {};
 
-template <class _T1, class _T2>
-template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_T1, _T2>::pair(
-    piecewise_construct_t,
-    tuple<_Args1...>& __first_args,
-    tuple<_Args2...>& __second_args,
-    __tuple_indices<_I1...>,
-    __tuple_indices<_I2...>)
-    : first(std::forward<_Args1>(std::get<_I1>(__first_args))...),
-      second(std::forward<_Args2>(std::get<_I2>(__second_args))...) {}
-
 #  if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr size_t tuple_size_v = tuple_size<_Tp>::value;
-
 #    define _LIBCPP_NOEXCEPT_RETURN(...)                                                                               \
       noexcept(noexcept(__VA_ARGS__)) { return __VA_ARGS__; }
 
@@ -1389,15 +1366,41 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) apply(_Fn&& __f, _Tuple&& 
         std::forward<_Tuple>(__t),
         typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type{}))
 
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Tuple, size_t... _Idx>
 inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, __tuple_indices<_Idx...>)
+  noexcept(noexcept(_Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...)))
+  requires is_constructible_v<_Tp, decltype(std::get<_Idx>(std::forward<_Tuple>(__t)))...> {
+  return _Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...);
+}
+#else
+template <class _Tp, class _Tuple, size_t... _Idx>
+inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, __tuple_indices<_Idx...>, 
+    enable_if_t<is_constructible_v<_Tp, decltype(std::get<_Idx>(std::forward<_Tuple>(__t)))...>> * = nullptr)
     _LIBCPP_NOEXCEPT_RETURN(_Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...))
+#endif // _LIBCPP_STD_VER >= 20
 
+template <class _Tp, class _Tuple, 
+          class _Seq = typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type, class = void>
+inline constexpr bool __can_make_from_tuple = false;
+
+template <class _Tp, class _Tuple, size_t... _Idx>
+inline constexpr bool __can_make_from_tuple<_Tp, _Tuple, __tuple_indices<_Idx...>, 
+    enable_if_t<is_constructible_v<_Tp, decltype(std::get<_Idx>(std::declval<_Tuple>()))...>>> = true;
+
+// Based on LWG3528(https://wg21.link/LWG3528) and http://eel.is/c++draft/description#structure.requirements-9, 
+// the standard allows to impose requirements, we constraint std::make_from_tuple to make std::make_from_tuple 
+// SFINAE friendly and also avoid worse diagnostic messages. We still keep the constraints of std::__make_from_tuple_impl 
+// so that std::__make_from_tuple_impl will have the same advantages when used alone.
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Tuple>
+  requires __can_make_from_tuple<_Tp, _Tuple> // strengthen
+#else
+template <class _Tp, class _Tuple, class = enable_if_t<__can_make_from_tuple<_Tp, _Tuple>>> // strengthen
+#endif // _LIBCPP_STD_VER >= 20
 inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp make_from_tuple(_Tuple&& __t)
     _LIBCPP_NOEXCEPT_RETURN(std::__make_from_tuple_impl<_Tp>(
         std::forward<_Tuple>(__t), typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type{}))
-
 #    undef _LIBCPP_NOEXCEPT_RETURN
 
 #  endif // _LIBCPP_STD_VER >= 17

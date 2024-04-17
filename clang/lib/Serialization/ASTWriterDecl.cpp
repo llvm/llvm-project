@@ -16,7 +16,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/ODRHash.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/SourceManager.h"
@@ -281,11 +280,18 @@ bool clang::CanElideDeclDef(const Decl *D) {
 
     if (FD->isDependentContext())
       return false;
+
+    if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return false;
   }
 
   if (auto *VD = dyn_cast<VarDecl>(D)) {
     if (!VD->getDeclContext()->getRedeclContext()->isFileContext() ||
-        VD->isInline() || VD->isConstexpr() || isa<ParmVarDecl>(VD))
+        VD->isInline() || VD->isConstexpr() || isa<ParmVarDecl>(VD) ||
+        // Constant initialized variable may not affect the ABI, but they
+        // may be used in constant evaluation in the frontend, so we have
+        // to remain them.
+        VD->hasConstantInitialization())
       return false;
 
     if (VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
@@ -519,7 +525,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
   BitsPacker EnumDeclBits;
   EnumDeclBits.addBits(D->getNumPositiveBits(), /*BitWidth=*/8);
   EnumDeclBits.addBits(D->getNumNegativeBits(), /*BitWidth=*/8);
-  bool ShouldSkipCheckingODR = D->shouldSkipCheckingODR();
+  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
   EnumDeclBits.addBit(ShouldSkipCheckingODR);
   EnumDeclBits.addBit(D->isScoped());
   EnumDeclBits.addBit(D->isScopedUsingClassTag());
@@ -545,7 +551,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
       !D->isTopLevelDeclInObjCContainer() &&
       !CXXRecordDecl::classofKind(D->getKind()) &&
       !D->getIntegerTypeSourceInfo() && !D->getMemberSpecializationInfo() &&
-      !needsAnonymousDeclarationNumber(D) && !D->shouldSkipCheckingODR() &&
+      !needsAnonymousDeclarationNumber(D) && !shouldSkipCheckingODR(D) &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier)
     AbbrevToUse = Writer.getDeclEnumAbbrev();
 
@@ -711,7 +717,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   // FIXME: stable encoding
   FunctionDeclBits.addBits(llvm::to_underlying(D->getLinkageInternal()), 3);
   FunctionDeclBits.addBits((uint32_t)D->getStorageClass(), /*BitWidth=*/3);
-  bool ShouldSkipCheckingODR = D->shouldSkipCheckingODR();
+  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
   FunctionDeclBits.addBit(ShouldSkipCheckingODR);
   FunctionDeclBits.addBit(D->isInlineSpecified());
   FunctionDeclBits.addBit(D->isInlined());
@@ -742,8 +748,15 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   if (!ShouldSkipCheckingODR)
     Record.push_back(D->getODRHash());
 
-  if (D->isDefaulted()) {
-    if (auto *FDI = D->getDefaultedFunctionInfo()) {
+  if (D->isDefaulted() || D->isDeletedAsWritten()) {
+    if (auto *FDI = D->getDefalutedOrDeletedInfo()) {
+      // Store both that there is an DefaultedOrDeletedInfo and whether it
+      // contains a DeletedMessage.
+      StringLiteral *DeletedMessage = FDI->getDeletedMessage();
+      Record.push_back(1 | (DeletedMessage ? 2 : 0));
+      if (DeletedMessage)
+        Record.AddStmt(DeletedMessage);
+
       Record.push_back(FDI->getUnqualifiedLookups().size());
       for (DeclAccessPair P : FDI->getUnqualifiedLookups()) {
         Record.AddDeclRef(P.getDecl());
@@ -1545,7 +1558,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
       D->getFirstDecl() == D->getMostRecentDecl() && !D->isInvalidDecl() &&
       !D->hasAttrs() && !D->isTopLevelDeclInObjCContainer() &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier &&
-      !D->shouldSkipCheckingODR() && !D->hasExtInfo() &&
+      !shouldSkipCheckingODR(D) && !D->hasExtInfo() &&
       !D->isExplicitlyDefaulted()) {
     if (D->getTemplatedKind() == FunctionDecl::TK_NonTemplate ||
         D->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate ||
@@ -1712,6 +1725,15 @@ void ASTDeclWriter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
   if (D->isFirstDecl())
     AddTemplateSpecializations(D);
+
+  // Force emitting the corresponding deduction guide in reduced BMI mode.
+  // Otherwise, the deduction guide may be optimized out incorrectly.
+  if (Writer.isGeneratingReducedBMI()) {
+    auto Name = Context.DeclarationNames.getCXXDeductionGuideName(D);
+    for (auto *DG : D->getDeclContext()->noload_lookup(Name))
+      Writer.GetDeclRef(DG);
+  }
+
   Code = serialization::DECL_CLASS_TEMPLATE;
 }
 
@@ -1914,6 +1936,7 @@ void ASTDeclWriter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
     Record.push_back(D->getNumExpansionTemplateParameters());
 
   VisitTemplateDecl(D);
+  Record.push_back(D->wasDeclaredWithTypename());
   // TemplateParmPosition.
   Record.push_back(D->getDepth());
   Record.push_back(D->getPosition());
@@ -1955,8 +1978,22 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
                 "You need to update the serializer after you change the "
                 "DeclContextBits");
 
-  Record.AddOffset(Writer.WriteDeclContextLexicalBlock(Context, DC));
-  Record.AddOffset(Writer.WriteDeclContextVisibleBlock(Context, DC));
+  uint64_t LexicalOffset = 0;
+  uint64_t VisibleOffset = 0;
+
+  if (Writer.isGeneratingReducedBMI() && isa<NamespaceDecl>(DC) &&
+      cast<NamespaceDecl>(DC)->isFromExplicitGlobalModule()) {
+    // In reduced BMI, delay writing lexical and visible block for namespace
+    // in the global module fragment. See the comments of DelayedNamespace for
+    // details.
+    Writer.DelayedNamespace.push_back(cast<NamespaceDecl>(DC));
+  } else {
+    LexicalOffset = Writer.WriteDeclContextLexicalBlock(Context, DC);
+    VisibleOffset = Writer.WriteDeclContextVisibleBlock(Context, DC);
+  }
+
+  Record.AddOffset(LexicalOffset);
+  Record.AddOffset(VisibleOffset);
 }
 
 const Decl *ASTWriter::getFirstLocalDecl(const Decl *D) {

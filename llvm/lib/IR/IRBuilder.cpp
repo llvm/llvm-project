@@ -918,12 +918,14 @@ CallInst *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
   return createCallHelper(Fn, {V}, Name, FMFSource);
 }
 
-CallInst *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
-                                               Value *RHS,
-                                               Instruction *FMFSource,
-                                               const Twine &Name) {
+Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
+                                            Value *RHS, Instruction *FMFSource,
+                                            const Twine &Name) {
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getDeclaration(M, ID, { LHS->getType() });
+  if (Value *V = Folder.FoldBinaryIntrinsic(ID, LHS, RHS, Fn->getReturnType(),
+                                            FMFSource))
+    return V;
   return createCallHelper(Fn, {LHS, RHS}, Name, FMFSource);
 }
 

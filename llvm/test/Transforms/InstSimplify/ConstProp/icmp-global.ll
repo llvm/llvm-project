@@ -298,3 +298,11 @@ bb:
   %cmp = icmp eq ptr blockaddress(@blockaddr_no_cfi, %bb), no_cfi @func
   ret i1 %cmp
 }
+
+define i1 @global_no_cfi_dso_local_equivalent() {
+; CHECK-LABEL: @global_no_cfi_dso_local_equivalent(
+; CHECK-NEXT:    ret i1 icmp eq (ptr dso_local_equivalent @func, ptr no_cfi @func)
+;
+  %cmp = icmp eq ptr dso_local_equivalent @func, no_cfi @func
+  ret i1 %cmp
+}

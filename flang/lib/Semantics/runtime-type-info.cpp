@@ -1239,6 +1239,16 @@ void RuntimeTableBuilder::IncorporateDefinedIoGenericInterfaces(
 RuntimeDerivedTypeTables BuildRuntimeDerivedTypeTables(
     SemanticsContext &context) {
   RuntimeDerivedTypeTables result;
+  // Do not attempt to read __fortran_type_info.mod when compiling
+  // the module on which it depends.
+  const auto &allSources{context.allCookedSources().allSources()};
+  if (auto firstProv{allSources.GetFirstFileProvenance()}) {
+    if (const auto *srcFile{allSources.GetSourceFile(firstProv->start())}) {
+      if (srcFile->path().find("__fortran_builtins.f90") != std::string::npos) {
+        return result;
+      }
+    }
+  }
   result.schemata = context.GetBuiltinModule(typeInfoBuiltinModule);
   if (result.schemata) {
     RuntimeTableBuilder builder{context, result};

@@ -1289,6 +1289,15 @@ def G_MERGE_VALUES : GenericInstruction {
   let variadicOpsType = type1;
 }
 
+// Generic vscale.
+// Puts the value of the runtime vscale multiplied by the value in the source
+// operand into the destination register.
+def G_VSCALE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$src);
+  let hasSideEffects = false;
+}
+
 /// Create a vector from multiple scalar registers. No implicit
 /// conversion is performed (i.e. the result element type must be the
 /// same as all source operands)
@@ -1564,6 +1573,28 @@ def G_BZERO : GenericInstruction {
   let InOperandList = (ins ptype0:$dst_addr, type1:$size, untyped_imm_0:$tailcall);
   let hasSideEffects = false;
   let mayStore = true;
+}
+
+//------------------------------------------------------------------------------
+// Trap intrinsics
+//------------------------------------------------------------------------------
+def G_TRAP : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+  let mayStore = true;
+}
+
+def G_DEBUGTRAP : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let hasSideEffects = true;
+}
+
+def G_UBSANTRAP : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins i8imm:$kind);
+  let hasSideEffects = true;
 }
 
 //------------------------------------------------------------------------------

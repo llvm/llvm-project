@@ -49,6 +49,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/HexagonAttributeParser.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MSP430AttributeParser.h"
 #include "llvm/Support/MSP430Attributes.h"
@@ -60,6 +61,7 @@
 #include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <array>
 #include <cinttypes>
 #include <cstddef>
 #include <cstdint>
@@ -73,6 +75,7 @@
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace llvm::support;
 using namespace ELF;
 
 #define LLVM_READOBJ_ENUM_CASE(ns, enum)                                       \
@@ -2824,14 +2827,15 @@ template <typename ELFT> void ELFDumper<ELFT>::printLoadName() {
 
 template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
   switch (Obj.getHeader().e_machine) {
+  case EM_HEXAGON:
+    printAttributes(ELF::SHT_HEXAGON_ATTRIBUTES,
+                    std::make_unique<HexagonAttributeParser>(&W),
+                    llvm::endianness::little);
+    break;
   case EM_ARM:
-    if (Obj.isLE())
-      printAttributes(ELF::SHT_ARM_ATTRIBUTES,
-                      std::make_unique<ARMAttributeParser>(&W),
-                      llvm::endianness::little);
-    else
-      reportUniqueWarning("attribute printing not implemented for big-endian "
-                          "ARM objects");
+    printAttributes(
+        ELF::SHT_ARM_ATTRIBUTES, std::make_unique<ARMAttributeParser>(&W),
+        Obj.isLE() ? llvm::endianness::little : llvm::endianness::big);
     break;
   case EM_RISCV:
     if (Obj.isLE())
@@ -3413,13 +3417,13 @@ template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {
     return;
   }
 
-  if (Error E = StackMapParser<ELFT::TargetEndianness>::validateHeader(
-          *ContentOrErr)) {
+  if (Error E =
+          StackMapParser<ELFT::Endianness>::validateHeader(*ContentOrErr)) {
     Warn(std::move(E));
     return;
   }
 
-  prettyPrintStackMap(W, StackMapParser<ELFT::TargetEndianness>(*ContentOrErr));
+  prettyPrintStackMap(W, StackMapParser<ELFT::Endianness>(*ContentOrErr));
 }
 
 template <class ELFT>
@@ -5098,6 +5102,73 @@ template <class ELFT> void GNUELFDumper<ELFT>::printAddrsig() {
   }
 }
 
+template <class ELFT>
+static bool printAArch64PAuthABICoreInfo(raw_ostream &OS, uint32_t DataSize,
+                                         ArrayRef<uint8_t> Desc) {
+  OS << "    AArch64 PAuth ABI core info: ";
+  // DataSize - size without padding, Desc.size() - size with padding
+  if (DataSize != 16) {
+    OS << format("<corrupted size: expected 16, got %d>", DataSize);
+    return false;
+  }
+
+  uint64_t Platform =
+      support::endian::read64<ELFT::Endianness>(Desc.data() + 0);
+  uint64_t Version = support::endian::read64<ELFT::Endianness>(Desc.data() + 8);
+
+  const char *PlatformDesc = [Platform]() {
+    switch (Platform) {
+    case AARCH64_PAUTH_PLATFORM_INVALID:
+      return "invalid";
+    case AARCH64_PAUTH_PLATFORM_BAREMETAL:
+      return "baremetal";
+    case AARCH64_PAUTH_PLATFORM_LLVM_LINUX:
+      return "llvm_linux";
+    default:
+      return "unknown";
+    }
+  }();
+
+  std::string VersionDesc = [Platform, Version]() -> std::string {
+    if (Platform != AARCH64_PAUTH_PLATFORM_LLVM_LINUX)
+      return "";
+    if (Version >= (1 << (AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST + 1)))
+      return "unknown";
+
+    std::array<StringRef, AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST + 1>
+        Flags;
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INTRINSICS] = "Intrinsics";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_CALLS] = "Calls";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_RETURNS] = "Returns";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_AUTHTRAPS] = "AuthTraps";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRADDRDISCR] =
+        "VTPtrAddressDiscrimination";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR] =
+        "VTPtrTypeDiscrimination";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI] = "InitFini";
+
+    static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI ==
+                      AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
+                  "Update when new enum items are defined");
+
+    std::string Desc;
+    for (uint32_t I = 0, End = Flags.size(); I < End; ++I) {
+      if (!(Version & (1ULL << I)))
+        Desc += '!';
+      Desc +=
+          Twine("PointerAuth" + Flags[I] + (I == End - 1 ? "" : ", ")).str();
+    }
+    return Desc;
+  }();
+
+  OS << format("platform 0x%" PRIx64 " (%s), version 0x%" PRIx64, Platform,
+               PlatformDesc, Version);
+  if (!VersionDesc.empty())
+    OS << format(" (%s)", VersionDesc.c_str());
+
+  return true;
+}
+
 template <typename ELFT>
 static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
                                   ArrayRef<uint8_t> Data) {
@@ -5139,7 +5210,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
       return OS.str();
@@ -5155,6 +5226,9 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     if (PrData)
       OS << format("<unknown flags: 0x%x>", PrData);
     return OS.str();
+  case GNU_PROPERTY_AARCH64_FEATURE_PAUTH:
+    printAArch64PAuthABICoreInfo<ELFT>(OS, DataSize, Data);
+    return OS.str();
   case GNU_PROPERTY_X86_FEATURE_2_NEEDED:
   case GNU_PROPERTY_X86_FEATURE_2_USED:
     OS << "x86 feature "
@@ -5163,7 +5237,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
       return OS.str();
@@ -5189,7 +5263,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
       return OS.str();
@@ -5357,31 +5431,6 @@ static bool printAndroidNote(raw_ostream &OS, uint32_t NoteType,
 }
 
 template <class ELFT>
-static bool printAArch64Note(raw_ostream &OS, uint32_t NoteType,
-                             ArrayRef<uint8_t> Desc) {
-  if (NoteType != NT_ARM_TYPE_PAUTH_ABI_TAG)
-    return false;
-
-  OS << "    AArch64 PAuth ABI tag: ";
-  if (Desc.size() < 16) {
-    OS << format("<corrupted size: expected at least 16, got %d>", Desc.size());
-    return false;
-  }
-
-  uint64_t Platform =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 0);
-  uint64_t Version =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
-  OS << format("platform 0x%" PRIx64 ", version 0x%" PRIx64, Platform, Version);
-
-  if (Desc.size() > 16)
-    OS << ", additional info 0x"
-       << toHex(ArrayRef<uint8_t>(Desc.data() + 16, Desc.size() - 16));
-
-  return true;
-}
-
-template <class ELFT>
 void GNUELFDumper<ELFT>::printMemtag(
     const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
     const ArrayRef<uint8_t> AndroidNoteDesc,
@@ -5451,16 +5500,14 @@ getFreeBSDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc, bool IsCore) {
   case ELF::NT_FREEBSD_ABI_TAG:
     if (Desc.size() != 4)
       return std::nullopt;
-    return FreeBSDNote{
-        "ABI tag",
-        utostr(support::endian::read32<ELFT::TargetEndianness>(Desc.data()))};
+    return FreeBSDNote{"ABI tag",
+                       utostr(endian::read32<ELFT::Endianness>(Desc.data()))};
   case ELF::NT_FREEBSD_ARCH_TAG:
     return FreeBSDNote{"Arch tag", toStringRef(Desc).str()};
   case ELF::NT_FREEBSD_FEATURE_CTL: {
     if (Desc.size() != 4)
       return std::nullopt;
-    unsigned Value =
-        support::endian::read32<ELFT::TargetEndianness>(Desc.data());
+    unsigned Value = endian::read32<ELFT::Endianness>(Desc.data());
     std::string FlagsStr;
     raw_string_ostream OS(FlagsStr);
     printFlags(Value, ArrayRef(FreeBSDFeatureCtlFlags), OS);
@@ -5780,10 +5827,6 @@ const NoteType AndroidNoteTypes[] = {
      "NT_ANDROID_TYPE_MEMTAG (Android memory tagging information)"},
 };
 
-const NoteType ARMNoteTypes[] = {
-    {ELF::NT_ARM_TYPE_PAUTH_ABI_TAG, "NT_ARM_TYPE_PAUTH_ABI_TAG"},
-};
-
 const NoteType CoreNoteTypes[] = {
     {ELF::NT_PRSTATUS, "NT_PRSTATUS (prstatus structure)"},
     {ELF::NT_FPREGSET, "NT_FPREGSET (floating point registers)"},
@@ -5902,8 +5945,6 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
     return FindNote(LLVMOMPOFFLOADNoteTypes);
   if (Name == "Android")
     return FindNote(AndroidNoteTypes);
-  if (Name == "ARM")
-    return FindNote(ARMNoteTypes);
 
   if (ELFType == ELF::ET_CORE)
     return FindNote(CoreNoteTypes);
@@ -6047,7 +6088,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
         DataExtractor DescExtractor(
-            Descriptor, ELFT::TargetEndianness == llvm::endianness::little,
+            Descriptor, ELFT::Endianness == llvm::endianness::little,
             sizeof(Elf_Addr));
         if (Expected<CoreNote> NoteOrErr = readCoreNote(DescExtractor)) {
           printCoreNote<ELFT>(OS, *NoteOrErr);
@@ -6058,9 +6099,6 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
       }
     } else if (Name == "Android") {
       if (printAndroidNote(OS, Type, Descriptor))
-        return Error::success();
-    } else if (Name == "ARM") {
-      if (printAArch64Note<ELFT>(OS, Type, Descriptor))
         return Error::success();
     }
     if (!Descriptor.empty()) {
@@ -7700,29 +7738,6 @@ static bool printAndroidNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
 }
 
 template <class ELFT>
-static bool printAarch64NoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
-                                      ScopedPrinter &W) {
-  if (NoteType != NT_ARM_TYPE_PAUTH_ABI_TAG)
-    return false;
-
-  if (Desc.size() < 16)
-    return false;
-
-  uint64_t platform =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 0);
-  uint64_t version =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
-  W.printNumber("Platform", platform);
-  W.printNumber("Version", version);
-
-  if (Desc.size() > 16)
-    W.printString("Additional info",
-                  toHex(ArrayRef<uint8_t>(Desc.data() + 16, Desc.size() - 16)));
-
-  return true;
-}
-
-template <class ELFT>
 void LLVMELFDumper<ELFT>::printMemtag(
     const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
     const ArrayRef<uint8_t> AndroidNoteDesc,
@@ -7846,7 +7861,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
         DataExtractor DescExtractor(
-            Descriptor, ELFT::TargetEndianness == llvm::endianness::little,
+            Descriptor, ELFT::Endianness == llvm::endianness::little,
             sizeof(Elf_Addr));
         if (Expected<CoreNote> N = readCoreNote(DescExtractor)) {
           printCoreNoteLLVMStyle(*N, W);
@@ -7857,9 +7872,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
       }
     } else if (Name == "Android") {
       if (printAndroidNoteLLVMStyle(Type, Descriptor, W))
-        return Error::success();
-    } else if (Name == "ARM") {
-      if (printAarch64NoteLLVMStyle<ELFT>(Type, Descriptor, W))
         return Error::success();
     }
     if (!Descriptor.empty()) {

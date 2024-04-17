@@ -230,3 +230,52 @@ using AFoo = Foo<U>*; // expected-note {{template is declared here}}
 
 AFoo s = {1}; // expected-error {{alias template 'AFoo' requires template arguments; argument deduction only allowed for}}
 } // namespace test17
+
+namespace test18 {
+template<typename T>
+concept False = false; // expected-note {{because 'false' evaluated to false}}
+
+template <typename T> struct Foo { T t; };
+
+template<typename T> requires False<T> // expected-note {{because 'int' does not satisfy 'False'}}
+Foo(T) -> Foo<int>;
+
+template <typename U>
+using Bar = Foo<U>; // expected-note {{could not match 'Foo<type-parameter-0-0>' against 'int'}} \
+                    // expected-note {{candidate template ignored: constraints not satisfied}} \
+                    // expected-note {{candidate function template not viable}}
+
+Bar s = {1}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
+} // namespace test18
+
+// GH85406, verify no crash on invalid alias templates.
+namespace test19 {
+template <typename T>
+class Foo {};
+
+template <typename T>
+template <typename K>
+using Bar2 = Foo<K>; // expected-error {{extraneous template parameter list in alias template declaration}}
+
+Bar2 b = 1; // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
+} // namespace test19
+
+// GH85385
+namespace test20 {
+template <template <typename> typename T>
+struct K {};
+
+template <typename U>
+class Foo {};
+
+// Verify that template template type parameter TTP is referenced/used in the
+// template arguments of the RHS.
+template <template<typename> typename TTP>
+using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'Foo<K<>>' against 'int'}}
+
+template <class T>
+class Container {};
+Bar t = Foo<K<Container>>();
+
+Bar s = 1; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of}}
+} // namespace test20

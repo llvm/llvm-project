@@ -390,8 +390,11 @@ public:
   /// Compute known bits for smin(LHS, RHS).
   static KnownBits smin(const KnownBits &LHS, const KnownBits &RHS);
 
-  /// Compute known bits for absdiff(LHS, RHS).
-  static KnownBits absdiff(const KnownBits &LHS, const KnownBits &RHS);
+  /// Compute known bits for abdu(LHS, RHS).
+  static KnownBits abdu(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute known bits for abds(LHS, RHS).
+  static KnownBits abds(const KnownBits &LHS, const KnownBits &RHS);
 
   /// Compute known bits for shl(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.

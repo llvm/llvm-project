@@ -305,7 +305,8 @@
 
 // Check profile CPUs
 
-// RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=rvi20u32 | FileCheck -check-prefix=MCPU-RVI20U32 %s
+// RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=rvi20u32 \
+// RUN:   | FileCheck -check-prefix=MCPU-RVI20U32 %s
 // MCPU-RVI20U32: "-target-cpu" "rvi20u32"
 // MCPU-RVI20U32-SAME: "-target-feature" "-a"
 // MCPU-RVI20U32-SAME: "-target-feature" "-c"
@@ -314,7 +315,8 @@
 // MCPU-RVI20U32-SAME: "-target-feature" "-m"
 // MCPU-RVI20U32-SAME: "-target-abi" "ilp32"
 
-// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rvi20u64 | FileCheck -check-prefix=MCPU-RVI20U64 %s
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rvi20u64 \
+// RUN:   | FileCheck -check-prefix=MCPU-RVI20U64 %s
 // MCPU-RVI20U64: "-target-cpu" "rvi20u64"
 // MCPU-RVI20U64: "-target-feature" "-a"
 // MCPU-RVI20U64: "-target-feature" "-c"
@@ -323,7 +325,8 @@
 // MCPU-RVI20U64: "-target-feature" "-m"
 // MCPU-RVI20U64-SAME: "-target-abi" "lp64"
 
-// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rva20u64 | FileCheck -check-prefix=MCPU-RVA20U64 %s
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rva20u64 \
+// RUN:   | FileCheck -check-prefix=MCPU-RVA20U64 %s
 // MCPU-RVA20U64: "-target-cpu" "rva20u64"
 // MCPU-RVA20U64: "-target-feature" "+m"
 // MCPU-RVA20U64: "-target-feature" "+a"
@@ -339,7 +342,8 @@
 // MCPU-RVA20U64: "-target-feature" "+za128rs"
 // MCPU-RVA20U64-SAME: "-target-abi" "lp64d"
 
-// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rva20s64 | FileCheck -check-prefix=MCPU-RVA20S64 %s
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rva20s64 \
+// RUN:   | FileCheck -check-prefix=MCPU-RVA20S64 %s
 // MCPU-RVA20S64: "-target-cpu" "rva20s64"
 // MCPU-RVA20S64-SAME: "-target-feature" "+m"
 // MCPU-RVA20S64-SAME: "-target-feature" "+a"
@@ -361,7 +365,8 @@
 // MCPU-RVA20S64-SAME: "-target-feature" "+svbare"
 // MCPU-RVA20S64-SAME: "-target-abi" "lp64d"
 
-// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rva22u64 | FileCheck -check-prefix=MCPU-RVA22U64 %s
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rva22u64 \
+// RUN:   | FileCheck -check-prefix=MCPU-RVA22U64 %s
 // MCPU-RVA22U64: "-target-cpu" "rva22u64"
 // MCPU-RVA22U64-SAME: "-target-feature" "+m"
 // MCPU-RVA22U64-SAME: "-target-feature" "+a"
@@ -388,7 +393,8 @@
 // MCPU-RVA22U64-SAME: "-target-feature" "+zkt"
 // MCPU-RVA22U64-SAME: "-target-abi" "lp64d"
 
-// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rva22s64 | FileCheck -check-prefix=MCPU-RVA22S64 %s
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rva22s64 \
+// RUN:   | FileCheck -check-prefix=MCPU-RVA22S64 %s
 // MCPU-RVA22S64: "-target-cpu" "rva22s64"
 // MCPU-RVA22S64-SAME: "-target-feature" "+m"
 // MCPU-RVA22S64-SAME: "-target-feature" "+a"
@@ -424,7 +430,7 @@
 // MCPU-RVA22S64-SAME: "-target-feature" "+svpbmt"
 // MCPU-RVA22S64-SAME: "-target-abi" "lp64d"
 
-// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rva23u64 -menable-experimental-extensions \
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rva23u64 \
 // RUN:   | FileCheck -check-prefix=MCPU-RVA23U64 %s
 // MCPU-RVA23U64: "-target-cpu" "rva23u64"
 // MCPU-RVA23U64-SAME: "-target-feature" "+m"
@@ -447,13 +453,13 @@
 // MCPU-RVA23U64-SAME: "-target-feature" "+zihintntl"
 // MCPU-RVA23U64-SAME: "-target-feature" "+zihintpause"
 // MCPU-RVA23U64-SAME: "-target-feature" "+zihpm"
-// MCPU-RVA23U64-SAME: "-target-feature" "+experimental-zimop"
+// MCPU-RVA23U64-SAME: "-target-feature" "+zimop"
 // MCPU-RVA23U64-SAME: "-target-feature" "+za64rs"
 // MCPU-RVA23U64-SAME: "-target-feature" "+zawrs"
 // MCPU-RVA23U64-SAME: "-target-feature" "+zfa"
 // MCPU-RVA23U64-SAME: "-target-feature" "+zfhmin"
 // MCPU-RVA23U64-SAME: "-target-feature" "+zcb"
-// MCPU-RVA23U64-SAME: "-target-feature" "+experimental-zcmop"
+// MCPU-RVA23U64-SAME: "-target-feature" "+zcmop"
 // MCPU-RVA23U64-SAME: "-target-feature" "+zba"
 // MCPU-RVA23U64-SAME: "-target-feature" "+zbb"
 // MCPU-RVA23U64-SAME: "-target-feature" "+zbs"
@@ -488,13 +494,13 @@
 // MCPU-RVA23S64-SAME: "-target-feature" "+zihintntl"
 // MCPU-RVA23S64-SAME: "-target-feature" "+zihintpause"
 // MCPU-RVA23S64-SAME: "-target-feature" "+zihpm"
-// MCPU-RVA23S64-SAME: "-target-feature" "+experimental-zimop"
+// MCPU-RVA23S64-SAME: "-target-feature" "+zimop"
 // MCPU-RVA23S64-SAME: "-target-feature" "+za64rs"
 // MCPU-RVA23S64-SAME: "-target-feature" "+zawrs"
 // MCPU-RVA23S64-SAME: "-target-feature" "+zfa"
 // MCPU-RVA23S64-SAME: "-target-feature" "+zfhmin"
 // MCPU-RVA23S64-SAME: "-target-feature" "+zcb"
-// MCPU-RVA23S64-SAME: "-target-feature" "+experimental-zcmop"
+// MCPU-RVA23S64-SAME: "-target-feature" "+zcmop"
 // MCPU-RVA23S64-SAME: "-target-feature" "+zba"
 // MCPU-RVA23S64-SAME: "-target-feature" "+zbb"
 // MCPU-RVA23S64-SAME: "-target-feature" "+zbs"
@@ -524,7 +530,7 @@
 // MCPU-RVA23S64-SAME: "-target-feature" "+svpbmt"
 // MCPU-RVA23S64-SAME: "-target-abi" "lp64d"
 
-// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rvb23u64 -menable-experimental-extensions \
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rvb23u64 \
 // RUN:   | FileCheck -check-prefix=MCPU-RVB23U64 %s
 // MCPU-RVB23U64: "-target-cpu" "rvb23u64"
 // MCPU-RVB23U64-SAME: "-target-feature" "+m"
@@ -546,19 +552,19 @@
 // MCPU-RVB23U64-SAME: "-target-feature" "+zihintntl"
 // MCPU-RVB23U64-SAME: "-target-feature" "+zihintpause"
 // MCPU-RVB23U64-SAME: "-target-feature" "+zihpm"
-// MCPU-RVB23U64-SAME: "-target-feature" "+experimental-zimop"
+// MCPU-RVB23U64-SAME: "-target-feature" "+zimop"
 // MCPU-RVB23U64-SAME: "-target-feature" "+za64rs"
 // MCPU-RVB23U64-SAME: "-target-feature" "+zawrs"
 // MCPU-RVB23U64-SAME: "-target-feature" "+zfa"
 // MCPU-RVB23U64-SAME: "-target-feature" "+zcb"
-// MCPU-RVB23U64-SAME: "-target-feature" "+experimental-zcmop"
+// MCPU-RVB23U64-SAME: "-target-feature" "+zcmop"
 // MCPU-RVB23U64-SAME: "-target-feature" "+zba"
 // MCPU-RVB23U64-SAME: "-target-feature" "+zbb"
 // MCPU-RVB23U64-SAME: "-target-feature" "+zbs"
 // MCPU-RVB23U64-SAME: "-target-feature" "+zkt"
 // MCPU-RVB23U64-SAME: "-target-abi" "lp64d"
 
-// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rvb23s64 -menable-experimental-extensions \
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=rvb23s64 \
 // RUN:   | FileCheck -check-prefix=MCPU-RVB23S64 %s
 // MCPU-RVB23S64: "-target-cpu" "rvb23s64"
 // MCPU-RVB23S64-SAME: "-target-feature" "+m"
@@ -581,12 +587,12 @@
 // MCPU-RVB23S64-SAME: "-target-feature" "+zihintntl"
 // MCPU-RVB23S64-SAME: "-target-feature" "+zihintpause"
 // MCPU-RVB23S64-SAME: "-target-feature" "+zihpm"
-// MCPU-RVB23S64-SAME: "-target-feature" "+experimental-zimop"
+// MCPU-RVB23S64-SAME: "-target-feature" "+zimop"
 // MCPU-RVB23S64-SAME: "-target-feature" "+za64rs"
 // MCPU-RVB23S64-SAME: "-target-feature" "+zawrs"
 // MCPU-RVB23S64-SAME: "-target-feature" "+zfa"
 // MCPU-RVB23S64-SAME: "-target-feature" "+zcb"
-// MCPU-RVB23S64-SAME: "-target-feature" "+experimental-zcmop"
+// MCPU-RVB23S64-SAME: "-target-feature" "+zcmop"
 // MCPU-RVB23S64-SAME: "-target-feature" "+zba"
 // MCPU-RVB23S64-SAME: "-target-feature" "+zbb"
 // MCPU-RVB23S64-SAME: "-target-feature" "+zbs"
@@ -605,7 +611,7 @@
 // MCPU-RVB23S64-SAME: "-target-feature" "+svpbmt"
 // MCPU-RVB23S64-SAME: "-target-abi" "lp64d"
 
-// RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=rvm23u32 -menable-experimental-extensions \
+// RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=rvm23u32 \
 // RUN:   | FileCheck -check-prefix=MCPU-RVM23U32 %s
 // MCPU-RVM23U32: "-target-cpu" "rvm23u32"
 // MCPU-RVM23U32-SAME: "-target-feature" "+m"
@@ -614,9 +620,9 @@
 // MCPU-RVM23U32-SAME: "-target-feature" "+zicsr"
 // MCPU-RVM23U32-SAME: "-target-feature" "+zihintntl"
 // MCPU-RVM23U32-SAME: "-target-feature" "+zihintpause"
-// MCPU-RVM23U32-SAME: "-target-feature" "+experimental-zimop"
+// MCPU-RVM23U32-SAME: "-target-feature" "+zimop"
 // MCPU-RVM23U32-SAME: "-target-feature" "+zce"
-// MCPU-RVM23U32-SAME: "-target-feature" "+experimental-zcmop"
+// MCPU-RVM23U32-SAME: "-target-feature" "+zcmop"
 // MCPU-RVM23U32-SAME: "-target-feature" "+zba"
 // MCPU-RVM23U32-SAME: "-target-feature" "+zbb"
 // MCPU-RVM23U32-SAME: "-target-feature" "+zbs"

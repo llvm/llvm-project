@@ -20,13 +20,7 @@ define float @fcvt_s_d(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_s_d:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fcvt.s.d a0, a0
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_s_d:
@@ -63,13 +57,7 @@ define double @fcvt_d_s(float %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_d_s:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINXZDINX-NEXT:    fcvt.d.s a0, a0
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_s:
@@ -106,13 +94,7 @@ define i32 @fcvt_w_d(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_w_d:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fcvt.w.d a0, a0, rtz
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_w_d:
@@ -153,17 +135,11 @@ define i32 @fcvt_w_d_sat(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_w_d_sat:
 ; RV32IZFINXZDINX:       # %bb.0: # %start
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fcvt.w.d a2, a0, rtz
 ; RV32IZFINXZDINX-NEXT:    feq.d a0, a0, a0
 ; RV32IZFINXZDINX-NEXT:    seqz a0, a0
 ; RV32IZFINXZDINX-NEXT:    addi a0, a0, -1
 ; RV32IZFINXZDINX-NEXT:    and a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_w_d_sat:
@@ -287,13 +263,7 @@ define i32 @fcvt_wu_d(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_wu_d:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rtz
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_wu_d:
@@ -334,15 +304,9 @@ define i32 @fcvt_wu_d_multiple_use(double %x, ptr %y) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_wu_d_multiple_use:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rtz
 ; RV32IZFINXZDINX-NEXT:    seqz a1, a0
 ; RV32IZFINXZDINX-NEXT:    add a0, a0, a1
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_wu_d_multiple_use:
@@ -402,17 +366,11 @@ define i32 @fcvt_wu_d_sat(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_wu_d_sat:
 ; RV32IZFINXZDINX:       # %bb.0: # %start
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a2, a0, rtz
 ; RV32IZFINXZDINX-NEXT:    feq.d a0, a0, a0
 ; RV32IZFINXZDINX-NEXT:    seqz a0, a0
 ; RV32IZFINXZDINX-NEXT:    addi a0, a0, -1
 ; RV32IZFINXZDINX-NEXT:    and a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_wu_d_sat:
@@ -512,13 +470,7 @@ define double @fcvt_d_w(i32 %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_d_w:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINXZDINX-NEXT:    fcvt.d.w a0, a0
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_w:
@@ -557,14 +509,8 @@ define double @fcvt_d_w_load(ptr %p) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_d_w_load:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINXZDINX-NEXT:    lw a0, 0(a0)
 ; RV32IZFINXZDINX-NEXT:    fcvt.d.w a0, a0
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_w_load:
@@ -605,13 +551,7 @@ define double @fcvt_d_wu(i32 %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_d_wu:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINXZDINX-NEXT:    fcvt.d.wu a0, a0
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_wu:
@@ -656,14 +596,8 @@ define double @fcvt_d_wu_load(ptr %p) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_d_wu_load:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINXZDINX-NEXT:    lw a0, 0(a0)
 ; RV32IZFINXZDINX-NEXT:    fcvt.d.wu a0, a0
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_wu_load:
@@ -749,47 +683,41 @@ define i64 @fcvt_l_d(double %a) nounwind {
 define i64 @fcvt_l_d_sat(double %a) nounwind {
 ; RV32IFD-LABEL: fcvt_l_d_sat:
 ; RV32IFD:       # %bb.0: # %start
-; RV32IFD-NEXT:    addi sp, sp, -32
-; RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IFD-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI12_0)
 ; RV32IFD-NEXT:    fld fa5, %lo(.LCPI12_0)(a0)
-; RV32IFD-NEXT:    lui a0, %hi(.LCPI12_1)
-; RV32IFD-NEXT:    fld fa4, %lo(.LCPI12_1)(a0)
 ; RV32IFD-NEXT:    fmv.d fs0, fa0
-; RV32IFD-NEXT:    flt.d s0, fa5, fa0
-; RV32IFD-NEXT:    neg s1, s0
-; RV32IFD-NEXT:    fle.d s2, fa4, fa0
-; RV32IFD-NEXT:    neg s3, s2
+; RV32IFD-NEXT:    fle.d s0, fa5, fa0
 ; RV32IFD-NEXT:    call __fixdfdi
-; RV32IFD-NEXT:    and a0, s3, a0
-; RV32IFD-NEXT:    or a0, s1, a0
-; RV32IFD-NEXT:    feq.d a2, fs0, fs0
-; RV32IFD-NEXT:    neg a2, a2
-; RV32IFD-NEXT:    lui a4, 524288
-; RV32IFD-NEXT:    li a5, 1
 ; RV32IFD-NEXT:    lui a3, 524288
-; RV32IFD-NEXT:    bne s2, a5, .LBB12_2
+; RV32IFD-NEXT:    li a4, 1
+; RV32IFD-NEXT:    lui a2, 524288
+; RV32IFD-NEXT:    bne s0, a4, .LBB12_2
 ; RV32IFD-NEXT:  # %bb.1: # %start
-; RV32IFD-NEXT:    mv a3, a1
+; RV32IFD-NEXT:    mv a2, a1
 ; RV32IFD-NEXT:  .LBB12_2: # %start
-; RV32IFD-NEXT:    and a0, a2, a0
-; RV32IFD-NEXT:    beqz s0, .LBB12_4
+; RV32IFD-NEXT:    lui a1, %hi(.LCPI12_1)
+; RV32IFD-NEXT:    fld fa5, %lo(.LCPI12_1)(a1)
+; RV32IFD-NEXT:    flt.d a4, fa5, fs0
+; RV32IFD-NEXT:    beqz a4, .LBB12_4
 ; RV32IFD-NEXT:  # %bb.3:
-; RV32IFD-NEXT:    addi a3, a4, -1
+; RV32IFD-NEXT:    addi a2, a3, -1
 ; RV32IFD-NEXT:  .LBB12_4: # %start
-; RV32IFD-NEXT:    and a1, a2, a3
-; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    feq.d a1, fs0, fs0
+; RV32IFD-NEXT:    neg a3, a1
+; RV32IFD-NEXT:    and a1, a3, a2
+; RV32IFD-NEXT:    neg a2, a4
+; RV32IFD-NEXT:    neg a4, s0
+; RV32IFD-NEXT:    and a0, a4, a0
+; RV32IFD-NEXT:    or a0, a2, a0
+; RV32IFD-NEXT:    and a0, a3, a0
+; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IFD-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
-; RV32IFD-NEXT:    addi sp, sp, 32
+; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: fcvt_l_d_sat:
@@ -803,50 +731,44 @@ define i64 @fcvt_l_d_sat(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_l_d_sat:
 ; RV32IZFINXZDINX:       # %bb.0: # %start
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -32
-; RV32IZFINXZDINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw a0, 0(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 4(sp)
-; RV32IZFINXZDINX-NEXT:    lw s0, 0(sp)
-; RV32IZFINXZDINX-NEXT:    lw s1, 4(sp)
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    mv s1, a1
+; RV32IZFINXZDINX-NEXT:    mv s0, a0
+; RV32IZFINXZDINX-NEXT:    call __fixdfdi
 ; RV32IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI12_0)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI12_0+4)(a2)
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI12_0)(a2)
-; RV32IZFINXZDINX-NEXT:    fle.d s2, a2, s0
-; RV32IZFINXZDINX-NEXT:    neg s3, s2
-; RV32IZFINXZDINX-NEXT:    call __fixdfdi
-; RV32IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI12_1)
-; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI12_1+4)(a2)
-; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI12_1)(a2)
-; RV32IZFINXZDINX-NEXT:    and a0, s3, a0
-; RV32IZFINXZDINX-NEXT:    flt.d a3, a2, s0
-; RV32IZFINXZDINX-NEXT:    neg a2, a3
-; RV32IZFINXZDINX-NEXT:    or a0, a2, a0
-; RV32IZFINXZDINX-NEXT:    feq.d a2, s0, s0
-; RV32IZFINXZDINX-NEXT:    neg a2, a2
+; RV32IZFINXZDINX-NEXT:    fle.d a2, a2, s0
 ; RV32IZFINXZDINX-NEXT:    lui a5, 524288
-; RV32IZFINXZDINX-NEXT:    li a6, 1
-; RV32IZFINXZDINX-NEXT:    lui a4, 524288
-; RV32IZFINXZDINX-NEXT:    bne s2, a6, .LBB12_2
+; RV32IZFINXZDINX-NEXT:    li a4, 1
+; RV32IZFINXZDINX-NEXT:    lui a3, 524288
+; RV32IZFINXZDINX-NEXT:    bne a2, a4, .LBB12_2
 ; RV32IZFINXZDINX-NEXT:  # %bb.1: # %start
-; RV32IZFINXZDINX-NEXT:    mv a4, a1
+; RV32IZFINXZDINX-NEXT:    mv a3, a1
 ; RV32IZFINXZDINX-NEXT:  .LBB12_2: # %start
-; RV32IZFINXZDINX-NEXT:    and a0, a2, a0
-; RV32IZFINXZDINX-NEXT:    beqz a3, .LBB12_4
+; RV32IZFINXZDINX-NEXT:    lui a1, %hi(.LCPI12_1)
+; RV32IZFINXZDINX-NEXT:    lw a6, %lo(.LCPI12_1)(a1)
+; RV32IZFINXZDINX-NEXT:    lw a7, %lo(.LCPI12_1+4)(a1)
+; RV32IZFINXZDINX-NEXT:    flt.d a4, a6, s0
+; RV32IZFINXZDINX-NEXT:    beqz a4, .LBB12_4
 ; RV32IZFINXZDINX-NEXT:  # %bb.3:
-; RV32IZFINXZDINX-NEXT:    addi a4, a5, -1
+; RV32IZFINXZDINX-NEXT:    addi a3, a5, -1
 ; RV32IZFINXZDINX-NEXT:  .LBB12_4: # %start
-; RV32IZFINXZDINX-NEXT:    and a1, a2, a4
-; RV32IZFINXZDINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 32
+; RV32IZFINXZDINX-NEXT:    feq.d a1, s0, s0
+; RV32IZFINXZDINX-NEXT:    neg a5, a1
+; RV32IZFINXZDINX-NEXT:    and a1, a5, a3
+; RV32IZFINXZDINX-NEXT:    neg a2, a2
+; RV32IZFINXZDINX-NEXT:    and a0, a2, a0
+; RV32IZFINXZDINX-NEXT:    neg a2, a4
+; RV32IZFINXZDINX-NEXT:    or a0, a2, a0
+; RV32IZFINXZDINX-NEXT:    and a0, a5, a0
+; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_l_d_sat:
@@ -1057,18 +979,17 @@ define i64 @fcvt_lu_d_sat(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_lu_d_sat:
 ; RV32IZFINXZDINX:       # %bb.0: # %start
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -32
-; RV32IZFINXZDINX-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw s0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw s1, 12(sp)
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
+; RV32IZFINXZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
+; RV32IZFINXZDINX-NEXT:    mv s1, a1
 ; RV32IZFINXZDINX-NEXT:    fcvt.d.w a2, zero
-; RV32IZFINXZDINX-NEXT:    fle.d a2, a2, s0
-; RV32IZFINXZDINX-NEXT:    neg s2, a2
+; RV32IZFINXZDINX-NEXT:    mv s0, a0
+; RV32IZFINXZDINX-NEXT:    fle.d a0, a2, s0
+; RV32IZFINXZDINX-NEXT:    neg s2, a0
+; RV32IZFINXZDINX-NEXT:    mv a0, s0
 ; RV32IZFINXZDINX-NEXT:    call __fixunsdfdi
 ; RV32IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI14_0)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI14_0+4)(a2)
@@ -1079,11 +1000,11 @@ define i64 @fcvt_lu_d_sat(double %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    or a0, a2, a0
 ; RV32IZFINXZDINX-NEXT:    and a1, s2, a1
 ; RV32IZFINXZDINX-NEXT:    or a1, a2, a1
-; RV32IZFINXZDINX-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 32
+; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_lu_d_sat:
@@ -1185,21 +1106,7 @@ define i64 @fmv_x_d(double %a, double %b) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fmv_x_d:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a2, 0(sp)
-; RV32IZFINXZDINX-NEXT:    sw a3, 4(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 0(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 4(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 0(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 4(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 0(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 4(sp)
 ; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fmv_x_d:
@@ -1334,13 +1241,13 @@ define double @fmv_d_x(i64 %a, i64 %b) nounwind {
 ; RV32IFD-LABEL: fmv_d_x:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw a3, 4(sp)
-; RV32IFD-NEXT:    sw a2, 0(sp)
-; RV32IFD-NEXT:    sw a1, 12(sp)
 ; RV32IFD-NEXT:    sw a0, 8(sp)
-; RV32IFD-NEXT:    fld fa5, 0(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld fa5, 8(sp)
+; RV32IFD-NEXT:    sw a2, 8(sp)
+; RV32IFD-NEXT:    sw a3, 12(sp)
 ; RV32IFD-NEXT:    fld fa4, 8(sp)
-; RV32IFD-NEXT:    fadd.d fa0, fa4, fa5
+; RV32IFD-NEXT:    fadd.d fa0, fa5, fa4
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
@@ -1353,21 +1260,7 @@ define double @fmv_d_x(i64 %a, i64 %b) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fmv_d_x:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -32
-; RV32IZFINXZDINX-NEXT:    sw a3, 20(sp)
-; RV32IZFINXZDINX-NEXT:    sw a2, 16(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 28(sp)
-; RV32IZFINXZDINX-NEXT:    sw a0, 24(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 16(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 20(sp)
-; RV32IZFINXZDINX-NEXT:    lw a2, 24(sp)
-; RV32IZFINXZDINX-NEXT:    lw a3, 28(sp)
-; RV32IZFINXZDINX-NEXT:    fadd.d a0, a2, a0
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 32
+; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, a2
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fmv_d_x:
@@ -1406,13 +1299,7 @@ define double @fcvt_d_w_i8(i8 signext %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_d_w_i8:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINXZDINX-NEXT:    fcvt.d.w a0, a0
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_w_i8:
@@ -1449,13 +1336,7 @@ define double @fcvt_d_wu_i8(i8 zeroext %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_d_wu_i8:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINXZDINX-NEXT:    fcvt.d.wu a0, a0
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_wu_i8:
@@ -1492,13 +1373,7 @@ define double @fcvt_d_w_i16(i16 signext %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_d_w_i16:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINXZDINX-NEXT:    fcvt.d.w a0, a0
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_w_i16:
@@ -1535,13 +1410,7 @@ define double @fcvt_d_wu_i16(i16 zeroext %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_d_wu_i16:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINXZDINX-NEXT:    fcvt.d.wu a0, a0
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_wu_i16:
@@ -1731,13 +1600,7 @@ define signext i16 @fcvt_w_s_i16(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_w_s_i16:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fcvt.w.d a0, a0, rtz
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_w_s_i16:
@@ -1788,8 +1651,8 @@ define signext i16 @fcvt_w_s_sat_i16(double %a) nounwind {
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI26_1)
 ; RV64IFD-NEXT:    fld fa4, %lo(.LCPI26_1)(a0)
 ; RV64IFD-NEXT:    feq.d a0, fa0, fa0
-; RV64IFD-NEXT:    fmax.d fa5, fa0, fa5
 ; RV64IFD-NEXT:    neg a0, a0
+; RV64IFD-NEXT:    fmax.d fa5, fa0, fa5
 ; RV64IFD-NEXT:    fmin.d fa5, fa5, fa4
 ; RV64IFD-NEXT:    fcvt.l.d a1, fa5, rtz
 ; RV64IFD-NEXT:    and a0, a0, a1
@@ -1797,24 +1660,18 @@ define signext i16 @fcvt_w_s_sat_i16(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_w_s_sat_i16:
 ; RV32IZFINXZDINX:       # %bb.0: # %start
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI26_0)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI26_0+4)(a2)
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI26_0)(a2)
 ; RV32IZFINXZDINX-NEXT:    lui a4, %hi(.LCPI26_1)
 ; RV32IZFINXZDINX-NEXT:    lw a5, %lo(.LCPI26_1+4)(a4)
 ; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI26_1)(a4)
-; RV32IZFINXZDINX-NEXT:    fmax.d a2, a0, a2
-; RV32IZFINXZDINX-NEXT:    feq.d a0, a0, a0
-; RV32IZFINXZDINX-NEXT:    neg a0, a0
-; RV32IZFINXZDINX-NEXT:    fmin.d a2, a2, a4
-; RV32IZFINXZDINX-NEXT:    fcvt.w.d a1, a2, rtz
-; RV32IZFINXZDINX-NEXT:    and a0, a0, a1
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    feq.d a6, a0, a0
+; RV32IZFINXZDINX-NEXT:    neg a6, a6
+; RV32IZFINXZDINX-NEXT:    fmax.d a0, a0, a2
+; RV32IZFINXZDINX-NEXT:    fmin.d a0, a0, a4
+; RV32IZFINXZDINX-NEXT:    fcvt.w.d a0, a0, rtz
+; RV32IZFINXZDINX-NEXT:    and a0, a6, a0
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_w_s_sat_i16:
@@ -1823,12 +1680,12 @@ define signext i16 @fcvt_w_s_sat_i16(double %a) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ld a1, %lo(.LCPI26_0)(a1)
 ; RV64IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI26_1)
 ; RV64IZFINXZDINX-NEXT:    ld a2, %lo(.LCPI26_1)(a2)
-; RV64IZFINXZDINX-NEXT:    fmax.d a1, a0, a1
-; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
-; RV64IZFINXZDINX-NEXT:    neg a0, a0
-; RV64IZFINXZDINX-NEXT:    fmin.d a1, a1, a2
-; RV64IZFINXZDINX-NEXT:    fcvt.l.d a1, a1, rtz
-; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    feq.d a3, a0, a0
+; RV64IZFINXZDINX-NEXT:    neg a3, a3
+; RV64IZFINXZDINX-NEXT:    fmax.d a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    fmin.d a0, a0, a2
+; RV64IZFINXZDINX-NEXT:    fcvt.l.d a0, a0, rtz
+; RV64IZFINXZDINX-NEXT:    and a0, a3, a0
 ; RV64IZFINXZDINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_w_s_sat_i16:
@@ -1948,13 +1805,7 @@ define zeroext i16 @fcvt_wu_s_i16(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_wu_s_i16:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rtz
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_wu_s_i16:
@@ -2006,11 +1857,6 @@ define zeroext i16 @fcvt_wu_s_sat_i16(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_wu_s_sat_i16:
 ; RV32IZFINXZDINX:       # %bb.0: # %start
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI28_0)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI28_0+4)(a2)
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI28_0)(a2)
@@ -2018,7 +1864,6 @@ define zeroext i16 @fcvt_wu_s_sat_i16(double %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    fmax.d a0, a0, a4
 ; RV32IZFINXZDINX-NEXT:    fmin.d a0, a0, a2
 ; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rtz
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_wu_s_sat_i16:
@@ -2130,13 +1975,7 @@ define signext i8 @fcvt_w_s_i8(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_w_s_i8:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fcvt.w.d a0, a0, rtz
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_w_s_i8:
@@ -2187,8 +2026,8 @@ define signext i8 @fcvt_w_s_sat_i8(double %a) nounwind {
 ; RV64IFD-NEXT:    lui a0, %hi(.LCPI30_1)
 ; RV64IFD-NEXT:    fld fa4, %lo(.LCPI30_1)(a0)
 ; RV64IFD-NEXT:    feq.d a0, fa0, fa0
-; RV64IFD-NEXT:    fmax.d fa5, fa0, fa5
 ; RV64IFD-NEXT:    neg a0, a0
+; RV64IFD-NEXT:    fmax.d fa5, fa0, fa5
 ; RV64IFD-NEXT:    fmin.d fa5, fa5, fa4
 ; RV64IFD-NEXT:    fcvt.l.d a1, fa5, rtz
 ; RV64IFD-NEXT:    and a0, a0, a1
@@ -2196,24 +2035,18 @@ define signext i8 @fcvt_w_s_sat_i8(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_w_s_sat_i8:
 ; RV32IZFINXZDINX:       # %bb.0: # %start
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI30_0)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI30_0+4)(a2)
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI30_0)(a2)
 ; RV32IZFINXZDINX-NEXT:    lui a4, %hi(.LCPI30_1)
 ; RV32IZFINXZDINX-NEXT:    lw a5, %lo(.LCPI30_1+4)(a4)
 ; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI30_1)(a4)
-; RV32IZFINXZDINX-NEXT:    fmax.d a2, a0, a2
-; RV32IZFINXZDINX-NEXT:    feq.d a0, a0, a0
-; RV32IZFINXZDINX-NEXT:    neg a0, a0
-; RV32IZFINXZDINX-NEXT:    fmin.d a2, a2, a4
-; RV32IZFINXZDINX-NEXT:    fcvt.w.d a1, a2, rtz
-; RV32IZFINXZDINX-NEXT:    and a0, a0, a1
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV32IZFINXZDINX-NEXT:    feq.d a6, a0, a0
+; RV32IZFINXZDINX-NEXT:    neg a6, a6
+; RV32IZFINXZDINX-NEXT:    fmax.d a0, a0, a2
+; RV32IZFINXZDINX-NEXT:    fmin.d a0, a0, a4
+; RV32IZFINXZDINX-NEXT:    fcvt.w.d a0, a0, rtz
+; RV32IZFINXZDINX-NEXT:    and a0, a6, a0
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_w_s_sat_i8:
@@ -2222,12 +2055,12 @@ define signext i8 @fcvt_w_s_sat_i8(double %a) nounwind {
 ; RV64IZFINXZDINX-NEXT:    ld a1, %lo(.LCPI30_0)(a1)
 ; RV64IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI30_1)
 ; RV64IZFINXZDINX-NEXT:    ld a2, %lo(.LCPI30_1)(a2)
-; RV64IZFINXZDINX-NEXT:    fmax.d a1, a0, a1
-; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
-; RV64IZFINXZDINX-NEXT:    neg a0, a0
-; RV64IZFINXZDINX-NEXT:    fmin.d a1, a1, a2
-; RV64IZFINXZDINX-NEXT:    fcvt.l.d a1, a1, rtz
-; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    feq.d a3, a0, a0
+; RV64IZFINXZDINX-NEXT:    neg a3, a3
+; RV64IZFINXZDINX-NEXT:    fmax.d a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    fmin.d a0, a0, a2
+; RV64IZFINXZDINX-NEXT:    fcvt.l.d a0, a0, rtz
+; RV64IZFINXZDINX-NEXT:    and a0, a3, a0
 ; RV64IZFINXZDINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_w_s_sat_i8:
@@ -2344,13 +2177,7 @@ define zeroext i8 @fcvt_wu_s_i8(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_wu_s_i8:
 ; RV32IZFINXZDINX:       # %bb.0:
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rtz
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_wu_s_i8:
@@ -2404,11 +2231,6 @@ define zeroext i8 @fcvt_wu_s_sat_i8(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_wu_s_sat_i8:
 ; RV32IZFINXZDINX:       # %bb.0: # %start
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI32_0)
 ; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI32_0+4)(a2)
 ; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI32_0)(a2)
@@ -2416,7 +2238,6 @@ define zeroext i8 @fcvt_wu_s_sat_i8(double %a) nounwind {
 ; RV32IZFINXZDINX-NEXT:    fmax.d a0, a0, a4
 ; RV32IZFINXZDINX-NEXT:    fmin.d a0, a0, a2
 ; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a0, a0, rtz
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_wu_s_sat_i8:
@@ -2532,17 +2353,11 @@ define zeroext i32 @fcvt_wu_d_sat_zext(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_wu_d_sat_zext:
 ; RV32IZFINXZDINX:       # %bb.0: # %start
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fcvt.wu.d a2, a0, rtz
 ; RV32IZFINXZDINX-NEXT:    feq.d a0, a0, a0
 ; RV32IZFINXZDINX-NEXT:    seqz a0, a0
 ; RV32IZFINXZDINX-NEXT:    addi a0, a0, -1
 ; RV32IZFINXZDINX-NEXT:    and a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_wu_d_sat_zext:
@@ -2647,17 +2462,11 @@ define signext i32 @fcvt_w_d_sat_sext(double %a) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_w_d_sat_sext:
 ; RV32IZFINXZDINX:       # %bb.0: # %start
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, -16
-; RV32IZFINXZDINX-NEXT:    sw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    sw a1, 12(sp)
-; RV32IZFINXZDINX-NEXT:    lw a0, 8(sp)
-; RV32IZFINXZDINX-NEXT:    lw a1, 12(sp)
 ; RV32IZFINXZDINX-NEXT:    fcvt.w.d a2, a0, rtz
 ; RV32IZFINXZDINX-NEXT:    feq.d a0, a0, a0
 ; RV32IZFINXZDINX-NEXT:    seqz a0, a0
 ; RV32IZFINXZDINX-NEXT:    addi a0, a0, -1
 ; RV32IZFINXZDINX-NEXT:    and a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    addi sp, sp, 16
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_w_d_sat_sext:

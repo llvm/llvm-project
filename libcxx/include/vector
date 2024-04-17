@@ -320,11 +320,13 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__bit_reference>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__debug_utils/sanitizers.h>
 #include <__format/enable_insertable.h>
 #include <__format/formatter.h>
 #include <__format/formatter_bool.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
+#include <__fwd/vector.h>
 #include <__iterator/advance.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
@@ -346,7 +348,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__split_buffer>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_constructible.h>
-#include <__type_traits/is_nothrow_move_assignable.h>
+#include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/exception_guard.h>
@@ -357,7 +359,6 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__utility/swap.h>
 #include <climits>
 #include <cstring>
-#include <iosfwd> // for forward declaration of vector
 #include <limits>
 #include <stdexcept>
 #include <version>
@@ -834,15 +835,7 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
-    (void)__old_mid;
-    (void)__new_mid;
-#ifndef _LIBCPP_HAS_NO_ASAN
-    const void* __beg = data();
-    const void* __end = data() + capacity();
-    if (!__libcpp_is_constant_evaluated() && __beg != nullptr &&
-        __asan_annotate_container_with_allocator<_Allocator>::value)
-      __sanitizer_annotate_contiguous_container(__beg, __end, __old_mid, __new_mid);
-#endif
+    std::__annotate_contiguous_container<_Allocator>(data(), data() + capacity(), __old_mid, __new_mid);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_new(size_type __current_size) const _NOEXCEPT {
@@ -2989,7 +2982,9 @@ _LIBCPP_POP_MACROS
 #  include <atomic>
 #  include <concepts>
 #  include <cstdlib>
+#  include <iosfwd>
 #  include <locale>
+#  include <tuple>
 #  include <type_traits>
 #  include <typeinfo>
 #  include <utility>

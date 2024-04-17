@@ -1,0 +1,76 @@
+; REQUIRES: webassembly-registered-target
+
+; Test case 1 - General options
+
+; test.cpp
+;  1  using INTPTR = const int *;
+;  2  int foo(INTPTR ParamPtr, unsigned ParamUnsigned, bool ParamBool) {
+;  3    if (ParamBool) {
+;  4      typedef int INTEGER;
+;  5      const INTEGER CONSTANT = 7;
+;  6      return CONSTANT;
+;  7    }
+;  8    return ParamUnsigned;
+;  9  }
+
+; Select logical elements.
+; The following prints all 'instructions', 'symbols' and 'types' that
+; contain 'BLOCK' or '.store' in their names or types, using a tab layout
+; and given the number of matches.
+
+; RUN: llvm-mc -arch=wasm32 -filetype=obj \
+; RUN:         %p/Inputs/test-clang.s -o %t.test-clang.o
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --select-nocase --select-regex \
+; RUN:                         --select=BLOCK --select=.store \
+; RUN:                         --report=list \
+; RUN:                         --print=symbols,types,instructions,summary \
+; RUN:                         %t.test-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; ONE:      Logical View:
+; ONE-NEXT: [000]           {File} '{{.*}}test-clang.o'
+; ONE-EMPTY:
+; ONE-NEXT: [001]           {CompileUnit} 'test.cpp'
+; ONE-NEXT: [003]           {Code} 'block'
+; ONE-NEXT: [003]           {Code} 'block'
+; ONE-NEXT: [004]           {Code} 'i32.store	12'
+; ONE-NEXT: [003]           {Code} 'i32.store	20'
+; ONE-NEXT: [003]           {Code} 'i32.store	24'
+; ONE-NEXT: [004]           {Code} 'i32.store	28'
+; ONE-NEXT: [003]           {Code} 'i32.store	28'
+; ONE-NEXT: [003]           {Code} 'i32.store8	19'
+; ONE-EMPTY:
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Element      Total    Printed
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Scopes           3          0
+; ONE-NEXT: Symbols          4          0
+; ONE-NEXT: Types            2          0
+; ONE-NEXT: Lines           62          8
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Total           71          8
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --select-regex --select-nocase \
+; RUN:                         --select=INTe \
+; RUN:                         --report=list \
+; RUN:                         --print=symbols,types \
+; RUN:                         %t.test-clang.o \
+; RUN:                         %p/../DWARF/Inputs/test-dwarf-gcc.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
+
+; TWO:      Logical View:
+; TWO-NEXT: [000]           {File} '{{.*}}test-clang.o'
+; TWO-EMPTY:
+; TWO-NEXT: [001]           {CompileUnit} 'test.cpp'
+; TWO-NEXT: [003]     4     {TypeAlias} 'INTEGER' -> 'int'
+; TWO-NEXT: [004]     5     {Variable} 'CONSTANT' -> 'const INTEGER'
+; TWO-EMPTY:
+; TWO-NEXT: Logical View:
+; TWO-NEXT: [000]           {File} 'test-dwarf-gcc.o'
+; TWO-EMPTY:
+; TWO-NEXT: [001]           {CompileUnit} 'test.cpp'
+; TWO-NEXT: [004]     4     {TypeAlias} 'INTEGER' -> 'int'
+; TWO-NEXT: [004]     5     {Variable} 'CONSTANT' -> 'const INTEGER'
