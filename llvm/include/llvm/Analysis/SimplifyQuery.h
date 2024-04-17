@@ -113,6 +113,12 @@ struct SimplifyQuery {
     using namespace PatternMatch;
     return match(V, m_Undef());
   }
+
+  SimplifyQuery getWithoutDomCondCache() const {
+    SimplifyQuery Copy(*this);
+    Copy.DC = nullptr;
+    return Copy;
+  }
 };
 
 } // end namespace llvm
