@@ -488,9 +488,9 @@ utilize ``split-file`` in RUN lines.
     int vb;
     #--- gen
     echo '#--- a.s'
-    clang -S -g a.cc -o -
+    clang --target=x86_64-linux -S -g a.cc -o -
     echo '#--- b.s'
-    clang -S -g b.cc -o -
+    clang --target=x86_64-linux -S -g b.cc -o -
     .endif
 
 Fragile tests

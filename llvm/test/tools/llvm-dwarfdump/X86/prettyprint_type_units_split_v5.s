@@ -9,7 +9,7 @@
 struct t1 { };
 t1 v1;
 #--- gen
-clang++ -S -g -fdebug-types-section -gsplit-dwarf -gdwarf-5 test.cpp -o -
+clang++ --target=x86_64-linux -S -g -fdebug-types-section -gsplit-dwarf -gdwarf-5 test.cpp -o -
 .endif
 	.text
 	.file	"test.cpp"
