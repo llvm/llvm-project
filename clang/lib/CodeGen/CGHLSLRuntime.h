@@ -50,6 +50,7 @@ namespace llvm {
 class GlobalVariable;
 class Function;
 class StructType;
+class Value;
 } // namespace llvm
 
 namespace clang {
@@ -79,7 +80,13 @@ public:
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
-
+  llvm::Value *emitHLSLIntrinsic(
+      llvm::function_ref<llvm::Value *()> DxilEmitter,
+      llvm::function_ref<llvm::Value *()> SPIRVEmitter,
+      llvm::function_ref<llvm::Value *()> GenericEmitter =
+          []() -> llvm::Value * {
+        llvm_unreachable("Intrinsic not supported by target architecture.");
+      });
   struct BufferResBinding {
     // The ID like 2 in register(b2, space1).
     std::optional<unsigned> Reg;

@@ -119,6 +119,21 @@ llvm::Triple::ArchType CGHLSLRuntime::getArch() {
   return CGM.getTarget().getTriple().getArch();
 }
 
+Value *
+CGHLSLRuntime::emitHLSLIntrinsic(llvm::function_ref<Value *()> DxilEmitter,
+                                 llvm::function_ref<Value *()> SPIRVEmitter,
+                                 llvm::function_ref<Value *()> GenericEmitter) {
+  llvm::Triple::ArchType Arch = getArch();
+  switch (Arch) {
+  case llvm::Triple::dxil:
+    return DxilEmitter();
+  case llvm::Triple::spirv:
+    return SPIRVEmitter();
+  default:
+    return GenericEmitter();
+  }
+}
+
 void CGHLSLRuntime::addConstant(VarDecl *D, Buffer &CB) {
   if (D->getStorageClass() == SC_Static) {
     // For static inside cbuffer, take as global static.

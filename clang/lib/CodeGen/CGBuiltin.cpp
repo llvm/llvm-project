@@ -18186,6 +18186,40 @@ Intrinsic::ID getDotProductIntrinsic(QualType QT, int elementCount) {
   return Intrinsic::dx_udot;
 }
 
+Value *CodeGenFunction::EmitHLSLMadIntrinsic(const CallExpr *E) {
+  Value *M = EmitScalarExpr(E->getArg(0));
+  Value *A = EmitScalarExpr(E->getArg(1));
+  Value *B = EmitScalarExpr(E->getArg(2));
+  if (E->getArg(0)->getType()->hasFloatingRepresentation())
+    return Builder.CreateIntrinsic(
+        /*ReturnType*/ M->getType(), Intrinsic::fmuladd,
+        ArrayRef<Value *>{M, A, B}, nullptr, "hlsl.fmad");
+
+  auto EmitHLSLIMadDirectX = [E, M, A, B, this]() -> Value * {
+    if (E->getArg(0)->getType()->hasSignedIntegerRepresentation())
+      return Builder.CreateIntrinsic(
+          /*ReturnType*/ M->getType(), Intrinsic::dx_imad,
+          ArrayRef<Value *>{M, A, B}, nullptr, "dx.imad");
+    assert(E->getArg(0)->getType()->hasUnsignedIntegerRepresentation());
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/M->getType(), Intrinsic::dx_umad,
+        ArrayRef<Value *>{M, A, B}, nullptr, "dx.umad");
+  };
+
+  auto EmitHLSLIMadGeneric = [E, M, A, B, this]() -> Value * {
+    if (E->getArg(0)->getType()->hasSignedIntegerRepresentation()) {
+      Value *Mul = Builder.CreateNSWMul(M, A);
+      return Builder.CreateNSWAdd(Mul, B);
+    }
+    assert(E->getArg(0)->getType()->hasUnsignedIntegerRepresentation());
+    Value *Mul = Builder.CreateNUWMul(M, A);
+    return Builder.CreateNUWAdd(Mul, B);
+  };
+
+  return CGM.getHLSLRuntime().emitHLSLIntrinsic(
+      EmitHLSLIMadDirectX, EmitHLSLIMadGeneric, EmitHLSLIMadGeneric);
+}
+
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                             const CallExpr *E) {
   if (!getLangOpts().HLSL)
@@ -18291,23 +18325,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                    ArrayRef<Value *>{Op0}, nullptr, "dx.isinf");
   }
   case Builtin::BI__builtin_hlsl_mad: {
-    Value *M = EmitScalarExpr(E->getArg(0));
-    Value *A = EmitScalarExpr(E->getArg(1));
-    Value *B = EmitScalarExpr(E->getArg(2));
-    if (E->getArg(0)->getType()->hasFloatingRepresentation()) {
-      return Builder.CreateIntrinsic(
-          /*ReturnType*/ M->getType(), Intrinsic::fmuladd,
-          ArrayRef<Value *>{M, A, B}, nullptr, "dx.fmad");
-    }
-    if (E->getArg(0)->getType()->hasSignedIntegerRepresentation()) {
-      return Builder.CreateIntrinsic(
-          /*ReturnType*/ M->getType(), Intrinsic::dx_imad,
-          ArrayRef<Value *>{M, A, B}, nullptr, "dx.imad");
-    }
-    assert(E->getArg(0)->getType()->hasUnsignedIntegerRepresentation());
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/M->getType(), Intrinsic::dx_umad,
-        ArrayRef<Value *>{M, A, B}, nullptr, "dx.umad");
+    return EmitHLSLMadIntrinsic(E);
   }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
