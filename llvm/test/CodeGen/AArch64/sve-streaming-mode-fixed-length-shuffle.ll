@@ -37,9 +37,9 @@ define void @interleave_store_without_splat(ptr %a, <4 x i32> %v1, <4 x i32> %v2
 define void @interleave_store_legalization(ptr %a, <8 x i32> %v1, <8 x i32> %v2) {
 ; CHECK-LABEL: interleave_store_legalization:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z2_z3
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    mov x8, #8 // =0x8
 ; CHECK-NEXT:    mov z4.d, z0.d
 ; CHECK-NEXT:    mov z2.d, z1.d

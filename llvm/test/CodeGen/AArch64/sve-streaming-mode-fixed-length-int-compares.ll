@@ -41,8 +41,8 @@ define <16 x i8> @icmp_eq_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 define void @icmp_eq_v32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: icmp_eq_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z1.b, z0.b
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
@@ -91,8 +91,8 @@ define <8 x i16> @icmp_eq_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 define void @icmp_eq_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: icmp_eq_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    cmpeq p1.h, p0/z, z1.h, z0.h
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
@@ -141,8 +141,8 @@ define <4 x i32> @icmp_eq_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @icmp_eq_v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: icmp_eq_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    cmpeq p1.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z3.s
@@ -191,8 +191,8 @@ define <2 x i64> @icmp_eq_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @icmp_eq_v4i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: icmp_eq_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    cmpeq p1.d, p0/z, z1.d, z0.d
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z2.d, z3.d
@@ -215,8 +215,8 @@ define void @icmp_eq_v4i64(ptr %a, ptr %b) {
 define void @icmp_ne_v32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: icmp_ne_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z1.b, z0.b
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, z3.b
@@ -261,8 +261,8 @@ define void @icmp_sge_v8i16(ptr %a, ptr %b) {
 define void @icmp_sgt_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: icmp_sgt_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    cmpgt p1.h, p0/z, z1.h, z0.h
 ; CHECK-NEXT:    cmpgt p0.h, p0/z, z2.h, z3.h
@@ -307,8 +307,8 @@ define void @icmp_sle_v4i32(ptr %a, ptr %b) {
 define void @icmp_slt_v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: icmp_slt_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    cmpgt p1.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z3.s, z2.s

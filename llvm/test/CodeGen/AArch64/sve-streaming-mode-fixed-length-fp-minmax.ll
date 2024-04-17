@@ -37,8 +37,8 @@ define <8 x half> @fmaxnm_v8f16(<8 x half> %op1, <8 x half> %op2) {
 define void @fmaxnm_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmaxnm_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z2
@@ -81,8 +81,8 @@ define <4 x float> @fmaxnm_v4f32(<4 x float> %op1, <4 x float> %op2) {
 define void @fmaxnm_v8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmaxnm_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -123,8 +123,8 @@ define <2 x double> @fmaxnm_v2f64(<2 x double> %op1, <2 x double> %op2) {
 define void @fmaxnm_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmaxnm_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2
@@ -171,8 +171,8 @@ define <8 x half> @fminnm_v8f16(<8 x half> %op1, <8 x half> %op2) {
 define void @fminnm_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fminnm_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z2
@@ -215,8 +215,8 @@ define <4 x float> @fminnm_v4f32(<4 x float> %op1, <4 x float> %op2) {
 define void @fminnm_v8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: fminnm_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -257,8 +257,8 @@ define <2 x double> @fminnm_v2f64(<2 x double> %op1, <2 x double> %op2) {
 define void @fminnm_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fminnm_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2
@@ -305,8 +305,8 @@ define <8 x half> @fmax_v8f16(<8 x half> %op1, <8 x half> %op2) {
 define void @fmax_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmax_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmax z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z2
@@ -349,8 +349,8 @@ define <4 x float> @fmax_v4f32(<4 x float> %op1, <4 x float> %op2) {
 define void @fmax_v8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmax_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -391,8 +391,8 @@ define <2 x double> @fmax_v2f64(<2 x double> %op1, <2 x double> %op2) {
 define void @fmax_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmax_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2
@@ -439,8 +439,8 @@ define <8 x half> @fmin_v8f16(<8 x half> %op1, <8 x half> %op2) {
 define void @fmin_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmin_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmin z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z2
@@ -483,8 +483,8 @@ define <4 x float> @fmin_v4f32(<4 x float> %op1, <4 x float> %op2) {
 define void @fmin_v8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmin_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -525,8 +525,8 @@ define <2 x double> @fmin_v2f64(<2 x double> %op1, <2 x double> %op2) {
 define void @fmin_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmin_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2
