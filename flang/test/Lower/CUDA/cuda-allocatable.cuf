@@ -5,6 +5,8 @@
 subroutine sub1()
   real, allocatable, device :: a(:)
   allocate(a(10))
+
+  deallocate(a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub1()
@@ -13,10 +15,14 @@ end subroutine
 ! CHECK: fir.call @_FortranAAllocatableSetBounds
 ! CHECK: %{{.*}} = fir.cuda_allocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<device>} -> i32
 
+! CHECK: %{{.*}} = fir.cuda_deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<device>} -> i32
+
 subroutine sub2()
   real, allocatable, managed :: a(:)
   integer :: istat
   allocate(a(10), stat=istat)
+
+  deallocate(a, stat=istat)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub2()
@@ -26,6 +32,9 @@ end subroutine
 ! CHECK: %[[ISTAT_DECL:.*]]:2 = hlfir.declare %[[ISTAT]] {uniq_name = "_QFsub2Eistat"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: fir.call @_FortranAAllocatableSetBounds
 ! CHECK: %[[STAT:.*]] = fir.cuda_allocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<managed>, hasStat} -> i32
+! CHECK: fir.store %[[STAT]] to %[[ISTAT_DECL]]#1 : !fir.ref<i32>
+
+! CHECK: %[[STAT:.*]] = fir.cuda_deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<managed>, hasStat} -> i32
 ! CHECK: fir.store %[[STAT]] to %[[ISTAT_DECL]]#1 : !fir.ref<i32>
 
 subroutine sub3()
@@ -92,6 +101,8 @@ subroutine sub7()
   integer :: istat
   character(50) :: err
   allocate(a(100), stat=istat, errmsg=err)
+
+  deallocate(a, stat=istat, errmsg=err)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub7()
@@ -104,4 +115,8 @@ end subroutine
 ! CHECK: %[[ERR_BOX:.*]] = fir.embox %[[ERR_DECL]]#1 : (!fir.ref<!fir.char<1,50>>) -> !fir.box<!fir.char<1,50>>
 ! CHECK: fir.call @_FortranAAllocatableSetBounds
 ! CHECK: %[[STAT:.*]] = fir.cuda_allocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> errmsg(%[[ERR_BOX]] : !fir.box<!fir.char<1,50>>) {cuda_attr = #fir.cuda<device>, hasStat} -> i32
+! CHECK: fir.store %[[STAT]] to %[[ISTAT_DECL]]#1 : !fir.ref<i32>
+
+! CHECK: %[[ERR_BOX:.*]] = fir.embox %[[ERR_DECL]]#1 : (!fir.ref<!fir.char<1,50>>) -> !fir.box<!fir.char<1,50>>
+! CHECK: %[[STAT:.*]] = fir.cuda_deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> errmsg(%15 : !fir.box<!fir.char<1,50>>) {cuda_attr = #fir.cuda<device>, hasStat} -> i32
 ! CHECK: fir.store %[[STAT]] to %[[ISTAT_DECL]]#1 : !fir.ref<i32>
