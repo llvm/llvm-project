@@ -35,14 +35,13 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
   }
 
   // Slow insert.
-  SmallVector<ConstantRange, 2> ExistingRanges(Ranges.begin(), Ranges.end());
   auto LowerBound =
-      std::lower_bound(ExistingRanges.begin(), ExistingRanges.end(), NewRange,
+      std::lower_bound(Ranges.begin(), Ranges.end(), NewRange,
                        [](const ConstantRange &a, const ConstantRange &b) {
                          return a.getLower().slt(b.getLower());
                        });
-  Ranges.erase(Ranges.begin() + (LowerBound - ExistingRanges.begin()),
-               Ranges.end());
+  SmallVector<ConstantRange, 2> ExistingTail(LowerBound, Ranges.end());
+  Ranges.erase(LowerBound, Ranges.end());
   if (!Ranges.empty() && NewRange.getLower().slt(Ranges.back().getUpper())) {
     APInt NewLower = Ranges.back().getLower();
     APInt NewUpper =
@@ -51,7 +50,7 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
   } else {
     Ranges.push_back(NewRange);
   }
-  for (auto Iter = LowerBound; Iter != ExistingRanges.end(); Iter++) {
+  for (auto Iter = ExistingTail.begin(); Iter != ExistingTail.end(); Iter++) {
     if (Ranges.back().getUpper().slt(Iter->getLower())) {
       Ranges.push_back(*Iter);
     } else {

@@ -1621,7 +1621,7 @@ Currently, only the following parameter attributes are defined:
     ``readonly`` or a ``memory`` attribute that does not contain
     ``argmem: write``.
 
-``initializes((Lo1,Hi1),...)``
+``initializes((Lo1, Hi1), ...)``
     This attribute indicates that the function initializes the ranges of the
     pointer parameter's memory, ``[%p+LoN, %p+HiN)``. Initialization of memory
     means the first memory access is a non-volatile, non-atomic write. The

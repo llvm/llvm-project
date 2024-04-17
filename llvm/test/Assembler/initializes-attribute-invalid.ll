@@ -12,37 +12,37 @@
 
 ;--- outer_left_parenthesis.ll
 ; OUTER-LEFT: expected '('
-define void @foo(ptr initializes 0,4 %a) {
+define void @foo(ptr initializes 0, 4 %a) {
   ret void
 }
 
 ;--- inner_left_parenthesis.ll
 ; INNER-LEFT: expected '('
-define void @foo(ptr initializes(0,4 %a) {
+define void @foo(ptr initializes(0, 4 %a) {
   ret void
 }
 
 ;--- inner_right_parenthesis.ll
 ; INNER-RIGHT: expected ')'
-define void @foo(ptr initializes((0,4 %a) {
+define void @foo(ptr initializes((0, 4 %a) {
   ret void
 }
 
 ;--- outer_right_parenthesis.ll
 ; OUTER-RIGHT: expected ')'
-define void @foo(ptr initializes((0,4) %a) {
+define void @foo(ptr initializes((0, 4) %a) {
   ret void
 }
 
 ;--- integer.ll
 ; INTEGER: expected integer
-define void @foo(ptr initializes((0.5,4)) %a) {
+define void @foo(ptr initializes((0.5, 4)) %a) {
   ret void
 }
 
 ;--- lower_equal_upper.ll
 ; LOWER-EQUAL-UPPER: the range should not represent the full or empty set!
-define void @foo(ptr initializes((4,4)) %a) {
+define void @foo(ptr initializes((4, 4)) %a) {
   ret void
 }
 
@@ -54,7 +54,7 @@ define void @foo(ptr initializes((0 4)) %a) {
 
 ;--- outer_comma.ll
 ; OUTER-COMMA: expected ')'
-define void @foo(ptr initializes((0,4) (8,12)) %a) {
+define void @foo(ptr initializes((0, 4) (8, 12)) %a) {
   ret void
 }
 

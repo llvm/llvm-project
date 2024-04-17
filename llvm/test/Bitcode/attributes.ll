@@ -536,8 +536,8 @@ define void @wide_range_attribute(i128 range(i128 618970019642690137449562111, 6
   ret void
 }
 
-; CHECK: define void @initializes(ptr initializes((-4,0),(4,8)) %a)
-define void @initializes(ptr initializes((-4,0),(4,8)) %a) {
+; CHECK: define void @initializes(ptr initializes((-4, 0), (4, 8)) %a)
+define void @initializes(ptr initializes((-4, 0), (4, 8)) %a) {
   ret void
 }
 
