@@ -1412,10 +1412,11 @@ static SmallVector<int64_t> getTiledPackShape(tensor::PackOp packOp,
 
 /// Create a TransferReadOp from `source` with static shape `readShape`. If the
 /// vector type for the read is not the same as the type of `source`, then a
-/// mask is created on the read.
+/// mask is created on the read.  If `doMasking` parameter is set to false we
+/// update the `inBounds` attribute instead of masking.
 static Value createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                     Value source, ArrayRef<int64_t> readShape,
-                                    Value padValue) {
+                                    Value padValue, bool doMasking = true) {
   assert(llvm::none_of(readShape,
                        [](int64_t s) { return s == ShapedType::kDynamic; }));
   auto sourceShape = dyn_cast<ShapedType>(source.getType()).getShape();
@@ -1424,14 +1425,21 @@ static Value createReadOrMaskedRead(OpBuilder &builder, Location loc,
   auto vectorType = VectorType::get(readShape, padValue.getType());
   int64_t readRank = readShape.size();
   auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  SmallVector<bool> inBoundsVal(readRank, true);
+  if (!doMasking) {
+    // Update the inBounds attribute.
+    for (unsigned i = 0; i < readRank; i++)
+      inBoundsVal[i] = sourceShape[i] == readShape[i];
+  }
   auto transferReadOp = builder.create<vector::TransferReadOp>(
       loc,
       /*vectorType=*/vectorType,
       /*source=*/source,
       /*indices=*/SmallVector<Value>(readRank, zero),
       /*padding=*/padValue,
-      /*inBounds=*/SmallVector<bool>(readRank, true));
-  if (llvm::equal(readShape, sourceShape)) {
+      /*inBounds=*/inBoundsVal);
+
+  if (llvm::equal(readShape, sourceShape) || !doMasking) {
     return transferReadOp;
   }
   SmallVector<OpFoldResult> mixedSourceDims =
@@ -1482,11 +1490,10 @@ static Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
   return write;
 }
 
-/// Vectorize tensor::PackOp with (1) static innerTiles and (2) constant
-/// padding value into:
+/// Vectorize tensor::PackOp with (1) static innerTiles (2) constant
+/// padding value and (3) input vector sizes into:
 /// masked_transfer_read->shape_cast->transpose->transfer_write_in_bounds
 /// As in the following example:
-///
 /// %pack = tensor.pack %src inner_dims_pos = [2, 1] inner_tiles = [16, 2]
 ///     into %dst : tensor<32x8x16xf32> -> tensor<32x4x1x16x2xf32>
 ///
@@ -1505,6 +1512,10 @@ static Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
 ///     %empty[%c0_0, %c0_0, %c0_0, %c0_0, %c0_0]
 ///     {in_bounds = [true, true, true, true, true]}
 ///     : vector<32x4x1x16x2xf32>, tensor<32x4x1x16x2xf32>
+///
+/// If the (3) input vector sizes are not provided, the vector sizes are
+/// determined by the result tensor shape. Also, we update the inBounds
+/// attribute instead of masking.
 static LogicalResult
 vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
                         ArrayRef<int64_t> inputVectorSizes,
@@ -1525,6 +1536,16 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
   (void)status; // prevent unused variable warning on non-assert builds.
   assert(succeeded(status) && "failed to reify result shapes");
 
+  // If the input vector sizes are not provided, then the vector sizes are
+  // determined by the result tensor shape. In case the vector sizes aren't
+  // provided, we update the inBounds attribute instead of masking.
+  bool doMasking = true;
+  if (inputVectorSizes.empty()) {
+    ArrayRef<int64_t> resultTensorShape = packOp.getDestType().getShape();
+    inputVectorSizes = resultTensorShape.take_front(packOp.getSourceRank());
+    doMasking = false;
+  }
+
   // Create masked TransferReadOp.
   SmallVector<int64_t> inputShape(inputVectorSizes);
   auto innerTiles = packOp.getStaticInnerTiles();
@@ -1536,7 +1557,7 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
   for (auto [idx, size] : enumerate(innerTiles))
     inputShape[innerDimsPos[idx]] *= size;
   auto maskedRead = createReadOrMaskedRead(rewriter, loc, packOp.getSource(),
-                                           inputShape, padValue);
+                                           inputShape, padValue, doMasking);
 
   // Create ShapeCastOp.
   SmallVector<int64_t> destShape(inputVectorSizes);
@@ -1763,7 +1784,7 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
 /// Returns success if `inputVectorSizes` is a valid masking configuraion for
 /// given `shape`, i.e., it meets:
 ///   1. The numbers of elements in both array are equal.
-///   2. `inputVectorSizes` does nos have dynamic dimensions.
+///   2. `inputVectorSizes` does not have dynamic dimensions.
 ///   3. All the values in `inputVectorSizes` are greater than or equal to
 ///      static sizes in `shape`.
 static LogicalResult
@@ -1881,18 +1902,25 @@ static LogicalResult vectorizeLinalgOpPrecondition(
   return success();
 }
 
-/// TODO: Use a matcher to check for a constant padding value.
 static LogicalResult
 vectorizePackOpPrecondition(tensor::PackOp packOp,
                             ArrayRef<int64_t> inputVectorSizes) {
   auto padValue = packOp.getPaddingValue();
-  if (padValue && !padValue.getDefiningOp<arith::ConstantOp>()) {
+  Attribute cstAttr;
+  if (padValue && !matchPattern(padValue, m_Constant(&cstAttr))) {
     LDBG("pad value is not constant: " << packOp << "\n");
     return failure();
   }
-
   ArrayRef<int64_t> resultTensorShape = packOp.getDestType().getShape();
-  if (failed(isValidMaskedInputVector(
+  bool satisfyEmptyCond = true;
+  if (inputVectorSizes.empty()) {
+    if (!packOp.getDestType().hasStaticShape() ||
+        !packOp.getSourceType().hasStaticShape())
+      satisfyEmptyCond = false;
+  }
+
+  if (!satisfyEmptyCond &&
+      failed(isValidMaskedInputVector(
           resultTensorShape.take_front(packOp.getSourceRank()),
           inputVectorSizes)))
     return failure();
