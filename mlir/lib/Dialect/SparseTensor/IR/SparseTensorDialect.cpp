@@ -2385,7 +2385,7 @@ LogicalResult IterateOp::verifyRegions() {
   return success();
 }
 
-/// IterateOp implemented OpInterfaces' methods.
+/// OpInterfaces' methods implemented by IterateOp.
 SmallVector<Region *> IterateOp::getLoopRegions() { return {&getRegion()}; }
 
 MutableArrayRef<OpOperand> IterateOp::getInitsMutable() {

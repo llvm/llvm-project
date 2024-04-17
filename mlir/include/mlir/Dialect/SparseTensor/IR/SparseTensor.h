@@ -58,7 +58,7 @@ struct COOSegment {
   }
 };
 
-/// A simple wrapper to encode a bitset of defined  (at most 64) levels.
+/// A simple wrapper to encode a bitset of defined (at most 64) levels.
 class LevelSet {
   uint64_t bits = 0;
 
@@ -69,7 +69,7 @@ public:
 
   LevelSet &set(unsigned i) {
     assert(i < 64);
-    bits |= 1 << i;
+    bits |= static_cast<uint64_t>(0x01u) << i;
     return *this;
   }
 

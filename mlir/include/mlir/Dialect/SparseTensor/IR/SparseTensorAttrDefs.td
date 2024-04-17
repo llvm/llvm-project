@@ -20,7 +20,7 @@ class SparseTensor_Attr<string name,
     : AttrDef<SparseTensor_Dialect, name, traits>;
 
 //===----------------------------------------------------------------------===//
-// A simple bitset attribute wrapped over a single int64_t to encode a set of
+// A simple bitset attribute wrapped around a single int64_t to encode a set of
 // sparse tensor levels.
 //===----------------------------------------------------------------------===//
 
