@@ -92,7 +92,9 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
     case RISCV::VFMV_F_S:
     case RISCV::VFMV_S_F:
     case RISCV::VMOR_MM:
+    case RISCV::VMXOR_MM:
     case RISCV::VMAND_MM:
+    case RISCV::VMANDN_MM:
     case RISCV::VMNAND_MM:
     case RISCV::VCPOP_M:
       Cost += 1;
