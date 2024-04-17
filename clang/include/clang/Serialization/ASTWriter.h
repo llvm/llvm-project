@@ -399,6 +399,11 @@ private:
   /// record containing modifications to them.
   DeclUpdateMap DeclUpdates;
 
+  /// DeclUpdates added during parsing the GMF. We split these from
+  /// DeclUpdates since we want to add these updates in GMF on need.
+  /// Only meaningful for reduced BMI.
+  DeclUpdateMap DeclUpdatesFromGMF;
+
   using FirstLatestDeclMap = llvm::DenseMap<Decl *, Decl *>;
 
   /// Map of first declarations from a chained PCH that point to the
@@ -866,6 +871,11 @@ private:
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
+  void EnteringModulePurview() override;
+  void AddedManglingNumber(const Decl *D, unsigned) override;
+  void AddedStaticLocalNumbers(const Decl *D, unsigned) override;
+  void AddedAnonymousNamespace(const TranslationUnitDecl *,
+                               NamespaceDecl *AnonNamespace) override;
 };
 
 /// AST and semantic-analysis consumer that generates a

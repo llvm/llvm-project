@@ -5026,27 +5026,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     GetDeclRef(D);
   }
 
-  // If the translation unit has an anonymous namespace, and we don't already
-  // have an update block for it, write it as an update block.
-  // FIXME: Why do we not do this if there's already an update block?
-  if (NamespaceDecl *NS = TU->getAnonymousNamespace()) {
-    ASTWriter::UpdateRecord &Record = DeclUpdates[TU];
-    if (Record.empty())
-      Record.push_back(DeclUpdate(UPD_CXX_ADDED_ANONYMOUS_NAMESPACE, NS));
-  }
-
-  // Add update records for all mangling numbers and static local numbers.
-  // These aren't really update records, but this is a convenient way of
-  // tagging this rare extra data onto the declarations.
-  for (const auto &Number : Context.MangleNumbers)
-    if (!Number.first->isFromASTFile())
-      DeclUpdates[Number.first].push_back(DeclUpdate(UPD_MANGLING_NUMBER,
-                                                     Number.second));
-  for (const auto &Number : Context.StaticLocalNumbers)
-    if (!Number.first->isFromASTFile())
-      DeclUpdates[Number.first].push_back(DeclUpdate(UPD_STATIC_LOCAL_NUMBER,
-                                                     Number.second));
-
   // Make sure visible decls, added to DeclContexts previously loaded from
   // an AST file, are registered for serialization. Likewise for template
   // specializations added to imported templates.
@@ -5313,6 +5292,41 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     WriteModuleFileExtension(SemaRef, *ExtWriter);
 
   return backpatchSignature();
+}
+
+void ASTWriter::EnteringModulePurview() {
+  // In C++20 named modules, all entities before entering the module purview
+  // lives in the GMF.
+  if (GeneratingReducedBMI)
+    DeclUpdatesFromGMF.swap(DeclUpdates);
+}
+
+// Add update records for all mangling numbers and static local numbers.
+// These aren't really update records, but this is a convenient way of
+// tagging this rare extra data onto the declarations.
+void ASTWriter::AddedManglingNumber(const Decl *D, unsigned Number) {
+  if (D->isFromASTFile())
+    return;
+
+  DeclUpdates[D].push_back(DeclUpdate(UPD_MANGLING_NUMBER, Number));
+}
+void ASTWriter::AddedStaticLocalNumbers(const Decl *D, unsigned Number) {
+  if (D->isFromASTFile())
+    return;
+
+  DeclUpdates[D].push_back(DeclUpdate(UPD_STATIC_LOCAL_NUMBER, Number));
+}
+
+void ASTWriter::AddedAnonymousNamespace(const TranslationUnitDecl *TU,
+                                        NamespaceDecl *AnonNamespace) {
+  // If the translation unit has an anonymous namespace, and we don't already
+  // have an update block for it, write it as an update block.
+  // FIXME: Why do we not do this if there's already an update block?
+  if (NamespaceDecl *NS = TU->getAnonymousNamespace()) {
+    ASTWriter::UpdateRecord &Record = DeclUpdates[TU];
+    if (Record.empty())
+      Record.push_back(DeclUpdate(UPD_CXX_ADDED_ANONYMOUS_NAMESPACE, NS));
+  }
 }
 
 void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
@@ -5858,6 +5872,14 @@ DeclID ASTWriter::GetDeclRef(const Decl *D) {
 
   if (!D) {
     return 0;
+  }
+
+  // If the DeclUpdate from the GMF gets touched, emit it.
+  if (auto *Iter = DeclUpdatesFromGMF.find(D);
+      Iter != DeclUpdatesFromGMF.end()) {
+    for (DeclUpdate &Update : Iter->second)
+      DeclUpdates[D].push_back(Update);
+    DeclUpdatesFromGMF.erase(Iter);
   }
 
   // If D comes from an AST file, its declaration ID is already known and

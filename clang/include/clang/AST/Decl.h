@@ -120,7 +120,7 @@ public:
   ASTContext &getASTContext() const { return Ctx; }
 
   NamespaceDecl *getAnonymousNamespace() const { return AnonymousNamespace; }
-  void setAnonymousNamespace(NamespaceDecl *D) { AnonymousNamespace = D; }
+  void setAnonymousNamespace(NamespaceDecl *D);
 
   static TranslationUnitDecl *Create(ASTContext &C);
 
