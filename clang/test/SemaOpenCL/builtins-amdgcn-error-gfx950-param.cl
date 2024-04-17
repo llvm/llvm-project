@@ -12,6 +12,7 @@ typedef int int8 __attribute__((ext_vector_type(8)));
 typedef int int16 __attribute__((ext_vector_type(16)));
 typedef unsigned int uint;
 typedef half half2 __attribute__((ext_vector_type(2)));
+typedef short short2 __attribute__((ext_vector_type(2)));
 
 void test_mfma_f32_16x16x32_f16(__global float4* out, half8 a, half8 b, float4 c, int X) {
 
@@ -162,9 +163,12 @@ void test_permlane32_swap(__global int* out, int old, int src, bool X) {
   *out = __builtin_amdgcn_permlane32_swap(old, src, false, X); // expected-error{{argument to '__builtin_amdgcn_permlane32_swap' must be a constant integer}}
 }
 
-void test_cvt_scalef32(global half2* out_v2f16, global float* out_f32, uint src, float scale, int index, bool X) {
+void test_cvt_scalef32(global half2* out_v2f16, global float* out_f32, uint src, float scale, int index, bool X,
+                       global short2* out_v2i16, float src0, float src1) {
   *out_v2f16 = __builtin_amdgcn_cvt_scalef32_f16_fp8(*out_v2f16, src, scale, index, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_f16_fp8' must be a constant integer}}
   *out_f32 = __builtin_amdgcn_cvt_scalef32_f32_fp8(src, scale, index); // // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_f32_fp8' must be a constant integer}}
   *out_v2f16 = __builtin_amdgcn_cvt_scalef32_f16_bf8(*out_v2f16, src, scale, index, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_f16_bf8' must be a constant integer}}
   *out_f32 = __builtin_amdgcn_cvt_scalef32_f32_bf8(src, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_f32_bf8' must be a constant integer}}
+  *out_v2i16 = __builtin_amdgcn_cvt_scalef32_pk_fp8_f32(*out_v2i16, src0, src1, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_fp8_f32' must be a constant integer}}
+  *out_v2i16 = __builtin_amdgcn_cvt_scalef32_pk_bf8_f32(*out_v2i16, src0, src1, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_bf8_f32' must be a constant integer}}
 }
