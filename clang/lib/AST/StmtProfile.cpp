@@ -2071,13 +2071,31 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
   }
 
   CXXRecordDecl *Lambda = S->getLambdaClass();
-  ID.AddInteger(Lambda->getODRHash());
-
   for (const auto &Capture : Lambda->captures()) {
     ID.AddInteger(Capture.getCaptureKind());
     if (Capture.capturesVariable())
       VisitDecl(Capture.getCapturedVar());
   }
+
+  // Profiling the body of the lambda may be dangerous during deserialization.
+  // So we'd like only to profile the signature here.
+  ODRHash Hasher;
+  // FIXME: We can't get the operator call easily by
+  // `CXXRecordDecl::getLambdaCallOperator()` if we're in deserialization.
+  // So we have to do something raw here.
+  for (auto *SubDecl : Lambda->decls()) {
+    FunctionDecl *Call = nullptr;
+    if (auto *FTD = dyn_cast<FunctionTemplateDecl>(SubDecl))
+      Call = FTD->getTemplatedDecl();
+    else if (auto *FD = dyn_cast<FunctionDecl>(SubDecl))
+      Call = FD;
+
+    if (!Call)
+      continue;
+
+    Hasher.AddFunctionDecl(Call, /*SkipBody=*/true);
+  }
+  ID.AddInteger(Hasher.CalculateHash());
 }
 
 void
