@@ -38,8 +38,8 @@ static raw_fd_ostream &unbuff_outs() {
   return S;
 }
 
-static bool VerboseLog = false;
-static void verboseLog(const llvm::Twine &message) {
+static bool LogVerbose = false;
+static void logVerbose(const llvm::Twine &message) {
   if (VerboseLog) {
     unbuff_outs() << message << '\n';
   }
@@ -148,7 +148,7 @@ void ModuleBuildDaemonServer::createDaemonSocket() {
           }
           // If a previous module build daemon invocation crashes, the socket
           // file will need to be removed before the address can be binded to
-          verboseLog("Removing ineligible file: " + SocketPath);
+          logVerbose("Removing ineligible file: " + SocketPath);
         } else {
           llvm::errs() << "MBD failed to create unix socket: "
                        << SE.getMessage() << ": " << EC.message() << '\n';
@@ -156,7 +156,7 @@ void ModuleBuildDaemonServer::createDaemonSocket() {
         }
       });
     } else {
-      verboseLog("MBD created and binded to socket at: " + SocketPath);
+      logVerbose("MBD created and binded to socket at: " + SocketPath);
       ServerListener.emplace(std::move(*MaybeServerListener));
       break;
     }
@@ -205,9 +205,9 @@ void ModuleBuildDaemonServer::listenForClients() {
 
         if (EC == std::errc::timed_out) {
           RunServiceLoop = false;
-          verboseLog("ListeningServer::accept timed out, shutting down");
+          logVerbose("ListeningServer::accept timed out, shutting down");
         } else if (EC == std::errc::interrupted && RunServiceLoop == false) {
-          verboseLog("Signal received, shutting down");
+          logVerbose("Signal received, shutting down");
         } else
           errs() << "MBD failed to accept incoming connection: "
                  << SE.getMessage() << ": " << EC.message() << '\n';
@@ -242,7 +242,7 @@ int cc1modbuildd_main(ArrayRef<const char *> Argv) {
 
   // -cc1modbuildd is sliced away when Argv is pased to cc1modbuildd_main
   if (find(Argv, StringRef("-v")) != Argv.end())
-    VerboseLog = true;
+    LogVerbose = true;
 
   std::string BasePath;
   // If an argument exists and it is not -v then it must be a BasePath
@@ -268,11 +268,12 @@ int cc1modbuildd_main(ArrayRef<const char *> Argv) {
     Daemon.setupDaemonEnv();
     Daemon.createDaemonSocket();
     Daemon.listenForClients();
-  }
 
-  // Prevents handleSignal from being called after ServerListener is destructed
-  // Daemon is shutting down at this point so signals can be ignored
-  modifySignals(SIG_IGN);
+    // Prevents the signal handler from being called after the
+    // ModuleBuildDaemonServer is destructed. The daemon is shutting down and
+    // the program is about to return so signals can be ignored
+    modifySignals(SIG_IGN);
+  }
 
   return EXIT_SUCCESS;
 }
