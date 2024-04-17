@@ -1885,8 +1885,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Get the frequency of the steady clock. If the attribute is missing
     // assume running on an older libhsa and default to 0, omp_get_wtime
     // will be inaccurate but otherwise programs can still run.
-    if (auto Err = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY,
-                                    ClockFrequency))
+    if (getDeviceAttrRaw(HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY,
+                         ClockFrequency) != HSA_STATUS_SUCCESS)
       ClockFrequency = 0;
 
     // Load the grid values dependending on the wavefront.
@@ -2401,6 +2401,27 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     AMDGPUDeviceTy &DstDevice = static_cast<AMDGPUDeviceTy &>(DstGenericDevice);
+
+    // For large transfers use synchronous behavior.
+    if (Size >= OMPX_MaxAsyncCopyBytes) {
+      if (AsyncInfoWrapper.hasQueue())
+        if (auto Err = synchronize(AsyncInfoWrapper))
+          return Err;
+
+      AMDGPUSignalTy Signal;
+      if (auto Err = Signal.init())
+        return Err;
+
+      if (auto Err = utils::asyncMemCopy(
+              useMultipleSdmaEngines(), DstPtr, DstDevice.getAgent(), SrcPtr,
+              getAgent(), (uint64_t)Size, 0, nullptr, Signal.get()))
+        return Err;
+
+      if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
+        return Err;
+
+      return Signal.deinit();
+    }
 
     AMDGPUStreamTy *Stream = nullptr;
     if (auto Err = getStream(AsyncInfoWrapper, Stream))

@@ -26,6 +26,9 @@ static bool isLessThanTargetBitWidth(Operation *op, unsigned targetBitWidth) {
     // Reject index since getElementTypeBitWidth will abort for Index types.
     if (!vecType || vecType.getElementType().isIndex())
       return false;
+    // There are no dimension to fold if it is a 0-D vector.
+    if (vecType.getRank() == 0)
+      return false;
     unsigned trailingVecDimBitWidth =
         vecType.getShape().back() * vecType.getElementTypeBitWidth();
     if (trailingVecDimBitWidth >= targetBitWidth)

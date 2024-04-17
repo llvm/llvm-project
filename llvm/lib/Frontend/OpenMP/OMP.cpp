@@ -27,8 +27,8 @@ using namespace llvm::omp;
 
 namespace llvm::omp {
 ArrayRef<Directive> getLeafConstructs(Directive D) {
-  auto Idx = static_cast<int>(D);
-  if (Idx < 0 || Idx >= static_cast<int>(Directive_enumSize))
+  auto Idx = static_cast<std::size_t>(D);
+  if (Idx >= Directive_enumSize)
     return {};
   const auto *Row = LeafConstructTable[LeafConstructTableOrdering[Idx]];
   return ArrayRef(&Row[2], &Row[2] + static_cast<int>(Row[1]));
@@ -50,6 +50,12 @@ Directive getCompoundConstruct(ArrayRef<Directive> Parts) {
       RawLeafs.push_back(P);
   }
 
+  // RawLeafs will be used as key in the binary search. The search doesn't
+  // guarantee that the exact same entry will be found (since RawLeafs may
+  // not correspond to any compound directive). Because of that, we will
+  // need to compare the search result with the given set of leafs.
+  // Also, if there is only one leaf in the list, it corresponds to itself,
+  // no search is necessary.
   auto GivenLeafs{ArrayRef<Directive>(RawLeafs).drop_front(2)};
   if (GivenLeafs.size() == 1)
     return GivenLeafs.front();

@@ -49,7 +49,10 @@ def CTypeAPI : PublicAPI<"ctype.h"> {
 }
 
 def FCntlAPI : PublicAPI<"fcntl.h"> {
-  let Types = ["mode_t"];
+  let Types = [
+    "mode_t",
+    "off_t",
+  ];
 }
 
 def IntTypesAPI : PublicAPI<"inttypes.h"> {
@@ -77,7 +80,12 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
     SimpleMacroDef<"_IOLBF", "1">,
     SimpleMacroDef<"_IONBF", "2">,
   ];
-  let Types = ["size_t", "FILE", "cookie_io_functions_t"];
+  let Types = [
+    "FILE",
+    "cookie_io_functions_t",
+    "off_t",
+    "size_t",
+  ];
 }
 
 def StdlibAPI : PublicAPI<"stdlib.h"> {

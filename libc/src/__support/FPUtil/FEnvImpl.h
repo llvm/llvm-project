@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FENVIMPL_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FENVIMPL_H
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"

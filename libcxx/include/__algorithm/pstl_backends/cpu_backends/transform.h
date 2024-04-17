@@ -14,6 +14,7 @@
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
@@ -49,7 +50,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> __pstl_transform(
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-    std::__par_backend::__parallel_for(
+    __pstl::__cpu_traits<__cpu_backend_tag>::__for_each(
         __first, __last, [__op, __first, __result](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
           auto __res = std::__pstl_transform<__remove_parallel_policy_t<_ExecutionPolicy>>(
               __cpu_backend_tag{}, __brick_first, __brick_last, __result + (__brick_first - __first), __op);
@@ -97,7 +98,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> __pstl_transform(
                 __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-    auto __res = std::__par_backend::__parallel_for(
+    auto __res = __pstl::__cpu_traits<__cpu_backend_tag>::__for_each(
         __first1,
         __last1,
         [__op, __first1, __first2, __result](_ForwardIterator1 __brick_first, _ForwardIterator1 __brick_last) {

@@ -315,6 +315,10 @@ std::optional<SmallVector<unsigned>>
 ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
                        std::function<unsigned(APInt)> CB);
 
+std::optional<SmallVector<APInt>>
+ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
+                 const MachineRegisterInfo &MRI);
+
 /// Test if the given value is known to have exactly one bit set. This differs
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
 /// set.
@@ -550,6 +554,10 @@ void eraseInstr(MachineInstr &MI, MachineRegisterInfo &MRI,
 /// Assuming the instruction \p MI is going to be deleted, attempt to salvage
 /// debug users of \p MI by writing the effect of \p MI in a DIExpression.
 void salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI);
+
+/// Returns whether opcode \p Opc is a pre-isel generic floating-point opcode,
+/// having only floating-point operands.
+bool isPreISelGenericFloatingPointOpcode(unsigned Opc);
 
 } // End namespace llvm.
 #endif

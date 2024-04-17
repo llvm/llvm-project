@@ -883,6 +883,9 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
 
     [[fallthrough]];
 
+  case CK_HLSLArrayRValue:
+    Visit(E->getSubExpr());
+    break;
 
   case CK_NoOp:
   case CK_UserDefinedConversion:
@@ -1524,6 +1527,7 @@ static bool castPreservesZero(const CastExpr *CE) {
   case CK_LValueToRValue:
   case CK_LValueToRValueBitCast:
   case CK_UncheckedDerivedToBase:
+  case CK_HLSLArrayRValue:
     return false;
   }
   llvm_unreachable("Unhandled clang::CastKind enum");

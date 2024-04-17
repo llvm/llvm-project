@@ -248,3 +248,15 @@ G g = {1};
 // CHECK: FunctionTemplateDecl
 // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for G> 'auto (T) -> G<T>' aggregate
 // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for G> 'auto (int) -> G<int>' implicit_instantiation aggregate
+
+template<typename X>
+using AG = G<X>;
+AG ag = {1};
+// Verify that the aggregate deduction guide for alias templates is built.
+// CHECK-LABEL: Dumping <deduction guide for AG>
+// CHECK: FunctionTemplateDecl
+// CHECK: |-CXXDeductionGuideDecl {{.*}} 'auto (type-parameter-0-0) -> G<type-parameter-0-0>'
+// CHECK: `-CXXDeductionGuideDecl {{.*}} 'auto (int) -> G<int>' implicit_instantiation
+// CHECK:   |-TemplateArgument type 'int'
+// CHECK:   | `-BuiltinType {{.*}} 'int'
+// CHECK:   `-ParmVarDecl {{.*}} 'int'

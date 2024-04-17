@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Module.h"
@@ -1300,8 +1301,10 @@ public:
   MachineInstrBuilder buildExtractVectorElementConstant(const DstOp &Res,
                                                         const SrcOp &Val,
                                                         const int Idx) {
-    return buildExtractVectorElement(Res, Val,
-                                     buildConstant(LLT::scalar(64), Idx));
+    auto TLI = getMF().getSubtarget().getTargetLowering();
+    unsigned VecIdxWidth = TLI->getVectorIdxTy(getDataLayout()).getSizeInBits();
+    return buildExtractVectorElement(
+        Res, Val, buildConstant(LLT::scalar(VecIdxWidth), Idx));
   }
 
   /// Build and insert \p Res = G_EXTRACT_VECTOR_ELT \p Val, \p Idx
