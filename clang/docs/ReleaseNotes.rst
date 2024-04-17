@@ -679,6 +679,8 @@ Static Analyzer
   but not under any case blocks if ``unroll-loops=true`` analyzer config is
   set. (#GH68819)
 - Support C++23 static operator calls. (#GH84972)
+- Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
+  matched user-defined ``strerror`` and similar library functions. (GH#88181)
 
 New features
 ^^^^^^^^^^^^
