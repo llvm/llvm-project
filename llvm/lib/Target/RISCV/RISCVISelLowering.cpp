@@ -13475,8 +13475,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
 
   // 2^N - 3/5/9 --> (sub (shl X, C1), (shXadd X, x))
   for (uint64_t Offset : {3, 5, 9}) {
-    if ((VT == MVT::i64 || MulAmt + Offset <= UINT32_MAX) &&
-        isPowerOf2_64(MulAmt + Offset)) {
+    if (isPowerOf2_64(MulAmt + Offset)) {
       SDLoc DL(N);
       SDValue Shift1 =
           DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
