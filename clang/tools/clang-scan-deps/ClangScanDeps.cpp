@@ -72,6 +72,7 @@ enum ResourceDirRecipeKind {
   RDRK_InvokeCompiler,
 };
 
+static std::string OutputFileName = "-";
 static ScanningMode ScanMode = ScanningMode::DependencyDirectivesScan;
 static ScanningOutputFormat Format = ScanningOutputFormat::Make;
 static ScanningOptimizations OptimizeArgs;
@@ -174,6 +175,9 @@ static void ParseArgs(int argc, char **argv) {
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_files_dir_EQ))
     ModuleFilesDir = A->getValue();
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_o))
+    OutputFileName = A->getValue();
 
   EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
 
@@ -419,6 +423,11 @@ public:
   }
 
   void printFullOutput(raw_ostream &OS) {
+    // Skip sorting modules and constructing the JSON object if the output
+    // cannot be observed anyway. This makes timings less noisy.
+    if (&OS == &llvm::nulls())
+      return;
+
     // Sort the modules by name to get a deterministic order.
     std::vector<IndexedModuleID> ModuleIDs;
     for (auto &&M : Modules)
@@ -849,8 +858,25 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       });
 
   SharedStream Errs(llvm::errs());
-  // Print out the dependency results to STDOUT by default.
-  SharedStream DependencyOS(llvm::outs());
+
+  std::optional<llvm::raw_fd_ostream> FileOS;
+  llvm::raw_ostream &ThreadUnsafeDependencyOS = [&]() -> llvm::raw_ostream & {
+    if (OutputFileName == "-")
+      return llvm::outs();
+
+    if (OutputFileName == "/dev/null")
+      return llvm::nulls();
+
+    std::error_code EC;
+    FileOS.emplace(OutputFileName, EC);
+    if (EC) {
+      llvm::errs() << "Failed to open output file '" << OutputFileName
+                   << "': " << llvm::errorCodeToError(EC) << '\n';
+      std::exit(1);
+    }
+    return *FileOS;
+  }();
+  SharedStream DependencyOS(ThreadUnsafeDependencyOS);
 
   std::vector<tooling::CompileCommand> Inputs =
       AdjustingCompilations->getAllCompileCommands();
@@ -991,9 +1017,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       HadErrors = true;
 
   if (Format == ScanningOutputFormat::Full)
-    FD->printFullOutput(llvm::outs());
+    FD->printFullOutput(ThreadUnsafeDependencyOS);
   else if (Format == ScanningOutputFormat::P1689)
-    PD.printDependencies(llvm::outs());
+    PD.printDependencies(ThreadUnsafeDependencyOS);
 
   return HadErrors;
 }
