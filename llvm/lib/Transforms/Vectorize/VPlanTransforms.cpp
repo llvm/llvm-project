@@ -852,6 +852,18 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
   return true;
 }
 
+static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
+  SetVector<VPUser *> Users(V->user_begin(), V->user_end());
+  for (unsigned I = 0; I != Users.size(); ++I) {
+    VPRecipeBase *Cur = dyn_cast<VPRecipeBase>(Users[I]);
+    if (!Cur || isa<VPHeaderPHIRecipe>(Cur))
+      continue;
+    for (VPValue *V : Cur->definedValues())
+      Users.insert(V->user_begin(), V->user_end());
+  }
+  return Users.takeVector();
+}
+
 void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   for (VPRecipeBase &R :
        Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
@@ -863,24 +875,10 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
     if (RK != RecurKind::Add && RK != RecurKind::Mul)
       continue;
 
-    SmallSetVector<VPValue *, 8> Worklist;
-    Worklist.insert(PhiR);
-
-    for (unsigned I = 0; I != Worklist.size(); ++I) {
-      VPValue *Cur = Worklist[I];
-      if (auto *RecWithFlags =
-              dyn_cast<VPRecipeWithIRFlags>(Cur->getDefiningRecipe())) {
+    for (VPUser *U : collectUsersRecursively(PhiR))
+      if (auto *RecWithFlags = dyn_cast<VPRecipeWithIRFlags>(U)) {
         RecWithFlags->dropPoisonGeneratingFlags();
       }
-
-      for (VPUser *U : Cur->users()) {
-        auto *UserRecipe = dyn_cast<VPRecipeBase>(U);
-        if (!UserRecipe)
-          continue;
-        for (VPValue *V : UserRecipe->definedValues())
-          Worklist.insert(V);
-      }
-    }
   }
 }
 
