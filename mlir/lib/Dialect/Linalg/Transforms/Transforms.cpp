@@ -1595,8 +1595,9 @@ void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
 }
 
 Value mlir::linalg::createReadOrMaskedRead(OpBuilder &builder, Location loc,
-                                    Value source, ArrayRef<int64_t> readShape,
-                                    Value padValue) {
+                                           Value source,
+                                           ArrayRef<int64_t> readShape,
+                                           Value padValue) {
   assert(llvm::none_of(readShape,
                        [](int64_t s) { return s == ShapedType::kDynamic; }));
   auto sourceShape = dyn_cast<ShapedType>(source.getType()).getShape();
