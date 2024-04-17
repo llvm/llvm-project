@@ -42702,7 +42702,7 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
                              Mask)) {
       SmallVector<APInt, 2> DemandedSrcElts(Ops.size(),
                                             APInt::getZero(NumElts));
-      for (auto M : enumerate(Mask)) {
+      for (auto &&M : enumerate(Mask)) {
         if (!DemandedElts[M.index()] || M.value() == SM_SentinelZero)
           continue;
         if (M.value() == SM_SentinelUndef)
@@ -42711,7 +42711,7 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
                "Shuffle mask index out of range");
         DemandedSrcElts[M.value() / NumElts].setBit(M.value() % NumElts);
       }
-      for (auto Op : enumerate(Ops))
+      for (auto &&Op : enumerate(Ops))
         if (!DemandedSrcElts[Op.index()].isZero() &&
             !DAG.isGuaranteedNotToBeUndefOrPoison(
                 Op.value(), DemandedSrcElts[Op.index()], PoisonOnly, Depth + 1))

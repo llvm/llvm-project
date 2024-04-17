@@ -168,7 +168,7 @@ void PSVRuntimeInfo::finalize(Triple::EnvironmentType Stage) {
   DXConStrTabBuilder.add(EntryName);
 
   DXConStrTabBuilder.finalize();
-  for (auto ElAndName : zip(SignatureElements, SemanticNames)) {
+  for (auto &&ElAndName : zip(SignatureElements, SemanticNames)) {
     llvm::dxbc::PSV::v0::SignatureElement &El = std::get<0>(ElAndName);
     StringRef Name = std::get<1>(ElAndName);
     El.NameOffset = static_cast<uint32_t>(DXConStrTabBuilder.getOffset(Name));
