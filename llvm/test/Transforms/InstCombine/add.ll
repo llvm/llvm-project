@@ -2983,7 +2983,7 @@ define i8 @signum_i8_i8_use3(i8 %x) {
   ret i8 %r
 }
 
-; poison/poison is ok to propagate in shift amount
+; poison is ok to propagate in shift amount
 ; complexity canonicalization guarantees that shift is op0 of add
 
 define <2 x i5> @signum_v2i5_v2i5(<2 x i5> %x) {

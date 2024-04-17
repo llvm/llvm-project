@@ -965,7 +965,7 @@ define <2 x i1> @substitute_constant_or_ne_slt_swap_vec_undef(<2 x i8> %x, <2 x 
   ret <2 x i1> %r
 }
 
-; The poison case would be valid to fold.
+; TODO: The poison case would be valid to fold.
 
 define <2 x i1> @substitute_constant_or_ne_slt_swap_vec_poison(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @substitute_constant_or_ne_slt_swap_vec_poison(
