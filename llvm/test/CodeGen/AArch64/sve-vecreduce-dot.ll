@@ -8,11 +8,11 @@ define i32 @test(<vscale x 32 x i8> %bin.rdx, <vscale x 32 x i8> %bin.rdx2)  {
 ; CHECK-NEXT:    sunpklo z5.h, z0.b
 ; CHECK-NEXT:    sunpkhi z0.h, z0.b
 ; CHECK-NEXT:    sunpkhi z2.h, z2.b
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sunpklo z6.h, z1.b
 ; CHECK-NEXT:    sunpkhi z1.h, z1.b
 ; CHECK-NEXT:    sunpklo z7.h, z3.b
 ; CHECK-NEXT:    sunpkhi z3.h, z3.b
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sunpkhi z24.s, z5.h
 ; CHECK-NEXT:    sunpklo z5.s, z5.h
 ; CHECK-NEXT:    sunpklo z25.s, z4.h

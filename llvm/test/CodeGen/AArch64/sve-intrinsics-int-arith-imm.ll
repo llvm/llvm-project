@@ -247,8 +247,8 @@ define <vscale x 4 x i32> @sub_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 define <vscale x 4 x i32> @sub_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: sub_i32_ptrue_all_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sub z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
@@ -402,8 +402,8 @@ define <vscale x 4 x i32> @subr_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 define <vscale x 4 x i32> @subr_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: subr_i32_ptrue_all_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    subr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
@@ -449,8 +449,8 @@ define <vscale x 8 x i16> @smax_i16(<vscale x 8 x i16> %a) {
 define <vscale x 8 x i16> @smax_i16_out_of_range(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: smax_i16_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov w8, #129 // =0x81
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    smax z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
@@ -480,8 +480,8 @@ define <vscale x 4 x i32> @smax_i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @smax_i32_out_of_range(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: smax_i32_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z1.s, #-129 // =0xffffffffffffff7f
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    smax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
@@ -510,8 +510,8 @@ define <vscale x 2 x i64> @smax_i64(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @smax_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: smax_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.d, #65535 // =0xffff
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    smax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
@@ -559,8 +559,8 @@ define <vscale x 4 x i32> @smax_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 define <vscale x 4 x i32> @smax_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: smax_i32_ptrue_all_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    smax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
@@ -606,8 +606,8 @@ define <vscale x 8 x i16> @smin_i16(<vscale x 8 x i16> %a) {
 define <vscale x 8 x i16> @smin_i16_out_of_range(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: smin_i16_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z1.h, #-129 // =0xffffffffffffff7f
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    smin z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
@@ -636,8 +636,8 @@ define <vscale x 4 x i32> @smin_i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @smin_i32_out_of_range(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: smin_i32_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov w8, #257 // =0x101
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    smin z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -668,8 +668,8 @@ define <vscale x 2 x i64> @smin_i64(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @smin_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: smin_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.d, #-256 // =0xffffffffffffff00
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    smin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
@@ -717,8 +717,8 @@ define <vscale x 4 x i32> @smin_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 define <vscale x 4 x i32> @smin_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: smin_i32_ptrue_all_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    smin z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
@@ -764,8 +764,8 @@ define <vscale x 8 x i16> @umax_i16(<vscale x 8 x i16> %a) {
 define <vscale x 8 x i16> @umax_i16_out_of_range(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: umax_i16_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    dupm z1.b, #0x1
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    umax z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
@@ -794,8 +794,8 @@ define <vscale x 4 x i32> @umax_i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @umax_i32_out_of_range(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: umax_i32_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov w8, #257 // =0x101
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    umax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -825,8 +825,8 @@ define <vscale x 2 x i64> @umax_i64(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @umax_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: umax_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.d, #65535 // =0xffff
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    umax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
@@ -874,8 +874,8 @@ define <vscale x 4 x i32> @umax_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 define <vscale x 4 x i32> @umax_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: umax_i32_ptrue_all_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    umax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
@@ -921,8 +921,8 @@ define <vscale x 8 x i16> @umin_i16(<vscale x 8 x i16> %a) {
 define <vscale x 8 x i16> @umin_i16_out_of_range(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: umin_i16_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    dupm z1.b, #0x1
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    umin z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
@@ -951,8 +951,8 @@ define <vscale x 4 x i32> @umin_i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x i32> @umin_i32_out_of_range(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: umin_i32_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov w8, #257 // =0x101
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    umin z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
@@ -982,8 +982,8 @@ define <vscale x 2 x i64> @umin_i64(<vscale x 2 x i64> %a) {
 define <vscale x 2 x i64> @umin_i64_out_of_range(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: umin_i64_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.d, #65535 // =0xffff
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    umin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
@@ -1031,8 +1031,8 @@ define <vscale x 4 x i32> @umin_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 define <vscale x 4 x i32> @umin_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: umin_i32_ptrue_all_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    umin z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
@@ -2120,8 +2120,8 @@ define <vscale x 4 x i32> @mul_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 define <vscale x 4 x i32> @mul_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: mul_i32_ptrue_all_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)

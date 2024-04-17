@@ -61,8 +61,8 @@ define <16 x i8> @select_v16i8(<16 x i8> %op1, <16 x i8> %op2, <16 x i1> %mask) 
 define void @select_v32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q1, q3, [x1]
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, z3.b
@@ -136,8 +136,8 @@ define <8 x i16> @select_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) {
 define void @select_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q3, [x1]
 ; CHECK-NEXT:    cmpeq p1.h, p0/z, z0.h, z1.h
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z3.h
@@ -193,8 +193,8 @@ define <4 x i32> @select_v4i32(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %mask) {
 define void @select_v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q3, [x1]
 ; CHECK-NEXT:    cmpeq p1.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z3.s
@@ -213,9 +213,9 @@ define void @select_v8i32(ptr %a, ptr %b) {
 define <1 x i64> @select_v1i64(<1 x i64> %op1, <1 x i64> %op2, <1 x i1> %mask) {
 ; CHECK-LABEL: select_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    and x8, x0, #0x1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    mov z2.d, x8
@@ -249,8 +249,8 @@ define <2 x i64> @select_v2i64(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %mask) {
 define void @select_v4i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q3, [x1]
 ; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z2.d, z3.d

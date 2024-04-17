@@ -105,8 +105,8 @@ define void @st1d_inbound(<vscale x 2 x i64> %data, ptr %a) {
 define void @store_nxv2f32(ptr %out) {
 ; CHECK-LABEL: store_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fmov z0.s, #1.00000000
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 2 x float> undef, float 1.0, i32 0
@@ -118,8 +118,8 @@ define void @store_nxv2f32(ptr %out) {
 define void @store_nxv4f16(ptr %out) {
 ; CHECK-LABEL: store_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fmov z0.h, #1.00000000
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 4 x half> undef, half 1.0, i32 0
@@ -133,9 +133,9 @@ define void @store_nxv4f16(ptr %out) {
 define void @store_nxv6f32(ptr %out) {
 ; CHECK-LABEL: store_nxv6f32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z0.s, #1.00000000
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    fmov z0.s, #1.00000000
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0, #2, mul vl]
 ; CHECK-NEXT:    st1w { z0.s }, p1, [x0]
 ; CHECK-NEXT:    ret
@@ -148,9 +148,9 @@ define void @store_nxv6f32(ptr %out) {
 define void @store_nxv12f16(ptr %out) {
 ; CHECK-LABEL: store_nxv12f16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z0.h, #1.00000000
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    fmov z0.h, #1.00000000
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0, #2, mul vl]
 ; CHECK-NEXT:    st1h { z0.h }, p1, [x0]
 ; CHECK-NEXT:    ret
