@@ -1776,24 +1776,31 @@ def GetGlobalOp : CIR_Op<"get_global",
     [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Get the address of a global variable";
   let description = [{
-     The `cir.get_global` operation retrieves the address pointing to a
-     named global variable. If the global variable is marked constant, writing
-     to the resulting address (such as through a `cir.store` operation) is
-     undefined. Resulting type must always be a `!cir.ptr<...>` type.
+    The `cir.get_global` operation retrieves the address pointing to a
+    named global variable. If the global variable is marked constant, writing
+    to the resulting address (such as through a `cir.store` operation) is
+    undefined. Resulting type must always be a `!cir.ptr<...>` type.
 
-     Example:
+    Addresses of thread local globals can only be retrieved if this operation
+    is marked `thread_local`, which indicates the address isn't constant.
 
-     ```mlir
-     %x = cir.get_global @foo : !cir.ptr<i32>
-     ```
+    Example:
+    ```mlir
+    %x = cir.get_global @foo : !cir.ptr<i32>
+    ...
+    %y = cir.get_global thread_local @batata : !cir.ptr<i32>
+    ```
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$name);
+  let arguments = (ins FlatSymbolRefAttr:$name, UnitAttr:$tls);
   let results = (outs Res<CIR_PointerType, "", []>:$addr);
 
   // FIXME: we should not be printing `cir.ptr` below, that should come
   // from the pointer type directly.
-  let assemblyFormat = "$name `:` `cir.ptr` type($addr) attr-dict";
+  let assemblyFormat = [{
+    (`thread_local` $tls^)?
+    $name `:` `cir.ptr` type($addr) attr-dict
+  }];
 
   // `GetGlobalOp` is fully verified by its traits.
   let hasVerifier = 0;

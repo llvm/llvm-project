@@ -719,10 +719,9 @@ static LValue buildGlobalVarDeclLValue(CIRGenFunction &CGF, const Expr *E,
   if (CGF.getLangOpts().OpenMP)
     llvm_unreachable("not implemented");
 
+  // Traditional LLVM codegen handles thread local separately, CIR handles
+  // as part of getAddrOfGlobalVar.
   auto V = CGF.CGM.getAddrOfGlobalVar(VD);
-
-  if (VD->getTLSKind() != VarDecl::TLS_None)
-    llvm_unreachable("NYI");
 
   auto RealVarTy = CGF.getTypes().convertTypeForMem(VD->getType());
   auto realPtrTy = CGF.getBuilder().getPointerTo(RealVarTy);
