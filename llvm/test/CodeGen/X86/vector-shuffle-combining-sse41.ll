@@ -22,6 +22,21 @@ define <16 x i8> @combine_vpshufb_as_movzx(<16 x i8> %a0) {
   ret <16 x i8> %res0
 }
 
+define <4 x i32> @combine_blend_of_permutes_v4i32(<2 x i64> %a0, <2 x i64> %a1) {
+; SSE-LABEL: combine_blend_of_permutes_v4i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3],xmm2[4,5],xmm0[6,7]
+; SSE-NEXT:    retq
+  %s0 = shufflevector <2 x i64> %a0, <2 x i64> undef, <2 x i32> <i32 1, i32 0>
+  %s1 = shufflevector <2 x i64> %a1, <2 x i64> undef, <2 x i32> <i32 1, i32 0>
+  %x0 = bitcast <2 x i64> %s0 to <4 x i32>
+  %x1 = bitcast <2 x i64> %s1 to <4 x i32>
+  %r = shufflevector <4 x i32> %x0, <4 x i32> %x1, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x i32> %r
+}
+
 define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; SSE-LABEL: PR50049:
 ; SSE:       # %bb.0:
