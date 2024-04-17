@@ -13,6 +13,7 @@
 #include <__algorithm/pstl_backends/cpu_backends/backend.h>
 #include <__config>
 #include <__iterator/concepts.h>
+#include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/empty.h>
 #include <optional>
@@ -39,7 +40,7 @@ _LIBCPP_HIDE_FROM_ABI optional<__empty>
 __pstl_fill(__cpu_backend_tag, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-    return __par_backend::__parallel_for(
+    return __pstl::__cpu_traits<__cpu_backend_tag>::__for_each(
         __first, __last, [&__value](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
           [[maybe_unused]] auto __res = std::__pstl_fill<__remove_parallel_policy_t<_ExecutionPolicy>>(
               __cpu_backend_tag{}, __brick_first, __brick_last, __value);

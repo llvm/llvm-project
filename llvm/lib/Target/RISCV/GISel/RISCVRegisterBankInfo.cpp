@@ -110,6 +110,8 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
                                               LLT Ty) const {
   switch (RC.getID()) {
   default:
+    if (RISCVRI::isVRegClass(RC.TSFlags))
+      return getRegBank(RISCV::VRBRegBankID);
     llvm_unreachable("Register class not supported");
   case RISCV::GPRRegClassID:
   case RISCV::GPRF16RegClassID:
@@ -131,20 +133,6 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case RISCV::FPR64CRegClassID:
   case RISCV::FPR32CRegClassID:
     return getRegBank(RISCV::FPRBRegBankID);
-  case RISCV::VMRegClassID:
-  case RISCV::VRRegClassID:
-  case RISCV::VRNoV0RegClassID:
-  case RISCV::VRM2RegClassID:
-  case RISCV::VRM2NoV0RegClassID:
-  case RISCV::VRM4RegClassID:
-  case RISCV::VRM4NoV0RegClassID:
-  case RISCV::VMV0RegClassID:
-  case RISCV::VRM2_with_sub_vrm1_0_in_VMV0RegClassID:
-  case RISCV::VRM4_with_sub_vrm1_0_in_VMV0RegClassID:
-  case RISCV::VRM8RegClassID:
-  case RISCV::VRM8NoV0RegClassID:
-  case RISCV::VRM8_with_sub_vrm1_0_in_VMV0RegClassID:
-    return getRegBank(RISCV::VRBRegBankID);
   }
 }
 
@@ -152,46 +140,6 @@ static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
   assert(Size == 32 || Size == 64);
   unsigned Idx = Size == 64 ? RISCV::FPRB64Idx : RISCV::FPRB32Idx;
   return &RISCV::ValueMappings[Idx];
-}
-
-/// Returns whether opcode \p Opc is a pre-isel generic floating-point opcode,
-/// having only floating-point operands.
-/// FIXME: this is copied from target AArch64. Needs some code refactor here to
-/// put this function in GlobalISel/Utils.cpp.
-static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
-  switch (Opc) {
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FMA:
-  case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FCONSTANT:
-  case TargetOpcode::G_FPEXT:
-  case TargetOpcode::G_FPTRUNC:
-  case TargetOpcode::G_FCEIL:
-  case TargetOpcode::G_FFLOOR:
-  case TargetOpcode::G_FNEARBYINT:
-  case TargetOpcode::G_FNEG:
-  case TargetOpcode::G_FCOPYSIGN:
-  case TargetOpcode::G_FCOS:
-  case TargetOpcode::G_FSIN:
-  case TargetOpcode::G_FLOG10:
-  case TargetOpcode::G_FLOG:
-  case TargetOpcode::G_FLOG2:
-  case TargetOpcode::G_FSQRT:
-  case TargetOpcode::G_FABS:
-  case TargetOpcode::G_FEXP:
-  case TargetOpcode::G_FRINT:
-  case TargetOpcode::G_INTRINSIC_TRUNC:
-  case TargetOpcode::G_INTRINSIC_ROUND:
-  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
-  case TargetOpcode::G_FMAXNUM:
-  case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMAXIMUM:
-  case TargetOpcode::G_FMINIMUM:
-    return true;
-  }
-  return false;
 }
 
 // TODO: Make this more like AArch64?

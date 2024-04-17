@@ -201,9 +201,8 @@ define <vscale x 32 x half> @vfmax_nxv32f16_vv(<vscale x 32 x half> %a, <vscale 
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vv v0, v8, v8
-; ZVFHMIN-NEXT:    vmfeq.vv v3, v24, v24
 ; ZVFHMIN-NEXT:    vmerge.vvm v16, v8, v24, v0
-; ZVFHMIN-NEXT:    vmv1r.v v0, v3
+; ZVFHMIN-NEXT:    vmfeq.vv v0, v24, v24
 ; ZVFHMIN-NEXT:    vmerge.vvm v8, v24, v8, v0
 ; ZVFHMIN-NEXT:    vfmax.vv v16, v8, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma

@@ -275,8 +275,8 @@ define i1 @extractelt_nxv16i1_idx0(ptr %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmseq.vi v10, v8, 0
-; CHECK-NEXT:    vfirst.m a0, v10
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
+; CHECK-NEXT:    vfirst.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <vscale x 16 x i8>, ptr %x
@@ -290,8 +290,8 @@ define i1 @extractelt_nxv32i1_idx0(ptr %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl4r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmseq.vi v12, v8, 0
-; CHECK-NEXT:    vfirst.m a0, v12
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
+; CHECK-NEXT:    vfirst.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <vscale x 32 x i8>, ptr %x
@@ -305,8 +305,8 @@ define i1 @extractelt_nxv64i1_idx0(ptr %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmseq.vi v16, v8, 0
-; CHECK-NEXT:    vfirst.m a0, v16
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
+; CHECK-NEXT:    vfirst.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <vscale x 64 x i8>, ptr %x

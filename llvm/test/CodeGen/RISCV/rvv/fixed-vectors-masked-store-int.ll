@@ -401,13 +401,13 @@ define void @masked_store_v32i64(ptr %val_ptr, ptr %a, ptr %m_ptr) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    csrr a3, vlenb
-; RV32-NEXT:    slli a3, a3, 4
+; RV32-NEXT:    li a4, 10
+; RV32-NEXT:    mul a3, a3, a4
 ; RV32-NEXT:    sub sp, sp, a3
 ; RV32-NEXT:    addi a3, a2, 128
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a3)
 ; RV32-NEXT:    csrr a3, vlenb
-; RV32-NEXT:    slli a3, a3, 3
 ; RV32-NEXT:    add a3, sp, a3
 ; RV32-NEXT:    addi a3, a3, 16
 ; RV32-NEXT:    vs8r.v v8, (a3) # Unknown-size Folded Spill
@@ -416,26 +416,25 @@ define void @masked_store_v32i64(ptr %val_ptr, ptr %a, ptr %m_ptr) nounwind {
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vmseq.vv v7, v24, v16
+; RV32-NEXT:    vmseq.vv v0, v24, v16
+; RV32-NEXT:    addi a2, sp, 16
+; RV32-NEXT:    vs1r.v v0, (a2) # Unknown-size Folded Spill
 ; RV32-NEXT:    addi a2, a0, 128
 ; RV32-NEXT:    vle64.v v24, (a2)
 ; RV32-NEXT:    vle64.v v8, (a0)
-; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
 ; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    slli a0, a0, 3
 ; RV32-NEXT:    add a0, sp, a0
 ; RV32-NEXT:    addi a0, a0, 16
-; RV32-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
-; RV32-NEXT:    vmseq.vv v0, v8, v16
+; RV32-NEXT:    vl8r.v v0, (a0) # Unknown-size Folded Reload
+; RV32-NEXT:    vmseq.vv v0, v0, v16
 ; RV32-NEXT:    addi a0, a1, 128
 ; RV32-NEXT:    vse64.v v24, (a0), v0.t
-; RV32-NEXT:    vmv1r.v v0, v7
 ; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; RV32-NEXT:    vl1r.v v0, (a0) # Unknown-size Folded Reload
 ; RV32-NEXT:    vse64.v v8, (a1), v0.t
 ; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    slli a0, a0, 4
+; RV32-NEXT:    li a1, 10
+; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    add sp, sp, a0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -446,7 +445,8 @@ define void @masked_store_v32i64(ptr %val_ptr, ptr %a, ptr %m_ptr) nounwind {
 ; RV64-NEXT:    addi a3, a2, 128
 ; RV64-NEXT:    vle64.v v8, (a3)
 ; RV64-NEXT:    vle64.v v16, (a2)
-; RV64-NEXT:    vmseq.vi v7, v8, 0
+; RV64-NEXT:    vmseq.vi v0, v8, 0
+; RV64-NEXT:    vmv1r.v v7, v0
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    addi a0, a0, 128
 ; RV64-NEXT:    vle64.v v24, (a0)
@@ -508,7 +508,8 @@ define void @masked_store_v64i32(ptr %val_ptr, ptr %a, ptr %m_ptr) nounwind {
 ; CHECK-NEXT:    addi a3, a2, 128
 ; CHECK-NEXT:    vle32.v v8, (a3)
 ; CHECK-NEXT:    vle32.v v16, (a2)
-; CHECK-NEXT:    vmseq.vi v7, v8, 0
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
+; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle32.v v24, (a0)
@@ -552,7 +553,8 @@ define void @masked_store_v128i16(ptr %val_ptr, ptr %a, ptr %m_ptr) nounwind {
 ; CHECK-NEXT:    addi a3, a2, 128
 ; CHECK-NEXT:    vle16.v v8, (a3)
 ; CHECK-NEXT:    vle16.v v16, (a2)
-; CHECK-NEXT:    vmseq.vi v7, v8, 0
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
+; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle16.v v24, (a0)
@@ -578,7 +580,8 @@ define void @masked_store_v256i8(ptr %val_ptr, ptr %a, ptr %m_ptr) nounwind {
 ; CHECK-NEXT:    addi a3, a2, 128
 ; CHECK-NEXT:    vle8.v v8, (a3)
 ; CHECK-NEXT:    vle8.v v16, (a2)
-; CHECK-NEXT:    vmseq.vi v7, v8, 0
+; CHECK-NEXT:    vmseq.vi v0, v8, 0
+; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle8.v v24, (a0)

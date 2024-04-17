@@ -79,6 +79,7 @@
 // CHECK-NOT: __riscv_za128rs {{.*$}}
 // CHECK-NOT: __riscv_za64rs {{.*$}}
 // CHECK-NOT: __riscv_zacas {{.*$}}
+// CHECK-NOT: __riscv_zama16b {{.*$}}
 // CHECK-NOT: __riscv_zawrs {{.*$}}
 // CHECK-NOT: __riscv_zba {{.*$}}
 // CHECK-NOT: __riscv_zbb {{.*$}}
@@ -703,6 +704,12 @@
 // RUN:   -march=rv64i_zacas1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZACAS-EXT %s
 // CHECK-ZACAS-EXT: __riscv_zacas 1000000{{$}}
+
+// RUN: %clang --target=riscv32 -march=rv32izama16b -x c -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZAMA16B-EXT %s
+// RUN: %clang --target=riscv64 -march=rv64izama16b  -x c -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZAMA16B-EXT %s
+// CHECK-ZAMA16B-EXT: __riscv_zama16b  1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32izawrs -E -dM %s \

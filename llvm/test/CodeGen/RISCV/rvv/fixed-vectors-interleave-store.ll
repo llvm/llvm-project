@@ -20,8 +20,8 @@ define void @vector_interleave_store_v32i1_v16i1(<16 x i1> %a, <16 x i1> %b, ptr
 ; CHECK-NEXT:    li a2, -1
 ; CHECK-NEXT:    vwmaccu.vx v12, a2, v10
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vmsne.vi v8, v12, 0
-; CHECK-NEXT:    vsm.v v8, (a0)
+; CHECK-NEXT:    vmsne.vi v0, v12, 0
+; CHECK-NEXT:    vsm.v v0, (a0)
 ; CHECK-NEXT:    ret
   %res = call <32 x i1> @llvm.experimental.vector.interleave2.v32i1(<16 x i1> %a, <16 x i1> %b)
   store <32 x i1> %res, ptr %p

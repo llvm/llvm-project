@@ -375,11 +375,11 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; CHECK-NEXT:    vl8r.v v16, (a4)
 ; CHECK-NEXT:    vl8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    sub a0, a3, a1
-; CHECK-NEXT:    sltu a4, a3, a0
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a0, a4, a0
+; CHECK-NEXT:    sub a0, a3, a1
+; CHECK-NEXT:    sltu a2, a3, a0
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    and a0, a2, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
