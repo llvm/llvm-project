@@ -949,9 +949,9 @@ void CGRecordLowering::calculateZeroInit() {
 
 // Verify accumulateBitfields computed the correct storage representations.
 void CGRecordLowering::checkBitfieldClipping(
-    bool isNonVirtualBaseType LLVM_ATTRIBUTE_UNUSED) const {
+    bool IsNonVirtualBaseType LLVM_ATTRIBUTE_UNUSED) const {
 #ifndef NDEBUG
-  auto ScissorOffset = calculateTailClippingOffset(isNonVirtualBaseType);
+  auto ScissorOffset = calculateTailClippingOffset(IsNonVirtualBaseType);
   auto Tail = CharUnits::Zero();
   for (const auto &M : Members) {
     // Only members with data could possibly overlap.
