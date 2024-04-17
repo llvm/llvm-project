@@ -2952,10 +2952,10 @@ TEST(YAMLIO, TestQuotedKeyWriteRead) {
     yout << map;
   }
 
-  EXPECT_NE(llvm::StringRef::npos, intermediate.find("unquoted:"));
-  EXPECT_NE(llvm::StringRef::npos, intermediate.find("'42':"));
-  EXPECT_NE(llvm::StringRef::npos, intermediate.find("' '"));
-  EXPECT_NE(llvm::StringRef::npos, intermediate.find("\"\\f\":"));
+  EXPECT_NE(std::string::npos, intermediate.find("unquoted:"));
+  EXPECT_NE(std::string::npos, intermediate.find("'42':"));
+  EXPECT_NE(std::string::npos, intermediate.find("' '"));
+  EXPECT_NE(std::string::npos, intermediate.find("\"\\f\":"));
 
   {
     Input yin(intermediate);

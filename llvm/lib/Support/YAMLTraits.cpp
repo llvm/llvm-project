@@ -776,7 +776,8 @@ void Output::output(StringRef S, QuotingType MustQuote) {
     return;
   }
 
-  const char *const Quote = MustQuote == QuotingType::Single ? "'" : "\"";
+  StringLiteral Quote = MustQuote == QuotingType::Single ? StringLiteral("'")
+                                                         : StringLiteral("\"");
   output(Quote); // Starting quote.
 
   // When using double-quoted strings (and only in that case), non-printable
