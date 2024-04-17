@@ -1,7 +1,82 @@
 {
-  "macros": [
-    "__STDC_VERSION_FENV_H__"
-  ],
+  "macros": {
+    "__STDC_VERSION_FENV_H__": {
+      "defined": "7.6.5",
+      "implemented": false
+    },
+    "FE_DIVBYZERO": {
+      "defined": "7.6.9",
+      "implemented": true
+    },
+    "FE_INEXACT": {
+      "defined": "7.6.9",
+      "implemented": true
+    },
+    "FE_INVALID": {
+      "defined": "7.6.9",
+      "implemented": true
+    },
+    "FE_OVERFLOW": {
+      "defined": "7.6.9",
+      "implemented": true
+    },
+    "FE_UNDERFLOW": {
+      "defined": "7.6.9",
+      "implemented": true
+    },
+    "FE_ALL_EXCEPT": {
+      "defined": "7.6.12",
+      "implemented": true
+    },
+    "FE_DFL_MODE": {
+      "defined": "7.6.11",
+      "implemented": false
+    },
+    "FE_DOWNARD": {
+      "defined": "7.6.13",
+      "implemented": true
+    },
+    "FE_TONEAREST": {
+      "defined": "7.6.13",
+      "implemented": true
+    },
+    "FE_TONEARESTFROMZERO": {
+      "defined": "7.6.13",
+      "implemented": false
+    },
+    "FE_TOWARDZERO": {
+      "defined": "7.6.13",
+      "implemented": true
+    },
+    "FE_UPWARD": {
+      "defined": "7.6.13",
+      "implemented": true
+    },
+    "FE_DEC_DOWNWARD": {
+      "defined": "7.6.14",
+      "implemented": false
+    },
+    "FE_DEC_TONEAREST": {
+      "defined": "7.6.14",
+      "implemented": false
+    },
+    "FE_DEC_TONEARESTFROMZERO": {
+      "defined": "7.6.14",
+      "implemented": false
+    },
+    "FE_DEC_TOWARDZERO": {
+      "defined": "7.6.14",
+      "implemented": false
+    },
+    "FE_DEC_UPWARD": {
+      "defined": "7.6.14",
+      "implemented": false
+    },
+    "FE_DFL_ENV": {
+      "defined": "7.6.17",
+      "implemented": true
+    }
+  },
   "functions": {
     "feclearexcept": {
       "defined": "7.6.4.1"

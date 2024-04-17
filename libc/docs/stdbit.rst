@@ -1,7 +1,77 @@
 .. include:: check.rst
 
-stdbit.h Functions
-==================
+========
+stdbit.h
+========
+
+Macros
+======
+
+.. list-table::
+  :widths: auto
+  :align: center
+  :header-rows: 1
+
+  * - Function
+    - Implemented
+    - Standard
+  * - __STDC_ENDIAN_BIG__
+    - |check|
+    - 7.18.2.2
+  * - __STDC_ENDIAN_LITTLE__
+    - |check|
+    - 7.18.2.2
+  * - __STDC_ENDIAN_NATIVE__
+    - |check|
+    - 7.18.2.2
+  * - __STDC_VERSION_STDBIT_H__
+    - |check|
+    - 7.18.1.2
+  * - stdc_bit_ceil
+    - |check|
+    - 7.18.16.1
+  * - stdc_bit_floor
+    - |check|
+    - 7.18.15.1
+  * - stdc_bit_width
+    - |check|
+    - 7.18.14.1
+  * - stdc_count_ones
+    - |check|
+    - 7.18.12.1
+  * - stdc_count_zeros
+    - |check|
+    - 7.18.11.1
+  * - stdc_first_leading_one
+    - |check|
+    - 7.18.8.1
+  * - stdc_first_leading_zero
+    - |check|
+    - 7.18.7.1
+  * - stdc_first_trailing_one
+    - |check|
+    - 7.18.10.1
+  * - stdc_first_trailing_zero
+    - |check|
+    - 7.18.9.1
+  * - stdc_has_single_bit
+    - |check|
+    - 7.18.13.1
+  * - stdc_leading_ones
+    - |check|
+    - 7.18.4.1
+  * - stdc_leading_zeros
+    - |check|
+    - 7.18.3.1
+  * - stdc_trailing_ones
+    - |check|
+    - 7.18.6.1
+  * - stdc_trailing_zeros
+    - |check|
+    - 7.18.5.1
+
+Functions
+=========
 
 .. list-table::
   :widths: auto

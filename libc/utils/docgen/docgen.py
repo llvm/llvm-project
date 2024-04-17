@@ -13,6 +13,22 @@ from typing import Dict
 import sys
 import json
 
+schema_name = "docgen-api-schema.json"
+
+
+def check_schema(api: Dict):
+    from jsonschema import validate
+
+    script_dir = Path(sys.path[0])
+    schema_file = script_dir / schema_name
+
+    if not schema_file.exists():
+        raise FileNotFoundError(f"couldn't locate docgen api schema: {schema_file}")
+
+    with schema_file.open() as f:
+        schema = json.load(f)
+        validate(api, schema=schema)
+
 
 def load_api(hname: str) -> Dict:
     p = Path(__file__).parent / Path(hname).with_suffix(".json")
@@ -23,11 +39,7 @@ def load_api(hname: str) -> Dict:
 # TODO: we may need to get more sophisticated for less generic implementations.
 # Does libc/src/{hname minus .h suffix}/{fname}.cpp exist?
 def is_implemented(hname: str, fname: str) -> bool:
-    path = Path(
-        Path(__file__).parent.parent.parent,
-        "src",
-        hname.rstrip(".h")
-    )
+    path = Path(Path(__file__).parent.parent.parent, "src", hname.rstrip(".h"))
 
     if not path.exists():
         raise FileNotFoundError(f"implementation dir does not exist: {path}")
@@ -43,27 +55,7 @@ def is_implemented(hname: str, fname: str) -> bool:
     return False
 
 
-def print_functions(header: str, functions: Dict):
-    for key in sorted(functions.keys()):
-        print(f"  * - {key}")
-
-        if is_implemented(header, key):
-            print("    - |check|")
-        else:
-            print("    -")
-
-        # defined is optional. Having any content is optional.
-        if functions[key] is not None and "defined" in functions[key]:
-            print(f'    - {functions[key]["defined"]}')
-        else:
-            print("    -")
-
-
-def print_header(header: str, api: Dict):
-    print(".. include:: check.rst\n")
-    fns = f"{header} Functions"
-    print(fns)
-    print("=" * (len(fns)))
+def print_tbl_dir():
     print(
         f"""
 .. list-table::
@@ -75,19 +67,82 @@ def print_header(header: str, api: Dict):
     - Implemented
     - Standard"""
     )
-    # TODO: how do we want to signal implementation of macros?
-    print_functions(header, api["functions"])
+
+
+def print_functions(header: str, functions: Dict):
+    tbl_hdr = "Functions"
+    print(tbl_hdr)
+    print("=" * len(tbl_hdr))
+
+    print_tbl_dir()
+
+    for key in sorted(functions.keys()):
+        print(f"  * - {key}")
+
+        if is_implemented(header, key):
+            print("    - |check|")
+        else:
+            print("    -")
+
+        # the object is either null or is an object with the "defined" property
+        if functions[key] is not None and "defined" in functions[key]:
+            print(f'    - {functions[key]["defined"]}')
+        else:
+            print("    -")
+
+
+def print_macros(macros: Dict):
+    tbl_hdr = "Macros"
+    print(tbl_hdr)
+    print("=" * len(tbl_hdr))
+
+    print_tbl_dir()
+
+    for key in sorted(macros.keys()):
+        print("  * - " + key)
+
+        if macros[key]["implemented"]:
+            print("    - |check|")
+        else:
+            print("    -")
+
+        print("    - " + macros[key]["defined"])
+
+
+def print_header(header: str, api: Dict):
+    print(".. include:: check.rst\n")
+
+    print("=" * len(header))
+    print(header)
+    print("=" * len(header))
+    print()
+
+    # the macro and function sections are both optional
+    if "macros" in api:
+        print_macros(api["macros"])
+        print()
+
+    if "functions" in api:
+        print_functions(header, api["functions"])
 
 
 def parse_args() -> Namespace:
     parser = ArgumentParser()
-    choices = [p.with_suffix(".h").name for p in Path(__file__).parent.glob("*.json")]
+    choices = [
+        p.with_suffix(".h").name
+        for p in Path(__file__).parent.glob("*.json")
+        if schema_name not in p.name
+    ]
     parser.add_argument("header_name", choices=choices)
+    parser.add_argument("--validate", action="store_true")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
     api = load_api(args.header_name)
+
+    if args.validate:
+        check_schema(api)
 
     print_header(args.header_name, api)

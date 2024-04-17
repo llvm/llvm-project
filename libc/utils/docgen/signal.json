@@ -1,16 +1,49 @@
 {
-  "macros": [
-    "SIG_DFL",
-    "SIG_ERR",
-    "SIG_IGN",
-    "SIGABRT",
-    "SIGFPE",
-    "SIGILL",
-    "SIGINT",
-    "SIGSEGV",
-    "SIGTERM"
-  ],
+  "macros": {
+    "SIG_DFL": {
+      "defined": "7.14.3",
+      "implemented": false
+    },
+    "SIG_ERR": {
+      "defined": "7.14.3",
+      "implemented": false
+    },
+    "SIG_IGN": {
+      "defined": "7.14.3",
+      "implemented": false
+    },
+    "SIGABRT": {
+      "defined": "7.14.3",
+      "implemented": true
+    },
+    "SIGFPE": {
+      "defined": "7.14.3",
+      "implemented": true
+    },
+    "SIGILL": {
+      "defined": "7.14.3",
+      "implemented": true
+    },
+    "SIGINT": {
+      "defined": "7.14.3",
+      "implemented": true
+    },
+    "SIGSEGV": {
+      "defined": "7.14.3",
+      "implemented": true
+    },
+    "SIGTERM": {
+      "defined": "7.14.3",
+      "implemented": true
+    }
+  },
   "functions": {
+    "signal": {
+      "defined": "7.14.1.1"
+    },
+    "raise": {
+      "defined": "7.14.2.1"
+    },
     "kill": null,
     "sigaction": null,
     "sigaddset": null,
@@ -18,12 +51,6 @@
     "sigdelset": null,
     "sigemptyset": null,
     "sigfillset": null,
-    "sigprocmask": null,
-    "signal": {
-      "defined": "7.14.1.1"
-    },
-    "raise": {
-      "defined": "7.14.2.1"
-    }
+    "sigprocmask": null
   }
 }

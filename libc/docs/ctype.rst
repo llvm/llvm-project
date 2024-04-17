@@ -1,7 +1,11 @@
 .. include:: check.rst
 
-ctype.h Functions
-=================
+=======
+ctype.h
+=======
+
+Functions
+=========
 
 .. list-table::
   :widths: auto

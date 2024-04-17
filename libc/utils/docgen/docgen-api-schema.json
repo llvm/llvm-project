@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "docgen API format",
+  "description": "This schema specifies the format used by docgen to automatically generate standard header implementation statuses for libc. See the other JSON files in $LLVM_PROJECT/libc/docgen/ for files implementing following this API format.",
+  "type": "object",
+  "properties": {
+    "macros": {
+      "description": "Implementation status of macros in this header",
+      "type": "object",
+      "patternProperties": {
+        ".+": {
+          "description": "Implementation status of a specific macro",
+          "type": "object",
+          "properties": {
+            "implemented": {
+              "description": "true or false, not computed automatically unlike individual functions described in the schema below",
+              "type": "boolean"
+            },
+            "defined": {
+              "$ref": "#/c-standard-reference"
+            }
+          },
+          "required": ["implemented", "defined"]
+        }
+      }
+    },
+    "functions": {
+      "patternProperties": {
+        ".+": {
+          "description": "Implementation status of functions in this header",
+          "type": ["object", "null"],
+          "properties": {
+            "defined": {
+              "$ref": "#/c-standard-reference"
+            }
+          },
+          "required": ["defined"]
+        }
+      }
+    }
+  },
+  "c-standard-reference": {
+    "description": "What subsection and paragraph number (if applicable) is this defined in the standard?",
+    "type": "string",
+    "pattern": "^7\\.([0-9]+\\.)*[0-9]+$"
+  }
+}
