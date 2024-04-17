@@ -10177,8 +10177,9 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
     // diagnostics and just checking for errors, e.g., during overload
     // resolution, return Incompatible to indicate the failure.
     if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers() &&
-        CheckObjCConversion(SourceRange(), Ty, E, CCK_ImplicitConversion,
-                            Diagnose, DiagnoseCFAudited) != ACR_okay) {
+        CheckObjCConversion(SourceRange(), Ty, E,
+                            CheckedConversionKind::Implicit, Diagnose,
+                            DiagnoseCFAudited) != ACR_okay) {
       if (!Diagnose)
         return Incompatible;
     }
@@ -12899,14 +12900,15 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
         Expr *E = LHS.get();
         if (getLangOpts().ObjCAutoRefCount)
           CheckObjCConversion(SourceRange(), RHSType, E,
-                              CCK_ImplicitConversion);
+                              CheckedConversionKind::Implicit);
         LHS = ImpCastExprToType(E, RHSType,
                                 RPT ? CK_BitCast :CK_CPointerToObjCPointerCast);
       }
       else {
         Expr *E = RHS.get();
         if (getLangOpts().ObjCAutoRefCount)
-          CheckObjCConversion(SourceRange(), LHSType, E, CCK_ImplicitConversion,
+          CheckObjCConversion(SourceRange(), LHSType, E,
+                              CheckedConversionKind::Implicit,
                               /*Diagnose=*/true,
                               /*DiagnoseCFAudited=*/false, Opc);
         RHS = ImpCastExprToType(E, LHSType,
