@@ -5242,7 +5242,7 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
     const llvm::Target *llvm_target =
         llvm::TargetRegistry::lookupTarget(llvm_triple.str(), error_str);
 
-    llvm::CodeGenOpt::Level optimization_level = llvm::CodeGenOpt::Level::None;
+    llvm::CodeGenOptLevel optimization_level = llvm::CodeGenOptLevel::None;
 
     // Create a target machine.
     llvm::TargetMachine *target_machine = llvm_target->createTargetMachine(
