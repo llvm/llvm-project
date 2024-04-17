@@ -1829,9 +1829,8 @@ void TaskloopOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: reductionByRefAttr, privateVars, privatizers.
   TaskloopOp::build(
-      builder, state, clauses.loopLBVar, clauses.loopUBVar, clauses.loopStepVar,
-      clauses.loopInclusiveAttr, clauses.ifVar, clauses.finalVar,
-      clauses.untiedAttr, clauses.mergeableAttr, clauses.inReductionVars,
+      builder, state, clauses.ifVar, clauses.finalVar, clauses.untiedAttr,
+      clauses.mergeableAttr, clauses.inReductionVars,
       makeArrayAttr(ctx, clauses.inReductionDeclSymbols), clauses.reductionVars,
       makeArrayAttr(ctx, clauses.reductionDeclSymbols), clauses.priorityVar,
       clauses.allocateVars, clauses.allocatorVars, clauses.grainsizeVar,
@@ -1869,6 +1868,16 @@ LogicalResult TaskloopOp::verify() {
     return emitError(
         "the grainsize clause and num_tasks clause are mutually exclusive and "
         "may not appear on the same taskloop directive");
+  }
+
+  if (!isWrapper())
+    return emitOpError() << "must be a loop wrapper";
+
+  if (LoopWrapperInterface nested = getNestedWrapper()) {
+    // Check for the allowed leaf constructs that may appear in a composite
+    // construct directly after TASKLOOP.
+    if (!isa<SimdLoopOp>(nested))
+      return emitError() << "only supported nested wrapper is 'omp.simdloop'";
   }
   return success();
 }
