@@ -1134,7 +1134,7 @@ private:
   OverloadingResult FailedOverloadResult;
 
   /// The candidate set created when initialization failed.
-  std::unique_ptr<OverloadCandidateSet> FailedCandidateSet;
+  OverloadCandidateSet FailedCandidateSet;
 
   /// The incomplete type that caused a failure.
   QualType FailedIncompleteType;
@@ -1403,9 +1403,7 @@ public:
   /// Retrieve a reference to the candidate set when overload
   /// resolution fails.
   OverloadCandidateSet &getFailedCandidateSet() {
-    assert(FailedCandidateSet &&
-           "this should have been allocated in the constructor!");
-    return *FailedCandidateSet;
+    return FailedCandidateSet;
   }
 
   /// Get the overloading result, for when the initialization
