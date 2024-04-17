@@ -1538,6 +1538,9 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
 
     if (!isVectorConfigInstr(MI)) {
       doUnion(Used, getDemanded(MI, MRI, ST));
+      if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
+          MI.modifiesRegister(RISCV::VTYPE))
+        NextMI = nullptr;
       continue;
     }
 
@@ -1551,7 +1554,9 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
         ToDelete.push_back(&MI);
         // Leave NextMI unchanged
         continue;
-      } else if (canMutatePriorConfig(MI, *NextMI, Used, *MRI)) {
+      }
+
+      if (canMutatePriorConfig(MI, *NextMI, Used, *MRI)) {
         if (!isVLPreservingConfig(*NextMI)) {
           MI.getOperand(0).setReg(NextMI->getOperand(0).getReg());
           MI.getOperand(0).setIsDead(false);

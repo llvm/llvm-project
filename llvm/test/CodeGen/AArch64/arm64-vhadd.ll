@@ -903,10 +903,10 @@ define <2 x i16> @hadd8x2_sext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl.2s v0, v0, #24
 ; CHECK-NEXT:    shl.2s v1, v1, #24
+; CHECK-NEXT:    movi d2, #0x00ffff0000ffff
 ; CHECK-NEXT:    sshr.2s v0, v0, #24
 ; CHECK-NEXT:    ssra.2s v0, v1, #24
-; CHECK-NEXT:    movi d1, #0x00ffff0000ffff
-; CHECK-NEXT:    and.8b v0, v0, v1
+; CHECK-NEXT:    and.8b v0, v0, v2
 ; CHECK-NEXT:    ushr.2s v0, v0, #1
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <2 x i8> %src1 to <2 x i16>
@@ -968,10 +968,10 @@ define <4 x i16> @rhadd8_sext_lsr(<4 x i8> %src1, <4 x i8> %src2) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl.4h v0, v0, #8
 ; CHECK-NEXT:    shl.4h v1, v1, #8
+; CHECK-NEXT:    movi.4h v2, #1
 ; CHECK-NEXT:    sshr.4h v0, v0, #8
 ; CHECK-NEXT:    ssra.4h v0, v1, #8
-; CHECK-NEXT:    movi.4h v1, #1
-; CHECK-NEXT:    add.4h v0, v0, v1
+; CHECK-NEXT:    add.4h v0, v0, v2
 ; CHECK-NEXT:    ushr.4h v0, v0, #1
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <4 x i8> %src1 to <4 x i16>
