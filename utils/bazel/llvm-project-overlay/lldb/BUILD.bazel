@@ -207,13 +207,28 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         ":Version",
+        "//lldb/source/Plugins:PluginExpressionParserClang",
         "//lldb/source/Plugins:PluginExpressionParserClangHeaders",
         "//lldb/source/Plugins:PluginsConfig",
+        "//llvm:AllTargetsDisassemblers",
         "//llvm:ExecutionEngine",
         "//llvm:MCJIT",
         "//llvm:Support",
         "//llvm:config",
-    ],
+    ] + [
+        "//lldb/source/Plugins:Plugin{}".format(x)
+        for x in DEFAULT_PLUGINS + DEFAULT_SCRIPT_PLUGINS
+    ] + select({
+        "@platforms//os:macos": [
+            "//lldb/source/Plugins:PluginProcessMacOSXKernel",
+            "//lldb/source/Plugins:PluginSymbolLocatorDebugSymbols",
+            "//lldb/source/Plugins:PluginSymbolVendorMacOSX",
+        ],
+        "@platforms//os:linux": [
+            "//lldb/source/Plugins:PluginProcessLinux",
+        ],
+        "//conditions:default": [],
+    }),
     alwayslink = True,
 )
 
@@ -695,23 +710,8 @@ cc_library(
     name = "liblldb.static",
     deps = [
         ":API",
-        ":Host",
         ":Interpreter",
-        "//llvm:AllTargetsDisassemblers",
-    ] + [
-        "//lldb/source/Plugins:Plugin{}".format(x)
-        for x in DEFAULT_PLUGINS + DEFAULT_SCRIPT_PLUGINS
-    ] + select({
-        "@platforms//os:macos": [
-            "//lldb/source/Plugins:PluginProcessMacOSXKernel",
-            "//lldb/source/Plugins:PluginSymbolLocatorDebugSymbols",
-            "//lldb/source/Plugins:PluginSymbolVendorMacOSX",
-        ],
-        "@platforms//os:linux": [
-            "//lldb/source/Plugins:PluginProcessLinux",
-        ],
-        "//conditions:default": [],
-    }),
+    ],
 )
 
 cc_shared_library(
@@ -894,6 +894,7 @@ cc_binary(
     deps = [
         ":Host",
         ":Initialization",
+        ":Interpreter",
         ":Utility",
         ":Version",
         ":lldb_server_opts_gen",
