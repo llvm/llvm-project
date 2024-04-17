@@ -320,6 +320,11 @@ private:
                                 ModuleDeps &Deps);
 };
 
+/// Resets codegen options that don't affect modules/PCH.
+void resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
+                               const LangOptions &LangOpts,
+                               CodeGenOptions &CGOpts);
+
 } // end namespace dependencies
 } // end namespace tooling
 } // end namespace clang
