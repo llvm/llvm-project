@@ -117,6 +117,11 @@ def POSIX : StandardSpec<"POSIX"> {
   ConstType ConstPThreadMutexTPtr = ConstType<PThreadMutexTPtr>;
   ConstType ConstRestrictedPThreadMutexTPtr = ConstType<RestrictedPThreadMutexTPtr>;
 
+  NamedType PThreadCondTType = NamedType<"pthread_cond_t">;
+  PtrType PThreadCondTPtr = PtrType<PThreadCondTType>;
+  NamedType PThreadCondAttrTType = NamedType<"pthread_condattr_t">;
+  PtrType PThreadCondAttrTPtr = PtrType<PThreadCondAttrTType>;
+
   PtrType PThreadTPtr = PtrType<PThreadTType>;
   RestrictedPtrType RestrictedPThreadTPtr = RestrictedPtrType<PThreadTType>;
 
@@ -981,6 +986,8 @@ def POSIX : StandardSpec<"POSIX"> {
     [
         AtForkCallbackT,
         PThreadAttrTType,
+        PThreadCondTType,
+        PThreadCondAttrTType,
         PThreadKeyT,
         PThreadMutexAttrTType,
         PThreadMutexTType,
@@ -1046,6 +1053,23 @@ def POSIX : StandardSpec<"POSIX"> {
           "pthread_attr_setstack",
           RetValSpec<IntType>,
           [ArgSpec<PThreadAttrTPtr>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
+      >,
+      FunctionSpec<
+          "pthread_cond_destroy",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadCondTPtr>]
+      >,
+      FunctionSpec<"pthread_cond_init",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadCondTPtr>, ArgSpec<PThreadCondAttrTPtr>]
+      >,
+      FunctionSpec<"pthread_cond_signal",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadCondTPtr>]
+      >,
+      FunctionSpec<"pthread_cond_wait",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadCondTPtr>, ArgSpec<PThreadMutexTPtr>]
       >,
       FunctionSpec<
           "pthread_create",
@@ -1522,9 +1546,31 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec SysTypes = HeaderSpec<
     "sys/types.h",
     [], // Macros
-    [BlkCntT, BlkSizeT, ClockIdT, DevT, GidT, InoT, ModeTType, NLinkT, OffTType, PidT,
-     PThreadAttrTType, PThreadKeyT, PThreadMutexTType, PThreadMutexAttrTType, PThreadOnceT, PThreadTType,
-     SizeTType, SSizeTType, SuSecondsT, TimeTType, UidT],
+    [
+      BlkCntT,
+      BlkSizeT,
+      ClockIdT,
+      DevT,
+      GidT,
+      InoT,
+      ModeTType,
+      NLinkT,
+      OffTType,
+      PThreadAttrTType,
+      PThreadCondAttrTType,
+      PThreadCondTType,
+      PThreadKeyT,
+      PThreadMutexAttrTType,
+      PThreadMutexTType,
+      PThreadOnceT,
+      PThreadTType,
+      PidT,
+      SSizeTType,
+      SizeTType,
+      SuSecondsT,
+      TimeTType,
+      UidT
+    ], // Types
     [], // Enumerations
     []  // Functions
   >;

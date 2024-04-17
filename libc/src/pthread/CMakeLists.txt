@@ -267,6 +267,54 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_cond_destroy
+  SRCS
+    pthread_cond_destroy.cpp
+  HDRS
+    pthread_cond_destroy.h
+  DEPENDS
+    libc.include.errno
+    libc.include.pthread
+    libc.include.threads
+)
+
+add_entrypoint_object(
+  pthread_cond_init
+  SRCS
+    pthread_cond_init.cpp
+  HDRS
+    pthread_cond_init.h
+  DEPENDS
+    libc.include.errno
+    libc.include.pthread
+    libc.include.threads
+)
+
+add_entrypoint_object(
+  pthread_cond_signal
+  SRCS
+    pthread_cond_signal.cpp
+  HDRS
+    pthread_cond_signal.h
+  DEPENDS
+    libc.include.errno
+    libc.include.pthread
+    libc.include.threads
+)
+
+add_entrypoint_object(
+  pthread_cond_wait
+  SRCS
+    pthread_cond_wait.cpp
+  HDRS
+    pthread_cond_wait.h
+  DEPENDS
+    libc.include.errno
+    libc.include.pthread
+    libc.include.threads
+)
+
+add_entrypoint_object(
   pthread_join
   SRCS
     pthread_join.cpp
