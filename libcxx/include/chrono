@@ -880,28 +880,48 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 
 // clang-format on
 
-#include <__chrono/calendar.h>
-#include <__chrono/convert_to_timespec.h>
-#include <__chrono/convert_to_tm.h>
-#include <__chrono/day.h>
+#include <__config>
+
 #include <__chrono/duration.h>
 #include <__chrono/file_clock.h>
-#include <__chrono/hh_mm_ss.h>
 #include <__chrono/high_resolution_clock.h>
-#include <__chrono/literals.h>
-#include <__chrono/month.h>
-#include <__chrono/month_weekday.h>
-#include <__chrono/monthday.h>
 #include <__chrono/steady_clock.h>
-#include <__chrono/sys_info.h>
 #include <__chrono/system_clock.h>
 #include <__chrono/time_point.h>
-#include <__chrono/weekday.h>
-#include <__chrono/year.h>
-#include <__chrono/year_month.h>
-#include <__chrono/year_month_day.h>
-#include <__chrono/year_month_weekday.h>
-#include <__config>
+
+#if _LIBCPP_STD_VER >= 20
+#  include <__chrono/calendar.h>
+#  include <__chrono/day.h>
+#  include <__chrono/hh_mm_ss.h>
+#  include <__chrono/literals.h>
+#  include <__chrono/month.h>
+#  include <__chrono/month_weekday.h>
+#  include <__chrono/monthday.h>
+#  include <__chrono/sys_info.h>
+#  include <__chrono/weekday.h>
+#  include <__chrono/year.h>
+#  include <__chrono/year_month.h>
+#  include <__chrono/year_month_day.h>
+#  include <__chrono/year_month_weekday.h>
+
+#  if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#    include <__chrono/formatter.h>
+#    include <__chrono/ostream.h>
+#    include <__chrono/parser_std_format_spec.h>
+#    include <__chrono/statically_widen.h>
+#  endif
+
+#  if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                            \
+      !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#    include <__chrono/leap_second.h>
+#    include <__chrono/time_zone.h>
+#    include <__chrono/time_zone_link.h>
+#    include <__chrono/tzdb.h>
+#    include <__chrono/tzdb_list.h>
+#  endif
+
+#endif
+
 #include <version>
 
 // standard-mandated includes
@@ -909,24 +929,15 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 // [time.syn]
 #include <compare>
 
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION) && _LIBCPP_STD_VER >= 20
-#  include <__chrono/formatter.h>
-#  include <__chrono/ostream.h>
-#  include <__chrono/parser_std_format_spec.h>
-#  include <__chrono/statically_widen.h>
-#endif
-
-#if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                              \
-    !defined(_LIBCPP_HAS_NO_LOCALIZATION)
-#  include <__chrono/leap_second.h>
-#  include <__chrono/time_zone.h>
-#  include <__chrono/time_zone_link.h>
-#  include <__chrono/tzdb.h>
-#  include <__chrono/tzdb_list.h>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
+#endif
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#  include <cstdint>
+#  include <stdexcept>
+#  include <string_view>
+#  include <vector>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20

@@ -6,10 +6,10 @@ func.func @complex_abs(%arg: complex<f32>) -> f32 {
   %abs = complex.abs %arg: complex<f32>
   return %abs : f32
 }
-// CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
 // CHECK: %[[REAL:.*]] = llvm.extractvalue %[[ARG]][0] : ![[C_TY]]
 // CHECK: %[[IMAG:.*]] = llvm.extractvalue %[[ARG]][1] : ![[C_TY]]
 
+// CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
 // CHECK: %[[ABS_REAL:.*]] = llvm.intr.fabs(%[[REAL]]) : (f32) -> f32
 // CHECK: %[[ABS_IMAG:.*]] = llvm.intr.fabs(%[[IMAG]]) : (f32) -> f32
 // CHECK: %[[MAX:.*]] = llvm.intr.maximum(%[[ABS_REAL]], %[[ABS_IMAG]]) : (f32, f32) -> f32

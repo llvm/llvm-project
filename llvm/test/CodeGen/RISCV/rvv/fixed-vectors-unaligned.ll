@@ -3,9 +3,9 @@
 ; RUN:   | FileCheck %s --check-prefixes=SLOW,RV32-SLOW
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=SLOW,RV64-SLOW
-; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+fast-unaligned-access -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+unaligned-vector-mem -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=FAST,RV32-FAST
-; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+fast-unaligned-access -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+unaligned-vector-mem -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=FAST,RV64-FAST
 
 define <4 x i32> @load_v4i32_align1(ptr %ptr) {
