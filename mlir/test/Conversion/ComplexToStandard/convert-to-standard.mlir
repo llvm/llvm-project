@@ -2187,3 +2187,16 @@ func.func @complex_tanh_nnan_ninf(%arg: complex<f32>) -> complex<f32> {
 
 // CHECK-COUNT-1: arith.select
 // CHECK-NOT: arith.select
+
+// -----
+
+// CHECK-LABEL:   func.func @complex_angle_with_fmf
+// CHECK-SAME: %[[ARG:.*]]: complex<f32>
+func.func @complex_angle_with_fmf(%arg: complex<f32>) -> f32 {
+  %angle = complex.angle %arg fastmath<nnan,contract> : complex<f32>
+  return %angle : f32
+}
+// CHECK: %[[REAL:.*]] = complex.re %[[ARG]] : complex<f32>
+// CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
+// CHECK: %[[RESULT:.*]] = math.atan2 %[[IMAG]], %[[REAL]] fastmath<nnan,contract> : f32
+// CHECK: return %[[RESULT]] : f32
