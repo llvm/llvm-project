@@ -22,28 +22,28 @@
 
 namespace clang {
 
-SemaObjC::SemaObjC(Sema &S) : SemaBase(S), NSNumberDecl(nullptr), NSValueDecl(nullptr), NSStringDecl(nullptr),
-      StringWithUTF8StringMethod(nullptr),
+SemaObjC::SemaObjC(Sema &S)
+    : SemaBase(S), NSNumberDecl(nullptr), NSValueDecl(nullptr),
+      NSStringDecl(nullptr), StringWithUTF8StringMethod(nullptr),
       ValueWithBytesObjCTypeMethod(nullptr), NSArrayDecl(nullptr),
       ArrayWithObjectsMethod(nullptr), NSDictionaryDecl(nullptr),
       DictionaryWithObjectsMethod(nullptr) {}
 
-StmtResult
-SemaObjC::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
-                                 Stmt *First, Expr *collection,
-                                 SourceLocation RParenLoc) {
+StmtResult SemaObjC::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
+                                                Stmt *First, Expr *collection,
+                                                SourceLocation RParenLoc) {
   ASTContext &Context = getASTContext();
   SemaRef.setFunctionHasBranchProtectedScope();
 
   ExprResult CollectionExprResult =
-    CheckObjCForCollectionOperand(ForLoc, collection);
+      CheckObjCForCollectionOperand(ForLoc, collection);
 
   if (First) {
     QualType FirstType;
     if (DeclStmt *DS = dyn_cast<DeclStmt>(First)) {
       if (!DS->isSingleDecl())
         return StmtError(Diag((*DS->decl_begin())->getLocation(),
-                         diag::err_toomany_element_decls));
+                              diag::err_toomany_element_decls));
 
       VarDecl *D = dyn_cast<VarDecl>(DS->getSingleDecl());
       if (!D || D->isInvalidDecl())
@@ -54,8 +54,8 @@ SemaObjC::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
       // declare identifiers for objects having storage class 'auto' or
       // 'register'.
       if (!D->hasLocalStorage())
-        return StmtError(Diag(D->getLocation(),
-                              diag::err_non_local_variable_decl_in_for));
+        return StmtError(
+            Diag(D->getLocation(), diag::err_non_local_variable_decl_in_for));
 
       // If the type contained 'auto', deduce the 'auto' to 'id'.
       if (FirstType->getContainedAutoType()) {
@@ -79,8 +79,7 @@ SemaObjC::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
         if (!SemaRef.inTemplateInstantiation()) {
           SourceLocation Loc =
               D->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
-          Diag(Loc, diag::warn_auto_var_is_id)
-            << D->getDeclName();
+          Diag(Loc, diag::warn_auto_var_is_id) << D->getDeclName();
         }
       }
 
@@ -91,23 +90,23 @@ SemaObjC::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
             Diag(First->getBeginLoc(), diag::err_selector_element_not_lvalue)
             << First->getSourceRange());
 
-      FirstType = static_cast<Expr*>(First)->getType();
+      FirstType = static_cast<Expr *>(First)->getType();
       if (FirstType.isConstQualified())
         Diag(ForLoc, diag::err_selector_element_const_type)
-          << FirstType << First->getSourceRange();
+            << FirstType << First->getSourceRange();
     }
     if (!FirstType->isDependentType() &&
         !FirstType->isObjCObjectPointerType() &&
         !FirstType->isBlockPointerType())
-        return StmtError(Diag(ForLoc, diag::err_selector_element_type)
-                           << FirstType << First->getSourceRange());
+      return StmtError(Diag(ForLoc, diag::err_selector_element_type)
+                       << FirstType << First->getSourceRange());
   }
 
   if (CollectionExprResult.isInvalid())
     return StmtError();
 
-  CollectionExprResult =
-      SemaRef.ActOnFinishFullExpr(CollectionExprResult.get(), /*DiscardedValue*/ false);
+  CollectionExprResult = SemaRef.ActOnFinishFullExpr(CollectionExprResult.get(),
+                                                     /*DiscardedValue*/ false);
   if (CollectionExprResult.isInvalid())
     return StmtError();
 
@@ -115,8 +114,8 @@ SemaObjC::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
                                              nullptr, ForLoc, RParenLoc);
 }
 
-ExprResult
-SemaObjC::CheckObjCForCollectionOperand(SourceLocation forLoc, Expr *collection) {
+ExprResult SemaObjC::CheckObjCForCollectionOperand(SourceLocation forLoc,
+                                                   Expr *collection) {
   ASTContext &Context = getASTContext();
   if (!collection)
     return ExprError();
@@ -127,7 +126,8 @@ SemaObjC::CheckObjCForCollectionOperand(SourceLocation forLoc, Expr *collection)
   collection = result.get();
 
   // Bail out early if we've got a type-dependent expression.
-  if (collection->isTypeDependent()) return collection;
+  if (collection->isTypeDependent())
+    return collection;
 
   // Perform normal l-value conversion.
   result = SemaRef.DefaultFunctionArrayLvalueConversion(collection);
@@ -138,10 +138,10 @@ SemaObjC::CheckObjCForCollectionOperand(SourceLocation forLoc, Expr *collection)
   // The operand needs to have object-pointer type.
   // TODO: should we do a contextual conversion?
   const ObjCObjectPointerType *pointerType =
-    collection->getType()->getAs<ObjCObjectPointerType>();
+      collection->getType()->getAs<ObjCObjectPointerType>();
   if (!pointerType)
     return Diag(forLoc, diag::err_collection_expr_type)
-             << collection->getType() << collection->getSourceRange();
+           << collection->getType() << collection->getSourceRange();
 
   // Check that the operand provides
   //   - countByEnumeratingWithState:objects:count:
@@ -153,7 +153,8 @@ SemaObjC::CheckObjCForCollectionOperand(SourceLocation forLoc, Expr *collection)
   if (iface &&
       (getLangOpts().ObjCAutoRefCount
            ? SemaRef.RequireCompleteType(forLoc, QualType(objectType, 0),
-                                 diag::err_arc_collection_forward, collection)
+                                         diag::err_arc_collection_forward,
+                                         collection)
            : !SemaRef.isCompleteType(forLoc, QualType(objectType, 0)))) {
     // Otherwise, if we have any useful type information, check that
     // the type declares the appropriate method.
@@ -168,7 +169,8 @@ SemaObjC::CheckObjCForCollectionOperand(SourceLocation forLoc, Expr *collection)
     // If there's an interface, look in both the public and private APIs.
     if (iface) {
       method = iface->lookupInstanceMethod(selector);
-      if (!method) method = iface->lookupPrivateMethod(selector);
+      if (!method)
+        method = iface->lookupPrivateMethod(selector);
     }
 
     // Also check protocol qualifiers.
@@ -179,7 +181,7 @@ SemaObjC::CheckObjCForCollectionOperand(SourceLocation forLoc, Expr *collection)
     // If we didn't find it anywhere, give up.
     if (!method) {
       Diag(forLoc, diag::warn_collection_expr_type)
-        << collection->getType() << selector << collection->getSourceRange();
+          << collection->getType() << selector << collection->getSourceRange();
     }
 
     // TODO: check for an incompatible signature?
@@ -192,16 +194,15 @@ SemaObjC::CheckObjCForCollectionOperand(SourceLocation forLoc, Expr *collection)
 StmtResult SemaObjC::FinishObjCForCollectionStmt(Stmt *S, Stmt *B) {
   if (!S || !B)
     return StmtError();
-  ObjCForCollectionStmt * ForStmt = cast<ObjCForCollectionStmt>(S);
+  ObjCForCollectionStmt *ForStmt = cast<ObjCForCollectionStmt>(S);
 
   ForStmt->setBody(B);
   return S;
 }
 
-StmtResult
-SemaObjC::ActOnObjCAtCatchStmt(SourceLocation AtLoc,
-                           SourceLocation RParen, Decl *Parm,
-                           Stmt *Body) {
+StmtResult SemaObjC::ActOnObjCAtCatchStmt(SourceLocation AtLoc,
+                                          SourceLocation RParen, Decl *Parm,
+                                          Stmt *Body) {
   ASTContext &Context = getASTContext();
   VarDecl *Var = cast_or_null<VarDecl>(Parm);
   if (Var && Var->isInvalidDecl())
@@ -210,15 +211,14 @@ SemaObjC::ActOnObjCAtCatchStmt(SourceLocation AtLoc,
   return new (Context) ObjCAtCatchStmt(AtLoc, RParen, Var, Body);
 }
 
-StmtResult
-SemaObjC::ActOnObjCAtFinallyStmt(SourceLocation AtLoc, Stmt *Body) {
+StmtResult SemaObjC::ActOnObjCAtFinallyStmt(SourceLocation AtLoc, Stmt *Body) {
   ASTContext &Context = getASTContext();
   return new (Context) ObjCAtFinallyStmt(AtLoc, Body);
 }
 
-StmtResult
-SemaObjC::ActOnObjCAtTryStmt(SourceLocation AtLoc, Stmt *Try,
-                         MultiStmtArg CatchStmts, Stmt *Finally) {
+StmtResult SemaObjC::ActOnObjCAtTryStmt(SourceLocation AtLoc, Stmt *Try,
+                                        MultiStmtArg CatchStmts,
+                                        Stmt *Finally) {
   ASTContext &Context = getASTContext();
   if (!getLangOpts().ObjCExceptions)
     Diag(AtLoc, diag::err_objc_exceptions_disabled) << "@try";
@@ -243,7 +243,8 @@ StmtResult SemaObjC::BuildObjCAtThrowStmt(SourceLocation AtLoc, Expr *Throw) {
     if (Result.isInvalid())
       return StmtError();
 
-    Result = SemaRef.ActOnFinishFullExpr(Result.get(), /*DiscardedValue*/ false);
+    Result =
+        SemaRef.ActOnFinishFullExpr(Result.get(), /*DiscardedValue*/ false);
     if (Result.isInvalid())
       return StmtError();
     Throw = Result.get();
@@ -262,9 +263,8 @@ StmtResult SemaObjC::BuildObjCAtThrowStmt(SourceLocation AtLoc, Expr *Throw) {
   return new (Context) ObjCAtThrowStmt(AtLoc, Throw);
 }
 
-StmtResult
-SemaObjC::ActOnObjCAtThrowStmt(SourceLocation AtLoc, Expr *Throw,
-                           Scope *CurScope) {
+StmtResult SemaObjC::ActOnObjCAtThrowStmt(SourceLocation AtLoc, Expr *Throw,
+                                          Scope *CurScope) {
   if (!getLangOpts().ObjCExceptions)
     Diag(AtLoc, diag::err_objc_exceptions_disabled) << "@throw";
 
@@ -280,8 +280,8 @@ SemaObjC::ActOnObjCAtThrowStmt(SourceLocation AtLoc, Expr *Throw,
   return BuildObjCAtThrowStmt(AtLoc, Throw);
 }
 
-ExprResult
-SemaObjC::ActOnObjCAtSynchronizedOperand(SourceLocation atLoc, Expr *operand) {
+ExprResult SemaObjC::ActOnObjCAtSynchronizedOperand(SourceLocation atLoc,
+                                                    Expr *operand) {
   ExprResult result = SemaRef.DefaultLvalueConversion(operand);
   if (result.isInvalid())
     return ExprError();
@@ -289,27 +289,27 @@ SemaObjC::ActOnObjCAtSynchronizedOperand(SourceLocation atLoc, Expr *operand) {
 
   // Make sure the expression type is an ObjC pointer or "void *".
   QualType type = operand->getType();
-  if (!type->isDependentType() &&
-      !type->isObjCObjectPointerType()) {
+  if (!type->isDependentType() && !type->isObjCObjectPointerType()) {
     const PointerType *pointerType = type->getAs<PointerType>();
     if (!pointerType || !pointerType->getPointeeType()->isVoidType()) {
       if (getLangOpts().CPlusPlus) {
         if (SemaRef.RequireCompleteType(atLoc, type,
-                                diag::err_incomplete_receiver_type))
+                                        diag::err_incomplete_receiver_type))
           return Diag(atLoc, diag::err_objc_synchronized_expects_object)
-                   << type << operand->getSourceRange();
+                 << type << operand->getSourceRange();
 
-        ExprResult result = SemaRef.PerformContextuallyConvertToObjCPointer(operand);
+        ExprResult result =
+            SemaRef.PerformContextuallyConvertToObjCPointer(operand);
         if (result.isInvalid())
           return ExprError();
         if (!result.isUsable())
           return Diag(atLoc, diag::err_objc_synchronized_expects_object)
-                   << type << operand->getSourceRange();
+                 << type << operand->getSourceRange();
 
         operand = result.get();
       } else {
-          return Diag(atLoc, diag::err_objc_synchronized_expects_object)
-                   << type << operand->getSourceRange();
+        return Diag(atLoc, diag::err_objc_synchronized_expects_object)
+               << type << operand->getSourceRange();
       }
     }
   }
@@ -318,27 +318,25 @@ SemaObjC::ActOnObjCAtSynchronizedOperand(SourceLocation atLoc, Expr *operand) {
   return SemaRef.ActOnFinishFullExpr(operand, /*DiscardedValue*/ false);
 }
 
-StmtResult
-SemaObjC::ActOnObjCAtSynchronizedStmt(SourceLocation AtLoc, Expr *SyncExpr,
-                                  Stmt *SyncBody) {
+StmtResult SemaObjC::ActOnObjCAtSynchronizedStmt(SourceLocation AtLoc,
+                                                 Expr *SyncExpr,
+                                                 Stmt *SyncBody) {
   ASTContext &Context = getASTContext();
   // We can't jump into or indirect-jump out of a @synchronized block.
   SemaRef.setFunctionHasBranchProtectedScope();
   return new (Context) ObjCAtSynchronizedStmt(AtLoc, SyncExpr, SyncBody);
 }
 
-StmtResult
-SemaObjC::ActOnObjCAutoreleasePoolStmt(SourceLocation AtLoc, Stmt *Body) {
+StmtResult SemaObjC::ActOnObjCAutoreleasePoolStmt(SourceLocation AtLoc,
+                                                  Stmt *Body) {
   ASTContext &Context = getASTContext();
   SemaRef.setFunctionHasBranchProtectedScope();
   return new (Context) ObjCAutoreleasePoolStmt(AtLoc, Body);
 }
 
 TypeResult SemaObjC::actOnObjCProtocolQualifierType(
-             SourceLocation lAngleLoc,
-             ArrayRef<Decl *> protocols,
-             ArrayRef<SourceLocation> protocolLocs,
-             SourceLocation rAngleLoc) {
+    SourceLocation lAngleLoc, ArrayRef<Decl *> protocols,
+    ArrayRef<SourceLocation> protocolLocs, SourceLocation rAngleLoc) {
   ASTContext &Context = getASTContext();
   // Form id<protocol-list>.
   QualType Result = Context.getObjCObjectType(
@@ -354,8 +352,8 @@ TypeResult SemaObjC::actOnObjCProtocolQualifierType(
   auto ObjCObjectPointerTL = ResultTL.castAs<ObjCObjectPointerTypeLoc>();
   ObjCObjectPointerTL.setStarLoc(SourceLocation()); // implicit
 
-  auto ObjCObjectTL = ObjCObjectPointerTL.getPointeeLoc()
-                        .castAs<ObjCObjectTypeLoc>();
+  auto ObjCObjectTL =
+      ObjCObjectPointerTL.getPointeeLoc().castAs<ObjCObjectTypeLoc>();
   ObjCObjectTL.setHasBaseTypeAsWritten(false);
   ObjCObjectTL.getBaseLoc().initialize(Context, SourceLocation());
 
@@ -374,16 +372,11 @@ TypeResult SemaObjC::actOnObjCProtocolQualifierType(
 }
 
 TypeResult SemaObjC::actOnObjCTypeArgsAndProtocolQualifiers(
-             Scope *S,
-             SourceLocation Loc,
-             ParsedType BaseType,
-             SourceLocation TypeArgsLAngleLoc,
-             ArrayRef<ParsedType> TypeArgs,
-             SourceLocation TypeArgsRAngleLoc,
-             SourceLocation ProtocolLAngleLoc,
-             ArrayRef<Decl *> Protocols,
-             ArrayRef<SourceLocation> ProtocolLocs,
-             SourceLocation ProtocolRAngleLoc) {
+    Scope *S, SourceLocation Loc, ParsedType BaseType,
+    SourceLocation TypeArgsLAngleLoc, ArrayRef<ParsedType> TypeArgs,
+    SourceLocation TypeArgsRAngleLoc, SourceLocation ProtocolLAngleLoc,
+    ArrayRef<Decl *> Protocols, ArrayRef<SourceLocation> ProtocolLocs,
+    SourceLocation ProtocolRAngleLoc) {
   ASTContext &Context = getASTContext();
   TypeSourceInfo *BaseTypeInfo = nullptr;
   QualType T = SemaRef.GetTypeFromParser(BaseType, &BaseTypeInfo);
@@ -485,22 +478,21 @@ TypeResult SemaObjC::actOnObjCTypeArgsAndProtocolQualifiers(
   return SemaRef.CreateParsedType(Result, ResultTInfo);
 }
 
-QualType SemaObjC::BuildObjCTypeParamType(const ObjCTypeParamDecl *Decl,
-                                      SourceLocation ProtocolLAngleLoc,
-                                      ArrayRef<ObjCProtocolDecl *> Protocols,
-                                      ArrayRef<SourceLocation> ProtocolLocs,
-                                      SourceLocation ProtocolRAngleLoc,
-                                      bool FailOnError) {
+QualType SemaObjC::BuildObjCTypeParamType(
+    const ObjCTypeParamDecl *Decl, SourceLocation ProtocolLAngleLoc,
+    ArrayRef<ObjCProtocolDecl *> Protocols,
+    ArrayRef<SourceLocation> ProtocolLocs, SourceLocation ProtocolRAngleLoc,
+    bool FailOnError) {
   ASTContext &Context = getASTContext();
   QualType Result = QualType(Decl->getTypeForDecl(), 0);
   if (!Protocols.empty()) {
     bool HasError;
-    Result = Context.applyObjCProtocolQualifiers(Result, Protocols,
-                                                 HasError);
+    Result = Context.applyObjCProtocolQualifiers(Result, Protocols, HasError);
     if (HasError) {
       Diag(SourceLocation(), diag::err_invalid_protocol_qualifiers)
-        << SourceRange(ProtocolLAngleLoc, ProtocolRAngleLoc);
-      if (FailOnError) Result = QualType();
+          << SourceRange(ProtocolLAngleLoc, ProtocolRAngleLoc);
+      if (FailOnError)
+        Result = QualType();
     }
     if (FailOnError && Result.isNull())
       return QualType();
@@ -517,9 +509,7 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
   // We can only apply type arguments to an Objective-C class type.
   const auto *objcObjectType = type->getAs<ObjCObjectType>();
   if (!objcObjectType || !objcObjectType->getInterface()) {
-    S.Diag(loc, diag::err_objc_type_args_non_class)
-      << type
-      << typeArgsRange;
+    S.Diag(loc, diag::err_objc_type_args_non_class) << type << typeArgsRange;
 
     if (failOnError)
       return QualType();
@@ -531,8 +521,7 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
   ObjCTypeParamList *typeParams = objcClass->getTypeParamList();
   if (!typeParams) {
     S.Diag(loc, diag::err_objc_type_args_non_parameterized_class)
-      << objcClass->getDeclName()
-      << FixItHint::CreateRemoval(typeArgsRange);
+        << objcClass->getDeclName() << FixItHint::CreateRemoval(typeArgsRange);
 
     if (failOnError)
       return QualType();
@@ -543,8 +532,7 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
   // The type must not already be specialized.
   if (objcObjectType->isSpecialized()) {
     S.Diag(loc, diag::err_objc_type_args_specialized_class)
-      << type
-      << FixItHint::CreateRemoval(typeArgsRange);
+        << type << FixItHint::CreateRemoval(typeArgsRange);
 
     if (failOnError)
       return QualType();
@@ -602,12 +590,9 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
       } else {
         // Too many arguments.
         S.Diag(loc, diag::err_objc_type_args_wrong_arity)
-          << false
-          << objcClass->getDeclName()
-          << (unsigned)typeArgs.size()
-          << numTypeParams;
-        S.Diag(objcClass->getLocation(), diag::note_previous_decl)
-          << objcClass;
+            << false << objcClass->getDeclName() << (unsigned)typeArgs.size()
+            << numTypeParams;
+        S.Diag(objcClass->getLocation(), diag::note_previous_decl) << objcClass;
 
         if (failOnError)
           return QualType();
@@ -646,7 +631,7 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
              diag::err_objc_type_arg_does_not_match_bound)
           << typeArg << bound << typeParam->getDeclName();
       S.Diag(typeParam->getLocation(), diag::note_objc_type_param_here)
-        << typeParam->getDeclName();
+          << typeParam->getDeclName();
 
       if (failOnError)
         return QualType();
@@ -674,7 +659,7 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
              diag::err_objc_type_arg_does_not_match_bound)
           << typeArg << bound << typeParam->getDeclName();
       S.Diag(typeParam->getLocation(), diag::note_objc_type_param_here)
-        << typeParam->getDeclName();
+          << typeParam->getDeclName();
 
       if (failOnError)
         return QualType();
@@ -706,12 +691,9 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
   // Make sure we didn't have the wrong number of arguments.
   if (!anyPackExpansions && finalTypeArgs.size() != numTypeParams) {
     S.Diag(loc, diag::err_objc_type_args_wrong_arity)
-      << (typeArgs.size() < typeParams->size())
-      << objcClass->getDeclName()
-      << (unsigned)finalTypeArgs.size()
-      << (unsigned)numTypeParams;
-    S.Diag(objcClass->getLocation(), diag::note_previous_decl)
-      << objcClass;
+        << (typeArgs.size() < typeParams->size()) << objcClass->getDeclName()
+        << (unsigned)finalTypeArgs.size() << (unsigned)numTypeParams;
+    S.Diag(objcClass->getLocation(), diag::note_previous_decl) << objcClass;
 
     if (failOnError)
       return QualType();
@@ -720,7 +702,7 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
   }
 
   // Success. Form the specialized type.
-  return S.Context.getObjCObjectType(type, finalTypeArgs, { }, false);
+  return S.Context.getObjCObjectType(type, finalTypeArgs, {}, false);
 }
 
 QualType SemaObjC::BuildObjCObjectType(
@@ -742,12 +724,12 @@ QualType SemaObjC::BuildObjCObjectType(
 
   if (!Protocols.empty()) {
     bool HasError;
-    Result = Context.applyObjCProtocolQualifiers(Result, Protocols,
-                                                 HasError);
+    Result = Context.applyObjCProtocolQualifiers(Result, Protocols, HasError);
     if (HasError) {
       Diag(Loc, diag::err_invalid_protocol_qualifiers)
-        << SourceRange(ProtocolLAngleLoc, ProtocolRAngleLoc);
-      if (FailOnError) Result = QualType();
+          << SourceRange(ProtocolLAngleLoc, ProtocolRAngleLoc);
+      if (FailOnError)
+        Result = QualType();
     }
     if (FailOnError && Result.isNull())
       return QualType();
@@ -824,19 +806,22 @@ static bool findRetainCycleOwner(Sema &S, Expr *e, RetainCycleOwner &owner) {
       if (!findRetainCycleOwner(S, ref->getBase(), owner))
         return false;
 
-      if (ref->isFreeIvar()) owner.setLocsFrom(ref);
+      if (ref->isFreeIvar())
+        owner.setLocsFrom(ref);
       owner.Indirect = true;
       return true;
     }
 
     if (DeclRefExpr *ref = dyn_cast<DeclRefExpr>(e)) {
       VarDecl *var = dyn_cast<VarDecl>(ref->getDecl());
-      if (!var) return false;
+      if (!var)
+        return false;
       return considerVariable(var, ref, owner);
     }
 
     if (MemberExpr *member = dyn_cast<MemberExpr>(e)) {
-      if (member->isArrow()) return false;
+      if (member->isArrow())
+        return false;
 
       // Don't count this as an indirect ownership.
       e = member->getBase();
@@ -845,17 +830,18 @@ static bool findRetainCycleOwner(Sema &S, Expr *e, RetainCycleOwner &owner) {
 
     if (PseudoObjectExpr *pseudo = dyn_cast<PseudoObjectExpr>(e)) {
       // Only pay attention to pseudo-objects on property references.
-      ObjCPropertyRefExpr *pre
-        = dyn_cast<ObjCPropertyRefExpr>(pseudo->getSyntacticForm()
-                                              ->IgnoreParens());
-      if (!pre) return false;
-      if (pre->isImplicitProperty()) return false;
+      ObjCPropertyRefExpr *pre = dyn_cast<ObjCPropertyRefExpr>(
+          pseudo->getSyntacticForm()->IgnoreParens());
+      if (!pre)
+        return false;
+      if (pre->isImplicitProperty())
+        return false;
       ObjCPropertyDecl *property = pre->getExplicitProperty();
       if (!property->isRetaining() &&
           !(property->getPropertyIvarDecl() &&
-            property->getPropertyIvarDecl()->getType()
-              .getObjCLifetime() == Qualifiers::OCL_Strong))
-          return false;
+            property->getPropertyIvarDecl()->getType().getObjCLifetime() ==
+                Qualifiers::OCL_Strong))
+        return false;
 
       owner.Indirect = true;
       if (pre->isSuperReceiver()) {
@@ -866,8 +852,8 @@ static bool findRetainCycleOwner(Sema &S, Expr *e, RetainCycleOwner &owner) {
         owner.Range = pre->getSourceRange();
         return true;
       }
-      e = const_cast<Expr*>(cast<OpaqueValueExpr>(pre->getBase())
-                              ->getSourceExpr());
+      e = const_cast<Expr *>(
+          cast<OpaqueValueExpr>(pre->getBase())->getSourceExpr());
       continue;
     }
 
@@ -879,56 +865,57 @@ static bool findRetainCycleOwner(Sema &S, Expr *e, RetainCycleOwner &owner) {
 
 namespace {
 
-  struct FindCaptureVisitor : EvaluatedExprVisitor<FindCaptureVisitor> {
-    VarDecl *Variable;
-    Expr *Capturer = nullptr;
-    bool VarWillBeReased = false;
+struct FindCaptureVisitor : EvaluatedExprVisitor<FindCaptureVisitor> {
+  VarDecl *Variable;
+  Expr *Capturer = nullptr;
+  bool VarWillBeReased = false;
 
-    FindCaptureVisitor(ASTContext &Context, VarDecl *variable)
-        : EvaluatedExprVisitor<FindCaptureVisitor>(Context),
-          Variable(variable) {}
+  FindCaptureVisitor(ASTContext &Context, VarDecl *variable)
+      : EvaluatedExprVisitor<FindCaptureVisitor>(Context), Variable(variable) {}
 
-    void VisitDeclRefExpr(DeclRefExpr *ref) {
-      if (ref->getDecl() == Variable && !Capturer)
-        Capturer = ref;
-    }
+  void VisitDeclRefExpr(DeclRefExpr *ref) {
+    if (ref->getDecl() == Variable && !Capturer)
+      Capturer = ref;
+  }
 
-    void VisitObjCIvarRefExpr(ObjCIvarRefExpr *ref) {
-      if (Capturer) return;
-      Visit(ref->getBase());
-      if (Capturer && ref->isFreeIvar())
-        Capturer = ref;
-    }
+  void VisitObjCIvarRefExpr(ObjCIvarRefExpr *ref) {
+    if (Capturer)
+      return;
+    Visit(ref->getBase());
+    if (Capturer && ref->isFreeIvar())
+      Capturer = ref;
+  }
 
-    void VisitBlockExpr(BlockExpr *block) {
-      // Look inside nested blocks
-      if (block->getBlockDecl()->capturesVariable(Variable))
-        Visit(block->getBlockDecl()->getBody());
-    }
+  void VisitBlockExpr(BlockExpr *block) {
+    // Look inside nested blocks
+    if (block->getBlockDecl()->capturesVariable(Variable))
+      Visit(block->getBlockDecl()->getBody());
+  }
 
-    void VisitOpaqueValueExpr(OpaqueValueExpr *OVE) {
-      if (Capturer) return;
-      if (OVE->getSourceExpr())
-        Visit(OVE->getSourceExpr());
-    }
+  void VisitOpaqueValueExpr(OpaqueValueExpr *OVE) {
+    if (Capturer)
+      return;
+    if (OVE->getSourceExpr())
+      Visit(OVE->getSourceExpr());
+  }
 
-    void VisitBinaryOperator(BinaryOperator *BinOp) {
-      if (!Variable || VarWillBeReased || BinOp->getOpcode() != BO_Assign)
+  void VisitBinaryOperator(BinaryOperator *BinOp) {
+    if (!Variable || VarWillBeReased || BinOp->getOpcode() != BO_Assign)
+      return;
+    Expr *LHS = BinOp->getLHS();
+    if (const DeclRefExpr *DRE = dyn_cast_or_null<DeclRefExpr>(LHS)) {
+      if (DRE->getDecl() != Variable)
         return;
-      Expr *LHS = BinOp->getLHS();
-      if (const DeclRefExpr *DRE = dyn_cast_or_null<DeclRefExpr>(LHS)) {
-        if (DRE->getDecl() != Variable)
-          return;
-        if (Expr *RHS = BinOp->getRHS()) {
-          RHS = RHS->IgnoreParenCasts();
-          std::optional<llvm::APSInt> Value;
-          VarWillBeReased =
-              (RHS && (Value = RHS->getIntegerConstantExpr(Context)) &&
-               *Value == 0);
-        }
+      if (Expr *RHS = BinOp->getRHS()) {
+        RHS = RHS->IgnoreParenCasts();
+        std::optional<llvm::APSInt> Value;
+        VarWillBeReased =
+            (RHS && (Value = RHS->getIntegerConstantExpr(Context)) &&
+             *Value == 0);
       }
     }
-  };
+  }
+};
 
 } // namespace
 
@@ -975,15 +962,16 @@ static void diagnoseRetainCycle(Sema &S, Expr *capturer,
   assert(owner.Variable && owner.Loc.isValid());
 
   S.Diag(capturer->getExprLoc(), diag::warn_arc_retain_cycle)
-    << owner.Variable << capturer->getSourceRange();
+      << owner.Variable << capturer->getSourceRange();
   S.Diag(owner.Loc, diag::note_arc_retain_cycle_owner)
-    << owner.Indirect << owner.Range;
+      << owner.Indirect << owner.Range;
 }
 
 /// Check for a keyword selector that starts with the word 'add' or
 /// 'set'.
 static bool isSetterLikeSelector(Selector sel) {
-  if (sel.isUnarySelector()) return false;
+  if (sel.isUnarySelector())
+    return false;
 
   StringRef str = sel.getNameForSlot(0);
   str = str.ltrim('_');
@@ -997,15 +985,15 @@ static bool isSetterLikeSelector(Selector sel) {
   } else
     return false;
 
-  if (str.empty()) return true;
+  if (str.empty())
+    return true;
   return !isLowercase(str.front());
 }
 
 static std::optional<int>
 GetNSMutableArrayArgumentIndex(SemaObjC &S, ObjCMessageExpr *Message) {
   bool IsMutableArray = S.NSAPIObj->isSubclassOfNSClass(
-                                                Message->getReceiverInterface(),
-                                                NSAPI::ClassId_NSMutableArray);
+      Message->getReceiverInterface(), NSAPI::ClassId_NSMutableArray);
   if (!IsMutableArray) {
     return std::nullopt;
   }
@@ -1021,15 +1009,15 @@ GetNSMutableArrayArgumentIndex(SemaObjC &S, ObjCMessageExpr *Message) {
   NSAPI::NSArrayMethodKind MK = *MKOpt;
 
   switch (MK) {
-    case NSAPI::NSMutableArr_addObject:
-    case NSAPI::NSMutableArr_insertObjectAtIndex:
-    case NSAPI::NSMutableArr_setObjectAtIndexedSubscript:
-      return 0;
-    case NSAPI::NSMutableArr_replaceObjectAtIndex:
-      return 1;
+  case NSAPI::NSMutableArr_addObject:
+  case NSAPI::NSMutableArr_insertObjectAtIndex:
+  case NSAPI::NSMutableArr_setObjectAtIndexedSubscript:
+    return 0;
+  case NSAPI::NSMutableArr_replaceObjectAtIndex:
+    return 1;
 
-    default:
-      return std::nullopt;
+  default:
+    return std::nullopt;
   }
 
   return std::nullopt;
@@ -1038,8 +1026,7 @@ GetNSMutableArrayArgumentIndex(SemaObjC &S, ObjCMessageExpr *Message) {
 static std::optional<int>
 GetNSMutableDictionaryArgumentIndex(SemaObjC &S, ObjCMessageExpr *Message) {
   bool IsMutableDictionary = S.NSAPIObj->isSubclassOfNSClass(
-                                            Message->getReceiverInterface(),
-                                            NSAPI::ClassId_NSMutableDictionary);
+      Message->getReceiverInterface(), NSAPI::ClassId_NSMutableDictionary);
   if (!IsMutableDictionary) {
     return std::nullopt;
   }
@@ -1055,13 +1042,13 @@ GetNSMutableDictionaryArgumentIndex(SemaObjC &S, ObjCMessageExpr *Message) {
   NSAPI::NSDictionaryMethodKind MK = *MKOpt;
 
   switch (MK) {
-    case NSAPI::NSMutableDict_setObjectForKey:
-    case NSAPI::NSMutableDict_setValueForKey:
-    case NSAPI::NSMutableDict_setObjectForKeyedSubscript:
-      return 0;
+  case NSAPI::NSMutableDict_setObjectForKey:
+  case NSAPI::NSMutableDict_setValueForKey:
+  case NSAPI::NSMutableDict_setObjectForKeyedSubscript:
+    return 0;
 
-    default:
-      return std::nullopt;
+  default:
+    return std::nullopt;
   }
 
   return std::nullopt;
@@ -1070,12 +1057,10 @@ GetNSMutableDictionaryArgumentIndex(SemaObjC &S, ObjCMessageExpr *Message) {
 static std::optional<int> GetNSSetArgumentIndex(SemaObjC &S,
                                                 ObjCMessageExpr *Message) {
   bool IsMutableSet = S.NSAPIObj->isSubclassOfNSClass(
-                                                Message->getReceiverInterface(),
-                                                NSAPI::ClassId_NSMutableSet);
+      Message->getReceiverInterface(), NSAPI::ClassId_NSMutableSet);
 
   bool IsMutableOrderedSet = S.NSAPIObj->isSubclassOfNSClass(
-                                            Message->getReceiverInterface(),
-                                            NSAPI::ClassId_NSMutableOrderedSet);
+      Message->getReceiverInterface(), NSAPI::ClassId_NSMutableOrderedSet);
   if (!IsMutableSet && !IsMutableOrderedSet) {
     return std::nullopt;
   }
@@ -1091,13 +1076,13 @@ static std::optional<int> GetNSSetArgumentIndex(SemaObjC &S,
   NSAPI::NSSetMethodKind MK = *MKOpt;
 
   switch (MK) {
-    case NSAPI::NSMutableSet_addObject:
-    case NSAPI::NSOrderedSet_setObjectAtIndex:
-    case NSAPI::NSOrderedSet_setObjectAtIndexedSubscript:
-    case NSAPI::NSOrderedSet_insertObjectAtIndex:
-      return 0;
-    case NSAPI::NSOrderedSet_replaceObjectAtIndexWithObject:
-      return 1;
+  case NSAPI::NSMutableSet_addObject:
+  case NSAPI::NSOrderedSet_setObjectAtIndex:
+  case NSAPI::NSOrderedSet_setObjectAtIndexedSubscript:
+  case NSAPI::NSOrderedSet_insertObjectAtIndex:
+    return 0;
+  case NSAPI::NSOrderedSet_replaceObjectAtIndexWithObject:
+    return 1;
   }
 
   return std::nullopt;
@@ -1128,7 +1113,7 @@ void SemaObjC::CheckObjCCircularContainer(ObjCMessageExpr *Message) {
       if (ArgRE->isObjCSelfExpr()) {
         Diag(Message->getSourceRange().getBegin(),
              diag::warn_objc_circular_container)
-          << ArgRE->getDecl() << StringRef("'super'");
+            << ArgRE->getDecl() << StringRef("'super'");
       }
     }
   } else {
@@ -1144,11 +1129,11 @@ void SemaObjC::CheckObjCCircularContainer(ObjCMessageExpr *Message) {
           ValueDecl *Decl = ReceiverRE->getDecl();
           Diag(Message->getSourceRange().getBegin(),
                diag::warn_objc_circular_container)
-            << Decl << Decl;
+              << Decl << Decl;
           if (!ArgRE->isObjCSelfExpr()) {
             Diag(Decl->getLocation(),
                  diag::note_objc_circular_container_declared_here)
-              << Decl;
+                << Decl;
           }
         }
       }
@@ -1158,10 +1143,10 @@ void SemaObjC::CheckObjCCircularContainer(ObjCMessageExpr *Message) {
           ObjCIvarDecl *Decl = IvarRE->getDecl();
           Diag(Message->getSourceRange().getBegin(),
                diag::warn_objc_circular_container)
-            << Decl << Decl;
+              << Decl << Decl;
           Diag(Decl->getLocation(),
                diag::note_objc_circular_container_declared_here)
-            << Decl;
+              << Decl;
         }
       }
     }
@@ -1255,13 +1240,13 @@ bool SemaObjC::CheckObjCString(Expr *Arg) {
 }
 
 bool SemaObjC::CheckObjCMethodCall(ObjCMethodDecl *Method, SourceLocation lbrac,
-                               ArrayRef<const Expr *> Args) {
+                                   ArrayRef<const Expr *> Args) {
   Sema::VariadicCallType CallType =
       Method->isVariadic() ? Sema::VariadicMethod : Sema::VariadicDoesNotApply;
 
   SemaRef.checkCall(Method, nullptr, /*ThisArg=*/nullptr, Args,
-            /*IsMemberFunction=*/false, lbrac, Method->getSourceRange(),
-            CallType);
+                    /*IsMemberFunction=*/false, lbrac, Method->getSourceRange(),
+                    CallType);
 
   SemaRef.CheckTCBEnforcement(lbrac, Method);
 
@@ -1285,7 +1270,8 @@ IdentifierInfo *SemaObjC::getNSErrorIdent() {
 }
 
 void SemaObjC::ActOnObjCContainerStartDefinition(ObjCContainerDecl *IDecl) {
-  assert(IDecl->getLexicalParent() == SemaRef.CurContext &&
+  assert(
+      IDecl->getLexicalParent() == SemaRef.CurContext &&
       "The next DeclContext should be lexically contained in the current one.");
   SemaRef.CurContext = IDecl;
 }
@@ -1295,7 +1281,8 @@ void SemaObjC::ActOnObjCContainerFinishDefinition() {
   SemaRef.PopDeclContext();
 }
 
-void SemaObjC::ActOnObjCTemporaryExitContainerContext(ObjCContainerDecl *ObjCCtx) {
+void SemaObjC::ActOnObjCTemporaryExitContainerContext(
+    ObjCContainerDecl *ObjCCtx) {
   assert(ObjCCtx == SemaRef.CurContext && "Mismatch of container contexts");
   SemaRef.OriginalLexicalContext = ObjCCtx;
   ActOnObjCContainerFinishDefinition();
@@ -1308,10 +1295,10 @@ void SemaObjC::ActOnObjCReenterContainerContext(ObjCContainerDecl *ObjCCtx) {
 
 /// Find the protocol with the given name, if any.
 ObjCProtocolDecl *SemaObjC::LookupProtocol(IdentifierInfo *II,
-                                       SourceLocation IdLoc,
-                                       RedeclarationKind Redecl) {
+                                           SourceLocation IdLoc,
+                                           RedeclarationKind Redecl) {
   Decl *D = SemaRef.LookupSingleName(SemaRef.TUScope, II, IdLoc,
-                             Sema::LookupObjCProtocolName, Redecl);
+                                     Sema::LookupObjCProtocolName, Redecl);
   return cast_or_null<ObjCProtocolDecl>(D);
 }
 
@@ -1325,7 +1312,7 @@ ObjCProtocolDecl *SemaObjC::LookupProtocol(IdentifierInfo *II,
 /// \param ConvertedType The type that will be produced after applying
 /// this conversion.
 bool SemaObjC::isObjCWritebackConversion(QualType FromType, QualType ToType,
-                                     QualType &ConvertedType) {
+                                         QualType &ConvertedType) {
   ASTContext &Context = getASTContext();
   if (!getLangOpts().ObjCAutoRefCount ||
       Context.hasSameUnqualifiedType(FromType, ToType))
@@ -1373,7 +1360,7 @@ bool SemaObjC::isObjCWritebackConversion(QualType FromType, QualType ToType,
   if (Context.typesAreCompatible(FromPointee, ToPointee))
     FromPointee = ToPointee;
   else if (!SemaRef.isObjCPointerConversion(FromPointee, ToPointee, FromPointee,
-                                    IncompatibleObjC))
+                                            IncompatibleObjC))
     return false;
 
   /// Construct the type we're converting to, which is a pointer to
@@ -1394,32 +1381,30 @@ SemaObjC::ObjCSubscriptKind SemaObjC::CheckSubscriptingKind(Expr *FromE) {
   // If we don't have a class type in C++, there's no way we can get an
   // expression of integral or enumeration type.
   const RecordType *RecordTy = T->getAs<RecordType>();
-  if (!RecordTy &&
-      (T->isObjCObjectPointerType() || T->isVoidPointerType()))
+  if (!RecordTy && (T->isObjCObjectPointerType() || T->isVoidPointerType()))
     // All other scalar cases are assumed to be dictionary indexing which
     // caller handles, with diagnostics if needed.
     return SemaObjC::OS_Dictionary;
-  if (!getLangOpts().CPlusPlus ||
-      !RecordTy || RecordTy->isIncompleteType()) {
+  if (!getLangOpts().CPlusPlus || !RecordTy || RecordTy->isIncompleteType()) {
     // No indexing can be done. Issue diagnostics and quit.
     const Expr *IndexExpr = FromE->IgnoreParenImpCasts();
     if (isa<StringLiteral>(IndexExpr))
       Diag(FromE->getExprLoc(), diag::err_objc_subscript_pointer)
-        << T << FixItHint::CreateInsertion(FromE->getExprLoc(), "@");
+          << T << FixItHint::CreateInsertion(FromE->getExprLoc(), "@");
     else
-      Diag(FromE->getExprLoc(), diag::err_objc_subscript_type_conversion)
-        << T;
+      Diag(FromE->getExprLoc(), diag::err_objc_subscript_type_conversion) << T;
     return SemaObjC::OS_Error;
   }
 
   // We must have a complete class type.
   if (SemaRef.RequireCompleteType(FromE->getExprLoc(), T,
-                          diag::err_objc_index_incomplete_class_type, FromE))
+                                  diag::err_objc_index_incomplete_class_type,
+                                  FromE))
     return SemaObjC::OS_Error;
 
   // Look for a conversion to an integral, enumeration type, or
   // objective-C pointer type.
-  int NoIntegrals=0, NoObjCIdPointers=0;
+  int NoIntegrals = 0, NoObjCIdPointers = 0;
   SmallVector<CXXConversionDecl *, 4> ConversionDecls;
 
   for (NamedDecl *D : cast<CXXRecordDecl>(RecordTy->getDecl())
@@ -1430,21 +1415,20 @@ SemaObjC::ObjCSubscriptKind SemaObjC::CheckSubscriptingKind(Expr *FromE) {
       if (CT->isIntegralOrEnumerationType()) {
         ++NoIntegrals;
         ConversionDecls.push_back(Conversion);
-      }
-      else if (CT->isObjCIdType() ||CT->isBlockPointerType()) {
+      } else if (CT->isObjCIdType() || CT->isBlockPointerType()) {
         ++NoObjCIdPointers;
         ConversionDecls.push_back(Conversion);
       }
     }
   }
-  if (NoIntegrals ==1 && NoObjCIdPointers == 0)
+  if (NoIntegrals == 1 && NoObjCIdPointers == 0)
     return SemaObjC::OS_Array;
   if (NoIntegrals == 0 && NoObjCIdPointers == 1)
     return SemaObjC::OS_Dictionary;
   if (NoIntegrals == 0 && NoObjCIdPointers == 0) {
     // No conversion function was found. Issue diagnostic and return.
     Diag(FromE->getExprLoc(), diag::err_objc_subscript_type_conversion)
-      << FromE->getType();
+        << FromE->getType();
     return SemaObjC::OS_Error;
   }
   Diag(FromE->getExprLoc(), diag::err_objc_multiple_subscript_type_conversion)
@@ -1461,7 +1445,8 @@ void SemaObjC::AddCFAuditedAttribute(Decl *D) {
   IdentifierInfo *Ident;
   SourceLocation Loc;
   std::tie(Ident, Loc) = SemaRef.PP.getPragmaARCCFCodeAuditedInfo();
-  if (!Loc.isValid()) return;
+  if (!Loc.isValid())
+    return;
 
   // Don't add a redundant or conflicting attribute.
   if (D->hasAttr<CFAuditedTransferAttr>() ||

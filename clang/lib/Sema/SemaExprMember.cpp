@@ -1497,8 +1497,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     if (warn) {
       if (ObjCMethodDecl *MD = S.getCurMethodDecl()) {
         ObjCMethodFamily MF = MD->getMethodFamily();
-        warn = (MF != OMF_init && MF != OMF_dealloc &&
-                MF != OMF_finalize &&
+        warn = (MF != OMF_init && MF != OMF_dealloc && MF != OMF_finalize &&
                 !S.ObjC().IvarBacksCurrentMethodAccessor(IDecl, MD, IV));
       }
       if (warn)
@@ -1637,9 +1636,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     }
 
     // Normal property access.
-    return S.ObjC().HandleExprPropertyRefExpr(OPT, BaseExpr.get(), OpLoc, MemberName,
-                                       MemberLoc, SourceLocation(), QualType(),
-                                       false);
+    return S.ObjC().HandleExprPropertyRefExpr(
+        OPT, BaseExpr.get(), OpLoc, MemberName, MemberLoc, SourceLocation(),
+        QualType(), false);
   }
 
   if (BaseType->isExtVectorBoolType()) {

@@ -3978,7 +3978,8 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
 
     // Look at Objective-C class types.
     if (auto objcClass = type->getAs<ObjCInterfaceType>()) {
-      if (objcClass->getInterface()->getIdentifier() == S.ObjC().getNSErrorIdent()) {
+      if (objcClass->getInterface()->getIdentifier() ==
+          S.ObjC().getNSErrorIdent()) {
         if (numNormalPointers == 2 && numTypeSpecifierPointers < 2)
           return PointerDeclaratorKind::NSErrorPointerPointer;
       }

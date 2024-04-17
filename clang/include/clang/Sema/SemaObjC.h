@@ -137,9 +137,9 @@ public:
 
   const DeclContext *getCurObjCLexicalContext() const;
 
-  ObjCProtocolDecl *
-  LookupProtocol(IdentifierInfo *II, SourceLocation IdLoc,
-                 RedeclarationKind Redecl = RedeclarationKind::NotForRedeclaration);
+  ObjCProtocolDecl *LookupProtocol(
+      IdentifierInfo *II, SourceLocation IdLoc,
+      RedeclarationKind Redecl = RedeclarationKind::NotForRedeclaration);
 
   bool isObjCWritebackConversion(QualType FromType, QualType ToType,
                                  QualType &ConvertedType);
@@ -1007,7 +1007,6 @@ public:
                                        ObjCInterfaceDecl *IDecl);
 
   ///@}
-
 };
 
 } // namespace clang

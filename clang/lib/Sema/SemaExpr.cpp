@@ -1053,7 +1053,7 @@ ExprResult Sema::DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
          (FDecl && FDecl->hasAttr<CFAuditedTransferAttr>()))) {
       E = ObjC().stripARCUnbridgedCast(E);
 
-    // Otherwise, do normal placeholder checking.
+      // Otherwise, do normal placeholder checking.
     } else {
       ExprResult ExprRes = CheckPlaceholderExpr(E);
       if (ExprRes.isInvalid())
@@ -5253,8 +5253,8 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
     // Use custom logic if this should be the pseudo-object subscript
     // expression.
     if (!LangOpts.isSubscriptPointerArithmetic())
-      return ObjC().BuildObjCSubscriptExpression(RLoc, BaseExpr, IndexExpr, nullptr,
-                                          nullptr);
+      return ObjC().BuildObjCSubscriptExpression(RLoc, BaseExpr, IndexExpr,
+                                                 nullptr, nullptr);
 
     ResultType = PTy->getPointeeType();
   } else if (const PointerType *PTy = RHSTy->getAs<PointerType>()) {
@@ -8620,8 +8620,8 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   if (!checkConditionalNullPointer(*this, LHS, RHSTy)) return RHSTy;
 
   // All objective-c pointer type analysis is done here.
-  QualType compositeType = ObjC().FindCompositeObjCPointerType(LHS, RHS,
-                                                        QuestionLoc);
+  QualType compositeType =
+      ObjC().FindCompositeObjCPointerType(LHS, RHS, QuestionLoc);
   if (LHS.isInvalid() || RHS.isInvalid())
     return QualType();
   if (!compositeType.isNull())
@@ -9862,14 +9862,14 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
     // resolution, return Incompatible to indicate the failure.
     if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers() &&
         ObjC().CheckObjCConversion(SourceRange(), Ty, E,
-                            CheckedConversionKind::Implicit, Diagnose,
-                            DiagnoseCFAudited) != SemaObjC::ACR_okay) {
+                                   CheckedConversionKind::Implicit, Diagnose,
+                                   DiagnoseCFAudited) != SemaObjC::ACR_okay) {
       if (!Diagnose)
         return Incompatible;
     }
     if (getLangOpts().ObjC &&
         (ObjC().CheckObjCBridgeRelatedConversions(E->getBeginLoc(), LHSType,
-                                           E->getType(), E, Diagnose) ||
+                                                  E->getType(), E, Diagnose) ||
          ObjC().CheckConversionToObjCLiteral(LHSType, E, Diagnose))) {
       if (!Diagnose)
         return Incompatible;
@@ -11688,18 +11688,19 @@ static bool hasIsEqualMethod(Sema &S, const Expr *LHS, const Expr *RHS) {
 
   // Try to find the -isEqual: method.
   Selector IsEqualSel = S.ObjC().NSAPIObj->getIsEqualSelector();
-  ObjCMethodDecl *Method = S.ObjC().LookupMethodInObjectType(IsEqualSel,
-                                                      InterfaceType,
-                                                      /*IsInstance=*/true);
+  ObjCMethodDecl *Method =
+      S.ObjC().LookupMethodInObjectType(IsEqualSel, InterfaceType,
+                                        /*IsInstance=*/true);
   if (!Method) {
     if (Type->isObjCIdType()) {
       // For 'id', just check the global pool.
-      Method = S.ObjC().LookupInstanceMethodInGlobalPool(IsEqualSel, SourceRange(),
-                                                  /*receiverId=*/true);
+      Method =
+          S.ObjC().LookupInstanceMethodInGlobalPool(IsEqualSel, SourceRange(),
+                                                    /*receiverId=*/true);
     } else {
       // Check protocols.
       Method = S.ObjC().LookupMethodInQualifiedType(IsEqualSel, Type,
-                                             /*IsInstance=*/true);
+                                                    /*IsInstance=*/true);
     }
   }
 
@@ -12542,7 +12543,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
         Expr *E = LHS.get();
         if (getLangOpts().ObjCAutoRefCount)
           ObjC().CheckObjCConversion(SourceRange(), RHSType, E,
-                              CheckedConversionKind::Implicit);
+                                     CheckedConversionKind::Implicit);
         LHS = ImpCastExprToType(E, RHSType,
                                 RPT ? CK_BitCast :CK_CPointerToObjCPointerCast);
       }
@@ -12550,9 +12551,9 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
         Expr *E = RHS.get();
         if (getLangOpts().ObjCAutoRefCount)
           ObjC().CheckObjCConversion(SourceRange(), LHSType, E,
-                              CheckedConversionKind::Implicit,
-                              /*Diagnose=*/true,
-                              /*DiagnoseCFAudited=*/false, Opc);
+                                     CheckedConversionKind::Implicit,
+                                     /*Diagnose=*/true,
+                                     /*DiagnoseCFAudited=*/false, Opc);
         RHS = ImpCastExprToType(E, LHSType,
                                 LPT ? CK_BitCast :CK_CPointerToObjCPointerCast);
       }

@@ -6020,7 +6020,7 @@ static bool tryObjCWritebackConversion(Sema &S,
   // Handle write-back conversion.
   QualType ConvertedArgType;
   if (!S.ObjC().isObjCWritebackConversion(ArgType, Entity.getType(),
-                                   ConvertedArgType))
+                                          ConvertedArgType))
     return false;
 
   // We should copy unless we're passing to an argument explicitly
@@ -6212,9 +6212,9 @@ void InitializationSequence::InitializeFrom(Sema &S,
   if (Args.size() == 1) {
     Initializer = Args[0];
     if (S.getLangOpts().ObjC) {
-      if (S.ObjC().CheckObjCBridgeRelatedConversions(Initializer->getBeginLoc(),
-                                              DestType, Initializer->getType(),
-                                              Initializer) ||
+      if (S.ObjC().CheckObjCBridgeRelatedConversions(
+              Initializer->getBeginLoc(), DestType, Initializer->getType(),
+              Initializer) ||
           S.ObjC().CheckConversionToObjCLiteral(DestType, Initializer))
         Args[0] = Initializer;
     }

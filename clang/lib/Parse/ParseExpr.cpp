@@ -1228,8 +1228,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       IdentifierInfo &PropertyName = *Tok.getIdentifierInfo();
       SourceLocation PropertyLoc = ConsumeToken();
 
-      Res = Actions.ObjC().ActOnClassPropertyRefExpr(II, PropertyName,
-                                              ILoc, PropertyLoc);
+      Res = Actions.ObjC().ActOnClassPropertyRefExpr(II, PropertyName, ILoc,
+                                                     PropertyLoc);
       break;
     }
 
@@ -3087,8 +3087,8 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
       return ExprError();
 
     return Actions.ObjC().ActOnObjCBridgedCast(getCurScope(), OpenLoc, Kind,
-                                        BridgeKeywordLoc, Ty.get(),
-                                        RParenLoc, SubExpr.get());
+                                               BridgeKeywordLoc, Ty.get(),
+                                               RParenLoc, SubExpr.get());
   } else if (ExprType >= CompoundLiteral &&
              isTypeIdInParens(isAmbiguousTypeId)) {
 
@@ -3925,6 +3925,6 @@ ExprResult Parser::ParseAvailabilityCheckExpr(SourceLocation BeginLoc) {
   if (Parens.consumeClose())
     return ExprError();
 
-  return Actions.ObjC().ActOnObjCAvailabilityCheckExpr(AvailSpecs, BeginLoc,
-                                                Parens.getCloseLocation());
+  return Actions.ObjC().ActOnObjCAvailabilityCheckExpr(
+      AvailSpecs, BeginLoc, Parens.getCloseLocation());
 }

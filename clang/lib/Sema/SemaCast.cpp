@@ -3218,8 +3218,8 @@ void CastOperation::CheckCStyleCast() {
           return;
         }
       }
-    }
-    else if (!Self.ObjC().CheckObjCARCUnavailableWeakConversion(DestType, SrcType)) {
+    } else if (!Self.ObjC().CheckObjCARCUnavailableWeakConversion(DestType,
+                                                                  SrcType)) {
       Self.Diag(SrcExpr.get()->getBeginLoc(),
                 diag::err_arc_convesion_of_weak_unavailable)
           << 1 << SrcType << DestType << SrcExpr.get()->getSourceRange();

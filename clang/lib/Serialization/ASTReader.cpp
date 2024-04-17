@@ -4245,8 +4245,8 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
 /// Move the given method to the back of the global list of methods.
 static void moveMethodToBackOfGlobalList(Sema &S, ObjCMethodDecl *Method) {
   // Find the entry for this selector in the method pool.
-  SemaObjC::GlobalMethodPool::iterator Known
-    = S.ObjC().MethodPool.find(Method->getSelector());
+  SemaObjC::GlobalMethodPool::iterator Known =
+      S.ObjC().MethodPool.find(Method->getSelector());
   if (Known == S.ObjC().MethodPool.end())
     return;
 
@@ -8584,7 +8584,9 @@ void ASTReader::ReadMethodPool(Selector Sel) {
 
   Sema &S = *getSema();
   SemaObjC::GlobalMethodPool::iterator Pos =
-      S.ObjC().MethodPool.insert(std::make_pair(Sel, SemaObjC::GlobalMethodPool::Lists()))
+      S.ObjC()
+          .MethodPool
+          .insert(std::make_pair(Sel, SemaObjC::GlobalMethodPool::Lists()))
           .first;
 
   Pos->second.first.setBits(Visitor.getInstanceBits());

@@ -29,14 +29,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Sema/SemaInternal.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
-#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/SmallString.h"
 
 using namespace clang;
@@ -558,14 +558,14 @@ static ObjCMethodDecl *LookupMethodInReceiverType(Sema &S, Selector sel,
 
     // Special case for 'self' in class method implementations.
     if (PT->isObjCClassType() &&
-        S.ObjC().isSelfExpr(const_cast<Expr*>(PRE->getBase()))) {
+        S.ObjC().isSelfExpr(const_cast<Expr *>(PRE->getBase()))) {
       // This cast is safe because isSelfExpr is only true within
       // methods.
       ObjCMethodDecl *method =
         cast<ObjCMethodDecl>(S.CurContext->getNonClosureAncestor());
-      return S.ObjC().LookupMethodInObjectType(sel,
-                 S.Context.getObjCInterfaceType(method->getClassInterface()),
-                                        /*instance*/ false);
+      return S.ObjC().LookupMethodInObjectType(
+          sel, S.Context.getObjCInterfaceType(method->getClassInterface()),
+          /*instance*/ false);
     }
 
     return S.ObjC().LookupMethodInObjectType(sel, PT->getPointeeType(), true);
@@ -576,7 +576,8 @@ static ObjCMethodDecl *LookupMethodInReceiverType(Sema &S, Selector sel,
         PRE->getSuperReceiverType()->getAs<ObjCObjectPointerType>())
       return S.ObjC().LookupMethodInObjectType(sel, PT->getPointeeType(), true);
 
-    return S.ObjC().LookupMethodInObjectType(sel, PRE->getSuperReceiverType(), false);
+    return S.ObjC().LookupMethodInObjectType(sel, PRE->getSuperReceiverType(),
+                                             false);
   }
 
   assert(PRE->isClassReceiver() && "Invalid expression");
@@ -742,13 +743,13 @@ ExprResult ObjCPropertyOpBuilder::buildGet() {
   if ((Getter->isInstanceMethod() && !RefExpr->isClassReceiver()) ||
       RefExpr->isObjectReceiver()) {
     assert(InstanceReceiver || RefExpr->isSuperReceiver());
-    msg = S.ObjC().BuildInstanceMessageImplicit(InstanceReceiver, receiverType,
-                                         GenericLoc, Getter->getSelector(),
-                                         Getter, std::nullopt);
+    msg = S.ObjC().BuildInstanceMessageImplicit(
+        InstanceReceiver, receiverType, GenericLoc, Getter->getSelector(),
+        Getter, std::nullopt);
   } else {
-    msg = S.ObjC().BuildClassMessageImplicit(receiverType, RefExpr->isSuperReceiver(),
-                                      GenericLoc, Getter->getSelector(), Getter,
-                                      std::nullopt);
+    msg = S.ObjC().BuildClassMessageImplicit(
+        receiverType, RefExpr->isSuperReceiver(), GenericLoc,
+        Getter->getSelector(), Getter, std::nullopt);
   }
   return msg;
 }
@@ -803,13 +804,12 @@ ExprResult ObjCPropertyOpBuilder::buildSet(Expr *op, SourceLocation opcLoc,
   if ((Setter->isInstanceMethod() && !RefExpr->isClassReceiver()) ||
       RefExpr->isObjectReceiver()) {
     msg = S.ObjC().BuildInstanceMessageImplicit(InstanceReceiver, receiverType,
-                                         GenericLoc, SetterSelector, Setter,
-                                         MultiExprArg(args, 1));
+                                                GenericLoc, SetterSelector,
+                                                Setter, MultiExprArg(args, 1));
   } else {
-    msg = S.ObjC().BuildClassMessageImplicit(receiverType, RefExpr->isSuperReceiver(),
-                                      GenericLoc,
-                                      SetterSelector, Setter,
-                                      MultiExprArg(args, 1));
+    msg = S.ObjC().BuildClassMessageImplicit(
+        receiverType, RefExpr->isSuperReceiver(), GenericLoc, SetterSelector,
+        Setter, MultiExprArg(args, 1));
   }
 
   if (!msg.isInvalid() && captureSetValueAsResult) {
@@ -838,7 +838,7 @@ ExprResult ObjCPropertyOpBuilder::buildRValueOperation(Expr *op) {
 
   if (RefExpr->isExplicitProperty() && !Getter->hasRelatedResultType())
     S.ObjC().DiagnosePropertyAccessorMismatch(RefExpr->getExplicitProperty(),
-                                       Getter, RefExpr->getLocation());
+                                              Getter, RefExpr->getLocation());
 
   // As a special case, if the method returns 'id', try to get
   // a better type from the property.
@@ -1057,13 +1057,13 @@ static void CheckKeyForObjCARCConversion(Sema &S, QualType ContainerT,
   const IdentifierInfo *KeyIdents[] = {
       &S.Context.Idents.get("objectForKeyedSubscript")};
   Selector GetterSelector = S.Context.Selectors.getSelector(1, KeyIdents);
-  ObjCMethodDecl *Getter = S.ObjC().LookupMethodInObjectType(GetterSelector, ContainerT,
-                                                      true /*instance*/);
+  ObjCMethodDecl *Getter = S.ObjC().LookupMethodInObjectType(
+      GetterSelector, ContainerT, true /*instance*/);
   if (!Getter)
     return;
   QualType T = Getter->parameters()[0]->getType();
   S.ObjC().CheckObjCConversion(Key->getSourceRange(), T, Key,
-                        CheckedConversionKind::Implicit);
+                               CheckedConversionKind::Implicit);
 }
 
 bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
@@ -1079,7 +1079,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
     ResultType = PTy->getPointeeType();
   }
   SemaObjC::ObjCSubscriptKind Res =
-    S.ObjC().CheckSubscriptingKind(RefExpr->getKeyExpr());
+      S.ObjC().CheckSubscriptingKind(RefExpr->getKeyExpr());
   if (Res == SemaObjC::OS_Error) {
     if (S.getLangOpts().ObjCAutoRefCount)
       CheckKeyForObjCARCConversion(S, ResultType,
@@ -1108,8 +1108,8 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
     AtIndexGetterSelector = S.Context.Selectors.getSelector(1, KeyIdents);
   }
 
-  AtIndexGetter = S.ObjC().LookupMethodInObjectType(AtIndexGetterSelector, ResultType,
-                                             true /*instance*/);
+  AtIndexGetter = S.ObjC().LookupMethodInObjectType(
+      AtIndexGetterSelector, ResultType, true /*instance*/);
 
   if (!AtIndexGetter && S.getLangOpts().DebuggerObjCLiteral) {
     AtIndexGetter = ObjCMethodDecl::Create(
@@ -1139,10 +1139,8 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
       << BaseExpr->getType() << 0 << arrayRef;
       return false;
     }
-    AtIndexGetter =
-      S.ObjC().LookupInstanceMethodInGlobalPool(AtIndexGetterSelector,
-                                         RefExpr->getSourceRange(),
-                                         true);
+    AtIndexGetter = S.ObjC().LookupInstanceMethodInGlobalPool(
+        AtIndexGetterSelector, RefExpr->getSourceRange(), true);
   }
 
   if (AtIndexGetter) {
@@ -1181,7 +1179,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
   }
 
   SemaObjC::ObjCSubscriptKind Res =
-    S.ObjC().CheckSubscriptingKind(RefExpr->getKeyExpr());
+      S.ObjC().CheckSubscriptingKind(RefExpr->getKeyExpr());
   if (Res == SemaObjC::OS_Error) {
     if (S.getLangOpts().ObjCAutoRefCount)
       CheckKeyForObjCARCConversion(S, ResultType,
@@ -1211,8 +1209,8 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
         &S.Context.Idents.get("atIndexedSubscript")};
     AtIndexSetterSelector = S.Context.Selectors.getSelector(2, KeyIdents);
   }
-  AtIndexSetter = S.ObjC().LookupMethodInObjectType(AtIndexSetterSelector, ResultType,
-                                             true /*instance*/);
+  AtIndexSetter = S.ObjC().LookupMethodInObjectType(
+      AtIndexSetterSelector, ResultType, true /*instance*/);
 
   if (!AtIndexSetter && S.getLangOpts().DebuggerObjCLiteral) {
     TypeSourceInfo *ReturnTInfo = nullptr;
@@ -1254,10 +1252,8 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
       << BaseExpr->getType() << 1 << arrayRef;
       return false;
     }
-    AtIndexSetter =
-      S.ObjC().LookupInstanceMethodInGlobalPool(AtIndexSetterSelector,
-                                         RefExpr->getSourceRange(),
-                                         true);
+    AtIndexSetter = S.ObjC().LookupInstanceMethodInGlobalPool(
+        AtIndexSetterSelector, RefExpr->getSourceRange(), true);
   }
 
   bool err = false;
@@ -1315,10 +1311,9 @@ ExprResult ObjCSubscriptOpBuilder::buildGet() {
   assert(InstanceBase);
   if (AtIndexGetter)
     S.DiagnoseUseOfDecl(AtIndexGetter, GenericLoc);
-  msg = S.ObjC().BuildInstanceMessageImplicit(InstanceBase, receiverType,
-                                       GenericLoc,
-                                       AtIndexGetterSelector, AtIndexGetter,
-                                       MultiExprArg(args, 1));
+  msg = S.ObjC().BuildInstanceMessageImplicit(
+      InstanceBase, receiverType, GenericLoc, AtIndexGetterSelector,
+      AtIndexGetter, MultiExprArg(args, 1));
   return msg;
 }
 
@@ -1340,11 +1335,9 @@ ExprResult ObjCSubscriptOpBuilder::buildSet(Expr *op, SourceLocation opcLoc,
   Expr *args[] = { op, Index };
 
   // Build a message-send.
-  ExprResult msg = S.ObjC().BuildInstanceMessageImplicit(InstanceBase, receiverType,
-                                                  GenericLoc,
-                                                  AtIndexSetterSelector,
-                                                  AtIndexSetter,
-                                                  MultiExprArg(args, 2));
+  ExprResult msg = S.ObjC().BuildInstanceMessageImplicit(
+      InstanceBase, receiverType, GenericLoc, AtIndexSetterSelector,
+      AtIndexSetter, MultiExprArg(args, 2));
 
   if (!msg.isInvalid() && captureSetValueAsResult) {
     ObjCMessageExpr *msgExpr =

@@ -1608,7 +1608,7 @@ public:
                                         MultiStmtArg CatchStmts,
                                         Stmt *Finally) {
     return getSema().ObjC().ActOnObjCAtTryStmt(AtLoc, TryBody, CatchStmts,
-                                        Finally);
+                                               Finally);
   }
 
   /// Rebuild an Objective-C exception declaration.
@@ -1617,10 +1617,9 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   VarDecl *RebuildObjCExceptionDecl(VarDecl *ExceptionDecl,
                                     TypeSourceInfo *TInfo, QualType T) {
-    return getSema().ObjC().BuildObjCExceptionDecl(TInfo, T,
-                                            ExceptionDecl->getInnerLocStart(),
-                                            ExceptionDecl->getLocation(),
-                                            ExceptionDecl->getIdentifier());
+    return getSema().ObjC().BuildObjCExceptionDecl(
+        TInfo, T, ExceptionDecl->getInnerLocStart(),
+        ExceptionDecl->getLocation(), ExceptionDecl->getIdentifier());
   }
 
   /// Build a new Objective-C \@catch statement.
@@ -1631,8 +1630,7 @@ public:
                                           SourceLocation RParenLoc,
                                           VarDecl *Var,
                                           Stmt *Body) {
-    return getSema().ObjC().ActOnObjCAtCatchStmt(AtLoc, RParenLoc,
-                                          Var, Body);
+    return getSema().ObjC().ActOnObjCAtCatchStmt(AtLoc, RParenLoc, Var, Body);
   }
 
   /// Build a new Objective-C \@finally statement.
@@ -2520,14 +2518,13 @@ public:
                                           Expr *Collection,
                                           SourceLocation RParenLoc,
                                           Stmt *Body) {
-    StmtResult ForEachStmt = getSema().ObjC().ActOnObjCForCollectionStmt(ForLoc,
-                                                Element,
-                                                Collection,
-                                                RParenLoc);
+    StmtResult ForEachStmt = getSema().ObjC().ActOnObjCForCollectionStmt(
+        ForLoc, Element, Collection, RParenLoc);
     if (ForEachStmt.isInvalid())
       return StmtError();
 
-    return getSema().ObjC().FinishObjCForCollectionStmt(ForEachStmt.get(), Body);
+    return getSema().ObjC().FinishObjCForCollectionStmt(ForEachStmt.get(),
+                                                        Body);
   }
 
   /// Build a new C++ exception declaration.
@@ -2593,8 +2590,8 @@ public:
                                   diag::err_objc_for_range_init_stmt)
                          << Init->getSourceRange();
             }
-            return getSema().ObjC().ActOnObjCForCollectionStmt(ForLoc, LoopVar,
-                                                        RangeExpr, RParenLoc);
+            return getSema().ObjC().ActOnObjCForCollectionStmt(
+                ForLoc, LoopVar, RangeExpr, RParenLoc);
           }
         }
       }
@@ -3718,16 +3715,16 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildObjCArrayLiteral(SourceRange Range,
                                      Expr **Elements, unsigned NumElements) {
-    return getSema().ObjC().BuildObjCArrayLiteral(Range,
-                                           MultiExprArg(Elements, NumElements));
+    return getSema().ObjC().BuildObjCArrayLiteral(
+        Range, MultiExprArg(Elements, NumElements));
   }
 
   ExprResult RebuildObjCSubscriptRefExpr(SourceLocation RB,
                                          Expr *Base, Expr *Key,
                                          ObjCMethodDecl *getterMethod,
                                          ObjCMethodDecl *setterMethod) {
-    return  getSema().ObjC().BuildObjCSubscriptExpression(RB, Base, Key,
-                                                   getterMethod, setterMethod);
+    return getSema().ObjC().BuildObjCSubscriptExpression(
+        RB, Base, Key, getterMethod, setterMethod);
   }
 
   /// Build a new Objective-C dictionary literal.
@@ -3746,7 +3743,8 @@ public:
   ExprResult RebuildObjCEncodeExpr(SourceLocation AtLoc,
                                          TypeSourceInfo *EncodeTypeInfo,
                                          SourceLocation RParenLoc) {
-    return SemaRef.ObjC().BuildObjCEncodeExpression(AtLoc, EncodeTypeInfo, RParenLoc);
+    return SemaRef.ObjC().BuildObjCEncodeExpression(AtLoc, EncodeTypeInfo,
+                                                    RParenLoc);
   }
 
   /// Build a new Objective-C class message.
@@ -3757,11 +3755,10 @@ public:
                                           SourceLocation LBracLoc,
                                           MultiExprArg Args,
                                           SourceLocation RBracLoc) {
-    return SemaRef.ObjC().BuildClassMessage(ReceiverTypeInfo,
-                                     ReceiverTypeInfo->getType(),
-                                     /*SuperLoc=*/SourceLocation(),
-                                     Sel, Method, LBracLoc, SelectorLocs,
-                                     RBracLoc, Args);
+    return SemaRef.ObjC().BuildClassMessage(
+        ReceiverTypeInfo, ReceiverTypeInfo->getType(),
+        /*SuperLoc=*/SourceLocation(), Sel, Method, LBracLoc, SelectorLocs,
+        RBracLoc, Args);
   }
 
   /// Build a new Objective-C instance message.
@@ -3772,11 +3769,10 @@ public:
                                           SourceLocation LBracLoc,
                                           MultiExprArg Args,
                                           SourceLocation RBracLoc) {
-    return SemaRef.ObjC().BuildInstanceMessage(Receiver,
-                                        Receiver->getType(),
-                                        /*SuperLoc=*/SourceLocation(),
-                                        Sel, Method, LBracLoc, SelectorLocs,
-                                        RBracLoc, Args);
+    return SemaRef.ObjC().BuildInstanceMessage(Receiver, Receiver->getType(),
+                                               /*SuperLoc=*/SourceLocation(),
+                                               Sel, Method, LBracLoc,
+                                               SelectorLocs, RBracLoc, Args);
   }
 
   /// Build a new Objective-C instance/class message to 'super'.
@@ -3788,18 +3784,13 @@ public:
                                     SourceLocation LBracLoc,
                                     MultiExprArg Args,
                                     SourceLocation RBracLoc) {
-    return Method->isInstanceMethod() ? SemaRef.ObjC().BuildInstanceMessage(nullptr,
-                                          SuperType,
-                                          SuperLoc,
-                                          Sel, Method, LBracLoc, SelectorLocs,
-                                          RBracLoc, Args)
-                                      : SemaRef.ObjC().BuildClassMessage(nullptr,
-                                          SuperType,
-                                          SuperLoc,
-                                          Sel, Method, LBracLoc, SelectorLocs,
-                                          RBracLoc, Args);
-
-
+    return Method->isInstanceMethod()
+               ? SemaRef.ObjC().BuildInstanceMessage(
+                     nullptr, SuperType, SuperLoc, Sel, Method, LBracLoc,
+                     SelectorLocs, RBracLoc, Args)
+               : SemaRef.ObjC().BuildClassMessage(nullptr, SuperType, SuperLoc,
+                                                  Sel, Method, LBracLoc,
+                                                  SelectorLocs, RBracLoc, Args);
   }
 
   /// Build a new Objective-C ivar reference expression.
@@ -15082,9 +15073,9 @@ TransformObjCBridgedCastExpr(ObjCBridgedCastExpr *E) {
       Result.get() == E->getSubExpr())
     return E;
 
-  return SemaRef.ObjC().BuildObjCBridgedCast(E->getLParenLoc(), E->getBridgeKind(),
-                                      E->getBridgeKeywordLoc(), TSInfo,
-                                      Result.get());
+  return SemaRef.ObjC().BuildObjCBridgedCast(
+      E->getLParenLoc(), E->getBridgeKind(), E->getBridgeKeywordLoc(), TSInfo,
+      Result.get());
 }
 
 template <typename Derived>
@@ -15472,10 +15463,9 @@ QualType TreeTransform<Derived>::RebuildObjCTypeParamType(
            ArrayRef<ObjCProtocolDecl *> Protocols,
            ArrayRef<SourceLocation> ProtocolLocs,
            SourceLocation ProtocolRAngleLoc) {
-  return SemaRef.ObjC().BuildObjCTypeParamType(Decl,
-                                        ProtocolLAngleLoc, Protocols,
-                                        ProtocolLocs, ProtocolRAngleLoc,
-                                        /*FailOnError=*/true);
+  return SemaRef.ObjC().BuildObjCTypeParamType(
+      Decl, ProtocolLAngleLoc, Protocols, ProtocolLocs, ProtocolRAngleLoc,
+      /*FailOnError=*/true);
 }
 
 template<typename Derived>
@@ -15489,11 +15479,11 @@ QualType TreeTransform<Derived>::RebuildObjCObjectType(
            ArrayRef<ObjCProtocolDecl *> Protocols,
            ArrayRef<SourceLocation> ProtocolLocs,
            SourceLocation ProtocolRAngleLoc) {
-  return SemaRef.ObjC().BuildObjCObjectType(BaseType, Loc, TypeArgsLAngleLoc, TypeArgs,
-                                     TypeArgsRAngleLoc, ProtocolLAngleLoc,
-                                     Protocols, ProtocolLocs, ProtocolRAngleLoc,
-                                     /*FailOnError=*/true,
-                                     /*Rebuilding=*/true);
+  return SemaRef.ObjC().BuildObjCObjectType(
+      BaseType, Loc, TypeArgsLAngleLoc, TypeArgs, TypeArgsRAngleLoc,
+      ProtocolLAngleLoc, Protocols, ProtocolLocs, ProtocolRAngleLoc,
+      /*FailOnError=*/true,
+      /*Rebuilding=*/true);
 }
 
 template<typename Derived>

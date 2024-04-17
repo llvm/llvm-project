@@ -3451,7 +3451,8 @@ void ASTWriter::WriteSelectors(Sema &SemaRef) {
     for (auto &SelectorAndID : SelectorIDs) {
       Selector S = SelectorAndID.first;
       SelectorID ID = SelectorAndID.second;
-      SemaObjC::GlobalMethodPool::iterator F = SemaRef.ObjC().MethodPool.find(S);
+      SemaObjC::GlobalMethodPool::iterator F =
+          SemaRef.ObjC().MethodPool.find(S);
       ASTMethodPoolTrait::data_type Data = {
         ID,
         ObjCMethodList(),

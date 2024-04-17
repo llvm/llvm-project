@@ -5864,7 +5864,8 @@ void Sema::CodeCompleteObjCClassPropertyRefExpr(Scope *S,
                                                 SourceLocation ClassNameLoc,
                                                 bool IsBaseExprStatement) {
   const IdentifierInfo *ClassNamePtr = &ClassName;
-  ObjCInterfaceDecl *IFace = ObjC().getObjCInterfaceDecl(ClassNamePtr, ClassNameLoc);
+  ObjCInterfaceDecl *IFace =
+      ObjC().getObjCInterfaceDecl(ClassNamePtr, ClassNameLoc);
   if (!IFace)
     return;
   CodeCompletionContext CCContext(
@@ -8183,8 +8184,9 @@ AddClassMessageCompletions(Sema &SemaRef, Scope *S, ParsedType Receiver,
       }
     }
 
-    for (SemaObjC::GlobalMethodPool::iterator M = SemaRef.ObjC().MethodPool.begin(),
-                                          MEnd = SemaRef.ObjC().MethodPool.end();
+    for (SemaObjC::GlobalMethodPool::iterator
+             M = SemaRef.ObjC().MethodPool.begin(),
+             MEnd = SemaRef.ObjC().MethodPool.end();
          M != MEnd; ++M) {
       for (ObjCMethodList *MethList = &M->second.second;
            MethList && MethList->getMethod(); MethList = MethList->getNext()) {
@@ -8354,7 +8356,7 @@ void Sema::CodeCompleteObjCInstanceMessage(
     }
 
     for (SemaObjC::GlobalMethodPool::iterator M = ObjC().MethodPool.begin(),
-                                    MEnd = ObjC().MethodPool.end();
+                                              MEnd = ObjC().MethodPool.end();
          M != MEnd; ++M) {
       for (ObjCMethodList *MethList = &M->second.first;
            MethList && MethList->getMethod(); MethList = MethList->getNext()) {
@@ -8429,7 +8431,7 @@ void Sema::CodeCompleteObjCSelector(
                         CodeCompletionContext::CCC_SelectorName);
   Results.EnterNewScope();
   for (SemaObjC::GlobalMethodPool::iterator M = ObjC().MethodPool.begin(),
-                                  MEnd = ObjC().MethodPool.end();
+                                            MEnd = ObjC().MethodPool.end();
        M != MEnd; ++M) {
 
     Selector Sel = M->first;
@@ -8497,7 +8499,8 @@ void Sema::CodeCompleteObjCProtocolReferences(
     // already seen.
     // FIXME: This doesn't work when caching code-completion results.
     for (const IdentifierLocPair &Pair : Protocols)
-      if (ObjCProtocolDecl *Protocol = ObjC().LookupProtocol(Pair.first, Pair.second))
+      if (ObjCProtocolDecl *Protocol =
+              ObjC().LookupProtocol(Pair.first, Pair.second))
         Results.Ignore(Protocol);
 
     // Add all protocols.
@@ -9773,7 +9776,7 @@ void Sema::CodeCompleteObjCMethodDeclSelector(
 
   Results.EnterNewScope();
   for (SemaObjC::GlobalMethodPool::iterator M = ObjC().MethodPool.begin(),
-                                  MEnd = ObjC().MethodPool.end();
+                                            MEnd = ObjC().MethodPool.end();
        M != MEnd; ++M) {
     for (ObjCMethodList *MethList = IsInstanceMethod ? &M->second.first
                                                      : &M->second.second;

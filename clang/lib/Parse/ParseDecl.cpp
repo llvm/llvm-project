@@ -4974,7 +4974,7 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
       }
       SmallVector<Decl *, 16> Fields;
       Actions.ObjC().ActOnDefs(getCurScope(), TagDecl, Tok.getLocation(),
-                        Tok.getIdentifierInfo(), Fields);
+                               Tok.getIdentifierInfo(), Fields);
       ConsumeToken();
       ExpectAndConsume(tok::r_paren);
     }

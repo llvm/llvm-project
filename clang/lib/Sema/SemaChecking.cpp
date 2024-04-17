@@ -15621,7 +15621,7 @@ static void DiagnoseImpCast(Sema &S, Expr *E, QualType T,
 
 static bool isObjCSignedCharBool(Sema &S, QualType Ty) {
   return Ty->isSpecificBuiltinType(BuiltinType::SChar) &&
-      S.getLangOpts().ObjC && S.ObjC().NSAPIObj->isObjCBOOLType(Ty);
+         S.getLangOpts().ObjC && S.ObjC().NSAPIObj->isObjCBOOLType(Ty);
 }
 
 static void adornObjCBoolConversionDiagWithTernaryFixit(
@@ -15941,8 +15941,8 @@ static void checkObjCArrayLiteral(Sema &S, QualType TargetType,
     return;
 
   if (TargetObjCPtr->isUnspecialized() ||
-      TargetObjCPtr->getInterfaceDecl()->getCanonicalDecl()
-        != S.ObjC().NSArrayDecl->getCanonicalDecl())
+      TargetObjCPtr->getInterfaceDecl()->getCanonicalDecl() !=
+          S.ObjC().NSArrayDecl->getCanonicalDecl())
     return;
 
   auto TypeArgs = TargetObjCPtr->getTypeArgs();
@@ -15970,8 +15970,8 @@ checkObjCDictionaryLiteral(Sema &S, QualType TargetType,
     return;
 
   if (TargetObjCPtr->isUnspecialized() ||
-      TargetObjCPtr->getInterfaceDecl()->getCanonicalDecl()
-        != S.ObjC().NSDictionaryDecl->getCanonicalDecl())
+      TargetObjCPtr->getInterfaceDecl()->getCanonicalDecl() !=
+          S.ObjC().NSDictionaryDecl->getCanonicalDecl())
     return;
 
   auto TypeArgs = TargetObjCPtr->getTypeArgs();

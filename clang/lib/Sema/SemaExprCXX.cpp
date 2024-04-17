@@ -4607,7 +4607,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
         ObjC().EmitRelatedResultTypeNote(From);
     } else if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers() &&
                !ObjC().CheckObjCARCUnavailableWeakConversion(ToType,
-                                                      From->getType())) {
+                                                             From->getType())) {
       if (Action == AA_Initializing)
         Diag(From->getBeginLoc(), diag::err_arc_weak_unavailable_assign);
       else
@@ -4642,7 +4642,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     // FIXME: doing this here is really ugly.
     if (Kind == CK_BlockPointerToObjCPointerCast) {
       ExprResult E = From;
-      (void) ObjC().PrepareCastToObjCObjectPointer(E);
+      (void)ObjC().PrepareCastToObjCObjectPointer(E);
       From = E.get();
     }
     if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
@@ -8665,7 +8665,7 @@ static ExprResult attemptRecovery(Sema &SemaRef,
             /*TemplateArgs*/ nullptr, /*S*/ nullptr);
     } else if (auto *Ivar = dyn_cast<ObjCIvarDecl>(ND)) {
       return SemaRef.ObjC().LookupInObjCMethod(R, Consumer.getScope(),
-                                        Ivar->getIdentifier());
+                                               Ivar->getIdentifier());
     }
   }
 

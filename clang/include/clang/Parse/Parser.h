@@ -422,8 +422,8 @@ class Parser : public CodeCompletionHandler {
   /// True if we are within an Objective-C container while parsing C-like decls.
   ///
   /// This is necessary because Sema thinks we have left the container
-  /// to parse the C-like decls, meaning Actions.ObjC().getObjCDeclContext() will
-  /// be NULL.
+  /// to parse the C-like decls, meaning Actions.ObjC().getObjCDeclContext()
+  /// will be NULL.
   bool ParsingInObjCContainer;
 
   /// Whether to skip parsing of function bodies.

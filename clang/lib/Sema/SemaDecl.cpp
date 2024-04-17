@@ -19476,7 +19476,8 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         // Ivar declared in @implementation never belongs to the implementation.
         // Only it is in implementation's lexical context.
         ClsFields[I]->setLexicalDeclContext(IMPDecl);
-      ObjC().CheckImplementationIvars(IMPDecl, ClsFields, RecFields.size(), RBrac);
+      ObjC().CheckImplementationIvars(IMPDecl, ClsFields, RecFields.size(),
+                                      RBrac);
       IMPDecl->setIvarLBraceLoc(LBrac);
       IMPDecl->setIvarRBraceLoc(RBrac);
     } else if (ObjCCategoryDecl *CDecl =
