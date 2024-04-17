@@ -488,8 +488,9 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   }
 
   const evaluate::Assignment *assign{semantics::GetAssignment(x)};
-  if (!assign)
+  if (!assign) {
     return;
+  }
 
   int nbLhs{evaluate::GetNbOfCUDASymbols(assign->lhs)};
   int nbRhs{evaluate::GetNbOfCUDASymbols(assign->rhs)};
