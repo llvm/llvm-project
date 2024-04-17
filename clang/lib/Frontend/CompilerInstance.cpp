@@ -381,8 +381,7 @@ FileManager *CompilerInstance::createFileManager(
                   : createVFSFromCompilerInvocation(getInvocation(),
                                                     getDiagnostics());
   assert(VFS && "FileManager has no VFS?");
-  FileMgr = new FileManager(getFileSystemOpts(), std::move(VFS),
-                            getFrontendOpts().ShowStats);
+  FileMgr = new FileManager(getFileSystemOpts(), std::move(VFS));
   return FileMgr.get();
 }
 
@@ -1293,6 +1292,10 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   ImportingInstance.getDiagnostics().Report(ImportLoc,
                                             diag::remark_module_build_done)
     << ModuleName;
+
+  // Propagate the statistics to the parent FileManager.
+  if (FrontendOpts.ModulesShareFileManager)
+    ImportingInstance.getFileManager().AddStats(Instance.getFileManager());
 
   if (Crashed) {
     // Clear the ASTConsumer if it hasn't been already, in case it owns streams

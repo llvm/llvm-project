@@ -973,7 +973,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   };
 
   DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
-                                    EagerLoadModules, PrintTiming);
+                                    EagerLoadModules);
 
   llvm::Timer T;
   T.startTimer();

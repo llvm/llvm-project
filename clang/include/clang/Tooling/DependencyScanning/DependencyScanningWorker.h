@@ -119,8 +119,6 @@ private:
   ScanningOptimizations OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
   bool EagerLoadModules;
-  /// Whether we should collect statistics during execution.
-  bool PrintStats;
 };
 
 } // end namespace dependencies

@@ -39,21 +39,14 @@ using namespace clang;
 
 #define DEBUG_TYPE "file-search"
 
-ALWAYS_ENABLED_STATISTIC(NumDirLookups, "Number of directory lookups.");
-ALWAYS_ENABLED_STATISTIC(NumFileLookups, "Number of file lookups.");
-ALWAYS_ENABLED_STATISTIC(NumDirCacheMisses,
-                         "Number of directory cache misses.");
-ALWAYS_ENABLED_STATISTIC(NumFileCacheMisses, "Number of file cache misses.");
-
 //===----------------------------------------------------------------------===//
 // Common logic.
 //===----------------------------------------------------------------------===//
 
 FileManager::FileManager(const FileSystemOptions &FSO,
-                         IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                         bool PrintStats)
+                         IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
     : FS(std::move(FS)), FileSystemOpts(FSO), SeenDirEntries(64),
-      SeenFileEntries(64), NextFileUID(0), EnablePrintStats(PrintStats) {
+      SeenFileEntries(64), NextFileUID(0) {
   // If the caller doesn't provide a virtual file system, just grab the real
   // file system.
   if (!this->FS)
@@ -135,8 +128,7 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
     }
   }
 
-  if (EnablePrintStats)
-    ++NumDirLookups;
+  ++NumDirLookups;
 
   // See if there was already an entry in the map.  Note that the map
   // contains both virtual and real directories.
@@ -149,8 +141,7 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
   }
 
   // We've not seen this before. Fill it in.
-  if (EnablePrintStats)
-    ++NumDirCacheMisses;
+  ++NumDirCacheMisses;
   auto &NamedDirEnt = *SeenDirInsertResult.first;
   assert(!NamedDirEnt.second && "should be newly-created");
 
@@ -205,8 +196,7 @@ FileManager::getFile(StringRef Filename, bool openFile, bool CacheFailure) {
 
 llvm::Expected<FileEntryRef>
 FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
-  if (EnablePrintStats)
-    ++NumFileLookups;
+  ++NumFileLookups;
 
   // See if there is already an entry in the map.
   auto SeenFileInsertResult =
@@ -219,8 +209,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   }
 
   // We've not seen this before. Fill it in.
-  if (EnablePrintStats)
-    ++NumFileCacheMisses;
+  ++NumFileCacheMisses;
   auto *NamedFileEnt = &*SeenFileInsertResult.first;
   assert(!NamedFileEnt->second && "should be newly-created");
 
@@ -382,8 +371,7 @@ const FileEntry *FileManager::getVirtualFile(StringRef Filename, off_t Size,
 
 FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
                                             time_t ModificationTime) {
-  if (EnablePrintStats)
-    ++NumFileLookups;
+  ++NumFileLookups;
 
   // See if there is already an entry in the map for an existing file.
   auto &NamedFileEnt = *SeenFileEntries.insert(
@@ -396,8 +384,7 @@ FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,
   }
 
   // We've not seen this before, or the file is cached as non-existent.
-  if (EnablePrintStats)
-    ++NumFileCacheMisses;
+  ++NumFileCacheMisses;
   addAncestorsAsVirtualDirs(Filename);
   FileEntry *UFE = nullptr;
 
@@ -661,6 +648,13 @@ StringRef FileManager::getCanonicalName(const void *Entry, StringRef Name) {
 
   CanonicalNames.insert({Entry, CanonicalName});
   return CanonicalName;
+}
+
+void FileManager::AddStats(const FileManager &Other) {
+  NumDirLookups += Other.NumDirLookups;
+  NumFileLookups += Other.NumFileLookups;
+  NumDirCacheMisses += Other.NumDirCacheMisses;
+  NumFileCacheMisses += Other.NumFileCacheMisses;
 }
 
 void FileManager::PrintStats() const {

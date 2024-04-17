@@ -439,6 +439,9 @@ public:
     if (Result)
       setLastCC1Arguments(std::move(OriginalInvocation));
 
+    // Propagate the statistics to the parent FileManager.
+    DriverFileMgr->AddStats(ScanInstance.getFileManager());
+
     return Result;
   }
 
@@ -501,8 +504,6 @@ DependencyScanningWorker::DependencyScanningWorker(
     BaseFS = FS;
     break;
   }
-
-  PrintStats = Service.getPrintStats();
 }
 
 llvm::Error DependencyScanningWorker::computeDependencies(
@@ -625,8 +626,8 @@ bool DependencyScanningWorker::computeDependencies(
       ModifiedCommandLine ? *ModifiedCommandLine : CommandLine;
   auto &FinalFS = ModifiedFS ? ModifiedFS : BaseFS;
 
-  auto FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions{},
-                                                        FinalFS, PrintStats);
+  auto FileMgr =
+      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions{}, FinalFS);
 
   std::vector<const char *> FinalCCommandLine(FinalCommandLine.size(), nullptr);
   llvm::transform(FinalCommandLine, FinalCCommandLine.begin(),

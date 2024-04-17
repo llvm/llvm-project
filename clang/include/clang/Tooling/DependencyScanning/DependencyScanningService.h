@@ -76,7 +76,7 @@ public:
   DependencyScanningService(
       ScanningMode Mode, ScanningOutputFormat Format,
       ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default,
-      bool EagerLoadModules = false, bool PrintStats = false);
+      bool EagerLoadModules = false);
 
   ScanningMode getMode() const { return Mode; }
 
@@ -90,8 +90,6 @@ public:
     return SharedCache;
   }
 
-  bool getPrintStats() const { return PrintStats; }
-
 private:
   const ScanningMode Mode;
   const ScanningOutputFormat Format;
@@ -99,8 +97,6 @@ private:
   const ScanningOptimizations OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
   const bool EagerLoadModules;
-  /// Whether we should collect statistics during execution.
-  const bool PrintStats;
   /// The global file system cache.
   DependencyScanningFilesystemSharedCache SharedCache;
 };
