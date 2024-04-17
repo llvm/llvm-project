@@ -85,10 +85,10 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
 
   TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
-  FunctionParmMutationAnalyzer &Analyzer =
-      MutationAnalyzers.try_emplace(Function, *Function, *Result.Context)
-          .first->second;
-  if (Analyzer.isMutated(Param))
+  FunctionParmMutationAnalyzer *Analyzer =
+      FunctionParmMutationAnalyzer::getFunctionParmMutationAnalyzer(
+          *Function, *Result.Context, MutationAnalyzerCache);
+  if (Analyzer->isMutated(Param))
     return;
 
   const bool IsConstQualified =
@@ -169,7 +169,7 @@ void UnnecessaryValueParamCheck::storeOptions(
 }
 
 void UnnecessaryValueParamCheck::onEndOfTranslationUnit() {
-  MutationAnalyzers.clear();
+  MutationAnalyzerCache.clear();
 }
 
 void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Var,

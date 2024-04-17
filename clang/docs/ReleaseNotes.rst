@@ -68,7 +68,7 @@ AST Dumping Potentially Breaking Changes
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
-- Removed support for constructing on-stack ``TemplateArgumentList``s; interfaces should instead
+- Removed support for constructing on-stack ``TemplateArgumentList``\ s; interfaces should instead
   use ``ArrayRef<TemplateArgument>`` to pass template arguments. Transitioning internal uses to
   ``ArrayRef<TemplateArgument>`` reduces AST memory usage by 0.4% when compiling clang, and is
   expected to show similar improvements on other workloads.
@@ -213,6 +213,9 @@ New Compiler Flags
 - ``-Wmissing-designated-field-initializers``, grouped under ``-Wmissing-field-initializers``.
   This diagnostic can be disabled to make ``-Wmissing-field-initializers`` behave
   like it did before Clang 18.x. Fixes #GH56628
+
+- ``-fexperimental-modules-reduced-bmi`` enables the Reduced BMI for C++20 named modules.
+  See the document of standard C++ modules for details.
 
 Deprecated Compiler Flags
 -------------------------
@@ -416,6 +419,8 @@ Bug Fixes in This Version
 
 - Fixed a regression in CTAD that a friend declaration that befriends itself may cause
   incorrect constraint substitution. (#GH86769).
+
+- Fixed an assertion failure on invalid InitListExpr in C89 mode (#GH88008).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -674,6 +679,8 @@ Static Analyzer
   but not under any case blocks if ``unroll-loops=true`` analyzer config is
   set. (#GH68819)
 - Support C++23 static operator calls. (#GH84972)
+- Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
+  matched user-defined ``strerror`` and similar library functions. (GH#88181)
 
 New features
 ^^^^^^^^^^^^

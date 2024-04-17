@@ -361,15 +361,12 @@ void RISCVInstrInfo::copyPhysRegVector(
     return {RISCVII::LMUL_1, RISCV::VRRegClass, RISCV::VMV1R_V,
             RISCV::PseudoVMV_V_V_M1, RISCV::PseudoVMV_V_I_M1};
   };
-  auto FindRegWithEncoding = [&TRI](const TargetRegisterClass &RegClass,
-                                    uint16_t Encoding) {
-    ArrayRef<MCPhysReg> Regs = RegClass.getRegisters();
-    const auto *FoundReg = llvm::find_if(Regs, [&](MCPhysReg Reg) {
-      return TRI->getEncodingValue(Reg) == Encoding;
-    });
-    // We should be always able to find one valid register.
-    assert(FoundReg != Regs.end());
-    return *FoundReg;
+  auto FindRegWithEncoding = [TRI](const TargetRegisterClass &RegClass,
+                                   uint16_t Encoding) {
+    MCRegister Reg = RISCV::V0 + Encoding;
+    if (&RegClass == &RISCV::VRRegClass)
+      return Reg;
+    return TRI->getMatchingSuperReg(Reg, RISCV::sub_vrm1_0, &RegClass);
   };
   while (I != NumRegs) {
     // For non-segment copying, we only do this once as the registers are always
@@ -3016,7 +3013,7 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, TYPE, SEW)
 
 #define CASE_VFMA_CHANGE_OPCODE_VV(OLDOP, NEWOP)                               \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VV, E16)                     \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VV, E16)                     \
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VV, E32)                     \
   CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VV, E64)
 
