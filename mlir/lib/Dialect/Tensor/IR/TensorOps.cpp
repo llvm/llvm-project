@@ -1593,27 +1593,21 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
     bool dynamicNoop =
         sourceTy.getRank() == static_cast<int64_t>(elements.size());
     for (auto [id, element] : llvm::enumerate(elements)) {
+      if (!dynamicNoop)
+        break;
+
       APSInt cstElement;
       if (matchPattern(element, m_ConstantInt(&cstElement))) {
-        if (cstElement.getExtValue() != sourceTy.getDimSize(id)) {
-          dynamicNoop = false;
-          break;
-        }
+        dynamicNoop &= cstElement.getExtValue() == sourceTy.getDimSize(id);
         continue;
       }
 
       if (auto dimOp = element.getDefiningOp<tensor::DimOp>()) {
-        if (dimOp.getSource() != source) {
-          dynamicNoop = false;
-          break;
-        }
+        dynamicNoop &= dimOp.getSource() == source;
 
         APSInt dim;
-        if (!matchPattern(dimOp.getIndex(), m_ConstantInt(&dim)) ||
-            dim.getExtValue() != static_cast<int64_t>(id)) {
-          dynamicNoop = false;
-          break;
-        }
+        dynamicNoop &= matchPattern(dimOp.getIndex(), m_ConstantInt(&dim)) &&
+                       dim.getExtValue() == static_cast<int64_t>(id);
         continue;
       }
     }
