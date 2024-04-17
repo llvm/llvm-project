@@ -52,6 +52,14 @@ public:
     return Ty;
   }
 
+  virtual void
+  addReturnRegisterOutputs(CIRGenFunction &CGF, LValue ReturnValue,
+                           std::string &Constraints,
+                           std::vector<mlir::Type> &ResultRegTypes,
+                           std::vector<mlir::Type> &ResultTruncRegTypes,
+                           std::vector<LValue> &ResultRegDests,
+                           std::string &AsmString, unsigned NumOutputs) const {}
+
   virtual ~TargetCIRGenInfo() {}
 };
 

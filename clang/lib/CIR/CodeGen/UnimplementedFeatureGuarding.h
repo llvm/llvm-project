@@ -171,6 +171,7 @@ struct UnimplementedFeature {
   static bool asm_unwind_clobber() { return false; }
   static bool asm_memory_effects() { return false; }
   static bool asm_vector_type() { return false; }
+  static bool asm_llvm_assume() { return false; }
 };
 } // namespace cir
 
