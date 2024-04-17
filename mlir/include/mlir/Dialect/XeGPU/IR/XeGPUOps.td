@@ -425,10 +425,6 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     %0 = memref.alloc() : memref<1024xf32>
     %1 = xegpu.create_tdesc %0[0, 4, 8, 12] {chunk_size = 8}: memref<1024xf32> -> TensorDesc<4x8xf32>
     ```
-
-
-
-
   }];
 
   let arguments = (ins XeGPU_BaseAddrType: $source,
@@ -722,14 +718,15 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
 def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
       AllElementTypesMatch<["tensorDesc", "value", "result"]>,
       AllShapesMatch<["tensorDesc", "mask", "value", "result"]>]> {
-  let summary = "A ready-modify-write operation. ";
+  let summary = "Atomic ready-modify-write operation on the TensorDesc. ";
 
   let description = [{
-    `AtomicRMWOp` has same semantic to `memref.atomic_rmw`, except that
-    it work on a `TensorDescType` object while `memref.atomic_rmw` works
-    on a `MemRefType` object. It also has a `mask` variable, which has the
-    same shape with `TensorDesc`, to enable or disable some data points of
-    the `TensorDesc`.
+    The `xegpu.atomic_rmw` operation provides a way to perform a read-modify-write
+    operation on the region described by the `TensorDesc` free from data races. The
+    `kind` enumeration specifies the modification to be performed, The `mask` operand
+    has the same shape with `TensorDesc`, and is used to enable or disable specific
+    data points of the `TensorDesc`. The `value` operand represents the new value to
+    be applied during the modification.
   }];
 
   let arguments = (ins
@@ -806,8 +803,8 @@ def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
         within each workgroup. "GPU" means the scope would be across workgroups within the GPU.
   }];
   let arguments = (ins XeGPU_MemoryScopeAttr: $memory_kind,
-                       StrAttr: $fence_scope);
-  let assemblyFormat = [{`memory_kind` `=` `` $memory_kind `,` `fence_scope` `=` $fence_scope attr-dict}];
+                       XeGPU_FenceScopeAttr: $fence_scope);
+  let assemblyFormat = [{`memory_kind` `=` `` $memory_kind `,` `fence_scope` `=` `` $fence_scope attr-dict}];
   let extraClassDeclaration = extraBaseClassDeclaration;
 }
 
