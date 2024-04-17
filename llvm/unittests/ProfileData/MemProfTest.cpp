@@ -21,9 +21,11 @@ using ::llvm::DILineInfo;
 using ::llvm::DILineInfoSpecifier;
 using ::llvm::DILocal;
 using ::llvm::StringRef;
+using ::llvm::memprof::CallStackId;
 using ::llvm::memprof::CallStackMap;
 using ::llvm::memprof::Frame;
 using ::llvm::memprof::FrameId;
+using ::llvm::memprof::IndexedAllocationInfo;
 using ::llvm::memprof::IndexedMemProfRecord;
 using ::llvm::memprof::MemInfoBlock;
 using ::llvm::memprof::MemProfReader;
@@ -36,6 +38,7 @@ using ::llvm::memprof::SegmentEntry;
 using ::llvm::object::SectionedAddress;
 using ::llvm::symbolize::SymbolizableModule;
 using ::testing::Return;
+using ::testing::SizeIs;
 
 class MockSymbolizer : public SymbolizableModule {
 public:
@@ -180,13 +183,13 @@ TEST(MemProf, FillsValue) {
   // We expect 4 records. We attach alloc site data to foo and bar, i.e.
   // all frames bottom up until we find a non-inline frame. We attach call site
   // data to bar, xyz and abc.
-  ASSERT_EQ(Records.size(), 4U);
+  ASSERT_THAT(Records, SizeIs(4));
 
   // Check the memprof record for foo.
   const llvm::GlobalValue::GUID FooId = IndexedMemProfRecord::getGUID("foo");
   ASSERT_EQ(Records.count(FooId), 1U);
   const MemProfRecord &Foo = Records[FooId];
-  ASSERT_EQ(Foo.AllocSites.size(), 1U);
+  ASSERT_THAT(Foo.AllocSites, SizeIs(1));
   EXPECT_EQ(Foo.AllocSites[0].Info.getAllocCount(), 1U);
   EXPECT_THAT(Foo.AllocSites[0].CallStack[0],
               FrameContains("foo", 5U, 30U, true));
@@ -202,7 +205,7 @@ TEST(MemProf, FillsValue) {
   const llvm::GlobalValue::GUID BarId = IndexedMemProfRecord::getGUID("bar");
   ASSERT_EQ(Records.count(BarId), 1U);
   const MemProfRecord &Bar = Records[BarId];
-  ASSERT_EQ(Bar.AllocSites.size(), 1U);
+  ASSERT_THAT(Bar.AllocSites, SizeIs(1));
   EXPECT_EQ(Bar.AllocSites[0].Info.getAllocCount(), 1U);
   EXPECT_THAT(Bar.AllocSites[0].CallStack[0],
               FrameContains("foo", 5U, 30U, true));
@@ -213,8 +216,8 @@ TEST(MemProf, FillsValue) {
   EXPECT_THAT(Bar.AllocSites[0].CallStack[3],
               FrameContains("abc", 5U, 30U, false));
 
-  ASSERT_EQ(Bar.CallSites.size(), 1U);
-  ASSERT_EQ(Bar.CallSites[0].size(), 2U);
+  ASSERT_THAT(Bar.CallSites, SizeIs(1));
+  ASSERT_THAT(Bar.CallSites[0], SizeIs(2));
   EXPECT_THAT(Bar.CallSites[0][0], FrameContains("foo", 5U, 30U, true));
   EXPECT_THAT(Bar.CallSites[0][1], FrameContains("bar", 51U, 20U, false));
 
@@ -222,8 +225,8 @@ TEST(MemProf, FillsValue) {
   const llvm::GlobalValue::GUID XyzId = IndexedMemProfRecord::getGUID("xyz");
   ASSERT_EQ(Records.count(XyzId), 1U);
   const MemProfRecord &Xyz = Records[XyzId];
-  ASSERT_EQ(Xyz.CallSites.size(), 1U);
-  ASSERT_EQ(Xyz.CallSites[0].size(), 2U);
+  ASSERT_THAT(Xyz.CallSites, SizeIs(1));
+  ASSERT_THAT(Xyz.CallSites[0], SizeIs(2));
   // Expect the entire frame even though in practice we only need the first
   // entry here.
   EXPECT_THAT(Xyz.CallSites[0][0], FrameContains("xyz", 5U, 30U, true));
@@ -234,8 +237,8 @@ TEST(MemProf, FillsValue) {
   ASSERT_EQ(Records.count(AbcId), 1U);
   const MemProfRecord &Abc = Records[AbcId];
   EXPECT_TRUE(Abc.AllocSites.empty());
-  ASSERT_EQ(Abc.CallSites.size(), 1U);
-  ASSERT_EQ(Abc.CallSites[0].size(), 2U);
+  ASSERT_THAT(Abc.CallSites, SizeIs(1));
+  ASSERT_THAT(Abc.CallSites[0], SizeIs(2));
   EXPECT_THAT(Abc.CallSites[0][0], FrameContains("xyz", 5U, 30U, true));
   EXPECT_THAT(Abc.CallSites[0][1], FrameContains("abc", 5U, 30U, false));
 }
@@ -390,9 +393,9 @@ TEST(MemProf, SymbolizationFilter) {
     Records.push_back(KeyRecordPair.second);
   }
 
-  ASSERT_EQ(Records.size(), 1U);
-  ASSERT_EQ(Records[0].AllocSites.size(), 1U);
-  ASSERT_EQ(Records[0].AllocSites[0].CallStack.size(), 1U);
+  ASSERT_THAT(Records, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(1));
   EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
               FrameContains("foo", 5U, 30U, false));
 }
@@ -424,12 +427,135 @@ TEST(MemProf, BaseMemProfReader) {
     Records.push_back(KeyRecordPair.second);
   }
 
-  ASSERT_EQ(Records.size(), 1U);
-  ASSERT_EQ(Records[0].AllocSites.size(), 1U);
-  ASSERT_EQ(Records[0].AllocSites[0].CallStack.size(), 2U);
+  ASSERT_THAT(Records, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(2));
   EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
               FrameContains("foo", 20U, 5U, true));
   EXPECT_THAT(Records[0].AllocSites[0].CallStack[1],
               FrameContains("bar", 10U, 2U, false));
+}
+
+TEST(MemProf, BaseMemProfReaderWithCSIdMap) {
+  llvm::DenseMap<FrameId, Frame> FrameIdMap;
+  Frame F1(/*Hash=*/IndexedMemProfRecord::getGUID("foo"), /*LineOffset=*/20,
+           /*Column=*/5, /*IsInlineFrame=*/true);
+  Frame F2(/*Hash=*/IndexedMemProfRecord::getGUID("bar"), /*LineOffset=*/10,
+           /*Column=*/2, /*IsInlineFrame=*/false);
+  FrameIdMap.insert({F1.hash(), F1});
+  FrameIdMap.insert({F2.hash(), F2});
+
+  llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdMap;
+  llvm::SmallVector<FrameId> CallStack = {F1.hash(), F2.hash()};
+  CallStackId CSId = llvm::memprof::hashCallStack(CallStack);
+  CSIdMap.insert({CSId, CallStack});
+
+  llvm::MapVector<llvm::GlobalValue::GUID, IndexedMemProfRecord> ProfData;
+  IndexedMemProfRecord FakeRecord;
+  MemInfoBlock Block;
+  Block.AllocCount = 1U, Block.TotalAccessDensity = 4,
+  Block.TotalLifetime = 200001;
+  FakeRecord.AllocSites.emplace_back(
+      /*CS=*/llvm::SmallVector<FrameId>(),
+      /*CSId=*/llvm::memprof::hashCallStack(CallStack),
+      /*MB=*/Block);
+  ProfData.insert({F1.hash(), FakeRecord});
+
+  MemProfReader Reader(FrameIdMap, CSIdMap, ProfData);
+
+  llvm::SmallVector<MemProfRecord, 1> Records;
+  for (const auto &KeyRecordPair : Reader) {
+    Records.push_back(KeyRecordPair.second);
+  }
+
+  ASSERT_THAT(Records, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(2));
+  EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
+              FrameContains("foo", 20U, 5U, true));
+  EXPECT_THAT(Records[0].AllocSites[0].CallStack[1],
+              FrameContains("bar", 10U, 2U, false));
+}
+
+TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
+  // Verify that MemProfRecord can be constructed from IndexedMemProfRecord with
+  // CallStackIds only.
+
+  llvm::DenseMap<FrameId, Frame> FrameIdMap;
+  Frame F1(1, 0, 0, false);
+  Frame F2(2, 0, 0, false);
+  Frame F3(3, 0, 0, false);
+  Frame F4(4, 0, 0, false);
+  FrameIdMap.insert({F1.hash(), F1});
+  FrameIdMap.insert({F2.hash(), F2});
+  FrameIdMap.insert({F3.hash(), F3});
+  FrameIdMap.insert({F4.hash(), F4});
+
+  llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CallStackIdMap;
+  llvm::SmallVector<FrameId> CS1 = {F1.hash(), F2.hash()};
+  llvm::SmallVector<FrameId> CS2 = {F1.hash(), F3.hash()};
+  llvm::SmallVector<FrameId> CS3 = {F2.hash(), F3.hash()};
+  llvm::SmallVector<FrameId> CS4 = {F2.hash(), F4.hash()};
+  CallStackIdMap.insert({llvm::memprof::hashCallStack(CS1), CS1});
+  CallStackIdMap.insert({llvm::memprof::hashCallStack(CS2), CS2});
+  CallStackIdMap.insert({llvm::memprof::hashCallStack(CS3), CS3});
+  CallStackIdMap.insert({llvm::memprof::hashCallStack(CS4), CS4});
+
+  IndexedMemProfRecord IndexedRecord;
+  IndexedAllocationInfo AI;
+  AI.CSId = llvm::memprof::hashCallStack(CS1);
+  IndexedRecord.AllocSites.push_back(AI);
+  AI.CSId = llvm::memprof::hashCallStack(CS2);
+  IndexedRecord.AllocSites.push_back(AI);
+  IndexedRecord.CallSiteIds.push_back(llvm::memprof::hashCallStack(CS3));
+  IndexedRecord.CallSiteIds.push_back(llvm::memprof::hashCallStack(CS4));
+
+  bool CSIdMissing = false;
+  bool FrameIdMissing = false;
+
+  auto Callback = [&](CallStackId CSId) -> llvm::SmallVector<Frame> {
+    llvm::SmallVector<Frame> CallStack;
+    llvm::SmallVector<FrameId> FrameIds;
+
+    auto Iter = CallStackIdMap.find(CSId);
+    if (Iter == CallStackIdMap.end())
+      CSIdMissing = true;
+    else
+      FrameIds = Iter->second;
+
+    for (FrameId Id : FrameIds) {
+      Frame F(0, 0, 0, false);
+      auto Iter = FrameIdMap.find(Id);
+      if (Iter == FrameIdMap.end())
+        FrameIdMissing = true;
+      else
+        F = Iter->second;
+      CallStack.push_back(F);
+    }
+
+    return CallStack;
+  };
+
+  MemProfRecord Record = IndexedRecord.toMemProfRecord(Callback);
+
+  // Make sure that all lookups are successful.
+  ASSERT_FALSE(CSIdMissing);
+  ASSERT_FALSE(FrameIdMissing);
+
+  // Verify the contents of Record.
+  ASSERT_THAT(Record.AllocSites, SizeIs(2));
+  ASSERT_THAT(Record.AllocSites[0].CallStack, SizeIs(2));
+  EXPECT_EQ(Record.AllocSites[0].CallStack[0].hash(), F1.hash());
+  EXPECT_EQ(Record.AllocSites[0].CallStack[1].hash(), F2.hash());
+  ASSERT_THAT(Record.AllocSites[1].CallStack, SizeIs(2));
+  EXPECT_EQ(Record.AllocSites[1].CallStack[0].hash(), F1.hash());
+  EXPECT_EQ(Record.AllocSites[1].CallStack[1].hash(), F3.hash());
+  ASSERT_THAT(Record.CallSites, SizeIs(2));
+  ASSERT_THAT(Record.CallSites[0], SizeIs(2));
+  EXPECT_EQ(Record.CallSites[0][0].hash(), F2.hash());
+  EXPECT_EQ(Record.CallSites[0][1].hash(), F3.hash());
+  ASSERT_THAT(Record.CallSites[1], SizeIs(2));
+  EXPECT_EQ(Record.CallSites[1][0].hash(), F2.hash());
+  EXPECT_EQ(Record.CallSites[1][1].hash(), F4.hash());
 }
 } // namespace

@@ -5,6 +5,11 @@
 // RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
 
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
+
 namespace cwg1 { // cwg1: no
   namespace X { extern "C" void cwg1_f(int a = 1); }
   namespace Y { extern "C" void cwg1_f(int a = 1); }
@@ -897,7 +902,7 @@ namespace cwg54 { // cwg54: 2.8
 
 namespace cwg55 { // cwg55: yes
   enum E { e = 5 };
-  int test[(e + 1 == 6) ? 1 : -1];
+  static_assert(e + 1 == 6, "");
 }
 
 namespace cwg56 { // cwg56: yes
@@ -1163,10 +1168,9 @@ namespace cwg75 { // cwg75: yes
 
 namespace cwg76 { // cwg76: yes
   const volatile int n = 1;
-  int arr[n]; // #cwg76-vla
-  // expected-error@#cwg76-vla {{variable length arrays in C++ are a Clang extension}}
-  //   expected-note@#cwg76-vla {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
-  // expected-error@#cwg76-vla {{variable length array declaration not allowed at file scope}}
+  static_assert(n, "");
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+  //   expected-note@-2 {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
 }
 
 namespace cwg77 { // cwg77: yes

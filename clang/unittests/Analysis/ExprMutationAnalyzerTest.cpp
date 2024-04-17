@@ -977,6 +977,36 @@ TEST(ExprMutationAnalyzerTest, FollowFuncArgModified) {
                          "void f() { int x; g(x); }");
   Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
   EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("g(x)"));
+
+  AST = buildASTFromCode(
+      StdRemoveReference + StdForward +
+      "template <class T> void f1(T &&a);"
+      "template <class T> void f2(T &&a);"
+      "template <class T> void f1(T &&a) { f2<T>(std::forward<T>(a)); }"
+      "template <class T> void f2(T &&a) { f1<T>(std::forward<T>(a)); }"
+      "void f() { int x; f1(x); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_FALSE(isMutated(Results, AST.get()));
+
+  AST = buildASTFromCode(
+      StdRemoveReference + StdForward +
+      "template <class T> void f1(T &&a);"
+      "template <class T> void f2(T &&a);"
+      "template <class T> void f1(T &&a) { f2<T>(std::forward<T>(a)); }"
+      "template <class T> void f2(T &&a) { f1<T>(std::forward<T>(a)); a++; }"
+      "void f() { int x; f1(x); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("f1(x)"));
+
+  AST = buildASTFromCode(
+      StdRemoveReference + StdForward +
+      "template <class T> void f1(T &&a);"
+      "template <class T> void f2(T &&a);"
+      "template <class T> void f1(T &&a) { f2<T>(std::forward<T>(a)); a++; }"
+      "template <class T> void f2(T &&a) { f1<T>(std::forward<T>(a)); }"
+      "void f() { int x; f1(x); }");
+  Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("f1(x)"));
 }
 
 TEST(ExprMutationAnalyzerTest, FollowFuncArgNotModified) {

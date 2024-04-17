@@ -8,15 +8,23 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
-
+from lldbsuite.test_event.build_exception import BuildError
 
 class AsanTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @expectedFailureNetBSD
     @skipUnlessAddressSanitizer
     def test(self):
-        self.build()
+        self.build(make_targets=["asan"])
         self.asan_tests()
+
+    @skipIf(oslist=no_match(["macosx"]))
+    def test_libsanitizers_asan(self):
+        try:
+            self.build(make_targets=["libsanitizers"])
+        except BuildError as e:
+            self.skipTest("failed to build with libsanitizers")
+        self.libsanitizer_tests()
 
     def setUp(self):
         # Call super's setUp().
@@ -25,6 +33,68 @@ class AsanTestCase(TestBase):
         self.line_malloc2 = line_number("main.c", "// malloc2 line")
         self.line_free = line_number("main.c", "// free line")
         self.line_breakpoint = line_number("main.c", "// break line")
+
+    # Test line numbers: rdar://126237493
+    def libsanitizer_tests(self):
+        target = self.createTestTarget()
+
+        self.runCmd(
+            "env SanitizersAddress=1 MallocSanitizerZone=1 MallocSecureAllocator=0"
+        )
+
+        self.runCmd("run")
+
+        # In libsanitizers, memory history is not supported until a report has been generated
+        self.expect(
+            "thread list",
+            "Process should be stopped due to ASan report",
+            substrs=["stopped", "stop reason = Use of deallocated memory"],
+        )
+
+        # test the 'memory history' command
+        self.expect(
+            "memory history 'pointer'",
+            substrs=[
+                "Memory deallocated by Thread",
+                "a.out`f2",
+                "main.c",
+                "Memory allocated by Thread",
+                "a.out`f1",
+                "main.c",
+            ],
+        )
+
+        # do the same using SB API
+        process = self.dbg.GetSelectedTarget().process
+        val = (
+            process.GetSelectedThread().GetSelectedFrame().EvaluateExpression("pointer")
+        )
+        addr = val.GetValueAsUnsigned()
+        threads = process.GetHistoryThreads(addr)
+        self.assertEqual(threads.GetSize(), 2)
+
+        history_thread = threads.GetThreadAtIndex(0)
+        self.assertTrue(history_thread.num_frames >= 2)
+        self.assertEqual(
+            history_thread.frames[1].GetLineEntry().GetFileSpec().GetFilename(),
+            "main.c",
+        )
+
+        history_thread = threads.GetThreadAtIndex(1)
+        self.assertTrue(history_thread.num_frames >= 2)
+        self.assertEqual(
+            history_thread.frames[1].GetLineEntry().GetFileSpec().GetFilename(),
+            "main.c",
+        )
+
+        # let's free the container (SBThreadCollection) and see if the
+        # SBThreads still live
+        threads = None
+        self.assertTrue(history_thread.num_frames >= 2)
+        self.assertEqual(
+            history_thread.frames[1].GetLineEntry().GetFileSpec().GetFilename(),
+            "main.c",
+        )
 
     def asan_tests(self):
         target = self.createTestTarget()

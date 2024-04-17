@@ -3466,6 +3466,54 @@ Query for this feature with ``__has_builtin(__builtin_trap)``.
 
 ``__builtin_arm_trap`` is lowered to the ``llvm.aarch64.break`` builtin, and then to ``brk #payload``.
 
+``__builtin_allow_runtime_check``
+---------------------------------
+
+``__builtin_allow_runtime_check`` return true if the check at the current
+program location should be executed. It is expected to be used to implement
+``assert`` like checks which can be safely removed by optimizer.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    bool __builtin_allow_runtime_check(const char* kind)
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_allow_runtime_check("mycheck") && !ExpensiveCheck()) {
+     abort();
+  }
+
+**Description**
+
+``__builtin_allow_runtime_check`` is lowered to ` ``llvm.allow.runtime.check``
+<https://llvm.org/docs/LangRef.html#llvm-allow-runtime-check-intrinsic>`_
+builtin.
+
+The ``__builtin_allow_runtime_check()`` is expected to be used with control
+flow conditions such as in ``if`` to guard expensive runtime checks. The
+specific rules for selecting permitted checks can differ and are controlled by
+the compiler options.
+
+Flags to control checks:
+* ``-mllvm -lower-allow-check-percentile-cutoff-hot=N`` where N is PGO hotness
+cutoff in range ``[0, 999999]`` to disallow checks in hot code.
+* ``-mllvm -lower-allow-check-random-rate=P`` where P is number in range
+``[0.0, 1.0]`` representation probability of keeping a check.
+* If both flags are specified, ``-lower-allow-check-random-rate`` takes
+precedence.
+* If none is specified, ``__builtin_allow_runtime_check`` is lowered as
+``true``, allowing all checks.
+
+Parameter ``kind`` is a string literal representing a user selected kind for
+guarded check. It's unused now. It will enable kind-specific lowering in future.
+E.g. a higher hotness cutoff can be used for more expensive kind of check.
+
+Query for this feature with ``__has_builtin(__builtin_allow_runtime_check)``.
+
 ``__builtin_nondeterministic_value``
 ------------------------------------
 

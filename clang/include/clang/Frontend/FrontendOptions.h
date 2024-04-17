@@ -404,6 +404,10 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned EmitPrettySymbolGraphs : 1;
 
+  /// Whether to generate reduced BMI for C++20 named modules.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned GenReducedBMI : 1;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -568,6 +572,9 @@ public:
   /// Path which stores the output files for -ftime-trace
   std::string TimeTracePath;
 
+  /// Output Path for module output file.
+  std::string ModuleOutputPath;
+
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
@@ -582,7 +589,8 @@ public:
         AllowPCMWithCompilerErrors(false), ModulesShareFileManager(true),
         EmitSymbolGraph(false), EmitExtensionSymbolGraphs(false),
         EmitSymbolGraphSymbolLabelsForTesting(false),
-        EmitPrettySymbolGraphs(false), TimeTraceGranularity(500) {}
+        EmitPrettySymbolGraphs(false), GenReducedBMI(false),
+        TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

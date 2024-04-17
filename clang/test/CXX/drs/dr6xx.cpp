@@ -144,7 +144,7 @@ namespace cwg608 { // cwg608: yes
   struct D : B, C {};
 }
 
-int cwg610[-0u == 0u ? 1 : -1]; // cwg610: yes
+static_assert(-0u == 0u, ""); // cwg610: yes
 
 namespace cwg611 { // cwg611: yes
   int k;
@@ -190,8 +190,8 @@ namespace cwg613 { // cwg613: yes c++11
   }
 }
 
-int cwg614_a[(-1) / 2 == 0 ? 1 : -1]; // cwg614: yes
-int cwg614_b[(-1) % 2 == -1 ? 1 : -1];
+static_assert((-1) / 2 == 0, ""); // cwg614: yes
+static_assert((-1) % 2 == -1, "");
 
 namespace cwg615 { // cwg615: yes
   int f();
