@@ -73,7 +73,7 @@ public:
   SmallString<256> Stderr; // path to stderr
   SmallString<256> Stdout; // path to stdout
 
-  ModuleBuildDaemonServer(StringRef Path)
+  explicit ModuleBuildDaemonServer(StringRef Path)
       : SocketPath(Path), Stderr(Path), Stdout(Path) {
     llvm::sys::path::append(SocketPath, SocketFileName);
     llvm::sys::path::append(Stdout, StdoutFileName);
@@ -109,13 +109,25 @@ void handleSignal(int) { DaemonPtr->shutdownDaemon(); }
 void ModuleBuildDaemonServer::setupDaemonEnv() {
 
 #ifdef _WIN32
-  freopen("NUL", "r", stdin);
+  if (!std::freopen("NUL", "r", stdin)) {
+    llvm::errs() << "Failed to close stdin" << '\n';
+    exit(EXIT_FAILURE);
+  }
 #else
-  close(STDIN_FILENO);
+  if (::close(STDIN_FILENO) == -1) {
+    llvm::errs() << "Failed to close stdin" << '\n';
+    exit(EXIT_FAILURE);
+  }
 #endif
 
-  freopen(Stdout.c_str(), "a", stdout);
-  freopen(Stderr.c_str(), "a", stderr);
+  if (std::freopen(Stdout.c_str(), "a", stdout) == NULL) {
+    llvm::errs() << "Failed to redirect stdout to " << Stdout << '\n';
+    exit(EXIT_FAILURE);
+  }
+  if (std::freopen(Stderr.c_str(), "a", stderr) == NULL) {
+    llvm::errs() << "Failed to redirect stderr to " << Stderr << '\n';
+    exit(EXIT_FAILURE);
+  }
 
   modifySignals(handleSignal);
 }
