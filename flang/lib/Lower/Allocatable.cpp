@@ -14,6 +14,7 @@
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/OpenACC.h"
@@ -368,20 +369,17 @@ private:
               [&](const Fortran::parser::AllocOpt::Mold &mold) {
                 moldExpr = Fortran::semantics::GetExpr(mold.v.value());
               },
-              [&](const Fortran::parser::AllocOpt::Stream &) {
-                TODO(loc, "CUDA ALLOCATE(STREAM=)");
+              [&](const Fortran::parser::AllocOpt::Stream &stream) {
+                streamExpr = Fortran::semantics::GetExpr(stream.v.value());
               },
-              [&](const Fortran::parser::AllocOpt::Pinned &) {
-                TODO(loc, "CUDA ALLOCATE(PINNED=)");
+              [&](const Fortran::parser::AllocOpt::Pinned &pinned) {
+                pinnedExpr = Fortran::semantics::GetExpr(pinned.v.value());
               },
           },
           allocOption.u);
   }
 
   void lowerAllocation(const Allocation &alloc) {
-    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol()))
-      TODO(loc, "Allocation of variable with CUDA attributes");
-
     fir::MutableBoxValue boxAddr =
         genMutableBoxValue(converter, loc, alloc.getAllocObj());
 
@@ -456,7 +454,8 @@ private:
                            const fir::MutableBoxValue &box) {
     if (!box.isDerived() && !errorManager.hasStatSpec() &&
         !alloc.type.IsPolymorphic() && !alloc.hasCoarraySpec() &&
-        !useAllocateRuntime && !box.isPointer()) {
+        !useAllocateRuntime && !box.isPointer() &&
+        !Fortran::semantics::HasCUDAAttr(alloc.getSymbol())) {
       // Pointers must use PointerAllocate so that their deallocations
       // can be validated.
       genInlinedAllocation(alloc, box);
@@ -472,7 +471,12 @@ private:
       genSetType(alloc, box, loc);
     genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
-    mlir::Value stat = genRuntimeAllocate(builder, loc, box, errorManager);
+    mlir::Value stat;
+    if (!Fortran::semantics::HasCUDAAttr(alloc.getSymbol()))
+      stat = genRuntimeAllocate(builder, loc, box, errorManager);
+    else
+      stat =
+          genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
     postAllocationAction(alloc);
     errorManager.assignStat(builder, loc, stat);
@@ -602,7 +606,10 @@ private:
       genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
-    if (isSource)
+    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol()))
+      stat =
+          genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
+    else if (isSource)
       stat = genRuntimeAllocateSource(builder, loc, box, exv, errorManager);
     else
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
@@ -717,6 +724,34 @@ private:
     return nullptr;
   }
 
+  mlir::Value genCudaAllocate(fir::FirOpBuilder &builder, mlir::Location loc,
+                              const fir::MutableBoxValue &box,
+                              ErrorManager &errorManager,
+                              const Fortran::semantics::Symbol &sym) {
+    Fortran::lower::StatementContext stmtCtx;
+    fir::CUDADataAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
+                                                         sym);
+    mlir::Value errmsg = errMsgExpr ? errorManager.errMsgAddr : nullptr;
+    mlir::Value stream =
+        streamExpr
+            ? fir::getBase(converter.genExprValue(loc, *streamExpr, stmtCtx))
+            : nullptr;
+    mlir::Value pinned =
+        pinnedExpr
+            ? fir::getBase(converter.genExprAddr(loc, *pinnedExpr, stmtCtx))
+            : nullptr;
+    mlir::Value source = sourceExpr ? fir::getBase(sourceExv) : nullptr;
+
+    // Keep return type the same as a standard AllocatableAllocate call.
+    mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
+    return builder
+        .create<fir::CUDAAllocateOp>(
+            loc, retTy, box.getAddr(), errmsg, stream, pinned, source, cudaAttr,
+            errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
+        .getResult();
+  }
+
   Fortran::lower::AbstractConverter &converter;
   fir::FirOpBuilder &builder;
   const Fortran::parser::AllocateStmt &stmt;
@@ -724,6 +759,8 @@ private:
   const Fortran::lower::SomeExpr *moldExpr{nullptr};
   const Fortran::lower::SomeExpr *statExpr{nullptr};
   const Fortran::lower::SomeExpr *errMsgExpr{nullptr};
+  const Fortran::lower::SomeExpr *pinnedExpr{nullptr};
+  const Fortran::lower::SomeExpr *streamExpr{nullptr};
   // If the allocate has a type spec, lenParams contains the
   // value of the length parameters that were specified inside.
   llvm::SmallVector<mlir::Value> lenParams;

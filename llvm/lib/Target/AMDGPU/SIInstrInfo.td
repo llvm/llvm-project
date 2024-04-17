@@ -1163,7 +1163,7 @@ def WaitEXP : NamedIntOperand<i8, "wait_exp">;
 def WaitVAVDst : NamedIntOperand<i8, "wait_va_vdst">;
 def WaitVMVSrc : NamedIntOperand<i8, "wait_vm_vsrc">;
 
-def BitOp3 : CustomOperand<i8, 1, "BitOp3">;
+def BitOp3 : NamedIntOperand<i8, "bitop3">;
 def bitop3_0 : DefaultOperand<BitOp3, 0>;
 
 def MatrixAFMT : CustomOperand<i32, 1, "MatrixAFMT">;
