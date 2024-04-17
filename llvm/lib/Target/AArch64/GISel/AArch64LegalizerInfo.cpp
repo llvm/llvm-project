@@ -262,7 +262,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalar(0, s32)
       .scalarize(0);
 
-  getActionDefinitionsBuilder(G_INTRINSIC_LRINT)
+  getActionDefinitionsBuilder({G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT})
       .legalFor({{s64, MinFPScalar}, {s64, s32}, {s64, s64}})
       .libcallFor({{s64, s128}})
       .minScalarOrElt(1, MinFPScalar);
