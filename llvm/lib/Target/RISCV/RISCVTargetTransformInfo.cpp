@@ -919,9 +919,11 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   if (!IsVectorType)
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
+  unsigned SrcEltSize = Src->getScalarSizeInBits();
+  unsigned DstEltSize = Dst->getScalarSizeInBits();
   bool IsTypeLegal = isTypeLegal(Src) && isTypeLegal(Dst) &&
-                     (Src->getScalarSizeInBits() <= ST->getELen()) &&
-                     (Dst->getScalarSizeInBits() <= ST->getELen());
+                     (SrcEltSize <= ST->getELen()) &&
+                     (DstEltSize <= ST->getELen());
 
   // FIXME: Need to compute legalizing cost for illegal types.
   if (!IsTypeLegal)
@@ -933,12 +935,10 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
-  int PowDiff = (int)Log2_32(Dst->getScalarSizeInBits()) -
-                (int)Log2_32(Src->getScalarSizeInBits());
+  int PowDiff = (int)Log2_32(DstEltSize) - (int)Log2_32(SrcEltSize);
   switch (ISD) {
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND: {
-    const unsigned SrcEltSize = Src->getScalarSizeInBits();
     if (SrcEltSize == 1) {
       // We do not use vsext/vzext to extend from mask vector.
       // Instead we use the following instructions to extend from mask vector:
@@ -957,9 +957,9 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   }
   case ISD::TRUNCATE:
     // Early return for invalid operation
-    if (Dst->getScalarSizeInBits() >= Src->getScalarSizeInBits())
+    if (DstEltSize >= SrcEltSize)
       break;
-    if (Dst->getScalarSizeInBits() == 1) {
+    if (DstEltSize == 1) {
       // We do not use several vncvt to truncate to mask vector. So we could
       // not use PowDiff to calculate it.
       // Instead we use the following instructions to truncate to mask vector:
@@ -972,15 +972,11 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   case ISD::FP_EXTEND:
   case ISD::FP_ROUND: {
     // Early return for invalid operation
-    if ((ISD == ISD::FP_ROUND) &&
-        Dst->getScalarSizeInBits() >= Src->getScalarSizeInBits())
+    if ((ISD == ISD::FP_ROUND) && DstEltSize >= SrcEltSize)
       break;
-    if ((ISD == ISD::FP_EXTEND) &&
-        Src->getScalarSizeInBits() >= Dst->getScalarSizeInBits())
+    if ((ISD == ISD::FP_EXTEND) && SrcEltSize >= DstEltSize)
       break;
     // Counts of narrow/widen instructions.
-    unsigned SrcEltSize = Src->getScalarSizeInBits();
-    unsigned DstEltSize = Dst->getScalarSizeInBits();
 
     unsigned Op = (ISD == ISD::TRUNCATE)    ? RISCV::VNSRL_WI
                   : (ISD == ISD::FP_EXTEND) ? RISCV::VFWCVT_F_F_V
@@ -1001,7 +997,7 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   case ISD::FP_TO_UINT:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
-    if (Src->getScalarSizeInBits() == 1 || Dst->getScalarSizeInBits() == 1) {
+    if (SrcEltSize == 1 || DstEltSize == 1) {
       // The cost of convert from or to mask vector is different from other
       // cases. We could not use PowDiff to calculate it.
       // For mask vector to fp, we should use the following instructions:
