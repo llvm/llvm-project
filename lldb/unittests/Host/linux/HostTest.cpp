@@ -29,6 +29,13 @@ public:
 } // namespace
 
 TEST_F(HostTest, GetProcessInfo) {
+  llvm::Triple triple = HostInfo::GetTargetTriple();
+
+  ASSERT_TRUE(
+      (triple.getOS() == llvm::Triple::OSType::Linux) ||
+      (triple.hasEnvironment() &&
+       triple.getEnvironment() == llvm::Triple::EnvironmentType::Android));
+
   ProcessInstanceInfo Info;
   ASSERT_FALSE(Host::GetProcessInfo(0, Info));
 
