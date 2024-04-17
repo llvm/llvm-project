@@ -929,6 +929,15 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> !llvm.ptr<2>
     llvm.return %2 : !llvm.ptr<2>
   }
+
+  // CHECK-LABEL: @load_ptr_addrspace_cast_different_size2
+  llvm.func @load_ptr_addrspace_cast_different_size2() -> !llvm.ptr<1> {
+    %0 = llvm.mlir.constant(1 : i32) : i32
+    // CHECK: llvm.alloca
+    %1 = llvm.alloca %0 x !llvm.ptr<2> {alignment = 4 : i64} : (i32) -> !llvm.ptr
+    %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> !llvm.ptr<1>
+    llvm.return %2 : !llvm.ptr<1>
+  }
 }
 
 // -----

@@ -150,6 +150,12 @@ static bool areConversionCompatible(const DataLayout &layout, Type lhs,
 
   if (!isSupportedTypeForConversion(lhs) || !isSupportedTypeForConversion(rhs))
     return false;
+
+  // Pointer casts will only be sane when the bitsize of both pointer types is
+  // the same.
+  if (isa<LLVM::LLVMPointerType>(lhs) && isa<LLVM::LLVMPointerType>(rhs))
+    return layout.getTypeSize(lhs) == layout.getTypeSize(rhs);
+
   return layout.getTypeSize(lhs) <= layout.getTypeSize(rhs);
 }
 
