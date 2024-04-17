@@ -863,6 +863,8 @@ def err_empty_requires_expr : Error<
   "a requires expression must contain at least one requirement">;
 def err_requires_expr_parameter_list_ellipsis : Error<
   "varargs not allowed in requires expression">;
+def err_requires_expr_explicit_object_parameter: Error<
+  "a requires expression cannot have an explicit object parameter">;
 def err_expected_semi_requirement : Error<
   "expected ';' at end of requirement">;
 def err_requires_expr_missing_arrow : Error<
