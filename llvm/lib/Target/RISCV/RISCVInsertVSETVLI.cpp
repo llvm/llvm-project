@@ -1522,9 +1522,7 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
     }
   }
 
-  if (!PrevMI.getOperand(2).isImm() || !MI.getOperand(2).isImm())
-    return false;
-
+  assert(PrevMI.getOperand(2).isImm() && MI.getOperand(2).isImm());
   auto PriorVType = PrevMI.getOperand(2).getImm();
   auto VType = MI.getOperand(2).getImm();
   return areCompatibleVTYPEs(PriorVType, VType, Used);
