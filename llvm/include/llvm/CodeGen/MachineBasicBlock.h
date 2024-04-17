@@ -481,7 +481,7 @@ public:
   /// Remove entry from the livein set and return iterator to the next.
   livein_iterator removeLiveIn(livein_iterator I);
 
-  const std::vector<RegisterMaskPair> getLiveIns() const { return LiveIns; }
+  const std::vector<RegisterMaskPair> &getLiveIns() const { return LiveIns; }
 
   class liveout_iterator {
   public:
