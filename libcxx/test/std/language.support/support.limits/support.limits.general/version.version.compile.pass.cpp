@@ -39,7 +39,6 @@
     __cpp_lib_atomic_wait                                   201907L [C++20]
     __cpp_lib_barrier                                       201907L [C++20]
     __cpp_lib_bind_back                                     202202L [C++23]
-                                                            202306L [C++26]
     __cpp_lib_bind_front                                    201907L [C++20]
                                                             202306L [C++26]
     __cpp_lib_bit_cast                                      201806L [C++20]
@@ -4605,17 +4604,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_bind_back
-#     error "__cpp_lib_bind_back should be defined in c++23"
-#   endif
-#   if __cpp_lib_bind_back != 202202L
-#     error "__cpp_lib_bind_back should have the value 202202L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_bind_back
-#     error "__cpp_lib_bind_back should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_bind_back
+#   error "__cpp_lib_bind_back should be defined in c++23"
+# endif
+# if __cpp_lib_bind_back != 202202L
+#   error "__cpp_lib_bind_back should have the value 202202L in c++23"
 # endif
 
 # ifndef __cpp_lib_bind_front
@@ -6240,17 +6233,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_bind_back
-#     error "__cpp_lib_bind_back should be defined in c++26"
-#   endif
-#   if __cpp_lib_bind_back != 202306L
-#     error "__cpp_lib_bind_back should have the value 202306L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_bind_back
-#     error "__cpp_lib_bind_back should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_bind_back
+#   error "__cpp_lib_bind_back should be defined in c++26"
+# endif
+# if __cpp_lib_bind_back != 202202L
+#   error "__cpp_lib_bind_back should have the value 202202L in c++26"
 # endif
 
 # ifndef __cpp_lib_bind_front

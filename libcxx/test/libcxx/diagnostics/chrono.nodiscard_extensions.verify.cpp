@@ -47,7 +47,9 @@ void test() {
   crno::remote_version(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   {
+    std::chrono::sys_seconds s{};
     tz.name();           // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    tz.get_info(s);      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     operator==(tz, tz);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     operator<=>(tz, tz); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }

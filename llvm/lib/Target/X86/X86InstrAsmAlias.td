@@ -760,7 +760,7 @@ def : InstAlias<"xor{q}\t{$imm, %rax|rax, $imm}", (XOR64ri8 RAX, i64i8imm:$imm),
 def : InstAlias<"movq.s\t{$src, $dst|$dst, $src}",
                 (MMX_MOVQ64rr_REV VR64:$dst, VR64:$src), 0>;
 
-//  CMOV SETCC Aliases
+//  CMOV SETCC SETZUCC Aliases
 multiclass CMOV_SETCC_Aliases<string Cond, int CC> {
   def : InstAlias<"cmov"#Cond#"{w}\t{$src, $dst|$dst, $src}",
                   (CMOV16rr GR16:$dst, GR16:$src, CC), 0>;
@@ -787,8 +787,12 @@ let Predicates = [In64BitMode] in {
                   (CMOV64rr_ND GR64:$dst, GR64:$src1, GR64:$src2, CC), 0>;
   def : InstAlias<"cmov"#Cond#"{q}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                   (CMOV64rm_ND GR64:$dst, GR64:$src1, i64mem:$src2, CC), 0>;
-}
 
+  def : InstAlias<"setzu"#Cond#"\t$dst", (SETZUCCr GR8:$dst, CC), 0>;
+  def : InstAlias<"setzu"#Cond#"\t$dst", (SETZUCCm i8mem:$dst, CC), 0>;
+  def : InstAlias<"set"#Cond#"\t$dst", (SETCCr_EVEX GR8:$dst, CC), 0>;
+  def : InstAlias<"set"#Cond#"\t$dst", (SETCCm_EVEX i8mem:$dst, CC), 0>;
+}
   def : InstAlias<"set"#Cond#"\t$dst", (SETCCr GR8:$dst, CC), 0>;
   def : InstAlias<"set"#Cond#"\t$dst", (SETCCm i8mem:$dst, CC), 0>;
 }

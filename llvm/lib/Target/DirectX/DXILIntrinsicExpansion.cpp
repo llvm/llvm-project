@@ -42,7 +42,6 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_clamp:
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_lerp:
-  case Intrinsic::dx_rcp:
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     return true;
@@ -218,25 +217,6 @@ static bool expandPowIntrinsic(CallInst *Orig) {
   return true;
 }
 
-static bool expandRcpIntrinsic(CallInst *Orig) {
-  Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig->getParent());
-  Builder.SetInsertPoint(Orig);
-  Type *Ty = X->getType();
-  Type *EltTy = Ty->getScalarType();
-  Constant *One =
-      Ty->isVectorTy()
-          ? ConstantVector::getSplat(
-                ElementCount::getFixed(
-                    dyn_cast<FixedVectorType>(Ty)->getNumElements()),
-                ConstantFP::get(EltTy, 1.0))
-          : ConstantFP::get(EltTy, 1.0);
-  auto *Result = Builder.CreateFDiv(One, X, "dx.rcp");
-  Orig->replaceAllUsesWith(Result);
-  Orig->eraseFromParent();
-  return true;
-}
-
 static Intrinsic::ID getMaxForClamp(Type *ElemTy,
                                     Intrinsic::ID ClampIntrinsic) {
   if (ClampIntrinsic == Intrinsic::dx_uclamp)
@@ -300,8 +280,6 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     return expandClampIntrinsic(Orig, F.getIntrinsicID());
   case Intrinsic::dx_lerp:
     return expandLerpIntrinsic(Orig);
-  case Intrinsic::dx_rcp:
-    return expandRcpIntrinsic(Orig);
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
     return expandIntegerDot(Orig, F.getIntrinsicID());

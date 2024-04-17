@@ -17,6 +17,7 @@
 ! HELP-NEXT: -###                    Print (but do not run) the commands to run for this compilation
 ! HELP-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! HELP-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! HELP-NEXT: -dM                     Print macro definitions in -E mode instead of normal output
 ! HELP-NEXT: -dumpmachine            Display the compiler's target processor
 ! HELP-NEXT: -dumpversion            Display the version of the compiler
 ! HELP-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
@@ -59,6 +60,7 @@
 ! HELP-NEXT: -fno-lto                Disable LTO mode (default)
 ! HELP-NEXT: -fno-ppc-native-vector-element-order
 ! HELP-NEXT:                         Specifies PowerPC non-native vector element order
+! HELP-NEXT:  -fno-rtlib-add-rpath Do not add -rpath with architecture-specific resource directory to the linker flags. When --hip-link is specified, do not add -rpath with HIP runtime library directory to the linker flags
 ! HELP-NEXT: -fno-signed-zeros       Allow optimizations that ignore the sign of floating point zeros
 ! HELP-NEXT: -fno-stack-arrays       Allocate array temporaries on the heap (default)
 ! HELP-NEXT: -fno-version-loops-for-stride
@@ -80,6 +82,7 @@
 ! HELP-NEXT:                         Specifies PowerPC native vector element order (default)
 ! HELP-NEXT: -freciprocal-math       Allow division operations to be reassociated
 ! HELP-NEXT: -fropi                  Generate read-only position independent code (ARM only)
+! HELP-NEXT: -frtlib-add-rpath Add -rpath with architecture-specific resource directory to the linker flags. When --hip-link is specified, also add -rpath with HIP runtime library directory to the linker flags
 ! HELP-NEXT: -frwpi                  Generate read-write position independent code (ARM only)
 ! HELP-NEXT: -fsave-optimization-record=<format>
 ! HELP-NEXT:                         Generate an optimization record file in a specific format
@@ -132,6 +135,7 @@
 ! HELP-NEXT: -print-target-triple    Print the normalized target triple
 ! HELP-NEXT: -pthread                Support POSIX threads in generated code
 ! HELP-NEXT: -P                      Disable linemarker output in -E mode
+! HELP-NEXT:  --rocm-path=<value> ROCm installation path, used for finding and automatically linking required bitcode libraries.
 ! HELP-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
 ! HELP-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression
 ! HELP-NEXT: -Rpass=<value>          Report transformations performed by optimization passes whose name matches the given POSIX regular expression
@@ -155,6 +159,7 @@
 ! HELP-FC1-NEXT:OPTIONS:
 ! HELP-FC1-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! HELP-FC1-NEXT: --dependent-lib=<value> Add dependent library
+! HELP-FC1-NEXT: -dM                     Print macro definitions in -E mode instead of normal output
 ! HELP-FC1-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-FC1-NEXT: -emit-fir               Build the parse tree, then lower it to FIR
 ! HELP-FC1-NEXT: -emit-hlfir             Build the parse tree, then lower it to HLFIR

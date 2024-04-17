@@ -51,7 +51,8 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
   this->CheckFullyInitialized = CheckFullyInitialized;
   this->ConvertResultToRValue =
       VD->getAnyInitializer() &&
-      (VD->getAnyInitializer()->getType()->isAnyComplexType());
+      (VD->getAnyInitializer()->getType()->isAnyComplexType() ||
+       VD->getAnyInitializer()->getType()->isVectorType());
   EvalResult.setSource(VD);
 
   if (!this->visitDecl(VD) && EvalResult.empty())

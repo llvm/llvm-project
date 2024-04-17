@@ -1059,6 +1059,19 @@ define <vscale x 16 x i8> @sqadd_b_lowimm(<vscale x 16 x i8> %a) {
   ret <vscale x 16 x i8> %out
 }
 
+; Immediate instruction form only supports positive values.
+define <vscale x 16 x i8> @sqadd_b_negimm(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: sqadd_b_negimm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqsub z0.b, z0.b, #128 // =0x80
+; CHECK-NEXT:    ret
+  %elt = insertelement <vscale x 16 x i8> undef, i8 -128, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.sqadd.x.nxv16i8(<vscale x 16 x i8> %a,
+                                                                   <vscale x 16 x i8> %splat)
+  ret <vscale x 16 x i8> %out
+}
+
 define <vscale x 8 x i16> @sqadd_h_lowimm(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: sqadd_h_lowimm:
 ; CHECK:       // %bb.0:
@@ -1077,6 +1090,19 @@ define <vscale x 8 x i16> @sqadd_h_highimm(<vscale x 8 x i16> %a) {
 ; CHECK-NEXT:    sqadd z0.h, z0.h, #2048 // =0x800
 ; CHECK-NEXT:    ret
   %elt = insertelement <vscale x 8 x i16> undef, i16 2048, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.sqadd.x.nxv8i16(<vscale x 8 x i16> %a,
+                                                                   <vscale x 8 x i16> %splat)
+  ret <vscale x 8 x i16> %out
+}
+
+; Immediate instruction form only supports positive values.
+define <vscale x 8 x i16> @sqadd_h_negimm(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: sqadd_h_negimm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqsub z0.h, z0.h, #1 // =0x1
+; CHECK-NEXT:    ret
+  %elt = insertelement <vscale x 8 x i16> undef, i16 -1, i32 0
   %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
   %out = call <vscale x 8 x i16> @llvm.aarch64.sve.sqadd.x.nxv8i16(<vscale x 8 x i16> %a,
                                                                    <vscale x 8 x i16> %splat)
@@ -1107,6 +1133,19 @@ define <vscale x 4 x i32> @sqadd_s_highimm(<vscale x 4 x i32> %a) {
   ret <vscale x 4 x i32> %out
 }
 
+; Immediate instruction form only supports positive values.
+define <vscale x 4 x i32> @sqadd_s_negimm(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: sqadd_s_negimm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqsub z0.s, z0.s, #65280 // =0xff00
+; CHECK-NEXT:    ret
+  %elt = insertelement <vscale x 4 x i32> undef, i32 -65280, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %elt, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sqadd.x.nxv4i32(<vscale x 4 x i32> %a,
+                                                                   <vscale x 4 x i32> %splat)
+  ret <vscale x 4 x i32> %out
+}
+
 define <vscale x 2 x i64> @sqadd_d_lowimm(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: sqadd_d_lowimm:
 ; CHECK:       // %bb.0:
@@ -1131,6 +1170,19 @@ define <vscale x 2 x i64> @sqadd_d_highimm(<vscale x 2 x i64> %a) {
   ret <vscale x 2 x i64> %out
 }
 
+; Immediate instruction form only supports positive values.
+define <vscale x 2 x i64> @sqadd_d_negimm(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: sqadd_d_negimm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqsub z0.d, z0.d, #3840 // =0xf00
+; CHECK-NEXT:    ret
+  %elt = insertelement <vscale x 2 x i64> undef, i64 -3840, i32 0
+  %splat = shufflevector <vscale x 2 x i64> %elt, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sqadd.x.nxv2i64(<vscale x 2 x i64> %a,
+                                                                   <vscale x 2 x i64> %splat)
+  ret <vscale x 2 x i64> %out
+}
+
 ; SQSUB
 
 define <vscale x 16 x i8> @sqsub_b_lowimm(<vscale x 16 x i8> %a) {
@@ -1139,6 +1191,19 @@ define <vscale x 16 x i8> @sqsub_b_lowimm(<vscale x 16 x i8> %a) {
 ; CHECK-NEXT:    sqsub z0.b, z0.b, #27 // =0x1b
 ; CHECK-NEXT:    ret
   %elt = insertelement <vscale x 16 x i8> undef, i8 27, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.sqsub.x.nxv16i8(<vscale x 16 x i8> %a,
+                                                                   <vscale x 16 x i8> %splat)
+  ret <vscale x 16 x i8> %out
+}
+
+; Immediate instruction form only supports positive values.
+define <vscale x 16 x i8> @sqsub_b_negimm(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: sqsub_b_negimm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqadd z0.b, z0.b, #1 // =0x1
+; CHECK-NEXT:    ret
+  %elt = insertelement <vscale x 16 x i8> undef, i8 -1, i32 0
   %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
   %out = call <vscale x 16 x i8> @llvm.aarch64.sve.sqsub.x.nxv16i8(<vscale x 16 x i8> %a,
                                                                    <vscale x 16 x i8> %splat)
@@ -1169,6 +1234,19 @@ define <vscale x 8 x i16> @sqsub_h_highimm(<vscale x 8 x i16> %a) {
   ret <vscale x 8 x i16> %out
 }
 
+; Immediate instruction form only supports positive values.
+define <vscale x 8 x i16> @sqsub_h_negimm(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: sqsub_h_negimm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqadd z0.h, z0.h, #128 // =0x80
+; CHECK-NEXT:    ret
+  %elt = insertelement <vscale x 8 x i16> undef, i16 -128, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.sqsub.x.nxv8i16(<vscale x 8 x i16> %a,
+                                                                   <vscale x 8 x i16> %splat)
+  ret <vscale x 8 x i16> %out
+}
+
 define <vscale x 4 x i32> @sqsub_s_lowimm(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: sqsub_s_lowimm:
 ; CHECK:       // %bb.0:
@@ -1193,6 +1271,19 @@ define <vscale x 4 x i32> @sqsub_s_highimm(<vscale x 4 x i32> %a) {
   ret <vscale x 4 x i32> %out
 }
 
+; Immediate instruction form only supports positive values.
+define <vscale x 4 x i32> @sqsub_s_negimm(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: sqsub_s_negimm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqadd z0.s, z0.s, #32768 // =0x8000
+; CHECK-NEXT:    ret
+  %elt = insertelement <vscale x 4 x i32> undef, i32 -32768, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %elt, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sqsub.x.nxv4i32(<vscale x 4 x i32> %a,
+                                                                   <vscale x 4 x i32> %splat)
+  ret <vscale x 4 x i32> %out
+}
+
 define <vscale x 2 x i64> @sqsub_d_lowimm(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: sqsub_d_lowimm:
 ; CHECK:       // %bb.0:
@@ -1211,6 +1302,19 @@ define <vscale x 2 x i64> @sqsub_d_highimm(<vscale x 2 x i64> %a) {
 ; CHECK-NEXT:    sqsub z0.d, z0.d, #65280 // =0xff00
 ; CHECK-NEXT:    ret
   %elt = insertelement <vscale x 2 x i64> undef, i64 65280, i32 0
+  %splat = shufflevector <vscale x 2 x i64> %elt, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sqsub.x.nxv2i64(<vscale x 2 x i64> %a,
+                                                                   <vscale x 2 x i64> %splat)
+  ret <vscale x 2 x i64> %out
+}
+
+; Immediate instruction form only supports positive values.
+define <vscale x 2 x i64> @sqsub_d_negimm(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: sqsub_d_negimm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqadd z0.d, z0.d, #57344 // =0xe000
+; CHECK-NEXT:    ret
+  %elt = insertelement <vscale x 2 x i64> undef, i64 -57344, i32 0
   %splat = shufflevector <vscale x 2 x i64> %elt, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
   %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sqsub.x.nxv2i64(<vscale x 2 x i64> %a,
                                                                    <vscale x 2 x i64> %splat)

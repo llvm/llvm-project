@@ -7,9 +7,10 @@ define void @t(i64 %v) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[V]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP2]], <i32 5, i32 6, i32 3, i32 2>
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i16> [[TMP2]], <i16 5, i16 6, i16 3, i16 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i16 [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 65535
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr null, align 4
 ; CHECK-NEXT:    ret void

@@ -825,8 +825,7 @@ private:
             Parent->overwriteFixedType(TT_BinaryOperator);
         }
         // An arrow after an ObjC method expression is not a lambda arrow.
-        if (CurrentToken->getType() == TT_ObjCMethodExpr &&
-            CurrentToken->Next &&
+        if (CurrentToken->is(TT_ObjCMethodExpr) && CurrentToken->Next &&
             CurrentToken->Next->is(TT_TrailingReturnArrow)) {
           CurrentToken->Next->overwriteFixedType(TT_Unknown);
         }
@@ -1563,7 +1562,7 @@ private:
     case tok::l_brace:
       if (Style.Language == FormatStyle::LK_TextProto) {
         FormatToken *Previous = Tok->getPreviousNonComment();
-        if (Previous && Previous->getType() != TT_DictLiteral)
+        if (Previous && Previous->isNot(TT_DictLiteral))
           Previous->setType(TT_SelectorName);
       }
       Scopes.push_back(getScopeType(*Tok));
@@ -1583,7 +1582,7 @@ private:
              Tok->Previous->isOneOf(TT_SelectorName, TT_DictLiteral))) {
           Tok->setType(TT_DictLiteral);
           FormatToken *Previous = Tok->getPreviousNonComment();
-          if (Previous && Previous->getType() != TT_DictLiteral)
+          if (Previous && Previous->isNot(TT_DictLiteral))
             Previous->setType(TT_SelectorName);
         }
         if (Style.isTableGen())
@@ -2355,7 +2354,8 @@ private:
     // Line.MightBeFunctionDecl can only be true after the parentheses of a
     // function declaration have been found. In this case, 'Current' is a
     // trailing token of this declaration and thus cannot be a name.
-    if (Current.is(Keywords.kw_instanceof)) {
+    if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) &&
+        Current.is(Keywords.kw_instanceof)) {
       Current.setType(TT_BinaryOperator);
     } else if (isStartOfName(Current) &&
                (!Line.MightBeFunctionDecl || Current.NestingLevel != 0)) {
@@ -4754,8 +4754,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // Objective-C dictionary literal -> no space before closing brace.
     return false;
   }
-  if (Right.getType() == TT_TrailingAnnotation &&
-      Right.isOneOf(tok::amp, tok::ampamp) &&
+  if (Right.is(TT_TrailingAnnotation) && Right.isOneOf(tok::amp, tok::ampamp) &&
       Left.isOneOf(tok::kw_const, tok::kw_volatile) &&
       (!Right.Next || Right.Next->is(tok::semi))) {
     // Match const and volatile ref-qualifiers without any additional

@@ -757,7 +757,7 @@ private:
 /// rewrite type and operation among the given rewrites.
 template <typename RewriteTy, typename R>
 static bool hasRewrite(R &&rewrites, Operation *op) {
-  return any_of(std::move(rewrites), [&](auto &rewrite) {
+  return any_of(std::forward<R>(rewrites), [&](auto &rewrite) {
     auto *rewriteTy = dyn_cast<RewriteTy>(rewrite.get());
     return rewriteTy && rewriteTy->getOperation() == op;
   });

@@ -236,6 +236,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
 
 def ParallelOp : OpenMP_Op<"parallel", [
                  AutomaticAllocationScope, AttrSizedOperandSegments,
+                 DeclareOpInterfaceMethods<LoopWrapperInterface>,
                  DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>,
                  RecursiveMemoryEffects, ReductionClauseInterface]> {
   let summary = "parallel construct";
@@ -287,7 +288,8 @@ def ParallelOp : OpenMP_Op<"parallel", [
   let regions = (region AnyRegion:$region);
 
   let builders = [
-    OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
+    OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins CArg<"const ParallelClauseOps &">:$clauses)>
   ];
   let extraClassDeclaration = [{
     /// Returns the number of reduction variables.
@@ -361,6 +363,10 @@ def TeamsOp : OpenMP_Op<"teams", [
                        OptionalAttr<SymbolRefArrayAttr>:$reductions);
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TeamsClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist(
@@ -451,6 +457,10 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments,
 
   let regions = (region SizedRegion<1>:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const SectionsClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist( `reduction` `(`
               custom<ReductionVarList>(
@@ -495,6 +505,10 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
 
   let regions = (region AnyRegion:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const SingleClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`allocate` `(`
               custom<AllocateAndAllocator>(
@@ -512,11 +526,82 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Loop Nest
+//===----------------------------------------------------------------------===//
+
+def LoopNestOp : OpenMP_Op<"loop_nest", [SameVariadicOperandSize,
+                        AllTypesMatch<["lowerBound", "upperBound", "step"]>,
+                        RecursiveMemoryEffects]> {
+  let summary = "rectangular loop nest";
+  let description = [{
+    This operation represents a collapsed rectangular loop nest. For each
+    rectangular loop of the nest represented by an instance of this operation,
+    lower and upper bounds, as well as a step variable, must be defined.
+
+    The lower and upper bounds specify a half-open range: the range includes the
+    lower bound but does not include the upper bound. If the `inclusive`
+    attribute is specified then the upper bound is also included.
+
+    The body region can contain any number of blocks. The region is terminated
+    by an `omp.yield` instruction without operands. The induction variables,
+    represented as entry block arguments to the loop nest operation's single
+    region, match the types of the `lowerBound`, `upperBound` and `step`
+    arguments.
+
+    ```mlir
+    omp.loop_nest (%i1, %i2) : i32 = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+      %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+      %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+      %sum = arith.addf %a, %b : f32
+      store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+      omp.yield
+    }
+    ```
+
+    This is a temporary simplified definition of a loop based on existing OpenMP
+    loop operations intended to serve as a stopgap solution until the long-term
+    representation of canonical loops is defined. Specifically, this operation
+    is intended to serve as a unique source for loop information during the
+    transition to making `omp.distribute`, `omp.simd`, `omp.taskloop` and
+    `omp.wsloop` wrapper operations. It is not intended to help with the
+    addition of support for loop transformations, non-rectangular loops and
+    non-perfectly nested loops.
+  }];
+
+  let arguments = (ins Variadic<IntLikeType>:$lowerBound,
+                       Variadic<IntLikeType>:$upperBound,
+                       Variadic<IntLikeType>:$step,
+                       UnitAttr:$inclusive);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const LoopNestClauseOps &">:$clauses)>
+  ];
+
+  let regions = (region AnyRegion:$region);
+
+  let extraClassDeclaration = [{
+    /// Returns the number of loops in the loop nest.
+    unsigned getNumLoops() { return getLowerBound().size(); }
+
+    /// Returns the induction variables of the loop nest.
+    ArrayRef<BlockArgument> getIVs() { return getRegion().getArguments(); }
+
+    /// Fills a list of wrapper operations around this loop nest. Wrappers
+    /// in the resulting vector will be sorted from innermost to outermost.
+    void gatherWrappers(SmallVectorImpl<LoopWrapperInterface> &wrappers);
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.9.2 Workshare Loop Construct
 //===----------------------------------------------------------------------===//
 
 def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                          AllTypesMatch<["lowerBound", "upperBound", "step"]>,
+                         DeclareOpInterfaceMethods<LoopWrapperInterface>,
                          RecursiveMemoryEffects, ReductionClauseInterface]> {
   let summary = "worksharing-loop construct";
   let description = [{
@@ -601,6 +686,7 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     OpBuilder<(ins "ValueRange":$lowerBound, "ValueRange":$upperBound,
                "ValueRange":$step,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins CArg<"const WsloopClauseOps &">:$clauses)>
   ];
 
   let regions = (region AnyRegion:$region);
@@ -636,22 +722,19 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
 // Simd construct [2.9.3.1]
 //===----------------------------------------------------------------------===//
 
-def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
-                         AllTypesMatch<["lowerBound", "upperBound", "step"]>]> {
- let summary = "simd loop construct";
+def SimdOp : OpenMP_Op<"simd", [AttrSizedOperandSegments,
+                       DeclareOpInterfaceMethods<LoopWrapperInterface>,
+                       RecursiveMemoryEffects,
+                       SingleBlockImplicitTerminator<"TerminatorOp">]> {
+ let summary = "simd construct";
   let description = [{
     The simd construct can be applied to a loop to indicate that the loop can be
     transformed into a SIMD loop (that is, multiple iterations of the loop can
-    be executed concurrently using SIMD instructions).. The lower and upper
-    bounds specify a half-open range: the range includes the lower bound but
-    does not include the upper bound. If the `inclusive` attribute is specified
-    then the upper bound is also included.
+    be executed concurrently using SIMD instructions).
 
-    The body region can contain any number of blocks. The region is terminated
-    by "omp.yield" instruction without operands.
-
-    Collapsed loops are represented by the simd-loop having a list of indices,
-    bounds and steps where the size of the list is equal to the collapse value.
+    The body region can contain a single block which must contain a single
+    operation and a terminator. The operation must be another compatible loop
+    wrapper or an `omp.loop_nest`.
 
     The `alignment_values` attribute additionally specifies alignment of each
     corresponding aligned operand. Note that `$aligned_vars` and
@@ -675,29 +758,34 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
     SIMD chunk can have a distance in the logical iteration space that is
     greater than or equal to the value given in the clause.
     ```
-    omp.simdloop <clauses>
-    for (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
-      // block operations
-      omp.yield
+    omp.simd <clauses> {
+      omp.loop_nest (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+        %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+        %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+        %sum = arith.addf %a, %b : f32
+        store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+        omp.yield
+      }
     }
     ```
   }];
 
   // TODO: Add other clauses
-  let arguments = (ins Variadic<IntLikeType>:$lowerBound,
-             Variadic<IntLikeType>:$upperBound,
-             Variadic<IntLikeType>:$step,
-             Variadic<OpenMP_PointerLikeType>:$aligned_vars,
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$aligned_vars,
              OptionalAttr<I64ArrayAttr>:$alignment_values,
              Optional<I1>:$if_expr,
              Variadic<OpenMP_PointerLikeType>:$nontemporal_vars,
              OptionalAttr<OrderKindAttr>:$order_val,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$simdlen,
-             ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$safelen,
-             UnitAttr:$inclusive
+             ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$safelen
      );
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const SimdClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`aligned` `(`
               custom<AlignedClause>($aligned_vars, type($aligned_vars),
@@ -707,14 +795,7 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
           |`order` `(` custom<ClauseAttr>($order_val) `)`
           |`simdlen` `(` $simdlen  `)`
           |`safelen` `(` $safelen  `)`
-    ) `for` custom<LoopControl>($region, $lowerBound, $upperBound, $step,
-                                  type($step), $inclusive) attr-dict
-  }];
-
-  let extraClassDeclaration = [{
-    /// Returns the number of loops in the simd loop nest.
-    unsigned getNumLoops() { return getLowerBound().size(); }
-
+    ) $region attr-dict
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -724,8 +805,8 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
 
 def YieldOp : OpenMP_Op<"yield",
     [Pure, ReturnLike, Terminator,
-     ParentOneOf<["WsloopOp", "DeclareReductionOp",
-     "AtomicUpdateOp", "SimdLoopOp", "PrivateClauseOp"]>]> {
+     ParentOneOf<["LoopNestOp", "WsloopOp", "DeclareReductionOp",
+     "AtomicUpdateOp", "PrivateClauseOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and
@@ -746,7 +827,9 @@ def YieldOp : OpenMP_Op<"yield",
 // Distribute construct [2.9.4.1]
 //===----------------------------------------------------------------------===//
 def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
-                              MemoryEffects<[MemWrite]>]> {
+                             DeclareOpInterfaceMethods<LoopWrapperInterface>,
+                             RecursiveMemoryEffects,
+                             SingleBlockImplicitTerminator<"TerminatorOp">]> {
   let summary = "distribute construct";
   let description = [{
     The distribute construct specifies that the iterations of one or more loops
@@ -761,15 +844,28 @@ def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
     The distribute loop construct specifies that the iterations of the loop(s)
     will be executed in parallel by threads in the current context. These
     iterations are spread across threads that already exist in the enclosing
-    region. The lower and upper bounds specify a half-open range: the
-    range includes the lower bound but does not include the upper bound. If the
-    `inclusive` attribute is specified then the upper bound is also included.
+    region.
+    
+    The body region can contain a single block which must contain a single
+    operation and a terminator. The operation must be another compatible loop
+    wrapper or an `omp.loop_nest`.
 
     The `dist_schedule_static` attribute specifies the  schedule for this
     loop, determining how the loop is distributed across the parallel threads.
     The optional `schedule_chunk` associated with this determines further
     controls this distribution.
 
+    ```mlir
+    omp.distribute <clauses> {
+      omp.loop_nest (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+        %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+        %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+        %sum = arith.addf %a, %b : f32
+        store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+        omp.yield
+      }
+    }
+    ```
     // TODO: private_var, firstprivate_var, lastprivate_var, collapse
   }];
   let arguments = (ins
@@ -780,6 +876,10 @@ def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
              OptionalAttr<OrderKindAttr>:$order_val);
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const DistributeClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist(`dist_schedule_static` $dist_schedule_static
@@ -883,6 +983,9 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
                        Variadic<AnyType>:$allocate_vars,
                        Variadic<AnyType>:$allocators_vars);
   let regions = (region AnyRegion:$region);
+  let builders = [
+    OpBuilder<(ins CArg<"const TaskClauseOps &">:$clauses)>
+  ];
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `)`
           |`final` `(` $final_expr `)`
@@ -915,9 +1018,10 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
 }
 
 def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
-                           AutomaticAllocationScope, RecursiveMemoryEffects,
-                           AllTypesMatch<["lowerBound", "upperBound", "step"]>,
-                           ReductionClauseInterface]> {
+                           AutomaticAllocationScope,
+                           DeclareOpInterfaceMethods<LoopWrapperInterface>,
+                           RecursiveMemoryEffects, ReductionClauseInterface,
+                           SingleBlockImplicitTerminator<"TerminatorOp">]> {
   let summary = "taskloop construct";
   let description = [{
     The taskloop construct specifies that the iterations of one or more
@@ -925,21 +1029,19 @@ def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
     iterations are distributed across tasks generated by the construct and
     scheduled to be executed.
 
-    The `lowerBound` and `upperBound` specify a half-open range: the range
-    includes the lower bound but does not include the upper bound. If the
-    `inclusive` attribute is specified then the upper bound is also included.
-    The `step` specifies the loop step.
-
-    The body region can contain any number of blocks.
+    The body region can contain a single block which must contain a single
+    operation and a terminator. The operation must be another compatible loop
+    wrapper or an `omp.loop_nest`.
 
     ```
-    omp.taskloop <clauses>
-    for (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
-      %a = load %arrA[%i1, %i2] : memref<?x?xf32>
-      %b = load %arrB[%i1, %i2] : memref<?x?xf32>
-      %sum = arith.addf %a, %b : f32
-      store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
-      omp.terminator
+    omp.taskloop <clauses> {
+      omp.loop_nest (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+        %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+        %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+        %sum = arith.addf %a, %b : f32
+        store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+        omp.yield
+      }
     }
     ```
 
@@ -1016,11 +1118,7 @@ def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
     created.
   }];
 
-  let arguments = (ins Variadic<IntLikeType>:$lowerBound,
-                       Variadic<IntLikeType>:$upperBound,
-                       Variadic<IntLikeType>:$step,
-                       UnitAttr:$inclusive,
-                       Optional<I1>:$if_expr,
+  let arguments = (ins Optional<I1>:$if_expr,
                        Optional<I1>:$final_expr,
                        UnitAttr:$untied,
                        UnitAttr:$mergeable,
@@ -1036,6 +1134,10 @@ def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
                        UnitAttr: $nogroup);
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TaskloopClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `)`
@@ -1059,8 +1161,7 @@ def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
           |`grain_size` `(` $grain_size `:` type($grain_size) `)`
           |`num_tasks` `(` $num_tasks `:` type($num_tasks) `)`
           |`nogroup` $nogroup
-    ) `for` custom<LoopControl>($region, $lowerBound, $upperBound, $step,
-                                  type($step), $inclusive) attr-dict
+    ) $region attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -1105,6 +1206,10 @@ def TaskgroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
                        Variadic<AnyType>:$allocators_vars);
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TaskgroupClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist(`task_reduction` `(`
@@ -1432,6 +1537,10 @@ def TargetDataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments,
 
   let regions = (region AnyRegion:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetDataClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
@@ -1486,6 +1595,10 @@ def TargetEnterDataOp: OpenMP_Op<"target_enter_data",
                        UnitAttr:$nowait,
                        Variadic<AnyType>:$map_operands);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
@@ -1539,6 +1652,10 @@ def TargetExitDataOp: OpenMP_Op<"target_exit_data",
                        Variadic<OpenMP_PointerLikeType>:$depend_vars,
                        UnitAttr:$nowait,
                        Variadic<AnyType>:$map_operands);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
@@ -1596,6 +1713,10 @@ def TargetUpdateOp: OpenMP_Op<"target_update", [AttrSizedOperandSegments,
                        UnitAttr:$nowait,
                        Variadic<OpenMP_PointerLikeType>:$map_operands);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
@@ -1628,14 +1749,23 @@ def TargetOp : OpenMP_Op<"target", [IsolatedFromAbove, MapClauseOwningOpInterfac
 
     The optional $thread_limit specifies the limit on the number of threads
 
-    The optional $nowait elliminates the implicit barrier so the parent task can make progress
+    The optional $nowait eliminates the implicit barrier so the parent task can make progress
     even if the target task is not yet completed.
 
     The `depends` and `depend_vars` arguments are variadic lists of values
     that specify the dependencies of this particular target task in relation to
     other tasks.
 
-    TODO:  is_device_ptr, defaultmap, in_reduction
+    The optional $is_device_ptr indicates list items are device pointers.
+
+    The optional $has_device_addr indicates that list items already have device
+    addresses, so they may be directly accessed from the target device. This
+    includes array sections.
+
+    The optional $map_operands maps data from the task’s environment to the
+    device environment.
+
+    TODO:  defaultmap, in_reduction
 
   }];
 
@@ -1645,15 +1775,22 @@ def TargetOp : OpenMP_Op<"target", [IsolatedFromAbove, MapClauseOwningOpInterfac
                        OptionalAttr<TaskDependArrayAttr>:$depends,
                        Variadic<OpenMP_PointerLikeType>:$depend_vars,
                        UnitAttr:$nowait,
+                       Variadic<OpenMP_PointerLikeType>:$is_device_ptr,
+                       Variadic<OpenMP_PointerLikeType>:$has_device_addr,
                        Variadic<AnyType>:$map_operands);
-
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist( `if` `(` $if_expr `)`
     | `device` `(` $device `:` type($device) `)`
     | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
     | `nowait` $nowait
+    | `is_device_ptr` `(` $is_device_ptr `:` type($is_device_ptr) `)`
+    | `has_device_addr` `(` $has_device_addr `:` type($has_device_addr) `)`
     | `map_entries` `(` custom<MapEntries>($map_operands, type($map_operands)) `)`
     | `depend` `(` custom<DependVarList>($depend_vars, type($depend_vars), $depends) `)`
     ) $region attr-dict
@@ -1692,6 +1829,10 @@ def CriticalDeclareOp : OpenMP_Op<"critical.declare", [Symbol]> {
 
   let arguments = (ins SymbolNameAttr:$sym_name,
                        DefaultValuedAttr<I64Attr, "0">:$hint_val);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const CriticalClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     $sym_name oilist(`hint` `(` custom<SynchronizationHint>($hint_val) `)`)
@@ -1773,6 +1914,10 @@ def OrderedOp : OpenMP_Op<"ordered"> {
              ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$num_loops_val,
              Variadic<AnyType>:$depend_vec_vars);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const OrderedOpClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     ( `depend_type` `` $depend_type_val^ )?
     ( `depend_vec` `(` $depend_vec_vars^ `:` type($depend_vec_vars) `)` )?
@@ -1797,6 +1942,10 @@ def OrderedRegionOp : OpenMP_Op<"ordered.region"> {
 
   let regions = (region AnyRegion:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const OrderedRegionClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{ ( `simd` $simd^ )? $region attr-dict}];
   let hasVerifier = 1;
 }
@@ -1811,6 +1960,10 @@ def TaskwaitOp : OpenMP_Op<"taskwait"> {
     The taskwait construct specifies a wait on the completion of child tasks
     of the current task.
   }];
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TaskwaitClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = "attr-dict";
 }

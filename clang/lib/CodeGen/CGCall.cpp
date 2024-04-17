@@ -5591,6 +5591,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                              /*AttrOnCallSite=*/true,
                              /*IsThunk=*/false);
 
+  if (CallingConv == llvm::CallingConv::X86_VectorCall &&
+      getTarget().getTriple().isWindowsArm64EC()) {
+    CGM.Error(Loc, "__vectorcall calling convention is not currently "
+                   "supported");
+  }
+
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
     if (FD->hasAttr<StrictFPAttr>())
       // All calls within a strictfp function are marked strictfp

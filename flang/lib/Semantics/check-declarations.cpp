@@ -988,6 +988,13 @@ void CheckHelper::CheckObjectEntity(
             symbol.name());
       }
       break;
+    case common::CUDADataAttr::Unified:
+      if ((!subpDetails || inDeviceSubprogram) && !isComponent) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(UNIFIED) must be declared in a host subprogram"_err_en_US,
+            symbol.name());
+      }
+      break;
     case common::CUDADataAttr::Texture:
       messages_.Say(
           "ATTRIBUTES(TEXTURE) is obsolete and no longer supported"_err_en_US);

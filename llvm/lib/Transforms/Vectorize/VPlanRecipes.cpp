@@ -47,9 +47,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
-  case VPWidenMemoryInstructionSC: {
-    return cast<VPWidenMemoryInstructionRecipe>(this)->isStore();
-  }
+  case VPWidenStoreSC:
+    return true;
   case VPReplicateSC:
   case VPWidenCallSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
@@ -64,6 +63,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenCastSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
+  case VPWidenLoadSC:
   case VPWidenPHISC:
   case VPWidenSC:
   case VPWidenSelectSC: {
@@ -81,16 +81,16 @@ bool VPRecipeBase::mayWriteToMemory() const {
 
 bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
-  case VPWidenMemoryInstructionSC: {
-    return !cast<VPWidenMemoryInstructionRecipe>(this)->isStore();
-  }
+  case VPWidenLoadSC:
+    return true;
   case VPReplicateSC:
   case VPWidenCallSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayReadFromMemory();
   case VPBranchOnMaskSC:
-  case VPScalarIVStepsSC:
   case VPPredInstPHISC:
+  case VPScalarIVStepsSC:
+  case VPWidenStoreSC:
     return false;
   case VPBlendSC:
   case VPReductionSC:
@@ -155,12 +155,13 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   }
   case VPInterleaveSC:
     return mayWriteToMemory();
-  case VPWidenMemoryInstructionSC:
-    assert(cast<VPWidenMemoryInstructionRecipe>(this)
-                   ->getIngredient()
-                   .mayHaveSideEffects() == mayWriteToMemory() &&
-           "mayHaveSideffects result for ingredient differs from this "
-           "implementation");
+  case VPWidenLoadSC:
+  case VPWidenStoreSC:
+    assert(
+        cast<VPWidenMemoryRecipe>(this)->getIngredient().mayHaveSideEffects() ==
+            mayWriteToMemory() &&
+        "mayHaveSideffects result for ingredient differs from this "
+        "implementation");
     return mayWriteToMemory();
   case VPReplicateSC: {
     auto *R = cast<VPReplicateRecipe>(this);
@@ -1514,12 +1515,65 @@ void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
     for (unsigned I = 0, E = getNumIncomingValues(); I < E; ++I) {
       O << " ";
       getIncomingValue(I)->printAsOperand(O, SlotTracker);
+      if (I == 0)
+        continue;
       O << "/";
       getMask(I)->printAsOperand(O, SlotTracker);
     }
   }
 }
+#endif
 
+void VPReductionRecipe::execute(VPTransformState &State) {
+  assert(!State.Instance && "Reduction being replicated.");
+  Value *PrevInChain = State.get(getChainOp(), 0, /*IsScalar*/ true);
+  RecurKind Kind = RdxDesc.getRecurrenceKind();
+  // Propagate the fast-math flags carried by the underlying instruction.
+  IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
+  State.Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    Value *NewVecOp = State.get(getVecOp(), Part);
+    if (VPValue *Cond = getCondOp()) {
+      Value *NewCond = State.get(Cond, Part, State.VF.isScalar());
+      VectorType *VecTy = dyn_cast<VectorType>(NewVecOp->getType());
+      Type *ElementTy = VecTy ? VecTy->getElementType() : NewVecOp->getType();
+      Value *Iden = RdxDesc.getRecurrenceIdentity(Kind, ElementTy,
+                                                  RdxDesc.getFastMathFlags());
+      if (State.VF.isVector()) {
+        Iden = State.Builder.CreateVectorSplat(VecTy->getElementCount(), Iden);
+      }
+
+      Value *Select = State.Builder.CreateSelect(NewCond, NewVecOp, Iden);
+      NewVecOp = Select;
+    }
+    Value *NewRed;
+    Value *NextInChain;
+    if (IsOrdered) {
+      if (State.VF.isVector())
+        NewRed = createOrderedReduction(State.Builder, RdxDesc, NewVecOp,
+                                        PrevInChain);
+      else
+        NewRed = State.Builder.CreateBinOp(
+            (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), PrevInChain,
+            NewVecOp);
+      PrevInChain = NewRed;
+    } else {
+      PrevInChain = State.get(getChainOp(), Part, /*IsScalar*/ true);
+      NewRed = createTargetReduction(State.Builder, RdxDesc, NewVecOp);
+    }
+    if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
+      NextInChain = createMinMaxOp(State.Builder, RdxDesc.getRecurrenceKind(),
+                                   NewRed, PrevInChain);
+    } else if (IsOrdered)
+      NextInChain = NewRed;
+    else
+      NextInChain = State.Builder.CreateBinOp(
+          (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), NewRed, PrevInChain);
+    State.set(this, NextInChain, Part, /*IsScalar*/ true);
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << "REDUCE ";
@@ -1716,16 +1770,17 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
 }
 
-void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
-                                           VPSlotTracker &SlotTracker) const {
+void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
+                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
+  printAsOperand(O, SlotTracker);
+  O << " = load ";
+  printOperands(O, SlotTracker);
+}
 
-  if (!isStore()) {
-    getVPSingleValue()->printAsOperand(O, SlotTracker);
-    O << " = ";
-  }
-  O << Instruction::getOpcodeName(Ingredient.getOpcode()) << " ";
-
+void VPWidenStoreRecipe::print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN store ";
   printOperands(O, SlotTracker);
 }
 #endif

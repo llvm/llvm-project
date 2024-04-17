@@ -95,18 +95,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
-add_object_library(
-  math_utils
-  SRCS
-    math_utils.cpp
-  HDRS
-    math_utils.h
-  DEPENDS
-    libc.include.errno
-    libc.include.math
-    libc.src.errno.errno
-)
-
 add_header_library(
   range_reduction
   HDRS
@@ -139,7 +127,6 @@ add_entrypoint_object(
     ../cosf.h
   DEPENDS
     .sincosf_utils
-    libc.include.math
     libc.src.errno.errno
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fenv_impl
@@ -162,7 +149,6 @@ add_entrypoint_object(
   DEPENDS
     .range_reduction
     .sincosf_utils
-    libc.include.math
     libc.src.errno.errno
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.fenv_impl
@@ -185,7 +171,6 @@ add_entrypoint_object(
   DEPENDS
     .range_reduction
     .sincosf_utils
-    libc.include.math
     libc.src.errno.errno
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -207,7 +192,6 @@ add_entrypoint_object(
   DEPENDS
     .range_reduction
     .sincosf_utils
-    libc.include.math
     libc.src.errno.errno
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fenv_impl
@@ -410,6 +394,55 @@ add_entrypoint_object(
     roundf128.cpp
   HDRS
     ../roundf128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  roundeven
+  SRCS
+    roundeven.cpp
+  HDRS
+    ../roundeven.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  roundevenf
+  SRCS
+    roundevenf.cpp
+  HDRS
+    ../roundevenf.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  roundevenl
+  SRCS
+    roundevenl.cpp
+  HDRS
+    ../roundevenl.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+  roundevenf128
+  SRCS
+    roundevenf128.cpp
+  HDRS
+    ../roundevenf128.h
   COMPILE_OPTIONS
     -O3
   DEPENDS
@@ -704,8 +737,6 @@ add_object_library(
     exp_utils.h
   SRCS
     exp_utils.cpp
-  DEPENDS
-    .math_utils
 )
 
 add_entrypoint_object(
@@ -721,7 +752,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
-    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
@@ -736,7 +766,6 @@ add_entrypoint_object(
     .common_constants
     .explogxf
     libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.dyadic_float
@@ -772,7 +801,6 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
     libc.include.errno
     libc.src.errno.errno
-    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
@@ -787,7 +815,6 @@ add_entrypoint_object(
     .common_constants
     .explogxf
     libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.dyadic_float
@@ -822,7 +849,6 @@ add_header_library(
     libc.src.__support.common
     libc.include.errno
     libc.src.errno.errno
-    libc.include.math
 )
 
 add_entrypoint_object(
@@ -868,7 +894,6 @@ add_entrypoint_object(
     .common_constants
     .explogxf
     libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.dyadic_float
@@ -902,7 +927,6 @@ add_header_library(
     libc.src.__support.common
     libc.include.errno
     libc.src.errno.errno
-    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
@@ -929,7 +953,6 @@ add_entrypoint_object(
     .common_constants
     .explogxf
     libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.dyadic_float
@@ -965,7 +988,6 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
     libc.include.errno
     libc.src.errno.errno
-    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
@@ -982,7 +1004,6 @@ add_entrypoint_object(
     .exp2f_impl
     .explogxf
     libc.include.errno
-    libc.include.math
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.fenv_impl
@@ -2706,7 +2727,6 @@ add_object_library(
     libc.src.__support.common
     libc.include.errno
     libc.src.errno.errno
-    libc.include.math
   COMPILE_OPTIONS
     -O3
 )
