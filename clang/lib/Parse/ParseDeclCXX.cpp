@@ -2092,7 +2092,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   TypeResult TypeResult = true;      // invalid
 
   bool Owned = false;
-  Sema::SkipBodyInfo SkipBody;
+  SkipBodyInfo SkipBody;
   if (TemplateId) {
     // Explicit specialization, class template partial specialization,
     // or explicit instantiation.
