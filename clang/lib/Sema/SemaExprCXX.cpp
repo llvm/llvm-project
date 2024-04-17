@@ -4250,7 +4250,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                 AssignmentAction Action,
                                 CheckedConversionKind CCK) {
   // C++ [over.match.oper]p7: [...] operands of class type are converted [...]
-  if (CCK == CCK_ForBuiltinOverloadedOp && !From->getType()->isRecordType())
+  if (CCK == CheckedConversionKind::ForBuiltinOverloadedOp &&
+      !From->getType()->isRecordType())
     return From;
 
   switch (ICS.getKind()) {
@@ -4311,7 +4312,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       // C++ [over.match.oper]p7:
       //   [...] the second standard conversion sequence of a user-defined
       //   conversion sequence is not applied.
-      if (CCK == CCK_ForBuiltinOverloadedOp)
+      if (CCK == CheckedConversionKind::ForBuiltinOverloadedOp)
         return From;
 
       return PerformImplicitConversion(From, ToType, ICS.UserDefined.After,
@@ -4352,7 +4353,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                 const StandardConversionSequence& SCS,
                                 AssignmentAction Action,
                                 CheckedConversionKind CCK) {
-  bool CStyle = (CCK == CCK_CStyleCast || CCK == CCK_FunctionalCast);
+  bool CStyle = (CCK == CheckedConversionKind::CStyleCast ||
+                 CCK == CheckedConversionKind::FunctionalCast);
 
   // Overall FIXME: we are recomputing too many types here and doing far too
   // much extra work. What this means is that we need to keep track of more

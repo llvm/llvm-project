@@ -437,6 +437,20 @@ enum class CXXSpecialMemberKind {
   Invalid
 };
 
+/// The kind of conversion being performed.
+enum class CheckedConversionKind {
+  /// An implicit conversion.
+  Implicit,
+  /// A C-style cast.
+  CStyleCast,
+  /// A functional-style cast.
+  FunctionalCast,
+  /// A cast other than a C-style cast.
+  OtherCast,
+  /// A conversion for an operand of a builtin overloaded operator.
+  ForBuiltinOverloadedOp
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -700,28 +714,27 @@ public:
   void checkTypeSupport(QualType Ty, SourceLocation Loc,
                         ValueDecl *D = nullptr);
 
-  /// The kind of conversion being performed.
-  enum CheckedConversionKind {
-    /// An implicit conversion.
-    CCK_ImplicitConversion,
-    /// A C-style cast.
-    CCK_CStyleCast,
-    /// A functional-style cast.
-    CCK_FunctionalCast,
-    /// A cast other than a C-style cast.
-    CCK_OtherCast,
-    /// A conversion for an operand of a builtin overloaded operator.
-    CCK_ForBuiltinOverloadedOp
-  };
+  // /// The kind of conversion being performed.
+  // enum CheckedConversionKind {
+  //   /// An implicit conversion.
+  //   CCK_ImplicitConversion,
+  //   /// A C-style cast.
+  //   CCK_CStyleCast,
+  //   /// A functional-style cast.
+  //   CCK_FunctionalCast,
+  //   /// A cast other than a C-style cast.
+  //   CCK_OtherCast,
+  //   /// A conversion for an operand of a builtin overloaded operator.
+  //   CCK_ForBuiltinOverloadedOp
+  // };
 
   /// ImpCastExprToType - If Expr is not of type 'Type', insert an implicit
   /// cast.  If there is already an implicit cast, merge into the existing one.
   /// If isLvalue, the result of the cast is an lvalue.
-  ExprResult
-  ImpCastExprToType(Expr *E, QualType Type, CastKind CK,
-                    ExprValueKind VK = VK_PRValue,
-                    const CXXCastPath *BasePath = nullptr,
-                    CheckedConversionKind CCK = CCK_ImplicitConversion);
+  ExprResult ImpCastExprToType(
+      Expr *E, QualType Type, CastKind CK, ExprValueKind VK = VK_PRValue,
+      const CXXCastPath *BasePath = nullptr,
+      CheckedConversionKind CCK = CheckedConversionKind::Implicit);
 
   /// ScalarTypeToBooleanCastKind - Returns the cast kind corresponding
   /// to the conversion from scalar type ScalarTy to the Boolean type.
@@ -1781,8 +1794,9 @@ public:
 
 public:
   static bool isCast(CheckedConversionKind CCK) {
-    return CCK == CCK_CStyleCast || CCK == CCK_FunctionalCast ||
-           CCK == CCK_OtherCast;
+    return CCK == CheckedConversionKind::CStyleCast ||
+           CCK == CheckedConversionKind::FunctionalCast ||
+           CCK == CheckedConversionKind::OtherCast;
   }
 
   /// ActOnCXXNamedCast - Parse
@@ -6739,11 +6753,10 @@ public:
 
   bool IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType);
 
-  ExprResult
-  PerformImplicitConversion(Expr *From, QualType ToType,
-                            const ImplicitConversionSequence &ICS,
-                            AssignmentAction Action,
-                            CheckedConversionKind CCK = CCK_ImplicitConversion);
+  ExprResult PerformImplicitConversion(
+      Expr *From, QualType ToType, const ImplicitConversionSequence &ICS,
+      AssignmentAction Action,
+      CheckedConversionKind CCK = CheckedConversionKind::Implicit);
   ExprResult PerformImplicitConversion(Expr *From, QualType ToType,
                                        const StandardConversionSequence &SCS,
                                        AssignmentAction Action,
@@ -7064,7 +7077,7 @@ public:
 
   ExprResult PerformQualificationConversion(
       Expr *E, QualType Ty, ExprValueKind VK = VK_PRValue,
-      CheckedConversionKind CCK = CCK_ImplicitConversion);
+      CheckedConversionKind CCK = CheckedConversionKind::Implicit);
 
   bool CanPerformCopyInitialization(const InitializedEntity &Entity,
                                     ExprResult Init);
