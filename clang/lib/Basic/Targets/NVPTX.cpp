@@ -244,7 +244,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
         return "210";
       case CudaArch::SM_30:
         return "300";
-      case CudaArch::SM_32:
+      case CudaArch::SM_32_:
         return "320";
       case CudaArch::SM_35:
         return "350";

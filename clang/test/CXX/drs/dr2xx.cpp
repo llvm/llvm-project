@@ -10,10 +10,15 @@
 typedef __SIZE_TYPE__ size_t;
 // cxx98-error@-1 0-1 {{'long long' is a C++11 extension}}
 
-#if __cplusplus < 201103L
-#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
+
+#if __cplusplus == 199711L
+#define __enable_constant_folding(x) (__builtin_constant_p(x) ? (x) : (x))
 #else
-#define fold
+#define __enable_constant_folding
 #endif
 
 namespace cwg200 { // cwg200: dup 214
@@ -31,7 +36,7 @@ namespace cwg200 { // cwg200: dup 214
 namespace cwg202 { // cwg202: 3.1
   template<typename T> T f();
   template<int (*g)()> struct X {
-    int arr[fold(g == &f<int>) ? 1 : -1];
+    static_assert(__enable_constant_folding(g == &f<int>), "");
   };
   template struct X<f>;
 }
@@ -1024,7 +1029,7 @@ namespace cwg275 { // cwg275: no
 namespace cwg277 { // cwg277: 3.1
   typedef int *intp;
   int *p = intp();
-  int a[fold(intp() ? -1 : 1)];
+  static_assert(__enable_constant_folding(!intp()), "");
 }
 
 namespace cwg280 { // cwg280: 2.9

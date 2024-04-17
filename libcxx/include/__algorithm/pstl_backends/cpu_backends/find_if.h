@@ -42,7 +42,7 @@ __parallel_find(_Index __first, _Index __last, _Brick __f, _Compare __comp, bool
   _DifferenceType __initial_dist = __b_first ? __n : -1;
   std::atomic<_DifferenceType> __extremum(__initial_dist);
   // TODO: find out what is better here: parallel_for or parallel_reduce
-  auto __res = __pstl::__cpu_traits<_Backend>::__parallel_for(
+  auto __res = __pstl::__cpu_traits<_Backend>::__for_each(
       __first, __last, [__comp, __f, __first, &__extremum](_Index __i, _Index __j) {
         // See "Reducing Contention Through Priority Updates", PPoPP '13, for discussion of
         // why using a shared variable scales fairly well in this situation.
