@@ -200,6 +200,9 @@ public:
   // Internal interface for testing purpose only.
   void setValueProfDataEndianness(llvm::endianness Endianness);
   void setOutputSparse(bool Sparse);
+  void setMemProfVersionRequested(memprof::IndexedVersion Version) {
+    MemProfVersionRequested = Version;
+  }
   // Compute the overlap b/w this object and Other. Program level result is
   // stored in Overlap and function level result is stored in FuncLevelOverlap.
   void overlapRecord(NamedInstrProfRecord &&Other, OverlapStats &Overlap,
