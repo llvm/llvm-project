@@ -70,8 +70,8 @@ void test0(MsgTest *t) {
     F1 ret2 = [t smallF1];
     // CHECK: call {{.*}} @objc_msgSend_stret
     S2 ret3 = [t stretS2];
-    // CHECK: call {{.*}} @objc_msgSend_stret2_np
+    // CHECK: call {{.*}} @objc_msgSend_stret2
     S3 ret4 = [t stretInRegS3];
-    // CHECK: call {{.*}} @objc_msgSend_stret2_np
+    // CHECK: call {{.*}} @objc_msgSend_stret2
     S3 ret5 = [MsgTest msgTestStretInRegS3];
 }
