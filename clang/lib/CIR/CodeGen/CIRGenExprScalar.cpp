@@ -467,7 +467,8 @@ public:
         auto &builder = CGF.getBuilder();
         auto amt = builder.getSInt32(amount, loc);
         if (CGF.getLangOpts().isSignedOverflowDefined()) {
-          llvm_unreachable("NYI");
+          value = builder.create<mlir::cir::PtrStrideOp>(loc, value.getType(),
+                                                         value, amt);
         } else {
           value = builder.create<mlir::cir::PtrStrideOp>(loc, value.getType(),
                                                          value, amt);
@@ -1207,7 +1208,8 @@ static mlir::Value buildPointerArithmetic(CIRGenFunction &CGF,
 
   mlir::Type elemTy = CGF.convertTypeForMem(elementType);
   if (CGF.getLangOpts().isSignedOverflowDefined())
-    llvm_unreachable("ptr arithmetic with signed overflow is NYI");
+    return CGF.getBuilder().create<mlir::cir::PtrStrideOp>(
+        CGF.getLoc(op.E->getExprLoc()), pointer.getType(), pointer, index);
 
   return CGF.buildCheckedInBoundsGEP(elemTy, pointer, index, isSigned,
                                      isSubtraction, op.E->getExprLoc());
@@ -1245,20 +1247,17 @@ mlir::Value ScalarExprEmitter::buildSub(const BinOpInfo &Ops) {
     if (Ops.CompType->isSignedIntegerOrEnumerationType()) {
       switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
       case LangOptions::SOB_Defined: {
-        llvm_unreachable("NYI");
-        return Builder.create<mlir::cir::BinOp>(
-            CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.FullType),
-            mlir::cir::BinOpKind::Sub, Ops.LHS, Ops.RHS);
+        if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+          return Builder.createSub(Ops.LHS, Ops.RHS);
+        [[fallthrough]];
       }
       case LangOptions::SOB_Undefined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
-          return Builder.create<mlir::cir::BinOp>(
-              CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.FullType),
-              mlir::cir::BinOpKind::Sub, Ops.LHS, Ops.RHS);
+          return Builder.createNSWSub(Ops.LHS, Ops.RHS);
         [[fallthrough]];
       case LangOptions::SOB_Trapping:
         if (CanElideOverflowCheck(CGF.getContext(), Ops))
-          llvm_unreachable("NYI");
+          return Builder.createNSWSub(Ops.LHS, Ops.RHS);
         llvm_unreachable("NYI");
       }
     }

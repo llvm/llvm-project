@@ -1036,6 +1036,22 @@ cir.func @bad_fetch(%x: !cir.ptr<!cir.float>, %y: !cir.float) -> () {
 
 // -----
 
+cir.func @bad_operands_for_nowrap(%x: !cir.float, %y: !cir.float) {
+  // expected-error@+1 {{only operations on integer values may have nsw/nuw flags}}
+  %0 = cir.binop(add, %x, %y) nsw : !cir.float 
+}
+
+// -----
+
+!u32i = !cir.int<u, 32>
+
+cir.func @bad_binop_for_nowrap(%x: !u32i, %y: !u32i) {
+  // expected-error@+1 {{The nsw/nuw flags are applicable to opcodes: 'add', 'sub' and 'mul'}}
+  %0 = cir.binop(div, %x, %y) nsw : !u32i
+}
+
+// -----
+
 !s32i = !cir.int<s, 32>
 
 module {
