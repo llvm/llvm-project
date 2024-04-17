@@ -1048,7 +1048,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                       name->symbol->GetUltimate().owner();
                   if (!curScope.IsTopLevel()) {
                     const semantics::Scope &declScope =
-                        GetProgramUnitContaining(curScope);
+                        GetProgramUnitOrBlockConstructContaining(curScope);
                     const semantics::Symbol *sym{
                         declScope.parent().FindSymbol(name->symbol->name())};
                     if (sym &&
