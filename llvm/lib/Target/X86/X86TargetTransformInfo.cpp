@@ -3402,6 +3402,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ROTR,       MVT::v32i16,  {  1,  1,  1,  1 } },
     { ISD::ROTR,       MVT::v16i16,  {  1,  1,  1,  1 } },
     { ISD::ROTR,       MVT::v8i16,   {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v32i16,  {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v16i16,  {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v8i16,   {  1,  1,  1,  1 } },
   };
   static const CostKindTblEntry AVX512BITALGCostTbl[] = {
     { ISD::CTPOP,      MVT::v32i16,  {  1,  1,  1,  1 } },
@@ -3498,6 +3501,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ROTR,       MVT::v64i8,   {  5,  6, 12, 14 } },
     { ISD::ROTR,       MVT::v32i8,   {  5, 14,  6,  9 } },
     { ISD::ROTR,       MVT::v16i8,   {  5, 14,  6,  9 } },
+    { X86ISD::VROTLI,  MVT::v32i16,  {  2,  5,  3,  3 } },
+    { X86ISD::VROTLI,  MVT::v16i16,  {  1,  5,  3,  3 } },
+    { X86ISD::VROTLI,  MVT::v8i16,   {  1,  5,  3,  3 } },
+    { X86ISD::VROTLI,  MVT::v64i8,   {  2,  9,  3,  4 } },
+    { X86ISD::VROTLI,  MVT::v32i8,   {  1,  9,  3,  4 } },
+    { X86ISD::VROTLI,  MVT::v16i8,   {  1,  8,  3,  4 } },
     { ISD::SADDSAT,    MVT::v32i16,  {  1 } },
     { ISD::SADDSAT,    MVT::v64i8,   {  1 } },
     { ISD::SMAX,       MVT::v32i16,  {  1,  1,  1,  1 } },
@@ -3556,6 +3565,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ROTR,       MVT::v16i32,  {  1,  1,  1,  1 } },
     { ISD::ROTR,       MVT::v8i32,   {  1,  1,  1,  1 } },
     { ISD::ROTR,       MVT::v4i32,   {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v8i64,   {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v4i64,   {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v2i64,   {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v16i32,  {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v8i32,   {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v4i32,   {  1,  1,  1,  1 } },
     { ISD::SMAX,       MVT::v8i64,   {  1,  3,  1,  1 } },
     { ISD::SMAX,       MVT::v16i32,  {  1,  1,  1,  1 } },
     { ISD::SMAX,       MVT::v32i16,  {  3,  7,  5,  5 } },
@@ -3642,7 +3657,15 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ROTR,       MVT::v2i64,   {  1,  3,  3,  3 } },
     { ISD::ROTR,       MVT::v4i32,   {  1,  3,  3,  3 } },
     { ISD::ROTR,       MVT::v8i16,   {  1,  3,  3,  3 } },
-    { ISD::ROTR,       MVT::v16i8,   {  1,  3,  3,  3 } }
+    { ISD::ROTR,       MVT::v16i8,   {  1,  3,  3,  3 } },
+    { X86ISD::VROTLI,  MVT::v4i64,   {  4,  7,  5,  6 } },
+    { X86ISD::VROTLI,  MVT::v8i32,   {  4,  7,  5,  6 } },
+    { X86ISD::VROTLI,  MVT::v16i16,  {  4,  7,  5,  6 } },
+    { X86ISD::VROTLI,  MVT::v32i8,   {  4,  7,  5,  6 } },
+    { X86ISD::VROTLI,  MVT::v2i64,   {  1,  3,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v4i32,   {  1,  3,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v8i16,   {  1,  3,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v16i8,   {  1,  3,  1,  1 } },
   };
   static const CostKindTblEntry AVX2CostTbl[] = {
     { ISD::ABS,        MVT::v2i64,   {  2,  4,  3,  5 } }, // VBLENDVPD(X,VPSUBQ(0,X),X)
@@ -4096,9 +4119,11 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
       if (Args[0] == Args[1]) {
         ISD = ISD::ROTL;
-        // Handle scalar constant rotation amounts.
-        // TODO: Handle vector + funnel-shift cases.
-        if (isa_and_nonnull<ConstantInt>(Args[2]))
+        // Handle uniform constant rotation amounts.
+        // TODO: Handle funnel-shift cases.
+        const APInt *Amt;
+        if (Args[2] &&
+            PatternMatch::match(Args[2], PatternMatch::m_APIntAllowUndef(Amt)))
           ISD = X86ISD::VROTLI;
       }
     }
@@ -4109,10 +4134,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (!ICA.isTypeBasedOnly()) {
       const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
       if (Args[0] == Args[1]) {
-        // Handle scalar constant rotation amount.
-        // TODO: Handle vector + funnel-shift cases.
         ISD = ISD::ROTR;
-        if (isa_and_nonnull<ConstantInt>(Args[2]))
+        // Handle uniform constant rotation amount.
+        // TODO: Handle funnel-shift cases.
+        const APInt *Amt;
+        if (Args[2] &&
+            PatternMatch::match(Args[2], PatternMatch::m_APIntAllowUndef(Amt)))
           ISD = X86ISD::VROTLI;
       }
     }

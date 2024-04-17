@@ -100,41 +100,17 @@ define void @store_i8(ptr nocapture %0, i32 %1, i32 %2) {
 define void @store_i64(ptr nocapture %0, i32 %1, i32 %2) {
 ; SSE-LABEL: @store_i64(
 ; SSE-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP1:%.*]] to i64
-; SSE-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP0:%.*]], align 8, !tbaa [[TBAA5:![0-9]+]]
-; SSE-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], [[TMP4]]
-; SSE-NEXT:    [[TMP7:%.*]] = lshr i64 [[TMP6]], 15
-; SSE-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i32
-; SSE-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP8]], 255
-; SSE-NEXT:    [[TMP10:%.*]] = and i64 [[TMP7]], 4294967295
-; SSE-NEXT:    [[TMP11:%.*]] = select i1 [[TMP9]], i64 [[TMP10]], i64 255
-; SSE-NEXT:    store i64 [[TMP11]], ptr [[TMP0]], align 8, !tbaa [[TBAA5]]
-; SSE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
-; SSE-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP12]], align 8, !tbaa [[TBAA5]]
-; SSE-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], [[TMP4]]
-; SSE-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP14]], 15
-; SSE-NEXT:    [[TMP16:%.*]] = trunc i64 [[TMP15]] to i32
-; SSE-NEXT:    [[TMP17:%.*]] = icmp ult i32 [[TMP16]], 255
-; SSE-NEXT:    [[TMP18:%.*]] = and i64 [[TMP15]], 4294967295
-; SSE-NEXT:    [[TMP19:%.*]] = select i1 [[TMP17]], i64 [[TMP18]], i64 255
-; SSE-NEXT:    store i64 [[TMP19]], ptr [[TMP12]], align 8, !tbaa [[TBAA5]]
-; SSE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
-; SSE-NEXT:    [[TMP21:%.*]] = load i64, ptr [[TMP20]], align 8, !tbaa [[TBAA5]]
-; SSE-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP21]], [[TMP4]]
-; SSE-NEXT:    [[TMP23:%.*]] = lshr i64 [[TMP22]], 15
-; SSE-NEXT:    [[TMP24:%.*]] = trunc i64 [[TMP23]] to i32
-; SSE-NEXT:    [[TMP25:%.*]] = icmp ult i32 [[TMP24]], 255
-; SSE-NEXT:    [[TMP26:%.*]] = and i64 [[TMP23]], 4294967295
-; SSE-NEXT:    [[TMP27:%.*]] = select i1 [[TMP25]], i64 [[TMP26]], i64 255
-; SSE-NEXT:    store i64 [[TMP27]], ptr [[TMP20]], align 8, !tbaa [[TBAA5]]
-; SSE-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 24
-; SSE-NEXT:    [[TMP29:%.*]] = load i64, ptr [[TMP28]], align 8, !tbaa [[TBAA5]]
-; SSE-NEXT:    [[TMP30:%.*]] = mul i64 [[TMP29]], [[TMP4]]
-; SSE-NEXT:    [[TMP31:%.*]] = lshr i64 [[TMP30]], 15
-; SSE-NEXT:    [[TMP32:%.*]] = trunc i64 [[TMP31]] to i32
-; SSE-NEXT:    [[TMP33:%.*]] = icmp ult i32 [[TMP32]], 255
-; SSE-NEXT:    [[TMP34:%.*]] = and i64 [[TMP31]], 4294967295
-; SSE-NEXT:    [[TMP35:%.*]] = select i1 [[TMP33]], i64 [[TMP34]], i64 255
-; SSE-NEXT:    store i64 [[TMP35]], ptr [[TMP28]], align 8, !tbaa [[TBAA5]]
+; SSE-NEXT:    [[TMP5:%.*]] = load <4 x i64>, ptr [[TMP0:%.*]], align 8, !tbaa [[TBAA5:![0-9]+]]
+; SSE-NEXT:    [[TMP6:%.*]] = insertelement <4 x i64> poison, i64 [[TMP4]], i64 0
+; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP6]], <4 x i64> poison, <4 x i32> zeroinitializer
+; SSE-NEXT:    [[TMP8:%.*]] = mul <4 x i64> [[TMP5]], [[TMP7]]
+; SSE-NEXT:    [[TMP9:%.*]] = lshr <4 x i64> [[TMP8]], <i64 15, i64 15, i64 15, i64 15>
+; SSE-NEXT:    [[TMP10:%.*]] = trunc <4 x i64> [[TMP9]] to <4 x i32>
+; SSE-NEXT:    [[TMP11:%.*]] = icmp ult <4 x i32> [[TMP10]], <i32 255, i32 255, i32 255, i32 255>
+; SSE-NEXT:    [[TMP12:%.*]] = trunc <4 x i64> [[TMP9]] to <4 x i32>
+; SSE-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP12]], <4 x i32> <i32 255, i32 255, i32 255, i32 255>
+; SSE-NEXT:    [[TMP14:%.*]] = zext <4 x i32> [[TMP13]] to <4 x i64>
+; SSE-NEXT:    store <4 x i64> [[TMP14]], ptr [[TMP0]], align 8, !tbaa [[TBAA5]]
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @store_i64(
