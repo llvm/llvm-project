@@ -16,7 +16,11 @@ package(
 
 licenses(["notice"])
 
-exports_files(["LICENSE.TXT"])
+exports_files([
+    "LICENSE.TXT",
+    "source/API/liblldb-private.exports",
+    "source/API/liblldb.exports",
+])
 
 bool_flag(
     name = "enable_curses",
@@ -210,6 +214,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:config",
     ],
+    alwayslink = True,
 )
 
 cc_library(
