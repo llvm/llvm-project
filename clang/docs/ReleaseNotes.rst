@@ -203,12 +203,6 @@ Non-comprehensive list of changes in this release
 - ``__typeof_unqual__`` is available in all C modes as an extension, which behaves
   like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
 
-- Improved stack usage with C++ initialization code. This allows significantly
-  more levels of recursive initialization before reaching stack exhaustion
-  limits. This will positively impact recursive template instantiation code,
-  but should also reduce memory overhead for initializations in general.
-  Fixes #GH88330
-
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
@@ -219,6 +213,9 @@ New Compiler Flags
 - ``-Wmissing-designated-field-initializers``, grouped under ``-Wmissing-field-initializers``.
   This diagnostic can be disabled to make ``-Wmissing-field-initializers`` behave
   like it did before Clang 18.x. Fixes #GH56628
+
+- ``-fexperimental-modules-reduced-bmi`` enables the Reduced BMI for C++20 named modules.
+  See the document of standard C++ modules for details.
 
 Deprecated Compiler Flags
 -------------------------
@@ -366,6 +363,8 @@ Improvements to Clang's diagnostics
 
 - Clang now uses the correct type-parameter-key (``class`` or ``typename``) when printing
   template template parameter declarations.
+
+- Clang now diagnoses requires expressions with explicit object parameters.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -537,7 +536,6 @@ Bug Fixes to C++ Support
   Fixes (#GH70604), (#GH79754), (#GH84163), (#GH84425), (#GH86054), (#GH86398), and (#GH86399).
 - Fix a crash when deducing ``auto`` from an invalid dereference (#GH88329).
 - Fix a crash in requires expression with templated base class member function. Fixes (#GH84020).
-- Placement new initializes typedef array with correct size (#GH41441)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -682,6 +680,8 @@ Static Analyzer
   but not under any case blocks if ``unroll-loops=true`` analyzer config is
   set. (#GH68819)
 - Support C++23 static operator calls. (#GH84972)
+- Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
+  matched user-defined ``strerror`` and similar library functions. (GH#88181)
 
 New features
 ^^^^^^^^^^^^

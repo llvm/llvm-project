@@ -1990,7 +1990,7 @@ Instruction *InstCombinerImpl::visitSIToFP(CastInst &CI) {
   if (Instruction *R = commonCastTransforms(CI))
     return R;
   if (isKnownNonNegative(CI.getOperand(0), SQ)) {
-    auto UI =
+    auto *UI =
         CastInst::Create(Instruction::UIToFP, CI.getOperand(0), CI.getType());
     UI->setNonNeg(true);
     return UI;
