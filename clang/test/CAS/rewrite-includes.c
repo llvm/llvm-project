@@ -14,9 +14,9 @@
 // RUN: %clang @%t/tu.rsp -frewrite-includes -w -E -o - | FileCheck %s
 
 // CHECK: int bar();{{$}}
-// CHECK-NEXT: #if 0 /* expanded by -frewrite-includes */{{$}}
+// CHECK-NEXT: #if defined(__CLANG_REWRITTEN_INCLUDES) /* test.h expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: #include "test.h"{{$}}
-// CHECK-NEXT: #endif /* expanded by -frewrite-includes */{{$}}
+// CHECK-NEXT: #else /* test.h expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: # 2 "{{.*[/\\]}}main.c"{{$}}
 // CHECK-NEXT: # 1 "{{.*[/\\]}}test.h" 1{{$}}
 // CHECK-NEXT: #if 0 /* expanded by -frewrite-includes */{{$}}
@@ -25,6 +25,7 @@
 // CHECK-NEXT: # 1 "{{.*[/\\]}}test.h"{{$}}
 // CHECK-NEXT: #pragma clang module import dummy /* clang -frewrite-includes: implicit import */{{$}}
 // CHECK-NEXT: # 2 "{{.*[/\\]}}test.h"{{$}}
+// CHECK-NEXT: #endif /* test.h expanded by -frewrite-includes */
 // CHECK-NEXT: # 3 "{{.*[/\\]}}main.c" 2{{$}}
 // CHECK-NEXT: int foo();{{$}}
 // CHECK-NEXT: #if 0 /* expanded by -frewrite-includes */{{$}}
@@ -33,12 +34,13 @@
 // CHECK-NEXT: # 4 "{{.*[/\\]}}main.c"{{$}}
 // CHECK-NEXT: #pragma clang module import dummy /* clang -frewrite-includes: implicit import */{{$}}
 // CHECK-NEXT: # 5 "{{.*[/\\]}}main.c"{{$}}
-// CHECK-NEXT: #if 0 /* expanded by -frewrite-includes */{{$}}
+// CHECK-NEXT: #if defined(__CLANG_REWRITTEN_INCLUDES) /* Missing.h expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: #include <Spurious/Missing.h>{{$}}
-// CHECK-NEXT: #endif /* expanded by -frewrite-includes */{{$}}
+// CHECK-NEXT: #else /* Missing.h expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: # 5 "{{.*[/\\]}}main.c"{{$}}
-// CHECK-NEXT: # 1 "{{.*[/\\]}}Missing.h" 1{{$}}
-// CHECK-NEXT: /* empty */
+// CHECK-NEXT: # 1 "{{.*[/\\]}}frameworks/Spurious.framework/Headers/Missing.h" 1{{$}}
+// CHECK-NEXT: /* empty */{{$}}
+// CHECK-NEXT: #endif /* Missing.h expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: # 6 "{{.*[/\\]}}main.c" 2{{$}}
 // CHECK-NEXT: #if 0 /* expanded by -frewrite-includes */{{$}}
 // CHECK-NEXT: #include <Mod.h>{{$}}
