@@ -427,7 +427,7 @@ struct ResourceBindInfo : public v0::ResourceBindInfo {
 
 namespace v3 {
 struct RuntimeInfo : public v2::RuntimeInfo {
-  uint32_t EntryNameOffset;
+  uint32_t EntryNameOffset = 0;
 
   void swapBytes() {
     v2::RuntimeInfo::swapBytes();
