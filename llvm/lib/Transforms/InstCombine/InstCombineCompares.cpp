@@ -8051,7 +8051,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
           (match(LHSI,
                  m_Select(m_Value(), m_Value(X), m_FNeg(m_Deferred(X)))) ||
            match(LHSI, m_Select(m_Value(), m_FNeg(m_Value(X)), m_Deferred(X)))))
-        return new FCmpInst(Pred, X, RHSC, "", &I);
+        return replaceOperand(I, 0, X);
       break;
     case Instruction::PHI:
       if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
