@@ -45,8 +45,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
-struct RecordReplayTy;
-
 namespace llvm {
 namespace omp {
 namespace target {
@@ -1033,12 +1031,6 @@ struct GenericPluginTy {
     return *RPCServer;
   }
 
-  /// Get a reference to the R&R interface for this plugin.
-  RecordReplayTy &getRecordAndReplay() const {
-    assert(RecordReplay && "R&R not initialized");
-    return *RecordReplay;
-  }
-
   /// Get the OpenMP requires flags set for this plugin.
   int64_t getRequiresFlags() const { return RequiresFlags; }
 
@@ -1228,9 +1220,6 @@ private:
 
   /// The interface between the plugin and the GPU for host services.
   RPCServerTy *RPCServer;
-
-  /// The interface into the record-and-replay functionality.
-  RecordReplayTy *RecordReplay;
 };
 
 namespace Plugin {
