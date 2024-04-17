@@ -873,7 +873,7 @@ private:
 
   /// Our current depth in #pragma cuda force_host_device begin/end
   /// macros.
-  unsigned ForceCUDAHostDeviceDepth = 0;
+  unsigned ForceHostDeviceDepth = 0;
 
   /// The IDs of the declarations Sema stores directly.
   ///
@@ -2457,6 +2457,12 @@ private:
   uint32_t Value;
   uint32_t CurrentBitsIndex = ~0;
 };
+
+inline bool shouldSkipCheckingODR(const Decl *D) {
+  return D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
+         D->isFromExplicitGlobalModule();
+}
+
 } // namespace clang
 
 #endif // LLVM_CLANG_SERIALIZATION_ASTREADER_H

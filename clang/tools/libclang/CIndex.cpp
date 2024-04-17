@@ -2783,13 +2783,17 @@ public:
   OpenACCClauseEnqueue(EnqueueVisitor &V) : Visitor(V) {}
 
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
-  void VisitOpenACC##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &C);
+  void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &C);
 #include "clang/Basic/OpenACCClauses.def"
 };
 
 void OpenACCClauseEnqueue::VisitDefaultClause(const OpenACCDefaultClause &C) {}
 void OpenACCClauseEnqueue::VisitIfClause(const OpenACCIfClause &C) {
   Visitor.AddStmt(C.getConditionExpr());
+}
+void OpenACCClauseEnqueue::VisitSelfClause(const OpenACCSelfClause &C) {
+  if (C.hasConditionExpr())
+    Visitor.AddStmt(C.getConditionExpr());
 }
 } // namespace
 

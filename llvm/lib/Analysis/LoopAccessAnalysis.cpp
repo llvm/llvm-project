@@ -2033,9 +2033,12 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
       std::get<DepDistanceStrideAndSizeInfo>(Res);
   bool HasSameSize = TypeByteSize > 0;
 
-  uint64_t CommonStride = StrideA == StrideB ? StrideA : 0;
+  std::optional<uint64_t> CommonStride =
+      StrideA == StrideB ? std::make_optional(StrideA) : std::nullopt;
   if (isa<SCEVCouldNotCompute>(Dist)) {
-    FoundNonConstantDistanceDependence |= CommonStride;
+    // TODO: Relax requirement that there is a common stride to retry with
+    // non-constant distance dependencies.
+    FoundNonConstantDistanceDependence |= !!CommonStride;
     LLVM_DEBUG(dbgs() << "LAA: Dependence because of uncomputable distance.\n");
     return Dependence::Unknown;
   }
@@ -2044,7 +2047,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
   if (HasSameSize && CommonStride &&
       isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
-                               CommonStride, TypeByteSize))
+                               *CommonStride, TypeByteSize))
     return Dependence::NoDep;
 
   const SCEVConstant *C = dyn_cast<SCEVConstant>(Dist);
@@ -2054,30 +2057,26 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     const APInt &Val = C->getAPInt();
     int64_t Distance = Val.getSExtValue();
 
-    if (std::abs(Distance) > 0 && CommonStride > 1 && HasSameSize &&
-        areStridedAccessesIndependent(std::abs(Distance), CommonStride,
+    if (std::abs(Distance) > 0 && CommonStride && *CommonStride > 1 &&
+        HasSameSize &&
+        areStridedAccessesIndependent(std::abs(Distance), *CommonStride,
                                       TypeByteSize)) {
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
       return Dependence::NoDep;
-    }
-
-    // Write to the same location with the same size.
-    if (C->isZero()) {
-      if (HasSameSize)
-        return Dependence::Forward;
-      LLVM_DEBUG(
-          dbgs()
-          << "LAA: Zero dependence difference but different type sizes\n");
-      return Dependence::Unknown;
     }
   }
 
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
-    if (!SE.isKnownNegative(Dist) && !HasSameSize) {
-      LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "
-                           "different type sizes\n");
-      return Dependence::Unknown;
+    if (!SE.isKnownNegative(Dist)) {
+      if (HasSameSize) {
+        // Write to the same location with the same size.
+        return Dependence::Forward;
+      } else {
+        LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "
+                             "different type sizes\n");
+        return Dependence::Unknown;
+      }
     }
 
     bool IsTrueDataDependence = (AIsWrite && !BIsWrite);
@@ -2086,7 +2085,9 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     // since a forward dependency will allow vectorization using any width.
     if (IsTrueDataDependence && EnableForwardingConflictDetection) {
       if (!C) {
-        FoundNonConstantDistanceDependence |= CommonStride;
+        // TODO: Relax requirement that there is a common stride to retry with
+        // non-constant distance dependencies.
+        FoundNonConstantDistanceDependence |= !!CommonStride;
         return Dependence::Unknown;
       }
       if (!HasSameSize ||
@@ -2102,21 +2103,20 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     return Dependence::Forward;
   }
 
-  if (!SE.isKnownPositive(Dist)) {
-    FoundNonConstantDistanceDependence |= !C && CommonStride;
+  if (!C) {
+    // TODO: Relax requirement that there is a common stride to retry with
+    // non-constant distance dependencies.
+    FoundNonConstantDistanceDependence |= !!CommonStride;
+    LLVM_DEBUG(dbgs() << "LAA: Dependence because of non-constant distance\n");
     return Dependence::Unknown;
   }
+
+  if (!SE.isKnownPositive(Dist))
+    return Dependence::Unknown;
 
   if (!HasSameSize) {
     LLVM_DEBUG(dbgs() << "LAA: ReadWrite-Write positive dependency with "
                          "different type sizes\n");
-    FoundNonConstantDistanceDependence |= !C && CommonStride;
-    return Dependence::Unknown;
-  }
-
-  if (!C) {
-    LLVM_DEBUG(dbgs() << "LAA: Dependence because of non-constant distance\n");
-    FoundNonConstantDistanceDependence |= CommonStride;
     return Dependence::Unknown;
   }
 
@@ -2163,7 +2163,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   // the minimum distance needed is 28, which is greater than distance. It is
   // not safe to do vectorization.
   uint64_t MinDistanceNeeded =
-      TypeByteSize * CommonStride * (MinNumIter - 1) + TypeByteSize;
+      TypeByteSize * (*CommonStride) * (MinNumIter - 1) + TypeByteSize;
   if (MinDistanceNeeded > static_cast<uint64_t>(Distance)) {
     LLVM_DEBUG(dbgs() << "LAA: Failure because of positive distance "
                       << Distance << '\n');
@@ -2212,7 +2212,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
   // An update to MinDepDistBytes requires an update to MaxSafeVectorWidthInBits
   // since there is a backwards dependency.
-  uint64_t MaxVF = MinDepDistBytes / (TypeByteSize * CommonStride);
+  uint64_t MaxVF = MinDepDistBytes / (TypeByteSize * (*CommonStride));
   LLVM_DEBUG(dbgs() << "LAA: Positive distance " << Val.getSExtValue()
                     << " with max VF = " << MaxVF << '\n');
   uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;

@@ -1809,8 +1809,16 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     else if (attr.hasRetAttr(Attribute::ZExt))
       Flags.setZExt();
 
-    for (unsigned i = 0; i < NumParts; ++i)
-      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, /*isfixed=*/true, 0, 0));
+    for (unsigned i = 0; i < NumParts; ++i) {
+      ISD::ArgFlagsTy OutFlags = Flags;
+      if (NumParts > 1 && i == 0)
+        OutFlags.setSplit();
+      else if (i == NumParts - 1 && i != 0)
+        OutFlags.setSplitEnd();
+
+      Outs.push_back(
+          ISD::OutputArg(OutFlags, PartVT, VT, /*isfixed=*/true, 0, 0));
+    }
   }
 }
 

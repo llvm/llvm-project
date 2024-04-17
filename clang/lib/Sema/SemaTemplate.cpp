@@ -33,6 +33,7 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
@@ -971,8 +972,9 @@ void Sema::translateTemplateArguments(const ASTTemplateArgsPtr &TemplateArgsIn,
 static void maybeDiagnoseTemplateParameterShadow(Sema &SemaRef, Scope *S,
                                                  SourceLocation Loc,
                                                  const IdentifierInfo *Name) {
-  NamedDecl *PrevDecl = SemaRef.LookupSingleName(
-      S, Name, Loc, Sema::LookupOrdinaryName, Sema::ForVisibleRedeclaration);
+  NamedDecl *PrevDecl =
+      SemaRef.LookupSingleName(S, Name, Loc, Sema::LookupOrdinaryName,
+                               RedeclarationKind::ForVisibleRedeclaration);
   if (PrevDecl && PrevDecl->isTemplateParameter())
     SemaRef.DiagnoseTemplateParameterShadow(Loc, PrevDecl);
 }
@@ -10155,9 +10157,9 @@ bool Sema::CheckFunctionTemplateSpecialization(
       // take target attributes into account, we reject candidates
       // here that have a different target.
       if (LangOpts.CUDA &&
-          IdentifyCUDATarget(Specialization,
-                             /* IgnoreImplicitHDAttr = */ true) !=
-              IdentifyCUDATarget(FD, /* IgnoreImplicitHDAttr = */ true)) {
+          CUDA().IdentifyTarget(Specialization,
+                                /* IgnoreImplicitHDAttr = */ true) !=
+              CUDA().IdentifyTarget(FD, /* IgnoreImplicitHDAttr = */ true)) {
         FailedCandidates.addCandidate().set(
             I.getPair(), FunTmpl->getTemplatedDecl(),
             MakeDeductionFailureInfo(
@@ -10328,7 +10330,7 @@ bool Sema::CheckFunctionTemplateSpecialization(
   // virtue e.g. of being constexpr, and it passes these implicit
   // attributes on to its specializations.)
   if (LangOpts.CUDA)
-    inheritCUDATargetAttrs(FD, *Specialization->getPrimaryTemplate());
+    CUDA().inheritTargetAttrs(FD, *Specialization->getPrimaryTemplate());
 
   // The "previous declaration" for this function template specialization is
   // the prior function template specialization.
@@ -11364,9 +11366,9 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     // target attributes into account, we reject candidates here that
     // have a different target.
     if (LangOpts.CUDA &&
-        IdentifyCUDATarget(Specialization,
-                           /* IgnoreImplicitHDAttr = */ true) !=
-            IdentifyCUDATarget(D.getDeclSpec().getAttributes())) {
+        CUDA().IdentifyTarget(Specialization,
+                              /* IgnoreImplicitHDAttr = */ true) !=
+            CUDA().IdentifyTarget(D.getDeclSpec().getAttributes())) {
       FailedCandidates.addCandidate().set(
           P.getPair(), FunTmpl->getTemplatedDecl(),
           MakeDeductionFailureInfo(

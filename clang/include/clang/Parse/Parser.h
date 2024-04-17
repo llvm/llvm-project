@@ -18,6 +18,7 @@
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -1601,6 +1602,8 @@ private:
                                      const ParsedTemplateInfo &TemplateInfo,
                                      const VirtSpecifiers &VS,
                                      SourceLocation PureSpecLoc);
+  StringLiteral *ParseCXXDeletedFunctionMessage();
+  void SkipDeletedFunctionBody();
   void ParseCXXNonStaticMemberInitializer(Decl *VarD);
   void ParseLexedAttributes(ParsingClass &Class);
   void ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
@@ -2535,7 +2538,7 @@ private:
   /// Returns true for declaration, false for expression.
   bool isForInitDeclaration() {
     if (getLangOpts().OpenMP)
-      Actions.startOpenMPLoop();
+      Actions.OpenMP().startOpenMPLoop();
     if (getLangOpts().CPlusPlus)
       return Tok.is(tok::kw_using) ||
              isCXXSimpleDeclaration(/*AllowForRangeDecl=*/true);
@@ -3394,7 +3397,7 @@ private:
                           SourceLocation Loc);
 
   /// Parse clauses for '#pragma omp [begin] declare target'.
-  void ParseOMPDeclareTargetClauses(Sema::DeclareTargetContextInfo &DTCI);
+  void ParseOMPDeclareTargetClauses(SemaOpenMP::DeclareTargetContextInfo &DTCI);
 
   /// Parse '#pragma omp end declare target'.
   void ParseOMPEndDeclareTargetDirective(OpenMPDirectiveKind BeginDKind,
@@ -3484,7 +3487,7 @@ private:
   /// Parses indirect clause
   /// \param ParseOnly true to skip the clause's semantic actions and return
   // false;
-  bool ParseOpenMPIndirectClause(Sema::DeclareTargetContextInfo &DTCI,
+  bool ParseOpenMPIndirectClause(SemaOpenMP::DeclareTargetContextInfo &DTCI,
                                  bool ParseOnly);
   /// Parses clause with a single expression and an additional argument
   /// of a kind \a Kind.
@@ -3554,12 +3557,12 @@ public:
 
   /// Parses a reserved locator like 'omp_all_memory'.
   bool ParseOpenMPReservedLocator(OpenMPClauseKind Kind,
-                                  Sema::OpenMPVarListDataTy &Data,
+                                  SemaOpenMP::OpenMPVarListDataTy &Data,
                                   const LangOptions &LangOpts);
   /// Parses clauses with list.
   bool ParseOpenMPVarList(OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
                           SmallVectorImpl<Expr *> &Vars,
-                          Sema::OpenMPVarListDataTy &Data);
+                          SemaOpenMP::OpenMPVarListDataTy &Data);
   bool ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
                           bool ObjectHadErrors, bool EnteringContext,
                           bool AllowDestructorName, bool AllowConstructorName,
@@ -3567,11 +3570,11 @@ public:
                           SourceLocation *TemplateKWLoc, UnqualifiedId &Result);
 
   /// Parses the mapper modifier in map, to, and from clauses.
-  bool parseMapperModifier(Sema::OpenMPVarListDataTy &Data);
+  bool parseMapperModifier(SemaOpenMP::OpenMPVarListDataTy &Data);
   /// Parses map-type-modifiers in map clause.
   /// map([ [map-type-modifier[,] [map-type-modifier[,] ...] map-type : ] list)
   /// where, map-type-modifier ::= always | close | mapper(mapper-identifier)
-  bool parseMapTypeModifiers(Sema::OpenMPVarListDataTy &Data);
+  bool parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data);
 
   //===--------------------------------------------------------------------===//
   // OpenACC Parsing.

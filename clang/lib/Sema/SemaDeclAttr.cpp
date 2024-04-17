@@ -39,11 +39,13 @@
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Assumptions.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/Support/Error.h"
@@ -1982,6 +1984,38 @@ static void handleWeakRefAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) WeakRefAttr(S.Context, AL));
 }
 
+// Mark alias/ifunc target as used. Due to name mangling, we look up the
+// demangled name ignoring parameters (not supported by microsoftDemangle
+// https://github.com/llvm/llvm-project/issues/88825). This should handle the
+// majority of use cases while leaving namespace scope names unmarked.
+static void markUsedForAliasOrIfunc(Sema &S, Decl *D, const ParsedAttr &AL,
+                                    StringRef Str) {
+  std::unique_ptr<char, llvm::FreeDeleter> Demangled;
+  if (S.getASTContext().getCXXABIKind() != TargetCXXABI::Microsoft)
+    Demangled.reset(llvm::itaniumDemangle(Str, /*ParseParams=*/false));
+  std::unique_ptr<MangleContext> MC(S.Context.createMangleContext());
+  SmallString<256> Name;
+
+  const DeclarationNameInfo Target(
+      &S.Context.Idents.get(Demangled ? Demangled.get() : Str), AL.getLoc());
+  LookupResult LR(S, Target, Sema::LookupOrdinaryName);
+  if (S.LookupName(LR, S.TUScope)) {
+    for (NamedDecl *ND : LR) {
+      if (!isa<FunctionDecl>(ND) && !isa<VarDecl>(ND))
+        continue;
+      if (MC->shouldMangleDeclName(ND)) {
+        llvm::raw_svector_ostream Out(Name);
+        Name.clear();
+        MC->mangleName(GlobalDecl(ND), Out);
+      } else {
+        Name = ND->getIdentifier()->getName();
+      }
+      if (Name == Str)
+        ND->markUsed(S.Context);
+    }
+  }
+}
+
 static void handleIFuncAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str))
@@ -1994,6 +2028,7 @@ static void handleIFuncAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
+  markUsedForAliasOrIfunc(S, D, AL, Str);
   D->addAttr(::new (S.Context) IFuncAttr(S.Context, AL, Str));
 }
 
@@ -2028,17 +2063,7 @@ static void handleAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  // Mark target used to prevent unneeded-internal-declaration warnings.
-  if (!S.LangOpts.CPlusPlus) {
-    // FIXME: demangle Str for C++, as the attribute refers to the mangled
-    // linkage name, not the pre-mangled identifier.
-    const DeclarationNameInfo target(&S.Context.Idents.get(Str), AL.getLoc());
-    LookupResult LR(S, target, Sema::LookupOrdinaryName);
-    if (S.LookupQualifiedName(LR, S.getCurLexicalContext()))
-      for (NamedDecl *ND : LR)
-        ND->markUsed(S.Context);
-  }
-
+  markUsedForAliasOrIfunc(S, D, AL, Str);
   D->addAttr(::new (S.Context) AliasAttr(S.Context, AL, Str));
 }
 
@@ -5099,8 +5124,8 @@ static void handleSharedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
   if (S.getLangOpts().CUDA && VD->hasLocalStorage() &&
-      S.CUDADiagIfHostCode(AL.getLoc(), diag::err_cuda_host_shared)
-          << llvm::to_underlying(S.CurrentCUDATarget()))
+      S.CUDA().DiagIfHostCode(AL.getLoc(), diag::err_cuda_host_shared)
+          << llvm::to_underlying(S.CUDA().CurrentTarget()))
     return;
   D->addAttr(::new (S.Context) CUDASharedAttr(S.Context, AL));
 }
@@ -5189,8 +5214,9 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Diagnostic is emitted elsewhere: here we store the (valid) AL
   // in the Decl node for syntactic reasoning, e.g., pretty-printing.
   CallingConv CC;
-  if (S.CheckCallingConvAttr(AL, CC, /*FD*/ nullptr,
-                             S.IdentifyCUDATarget(dyn_cast<FunctionDecl>(D))))
+  if (S.CheckCallingConvAttr(
+          AL, CC, /*FD*/ nullptr,
+          S.CUDA().IdentifyTarget(dyn_cast<FunctionDecl>(D))))
     return;
 
   if (!isa<ObjCMethodDecl>(D)) {
@@ -5495,7 +5521,7 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   if (LangOpts.CUDA) {
     auto *Aux = Context.getAuxTargetInfo();
     assert(FD || CFT != CUDAFunctionTarget::InvalidTarget);
-    auto CudaTarget = FD ? IdentifyCUDATarget(FD) : CFT;
+    auto CudaTarget = FD ? CUDA().IdentifyTarget(FD) : CFT;
     bool CheckHost = false, CheckDevice = false;
     switch (CudaTarget) {
     case CUDAFunctionTarget::HostDevice:
