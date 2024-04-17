@@ -17,7 +17,7 @@
 ; SUMMARY-NEXT:       BitMask:         0
 ; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:          
-; SUMMARY-NEXT:       '0':               
+; SUMMARY-NEXT:       0:               
 ; SUMMARY-NEXT:         Kind:            BranchFunnel
 ; SUMMARY-NEXT:         SingleImplName:  ''
 ; SUMMARY-NEXT:         ResByArg:        
@@ -30,7 +30,7 @@
 ; SUMMARY-NEXT:       BitMask:         0
 ; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:          
-; SUMMARY-NEXT:       '0':               
+; SUMMARY-NEXT:       0:               
 ; SUMMARY-NEXT:         Kind:            BranchFunnel
 ; SUMMARY-NEXT:         SingleImplName:  ''
 ; SUMMARY-NEXT:         ResByArg:        
@@ -43,7 +43,7 @@
 ; SUMMARY-NEXT:       BitMask:         0
 ; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:          
-; SUMMARY-NEXT:       '0':               
+; SUMMARY-NEXT:       0:               
 ; SUMMARY-NEXT:         Kind:            Indir
 ; SUMMARY-NEXT:         SingleImplName:  ''
 ; SUMMARY-NEXT:         ResByArg:        

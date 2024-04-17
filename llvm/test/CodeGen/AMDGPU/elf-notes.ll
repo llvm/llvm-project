@@ -71,8 +71,8 @@
 ; OSABI-PAL-ELF:         .sgpr_count:     96
 ; OSABI-PAL-ELF:         .vgpr_count:     1
 ; OSABI-PAL-ELF:     .registers:
-; OSABI-PAL-ELF:       '11794':           11469504
-; OSABI-PAL-ELF:       '11795':           128
+; OSABI-PAL-ELF:       11794:           11469504
+; OSABI-PAL-ELF:       11795:           128
 
 ; R600-NOT: .hsa_code_object_version
 ; R600-NOT: .hsa_code_object_isa

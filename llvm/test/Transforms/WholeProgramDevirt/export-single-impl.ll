@@ -11,7 +11,7 @@
 ; SUMMARY-NEXT:       BitMask:         0
 ; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:
-; SUMMARY-NEXT:       '0':
+; SUMMARY-NEXT:       0:
 ; SUMMARY-NEXT:         Kind:            SingleImpl
 ; SUMMARY-NEXT:         SingleImplName:  vf3.llvm.merged
 ; SUMMARY-NEXT:         ResByArg:
@@ -24,7 +24,7 @@
 ; SUMMARY-NEXT:       BitMask:         0
 ; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:
-; SUMMARY-NEXT:       '0':
+; SUMMARY-NEXT:       0:
 ; SUMMARY-NEXT:         Kind:            SingleImpl
 ; SUMMARY-NEXT:         SingleImplName:  vf1
 ; SUMMARY-NEXT:         ResByArg:
@@ -37,7 +37,7 @@
 ; SUMMARY-NEXT:       BitMask:         0
 ; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:
-; SUMMARY-NEXT:       '0':
+; SUMMARY-NEXT:       0:
 ; SUMMARY-NEXT:         Kind:            SingleImpl
 ; SUMMARY-NEXT:         SingleImplName:  vf2
 ; SUMMARY-NEXT:         ResByArg:
@@ -50,7 +50,7 @@
 ; SUMMARY-NEXT:       BitMask:         0
 ; SUMMARY-NEXT:       InlineBits:      0
 ; SUMMARY-NEXT:     WPDRes:
-; SUMMARY-NEXT:       '0':
+; SUMMARY-NEXT:       0:
 ; SUMMARY-NEXT:         Kind:            SingleImpl
 ; SUMMARY-NEXT:         SingleImplName:  vf4.llvm.merged
 ; SUMMARY-NEXT:         ResByArg:

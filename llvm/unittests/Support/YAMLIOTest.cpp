@@ -2911,8 +2911,11 @@ TEST(YAMLIO, Numeric) {
 
 // Struct with dynamic string key
 struct QuotedKeyStruct {
-  int unquoted;
-  int numeric;
+  int unquoted_bool;
+  int unquoted_null;
+  int unquoted_numeric;
+  int unquoted_str;
+  int colon;
   int just_space;
   int unprintable;
 };
@@ -2921,8 +2924,11 @@ namespace llvm {
 namespace yaml {
 template <> struct MappingTraits<QuotedKeyStruct> {
   static void mapping(IO &io, QuotedKeyStruct &map) {
-    io.mapRequired("unquoted", map.unquoted);
-    io.mapRequired("42", map.numeric);
+    io.mapRequired("true", map.unquoted_bool);
+    io.mapRequired("null", map.unquoted_null);
+    io.mapRequired("42", map.unquoted_numeric);
+    io.mapRequired("unquoted", map.unquoted_str);
+    io.mapRequired(":", map.colon);
     io.mapRequired(" ", map.just_space);
     char unprintableKey[] = {/* \f, form-feed */ 0xC, 0};
     io.mapRequired(unprintableKey, map.unprintable);
@@ -2933,27 +2939,34 @@ template <> struct MappingTraits<QuotedKeyStruct> {
 
 TEST(YAMLIO, TestQuotedKeyRead) {
   QuotedKeyStruct map = {};
-  Input yin("---\nunquoted:  1\n'42':  2\n' ':  3\n\"\\f\":  4\n...\n");
+  Input yin("---\ntrue:  1\nnull:  2\n42:  3\nunquoted:  4\n':':  5\n' ':  "
+            "6\n\"\\f\":  7\n...\n");
   yin >> map;
 
   EXPECT_FALSE(yin.error());
-  EXPECT_EQ(map.unquoted, 1);
-  EXPECT_EQ(map.numeric, 2);
-  EXPECT_EQ(map.just_space, 3);
-  EXPECT_EQ(map.unprintable, 4);
+  EXPECT_EQ(map.unquoted_bool, 1);
+  EXPECT_EQ(map.unquoted_null, 2);
+  EXPECT_EQ(map.unquoted_numeric, 3);
+  EXPECT_EQ(map.unquoted_str, 4);
+  EXPECT_EQ(map.colon, 5);
+  EXPECT_EQ(map.just_space, 6);
+  EXPECT_EQ(map.unprintable, 7);
 }
 
 TEST(YAMLIO, TestQuotedKeyWriteRead) {
   std::string intermediate;
   {
-    QuotedKeyStruct map = {1, 2, 3, 4};
+    QuotedKeyStruct map = {1, 2, 3, 4, 5, 6, 7};
     llvm::raw_string_ostream ostr(intermediate);
     Output yout(ostr);
     yout << map;
   }
 
+  EXPECT_NE(std::string::npos, intermediate.find("true:"));
+  EXPECT_NE(std::string::npos, intermediate.find("null:"));
+  EXPECT_NE(std::string::npos, intermediate.find("42:"));
   EXPECT_NE(std::string::npos, intermediate.find("unquoted:"));
-  EXPECT_NE(std::string::npos, intermediate.find("'42':"));
+  EXPECT_NE(std::string::npos, intermediate.find("':':"));
   EXPECT_NE(std::string::npos, intermediate.find("' '"));
   EXPECT_NE(std::string::npos, intermediate.find("\"\\f\":"));
 
@@ -2963,10 +2976,13 @@ TEST(YAMLIO, TestQuotedKeyWriteRead) {
     yin >> map;
 
     EXPECT_FALSE(yin.error());
-    EXPECT_EQ(map.unquoted, 1);
-    EXPECT_EQ(map.numeric, 2);
-    EXPECT_EQ(map.just_space, 3);
-    EXPECT_EQ(map.unprintable, 4);
+    EXPECT_EQ(map.unquoted_bool, 1);
+    EXPECT_EQ(map.unquoted_null, 2);
+    EXPECT_EQ(map.unquoted_numeric, 3);
+    EXPECT_EQ(map.unquoted_str, 4);
+    EXPECT_EQ(map.colon, 5);
+    EXPECT_EQ(map.just_space, 6);
+    EXPECT_EQ(map.unprintable, 7);
   }
 }
 

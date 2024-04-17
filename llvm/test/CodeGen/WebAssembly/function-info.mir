@@ -47,7 +47,7 @@ liveins:
   - { reg: '$arguments' }
 # CHECK:  wasmEHFuncInfo:
 # bb.2 becomes bb.1 and bb.3 becomes bb.2 after CFGSort.
-# CHECK-NEXT:    '1':               2
+# CHECK-NEXT:    1:               2
 machineFunctionInfo:
   wasmEHFuncInfo:
     2:               3

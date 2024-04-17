@@ -3,7 +3,7 @@
 ; RUN: FileCheck --check-prefix=SUMMARY %s < %t
 
 ; SUMMARY:      GlobalValueMap:
-; SUMMARY-NEXT:   '42':
+; SUMMARY-NEXT:   42:
 ; SUMMARY-NEXT:    - Linkage:             0
 ; SUMMARY-NEXT:      Visibility:          0
 ; SUMMARY-NEXT:      NotEligibleToImport: false
