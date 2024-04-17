@@ -2904,8 +2904,15 @@ void DebugNamesBaseSection::computeHdrAndAbbrevTable(
     numCu += chunks[i].compUnits.size();
     for (const NameData &nd : inputChunk.nameData) {
       hdr.CompUnitCount += nd.hdr.CompUnitCount;
-      hdr.LocalTypeUnitCount += nd.hdr.LocalTypeUnitCount;
-      hdr.ForeignTypeUnitCount += nd.hdr.ForeignTypeUnitCount;
+      // We are not actually handling or emitting type units yet, so
+      // so non-zero type unit counts will crash LLD.
+      // TODO: Uncomment the two lines below when we implement this for
+      // type units & remove the following check/warning.
+      //hdr.LocalTypeUnitCount += nd.hdr.LocalTypeUnitCount;
+      //hdr.ForeignTypeUnitCount += nd.hdr.ForeignTypeUnitCount;
+      if (nd.hdr.LocalTypeUnitCount || nd. hdr.ForeignTypeUnitCount)
+        warn(toString(inputChunk.section.sec) +
+             Twine(": type units are not implemented"));
       // If augmentation strings are not identical, use an empty string.
       if (i == 0) {
         hdr.AugmentationStringSize = nd.hdr.AugmentationStringSize;
@@ -3039,7 +3046,7 @@ std::pair<uint32_t, uint32_t> DebugNamesBaseSection::computeEntryPool(
     }
   });
 
-  // Compute entry offsets in parallel. First, comptute offsets relative to the
+  // Compute entry offsets in parallel. First, compute offsets relative to the
   // current shard.
   uint32_t offsets[numShards];
   parallelFor(0, numShards, [&](size_t shard) {
@@ -3234,10 +3241,7 @@ template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
     for (uint32_t cuOffset : chunks[i].compUnits)
       endian::writeNext<uint32_t, ELFT::Endianness>(buf, cuOffset);
 
-  // Write the local TU list, then the foreign TU list..
-  // TODO: Fix this, once we get everything working without TUs.
-  if (hdr.LocalTypeUnitCount || hdr.ForeignTypeUnitCount)
-    warn(".debug_names: type units are not implemented");
+  // TODO: Write the local TU list, then the foreign TU list..
 
   // Write the hash lookup table.
   SmallVector<SmallVector<NameEntry *, 0>, 0> buckets(hdr.BucketCount);
