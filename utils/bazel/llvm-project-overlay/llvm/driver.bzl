@@ -8,31 +8,29 @@ load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 
 # Mapping from every tool to the cc_library that implements the tool's entrypoint.
-# TODO: uncomment the remaining targets after splitting them
-# into separate library/binary targets.
 _TOOLS = {
-    # "clang-scan-deps": "//clang:clang-scan-deps-lib",
-    # "clang": "//clang:clang-driver",
-    # "dsymutil": "//llvm:dsymutil-lib",
-    # "lld": "//lld:lld-lib",
+    "clang-scan-deps": "//clang:clang-scan-deps-lib",
+    "clang": "//clang:clang-driver",
+    "dsymutil": "//llvm:dsymutil-lib",
+    "lld": "//lld:lld-lib",
     "llvm-ar": "//llvm:llvm-ar-lib",
-    # "llvm-cxxfilt": "//llvm:llvm-cxxfilt-lib",
-    # "llvm-dwp": "//llvm:llvm-dwp-lib",
-    # "llvm-gsymutil": "//llvm:llvm-gsymutil-lib",
-    # "llvm-ifs": "//llvm:llvm-ifs-lib",
-    # "llvm-libtool-darwin": "//llvm:llvm-libtool-darwin-lib",
-    # "llvm-lipo": "//llvm:llvm-lipo-lib",
-    # "llvm-ml": "//llvm:llvm-ml-lib",
-    # "llvm-mt": "//llvm:llvm-mt-lib",
+    "llvm-cxxfilt": "//llvm:llvm-cxxfilt-lib",
+    "llvm-dwp": "//llvm:llvm-dwp-lib",
+    "llvm-gsymutil": "//llvm:llvm-gsymutil-lib",
+    "llvm-ifs": "//llvm:llvm-ifs-lib",
+    "llvm-libtool-darwin": "//llvm:llvm-libtool-darwin-lib",
+    "llvm-lipo": "//llvm:llvm-lipo-lib",
+    "llvm-ml": "//llvm:llvm-ml-lib",
+    "llvm-mt": "//llvm:llvm-mt-lib",
     "llvm-nm": "//llvm:llvm-nm-lib",
-    # "llvm-objcopy": "//llvm:llvm-objcopy-lib",
-    # "llvm-objdump": "//llvm:llvm-objdump-lib",
-    # "llvm-profdata": "//llvm:llvm-profdata-lib",
-    # "llvm-rc": "//llvm:llvm-rc-lib",
-    # "llvm-readobj": "//llvm:llvm-readobj-lib",
+    "llvm-objcopy": "//llvm:llvm-objcopy-lib",
+    "llvm-objdump": "//llvm:llvm-objdump-lib",
+    "llvm-profdata": "//llvm:llvm-profdata-lib",
+    "llvm-rc": "//llvm:llvm-rc-lib",
+    "llvm-readobj": "//llvm:llvm-readobj-lib",
     "llvm-size": "//llvm:llvm-size-lib",
-    # "llvm-symbolizer": "//llvm:llvm-symbolizer-lib",
-    # "sancov": "//llvm:sancov-lib",
+    "llvm-symbolizer": "//llvm:llvm-symbolizer-lib",
+    "sancov": "//llvm:sancov-lib",
 }
 
 # Tools automatically get their own name as an alias, but there may be additional

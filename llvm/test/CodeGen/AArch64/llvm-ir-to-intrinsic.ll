@@ -1145,8 +1145,8 @@ define <vscale x 4 x i64> @fshl_rot_illegal_i64(<vscale x 4 x i64> %a, <vscale x
 ; CHECK-NEXT:    subr z3.d, z3.d, #0 // =0x0
 ; CHECK-NEXT:    and z4.d, z4.d, #0x3f
 ; CHECK-NEXT:    and z2.d, z2.d, #0x3f
-; CHECK-NEXT:    and z3.d, z3.d, #0x3f
 ; CHECK-NEXT:    and z5.d, z5.d, #0x3f
+; CHECK-NEXT:    and z3.d, z3.d, #0x3f
 ; CHECK-NEXT:    lslr z4.d, p0/m, z4.d, z0.d
 ; CHECK-NEXT:    lsr z0.d, p0/m, z0.d, z2.d
 ; CHECK-NEXT:    movprfx z2, z1

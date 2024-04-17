@@ -104,7 +104,7 @@ def FeatureStdExtZihpm
                        "'Zihpm' (Hardware Performance Counters)",
                        [FeatureStdExtZicsr]>;
 
-def FeatureStdExtZimop : SubtargetFeature<"experimental-zimop", "HasStdExtZimop", "true",
+def FeatureStdExtZimop : SubtargetFeature<"zimop", "HasStdExtZimop", "true",
                                           "'Zimop' (May-Be-Operations)">;
 def HasStdExtZimop : Predicate<"Subtarget->hasStdExtZimop()">,
                      AssemblerPredicate<(all_of FeatureStdExtZimop),
@@ -390,7 +390,7 @@ def HasStdExtCOrZcfOrZce
                          "'C' (Compressed Instructions) or "
                          "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
-def FeatureStdExtZcmop : SubtargetFeature<"experimental-zcmop", "HasStdExtZcmop", "true",
+def FeatureStdExtZcmop : SubtargetFeature<"zcmop", "HasStdExtZcmop", "true",
                                           "'Zcmop' (Compressed May-Be-Operations)",
                                           [FeatureStdExtZca]>;
 def HasStdExtZcmop : Predicate<"Subtarget->hasStdExtZcmop()">,
@@ -1183,10 +1183,15 @@ def FeatureTrailingSeqCstFence : SubtargetFeature<"seq-cst-trailing-fence",
                                           "true",
                                           "Enable trailing fence for seq-cst store.">;
 
-def FeatureFastUnalignedAccess
-   : SubtargetFeature<"fast-unaligned-access", "HasFastUnalignedAccess",
-                      "true", "Has reasonably performant unaligned "
-                      "loads and stores (both scalar and vector)">;
+def FeatureUnalignedScalarMem
+   : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
+                      "true", "Has reasonably performant unaligned scalar "
+                      "loads and stores">;
+
+def FeatureUnalignedVectorMem
+   : SubtargetFeature<"unaligned-vector-mem", "EnableUnalignedVectorMem",
+                      "true", "Has reasonably performant unaligned vector "
+                      "loads and stores">;
 
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
@@ -1226,9 +1231,9 @@ def TuneNoSinkSplatOperands
                        "false", "Disable sink splat operands to enable .vx, .vf,"
                        ".wx, and .wf instructions">;
 
-def TuneNoStripWSuffix
-    : SubtargetFeature<"no-strip-w-suffix", "EnableStripWSuffix", "false",
-                       "Disable strip W suffix">;
+def TunePreferWInst
+    : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
+                       "Prefer instructions with W suffix">;
 
 def TuneConditionalCompressedMoveFusion
     : SubtargetFeature<"conditional-cmv-fusion", "HasConditionalCompressedMoveFusion",

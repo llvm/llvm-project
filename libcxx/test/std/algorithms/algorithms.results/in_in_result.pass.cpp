@@ -59,6 +59,7 @@ struct ConstructibleFrom {
 };
 
 constexpr bool test() {
+  // Checks that conversion operations are correct.
   {
     std::ranges::in_in_result<int, double> res{10L, 0.};
     assert(res.in1 == 10);
@@ -67,12 +68,16 @@ constexpr bool test() {
     assert(res2.in1.content == 10);
     assert(res2.in2.content == 0.);
   }
+
+  // Checks that conversions are possible when one of the types is move-only.
   {
     std::ranges::in_in_result<MoveOnly, int> res{MoveOnly{}, 0};
     assert(res.in1.get() == 1);
     [[maybe_unused]] auto res2 = static_cast<std::ranges::in_in_result<MoveOnly, int>>(std::move(res));
     assert(res.in1.get() == 0);
   }
+
+  // Checks that structured bindings get the correct values.
   {
     auto [in1, in2] = std::ranges::in_in_result<int, int>{1, 2};
     assert(in1 == 1);

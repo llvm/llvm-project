@@ -19,8 +19,8 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfReader.h"
 #include "llvm/ProfileData/ProfileCommon.h"
-#include "llvm/ProfileData/RawMemProfReader.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/Support/BalancedPartitioning.h"
@@ -679,8 +679,8 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     }
     const auto &FunctionProfileData = Reader->getProfileData();
     // Add the memprof records into the writer context.
-    for (const auto &I : FunctionProfileData) {
-      WC->Writer.addMemProfRecord(/*Id=*/I.first, /*Record=*/I.second);
+    for (const auto &[GUID, Record] : FunctionProfileData) {
+      WC->Writer.addMemProfRecord(GUID, Record);
     }
     return;
   }

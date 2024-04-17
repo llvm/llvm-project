@@ -1419,7 +1419,7 @@ defm : BccPat<SETGE, BGE>;
 defm : BccPat<SETULT, BLTU>;
 defm : BccPat<SETUGE, BGEU>;
 
-let Predicates = [HasStdExtC, OptForMinSize] in {
+let Predicates = [HasStdExtCOrZca, OptForMinSize] in {
   def : BrccCompressOpt<SETEQ, BEQ>;
   def : BrccCompressOpt<SETNE, BNE>;
 }
@@ -1861,7 +1861,7 @@ def : Pat<(trap), (UNIMP)>;
 def : Pat<(debugtrap), (EBREAK)>;
 
 let Predicates = [IsRV64], Uses = [X5],
-    Defs = [X1, X6, X7, X28, X29, X30, X31] in
+    Defs = [X1, X6, X7, X28, X29, X30, X31], Size = 8 in
 def HWASAN_CHECK_MEMACCESS_SHORTGRANULES
   : Pseudo<(outs), (ins GPRJALR:$ptr, i32imm:$accessinfo),
            [(int_hwasan_check_memaccess_shortgranules (i64 X5), GPRJALR:$ptr,

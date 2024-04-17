@@ -23,11 +23,20 @@ def SparseAssembler : Pass<"sparse-assembler", "ModuleOp"> {
     sparse tensors as numpy arrays from and to Python. Note that eventual
     bufferization decisions (e.g. who [de]allocates the underlying memory)
     should be resolved in agreement with the external runtime.
+
+    By default, the pass uses the [dis]assemble operations to input and output
+    sparse tensors. When the direct-out option is set, however, the output
+    directly returns the MLIR allocated buffers to the external runtime.
   }];
   let constructor = "mlir::createSparseAssembler()";
   let dependentDialects = [
+    "bufferization::BufferizationDialect",
     "sparse_tensor::SparseTensorDialect",
     "tensor::TensorDialect",
+  ];
+  let options = [
+    Option<"directOut", "direct-out", "bool",
+      "false", "Directly returns buffers externally">,
   ];
 }
 

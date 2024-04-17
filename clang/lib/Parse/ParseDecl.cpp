@@ -26,7 +26,9 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -2379,14 +2381,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       if (getLangOpts().CPlusPlus23) {
         auto &LastRecord = Actions.ExprEvalContexts.back();
         LastRecord.InLifetimeExtendingContext = true;
-
-        // Materialize non-`cv void` prvalue temporaries in discarded
-        // expressions. These materialized temporaries may be lifetime-extented.
-        LastRecord.InMaterializeTemporaryObjectContext = true;
       }
 
       if (getLangOpts().OpenMP)
-        Actions.startOpenMPCXXRangeFor();
+        Actions.OpenMP().startOpenMPCXXRangeFor();
       if (Tok.is(tok::l_brace))
         FRI->RangeExpr = ParseBraceInitializer();
       else
@@ -2664,7 +2662,8 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     }
   }
 
-  Sema::CUDATargetContextRAII X(Actions, Sema::CTCK_InitGlobalVar, ThisDecl);
+  SemaCUDA::CUDATargetContextRAII X(Actions.CUDA(),
+                                    SemaCUDA::CTCK_InitGlobalVar, ThisDecl);
   switch (TheInitKind) {
   // Parse declarator '=' initializer.
   case InitKind::Equal: {
@@ -2676,6 +2675,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
           << 1 /* delete */;
       else
         Diag(ConsumeToken(), diag::err_deleted_non_function);
+      SkipDeletedFunctionBody();
     } else if (Tok.is(tok::kw_default)) {
       if (D.isFunctionDeclarator())
         Diag(ConsumeToken(), diag::err_default_delete_in_multiple_declaration)
@@ -7700,7 +7700,7 @@ void Parser::ParseParameterDeclarationClause(
     }
 
     // Remember this parsed parameter in ParamInfo.
-    IdentifierInfo *ParmII = ParmDeclarator.getIdentifier();
+    const IdentifierInfo *ParmII = ParmDeclarator.getIdentifier();
 
     // DefArgToks is used when the parsing of default arguments needs
     // to be delayed.

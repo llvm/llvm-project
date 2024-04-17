@@ -385,7 +385,7 @@ define i16 @smear_set_bit_different_dest_type(i32 %x) {
 ; CHECK-LABEL: @smear_set_bit_different_dest_type(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 24
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP1]], 31
-; CHECK-NEXT:    [[S:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    [[S:%.*]] = trunc nsw i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[S]]
 ;
   %t = trunc i32 %x to i8

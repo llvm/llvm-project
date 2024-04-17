@@ -12,6 +12,7 @@
 #include <__algorithm/pstl_backends/cpu_backends/backend.h>
 #include <__algorithm/stable_sort.h>
 #include <__config>
+#include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/empty.h>
 #include <optional>
@@ -28,7 +29,7 @@ template <class _ExecutionPolicy, class _RandomAccessIterator, class _Comp>
 _LIBCPP_HIDE_FROM_ABI optional<__empty>
 __pstl_stable_sort(__cpu_backend_tag, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) {
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy>) {
-    return __par_backend::__parallel_stable_sort(
+    return __pstl::__cpu_traits<__cpu_backend_tag>::__stable_sort(
         __first, __last, __comp, [](_RandomAccessIterator __g_first, _RandomAccessIterator __g_last, _Comp __g_comp) {
           std::stable_sort(__g_first, __g_last, __g_comp);
         });

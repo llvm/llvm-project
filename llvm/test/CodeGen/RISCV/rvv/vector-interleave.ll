@@ -674,6 +674,26 @@ define <vscale x 8 x i32> @vector_interleave_nxv8i32_nxv4i32_poison(<vscale x 4 
   ret <vscale x 8 x i32> %res
 }
 
+define <vscale x 8 x i32> @vector_interleave_nxv8i32_nxv4i32_poison2(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: vector_interleave_nxv8i32_nxv4i32_poison2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vzext.vf2 v12, v8
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsll.vx v8, v12, a0
+; CHECK-NEXT:    ret
+;
+; ZVBB-LABEL: vector_interleave_nxv8i32_nxv4i32_poison2:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    li a0, 32
+; ZVBB-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; ZVBB-NEXT:    vwsll.vx v12, v8, a0
+; ZVBB-NEXT:    vmv4r.v v8, v12
+; ZVBB-NEXT:    ret
+  %res = call <vscale x 8 x i32> @llvm.experimental.vector.interleave2.nxv8i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a)
+  ret <vscale x 8 x i32> %res
+}
+
 declare <vscale x 64 x half> @llvm.experimental.vector.interleave2.nxv64f16(<vscale x 32 x half>, <vscale x 32 x half>)
 declare <vscale x 32 x float> @llvm.experimental.vector.interleave2.nxv32f32(<vscale x 16 x float>, <vscale x 16 x float>)
 declare <vscale x 16 x double> @llvm.experimental.vector.interleave2.nxv16f64(<vscale x 8 x double>, <vscale x 8 x double>)

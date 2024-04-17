@@ -473,8 +473,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
           Style.ReferenceAlignment != FormatStyle::RAS_Right &&
           Style.ReferenceAlignment != FormatStyle::RAS_Pointer;
       for (int Previous = i - 1;
-           Previous >= 0 &&
-           Changes[Previous].Tok->getType() == TT_PointerOrReference;
+           Previous >= 0 && Changes[Previous].Tok->is(TT_PointerOrReference);
            --Previous) {
         assert(Changes[Previous].Tok->isPointerOrReference());
         if (Changes[Previous].Tok->isNot(tok::star)) {

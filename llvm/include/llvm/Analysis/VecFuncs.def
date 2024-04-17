@@ -1005,6 +1005,8 @@ TLI_DEFINE_VECFUNC("llvm.log2.f32", "armpl_svlog2_f32_x", SCALABLE(4), MASKED, "
 
 TLI_DEFINE_VECFUNC("modf", "armpl_vmodfq_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2vl8")
 TLI_DEFINE_VECFUNC("modff", "armpl_vmodfq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4vl4")
+TLI_DEFINE_VECFUNC("modf", "armpl_svmodf_f64_x", SCALABLE(2), MASKED, "_ZGVsMxvl8")
+TLI_DEFINE_VECFUNC("modff", "armpl_svmodf_f32_x", SCALABLE(4), MASKED, "_ZGVsMxvl4")
 
 TLI_DEFINE_VECFUNC("nextafter", "armpl_vnextafterq_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2vv")
 TLI_DEFINE_VECFUNC("nextafterf", "armpl_vnextafterq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4vv")
@@ -1033,9 +1035,13 @@ TLI_DEFINE_VECFUNC("llvm.sin.f32", "armpl_svsin_f32_x", SCALABLE(4), MASKED, "_Z
 
 TLI_DEFINE_VECFUNC("sincos", "armpl_vsincosq_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2vl8l8")
 TLI_DEFINE_VECFUNC("sincosf", "armpl_vsincosq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4vl4l4")
+TLI_DEFINE_VECFUNC("sincos", "armpl_svsincos_f64_x", SCALABLE(2), MASKED, "_ZGVsMxvl8l8")
+TLI_DEFINE_VECFUNC("sincosf", "armpl_svsincos_f32_x", SCALABLE(4), MASKED, "_ZGVsMxvl4l4")
 
 TLI_DEFINE_VECFUNC("sincospi", "armpl_vsincospiq_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2vl8l8")
 TLI_DEFINE_VECFUNC("sincospif", "armpl_vsincospiq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4vl4l4")
+TLI_DEFINE_VECFUNC("sincospi", "armpl_svsincospi_f64_x", SCALABLE(2), MASKED, "_ZGVsMxvl8l8")
+TLI_DEFINE_VECFUNC("sincospif", "armpl_svsincospi_f32_x", SCALABLE(4), MASKED, "_ZGVsMxvl4l4")
 
 TLI_DEFINE_VECFUNC("sinh", "armpl_vsinhq_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
 TLI_DEFINE_VECFUNC("sinhf", "armpl_vsinhq_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")

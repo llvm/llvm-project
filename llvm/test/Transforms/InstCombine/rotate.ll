@@ -147,6 +147,17 @@ define <2 x i32> @rotr_v2i32_constant_nonsplat_undef0(<2 x i32> %x) {
   ret <2 x i32> %r
 }
 
+define <2 x i32> @rotr_v2i32_constant_nonsplat_poison0(<2 x i32> %x) {
+; CHECK-LABEL: @rotr_v2i32_constant_nonsplat_poison0(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[X]], <2 x i32> <i32 poison, i32 19>)
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %shl = shl <2 x i32> %x, <i32 poison, i32 19>
+  %shr = lshr <2 x i32> %x, <i32 15, i32 13>
+  %r = or <2 x i32> %shl, %shr
+  ret <2 x i32> %r
+}
+
 define <2 x i32> @rotr_v2i32_constant_nonsplat_undef1(<2 x i32> %x) {
 ; CHECK-LABEL: @rotr_v2i32_constant_nonsplat_undef1(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[X]], <2 x i32> <i32 17, i32 0>)

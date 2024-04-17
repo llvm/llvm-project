@@ -1086,7 +1086,7 @@ void SplitPtrStructs::processConditionals() {
       if (MaybeRsrc)
         for (Value *V : Seen)
           FoundRsrcs[cast<Instruction>(V)] = NewRsrc;
-    } else if (auto *SI = dyn_cast<SelectInst>(I)) {
+    } else if (isa<SelectInst>(I)) {
       if (MaybeRsrc) {
         ConditionalTemps.push_back(cast<Instruction>(Rsrc));
         Rsrc->replaceAllUsesWith(*MaybeRsrc);
@@ -1777,8 +1777,8 @@ void SplitPtrStructs::processFunction(Function &F) {
     Originals.push_back(&I);
   for (Instruction *I : Originals) {
     auto [Rsrc, Off] = visit(I);
-    assert((Rsrc && Off) ||
-           (!Rsrc && !Off) && "Can't have a resource but no offset");
+    assert(((Rsrc && Off) || (!Rsrc && !Off)) &&
+           "Can't have a resource but no offset");
     if (Rsrc)
       RsrcParts[I] = Rsrc;
     if (Off)
