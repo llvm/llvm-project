@@ -364,6 +364,8 @@ Improvements to Clang's diagnostics
 - Clang now uses the correct type-parameter-key (``class`` or ``typename``) when printing
   template template parameter declarations.
 
+- Clang now diagnoses requires expressions with explicit object parameters.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
