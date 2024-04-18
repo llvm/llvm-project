@@ -1982,6 +1982,30 @@ getDependenceDistanceStrideAndSize(
                                    InnermostLoop))
     return MemoryDepChecker::Dependence::IndirectUnsafe;
 
+  uint64_t TypeByteSizeA = ATy->isScalableTy() ? 0 : DL.getTypeAllocSize(ATy);
+  uint64_t TypeByteSizeB = BTy->isScalableTy() ? 0 : DL.getTypeAllocSize(BTy);
+  // If either Src or Sink are loop invariant, check if Src + AccessSize <= Sink
+  // (or vice versa). This is done by checking (Sink - (Src + AccessSize)) s>=
+  // 0.
+  if (SE.isLoopInvariant(Src, InnermostLoop) && TypeByteSizeA > 0) {
+    const SCEV *SrcLastAccess =
+        SE.getAddExpr(Src, SE.getConstant(Src->getType(), TypeByteSizeA));
+    const SCEV *D = SE.getMinusSCEV(Sink, SrcLastAccess);
+    if (!isa<SCEVCouldNotCompute>(D) &&
+        SE.isKnownPredicate(CmpInst::ICMP_SGE, D,
+                            SE.getConstant(Src->getType(), 0)))
+      return MemoryDepChecker::Dependence::NoDep;
+  }
+  if (SE.isLoopInvariant(Sink, InnermostLoop) && TypeByteSizeB > 0) {
+    const SCEV *SinkLastAccess =
+        SE.getAddExpr(Sink, SE.getConstant(Src->getType(), TypeByteSizeB));
+    const SCEV *D = SE.getMinusSCEV(Src, SinkLastAccess);
+    if (!isa<SCEVCouldNotCompute>(D) &&
+        SE.isKnownPredicate(CmpInst::ICMP_SGE, D,
+                            SE.getConstant(Src->getType(), 0)))
+      return MemoryDepChecker::Dependence::NoDep;
+  }
+
   // Need accesses with constant strides and the same direction. We don't want
   // to vectorize "A[B[i]] += ..." and similar code or pointer arithmetic that
   // could wrap in the address space.
@@ -1991,13 +2015,12 @@ getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::Unknown;
   }
 
-  uint64_t TypeByteSize = DL.getTypeAllocSize(ATy);
   bool HasSameSize =
       DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);
   if (!HasSameSize)
-    TypeByteSize = 0;
+    TypeByteSizeA = 0;
   return DepDistanceStrideAndSizeInfo(Dist, std::abs(StrideAPtr),
-                                      std::abs(StrideBPtr), TypeByteSize,
+                                      std::abs(StrideBPtr), TypeByteSizeA,
                                       AIsWrite, BIsWrite);
 }
 
