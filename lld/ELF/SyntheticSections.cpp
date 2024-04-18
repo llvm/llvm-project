@@ -2803,7 +2803,6 @@ readEntry(uint64_t &offset, const DWARFDebugNames::NameIndex &ni,
     else if (a.Form != DW_FORM_flag_present)
       ie->attrValues.push_back(attr);
   }
-
   // Canonicalize abbrev by placing the CU/TU index at the end.
   ie->attrValues.push_back(cuAttr);
   return ie;
@@ -3014,7 +3013,7 @@ std::pair<uint32_t, uint32_t> DebugNamesBaseSection::computeEntryPool(
   const size_t concurrency =
       bit_floor(std::min<size_t>(config->threadCount, numShards));
   const size_t shift = 32 - countr_zero(numShards);
-  uint8_t cuAttrSize = getMergedCuCountForm(hdr.CompUnitCount).first;
+  const uint8_t cuAttrSize = getMergedCuCountForm(hdr.CompUnitCount).first;
   DenseMap<CachedHashStringRef, size_t> maps[numShards];
 
   parallelFor(0, concurrency, [&](size_t threadId) {
