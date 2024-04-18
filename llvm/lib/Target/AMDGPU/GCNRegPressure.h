@@ -269,7 +269,7 @@ protected:
 
   mutable const MachineRegisterInfo *MRI = nullptr;
 
-  GCNIterativeRPTracker() {};
+  GCNIterativeRPTracker(){};
 
 public:
   void reset(const MachineRegisterInfo *MRI_, const LiveRegSet *LiveRegsCopy);
@@ -280,7 +280,7 @@ public:
 
 class GCNIterativeUpwardRPTracker : public GCNIterativeRPTracker {
 public:
-  GCNIterativeUpwardRPTracker() {};
+  GCNIterativeUpwardRPTracker(){};
 
   // Move to the state just before the MI.
   void recede(const MachineInstr &MI, LiveIntervals *TheLIS);
@@ -288,7 +288,7 @@ public:
 
 class GCNIterativeDownwardRPTracker : public GCNIterativeRPTracker {
 public:
-  GCNIterativeDownwardRPTracker() {};
+  GCNIterativeDownwardRPTracker(){};
 
   // Move to the state just after the MI.
   void advance(const MachineInstr &MI, LiveIntervals *TheLIS);
