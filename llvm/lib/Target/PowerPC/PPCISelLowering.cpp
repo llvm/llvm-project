@@ -15691,14 +15691,16 @@ static void fixupShuffleMaskForPermutedSToV(
     SmallVectorImpl<int> &ShuffV, int LHSFirstElt, int LHSLastElt,
     int RHSFirstElt, int RHSLastElt, int HalfVec, unsigned LHSNumValidElts,
     unsigned RHSNumValidElts, const PPCSubtarget &Subtarget) {
+  int LHSEltFixup =
+      Subtarget.isLittleEndian() ? HalfVec : HalfVec - LHSNumValidElts;
+  int RHSEltFixup =
+      Subtarget.isLittleEndian() ? HalfVec : HalfVec - RHSNumValidElts;
   for (int I = 0, E = ShuffV.size(); I < E; ++I) {
     int Idx = ShuffV[I];
     if (Idx >= LHSFirstElt && Idx <= LHSLastElt)
-      ShuffV[I] +=
-          Subtarget.isLittleEndian() ? HalfVec : HalfVec - LHSNumValidElts;
+      ShuffV[I] += LHSEltFixup;
     if (Idx >= RHSFirstElt && Idx <= RHSLastElt)
-      ShuffV[I] +=
-          Subtarget.isLittleEndian() ? HalfVec : HalfVec - RHSNumValidElts;
+      ShuffV[I] += RHSEltFixup;
   }
 }
 
@@ -15754,6 +15756,31 @@ static bool isShuffleMaskInRange(const SmallVectorImpl<int> &ShuffV,
       return false;
   }
   return true;
+}
+
+static SDValue generateSToVPermutedForVecShuffle(
+    int ScalarSize, uint64_t ShuffleEltWidth, unsigned &NumValidElts,
+    int FirstElt, int &LastElt, SDValue VecShuffOperand, SDValue SToVNode,
+    SelectionDAG &DAG, const PPCSubtarget &Subtarget) {
+  EVT VecShuffOperandType = VecShuffOperand.getValueType();
+  // Set up the values for the shuffle vector fixup.
+  NumValidElts = ScalarSize / VecShuffOperandType.getScalarSizeInBits();
+  // The last element depends on if the input comes from the LHS or RHS.
+  //
+  // For example:
+  // (shuff (s_to_v i32), (bitcast (s_to_v i64), v4i32), ...)
+  //
+  // For the LHS: The last element that comes from the LHS is actually 0, not 3
+  // because elements 1 and higher of a scalar_to_vector are undefined.
+  // For the RHS: The last element that comes from the RHS is actually 5, not 7
+  // because elements 1 and higher of a scalar_to_vector are undefined.
+  // It is also not 4 because the original scalar_to_vector is wider and
+  // actually contains two i32 elements.
+  LastElt = ScalarSize / (ShuffleEltWidth + 1) + FirstElt;
+  SDValue SToVPermuted = getSToVPermuted(SToVNode, DAG, Subtarget);
+  if (SToVPermuted.getValueType() != VecShuffOperandType)
+    SToVPermuted = DAG.getBitcast(VecShuffOperandType, SToVPermuted);
+  return SToVPermuted;
 }
 
 // On little endian subtargets, combine shuffles such as:
@@ -15833,36 +15860,17 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
       int LHSScalarSize = SToVLHS.getValueType().getScalarSizeInBits();
       if (!IsLittleEndian && LHSScalarSize >= 64)
         return Res;
-      // Set up the values for the shuffle vector fixup.
-      LHSNumValidElts =
-          LHSScalarSize / LHS.getValueType().getScalarSizeInBits();
-      // The last element that comes from the LHS. For example:
-      // (shuff (s_to_v i32), (bitcast (s_to_v i64), v4i32), ...)
-      // The last element that comes from the LHS is actually 0, not 3
-      // because elements 1 and higher of a scalar_to_vector are undefined.
-      LHSLastElt = LHSScalarSize / (ShuffleEltWidth + 1);
-      SToVLHS = getSToVPermuted(SToVLHS, DAG, Subtarget);
-      if (SToVLHS.getValueType() != LHS.getValueType())
-        SToVLHS = DAG.getBitcast(LHS.getValueType(), SToVLHS);
-      LHS = SToVLHS;
+      LHS = generateSToVPermutedForVecShuffle(
+          LHSScalarSize, ShuffleEltWidth, LHSNumValidElts, LHSFirstElt,
+          LHSLastElt, LHS, SToVLHS, DAG, Subtarget);
     }
     if (SToVRHS) {
       int RHSScalarSize = SToVRHS.getValueType().getScalarSizeInBits();
       if (!IsLittleEndian && RHSScalarSize >= 64)
         return Res;
-      RHSNumValidElts =
-          RHSScalarSize / RHS.getValueType().getScalarSizeInBits();
-      // The last element that comes from the RHS. For example:
-      // (shuff (s_to_v i32), (bitcast (s_to_v i64), v4i32), ...)
-      // The last element that comes from the RHS is actually 5, not 7
-      // because elements 1 and higher of a scalar_to_vector are undefined.
-      // It is also not 4 because the original scalar_to_vector is wider and
-      // actually contains two i32 elements.
-      RHSLastElt = RHSScalarSize / (ShuffleEltWidth + 1) + RHSFirstElt;
-      SToVRHS = getSToVPermuted(SToVRHS, DAG, Subtarget);
-      if (SToVRHS.getValueType() != RHS.getValueType())
-        SToVRHS = DAG.getBitcast(RHS.getValueType(), SToVRHS);
-      RHS = SToVRHS;
+      RHS = generateSToVPermutedForVecShuffle(
+          RHSScalarSize, ShuffleEltWidth, RHSNumValidElts, RHSFirstElt,
+          RHSLastElt, RHS, SToVRHS, DAG, Subtarget);
     }
 
     if (!isShuffleMaskInRange(ShuffV, HalfVec, LHSLastElt, RHSLastElt))
