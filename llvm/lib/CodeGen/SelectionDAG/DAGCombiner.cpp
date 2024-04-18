@@ -3520,6 +3520,8 @@ static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
     return SDValue();
 
   SDLoc DL(N);
+  CarryIn = DAG.getBoolExtOrTrunc(CarryIn, DL, Carry1->getValueType(1),
+                                  Carry1->getValueType(0));
   SDValue Merged =
       DAG.getNode(NewOp, DL, Carry1->getVTList(), Carry0.getOperand(0),
                   Carry0.getOperand(1), CarryIn);
