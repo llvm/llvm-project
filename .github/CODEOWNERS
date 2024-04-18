@@ -113,7 +113,6 @@ clang/test/AST/Interp/ @tbaederr
 
 # MLIR NVVM Dialect in MLIR
 /mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
-/mlir/**/NVVM*/ @grypp
 /mlir/**/NVVM* @grypp
 
 # BOLT
