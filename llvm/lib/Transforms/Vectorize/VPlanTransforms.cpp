@@ -1203,22 +1203,22 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   return LaneMaskPhi;
 }
 
-/// Collet all VPValues representing a header mask through the (ICMP_ULE,
+/// Collect all VPValues representing a header mask through the (ICMP_ULE,
 /// WideCanonicalIV, backedge-taken-count) pattern.
+/// TODO: Introduce explicit recipe for header-mask instead of searching
+/// for the header-mask pattern manually.
 static SmallVector<VPValue *> collectAllHeaderMasks(VPlan &Plan) {
   SmallVector<VPValue *> WideCanonicalIVs;
   auto *FoundWidenCanonicalIVUser =
       find_if(Plan.getCanonicalIV()->users(),
               [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
+  assert(count_if(Plan.getCanonicalIV()->users(),
+                  [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); }) <=
+             1 &&
+         "Must at most one VPWideCanonicalIVRecipe");
   if (FoundWidenCanonicalIVUser != Plan.getCanonicalIV()->users().end()) {
     auto *WideCanonicalIV =
         cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
-    assert(all_of(Plan.getCanonicalIV()->users(),
-                  [WideCanonicalIV](VPUser *U) {
-                    return !isa<VPWidenCanonicalIVRecipe>(U) ||
-                           U == WideCanonicalIV;
-                  }) &&
-           "Must have a single WideCanonicalIV");
     WideCanonicalIVs.push_back(WideCanonicalIV);
   }
 
@@ -1231,14 +1231,12 @@ static SmallVector<VPValue *> collectAllHeaderMasks(VPlan &Plan) {
       WideCanonicalIVs.push_back(WidenOriginalIV);
   }
 
-  // Walk users of wide canonical IVs and apply Fn to all compares of the form
+  // Walk users of wide canonical IVs and collect to all compares of the form
   // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
   SmallVector<VPValue *> HeaderMasks;
   VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
   for (auto *Wide : WideCanonicalIVs) {
     for (VPUser *U : SmallVector<VPUser *>(Wide->users())) {
-      // TODO: Introduce explicit recipe for header-mask instead of searching
-      // for the header-mask pattern manually.
       auto *HeaderMask = dyn_cast<VPInstruction>(U);
       if (!HeaderMask || HeaderMask->getOpcode() != Instruction::ICmp ||
           HeaderMask->getPredicate() != CmpInst::ICMP_ULE ||
@@ -1351,12 +1349,12 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
       assert(OrigMask && "Unmasked widen memory recipe when folding tail");
       VPValue *NewMask = HeaderMask == OrigMask ? nullptr : OrigMask;
       if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR)) {
-        auto *N = new VPWidenEVLLoadRecipe(L, VPEVL, NewMask);
+        auto *N = new VPWidenLoadEVLRecipe(L, VPEVL, NewMask);
         N->insertBefore(L);
         L->replaceAllUsesWith(N);
         L->eraseFromParent();
       } else if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR)) {
-        auto *N = new VPWidenEVLStoreRecipe(S, VPEVL, NewMask);
+        auto *N = new VPWidenStoreEVLRecipe(S, VPEVL, NewMask);
         N->insertBefore(S);
         S->eraseFromParent();
       } else {

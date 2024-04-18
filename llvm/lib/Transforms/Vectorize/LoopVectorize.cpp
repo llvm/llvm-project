@@ -9365,7 +9365,7 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   }
 }
 
-void VPWidenEVLLoadRecipe::execute(VPTransformState &State) {
+void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                           "explicit vector length.");
   // FIXME: Support reverse loading after vp_reverse is added.
@@ -9445,7 +9445,7 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
   }
 }
 
-void VPWidenEVLStoreRecipe::execute(VPTransformState &State) {
+void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                           "explicit vector length.");
   // FIXME: Support reverse loading after vp_reverse is added.

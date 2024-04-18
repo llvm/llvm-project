@@ -866,10 +866,10 @@ public:
       return true;
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPBranchOnMaskSC:
+    case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
+    case VPRecipeBase::VPWidenStoreEVLSC:
     case VPRecipeBase::VPWidenStoreSC:
-    case VPRecipeBase::VPWidenEVLLoadSC:
-    case VPRecipeBase::VPWidenEVLStoreSC:
       // TODO: Widened stores don't define a value, but widened loads do. Split
       // the recipes to be able to make widened loads VPSingleDefRecipes.
       return false;
@@ -2318,8 +2318,8 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPWidenLoadSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenStoreSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenEVLLoadSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenEVLStoreSC;
+           R->getVPDefID() == VPRecipeBase::VPWidenLoadEVLSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenStoreEVLSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2396,16 +2396,16 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
 /// A recipe for widening load operations with vector-predication intrinsics,
 /// using the address to load from, the explicit vector length and an optional
 /// mask.
-struct VPWidenEVLLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
-  VPWidenEVLLoadRecipe(VPWidenLoadRecipe *L, VPValue *EVL, VPValue *Mask)
+struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
+  VPWidenLoadEVLRecipe(VPWidenLoadRecipe *L, VPValue *EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(
-            VPDef::VPWidenEVLLoadSC, *cast<LoadInst>(&L->getIngredient()),
+            VPDef::VPWidenLoadEVLSC, *cast<LoadInst>(&L->getIngredient()),
             {L->getAddr(), EVL}, L->isConsecutive(), false, L->getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenEVLLoadSC)
+  VP_CLASSOF_IMPL(VPDef::VPWidenLoadEVLSC)
 
   /// Return the EVL operand.
   VPValue *getEVL() const { return getOperand(1); }
@@ -2472,16 +2472,15 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
 /// A recipe for widening store operations with vector-predication intrinsics,
 /// using the value to store, the address to store to, the explicit vector
 /// length and an optional mask.
-struct VPWidenEVLStoreRecipe final : public VPWidenMemoryRecipe {
-  VPWidenEVLStoreRecipe(VPWidenStoreRecipe *S, VPValue *EVL, VPValue *Mask)
-      : VPWidenMemoryRecipe(VPDef::VPWidenEVLStoreSC,
-                            *cast<StoreInst>(&S->getIngredient()),
+struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
+  VPWidenStoreEVLRecipe(VPWidenStoreRecipe *S, VPValue *EVL, VPValue *Mask)
+      : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S->getIngredient(),
                             {S->getAddr(), S->getStoredValue(), EVL},
                             S->isConsecutive(), false, S->getDebugLoc()) {
     setMask(Mask);
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenEVLStoreSC)
+  VP_CLASSOF_IMPL(VPDef::VPWidenStoreEVLSC)
 
   /// Return the address accessed by this recipe.
   VPValue *getStoredValue() const { return getOperand(1); }
