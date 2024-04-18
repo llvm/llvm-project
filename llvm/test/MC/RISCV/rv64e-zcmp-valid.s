@@ -25,7 +25,7 @@ cm.popret {ra}, 32
 cm.popret {ra, s0}, 64
 
 # CHECK-ASM-AND-OBJ: cm.popret   {ra, s0-s1}, 32
-# CHECK-ASM: encoding: [0x66,0xbe]
+# CHECK-ASM: encoding: [0x62,0xbe]
 cm.popret {ra,s0-s1}, 32
 
 # CHECK-ASM-AND-OBJ: cm.popretz   {ra}, 16
@@ -41,7 +41,7 @@ cm.popretz {ra}, 32
 cm.popretz {ra, s0}, 64
 
 # CHECK-ASM-AND-OBJ: cm.popretz   {ra, s0-s1}, 32
-# CHECK-ASM: encoding: [0x66,0xbc]
+# CHECK-ASM: encoding: [0x62,0xbc]
 cm.popretz {ra, s0-s1}, 32
 
 # CHECK-ASM-AND-OBJ: cm.pop  {ra}, 16
@@ -57,7 +57,7 @@ cm.pop {ra}, 32
 cm.pop {ra, s0}, 16
 
 # CHECK-ASM-AND-OBJ: cm.pop  {ra, s0-s1}, 32
-# CHECK-ASM: encoding: [0x66,0xba]
+# CHECK-ASM: encoding: [0x62,0xba]
 cm.pop {ra, s0-s1}, 32
 
 # CHECK-ASM-AND-OBJ: cm.push {ra}, -16
@@ -69,5 +69,5 @@ cm.push {ra}, -16
 cm.push {ra, s0}, -32
 
 # CHECK-ASM-AND-OBJ: cm.push {ra, s0-s1}, -32
-# CHECK-ASM: encoding: [0x66,0xb8]
+# CHECK-ASM: encoding: [0x62,0xb8]
 cm.push {ra, s0-s1}, -32
