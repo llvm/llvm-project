@@ -287,6 +287,9 @@ Attribute Changes in Clang
   This allows the ``_Nullable`` and ``_Nonnull`` family of type attributes to
   apply to this class.
 
+- Clang now warns that the ``exclude_from_explicit_instantiation`` attribute
+  is ignored when applied to a local class or a member thereof.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
@@ -363,6 +366,8 @@ Improvements to Clang's diagnostics
 
 - Clang now uses the correct type-parameter-key (``class`` or ``typename``) when printing
   template template parameter declarations.
+
+- Clang now diagnoses requires expressions with explicit object parameters.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -534,6 +539,8 @@ Bug Fixes to C++ Support
   Fixes (#GH70604), (#GH79754), (#GH84163), (#GH84425), (#GH86054), (#GH86398), and (#GH86399).
 - Fix a crash when deducing ``auto`` from an invalid dereference (#GH88329).
 - Fix a crash in requires expression with templated base class member function. Fixes (#GH84020).
+- Fix a crash caused by defined struct in a type alias template when the structure
+  has fields with dependent type. Fixes (#GH75221).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
