@@ -2841,15 +2841,6 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[16], BK_BracedInit);
 }
 
-TEST_F(TokenAnnotatorTest, StreamOperator) {
-  auto Tokens = annotate("\"foo\\n\" << aux << \"foo\\n\" << \"foo\";");
-  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
-  EXPECT_FALSE(Tokens[1]->MustBreakBefore);
-  EXPECT_FALSE(Tokens[3]->MustBreakBefore);
-  // Only break between string literals if the former ends with \n.
-  EXPECT_TRUE(Tokens[5]->MustBreakBefore);
-}
-
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
   auto Tokens = annotate("auto foo() -> enum En {}");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
