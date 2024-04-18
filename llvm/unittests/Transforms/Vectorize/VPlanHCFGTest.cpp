@@ -192,9 +192,9 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   auto Iter = VecBB->begin();
   EXPECT_NE(nullptr, dyn_cast<VPWidenPHIRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenGEPRecipe>(&*Iter++));
-  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryInstructionRecipe>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
-  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryInstructionRecipe>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
