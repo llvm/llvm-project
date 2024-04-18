@@ -1,4 +1,4 @@
-//===--- A platform independent abstraction layer for mutexes ---*- C++ -*-===//
+//===--- A simple std::mutex implementation ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +8,6 @@
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_MUTEX_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_MUTEX_H
-
-#include "src/__support/macros/properties/architectures.h"
 
 // Platform independent code will include this header file which pulls
 // the platfrom specific specializations using platform macros.
@@ -37,27 +35,23 @@
 // few global locks. So, to avoid static initialization order fiasco, we
 // want the constructors of the Mutex classes to be constexprs.
 
-#if defined(__linux__)
-#include "linux/mutex.h"
-#elif defined(LIBC_TARGET_ARCH_IS_GPU)
-#include "gpu/mutex.h"
-#endif // __linux__
-
 namespace LIBC_NAMESPACE {
 namespace cpp {
 
 // An RAII class for easy locking and unlocking of mutexes.
+template<typename mutex_type>
 class lock_guard {
-  Mutex &mutex;
-
 public:
-  explicit lock_guard(Mutex &m) : mutex(m) { mutex->lock(); }
+  explicit lock_guard(mutex_type &m) : mutex(m) { mutex->lock(); }
 
   ~lock_guard() { mutex->unlock(); }
 
   // non-copyable
   lock_guard &operator=(const lock_guard &) = delete;
   lock_guard(const lock_guard &) = delete;
+
+private:
+  mutex_type &mutex;
 };
 
 } // namespace cpp

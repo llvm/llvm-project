@@ -65,6 +65,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  mutex_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    mutex_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.mutex
+)
+
+add_libc_test(
   int_seq_test
   SUITE
     libc-cpp-utils-tests
