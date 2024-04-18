@@ -19676,7 +19676,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
                                       E = Record->field_end();
            (NonBitFields == 0 || ZeroSize) && I != E; ++I) {
         IsEmpty = false;
-        if (I->isUnnamedBitfield()) {
+        if (I->isUnnamedBitField()) {
           if (!I->isZeroLengthBitField(Context))
             ZeroSize = false;
         } else {

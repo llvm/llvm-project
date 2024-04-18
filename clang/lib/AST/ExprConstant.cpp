@@ -2494,7 +2494,7 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
       }
     }
     for (const auto *I : RD->fields()) {
-      if (I->isUnnamedBitfield())
+      if (I->isUnnamedBitField())
         continue;
 
       if (!CheckEvaluationResult(CERK, Info, DiagLoc, I->getType(),
@@ -3531,7 +3531,7 @@ static bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD) {
     return false;
 
   for (auto *Field : RD->fields())
-    if (!Field->isUnnamedBitfield() &&
+    if (!Field->isUnnamedBitField() &&
         isReadByLvalueToRvalueConversion(Field->getType()))
       return true;
 
@@ -4900,7 +4900,7 @@ static bool handleDefaultInitValue(QualType T, APValue &Result) {
           handleDefaultInitValue(I->getType(), Result.getStructBase(Index));
 
     for (const auto *I : RD->fields()) {
-      if (I->isUnnamedBitfield())
+      if (I->isUnnamedBitField())
         continue;
       Success &= handleDefaultInitValue(
           I->getType(), Result.getStructField(I->getFieldIndex()));
@@ -6438,7 +6438,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
     // Default-initialize any fields with no explicit initializer.
     for (; !declaresSameEntity(*FieldIt, FD); ++FieldIt) {
       assert(FieldIt != RD->field_end() && "missing field?");
-      if (!FieldIt->isUnnamedBitfield())
+      if (!FieldIt->isUnnamedBitField())
         Success &= handleDefaultInitValue(
             FieldIt->getType(),
             Result.getStructField(FieldIt->getFieldIndex()));
@@ -6548,7 +6548,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
   // Default-initialize any remaining fields.
   if (!RD->isUnion()) {
     for (; FieldIt != RD->field_end(); ++FieldIt) {
-      if (!FieldIt->isUnnamedBitfield())
+      if (!FieldIt->isUnnamedBitField())
         Success &= handleDefaultInitValue(
             FieldIt->getType(),
             Result.getStructField(FieldIt->getFieldIndex()));
@@ -6710,7 +6710,7 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
   // fields first and then walk them backwards.
   SmallVector<FieldDecl*, 16> Fields(RD->fields());
   for (const FieldDecl *FD : llvm::reverse(Fields)) {
-    if (FD->isUnnamedBitfield())
+    if (FD->isUnnamedBitField())
       continue;
 
     LValue Subobject = This;
@@ -10222,7 +10222,7 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
 
   for (const auto *I : RD->fields()) {
     // -- if T is a reference type, no initialization is performed.
-    if (I->isUnnamedBitfield() || I->getType()->isReferenceType())
+    if (I->isUnnamedBitField() || I->getType()->isReferenceType())
       continue;
 
     LValue Subobject = This;
@@ -10245,7 +10245,7 @@ bool RecordExprEvaluator::ZeroInitialization(const Expr *E, QualType T) {
     // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
     // object's first non-static named data member is zero-initialized
     RecordDecl::field_iterator I = RD->field_begin();
-    while (I != RD->field_end() && (*I)->isUnnamedBitfield())
+    while (I != RD->field_end() && (*I)->isUnnamedBitField())
       ++I;
     if (I == RD->field_end()) {
       Result = APValue((const FieldDecl*)nullptr);
@@ -10392,7 +10392,7 @@ bool RecordExprEvaluator::VisitCXXParenListOrInitListExpr(
   for (const auto *Field : RD->fields()) {
     // Anonymous bit-fields are not considered members of the class for
     // purposes of aggregate initialization.
-    if (Field->isUnnamedBitfield())
+    if (Field->isUnnamedBitField())
       continue;
 
     LValue Subobject = This;
