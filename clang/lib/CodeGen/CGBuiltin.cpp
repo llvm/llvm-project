@@ -849,6 +849,7 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
         Offset += Layout.getFieldOffset(FieldNo);
         return Field;
       }
+    }
 
     if (!RD->isUnion())
       ++FieldNo;
