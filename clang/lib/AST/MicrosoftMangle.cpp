@@ -1933,7 +1933,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     for (const CXXBaseSpecifier &B : RD->bases())
       mangleTemplateArgValue(B.getType(), V.getStructBase(BaseIndex++), TAK);
     for (const FieldDecl *FD : RD->fields())
-      if (!FD->isUnnamedBitfield())
+      if (!FD->isUnnamedBitField())
         mangleTemplateArgValue(FD->getType(),
                                V.getStructField(FD->getFieldIndex()), TAK,
                                /*WithScalarType*/ true);
@@ -3077,6 +3077,11 @@ void MicrosoftCXXNameMangler::mangleArrayType(const ArrayType *T) {
   for (const llvm::APInt &Dimension : Dimensions)
     mangleNumber(Dimension.getLimitedValue());
   mangleType(ElementTy, SourceRange(), QMM_Escape);
+}
+
+void MicrosoftCXXNameMangler::mangleType(const ArrayParameterType *T,
+                                         Qualifiers, SourceRange) {
+  mangleArrayType(cast<ConstantArrayType>(T));
 }
 
 // <type>                   ::= <pointer-to-member-type>

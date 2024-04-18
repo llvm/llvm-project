@@ -14,7 +14,7 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 
 #define TEST_SPECIAL(x, y, expected, expected_exception)                       \
   EXPECT_EQ(expected, f(&x, &y));                                              \
@@ -67,22 +67,22 @@ public:
       // Exponent   |       Significand      | Meaning
       //            | Bits 63-62 | Bits 61-0 |
       // All Ones   |     00     |  Non-Zero | Pseudo NaN, Value = SNaN
-      FPBits test2_1(0x000000000'00007FFF'00000000'00000001_u128);
+      FPBits test2_1(0x00000000'00007FFF'00000000'00000001_u128);
       const T test2_1_val = test2_1.get_val();
       TEST_SPECIAL(cx, test2_1_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test2_2(0x000000000'00007FFF'00000042'70000001_u128);
+      FPBits test2_2(0x00000000'00007FFF'00000042'70000001_u128);
       const T test2_2_val = test2_2.get_val();
       TEST_SPECIAL(cx, test2_2_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test2_3(0x000000000'00007FFF'00000000'08261001_u128);
+      FPBits test2_3(0x00000000'00007FFF'00000000'08261001_u128);
       const T test2_3_val = test2_3.get_val();
       TEST_SPECIAL(cx, test2_3_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
 
-      FPBits test2_4(0x000000000'00007FFF'00007800'08261001_u128);
+      FPBits test2_4(0x00000000'00007FFF'00007800'08261001_u128);
       const T test2_4_val = test2_4.get_val();
       TEST_SPECIAL(cx, test2_4_val, 1, FE_INVALID);
       EXPECT_FP_EQ(cx, aNaN);
@@ -125,6 +125,7 @@ public:
       TEST_SPECIAL(cx, test4_2_val, 0, 0);
       EXPECT_FP_EQ(
           cx, FPBits::make_value(test4_2.get_explicit_mantissa(), 0).get_val());
+
       FPBits test4_3(0x00000000'00000000'80000000'08261001_u128);
       const T test4_3_val = test4_3.get_val();
       TEST_SPECIAL(cx, test4_3_val, 0, 0);

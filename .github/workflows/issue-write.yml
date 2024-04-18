@@ -2,7 +2,9 @@ name: Comment on an issue
 
 on:
   workflow_run:
-    workflows: ["Check code formatting"]
+    workflows:
+      - "Check code formatting"
+      - "Check for private emails used in PRs"
     types:
       - completed
 
@@ -31,7 +33,7 @@ jobs:
           script: |
             var fs = require('fs');
             const comments = JSON.parse(fs.readFileSync('./comments'));
-            if (!comments) {
+            if (!comments || comments.length == 0) {
               return;
             }
 
@@ -77,6 +79,15 @@ jobs:
             }
             const gql_result = await github.graphql(gql_query, gql_variables);
             console.log(gql_result);
+            // If the branch for the PR was deleted before this job has a chance
+            // to run, then the ref will be null.  This can happen if someone:
+            // 1. Rebase the PR, which triggers some workflow.
+            // 2. Immediately merges the PR and deletes the branch.
+            // 3. The workflow finishes and triggers this job.
+            if (!gql_result.repository.ref) {
+              console.log("Ref has been deleted");
+              return;
+            }
             console.log(gql_result.repository.ref.associatedPullRequests.nodes);
 
             var pr_number = 0;

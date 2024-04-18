@@ -41,7 +41,7 @@ define i32 @test1() {
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[FOR_COND]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[I_05_LCSSA_WIDE:%.*]] = phi i64 [ [[INDVARS_IV]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[I_05_LCSSA_WIDE]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc nuw nsw i64 [[I_05_LCSSA_WIDE]] to i32
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr @idx, align 4
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.cond.for.end.loopexit_crit_edge:
@@ -237,7 +237,7 @@ define i32 @test4(i32 %a) {
 ; CHECK-NEXT:    [[CONV3:%.*]] = trunc i32 [[OR]] to i8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn1(i8 signext [[CONV3]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i32 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[INDVARS_IV_NEXT]] to i8
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw i32 [[INDVARS_IV_NEXT]] to i8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[TMP0]], -14
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
@@ -466,7 +466,7 @@ define i32 @test9(ptr %a, i32 %b, i32 %init) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[SUM_0]], [[TMP1]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 0, [[TMP2]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[FOR_END]]
 ; CHECK:       for.end:
@@ -997,7 +997,7 @@ define i32 @test16_unsigned_neg(i32 %start, ptr %p, ptr %q, i32 %x) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    [[FOO:%.*]] = add i32 [[TMP1]], -1
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[GUARDED:%.*]]
 ; CHECK:       guarded:

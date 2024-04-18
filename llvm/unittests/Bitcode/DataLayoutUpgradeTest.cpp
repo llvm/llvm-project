@@ -59,6 +59,14 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
   EXPECT_EQ(UpgradeDataLayoutString("e-m:e-p:64:64-i64:64-i128:128-n64-S128",
                                     "riscv64"),
             "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
+
+  // Check that SPIR && SPIRV targets add -G1 if it's not present.
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spir"), "e-p:32:32-G1");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spir64"), "e-p:32:32-G1");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spirv32"), "e-p:32:32-G1");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spirv64"), "e-p:32:32-G1");
+  // but that SPIRV Logical does not.
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spirv"), "e-p:32:32");
 }
 
 TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
@@ -100,6 +108,17 @@ TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
             "p7:64:64-G2-e-p:64:64-ni:7:8:9-p8:128:128-p9:192:256:256:32");
   EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-p7:64:64-G1", "amdgcn"),
             "e-p:64:64-p7:64:64-G1-ni:7:8:9-p8:128:128-p9:192:256:256:32");
+
+  // Check that SPIR & SPIRV targets don't add -G1 if there is already a -G
+  // flag.
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G2", "spir"), "e-p:32:32-G2");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G2", "spir64"), "e-p:32:32-G2");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G2", "spirv32"), "e-p:32:32-G2");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G2", "spirv64"), "e-p:32:32-G2");
+  EXPECT_EQ(UpgradeDataLayoutString("G2", "spir"), "G2");
+  EXPECT_EQ(UpgradeDataLayoutString("G2", "spir64"), "G2");
+  EXPECT_EQ(UpgradeDataLayoutString("G2", "spirv32"), "G2");
+  EXPECT_EQ(UpgradeDataLayoutString("G2", "spirv64"), "G2");
 }
 
 TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
@@ -113,6 +132,14 @@ TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
   EXPECT_EQ(UpgradeDataLayoutString("", "r600"), "G1");
   EXPECT_EQ(UpgradeDataLayoutString("", "amdgcn"),
             "G1-ni:7:8:9-p7:160:256:256:32-p8:128:128-p9:192:256:256:32");
+
+  // Check that SPIR & SPIRV targets add G1 if it's not present.
+  EXPECT_EQ(UpgradeDataLayoutString("", "spir"), "G1");
+  EXPECT_EQ(UpgradeDataLayoutString("", "spir64"), "G1");
+  EXPECT_EQ(UpgradeDataLayoutString("", "spirv32"), "G1");
+  EXPECT_EQ(UpgradeDataLayoutString("", "spirv64"), "G1");
+  // but SPIRV Logical does not.
+  EXPECT_EQ(UpgradeDataLayoutString("", "spirv"), "");
 }
 
 } // end namespace

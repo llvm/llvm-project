@@ -206,6 +206,12 @@ libc++ specific options
 
   Toggle the installation of the libc++ headers.
 
+.. option:: LIBCXX_INSTALL_MODULES:BOOL
+
+  **Default**: ``OFF``
+
+  Toggle the installation of the experimental libc++ module sources.
+
 .. option:: LIBCXX_ENABLE_SHARED:BOOL
 
   **Default**: ``ON``

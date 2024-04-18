@@ -488,16 +488,21 @@ TEST(CallDescription, NegativeMatchQualifiedNames) {
 }
 
 TEST(CallDescription, MatchBuiltins) {
-  // Test CDM::CLibrary - a flag that allows matching weird builtins.
-  EXPECT_TRUE(tooling::runToolOnCode(
-      std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-          {{{{"memset"}, 3}, false}, {{CDM::CLibrary, {"memset"}, 3}, true}})),
-      "void foo() {"
-      "  int x;"
-      "  __builtin___memset_chk(&x, 0, sizeof(x),"
-      "                         __builtin_object_size(&x, 0));"
-      "}"));
-
+  // Test the matching modes CDM::CLibrary and CDM::CLibraryMaybeHardened,
+  // which can recognize builtin variants of C library functions.
+  {
+    SCOPED_TRACE("hardened variants of functions");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDM::Unspecified, {"memset"}, 3}, false},
+             {{CDM::CLibrary, {"memset"}, 3}, false},
+             {{CDM::CLibraryMaybeHardened, {"memset"}, 3}, true}})),
+        "void foo() {"
+        "  int x;"
+        "  __builtin___memset_chk(&x, 0, sizeof(x),"
+        "                         __builtin_object_size(&x, 0));"
+        "}"));
+  }
   {
     SCOPED_TRACE("multiple similar builtins");
     EXPECT_TRUE(tooling::runToolOnCode(
@@ -516,6 +521,35 @@ TEST(CallDescription, MatchBuiltins) {
              {{CDM::CLibrary, {"memcpy"}, 3}, false}})),
         R"(void foo(wchar_t *x, wchar_t *y) {
             __builtin_wmemcpy(x, y, sizeof(wchar_t));
+          })"));
+  }
+  {
+    SCOPED_TRACE("multiple similar builtins with hardened variant");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDM::CLibraryMaybeHardened, {"memcpy"}, 3}, false},
+             {{CDM::CLibraryMaybeHardened, {"wmemcpy"}, 3}, true}})),
+        R"(typedef __typeof(sizeof(int)) size_t;
+          extern wchar_t *__wmemcpy_chk (wchar_t *__restrict __s1,
+                                          const wchar_t *__restrict __s2,
+                                          size_t __n, size_t __ns1);
+          void foo(wchar_t *x, wchar_t *y) {
+            __wmemcpy_chk(x, y, sizeof(wchar_t), 1234);
+          })"));
+  }
+  {
+    SCOPED_TRACE(
+        "multiple similar builtins with hardened variant reversed order");
+    EXPECT_TRUE(tooling::runToolOnCode(
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDM::CLibraryMaybeHardened, {"wmemcpy"}, 3}, true},
+             {{CDM::CLibraryMaybeHardened, {"memcpy"}, 3}, false}})),
+        R"(typedef __typeof(sizeof(int)) size_t;
+          extern wchar_t *__wmemcpy_chk (wchar_t *__restrict __s1,
+                                          const wchar_t *__restrict __s2,
+                                          size_t __n, size_t __ns1);
+          void foo(wchar_t *x, wchar_t *y) {
+            __wmemcpy_chk(x, y, sizeof(wchar_t), 1234);
           })"));
   }
   {

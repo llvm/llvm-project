@@ -896,7 +896,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   const APInt *C;
   unsigned BitWidth = Ty->getScalarSizeInBits();
   if (match(Op0, m_OneUse(m_AShr(m_Value(X),
-                                 m_SpecificIntAllowUndef(BitWidth - 1)))) &&
+                                 m_SpecificIntAllowPoison(BitWidth - 1)))) &&
       match(Op1, m_One()))
     return new ZExtInst(Builder.CreateIsNotNeg(X, "isnotneg"), Ty);
 
@@ -988,7 +988,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   if (C->isOne()) {
     if (match(Op0, m_ZExt(m_Add(m_Value(X), m_AllOnes())))) {
       const SimplifyQuery Q = SQ.getWithInstruction(&Add);
-      if (llvm::isKnownNonZero(X, DL, 0, Q.AC, Q.CxtI, Q.DT))
+      if (llvm::isKnownNonZero(X, Q))
         return new ZExtInst(X, Ty);
     }
   }
@@ -1656,7 +1656,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // (A s>> (BW - 1)) + (zext (A s> 0)) --> (A s>> (BW - 1)) | (zext (A != 0))
   ICmpInst::Predicate Pred;
   uint64_t BitWidth = Ty->getScalarSizeInBits();
-  if (match(LHS, m_AShr(m_Value(A), m_SpecificIntAllowUndef(BitWidth - 1))) &&
+  if (match(LHS, m_AShr(m_Value(A), m_SpecificIntAllowPoison(BitWidth - 1))) &&
       match(RHS, m_OneUse(m_ZExt(
                      m_OneUse(m_ICmp(Pred, m_Specific(A), m_ZeroInt()))))) &&
       Pred == CmpInst::ICMP_SGT) {
@@ -2281,8 +2281,10 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   if (match(Op0, m_APInt(Op0C))) {
     if (Op0C->isMask()) {
       // Turn this into a xor if LHS is 2^n-1 and the remaining bits are known
-      // zero.
-      KnownBits RHSKnown = computeKnownBits(Op1, 0, &I);
+      // zero. We don't use information from dominating conditions so this
+      // transform is easier to reverse if necessary.
+      KnownBits RHSKnown = llvm::computeKnownBits(
+          Op1, 0, SQ.getWithInstruction(&I).getWithoutDomCondCache());
       if ((*Op0C | RHSKnown.Zero).isAllOnes())
         return BinaryOperator::CreateXor(Op1, Op0);
     }
