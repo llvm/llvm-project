@@ -559,6 +559,8 @@ private:
   void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver &IdResolver,
                             bool IsModule);
   void WriteDeclAndTypes(ASTContext &Context);
+  void PrepareWritingSpecialDecls(Sema &SemaRef);
+  void WriteSpecialDeclRecords(Sema &SemaRef);
   void WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord);
   void WriteDeclContextVisibleUpdate(const DeclContext *DC);
   void WriteFPPragmaOptions(const FPOptionsOverride &Opts);
