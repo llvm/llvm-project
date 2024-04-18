@@ -81,6 +81,11 @@ endif()
 # llvm-spirv is an optional dependency, used to build spirv-* targets.
 find_program( LLVM_SPIRV llvm-spirv PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
 
+if( LLVM_SPIRV )
+  add_executable( libclc::llvm-spirv IMPORTED GLOBAL )
+  set_target_properties( libclc::llvm-spirv PROPERTIES IMPORTED_LOCATION ${LLVM_SPIRV} )
+endif()
+
 # List of all targets. Note that some are added dynamically below.
 set( LIBCLC_TARGETS_ALL
   amdgcn--
@@ -101,7 +106,7 @@ endif()
 
 # spirv-mesa3d and spirv64-mesa3d targets can only be built with the (optional)
 # llvm-spirv external tool.
-if( LLVM_SPIRV )
+if( TARGET libclc::llvm-spirv )
   list( APPEND LIBCLC_TARGETS_ALL  spirv-mesa3d- spirv64-mesa3d- )
 endif()
 
@@ -114,7 +119,7 @@ list( SORT LIBCLC_TARGETS_TO_BUILD )
 # Verify that the user hasn't requested mesa3d targets without an available
 # llvm-spirv tool.
 if( "spirv-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD OR "spirv64-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD )
-  if( NOT LLVM_SPIRV )
+  if( NOT TARGET libclc::llvm-spirv )
     message( FATAL_ERROR "SPIR-V targets requested, but spirv-tools is not installed" )
   endif()
 endif()
@@ -363,7 +368,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64 )
       set( spv_suffix ${arch_suffix}.spv )
       add_custom_command( OUTPUT ${spv_suffix}
-        COMMAND ${LLVM_SPIRV} ${spvflags} -o ${spv_suffix} ${builtins_link_lib}
+        COMMAND libclc::llvm-spirv ${spvflags} -o ${spv_suffix} ${builtins_link_lib}
         DEPENDS ${builtins_link_lib}
       )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
