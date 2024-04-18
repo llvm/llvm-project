@@ -17522,6 +17522,12 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
     if (Converted.isInvalid())
       return Converted;
     E = Converted.get();
+    // The 'explicit' case causes us to get a RecoveryExpr.  Give up here so we
+    // don't try to evaluate it later. We also don't want to return the
+    // RecoveryExpr here, as it results in this call succeeding, thus callers of
+    // this function will attempt to use 'Value'.
+    if (isa<RecoveryExpr>(E))
+      return ExprError();
     if (!E->getType()->isIntegralOrUnscopedEnumerationType())
       return ExprError();
   } else if (!E->getType()->isIntegralOrUnscopedEnumerationType()) {

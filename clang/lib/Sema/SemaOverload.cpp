@@ -6563,11 +6563,14 @@ diagnoseNoViableConversion(Sema &SemaRef, SourceLocation Loc, Expr *&From,
                                                        HadMultipleCandidates);
     if (Result.isInvalid())
       return true;
-    // Record usage of conversion in an implicit cast.
-    From = ImplicitCastExpr::Create(SemaRef.Context, Result.get()->getType(),
-                                    CK_UserDefinedConversion, Result.get(),
-                                    nullptr, Result.get()->getValueKind(),
-                                    SemaRef.CurFPFeatureOverrides());
+
+    // Replace the conversion with a RecoveryExpr, so we don't try to
+    // instantiate it later, but can further diagnose here.
+    Result = SemaRef.CreateRecoveryExpr(From->getBeginLoc(), From->getEndLoc(),
+                                        From, Result.get()->getType());
+    if (Result.isInvalid())
+      return true;
+    From = Result.get();
   }
   return false;
 }
