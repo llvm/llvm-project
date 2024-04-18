@@ -672,7 +672,7 @@ class BreakpointCommandTestCase(TestBase):
         for breakpoint_stats in breakpoints_stats:
             self.assertIn("hitCount", breakpoint_stats)
 
-    @skipIf(oslist=no_match(["linux"]))
+    @skipIf(oslist=no_match(["linux"]), archs=["arm", "aarch64"])
     def test_break_at__dl_debug_state(self):
         """
         Test lldb is able to stop at _dl_debug_state if it is set before the
