@@ -73,14 +73,6 @@ set(files
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
   __algorithm/pstl_any_all_none_of.h
-  __algorithm/pstl_backends/cpu_backends/any_of.h
-  __algorithm/pstl_backends/cpu_backends/fill.h
-  __algorithm/pstl_backends/cpu_backends/find_if.h
-  __algorithm/pstl_backends/cpu_backends/for_each.h
-  __algorithm/pstl_backends/cpu_backends/merge.h
-  __algorithm/pstl_backends/cpu_backends/stable_sort.h
-  __algorithm/pstl_backends/cpu_backends/transform.h
-  __algorithm/pstl_backends/cpu_backends/transform_reduce.h
   __algorithm/pstl_copy.h
   __algorithm/pstl_count.h
   __algorithm/pstl_equal.h
@@ -593,7 +585,15 @@ set(files
   __pstl/backends/std_thread.h
   __pstl/configuration.h
   __pstl/configuration_fwd.h
+  __pstl/cpu_algos/any_of.h
   __pstl/cpu_algos/cpu_traits.h
+  __pstl/cpu_algos/fill.h
+  __pstl/cpu_algos/find_if.h
+  __pstl/cpu_algos/for_each.h
+  __pstl/cpu_algos/merge.h
+  __pstl/cpu_algos/stable_sort.h
+  __pstl/cpu_algos/transform.h
+  __pstl/cpu_algos/transform_reduce.h
   __random/bernoulli_distribution.h
   __random/binomial_distribution.h
   __random/cauchy_distribution.h

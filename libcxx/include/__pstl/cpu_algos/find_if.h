@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_FIND_IF_H
-#define _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_FIND_IF_H
+#ifndef _LIBCPP___PSTL_CPU_ALGOS_FIND_IF_H
+#define _LIBCPP___PSTL_CPU_ALGOS_FIND_IF_H
 
 #include <__algorithm/find_if.h>
 #include <__atomic/atomic.h>
@@ -132,4 +132,4 @@ _LIBCPP_POP_MACROS
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_FIND_IF_H
+#endif // _LIBCPP___PSTL_CPU_ALGOS_FIND_IF_H
