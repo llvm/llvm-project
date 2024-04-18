@@ -119,33 +119,6 @@ llvm::Triple::ArchType CGHLSLRuntime::getArch() {
   return CGM.getTarget().getTriple().getArch();
 }
 
-void CGHLSLRuntime::registerHLSLTargetIntrinsic(
-    Builtin::ID Id, llvm::Triple::ArchType Arch,
-    llvm::function_ref<llvm::Value *()> IntrinsicImpl) {
-  if (!IntrinsicCodeGen.count(Id))
-    IntrinsicCodeGen[Id] = CGHLSLIntrinsic();
-  IntrinsicCodeGen[Id].targetImplementations[Arch] = IntrinsicImpl;
-}
-void CGHLSLRuntime::registerHLSLGenericIntrinsic(
-    Builtin::ID Id, llvm::function_ref<llvm::Value *()> IntrinsicImpl) {
-  if (!IntrinsicCodeGen.count(Id))
-    IntrinsicCodeGen[Id] = CGHLSLIntrinsic();
-  IntrinsicCodeGen[Id].genericImplementation = IntrinsicImpl;
-}
-
-llvm::Value *CGHLSLRuntime::emitHLSLIntrinsic(Builtin::ID id) {
-  auto it = IntrinsicCodeGen.find(id);
-  assert(it != IntrinsicCodeGen.end() &&
-         " HLSL intrinsics need to be reigstered before use.");
-  llvm::Triple::ArchType Arch = getArch();
-  auto targets = it->second.targetImplementations;
-  auto targetIt = targets.find(Arch);
-  if (targetIt == targets.end()) {
-    return it->second.genericImplementation();
-  }
-  return targetIt->second();
-}
-
 void CGHLSLRuntime::addConstant(VarDecl *D, Buffer &CB) {
   if (D->getStorageClass() == SC_Static) {
     // For static inside cbuffer, take as global static.
