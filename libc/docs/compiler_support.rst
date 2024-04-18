@@ -17,6 +17,10 @@ For platforms where only ``GCC`` is natively available but maximum performance
 is required it is possible to bootstrap ``Clang`` with ``GCC`` and then use
 ``Clang`` to build the '`libc``" project.
 
+IMPORTANT NOTE: There is currently an issue when doing an overlay build in
+release mode with GCC. If you want to build with GCC, please either build in
+debug mode or use fullbuild mode. Otherwise, please use clang.
+
 Minimum supported versions
 ==========================
 
