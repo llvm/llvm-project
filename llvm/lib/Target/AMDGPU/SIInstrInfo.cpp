@@ -6804,6 +6804,32 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return nullptr;
   }
 
+  if (MI.getOpcode() == AMDGPU::V_PERMUTE_PAIR_GENSGPR_B32) {
+    const DebugLoc &DL = MI.getDebugLoc();
+    Register Reg = MRI.createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
+    int Src1Idx =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src1);
+    MachineOperand &Src1 = MI.getOperand(Src1Idx);
+
+    Register CurRegLo = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+    Register CurRegHi = MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    BuildMI(*MI.getParent(), MI, DL, get(AMDGPU::V_READFIRSTLANE_B32), CurRegLo)
+        .addReg(Src1.getReg(), 0, TRI->getSubRegFromChannel(0));
+    BuildMI(*MI.getParent(), MI, DL, get(AMDGPU::V_READFIRSTLANE_B32), CurRegHi)
+        .addReg(Src1.getReg(), 0, TRI->getSubRegFromChannel(1));
+
+    BuildMI(*MI.getParent(), MI, DL, get(AMDGPU::REG_SEQUENCE), Reg)
+        .addReg(CurRegLo)
+        .addImm(AMDGPU::sub0)
+        .addReg(CurRegHi)
+        .addImm(AMDGPU::sub1);
+
+    Src1.ChangeToRegister(Reg, false);
+    return nullptr;
+  }
+
   // Legalize MUBUF instructions.
   bool isSoffsetLegal = true;
   int SoffsetIdx =

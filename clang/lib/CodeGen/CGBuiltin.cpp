@@ -19339,6 +19339,27 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(BuiltinWMMAOp, ArgTypes);
     return Builder.CreateCall(F, Args);
   }
+  case AMDGPU::BI__builtin_amdgcn_permute_pair_2src_interleave_b64:
+  case AMDGPU::BI__builtin_amdgcn_permute_pack_tensor_2src_b64: {
+    unsigned IntrinsicID =
+        (BuiltinID ==
+         AMDGPU::BI__builtin_amdgcn_permute_pair_2src_interleave_b64)
+            ? Intrinsic::amdgcn_permute_pair_2src_interleave_b64
+            : Intrinsic::amdgcn_permute_pack_tensor_2src_b64;
+    Function *F = CGM.getIntrinsic(IntrinsicID);
+    SmallVector<Value *, 3> Args;
+    for (int i = 1, e = E->getNumArgs(); i != e; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+    // The intrinsic returns a structure with two members.
+    llvm::Value *StructOut = Builder.CreateCall(F, Args);
+
+    llvm::Value *Dest0 = Builder.CreateExtractValue(StructOut, 0);
+    llvm::Value *Dest1 = Builder.CreateExtractValue(StructOut, 1);
+
+    Address Dest1Ptr = EmitPointerWithAlignment(E->getArg(0));
+    Builder.CreateStore(Dest1, Dest1Ptr);
+    return Dest0;
+  }
 
   // amdgcn workitem
   case AMDGPU::BI__builtin_amdgcn_workitem_id_x:
