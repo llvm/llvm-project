@@ -1333,34 +1333,6 @@ arguments.
 
   %val = load i32, ptr %in, align 4, !amdgpu.last.use !{}
 
-.. _amdgpu_no_fine_grained_memory:
-
-'``amdgpu.no.fine.grained.memory``' Metadata
--------------------------------------------------
-
-Asserts a memory access does not access bytes allocated in fine
-grained allocated memory. This is intended for use with
-:ref:`atomicrmw <i_atomicrmw>` and other atomic instructions. This is
-required to emit a native hardware instruction for some :ref:`system
-scope <amdgpu-memory-scopes>` atomic operations on some subtargets. An
-:ref:`atomicrmw <i_atomicrmw>` without metadata will be treated
-conservatively as required to preserve the operation behavior in all
-cases. This will typically be used in conjunction with
-:ref:`\!amdgpu.no.remote.memory.access<amdgpu_no_remote_memory_access>`.
-
-.. code-block:: llvm
-
-  ; Indicates the access does not access fine-grained memory, or
-  ; remote device memory.
-  %old0 = atomicrmw sub ptr %ptr0, i32 1 acquire, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
-
-  ; Indicates the access does not access peer device memory.
-  %old2 = atomicrmw sub ptr %ptr2, i32 1 acquire, !amdgpu.no.fine.grained.memory !0
-
-  !0 = !{}
-
-.. _amdgpu_no_remote_memory_access:
-
 '``amdgpu.no.remote.memory.access``' Metadata
 ---------------------------------------------
 
@@ -1388,6 +1360,34 @@ cases. This will typically be used in conjunction with
   %old2 = atomicrmw sub ptr %ptr2, i32 1 acquire, !amdgpu.no.remote.memory.access !0
 
   !0 = !{}
+
+.. _amdgpu_no_fine_grained_memory:
+
+'``amdgpu.no.fine.grained.memory``' Metadata
+-------------------------------------------------
+
+Asserts a memory access does not access bytes allocated in fine
+grained allocated memory. This is intended for use with
+:ref:`atomicrmw <i_atomicrmw>` and other atomic instructions. This is
+required to emit a native hardware instruction for some :ref:`system
+scope <amdgpu-memory-scopes>` atomic operations on some subtargets. An
+:ref:`atomicrmw <i_atomicrmw>` without metadata will be treated
+conservatively as required to preserve the operation behavior in all
+cases. This will typically be used in conjunction with
+:ref:`\!amdgpu.no.remote.memory.access<amdgpu_no_remote_memory_access>`.
+
+.. code-block:: llvm
+
+  ; Indicates the access does not access fine-grained memory, or
+  ; remote device memory.
+  %old0 = atomicrmw sub ptr %ptr0, i32 1 acquire, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+
+  ; Indicates the access does not access peer device memory.
+  %old2 = atomicrmw sub ptr %ptr2, i32 1 acquire, !amdgpu.no.fine.grained.memory !0
+
+  !0 = !{}
+
+.. _amdgpu_no_remote_memory_access:
 
 '``amdgpu.ignore.denormal.mode``' Metadata
 ------------------------------------------
