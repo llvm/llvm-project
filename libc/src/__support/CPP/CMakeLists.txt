@@ -51,6 +51,16 @@ add_header_library(
     libc.src.__support.macros.properties.types
 )
 
+if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.mutex)
+  add_header_library(
+    mutex
+    HDRS
+      mutex.h
+    DEPENDS
+      libc.src.__support.threads.${LIBC_TARGET_OS}.mutex
+  )
+endif()
+
 add_header_library(
   span
   HDRS
