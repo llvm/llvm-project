@@ -344,7 +344,7 @@ Error DWARFUnitHeader::applyIndexEntry(const DWARFUnitIndex::Entry *Entry) {
   IndexEntry = Entry;
   if (AbbrOffset)
     return createStringError(errc::invalid_argument,
-                             "DWARF package unit from offset 0x%8.8" PRIx64
+                             "DWARF package unit at offset 0x%8.8" PRIx64
                              " has a non-zero abbreviation offset",
                              Offset);
 
@@ -353,7 +353,7 @@ Error DWARFUnitHeader::applyIndexEntry(const DWARFUnitIndex::Entry *Entry) {
       UnitContrib->getLength() != (getLength() + getUnitLengthFieldByteSize()))
     return createStringError(errc::invalid_argument,
                              "DWARF package unit at offset 0x%8.8" PRIx64
-                             "has an inconsistent index",
+                             " has an inconsistent index",
                              Offset);
 
   auto *AbbrEntry = IndexEntry->getContribution(DW_SECT_ABBREV);
