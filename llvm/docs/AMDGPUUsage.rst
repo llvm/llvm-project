@@ -1336,13 +1336,14 @@ arguments.
 '``amdgpu.no.remote.memory.access``' Metadata
 ---------------------------------------------
 
-Asserts a memory access does not access bytes in remote connected peer
-device memory (the address must be device local). This is intended for
-use with :ref:`atomicrmw <i_atomicrmw>` and other atomic
-instructions. This is required to emit a native hardware instruction
-for some :ref:`system scope <amdgpu-memory-scopes>` atomic operations
-on some subtargets. For most integer atomic operations, this is a
-sufficient restriction to emit a native atomic instruction.
+Asserts a memory access does not access bytes in host memory, or
+remote connected peer device memory (the address must be device
+local). This is intended for use with :ref:`atomicrmw <i_atomicrmw>`
+and other atomic instructions. This is required to emit a native
+hardware instruction for some :ref:`system scope
+<amdgpu-memory-scopes>` atomic operations on some subtargets. For most
+integer atomic operations, this is a sufficient restriction to emit a
+native atomic instruction.
 
 An :ref:`atomicrmw <i_atomicrmw>` without metadata will be treated
 conservatively as required to preserve the operation behavior in all
