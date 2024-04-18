@@ -3359,7 +3359,7 @@ SDValue DAGCombiner::visitUADDO_CARRY(SDNode *N) {
 }
 
 /**
- * If we are facing some sort of diamond carry propapagtion pattern try to
+ * If we are facing some sort of diamond carry propagation pattern try to
  * break it up to generate something like:
  *   (uaddo_carry X, 0, (uaddo_carry A, B, Z):Carry)
  *
@@ -3400,7 +3400,7 @@ static SDValue combineUADDO_CARRYDiamond(DAGCombiner &Combiner,
     Z = Carry0.getOperand(2);
   } else if (Carry0.getOpcode() == ISD::UADDO &&
              isOneConstant(Carry0.getOperand(1))) {
-    EVT VT = Combiner.getSetCCResultType(Carry0.getValueType());
+    EVT VT = Carry0->getValueType(1);
     Z = DAG.getConstant(1, SDLoc(Carry0.getOperand(1)), VT);
   } else {
     // We couldn't find a suitable Z.
