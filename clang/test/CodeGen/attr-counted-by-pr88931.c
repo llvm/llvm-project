@@ -21,3 +21,20 @@ void init(void * __attribute__((pass_dynamic_object_size(0))));
 void test1(struct bar *p) {
   init(p->array);
 }
+
+struct mux {
+  int count;
+  int array[] __attribute__((counted_by(count)));
+};
+
+struct bux { struct mux x; };
+
+// CHECK-LABEL: define dso_local void @test2(
+// CHECK-SAME: ptr noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @init(ptr noundef [[P]], i64 noundef -1) #[[ATTR2]]
+// CHECK-NEXT:    ret void
+//
+void test2(struct foo *p) {
+  init(p);
+}
