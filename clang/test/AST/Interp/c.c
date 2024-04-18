@@ -233,3 +233,15 @@ _Static_assert(funcp == (void*)0, ""); // all-error {{failed due to requirement 
                                        // pedantic-warning {{expression is not an integer constant expression}}
 _Static_assert(funcp == (void*)123, ""); // pedantic-warning {{equality comparison between function pointer and void pointer}} \
                                          // pedantic-warning {{expression is not an integer constant expression}}
+
+void unaryops(void) {
+  (void)(++(struct x {unsigned x;}){3}.x);
+  (void)(--(struct y {unsigned x;}){3}.x);
+  (void)(++(struct z {float x;}){3}.x);
+  (void)(--(struct w {float x;}){3}.x);
+
+  (void)((struct xx {unsigned x;}){3}.x++);
+  (void)((struct yy {unsigned x;}){3}.x--);
+  (void)((struct zz {float x;}){3}.x++);
+  (void)((struct ww {float x;}){3}.x--);
+}
