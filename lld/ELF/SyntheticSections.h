@@ -21,13 +21,17 @@
 #define LLD_ELF_SYNTHETIC_SECTIONS_H
 
 #include "Config.h"
+#include "DWARF.h"
 #include "InputSection.h"
 #include "Symbols.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Parallel.h"
@@ -789,6 +793,134 @@ public:
   void writeTo(uint8_t *buf) override {}
 };
 
+// Used by the merged DWARF32 .debug_names (a per-module index). If we
+// move to DWARF64, most of this data will need to be re-sized.
+class DebugNamesBaseSection : public SyntheticSection {
+public:
+  struct Abbrev : llvm::FoldingSetNode {
+    uint32_t code;
+    uint32_t tag;
+    SmallVector<llvm::DWARFDebugNames::AttributeEncoding, 2> attributes;
+
+    void Profile(llvm::FoldingSetNodeID &id) const;
+  };
+
+  struct AttrValue {
+    uint32_t attrValue;
+    uint8_t attrSize;
+  };
+
+  struct IndexEntry {
+    uint32_t abbrevCode;
+    uint32_t poolOffset;
+    union {
+      uint64_t parentOffset = 0;
+      IndexEntry *parentEntry;
+    };
+    SmallVector<AttrValue, 3> attrValues;
+  };
+
+  struct NameEntry {
+    const char *name;
+    uint32_t hashValue;
+    uint32_t stringOffset;
+    uint32_t entryOffset;
+    // Used to relocate `stringOffset` in the merged section.
+    uint32_t chunkIdx;
+    SmallVector<IndexEntry *, 0> indexEntries;
+
+    llvm::iterator_range<
+        llvm::pointee_iterator<typename SmallVector<IndexEntry *, 0>::iterator>>
+    entries() {
+      return llvm::make_pointee_range(indexEntries);
+    }
+  };
+
+  // The contents of one input .debug_names section. An InputChunk
+  // typically contains one NameData, but might contain more, especially
+  // in LTO builds.
+  struct NameData {
+    llvm::DWARFDebugNames::Header hdr;
+    llvm::DenseMap<uint32_t, uint32_t> abbrevCodeMap;
+    SmallVector<NameEntry, 0> nameEntries;
+  };
+
+  // InputChunk and OutputChunk hold per-file contributions to the merged index.
+  // InputChunk instances will be discarded after `init` completes.
+  struct InputChunk {
+    uint32_t baseCuIdx;
+    LLDDWARFSection section;
+    SmallVector<NameData, 0> nameData;
+    std::optional<llvm::DWARFDebugNames> llvmDebugNames;
+  };
+
+  struct OutputChunk {
+    // Pointer to the .debug_info section that contains compile units, used to
+    // compute the relocated CU offsets.
+    InputSection *infoSec;
+    // This initially holds section offsets. After relocation, the section
+    // offsets are changed to CU offsets relative the the output section.
+    SmallVector<uint32_t, 0> compUnits;
+  };
+
+  DebugNamesBaseSection();
+  size_t getSize() const override { return size; }
+  bool isNeeded() const override { return numChunks > 0; }
+
+protected:
+  void init(llvm::function_ref<void(InputFile *, InputChunk &, OutputChunk &)>);
+  static void
+  parseDebugNames(InputChunk &inputChunk, OutputChunk &chunk,
+                  llvm::DWARFDataExtractor &namesExtractor,
+                  llvm::DataExtractor &strExtractor,
+                  llvm::function_ref<SmallVector<uint32_t, 0>(
+                      uint32_t numCUs, const llvm::DWARFDebugNames::Header &hdr,
+                      const llvm::DWARFDebugNames::DWARFDebugNamesOffsets &)>
+                      readOffsets);
+  void computeHdrAndAbbrevTable(MutableArrayRef<InputChunk> inputChunks);
+  std::pair<uint32_t, uint32_t>
+  computeEntryPool(MutableArrayRef<InputChunk> inputChunks);
+
+  // Input .debug_names sections for relocating string offsets in the name table
+  // in `finalizeContents`.
+  SmallVector<InputSection *, 0> inputSections;
+
+  llvm::DWARFDebugNames::Header hdr;
+  size_t numChunks;
+  std::unique_ptr<OutputChunk[]> chunks;
+  llvm::SpecificBumpPtrAllocator<Abbrev> abbrevAlloc;
+  SmallVector<Abbrev *, 0> abbrevTable;
+  SmallVector<char, 0> abbrevTableBuf;
+
+  ArrayRef<OutputChunk> getChunks() const {
+    return ArrayRef(chunks.get(), numChunks);
+  }
+
+  // Sharded name entries that will be used to compute bucket_count and the
+  // count name table.
+  static constexpr size_t numShards = 32;
+  SmallVector<NameEntry, 0> nameVecs[numShards];
+};
+
+// Complement DebugNamesBaseSection for ELFT-aware code: reading offsets,
+// relocating string offsets, and writeTo.
+template <class ELFT>
+class DebugNamesSection final : public DebugNamesBaseSection {
+public:
+  DebugNamesSection();
+  void finalizeContents() override;
+  void writeTo(uint8_t *buf) override;
+
+  template <class RelTy>
+  void getNameRelocs(InputSection *sec, ArrayRef<RelTy> rels,
+                     llvm::DenseMap<uint32_t, uint32_t> &relocs);
+
+private:
+  static void readOffsets(InputChunk &inputChunk, OutputChunk &chunk,
+                          llvm::DWARFDataExtractor &namesExtractor,
+                          llvm::DataExtractor &strExtractor);
+};
+
 class GdbIndexSection final : public SyntheticSection {
 public:
   struct AddressEntry {
@@ -1364,6 +1496,7 @@ struct InStruct {
   std::unique_ptr<IBTPltSection> ibtPlt;
   std::unique_ptr<RelocationBaseSection> relaPlt;
   // Non-SHF_ALLOC sections
+  std::unique_ptr<SyntheticSection> debugNames;
   std::unique_ptr<GdbIndexSection> gdbIndex;
   std::unique_ptr<StringTableSection> shStrTab;
   std::unique_ptr<StringTableSection> strTab;
