@@ -3640,13 +3640,14 @@ private:
   /// Parses the clause-list for an OpenACC directive.
   SmallVector<OpenACCClause *>
   ParseOpenACCClauseList(OpenACCDirectiveKind DirKind);
-  bool ParseOpenACCWaitArgument();
+  bool ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective);
   /// Parses the clause of the 'bind' argument, which can be a string literal or
   /// an ID expression.
   ExprResult ParseOpenACCBindClauseArgument();
   /// Parses the clause kind of 'int-expr', which can be any integral
   /// expression.
-  ExprResult ParseOpenACCIntExpr();
+  ExprResult ParseOpenACCIntExpr(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                                 SourceLocation Loc);
   /// Parses the 'device-type-list', which is a list of identifiers.
   bool ParseOpenACCDeviceTypeList();
   /// Parses the 'async-argument', which is an integral value with two
@@ -3657,9 +3658,9 @@ private:
   /// Parses a comma delimited list of 'size-expr's.
   bool ParseOpenACCSizeExprList();
   /// Parses a 'gang-arg-list', used for the 'gang' clause.
-  bool ParseOpenACCGangArgList();
+  bool ParseOpenACCGangArgList(SourceLocation GangLoc);
   /// Parses a 'gang-arg', used for the 'gang' clause.
-  bool ParseOpenACCGangArg();
+  bool ParseOpenACCGangArg(SourceLocation GangLoc);
   /// Parses a 'condition' expr, ensuring it results in a
   ExprResult ParseOpenACCConditionExpr();
 
