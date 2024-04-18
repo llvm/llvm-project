@@ -5074,7 +5074,7 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
   // Write the record containing declaration references of Sema.
   RecordData SemaDeclRefs;
   if (SemaRef.StdNamespace || SemaRef.StdBadAlloc || SemaRef.StdAlignValT) {
-    auto AddEmittedDeclRefOrZero = [this, &SemaDeclRefs, &SemaRef](Decl *D) {
+    auto AddEmittedDeclRefOrZero = [this, &SemaDeclRefs](Decl *D) {
       if (!D || !wasDeclEmitted(D))
         SemaDeclRefs.push_back(0);
       else
