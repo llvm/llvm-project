@@ -223,7 +223,7 @@ protected:
   bool HasImageStoreD16Bug = false;
   bool HasImageGather4D16Bug = false;
   bool HasMSAALoadDstSelBug = false;
-  bool HasPrivEnabledBug = false;
+  bool HasPrivEnabledTrap2NopBug = false;
   bool Has1_5xVGPRs = false;
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
@@ -1027,7 +1027,7 @@ public:
 
   bool hasMSAALoadDstSelBug() const { return HasMSAALoadDstSelBug; }
 
-  bool hasPrivEnabledBug() const { return HasPrivEnabledBug; }
+  bool hasPrivEnabledTrap2NopBug() const { return HasPrivEnabledTrap2NopBug; }
 
   bool hasNSAEncoding() const { return HasNSAEncoding; }
 

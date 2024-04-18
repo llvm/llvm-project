@@ -303,10 +303,10 @@ def FeatureMSAALoadDstSelBug : SubtargetFeature<"msaa-load-dst-sel-bug",
   "MSAA loads not honoring dst_sel bug"
 >;
 
-def FeaturePrivEnabledBug : SubtargetFeature<"priv-enabled-bug",
-  "HasPrivEnabledBug",
+def FeaturePrivEnabledTrap2NopBug : SubtargetFeature<"priv-enabled-trap2-nop-bug",
+  "HasPrivEnabledTrap2NopBug",
   "true",
-  "Hardware that runs with PRIV=1 workaround"
+  "Hardware that runs with PRIV=1 interpreting 's_trap 2' as a nop bug"
 >;
 
 class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
@@ -1496,7 +1496,7 @@ def FeatureISAVersion11_0_Common : FeatureSet<
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
      FeatureMADIntraFwdBug,
-     FeaturePrivEnabledBug])>;
+     FeaturePrivEnabledTrap2NopBug])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,

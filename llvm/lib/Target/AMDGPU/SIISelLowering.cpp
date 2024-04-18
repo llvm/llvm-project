@@ -5410,7 +5410,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     return SplitBB;
   }
   case AMDGPU::SIMULATED_TRAP: {
-    assert(Subtarget->hasPrivEnabledBug());
+    assert(Subtarget->hasPrivEnabledTrap2NopBug());
     MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
     MachineBasicBlock *SplitBB =
         TII->insertSimulatedTrap(MRI, *BB, MI, MI.getDebugLoc());
@@ -6637,7 +6637,7 @@ SDValue SITargetLowering::lowerTrapHsa(
 
   // We need to simulate the 's_trap 2' instruction on targets that run in
   // PRIV=1 (where it is treated as a nop).
-  if (Subtarget->hasPrivEnabledBug())
+  if (Subtarget->hasPrivEnabledTrap2NopBug())
     return DAG.getNode(AMDGPUISD::SIMULATED_TRAP, SL, MVT::Other, Chain);
 
   uint64_t TrapID = static_cast<uint64_t>(GCNSubtarget::TrapID::LLVMAMDHSATrap);
