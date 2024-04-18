@@ -17640,6 +17640,18 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   return TailMBB;
 }
 
+// Helper to find Masked Pseudo instruction from MC instruction, LMUL and SEW.
+static const RISCV::RISCVMaskedPseudoInfo *
+lookupMaskedIntrinsic(uint16_t MCOpcode, RISCVII::VLMUL LMul, unsigned SEW) {
+  const RISCVVInversePseudosTable::PseudoInfo *Inverse =
+      RISCVVInversePseudosTable::getBaseInfo(MCOpcode, LMul, SEW);
+  assert(Inverse && "Unexpected LMUL and SEW pair for instruction");
+  const RISCV::RISCVMaskedPseudoInfo *Masked =
+      RISCV::lookupMaskedIntrinsicByUnmasked(Inverse->Pseudo);
+  assert(Masked && "Could not find masked instruction for LMUL and SEW pair");
+  return Masked;
+}
+
 static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
                                                     MachineBasicBlock *BB,
                                                     unsigned CVTXOpc) {
@@ -17678,7 +17690,7 @@ static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
   // There is no E8 variant for VFCVT_F_X.
   assert(Log2SEW >= 4);
   unsigned CVTFOpc =
-      RISCV::lookupMaskedIntrinsic(RISCV::VFCVT_F_X_V, LMul, 1 << Log2SEW)
+      lookupMaskedIntrinsic(RISCV::VFCVT_F_X_V, LMul, 1 << Log2SEW)
           ->MaskedPseudo;
 
   BuildMI(*BB, MI, DL, TII.get(CVTFOpc))

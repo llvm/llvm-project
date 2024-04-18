@@ -21,13 +21,6 @@
 #define DEBUG_TYPE "llvm-mca-riscv-custombehaviour"
 
 namespace llvm {
-
-namespace RISCVVInversePseudosTable {
-using namespace RISCV;
-#define GET_RISCVVInversePseudosTable_IMPL
-#include "RISCVGenSearchableTables.inc"
-} // end namespace RISCVVInversePseudosTable
-
 namespace mca {
 
 const llvm::StringRef RISCVLMULInstrument::DESC_NAME = "RISCV-LMUL";
