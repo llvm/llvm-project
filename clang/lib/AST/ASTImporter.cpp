@@ -3647,17 +3647,25 @@ private:
 };
 } // namespace
 
-/// This function checks if the function has 'auto' return type that contains
+/// This function checks if the given function has a return type that contains
 /// a reference (in any way) to a declaration inside the same function.
 bool ASTNodeImporter::hasReturnTypeDeclaredInside(FunctionDecl *D) {
   QualType FromTy = D->getType();
   const auto *FromFPT = FromTy->getAs<FunctionProtoType>();
   assert(FromFPT && "Must be called on FunctionProtoType");
 
+  bool IsLambdaDefinition = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
+    IsLambdaDefinition = cast<CXXRecordDecl>(MD->getDeclContext())->isLambda();
+
   QualType RetT = FromFPT->getReturnType();
-  FunctionDecl *Def = D->getDefinition();
-  IsTypeDeclaredInsideVisitor Visitor(Def ? Def : D);
-  return Visitor.CheckType(RetT);
+  if (isa<AutoType>(RetT.getTypePtr()) || IsLambdaDefinition) {
+    FunctionDecl *Def = D->getDefinition();
+    IsTypeDeclaredInsideVisitor Visitor(Def ? Def : D);
+    return Visitor.CheckType(RetT);
+  }
+
+  return false;
 }
 
 ExplicitSpecifier
