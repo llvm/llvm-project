@@ -1,0 +1,92 @@
+# RUN: yaml2obj %s -DGPU=GFX1200 -DSRC1=0300AC60 -DSRC2=80000000 -DSRC3=00000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=VALID
+# VALID: .amdhsa_kernel test
+
+# RUN: yaml2obj %s -DGPU=GFX1200 -DSRC1=4300AC60 -DSRC2=80000000 -DSRC3=00000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=SRC1_9_6
+# SRC1_9_6: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT reserved bits in range (9:6) set, must be zero on gfx10+
+# SRC1_9_6-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX1200 -DSRC1=0308AC60 -DSRC2=80000000 -DSRC3=00000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=SRC1_PRIORITY
+# SRC1_PRIORITY: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC1_PRIORITY reserved bits in range (11:10) set
+# SRC1_PRIORITY-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX1200 -DSRC1=0300BC60 -DSRC2=80000000 -DSRC3=00000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=SRC1_PRIV
+# SRC1_PRIV: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC1_PRIV reserved bit (20) set
+# SRC1_PRIV-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX801 -DSRC1=0300AC64 -DSRC2=80000000 -DSRC3=00000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=SRC1_6_8
+# SRC1_6_8: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC1 reserved bit (26) set, must be zero pre-gfx9
+# SRC1_6_8-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX1200 -DSRC1=0300AC60 -DSRC2=80200000 -DSRC3=00000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RSRC2
+# RSRC2: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_ADDRESS_WATCH reserved bit (13) set
+# RSRC2-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX90A -DSRC1=0300AC60 -DSRC2=80000000 -DSRC3=40000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RSRC3_90A
+# RSRC3_90A: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC3 reserved bits in range (15:6) set, must be zero on gfx90a
+# RSRC3_90A-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX1200 -DSRC1=0300AC60 -DSRC2=80000000 -DSRC3=01000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RSRC3_RES
+# RSRC3_RES: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC3 reserved bits in range (3:0) set, must be zero on gfx12+
+# RSRC3_RES-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX1100 -DSRC1=0300AC60 -DSRC2=80000000 -DSRC3=00000100 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RSRC3_10
+# RSRC3_10: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC3 reserved bits in range (30:14) set, must be zero on gfx10+
+# RSRC3_10-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX801 -DSRC1=0300AC60 -DSRC2=80000000 -DSRC3=00000001 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RSRC3_PRE_9
+# RSRC3_PRE_9: ; error decoding test.kd: kernel descriptor COMPUTE_PGM_RSRC3 must be all zero before gfx9
+# RSRC3_PRE_9-NEXT: ; decoding failed region as bytes
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_AMDGPU_HSA
+  ABIVersion:      0x3
+  Type:            ET_REL
+  Machine:         EM_AMDGPU
+  Flags:           [ EF_AMDGPU_MACH_AMDGCN_[[GPU]], EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4, EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4 ]
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+    Content:         0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000[[SRC3]][[SRC1]][[SRC2]]0004000000000000
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x10
+        Symbol:          test
+        Type:            R_AMDGPU_REL64
+        Addend:          16
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .symtab
+Symbols:
+  - Name:            test.kd
+    Type:            STT_OBJECT
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x40
+  - Name:            test
+    Binding:         STB_GLOBAL
+    Other:           [ STV_PROTECTED ]
+...
