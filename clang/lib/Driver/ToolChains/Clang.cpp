@@ -4632,6 +4632,21 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     }
   }
 
+  // Emit DW_TAG_template_alias for template aliases? True by default for SCE.
+  bool UseDebugTemplateAlias =
+      DebuggerTuning == llvm::DebuggerKind::SCE && RequestedDWARFVersion >= 5;
+  if (const auto *DebugTemplateAlias = Args.getLastArg(
+          options::OPT_gtemplate_alias, options::OPT_gno_template_alias)) {
+    // DW_TAG_template_alias is only supported from DWARFv5 but if a user
+    // asks for it we should let them have it (if the target supports it).
+    if (checkDebugInfoOption(DebugTemplateAlias, Args, D, TC)) {
+      const auto &Opt = DebugTemplateAlias->getOption();
+      UseDebugTemplateAlias = Opt.matches(options::OPT_gtemplate_alias);
+    }
+  }
+  if (UseDebugTemplateAlias)
+    CmdArgs.push_back("-gtemplate-alias");
+
   if (const Arg *A = Args.getLastArg(options::OPT_gsrc_hash_EQ)) {
     StringRef v = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-gsrc-hash=" + v));

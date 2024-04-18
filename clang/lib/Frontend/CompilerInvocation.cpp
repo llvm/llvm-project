@@ -1556,6 +1556,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
                llvm::DICompileUnit::DebugNameTableKind::Default))
     GenerateArg(Consumer, OPT_gpubnames);
 
+  if (Opts.DebugTemplateAlias)
+    GenerateArg(Consumer, OPT_gtemplate_alias);
+
   auto TNK = Opts.getDebugSimpleTemplateNames();
   if (TNK != llvm::codegenoptions::DebugTemplateNamesKind::Full) {
     if (TNK == llvm::codegenoptions::DebugTemplateNamesKind::Simple)
@@ -1826,6 +1829,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                    (Opts.OptimizationLevel > 1));
   Opts.BinutilsVersion =
       std::string(Args.getLastArgValue(OPT_fbinutils_version_EQ));
+
+  Opts.DebugTemplateAlias = Args.hasArg(OPT_gtemplate_alias);
 
   Opts.DebugNameTable = static_cast<unsigned>(
       Args.hasArg(OPT_ggnu_pubnames)
