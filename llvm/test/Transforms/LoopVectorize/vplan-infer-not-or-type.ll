@@ -4,8 +4,9 @@
 ; This test used to crash due to missing Or/Not cases in
 ; inferScalarTypeForRecipe.
 
-define void @foo() {
-; CHECK-LABEL: define void @foo() {
+define void @foo(i8 %arg.0, i8 %arg.1) {
+; CHECK-LABEL: define void @foo(
+; CHECK-SAME: i8 [[ARG_0:%.*]], i8 [[ARG_1:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -21,7 +22,7 @@ define void @foo() {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[INCREMENTOR:%.*]] = phi i8 [ [[ADD:%.*]], [[LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 0, 0
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ARG_0]], [[ARG_1]]
 ; CHECK-NEXT:    [[EXTRACT_T:%.*]] = trunc i8 [[AND]] to i1
 ; CHECK-NEXT:    br i1 [[EXTRACT_T]], label [[LATCH]], label [[INDIRECT_LATCH:%.*]]
 ; CHECK:       indirect.latch:
@@ -39,7 +40,7 @@ entry:
 
 loop.header:                                         ; preds = %latch, %entry
   %incrementor = phi i8 [ %add, %latch ], [ 0, %entry ]
-  %and = and i8 0, 0
+  %and = and i8 %arg.0, %arg.1
   %extract.t = trunc i8 %and to i1
   br i1 %extract.t, label %latch, label %indirect.latch
 
