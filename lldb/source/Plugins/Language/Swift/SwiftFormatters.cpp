@@ -1178,6 +1178,8 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
       return false;
 
     auto synthetic = simd_elem->GetSyntheticValue();
+    if (!synthetic)
+      return false;
     const char *value_string = synthetic->GetValueAsCString();
     elem_vector.push_back(value_string);
   }
