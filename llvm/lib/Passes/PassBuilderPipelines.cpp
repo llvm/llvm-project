@@ -1174,8 +1174,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
 
   // ExpandVariadics interacts well with the function inliner.
-  MPM.addPass(ExpandVariadicsPass(Level));
+  MPM.addPass(ExpandVariadicsPass(Level == OptimizationLevel::O0
+                                  ? ExpandVariadicsMode::Disable
+                                  : ExpandVariadicsMode::Optimize));
 
+  
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
 
   if (EnableModuleInliner)

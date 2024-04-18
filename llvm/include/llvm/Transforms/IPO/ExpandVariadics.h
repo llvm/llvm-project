@@ -30,9 +30,6 @@ public:
   // Operates under passed mode unless overridden on commandline
   ExpandVariadicsPass(ExpandVariadicsMode ConstructedMode);
 
-  // Chooses disable or optimize based on optimization level
-  ExpandVariadicsPass(OptimizationLevel Level);
-
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

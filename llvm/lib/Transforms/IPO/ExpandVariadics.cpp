@@ -1046,10 +1046,5 @@ PreservedAnalyses ExpandVariadicsPass::run(Module &M, ModuleAnalysisManager &) {
              : PreservedAnalyses::all();
 }
 
-ExpandVariadicsPass::ExpandVariadicsPass(OptimizationLevel Level)
-    : ExpandVariadicsPass(Level == OptimizationLevel::O0
-                              ? ExpandVariadicsMode::Disable
-                              : ExpandVariadicsMode::Optimize) {}
-
 ExpandVariadicsPass::ExpandVariadicsPass(ExpandVariadicsMode Mode)
     : ConstructedMode(Mode) {}
