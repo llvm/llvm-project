@@ -4211,6 +4211,17 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
           Base = GEPI2.SgprParts[0];
           *SOffset = OffsetReg;
           *Offset = *EncodedImm;
+          if (*Offset >= 0 || !STI.hasSignedSMRDImmOffset())
+            return true;
+
+          // For unbuffered smem loads, it is illegal for the Immediate Offset
+          // to be negative if the resulting (Offset + (M0 or SOffset or zero)
+          // is negative. Handle the case where the Immediate Offset + SOffset
+          // is negative.
+          auto SKnown = KB->getKnownBits(*SOffset);
+          if (*Offset + SKnown.getMinValue().getSExtValue() < 0)
+            return false;
+
           return true;
         }
       }
@@ -4221,7 +4232,13 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
   if (Offset && GEPI.SgprParts.size() == 1 && EncodedImm) {
     Base = GEPI.SgprParts[0];
     *Offset = *EncodedImm;
-    return true;
+    if (*Offset >= 0 || !STI.hasSignedSMRDImmOffset())
+      return true;
+    // For unbuffered smem loads, it is illegal for the Immediate Offset to be
+    // negative if the resulting (Offset + (M0 or SOffset or zero is negative.
+    // Handle the case where the Immediate Offset is negative and there is no
+    // SOffset.
+    return false;
   }
 
   // SGPR offset is unsigned.
