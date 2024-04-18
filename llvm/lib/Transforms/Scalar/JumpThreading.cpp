@@ -971,6 +971,9 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
   if (maybeMergeBasicBlockIntoOnlyPred(BB))
     return true;
 
+  if (tryToConvertSZExtToSelect(BB))
+    return true;
+
   if (tryToUnfoldSelectInCurrBB(BB))
     return true;
 
@@ -2750,7 +2753,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
 // Pred is a predecessor of BB with an unconditional branch to BB. SI is
 // a Select instruction in Pred. BB has other predecessors and SI is used in
 // a PHI node in BB. SI has no other use.
-// A new basic block, NewBB, is created and SI is converted to compare and 
+// A new basic block, NewBB, is created and SI is converted to compare and
 // conditional branch. SI is erased from parent.
 void JumpThreadingPass::unfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
                                           SelectInst *SI, PHINode *SIUse,
@@ -2995,6 +2998,83 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
     return true;
   }
   return false;
+}
+
+/// Try to convert "sext/zext i1" into "select i1" which could be further
+/// unfolded by tryToUnfoldSelect().
+///
+/// For example,
+///
+/// ; before the transformation
+/// BB1:
+///   %a = icmp ...
+///   %b = zext i1 %a to i32
+///   br label %BB2
+/// BB2:
+///   %c = phi i32 [ %b, %BB1 ], ...
+///   %d = icmp eq i32 %c, 0
+///   br i1 %d, ...
+///
+/// ------
+///
+/// ; after the transformation
+/// BB1:
+///   %a = icmp ...
+///   %b = select i1 %a, i32 1, i32 0
+///   br label %BB2
+/// BB2:
+///   %c = phi i32 [ %b, %BB1 ], ...
+///   %d = icmp eq i32 %c, 0
+///   br i1 %d, ...
+///
+bool JumpThreadingPass::tryToConvertSZExtToSelect(BasicBlock *BB) {
+  // tryToUnfoldSelect requires that Br is unconditional
+  BranchInst *Br = dyn_cast<BranchInst>(BB->getTerminator());
+  if (!Br || Br->isConditional())
+    return false;
+  BasicBlock *BBX = Br->getSuccessor(0);
+
+  SmallVector<Instruction *> ToConvert;
+  for (auto &I : *BB) {
+    using namespace PatternMatch;
+
+    Value *V;
+    if (!match(&I, m_ZExtOrSExt(m_Value(V))) || !V->getType()->isIntegerTy(1))
+      continue;
+
+    // I is only used by Phi
+    Use *U = I.getSingleUndroppableUse();
+    if (!U)
+      continue;
+    PHINode *Phi = dyn_cast<PHINode>(U->getUser());
+    if (!Phi || Phi->getParent() != BBX)
+      continue;
+
+    // tryToUnfoldSelect requires that Phi is used in the following way
+    ICmpInst::Predicate Pred;
+    if (!match(BBX->getTerminator(),
+               m_Br(m_ICmp(Pred, m_Specific(Phi), m_ConstantInt()),
+                    m_BasicBlock(), m_BasicBlock())))
+      continue;
+
+    ToConvert.push_back(&I);
+  }
+  if (ToConvert.empty())
+    return false;
+
+  LLVM_DEBUG(dbgs() << "\nconvert-szext-to-select:\n" << *BB << "\n");
+  for (Instruction *I : ToConvert) {
+    auto Ty = I->getType();
+    Value *V1 = isa<SExtInst>(I) ? ConstantInt::getAllOnesValue(Ty)
+                                 : ConstantInt::get(Ty, 1);
+    Value *V2 = ConstantInt::getNullValue(Ty);
+    SelectInst *SI =
+        SelectInst::Create(I->getOperand(0), V1, V2, I->getName(), I);
+    I->replaceAllUsesWith(SI);
+    I->eraseFromParent();
+  }
+  LLVM_DEBUG(dbgs() << *BB << "\n");
+  return true;
 }
 
 /// Try to propagate a guard from the current BB into one of its predecessors

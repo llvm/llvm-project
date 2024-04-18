@@ -162,6 +162,8 @@ public:
   bool tryToUnfoldSelect(SwitchInst *SI, BasicBlock *BB);
   bool tryToUnfoldSelectInCurrBB(BasicBlock *BB);
 
+  bool tryToConvertSZExtToSelect(BasicBlock *BB);
+
   bool processGuards(BasicBlock *BB);
   bool threadGuard(BasicBlock *BB, IntrinsicInst *Guard, BranchInst *BI);
 
