@@ -1598,7 +1598,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // machine operand (which is a TargetGlobalTLSAddress) is expected to be
     // the same operand for both loads and stores.
     for (const MachineOperand &TempMO : MI->operands()) {
-      if (((TempMO.getTargetFlags() == PPCII::MO_TPREL_FLAG)) &&
+      if (((TempMO.getTargetFlags() == PPCII::MO_TPREL_FLAG ||
+            TempMO.getTargetFlags() == PPCII::MO_TLSLD_FLAG)) &&
           TempMO.getOperandNo() == 1)
         OpNum = 1;
     }
@@ -1634,8 +1635,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::ADDI8: {
     // A faster non-TOC-based local-[exec|dynamic] sequence is represented by
     // `addi` or a load/store instruction (that directly loads or stores off of
-    // the thread pointer) with an immediate operand having the MO_TPREL_FLAG.
-    // Such instructions do not otherwise arise.
+    // the thread pointer) with an immediate operand having the
+    // [MO_TPREL_FLAG|MO_TLSLD_FLAG]. Such instructions do not otherwise arise.
     if (!HasAIXSmallLocalTLS)
       break;
     bool IsMIADDI8 = MI->getOpcode() == PPC::ADDI8;
