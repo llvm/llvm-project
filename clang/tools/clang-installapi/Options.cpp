@@ -259,6 +259,8 @@ bool Options::processLinkerOptions(InputArgList &Args) {
   if (auto *Arg = Args.getLastArg(drv::OPT_umbrella))
     LinkerOpts.ParentUmbrella = Arg->getValue();
 
+  LinkerOpts.IsDylib = Args.hasArg(drv::OPT_dynamiclib);
+
   for (auto *Arg : Args.filtered(drv::OPT_alias_list)) {
     LinkerOpts.AliasLists.emplace_back(Arg->getValue());
     Arg->claim();
