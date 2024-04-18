@@ -39,6 +39,79 @@ public:
   }
 };
 
+class CmpIOpConversion : public OpConversionPattern<arith::CmpIOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  bool needsUnsignedCmp(arith::CmpIPredicate pred) const {
+    switch (pred) {
+    case arith::CmpIPredicate::eq:
+    case arith::CmpIPredicate::ne:
+    case arith::CmpIPredicate::slt:
+    case arith::CmpIPredicate::sle:
+    case arith::CmpIPredicate::sgt:
+    case arith::CmpIPredicate::sge:
+      return false;
+    case arith::CmpIPredicate::ult:
+    case arith::CmpIPredicate::ule:
+    case arith::CmpIPredicate::ugt:
+    case arith::CmpIPredicate::uge:
+      return true;
+    }
+    llvm_unreachable("unknown cmpi predicate kind");
+  }
+
+  emitc::CmpPredicate toEmitCPred(arith::CmpIPredicate pred) const {
+    switch (pred) {
+    case arith::CmpIPredicate::eq:
+      return emitc::CmpPredicate::eq;
+    case arith::CmpIPredicate::ne:
+      return emitc::CmpPredicate::ne;
+    case arith::CmpIPredicate::slt:
+    case arith::CmpIPredicate::ult:
+      return emitc::CmpPredicate::lt;
+    case arith::CmpIPredicate::sle:
+    case arith::CmpIPredicate::ule:
+      return emitc::CmpPredicate::le;
+    case arith::CmpIPredicate::sgt:
+    case arith::CmpIPredicate::ugt:
+      return emitc::CmpPredicate::gt;
+    case arith::CmpIPredicate::sge:
+    case arith::CmpIPredicate::uge:
+      return emitc::CmpPredicate::ge;
+    }
+    llvm_unreachable("unknown cmpi predicate kind");
+  }
+
+  LogicalResult
+  matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type type = adaptor.getLhs().getType();
+    if (!isa_and_nonnull<IntegerType, IndexType>(type)) {
+      return rewriter.notifyMatchFailure(op, "expected integer or index type");
+    }
+
+    bool needsUnsigned = needsUnsignedCmp(op.getPredicate());
+    emitc::CmpPredicate pred = toEmitCPred(op.getPredicate());
+    Type arithmeticType = type;
+    if (type.isUnsignedInteger() != needsUnsigned) {
+      arithmeticType = rewriter.getIntegerType(type.getIntOrFloatBitWidth(),
+                                               /*isSigned=*/!needsUnsigned);
+    }
+    Value lhs = adaptor.getLhs();
+    Value rhs = adaptor.getRhs();
+    if (arithmeticType != type) {
+      lhs = rewriter.template create<emitc::CastOp>(op.getLoc(), arithmeticType,
+                                                    lhs);
+      rhs = rewriter.template create<emitc::CastOp>(op.getLoc(), arithmeticType,
+                                                    rhs);
+    }
+    rewriter.replaceOpWithNewOp<emitc::CmpOp>(op, op.getType(), pred, lhs, rhs);
+    return success();
+  }
+};
+
 template <typename ArithOp, typename EmitCOp>
 class ArithOpConversion final : public OpConversionPattern<ArithOp> {
 public:
@@ -148,6 +221,7 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     IntegerOpConversion<arith::AddIOp, emitc::AddOp>,
     IntegerOpConversion<arith::MulIOp, emitc::MulOp>,
     IntegerOpConversion<arith::SubIOp, emitc::SubOp>,
+    CmpIOpConversion,
     SelectOpConversion
   >(typeConverter, ctx);
   // clang-format on
