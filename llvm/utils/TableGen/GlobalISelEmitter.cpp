@@ -428,7 +428,7 @@ private:
 
   /// Analyze pattern \p P, returning a matcher for it if possible.
   /// Otherwise, return an Error explaining why we don't support it.
-  Expected<RuleMatcher> runOnPattern(const PatternToMatch &P);
+  std::optional<Expected<RuleMatcher>> runOnPattern(const PatternToMatch &P);
 
   void declareSubtargetFeature(Record *Predicate);
 
@@ -1901,7 +1901,11 @@ std::optional<CodeGenSubRegIndex *> GlobalISelEmitter::inferSubRegIndexForNode(
   return CGRegs.getSubRegIdx(SubRegInit->getDef());
 }
 
-Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
+std::optional<Expected<RuleMatcher>> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
+  if (P.getISelShouldIgnore()) {
+    return {};
+  }
+
   // Keep track of the matchers and actions to emit.
   int Score = P.getPatternComplexity(CGP);
   RuleMatcher M(P.getSrcRecord()->getLoc());
@@ -2412,10 +2416,11 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     ++NumPatternTotal;
 
     auto MatcherOrErr = runOnPattern(Pat);
+    if (!MatcherOrErr) continue; // skip without warning
 
     // The pattern analysis can fail, indicating an unsupported pattern.
     // Report that if we've been asked to do so.
-    if (auto Err = MatcherOrErr.takeError()) {
+    if (auto Err = MatcherOrErr->takeError()) {
       if (WarnOnSkippedPatterns) {
         PrintWarning(Pat.getSrcRecord()->getLoc(),
                      "Skipped pattern: " + toString(std::move(Err)));
@@ -2427,13 +2432,13 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     }
 
     if (RuleCoverage) {
-      if (RuleCoverage->isCovered(MatcherOrErr->getRuleID()))
+      if (RuleCoverage->isCovered((*MatcherOrErr)->getRuleID()))
         ++NumPatternsTested;
       else
         PrintWarning(Pat.getSrcRecord()->getLoc(),
                      "Pattern is not covered by a test");
     }
-    Rules.push_back(std::move(MatcherOrErr.get()));
+    Rules.push_back(std::move(MatcherOrErr->get()));
     postProcessRule(Rules.back());
   }
 
