@@ -331,7 +331,10 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
   }];
 
   let arguments = (ins
-    TransformHandleTypeInterface:$target, UnitAttr:$apply_cse);
+    TransformHandleTypeInterface:$target,
+    UnitAttr:$apply_cse,
+    DefaultValuedAttr<I64Attr, "static_cast<uint64_t>(-1)">:$max_iterations,
+    DefaultValuedAttr<I64Attr, "static_cast<uint64_t>(-1)">:$max_num_rewrites);
   let results = (outs);
   let regions = (region MaxSizedRegion<1>:$patterns);
 
