@@ -573,7 +573,9 @@ static Triple::ArchType parseArch(StringRef ArchName) {
           .Case("csky", Triple::csky)
           .Case("loongarch32", Triple::loongarch32)
           .Case("loongarch64", Triple::loongarch64)
-          .Case("dxil", Triple::dxil)
+          .Cases("dxil", "dxilv1.0", "dxilv1.1", "dxilv1.2", "dxilv1.3",
+                 "dxilv1.4", "dxilv1.5", "dxilv1.6", "dxilv1.7", "dxilv1.8",
+                 Triple::dxil)
           .Case("xtensa", Triple::xtensa)
           .Default(Triple::UnknownArch);
 
@@ -739,6 +741,19 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
         .EndsWith("v1.4", Triple::SPIRVSubArch_v14)
         .EndsWith("v1.5", Triple::SPIRVSubArch_v15)
         .EndsWith("v1.6", Triple::SPIRVSubArch_v16)
+        .Default(Triple::NoSubArch);
+
+  if (SubArchName.starts_with("dxil"))
+    return StringSwitch<Triple::SubArchType>(SubArchName)
+        .EndsWith("v1.0", Triple::DXILSubArch_v1_0)
+        .EndsWith("v1.1", Triple::DXILSubArch_v1_1)
+        .EndsWith("v1.2", Triple::DXILSubArch_v1_2)
+        .EndsWith("v1.3", Triple::DXILSubArch_v1_3)
+        .EndsWith("v1.4", Triple::DXILSubArch_v1_4)
+        .EndsWith("v1.5", Triple::DXILSubArch_v1_5)
+        .EndsWith("v1.6", Triple::DXILSubArch_v1_6)
+        .EndsWith("v1.7", Triple::DXILSubArch_v1_7)
+        .EndsWith("v1.8", Triple::DXILSubArch_v1_8)
         .Default(Triple::NoSubArch);
 
   StringRef ARMSubArch = ARM::getCanonicalArchName(SubArchName);
