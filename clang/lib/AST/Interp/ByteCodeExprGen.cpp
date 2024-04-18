@@ -1843,7 +1843,7 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
   const Expr *Init = E->getInitializer();
   if (Initializing) {
     // We already have a value, just initialize that.
-    return this->visitInitializer(Init);
+    return this->visitInitializer(Init) && this->emitFinishInit(E);
   }
 
   std::optional<PrimType> T = classify(E->getType());
@@ -1862,7 +1862,7 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
         return this->emitInitGlobal(*T, *GlobalIndex, E);
       }
 
-      return this->visitInitializer(Init);
+      return this->visitInitializer(Init) && this->emitFinishInit(E);
     }
 
     return false;
@@ -1891,7 +1891,7 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
       }
       return this->emitInit(*T, E);
     } else {
-      if (!this->visitInitializer(Init))
+      if (!this->visitInitializer(Init) || !this->emitFinishInit(E))
         return false;
     }
 

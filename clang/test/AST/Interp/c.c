@@ -245,3 +245,15 @@ void unaryops(void) {
   (void)((struct zz {float x;}){3}.x++);
   (void)((struct ww {float x;}){3}.x--);
 }
+
+/// This used to fail because we didn't properly mark the struct
+/// initialized through a CompoundLiteralExpr as initialized.
+struct TestStruct {
+  int a;
+  int b;
+};
+int Y __attribute__((annotate(
+  "GlobalValAnnotationWithArgs",
+  42,
+  (struct TestStruct) { .a = 1, .b = 2 }
+)));
