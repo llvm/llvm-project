@@ -121,7 +121,7 @@ should convert the CMake config options to appropriate compiler and/or linker
 flags. Those compile/link flags can be used in listing the affected targets as
 follows:
 
-.. code-block:: none
+.. code-block:: cmake
 
    add_object_library(
     ...
