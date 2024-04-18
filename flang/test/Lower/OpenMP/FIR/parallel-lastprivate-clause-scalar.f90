@@ -12,8 +12,9 @@
 !CHECK-DAG: %[[ARG1_PVT:.*]] = fir.alloca !fir.char<1,5> {bindc_name = "arg1", 
 
 ! Check that we are accessing the clone inside the loop
-!CHECK-DAG: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
-!CHECK-DAG: %[[UNIT:.*]] = arith.constant 6 : i32
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
+!CHECK: %[[UNIT:.*]] = arith.constant 6 : i32
 !CHECK-NEXT: %[[ADDR:.*]] = fir.address_of(@_QQclX
 !CHECK-NEXT: %[[CVT0:.*]] = fir.convert %[[ADDR]] 
 !CHECK-NEXT: %[[CNST:.*]] = arith.constant
@@ -36,9 +37,12 @@
 ! Testing lastprivate val update
 !CHECK-DAG: %[[CVT:.*]] = fir.convert %[[ARG1_REF]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
 !CHECK-DAG: %[[CVT1:.*]] = fir.convert %[[ARG1_PVT]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-!CHECK-DAG: fir.call @llvm.memmove.p0.p0.i64(%[[CVT]], %[[CVT1]]{{.*}})
-!CHECK-DAG: } 
-!CHECK-DAG: omp.yield
+!CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[CVT]], %[[CVT1]]{{.*}})
+!CHECK: }
+!CHECK: omp.yield
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
 
 subroutine lastprivate_character(arg1)
         character(5) :: arg1
@@ -55,7 +59,8 @@ end subroutine
 !CHECK: func @_QPlastprivate_int(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}) {
 !CHECK-DAG: omp.parallel  {
 !CHECK-DAG: %[[CLONE:.*]] = fir.alloca i32 {bindc_name = "arg1"
-!CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
 
 ! Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
@@ -70,8 +75,11 @@ end subroutine
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE]] : !fir.ref<i32>
 !CHECK-NEXT: fir.store %[[CLONE_LD]] to %[[ARG1]] : !fir.ref<i32>
-!CHECK-DAG: }
-!CHECK-DAG: omp.yield
+!CHECK: }
+!CHECK: omp.yield
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
 
 subroutine lastprivate_int(arg1)
         integer :: arg1
@@ -90,7 +98,8 @@ end subroutine
 !CHECK: omp.parallel  {
 !CHECK-DAG: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
 !CHECK-DAG: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2"
-!CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
 
 ! Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
@@ -108,6 +117,9 @@ end subroutine
 !CHECK-DAG: fir.store %[[CLONE_LD2]] to %[[ARG2]] : !fir.ref<i32>
 !CHECK: }
 !CHECK: omp.yield
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
 
 subroutine mult_lastprivate_int(arg1, arg2)
         integer :: arg1, arg2
@@ -127,7 +139,8 @@ end subroutine
 !CHECK: omp.parallel  {
 !CHECK-DAG: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
 !CHECK-DAG: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2"
-!CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
 
 !Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
@@ -145,6 +158,9 @@ end subroutine
 !CHECK-DAG: fir.store %[[CLONE_LD1]] to %[[ARG1]] : !fir.ref<i32>
 !CHECK: }
 !CHECK: omp.yield
+!CHECK: }
+!CHECK: omp.terminator
+!CHECK: }
 
 subroutine mult_lastprivate_int2(arg1, arg2)
         integer :: arg1, arg2
@@ -169,7 +185,8 @@ end subroutine
 ! Lastprivate Allocation
 !CHECK-DAG: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2"
 !CHECK-NOT: omp.barrier
-!CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
 
 ! Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
@@ -185,6 +202,9 @@ end subroutine
 !CHECK-NEXT: fir.store %[[CLONE_LD]] to %[[ARG2]] : !fir.ref<i32>
 !CHECK-NEXT: }
 !CHECK-NEXT: omp.yield
+!CHECK-NEXT: }
+!CHECK-NEXT: omp.terminator
+!CHECK-NEXT: }
 
 subroutine firstpriv_lastpriv_int(arg1, arg2)
         integer :: arg1, arg2
@@ -207,7 +227,8 @@ end subroutine
 !CHECK-NEXT: %[[FPV_LD:.*]] = fir.load %[[ARG1]] : !fir.ref<i32>
 !CHECK-NEXT: fir.store %[[FPV_LD]] to %[[CLONE1]] : !fir.ref<i32>
 !CHECK-NEXT: omp.barrier
-!CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[INDX_WS:.*]]) : {{.*}} {
 ! Testing last iteration check
 !CHECK: %[[V:.*]] = arith.addi %[[INDX_WS]], %{{.*}} : i32
 !CHECK: %[[C0:.*]] = arith.constant 0 : i32
@@ -222,6 +243,9 @@ end subroutine
 !CHECK-NEXT: fir.store %[[CLONE_LD]] to %[[ARG1]] : !fir.ref<i32>
 !CHECK-NEXT: }
 !CHECK-NEXT: omp.yield
+!CHECK-NEXT: }
+!CHECK-NEXT: omp.terminator
+!CHECK-NEXT: }
 
 subroutine firstpriv_lastpriv_int2(arg1)
         integer :: arg1
