@@ -713,7 +713,7 @@ public:
     llvm::SmallVector<FrameId> CS;
     // Derive the number of frames from the data length.
     uint64_t NumFrames = Length / sizeof(FrameId);
-    assert(Length % sizeof(CallStackId) == 0);
+    assert(Length % sizeof(FrameId) == 0);
     CS.reserve(NumFrames);
     for (size_t I = 0; I != NumFrames; ++I) {
       FrameId F = endian::readNext<FrameId, llvm::endianness::little>(D);
