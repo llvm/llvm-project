@@ -24478,7 +24478,8 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     unsigned NumSubElts = NVT.getVectorMinNumElements();
     if (InsIdx <= ExtIdx && (ExtIdx + NumSubElts) <= (InsIdx + NumInsElts) &&
         TLI.isExtractSubvectorCheap(NVT, InsSubVT, ExtIdx - InsIdx) &&
-        InsSubVT.isFixedLengthVector() && NVT.isFixedLengthVector())
+        InsSubVT.isFixedLengthVector() && NVT.isFixedLengthVector() &&
+        V.getValueType().isFixedLengthVector())
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, InsSub,
                          DAG.getVectorIdxConstant(ExtIdx - InsIdx, DL));
   }
