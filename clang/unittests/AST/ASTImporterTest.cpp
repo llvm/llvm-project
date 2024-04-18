@@ -6721,7 +6721,8 @@ TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionBody) {
   EXPECT_FALSE(FromL->isDependentLambda());
 }
 
-TEST_P(ASTImporterOptionSpecificTestBase, LambdaReturnTypeDeclaredInside) {
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ReturnTypeDeclaredInsideOfCXX11LambdaWithoutTrailingReturn) {
   Decl *From, *To;
   std::tie(From, To) = getImportedDecl(
       R"(
@@ -6732,7 +6733,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, LambdaReturnTypeDeclaredInside) {
         };
       }
       )",
-      Lang_CXX11, "", Lang_CXX11, "foo");
+      Lang_CXX11, "", Lang_CXX11, "foo"); // c++11 only
   auto *ToLambda = FirstDeclMatcher<LambdaExpr>().match(To, lambdaExpr());
   EXPECT_TRUE(ToLambda);
 }

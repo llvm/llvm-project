@@ -3522,6 +3522,7 @@ public:
       : ParentDC(ParentDC) {}
 
   bool CheckType(QualType T) {
+    T->isUndeducedType();
     // Check the chain of "sugar" types.
     // The "sugar" types are typedef or similar types that have the same
     // canonical type.
@@ -3654,12 +3655,21 @@ bool ASTNodeImporter::hasReturnTypeDeclaredInside(FunctionDecl *D) {
   const auto *FromFPT = FromTy->getAs<FunctionProtoType>();
   assert(FromFPT && "Must be called on FunctionProtoType");
 
-  bool IsLambdaDefinition = false;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
-    IsLambdaDefinition = cast<CXXRecordDecl>(MD->getDeclContext())->isLambda();
+  auto IsCXX11LambdaWithouTrailingReturn = [&]() {
+    if (!Importer.FromContext.getLangOpts().CPlusPlus11)
+      return false;
+
+    if (FromFPT->hasTrailingReturn())
+      return false;
+
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
+      return cast<CXXRecordDecl>(MD->getDeclContext())->isLambda();
+
+    return false;
+  };
 
   QualType RetT = FromFPT->getReturnType();
-  if (isa<AutoType>(RetT.getTypePtr()) || IsLambdaDefinition) {
+  if (isa<AutoType>(RetT.getTypePtr()) || IsCXX11LambdaWithouTrailingReturn()) {
     FunctionDecl *Def = D->getDefinition();
     IsTypeDeclaredInsideVisitor Visitor(Def ? Def : D);
     return Visitor.CheckType(RetT);
