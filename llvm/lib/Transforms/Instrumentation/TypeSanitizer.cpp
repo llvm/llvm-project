@@ -110,6 +110,7 @@ private:
                                   TypeNameMapTy &TypeNames, Module &M);
 
   const Triple TargetTriple;
+  Regex AnonNameRegex;
   Type *IntptrTy;
   uint64_t PtrShift;
   IntegerType *OrdTy;
@@ -122,7 +123,8 @@ private:
 } // namespace
 
 TypeSanitizer::TypeSanitizer(Module &M)
-    : TargetTriple(Triple(M.getTargetTriple())) {
+    : TargetTriple(Triple(M.getTargetTriple())),
+      AnonNameRegex("^_ZTS.*N[1-9][0-9]*_GLOBAL__N") {
   const DataLayout &DL = M.getDataLayout();
   IntptrTy = DL.getIntPtrType(M.getContext());
   PtrShift = countr_zero(IntptrTy->getPrimitiveSizeInBits() / 8);
@@ -237,16 +239,6 @@ static std::string encodeName(StringRef Name) {
   return Output;
 }
 
-static bool isAnonymousNamespaceName(StringRef Name) {
-  // Types that are in an anonymous namespace are local to this module.
-  // FIXME: This should really be marked by the frontend in the metadata
-  // instead of having us guess this from the mangled name. Moreover, the regex
-  // here can pick up (unlikely) names in the non-reserved namespace (because
-  // it needs to search into the type to pick up cases where the type in the
-  // anonymous namespace is a template parameter, etc.).
-  return AnonNameRegex.match(Name);
-}
-
 std::string
 TypeSanitizer::getAnonymousStructIdentifier(const MDNode *MD,
                                             TypeNameMapTy &TypeNames) {
@@ -352,7 +344,13 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
   TDSubTys.push_back(IntptrTy);
   TDSubData.push_back(ConstantInt::get(IntptrTy, Members.size()));
 
-  bool ShouldBeComdat = !isAnonymousNamespaceName(NameNode->getString());
+  // Types that are in an anonymous namespace are local to this module.
+  // FIXME: This should really be marked by the frontend in the metadata
+  // instead of having us guess this from the mangled name. Moreover, the regex
+  // here can pick up (unlikely) names in the non-reserved namespace (because
+  // it needs to search into the type to pick up cases where the type in the
+  // anonymous namespace is a template parameter, etc.).
+  bool ShouldBeComdat = !AnonNameRegex.match(NameNode->getString());
   for (auto &Member : Members) {
     TDSubTys.push_back(Member.first->getType());
     TDSubData.push_back(Member.first);
