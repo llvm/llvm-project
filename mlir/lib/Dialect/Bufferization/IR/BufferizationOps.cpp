@@ -798,7 +798,9 @@ struct ToMemrefToTensorFolding : public OpRewritePattern<ToMemrefOp> {
 
   LogicalResult matchAndRewrite(ToMemrefOp toMemref,
                                 PatternRewriter &rewriter) const final {
-    return foldToMemrefToTensorPair(rewriter, toMemref, {});
+    BufferizationOptions options;
+    options.bufferAlignment = 0;
+    return foldToMemrefToTensorPair(rewriter, toMemref, options);
   }
 };
 

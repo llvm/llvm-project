@@ -74,8 +74,10 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
       auto rankedDestType = dyn_cast<MemRefType>(type);
       if (!rankedDestType)
         return nullptr;
+      BufferizationOptions options;
+      options.bufferAlignment = 0;
       FailureOr<Value> replacement =
-          castOrReallocMemRefValue(builder, inputs[0], rankedDestType, {});
+          castOrReallocMemRefValue(builder, inputs[0], rankedDestType, options);
       if (failed(replacement))
         return nullptr;
       return *replacement;
