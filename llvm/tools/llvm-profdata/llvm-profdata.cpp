@@ -305,7 +305,8 @@ cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     cl::desc("Specify the version of the memprof format to use"),
     cl::init(memprof::Version0),
     cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
-               clEnumValN(memprof::Version1, "1", "version 1")));
+               clEnumValN(memprof::Version1, "1", "version 1"),
+               clEnumValN(memprof::Version2, "2", "version 2")));
 
 // Options specific to overlap subcommand.
 cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
@@ -677,6 +678,18 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       if (!Succeeded)
         return;
     }
+
+    // Add the call stacks into the writer context.
+    const auto &CSIdToCallStacks = Reader->getCallStacks();
+    for (const auto &I : CSIdToCallStacks) {
+      bool Succeeded = WC->Writer.addMemProfCallStack(
+          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
+      // If we weren't able to add the call stacks then it doesn't make sense
+      // to try to add the records from this profile.
+      if (!Succeeded)
+        return;
+    }
+
     const auto &FunctionProfileData = Reader->getProfileData();
     // Add the memprof records into the writer context.
     for (const auto &[GUID, Record] : FunctionProfileData) {

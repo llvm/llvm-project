@@ -13,6 +13,9 @@ RUN: llvm-profdata show %t.prof.v0 | FileCheck %s
 RUN: llvm-profdata merge %t.proftext %p/Inputs/basic.memprofraw --memprof-version=1 --profiled-binary %p/Inputs/basic.memprofexe -o %t.prof.v1
 RUN: llvm-profdata show %t.prof.v1 | FileCheck %s
 
+RUN: llvm-profdata merge %t.proftext %p/Inputs/basic.memprofraw --memprof-version=2 --profiled-binary %p/Inputs/basic.memprofexe -o %t.prof.v2
+RUN: llvm-profdata show %t.prof.v2 | FileCheck %s
+
 For now we only check the validity of the instrumented profile since we don't
 have a way to display the contents of the memprof indexed format yet.
 
