@@ -204,6 +204,7 @@ config.environment["FILECHECK_OPTS"] = "-enable-var-scope --allow-unused-prefixe
 # binaries come from the build tree. This should be unified to the build tree
 # by copying/linking sources to build.
 if config.enable_bindings_python:
+    config.environment["PYTHONPATH"] = os.getenv("MLIR_LIT_PYTHONPATH", "")
     llvm_config.with_environment(
         "PYTHONPATH",
         [
