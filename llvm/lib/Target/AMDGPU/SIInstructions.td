@@ -291,22 +291,37 @@ def V_SUB_U64_PSEUDO : VPseudoInstSI <
 
 let usesCustomInserter = 1 in {
   def V_READLANE_PSEUDO_B64 : VPseudoInstSI <
-  (outs SReg_64:$sdst), (ins VReg_64:$src0, SSrc_b32:$src1),
-  [(set i64:$sdst, (int_amdgcn_readlane i64:$src0, i32:$src1))]
-  >;
+  (outs SReg_64:$sdst), (ins VReg_64:$src0, SSrc_b32:$src1)>;
 
   def V_READFIRSTLANE_PSEUDO_B64 : VPseudoInstSI <
-  (outs SReg_64:$sdst), (ins VReg_64:$src0),
-  [(set i64:$sdst, (int_amdgcn_readfirstlane i64:$src0))]
-  >;
+  (outs SReg_64:$sdst), (ins VReg_64:$src0)>;
   
   def V_WRITELANE_PSEUDO_B64 : VPseudoInstSI <
-  (outs VReg_64:$sdst), (ins SReg_64:$src0, SSrc_b32:$src1, VReg_64:$src2),
-  [(set i64:$sdst, (int_amdgcn_writelane i64:$src0, i32:$src1, i64:$src2))]
-  > {
+  (outs VReg_64:$sdst), (ins SReg_64:$src0, SSrc_b32:$src1, VReg_64:$src2)> {
     let UseNamedOperandTable = 1;
   }
-}
+} // End usesCustomInserter = 1
+
+class ReadLanePseudoPat <ValueType vt> : GCNPat <
+  (vt (int_amdgcn_readlane vt:$src0, i32:$src1)),
+  (V_READLANE_PSEUDO_B64 VReg_64:$src0, SSrc_b32:$src1)>;
+
+def : ReadLanePseudoPat<i64>;
+def : ReadLanePseudoPat<f64>;
+
+class WriteLanePseudoPat <ValueType vt> : GCNPat <
+  (vt (int_amdgcn_writelane vt:$src0, i32:$src1, vt:$src2)),
+  (V_WRITELANE_PSEUDO_B64 SReg_64:$src0, SSrc_b32:$src1, VReg_64:$src2)>;
+
+def : WriteLanePseudoPat<i64>;
+def : WriteLanePseudoPat<f64>;
+
+class ReadFirstLanePseudoPat <ValueType vt> : GCNPat <
+  (vt (int_amdgcn_readfirstlane vt:$src0)),
+  (V_READFIRSTLANE_PSEUDO_B64 VReg_64:$src0)>;
+
+def : ReadFirstLanePseudoPat<i64>;
+def : ReadFirstLanePseudoPat<f64>;
 
 let usesCustomInserter = 1, Defs = [SCC] in {
 def S_ADD_U64_PSEUDO : SPseudoInstSI <
