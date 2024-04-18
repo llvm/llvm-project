@@ -220,11 +220,11 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
   if("${target_name}" STREQUAL "amdgpu")
     if(OPENMP_STANDALONE_BUILD)
       list(APPEND extra_bc_files
-        ${CMAKE_BINARY_DIR}/libomptarget/hostexec/libhostexec-${target_cpu}.bc
+        ${CMAKE_BINARY_DIR}/hostexec/libhostexec-${target_cpu}.bc
       )
     else()
       list(APPEND extra_bc_files
-        ${CMAKE_BINARY_DIR}/openmp/libomptarget/hostexec/libhostexec-${target_cpu}.bc
+        ${CMAKE_BINARY_DIR}/offload/hostexec/libhostexec-${target_cpu}.bc
       )
     endif()
     add_custom_target(libhostexec-${target_cpu}
@@ -307,7 +307,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
   set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES  ${bclib_name} ${LIBOMPTARGET_LIBRARY_DIR}/${bclib_name})
 
   # Install bitcode library under the lib destination folder.
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
 
   #  ----------------- end steps for bc file installation for opaque-linker ----------------- #
 
@@ -406,4 +406,4 @@ set_target_properties(omptarget.devicertl PROPERTIES
 )
 target_link_libraries(omptarget.devicertl PRIVATE omptarget.devicertl.all_objs)
 
-install(TARGETS omptarget.devicertl ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+install(TARGETS omptarget.devicertl ARCHIVE DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")

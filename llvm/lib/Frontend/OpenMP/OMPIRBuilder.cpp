@@ -4683,7 +4683,7 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
   UI->eraseFromParent();
 
   // Continue in the "user_code" block, see diagram above and in
-  // openmp/libomptarget/deviceRTLs/common/include/target.h .
+  // offload/deviceRTLs/common/include/target.h .
   return InsertPointTy(UserCodeEntryBB, UserCodeEntryBB->getFirstInsertionPt());
 }
 

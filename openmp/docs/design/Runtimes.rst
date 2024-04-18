@@ -1174,7 +1174,7 @@ plugins' implementation. Currently, these plugins have support for the NVIDIA
 and AMDGPU devices as well as the GenericELF64bit host-simulated device.
 
 The source code of the common infrastructure and the vendor-specific plugins is
-in the ``openmp/libomptarget/nextgen-plugins`` directory in the LLVM project
+in the ``offload/nextgen-plugins`` directory in the LLVM project
 repository. The plugin infrastructure aims at unifying the plugin code and logic
 into a generic interface using object-oriented C++. There is a plugin interface
 composed by multiple generic C++ classes which implement the common logic that

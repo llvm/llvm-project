@@ -33,7 +33,7 @@ using OpenACCIRBuilder = llvm::OpenMPIRBuilder;
 // Utility functions
 //===----------------------------------------------------------------------===//
 
-/// Flag values are extracted from openmp/libomptarget/include/omptarget.h and
+/// Flag values are extracted from offload/include/omptarget.h and
 /// mapped to corresponding OpenACC flags.
 static constexpr uint64_t kCreateFlag = 0x000;
 static constexpr uint64_t kDeviceCopyinFlag = 0x001;

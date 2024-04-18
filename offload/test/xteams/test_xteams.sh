@@ -8,7 +8,7 @@
 #===----------------------------------------------------------------------===//
 # 
 #  test_xteams.sh: Script to test high performance Cross Team Scan functions
-#                  in llvm-project/openmp/libomptarget/DeviceRTL/src/Xteams.cpp
+#                  in llvm-project/offload/DeviceRTL/src/Xteams.cpp
 #                  It compiles and executes test_xteams.cpp in 4 configs of
 #                  device threads 1024, 512, 256 and 128.
 #

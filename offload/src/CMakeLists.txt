@@ -9,6 +9,15 @@
 # Build offloading library libomptarget.so.
 #
 ##===----------------------------------------------------------------------===##
+
+libomptarget_say("Building offloading runtime library libomptarget.")
+
+if(LIBOMP_STANDALONE)
+  set(LIBOMP ${LIBOMP_STANDALONE})
+else()
+  set(LIBOMP omp)
+endif()
+
 add_llvm_library(omptarget
   SHARED
 
@@ -37,7 +46,7 @@ add_llvm_library(omptarget
 
   LINK_LIBS
   PUBLIC
-  omp
+  ${LIBOMP}
 
   NO_INSTALL_RPATH
   BUILDTREE_ONLY
@@ -114,4 +123,4 @@ endif()
 set_target_properties(omptarget PROPERTIES
                       POSITION_INDEPENDENT_CODE ON
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
-install(TARGETS omptarget LIBRARY COMPONENT omptarget DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+install(TARGETS omptarget LIBRARY COMPONENT omptarget DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")

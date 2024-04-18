@@ -8,7 +8,7 @@
 #===----------------------------------------------------------------------====//
 # 
 #  test_xteamr.sh: Script to test high performance reduction helper functions
-#                  in llvm-project/openmp/libomptarget/DeviceRTL/src/Xteamr.cpp
+#                  in llvm-project/offload/DeviceRTL/src/Xteamr.cpp
 #                  It compiles and executes test_xteamr.cpp in 5 configs.
 #                  1024 device threads, 512 dev threads, 256 dev threads.
 #                  128 device threads, and 64 dev threads

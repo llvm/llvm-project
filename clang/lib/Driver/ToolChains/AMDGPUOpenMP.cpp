@@ -263,7 +263,7 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   if (LibSuffix != "lib" || llvm::sys::fs::exists(Path)) {
     BCLibs.push_back(Args.MakeArgString(Path));
   } else {
-    std::string RtDir = "/../runtimes/runtimes-bins/openmp/libomptarget";
+    std::string RtDir = "/../runtimes/runtimes-bins/offload";
     BCLibs.push_back(Args.MakeArgString(libpath + RtDir + LibDeviceName));
   }
 

@@ -2071,7 +2071,7 @@ public:
   /// The `omp target` interface
   ///
   /// For more information about the usage of this interface,
-  /// \see openmp/libomptarget/deviceRTLs/common/include/target.h
+  /// \see offload/deviceRTLs/common/include/target.h
   ///
   ///{
 

@@ -33,7 +33,7 @@ endif()
 
 # Install plugin under the lib destination folder.
 install(TARGETS omptarget.rtl.${machine}
-        LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+        LIBRARY DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
 
 if(NOT DEFINED CMAKE_INSTALL_RPATH)
   set_target_properties(omptarget.rtl.${machine} PROPERTIES
