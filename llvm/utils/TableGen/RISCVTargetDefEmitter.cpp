@@ -17,34 +17,34 @@
 
 using namespace llvm;
 
-using ISAInfoTy = llvm::Expected<std::unique_ptr<RISCVISAInfo>>;
-
 // We can generate march string from target features as what has been described
 // in RISC-V ISA specification (version 20191213) 'Chapter 27. ISA Extension
 // Naming Conventions'.
 //
 // This is almost the same as RISCVFeatures::parseFeatureBits, except that we
 // get feature name from feature records instead of feature bits.
-static std::string getMArch(const Record &Rec) {
-  std::vector<std::string> FeatureVector;
+static void printMArch(raw_ostream &OS, const Record &Rec) {
+  std::map<std::string, std::pair<unsigned, unsigned>,
+           RISCVISAInfo::ExtensionComparator>
+      Extensions;
   unsigned XLen = 32;
 
   // Convert features to FeatureVector.
   for (auto *Feature : Rec.getValueAsListOfDefs("Features")) {
     StringRef FeatureName = Feature->getValueAsString("Name");
-    if (llvm::RISCVISAInfo::isSupportedExtensionFeature(FeatureName))
-      FeatureVector.push_back((Twine("+") + FeatureName).str());
-    else if (FeatureName == "64bit")
+    if (Feature->isSubClassOf("RISCVExtension")) {
+      unsigned Major = Feature->getValueAsInt("MajorVersion");
+      unsigned Minor = Feature->getValueAsInt("MinorVersion");
+      Extensions.try_emplace(FeatureName.str(), Major, Minor);
+    } else if (FeatureName == "64bit")
       XLen = 64;
   }
 
-  ISAInfoTy ISAInfo = llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
-  if (!ISAInfo)
-    report_fatal_error("Invalid features");
+  OS << "rv" << XLen;
 
-  // RISCVISAInfo::toString will generate a march string with all the extensions
-  // we have added to it.
-  return (*ISAInfo)->toString();
+  ListSeparator LS("_");
+  for (auto const &Ext : Extensions)
+    OS << LS << Ext.first << Ext.second.first << 'p' << Ext.second.second;
 }
 
 static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
@@ -54,12 +54,6 @@ static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
 
   // Iterate on all definition records.
   for (const Record *Rec : RK.getAllDerivedDefinitions("RISCVProcessorModel")) {
-    std::string MArch = Rec->getValueAsString("DefaultMarch").str();
-
-    // Compute MArch from features if we don't specify it.
-    if (MArch.empty())
-      MArch = getMArch(*Rec);
-
     bool FastScalarUnalignedAccess =
         any_of(Rec->getValueAsListOfDefs("Features"), [&](auto &Feature) {
           return Feature->getValueAsString("Name") == "unaligned-scalar-mem";
@@ -75,7 +69,16 @@ static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
 
     OS << "PROC(" << Rec->getName() << ", "
        << "{\"" << Rec->getValueAsString("Name") << "\"}, "
-       << "{\"" << MArch << "\"}, " << FastUnalignedAccess << ")\n";
+       << "{\"";
+
+    StringRef MArch = Rec->getValueAsString("DefaultMarch");
+
+    // Compute MArch from features if we don't specify it.
+    if (MArch.empty())
+      printMArch(OS, *Rec);
+    else
+      OS << MArch;
+    OS << "\"}, " << FastUnalignedAccess << ")\n";
   }
   OS << "\n#undef PROC\n";
   OS << "\n";
