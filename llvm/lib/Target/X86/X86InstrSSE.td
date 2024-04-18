@@ -5755,6 +5755,13 @@ multiclass avx_bittest<bits<8> opc, string OpcodeStr, RegisterClass RC,
             Sched<[sched.Folded, sched.ReadAfterFold]>, VEX;
 }
 
+// ptest is commutable if only the Z flag is used. If the C flag is used,
+// commuting would change which operand is inverted.
+def X86testp_commutable : PatFrag<(ops node:$src1, node:$src2),
+                                  (X86testp node:$src1, node:$src2), [{
+  return onlyUsesZeroFlag(SDValue(Node, 0));
+}]>;
+
 let Defs = [EFLAGS], Predicates = [HasAVX] in {
 let ExeDomain = SSEPackedSingle in {
 defm VTESTPS  : avx_bittest<0x0E, "vtestps", VR128, f128mem, loadv4f32, v4f32,
@@ -5768,6 +5775,18 @@ defm VTESTPD  : avx_bittest<0x0F, "vtestpd", VR128, f128mem, loadv2f64, v2f64,
 defm VTESTPDY : avx_bittest<0x0F, "vtestpd", VR256, f256mem, loadv4f64, v4f64,
                             SchedWriteFTest.YMM>, VEX_L;
 }
+}
+
+let Predicates = [HasAVX] in {
+  def : Pat<(X86testp_commutable (loadv4f32 addr:$src2), VR128:$src),
+            (VTESTPSrm VR128:$src, addr:$src2)>;
+  def : Pat<(X86testp_commutable (loadv8f32 addr:$src2), VR256:$src),
+            (VTESTPSYrm VR256:$src, addr:$src2)>;
+
+  def : Pat<(X86testp_commutable (loadv2f64 addr:$src2), VR128:$src),
+            (VTESTPDrm VR128:$src, addr:$src2)>;
+  def : Pat<(X86testp_commutable (loadv4f64 addr:$src2), VR256:$src),
+            (VTESTPDYrm VR256:$src, addr:$src2)>;
 }
 
 //===----------------------------------------------------------------------===//
