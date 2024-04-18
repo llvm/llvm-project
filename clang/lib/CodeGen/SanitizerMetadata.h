@@ -37,12 +37,13 @@ class SanitizerMetadata {
 
 public:
   SanitizerMetadata(CodeGenModule &CGM);
-  void reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
-                    bool IsDynInit = false);
-  void reportGlobal(llvm::GlobalVariable *GV, SourceLocation Loc,
-                    StringRef Name, QualType Ty = {},
-                    SanitizerMask NoSanitizeAttrMask = {},
-                    bool IsDynInit = false);
+  void reportGlobalToASan(llvm::GlobalVariable *GV, const VarDecl &D,
+                          bool IsDynInit = false);
+  void reportGlobalToASan(llvm::GlobalVariable *GV, SourceLocation Loc,
+                          StringRef Name, QualType Ty = {},
+                          SanitizerMask NoSanitizeAttrMask = {},
+                          bool IsDynInit = false);
+  void reportGlobalToTySan(llvm::GlobalVariable *GV, const VarDecl &D);
   void disableSanitizerForGlobal(llvm::GlobalVariable *GV);
 };
 } // end namespace CodeGen

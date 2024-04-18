@@ -397,8 +397,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   if (LangOpts.HLSL)
     createHLSLRuntime();
 
-  // Enable TBAA unless it's suppressed. ThreadSanitizer needs TBAA even at O0.
-  if (LangOpts.Sanitize.has(SanitizerKind::Thread) ||
+  // Enable TBAA unless it's suppressed. TSan and TySan need TBAA even at O0.
+  if (LangOpts.Sanitize.hasOneOf(SanitizerKind::Thread | SanitizerKind::Type) ||
       (!CodeGenOpts.RelaxedAliasing && CodeGenOpts.OptimizationLevel > 0))
     TBAA.reset(new CodeGenTBAA(Context, getTypes(), TheModule, CodeGenOpts,
                                getLangOpts()));
@@ -5162,7 +5162,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
   }
 
   if (D)
-    SanitizerMD->reportGlobal(GV, *D);
+    SanitizerMD->reportGlobalToASan(GV, *D);
 
   LangAS ExpectedAS =
       D ? D->getType().getAddressSpace()
@@ -5728,7 +5728,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (NeedsGlobalCtor || NeedsGlobalDtor)
     EmitCXXGlobalVarDeclInitFunc(D, GV, NeedsGlobalCtor);
 
-  SanitizerMD->reportGlobal(GV, *D, NeedsGlobalCtor);
+  SanitizerMD->reportGlobalToASan(GV, *D, NeedsGlobalCtor);
+  SanitizerMD->reportGlobalToTySan(GV, *D);
 
   // Emit global variable debug information.
   if (CGDebugInfo *DI = getModuleDebugInfo())
@@ -6618,7 +6619,8 @@ CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
   if (Entry)
     *Entry = GV;
 
-  SanitizerMD->reportGlobal(GV, S->getStrTokenLoc(0), "<string literal>");
+  SanitizerMD->reportGlobalToASan(GV, S->getStrTokenLoc(0), "<string literal>");
+  // FIXME: Should we also report to the TySan?
 
   return ConstantAddress(castStringLiteralToDefaultAddressSpace(*this, GV),
                          GV->getValueType(), Alignment);
