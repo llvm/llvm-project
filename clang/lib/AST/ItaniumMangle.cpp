@@ -1070,14 +1070,7 @@ void CXXNameMangler::mangleNameWithAbiTags(GlobalDecl GD,
   if (isLocalContainerContext(DC) && ND->hasLinkage() && !isLambda(ND))
     while (!DC->isNamespace() && !DC->isTranslationUnit())
       DC = Context.getEffectiveParentContext(DC);
-  else if (GetLocalClassDecl(ND)) {
-    mangleLocalName(GD, AdditionalAbiTags);
-    return;
-  }
-
-  assert(!isa<LinkageSpecDecl>(DC) && "context cannot be LinkageSpecDecl");
-
-  if (isLocalContainerContext(DC)) {
+  else if (GetLocalClassDecl(ND) && !isLambda(ND)) {
     mangleLocalName(GD, AdditionalAbiTags);
     return;
   }
@@ -1086,6 +1079,13 @@ void CXXNameMangler::mangleNameWithAbiTags(GlobalDecl GD,
   // in the global namespace.
   if (const NamedDecl *PrefixND = getClosurePrefix(ND)) {
     mangleNestedNameWithClosurePrefix(GD, PrefixND, AdditionalAbiTags);
+    return;
+  }
+
+  assert(!isa<LinkageSpecDecl>(DC) && "context cannot be LinkageSpecDecl");
+
+  if (isLocalContainerContext(DC)) {
+    mangleLocalName(GD, AdditionalAbiTags);
     return;
   }
 
@@ -2200,8 +2200,6 @@ void CXXNameMangler::manglePrefix(const DeclContext *DC, bool NoFunction) {
 
   if (NoFunction && isLocalContainerContext(DC))
     return;
-
-  assert(!isLocalContainerContext(DC));
 
   const NamedDecl *ND = cast<NamedDecl>(DC);
   if (mangleSubstitution(ND))
