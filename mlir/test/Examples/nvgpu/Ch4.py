@@ -251,10 +251,11 @@ def epilogue(D: WGMMAMatrix, d_dev):
         memref.store(val, d_gmem, [i, tidx])
         scf.yield_([])
 
-# The decorator generates 
-#   a -> memref<MxKxf16> 
-#   b -> memref<NxKf16> 
-#   d -> memref<MxNxf32> 
+
+# The decorator generates
+#   a -> memref<MxKxf16>
+#   b -> memref<NxKf16>
+#   d -> memref<MxNxf32>
 @NVDSL.mlir_func
 def gemm_multistage(a, b, d, num_stages):
     token_ty = ir.Type.parse("!gpu.async.token")

@@ -147,33 +147,33 @@ def switch_phase(stage, phase, num_stages):
 
 
 def producer_loop(
-    mbar_group_tma: Mbarriers,
-    mbar_group_mma: Mbarriers,
+    mbar_tma: Mbarriers,
+    mbar_mma: Mbarriers,
     a_tma: TMA,
     b_tma: TMA,
     wg_me: Warpgroup,
-    num_stages
+    num_stages,
 ):
     phase = const(True, ty=T.bool())
 
     for iv, phase in scf.for_(0, (K // TILE_K), 1, [phase]):
         stage = iv % num_stages
         # Wait MMA to be done
-        mbar_group_mma[stage].try_wait(phase)
+        mbar_mma[stage].try_wait(phase)
         # New phase for mbarrier
         phase = switch_phase(stage, phase, num_stages)
         # TMA Load
-        tma_load(mbar_group_tma, a_tma, b_tma, stage, iv, num_stages, wg_me.is_wg_primary)
+        tma_load(mbar_tma, a_tma, b_tma, stage, iv, num_stages, wg_me.is_wg_primary)
         scf.yield_([phase])
 
 
 def consumer_loop(
-    mbar_group_tma: Mbarriers,
-    mbar_group_mma: Mbarriers,
+    mbar_tma: Mbarriers,
+    mbar_mma: Mbarriers,
     a_tma: TMA,
     b_tma: TMA,
     wg_me: Warpgroup,
-    num_stages
+    num_stages,
 ):
     begin_b = num_stages * get_type_size(a_tma.tma_memref)
 
@@ -191,7 +191,7 @@ def consumer_loop(
         stage = iv % num_stages
 
         # Wait TMA for current stage
-        mbar_group_tma[stage].try_wait(phase)
+        mbar_tma[stage].try_wait(phase)
 
         # Find shared memory slot
         offset_a = stage * size_a
@@ -211,7 +211,7 @@ def consumer_loop(
         p_arrive = (iv > 0) & wg_me.is_wg_primary
         with ir.InsertionPoint(scf.IfOp(p_arrive).then_block):
             barId = arith.select((stage == 0), const(num_stages - 1), (stage - 1))
-            mbar_group_mma[barId].arrive()
+            mbar_mma[barId].arrive()
             scf.yield_([])
 
         phase = switch_phase(stage, phase, num_stages)
@@ -281,15 +281,15 @@ def gemm_warp_specialized(a, b, d, num_stages):
         wg_consumer = Warpgroup(primary_thread=0, register_size=232)
 
         # Initialize mbarriers and prefetch TMA descriptors
-        mbar_group_mma, mbar_group_tma = initialize(a_tma, b_tma, num_stages)
+        mbar_mma, mbar_tma = initialize(a_tma, b_tma, num_stages)
 
         # Producer performs TMA
         with wg_producer:
-            producer_loop(mbar_group_tma, mbar_group_mma, a_tma, b_tma, wg_producer, num_stages)
+            producer_loop(mbar_tma, mbar_mma, a_tma, b_tma, wg_producer, num_stages)
 
         # Consumer performs MMA/Tensor Core
         with wg_consumer:
-            D = consumer_loop(mbar_group_tma, mbar_group_mma, a_tma, b_tma, wg_consumer, num_stages)
+            D = consumer_loop(mbar_tma, mbar_mma, a_tma, b_tma, wg_consumer, num_stages)
             epilogue(D, d_dev)
 
     gemm_warp_specialized_kernel()
@@ -309,7 +309,7 @@ a = np.random.randn(M, K).astype(np.float16)
 b = np.random.randn(K, N).astype(np.float16)
 d = np.zeros((M, N), np.float32)
 
-gemm_warp_specialized(a, b, d, num_stages = 7)
+gemm_warp_specialized(a, b, d, num_stages=7)
 
 
 # Verify MLIR with reference computation
