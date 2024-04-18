@@ -222,8 +222,15 @@ ValueMapping::ValueMapping(const Module &M) {
         map(&I);
 
     // Constants used by instructions.
-    for (const BasicBlock &BB : F)
-      for (const Instruction &I : BB)
+    for (const BasicBlock &BB : F) {
+      for (const Instruction &I : BB) {
+        for (const DbgVariableRecord &DVR :
+             filterDbgVars(I.getDbgRecordRange())) {
+          for (Value *Op : DVR.location_ops())
+            map(Op);
+          if (DVR.isDbgAssign())
+            map(DVR.getAddress());
+        }
         for (const Value *Op : I.operands()) {
           // Look through a metadata wrapper.
           if (const auto *MAV = dyn_cast<MetadataAsValue>(Op))
@@ -234,6 +241,8 @@ ValueMapping::ValueMapping(const Module &M) {
               isa<InlineAsm>(Op))
             map(Op);
         }
+      }
+    }
   }
 }
 
