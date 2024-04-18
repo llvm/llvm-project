@@ -2046,14 +2046,24 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
   return f;
 }
 
-mlir::cir::FuncOp CIRGenModule::createRuntimeFunction(mlir::cir::FuncType Ty,
-                                                      StringRef Name) {
-  auto entry = cast_if_present<mlir::cir::FuncOp>(getGlobalValue(Name));
-  if (entry)
-    return entry;
+mlir::cir::FuncOp CIRGenModule::createRuntimeFunction(
+    mlir::cir::FuncType Ty, StringRef Name, mlir::ArrayAttr,
+    [[maybe_unused]] bool Local, bool AssumeConvergent) {
+  if (AssumeConvergent) {
+    llvm_unreachable("NYI");
+  }
 
-  return createCIRFunction(mlir::UnknownLoc::get(builder.getContext()), Name,
-                           Ty, nullptr);
+  auto entry = GetOrCreateCIRFunction(Name, Ty, GlobalDecl(),
+                                      /*ForVtable=*/false);
+
+  // Traditional codegen checks for a valid dyn_cast llvm::Function for `entry`,
+  // no testcase that cover this path just yet though.
+  if (!entry) {
+    // Setup runtime CC, DLL support for windows and set dso local.
+    llvm_unreachable("NYI");
+  }
+
+  return entry;
 }
 
 bool isDefaultedMethod(const clang::FunctionDecl *FD) {
@@ -2065,9 +2075,8 @@ bool isDefaultedMethod(const clang::FunctionDecl *FD) {
 }
 
 mlir::Location CIRGenModule::getLocForFunction(const clang::FunctionDecl *FD) {
-  assert(FD && "Not sure which location to use yet");
-  bool invalidLoc = (FD->getSourceRange().getBegin().isInvalid() ||
-                     FD->getSourceRange().getEnd().isInvalid());
+  bool invalidLoc = !FD || (FD->getSourceRange().getBegin().isInvalid() ||
+                            FD->getSourceRange().getEnd().isInvalid());
   if (!invalidLoc)
     return getLoc(FD->getSourceRange());
 
@@ -2267,8 +2276,7 @@ mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
     IsIncompleteFunction = true;
   }
 
-  auto *FD = llvm::cast<FunctionDecl>(D);
-  assert(FD && "Only FunctionDecl supported so far.");
+  auto *FD = llvm::cast_or_null<FunctionDecl>(D);
 
   // TODO: CodeGen includeds the linkage (ExternalLinkage) and only passes the
   // mangledname if Entry is nullptr
