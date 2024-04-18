@@ -286,6 +286,13 @@ public:
   bool isExternallyDestructed() const { return IsExternallyDestructed; }
 };
 
+enum class FnInfoOpts {
+  None = 0,
+  IsInstanceMethod = 1 << 0,
+  IsChainCall = 1 << 1,
+  IsDelegateCall = 1 << 2,
+};
+
 } // namespace cir
 
 #endif

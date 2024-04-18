@@ -2203,7 +2203,7 @@ static mlir::cir::FuncOp getBadCastFn(CIRGenFunction &CGF) {
 
   mlir::cir::FuncType FTy =
       CGF.getBuilder().getFuncType({}, CGF.getBuilder().getVoidTy());
-  return CGF.CGM.getOrCreateRuntimeFunction(FTy, "__cxa_bad_cast");
+  return CGF.CGM.createRuntimeFunction(FTy, "__cxa_bad_cast");
 }
 
 void CIRGenItaniumCXXABI::buildBadCastCall(CIRGenFunction &CGF,
@@ -2284,7 +2284,7 @@ static mlir::cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &CGF) {
 
   mlir::cir::FuncType FTy = CGF.getBuilder().getFuncType(
       {VoidPtrTy, RTTIPtrTy, RTTIPtrTy, PtrDiffTy}, VoidPtrTy);
-  return CGF.CGM.getOrCreateRuntimeFunction(FTy, "__dynamic_cast");
+  return CGF.CGM.createRuntimeFunction(FTy, "__dynamic_cast");
 }
 
 mlir::Value CIRGenItaniumCXXABI::buildDynamicCastCall(

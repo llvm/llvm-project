@@ -2045,9 +2045,8 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
   return f;
 }
 
-mlir::cir::FuncOp
-CIRGenModule::getOrCreateRuntimeFunction(mlir::cir::FuncType Ty,
-                                         StringRef Name) {
+mlir::cir::FuncOp CIRGenModule::createRuntimeFunction(mlir::cir::FuncType Ty,
+                                                      StringRef Name) {
   auto entry = cast_if_present<mlir::cir::FuncOp>(getGlobalValue(Name));
   if (entry)
     return entry;
