@@ -1422,7 +1422,7 @@ Error RewriteInstance::registerFragments() {
   for (const ELFSymbolRef &Symbol : InputFile->symbols()) {
     if (cantFail(Symbol.getType()) == SymbolRef::ST_File)
       FileSymbols.emplace_back(Symbol.getRawDataRefImpl());
-    if (cantFail(Symbol.getFlags()) & SymbolRef::ST_Function)
+    if (cantFail(Symbol.getType()) == SymbolRef::ST_Function)
       FunctionSymbols.emplace(cantFail(Symbol.getName()),
                               Symbol.getRawDataRefImpl());
   }
@@ -1455,8 +1455,12 @@ Error RewriteInstance::registerFragments() {
     if (ParentSymsCount == 0)
       return createFatalBOLTError("parent not found for " + Twine(Name));
 
-    if (ParentSymsCount == 1)
-      return registerBD(*BF, BC->getBinaryDataByName(ParentName));
+    if (ParentSymsCount == 1) {
+      auto ParentSymbolIt = FunctionSymbols.find(ParentName);
+      SymbolRef ParentSymbol(ParentSymbolIt->second, InputFile);
+      const uint64_t ParentAddress = cantFail(ParentSymbol.getAddress());
+      return registerBD(*BF, BC->getBinaryDataAtAddress(ParentAddress));
+    }
 
     // Multiple possible parent symbols.
     // Need FILE symbols to resolve ambiguity.
@@ -1476,6 +1480,9 @@ Error RewriteInstance::registerFragments() {
     // Filter to only the local file.
     auto LocalFileSymbols = llvm::make_filter_range(
         llvm::make_second_range(Range), [&](const DataRefImpl &DRI) {
+          SymbolRef Symbol(DRI, InputFile);
+          if (cantFail(Symbol.getFlags()) & SymbolRef::SF_Global)
+            return false;
           return DRI.d.b > FSII && DRI.d.b < FSIE;
         });
     // No local symbol with ParentName: use global symbol.

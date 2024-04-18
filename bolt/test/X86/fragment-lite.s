@@ -11,27 +11,28 @@
 # RUN:   2>&1 | FileCheck %s
 
 # CHECK: BOLT-INFO: processing main.cold.1 as a sibling of non-ignored function
-# CHECK: BOLT-INFO: processing foo.cold.1/1 as a sibling of non-ignored function
-# CHECK: BOLT-INFO: processing bar.cold.1/1 as a sibling of non-ignored function
+# CHECK: BOLT-INFO: processing foo.cold.1/1(*2) as a sibling of non-ignored function
+# CHECK: BOLT-INFO: processing bar.cold.1/1(*2) as a sibling of non-ignored function
 # CHECK: BOLT-INFO: processing baz.cold.1 as a sibling of non-ignored function
-# CHECK: BOLT-INFO: processing baz.cold.1/1 as a sibling of non-ignored function
+# CHECK: BOLT-INFO: processing baz.cold.1/1(*2) as a sibling of non-ignored function
 
 # CHECK: Binary Function "main.cold.1" after building cfg
 # CHECK: Parent : main
 
-# CHECK: Binary Function "foo.cold.1/1" after building cfg
+# CHECK: Binary Function "foo.cold.1/1(*2)" after building cfg
 # CHECK: Parent : foo
 
-# CHECK: Binary Function "bar.cold.1/1" after building cfg
+# CHECK: Binary Function "bar.cold.1/1(*2)" after building cfg
 # CHECK: Parent : bar/1
 
 # CHECK: Binary Function "baz.cold.1" after building cfg
 # CHECK: Parent : baz{{$}}
 
-# CHECK: Binary Function "baz.cold.1/1" after building cfg
+# CHECK: Binary Function "baz.cold.1/1(*2)" after building cfg
 # CHECK: Parent : baz/1
 
 #--- main.s
+.file "main.s"
   .globl main
   .type main, %function
 main:
@@ -126,6 +127,7 @@ baz.cold.1:
 .size baz.cold.1, .-baz.cold.1
 
 #--- baz.s
+.file "baz.s"
   .local baz
   .type baz, %function
 baz:
