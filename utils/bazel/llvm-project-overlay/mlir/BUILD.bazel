@@ -11632,6 +11632,7 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
+        ":IndexDialect",
         ":InferTypeOpInterface",
         ":LinalgDialect",
         ":MathDialect",

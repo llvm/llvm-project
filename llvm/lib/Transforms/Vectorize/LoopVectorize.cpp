@@ -3868,6 +3868,13 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
     if (!ScalarInd)
       continue;
 
+    // If the induction variable update is a fixed-order recurrence, neither the
+    // induction variable or its update should be marked scalar after
+    // vectorization.
+    auto *IndUpdatePhi = dyn_cast<PHINode>(IndUpdate);
+    if (IndUpdatePhi && Legal->isFixedOrderRecurrence(IndUpdatePhi))
+      continue;
+
     // Determine if all users of the induction variable update instruction are
     // scalar after vectorization.
     auto ScalarIndUpdate =
