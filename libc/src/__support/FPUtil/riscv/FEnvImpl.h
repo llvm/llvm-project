@@ -15,7 +15,6 @@
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE_ASM
 #include "src/__support/macros/config.h"     // For LIBC_INLINE
 
-#include <fenv.h>
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE {
