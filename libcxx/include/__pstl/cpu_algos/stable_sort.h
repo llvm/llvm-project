@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_STABLE_SORT_H
-#define _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_STABLE_SORT_H
+#ifndef _LIBCPP___PSTL_CPU_ALGOS_STABLE_SORT_H
+#define _LIBCPP___PSTL_CPU_ALGOS_STABLE_SORT_H
 
 #include <__algorithm/stable_sort.h>
 #include <__config>
@@ -43,4 +43,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_STABLE_SORT_H
+#endif // _LIBCPP___PSTL_CPU_ALGOS_STABLE_SORT_H
