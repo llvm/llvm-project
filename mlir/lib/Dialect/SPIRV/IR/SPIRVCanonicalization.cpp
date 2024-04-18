@@ -250,14 +250,11 @@ struct MulExtendedFold final : OpRewritePattern<MulOp> {
 
     auto highBits = constFoldBinaryOp<IntegerAttr>(
         {lhsAttr, rhsAttr}, [](const APInt &a, const APInt &b) {
-          unsigned bitWidth = a.getBitWidth();
-          APInt c;
           if (IsSigned) {
-            c = a.sext(bitWidth * 2) * b.sext(bitWidth * 2);
+            return llvm::APIntOps::mulhs(a, b);
           } else {
-            c = a.zext(bitWidth * 2) * b.zext(bitWidth * 2);
+            return llvm::APIntOps::mulhu(a, b);
           }
-          return c.extractBits(bitWidth, bitWidth); // Extract high result
         });
 
     if (!highBits)
@@ -877,6 +874,90 @@ OpFoldResult spirv::INotEqualOp::fold(spirv::INotEqualOp::FoldAdaptor adaptor) {
   return constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
         return a == b ? APInt::getZero(1) : APInt::getAllOnes(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.SGreaterThan
+//===----------------------------------------------------------------------===//
+
+OpFoldResult
+spirv::SGreaterThanOp::fold(spirv::SGreaterThanOp::FoldAdaptor adaptor) {
+  // x == x -> false
+  if (getOperand1() == getOperand2()) {
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType()))
+      return falseAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, falseAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.sgt(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.SGreaterThanEqual
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::SGreaterThanEqualOp::fold(
+    spirv::SGreaterThanEqualOp::FoldAdaptor adaptor) {
+  // x == x -> true
+  if (getOperand1() == getOperand2()) {
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType()))
+      return trueAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, trueAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.sge(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.UGreaterThan
+//===----------------------------------------------------------------------===//
+
+OpFoldResult
+spirv::UGreaterThanOp::fold(spirv::UGreaterThanOp::FoldAdaptor adaptor) {
+  // x == x -> false
+  if (getOperand1() == getOperand2()) {
+    auto falseAttr = BoolAttr::get(getContext(), false);
+    if (isa<IntegerType>(getType()))
+      return falseAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, falseAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.ugt(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.UGreaterThanEqual
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::UGreaterThanEqualOp::fold(
+    spirv::UGreaterThanEqualOp::FoldAdaptor adaptor) {
+  // x == x -> true
+  if (getOperand1() == getOperand2()) {
+    auto trueAttr = BoolAttr::get(getContext(), true);
+    if (isa<IntegerType>(getType()))
+      return trueAttr;
+    if (auto vecTy = dyn_cast<VectorType>(getType()))
+      return SplatElementsAttr::get(vecTy, trueAttr);
+  }
+
+  return constFoldBinaryOp<IntegerAttr>(
+      adaptor.getOperands(), getType(), [](const APInt &a, const APInt &b) {
+        return a.uge(b) ? APInt::getAllOnes(1) : APInt::getZero(1);
       });
 }
 

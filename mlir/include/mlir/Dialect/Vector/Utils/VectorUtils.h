@@ -170,6 +170,16 @@ public:
                             PatternRewriter &rewriter) const = 0;
 };
 
+/// Returns true if the input Vector type can be linearized.
+///
+/// Linearization is meant in the sense of flattening vectors, e.g.:
+///   * vector<NxMxKxi32> -> vector<N*M*Kxi32>
+/// In this sense, Vectors that are either:
+///   * already linearized, or
+///   * contain more than 1 scalable dimensions,
+/// are not linearizable.
+bool isLinearizableVector(VectorType type);
+
 } // namespace vector
 
 /// Constructs a permutation map of invariant memref indices to vector

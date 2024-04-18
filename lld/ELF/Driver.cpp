@@ -46,6 +46,7 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -461,6 +462,8 @@ static void checkOptions() {
       error("-z force-bti only supported on AArch64");
     if (config->zBtiReport != "none")
       error("-z bti-report only supported on AArch64");
+    if (config->zPauthReport != "none")
+      error("-z pauth-report only supported on AArch64");
   }
 
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
@@ -1501,7 +1504,8 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   auto reports = {std::make_pair("bti-report", &config->zBtiReport),
-                  std::make_pair("cet-report", &config->zCetReport)};
+                  std::make_pair("cet-report", &config->zCetReport),
+                  std::make_pair("pauth-report", &config->zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -2114,8 +2118,11 @@ static void handleUndefinedGlob(StringRef arg) {
 
 static void handleLibcall(StringRef name) {
   Symbol *sym = symtab.find(name);
-  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
+  if (sym && sym->isLazy() && isa<BitcodeFile>(sym->file)) {
+    if (!config->whyExtract.empty())
+      ctx.whyExtractRecords.emplace_back("<libcall>", sym->file, *sym);
     sym->extract();
+  }
 }
 
 static void writeArchiveStats() {
@@ -2393,12 +2400,6 @@ static void readSymbolPartitionSection(InputSectionBase *s) {
   sym->partition = newPart.getNumber();
 }
 
-static Symbol *addUnusedUndefined(StringRef name,
-                                  uint8_t binding = STB_GLOBAL) {
-  return symtab.addSymbol(
-      Undefined{ctx.internalFile, name, binding, STV_DEFAULT, 0});
-}
-
 static void markBuffersAsDontNeed(bool skipLinkedOutput) {
   // With --thinlto-index-only, all buffers are nearly unused from now on
   // (except symbol/section names used by infrequent passes). Mark input file
@@ -2485,15 +2486,15 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
       continue;
 
     Symbol *wrap =
-        addUnusedUndefined(saver().save("__wrap_" + name), sym->binding);
+        symtab.addUnusedUndefined(saver().save("__wrap_" + name), sym->binding);
 
     // If __real_ is referenced, pull in the symbol if it is lazy. Do this after
     // processing __wrap_ as that may have referenced __real_.
     StringRef realName = saver().save("__real_" + name);
     if (symtab.find(realName))
-      addUnusedUndefined(name, sym->binding);
+      symtab.addUnusedUndefined(name, sym->binding);
 
-    Symbol *real = addUnusedUndefined(realName);
+    Symbol *real = symtab.addUnusedUndefined(realName);
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten
@@ -2602,14 +2603,17 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
     symtab.wrap(w.sym, w.real, w.wrap);
 }
 
+static void reportMissingFeature(StringRef config, const Twine &report) {
+  if (config == "error")
+    error(report);
+  else if (config == "warning")
+    warn(report);
+}
+
 static void checkAndReportMissingFeature(StringRef config, uint32_t features,
                                          uint32_t mask, const Twine &report) {
-  if (!(features & mask)) {
-    if (config == "error")
-      error(report);
-    else if (config == "warning")
-      warn(report);
-  }
+  if (!(features & mask))
+    reportMissingFeature(config, report);
 }
 
 // To enable CET (x86's hardware-assisted control flow enforcement), each
@@ -2620,12 +2624,28 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
 //
 // This is also the case with AARCH64's BTI and PAC which use the similar
 // GNU_PROPERTY_AARCH64_FEATURE_1_AND mechanism.
-static uint32_t getAndFeatures() {
+//
+// For AArch64 PAuth-enabled object files, the core info of all of them must
+// match. Missing info for some object files with matching info for remaining
+// ones can be allowed (see -z pauth-report).
+static void readSecurityNotes() {
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
       config->emachine != EM_AARCH64)
-    return 0;
+    return;
 
-  uint32_t ret = -1;
+  config->andFeatures = -1;
+
+  StringRef referenceFileName;
+  if (config->emachine == EM_AARCH64) {
+    auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
+      return !f->aarch64PauthAbiCoreInfo.empty();
+    });
+    if (it != ctx.objectFiles.end()) {
+      ctx.aarch64PauthAbiCoreInfo = (*it)->aarch64PauthAbiCoreInfo;
+      referenceFileName = (*it)->getName();
+    }
+  }
+
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
@@ -2661,14 +2681,31 @@ static uint32_t getAndFeatures() {
                          "GNU_PROPERTY_AARCH64_FEATURE_1_PAC property");
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
     }
-    ret &= features;
+    config->andFeatures &= features;
+
+    if (ctx.aarch64PauthAbiCoreInfo.empty())
+      continue;
+
+    if (f->aarch64PauthAbiCoreInfo.empty()) {
+      reportMissingFeature(config->zPauthReport,
+                           toString(f) +
+                               ": -z pauth-report: file does not have AArch64 "
+                               "PAuth core info while '" +
+                               referenceFileName + "' has one");
+      continue;
+    }
+
+    if (ctx.aarch64PauthAbiCoreInfo != f->aarch64PauthAbiCoreInfo)
+      errorOrWarn("incompatible values of AArch64 PAuth core info found\n>>> " +
+                  referenceFileName + ": 0x" +
+                  toHex(ctx.aarch64PauthAbiCoreInfo, /*LowerCase=*/true) +
+                  "\n>>> " + toString(f) + ": 0x" +
+                  toHex(f->aarch64PauthAbiCoreInfo, /*LowerCase=*/true));
   }
 
   // Force enable Shadow Stack.
   if (config->zShstk)
-    ret |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
-
-  return ret;
+    config->andFeatures |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
@@ -2723,43 +2760,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.
   for (StringRef name : config->undefined)
-    addUnusedUndefined(name)->referenced = true;
+    symtab.addUnusedUndefined(name)->referenced = true;
 
-  // Add all files to the symbol table. This will add almost all
-  // symbols that we need to the symbol table. This process might
-  // add files to the link, via autolinking, these files are always
-  // appended to the Files vector.
-  {
-    llvm::TimeTraceScope timeScope("Parse input files");
-    for (size_t i = 0; i < files.size(); ++i) {
-      llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
-      doParseFile<ELFT>(files[i]);
-    }
-    if (armCmseImpLib)
-      parseArmCMSEImportLib(*armCmseImpLib);
-  }
+  parseFiles(files, armCmseImpLib);
 
-  // Now that we have every file, we can decide if we will need a
-  // dynamic symbol table.
-  // We need one if we were asked to export dynamic symbols or if we are
-  // producing a shared library.
-  // We also need one if any shared libraries are used and for pie executables
-  // (probably because the dynamic linker needs it).
-  config->hasDynSymTab =
-      !ctx.sharedFiles.empty() || config->isPic || config->exportDynamic;
-
-  // Some symbols (such as __ehdr_start) are defined lazily only when there
-  // are undefined symbols for them, so we add these to trigger that logic.
-  for (StringRef name : script->referencedSymbols) {
-    Symbol *sym = addUnusedUndefined(name);
-    sym->isUsedInRegularObj = true;
-    sym->referenced = true;
-  }
-
-  // Prevent LTO from removing any definition referenced by -u.
-  for (StringRef name : config->undefined)
-    if (Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name)))
-      sym->isUsedInRegularObj = true;
+  // Create dynamic sections for dynamic linking and static PIE.
+  config->hasDynSymTab = !ctx.sharedFiles.empty() || config->isPic;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = symtab.find(config->entry))
@@ -2768,6 +2774,16 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Handle the `--undefined-glob <pattern>` options.
   for (StringRef pat : args::getStrings(args, OPT_undefined_glob))
     handleUndefinedGlob(pat);
+
+  // After potential archive member extraction involving ENTRY and
+  // -u/--undefined-glob, check whether PROVIDE symbols should be defined (the
+  // RHS may refer to definitions in just extracted object files).
+  script->addScriptReferencedSymbolsToSymTable();
+
+  // Prevent LTO from removing any definition referenced by -u.
+  for (StringRef name : config->undefined)
+    if (Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name)))
+      sym->isUsedInRegularObj = true;
 
   // Mark -init and -fini symbols so that the LTO doesn't eliminate them.
   if (Symbol *sym = dyn_cast_or_null<Defined>(symtab.find(config->init)))
@@ -2971,7 +2987,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
-  config->andFeatures = getAndFeatures();
+  readSecurityNotes();
 
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent

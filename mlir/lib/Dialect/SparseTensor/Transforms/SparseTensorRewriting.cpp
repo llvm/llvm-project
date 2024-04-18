@@ -648,7 +648,9 @@ public:
             loc, lvl, vector::PrintPunctuation::NoPunctuation);
         rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("] : "));
         Value crd = nullptr;
-        // TODO: eliminates ToCoordinateBufferOp!
+        // For COO AoS storage, we want to print a single, linear view of
+        // the full coordinate storage at this level. For any other storage,
+        // we show the coordinate storage for every indivual level.
         if (stt.getAoSCOOStart() == l)
           crd = rewriter.create<ToCoordinatesBufferOp>(loc, tensor);
         else

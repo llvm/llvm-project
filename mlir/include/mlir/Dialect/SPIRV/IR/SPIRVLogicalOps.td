@@ -659,6 +659,8 @@ def SPIRV_SGreaterThanOp : SPIRV_LogicalBinaryOp<"SGreaterThan",
 
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -688,6 +690,8 @@ def SPIRV_SGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"SGreaterThanEqual",
     %5 = spirv.SGreaterThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -834,6 +838,8 @@ def SPIRV_UGreaterThanOp : SPIRV_LogicalBinaryOp<"UGreaterThan",
     %5 = spirv.UGreaterThan %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -863,6 +869,8 @@ def SPIRV_UGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"UGreaterThanEqual",
     %5 = spirv.UGreaterThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----

@@ -1031,10 +1031,6 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
       !ICmpInst::isEquality(EqPred))
     return nullptr;
 
-  auto IsKnownNonZero = [&](Value *V) {
-    return isKnownNonZero(V, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
-  };
-
   ICmpInst::Predicate UnsignedPred;
 
   Value *A, *B;
@@ -1043,9 +1039,9 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
       match(ZeroCmpOp, m_c_Add(m_Specific(A), m_Value(B))) &&
       (ZeroICmp->hasOneUse() || UnsignedICmp->hasOneUse())) {
     auto GetKnownNonZeroAndOther = [&](Value *&NonZero, Value *&Other) {
-      if (!IsKnownNonZero(NonZero))
+      if (!isKnownNonZero(NonZero, Q))
         std::swap(NonZero, Other);
-      return IsKnownNonZero(NonZero);
+      return isKnownNonZero(NonZero, Q);
     };
 
     // Given  ZeroCmpOp = (A + B)
@@ -2542,6 +2538,8 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     }
   }
 
+  // and(shl(zext(X), Y), SignMask) -> and(sext(X), SignMask)
+  // where Y is a valid shift amount.
   if (match(&I, m_And(m_OneUse(m_Shl(m_ZExt(m_Value(X)), m_Value(Y))),
                       m_SignMask())) &&
       match(Y, m_SpecificInt_ICMP(
@@ -2550,15 +2548,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
                          Ty->getScalarSizeInBits() -
                              X->getType()->getScalarSizeInBits())))) {
     auto *SExt = Builder.CreateSExt(X, Ty, X->getName() + ".signext");
-    auto *SanitizedSignMask = cast<Constant>(Op1);
-    // We must be careful with the undef elements of the sign bit mask, however:
-    // the mask elt can be undef iff the shift amount for that lane was undef,
-    // otherwise we need to sanitize undef masks to zero.
-    SanitizedSignMask = Constant::replaceUndefsWith(
-        SanitizedSignMask, ConstantInt::getNullValue(Ty->getScalarType()));
-    SanitizedSignMask =
-        Constant::mergeUndefsWith(SanitizedSignMask, cast<Constant>(Y));
-    return BinaryOperator::CreateAnd(SExt, SanitizedSignMask);
+    return BinaryOperator::CreateAnd(SExt, Op1);
   }
 
   if (Instruction *Z = narrowMaskedBinOp(I))
@@ -4250,10 +4240,11 @@ static Instruction *canonicalizeAbs(BinaryOperator &Xor,
     // xor (add A, Op1), Op1  ; add -1 and flip bits if negative
     // --> (A < 0) ? -A : A
     Value *IsNeg = Builder.CreateIsNeg(A);
-    // Copy the nuw/nsw flags from the add to the negate.
+    // Copy the nsw flags from the add to the negate.
     auto *Add = cast<BinaryOperator>(Op0);
-    Value *NegA = Builder.CreateNeg(A, "", Add->hasNoUnsignedWrap(),
-                                   Add->hasNoSignedWrap());
+    Value *NegA = Add->hasNoUnsignedWrap()
+                      ? Constant::getNullValue(A->getType())
+                      : Builder.CreateNeg(A, "", Add->hasNoSignedWrap());
     return SelectInst::Create(IsNeg, NegA, A);
   }
   return nullptr;

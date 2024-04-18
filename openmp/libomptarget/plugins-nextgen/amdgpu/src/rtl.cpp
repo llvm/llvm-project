@@ -371,7 +371,8 @@ private:
 struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
 
   /// Create an empty memory manager.
-  AMDGPUMemoryManagerTy() : MemoryPool(nullptr), MemoryManager(nullptr) {}
+  AMDGPUMemoryManagerTy(AMDGPUPluginTy &Plugin)
+      : Plugin(Plugin), MemoryPool(nullptr), MemoryManager(nullptr) {}
 
   /// Initialize the memory manager from a memory pool.
   Error init(AMDGPUMemoryPoolTy &MemoryPool) {
@@ -428,6 +429,9 @@ private:
     }
     return OFFLOAD_SUCCESS;
   }
+
+  /// The underlying plugin that owns this memory manager.
+  AMDGPUPluginTy &Plugin;
 
   /// The memory pool used to allocate memory.
   AMDGPUMemoryPoolTy *MemoryPool;
@@ -1744,9 +1748,10 @@ protected:
 /// HSA host agent. We aggregate all its resources into the same instance.
 struct AMDHostDeviceTy : public AMDGenericDeviceTy {
   /// Create a host device from an array of host agents.
-  AMDHostDeviceTy(const llvm::SmallVector<hsa_agent_t> &HostAgents)
-      : AMDGenericDeviceTy(), Agents(HostAgents), ArgsMemoryManager(),
-        PinnedMemoryManager() {
+  AMDHostDeviceTy(AMDGPUPluginTy &Plugin,
+                  const llvm::SmallVector<hsa_agent_t> &HostAgents)
+      : AMDGenericDeviceTy(), Agents(HostAgents), ArgsMemoryManager(Plugin),
+        PinnedMemoryManager(Plugin) {
     assert(HostAgents.size() && "No host agent found");
   }
 
@@ -1840,9 +1845,10 @@ private:
 /// generic device class.
 struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   // Create an AMDGPU device with a device id and default AMDGPU grid values.
-  AMDGPUDeviceTy(int32_t DeviceId, int32_t NumDevices,
+  AMDGPUDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
                  AMDHostDeviceTy &HostDevice, hsa_agent_t Agent)
-      : GenericDeviceTy(DeviceId, NumDevices, {0}), AMDGenericDeviceTy(),
+      : GenericDeviceTy(Plugin, DeviceId, NumDevices, {0}),
+        AMDGenericDeviceTy(),
         OMPX_NumQueues("LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES", 4),
         OMPX_QueueSize("LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE", 512),
         OMPX_DefaultTeamsPerCU("LIBOMPTARGET_AMDGPU_TEAMS_PER_CU", 4),
@@ -1879,8 +1885,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Get the frequency of the steady clock. If the attribute is missing
     // assume running on an older libhsa and default to 0, omp_get_wtime
     // will be inaccurate but otherwise programs can still run.
-    if (auto Err = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY,
-                                    ClockFrequency))
+    if (getDeviceAttrRaw(HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY,
+                         ClockFrequency) != HSA_STATUS_SUCCESS)
       ClockFrequency = 0;
 
     // Load the grid values dependending on the wavefront.
@@ -2088,7 +2094,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Allocate and construct an AMDGPU kernel.
   Expected<GenericKernelTy &> constructKernel(const char *Name) override {
     // Allocate and construct the AMDGPU kernel.
-    AMDGPUKernelTy *AMDGPUKernel = Plugin::get().allocate<AMDGPUKernelTy>();
+    AMDGPUKernelTy *AMDGPUKernel = Plugin.allocate<AMDGPUKernelTy>();
     if (!AMDGPUKernel)
       return Plugin::error("Failed to allocate memory for AMDGPU kernel");
 
@@ -2138,8 +2144,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   Expected<DeviceImageTy *> loadBinaryImpl(const __tgt_device_image *TgtImage,
                                            int32_t ImageId) override {
     // Allocate and initialize the image object.
-    AMDGPUDeviceImageTy *AMDImage =
-        Plugin::get().allocate<AMDGPUDeviceImageTy>();
+    AMDGPUDeviceImageTy *AMDImage = Plugin.allocate<AMDGPUDeviceImageTy>();
     new (AMDImage) AMDGPUDeviceImageTy(ImageId, *this, TgtImage);
 
     // Load the HSA executable.
@@ -2396,6 +2401,27 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     AMDGPUDeviceTy &DstDevice = static_cast<AMDGPUDeviceTy &>(DstGenericDevice);
+
+    // For large transfers use synchronous behavior.
+    if (Size >= OMPX_MaxAsyncCopyBytes) {
+      if (AsyncInfoWrapper.hasQueue())
+        if (auto Err = synchronize(AsyncInfoWrapper))
+          return Err;
+
+      AMDGPUSignalTy Signal;
+      if (auto Err = Signal.init())
+        return Err;
+
+      if (auto Err = utils::asyncMemCopy(
+              useMultipleSdmaEngines(), DstPtr, DstDevice.getAgent(), SrcPtr,
+              getAgent(), (uint64_t)Size, 0, nullptr, Signal.get()))
+        return Err;
+
+      if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
+        return Err;
+
+      return Signal.deinit();
+    }
 
     AMDGPUStreamTy *Stream = nullptr;
     if (auto Err = getStream(AsyncInfoWrapper, Stream))
@@ -2697,7 +2723,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
   Error setDeviceHeapSize(uint64_t Value) override {
     for (DeviceImageTy *Image : LoadedImages)
-      if (auto Err = setupDeviceMemoryPool(Plugin::get(), *Image, Value))
+      if (auto Err = setupDeviceMemoryPool(Plugin, *Image, Value))
         return Err;
     DeviceMemoryPoolSize = Value;
     return Plugin::success();
@@ -2737,7 +2763,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return utils::iterateAgentMemoryPools(
         Agent, [&](hsa_amd_memory_pool_t HSAMemoryPool) {
           AMDGPUMemoryPoolTy *MemoryPool =
-              Plugin::get().allocate<AMDGPUMemoryPoolTy>();
+              Plugin.allocate<AMDGPUMemoryPoolTy>();
           new (MemoryPool) AMDGPUMemoryPoolTy(HSAMemoryPool);
           AllMemoryPools.push_back(MemoryPool);
           return HSA_STATUS_SUCCESS;
@@ -3090,7 +3116,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
     // Initialize the host device using host agents.
     HostDevice = allocate<AMDHostDeviceTy>();
-    new (HostDevice) AMDHostDeviceTy(HostAgents);
+    new (HostDevice) AMDHostDeviceTy(*this, HostAgents);
 
     // Setup the memory pools of available for the host.
     if (auto Err = HostDevice->init())
@@ -3113,6 +3139,18 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     // Finalize the HSA runtime.
     hsa_status_t Status = hsa_shut_down();
     return Plugin::check(Status, "Error in hsa_shut_down: %s");
+  }
+
+  /// Creates an AMDGPU device.
+  GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
+                                int32_t NumDevices) override {
+    return new AMDGPUDeviceTy(Plugin, DeviceId, NumDevices, getHostDevice(),
+                              getKernelAgent(DeviceId));
+  }
+
+  /// Creates an AMDGPU global handler.
+  GenericGlobalHandlerTy *createGlobalHandler() override {
+    return new AMDGPUGlobalHandlerTy();
   }
 
   Triple::ArchType getTripleArch() const override { return Triple::amdgcn; }
@@ -3237,7 +3275,9 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   // 56 bytes per allocation.
   uint32_t AllArgsSize = KernelArgsSize + ImplicitArgsSize;
 
-  AMDHostDeviceTy &HostDevice = Plugin::get<AMDGPUPluginTy>().getHostDevice();
+  AMDGPUPluginTy &AMDGPUPlugin =
+      static_cast<AMDGPUPluginTy &>(GenericDevice.Plugin);
+  AMDHostDeviceTy &HostDevice = AMDGPUPlugin.getHostDevice();
   AMDGPUMemoryManagerTy &ArgsMemoryManager = HostDevice.getArgsMemoryManager();
 
   void *AllArgs = nullptr;
@@ -3347,20 +3387,10 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
   return Plugin::success();
 }
 
-GenericPluginTy *Plugin::createPlugin() { return new AMDGPUPluginTy(); }
-
-GenericDeviceTy *Plugin::createDevice(int32_t DeviceId, int32_t NumDevices) {
-  AMDGPUPluginTy &Plugin = get<AMDGPUPluginTy &>();
-  return new AMDGPUDeviceTy(DeviceId, NumDevices, Plugin.getHostDevice(),
-                            Plugin.getKernelAgent(DeviceId));
-}
-
-GenericGlobalHandlerTy *Plugin::createGlobalHandler() {
-  return new AMDGPUGlobalHandlerTy();
-}
+GenericPluginTy *PluginTy::createPlugin() { return new AMDGPUPluginTy(); }
 
 template <typename... ArgsTy>
-Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
+static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   hsa_status_t ResultCode = static_cast<hsa_status_t>(Code);
   if (ResultCode == HSA_STATUS_SUCCESS || ResultCode == HSA_STATUS_INFO_BREAK)
     return Error::success();
@@ -3384,7 +3414,7 @@ void *AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
   }
   assert(Ptr && "Invalid pointer");
 
-  auto &KernelAgents = Plugin::get<AMDGPUPluginTy>().getKernelAgents();
+  auto &KernelAgents = Plugin.getKernelAgents();
 
   // Allow all kernel agents to access the allocation.
   if (auto Err = MemoryPool->enableAccess(Ptr, Size, KernelAgents)) {
@@ -3427,7 +3457,8 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
   }
 
   if (Alloc) {
-    auto &KernelAgents = Plugin::get<AMDGPUPluginTy>().getKernelAgents();
+    auto &KernelAgents =
+        static_cast<AMDGPUPluginTy &>(Plugin).getKernelAgents();
     // Inherently necessary for host or shared allocations
     // Also enabled for device memory to allow device to device memcpy
 
