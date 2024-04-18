@@ -807,12 +807,18 @@ template <> struct MappingTraits<FormatStyle> {
         FormatStyle PredefinedStyle;
         if (getPredefinedStyle(StyleName, Style.Language, &PredefinedStyle) &&
             Style == PredefinedStyle) {
-          IO.mapOptional("# BasedOnStyle", StyleName);
+          // For convenience, emit the info which style this matches. However,
+          // setting BasedOnStyle will override all other keys when importing,
+          // so we set a helper key that is ignored when importing.
+          // Ideally, we'd want a YAML comment here, but that's not supported.
+          IO.mapOptional("OrigBasedOnStyle", StyleName);
           BasedOnStyle = StyleName;
           break;
         }
       }
     } else {
+      StringRef OrigBasedOnStyle; // ignored
+      IO.mapOptional("OrigBasedOnStyle", OrigBasedOnStyle);
       IO.mapOptional("BasedOnStyle", BasedOnStyle);
       if (!BasedOnStyle.empty()) {
         FormatStyle::LanguageKind OldLanguage = Style.Language;
