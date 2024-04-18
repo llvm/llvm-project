@@ -12867,7 +12867,7 @@ TreeTransform<Derived>::TransformCXXNewExpr(CXXNewExpr *E) {
   // Per C++0x [expr.new]p5, the type being constructed may be a
   // typedef of an array type.
   QualType AllocType = AllocTypeInfo->getType();
-  if (ArraySize) {
+  if (ArraySize && E->isTypeDependent()) {
     if (const ConstantArrayType *Array =
             SemaRef.Context.getAsConstantArrayType(AllocType)) {
       ArraySize = IntegerLiteral::Create(SemaRef.Context, Array->getSize(),
