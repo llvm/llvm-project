@@ -23,7 +23,7 @@ extern bool WriteNewDbgInfoFormatToBitcode;
 PreservedAnalyses BitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat &&
                                                 WriteNewDbgInfoFormatToBitcode);
-  if (M.IsNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode)
+  if (M.IsNewDbgInfoFormat)
     M.removeDebugIntrinsicDeclarations();
 
   const ModuleSummaryIndex *Index =
@@ -56,7 +56,7 @@ namespace {
     bool runOnModule(Module &M) override {
       ScopedDbgInfoFormatSetter FormatSetter(
           M, M.IsNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode);
-      if (M.IsNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode)
+      if (M.IsNewDbgInfoFormat)
         M.removeDebugIntrinsicDeclarations();
 
       WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, /*Index=*/nullptr,
