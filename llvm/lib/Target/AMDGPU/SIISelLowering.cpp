@@ -4855,9 +4855,15 @@ static MachineBasicBlock *lowerPseudoLaneOp(MachineInstr &MI,
   switch (Opc) {
   case AMDGPU::V_READLANE_PSEUDO_B64: {
     MachineOperand &Src1 = MI.getOperand(2);
+    auto IsKill = (Src1.isReg() && Src1.isKill());
+    if (IsKill)
+      Src1.setIsKill(false);
     LoHalf = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_READLANE_B32), DestSub0)
                  .add(SrcReg0Sub0)
                  .add(Src1);
+
+    if (IsKill)
+      Src1.setIsKill(true);
     HighHalf = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_READLANE_B32), DestSub1)
                    .add(SrcReg0Sub1)
                    .add(Src1);
@@ -4875,6 +4881,7 @@ static MachineBasicBlock *lowerPseudoLaneOp(MachineInstr &MI,
   case AMDGPU::V_WRITELANE_PSEUDO_B64: {
     MachineOperand &Src1 = MI.getOperand(2);
     MachineOperand &Src2 = MI.getOperand(3);
+    auto IsKill = (Src1.isReg() && Src1.isKill());
 
     const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2.getReg());
     const TargetRegisterClass *Src2SubRC =
@@ -4886,10 +4893,15 @@ static MachineBasicBlock *lowerPseudoLaneOp(MachineInstr &MI,
     MachineOperand SrcReg2Sub1 = TII->buildExtractSubRegOrImm(
         MI, MRI, Src2, Src2RC, AMDGPU::sub1, Src2SubRC);
 
+    if (IsKill)
+      Src1.setIsKill(false);
     LoHalf = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), DestSub0)
                  .add(SrcReg0Sub0)
                  .add(Src1)
                  .add(SrcReg2Sub0);
+
+    if (IsKill)
+      Src1.setIsKill(true);
     HighHalf = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), DestSub1)
                    .add(SrcReg0Sub1)
                    .add(Src1)
