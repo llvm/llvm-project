@@ -486,9 +486,8 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     assert(cstNeedsDealloc.has_value() &&
            "createTempFromMold decides this statically");
     if (cstNeedsDealloc.has_value() && *cstNeedsDealloc != false) {
-      auto insPt = builder.saveInsertionPoint();
+      mlir::OpBuilder::InsertionGuard guard(builder);
       createReductionCleanupRegion(builder, loc, reductionDecl);
-      builder.restoreInsertionPoint(insPt);
     }
 
     // Put the temporary inside of a box:
