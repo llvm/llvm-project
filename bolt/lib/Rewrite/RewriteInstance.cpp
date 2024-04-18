@@ -1339,7 +1339,7 @@ void RewriteInstance::discoverFileObjects() {
     processRelocations();
   }
 
-  registerFragments();
+  BC->logBOLTErrorsAndQuitOnFatal(registerFragments());
 }
 
 Error RewriteInstance::discoverRtFiniAddress() {
@@ -1413,54 +1413,88 @@ void RewriteInstance::updateRtFiniReloc() {
       /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
 }
 
-void RewriteInstance::registerFragments() {
+Error RewriteInstance::registerFragments() {
   if (!BC->HasSplitFunctions)
-    return;
+    return Error::success();
 
-  for (auto &BFI : BC->getBinaryFunctions()) {
-    BinaryFunction &Function = BFI.second;
-    if (!Function.isFragment())
-      continue;
-    unsigned ParentsFound = 0;
-    for (StringRef Name : Function.getNames()) {
-      StringRef BaseName, Suffix;
-      std::tie(BaseName, Suffix) = Name.split('/');
-      const size_t ColdSuffixPos = BaseName.find(".cold");
-      if (ColdSuffixPos == StringRef::npos)
-        continue;
-      // For cold function with local (foo.cold/1) symbol, prefer a parent with
-      // local symbol as well (foo/1) over global symbol (foo).
-      std::string ParentName = BaseName.substr(0, ColdSuffixPos).str();
-      const BinaryData *BD = BC->getBinaryDataByName(ParentName);
-      if (Suffix != "") {
-        ParentName.append(Twine("/", Suffix).str());
-        const BinaryData *BDLocal = BC->getBinaryDataByName(ParentName);
-        if (BDLocal || !BD)
-          BD = BDLocal;
-      }
-      if (!BD) {
-        if (opts::Verbosity >= 1)
-          BC->outs() << "BOLT-INFO: parent function not found for " << Name
-                     << "\n";
-        continue;
-      }
-      const uint64_t Address = BD->getAddress();
-      BinaryFunction *BF = BC->getBinaryFunctionAtAddress(Address);
-      if (!BF) {
-        if (opts::Verbosity >= 1)
-          BC->outs() << formatv(
-              "BOLT-INFO: parent function not found at {0:x}\n", Address);
-        continue;
-      }
-      BC->registerFragment(Function, *BF);
-      ++ParentsFound;
-    }
-    if (!ParentsFound) {
-      BC->errs() << "BOLT-ERROR: parent function not found for " << Function
-                 << '\n';
-      exit(1);
-    }
+  std::vector<DataRefImpl> FileSymbols;
+  std::multimap<StringRef, DataRefImpl> FunctionSymbols;
+  for (const ELFSymbolRef &Symbol : InputFile->symbols()) {
+    if (cantFail(Symbol.getType()) == SymbolRef::ST_File)
+      FileSymbols.emplace_back(Symbol.getRawDataRefImpl());
+    if (cantFail(Symbol.getFlags()) & SymbolRef::ST_Function)
+      FunctionSymbols.emplace(cantFail(Symbol.getName()),
+                              Symbol.getRawDataRefImpl());
   }
+
+  auto registerBD = [&](BinaryFunction &Function, BinaryData *BD) -> Error {
+    if (BD)
+      if (BinaryFunction *BF = BC->getBinaryFunctionAtAddress(BD->getAddress()))
+        if (BC->registerFragment(Function, *BF))
+          return Error::success();
+    return createFatalBOLTError("parent not found for " +
+                                Twine(Function.getOneName()));
+  };
+
+  auto handleFragment = [&](StringRef Name, DataRefImpl DRI) -> Error {
+    StringRef ParentName = Name.split(".cold").first;
+    if (ParentName == Name)
+      return Error::success();
+
+    SymbolRef Symbol(DRI, InputFile);
+    const uint64_t Address = cantFail(Symbol.getAddress());
+    BinaryFunction *BF = BC->getBinaryFunctionAtAddress(Address);
+    assert(BF);
+
+    // Fragment has global symbol: lookup global parent
+    if (cantFail(Symbol.getFlags()) & SymbolRef::SF_Global)
+      return registerBD(*BF, BC->getBinaryDataByName(ParentName));
+
+    // Fragment has local symbol: check number of matching symbols
+    size_t ParentSymsCount = FunctionSymbols.count(ParentName);
+    if (ParentSymsCount == 0)
+      return createFatalBOLTError("parent not found for " + Twine(Name));
+
+    if (ParentSymsCount == 1)
+      return registerBD(*BF, BC->getBinaryDataByName(ParentName));
+
+    // Multiple possible parent symbols.
+    // Need FILE symbols to resolve ambiguity.
+    if (!BC->hasSymbolsWithFileName())
+      return createFatalBOLTError(
+          "input file has split functions but does not have FILE symbols. If "
+          "the binary was stripped, preserve FILE symbols with "
+          "--keep-file-symbols strip option.");
+
+    // Check local symbols belonging to the same file first.
+    auto FSI = llvm::upper_bound(FileSymbols, DRI);
+    // Symbol table index bounds to look for local parent.
+    uint32_t FSII = FSI != FileSymbols.begin() ? FSI[-1].d.b : 0;
+    uint32_t FSIE = FSI != FileSymbols.end() ? FSI->d.b : UINT32_MAX;
+    // All symbols with ParentName.
+    auto Range = llvm::make_range(FunctionSymbols.equal_range(ParentName));
+    // Filter to only the local file.
+    auto LocalFileSymbols = llvm::make_filter_range(
+        llvm::make_second_range(Range), [&](const DataRefImpl &DRI) {
+          return DRI.d.b > FSII && DRI.d.b < FSIE;
+        });
+    // No local symbol with ParentName: use global symbol.
+    if (LocalFileSymbols.empty())
+      return registerBD(*BF, BC->getBinaryDataByName(ParentName));
+
+    auto LocalFileSymbol = LocalFileSymbols.begin();
+    if (std::next(LocalFileSymbol) != LocalFileSymbols.end())
+      return createFatalBOLTError("duplicate local symbols " +
+                                  Twine(ParentName) + " from the same file");
+    SymbolRef ParentSymbol(*LocalFileSymbol, InputFile);
+    const uint64_t ParentAddress = cantFail(ParentSymbol.getAddress());
+    return registerBD(*BF, BC->getBinaryDataAtAddress(ParentAddress));
+  };
+
+  for (const auto &[Name, DRI] : FunctionSymbols)
+    if (Error E = handleFragment(Name, DRI))
+      return E;
+  return Error::success();
 }
 
 void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,

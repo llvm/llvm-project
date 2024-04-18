@@ -110,7 +110,7 @@ private:
   void initializeMetadataManager();
 
   /// Process fragments, locate parent functions.
-  void registerFragments();
+  Error registerFragments();
 
   /// Read info from special sections. E.g. eh_frame and .gcc_except_table
   /// for exception and stack unwinding information.
