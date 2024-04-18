@@ -50,7 +50,7 @@
 // RVA20S64: "-target-feature" "+svade"
 // RVA20S64: "-target-feature" "+svbare"
 
-// RUN: %clang --target=riscv64 --target=riscv64 -### -c %s 2>&1 -march=rva22u64 \
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva22u64 \
 // RUN:   | FileCheck -check-prefix=RVA22U64 %s
 // RVA22U64: "-target-feature" "+m"
 // RVA22U64: "-target-feature" "+a"
@@ -76,7 +76,7 @@
 // RVA22U64: "-target-feature" "+zbs"
 // RVA22U64: "-target-feature" "+zkt"
 
-// RUN: %clang --target=riscv64 --target=riscv64 -### -c %s 2>&1 -march=rva22s64 \
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva22s64 \
 // RUN:   | FileCheck -check-prefix=RVA22S64 %s
 // RVA22S64: "-target-feature" "+m"
 // RVA22S64: "-target-feature" "+a"
@@ -111,7 +111,7 @@
 // RVA22S64: "-target-feature" "+svinval"
 // RVA22S64: "-target-feature" "+svpbmt"
 
-// RUN: %clang --target=riscv64 --target=riscv64 -### -c %s 2>&1 -march=rva23u64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva23u64 \
 // RUN:   | FileCheck -check-prefix=RVA23U64 %s
 // RVA23U64: "-target-feature" "+m"
 // RVA23U64: "-target-feature" "+a"
@@ -133,13 +133,13 @@
 // RVA23U64: "-target-feature" "+zihintntl"
 // RVA23U64: "-target-feature" "+zihintpause"
 // RVA23U64: "-target-feature" "+zihpm"
-// RVA23U64: "-target-feature" "+experimental-zimop"
+// RVA23U64: "-target-feature" "+zimop"
 // RVA23U64: "-target-feature" "+za64rs"
 // RVA23U64: "-target-feature" "+zawrs"
 // RVA23U64: "-target-feature" "+zfa"
 // RVA23U64: "-target-feature" "+zfhmin"
 // RVA23U64: "-target-feature" "+zcb"
-// RVA23U64: "-target-feature" "+experimental-zcmop"
+// RVA23U64: "-target-feature" "+zcmop"
 // RVA23U64: "-target-feature" "+zba"
 // RVA23U64: "-target-feature" "+zbb"
 // RVA23U64: "-target-feature" "+zbs"
@@ -172,13 +172,13 @@
 // RVA23S64: "-target-feature" "+zihintntl"
 // RVA23S64: "-target-feature" "+zihintpause"
 // RVA23S64: "-target-feature" "+zihpm"
-// RVA23S64: "-target-feature" "+experimental-zimop"
+// RVA23S64: "-target-feature" "+zimop"
 // RVA23S64: "-target-feature" "+za64rs"
 // RVA23S64: "-target-feature" "+zawrs"
 // RVA23S64: "-target-feature" "+zfa"
 // RVA23S64: "-target-feature" "+zfhmin"
 // RVA23S64: "-target-feature" "+zcb"
-// RVA23S64: "-target-feature" "+experimental-zcmop"
+// RVA23S64: "-target-feature" "+zcmop"
 // RVA23S64: "-target-feature" "+zba"
 // RVA23S64: "-target-feature" "+zbb"
 // RVA23S64: "-target-feature" "+zbs"
@@ -207,7 +207,7 @@
 // RVA23S64: "-target-feature" "+svnapot"
 // RVA23S64: "-target-feature" "+svpbmt"
 
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23u64 -menable-experimental-extensions \
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23u64 \
 // RUN:   | FileCheck -check-prefix=RVB23U64 %s
 // RVB23U64: "-target-feature" "+m"
 // RVB23U64: "-target-feature" "+a"
@@ -228,12 +228,12 @@
 // RVB23U64: "-target-feature" "+zihintntl"
 // RVB23U64: "-target-feature" "+zihintpause"
 // RVB23U64: "-target-feature" "+zihpm"
-// RVB23U64: "-target-feature" "+experimental-zimop"
+// RVB23U64: "-target-feature" "+zimop"
 // RVB23U64: "-target-feature" "+za64rs"
 // RVB23U64: "-target-feature" "+zawrs"
 // RVB23U64: "-target-feature" "+zfa"
 // RVB23U64: "-target-feature" "+zcb"
-// RVB23U64: "-target-feature" "+experimental-zcmop"
+// RVB23U64: "-target-feature" "+zcmop"
 // RVB23U64: "-target-feature" "+zba"
 // RVB23U64: "-target-feature" "+zbb"
 // RVB23U64: "-target-feature" "+zbs"
@@ -261,12 +261,12 @@
 // RVB23S64: "-target-feature" "+zihintntl"
 // RVB23S64: "-target-feature" "+zihintpause"
 // RVB23S64: "-target-feature" "+zihpm"
-// RVB23S64: "-target-feature" "+experimental-zimop"
+// RVB23S64: "-target-feature" "+zimop"
 // RVB23S64: "-target-feature" "+za64rs"
 // RVB23S64: "-target-feature" "+zawrs"
 // RVB23S64: "-target-feature" "+zfa"
 // RVB23S64: "-target-feature" "+zcb"
-// RVB23S64: "-target-feature" "+experimental-zcmop"
+// RVB23S64: "-target-feature" "+zcmop"
 // RVB23S64: "-target-feature" "+zba"
 // RVB23S64: "-target-feature" "+zbb"
 // RVB23S64: "-target-feature" "+zbs"
@@ -284,7 +284,7 @@
 // RVB23S64: "-target-feature" "+svnapot"
 // RVB23S64: "-target-feature" "+svpbmt"
 
-// RUN: %clang --target=riscv32 -### -c %s 2>&1 -march=rvm23u32 -menable-experimental-extensions \
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -march=rvm23u32 \
 // RUN:   | FileCheck -check-prefix=RVM23U32 %s
 // RVM23U32: "-target-feature" "+m"
 // RVM23U32: "-target-feature" "+zicbop"
@@ -292,9 +292,9 @@
 // RVM23U32: "-target-feature" "+zicsr"
 // RVM23U32: "-target-feature" "+zihintntl"
 // RVM23U32: "-target-feature" "+zihintpause"
-// RVM23U32: "-target-feature" "+experimental-zimop"
+// RVM23U32: "-target-feature" "+zimop"
 // RVM23U32: "-target-feature" "+zce"
-// RVM23U32: "-target-feature" "+experimental-zcmop"
+// RVM23U32: "-target-feature" "+zcmop"
 // RVM23U32: "-target-feature" "+zba"
 // RVM23U32: "-target-feature" "+zbb"
 // RVM23U32: "-target-feature" "+zbs"

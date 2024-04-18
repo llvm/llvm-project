@@ -364,7 +364,7 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.1>
 ; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]>, vp<[[NOT]]>, ir<false>
 ; CHECK-NEXT:   EMIT vp<[[OR:%.+]]> = or vp<[[MASK2]]>, vp<[[MASK3]]>
-; CHECK-NEXT:   BLEND ir<%p> = ir<0>/vp<[[MASK3]]> vp<[[PRED]]>/vp<[[MASK2]]>
+; CHECK-NEXT:   BLEND ir<%p> = ir<0> vp<[[PRED]]>/vp<[[MASK2]]>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
@@ -465,7 +465,7 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
 ; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]>, vp<[[NOT]]>, ir<false>
 ; CHECK-NEXT:   EMIT vp<[[OR:%.+]]> = or vp<[[MASK2]]>, vp<[[MASK3]]>
-; CHECK-NEXT:   BLEND ir<%p> = ir<0>/vp<[[MASK3]]> vp<[[PRED]]>/vp<[[MASK2]]>
+; CHECK-NEXT:   BLEND ir<%p> = ir<0> vp<[[PRED]]>/vp<[[MASK2]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK4:%.+]]> = select vp<[[OR]]>, ir<%c.1>, ir<false>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
@@ -573,7 +573,7 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
 ; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]>, vp<[[NOT]]>, ir<false>
 ; CHECK-NEXT:   EMIT vp<[[MASK4:%.+]]> = or vp<[[MASK2]]>, vp<[[MASK3]]>
-; CHECK-NEXT:   BLEND ir<%p> = ir<0>/vp<[[MASK3]]> vp<[[PRED]]>/vp<[[MASK2]]>
+; CHECK-NEXT:   BLEND ir<%p> = ir<0> vp<[[PRED]]>/vp<[[MASK2]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK5:%.+]]> = select vp<[[MASK4]]>, ir<%c.0>, ir<false>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
@@ -986,8 +986,8 @@ define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%addr>, vp<[[STEPS]]>
-; CHECK-NEXT:     REPLICATE store ir<1.000000e+01>, ir<%gep>
+; CHECK-NEXT:     REPLICATE ir<%gep>.1 = getelementptr ir<%addr>, vp<[[STEPS]]>
+; CHECK-NEXT:     REPLICATE store ir<1.000000e+01>, ir<%gep>.1
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
@@ -1113,8 +1113,10 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
-; CHECK-NEXT:     EMIT ir<%ptr.iv> = WIDEN-POINTER-INDUCTION ir<%start>, -1
-; CHECK-NEXT:     CLONE ir<%ptr.iv.next> = getelementptr inbounds ir<%ptr.iv>, ir<-1>
+; CHECK-NEXT:     vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<0> + vp<%3> * ir<-1>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
+; CHECK-NEXT:     EMIT vp<[[PTR_IV:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
+; CHECK-NEXT:     CLONE ir<%ptr.iv.next> = getelementptr inbounds vp<[[PTR_IV]]>, ir<-1>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer (reverse) ir<%ptr.iv.next>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<0>
@@ -1127,8 +1129,8 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
-; CHECK-NEXT:       REPLICATE ir<%ptr.iv.next> = getelementptr inbounds ir<%ptr.iv>, ir<-1>
-; CHECK-NEXT:       REPLICATE store ir<95>, ir<%ptr.iv.next>
+; CHECK-NEXT:       REPLICATE ir<%ptr.iv.next>.1 = getelementptr inbounds vp<[[PTR_IV]]>, ir<-1>
+; CHECK-NEXT:       REPLICATE store ir<95>, ir<%ptr.iv.next>.1
 ; CHECK-NEXT:     Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.continue:

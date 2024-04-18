@@ -1082,14 +1082,8 @@ public:
     if (!llvmResultType)
       return failure();
 
-    SmallVector<OpFoldResult> positionVec;
-    for (auto [idx, pos] : llvm::enumerate(extractOp.getMixedPosition())) {
-      if (pos.is<Value>())
-        // Make sure we use the value that has been already converted to LLVM.
-        positionVec.push_back(adaptor.getDynamicPosition()[idx]);
-      else
-        positionVec.push_back(pos);
-    }
+    SmallVector<OpFoldResult> positionVec = getMixedValues(
+        adaptor.getStaticPosition(), adaptor.getDynamicPosition(), rewriter);
 
     // Extract entire vector. Should be handled by folder, but just to be safe.
     ArrayRef<OpFoldResult> position(positionVec);
@@ -1209,14 +1203,8 @@ public:
     if (!llvmResultType)
       return failure();
 
-    SmallVector<OpFoldResult> positionVec;
-    for (auto [idx, pos] : llvm::enumerate(insertOp.getMixedPosition())) {
-      if (pos.is<Value>())
-        // Make sure we use the value that has been already converted to LLVM.
-        positionVec.push_back(adaptor.getDynamicPosition()[idx]);
-      else
-        positionVec.push_back(pos);
-    }
+    SmallVector<OpFoldResult> positionVec = getMixedValues(
+        adaptor.getStaticPosition(), adaptor.getDynamicPosition(), rewriter);
 
     // Overwrite entire vector with value. Should be handled by folder, but
     // just to be safe.

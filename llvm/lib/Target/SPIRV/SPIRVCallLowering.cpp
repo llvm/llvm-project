@@ -201,21 +201,30 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   if (!isPointerTy(OriginalArgType))
     return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
 
-  // In case OriginalArgType is of pointer type, there are three possibilities:
+  Argument *Arg = F.getArg(ArgIdx);
+  Type *ArgType = Arg->getType();
+  if (isTypedPointerTy(ArgType)) {
+    SPIRVType *ElementType = GR->getOrCreateSPIRVType(
+        cast<TypedPointerType>(ArgType)->getElementType(), MIRBuilder);
+    return GR->getOrCreateSPIRVPointerType(
+        ElementType, MIRBuilder,
+        addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
+  }
+
+  // In case OriginalArgType is of untyped pointer type, there are three
+  // possibilities:
   // 1) This is a pointer of an LLVM IR element type, passed byval/byref.
   // 2) This is an OpenCL/SPIR-V builtin type if there is spv_assign_type
-  // intrinsic assigning a TargetExtType.
+  //    intrinsic assigning a TargetExtType.
   // 3) This is a pointer, try to retrieve pointer element type from a
   // spv_assign_ptr_type intrinsic or otherwise use default pointer element
   // type.
-  Argument *Arg = F.getArg(ArgIdx);
-  if (HasPointeeTypeAttr(Arg)) {
-    Type *ByValRefType = Arg->hasByValAttr() ? Arg->getParamByValType()
-                                             : Arg->getParamByRefType();
-    SPIRVType *ElementType = GR->getOrCreateSPIRVType(ByValRefType, MIRBuilder);
+  if (hasPointeeTypeAttr(Arg)) {
+    SPIRVType *ElementType =
+        GR->getOrCreateSPIRVType(getPointeeTypeByAttr(Arg), MIRBuilder);
     return GR->getOrCreateSPIRVPointerType(
         ElementType, MIRBuilder,
-        addressSpaceToStorageClass(getPointerAddressSpace(Arg->getType()), ST));
+        addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
   }
 
   for (auto User : Arg->users()) {
@@ -234,14 +243,25 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
       continue;
 
     MetadataAsValue *VMD = cast<MetadataAsValue>(II->getOperand(1));
-    SPIRVType *ElementType = GR->getOrCreateSPIRVType(
-        cast<ConstantAsMetadata>(VMD->getMetadata())->getType(), MIRBuilder);
+    Type *ElementTy = cast<ConstantAsMetadata>(VMD->getMetadata())->getType();
+    if (isUntypedPointerTy(ElementTy))
+      ElementTy =
+          TypedPointerType::get(IntegerType::getInt8Ty(II->getContext()),
+                                getPointerAddressSpace(ElementTy));
+    SPIRVType *ElementType = GR->getOrCreateSPIRVType(ElementTy, MIRBuilder);
     return GR->getOrCreateSPIRVPointerType(
         ElementType, MIRBuilder,
         addressSpaceToStorageClass(
             cast<ConstantInt>(II->getOperand(2))->getZExtValue(), ST));
   }
 
+  // Replace PointerType with TypedPointerType to be able to map SPIR-V types to
+  // LLVM types in a consistent manner
+  if (isUntypedPointerTy(OriginalArgType)) {
+    OriginalArgType =
+        TypedPointerType::get(Type::getInt8Ty(F.getContext()),
+                              getPointerAddressSpace(OriginalArgType));
+  }
   return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
 }
 
@@ -363,7 +383,16 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (F.isDeclaration())
     GR->add(&F, &MIRBuilder.getMF(), FuncVReg);
   FunctionType *FTy = getOriginalFunctionType(F);
-  SPIRVType *RetTy = GR->getOrCreateSPIRVType(FTy->getReturnType(), MIRBuilder);
+  Type *FRetTy = FTy->getReturnType();
+  if (isUntypedPointerTy(FRetTy)) {
+    if (Type *FRetElemTy = GR->findDeducedElementType(&F)) {
+      TypedPointerType *DerivedTy =
+          TypedPointerType::get(FRetElemTy, getPointerAddressSpace(FRetTy));
+      GR->addReturnType(&F, DerivedTy);
+      FRetTy = DerivedTy;
+    }
+  }
+  SPIRVType *RetTy = GR->getOrCreateSPIRVType(FRetTy, MIRBuilder);
   FTy = fixFunctionTypeIfPtrArgs(GR, F, FTy, RetTy, ArgTypeVRegs);
   SPIRVType *FuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
       FTy, RetTy, ArgTypeVRegs, MIRBuilder);
@@ -485,8 +514,13 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     // TODO: support constexpr casts and indirect calls.
     if (CF == nullptr)
       return false;
-    if (FunctionType *FTy = getOriginalFunctionType(*CF))
+    if (FunctionType *FTy = getOriginalFunctionType(*CF)) {
       OrigRetTy = FTy->getReturnType();
+      if (isUntypedPointerTy(OrigRetTy)) {
+        if (auto *DerivedRetTy = GR->findReturnType(CF))
+          OrigRetTy = DerivedRetTy;
+      }
+    }
   }
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();

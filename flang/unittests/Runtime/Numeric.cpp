@@ -65,6 +65,30 @@ TEST(Numeric, Mod) {
   EXPECT_EQ(RTNAME(ModReal4)(Real<4>{-8.0}, Real<4>(5.0)), -3.0);
   EXPECT_EQ(RTNAME(ModReal8)(Real<8>{8.0}, Real<8>(-5.0)), 3.0);
   EXPECT_EQ(RTNAME(ModReal8)(Real<8>{-8.0}, Real<8>(-5.0)), -3.0);
+  EXPECT_EQ(
+      RTNAME(ModReal4)(Real<4>{0.5}, std::numeric_limits<Real<4>>::infinity()),
+      0.5);
+  EXPECT_EQ(
+      RTNAME(ModReal4)(Real<4>{-0.5}, std::numeric_limits<Real<4>>::infinity()),
+      -0.5);
+  EXPECT_EQ(
+      RTNAME(ModReal4)(Real<4>{0.5}, -std::numeric_limits<Real<4>>::infinity()),
+      0.5);
+  EXPECT_EQ(RTNAME(ModReal4)(
+                Real<4>{-0.5}, -std::numeric_limits<Real<4>>::infinity()),
+      -0.5);
+  EXPECT_EQ(
+      RTNAME(ModReal8)(Real<8>{0.5}, std::numeric_limits<Real<8>>::infinity()),
+      0.5);
+  EXPECT_EQ(
+      RTNAME(ModReal8)(Real<8>{-0.5}, std::numeric_limits<Real<8>>::infinity()),
+      -0.5);
+  EXPECT_EQ(
+      RTNAME(ModReal8)(Real<8>{0.5}, -std::numeric_limits<Real<8>>::infinity()),
+      0.5);
+  EXPECT_EQ(RTNAME(ModReal8)(
+                Real<8>{-0.5}, -std::numeric_limits<Real<8>>::infinity()),
+      -0.5);
 }
 
 TEST(Numeric, Modulo) {
@@ -76,6 +100,28 @@ TEST(Numeric, Modulo) {
   EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{-8.0}, Real<4>(5.0)), 2.0);
   EXPECT_EQ(RTNAME(ModuloReal8)(Real<8>{8.0}, Real<8>(-5.0)), -2.0);
   EXPECT_EQ(RTNAME(ModuloReal8)(Real<8>{-8.0}, Real<8>(-5.0)), -3.0);
+  // MODULO(x, INF) == NaN
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal4)(
+      Real<4>{0.5}, std::numeric_limits<Real<4>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal4)(
+      Real<4>{-0.5}, std::numeric_limits<Real<4>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal4)(
+      Real<4>{0.5}, -std::numeric_limits<Real<4>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal4)(
+      Real<4>{-0.5}, -std::numeric_limits<Real<4>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal8)(
+      Real<8>{-0.5}, std::numeric_limits<Real<8>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal8)(
+      Real<8>{0.5}, std::numeric_limits<Real<8>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal8)(
+      Real<8>{-0.5}, -std::numeric_limits<Real<8>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal8)(
+      Real<8>{0.5}, -std::numeric_limits<Real<8>>::infinity())));
+  // MODULO(x, y) for integer values of x and y with 0 remainder.
+  EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{5.0}, Real<4>(1.0)), 0.0);
+  EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{5.0}, Real<4>(-1.0)), -0.0);
+  EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{-5.0}, Real<4>(1.0)), 0.0);
+  EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{-5.0}, Real<4>(-1.0)), -0.0);
 }
 
 TEST(Numeric, Nearest) {

@@ -297,7 +297,8 @@ enum OperandType : unsigned {
   OPERAND_RVKRNUM_0_7,
   OPERAND_RVKRNUM_1_10,
   OPERAND_RVKRNUM_2_14,
-  OPERAND_LAST_RISCV_IMM = OPERAND_RVKRNUM_2_14,
+  OPERAND_SPIMM,
+  OPERAND_LAST_RISCV_IMM = OPERAND_SPIMM,
   // Operand is either a register or uimm5, this is used by V extension pseudo
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.
@@ -580,15 +581,17 @@ inline static bool getSpimm(unsigned RlistVal, unsigned &SpimmVal,
                             int64_t StackAdjustment, bool IsRV64, bool IsEABI) {
   if (RlistVal == RLISTENCODE::INVALID_RLIST)
     return false;
-  unsigned stackAdj = getStackAdjBase(RlistVal, IsRV64, IsEABI);
-  SpimmVal = (StackAdjustment - stackAdj) / 16;
+  unsigned StackAdjBase = getStackAdjBase(RlistVal, IsRV64, IsEABI);
+  StackAdjustment -= StackAdjBase;
+  if (StackAdjustment % 16 != 0)
+    return false;
+  SpimmVal = StackAdjustment / 16;
   if (SpimmVal > 3)
     return false;
   return true;
 }
 
 void printRlist(unsigned SlistEncode, raw_ostream &OS);
-void printSpimm(int64_t Spimm, raw_ostream &OS);
 } // namespace RISCVZC
 
 } // namespace llvm

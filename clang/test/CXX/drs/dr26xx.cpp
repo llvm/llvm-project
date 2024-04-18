@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 
-namespace dr2621 { // dr2621: 16
+namespace cwg2621 { // cwg2621: 16
 #if __cplusplus >= 202002L
 enum class E { a };
 namespace One {
@@ -16,7 +16,7 @@ using enum E_t; // typedef ok
 auto v = a;
 }
 namespace Two {
-using dr2621::E;
+using cwg2621::E;
 int E; // we see this
 using enum E;
 // since-cxx20-error@-1 {{unknown type name E}}
@@ -24,32 +24,32 @@ using enum E;
 #endif
 }
 
-namespace dr2628 { // dr2628: no
+namespace cwg2628 { // cwg2628: no
                    // this was reverted for the 16.x release
                    // due to regressions, see the issue for more details:
                    // https://github.com/llvm/llvm-project/issues/60777
 #if __cplusplus >= 202002L
 template <bool A = false, bool B = false>
 struct foo {
-  // The expected notes below should be removed when dr2628 is fully implemented again
-  constexpr foo() requires (!A && !B) = delete; // #dr2628-ctor-1
-  constexpr foo() requires (A || B) = delete; //  #dr2628-ctor-2
+  // The expected notes below should be removed when cwg2628 is fully implemented again
+  constexpr foo() requires (!A && !B) = delete; // #cwg2628-ctor-1
+  constexpr foo() requires (A || B) = delete; //  #cwg2628-ctor-2
 };
 
 void f() {
-  // The FIXME's below should be the expected errors when dr2628 is
+  // The FIXME's below should be the expected errors when cwg2628 is
   // fully implemented again.
-  foo fooable; // #dr2628-fooable
+  foo fooable; // #cwg2628-fooable
   // since-cxx20-error@-1 {{ambiguous deduction for template arguments of 'foo'}}
-  //   since-cxx20-note@#dr2628-ctor-1 {{candidate function [with A = false, B = false]}}
-  //   since-cxx20-note@#dr2628-ctor-2 {{candidate function [with A = false, B = false]}}
-  // FIXME-since-cxx20-error@#dr2628-fooable {{call to deleted}} 
-  //   FIXME-since-cxx20-note@#dr2628-ctor {{marked deleted here}} 
+  //   since-cxx20-note@#cwg2628-ctor-1 {{candidate function [with A = false, B = false]}}
+  //   since-cxx20-note@#cwg2628-ctor-2 {{candidate function [with A = false, B = false]}}
+  // FIXME-since-cxx20-error@#cwg2628-fooable {{call to deleted}} 
+  //   FIXME-since-cxx20-note@#cwg2628-ctor {{marked deleted here}} 
 }
 #endif
 }
 
-namespace dr2631 { // dr2631: 16
+namespace cwg2631 { // cwg2631: 16
 #if __cplusplus >= 202002L
   constexpr int g();
   consteval int f() {
@@ -67,7 +67,7 @@ namespace dr2631 { // dr2631: 16
 #endif
 }
 
-namespace dr2635 { // dr2635: 16
+namespace cwg2635 { // cwg2635: 16
 #if __cplusplus >= 202002L
 template<typename T>
 concept UnaryC = true;
@@ -97,9 +97,9 @@ void TemplUse() {
 #endif
 }
 
-// dr2636: na
+// cwg2636: na
 
-namespace dr2640 { // dr2640: 16
+namespace cwg2640 { // cwg2640: 16
 
 int \N{Λ} = 0;
 // expected-error@-1 {{'Λ' is not a valid Unicode character name}}
@@ -113,18 +113,18 @@ const char* emoji = "\N{🤡}";
 //   expected-note@-6 {{did you mean BAT ('🦇' U+1F987)?}}
 
 #define z(x) 0
-#define dr2640_a z(
-int x = dr2640_a\N{abc});
+#define cwg2640_a z(
+int x = cwg2640_a\N{abc});
 // expected-error@-1 {{'abc' is not a valid Unicode character name}}
-int y = dr2640_a\N{LOTUS});
+int y = cwg2640_a\N{LOTUS});
 // expected-error@-1 {{character <U+1FAB7> not allowed in an identifier}}
-// expected-error@-2 {{use of undeclared identifier 'dr2640_a🪷'}}
+// expected-error@-2 {{use of undeclared identifier 'cwg2640_a🪷'}}
 // expected-error@-3 {{extraneous ')' before ';'}}
 }
 
-// dr2642: na
+// cwg2642: na
 
-namespace dr2644 { // dr2644: 8
+namespace cwg2644 { // cwg2644: 8
 #if __cplusplus >= 201103L
 auto z = [a = 42](int a) {
 // cxx11-warning@-1 {{initialized lambda captures are a C++14 extension}}
@@ -136,20 +136,20 @@ auto z = [a = 42](int a) {
 }
 
 #if __cplusplus >= 202302L
-namespace dr2650 { // dr2650: 17
+namespace cwg2650 { // cwg2650: 17
 template <class T, T> struct S {};
-template <class T> int f(S<T, T{}>*); // #dr2650-f
+template <class T> int f(S<T, T{}>*); // #cwg2650-f
 class X {
   int m;
 };
 int i0 = f<X>(0);
 // since-cxx23-error@-1 {{no matching function for call to 'f'}}
-//   since-cxx23-note@#dr2650-f {{type 'X' of non-type template parameter is not a structural type}}
+//   since-cxx23-note@#cwg2650-f {{type 'X' of non-type template parameter is not a structural type}}
 }
 #endif
 
 #if __cplusplus >= 202302L
-namespace dr2653 { // dr2653: 18
+namespace cwg2653 { // cwg2653: 18
   struct Test { void f(this const auto& = Test{}); };
   // since-cxx23-error@-1 {{the explicit object parameter cannot have a default argument}}
   auto L = [](this const auto& = Test{}){};
@@ -157,7 +157,7 @@ namespace dr2653 { // dr2653: 18
 }
 #endif
 
-namespace dr2654 { // dr2654: 16
+namespace cwg2654 { // cwg2654: 16
 void f() {
     int neck, tail;
     volatile int brachiosaur;
@@ -167,7 +167,7 @@ void f() {
 }
 }
 
-namespace dr2681 { // dr2681: 17
+namespace cwg2681 { // cwg2681: 17
 #if __cplusplus >= 202002L
 using size_t = decltype(sizeof(int));
 
@@ -180,7 +180,7 @@ struct I {
   volatile T array[N];
 };
 template<size_t N>
-struct J { // #dr2681-J
+struct J { // #cwg2681-J
   unsigned char array[N];
 };
 
@@ -191,13 +191,13 @@ static_assert(__is_same(decltype(i), I<char, 4>));
 
 J j = { "ghi" };
 // since-cxx20-error@-1 {{no viable constructor or deduction guide}}
-//   since-cxx20-note@#dr2681-J {{candidate template ignored: could not match 'J<N>' against 'const char *'}}
-//   since-cxx20-note@#dr2681-J {{candidate template ignored: could not match 'const unsigned char' against 'const char'}}
-//   since-cxx20-note@#dr2681-J {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
+//   since-cxx20-note@#cwg2681-J {{candidate template ignored: could not match 'J<N>' against 'const char *'}}
+//   since-cxx20-note@#cwg2681-J {{candidate template ignored: could not match 'const unsigned char' against 'const char'}}
+//   since-cxx20-note@#cwg2681-J {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
 #endif
 }
 
-namespace dr2672 { // dr2672: 18
+namespace cwg2672 { // cwg2672: 18
 #if __cplusplus >= 202002L
 template <class T>
 void f(T) requires requires { []() { T::invalid; } (); };
@@ -205,8 +205,8 @@ void f(T) requires requires { []() { T::invalid; } (); };
 //   since-cxx20-note@-2 {{while substituting into a lambda expression here}}
 //   since-cxx20-note@-3 {{in instantiation of requirement here}}
 //   since-cxx20-note@-4 {{while substituting template arguments into constraint expression here}}
-//   since-cxx20-note@#dr2672-f-0 {{while checking constraint satisfaction for template 'f<int>' required here}}
-//   since-cxx20-note@#dr2672-f-0 {{in instantiation of function template specialization 'dr2672::f<int>' requested here}}
+//   since-cxx20-note@#cwg2672-f-0 {{while checking constraint satisfaction for template 'f<int>' required here}}
+//   since-cxx20-note@#cwg2672-f-0 {{in instantiation of function template specialization 'cwg2672::f<int>' requested here}}
 void f(...);
 
 template <class T>
@@ -216,14 +216,14 @@ void bar(T) requires requires {
 void bar(...);
 
 void m() {
-  f(0); // #dr2672-f-0
+  f(0); // #cwg2672-f-0
   bar(0);
 }
 #endif
 }
 
 #if __cplusplus >= 202302L
-namespace dr2687 { // dr2687: 18
+namespace cwg2687 { // cwg2687: 18
 struct S{
     void f(int);
     static void g(int);
@@ -232,7 +232,7 @@ struct S{
 
 void test() {
     (&S::f)(1);
-    // since-cxx23-error@-1 {{called object type 'void (dr2687::S::*)(int)' is not a function or function pointer}}
+    // since-cxx23-error@-1 {{called object type 'void (cwg2687::S::*)(int)' is not a function or function pointer}}
     (&S::g)(1);
     (&S::h)(S(), 1);
 }

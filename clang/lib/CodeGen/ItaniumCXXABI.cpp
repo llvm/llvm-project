@@ -3584,6 +3584,9 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
   case Type::Pipe:
     llvm_unreachable("Pipe types shouldn't get here");
 
+  case Type::ArrayParameter:
+    llvm_unreachable("Array Parameter types should not get here.");
+
   case Type::Builtin:
   case Type::BitInt:
   // GCC treats vector and complex types as fundamental types.
@@ -3868,6 +3871,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
+  case Type::ArrayParameter:
     // Itanium C++ ABI 2.9.5p5:
     // abi::__array_type_info adds no data members to std::type_info.
     break;

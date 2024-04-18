@@ -766,11 +766,15 @@ static Value broadcastDynamicDimension(PatternRewriter &rewriter, Location loc,
 
   // Emit 'then' region of 'scf.if'
   auto emitThenRegion = [&](OpBuilder &opBuilder, Location loc) {
+    // It is not safe to cache constants across regions.
+    // New constants could potentially violate dominance requirements.
+    IndexPool localPool;
+
     // Emit 'tensor.empty' op
     SmallVector<OpFoldResult> outputTensorShape;
     for (auto index : llvm::seq<int64_t>(0, rank)) {
       auto size = index == dim ? targetSize
-                               : getOrFoldTensorDim(rewriter, loc, indexPool,
+                               : getOrFoldTensorDim(rewriter, loc, localPool,
                                                     operand, index);
       outputTensorShape.push_back(size);
     }
@@ -812,9 +816,9 @@ static Value broadcastDynamicDimensions(PatternRewriter &rewriter, Location loc,
                                         IndexPool &indexPool, Value operand,
                                         ArrayRef<OpFoldResult> targetShape,
                                         ArrayRef<Value> masterOperands) {
-  size_t rank = operand.getType().cast<RankedTensorType>().getRank();
-  assert(targetShape.size() == rank);
-  assert(masterOperands.size() == rank);
+  int64_t rank = operand.getType().cast<RankedTensorType>().getRank();
+  assert((int64_t)targetShape.size() == rank);
+  assert((int64_t)masterOperands.size() == rank);
   for (auto index : llvm::seq<int64_t>(0, rank))
     operand =
         broadcastDynamicDimension(rewriter, loc, indexPool, operand, index,
@@ -1578,17 +1582,16 @@ public:
         }
         // x = x * scale_d + offset;
         // ix = floor(x / scale_n)
-        // dx = x / scale_n - ix
-        Value val = b.create<arith::UIToFPOp>(floatTy, in);
-        scaleN = b.create<arith::UIToFPOp>(floatTy, scaleN);
-        scaleD = b.create<arith::UIToFPOp>(floatTy, scaleD);
-        offset = b.create<arith::SIToFPOp>(floatTy, offset);
-        val = b.create<arith::MulFOp>(val, scaleD);
-        val = b.create<arith::AddFOp>(val, offset);
-        val = b.create<arith::DivFOp>(val, scaleN);
-        index = b.create<math::FloorOp>(val);
-        delta = b.create<arith::SubFOp>(val, index);
-        index = b.create<arith::FPToSIOp>(b.getI32Type(), index);
+        Value val = b.create<arith::MulIOp>(in, scaleD);
+        val = b.create<arith::AddIOp>(val, offset);
+        index = b.create<arith::FloorDivSIOp>(val, scaleN);
+
+        // rx = x % scale_n
+        // dx = rx / scale_n
+        Value r = b.create<arith::RemSIOp>(val, scaleN);
+        Value rFp = b.create<arith::SIToFPOp>(floatTy, r);
+        Value scaleNfp = b.create<arith::UIToFPOp>(floatTy, scaleN);
+        delta = b.create<arith::DivFOp>(rFp, scaleNfp);
       };
 
       // Compute the ix and dx values for the X and Y dimensions - int case.

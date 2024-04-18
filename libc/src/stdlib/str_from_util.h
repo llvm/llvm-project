@@ -11,7 +11,7 @@
 // %{a,A,e,E,f,F,g,G}, are not allowed and any code that does otherwise results
 // in undefined behaviour(including use of a '%%' conversion specifier); which
 // in this case is that the buffer string is simply populated with the format
-// string. The case of the input being NULL should be handled in the calling
+// string. The case of the input being nullptr should be handled in the calling
 // function (strfromf, strfromd, strfroml) itself.
 
 #ifndef LLVM_LIBC_SRC_STDLIB_STRFROM_UTIL_H

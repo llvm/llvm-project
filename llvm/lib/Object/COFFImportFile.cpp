@@ -84,6 +84,27 @@ StringRef COFFImportFile::getExportName() const {
   return name;
 }
 
+Error COFFImportFile::printSymbolName(raw_ostream &OS, DataRefImpl Symb) const {
+  switch (Symb.p) {
+  case ImpSymbol:
+    OS << "__imp_";
+    break;
+  case ECAuxSymbol:
+    OS << "__imp_aux_";
+    break;
+  }
+  const char *Name = Data.getBufferStart() + sizeof(coff_import_header);
+  if (Symb.p != ECThunkSymbol && COFF::isArm64EC(getMachine())) {
+    if (std::optional<std::string> DemangledName =
+            getArm64ECDemangledFunctionName(Name)) {
+      OS << StringRef(*DemangledName);
+      return Error::success();
+    }
+  }
+  OS << StringRef(Name);
+  return Error::success();
+}
+
 static uint16_t getImgRelRelocation(MachineTypes Machine) {
   switch (Machine) {
   default:
@@ -690,12 +711,12 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
       if (ImportType == IMPORT_CODE && isArm64EC(M)) {
         if (std::optional<std::string> MangledName =
                 getArm64ECMangledFunctionName(Name)) {
-          if (ExportName.empty()) {
+          if (!E.Noname && ExportName.empty()) {
             NameType = IMPORT_NAME_EXPORTAS;
             ExportName.swap(Name);
           }
           Name = std::move(*MangledName);
-        } else if (ExportName.empty()) {
+        } else if (!E.Noname && ExportName.empty()) {
           NameType = IMPORT_NAME_EXPORTAS;
           ExportName = std::move(*getArm64ECDemangledFunctionName(Name));
         }

@@ -464,16 +464,16 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     if (i + 1 != Changes.size())
       Changes[i + 1].PreviousEndOfTokenColumn += Shift;
 
-    // If PointerAlignment is PAS_Right, keep *s or &s next to the token
+    // If PointerAlignment is PAS_Right, keep *s or &s next to the token,
+    // except if the token is equal, then a space is needed.
     if ((Style.PointerAlignment == FormatStyle::PAS_Right ||
          Style.ReferenceAlignment == FormatStyle::RAS_Right) &&
-        CurrentChange.Spaces != 0) {
+        CurrentChange.Spaces != 0 && CurrentChange.Tok->isNot(tok::equal)) {
       const bool ReferenceNotRightAligned =
           Style.ReferenceAlignment != FormatStyle::RAS_Right &&
           Style.ReferenceAlignment != FormatStyle::RAS_Pointer;
       for (int Previous = i - 1;
-           Previous >= 0 &&
-           Changes[Previous].Tok->getType() == TT_PointerOrReference;
+           Previous >= 0 && Changes[Previous].Tok->is(TT_PointerOrReference);
            --Previous) {
         assert(Changes[Previous].Tok->isPointerOrReference());
         if (Changes[Previous].Tok->isNot(tok::star)) {
