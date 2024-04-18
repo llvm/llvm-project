@@ -480,7 +480,7 @@ void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
   LLVM_DEBUG(dbgs() << "Scheduling using default scheduler, "
                        "target occupancy = "
                     << TgtOcc << '\n');
-  GCNMaxOccupancySchedStrategy LStrgy(Context);
+  GCNMaxOccupancySchedStrategy LStrgy(Context, /*IsLegacyScheduler*/ true);
   unsigned FinalOccupancy = std::min(Occ, MFI->getOccupancy());
 
   for (int I = 0; I < NumPasses; ++I) {

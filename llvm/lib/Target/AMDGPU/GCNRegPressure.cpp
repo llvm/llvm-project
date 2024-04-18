@@ -696,9 +696,9 @@ void GCNIterativeDownwardRPTracker::advance(const MachineInstr &MI,
   for (auto &MO : MI.operands()) {
     if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
-    if (!MO.isUse())
-      continue;
     if (!MO.readsReg())
+      continue;
+    if (!MO.isUse())
       continue;
     if (!SeenRegs.insert(MO.getReg()).second)
       continue;

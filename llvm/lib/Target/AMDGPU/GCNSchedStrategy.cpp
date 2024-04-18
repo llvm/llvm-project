@@ -429,12 +429,13 @@ GCNSchedStageID GCNSchedStrategy::getNextStage() const {
 }
 
 GCNMaxOccupancySchedStrategy::GCNMaxOccupancySchedStrategy(
-    const MachineSchedContext *C)
+    const MachineSchedContext *C, bool IsLegacyScheduler)
     : GCNSchedStrategy(C) {
   SchedStages.push_back(GCNSchedStageID::OccInitialSchedule);
   SchedStages.push_back(GCNSchedStageID::UnclusteredHighRPReschedule);
   SchedStages.push_back(GCNSchedStageID::ClusteredLowOccupancyReschedule);
   SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
+  GCNTrackers = GCNTrackers && !IsLegacyScheduler;
 }
 
 GCNMaxILPSchedStrategy::GCNMaxILPSchedStrategy(const MachineSchedContext *C)

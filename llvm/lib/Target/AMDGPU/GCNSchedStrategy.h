@@ -142,7 +142,8 @@ public:
 /// maximum number of waves per simd).
 class GCNMaxOccupancySchedStrategy final : public GCNSchedStrategy {
 public:
-  GCNMaxOccupancySchedStrategy(const MachineSchedContext *C);
+  GCNMaxOccupancySchedStrategy(const MachineSchedContext *C,
+                               bool IsLegacyScheduler = false);
 };
 
 /// The goal of this scheduling strategy is to maximize ILP for a single wave
