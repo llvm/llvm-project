@@ -116,26 +116,8 @@ struct VAListInterface {
   bool vaCopyIsMemcpy() { return true; }
 };
 
-// The majority case - a void* into an alloca
+// The majority case - a void* of an alloca
 struct VoidPtr final : public VAListInterface {
-  bool passedInSSARegister() override { return true; }
-
-  Type *vaListType(LLVMContext &Ctx) override {
-    return PointerType::getUnqual(Ctx);
-  }
-
-  Type *vaListParameterType(Module &M) override {
-    return PointerType::getUnqual(M.getContext());
-  }
-
-  Value *initializeVAList(LLVMContext &Ctx, IRBuilder<> &Builder,
-                          AllocaInst * /*va_list*/, Value *buffer) override {
-    return buffer;
-  }
-};
-
-struct VoidPtrAllocaAddrspace final : public VAListInterface {
-
   bool passedInSSARegister() override { return true; }
 
   Type *vaListType(LLVMContext &Ctx) override {
@@ -242,7 +224,7 @@ public:
 
     case Triple::r600:
     case Triple::amdgcn: {
-      return create<VoidPtrAllocaAddrspace>(1, 0);
+      return create<VoidPtr>(1, 0);
     }
 
     case Triple::nvptx:
@@ -354,7 +336,6 @@ public:
     auto &Ctx = Builder.getContext();
     Type *VaListTy = ABI.VAList->vaListType(Ctx);
     uint64_t Size = DL.getTypeAllocSize(VaListTy).getFixedValue();
-    // todo: on amdgcn this should be in terms of addrspace 5
     Builder.CreateMemCpyInline(Dst, {}, Src, {},
                                ConstantInt::get(Type::getInt32Ty(Ctx), Size));
   }
@@ -773,10 +754,6 @@ Function *ExpandVariadics::deriveInlinableVariadicFunctionPair(
     SmallVector<Value *> Args;
     for (Argument &A : F.args())
       Args.push_back(&A);
-
-    // Shall we put the extra arg in alloca addrspace? Probably yes
-    VaListInstance = Builder.CreatePointerBitCastOrAddrSpaceCast(
-        VaListInstance, ABI.VAList->vaListParameterType(M));
     Args.push_back(VaListInstance);
 
     CallInst *Result = Builder.CreateCall(NF, Args);
@@ -867,7 +844,7 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   }
 
   if (Frame.empty()) {
-    // Not passing any arguments, hopefully va_arg won't try to read any
+    // Not passing any arguments, hopefully va_arg won't try to read any.
     // Creating a single byte frame containing nothing to point the va_list
     // instance as that is less special-casey in the compiler and probably
     // easier to interpret in a debugger.
@@ -879,18 +856,17 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   StructType *VarargsTy = Frame.asStruct(Ctx, CBF->getName());
 
   // Put the alloca to hold the variadic args in the entry basic block.
-  // The clumsy construction is to set a the alignment on the instance
   Builder.SetInsertPointPastAllocas(CBF);
 
   // The struct instance needs to be at least MaxFieldAlign for the alignment of
   // the fields to be correct at runtime. Use the native stack alignment instead
   // if that's greater as that tends to give better codegen.
   Align AllocaAlign = MaxFieldAlign;
-  if (DL.exceedsNaturalStackAlignment(Align(1024))) {
-    // TODO: DL.getStackAlignment could return a MaybeAlign instead of assert
-    AllocaAlign = std::max(AllocaAlign, DL.getStackAlignment());
+  if (DL.belowNaturalStackAlignment(MaxFieldAlign)) {
+    AllocaAlign = DL.getStackAlignment();
   }
 
+  // The clumsy construction is to set the alignment on the instance
   AllocaInst *Alloced = Builder.Insert(
       new AllocaInst(VarargsTy, DL.getAllocaAddrSpace(), nullptr, AllocaAlign),
       "vararg_buffer");

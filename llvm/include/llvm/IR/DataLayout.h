@@ -268,6 +268,11 @@ public:
     return StackNaturalAlign && (Alignment > *StackNaturalAlign);
   }
 
+  /// Returns true if the given alignment is below the natural stack alignment.
+  bool belowNaturalStackAlignment(Align Alignment) const {
+    return StackNaturalAlign && (Alignment < *StackNaturalAlign);
+  }
+
   Align getStackAlignment() const {
     assert(StackNaturalAlign && "StackNaturalAlign must be defined");
     return *StackNaturalAlign;
