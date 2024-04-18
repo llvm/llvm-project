@@ -19529,6 +19529,13 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
   // Okay, we successfully defined 'Record'.
   if (Record) {
     bool Completed = false;
+    if (S) {
+      Scope *Parent = S->getParent();
+      if (Parent && Parent->isTypeAliasScope() &&
+          Parent->isTemplateParamScope())
+        Record->setInvalidDecl();
+    }
+
     if (CXXRecord) {
       if (!CXXRecord->isInvalidDecl()) {
         // Set access bits correctly on the directly-declared conversions.
