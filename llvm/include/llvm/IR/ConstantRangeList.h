@@ -49,7 +49,7 @@ public:
   /// Get the bit width of this ConstantRangeList.
   uint32_t getBitWidth() const { return 64; }
 
-  /// Return the size of this ConstantRangeList.
+  /// Return the number of ranges in this ConstantRangeList.
   size_t size() const { return Ranges.size(); }
 
   /// Insert a new range to Ranges and keep the list ordered.

@@ -33,6 +33,9 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
     Ranges.insert(Ranges.begin(), NewRange);
     return;
   }
+  if (std::find(Ranges.begin(), Ranges.end(), NewRange) != Ranges.end()) {
+    return;
+  }
 
   // Slow insert.
   auto LowerBound =
@@ -60,10 +63,10 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
       Ranges.back() = ConstantRange(NewLower, NewUpper);
     }
   }
-  return;
 }
 
 void ConstantRangeList::print(raw_ostream &OS) const {
-  for (const auto &Range : Ranges)
-    Range.print(OS);
+  interleaveComma(Ranges, OS, [&](ConstantRange CR) {
+    OS << "(" << CR.getLower() << ", " << CR.getUpper() << ")";
+  });
 }

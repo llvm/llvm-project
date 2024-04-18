@@ -1,7 +1,7 @@
 ; RUN: split-file %s %t
 ; RUN: not llvm-as < %s %t/outer_left_parenthesis.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=OUTER-LEFT
 ; RUN: not llvm-as < %s %t/inner_left_parenthesis.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=INNER-LEFT
-; RUN: not llvm-as < %s %t/inner_right_parenthesis.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=OUTER-RIGHT
+; RUN: not llvm-as < %s %t/inner_right_parenthesis.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=INNER-RIGHT
 ; RUN: not llvm-as < %s %t/outer_right_parenthesis.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=OUTER-RIGHT
 ; RUN: not llvm-as < %s %t/integer.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=INTEGER
 ; RUN: not llvm-as < %s %t/lower_equal_upper.ll -o /dev/null 2>&1 | FileCheck %s --check-prefix=LOWER-EQUAL-UPPER

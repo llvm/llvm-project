@@ -50,6 +50,8 @@ TEST_F(ConstantRangeListTest, Insert) {
   CRL.insert(14, 18);
   // Overlap cross ranges
   CRL.insert(2, 14);
+  // An existing range
+  CRL.insert(0, 20);
 
   ConstantRangeList Expected;
   Expected.insert(-8, -2);
