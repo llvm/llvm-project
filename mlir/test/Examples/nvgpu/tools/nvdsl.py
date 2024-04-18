@@ -144,7 +144,7 @@ class TMA:
             device_ptr,
         )
         self.tma_descriptor = nvgpu.TmaCreateDescriptorOp(
-            tma_descriptor_ty, device_unranked_memref, map(const, self.tma_shape)
+            tma_descriptor_ty, device_unranked_memref, map(const, self.tma_box_shape)
         )
         return self.tma_descriptor.result
 
@@ -428,7 +428,7 @@ class NVDSL:
                         func.ReturnOp([])
 
                 # Save IR in a file
-                saveIR(module)
+                # saveIR(module)
 
                 # Verify the module
                 # module.operation.verify()
