@@ -118,9 +118,9 @@ int test() {
   if (num_threads > MAX_THREADS)
     num_threads = MAX_THREADS;
 
-  unsigned *chunkSizesOpenmp =
-      (unsigned *)malloc(sizeof(unsigned) * num_threads);
-  memset(chunkSizesOpenmp, 0, sizeof(unsigned) * num_threads);
+  unsigned long *chunkSizesOpenmp =
+      (unsigned long *)malloc(sizeof(unsigned long) * num_threads);
+  memset(chunkSizesOpenmp, 0, sizeof(unsigned long) * num_threads);
 
   // count iterations and allocate space
   LOOP { ++trueCount; }
