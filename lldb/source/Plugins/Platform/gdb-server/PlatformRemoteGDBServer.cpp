@@ -684,6 +684,14 @@ Status PlatformRemoteGDBServer::RunShellCommand(
                                           signo_ptr, command_output, timeout);
 }
 
+bool PlatformRemoteGDBServer::CalculateMD5(const FileSpec &file_spec,
+                                           uint64_t &low, uint64_t &high) {
+  if (!IsConnected())
+    return false;
+
+  return m_gdb_client_up->CalculateMD5(file_spec, low, high);
+}
+
 void PlatformRemoteGDBServer::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
 }
