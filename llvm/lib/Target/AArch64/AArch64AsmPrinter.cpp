@@ -637,12 +637,11 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
 
     if (IsFixedShadow) {
       std::optional<uint64_t> HwasanFixedShadowBase = getFixedShadowBase();
-      assert(HwasanFixedShadowBase.has_value());
 
       OutStreamer->emitInstruction(
           MCInstBuilder(AArch64::MOVZXi)
               .addReg(AArch64::X17)
-              .addImm(HwasanFixedShadowBase.value() >> 32)
+              .addImm(HwasanFixedShadowBase.value_or(0) >> 32)
               .addImm(32),
           *STI);
       OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDRBBroX)
