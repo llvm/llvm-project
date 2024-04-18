@@ -41,6 +41,7 @@
 #include "UniqueDWARFASTType.h"
 
 class DWARFASTParserClang;
+class DWARFASTParserSwift;
 
 namespace llvm {
 class DWARFDebugAbbrev;
