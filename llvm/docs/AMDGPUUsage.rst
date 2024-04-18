@@ -1375,7 +1375,7 @@ sufficient restriction to emit a native atomic instruction.
 An :ref:`atomicrmw <i_atomicrmw>` without metadata will be treated
 conservatively as required to preserve the operation behavior in all
 cases. This will typically be used in conjunction with
-:ref:`\!amdgpu.no.fine.grained.host.memory<amdgpu_no_fine_grained_host_memory>`.
+:ref:`\!amdgpu.no.fine.grained.memory<amdgpu_no_fine_grained_memory>`.
 
 
 .. code-block:: llvm
