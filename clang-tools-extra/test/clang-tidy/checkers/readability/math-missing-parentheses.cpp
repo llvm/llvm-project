@@ -17,7 +17,7 @@ int bar(){
 }
 
 class fun{
-public:  
+public:
     int A;
     double B;
     fun(){
@@ -29,7 +29,7 @@ public:
 void f(){
     //CHECK-MESSAGES: :[[@LINE+2]]:17: warning: '*' has higher precedence than '+'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
     //CHECK-FIXES: int a = 1 + (2 * 3);
-    int a = 1 + 2 * 3; 
+    int a = 1 + 2 * 3;
 
     int a_negative = 1 + (2 * 3); // No warning
 
@@ -97,9 +97,9 @@ void f(){
     int n_negative = (1.05 * foo()) + double(bar()); // No warning
 
     //CHECK-MESSAGES: :[[@LINE+3]]:17: warning: '*' has higher precedence than '+'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
-    //CHECK-FIXES: int o = 1 + (obj.A * 3) + obj.B; 
+    //CHECK-FIXES: int o = 1 + (obj.A * 3) + obj.B;
     fun obj;
-    int o = 1 + obj.A * 3 + obj.B; 
+    int o = 1 + obj.A * 3 + obj.B;
 
     int o_negative = 1 + (obj.A * 3) + obj.B; // No warning
 
@@ -108,7 +108,7 @@ void f(){
     int p = 1U + 2 * 3;
 
     int p_negative = 1U + (2 * 3); // No warning
-    
+
     //CHECK-MESSAGES: :[[@LINE+7]]:13: warning: '+' has higher precedence than '|'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
     //CHECK-MESSAGES: :[[@LINE+6]]:25: warning: '*' has higher precedence than '+'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
     //CHECK-MESSAGES: :[[@LINE+5]]:53: warning: '&' has higher precedence than '^'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
