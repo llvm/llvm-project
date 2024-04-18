@@ -16,6 +16,7 @@ import lldb
 import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test_event.build_exception import BuildError
 import os
 import unittest2
 import json
@@ -29,8 +30,16 @@ class AsanSwiftTestCase(lldbtest.TestBase):
     @decorators.skipIfLinux
     @decorators.skipUnlessSwiftAddressSanitizer
     def test_asan_swift(self):
-        self.build()
-        self.do_test()
+        self.build(make_targets=["asan"])
+        self.do_test_asan()
+
+    @decorators.skipIf(oslist=decorators.no_match(["macosx"]))
+    def test_libsanitizers_swift(self):
+        try:
+            self.build(make_targets=["libsanitizers"])
+        except BuildError as e:
+            self.skipTest("failed to build with libsanitizers")
+        self.do_test_libsanitizers()
 
     def setUp(self):
         lldbtest.TestBase.setUp(self)
@@ -39,7 +48,7 @@ class AsanSwiftTestCase(lldbtest.TestBase):
         self.line_breakpoint = lldbtest.line_number(
             self.main_source, '// breakpoint')
 
-    def do_test(self):
+    def do_test_asan(self):
         exe_name = "a.out"
         exe = self.getBuildArtifact(exe_name)
 
@@ -98,6 +107,36 @@ class AsanSwiftTestCase(lldbtest.TestBase):
 
         self.expect(
             "memory history `ptr`",
+            substrs=[
+                'Memory allocated by Thread 1',
+                'main.swift'])
+
+    # Test line numbers: rdar://126237493
+    def do_test_libsanitizers(self):
+        exe_name = "a.out"
+        exe = self.getBuildArtifact(exe_name)
+
+        # Create the target
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, lldbtest.VALID_TARGET)
+
+        self.runCmd("env SanitizersAddress=1 MallocSanitizerZone=1 MallocSecureAllocator=0")
+
+        self.runCmd("run")
+
+        # the stop reason of the thread should be a ASan report.
+        self.expect("thread list", "Heap buffer overflow", substrs=[
+                    'stopped', 'stop reason = Heap buffer overflow'])
+
+        process = self.dbg.GetSelectedTarget().process
+        thread = process.GetSelectedThread()
+
+        self.assertEqual(
+            thread.GetStopReason(),
+            lldb.eStopReasonInstrumentation)
+
+        self.expect(
+            "memory history `__asan_get_report_address()`",
             substrs=[
                 'Memory allocated by Thread 1',
                 'main.swift'])
