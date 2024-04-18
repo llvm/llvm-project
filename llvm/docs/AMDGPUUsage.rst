@@ -1367,8 +1367,8 @@ cases. This will typically be used in conjunction with
 '``amdgpu.no.fine.grained.memory``' Metadata
 -------------------------------------------------
 
-Asserts a memory access does not access bytes allocated in fine
-grained allocated memory. This is intended for use with
+Asserts a memory access does not access bytes allocated in
+fine-grained allocated memory. This is intended for use with
 :ref:`atomicrmw <i_atomicrmw>` and other atomic instructions. This is
 required to emit a native hardware instruction for some :ref:`system
 scope <amdgpu-memory-scopes>` atomic operations on some subtargets. An
@@ -1383,7 +1383,7 @@ cases. This will typically be used in conjunction with
   ; remote device memory.
   %old0 = atomicrmw sub ptr %ptr0, i32 1 acquire, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
 
-  ; Indicates the access does not access peer device memory.
+  ; Indicates the access does not access fine-grained memory
   %old2 = atomicrmw sub ptr %ptr2, i32 1 acquire, !amdgpu.no.fine.grained.memory !0
 
   !0 = !{}
