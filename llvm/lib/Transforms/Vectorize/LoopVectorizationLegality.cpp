@@ -787,6 +787,7 @@ static bool isTLIScalarize(const TargetLibraryInfo &TLI, const CallInst &CI) {
 
 bool LoopVectorizationLegality::canVectorizeInstrs() {
   BasicBlock *Header = TheLoop->getHeader();
+  DenseMap<Instruction *, unsigned> MultiCmpsRed;
 
   // For each block in the loop.
   for (BasicBlock *BB : TheLoop->blocks()) {
@@ -830,6 +831,13 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
           AllowedExit.insert(RedDes.getLoopExitInstr());
           Reductions[Phi] = RedDes;
+          Instruction *Cmp = RedDes.getMultiCmp();
+          if (Cmp) {
+            if (MultiCmpsRed.contains(Cmp))
+              MultiCmpsRed[Cmp]++;
+            else
+              MultiCmpsRed[Cmp] = 1;
+          }
           continue;
         }
 
@@ -1042,6 +1050,23 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       return false;
     } else {
       LLVM_DEBUG(dbgs() << "LV: Did not find one integer induction var.\n");
+    }
+  }
+
+  // Make sure that all compare instruction users are recurrent if in loop's BB.
+  if (MultiCmpsRed.size() > 0) {
+    auto Blocks = TheLoop->getBlocksVector();
+    for (auto const &C : MultiCmpsRed) {
+      Instruction *Cmp = C.first;
+      unsigned Counter = 0;
+      for (User *U : Cmp->users()) {
+        SelectInst *Inst = dyn_cast<SelectInst>(U);
+        if (Inst && std::find(Blocks.begin(), Blocks.end(),
+                              Inst->getParent()) != Blocks.end())
+          Counter++;
+      }
+      if (Counter != C.second)
+        return false;
     }
   }
 

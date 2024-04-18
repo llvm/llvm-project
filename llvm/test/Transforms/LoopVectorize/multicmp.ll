@@ -20,22 +20,55 @@ define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK-LABEL: define i32 @multi_user_cmp(
 ; CHECK-SAME: ptr readonly [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ <i1 true, i1 true, i1 true, i1 true>, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP3]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP3]], <4 x i1> [[VEC_PHI]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne <4 x i1> [[TMP5]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP]])
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP7]], i1 false, i1 true
+; CHECK-NEXT:    [[RDX_SELECT_CMP2:%.*]] = icmp ne <4 x i1> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP2]])
+; CHECK-NEXT:    [[RDX_SELECT3:%.*]] = select i1 [[TMP8]], i1 true, i1 false
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX4:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[RDX_SELECT3]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ [[BC_MERGE_RDX4]], [[SCALAR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[LOAD1]], 0.000000e+00
 ; CHECK-NEXT:    [[DOTANY_0_OFF0]] = select i1 [[CMP1]], i1 true, i1 [[ANY_0_OFF09]]
 ; CHECK-NEXT:    [[ALL_0_OFF0_]] = select i1 [[CMP1]], i1 [[ALL_0_OFF010]], i1 false
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[FOR_BODY]] ], [ [[RDX_SELECT3]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[FOR_BODY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[DOTANY_0_OFF0_LCSSA]], i32 2, i32 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[ALL_0_OFF0__LCSSA]], i32 1, i32 [[TMP9]]
 ; CHECK-NEXT:    ret i32 [[TMP10]]
@@ -43,22 +76,68 @@ define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC2-LABEL: define i32 @multi_user_cmp(
 ; CHECK-VF4-IC2-SAME: ptr readonly [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-VF4-IC2-NEXT:  entry:
+; CHECK-VF4-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-VF4-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-VF4-IC2:       vector.ph:
+; CHECK-VF4-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-VF4-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-VF4-IC2:       vector.body:
+; CHECK-VF4-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ <i1 true, i1 true, i1 true, i1 true>, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ <i1 true, i1 true, i1 true, i1 true>, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-VF4-IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
+; CHECK-VF4-IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF4-IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
+; CHECK-VF4-IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
+; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 4
+; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
+; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
+; CHECK-VF4-IC2-NEXT:    [[TMP6:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP7:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD4]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP8]] = select <4 x i1> [[TMP6]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[VEC_PHI2]]
+; CHECK-VF4-IC2-NEXT:    [[TMP9]] = select <4 x i1> [[TMP7]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[VEC_PHI3]]
+; CHECK-VF4-IC2-NEXT:    [[TMP10]] = select <4 x i1> [[TMP6]], <4 x i1> [[VEC_PHI]], <4 x i1> zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP11]] = select <4 x i1> [[TMP7]], <4 x i1> [[VEC_PHI1]], <4 x i1> zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-VF4-IC2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-VF4-IC2-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-VF4-IC2:       middle.block:
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne <4 x i1> [[TMP10]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT:%.*]] = select <4 x i1> [[RDX_SELECT_CMP]], <4 x i1> [[TMP10]], <4 x i1> [[TMP11]]
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP5:%.*]] = icmp ne <4 x i1> [[RDX_SELECT]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-VF4-IC2-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP5]])
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT6:%.*]] = select i1 [[TMP13]], i1 false, i1 true
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP7:%.*]] = icmp ne <4 x i1> [[TMP8]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT8:%.*]] = select <4 x i1> [[RDX_SELECT_CMP7]], <4 x i1> [[TMP8]], <4 x i1> [[TMP9]]
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP9:%.*]] = icmp ne <4 x i1> [[RDX_SELECT8]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP14:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP9]])
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT10:%.*]] = select i1 [[TMP14]], i1 true, i1 false
+; CHECK-VF4-IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-VF4-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-VF4-IC2:       scalar.ph:
+; CHECK-VF4-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[RDX_SELECT6]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX11:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[RDX_SELECT10]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4-IC2-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-VF4-IC2:       for.body:
-; CHECK-VF4-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-VF4-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ [[BC_MERGE_RDX11]], [[SCALAR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF4-IC2-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF4-IC2-NEXT:    [[CMP1:%.*]] = fcmp olt float [[LOAD1]], 0.000000e+00
 ; CHECK-VF4-IC2-NEXT:    [[DOTANY_0_OFF0]] = select i1 [[CMP1]], i1 true, i1 [[ANY_0_OFF09]]
 ; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF0_]] = select i1 [[CMP1]], i1 [[ALL_0_OFF010]], i1 false
-; CHECK-VF4-IC2-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
-; CHECK-VF4-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
-; CHECK-VF4-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK-VF4-IC2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-VF4-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-VF4-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-VF4-IC2:       exit:
-; CHECK-VF4-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[FOR_BODY]] ], [ [[RDX_SELECT10]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[FOR_BODY]] ], [ [[RDX_SELECT6]], [[MIDDLE_BLOCK]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP15:%.*]] = select i1 [[DOTANY_0_OFF0_LCSSA]], i32 2, i32 3
 ; CHECK-VF4-IC2-NEXT:    [[TMP16:%.*]] = select i1 [[ALL_0_OFF0__LCSSA]], i32 1, i32 [[TMP15]]
 ; CHECK-VF4-IC2-NEXT:    ret i32 [[TMP16]]
@@ -66,22 +145,60 @@ define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF1-IC2-LABEL: define i32 @multi_user_cmp(
 ; CHECK-VF1-IC2-SAME: ptr readonly [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-VF1-IC2-NEXT:  entry:
+; CHECK-VF1-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; CHECK-VF1-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-VF1-IC2:       vector.ph:
+; CHECK-VF1-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-VF1-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-VF1-IC2:       vector.body:
+; CHECK-VF1-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI1:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-VF1-IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; CHECK-VF1-IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF1-IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
+; CHECK-VF1-IC2-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP2]], align 4
+; CHECK-VF1-IC2-NEXT:    [[TMP5:%.*]] = load float, ptr [[TMP3]], align 4
+; CHECK-VF1-IC2-NEXT:    [[TMP6:%.*]] = fcmp olt float [[TMP4]], 0.000000e+00
+; CHECK-VF1-IC2-NEXT:    [[TMP7:%.*]] = fcmp olt float [[TMP5]], 0.000000e+00
+; CHECK-VF1-IC2-NEXT:    [[TMP8]] = select i1 [[TMP6]], i1 true, i1 [[VEC_PHI2]]
+; CHECK-VF1-IC2-NEXT:    [[TMP9]] = select i1 [[TMP7]], i1 true, i1 [[VEC_PHI3]]
+; CHECK-VF1-IC2-NEXT:    [[TMP10]] = select i1 [[TMP6]], i1 [[VEC_PHI]], i1 false
+; CHECK-VF1-IC2-NEXT:    [[TMP11]] = select i1 [[TMP7]], i1 [[VEC_PHI1]], i1 false
+; CHECK-VF1-IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-VF1-IC2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-VF1-IC2-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-VF1-IC2:       middle.block:
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i1 [[TMP10]], true
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i1 [[TMP10]], i1 [[TMP11]]
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT_CMP4:%.*]] = icmp ne i1 [[TMP8]], false
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT5:%.*]] = select i1 [[RDX_SELECT_CMP4]], i1 [[TMP8]], i1 [[TMP9]]
+; CHECK-VF1-IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-VF1-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-VF1-IC2:       scalar.ph:
+; CHECK-VF1-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[RDX_SELECT5]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1-IC2-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-VF1-IC2:       for.body:
-; CHECK-VF1-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-VF1-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ [[BC_MERGE_RDX6]], [[SCALAR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF1-IC2-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF1-IC2-NEXT:    [[CMP1:%.*]] = fcmp olt float [[LOAD1]], 0.000000e+00
 ; CHECK-VF1-IC2-NEXT:    [[DOTANY_0_OFF0]] = select i1 [[CMP1]], i1 true, i1 [[ANY_0_OFF09]]
 ; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF0_]] = select i1 [[CMP1]], i1 [[ALL_0_OFF010]], i1 false
-; CHECK-VF1-IC2-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
-; CHECK-VF1-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
-; CHECK-VF1-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK-VF1-IC2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-VF1-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-VF1-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-VF1-IC2:       exit:
-; CHECK-VF1-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[VECTOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[FOR_BODY]] ], [ [[RDX_SELECT5]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[FOR_BODY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
 ; CHECK-VF1-IC2-NEXT:    [[TMP13:%.*]] = select i1 [[DOTANY_0_OFF0_LCSSA]], i32 2, i32 3
 ; CHECK-VF1-IC2-NEXT:    [[TMP14:%.*]] = select i1 [[ALL_0_OFF0__LCSSA]], i32 1, i32 [[TMP13]]
 ; CHECK-VF1-IC2-NEXT:    ret i32 [[TMP14]]
@@ -124,22 +241,55 @@ define i32 @multi_user_cmp_int(ptr readonly %a, i64 noundef %n) {
 ; CHECK-LABEL: define i32 @multi_user_cmp_int(
 ; CHECK-SAME: ptr readonly [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ <i1 true, i1 true, i1 true, i1 true>, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP3]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP3]], <4 x i1> [[VEC_PHI]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne <4 x i1> [[TMP5]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP]])
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP7]], i1 false, i1 true
+; CHECK-NEXT:    [[RDX_SELECT_CMP2:%.*]] = icmp ne <4 x i1> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP2]])
+; CHECK-NEXT:    [[RDX_SELECT3:%.*]] = select i1 [[TMP8]], i1 true, i1 false
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX4:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[RDX_SELECT3]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ [[BC_MERGE_RDX4]], [[SCALAR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[LOAD1]], 0
 ; CHECK-NEXT:    [[DOTANY_0_OFF0]] = select i1 [[CMP1]], i1 true, i1 [[ANY_0_OFF09]]
 ; CHECK-NEXT:    [[ALL_0_OFF0_]] = select i1 [[CMP1]], i1 [[ALL_0_OFF010]], i1 false
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[FOR_BODY]] ], [ [[RDX_SELECT3]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[FOR_BODY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[DOTANY_0_OFF0_LCSSA]], i32 2, i32 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[ALL_0_OFF0__LCSSA]], i32 1, i32 [[TMP9]]
 ; CHECK-NEXT:    ret i32 [[TMP10]]
@@ -147,22 +297,68 @@ define i32 @multi_user_cmp_int(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC2-LABEL: define i32 @multi_user_cmp_int(
 ; CHECK-VF4-IC2-SAME: ptr readonly [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-VF4-IC2-NEXT:  entry:
+; CHECK-VF4-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-VF4-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-VF4-IC2:       vector.ph:
+; CHECK-VF4-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-VF4-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-VF4-IC2:       vector.body:
+; CHECK-VF4-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ <i1 true, i1 true, i1 true, i1 true>, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ <i1 true, i1 true, i1 true, i1 true>, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-VF4-IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
+; CHECK-VF4-IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF4-IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
+; CHECK-VF4-IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
+; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 4
+; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
+; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
+; CHECK-VF4-IC2-NEXT:    [[TMP6:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP7:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD4]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP8]] = select <4 x i1> [[TMP6]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[VEC_PHI2]]
+; CHECK-VF4-IC2-NEXT:    [[TMP9]] = select <4 x i1> [[TMP7]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[VEC_PHI3]]
+; CHECK-VF4-IC2-NEXT:    [[TMP10]] = select <4 x i1> [[TMP6]], <4 x i1> [[VEC_PHI]], <4 x i1> zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP11]] = select <4 x i1> [[TMP7]], <4 x i1> [[VEC_PHI1]], <4 x i1> zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-VF4-IC2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-VF4-IC2-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-VF4-IC2:       middle.block:
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne <4 x i1> [[TMP10]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT:%.*]] = select <4 x i1> [[RDX_SELECT_CMP]], <4 x i1> [[TMP10]], <4 x i1> [[TMP11]]
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP5:%.*]] = icmp ne <4 x i1> [[RDX_SELECT]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-VF4-IC2-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP5]])
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT6:%.*]] = select i1 [[TMP13]], i1 false, i1 true
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP7:%.*]] = icmp ne <4 x i1> [[TMP8]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT8:%.*]] = select <4 x i1> [[RDX_SELECT_CMP7]], <4 x i1> [[TMP8]], <4 x i1> [[TMP9]]
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP9:%.*]] = icmp ne <4 x i1> [[RDX_SELECT8]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP14:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP9]])
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT10:%.*]] = select i1 [[TMP14]], i1 true, i1 false
+; CHECK-VF4-IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-VF4-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-VF4-IC2:       scalar.ph:
+; CHECK-VF4-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[RDX_SELECT6]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX11:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[RDX_SELECT10]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4-IC2-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-VF4-IC2:       for.body:
-; CHECK-VF4-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-VF4-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ [[BC_MERGE_RDX11]], [[SCALAR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF4-IC2-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF4-IC2-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[LOAD1]], 0
 ; CHECK-VF4-IC2-NEXT:    [[DOTANY_0_OFF0]] = select i1 [[CMP1]], i1 true, i1 [[ANY_0_OFF09]]
 ; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF0_]] = select i1 [[CMP1]], i1 [[ALL_0_OFF010]], i1 false
-; CHECK-VF4-IC2-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
-; CHECK-VF4-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
-; CHECK-VF4-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK-VF4-IC2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-VF4-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-VF4-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-VF4-IC2:       exit:
-; CHECK-VF4-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[FOR_BODY]] ], [ [[RDX_SELECT10]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[FOR_BODY]] ], [ [[RDX_SELECT6]], [[MIDDLE_BLOCK]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP15:%.*]] = select i1 [[DOTANY_0_OFF0_LCSSA]], i32 2, i32 3
 ; CHECK-VF4-IC2-NEXT:    [[TMP16:%.*]] = select i1 [[ALL_0_OFF0__LCSSA]], i32 1, i32 [[TMP15]]
 ; CHECK-VF4-IC2-NEXT:    ret i32 [[TMP16]]
@@ -170,22 +366,60 @@ define i32 @multi_user_cmp_int(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF1-IC2-LABEL: define i32 @multi_user_cmp_int(
 ; CHECK-VF1-IC2-SAME: ptr readonly [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-VF1-IC2-NEXT:  entry:
+; CHECK-VF1-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; CHECK-VF1-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-VF1-IC2:       vector.ph:
+; CHECK-VF1-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-VF1-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-VF1-IC2:       vector.body:
+; CHECK-VF1-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI1:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-VF1-IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; CHECK-VF1-IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF1-IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
+; CHECK-VF1-IC2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4
+; CHECK-VF1-IC2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-VF1-IC2-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[TMP4]], 0
+; CHECK-VF1-IC2-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[TMP5]], 0
+; CHECK-VF1-IC2-NEXT:    [[TMP8]] = select i1 [[TMP6]], i1 true, i1 [[VEC_PHI2]]
+; CHECK-VF1-IC2-NEXT:    [[TMP9]] = select i1 [[TMP7]], i1 true, i1 [[VEC_PHI3]]
+; CHECK-VF1-IC2-NEXT:    [[TMP10]] = select i1 [[TMP6]], i1 [[VEC_PHI]], i1 false
+; CHECK-VF1-IC2-NEXT:    [[TMP11]] = select i1 [[TMP7]], i1 [[VEC_PHI1]], i1 false
+; CHECK-VF1-IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-VF1-IC2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-VF1-IC2-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-VF1-IC2:       middle.block:
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i1 [[TMP10]], true
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i1 [[TMP10]], i1 [[TMP11]]
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT_CMP4:%.*]] = icmp ne i1 [[TMP8]], false
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT5:%.*]] = select i1 [[RDX_SELECT_CMP4]], i1 [[TMP8]], i1 [[TMP9]]
+; CHECK-VF1-IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-VF1-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-VF1-IC2:       scalar.ph:
+; CHECK-VF1-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[RDX_SELECT5]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1-IC2-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-VF1-IC2:       for.body:
-; CHECK-VF1-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-VF1-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ [[BC_MERGE_RDX6]], [[SCALAR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF1-IC2-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF1-IC2-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[LOAD1]], 0
 ; CHECK-VF1-IC2-NEXT:    [[DOTANY_0_OFF0]] = select i1 [[CMP1]], i1 true, i1 [[ANY_0_OFF09]]
 ; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF0_]] = select i1 [[CMP1]], i1 [[ALL_0_OFF010]], i1 false
-; CHECK-VF1-IC2-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
-; CHECK-VF1-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
-; CHECK-VF1-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK-VF1-IC2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-VF1-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-VF1-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-VF1-IC2:       exit:
-; CHECK-VF1-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[VECTOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[FOR_BODY]] ], [ [[RDX_SELECT5]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[FOR_BODY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
 ; CHECK-VF1-IC2-NEXT:    [[TMP13:%.*]] = select i1 [[DOTANY_0_OFF0_LCSSA]], i32 2, i32 3
 ; CHECK-VF1-IC2-NEXT:    [[TMP14:%.*]] = select i1 [[ALL_0_OFF0__LCSSA]], i32 1, i32 [[TMP13]]
 ; CHECK-VF1-IC2-NEXT:    ret i32 [[TMP14]]
@@ -231,11 +465,95 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-LABEL: define i32 @multi_user_cmp_branch_use(
 ; CHECK-SAME: ptr readonly [[A:%.*]], ptr [[B:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE8:%.*]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ <i1 true, i1 true, i1 true, i1 true>, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[PRED_STORE_CONTINUE8]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[PRED_STORE_CONTINUE8]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP3]], align 4, !alias.scope [[META6:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP4]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[VEC_PHI2]]
+; CHECK-NEXT:    [[TMP6]] = select <4 x i1> [[TMP4]], <4 x i1> [[VEC_PHI]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP4]], i32 0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; CHECK:       pred.store.if:
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP9]], 1
+; CHECK-NEXT:    store i32 [[TMP10]], ptr [[TMP8]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; CHECK:       pred.store.continue:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP9]], [[PRED_STORE_IF]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP4]], i32 1
+; CHECK-NEXT:    br i1 [[TMP12]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
+; CHECK:       pred.store.if3:
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-NEXT:    [[TMP16:%.*]] = add nsw i32 [[TMP15]], 1
+; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP14]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
+; CHECK:       pred.store.continue4:
+; CHECK-NEXT:    [[TMP17:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE]] ], [ [[TMP15]], [[PRED_STORE_IF3]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP4]], i32 2
+; CHECK-NEXT:    br i1 [[TMP18]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
+; CHECK:       pred.store.if5:
+; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-NEXT:    [[TMP22:%.*]] = add nsw i32 [[TMP21]], 1
+; CHECK-NEXT:    store i32 [[TMP22]], ptr [[TMP20]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
+; CHECK:       pred.store.continue6:
+; CHECK-NEXT:    [[TMP23:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE4]] ], [ [[TMP21]], [[PRED_STORE_IF5]] ]
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP4]], i32 3
+; CHECK-NEXT:    br i1 [[TMP24]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8]]
+; CHECK:       pred.store.if7:
+; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP25]]
+; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-NEXT:    [[TMP28:%.*]] = add nsw i32 [[TMP27]], 1
+; CHECK-NEXT:    store i32 [[TMP28]], ptr [[TMP26]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE8]]
+; CHECK:       pred.store.continue8:
+; CHECK-NEXT:    [[TMP29:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE6]] ], [ [[TMP27]], [[PRED_STORE_IF7]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne <4 x i1> [[TMP6]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP31:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP]])
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP31]], i1 false, i1 true
+; CHECK-NEXT:    [[RDX_SELECT_CMP9:%.*]] = icmp ne <4 x i1> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    [[TMP32:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP9]])
+; CHECK-NEXT:    [[RDX_SELECT10:%.*]] = select i1 [[TMP32]], i1 true, i1 false
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ true, [[VECTOR_MEMCHECK]] ], [ true, [[ENTRY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX11:%.*]] = phi i1 [ false, [[VECTOR_MEMCHECK]] ], [ false, [[ENTRY]] ], [ [[RDX_SELECT10]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END6:%.*]] ]
-; CHECK-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[ALL_0_OFF0_:%.*]], [[IF_END6]] ]
-; CHECK-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[DOTANY_0_OFF0:%.*]], [[IF_END6]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END6:%.*]] ]
+; CHECK-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[IF_END6]] ]
+; CHECK-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ [[BC_MERGE_RDX11]], [[SCALAR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[IF_END6]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[LOAD1]], 0.000000e+00
@@ -251,10 +569,10 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK:       if.end6:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[IF_END6]] ]
-; CHECK-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[IF_END6]] ]
+; CHECK-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[IF_END6]] ], [ [[RDX_SELECT10]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[IF_END6]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[TMP33:%.*]] = select i1 [[DOTANY_0_OFF0_LCSSA]], i32 2, i32 3
 ; CHECK-NEXT:    [[TMP34:%.*]] = select i1 [[ALL_0_OFF0__LCSSA]], i32 1, i32 [[TMP33]]
 ; CHECK-NEXT:    ret i32 [[TMP34]]
@@ -262,11 +580,151 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2-LABEL: define i32 @multi_user_cmp_branch_use(
 ; CHECK-VF4-IC2-SAME: ptr readonly [[A:%.*]], ptr [[B:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-VF4-IC2-NEXT:  entry:
+; CHECK-VF4-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-VF4-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-VF4-IC2:       vector.memcheck:
+; CHECK-VF4-IC2-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
+; CHECK-VF4-IC2-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
+; CHECK-VF4-IC2-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF4-IC2-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[SCEVGEP1]]
+; CHECK-VF4-IC2-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
+; CHECK-VF4-IC2-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-VF4-IC2-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-VF4-IC2:       vector.ph:
+; CHECK-VF4-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-VF4-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-VF4-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-VF4-IC2:       vector.body:
+; CHECK-VF4-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE19:%.*]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ <i1 true, i1 true, i1 true, i1 true>, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[PRED_STORE_CONTINUE19]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ <i1 true, i1 true, i1 true, i1 true>, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[PRED_STORE_CONTINUE19]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[PRED_STORE_CONTINUE19]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[PRED_STORE_CONTINUE19]] ]
+; CHECK-VF4-IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
+; CHECK-VF4-IC2-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 4
+; CHECK-VF4-IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
+; CHECK-VF4-IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP2]]
+; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 0
+; CHECK-VF4-IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 4
+; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP5]], align 4, !alias.scope [[META6:![0-9]+]]
+; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP6]], align 4, !alias.scope [[META6]]
+; CHECK-VF4-IC2-NEXT:    [[TMP7:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP8:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD5]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP9]] = select <4 x i1> [[TMP7]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[VEC_PHI3]]
+; CHECK-VF4-IC2-NEXT:    [[TMP10]] = select <4 x i1> [[TMP8]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[VEC_PHI4]]
+; CHECK-VF4-IC2-NEXT:    [[TMP11]] = select <4 x i1> [[TMP7]], <4 x i1> [[VEC_PHI]], <4 x i1> zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP12]] = select <4 x i1> [[TMP8]], <4 x i1> [[VEC_PHI2]], <4 x i1> zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP7]], i32 0
+; CHECK-VF4-IC2-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; CHECK-VF4-IC2:       pred.store.if:
+; CHECK-VF4-IC2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP1]]
+; CHECK-VF4-IC2-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    [[TMP16:%.*]] = add nsw i32 [[TMP15]], 1
+; CHECK-VF4-IC2-NEXT:    store i32 [[TMP16]], ptr [[TMP14]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; CHECK-VF4-IC2:       pred.store.continue:
+; CHECK-VF4-IC2-NEXT:    [[TMP17:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP15]], [[PRED_STORE_IF]] ]
+; CHECK-VF4-IC2-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP7]], i32 1
+; CHECK-VF4-IC2-NEXT:    br i1 [[TMP18]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7:%.*]]
+; CHECK-VF4-IC2:       pred.store.if6:
+; CHECK-VF4-IC2-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX]], 1
+; CHECK-VF4-IC2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP19]]
+; CHECK-VF4-IC2-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    [[TMP22:%.*]] = add nsw i32 [[TMP21]], 1
+; CHECK-VF4-IC2-NEXT:    store i32 [[TMP22]], ptr [[TMP20]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE7]]
+; CHECK-VF4-IC2:       pred.store.continue7:
+; CHECK-VF4-IC2-NEXT:    [[TMP23:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE]] ], [ [[TMP21]], [[PRED_STORE_IF6]] ]
+; CHECK-VF4-IC2-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP7]], i32 2
+; CHECK-VF4-IC2-NEXT:    br i1 [[TMP24]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9:%.*]]
+; CHECK-VF4-IC2:       pred.store.if8:
+; CHECK-VF4-IC2-NEXT:    [[TMP25:%.*]] = add i64 [[INDEX]], 2
+; CHECK-VF4-IC2-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP25]]
+; CHECK-VF4-IC2-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP26]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    [[TMP28:%.*]] = add nsw i32 [[TMP27]], 1
+; CHECK-VF4-IC2-NEXT:    store i32 [[TMP28]], ptr [[TMP26]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE9]]
+; CHECK-VF4-IC2:       pred.store.continue9:
+; CHECK-VF4-IC2-NEXT:    [[TMP29:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE7]] ], [ [[TMP27]], [[PRED_STORE_IF8]] ]
+; CHECK-VF4-IC2-NEXT:    [[TMP30:%.*]] = extractelement <4 x i1> [[TMP7]], i32 3
+; CHECK-VF4-IC2-NEXT:    br i1 [[TMP30]], label [[PRED_STORE_IF10:%.*]], label [[PRED_STORE_CONTINUE11:%.*]]
+; CHECK-VF4-IC2:       pred.store.if10:
+; CHECK-VF4-IC2-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 3
+; CHECK-VF4-IC2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP31]]
+; CHECK-VF4-IC2-NEXT:    [[TMP33:%.*]] = load i32, ptr [[TMP32]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    [[TMP34:%.*]] = add nsw i32 [[TMP33]], 1
+; CHECK-VF4-IC2-NEXT:    store i32 [[TMP34]], ptr [[TMP32]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE11]]
+; CHECK-VF4-IC2:       pred.store.continue11:
+; CHECK-VF4-IC2-NEXT:    [[TMP35:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE9]] ], [ [[TMP33]], [[PRED_STORE_IF10]] ]
+; CHECK-VF4-IC2-NEXT:    [[TMP36:%.*]] = extractelement <4 x i1> [[TMP8]], i32 0
+; CHECK-VF4-IC2-NEXT:    br i1 [[TMP36]], label [[PRED_STORE_IF12:%.*]], label [[PRED_STORE_CONTINUE13:%.*]]
+; CHECK-VF4-IC2:       pred.store.if12:
+; CHECK-VF4-IC2-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP2]]
+; CHECK-VF4-IC2-NEXT:    [[TMP38:%.*]] = load i32, ptr [[TMP37]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    [[TMP39:%.*]] = add nsw i32 [[TMP38]], 1
+; CHECK-VF4-IC2-NEXT:    store i32 [[TMP39]], ptr [[TMP37]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE13]]
+; CHECK-VF4-IC2:       pred.store.continue13:
+; CHECK-VF4-IC2-NEXT:    [[TMP40:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE11]] ], [ [[TMP38]], [[PRED_STORE_IF12]] ]
+; CHECK-VF4-IC2-NEXT:    [[TMP41:%.*]] = extractelement <4 x i1> [[TMP8]], i32 1
+; CHECK-VF4-IC2-NEXT:    br i1 [[TMP41]], label [[PRED_STORE_IF14:%.*]], label [[PRED_STORE_CONTINUE15:%.*]]
+; CHECK-VF4-IC2:       pred.store.if14:
+; CHECK-VF4-IC2-NEXT:    [[TMP42:%.*]] = add i64 [[INDEX]], 5
+; CHECK-VF4-IC2-NEXT:    [[TMP43:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP42]]
+; CHECK-VF4-IC2-NEXT:    [[TMP44:%.*]] = load i32, ptr [[TMP43]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    [[TMP45:%.*]] = add nsw i32 [[TMP44]], 1
+; CHECK-VF4-IC2-NEXT:    store i32 [[TMP45]], ptr [[TMP43]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE15]]
+; CHECK-VF4-IC2:       pred.store.continue15:
+; CHECK-VF4-IC2-NEXT:    [[TMP46:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE13]] ], [ [[TMP44]], [[PRED_STORE_IF14]] ]
+; CHECK-VF4-IC2-NEXT:    [[TMP47:%.*]] = extractelement <4 x i1> [[TMP8]], i32 2
+; CHECK-VF4-IC2-NEXT:    br i1 [[TMP47]], label [[PRED_STORE_IF16:%.*]], label [[PRED_STORE_CONTINUE17:%.*]]
+; CHECK-VF4-IC2:       pred.store.if16:
+; CHECK-VF4-IC2-NEXT:    [[TMP48:%.*]] = add i64 [[INDEX]], 6
+; CHECK-VF4-IC2-NEXT:    [[TMP49:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP48]]
+; CHECK-VF4-IC2-NEXT:    [[TMP50:%.*]] = load i32, ptr [[TMP49]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    [[TMP51:%.*]] = add nsw i32 [[TMP50]], 1
+; CHECK-VF4-IC2-NEXT:    store i32 [[TMP51]], ptr [[TMP49]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE17]]
+; CHECK-VF4-IC2:       pred.store.continue17:
+; CHECK-VF4-IC2-NEXT:    [[TMP52:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE15]] ], [ [[TMP50]], [[PRED_STORE_IF16]] ]
+; CHECK-VF4-IC2-NEXT:    [[TMP53:%.*]] = extractelement <4 x i1> [[TMP8]], i32 3
+; CHECK-VF4-IC2-NEXT:    br i1 [[TMP53]], label [[PRED_STORE_IF18:%.*]], label [[PRED_STORE_CONTINUE19]]
+; CHECK-VF4-IC2:       pred.store.if18:
+; CHECK-VF4-IC2-NEXT:    [[TMP54:%.*]] = add i64 [[INDEX]], 7
+; CHECK-VF4-IC2-NEXT:    [[TMP55:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP54]]
+; CHECK-VF4-IC2-NEXT:    [[TMP56:%.*]] = load i32, ptr [[TMP55]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    [[TMP57:%.*]] = add nsw i32 [[TMP56]], 1
+; CHECK-VF4-IC2-NEXT:    store i32 [[TMP57]], ptr [[TMP55]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF4-IC2-NEXT:    br label [[PRED_STORE_CONTINUE19]]
+; CHECK-VF4-IC2:       pred.store.continue19:
+; CHECK-VF4-IC2-NEXT:    [[TMP58:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE17]] ], [ [[TMP56]], [[PRED_STORE_IF18]] ]
+; CHECK-VF4-IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-VF4-IC2-NEXT:    [[TMP59:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-VF4-IC2-NEXT:    br i1 [[TMP59]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-VF4-IC2:       middle.block:
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne <4 x i1> [[TMP11]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT:%.*]] = select <4 x i1> [[RDX_SELECT_CMP]], <4 x i1> [[TMP11]], <4 x i1> [[TMP12]]
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP20:%.*]] = icmp ne <4 x i1> [[RDX_SELECT]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-VF4-IC2-NEXT:    [[TMP60:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP20]])
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT21:%.*]] = select i1 [[TMP60]], i1 false, i1 true
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP22:%.*]] = icmp ne <4 x i1> [[TMP9]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT23:%.*]] = select <4 x i1> [[RDX_SELECT_CMP22]], <4 x i1> [[TMP9]], <4 x i1> [[TMP10]]
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP24:%.*]] = icmp ne <4 x i1> [[RDX_SELECT23]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP61:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP24]])
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT25:%.*]] = select i1 [[TMP61]], i1 true, i1 false
+; CHECK-VF4-IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-VF4-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-VF4-IC2:       scalar.ph:
+; CHECK-VF4-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ true, [[VECTOR_MEMCHECK]] ], [ true, [[ENTRY]] ], [ [[RDX_SELECT21]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX26:%.*]] = phi i1 [ false, [[VECTOR_MEMCHECK]] ], [ false, [[ENTRY]] ], [ [[RDX_SELECT25]], [[MIDDLE_BLOCK]] ]
 ; CHECK-VF4-IC2-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-VF4-IC2:       for.body:
-; CHECK-VF4-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END6:%.*]] ]
-; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[ALL_0_OFF0_:%.*]], [[IF_END6]] ]
-; CHECK-VF4-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[DOTANY_0_OFF0:%.*]], [[IF_END6]] ]
+; CHECK-VF4-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END6:%.*]] ]
+; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[IF_END6]] ]
+; CHECK-VF4-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ [[BC_MERGE_RDX26]], [[SCALAR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[IF_END6]] ]
 ; CHECK-VF4-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF4-IC2-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF4-IC2-NEXT:    [[CMP1:%.*]] = fcmp olt float [[LOAD1]], 0.000000e+00
@@ -282,10 +740,10 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF4-IC2:       if.end6:
 ; CHECK-VF4-IC2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-VF4-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
-; CHECK-VF4-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; CHECK-VF4-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-VF4-IC2:       exit:
-; CHECK-VF4-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[IF_END6]] ]
-; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[IF_END6]] ]
+; CHECK-VF4-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[IF_END6]] ], [ [[RDX_SELECT25]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[IF_END6]] ], [ [[RDX_SELECT21]], [[MIDDLE_BLOCK]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP62:%.*]] = select i1 [[DOTANY_0_OFF0_LCSSA]], i32 2, i32 3
 ; CHECK-VF4-IC2-NEXT:    [[TMP63:%.*]] = select i1 [[ALL_0_OFF0__LCSSA]], i32 1, i32 [[TMP62]]
 ; CHECK-VF4-IC2-NEXT:    ret i32 [[TMP63]]
@@ -293,30 +751,94 @@ define i32 @multi_user_cmp_branch_use(ptr readonly %a, ptr %b, i64 noundef %n) {
 ; CHECK-VF1-IC2-LABEL: define i32 @multi_user_cmp_branch_use(
 ; CHECK-VF1-IC2-SAME: ptr readonly [[A:%.*]], ptr [[B:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-VF1-IC2-NEXT:  entry:
+; CHECK-VF1-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; CHECK-VF1-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-VF1-IC2:       vector.memcheck:
+; CHECK-VF1-IC2-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
+; CHECK-VF1-IC2-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP0]]
+; CHECK-VF1-IC2-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF1-IC2-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[SCEVGEP1]]
+; CHECK-VF1-IC2-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
+; CHECK-VF1-IC2-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-VF1-IC2-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-VF1-IC2:       vector.ph:
+; CHECK-VF1-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-VF1-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK-VF1-IC2:       for.body:
-; CHECK-VF1-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
+; CHECK-VF1-IC2:       vector.body:
+; CHECK-VF1-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[PRED_STORE_CONTINUE6]] ]
 ; CHECK-VF1-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[PRED_STORE_CONTINUE6]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[PRED_STORE_CONTINUE6]] ]
 ; CHECK-VF1-IC2-NEXT:    [[VEC_PHI4:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[PRED_STORE_CONTINUE6]] ]
-; CHECK-VF1-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-VF1-IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
+; CHECK-VF1-IC2-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 1
+; CHECK-VF1-IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
+; CHECK-VF1-IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP2]]
+; CHECK-VF1-IC2-NEXT:    [[TMP5:%.*]] = load float, ptr [[TMP3]], align 4, !alias.scope [[META6:![0-9]+]]
+; CHECK-VF1-IC2-NEXT:    [[TMP6:%.*]] = load float, ptr [[TMP4]], align 4, !alias.scope [[META6]]
+; CHECK-VF1-IC2-NEXT:    [[TMP7:%.*]] = fcmp olt float [[TMP5]], 0.000000e+00
+; CHECK-VF1-IC2-NEXT:    [[TMP8:%.*]] = fcmp olt float [[TMP6]], 0.000000e+00
+; CHECK-VF1-IC2-NEXT:    [[TMP9]] = select i1 [[TMP7]], i1 true, i1 [[VEC_PHI3]]
+; CHECK-VF1-IC2-NEXT:    [[TMP10]] = select i1 [[TMP8]], i1 true, i1 [[VEC_PHI4]]
+; CHECK-VF1-IC2-NEXT:    [[TMP11]] = select i1 [[TMP7]], i1 [[VEC_PHI]], i1 false
+; CHECK-VF1-IC2-NEXT:    [[TMP12]] = select i1 [[TMP8]], i1 [[VEC_PHI2]], i1 false
+; CHECK-VF1-IC2-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; CHECK-VF1-IC2:       pred.store.if:
+; CHECK-VF1-IC2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP1]]
+; CHECK-VF1-IC2-NEXT:    [[TMP14:%.*]] = load i32, ptr [[TMP13]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META6]]
+; CHECK-VF1-IC2-NEXT:    [[TMP15:%.*]] = add nsw i32 [[TMP14]], 1
+; CHECK-VF1-IC2-NEXT:    store i32 [[TMP15]], ptr [[TMP13]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF1-IC2-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; CHECK-VF1-IC2:       pred.store.continue:
+; CHECK-VF1-IC2-NEXT:    [[TMP16:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP14]], [[PRED_STORE_IF]] ]
+; CHECK-VF1-IC2-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
+; CHECK-VF1-IC2:       pred.store.if5:
+; CHECK-VF1-IC2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP2]]
+; CHECK-VF1-IC2-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP17]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF1-IC2-NEXT:    [[TMP19:%.*]] = add nsw i32 [[TMP18]], 1
+; CHECK-VF1-IC2-NEXT:    store i32 [[TMP19]], ptr [[TMP17]], align 4, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-VF1-IC2-NEXT:    br label [[PRED_STORE_CONTINUE6]]
+; CHECK-VF1-IC2:       pred.store.continue6:
+; CHECK-VF1-IC2-NEXT:    [[TMP20:%.*]] = phi i32 [ poison, [[PRED_STORE_CONTINUE]] ], [ [[TMP18]], [[PRED_STORE_IF5]] ]
+; CHECK-VF1-IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-VF1-IC2-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-VF1-IC2-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-VF1-IC2:       middle.block:
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i1 [[TMP11]], true
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i1 [[TMP11]], i1 [[TMP12]]
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT_CMP7:%.*]] = icmp ne i1 [[TMP9]], false
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT8:%.*]] = select i1 [[RDX_SELECT_CMP7]], i1 [[TMP9]], i1 [[TMP10]]
+; CHECK-VF1-IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-VF1-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-VF1-IC2:       scalar.ph:
+; CHECK-VF1-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ true, [[VECTOR_MEMCHECK]] ], [ true, [[ENTRY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX9:%.*]] = phi i1 [ false, [[VECTOR_MEMCHECK]] ], [ false, [[ENTRY]] ], [ [[RDX_SELECT8]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1-IC2-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK-VF1-IC2:       for.body:
+; CHECK-VF1-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END6:%.*]] ]
+; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[IF_END6]] ]
+; CHECK-VF1-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ [[BC_MERGE_RDX9]], [[SCALAR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[IF_END6]] ]
+; CHECK-VF1-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF1-IC2-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF1-IC2-NEXT:    [[CMP1:%.*]] = fcmp olt float [[LOAD1]], 0.000000e+00
-; CHECK-VF1-IC2-NEXT:    [[TMP10]] = select i1 [[CMP1]], i1 true, i1 [[VEC_PHI4]]
-; CHECK-VF1-IC2-NEXT:    [[TMP12]] = select i1 [[CMP1]], i1 [[VEC_PHI2]], i1 false
-; CHECK-VF1-IC2-NEXT:    br i1 [[CMP1]], label [[IF_THEN3:%.*]], label [[PRED_STORE_CONTINUE6]]
+; CHECK-VF1-IC2-NEXT:    [[DOTANY_0_OFF0]] = select i1 [[CMP1]], i1 true, i1 [[ANY_0_OFF09]]
+; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF0_]] = select i1 [[CMP1]], i1 [[ALL_0_OFF010]], i1 false
+; CHECK-VF1-IC2-NEXT:    br i1 [[CMP1]], label [[IF_THEN3:%.*]], label [[IF_END6]]
 ; CHECK-VF1-IC2:       if.then3:
-; CHECK-VF1-IC2-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
+; CHECK-VF1-IC2-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDVARS_IV]]
 ; CHECK-VF1-IC2-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-VF1-IC2-NEXT:    [[INC:%.*]] = add nsw i32 [[LOAD2]], 1
 ; CHECK-VF1-IC2-NEXT:    store i32 [[INC]], ptr [[ARRAYIDX5]], align 4
-; CHECK-VF1-IC2-NEXT:    br label [[PRED_STORE_CONTINUE6]]
+; CHECK-VF1-IC2-NEXT:    br label [[IF_END6]]
 ; CHECK-VF1-IC2:       if.end6:
-; CHECK-VF1-IC2-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
-; CHECK-VF1-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
-; CHECK-VF1-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK-VF1-IC2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-VF1-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-VF1-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-VF1-IC2:       exit:
-; CHECK-VF1-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[TMP10]], [[PRED_STORE_CONTINUE6]] ]
-; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[TMP12]], [[PRED_STORE_CONTINUE6]] ]
+; CHECK-VF1-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[IF_END6]] ], [ [[RDX_SELECT8]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[IF_END6]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
 ; CHECK-VF1-IC2-NEXT:    [[TMP22:%.*]] = select i1 [[DOTANY_0_OFF0_LCSSA]], i32 2, i32 3
 ; CHECK-VF1-IC2-NEXT:    [[TMP23:%.*]] = select i1 [[ALL_0_OFF0__LCSSA]], i32 1, i32 [[TMP22]]
 ; CHECK-VF1-IC2-NEXT:    ret i32 [[TMP23]]
@@ -371,23 +893,57 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-LABEL: define i32 @multi_user_cmp_branch_use_and_outside_bb_use(
 ; CHECK-SAME: ptr readonly [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ <i1 true, i1 true, i1 true, i1 true>, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP3]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP3]], <4 x i1> [[VEC_PHI]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP3]], i32 3
+; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne <4 x i1> [[TMP5]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP]])
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP8]], i1 false, i1 true
+; CHECK-NEXT:    [[RDX_SELECT_CMP2:%.*]] = icmp ne <4 x i1> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP2]])
+; CHECK-NEXT:    [[RDX_SELECT3:%.*]] = select i1 [[TMP9]], i1 true, i1 false
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX4:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[RDX_SELECT3]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ [[BC_MERGE_RDX4]], [[SCALAR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[LOAD1]], 0.000000e+00
 ; CHECK-NEXT:    [[DOTANY_0_OFF0]] = select i1 [[CMP1]], i1 true, i1 [[ANY_0_OFF09]]
 ; CHECK-NEXT:    [[ALL_0_OFF0_]] = select i1 [[CMP1]], i1 [[ALL_0_OFF010]], i1 false
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[CMP1_LCSSA:%.*]] = phi i1 [ [[CMP1]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[CMP1_LCSSA:%.*]] = phi i1 [ [[CMP1]], [[FOR_BODY]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[FOR_BODY]] ], [ [[RDX_SELECT3]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[FOR_BODY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i1 [[CMP1_LCSSA]] to i32
 ; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[DOTANY_0_OFF0_LCSSA]], i32 2, i32 3
 ; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[ALL_0_OFF0__LCSSA]], i32 [[TMP10]], i32 [[TMP11]]
@@ -396,23 +952,70 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF4-IC2-LABEL: define i32 @multi_user_cmp_branch_use_and_outside_bb_use(
 ; CHECK-VF4-IC2-SAME: ptr readonly [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-VF4-IC2-NEXT:  entry:
+; CHECK-VF4-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-VF4-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-VF4-IC2:       vector.ph:
+; CHECK-VF4-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-VF4-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-VF4-IC2:       vector.body:
+; CHECK-VF4-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ <i1 true, i1 true, i1 true, i1 true>, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ <i1 true, i1 true, i1 true, i1 true>, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-VF4-IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
+; CHECK-VF4-IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF4-IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
+; CHECK-VF4-IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
+; CHECK-VF4-IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 4
+; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
+; CHECK-VF4-IC2-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
+; CHECK-VF4-IC2-NEXT:    [[TMP6:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP7:%.*]] = fcmp olt <4 x float> [[WIDE_LOAD4]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP8]] = select <4 x i1> [[TMP6]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[VEC_PHI2]]
+; CHECK-VF4-IC2-NEXT:    [[TMP9]] = select <4 x i1> [[TMP7]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[VEC_PHI3]]
+; CHECK-VF4-IC2-NEXT:    [[TMP10]] = select <4 x i1> [[TMP6]], <4 x i1> [[VEC_PHI]], <4 x i1> zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP11]] = select <4 x i1> [[TMP7]], <4 x i1> [[VEC_PHI1]], <4 x i1> zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-VF4-IC2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-VF4-IC2-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-VF4-IC2:       middle.block:
+; CHECK-VF4-IC2-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP7]], i32 3
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne <4 x i1> [[TMP10]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT:%.*]] = select <4 x i1> [[RDX_SELECT_CMP]], <4 x i1> [[TMP10]], <4 x i1> [[TMP11]]
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP5:%.*]] = icmp ne <4 x i1> [[RDX_SELECT]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-VF4-IC2-NEXT:    [[TMP14:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP5]])
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT6:%.*]] = select i1 [[TMP14]], i1 false, i1 true
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP7:%.*]] = icmp ne <4 x i1> [[TMP8]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT8:%.*]] = select <4 x i1> [[RDX_SELECT_CMP7]], <4 x i1> [[TMP8]], <4 x i1> [[TMP9]]
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT_CMP9:%.*]] = icmp ne <4 x i1> [[RDX_SELECT8]], zeroinitializer
+; CHECK-VF4-IC2-NEXT:    [[TMP15:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_SELECT_CMP9]])
+; CHECK-VF4-IC2-NEXT:    [[RDX_SELECT10:%.*]] = select i1 [[TMP15]], i1 true, i1 false
+; CHECK-VF4-IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-VF4-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-VF4-IC2:       scalar.ph:
+; CHECK-VF4-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[RDX_SELECT6]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4-IC2-NEXT:    [[BC_MERGE_RDX11:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[RDX_SELECT10]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4-IC2-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-VF4-IC2:       for.body:
-; CHECK-VF4-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-VF4-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ [[BC_MERGE_RDX11]], [[SCALAR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF4-IC2-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF4-IC2-NEXT:    [[CMP1:%.*]] = fcmp olt float [[LOAD1]], 0.000000e+00
 ; CHECK-VF4-IC2-NEXT:    [[DOTANY_0_OFF0]] = select i1 [[CMP1]], i1 true, i1 [[ANY_0_OFF09]]
 ; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF0_]] = select i1 [[CMP1]], i1 [[ALL_0_OFF010]], i1 false
-; CHECK-VF4-IC2-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
-; CHECK-VF4-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
-; CHECK-VF4-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK-VF4-IC2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-VF4-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-VF4-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK-VF4-IC2:       exit:
-; CHECK-VF4-IC2-NEXT:    [[CMP1_LCSSA:%.*]] = phi i1 [ [[CMP1]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[VECTOR_BODY]] ]
-; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[VECTOR_BODY]] ]
+; CHECK-VF4-IC2-NEXT:    [[CMP1_LCSSA:%.*]] = phi i1 [ [[CMP1]], [[FOR_BODY]] ], [ [[TMP13]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[FOR_BODY]] ], [ [[RDX_SELECT10]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[FOR_BODY]] ], [ [[RDX_SELECT6]], [[MIDDLE_BLOCK]] ]
 ; CHECK-VF4-IC2-NEXT:    [[TMP16:%.*]] = zext i1 [[CMP1_LCSSA]] to i32
 ; CHECK-VF4-IC2-NEXT:    [[TMP17:%.*]] = select i1 [[DOTANY_0_OFF0_LCSSA]], i32 2, i32 3
 ; CHECK-VF4-IC2-NEXT:    [[TMP18:%.*]] = select i1 [[ALL_0_OFF0__LCSSA]], i32 [[TMP16]], i32 [[TMP17]]
@@ -421,23 +1024,61 @@ define i32 @multi_user_cmp_branch_use_and_outside_bb_use(ptr readonly %a, i64 no
 ; CHECK-VF1-IC2-LABEL: define i32 @multi_user_cmp_branch_use_and_outside_bb_use(
 ; CHECK-VF1-IC2-SAME: ptr readonly [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-VF1-IC2-NEXT:  entry:
+; CHECK-VF1-IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; CHECK-VF1-IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-VF1-IC2:       vector.ph:
+; CHECK-VF1-IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; CHECK-VF1-IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1-IC2-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-VF1-IC2:       vector.body:
+; CHECK-VF1-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI1:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI2:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[VEC_PHI3:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-VF1-IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
+; CHECK-VF1-IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF1-IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP1]]
+; CHECK-VF1-IC2-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP2]], align 4
+; CHECK-VF1-IC2-NEXT:    [[TMP5:%.*]] = load float, ptr [[TMP3]], align 4
+; CHECK-VF1-IC2-NEXT:    [[TMP6:%.*]] = fcmp olt float [[TMP4]], 0.000000e+00
+; CHECK-VF1-IC2-NEXT:    [[TMP7:%.*]] = fcmp olt float [[TMP5]], 0.000000e+00
+; CHECK-VF1-IC2-NEXT:    [[TMP8]] = select i1 [[TMP6]], i1 true, i1 [[VEC_PHI2]]
+; CHECK-VF1-IC2-NEXT:    [[TMP9]] = select i1 [[TMP7]], i1 true, i1 [[VEC_PHI3]]
+; CHECK-VF1-IC2-NEXT:    [[TMP10]] = select i1 [[TMP6]], i1 [[VEC_PHI]], i1 false
+; CHECK-VF1-IC2-NEXT:    [[TMP11]] = select i1 [[TMP7]], i1 [[VEC_PHI1]], i1 false
+; CHECK-VF1-IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-VF1-IC2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-VF1-IC2-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-VF1-IC2:       middle.block:
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i1 [[TMP10]], true
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i1 [[TMP10]], i1 [[TMP11]]
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT_CMP4:%.*]] = icmp ne i1 [[TMP8]], false
+; CHECK-VF1-IC2-NEXT:    [[RDX_SELECT5:%.*]] = select i1 [[RDX_SELECT_CMP4]], i1 [[TMP8]], i1 [[TMP9]]
+; CHECK-VF1-IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-VF1-IC2-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-VF1-IC2:       scalar.ph:
+; CHECK-VF1-IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1-IC2-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[RDX_SELECT5]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1-IC2-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-VF1-IC2:       for.body:
-; CHECK-VF1-IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ true, [[VECTOR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ false, [[VECTOR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[VECTOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
+; CHECK-VF1-IC2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF010:%.*]] = phi i1 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ALL_0_OFF0_:%.*]], [[FOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[ANY_0_OFF09:%.*]] = phi i1 [ [[BC_MERGE_RDX6]], [[SCALAR_PH]] ], [ [[DOTANY_0_OFF0:%.*]], [[FOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-VF1-IC2-NEXT:    [[LOAD1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF1-IC2-NEXT:    [[CMP1:%.*]] = fcmp olt float [[LOAD1]], 0.000000e+00
 ; CHECK-VF1-IC2-NEXT:    [[DOTANY_0_OFF0]] = select i1 [[CMP1]], i1 true, i1 [[ANY_0_OFF09]]
 ; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF0_]] = select i1 [[CMP1]], i1 [[ALL_0_OFF010]], i1 false
-; CHECK-VF1-IC2-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
-; CHECK-VF1-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
-; CHECK-VF1-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[VECTOR_BODY]]
+; CHECK-VF1-IC2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-VF1-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
+; CHECK-VF1-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK-VF1-IC2:       exit:
-; CHECK-VF1-IC2-NEXT:    [[CMP1_LCSSA:%.*]] = phi i1 [ [[CMP1]], [[VECTOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[VECTOR_BODY]] ]
-; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[VECTOR_BODY]] ]
+; CHECK-VF1-IC2-NEXT:    [[CMP1_LCSSA:%.*]] = phi i1 [ [[CMP1]], [[FOR_BODY]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1-IC2-NEXT:    [[DOTANY_0_OFF0_LCSSA:%.*]] = phi i1 [ [[DOTANY_0_OFF0]], [[FOR_BODY]] ], [ [[RDX_SELECT5]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF0__LCSSA:%.*]] = phi i1 [ [[ALL_0_OFF0_]], [[FOR_BODY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
 ; CHECK-VF1-IC2-NEXT:    [[TMP13:%.*]] = zext i1 [[CMP1_LCSSA]] to i32
 ; CHECK-VF1-IC2-NEXT:    [[TMP14:%.*]] = select i1 [[DOTANY_0_OFF0_LCSSA]], i32 2, i32 3
 ; CHECK-VF1-IC2-NEXT:    [[TMP15:%.*]] = select i1 [[ALL_0_OFF0__LCSSA]], i32 [[TMP13]], i32 [[TMP14]]
@@ -583,7 +1224,7 @@ exit:
 }
 
 ; Currently, this test-case is not supported.
-; int multi_user_cmp_fmax(int* a, long long n) {
+; int multi_user_cmp_max(int* a, long long n) {
 ;   _Bool any = 0;
 ;   _Bool all = 1;
 ;   int max = 0;
@@ -613,7 +1254,7 @@ define i32 @multi_user_cmp_max(ptr readonly %a, i64 noundef %n) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[LOAD1]], [[MAX_015]]
 ; CHECK-NEXT:    [[DOTANY_0_OFF0]] = select i1 [[CMP1]], i1 true, i1 [[ANY_0_OFF09]]
 ; CHECK-NEXT:    [[ALL_0_OFF0_]] = select i1 [[CMP1]], i1 [[ALL_0_OFF010]], i1 false
-; CHECK-NEXT:    [[DOTMAX_0]] = select i1 [[CMP1]], i32 [[LOAD1]], i32 [[MAX_015]]
+; CHECK-NEXT:    [[DOTMAX_0]] = tail call i32 @llvm.smax.i32(i32 [[LOAD1]], i32 [[MAX_015]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[FOR_BODY]]
@@ -638,7 +1279,7 @@ define i32 @multi_user_cmp_max(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF4-IC2-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[LOAD1]], [[MAX_015]]
 ; CHECK-VF4-IC2-NEXT:    [[DOTANY_0_OFF0]] = select i1 [[CMP1]], i1 true, i1 [[ANY_0_OFF09]]
 ; CHECK-VF4-IC2-NEXT:    [[ALL_0_OFF0_]] = select i1 [[CMP1]], i1 [[ALL_0_OFF010]], i1 false
-; CHECK-VF4-IC2-NEXT:    [[DOTMAX_0]] = select i1 [[CMP1]], i32 [[LOAD1]], i32 [[MAX_015]]
+; CHECK-VF4-IC2-NEXT:    [[DOTMAX_0]] = tail call i32 @llvm.smax.i32(i32 [[LOAD1]], i32 [[MAX_015]])
 ; CHECK-VF4-IC2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-VF4-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
 ; CHECK-VF4-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[FOR_BODY]]
@@ -663,7 +1304,7 @@ define i32 @multi_user_cmp_max(ptr readonly %a, i64 noundef %n) {
 ; CHECK-VF1-IC2-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[LOAD1]], [[MAX_015]]
 ; CHECK-VF1-IC2-NEXT:    [[DOTANY_0_OFF0]] = select i1 [[CMP1]], i1 true, i1 [[ANY_0_OFF09]]
 ; CHECK-VF1-IC2-NEXT:    [[ALL_0_OFF0_]] = select i1 [[CMP1]], i1 [[ALL_0_OFF010]], i1 false
-; CHECK-VF1-IC2-NEXT:    [[DOTMAX_0]] = select i1 [[CMP1]], i32 [[LOAD1]], i32 [[MAX_015]]
+; CHECK-VF1-IC2-NEXT:    [[DOTMAX_0]] = tail call i32 @llvm.smax.i32(i32 [[LOAD1]], i32 [[MAX_015]])
 ; CHECK-VF1-IC2-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-VF1-IC2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
 ; CHECK-VF1-IC2-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[FOR_BODY]]
@@ -677,7 +1318,7 @@ define i32 @multi_user_cmp_max(ptr readonly %a, i64 noundef %n) {
 entry:
   br label %for.body
 
-for.body:
+for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %all.0.off010 = phi i1 [ true, %entry ], [ %all.0.off0., %for.body ]
   %any.0.off09 = phi i1 [ false, %entry ], [ %.any.0.off0, %for.body ]
@@ -687,16 +1328,20 @@ for.body:
   %cmp1 = icmp sgt i32 %load1, %max.015
   %.any.0.off0 = select i1 %cmp1, i1 true, i1 %any.0.off09
   %all.0.off0. = select i1 %cmp1, i1 %all.0.off010, i1 false
-  %.max.0 = select i1 %cmp1, i32 %load1, i32 %max.015
+  %.max.0 = tail call i32 @llvm.smax.i32(i32 %load1, i32 %max.015)
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %exit, label %for.body
 
-exit:
-  %0 = select i1 %.any.0.off0, i32 2, i32 3
-  %1 = select i1 %all.0.off0., i32 1, i32 %0
+exit:                                             ; preds = %for.body
+  %.any.0.off0.lcssa = phi i1 [ %.any.0.off0, %for.body ]
+  %all.0.off0..lcssa = phi i1 [ %all.0.off0., %for.body ]
+  %0 = select i1 %.any.0.off0.lcssa, i32 2, i32 3
+  %1 = select i1 %all.0.off0..lcssa, i32 1, i32 %0
   ret i32 %1
 }
+
+declare i32 @llvm.smax.i32(i32, i32)
 
 ; Currently, this test-case is not supported.
 ; int multi_user_cmp_use_store_offset(float* a, int *b, long long n) {

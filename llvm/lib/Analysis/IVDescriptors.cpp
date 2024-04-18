@@ -256,6 +256,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   SmallPtrSet<Instruction *, 4> CastInsts;
   unsigned MinWidthCastToRecurrenceType;
   Instruction *Start = Phi;
+  Instruction *MultiCMP = nullptr;
   bool IsSigned = false;
 
   SmallPtrSet<Instruction *, 8> VisitedInsts;
@@ -400,6 +401,8 @@ bool RecurrenceDescriptor::AddReductionVar(
     }
 
     bool IsASelect = isa<SelectInst>(Cur);
+    if (IsASelect)
+      MultiCMP = ReduxDesc.getMultiCmp();
 
     // A conditional reduction operation must only have 2 or less uses in
     // VisitedInsts.
@@ -597,7 +600,8 @@ bool RecurrenceDescriptor::AddReductionVar(
   // Save the description of this reduction variable.
   RecurrenceDescriptor RD(RdxStart, ExitInstruction, IntermediateStore, Kind,
                           FMF, ExactFPMathInst, RecurrenceType, IsSigned,
-                          IsOrdered, CastInsts, MinWidthCastToRecurrenceType);
+                          IsOrdered, CastInsts, MinWidthCastToRecurrenceType,
+                          MultiCMP);
   RedDes = RD;
 
   return true;
@@ -635,14 +639,59 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       return InstDesc(Select, Prev.getRecKind());
   }
 
+  SelectInst *SI = dyn_cast<SelectInst>(I);
+  Instruction *Cmp = nullptr;
+
+  if (SI) {
+    bool HasOrigPhiUser = false;
+    bool SelectNonPHIUserInLoop = false;
+    auto Blocks = Loop->getBlocksVector();
+    for (User *U : SI->users()) {
+      Instruction *Inst = dyn_cast<Instruction>(U);
+      if (!Inst)
+        continue;
+      if (Inst == OrigPhi) {
+        HasOrigPhiUser = true;
+      } else {
+        if (std::find(Blocks.begin(), Blocks.end(), Inst->getParent()) !=
+            Blocks.end())
+          SelectNonPHIUserInLoop = true;
+      }
+    }
+    Cmp = dyn_cast<CmpInst>(SI->getOperand(0));
+    if (Cmp && !Cmp->hasOneUse() && HasOrigPhiUser && !SelectNonPHIUserInLoop) {
+      bool IsSafeCMP = true;
+      for (User *U : Cmp->users()) {
+        Instruction *UInst = dyn_cast<Instruction>(U);
+        if (!UInst)
+          continue;
+        if (SelectInst *SI1 = dyn_cast<SelectInst>(U)) {
+          if (!llvm::all_of(SI1->users(), [Blocks](User *USI) {
+                Instruction *Inst1 = dyn_cast<Instruction>(USI);
+                if (!Inst1 || (std::find(Blocks.begin(), Blocks.end(),
+                                         Inst1->getParent()) == Blocks.end() ||
+                               isa<PHINode>(Inst1)))
+                  return true;
+                return false;
+              }))
+            IsSafeCMP = false;
+        }
+        if (IsSafeCMP && !isa<BranchInst>(UInst) && !isa<SelectInst>(UInst) &&
+            std::find(Blocks.begin(), Blocks.end(), UInst->getParent()) !=
+                Blocks.end())
+          IsSafeCMP = false;
+      }
+      if (!IsSafeCMP)
+        Cmp = nullptr;
+    }
+  }
+
   // Only match select with single use cmp condition.
-  if (!match(I, m_Select(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())), m_Value(),
-                         m_Value())))
+  if (!Cmp && !match(I, m_Select(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())),
+                                 m_Value(), m_Value())))
     return InstDesc(false, I);
 
-  SelectInst *SI = cast<SelectInst>(I);
   Value *NonPhi = nullptr;
-
   if (OrigPhi == dyn_cast<PHINode>(SI->getTrueValue()))
     NonPhi = SI->getFalseValue();
   else if (OrigPhi == dyn_cast<PHINode>(SI->getFalseValue()))
@@ -656,8 +705,10 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
   if (!Loop->isLoopInvariant(NonPhi))
     return InstDesc(false, I);
 
-  return InstDesc(I, isa<ICmpInst>(I->getOperand(0)) ? RecurKind::IAnyOf
-                                                     : RecurKind::FAnyOf);
+  return InstDesc(I,
+                  isa<ICmpInst>(I->getOperand(0)) ? RecurKind::IAnyOf
+                                                  : RecurKind::FAnyOf,
+                  nullptr, Cmp);
 }
 
 RecurrenceDescriptor::InstDesc

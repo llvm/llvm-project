@@ -76,11 +76,11 @@ public:
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
                        Type *RT, bool Signed, bool Ordered,
                        SmallPtrSetImpl<Instruction *> &CI,
-                       unsigned MinWidthCastToRecurTy)
+                       unsigned MinWidthCastToRecurTy, Instruction *Cmp)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
         IsSigned(Signed), IsOrdered(Ordered),
-        MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
+        MinWidthCastToRecurrenceType(MinWidthCastToRecurTy), MultiCmp(Cmp) {
     CastInsts.insert(CI.begin(), CI.end());
   }
 
@@ -88,12 +88,13 @@ public:
   class InstDesc {
   public:
     InstDesc(bool IsRecur, Instruction *I, Instruction *ExactFP = nullptr)
-        : IsRecurrence(IsRecur), PatternLastInst(I),
-          RecKind(RecurKind::None), ExactFPMathInst(ExactFP) {}
+        : IsRecurrence(IsRecur), PatternLastInst(I), RecKind(RecurKind::None),
+          ExactFPMathInst(ExactFP), Cmp(nullptr) {}
 
-    InstDesc(Instruction *I, RecurKind K, Instruction *ExactFP = nullptr)
+    InstDesc(Instruction *I, RecurKind K, Instruction *ExactFP = nullptr,
+             Instruction *MultiCmp = nullptr)
         : IsRecurrence(true), PatternLastInst(I), RecKind(K),
-          ExactFPMathInst(ExactFP) {}
+          ExactFPMathInst(ExactFP), Cmp(MultiCmp) {}
 
     bool isRecurrence() const { return IsRecurrence; }
 
@@ -105,6 +106,8 @@ public:
 
     Instruction *getPatternInst() const { return PatternLastInst; }
 
+    Instruction *getMultiCmp() const { return Cmp; }
+
   private:
     // Is this instruction a recurrence candidate.
     bool IsRecurrence;
@@ -115,6 +118,8 @@ public:
     RecurKind RecKind;
     // Recurrence does not allow floating-point reassociation.
     Instruction *ExactFPMathInst;
+    // Mult-user compare instruction.
+    Instruction *Cmp;
   };
 
   /// Returns a struct describing if the instruction 'I' can be a recurrence
@@ -270,6 +275,8 @@ public:
            cast<IntrinsicInst>(I)->getIntrinsicID() == Intrinsic::fmuladd;
   }
 
+  Instruction *getMultiCmp() const { return MultiCmp; }
+
   /// Reductions may store temporary or final result to an invariant address.
   /// If there is such a store in the loop then, after successfull run of
   /// AddReductionVar method, this field will be assigned the last met store.
@@ -300,6 +307,7 @@ private:
   SmallPtrSet<Instruction *, 8> CastInsts;
   // The minimum width used by the recurrence.
   unsigned MinWidthCastToRecurrenceType;
+  Instruction *MultiCmp = nullptr;
 };
 
 /// A struct for saving information about induction variables.
