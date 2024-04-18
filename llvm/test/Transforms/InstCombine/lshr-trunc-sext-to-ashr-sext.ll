@@ -74,13 +74,13 @@ define <2 x i16> @t4_vec_splat(<2 x i8> %x) {
   ret <2 x i16> %c
 }
 
-define <2 x i16> @t5_vec_undef(<2 x i8> %x) {
-; CHECK-LABEL: @t5_vec_undef(
+define <2 x i16> @t5_vec_poison(<2 x i8> %x) {
+; CHECK-LABEL: @t5_vec_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 4, i8 4>
 ; CHECK-NEXT:    [[C:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]
 ;
-  %a = lshr <2 x i8> %x, <i8 4, i8 undef>
+  %a = lshr <2 x i8> %x, <i8 4, i8 poison>
   %b = trunc <2 x i8> %a to <2 x i4>
   %c = sext <2 x i4> %b to <2 x i16>
   ret <2 x i16> %c
@@ -105,15 +105,15 @@ define i16 @t6_extrause0(i8 %x) {
 
 ; TODO: We could convert %a to ashr and eliminate 2nd use of %b.
 
-define <2 x i16> @t7_extrause0_vec_undef(<2 x i8> %x) {
-; CHECK-LABEL: @t7_extrause0_vec_undef(
-; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 4, i8 undef>
-; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i8> [[A]] to <2 x i4>
+define <2 x i16> @t7_extrause0_vec_poison(<2 x i8> %x) {
+; CHECK-LABEL: @t7_extrause0_vec_poison(
+; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 4, i8 poison>
+; CHECK-NEXT:    [[B:%.*]] = trunc nuw <2 x i8> [[A]] to <2 x i4>
 ; CHECK-NEXT:    call void @usevec4(<2 x i4> [[B]])
 ; CHECK-NEXT:    [[C:%.*]] = sext <2 x i4> [[B]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]
 ;
-  %a = lshr <2 x i8> %x, <i8 4, i8 undef>
+  %a = lshr <2 x i8> %x, <i8 4, i8 poison>
   %b = trunc <2 x i8> %a to <2 x i4>
   call void @usevec4(<2 x i4> %b)
   %c = sext <2 x i4> %b to <2 x i16>
@@ -139,15 +139,15 @@ define i16 @t8_extrause1(i8 %x) {
 
 ; TODO: We could convert %a to ashr + mask (and) and eliminate %b.
 
-define <2 x i16> @t9_extrause1_vec_undef(<2 x i8> %x) {
-; CHECK-LABEL: @t9_extrause1_vec_undef(
-; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 4, i8 undef>
+define <2 x i16> @t9_extrause1_vec_poison(<2 x i8> %x) {
+; CHECK-LABEL: @t9_extrause1_vec_poison(
+; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 4, i8 poison>
 ; CHECK-NEXT:    call void @usevec8(<2 x i8> [[A]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X]], <i8 4, i8 4>
 ; CHECK-NEXT:    [[C:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]
 ;
-  %a = lshr <2 x i8> %x, <i8 4, i8 undef>
+  %a = lshr <2 x i8> %x, <i8 4, i8 poison>
   call void @usevec8(<2 x i8> %a)
   %b = trunc <2 x i8> %a to <2 x i4>
   %c = sext <2 x i4> %b to <2 x i16>
@@ -169,16 +169,16 @@ define i16 @t10_extrause2(i8 %x) {
   %c = sext i4 %b to i16
   ret i16 %c
 }
-define <2 x i16> @t11_extrause2_vec_undef(<2 x i8> %x) {
-; CHECK-LABEL: @t11_extrause2_vec_undef(
-; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 4, i8 undef>
+define <2 x i16> @t11_extrause2_vec_poison(<2 x i8> %x) {
+; CHECK-LABEL: @t11_extrause2_vec_poison(
+; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 4, i8 poison>
 ; CHECK-NEXT:    call void @usevec8(<2 x i8> [[A]])
-; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i8> [[A]] to <2 x i4>
+; CHECK-NEXT:    [[B:%.*]] = trunc nuw <2 x i8> [[A]] to <2 x i4>
 ; CHECK-NEXT:    call void @usevec4(<2 x i4> [[B]])
 ; CHECK-NEXT:    [[C:%.*]] = sext <2 x i4> [[B]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]
 ;
-  %a = lshr <2 x i8> %x, <i8 4, i8 undef>
+  %a = lshr <2 x i8> %x, <i8 4, i8 poison>
   call void @usevec8(<2 x i8> %a)
   %b = trunc <2 x i8> %a to <2 x i4>
   call void @usevec4(<2 x i4> %b)
