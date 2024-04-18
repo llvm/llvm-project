@@ -167,15 +167,15 @@ public:
     SPIRVSubArch_v16,
 
     // DXIL sub-arch corresponds to its version.
-    DXILSubArch_v10,
-    DXILSubArch_v11,
-    DXILSubArch_v12,
-    DXILSubArch_v13,
-    DXILSubArch_v14,
-    DXILSubArch_v15,
-    DXILSubArch_v16,
-    DXILSubArch_v17,
-    DXILSubArch_v18,
+    DXILSubArch_v1_0,
+    DXILSubArch_v1_1,
+    DXILSubArch_v1_2,
+    DXILSubArch_v1_3,
+    DXILSubArch_v1_4,
+    DXILSubArch_v1_5,
+    DXILSubArch_v1_6,
+    DXILSubArch_v1_7,
+    DXILSubArch_v1_8,
   };
   enum VendorType {
     UnknownVendor,
