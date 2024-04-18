@@ -201,7 +201,8 @@ struct P {
 
 struct Q {
   template <typename T> int foo() {
-    return T::template I<int>; // expected-error {{'P::I' is expected to be a non-type template, but instantiated to a type alias template}}
+    return T::template I<int>;
+    // expected-error@-1 {{'P::I' is expected to be a non-type template, but instantiated to a type alias template}}
     // expected-note@#TypeAlias {{type alias template declared here}}
   }
 };
@@ -243,8 +244,6 @@ template <typename T> struct C {
 };
 
 template <typename T1> struct A {
-
-  template <int TT> class SubA {}; // #SubA
 
   template <typename T2>
   void foo(T2) {}
