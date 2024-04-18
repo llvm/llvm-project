@@ -129,8 +129,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr uint32_t __substitute_arg_id(basic_format_arg<_C
 ///
 /// They default to false so when a new field is added it needs to be opted in
 /// explicitly.
-// TODO FMT Use an ABI tag for this struct.
-struct __fields {
+struct _LIBCPP_HIDE_FROM_ABI __fields {
   uint16_t __sign_                 : 1 {false};
   uint16_t __alternate_form_       : 1 {false};
   uint16_t __zero_padding_         : 1 {false};

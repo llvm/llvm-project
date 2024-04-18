@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___CHRONO_FORMATTER_H
 #define _LIBCPP___CHRONO_FORMATTER_H
 
+#include <__algorithm/ranges_copy.h>
 #include <__chrono/calendar.h>
 #include <__chrono/concepts.h>
 #include <__chrono/convert_to_tm.h>
@@ -23,6 +24,7 @@
 #include <__chrono/ostream.h>
 #include <__chrono/parser_std_format_spec.h>
 #include <__chrono/statically_widen.h>
+#include <__chrono/sys_info.h>
 #include <__chrono/system_clock.h>
 #include <__chrono/time_point.h>
 #include <__chrono/weekday.h>
@@ -79,7 +81,7 @@ namespace __formatter {
 // small). Therefore a duration uses its own conversion.
 template <class _CharT, class _Rep, class _Period>
 _LIBCPP_HIDE_FROM_ABI void
-__format_sub_seconds(const chrono::duration<_Rep, _Period>& __value, basic_stringstream<_CharT>& __sstr) {
+__format_sub_seconds(basic_stringstream<_CharT>& __sstr, const chrono::duration<_Rep, _Period>& __value) {
   __sstr << std::use_facet<numpunct<_CharT>>(__sstr.getloc()).decimal_point();
 
   using __duration = chrono::duration<_Rep, _Period>;
@@ -110,13 +112,13 @@ __format_sub_seconds(const chrono::duration<_Rep, _Period>& __value, basic_strin
 }
 
 template <class _CharT, __is_time_point _Tp>
-_LIBCPP_HIDE_FROM_ABI void __format_sub_seconds(const _Tp& __value, basic_stringstream<_CharT>& __sstr) {
-  __formatter::__format_sub_seconds(__value.time_since_epoch(), __sstr);
+_LIBCPP_HIDE_FROM_ABI void __format_sub_seconds(basic_stringstream<_CharT>& __sstr, const _Tp& __value) {
+  __formatter::__format_sub_seconds(__sstr, __value.time_since_epoch());
 }
 
 template <class _CharT, class _Duration>
 _LIBCPP_HIDE_FROM_ABI void
-__format_sub_seconds(const chrono::hh_mm_ss<_Duration>& __value, basic_stringstream<_CharT>& __sstr) {
+__format_sub_seconds(basic_stringstream<_CharT>& __sstr, const chrono::hh_mm_ss<_Duration>& __value) {
   __sstr << std::use_facet<numpunct<_CharT>>(__sstr.getloc()).decimal_point();
   if constexpr (chrono::treat_as_floating_point_v<typename _Duration::rep>)
     std::format_to(std::ostreambuf_iterator<_CharT>{__sstr},
@@ -143,7 +145,7 @@ consteval bool __use_fraction() {
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI void __format_year(int __year, basic_stringstream<_CharT>& __sstr) {
+_LIBCPP_HIDE_FROM_ABI void __format_year(basic_stringstream<_CharT>& __sstr, int __year) {
   if (__year < 0) {
     __sstr << _CharT('-');
     __year = -__year;
@@ -159,7 +161,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_year(int __year, basic_stringstream<_CharT>&
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI void __format_century(int __year, basic_stringstream<_CharT>& __sstr) {
+_LIBCPP_HIDE_FROM_ABI void __format_century(basic_stringstream<_CharT>& __sstr, int __year) {
   // TODO FMT Write an issue
   // [tab:time.format.spec]
   //   %C The year divided by 100 using floored division. If the result is a
@@ -170,10 +172,51 @@ _LIBCPP_HIDE_FROM_ABI void __format_century(int __year, basic_stringstream<_Char
   __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{:02}"), __century);
 }
 
+// Implements the %z format specifier according to [tab:time.format.spec], where
+// '__modifier' signals %Oz or %Ez were used. (Both modifiers behave the same,
+// so there is no need to distinguish between them.)
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI void
+__format_zone_offset(basic_stringstream<_CharT>& __sstr, chrono::seconds __offset, bool __modifier) {
+  if (__offset < 0s) {
+    __sstr << _CharT('-');
+    __offset = -__offset;
+  } else {
+    __sstr << _CharT('+');
+  }
+
+  chrono::hh_mm_ss __hms{__offset};
+  std::ostreambuf_iterator<_CharT> __out_it{__sstr};
+  // Note HMS does not allow formatting hours > 23, but the offset is not limited to 24H.
+  std::format_to(__out_it, _LIBCPP_STATICALLY_WIDEN(_CharT, "{:02}"), __hms.hours().count());
+  if (__modifier)
+    __sstr << _CharT(':');
+  std::format_to(__out_it, _LIBCPP_STATICALLY_WIDEN(_CharT, "{:02}"), __hms.minutes().count());
+}
+
+// Helper to store the time zone information needed for formatting.
+struct _LIBCPP_HIDE_FROM_ABI __time_zone {
+  // Typically these abbreviations are short and fit in the string's internal
+  // buffer.
+  string __abbrev;
+  chrono::seconds __offset;
+};
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI __time_zone __convert_to_time_zone([[maybe_unused]] const _Tp& __value) {
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+  if constexpr (same_as<_Tp, chrono::sys_info>)
+    return {__value.abbrev, __value.offset};
+  else
+#  endif
+    return {"UTC", chrono::seconds{0}};
+}
+
 template <class _CharT, class _Tp>
 _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
-    const _Tp& __value, basic_stringstream<_CharT>& __sstr, basic_string_view<_CharT> __chrono_specs) {
+    basic_stringstream<_CharT>& __sstr, const _Tp& __value, basic_string_view<_CharT> __chrono_specs) {
   tm __t              = std::__convert_to_tm<tm>(__value);
+  __time_zone __z     = __formatter::__convert_to_time_zone(__value);
   const auto& __facet = std::use_facet<time_put<_CharT>>(__sstr.getloc());
   for (auto __it = __chrono_specs.begin(); __it != __chrono_specs.end(); ++__it) {
     if (*__it == _CharT('%')) {
@@ -196,7 +239,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         // strftime's output is only defined in the range [00, 99].
         int __year = __t.tm_year + 1900;
         if (__year < 1000 || __year > 9999)
-          __formatter::__format_century(__year, __sstr);
+          __formatter::__format_century(__sstr, __year);
         else
           __facet.put(
               {__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
@@ -242,7 +285,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         __facet.put(
             {__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
         if constexpr (__use_fraction<_Tp>())
-          __formatter::__format_sub_seconds(__value, __sstr);
+          __formatter::__format_sub_seconds(__sstr, __value);
         break;
 
         // Unlike time_put and strftime the formatting library requires %Y
@@ -283,22 +326,24 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         // Depending on the platform's libc the range of supported years is
         // limited. Intead of of testing all conditions use the internal
         // implementation unconditionally.
-        __formatter::__format_year(__t.tm_year + 1900, __sstr);
+        __formatter::__format_year(__sstr, __t.tm_year + 1900);
         break;
 
-      case _CharT('F'): {
-        int __year = __t.tm_year + 1900;
-        if (__year < 1000) {
-          __formatter::__format_year(__year, __sstr);
-          __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "-{:02}-{:02}"), __t.tm_mon + 1, __t.tm_mday);
-        } else
-          __facet.put(
-              {__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
-      } break;
+      case _CharT('F'):
+        // Depending on the platform's libc the range of supported years is
+        // limited. Instead of testing all conditions use the internal
+        // implementation unconditionally.
+        __formatter::__format_year(__sstr, __t.tm_year + 1900);
+        __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "-{:02}-{:02}"), __t.tm_mon + 1, __t.tm_mday);
+        break;
+
+      case _CharT('z'):
+        __formatter::__format_zone_offset(__sstr, __z.__offset, false);
+        break;
 
       case _CharT('Z'):
-        // TODO FMT Add proper timezone support.
-        __sstr << _LIBCPP_STATICALLY_WIDEN(_CharT, "UTC");
+        // __abbrev is always a char so the copy may convert.
+        ranges::copy(__z.__abbrev, std::ostreambuf_iterator<_CharT>{__sstr});
         break;
 
       case _CharT('O'):
@@ -310,13 +355,19 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
             ++__it;
             __facet.put(
                 {__sstr}, __sstr, _CharT(' '), std::addressof(__t), std::to_address(__s), std::to_address(__it + 1));
-            __formatter::__format_sub_seconds(__value, __sstr);
+            __formatter::__format_sub_seconds(__sstr, __value);
             break;
           }
         }
+
+        // Oz produces the same output as Ez below.
         [[fallthrough]];
       case _CharT('E'):
         ++__it;
+        if (*__it == 'z') {
+          __formatter::__format_zone_offset(__sstr, __z.__offset, true);
+          break;
+        }
         [[fallthrough]];
       default:
         __facet.put(
@@ -365,6 +416,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_ok(const _Tp& __value) {
     return __value.weekday().ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+  else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+#  endif
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -405,6 +460,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_name_ok(const _Tp& __value) {
     return __value.weekday().ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+  else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+#  endif
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -445,6 +504,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __date_ok(const _Tp& __value) {
     return __value.ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+  else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+#  endif
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -485,6 +548,10 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __month_name_ok(const _Tp& __value) {
     return __value.month().ok();
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return true;
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+  else if constexpr (same_as<_Tp, chrono::sys_info>)
+    return true;
+#  endif
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -512,7 +579,7 @@ __format_chrono(const _Tp& __value,
     if constexpr (chrono::__is_duration<_Tp>::value) {
       if (__value < __value.zero())
         __sstr << _CharT('-');
-      __formatter::__format_chrono_using_chrono_specs(chrono::abs(__value), __sstr, __chrono_specs);
+      __formatter::__format_chrono_using_chrono_specs(__sstr, chrono::abs(__value), __chrono_specs);
       // TODO FMT When keeping the precision it will truncate the string.
       // Note that the behaviour what the precision does isn't specified.
       __specs.__precision_ = -1;
@@ -556,7 +623,7 @@ __format_chrono(const _Tp& __value,
           __sstr << _CharT('-');
       }
 
-      __formatter::__format_chrono_using_chrono_specs(__value, __sstr, __chrono_specs);
+      __formatter::__format_chrono_using_chrono_specs(__sstr, __value, __chrono_specs);
     }
   }
 
@@ -814,6 +881,20 @@ public:
     return _Base::__parse(__ctx, __format_spec::__fields_chrono, __format_spec::__flags::__time);
   }
 };
+
+#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+template <__fmt_char_type _CharT>
+struct formatter<chrono::sys_info, _CharT> : public __formatter_chrono<_CharT> {
+public:
+  using _Base = __formatter_chrono<_CharT>;
+
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    return _Base::__parse(__ctx, __format_spec::__fields_chrono, __format_spec::__flags::__time_zone);
+  }
+};
+#  endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+
 #endif // if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD

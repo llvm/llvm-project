@@ -1220,8 +1220,7 @@ TEST(DeclPrinter, TestTemplateTemplateParameterWrittenWithTypename) {
   ASSERT_TRUE(PrintedDeclCXX17Matches(
       "template <template <typename> typename Z> void A();",
       functionTemplateDecl(hasName("A")).bind("id"),
-      "template <template <typename> class Z> void A()"));
-  // WRONG: We should use typename if the parameter was written with it.
+      "template <template <typename> typename Z> void A()"));
 }
 
 TEST(DeclPrinter, TestTemplateArgumentList1) {
@@ -1384,6 +1383,79 @@ TEST(DeclPrinter, TestTemplateArgumentList16) {
   ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "T2", "typename T2 = bool"));
   ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "NT1", "int NT1"));
   ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "NT2", "int NT2 = 5"));
+}
+
+TEST(DeclPrinter, TestCXXRecordDecl17) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template<typename T> struct Z {};"
+      "struct X {};"
+      "Z<X> A;",
+      "A", "Z<X> A",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
+}
+
+TEST(DeclPrinter, TestCXXRecordDecl18) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template<typename T> struct Z {};"
+      "struct X {};"
+      "Z<X> A;"
+      "template <typename T1, int>"
+      "struct Y{};"
+      "Y<Z<X>, 2> B;",
+      "B", "Y<Z<X>, 2> B",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
+}
+
+TEST(DeclPrinter, TestCXXRecordDecl19) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template<typename T> struct Z {};"
+      "struct X {};"
+      "Z<X> A;"
+      "template <typename T1, int>"
+      "struct Y{};"
+      "Y<Z<X>, 2> B;",
+      "B", "Y<Z<X>, 2> B",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; }));
+}
+
+TEST(DeclPrinter, TestCXXRecordDecl20) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template <typename T, int N> class Inner;"
+      "template <typename T, int N>"
+      "class Inner{Inner(T val){}};"
+      "template <class InnerClass, int N> class Outer {"
+      "public:"
+      "struct NestedStruct {"
+      "int nestedValue;"
+      "NestedStruct(int val) : nestedValue(val) {}"
+      "};"
+      "InnerClass innerInstance;"
+      "Outer(const InnerClass &inner) : innerInstance(inner) {}"
+      "};"
+      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100);",
+      "nestedInstance",
+      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
+}
+
+TEST(DeclPrinter, TestCXXRecordDecl21) {
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template <typename T, int N> class Inner;"
+      "template <typename T, int N>"
+      "class Inner{Inner(T val){}};"
+      "template <class InnerClass, int N> class Outer {"
+      "public:"
+      "struct NestedStruct {"
+      "int nestedValue;"
+      "NestedStruct(int val) : nestedValue(val) {}"
+      "};"
+      "InnerClass innerInstance;"
+      "Outer(const InnerClass &inner) : innerInstance(inner) {}"
+      "};"
+      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100);",
+      "nestedInstance",
+      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; }));
 }
 
 TEST(DeclPrinter, TestFunctionParamUglified) {

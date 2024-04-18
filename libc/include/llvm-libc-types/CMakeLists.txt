@@ -49,11 +49,12 @@ add_header(pid_t HDR pid_t.h)
 add_header(posix_spawn_file_actions_t HDR posix_spawn_file_actions_t.h)
 add_header(posix_spawnattr_t HDR posix_spawnattr_t.h)
 add_header(pthread_attr_t HDR pthread_attr_t.h DEPENDS .size_t)
+add_header(pthread_condattr_t HDR pthread_condattr_t.h DEPENDS .clockid_t)
 add_header(pthread_key_t HDR pthread_key_t.h)
 add_header(pthread_mutex_t HDR pthread_mutex_t.h DEPENDS .__futex_word .__mutex_type)
-add_header(pthread_t HDR pthread_t.h DEPENDS .__thread_type)
 add_header(pthread_mutexattr_t HDR pthread_mutexattr_t.h)
 add_header(pthread_once_t HDR pthread_once_t.h DEPENDS .__futex_word)
+add_header(pthread_t HDR pthread_t.h DEPENDS .__thread_type)
 add_header(rlim_t HDR rlim_t.h)
 add_header(time_t HDR time_t.h)
 add_header(stack_t HDR stack_t.h)
@@ -105,4 +106,14 @@ add_header(
     float128.h
   DEPENDS
     libc.include.llvm-libc-macros.float_macros
+)
+add_header(fsblkcnt_t HDR fsblkcnt_t.h)
+add_header(fsfilcnt_t HDR fsfilcnt_t.h)
+add_header(
+  struct_statvfs 
+HDR 
+  struct_statvfs.h
+DEPENDS
+  .fsblkcnt_t
+  .fsfilcnt_t
 )

@@ -3,7 +3,7 @@
 
 int __attribute__((target_version("sme-f64f64+bf16"))) foo(int) { return 1; }
 int __attribute__((target_version("default"))) foo(int) { return 2; }
-int __attribute__((target_version("sm4+ebf16"))) foo(void) { return 3; }
+int __attribute__((target_version("sm4+bf16"))) foo(void) { return 3; }
 int __attribute__((target_version("default"))) foo(void) { return 4; }
 
 struct MyClass {
@@ -35,7 +35,7 @@ struct MyClass {
   int unused_with_implicit_forward_default_def(void);
   int __attribute__((target_version("lse"))) unused_with_implicit_forward_default_def(void);
 
-  // This should generate a normal function.
+  // This should generate a target version despite the default not being declared.
   int __attribute__((target_version("rdm"))) unused_without_default(void);
 };
 
@@ -75,11 +75,23 @@ int bar() {
 // CHECK: @_ZN7MyClass32unused_with_implicit_default_defEv = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClass32unused_with_implicit_default_defEv.resolver
 // CHECK: @_ZN7MyClass40unused_with_implicit_forward_default_defEv = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClass40unused_with_implicit_forward_default_defEv.resolver
 //.
+// CHECK-LABEL: @_Z3fooi._Mbf16Msme-f64f64(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
+// CHECK-NEXT:    ret i32 1
+//
+//
 // CHECK-LABEL: @_Z3fooi.default(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
 // CHECK-NEXT:    ret i32 2
+//
+//
+// CHECK-LABEL: @_Z3foov._Mbf16Msm4(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 3
 //
 //
 // CHECK-LABEL: @_Z3foov.default(
@@ -189,6 +201,14 @@ int bar() {
 // CHECK-NEXT:    ret i32 1
 //
 //
+// CHECK-LABEL: @_ZN7MyClass22unused_without_defaultEv._Mrdm(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK-NEXT:    ret i32 0
+//
+//
 // CHECK-LABEL: @_Z3barv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[M:%.*]] = alloca [[STRUCT_MYCLASS:%.*]], align 1
@@ -226,8 +246,8 @@ int bar() {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 36028797153181696
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 36028797153181696
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1099520016384
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1099520016384
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
@@ -240,42 +260,22 @@ int bar() {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 268435488
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 268435488
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 8388640
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 8388640
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @_Z3foov._Mebf16Msm4
+// CHECK-NEXT:    ret ptr @_Z3foov._Mbf16Msm4
 // CHECK:       resolver_else:
 // CHECK-NEXT:    ret ptr @_Z3foov.default
-//
-//
-// CHECK-LABEL: @_Z3fooi._Mbf16Msme-f64f64(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: @_Z3foov._Mebf16Msm4(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 3
-//
-//
-// CHECK-LABEL: @_ZN7MyClass22unused_without_defaultEv(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    ret i32 0
 //
 //
 // CHECK-LABEL: @_ZN7MyClass23unused_with_default_defEv.resolver(
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1073741824
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1073741824
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 33554432
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 33554432
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
@@ -288,8 +288,8 @@ int bar() {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 65536
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 65536
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 16384
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 16384
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
@@ -312,16 +312,16 @@ int bar() {
 // CHECK-NEXT:    ret ptr @_ZN7MyClass40unused_with_implicit_forward_default_defEv.default
 //
 //.
-// CHECK: attributes #[[ATTR0:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR1:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+crc" }
-// CHECK: attributes #[[ATTR2:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+fp-armv8,+neon" }
-// CHECK: attributes #[[ATTR3:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+mops" }
-// CHECK: attributes #[[ATTR4:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon" }
-// CHECK: attributes #[[ATTR5:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve" }
-// CHECK: attributes #[[ATTR6:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
-// CHECK: attributes #[[ATTR7:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse" }
-// CHECK: attributes #[[ATTR8:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }
-// CHECK: attributes #[[ATTR9:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+neon,+sm4" }
+// CHECK: attributes #[[ATTR0:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }
+// CHECK: attributes #[[ATTR1:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR2:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fp-armv8,+neon,+sm4" }
+// CHECK: attributes #[[ATTR3:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+crc" }
+// CHECK: attributes #[[ATTR4:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+fp-armv8,+neon" }
+// CHECK: attributes #[[ATTR5:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+mops" }
+// CHECK: attributes #[[ATTR6:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon" }
+// CHECK: attributes #[[ATTR7:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve" }
+// CHECK: attributes #[[ATTR8:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
+// CHECK: attributes #[[ATTR9:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse" }
 // CHECK: attributes #[[ATTR10:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon,+rdm" }
 // CHECK: attributes #[[ATTR11:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 //.

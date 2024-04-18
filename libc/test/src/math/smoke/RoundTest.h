@@ -12,7 +12,7 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 
 template <typename T> class RoundTest : public LIBC_NAMESPACE::testing::Test {
 
