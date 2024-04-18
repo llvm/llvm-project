@@ -1595,9 +1595,8 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
     for (int id = 0, s = elements.size(); id < s && dynamicNoop; ++id) {
       auto element = elements[id];
 
-      APSInt cstElement;
-      if (matchPattern(element, m_ConstantInt(&cstElement))) {
-        dynamicNoop &= cstElement.getExtValue() == sourceTy.getDimSize(id);
+      if (auto cst = getConstantIntValue(element)) {
+        dynamicNoop &= cst.value() == sourceTy.getDimSize(id);
         continue;
       }
 
@@ -1605,8 +1604,9 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
         dynamicNoop &= dimOp.getSource() == source;
 
         APSInt dim;
-        dynamicNoop &= matchPattern(dimOp.getIndex(), m_ConstantInt(&dim)) &&
-                       dim.getExtValue() == static_cast<int64_t>(id);
+        auto cst = getConstantIntValue(dimOp.getIndex());
+        dynamicNoop &=
+            cst.has_value() && cst.value() == static_cast<int64_t>(id);
         continue;
       }
     }
