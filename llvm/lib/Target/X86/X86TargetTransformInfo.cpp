@@ -4123,7 +4123,7 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         // TODO: Handle funnel-shift cases.
         const APInt *Amt;
         if (Args[2] &&
-            PatternMatch::match(Args[2], PatternMatch::m_APIntAllowUndef(Amt)))
+            PatternMatch::match(Args[2], PatternMatch::m_APIntAllowPoison(Amt)))
           ISD = X86ISD::VROTLI;
       }
     }
@@ -4139,7 +4139,7 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         // TODO: Handle funnel-shift cases.
         const APInt *Amt;
         if (Args[2] &&
-            PatternMatch::match(Args[2], PatternMatch::m_APIntAllowUndef(Amt)))
+            PatternMatch::match(Args[2], PatternMatch::m_APIntAllowPoison(Amt)))
           ISD = X86ISD::VROTLI;
       }
     }
