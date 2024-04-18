@@ -156,8 +156,8 @@ inline void addTargetRewritePass(mlir::PassManager &pm) {
 }
 
 inline void addDebugInfoPass(mlir::PassManager &pm) {
-  addPassConditionally(pm, disableDebugInfo,
-      [&]() { return fir::createAddDebugInfoPass(); });
+  addPassConditionally(
+      pm, disableDebugInfo, [&]() { return fir::createAddDebugInfoPass(); });
 }
 
 inline void addFIRToLLVMPass(
