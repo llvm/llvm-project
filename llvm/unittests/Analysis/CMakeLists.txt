@@ -80,5 +80,11 @@ if(NOT WIN32)
   export_executable_symbols_for_plugins(AnalysisTests)
 endif()
 
+include(CheckCXXSymbolExists)
+check_cxx_symbol_exists(logf128 math.h HAS_LOGF128)
+if(HAS_LOGF128)
+  target_compile_definitions(AnalysisTests PRIVATE HAS_LOGF128)
+endif()
+
 add_subdirectory(InlineAdvisorPlugin)
 add_subdirectory(InlineOrderPlugin)
