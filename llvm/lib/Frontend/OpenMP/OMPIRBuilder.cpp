@@ -4786,11 +4786,12 @@ OpenMPIRBuilder::readTeamBoundsForKernel(const Triple &, Function &Kernel) {
 
 void OpenMPIRBuilder::writeTeamsForKernel(const Triple &T, Function &Kernel,
                                           int32_t LB, int32_t UB) {
-  if (T.isNVPTX()) {
+  if (T.isNVPTX())
     if (UB > 0)
       updateNVPTXMetadata(Kernel, "maxclusterrank", UB, true);
-    updateNVPTXMetadata(Kernel, "minctasm", LB, false);
-  }
+  if (T.isAMDGPU())
+    Kernel.addFnAttr("amdgpu-max-num-workgroups", llvm::utostr(LB) + ",1,1");
+
   Kernel.addFnAttr("omp_target_num_teams", std::to_string(LB));
 }
 
@@ -4883,8 +4884,11 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
     return InsertPointTy();
 
   // Disable TargetData CodeGen on Device pass.
-  if (Config.IsTargetDevice.value_or(false))
+  if (Config.IsTargetDevice.value_or(false)) {
+    if (BodyGenCB)
+      Builder.restoreIP(BodyGenCB(Builder.saveIP(), BodyGenTy::NoPriv));
     return Builder.saveIP();
+  }
 
   Builder.restoreIP(CodeGenIP);
   bool IsStandAlone = !BodyGenCB;
@@ -5070,10 +5074,15 @@ FunctionCallee OpenMPIRBuilder::createDispatchFiniFunction(unsigned IVSize,
 
 static void replaceConstatExprUsesInFuncWithInstr(ConstantExpr *ConstExpr,
                                                   Function *Func) {
-  for (User *User : make_early_inc_range(ConstExpr->users()))
-    if (auto *Instr = dyn_cast<Instruction>(User))
-      if (Instr->getFunction() == Func)
-        Instr->replaceUsesOfWith(ConstExpr, ConstExpr->getAsInstruction(Instr));
+  for (User *User : make_early_inc_range(ConstExpr->users())) {
+    if (auto *Instr = dyn_cast<Instruction>(User)) {
+      if (Instr->getFunction() == Func) {
+        Instruction *ConstInst = ConstExpr->getAsInstruction();
+        ConstInst->insertBefore(*Instr->getParent(), Instr->getIterator());
+        Instr->replaceUsesOfWith(ConstExpr, ConstInst);
+      }
+    }
+  }
 }
 
 static void replaceConstantValueUsesInFuncWithInstr(llvm::Value *Input,

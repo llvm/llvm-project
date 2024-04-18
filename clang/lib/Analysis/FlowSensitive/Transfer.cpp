@@ -20,7 +20,9 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
@@ -38,9 +40,9 @@ namespace clang {
 namespace dataflow {
 
 const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
-  auto BlockIt = CFCtx.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
-  assert(BlockIt != CFCtx.getStmtToBlock().end());
-  if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
+  auto BlockIt = ACFG.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
+  assert(BlockIt != ACFG.getStmtToBlock().end());
+  if (!ACFG.isBlockReachable(*BlockIt->getSecond()))
     return nullptr;
   if (BlockIt->getSecond()->getBlockID() == CurBlockID)
     return &CurState.Env;
@@ -450,15 +452,50 @@ public:
     Env.setStorageLocation(*S, *MemberLoc);
   }
 
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *S) {
+    const Expr *ArgExpr = S->getExpr();
+    assert(ArgExpr != nullptr);
+    propagateValueOrStorageLocation(*ArgExpr, *S, Env);
+
+    // If this is a prvalue of record type, we consider it to be an "original
+    // record constructor", which we always require to have a `RecordValue`.
+    // So make sure we have a value if we didn't propagate one above.
+    if (S->isPRValue() && S->getType()->isRecordType()) {
+      if (Env.getValue(*S) == nullptr) {
+        auto &Loc = Env.getResultObjectLocation(*S);
+        Env.initializeFieldsWithValues(Loc);
+        refreshRecordValue(Loc, Env);
+      }
+    }
+  }
+
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *S) {
     const Expr *InitExpr = S->getExpr();
     assert(InitExpr != nullptr);
+
+    // If this is a prvalue of record type, the handler for `*InitExpr` (if one
+    // exists) will initialize the result object; there is no value to propgate
+    // here.
+    if (S->getType()->isRecordType() && S->isPRValue())
+      return;
+
     propagateValueOrStorageLocation(*InitExpr, *S, Env);
   }
 
   void VisitCXXConstructExpr(const CXXConstructExpr *S) {
     const CXXConstructorDecl *ConstructorDecl = S->getConstructor();
     assert(ConstructorDecl != nullptr);
+
+    // `CXXConstructExpr` can have array type if default-initializing an array
+    // of records. We don't handle this specifically beyond potentially inlining
+    // the call.
+    if (!S->getType()->isRecordType()) {
+      transferInlineCall(S, ConstructorDecl);
+      return;
+    }
+
+    RecordStorageLocation &Loc = Env.getResultObjectLocation(*S);
+    Env.setValue(*S, refreshRecordValue(Loc, Env));
 
     if (ConstructorDecl->isCopyOrMoveConstructor()) {
       // It is permissible for a copy/move constructor to have additional
@@ -472,24 +509,14 @@ public:
       if (ArgLoc == nullptr)
         return;
 
-      if (S->isElidable()) {
-        if (Value *Val = Env.getValue(*ArgLoc))
-          Env.setValue(*S, *Val);
-      } else {
-        auto &Val = *cast<RecordValue>(Env.createValue(S->getType()));
-        Env.setValue(*S, Val);
-        copyRecord(*ArgLoc, Val.getLoc(), Env);
-      }
+      // Even if the copy/move constructor call is elidable, we choose to copy
+      // the record in all cases (which isn't wrong, just potentially not
+      // optimal).
+      copyRecord(*ArgLoc, Loc, Env);
       return;
     }
 
-    // `CXXConstructExpr` can have array type if default-initializing an array
-    // of records, and we currently can't create values for arrays. So check if
-    // we've got a record type.
-    if (S->getType()->isRecordType()) {
-      auto &InitialVal = *cast<RecordValue>(Env.createValue(S->getType()));
-      Env.setValue(*S, InitialVal);
-    }
+    Env.initializeFieldsWithValues(Loc, S->getType());
 
     transferInlineCall(S, ConstructorDecl);
   }
@@ -525,15 +552,6 @@ public:
       if (LocSrc == nullptr || LocDst == nullptr)
         return;
 
-      // The assignment operators are different from the type of the destination
-      // in this model (i.e. in one of their base classes). This must be very
-      // rare and we just bail.
-      if (Method->getFunctionObjectParameterType()
-              .getCanonicalType()
-              .getUnqualifiedType() !=
-          LocDst->getType().getCanonicalType().getUnqualifiedType())
-        return;
-
       copyRecord(*LocSrc, *LocDst, Env);
 
       // If the expr is a glvalue, we can reasonably assume the operator is
@@ -541,19 +559,15 @@ public:
       if (S->isGLValue()) {
         Env.setStorageLocation(*S, *LocDst);
       } else if (S->getType()->isRecordType()) {
-        // Make sure that we have a `RecordValue` for this expression so that
-        // `Environment::getResultObjectLocation()` is able to return a location
-        // for it.
-        if (Env.getValue(*S) == nullptr)
-          refreshRecordValue(*S, Env);
+        // Assume that the assignment returns the assigned value.
+        copyRecord(*LocDst, Env.getResultObjectLocation(*S), Env);
       }
 
       return;
     }
 
-    // CXXOperatorCallExpr can be prvalues. Call `VisitCallExpr`() to create
-    // a `RecordValue` for them so that `Environment::getResultObjectLocation()`
-    // can return a value.
+    // `CXXOperatorCallExpr` can be a prvalue. Call `VisitCallExpr`() to
+    // initialize the prvalue's fields with values.
     VisitCallExpr(S);
   }
 
@@ -568,11 +582,6 @@ public:
 
       propagateValue(*SubExpr, *S, Env);
     }
-  }
-
-  void VisitCXXTemporaryObjectExpr(const CXXTemporaryObjectExpr *S) {
-    if (Value *Val = Env.createValue(S->getType()))
-      Env.setValue(*S, *Val);
   }
 
   void VisitCallExpr(const CallExpr *S) {
@@ -602,13 +611,14 @@ public:
     } else if (const FunctionDecl *F = S->getDirectCallee()) {
       transferInlineCall(S, F);
 
-      // If this call produces a prvalue of record type, make sure that we have
-      // a `RecordValue` for it. This is required so that
-      // `Environment::getResultObjectLocation()` is able to return a location
-      // for this `CallExpr`.
+      // If this call produces a prvalue of record type, initialize its fields
+      // with values.
       if (S->getType()->isRecordType() && S->isPRValue())
-        if (Env.getValue(*S) == nullptr)
-          refreshRecordValue(*S, Env);
+        if (Env.getValue(*S) == nullptr) {
+          RecordStorageLocation &Loc = Env.getResultObjectLocation(*S);
+          Env.initializeFieldsWithValues(Loc);
+          Env.setValue(*S, refreshRecordValue(Loc, Env));
+        }
     }
   }
 
@@ -656,8 +666,10 @@ public:
     // `getLogicOperatorSubExprValue()`.
     if (S->isGLValue())
       Env.setStorageLocation(*S, Env.createObject(S->getType()));
-    else if (Value *Val = Env.createValue(S->getType()))
-      Env.setValue(*S, *Val);
+    else if (!S->getType()->isRecordType()) {
+      if (Value *Val = Env.createValue(S->getType()))
+        Env.setValue(*S, *Val);
+    }
   }
 
   void VisitInitListExpr(const InitListExpr *S) {
@@ -678,99 +690,50 @@ public:
       return;
     }
 
-    llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
+    RecordStorageLocation &Loc = Env.getResultObjectLocation(*S);
+    Env.setValue(*S, refreshRecordValue(Loc, Env));
 
-    // This only contains the direct fields for the given type.
-    std::vector<const FieldDecl *> FieldsForInit = getFieldsForInitListExpr(S);
+    // Initialization of base classes and fields of record type happens when we
+    // visit the nested `CXXConstructExpr` or `InitListExpr` for that base class
+    // or field. We therefore only need to deal with fields of non-record type
+    // here.
 
-    // `S->inits()` contains all the initializer expressions, including the
-    // ones for direct base classes.
-    ArrayRef<Expr *> Inits = S->inits();
-    size_t InitIdx = 0;
+    RecordInitListHelper InitListHelper(S);
 
-    // Unions initialized with an empty initializer list need special treatment.
-    // For structs/classes initialized with an empty initializer list, Clang
-    // puts `ImplicitValueInitExpr`s in `InitListExpr::inits()`, but for unions,
-    // it doesn't do this -- so we create an `ImplicitValueInitExpr` ourselves.
-    std::optional<ImplicitValueInitExpr> ImplicitValueInitForUnion;
-    SmallVector<Expr *> InitsForUnion;
-    if (S->getType()->isUnionType() && Inits.empty()) {
-      assert(FieldsForInit.size() == 1);
-      ImplicitValueInitForUnion.emplace(FieldsForInit.front()->getType());
-      InitsForUnion.push_back(&*ImplicitValueInitForUnion);
-      Inits = InitsForUnion;
-    }
-
-    // Initialize base classes.
-    if (auto* R = S->getType()->getAsCXXRecordDecl()) {
-      assert(FieldsForInit.size() + R->getNumBases() == Inits.size());
-      for ([[maybe_unused]] const CXXBaseSpecifier &Base : R->bases()) {
-        assert(InitIdx < Inits.size());
-        auto Init = Inits[InitIdx++];
-        assert(Base.getType().getCanonicalType() ==
+    for (auto [Field, Init] : InitListHelper.field_inits()) {
+      if (Field->getType()->isRecordType())
+        continue;
+      if (Field->getType()->isReferenceType()) {
+        assert(Field->getType().getCanonicalType()->getPointeeType() ==
                Init->getType().getCanonicalType());
-        auto *BaseVal = Env.get<RecordValue>(*Init);
-        if (!BaseVal)
-          BaseVal = cast<RecordValue>(Env.createValue(Init->getType()));
-        // Take ownership of the fields of the `RecordValue` for the base class
-        // and incorporate them into the "flattened" set of fields for the
-        // derived class.
-        auto Children = BaseVal->getLoc().children();
-        FieldLocs.insert(Children.begin(), Children.end());
+        Loc.setChild(*Field, &Env.createObject(Field->getType(), Init));
+        continue;
+      }
+      assert(Field->getType().getCanonicalType().getUnqualifiedType() ==
+             Init->getType().getCanonicalType().getUnqualifiedType());
+      StorageLocation *FieldLoc = Loc.getChild(*Field);
+      // Locations for non-reference fields must always be non-null.
+      assert(FieldLoc != nullptr);
+      Value *Val = Env.getValue(*Init);
+      if (Val == nullptr && isa<ImplicitValueInitExpr>(Init) &&
+          Init->getType()->isPointerType())
+        Val =
+            &Env.getOrCreateNullPointerValue(Init->getType()->getPointeeType());
+      if (Val == nullptr)
+        Val = Env.createValue(Field->getType());
+      if (Val != nullptr)
+        Env.setValue(*FieldLoc, *Val);
+    }
+
+    for (const auto &[FieldName, FieldLoc] : Loc.synthetic_fields()) {
+      QualType FieldType = FieldLoc->getType();
+      if (FieldType->isRecordType()) {
+        Env.initializeFieldsWithValues(*cast<RecordStorageLocation>(FieldLoc));
+      } else {
+        if (Value *Val = Env.createValue(FieldType))
+          Env.setValue(*FieldLoc, *Val);
       }
     }
-
-    assert(FieldsForInit.size() == Inits.size() - InitIdx);
-    for (auto Field : FieldsForInit) {
-      assert(InitIdx < Inits.size());
-      auto Init = Inits[InitIdx++];
-      assert(
-          // The types are same, or
-          Field->getType().getCanonicalType().getUnqualifiedType() ==
-              Init->getType().getCanonicalType().getUnqualifiedType() ||
-          // The field's type is T&, and initializer is T
-          (Field->getType()->isReferenceType() &&
-           Field->getType().getCanonicalType()->getPointeeType() ==
-               Init->getType().getCanonicalType()));
-      auto& Loc = Env.createObject(Field->getType(), Init);
-      FieldLocs.insert({Field, &Loc});
-    }
-
-    // In the case of a union, we don't in general have initializers for all
-    // of the fields. Create storage locations for the remaining fields (but
-    // don't associate them with values).
-    if (Type->isUnionType()) {
-      for (const FieldDecl *Field :
-           Env.getDataflowAnalysisContext().getModeledFields(Type)) {
-        if (auto [it, inserted] = FieldLocs.insert({Field, nullptr}); inserted)
-          it->second = &Env.createStorageLocation(Field->getType());
-      }
-    }
-
-    // Check that we satisfy the invariant that a `RecordStorageLoation`
-    // contains exactly the set of modeled fields for that type.
-    // `ModeledFields` includes fields from all the bases, but only the
-    // modeled ones. However, if a class type is initialized with an
-    // `InitListExpr`, all fields in the class, including those from base
-    // classes, are included in the set of modeled fields. The code above
-    // should therefore populate exactly the modeled fields.
-    assert(containsSameFields(
-        Env.getDataflowAnalysisContext().getModeledFields(Type), FieldLocs));
-
-    RecordStorageLocation::SyntheticFieldMap SyntheticFieldLocs;
-    for (const auto &Entry :
-         Env.getDataflowAnalysisContext().getSyntheticFields(Type)) {
-      SyntheticFieldLocs.insert(
-          {Entry.getKey(), &Env.createObject(Entry.getValue())});
-    }
-
-    auto &Loc = Env.getDataflowAnalysisContext().createRecordStorageLocation(
-        Type, std::move(FieldLocs), std::move(SyntheticFieldLocs));
-    RecordValue &RecordVal = Env.create<RecordValue>(Loc);
-
-    Env.setValue(Loc, RecordVal);
-
-    Env.setValue(*S, RecordVal);
 
     // FIXME: Implement array initialization.
   }
@@ -836,27 +799,26 @@ private:
           Env.canDescend(Options.ContextSensitiveOpts->Depth, F)))
       return;
 
-    const ControlFlowContext *CFCtx =
-        Env.getDataflowAnalysisContext().getControlFlowContext(F);
-    if (!CFCtx)
+    const AdornedCFG *ACFG = Env.getDataflowAnalysisContext().getAdornedCFG(F);
+    if (!ACFG)
       return;
 
     // FIXME: We don't support context-sensitive analysis of recursion, so
     // we should return early here if `F` is the same as the `FunctionDecl`
     // holding `S` itself.
 
-    auto ExitBlock = CFCtx->getCFG().getExit().getBlockID();
+    auto ExitBlock = ACFG->getCFG().getExit().getBlockID();
 
     auto CalleeEnv = Env.pushCall(S);
 
     // FIXME: Use the same analysis as the caller for the callee. Note,
     // though, that doing so would require support for changing the analysis's
     // ASTContext.
-    auto Analysis = NoopAnalysis(CFCtx->getDecl().getASTContext(),
+    auto Analysis = NoopAnalysis(ACFG->getDecl().getASTContext(),
                                  DataflowAnalysisOptions{Options});
 
     auto BlockToOutputState =
-        dataflow::runDataflowAnalysis(*CFCtx, Analysis, CalleeEnv);
+        dataflow::runDataflowAnalysis(*ACFG, Analysis, CalleeEnv);
     assert(BlockToOutputState);
     assert(ExitBlock < BlockToOutputState->size());
 

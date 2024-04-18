@@ -9,7 +9,13 @@
 #ifndef MLIR_DIALECT_XEGPU_IR_XEGPU_H
 #define MLIR_DIALECT_XEGPU_IR_XEGPU_H
 
-#include <mlir/IR/Dialect.h>
+#include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/ShapedOpInterfaces.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 namespace mlir {
 namespace xegpu {

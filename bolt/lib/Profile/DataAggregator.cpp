@@ -16,6 +16,7 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/Heatmap.h"
+#include "bolt/Profile/YAMLProfileWriter.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -85,6 +86,7 @@ MaxSamples("max-samples",
   cl::cat(AggregatorCategory));
 
 extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
+extern cl::opt<std::string> SaveProfile;
 
 cl::opt<bool> ReadPreAggregated(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
@@ -594,10 +596,21 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
     convertBranchData(Function);
   }
 
-  if (opts::AggregateOnly &&
-      opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata) {
-    if (std::error_code EC = writeAggregatedFile(opts::OutputFilename))
-      report_error("cannot create output data file", EC);
+  if (opts::AggregateOnly) {
+    if (opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata)
+      if (std::error_code EC = writeAggregatedFile(opts::OutputFilename))
+        report_error("cannot create output data file", EC);
+
+    // BAT YAML is handled by DataAggregator since normal YAML output requires
+    // CFG which is not available in BAT mode.
+    if (usesBAT()) {
+      if (opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML)
+        if (std::error_code EC = writeBATYAML(BC, opts::OutputFilename))
+          report_error("cannot create output data file", EC);
+      if (!opts::SaveProfile.empty())
+        if (std::error_code EC = writeBATYAML(BC, opts::SaveProfile))
+          report_error("cannot create output data file", EC);
+    }
   }
 
   return Error::success();
@@ -649,18 +662,19 @@ DataAggregator::getBinaryFunctionContainingAddress(uint64_t Address) const {
                                                 /*UseMaxSize=*/true);
 }
 
-StringRef DataAggregator::getLocationName(BinaryFunction &Func,
-                                          uint64_t Count) {
+BinaryFunction *
+DataAggregator::getBATParentFunction(const BinaryFunction &Func) const {
+  if (BAT)
+    if (const uint64_t HotAddr = BAT->fetchParentAddress(Func.getAddress()))
+      return getBinaryFunctionContainingAddress(HotAddr);
+  return nullptr;
+}
+
+StringRef DataAggregator::getLocationName(const BinaryFunction &Func) const {
   if (!BAT)
     return Func.getOneName();
 
   const BinaryFunction *OrigFunc = &Func;
-  if (const uint64_t HotAddr = BAT->fetchParentAddress(Func.getAddress())) {
-    NumColdSamples += Count;
-    BinaryFunction *HotFunc = getBinaryFunctionContainingAddress(HotAddr);
-    if (HotFunc)
-      OrigFunc = HotFunc;
-  }
   // If it is a local function, prefer the name containing the file name where
   // the local function was declared
   for (StringRef AlternativeName : OrigFunc->getNames()) {
@@ -675,12 +689,17 @@ StringRef DataAggregator::getLocationName(BinaryFunction &Func,
   return OrigFunc->getOneName();
 }
 
-bool DataAggregator::doSample(BinaryFunction &Func, uint64_t Address,
+bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
                               uint64_t Count) {
+  BinaryFunction *ParentFunc = getBATParentFunction(OrigFunc);
+  BinaryFunction &Func = ParentFunc ? *ParentFunc : OrigFunc;
+  if (ParentFunc)
+    NumColdSamples += Count;
+
   auto I = NamesToSamples.find(Func.getOneName());
   if (I == NamesToSamples.end()) {
     bool Success;
-    StringRef LocName = getLocationName(Func, Count);
+    StringRef LocName = getLocationName(Func);
     std::tie(I, Success) = NamesToSamples.insert(
         std::make_pair(Func.getOneName(),
                        FuncSampleData(LocName, FuncSampleData::ContainerTy())));
@@ -700,22 +719,12 @@ bool DataAggregator::doIntraBranch(BinaryFunction &Func, uint64_t From,
   FuncBranchData *AggrData = getBranchData(Func);
   if (!AggrData) {
     AggrData = &NamesToBranches[Func.getOneName()];
-    AggrData->Name = getLocationName(Func, Count);
+    AggrData->Name = getLocationName(Func);
     setBranchData(Func, AggrData);
   }
 
-  From -= Func.getAddress();
-  To -= Func.getAddress();
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: bumpBranchCount: "
                     << formatv("{0} @ {1:x} -> {0} @ {2:x}\n", Func, From, To));
-  if (BAT) {
-    From = BAT->translate(Func.getAddress(), From, /*IsBranchSrc=*/true);
-    To = BAT->translate(Func.getAddress(), To, /*IsBranchSrc=*/false);
-    LLVM_DEBUG(
-        dbgs() << "BOLT-DEBUG: BAT translation on bumpBranchCount: "
-               << formatv("{0} @ {1:x} -> {0} @ {2:x}\n", Func, From, To));
-  }
-
   AggrData->bumpBranchCount(From, To, Count, Mispreds);
   return true;
 }
@@ -729,30 +738,24 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
   StringRef SrcFunc;
   StringRef DstFunc;
   if (FromFunc) {
-    SrcFunc = getLocationName(*FromFunc, Count);
+    SrcFunc = getLocationName(*FromFunc);
     FromAggrData = getBranchData(*FromFunc);
     if (!FromAggrData) {
       FromAggrData = &NamesToBranches[FromFunc->getOneName()];
       FromAggrData->Name = SrcFunc;
       setBranchData(*FromFunc, FromAggrData);
     }
-    From -= FromFunc->getAddress();
-    if (BAT)
-      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
 
     recordExit(*FromFunc, From, Mispreds, Count);
   }
   if (ToFunc) {
-    DstFunc = getLocationName(*ToFunc, 0);
+    DstFunc = getLocationName(*ToFunc);
     ToAggrData = getBranchData(*ToFunc);
     if (!ToAggrData) {
       ToAggrData = &NamesToBranches[ToFunc->getOneName()];
       ToAggrData->Name = DstFunc;
       setBranchData(*ToFunc, ToAggrData);
     }
-    To -= ToFunc->getAddress();
-    if (BAT)
-      To = BAT->translate(ToFunc->getAddress(), To, /*IsBranchSrc=*/false);
 
     recordEntry(*ToFunc, To, Mispreds, Count);
   }
@@ -768,15 +771,32 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                               uint64_t Mispreds) {
-  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(From);
-  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(To);
+  auto handleAddress = [&](uint64_t &Addr, bool IsFrom) -> BinaryFunction * {
+    if (BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr)) {
+      Addr -= Func->getAddress();
+
+      if (BAT)
+        Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
+
+      if (BinaryFunction *ParentFunc = getBATParentFunction(*Func)) {
+        Func = ParentFunc;
+        if (IsFrom)
+          NumColdSamples += Count;
+      }
+
+      return Func;
+    }
+    return nullptr;
+  };
+
+  BinaryFunction *FromFunc = handleAddress(From, /*IsFrom=*/true);
+  BinaryFunction *ToFunc = handleAddress(To, /*IsFrom=*/false);
   if (!FromFunc && !ToFunc)
     return false;
 
   // Treat recursive control transfers as inter-branches.
-  if (FromFunc == ToFunc && (To != ToFunc->getAddress())) {
-    recordBranch(*FromFunc, From - FromFunc->getAddress(),
-                 To - FromFunc->getAddress(), Count, Mispreds);
+  if (FromFunc == ToFunc && To != 0) {
+    recordBranch(*FromFunc, From, To, Count, Mispreds);
     return doIntraBranch(*FromFunc, From, To, Count, Mispreds);
   }
 
@@ -827,9 +847,14 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
                     << FromFunc->getPrintName() << ":"
                     << Twine::utohexstr(First.To) << " to "
                     << Twine::utohexstr(Second.From) << ".\n");
-  for (const std::pair<uint64_t, uint64_t> &Pair : *FTs)
-    doIntraBranch(*FromFunc, Pair.first + FromFunc->getAddress(),
-                  Pair.second + FromFunc->getAddress(), Count, false);
+  BinaryFunction *ParentFunc = getBATParentFunction(*FromFunc);
+  for (auto [From, To] : *FTs) {
+    if (BAT) {
+      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
+      To = BAT->translate(FromFunc->getAddress(), To, /*IsBranchSrc=*/false);
+    }
+    doIntraBranch(ParentFunc ? *ParentFunc : *FromFunc, From, To, Count, false);
+  }
 
   return true;
 }
@@ -2255,6 +2280,136 @@ DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
   outs() << "PERF2BOLT: wrote " << BranchValues << " objects and " << MemValues
          << " memory objects to " << OutputFilename << "\n";
 
+  return std::error_code();
+}
+
+std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
+                                             StringRef OutputFilename) const {
+  std::error_code EC;
+  raw_fd_ostream OutFile(OutputFilename, EC, sys::fs::OpenFlags::OF_None);
+  if (EC)
+    return EC;
+
+  yaml::bolt::BinaryProfile BP;
+
+  // Fill out the header info.
+  BP.Header.Version = 1;
+  BP.Header.FileName = std::string(BC.getFilename());
+  std::optional<StringRef> BuildID = BC.getFileBuildID();
+  BP.Header.Id = BuildID ? std::string(*BuildID) : "<unknown>";
+  BP.Header.Origin = std::string(getReaderName());
+  // Only the input binary layout order is supported.
+  BP.Header.IsDFSOrder = false;
+  // FIXME: Need to match hash function used to produce BAT hashes.
+  BP.Header.HashFunction = HashFunction::Default;
+
+  ListSeparator LS(",");
+  raw_string_ostream EventNamesOS(BP.Header.EventNames);
+  for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames)
+    EventNamesOS << LS << EventEntry.first().str();
+
+  BP.Header.Flags = opts::BasicAggregation ? BinaryFunction::PF_SAMPLE
+                                           : BinaryFunction::PF_LBR;
+
+  if (!opts::BasicAggregation) {
+    // Convert profile for functions not covered by BAT
+    for (auto &BFI : BC.getBinaryFunctions()) {
+      BinaryFunction &Function = BFI.second;
+      if (!Function.hasProfile())
+        continue;
+      if (BAT->isBATFunction(Function.getAddress()))
+        continue;
+      BP.Functions.emplace_back(
+          YAMLProfileWriter::convert(Function, /*UseDFS=*/false, BAT));
+    }
+
+    for (const auto &KV : NamesToBranches) {
+      const StringRef FuncName = KV.first;
+      const FuncBranchData &Branches = KV.second;
+      yaml::bolt::BinaryFunctionProfile YamlBF;
+      BinaryData *BD = BC.getBinaryDataByName(FuncName);
+      assert(BD);
+      uint64_t FuncAddress = BD->getAddress();
+      if (!BAT->isBATFunction(FuncAddress))
+        continue;
+      BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
+      assert(BF);
+      YamlBF.Name = FuncName.str();
+      YamlBF.Id = BF->getFunctionNumber();
+      YamlBF.Hash = BAT->getBFHash(FuncAddress);
+      YamlBF.ExecCount = BF->getKnownExecutionCount();
+      YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
+      const BoltAddressTranslation::BBHashMapTy &BlockMap =
+          BAT->getBBHashMap(FuncAddress);
+      YamlBF.Blocks.resize(YamlBF.NumBasicBlocks);
+
+      for (auto &&[Idx, YamlBB] : llvm::enumerate(YamlBF.Blocks))
+        YamlBB.Index = Idx;
+
+      for (auto BI = BlockMap.begin(), BE = BlockMap.end(); BI != BE; ++BI)
+        YamlBF.Blocks[BI->second.getBBIndex()].Hash = BI->second.getBBHash();
+
+      auto getSuccessorInfo = [&](uint32_t SuccOffset, unsigned SuccDataIdx) {
+        const llvm::bolt::BranchInfo &BI = Branches.Data.at(SuccDataIdx);
+        yaml::bolt::SuccessorInfo SI;
+        SI.Index = BlockMap.getBBIndex(SuccOffset);
+        SI.Count = BI.Branches;
+        SI.Mispreds = BI.Mispreds;
+        return SI;
+      };
+
+      auto getCallSiteInfo = [&](Location CallToLoc, unsigned CallToIdx,
+                                 uint32_t Offset) {
+        const llvm::bolt::BranchInfo &BI = Branches.Data.at(CallToIdx);
+        yaml::bolt::CallSiteInfo CSI;
+        CSI.DestId = 0; // designated for unknown functions
+        CSI.EntryDiscriminator = 0;
+        CSI.Count = BI.Branches;
+        CSI.Mispreds = BI.Mispreds;
+        CSI.Offset = Offset;
+        if (BinaryData *BD = BC.getBinaryDataByName(CallToLoc.Name))
+          YAMLProfileWriter::setCSIDestination(BC, CSI, BD->getSymbol(), BAT,
+                                               CallToLoc.Offset);
+        return CSI;
+      };
+
+      for (const auto &[FromOffset, SuccKV] : Branches.IntraIndex) {
+        if (!BlockMap.isInputBlock(FromOffset))
+          continue;
+        const unsigned Index = BlockMap.getBBIndex(FromOffset);
+        yaml::bolt::BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[Index];
+        for (const auto &[SuccOffset, SuccDataIdx] : SuccKV)
+          if (BlockMap.isInputBlock(SuccOffset))
+            YamlBB.Successors.emplace_back(
+                getSuccessorInfo(SuccOffset, SuccDataIdx));
+      }
+      for (const auto &[FromOffset, CallTo] : Branches.InterIndex) {
+        auto BlockIt = BlockMap.upper_bound(FromOffset);
+        --BlockIt;
+        const unsigned BlockOffset = BlockIt->first;
+        const unsigned BlockIndex = BlockIt->second.getBBIndex();
+        yaml::bolt::BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[BlockIndex];
+        const uint32_t Offset = FromOffset - BlockOffset;
+        for (const auto &[CallToLoc, CallToIdx] : CallTo)
+          YamlBB.CallSites.emplace_back(
+              getCallSiteInfo(CallToLoc, CallToIdx, Offset));
+        llvm::sort(YamlBB.CallSites, [](yaml::bolt::CallSiteInfo &A,
+                                        yaml::bolt::CallSiteInfo &B) {
+          return A.Offset < B.Offset;
+        });
+      }
+      // Drop blocks without a hash, won't be useful for stale matching.
+      llvm::erase_if(YamlBF.Blocks,
+                     [](const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+                       return YamlBB.Hash == (yaml::Hex64)0;
+                     });
+      BP.Functions.emplace_back(YamlBF);
+    }
+  }
+
+  // Write the profile.
+  yaml::Output Out(OutFile, nullptr, 0);
+  Out << BP;
   return std::error_code();
 }
 

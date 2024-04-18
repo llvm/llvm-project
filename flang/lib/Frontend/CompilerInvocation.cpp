@@ -772,6 +772,7 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
   opts.noLineDirectives = args.hasArg(clang::driver::options::OPT_P);
+  opts.showMacros = args.hasArg(clang::driver::options::OPT_dM);
 }
 
 /// Parses all semantic related arguments and populates the variables
@@ -1191,11 +1192,6 @@ bool CompilerInvocation::createFromArgs(
     invoc.loweringOpts.setLowerToHighLevelFIR(false);
   }
 
-  if (args.hasArg(
-          clang::driver::options::OPT_flang_experimental_polymorphism)) {
-    invoc.loweringOpts.setPolymorphicTypeImpl(true);
-  }
-
   // -fno-ppc-native-vector-element-order
   if (args.hasArg(clang::driver::options::OPT_fno_ppc_native_vec_elem_order)) {
     invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
@@ -1337,20 +1333,21 @@ void CompilerInvocation::setDefaultPredefinitions() {
   }
 
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
+  if (targetTriple.isPPC()) {
+    // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
+    // size.
+    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
+  }
+  if (targetTriple.isOSLinux()) {
+    fortranOptions.predefinitions.emplace_back("__linux__", "1");
+  }
+
   switch (targetTriple.getArch()) {
   default:
     break;
   case llvm::Triple::ArchType::x86_64:
     fortranOptions.predefinitions.emplace_back("__x86_64__", "1");
     fortranOptions.predefinitions.emplace_back("__x86_64", "1");
-    break;
-  case llvm::Triple::ArchType::ppc:
-  case llvm::Triple::ArchType::ppcle:
-  case llvm::Triple::ArchType::ppc64:
-  case llvm::Triple::ArchType::ppc64le:
-    // '__powerpc__' is a generic macro for any PowerPC cases. e.g. Max integer
-    // size.
-    fortranOptions.predefinitions.emplace_back("__powerpc__", "1");
     break;
   }
 }

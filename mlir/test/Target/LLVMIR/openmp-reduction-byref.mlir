@@ -1,6 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
-  omp.reduction.declare @add_reduction_i_32 : !llvm.ptr init {
+  omp.declare_reduction @add_reduction_i_32 : !llvm.ptr init {
   ^bb0(%arg0: !llvm.ptr):
     %0 = llvm.mlir.constant(0 : i32) : i32
     %1 = llvm.mlir.constant(1 : i64) : i64

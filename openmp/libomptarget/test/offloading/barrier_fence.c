@@ -3,10 +3,6 @@
 // RUN: %libomptarget-compileopt-generic -fopenmp-offload-mandatory -O3
 // RUN: %libomptarget-run-generic
 
-// FIXME: This test is flaky on all targets
-// UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: nvptx64-nvidia-cuda
-// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // UNSUPPORTED: aarch64-unknown-linux-gnu
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 // UNSUPPORTED: x86_64-pc-linux-gnu

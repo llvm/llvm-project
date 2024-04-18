@@ -9,14 +9,15 @@
 #ifndef _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_TRANSFORM_REDUCE_H
 #define _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_TRANSFORM_REDUCE_H
 
-#include <__algorithm/pstl_backends/cpu_backends/backend.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__numeric/transform_reduce.h>
+#include <__pstl/configuration_fwd.h>
+#include <__pstl/cpu_algos/cpu_traits.h>
+#include <__type_traits/desugars_to.h>
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_execution_policy.h>
-#include <__type_traits/operation_traits.h>
 #include <__utility/move.h>
 #include <new>
 #include <optional>
@@ -32,12 +33,13 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <typename _DifferenceType,
+template <typename _Backend,
+          typename _DifferenceType,
           typename _Tp,
           typename _BinaryOperation,
           typename _UnaryOperation,
           typename _UnaryResult = invoke_result_t<_UnaryOperation, _DifferenceType>,
-          __enable_if_t<__desugars_to<__plus_tag, _BinaryOperation, _Tp, _UnaryResult>::value && is_arithmetic_v<_Tp> &&
+          __enable_if_t<__desugars_to_v<__plus_tag, _BinaryOperation, _Tp, _UnaryResult> && is_arithmetic_v<_Tp> &&
                             is_arithmetic_v<_UnaryResult>,
                         int>    = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
@@ -48,17 +50,19 @@ __simd_transform_reduce(_DifferenceType __n, _Tp __init, _BinaryOperation, _Unar
   return __init;
 }
 
-template <typename _Size,
+template <typename _Backend,
+          typename _Size,
           typename _Tp,
           typename _BinaryOperation,
           typename _UnaryOperation,
           typename _UnaryResult = invoke_result_t<_UnaryOperation, _Size>,
-          __enable_if_t<!(__desugars_to<__plus_tag, _BinaryOperation, _Tp, _UnaryResult>::value &&
-                          is_arithmetic_v<_Tp> && is_arithmetic_v<_UnaryResult>),
+          __enable_if_t<!(__desugars_to_v<__plus_tag, _BinaryOperation, _Tp, _UnaryResult> && is_arithmetic_v<_Tp> &&
+                          is_arithmetic_v<_UnaryResult>),
                         int>    = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _UnaryOperation __f) noexcept {
-  const _Size __block_size = __lane_size / sizeof(_Tp);
+  constexpr size_t __lane_size = __pstl::__cpu_traits<_Backend>::__lane_size;
+  const _Size __block_size     = __lane_size / sizeof(_Tp);
   if (__n > 2 * __block_size && __block_size > 1) {
     alignas(__lane_size) char __lane_buffer[__lane_size];
     _Tp* __lane = reinterpret_cast<_Tp*>(__lane_buffer);
@@ -116,7 +120,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_Tp> __pstl_transform_reduce(
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
-    return __par_backend::__parallel_transform_reduce(
+    return __pstl::__cpu_traits<__cpu_backend_tag>::__transform_reduce(
         __first1,
         std::move(__last1),
         [__first1, __first2, __transform](_ForwardIterator1 __iter) {
@@ -138,7 +142,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_Tp> __pstl_transform_reduce(
   } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                        __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                        __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
-    return std::__simd_transform_reduce(
+    return std::__simd_transform_reduce<__cpu_backend_tag>(
         __last1 - __first1, std::move(__init), std::move(__reduce), [&](__iter_diff_t<_ForwardIterator1> __i) {
           return __transform(__first1[__i], __first2[__i]);
         });
@@ -163,7 +167,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_Tp> __pstl_transform_reduce(
     _UnaryOperation __transform) {
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-    return __par_backend::__parallel_transform_reduce(
+    return __pstl::__cpu_traits<__cpu_backend_tag>::__transform_reduce(
         std::move(__first),
         std::move(__last),
         [__transform](_ForwardIterator __iter) { return __transform(*__iter); },
@@ -182,7 +186,7 @@ _LIBCPP_HIDE_FROM_ABI optional<_Tp> __pstl_transform_reduce(
         });
   } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                        __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-    return std::__simd_transform_reduce(
+    return std::__simd_transform_reduce<__cpu_backend_tag>(
         __last - __first,
         std::move(__init),
         std::move(__reduce),

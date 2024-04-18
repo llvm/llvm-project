@@ -9,7 +9,7 @@
 ; BOLT: [[OFFSET1:0x[0-9a-f]*]]: Compile Unit
 ; BOLT:       Name Index @ 0x0 {
 ; BOLT-NEXT:   Header {
-; BOLT-NEXT:     Length: 0x154
+; BOLT-NEXT:     Length: 0x14F
 ; BOLT-NEXT:     Format: DWARF32
 ; BOLT-NEXT:     Version: 5
 ; BOLT-NEXT:     CU count: 1
@@ -178,12 +178,6 @@
 ; BOLT-NEXT:       Hash: 0x8CFC710C
 ; BOLT-NEXT:       String: {{.+}} "(anonymous namespace)"
 ; BOLT-NEXT:       Entry @ 0x14d {
-; BOLT-NEXT:         Abbrev: [[ABBREV6]]
-; BOLT-NEXT:         Tag: DW_TAG_namespace
-; BOLT-NEXT:         DW_IDX_die_offset: 0x00000061
-; BOLT-NEXT:         DW_IDX_parent: <parent not indexed>
-; BOLT-NEXT:       }
-; BOLT-NEXT:       Entry @ {{.+}} {
 ; BOLT-NEXT:         Abbrev: [[ABBREV6]]
 ; BOLT-NEXT:         Tag: DW_TAG_namespace
 ; BOLT-NEXT:         DW_IDX_die_offset: 0x00000061

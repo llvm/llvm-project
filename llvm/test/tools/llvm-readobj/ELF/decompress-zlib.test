@@ -28,6 +28,7 @@
 # COMPRESSED:      String dump of section '.not_null_terminated':
 # COMPRESSED-NEXT: [     0] no
 # COMPRESSED-NEXT: [     3] null
+# COMPRESSED-EMPTY:
 # COMPRESSED-NEXT: Hex dump of section '.strings':
 # COMPRESSED-NEXT: 0x00000000 01000000 00000000 16000000 00000000 ................
 # COMPRESSED-NEXT: 0x00000010 00000000 00000000 789ccb48 2d4a6548 ........x..H-JeH
@@ -39,6 +40,7 @@
 # INVALID:      String dump of section '.invalid1':
 # INVALID-NEXT: warning: '[[FILE]]': corrupted compressed section header
 # INVALID-NEXT: [     0] .
+# INVALID-EMPTY:
 # INVALID-NEXT: Hex dump of section '.invalid2':
 # INVALID-NEXT: warning: '[[FILE]]': zlib error: Z_DATA_ERROR
 # INVALID-NEXT: 0x00000000 01000000 00000000 16000000 00000000 ................

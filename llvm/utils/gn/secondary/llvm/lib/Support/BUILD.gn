@@ -90,6 +90,8 @@ static_library("Support") {
     "GlobPattern.cpp",
     "GraphWriter.cpp",
     "Hashing.cpp",
+    "HexagonAttributeParser.cpp",
+    "HexagonAttributes.cpp",
     "InitLLVM.cpp",
     "InstructionCost.cpp",
     "IntEqClasses.cpp",

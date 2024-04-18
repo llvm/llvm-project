@@ -10,8 +10,8 @@
 #define MLIR_DIALECT_LINALG_TRANSFORMOPS_LINALGMATCHOPS_H
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
+#include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.h"
 
 namespace mlir {
 namespace transform {

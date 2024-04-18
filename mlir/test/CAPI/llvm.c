@@ -264,9 +264,9 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_file<"foo" in "bar">
   mlirAttributeDump(file);
 
-  MlirAttribute compile_unit =
-      mlirLLVMDICompileUnitAttrGet(ctx, id, LLVMDWARFSourceLanguageC99, file,
-                                   foo, false, MlirLLVMDIEmissionKindFull);
+  MlirAttribute compile_unit = mlirLLVMDICompileUnitAttrGet(
+      ctx, id, LLVMDWARFSourceLanguageC99, file, foo, false,
+      MlirLLVMDIEmissionKindFull, MlirLLVMDINameTableKindDefault);
 
   // CHECK: #llvm.di_compile_unit<{{.*}}>
   mlirAttributeDump(compile_unit);
@@ -297,7 +297,7 @@ static void testDebugInfoAttributes(MlirContext ctx) {
                                                    1, 0, 8, di_type));
   // CHECK: #llvm.di_derived_type<{{.*}}>
   mlirAttributeDump(
-      mlirLLVMDIDerivedTypeAttrGet(ctx, 0, bar, di_type, 64, 8, 0));
+      mlirLLVMDIDerivedTypeAttrGet(ctx, 0, bar, di_type, 64, 8, 0, di_type));
 
   // CHECK: #llvm.di_composite_type<{{.*}}>
   mlirAttributeDump(mlirLLVMDICompositeTypeAttrGet(

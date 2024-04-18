@@ -29,19 +29,20 @@
 namespace llvm {
 
 class BasicBlock;
-class DPMarker;
+class DbgMarker;
 class FastMathFlags;
 class MDNode;
 class Module;
 struct AAMDNodes;
-class DPMarker;
+class DbgMarker;
 class DbgRecord;
 
 template <> struct ilist_alloc_traits<Instruction> {
   static inline void deleteNode(Instruction *V);
 };
 
-iterator_range<simple_ilist<DbgRecord>::iterator> getDbgRecordRange(DPMarker *);
+iterator_range<simple_ilist<DbgRecord>::iterator>
+getDbgRecordRange(DbgMarker *);
 
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock,
@@ -60,7 +61,7 @@ public:
   /// Optional marker recording the position for debugging information that
   /// takes effect immediately before this instruction. Null unless there is
   /// debugging information present.
-  DPMarker *DbgMarker = nullptr;
+  DbgMarker *DebugMarker = nullptr;
 
   /// Clone any debug-info attached to \p From onto this instruction. Used to
   /// copy debugging information from one block to another, when copying entire
@@ -81,7 +82,7 @@ public:
 
   /// Return a range over the DbgRecords attached to this instruction.
   iterator_range<simple_ilist<DbgRecord>::iterator> getDbgRecordRange() const {
-    return llvm::getDbgRecordRange(DbgMarker);
+    return llvm::getDbgRecordRange(DebugMarker);
   }
 
   /// Return an iterator to the position of the "Next" DbgRecord after this

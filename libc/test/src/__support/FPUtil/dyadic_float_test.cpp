@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/dyadic_float.h"
-#include "src/__support/UInt.h"
+#include "src/__support/big_int.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
@@ -15,7 +15,6 @@
 using Float128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
 using Float192 = LIBC_NAMESPACE::fputil::DyadicFloat<192>;
 using Float256 = LIBC_NAMESPACE::fputil::DyadicFloat<256>;
-using Sign = LIBC_NAMESPACE::fputil::Sign;
 
 TEST(LlvmLibcDyadicFloatTest, BasicConversions) {
   Float128 x(Sign::POS, /*exponent*/ 0,

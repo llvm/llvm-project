@@ -168,16 +168,15 @@ MlirAttribute mlirLLVMDICompositeTypeAttrGet(
                           [](Attribute a) { return a.cast<DINodeAttr>(); })));
 }
 
-MlirAttribute mlirLLVMDIDerivedTypeAttrGet(MlirContext ctx, unsigned int tag,
-                                           MlirAttribute name,
-                                           MlirAttribute baseType,
-                                           uint64_t sizeInBits,
-                                           uint32_t alignInBits,
-                                           uint64_t offsetInBits) {
-  return wrap(DIDerivedTypeAttr::get(unwrap(ctx), tag,
-                                     cast<StringAttr>(unwrap(name)),
-                                     cast<DITypeAttr>(unwrap(baseType)),
-                                     sizeInBits, alignInBits, offsetInBits));
+MlirAttribute
+mlirLLVMDIDerivedTypeAttrGet(MlirContext ctx, unsigned int tag,
+                             MlirAttribute name, MlirAttribute baseType,
+                             uint64_t sizeInBits, uint32_t alignInBits,
+                             uint64_t offsetInBits, MlirAttribute extraData) {
+  return wrap(DIDerivedTypeAttr::get(
+      unwrap(ctx), tag, cast<StringAttr>(unwrap(name)),
+      cast<DITypeAttr>(unwrap(baseType)), sizeInBits, alignInBits, offsetInBits,
+      cast<DINodeAttr>(unwrap(extraData))));
 }
 
 MlirAttribute
@@ -207,11 +206,13 @@ MlirAttribute
 mlirLLVMDICompileUnitAttrGet(MlirContext ctx, MlirAttribute id,
                              unsigned int sourceLanguage, MlirAttribute file,
                              MlirAttribute producer, bool isOptimized,
-                             MlirLLVMDIEmissionKind emissionKind) {
+                             MlirLLVMDIEmissionKind emissionKind,
+                             MlirLLVMDINameTableKind nameTableKind) {
   return wrap(DICompileUnitAttr::get(
       unwrap(ctx), cast<DistinctAttr>(unwrap(id)), sourceLanguage,
       cast<DIFileAttr>(unwrap(file)), cast<StringAttr>(unwrap(producer)),
-      isOptimized, DIEmissionKind(emissionKind)));
+      isOptimized, DIEmissionKind(emissionKind),
+      DINameTableKind(nameTableKind)));
 }
 
 MlirAttribute mlirLLVMDIFlagsAttrGet(MlirContext ctx, uint64_t value) {

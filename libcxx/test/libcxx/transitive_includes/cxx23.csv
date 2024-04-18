@@ -80,7 +80,6 @@ chrono cstring
 chrono ctime
 chrono cwchar
 chrono forward_list
-chrono initializer_list
 chrono limits
 chrono new
 chrono optional
@@ -142,7 +141,6 @@ coroutine version
 cstddef version
 ctgmath ccomplex
 ctgmath cmath
-cwchar cstddef
 cwchar cwctype
 cwctype cctype
 deque compare
@@ -161,7 +159,6 @@ exception cstdlib
 exception new
 exception typeinfo
 exception version
-execution cstddef
 execution version
 expected cstddef
 expected initializer_list
@@ -192,6 +189,7 @@ filesystem string_view
 filesystem version
 format array
 format cctype
+format cerrno
 format clocale
 format cmath
 format cstddef
@@ -203,8 +201,6 @@ format initializer_list
 format limits
 format new
 format optional
-format queue
-format stack
 format stdexcept
 format string
 format string_view
@@ -455,6 +451,7 @@ random vector
 random version
 ranges compare
 ranges cstddef
+ranges cstdint
 ranges cwchar
 ranges initializer_list
 ranges iterator
@@ -544,9 +541,22 @@ stop_token ctime
 stop_token limits
 stop_token ratio
 stop_token version
+streambuf cctype
 streambuf climits
+streambuf clocale
+streambuf cstddef
+streambuf cstdint
+streambuf cstdlib
+streambuf cstring
+streambuf cwchar
+streambuf initializer_list
 streambuf ios
 streambuf iosfwd
+streambuf limits
+streambuf new
+streambuf string
+streambuf tuple
+streambuf typeinfo
 streambuf version
 string climits
 string compare
@@ -682,7 +692,6 @@ vector cstdlib
 vector cstring
 vector cwchar
 vector initializer_list
-vector iosfwd
 vector limits
 vector new
 vector stdexcept

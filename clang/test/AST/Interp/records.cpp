@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++14 -verify=expected,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=expected,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -triple i686 -verify=expected,both %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple i686 -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++14 %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++17 %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++17 -triple i686 %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
-// RUN: %clang_cc1 -verify=ref,both -triple i686 %s
 
 /// Used to crash.
 struct Empty {};
@@ -1263,4 +1263,57 @@ namespace {
   /// the data member itself.
   static_assert(true_type::value, "");
   static_assert(true_type::value, "");
+}
+
+#if __cplusplus >= 202002L
+namespace {
+  /// Used to crash because the CXXDefaultInitExpr is of compound type.
+  struct A {
+    int &x;
+    constexpr ~A() { --x; }
+  };
+  struct B {
+    int &x;
+    const A &a = A{x};
+  };
+  constexpr int a() {
+    int x = 1;
+    int f = B{x}.x;
+    B{x}; // both-warning {{expression result unused}}
+
+    return 1;
+  }
+}
+#endif
+
+namespace pr18633 {
+  struct A1 {
+    static const int sz;
+    static const int sz2;
+  };
+  const int A1::sz2 = 11;
+  template<typename T>
+  void func () {
+    int arr[A1::sz];
+    // both-warning@-1 {{variable length arrays in C++ are a Clang extension}}
+    // both-note@-2 {{initializer of 'sz' is unknown}}
+    // both-note@-9 {{declared here}}
+  }
+  template<typename T>
+  void func2 () {
+    int arr[A1::sz2];
+  }
+  const int A1::sz = 12;
+  void func2() {
+    func<int>();
+    func2<int>();
+  }
+}
+
+namespace {
+  struct F {
+    static constexpr int Z = 12;
+  };
+  F f;
+  static_assert(f.Z == 12, "");
 }

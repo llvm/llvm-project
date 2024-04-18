@@ -1,4 +1,4 @@
-! RUN: bbc -polymorphic-type -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module poly
   type p1

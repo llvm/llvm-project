@@ -11,21 +11,21 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define ptr @f0() {
 ; CHECK-LABEL: @f0(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([3 x ptr], ptr @vt, inrange i64 0, i64 2)
+; CHECK-NEXT:    ret ptr getelementptr inbounds inrange(-16, 8) ([3 x ptr], ptr @vt, i64 0, i64 2)
 ;
-  ret ptr getelementptr (ptr, ptr getelementptr inbounds ([3 x ptr], ptr @vt, inrange i64 0, i64 1), i64 1)
+  ret ptr getelementptr (ptr, ptr getelementptr inbounds inrange(-8, 16) ([3 x ptr], ptr @vt, i64 0, i64 1), i64 1)
 }
 
 define ptr @f1() {
 ; CHECK-LABEL: @f1(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([3 x ptr], ptr @vt, i64 0, i64 2)
+; CHECK-NEXT:    ret ptr getelementptr inbounds inrange(-8, 0) ([3 x ptr], ptr @vt, i64 0, i64 2)
 ;
-  ret ptr getelementptr (ptr, ptr getelementptr inbounds ([3 x ptr], ptr @vt, i64 0, inrange i64 1), i64 1)
+  ret ptr getelementptr (ptr, ptr getelementptr inbounds inrange(0, 8) ([3 x ptr], ptr @vt, i64 0, i64 1), i64 1)
 }
 
 define ptr @f2() {
 ; CHECK-LABEL: @f2(
-; CHECK-NEXT:    ret ptr getelementptr ([3 x ptr], ptr @vt, i64 1, i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inrange(-24, -16) ([3 x ptr], ptr @vt, i64 1, i64 1)
 ;
-  ret ptr getelementptr (ptr, ptr getelementptr inbounds ([3 x ptr], ptr @vt, i64 0, inrange i64 1), i64 3)
+  ret ptr getelementptr (ptr, ptr getelementptr inbounds inrange(0, 8) ([3 x ptr], ptr @vt, i64 0, i64 1), i64 3)
 }

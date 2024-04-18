@@ -17,6 +17,7 @@
 #define LLVM_OBJECT_COFFIMPORTFILE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
@@ -44,26 +45,7 @@ public:
 
   void moveSymbolNext(DataRefImpl &Symb) const override { ++Symb.p; }
 
-  Error printSymbolName(raw_ostream &OS, DataRefImpl Symb) const override {
-    switch (Symb.p) {
-    case ImpSymbol:
-      OS << "__imp_";
-      break;
-    case ECAuxSymbol:
-      OS << "__imp_aux_";
-      break;
-    }
-    const char *Name = Data.getBufferStart() + sizeof(coff_import_header);
-    if (Symb.p != ECThunkSymbol && COFF::isArm64EC(getMachine())) {
-      if (std::optional<std::string> DemangledName =
-              getArm64ECDemangledFunctionName(Name)) {
-        OS << StringRef(*DemangledName);
-        return Error::success();
-      }
-    }
-    OS << StringRef(Name);
-    return Error::success();
-  }
+  Error printSymbolName(raw_ostream &OS, DataRefImpl Symb) const override;
 
   Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override {
     return SymbolRef::SF_Global;

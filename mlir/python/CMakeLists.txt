@@ -111,6 +111,15 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/IndexOps.td
+  SOURCES
+    dialects/index.py
+  DIALECT_NAME index
+  GEN_ENUM_BINDINGS)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/ControlFlowOps.td
   SOURCES
     dialects/cf.py
@@ -513,6 +522,19 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIQuant
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.NVGPU.Pybind
+  MODULE_NAME _mlirDialectsNvgpu
+  ADD_TO_PARENT MLIRPythonSources.Dialects.nvgpu
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectNVGPU.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPINVGPU
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.PDL.Pybind
