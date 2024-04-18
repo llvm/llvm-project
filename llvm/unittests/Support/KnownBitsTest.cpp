@@ -294,58 +294,6 @@ TEST(KnownBitsTest, SignBitUnknown) {
   EXPECT_TRUE(Known.isSignUnknown());
 }
 
-TEST(KnownBitsTest, ABDUSpecialCase) {
-  // There are 2 implementations of abdu - both are currently needed to cover
-  // extra cases.
-  KnownBits LHS, RHS, Res;
-
-  // abdu(LHS,RHS) = sub(umax(LHS,RHS), umin(LHS,RHS)).
-  // Actual: false (Inputs = 1011, 101?, Computed = 000?, Exact = 000?)
-  LHS.One = APInt(4, 0b1011);
-  RHS.One = APInt(4, 0b1010);
-  LHS.Zero = APInt(4, 0b0100);
-  RHS.Zero = APInt(4, 0b0100);
-  Res = KnownBits::abdu(LHS, RHS);
-  EXPECT_EQ(0b0000ul, Res.One.getZExtValue());
-  EXPECT_EQ(0b1110ul, Res.Zero.getZExtValue());
-
-  // find the common bits between sub(LHS,RHS) and sub(RHS,LHS).
-  // Actual: false (Inputs = ???1, 1000, Computed = ???1, Exact = 0??1)
-  LHS.One = APInt(4, 0b0001);
-  RHS.One = APInt(4, 0b1000);
-  LHS.Zero = APInt(4, 0b0000);
-  RHS.Zero = APInt(4, 0b0111);
-  Res = KnownBits::abdu(LHS, RHS);
-  EXPECT_EQ(0b0001ul, Res.One.getZExtValue());
-  EXPECT_EQ(0b0000ul, Res.Zero.getZExtValue());
-}
-
-TEST(KnownBitsTest, ABDSSpecialCase) {
-  // There are 2 implementations of abds - both are currently needed to cover
-  // extra cases.
-  KnownBits LHS, RHS, Res;
-
-  // abds(LHS,RHS) = sub(smax(LHS,RHS), smin(LHS,RHS)).
-  // Actual: false (Inputs = 1011, 10??, Computed = ????, Exact = 00??)
-  LHS.One = APInt(4, 0b1011);
-  RHS.One = APInt(4, 0b1000);
-  LHS.Zero = APInt(4, 0b0100);
-  RHS.Zero = APInt(4, 0b0100);
-  Res = KnownBits::abds(LHS, RHS);
-  EXPECT_EQ(0, Res.One.getSExtValue());
-  EXPECT_EQ(-4, Res.Zero.getSExtValue());
-
-  // find the common bits between sub(LHS,RHS) and sub(RHS,LHS).
-  // Actual: false (Inputs = ???1, 1000, Computed = ???1, Exact = 0??1)
-  LHS.One = APInt(4, 0b0001);
-  RHS.One = APInt(4, 0b1000);
-  LHS.Zero = APInt(4, 0b0000);
-  RHS.Zero = APInt(4, 0b0111);
-  Res = KnownBits::abds(LHS, RHS);
-  EXPECT_EQ(1, Res.One.getSExtValue());
-  EXPECT_EQ(0, Res.Zero.getSExtValue());
-}
-
 TEST(KnownBitsTest, BinaryExhaustive) {
   testBinaryOpExhaustive(
       [](const KnownBits &Known1, const KnownBits &Known2) {
@@ -366,10 +314,8 @@ TEST(KnownBitsTest, BinaryExhaustive) {
   testBinaryOpExhaustive(KnownBits::umin, APIntOps::umin);
   testBinaryOpExhaustive(KnownBits::smax, APIntOps::smax);
   testBinaryOpExhaustive(KnownBits::smin, APIntOps::smin);
-  testBinaryOpExhaustive(KnownBits::abdu, APIntOps::abdu,
-                         checkCorrectnessOnlyBinary);
-  testBinaryOpExhaustive(KnownBits::abds, APIntOps::abds,
-                         checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(KnownBits::abdu, APIntOps::abdu);
+  testBinaryOpExhaustive(KnownBits::abds, APIntOps::abds);
   testBinaryOpExhaustive(
       [](const KnownBits &Known1, const KnownBits &Known2) {
         return KnownBits::udiv(Known1, Known2);
