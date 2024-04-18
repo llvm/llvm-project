@@ -223,11 +223,12 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
 }
 
 static std::pair<Register, unsigned>
-createNewIdReg(Register ValReg, unsigned Opcode, MachineRegisterInfo &MRI,
+createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
                const SPIRVGlobalRegistry &GR) {
-  LLT NewT = LLT::scalar(32);
-  SPIRVType *SpvType = GR.getSPIRVTypeForVReg(ValReg);
+  if (!SpvType)
+    SpvType = GR.getSPIRVTypeForVReg(SrcReg);
   assert(SpvType && "VReg is expected to have SPIRV type");
+  LLT NewT = LLT::scalar(32);
   bool IsFloat = SpvType->getOpcode() == SPIRV::OpTypeFloat;
   bool IsVectorFloat =
       SpvType->getOpcode() == SPIRV::OpTypeVector &&
@@ -236,14 +237,38 @@ createNewIdReg(Register ValReg, unsigned Opcode, MachineRegisterInfo &MRI,
   IsFloat |= IsVectorFloat;
   auto GetIdOp = IsFloat ? SPIRV::GET_fID : SPIRV::GET_ID;
   auto DstClass = IsFloat ? &SPIRV::fIDRegClass : &SPIRV::IDRegClass;
-  if (MRI.getType(ValReg).isPointer()) {
-    NewT = LLT::pointer(0, 32);
-    GetIdOp = SPIRV::GET_pID;
-    DstClass = &SPIRV::pIDRegClass;
-  } else if (MRI.getType(ValReg).isVector()) {
+  if (MRI.getType(SrcReg).isPointer()) {
+    unsigned PtrSz = GR.getPointerSize();
+    NewT = LLT::pointer(0, PtrSz);
+    bool IsVec = MRI.getType(SrcReg).isVector();
+    if (IsVec)
+      NewT = LLT::fixed_vector(2, NewT);
+    if (PtrSz == 64) {
+      if (IsVec) {
+        GetIdOp = SPIRV::GET_vpID64;
+        DstClass = &SPIRV::vpID64RegClass;
+      } else {
+        GetIdOp = SPIRV::GET_pID64;
+        DstClass = &SPIRV::pID64RegClass;
+      }
+    } else {
+      if (IsVec) {
+        GetIdOp = SPIRV::GET_vpID32;
+        DstClass = &SPIRV::vpID32RegClass;
+      } else {
+        GetIdOp = SPIRV::GET_pID32;
+        DstClass = &SPIRV::pID32RegClass;
+      }
+    }
+  } else if (MRI.getType(SrcReg).isVector()) {
     NewT = LLT::fixed_vector(2, NewT);
-    GetIdOp = IsFloat ? SPIRV::GET_vfID : SPIRV::GET_vID;
-    DstClass = IsFloat ? &SPIRV::vfIDRegClass : &SPIRV::vIDRegClass;
+    if (IsFloat) {
+      GetIdOp = SPIRV::GET_vfID;
+      DstClass = &SPIRV::vfIDRegClass;
+    } else {
+      GetIdOp = SPIRV::GET_vID;
+      DstClass = &SPIRV::vIDRegClass;
+    }
   }
   Register IdReg = MRI.createGenericVirtualRegister(NewT);
   MRI.setRegClass(IdReg, DstClass);
@@ -264,6 +289,7 @@ Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
   MIB.setInsertPt(*Def->getParent(),
                   (Def->getNextNode() ? Def->getNextNode()->getIterator()
                                       : Def->getParent()->end()));
+  SpirvTy = SpirvTy ? SpirvTy : GR->getOrCreateSPIRVType(Ty, MIB);
   Register NewReg = MRI.createGenericVirtualRegister(MRI.getType(Reg));
   if (auto *RC = MRI.getRegClassOrNull(Reg)) {
     MRI.setRegClass(NewReg, RC);
@@ -271,7 +297,6 @@ Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
     MRI.setRegClass(NewReg, &SPIRV::IDRegClass);
     MRI.setRegClass(Reg, &SPIRV::IDRegClass);
   }
-  SpirvTy = SpirvTy ? SpirvTy : GR->getOrCreateSPIRVType(Ty, MIB);
   GR->assignSPIRVTypeToVReg(SpirvTy, Reg, MIB.getMF());
   // This is to make it convenient for Legalizer to get the SPIRVType
   // when processing the actual MI (i.e. not pseudo one).
@@ -290,11 +315,11 @@ Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
 
 void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
                   MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR) {
-  unsigned Opc = MI.getOpcode();
   assert(MI.getNumDefs() > 0 && MRI.hasOneUse(MI.getOperand(0).getReg()));
   MachineInstr &AssignTypeInst =
       *(MRI.use_instr_begin(MI.getOperand(0).getReg()));
-  auto NewReg = createNewIdReg(MI.getOperand(0).getReg(), Opc, MRI, *GR).first;
+  auto NewReg =
+      createNewIdReg(nullptr, MI.getOperand(0).getReg(), MRI, *GR).first;
   AssignTypeInst.getOperand(1).setReg(NewReg);
   MI.getOperand(0).setReg(NewReg);
   MIB.setInsertPt(*MI.getParent(),
@@ -303,7 +328,7 @@ void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
   for (auto &Op : MI.operands()) {
     if (!Op.isReg() || Op.isDef())
       continue;
-    auto IdOpInfo = createNewIdReg(Op.getReg(), Opc, MRI, *GR);
+    auto IdOpInfo = createNewIdReg(nullptr, Op.getReg(), MRI, *GR);
     MIB.buildInstr(IdOpInfo.second).addDef(IdOpInfo.first).addUse(Op.getReg());
     Op.setReg(IdOpInfo.first);
   }
@@ -419,6 +444,7 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
         processInstr(MI, MIB, MRI, GR);
     }
   }
+
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       // We need to rewrite dst types for ASSIGN_TYPE instrs to be able
@@ -431,16 +457,18 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
       if (!isTypeFoldingSupported(Opcode))
         continue;
       Register DstReg = MI.getOperand(0).getReg();
-      if (MRI.getType(DstReg).isVector())
+      bool IsDstPtr = MRI.getType(DstReg).isPointer();
+      if (IsDstPtr || MRI.getType(DstReg).isVector())
         MRI.setRegClass(DstReg, &SPIRV::IDRegClass);
       // Don't need to reset type of register holding constant and used in
-      // G_ADDRSPACE_CAST, since it braaks legalizer.
+      // G_ADDRSPACE_CAST, since it breaks legalizer.
       if (Opcode == TargetOpcode::G_CONSTANT && MRI.hasOneUse(DstReg)) {
         MachineInstr &UseMI = *MRI.use_instr_begin(DstReg);
         if (UseMI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST)
           continue;
       }
-      MRI.setType(DstReg, LLT::scalar(32));
+      MRI.setType(DstReg, IsDstPtr ? LLT::pointer(0, GR->getPointerSize())
+                                   : LLT::scalar(32));
     }
   }
 }
