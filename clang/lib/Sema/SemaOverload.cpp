@@ -14395,9 +14395,16 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
   ArrayRef<Expr *> ArgsArray(Args, NumArgs);
 
   if (Input->isTypeDependent()) {
+    ExprValueKind VK = ExprValueKind::VK_PRValue;
+    // [C++26][expr.unary.op][expr.pre.incr]
+    // The * operator yields an lvalue of type
+    // The pre/post increment operators yied an lvalue.
+    if (Opc == UO_PreDec || Opc == UO_PreInc || Opc == UO_Deref)
+      VK = VK_LValue;
+
     if (Fns.empty())
-      return UnaryOperator::Create(Context, Input, Opc, Context.DependentTy,
-                                   VK_PRValue, OK_Ordinary, OpLoc, false,
+      return UnaryOperator::Create(Context, Input, Opc, Context.DependentTy, VK,
+                                   OK_Ordinary, OpLoc, false,
                                    CurFPFeatureOverrides());
 
     CXXRecordDecl *NamingClass = nullptr; // lookup ignores member operators
@@ -14406,7 +14413,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     if (Fn.isInvalid())
       return ExprError();
     return CXXOperatorCallExpr::Create(Context, Op, Fn.get(), ArgsArray,
-                                       Context.DependentTy, VK_PRValue, OpLoc,
+                                       Context.DependentTy, VK, OpLoc,
                                        CurFPFeatureOverrides());
   }
 
@@ -14499,7 +14506,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
       // operator node.
       ExprResult InputRes = PerformImplicitConversion(
           Input, Best->BuiltinParamTypes[0], Best->Conversions[0], AA_Passing,
-          CCK_ForBuiltinOverloadedOp);
+          CheckedConversionKind::ForBuiltinOverloadedOp);
       if (InputRes.isInvalid())
         return ExprError();
       Input = InputRes.get();
@@ -14982,14 +14989,14 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // operator node.
         ExprResult ArgsRes0 = PerformImplicitConversion(
             Args[0], Best->BuiltinParamTypes[0], Best->Conversions[0],
-            AA_Passing, CCK_ForBuiltinOverloadedOp);
+            AA_Passing, CheckedConversionKind::ForBuiltinOverloadedOp);
         if (ArgsRes0.isInvalid())
           return ExprError();
         Args[0] = ArgsRes0.get();
 
         ExprResult ArgsRes1 = PerformImplicitConversion(
             Args[1], Best->BuiltinParamTypes[1], Best->Conversions[1],
-            AA_Passing, CCK_ForBuiltinOverloadedOp);
+            AA_Passing, CheckedConversionKind::ForBuiltinOverloadedOp);
         if (ArgsRes1.isInvalid())
           return ExprError();
         Args[1] = ArgsRes1.get();
@@ -15360,14 +15367,14 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         // operator node.
         ExprResult ArgsRes0 = PerformImplicitConversion(
             Args[0], Best->BuiltinParamTypes[0], Best->Conversions[0],
-            AA_Passing, CCK_ForBuiltinOverloadedOp);
+            AA_Passing, CheckedConversionKind::ForBuiltinOverloadedOp);
         if (ArgsRes0.isInvalid())
           return ExprError();
         Args[0] = ArgsRes0.get();
 
         ExprResult ArgsRes1 = PerformImplicitConversion(
             Args[1], Best->BuiltinParamTypes[1], Best->Conversions[1],
-            AA_Passing, CCK_ForBuiltinOverloadedOp);
+            AA_Passing, CheckedConversionKind::ForBuiltinOverloadedOp);
         if (ArgsRes1.isInvalid())
           return ExprError();
         Args[1] = ArgsRes1.get();

@@ -118,6 +118,11 @@ static cl::opt<int>
                      cl::desc("Only vectorize if you gain more than this "
                               "number "));
 
+static cl::opt<bool> SLPSkipEarlyProfitabilityCheck(
+    "slp-skip-early-profitability-check", cl::init(false), cl::Hidden,
+    cl::desc("When true, SLP vectorizer bypasses profitability checks based on "
+             "heuristics and makes vectorization decision via cost modeling."));
+
 static cl::opt<bool>
 ShouldVectorizeHor("slp-vectorize-hor", cl::init(true), cl::Hidden,
                    cl::desc("Attempt to vectorize horizontal reductions"));
@@ -1129,6 +1134,7 @@ public:
     MustGather.clear();
     EntryToLastInstruction.clear();
     ExternalUses.clear();
+    ExternalUsesAsGEPs.clear();
     for (auto &Iter : BlocksSchedules) {
       BlockScheduling *BS = Iter.second.get();
       BS->clear();
@@ -3148,6 +3154,10 @@ private:
   /// can be nullptr, it means that this Internal Scalar will be used later,
   /// after vectorization.
   UserList ExternalUses;
+
+  /// A list of GEPs which can be reaplced by scalar GEPs instead of
+  /// extractelement instructions.
+  SmallPtrSet<Value *, 4> ExternalUsesAsGEPs;
 
   /// Values used only by @llvm.assume calls.
   SmallPtrSet<const Value *, 32> EphValues;
@@ -5509,6 +5519,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
 
 void BoUpSLP::buildExternalUses(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues) {
+  DenseMap<Value *, unsigned> ScalarToExtUses;
   // Collect the values that we need to extract from the tree.
   for (auto &TEPtr : VectorizableTree) {
     TreeEntry *Entry = TEPtr.get();
@@ -5522,14 +5533,20 @@ void BoUpSLP::buildExternalUses(
       Value *Scalar = Entry->Scalars[Lane];
       if (!isa<Instruction>(Scalar))
         continue;
-      int FoundLane = Entry->findLaneForValue(Scalar);
+      // All uses must be replaced already? No need to do it again.
+      auto It = ScalarToExtUses.find(Scalar);
+      if (It != ScalarToExtUses.end() && !ExternalUses[It->second].User)
+        continue;
 
       // Check if the scalar is externally used as an extra arg.
       const auto *ExtI = ExternallyUsedValues.find(Scalar);
       if (ExtI != ExternallyUsedValues.end()) {
+        int FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract: Extra arg from lane "
-                          << Lane << " from " << *Scalar << ".\n");
+                          << FoundLane << " from " << *Scalar << ".\n");
+        ScalarToExtUses.try_emplace(Scalar, ExternalUses.size());
         ExternalUses.emplace_back(Scalar, nullptr, FoundLane);
+        continue;
       }
       for (User *U : Scalar->users()) {
         LLVM_DEBUG(dbgs() << "SLP: Checking user:" << *U << ".\n");
@@ -5556,12 +5573,20 @@ void BoUpSLP::buildExternalUses(
             continue;
           }
           U = nullptr;
+          if (It != ScalarToExtUses.end()) {
+            ExternalUses[It->second].User = nullptr;
+            break;
+          }
         }
 
+        int FoundLane = Entry->findLaneForValue(Scalar);
         LLVM_DEBUG(dbgs() << "SLP: Need to extract:" << *UserInst
-                          << " from lane " << Lane << " from " << *Scalar
+                          << " from lane " << FoundLane << " from " << *Scalar
                           << ".\n");
+        It = ScalarToExtUses.try_emplace(Scalar, ExternalUses.size()).first;
         ExternalUses.emplace_back(Scalar, U, FoundLane);
+        if (!U)
+          break;
       }
     }
   }
@@ -6250,7 +6275,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       LLVM_DEBUG(dbgs() << "SLP: ShuffleVector are not vectorized.\n");
       return TreeEntry::NeedToGather;
     }
-    if (!areAltOperandsProfitable(S, VL)) {
+    if (!SLPSkipEarlyProfitabilityCheck && !areAltOperandsProfitable(S, VL)) {
       LLVM_DEBUG(
           dbgs()
           << "SLP: ShuffleVector not vectorized, operands are buildvector and "
@@ -9906,6 +9931,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   SmallVector<APInt> DemandedElts;
   SmallDenseSet<Value *, 4> UsedInserts;
   DenseSet<std::pair<const TreeEntry *, Type *>> VectorCasts;
+  std::optional<DenseMap<Value *, unsigned>> ValueToExtUses;
   for (ExternalUser &EU : ExternalUses) {
     // We only add extract cost once for the same scalar.
     if (!isa_and_nonnull<InsertElementInst>(EU.User) &&
@@ -10014,12 +10040,40 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         }
       }
     }
+    // Leave the GEPs as is, they are free in most cases and better to keep them
+    // as GEPs.
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(EU.Scalar)) {
+      if (!ValueToExtUses) {
+        ValueToExtUses.emplace();
+        for_each(enumerate(ExternalUses), [&](const auto &P) {
+          ValueToExtUses->try_emplace(P.value().Scalar, P.index());
+        });
+      }
+      // Can use original GEP, if no operands vectorized or they are marked as
+      // externally used already.
+      bool CanBeUsedAsGEP = all_of(GEP->operands(), [&](Value *V) {
+        if (!getTreeEntry(V))
+          return true;
+        auto It = ValueToExtUses->find(V);
+        if (It != ValueToExtUses->end()) {
+          // Replace all uses to avoid compiler crash.
+          ExternalUses[It->second].User = nullptr;
+          return true;
+        }
+        return false;
+      });
+      if (CanBeUsedAsGEP) {
+        ExtractCost += TTI->getInstructionCost(GEP, CostKind);
+        ExternalUsesAsGEPs.insert(EU.Scalar);
+        continue;
+      }
+    }
 
     // If we plan to rewrite the tree in a smaller type, we will need to sign
     // extend the extracted value back to the original type. Here, we account
     // for the extract and the added cost of the sign extend if needed.
     auto *VecTy = FixedVectorType::get(EU.Scalar->getType(), BundleWidth);
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     auto It = MinBWs.find(getTreeEntry(EU.Scalar));
     if (It != MinBWs.end()) {
       auto *MinTy = IntegerType::get(F->getContext(), It->second.first);
@@ -13142,6 +13196,8 @@ Value *BoUpSLP::vectorizeTree(
       if (Scalar->getType() != Vec->getType()) {
         Value *Ex = nullptr;
         Value *ExV = nullptr;
+        auto *GEP = dyn_cast<GetElementPtrInst>(Scalar);
+        bool ReplaceGEP = GEP && ExternalUsesAsGEPs.contains(GEP);
         auto It = ScalarToEEs.find(Scalar);
         if (It != ScalarToEEs.end()) {
           // No need to emit many extracts, just move the only one in the
@@ -13167,6 +13223,15 @@ Value *BoUpSLP::vectorizeTree(
             if (const TreeEntry *ETE = getTreeEntry(V))
               V = ETE->VectorizedValue;
             Ex = Builder.CreateExtractElement(V, ES->getIndexOperand());
+          } else if (ReplaceGEP) {
+            // Leave the GEPs as is, they are free in most cases and better to
+            // keep them as GEPs.
+            auto *CloneGEP = GEP->clone();
+            CloneGEP->insertBefore(*Builder.GetInsertBlock(),
+                                   Builder.GetInsertPoint());
+            if (GEP->hasName())
+              CloneGEP->takeName(GEP);
+            Ex = CloneGEP;
           } else {
             Ex = Builder.CreateExtractElement(Vec, Lane);
           }
@@ -13205,6 +13270,8 @@ Value *BoUpSLP::vectorizeTree(
       assert((ExternallyUsedValues.count(Scalar) ||
               any_of(Scalar->users(),
                      [&](llvm::User *U) {
+                       if (ExternalUsesAsGEPs.contains(U))
+                         return true;
                        TreeEntry *UseEntry = getTreeEntry(U);
                        return UseEntry &&
                               (UseEntry->State == TreeEntry::Vectorize ||
@@ -14620,10 +14687,16 @@ bool BoUpSLP::collectValuesToDemote(
         assert((ID == Intrinsic::smin || ID == Intrinsic::smax) &&
                "Expected min/max intrinsics only.");
         unsigned SignBits = OrigBitWidth - BitWidth;
+        APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth - 1);
         return SignBits <= ComputeNumSignBits(I->getOperand(0), *DL, 0, AC,
                                               nullptr, DT) &&
+               (!isKnownNonNegative(I->getOperand(0), SimplifyQuery(*DL)) ||
+                MaskedValueIsZero(I->getOperand(0), Mask,
+                                  SimplifyQuery(*DL))) &&
                SignBits <= ComputeNumSignBits(I->getOperand(1), *DL, 0, AC,
-                                              nullptr, DT);
+                                              nullptr, DT) &&
+               (!isKnownNonNegative(I->getOperand(1), SimplifyQuery(*DL)) ||
+                MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL)));
       });
     };
     if (ID != Intrinsic::abs) {
@@ -15091,10 +15164,6 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
   BoUpSLP::ValueSet VectorizedStores;
   bool Changed = false;
 
-  // Stores the pair of stores (first_store, last_store) in a range, that were
-  // already tried to be vectorized. Allows to skip the store ranges that were
-  // already tried to be vectorized but the attempts were unsuccessful.
-  DenseSet<std::pair<Value *, Value *>> TriedSequences;
   struct StoreDistCompare {
     bool operator()(const std::pair<unsigned, int> &Op1,
                     const std::pair<unsigned, int> &Op2) const {
@@ -15136,8 +15205,10 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
       Type *ValueTy = StoreTy;
       if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
         ValueTy = Trunc->getSrcTy();
-      unsigned MinVF = TTI->getStoreMinimumVF(
-          R.getMinVF(DL->getTypeSizeInBits(StoreTy)), StoreTy, ValueTy);
+      unsigned MinVF = std::max<unsigned>(
+          2, PowerOf2Ceil(TTI->getStoreMinimumVF(
+                 R.getMinVF(DL->getTypeStoreSizeInBits(StoreTy)), StoreTy,
+                 ValueTy)));
 
       if (MaxVF < MinVF) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
@@ -15163,40 +15234,74 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
         VF = Size > MaxVF ? NonPowerOf2VF : Size;
         Size *= 2;
       });
-      unsigned StartIdx = 0;
-      for (unsigned Size : CandidateVFs) {
-        for (unsigned Cnt = StartIdx, E = Operands.size(); Cnt + Size <= E;) {
-          ArrayRef<Value *> Slice = ArrayRef(Operands).slice(Cnt, Size);
-          assert(
-              all_of(
-                  Slice,
-                  [&](Value *V) {
-                    return cast<StoreInst>(V)->getValueOperand()->getType() ==
-                           cast<StoreInst>(Slice.front())
-                               ->getValueOperand()
-                               ->getType();
-                  }) &&
-              "Expected all operands of same type.");
-          if (!VectorizedStores.count(Slice.front()) &&
-              !VectorizedStores.count(Slice.back()) &&
-              TriedSequences.insert(std::make_pair(Slice.front(), Slice.back()))
-                  .second &&
-              vectorizeStoreChain(Slice, R, Cnt, MinVF)) {
-            // Mark the vectorized stores so that we don't vectorize them again.
-            VectorizedStores.insert(Slice.begin(), Slice.end());
-            Changed = true;
-            // If we vectorized initial block, no need to try to vectorize it
-            // again.
-            if (Cnt == StartIdx)
-              StartIdx += Size;
-            Cnt += Size;
-            continue;
+      unsigned End = Operands.size();
+      unsigned Repeat = 0;
+      constexpr unsigned MaxAttempts = 2;
+      SmallBitVector Range(Operands.size());
+      while (true) {
+        ++Repeat;
+        for (unsigned Size : CandidateVFs) {
+          int StartIdx = Range.find_first_unset();
+          while (StartIdx != -1) {
+            int EndIdx = Range.find_next(StartIdx);
+            unsigned Sz = EndIdx == -1 ? End : EndIdx;
+            for (unsigned Cnt = StartIdx; Cnt + Size <= Sz;) {
+              ArrayRef<Value *> Slice = ArrayRef(Operands).slice(Cnt, Size);
+              assert(all_of(Slice,
+                            [&](Value *V) {
+                              return cast<StoreInst>(V)
+                                         ->getValueOperand()
+                                         ->getType() ==
+                                     cast<StoreInst>(Slice.front())
+                                         ->getValueOperand()
+                                         ->getType();
+                            }) &&
+                     "Expected all operands of same type.");
+              if (vectorizeStoreChain(Slice, R, Cnt, MinVF)) {
+                // Mark the vectorized stores so that we don't vectorize them
+                // again.
+                VectorizedStores.insert(Slice.begin(), Slice.end());
+                // Mark the vectorized stores so that we don't vectorize them
+                // again.
+                Changed = true;
+                // If we vectorized initial block, no need to try to vectorize
+                // it again.
+                Range.set(Cnt, Cnt + Size);
+                if (Cnt < StartIdx + MinVF)
+                  Range.set(StartIdx, Cnt);
+                if (Cnt > EndIdx - Size - MinVF) {
+                  Range.set(Cnt + Size, EndIdx);
+                  End = Cnt;
+                }
+                Cnt += Size;
+                continue;
+              }
+              ++Cnt;
+            }
+            if (Sz >= End)
+              break;
+            StartIdx = Range.find_next_unset(EndIdx);
           }
-          ++Cnt;
         }
-        // Check if the whole array was vectorized already - exit.
-        if (StartIdx >= Operands.size())
+        // All values vectorize - exit.
+        if (Range.all())
           break;
+        // Check if tried all attempts or no need for the last attempts at all.
+        if (Repeat >= MaxAttempts)
+          break;
+        constexpr unsigned MaxVFScale = 4;
+        constexpr unsigned StoresLimit = 16;
+        const unsigned MaxTotalNum = std::min(
+            std::max<unsigned>(StoresLimit, MaxVFScale * MaxVF),
+            bit_floor(static_cast<unsigned>(Range.find_last_unset() -
+                                            Range.find_first_unset() + 1)));
+        if (MaxVF >= MaxTotalNum)
+          break;
+        // Last attempt to vectorize max number of elements, if all previous
+        // attempts were unsuccessful because of the cost issues.
+        CandidateVFs.clear();
+        for (unsigned Size = MaxTotalNum; Size > MaxVF; Size /= 2)
+          CandidateVFs.push_back(Size);
       }
     }
   };
