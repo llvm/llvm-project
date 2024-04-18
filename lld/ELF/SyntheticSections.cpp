@@ -42,6 +42,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <cinttypes>
 #include <cstdlib>
 
 using namespace llvm;
@@ -2744,18 +2745,17 @@ readEntry(uint64_t &offset, const DWARFDebugNames::NameIndex &ni,
   uint64_t ulebVal = namesExtractor.getULEB128(&offset, &err);
   if (err)
     return createStringError(inconvertibleErrorCode(),
-                             "invalid abbrev code in entry: %s",
+                             "invalid abbrev code: %s",
                              toString(std::move(err)).c_str());
-  if (ulebVal <= UINT32_MAX)
-    ie->abbrevCode = static_cast<uint32_t>(ulebVal);
-  else
+  if (!isUInt<32>(ulebVal))
     return createStringError(inconvertibleErrorCode(),
-                             "abbrev code in entry too large for DWARF32: %d",
+                             "abbrev code too large for DWARF32: %" PRIu64,
                              ulebVal);
+  ie->abbrevCode = static_cast<uint32_t>(ulebVal);
   auto it = ni.getAbbrevs().find_as(ie->abbrevCode);
   if (it == ni.getAbbrevs().end())
     return createStringError(inconvertibleErrorCode(),
-                             "entry abbrev code not found in abbrev table: %d",
+                             "abbrev code not found in abbrev table: %" PRIu32,
                              ie->abbrevCode);
 
   DebugNamesBaseSection::AttrValue attr, cuAttr = {0, 0};
@@ -2806,7 +2806,6 @@ readEntry(uint64_t &offset, const DWARFDebugNames::NameIndex &ni,
 
   // Canonicalize abbrev by placing the CU/TU index at the end.
   ie->attrValues.push_back(cuAttr);
-
   return ie;
 }
 
@@ -2919,7 +2918,7 @@ void DebugNamesBaseSection::computeHdrAndAbbrevTable(
       hdr.CompUnitCount += nd.hdr.CompUnitCount;
       // TODO: We don't handle type units yet, so LocalTypeUnitCount &
       // ForeignTypeUnitCount are left as 0.
-      if (nd.hdr.LocalTypeUnitCount || nd. hdr.ForeignTypeUnitCount)
+      if (nd.hdr.LocalTypeUnitCount || nd.hdr.ForeignTypeUnitCount)
         warn(toString(inputChunk.section.sec) +
              Twine(": type units are not implemented"));
       // If augmentation strings are not identical, use an empty string.

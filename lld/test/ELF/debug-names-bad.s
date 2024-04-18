@@ -41,7 +41,7 @@
 # RUN: ld.lld --debug-names bad-abbrev-code.o -o bad-abbrev-code --noinhibit-exec
 # RUN: llvm-dwarfdump --debug-names bad-abbrev-code | FileCheck %s --check-prefix=BAD-ABBREV-CODE-DWARF
 
-# BAD-ABBREV-CODE: error: bad-abbrev-code.o:(.debug_names): entry abbrev code not found in abbrev table: 3
+# BAD-ABBREV-CODE: error: bad-abbrev-code.o:(.debug_names): abbrev code not found in abbrev table: 3
 
 # BAD-ABBREV-CODE-DWARF:      Abbreviations [
 # BAD-ABBREV-CODE-DWARF-NEXT:   Abbreviation 0x1 {

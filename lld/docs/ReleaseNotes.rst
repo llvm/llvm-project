@@ -33,7 +33,8 @@ ELF Improvements
   ``R_AARCH64_AUTH_RELATIVE`` relocations are now supported.
   (`#72714 <https://github.com/llvm/llvm-project/pull/72714>`_)
 * ``--debug-names`` is added to create a merged ``.debug_names`` index
-  from input ``.debug_names`` sections.
+  from input ``.debug_names`` sections. Type units are not handled yet.
+  (`#86508 <https://github.com/llvm/llvm-project/pull/86508>`_)
 
 Breaking changes
 ----------------
