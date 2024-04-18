@@ -247,7 +247,7 @@ Address CodeGen::emitMergePHI(CodeGenFunction &CGF, Address Addr1,
 
 bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
                            bool AllowArrays, bool AsIfNoUniqueAddr) {
-  if (FD->isUnnamedBitfield())
+  if (FD->isUnnamedBitField())
     return true;
 
   QualType FT = FD->getType();
