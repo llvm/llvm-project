@@ -7,6 +7,8 @@
 
 #include "shadow_mapping.h"
 
+static const __constant u8 kAsanHeapLeftRedzoneMagic = (u8)0xfa;
+
 NO_SANITIZE_ADDR
 static uptr
 range_check(uptr beg, uptr end) {
@@ -44,4 +46,26 @@ __asan_region_is_poisoned(uptr beg, uptr size)
       }
     }
     return 0;
+}
+
+USED NO_INLINE NO_SANITIZE_ADDR
+void
+__asan_poison_region(ulong beg, ulong size)
+{
+    // Handle intial bytes if not aligned.
+    if (!is_aligned_by_granularity(beg)) {
+      ulong beg_round_downto = round_downto(beg, SHADOW_GRANULARITY);
+      __global s8 *shadow_ptr = (__global s8 *)MEM_TO_SHADOW(beg_round_downto);
+      s8 shadow_value = (s8) (beg - beg_round_downto);
+      *shadow_ptr = shadow_value;
+    }
+
+    // Handle aligned bytes.
+    ulong end  = round_downto(beg + size, SHADOW_GRANULARITY);
+    ulong beg_round_upto = round_upto(beg, SHADOW_GRANULARITY);
+    if (end > beg_round_upto) {
+      u64 shadow_size = (end - beg_round_upto) / SHADOW_GRANULARITY;
+      __global s8 *shadow_ptr = (__global s8 *)MEM_TO_SHADOW(beg_round_upto);
+      __builtin_memset(shadow_ptr, kAsanHeapLeftRedzoneMagic, shadow_size);
+    }
 }
