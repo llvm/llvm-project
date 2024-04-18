@@ -661,8 +661,8 @@ public:
   Instruction *foldICmpUsingBoolRange(ICmpInst &I);
   Instruction *foldICmpInstWithConstant(ICmpInst &Cmp);
   Instruction *foldICmpInstWithConstantNotInt(ICmpInst &Cmp);
-  Instruction *foldICmpInstWithConstantAllowUndef(ICmpInst &Cmp,
-                                                  const APInt &C);
+  Instruction *foldICmpInstWithConstantAllowPoison(ICmpInst &Cmp,
+                                                   const APInt &C);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
   Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
                                   Value *Z, ICmpInst::Predicate Pred);

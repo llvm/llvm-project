@@ -1222,40 +1222,51 @@ TEST_F(PatternMatchTest, VectorUndefInt) {
   EXPECT_TRUE(match(VectorZeroPoison, m_Zero()));
 
   const APInt *C;
-  // Regardless of whether undefs are allowed,
-  // a fully undef constant does not match.
+  // Regardless of whether poison is allowed,
+  // a fully undef/poison constant does not match.
   EXPECT_FALSE(match(ScalarUndef, m_APInt(C)));
-  EXPECT_FALSE(match(ScalarUndef, m_APIntForbidUndef(C)));
-  EXPECT_FALSE(match(ScalarUndef, m_APIntAllowUndef(C)));
+  EXPECT_FALSE(match(ScalarUndef, m_APIntForbidPoison(C)));
+  EXPECT_FALSE(match(ScalarUndef, m_APIntAllowPoison(C)));
   EXPECT_FALSE(match(VectorUndef, m_APInt(C)));
-  EXPECT_FALSE(match(VectorUndef, m_APIntForbidUndef(C)));
-  EXPECT_FALSE(match(VectorUndef, m_APIntAllowUndef(C)));
+  EXPECT_FALSE(match(VectorUndef, m_APIntForbidPoison(C)));
+  EXPECT_FALSE(match(VectorUndef, m_APIntAllowPoison(C)));
+  EXPECT_FALSE(match(ScalarPoison, m_APInt(C)));
+  EXPECT_FALSE(match(ScalarPoison, m_APIntForbidPoison(C)));
+  EXPECT_FALSE(match(ScalarPoison, m_APIntAllowPoison(C)));
+  EXPECT_FALSE(match(VectorPoison, m_APInt(C)));
+  EXPECT_FALSE(match(VectorPoison, m_APIntForbidPoison(C)));
+  EXPECT_FALSE(match(VectorPoison, m_APIntAllowPoison(C)));
 
   // We can always match simple constants and simple splats.
   C = nullptr;
   EXPECT_TRUE(match(ScalarZero, m_APInt(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(ScalarZero, m_APIntForbidUndef(C)));
+  EXPECT_TRUE(match(ScalarZero, m_APIntForbidPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(ScalarZero, m_APIntAllowUndef(C)));
+  EXPECT_TRUE(match(ScalarZero, m_APIntAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(VectorZero, m_APInt(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(VectorZero, m_APIntForbidUndef(C)));
+  EXPECT_TRUE(match(VectorZero, m_APIntForbidPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(VectorZero, m_APIntAllowUndef(C)));
+  EXPECT_TRUE(match(VectorZero, m_APIntAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
 
-  // Whether splats with undef can be matched depends on the matcher.
+  // Splats with undef are never allowed.
+  // Whether splats with poison can be matched depends on the matcher.
   EXPECT_FALSE(match(VectorZeroUndef, m_APInt(C)));
-  EXPECT_FALSE(match(VectorZeroUndef, m_APIntForbidUndef(C)));
+  EXPECT_FALSE(match(VectorZeroUndef, m_APIntForbidPoison(C)));
+  EXPECT_FALSE(match(VectorZeroUndef, m_APIntAllowPoison(C)));
+
+  EXPECT_FALSE(match(VectorZeroPoison, m_APInt(C)));
+  EXPECT_FALSE(match(VectorZeroPoison, m_APIntForbidPoison(C)));
   C = nullptr;
-  EXPECT_TRUE(match(VectorZeroUndef, m_APIntAllowUndef(C)));
+  EXPECT_TRUE(match(VectorZeroPoison, m_APIntAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
 }
 
@@ -1387,43 +1398,63 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
   EXPECT_FALSE(match(VectorNaNPoison, m_Finite()));
 
   const APFloat *C;
-  // Regardless of whether undefs are allowed,
-  // a fully undef constant does not match.
+  // Regardless of whether poison is allowed,
+  // a fully undef/poison constant does not match.
   EXPECT_FALSE(match(ScalarUndef, m_APFloat(C)));
-  EXPECT_FALSE(match(ScalarUndef, m_APFloatForbidUndef(C)));
-  EXPECT_FALSE(match(ScalarUndef, m_APFloatAllowUndef(C)));
+  EXPECT_FALSE(match(ScalarUndef, m_APFloatForbidPoison(C)));
+  EXPECT_FALSE(match(ScalarUndef, m_APFloatAllowPoison(C)));
   EXPECT_FALSE(match(VectorUndef, m_APFloat(C)));
-  EXPECT_FALSE(match(VectorUndef, m_APFloatForbidUndef(C)));
-  EXPECT_FALSE(match(VectorUndef, m_APFloatAllowUndef(C)));
+  EXPECT_FALSE(match(VectorUndef, m_APFloatForbidPoison(C)));
+  EXPECT_FALSE(match(VectorUndef, m_APFloatAllowPoison(C)));
+  EXPECT_FALSE(match(ScalarPoison, m_APFloat(C)));
+  EXPECT_FALSE(match(ScalarPoison, m_APFloatForbidPoison(C)));
+  EXPECT_FALSE(match(ScalarPoison, m_APFloatAllowPoison(C)));
+  EXPECT_FALSE(match(VectorPoison, m_APFloat(C)));
+  EXPECT_FALSE(match(VectorPoison, m_APFloatForbidPoison(C)));
+  EXPECT_FALSE(match(VectorPoison, m_APFloatAllowPoison(C)));
 
   // We can always match simple constants and simple splats.
   C = nullptr;
   EXPECT_TRUE(match(ScalarZero, m_APFloat(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(ScalarZero, m_APFloatForbidUndef(C)));
+  EXPECT_TRUE(match(ScalarZero, m_APFloatForbidPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(ScalarZero, m_APFloatAllowUndef(C)));
+  EXPECT_TRUE(match(ScalarZero, m_APFloatAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(VectorZero, m_APFloat(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(VectorZero, m_APFloatForbidUndef(C)));
+  EXPECT_TRUE(match(VectorZero, m_APFloatForbidPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(VectorZero, m_APFloatAllowUndef(C)));
+  EXPECT_TRUE(match(VectorZero, m_APFloatAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
 
-  // Whether splats with undef can be matched depends on the matcher.
+  // Splats with undef are never allowed.
+  // Whether splats with poison can be matched depends on the matcher.
   EXPECT_FALSE(match(VectorZeroUndef, m_APFloat(C)));
-  EXPECT_FALSE(match(VectorZeroUndef, m_APFloatForbidUndef(C)));
+  EXPECT_FALSE(match(VectorZeroUndef, m_APFloatForbidPoison(C)));
+  EXPECT_FALSE(match(VectorZeroUndef, m_APFloatAllowPoison(C)));
+  EXPECT_FALSE(match(VectorZeroUndef, m_Finite(C)));
+
+  EXPECT_FALSE(match(VectorZeroPoison, m_APFloat(C)));
+  EXPECT_FALSE(match(VectorZeroPoison, m_APFloatForbidPoison(C)));
   C = nullptr;
-  EXPECT_TRUE(match(VectorZeroUndef, m_APFloatAllowUndef(C)));
+  EXPECT_TRUE(match(VectorZeroPoison, m_APFloatAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(VectorZeroUndef, m_Finite(C)));
+  EXPECT_TRUE(match(VectorZeroPoison, m_Finite(C)));
+  EXPECT_TRUE(C->isZero());
+  EXPECT_FALSE(match(VectorZeroPoison, m_APFloat(C)));
+  EXPECT_FALSE(match(VectorZeroPoison, m_APFloatForbidPoison(C)));
+  C = nullptr;
+  EXPECT_TRUE(match(VectorZeroPoison, m_APFloatAllowPoison(C)));
+  EXPECT_TRUE(C->isZero());
+  C = nullptr;
+  EXPECT_TRUE(match(VectorZeroPoison, m_Finite(C)));
   EXPECT_TRUE(C->isZero());
 }
 

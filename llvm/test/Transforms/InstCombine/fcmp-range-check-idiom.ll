@@ -182,15 +182,15 @@ define i1 @test_and_olt_logical(float %x) {
   ret i1 %cond
 }
 
-define <2 x i1> @test_and_olt_undef(<2 x float> %x) {
-; CHECK-LABEL: define <2 x i1> @test_and_olt_undef(
+define <2 x i1> @test_and_olt_poison(<2 x float> %x) {
+; CHECK-LABEL: define <2 x i1> @test_and_olt_poison(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp olt <2 x float> [[TMP1]], <float 0x3C00000000000000, float 0x3C00000000000000>
 ; CHECK-NEXT:    ret <2 x i1> [[COND]]
 ;
-  %cmp1 = fcmp olt <2 x float> %x, <float 0x3C00000000000000, float undef>
-  %cmp2 = fcmp ogt <2 x float> %x, <float 0xBC00000000000000, float undef>
+  %cmp1 = fcmp olt <2 x float> %x, <float 0x3C00000000000000, float poison>
+  %cmp2 = fcmp ogt <2 x float> %x, <float 0xBC00000000000000, float poison>
   %cond = and <2 x i1> %cmp1, %cmp2
   ret <2 x i1> %cond
 }

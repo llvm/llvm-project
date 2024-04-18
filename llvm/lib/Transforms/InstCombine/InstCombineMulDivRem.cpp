@@ -276,7 +276,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     const APInt *NegPow2C;
     Value *X;
     if (match(Op0, m_ZExtOrSExt(m_Value(X))) &&
-        match(Op1, m_APIntAllowUndef(NegPow2C))) {
+        match(Op1, m_APIntAllowPoison(NegPow2C))) {
       unsigned SrcWidth = X->getType()->getScalarSizeInBits();
       unsigned ShiftAmt = NegPow2C->countr_zero();
       if (ShiftAmt >= BitWidth - SrcWidth) {
@@ -485,7 +485,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   // ((ashr X, 31) | 1) * X --> abs(X)
   // X * ((ashr X, 31) | 1) --> abs(X)
   if (match(&I, m_c_BinOp(m_Or(m_AShr(m_Value(X),
-                                      m_SpecificIntAllowUndef(BitWidth - 1)),
+                                      m_SpecificIntAllowPoison(BitWidth - 1)),
                                m_One()),
                           m_Deferred(X)))) {
     Value *Abs = Builder.CreateBinaryIntrinsic(
@@ -836,7 +836,7 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   // X * 0.0 --> copysign(0.0, X)
   // X * -0.0 --> copysign(0.0, -X)
   const APFloat *FPC;
-  if (match(Op1, m_APFloatAllowUndef(FPC)) && FPC->isZero() &&
+  if (match(Op1, m_APFloatAllowPoison(FPC)) && FPC->isZero() &&
       ((I.hasNoInfs() &&
         isKnownNeverNaN(Op0, /*Depth=*/0, SQ.getWithInstruction(&I))) ||
        isKnownNeverNaN(&I, /*Depth=*/0, SQ.getWithInstruction(&I)))) {
