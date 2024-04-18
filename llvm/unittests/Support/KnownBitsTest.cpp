@@ -314,10 +314,8 @@ TEST(KnownBitsTest, BinaryExhaustive) {
   testBinaryOpExhaustive(KnownBits::umin, APIntOps::umin);
   testBinaryOpExhaustive(KnownBits::smax, APIntOps::smax);
   testBinaryOpExhaustive(KnownBits::smin, APIntOps::smin);
-  testBinaryOpExhaustive(KnownBits::abdu, APIntOps::abdu,
-                         checkOptimalityBinary);
-  testBinaryOpExhaustive(KnownBits::abds, APIntOps::abds,
-                         checkOptimalityBinary);
+  testBinaryOpExhaustive(KnownBits::abdu, APIntOps::abdu);
+  testBinaryOpExhaustive(KnownBits::abds, APIntOps::abds);
   testBinaryOpExhaustive(
       [](const KnownBits &Known1, const KnownBits &Known2) {
         return KnownBits::udiv(Known1, Known2);
