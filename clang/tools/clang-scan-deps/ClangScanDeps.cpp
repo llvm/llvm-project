@@ -80,6 +80,7 @@ enum ResourceDirRecipeKind {
   RDRK_InvokeCompiler,
 };
 
+static std::string OutputFileName = "-";
 static ScanningMode ScanMode = ScanningMode::DependencyDirectivesScan;
 static ScanningOutputFormat Format = ScanningOutputFormat::Make;
 static ScanningOptimizations OptimizeArgs;
@@ -194,6 +195,9 @@ static void ParseArgs(int argc, char **argv) {
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_files_dir_EQ))
     ModuleFilesDir = A->getValue();
+
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_o))
+    OutputFileName = A->getValue();
 
   EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
 
@@ -513,7 +517,7 @@ handleMakeDependencyToolResult(const std::string &Input,
 
 static bool handleTreeDependencyToolResult(
     llvm::cas::ObjectStore &CAS, const std::string &Input,
-    llvm::Expected<llvm::cas::ObjectProxy> &MaybeTree, SharedStream &OS,
+    llvm::Expected<llvm::cas::ObjectProxy> &MaybeTree, llvm::raw_ostream &OS,
     SharedStream &Errs) {
   if (!MaybeTree) {
     llvm::handleAllErrors(
@@ -526,9 +530,7 @@ static bool handleTreeDependencyToolResult(
         });
     return true;
   }
-  OS.applyLocked([&](llvm::raw_ostream &OS) {
-    OS << "tree " << MaybeTree->getID() << " for '" << Input << "'\n";
-  });
+  OS << "tree " << MaybeTree->getID() << " for '" << Input << "'\n";
   return false;
 }
 
@@ -536,7 +538,7 @@ static bool
 handleIncludeTreeToolResult(llvm::cas::ObjectStore &CAS,
                             const std::string &Input,
                             Expected<cas::IncludeTreeRoot> &MaybeTree,
-                            SharedStream &OS, SharedStream &Errs) {
+                            llvm::raw_ostream &OS, SharedStream &Errs) {
   if (!MaybeTree) {
     llvm::handleAllErrors(
         MaybeTree.takeError(), [&Input, &Errs](llvm::StringError &Err) {
@@ -558,11 +560,9 @@ handleIncludeTreeToolResult(llvm::cas::ObjectStore &CAS,
   };
 
   std::optional<llvm::Error> E;
-  OS.applyLocked([&](llvm::raw_ostream &OS) {
-    MaybeTree->getID().print(OS);
-    OS << " - " << Input << "\n";
-    E = MaybeTree->print(OS);
-  });
+  MaybeTree->getID().print(OS);
+  OS << " - " << Input << "\n";
+  E = MaybeTree->print(OS);
   if (*E)
     return printError(std::move(*E));
   return false;
@@ -681,6 +681,11 @@ public:
   }
 
   void printFullOutput(raw_ostream &OS) {
+    // Skip sorting modules and constructing the JSON object if the output
+    // cannot be observed anyway. This makes timings less noisy.
+    if (&OS == &llvm::nulls())
+      return;
+
     // Sort the modules by name to get a deterministic order.
     std::vector<IndexedModuleID> ModuleIDs;
     for (auto &&M : Modules)
@@ -1140,8 +1145,25 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       });
 
   SharedStream Errs(llvm::errs());
-  // Print out the dependency results to STDOUT by default.
-  SharedStream DependencyOS(llvm::outs());
+
+  std::optional<llvm::raw_fd_ostream> FileOS;
+  llvm::raw_ostream &ThreadUnsafeDependencyOS = [&]() -> llvm::raw_ostream & {
+    if (OutputFileName == "-")
+      return llvm::outs();
+
+    if (OutputFileName == "/dev/null")
+      return llvm::nulls();
+
+    std::error_code EC;
+    FileOS.emplace(OutputFileName, EC);
+    if (EC) {
+      llvm::errs() << "Failed to open output file '" << OutputFileName
+                   << "': " << llvm::errorCodeToError(EC) << '\n';
+      std::exit(1);
+    }
+    return *FileOS;
+  }();
+  SharedStream DependencyOS(ThreadUnsafeDependencyOS);
 
   auto DiagsConsumer = std::make_unique<TextDiagnosticPrinter>(
       llvm::errs(), new DiagnosticOptions(), false);
@@ -1361,23 +1383,23 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   if (Format == ScanningOutputFormat::Tree) {
     for (auto &TreeResult : TreeResults) {
       if (handleTreeDependencyToolResult(*CAS, TreeResult.Filename,
-                                         *TreeResult.MaybeTree, DependencyOS,
-                                         Errs))
+                                         *TreeResult.MaybeTree,
+                                         ThreadUnsafeDependencyOS, Errs))
         HadErrors = true;
     }
   } else if (Format == ScanningOutputFormat::IncludeTree) {
     for (auto &TreeResult : TreeResults) {
       if (handleIncludeTreeToolResult(*CAS, TreeResult.Filename,
                                       *TreeResult.MaybeIncludeTree,
-                                      DependencyOS, Errs))
+                                      ThreadUnsafeDependencyOS, Errs))
         HadErrors = true;
     }
   } else if (Format == ScanningOutputFormat::Full ||
              Format == ScanningOutputFormat::FullTree ||
              Format == ScanningOutputFormat::FullIncludeTree) {
-    FD->printFullOutput(llvm::outs());
+    FD->printFullOutput(ThreadUnsafeDependencyOS);
   } else if (Format == ScanningOutputFormat::P1689)
-    PD.printDependencies(llvm::outs());
+    PD.printDependencies(ThreadUnsafeDependencyOS);
 
   return HadErrors;
 }
