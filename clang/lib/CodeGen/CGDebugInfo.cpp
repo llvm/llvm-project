@@ -1332,38 +1332,21 @@ GetTemplateArgs(const TemplateDecl *TD, const TemplateSpecializationType *Ty) {
       break;
     }
 
-    // Take the next argument.
-    if (!SubstArgs.empty()) {
-      SpecArgs.push_back(SubstArgs.front());
-      SubstArgs = SubstArgs.drop_front();
-      continue;
-    }
-
-    // If SubstArgs is now empty (we're taking from it each iteration) and
-    // this template parameter isn't a pack, then that should mean we're
-    // using default values for the remaining template parameters. Push the
-    // default value for each parameter.
-    if (auto *P = dyn_cast<TemplateTypeParmDecl>(Param)) {
-      assert(P->hasDefaultArgument() &&
-             "expected defaulted template type parameter");
-      SpecArgs.emplace_back(P->getDefaultArgument(),
-                            /*IsNullPtr=*/false,
-                            /*IsDefaulted=*/true);
-    } else if (auto *P = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
-      assert(P->hasDefaultArgument() &&
-             "expected defaulted template non-type parameter");
-      SpecArgs.emplace_back(P->getDefaultArgument(),
-                            /*IsDefaulted=*/true);
-    } else if (auto *P = dyn_cast<TemplateTemplateParmDecl>(Param)) {
-      assert(P->hasDefaultArgument() &&
-             "expected defaulted template template parameter");
-      SpecArgs.emplace_back(
-          P->getDefaultArgument().getArgument().getAsTemplate(),
-          /*IsDefaulted=*/true);
-    } else {
-      llvm_unreachable("Unexpected template parameter kind");
+    // Skip defaulted args.
+    // FIXME: Ideally, we wouldn't do this. We can read the default values
+    // for each parameter. However, defaulted arguments which are dependent
+    // values or dependent types can't (easily?) be resolved here.
+    if (SubstArgs.empty()) {
+      // If SubstArgs is now empty (we're taking from it each iteration) and
+      // this template parameter isn't a pack, then that should mean we're
+      // using default values for the remaining template parameters (after
+      // which there may be an empty pack too which we will ignore).
       break;
     }
+
+    // Take the next argument.
+    SpecArgs.push_back(SubstArgs.front());
+    SubstArgs = SubstArgs.drop_front();
   }
   return SpecArgs;
 }
