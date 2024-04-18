@@ -143,26 +143,28 @@ static bool isSupportedTypeForConversion(Type type) {
 
 /// Checks that `rhs` can be converted to `lhs` by a sequence of casts and
 /// truncations.
-static bool areConversionCompatible(const DataLayout &layout, Type lhs,
-                                    Type rhs) {
-  if (lhs == rhs)
+static bool areConversionCompatible(const DataLayout &layout, Type targetType,
+                                    Type srcType) {
+  if (targetType == srcType)
     return true;
 
-  if (!isSupportedTypeForConversion(lhs) || !isSupportedTypeForConversion(rhs))
+  if (!isSupportedTypeForConversion(targetType) ||
+      !isSupportedTypeForConversion(srcType))
     return false;
 
   // Pointer casts will only be sane when the bitsize of both pointer types is
   // the same.
-  if (isa<LLVM::LLVMPointerType>(lhs) && isa<LLVM::LLVMPointerType>(rhs))
-    return layout.getTypeSize(lhs) == layout.getTypeSize(rhs);
+  if (isa<LLVM::LLVMPointerType>(targetType) &&
+      isa<LLVM::LLVMPointerType>(srcType))
+    return layout.getTypeSize(targetType) == layout.getTypeSize(srcType);
 
-  return layout.getTypeSize(lhs) <= layout.getTypeSize(rhs);
+  return layout.getTypeSize(targetType) <= layout.getTypeSize(srcType);
 }
 
 /// Checks if `dataLayout` describes a little endian layout.
-static bool isLittleEndian(const DataLayout &dataLayout) {
+static bool isBigEndian(const DataLayout &dataLayout) {
   auto endiannessStr = dyn_cast_or_null<StringAttr>(dataLayout.getEndianness());
-  return !endiannessStr || endiannessStr == "little";
+  return endiannessStr && endiannessStr == "big";
 }
 
 /// The size of a byte in bits.
@@ -187,7 +189,7 @@ static Value createConversionSequence(RewriterBase &rewriter, Location loc,
 
   // In the special case of casting one pointer to another, we want to generate
   // an address space cast. Bitcasts of pointers are not allowed and using
-  // pointer to integer conversions are not equivalent due to the loss or
+  // pointer to integer conversions are not equivalent due to the loss of
   // provenance.
   if (isa<LLVM::LLVMPointerType>(targetType) &&
       isa<LLVM::LLVMPointerType>(srcType))
@@ -208,7 +210,7 @@ static Value createConversionSequence(RewriterBase &rewriter, Location loc,
 
   // Truncate the integer if the size of the target is less than the value.
   if (targetTypeSize != srcTypeSize) {
-    if (!isLittleEndian(dataLayout)) {
+    if (isBigEndian(dataLayout)) {
       uint64_t shiftAmount = (srcTypeSize - targetTypeSize) * kBitsInByte;
       auto shiftConstant = rewriter.create<LLVM::ConstantOp>(
           loc, rewriter.getIntegerAttr(srcType, shiftAmount));
