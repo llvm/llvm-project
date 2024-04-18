@@ -75,9 +75,9 @@ void LambdaFunctionNameCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void LambdaFunctionNameCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMethodDecl(isInLambda(),
-                    hasBody(hasDescendant(expr(
+                    hasBody(forEachDescendant(
                         predefinedExpr(hasAncestor(cxxMethodDecl().bind("fn")))
-                            .bind("E")))),
+                            .bind("E"))),
                     equalsBoundNode("fn")),
       this);
 }
