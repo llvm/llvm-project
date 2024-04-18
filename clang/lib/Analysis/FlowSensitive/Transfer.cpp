@@ -655,6 +655,9 @@ public:
       if (TrueLoc == FalseLoc && TrueLoc != nullptr)
         Env.setStorageLocation(*S, *TrueLoc);
     } else if (!S->getType()->isRecordType()) {
+      // The conditional operator can evaluate to either of the values of the
+      // two branches. To model this, join these two values together to yield
+      // the result of the conditional operator.
       if (Value *Val = Environment::joinValues(
               S->getType(), TrueEnv->getValue(*S->getTrueExpr()), *TrueEnv,
               FalseEnv->getValue(*S->getFalseExpr()), *FalseEnv, Env, Model))
