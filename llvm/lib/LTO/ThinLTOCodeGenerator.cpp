@@ -777,17 +777,13 @@ public:
                     StringRef OutputPath) final {
     std::string TmpPath = this->OutputPath + ".computed.tmp";
 
-    if (Error E = AsyncModuleCacheEntry::writeObject(OutputBuffer, TmpPath)) {
-      llvm::errs() << "writeObject failed\n";
+    if (Error E = AsyncModuleCacheEntry::writeObject(OutputBuffer, TmpPath))
       return E;
-    }
 
     if (auto EC = sys::fs::rename(TmpPath, OutputPath)) {
-      llvm::errs() << "rename failed\n";
-      if (auto EC = sys::fs::remove(TmpPath)) {
-        //
-      }
-      return createStringError(EC, "");
+      (void)sys::fs::remove(TmpPath); // Attempt to clean up.
+      return createStringError(
+          EC, "renaming of computed module object file failed");
     }
 
     return Error::success();
