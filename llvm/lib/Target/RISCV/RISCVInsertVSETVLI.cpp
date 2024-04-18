@@ -616,7 +616,7 @@ public:
     if (SEWLMULRatioOnly)
       return false;
 
-    if (Used.VLAny && !hasSameAVL(Require))
+    if (Used.VLAny && !(hasSameAVL(Require) && hasSameVLMAX(Require)))
       return false;
 
     if (Used.VLZeroness && !hasEquallyZeroAVL(Require, MRI))
