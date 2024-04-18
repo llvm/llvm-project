@@ -489,6 +489,7 @@ struct DwarfSectionsCache {
   MCSection *AppleNames;
   MCSection *AppleTypes;
   MCSection *AppleNamespace;
+  MCSection *AppleObjC;
 };
 
 /// Queries `Asm` for all dwarf sections and returns an object with (possibly
@@ -647,6 +648,10 @@ private:
   // If a DWARF Apple Namespaces section exists, create a AppleNamespaceRef CAS
   // object for the section.
   Error createAppleNamespaceSection();
+
+  // If a DWARF Apple Objc section exists, create a AppleObjcRef CAS
+  // object for the section.
+  Error createAppleObjCSection();
 
   /// If there is any padding between one section and the next, create a
   /// PaddingRef CAS object to represent the bytes of Padding between the two
