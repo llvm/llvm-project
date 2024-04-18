@@ -2965,7 +2965,8 @@ foldRoundUpIntegerWithPow2Alignment(SelectInst &SI,
     return nullptr;
 
   if (!XBiasedHighBits->hasOneUse()) {
-    if (*BiasCst == *LowBitMaskCst)
+    // We can't directly return XBiasedHighBits if it is more poisonous.
+    if (*BiasCst == *LowBitMaskCst && impliesPoison(XBiasedHighBits, X))
       return XBiasedHighBits;
     return nullptr;
   }
