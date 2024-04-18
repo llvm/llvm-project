@@ -7409,8 +7409,7 @@ void SemaOpenMP::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
   const IdentifierInfo *BaseII = D.getIdentifier();
   LookupResult Lookup(SemaRef, DeclarationName(BaseII), D.getIdentifierLoc(),
                       Sema::LookupOrdinaryName);
-  SemaRef.LookupParsedName(Lookup, S,
-                           &D.getCXXScopeSpec(),
+  SemaRef.LookupParsedName(Lookup, S, &D.getCXXScopeSpec(),
                            /*ObjectType=*/QualType());
 
   TypeSourceInfo *TInfo = SemaRef.GetTypeForDeclarator(D);
