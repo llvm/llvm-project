@@ -334,7 +334,7 @@ CodeGenFunction::EmitPointerAuthResign(llvm::Value *value, QualType type,
 
   // Null pointers have to be mapped to null, and the ptrauth_resign
   // intrinsic doesn't do that.
-  if (!isKnownNonNull && !llvm::isKnownNonZero(value, /*Depth=*/ 0, CGM.getDataLayout())) {
+  if (!isKnownNonNull && !llvm::isKnownNonZero(value, CGM.getDataLayout())) {
     contBB = createBasicBlock("resign.cont");
     resignBB = createBasicBlock("resign.nonnull");
 
