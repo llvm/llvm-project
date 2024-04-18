@@ -156,7 +156,7 @@ static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
   }
 }
 
-static bool isNonZeroLoadImmediate(MachineInstr &MI) {
+static bool isNonZeroLoadImmediate(const MachineInstr &MI) {
   return MI.getOpcode() == RISCV::ADDI &&
     MI.getOperand(1).isReg() && MI.getOperand(2).isImm() &&
     MI.getOperand(1).getReg() == RISCV::X0 &&
@@ -459,6 +459,8 @@ class VSETVLIInfo {
     unsigned AVLImm;
   };
 
+  const MachineInstr *AVLDefMI;
+
   enum : uint8_t {
     Uninitialized,
     AVLIsReg,
@@ -477,7 +479,7 @@ class VSETVLIInfo {
 
 public:
   VSETVLIInfo()
-      : AVLImm(0), TailAgnostic(false), MaskAgnostic(false),
+      : AVLImm(0), AVLDefMI(nullptr), TailAgnostic(false), MaskAgnostic(false),
         SEWLMULRatioOnly(false) {}
 
   static VSETVLIInfo getUnknown() {
@@ -504,6 +506,7 @@ public:
   void setAVLVLMAX() { State = AVLIsVLMAX; }
 
   void setAVLIgnored() { State = AVLIsIgnored; }
+  void setAVLDefMI(const MachineInstr *DefMI) { AVLDefMI = DefMI; }
 
   bool hasAVLImm() const { return State == AVLIsImm; }
   bool hasAVLReg() const { return State == AVLIsReg; }
@@ -518,12 +521,16 @@ public:
     return AVLImm;
   }
 
+  const MachineInstr *getAVLDefMI() const { return AVLDefMI; }
+
   void setAVL(VSETVLIInfo Info) {
     assert(Info.isValid());
     if (Info.isUnknown())
       setUnknown();
-    else if (Info.hasAVLReg())
+    else if (Info.hasAVLReg()) {
       setAVLReg(Info.getAVLReg());
+      setAVLDefMI(Info.getAVLDefMI());
+    }
     else if (Info.hasAVLVLMAX())
       setAVLVLMAX();
     else if (Info.hasAVLIgnored())
@@ -543,7 +550,7 @@ public:
     if (hasAVLImm())
       return getAVLImm() > 0;
     if (hasAVLReg()) {
-      MachineInstr *MI = MRI.getUniqueVRegDef(getAVLReg());
+      const MachineInstr *MI = getAVLDefMI();
       assert(MI);
       return isNonZeroLoadImmediate(*MI);
     }
@@ -870,7 +877,8 @@ INITIALIZE_PASS(RISCVCoalesceVSETVLI, "riscv-coalesce-vsetvli",
 
 // Return a VSETVLIInfo representing the changes made by this VSETVLI or
 // VSETIVLI instruction.
-static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
+static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI,
+                                     const MachineRegisterInfo &MRI) {
   VSETVLIInfo NewInfo;
   if (MI.getOpcode() == RISCV::PseudoVSETIVLI) {
     NewInfo.setAVLImm(MI.getOperand(1).getImm());
@@ -883,7 +891,7 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
     if (AVLReg == RISCV::X0)
       NewInfo.setAVLVLMAX();
     else
-      NewInfo.setAVLReg(AVLReg);
+      NewInfo.setAVLDefMI(MRI.getVRegDef(AVLReg));
   }
   NewInfo.setVTYPE(MI.getOperand(2).getImm());
 
@@ -956,6 +964,8 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
         InstrInfo.setAVLImm(Imm);
     } else {
       InstrInfo.setAVLReg(VLOp.getReg());
+      if (VLOp.getReg().isVirtual())
+        InstrInfo.setAVLDefMI(MRI->getVRegDef(VLOp.getReg()));
     }
   } else {
     assert(isScalarExtractInstr(MI));
@@ -976,10 +986,9 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
   // register AVLs to avoid extending live ranges without being sure we can
   // kill the original source reg entirely.
   if (InstrInfo.hasAVLReg()) {
-    MachineInstr *DefMI = MRI->getUniqueVRegDef(InstrInfo.getAVLReg());
-    assert(DefMI);
+    const MachineInstr *DefMI = InstrInfo.getAVLDefMI();
     if (isVectorConfigInstr(*DefMI)) {
-      VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI);
+      VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI, *MRI);
       if (DefInstrInfo.hasSameVLMAX(InstrInfo) &&
           (DefInstrInfo.hasAVLImm() || DefInstrInfo.hasAVLVLMAX()))
         InstrInfo.setAVL(DefInstrInfo);
@@ -1017,10 +1026,10 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     // it has the same VLMAX we want and the last VL/VTYPE we observed is the
     // same, we can use the X0, X0 form.
     if (Info.hasSameVLMAX(PrevInfo) && Info.hasAVLReg()) {
-      MachineInstr *DefMI = MRI->getUniqueVRegDef(Info.getAVLReg());
+      const MachineInstr *DefMI = Info.getAVLDefMI();
       assert(DefMI);
       if (isVectorConfigInstr(*DefMI)) {
-        VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+        VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI, *MRI);
         if (DefInfo.hasSameAVL(PrevInfo) && DefInfo.hasSameVLMAX(PrevInfo)) {
           BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0))
               .addReg(RISCV::X0, RegState::Define | RegState::Dead)
@@ -1138,8 +1147,8 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   if (Require.hasAVLReg() && CurInfo.hasCompatibleVTYPE(Used, Require)) {
     MachineInstr *DefMI = MRI->getUniqueVRegDef(Require.getAVLReg());
     assert(DefMI);
-    if (isVectorConfigInstr(*DefMI)) {
-      VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+    if (Require.getAVLDefMI() && isVectorConfigInstr(*Require.getAVLDefMI())) {
+      VSETVLIInfo DefInfo = getInfoForVSETVLI(*Require.getAVLDefMI(), *MRI);
       if (DefInfo.hasSameAVL(CurInfo) && DefInfo.hasSameVLMAX(CurInfo))
         return false;
     }
@@ -1225,13 +1234,15 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
 void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
                                        const MachineInstr &MI) const {
   if (isVectorConfigInstr(MI)) {
-    Info = getInfoForVSETVLI(MI);
+    Info = getInfoForVSETVLI(MI, *MRI);
     return;
   }
 
   if (RISCV::isFaultFirstLoad(MI)) {
     // Update AVL to vl-output of the fault first load.
     Info.setAVLReg(MI.getOperand(1).getReg());
+    if (MI.getOperand(1).getReg().isVirtual())
+      Info.setAVLDefMI(MRI->getVRegDef(MI.getOperand(1).getReg()));
     return;
   }
 
@@ -1346,7 +1357,7 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
 
     // We found a VSET(I)VLI make sure it matches the output of the
     // predecessor block.
-    VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+    VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI, *MRI);
     if (DefInfo != PBBExit)
       return true;
 
@@ -1500,7 +1511,7 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
   // we need to prove the value is available at the point we're going
   // to insert the vsetvli at.
   if (AvailableInfo.hasAVLReg()) {
-    MachineInstr *AVLDefMI = MRI->getUniqueVRegDef(AvailableInfo.getAVLReg());
+    const MachineInstr *AVLDefMI = AvailableInfo.getAVLDefMI();
     assert(AVLDefMI);
     // This is an inline dominance check which covers the case of
     // UnavailablePred being the preheader of a loop.
@@ -1580,8 +1591,8 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
     if (Used.VLZeroness) {
       if (isVLPreservingConfig(PrevMI))
         return false;
-      if (!getInfoForVSETVLI(PrevMI).hasEquallyZeroAVL(getInfoForVSETVLI(MI),
-                                                       MRI))
+      if (!getInfoForVSETVLI(PrevMI, MRI)
+               .hasEquallyZeroAVL(getInfoForVSETVLI(MI, MRI), MRI))
         return false;
     }
 
