@@ -251,3 +251,13 @@ public:
   Test10(T &&Item, E e)
       : e(e){}
 };
+
+// A deleted ctor cannot hide anything
+class Test11 {
+public:
+  template <typename T>
+  Test11(T&&) = delete;
+
+  Test11(const Test11 &) = default;
+  Test11(Test11 &&) = default;
+};
