@@ -19596,6 +19596,64 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
 
     return Builder.CreateCall(F, Args);
   }
+  case AMDGPU::BI__builtin_amdgcn_scale_bias_activate_scatter2_f16:
+  case AMDGPU::BI__builtin_amdgcn_scale_bias_activate_scatter2_bf16:
+  case AMDGPU::BI__builtin_amdgcn_uniform_scale_activate_scatter2_f16:
+  case AMDGPU::BI__builtin_amdgcn_uniform_scale_activate_scatter2_bf16:
+  case AMDGPU::BI__builtin_amdgcn_scale_bias_activate_scatter4_f16:
+  case AMDGPU::BI__builtin_amdgcn_scale_bias_activate_scatter4_bf16:
+  case AMDGPU::BI__builtin_amdgcn_uniform_scale_activate_scatter4_f16:
+  case AMDGPU::BI__builtin_amdgcn_uniform_scale_activate_scatter4_bf16: {
+    unsigned IntrinsicID;
+    unsigned Scatter;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_scale_bias_activate_scatter2_f16:
+      IntrinsicID = Intrinsic::amdgcn_scale_bias_activate_scatter2_f16;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_scale_bias_activate_scatter2_bf16:
+      IntrinsicID = Intrinsic::amdgcn_scale_bias_activate_scatter2_bf16;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_uniform_scale_activate_scatter2_f16:
+      IntrinsicID = Intrinsic::amdgcn_uniform_scale_activate_scatter2_f16;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_uniform_scale_activate_scatter2_bf16:
+      IntrinsicID = Intrinsic::amdgcn_uniform_scale_activate_scatter2_bf16;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_scale_bias_activate_scatter4_f16:
+      IntrinsicID = Intrinsic::amdgcn_scale_bias_activate_scatter4_f16;
+      Scatter = 4;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_scale_bias_activate_scatter4_bf16:
+      IntrinsicID = Intrinsic::amdgcn_scale_bias_activate_scatter4_bf16;
+      Scatter = 4;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_uniform_scale_activate_scatter4_f16:
+      IntrinsicID = Intrinsic::amdgcn_uniform_scale_activate_scatter4_f16;
+      Scatter = 4;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_uniform_scale_activate_scatter4_bf16:
+      IntrinsicID = Intrinsic::amdgcn_uniform_scale_activate_scatter4_bf16;
+      Scatter = 4;
+      break;
+    }
+
+    Function *F = CGM.getIntrinsic(IntrinsicID);
+    SmallVector<Value *> Args;
+    for (unsigned i = Scatter, e = E->getNumArgs(); i != e; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+    // The intrinsic returns a structure with 2 or 4 members.
+    llvm::Value *StructOut = Builder.CreateCall(F, Args);
+
+    for (unsigned i = 0; i < Scatter; ++i) {
+      Address DestPtr = EmitPointerWithAlignment(E->getArg(i));
+      Builder.CreateStore(Builder.CreateExtractValue(StructOut, i), DestPtr);
+    }
+    return llvm::UndefValue::get(llvm::Type::getVoidTy(getLLVMContext()));
+  }
 
   // amdgcn workitem
   case AMDGPU::BI__builtin_amdgcn_workitem_id_x:

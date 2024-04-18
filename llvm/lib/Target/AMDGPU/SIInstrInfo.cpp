@@ -6864,16 +6864,39 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     }
   }
 
-  // Legalize s_sleep_var.
-  if (MI.getOpcode() == AMDGPU::S_SLEEP_VAR) {
+  // Legalize single s32 operand.
+  int SrcIdx;
+  switch (MI.getOpcode()) {
+  case AMDGPU::S_SLEEP_VAR:
+    SrcIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
+    break;
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_F32:
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_F16:
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_BF16:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_F32:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_F16:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_BF16:
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_SCATTER2_F16:
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_SCATTER2_BF16:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_SCATTER2_F16:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_SCATTER2_BF16:
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_SCATTER4_F16:
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_SCATTER4_BF16:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_SCATTER4_F16:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_SCATTER4_BF16:
+    SrcIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::ssrc);
+    break;
+  default:
+    SrcIdx = -1;
+    break;
+  }
+  if (SrcIdx != -1) {
     const DebugLoc &DL = MI.getDebugLoc();
     Register Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-    int Src0Idx =
-        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
-    MachineOperand &Src0 = MI.getOperand(Src0Idx);
+    MachineOperand &SrcMO = MI.getOperand(SrcIdx);
     BuildMI(*MI.getParent(), MI, DL, get(AMDGPU::V_READFIRSTLANE_B32), Reg)
-        .add(Src0);
-    Src0.ChangeToRegister(Reg, false);
+        .add(SrcMO);
+    SrcMO.ChangeToRegister(Reg, false);
     return nullptr;
   }
 

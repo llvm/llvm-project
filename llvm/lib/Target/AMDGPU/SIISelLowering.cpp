@@ -9155,6 +9155,33 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                         Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
                         IndexKeyi32, Op.getOperand(7)});
   }
+  case Intrinsic::amdgcn_scale_bias_activate_f32:
+  case Intrinsic::amdgcn_scale_bias_activate_f16:
+  case Intrinsic::amdgcn_scale_bias_activate_bf16:
+  case Intrinsic::amdgcn_scale_bias_activate_scatter2_f16:
+  case Intrinsic::amdgcn_scale_bias_activate_scatter2_bf16:
+  case Intrinsic::amdgcn_scale_bias_activate_scatter4_f16:
+  case Intrinsic::amdgcn_scale_bias_activate_scatter4_bf16: {
+    // The intrinsics pass an extra bit to inform that both scale and bias are
+    // packed in vgpr, but that implies that the ssrc that is normally used for
+    // scale needs to be forced to NULL.
+
+    // TODO-GFX13: Use the proper bit for this ensuring it does not clash with
+    // the real aux_mod.
+    unsigned AuxMod = Op.getConstantOperandVal(4);
+    bool ScaleNull = AuxMod & (1U << 16);
+
+    return ScaleNull
+               ? DAG.getNode(
+                     ISD::INTRINSIC_WO_CHAIN, SDLoc(Op), Op->getVTList(),
+                     {Op.getOperand(0), Op.getOperand(1),
+                      DAG.getRegister(AMDGPU::SGPR_NULL,
+                                      Op.getOperand(2).getValueType()),
+                      Op.getOperand(3),
+                      DAG.getTargetConstant(AuxMod & ~(1U << 16), DL, MVT::i32),
+                      Op.getOperand(5)})
+               : SDValue();
+  }
   case Intrinsic::amdgcn_addrspacecast_nonnull:
     return lowerADDRSPACECAST(Op, DAG);
   default:
