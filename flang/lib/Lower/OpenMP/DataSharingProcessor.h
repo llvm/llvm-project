@@ -78,13 +78,12 @@ private:
 public:
   DataSharingProcessor(Fortran::lower::AbstractConverter &converter,
                        Fortran::semantics::SemanticsContext &semaCtx,
-                       const Fortran::parser::OmpClauseList &opClauseList,
+                       const List<Clause> &clauses,
                        Fortran::lower::pft::Evaluation &eval,
                        bool useDelayedPrivatization = false,
                        Fortran::lower::SymMap *symTable = nullptr)
       : hasLastPrivateOp(false), converter(converter),
-        firOpBuilder(converter.getFirOpBuilder()),
-        clauses(omp::makeClauses(opClauseList, semaCtx)), eval(eval),
+        firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
         useDelayedPrivatization(useDelayedPrivatization), symTable(symTable) {}
 
   // Privatisation is split into two steps.
