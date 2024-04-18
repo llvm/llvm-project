@@ -249,7 +249,8 @@ Modified Compiler Flags
   grouped under ``-Wpointer-integer-compare`` and moved previously
   ungrouped diagnostics ``ext_typecheck_ordered_comparison_of_pointer_integer``,
   ``ext_typecheck_ordered_comparison_of_pointer_and_zero`` under
-  ``-Wpointer-integer-ordered-compare``. Fixes #GH88090
+  ``-Wpointer-integer-ordered-compare``.This also resolves false negative
+  for comparison between pointers and literal zero.  Fixes #GH88090
 
 
 Removed Compiler Flags

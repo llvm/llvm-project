@@ -20,6 +20,7 @@ int test3(int *a){
 int test4(int *a){
     return a>1; // pointer-integer-ordered-warning{{ordered comparison between pointer and integer ('int *' and 'int')}}
 }
+
 int test5(int *a){
     int zero = 0;
     return a>=zero; // pointer-integer-ordered-warning{{ordered comparison between pointer and integer ('int *' and 'int')}}
