@@ -578,6 +578,9 @@ private:
 
   Expected<SmallVector<DebugStrRef, 0>> createDebugStringRefs();
 
+  template <typename SectionTy>
+  std::optional<Expected<SectionTy>> createGenericDebugRef(MCSection *Section);
+
   struct CUSplit {
     SmallVector<MutableArrayRef<char>> SplitCUData;
     SmallVector<size_t> AbbrevOffsets;

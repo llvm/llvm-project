@@ -750,6 +750,21 @@ DebugStringSectionRef::create(MCCASBuilder &MB,
   return get(B->build());
 }
 
+// Creating a Debug Section CAS Object is the same for most sections, this
+// function improve code reuse.
+template <typename SectionTy>
+static Error createGenericDebugSection(MCCASBuilder &MB,
+                                       ArrayRef<cas::ObjectRef> Fragments,
+                                       SmallVectorImpl<char> &Data,
+                                       SmallVectorImpl<cas::ObjectRef> &Refs) {
+
+  if (auto E = SectionTy::encodeReferences(Fragments, Data, Refs))
+    return E;
+
+  writeRelocations(MB.getSectionRelocs(), Data);
+  return Error::success();
+}
+
 Expected<uint64_t> SectionRef::materialize(MCCASReader &Reader,
                                            raw_ostream *Stream) const {
   // Start a new section for relocations.
@@ -1156,6 +1171,36 @@ DebugStringSectionRef::materialize(MCCASReader &Reader,
   unsigned Size = 0;
   StringRef Remaining = getData();
   auto Refs = decodeReferences(*this, Remaining);
+  if (!Refs)
+    return Refs.takeError();
+
+  for (auto ID : *Refs) {
+    auto FragmentSize = Reader.materializeSection(ID, &SectionStream);
+    if (!FragmentSize)
+      return FragmentSize.takeError();
+    Size += *FragmentSize;
+  }
+
+  if (auto E = decodeRelocations(Reader, Remaining))
+    return std::move(E);
+  Reader.OS << SectionContents;
+
+  return Size;
+}
+
+// Materializing a Debug Section CAS Object is the same for most sections, this
+// function improve code reuse.
+template <typename SectionTy>
+static Expected<uint64_t> materializeGenericDebugSection(MCCASReader &Reader,
+                                                         StringRef Remaining,
+                                                         SectionTy Section) {
+  // Start a new section for relocations.
+  Reader.Relocations.emplace_back();
+  SmallVector<char, 0> SectionContents;
+  raw_svector_ostream SectionStream(SectionContents);
+
+  unsigned Size = 0;
+  auto Refs = SectionTy::decodeReferences(Section, Remaining);
   if (!Refs)
     return Refs.takeError();
 
@@ -2305,6 +2350,27 @@ Expected<SmallVector<DebugStrRef, 0>> MCCASBuilder::createDebugStringRefs() {
       }))
     return std::move(E);
   return DebugStringRefs;
+}
+
+template <typename SectionTy>
+std::optional<Expected<SectionTy>>
+MCCASBuilder::createGenericDebugRef(MCSection *Section) {
+  if (!Section || !Section->getFragmentList().size())
+    return std::nullopt;
+
+  auto DebugCASData =
+      mergeMCFragmentContents(Section->getFragmentList(), false);
+
+  if (!DebugCASData)
+    return DebugCASData.takeError();
+
+  StringRef S(DebugCASData->data(), DebugCASData->size());
+
+  auto DebugCASRef = SectionTy::create(*this, S);
+  if (!DebugCASRef)
+    return DebugCASRef.takeError();
+
+  return *DebugCASRef;
 }
 
 static ArrayRef<char> getFragmentContents(const MCFragment &Fragment) {
