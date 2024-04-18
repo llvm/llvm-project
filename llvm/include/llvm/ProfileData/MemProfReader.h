@@ -51,6 +51,12 @@ public:
     return IdToFrame;
   }
 
+  // Return a const reference to the internal Id to call stacks.
+  const llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> &
+  getCallStacks() const {
+    return CSIdToCallStack;
+  }
+
   // Return a const reference to the internal function profile data.
   const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> &
   getProfileData() const {

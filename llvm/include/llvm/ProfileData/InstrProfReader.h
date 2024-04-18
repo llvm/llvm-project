@@ -560,6 +560,8 @@ using MemProfRecordHashTable =
     OnDiskIterableChainedHashTable<memprof::RecordLookupTrait>;
 using MemProfFrameHashTable =
     OnDiskIterableChainedHashTable<memprof::FrameLookupTrait>;
+using MemProfCallStackHashTable =
+    OnDiskIterableChainedHashTable<memprof::CallStackLookupTrait>;
 
 template <typename HashTableImpl>
 class InstrProfReaderItaniumRemapper;
@@ -666,6 +668,8 @@ private:
   std::unique_ptr<MemProfRecordHashTable> MemProfRecordTable;
   /// MemProf frame profile data on-disk indexed via frame id.
   std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
+  /// MemProf call stack data on-disk indexed via call stack id.
+  std::unique_ptr<MemProfCallStackHashTable> MemProfCallStackTable;
   /// VTableNamePtr points to the beginning of compressed vtable names.
   /// When a symtab is constructed from profiles by llvm-profdata, the list of
   /// names could be decompressed based on `VTableNamePtr` and

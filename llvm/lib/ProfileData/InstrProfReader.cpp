@@ -1249,14 +1249,14 @@ Error IndexedInstrProfReader::readHeader() {
 
     // Read the first 64-bit word, which may be RecordTableOffset in
     // memprof::MemProfVersion0 or the MemProf version number in
-    // memprof::MemProfVersion1.
+    // memprof::MemProfVersion1 and above.
     const uint64_t FirstWord =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
     memprof::IndexedVersion Version = memprof::Version0;
-    if (FirstWord == memprof::Version1) {
+    if (FirstWord == memprof::Version1 || FirstWord == memprof::Version2) {
       // Everything is good.  We can proceed to deserialize the rest.
-      Version = memprof::Version1;
+      Version = static_cast<memprof::IndexedVersion>(FirstWord);
     } else if (FirstWord >= 24) {
       // This is a heuristic/hack to detect memprof::MemProfVersion0,
       // which does not have a version field in the header.
@@ -1286,6 +1286,18 @@ Error IndexedInstrProfReader::readHeader() {
     const uint64_t FrameTableOffset =
         support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
 
+    // The offset in the stream right before invoking
+    // CallStackTableGenerator.Emit.
+    uint64_t CallStackPayloadOffset = 0;
+    // The value returned from CallStackTableGenerator.Emit.
+    uint64_t CallStackTableOffset = 0;
+    if (Version >= memprof::Version2) {
+      CallStackPayloadOffset =
+          support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+      CallStackTableOffset =
+          support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+    }
+
     // Read the schema.
     auto SchemaOr = memprof::readMemProfSchema(Ptr);
     if (!SchemaOr)
@@ -1296,7 +1308,7 @@ Error IndexedInstrProfReader::readHeader() {
     MemProfRecordTable.reset(MemProfRecordHashTable::Create(
         /*Buckets=*/Start + RecordTableOffset,
         /*Payload=*/Ptr,
-        /*Base=*/Start, memprof::RecordLookupTrait(memprof::Version1, Schema)));
+        /*Base=*/Start, memprof::RecordLookupTrait(Version, Schema)));
 
     // Initialize the frame table reader with the payload and bucket offsets.
     MemProfFrameTable.reset(MemProfFrameHashTable::Create(
@@ -1304,12 +1316,22 @@ Error IndexedInstrProfReader::readHeader() {
         /*Payload=*/Start + FramePayloadOffset,
         /*Base=*/Start, memprof::FrameLookupTrait()));
 
+    if (Version >= memprof::Version2)
+      MemProfCallStackTable.reset(MemProfCallStackHashTable::Create(
+          /*Buckets=*/Start + CallStackTableOffset,
+          /*Payload=*/Start + CallStackPayloadOffset,
+          /*Base=*/Start, memprof::CallStackLookupTrait()));
+
 #ifdef EXPENSIVE_CHECKS
     // Go through all the records and verify that CSId has been correctly
     // populated.  Do this only under EXPENSIVE_CHECKS.  Otherwise, we
     // would defeat the purpose of OnDiskIterableChainedHashTable.
-    for (const auto &Record : MemProfRecordTable->data())
-      verifyIndexedMemProfRecord(Record);
+    // Note that we can compare CSId against actual call stacks only for
+    // Version0 and Version1 because IndexedAllocationInfo::CallStack and
+    // IndexedMemProfRecord::CallSites are not populated in Version2.
+    if (Version <= memprof::Version1)
+      for (const auto &Record : MemProfRecordTable->data())
+        verifyIndexedMemProfRecord(Record);
 #endif
   }
 
@@ -1502,13 +1524,43 @@ IndexedInstrProfReader::getMemProfRecord(const uint64_t FuncNameHash) {
     return *FrIter;
   };
 
-  memprof::MemProfRecord Record(*Iter, IdToFrameCallback);
+  // Setup a callback to convert call stack ids to call stacks using the on-disk
+  // hash table.
+  std::optional<memprof::CallStackId> LastUnmappedCSId;
+  auto CSIdToCallStackCallback = [&](memprof::CallStackId CSId) {
+    llvm::SmallVector<memprof::Frame> Frames;
+    auto CSIter = MemProfCallStackTable->find(CSId);
+    if (CSIter == MemProfCallStackTable->end()) {
+      LastUnmappedCSId = CSId;
+    } else {
+      const llvm::SmallVector<memprof::FrameId> &CS = *CSIter;
+      Frames.reserve(CS.size());
+      for (memprof::FrameId Id : CS)
+        Frames.push_back(IdToFrameCallback(Id));
+    }
+    return Frames;
+  };
+
+  const memprof::IndexedMemProfRecord IndexedRecord = *Iter;
+  memprof::MemProfRecord Record;
+  if (MemProfCallStackTable)
+    Record = IndexedRecord.toMemProfRecord(CSIdToCallStackCallback);
+  else
+    Record = memprof::MemProfRecord(IndexedRecord, IdToFrameCallback);
 
   // Check that all frame ids were successfully converted to frames.
   if (LastUnmappedFrameId) {
     return make_error<InstrProfError>(instrprof_error::hash_mismatch,
                                       "memprof frame not found for frame id " +
                                           Twine(*LastUnmappedFrameId));
+  }
+
+  // Check that all call stack ids were successfully converted to call stacks.
+  if (LastUnmappedCSId) {
+    return make_error<InstrProfError>(
+        instrprof_error::hash_mismatch,
+        "memprof call stack not found for call stack id " +
+            Twine(*LastUnmappedCSId));
   }
   return Record;
 }
