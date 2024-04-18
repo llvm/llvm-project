@@ -1365,13 +1365,16 @@ cases. This will typically be used in conjunction with
 ---------------------------------------------
 
 Asserts a memory access does not access bytes in remote connected peer
-device memory (the device address must be device local). This is
-intended for use with :ref:`atomicrmw <i_atomicrmw>` and other atomic
+device memory (the address must be device local). This is intended for
+use with :ref:`atomicrmw <i_atomicrmw>` and other atomic
 instructions. This is required to emit a native hardware instruction
 for some :ref:`system scope <amdgpu-memory-scopes>` atomic operations
-on some subtargets. An :ref:`atomicrmw <i_atomicrmw>` without metadata
-will be treated conservatively as required to preserve the operation
-behavior in all cases. This will typically be used in conjunction with
+on some subtargets. For most integer atomic operations, this is a
+sufficient restriction to emit a native atomic instruction.
+
+An :ref:`atomicrmw <i_atomicrmw>` without metadata will be treated
+conservatively as required to preserve the operation behavior in all
+cases. This will typically be used in conjunction with
 :ref:`\!amdgpu.no.fine.grained.host.memory<amdgpu_no_fine_grained_host_memory>`.
 
 
