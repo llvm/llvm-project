@@ -1041,6 +1041,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
+        ":__support_macros_sanitizer",
     ],
 )
 
@@ -2998,6 +2999,7 @@ libc_function(
     hdrs = ["src/unistd/pipe.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
     ],
@@ -3025,6 +3027,7 @@ libc_function(
     }),
     deps = [
         ":__support_common",
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
     ],
