@@ -19,8 +19,6 @@ add_libc_unittest(
     libc.src.pthread.pthread_attr_setguardsize
     libc.src.pthread.pthread_attr_setstacksize
     libc.src.pthread.pthread_attr_setstack
-  LINK_LIBRARIES
-    -lpthread
 )
 
 add_libc_unittest(
@@ -40,8 +38,6 @@ add_libc_unittest(
     libc.src.pthread.pthread_mutexattr_setpshared
     libc.src.pthread.pthread_mutexattr_setrobust
     libc.src.pthread.pthread_mutexattr_settype
-  LINK_LIBRARIES
-    -pthread
 )
 
 add_libc_unittest(
