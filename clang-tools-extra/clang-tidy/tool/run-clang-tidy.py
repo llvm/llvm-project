@@ -308,6 +308,14 @@ def main():
         "diagnostics from.",
     )
     parser.add_argument(
+        "-directory-filter",
+        dest="directory_filter",
+        action="append",
+        default=[],
+        help="List of directories matching the names of the "
+        "compilation database to filter.",
+    )
+    parser.add_argument(
         "-line-filter",
         default=None,
         help="List of files with line ranges to filter the warnings.",
@@ -488,6 +496,7 @@ def main():
 
     # Build up a big regexy filter from all command line arguments.
     file_name_re = re.compile("|".join(args.files))
+    directory_filters_re = re.compile("|".join(args.directory_filters))
 
     return_code = 0
     try:
@@ -514,7 +523,7 @@ def main():
 
         # Fill the queue with files.
         for name in files:
-            if file_name_re.search(name):
+            if file_name_re.search(name) and not directory_filters_re.search(name):
                 task_queue.put(name)
 
         # Wait for all threads to be done.
