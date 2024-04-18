@@ -478,8 +478,7 @@ void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
 
 /// Set up common members and attributes for buffer types
 static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
-                                              ResourceClass RC, ResourceKind RK,
-                                              bool IsROV) {
+                                              ResourceClass RC) {
   return BuiltinTypeDeclBuilder(Decl)
       .addHandleMember()
       .addDefaultHandleConstructor(S, RC);
@@ -495,8 +494,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
           .Record;
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
-                    ResourceKind::TypedBuffer, /*IsROV=*/false)
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV)
         .addArraySubscriptOperators()
         .completeDefinition();
   });
@@ -504,10 +502,11 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   Decl =
       BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RasterizerOrderedBuffer")
           .addSimpleTemplateParams({"element_type"})
+          .annotateResourceClass(ResourceClass::UAV, ResourceKind::TypedBuffer,
+                                 /*IsROV=*/true)
           .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
-                    ResourceKind::TypedBuffer, /*IsROV=*/true)
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV)
         .addArraySubscriptOperators()
         .completeDefinition();
   });

@@ -9,7 +9,7 @@ cbuffer A : register(b0, space2) {
 }
 
 // CHECK: @[[TB:.+]] = external constant { float, double }
-tbuffer A : register(t2, space1) {
+tbuffer A : register(b2, space1) {
   float c;
   double d;
 }

@@ -45,7 +45,7 @@ void foo2() {
   extern RWBuffer<float> U2 : register(u5);
 }
 // FIXME: expect-error once fix https://github.com/llvm/llvm-project/issues/57886.
-float b : register(u0, space1);
+// float b : register(u0, space1) {}
 
 // expected-warning@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
 void bar(RWBuffer<float> U : register(u3)) {

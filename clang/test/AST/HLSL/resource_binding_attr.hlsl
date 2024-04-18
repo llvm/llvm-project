@@ -8,9 +8,9 @@ cbuffer CB : register(b3, space2) {
 }
 
 // CHECK:HLSLBufferDecl 0x[[TB:[0-9a-f]+]] {{.*}} line:13:9 tbuffer TB
-// CHECK-NEXT:HLSLResourceBindingAttr 0x{{[0-9a-f]+}} <col:14> "t2" "space1"
+// CHECK-NEXT:HLSLResourceBindingAttr 0x{{[0-9a-f]+}} <col:14> "b2" "space1"
 // CHECK-NEXT:VarDecl 0x[[B:[0-9a-f]+]] {{.*}} col:9 used b 'float'
-tbuffer TB : register(t2, space1) {
+tbuffer TB : register(b2, space1) {
   float b;
 }
 
