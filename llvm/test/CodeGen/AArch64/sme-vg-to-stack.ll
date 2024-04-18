@@ -1030,15 +1030,15 @@ define void @streaming_compatible_no_sve() #4 {
 ; NO-SVE-CHECK-NEXT:    .cfi_offset b15, -96
 ; NO-SVE-CHECK-NEXT:    bl __arm_sme_state
 ; NO-SVE-CHECK-NEXT:    and x19, x0, #0x1
-; NO-SVE-CHECK-NEXT:    tbnz w19, #0, .LBB6_2
+; NO-SVE-CHECK-NEXT:    tbnz w19, #0, .LBB8_2
 ; NO-SVE-CHECK-NEXT:  // %bb.1:
 ; NO-SVE-CHECK-NEXT:    smstart sm
-; NO-SVE-CHECK-NEXT:  .LBB6_2:
+; NO-SVE-CHECK-NEXT:  .LBB8_2:
 ; NO-SVE-CHECK-NEXT:    bl streaming_callee
-; NO-SVE-CHECK-NEXT:    tbnz w19, #0, .LBB6_4
+; NO-SVE-CHECK-NEXT:    tbnz w19, #0, .LBB8_4
 ; NO-SVE-CHECK-NEXT:  // %bb.3:
 ; NO-SVE-CHECK-NEXT:    smstop sm
-; NO-SVE-CHECK-NEXT:  .LBB6_4:
+; NO-SVE-CHECK-NEXT:  .LBB8_4:
 ; NO-SVE-CHECK-NEXT:    .cfi_def_cfa wsp, 96
 ; NO-SVE-CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
 ; NO-SVE-CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Folded Reload

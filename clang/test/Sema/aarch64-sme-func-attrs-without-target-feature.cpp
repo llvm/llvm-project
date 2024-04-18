@@ -38,7 +38,7 @@ void non_streaming_def(void (*streaming_fn_ptr)(void) __arm_streaming,
 void streaming_compatible_def2(void (*streaming_fn_ptr)(void) __arm_streaming,
                                void (*streaming_compatible_fn_ptr)(void) __arm_streaming_compatible)
                                 __arm_streaming_compatible {
-  non_streaming_decl(); // OK
+  non_streaming_decl(); // expected-warning {{function requires a streaming-mode change, unwinding is not possible without 'sve'}}
   streaming_compatible_decl(); // OK
   streaming_compatible_fn_ptr(); // OK
   streaming_decl(); // expected-error {{call to a streaming function requires 'sme'}}
