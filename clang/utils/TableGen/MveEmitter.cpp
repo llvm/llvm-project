@@ -660,7 +660,7 @@ public:
   std::map<unsigned, std::string> IntegerArgs;
   IRBuilderResult(StringRef CallPrefix, std::vector<Ptr> Args,
                   std::set<unsigned> AddressArgs,
-                  std::map<unsigned, std::string> IntegerArgs)
+                  const std::map<unsigned, std::string> &IntegerArgs)
       : CallPrefix(CallPrefix), Args(Args), AddressArgs(AddressArgs),
         IntegerArgs(IntegerArgs) {}
   void genCode(raw_ostream &OS,
@@ -728,7 +728,7 @@ public:
   std::vector<const Type *> ParamTypes;
   std::vector<Ptr> Args;
   IRIntrinsicResult(StringRef IntrinsicID, std::vector<const Type *> ParamTypes,
-                    std::vector<Ptr> Args)
+                    const std::vector<Ptr> &Args)
       : IntrinsicID(std::string(IntrinsicID)), ParamTypes(ParamTypes),
         Args(Args) {}
   void genCode(raw_ostream &OS,
