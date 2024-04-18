@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TableGen/DirectiveEmitter.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
@@ -501,7 +503,7 @@ static void EmitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
   //   row for Dir_A = table[auxiliary[Dir_A]].
 
   std::vector<Record *> Directives = DirLang.getDirectives();
-  DenseMap<Record *, size_t> DirId; // Record * -> llvm::omp::Directive
+  DenseMap<Record *, int> DirId; // Record * -> llvm::omp::Directive
 
   for (auto [Idx, Rec] : llvm::enumerate(Directives))
     DirId.insert(std::make_pair(Rec, Idx));
@@ -525,6 +527,25 @@ static void EmitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
           static_cast<size_t>(I) < Leaves.size() ? DirId.at(Leaves[I]) : -1;
   }
 
+  // Some Fortran directives are delimited, i.e. they have the form of
+  // "directive"---"end directive". If "directive" is a compound construct,
+  // then the set of leaf constituents will be nonempty and the same for
+  // both directives. Given this set of leafs, looking up the corresponding
+  // compound directive should return "directive", and not "end directive".
+  // To avoid this problem, gather all "end directives" at the end of the
+  // leaf table, and only do the search on the initial segment of the table
+  // that excludes the "end directives".
+  // It's safe to find all directives whose names begin with "end ". The
+  // problem only exists for compound directives, like "end do simd".
+  // All existing directives with names starting with "end " are either
+  // "end directives" for an existing "directive", or leaf directives
+  // (such as "end declare target").
+  DenseSet<int> EndDirectives;
+  for (auto [Rec, Id] : DirId) {
+    if (Directive{Rec}.getName().starts_with_insensitive("end "))
+      EndDirectives.insert(Id);
+  }
+
   // Avoid sorting the vector<vector> array, instead sort an index array.
   // It will also be useful later to create the auxiliary indexing array.
   std::vector<int> Ordering(Directives.size());
@@ -533,8 +554,13 @@ static void EmitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
   llvm::sort(Ordering, [&](int A, int B) {
     auto &LeavesA = LeafTable[A];
     auto &LeavesB = LeafTable[B];
+    int DirA = LeavesA[0], DirB = LeavesB[0];
+    // First of all, end directives compare greater than non-end directives.
+    int IsEndA = EndDirectives.count(DirA), IsEndB = EndDirectives.count(DirB);
+    if (IsEndA != IsEndB)
+      return IsEndA < IsEndB;
     if (LeavesA[1] == 0 && LeavesB[1] == 0)
-      return LeavesA[0] < LeavesB[0];
+      return DirA < DirB;
     return std::lexicographical_compare(&LeavesA[2], &LeavesA[2] + LeavesA[1],
                                         &LeavesB[2], &LeavesB[2] + LeavesB[1]);
   });
@@ -564,6 +590,14 @@ static void EmitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
     OS << '\n';
   }
   OS << "};\n\n";
+
+  // Emit a marker where the first "end directive" is.
+  auto FirstE = llvm::find_if(Ordering, [&](int RowIdx) {
+    return EndDirectives.count(LeafTable[RowIdx][0]);
+  });
+  OS << "[[maybe_unused]] static auto " << TableName
+     << "EndDirective = " << TableName << " + "
+     << std::distance(Ordering.begin(), FirstE) << ";\n\n";
 
   // Emit the auxiliary index table: it's the inverse of the `Ordering`
   // table above.

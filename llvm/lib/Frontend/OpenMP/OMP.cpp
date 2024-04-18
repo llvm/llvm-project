@@ -61,8 +61,8 @@ Directive getCompoundConstruct(ArrayRef<Directive> Parts) {
     return GivenLeafs.front();
   RawLeafs[1] = static_cast<Directive>(GivenLeafs.size());
 
-  auto Iter = llvm::lower_bound(
-      LeafConstructTable,
+  auto Iter = std::lower_bound(
+      LeafConstructTable, LeafConstructTableEndDirective,
       static_cast<std::decay_t<decltype(*LeafConstructTable)>>(RawLeafs.data()),
       [](const auto *RowA, const auto *RowB) {
         const auto *BeginA = &RowA[2];
