@@ -448,6 +448,14 @@ private:
 
 } // end anonymous namespace
 
+namespace llvm {
+std::optional<unsigned long long> getFixedShadowBase(void) {
+  if (ClMappingOffset.getNumOccurrences() > 0)
+    return ClMappingOffset;
+  return std::nullopt;
+}
+} // namespace llvm
+
 PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
   const StackSafetyGlobalInfo *SSI = nullptr;

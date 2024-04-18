@@ -9,27 +9,24 @@ define ptr @f1(ptr %x0, ptr %x1) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x9, x0
-; CHECK-NEXT:    mov x0, x1
 ; CHECK-NEXT:    bl __hwasan_check_x1_1
+; CHECK-NEXT:    mov x0, x1
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @llvm.hwasan.check.memaccess(ptr %x0, ptr %x1, i32 1)
+  call void @llvm.hwasan.check.memaccess.fixedshadow(ptr %x1, i32 1)
   ret ptr %x1
 }
 
 define ptr @f2(ptr %x0, ptr %x1) {
 ; CHECK-LABEL: f2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x30, x20, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w20, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x20, x1
 ; CHECK-NEXT:    bl __hwasan_check_x0_2_short_v2
-; CHECK-NEXT:    ldp x30, x20, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @llvm.hwasan.check.memaccess.shortgranules(ptr %x1, ptr %x0, i32 2)
+  call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr %x0, i32 2)
   ret ptr %x0
 }
 
@@ -40,11 +37,10 @@ define void @f3(ptr %x0, ptr %x1) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x9, x0
 ; CHECK-NEXT:    bl __hwasan_check_x1_67043328
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @llvm.hwasan.check.memaccess(ptr %x0, ptr %x1, i32 67043328)
+  call void @llvm.hwasan.check.memaccess.fixedshadow(ptr %x1, i32 67043328)
   ret void
 }
 
@@ -52,20 +48,18 @@ define void @f4(ptr %x0, ptr %x1) {
   ; 0x1000010 (access-size-index = 0, is-write = 1, match-all = 0x0)
 ; CHECK-LABEL: f4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x30, x20, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w20, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x20, x0
 ; CHECK-NEXT:    bl __hwasan_check_x1_16777232_short_v2
-; CHECK-NEXT:    ldp x30, x20, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  call void @llvm.hwasan.check.memaccess.shortgranules(ptr %x0, ptr %x1, i32 16777232)
+  call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr %x1, i32 16777232)
   ret void
 }
 
-declare void @llvm.hwasan.check.memaccess(ptr, ptr, i32)
-declare void @llvm.hwasan.check.memaccess.shortgranules(ptr, ptr, i32)
+declare void @llvm.hwasan.check.memaccess.fixedshadow(ptr, i32)
+declare void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr, i32)
 
 ; CHECK:      .section .text.hot,"axG",@progbits,__hwasan_check_x0_2_short_v2,comdat
 ; CHECK-NEXT: .type __hwasan_check_x0_2_short_v2,@function
@@ -73,7 +67,8 @@ declare void @llvm.hwasan.check.memaccess.shortgranules(ptr, ptr, i32)
 ; CHECK-NEXT: .hidden __hwasan_check_x0_2_short_v2
 ; CHECK-NEXT: __hwasan_check_x0_2_short_v2:
 ; CHECK-NEXT: sbfx x16, x0, #4, #52
-; CHECK-NEXT: ldrb w16, [x20, x16]
+; CHECK-NEXT: mov x17, #4398046511104
+; CHECK-NEXT: ldrb w16, [x17, x16]
 ; CHECK-NEXT: cmp x16, x0, lsr #56
 ; CHECK-NEXT: b.ne .Ltmp0
 ; CHECK-NEXT: .Ltmp1:
@@ -104,7 +99,8 @@ declare void @llvm.hwasan.check.memaccess.shortgranules(ptr, ptr, i32)
 ; CHECK-NEXT: .hidden __hwasan_check_x1_1
 ; CHECK-NEXT: __hwasan_check_x1_1:
 ; CHECK-NEXT: sbfx x16, x1, #4, #52
-; CHECK-NEXT: ldrb w16, [x9, x16]
+; CHECK-NEXT: mov x17, #4398046511104
+; CHECK-NEXT: ldrb w16, [x17, x16]
 ; CHECK-NEXT: cmp x16, x1, lsr #56
 ; CHECK-NEXT: b.ne .Ltmp3
 ; CHECK-NEXT: .Ltmp4:
@@ -120,7 +116,8 @@ declare void @llvm.hwasan.check.memaccess.shortgranules(ptr, ptr, i32)
 
 ; CHECK:      __hwasan_check_x1_67043328:
 ; CHECK-NEXT: sbfx x16, x1, #4, #52
-; CHECK-NEXT: ldrb w16, [x9, x16]
+; CHECK-NEXT: mov x17, #4398046511104
+; CHECK-NEXT: ldrb w16, [x17, x16]
 ; CHECK-NEXT: cmp x16, x1, lsr #56
 ; CHECK-NEXT: b.ne .Ltmp5
 ; CHECK-NEXT: .Ltmp6:
@@ -137,7 +134,8 @@ declare void @llvm.hwasan.check.memaccess.shortgranules(ptr, ptr, i32)
 
 ; CHECK:      __hwasan_check_x1_16777232_short_v2:
 ; CHECK-NEXT: sbfx	x16, x1, #4, #52
-; CHECK-NEXT: ldrb	w16, [x20, x16]
+; CHECK-NEXT: mov x17, #4398046511104
+; CHECK-NEXT: ldrb w16, [x17, x16]
 ; CHECK-NEXT: cmp	x16, x1, lsr #56
 ; CHECK-NEXT: b.ne	.Ltmp7
 ; CHECK-NEXT: .Ltmp8:

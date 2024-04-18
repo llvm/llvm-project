@@ -67,6 +67,8 @@ enum { RuntimeMask = 0xffff };
 
 } // namespace HWASanAccessInfo
 
+std::optional<unsigned long long> getFixedShadowBase(void);
+
 } // namespace llvm
 
 #endif
