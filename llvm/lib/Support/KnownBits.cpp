@@ -241,6 +241,7 @@ KnownBits KnownBits::abdu(const KnownBits &LHS, const KnownBits &RHS) {
     return computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, RHS,
                             LHS);
 
+  // By construction, the subtraction in abdu never has unsigned overflow.
   // Find the common bits between (sub nuw LHS, RHS) and (sub nuw RHS, LHS).
   KnownBits Diff0 =
       computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/true, LHS, RHS);
@@ -249,17 +250,35 @@ KnownBits KnownBits::abdu(const KnownBits &LHS, const KnownBits &RHS) {
   return Diff0.intersectWith(Diff1);
 }
 
-KnownBits KnownBits::abds(const KnownBits &LHS, const KnownBits &RHS) {
-  // Flip the range of values: [-0x80000000, 0x7FFFFFFF] <-> [0, 0xFFFFFFFF]
-  auto Flip = [](const KnownBits &Val) {
-    unsigned SignBitPosition = Val.getBitWidth() - 1;
-    APInt Zero = Val.Zero;
-    APInt One = Val.One;
-    Zero.setBitVal(SignBitPosition, Val.One[SignBitPosition]);
-    One.setBitVal(SignBitPosition, Val.Zero[SignBitPosition]);
-    return KnownBits(Zero, One);
-  };
-  return abdu(Flip(LHS), Flip(RHS));
+KnownBits KnownBits::abds(KnownBits LHS, KnownBits RHS) {
+  // If we know which argument is larger, return (sub LHS, RHS) or
+  // (sub RHS, LHS) directly.
+  if (LHS.getSignedMinValue().sge(RHS.getSignedMaxValue()))
+    return computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, LHS,
+                            RHS);
+  if (RHS.getSignedMinValue().sge(LHS.getSignedMaxValue()))
+    return computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/false, RHS,
+                            LHS);
+
+  // Shift both arguments from the signed range to the unsigned range, e.g. from
+  // [-0x80, 0x7F] to [0, 0xFF]. This allows us to use "sub nuw" below just like
+  // abdu does.
+  // Note that we can't just use "sub nsw" instead because abds has signed
+  // inputs but an unsigned result, which makes the overflow conditions
+  // different.
+  unsigned SignBitPosition = LHS.getBitWidth() - 1;
+  for (auto Arg : {&LHS, &RHS}) {
+    bool Tmp = Arg->Zero[SignBitPosition];
+    Arg->Zero.setBitVal(SignBitPosition, Arg->One[SignBitPosition]);
+    Arg->One.setBitVal(SignBitPosition, Tmp);
+  }
+
+  // Find the common bits between (sub nuw LHS, RHS) and (sub nuw RHS, LHS).
+  KnownBits Diff0 =
+      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/true, LHS, RHS);
+  KnownBits Diff1 =
+      computeForAddSub(/*Add=*/false, /*NSW=*/false, /*NUW=*/true, RHS, LHS);
+  return Diff0.intersectWith(Diff1);
 }
 
 static unsigned getMaxShiftAmount(const APInt &MaxValue, unsigned BitWidth) {
