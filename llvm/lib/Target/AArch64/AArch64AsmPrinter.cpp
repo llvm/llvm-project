@@ -117,8 +117,7 @@ public:
   void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
   void LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI, bool Typed);
 
-  typedef std::tuple<unsigned, bool, uint32_t> HwasanMemaccessTuple;
-  std::optional<uint64_t> HwasanFixedShadowBase;
+  typedef std::tuple<unsigned, bool, uint32_t, bool> HwasanMemaccessTuple;
   std::map<HwasanMemaccessTuple, MCSymbol *> HwasanMemaccessSymbols;
   void LowerKCFI_CHECK(const MachineInstr &MI);
   void LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI);
@@ -557,16 +556,13 @@ void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
        (MI.getOpcode() ==
         AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW));
   uint32_t AccessInfo = MI.getOperand(1).getImm();
+  bool IsFixedShadow =
+      ((MI.getOpcode() == AArch64::HWASAN_CHECK_MEMACCESS_FIXEDSHADOW) ||
+       (MI.getOpcode() ==
+        AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW));
 
-  if ((MI.getOpcode() == AArch64::HWASAN_CHECK_MEMACCESS_FIXEDSHADOW) ||
-      (MI.getOpcode() ==
-       AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW)) {
-    HwasanFixedShadowBase = getFixedShadowBase();
-    assert(HwasanFixedShadowBase.has_value());
-  }
-
-  MCSymbol *&Sym =
-      HwasanMemaccessSymbols[HwasanMemaccessTuple(Reg, IsShort, AccessInfo)];
+  MCSymbol *&Sym = HwasanMemaccessSymbols[HwasanMemaccessTuple(
+      Reg, IsShort, AccessInfo, IsFixedShadow)];
   if (!Sym) {
     // FIXME: Make this work on non-ELF.
     if (!TM.getTargetTriple().isOSBinFormatELF())
@@ -608,6 +604,7 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
     unsigned Reg = std::get<0>(P.first);
     bool IsShort = std::get<1>(P.first);
     uint32_t AccessInfo = std::get<2>(P.first);
+    bool IsFixedShadow = std::get<3>(P.first);
     const MCSymbolRefExpr *HwasanTagMismatchRef =
         IsShort ? HwasanTagMismatchV2Ref : HwasanTagMismatchV1Ref;
     MCSymbol *Sym = P.second;
@@ -638,7 +635,10 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
                                      .addImm(55),
                                  *STI);
 
-    if (HwasanFixedShadowBase.has_value()) {
+    if (IsFixedShadow) {
+      std::optional<uint64_t> HwasanFixedShadowBase = getFixedShadowBase();
+      assert(HwasanFixedShadowBase.has_value());
+
       OutStreamer->emitInstruction(
           MCInstBuilder(AArch64::MOVZXi)
               .addReg(AArch64::X17)
