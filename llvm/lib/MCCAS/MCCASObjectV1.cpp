@@ -835,6 +835,20 @@ DebugRangelistsSectionRef::create(MCCASBuilder &MB,
   return get(B->build());
 }
 
+Expected<DebugLineStrSectionRef>
+DebugLineStrSectionRef::create(MCCASBuilder &MB,
+                               ArrayRef<cas::ObjectRef> Fragments) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+
+  if (auto E = createGenericDebugSection<DebugLineStrSectionRef>(
+          MB, Fragments, B->Data, B->Refs))
+    return E;
+
+  return get(B->build());
+}
+
 Expected<uint64_t> SectionRef::materialize(MCCASReader &Reader,
                                            raw_ostream *Stream) const {
   // Start a new section for relocations.
@@ -1327,6 +1341,14 @@ DebugRangelistsSectionRef::materialize(MCCASReader &Reader,
       Reader, Remaining, *this);
 }
 
+Expected<uint64_t>
+DebugLineStrSectionRef::materialize(MCCASReader &Reader,
+                                    raw_ostream *Stream) const {
+  StringRef Remaining = getData();
+  return materializeGenericDebugSection<DebugLineStrSectionRef>(
+      Reader, Remaining, *this);
+}
+
 Expected<AtomRef> AtomRef::create(MCCASBuilder &MB,
                                   ArrayRef<cas::ObjectRef> Fragments) {
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
@@ -1660,7 +1682,8 @@ DwarfSectionsCache mccasformats::v1::getDwarfSections(MCAssembler &Asm) {
       Asm.getContext().getObjectFileInfo()->getDwarfLocSection(),
       Asm.getContext().getObjectFileInfo()->getDwarfLoclistsSection(),
       Asm.getContext().getObjectFileInfo()->getDwarfRangesSection(),
-      Asm.getContext().getObjectFileInfo()->getDwarfRnglistsSection()};
+      Asm.getContext().getObjectFileInfo()->getDwarfRnglistsSection(),
+      Asm.getContext().getObjectFileInfo()->getDwarfLineStrSection()};
 }
 
 Error MCCASBuilder::prepare() {
@@ -2570,6 +2593,23 @@ Error MCCASBuilder::createDebugRangelistsSection() {
   return finalizeSection<DebugRangelistsSectionRef>();
 }
 
+Error MCCASBuilder::createDebugLineStrSection() {
+
+  auto MaybeDebugLineStrRef =
+      createGenericDebugRef<DebugLineStrRef>(DwarfSections.LineStr);
+  if (!MaybeDebugLineStrRef)
+    return Error::success();
+
+  if (!*MaybeDebugLineStrRef)
+    return MaybeDebugLineStrRef->takeError();
+
+  startSection(DwarfSections.LineStr);
+  addNode(**MaybeDebugLineStrRef);
+  if (auto E = createPaddingRef(DwarfSections.LineStr))
+    return E;
+  return finalizeSection<DebugLineStrSectionRef>();
+}
+
 static ArrayRef<char> getFragmentContents(const MCFragment &Fragment) {
   switch (Fragment.getKind()) {
 #define MCFRAGMENT_NODE_REF(MCFragmentName, MCEnumName, MCEnumIdentifier)      \
@@ -2736,6 +2776,13 @@ Error MCCASBuilder::buildFragments() {
       continue;
     }
 
+    // Handle Debug LineStr sections separately.
+    if (&Sec == DwarfSections.LineStr) {
+      if (auto E = createDebugLineStrSection())
+        return E;
+      continue;
+    }
+
     // Start Subsection for one section.
     startSection(&Sec);
 
@@ -2897,7 +2944,7 @@ void MCCASBuilder::startSection(const MCSection *Sec) {
       if (R.F && Sec != DwarfSections.Line && Sec != DwarfSections.DebugInfo &&
           Sec != DwarfSections.Abbrev && Sec != DwarfSections.StrOffsets &&
           Sec != DwarfSections.Loclists && Sec != DwarfSections.Ranges &&
-          Sec != DwarfSections.Rangelists)
+          Sec != DwarfSections.Rangelists && Sec != DwarfSections.LineStr)
         RelMap[R.F].push_back(R.MRE);
       else
         // If the fragment is nullptr, it should a section with only relocation
@@ -3110,6 +3157,8 @@ Expected<uint64_t> MCCASReader::materializeGroup(cas::ObjectRef ID) {
     return F->materialize(*this);
   if (auto F = DebugRangelistsSectionRef::Cast(*Node))
     return F->materialize(*this);
+  if (auto F = DebugLineStrSectionRef::Cast(*Node))
+    return F->materialize(*this);
   if (auto F = CStringRef::Cast(*Node)) {
     auto Size = F->materialize(OS);
     if (!Size)
@@ -3183,6 +3232,8 @@ Expected<uint64_t> MCCASReader::materializeSection(cas::ObjectRef ID,
   if (auto F = DebugRangesRef::Cast(*Node))
     return F->materialize(*Stream);
   if (auto F = DebugRangelistsRef::Cast(*Node))
+    return F->materialize(*Stream);
+  if (auto F = DebugLineStrRef::Cast(*Node))
     return F->materialize(*Stream);
   if (auto F = AddendsRef::Cast(*Node))
     // AddendsRef is already handled when materializing Atoms, skip.
