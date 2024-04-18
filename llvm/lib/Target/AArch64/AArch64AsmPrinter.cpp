@@ -118,7 +118,7 @@ public:
   void LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI, bool Typed);
 
   typedef std::tuple<unsigned, bool, uint32_t> HwasanMemaccessTuple;
-  std::optional<unsigned long long> HwasanFixedShadowBase = std::nullopt;
+  std::optional<uint64_t> HwasanFixedShadowBase = std::nullopt;
   std::map<HwasanMemaccessTuple, MCSymbol *> HwasanMemaccessSymbols;
   void LowerKCFI_CHECK(const MachineInstr &MI);
   void LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI);

@@ -449,7 +449,7 @@ private:
 } // end anonymous namespace
 
 namespace llvm {
-std::optional<unsigned long long> getFixedShadowBase(void) {
+std::optional<uint64_t> getFixedShadowBase(void) {
   if (ClMappingOffset.getNumOccurrences() > 0)
     return ClMappingOffset;
   return std::nullopt;
