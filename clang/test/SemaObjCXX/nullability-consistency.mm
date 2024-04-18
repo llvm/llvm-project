@@ -9,6 +9,7 @@
 #include "nullability-consistency-6.h"
 #include "nullability-consistency-7.h"
 #include "nullability-consistency-8.h"
+#include "nullability-consistency-smart.h"
 #include "nullability-consistency-system.h"
 
 void h1(int *ptr) { } // don't warn

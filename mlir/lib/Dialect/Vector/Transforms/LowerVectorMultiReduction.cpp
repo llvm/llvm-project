@@ -12,9 +12,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
+#include "mlir/Dialect/Vector/Transforms/Passes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+namespace mlir {
+namespace vector {
+#define GEN_PASS_DEF_LOWERVECTORMULTIREDUCTION
+#include "mlir/Dialect/Vector/Transforms/Passes.h.inc"
+} // namespace vector
+} // namespace mlir
 
 #define DEBUG_TYPE "vector-multi-reduction"
 
@@ -461,6 +471,31 @@ struct OneDimMultiReductionToTwoDim
     return success();
   }
 };
+
+struct LowerVectorMultiReductionPass
+    : public vector::impl::LowerVectorMultiReductionBase<
+          LowerVectorMultiReductionPass> {
+  LowerVectorMultiReductionPass(vector::VectorMultiReductionLowering option) {
+    this->loweringStrategy = option;
+  }
+
+  void runOnOperation() override {
+    Operation *op = getOperation();
+    MLIRContext *context = op->getContext();
+
+    RewritePatternSet loweringPatterns(context);
+    populateVectorMultiReductionLoweringPatterns(loweringPatterns,
+                                                 this->loweringStrategy);
+
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(loweringPatterns))))
+      signalPassFailure();
+  }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<vector::VectorDialect>();
+  }
+};
+
 } // namespace
 
 void mlir::vector::populateVectorMultiReductionLoweringPatterns(
@@ -475,4 +510,9 @@ void mlir::vector::populateVectorMultiReductionLoweringPatterns(
   else
     patterns.add<TwoDimMultiReductionToElementWise>(patterns.getContext(),
                                                     benefit);
+}
+
+std::unique_ptr<Pass> vector::createLowerVectorMultiReductionPass(
+    vector::VectorMultiReductionLowering option) {
+  return std::make_unique<LowerVectorMultiReductionPass>(option);
 }

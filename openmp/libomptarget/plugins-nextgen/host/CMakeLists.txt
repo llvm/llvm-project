@@ -51,8 +51,14 @@ else()
 endif()
 
 # Define the target specific triples and ELF machine values.
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64le$" OR
-   CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64$")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64le$")
+  target_compile_definitions(omptarget.rtl.${machine} PRIVATE TARGET_ELF_ID=EM_PPC64)
+  target_compile_definitions(omptarget.rtl.${machine} PRIVATE
+      LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE="powerpc64le-ibm-linux-gnu")
+  list(APPEND LIBOMPTARGET_SYSTEM_TARGETS 
+       "powerpc64le-ibm-linux-gnu" "powerpc64le-ibm-linux-gnu-LTO")
+  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64$")
   target_compile_definitions(omptarget.rtl.${machine} PRIVATE TARGET_ELF_ID=EM_PPC64)
   target_compile_definitions(omptarget.rtl.${machine} PRIVATE
       LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE="powerpc64-ibm-linux-gnu")

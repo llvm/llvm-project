@@ -13,6 +13,13 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CLANG_BUILT_STANDALONE TRUE)
 endif()
 
+# Make sure that our source directory is on the current cmake module path so that
+# we can include cmake files from this directory.
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+  )
+
 # Must go below project(..)
 include(GNUInstallDirs)
 include(GetDarwinLinkerVersion)
@@ -141,13 +148,6 @@ if(CLANG_BUILT_STANDALONE)
   endif() # LLVM_INCLUDE_TESTS
 endif() # standalone
 
-# Make sure that our source directory is on the current cmake module path so that
-# we can include cmake files from this directory.
-list(INSERT CMAKE_MODULE_PATH 0
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
-  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
-  )
-
 # This allows disabling clang's XML dependency even if LLVM finds libxml2.
 # By default, clang depends on libxml2 if LLVM does.
 option(CLANG_ENABLE_LIBXML2 "Whether libclang may depend on libxml2"
@@ -162,6 +162,13 @@ if(CLANG_ENABLE_LIBXML2)
     if (LIBXML2_FOUND)
       set(CLANG_HAVE_LIBXML 1)
     endif()
+  endif()
+endif()
+
+if(CLANG_ENABLE_CIR)
+  if (NOT "${LLVM_ENABLE_PROJECTS}" MATCHES "MLIR|mlir")
+    message(FATAL_ERROR
+      "Cannot build ClangIR without MLIR in LLVM_ENABLE_PROJECTS")
   endif()
 endif()
 

@@ -8,6 +8,7 @@
 
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCRegister.h"
 
 using namespace llvm;
 
@@ -47,4 +48,9 @@ ParseStatus MCTargetAsmParser::parseDirective(AsmToken DirectiveID) {
   if (getTok().getLoc() != StartTokLoc)
     return ParseStatus::Failure;
   return ParseStatus::NoMatch;
+}
+
+bool MCTargetAsmParser::areEqualRegs(const MCParsedAsmOperand &Op1,
+                                     const MCParsedAsmOperand &Op2) const {
+  return Op1.isReg() && Op2.isReg() && Op1.getReg() == Op2.getReg();
 }

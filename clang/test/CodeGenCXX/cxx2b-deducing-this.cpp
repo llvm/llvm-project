@@ -109,3 +109,76 @@ void test_temporary() {
 //CHECK:    %ref.tmp = alloca %struct.MaterializedTemporary, align 1
 //CHECK:    call void @_ZN21MaterializedTemporaryC1Ev(ptr noundef nonnull align 1 dereferenceable(1) %ref.tmp){{.*}}
 //CHECK     invoke void @_ZNH21MaterializedTemporary3fooEOS_(ptr noundef nonnull align 1 dereferenceable(1) %ref.tmp){{.*}}
+
+namespace GH86399 {
+volatile int a = 0;
+struct function {
+  function& operator=(function const&) {
+    a = 1;
+    return *this;
+  }
+};
+
+void f() {
+  function list;
+
+  //CHECK-LABEL: define internal void @"_ZZN7GH863991f{{.*}}"(ptr %{{.*}})
+  //CHECK: call {{.*}} @_ZN7GH863998functionaSERKS0_
+  //CHECK-NEXT: ret void
+  [&list](this auto self) {
+    list = function{};
+  }();
+}
+}
+
+namespace GH84163 {
+// Just check that this doesn't crash (we were previously not instantiating
+// everything that needs instantiating in here).
+template <typename> struct S {};
+
+void a() {
+  int x;
+  const auto l = [&x](this auto&) { S<decltype(x)> q; };
+  l();
+}
+}
+
+namespace GH84425 {
+// As above.
+void do_thing(int x) {
+    auto second = [&](this auto const& self, int b) -> int {
+        if (x) return x;
+        else return self(x);
+    };
+
+     second(1);
+}
+
+void do_thing2(int x) {
+    auto second = [&](this auto const& self)  {
+        if (true) return x;
+        else return x;
+    };
+
+     second();
+}
+}
+
+namespace GH79754 {
+// As above.
+void f() {
+  int x;
+  [&x](this auto&&) {return x;}();
+}
+}
+
+namespace GH70604 {
+auto dothing(int num)
+{
+  auto fun =  [&num](this auto&& self) -> void {
+    auto copy = num;
+  };
+
+  fun();
+}
+}

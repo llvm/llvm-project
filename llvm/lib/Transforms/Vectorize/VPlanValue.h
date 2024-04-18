@@ -23,6 +23,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 
@@ -35,7 +36,6 @@ class VPDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
-class VPWidenMemoryInstructionRecipe;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -50,7 +50,6 @@ class VPValue {
   friend class VPInterleavedAccessInfo;
   friend class VPSlotTracker;
   friend class VPRecipeBase;
-  friend class VPWidenMemoryInstructionRecipe;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -357,24 +356,26 @@ public:
     VPWidenCanonicalIVSC,
     VPWidenCastSC,
     VPWidenGEPSC,
-    VPWidenMemoryInstructionSC,
+    VPWidenLoadSC,
+    VPWidenStoreSC,
     VPWidenSC,
     VPWidenSelectSC,
-    // START: Phi-like recipes. Need to be kept together.
     VPBlendSC,
+    // START: Phi-like recipes. Need to be kept together.
     VPWidenPHISC,
     VPPredInstPHISC,
     // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
     // VPHeaderPHIRecipe need to be kept together.
     VPCanonicalIVPHISC,
     VPActiveLaneMaskPHISC,
+    VPEVLBasedIVPHISC,
     VPFirstOrderRecurrencePHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPReductionPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
-    VPFirstPHISC = VPBlendSC,
+    VPFirstPHISC = VPWidenPHISC,
     VPFirstHeaderPHISC = VPCanonicalIVPHISC,
     VPLastHeaderPHISC = VPReductionPHISC,
     VPLastPHISC = VPReductionPHISC,
@@ -442,29 +443,36 @@ public:
 class VPlan;
 class VPBasicBlock;
 
-/// This class can be used to assign consecutive numbers to all VPValues in a
-/// VPlan and allows querying the numbering for printing, similar to the
+/// This class can be used to assign names to VPValues. For VPValues without
+/// underlying value, assign consecutive numbers and use those as names (wrapped
+/// in vp<>). Otherwise, use the name from the underlying value (wrapped in
+/// ir<>), appending a .V version number if there are multiple uses of the same
+/// name. Allows querying names for VPValues for printing, similar to the
 /// ModuleSlotTracker for IR values.
 class VPSlotTracker {
-  DenseMap<const VPValue *, unsigned> Slots;
+  /// Keep track of versioned names assigned to VPValues with underlying IR
+  /// values.
+  DenseMap<const VPValue *, std::string> VPValue2Name;
+  /// Keep track of the next number to use to version the base name.
+  StringMap<unsigned> BaseName2Version;
+
+  /// Number to assign to the next VPValue without underlying value.
   unsigned NextSlot = 0;
 
-  void assignSlot(const VPValue *V);
-  void assignSlots(const VPlan &Plan);
-  void assignSlots(const VPBasicBlock *VPBB);
+  void assignName(const VPValue *V);
+  void assignNames(const VPlan &Plan);
+  void assignNames(const VPBasicBlock *VPBB);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
     if (Plan)
-      assignSlots(*Plan);
+      assignNames(*Plan);
   }
 
-  unsigned getSlot(const VPValue *V) const {
-    auto I = Slots.find(V);
-    if (I == Slots.end())
-      return -1;
-    return I->second;
-  }
+  /// Returns the name assigned to \p V, if there is one, otherwise try to
+  /// construct one from the underlying value, if there's one; else return
+  /// <badref>.
+  std::string getOrCreateName(const VPValue *V) const;
 };
 
 } // namespace llvm

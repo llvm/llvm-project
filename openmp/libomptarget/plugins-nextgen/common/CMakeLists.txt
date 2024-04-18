@@ -19,6 +19,7 @@ add_library(PluginCommon OBJECT
   src/RPC.cpp
   src/Utils/ELF.cpp
 )
+add_dependencies(PluginCommon intrinsics_gen)
 
 # Only enable JIT for those targets that LLVM can support.
 string(TOUPPER "${LLVM_TARGETS_TO_BUILD}" TargetsSupported)
@@ -60,6 +61,7 @@ target_link_options(PluginCommon PUBLIC ${offload_link_flags})
 
 target_include_directories(PluginCommon PUBLIC 
   ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
   ${LIBOMPTARGET_INCLUDE_DIR}
 )
 

@@ -487,7 +487,9 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
     // extelt (cmp X, Y), Index --> cmp (extelt X, Index), (extelt Y, Index)
     Value *E0 = Builder.CreateExtractElement(X, Index);
     Value *E1 = Builder.CreateExtractElement(Y, Index);
-    return CmpInst::Create(cast<CmpInst>(SrcVec)->getOpcode(), Pred, E0, E1);
+    CmpInst *SrcCmpInst = cast<CmpInst>(SrcVec);
+    return CmpInst::CreateWithCopiedFlags(SrcCmpInst->getOpcode(), Pred, E0, E1,
+                                          SrcCmpInst);
   }
 
   if (auto *I = dyn_cast<Instruction>(SrcVec)) {
