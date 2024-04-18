@@ -386,6 +386,9 @@ public:
 
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
+  std::optional<Instruction *> getHistogramIndexValue(Instruction *I) const {
+    return LAI->getHistogramIndexValue(I);
+  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;

@@ -118,6 +118,8 @@ public:
     return 31;
   }
 
+  InstructionCost getHistogramCost(Type *Ty) const;
+
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
 

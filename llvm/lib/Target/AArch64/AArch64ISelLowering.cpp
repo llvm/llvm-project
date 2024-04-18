@@ -5293,6 +5293,21 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   SDLoc dl(Op);
   switch (IntNo) {
   default: return SDValue();    // Don't custom lower most intrinsics.
+  case Intrinsic::experimental_vector_histogram_count: {
+    // Replacing IR Intrinsic with AArch64/sve2 histcnt
+    assert((Op.getNumOperands() == 3) &&
+           "Histogram Intrinsic requires 3 operands");
+    EVT Ty = Op.getValueType();
+    assert((Ty == MVT::nxv4i32 || Ty == MVT::nxv2i64) &&
+           "Intrinsic supports only i64 or i32 types");
+    // EVT VT = (Ty == MVT::nxv4i32) ? MVT::i32 : MVT::i64;
+    SDValue InputVector = Op.getOperand(1);
+    SDValue Mask = Op.getOperand(2);
+    SDValue ID =
+        DAG.getTargetConstant(Intrinsic::aarch64_sve_histcnt, dl, MVT::i32);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, Ty, ID, Mask, InputVector,
+                       InputVector);
+  }
   case Intrinsic::thread_pointer: {
     EVT PtrVT = getPointerTy(DAG.getDataLayout());
     return DAG.getNode(AArch64ISD::THREAD_POINTER, dl, PtrVT);
