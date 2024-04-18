@@ -362,6 +362,30 @@ AIX::GetHeaderSysroot(const llvm::opt::ArgList &DriverArgs) const {
   return "/";
 }
 
+void AIX::AddOpenMPIncludeArgs(const ArgList &DriverArgs,
+                               ArgStringList &CC1Args) const {
+  // Add OpenMP include paths if -fopenmp is specified.
+  if (DriverArgs.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                         options::OPT_fno_openmp, false)) {
+    SmallString<128> PathOpenMP;
+    switch (getDriver().getOpenMPRuntime(DriverArgs)) {
+    case Driver::OMPRT_OMP:
+      PathOpenMP = GetHeaderSysroot(DriverArgs);
+      llvm::sys::path::append(PathOpenMP, "opt/IBM/openxlCSDK", "include",
+                              "openmp");
+      addSystemInclude(DriverArgs, CC1Args, PathOpenMP.str());
+      break;
+    case Driver::OMPRT_IOMP5:
+      LLVM_FALLTHROUGH;
+    case Driver::OMPRT_GOMP:
+      LLVM_FALLTHROUGH;
+    case Driver::OMPRT_Unknown:
+      // Unknown / unsupported include paths.
+      break;
+    }
+  }
+}
+
 void AIX::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                     ArgStringList &CC1Args) const {
   // Return if -nostdinc is specified as a driver option.
@@ -379,6 +403,11 @@ void AIX::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     // Add the Clang builtin headers (<resource>/include)
     addSystemInclude(DriverArgs, CC1Args, path::parent_path(P.str()));
   }
+
+  // Add the include directory containing omp.h. This needs to be before
+  // adding the system include directory because other compilers put their
+  // omp.h in /usr/include.
+  AddOpenMPIncludeArgs(DriverArgs, CC1Args);
 
   // Return if -nostdlibinc is specified as a driver option.
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
