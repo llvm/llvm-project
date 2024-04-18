@@ -4,54 +4,56 @@
 ; This test used to crash due to missing Or/Not cases in
 ; inferScalarTypeForRecipe.
 
-define i32 @foo() {
-; CHECK-LABEL: define i32 @foo() {
+define void @foo() {
+; CHECK-LABEL: define void @foo() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.cond.cleanup.loopexit:
-; CHECK-NEXT:    ret i32 0
-; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[COND_END:%.*]] ]
-; CHECK-NEXT:    [[ZEXT_0:%.*]] = zext i1 false to i64
-; CHECK-NEXT:    [[DEAD_INSN:%.*]] = trunc i64 [[ZEXT_0]] to i16
-; CHECK-NEXT:    br i1 false, label [[COND_FALSE:%.*]], label [[COND_END]]
-; CHECK:       cond.false:
-; CHECK-NEXT:    br label [[COND_END]]
-; CHECK:       cond.end:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 2, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[INCREMENTOR:%.*]] = phi i8 [ [[ADD:%.*]], [[LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 0, 0
+; CHECK-NEXT:    [[EXTRACT_T:%.*]] = trunc i8 [[AND]] to i1
+; CHECK-NEXT:    br i1 [[EXTRACT_T]], label [[LATCH]], label [[INDIRECT_LATCH:%.*]]
+; CHECK:       indirect.latch:
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[ADD]] = add i8 [[INCREMENTOR]], 1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[INCREMENTOR]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[CONV]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_HEADER]], label [[LOOPEXIT]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       loop.exit:
+; CHECK-NEXT:    ret void
 ;
 entry:
-  br label %for.body
+  br label %loop.header
 
-for.cond.cleanup.loopexit:                        ; preds = %cond.end
-  ret i32 0
+loop.header:                                         ; preds = %latch, %entry
+  %incrementor = phi i8 [ %add, %latch ], [ 0, %entry ]
+  %and = and i8 0, 0
+  %extract.t = trunc i8 %and to i1
+  br i1 %extract.t, label %latch, label %indirect.latch
 
-for.body:                                         ; preds = %cond.end, %entry
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %cond.end ]
-  %zext.0 = zext i1 false to i64
-  %dead.insn = trunc i64 %zext.0 to i16
-  br i1 false, label %cond.false, label %cond.end
+indirect.latch:                                       ; preds = %loop.header
+  br label %latch
 
-cond.false:                                       ; preds = %for.body
-  br label %cond.end
+latch:                               ; preds = %loop.header16, %loop.header
+  %add = add i8 %incrementor, 1
+  %conv = zext i8 %incrementor to i32
+  %cmp = icmp ult i32 %conv, 1
+  br i1 %cmp, label %loop.header, label %loop.exit
 
-cond.end:                                         ; preds = %cond.false, %for.body
-  %indvars.iv.next = add i64 %indvars.iv, 1
-  %cmp = icmp ult i64 %indvars.iv, 1
-  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit
+loop.exit:
+  ret void
 }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
