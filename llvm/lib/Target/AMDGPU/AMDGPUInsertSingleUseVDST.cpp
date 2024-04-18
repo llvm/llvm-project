@@ -70,8 +70,12 @@ public:
       // false positives. If they are live at the end of a basic block then
       // assume it has more uses later on.
       for (const auto &Liveout : MBB.liveouts()) {
-        for (const MCRegUnit &Unit : TRI->regunits(Liveout.PhysReg))
-          RegisterUseCount[Unit] = 2;
+        for (MCRegUnitMaskIterator Units(Liveout.PhysReg, TRI); Units.isValid();
+             ++Units) {
+          const auto [Unit, Mask] = *Units;
+          if ((Mask & Liveout.LaneMask).any())
+            RegisterUseCount[Unit] = 2;
+        }
       }
 
       for (MachineInstr &MI : reverse(MBB.instrs())) {
