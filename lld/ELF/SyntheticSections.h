@@ -892,7 +892,7 @@ protected:
   SmallVector<Abbrev *, 0> abbrevTable;
   SmallVector<char, 0> abbrevTableBuf;
 
-  ArrayRef<OutputChunk> getChunks() {
+  ArrayRef<OutputChunk> getChunks() const {
     return ArrayRef(chunks.get(), numChunks);
   }
 

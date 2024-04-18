@@ -2738,29 +2738,25 @@ static Expected<DebugNamesBaseSection::IndexEntry *>
 readEntry(uint64_t &offset, const DWARFDebugNames::NameIndex &ni,
           uint64_t entriesBase, DWARFDataExtractor &namesExtractor,
           const LLDDWARFSection &namesSec) {
-  std::string errMsg;
   auto ie = makeThreadLocal<DebugNamesBaseSection::IndexEntry>();
   ie->poolOffset = offset;
   Error err = Error::success();
   uint64_t ulebVal = namesExtractor.getULEB128(&offset, &err);
-  if (err) {
-    errMsg = ": invalid abbrev code in entry: ";
-    errMsg.append(toString(std::move(err)));
-    return createStringError(inconvertibleErrorCode(), errMsg.c_str());
-  }
-  if (ulebVal < UINT32_MAX)
+  if (err)
+    return createStringError(inconvertibleErrorCode(),
+                             "invalid abbrev code in entry: %s",
+                             toString(std::move(err)).c_str());
+  if (ulebVal <= UINT32_MAX)
     ie->abbrevCode = static_cast<uint32_t>(ulebVal);
-  else {
-    errMsg = ": abbrev code in entry too large for DWARF32: ";
-    errMsg.append(std::to_string(ulebVal));
-    return createStringError(inconvertibleErrorCode(), errMsg.c_str());
-  }
+  else
+    return createStringError(inconvertibleErrorCode(),
+                             "abbrev code in entry too large for DWARF32: %d",
+                             ulebVal);
   auto it = ni.getAbbrevs().find_as(ie->abbrevCode);
-  if (it == ni.getAbbrevs().end()) {
-    errMsg = ": entry abbrev code not found in abbrev table: ";
-    errMsg.append(std::to_string(ie->abbrevCode));
-    return createStringError(inconvertibleErrorCode(), errMsg.c_str());
-  }
+  if (it == ni.getAbbrevs().end())
+    return createStringError(inconvertibleErrorCode(),
+                             "entry abbrev code not found in abbrev table: %d",
+                             ie->abbrevCode);
 
   DebugNamesBaseSection::AttrValue attr, cuAttr = {0, 0};
   for (DWARFDebugNames::AttributeEncoding a : it->Attributes) {
@@ -2769,9 +2765,9 @@ readEntry(uint64_t &offset, const DWARFDebugNames::NameIndex &ni,
         attr.attrValue = namesExtractor.getU32(&offset, &err);
         attr.attrSize = 4;
         ie->parentOffset = entriesBase + attr.attrValue;
-      } else if (a.Form != DW_FORM_flag_present) {
-        errMsg = ": invalid form for DW_IDX_parent";
-      }
+      } else if (a.Form != DW_FORM_flag_present)
+        return createStringError(inconvertibleErrorCode(),
+                                 "invalid form for DW_IDX_parent");
     } else {
       switch (a.Form) {
       case DW_FORM_data1:
@@ -2793,17 +2789,15 @@ readEntry(uint64_t &offset, const DWARFDebugNames::NameIndex &ni,
         break;
       }
       default:
-        errMsg = ": unrecognized form encoding ";
-        errMsg.append(std::to_string(a.Form));
-        errMsg.append(" in abbrev table");
-        return createStringError(inconvertibleErrorCode(), errMsg.c_str());
+        return createStringError(
+            inconvertibleErrorCode(),
+            "unrecognized form encoding %d in abbrev table", a.Form);
       }
     }
-    if (err) {
-      errMsg = ": error while reading attributes: ";
-      errMsg.append(toString(std::move(err)));
-      return createStringError(inconvertibleErrorCode(), errMsg.c_str());
-    }
+    if (err)
+      return createStringError(inconvertibleErrorCode(),
+                               "error while reading attributes: %s",
+                               toString(std::move(err)).c_str());
     if (a.Index == DW_IDX_compile_unit)
       cuAttr = attr;
     else if (a.Form != DW_FORM_flag_present)
@@ -2813,10 +2807,7 @@ readEntry(uint64_t &offset, const DWARFDebugNames::NameIndex &ni,
   // Canonicalize abbrev by placing the CU/TU index at the end.
   ie->attrValues.push_back(cuAttr);
 
-  if (!errMsg.empty())
-    return createStringError(inconvertibleErrorCode(), errMsg.c_str());
-  else
-    return ie;
+  return ie;
 }
 
 void DebugNamesBaseSection::parseDebugNames(
@@ -2866,23 +2857,21 @@ void DebugNamesBaseSection::parseDebugNames(
       ne.hashValue = caseFoldingDjbHash(name);
 
       // Read a series of index entries that end with abbreviation code 0.
-      std::string errMsg;
       uint64_t offset = locs.EntriesBase + entryOffsets[i];
       while (offset < namesSec.Data.size() && namesSec.Data[offset] != 0) {
         // Read & store all entries (for the same string).
         Expected<IndexEntry *> ieOrErr =
             readEntry(offset, ni, locs.EntriesBase, namesExtractor, namesSec);
         if (!ieOrErr) {
-          errorOrWarn(toString(namesSec.sec) +
-                      Twine(toString(ieOrErr.takeError())));
+          errorOrWarn(toString(namesSec.sec) + ": " +
+                      toString(ieOrErr.takeError()));
           return;
         }
         ne.indexEntries.push_back(std::move(*ieOrErr));
       }
       if (offset >= namesSec.Data.size())
-        errMsg = ": index entry is out of bounds";
-      if (!errMsg.empty())
-        errorOrWarn(toString(namesSec.sec) + Twine(errMsg.c_str()));
+        errorOrWarn(toString(namesSec.sec) +
+                    Twine(": index entry is out of bounds"));
 
       for (IndexEntry &ie : ne.entries())
         offsetMap[ie.poolOffset] = &ie;
@@ -3023,9 +3012,9 @@ std::pair<uint32_t, uint32_t> DebugNamesBaseSection::computeEntryPool(
   // Collect and de-duplicate all the names (preserving all the entries).
   // Speed it up using multithreading, as the number of symbols can be in the
   // order of millions.
-  size_t concurrency =
+  const size_t concurrency =
       bit_floor(std::min<size_t>(config->threadCount, numShards));
-  size_t shift = 32 - countr_zero(numShards);
+  const size_t shift = 32 - countr_zero(numShards);
   uint8_t cuAttrSize = getMergedCuCountForm(hdr.CompUnitCount).first;
   DenseMap<CachedHashStringRef, size_t> maps[numShards];
 
