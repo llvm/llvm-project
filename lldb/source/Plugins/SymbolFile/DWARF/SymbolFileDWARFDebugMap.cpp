@@ -848,8 +848,7 @@ SymbolFileDWARFDebugMap::ResolveSymbolContext(const Address &exe_so_addr,
                 debug_map_entry->data.GetOSOFileAddress();
             Address oso_so_addr;
             if (oso_module->ResolveFileAddress(oso_file_addr, oso_so_addr)) {
-              SymbolFile *sym_file = oso_module->GetSymbolFile();
-              if (sym_file) {
+              if (SymbolFile *sym_file = oso_module->GetSymbolFile()) {
                 resolved_flags |= sym_file->ResolveSymbolContext(oso_so_addr, 
                     resolve_scope, sc);
               } else {
