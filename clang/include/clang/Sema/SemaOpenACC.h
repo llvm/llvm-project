@@ -93,13 +93,15 @@ public:
     }
 
     unsigned getNumIntExprs() const {
-      assert(ClauseKind == OpenACCClauseKind::NumWorkers &&
+      assert((ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       return std::get<IntExprDetails>(Details).IntExprs.size();
     }
 
     ArrayRef<Expr *> getIntExprs() {
-      assert(ClauseKind == OpenACCClauseKind::NumWorkers &&
+      assert((ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       return std::get<IntExprDetails>(Details).IntExprs;
     }
@@ -132,7 +134,8 @@ public:
     }
 
     void setIntExprDetails(ArrayRef<Expr *> IntExprs) {
-      assert(ClauseKind == OpenACCClauseKind::NumWorkers &&
+      assert((ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{{IntExprs.begin(), IntExprs.end()}};
     }

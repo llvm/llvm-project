@@ -103,6 +103,27 @@ OpenACCNumWorkersClause::Create(const ASTContext &C, SourceLocation BeginLoc,
       OpenACCNumWorkersClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
 }
 
+OpenACCVectorLengthClause::OpenACCVectorLengthClause(SourceLocation BeginLoc,
+                                                     SourceLocation LParenLoc,
+                                                     Expr *IntExpr,
+                                                     SourceLocation EndLoc)
+    : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::VectorLength, BeginLoc,
+                                     LParenLoc, IntExpr, EndLoc) {
+  assert((!IntExpr || IntExpr->isInstantiationDependent() ||
+          IntExpr->getType()->isIntegerType()) &&
+         "Condition expression type not scalar/dependent");
+}
+
+OpenACCVectorLengthClause *
+OpenACCVectorLengthClause::Create(const ASTContext &C, SourceLocation BeginLoc,
+                                  SourceLocation LParenLoc, Expr *IntExpr,
+                                  SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCVectorLengthClause),
+                         alignof(OpenACCVectorLengthClause));
+  return new (Mem)
+      OpenACCVectorLengthClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -123,4 +144,9 @@ void OpenACCClausePrinter::VisitSelfClause(const OpenACCSelfClause &C) {
 void OpenACCClausePrinter::VisitNumWorkersClause(
     const OpenACCNumWorkersClause &C) {
   OS << "num_workers(" << C.getIntExpr() << ")";
+}
+
+void OpenACCClausePrinter::VisitVectorLengthClause(
+    const OpenACCVectorLengthClause &C) {
+  OS << "vector_length(" << C.getIntExpr() << ")";
 }
