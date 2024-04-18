@@ -448,19 +448,6 @@ llvm.func @store_load_forward() -> i32 {
 
 // -----
 
-// CHECK-LABEL: llvm.func @store_load_wrong_type
-llvm.func @store_load_wrong_type() -> i16 {
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.mlir.constant(0 : i32) : i32
-  // CHECK: = llvm.alloca
-  %2 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
-  llvm.store %1, %2 {alignment = 4 : i64} : i32, !llvm.ptr
-  %3 = llvm.load %2 {alignment = 2 : i64} : !llvm.ptr -> i16
-  llvm.return %3 : i16
-}
-
-// -----
-
 // CHECK-LABEL: llvm.func @merge_point_cycle
 llvm.func @merge_point_cycle() {
   // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : i32
@@ -894,7 +881,7 @@ llvm.func @stores_with_different_type_sizes(%arg0: i64, %arg1: f32, %cond: i1) -
 // CHECK-LABEL: @load_smaller_int
 llvm.func @load_smaller_int() -> i16 {
   %0 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: llvm.alloca
+  // CHECK-NOT: llvm.alloca
   %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
   %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i16
   llvm.return %2 : i16
@@ -902,10 +889,10 @@ llvm.func @load_smaller_int() -> i16 {
 
 // -----
 
-// CHECK-LABEL: @load_different_type_smaller
-llvm.func @load_different_type_smaller() -> f32 {
+// CHECK-LABEL: @load_different_type_same_size
+llvm.func @load_different_type_same_size() -> f32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: llvm.alloca
+  // CHECK-NOT: llvm.alloca
   %1 = llvm.alloca %0 x i64 {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> f32
   llvm.return %2 : f32
@@ -942,4 +929,121 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> !llvm.ptr<2>
     llvm.return %2 : !llvm.ptr<2>
   }
+
+  // CHECK-LABEL: @load_ptr_addrspace_cast_different_size2
+  llvm.func @load_ptr_addrspace_cast_different_size2() -> !llvm.ptr<1> {
+    %0 = llvm.mlir.constant(1 : i32) : i32
+    // CHECK: llvm.alloca
+    %1 = llvm.alloca %0 x !llvm.ptr<2> {alignment = 4 : i64} : (i32) -> !llvm.ptr
+    %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> !llvm.ptr<1>
+    llvm.return %2 : !llvm.ptr<1>
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @load_smaller_int_type
+llvm.func @load_smaller_int_type() -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i64 : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> i32
+  // CHECK: %[[RES:.*]] = llvm.trunc %{{.*}} : i64 to i32
+  // CHECK: llvm.return %[[RES]] : i32
+  llvm.return %2 : i32
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<"dlti.endianness", "big">
+>} {
+  // CHECK-LABEL: @load_smaller_int_type_big_endian
+  llvm.func @load_smaller_int_type_big_endian() -> i8 {
+    %0 = llvm.mlir.constant(1 : i32) : i32
+    // CHECK-NOT: llvm.alloca
+    %1 = llvm.alloca %0 x i64 : (i32) -> !llvm.ptr
+    %2 = llvm.load %1 : !llvm.ptr -> i8
+    // CHECK: %[[SHIFT_WIDTH:.*]] = llvm.mlir.constant(56 : i64) : i64
+    // CHECK: %[[SHIFT:.*]] = llvm.lshr %{{.*}}, %[[SHIFT_WIDTH]]
+    // CHECK: %[[RES:.*]] = llvm.trunc %[[SHIFT]] : i64 to i8
+    // CHECK: llvm.return %[[RES]] : i8
+    llvm.return %2 : i8
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @load_different_type_smaller
+llvm.func @load_different_type_smaller() -> f32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i64 : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> f32
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %{{.*}} : i64 to i32
+  // CHECK: %[[RES:.*]] = llvm.bitcast %[[TRUNC]] : i32 to f32
+  // CHECK: llvm.return %[[RES]] : f32
+  llvm.return %2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @load_smaller_float_type
+llvm.func @load_smaller_float_type() -> f32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x f64 : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> f32
+  // CHECK: %[[CAST:.*]] = llvm.bitcast %{{.*}} : f64 to i64
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[CAST]] : i64 to i32
+  // CHECK: %[[RES:.*]] = llvm.bitcast %[[TRUNC]] : i32 to f32
+  // CHECK: llvm.return %[[RES]] : f32
+  llvm.return %2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @load_first_vector_elem
+llvm.func @load_first_vector_elem() -> i16 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x vector<4xi16> : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> i16
+  // CHECK: %[[TRUNC:.*]] = llvm.bitcast %{{.*}} : vector<4xi16> to i64
+  // CHECK: %[[RES:.*]] = llvm.trunc %[[TRUNC]] : i64 to i16
+  // CHECK: llvm.return %[[RES]] : i16
+  llvm.return %2 : i16
+}
+
+// -----
+
+// CHECK-LABEL: @load_first_llvm_vector_elem
+llvm.func @load_first_llvm_vector_elem() -> i16 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.alloca
+  %1 = llvm.alloca %0 x !llvm.vec<4 x ptr> : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> i16
+  llvm.return %2 : i16
+}
+
+// -----
+
+// CHECK-LABEL: @scalable_vector
+llvm.func @scalable_vector() -> i16 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.alloca
+  %1 = llvm.alloca %0 x vector<[4]xi16> : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> i16
+  llvm.return %2 : i16
+}
+
+// -----
+
+// CHECK-LABEL: @scalable_llvm_vector
+llvm.func @scalable_llvm_vector() -> i16 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.alloca
+  %1 = llvm.alloca %0 x !llvm.vec<? x 4 x ppc_fp128> : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> i16
+  llvm.return %2 : i16
 }
