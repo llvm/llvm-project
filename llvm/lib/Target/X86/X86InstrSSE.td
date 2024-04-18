@@ -5755,8 +5755,8 @@ multiclass avx_bittest<bits<8> opc, string OpcodeStr, RegisterClass RC,
             Sched<[sched.Folded, sched.ReadAfterFold]>, VEX;
 }
 
-// ptest is commutable if only the Z flag is used. If the C flag is used,
-// commuting would change which operand is inverted.
+// testps/testpd are commutable if only the Z flag is used. If the C flag is
+// used, commuting would change which operand is inverted.
 def X86testp_commutable : PatFrag<(ops node:$src1, node:$src2),
                                   (X86testp node:$src1, node:$src2), [{
   return onlyUsesZeroFlag(SDValue(Node, 0));
