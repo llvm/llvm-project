@@ -99,7 +99,7 @@ ExceptionSpecAnalyzer::analyzeRecord(const CXXRecordDecl *RecordDecl,
   }
 
   for (const auto *FDecl : RecordDecl->fields())
-    if (!FDecl->isInvalidDecl() && !FDecl->isUnnamedBitfield()) {
+    if (!FDecl->isInvalidDecl() && !FDecl->isUnnamedBitField()) {
       State Result = analyzeFieldDecl(FDecl, Kind);
       if (Result == State::Throwing || Result == State::Unknown)
         return Result;
