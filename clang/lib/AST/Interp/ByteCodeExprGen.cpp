@@ -1071,13 +1071,11 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
 
   if (T->isArrayType()) {
     auto Eval = [&](Expr *Init, unsigned ElemIndex) {
-      if (!visitArrayElemInit(ElemIndex, Init))
-        return false;
-      return true;
+      return visitArrayElemInit(ElemIndex, Init);
     };
     unsigned ElementIndex = 0;
     for (const Expr *Init : E->inits()) {
-      if (auto *EmbedS =
+      if (const auto *EmbedS =
               dyn_cast<EmbedSubscriptExpr>(Init->IgnoreParenImpCasts())) {
         if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
           return false;
@@ -1216,9 +1214,7 @@ bool ByteCodeExprGen<Emitter>::VisitEmbedSubscriptExpr(
     const EmbedSubscriptExpr *E) {
   PPEmbedExpr *PPEmbed = E->getEmbed();
   auto It = PPEmbed->begin() + E->getBegin();
-  if (!this->Visit(*It))
-    return false;
-  return true;
+  return this->Visit(*It);
 }
 
 static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,

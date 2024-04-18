@@ -4969,8 +4969,9 @@ public:
 
   unsigned getDataElementCount() const { return NumOfElements; }
 
-  SourceLocation getBeginLoc() const LLVM_READONLY { return SourceLocation(); }
-  SourceLocation getEndLoc() const LLVM_READONLY { return SourceLocation(); }
+  SourceLocation getLocation() const { return ReferencedEmbed->getLocation(); }
+  SourceLocation getBeginLoc() const { return ReferencedEmbed->getBeginLoc(); }
+  SourceLocation getEndLoc() const { return ReferencedEmbed->getEndLoc(); }
 
   // Iterators
   child_range children() {

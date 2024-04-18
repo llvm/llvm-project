@@ -9124,18 +9124,12 @@ ExprResult InitializationSequence::Perform(Sema &S,
       }
       Expr *Init = CurInit.get();
       if (auto *Embed = dyn_cast<PPEmbedExpr>(Init->IgnoreParenImpCasts())) {
-        if (Embed->getDataElementCount(S.Context) == 1) {
-          // Expand the list in-place immediately, let the natural work take
-          // hold
-          Init = S.ExpandSinglePPEmbedExpr(Embed);
-        } else {
-          // Whee, this is a comma expression! However, we don't need to retain
-          // it as such because the comma expression results are the right-most
-          // operand. So we'll get that value and expand it as a single value.
-          Init = new (S.Context) EmbedSubscriptExpr(
-              Embed->getType(), Embed,
-              Embed->getDataElementCount(S.Context) - 1, /*ElsCount*/ 1);
-        }
+        // We can have a comma expression in case of embed with multiple data
+        // elements, the comma expression results are the right-most operand.
+        // So just reference the last data element.
+        Init = new (S.Context) EmbedSubscriptExpr(
+            Embed->getType(), Embed, Embed->getDataElementCount(S.Context) - 1,
+            /*ElsCount*/ 1);
       }
 
       CheckedConversionKind CCK =
@@ -9303,10 +9297,19 @@ ExprResult InitializationSequence::Perform(Sema &S,
 
     case SK_CAssignment: {
       QualType SourceType = CurInit.get()->getType();
+      Expr *Init = CurInit.get();
+      if (auto *Embed = dyn_cast<PPEmbedExpr>(Init->IgnoreParenImpCasts())) {
+        // We can have a comma expression in case of embed with multiple data
+        // elements, the comma expression results are the right-most operand.
+        // So just reference the last data element.
+        Init = new (S.Context) EmbedSubscriptExpr(
+            Embed->getType(), Embed, Embed->getDataElementCount(S.Context) - 1,
+            /*ElsCount*/ 1);
+      }
 
       // Save off the initial CurInit in case we need to emit a diagnostic
-      ExprResult InitialCurInit = CurInit;
-      ExprResult Result = CurInit;
+      ExprResult InitialCurInit = Init;
+      ExprResult Result = Init;
       Sema::AssignConvertType ConvTy =
         S.CheckSingleAssignmentConstraints(Step->Type, Result, true,
             Entity.getKind() == InitializedEntity::EK_Parameter_CF_Audited);

@@ -704,7 +704,8 @@ private:
                                       (uintptr_t)Ty.getAsOpaquePtr());
     // The QualType parameter `OpaqueType`, represented as `void*`.
     Visitor.Args.push_back(TypeArg);
-    B->S.ModifyCallExprArguments(nullptr, E->getBeginLoc(), Visitor.Args, E->getEndLoc());
+    B->S.ModifyCallExprArguments(nullptr, E->getBeginLoc(), Visitor.Args,
+                                 E->getEndLoc());
 
     // We push the last parameter based on the type of the Expr. Note we need
     // special care for rvalue struct.
