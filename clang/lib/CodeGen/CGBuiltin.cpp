@@ -842,7 +842,7 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
     }
 
     QualType Ty = FD->getType();
-    if (!Ty->isPointerType() && (Ty->isStructureType() || Ty->isUnionType()))
+    if (Ty->isRecordType()) {
       if (const FieldDecl *Field = FindFlexibleArrayMemberField(
               Ctx, Ty->getAsRecordDecl(), Name, Offset)) {
         const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
