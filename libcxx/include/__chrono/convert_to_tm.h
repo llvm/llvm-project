@@ -16,6 +16,7 @@
 #include <__chrono/duration.h>
 #include <__chrono/file_clock.h>
 #include <__chrono/hh_mm_ss.h>
+#include <__chrono/local_info.h>
 #include <__chrono/month.h>
 #include <__chrono/month_weekday.h>
 #include <__chrono/monthday.h>
@@ -174,6 +175,8 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
     __result.tm_hour = __value.hours().count();
 #  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
   } else if constexpr (same_as<_ChronoT, chrono::sys_info>) {
+    // Has no time information.
+  } else if constexpr (same_as<_ChronoT, chrono::local_info>) {
     // Has no time information.
 #  endif
   } else
