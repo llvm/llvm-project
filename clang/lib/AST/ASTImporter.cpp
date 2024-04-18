@@ -3522,7 +3522,6 @@ public:
       : ParentDC(ParentDC) {}
 
   bool CheckType(QualType T) {
-    T->isUndeducedType();
     // Check the chain of "sugar" types.
     // The "sugar" types are typedef or similar types that have the same
     // canonical type.
