@@ -1,0 +1,48 @@
+RUN: llvm-dwp %p/../Inputs/merge_v5/notypes/c.dwo %p/../Inputs/merge_v5/notypes/ab.dwp -o - | \
+RUN:   llvm-dwarfdump -v - | FileCheck --check-prefix=CHECK %s
+
+DWP from a DWO (c.dwo) and a DWP (ab.dwp, created from a.dwo and b.dwo)
+Make sure the entries for A and B are updated correctly when read/processed from ab.dwp
+a.cpp:
+  struct foo { };
+  foo a;
+
+b.cpp:
+  struct bar { };
+  void b(bar) {
+  }
+
+c.cpp:
+  typedef int baz;
+  baz c() {
+  }
+
+CHECK-LABEL: .debug_abbrev.dwo contents:
+CHECK-LABEL: Abbrev table for offset:
+CHECK: 0x0000[[CAOFF:.*]]
+CHECK-LABEL: Abbrev table for offset:
+CHECK: 0x0000[[AAOFF:.*]]
+CHECK-LABEL: Abbrev table for offset:
+CHECK: 0x0000[[BAOFF:.*]]
+
+CHECK: .debug_info.dwo contents:
+CHECK: 0x[[#%.8x,COFF:]]:
+CHECK-LABEL: Compile Unit: length = {{.*}}, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset =
+CHECK:         0x[[CAOFF]], addr_size = 0x08, DWO_id = 0x[[DWOC:.*]] (next unit at 0x[[#%.8x,BOFF:]])
+CHECK: [[#BOFF]]:
+CHECK-LABEL: Compile Unit: length = {{.*}}, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset =
+CHECK:         0x[[BAOFF]], addr_size = 0x08, DWO_id = 0x[[DWOB:.*]] (next unit at 0x[[#%.8x,AOFF:]])
+CHECK: [[#AOFF]]:
+CHECK-LABEL: Compile Unit: length = {{.*}}, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset =
+CHECK:         0x[[AAOFF]], addr_size = 0x08, DWO_id = 0x[[DWOA:.*]] (next unit at 0x[[#%.8x,XOFF:]])
+
+CHECK-LABEL: .debug_cu_index contents:
+CHECK:    Index Signature          INFO                                     ABBREV                                  STR_OFFSETS 
+CHECK-DAG:       [[DWOC]]  [0x00000000[[#COFF]], 0x00000000[[#BOFF]]) [0x0000[[CAOFF]], 0x0000[[AAOFF]]) [0x00000000, 0x00000024) 
+CHECK-DAG:       [[DWOB]]  [0x00000000[[#BOFF]], 0x00000000[[#AOFF]]) [0x0000[[BAOFF]],  
+CHECK-DAG:       [[DWOA]]  [0x00000000[[#AOFF]], 0x00000000[[#XOFF]]) [0x0000[[AAOFF]], 
+
+CHECK-LABEL: .debug_str_offsets.dwo contents:
+CHECK: Contribution size = 32, Format = DWARF32, Version = 5
+CHECK: Contribution size = 24, Format = DWARF32, Version = 5
+CHECK: Contribution size = 28, Format = DWARF32, Version = 5
