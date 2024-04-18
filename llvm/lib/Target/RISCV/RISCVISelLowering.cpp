@@ -13430,10 +13430,11 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (ScaleShift >= 1 && ScaleShift < 4) {
       unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
       SDLoc DL(N);
-      SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                   DAG.getConstant(ShiftAmt, DL, VT));
-      SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                   DAG.getConstant(ScaleShift, DL, VT));
+      SDValue X = DAG.getFreeze(N->getOperand(0));
+      SDValue Shift1 =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
+      SDValue Shift2 =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ScaleShift, DL, VT));
       return DAG.getNode(ISD::ADD, DL, VT, Shift1, Shift2);
     }
   }
@@ -13464,13 +13465,13 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (ScaleShift >= 1 && ScaleShift < 4) {
       unsigned ShiftAmt = Log2_64(((MulAmt - 1) & (MulAmt - 2)));
       SDLoc DL(N);
-      SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                   DAG.getConstant(ShiftAmt, DL, VT));
-      SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                   DAG.getConstant(ScaleShift, DL, VT));
-      return DAG.getNode(
-          ISD::ADD, DL, VT, Shift1,
-          DAG.getNode(ISD::ADD, DL, VT, Shift2, N->getOperand(0)));
+      SDValue X = DAG.getFreeze(N->getOperand(0));
+      SDValue Shift1 =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
+      SDValue Shift2 =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ScaleShift, DL, VT));
+      return DAG.getNode(ISD::ADD, DL, VT, Shift1,
+                         DAG.getNode(ISD::ADD, DL, VT, Shift2, X));
     }
   }
 
