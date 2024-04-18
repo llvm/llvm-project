@@ -204,7 +204,7 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
 def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
   let summary = "Add the debug info";
   let description = [{
-    Add the foundation for emitting debug info that can be understood by llvm.
+    Emit debug info that can be understood by llvm.
   }];
   let constructor = "::fir::createAddDebugInfoPass()";
   let dependentDialects = [
