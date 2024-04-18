@@ -1112,10 +1112,7 @@ define float @fcmp_ult_neginf_implies_class_assert(float %arg) {
 define i1 @isKnownNeverInfinity_vector_reduce_maximum(<4 x double> %x) {
 ; CHECK-LABEL: define i1 @isKnownNeverInfinity_vector_reduce_maximum
 ; CHECK-SAME: (<4 x double> [[X:%.*]]) {
-; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf <4 x double> [[X]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.vector.reduce.fmaximum.v4f64(<4 x double> [[NINF_X]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ninf.x = fadd ninf <4 x double> %x, <double 1.0, double 1.0, double 1.0, double 1.0>
   %op = call double @llvm.vector.reduce.fmaximum.v4f64(<4 x double> %ninf.x)
@@ -1140,10 +1137,7 @@ define i1 @isKnownNeverInfinity_vector_reduce_maximum_fail(<4 x double> %x) {
 define i1 @isKnownNeverInfinity_vector_reduce_minimum(<4 x double> %x) {
 ; CHECK-LABEL: define i1 @isKnownNeverInfinity_vector_reduce_minimum
 ; CHECK-SAME: (<4 x double> [[X:%.*]]) {
-; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf <4 x double> [[X]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.vector.reduce.fminimum.v4f64(<4 x double> [[NINF_X]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ninf.x = fadd ninf <4 x double> %x, <double 1.0, double 1.0, double 1.0, double 1.0>
   %op = call double @llvm.vector.reduce.fminimum.v4f64(<4 x double> %ninf.x)
@@ -1168,10 +1162,7 @@ define i1 @isKnownNeverInfinity_vector_reduce_minimum_fail(<4 x double> %x) {
 define i1 @isKnownNeverInfinity_vector_reduce_fmax(<4 x double> %x) {
 ; CHECK-LABEL: define i1 @isKnownNeverInfinity_vector_reduce_fmax
 ; CHECK-SAME: (<4 x double> [[X:%.*]]) {
-; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf <4 x double> [[X]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.vector.reduce.fmax.v4f64(<4 x double> [[NINF_X]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ninf.x = fadd ninf <4 x double> %x, <double 1.0, double 1.0, double 1.0, double 1.0>
   %op = call double @llvm.vector.reduce.fmax.v4f64(<4 x double> %ninf.x)
@@ -1196,10 +1187,7 @@ define i1 @isKnownNeverInfinity_vector_reduce_fmax_fail(<4 x double> %x) {
 define i1 @isKnownNeverInfinity_vector_reduce_fmin(<4 x double> %x) {
 ; CHECK-LABEL: define i1 @isKnownNeverInfinity_vector_reduce_fmin
 ; CHECK-SAME: (<4 x double> [[X:%.*]]) {
-; CHECK-NEXT:    [[NINF_X:%.*]] = fadd ninf <4 x double> [[X]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[OP:%.*]] = call double @llvm.vector.reduce.fmin.v4f64(<4 x double> [[NINF_X]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[OP]], 0x7FF0000000000000
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ninf.x = fadd ninf <4 x double> %x, <double 1.0, double 1.0, double 1.0, double 1.0>
   %op = call double @llvm.vector.reduce.fmin.v4f64(<4 x double> %ninf.x)
