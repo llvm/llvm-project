@@ -4578,8 +4578,14 @@ public:
 
 /// Wrap a function effect's condition expression in another struct so
 /// that FunctionProtoType's TrailingObjects can treat it separately.
-struct FunctionEffectCondition {
-  const Expr *Cond = nullptr; // if null, unconditional
+class FunctionEffectCondition {
+  Expr *Cond = nullptr; // if null, unconditional
+
+public:
+  FunctionEffectCondition() = default;
+  FunctionEffectCondition(Expr *E) : Cond(E) {} // implicit OK
+
+  Expr *expr() const { return Cond; }
 
   bool operator==(const FunctionEffectCondition &RHS) const {
     return Cond == RHS.Cond;
@@ -4589,9 +4595,9 @@ struct FunctionEffectCondition {
 /// A FunctionEffect plus a potential boolean expression determining whether
 /// the effect is declared (e.g. nonblocking(expr)). Generally the condition
 /// expression when present, is dependent.
-struct CondFunctionEffect {
+struct FunctionEffectWithCondition {
   FunctionEffect Effect;
-  const Expr *Cond = nullptr; // if null, unconditional
+  FunctionEffectCondition Cond;
 };
 
 /// Support iteration in parallel through a pair of FunctionEffect and
@@ -4615,10 +4621,10 @@ public:
     return *this;
   }
 
-  CondFunctionEffect operator*() const {
+  FunctionEffectWithCondition operator*() const {
     const bool HasConds = !Outer.Conditions.empty();
-    return CondFunctionEffect{Outer.Effects[Idx],
-                              HasConds ? Outer.Conditions[Idx].Cond : nullptr};
+    return FunctionEffectWithCondition{Outer.Effects[Idx],
+                              HasConds ? Outer.Conditions[Idx] : FunctionEffectCondition()};
   }
 };
 
@@ -4696,14 +4702,17 @@ public:
   void dump(llvm::raw_ostream &OS) const;
 
   // Mutators
-  void insert(FunctionEffect Effect, const Expr *Cond);
+  void insert(FunctionEffect Effect, Expr *Cond);
   void insert(const FunctionEffectsRef &Set);
   void insertIgnoringConditions(const FunctionEffectsRef &Set);
+
+  void replaceCondition(unsigned Idx, Expr *Cond);
+  void erase(unsigned Idx);
 
   // Set operations
 
   using Differences =
-      SmallVector<std::pair<CondFunctionEffect, /*added=*/bool>>;
+      SmallVector<std::pair<FunctionEffectWithCondition, /*added=*/bool>>;
   /// Caller should short-circuit by checking for equality first.
   static Differences differences(const FunctionEffectsRef &Old,
                                  const FunctionEffectsRef &New);

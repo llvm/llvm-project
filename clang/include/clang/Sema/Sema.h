@@ -420,6 +420,14 @@ enum class TemplateDeductionResult {
   AlreadyDiagnosed
 };
 
+/// Used with attributes/effects with a boolean condition, e.g. `nonblocking`.
+enum class FunctionEffectMode {
+  None,     // effect is not present
+  False,    // effect(false)
+  True,     // effect(true)
+  Dependent // effect(expr) where expr is dependent
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final {
@@ -955,6 +963,12 @@ public:
 
   /// Potentially add a FunctionDecl or BlockDecl to DeclsWithEffectsToVerify.
   void maybeAddDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX);
+
+  /// Try to parse the conditional expression attached to an effect attribute 
+  /// (e.g. 'nonblocking'). (c.f. Sema::ActOnNoexceptSpec). If RequireConstexpr,
+  /// then this will fail if the expression is dependent.
+  ExprResult ActOnEffectExpression(Expr *CondExpr, FunctionEffectMode &Mode,
+    bool RequireConstexpr = false);
 
   // ----- function effects --- where ?????
 

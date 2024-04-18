@@ -10833,21 +10833,21 @@ def warn_func_effect_calls_objc : Warning<
 def note_func_effect_calls_objc : Note<
   "function cannot be inferred '%0' because it accesses an ObjC method or property">;
 
-def warn_func_effect_calls_disallowed_func : Warning<
+def warn_func_effect_calls_func_without_effect : Warning<
   "'%0' function must not call non-'%0' function '%1'">,
   InGroup<FunctionEffects>;
 
-def warn_func_effect_calls_disallowed_expr : Warning<
+def warn_func_effect_calls_expr_without_effect : Warning<
   "'%0' function must not call non-'%0' expression">,
   InGroup<FunctionEffects>;
 
-def note_func_effect_calls_disallowed_func : Note<
+def note_func_effect_calls_func_without_effect : Note<
   "function cannot be inferred '%0' because it calls non-'%0' function '%1'">;
 
 def note_func_effect_call_extern : Note<
   "function cannot be inferred '%0' because it has no definition in this translation unit">;
 
-def note_func_effect_call_not_inferrable : Note<
+def note_func_effect_call_disallows_inference : Note<
   "function does not permit inference of '%0'">;
 
 def note_func_effect_call_virtual : Note<

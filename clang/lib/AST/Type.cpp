@@ -3653,6 +3653,9 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
       ExtraBits.EffectsHaveConditions = true;
       auto *DestConds = getTrailingObjects<FunctionEffectCondition>();
       std::copy(SrcConds.begin(), SrcConds.end(), DestConds);
+
+      assert(isCanonicalUnqualified()); // TODO: because I don't understand this yet...
+      addDependence(TypeDependence::DependentInstantiation);
     }
   }
 }
@@ -5171,11 +5174,11 @@ void FunctionEffectsRef::Profile(llvm::FoldingSetNodeID &ID) const {
   for (unsigned Idx = 0, Count = Effects.size(); Idx != Count; ++Idx) {
     ID.AddInteger(llvm::to_underlying(Effects[Idx].kind()));
     if (HasConds)
-      ID.AddPointer(Conditions[Idx].Cond);
+      ID.AddPointer(Conditions[Idx].expr());
   }
 }
 
-void FunctionEffectSet::insert(FunctionEffect Effect, const Expr *Cond) {
+void FunctionEffectSet::insert(FunctionEffect Effect, Expr *Cond) {
   // lower_bound would be overkill
   unsigned Idx = 0;
   for (unsigned Count = Effects.size(); Idx != Count; ++Idx) {
@@ -5189,23 +5192,35 @@ void FunctionEffectSet::insert(FunctionEffect Effect, const Expr *Cond) {
       break;
   }
 
-  if (Cond != nullptr) {
+  if (Cond) {
     if (Conditions.empty() && !Effects.empty())
       Conditions.resize(Effects.size());
-    Conditions.insert(Conditions.begin() + Idx, FunctionEffectCondition{Cond});
+    Conditions.insert(Conditions.begin() + Idx, Cond);
   }
   Effects.insert(Effects.begin() + Idx, Effect);
 }
 
 void FunctionEffectSet::insert(const FunctionEffectsRef &Set) {
   for (const auto &Item : Set)
-    insert(Item.Effect, Item.Cond);
+    insert(Item.Effect, Item.Cond.expr());
 }
 
 void FunctionEffectSet::insertIgnoringConditions(
     const FunctionEffectsRef &Set) {
   for (const auto &Item : Set)
     insert(Item.Effect, nullptr);
+}
+
+void FunctionEffectSet::replaceCondition(unsigned Idx, Expr *Cond) {
+  assert(Idx < Conditions.size());
+  Conditions[Idx] = FunctionEffectCondition(Cond);
+}
+
+void FunctionEffectSet::erase(unsigned Idx) {
+  assert(Idx < Effects.size());
+  Effects.erase(Effects.begin() + Idx);
+  if (!Conditions.empty())
+    Conditions.erase(Conditions.begin() + Idx);
 }
 
 FunctionEffectSet FunctionEffectSet::getUnion(FunctionEffectsRef LHS,
@@ -5230,15 +5245,15 @@ FunctionEffectSet::differences(const FunctionEffectsRef &Old,
   FunctionEffectsRef::iterator PNew = New.begin();
   FunctionEffectsRef::iterator NewEnd = New.end();
 
-  auto compare = [](const CondFunctionEffect &LHS,
-                    const CondFunctionEffect &RHS) {
+  auto compare = [](const FunctionEffectWithCondition &LHS,
+                    const FunctionEffectWithCondition &RHS) {
     if (LHS.Effect < RHS.Effect)
       return -1;
     if (LHS.Effect > RHS.Effect)
       return 1;
-    if (LHS.Cond < RHS.Cond)
+    if (LHS.Cond.expr() < RHS.Cond.expr())
       return -1;
-    if (LHS.Cond > RHS.Cond)
+    if (RHS.Cond.expr() < LHS.Cond.expr())
       return 1;
     return 0;
   };
@@ -5292,7 +5307,7 @@ void FunctionEffectSet::insertIgnoringConditions(
     FunctionEffectsRef Arr) {
   // TODO: For large RHS sets, use set_union or a custom insert-in-place
   for (const auto &CFE : Arr) {
-    insert(CondFunctionEffect(CFE.effect().kind(), nullptr));
+    insert(FunctionEffectWithCondition(CFE.effect().kind(), nullptr));
   }
 }
 #endif
@@ -5306,7 +5321,11 @@ LLVM_DUMP_METHOD void FunctionEffectsRef::dump(llvm::raw_ostream &OS) const {
     else
       First = false;
     OS << CFE.Effect.name();
-    // TODO: Condition
+    if (Expr * E = CFE.Cond.expr()) {
+      OS << '(';
+      E->dump();
+      OS << ')';
+    }
   }
   OS << "}";
 }

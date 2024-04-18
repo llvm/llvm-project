@@ -2385,7 +2385,7 @@ public:
 // =============================================================================
 
 // Temporary feature enablement
-#define FX_ANALYZER_ENABLED 1
+#define FX_ANALYZER_ENABLED 0
 
 #if FX_ANALYZER_ENABLED
 
@@ -2410,10 +2410,10 @@ enum class DiagnosticID : uint8_t {
   AccessesThreadLocal,
 
   // These only apply to callees, where the analysis stops at the Decl
-  DeclWithoutConstraintOrInference,
+  DeclDisallowsInference,
 
-  CallsUnsafeDecl,
-  CallsDisallowedExpr,
+  CallsDeclWithoutEffect,
+  CallsExprWithoutEffect,
 };
 
 struct Diagnostic {
@@ -2469,7 +2469,7 @@ public:
 
   void insert(const FunctionEffect &Effect);
   void insert(const EffectSet &Set);
-  void insertIgnoringConditions(ArrayRef<CondFunctionEffect> Arr);
+  void insertIgnoringConditions(ArrayRef<FunctionEffectWithCondition> Arr);
 
   void dump(llvm::raw_ostream &OS) const;
 
@@ -2528,6 +2528,9 @@ public:
   void insert(const FunctionEffect &Effect);
   void insert(const EffectSet &Set);
   void insertIgnoringConditions(const FunctionEffectsRef &FX);
+  bool contains(const FunctionEffect &E) const {
+    return std::find(begin(), end(), E) != end();
+  }
 
   void dump(llvm::raw_ostream &OS) const;
 
@@ -2579,6 +2582,31 @@ EffectSet EffectSet::difference(ArrayRef<FunctionEffect> LHS,
   return Result;
 }
 
+// Represent the declared effects, and absent effects (e.g. nonblocking(false)).
+// Centralize the resolution of computed effects.
+struct CondEffectSet {
+  EffectSet EffectsPresent;
+  EffectSet EffectsExplicitlyAbsent;
+
+  CondEffectSet() = default;
+
+  CondEffectSet(Sema &SemaRef, FunctionEffectsRef FX) {
+    for (const auto Item : FX) {
+      if (Expr *Cond = Item.Cond) {
+        FunctionEffectMode Mode = FunctionEffectMode::None;
+        ExprResult ER = SemaRef.ActOnEffectExpression(Cond, Mode, /*RequireConstexpr=*/true);
+        if (ER.isInvalid() || Mode == FunctionEffectMode::Dependent)
+          continue;
+        if (Mode == FunctionEffectMode::False) {
+          EffectsExplicitlyAbsent.insert(Item.Effect);
+          continue;
+        }
+      }
+      EffectsPresent.insert(Item.Effect);
+    }
+  }
+};
+
 // Transitory, more extended information about a callable, which can be a
 // function, block, function pointer...
 struct CallableInfo {
@@ -2587,13 +2615,13 @@ struct CallableInfo {
   mutable std::optional<std::string>
       MaybeName; // mutable because built on demand in const method
   SpecialFuncType FuncType = SpecialFuncType::None;
-  EffectSet Effects;
+  CondEffectSet Effects;
   CallType CType = CallType::Unknown;
 
-  CallableInfo(const Decl &CD, SpecialFuncType FT = SpecialFuncType::None)
+  CallableInfo(Sema &SemaRef, const Decl &CD, SpecialFuncType FT = SpecialFuncType::None)
       : CDecl(&CD), FuncType(FT) {
     // llvm::errs() << "CallableInfo " << name() << "\n";
-    FunctionEffectsRef FX;
+    FunctionEffectsRef FXRef;
 
     if (auto *FD = dyn_cast<FunctionDecl>(CDecl)) {
       // Use the function's definition, if any.
@@ -2606,15 +2634,15 @@ struct CallableInfo {
           CType = CallType::Virtual;
         }
       }
-      FX = FD->getFunctionEffects();
+      FXRef = FD->getFunctionEffects();
     } else if (auto *BD = dyn_cast<BlockDecl>(CDecl)) {
       CType = CallType::Block;
-      FX = BD->getFunctionEffects();
+      FXRef = BD->getFunctionEffects();
     } else if (auto *VD = dyn_cast<ValueDecl>(CDecl)) {
       // ValueDecl is function, enum, or variable, so just look at its type.
-      FX = FunctionEffectsRef::get(VD->getType());
+      FXRef = FunctionEffectsRef::get(VD->getType());
     }
-    Effects.insertIgnoringConditions(FX);
+    Effects = CondEffectSet(SemaRef, FXRef);
   }
 
   bool isDirectCall() const {
@@ -2749,13 +2777,13 @@ public:
   PendingFunctionAnalysis(
       Sema &Sem, const CallableInfo &CInfo,
       ArrayRef<FunctionEffect> AllInferrableEffectsToVerify) {
-    DeclaredVerifiableEffects = CInfo.Effects;
+    DeclaredVerifiableEffects = CInfo.Effects.EffectsPresent;
 
     // Check for effects we are not allowed to infer
     EffectSet FX;
 
     for (const auto &effect : AllInferrableEffectsToVerify) {
-      if (effect.canInferOnFunction(*CInfo.CDecl)) {
+      if (effect.canInferOnFunction(*CInfo.CDecl) && !CInfo.Effects.EffectsExplicitlyAbsent.contains(effect)) {
         FX.insert(effect);
       } else {
         // Add a diagnostic for this effect if a caller were to
@@ -2763,7 +2791,7 @@ public:
         auto &diag =
             InferrableEffectToFirstDiagnostic.getOrInsertDefault(effect);
         diag =
-            Diagnostic(effect, DiagnosticID::DeclWithoutConstraintOrInference,
+            Diagnostic(effect, DiagnosticID::DeclDisallowsInference,
                        CInfo.CDecl->getLocation());
       }
     }
@@ -2813,8 +2841,7 @@ public:
     return DiagnosticsForExplicitFX.get();
   }
 
-  // If Sema is supplied, prints names of unverified direct calls
-  void dump(llvm::raw_ostream &OS, Sema *SemPtr = nullptr) const {
+  void dump(Sema &SemaRef, llvm::raw_ostream &OS) const {
     OS << "Pending: Declared ";
     DeclaredVerifiableEffects.dump(OS);
     OS << ", "
@@ -2823,11 +2850,11 @@ public:
     OS << " Infer ";
     FXToInfer.dump(OS);
     OS << ", " << InferrableEffectToFirstDiagnostic.size() << " diags";
-    if (SemPtr && UnverifiedDirectCalls) {
+    if (UnverifiedDirectCalls) {
       OS << "; Calls: ";
       for (const auto &Call : *UnverifiedDirectCalls) {
-        CallableInfo CI(*Call.callee());
-        OS << " " << CI.name(*SemPtr);
+        CallableInfo CI(SemaRef, *Call.callee());
+        OS << " " << CI.name(SemaRef);
       }
     }
     OS << "\n";
@@ -2888,7 +2915,7 @@ const Decl *CanonicalFunctionDecl(const Decl *D) {
 
 // ==========
 class Analyzer {
-  constexpr static int DebugLogLevel = 0;
+  constexpr static int DebugLogLevel = 3;
   // --
   Sema &Sem;
 
@@ -2931,12 +2958,12 @@ class Analyzer {
       return nullptr;
     }
 
-    void dump(Sema &S, llvm::raw_ostream &OS) {
+    void dump(Sema &SemaRef, llvm::raw_ostream &OS) {
       OS << "\nAnalysisMap:\n";
       for (const auto &item : *this) {
-        CallableInfo CI(*item.first);
+        CallableInfo CI(SemaRef, *item.first);
         const auto AP = item.second;
-        OS << item.first << " " << CI.name(S) << " : ";
+        OS << item.first << " " << CI.name(SemaRef) << " : ";
         if (AP.isNull()) {
           OS << "null\n";
         } else if (isa<CompleteFunctionAnalysis *>(AP)) {
@@ -2946,7 +2973,7 @@ class Analyzer {
         } else if (isa<PendingFunctionAnalysis *>(AP)) {
           auto *PFA = AP.get<PendingFunctionAnalysis *>();
           OS << PFA << " ";
-          PFA->dump(OS);
+          PFA->dump(SemaRef, OS);
         } else
           llvm_unreachable("never");
       }
@@ -2965,7 +2992,7 @@ public:
     // Gather all of the effects to be verified to see what operations need to
     // be checked, and to see which ones are inferrable.
     {
-      for (const CondFunctionEffect &CFE : Sem.AllEffectsToVerify) {
+      for (const FunctionEffectWithCondition &CFE : Sem.AllEffectsToVerify) {
         const FunctionEffect &Effect = CFE.Effect;
         const auto Flags = Effect.flags();
         if (Flags & FunctionEffect::FE_InferrableOnCallees) {
@@ -3036,11 +3063,11 @@ private:
   // Verify a single Decl. Return the pending structure if that was the result,
   // else null. This method must not recurse.
   PendingFunctionAnalysis *verifyDecl(const Decl *D) {
-    CallableInfo CInfo(*D);
+    CallableInfo CInfo(Sem, *D);
 
     // If any of the Decl's declared effects forbid throwing (e.g. nonblocking)
     // then the function should also be declared noexcept.
-    for (const auto &Effect : CInfo.Effects) {
+    for (const auto &Effect : CInfo.Effects.EffectsPresent) {
       if (!(Effect.flags() & FunctionEffect::FE_ExcludeThrow))
         continue;
 
@@ -3070,7 +3097,7 @@ private:
 
     if constexpr (DebugLogLevel > 0) {
       llvm::outs() << "\nVerifying " << CInfo.name(Sem) << " ";
-      FAnalysis.dump(llvm::outs());
+      FAnalysis.dump(Sem, llvm::outs());
     }
 
     FunctionBodyASTVisitor Visitor(*this, FAnalysis, CInfo);
@@ -3098,7 +3125,7 @@ private:
       emitDiagnostics(*Diags, CInfo, Sem);
     }
     auto *CompletePtr = new CompleteFunctionAnalysis(
-        Sem.getASTContext(), Pending, CInfo.Effects,
+        Sem.getASTContext(), Pending, CInfo.Effects.EffectsPresent,
         AllInferrableEffectsToVerify);
     DeclAnalysis[CInfo.CDecl] = CompletePtr;
     if constexpr (DebugLogLevel > 0) {
@@ -3111,17 +3138,17 @@ private:
   // not. Generally replicates FunctionBodyASTVisitor::followCall() but without
   // the possibility of inference.
   void finishPendingAnalysis(const Decl *D, PendingFunctionAnalysis *Pending) {
-    CallableInfo Caller(*D);
+    CallableInfo Caller(Sem, *D);
     if constexpr (DebugLogLevel > 0) {
       llvm::outs() << "finishPendingAnalysis for " << Caller.name(Sem) << " : ";
-      Pending->dump(llvm::outs(), &Sem);
+      Pending->dump(Sem, llvm::outs());
       llvm::outs() << "\n";
     }
     for (const auto &Call : Pending->unverifiedCalls()) {
       if (Call.recursed())
         continue;
 
-      CallableInfo Callee(*Call.callee());
+      CallableInfo Callee(Sem, *Call.callee());
       followCall(Caller, *Pending, Callee, Call.CallLoc,
                  /*AssertNoFurtherInference=*/true);
     }
@@ -3137,7 +3164,7 @@ private:
     const bool DirectCall = Callee.isDirectCall();
 
     // These will be its declared effects.
-    EffectSet CalleeEffects = Callee.Effects;
+    EffectSet CalleeEffects = Callee.Effects.EffectsPresent;
 
     bool IsInferencePossible = DirectCall;
 
@@ -3180,7 +3207,7 @@ private:
           if (Callee.FuncType == SpecialFuncType::None) {
             PFA.checkAddDiagnostic(
                 Inferring,
-                {Effect, DiagnosticID::CallsUnsafeDecl, CallLoc, Callee.CDecl});
+                {Effect, DiagnosticID::CallsDeclWithoutEffect, CallLoc, Callee.CDecl});
           } else {
             PFA.checkAddDiagnostic(
                 Inferring, {Effect, DiagnosticID::AllocatesMemory, CallLoc});
@@ -3226,7 +3253,7 @@ private:
       StringRef effectName = Diag.Effect.name();
       switch (Diag.ID) {
       case DiagnosticID::None:
-      case DiagnosticID::DeclWithoutConstraintOrInference: // shouldn't happen
+      case DiagnosticID::DeclDisallowsInference: // shouldn't happen
                                                            // here
         llvm_unreachable("Unexpected diagnostic kind");
         break;
@@ -3253,17 +3280,17 @@ private:
         S.Diag(Diag.Loc, diag::warn_func_effect_calls_objc) << effectName;
         checkAddTemplateNote(CInfo.CDecl);
         break;
-      case DiagnosticID::CallsDisallowedExpr:
-        S.Diag(Diag.Loc, diag::warn_func_effect_calls_disallowed_expr)
+      case DiagnosticID::CallsExprWithoutEffect:
+        S.Diag(Diag.Loc, diag::warn_func_effect_calls_expr_without_effect)
             << effectName;
         checkAddTemplateNote(CInfo.CDecl);
         break;
 
-      case DiagnosticID::CallsUnsafeDecl: {
-        CallableInfo CalleeInfo{*Diag.Callee};
+      case DiagnosticID::CallsDeclWithoutEffect: {
+        CallableInfo CalleeInfo(S, *Diag.Callee);
         auto CalleeName = CalleeInfo.name(S);
 
-        S.Diag(Diag.Loc, diag::warn_func_effect_calls_disallowed_func)
+        S.Diag(Diag.Loc, diag::warn_func_effect_calls_func_without_effect)
             << effectName << CalleeName;
         checkAddTemplateNote(CInfo.CDecl);
 
@@ -3284,6 +3311,9 @@ private:
               S.Diag(Callee->getLocation(),
                      diag::note_func_effect_call_func_ptr)
                   << effectName;
+            } else if (CalleeInfo.Effects.EffectsExplicitlyAbsent.contains(Diag.Effect)) {
+              S.Diag(Callee->getLocation(), diag::note_func_effect_call_disallows_inference)
+                << effectName;
             } else {
               S.Diag(Callee->getLocation(), diag::note_func_effect_call_extern)
                   << effectName;
@@ -3300,11 +3330,11 @@ private:
           case DiagnosticID::None:
             llvm_unreachable("Unexpected diagnostic kind");
             break;
-          case DiagnosticID::DeclWithoutConstraintOrInference:
-            S.Diag(Diag2.Loc, diag::note_func_effect_call_not_inferrable)
+          case DiagnosticID::DeclDisallowsInference:
+            S.Diag(Diag2.Loc, diag::note_func_effect_call_disallows_inference)
                 << effectName;
             break;
-          case DiagnosticID::CallsDisallowedExpr:
+          case DiagnosticID::CallsExprWithoutEffect:
             S.Diag(Diag2.Loc, diag::note_func_effect_call_func_ptr)
                 << effectName;
             break;
@@ -3327,9 +3357,9 @@ private:
           case DiagnosticID::CallsObjC:
             S.Diag(Diag2.Loc, diag::note_func_effect_calls_objc) << effectName;
             break;
-          case DiagnosticID::CallsUnsafeDecl:
-            MaybeNextCallee.emplace(*Diag2.Callee);
-            S.Diag(Diag2.Loc, diag::note_func_effect_calls_disallowed_func)
+          case DiagnosticID::CallsDeclWithoutEffect:
+            MaybeNextCallee.emplace(S, *Diag2.Callee);
+            S.Diag(Diag2.Loc, diag::note_func_effect_calls_func_without_effect)
                 << effectName << MaybeNextCallee->name(S);
             break;
           }
@@ -3444,15 +3474,16 @@ private:
       auto *FPT =
           CalleeType->getAs<FunctionProtoType>(); // null if FunctionType
       EffectSet CalleeFX;
-      if (FPT)
-        CalleeFX.insertIgnoringConditions(FPT->getFunctionEffects());
-      static_assert(sizeof(FunctionEffect) == 1);
+      if (FPT) {
+        CondEffectSet CFE(Outer.Sem, FPT->getFunctionEffects());
+        CalleeFX.insert(CFE.EffectsPresent);
+      }
 
       auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {
         if (FPT == nullptr || Effect.shouldDiagnoseFunctionCall(
                                   /*direct=*/false, CalleeFX)) {
           addDiagnosticInner(Inferring, Effect,
-                             DiagnosticID::CallsDisallowedExpr,
+                             DiagnosticID::CallsExprWithoutEffect,
                              Call->getBeginLoc());
         }
       };
@@ -3495,7 +3526,7 @@ private:
       if (Ty->isRecordType()) {
         if (const CXXRecordDecl *Class = Ty->getAsCXXRecordDecl()) {
           if (auto *Dtor = Class->getDestructor()) {
-            CallableInfo CI{*Dtor};
+            CallableInfo CI(Outer.Sem, *Dtor);
             followCall(CI, Dtor->getLocation());
           }
         }
@@ -3541,7 +3572,7 @@ private:
 
       Expr *CalleeExpr = Call->getCallee();
       if (const Decl *Callee = CalleeExpr->getReferencedDeclOfCallee()) {
-        CallableInfo CI(*Callee);
+        CallableInfo CI(Outer.Sem, *Callee);
         followCall(CI, Call->getBeginLoc());
         return Proceed;
       }
@@ -3587,7 +3618,7 @@ private:
           if (const auto *CxxRec =
                   dyn_cast<CXXRecordDecl>(ClsType->getDecl())) {
             if (const auto *Dtor = CxxRec->getDestructor()) {
-              CallableInfo CI(*Dtor);
+              CallableInfo CI(Outer.Sem, *Dtor);
               followCall(CI, Var->getLocation());
             }
           }
@@ -3600,7 +3631,7 @@ private:
       // BUG? It seems incorrect that RecursiveASTVisitor does not
       // visit the call to operator new.
       if (auto *FD = New->getOperatorNew()) {
-        CallableInfo CI(*FD, SpecialFuncType::OperatorNew);
+        CallableInfo CI(Outer.Sem, *FD, SpecialFuncType::OperatorNew);
         followCall(CI, New->getBeginLoc());
       }
 
@@ -3616,7 +3647,7 @@ private:
       // BUG? It seems incorrect that RecursiveASTVisitor does not
       // visit the call to operator delete.
       if (auto *FD = Delete->getOperatorDelete()) {
-        CallableInfo CI(*FD, SpecialFuncType::OperatorDelete);
+        CallableInfo CI(Outer.Sem, *FD, SpecialFuncType::OperatorDelete);
         followCall(CI, Delete->getBeginLoc());
       }
 
@@ -3636,7 +3667,7 @@ private:
       // BUG? It seems incorrect that RecursiveASTVisitor does not
       // visit the call to the constructor.
       const CXXConstructorDecl *Ctor = Construct->getConstructor();
-      CallableInfo CI(*Ctor);
+      CallableInfo CI(Outer.Sem, *Ctor);
       followCall(CI, Construct->getLocation());
 
       return Proceed;
