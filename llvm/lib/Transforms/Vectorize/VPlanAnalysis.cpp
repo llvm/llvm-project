@@ -35,6 +35,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
+  case Instruction::Or:
   case Instruction::ICmp:
   case VPInstruction::FirstOrderRecurrenceSplice: {
     Type *ResTy = inferScalarType(R->getOperand(0));
@@ -44,8 +45,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
+  case VPInstruction::Not:
   case VPInstruction::PtrAdd:
-    // Return the type based on the pointer argument (i.e. first operand).
+    // Return the type based on the pointer/not argument (i.e. first operand).
     return inferScalarType(R->getOperand(0));
   default:
     break;
