@@ -196,6 +196,16 @@ public:
                                          Expr *IntExpr, SourceLocation EndLoc);
 };
 
+class OpenACCVectorLengthClause : public OpenACCClauseWithSingleIntExpr {
+  OpenACCVectorLengthClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                            Expr *IntExpr, SourceLocation EndLoc);
+
+public:
+  static OpenACCVectorLengthClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         Expr *IntExpr, SourceLocation EndLoc);
+};
+
 template <class Impl> class OpenACCClauseVisitor {
   Impl &getDerived() { return static_cast<Impl &>(*this); }
 

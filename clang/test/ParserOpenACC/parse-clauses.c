@@ -893,11 +893,9 @@ void IntExprParsing() {
 #pragma acc parallel vector_length(5, 4)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length(5)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length(returns_int())
   {}
 

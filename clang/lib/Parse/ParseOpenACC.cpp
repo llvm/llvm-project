@@ -960,7 +960,8 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
 
       // TODO OpenACC: as we implement the 'rest' of the above, this 'if' should
       // be removed leaving just the 'setIntExprDetails'.
-      if (ClauseKind == OpenACCClauseKind::NumWorkers)
+      if (ClauseKind == OpenACCClauseKind::NumWorkers ||
+          ClauseKind == OpenACCClauseKind::VectorLength)
         ParsedClause.setIntExprDetails(IntExpr.get());
 
       break;
