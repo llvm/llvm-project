@@ -141,13 +141,14 @@ def LinalgDetensorizePass : InterfacePass<"linalg-detensorize", "FunctionOpInter
   ];
 }
 
-def LinalgMatmulToMatmulTransposeAPass
-    : Pass<"linalg-matmul-to-matmul-transpose-a"> {
-  let summary = "Converts `linalg.matmul` to `linalg.matmul_transpose_a`.";
+def LinalgTransposeMatmulPass : Pass<"linalg-transpose-matmul"> {
+  let summary = "Converts `linalg.matmul` to `linalg.matmul_transpose_a` "
+                "(default) or `linalg.matmul_transpose_b`";
   let dependentDialects = ["linalg::LinalgDialect"];
-  let description = [{
-    Transposes the A matrix of a `linalg.matmul` for contiguous access.
-  }];
+  let options = [
+    Option<"transposeA", "transpose-a", "bool", /*default=*/"true",
+           "If true transpose A (default), otherwise transpose B.">
+  ];
 }
 
 #endif // MLIR_DIALECT_LINALG_PASSES
