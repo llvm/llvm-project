@@ -9293,9 +9293,13 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
 
     // ---------- Step 3 llvm-link internalize as-needed -----------
     ArgStringList LastLinkArgs;
+    // Find all directories pointed to by the environment variable
+    // LIBRARY_PATH.
+    ArgStringList EnvLibraryPaths;
+    addDirectoryList(Args, EnvLibraryPaths, "", "LIBRARY_PATH");
     auto LinkOutputFileName = amdgpu::dlr::getLinkCommandArgs(
         C, Args, LastLinkArgs, TC, TheTriple, TargetID, OutputFilePrefix,
-        PreLinkFileName, RocmInstallation);
+        PreLinkFileName, RocmInstallation, EnvLibraryPaths);
 
     const char *LinkExec =
         Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));

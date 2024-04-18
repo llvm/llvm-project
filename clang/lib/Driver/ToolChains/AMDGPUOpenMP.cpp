@@ -210,7 +210,8 @@ const char *amdgpu::dlr::getLinkCommandArgs(
     llvm::opt::ArgStringList &LastLinkArgs, const ToolChain &TC,
     const llvm::Triple &Triple, llvm::StringRef TargetID,
     llvm::StringRef OutputFilePrefix, const char *InputFileName,
-    const RocmInstallationDetector &RocmInstallation) {
+    const RocmInstallationDetector &RocmInstallation,
+    llvm::opt::ArgStringList &EnvironmentLibraryPaths) {
   LastLinkArgs.push_back(Args.MakeArgString(InputFileName));
 
   // Get the environment variable ROCM_LINK_ARGS and add to llvm-link.
@@ -263,8 +264,23 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   if (LibSuffix != "lib" || llvm::sys::fs::exists(Path)) {
     BCLibs.push_back(Args.MakeArgString(Path));
   } else {
-    std::string RtDir = "/../runtimes/runtimes-bins/offload";
-    BCLibs.push_back(Args.MakeArgString(libpath + RtDir + LibDeviceName));
+    // Check if the device library can be found in
+    // one of the LIBRARY_PATH directories.
+    bool EnvOmpLibDeviceFound = false;
+    for (auto &EnvLibraryPath : EnvironmentLibraryPaths) {
+      std::string EnvOmpLibDevice = EnvLibraryPath + LibDeviceName;
+      if (llvm::sys::fs::exists(EnvOmpLibDevice)) {
+        EnvOmpLibDeviceFound = true;
+        BCLibs.push_back(EnvOmpLibDevice);
+        break;
+      }
+    }
+    // If LIBRARY_PATH doesn't point to the device library,
+    // then use the default one.
+    if (!EnvOmpLibDeviceFound) {
+      std::string RtDir = "/../runtimes/runtimes-bins/offload";
+      BCLibs.push_back(Args.MakeArgString(libpath + RtDir + LibDeviceName));
+    }
   }
 
   if (!AsanRTL.empty()) {

@@ -59,7 +59,8 @@ getLinkCommandArgs(Compilation &C, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &LastLinkArgs, const ToolChain &TC,
                    const llvm::Triple &Triple, llvm::StringRef TargetID,
                    llvm::StringRef OutputFilePrefix, const char *InputFileName,
-                   const RocmInstallationDetector &RocmInstallation);
+                   const RocmInstallationDetector &RocmInstallation,
+                   llvm::opt::ArgStringList &EnvironmentLibraryPaths);
 
 const char *getOptCommandArgs(Compilation &C, const llvm::opt::ArgList &Args,
                               llvm::opt::ArgStringList &OptArgs,
