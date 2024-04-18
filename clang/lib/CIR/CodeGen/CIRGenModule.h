@@ -640,7 +640,9 @@ public:
                                       const clang::FunctionDecl *FD);
 
   mlir::cir::FuncOp createRuntimeFunction(mlir::cir::FuncType Ty,
-                                          StringRef Name);
+                                          StringRef Name, mlir::ArrayAttr = {},
+                                          bool Local = false,
+                                          bool AssumeConvergent = false);
 
   /// Emit type info if type of an expression is a variably modified
   /// type. Also emit proper debug info for cast types.
