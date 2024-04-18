@@ -14,8 +14,7 @@ def err_cas_cannot_be_initialized : Error<
 def err_cas_cannot_parse_root_id : Error<
   "CAS cannot parse root-id '%0' specified by -fcas-fs">, DefaultFatal;
 def err_cas_filesystem_cannot_be_initialized : Error<
-  "CAS filesystem cannot be initialized from root-id '%0' specified by"
-  " -fcas-fs">, DefaultFatal;
+  "CAS filesystem cannot be initialized from root-id '%0': %1">, DefaultFatal;
 def err_cas_filesystem_cannot_set_working_directory : Error<
   "CAS filesystem cannot set working directory to '%0' specified by"
   " -fcas-fs-working-directory">, DefaultFatal;

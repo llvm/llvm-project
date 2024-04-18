@@ -941,7 +941,6 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
 
   // Adjust the invocation.
   auto &Frontend = Invocation->getFrontendOpts();
-  Frontend.ProgramAction = frontend::RunPreprocessorOnly;
   Frontend.OutputFile = "/dev/null";
   Frontend.DisableFree = false;
 
