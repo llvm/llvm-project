@@ -227,11 +227,24 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
 
 // Cratels:  build 目录下会生成一个 main 方法。在该方法中调用 clang_main
 // 这里是所有程序的入口
+
+// int clang_main(int argc, char **, const llvm::ToolContext &);
+
+// int main(int argc, char **argv) { // Cratels: 程序入口
+//   llvm::InitLLVM X(argc, argv); // Cratels: 初始化 LLVM
+//   return clang_main(argc, argv, {argv[0], nullptr, false});
+// }
+
+// Cratels: clang 驱动器调用的第一个工具是 clang
+// 本身，给以参数-cc1，关闭编译器驱动器模式而开启编译器模式。
+
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   noteBottomOfStack();
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
                         " and include the crash backtrace, preprocessed "
                         "source, and associated run script.\n");
+
+  // Cratels: 自定义 vector 来存放编译参数
   SmallVector<const char *, 256> Args(Argv, Argv + Argc);
 
   if (llvm::sys::Process::FixupStandardFileDescriptors())
