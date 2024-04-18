@@ -1261,7 +1261,7 @@ void PyOperationBase::walk(
     std::string exceptionWhat;
     py::object exceptionType;
   };
-  UserData userData{.callback = callback};
+  UserData userData{callback, false, {}, {}};
   MlirOperationWalkCallback walkCallback = [](MlirOperation op,
                                               void *userData) {
     UserData *calleeUserData = static_cast<UserData *>(userData);
