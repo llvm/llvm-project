@@ -228,6 +228,10 @@ public:
   const CIRGenFunctionInfo &
   arrangeFunctionDeclaration(const clang::FunctionDecl *FD);
 
+  const CIRGenFunctionInfo &
+  arrangeBuiltinFunctionCall(clang::QualType resultType,
+                             const CallArgList &args);
+
   const CIRGenFunctionInfo &arrangeCXXConstructorCall(
       const CallArgList &Args, const clang::CXXConstructorDecl *D,
       clang::CXXCtorType CtorKind, unsigned ExtraPrefixArgs,

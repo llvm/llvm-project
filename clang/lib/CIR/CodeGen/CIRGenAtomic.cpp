@@ -524,6 +524,14 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   builder.createStore(loc, Result, Dest);
 }
 
+static RValue buildAtomicLibcall(CIRGenFunction &CGF, StringRef fnName,
+                                 QualType resultType, CallArgList &args) {
+  [[maybe_unused]] const CIRGenFunctionInfo &fnInfo =
+      CGF.CGM.getTypes().arrangeBuiltinFunctionCall(resultType, args);
+  [[maybe_unused]] auto fnTy = CGF.CGM.getTypes().GetFunctionType(fnInfo);
+  llvm_unreachable("NYI");
+}
+
 static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *Expr, Address Dest,
                           Address Ptr, Address Val1, Address Val2,
                           mlir::Value IsWeak, mlir::Value FailureOrder,
@@ -735,130 +743,39 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
       Dest = Atomics.castToAtomicIntPointer(Dest);
   }
 
-  // Use a library call.  See: http://gcc.gnu.org/wiki/Atomic/GCCMM/LIbrary .
+  // For atomics larger than 16 bytes, emit a libcall from the frontend. This
+  // avoids the overhead of dealing with excessively-large value types in IR.
+  // Non-power-of-2 values also lower to libcall here, as they are not currently
+  // permitted in IR instructions (although that constraint could be relaxed in
+  // the future). For other cases where a libcall is required on a given
+  // platform, we let the backend handle it (this includes handling for all of
+  // the size-optimized libcall variants, which are only valid up to 16 bytes.)
+  //
+  // See: https://llvm.org/docs/Atomics.html#libcalls-atomic
   if (UseLibcall) {
-    bool UseOptimizedLibcall = false;
-    switch (E->getOp()) {
-    case AtomicExpr::AO__c11_atomic_init:
-    case AtomicExpr::AO__opencl_atomic_init:
-      llvm_unreachable("Already handled above with EmitAtomicInit!");
-
-    case AtomicExpr::AO__atomic_fetch_add:
-    case AtomicExpr::AO__atomic_fetch_and:
-    case AtomicExpr::AO__atomic_fetch_max:
-    case AtomicExpr::AO__atomic_fetch_min:
-    case AtomicExpr::AO__atomic_fetch_nand:
-    case AtomicExpr::AO__atomic_fetch_or:
-    case AtomicExpr::AO__atomic_fetch_sub:
-    case AtomicExpr::AO__atomic_fetch_xor:
-    case AtomicExpr::AO__atomic_add_fetch:
-    case AtomicExpr::AO__atomic_and_fetch:
-    case AtomicExpr::AO__atomic_max_fetch:
-    case AtomicExpr::AO__atomic_min_fetch:
-    case AtomicExpr::AO__atomic_nand_fetch:
-    case AtomicExpr::AO__atomic_or_fetch:
-    case AtomicExpr::AO__atomic_sub_fetch:
-    case AtomicExpr::AO__atomic_xor_fetch:
-    case AtomicExpr::AO__c11_atomic_fetch_add:
-    case AtomicExpr::AO__c11_atomic_fetch_and:
-    case AtomicExpr::AO__c11_atomic_fetch_max:
-    case AtomicExpr::AO__c11_atomic_fetch_min:
-    case AtomicExpr::AO__c11_atomic_fetch_nand:
-    case AtomicExpr::AO__c11_atomic_fetch_or:
-    case AtomicExpr::AO__c11_atomic_fetch_sub:
-    case AtomicExpr::AO__c11_atomic_fetch_xor:
-    case AtomicExpr::AO__hip_atomic_fetch_add:
-    case AtomicExpr::AO__hip_atomic_fetch_and:
-    case AtomicExpr::AO__hip_atomic_fetch_max:
-    case AtomicExpr::AO__hip_atomic_fetch_min:
-    case AtomicExpr::AO__hip_atomic_fetch_or:
-    case AtomicExpr::AO__hip_atomic_fetch_sub:
-    case AtomicExpr::AO__hip_atomic_fetch_xor:
-    case AtomicExpr::AO__opencl_atomic_fetch_add:
-    case AtomicExpr::AO__opencl_atomic_fetch_and:
-    case AtomicExpr::AO__opencl_atomic_fetch_max:
-    case AtomicExpr::AO__opencl_atomic_fetch_min:
-    case AtomicExpr::AO__opencl_atomic_fetch_or:
-    case AtomicExpr::AO__opencl_atomic_fetch_sub:
-    case AtomicExpr::AO__opencl_atomic_fetch_xor:
-    case AtomicExpr::AO__scoped_atomic_fetch_add:
-    case AtomicExpr::AO__scoped_atomic_fetch_and:
-    case AtomicExpr::AO__scoped_atomic_fetch_max:
-    case AtomicExpr::AO__scoped_atomic_fetch_min:
-    case AtomicExpr::AO__scoped_atomic_fetch_nand:
-    case AtomicExpr::AO__scoped_atomic_fetch_or:
-    case AtomicExpr::AO__scoped_atomic_fetch_sub:
-    case AtomicExpr::AO__scoped_atomic_fetch_xor:
-    case AtomicExpr::AO__scoped_atomic_add_fetch:
-    case AtomicExpr::AO__scoped_atomic_and_fetch:
-    case AtomicExpr::AO__scoped_atomic_max_fetch:
-    case AtomicExpr::AO__scoped_atomic_min_fetch:
-    case AtomicExpr::AO__scoped_atomic_nand_fetch:
-    case AtomicExpr::AO__scoped_atomic_or_fetch:
-    case AtomicExpr::AO__scoped_atomic_sub_fetch:
-    case AtomicExpr::AO__scoped_atomic_xor_fetch:
-      // For these, only library calls for certain sizes exist.
-      UseOptimizedLibcall = true;
-      break;
-
-    case AtomicExpr::AO__atomic_load:
-    case AtomicExpr::AO__atomic_store:
-    case AtomicExpr::AO__atomic_exchange:
-    case AtomicExpr::AO__atomic_compare_exchange:
-    case AtomicExpr::AO__scoped_atomic_load:
-    case AtomicExpr::AO__scoped_atomic_store:
-    case AtomicExpr::AO__scoped_atomic_exchange:
-    case AtomicExpr::AO__scoped_atomic_compare_exchange:
-      // Use the generic version if we don't know that the operand will be
-      // suitably aligned for the optimized version.
-      if (Misaligned)
-        break;
-      [[fallthrough]];
-    case AtomicExpr::AO__atomic_load_n:
-    case AtomicExpr::AO__atomic_store_n:
-    case AtomicExpr::AO__atomic_exchange_n:
-    case AtomicExpr::AO__atomic_compare_exchange_n:
-    case AtomicExpr::AO__c11_atomic_load:
-    case AtomicExpr::AO__c11_atomic_store:
-    case AtomicExpr::AO__c11_atomic_exchange:
-    case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
-    case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
-    case AtomicExpr::AO__hip_atomic_load:
-    case AtomicExpr::AO__hip_atomic_store:
-    case AtomicExpr::AO__hip_atomic_exchange:
-    case AtomicExpr::AO__hip_atomic_compare_exchange_weak:
-    case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
-    case AtomicExpr::AO__opencl_atomic_load:
-    case AtomicExpr::AO__opencl_atomic_store:
-    case AtomicExpr::AO__opencl_atomic_exchange:
-    case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:
-    case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
-    case AtomicExpr::AO__scoped_atomic_load_n:
-    case AtomicExpr::AO__scoped_atomic_store_n:
-    case AtomicExpr::AO__scoped_atomic_exchange_n:
-    case AtomicExpr::AO__scoped_atomic_compare_exchange_n:
-      // Only use optimized library calls for sizes for which they exist.
-      // FIXME: Size == 16 optimized library functions exist too.
-      if (Size == 1 || Size == 2 || Size == 4 || Size == 8)
-        UseOptimizedLibcall = true;
-      break;
-    }
-
     CallArgList Args;
-    if (!UseOptimizedLibcall) {
-      llvm_unreachable("NYI");
-    }
-    // TODO(cir): Atomic address is the first or second parameter
+    // For non-optimized library calls, the size is the first parameter.
+    Args.add(RValue::get(builder.getConstInt(getLoc(E->getSourceRange()),
+                                             SizeTy, Size)),
+             getContext().getSizeType());
+
+    // The atomic address is the second parameter.
     // The OpenCL atomic library functions only accept pointer arguments to
     // generic address space.
-    llvm_unreachable("NYI");
+    auto CastToGenericAddrSpace = [&](mlir::Value V, QualType PT) {
+      if (!E->isOpenCL())
+        return V;
+      llvm_unreachable("NYI");
+    };
 
+    Args.add(RValue::get(CastToGenericAddrSpace(Ptr.emitRawPointer(),
+                                                E->getPtr()->getType())),
+             getContext().VoidPtrTy);
+
+    // The next 1-3 parameters are op-dependent.
     std::string LibCallName;
-    [[maybe_unused]] QualType LoweredMemTy =
-        MemTy->isPointerType() ? getContext().getIntPtrType() : MemTy;
     QualType RetTy;
-    [[maybe_unused]] bool HaveRetTy = false;
-    [[maybe_unused]] bool PostOpMinMax = false;
+    bool HaveRetTy = false;
     switch (E->getOp()) {
     case AtomicExpr::AO__c11_atomic_init:
     case AtomicExpr::AO__opencl_atomic_init:
@@ -869,8 +786,6 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
     // and exchange.
     // bool __atomic_compare_exchange(size_t size, void *mem, void *expected,
     //                                void *desired, int success, int failure)
-    // bool __atomic_compare_exchange_N(T *mem, T *expected, T desired,
-    //                                  int success, int failure)
     case AtomicExpr::AO__atomic_compare_exchange:
     case AtomicExpr::AO__atomic_compare_exchange_n:
     case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
@@ -886,7 +801,6 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
       break;
     // void __atomic_exchange(size_t size, void *mem, void *val, void *return,
     //                        int order)
-    // T __atomic_exchange_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_exchange:
     case AtomicExpr::AO__atomic_exchange_n:
     case AtomicExpr::AO__c11_atomic_exchange:
@@ -898,7 +812,6 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
       llvm_unreachable("NYI");
       break;
     // void __atomic_store(size_t size, void *mem, void *val, int order)
-    // void __atomic_store_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_store:
     case AtomicExpr::AO__atomic_store_n:
     case AtomicExpr::AO__c11_atomic_store:
@@ -910,7 +823,6 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
       llvm_unreachable("NYI");
       break;
     // void __atomic_load(size_t size, void *mem, void *return, int order)
-    // T __atomic_load_N(T *mem, int order)
     case AtomicExpr::AO__atomic_load:
     case AtomicExpr::AO__atomic_load_n:
     case AtomicExpr::AO__c11_atomic_load:
@@ -919,129 +831,89 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__scoped_atomic_load:
     case AtomicExpr::AO__scoped_atomic_load_n:
       LibCallName = "__atomic_load";
-      llvm_unreachable("NYI");
       break;
-    // T __atomic_add_fetch_N(T *mem, T val, int order)
-    // T __atomic_fetch_add_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_add_fetch:
     case AtomicExpr::AO__scoped_atomic_add_fetch:
-      llvm_unreachable("NYI");
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_add:
     case AtomicExpr::AO__c11_atomic_fetch_add:
     case AtomicExpr::AO__hip_atomic_fetch_add:
     case AtomicExpr::AO__opencl_atomic_fetch_add:
     case AtomicExpr::AO__scoped_atomic_fetch_add:
-      LibCallName = "__atomic_fetch_add";
-      llvm_unreachable("NYI");
-      break;
-    // T __atomic_and_fetch_N(T *mem, T val, int order)
-    // T __atomic_fetch_and_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_and_fetch:
     case AtomicExpr::AO__scoped_atomic_and_fetch:
-      llvm_unreachable("NYI");
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_and:
     case AtomicExpr::AO__c11_atomic_fetch_and:
     case AtomicExpr::AO__hip_atomic_fetch_and:
     case AtomicExpr::AO__opencl_atomic_fetch_and:
     case AtomicExpr::AO__scoped_atomic_fetch_and:
-      LibCallName = "__atomic_fetch_and";
-      llvm_unreachable("NYI");
-      break;
-    // T __atomic_or_fetch_N(T *mem, T val, int order)
-    // T __atomic_fetch_or_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_or_fetch:
     case AtomicExpr::AO__scoped_atomic_or_fetch:
-      llvm_unreachable("NYI");
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_or:
     case AtomicExpr::AO__c11_atomic_fetch_or:
     case AtomicExpr::AO__hip_atomic_fetch_or:
     case AtomicExpr::AO__opencl_atomic_fetch_or:
     case AtomicExpr::AO__scoped_atomic_fetch_or:
-      LibCallName = "__atomic_fetch_or";
-      llvm_unreachable("NYI");
-      break;
-    // T __atomic_sub_fetch_N(T *mem, T val, int order)
-    // T __atomic_fetch_sub_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_sub_fetch:
     case AtomicExpr::AO__scoped_atomic_sub_fetch:
-      llvm_unreachable("NYI");
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_sub:
     case AtomicExpr::AO__c11_atomic_fetch_sub:
     case AtomicExpr::AO__hip_atomic_fetch_sub:
     case AtomicExpr::AO__opencl_atomic_fetch_sub:
     case AtomicExpr::AO__scoped_atomic_fetch_sub:
-      LibCallName = "__atomic_fetch_sub";
-      llvm_unreachable("NYI");
-      break;
-    // T __atomic_xor_fetch_N(T *mem, T val, int order)
-    // T __atomic_fetch_xor_N(T *mem, T val, int order)
     case AtomicExpr::AO__atomic_xor_fetch:
     case AtomicExpr::AO__scoped_atomic_xor_fetch:
-      llvm_unreachable("NYI");
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_xor:
     case AtomicExpr::AO__c11_atomic_fetch_xor:
     case AtomicExpr::AO__hip_atomic_fetch_xor:
     case AtomicExpr::AO__opencl_atomic_fetch_xor:
     case AtomicExpr::AO__scoped_atomic_fetch_xor:
-      LibCallName = "__atomic_fetch_xor";
-      llvm_unreachable("NYI");
-      break;
+    case AtomicExpr::AO__atomic_nand_fetch:
+    case AtomicExpr::AO__atomic_fetch_nand:
+    case AtomicExpr::AO__c11_atomic_fetch_nand:
+    case AtomicExpr::AO__scoped_atomic_fetch_nand:
+    case AtomicExpr::AO__scoped_atomic_nand_fetch:
     case AtomicExpr::AO__atomic_min_fetch:
-    case AtomicExpr::AO__scoped_atomic_min_fetch:
-      llvm_unreachable("NYI");
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_min:
     case AtomicExpr::AO__c11_atomic_fetch_min:
-    case AtomicExpr::AO__scoped_atomic_fetch_min:
     case AtomicExpr::AO__hip_atomic_fetch_min:
     case AtomicExpr::AO__opencl_atomic_fetch_min:
-      LibCallName = E->getValueType()->isSignedIntegerType()
-                        ? "__atomic_fetch_min"
-                        : "__atomic_fetch_umin";
-      llvm_unreachable("NYI");
-      break;
+    case AtomicExpr::AO__scoped_atomic_fetch_min:
+    case AtomicExpr::AO__scoped_atomic_min_fetch:
     case AtomicExpr::AO__atomic_max_fetch:
-    case AtomicExpr::AO__scoped_atomic_max_fetch:
-      llvm_unreachable("NYI");
-      [[fallthrough]];
     case AtomicExpr::AO__atomic_fetch_max:
     case AtomicExpr::AO__c11_atomic_fetch_max:
     case AtomicExpr::AO__hip_atomic_fetch_max:
     case AtomicExpr::AO__opencl_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_fetch_max:
-      LibCallName = E->getValueType()->isSignedIntegerType()
-                        ? "__atomic_fetch_max"
-                        : "__atomic_fetch_umax";
-      llvm_unreachable("NYI");
-      break;
-    // T __atomic_nand_fetch_N(T *mem, T val, int order)
-    // T __atomic_fetch_nand_N(T *mem, T val, int order)
-    case AtomicExpr::AO__atomic_nand_fetch:
-    case AtomicExpr::AO__scoped_atomic_nand_fetch:
-      llvm_unreachable("NYI");
-      [[fallthrough]];
-    case AtomicExpr::AO__atomic_fetch_nand:
-    case AtomicExpr::AO__c11_atomic_fetch_nand:
-    case AtomicExpr::AO__scoped_atomic_fetch_nand:
-      LibCallName = "__atomic_fetch_nand";
-      llvm_unreachable("NYI");
-      break;
+    case AtomicExpr::AO__scoped_atomic_max_fetch:
+      llvm_unreachable("Integral atomic operations always become atomicrmw!");
     }
 
     if (E->isOpenCL()) {
       LibCallName =
           std::string("__opencl") + StringRef(LibCallName).drop_front(1).str();
     }
-    // Optimized functions have the size in their name.
-    if (UseOptimizedLibcall) {
+    // By default, assume we return a value of the atomic type.
+    if (!HaveRetTy) {
       llvm_unreachable("NYI");
     }
-    // By default, assume we return a value of the atomic type.
+    // Order is always the last parameter.
+    Args.add(RValue::get(Order), getContext().IntTy);
+    if (E->isOpenCL()) {
+      llvm_unreachable("NYI");
+    }
+
+    [[maybe_unused]] RValue Res =
+        buildAtomicLibcall(*this, LibCallName, RetTy, Args);
+    // The value is returned directly from the libcall.
+    if (E->isCmpXChg()) {
+      llvm_unreachable("NYI");
+    }
+
+    if (RValTy->isVoidType()) {
+      llvm_unreachable("NYI");
+    }
+
     llvm_unreachable("NYI");
   }
 
