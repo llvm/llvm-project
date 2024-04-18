@@ -26,7 +26,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 bad-parent-form.s -o bad-parent-form.o
 # RUN: not ld.lld --debug-names bad-parent-form.o 2>&1 | FileCheck %s --check-prefix=BAD-PARENT-FORM --implicit-check-not=error:
 
-# BAD-PARENT-FORM-COUNT-2: error: bad-parent-form.o:(.debug_names): invalid form for DW_IDX_parent
+# BAD-PARENT-FORM: error: bad-parent-form.o:(.debug_names): invalid form for DW_IDX_parent
 
 # RUN: sed -E '/DW_IDX_die_offset/{n;s/[0-9]+.*DW_FORM_ref4/16/}' %S/Inputs/debug-names-a.s > bad-die-form.s
 # RUN: llvm-mc -filetype=obj -triple=x86_64 bad-die-form.s -o bad-die-form.o
@@ -41,7 +41,7 @@
 # RUN: ld.lld --debug-names bad-abbrev-code.o -o bad-abbrev-code --noinhibit-exec
 # RUN: llvm-dwarfdump --debug-names bad-abbrev-code | FileCheck %s --check-prefix=BAD-ABBREV-CODE-DWARF
 
-# BAD-ABBREV-CODE-COUNT-2: error: bad-abbrev-code.o:(.debug_names): invalid abbrev code in entry
+# BAD-ABBREV-CODE: error: bad-abbrev-code.o:(.debug_names): entry abbrev code not found in abbrev table: 3
 
 # BAD-ABBREV-CODE-DWARF:      Abbreviations [
 # BAD-ABBREV-CODE-DWARF-NEXT:   Abbreviation 0x1 {

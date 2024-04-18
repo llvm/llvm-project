@@ -892,6 +892,10 @@ protected:
   SmallVector<Abbrev *, 0> abbrevTable;
   SmallVector<char, 0> abbrevTableBuf;
 
+  ArrayRef<OutputChunk> getChunks() {
+    return ArrayRef(chunks.get(), numChunks);
+  }
+
   // Sharded name entries that will be used to compute bucket_count and the
   // count name table.
   static constexpr size_t numShards = 32;
