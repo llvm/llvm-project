@@ -76,7 +76,7 @@ static llvm::cl::opt<bool> useOldAliasTags("use-old-alias-tags",
 #if !defined(FLANG_EXCLUDE_CODEGEN)
 DisableOption(CodeGenRewrite, "codegen-rewrite", "rewrite FIR for codegen");
 DisableOption(TargetRewrite, "target-rewrite", "rewrite FIR for target");
-DisableOption(DebugFoundation, "debug-foundation", "Add debug foundation");
+DisableOption(DebugInfo, "debug-info", "Add debug info");
 DisableOption(FirToLlvmIr, "fir-to-llvmir", "FIR to LLVM-IR dialect");
 DisableOption(LlvmIrToLlvm, "llvm", "conversion to LLVM");
 DisableOption(BoxedProcedureRewrite, "boxed-procedure-rewrite",
@@ -156,8 +156,8 @@ inline void addTargetRewritePass(mlir::PassManager &pm) {
 }
 
 inline void addDebugInfoPass(mlir::PassManager &pm) {
-  addPassConditionally(pm, disableDebugFoundation,
-      [&]() { return fir::createAddDebugInfoPass(); });
+  addPassConditionally(
+      pm, disableDebugInfo, [&]() { return fir::createAddDebugInfoPass(); });
 }
 
 inline void addFIRToLLVMPass(
