@@ -6748,11 +6748,6 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA] in {
                                SchedWriteVecIMul.XMM>;
 }
 
-// Aliases with explicit %xmm0
-def : InstAlias<"sha256rnds2\t{$src2, $dst|$dst, $src2}",
-                (SHA256RNDS2rr VR128:$dst, VR128:$src2), 0>;
-def : InstAlias<"sha256rnds2\t{$src2, $dst|$dst, $src2}",
-                (SHA256RNDS2rm VR128:$dst, i128mem:$src2), 0>;
 
 //===----------------------------------------------------------------------===//
 // AES-NI Instructions
