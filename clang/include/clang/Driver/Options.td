@@ -1505,6 +1505,7 @@ def end_no_unused_arguments : Flag<["--"], "end-no-unused-arguments">,
 def interface_stub_version_EQ : JoinedOrSeparate<["-"], "interface-stub-version=">,
   Visibility<[ClangOption, CC1Option]>;
 def exported__symbols__list : Separate<["-"], "exported_symbols_list">;
+def alias_list : Separate<["-"], "alias_list">, Flags<[LinkerInput]>;
 def extract_api : Flag<["-"], "extract-api">,
   Visibility<[ClangOption, CC1Option]>, Group<Action_Group>,
   HelpText<"Extract API information">;
