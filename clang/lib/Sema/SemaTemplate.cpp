@@ -3043,6 +3043,11 @@ FunctionTemplateDecl *DeclareAggregateDeductionGuideForTypeAlias(
     return nullptr;
 
   LocalInstantiationScope Scope(SemaRef);
+  Sema::InstantiatingTemplate BuildingDeductionGuides(
+        SemaRef, AliasTemplate->getLocation(), RHSDeductionGuide,
+        Sema::InstantiatingTemplate::BuildingDeductionGuidesTag{});
+  if (BuildingDeductionGuides.isInvalid())
+    return nullptr;
 
   // Build a new template parameter list for the synthesized aggregate deduction
   // guide by transforming the one from RHSDeductionGuide.
