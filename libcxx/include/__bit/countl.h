@@ -39,7 +39,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
   return __builtin_clzll(__x);
 }
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#if _LIBCPP_HAS_INT128
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(__uint128_t __x) _NOEXCEPT {
 #  if __has_builtin(__builtin_clzg)
   return __builtin_clzg(__x);
@@ -57,7 +57,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_clz(__uint128_t __x)
                             : __builtin_clzll(static_cast<unsigned long long>(__x >> 64));
 #  endif
 }
-#endif // _LIBCPP_HAS_NO_INT128
+#endif // _LIBCPP_HAS_INT128
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int __countl_zero(_Tp __t) _NOEXCEPT {
