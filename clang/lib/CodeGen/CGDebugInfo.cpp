@@ -1346,20 +1346,20 @@ GetTemplateArgs(const TemplateDecl *TD, const TemplateSpecializationType *Ty) {
     if (auto *P = dyn_cast<TemplateTypeParmDecl>(Param)) {
       assert(P->hasDefaultArgument() &&
              "expected defaulted template type parameter");
-      SpecArgs.push_back(TemplateArgument(P->getDefaultArgument(),
-                                          /*IsNullPtr=*/false,
-                                          /*IsDefaulted=*/true));
+      SpecArgs.emplace_back(P->getDefaultArgument(),
+                            /*IsNullPtr=*/false,
+                            /*IsDefaulted=*/true);
     } else if (auto *P = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
       assert(P->hasDefaultArgument() &&
              "expected defaulted template non-type parameter");
-      SpecArgs.push_back(TemplateArgument(P->getDefaultArgument(),
-                                          /*IsDefaulted=*/true));
+      SpecArgs.emplace_back(P->getDefaultArgument(),
+                            /*IsDefaulted=*/true);
     } else if (auto *P = dyn_cast<TemplateTemplateParmDecl>(Param)) {
       assert(P->hasDefaultArgument() &&
              "expected defaulted template template parameter");
-      SpecArgs.push_back(TemplateArgument(
+      SpecArgs.emplace_back(
           P->getDefaultArgument().getArgument().getAsTemplate(),
-          /*IsDefaulted=*/true));
+          /*IsDefaulted=*/true);
     } else {
       llvm_unreachable("Unexpected template parameter kind");
       break;
