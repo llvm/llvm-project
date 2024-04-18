@@ -178,7 +178,7 @@ void test_P1361() {
 
 #  if !defined(TEST_HAS_NO_INCOMPLETE_TZDB)
   assert_is_formattable<std::chrono::sys_info, CharT>();
-  //assert_is_formattable<std::chrono::local_info, CharT>();
+  assert_is_formattable<std::chrono::local_info, CharT>();
 
   //assert_is_formattable<std::chrono::zoned_time, CharT>();
 #  endif // !defined(TEST_HAS_NO_INCOMPLETE_TZDB)
