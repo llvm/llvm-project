@@ -5814,7 +5814,8 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
         // invalid scalarization costs.
         // Do not apply discount logic if hacked cost is needed
         // for emulated masked memrefs.
-        if (!VF.isScalable() && !useEmulatedMaskMemRefHack(&I, VF) &&
+        if (!isScalarAfterVectorization(&I, VF) && !VF.isScalable() &&
+            !useEmulatedMaskMemRefHack(&I, VF) &&
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0)
           ScalarCostsVF.insert(ScalarCosts.begin(), ScalarCosts.end());
         // Remember that BB will remain after vectorization.
