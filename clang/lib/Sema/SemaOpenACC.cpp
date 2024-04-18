@@ -14,6 +14,7 @@
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/Casting.h"
 
@@ -85,6 +86,16 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     case OpenACCDirectiveKind::Update:
     case OpenACCDirectiveKind::ParallelLoop:
     case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::NumWorkers:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::ParallelLoop:
     case OpenACCDirectiveKind::KernelsLoop:
       return true;
     default:
@@ -218,6 +229,25 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
         getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
         Clause.getConditionExpr(), Clause.getEndLoc());
   }
+  case OpenACCClauseKind::NumWorkers: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // There is no prose in the standard that says duplicates aren't allowed,
+    // but this diagnostic is present in other compilers, as well as makes
+    // sense.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    assert(Clause.getIntExprs().size() == 1 &&
+           "Invalid number of expressions for NumWorkers");
+    return OpenACCNumWorkersClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getIntExprs()[0], Clause.getEndLoc());
+  }
   default:
     break;
   }
@@ -246,6 +276,96 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
     Diag(StartLoc, diag::warn_acc_construct_unimplemented) << K;
     break;
   }
+}
+
+ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
+                                     OpenACCClauseKind CK, SourceLocation Loc,
+                                     Expr *IntExpr) {
+
+  assert(((DK != OpenACCDirectiveKind::Invalid &&
+           CK == OpenACCClauseKind::Invalid) ||
+          (DK == OpenACCDirectiveKind::Invalid &&
+           CK != OpenACCClauseKind::Invalid)) &&
+         "Only one of directive or clause kind should be provided");
+
+  class IntExprConverter : public Sema::ICEConvertDiagnoser {
+    OpenACCDirectiveKind DirectiveKind;
+    OpenACCClauseKind ClauseKind;
+    Expr *IntExpr;
+
+  public:
+    IntExprConverter(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                     Expr *IntExpr)
+        : ICEConvertDiagnoser(/*AllowScopedEnumerations=*/false,
+                              /*Suppress=*/false,
+                              /*SuppressConversion=*/true),
+          DirectiveKind(DK), ClauseKind(CK), IntExpr(IntExpr) {}
+
+    bool match(QualType T) override {
+      // OpenACC spec just calls this 'integer expression' as having an
+      // 'integer type', so fall back on C99's 'integer type'.
+      return T->isIntegerType();
+    }
+    SemaBase::SemaDiagnosticBuilder diagnoseNotInt(Sema &S, SourceLocation Loc,
+                                                   QualType T) override {
+      if (ClauseKind != OpenACCClauseKind::Invalid)
+        return S.Diag(Loc, diag::err_acc_int_expr_requires_integer) <<
+               /*Clause=*/0 << ClauseKind << T;
+
+      return S.Diag(Loc, diag::err_acc_int_expr_requires_integer) <<
+             /*Directive=*/1 << DirectiveKind << T;
+    }
+
+    SemaBase::SemaDiagnosticBuilder
+    diagnoseIncomplete(Sema &S, SourceLocation Loc, QualType T) override {
+      return S.Diag(Loc, diag::err_acc_int_expr_incomplete_class_type)
+             << T << IntExpr->getSourceRange();
+    }
+
+    SemaBase::SemaDiagnosticBuilder
+    diagnoseExplicitConv(Sema &S, SourceLocation Loc, QualType T,
+                         QualType ConvTy) override {
+      return S.Diag(Loc, diag::err_acc_int_expr_explicit_conversion)
+             << T << ConvTy;
+    }
+
+    SemaBase::SemaDiagnosticBuilder noteExplicitConv(Sema &S,
+                                                     CXXConversionDecl *Conv,
+                                                     QualType ConvTy) override {
+      return S.Diag(Conv->getLocation(), diag::note_acc_int_expr_conversion)
+             << ConvTy->isEnumeralType() << ConvTy;
+    }
+
+    SemaBase::SemaDiagnosticBuilder
+    diagnoseAmbiguous(Sema &S, SourceLocation Loc, QualType T) override {
+      return S.Diag(Loc, diag::err_acc_int_expr_multiple_conversions) << T;
+    }
+
+    SemaBase::SemaDiagnosticBuilder
+    noteAmbiguous(Sema &S, CXXConversionDecl *Conv, QualType ConvTy) override {
+      return S.Diag(Conv->getLocation(), diag::note_acc_int_expr_conversion)
+             << ConvTy->isEnumeralType() << ConvTy;
+    }
+
+    SemaBase::SemaDiagnosticBuilder
+    diagnoseConversion(Sema &S, SourceLocation Loc, QualType T,
+                       QualType ConvTy) override {
+      llvm_unreachable("conversion functions are permitted");
+    }
+  } IntExprDiagnoser(DK, CK, IntExpr);
+
+  ExprResult IntExprResult = SemaRef.PerformContextualImplicitConversion(
+      Loc, IntExpr, IntExprDiagnoser);
+  if (IntExprResult.isInvalid())
+    return ExprError();
+
+  IntExpr = IntExprResult.get();
+  if (!IntExpr->isTypeDependent() && !IntExpr->getType()->isIntegerType())
+    return ExprError();
+
+  // TODO OpenACC: Do we want to perform usual unary conversions here? When
+  // doing codegen we might find that is necessary, but skip it for now.
+  return IntExpr;
 }
 
 bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,

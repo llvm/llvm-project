@@ -943,11 +943,9 @@ void IntExprParsing() {
 #pragma acc parallel num_workers(5, 4)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel num_workers(5)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel num_workers(returns_int())
   {}
 

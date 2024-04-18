@@ -156,6 +156,46 @@ public:
                                    Expr *ConditionExpr, SourceLocation EndLoc);
 };
 
+/// Represents oen of a handful of classes that have a single integer
+/// expression.
+class OpenACCClauseWithSingleIntExpr : public OpenACCClauseWithParams {
+  Expr *IntExpr;
+
+protected:
+  OpenACCClauseWithSingleIntExpr(OpenACCClauseKind K, SourceLocation BeginLoc,
+                                 SourceLocation LParenLoc, Expr *IntExpr,
+                                 SourceLocation EndLoc)
+      : OpenACCClauseWithParams(K, BeginLoc, LParenLoc, EndLoc),
+        IntExpr(IntExpr) {}
+
+public:
+  bool hasIntExpr() const { return IntExpr; }
+  const Expr *getIntExpr() const { return IntExpr; }
+
+  Expr *getIntExpr() { return IntExpr; };
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(&IntExpr),
+                       reinterpret_cast<Stmt **>(&IntExpr + 1));
+  }
+
+  const_child_range children() const {
+    return const_child_range(reinterpret_cast<Stmt *const *>(&IntExpr),
+                             reinterpret_cast<Stmt *const *>(&IntExpr + 1));
+  }
+};
+
+class OpenACCNumWorkersClause : public OpenACCClauseWithSingleIntExpr {
+  OpenACCNumWorkersClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                          Expr *IntExpr, SourceLocation EndLoc);
+
+public:
+  static OpenACCNumWorkersClause *Create(const ASTContext &C,
+                                         SourceLocation BeginLoc,
+                                         SourceLocation LParenLoc,
+                                         Expr *IntExpr, SourceLocation EndLoc);
+};
+
 template <class Impl> class OpenACCClauseVisitor {
   Impl &getDerived() { return static_cast<Impl &>(*this); }
 
