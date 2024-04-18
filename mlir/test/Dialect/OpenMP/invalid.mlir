@@ -138,6 +138,20 @@ func.func @iv_number_mismatch(%lb : index, %ub : index, %step : index) {
 
 // -----
 
+func.func @no_loops(%lb : index, %ub : index, %step : index) {
+  // TODO Remove induction variables from omp.wsloop.
+  omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+    // expected-error@+1 {{op must represent at least one loop}}
+    "omp.loop_nest" () ({
+    ^bb0():
+      omp.yield
+    }) : () -> ()
+    omp.terminator
+  }
+}
+
+// -----
+
 func.func @inclusive_not_a_clause(%lb : index, %ub : index, %step : index) {
   // expected-error @below {{expected 'for'}}
   omp.wsloop nowait inclusive

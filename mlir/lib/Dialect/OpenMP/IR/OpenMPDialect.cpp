@@ -1898,6 +1898,9 @@ void LoopNestOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult LoopNestOp::verify() {
+  if (getLowerBound().empty())
+    return emitOpError() << "must represent at least one loop";
+
   if (getLowerBound().size() != getIVs().size())
     return emitOpError() << "number of range arguments and IVs do not match";
 
