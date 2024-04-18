@@ -4892,8 +4892,21 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
     if (D->isFromASTFile())
       continue;
 
-    if (GeneratingReducedBMI && D->isFromExplicitGlobalModule())
-      continue;
+    if (GeneratingReducedBMI) {
+      if (D->isFromExplicitGlobalModule())
+        continue;
+
+      // Don't force emitting static entities.
+      //
+      // Technically, all static entities shouldn't be in reduced BMI. The
+      // language also specifies that the program exposes TU-local entities
+      // is ill-formed. However, in practice, there are a lot of projects
+      // uses `static inline` in the headers. So we can't get rid of all
+      // static entities in reduced BMI now.
+      if (auto *ND = dyn_cast<NamedDecl>(D);
+          ND && ND->getFormalLinkage() == Linkage::Internal)
+        continue;
+    }
 
     GetDeclRef(D);
   }
