@@ -874,6 +874,14 @@ def DstSelToOpSelXForm : SDNodeXForm<timm, [{
 def gi_DstSelToOpSelXForm : GICustomOperandRenderer<"renderDstSelToOpSelXForm">,
   GISDNodeXFormEquiv<DstSelToOpSelXForm>;
 
+def SrcSelToOpSelXForm : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(
+      N->getZExtValue() ? SISrcMods::OP_SEL_0 : SISrcMods::NONE,
+      SDLoc(N), MVT::i32);
+}]>;
+def gi_SrcSelToOpSelXForm : GICustomOperandRenderer<"renderSrcSelToOpSelXForm">,
+  GISDNodeXFormEquiv<SrcSelToOpSelXForm>;
+
 class PermlanePat<SDPatternOperator permlane,
   Instruction inst> : GCNPat<
   (permlane i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2,
@@ -1097,6 +1105,13 @@ class Cvt_Scale_PK_F32ToFP8BF8_Pat<SDPatternOperator node, VOP3_Pseudo inst> : G
 >;
 def : Cvt_Scale_PK_F32ToFP8BF8_Pat<int_amdgcn_cvt_scalef32_pk_fp8_f32, V_CVT_SCALEF32_PK_FP8_F32_e64>;
 def : Cvt_Scale_PK_F32ToFP8BF8_Pat<int_amdgcn_cvt_scalef32_pk_bf8_f32, V_CVT_SCALEF32_PK_BF8_F32_e64>;
+
+class Cvt_Scale_PK_FP8BF8ToF32_Pat<SDPatternOperator node, VOP3_Pseudo inst> : GCNPat<
+    (v2f32 (node i32:$src0, f32:$src1, timm:$word_sel)),
+    (inst (SrcSelToOpSelXForm $word_sel), $src0, 0, $src1)
+>;
+def : Cvt_Scale_PK_FP8BF8ToF32_Pat<int_amdgcn_cvt_scalef32_pk_f32_fp8, V_CVT_SCALEF32_PK_F32_FP8_e64>;
+def : Cvt_Scale_PK_FP8BF8ToF32_Pat<int_amdgcn_cvt_scalef32_pk_f32_bf8, V_CVT_SCALEF32_PK_F32_BF8_e64>;
 
 let SubtargetPredicate = isGFX10Plus in {
   let isCommutable = 1, isReMaterializable = 1 in {

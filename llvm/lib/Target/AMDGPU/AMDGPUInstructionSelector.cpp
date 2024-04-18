@@ -5835,6 +5835,13 @@ void AMDGPUInstructionSelector::renderDstSelToOpSelXForm(
                                            : 0);
 }
 
+void AMDGPUInstructionSelector::renderSrcSelToOpSelXForm(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx >= 0 && "expected to match an immediate operand");
+  MIB.addImm(MI.getOperand(OpIdx).getImm() ? (int64_t)(SISrcMods::OP_SEL_0)
+                                           : 0);
+}
+
 void AMDGPUInstructionSelector::renderExtractCPol(MachineInstrBuilder &MIB,
                                                   const MachineInstr &MI,
                                                   int OpIdx) const {
