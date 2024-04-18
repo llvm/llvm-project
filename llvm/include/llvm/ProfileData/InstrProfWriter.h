@@ -197,7 +197,7 @@ public:
     return static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage);
   }
 
-  // Internal interface for testing purpose only.
+  // Internal interfaces for testing purpose only.
   void setValueProfDataEndianness(llvm::endianness Endianness);
   void setOutputSparse(bool Sparse);
   void setMemProfVersionRequested(memprof::IndexedVersion Version) {

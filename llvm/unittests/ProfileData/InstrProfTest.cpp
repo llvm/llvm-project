@@ -391,6 +391,8 @@ makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
              const MemInfoBlock &Block = MemInfoBlock()) {
   llvm::memprof::IndexedMemProfRecord MR;
   for (const auto &CSId : AllocFrames)
+    // We don't populate IndexedAllocationInfo::CallStack because we use it only
+    // in Version0 and Version1.
     MR.AllocSites.emplace_back(::llvm::SmallVector<memprof::FrameId>(), CSId,
                                Block);
   for (const auto &CSId : CallSiteFrames)
@@ -528,9 +530,9 @@ TEST_F(InstrProfTest, test_memprof_v2) {
 
   const ::llvm::memprof::MemProfRecord WantRecord =
       IndexedMR.toMemProfRecord(CSIdToCallStackCallback);
-  ASSERT_FALSE(LastUnmappedFrameId.has_value())
+  ASSERT_EQ(LastUnmappedFrameId, std::nullopt)
       << "could not map frame id: " << *LastUnmappedFrameId;
-  ASSERT_FALSE(LastUnmappedCSId.has_value())
+  ASSERT_EQ(LastUnmappedCSId, std::nullopt)
       << "could not map call stack id: " << *LastUnmappedCSId;
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
