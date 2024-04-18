@@ -4431,7 +4431,7 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
         return nullptr;
     }
     Constant *Res = ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
-    if (DropFlags && Res && I->hasPoisonGeneratingFlagsOrMetadata())
+    if (DropFlags && Res && I->hasPoisonGeneratingAnnotations())
       DropFlags->push_back(I);
     return Res;
   }

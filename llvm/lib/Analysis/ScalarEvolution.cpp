@@ -4239,7 +4239,7 @@ bool ScalarEvolution::canReuseInstruction(
       return false;
 
     // If the instruction can't create poison, we can recurse to its operands.
-    if (I->hasPoisonGeneratingFlagsOrMetadata())
+    if (I->hasPoisonGeneratingAnnotations())
       DropPoisonGeneratingInsts.push_back(I);
 
     for (Value *Op : I->operands())
