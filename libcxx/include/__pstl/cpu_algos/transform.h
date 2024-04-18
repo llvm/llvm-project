@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_TRANSFORM_H
-#define _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_TRANSFORM_H
+#ifndef _LIBCPP___PSTL_CPU_ALGOS_TRANSFORM_H
+#define _LIBCPP___PSTL_CPU_ALGOS_TRANSFORM_H
 
-#include <__algorithm/pstl_backends/cpu_backends/backend.h>
 #include <__algorithm/transform.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__pstl/configuration_fwd.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
@@ -136,4 +136,4 @@ _LIBCPP_POP_MACROS
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_TRANSFORM_H
+#endif // _LIBCPP___PSTL_CPU_ALGOS_TRANSFORM_H

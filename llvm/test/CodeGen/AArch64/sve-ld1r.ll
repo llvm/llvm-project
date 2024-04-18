@@ -20,8 +20,8 @@ define <vscale x 16 x i8> @ld1r_stack() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    adrp x8, :got:g8
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:g8]
 ; CHECK-NEXT:    ldrb w8, [x8]
 ; CHECK-NEXT:    strb w8, [sp, #12]
@@ -1433,10 +1433,10 @@ define ptr @avoid_preindex_load(ptr %src, ptr %out) {
 define ptr @avoid_preindex_load_dup(ptr %src, <vscale x 2 x i1> %pg, ptr %out) {
 ; CHECK-LABEL: avoid_preindex_load_dup:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1rsb { z0.d }, p0/z, [x0, #1]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    add x0, x0, #1
-; CHECK-NEXT:    st1d { z0.d }, p1, [x1]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1
   %tmp = load i8, ptr %ptr, align 4
@@ -1450,10 +1450,10 @@ define ptr @avoid_preindex_load_dup(ptr %src, <vscale x 2 x i1> %pg, ptr %out) {
 define ptr @avoid_preindex_load_dup_passthru_zero(ptr %src, <vscale x 2 x i1> %pg, ptr %out) {
 ; CHECK-LABEL: avoid_preindex_load_dup_passthru_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1rsb { z0.d }, p0/z, [x0, #1]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    add x0, x0, #1
-; CHECK-NEXT:    st1d { z0.d }, p1, [x1]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1
   %tmp = load i8, ptr %ptr, align 4
@@ -1467,10 +1467,10 @@ define ptr @avoid_preindex_load_dup_passthru_zero(ptr %src, <vscale x 2 x i1> %p
 define ptr @preindex_load_dup_passthru(<vscale x 2 x i64> %passthru, ptr %src, <vscale x 2 x i1> %pg, ptr %out) {
 ; CHECK-LABEL: preindex_load_dup_passthru:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ldrsb x8, [x0, #1]!
 ; CHECK-NEXT:    mov z0.d, p0/m, x8
-; CHECK-NEXT:    st1d { z0.d }, p1, [x1]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1
   %tmp = load i8, ptr %ptr, align 4
@@ -1485,8 +1485,8 @@ define ptr @preindex_load_dup_passthru(<vscale x 2 x i64> %passthru, ptr %src, <
 define ptr @preidx8sext64_instead_of_ld1r(ptr %src, ptr %out, ptr %dst) {
 ; CHECK-LABEL: preidx8sext64_instead_of_ld1r:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldrsb x8, [x0, #1]!
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z0.d, x8
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    str x8, [x2]

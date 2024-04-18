@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKEND_ANY_OF_H
-#define _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKEND_ANY_OF_H
+#ifndef _LIBCPP___PSTL_CPU_ALGOS_ANY_OF_H
+#define _LIBCPP___PSTL_CPU_ALGOS_ANY_OF_H
 
 #include <__algorithm/any_of.h>
 #include <__algorithm/find_if.h>
-#include <__algorithm/pstl_backends/cpu_backends/backend.h>
 #include <__atomic/atomic.h>
 #include <__atomic/memory_order.h>
 #include <__config>
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
+#include <__pstl/configuration_fwd.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>
@@ -96,4 +96,4 @@ _LIBCPP_POP_MACROS
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKEND_ANY_OF_H
+#endif // _LIBCPP___PSTL_CPU_ALGOS_ANY_OF_H

@@ -3868,6 +3868,13 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
     if (!ScalarInd)
       continue;
 
+    // If the induction variable update is a fixed-order recurrence, neither the
+    // induction variable or its update should be marked scalar after
+    // vectorization.
+    auto *IndUpdatePhi = dyn_cast<PHINode>(IndUpdate);
+    if (IndUpdatePhi && Legal->isFixedOrderRecurrence(IndUpdatePhi))
+      continue;
+
     // Determine if all users of the induction variable update instruction are
     // scalar after vectorization.
     auto ScalarIndUpdate =
@@ -5814,7 +5821,8 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
         // invalid scalarization costs.
         // Do not apply discount logic if hacked cost is needed
         // for emulated masked memrefs.
-        if (!VF.isScalable() && !useEmulatedMaskMemRefHack(&I, VF) &&
+        if (!isScalarAfterVectorization(&I, VF) && !VF.isScalable() &&
+            !useEmulatedMaskMemRefHack(&I, VF) &&
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0)
           ScalarCostsVF.insert(ScalarCosts.begin(), ScalarCosts.end());
         // Remember that BB will remain after vectorization.

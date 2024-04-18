@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_TRANSFORM_REDUCE_H
-#define _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_TRANSFORM_REDUCE_H
+#ifndef _LIBCPP___PSTL_CPU_ALGOS_TRANSFORM_REDUCE_H
+#define _LIBCPP___PSTL_CPU_ALGOS_TRANSFORM_REDUCE_H
 
-#include <__algorithm/pstl_backends/cpu_backends/backend.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__numeric/transform_reduce.h>
+#include <__pstl/configuration_fwd.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/is_arithmetic.h>
@@ -203,4 +203,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_TRANSFORM_REDUCE_H
+#endif // _LIBCPP___PSTL_CPU_ALGOS_TRANSFORM_REDUCE_H
