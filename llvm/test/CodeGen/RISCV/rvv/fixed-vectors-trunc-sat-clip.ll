@@ -8,11 +8,8 @@ declare <4 x i32> @llvm.smin.v4i32(<4 x i32>, <4 x i32>)
 declare <4 x i64> @llvm.smax.v4i64(<4 x i64>, <4 x i64>)
 declare <4 x i64> @llvm.smin.v4i64(<4 x i64>, <4 x i64>)
 
-declare <4 x i16> @llvm.umax.v4i16(<4 x i16>, <4 x i16>)
 declare <4 x i16> @llvm.umin.v4i16(<4 x i16>, <4 x i16>)
-declare <4 x i32> @llvm.umax.v4i32(<4 x i32>, <4 x i32>)
 declare <4 x i32> @llvm.umin.v4i32(<4 x i32>, <4 x i32>)
-declare <4 x i64> @llvm.umax.v4i64(<4 x i64>, <4 x i64>)
 declare <4 x i64> @llvm.umin.v4i64(<4 x i64>, <4 x i64>)
 
 define void @trunc_sat_i8i16_maxmin(ptr %x, ptr %y) {
@@ -110,10 +107,9 @@ define void @trunc_sat_u8u16_maxmin(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
   %1 = load <4 x i16>, ptr %x, align 16
-  %2 = tail call <4 x i16> @llvm.umax.v4i16(<4 x i16> %1, <4 x i16> <i16 0, i16 0, i16 0, i16 0>)
-  %3 = tail call <4 x i16> @llvm.umin.v4i16(<4 x i16> %2, <4 x i16> <i16 255, i16 255, i16 255, i16 255>)
-  %4 = trunc <4 x i16> %3 to <4 x i8>
-  store <4 x i8> %4, ptr %y, align 8
+  %2 = tail call <4 x i16> @llvm.umin.v4i16(<4 x i16> %1, <4 x i16> <i16 255, i16 255, i16 255, i16 255>)
+  %3 = trunc <4 x i16> %2 to <4 x i8>
+  store <4 x i8> %3, ptr %y, align 8
   ret void
 }
 
@@ -127,9 +123,8 @@ define void @trunc_sat_u8u16_minmax(ptr %x, ptr %y) {
 ; CHECK-NEXT:    ret
   %1 = load <4 x i16>, ptr %x, align 16
   %2 = tail call <4 x i16> @llvm.umin.v4i16(<4 x i16> %1, <4 x i16> <i16 255, i16 255, i16 255, i16 255>)
-  %3 = tail call <4 x i16> @llvm.umax.v4i16(<4 x i16> %2, <4 x i16> <i16 0, i16 0, i16 0, i16 0>)
-  %4 = trunc <4 x i16> %3 to <4 x i8>
-  store <4 x i8> %4, ptr %y, align 8
+  %3 = trunc <4 x i16> %2 to <4 x i8>
+  store <4 x i8> %3, ptr %y, align 8
   ret void
 }
 
@@ -231,10 +226,9 @@ define void @trunc_sat_u16u32_minmax(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    ret
   %1 = load <4 x i32>, ptr %x, align 32
-  %2 = tail call <4 x i32> @llvm.umax.v4i32(<4 x i32> %1, <4 x i32> <i32 0, i32 0, i32 0, i32 0>)
-  %3 = tail call <4 x i32> @llvm.umin.v4i32(<4 x i32> %2, <4 x i32> <i32 65535, i32 65535, i32 65535, i32 65535>)
-  %4 = trunc <4 x i32> %3 to <4 x i16>
-  store <4 x i16> %4, ptr %y, align 16
+  %2 = tail call <4 x i32> @llvm.umin.v4i32(<4 x i32> %1, <4 x i32> <i32 65535, i32 65535, i32 65535, i32 65535>)
+  %3 = trunc <4 x i32> %2 to <4 x i16>
+  store <4 x i16> %3, ptr %y, align 16
   ret void
 }
 
@@ -248,9 +242,8 @@ define void @trunc_sat_u16u32_maxmin(ptr %x, ptr %y) {
 ; CHECK-NEXT:    ret
   %1 = load <4 x i32>, ptr %x, align 32
   %2 = tail call <4 x i32> @llvm.umin.v4i32(<4 x i32> %1, <4 x i32> <i32 65535, i32 65535, i32 65535, i32 65535>)
-  %3 = tail call <4 x i32> @llvm.umax.v4i32(<4 x i32> %2, <4 x i32> <i32 0, i32 0, i32 0, i32 0>)
-  %4 = trunc <4 x i32> %3 to <4 x i16>
-  store <4 x i16> %4, ptr %y, align 16
+  %3 = trunc <4 x i32> %2 to <4 x i16>
+  store <4 x i16> %3, ptr %y, align 16
   ret void
 }
 
@@ -355,10 +348,9 @@ define void @trunc_sat_u32u64_maxmin(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vse32.v v10, (a1)
 ; CHECK-NEXT:    ret
   %1 = load <4 x i64>, ptr %x, align 64
-  %2 = tail call <4 x i64> @llvm.umax.v4i64(<4 x i64> %1, <4 x i64> <i64 0, i64 0, i64 0, i64 0>)
-  %3 = tail call <4 x i64> @llvm.umin.v4i64(<4 x i64> %2, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
-  %4 = trunc <4 x i64> %3 to <4 x i32>
-  store <4 x i32> %4, ptr %y, align 32
+  %2 = tail call <4 x i64> @llvm.umin.v4i64(<4 x i64> %1, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
+  %3 = trunc <4 x i64> %2 to <4 x i32>
+  store <4 x i32> %3, ptr %y, align 32
   ret void
 }
 
@@ -372,8 +364,7 @@ define void @trunc_sat_u32u64_minmax(ptr %x, ptr %y) {
 ; CHECK-NEXT:    ret
   %1 = load <4 x i64>, ptr %x, align 64
   %2 = tail call <4 x i64> @llvm.umin.v4i64(<4 x i64> %1, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
-  %3 = tail call <4 x i64> @llvm.umax.v4i64(<4 x i64> %2, <4 x i64> <i64 0, i64 0, i64 0, i64 0>)
-  %4 = trunc <4 x i64> %3 to <4 x i32>
-  store <4 x i32> %4, ptr %y, align 32
+  %3 = trunc <4 x i64> %2 to <4 x i32>
+  store <4 x i32> %3, ptr %y, align 32
   ret void
 }
