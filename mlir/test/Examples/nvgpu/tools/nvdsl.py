@@ -104,7 +104,7 @@ class TMA:
 
     def __init__(
         self,
-        shape,
+        tma_box_shape,
         memref_ty,
         swizzle=nvgpu.TensorMapSwizzleKind.SWIZZLE_NONE,
         l2promo=nvgpu.TensorMapL2PromoKind.L2PROMO_NONE,
@@ -115,31 +115,25 @@ class TMA:
         self.l2promo = l2promo  # mlir.nvgpu.TensorMapL2PromoKind
         self.oob = oob  # mlir.nvgpu.TensorMapOOBKind
         self.interleave = interleave  # mlir.nvgpu.TensorMapInterleaveKind
-        self.shape = shape
+        self.tma_box_shape = tma_box_shape
         self.memref_ty = memref_ty  # MemRefType
-        self.lastDim = 64
-        self.requiredLoad = 1
-        self.tma_shape = shape
-        self.tma_memref = ir.MemRefType.get(shape, memref_ty.element_type)
+        self.tma_memref = ir.MemRefType.get(tma_box_shape, memref_ty.element_type)
 
     @property
     def tensormap_descriptor_ty(self):
         """Returns a tensormap descriptor type."""
-        memref_str = (
-            "memref<"
-            + "x".join(map(str, self.tma_shape))
-            + "x"
-            + str(self.memref_ty.element_type)
-            + ", 3>"
+        tensorMemrefType = ir.MemRefType.get(
+            self.tma_box_shape,
+            self.memref_ty.element_type,
+            memory_space=ir.Attribute.parse("3"),
         )
-        parse_str = (
-            f"!nvgpu.tensormap.descriptor<tensor = {memref_str}, "
-            f"swizzle = {self.swizzle}, "
-            f"l2promo = {self.l2promo}, "
-            f"oob = {self.oob}, "
-            f"interleave = {self.interleave}>"
+        return nvgpu.TensorMapDescriptorType.get(
+            tensorMemrefType,
+            self.swizzle,
+            self.l2promo,
+            self.oob,
+            self.interleave,
         )
-        return ir.Type.parse(parse_str)
 
     def create_descriptor(self, device_ptr):
         tma_descriptor_ty = self.tensormap_descriptor_ty
