@@ -74,11 +74,11 @@ void LambdaFunctionNameCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void LambdaFunctionNameCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      functionDecl(cxxMethodDecl(isInLambda()),
-                   hasBody(hasDescendant(expr(
-                       predefinedExpr(hasAncestor(functionDecl().bind("fn")))
-                           .bind("E")))),
-                   functionDecl(equalsBoundNode("fn"))),
+      cxxMethodDecl(isInLambda(),
+                    hasBody(hasDescendant(expr(
+                        predefinedExpr(hasAncestor(cxxMethodDecl().bind("fn")))
+                            .bind("E")))),
+                    equalsBoundNode("fn")),
       this);
 }
 
