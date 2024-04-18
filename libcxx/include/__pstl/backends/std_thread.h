@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_SERIAL_H
-#define _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_SERIAL_H
+#ifndef _LIBCPP___PSTL_BACKENDS_STD_THREAD_H
+#define _LIBCPP___PSTL_BACKENDS_STD_THREAD_H
 
+#include <__assert>
 #include <__config>
+#include <__pstl/configuration_fwd.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__utility/empty.h>
 #include <__utility/move.h>
@@ -21,18 +22,19 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
-_LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
+// This backend implementation is for testing purposes only and not meant for production use. This will be replaced
+// by a proper implementation once the PSTL implementation is somewhat stable.
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
 
-struct __serial_backend_tag {};
-
 template <>
-struct __cpu_traits<__serial_backend_tag> {
+struct __cpu_traits<__std_thread_backend_tag> {
   template <class _RandomAccessIterator, class _Fp>
   _LIBCPP_HIDE_FROM_ABI static optional<__empty>
   __for_each(_RandomAccessIterator __first, _RandomAccessIterator __last, _Fp __f) {
@@ -78,8 +80,18 @@ struct __cpu_traits<__serial_backend_tag> {
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
-_LIBCPP_POP_MACROS
-
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && && _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_SERIAL_H
+_LIBCPP_POP_MACROS
+
+// Implement PSTL algorithms based on the __cpu_traits specialized above
+#include <__algorithm/pstl_backends/cpu_backends/any_of.h>
+#include <__algorithm/pstl_backends/cpu_backends/fill.h>
+#include <__algorithm/pstl_backends/cpu_backends/find_if.h>
+#include <__algorithm/pstl_backends/cpu_backends/for_each.h>
+#include <__algorithm/pstl_backends/cpu_backends/merge.h>
+#include <__algorithm/pstl_backends/cpu_backends/stable_sort.h>
+#include <__algorithm/pstl_backends/cpu_backends/transform.h>
+#include <__algorithm/pstl_backends/cpu_backends/transform_reduce.h>
+
+#endif // _LIBCPP___PSTL_BACKENDS_STD_THREAD_H
