@@ -486,6 +486,7 @@ struct DwarfSectionsCache {
   MCSection *Rangelists;
   MCSection *LineStr;
   MCSection *Names;
+  MCSection *AppleNames;
 };
 
 /// Queries `Asm` for all dwarf sections and returns an object with (possibly
@@ -632,6 +633,10 @@ private:
   // If a DWARF Names section exists, create a DebugNamesRef CAS
   // object for the section.
   Error createDebugNamesSection();
+
+  // If a DWARF Apple Names section exists, create a AppleNamesRef CAS
+  // object for the section.
+  Error createAppleNamesSection();
 
   /// If there is any padding between one section and the next, create a
   /// PaddingRef CAS object to represent the bytes of Padding between the two
