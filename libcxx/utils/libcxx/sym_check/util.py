@@ -131,10 +131,10 @@ def extract_object_sizes_from_map(mapfilename: str):
         with open(mapfilename, "r") as f:
             maplines = f.readlines()
     except FileNotFoundError as e:
-        return []
+        return False, {}
 
     if len(maplines) == 0:
-        return {}
+        return False, {}
 
     # Yes, this is fragile.
     symbols_start_index = -1
@@ -144,7 +144,7 @@ def extract_object_sizes_from_map(mapfilename: str):
             break
 
     if symbols_start_index == -1:
-        return {}
+        return False, {}
 
     # There is a header after the line we use to detect
     # the start of the symbol section -- + 2 to jump
@@ -159,7 +159,7 @@ def extract_object_sizes_from_map(mapfilename: str):
         if size != 0:
             result[name] = size
 
-    return result
+    return True, result
 
 
 new_delete_std_symbols = ["_Znam", "_Znwm", "_ZdaPv", "_ZdaPvm", "_ZdlPv", "_ZdlPvm"]

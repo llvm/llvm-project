@@ -52,11 +52,11 @@ def main(argv):
 
     supplemental_info = {}
     if args.mapfile != None:
-        supplemental_info = libcxx.sym_check.util.extract_object_sizes_from_map(
+        map_extract_success, supplemental_info = libcxx.sym_check.util.extract_object_sizes_from_map(
             args.mapfile
         )
-        if len(supplemental_info) == 0:
-            print("You requested that the ABI list be built with the help of a mapfile, but the specified mapfile could not be found.")
+        if not map_extract_success:
+            print(f"ERROR: Request to build the ABI list with the help of a mapfile, but the specified mapfile ({args.mapfile}) could not be found.")
             return 1
 
     # Specific to the case where there is supplemental symbol information from a mapfile ...
