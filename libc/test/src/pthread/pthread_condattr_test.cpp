@@ -50,10 +50,13 @@ TEST(LlvmLibcPThreadCondAttrTest, SetGoodValues) {
   int pshared = 42;
 
   ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_init(&cond), 0);
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_setclock(&cond, CLOCK_MONOTONIC), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_setclock(&cond, CLOCK_MONOTONIC),
+            0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_getclock(&cond, &clock), 0);
   ASSERT_EQ(clock, CLOCK_MONOTONIC);
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_setpshared(&cond, PTHREAD_PROCESS_SHARED), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_setpshared(&cond,
+                                                        PTHREAD_PROCESS_SHARED),
+            0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_getpshared(&cond, &pshared), 0);
   ASSERT_EQ(pshared, PTHREAD_PROCESS_SHARED);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_destroy(&cond), 0);
@@ -71,7 +74,8 @@ TEST(LlvmLibcPThreadCondAttrTest, SetBadValues) {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_setclock(&cond, clock), EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_getclock(&cond, &clock), 0);
   ASSERT_EQ(clock, CLOCK_REALTIME);
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_setpshared(&cond, pshared), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_setpshared(&cond, pshared),
+            EINVAL);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_getpshared(&cond, &pshared), 0);
   ASSERT_EQ(pshared, PTHREAD_PROCESS_PRIVATE);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_destroy(&cond), 0);
