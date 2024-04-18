@@ -21238,19 +21238,22 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
   case BuiltinType::UnresolvedTemplate: {
     auto *ULE = cast<UnresolvedLookupExpr>(E);
     const DeclarationNameInfo &NameInfo = ULE->getNameInfo();
-    NestedNameSpecifierLoc Loc = ULE->getQualifierLoc();
+    // There's only one FoundDecl for UnresolvedTemplate type. See
+    // BuildTemplateIdExpr.
     NamedDecl *Temp = *ULE->decls_begin();
-    bool IsTypeAliasTemplateDecl = isa<TypeAliasTemplateDecl>(Temp);
-    if (NestedNameSpecifier *NNS = Loc.getNestedNameSpecifier())
+    const bool IsTypeAliasTemplateDecl = isa<TypeAliasTemplateDecl>(Temp);
+
+    if (NestedNameSpecifierLoc Loc = ULE->getQualifierLoc(); Loc.hasQualifier())
       Diag(NameInfo.getLoc(), diag::err_template_kw_refers_to_type_template)
-          << NNS << NameInfo.getName().getAsString() << Loc.getSourceRange()
-          << IsTypeAliasTemplateDecl;
+          << Loc.getNestedNameSpecifier() << NameInfo.getName().getAsString()
+          << Loc.getSourceRange() << IsTypeAliasTemplateDecl;
     else
       Diag(NameInfo.getLoc(), diag::err_template_kw_refers_to_type_template)
-          << "" << NameInfo.getName().getAsString() << Loc.getSourceRange()
+          << "" << NameInfo.getName().getAsString() << ULE->getSourceRange()
           << IsTypeAliasTemplateDecl;
     Diag(Temp->getLocation(), diag::note_referenced_type_template)
         << IsTypeAliasTemplateDecl;
+
     return CreateRecoveryExpr(NameInfo.getBeginLoc(), NameInfo.getEndLoc(), {});
   }
 

@@ -243,10 +243,29 @@ template <typename T> struct C {
 };
 
 template <typename T1> struct A {
+
+  template <int TT> class SubA {}; // #SubA
+
+  template <typename T2>
+  void foo(T2) {}
+
   void foo() {
     C<T1>::template Type<2>;  // #templated-decl-as-expression
     // expected-error@#templated-decl-as-expression {{'C<float>::Type' is expected to be a non-type template, but instantiated to a class template}}}
     // expected-note@#ClassTemplate {{class template declared here}}
+
+    foo(C<T1>::Type<2>); // expected-error {{expected expression}}
+
+    foo(C<T1>::template Type<2>);
+    // expected-error@-1 {{'C<float>::Type' is expected to be a non-type template, but instantiated to a class template}}
+    // expected-note@#ClassTemplate {{class template declared here}}
+
+    foo(C<T1>::template Type<2>());
+    // expected-error@-1 {{'C<float>::Type' is expected to be a non-type template, but instantiated to a class template}}
+    // expected-error@-2 {{called object type '<dependent type>' is not a function or function pointer}}
+    // expected-note@#ClassTemplate {{class template declared here}}
+
+    foo(typename C<T1>::template Type<2>());
   }
 };
 
