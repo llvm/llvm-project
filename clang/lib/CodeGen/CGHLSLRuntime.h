@@ -51,6 +51,41 @@ class GlobalVariable;
 class Function;
 class StructType;
 class Value;
+
+template <> struct DenseMapInfo<clang::Builtin::ID> {
+  static clang::Builtin::ID getEmptyKey() { return clang::Builtin::NotBuiltin; }
+
+  static clang::Builtin::ID getTombstoneKey() {
+    return clang::Builtin::FirstTSBuiltin;
+  }
+
+  static unsigned getHashValue(clang::Builtin::ID Val) {
+    return static_cast<unsigned>(Val);
+  }
+
+  static bool isEqual(clang::Builtin::ID LHS, clang::Builtin::ID RHS) {
+    return LHS == RHS;
+  }
+};
+
+template <> struct DenseMapInfo<llvm::Triple::ArchType> {
+  static llvm::Triple::ArchType getEmptyKey() {
+    return llvm::Triple::ArchType::UnknownArch;
+  }
+
+  static llvm::Triple::ArchType getTombstoneKey() {
+    return llvm::Triple::ArchType::LastArchType;
+  }
+
+  static unsigned getHashValue(llvm::Triple::ArchType Val) {
+    return static_cast<unsigned>(Val);
+  }
+
+  static bool isEqual(llvm::Triple::ArchType LHS, llvm::Triple::ArchType RHS) {
+    return LHS == RHS;
+  }
+};
+
 } // namespace llvm
 
 namespace clang {
@@ -67,6 +102,15 @@ namespace CodeGen {
 
 class CodeGenModule;
 
+struct CGHLSLIntrinsic {
+  llvm::DenseMap<llvm::Triple::ArchType, llvm::function_ref<llvm::Value *()>>
+      targetImplementations;
+  llvm::function_ref<llvm::Value *()> genericImplementation =
+      []() -> llvm::Value * {
+    llvm_unreachable("Intrinsic not supported by target architecture.");
+  };
+};
+
 class CGHLSLRuntime {
 public:
   //===----------------------------------------------------------------------===//
@@ -80,13 +124,11 @@ public:
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
-  llvm::Value *emitHLSLIntrinsic(
-      llvm::function_ref<llvm::Value *()> DxilEmitter,
-      llvm::function_ref<llvm::Value *()> SPIRVEmitter,
-      llvm::function_ref<llvm::Value *()> GenericEmitter =
-          []() -> llvm::Value * {
-        llvm_unreachable("Intrinsic not supported by target architecture.");
-      });
+  void registerHLSLTargetIntrinsic(Builtin::ID, llvm::Triple::ArchType,
+                                   llvm::function_ref<llvm::Value *()>);
+  void registerHLSLGenericIntrinsic(Builtin::ID,
+                                    llvm::function_ref<llvm::Value *()>);
+  llvm::Value *emitHLSLIntrinsic(Builtin::ID);
   struct BufferResBinding {
     // The ID like 2 in register(b2, space1).
     std::optional<unsigned> Reg;
@@ -137,6 +179,7 @@ private:
   void addBufferDecls(const DeclContext *DC, Buffer &CB);
   llvm::Triple::ArchType getArch();
   llvm::SmallVector<Buffer> Buffers;
+  llvm::DenseMap<clang::Builtin::ID, CGHLSLIntrinsic> IntrinsicCodeGen;
 };
 
 } // namespace CodeGen

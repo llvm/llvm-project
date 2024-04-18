@@ -119,19 +119,31 @@ llvm::Triple::ArchType CGHLSLRuntime::getArch() {
   return CGM.getTarget().getTriple().getArch();
 }
 
-Value *
-CGHLSLRuntime::emitHLSLIntrinsic(llvm::function_ref<Value *()> DxilEmitter,
-                                 llvm::function_ref<Value *()> SPIRVEmitter,
-                                 llvm::function_ref<Value *()> GenericEmitter) {
+void CGHLSLRuntime::registerHLSLTargetIntrinsic(
+    Builtin::ID Id, llvm::Triple::ArchType Arch,
+    llvm::function_ref<llvm::Value *()> IntrinsicImpl) {
+  if (!IntrinsicCodeGen.count(Id))
+    IntrinsicCodeGen[Id] = CGHLSLIntrinsic();
+  IntrinsicCodeGen[Id].targetImplementations[Arch] = IntrinsicImpl;
+}
+void CGHLSLRuntime::registerHLSLGenericIntrinsic(
+    Builtin::ID Id, llvm::function_ref<llvm::Value *()> IntrinsicImpl) {
+  if (!IntrinsicCodeGen.count(Id))
+    IntrinsicCodeGen[Id] = CGHLSLIntrinsic();
+  IntrinsicCodeGen[Id].genericImplementation = IntrinsicImpl;
+}
+
+llvm::Value *CGHLSLRuntime::emitHLSLIntrinsic(Builtin::ID id) {
+  auto it = IntrinsicCodeGen.find(id);
+  assert(it != IntrinsicCodeGen.end() &&
+         " HLSL intrinsics need to be reigstered before use.");
   llvm::Triple::ArchType Arch = getArch();
-  switch (Arch) {
-  case llvm::Triple::dxil:
-    return DxilEmitter();
-  case llvm::Triple::spirv:
-    return SPIRVEmitter();
-  default:
-    return GenericEmitter();
+  auto targets = it->second.targetImplementations;
+  auto targetIt = targets.find(Arch);
+  if (targetIt == targets.end()) {
+    return it->second.genericImplementation();
   }
+  return targetIt->second();
 }
 
 void CGHLSLRuntime::addConstant(VarDecl *D, Buffer &CB) {

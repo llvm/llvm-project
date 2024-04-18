@@ -18215,9 +18215,11 @@ Value *CodeGenFunction::EmitHLSLMadIntrinsic(const CallExpr *E) {
     Value *Mul = Builder.CreateNUWMul(M, A);
     return Builder.CreateNUWAdd(Mul, B);
   };
-
-  return CGM.getHLSLRuntime().emitHLSLIntrinsic(
-      EmitHLSLIMadDirectX, EmitHLSLIMadGeneric, EmitHLSLIMadGeneric);
+  CGM.getHLSLRuntime().registerHLSLTargetIntrinsic(
+      Builtin::BI__builtin_hlsl_mad, llvm::Triple::dxil, EmitHLSLIMadDirectX);
+  CGM.getHLSLRuntime().registerHLSLGenericIntrinsic(
+      Builtin::BI__builtin_hlsl_mad, EmitHLSLIMadGeneric);
+  return CGM.getHLSLRuntime().emitHLSLIntrinsic(Builtin::BI__builtin_hlsl_mad);
 }
 
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
