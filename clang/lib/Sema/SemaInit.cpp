@@ -849,7 +849,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
       }
 
       for (auto *Field : RDecl->fields()) {
-        if (Field->isUnnamedBitfield())
+        if (Field->isUnnamedBitField())
           continue;
 
         if (hadError)
@@ -1027,7 +1027,7 @@ int InitListChecker::numStructUnionElements(QualType DeclType) {
   if (auto *CXXRD = dyn_cast<CXXRecordDecl>(structDecl))
     InitializableMembers += CXXRD->getNumBases();
   for (const auto *Field : structDecl->fields())
-    if (!Field->isUnnamedBitfield())
+    if (!Field->isUnnamedBitField())
       ++InitializableMembers;
 
   if (structDecl->isUnion())
@@ -2175,7 +2175,7 @@ void InitListChecker::CheckStructUnionTypes(
     // bitfield.
     for (RecordDecl::field_iterator FieldEnd = RD->field_end();
          Field != FieldEnd; ++Field) {
-      if (!Field->isUnnamedBitfield()) {
+      if (!Field->isUnnamedBitField()) {
         CheckEmptyInitializable(
             InitializedEntity::InitializeMember(*Field, &Entity),
             IList->getEndLoc());
@@ -2338,7 +2338,7 @@ void InitListChecker::CheckStructUnionTypes(
     if (Field->getType()->isIncompleteArrayType())
       break;
 
-    if (Field->isUnnamedBitfield()) {
+    if (Field->isUnnamedBitField()) {
       // Don't initialize unnamed bitfields, e.g. "int : 20;"
       ++Field;
       continue;
@@ -2398,7 +2398,7 @@ void InitListChecker::CheckStructUnionTypes(
       if (HasDesignatedInit && InitializedFields.count(*it))
         continue;
 
-      if (!it->isUnnamedBitfield() && !it->hasInClassInitializer() &&
+      if (!it->isUnnamedBitField() && !it->hasInClassInitializer() &&
           !it->getType()->isIncompleteArrayType()) {
         auto Diag = HasDesignatedInit
                         ? diag::warn_missing_designated_field_initializers
@@ -2414,7 +2414,7 @@ void InitListChecker::CheckStructUnionTypes(
   if (!StructuredList && Field != FieldEnd && !RD->isUnion() &&
       !Field->getType()->isIncompleteArrayType()) {
     for (; Field != FieldEnd && !hadError; ++Field) {
-      if (!Field->isUnnamedBitfield() && !Field->hasInClassInitializer())
+      if (!Field->isUnnamedBitField() && !Field->hasInClassInitializer())
         CheckEmptyInitializable(
             InitializedEntity::InitializeMember(*Field, &Entity),
             IList->getEndLoc());
@@ -2784,7 +2784,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     unsigned FieldIndex = NumBases;
 
     for (auto *FI : RD->fields()) {
-      if (FI->isUnnamedBitfield())
+      if (FI->isUnnamedBitField())
         continue;
       if (declaresSameEntity(KnownField, FI)) {
         KnownField = FI;
@@ -2858,7 +2858,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       // Find the field that we just initialized.
       FieldDecl *PrevField = nullptr;
       for (auto FI = RD->field_begin(); FI != RD->field_end(); ++FI) {
-        if (FI->isUnnamedBitfield())
+        if (FI->isUnnamedBitField())
           continue;
         if (*NextField != RD->field_end() &&
             declaresSameEntity(*FI, **NextField))
@@ -2976,7 +2976,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     // If this the first designator, our caller will continue checking
     // the rest of this struct/class/union subobject.
     if (IsFirstDesignator) {
-      if (Field != RD->field_end() && Field->isUnnamedBitfield())
+      if (Field != RD->field_end() && Field->isUnnamedBitField())
         ++Field;
 
       if (NextField)
@@ -5585,7 +5585,7 @@ static void TryOrBuildParenListInitialization(
     for (FieldDecl *FD : RD->fields()) {
       // Unnamed bitfields should not be initialized at all, either with an arg
       // or by default.
-      if (FD->isUnnamedBitfield())
+      if (FD->isUnnamedBitField())
         continue;
 
       InitializedEntity SubEntity =
@@ -7930,7 +7930,7 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
         for (const auto *I : RD->fields()) {
           if (Index >= ILE->getNumInits())
             break;
-          if (I->isUnnamedBitfield())
+          if (I->isUnnamedBitField())
             continue;
           Expr *SubInit = ILE->getInit(Index);
           if (I->getType()->isReferenceType())
@@ -9532,7 +9532,7 @@ static bool DiagnoseUninitializedReference(Sema &S, SourceLocation Loc,
     return false;
 
   for (const auto *FI : RD->fields()) {
-    if (FI->isUnnamedBitfield())
+    if (FI->isUnnamedBitField())
       continue;
 
     if (DiagnoseUninitializedReference(S, FI->getLocation(), FI->getType())) {

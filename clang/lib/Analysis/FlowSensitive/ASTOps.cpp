@@ -101,7 +101,7 @@ getFieldsForInitListExpr(const InitListExpr *InitList) {
   // fields to avoid mapping inits to the wrongs fields.
   llvm::copy_if(
       RD->fields(), std::back_inserter(Fields),
-      [](const FieldDecl *Field) { return !Field->isUnnamedBitfield(); });
+      [](const FieldDecl *Field) { return !Field->isUnnamedBitField(); });
   return Fields;
 }
 
