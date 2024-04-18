@@ -1176,6 +1176,16 @@ CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> FTNP) {
                                 FTNP->getExtInfo(), {}, RequiredArgs(0));
 }
 
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeBuiltinFunctionCall(QualType resultType,
+                                        const CallArgList &args) {
+  // FIXME: Kill copy.
+  SmallVector<CanQualType, 16> argTypes;
+  for (const auto &Arg : args)
+    argTypes.push_back(getContext().getCanonicalParamType(Arg.Ty));
+  llvm_unreachable("NYI");
+}
+
 /// Arrange a call to a C++ method, passing the given arguments.
 ///
 /// ExtraPrefixArgs is the number of ABI-specific args passed after the `this`
