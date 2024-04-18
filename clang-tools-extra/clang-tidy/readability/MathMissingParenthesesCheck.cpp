@@ -63,15 +63,15 @@ static void addParantheses(const BinaryOperator *BinOp,
         clang::Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0, SM, LangOpts);
 
     Check->diag(StartLoc,
-            "'%0' has higher precedence than '%1'; add parentheses to "
-            "explicitly specify the order of operations")
-    << (Precedence1 > Precedence2 ? BinOp->getOpcodeStr()
-                                  : ParentBinOp->getOpcodeStr())
-    << (Precedence1 > Precedence2 ? ParentBinOp->getOpcodeStr()
-                                  : BinOp->getOpcodeStr())
-    << FixItHint::CreateInsertion(StartLoc, "(")
-    << FixItHint::CreateInsertion(EndLoc, ")")
-    << SourceRange(StartLoc, EndLoc);
+                "'%0' has higher precedence than '%1'; add parentheses to "
+                "explicitly specify the order of operations")
+        << (Precedence1 > Precedence2 ? BinOp->getOpcodeStr()
+                                      : ParentBinOp->getOpcodeStr())
+        << (Precedence1 > Precedence2 ? ParentBinOp->getOpcodeStr()
+                                      : BinOp->getOpcodeStr())
+        << FixItHint::CreateInsertion(StartLoc, "(")
+        << FixItHint::CreateInsertion(EndLoc, ")")
+        << SourceRange(StartLoc, EndLoc);
   }
 
   addParantheses(dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreImpCasts()),
