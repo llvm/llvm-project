@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple i386-pc-win32    %s -emit-llvm -o - | FileCheck --check-prefix=MSABI %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -mconstructor-aliases -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fclang-abi-compat=18 %s -emit-llvm -mconstructor-aliases  -o - | FileCheck --check-prefix=CLANG18 %s
+// RUN: %clang_cc1 -triple i386-pc-win32 %s -emit-llvm -mconstructor-aliases -o - | FileCheck --check-prefix=MSABI %s
 
 
 class func {
@@ -27,6 +28,11 @@ void GH88906(){
 // CHECK-LABEL: define internal void @_ZN4funcC2IN7GH889064Test1aMUlvE_ENS3_UlvE0_EEET_T0_
 // CHECK-LABEL: define internal void @_ZN4funcC2IN7GH889064Test1bMUlvE_EEET_
 // CHECK-LABEL: define internal void @_ZN4funcC2IN7GH889064Test1cMUlvE_EEET_
+
+// CLANG18-LABEL: define internal void @_ZZ7GH88906vEN4TestC2Ev
+// CLANG18: call void @_ZN4funcC2IZ7GH88906vEN4TestUlvE_EZ7GH88906vENS1_UlvE0_EEET_T0_
+// CLANG18: call void @_ZN4funcC2IZ7GH88906vEN4TestUlvE_EEET_
+// CLANG18: call void @_ZN4funcC2IZ7GH88906vEN4TestUlvE_EEET_
 
 
 

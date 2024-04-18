@@ -1062,18 +1062,22 @@ void CXXNameMangler::mangleNameWithAbiTags(GlobalDecl GD,
   //         ::= <local-name>
   //
   const DeclContext *DC = Context.getEffectiveDeclContext(ND);
+  bool IsLambda = isLambda(ND);
 
   // If this is an extern variable declared locally, the relevant DeclContext
   // is that of the containing namespace, or the translation unit.
   // FIXME: This is a hack; extern variables declared locally should have
   // a proper semantic declaration context!
-  if (isLocalContainerContext(DC) && ND->hasLinkage() && !isLambda(ND))
+  if (isLocalContainerContext(DC) && ND->hasLinkage() && !IsLambda)
     while (!DC->isNamespace() && !DC->isTranslationUnit())
       DC = Context.getEffectiveParentContext(DC);
-  else if (GetLocalClassDecl(ND) && !isLambda(ND)) {
+  else if (GetLocalClassDecl(ND) &&
+           (!IsLambda || isCompatibleWith(LangOptions::ClangABI::Ver18))) {
     mangleLocalName(GD, AdditionalAbiTags);
     return;
   }
+
+  assert(!isa<LinkageSpecDecl>(DC) && "context cannot be LinkageSpecDecl");
 
   // Closures can require a nested-name mangling even if they're semantically
   // in the global namespace.
@@ -1081,8 +1085,6 @@ void CXXNameMangler::mangleNameWithAbiTags(GlobalDecl GD,
     mangleNestedNameWithClosurePrefix(GD, PrefixND, AdditionalAbiTags);
     return;
   }
-
-  assert(!isa<LinkageSpecDecl>(DC) && "context cannot be LinkageSpecDecl");
 
   if (isLocalContainerContext(DC)) {
     mangleLocalName(GD, AdditionalAbiTags);
