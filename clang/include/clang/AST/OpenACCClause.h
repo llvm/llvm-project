@@ -160,7 +160,7 @@ public:
 /// Semantically, many only permit a single expression, with a few that permit
 /// up to 3.
 class OpenACCClauseWithIntExprs : public OpenACCClauseWithParams {
-  llvm::SmallVector<Expr *> IntExprs;
+  llvm::ArrayRef<Expr *> IntExprs;
 
 protected:
   OpenACCClauseWithIntExprs(OpenACCClauseKind K, SourceLocation BeginLoc,
@@ -175,8 +175,9 @@ protected:
 
 public:
   child_range children() {
-    return child_range(reinterpret_cast<Stmt **>(IntExprs.begin()),
-                       reinterpret_cast<Stmt **>(IntExprs.end()));
+    return child_range(
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(IntExprs.begin())),
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(IntExprs.end())));
   }
 
   const_child_range children() const {
@@ -189,11 +190,15 @@ public:
 /// A more restrictive version of the IntExprs version that exposes a single
 /// integer expression.
 class OpenACCClauseWithSingleIntExpr : public OpenACCClauseWithIntExprs {
+  Expr *IntExpr;
+
 protected:
   OpenACCClauseWithSingleIntExpr(OpenACCClauseKind K, SourceLocation BeginLoc,
                                  SourceLocation LParenLoc, Expr *IntExpr,
                                  SourceLocation EndLoc)
-      : OpenACCClauseWithIntExprs(K, BeginLoc, LParenLoc, IntExpr, EndLoc) {}
+      : OpenACCClauseWithIntExprs(K, BeginLoc, LParenLoc,
+                                  ArrayRef{&this->IntExpr, 1}, EndLoc),
+        IntExpr(IntExpr) {}
 
 public:
   bool hasIntExpr() const { return !getIntExprs().empty(); }
