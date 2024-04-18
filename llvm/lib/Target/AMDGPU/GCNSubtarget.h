@@ -241,6 +241,7 @@ protected:
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
   bool HasForceVALUThrottle = false;
+  bool HasMLMathInsts = false;
 
   bool RequiresCOV6 = false;
 
@@ -1230,6 +1231,8 @@ public:
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
   bool hasForceVALUThrottle() const { return HasForceVALUThrottle; }
+
+  bool hasMLMathInsts() const { return HasMLMathInsts; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts || GFX12_10Insts; }

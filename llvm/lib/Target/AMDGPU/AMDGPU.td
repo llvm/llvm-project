@@ -474,6 +474,12 @@ def FeatureBF16PackedInsts : SubtargetFeature<"bf16-pk-insts",
   "Has bf16 packed instructions (fma, add, mul, max, min)"
 >;
 
+def FeatureMLMathInsts : SubtargetFeature<"ml-math-insts",
+  "HasMLMathInsts",
+  "true",
+  "Has ML math instructions (convolve, tensor convert, sba, bpermute)"
+>;
+
 def FeatureVOP3P : SubtargetFeature<"vop3p",
   "HasVOP3PInsts",
   "true",
@@ -1789,7 +1795,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBF16PackedInsts,
    FeaturePrngInst,
    FeaturePermlane16Swap,
-   FeatureSupportsSRAMECC]>;
+   FeatureSupportsSRAMECC,
+   FeatureMLMathInsts]>;
 
 //===----------------------------------------------------------------------===//
 
