@@ -1340,7 +1340,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
                              /* AllowRefinement */ false,
                              &DropFlags) == TrueVal) {
     for (Instruction *I : DropFlags) {
-      I->dropPoisonGeneratingFlagsAndMetadata();
+      I->dropPoisonGeneratingAnnotations();
       Worklist.add(I);
     }
 

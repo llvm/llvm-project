@@ -13,7 +13,9 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -470,6 +472,27 @@ void Instruction::dropPoisonGeneratingMetadata() {
   eraseMetadata(LLVMContext::MD_range);
   eraseMetadata(LLVMContext::MD_nonnull);
   eraseMetadata(LLVMContext::MD_align);
+}
+
+bool Instruction::hasPoisonGeneratingReturnAttributes() const {
+  if (const auto *CB = dyn_cast<CallBase>(this)) {
+    AttributeSet RetAttrs = CB->getAttributes().getRetAttrs();
+    return RetAttrs.hasAttribute(Attribute::Range) ||
+           RetAttrs.hasAttribute(Attribute::Alignment) ||
+           RetAttrs.hasAttribute(Attribute::NonNull);
+  }
+  return false;
+}
+
+void Instruction::dropPoisonGeneratingReturnAttributes() {
+  if (auto *CB = dyn_cast<CallBase>(this)) {
+    AttributeMask AM;
+    AM.addAttribute(Attribute::Range);
+    AM.addAttribute(Attribute::Alignment);
+    AM.addAttribute(Attribute::NonNull);
+    CB->removeRetAttrs(AM);
+  }
+  assert(!hasPoisonGeneratingReturnAttributes() && "must be kept in sync");
 }
 
 void Instruction::dropUBImplyingAttrsAndUnknownMetadata(

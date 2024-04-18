@@ -6951,7 +6951,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
                                    bool ConsiderFlagsAndMetadata) {
 
   if (ConsiderFlagsAndMetadata && includesPoison(Kind) &&
-      Op->hasPoisonGeneratingFlagsOrMetadata())
+      Op->hasPoisonGeneratingAnnotations())
     return true;
 
   unsigned Opcode = Op->getOpcode();
