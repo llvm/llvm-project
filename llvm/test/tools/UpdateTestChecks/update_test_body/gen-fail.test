@@ -1,4 +1,4 @@
-# RUN: cp %s %t && %update_test_body %t 2>&1 | FileCheck %s
+# RUN: cp %s %t && not %update_test_body %t 2>&1 | FileCheck %s
 
 # CHECK:      log
 # CHECK-NEXT: 'gen' failed

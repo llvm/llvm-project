@@ -483,6 +483,13 @@ violations with the flag enabled.
 ABI Impacts
 -----------
 
+This section describes the new ABI changes brought by modules.
+
+Only Itanium C++ ABI related change are mentioned
+
+Mangling Names
+~~~~~~~~~~~~~~
+
 The declarations in a module unit which are not in the global module fragment have new linkage names.
 
 For example,
@@ -519,6 +526,23 @@ is attached to the global module fragments. For example:
   }
 
 Now the linkage name of ``NS::foo()`` will be ``_ZN2NS3fooEv``.
+
+Module Initializers
+~~~~~~~~~~~~~~~~~~~
+
+All the importable module units are required to emit an initializer function.
+The initializer function should contain calls to importing modules first and
+all the dynamic-initializers in the current module unit then.
+
+Translation units explicitly or implicitly importing named modules must call
+the initializer functions of the imported named modules within the sequence of
+the dynamic-initializers in the TU. Initializations of entities at namespace
+scope are appearance-ordered. This (recursively) extends into imported modules
+at the point of appearance of the import declaration.
+
+It is allowed to omit calls to importing modules if it is known empty.
+
+It is allowed to omit calls to importing modules for which is known to be called.
 
 Reduced BMI
 -----------

@@ -16,7 +16,7 @@ e foo() {
   return *E;
 }
 #--- gen
-clang --target=x86_64-linux -O2 -gdwarf-4 -S a.cpp -o -
+clang --target=x86_64-apple-macosx -O2 -gdwarf-4 -S a.cpp -o -
 .endif
 
 	.section	__TEXT,__text,regular,pure_instructions

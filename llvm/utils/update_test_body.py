@@ -17,13 +17,18 @@ rewrite the part after `.endif` with its stdout.
 Example:
 PATH=/path/to/clang_build/bin:$PATH llvm/utils/update_test_body.py path/to/test.s
 """
-import argparse, contextlib, os, subprocess, sys, tempfile
+import argparse
+import contextlib
+import os
+import subprocess
+import sys
+import tempfile
 
 
 @contextlib.contextmanager
-def cd(dir):
+def cd(directory):
     cwd = os.getcwd()
-    os.chdir(dir)
+    os.chdir(directory)
     try:
         yield
     finally:
@@ -49,27 +54,29 @@ def process(args, path):
 
     if not split_file_input:
         print("no .ifdef GEN", file=sys.stderr)
-        return
+        return 1
     if is_split_file_input:
         print("no .endif", file=sys.stderr)
-        return
+        return 1
     with tempfile.TemporaryDirectory(prefix="update_test_body_") as dir:
-        sub = subprocess.run(
-            ["split-file", "-", dir],
-            input="\n".join(split_file_input).encode(),
-            capture_output=True,
-        )
-        if sub.returncode != 0:
-            sys.stderr.write(f"split-file failed\n{sub.stderr.decode()}")
-            return
+        try:
+            sub = subprocess.run(
+                ["split-file", "-", dir],
+                input="\n".join(split_file_input).encode(),
+                capture_output=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as ex:
+            sys.stderr.write(ex.stderr.decode())
+            return 1
         with cd(dir):
             if args.shell:
                 print(f"invoke shell in the temporary directory '{dir}'")
                 subprocess.run([os.environ.get("SHELL", "sh")])
-                return
+                return 0
             if not os.path.exists("gen"):
                 print("'gen' does not exist", file=sys.stderr)
-                return
+                return 1
 
             sub = subprocess.run(
                 ["sh", "-euo", "pipefail", "gen"],
@@ -85,10 +92,10 @@ def process(args, path):
             sys.stderr.write(sub.stderr.decode())
             if sub.returncode != 0:
                 print("'gen' failed", file=sys.stderr)
-                return
+                return sub.returncode
             if not sub.stdout:
                 print("stdout is empty; forgot -o - ?", file=sys.stderr)
-                return
+                return 1
             content = sub.stdout.decode()
 
     with open(path, "w") as f:
@@ -107,4 +114,6 @@ parser.add_argument(
 )
 args = parser.parse_args()
 for path in args.files:
-    process(args, path)
+    retcode = process(args, path)
+    if retcode != 0:
+        sys.exit(retcode)
