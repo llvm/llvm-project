@@ -817,8 +817,8 @@ defm FMLS_VG4_M4Z2Z_H : sme2_dot_mla_add_sub_array_vg4_multi<"fmls", 0b0100011, 
 defm FCVT_2ZZ_H  : sme2p1_fp_cvt_vector_vg2_single<"fcvt", 0b0>;
 defm FCVTL_2ZZ_H : sme2p1_fp_cvt_vector_vg2_single<"fcvtl", 0b1>;
 
-defm FMOPA_MPPZZ_H : sme2p1_fmop_tile_fp16<"fmopa", 0b0, 0b0, 0b11, nxv8f16, int_aarch64_sme_mopa>;
-defm FMOPS_MPPZZ_H : sme2p1_fmop_tile_fp16<"fmops", 0b0, 0b1, 0b11, nxv8f16, int_aarch64_sme_mops>;
+defm FMOPA_MPPZZ_H : sme2p1_fmop_tile_fp16<"fmopa", 0b0, 0b0, nxv8f16, int_aarch64_sme_mopa>;
+defm FMOPS_MPPZZ_H : sme2p1_fmop_tile_fp16<"fmops", 0b0, 0b1, nxv8f16, int_aarch64_sme_mops>;
 }
 
 let Predicates = [HasSME2, HasB16B16] in {
@@ -865,8 +865,8 @@ defm BFMINNM_VG4_4Z2Z : sme2p1_bf_max_min_vector_vg4_multi<"bfminnm",  0b0010011
 defm BFCLAMP_VG2_2ZZZ: sme2p1_bfclamp_vector_vg2_multi<"bfclamp">;
 defm BFCLAMP_VG4_4ZZZ: sme2p1_bfclamp_vector_vg4_multi<"bfclamp">;
 
-defm BFMOPA_MPPZZ_H : sme2p1_fmop_tile_fp16<"bfmopa", 0b1, 0b0, 0b11, nxv8bf16, int_aarch64_sme_mopa>;
-defm BFMOPS_MPPZZ_H : sme2p1_fmop_tile_fp16<"bfmops", 0b1, 0b1, 0b11, nxv8bf16, int_aarch64_sme_mops>;
+defm BFMOPA_MPPZZ_H : sme2p1_fmop_tile_fp16<"bfmopa", 0b1, 0b0, nxv8bf16, int_aarch64_sme_mopa>;
+defm BFMOPS_MPPZZ_H : sme2p1_fmop_tile_fp16<"bfmops", 0b1, 0b1, nxv8bf16, int_aarch64_sme_mops>;
 }
 
 let Predicates = [HasSME2, HasFP8] in {

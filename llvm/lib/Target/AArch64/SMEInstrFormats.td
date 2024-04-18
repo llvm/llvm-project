@@ -294,8 +294,8 @@ multiclass sme2p1_fmop_tile_f8f16<string mnemonic, bit bf, bit s, bits<2> op> {
   }
 }
 
-multiclass sme2p1_fmop_tile_fp16<string mnemonic, bit bf, bit s, bits<2> op, ValueType vt, SDPatternOperator intrinsic = null_frag> {
-  def NAME : sme_fp_outer_product_inst<s, {0,bf}, op, TileOp16, ZPR16, mnemonic>, SMEPseudo2Instr<NAME, 1> {
+multiclass sme2p1_fmop_tile_fp16<string mnemonic, bit bf, bit s, ValueType vt, SDPatternOperator intrinsic = null_frag> {
+  def NAME : sme_fp_outer_product_inst<s, {0,bf}, 0b11, TileOp16, ZPR16, mnemonic>, SMEPseudo2Instr<NAME, 1> {
     bits<1> ZAda;
     let Inst{2-1} = 0b00;
     let Inst{0}   = ZAda;
