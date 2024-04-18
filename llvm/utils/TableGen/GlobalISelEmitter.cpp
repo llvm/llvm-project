@@ -1901,7 +1901,8 @@ std::optional<CodeGenSubRegIndex *> GlobalISelEmitter::inferSubRegIndexForNode(
   return CGRegs.getSubRegIdx(SubRegInit->getDef());
 }
 
-std::optional<Expected<RuleMatcher>> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
+std::optional<Expected<RuleMatcher>>
+GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   if (P.getISelShouldIgnore()) {
     return {};
   }
@@ -2416,7 +2417,8 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     ++NumPatternTotal;
 
     auto MatcherOrErr = runOnPattern(Pat);
-    if (!MatcherOrErr) continue; // skip without warning
+    if (!MatcherOrErr)
+      continue; // skip without warning
 
     // The pattern analysis can fail, indicating an unsupported pattern.
     // Report that if we've been asked to do so.

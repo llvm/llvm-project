@@ -171,10 +171,10 @@ void DAGISelEmitter::run(raw_ostream &OS) {
     const TreePatternNode &Dst = PTM.getDstPattern();
     if (!Dst.isLeaf()) {
       const Record *Op = Dst.getOperator();
-      const bool shouldIgnore =
+      const bool ShouldIgnore =
           Op->isSubClassOf("Instruction") &&
           CGP.getTargetInfo().getInstruction(Op).DAGISelShouldIgnore;
-      if (shouldIgnore)
+      if (ShouldIgnore)
         continue;
     }
 

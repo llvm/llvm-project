@@ -4408,10 +4408,10 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
       return;
     }
 
-    PatternsToMatch.emplace_back(P.getSrcRecord(), P.getPredicates(),
-                                 std::move(NewSrc), std::move(NewDst),
-                                 P.getDstRegs(), P.getAddedComplexity(),
-                                 Record::getNewUID(Records), P.getISelShouldIgnore(), Check);
+    PatternsToMatch.emplace_back(
+        P.getSrcRecord(), P.getPredicates(), std::move(NewSrc),
+        std::move(NewDst), P.getDstRegs(), P.getAddedComplexity(),
+        Record::getNewUID(Records), P.getISelShouldIgnore(), Check);
   };
 
   for (PatternToMatch &P : Copy) {

@@ -1064,11 +1064,12 @@ class PatternToMatch {
 public:
   PatternToMatch(Record *srcrecord, ListInit *preds, TreePatternNodePtr src,
                  TreePatternNodePtr dst, std::vector<Record *> dstregs,
-                 int complexity, unsigned uid, bool ignore, const Twine &hwmodefeatures = "")
+                 int complexity, unsigned uid, bool ignore,
+                 const Twine &hwmodefeatures = "")
       : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src),
         DstPattern(dst), Dstregs(std::move(dstregs)),
-        HwModeFeatures(hwmodefeatures.str()), AddedComplexity(complexity), ISelShouldIgnore(ignore),
-        ID(uid) {}
+        HwModeFeatures(hwmodefeatures.str()), AddedComplexity(complexity),
+        ISelShouldIgnore(ignore), ID(uid) {}
 
   Record *getSrcRecord() const { return SrcRecord; }
   ListInit *getPredicates() const { return Predicates; }
