@@ -71,7 +71,7 @@ backends, ``CallLowering`` makes available a few helpers and interfaces:
   :ref:`backend-calling-convs`), to decide where to put each
   ``ArgInfo`` (physical register or stack); backends can use the provided
   ``IncomingValueAssigner`` (for formal arguments and call results) and
-  ``OutgoingValueAssigner`` (for call paramters and function returns), but it's
+  ``OutgoingValueAssigner`` (for call parameters and function returns), but it's
   also possible to subclass them;
 
 * ``ValueHandler`` - inserts the necessary instructions for putting each value
