@@ -560,8 +560,10 @@ void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
 
   if ((MI.getOpcode() == AArch64::HWASAN_CHECK_MEMACCESS_FIXEDSHADOW) ||
       (MI.getOpcode() ==
-       AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW))
+       AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW)) {
     HwasanFixedShadowBase = getFixedShadowBase();
+    assert(HwasanFixedShadowBase.has_value());
+  }
 
   MCSymbol *&Sym =
       HwasanMemaccessSymbols[HwasanMemaccessTuple(Reg, IsShort, AccessInfo)];
