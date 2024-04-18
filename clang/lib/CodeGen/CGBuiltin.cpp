@@ -826,43 +826,31 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
     ASTContext &Ctx, const RecordDecl *RD, StringRef Name, uint64_t &Offset) {
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       getLangOpts().getStrictFlexArraysLevel();
-  unsigned FieldNo = 0;
-  bool IsUnion = RD->isUnion();
+  uint32_t FieldNo = 0;
 
   if (RD->isImplicit())
     return nullptr;
 
-  for (const Decl *D : RD->decls()) {
-    if (const auto *Field = dyn_cast<FieldDecl>(D);
-        Field && (Name.empty() || Field->getNameAsString() == Name) &&
+  for (const FieldDecl *FD : RD->fields()) {
+    if ((Name.empty() || FD->getNameAsString() == Name) &&
         Decl::isFlexibleArrayMemberLike(
-            Ctx, Field, Field->getType(), StrictFlexArraysLevel,
+            Ctx, FD, FD->getType(), StrictFlexArraysLevel,
             /*IgnoreTemplateOrMacroSubstitution=*/true)) {
       const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
       Offset += Layout.getFieldOffset(FieldNo);
-      return Field;
+      return FD;
     }
 
-    if (const auto *Record = dyn_cast<RecordDecl>(D))
-      if (const FieldDecl *Field =
-              FindFlexibleArrayMemberField(Ctx, Record, Name, Offset)) {
+    QualType Ty = FD->getType();
+    if (!Ty->isPointerType() && (Ty->isStructureType() || Ty->isUnionType()))
+      if (const FieldDecl *Field = FindFlexibleArrayMemberField(
+              Ctx, Ty->getAsRecordDecl(), Name, Offset)) {
         const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
-        if (Layout.getFieldCount()) {
-          // A struct that holds only an inner struct won't have any fields.
-          // E.g.
-          //
-          //     struct foo {
-          //         struct bar {
-          //             int count;
-          //             int array[];
-          //         };
-          //     };
-          Offset += Layout.getFieldOffset(FieldNo);
-        }
+        Offset += Layout.getFieldOffset(FieldNo);
         return Field;
       }
 
-    if (!IsUnion && isa<FieldDecl>(D))
+    if (!RD->isUnion())
       ++FieldNo;
   }
 
