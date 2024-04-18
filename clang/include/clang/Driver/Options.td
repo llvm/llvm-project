@@ -1505,6 +1505,7 @@ def end_no_unused_arguments : Flag<["--"], "end-no-unused-arguments">,
 def interface_stub_version_EQ : JoinedOrSeparate<["-"], "interface-stub-version=">,
   Visibility<[ClangOption, CC1Option]>;
 def exported__symbols__list : Separate<["-"], "exported_symbols_list">;
+def alias_list : Separate<["-"], "alias_list">, Flags<[LinkerInput]>;
 def extract_api : Flag<["-"], "extract-api">,
   Visibility<[ClangOption, CC1Option]>, Group<Action_Group>,
   HelpText<"Extract API information">;
@@ -4308,6 +4309,8 @@ def gsplit_dwarf_EQ : Joined<["-"], "gsplit-dwarf=">, Group<g_flags_Group>,
   Values<"split,single">;
 def gno_split_dwarf : Flag<["-"], "gno-split-dwarf">, Group<g_flags_Group>,
   Visibility<[ClangOption, CLOption, DXCOption]>;
+def gtemplate_alias : Flag<["-"], "gtemplate-alias">, Group<g_flags_Group>, Visibility<[ClangOption, CC1Option]>;
+def gno_template_alias : Flag<["-"], "gno-template-alias">, Group<g_flags_Group>, Visibility<[ClangOption]>;
 def gsimple_template_names : Flag<["-"], "gsimple-template-names">, Group<g_flags_Group>;
 def gsimple_template_names_EQ
     : Joined<["-"], "gsimple-template-names=">,
