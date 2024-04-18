@@ -92,6 +92,7 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   case OpenACCClauseKind::NumWorkers:
+  case OpenACCClauseKind::VectorLength:
     switch (DirectiveKind) {
     case OpenACCDirectiveKind::Parallel:
     case OpenACCDirectiveKind::Kernels:
@@ -245,6 +246,25 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     assert(Clause.getIntExprs().size() == 1 &&
            "Invalid number of expressions for NumWorkers");
     return OpenACCNumWorkersClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getIntExprs()[0], Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::VectorLength: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // There is no prose in the standard that says duplicates aren't allowed,
+    // but this diagnostic is present in other compilers, as well as makes
+    // sense.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    assert(Clause.getIntExprs().size() == 1 &&
+           "Invalid number of expressions for VectorLength");
+    return OpenACCVectorLengthClause::Create(
         getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
         Clause.getIntExprs()[0], Clause.getEndLoc());
   }
