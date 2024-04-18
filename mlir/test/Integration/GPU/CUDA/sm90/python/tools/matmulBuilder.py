@@ -42,13 +42,18 @@ class TmaDescriptorBuilder:
     @property
     def tensormap_descriptor_ty(self):
         """Returns a tensormap descriptor type."""
-        memref_str = f"memref<{self.tma_box_shape[0]}x{self.tma_box_shape[1]}x{self.memref_ty.element_type}, 3>"
-        parse_str = f"!nvgpu.tensormap.descriptor<tensor = {memref_str},\
-                                              swizzle = {self.swizzle},\
-                                              l2promo = {self.l2promo},\
-                                              oob = {self.oob},\
-                                              interleave = {self.interleave}>"
-        return ir.Type.parse(parse_str)
+        tensorMemrefType = ir.MemRefType.get(
+            self.tma_box_shape,
+            self.memref_ty.element_type,
+            memory_space=ir.Attribute.parse("3"),
+        )
+        return nvgpu.TensorMapDescriptorType.get(
+            tensorMemrefType,
+            self.swizzle,
+            self.l2promo,
+            self.oob,
+            self.interleave,
+        )
 
     def tma_descriptor_op(self, device_ptr):
         """Returns a tensormap descriptor op."""
