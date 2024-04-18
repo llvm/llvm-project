@@ -1397,9 +1397,11 @@ For use with :ref:`atomicrmw <i_atomicrmw>` floating-point
 operations. Indicates the handling of denormal inputs and results is
 insignificant and may be inconsistent with the expected floating-point
 mode. This is necessary to emit a native atomic instruction on some
-targets for some address spaces. This is typically used in conjunction
-with :ref:`\!amdgpu.no.remote.memory.access<amdgpu_no_remote_memory_access>`
-and :ref:`\!amdgpu.no.fine.grained.memory<amdgpu_no_fine_grained_memory>`
+targets for some address spaces where float denormals are
+unconditionally flushed. This is typically used in conjunction with
+:ref:`\!amdgpu.no.remote.memory.access<amdgpu_no_remote_memory_access>`
+and
+:ref:`\!amdgpu.no.fine.grained.memory<amdgpu_no_fine_grained_memory>`
 
 
 .. code-block:: llvm
