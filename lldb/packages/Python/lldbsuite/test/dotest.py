@@ -248,7 +248,7 @@ def parseOptionsAndInitTestdirs():
             configuration.compiler = which(args.compiler)
         if not is_exe(configuration.compiler):
             logging.error(
-                "%s is not a valid compiler executable; aborting...", args.compiler
+                '"%s" is not a valid compiler executable; aborting...', args.compiler
             )
             sys.exit(-1)
     else:
