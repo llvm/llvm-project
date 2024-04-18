@@ -714,6 +714,8 @@ public:
 
   /// Emit a reference to a declaration.
   void AddDeclRef(const Decl *D, RecordDataImpl &Record);
+  // Emit a reference to a declaration if the declaration was emitted.
+  void AddEmittedDeclRef(const Decl *D, RecordDataImpl &Record);
 
   /// Force a declaration to be emitted and get its ID.
   serialization::DeclID GetDeclRef(const Decl *D);
