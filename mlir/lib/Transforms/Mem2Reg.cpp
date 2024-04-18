@@ -165,7 +165,7 @@ class MemorySlotPromoter {
 public:
   MemorySlotPromoter(MemorySlot slot, PromotableAllocationOpInterface allocator,
                      RewriterBase &rewriter, DominanceInfo &dominance,
-                     MemorySlotPromotionInfo info,
+                     const DataLayout &dataLayout, MemorySlotPromotionInfo info,
                      const Mem2RegStatistics &statistics);
 
   /// Actually promotes the slot by mutating IR. Promoting a slot DOES
@@ -204,6 +204,7 @@ private:
   DenseMap<PromotableMemOpInterface, Value> reachingDefs;
   DenseMap<PromotableMemOpInterface, Value> replacedValuesMap;
   DominanceInfo &dominance;
+  const DataLayout &dataLayout;
   MemorySlotPromotionInfo info;
   const Mem2RegStatistics &statistics;
 };
@@ -213,9 +214,11 @@ private:
 MemorySlotPromoter::MemorySlotPromoter(
     MemorySlot slot, PromotableAllocationOpInterface allocator,
     RewriterBase &rewriter, DominanceInfo &dominance,
-    MemorySlotPromotionInfo info, const Mem2RegStatistics &statistics)
+    const DataLayout &dataLayout, MemorySlotPromotionInfo info,
+    const Mem2RegStatistics &statistics)
     : slot(slot), allocator(allocator), rewriter(rewriter),
-      dominance(dominance), info(std::move(info)), statistics(statistics) {
+      dominance(dominance), dataLayout(dataLayout), info(std::move(info)),
+      statistics(statistics) {
 #ifndef NDEBUG
   auto isResultOrNewBlockArgument = [&]() {
     if (BlockArgument arg = dyn_cast<BlockArgument>(slot.ptr))
@@ -435,7 +438,7 @@ Value MemorySlotPromoter::computeReachingDefInBlock(Block *block,
 
       if (memOp.storesTo(slot)) {
         rewriter.setInsertionPointAfter(memOp);
-        Value stored = memOp.getStored(slot, rewriter);
+        Value stored = memOp.getStored(slot, rewriter, dataLayout);
         assert(stored && "a memory operation storing to a slot must provide a "
                          "new definition of the slot");
         reachingDef = stored;
@@ -568,8 +571,8 @@ void MemorySlotPromoter::removeBlockingUses() {
 
       rewriter.setInsertionPointAfter(toPromote);
       if (toPromoteMemOp.removeBlockingUses(
-              slot, info.userToBlockingUses[toPromote], rewriter,
-              reachingDef) == DeletionKind::Delete)
+              slot, info.userToBlockingUses[toPromote], rewriter, reachingDef,
+              dataLayout) == DeletionKind::Delete)
         toErase.push_back(toPromote);
       if (toPromoteMemOp.storesTo(slot))
         if (Value replacedValue = replacedValuesMap[toPromoteMemOp])
@@ -642,7 +645,7 @@ LogicalResult mlir::tryToPromoteMemorySlots(
       MemorySlotPromotionAnalyzer analyzer(slot, dominance, dataLayout);
       std::optional<MemorySlotPromotionInfo> info = analyzer.computeInfo();
       if (info) {
-        MemorySlotPromoter(slot, allocator, rewriter, dominance,
+        MemorySlotPromoter(slot, allocator, rewriter, dominance, dataLayout,
                            std::move(*info), statistics)
             .promoteSlot();
         promotedAny = true;
