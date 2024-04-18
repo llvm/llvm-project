@@ -1317,3 +1317,16 @@ namespace {
   F f;
   static_assert(f.Z == 12, "");
 }
+
+namespace UnnamedBitFields {
+  struct A {
+    int : 1;
+    double f;
+    int : 1;
+    char c;
+  };
+
+  constexpr A a = (A){1.0, 'a'};
+  static_assert(a.f == 1.0, "");
+  static_assert(a.c == 'a', "");
+}
