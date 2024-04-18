@@ -470,11 +470,14 @@ then rewrite the part after ``.endif`` with its stdout.
   Consider specifying an explicit target triple to avoid differences when
   regeneration is needed on another machine.
 
+  ``gen`` is invoked with ``PWD`` set to ``/proc/self/cwd``. Clang commands
+  don't need ``-fdebug-compilation-dir=``.
+
   Check prefixes should be placed before ``.endif`` since the part after
   ``.endif`` is replaced.
 
-If you want to generate extra files, you can print ``#---`` separators and
-utilize ``split-file`` in RUN lines.
+If the test body contains multiple files, you can print ``#---`` separators and
+utilize ``split-file`` in ``RUN`` lines.
 
 .. code-block:: none
 

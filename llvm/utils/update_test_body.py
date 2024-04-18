@@ -17,7 +17,7 @@ rewrite the part after `.endif` with its stdout.
 Example:
 PATH=/path/to/clang_build/bin:$PATH llvm/utils/update_test_body.py path/to/test.s
 """
-import contextlib, os, subprocess, sys, tempfile
+import argparse, contextlib, os, subprocess, sys, tempfile
 
 
 @contextlib.contextmanager
@@ -30,7 +30,7 @@ def cd(dir):
         os.chdir(cwd)
 
 
-def process(path):
+def process(args, path):
     split_file_input = []
     prolog = []
     is_split_file_input = False
@@ -53,7 +53,7 @@ def process(path):
     if is_split_file_input:
         print("no .endif", file=sys.stderr)
         return
-    with tempfile.TemporaryDirectory() as dir:
+    with tempfile.TemporaryDirectory(prefix="update_test_body_") as dir:
         sub = subprocess.run(
             ["split-file", "-", dir],
             input="\n".join(split_file_input).encode(),
@@ -63,18 +63,28 @@ def process(path):
             sys.stderr.write(f"split-file failed\n{sub.stderr.decode()}")
             return
         with cd(dir):
+            if args.shell:
+                print(f"invoke shell in the temporary directory '{dir}'")
+                subprocess.run([os.environ.get("SHELL", "sh")])
+                return
             if not os.path.exists("gen"):
                 print("'gen' does not exist", file=sys.stderr)
                 return
 
-            # Don't encode the directory information to the Clang output.
-            # Remove unneeded details (.ident) as well.
-            env = dict(
-                os.environ, CCC_OVERRIDE_OPTIONS="+-fno-ident", PWD="/proc/self/cwd"
+            sub = subprocess.run(
+                ["sh", "-euo", "pipefail", "gen"],
+                capture_output=True,
+                # Don't encode the directory information to the Clang output.
+                # Remove unneeded details (.ident) as well.
+                env=dict(
+                    os.environ,
+                    CCC_OVERRIDE_OPTIONS="#+-fno-ident",
+                    PWD="/proc/self/cwd",
+                ),
             )
-            sub = subprocess.run(["sh", "gen"], capture_output=True, env=env)
+            sys.stderr.write(sub.stderr.decode())
             if sub.returncode != 0:
-                sys.stderr.write(f"'gen' failed\n{sub.stderr.decode()}")
+                print("'gen' failed", file=sys.stderr)
                 return
             if not sub.stdout:
                 print("stdout is empty; forgot -o - ?", file=sys.stderr)
@@ -88,5 +98,13 @@ def process(path):
         f.write(content)
 
 
-for path in sys.argv[1:]:
-    process(path)
+parser = argparse.ArgumentParser(
+    description="Generate test body using split-file and a custom script"
+)
+parser.add_argument("files", nargs="+")
+parser.add_argument(
+    "--shell", action="store_true", help="invoke shell instead of 'gen'"
+)
+args = parser.parse_args()
+for path in args.files:
+    process(args, path)

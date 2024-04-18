@@ -1,8 +1,11 @@
 # RUN: cp %s %t && %update_test_body %t 2>&1 | FileCheck %s
 
-# CHECK: 'gen' failed
+# CHECK:      log
+# CHECK-NEXT: 'gen' failed
 
 .ifdef GEN
 #--- gen
-false
+echo log >&2
+false  # gen fails due to sh -e
+true
 .endif
