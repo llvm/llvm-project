@@ -16,7 +16,7 @@
 
 /* Indicate that this is LLVM compiled from the amd-gfx branch. */
 #define LLVM_HAVE_BRANCH_AMD_GFX
-#define LLVM_MAIN_REVISION 496109
+#define LLVM_MAIN_REVISION 496121
 
 /* Define if LLVM_ENABLE_DUMP is enabled */
 #cmakedefine LLVM_ENABLE_DUMP
@@ -201,8 +201,5 @@
 
 /* Define if plugins enabled */
 #cmakedefine LLVM_ENABLE_PLUGINS
-
-/* Define if logf128 is available */
-#cmakedefine LLVM_HAS_LOGF128
 
 #endif
