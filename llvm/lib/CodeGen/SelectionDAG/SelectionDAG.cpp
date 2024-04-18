@@ -3524,8 +3524,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::SHL_ADD:
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::computeForAddSub(true, false, false,
-        KnownBits::shl(Known, Known2),
+    Known = KnownBits::computeForAddSub(
+        true, false, false, KnownBits::shl(Known, Known2),
         computeKnownBits(Op.getOperand(2), DemandedElts, Depth + 1));
     break;
   case ISD::FSHL:

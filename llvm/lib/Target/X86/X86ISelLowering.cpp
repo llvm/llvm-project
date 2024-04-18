@@ -46900,7 +46900,7 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
 static SDValue createMulImm(uint64_t MulAmt, SDValue N, SelectionDAG &DAG,
                             EVT VT, const SDLoc &DL) {
   assert(MulAmt == 3 || MulAmt == 5 || MulAmt == 9);
-  SDValue ShAmt = DAG.getConstant(Log2_64(MulAmt-1), DL, MVT::i8);
+  SDValue ShAmt = DAG.getConstant(Log2_64(MulAmt - 1), DL, MVT::i8);
   return DAG.getNode(ISD::SHL_ADD, DL, VT, N, ShAmt, N);
 }
 

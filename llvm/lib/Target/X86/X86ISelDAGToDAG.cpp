@@ -2556,8 +2556,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     assert(CN->getZExtValue() == 1 || CN->getZExtValue() == 2 ||
            CN->getZExtValue() == 3);
     if (AM.BaseType == X86ISelAddressMode::RegBase &&
-        AM.Base_Reg.getNode() == nullptr &&
-        AM.IndexReg.getNode() == nullptr) {
+        AM.Base_Reg.getNode() == nullptr && AM.IndexReg.getNode() == nullptr) {
       AM.Scale = unsigned(2 << (CN->getZExtValue() - 1));
 
       if (N.getOperand(0) == N.getOperand(2)) {
