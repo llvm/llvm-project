@@ -475,34 +475,45 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
 
     // For little endian we need to clear uninterested bits.
     if (STI->isLittle()) {
+      // If signed, we need to sign-extend.
       if (!IsUnsigned) {
-        BuildMI(loopMBB, DL, TII->get(Mips::SRAV), OldVal)
-            .addReg(OldVal)
-            .addReg(ShiftAmnt);
-        BuildMI(loopMBB, DL, TII->get(Mips::SRAV), Incr)
-            .addReg(Incr)
-            .addReg(ShiftAmnt);
         if (STI->hasMips32r2()) {
+          BuildMI(loopMBB, DL, TII->get(Mips::SRAV), OldVal)
+              .addReg(OldVal)
+              .addReg(ShiftAmnt);
+          BuildMI(loopMBB, DL, TII->get(Mips::SRAV), Incr)
+              .addReg(Incr)
+              .addReg(ShiftAmnt);
           BuildMI(loopMBB, DL, TII->get(SEOp), OldVal).addReg(OldVal);
           BuildMI(loopMBB, DL, TII->get(SEOp), Incr).addReg(Incr);
+          BuildMI(loopMBB, DL, TII->get(Mips::SLLV), OldVal)
+              .addReg(OldVal)
+              .addReg(ShiftAmnt);
+          BuildMI(loopMBB, DL, TII->get(Mips::SLLV), Incr)
+              .addReg(Incr)
+              .addReg(ShiftAmnt);
         } else {
-          const unsigned ShiftImm = SEOp == Mips::SEH ? 16 : 24;
-          BuildMI(loopMBB, DL, TII->get(Mips::SLL), OldVal)
-              .addReg(OldVal, RegState::Kill)
-              .addImm(ShiftImm);
-          BuildMI(loopMBB, DL, TII->get(Mips::SRA), OldVal)
-              .addReg(OldVal, RegState::Kill)
-              .addImm(ShiftImm);
-          BuildMI(loopMBB, DL, TII->get(Mips::SLL), Incr)
-              .addReg(Incr, RegState::Kill)
-              .addImm(ShiftImm);
-          BuildMI(loopMBB, DL, TII->get(Mips::SRA), Incr)
-              .addReg(Incr, RegState::Kill)
-              .addImm(ShiftImm);
+          BuildMI(loopMBB, DL, TII->get(Mips::AND), OldVal)
+              .addReg(OldVal)
+              .addReg(Mask);
+          BuildMI(loopMBB, DL, TII->get(Mips::AND), Incr)
+              .addReg(Incr)
+              .addReg(Mask);
+          BuildMI(loopMBB, DL, TII->get(Mips::CLZ), Scratch4).addReg(Mask);
+          BuildMI(loopMBB, DL, TII->get(Mips::SLLV), OldVal)
+              .addReg(OldVal)
+              .addReg(Scratch4);
+          BuildMI(loopMBB, DL, TII->get(Mips::SRAV), OldVal)
+              .addReg(OldVal)
+              .addReg(Scratch4);
+          BuildMI(loopMBB, DL, TII->get(Mips::SLLV), Incr)
+              .addReg(Incr)
+              .addReg(Scratch4);
+          BuildMI(loopMBB, DL, TII->get(Mips::SRAV), Incr)
+              .addReg(Incr)
+              .addReg(Scratch4);
         }
       } else {
-        // and OldVal, OldVal, Mask
-        // and Incr, Incr, Mask
         BuildMI(loopMBB, DL, TII->get(Mips::AND), OldVal)
             .addReg(OldVal)
             .addReg(Mask);

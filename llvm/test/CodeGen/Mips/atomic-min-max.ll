@@ -1067,12 +1067,13 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:  $BB4_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
-; MIPS32-NEXT:    srav $2, $2, $10
-; MIPS32-NEXT:    srav $7, $7, $10
-; MIPS32-NEXT:    sll $2, $2, 16
-; MIPS32-NEXT:    sra $2, $2, 16
-; MIPS32-NEXT:    sll $7, $7, 16
-; MIPS32-NEXT:    sra $7, $7, 16
+; MIPS32-NEXT:    and $2, $2, $8
+; MIPS32-NEXT:    and $7, $7, $8
+; MIPS32-NEXT:    clz $5, $8
+; MIPS32-NEXT:    sllv $2, $2, $5
+; MIPS32-NEXT:    srav $2, $2, $5
+; MIPS32-NEXT:    sllv $7, $7, $5
+; MIPS32-NEXT:    srav $7, $7, $5
 ; MIPS32-NEXT:    slt $5, $2, $7
 ; MIPS32-NEXT:    move $3, $2
 ; MIPS32-NEXT:    movn $3, $7, $5
@@ -1095,7 +1096,6 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:    addiu $sp, $sp, 8
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
-
 ;
 ; MIPSEL-LABEL: test_max_16:
 ; MIPSEL:       # %bb.0: # %entry
@@ -1118,6 +1118,8 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL-NEXT:    srav $7, $7, $10
 ; MIPSEL-NEXT:    seh $2, $2
 ; MIPSEL-NEXT:    seh $7, $7
+; MIPSEL-NEXT:    sllv $2, $2, $10
+; MIPSEL-NEXT:    sllv $7, $7, $10
 ; MIPSEL-NEXT:    slt $5, $2, $7
 ; MIPSEL-NEXT:    move $3, $2
 ; MIPSEL-NEXT:    movn $3, $7, $5
@@ -1161,6 +1163,8 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6-NEXT:    srav $7, $7, $10
 ; MIPSELR6-NEXT:    seh $2, $2
 ; MIPSELR6-NEXT:    seh $7, $7
+; MIPSELR6-NEXT:    sllv $2, $2, $10
+; MIPSELR6-NEXT:    sllv $7, $7, $10
 ; MIPSELR6-NEXT:    slt $5, $2, $7
 ; MIPSELR6-NEXT:    seleqz $3, $2, $5
 ; MIPSELR6-NEXT:    selnez $5, $7, $5
@@ -1203,6 +1207,8 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL-NEXT:    srav $7, $7, $10
 ; MMEL-NEXT:    seh $2, $2
 ; MMEL-NEXT:    seh $7, $7
+; MMEL-NEXT:    sllv $2, $2, $10
+; MMEL-NEXT:    sllv $7, $7, $10
 ; MMEL-NEXT:    slt $5, $2, $7
 ; MMEL-NEXT:    or $3, $2, $zero
 ; MMEL-NEXT:    movn $3, $7, $5
@@ -1244,6 +1250,8 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6-NEXT:    srav $7, $7, $10
 ; MMELR6-NEXT:    seh $2, $2
 ; MMELR6-NEXT:    seh $7, $7
+; MMELR6-NEXT:    sllv $2, $2, $10
+; MMELR6-NEXT:    sllv $7, $7, $10
 ; MMELR6-NEXT:    slt $5, $2, $7
 ; MMELR6-NEXT:    seleqz $3, $2, $5
 ; MMELR6-NEXT:    selnez $5, $7, $5
@@ -1365,6 +1373,8 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64EL-NEXT:    srav $7, $7, $10
 ; MIPS64EL-NEXT:    seh $2, $2
 ; MIPS64EL-NEXT:    seh $7, $7
+; MIPS64EL-NEXT:    sllv $2, $2, $10
+; MIPS64EL-NEXT:    sllv $7, $7, $10
 ; MIPS64EL-NEXT:    slt $5, $2, $7
 ; MIPS64EL-NEXT:    move $3, $2
 ; MIPS64EL-NEXT:    movn $3, $7, $5
@@ -1408,6 +1418,8 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:    srav $7, $7, $10
 ; MIPS64ELR6-NEXT:    seh $2, $2
 ; MIPS64ELR6-NEXT:    seh $7, $7
+; MIPS64ELR6-NEXT:    sllv $2, $2, $10
+; MIPS64ELR6-NEXT:    sllv $7, $7, $10
 ; MIPS64ELR6-NEXT:    slt $5, $2, $7
 ; MIPS64ELR6-NEXT:    seleqz $3, $2, $5
 ; MIPS64ELR6-NEXT:    selnez $5, $7, $5
@@ -1428,6 +1440,7 @@ define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
+
 entry:
   %0 = atomicrmw max ptr %ptr, i16 %val seq_cst
   ret i16 %0
@@ -1607,12 +1620,13 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:  $BB5_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
-; MIPS32-NEXT:    srav $2, $2, $10
-; MIPS32-NEXT:    srav $7, $7, $10
-; MIPS32-NEXT:    sll $2, $2, 16
-; MIPS32-NEXT:    sra $2, $2, 16
-; MIPS32-NEXT:    sll $7, $7, 16
-; MIPS32-NEXT:    sra $7, $7, 16
+; MIPS32-NEXT:    and $2, $2, $8
+; MIPS32-NEXT:    and $7, $7, $8
+; MIPS32-NEXT:    clz $5, $8
+; MIPS32-NEXT:    sllv $2, $2, $5
+; MIPS32-NEXT:    srav $2, $2, $5
+; MIPS32-NEXT:    sllv $7, $7, $5
+; MIPS32-NEXT:    srav $7, $7, $5
 ; MIPS32-NEXT:    slt $5, $2, $7
 ; MIPS32-NEXT:    move $3, $2
 ; MIPS32-NEXT:    movz $3, $7, $5
@@ -1657,6 +1671,8 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSEL-NEXT:    srav $7, $7, $10
 ; MIPSEL-NEXT:    seh $2, $2
 ; MIPSEL-NEXT:    seh $7, $7
+; MIPSEL-NEXT:    sllv $2, $2, $10
+; MIPSEL-NEXT:    sllv $7, $7, $10
 ; MIPSEL-NEXT:    slt $5, $2, $7
 ; MIPSEL-NEXT:    move $3, $2
 ; MIPSEL-NEXT:    movz $3, $7, $5
@@ -1700,6 +1716,8 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPSELR6-NEXT:    srav $7, $7, $10
 ; MIPSELR6-NEXT:    seh $2, $2
 ; MIPSELR6-NEXT:    seh $7, $7
+; MIPSELR6-NEXT:    sllv $2, $2, $10
+; MIPSELR6-NEXT:    sllv $7, $7, $10
 ; MIPSELR6-NEXT:    slt $5, $2, $7
 ; MIPSELR6-NEXT:    selnez $3, $2, $5
 ; MIPSELR6-NEXT:    seleqz $5, $7, $5
@@ -1742,6 +1760,8 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMEL-NEXT:    srav $7, $7, $10
 ; MMEL-NEXT:    seh $2, $2
 ; MMEL-NEXT:    seh $7, $7
+; MMEL-NEXT:    sllv $2, $2, $10
+; MMEL-NEXT:    sllv $7, $7, $10
 ; MMEL-NEXT:    slt $5, $2, $7
 ; MMEL-NEXT:    or $3, $2, $zero
 ; MMEL-NEXT:    movz $3, $7, $5
@@ -1783,6 +1803,8 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MMELR6-NEXT:    srav $7, $7, $10
 ; MMELR6-NEXT:    seh $2, $2
 ; MMELR6-NEXT:    seh $7, $7
+; MMELR6-NEXT:    sllv $2, $2, $10
+; MMELR6-NEXT:    sllv $7, $7, $10
 ; MMELR6-NEXT:    slt $5, $2, $7
 ; MMELR6-NEXT:    selnez $3, $2, $5
 ; MMELR6-NEXT:    seleqz $5, $7, $5
@@ -1904,6 +1926,8 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64EL-NEXT:    srav $7, $7, $10
 ; MIPS64EL-NEXT:    seh $2, $2
 ; MIPS64EL-NEXT:    seh $7, $7
+; MIPS64EL-NEXT:    sllv $2, $2, $10
+; MIPS64EL-NEXT:    sllv $7, $7, $10
 ; MIPS64EL-NEXT:    slt $5, $2, $7
 ; MIPS64EL-NEXT:    move $3, $2
 ; MIPS64EL-NEXT:    movz $3, $7, $5
@@ -1947,6 +1971,8 @@ define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:    srav $7, $7, $10
 ; MIPS64ELR6-NEXT:    seh $2, $2
 ; MIPS64ELR6-NEXT:    seh $7, $7
+; MIPS64ELR6-NEXT:    sllv $2, $2, $10
+; MIPS64ELR6-NEXT:    sllv $7, $7, $10
 ; MIPS64ELR6-NEXT:    slt $5, $2, $7
 ; MIPS64ELR6-NEXT:    selnez $3, $2, $5
 ; MIPS64ELR6-NEXT:    seleqz $5, $7, $5
@@ -2694,7 +2720,6 @@ define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 ;
-;
 ; MIPSEL-LABEL: test_umin_16:
 ; MIPSEL:       # %bb.0: # %entry
 ; MIPSEL-NEXT:    addiu $sp, $sp, -8
@@ -3194,12 +3219,13 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:  $BB8_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
-; MIPS32-NEXT:    srav $2, $2, $10
-; MIPS32-NEXT:    srav $7, $7, $10
-; MIPS32-NEXT:    sll $2, $2, 24
-; MIPS32-NEXT:    sra $2, $2, 24
-; MIPS32-NEXT:    sll $7, $7, 24
-; MIPS32-NEXT:    sra $7, $7, 24
+; MIPS32-NEXT:    and $2, $2, $8
+; MIPS32-NEXT:    and $7, $7, $8
+; MIPS32-NEXT:    clz $5, $8
+; MIPS32-NEXT:    sllv $2, $2, $5
+; MIPS32-NEXT:    srav $2, $2, $5
+; MIPS32-NEXT:    sllv $7, $7, $5
+; MIPS32-NEXT:    srav $7, $7, $5
 ; MIPS32-NEXT:    slt $5, $2, $7
 ; MIPS32-NEXT:    move $3, $2
 ; MIPS32-NEXT:    movn $3, $7, $5
@@ -3244,6 +3270,8 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL-NEXT:    srav $7, $7, $10
 ; MIPSEL-NEXT:    seb $2, $2
 ; MIPSEL-NEXT:    seb $7, $7
+; MIPSEL-NEXT:    sllv $2, $2, $10
+; MIPSEL-NEXT:    sllv $7, $7, $10
 ; MIPSEL-NEXT:    slt $5, $2, $7
 ; MIPSEL-NEXT:    move $3, $2
 ; MIPSEL-NEXT:    movn $3, $7, $5
@@ -3287,6 +3315,8 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6-NEXT:    srav $7, $7, $10
 ; MIPSELR6-NEXT:    seb $2, $2
 ; MIPSELR6-NEXT:    seb $7, $7
+; MIPSELR6-NEXT:    sllv $2, $2, $10
+; MIPSELR6-NEXT:    sllv $7, $7, $10
 ; MIPSELR6-NEXT:    slt $5, $2, $7
 ; MIPSELR6-NEXT:    seleqz $3, $2, $5
 ; MIPSELR6-NEXT:    selnez $5, $7, $5
@@ -3329,6 +3359,8 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL-NEXT:    srav $7, $7, $10
 ; MMEL-NEXT:    seb $2, $2
 ; MMEL-NEXT:    seb $7, $7
+; MMEL-NEXT:    sllv $2, $2, $10
+; MMEL-NEXT:    sllv $7, $7, $10
 ; MMEL-NEXT:    slt $5, $2, $7
 ; MMEL-NEXT:    or $3, $2, $zero
 ; MMEL-NEXT:    movn $3, $7, $5
@@ -3370,6 +3402,8 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6-NEXT:    srav $7, $7, $10
 ; MMELR6-NEXT:    seb $2, $2
 ; MMELR6-NEXT:    seb $7, $7
+; MMELR6-NEXT:    sllv $2, $2, $10
+; MMELR6-NEXT:    sllv $7, $7, $10
 ; MMELR6-NEXT:    slt $5, $2, $7
 ; MMELR6-NEXT:    seleqz $3, $2, $5
 ; MMELR6-NEXT:    selnez $5, $7, $5
@@ -3491,6 +3525,8 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64EL-NEXT:    srav $7, $7, $10
 ; MIPS64EL-NEXT:    seb $2, $2
 ; MIPS64EL-NEXT:    seb $7, $7
+; MIPS64EL-NEXT:    sllv $2, $2, $10
+; MIPS64EL-NEXT:    sllv $7, $7, $10
 ; MIPS64EL-NEXT:    slt $5, $2, $7
 ; MIPS64EL-NEXT:    move $3, $2
 ; MIPS64EL-NEXT:    movn $3, $7, $5
@@ -3534,6 +3570,8 @@ define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:    srav $7, $7, $10
 ; MIPS64ELR6-NEXT:    seb $2, $2
 ; MIPS64ELR6-NEXT:    seb $7, $7
+; MIPS64ELR6-NEXT:    sllv $2, $2, $10
+; MIPS64ELR6-NEXT:    sllv $7, $7, $10
 ; MIPS64ELR6-NEXT:    slt $5, $2, $7
 ; MIPS64ELR6-NEXT:    seleqz $3, $2, $5
 ; MIPS64ELR6-NEXT:    selnez $5, $7, $5
@@ -3733,12 +3771,13 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS32-NEXT:  $BB9_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; MIPS32-NEXT:    ll $2, 0($6)
-; MIPS32-NEXT:    srav $2, $2, $10
-; MIPS32-NEXT:    srav $7, $7, $10
-; MIPS32-NEXT:    sll $2, $2, 24
-; MIPS32-NEXT:    sra $2, $2, 24
-; MIPS32-NEXT:    sll $7, $7, 24
-; MIPS32-NEXT:    sra $7, $7, 24
+; MIPS32-NEXT:    and $2, $2, $8
+; MIPS32-NEXT:    and $7, $7, $8
+; MIPS32-NEXT:    clz $5, $8
+; MIPS32-NEXT:    sllv $2, $2, $5
+; MIPS32-NEXT:    srav $2, $2, $5
+; MIPS32-NEXT:    sllv $7, $7, $5
+; MIPS32-NEXT:    srav $7, $7, $5
 ; MIPS32-NEXT:    slt $5, $2, $7
 ; MIPS32-NEXT:    move $3, $2
 ; MIPS32-NEXT:    movz $3, $7, $5
@@ -3783,6 +3822,8 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSEL-NEXT:    srav $7, $7, $10
 ; MIPSEL-NEXT:    seb $2, $2
 ; MIPSEL-NEXT:    seb $7, $7
+; MIPSEL-NEXT:    sllv $2, $2, $10
+; MIPSEL-NEXT:    sllv $7, $7, $10
 ; MIPSEL-NEXT:    slt $5, $2, $7
 ; MIPSEL-NEXT:    move $3, $2
 ; MIPSEL-NEXT:    movz $3, $7, $5
@@ -3826,6 +3867,8 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPSELR6-NEXT:    srav $7, $7, $10
 ; MIPSELR6-NEXT:    seb $2, $2
 ; MIPSELR6-NEXT:    seb $7, $7
+; MIPSELR6-NEXT:    sllv $2, $2, $10
+; MIPSELR6-NEXT:    sllv $7, $7, $10
 ; MIPSELR6-NEXT:    slt $5, $2, $7
 ; MIPSELR6-NEXT:    selnez $3, $2, $5
 ; MIPSELR6-NEXT:    seleqz $5, $7, $5
@@ -3868,6 +3911,8 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMEL-NEXT:    srav $7, $7, $10
 ; MMEL-NEXT:    seb $2, $2
 ; MMEL-NEXT:    seb $7, $7
+; MMEL-NEXT:    sllv $2, $2, $10
+; MMEL-NEXT:    sllv $7, $7, $10
 ; MMEL-NEXT:    slt $5, $2, $7
 ; MMEL-NEXT:    or $3, $2, $zero
 ; MMEL-NEXT:    movz $3, $7, $5
@@ -3909,6 +3954,8 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MMELR6-NEXT:    srav $7, $7, $10
 ; MMELR6-NEXT:    seb $2, $2
 ; MMELR6-NEXT:    seb $7, $7
+; MMELR6-NEXT:    sllv $2, $2, $10
+; MMELR6-NEXT:    sllv $7, $7, $10
 ; MMELR6-NEXT:    slt $5, $2, $7
 ; MMELR6-NEXT:    selnez $3, $2, $5
 ; MMELR6-NEXT:    seleqz $5, $7, $5
@@ -4030,6 +4077,8 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64EL-NEXT:    srav $7, $7, $10
 ; MIPS64EL-NEXT:    seb $2, $2
 ; MIPS64EL-NEXT:    seb $7, $7
+; MIPS64EL-NEXT:    sllv $2, $2, $10
+; MIPS64EL-NEXT:    sllv $7, $7, $10
 ; MIPS64EL-NEXT:    slt $5, $2, $7
 ; MIPS64EL-NEXT:    move $3, $2
 ; MIPS64EL-NEXT:    movz $3, $7, $5
@@ -4073,6 +4122,8 @@ define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:    srav $7, $7, $10
 ; MIPS64ELR6-NEXT:    seb $2, $2
 ; MIPS64ELR6-NEXT:    seb $7, $7
+; MIPS64ELR6-NEXT:    sllv $2, $2, $10
+; MIPS64ELR6-NEXT:    sllv $7, $7, $10
 ; MIPS64ELR6-NEXT:    slt $5, $2, $7
 ; MIPS64ELR6-NEXT:    selnez $3, $2, $5
 ; MIPS64ELR6-NEXT:    seleqz $5, $7, $5
