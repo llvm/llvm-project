@@ -95,7 +95,6 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     switch (DirectiveKind) {
     case OpenACCDirectiveKind::Parallel:
     case OpenACCDirectiveKind::Kernels:
-    case OpenACCDirectiveKind::Update:
     case OpenACCDirectiveKind::ParallelLoop:
     case OpenACCDirectiveKind::KernelsLoop:
       return true;
