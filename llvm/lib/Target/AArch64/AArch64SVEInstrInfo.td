@@ -3556,6 +3556,22 @@ let Predicates = [HasSVE2orSME, UseExperimentalZeroingPseudos] in {
   defm SQSHLU_ZPZI : sve_int_bin_pred_shift_imm_left_zeroing_bhsd<int_aarch64_sve_sqshlu>;
 } // End HasSVE2orSME, UseExperimentalZeroingPseudos
 
+def SDT_AArch64ArithLong_Unpred : SDTypeProfile<1, 2, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<1,2>,
+  SDTCisInt<0>, SDTCisInt<1>,
+  SDTCisOpSmallerThanOp<1, 0>
+]>;
+def AArch64uaddlb_node : SDNode<"AArch64ISD::UADDLB",  SDT_AArch64ArithLong_Unpred>;
+def AArch64uaddlt_node : SDNode<"AArch64ISD::UADDLT",  SDT_AArch64ArithLong_Unpred>;
+
+// TODO: lower the intrinsic to the isd node.
+def AArch64uaddlb : PatFrags<(ops node:$op1, node:$op2),
+                           [(int_aarch64_sve_uaddlb node:$op1, node:$op2),
+                            (AArch64uaddlb_node node:$op1, node:$op2)]>;
+def AArch64uaddlt : PatFrags<(ops node:$op1, node:$op2),
+                           [(int_aarch64_sve_uaddlt node:$op1, node:$op2),
+                            (AArch64uaddlt_node node:$op1, node:$op2)]>;
+
 let Predicates = [HasSVE2orSME] in {
   // SVE2 predicated shifts
   defm SQSHL_ZPmI  : sve_int_bin_pred_shift_imm_left_dup<0b0110, "sqshl",  "SQSHL_ZPZI",  int_aarch64_sve_sqshl>;
@@ -3567,8 +3583,8 @@ let Predicates = [HasSVE2orSME] in {
   // SVE2 integer add/subtract long
   defm SADDLB_ZZZ : sve2_wide_int_arith_long<0b00000, "saddlb", int_aarch64_sve_saddlb>;
   defm SADDLT_ZZZ : sve2_wide_int_arith_long<0b00001, "saddlt", int_aarch64_sve_saddlt>;
-  defm UADDLB_ZZZ : sve2_wide_int_arith_long<0b00010, "uaddlb", int_aarch64_sve_uaddlb>;
-  defm UADDLT_ZZZ : sve2_wide_int_arith_long<0b00011, "uaddlt", int_aarch64_sve_uaddlt>;
+  defm UADDLB_ZZZ : sve2_wide_int_arith_long<0b00010, "uaddlb", AArch64uaddlb>;
+  defm UADDLT_ZZZ : sve2_wide_int_arith_long<0b00011, "uaddlt", AArch64uaddlt>;
   defm SSUBLB_ZZZ : sve2_wide_int_arith_long<0b00100, "ssublb", int_aarch64_sve_ssublb>;
   defm SSUBLT_ZZZ : sve2_wide_int_arith_long<0b00101, "ssublt", int_aarch64_sve_ssublt>;
   defm USUBLB_ZZZ : sve2_wide_int_arith_long<0b00110, "usublb", int_aarch64_sve_usublb>;

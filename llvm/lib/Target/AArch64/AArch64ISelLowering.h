@@ -220,6 +220,9 @@ enum NodeType : unsigned {
   URSHR_I,
   URSHR_I_PRED,
 
+  UADDLB,
+  UADDLT,
+
   // Vector narrowing shift by immediate (bottom)
   RSHRNB_I,
 
