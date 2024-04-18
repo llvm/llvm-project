@@ -134,11 +134,10 @@ public:
       loopOrder.push_back(2);
     }
 
-    // Keep track of the previous accumulator when tiling over K
+    // Keep track of the previous accumulator when tiling over K.
     Value kAcc;
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(unrolledSize, smmlaShape, loopOrder)) {
-      auto kTileIndex = offsets[offsets.size() - 1] / 8;
       // Helper to compute the new shape of each operand and extract the slice.
       auto extractOperand = [&](Value operand, AffineMap permutationMap,
                                 ArrayRef<int64_t> operandOffsets) {
@@ -198,22 +197,24 @@ public:
           tiledRhs.getLoc(), collapsedInputType, tiledRhs);
       auto collapsedOutputType =
           VectorType::get(outputExpandedType.getNumElements(), accElementType);
-      auto collapsedRes = rewriter.createOrFold<vector::ShapeCastOp>(
-          tiledAcc.getLoc(), collapsedOutputType, tiledAcc);
 
-      if (kTileIndex != 0) {
+      bool initialKAcc = offsets.back() == 0;
+      Value collapsedRes;
+      if (!initialKAcc) {
         collapsedRes = kAcc;
+      } else {
+        collapsedRes = rewriter.createOrFold<vector::ShapeCastOp>(
+            tiledAcc.getLoc(), collapsedOutputType, tiledAcc);
       }
 
       // Insert contract op
-      auto smmlaOp = rewriter.createOrFold<arm_neon::SmmlaOp>(
+      kAcc = rewriter.createOrFold<arm_neon::SmmlaOp>(
           op.getLoc(), collapsedRes.getType(), collapsedRes, collapsedLhs,
           collapsedRhs);
-      kAcc = smmlaOp;
 
       // Reshape output back to 2D
       Value tiledRes = rewriter.createOrFold<vector::ShapeCastOp>(
-          smmlaOp.getLoc(), tiledAcc.getType(), smmlaOp);
+          kAcc.getLoc(), tiledAcc.getType(), kAcc);
 
       // With vecmat, only one row of tiled ACC can be inserted into file result
       if (isVecmat) {
