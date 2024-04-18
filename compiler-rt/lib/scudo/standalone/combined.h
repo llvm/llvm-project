@@ -1239,7 +1239,7 @@ private:
       Header->OriginOrWasZeroed =
           Header->ClassId && !TSDRegistry.getDisableMemInit();
       BlockBegin =
-          reTagBlock(Options, TaggedPtr, Ptr, Header, Size, BypassQuarantine);
+          retagBlock(Options, TaggedPtr, Ptr, Header, Size, BypassQuarantine);
     }
 
     Chunk::storeHeader(Cookie, Ptr, Header);
@@ -1268,12 +1268,10 @@ private:
     }
   }
 
-  NOINLINE void *reTagBlock(const Options &Options, void *TaggedPtr,
-                            void *HeaderTaggedPtr,
+  NOINLINE void *retagBlock(const Options &Options, void *TaggedPtr, void *Ptr,
                             Chunk::UnpackedHeader *Header, const uptr Size,
                             bool BypassQuarantine) {
     DCHECK(useMemoryTagging<AllocatorConfig>(Options));
-    void *Ptr = HeaderTaggedPtr;
 
     const u8 PrevTag = extractTag(reinterpret_cast<uptr>(TaggedPtr));
     storeDeallocationStackMaybe(Options, Ptr, PrevTag, Size);
