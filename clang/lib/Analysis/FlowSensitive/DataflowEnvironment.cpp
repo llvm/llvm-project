@@ -414,52 +414,25 @@ public:
 
     ResultObjectMap[E] = Loc;
 
-    switch (E->getStmtClass()) {
     // The following AST node kinds are "original initializers": They are the
     // lowest-level AST node that initializes a given object, and nothing
     // below them can initialize the same object (or part of it).
-    case Stmt::CXXConstructExprClass:
-    case Stmt::CallExprClass:
-    case Stmt::LambdaExprClass:
-    case Stmt::CXXDefaultArgExprClass:
-    case Stmt::CXXDefaultInitExprClass:
-    case Stmt::CXXStdInitializerListExprClass:
-    // We treat `BuiltinBitCastExpr` as an "original initializer" too as it may
-    // not even be casting from a record type -- and even if it is, the two
-    // objects are in general of unrelated type.
-    case Stmt::BuiltinBitCastExprClass:
-      return;
-    case Stmt::BinaryOperatorClass: {
-      auto *Op = cast<BinaryOperator>(E);
-      if (Op->getOpcode() == BO_Cmp) {
-        // Builtin `<=>` returns a `std::strong_ordering` object. We
-        // consider this to be an "original" initializer too (see above).
-        return;
-      }
-      if (Op->isCommaOp()) {
-        PropagateResultObject(Op->getRHS(), Loc);
-        return;
-      }
-      // We don't expect any other binary operators to produce a record
-      // prvalue, so if we get here, we've hit some case we don't know
-      // about.
-      assert(false);
+    if (isa<CXXConstructExpr>(E) || isa<CallExpr>(E) || isa<LambdaExpr>(E) ||
+        isa<CXXDefaultArgExpr>(E) || isa<CXXDefaultInitExpr>(E) ||
+        isa<CXXStdInitializerListExpr>(E) ||
+        // We treat `BuiltinBitCastExpr` as an "original initializer" too as
+        // it may not even be casting from a record type -- and even if it is,
+        // the two objects are in general of unrelated type.
+        isa<BuiltinBitCastExpr>(E)) {
       return;
     }
-    case Stmt::BinaryConditionalOperatorClass:
-    case Stmt::ConditionalOperatorClass: {
-      auto *Cond = cast<AbstractConditionalOperator>(E);
-      PropagateResultObject(Cond->getTrueExpr(), Loc);
-      PropagateResultObject(Cond->getFalseExpr(), Loc);
+    if (auto *Op = dyn_cast<BinaryOperator>(E);
+        Op && Op->getOpcode() == BO_Cmp) {
+      // Builtin `<=>` returns a `std::strong_ordering` object.
       return;
     }
-    case Stmt::StmtExprClass: {
-      auto *SE = cast<StmtExpr>(E);
-      PropagateResultObject(cast<Expr>(SE->getSubStmt()->body_back()), Loc);
-      return;
-    }
-    case Stmt::InitListExprClass: {
-      auto *InitList = cast<InitListExpr>(E);
+
+    if (auto *InitList = dyn_cast<InitListExpr>(E)) {
       if (!InitList->isSemanticForm())
         return;
       if (InitList->isTransparent()) {
@@ -489,20 +462,33 @@ public:
       }
       return;
     }
-    default: {
-      // All other expression nodes that propagate a record prvalue should
-      // have exactly one child.
-      SmallVector<Stmt *, 1> Children(E->child_begin(), E->child_end());
-      LLVM_DEBUG({
-        if (Children.size() != 1)
-          E->dump();
-      });
-      assert(Children.size() == 1);
-      for (Stmt *S : Children)
-        PropagateResultObject(cast<Expr>(S), Loc);
+
+    if (auto *Op = dyn_cast<BinaryOperator>(E); Op && Op->isCommaOp()) {
+      PropagateResultObject(Op->getRHS(), Loc);
       return;
     }
+
+    if (auto *Cond = dyn_cast<AbstractConditionalOperator>(E)) {
+      PropagateResultObject(Cond->getTrueExpr(), Loc);
+      PropagateResultObject(Cond->getFalseExpr(), Loc);
+      return;
     }
+
+    if (auto *SE = dyn_cast<StmtExpr>(E)) {
+      PropagateResultObject(cast<Expr>(SE->getSubStmt()->body_back()), Loc);
+      return;
+    }
+
+    // All other expression nodes that propagate a record prvalue should have
+    // exactly one child.
+    SmallVector<Stmt *, 1> Children(E->child_begin(), E->child_end());
+    LLVM_DEBUG({
+      if (Children.size() != 1)
+        E->dump();
+    });
+    assert(Children.size() == 1);
+    for (Stmt *S : Children)
+      PropagateResultObject(cast<Expr>(S), Loc);
   }
 
 private:
