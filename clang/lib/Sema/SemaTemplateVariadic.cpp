@@ -1085,7 +1085,7 @@ ExprResult Sema::ActOnPackIndexingExpr(Scope *S, Expr *PackExpression,
                                        SourceLocation RSquareLoc) {
   bool isParameterPack = ::isParameterPack(PackExpression);
   if (!isParameterPack) {
-    if(!PackExpression->containsErrors()) {
+    if (!PackExpression->containsErrors()) {
       CorrectDelayedTyposInExpr(IndexExpr);
       Diag(PackExpression->getBeginLoc(), diag::err_expected_name_of_pack)
           << PackExpression;
