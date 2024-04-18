@@ -13,6 +13,7 @@ from lldbsuite.test import lldbutil
 class CommandLineExprCompletionTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     def test_expr_completion(self):
         self.build()
         self.main_source = "main.cpp"

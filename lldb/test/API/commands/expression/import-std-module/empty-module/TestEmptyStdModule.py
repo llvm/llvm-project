@@ -15,6 +15,7 @@ class ImportStdModule(TestBase):
     @add_test_categories(["libc++"])
     @skipIfRemote
     @skipIf(compiler=no_match("clang"))
+    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     def test(self):
         self.build()
 

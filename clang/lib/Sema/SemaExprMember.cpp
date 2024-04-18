@@ -715,6 +715,13 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
     }
   }
 
+  if (ExternalASTSource *Source =
+          DC->getParentASTContext().getExternalSource()) {
+    if (auto LookupName = R.getLookupName()) {
+      Source->FindExternalVisibleMethodsByName(DC, LookupName);
+    }
+  }
+
   // The record definition is complete, now look up the member.
   SemaRef.LookupQualifiedName(R, DC, SS);
 
