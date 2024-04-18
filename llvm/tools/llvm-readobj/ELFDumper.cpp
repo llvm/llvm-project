@@ -411,6 +411,7 @@ protected:
   std::string getStaticSymbolName(uint32_t Index) const;
   StringRef getDynamicString(uint64_t Value) const;
 
+  std::pair<Elf_Sym_Range, std::optional<StringRef>> getSymtabAndStrtab() const;
   void printSymbolsHelper(bool IsDynamic, bool ExtraSymInfo) const;
   std::string getDynamicEntry(uint64_t Type, uint64_t Value) const;
 
@@ -513,6 +514,28 @@ ELFDumper<ELFT>::getVersionTable(const Elf_Shdr &Sec, ArrayRef<Elf_Sym> *SymTab,
 }
 
 template <class ELFT>
+std::pair<typename ELFDumper<ELFT>::Elf_Sym_Range, std::optional<StringRef>>
+ELFDumper<ELFT>::getSymtabAndStrtab() const {
+  assert(DotSymtabSec);
+  Elf_Sym_Range Syms(nullptr, nullptr);
+  std::optional<StringRef> StrTable;
+  if (Expected<StringRef> StrTableOrErr =
+          Obj.getStringTableForSymtab(*DotSymtabSec))
+    StrTable = *StrTableOrErr;
+  else
+    reportUniqueWarning(
+        "unable to get the string table for the SHT_SYMTAB section: " +
+        toString(StrTableOrErr.takeError()));
+
+  if (Expected<Elf_Sym_Range> SymsOrErr = Obj.symbols(DotSymtabSec))
+    Syms = *SymsOrErr;
+  else
+    reportUniqueWarning("unable to read symbols from the SHT_SYMTAB section: " +
+                        toString(SymsOrErr.takeError()));
+  return {Syms, StrTable};
+}
+
+template <class ELFT>
 void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic,
                                          bool ExtraSymInfo) const {
   std::optional<StringRef> StrTable;
@@ -525,20 +548,7 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic,
     Syms = dynamic_symbols();
     Entries = Syms.size();
   } else if (DotSymtabSec) {
-    if (Expected<StringRef> StrTableOrErr =
-            Obj.getStringTableForSymtab(*DotSymtabSec))
-      StrTable = *StrTableOrErr;
-    else
-      reportUniqueWarning(
-          "unable to get the string table for the SHT_SYMTAB section: " +
-          toString(StrTableOrErr.takeError()));
-
-    if (Expected<Elf_Sym_Range> SymsOrErr = Obj.symbols(DotSymtabSec))
-      Syms = *SymsOrErr;
-    else
-      reportUniqueWarning(
-          "unable to read symbols from the SHT_SYMTAB section: " +
-          toString(SymsOrErr.takeError()));
+    std::tie(Syms, StrTable) = getSymtabAndStrtab();
     Entries = DotSymtabSec->getEntityCount();
   }
   if (Syms.empty())
@@ -3955,19 +3965,21 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelr(const Elf_Shdr &Sec) {
   else
     OS << "Index: Entry    Address   Symbolic Address\n";
 
+  // If .symtab is available, collect its defined symbols and sort them by
+  // st_value.
   SmallVector<std::pair<uint64_t, std::string>, 0> Syms;
   if (this->DotSymtabSec) {
-    if (auto SymsOrErr = this->Obj.symbols(this->DotSymtabSec)) {
-      StringRef Strtab =
-          unwrapOrError(this->FileName,
-                        this->Obj.getStringTableForSymtab(*this->DotSymtabSec));
-      for (auto [I, Sym] : enumerate(*SymsOrErr)) {
+    Elf_Sym_Range Symtab;
+    std::optional<StringRef> Strtab;
+    std::tie(Symtab, Strtab) = this->getSymtabAndStrtab();
+    if (Symtab.size() && Strtab) {
+      for (auto [I, Sym] : enumerate(Symtab)) {
+        if (!Sym.st_shndx)
+          continue;
         Syms.emplace_back(Sym.st_value,
                           this->getFullSymbolName(Sym, I, ArrayRef<Elf_Word>(),
-                                                  Strtab, false));
+                                                  *Strtab, false));
       }
-    } else {
-      this->reportUniqueWarning(SymsOrErr.takeError());
     }
   }
   llvm::stable_sort(Syms);
@@ -3978,6 +3990,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelr(const Elf_Shdr &Sec) {
     OS << format_hex_no_prefix(Where, ELFT::Is64Bits ? 16 : 8);
     for (; I < Syms.size() && Syms[I].first <= Where; ++I)
       ;
+    // Try symbolizing the address. Find the nearest symbol before or at the
+    // address and print the symbol and the address difference.
     if (I) {
       OS << "  " << Syms[I - 1].second;
       if (Syms[I - 1].first < Where)
@@ -3985,9 +3999,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelr(const Elf_Shdr &Sec) {
     }
     OS << '\n';
   };
-  for (auto [I, R] : enumerate(*RangeOrErr)) {
+  for (auto [Index, R] : enumerate(*RangeOrErr)) {
     typename ELFT::uint Entry = R;
-    OS << formatv("{0:4}:  ", I)
+    OS << formatv("{0:4}:  ", Index)
        << format_hex_no_prefix(Entry, ELFT::Is64Bits ? 16 : 8) << ' ';
     if ((Entry & 1) == 0) {
       Print(Entry);

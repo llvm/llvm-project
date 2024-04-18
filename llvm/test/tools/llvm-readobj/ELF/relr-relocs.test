@@ -1,7 +1,6 @@
 ## This is a test to test how SHT_RELR sections are dumped.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: llvm-objcopy --strip-all %t1 %t1.stripped
 # RUN: llvm-readobj --relocations --raw-relr %t1 \
 # RUN:   | FileCheck --check-prefix=RAW-LLVM1 %s
 # RAW-LLVM1:      Section (1) .relr.dyn {
@@ -51,9 +50,9 @@
 # RUN: llvm-readelf --relocations %t1 | FileCheck --check-prefix=GNU1 --match-full-lines --strict-whitespace %s
 #      GNU1:Relocation section '.relr.dyn' at offset 0x40 contains 21 entries:
 # GNU1-NEXT:Index: Entry            Address           Symbolic Address
-# GNU1-NEXT:0000:  0000000000010d60 0000000000010d60  base + 0x60
-# GNU1-NEXT:0001:  0000000000000103 0000000000010d68  base + 0x68
-# GNU1-NEXT:                        0000000000010da0  base + 0xa0
+# GNU1-NEXT:0000:  0000000000010d60 0000000000010d60
+# GNU1-NEXT:0001:  0000000000000103 0000000000010d68
+# GNU1-NEXT:                        0000000000010da0  base + 0x30
 # GNU1-NEXT:0002:  0000000000020000 0000000000020000  foo
 # GNU1-NEXT:0003:  00000000000f0501 0000000000020040  foo + 0x40
 # GNU1-NEXT:                        0000000000020050  foo + 0x50
@@ -74,6 +73,7 @@
 # GNU1-NEXT:                        0000000000020390  bar + 0x190
 
 ## The addresses are not symbolized in the absence of .symtab.
+# RUN: llvm-objcopy --strip-all %t1 %t1.stripped
 # RUN: llvm-readelf --relocations %t1.stripped | FileCheck --check-prefix=GNU1S --match-full-lines --strict-whitespace %s
 #      GNU1S:Relocation section '.relr.dyn' at offset 0x40 contains 21 entries:
 # GNU1S-NEXT:Index: Entry            Address           Symbolic Address
@@ -93,12 +93,17 @@ Sections:
     Entries: [ 0x0000000000010D60, 0x0000000000000103, 0x0000000000020000,
                0x00000000000F0501, 0x000A700550400009 ]
 Symbols:
-  - Name:  bar
-    Value: 0x20200
-  - Name:  foo
-    Value: 0x20000
-  - Name:  base
-    Value: 0x10d00
+  - Name:    bar
+    Value:   0x20200
+    Section: .relr.dyn
+  - Name:    foo
+    Value:   0x20000
+    Section: .relr.dyn
+  - Name:    base
+    Value:   0x10d70
+    Section: .relr.dyn
+  - Name:    ignored
+    Value:   0x20210
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: llvm-readobj --relocations --raw-relr %t2 | \
@@ -140,23 +145,23 @@ Symbols:
 # RAW-GNU2-NEXT: 000f0501
 # RAW-GNU2-NEXT: 50400009
 
-# RUN: llvm-readelf --relocations %t2 | FileCheck --check-prefix=GNU2 %s
-# GNU2:      Relocation section '.relr.dyn' at offset 0x34 contains 14 entries:
-# GNU2-NEXT: Index: Entry            Address           Symbolic Address
-# GNU2-NEXT: 0000:  00010d60 00010d60  .relr.dyn
-# GNU2-NEXT: 0001:  00000103 00010d64  .relr.dyn + 0x4
-# GNU2-NEXT:                 00010d80  .relr.dyn + 0x20
-# GNU2-NEXT: 0002:  00020000 00020000  .relr.dyn + 0xf2a0
-# GNU2-NEXT: 0003:  000f0501 00020020  .relr.dyn + 0xf2c0
-# GNU2-NEXT:                 00020028  .relr.dyn + 0xf2c8
-# GNU2-NEXT:                 00020040  .relr.dyn + 0xf2e0
-# GNU2-NEXT:                 00020044  .relr.dyn + 0xf2e4
-# GNU2-NEXT:                 00020048  .relr.dyn + 0xf2e8
-# GNU2-NEXT:                 0002004c  .relr.dyn + 0xf2ec
-# GNU2-NEXT: 0004:  50400009 00020088  .relr.dyn + 0xf328
-# GNU2-NEXT:                 000200d4  .relr.dyn + 0xf374
-# GNU2-NEXT:                 000200ec  .relr.dyn + 0xf38c
-# GNU2-NEXT:                 000200f4  .relr.dyn + 0xf394
+# RUN: llvm-readelf --relocations %t2 | FileCheck --check-prefix=GNU2 --match-full-lines --strict-whitespace %s
+#      GNU2:Relocation section '.relr.dyn' at offset 0x34 contains 14 entries:
+# GNU2-NEXT:Index: Entry    Address   Symbolic Address
+# GNU2-NEXT:0000:  00010d60 00010d60  .relr.dyn
+# GNU2-NEXT:0001:  00000103 00010d64  .relr.dyn + 0x4
+# GNU2-NEXT:                00010d80  .relr.dyn + 0x20
+# GNU2-NEXT:0002:  00020000 00020000  .relr.dyn + 0xf2a0
+# GNU2-NEXT:0003:  000f0501 00020020  .relr.dyn + 0xf2c0
+# GNU2-NEXT:                00020028  .relr.dyn + 0xf2c8
+# GNU2-NEXT:                00020040  .relr.dyn + 0xf2e0
+# GNU2-NEXT:                00020044  .relr.dyn + 0xf2e4
+# GNU2-NEXT:                00020048  .relr.dyn + 0xf2e8
+# GNU2-NEXT:                0002004c  .relr.dyn + 0xf2ec
+# GNU2-NEXT:0004:  50400009 00020088  .relr.dyn + 0xf328
+# GNU2-NEXT:                000200d4  .relr.dyn + 0xf374
+# GNU2-NEXT:                000200ec  .relr.dyn + 0xf38c
+# GNU2-NEXT:                000200f4  .relr.dyn + 0xf394
 
 --- !ELF
 FileHeader:
@@ -240,12 +245,15 @@ Symbols:
 # RUN: llvm-readelf --relocations --raw-relr %t2.has.link 2>&1 | \
 # RUN:   FileCheck -DFILE=%t2.has.link --check-prefix=RAW-GNU2 %s
 
-# RUN: yaml2obj --docnum=3 %s -o %t3
-# RUN: llvm-readelf -r %t3 2>&1 | FileCheck -DFILE=%t3 --check-prefix=GNU3 %s
-
 ## .symtab is invalid. Check we report a warning and print entries without symbolization.
+# RUN: yaml2obj --docnum=3 -DENTSIZE=1 %s -o %t3.err1
+# RUN: llvm-readelf -r %t3.err1 2>&1 | FileCheck -DFILE=%t3.err1 --check-prefixes=GNU3,GNU3-ERR1 %s
+# RUN: yaml2obj --docnum=3 -DLINK=0xff %s -o %t3.err2
+# RUN: llvm-readelf -r %t3.err2 2>&1 | FileCheck -DFILE=%t3.err2 --check-prefixes=GNU3,GNU3-ERR2 %s
+
 # GNU3:      Index: Entry            Address           Symbolic Address
-# GNU3-NEXT: warning: '[[FILE]]': section [index 2] has invalid sh_entsize: expected 24, but got 1
+# GNU3-ERR1-NEXT: warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 2] has invalid sh_entsize: expected 24, but got 1
+# GNU3-ERR2-NEXT: warning: '[[FILE]]': unable to get the string table for the SHT_SYMTAB section: invalid section index: 255
 # GNU3-NEXT: 0000:  0000000000010d60 0000000000010d60
 # GNU3-NEXT: 0001:  0000000000000103 0000000000010d68
 # GNU3-NEXT:                         0000000000010da0
@@ -263,8 +271,8 @@ Sections:
     Entries: [ 0x0000000000010D60, 0x0000000000000103 ]
   - Name:    .symtab
     Type:    SHT_SYMTAB
-    Link:    .strtab
-    EntSize: 1
+    Link:    [[LINK=.strtab]]
+    EntSize: [[ENTSIZE=0x18]]
 Symbols:
   - Name:  bar
     Value: 0x10D60
