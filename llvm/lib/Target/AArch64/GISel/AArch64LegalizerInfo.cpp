@@ -87,25 +87,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const bool HasCSSC = ST.hasCSSC();
   const bool HasRCPC3 = ST.hasRCPC3();
 
-  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_CONSTANT_FOLD_BARRIER})
-      .legalFor({p0, s8, s16, s32, s64})
-      .legalFor(PackedVectorAllTypeList)
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, s8, s64)
-      .fewerElementsIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].isVector() &&
-                   (Query.Types[0].getElementType() != s64 ||
-                    Query.Types[0].getNumElements() != 2);
-          },
-          [=](const LegalityQuery &Query) {
-            LLT EltTy = Query.Types[0].getElementType();
-            if (EltTy == s64)
-              return std::make_pair(0, LLT::fixed_vector(2, 64));
-            return std::make_pair(0, EltTy);
-          });
-
-  getActionDefinitionsBuilder(G_FREEZE)
+  getActionDefinitionsBuilder(
+      {G_IMPLICIT_DEF, G_FREEZE, G_CONSTANT_FOLD_BARRIER})
       .legalFor({p0, s8, s16, s32, s64})
       .legalFor(PackedVectorAllTypeList)
       .widenScalarToNextPow2(0)
