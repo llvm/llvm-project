@@ -1834,8 +1834,8 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
 
 bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
                                                           EVT OpVT) const {
-  // Only SVE/SME has a 1:1 mapping from intrinsic -> instruction (whilelo).
-  if (!Subtarget->hasSVEorSME())
+  // Only SVE has a 1:1 mapping from intrinsic -> instruction (whilelo).
+  if (!Subtarget->hasSVE())
     return true;
 
   // We can only support legal predicate result types. We can use the SVE
@@ -20541,7 +20541,7 @@ static SDValue tryCombineWhileLo(SDNode *N,
   if (DCI.isBeforeLegalize())
     return SDValue();
 
-  if (!Subtarget->hasSVE2p1() && !Subtarget->hasSME2())
+  if (!Subtarget->hasSVE2p1())
     return SDValue();
 
   if (!N->hasNUsesOfValue(2, 0))
@@ -20555,12 +20555,12 @@ static SDValue tryCombineWhileLo(SDNode *N,
   SDNode *Lo = *It++;
   SDNode *Hi = *It;
 
-  uint64_t OffLo, OffHi;
   if (Lo->getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-      !isIntImmediate(Lo->getOperand(1).getNode(), OffLo) ||
-      Hi->getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-      !isIntImmediate(Hi->getOperand(1).getNode(), OffHi))
+      Hi->getOpcode() != ISD::EXTRACT_SUBVECTOR)
     return SDValue();
+
+  uint64_t OffLo = Lo->getConstantOperandVal(1);
+  uint64_t OffHi = Hi->getConstantOperandVal(1);
 
   if (OffLo > OffHi) {
     std::swap(Lo, Hi);
