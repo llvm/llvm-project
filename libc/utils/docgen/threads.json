@@ -1,12 +1,10 @@
 {
   "macros": {
     "ONCE_FLAG_INIT": {
-      "defined": "7.28.1.3",
-      "implemented": true
+      "defined": "7.28.1.3"
     },
     "TSS_DTOR_ITERATIONS": {
-      "defined": "7.28.1.3",
-      "implemented": false
+      "defined": "7.28.1.3"
     }
   },
   "functions": {
