@@ -227,12 +227,12 @@ public:
   ///   information will not be used.
   virtual StoreRef invalidateRegions(Store store,
                                   ArrayRef<SVal> Values,
-                                  const Expr *E, unsigned Count,
+                                  const Expr *Ex, unsigned Count,
                                   const LocationContext *LCtx,
                                   const CallEvent *Call,
                                   InvalidatedSymbols &IS,
                                   RegionAndSymbolInvalidationTraits &ITraits,
-                                  InvalidatedRegions *InvalidatedTopLevel,
+                                  InvalidatedRegions *TopLevelRegions,
                                   InvalidatedRegions *Invalidated) = 0;
 
   /// enterStackFrame - Let the StoreManager to do something when execution
