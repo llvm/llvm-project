@@ -24,11 +24,9 @@ def tuimm5 : RISCVOp, TImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]>;
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 multiclass VCLMUL_MV_V_X<string opcodestr, bits<6> funct6> {
   def V  : VALUVV<funct6, OPMVV, opcodestr # "." # "vv">,
-           Sched<[WriteVIALUV_WorstCase, ReadVIALUV_WorstCase,
-                  ReadVIALUV_WorstCase, ReadVMask]>;
+           SchedBinaryMC<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV">;
   def X  : VALUVX<funct6, OPMVX, opcodestr # "." # "vx">,
-           Sched<[WriteVIALUX_WorstCase, ReadVIALUV_WorstCase,
-                  ReadVIALUX_WorstCase, ReadVMask]>;
+           SchedBinaryMC<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV">;
 }
 
 class RVInstIVI_VROR<bits<6> funct6, dag outs, dag ins, string opcodestr,
@@ -57,13 +55,13 @@ multiclass VROR_IV_V_X_I<string opcodestr, bits<6> funct6>
   def I : RVInstIVI_VROR<funct6, (outs VR:$vd),
               (ins VR:$vs2, uimm6:$imm, VMaskOp:$vm),
               opcodestr # ".vi", "$vd, $vs2, $imm$vm">,
-         Sched<[WriteVIALUI_WorstCase, ReadVIALUV_WorstCase,
-                ReadVMask]>;
+          SchedUnaryMC<"WriteVIALUI", "ReadVIALUV">;
 }
 
 // op vd, vs2, vs1
 class PALUVVNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
-    : VALUVVNoVm<funct6, opv, opcodestr> {
+    : VALUVVNoVm<funct6, opv, opcodestr>,
+      SchedUnaryMC<"WriteVIALUI", "ReadVIALUV"> {
   let Inst{6-0} = OPC_OP_VE.Value;
 }
 
@@ -71,7 +69,8 @@ class PALUVVNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
 class PALUVVNoVmTernary<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : RVInstVV<funct6, opv, (outs VR:$vd_wb),
                (ins VR:$vd, VR:$vs2, VR:$vs1),
-               opcodestr, "$vd, $vs2, $vs1"> {
+               opcodestr, "$vd, $vs2, $vs1">,
+      SchedBinaryMC<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV"> {
   let Constraints = "$vd = $vd_wb";
   let vm = 1;
   let Inst{6-0} = OPC_OP_VE.Value;
@@ -79,7 +78,8 @@ class PALUVVNoVmTernary<bits<6> funct6, RISCVVFormat opv, string opcodestr>
 
 // op vd, vs2, imm
 class PALUVINoVm<bits<6> funct6, string opcodestr, Operand optype>
-    : VALUVINoVm<funct6, opcodestr, optype> {
+    : VALUVINoVm<funct6, opcodestr, optype>,
+              SchedUnaryMC<"WriteVIALUV", "ReadVIALUV"> {
   let Inst{6-0} = OPC_OP_VE.Value;
   let Inst{14-12} = OPMVV.Value;
 }
@@ -88,7 +88,8 @@ class PALUVINoVm<bits<6> funct6, string opcodestr, Operand optype>
 class PALUVINoVmBinary<bits<6> funct6, string opcodestr, Operand optype>
     : RVInstIVI<funct6, (outs VR:$vd_wb),
                 (ins VR:$vd, VR:$vs2, optype:$imm),
-                opcodestr, "$vd, $vs2, $imm"> {
+                opcodestr, "$vd, $vs2, $imm">,
+      SchedBinaryMC<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV"> {
   let Constraints = "$vd = $vd_wb";
   let vm = 1;
   let Inst{6-0} = OPC_OP_VE.Value;
@@ -100,7 +101,8 @@ class PALUVINoVmBinary<bits<6> funct6, string opcodestr, Operand optype>
 class PALUVs2NoVmBinary<bits<6> funct6, bits<5> vs1, RISCVVFormat opv,
                         string opcodestr>
     : RVInstV<funct6, vs1, opv, (outs VR:$vd_wb), (ins VR:$vd, VR:$vs2),
-              opcodestr, "$vd, $vs2"> {
+              opcodestr, "$vd, $vs2">,
+              SchedBinaryMC<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV"> {
   let Constraints = "$vd = $vd_wb";
   let vm = 1;
   let Inst{6-0} = OPC_OP_VE.Value;
