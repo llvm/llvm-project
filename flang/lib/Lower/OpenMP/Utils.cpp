@@ -15,6 +15,7 @@
 
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
+#include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
@@ -35,6 +36,17 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 
+int64_t getCollapseValue(const List<Clause> &clauses) {
+  auto iter = llvm::find_if(clauses, [](const Clause &clause) {
+    return clause.id == llvm::omp::Clause::OMPC_collapse;
+  });
+  if (iter != clauses.end()) {
+    const auto &collapse = std::get<clause::Collapse>(iter->u);
+    return evaluate::ToInt64(collapse.v).value();
+  }
+  return 1;
+}
+
 void genObjectList(const ObjectList &objects,
                    Fortran::lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands) {
@@ -51,23 +63,22 @@ void genObjectList(const ObjectList &objects,
   }
 }
 
-void genObjectList2(const Fortran::parser::OmpObjectList &objectList,
-                    Fortran::lower::AbstractConverter &converter,
-                    llvm::SmallVectorImpl<mlir::Value> &operands) {
-  auto addOperands = [&](Fortran::lower::SymbolRef sym) {
-    const mlir::Value variable = converter.getSymbolAddress(sym);
-    if (variable) {
-      operands.push_back(variable);
-    } else if (const auto *details =
-                   sym->detailsIf<Fortran::semantics::HostAssocDetails>()) {
-      operands.push_back(converter.getSymbolAddress(details->symbol()));
-      converter.copySymbolBinding(details->symbol(), sym);
-    }
-  };
-  for (const Fortran::parser::OmpObject &ompObject : objectList.v) {
-    Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
-    addOperands(*sym);
+mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
+                          std::size_t loopVarTypeSize) {
+  // OpenMP runtime requires 32-bit or 64-bit loop variables.
+  loopVarTypeSize = loopVarTypeSize * 8;
+  if (loopVarTypeSize < 32) {
+    loopVarTypeSize = 32;
+  } else if (loopVarTypeSize > 64) {
+    loopVarTypeSize = 64;
+    mlir::emitWarning(converter.getCurrentLocation(),
+                      "OpenMP loop iteration variable cannot have more than 64 "
+                      "bits size and will be narrowed into 64 bits.");
   }
+  assert((loopVarTypeSize == 32 || loopVarTypeSize == 64) &&
+         "OpenMP loop iteration variable size must be transformed into 32-bit "
+         "or 64-bit");
+  return converter.getFirOpBuilder().getIntegerType(loopVarTypeSize);
 }
 
 void gatherFuncAndVarSyms(

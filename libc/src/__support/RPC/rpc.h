@@ -198,11 +198,8 @@ template <bool Invert> struct Process {
   /// convergent, otherwise the compiler will sink the store and deadlock.
   [[clang::convergent]] LIBC_INLINE void unlock(uint64_t lane_mask,
                                                 uint32_t index) {
-    // Do not move any writes past the unlock
+    // Do not move any writes past the unlock.
     atomic_thread_fence(cpp::MemoryOrder::RELEASE);
-
-    // Wait for other threads in the warp to finish using the lock
-    gpu::sync_lane(lane_mask);
 
     // Use exactly one thread to clear the nth bit in the lock array Must
     // restrict to a single thread to avoid one thread dropping the lock, then
@@ -331,6 +328,9 @@ public:
   LIBC_INLINE uint16_t get_index() const { return index; }
 
   LIBC_INLINE void close() {
+    // Wait for all lanes to finish using the port.
+    gpu::sync_lane(lane_mask);
+
     // The server is passive, if it own the buffer when it closes we need to
     // give ownership back to the client.
     if (owns_buffer && T)

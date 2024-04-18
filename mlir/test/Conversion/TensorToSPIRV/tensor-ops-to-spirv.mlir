@@ -14,14 +14,12 @@ func.func @tensor_extract_constant(%a : index, %b: index, %c: index) -> i32 {
   // CHECK: spirv.Store "Function" %[[VAR]], %[[CST]] : !spirv.array<12 x i32>
   // CHECK: %[[C0:.+]] = spirv.Constant 0 : i32
   // CHECK: %[[C6:.+]] = spirv.Constant 6 : i32
-  // CHECK: %[[MUL0:.+]] = spirv.IMul %[[C6]], %[[A]] : i32
-  // CHECK: %[[ADD0:.+]] = spirv.IAdd %[[C0]], %[[MUL0]] : i32
+  // CHECK: %[[MUL0:.+]] = spirv.IMul %[[A]], %[[C6]] : i32
   // CHECK: %[[C3:.+]] = spirv.Constant 3 : i32
-  // CHECK: %[[MUL1:.+]] = spirv.IMul %[[C3]], %[[B]] : i32
-  // CHECK: %[[ADD1:.+]] = spirv.IAdd %[[ADD0]], %[[MUL1]] : i32
+  // CHECK: %[[MUL1:.+]] = spirv.IMul %[[B]], %[[C3]] : i32
+  // CHECK: %[[ADD1:.+]] = spirv.IAdd %[[MUL1]], %[[MUL0]] : i32
   // CHECK: %[[C1:.+]] = spirv.Constant 1 : i32
-  // CHECK: %[[MUL2:.+]] = spirv.IMul %[[C1]], %[[C]] : i32
-  // CHECK: %[[ADD2:.+]] = spirv.IAdd %[[ADD1]], %[[MUL2]] : i32
+  // CHECK: %[[ADD2:.+]] = spirv.IAdd %[[C]], %[[ADD1]] : i32
   // CHECK: %[[AC:.+]] = spirv.AccessChain %[[VAR]][%[[ADD2]]]
   // CHECK: %[[VAL:.+]] = spirv.Load "Function" %[[AC]] : i32
   %extract = tensor.extract %cst[%a, %b, %c] : tensor<2x2x3xi32>

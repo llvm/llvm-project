@@ -309,6 +309,14 @@ them.
  Compress DWARF debug sections in the output, using the specified format.
  Supported formats are ``zlib`` and ``zstd``. Use ``zlib`` if ``<format>`` is omitted.
 
+.. option:: --compress-sections <section>=<format>
+
+ Compress or decompress sections matched by ``<section>`` using the specified
+ format. Supported formats are ``zlib`` and ``zstd``. Specify ``none`` for
+ decompression. When a section is matched by multiple options, the last one
+ wins. A wildcard ``<section>`` starting with '!' is disallowed.
+ Sections within a segment cannot be (de)compressed.
+
 .. option:: --decompress-debug-sections
 
  Decompress any compressed DWARF debug sections in the output.
@@ -463,6 +471,19 @@ them.
 
  Read a list of symbols from <filename> and change their visibility to the
  specified value. Visibility values: default, internal, hidden, protected.
+
+.. option:: --skip-symbol <symbol>
+
+ Do not change the parameters of symbol ``<symbol>`` when executing other
+ options that can change the symbol's name, binding or visibility.
+
+.. option:: --skip-symbols <filename>
+
+ Do not change the parameters of symbols named in the file ``<filename>`` when
+ executing other options that can change the symbol's name, binding or
+ visibility. In the file, each line represents a single symbol, with leading
+ and trailing whitespace ignored, as is anything following a '#'.
+ Can be specified multiple times to read names from multiple files.
 
 .. option:: --split-dwo <dwo-file>
 

@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_TYPES_COOKIE_IO_FUNCTIONS_T_H
 #define LLVM_LIBC_TYPES_COOKIE_IO_FUNCTIONS_T_H
 
-#include <llvm-libc-types/off64_t.h>
-#include <llvm-libc-types/size_t.h>
-#include <llvm-libc-types/ssize_t.h>
+#include "llvm-libc-types/off64_t.h"
+#include "llvm-libc-types/size_t.h"
+#include "llvm-libc-types/ssize_t.h"
 
 typedef ssize_t cookie_read_function_t(void *, char *, size_t);
 typedef ssize_t cookie_write_function_t(void *, const char *, size_t);

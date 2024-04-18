@@ -456,6 +456,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::CONVERGENCECTRL_ANCHOR:     return "convergencectrl_anchor";
   case ISD::CONVERGENCECTRL_ENTRY:      return "convergencectrl_entry";
   case ISD::CONVERGENCECTRL_LOOP:       return "convergencectrl_loop";
+  case ISD::CONVERGENCECTRL_GLUE:       return "convergencectrl_glue";
 
   // Bit manipulation
   case ISD::ABS:                        return "abs";

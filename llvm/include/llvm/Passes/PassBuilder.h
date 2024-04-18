@@ -672,6 +672,13 @@ public:
     return Result;
   }
 
+  /// Handle passes only accept one bool-valued parameter.
+  ///
+  /// \return false when Params is empty.
+  static Expected<bool> parseSinglePassOption(StringRef Params,
+                                              StringRef OptionName,
+                                              StringRef PassName);
+
 private:
   // O1 pass pipeline
   FunctionPassManager
@@ -902,8 +909,7 @@ struct NoOpLoopPass : PassInfoMixin<NoOpLoopPass> {
 };
 
 /// No-op machine function pass which does nothing.
-struct NoOpMachineFunctionPass
-    : public MachinePassInfoMixin<NoOpMachineFunctionPass> {
+struct NoOpMachineFunctionPass : public PassInfoMixin<NoOpMachineFunctionPass> {
   PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
     return PreservedAnalyses::all();
   }

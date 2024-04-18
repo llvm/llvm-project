@@ -458,7 +458,7 @@ private:
                                const PointerListInfo &ptrList);
 
   Defined *emitCategory(const ClassExtensionInfo &extInfo);
-  Defined *emitCatListEntrySec(const std::string &forCateogryName,
+  Defined *emitCatListEntrySec(const std::string &forCategoryName,
                                const std::string &forBaseClassName,
                                ObjFile *objFile);
   Defined *emitCategoryBody(const std::string &name, const Defined *nameSym,
@@ -790,7 +790,7 @@ void ObjcCategoryMerger::emitAndLinkProtocolList(
       infoCategoryWriter.catPtrListInfo.align);
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
   listSec->live = true;
-  allInputSections.push_back(listSec);
+  addInputSection(listSec);
 
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
@@ -848,7 +848,7 @@ void ObjcCategoryMerger::emitAndLinkPointerList(
       infoCategoryWriter.catPtrListInfo.align);
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
   listSec->live = true;
-  allInputSections.push_back(listSec);
+  addInputSection(listSec);
 
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
@@ -878,7 +878,7 @@ void ObjcCategoryMerger::emitAndLinkPointerList(
 
 // This method creates an __objc_catlist ConcatInputSection with a single slot
 Defined *
-ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCateogryName,
+ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCategoryName,
                                         const std::string &forBaseClassName,
                                         ObjFile *objFile) {
   uint32_t sectionSize = target->wordSize;
@@ -889,12 +889,12 @@ ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCateogryName,
                                bodyData, infoCategoryWriter.catListInfo.align);
   newCatList->parent = infoCategoryWriter.catListInfo.outputSection;
   newCatList->live = true;
-  allInputSections.push_back(newCatList);
+  addInputSection(newCatList);
 
   newCatList->parent = infoCategoryWriter.catListInfo.outputSection;
 
   std::string catSymName = "<__objc_catlist slot for merged category ";
-  catSymName += forBaseClassName + "(" + forCateogryName + ")>";
+  catSymName += forBaseClassName + "(" + forCategoryName + ")>";
 
   Defined *catListSym = make<Defined>(
       newStringData(catSymName.c_str()), /*file=*/objFile, newCatList,
@@ -927,7 +927,7 @@ Defined *ObjcCategoryMerger::emitCategoryBody(const std::string &name,
                                bodyData, infoCategoryWriter.catBodyInfo.align);
   newBodySec->parent = infoCategoryWriter.catBodyInfo.outputSection;
   newBodySec->live = true;
-  allInputSections.push_back(newBodySec);
+  addInputSection(newBodySec);
 
   std::string symName =
       objc::symbol_names::category + baseClassName + "_$_(" + name + ")";
@@ -1069,7 +1069,7 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
          off += target->wordSize) {
       Defined *categorySym = tryGetDefinedAtIsecOffset(catListCisec, off);
       assert(categorySym &&
-             "Failed to get a valid cateogry at __objc_catlit offset");
+             "Failed to get a valid category at __objc_catlit offset");
 
       // We only support ObjC categories (no swift + @objc)
       // TODO: Support swift + @objc categories also
@@ -1132,7 +1132,7 @@ void ObjcCategoryMerger::generateCatListForNonErasedCategories(
           infoCategoryWriter.catListInfo.align);
       listSec->parent = infoCategoryWriter.catListInfo.outputSection;
       listSec->live = true;
-      allInputSections.push_back(listSec);
+      addInputSection(listSec);
 
       std::string slotSymName = "<__objc_catlist slot for category ";
       slotSymName += nonErasedCatBody->getName();
@@ -1221,9 +1221,11 @@ void ObjcCategoryMerger::doCleanup() { generatedSectionData.clear(); }
 
 StringRef ObjcCategoryMerger::newStringData(const char *str) {
   uint32_t len = strlen(str);
-  auto &data = newSectionData(len + 1);
+  uint32_t bufSize = len + 1;
+  auto &data = newSectionData(bufSize);
   char *strData = reinterpret_cast<char *>(data.data());
-  strncpy(strData, str, len);
+  // Copy the string chars and null-terminator
+  memcpy(strData, str, bufSize);
   return StringRef(strData, len);
 }
 

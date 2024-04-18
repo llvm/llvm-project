@@ -16,17 +16,6 @@
 #  pragma GCC system_header
 #endif
 
-#if defined(_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES) && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
-#  pragma clang deprecated(                                                                                            \
-      _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES,                                                                           \
-      "_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES is deprecated in LLVM 18 and will be removed in LLVM 19")
-#endif
-#if defined(_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES) && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
-#  pragma clang deprecated(                                                                                            \
-      _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES,                                                                           \
-      "_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES is deprecated in LLVM 18 and will be removed in LLVM 19")
-#endif
-
 #if defined(__apple_build_version__)
 // Given AppleClang XX.Y.Z, _LIBCPP_APPLE_CLANG_VER is XXYZ (e.g. AppleClang 14.0.3 => 1403)
 #  define _LIBCPP_COMPILER_CLANG_BASED
@@ -44,8 +33,8 @@
 // Warn if a compiler version is used that is not supported anymore
 // LLVM RELEASE Update the minimum compiler versions
 #  if defined(_LIBCPP_CLANG_VER)
-#    if _LIBCPP_CLANG_VER < 1600
-#      warning "Libc++ only supports Clang 16 and later"
+#    if _LIBCPP_CLANG_VER < 1700
+#      warning "Libc++ only supports Clang 17 and later"
 #    endif
 #  elif defined(_LIBCPP_APPLE_CLANG_VER)
 #    if _LIBCPP_APPLE_CLANG_VER < 1500
@@ -120,14 +109,11 @@
 #    define _LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB
 #    define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
 #    define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
-// Define a key function for `bad_function_call` in the library, to centralize
-// its vtable and typeinfo to libc++ rather than having all other libraries
-// using that class define their own copies.
-#    define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
-// Override the default return value of exception::what() for
-// bad_function_call::what() with a string that is specific to
-// bad_function_call (see http://wg21.link/LWG2233). This is an ABI break
-// because it changes the vtable layout of bad_function_call.
+// Override the default return value of exception::what() for bad_function_call::what()
+// with a string that is specific to bad_function_call (see http://wg21.link/LWG2233).
+// This is an ABI break on platforms that sign and authenticate vtable function pointers
+// because it changes the mangling of the virtual function located in the vtable, which
+// changes how it gets signed.
 #    define _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
 // Enable optimized version of __do_get_(un)signed which avoids redundant copies.
 #    define _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
@@ -197,19 +183,6 @@
 #    if defined(__FreeBSD__) && __FreeBSD__ < 14
 #      define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #    endif
-// For XCOFF linkers, we have problems if we see a weak hidden version of a symbol
-// in user code (like you get with -fvisibility-inlines-hidden) and then a strong def
-// in the library, so we need to always rely on the library version.
-#    if defined(_AIX)
-#      define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
-#    endif
-#  endif
-
-#  if defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_ABI_VERSION >= 2
-// Define a key function for `bad_function_call` in the library, to centralize
-// its vtable and typeinfo to libc++ rather than having all other libraries
-// using that class define their own copies.
-#    define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #  endif
 
 // We had some bugs where we use [[no_unique_address]] together with construct_at,
@@ -805,6 +778,12 @@ typedef __char32_t char32_t;
 // the implementation of a virtual function in an ABI-incompatible way in the first place,
 // since that would be an ABI break anyway. Hence, the lack of ABI tag should not be noticeable.
 //
+// The macro can be applied to record and enum types. When the tagged type is nested in
+// a record this "parent" record needs to have the macro too. Another use case for applying
+// this macro to records and unions is to apply an ABI tag to inline constexpr variables.
+// This can be useful for inline variables that are implementation details which are expected
+// to change in the future.
+//
 // TODO: We provide a escape hatch with _LIBCPP_NO_ABI_TAG for folks who want to avoid increasing
 //       the length of symbols with an ABI tag. In practice, we should remove the escape hatch and
 //       use compression mangling instead, see https://github.com/itanium-cxx-abi/cxx-abi/issues/70.
@@ -838,21 +817,33 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++2b-extensions")
 #endif
 
+// Clang modules take a significant compile time hit when pushing and popping diagnostics.
+// Since all the headers are marked as system headers in the modulemap, we can simply disable this
+// pushing and popping when building with clang modules.
+#  if !__has_feature(modules)
+#    define _LIBCPP_PUSH_EXTENSION_DIAGNOSTICS                                                                         \
+      _LIBCPP_DIAGNOSTIC_PUSH                                                                                          \
+      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++11-extensions")                                                           \
+      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++14-extensions")                                                           \
+      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                           \
+      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                           \
+      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION                                                                 \
+      _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++14-extensions")                                                             \
+      _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                             \
+      _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                             \
+      _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++23-extensions")
+#    define _LIBCPP_POP_EXTENSION_DIAGNOSTICS _LIBCPP_DIAGNOSTIC_POP
+#  else
+#    define _LIBCPP_PUSH_EXTENSION_DIAGNOSTICS
+#    define _LIBCPP_POP_EXTENSION_DIAGNOSTICS
+#  endif
+
 // Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
 // clang-format off
-#  define _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_DIAGNOSTIC_PUSH                                                          \
-                                      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++11-extensions")                           \
-                                      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++14-extensions")                           \
-                                      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                           \
-                                      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                           \
-                                      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION                                 \
-                                      _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++14-extensions")                             \
-                                      _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                             \
-                                      _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                             \
-                                      _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++23-extensions")                             \
+#  define _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_PUSH_EXTENSION_DIAGNOSTICS                                               \
                                       namespace _LIBCPP_TYPE_VISIBILITY_DEFAULT std {                                  \
                                inline namespace _LIBCPP_ABI_NAMESPACE {
-#  define _LIBCPP_END_NAMESPACE_STD }} _LIBCPP_DIAGNOSTIC_POP
+#  define _LIBCPP_END_NAMESPACE_STD }} _LIBCPP_POP_EXTENSION_DIAGNOSTICS
 
 #  define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM _LIBCPP_BEGIN_NAMESPACE_STD                                               \
                                              inline namespace __fs { namespace filesystem {
@@ -954,6 +945,14 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DEPRECATED_(m)
 #  endif
 
+#  if _LIBCPP_STD_VER < 20
+#    define _LIBCPP_DEPRECATED_ATOMIC_SYNC                                                                             \
+      _LIBCPP_DEPRECATED_("The C++20 synchronization library has been deprecated prior to C++20. Please update to "    \
+                          "using -std=c++20 if you need to use these facilities.")
+#  else
+#    define _LIBCPP_DEPRECATED_ATOMIC_SYNC /* nothing */
+#  endif
+
 #  if !defined(_LIBCPP_CXX03_LANG)
 #    define _LIBCPP_DEPRECATED_IN_CXX11 _LIBCPP_DEPRECATED
 #  else
@@ -1041,15 +1040,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CONSTEXPR_SINCE_CXX23 constexpr
 #  else
 #    define _LIBCPP_CONSTEXPR_SINCE_CXX23
-#  endif
-
-#  ifndef _LIBCPP_HAS_NO_ASAN
-extern "C" _LIBCPP_EXPORTED_FROM_ABI void
-__sanitizer_annotate_contiguous_container(const void*, const void*, const void*, const void*);
-extern "C" _LIBCPP_EXPORTED_FROM_ABI void __sanitizer_annotate_double_ended_contiguous_container(
-    const void*, const void*, const void*, const void*, const void*, const void*);
-extern "C" _LIBCPP_EXPORTED_FROM_ABI int
-__sanitizer_verify_double_ended_contiguous_container(const void*, const void*, const void*, const void*);
 #  endif
 
 // Try to find out if RTTI is disabled.
@@ -1228,23 +1218,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #  else
 #    define _LIBCPP_IF_WIDE_CHARACTERS(...) __VA_ARGS__
 #  endif
-
-#  if defined(_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES)
-#    define _LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR
-#    define _LIBCPP_ENABLE_CXX17_REMOVED_BINDERS
-#    define _LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE
-#    define _LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS
-#    define _LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
-#  endif // _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES
-
-#  if defined(_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES)
-#    define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
-#    define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION
-#    define _LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS
-#    define _LIBCPP_ENABLE_CXX20_REMOVED_NEGATORS
-#    define _LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR
-#    define _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
-#  endif // _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES
 
 // clang-format off
 #  define _LIBCPP_PUSH_MACROS _Pragma("push_macro(\"min\")") _Pragma("push_macro(\"max\")") _Pragma("push_macro(\"refresh\")") _Pragma("push_macro(\"move\")") _Pragma("push_macro(\"erase\")")
