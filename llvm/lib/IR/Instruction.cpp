@@ -474,7 +474,7 @@ void Instruction::dropPoisonGeneratingMetadata() {
   eraseMetadata(LLVMContext::MD_align);
 }
 
-bool Instruction::hasPoisonGeneratingAttribute() const {
+bool Instruction::hasPoisonGeneratingReturnAttributes() const {
   if (const auto *CB = dyn_cast<CallBase>(this)) {
     AttributeSet RetAttrs = CB->getAttributes().getRetAttrs();
     return RetAttrs.hasAttribute(Attribute::Range) ||
@@ -484,7 +484,7 @@ bool Instruction::hasPoisonGeneratingAttribute() const {
   return false;
 }
 
-void Instruction::dropPoisonGeneratingAttribute() {
+void Instruction::dropPoisonGeneratingReturnAttributes() {
   if (auto *CB = dyn_cast<CallBase>(this)) {
     AttributeMask AM;
     AM.addAttribute(Attribute::Range);
@@ -492,7 +492,7 @@ void Instruction::dropPoisonGeneratingAttribute() {
     AM.addAttribute(Attribute::NonNull);
     CB->removeRetAttrs(AM);
   }
-  assert(!hasPoisonGeneratingAttribute() && "must be kept in sync");
+  assert(!hasPoisonGeneratingReturnAttributes() && "must be kept in sync");
 }
 
 void Instruction::dropUBImplyingAttrsAndUnknownMetadata(

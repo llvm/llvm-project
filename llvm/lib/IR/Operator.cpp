@@ -60,7 +60,7 @@ bool Operator::hasPoisonGeneratingAnnotations() const {
   if (hasPoisonGeneratingFlags())
     return true;
   auto *I = dyn_cast<Instruction>(this);
-  return I && (I->hasPoisonGeneratingAttribute() ||
+  return I && (I->hasPoisonGeneratingReturnAttributes() ||
                I->hasPoisonGeneratingMetadata());
 }
 

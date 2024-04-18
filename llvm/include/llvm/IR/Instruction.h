@@ -497,22 +497,23 @@ public:
   void dropPoisonGeneratingMetadata();
 
   /// Return true if this instruction has poison-generating attribute.
-  bool hasPoisonGeneratingAttribute() const LLVM_READONLY;
+  bool hasPoisonGeneratingReturnAttributes() const LLVM_READONLY;
 
-  /// Drops attributes that may generate poison.
-  void dropPoisonGeneratingAttribute();
+  /// Drops return attributes that may generate poison.
+  void dropPoisonGeneratingReturnAttributes();
 
-  /// Return true if this instruction has poison-generating flags, attributes or
-  /// metadata.
+  /// Return true if this instruction has poison-generating flags,
+  /// return attributes or metadata.
   bool hasPoisonGeneratingAnnotations() const {
-    return hasPoisonGeneratingFlags() || hasPoisonGeneratingAttribute() ||
+    return hasPoisonGeneratingFlags() ||
+           hasPoisonGeneratingReturnAttributes() ||
            hasPoisonGeneratingMetadata();
   }
 
-  /// Drops flags, attributes and metadata that may generate poison.
+  /// Drops flags, return attributes and metadata that may generate poison.
   void dropPoisonGeneratingAnnotations() {
     dropPoisonGeneratingFlags();
-    dropPoisonGeneratingAttribute();
+    dropPoisonGeneratingReturnAttributes();
     dropPoisonGeneratingMetadata();
   }
 
