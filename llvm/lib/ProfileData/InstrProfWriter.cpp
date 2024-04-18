@@ -272,24 +272,24 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
 
 void InstrProfWriter::addMemProfRecord(
     const Function::GUID Id, const memprof::IndexedMemProfRecord &Record) {
-  auto Result = MemProfRecordData.insert({Id, Record});
+  auto [Iter, Inserted] = MemProfRecordData.insert({Id, Record});
   // If we inserted a new record then we are done.
-  if (Result.second) {
+  if (Inserted) {
     return;
   }
-  memprof::IndexedMemProfRecord &Existing = Result.first->second;
+  memprof::IndexedMemProfRecord &Existing = Iter->second;
   Existing.merge(Record);
 }
 
 bool InstrProfWriter::addMemProfFrame(const memprof::FrameId Id,
                                       const memprof::Frame &Frame,
                                       function_ref<void(Error)> Warn) {
-  auto Result = MemProfFrameData.insert({Id, Frame});
+  auto [Iter, Inserted] = MemProfFrameData.insert({Id, Frame});
   // If a mapping already exists for the current frame id and it does not
   // match the new mapping provided then reset the existing contents and bail
   // out. We don't support the merging of memprof data whose Frame -> Id
   // mapping across profiles is inconsistent.
-  if (!Result.second && Result.first->second != Frame) {
+  if (!Inserted && Iter->second != Frame) {
     Warn(make_error<InstrProfError>(instrprof_error::malformed,
                                     "frame to id mapping mismatch"));
     return false;
@@ -388,10 +388,10 @@ void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
                            IPW.TemporalProfTraceStreamSize);
 
   MemProfFrameData.reserve(IPW.MemProfFrameData.size());
-  for (auto &I : IPW.MemProfFrameData) {
+  for (auto &[FrameId, Frame] : IPW.MemProfFrameData) {
     // If we weren't able to add the frame mappings then it doesn't make sense
     // to try to merge the records from this profile.
-    if (!addMemProfFrame(I.first, I.second, Warn))
+    if (!addMemProfFrame(FrameId, Frame, Warn))
       return;
   }
 
@@ -402,8 +402,8 @@ void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
   }
 
   MemProfRecordData.reserve(IPW.MemProfRecordData.size());
-  for (auto &I : IPW.MemProfRecordData) {
-    addMemProfRecord(I.first, I.second);
+  for (auto &[GUID, Record] : IPW.MemProfRecordData) {
+    addMemProfRecord(GUID, Record);
   }
 }
 
