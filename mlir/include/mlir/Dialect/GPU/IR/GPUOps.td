@@ -55,7 +55,7 @@ class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
         DeclareOpInterfaceMethods<InferIntRangeInterface>,
         DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>])>,
     Arguments<(ins GPU_DimensionAttr:$dimension)>, Results<(outs Index)> {
-  let assemblyFormat = "$dimension attr-dict";
+  let assemblyFormat = "`` $dimension attr-dict";
   let extraClassDefinition = [{
     void $cppClass::getAsmResultNames(
         llvm::function_ref<void(mlir::Value, mlir::StringRef)> setNameFn) {
@@ -496,7 +496,7 @@ def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic_shared_memory", [Pure]>
   }];
   let arguments = (ins);
   let results = (outs Arg<MemRefRankOf<[I8], [1]>>:$resultMemref);
-  let assemblyFormat = [{ attr-dict `:` type($resultMemref) }];
+  let assemblyFormat = "attr-dict `:` type($resultMemref)";
   let hasVerifier = 1;
 }
 
@@ -692,8 +692,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
                Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
-               Optional<Index>:$clusterSizeX, 
-               Optional<Index>:$clusterSizeY, 
+               Optional<Index>:$clusterSizeX,
+               Optional<Index>:$clusterSizeY,
                Optional<Index>:$clusterSizeZ,
                Optional<I32>:$dynamicSharedMemorySize)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
@@ -717,7 +717,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     to the amount of dynamic shared memory a kernel's workgroup should be
     allocated; when this operand is not present, a zero size is assumed.
 
-    The body region has at least _twelve_ arguments, or _eighteen_ if cluster 
+    The body region has at least _twelve_ arguments, or _eighteen_ if cluster
     dimensions are present, grouped as follows:
 
     -   three optional arguments that contain cluster identifiers along x,y,z
@@ -790,7 +790,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                blocks(%bx, %by, %bz) in (%sz_bx = %3, %sz_by = %4, %sz_bz = %5)
                threads(%tx, %ty, %tz) in (%sz_tx = %6, %sz_ty = %7, %sz_tz = %8)
     {
-      // Cluster, block and thread identifiers, as well as cluster/block/grid 
+      // Cluster, block and thread identifiers, as well as cluster/block/grid
       // sizes are immediately usable inside body region.
       "some_op"(%cx, %bx, %tx) : (index, index, index) -> ()
     }
@@ -867,7 +867,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     unsigned getNumConfigOperands() {
       return kNumConfigOperands + (hasClusterSize() ? 3 : 0);
     }
-    /// Returns the number of region attributes including cluster size 
+    /// Returns the number of region attributes including cluster size
     unsigned getNumConfigRegionAttributes() {
       return kNumConfigRegionAttributes + (hasClusterSize() ? 6 : 0);
     }
@@ -1075,9 +1075,10 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
   let results = (outs AnyIntegerOrFloat:$result);
 
   let regions = (region AnyRegion:$body);
-  let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
-                          (`uniform` $uniform^)? $body attr-dict
-                          `:` functional-type(operands, results) }];
+  let assemblyFormat = [{
+    `` custom<AllReduceOperation>($op) $value (`uniform` $uniform^)? $body attr-dict
+      `:` functional-type(operands, results)
+  }];
 
   let hasFolder = 1;
   let hasRegionVerifier = 1;
@@ -1118,9 +1119,10 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
   );
   let results = (outs AnyIntegerOrFloatOr1DVector:$result);
 
-  let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
-                          (`uniform` $uniform^)? attr-dict
-                          `:` functional-type(operands, results) }];
+  let assemblyFormat = [{
+    `` $op $value (`uniform` $uniform^)? attr-dict
+      `:` functional-type(operands, results)
+  }];
 
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -1205,7 +1207,7 @@ def GPU_ShuffleOp : GPU_Op<
   }];
 
   let assemblyFormat = [{
-    $mode $value `,` $offset `,` $width attr-dict `:` type($value)
+    `` $mode $value `,` $offset `,` $width attr-dict `:` type($value)
   }];
 
   let builders = [
@@ -1833,9 +1835,9 @@ def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
     Example:
 
     ```mlir
-     %0 =  %A, %B { opType = "ADD" } :
+     %0 =  gpu.subgroup_mma_elementwise addf %A, %B :
       (!gpu.mma_matrix<16x16xf16, "COp">, !gpu.mma_matrix<16x16xf16, "COp">)
-      -> !gpu.mma_matrix<16x16xf16, "COp">
+        -> !gpu.mma_matrix<16x16xf16, "COp">
     ```
   }];
 
@@ -1851,7 +1853,7 @@ def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
   }];
 
   let assemblyFormat = [{
-    $opType $args attr-dict `:` functional-type($args, $res)
+    `` $opType $args attr-dict `:` functional-type($args, $res)
   }];
 }
 
