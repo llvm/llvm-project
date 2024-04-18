@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O2 -Wno-missing-declarations -emit-llvm -o - %s | FileCheck %s
 
 struct foo {
+  int x,y,z;
   struct bar {
     int count;
     int array[] __attribute__((counted_by(count)));
