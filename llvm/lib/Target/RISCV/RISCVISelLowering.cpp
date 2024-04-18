@@ -13428,9 +13428,10 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
     if (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9) {
       SDLoc DL(N);
-      SDValue Mul359 = DAG.getNode(
-          RISCVISD::SHL_ADD, DL, VT, N->getOperand(0),
-          DAG.getConstant(Log2_64(Divisor - 1), DL, VT), N->getOperand(0));
+      SDValue X = DAG.getFreeze(N->getOperand(0));
+      SDValue Mul359 =
+          DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                      DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
       return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
                          DAG.getConstant(Log2_64(MulAmt2 - 1), DL, VT), Mul359);
     }
@@ -13464,11 +13465,12 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     unsigned TZ = llvm::countr_zero(C);
     if ((C >> TZ) == Divisor && (TZ == 1 || TZ == 2 || TZ == 3)) {
       SDLoc DL(N);
-      SDValue Mul359 = DAG.getNode(
-          RISCVISD::SHL_ADD, DL, VT, N->getOperand(0),
-          DAG.getConstant(Log2_64(Divisor - 1), DL, VT), N->getOperand(0));
+      SDValue X = DAG.getFreeze(N->getOperand(0));
+      SDValue Mul359 =
+          DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                      DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
       return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                         DAG.getConstant(TZ, DL, VT), N->getOperand(0));
+                         DAG.getConstant(TZ, DL, VT), X);
     }
   }
 
