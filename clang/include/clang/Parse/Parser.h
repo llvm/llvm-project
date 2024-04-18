@@ -2967,25 +2967,25 @@ private:
       Sema::AttributeCompletion Completion = Sema::AttributeCompletion::None,
       const IdentifierInfo *EnclosingScope = nullptr);
 
-  void MaybeParseHLSLSemantics(Declarator &D,
-                               SourceLocation *EndLoc = nullptr) {
-    assert(getLangOpts().HLSL && "MaybeParseHLSLSemantics is for HLSL only");
+  void MaybeParseHLSLAnnotations(Declarator &D,
+                                 SourceLocation *EndLoc = nullptr) {
+    assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
     if (Tok.is(tok::colon)) {
       ParsedAttributes Attrs(AttrFactory);
-      ParseHLSLSemantics(Attrs, EndLoc);
+      ParseHLSLAnnotations(Attrs, EndLoc);
       D.takeAttributes(Attrs);
     }
   }
 
-  void MaybeParseHLSLSemantics(ParsedAttributes &Attrs,
-                               SourceLocation *EndLoc = nullptr) {
-    assert(getLangOpts().HLSL && "MaybeParseHLSLSemantics is for HLSL only");
+  void MaybeParseHLSLAnnotations(ParsedAttributes &Attrs,
+                                 SourceLocation *EndLoc = nullptr) {
+    assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
     if (getLangOpts().HLSL && Tok.is(tok::colon))
-      ParseHLSLSemantics(Attrs, EndLoc);
+      ParseHLSLAnnotations(Attrs, EndLoc);
   }
 
-  void ParseHLSLSemantics(ParsedAttributes &Attrs,
-                          SourceLocation *EndLoc = nullptr);
+  void ParseHLSLAnnotations(ParsedAttributes &Attrs,
+                            SourceLocation *EndLoc = nullptr);
   Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
 
   void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
