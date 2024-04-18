@@ -176,7 +176,7 @@ namespace UsesThis {
     f.bar(1);
   }
 
-    struct B {
+  struct B {
     int x0;
     static inline int y0;
 
@@ -391,4 +391,137 @@ namespace UsesThis {
   };
 
   template struct D<int>; // expected-note 2{{in instantiation of}}
+
+  template<typename T>
+  struct E : T {
+    int x1;
+    static inline int y1;
+
+    int f1(int);
+    static int g1(int);
+
+    using T::x0;
+    using T::y0;
+    using T::f0;
+    using T::g0;
+
+    template<typename U>
+    void non_static_spec(U);
+
+    template<typename U>
+    static void static_spec(U);
+
+    template<>
+    void non_static_spec(int z) {
+      ++z;
+      ++x0;
+      ++x1;
+      ++y0;
+      ++y1;
+
+      &z;
+      &x0;
+      &x1;
+      &y0;
+      &y1;
+
+      &f0; // expected-error {{must explicitly qualify name of member function when taking its address}}
+      &f1; // expected-error 2{{must explicitly qualify name of member function when taking its address}}
+      &g0;
+      &g1;
+
+      &T::x0;
+      &E::x1;
+      &T::y0;
+      &E::y1;
+      &T::f0;
+      &E::f1;
+      &T::g0;
+      &E::g1;
+
+      f0(0);
+      f0(z);
+      f0(x0);
+      f0(x1);
+      f0(y0);
+      f0(y1);
+      g0(0);
+      g0(z);
+      g0(x0);
+      g0(x1);
+      g0(y0);
+      g0(y1);
+
+      f1(0);
+      f1(z);
+      f1(x0);
+      f1(x1);
+      f1(y0);
+      f1(y1);
+      g1(0);
+      g1(z);
+      g1(x0);
+      g1(x1);
+      g1(y0);
+      g1(y1);
+    }
+
+    template<>
+    void static_spec(int z) {
+      ++z;
+      ++x0; // expected-error {{invalid use of member 'x0' in static member function}}
+      ++x1; // expected-error {{invalid use of member 'x1' in static member function}}
+      ++y0;
+      ++y1;
+
+      &z;
+      &x0; // expected-error {{invalid use of member 'x0' in static member function}}
+      &x1; // expected-error {{invalid use of member 'x1' in static member function}}
+      &y0;
+      &y1;
+
+      &f0; // expected-error {{must explicitly qualify name of member function when taking its address}}
+      &f1; // expected-error 2{{must explicitly qualify name of member function when taking its address}}
+      &g0;
+      &g1;
+
+      &T::x0;
+      &E::x1;
+      &T::y0;
+      &E::y1;
+      &T::f0;
+      &E::f1;
+      &T::g0;
+      &E::g1;
+
+      f0(0); // expected-error {{call to non-static member function without an object argument}}
+      f0(z); // expected-error {{call to non-static member function without an object argument}}
+      f0(x0); // expected-error {{call to non-static member function without an object argument}}
+      f0(x1); // expected-error {{call to non-static member function without an object argument}}
+      f0(y0); // expected-error {{call to non-static member function without an object argument}}
+      f0(y1); // expected-error {{call to non-static member function without an object argument}}
+      g0(0);
+      g0(z);
+      g0(x0); // expected-error {{invalid use of member 'x0' in static member function}}
+      g0(x1); // expected-error {{invalid use of member 'x1' in static member function}}
+      g0(y0);
+      g0(y1);
+
+      f1(0); // expected-error {{call to non-static member function without an object argument}}
+      f1(z); // expected-error {{call to non-static member function without an object argument}}
+      f1(x0); // expected-error {{call to non-static member function without an object argument}}
+      f1(x1); // expected-error {{call to non-static member function without an object argument}}
+      f1(y0); // expected-error {{call to non-static member function without an object argument}}
+      f1(y1); // expected-error {{call to non-static member function without an object argument}}
+      g1(0);
+      g1(z);
+      g1(x0); // expected-error {{invalid use of member 'x0' in static member function}}
+      g1(x1); // expected-error {{invalid use of member 'x1' in static member function}}
+      g1(y0);
+      g1(y1);
+    }
+  };
+
+  template struct E<B>; // expected-note 2{{in instantiation of}}
+
 }

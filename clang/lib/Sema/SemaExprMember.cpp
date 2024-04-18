@@ -109,9 +109,12 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
     }
   }
 
-  if (R.isUnresolvableResult())
+  if (R.isUnresolvableResult()) {
+    if (couldInstantiateToStatic)
+      return IMA_Dependent;
     return isStaticOrExplicitContext ? IMA_Unresolved_StaticOrExplicitContext
                                      : IMA_Unresolved;
+  }
 
   // Collect all the declaring classes of instance members we find.
   bool hasNonInstance = false;
