@@ -5046,8 +5046,12 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       unsigned Opcode;
       switch (IntNo) {
       default: llvm_unreachable("Impossible intrinsic");
-      case Intrinsic::x86_encodekey128: Opcode = X86::ENCODEKEY128; break;
-      case Intrinsic::x86_encodekey256: Opcode = X86::ENCODEKEY256; break;
+      case Intrinsic::x86_encodekey128:
+        Opcode = X86::ENCODEKEY128;
+        break;
+      case Intrinsic::x86_encodekey256:
+        Opcode = X86::ENCODEKEY256;
+        break;
       }
 
       SDValue Chain = Node->getOperand(0);
