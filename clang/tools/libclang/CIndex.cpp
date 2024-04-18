@@ -2795,6 +2795,10 @@ void OpenACCClauseEnqueue::VisitSelfClause(const OpenACCSelfClause &C) {
   if (C.hasConditionExpr())
     Visitor.AddStmt(C.getConditionExpr());
 }
+void OpenACCClauseEnqueue::VisitNumWorkersClause(
+    const OpenACCNumWorkersClause &C) {
+  Visitor.AddStmt(C.getIntExpr());
+}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {
