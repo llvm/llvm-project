@@ -799,6 +799,11 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
     ProhibitAttributes(PrefixAttrs);
 
     Decl *DeclFromDeclSpec = nullptr;
+    Scope *CurScope = getCurScope();
+    if (CurScope)
+      CurScope->setFlags(Scope::ScopeFlags::TypeAliasScope |
+                         CurScope->getFlags());
+
     Decl *AD = ParseAliasDeclarationAfterDeclarator(
         TemplateInfo, UsingLoc, D, DeclEnd, AS, Attrs, &DeclFromDeclSpec);
     return Actions.ConvertDeclToDeclGroup(AD, DeclFromDeclSpec);
