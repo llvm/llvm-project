@@ -84,7 +84,8 @@ struct __range_adaptor_closure {
 #  if _LIBCPP_STD_VER >= 23
 namespace ranges {
 template <class _Tp>
-using range_adaptor_closure = __range_adaptor_closure<_Tp>;
+  requires is_class_v<_Tp> && same_as<_Tp, remove_cv_t<_Tp>>
+class range_adaptor_closure : public __range_adaptor_closure<_Tp> {};
 } // namespace ranges
 #  endif // _LIBCPP_STD_VER >= 23
 
