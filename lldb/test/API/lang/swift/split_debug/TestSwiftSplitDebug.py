@@ -39,7 +39,7 @@ class TestSwiftSplitDebug(lldbtest.TestBase):
 
         self.assertTrue(value.IsValid(),
                         "expr " + var_name + " returned a valid value")
-        self.assertEquals(value.GetValue(), expected_val)
+        self.assertEqual(value.GetValue(), expected_val)
 
     def do_test(self):
         """Test the split debug info"""
