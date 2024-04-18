@@ -312,7 +312,7 @@ llvm::AnalyzeVirtRegLanesInBundle(const MachineInstr &MI, Register Reg,
 
   LaneBitmask UseMask, DefMask;
 
-  for (const MachineOperand &MO: const_mi_bundle_ops(MI)) {
+  for (const MachineOperand &MO : const_mi_bundle_ops(MI)) {
     if (!MO.isReg() || MO.getReg() != Reg)
       continue;
 
