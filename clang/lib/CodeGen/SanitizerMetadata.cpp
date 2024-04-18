@@ -31,11 +31,11 @@ static SanitizerMask expandKernelSanitizerMasks(SanitizerMask Mask) {
   return Mask;
 }
 
-void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
-                                     SourceLocation Loc, StringRef Name,
-                                     QualType Ty,
-                                     SanitizerMask NoSanitizeAttrMask,
-                                     bool IsDynInit) {
+void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
+                                           SourceLocation Loc, StringRef Name,
+                                           QualType Ty,
+                                           SanitizerMask NoSanitizeAttrMask,
+                                           bool IsDynInit) {
   SanitizerSet FsanitizeArgument = CGM.getLangOpts().Sanitize;
   if (!isAsanHwasanOrMemTag(FsanitizeArgument))
     return;
@@ -72,8 +72,8 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
   GV->setSanitizerMetadata(Meta);
 }
 
-void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
-                                     bool IsDynInit) {
+void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
+                                           const VarDecl &D, bool IsDynInit) {
   if (!isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
     return;
   std::string QualName;
@@ -95,6 +95,30 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
                IsDynInit);
 }
 
+void SanitizerMetadata::reportGlobalToTySan(llvm::GlobalVariable *GV,
+                                            const VarDecl &D) {
+  if (!CGM.getLangOpts().Sanitize.has(SanitizerKind::Type))
+    return;
+
+  for (auto Attr : D.specific_attrs<NoSanitizeAttr>())
+    if (Attr->getMask() & SanitizerKind::Type)
+      return;
+
+  QualType QTy = D.getType();
+  llvm::MDNode *TBAAInfo = CGM.getTBAATypeInfo(QTy);
+  if (!TBAAInfo || TBAAInfo == CGM.getTBAATypeInfo(CGM.getContext().CharTy))
+    return;
+
+  llvm::Metadata *GlobalMetadata[] = {llvm::ConstantAsMetadata::get(GV),
+                                      TBAAInfo};
+
+  llvm::MDNode *ThisGlobal =
+      llvm::MDNode::get(CGM.getLLVMContext(), GlobalMetadata);
+  llvm::NamedMDNode *TysanGlobals =
+      CGM.getModule().getOrInsertNamedMetadata("llvm.tysan.globals");
+  TysanGlobals->addOperand(ThisGlobal);
+}
+
 void SanitizerMetadata::disableSanitizerForGlobal(llvm::GlobalVariable *GV) {
-  reportGlobal(GV, SourceLocation(), "", QualType(), SanitizerKind::All);
+  reportGlobalToASan(GV, SourceLocation(), "", QualType(), SanitizerKind::All);
 }

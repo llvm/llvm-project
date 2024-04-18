@@ -458,7 +458,8 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   LocalDeclMap.find(&D)->second = Address(castedAddr, elemTy, alignment);
   CGM.setStaticLocalDeclAddress(&D, castedAddr);
 
-  CGM.getSanitizerMetadata()->reportGlobal(var, D);
+  CGM.getSanitizerMetadata()->reportGlobalToASan(var, D);
+  CGM.getSanitizerMetadata()->reportGlobalToTySan(var, D);
 
   // Emit global variable debug descriptor for static vars.
   CGDebugInfo *DI = getDebugInfo();
