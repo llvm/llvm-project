@@ -525,6 +525,7 @@ private:
 
   /// Calculate hash of the pcm content.
   std::pair<ASTFileSignature, ASTFileSignature> createSignature() const;
+  ASTFileSignature createSignatureForNamedModule() const;
 
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
   void WriteSourceManagerBlock(SourceManager &SourceMgr,
