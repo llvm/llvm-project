@@ -153,7 +153,7 @@ struct LinearizeVectorExtractStridedSlice final
       return rewriter.notifyMatchFailure(
           extractOp, "Strided slice with stride != 1 is not supported.");
     Value srcVector = adaptor.getVector();
-    // If kD offsets are specified for nd source vector (n > k), the granularity
+    // If kD offsets are specified for nD source vector (n > k), the granularity
     // of the extraction is greater than 1. In this case last (n-k) dimensions
     // form the extraction granularity.
     // Example :
@@ -162,13 +162,12 @@ struct LinearizeVectorExtractStridedSlice final
     //      vector<4x8x8xf32> to vector<2x2x8xf32>
     // Here, extraction granularity is 8.
     int64_t extractGranularitySize = 1;
-    int64_t n = extractOp.getSourceVectorType().getRank();
-    int64_t k = (int64_t)offsets.size();
-    if (n > k) {
-      for (unsigned i = 0; i < n - k; ++i) {
-        extractGranularitySize *=
-            extractOp.getSourceVectorType().getShape()[i + k];
-      }
+    int64_t nD = extractOp.getSourceVectorType().getRank();
+    int64_t kD = (int64_t)offsets.size();
+    int64_t k = kD;
+    while (k < nD) {
+      extractGranularitySize *= extractOp.getSourceVectorType().getShape()[k];
+      ++k;
     }
     // Get total number of extracted slices.
     int64_t nExtractedSlices = 1;
@@ -176,8 +175,8 @@ struct LinearizeVectorExtractStridedSlice final
       nExtractedSlices *= size.cast<IntegerAttr>().getInt();
     }
     // Compute the strides of the source vector considering first k dimensions.
-    llvm::SmallVector<int64_t, 4> sourceStrides(k, extractGranularitySize);
-    for (int i = k - 2; i >= 0; --i) {
+    llvm::SmallVector<int64_t, 4> sourceStrides(kD, extractGranularitySize);
+    for (int i = kD - 2; i >= 0; --i) {
       sourceStrides[i] = sourceStrides[i + 1] *
                          extractOp.getSourceVectorType().getShape()[i + 1];
     }
@@ -186,9 +185,9 @@ struct LinearizeVectorExtractStridedSlice final
     llvm::SmallVector<int64_t, 4> indices(nExtractedSlices *
                                           extractGranularitySize);
     // Compute the strides of the extracted kD vector.
-    llvm::SmallVector<int64_t, 4> extractedStrides(k, 1);
+    llvm::SmallVector<int64_t, 4> extractedStrides(kD, 1);
     // Compute extractedStrides.
-    for (int i = k - 2; i >= 0; --i) {
+    for (int i = kD - 2; i >= 0; --i) {
       extractedStrides[i] =
           extractedStrides[i + 1] * sizes[i + 1].cast<IntegerAttr>().getInt();
     }
@@ -198,15 +197,15 @@ struct LinearizeVectorExtractStridedSlice final
     for (int64_t i = 0; i < nExtractedSlices; ++i) {
       int64_t index = i;
       // Compute the corresponding multi-dimensional index.
-      llvm::SmallVector<int64_t, 4> multiDimIndex(k, 0);
-      for (int64_t j = 0; j < k; ++j) {
+      llvm::SmallVector<int64_t, 4> multiDimIndex(kD, 0);
+      for (int64_t j = 0; j < kD; ++j) {
         multiDimIndex[j] = (index / extractedStrides[j]);
         index -= multiDimIndex[j] * extractedStrides[j];
       }
       // Compute the corresponding linearized index in the source vector
       // i.e. shift the multiDimIndex by the offsets.
       int64_t linearizedIndex = 0;
-      for (int64_t j = 0; j < k; ++j) {
+      for (int64_t j = 0; j < kD; ++j) {
         linearizedIndex +=
             (offsets[j].cast<IntegerAttr>().getInt() + multiDimIndex[j]) *
             sourceStrides[j];
