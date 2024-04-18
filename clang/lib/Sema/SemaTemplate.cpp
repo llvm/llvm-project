@@ -3044,8 +3044,8 @@ FunctionTemplateDecl *DeclareAggregateDeductionGuideForTypeAlias(
 
   LocalInstantiationScope Scope(SemaRef);
   Sema::InstantiatingTemplate BuildingDeductionGuides(
-        SemaRef, AliasTemplate->getLocation(), RHSDeductionGuide,
-        Sema::InstantiatingTemplate::BuildingDeductionGuidesTag{});
+      SemaRef, AliasTemplate->getLocation(), RHSDeductionGuide,
+      Sema::InstantiatingTemplate::BuildingDeductionGuidesTag{});
   if (BuildingDeductionGuides.isInvalid())
     return nullptr;
 
