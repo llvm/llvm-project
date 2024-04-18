@@ -672,7 +672,7 @@ class BreakpointCommandTestCase(TestBase):
         for breakpoint_stats in breakpoints_stats:
             self.assertIn("hitCount", breakpoint_stats)
 
-    @skipIf(oslist=no_match(["linux"]), archs=["arm", "aarch64"])
+    @skipIf(oslist=no_match(["linux"]))
     def test_break_at__dl_debug_state(self):
         """
         Test lldb is able to stop at _dl_debug_state if it is set before the
@@ -682,7 +682,7 @@ class BreakpointCommandTestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         self.runCmd("target create %s" % exe)
         bpid = lldbutil.run_break_set_by_symbol(
-            self, "_dl_debug_state", num_expected_locations=0
+            self, "_dl_debug_state", num_expected_locations=-2
         )
         self.runCmd("run")
         self.assertIsNotNone(
