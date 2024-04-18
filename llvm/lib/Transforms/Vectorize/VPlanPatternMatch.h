@@ -65,7 +65,7 @@ struct specific_intval {
     if (!CI && V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
         CI = dyn_cast_or_null<ConstantInt>(
-            C->getSplatValue(/*UndefsAllowed=*/false));
+            C->getSplatValue(/*AllowPoison=*/false));
 
     return CI && APInt::isSameValue(CI->getValue(), Val);
   }

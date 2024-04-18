@@ -243,10 +243,10 @@ inline match_combine_and<LTy, RTy> m_CombineAnd(const LTy &L, const RTy &R) {
 
 struct apint_match {
   const APInt *&Res;
-  bool AllowUndef;
+  bool AllowPoison;
 
-  apint_match(const APInt *&Res, bool AllowUndef)
-      : Res(Res), AllowUndef(AllowUndef) {}
+  apint_match(const APInt *&Res, bool AllowPoison)
+      : Res(Res), AllowPoison(AllowPoison) {}
 
   template <typename ITy> bool match(ITy *V) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -256,7 +256,7 @@ struct apint_match {
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
         if (auto *CI =
-                dyn_cast_or_null<ConstantInt>(C->getSplatValue(AllowUndef))) {
+                dyn_cast_or_null<ConstantInt>(C->getSplatValue(AllowPoison))) {
           Res = &CI->getValue();
           return true;
         }
@@ -268,10 +268,10 @@ struct apint_match {
 // function for both apint/apfloat.
 struct apfloat_match {
   const APFloat *&Res;
-  bool AllowUndef;
+  bool AllowPoison;
 
-  apfloat_match(const APFloat *&Res, bool AllowUndef)
-      : Res(Res), AllowUndef(AllowUndef) {}
+  apfloat_match(const APFloat *&Res, bool AllowPoison)
+      : Res(Res), AllowPoison(AllowPoison) {}
 
   template <typename ITy> bool match(ITy *V) {
     if (auto *CI = dyn_cast<ConstantFP>(V)) {
@@ -281,7 +281,7 @@ struct apfloat_match {
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
         if (auto *CI =
-                dyn_cast_or_null<ConstantFP>(C->getSplatValue(AllowUndef))) {
+                dyn_cast_or_null<ConstantFP>(C->getSplatValue(AllowPoison))) {
           Res = &CI->getValueAPF();
           return true;
         }
@@ -292,35 +292,35 @@ struct apfloat_match {
 /// Match a ConstantInt or splatted ConstantVector, binding the
 /// specified pointer to the contained APInt.
 inline apint_match m_APInt(const APInt *&Res) {
-  // Forbid undefs by default to maintain previous behavior.
-  return apint_match(Res, /* AllowUndef */ false);
+  // Forbid poison by default to maintain previous behavior.
+  return apint_match(Res, /* AllowPoison */ false);
 }
 
-/// Match APInt while allowing undefs in splat vector constants.
-inline apint_match m_APIntAllowUndef(const APInt *&Res) {
-  return apint_match(Res, /* AllowUndef */ true);
+/// Match APInt while allowing poison in splat vector constants.
+inline apint_match m_APIntAllowPoison(const APInt *&Res) {
+  return apint_match(Res, /* AllowPoison */ true);
 }
 
-/// Match APInt while forbidding undefs in splat vector constants.
-inline apint_match m_APIntForbidUndef(const APInt *&Res) {
-  return apint_match(Res, /* AllowUndef */ false);
+/// Match APInt while forbidding poison in splat vector constants.
+inline apint_match m_APIntForbidPoison(const APInt *&Res) {
+  return apint_match(Res, /* AllowPoison */ false);
 }
 
 /// Match a ConstantFP or splatted ConstantVector, binding the
 /// specified pointer to the contained APFloat.
 inline apfloat_match m_APFloat(const APFloat *&Res) {
   // Forbid undefs by default to maintain previous behavior.
-  return apfloat_match(Res, /* AllowUndef */ false);
+  return apfloat_match(Res, /* AllowPoison */ false);
 }
 
-/// Match APFloat while allowing undefs in splat vector constants.
-inline apfloat_match m_APFloatAllowUndef(const APFloat *&Res) {
-  return apfloat_match(Res, /* AllowUndef */ true);
+/// Match APFloat while allowing poison in splat vector constants.
+inline apfloat_match m_APFloatAllowPoison(const APFloat *&Res) {
+  return apfloat_match(Res, /* AllowPoison */ true);
 }
 
-/// Match APFloat while forbidding undefs in splat vector constants.
-inline apfloat_match m_APFloatForbidUndef(const APFloat *&Res) {
-  return apfloat_match(Res, /* AllowUndef */ false);
+/// Match APFloat while forbidding poison in splat vector constants.
+inline apfloat_match m_APFloatForbidPoison(const APFloat *&Res) {
+  return apfloat_match(Res, /* AllowPoison */ false);
 }
 
 template <int64_t Val> struct constantint_match {
@@ -418,7 +418,7 @@ template <typename Predicate> struct api_pred_ty : public Predicate {
 
 /// This helper class is used to match scalar and vector constants that
 /// satisfy a specified predicate, and bind them to an APFloat.
-/// Undefs are allowed in splat vector constants.
+/// Poison is allowed in splat vector constants.
 template <typename Predicate> struct apf_pred_ty : public Predicate {
   const APFloat *&Res;
 
@@ -433,7 +433,7 @@ template <typename Predicate> struct apf_pred_ty : public Predicate {
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
         if (auto *CI = dyn_cast_or_null<ConstantFP>(
-                C->getSplatValue(/* AllowUndef */ true)))
+                C->getSplatValue(/* AllowPoison */ true)))
           if (this->isValue(CI->getValue())) {
             Res = &CI->getValue();
             return true;
@@ -883,7 +883,7 @@ struct bind_const_intval_ty {
 
 /// Match a specified integer value or vector of all elements of that
 /// value.
-template <bool AllowUndefs> struct specific_intval {
+template <bool AllowPoison> struct specific_intval {
   const APInt &Val;
 
   specific_intval(const APInt &V) : Val(V) {}
@@ -892,13 +892,13 @@ template <bool AllowUndefs> struct specific_intval {
     const auto *CI = dyn_cast<ConstantInt>(V);
     if (!CI && V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
-        CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue(AllowUndefs));
+        CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue(AllowPoison));
 
     return CI && APInt::isSameValue(CI->getValue(), Val);
   }
 };
 
-template <bool AllowUndefs> struct specific_intval64 {
+template <bool AllowPoison> struct specific_intval64 {
   uint64_t Val;
 
   specific_intval64(uint64_t V) : Val(V) {}
@@ -907,7 +907,7 @@ template <bool AllowUndefs> struct specific_intval64 {
     const auto *CI = dyn_cast<ConstantInt>(V);
     if (!CI && V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
-        CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue(AllowUndefs));
+        CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue(AllowPoison));
 
     return CI && CI->getValue() == Val;
   }
@@ -923,11 +923,11 @@ inline specific_intval64<false> m_SpecificInt(uint64_t V) {
   return specific_intval64<false>(V);
 }
 
-inline specific_intval<true> m_SpecificIntAllowUndef(const APInt &V) {
+inline specific_intval<true> m_SpecificIntAllowPoison(const APInt &V) {
   return specific_intval<true>(V);
 }
 
-inline specific_intval64<true> m_SpecificIntAllowUndef(uint64_t V) {
+inline specific_intval64<true> m_SpecificIntAllowPoison(uint64_t V) {
   return specific_intval64<true>(V);
 }
 
@@ -1699,9 +1699,9 @@ struct m_SpecificMask {
   bool match(ArrayRef<int> Mask) { return MaskRef == Mask; }
 };
 
-struct m_SplatOrUndefMask {
+struct m_SplatOrPoisonMask {
   int &SplatIndex;
-  m_SplatOrUndefMask(int &SplatIndex) : SplatIndex(SplatIndex) {}
+  m_SplatOrPoisonMask(int &SplatIndex) : SplatIndex(SplatIndex) {}
   bool match(ArrayRef<int> Mask) {
     const auto *First = find_if(Mask, [](int Elem) { return Elem != -1; });
     if (First == Mask.end())

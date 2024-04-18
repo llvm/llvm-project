@@ -1821,7 +1821,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
        return NewMinMax;
 
     // Try to fold minmax with constant RHS based on range information
-    if (match(I1, m_APIntAllowUndef(RHSC))) {
+    if (match(I1, m_APIntAllowPoison(RHSC))) {
       ICmpInst::Predicate Pred =
           ICmpInst::getNonStrictPredicate(MinMaxIntrinsic::getPredicate(IID));
       bool IsSigned = MinMaxIntrinsic::isSigned(IID);
@@ -1865,12 +1865,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // bswap (lshr X, Y) --> shl (bswap X), Y
     Value *X, *Y;
     if (match(IIOperand, m_OneUse(m_LogicalShift(m_Value(X), m_Value(Y))))) {
-      // The transform allows undef vector elements, so try a constant match
-      // first. If knownbits can handle that case, that clause could be removed.
       unsigned BitWidth = IIOperand->getType()->getScalarSizeInBits();
-      const APInt *C;
-      if ((match(Y, m_APIntAllowUndef(C)) && (*C & 7) == 0) ||
-          MaskedValueIsZero(Y, APInt::getLowBitsSet(BitWidth, 3))) {
+      if (MaskedValueIsZero(Y, APInt::getLowBitsSet(BitWidth, 3))) {
         Value *NewSwap = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X);
         BinaryOperator::BinaryOps InverseShift =
             cast<BinaryOperator>(IIOperand)->getOpcode() == Instruction::Shl

@@ -3023,7 +3023,7 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
 
   Value *X;
   const APInt *C;
-  if (!match(RHS, m_APIntAllowUndef(C)))
+  if (!match(RHS, m_APIntAllowPoison(C)))
     return nullptr;
 
   // Sign-bit checks can be optimized to true/false after unsigned
@@ -3056,9 +3056,9 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
   // (mul nuw/nsw X, MulC) == C --> false (if C is not a multiple of MulC)
   const APInt *MulC;
   if (IIQ.UseInstrInfo && ICmpInst::isEquality(Pred) &&
-      ((match(LHS, m_NUWMul(m_Value(), m_APIntAllowUndef(MulC))) &&
+      ((match(LHS, m_NUWMul(m_Value(), m_APIntAllowPoison(MulC))) &&
         *MulC != 0 && C->urem(*MulC) != 0) ||
-       (match(LHS, m_NSWMul(m_Value(), m_APIntAllowUndef(MulC))) &&
+       (match(LHS, m_NSWMul(m_Value(), m_APIntAllowPoison(MulC))) &&
         *MulC != 0 && C->srem(*MulC) != 0)))
     return ConstantInt::get(ITy, Pred == ICmpInst::ICMP_NE);
 
@@ -3203,7 +3203,7 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
 
   // (sub C, X) == X, C is odd  --> false
   // (sub C, X) != X, C is odd  --> true
-  if (match(LBO, m_Sub(m_APIntAllowUndef(C), m_Specific(RHS))) &&
+  if (match(LBO, m_Sub(m_APIntAllowPoison(C), m_Specific(RHS))) &&
       (*C & 1) == 1 && ICmpInst::isEquality(Pred))
     return (Pred == ICmpInst::ICMP_EQ) ? getFalse(ITy) : getTrue(ITy);
 
@@ -3354,7 +3354,7 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
   //   (C2 << X) != C --> true
   const APInt *C;
   if (match(LHS, m_Shl(m_Power2(), m_Value())) &&
-      match(RHS, m_APIntAllowUndef(C)) && !C->isPowerOf2()) {
+      match(RHS, m_APIntAllowPoison(C)) && !C->isPowerOf2()) {
     // C2 << X can equal zero in some circumstances.
     // This simplification might be unsafe if C is zero.
     //
@@ -4105,7 +4105,7 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   }
 
   const APFloat *C = nullptr;
-  match(RHS, m_APFloatAllowUndef(C));
+  match(RHS, m_APFloatAllowPoison(C));
   std::optional<KnownFPClass> FullKnownClassLHS;
 
   // Lazily compute the possible classes for LHS. Avoid computing it twice if
@@ -6459,7 +6459,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
           ReturnType, MinMaxIntrinsic::getSaturationPoint(IID, BitWidth));
 
     const APInt *C;
-    if (match(Op1, m_APIntAllowUndef(C))) {
+    if (match(Op1, m_APIntAllowPoison(C))) {
       // Clamp to limit value. For example:
       // umax(i8 %x, i8 255) --> 255
       if (*C == MinMaxIntrinsic::getSaturationPoint(IID, BitWidth))

@@ -896,7 +896,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   const APInt *C;
   unsigned BitWidth = Ty->getScalarSizeInBits();
   if (match(Op0, m_OneUse(m_AShr(m_Value(X),
-                                 m_SpecificIntAllowUndef(BitWidth - 1)))) &&
+                                 m_SpecificIntAllowPoison(BitWidth - 1)))) &&
       match(Op1, m_One()))
     return new ZExtInst(Builder.CreateIsNotNeg(X, "isnotneg"), Ty);
 
@@ -1656,7 +1656,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // (A s>> (BW - 1)) + (zext (A s> 0)) --> (A s>> (BW - 1)) | (zext (A != 0))
   ICmpInst::Predicate Pred;
   uint64_t BitWidth = Ty->getScalarSizeInBits();
-  if (match(LHS, m_AShr(m_Value(A), m_SpecificIntAllowUndef(BitWidth - 1))) &&
+  if (match(LHS, m_AShr(m_Value(A), m_SpecificIntAllowPoison(BitWidth - 1))) &&
       match(RHS, m_OneUse(m_ZExt(
                      m_OneUse(m_ICmp(Pred, m_Specific(A), m_ZeroInt()))))) &&
       Pred == CmpInst::ICMP_SGT) {

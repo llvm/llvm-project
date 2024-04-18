@@ -1481,7 +1481,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     Value *Y;
     if (Src->hasOneUse() &&
         match(X, m_LShr(m_Value(Y),
-                        m_SpecificIntAllowUndef(XBitSize - SrcBitSize)))) {
+                        m_SpecificIntAllowPoison(XBitSize - SrcBitSize)))) {
       Value *Ashr = Builder.CreateAShr(Y, XBitSize - SrcBitSize);
       return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
     }
