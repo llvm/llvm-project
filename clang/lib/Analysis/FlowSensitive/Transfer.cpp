@@ -124,8 +124,9 @@ namespace {
 
 class TransferVisitor : public ConstStmtVisitor<TransferVisitor> {
 public:
-  TransferVisitor(const StmtToEnvMap &StmtToEnv, Environment &Env)
-      : StmtToEnv(StmtToEnv), Env(Env) {}
+  TransferVisitor(const StmtToEnvMap &StmtToEnv, Environment &Env,
+                  Environment::ValueModel &Model)
+      : StmtToEnv(StmtToEnv), Env(Env), Model(Model) {}
 
   void VisitBinaryOperator(const BinaryOperator *S) {
     const Expr *LHS = S->getLHS();
@@ -641,17 +642,22 @@ public:
   }
 
   void VisitConditionalOperator(const ConditionalOperator *S) {
-    // FIXME: Revisit this once flow conditions are added to the framework. For
-    // `a = b ? c : d` we can add `b => a == c && !b => a == d` to the flow
-    // condition.
-    // When we do this, we will need to retrieve the values of the operands from
-    // the environments for the basic blocks they are computed in, in a similar
-    // way to how this is done for short-circuited logical operators in
-    // `getLogicOperatorSubExprValue()`.
-    if (S->isGLValue())
-      Env.setStorageLocation(*S, Env.createObject(S->getType()));
-    else if (!S->getType()->isRecordType()) {
-      if (Value *Val = Env.createValue(S->getType()))
+    const Environment *TrueEnv = StmtToEnv.getEnvironment(*S->getTrueExpr());
+    const Environment *FalseEnv = StmtToEnv.getEnvironment(*S->getFalseExpr());
+
+    if (TrueEnv == nullptr || FalseEnv == nullptr)
+      return;
+
+    if (S->isGLValue()) {
+      StorageLocation *TrueLoc = TrueEnv->getStorageLocation(*S->getTrueExpr());
+      StorageLocation *FalseLoc =
+          FalseEnv->getStorageLocation(*S->getFalseExpr());
+      if (TrueLoc == FalseLoc && TrueLoc != nullptr)
+        Env.setStorageLocation(*S, *TrueLoc);
+    } else if (!S->getType()->isRecordType()) {
+      if (Value *Val = Environment::joinValues(
+              S->getType(), TrueEnv->getValue(*S->getTrueExpr()), *TrueEnv,
+              FalseEnv->getValue(*S->getFalseExpr()), *FalseEnv, Env, Model))
         Env.setValue(*S, *Val);
     }
   }
@@ -810,12 +816,14 @@ private:
 
   const StmtToEnvMap &StmtToEnv;
   Environment &Env;
+  Environment::ValueModel &Model;
 };
 
 } // namespace
 
-void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env) {
-  TransferVisitor(StmtToEnv, Env).Visit(&S);
+void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env,
+              Environment::ValueModel &Model) {
+  TransferVisitor(StmtToEnv, Env, Model).Visit(&S);
 }
 
 } // namespace dataflow
