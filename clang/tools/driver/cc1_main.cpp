@@ -63,7 +63,7 @@ using namespace llvm::opt;
 
 static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
-  DiagnosticsEngine &Diags = *static_cast<DiagnosticsEngine*>(UserData);
+  DiagnosticsEngine &Diags = *static_cast<DiagnosticsEngine *>(UserData);
 
   Diags.Report(diag::err_fe_error_backend) << Message;
 
@@ -139,7 +139,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
   const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getAllProcessorFeatures();
+      MCInfo->getAllProcessorFeatures();
 
   llvm::StringMap<llvm::StringRef> DescMap;
   for (const llvm::SubtargetFeatureKV &feature : Features)
@@ -161,6 +161,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   return 0;
 }
 
+// 通过指定-cc1 option 之后，LLVM 最终会执行到这个方法作为编译器前端来工作
 int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   ensureSufficientStack();
 
@@ -208,7 +209,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
       Clang->getHeaderSearchOpts().ResourceDir.empty())
     Clang->getHeaderSearchOpts().ResourceDir =
-      CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
+        CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
   // Create the actual diagnostics engine.
   Clang->createDiagnostics();
@@ -217,8 +218,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
-  llvm::install_fatal_error_handler(LLVMErrorHandler,
-                                  static_cast<void*>(&Clang->getDiagnostics()));
+  llvm::install_fatal_error_handler(
+      LLVMErrorHandler, static_cast<void *>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
   if (!Success) {
