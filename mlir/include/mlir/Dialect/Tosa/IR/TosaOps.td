@@ -49,6 +49,7 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
     Tosa_Tensor: $output
   );
 
+  let hasFolder = 1;
   let hasVerifier = 1;
 }
 
