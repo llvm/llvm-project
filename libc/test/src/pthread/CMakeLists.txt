@@ -47,9 +47,9 @@ add_libc_unittest(
   SRCS
     pthread_condattr_test.cpp
   DEPENDS
-    libc.include.errno
+    libc.include.llvm-libc-macros.generic_error_number_macros
+    libc.include.llvm-libc-macros.time_macros
     libc.include.pthread
-    libc.include.time
     libc.src.pthread.pthread_condattr_destroy
     libc.src.pthread.pthread_condattr_getclock
     libc.src.pthread.pthread_condattr_getpshared
