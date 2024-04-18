@@ -265,3 +265,8 @@ void transform::gpu::CopyMappingInfo::print(llvm::raw_ostream &os) const {
   llvm::interleaveComma(threadMapping, os << "}, threadMapping: {");
   os << "}}";
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
+void transform::gpu::CopyMappingInfo::dump() const { print(llvm::errs()); }
+#endif

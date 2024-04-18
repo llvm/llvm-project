@@ -407,11 +407,14 @@ void OpPassManager::printAsTextualPipeline(raw_ostream &os) const {
        MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.end()});
 }
 
-void OpPassManager::dump() {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
+void OpPassManager::dump() const {
   llvm::errs() << "Pass Manager with " << impl->passes.size() << " passes:\n";
   printAsTextualPipeline(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 static void registerDialectsForPipeline(const OpPassManager &pm,
                                         DialectRegistry &dialects) {

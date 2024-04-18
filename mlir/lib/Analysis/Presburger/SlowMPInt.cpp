@@ -36,7 +36,10 @@ llvm::hash_code detail::hash_value(const SlowMPInt &x) {
 /// ---------------------------------------------------------------------------
 void SlowMPInt::print(llvm::raw_ostream &os) const { os << val; }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void SlowMPInt::dump() const { print(llvm::errs()); }
+#endif
 
 llvm::raw_ostream &detail::operator<<(llvm::raw_ostream &os,
                                       const SlowMPInt &x) {

@@ -171,6 +171,8 @@ int64_t ShapeAdaptor::getNumElements() const {
   return num;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
 void ShapeAdaptor::dump() const {
   if (!hasRank()) {
     llvm::errs() << "<<unranked>>\n";
@@ -188,6 +190,7 @@ void ShapeAdaptor::dump() const {
   llvm::interleave(mapped, llvm::errs(), "x");
   llvm::errs() << "]\n";
 }
+#endif
 
 ShapeAdaptor ValueShapeRange::getValueAsShape(int index) {
   Value val = operator[](index);

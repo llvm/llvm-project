@@ -174,8 +174,11 @@ void CallGraph::eraseNode(CallGraphNode *node) {
 //===----------------------------------------------------------------------===//
 // Printing
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// Dump the graph in a human readable format.
-void CallGraph::dump() const { print(llvm::errs()); }
+LLVM_DUMP_METHOD void CallGraph::dump() const { print(llvm::errs()); }
+#endif
+
 void CallGraph::print(raw_ostream &os) const {
   os << "// ---- CallGraph ----\n";
 

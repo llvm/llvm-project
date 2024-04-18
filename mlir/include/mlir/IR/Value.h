@@ -73,11 +73,10 @@ protected:
 
   /// Expose a few methods explicitly for the debugger to call for
   /// visualization.
-#ifndef NDEBUG
-  LLVM_DUMP_METHOD Type debug_getType() const { return getType(); }
-  LLVM_DUMP_METHOD Kind debug_getKind() const { return getKind(); }
-
-#endif
+  /// @{
+  Type debug_getType() const;
+  Kind debug_getKind() const;
+  /// @}
 
   /// The type of this result and the kind.
   llvm::PointerIntPair<Type, 3, Kind> typeAndKind;

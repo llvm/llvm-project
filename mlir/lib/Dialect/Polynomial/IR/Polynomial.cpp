@@ -81,6 +81,11 @@ void Polynomial::print(raw_ostream &os, ::llvm::StringRef separator,
 
 void Polynomial::print(raw_ostream &os) const { print(os, " + ", "**"); }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD
+void Polynomial::dump() const { print(llvm::errs()); }
+#endif
+
 std::string Polynomial::toIdentifier() const {
   std::string result;
   llvm::raw_string_ostream os(result);

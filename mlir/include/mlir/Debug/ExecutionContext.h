@@ -29,10 +29,7 @@ public:
   const Action &getAction() const { return action; }
   int getDepth() const { return depth; }
   void print(raw_ostream &os, bool withContext) const;
-  void dump() const {
-    print(llvm::errs(), /*withContext=*/true);
-    llvm::errs() << "\n";
-  }
+  void dump() const;
   Breakpoint *getBreakpoint() const { return breakpoint; }
   void setBreakpoint(Breakpoint *breakpoint) { this->breakpoint = breakpoint; }
 
