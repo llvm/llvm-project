@@ -91,7 +91,7 @@ void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
     return NoSanitizeMask;
   };
 
-  reportGlobal(GV, D.getLocation(), QualName, D.getType(), getNoSanitizeMask(D),
+  reportGlobalToASan(GV, D.getLocation(), QualName, D.getType(), getNoSanitizeMask(D),
                IsDynInit);
 }
 
