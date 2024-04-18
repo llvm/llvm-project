@@ -480,10 +480,20 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
 }
 
 void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
+  auto lhsLoc{std::get<parser::Variable>(x.t).GetSource()};
+  const auto &scope{context_.FindScope(lhsLoc)};
+  const Scope &progUnit{GetProgramUnitContaining(scope)};
+  if (IsCUDADeviceContext(&progUnit)) {
+    return; // Data transfer with assignment is only perform on host.
+  }
+
   const evaluate::Assignment *assign{semantics::GetAssignment(x)};
+  if (!assign) {
+    return;
+  }
+
   int nbLhs{evaluate::GetNbOfCUDASymbols(assign->lhs)};
   int nbRhs{evaluate::GetNbOfCUDASymbols(assign->rhs)};
-  auto lhsLoc{std::get<parser::Variable>(x.t).GetSource()};
 
   // device to host transfer with more than one device object on the rhs is not
   // legal.

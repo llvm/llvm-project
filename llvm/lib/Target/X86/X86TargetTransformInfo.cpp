@@ -3402,6 +3402,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ROTR,       MVT::v32i16,  {  1,  1,  1,  1 } },
     { ISD::ROTR,       MVT::v16i16,  {  1,  1,  1,  1 } },
     { ISD::ROTR,       MVT::v8i16,   {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v32i16,  {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v16i16,  {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v8i16,   {  1,  1,  1,  1 } },
   };
   static const CostKindTblEntry AVX512BITALGCostTbl[] = {
     { ISD::CTPOP,      MVT::v32i16,  {  1,  1,  1,  1 } },
@@ -3498,6 +3501,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ROTR,       MVT::v64i8,   {  5,  6, 12, 14 } },
     { ISD::ROTR,       MVT::v32i8,   {  5, 14,  6,  9 } },
     { ISD::ROTR,       MVT::v16i8,   {  5, 14,  6,  9 } },
+    { X86ISD::VROTLI,  MVT::v32i16,  {  2,  5,  3,  3 } },
+    { X86ISD::VROTLI,  MVT::v16i16,  {  1,  5,  3,  3 } },
+    { X86ISD::VROTLI,  MVT::v8i16,   {  1,  5,  3,  3 } },
+    { X86ISD::VROTLI,  MVT::v64i8,   {  2,  9,  3,  4 } },
+    { X86ISD::VROTLI,  MVT::v32i8,   {  1,  9,  3,  4 } },
+    { X86ISD::VROTLI,  MVT::v16i8,   {  1,  8,  3,  4 } },
     { ISD::SADDSAT,    MVT::v32i16,  {  1 } },
     { ISD::SADDSAT,    MVT::v64i8,   {  1 } },
     { ISD::SMAX,       MVT::v32i16,  {  1,  1,  1,  1 } },
@@ -3556,6 +3565,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ROTR,       MVT::v16i32,  {  1,  1,  1,  1 } },
     { ISD::ROTR,       MVT::v8i32,   {  1,  1,  1,  1 } },
     { ISD::ROTR,       MVT::v4i32,   {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v8i64,   {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v4i64,   {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v2i64,   {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v16i32,  {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v8i32,   {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v4i32,   {  1,  1,  1,  1 } },
     { ISD::SMAX,       MVT::v8i64,   {  1,  3,  1,  1 } },
     { ISD::SMAX,       MVT::v16i32,  {  1,  1,  1,  1 } },
     { ISD::SMAX,       MVT::v32i16,  {  3,  7,  5,  5 } },
@@ -3642,7 +3657,15 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ROTR,       MVT::v2i64,   {  1,  3,  3,  3 } },
     { ISD::ROTR,       MVT::v4i32,   {  1,  3,  3,  3 } },
     { ISD::ROTR,       MVT::v8i16,   {  1,  3,  3,  3 } },
-    { ISD::ROTR,       MVT::v16i8,   {  1,  3,  3,  3 } }
+    { ISD::ROTR,       MVT::v16i8,   {  1,  3,  3,  3 } },
+    { X86ISD::VROTLI,  MVT::v4i64,   {  4,  7,  5,  6 } },
+    { X86ISD::VROTLI,  MVT::v8i32,   {  4,  7,  5,  6 } },
+    { X86ISD::VROTLI,  MVT::v16i16,  {  4,  7,  5,  6 } },
+    { X86ISD::VROTLI,  MVT::v32i8,   {  4,  7,  5,  6 } },
+    { X86ISD::VROTLI,  MVT::v2i64,   {  1,  3,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v4i32,   {  1,  3,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v8i16,   {  1,  3,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::v16i8,   {  1,  3,  1,  1 } },
   };
   static const CostKindTblEntry AVX2CostTbl[] = {
     { ISD::ABS,        MVT::v2i64,   {  2,  4,  3,  5 } }, // VBLENDVPD(X,VPSUBQ(0,X),X)
@@ -3819,6 +3842,24 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::FSQRT,      MVT::f64,     { 27, 27,  1,  1 } }, // vsqrtsd
     { ISD::FSQRT,      MVT::v2f64,   { 27, 27,  1,  1 } }, // vsqrtpd
     { ISD::FSQRT,      MVT::v4f64,   { 54, 54,  1,  3 } }, // vsqrtpd
+  };
+  static const CostKindTblEntry GFNICostTbl[] = {
+    { ISD::BITREVERSE, MVT::i8,      {  3,  3,  3,  4 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::i16,     {  3,  3,  4,  6 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::i32,     {  3,  3,  4,  5 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::i64,     {  3,  3,  4,  6 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::v16i8,   {  1,  6,  1,  2 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::v32i8,   {  1,  6,  1,  2 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::v64i8,   {  1,  6,  1,  2 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::v8i16,   {  1,  8,  2,  4 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::v16i16,  {  1,  9,  2,  4 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::v32i16,  {  1,  9,  2,  4 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::v4i32,   {  1,  8,  2,  4 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::v8i32,   {  1,  9,  2,  4 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::v16i32,  {  1,  9,  2,  4 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::v2i64,   {  1,  8,  2,  4 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::v4i64,   {  1,  9,  2,  4 } }, // gf2p8affineqb
+    { ISD::BITREVERSE, MVT::v8i64,   {  1,  9,  2,  4 } }, // gf2p8affineqb
   };
   static const CostKindTblEntry GLMCostTbl[] = {
     { ISD::FSQRT,      MVT::f32,     { 19, 20, 1, 1 } }, // sqrtss
@@ -4078,9 +4119,11 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
       if (Args[0] == Args[1]) {
         ISD = ISD::ROTL;
-        // Handle scalar constant rotation amounts.
-        // TODO: Handle vector + funnel-shift cases.
-        if (isa_and_nonnull<ConstantInt>(Args[2]))
+        // Handle uniform constant rotation amounts.
+        // TODO: Handle funnel-shift cases.
+        const APInt *Amt;
+        if (Args[2] &&
+            PatternMatch::match(Args[2], PatternMatch::m_APIntAllowPoison(Amt)))
           ISD = X86ISD::VROTLI;
       }
     }
@@ -4091,10 +4134,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (!ICA.isTypeBasedOnly()) {
       const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
       if (Args[0] == Args[1]) {
-        // Handle scalar constant rotation amount.
-        // TODO: Handle vector + funnel-shift cases.
         ISD = ISD::ROTR;
-        if (isa_and_nonnull<ConstantInt>(Args[2]))
+        // Handle uniform constant rotation amount.
+        // TODO: Handle funnel-shift cases.
+        const APInt *Amt;
+        if (Args[2] &&
+            PatternMatch::match(Args[2], PatternMatch::m_APIntAllowPoison(Amt)))
           ISD = X86ISD::VROTLI;
       }
     }
@@ -4156,23 +4201,6 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(OpTy);
     MVT MTy = LT.second;
 
-    // Attempt to lookup cost.
-    if (ISD == ISD::BITREVERSE && ST->hasGFNI() && ST->hasSSSE3() &&
-        MTy.isVector()) {
-      // With PSHUFB the code is very similar for all types. If we have integer
-      // byte operations, we just need a GF2P8AFFINEQB for vXi8. For other types
-      // we also need a PSHUFB.
-      unsigned Cost = MTy.getVectorElementType() == MVT::i8 ? 1 : 2;
-
-      // Without byte operations, we need twice as many GF2P8AFFINEQB and PSHUFB
-      // instructions. We also need an extract and an insert.
-      if (!(MTy.is128BitVector() || (ST->hasAVX2() && MTy.is256BitVector()) ||
-            (ST->hasBWI() && MTy.is512BitVector())))
-        Cost = Cost * 2 + 2;
-
-      return LT.first * Cost;
-    }
-
     // Without BMI/LZCNT see if we're only looking for a *_ZERO_UNDEF cost.
     if (((ISD == ISD::CTTZ && !ST->hasBMI()) ||
          (ISD == ISD::CTLZ && !ST->hasLZCNT())) &&
@@ -4226,6 +4254,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     if (ST->hasVPOPCNTDQ())
       if (const auto *Entry = CostTableLookup(AVX512VPOPCNTDQCostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
+
+    if (ST->hasGFNI())
+      if (const auto *Entry = CostTableLookup(GFNICostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
           return adjustTableCost(Entry->ISD, *KindCost, LT.first,
                                  ICA.getFlags());

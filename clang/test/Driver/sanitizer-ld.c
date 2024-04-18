@@ -177,6 +177,7 @@
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=address \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-ANDROID %s
 //
 // CHECK-ASAN-ANDROID: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
@@ -191,6 +192,7 @@
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=address \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     -static-libsan \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-ANDROID-STATICLIBASAN %s
 //
@@ -203,6 +205,7 @@
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=undefined \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-ANDROID %s
 //
 // CHECK-UBSAN-ANDROID: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
@@ -217,6 +220,7 @@
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=undefined \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     -static-libsan \
 // RUN:   | FileCheck --check-prefix=CHECK-UBSAN-ANDROID-STATICLIBASAN %s
 //
@@ -230,6 +234,7 @@
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i686-linux-android -fuse-ld=ld -fsanitize=address \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-ANDROID-X86 %s
 //
 // CHECK-ASAN-ANDROID-X86: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
@@ -252,6 +257,7 @@
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=address \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-ANDROID-SHARED %s
 //

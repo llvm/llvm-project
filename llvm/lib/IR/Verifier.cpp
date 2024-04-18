@@ -1240,7 +1240,8 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
               (N.getTag() == dwarf::DW_TAG_variable && N.isStaticMember()) ||
               N.getTag() == dwarf::DW_TAG_inheritance ||
               N.getTag() == dwarf::DW_TAG_friend ||
-              N.getTag() == dwarf::DW_TAG_set_type,
+              N.getTag() == dwarf::DW_TAG_set_type ||
+              N.getTag() == dwarf::DW_TAG_template_alias,
           "invalid tag", &N);
   if (N.getTag() == dwarf::DW_TAG_ptr_to_member_type) {
     CheckDI(isType(N.getRawExtraData()), "invalid pointer to member type", &N,
@@ -5122,6 +5123,9 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa))
     TBAAVerifyHelper.visitTBAAMetadata(I, TBAA);
 
+  if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa_struct))
+    TBAAVerifyHelper.visitTBAAStructMetadata(I, TBAA);
+
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_noalias))
     visitAliasScopeListMetadata(MD);
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_alias_scope))
@@ -5795,6 +5799,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     break;
   }
+  case Intrinsic::vastart: {
+    Check(Call.getFunction()->isVarArg(),
+          "va_start called in a non-varargs function");
+    break;
+  }
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_xor:
@@ -6226,10 +6235,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::threadlocal_address: {
     const Value &Arg0 = *Call.getArgOperand(0);
-    Check(isa<GlobalVariable>(Arg0),
-          "llvm.threadlocal.address first argument must be a GlobalVariable");
-    Check(cast<GlobalVariable>(Arg0).isThreadLocal(),
-          "llvm.threadlocal.address operand isThreadLocal() must no be false");
+    Check(isa<GlobalValue>(Arg0),
+          "llvm.threadlocal.address first argument must be a GlobalValue");
+    Check(cast<GlobalValue>(Arg0).isThreadLocal(),
+          "llvm.threadlocal.address operand isThreadLocal() must be true");
     break;
   }
   };
@@ -7450,6 +7459,35 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
 
   CheckTBAA(SeenAccessTypeInPath, "Did not see access type in access path!", &I,
             MD);
+  return true;
+}
+
+bool TBAAVerifier::visitTBAAStructMetadata(Instruction &I, const MDNode *MD) {
+  CheckTBAA(MD->getNumOperands() % 3 == 0,
+            "tbaa.struct operands must occur in groups of three", &I, MD);
+
+  // Each group of three operands must consist of two integers and a
+  // tbaa node. Moreover, the regions described by the offset and size
+  // operands must be non-overlapping.
+  std::optional<APInt> NextFree;
+  for (unsigned int Idx = 0; Idx < MD->getNumOperands(); Idx += 3) {
+    auto *OffsetCI =
+        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(Idx));
+    CheckTBAA(OffsetCI, "Offset must be a constant integer", &I, MD);
+
+    auto *SizeCI =
+        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(Idx + 1));
+    CheckTBAA(SizeCI, "Size must be a constant integer", &I, MD);
+
+    MDNode *TBAA = dyn_cast_or_null<MDNode>(MD->getOperand(Idx + 2));
+    CheckTBAA(TBAA, "TBAA tag missing", &I, MD);
+    visitTBAAMetadata(I, TBAA);
+
+    bool NonOverlapping = !NextFree || NextFree->ule(OffsetCI->getValue());
+    CheckTBAA(NonOverlapping, "Overlapping tbaa.struct regions", &I, MD);
+
+    NextFree = OffsetCI->getValue() + SizeCI->getValue();
+  }
   return true;
 }
 

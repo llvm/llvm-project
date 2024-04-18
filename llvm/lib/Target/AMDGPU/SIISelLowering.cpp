@@ -16027,6 +16027,19 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       SSID == RMW->getContext().getOrInsertSyncScopeID("one-as");
 
   switch (RMW->getOperation()) {
+  case AtomicRMWInst::Sub:
+  case AtomicRMWInst::Or:
+  case AtomicRMWInst::Xor: {
+    // Atomic sub/or/xor do not work over PCI express, but atomic add
+    // does. InstCombine transforms these with 0 to or, so undo that.
+    if (HasSystemScope && AMDGPU::isFlatGlobalAddrSpace(AS)) {
+      if (Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
+          ConstVal && ConstVal->isNullValue())
+        return AtomicExpansionKind::Expand;
+    }
+
+    break;
+  }
   case AtomicRMWInst::FAdd: {
     Type *Ty = RMW->getType();
 
@@ -16049,7 +16062,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       if (HasSystemScope)
         return AtomicExpansionKind::CmpXChg;
 
-      if ((AS == AMDGPUAS::GLOBAL_ADDRESS ||
+      if ((AMDGPU::isExtendedGlobalAddrSpace(AS) ||
            AS == AMDGPUAS::BUFFER_FAT_POINTER) &&
           Ty->isFloatTy()) {
         // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940, gfx11+.
@@ -16312,14 +16325,24 @@ bool SITargetLowering::checkForPhysRegDependency(
 }
 
 void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
+  AtomicRMWInst::BinOp Op = AI->getOperation();
+
+  if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
+      Op == AtomicRMWInst::Xor) {
+    // atomicrmw or %ptr, 0 -> atomicrmw add %ptr, 0
+    assert(cast<Constant>(AI->getValOperand())->isNullValue() &&
+           "this cannot be replaced with add");
+    AI->setOperation(AtomicRMWInst::Add);
+    return;
+  }
+
   assert(Subtarget->hasAtomicFaddInsts() &&
          "target should have atomic fadd instructions");
   assert(AI->getType()->isFloatTy() &&
          AI->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS &&
          "generic atomicrmw expansion only supports FP32 operand in flat "
          "address space");
-  assert(AI->getOperation() == AtomicRMWInst::FAdd &&
-         "only fadd is supported for now");
+  assert(Op == AtomicRMWInst::FAdd && "only fadd is supported for now");
 
   // Given: atomicrmw fadd ptr %addr, float %val ordering
   //

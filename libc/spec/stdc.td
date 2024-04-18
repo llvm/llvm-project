@@ -150,6 +150,11 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<IntType>]
           >,
           FunctionSpec<
+              "fetestexceptflag",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstFExceptTPtr>, ArgSpec<IntType>]
+          >,
+          FunctionSpec<
               "feraiseexcept",
               RetValSpec<IntType>,
               [ArgSpec<IntType>]

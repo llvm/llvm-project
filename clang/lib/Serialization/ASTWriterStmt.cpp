@@ -19,7 +19,6 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Lex/Token.h"
-#include "clang/Sema/DeclSpec.h"
 #include "clang/Serialization/ASTRecordWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 using namespace clang;
@@ -2821,6 +2820,7 @@ void ASTStmtWriter::VisitOMPTeamsGenericLoopDirective(
 void ASTStmtWriter::VisitOMPTargetTeamsGenericLoopDirective(
     OMPTargetTeamsGenericLoopDirective *D) {
   VisitOMPLoopDirective(D);
+  Record.writeBool(D->canBeParallelFor());
   Code = serialization::STMT_OMP_TARGET_TEAMS_GENERIC_LOOP_DIRECTIVE;
 }
 

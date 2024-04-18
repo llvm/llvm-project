@@ -210,8 +210,7 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       unsigned Opc = NumOfVReg == 2 ? RISCV::SH1ADD :
         (NumOfVReg == 4 ? RISCV::SH2ADD : RISCV::SH3ADD);
       BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
-          .addReg(ScratchReg, RegState::Kill)
-          .addReg(SrcReg, getKillRegState(KillSrcReg))
+          .addReg(ScratchReg, RegState::Kill).addReg(SrcReg)
           .setMIFlag(Flag);
     } else {
       TII->mulImm(MF, MBB, II, DL, ScratchReg, NumOfVReg, Flag);
@@ -608,20 +607,22 @@ bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const RISCVFrameLowering *TFI = getFrameLowering(MF);
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  unsigned CalleeSavedSize = 0;
   Offset += getFrameIndexInstrOffset(MI, FIOperandNum);
 
-  // Estimate the stack size used to store callee saved registers(
-  // excludes reserved registers).
-  BitVector ReservedRegs = getReservedRegs(MF);
-  for (const MCPhysReg *R = MRI.getCalleeSavedRegs(); MCPhysReg Reg = *R; ++R) {
-    if (!ReservedRegs.test(Reg))
-      CalleeSavedSize += getSpillSize(*getMinimalPhysRegClass(Reg));
-  }
+  if (TFI->hasFP(MF) && !shouldRealignStack(MF)) {
+    // Estimate the stack size used to store callee saved registers(
+    // excludes reserved registers).
+    unsigned CalleeSavedSize = 0;
+    BitVector ReservedRegs = getReservedRegs(MF);
+    for (const MCPhysReg *R = MRI.getCalleeSavedRegs(); MCPhysReg Reg = *R;
+         ++R) {
+      if (!ReservedRegs.test(Reg))
+        CalleeSavedSize += getSpillSize(*getMinimalPhysRegClass(Reg));
+    }
 
-  int64_t MaxFPOffset = Offset - CalleeSavedSize;
-  if (TFI->hasFP(MF) && !shouldRealignStack(MF))
+    int64_t MaxFPOffset = Offset - CalleeSavedSize;
     return !isFrameOffsetLegal(MI, RISCV::X8, MaxFPOffset);
+  }
 
   // Assume 128 bytes spill slots size to estimate the maximum possible
   // offset relative to the stack pointer.

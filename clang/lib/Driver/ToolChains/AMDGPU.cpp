@@ -670,6 +670,10 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                    options::OPT_mno_wavefrontsize64, false))
     Features.push_back("+wavefrontsize64");
 
+  if (Args.hasFlag(options::OPT_mamdgpu_precise_memory_op,
+                   options::OPT_mno_amdgpu_precise_memory_op, false))
+    Features.push_back("+precise-memory");
+
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_amdgpu_Features_Group);
 }

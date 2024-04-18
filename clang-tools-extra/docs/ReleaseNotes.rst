@@ -100,6 +100,8 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` script. Added argument `-source-filter`
   to filter source files from the compilation database, via a RegEx. In a
   similar fashion to what `-header-filter` does for header files.
+- Improved :program:`check_clang_tidy.py` script. Added argument `-export-fixes`
+  to aid in clang-tidy and test development.
 
 New checks
 ^^^^^^^^^^
@@ -144,6 +146,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-assert-side-effect
   <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
   effect from calling a method with non-const reference parameters.
+
+- Improved :doc:`bugprone-forwarding-reference-overload
+  <clang-tidy/checks/bugprone/forwarding-reference-overload>`
+  check to ignore deleted constructors which won't hide other overloads.
 
 - Improved :doc:`bugprone-inc-dec-in-conditions
   <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check to ignore code
@@ -219,6 +225,10 @@ Changes in existing checks
   <clang-tidy/checks/llvm/header-guard>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
 
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check by avoiding infinite recursion
+  for recursive forwarding reference.
+
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
@@ -268,7 +278,7 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
   mode by resolving symbolic links to header files. Fixed handling of Hungarian
   Prefix when configured to `LowerCase`. Added support for renaming designated
-  initializers.
+  initializers. Added support for renaming macro arguments.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
@@ -296,6 +306,10 @@ Miscellaneous
 - Fixed incorrect formatting in :program:`clang-apply-replacements` when no
   ``--format`` option is specified. Now :program:`clang-apply-replacements`
   applies formatting only with the option.
+
+- Fixed the :doc:`linuxkernel-must-check-errs
+  <clang-tidy/checks/linuxkernel/must-check-errs>` documentation to consistently
+  use the check's proper name.
 
 Improvements to include-fixer
 -----------------------------

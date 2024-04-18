@@ -1273,12 +1273,12 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
 
       // if X non-zero and NoOverflow(X * Y)
       //    (icmp eq/ne Y)
-      if (!XKnown.One.isZero() || isKnownNonZero(X, DL, 0, Q.AC, Q.CxtI, Q.DT))
+      if (!XKnown.One.isZero() || isKnownNonZero(X, Q))
         return new ICmpInst(Pred, Y, Cmp.getOperand(1));
 
       // if Y non-zero and NoOverflow(X * Y)
       //    (icmp eq/ne X)
-      if (!YKnown.One.isZero() || isKnownNonZero(Y, DL, 0, Q.AC, Q.CxtI, Q.DT))
+      if (!YKnown.One.isZero() || isKnownNonZero(Y, Q))
         return new ICmpInst(Pred, X, Cmp.getOperand(1));
     }
     // Note, we are skipping cases:
@@ -3087,7 +3087,7 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
   // (X + -1) <u C --> X <=u C (if X is never null)
   if (Pred == CmpInst::ICMP_ULT && C2->isAllOnes()) {
     const SimplifyQuery Q = SQ.getWithInstruction(&Cmp);
-    if (llvm::isKnownNonZero(X, DL, 0, Q.AC, Q.CxtI, Q.DT))
+    if (llvm::isKnownNonZero(X, Q))
       return new ICmpInst(ICmpInst::ICMP_ULE, X, ConstantInt::get(Ty, C));
   }
 
@@ -3417,8 +3417,8 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstant(ICmpInst &Cmp) {
       return new ICmpInst(Cmp.getPredicate(), X, Y);
   }
 
-  if (match(Cmp.getOperand(1), m_APIntAllowUndef(C)))
-    return foldICmpInstWithConstantAllowUndef(Cmp, *C);
+  if (match(Cmp.getOperand(1), m_APIntAllowPoison(C)))
+    return foldICmpInstWithConstantAllowPoison(Cmp, *C);
 
   return nullptr;
 }
@@ -3735,11 +3735,11 @@ foldICmpIntrinsicWithIntrinsic(ICmpInst &Cmp,
 }
 
 /// Try to fold integer comparisons with a constant operand: icmp Pred X, C
-/// where X is some kind of instruction and C is AllowUndef.
-/// TODO: Move more folds which allow undef to this function.
+/// where X is some kind of instruction and C is AllowPoison.
+/// TODO: Move more folds which allow poison to this function.
 Instruction *
-InstCombinerImpl::foldICmpInstWithConstantAllowUndef(ICmpInst &Cmp,
-                                                     const APInt &C) {
+InstCombinerImpl::foldICmpInstWithConstantAllowPoison(ICmpInst &Cmp,
+                                                      const APInt &C) {
   const ICmpInst::Predicate Pred = Cmp.getPredicate();
   if (auto *II = dyn_cast<IntrinsicInst>(Cmp.getOperand(0))) {
     switch (II->getIntrinsicID()) {
@@ -4275,8 +4275,7 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst::Predicate Pred, Value *Op0,
 
       // Look for: x & ~Mask pred ~Mask
       if (isMaskOrZero(X, /*Not=*/true, Q)) {
-        return !ICmpInst::isSigned(Pred) ||
-               isKnownNonZero(X, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
+        return !ICmpInst::isSigned(Pred) || isKnownNonZero(X, Q);
       }
       return false;
     }
@@ -4780,8 +4779,7 @@ static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
   // icmp (X ^ Y_NonZero) s>= X --> icmp (X ^ Y_NonZero) s> X
   // icmp (X ^ Y_NonZero) s<= X --> icmp (X ^ Y_NonZero) s< X
   CmpInst::Predicate PredOut = CmpInst::getStrictPredicate(Pred);
-  if (PredOut != Pred &&
-      isKnownNonZero(A, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+  if (PredOut != Pred && isKnownNonZero(A, Q))
     return new ICmpInst(PredOut, Op0, Op1);
 
   return nullptr;
@@ -4846,7 +4844,7 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     const APInt *C;
     if ((Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE) &&
         match(Op0, m_And(m_BinOp(BO), m_LowBitMask(C))) &&
-        match(BO, m_Add(m_Specific(Op1), m_SpecificIntAllowUndef(*C)))) {
+        match(BO, m_Add(m_Specific(Op1), m_SpecificIntAllowPoison(*C)))) {
       CmpInst::Predicate NewPred =
           Pred == ICmpInst::ICMP_ULT ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
       Constant *Zero = ConstantInt::getNullValue(Op1->getType());
@@ -4855,7 +4853,7 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
 
     if ((Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULE) &&
         match(Op1, m_And(m_BinOp(BO), m_LowBitMask(C))) &&
-        match(BO, m_Add(m_Specific(Op0), m_SpecificIntAllowUndef(*C)))) {
+        match(BO, m_Add(m_Specific(Op0), m_SpecificIntAllowPoison(*C)))) {
       CmpInst::Predicate NewPred =
           Pred == ICmpInst::ICMP_UGT ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
       Constant *Zero = ConstantInt::getNullValue(Op1->getType());
@@ -5005,8 +5003,9 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       (BO0->hasOneUse() || BO1->hasOneUse()) && !I.isUnsigned()) {
     const APInt *AP1, *AP2;
     // TODO: Support non-uniform vectors.
-    // TODO: Allow undef passthrough if B AND D's element is undef.
-    if (match(B, m_APIntAllowUndef(AP1)) && match(D, m_APIntAllowUndef(AP2)) &&
+    // TODO: Allow poison passthrough if B or D's element is poison.
+    if (match(B, m_APIntAllowPoison(AP1)) &&
+        match(D, m_APIntAllowPoison(AP2)) &&
         AP1->isNegative() == AP2->isNegative()) {
       APInt AP1Abs = AP1->abs();
       APInt AP2Abs = AP2->abs();
@@ -5064,11 +5063,11 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     return new ICmpInst(Pred, C, D);
   // (A - B) u>=/u< A --> B u>/u<= A  iff B != 0
   if (A == Op1 && (Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_ULT) &&
-      isKnownNonZero(B, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+      isKnownNonZero(B, Q))
     return new ICmpInst(CmpInst::getFlippedStrictnessPredicate(Pred), B, A);
   // C u<=/u> (C - D) --> C u</u>= D  iff B != 0
   if (C == Op0 && (Pred == ICmpInst::ICMP_ULE || Pred == ICmpInst::ICMP_UGT) &&
-      isKnownNonZero(D, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
+      isKnownNonZero(D, Q))
     return new ICmpInst(CmpInst::getFlippedStrictnessPredicate(Pred), C, D);
 
   // icmp (A-B), (C-B) -> icmp A, C for equalities or if there is no overflow.
@@ -5110,14 +5109,13 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
         //    X * Z eq/ne Y * Z -> X eq/ne Y
         if (ZKnown.countMaxTrailingZeros() == 0)
           return new ICmpInst(Pred, X, Y);
-        NonZero = !ZKnown.One.isZero() ||
-                  isKnownNonZero(Z, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
+        NonZero = !ZKnown.One.isZero() || isKnownNonZero(Z, Q);
         // if Z != 0 and nsw(X * Z) and nsw(Y * Z)
         //    X * Z eq/ne Y * Z -> X eq/ne Y
         if (NonZero && BO0 && BO1 && Op0HasNSW && Op1HasNSW)
           return new ICmpInst(Pred, X, Y);
       } else
-        NonZero = isKnownNonZero(Z, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT);
+        NonZero = isKnownNonZero(Z, Q);
 
       // If Z != 0 and nuw(X * Z) and nuw(Y * Z)
       //    X * Z u{lt/le/gt/ge}/eq/ne Y * Z -> X u{lt/le/gt/ge}/eq/ne Y
@@ -5578,10 +5576,10 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   // (A >> C) == (B >> C) --> (A^B) u< (1 << C)
   // For lshr and ashr pairs.
   const APInt *AP1, *AP2;
-  if ((match(Op0, m_OneUse(m_LShr(m_Value(A), m_APIntAllowUndef(AP1)))) &&
-       match(Op1, m_OneUse(m_LShr(m_Value(B), m_APIntAllowUndef(AP2))))) ||
-      (match(Op0, m_OneUse(m_AShr(m_Value(A), m_APIntAllowUndef(AP1)))) &&
-       match(Op1, m_OneUse(m_AShr(m_Value(B), m_APIntAllowUndef(AP2)))))) {
+  if ((match(Op0, m_OneUse(m_LShr(m_Value(A), m_APIntAllowPoison(AP1)))) &&
+       match(Op1, m_OneUse(m_LShr(m_Value(B), m_APIntAllowPoison(AP2))))) ||
+      (match(Op0, m_OneUse(m_AShr(m_Value(A), m_APIntAllowPoison(AP1)))) &&
+       match(Op1, m_OneUse(m_AShr(m_Value(B), m_APIntAllowPoison(AP2)))))) {
     if (AP1 != AP2)
       return nullptr;
     unsigned TypeBits = AP1->getBitWidth();
@@ -6972,10 +6970,10 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
 
   // Length-changing splats are ok, so adjust the constants as needed:
   // cmp (shuffle V1, M), C --> shuffle (cmp V1, C'), M
-  Constant *ScalarC = C->getSplatValue(/* AllowUndefs */ true);
+  Constant *ScalarC = C->getSplatValue(/* AllowPoison */ true);
   int MaskSplatIndex;
-  if (ScalarC && match(M, m_SplatOrUndefMask(MaskSplatIndex))) {
-    // We allow undefs in matching, but this transform removes those for safety.
+  if (ScalarC && match(M, m_SplatOrPoisonMask(MaskSplatIndex))) {
+    // We allow poison in matching, but this transform removes it for safety.
     // Demanded elements analysis should be able to recover some/all of that.
     C = ConstantVector::getSplat(cast<VectorType>(V1Ty)->getElementCount(),
                                  ScalarC);
@@ -7162,6 +7160,40 @@ Instruction *InstCombinerImpl::foldICmpCommutative(ICmpInst::Predicate Pred,
   const SimplifyQuery Q = SQ.getWithInstruction(&CxtI);
   if (Value *V = foldICmpWithLowBitMaskedVal(Pred, Op0, Op1, Q, *this))
     return replaceInstUsesWith(CxtI, V);
+
+  // Folding (X / Y) pred X => X swap(pred) 0 for constant Y other than 0 or 1
+  {
+    const APInt *Divisor;
+    if (match(Op0, m_UDiv(m_Specific(Op1), m_APInt(Divisor))) &&
+        Divisor->ugt(1)) {
+      return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                          Constant::getNullValue(Op1->getType()));
+    }
+
+    if (!ICmpInst::isUnsigned(Pred) &&
+        match(Op0, m_SDiv(m_Specific(Op1), m_APInt(Divisor))) &&
+        Divisor->ugt(1)) {
+      return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                          Constant::getNullValue(Op1->getType()));
+    }
+  }
+
+  // Another case of this fold is (X >> Y) pred X => X swap(pred) 0 if Y != 0
+  {
+    const APInt *Shift;
+    if (match(Op0, m_LShr(m_Specific(Op1), m_APInt(Shift))) &&
+        !Shift->isZero()) {
+      return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                          Constant::getNullValue(Op1->getType()));
+    }
+
+    if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SGE) &&
+        match(Op0, m_AShr(m_Specific(Op1), m_APInt(Shift))) &&
+        !Shift->isZero()) {
+      return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                          Constant::getNullValue(Op1->getType()));
+    }
+  }
 
   return nullptr;
 }
@@ -7413,7 +7445,7 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       unsigned OpWidth = Op0->getType()->getScalarSizeInBits();
       Instruction *ShiftI;
       if (match(Op0, m_CombineAnd(m_Instruction(ShiftI),
-                                  m_Shr(m_Value(X), m_SpecificIntAllowUndef(
+                                  m_Shr(m_Value(X), m_SpecificIntAllowPoison(
                                                         OpWidth - 1))))) {
         unsigned ExtOpc = ExtI->getOpcode();
         unsigned ShiftOpc = ShiftI->getOpcode();
@@ -8065,6 +8097,14 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
         return new FCmpInst(I.getSwappedPredicate(), X, NegC, "", &I);
   }
+
+  // fcmp (fadd X, 0.0), Y --> fcmp X, Y
+  if (match(Op0, m_FAdd(m_Value(X), m_AnyZeroFP())))
+    return new FCmpInst(Pred, X, Op1, "", &I);
+
+  // fcmp X, (fadd Y, 0.0) --> fcmp X, Y
+  if (match(Op1, m_FAdd(m_Value(Y), m_AnyZeroFP())))
+    return new FCmpInst(Pred, Op0, Y, "", &I);
 
   if (match(Op0, m_FPExt(m_Value(X)))) {
     // fcmp (fpext X), (fpext Y) -> fcmp X, Y

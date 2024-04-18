@@ -1,7 +1,7 @@
-! RUN: %flang -### --target=aarch64-windows-msvc %S/Inputs/hello.f90 -v 2>&1 | FileCheck %s --check-prefixes=MSVC
-! RUN: %flang -### --target=aarch64-windows-msvc -fms-runtime-lib=static_dbg %S/Inputs/hello.f90 -v 2>&1 | FileCheck %s --check-prefixes=MSVC-DEBUG
-! RUN: %flang -### --target=aarch64-windows-msvc -fms-runtime-lib=dll %S/Inputs/hello.f90 -v 2>&1 | FileCheck %s --check-prefixes=MSVC-DLL
-! RUN: %flang -### --target=aarch64-windows-msvc -fms-runtime-lib=dll_dbg %S/Inputs/hello.f90 -v 2>&1 | FileCheck %s --check-prefixes=MSVC-DLL-DEBUG
+! RUN: %flang -### --target=aarch64-windows-msvc -resource-dir=%S/Inputs/resource_dir %S/Inputs/hello.f90 -v 2>&1 | FileCheck %s --check-prefixes=MSVC
+! RUN: %flang -### --target=aarch64-windows-msvc -resource-dir=%S/Inputs/resource_dir -fms-runtime-lib=static_dbg %S/Inputs/hello.f90 -v 2>&1 | FileCheck %s --check-prefixes=MSVC-DEBUG
+! RUN: %flang -### --target=aarch64-windows-msvc -resource-dir=%S/Inputs/resource_dir -fms-runtime-lib=dll %S/Inputs/hello.f90 -v 2>&1 | FileCheck %s --check-prefixes=MSVC-DLL
+! RUN: %flang -### --target=aarch64-windows-msvc -resource-dir=%S/Inputs/resource_dir -fms-runtime-lib=dll_dbg %S/Inputs/hello.f90 -v 2>&1 | FileCheck %s --check-prefixes=MSVC-DLL-DEBUG
 
 ! MSVC: -fc1
 ! MSVC-SAME: --dependent-lib=clang_rt.builtins.lib

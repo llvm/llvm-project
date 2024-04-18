@@ -9,7 +9,6 @@
 //  This file implements semantic analysis member access expressions.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Sema/Overload.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -18,9 +17,11 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaOpenMP.h"
 
 using namespace clang;
 using namespace sema;
@@ -61,10 +62,6 @@ enum IMAKind {
   /// The reference is a contextually-permitted abstract member reference.
   IMA_Abstract,
 
-  /// Whether the context is static is dependent on the enclosing template (i.e.
-  /// in a dependent class scope explicit specialization).
-  IMA_Dependent,
-
   /// The reference may be to an unresolved using declaration and the
   /// context is not an instance method.
   IMA_Unresolved_StaticOrExplicitContext,
@@ -95,18 +92,10 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
 
   DeclContext *DC = SemaRef.getFunctionLevelDeclContext();
 
-  bool couldInstantiateToStatic = false;
-  bool isStaticOrExplicitContext = SemaRef.CXXThisTypeOverride.isNull();
-
-  if (auto *MD = dyn_cast<CXXMethodDecl>(DC)) {
-    if (MD->isImplicitObjectMemberFunction()) {
-      isStaticOrExplicitContext = false;
-      // A dependent class scope function template explicit specialization
-      // that is neither declared 'static' nor with an explicit object
-      // parameter could instantiate to a static or non-static member function.
-      couldInstantiateToStatic = MD->getDependentSpecializationInfo();
-    }
-  }
+  bool isStaticOrExplicitContext =
+      SemaRef.CXXThisTypeOverride.isNull() &&
+      (!isa<CXXMethodDecl>(DC) || cast<CXXMethodDecl>(DC)->isStatic() ||
+       cast<CXXMethodDecl>(DC)->isExplicitObjectMemberFunction());
 
   if (R.isUnresolvableResult())
     return isStaticOrExplicitContext ? IMA_Unresolved_StaticOrExplicitContext
@@ -134,9 +123,6 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
   // member reference.
   if (Classes.empty())
     return IMA_Static;
-
-  if (couldInstantiateToStatic)
-    return IMA_Dependent;
 
   // C++11 [expr.prim.general]p12:
   //   An id-expression that denotes a non-static data member or non-static
@@ -283,30 +269,27 @@ ExprResult Sema::BuildPossibleImplicitMemberExpr(
     const CXXScopeSpec &SS, SourceLocation TemplateKWLoc, LookupResult &R,
     const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
     UnresolvedLookupExpr *AsULE) {
-  switch (IMAKind Classification = ClassifyImplicitMemberAccess(*this, R)) {
+  switch (ClassifyImplicitMemberAccess(*this, R)) {
   case IMA_Instance:
+    return BuildImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs, true, S);
+
   case IMA_Mixed:
   case IMA_Mixed_Unrelated:
   case IMA_Unresolved:
-    return BuildImplicitMemberExpr(
-        SS, TemplateKWLoc, R, TemplateArgs,
-        /*IsKnownInstance=*/Classification == IMA_Instance, S);
+    return BuildImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs, false,
+                                   S);
+
   case IMA_Field_Uneval_Context:
     Diag(R.getNameLoc(), diag::warn_cxx98_compat_non_static_member_use)
       << R.getLookupNameInfo().getName();
     [[fallthrough]];
   case IMA_Static:
   case IMA_Abstract:
-  case IMA_Dependent:
   case IMA_Mixed_StaticOrExplicitContext:
   case IMA_Unresolved_StaticOrExplicitContext:
     if (TemplateArgs || TemplateKWLoc.isValid())
-      return BuildTemplateIdExpr(SS, TemplateKWLoc, R, /*RequiresADL=*/false,
-                                 TemplateArgs);
-    return AsULE ? AsULE
-                 : BuildDeclarationNameExpr(
-                       SS, R, /*NeedsADL=*/false, /*AcceptInvalidDecl=*/false,
-                       /*NeedUnresolved=*/Classification == IMA_Dependent);
+      return BuildTemplateIdExpr(SS, TemplateKWLoc, R, false, TemplateArgs);
+    return AsULE ? AsULE : BuildDeclarationNameExpr(SS, R, false);
 
   case IMA_Error_StaticOrExplicitContext:
   case IMA_Error_Unrelated:
@@ -745,7 +728,7 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
     Sema &SemaRef;
     DeclarationNameInfo NameInfo;
     Sema::LookupNameKind LookupKind;
-    Sema::RedeclarationKind Redecl;
+    RedeclarationKind Redecl;
   };
   QueryState Q = {R.getSema(), R.getLookupNameInfo(), R.getLookupKind(),
                   R.redeclarationKind()};
@@ -1918,9 +1901,9 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
   if (getLangOpts().OpenMP && IsArrow &&
       !CurContext->isDependentContext() &&
       isa<CXXThisExpr>(Base.get()->IgnoreParenImpCasts())) {
-    if (auto *PrivateCopy = isOpenMPCapturedDecl(Field)) {
-      return getOpenMPCapturedExpr(PrivateCopy, VK, OK,
-                                   MemberNameInfo.getLoc());
+    if (auto *PrivateCopy = OpenMP().isOpenMPCapturedDecl(Field)) {
+      return OpenMP().getOpenMPCapturedExpr(PrivateCopy, VK, OK,
+                                            MemberNameInfo.getLoc());
     }
   }
 

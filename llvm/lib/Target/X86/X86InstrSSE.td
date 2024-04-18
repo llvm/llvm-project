@@ -5688,6 +5688,13 @@ let Predicates = [UseSSE41, OptForSize] in {
 // SSE4.1 - Packed Bit Test
 //===----------------------------------------------------------------------===//
 
+// ptest is commutable if only the Z flag is used. If the C flag is used,
+// commuting would change which operand is inverted.
+def X86ptest_commutable : PatFrag<(ops node:$src1, node:$src2),
+                                  (X86ptest node:$src1, node:$src2), [{
+  return onlyUsesZeroFlag(SDValue(Node, 0));
+}]>;
+
 // ptest instruction we'll lower to this in X86ISelLowering primarily from
 // the intel intrinsic that corresponds to this.
 let Defs = [EFLAGS], Predicates = [HasAVX] in {
@@ -5723,6 +5730,17 @@ def PTESTrm : SS48I<0x17, MRMSrcMem, (outs), (ins VR128:$src1, f128mem:$src2),
               Sched<[SchedWriteVecTest.XMM.Folded, SchedWriteVecTest.XMM.ReadAfterFold]>;
 }
 
+let Predicates = [HasAVX] in {
+  def : Pat<(X86ptest_commutable (loadv2i64 addr:$src2), VR128:$src1),
+            (VPTESTrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86ptest_commutable (loadv4i64 addr:$src2), VR256:$src1),
+            (VPTESTYrm VR256:$src1, addr:$src2)>;
+}
+let Predicates = [UseSSE41] in {
+  def : Pat<(X86ptest_commutable (memopv2i64 addr:$src2), VR128:$src1),
+            (PTESTrm VR128:$src1, addr:$src2)>;
+}
+
 // The bit test instructions below are AVX only
 multiclass avx_bittest<bits<8> opc, string OpcodeStr, RegisterClass RC,
                        X86MemOperand x86memop, PatFrag mem_frag, ValueType vt,
@@ -5737,6 +5755,13 @@ multiclass avx_bittest<bits<8> opc, string OpcodeStr, RegisterClass RC,
             Sched<[sched.Folded, sched.ReadAfterFold]>, VEX;
 }
 
+// testps/testpd are commutable if only the Z flag is used. If the C flag is
+// used, commuting would change which operand is inverted.
+def X86testp_commutable : PatFrag<(ops node:$src1, node:$src2),
+                                  (X86testp node:$src1, node:$src2), [{
+  return onlyUsesZeroFlag(SDValue(Node, 0));
+}]>;
+
 let Defs = [EFLAGS], Predicates = [HasAVX] in {
 let ExeDomain = SSEPackedSingle in {
 defm VTESTPS  : avx_bittest<0x0E, "vtestps", VR128, f128mem, loadv4f32, v4f32,
@@ -5750,6 +5775,18 @@ defm VTESTPD  : avx_bittest<0x0F, "vtestpd", VR128, f128mem, loadv2f64, v2f64,
 defm VTESTPDY : avx_bittest<0x0F, "vtestpd", VR256, f256mem, loadv4f64, v4f64,
                             SchedWriteFTest.YMM>, VEX_L;
 }
+}
+
+let Predicates = [HasAVX] in {
+  def : Pat<(X86testp_commutable (loadv4f32 addr:$src2), VR128:$src),
+            (VTESTPSrm VR128:$src, addr:$src2)>;
+  def : Pat<(X86testp_commutable (loadv8f32 addr:$src2), VR256:$src),
+            (VTESTPSYrm VR256:$src, addr:$src2)>;
+
+  def : Pat<(X86testp_commutable (loadv2f64 addr:$src2), VR128:$src),
+            (VTESTPDrm VR128:$src, addr:$src2)>;
+  def : Pat<(X86testp_commutable (loadv4f64 addr:$src2), VR256:$src),
+            (VTESTPDYrm VR256:$src, addr:$src2)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -8314,7 +8351,7 @@ let Predicates = [HasAVXNECONVERT] in {
        f256mem>, T8;
   defm VCVTNEPS2BF16 : VCVTNEPS2BF16_BASE, VEX, T8, XS, ExplicitVEXPrefix;
 
-  def : Pat<(v8bf16 (X86cvtneps2bf16 (v4f32 VR128X:$src))),
+  def : Pat<(v8bf16 (X86cvtneps2bf16 (v4f32 VR128:$src))),
             (VCVTNEPS2BF16rr VR128:$src)>;
   def : Pat<(v8bf16 (X86cvtneps2bf16 (loadv4f32 addr:$src))),
             (VCVTNEPS2BF16rm addr:$src)>;
