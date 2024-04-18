@@ -118,6 +118,7 @@
 
 // RUN: %clang_cl /Fefoo.ext -### -- %s 2>&1 | FileCheck -check-prefix=FeEXT %s
 // RUN: %clang_cl /Fe:foo.ext -### -- %s 2>&1 | FileCheck -check-prefix=FeEXT %s
+// RUN: %clang_cl /Fe: foo.ext -### -- %s 2>&1 | FileCheck -check-prefix=FeEXT %s
 // FeEXT: "-out:foo.ext"
 
 // RUN: %clang_cl /LD /Fefoo.ext -### -- %s 2>&1 | FileCheck -check-prefix=FeEXTDLL %s
@@ -270,6 +271,8 @@
 // P: "-o" "cl-outputs.i"
 
 // RUN: %clang_cl /P /Fifoo -### -- %s 2>&1 | FileCheck -check-prefix=Fi1 %s
+// RUN: %clang_cl /P /Fi:foo -### -- %s 2>&1 | FileCheck -check-prefix=Fi1 %s
+// RUN: %clang_cl /P /Fi: foo -### -- %s 2>&1 | FileCheck -check-prefix=Fi1 %s
 // Fi1: "-E"
 // Fi1: "-o" "foo.i"
 
@@ -302,6 +305,7 @@
 // RELATIVE_OBJPATH1: "-object-file-name=a.obj"
 
 // RUN: %clang_cl -fdebug-compilation-dir=. /Z7 /Fo:a.obj -### -- %s 2>&1 | FileCheck -check-prefix=RELATIVE_OBJPATH1_COLON %s
+// RUN: %clang_cl -fdebug-compilation-dir=. /Z7 /Fo: a.obj -### -- %s 2>&1 | FileCheck -check-prefix=RELATIVE_OBJPATH1_COLON %s
 // RELATIVE_OBJPATH1_COLON: "-object-file-name=a.obj"
 
 // RUN: %clang_cl -fdebug-compilation-dir=. /Z7 /Fofoo/a.obj -### -- %s 2>&1 | FileCheck -check-prefix=RELATIVE_OBJPATH2 %s
