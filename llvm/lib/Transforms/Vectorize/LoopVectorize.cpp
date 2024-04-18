@@ -9338,32 +9338,27 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
         Mask = Builder.CreateVectorReverse(Mask, "reverse");
     }
 
+    Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateGather);
     if (CreateGather) {
-      Value *VectorGep = State.get(getAddr(), Part);
-      NewLI = Builder.CreateMaskedGather(DataTy, VectorGep, Alignment, Mask,
-                                         nullptr, "wide.masked.gather");
+      NewLI = Builder.CreateMaskedGather(DataTy, Addr, Alignment, Mask, nullptr,
+                                         "wide.masked.gather");
       State.addMetadata(NewLI, LI);
+    } else if (Mask) {
+      NewLI = Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
+                                       PoisonValue::get(DataTy),
+                                       "wide.masked.load");
     } else {
-      auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
-      if (Mask)
-        NewLI = Builder.CreateMaskedLoad(DataTy, VecPtr, Alignment, Mask,
-                                         PoisonValue::get(DataTy),
-                                         "wide.masked.load");
-      else
-        NewLI =
-            Builder.CreateAlignedLoad(DataTy, VecPtr, Alignment, "wide.load");
-
-      // Add metadata to the load, but setVectorValue to the reverse shuffle.
-      State.addMetadata(NewLI, LI);
-      if (Reverse)
-        NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
+      NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
     }
-
+    // Add metadata to the load, but setVectorValue to the reverse shuffle.
+    State.addMetadata(NewLI, LI);
+    if (Reverse)
+      NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
     State.set(this, NewLI, Part);
   }
 }
 
-void VPWidenVPLoadRecipe::execute(VPTransformState &State) {
+void VPWidenEVLLoadRecipe::execute(VPTransformState &State) {
   assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                           "explicit vector length.");
   // FIXME: Support reverse loading after vp_reverse is added.
@@ -9430,23 +9425,20 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
       // We don't want to update the value in the map as it might be used in
       // another expression. So don't call resetVectorValue(StoredVal).
     }
-    // TODO: split this into several classes for better design.
+    Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateScatter);
     if (CreateScatter) {
-      Value *VectorGep = State.get(getAddr(), Part);
-      NewSI =
-          Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment, Mask);
+      NewSI = Builder.CreateMaskedScatter(StoredVal, Addr, Alignment, Mask);
     } else {
-      auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
       if (Mask)
-        NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment, Mask);
+        NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
       else
-        NewSI = Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment);
+        NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
     }
     State.addMetadata(NewSI, SI);
   }
 }
 
-void VPWidenVPStoreRecipe::execute(VPTransformState &State) {
+void VPWidenEVLStoreRecipe::execute(VPTransformState &State) {
   assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                           "explicit vector length.");
   // FIXME: Support reverse loading after vp_reverse is added.

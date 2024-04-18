@@ -48,7 +48,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
   case VPWidenStoreSC:
-  case VPWidenVPStoreSC:
+  case VPWidenEVLStoreSC:
     return true;
   case VPReplicateSC:
   case VPWidenCallSC:
@@ -66,7 +66,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenIntOrFpInductionSC:
   case VPWidenLoadSC:
   case VPWidenPHISC:
-  case VPWidenVPLoadSC:
+  case VPWidenEVLLoadSC:
   case VPWidenSC:
   case VPWidenSelectSC: {
     const Instruction *I =
@@ -84,7 +84,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
 bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
   case VPWidenLoadSC:
-  case VPWidenVPLoadSC:
+  case VPWidenEVLLoadSC:
     return true;
   case VPReplicateSC:
   case VPWidenCallSC:
@@ -94,7 +94,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPPredInstPHISC:
   case VPScalarIVStepsSC:
   case VPWidenStoreSC:
-  case VPWidenVPStoreSC:
+  case VPWidenEVLStoreSC:
     return false;
   case VPBlendSC:
   case VPReductionSC:
@@ -161,8 +161,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return mayWriteToMemory();
   case VPWidenLoadSC:
   case VPWidenStoreSC:
-  case VPWidenVPLoadSC:
-  case VPWidenVPStoreSC:
+  case VPWidenEVLLoadSC:
+  case VPWidenEVLStoreSC:
     assert(
         cast<VPWidenMemoryRecipe>(this)->getIngredient().mayHaveSideEffects() ==
             mayWriteToMemory() &&
@@ -1782,8 +1782,8 @@ void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
 }
 
-void VPWidenVPLoadRecipe::print(raw_ostream &O, const Twine &Indent,
-                                VPSlotTracker &SlotTracker) const {
+void VPWidenEVLLoadRecipe::print(raw_ostream &O, const Twine &Indent,
+                                 VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
   O << " = vp.load ";
@@ -1796,8 +1796,8 @@ void VPWidenStoreRecipe::print(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
 }
 
-void VPWidenVPStoreRecipe::print(raw_ostream &O, const Twine &Indent,
-                                 VPSlotTracker &SlotTracker) const {
+void VPWidenEVLStoreRecipe::print(raw_ostream &O, const Twine &Indent,
+                                  VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN vp.store ";
   printOperands(O, SlotTracker);
 }

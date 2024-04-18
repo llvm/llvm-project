@@ -1203,10 +1203,9 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   return LaneMaskPhi;
 }
 
-/// Apply \p Fn to all VPInstructions matching the header mask (ICMP_ULE,
-/// WideCanonicalIV, backedge-taken-count) pattern
-static void forAllHeaderPredicates(VPlan &Plan,
-                                   function_ref<void(VPInstruction &)> Fn) {
+/// Collet all VPValues representing a header mask through the (ICMP_ULE,
+/// WideCanonicalIV, backedge-taken-count) pattern.
+static SmallVector<VPValue *> collectAllHeaderMasks(VPlan &Plan) {
   SmallVector<VPValue *> WideCanonicalIVs;
   auto *FoundWidenCanonicalIVUser =
       find_if(Plan.getCanonicalIV()->users(),
@@ -1214,6 +1213,12 @@ static void forAllHeaderPredicates(VPlan &Plan,
   if (FoundWidenCanonicalIVUser != Plan.getCanonicalIV()->users().end()) {
     auto *WideCanonicalIV =
         cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
+    assert(all_of(Plan.getCanonicalIV()->users(),
+                  [WideCanonicalIV](VPUser *U) {
+                    return !isa<VPWidenCanonicalIVRecipe>(U) ||
+                           U == WideCanonicalIV;
+                  }) &&
+           "Must have a single WideCanonicalIV");
     WideCanonicalIVs.push_back(WideCanonicalIV);
   }
 
@@ -1226,25 +1231,26 @@ static void forAllHeaderPredicates(VPlan &Plan,
       WideCanonicalIVs.push_back(WidenOriginalIV);
   }
 
-  // Walk users of wide canonical IVs and replace all compares of the form
-  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with
-  // the given idiom VPValue.
+  // Walk users of wide canonical IVs and apply Fn to all compares of the form
+  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
+  SmallVector<VPValue *> HeaderMasks;
   VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
   for (auto *Wide : WideCanonicalIVs) {
     for (VPUser *U : SmallVector<VPUser *>(Wide->users())) {
-      auto *CompareToReplace = dyn_cast<VPInstruction>(U);
-      if (!CompareToReplace ||
-          CompareToReplace->getOpcode() != Instruction::ICmp ||
-          CompareToReplace->getPredicate() != CmpInst::ICMP_ULE ||
-          CompareToReplace->getOperand(1) != BTC)
+      // TODO: Introduce explicit recipe for header-mask instead of searching
+      // for the header-mask pattern manually.
+      auto *HeaderMask = dyn_cast<VPInstruction>(U);
+      if (!HeaderMask || HeaderMask->getOpcode() != Instruction::ICmp ||
+          HeaderMask->getPredicate() != CmpInst::ICMP_ULE ||
+          HeaderMask->getOperand(1) != BTC)
         continue;
 
-      assert(CompareToReplace->getOperand(0) == Wide &&
+      assert(HeaderMask->getOperand(0) == Wide &&
              "WidenCanonicalIV must be the first operand of the compare");
-      Fn(*CompareToReplace);
-      recursivelyDeleteDeadRecipes(CompareToReplace);
+      HeaderMasks.push_back(HeaderMask);
     }
   }
+  return HeaderMasks;
 }
 
 void VPlanTransforms::addActiveLaneMask(
@@ -1276,8 +1282,10 @@ void VPlanTransforms::addActiveLaneMask(
   // Walk users of WideCanonicalIV and replace all compares of the form
   // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with an
   // active-lane-mask.
-  forAllHeaderPredicates(
-      Plan, [LaneMask](VPInstruction &I) { I.replaceAllUsesWith(LaneMask); });
+  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
+    HeaderMask->replaceAllUsesWith(LaneMask);
+    recursivelyDeleteDeadRecipes(HeaderMask);
+  }
 }
 
 /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
@@ -1332,8 +1340,8 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   NextEVLIV->insertBefore(CanonicalIVIncrement);
   EVLPhi->addOperand(NextEVLIV);
 
-  forAllHeaderPredicates(Plan, [VPEVL](VPInstruction &Mask) {
-    for (VPUser *U : collectUsersRecursively(&Mask)) {
+  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
+    for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U);
       if (!MemR)
         continue;
@@ -1341,21 +1349,22 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
              "Reversed memory operations not supported yet.");
       VPValue *OrigMask = MemR->getMask();
       assert(OrigMask && "Unmasked widen memory recipe when folding tail");
-      VPValue *NewMask = &Mask == OrigMask ? nullptr : OrigMask;
+      VPValue *NewMask = HeaderMask == OrigMask ? nullptr : OrigMask;
       if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR)) {
-        auto *N = new VPWidenVPLoadRecipe(L, VPEVL, NewMask);
+        auto *N = new VPWidenEVLLoadRecipe(L, VPEVL, NewMask);
         N->insertBefore(L);
         L->replaceAllUsesWith(N);
         L->eraseFromParent();
       } else if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR)) {
-        auto *N = new VPWidenVPStoreRecipe(S, VPEVL, NewMask);
+        auto *N = new VPWidenEVLStoreRecipe(S, VPEVL, NewMask);
         N->insertBefore(S);
         S->eraseFromParent();
       } else {
         llvm_unreachable("unsupported recipe");
       }
     }
-  });
+    recursivelyDeleteDeadRecipes(HeaderMask);
+  }
   // Replace all uses of VPCanonicalIVPHIRecipe by
   // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
   CanonicalIVPHI->replaceAllUsesWith(EVLPhi);

@@ -868,8 +868,8 @@ public:
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreSC:
-    case VPRecipeBase::VPWidenVPLoadSC:
-    case VPRecipeBase::VPWidenVPStoreSC:
+    case VPRecipeBase::VPWidenEVLLoadSC:
+    case VPRecipeBase::VPWidenEVLStoreSC:
       // TODO: Widened stores don't define a value, but widened loads do. Split
       // the recipes to be able to make widened loads VPSingleDefRecipes.
       return false;
@@ -2318,8 +2318,8 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPWidenLoadSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenStoreSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenVPLoadSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenVPStoreSC;
+           R->getVPDefID() == VPRecipeBase::VPWidenEVLLoadSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenEVLStoreSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2387,9 +2387,8 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    // Widened, consecutive memory operations only demand the first lane of
-    // their address, unless the same operand is also stored. That latter can
-    // happen with opaque pointers.
+    // Widened, consecutive loads operations only demand the first lane of
+    // their address.
     return Op == getAddr() && isConsecutive();
   }
 };
@@ -2397,21 +2396,21 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
 /// A recipe for widening load operations with vector-predication intrinsics,
 /// using the address to load from, the explicit vector length and an optional
 /// mask.
-struct VPWidenVPLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
-  VPWidenVPLoadRecipe(VPWidenLoadRecipe *L, VPValue *EVL, VPValue *Mask)
+struct VPWidenEVLLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
+  VPWidenEVLLoadRecipe(VPWidenLoadRecipe *L, VPValue *EVL, VPValue *Mask)
       : VPWidenMemoryRecipe(
-            VPDef::VPWidenVPLoadSC, *cast<LoadInst>(&L->getIngredient()),
+            VPDef::VPWidenEVLLoadSC, *cast<LoadInst>(&L->getIngredient()),
             {L->getAddr(), EVL}, L->isConsecutive(), false, L->getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenVPLoadSC)
+  VP_CLASSOF_IMPL(VPDef::VPWidenEVLLoadSC)
 
   /// Return the EVL operand.
   VPValue *getEVL() const { return getOperand(1); }
 
-  /// Generate the wide load/store.
+  /// Generate the wide load or gather.
   void execute(VPTransformState &State) override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2471,18 +2470,18 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
 };
 
 /// A recipe for widening store operations with vector-predication intrinsics,
-/// using the value to store, the address to store to , the explicit vector
+/// using the value to store, the address to store to, the explicit vector
 /// length and an optional mask.
-struct VPWidenVPStoreRecipe final : public VPWidenMemoryRecipe {
-  VPWidenVPStoreRecipe(VPWidenStoreRecipe *S, VPValue *EVL, VPValue *Mask)
-      : VPWidenMemoryRecipe(VPDef::VPWidenVPStoreSC,
+struct VPWidenEVLStoreRecipe final : public VPWidenMemoryRecipe {
+  VPWidenEVLStoreRecipe(VPWidenStoreRecipe *S, VPValue *EVL, VPValue *Mask)
+      : VPWidenMemoryRecipe(VPDef::VPWidenEVLStoreSC,
                             *cast<StoreInst>(&S->getIngredient()),
                             {S->getAddr(), S->getStoredValue(), EVL},
                             S->isConsecutive(), false, S->getDebugLoc()) {
     setMask(Mask);
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenVPStoreSC)
+  VP_CLASSOF_IMPL(VPDef::VPWidenEVLStoreSC)
 
   /// Return the address accessed by this recipe.
   VPValue *getStoredValue() const { return getOperand(1); }
@@ -2490,7 +2489,7 @@ struct VPWidenVPStoreRecipe final : public VPWidenMemoryRecipe {
   /// Return the EVL operand.
   VPValue *getEVL() const { return getOperand(2); }
 
-  /// Generate the wide load/store.
+  /// Generate the wide store or scatter.
   void execute(VPTransformState &State) override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
