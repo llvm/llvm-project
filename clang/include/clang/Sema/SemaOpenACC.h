@@ -44,8 +44,13 @@ public:
       Expr *ConditionExpr;
     };
 
-    std::variant<std::monostate, DefaultDetails, ConditionDetails> Details =
-        std::monostate{};
+    struct IntExprDetails {
+      SmallVector<Expr *> IntExprs;
+    };
+
+    std::variant<std::monostate, DefaultDetails, ConditionDetails,
+                 IntExprDetails>
+        Details = std::monostate{};
 
   public:
     OpenACCParsedClause(OpenACCDirectiveKind DirKind,
@@ -87,6 +92,22 @@ public:
       return std::get<ConditionDetails>(Details).ConditionExpr;
     }
 
+    unsigned getNumIntExprs() const {
+      assert(ClauseKind == OpenACCClauseKind::NumWorkers &&
+             "Parsed clause kind does not have a int exprs");
+      return std::get<IntExprDetails>(Details).IntExprs.size();
+    }
+
+    ArrayRef<Expr *> getIntExprs() {
+      assert(ClauseKind == OpenACCClauseKind::NumWorkers &&
+             "Parsed clause kind does not have a int exprs");
+      return std::get<IntExprDetails>(Details).IntExprs;
+    }
+
+    ArrayRef<Expr *> getIntExprs() const {
+      return const_cast<OpenACCParsedClause *>(this)->getIntExprs();
+    }
+
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
     void setEndLoc(SourceLocation EndLoc) { ClauseRange.setEnd(EndLoc); }
 
@@ -108,6 +129,12 @@ public:
              "Condition expression type not scalar/dependent");
 
       Details = ConditionDetails{ConditionExpr};
+    }
+
+    void setIntExprDetails(ArrayRef<Expr *> IntExprs) {
+      assert(ClauseKind == OpenACCClauseKind::NumWorkers &&
+             "Parsed clause kind does not have a int exprs");
+      Details = IntExprDetails{{IntExprs.begin(), IntExprs.end()}};
     }
   };
 
@@ -148,6 +175,11 @@ public:
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
   DeclGroupRef ActOnEndDeclDirective();
+
+  /// Called when encountering an 'int-expr' for OpenACC, and manages
+  /// conversions and diagnostics to 'int'.
+  ExprResult ActOnIntExpr(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                          SourceLocation Loc, Expr *IntExpr);
 };
 
 } // namespace clang
