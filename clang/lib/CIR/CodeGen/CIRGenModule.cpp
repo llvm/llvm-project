@@ -2190,6 +2190,12 @@ void CIRGenModule::setExtraAttributesForFunc(FuncOp f,
       builder.getContext(), attrs.getDictionary(builder.getContext())));
 }
 
+void CIRGenModule::setFunctionAttributes(GlobalDecl GD, mlir::cir::FuncOp F,
+                                         bool IsIncompleteFunction,
+                                         bool IsThunk) {
+  assert(!UnimplementedFeature::setFunctionAttributes());
+}
+
 /// If the specified mangled name is not in the module,
 /// create and return a CIR Function with the specified type. If there is
 /// something in the module with the specified name, return it potentially
@@ -2199,7 +2205,8 @@ void CIRGenModule::setExtraAttributesForFunc(FuncOp f,
 /// used to set the attributes on the function when it is first created.
 mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
     StringRef MangledName, mlir::Type Ty, GlobalDecl GD, bool ForVTable,
-    bool DontDefer, bool IsThunk, ForDefinition_t IsForDefinition) {
+    bool DontDefer, bool IsThunk, ForDefinition_t IsForDefinition,
+    mlir::ArrayAttr ExtraAttrs) {
   assert(!IsThunk && "NYI");
 
   const auto *D = GD.getDecl();
@@ -2310,16 +2317,11 @@ mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
     Entry->erase();
   }
 
-  // TODO: This might not be valid, seems the uniqueing system doesn't make
-  // sense for MLIR
-  // assert(F->getName().getStringRef() == MangledName && "name was uniqued!");
-
   if (D)
-    ; // TODO: set function attributes from the declaration
-
-  // TODO: set function attributes from the missing attributes param
-
-  // TODO: Handle extra attributes
+    setFunctionAttributes(GD, F, IsIncompleteFunction, IsThunk);
+  if (ExtraAttrs) {
+    llvm_unreachable("NYI");
+  }
 
   if (!DontDefer) {
     // All MSVC dtors other than the base dtor are linkonce_odr and delegate to

@@ -65,6 +65,7 @@ struct UnimplementedFeature {
   static bool generateDebugInfo() { return false; }
 
   // LLVM Attributes
+  static bool setFunctionAttributes() { return false; }
   static bool attributeBuiltin() { return false; }
   static bool attributeNoBuiltin() { return false; }
   static bool parameterAttributes() { return false; }
