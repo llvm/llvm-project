@@ -5,9 +5,29 @@ Tests expression evaluation in context of an object.
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-
+from lldbsuite.test.decorators import *
 
 class ContextObjectTestCase(TestBase):
+    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
+    def test_context_object_eval_function(self):
+        """Tests expression evaluation of functions in context of an object."""
+        self.build()
+
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "// Break here", self.main_source_spec
+        )
+        frame = thread.GetFrameAtIndex(0)
+        for obj in "cpp_struct", "cpp_struct_ref":
+            obj_val = frame.FindVariable(obj)
+            self.assertTrue(obj_val.IsValid())
+
+            # Test functions evaluation
+            value = obj_val.EvaluateExpression("function()")
+            self.assertTrue(value.IsValid())
+            self.assertSuccess(value.GetError())
+            self.assertEqual(value.GetValueAsSigned(), 2222)
+
+
     def test_context_object(self):
         """Tests expression evaluation in context of an object."""
         self.build()
@@ -34,12 +54,6 @@ class ContextObjectTestCase(TestBase):
             self.assertTrue(value.IsValid())
             self.assertSuccess(value.GetError())
             self.assertEqual(value.GetValueAsSigned(), 1111)
-
-            # Test functions evaluation
-            value = obj_val.EvaluateExpression("function()")
-            self.assertTrue(value.IsValid())
-            self.assertSuccess(value.GetError())
-            self.assertEqual(value.GetValueAsSigned(), 2222)
 
             # Test that we retrieve the right global
             value = obj_val.EvaluateExpression("global.field")
