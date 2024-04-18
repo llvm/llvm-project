@@ -295,7 +295,7 @@ DILineInfo SymbolizableObjectFile::symbolizeCode(object::SectionedAddress Module
   // HACK: Upstream doesn't have the getCompilationDirectory() function.
   std::string FullPath = LineInfo.FileName;
   std::string Prefix = DebugInfoContext->getCompilationDirectory().str();
-  if (Prefix.back() != '/') {
+  if (Prefix.empty() || Prefix.back() != '/') {
     Prefix.push_back('/');
   }
 
