@@ -639,8 +639,8 @@ public:
                                       mlir::cir::FuncType Ty,
                                       const clang::FunctionDecl *FD);
 
-  mlir::cir::FuncOp getOrCreateRuntimeFunction(mlir::cir::FuncType Ty,
-                                               StringRef Name);
+  mlir::cir::FuncOp createRuntimeFunction(mlir::cir::FuncType Ty,
+                                          StringRef Name);
 
   /// Emit type info if type of an expression is a variably modified
   /// type. Also emit proper debug info for cast types.

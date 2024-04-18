@@ -1119,9 +1119,8 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
   CanQualType resultType = Context.VoidTy;
   (void)resultType;
 
-  return arrangeCIRFunctionInfo(resultType, /*instanceMethod=*/true,
-                                /*chainCall=*/false, argTypes, extInfo,
-                                paramInfos, required);
+  return arrangeCIRFunctionInfo(resultType, FnInfoOpts::IsInstanceMethod,
+                                argTypes, extInfo, paramInfos, required);
 }
 
 /// Derives the 'this' type for CIRGen purposes, i.e. ignoring method CVR
@@ -1145,7 +1144,7 @@ CanQualType CIRGenTypes::DeriveThisType(const CXXRecordDecl *RD,
 /// Arrange the CIR function layout for a value of the given function type, on
 /// top of any implicit parameters already stored.
 static const CIRGenFunctionInfo &
-arrangeCIRFunctionInfo(CIRGenTypes &CGT, bool instanceMethod,
+arrangeCIRFunctionInfo(CIRGenTypes &CGT, FnInfoOpts instanceMethod,
                        SmallVectorImpl<CanQualType> &prefix,
                        CanQual<FunctionProtoType> FTP) {
   SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
@@ -1154,8 +1153,7 @@ arrangeCIRFunctionInfo(CIRGenTypes &CGT, bool instanceMethod,
   appendParameterTypes(CGT, prefix, paramInfos, FTP);
   CanQualType resultType = FTP->getReturnType().getUnqualifiedType();
 
-  return CGT.arrangeCIRFunctionInfo(resultType, instanceMethod,
-                                    /*chainCall=*/false, prefix,
+  return CGT.arrangeCIRFunctionInfo(resultType, instanceMethod, prefix,
                                     FTP->getExtInfo(), paramInfos, Required);
 }
 
@@ -1164,8 +1162,7 @@ arrangeCIRFunctionInfo(CIRGenTypes &CGT, bool instanceMethod,
 const CIRGenFunctionInfo &
 CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionProtoType> FTP) {
   SmallVector<CanQualType, 16> argTypes;
-  return ::arrangeCIRFunctionInfo(*this, /*instanceMethod=*/false, argTypes,
-                                  FTP);
+  return ::arrangeCIRFunctionInfo(*this, FnInfoOpts::None, argTypes, FTP);
 }
 
 /// Arrange the argument and result information for a value of the given
@@ -1175,8 +1172,7 @@ CIRGenTypes::arrangeFreeFunctionType(CanQual<FunctionNoProtoType> FTNP) {
   // When translating an unprototyped function type, always use a
   // variadic type.
   return arrangeCIRFunctionInfo(FTNP->getReturnType().getUnqualifiedType(),
-                                /*instanceMethod=*/false,
-                                /*chainCall=*/false, std::nullopt,
+                                FnInfoOpts::None, std::nullopt,
                                 FTNP->getExtInfo(), {}, RequiredArgs(0));
 }
 
@@ -1217,9 +1213,8 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
   // which never have param info.
   assert(!FPT->hasExtParameterInfos() && "NYI");
 
-  return arrangeCIRFunctionInfo(ResultType, /*instanceMethod=*/true,
-                                /*chainCall=*/false, ArgTypes, Info, ParamInfos,
-                                Required);
+  return arrangeCIRFunctionInfo(ResultType, FnInfoOpts::IsInstanceMethod,
+                                ArgTypes, Info, ParamInfos, Required);
 }
 
 bool CIRGenTypes::inheritingCtorHasParams(const InheritedConstructor &Inherited,
@@ -1299,9 +1294,10 @@ static CanQualType GetReturnType(QualType RetTy) {
 static const CIRGenFunctionInfo &
 arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
                             const CallArgList &args, const FunctionType *fnType,
-                            unsigned numExtraRequiredArgs, bool chainCall) {
+                            unsigned numExtraRequiredArgs,
+                            FnInfoOpts chainCall) {
   assert(args.size() >= numExtraRequiredArgs);
-  assert(!chainCall && "Chain call NYI");
+  assert((chainCall != FnInfoOpts::IsChainCall) && "Chain call NYI");
 
   llvm::SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
 
@@ -1326,9 +1322,9 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &CGT, CIRGenModule &CGM,
   SmallVector<CanQualType, 16> argTypes;
   for (const auto &arg : args)
     argTypes.push_back(CGT.getContext().getCanonicalParamType(arg.Ty));
-  return CGT.arrangeCIRFunctionInfo(
-      GetReturnType(fnType->getReturnType()), /*instanceMethod=*/false,
-      chainCall, argTypes, fnType->getExtInfo(), paramInfos, required);
+  return CGT.arrangeCIRFunctionInfo(GetReturnType(fnType->getReturnType()),
+                                    chainCall, argTypes, fnType->getExtInfo(),
+                                    paramInfos, required);
 }
 
 static llvm::SmallVector<CanQualType, 16>
@@ -1367,9 +1363,9 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXMethodCall(
   auto argTypes = getArgTypesForCall(Context, args);
 
   auto info = proto->getExtInfo();
-  return arrangeCIRFunctionInfo(
-      GetReturnType(proto->getReturnType()), /*instanceMethod=*/true,
-      /*chainCall=*/false, argTypes, info, paramInfos, required);
+  return arrangeCIRFunctionInfo(GetReturnType(proto->getReturnType()),
+                                FnInfoOpts::IsInstanceMethod, argTypes, info,
+                                paramInfos, required);
 }
 
 /// Figure out the rules for calling a function with the given formal type using
@@ -1378,8 +1374,9 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXMethodCall(
 const CIRGenFunctionInfo &CIRGenTypes::arrangeFreeFunctionCall(
     const CallArgList &args, const FunctionType *fnType, bool ChainCall) {
   assert(!ChainCall && "ChainCall NYI");
-  return arrangeFreeFunctionLikeCall(*this, CGM, args, fnType,
-                                     ChainCall ? 1 : 0, ChainCall);
+  return arrangeFreeFunctionLikeCall(
+      *this, CGM, args, fnType, ChainCall ? 1 : 0,
+      ChainCall ? FnInfoOpts::IsChainCall : FnInfoOpts::None);
 }
 
 /// Set calling convention for CUDA/HIP kernel.
@@ -1426,7 +1423,7 @@ CIRGenTypes::arrangeCXXMethodType(const CXXRecordDecl *RD,
   argTypes.push_back(DeriveThisType(RD, MD));
 
   return ::arrangeCIRFunctionInfo(
-      *this, true, argTypes,
+      *this, FnInfoOpts::IsChainCall, argTypes,
       FTP->getCanonicalTypeUnqualified().getAs<FunctionProtoType>());
 }
 
@@ -1446,10 +1443,9 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
   // When declaring a function without a prototype, always use a non-variadic
   // type.
   if (CanQual<FunctionNoProtoType> noProto = FTy.getAs<FunctionNoProtoType>()) {
-    return arrangeCIRFunctionInfo(noProto->getReturnType(),
-                                  /*instanceMethod=*/false,
-                                  /*chainCall=*/false, std::nullopt,
-                                  noProto->getExtInfo(), {}, RequiredArgs::All);
+    return arrangeCIRFunctionInfo(noProto->getReturnType(), FnInfoOpts::None,
+                                  std::nullopt, noProto->getExtInfo(), {},
+                                  RequiredArgs::All);
   }
 
   return arrangeFreeFunctionType(FTy.castAs<FunctionProtoType>());
