@@ -51,7 +51,7 @@ func.func @test_poly_expr_with_associate(%arg1: !fir.class<!fir.array<3x!fir.typ
   %c3 = arith.constant 3 : index
   %12 = fir.shape %c3 : (index) -> !fir.shape<1>
   %c1 = arith.constant 1 : index
-  fir.do_loop %arg2 = %c1 to %c3 step %c1 {
+  fir.do_loop %arg2 = %c1 to %c3 step %c1 attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %13 = hlfir.designate %2#0 (%arg2)  : (!fir.class<!fir.array<3x!fir.type<_QMtest_typeTt1{i:i32}>>>, index) -> !fir.class<!fir.type<_QMtest_typeTt1{i:i32}>>
     %14 = hlfir.designate %9#0 (%arg2)  : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>, index) -> !fir.class<!fir.type<_QMtest_typeTt1{i:i32}>>
     fir.dispatch "assign"(%13 : !fir.class<!fir.type<_QMtest_typeTt1{i:i32}>>) (%13, %14 : !fir.class<!fir.type<_QMtest_typeTt1{i:i32}>>, !fir.class<!fir.type<_QMtest_typeTt1{i:i32}>>) {pass_arg_pos = 0 : i32}
@@ -93,7 +93,7 @@ func.func @test_poly_expr_with_associate(%arg1: !fir.class<!fir.array<3x!fir.typ
 // CHECK:           %[[VAL_29:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_30:.*]] = fir.shape %[[VAL_29]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_31:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_32:.*]] = %[[VAL_31]] to %[[VAL_29]] step %[[VAL_31]] {
+// CHECK:           fir.do_loop %[[VAL_32:.*]] = %[[VAL_31]] to %[[VAL_29]] step %[[VAL_31]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_33:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_32]])  : (!fir.class<!fir.array<3x!fir.type<_QMtest_typeTt1{i:i32}>>>, index) -> !fir.class<!fir.type<_QMtest_typeTt1{i:i32}>>
 // CHECK:             %[[VAL_34:.*]] = hlfir.designate %[[VAL_14B]] (%[[VAL_32]])  : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>, index) -> !fir.class<!fir.type<_QMtest_typeTt1{i:i32}>>
 // CHECK:             fir.dispatch "assign"(%[[VAL_33]] : !fir.class<!fir.type<_QMtest_typeTt1{i:i32}>>) (%[[VAL_33]], %[[VAL_34]] : !fir.class<!fir.type<_QMtest_typeTt1{i:i32}>>, !fir.class<!fir.type<_QMtest_typeTt1{i:i32}>>) {pass_arg_pos = 0 : i32}

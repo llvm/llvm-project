@@ -30,7 +30,7 @@ omp.declare_reduction @add_reduction_i_32_box_3_byref : !fir.ref<!fir.box<!fir.a
   %1 = fir.load %arg1 : !fir.ref<!fir.box<!fir.array<3xi32>>>
   %2:3 = fir.box_dims %0, %c0 : (!fir.box<!fir.array<3xi32>>, index) -> (index, index, index)
   %3 = fir.shape_shift %2#0, %2#1 : (index, index) -> !fir.shapeshift<1>
-  fir.do_loop %arg2 = %c1 to %2#1 step %c1 unordered {
+  fir.do_loop %arg2 = %c1 to %2#1 step %c1 unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %4 = fir.array_coor %0(%3) %arg2 : (!fir.box<!fir.array<3xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
     %5 = fir.array_coor %1(%3) %arg2 : (!fir.box<!fir.array<3xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
     %6 = fir.load %4 : !fir.ref<i32>

@@ -74,7 +74,7 @@ contains
     ! CHECK: %[[icoor:.*]] = fir.coordinate_of %[[tmp]], %[[ifield]] : (!fir.ref<!fir.type<_QMm_struct_ctorTt_array{x:f32,i:!fir.array<5xi32>}>>, !fir.field) -> !fir.ref<!fir.array<5xi32>>
     ! CHECK: %[[iload:.*]] = fir.array_load %[[icoor]](%{{.*}}) : (!fir.ref<!fir.array<5xi32>>, !fir.shape<1>) -> !fir.array<5xi32>
     ! CHECK: %[[jload:.*]] = fir.array_load %[[j]](%{{.*}}) : (!fir.ref<!fir.array<5xi32>>, !fir.shape<1>) -> !fir.array<5xi32>
-    ! CHECK: %[[loop:.*]] = fir.do_loop %[[idx:.*]] = %c0{{.*}} to %{{.*}} step %c1{{.*}} iter_args(%[[res:.*]] = %[[iload]]) -> (!fir.array<5xi32>) {
+    ! CHECK: %[[loop:.*]] = fir.do_loop %[[idx:.*]] = %c0{{.*}} to %{{.*}} step %c1{{.*}} iter_args(%[[res:.*]] = %[[iload]]) -> (!fir.array<5xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     ! CHECK:   %[[jval:.*]] = fir.array_fetch %[[jload]], %[[idx]] : (!fir.array<5xi32>, index) -> i32
     ! CHECK:   %[[ival:.*]] = arith.muli %c2{{.*}}, %[[jval]] : i32
     ! CHECK:   %[[iupdate:.*]] = fir.array_update %[[res]], %[[ival]], %[[idx]] : (!fir.array<5xi32>, i32, index) -> !fir.array<5xi32>
@@ -105,7 +105,7 @@ contains
   ! CHECK: %[[VAL_17:.*]] = arith.constant 1 : index
   ! CHECK: %[[VAL_18:.*]] = arith.constant 0 : index
   ! CHECK: %[[VAL_19:.*]] = arith.subi %[[VAL_12]], %[[VAL_17]] : index
-  ! CHECK: %[[VAL_20:.*]] = fir.do_loop %[[VAL_21:.*]] = %[[VAL_18]] to %[[VAL_19]] step %[[VAL_17]] unordered iter_args(%[[VAL_22:.*]] = %[[VAL_14]]) -> (!fir.array<5x!fir.char<1,3>>) {
+  ! CHECK: %[[VAL_20:.*]] = fir.do_loop %[[VAL_21:.*]] = %[[VAL_18]] to %[[VAL_19]] step %[[VAL_17]] unordered iter_args(%[[VAL_22:.*]] = %[[VAL_14]]) -> (!fir.array<5x!fir.char<1,3>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   ! CHECK: %[[VAL_23:.*]] = fir.array_access %[[VAL_16]], %[[VAL_21]] : (!fir.array<5x!fir.char<1,3>>, index) -> !fir.ref<!fir.char<1,3>>
   ! CHECK: %[[VAL_24:.*]] = fir.array_access %[[VAL_22]], %[[VAL_21]] : (!fir.array<5x!fir.char<1,3>>, index) -> !fir.ref<!fir.char<1,3>>
   ! CHECK: %[[VAL_25:.*]] = arith.constant 3 : index
@@ -189,7 +189,7 @@ contains
   ! CHECK:         %[[VAL_15:.*]] = arith.constant 0 : index
   ! CHECK:         %[[VAL_16:.*]] = arith.constant 1 : index
   ! CHECK:         %[[VAL_17:.*]] = arith.constant 4 : index
-  ! CHECK:         fir.do_loop %[[VAL_18:.*]] = %[[VAL_15]] to %[[VAL_17]] step %[[VAL_16]] {
+  ! CHECK:         fir.do_loop %[[VAL_18:.*]] = %[[VAL_15]] to %[[VAL_17]] step %[[VAL_16]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:           %[[VAL_19:.*]] = fir.coordinate_of %[[VAL_14]], %[[VAL_18]] : (!fir.ref<!fir.array<5xi32>>, index) -> !fir.ref<i32>
   ! CHECK:           %[[VAL_20:.*]] = fir.coordinate_of %[[VAL_13]], %[[VAL_18]] : (!fir.ref<!fir.array<5xi32>>, index) -> !fir.ref<i32>
   ! CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_20]] : !fir.ref<i32>
@@ -253,7 +253,7 @@ end
 ! CHECK:         %[[VAL_26:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_27:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_28:.*]] = arith.subi %[[VAL_19]], %[[VAL_26]] : index
-! CHECK:         %[[VAL_29:.*]] = fir.do_loop %[[VAL_30:.*]] = %[[VAL_27]] to %[[VAL_28]] step %[[VAL_26]] unordered iter_args(%[[VAL_31:.*]] = %[[VAL_21]]) -> (!fir.array<2xi32>) {
+! CHECK:         %[[VAL_29:.*]] = fir.do_loop %[[VAL_30:.*]] = %[[VAL_27]] to %[[VAL_28]] step %[[VAL_26]] unordered iter_args(%[[VAL_31:.*]] = %[[VAL_21]]) -> (!fir.array<2xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_32:.*]] = fir.array_fetch %[[VAL_25]], %[[VAL_30]] : (!fir.array<2xi32>, index) -> i32
 ! CHECK:           %[[VAL_33:.*]] = fir.array_update %[[VAL_31]], %[[VAL_32]], %[[VAL_30]] : (!fir.array<2xi32>, i32, index) -> !fir.array<2xi32>
 ! CHECK:           fir.result %[[VAL_33]] : !fir.array<2xi32>
@@ -273,7 +273,7 @@ end
 ! CHECK:         %[[VAL_45:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_46:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_47:.*]] = arith.constant 1 : index
-! CHECK:         fir.do_loop %[[VAL_48:.*]] = %[[VAL_45]] to %[[VAL_47]] step %[[VAL_46]] {
+! CHECK:         fir.do_loop %[[VAL_48:.*]] = %[[VAL_45]] to %[[VAL_47]] step %[[VAL_46]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:           %[[VAL_49:.*]] = fir.coordinate_of %[[VAL_44]], %[[VAL_48]] : (!fir.ref<!fir.array<2xi32>>, index) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_50:.*]] = fir.coordinate_of %[[VAL_42]], %[[VAL_48]] : (!fir.ref<!fir.array<2xi32>>, index) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_51:.*]] = fir.load %[[VAL_50]] : !fir.ref<i32>

@@ -25,7 +25,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
     %4 = fir.convert %3 : (i32) -> index
     %c1 = arith.constant 1 : index
     %5 = fir.convert %2 : (index) -> i32
-    %6:2 = fir.do_loop %arg2 = %2 to %4 step %c1 iter_args(%arg3 = %5) -> (index, i32) {
+    %6:2 = fir.do_loop %arg2 = %2 to %4 step %c1 iter_args(%arg3 = %5) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       fir.store %arg3 to %0 : !fir.ref<i32>
       %7 = fir.load %1 : !fir.ref<f64>
       %8 = fir.load %0 : !fir.ref<i32>
@@ -89,7 +89,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
     %4 = fir.convert %3 : (i32) -> index
     %c1 = arith.constant 1 : index
     %5 = fir.convert %2 : (index) -> i32
-    %6:2 = fir.do_loop %arg2 = %2 to %4 step %c1 iter_args(%arg3 = %5) -> (index, i32) {
+    %6:2 = fir.do_loop %arg2 = %2 to %4 step %c1 iter_args(%arg3 = %5) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       fir.store %arg3 to %0 : !fir.ref<i32>
       %7 = fir.load %1 : !fir.ref<f64>
       %8 = fir.load %0 : !fir.ref<i32>
@@ -134,7 +134,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
     %c1_0 = arith.constant 1 : index
     %c0_1 = arith.constant 0 : index
     %5 = arith.subi %3#1, %c1_0 : index
-    fir.do_loop %arg2 = %c0_1 to %5 step %c1_0 {
+    fir.do_loop %arg2 = %c0_1 to %5 step %c1_0 attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
       %7 = fir.coordinate_of %arg1, %arg2 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
       %8 = fir.load %7 : !fir.ref<i32>
       %9 = fir.convert %8 : (i32) -> index
@@ -157,7 +157,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
 // CHECK:    fir.if %[[COMP]] {
 // CHECK:    %[[CONV:.*]]  = fir.convert %[[Y]] : {{.*}}
 // CHECK:    %[[BOX_ADDR:.*]] = fir.box_addr %[[CONV]] : {{.*}}
-// CHECK:    fir.do_loop %[[INDEX:.*]] = {{.*}}
+// CHECK:    fir.do_loop %[[INDEX:.*]] = {{.*}} attributes {{.*}}
 // CHECK:    %[[YADDR:.*]] = fir.coordinate_of %[[BOX_ADDR]], %[[INDEX]]
 // CHECK:    %[[YINT:.*]] = fir.load %[[YADDR]] : {{.*}}
 // CHECK:    %[[YINDEX:.*]] = fir.convert %[[YINT]]
@@ -165,7 +165,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
 // CHECK:    fir.call @Func(%[[XADDR]])
 // CHECK-NEXT: }
 // CHECK-NEXT: } else {
-// CHECK:    fir.do_loop %[[INDEX2:.*]] = {{.*}}
+// CHECK:    fir.do_loop %[[INDEX2:.*]] = {{.*}} attributes {{.*}}
 // CHECK:    %[[YADDR2:.*]] = fir.coordinate_of %[[Y]], %[[INDEX2]]
 // CHECK:    %[[YINT2:.*]] = fir.load %[[YADDR2]] : {{.*}}
 // CHECK:    %[[YINDEX2:.*]] = fir.convert %[[YINT2]]
@@ -206,7 +206,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
     %9 = fir.load %arg3 : !fir.ref<i32>
     %10 = fir.convert %9 : (i32) -> i64
     %11 = fir.convert %10 : (i64) -> index
-    %12 = fir.do_loop %arg4 = %5 to %8 step %11 iter_args(%arg5 = %4) -> (!fir.heap<f32>) {
+    %12 = fir.do_loop %arg4 = %5 to %8 step %11 iter_args(%arg5 = %4) -> (!fir.heap<f32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       %c1_i64_2 = arith.constant 1 : i64
       %19 = fir.convert %c1_i64_2 : (i64) -> index
       %20 = fir.load %arg2 : !fir.ref<i32>
@@ -215,7 +215,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
       %23 = fir.load %arg3 : !fir.ref<i32>
       %24 = fir.convert %23 : (i32) -> i64
       %25 = fir.convert %24 : (i64) -> index
-      %26 = fir.do_loop %arg6 = %19 to %22 step %25 iter_args(%arg7 = %arg5) -> (!fir.heap<f32>) {
+      %26 = fir.do_loop %arg6 = %19 to %22 step %25 iter_args(%arg7 = %arg5) -> (!fir.heap<f32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
         %27 = fir.convert %arg4 : (index) -> i32
         %28 = fir.convert %27 : (i32) -> i64
         %c1_i64_3 = arith.constant 1 : i64
@@ -247,7 +247,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
     %c1 = arith.constant 1 : index
     %c0_1 = arith.constant 0 : index
     %17 = arith.subi %2#1, %c1 : index
-    %18 = fir.do_loop %arg4 = %c0_1 to %17 step %c1 unordered iter_args(%arg5 = %3) -> (!fir.array<?xf32>) {
+    %18 = fir.do_loop %arg4 = %c0_1 to %17 step %c1 unordered iter_args(%arg5 = %3) -> (!fir.array<?xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       %19 = fir.array_fetch %16, %arg4 : (!fir.array<?xf32>, index) -> f32
       %20 = fir.array_update %arg5, %19, %arg4 : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
       fir.result %20 : !fir.array<?xf32>
@@ -310,7 +310,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
     %5 = fir.convert %4 : (i32) -> index
     %c1 = arith.constant 1 : index
     %6 = fir.convert %3 : (index) -> i32
-    %7:2 = fir.do_loop %arg3 = %3 to %5 step %c1 iter_args(%arg4 = %6) -> (index, i32) {
+    %7:2 = fir.do_loop %arg3 = %3 to %5 step %c1 iter_args(%arg4 = %6) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       fir.store %arg4 to %0 : !fir.ref<i32>
       %c1_i32_0 = arith.constant 1 : i32
       %8 = fir.convert %c1_i32_0 : (i32) -> index
@@ -318,7 +318,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
       %10 = fir.convert %9 : (i32) -> index
       %c1_1 = arith.constant 1 : index
       %11 = fir.convert %8 : (index) -> i32
-      %12:2 = fir.do_loop %arg5 = %8 to %10 step %c1_1 iter_args(%arg6 = %11) -> (index, i32) {
+      %12:2 = fir.do_loop %arg5 = %8 to %10 step %c1_1 iter_args(%arg6 = %11) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
         fir.store %arg6 to %1 : !fir.ref<i32>
         %17 = fir.load %2 : !fir.ref<f64>
         %18 = fir.load %1 : !fir.ref<i32>
@@ -419,7 +419,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
     %6 = fir.convert %5 : (i32) -> index
     %c1 = arith.constant 1 : index
     %7 = fir.convert %4 : (index) -> i32
-    %8:2 = fir.do_loop %arg4 = %4 to %6 step %c1 iter_args(%arg5 = %7) -> (index, i32) {
+    %8:2 = fir.do_loop %arg4 = %4 to %6 step %c1 iter_args(%arg5 = %7) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       fir.store %arg5 to %2 : !fir.ref<i32>
       %c1_i32_0 = arith.constant 1 : i32
       %9 = fir.convert %c1_i32_0 : (i32) -> index
@@ -427,7 +427,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
       %11 = fir.convert %10 : (i32) -> index
       %c1_1 = arith.constant 1 : index
       %12 = fir.convert %9 : (index) -> i32
-      %13:2 = fir.do_loop %arg6 = %9 to %11 step %c1_1 iter_args(%arg7 = %12) -> (index, i32) {
+      %13:2 = fir.do_loop %arg6 = %9 to %11 step %c1_1 iter_args(%arg7 = %12) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
         fir.store %arg7 to %1 : !fir.ref<i32>
         %c0_i32 = arith.constant 0 : i32
         %18 = fir.convert %c0_i32 : (i32) -> index
@@ -435,7 +435,7 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
         %20 = fir.convert %19 : (i32) -> index
         %c1_2 = arith.constant 1 : index
         %21 = fir.convert %18 : (index) -> i32
-        %22:2 = fir.do_loop %arg8 = %18 to %20 step %c1_2 iter_args(%arg9 = %21) -> (index, i32) {
+        %22:2 = fir.do_loop %arg8 = %18 to %20 step %c1_2 iter_args(%arg9 = %21) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
           fir.store %arg9 to %0 : !fir.ref<i32>
           %27 = fir.load %3 : !fir.ref<f64>
           %28 = fir.load %0 : !fir.ref<i32>
@@ -528,7 +528,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
   %c0_i64 = arith.constant 0 : i64
   %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMcheck_modFtestEi"}
   %1 = fir.convert %c1 : (index) -> i32
-  %2:2 = fir.do_loop %arg1 = %c1 to %c20 step %c1 iter_args(%arg2 = %1) -> (index, i32) {
+  %2:2 = fir.do_loop %arg1 = %c1 to %c20 step %c1 iter_args(%arg2 = %1) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg2 to %0 : !fir.ref<i32>
     %3 = fir.is_present %arg0 : (!fir.box<!fir.array<?xf32>>) -> i1
     fir.if %3 {
@@ -551,7 +551,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK-NEXT:           %[[VAL_3:.*]] = arith.constant 0 : i64
 // CHECK-NEXT:           %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMcheck_modFtestEi"}
 // CHECK-NEXT:           %[[VAL_5:.*]] = fir.convert %[[VAL_1]] : (index) -> i32
-// CHECK-NEXT:           %[[VAL_6:.*]]:2 = fir.do_loop %[[VAL_7:.*]] = %[[VAL_1]] to %[[VAL_2]] step %[[VAL_1]] iter_args(%[[VAL_8:.*]] = %[[VAL_5]]) -> (index, i32) {
+// CHECK-NEXT:           %[[VAL_6:.*]]:2 = fir.do_loop %[[VAL_7:.*]] = %[[VAL_1]] to %[[VAL_2]] step %[[VAL_1]] iter_args(%[[VAL_8:.*]] = %[[VAL_5]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NEXT:             fir.store %[[VAL_8]] to %[[VAL_4]] : !fir.ref<i32>
 // CHECK-NEXT:             %[[VAL_9:.*]] = fir.is_present %[[VAL_0]] : (!fir.box<!fir.array<?xf32>>) -> i1
 // CHECK-NEXT:             fir.if %[[VAL_9]] {
@@ -583,7 +583,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
     %7 = fir.load %4 : !fir.ref<i32>
     %8 = fir.convert %7 : (i32) -> index
     %9 = fir.convert %c1 : (index) -> i32
-    %10:2 = fir.do_loop %arg2 = %c1 to %8 step %c1 iter_args(%arg3 = %9) -> (index, i32) {
+    %10:2 = fir.do_loop %arg2 = %c1 to %8 step %c1 iter_args(%arg3 = %9) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       fir.store %arg3 to %3 : !fir.ref<i32>
       %11 = fir.load %6 : !fir.ref<f64>
       %12 = fir.load %3 : !fir.ref<i32>
@@ -623,7 +623,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:           %[[VAL_18:.*]]:2 = fir.if %[[VAL_17]] -> (index, i32) {
 // CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_5]] : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
 // CHECK:             %[[VAL_20:.*]] = fir.box_addr %[[VAL_19]] : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
-// CHECK:             %[[VAL_21:.*]]:2 = fir.do_loop %[[VAL_22:.*]] = %[[VAL_2]] to %[[VAL_12]] step %[[VAL_2]] iter_args(%[[VAL_23:.*]] = %[[VAL_13]]) -> (index, i32) {
+// CHECK:             %[[VAL_21:.*]]:2 = fir.do_loop %[[VAL_22:.*]] = %[[VAL_2]] to %[[VAL_12]] step %[[VAL_2]] iter_args(%[[VAL_23:.*]] = %[[VAL_13]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:               fir.store %[[VAL_23]] to %[[VAL_7]] : !fir.ref<i32>
 // CHECK:               %[[VAL_24:.*]] = fir.load %[[VAL_10]] : !fir.ref<f64>
 // CHECK:               %[[VAL_25:.*]] = fir.load %[[VAL_7]] : !fir.ref<i32>
@@ -642,7 +642,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:             }
 // CHECK:             fir.result %[[VAL_36:.*]]#0, %[[VAL_36]]#1 : index, i32
 // CHECK:           } else {
-// CHECK:             %[[VAL_37:.*]]:2 = fir.do_loop %[[VAL_38:.*]] = %[[VAL_2]] to %[[VAL_12]] step %[[VAL_2]] iter_args(%[[VAL_39:.*]] = %[[VAL_13]]) -> (index, i32) {
+// CHECK:             %[[VAL_37:.*]]:2 = fir.do_loop %[[VAL_38:.*]] = %[[VAL_2]] to %[[VAL_12]] step %[[VAL_2]] iter_args(%[[VAL_39:.*]] = %[[VAL_13]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:               fir.store %[[VAL_39]] to %[[VAL_7]] : !fir.ref<i32>
 // CHECK:               %[[VAL_40:.*]] = fir.load %[[VAL_10]] : !fir.ref<f64>
 // CHECK:               %[[VAL_41:.*]] = fir.load %[[VAL_7]] : !fir.ref<i32>
@@ -680,11 +680,11 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
     %10 = fir.load %6 : !fir.ref<i32>
     %11 = fir.convert %10 : (i32) -> index
     %12 = fir.convert %c1 : (index) -> i32
-    %13:2 = fir.do_loop %arg3 = %c1 to %11 step %c1 iter_args(%arg4 = %12) -> (index, i32) {
+    %13:2 = fir.do_loop %arg3 = %c1 to %11 step %c1 iter_args(%arg4 = %12) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       fir.store %arg4 to %3 : !fir.ref<i32>
       %14 = fir.load %7 : !fir.ref<i32>
       %15 = fir.convert %14 : (i32) -> index
-      %16:2 = fir.do_loop %arg5 = %c1 to %15 step %c1 iter_args(%arg6 = %12) -> (index, i32) {
+      %16:2 = fir.do_loop %arg5 = %c1 to %15 step %c1 iter_args(%arg6 = %12) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
         fir.store %arg6 to %5 : !fir.ref<i32>
         %20 = fir.load %9 : !fir.ref<f64>
         %21 = fir.load %5 : !fir.ref<i32>
@@ -729,7 +729,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:           %[[VAL_15:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
 // CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (i32) -> index
 // CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_3]] : (index) -> i32
-// CHECK:           %[[VAL_18:.*]]:2 = fir.do_loop %[[VAL_19:.*]] = %[[VAL_3]] to %[[VAL_16]] step %[[VAL_3]] iter_args(%[[VAL_20:.*]] = %[[VAL_17]]) -> (index, i32) {
+// CHECK:           %[[VAL_18:.*]]:2 = fir.do_loop %[[VAL_19:.*]] = %[[VAL_3]] to %[[VAL_16]] step %[[VAL_3]] iter_args(%[[VAL_20:.*]] = %[[VAL_17]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             fir.store %[[VAL_20]] to %[[VAL_8]] : !fir.ref<i32>
 // CHECK:             %[[VAL_21:.*]] = fir.load %[[VAL_12]] : !fir.ref<i32>
 // CHECK:             %[[VAL_22:.*]] = fir.convert %[[VAL_21]] : (i32) -> index
@@ -742,7 +742,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:             %[[VAL_29:.*]]:2 = fir.if %[[VAL_28]] -> (index, i32) {
 // CHECK:               %[[VAL_30:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.array<?x?xf64>>) -> !fir.box<!fir.array<?xf64>>
 // CHECK:               %[[VAL_31:.*]] = fir.box_addr %[[VAL_30]] : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
-// CHECK:               %[[VAL_32:.*]]:2 = fir.do_loop %[[VAL_33:.*]] = %[[VAL_3]] to %[[VAL_22]] step %[[VAL_3]] iter_args(%[[VAL_34:.*]] = %[[VAL_17]]) -> (index, i32) {
+// CHECK:               %[[VAL_32:.*]]:2 = fir.do_loop %[[VAL_33:.*]] = %[[VAL_3]] to %[[VAL_22]] step %[[VAL_3]] iter_args(%[[VAL_34:.*]] = %[[VAL_17]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:                 fir.store %[[VAL_34]] to %[[VAL_10]] : !fir.ref<i32>
 // CHECK:                 %[[VAL_35:.*]] = fir.load %[[VAL_14]] : !fir.ref<f64>
 // CHECK:                 %[[VAL_36:.*]] = fir.load %[[VAL_10]] : !fir.ref<i32>
@@ -770,7 +770,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:               }
 // CHECK:               fir.result %[[VAL_56:.*]]#0, %[[VAL_56]]#1 : index, i32
 // CHECK:             } else {
-// CHECK:               %[[VAL_57:.*]]:2 = fir.do_loop %[[VAL_58:.*]] = %[[VAL_3]] to %[[VAL_22]] step %[[VAL_3]] iter_args(%[[VAL_59:.*]] = %[[VAL_17]]) -> (index, i32) {
+// CHECK:               %[[VAL_57:.*]]:2 = fir.do_loop %[[VAL_58:.*]] = %[[VAL_3]] to %[[VAL_22]] step %[[VAL_3]] iter_args(%[[VAL_59:.*]] = %[[VAL_17]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:                 fir.store %[[VAL_59]] to %[[VAL_10]] : !fir.ref<i32>
 // CHECK:                 %[[VAL_60:.*]] = fir.load %[[VAL_14]] : !fir.ref<f64>
 // CHECK:                 %[[VAL_61:.*]] = fir.load %[[VAL_10]] : !fir.ref<i32>
@@ -820,16 +820,16 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
     %13 = fir.load %10 : !fir.ref<i32>
     %14 = fir.convert %13 : (i32) -> index
     %15 = fir.convert %c1 : (index) -> i32
-    %16:2 = fir.do_loop %arg4 = %c1 to %14 step %c1 iter_args(%arg5 = %15) -> (index, i32) {
+    %16:2 = fir.do_loop %arg4 = %c1 to %14 step %c1 iter_args(%arg5 = %15) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       fir.store %arg5 to %7 : !fir.ref<i32>
       %17 = fir.load %9 : !fir.ref<i32>
       %18 = fir.convert %17 : (i32) -> index
-      %19:2 = fir.do_loop %arg6 = %c1 to %18 step %c1 iter_args(%arg7 = %15) -> (index, i32) {
+      %19:2 = fir.do_loop %arg6 = %c1 to %18 step %c1 iter_args(%arg7 = %15) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
         fir.store %arg7 to %5 : !fir.ref<i32>
         %23 = fir.load %8 : !fir.ref<i32>
         %24 = fir.convert %23 : (i32) -> index
         %25 = fir.convert %c0 : (index) -> i32
-        %26:2 = fir.do_loop %arg8 = %c0 to %24 step %c1 iter_args(%arg9 = %25) -> (index, i32) {
+        %26:2 = fir.do_loop %arg8 = %c0 to %24 step %c1 iter_args(%arg9 = %25) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
           fir.store %arg9 to %3 : !fir.ref<i32>
           %30 = fir.load %12 : !fir.ref<f64>
           %31 = fir.load %3 : !fir.ref<i32>
@@ -887,11 +887,11 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:           %[[VAL_20:.*]] = fir.load %[[VAL_17]] : !fir.ref<i32>
 // CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i32) -> index
 // CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_5]] : (index) -> i32
-// CHECK:           %[[VAL_23:.*]]:2 = fir.do_loop %[[VAL_24:.*]] = %[[VAL_5]] to %[[VAL_21]] step %[[VAL_5]] iter_args(%[[VAL_25:.*]] = %[[VAL_22]]) -> (index, i32) {
+// CHECK:           %[[VAL_23:.*]]:2 = fir.do_loop %[[VAL_24:.*]] = %[[VAL_5]] to %[[VAL_21]] step %[[VAL_5]] iter_args(%[[VAL_25:.*]] = %[[VAL_22]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             fir.store %[[VAL_25]] to %[[VAL_14]] : !fir.ref<i32>
 // CHECK:             %[[VAL_26:.*]] = fir.load %[[VAL_16]] : !fir.ref<i32>
 // CHECK:             %[[VAL_27:.*]] = fir.convert %[[VAL_26]] : (i32) -> index
-// CHECK:             %[[VAL_28:.*]]:2 = fir.do_loop %[[VAL_29:.*]] = %[[VAL_5]] to %[[VAL_27]] step %[[VAL_5]] iter_args(%[[VAL_30:.*]] = %[[VAL_22]]) -> (index, i32) {
+// CHECK:             %[[VAL_28:.*]]:2 = fir.do_loop %[[VAL_29:.*]] = %[[VAL_5]] to %[[VAL_27]] step %[[VAL_5]] iter_args(%[[VAL_30:.*]] = %[[VAL_22]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:               fir.store %[[VAL_30]] to %[[VAL_12]] : !fir.ref<i32>
 // CHECK:               %[[VAL_31:.*]] = fir.load %[[VAL_15]] : !fir.ref<i32>
 // CHECK:               %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (i32) -> index
@@ -907,7 +907,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:               %[[VAL_42:.*]]:2 = fir.if %[[VAL_41]] -> (index, i32) {
 // CHECK:                 %[[VAL_43:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x?x?xf64>>) -> !fir.box<!fir.array<?xf64>>
 // CHECK:                 %[[VAL_44:.*]] = fir.box_addr %[[VAL_43]] : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
-// CHECK:                 %[[VAL_45:.*]]:2 = fir.do_loop %[[VAL_46:.*]] = %[[VAL_4]] to %[[VAL_32]] step %[[VAL_5]] iter_args(%[[VAL_47:.*]] = %[[VAL_33]]) -> (index, i32) {
+// CHECK:                 %[[VAL_45:.*]]:2 = fir.do_loop %[[VAL_46:.*]] = %[[VAL_4]] to %[[VAL_32]] step %[[VAL_5]] iter_args(%[[VAL_47:.*]] = %[[VAL_33]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:                   fir.store %[[VAL_47]] to %[[VAL_10]] : !fir.ref<i32>
 // CHECK:                   %[[VAL_48:.*]] = fir.load %[[VAL_19]] : !fir.ref<f64>
 // CHECK:                   %[[VAL_49:.*]] = fir.load %[[VAL_10]] : !fir.ref<i32>
@@ -942,7 +942,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:                 }
 // CHECK:                 fir.result %[[VAL_76:.*]]#0, %[[VAL_76]]#1 : index, i32
 // CHECK:               } else {
-// CHECK:                 %[[VAL_77:.*]]:2 = fir.do_loop %[[VAL_78:.*]] = %[[VAL_4]] to %[[VAL_32]] step %[[VAL_5]] iter_args(%[[VAL_79:.*]] = %[[VAL_33]]) -> (index, i32) {
+// CHECK:                 %[[VAL_77:.*]]:2 = fir.do_loop %[[VAL_78:.*]] = %[[VAL_4]] to %[[VAL_32]] step %[[VAL_5]] iter_args(%[[VAL_79:.*]] = %[[VAL_33]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:                   fir.store %[[VAL_79]] to %[[VAL_10]] : !fir.ref<i32>
 // CHECK:                   %[[VAL_80:.*]] = fir.load %[[VAL_19]] : !fir.ref<f64>
 // CHECK:                   %[[VAL_81:.*]] = fir.load %[[VAL_10]] : !fir.ref<i32>
@@ -1017,14 +1017,14 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
     %31 = arith.subi %30, %c1_i32 : i32
     %32 = fir.convert %31 : (i32) -> index
     %33 = fir.convert %29 : (index) -> i32
-    %34:2 = fir.do_loop %arg10 = %29 to %32 step %c1 iter_args(%arg11 = %33) -> (index, i32) {
+    %34:2 = fir.do_loop %arg10 = %29 to %32 step %c1 iter_args(%arg11 = %33) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       fir.store %arg11 to %6 : !fir.ref<i32>
       %35 = fir.load %4 : !fir.ref<i32>
       %36 = fir.convert %35 : (i32) -> index
       %37 = fir.load %3 : !fir.ref<i32>
       %38 = fir.convert %37 : (i32) -> index
       %39 = fir.convert %36 : (index) -> i32
-      %40:2 = fir.do_loop %arg12 = %36 to %38 step %c1 iter_args(%arg13 = %39) -> (index, i32) {
+      %40:2 = fir.do_loop %arg12 = %36 to %38 step %c1 iter_args(%arg13 = %39) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
         fir.store %arg13 to %1 : !fir.ref<i32>
         %45 = fir.load %14 : !fir.ref<i32>
         %46 = fir.convert %45 : (i32) -> index
@@ -1032,7 +1032,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
         %48 = arith.subi %47, %c1_i32 : i32
         %49 = fir.convert %48 : (i32) -> index
         %50 = fir.convert %46 : (index) -> i32
-        %51:2 = fir.do_loop %arg14 = %46 to %49 step %c1 iter_args(%arg15 = %50) -> (index, i32) {
+        %51:2 = fir.do_loop %arg14 = %46 to %49 step %c1 iter_args(%arg15 = %50) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
           fir.store %arg15 to %11 : !fir.ref<i32>
           %56 = fir.load %11 : !fir.ref<i32>
           %57 = fir.convert %56 : (i32) -> i64
@@ -1127,14 +1127,14 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:           %[[VAL_43:.*]] = arith.subi %[[VAL_42]], %[[VAL_10]] : i32
 // CHECK:           %[[VAL_44:.*]] = fir.convert %[[VAL_43]] : (i32) -> index
 // CHECK:           %[[VAL_45:.*]] = fir.convert %[[VAL_41]] : (index) -> i32
-// CHECK:           %[[VAL_46:.*]]:2 = fir.do_loop %[[VAL_47:.*]] = %[[VAL_41]] to %[[VAL_44]] step %[[VAL_11]] iter_args(%[[VAL_48:.*]] = %[[VAL_45]]) -> (index, i32) {
+// CHECK:           %[[VAL_46:.*]]:2 = fir.do_loop %[[VAL_47:.*]] = %[[VAL_41]] to %[[VAL_44]] step %[[VAL_11]] iter_args(%[[VAL_48:.*]] = %[[VAL_45]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             fir.store %[[VAL_48]] to %[[VAL_18]] : !fir.ref<i32>
 // CHECK:             %[[VAL_49:.*]] = fir.load %[[VAL_16]] : !fir.ref<i32>
 // CHECK:             %[[VAL_50:.*]] = fir.convert %[[VAL_49]] : (i32) -> index
 // CHECK:             %[[VAL_51:.*]] = fir.load %[[VAL_15]] : !fir.ref<i32>
 // CHECK:             %[[VAL_52:.*]] = fir.convert %[[VAL_51]] : (i32) -> index
 // CHECK:             %[[VAL_53:.*]] = fir.convert %[[VAL_50]] : (index) -> i32
-// CHECK:             %[[VAL_54:.*]]:2 = fir.do_loop %[[VAL_55:.*]] = %[[VAL_50]] to %[[VAL_52]] step %[[VAL_11]] iter_args(%[[VAL_56:.*]] = %[[VAL_53]]) -> (index, i32) {
+// CHECK:             %[[VAL_54:.*]]:2 = fir.do_loop %[[VAL_55:.*]] = %[[VAL_50]] to %[[VAL_52]] step %[[VAL_11]] iter_args(%[[VAL_56:.*]] = %[[VAL_53]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:               fir.store %[[VAL_56]] to %[[VAL_13]] : !fir.ref<i32>
 // CHECK:               %[[VAL_57:.*]] = fir.load %[[VAL_26]] : !fir.ref<i32>
 // CHECK:               %[[VAL_58:.*]] = fir.convert %[[VAL_57]] : (i32) -> index
@@ -1153,7 +1153,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:               %[[VAL_71:.*]]:2 = fir.if %[[VAL_70]] -> (index, i32) {
 // CHECK:                 %[[VAL_72:.*]] = fir.convert %[[VAL_37]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.box<!fir.array<?xf32>>
 // CHECK:                 %[[VAL_73:.*]] = fir.box_addr %[[VAL_72]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-// CHECK:                 %[[VAL_74:.*]]:2 = fir.do_loop %[[VAL_75:.*]] = %[[VAL_58]] to %[[VAL_61]] step %[[VAL_11]] iter_args(%[[VAL_76:.*]] = %[[VAL_62]]) -> (index, i32) {
+// CHECK:                 %[[VAL_74:.*]]:2 = fir.do_loop %[[VAL_75:.*]] = %[[VAL_58]] to %[[VAL_61]] step %[[VAL_11]] iter_args(%[[VAL_76:.*]] = %[[VAL_62]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:                   fir.store %[[VAL_76]] to %[[VAL_23]] : !fir.ref<i32>
 // CHECK:                   %[[VAL_77:.*]] = fir.load %[[VAL_23]] : !fir.ref<i32>
 // CHECK:                   %[[VAL_78:.*]] = fir.convert %[[VAL_77]] : (i32) -> i64
@@ -1215,7 +1215,7 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:                 }
 // CHECK:                 fir.result %[[VAL_129:.*]]#0, %[[VAL_129]]#1 : index, i32
 // CHECK:               } else {
-// CHECK:                 %[[VAL_130:.*]]:2 = fir.do_loop %[[VAL_131:.*]] = %[[VAL_58]] to %[[VAL_61]] step %[[VAL_11]] iter_args(%[[VAL_132:.*]] = %[[VAL_62]]) -> (index, i32) {
+// CHECK:                 %[[VAL_130:.*]]:2 = fir.do_loop %[[VAL_131:.*]] = %[[VAL_58]] to %[[VAL_61]] step %[[VAL_11]] iter_args(%[[VAL_132:.*]] = %[[VAL_62]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:                   fir.store %[[VAL_132]] to %[[VAL_23]] : !fir.ref<i32>
 // CHECK:                   %[[VAL_133:.*]] = fir.load %[[VAL_23]] : !fir.ref<i32>
 // CHECK:                   %[[VAL_134:.*]] = fir.convert %[[VAL_133]] : (i32) -> i64
@@ -1288,7 +1288,7 @@ func.func @_QPtest_slice(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = 
   %c1 = arith.constant 1 : index
   %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_sliceEi"}
   %1 = fir.convert %c10 : (index) -> i32
-  %2:2 = fir.do_loop %arg1 = %c10 to %c100 step %c1 iter_args(%arg2 = %1) -> (index, i32) {
+  %2:2 = fir.do_loop %arg1 = %c10 to %c100 step %c1 iter_args(%arg2 = %1) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg2 to %0 : !fir.ref<i32>
     %3 = fir.load %0 : !fir.ref<i32>
     %4 = fir.convert %3 : (i32) -> i64
@@ -1301,7 +1301,7 @@ func.func @_QPtest_slice(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = 
     %10 = fir.convert %7 : (i32) -> index
     %11 = fir.slice %8, %9, %9, %c3, %c5, %c1 : (i64, index, index, index, index, index) -> !fir.slice<2>
     %12 = fir.undefined !fir.array<?x?xf32>
-    %13 = fir.do_loop %arg3 = %c0 to %c2 step %c1 unordered iter_args(%arg4 = %12) -> (!fir.array<?x?xf32>) {
+    %13 = fir.do_loop %arg3 = %c0 to %c2 step %c1 unordered iter_args(%arg4 = %12) -> (!fir.array<?x?xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       %18 = arith.addi %arg3, %c1 : index
       %19 = fir.array_coor %arg0 [%11] %10, %18 : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>, index, index) -> !fir.ref<f32>
       fir.store %cst to %19 : !fir.ref<f32>
@@ -1341,7 +1341,7 @@ func.func @_QPtest_independent_args(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bi
   %c1 = arith.constant 1 : index
   %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_independent_argsEi"}
   %1 = fir.convert %c10 : (index) -> i32
-  %2:2 = fir.do_loop %arg2 = %c10 to %c100 step %c1 iter_args(%arg3 = %1) -> (index, i32) {
+  %2:2 = fir.do_loop %arg2 = %c10 to %c100 step %c1 iter_args(%arg3 = %1) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg3 to %0 : !fir.ref<i32>
     %3 = fir.load %0 : !fir.ref<i32>
     %4 = fir.convert %3 : (i32) -> i64
@@ -1354,7 +1354,7 @@ func.func @_QPtest_independent_args(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bi
     %10 = fir.convert %7 : (i32) -> index
     %11 = fir.slice %8, %9, %9, %c3, %c5, %c1 : (i64, index, index, index, index, index) -> !fir.slice<2>
     %12 = fir.undefined !fir.array<?x?xf32>
-    %13 = fir.do_loop %arg4 = %c0 to %c2 step %c1 unordered iter_args(%arg5 = %12) -> (!fir.array<?x?xf32>) {
+    %13 = fir.do_loop %arg4 = %c0 to %c2 step %c1 unordered iter_args(%arg5 = %12) -> (!fir.array<?x?xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       %18 = arith.addi %arg4, %c1 : index
       %19 = fir.array_coor %arg1 [%11] %10, %18 : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>, index, index) -> !fir.ref<f32>
       fir.store %cst to %19 : !fir.ref<f32>
@@ -1400,14 +1400,14 @@ func.func @_QPtest_loop_nest(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
   %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_loop_nestEi"}
   %1 = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFtest_loop_nestEj"}
   %2 = fir.convert %c10 : (index) -> i32
-  %3:2 = fir.do_loop %arg1 = %c10 to %c100 step %c1 iter_args(%arg2 = %2) -> (index, i32) {
+  %3:2 = fir.do_loop %arg1 = %c10 to %c100 step %c1 iter_args(%arg2 = %2) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg2 to %0 : !fir.ref<i32>
     %4 = fir.load %0 : !fir.ref<i32>
     %5 = fir.convert %4 : (i32) -> i64
     %6 = arith.subi %5, %c1_i64 : i64
     %7 = fir.coordinate_of %arg0, %6 : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
     fir.store %cst_0 to %7 : !fir.ref<f32>
-    %8:2 = fir.do_loop %arg3 = %c10 to %c100 step %c1 iter_args(%arg4 = %2) -> (index, i32) {
+    %8:2 = fir.do_loop %arg3 = %c10 to %c100 step %c1 iter_args(%arg4 = %2) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       fir.store %arg4 to %1 : !fir.ref<i32>
       %13 = fir.load %1 : !fir.ref<i32>
       %14 = fir.convert %13 : (i32) -> i64
@@ -1451,7 +1451,7 @@ func.func @sum1drebox(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"},
   %4 = fir.convert %3 : (i32) -> index
   %c1 = arith.constant 1 : index
   %5 = fir.convert %2 : (index) -> i32
-  %6:2 = fir.do_loop %arg2 = %2 to %4 step %c1 iter_args(%arg3 = %5) -> (index, i32) {
+  %6:2 = fir.do_loop %arg2 = %2 to %4 step %c1 iter_args(%arg3 = %5) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     // rebox is not dominating the loop.
     %rebox = fir.rebox %decl : (!fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>>
     fir.store %arg3 to %0 : !fir.ref<i32>
@@ -1501,7 +1501,7 @@ func.func @minloc(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "x"}, %ar
   fir.store %c0_i32 to %0 : !fir.ref<i32>
   %10:3 = fir.box_dims %7, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
   %11 = arith.subi %10#1, %c1 : index
-  %12 = fir.do_loop %arg2 = %c0 to %11 step %c1 iter_args(%arg3 = %c2147483647_i32) -> (i32) {
+  %12 = fir.do_loop %arg2 = %c0 to %11 step %c1 iter_args(%arg3 = %c2147483647_i32) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %18 = arith.addi %arg2, %c1 : index
     %19 = fir.array_coor %3 %18 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %20 = fir.load %19 : !fir.ref<i32>
@@ -1537,7 +1537,7 @@ func.func @minloc(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "x"}, %ar
   }
   %15 = fir.slice %c5, %c5, %c1 : (index, index, index) -> !fir.slice<1>
   %16 = fir.rebox %7 [%15] : (!fir.box<!fir.array<?xi32>>, !fir.slice<1>) -> !fir.box<!fir.array<1xi32>>
-  fir.do_loop %arg2 = %c1 to %c1 step %c1 unordered {
+  fir.do_loop %arg2 = %c1 to %c1 step %c1 unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %18 = fir.array_coor %1(%8) %arg2 : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
     %19 = fir.load %18 : !fir.ref<i32>
     %20 = fir.array_coor %16 %arg2 : (!fir.box<!fir.array<1xi32>>, index) -> !fir.ref<i32>
@@ -1570,7 +1570,7 @@ func.func @_QPtest_real10(%arg0: !fir.box<!fir.array<?x?xf80>> {fir.bindc_name =
   %7 = fir.declare %6 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_real10ECxdp"} : (!fir.ref<i32>) -> !fir.ref<i32>
   fir.store %cst to %5 : !fir.ref<f80>
   %8 = fir.convert %c1 : (index) -> i32
-  %9:2 = fir.do_loop %arg1 = %c1 to %c10 step %c1 iter_args(%arg2 = %8) -> (index, i32) {
+  %9:2 = fir.do_loop %arg1 = %c1 to %c10 step %c1 iter_args(%arg2 = %8) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg2 to %3 : !fir.ref<i32>
     %11 = fir.load %5 : !fir.ref<f80>
     %12 = fir.load %3 : !fir.ref<i32>
@@ -1614,7 +1614,7 @@ func.func @_QPtest_complex10(%arg0: !fir.box<!fir.array<?x?x!fir.complex<10>>> {
   %10 = fir.insert_value %9, %cst, [1 : index] : (!fir.complex<10>, f80) -> !fir.complex<10>
   fir.store %10 to %5 : !fir.ref<!fir.complex<10>>
   %11 = fir.convert %c1 : (index) -> i32
-  %12:2 = fir.do_loop %arg1 = %c1 to %c10 step %c1 iter_args(%arg2 = %11) -> (index, i32) {
+  %12:2 = fir.do_loop %arg1 = %c1 to %c10 step %c1 iter_args(%arg2 = %11) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg2 to %3 : !fir.ref<i32>
     %14 = fir.load %5 : !fir.ref<!fir.complex<10>>
     %15 = fir.load %3 : !fir.ref<i32>

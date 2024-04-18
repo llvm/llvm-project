@@ -138,7 +138,7 @@ subroutine wsloop_variable_sub
 !CHECK:               %[[VAL_33:.*]] = fir.load %[[VAL_15]]#0 : !fir.ref<i32>
 !CHECK:               %[[VAL_34:.*]] = fir.convert %[[VAL_33]] : (i32) -> index
 !CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_30]] : (index) -> i64
-!CHECK:               %[[VAL_36:.*]]:2 = fir.do_loop %[[VAL_37:.*]] = %[[VAL_30]] to %[[VAL_32]] step %[[VAL_34]] iter_args(%[[VAL_38:.*]] = %[[VAL_35]]) -> (index, i64) {
+!CHECK:               %[[VAL_36:.*]]:2 = fir.do_loop %[[VAL_37:.*]] = %[[VAL_30]] to %[[VAL_32]] step %[[VAL_34]] iter_args(%[[VAL_38:.*]] = %[[VAL_35]]) -> (index, i64) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 !CHECK:                 fir.store %[[VAL_38]] to %[[VAL_17]]#1 : !fir.ref<i64>
 !CHECK:                 %[[VAL_39:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i16>
 !CHECK:                 %[[VAL_40:.*]] = fir.convert %[[VAL_39]] : (i16) -> i64

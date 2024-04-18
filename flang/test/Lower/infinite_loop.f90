@@ -94,7 +94,7 @@ end subroutine
 ! CHECK:  %[[J_LB:.*]] = fir.convert %[[C1_INDEX]] : (index) -> i32
 ! CHECK:  %[[J_FINAL:.*]]:2 = fir.do_loop %[[J:[^ ]*]] =
 ! CHECK-SAME: %[[C1_INDEX]] to %[[C10_INDEX]] step %[[C1_1]]
-! CHECK-SAME: iter_args(%[[J_IV:.*]] = %[[J_LB]]) -> (index, i32) {
+! CHECK-SAME: iter_args(%[[J_IV:.*]] = %[[J_LB]]) -> (index, i32) {{.*}} {
 ! CHECK:    fir.store %[[J_IV]] to %[[J_REF]] : !fir.ref<i32>
 ! CHECK:    %[[J_NEXT:.*]] = arith.addi %[[J]], %[[C1_1]] : index
 ! CHECK:    %[[J_STEPCAST:.*]] = fir.convert %[[C1_1]] : (index) -> i32
@@ -127,7 +127,7 @@ end subroutine
 ! NSW:  %[[J_LB:.*]] = fir.convert %[[C1_INDEX]] : (index) -> i32
 ! NSW:  %[[J_FINAL:.*]]:2 = fir.do_loop %[[J:[^ ]*]] =
 ! NSW-SAME: %[[C1_INDEX]] to %[[C10_INDEX]] step %[[C1_1]]
-! NSW-SAME: iter_args(%[[J_IV:.*]] = %[[J_LB]]) -> (index, i32) {
+! NSW-SAME: iter_args(%[[J_IV:.*]] = %[[J_LB]]) -> (index, i32) {{.*}} {
 ! NSW:    fir.store %[[J_IV]] to %[[J_REF]] : !fir.ref<i32>
 ! NSW:    %[[J_NEXT:.*]] = arith.addi %[[J]], %[[C1_1]] overflow<nsw> : index
 ! NSW:    %[[J_STEPCAST:.*]] = fir.convert %[[C1_1]] : (index) -> i32

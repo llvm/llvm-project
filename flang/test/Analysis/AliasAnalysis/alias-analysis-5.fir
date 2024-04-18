@@ -21,7 +21,7 @@ func.func @_QPtest1(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "arraya
   %1 = fir.load %arg3 : !fir.ref<i32>
   %2 = fir.convert %1 : (i32) -> index
   %3 = fir.convert %c1 : (index) -> i32
-  %4:2 = fir.do_loop %arg4 = %c1 to %2 step %c1 iter_args(%arg5 = %3) -> (index, i32) {
+  %4:2 = fir.do_loop %arg4 = %c1 to %2 step %c1 iter_args(%arg5 = %3) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg5 to %0 : !fir.ref<i32>
     %5 = fir.load %0 : !fir.ref<i32>
     %6 = fir.convert %5 : (i32) -> i64
@@ -64,7 +64,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "arraya
   %1 = fir.load %arg3 : !fir.ref<i32>
   %2 = fir.convert %1 : (i32) -> index
   %3 = fir.convert %c1 : (index) -> i32
-  %4:2 = fir.do_loop %arg4 = %c1 to %2 step %c1 iter_args(%arg5 = %3) -> (index, i32) {
+  %4:2 = fir.do_loop %arg4 = %c1 to %2 step %c1 iter_args(%arg5 = %3) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg5 to %0 : !fir.ref<i32>
     %5 = fir.load %0 : !fir.ref<i32>
     %6 = fir.convert %5 : (i32) -> i64
@@ -123,7 +123,7 @@ func.func @_QMtest4Ptest() {
   %5 = fir.load %3 : !fir.ref<i32>
   %6 = fir.convert %5 : (i32) -> index
   %7 = fir.convert %c1 : (index) -> i32
-  %8:2 = fir.do_loop %arg0 = %c1 to %6 step %c1 iter_args(%arg1 = %7) -> (index, i32) {
+  %8:2 = fir.do_loop %arg0 = %c1 to %6 step %c1 iter_args(%arg1 = %7) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg1 to %4 : !fir.ref<i32>
     %9 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %10:3 = fir.box_dims %9, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -192,7 +192,7 @@ func.func @_QMtest5Ptest() {
   %5 = fir.load %3 : !fir.ref<i32>
   %6 = fir.convert %5 : (i32) -> index
   %7 = fir.convert %c1 : (index) -> i32
-  %8:2 = fir.do_loop %arg0 = %c1 to %6 step %c1 iter_args(%arg1 = %7) -> (index, i32) {
+  %8:2 = fir.do_loop %arg0 = %c1 to %6 step %c1 iter_args(%arg1 = %7) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg1 to %4 : !fir.ref<i32>
     %9 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %10:3 = fir.box_dims %9, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -260,7 +260,7 @@ func.func @_QMtest6Ptest() {
   %5 = fir.load %3 : !fir.ref<i32>
   %6 = fir.convert %5 : (i32) -> index
   %7 = fir.convert %c1 : (index) -> i32
-  %8:2 = fir.do_loop %arg0 = %c1 to %6 step %c1 iter_args(%arg1 = %7) -> (index, i32) {
+  %8:2 = fir.do_loop %arg0 = %c1 to %6 step %c1 iter_args(%arg1 = %7) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg1 to %4 : !fir.ref<i32>
     %9 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %10:3 = fir.box_dims %9, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -329,7 +329,7 @@ func.func @_QMtest7Ptest() {
   %5 = fir.load %3 : !fir.ref<i32>
   %6 = fir.convert %5 : (i32) -> index
   %7 = fir.convert %c1 : (index) -> i32
-  %8:2 = fir.do_loop %arg0 = %c1 to %6 step %c1 iter_args(%arg1 = %7) -> (index, i32) {
+  %8:2 = fir.do_loop %arg0 = %c1 to %6 step %c1 iter_args(%arg1 = %7) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg1 to %4 : !fir.ref<i32>
     %9 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %10:3 = fir.box_dims %9, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -394,7 +394,7 @@ func.func @_QMtest8Ptest() {
   %5 = fir.load %3 : !fir.ref<i32>
   %6 = fir.convert %5 : (i32) -> index
   %7 = fir.convert %c1 : (index) -> i32
-  %8:2 = fir.do_loop %arg0 = %c1 to %6 step %c1 iter_args(%arg1 = %7) -> (index, i32) {
+  %8:2 = fir.do_loop %arg0 = %c1 to %6 step %c1 iter_args(%arg1 = %7) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg1 to %4 : !fir.ref<i32>
     %9 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %10:3 = fir.box_dims %9, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -457,7 +457,7 @@ func.func @_QMtest9Ptest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a
   %4 = fir.load %2 : !fir.ref<i32>
   %5 = fir.convert %4 : (i32) -> index
   %6 = fir.convert %c1 : (index) -> i32
-  %7:2 = fir.do_loop %arg1 = %c1 to %5 step %c1 iter_args(%arg2 = %6) -> (index, i32) {
+  %7:2 = fir.do_loop %arg1 = %c1 to %5 step %c1 iter_args(%arg2 = %6) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg2 to %3 : !fir.ref<i32>
     %8 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %9:3 = fir.box_dims %8, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -520,7 +520,7 @@ func.func @_QMtest10Ptest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "
   %4 = fir.load %2 : !fir.ref<i32>
   %5 = fir.convert %4 : (i32) -> index
   %6 = fir.convert %c1 : (index) -> i32
-  %7:2 = fir.do_loop %arg1 = %c1 to %5 step %c1 iter_args(%arg2 = %6) -> (index, i32) {
+  %7:2 = fir.do_loop %arg1 = %c1 to %5 step %c1 iter_args(%arg2 = %6) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg2 to %3 : !fir.ref<i32>
     %8 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %9:3 = fir.box_dims %8, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -583,7 +583,7 @@ func.func @_QMtest11Ptest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "
   %4 = fir.load %2 : !fir.ref<i32>
   %5 = fir.convert %4 : (i32) -> index
   %6 = fir.convert %c1 : (index) -> i32
-  %7:2 = fir.do_loop %arg1 = %c1 to %5 step %c1 iter_args(%arg2 = %6) -> (index, i32) {
+  %7:2 = fir.do_loop %arg1 = %c1 to %5 step %c1 iter_args(%arg2 = %6) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg2 to %3 : !fir.ref<i32>
     %8 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %9:3 = fir.box_dims %8, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -643,7 +643,7 @@ func.func @_QMtest12Ptest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "
   %4 = fir.load %2 : !fir.ref<i32>
   %5 = fir.convert %4 : (i32) -> index
   %6 = fir.convert %c1 : (index) -> i32
-  %7:2 = fir.do_loop %arg1 = %c1 to %5 step %c1 iter_args(%arg2 = %6) -> (index, i32) {
+  %7:2 = fir.do_loop %arg1 = %c1 to %5 step %c1 iter_args(%arg2 = %6) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg2 to %3 : !fir.ref<i32>
     %8 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
     %9:3 = fir.box_dims %8, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)

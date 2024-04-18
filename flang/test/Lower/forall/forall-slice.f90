@@ -21,10 +21,10 @@
 ! CHECK:         %[[VAL_16:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_17:.*]] = fir.shape %[[VAL_4]], %[[VAL_5]] : (index, index) -> !fir.shape<2>
 ! CHECK:         %[[VAL_18:.*]] = fir.array_load %[[VAL_6]](%[[VAL_17]]) : (!fir.ref<!fir.array<10x10x!fir.type<_QFtest_forall_with_sliceTt{arr:!fir.array<11xi32>}>>>, !fir.shape<2>) -> !fir.array<10x10x!fir.type<_QFtest_forall_with_sliceTt{arr:!fir.array<11xi32>}>>
-! CHECK:         %[[VAL_19:.*]] = fir.do_loop %[[VAL_20:.*]] = %[[VAL_8]] to %[[VAL_10]] step %[[VAL_11]] unordered iter_args(%[[VAL_21:.*]] = %[[VAL_18]]) -> (!fir.array<10x10x!fir.type<_QFtest_forall_with_sliceTt{arr:!fir.array<11xi32>}>>) {
+! CHECK:         %[[VAL_19:.*]] = fir.do_loop %[[VAL_20:.*]] = %[[VAL_8]] to %[[VAL_10]] step %[[VAL_11]] unordered iter_args(%[[VAL_21:.*]] = %[[VAL_18]]) -> (!fir.array<10x10x!fir.type<_QFtest_forall_with_sliceTt{arr:!fir.array<11xi32>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_20]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_22]] to %[[VAL_3]] : !fir.ref<i32>
-! CHECK:           %[[VAL_23:.*]] = fir.do_loop %[[VAL_24:.*]] = %[[VAL_13]] to %[[VAL_15]] step %[[VAL_16]] unordered iter_args(%[[VAL_25:.*]] = %[[VAL_21]]) -> (!fir.array<10x10x!fir.type<_QFtest_forall_with_sliceTt{arr:!fir.array<11xi32>}>>) {
+! CHECK:           %[[VAL_23:.*]] = fir.do_loop %[[VAL_24:.*]] = %[[VAL_13]] to %[[VAL_15]] step %[[VAL_16]] unordered iter_args(%[[VAL_25:.*]] = %[[VAL_21]]) -> (!fir.array<10x10x!fir.type<_QFtest_forall_with_sliceTt{arr:!fir.array<11xi32>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_26:.*]] = fir.convert %[[VAL_24]] : (index) -> i32
 ! CHECK:             fir.store %[[VAL_26]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_27:.*]] = arith.constant 1 : index
@@ -57,7 +57,7 @@
 ! CHECK:             %[[VAL_53:.*]] = arith.constant 1 : index
 ! CHECK:             %[[VAL_54:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_55:.*]] = arith.subi %[[VAL_52]], %[[VAL_53]] : index
-! CHECK:             %[[VAL_56:.*]] = fir.do_loop %[[VAL_57:.*]] = %[[VAL_54]] to %[[VAL_55]] step %[[VAL_53]] unordered iter_args(%[[VAL_58:.*]] = %[[VAL_25]]) -> (!fir.array<10x10x!fir.type<_QFtest_forall_with_sliceTt{arr:!fir.array<11xi32>}>>) {
+! CHECK:             %[[VAL_56:.*]] = fir.do_loop %[[VAL_57:.*]] = %[[VAL_54]] to %[[VAL_55]] step %[[VAL_53]] unordered iter_args(%[[VAL_58:.*]] = %[[VAL_25]]) -> (!fir.array<10x10x!fir.type<_QFtest_forall_with_sliceTt{arr:!fir.array<11xi32>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:               %[[VAL_60:.*]] = arith.subi %[[VAL_40]], %[[VAL_37]] : index
 ! CHECK:               %[[VAL_61:.*]] = arith.muli %[[VAL_57]], %[[VAL_43]] : index
 ! CHECK:               %[[VAL_62:.*]] = arith.addi %[[VAL_60]], %[[VAL_61]] : index

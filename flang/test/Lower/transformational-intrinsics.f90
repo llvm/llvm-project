@@ -170,8 +170,8 @@ end subroutine
   ! CHECK:         %[[VAL_42:.*]] = arith.constant 0 : index
   ! CHECK:         %[[VAL_43:.*]] = arith.subi %[[VAL_6]], %[[VAL_41]] : index
   ! CHECK:         %[[VAL_44:.*]] = arith.subi %[[VAL_7]], %[[VAL_41]] : index
-  ! CHECK:         %[[VAL_45:.*]] = fir.do_loop %[[VAL_46:.*]] = %[[VAL_42]] to %[[VAL_44]] step %[[VAL_41]] unordered iter_args(%[[VAL_47:.*]] = %[[VAL_16]]) -> (!fir.array<3x3xi32>) {
-  ! CHECK:           %[[VAL_48:.*]] = fir.do_loop %[[VAL_49:.*]] = %[[VAL_42]] to %[[VAL_43]] step %[[VAL_41]] unordered iter_args(%[[VAL_50:.*]] = %[[VAL_47]]) -> (!fir.array<3x3xi32>) {
+  ! CHECK:         %[[VAL_45:.*]] = fir.do_loop %[[VAL_46:.*]] = %[[VAL_42]] to %[[VAL_44]] step %[[VAL_41]] unordered iter_args(%[[VAL_47:.*]] = %[[VAL_16]]) -> (!fir.array<3x3xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
+  ! CHECK:           %[[VAL_48:.*]] = fir.do_loop %[[VAL_49:.*]] = %[[VAL_42]] to %[[VAL_43]] step %[[VAL_41]] unordered iter_args(%[[VAL_50:.*]] = %[[VAL_47]]) -> (!fir.array<3x3xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   ! CHECK:             %[[VAL_51:.*]] = fir.array_fetch %[[VAL_40]], %[[VAL_49]], %[[VAL_46]] : (!fir.array<?x?xi32>, index, index) -> i32
   ! CHECK:             %[[VAL_52:.*]] = fir.array_update %[[VAL_50]], %[[VAL_51]], %[[VAL_49]], %[[VAL_46]] : (!fir.array<3x3xi32>, i32, index, index) -> !fir.array<3x3xi32>
   ! CHECK:             fir.result %[[VAL_52]] : !fir.array<3x3xi32>
@@ -208,7 +208,7 @@ end subroutine
   ! CHECK:         %[[VAL_78:.*]] = arith.constant 1 : index
   ! CHECK:         %[[VAL_79:.*]] = arith.constant 0 : index
   ! CHECK:         %[[VAL_80:.*]] = arith.subi %[[VAL_13]], %[[VAL_78]] : index
-  ! CHECK:         %[[VAL_81:.*]] = fir.do_loop %[[VAL_82:.*]] = %[[VAL_79]] to %[[VAL_80]] step %[[VAL_78]] unordered iter_args(%[[VAL_83:.*]] = %[[VAL_56]]) -> (!fir.array<6xi32>) {
+  ! CHECK:         %[[VAL_81:.*]] = fir.do_loop %[[VAL_82:.*]] = %[[VAL_79]] to %[[VAL_80]] step %[[VAL_78]] unordered iter_args(%[[VAL_83:.*]] = %[[VAL_56]]) -> (!fir.array<6xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   ! CHECK:           %[[VAL_84:.*]] = fir.array_fetch %[[VAL_77]], %[[VAL_82]] : (!fir.array<?xi32>, index) -> i32
   ! CHECK:           %[[VAL_85:.*]] = fir.array_update %[[VAL_83]], %[[VAL_84]], %[[VAL_82]] : (!fir.array<6xi32>, i32, index) -> !fir.array<6xi32>
   ! CHECK:           fir.result %[[VAL_85]] : !fir.array<6xi32>

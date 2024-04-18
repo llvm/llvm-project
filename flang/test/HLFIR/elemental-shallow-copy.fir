@@ -23,7 +23,7 @@ func.func @_QMtypesPtest() {
 // CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}> {bindc_name = ".result"}
 // CHECK:           %[[VAL_6:.*]] = fir.allocmem !fir.array<1x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>> {bindc_name = ".tmp.array", uniq_name = ""}
 // CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]](%{{.*}}) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<1x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<1x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.heap<!fir.array<1x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>)
-// CHECK:           fir.do_loop %[[VAL_10:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:           fir.do_loop %[[VAL_10:.*]] = %{{.*}} to %{{.*}} step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>) -> (!fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>)
 // CHECK:             %[[VAL_15:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_10]])  : (!fir.heap<!fir.array<1x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, index) -> !fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>
 // CHECK:             %[[VAL_16:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>

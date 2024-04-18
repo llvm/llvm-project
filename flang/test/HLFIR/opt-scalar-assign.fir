@@ -19,8 +19,8 @@ func.func @_QPtest1() {
 // CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.array<11x13xf32> {bindc_name = "x", uniq_name = "_QFtest1Ex"}
 // CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_2]], %[[VAL_3]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_5]]) {uniq_name = "_QFtest1Ex"} : (!fir.ref<!fir.array<11x13xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<11x13xf32>>, !fir.ref<!fir.array<11x13xf32>>)
-// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_0]] to %[[VAL_3]] step %[[VAL_0]] unordered {
-// CHECK:             fir.do_loop %[[VAL_8:.*]] = %[[VAL_0]] to %[[VAL_2]] step %[[VAL_0]] unordered {
+// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_0]] to %[[VAL_3]] step %[[VAL_0]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+// CHECK:             fir.do_loop %[[VAL_8:.*]] = %[[VAL_0]] to %[[VAL_2]] step %[[VAL_0]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:               %[[VAL_9:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_8]], %[[VAL_7]])  : (!fir.ref<!fir.array<11x13xf32>>, index, index) -> !fir.ref<f32>
 // CHECK:               hlfir.assign %[[VAL_1]] to %[[VAL_9]] : f32, !fir.ref<f32>
 // CHECK:             }
@@ -42,8 +42,8 @@ func.func @_QPtest2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "x"})
 // CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtest2Ex"} : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
 // CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_4]]#0, %[[VAL_2]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_6:.*]]:3 = fir.box_dims %[[VAL_4]]#0, %[[VAL_1]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
-// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_1]] to %[[VAL_6]]#1 step %[[VAL_1]] unordered {
-// CHECK:             fir.do_loop %[[VAL_8:.*]] = %[[VAL_1]] to %[[VAL_5]]#1 step %[[VAL_1]] unordered {
+// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_1]] to %[[VAL_6]]#1 step %[[VAL_1]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+// CHECK:             fir.do_loop %[[VAL_8:.*]] = %[[VAL_1]] to %[[VAL_5]]#1 step %[[VAL_1]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:               %[[VAL_9:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_8]], %[[VAL_7]])  : (!fir.box<!fir.array<?x?xi32>>, index, index) -> !fir.ref<i32>
 // CHECK:               hlfir.assign %[[VAL_3]] to %[[VAL_9]] : i32, !fir.ref<i32>
 // CHECK:             }
@@ -68,7 +68,7 @@ func.func @_QPtest4(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<
 // CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_3]] : (i1) -> !fir.logical<4>
 // CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>>
 // CHECK:           %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_6]], %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>, index) -> (index, index, index)
-// CHECK:           fir.do_loop %[[VAL_8:.*]] = %[[VAL_1]] to %[[VAL_7]]#1 step %[[VAL_1]] unordered {
+// CHECK:           fir.do_loop %[[VAL_8:.*]] = %[[VAL_1]] to %[[VAL_7]]#1 step %[[VAL_1]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_9:.*]]:3 = fir.box_dims %[[VAL_6]], %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.logical<4>>>>, index) -> (index, index, index)
 // CHECK:             %[[VAL_10:.*]] = arith.subi %[[VAL_9]]#0, %[[VAL_1]] : index
 // CHECK:             %[[VAL_11:.*]] = arith.addi %[[VAL_8]], %[[VAL_10]] : index
@@ -92,7 +92,7 @@ func.func @_QPtest3(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir
 // CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest3Ex"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 // CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK:           %[[VAL_6:.*]]:3 = fir.box_dims %[[VAL_5]], %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_1]] to %[[VAL_6]]#1 step %[[VAL_1]] unordered {
+// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_1]] to %[[VAL_6]]#1 step %[[VAL_1]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_8:.*]]:3 = fir.box_dims %[[VAL_5]], %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 // CHECK:             %[[VAL_9:.*]] = arith.subi %[[VAL_8]]#0, %[[VAL_1]] : index
 // CHECK:             %[[VAL_10:.*]] = arith.addi %[[VAL_7]], %[[VAL_9]] : index
@@ -123,7 +123,7 @@ func.func @_QPtest5(%arg0: !fir.ref<!fir.array<77x!fir.complex<4>>> {fir.bindc_n
 // CHECK:           %[[VAL_6:.*]] = fir.undefined !fir.complex<4>
 // CHECK:           %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_2]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
 // CHECK:           %[[VAL_8:.*]] = fir.insert_value %[[VAL_7]], %[[VAL_2]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-// CHECK:           fir.do_loop %[[VAL_9:.*]] = %[[VAL_1]] to %[[VAL_3]] step %[[VAL_1]] unordered {
+// CHECK:           fir.do_loop %[[VAL_9:.*]] = %[[VAL_1]] to %[[VAL_3]] step %[[VAL_1]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_10:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_9]])  : (!fir.ref<!fir.array<77x!fir.complex<4>>>, index) -> !fir.ref<!fir.complex<4>>
 // CHECK:             hlfir.assign %[[VAL_8]] to %[[VAL_10]] : !fir.complex<4>, !fir.ref<!fir.complex<4>>
 // CHECK:           }

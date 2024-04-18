@@ -55,8 +55,8 @@ endprogram
 ! CHECK:           %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_6]] : (!fir.box<!fir.array<3x3xf64>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_8:.*]] = fir.shape_shift %[[VAL_5]]#0, %[[VAL_5]]#1, %[[VAL_7]]#0, %[[VAL_7]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_9]] to %[[VAL_7]]#1 step %[[VAL_9]] unordered {
-! CHECK:             fir.do_loop %[[VAL_11:.*]] = %[[VAL_9]] to %[[VAL_5]]#1 step %[[VAL_9]] unordered {
+! CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_9]] to %[[VAL_7]]#1 step %[[VAL_9]] unordered {{.*}} {
+! CHECK:             fir.do_loop %[[VAL_11:.*]] = %[[VAL_9]] to %[[VAL_5]]#1 step %[[VAL_9]] unordered {{.*}} {
 ! CHECK:               %[[VAL_12:.*]] = fir.array_coor %[[VAL_2]](%[[VAL_8]]) %[[VAL_11]], %[[VAL_10]] : (!fir.box<!fir.array<3x3xf64>>, !fir.shapeshift<2>, index, index) -> !fir.ref<f64>
 ! CHECK:               %[[VAL_13:.*]] = fir.array_coor %[[VAL_3]](%[[VAL_8]]) %[[VAL_11]], %[[VAL_10]] : (!fir.box<!fir.array<3x3xf64>>, !fir.shapeshift<2>, index, index) -> !fir.ref<f64>
 ! CHECK:               %[[VAL_14:.*]] = fir.load %[[VAL_12]] : !fir.ref<f64>

@@ -46,7 +46,7 @@ func.func @_QFPtest(%arg0: !fir.ref<!fir.array<4x7xi32>> {fir.bindc_name = "b"},
 // CHECK-NEXT:     %[[V8:.*]] = fir.shape %c7 : (index) -> !fir.shape<1>
 // CHECK-NEXT:     %[[V9:.*]] = hlfir.designate %[[V1]]#0 (%[[V7]], %c1:%c7:%c1)  shape %[[V8]] : (!fir.ref<!fir.array<4x7xi32>>, i64, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<7xi32>>
 // CHECK-NEXT:     %[[V10:.*]] = fir.load %[[V5]]#0 : !fir.ref<i32>
-// CHECK-NEXT:     %[[V11:.*]] = fir.do_loop %arg3 = %c1 to %c7 step %c1 iter_args(%arg4 = %c0_i32) -> (i32) {
+// CHECK-NEXT:     %[[V11:.*]] = fir.do_loop %arg3 = %c1 to %c7 step %c1 iter_args(%arg4 = %c0_i32) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NEXT:       %[[V13:.*]] = hlfir.designate %[[V9]] (%arg3)  : (!fir.box<!fir.array<7xi32>>, index) -> !fir.ref<i32>
 // CHECK-NEXT:       %[[V14:.*]] = fir.load %[[V13]] : !fir.ref<i32>
 // CHECK-NEXT:       %[[V15:.*]] = arith.cmpi sge, %[[V14]], %[[V10]] : i32
@@ -104,7 +104,7 @@ func.func @_QFPtest_kind2(%arg0: !fir.ref<!fir.array<4x7xi32>> {fir.bindc_name =
 // CHECK-NEXT:     %[[V8:.*]] = fir.shape %c7 : (index) -> !fir.shape<1>
 // CHECK-NEXT:     %[[V9:.*]] = hlfir.designate %[[V1]]#0 (%[[V7]], %c1:%c7:%c1)  shape %[[V8]] : (!fir.ref<!fir.array<4x7xi32>>, i64, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<7xi32>>
 // CHECK-NEXT:     %[[V10:.*]] = fir.load %[[V5]]#0 : !fir.ref<i32>
-// CHECK-NEXT:     %[[V11:.*]] = fir.do_loop %arg3 = %c1 to %c7 step %c1 iter_args(%arg4 = %c0_i16) -> (i16) {
+// CHECK-NEXT:     %[[V11:.*]] = fir.do_loop %arg3 = %c1 to %c7 step %c1 iter_args(%arg4 = %c0_i16) -> (i16) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NEXT:       %[[V13:.*]] = hlfir.designate %[[V9]] (%arg3)  : (!fir.box<!fir.array<7xi32>>, index) -> !fir.ref<i32>
 // CHECK-NEXT:       %[[V14:.*]] = fir.load %[[V13]] : !fir.ref<i32>
 // CHECK-NEXT:       %[[V15:.*]] = arith.cmpi sge, %[[V14]], %[[V10]] : i32
@@ -191,9 +191,9 @@ func.func @_QFPtest_multi(%arg0: !fir.ref<!fir.array<4x7x2xi32>> {fir.bindc_name
 // CHECK-NEXT:     %[[V5:.*]]:2 = hlfir.declare %arg2 {uniq_name = "_QFFtestEval"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK-NEXT:     %[[V6:.*]] = hlfir.designate %[[V1]]#0 (%c1:%c4:%c1, %c1:%c7:%c1, %c1:%c2:%c1)  shape %[[V0]] : (!fir.ref<!fir.array<4x7x2xi32>>, index, index, index, index, index, index, index, index, index, !fir.shape<3>) -> !fir.ref<!fir.array<4x7x2xi32>>
 // CHECK-NEXT:     %[[V7:.*]] = fir.load %[[V5]]#0 : !fir.ref<i32>
-// CHECK-NEXT:     %[[V8:.*]] = fir.do_loop %arg3 = %c1 to %c2 step %c1 iter_args(%arg4 = %c0_i32) -> (i32) {
-// CHECK-NEXT:       %[[V10:.*]] = fir.do_loop %arg5 = %c1 to %c7 step %c1 iter_args(%arg6 = %arg4) -> (i32) {
-// CHECK-NEXT:         %[[V11:.*]] = fir.do_loop %arg7 = %c1 to %c4 step %c1 iter_args(%arg8 = %arg6) -> (i32) {
+// CHECK-NEXT:     %[[V8:.*]] = fir.do_loop %arg3 = %c1 to %c2 step %c1 iter_args(%arg4 = %c0_i32) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
+// CHECK-NEXT:       %[[V10:.*]] = fir.do_loop %arg5 = %c1 to %c7 step %c1 iter_args(%arg6 = %arg4) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
+// CHECK-NEXT:         %[[V11:.*]] = fir.do_loop %arg7 = %c1 to %c4 step %c1 iter_args(%arg8 = %arg6) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NEXT:           %[[V12:.*]] = hlfir.designate %[[V6]] (%arg7, %arg5, %arg3)  : (!fir.ref<!fir.array<4x7x2xi32>>, index, index, index) -> !fir.ref<i32>
 // CHECK-NEXT:           %[[V13:.*]] = fir.load %[[V12]] : !fir.ref<i32>
 // CHECK-NEXT:           %[[V14:.*]] = arith.cmpi sge, %[[V13]], %[[V7]] : i32
@@ -249,7 +249,7 @@ func.func @_QFPtest_rec_sum(%arg0: !fir.ref<!fir.array<4x7xi32>> {fir.bindc_name
   return %14 : i32
 }
 // CHECK-LABEL:  func.func @_QFPtest_rec_sum(%arg0: !fir.ref<!fir.array<4x7xi32>> {fir.bindc_name = "b"}, %arg1: !fir.ref<i32> {fir.bindc_name = "row"}, %arg2: !fir.ref<i32> {fir.bindc_name = "val"}) -> i32 {
-// CHECK:    %[[V12:.*]] = fir.do_loop %arg3 = %c1 to %c7 step %c1 iter_args(%arg4 = %c0_i32) -> (i32) {
+// CHECK:    %[[V12:.*]] = fir.do_loop %arg3 = %c1 to %c7 step %c1 iter_args(%arg4 = %c0_i32) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:      %[[V14:.*]] = hlfir.sum %[[V11]] : (!hlfir.expr<7xi32>) -> i32
 // CHECK:      %[[V15:.*]] = arith.cmpi sge, %[[V14]], %[[V10]] : i32
 // CHECK:      %[[V16:.*]] = arith.addi %arg4, %c1_i32 : i32
@@ -298,8 +298,8 @@ func.func @_QFPtest_rec_count(%arg0: !fir.ref<!fir.array<4x7xi32>> {fir.bindc_na
   return %14 : i32
 }
 // CHECK-LABEL:  func.func @_QFPtest_rec_count(%arg0: !fir.ref<!fir.array<4x7xi32>> {fir.bindc_name = "b"}, %arg1: !fir.ref<i32> {fir.bindc_name = "row"}, %arg2: !fir.ref<i32> {fir.bindc_name = "val"}) -> i32 {
-// CHECK:    %[[V11:.*]] = fir.do_loop %arg3 = %c1 to %c7 step %c1 iter_args(%arg4 = %c0_i32) -> (i32) {
-// CHECK:      %[[V13:.*]] = fir.do_loop %arg5 = %c1 to %c7 step %c1 iter_args(%arg6 = %c0_i32) -> (i32) {
+// CHECK:    %[[V11:.*]] = fir.do_loop %arg3 = %c1 to %c7 step %c1 iter_args(%arg4 = %c0_i32) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
+// CHECK:      %[[V13:.*]] = fir.do_loop %arg5 = %c1 to %c7 step %c1 iter_args(%arg6 = %c0_i32) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:        %[[V17:.*]] = hlfir.designate %[[V9]] (%arg5)  : (!fir.box<!fir.array<7xi32>>, index) -> !fir.ref<i32>
 // CHECK:        %[[V18:.*]] = fir.load %[[V17]] : !fir.ref<i32>
 // CHECK:        %[[V19:.*]] = arith.cmpi sge, %[[V18]], %[[V10]] : i32

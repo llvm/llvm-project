@@ -114,7 +114,7 @@ func.func @scalar_character(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>) {
 // CHECK:  %[[VAL_19:.*]] = fir.undefined !fir.char<1>
 // CHECK:  %[[VAL_20:.*]] = fir.insert_value %[[VAL_19]], %[[VAL_18]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 // CHECK:  %[[VAL_21:.*]] = arith.constant 1 : index
-// CHECK:  fir.do_loop %[[VAL_22:.*]] = %[[VAL_9]] to %[[VAL_17]] step %[[VAL_21]] {
+// CHECK:  fir.do_loop %[[VAL_22:.*]] = %[[VAL_9]] to %[[VAL_17]] step %[[VAL_21]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:    %[[VAL_23:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:    %[[VAL_24:.*]] = fir.coordinate_of %[[VAL_23]], %[[VAL_22]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:    fir.store %[[VAL_20]] to %[[VAL_24]] : !fir.ref<!fir.char<1>>
@@ -380,7 +380,7 @@ func.func @test_upoly_expr_assignment(%arg0: !fir.class<!fir.array<?xnone>> {fir
   %8:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = ".tmp.array"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>)
   %22 = fir.load %8#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
   %c1_2 = arith.constant 1 : index
-  fir.do_loop %arg2 = %c1_2 to %3#1 step %c1_2 unordered {
+  fir.do_loop %arg2 = %c1_2 to %3#1 step %c1_2 unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %27 = hlfir.designate %2#0 (%arg2)  : (!fir.class<!fir.array<?xnone>>, index) -> !fir.class<none>
     %c0_3 = arith.constant 0 : index
     %28:3 = fir.box_dims %22, %c0_3 : (!fir.class<!fir.heap<!fir.array<?xnone>>>, index) -> (index, index, index)
@@ -403,7 +403,7 @@ func.func @test_upoly_expr_assignment(%arg0: !fir.class<!fir.array<?xnone>> {fir
 // CHECK:           %[[VAL_7:.*]] = fir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = ".tmp.array"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
 // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_9]] to %[[VAL_6]]#1 step %[[VAL_9]] unordered {
+// CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_9]] to %[[VAL_6]]#1 step %[[VAL_9]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_11:.*]] = fir.array_coor %[[VAL_5]] %[[VAL_10]] : (!fir.class<!fir.array<?xnone>>, index) -> !fir.ref<none>
 // CHECK:             %[[VAL_12:.*]] = fir.embox %[[VAL_11]] source_box %[[VAL_5]] : (!fir.ref<none>, !fir.class<!fir.array<?xnone>>) -> !fir.class<none>
 // CHECK:             %[[VAL_13:.*]] = arith.constant 0 : index

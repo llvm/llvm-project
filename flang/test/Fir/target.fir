@@ -130,7 +130,7 @@ func.func @char1copy(%arg0 : !fir.boxchar<1> {llvm.sret = !fir.char<1, ?>}, %arg
   %c1 = arith.constant 1 : index
   %3 = fir.convert %1#1 : (i64) -> index
   %last = arith.subi %3, %c1 : index
-  fir.do_loop %i = %c0 to %last step %c1 {
+  fir.do_loop %i = %c0 to %last step %c1 attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %in_pos = fir.coordinate_of %2#0, %i : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
     %out_pos = fir.coordinate_of %1#0, %i : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
     %ch = fir.load %in_pos : !fir.ref<!fir.char<1>>

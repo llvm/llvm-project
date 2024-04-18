@@ -13,7 +13,7 @@ func.func @loop_with_load_and_store(%a1: !arr_d1, %a2: !arr_d1, %a3: !arr_d1) {
   %siz = affine.apply #arr_len()[%c1,%len]
   %t1 = fir.alloca !fir.array<?xf32>, %siz
 
-  fir.do_loop %i = %c1 to %len step %c1 {
+  fir.do_loop %i = %c1 to %len step %c1 attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %a1_idx = fir.array_coor %a1(%dims) %i
             : (!arr_d1, !fir.shape<1>, index) -> !fir.ref<f32>
     %a1_v = fir.load %a1_idx : !fir.ref<f32>
@@ -28,7 +28,7 @@ func.func @loop_with_load_and_store(%a1: !arr_d1, %a2: !arr_d1, %a3: !arr_d1) {
 
     fir.store %v to %t1_idx : !fir.ref<f32>
   }
-  fir.do_loop %i = %c1 to %len step %c1 {
+  fir.do_loop %i = %c1 to %len step %c1 attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %t1_idx = fir.array_coor %t1(%dims) %i
             : (!arr_d1, !fir.shape<1>, index) -> !fir.ref<f32>
     %t1_v = fir.load %t1_idx : !fir.ref<f32>
@@ -85,9 +85,9 @@ func.func @loop_with_if(%a: !arr_d1, %v: f32) {
   %len = arith.constant 100 : index
   %dims = fir.shape %len : (index) -> !fir.shape<1>
 
-  fir.do_loop %i = %c1 to %len step %c1 {
-    fir.do_loop %j = %c1 to %len step %c1 {
-      fir.do_loop %k = %c1 to %len step %c1 {
+  fir.do_loop %i = %c1 to %len step %c1 attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+    fir.do_loop %j = %c1 to %len step %c1 attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+      fir.do_loop %k = %c1 to %len step %c1 attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
         %im2 = arith.subi %i, %c2 : index
         %cond = arith.cmpi "sgt", %im2, %c0 : index
         fir.if %cond {

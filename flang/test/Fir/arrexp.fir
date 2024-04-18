@@ -7,9 +7,9 @@ func.func @f1(%a : !fir.ref<!fir.array<?x?xf32>>, %n : index, %m : index, %o : i
   %s = fir.shape_shift %o, %n, %p, %m : (index, index, index, index) -> !fir.shapeshift<2>
   %vIn = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
   // CHECK: = icmp sgt
-  %r = fir.do_loop %j = %p to %m step %c1 iter_args(%v1 = %vIn) -> !fir.array<?x?xf32> {
+  %r = fir.do_loop %j = %p to %m step %c1 iter_args(%v1 = %vIn) -> !fir.array<?x?xf32> attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     // CHECK: = icmp sgt
-    %r = fir.do_loop %i = %o to %n step %c1 iter_args(%v = %v1) -> !fir.array<?x?xf32> {
+    %r = fir.do_loop %i = %o to %n step %c1 iter_args(%v = %v1) -> !fir.array<?x?xf32> attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       // CHECK: %[[AOFF:.*]] = getelementptr float, ptr %[[A]], i64
       // CHECK: store float %[[F]], ptr %[[AOFF]]
       %r = fir.array_update %v, %f, %i, %j : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
@@ -30,9 +30,9 @@ func.func @f2(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf
   %vIn = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
   %wIn = fir.array_load %b(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
   // CHECK: = icmp sgt
-  %r = fir.do_loop %j = %p to %m step %c1 iter_args(%v1 = %vIn) -> !fir.array<?x?xf32> {
+  %r = fir.do_loop %j = %p to %m step %c1 iter_args(%v1 = %vIn) -> !fir.array<?x?xf32> attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     // CHECK: = icmp sgt
-    %r = fir.do_loop %i = %o to %n step %c1 iter_args(%v = %v1) -> !fir.array<?x?xf32> {
+    %r = fir.do_loop %i = %o to %n step %c1 iter_args(%v = %v1) -> !fir.array<?x?xf32> attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       %x = fir.array_fetch %wIn, %i, %j : (!fir.array<?x?xf32>, index, index) -> f32
       %y = arith.addf %x, %f : f32
       // CHECK: %[[AOFF:.*]] = getelementptr float, ptr %[[A]], i64
@@ -54,9 +54,9 @@ func.func @f3(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf
   %vIn = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
   %wIn = fir.array_load %b(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
   // CHECK: = icmp sgt
-  %r = fir.do_loop %j = %p to %m step %c1 iter_args(%v1 = %vIn) -> !fir.array<?x?xf32> {
+  %r = fir.do_loop %j = %p to %m step %c1 iter_args(%v1 = %vIn) -> !fir.array<?x?xf32> attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     // CHECK: = icmp sgt
-    %r = fir.do_loop %i = %o to %n step %c1 iter_args(%v = %v1) -> !fir.array<?x?xf32> {
+    %r = fir.do_loop %i = %o to %n step %c1 iter_args(%v = %v1) -> !fir.array<?x?xf32> attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       %x = fir.array_fetch %wIn, %i, %j : (!fir.array<?x?xf32>, index, index) -> f32
       %y = arith.addf %x, %f : f32
       // CHECK: %[[AOFF:.*]] = getelementptr float, ptr %[[A]], i64
@@ -79,9 +79,9 @@ func.func @f4(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf
   %vIn = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
   %wIn = fir.array_load %b(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
   // CHECK: = icmp sgt
-  %r = fir.do_loop %j = %p to %m step %c1 iter_args(%v1 = %vIn) -> !fir.array<?x?xf32> {
+  %r = fir.do_loop %j = %p to %m step %c1 iter_args(%v1 = %vIn) -> !fir.array<?x?xf32> attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     // CHECK: = icmp sgt
-    %r = fir.do_loop %i = %o to %n step %c1 iter_args(%v = %v1) -> !fir.array<?x?xf32> {
+    %r = fir.do_loop %i = %o to %n step %c1 iter_args(%v = %v1) -> !fir.array<?x?xf32> attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       %x2 = fir.array_fetch %vIn, %i, %j : (!fir.array<?x?xf32>, index, index) -> f32
       %x = fir.array_fetch %wIn, %i, %j : (!fir.array<?x?xf32>, index, index) -> f32
       %y = arith.addf %x, %f : f32
@@ -111,7 +111,7 @@ func.func @f5(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf
   %2 = fir.array_load %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>
   %3 = fir.array_load %arg1 : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>
   // CHECK: icmp sgt
-  %4 = fir.do_loop %arg3 = %c0 to %1 step %c1 iter_args(%arg4 = %2) -> (!fir.array<?xf32>) {
+  %4 = fir.do_loop %arg3 = %c0 to %1 step %c1 iter_args(%arg4 = %2) -> (!fir.array<?xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     // CHECK: %[[B_STRIDE_GEP:.*]] = getelementptr {{.*}}, ptr %[[B]], i32 0, i32 7, i32 0, i32 2
     // CHECK: %[[B_STRIDE:.*]] = load i64, ptr %[[B_STRIDE_GEP]]
     // CHECK: %[[B_DIM_OFFSET:.*]] = mul nsw i64 %{{.*}}, %[[B_STRIDE]]
@@ -151,7 +151,7 @@ func.func @f6(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: f32) {
   %2 = fir.array_load %arg0 [%1] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.array<?xf32>
   %3 = fir.slice %c1, %c9, %c1 : (index, index, index) -> !fir.slice<1>
   %4 = fir.array_load %arg0 [%3] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.array<?xf32>
-  %5 = fir.do_loop %arg2 = %c0 to %c9 step %c1 iter_args(%arg3 = %2) -> (!fir.array<?xf32>) {
+  %5 = fir.do_loop %arg2 = %c0 to %c9 step %c1 iter_args(%arg3 = %2) -> (!fir.array<?xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %6 = fir.array_fetch %4, %arg2 : (!fir.array<?xf32>, index) -> f32
     %7 = arith.addf %6, %arg1 : f32
     %8 = fir.array_update %arg3, %7, %arg2 : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>

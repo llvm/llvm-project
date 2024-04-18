@@ -58,7 +58,7 @@ func.func @test_elemental_overlap(%i: !fir.ref<!fir.array<10xi32>>) {
 // CHECK:  %[[VAL_12:.*]] = arith.constant 10 : index
 // CHECK:  %[[VAL_13:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
 // CHECK:  %[[VAL_14:.*]] = arith.constant 1 : index
-// CHECK:  fir.do_loop %[[VAL_15:.*]] = %[[VAL_14]] to %[[VAL_12]] step %[[VAL_14]] {
+// CHECK:  fir.do_loop %[[VAL_15:.*]] = %[[VAL_14]] to %[[VAL_12]] step %[[VAL_14]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:    %[[VAL_16:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_15]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 // CHECK:    %[[VAL_17:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_15]])  : (!fir.ref<!fir.array<10x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 // CHECK:    %[[VAL_18:.*]] = fir.load %[[VAL_17]] : !fir.ref<!fir.logical<4>>
@@ -156,7 +156,7 @@ func.func @test_scalar_forall_overlap(%i: !fir.ref<!fir.array<10xi32>>) {
 // CHECK:  %[[VAL_15:.*]] = fir.allocmem !fir.array<?xi1>, %[[VAL_12]] {bindc_name = ".tmp.forall", uniq_name = ""}
 // CHECK:  %[[VAL_16:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
 // CHECK:  %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]](%[[VAL_16]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi1>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi1>>, !fir.heap<!fir.array<?xi1>>)
-// CHECK:  fir.do_loop %[[VAL_18:.*]] = %[[VAL_3]] to %[[VAL_4]] step %[[VAL_6]] {
+// CHECK:  fir.do_loop %[[VAL_18:.*]] = %[[VAL_3]] to %[[VAL_4]] step %[[VAL_6]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:    %[[VAL_19:.*]] = arith.subi %[[VAL_5]], %[[VAL_18]] : index
 // CHECK:    %[[VAL_20:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_19]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 // CHECK:    %[[VAL_21:.*]] = fir.load %[[VAL_20]] : !fir.ref<i32>
@@ -169,7 +169,7 @@ func.func @test_scalar_forall_overlap(%i: !fir.ref<!fir.array<10xi32>>) {
 // CHECK:  }
 // CHECK:  %[[VAL_26:.*]] = arith.constant 1 : index
 // CHECK:  fir.store %[[VAL_13]] to %[[VAL_1]] : !fir.ref<index>
-// CHECK:  fir.do_loop %[[VAL_27:.*]] = %[[VAL_3]] to %[[VAL_4]] step %[[VAL_26]] {
+// CHECK:  fir.do_loop %[[VAL_27:.*]] = %[[VAL_3]] to %[[VAL_4]] step %[[VAL_26]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:    %[[VAL_28:.*]] = fir.load %[[VAL_1]] : !fir.ref<index>
 // CHECK:    %[[VAL_29:.*]] = arith.addi %[[VAL_28]], %[[VAL_14]] : index
 // CHECK:    fir.store %[[VAL_29]] to %[[VAL_1]] : !fir.ref<index>

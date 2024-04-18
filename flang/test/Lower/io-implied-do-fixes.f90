@@ -5,7 +5,7 @@
 ! CHECK-LABEL: func @_QPido1
 ! CHECK: %[[J_REF_ADDR:.*]] = fir.alloca !fir.ptr<i32> {uniq_name = "_QFido1Eiptr.addr"}
 ! CHECK: %[[J_ADDR:.*]] = fir.load %[[J_REF_ADDR]] : !fir.ref<!fir.ptr<i32>>
-! CHECK: %[[J_VAL_FINAL:.*]] = fir.do_loop %[[J_VAL:.*]] = %{{.*}} to %{{.*}} step %{{.*}} -> index {
+! CHECK: %[[J_VAL_FINAL:.*]] = fir.do_loop %[[J_VAL:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {{.*}} {
 ! CHECK:   %[[J_VAL_CVT1:.*]] = fir.convert %[[J_VAL]] : (index) -> i32
 ! CHECK:   fir.store %[[J_VAL_CVT1]] to %[[J_ADDR]] : !fir.ptr<i32>
 ! CHECK:   %[[J_VAL_NEXT:.*]] = arith.addi %[[J_VAL]], %{{[^ ]*}} : index
@@ -17,7 +17,7 @@
 ! NSW-LABEL: func @_QPido1
 ! NSW: %[[J_REF_ADDR:.*]] = fir.alloca !fir.ptr<i32> {uniq_name = "_QFido1Eiptr.addr"}
 ! NSW: %[[J_ADDR:.*]] = fir.load %[[J_REF_ADDR]] : !fir.ref<!fir.ptr<i32>>
-! NSW: %[[J_VAL_FINAL:.*]] = fir.do_loop %[[J_VAL:.*]] = %{{.*}} to %{{.*}} step %{{.*}} -> index {
+! NSW: %[[J_VAL_FINAL:.*]] = fir.do_loop %[[J_VAL:.*]] = %{{.*}} to %{{.*}} step %{{.*}} -> index {{.*}} {
 ! NSW:   %[[J_VAL_CVT1:.*]] = fir.convert %[[J_VAL]] : (index) -> i32
 ! NSW:   fir.store %[[J_VAL_CVT1]] to %[[J_ADDR]] : !fir.ptr<i32>
 ! NSW:   %[[J_VAL_NEXT:.*]] = arith.addi %[[J_VAL]], %{{[^ ]*}} overflow<nsw> : index
@@ -35,7 +35,7 @@ end subroutine
 ! CHECK-LABEL: func @_QPido2
 ! CHECK: %[[J_REF_ADDR:.*]] = fir.alloca !fir.heap<i32> {uniq_name = "_QFido2Eiptr.addr"}
 ! CHECK: %[[J_ADDR:.*]] = fir.load %[[J_REF_ADDR]] : !fir.ref<!fir.heap<i32>>
-! CHECK: %[[J_VAL_FINAL:.*]] = fir.do_loop %[[J_VAL:.*]] = %{{.*}} to %{{.*}} step %{{.*}} -> index {
+! CHECK: %[[J_VAL_FINAL:.*]] = fir.do_loop %[[J_VAL:.*]] = %{{.*}} to %{{.*}} step %{{.*}} -> index {{.*}} {
 ! CHECK: %[[J_VAL_CVT1:.*]] = fir.convert %[[J_VAL]] : (index) -> i32
 ! CHECK: fir.store %[[J_VAL_CVT1]] to %[[J_ADDR]] : !fir.heap<i32>
 ! CHECK: %[[J_VAL_NEXT:.*]] = arith.addi %[[J_VAL]], %{{[^ ]*}} : index
@@ -47,7 +47,7 @@ end subroutine
 ! NSW-LABEL: func @_QPido2
 ! NSW: %[[J_REF_ADDR:.*]] = fir.alloca !fir.heap<i32> {uniq_name = "_QFido2Eiptr.addr"}
 ! NSW: %[[J_ADDR:.*]] = fir.load %[[J_REF_ADDR]] : !fir.ref<!fir.heap<i32>>
-! NSW: %[[J_VAL_FINAL:.*]] = fir.do_loop %[[J_VAL:.*]] = %{{.*}} to %{{.*}} step %{{.*}} -> index {
+! NSW: %[[J_VAL_FINAL:.*]] = fir.do_loop %[[J_VAL:.*]] = %{{.*}} to %{{.*}} step %{{.*}} -> index {{.*}} {
 ! NSW: %[[J_VAL_CVT1:.*]] = fir.convert %[[J_VAL]] : (index) -> i32
 ! NSW: fir.store %[[J_VAL_CVT1]] to %[[J_ADDR]] : !fir.heap<i32>
 ! NSW: %[[J_VAL_NEXT:.*]] = arith.addi %[[J_VAL]], %{{[^ ]*}} overflow<nsw> : index

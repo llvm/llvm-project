@@ -69,10 +69,10 @@ end subroutine test_nested_forall_where
 ! CHECK:         %[[VAL_43:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_44:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>>) -> !fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>
 ! CHECK:         %[[VAL_45:.*]] = fir.array_load %[[VAL_1]] : (!fir.box<!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>>) -> !fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>
-! CHECK:         %[[VAL_46:.*]] = fir.do_loop %[[VAL_47:.*]] = %[[VAL_19]] to %[[VAL_29]] step %[[VAL_30]] unordered iter_args(%[[VAL_48:.*]] = %[[VAL_44]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) {
+! CHECK:         %[[VAL_46:.*]] = fir.do_loop %[[VAL_47:.*]] = %[[VAL_19]] to %[[VAL_29]] step %[[VAL_30]] unordered iter_args(%[[VAL_48:.*]] = %[[VAL_44]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_49:.*]] = fir.convert %[[VAL_47]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_49]] to %[[VAL_7]] : !fir.ref<i32>
-! CHECK:           %[[VAL_50:.*]] = fir.do_loop %[[VAL_51:.*]] = %[[VAL_32]] to %[[VAL_42]] step %[[VAL_43]] unordered iter_args(%[[VAL_52:.*]] = %[[VAL_48]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) {
+! CHECK:           %[[VAL_50:.*]] = fir.do_loop %[[VAL_51:.*]] = %[[VAL_32]] to %[[VAL_42]] step %[[VAL_43]] unordered iter_args(%[[VAL_52:.*]] = %[[VAL_48]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_53:.*]] = fir.convert %[[VAL_51]] : (index) -> i32
 ! CHECK:             fir.store %[[VAL_53]] to %[[VAL_6]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_54:.*]] = arith.constant 1 : i64
@@ -170,7 +170,7 @@ end subroutine test_nested_forall_where
 ! CHECK:             %[[VAL_139:.*]] = arith.constant 1 : index
 ! CHECK:             %[[VAL_140:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_141:.*]] = arith.subi %[[VAL_114]], %[[VAL_139]] : index
-! CHECK:             %[[VAL_142:.*]] = fir.do_loop %[[VAL_143:.*]] = %[[VAL_140]] to %[[VAL_141]] step %[[VAL_139]] unordered iter_args(%[[VAL_144:.*]] = %[[VAL_122]]) -> (!fir.array<?xi8>) {
+! CHECK:             %[[VAL_142:.*]] = fir.do_loop %[[VAL_143:.*]] = %[[VAL_140]] to %[[VAL_141]] step %[[VAL_139]] unordered iter_args(%[[VAL_144:.*]] = %[[VAL_122]]) -> (!fir.array<?xi8>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:               %[[VAL_145:.*]] = fir.array_fetch %[[VAL_116]], %[[VAL_143]] : (!fir.array<100xf32>, index) -> f32
 ! CHECK:               %[[VAL_146:.*]] = arith.cmpf ogt, %[[VAL_145]], %[[VAL_117]] {{.*}} : f32
 ! CHECK:               %[[VAL_147:.*]] = arith.constant 1 : i32
@@ -188,10 +188,10 @@ end subroutine test_nested_forall_where
 ! CHECK:           }
 ! CHECK:           fir.result %[[VAL_155:.*]] : !fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>
 ! CHECK:         }
-! CHECK:         %[[VAL_156:.*]] = fir.do_loop %[[VAL_157:.*]] = %[[VAL_19]] to %[[VAL_29]] step %[[VAL_30]] unordered iter_args(%[[VAL_158:.*]] = %[[VAL_44]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) {
+! CHECK:         %[[VAL_156:.*]] = fir.do_loop %[[VAL_157:.*]] = %[[VAL_19]] to %[[VAL_29]] step %[[VAL_30]] unordered iter_args(%[[VAL_158:.*]] = %[[VAL_44]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_159:.*]] = fir.convert %[[VAL_157]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_159]] to %[[VAL_5]] : !fir.ref<i32>
-! CHECK:           %[[VAL_160:.*]] = fir.do_loop %[[VAL_161:.*]] = %[[VAL_32]] to %[[VAL_42]] step %[[VAL_43]] unordered iter_args(%[[VAL_162:.*]] = %[[VAL_158]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) {
+! CHECK:           %[[VAL_160:.*]] = fir.do_loop %[[VAL_161:.*]] = %[[VAL_32]] to %[[VAL_42]] step %[[VAL_43]] unordered iter_args(%[[VAL_162:.*]] = %[[VAL_158]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_163:.*]] = fir.convert %[[VAL_161]] : (index) -> i32
 ! CHECK:             fir.store %[[VAL_163]] to %[[VAL_4]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_164:.*]] = arith.constant 0 : i64
@@ -262,7 +262,7 @@ end subroutine test_nested_forall_where
 ! CHECK:             %[[VAL_229:.*]] = arith.constant 1 : index
 ! CHECK:             %[[VAL_230:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_231:.*]] = arith.subi %[[VAL_206]], %[[VAL_229]] : index
-! CHECK:             %[[VAL_232:.*]] = fir.do_loop %[[VAL_233:.*]] = %[[VAL_230]] to %[[VAL_231]] step %[[VAL_229]] unordered iter_args(%[[VAL_234:.*]] = %[[VAL_162]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) {
+! CHECK:             %[[VAL_232:.*]] = fir.do_loop %[[VAL_233:.*]] = %[[VAL_230]] to %[[VAL_231]] step %[[VAL_229]] unordered iter_args(%[[VAL_234:.*]] = %[[VAL_162]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:               %[[VAL_235:.*]] = arith.constant 1 : index
 ! CHECK:               %[[VAL_236:.*]] = arith.addi %[[VAL_233]], %[[VAL_235]] : index
 ! CHECK:               %[[VAL_237:.*]] = fir.array_coor %[[VAL_199]](%[[VAL_207]]) %[[VAL_236]] : (!fir.ref<!fir.array<?xi8>>, !fir.shape<1>, index) -> !fir.ref<i8>
@@ -285,10 +285,10 @@ end subroutine test_nested_forall_where
 ! CHECK:         fir.array_merge_store %[[VAL_44]], %[[VAL_247:.*]] to %[[VAL_0]] : !fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>, !fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>, !fir.box<!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>>
 ! CHECK:         %[[VAL_248:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>>) -> !fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>
 ! CHECK:         %[[VAL_249:.*]] = fir.array_load %[[VAL_1]] : (!fir.box<!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>>) -> !fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>
-! CHECK:         %[[VAL_250:.*]] = fir.do_loop %[[VAL_251:.*]] = %[[VAL_19]] to %[[VAL_29]] step %[[VAL_30]] unordered iter_args(%[[VAL_252:.*]] = %[[VAL_248]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) {
+! CHECK:         %[[VAL_250:.*]] = fir.do_loop %[[VAL_251:.*]] = %[[VAL_19]] to %[[VAL_29]] step %[[VAL_30]] unordered iter_args(%[[VAL_252:.*]] = %[[VAL_248]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_253:.*]] = fir.convert %[[VAL_251]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_253]] to %[[VAL_3]] : !fir.ref<i32>
-! CHECK:           %[[VAL_254:.*]] = fir.do_loop %[[VAL_255:.*]] = %[[VAL_32]] to %[[VAL_42]] step %[[VAL_43]] unordered iter_args(%[[VAL_256:.*]] = %[[VAL_252]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) {
+! CHECK:           %[[VAL_254:.*]] = fir.do_loop %[[VAL_255:.*]] = %[[VAL_32]] to %[[VAL_42]] step %[[VAL_43]] unordered iter_args(%[[VAL_256:.*]] = %[[VAL_252]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_257:.*]] = fir.convert %[[VAL_255]] : (index) -> i32
 ! CHECK:             fir.store %[[VAL_257]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_258:.*]] = arith.constant 0 : i64
@@ -358,7 +358,7 @@ end subroutine test_nested_forall_where
 ! CHECK:             %[[VAL_322:.*]] = arith.constant 1 : index
 ! CHECK:             %[[VAL_323:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_324:.*]] = arith.subi %[[VAL_300]], %[[VAL_322]] : index
-! CHECK:             %[[VAL_325:.*]] = fir.do_loop %[[VAL_326:.*]] = %[[VAL_323]] to %[[VAL_324]] step %[[VAL_322]] unordered iter_args(%[[VAL_327:.*]] = %[[VAL_256]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) {
+! CHECK:             %[[VAL_325:.*]] = fir.do_loop %[[VAL_326:.*]] = %[[VAL_323]] to %[[VAL_324]] step %[[VAL_322]] unordered iter_args(%[[VAL_327:.*]] = %[[VAL_256]]) -> (!fir.array<?x?x!fir.type<_QFtest_nested_forall_whereTt{data:!fir.array<100xf32>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:               %[[VAL_328:.*]] = arith.constant 1 : index
 ! CHECK:               %[[VAL_329:.*]] = arith.addi %[[VAL_326]], %[[VAL_328]] : index
 ! CHECK:               %[[VAL_330:.*]] = fir.array_coor %[[VAL_293]](%[[VAL_301]]) %[[VAL_329]] : (!fir.ref<!fir.array<?xi8>>, !fir.shape<1>, index) -> !fir.ref<i8>

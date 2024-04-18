@@ -24,7 +24,7 @@ func.func @simple(%arg: !fir.ref<!fir.array<42xi32>>) {
 // CHECK:           %[[VAL_3:.*]] = arith.constant 1 : i32
 // CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) {uniq_name = "array"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
-// CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_1]] to %[[VAL_2]] step %[[VAL_1]] unordered {
+// CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_1]] to %[[VAL_2]] step %[[VAL_1]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_7:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_6]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[VAL_8:.*]] = fir.load %[[VAL_7]] : !fir.ref<i32>
 // CHECK:             %[[VAL_9:.*]] = arith.subi %[[VAL_8]], %[[VAL_3]] : i32
@@ -61,7 +61,7 @@ func.func @read_no_alias(%arg: !fir.ref<!fir.array<42xi32>>, %arg1: !fir.ref<!fi
 // CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) {uniq_name = "array"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 // CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_4]]) {uniq_name = "other"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
-// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_2]] to %[[VAL_3]] step %[[VAL_2]] unordered {
+// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_2]] to %[[VAL_3]] step %[[VAL_2]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_8:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_7]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[VAL_9:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_7]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[VAL_10:.*]] = fir.load %[[VAL_8]] : !fir.ref<i32>
@@ -135,8 +135,8 @@ func.func @two_dimensional(%arg: !fir.ref<!fir.array<42x42xi32>>) {
 // CHECK:           %[[VAL_3:.*]] = arith.constant 1 : i32
 // CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) {uniq_name = "array"} : (!fir.ref<!fir.array<42x42xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<42x42xi32>>, !fir.ref<!fir.array<42x42xi32>>)
-// CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_1]] to %[[VAL_2]] step %[[VAL_1]] unordered {
-// CHECK:             fir.do_loop %[[VAL_7:.*]] = %[[VAL_1]] to %[[VAL_2]] step %[[VAL_1]] unordered {
+// CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_1]] to %[[VAL_2]] step %[[VAL_1]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+// CHECK:             fir.do_loop %[[VAL_7:.*]] = %[[VAL_1]] to %[[VAL_2]] step %[[VAL_1]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:               %[[VAL_8:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_7]], %[[VAL_6]])  : (!fir.ref<!fir.array<42x42xi32>>, index, index) -> !fir.ref<i32>
 // CHECK:               %[[VAL_9:.*]] = fir.load %[[VAL_8]] : !fir.ref<i32>
 // CHECK:               %[[VAL_10:.*]] = arith.subi %[[VAL_9]], %[[VAL_3]] : i32
@@ -423,7 +423,7 @@ func.func @_QMmPrepro(%arg0: !fir.ref<i32> {fir.bindc_name = "imin"}, %arg1: !fi
   %12 = fir.load %7#0 : !fir.ref<i32>
   %13 = fir.convert %12 : (i32) -> index
   %14 = fir.convert %11 : (index) -> i32
-  %15:2 = fir.do_loop %arg3 = %11 to %13 step %c1 iter_args(%arg4 = %14) -> (index, i32) {
+  %15:2 = fir.do_loop %arg3 = %11 to %13 step %c1 iter_args(%arg4 = %14) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg4 to %6#1 : !fir.ref<i32>
     %16 = fir.load %9#0 : !fir.ref<i32>
     %17 = fir.convert %16 : (i32) -> i64
@@ -473,7 +473,7 @@ func.func @_QMmPrepro(%arg0: !fir.ref<i32> {fir.bindc_name = "imin"}, %arg1: !fi
 // CHECK:           %[[VAL_20:.*]] = fir.load %[[VAL_15]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i32) -> index
 // CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_19]] : (index) -> i32
-// CHECK:           %[[VAL_23:.*]]:2 = fir.do_loop %[[VAL_24:.*]] = %[[VAL_19]] to %[[VAL_21]] step %[[VAL_6]] iter_args(%[[VAL_25:.*]] = %[[VAL_22]]) -> (index, i32) {
+// CHECK:           %[[VAL_23:.*]]:2 = fir.do_loop %[[VAL_24:.*]] = %[[VAL_19]] to %[[VAL_21]] step %[[VAL_6]] iter_args(%[[VAL_25:.*]] = %[[VAL_22]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             fir.store %[[VAL_25]] to %[[VAL_14]]#1 : !fir.ref<i32>
 // CHECK:             %[[VAL_26:.*]] = fir.load %[[VAL_17]]#0 : !fir.ref<i32>
 // CHECK:             %[[VAL_27:.*]] = fir.convert %[[VAL_26]] : (i32) -> i64
@@ -481,7 +481,7 @@ func.func @_QMmPrepro(%arg0: !fir.ref<i32> {fir.bindc_name = "imin"}, %arg1: !fi
 // CHECK:             %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (i32) -> i64
 // CHECK:             %[[VAL_30:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 // CHECK:             %[[VAL_31:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_27]], %[[VAL_5]]:%[[VAL_7]]:%[[VAL_6]], %[[VAL_29]])  shape %[[VAL_30]] : (!fir.ref<!fir.array<9x9x9xi32>>, i64, index, index, index, i64, !fir.shape<1>) -> !fir.box<!fir.array<8xi32>>
-// CHECK:             fir.do_loop %[[VAL_32:.*]] = %[[VAL_6]] to %[[VAL_4]] step %[[VAL_6]] unordered {
+// CHECK:             fir.do_loop %[[VAL_32:.*]] = %[[VAL_6]] to %[[VAL_4]] step %[[VAL_6]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:               %[[VAL_33:.*]] = hlfir.designate %[[VAL_31]] (%[[VAL_32]])  : (!fir.box<!fir.array<8xi32>>, index) -> !fir.ref<i32>
 // CHECK:               %[[VAL_34:.*]] = fir.load %[[VAL_33]] : !fir.ref<i32>
 // CHECK:               %[[VAL_35:.*]] = arith.subi %[[VAL_34]], %[[VAL_3]] : i32
@@ -533,7 +533,7 @@ func.func @other_reads(%z_arg: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "z"
 // CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) {uniq_name = "z"} : (!fir.box<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 // CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_6]]) {uniq_name = "x"} : (!fir.box<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 // CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_6]]) {uniq_name = "y"} : (!fir.box<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-// CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_3]] to %[[VAL_5]]#1 step %[[VAL_3]] unordered {
+// CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_3]] to %[[VAL_5]]#1 step %[[VAL_3]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_11:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_10]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // CHECK:             %[[VAL_12:.*]] = fir.load %[[VAL_11]] : !fir.ref<f32>
 // CHECK:             %[[VAL_13:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_10]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
@@ -580,7 +580,7 @@ func.func @other_reads_late_decl(%z_arg: !fir.box<!fir.array<?xf32>> {fir.bindc_
 // CHECK-DAG:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) {uniq_name = "z"} : (!fir.box<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 // CHECK-DAG:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_6]]) {uniq_name = "x"} : (!fir.box<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 // CHECK-DAG:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_6]]) {uniq_name = "y"} : (!fir.box<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-// CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_3]] to %[[VAL_5]]#1 step %[[VAL_3]] unordered {
+// CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_3]] to %[[VAL_5]]#1 step %[[VAL_3]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_11:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_10]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // CHECK:             %[[VAL_12:.*]] = fir.load %[[VAL_11]] : !fir.ref<f32>
 // CHECK:             %[[VAL_13:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_10]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
@@ -644,7 +644,7 @@ func.func @other_reads_odd_shape(%z_arg: !fir.box<!fir.array<?xf32>> {fir.bindc_
 // CHECK:         %[[VAL_13:.*]] = arith.addi %[[VAL_6]]#1, %[[VAL_4]] : index
 // CHECK:         %[[VAL_14:.*]] = fir.shape %[[VAL_13]] : (index) -> !fir.shape<1>
 // CHECK:         %[[VAL_15:.*]] = hlfir.designate %[[VAL_12]]#0 (%[[VAL_4]]:%[[VAL_13]]:%[[VAL_3]])  shape %[[VAL_14]] : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-// CHECK:         fir.do_loop %[[VAL_16:.*]] = %[[VAL_3]] to %[[VAL_6]]#1 step %[[VAL_3]] unordered {
+// CHECK:         fir.do_loop %[[VAL_16:.*]] = %[[VAL_3]] to %[[VAL_6]]#1 step %[[VAL_3]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:           %[[VAL_17:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_16]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_17]] : !fir.ref<f32>
 // CHECK:           %[[VAL_19:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_16]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
@@ -782,8 +782,8 @@ func.func @_QPddx(%arg0: !fir.box<!fir.array<?x?xf64>> {fir.bindc_name = "array"
 // CHECK:           %[[VAL_50:.*]] = arith.select %[[VAL_49]], %[[VAL_48]], %[[VAL_8]] : index
 // CHECK:           %[[VAL_51:.*]] = fir.shape %[[VAL_50]], %[[VAL_37]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_52:.*]] = hlfir.designate %[[VAL_26]]#0 (%[[VAL_4]]:%[[VAL_47]]:%[[VAL_7]], %[[VAL_7]]:%[[VAL_35]]:%[[VAL_7]])  shape %[[VAL_51]] : (!fir.box<!fir.array<?x?xf64>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf64>>
-// CHECK:           fir.do_loop %[[VAL_53:.*]] = %[[VAL_7]] to %[[VAL_37]] step %[[VAL_7]] unordered {
-// CHECK:             fir.do_loop %[[VAL_54:.*]] = %[[VAL_7]] to %[[VAL_33]] step %[[VAL_7]] unordered {
+// CHECK:           fir.do_loop %[[VAL_53:.*]] = %[[VAL_7]] to %[[VAL_37]] step %[[VAL_7]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+// CHECK:             fir.do_loop %[[VAL_54:.*]] = %[[VAL_7]] to %[[VAL_33]] step %[[VAL_7]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:               %[[VAL_55:.*]] = hlfir.designate %[[VAL_39]] (%[[VAL_54]], %[[VAL_53]])  : (!fir.box<!fir.array<?x?xf64>>, index, index) -> !fir.ref<f64>
 // CHECK:               %[[VAL_56:.*]] = hlfir.designate %[[VAL_45]] (%[[VAL_54]], %[[VAL_53]])  : (!fir.box<!fir.array<?x?xf64>>, index, index) -> !fir.ref<f64>
 // CHECK:               %[[VAL_57:.*]] = fir.load %[[VAL_55]] : !fir.ref<f64>

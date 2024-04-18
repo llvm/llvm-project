@@ -92,7 +92,7 @@ func.func @conversion_with_temporary(%arr0 : !fir.ref<!fir.array<10xi32>>) {
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %7 = arith.subi %3, %c1 : index
-  %8 = fir.do_loop %arg0 = %c0 to %7 step %c1 unordered iter_args(%arg1 = %2) -> (!fir.array<10xi32>) {
+  %8 = fir.do_loop %arg0 = %c0 to %7 step %c1 unordered iter_args(%arg1 = %2) -> (!fir.array<10xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %9 = fir.array_fetch %6, %arg0 : (!fir.array<10xi32>, index) -> i32
     %10 = fir.array_update %arg1, %9, %arg0 : (!fir.array<10xi32>, i32, index) -> !fir.array<10xi32>
     fir.result %10 : !fir.array<10xi32>
@@ -106,14 +106,14 @@ func.func @conversion_with_temporary(%arr0 : !fir.ref<!fir.array<10xi32>>) {
 // Allocation of temporary array.
 // CHECK:         %[[TEMP:.*]] = fir.allocmem !fir.array<10xi32>
 // Copy of original array to temp.
-// CHECK:         fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:         fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:           %[[COOR0:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:           %[[COOR1:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:           %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<i32>
 // CHECK:           fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
 // CHECK:         }
 // Perform the assignment i = i(10:1:-1) using the temporary array.
-// CHECK:         %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10xi32>) {
+// CHECK:         %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NOT:       %{{.*}} = fir.array_fetch
 // CHECK-NOT:       %{{.*}} = fir.array_update
 // CHECK:           %[[COOR0:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) [%{{.*}}] %{{.*}} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<i32>
@@ -123,7 +123,7 @@ func.func @conversion_with_temporary(%arr0 : !fir.ref<!fir.array<10xi32>>) {
 // CHECK:           fir.result %{{.*}} : !fir.array<10xi32>
 // CHECK:         }
 // Copy the result back to the original array.
-// CHECK:         fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:         fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:           %[[COOR0:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:           %[[COOR1:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 // CHECK:           %[[LOAD0:.*]] = fir.load %[[COOR0:.*]] : !fir.ref<i32>
@@ -160,8 +160,8 @@ func.func @conversion_with_temporary_multidim(%0: !fir.ref<!fir.array<10x5xi32>>
   %c0 = arith.constant 0 : index
   %10 = arith.subi %3, %c1_2 : index
   %11 = arith.subi %4, %c1_2 : index
-  %12 = fir.do_loop %arg0 = %c0 to %11 step %c1_2 unordered iter_args(%arg1 = %2) -> (!fir.array<10x5xi32>) {
-    %13 = fir.do_loop %arg2 = %c0 to %10 step %c1_2 unordered iter_args(%arg3 = %arg1) -> (!fir.array<10x5xi32>) {
+  %12 = fir.do_loop %arg0 = %c0 to %11 step %c1_2 unordered iter_args(%arg1 = %2) -> (!fir.array<10x5xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
+    %13 = fir.do_loop %arg2 = %c0 to %10 step %c1_2 unordered iter_args(%arg3 = %arg1) -> (!fir.array<10x5xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       %14 = fir.array_fetch %9, %arg2, %arg0 : (!fir.array<10x5xi32>, index, index) -> i32
       %15 = fir.array_update %arg3, %14, %arg2, %arg0 : (!fir.array<10x5xi32>, i32, index, index) -> !fir.array<10x5xi32>
       fir.result %15 : !fir.array<10x5xi32>
@@ -179,18 +179,18 @@ func.func @conversion_with_temporary_multidim(%0: !fir.ref<!fir.array<10x5xi32>>
 // CHECK:         %[[TEMP:.*]] = fir.allocmem !fir.array<10x5xi32>
 // CHECK:         %[[IDX5:.*]] = fir.convert %[[CST5]] : (index) -> index
 // CHECK:         %[[UB5:.*]] = arith.subi %[[IDX5]], %{{.*}} : index
-// CHECK:         fir.do_loop %[[INDUC0:.*]] = %{{.*}} to %[[UB5]] step %{{.*}} {
+// CHECK:         fir.do_loop %[[INDUC0:.*]] = %{{.*}} to %[[UB5]] step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:           %[[IDX10:.*]] = fir.convert %[[CST10]] : (index) -> index
 // CHECK:           %[[UB10:.*]] = arith.subi %[[IDX10]], %{{.*}} : index
-// CHECK:           fir.do_loop %[[INDUC1:.*]] = %{{.*}} to %[[UB10]] step %{{.*}} {
+// CHECK:           fir.do_loop %[[INDUC1:.*]] = %{{.*}} to %[[UB10]] step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[IDX1:.*]] = arith.addi %[[INDUC1]], %{{.*}} : index
 // CHECK:             %[[IDX2:.*]] = arith.addi %[[INDUC0]], %{{.*}} : index
 // CHECK:             %[[COOR0:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %[[IDX1:.*]], %[[IDX2:.*]] : (!fir.ref<!fir.array<10x5xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
 // CHECK:             %[[COOR1:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}}, %{{.*}} : (!fir.heap<!fir.array<10x5xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
 // CHECK:             %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<i32>
 // CHECK:             fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
-// CHECK:         %{{.*}} = fir.do_loop %[[INDUC0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10x5xi32>) {
-// CHECK:           %{{.*}} = fir.do_loop %[[INDUC1:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10x5xi32>) {
+// CHECK:         %{{.*}} = fir.do_loop %[[INDUC0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10x5xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
+// CHECK:           %{{.*}} = fir.do_loop %[[INDUC1:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10x5xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %[[IDX1:.*]] = arith.addi %[[INDUC1]], %{{.*}} : index
 // CHECK:             %[[IDX2:.*]] = arith.addi %[[INDUC0]], %{{.*}} : index
 // CHECK-NOT:         %{{.*}} = fir.array_fetch
@@ -201,10 +201,10 @@ func.func @conversion_with_temporary_multidim(%0: !fir.ref<!fir.array<10x5xi32>>
 // CHECK:             fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
 // CHECK:         %[[IDX5:.*]] = fir.convert %[[CST5]] : (index) -> index
 // CHECK:         %[[UB5:.*]] = arith.subi %[[IDX5]], %{{.*}} : index
-// CHECK:         fir.do_loop %[[INDUC0:.*]] = %{{.*}} to %[[UB5]] step %{{.*}} {
+// CHECK:         fir.do_loop %[[INDUC0:.*]] = %{{.*}} to %[[UB5]] step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:           %[[IDX10:.*]] = fir.convert %[[CST10]] : (index) -> index
 // CHECK:           %[[UB10:.*]] = arith.subi %[[IDX10]], %{{.*}} : index
-// CHECK:           fir.do_loop %[[INDUC1:.*]] = %{{.*}} to %[[UB10]] step %{{.*}} {
+// CHECK:           fir.do_loop %[[INDUC1:.*]] = %{{.*}} to %[[UB10]] step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[IDX1:.*]] = arith.addi %[[INDUC1]], %{{.*}} : index
 // CHECK:             %[[IDX2:.*]] = arith.addi %[[INDUC0]], %{{.*}} : index  
 // CHECK:             %[[COOR0:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %[[IDX1]], %[[IDX2]] : (!fir.heap<!fir.array<10x5xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
@@ -225,7 +225,7 @@ func.func @array_modify_no_overlap(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: 
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
   %2 = fir.array_load %arg0(%1) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
   %3 = fir.array_load %arg1(%1) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
-  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %2) -> (!fir.array<100xf32>) {
+  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %2) -> (!fir.array<100xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %5 = fir.array_fetch %3, %arg2 : (!fir.array<100xf32>, index) -> f32
     %6:2 = fir.array_modify %arg3, %arg2 : (!fir.array<100xf32>, index) -> (!fir.ref<f32>, !fir.array<100xf32>)
     fir.store %5 to %0 : !fir.ref<f32>
@@ -242,7 +242,7 @@ func.func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)
 // CHECK-SAME:                                  %[[ARR0:.*]]: !fir.ref<!fir.array<100xf32>>,
 // CHECK-SAME:                                  %[[ARR1:.*]]: !fir.ref<!fir.array<100xf32>>) {
 // CHECK:           %[[VAR0:.*]] = fir.alloca f32
-// CHECK-COUNT-1:   %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<100xf32>) {
+// CHECK-COUNT-1:   %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<100xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NOT:       %{{.*}} = fir.array_fetch
 // CHECK-NOT:       %{{.*}} = fir.array_modify
 // CHECK:           %[[COOR0:.*]] = fir.array_coor %arg1(%1) %5 : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
@@ -266,7 +266,7 @@ func.func @array_modify_overlap(%arg0: !fir.ref<!fir.array<100xf32>>) {
   %2 = fir.array_load %arg0(%1) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
   %3 = fir.slice %c100, %c1, %c-1 : (index, index, index) -> !fir.slice<1>
   %4 = fir.array_load %arg0(%1) [%3] : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<100xf32>
-  %5 = fir.do_loop %arg1 = %c0 to %c99 step %c1 unordered iter_args(%arg2 = %2) -> (!fir.array<100xf32>) {
+  %5 = fir.do_loop %arg1 = %c0 to %c99 step %c1 unordered iter_args(%arg2 = %2) -> (!fir.array<100xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %6 = fir.array_fetch %4, %arg1 : (!fir.array<100xf32>, index) -> f32
     %7:2 = fir.array_modify %arg2, %arg1 : (!fir.array<100xf32>, index) -> (!fir.ref<f32>, !fir.array<100xf32>)
     fir.store %6 to %0 : !fir.ref<f32>
@@ -285,7 +285,7 @@ func.func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)
 // Allocate the temporary array.
 // CHECK:           %[[TEMP:.*]] = fir.allocmem !fir.array<100xf32>
 // Copy original array to temp.
-// CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[COOR0:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
 // CHECK:             %[[COOR1:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
 // CHECK:             %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<f32>
@@ -302,7 +302,7 @@ func.func private @user_defined_assignment(!fir.ref<f32>, !fir.ref<f32>)
 // CHECK:             fir.call @user_defined_assignment(%[[COOR1]], %[[VAR0]]) : (!fir.ref<f32>, !fir.ref<f32>) -> ()
 // CHECK:           }
 // Copy back result to original array from temp.
-// CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:           fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[COOR0:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
 // CHECK:             %[[COOR1:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
 // CHECK:             %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<f32>
@@ -324,7 +324,7 @@ func.func @array_of_types() {
   %c10_i32 = arith.constant 10 : i32
   %3 = fir.convert %c10_i32 : (i32) -> index
   %c1 = arith.constant 1 : index
-  %4 = fir.do_loop %arg0 = %2 to %3 step %c1 -> index {
+  %4 = fir.do_loop %arg0 = %2 to %3 step %c1 -> index attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %6 = fir.convert %arg0 : (index) -> i32
     fir.store %6 to %0 : !fir.ref<i32>
     %c1_0 = arith.constant 1 : index
@@ -348,7 +348,7 @@ func.func @array_of_types() {
     %c1_2 = arith.constant 1 : index
     %c0 = arith.constant 0 : index
     %19 = arith.subi %18, %c1_2 : index
-    %20 = fir.do_loop %arg1 = %c0 to %19 step %c1_2 unordered iter_args(%arg2 = %17) -> (!fir.array<10xi32>) {
+    %20 = fir.do_loop %arg1 = %c0 to %19 step %c1_2 unordered iter_args(%arg2 = %17) -> (!fir.array<10xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       %22 = fir.array_update %arg2, %c0_i32, %arg1 : (!fir.array<10xi32>, i32, index) -> !fir.array<10xi32>
       fir.result %22 : !fir.array<10xi32>
     }
@@ -362,8 +362,8 @@ func.func @array_of_types() {
 }
 
 // CHECK-LABEL: func @array_of_types() {
-// CHECK:         %{{.*}} = fir.do_loop %{{.*}} = %{{.*}}  to %{{.*}}  step %{{.*}}  -> index {
-// CHECK:           %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%arg2 = %17) -> (!fir.array<10xi32>) {
+// CHECK:         %{{.*}} = fir.do_loop %{{.*}} = %{{.*}}  to %{{.*}}  step %{{.*}}  -> index attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+// CHECK:           %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%arg2 = %17) -> (!fir.array<10xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NOT:         %{{.*}} = fir.array_update
 // CHECK:             %[[COOR0:.*]] = fir.array_coor %{{.*}}(%{{.*}}) [%{{.*}}] %{{.*}} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<i32>
 // CHECK:             fir.store %{{.*}} to %[[COOR0]] : !fir.ref<i32>
@@ -387,7 +387,7 @@ func.func @conversion_with_temporary_boxed_array(%arr0 : !fir.box<!fir.array<10x
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %7 = arith.subi %3, %c1 : index
-  %8 = fir.do_loop %arg0 = %c0 to %7 step %c1 unordered iter_args(%arg1 = %2) -> (!fir.array<10xi32>) {
+  %8 = fir.do_loop %arg0 = %c0 to %7 step %c1 unordered iter_args(%arg1 = %2) -> (!fir.array<10xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %9 = fir.array_fetch %6, %arg0 : (!fir.array<10xi32>, index) -> i32
     %10 = fir.array_update %arg1, %9, %arg0 : (!fir.array<10xi32>, i32, index) -> !fir.array<10xi32>
     fir.result %10 : !fir.array<10xi32>
@@ -401,14 +401,14 @@ func.func @conversion_with_temporary_boxed_array(%arr0 : !fir.box<!fir.array<10x
 // Allocation of temporary array.
 // CHECK:         %[[TEMP:.*]] = fir.allocmem !fir.array<10xi32>
 // Copy of original array to temp.
-// CHECK:         fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:         fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:           %[[COOR0:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.box<!fir.array<10xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
 // CHECK:           %[[COOR1:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<10xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
 // CHECK:           %[[LOAD0:.*]] = fir.load %[[COOR0]] : !fir.ref<i32>
 // CHECK:           fir.store %[[LOAD0]] to %[[COOR1]] : !fir.ref<i32>
 // CHECK:         }
 // Perform the assignment i = i(10:1:-1) using the temporary array.
-// CHECK:         %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10xi32>) {
+// CHECK:         %{{.*}} = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NOT:       %{{.*}} = fir.array_fetch
 // CHECK-NOT:       %{{.*}} = fir.update
 // CHECK:           %[[COOR0:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) [%{{.*}}] %{{.*}} : (!fir.box<!fir.array<10xi32>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<i32>
@@ -418,7 +418,7 @@ func.func @conversion_with_temporary_boxed_array(%arr0 : !fir.box<!fir.array<10x
 // CHECK:           fir.result %{{.*}} : !fir.array<10xi32>
 // CHECK:         }
 // Copy the result back to the original array.
-// CHECK:         fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:         fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:           %[[COOR0:.*]] = fir.array_coor %[[TEMP]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<10xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
 // CHECK:           %[[COOR1:.*]] = fir.array_coor %[[ARR0]](%{{.*}}) %{{.*}} : (!fir.box<!fir.array<10xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
 // CHECK:           %[[LOAD0:.*]] = fir.load %[[COOR0:.*]] : !fir.ref<i32>
@@ -459,7 +459,7 @@ func.func @array_fetch_derived_type(%0 : !fir.ref<!fir.array<10x!fir.type<_QTu{m
   %c1 = arith.constant 1 : index
   %shape = fir.shape %2 : (index) -> !fir.shape<1>
   %arr0 = fir.array_load %0(%shape) : (!fir.ref<!fir.array<10x!fir.type<_QTu{mt:!fir.type<_QTt{mem:i32}>}>>>, !fir.shape<1>) -> !fir.array<10x!fir.type<_QTu{mt:!fir.type<_QTt{mem:i32}>}>>
-  %4 = fir.do_loop %arg0 = %2 to %3 step %c1 -> index {
+  %4 = fir.do_loop %arg0 = %2 to %3 step %c1 -> index attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %6 = fir.convert %arg0 : (index) -> i32
     fir.store %6 to %1 : !fir.ref<i32>
     %c1_i32_0 = arith.constant 1 : i32

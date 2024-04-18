@@ -116,7 +116,7 @@ subroutine substring_assignment(a,b)
 ! CHECK:           %[[VAL_45:.*]] = fir.undefined !fir.char<1>
 ! CHECK:           %[[VAL_46:.*]] = fir.insert_value %[[VAL_45]], %[[VAL_44]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 ! CHECK:           %[[VAL_47:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_48:.*]] = %[[VAL_35]] to %[[VAL_43]] step %[[VAL_47]] {
+! CHECK:           fir.do_loop %[[VAL_48:.*]] = %[[VAL_35]] to %[[VAL_43]] step %[[VAL_47]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_49:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 ! CHECK:             %[[VAL_50:.*]] = fir.coordinate_of %[[VAL_49]], %[[VAL_48]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 ! CHECK:             fir.store %[[VAL_46]] to %[[VAL_50]] : !fir.ref<!fir.char<1>>
@@ -152,7 +152,7 @@ end subroutine substring_assignment
 ! CHECK:         %[[VAL_20:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_21:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_22:.*]] = arith.subi %[[VAL_14]], %[[VAL_20]] : index
-! CHECK:         %[[VAL_23:.*]] = fir.do_loop %[[VAL_24:.*]] = %[[VAL_21]] to %[[VAL_22]] step %[[VAL_20]] unordered iter_args(%[[VAL_25:.*]] = %[[VAL_17]]) -> (!fir.array<6x!fir.char<1,5>>) {
+! CHECK:         %[[VAL_23:.*]] = fir.do_loop %[[VAL_24:.*]] = %[[VAL_21]] to %[[VAL_22]] step %[[VAL_20]] unordered iter_args(%[[VAL_25:.*]] = %[[VAL_17]]) -> (!fir.array<6x!fir.char<1,5>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_26:.*]] = fir.array_access %[[VAL_25]], %[[VAL_24]] : (!fir.array<6x!fir.char<1,5>>, index) -> !fir.ref<!fir.char<1,5>>
 ! CHECK:           %[[VAL_27:.*]] = arith.constant 3 : i64
 ! CHECK:           %[[VAL_28:.*]] = arith.constant 5 : i64
@@ -172,7 +172,7 @@ end subroutine substring_assignment
 ! CHECK:           %[[VAL_42:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_43:.*]] = fir.convert %[[VAL_40]] : (index) -> index
 ! CHECK:           %[[VAL_44:.*]] = arith.subi %[[VAL_43]], %[[VAL_42]] : index
-! CHECK:           fir.do_loop %[[VAL_45:.*]] = %[[VAL_41]] to %[[VAL_44]] step %[[VAL_42]] {
+! CHECK:           fir.do_loop %[[VAL_45:.*]] = %[[VAL_41]] to %[[VAL_44]] step %[[VAL_42]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_46:.*]] = fir.convert %[[VAL_19]] : (index) -> index
 ! CHECK:             %[[VAL_47:.*]] = arith.cmpi slt, %[[VAL_45]], %[[VAL_46]] : index
 ! CHECK:             fir.if %[[VAL_47]] {
@@ -204,7 +204,7 @@ end subroutine substring_assignment
 ! CHECK:           %[[VAL_67:.*]] = fir.undefined !fir.char<1>
 ! CHECK:           %[[VAL_68:.*]] = fir.insert_value %[[VAL_67]], %[[VAL_66]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 ! CHECK:           %[[VAL_69:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_70:.*]] = %[[VAL_57]] to %[[VAL_65]] step %[[VAL_69]] {
+! CHECK:           fir.do_loop %[[VAL_70:.*]] = %[[VAL_57]] to %[[VAL_65]] step %[[VAL_69]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_71:.*]] = fir.convert %[[VAL_35]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 ! CHECK:             %[[VAL_72:.*]] = fir.coordinate_of %[[VAL_71]], %[[VAL_70]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 ! CHECK:             fir.store %[[VAL_68]] to %[[VAL_72]] : !fir.ref<!fir.char<1>>
@@ -240,7 +240,7 @@ end subroutine array_substring_assignment
 ! CHECK:         %[[VAL_9:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_11:.*]] = arith.subi %[[select]], %[[VAL_9]] : index
-! CHECK:         %[[VAL_12:.*]] = fir.do_loop %[[VAL_13:.*]] = %[[VAL_10]] to %[[VAL_11]] step %[[VAL_9]] unordered iter_args(%[[VAL_14:.*]] = %[[VAL_6]]) -> (!fir.array<8x!fir.char<1,7>>) {
+! CHECK:         %[[VAL_12:.*]] = fir.do_loop %[[VAL_13:.*]] = %[[VAL_10]] to %[[VAL_11]] step %[[VAL_9]] unordered iter_args(%[[VAL_14:.*]] = %[[VAL_6]]) -> (!fir.array<8x!fir.char<1,7>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_15:.*]] = fir.array_access %[[VAL_14]], %[[VAL_13]] : (!fir.array<8x!fir.char<1,7>>, index) -> !fir.ref<!fir.char<1,7>>
 ! CHECK:           %[[VAL_16:.*]] = arith.constant 4 : i64
 ! CHECK:           %[[VAL_17:.*]] = arith.constant 7 : i64
@@ -260,7 +260,7 @@ end subroutine array_substring_assignment
 ! CHECK:           %[[VAL_31:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_29]] : (index) -> index
 ! CHECK:           %[[VAL_33:.*]] = arith.subi %[[VAL_32]], %[[VAL_31]] : index
-! CHECK:           fir.do_loop %[[VAL_34:.*]] = %[[VAL_30]] to %[[VAL_33]] step %[[VAL_31]] {
+! CHECK:           fir.do_loop %[[VAL_34:.*]] = %[[VAL_30]] to %[[VAL_33]] step %[[VAL_31]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_35:.*]] = fir.convert %[[VAL_8]] : (index) -> index
 ! CHECK:             %[[VAL_36:.*]] = arith.cmpi slt, %[[VAL_34]], %[[VAL_35]] : index
 ! CHECK:             fir.if %[[VAL_36]] {
@@ -292,7 +292,7 @@ end subroutine array_substring_assignment
 ! CHECK:           %[[VAL_56:.*]] = fir.undefined !fir.char<1>
 ! CHECK:           %[[VAL_57:.*]] = fir.insert_value %[[VAL_56]], %[[VAL_55]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 ! CHECK:           %[[VAL_58:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_59:.*]] = %[[VAL_46]] to %[[VAL_54]] step %[[VAL_58]] {
+! CHECK:           fir.do_loop %[[VAL_59:.*]] = %[[VAL_46]] to %[[VAL_54]] step %[[VAL_58]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_60:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 ! CHECK:             %[[VAL_61:.*]] = fir.coordinate_of %[[VAL_60]], %[[VAL_59]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 ! CHECK:             fir.store %[[VAL_57]] to %[[VAL_61]] : !fir.ref<!fir.char<1>>
@@ -335,7 +335,7 @@ end subroutine array_substring_assignment2
 ! CHECK:         %[[VAL_14:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_15:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_16:.*]] = arith.subi %[[select]], %[[VAL_14]] : index
-! CHECK:         %[[VAL_17:.*]] = fir.do_loop %[[VAL_18:.*]] = %[[VAL_15]] to %[[VAL_16]] step %[[VAL_14]] unordered iter_args(%[[VAL_19:.*]] = %[[VAL_8]]) -> (!fir.array<8x!fir.char<1,7>>) {
+! CHECK:         %[[VAL_17:.*]] = fir.do_loop %[[VAL_18:.*]] = %[[VAL_15]] to %[[VAL_16]] step %[[VAL_14]] unordered iter_args(%[[VAL_19:.*]] = %[[VAL_8]]) -> (!fir.array<8x!fir.char<1,7>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_20:.*]] = fir.array_access %[[VAL_13]], %[[VAL_18]] : (!fir.array<8x!fir.char<1,7>>, index) -> !fir.ref<!fir.char<1,7>>
 ! CHECK:           %[[VAL_21:.*]] = arith.constant 2 : i64
 ! CHECK:           %[[VAL_22:.*]] = arith.constant 5 : i64
@@ -370,7 +370,7 @@ end subroutine array_substring_assignment2
 ! CHECK:           %[[VAL_51:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_52:.*]] = fir.convert %[[VAL_49]] : (index) -> index
 ! CHECK:           %[[VAL_53:.*]] = arith.subi %[[VAL_52]], %[[VAL_51]] : index
-! CHECK:           fir.do_loop %[[VAL_54:.*]] = %[[VAL_50]] to %[[VAL_53]] step %[[VAL_51]] {
+! CHECK:           fir.do_loop %[[VAL_54:.*]] = %[[VAL_50]] to %[[VAL_53]] step %[[VAL_51]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_55:.*]] = fir.convert %[[VAL_34]] : (index) -> index
 ! CHECK:             %[[VAL_56:.*]] = arith.cmpi slt, %[[VAL_54]], %[[VAL_55]] : index
 ! CHECK:             fir.if %[[VAL_56]] {
@@ -402,7 +402,7 @@ end subroutine array_substring_assignment2
 ! CHECK:           %[[VAL_76:.*]] = fir.undefined !fir.char<1>
 ! CHECK:           %[[VAL_77:.*]] = fir.insert_value %[[VAL_76]], %[[VAL_75]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 ! CHECK:           %[[VAL_78:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_79:.*]] = %[[VAL_66]] to %[[VAL_74]] step %[[VAL_78]] {
+! CHECK:           fir.do_loop %[[VAL_79:.*]] = %[[VAL_66]] to %[[VAL_74]] step %[[VAL_78]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_80:.*]] = fir.convert %[[VAL_44]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 ! CHECK:             %[[VAL_81:.*]] = fir.coordinate_of %[[VAL_80]], %[[VAL_79]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 ! CHECK:             fir.store %[[VAL_77]] to %[[VAL_81]] : !fir.ref<!fir.char<1>>

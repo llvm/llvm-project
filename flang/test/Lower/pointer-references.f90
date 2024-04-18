@@ -102,7 +102,7 @@ end subroutine
   ! CHECK:         %[[VAL_23:.*]] = arith.constant 1 : index
   ! CHECK:         %[[VAL_24:.*]] = arith.constant 0 : index
   ! CHECK:         %[[VAL_25:.*]] = arith.subi %[[VAL_17]], %[[VAL_23]] : index
-  ! CHECK:         %[[VAL_26:.*]] = fir.do_loop %[[VAL_27:.*]] = %[[VAL_24]] to %[[VAL_25]] step %[[VAL_23]] unordered iter_args(%[[VAL_28:.*]] = %[[VAL_20]]) -> (!fir.array<?xf32>) {
+  ! CHECK:         %[[VAL_26:.*]] = fir.do_loop %[[VAL_27:.*]] = %[[VAL_24]] to %[[VAL_25]] step %[[VAL_23]] unordered iter_args(%[[VAL_28:.*]] = %[[VAL_20]]) -> (!fir.array<?xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   ! CHECK:           %[[VAL_29:.*]] = fir.array_fetch %[[VAL_22]], %[[VAL_27]] : (!fir.array<100xf32>, index) -> f32
   ! CHECK:           %[[VAL_30:.*]] = fir.array_update %[[VAL_28]], %[[VAL_29]], %[[VAL_27]] : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
   ! CHECK:           fir.result %[[VAL_30]] : !fir.array<?xf32>
@@ -147,7 +147,7 @@ end subroutine
   ! CHECK:         %[[VAL_24:.*]] = arith.constant 1 : index
   ! CHECK:         %[[VAL_25:.*]] = arith.constant 0 : index
   ! CHECK:         %[[VAL_26:.*]] = arith.subi %[[VAL_18]], %[[VAL_24]] : index
-  ! CHECK:         %[[VAL_27:.*]] = fir.do_loop %[[VAL_28:.*]] = %[[VAL_25]] to %[[VAL_26]] step %[[VAL_24]] unordered iter_args(%[[VAL_29:.*]] = %[[VAL_21]]) -> (!fir.array<?xf32>) {
+  ! CHECK:         %[[VAL_27:.*]] = fir.do_loop %[[VAL_28:.*]] = %[[VAL_25]] to %[[VAL_26]] step %[[VAL_24]] unordered iter_args(%[[VAL_29:.*]] = %[[VAL_21]]) -> (!fir.array<?xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   ! CHECK:           %[[VAL_30:.*]] = fir.array_fetch %[[VAL_23]], %[[VAL_28]] : (!fir.array<100xf32>, index) -> f32
   ! CHECK:           %[[VAL_31:.*]] = fir.array_update %[[VAL_29]], %[[VAL_30]], %[[VAL_28]] : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
   ! CHECK:           fir.result %[[VAL_31]] : !fir.array<?xf32>

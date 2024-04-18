@@ -157,7 +157,7 @@ func.func @placement3() {
   %c1_i32 = fir.convert %c1 : (index) -> i32
   %c2 = arith.constant 2 : index
   %c10 = arith.constant 10 : index
-  %0:2 = fir.do_loop %arg0 = %c1 to %c10 step %c1 iter_args(%arg1 = %c1_i32) -> (index, i32) {
+  %0:2 = fir.do_loop %arg0 = %c1 to %c10 step %c1 iter_args(%arg1 = %c1_i32) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %3 = arith.addi %c1, %c2 : index
     // operand is now available
     %4 = fir.allocmem !fir.array<?xi32>, %3
@@ -220,7 +220,7 @@ func.func @placement5() {
   %c1_i32 = fir.convert %c1 : (index) -> i32
   %c2 = arith.constant 2 : index
   %c10 = arith.constant 10 : index
-  %0:2 = fir.do_loop %arg0 = %c1 to %c10 step %c1 iter_args(%arg1 = %c1_i32) -> (index, i32) {
+  %0:2 = fir.do_loop %arg0 = %c1 to %c10 step %c1 iter_args(%arg1 = %c1_i32) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %3 = arith.addi %c1, %c2 : index
     // operand is now available
     %4 = fir.allocmem !fir.array<?xi32>, %3

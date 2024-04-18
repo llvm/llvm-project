@@ -20,7 +20,7 @@ func.func @test_overlap_with_alloc_components(%arg0: !fir.ref<!fir.array<10x!t_w
   %6 = fir.slice %c10, %c1, %c-1 : (index, index, index) -> !fir.slice<1>
   %2 = fir.array_load %arg0(%1) : (!fir.ref<!fir.array<10x!t_with_alloc_comp>>, !fir.shape<1>) -> !fir.array<10x!t_with_alloc_comp>
   %7 = fir.array_load %arg0(%1) [%6] : (!fir.ref<!fir.array<10x!t_with_alloc_comp>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<10x!t_with_alloc_comp>
-  %9 = fir.do_loop %arg1 = %c0 to %c9 step %c1 unordered iter_args(%arg2 = %2) -> (!fir.array<10x!t_with_alloc_comp>) {
+  %9 = fir.do_loop %arg1 = %c0 to %c9 step %c1 unordered iter_args(%arg2 = %2) -> (!fir.array<10x!t_with_alloc_comp>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %10 = fir.array_access %7, %arg1 : (!fir.array<10x!t_with_alloc_comp>, index) -> !fir.ref<!t_with_alloc_comp>
     %11 = fir.array_access %arg2, %arg1 : (!fir.array<10x!t_with_alloc_comp>, index) -> !fir.ref<!t_with_alloc_comp>
     fir.call @custom_assign(%11, %10) : (!fir.ref<!t_with_alloc_comp>, !fir.ref<!t_with_alloc_comp>) -> none

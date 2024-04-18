@@ -46,7 +46,7 @@ func.func @test_scalar_save(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:           %[[VAL_16:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_13]] {bindc_name = ".tmp.forall", uniq_name = ""}
 // CHECK:           %[[VAL_17:.*]] = fir.shape %[[VAL_13]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_16]](%[[VAL_17]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
-// CHECK:           fir.do_loop %[[VAL_19:.*]] = %[[VAL_5]] to %[[VAL_6]] step %[[VAL_7]] {
+// CHECK:           fir.do_loop %[[VAL_19:.*]] = %[[VAL_5]] to %[[VAL_6]] step %[[VAL_7]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (index) -> i32
 // CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i32) -> i64
 // CHECK:             %[[VAL_22:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_21]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
@@ -61,7 +61,7 @@ func.func @test_scalar_save(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:           %[[VAL_28:.*]] = fir.convert %[[VAL_2]] : (i32) -> index
 // CHECK:           %[[VAL_29:.*]] = arith.constant 1 : index
 // CHECK:           fir.store %[[VAL_14]] to %[[VAL_1]] : !fir.ref<index>
-// CHECK:           fir.do_loop %[[VAL_30:.*]] = %[[VAL_27]] to %[[VAL_28]] step %[[VAL_29]] {
+// CHECK:           fir.do_loop %[[VAL_30:.*]] = %[[VAL_27]] to %[[VAL_28]] step %[[VAL_29]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (index) -> i32
 // CHECK:             %[[VAL_32:.*]] = fir.load %[[VAL_1]] : !fir.ref<index>
 // CHECK:             %[[VAL_33:.*]] = arith.addi %[[VAL_32]], %[[VAL_15]] : index
@@ -144,7 +144,7 @@ func.func @mask_and_rhs_conflict(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:           %[[VAL_29:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_26]] {bindc_name = ".tmp.forall", uniq_name = ""}
 // CHECK:           %[[VAL_30:.*]] = fir.shape %[[VAL_26]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_31:.*]]:2 = hlfir.declare %[[VAL_29]](%[[VAL_30]]) {uniq_name = ".tmp.forall"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
-// CHECK:           fir.do_loop %[[VAL_32:.*]] = %[[VAL_7]] to %[[VAL_8]] step %[[VAL_9]] {
+// CHECK:           fir.do_loop %[[VAL_32:.*]] = %[[VAL_7]] to %[[VAL_8]] step %[[VAL_9]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (index) -> i32
 // CHECK:             %[[VAL_34:.*]] = fir.convert %[[VAL_33]] : (i32) -> i64
 // CHECK:             %[[VAL_35:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_34]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>
@@ -171,7 +171,7 @@ func.func @mask_and_rhs_conflict(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:           %[[VAL_49:.*]] = arith.constant 1 : index
 // CHECK:           fir.store %[[VAL_16]] to %[[VAL_2]] : !fir.ref<index>
 // CHECK:           fir.store %[[VAL_27]] to %[[VAL_1]] : !fir.ref<index>
-// CHECK:           fir.do_loop %[[VAL_50:.*]] = %[[VAL_47]] to %[[VAL_48]] step %[[VAL_49]] {
+// CHECK:           fir.do_loop %[[VAL_50:.*]] = %[[VAL_47]] to %[[VAL_48]] step %[[VAL_49]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_51:.*]] = fir.convert %[[VAL_50]] : (index) -> i32
 // CHECK:             %[[VAL_52:.*]] = fir.load %[[VAL_2]] : !fir.ref<index>
 // CHECK:             %[[VAL_53:.*]] = arith.addi %[[VAL_52]], %[[VAL_17]] : index
@@ -240,7 +240,7 @@ func.func @test_where_mask_save(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:           %[[VAL_12:.*]]:3 = hlfir.associate %[[VAL_13:.*]](%[[VAL_5]]) {uniq_name = ".tmp.where"} : (!hlfir.expr<?x!fir.logical<4>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.ref<!fir.array<?x!fir.logical<4>>>, i1)
 // CHECK:           hlfir.destroy %[[VAL_13]] : !hlfir.expr<?x!fir.logical<4>>
 // CHECK:           %[[VAL_14:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_15:.*]] = %[[VAL_14]] to %[[VAL_4]]#1 step %[[VAL_14]] {
+// CHECK:           fir.do_loop %[[VAL_15:.*]] = %[[VAL_14]] to %[[VAL_4]]#1 step %[[VAL_14]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_16:.*]] = hlfir.designate %[[VAL_12]]#0 (%[[VAL_15]])  : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (!fir.logical<4>) -> i1
@@ -294,7 +294,7 @@ func.func @test_where_rhs_save(%x: !fir.ref<!fir.array<10xi32>>, %mask: !fir.ref
 // CHECK:           %[[VAL_19:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_16]] {bindc_name = ".tmp.where", uniq_name = ""}
 // CHECK:           %[[VAL_20:.*]] = fir.shape %[[VAL_16]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_19]](%[[VAL_20]]) {uniq_name = ".tmp.where"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
-// CHECK:           fir.do_loop %[[VAL_22:.*]] = %[[VAL_9]] to %[[VAL_7]] step %[[VAL_9]] {
+// CHECK:           fir.do_loop %[[VAL_22:.*]] = %[[VAL_9]] to %[[VAL_7]] step %[[VAL_9]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_23:.*]] = hlfir.designate %[[VAL_1]] (%[[VAL_22]])  : (!fir.ref<!fir.array<10x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_24:.*]] = fir.load %[[VAL_23]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (!fir.logical<4>) -> i1
@@ -313,7 +313,7 @@ func.func @test_where_rhs_save(%x: !fir.ref<!fir.array<10xi32>>, %mask: !fir.ref
 // CHECK:           %[[VAL_32:.*]] = fir.shape %[[VAL_31]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_33:.*]] = arith.constant 1 : index
 // CHECK:           fir.store %[[VAL_17]] to %[[VAL_2]] : !fir.ref<index>
-// CHECK:           fir.do_loop %[[VAL_34:.*]] = %[[VAL_33]] to %[[VAL_31]] step %[[VAL_33]] {
+// CHECK:           fir.do_loop %[[VAL_34:.*]] = %[[VAL_33]] to %[[VAL_31]] step %[[VAL_33]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_35:.*]] = hlfir.designate %[[VAL_1]] (%[[VAL_34]])  : (!fir.ref<!fir.array<10x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_36:.*]] = fir.load %[[VAL_35]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_37:.*]] = fir.convert %[[VAL_36]] : (!fir.logical<4>) -> i1

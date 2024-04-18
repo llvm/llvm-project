@@ -10,7 +10,7 @@ func.func @set_all_n(%n : index, %x : i32) {
   // CHECK-DAG: %[[IV:.*]] = phi i64
   // CHECK-DAG: %[[LCV:.*]] = phi i64
   // CHECK: icmp sgt i64 %[[LCV]], 0
-  fir.do_loop %i = %c1 to %n step %c1 unordered {
+  fir.do_loop %i = %c1 to %n step %c1 unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %1 = fir.coordinate_of %a, %i : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     // CHECK: store i32 %{{.*}}, ptr %{{.*}}
     fir.store %x to %1 : !fir.ref<i32>

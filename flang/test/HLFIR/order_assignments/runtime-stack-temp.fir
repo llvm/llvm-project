@@ -73,7 +73,7 @@ func.func @test_runtime_stack(%arg0: !fir.box<!fir.array<?xi32>>, %n: !fir.ref<i
 // CHECK:           %[[VAL_17:.*]] = arith.constant 1 : i64
 // CHECK:           fir.store %[[VAL_16]] to %[[VAL_3]] : !fir.ref<i64>
 // CHECK:           %[[VAL_22:.*]] = fir.call @_FortranACreateValueStack(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
-// CHECK:           fir.do_loop %[[VAL_23:.*]] = %[[VAL_13]] to %[[VAL_14]] step %[[VAL_15]] {
+// CHECK:           fir.do_loop %[[VAL_23:.*]] = %[[VAL_13]] to %[[VAL_14]] step %[[VAL_15]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (index) -> i32
 // CHECK:             %[[VAL_25:.*]] = arith.subi %[[VAL_8]], %[[VAL_24]] : i32
 // CHECK:             %[[VAL_26:.*]] = arith.subi %[[VAL_7]], %[[VAL_24]] : i32
@@ -95,7 +95,7 @@ func.func @test_runtime_stack(%arg0: !fir.box<!fir.array<?xi32>>, %n: !fir.ref<i
 // CHECK:           %[[VAL_41:.*]] = fir.convert %[[VAL_8]] : (i32) -> index
 // CHECK:           %[[VAL_42:.*]] = fir.convert %[[VAL_12]] : (i32) -> index
 // CHECK:           fir.store %[[VAL_16]] to %[[VAL_3]] : !fir.ref<i64>
-// CHECK:           fir.do_loop %[[VAL_43:.*]] = %[[VAL_40]] to %[[VAL_41]] step %[[VAL_42]] {
+// CHECK:           fir.do_loop %[[VAL_43:.*]] = %[[VAL_40]] to %[[VAL_41]] step %[[VAL_42]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_44:.*]] = fir.convert %[[VAL_43]] : (index) -> i32
 // CHECK:             %[[VAL_45:.*]] = fir.load %[[VAL_3]] : !fir.ref<i64>
 // CHECK:             %[[VAL_46:.*]] = arith.addi %[[VAL_45]], %[[VAL_17]] : i64

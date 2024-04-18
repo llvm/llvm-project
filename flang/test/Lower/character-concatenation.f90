@@ -25,7 +25,7 @@ subroutine concat_1(a, b)
 
   ! CHECK: %[[c1_0:.*]] = arith.constant 1
   ! CHECK: %[[count2:.*]] = arith.subi %[[len]], %[[c1_0]]
-  ! CHECK: fir.do_loop %[[index2:.*]] = %[[a]]#1 to %[[count2]] step %[[c1_0]] {
+  ! CHECK: fir.do_loop %[[index2:.*]] = %[[a]]#1 to %[[count2]] step %[[c1_0]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     ! CHECK: %[[b_index:.*]] = arith.subi %[[index2]], %[[a]]#1
     ! CHECK: %[[b_cast:.*]] = fir.convert %[[b]]#0
     ! CHECK: %[[b_addr:.*]] = fir.coordinate_of %[[b_cast]], %[[b_index]]

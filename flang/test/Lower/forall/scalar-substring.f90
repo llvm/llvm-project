@@ -17,7 +17,7 @@ end subroutine s
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 4 : i32
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (i32) -> index
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_9:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_8]] unordered {
+! CHECK:           fir.do_loop %[[VAL_9:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_8]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (index) -> i32
 ! CHECK:             fir.store %[[VAL_10]] to %[[VAL_1]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_11:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
@@ -71,7 +71,7 @@ end subroutine s
 ! CHECK:             %[[VAL_58:.*]] = fir.undefined !fir.char<1>
 ! CHECK:             %[[VAL_59:.*]] = fir.insert_value %[[VAL_58]], %[[VAL_57]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 ! CHECK:             %[[VAL_60:.*]] = arith.constant 1 : index
-! CHECK:             fir.do_loop %[[VAL_61:.*]] = %[[VAL_48]] to %[[VAL_56]] step %[[VAL_60]] {
+! CHECK:             fir.do_loop %[[VAL_61:.*]] = %[[VAL_48]] to %[[VAL_56]] step %[[VAL_60]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:               %[[VAL_62:.*]] = fir.convert %[[VAL_41]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 ! CHECK:               %[[VAL_63:.*]] = fir.coordinate_of %[[VAL_62]], %[[VAL_61]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 ! CHECK:               fir.store %[[VAL_59]] to %[[VAL_63]] : !fir.ref<!fir.char<1>>

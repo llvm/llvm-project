@@ -683,6 +683,89 @@ private:
     }
   }
 
+  void CheckReduce(
+      const parser::LocalitySpec::Reduce &reduce) const {
+    const parser::ReduceOperation &reduceOperation = 
+        std::get<parser::ReduceOperation>(reduce.t);
+    // F'2023 C1132, reduction variables should have suitable intrinsic type
+    bool supported_identifier = true;
+    common::visit(
+        common::visitors{
+            [&](const parser::DefinedOperator &dOpr) {
+              const auto &intrinsicOp{
+                std::get<parser::DefinedOperator::IntrinsicOperator>(dOpr.u)
+              };
+              for (const Fortran::parser::Name &x :
+                       std::get<std::list<Fortran::parser::Name>>(reduce.t)) {
+                const auto *type{x.symbol->GetType()};
+                bool suitable_type = false;
+                switch (intrinsicOp) {
+                case parser::DefinedOperator::IntrinsicOperator::Add:
+                case parser::DefinedOperator::IntrinsicOperator::Multiply:
+                  if (type->IsNumeric(TypeCategory::Integer) ||
+                      type->IsNumeric(TypeCategory::Real) ||
+                      type->IsNumeric(TypeCategory::Complex)) {
+                    // TODO: check composite type.
+                    suitable_type = true;
+                  }
+                  break;
+                case parser::DefinedOperator::IntrinsicOperator::AND:
+                case parser::DefinedOperator::IntrinsicOperator::OR:
+                case parser::DefinedOperator::IntrinsicOperator::EQV:
+                case parser::DefinedOperator::IntrinsicOperator::NEQV:
+                  if (type->category() == DeclTypeSpec::Category::Logical) {
+                    suitable_type = true;
+                  }
+                  break;
+                default:
+                  supported_identifier = false;
+                  return;
+                }
+                if (!suitable_type) {
+                  context_.Say(currentStatementSourcePosition_,
+                               "Reduction variable '%s' does not have a "
+                               "suitable type."_err_en_US, x.symbol->name());
+                }
+              }
+            },
+            [&](const parser::ProcedureDesignator &procD) {
+              const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
+              if (!(name && name->symbol)) {
+                supported_identifier = false;
+                return;
+              }
+              const SourceName &realName{name->symbol->GetUltimate().name()};
+              for (const Fortran::parser::Name &x : std::get<std::list<
+                       Fortran::parser::Name>>(reduce.t)) {
+                const auto *type{x.symbol->GetType()};
+                bool suitable_type = false;
+                if (realName == "max" || realName == "min") {
+                  if (type->IsNumeric(TypeCategory::Integer) ||
+                      type->IsNumeric(TypeCategory::Real))
+                    suitable_type = true;
+                } else if (realName == "iand" || realName == "ior" ||
+                           realName == "ieor") {
+                  if (type->IsNumeric(TypeCategory::Integer))
+                    suitable_type = true;
+                } else {
+                  supported_identifier = false;
+                  return;
+                }
+                if (!suitable_type) {
+                  context_.Say(currentStatementSourcePosition_,
+                      "Reduction variable '%s' does not have a "
+                      "suitable type."_err_en_US, x.symbol->name());
+                }
+              }
+            }
+        },
+        reduceOperation.u);
+    if (!supported_identifier) {
+      context_.Say(currentStatementSourcePosition_,
+          "Invalid reduction identifier in REDUCE clause."_err_en_US);
+    }
+  }
+
   // C1123, concurrent limit or step expressions can't reference index-names
   void CheckConcurrentHeader(const parser::ConcurrentHeader &header) const {
     if (const auto &mask{
@@ -736,6 +819,12 @@ private:
       if (const auto &mask{
               std::get<std::optional<parser::ScalarLogicalExpr>>(header.t)}) {
         CheckMaskDoesNotReferenceLocal(*mask, localVars);
+      }
+      for (auto &ls : localitySpecs) {
+        if (const auto *reduce{
+                std::get_if<parser::LocalitySpec::Reduce>(&ls.u)}) {
+          CheckReduce(*reduce);
+        }
       }
       CheckDefaultNoneImpliesExplicitLocality(localitySpecs, block);
     }

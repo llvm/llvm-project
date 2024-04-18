@@ -49,7 +49,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
-// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[SUM:.*]] = %[[CI32_0]]) -> (i32) {
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[SUM:.*]] = %[[CI32_0]]) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_I32]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<i32>
 // CHECK:             %[[NEW_SUM:.*]] = arith.addi %[[ITEM_VAL]], %[[SUM]] : i32
@@ -111,8 +111,8 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[DIMIDX_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[DIMS_1:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %[[DIMIDX_1]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT_1:.*]] = arith.subi %[[DIMS_1]]#1, %[[CINDEX_1]] : index
-// CHECK:           %[[RES_1:.*]] = fir.do_loop %[[ITER_1:.*]] = %[[CINDEX_0]] to %[[EXTENT_1]] step %[[CINDEX_1]] iter_args(%[[SUM_1:.*]] = %[[CI32_0]]) -> (i32) {
-// CHECK:             %[[RES_0:.*]] = fir.do_loop %[[ITER_0:.*]] = %[[CINDEX_0]] to %[[EXTENT_0]] step %[[CINDEX_1]] iter_args(%[[SUM_0:.*]] = %[[SUM_1]]) -> (i32) {
+// CHECK:           %[[RES_1:.*]] = fir.do_loop %[[ITER_1:.*]] = %[[CINDEX_0]] to %[[EXTENT_1]] step %[[CINDEX_1]] iter_args(%[[SUM_1:.*]] = %[[CI32_0]]) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
+// CHECK:             %[[RES_0:.*]] = fir.do_loop %[[ITER_0:.*]] = %[[CINDEX_0]] to %[[EXTENT_0]] step %[[CINDEX_1]] iter_args(%[[SUM_0:.*]] = %[[SUM_1]]) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:               %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_I32]], %[[ITER_0]], %[[ITER_1]] : (!fir.box<!fir.array<?x?xi32>>, index, index) -> !fir.ref<i32>
 // CHECK:               %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<i32>
 // CHECK:               %[[NEW_SUM:.*]] = arith.addi %[[ITEM_VAL]], %[[SUM_0]] : i32
@@ -174,7 +174,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_F64]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
-// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[SUM]] = %[[ZERO]]) -> (f64) {
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[SUM]] = %[[ZERO]]) -> (f64) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_F64]], %[[ITER]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<f64>
 // CHECK:             %[[NEW_SUM:.*]] = arith.addf %[[ITEM_VAL]], %[[SUM]] : f64
@@ -234,7 +234,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_F32]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
-// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[SUM]] = %[[ZERO]]) -> (f32) {
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[SUM]] = %[[ZERO]]) -> (f32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_F32]], %[[ITER]] : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<f32>
 // CHECK:             %[[NEW_SUM:.*]] = arith.addf %[[ITEM_VAL]], %[[SUM]] : f32
@@ -396,7 +396,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
-// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %{{.*}} to %[[EXTENT]] step %[[CINDEX_1]] iter_args({{.*}}) -> (i32) {
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %{{.*}} to %[[EXTENT]] step %[[CINDEX_1]] iter_args({{.*}}) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %{{.*}} = fir.coordinate_of %[[ARR_BOX_I32]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:           }
 // CHECK:           return %[[RES]] : i32
@@ -498,7 +498,7 @@ func.func @dot_f32(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %a
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ACAST]], %[[IZERO]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 // CHECK:           %[[IONE:.*]] = arith.constant 1 : index
 // CHECK:           %[[LEN:.*]] = arith.subi %[[DIMS]]#1, %[[IONE]] : index
-// CHECK:           %[[RES:.*]] = fir.do_loop %[[IDX:.*]] = %[[IZERO]] to %[[LEN]] step %[[IONE]] iter_args(%[[SUM:.*]] = %[[FZERO]]) -> (f32) {
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[IDX:.*]] = %[[IZERO]] to %[[LEN]] step %[[IONE]] iter_args(%[[SUM:.*]] = %[[FZERO]]) -> (f32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %[[ALOC:.*]] = fir.coordinate_of %[[ACAST]], %[[IDX]] : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // CHECK:             %[[AVAL:.*]] = fir.load %[[ALOC]] : !fir.ref<f32>
 // CHECK:             %[[AVALCAST:.*]] = fir.convert %[[AVAL]] : (f32) -> f32
@@ -635,7 +635,7 @@ fir.global linkonce @_QQclX2E2F646F742E66393000 constant : !fir.char<1,10> {
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ACAST]], %[[IZERO]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[IONE:.*]] = arith.constant 1 : index
 // CHECK:           %[[LEN:.*]] = arith.subi %[[DIMS]]#1, %[[IONE]] : index
-// CHECK:           %[[RES:.*]] = fir.do_loop %[[IDX:.*]] = %[[IZERO]] to %[[LEN]] step %[[IONE]] iter_args(%[[SUM:.*]] = %[[I32ZERO]]) -> (i32) {
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[IDX:.*]] = %[[IZERO]] to %[[LEN]] step %[[IONE]] iter_args(%[[SUM:.*]] = %[[I32ZERO]]) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %[[ALOC:.*]] = fir.coordinate_of %[[ACAST]], %[[IDX]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[AVAL:.*]] = fir.load %[[ALOC]] : !fir.ref<i32>
 // CHECK:             %[[AVALCAST:.*]] = fir.convert %[[AVAL]] : (i32) -> i32
@@ -776,7 +776,7 @@ fir.global linkonce @_QQclX2E2F646F742E66393000 constant : !fir.char<1,10> {
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ACAST]], %[[IZERO]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
 // CHECK:           %[[IONE:.*]] = arith.constant 1 : index
 // CHECK:           %[[LEN:.*]] = arith.subi %[[DIMS]]#1, %[[IONE]] : index
-// CHECK:           %[[RES:.*]] = fir.do_loop %[[IDX:.*]] = %[[IZERO]] to %[[LEN]] step %[[IONE]] iter_args(%[[SUM:.*]] = %[[FZERO]]) -> (f64) {
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[IDX:.*]] = %[[IZERO]] to %[[LEN]] step %[[IONE]] iter_args(%[[SUM:.*]] = %[[FZERO]]) -> (f64) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %[[ALOC:.*]] = fir.coordinate_of %[[ACAST]], %[[IDX]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
 // CHECK:             %[[AVAL:.*]] = fir.load %[[ALOC]] : !fir.ref<f64>
 // CHECK:             %[[AVALCAST:.*]] = fir.convert %[[AVAL]] : (f64) -> f64
@@ -838,7 +838,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
-// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MAX:.*]] = %[[CI32_MININT]]) -> (i32) {
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MAX:.*]] = %[[CI32_MININT]]) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_I32]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<i32>
 // CHECK:             %[[NEW_MAX:.*]] = arith.maxsi %[[ITEM_VAL]], %[[MAX]] : i32
@@ -896,7 +896,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_F64]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
-// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MAX]] = %[[NEG_DBL_MAX]]) -> (f64) {
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MAX]] = %[[NEG_DBL_MAX]]) -> (f64) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_F64]], %[[ITER]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<f64>
 // CHECK:             %[[CMP:.*]] = arith.cmpf ogt, %[[ITEM_VAL]], %[[MAX]] : f64
@@ -1148,7 +1148,7 @@ fir.global linkonce @_QQclX2E2F746573746661696C2E66393000 constant : !fir.char<1
 // CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[C_INDEX1]] : index
-// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[COUNT:.*]] = %[[IZERO]]) -> (i64) {
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[COUNT:.*]] = %[[IZERO]]) -> (i64) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_I32]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<i32>
 // CHECK:             %[[I32_0:.*]] = arith.constant 0 : i32
@@ -1196,7 +1196,7 @@ func.func @_QPdiffkind(%arg0: !fir.ref<!fir.array<10x!fir.logical<2>>> {fir.bind
 // CHECK:           %[[DIMIDX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I16]], %[[DIMIDX_0]] : (!fir.box<!fir.array<?xi16>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[C_INDEX1]] : index
-// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[COUNT:.*]] = %[[IZERO]]) -> (i64) {
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[COUNT:.*]] = %[[IZERO]]) -> (i64) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_I16]], %[[ITER]] : (!fir.box<!fir.array<?xi16>>, index) -> !fir.ref<i16>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<i16>
 // CHECK:             %[[I16_0:.*]] = arith.constant 0 : i16
@@ -1246,7 +1246,7 @@ func.func @_QMtestPcount_generate_mask(%arg0: !fir.ref<!fir.array<10x10x!fir.log
   %c1 = arith.constant 1 : index
   %c0_3 = arith.constant 0 : index
   %20 = arith.subi %c10_1, %c1 : index
-  %21 = fir.do_loop %arg1 = %c0_3 to %20 step %c1 unordered iter_args(%arg2 = %3) -> (!fir.array<10xi32>) {
+  %21 = fir.do_loop %arg1 = %c0_3 to %20 step %c1 unordered iter_args(%arg2 = %3) -> (!fir.array<10xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %23 = fir.array_fetch %19, %arg1 : (!fir.array<?xi32>, index) -> i32
     %24 = fir.array_update %arg2, %23, %arg1 : (!fir.array<10xi32>, i32, index) -> !fir.array<10xi32>
     fir.result %24 : !fir.array<10xi32>
@@ -1429,7 +1429,7 @@ func.func @_QPtestAny_DimArg(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> 
   %c1 = arith.constant 1 : index
   %c0_3 = arith.constant 0 : index
   %19 = arith.subi %c10_1, %c1 : index
-  %20 = fir.do_loop %arg1 = %c0_3 to %19 step %c1 unordered iter_args(%arg2 = %3) -> (!fir.array<10x!fir.logical<4>>) {
+  %20 = fir.do_loop %arg1 = %c0_3 to %19 step %c1 unordered iter_args(%arg2 = %3) -> (!fir.array<10x!fir.logical<4>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %22 = fir.array_fetch %18, %arg1 : (!fir.array<?x!fir.logical<4>>, index) -> !fir.logical<4>
     %23 = fir.array_update %arg2, %22, %arg1 : (!fir.array<10x!fir.logical<4>>, !fir.logical<4>, index) -> !fir.array<10x!fir.logical<4>>
     fir.result %23 : !fir.array<10x!fir.logical<4>>
@@ -1668,7 +1668,7 @@ func.func @_QPtestAll_DimArg(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> 
   %c1 = arith.constant 1 : index
   %c0_3 = arith.constant 0 : index
   %19 = arith.subi %c10_1, %c1 : index
-  %20 = fir.do_loop %arg1 = %c0_3 to %19 step %c1 unordered iter_args(%arg2 = %3) -> (!fir.array<10x!fir.logical<4>>) {
+  %20 = fir.do_loop %arg1 = %c0_3 to %19 step %c1 unordered iter_args(%arg2 = %3) -> (!fir.array<10x!fir.logical<4>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %22 = fir.array_fetch %18, %arg1 : (!fir.array<?x!fir.logical<4>>, index) -> !fir.logical<4>
     %23 = fir.array_update %arg2, %22, %arg1 : (!fir.array<10x!fir.logical<4>>, !fir.logical<4>, index) -> !fir.array<10x!fir.logical<4>>
     fir.result %23 : !fir.array<10x!fir.logical<4>>
@@ -1724,7 +1724,7 @@ func.func @_QPtestminloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
   %c1_2 = arith.constant 1 : index
   %c0_3 = arith.constant 0 : index
   %23 = arith.subi %c1, %c1_2 : index
-  %24 = fir.do_loop %arg2 = %c0_3 to %23 step %c1_2 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) {
+  %24 = fir.do_loop %arg2 = %c0_3 to %23 step %c1_2 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %26 = fir.array_fetch %22, %arg2 : (!fir.array<?xi32>, index) -> i32
     %27 = fir.array_update %arg3, %26, %arg2 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
     fir.result %27 : !fir.array<1xi32>
@@ -1774,7 +1774,7 @@ func.func @_QPtestminloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
 // CHECK:           %[[DIM_INDEX0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[BOX_INARR]], %[[DIM_INDEX0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
-// CHECK:           %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (i32) {
+// CHECK:           %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %[[MASK_ITEM:.*]] = fir.coordinate_of %[[BOX_MASK]], %[[ITER]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 // CHECK:             %[[MASK_ITEMVAL:.*]] = fir.load %[[MASK_ITEM]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[MASK_IF_ITEM:.*]] = fir.convert %[[MASK_ITEMVAL]] : (!fir.logical<4>) -> i1
@@ -1847,7 +1847,7 @@ func.func @_QPtestminloc_works2d_nomask(%arg0: !fir.ref<!fir.array<10x10xi32>> {
   %c1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %21 = arith.subi %c2, %c1 : index
-  %22 = fir.do_loop %arg1 = %c0_2 to %21 step %c1 unordered iter_args(%arg2 = %3) -> (!fir.array<2xi32>) {
+  %22 = fir.do_loop %arg1 = %c0_2 to %21 step %c1 unordered iter_args(%arg2 = %3) -> (!fir.array<2xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %24 = fir.array_fetch %20, %arg1 : (!fir.array<?xi64>, index) -> i64
     %25 = fir.convert %24 : (i64) -> i32
     %26 = fir.array_update %arg2, %25, %arg1 : (!fir.array<2xi32>, i32, index) -> !fir.array<2xi32>
@@ -1894,8 +1894,8 @@ func.func @_QPtestminloc_works2d_nomask(%arg0: !fir.ref<!fir.array<10x10xi32>> {
 // CHECK:           %[[DIM_INDEX1:.*]] = arith.constant 1 : index
 // CHECK:           %[[DIMS1:.*]]:3 = fir.box_dims %[[BOX_INARR]], %[[DIM_INDEX1]] : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT1:.*]] = arith.subi %[[DIMS1]]#1, %[[C_INDEX1]] : index
-// CHECK:           %[[DOLOOP0:.*]] = fir.do_loop %[[ITER0:.*]] = %[[C_INDEX0]] to %[[EXTENT1]] step %[[C_INDEX1]] iter_args(%[[MIN0:.*]] = %[[MAX]]) -> (i32) {
-// CHECK:             %[[DOLOOP1:.*]] = fir.do_loop %[[ITER1:.*]] = %[[C_INDEX0]] to %[[EXTENT0]] step %[[C_INDEX1]] iter_args(%[[MIN1:.*]] = %[[MIN0]]) -> (i32) {
+// CHECK:           %[[DOLOOP0:.*]] = fir.do_loop %[[ITER0:.*]] = %[[C_INDEX0]] to %[[EXTENT1]] step %[[C_INDEX1]] iter_args(%[[MIN0:.*]] = %[[MAX]]) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
+// CHECK:             %[[DOLOOP1:.*]] = fir.do_loop %[[ITER1:.*]] = %[[C_INDEX0]] to %[[EXTENT0]] step %[[C_INDEX1]] iter_args(%[[MIN1:.*]] = %[[MIN0]]) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:               %[[FLAG_SET2:.*]] = arith.constant 1 : i64
 // CHECK:               %[[ISFIRST:.*]] = fir.load %[[FLAG_ALLOC]] : !fir.ref<i64>
 // CHECK:               %[[INARR_ITEM:.*]] = fir.coordinate_of %[[BOX_INARR]], %[[ITER1]], %[[ITER0]] : (!fir.box<!fir.array<?x?xi32>>, index, index) -> !fir.ref<i32>
@@ -1967,7 +1967,7 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
   %c1_1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %22 = arith.subi %c1, %c1_1 : index
-  %23 = fir.do_loop %arg2 = %c0_2 to %22 step %c1_1 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) {
+  %23 = fir.do_loop %arg2 = %c0_2 to %22 step %c1_1 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %25 = fir.array_fetch %21, %arg2 : (!fir.array<?xi32>, index) -> i32
     %26 = fir.array_update %arg3, %25, %arg2 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
     fir.result %26 : !fir.array<1xi32>
@@ -2011,7 +2011,7 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:             %[[DIM_INDEX:.*]] = arith.constant 0 : index
 // CHECK:             %[[DIMS:.*]]:3 = fir.box_dims %[[BOX_INARR]], %[[DIM_INDEX]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
 // CHECK:             %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[C_INDEX1]] : index
-// CHECK:             %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (f64) {
+// CHECK:             %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (f64) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:               %[[FLAG_SET2:.*]] = arith.constant 1 : i32
 // CHECK:               %[[ISFIRST:.*]] = fir.load %[[FLAG_ALLOC]] : !fir.ref<i32>
 // CHECK:               %[[INARR_ITEM:.*]] = fir.coordinate_of %[[BOX_INARR]], %[[ITER]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
@@ -2080,7 +2080,7 @@ func.func @_QPtestminloc_doesntwork1d_back(%arg0: !fir.ref<!fir.array<10xi32>> {
   %c1_1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %22 = arith.subi %c1, %c1_1 : index
-  %23 = fir.do_loop %arg1 = %c0_2 to %22 step %c1_1 unordered iter_args(%arg2 = %3) -> (!fir.array<1xi32>) {
+  %23 = fir.do_loop %arg1 = %c0_2 to %22 step %c1_1 unordered iter_args(%arg2 = %3) -> (!fir.array<1xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %25 = fir.array_fetch %21, %arg1 : (!fir.array<?xi32>, index) -> i32
     %26 = fir.array_update %arg2, %25, %arg1 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
     fir.result %26 : !fir.array<1xi32>
@@ -2131,7 +2131,7 @@ func.func @_QPtestminloc_1d_dim(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_n
   %c1_0 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %19 = arith.subi %c1, %c1_0 : index
-  %20 = fir.do_loop %arg1 = %c0 to %19 step %c1_0 unordered iter_args(%arg2 = %3) -> (!fir.array<1xi32>) {
+  %20 = fir.do_loop %arg1 = %c0 to %19 step %c1_0 unordered iter_args(%arg2 = %3) -> (!fir.array<1xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %22 = fir.array_update %arg2, %18, %arg1 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
     fir.result %22 : !fir.array<1xi32>
   }
@@ -2163,7 +2163,7 @@ func.func @_QPtestminloc_1d_dim(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_n
 // CHECK-NEXT:    %c0_3 = arith.constant 0 : index
 // CHECK-NEXT:    %[[V6:.*]]:3 = fir.box_dims %[[V5]], %c0_3 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK-NEXT:    %[[V7:.*]] = arith.subi %[[V6]]#1, %c1_2 : index
-// CHECK-NEXT:    %[[V8:.*]] = fir.do_loop %arg3 = %c0_0 to %[[V7]] step %c1_2 iter_args(%arg4 = %c2147483647_i32) -> (i32) {
+// CHECK-NEXT:    %[[V8:.*]] = fir.do_loop %arg3 = %c0_0 to %[[V7]] step %c1_2 iter_args(%arg4 = %c2147483647_i32) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NEXT:      %c1_i32_4 = arith.constant 1 : i32
 // CHECK-NEXT:      %[[ISFIRST:.*]] = fir.load %[[FLAG_ALLOC]] : !fir.ref<i32>
 // CHECK-NEXT:      %[[V12:.*]] = fir.coordinate_of %[[V5]], %arg3 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
@@ -2230,7 +2230,7 @@ func.func @_QPtestminloc_doesntwork1d_unknownsize(%arg0: !fir.box<!fir.array<?xi
   %c1_1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %20 = arith.subi %c1, %c1_1 : index
-  %21 = fir.do_loop %arg1 = %c0_2 to %20 step %c1_1 unordered iter_args(%arg2 = %3) -> (!fir.array<1xi32>) {
+  %21 = fir.do_loop %arg1 = %c0_2 to %20 step %c1_1 unordered iter_args(%arg2 = %3) -> (!fir.array<1xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %23 = fir.array_fetch %19, %arg1 : (!fir.array<?xi32>, index) -> i32
     %24 = fir.array_update %arg2, %23, %arg1 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
     fir.result %24 : !fir.array<1xi32>
@@ -2285,7 +2285,7 @@ func.func @_QPtestminloc_doesntwork1d_chars(%arg0: !fir.boxchar<1> {fir.bindc_na
   %c1_1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %24 = arith.subi %c1, %c1_1 : index
-  %25 = fir.do_loop %arg1 = %c0_2 to %24 step %c1_1 unordered iter_args(%arg2 = %5) -> (!fir.array<1xi32>) {
+  %25 = fir.do_loop %arg1 = %c0_2 to %24 step %c1_1 unordered iter_args(%arg2 = %5) -> (!fir.array<1xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %27 = fir.array_fetch %23, %arg1 : (!fir.array<?xi32>, index) -> i32
     %28 = fir.array_update %arg2, %27, %arg1 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
     fir.result %28 : !fir.array<1xi32>
@@ -2366,7 +2366,7 @@ func.func @_QPtestminloc_doesntwork1d_unknownmask(%arg0: !fir.ref<!fir.array<10x
   %c1_3 = arith.constant 1 : index
   %c0_4 = arith.constant 0 : index
   %42 = arith.subi %c1, %c1_3 : index
-  %43 = fir.do_loop %arg1 = %c0_4 to %42 step %c1_3 unordered iter_args(%arg2 = %14) -> (!fir.array<1xi32>) {
+  %43 = fir.do_loop %arg1 = %c0_4 to %42 step %c1_3 unordered iter_args(%arg2 = %14) -> (!fir.array<1xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %45 = fir.array_fetch %41, %arg1 : (!fir.array<?xi32>, index) -> i32
     %46 = fir.array_update %arg2, %45, %arg1 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
     fir.result %46 : !fir.array<1xi32>
@@ -2421,7 +2421,7 @@ func.func @_QPtestmaxloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
   %c1_2 = arith.constant 1 : index
   %c0_3 = arith.constant 0 : index
   %23 = arith.subi %c1, %c1_2 : index
-  %24 = fir.do_loop %arg2 = %c0_3 to %23 step %c1_2 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) {
+  %24 = fir.do_loop %arg2 = %c0_3 to %23 step %c1_2 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %26 = fir.array_fetch %22, %arg2 : (!fir.array<?xi32>, index) -> i32
     %27 = fir.array_update %arg3, %26, %arg2 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
     fir.result %27 : !fir.array<1xi32>
@@ -2471,7 +2471,7 @@ func.func @_QPtestmaxloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
 // CHECK:           %[[DIM_INDEX0:.*]] = arith.constant 0 : index
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[BOX_INARR]], %[[DIM_INDEX0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
-// CHECK:           %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (i32) {
+// CHECK:           %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             %[[MASK_ITEM:.*]] = fir.coordinate_of %[[BOX_MASK]], %[[ITER]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 // CHECK:             %[[MASK_ITEMVAL:.*]] = fir.load %[[MASK_ITEM]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[MASK_IF_ITEM:.*]] = fir.convert %[[MASK_ITEMVAL]] : (!fir.logical<4>) -> i1
@@ -2544,7 +2544,7 @@ func.func @_QPtestmaxloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
   %c1_1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %22 = arith.subi %c1, %c1_1 : index
-  %23 = fir.do_loop %arg2 = %c0_2 to %22 step %c1_1 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) {
+  %23 = fir.do_loop %arg2 = %c0_2 to %22 step %c1_1 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %25 = fir.array_fetch %21, %arg2 : (!fir.array<?xi32>, index) -> i32
     %26 = fir.array_update %arg3, %25, %arg2 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
     fir.result %26 : !fir.array<1xi32>
@@ -2588,7 +2588,7 @@ func.func @_QPtestmaxloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
 // CHECK:             %[[DIM_INDEX:.*]] = arith.constant 0 : index
 // CHECK:             %[[DIMS:.*]]:3 = fir.box_dims %[[BOX_INARR]], %[[DIM_INDEX]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
 // CHECK:             %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[C_INDEX1]] : index
-// CHECK:             %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (f64) {
+// CHECK:             %[[DOLOOP:.*]] = fir.do_loop %[[ITER:.*]] = %[[C_INDEX0]] to %[[EXTENT]] step %[[C_INDEX1]] iter_args(%[[MIN:.*]] = %[[MAX]]) -> (f64) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:               %[[FLAG_SET2:.*]] = arith.constant 1 : i32
 // CHECK:               %[[ISFIRST:.*]] = fir.load %[[FLAG_ALLOC]] : !fir.ref<i32>
 // CHECK:               %[[INARR_ITEM:.*]] = fir.coordinate_of %[[BOX_INARR]], %[[ITER]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>

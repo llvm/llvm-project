@@ -38,10 +38,10 @@ end subroutine test3_forall_construct
 ! CHECK:         %[[VAL_24:.*]] = fir.array_load %[[VAL_1]](%[[VAL_23]]) : (!fir.ref<!fir.array<200x200xf32>>, !fir.shape<2>) -> !fir.array<200x200xf32>
 ! CHECK:         %[[VAL_25:.*]] = fir.shape %[[VAL_9]], %[[VAL_10]] : (index, index) -> !fir.shape<2>
 ! CHECK:         %[[VAL_26:.*]] = fir.array_load %[[VAL_1]](%[[VAL_25]]) : (!fir.ref<!fir.array<200x200xf32>>, !fir.shape<2>) -> !fir.array<200x200xf32>
-! CHECK:         %[[VAL_27:.*]] = fir.do_loop %[[VAL_28:.*]] = %[[VAL_12]] to %[[VAL_14]] step %[[VAL_15]] unordered iter_args(%[[VAL_29:.*]] = %[[VAL_22]]) -> (!fir.array<100x400xf32>) {
+! CHECK:         %[[VAL_27:.*]] = fir.do_loop %[[VAL_28:.*]] = %[[VAL_12]] to %[[VAL_14]] step %[[VAL_15]] unordered iter_args(%[[VAL_29:.*]] = %[[VAL_22]]) -> (!fir.array<100x400xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_28]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_30]] to %[[VAL_6]] : !fir.ref<i32>
-! CHECK:           %[[VAL_31:.*]] = fir.do_loop %[[VAL_32:.*]] = %[[VAL_17]] to %[[VAL_19]] step %[[VAL_20]] unordered iter_args(%[[VAL_33:.*]] = %[[VAL_29]]) -> (!fir.array<100x400xf32>) {
+! CHECK:           %[[VAL_31:.*]] = fir.do_loop %[[VAL_32:.*]] = %[[VAL_17]] to %[[VAL_19]] step %[[VAL_20]] unordered iter_args(%[[VAL_33:.*]] = %[[VAL_29]]) -> (!fir.array<100x400xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_34:.*]] = fir.convert %[[VAL_32]] : (index) -> i32
 ! CHECK:             fir.store %[[VAL_34]] to %[[VAL_5]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_35:.*]] = fir.load %[[VAL_6]] : !fir.ref<i32>
@@ -102,10 +102,10 @@ end subroutine test3_forall_construct
 ! CHECK:         %[[VAL_84:.*]] = fir.array_load %[[VAL_0]](%[[VAL_83]]) : (!fir.ref<!fir.array<100x400xf32>>, !fir.shape<2>) -> !fir.array<100x400xf32>
 ! CHECK:         %[[VAL_85:.*]] = fir.shape %[[VAL_9]], %[[VAL_10]] : (index, index) -> !fir.shape<2>
 ! CHECK:         %[[VAL_86:.*]] = fir.array_load %[[VAL_1]](%[[VAL_85]]) : (!fir.ref<!fir.array<200x200xf32>>, !fir.shape<2>) -> !fir.array<200x200xf32>
-! CHECK:         %[[VAL_87:.*]] = fir.do_loop %[[VAL_88:.*]] = %[[VAL_12]] to %[[VAL_14]] step %[[VAL_15]] unordered iter_args(%[[VAL_89:.*]] = %[[VAL_84]]) -> (!fir.array<100x400xf32>) {
+! CHECK:         %[[VAL_87:.*]] = fir.do_loop %[[VAL_88:.*]] = %[[VAL_12]] to %[[VAL_14]] step %[[VAL_15]] unordered iter_args(%[[VAL_89:.*]] = %[[VAL_84]]) -> (!fir.array<100x400xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_90:.*]] = fir.convert %[[VAL_88]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_90]] to %[[VAL_4]] : !fir.ref<i32>
-! CHECK:           %[[VAL_91:.*]] = fir.do_loop %[[VAL_92:.*]] = %[[VAL_17]] to %[[VAL_19]] step %[[VAL_20]] unordered iter_args(%[[VAL_93:.*]] = %[[VAL_89]]) -> (!fir.array<100x400xf32>) {
+! CHECK:           %[[VAL_91:.*]] = fir.do_loop %[[VAL_92:.*]] = %[[VAL_17]] to %[[VAL_19]] step %[[VAL_20]] unordered iter_args(%[[VAL_93:.*]] = %[[VAL_89]]) -> (!fir.array<100x400xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_94:.*]] = fir.convert %[[VAL_92]] : (index) -> i32
 ! CHECK:             fir.store %[[VAL_94]] to %[[VAL_3]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_95:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>

@@ -289,7 +289,7 @@ subroutine cray_array()
 ! CHECK: %[[c1:.*]] = arith.constant 1 : index
 ! CHECK: %[[c0:.*]] = arith.constant 0 : index
 ! CHECK: %[[sub:.*]] = arith.subi %[[c3]], %[[c1]] : index
-! CHECK: %[[doloop:.*]] = fir.do_loop %arg0 = %[[c0]] to %[[sub]] step %[[c1]] unordered iter_args(%arg1 = %[[arrayld1]]) -> (!fir.array<3xi32>) {
+! CHECK: %[[doloop:.*]] = fir.do_loop %arg0 = %[[c0]] to %[[sub]] step %[[c1]] unordered iter_args(%arg1 = %[[arrayld1]]) -> (!fir.array<3xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK: %[[arrayfetch:.*]] = fir.array_fetch %[[arrayld]], %arg0 : (!fir.array<3xi32>, index) -> i32
 ! CHECK: %[[arrayupdate:.*]] = fir.array_update %arg1, %[[arrayfetch]], %arg0 : (!fir.array<3xi32>, i32, index) -> !fir.array<3xi32>
 ! CHECK: fir.result %[[arrayupdate]] : !fir.array<3xi32>
@@ -308,7 +308,7 @@ subroutine cray_array()
 ! CHECK: %[[c1:.*]] = arith.constant 1 : index
 ! CHECK: %[[c0:.*]] = arith.constant 0 : index
 ! CHECK: %[[sub1:.*]] = arith.subi %[[c31]], %[[c1]] : index
-! CHECK: %[[doloop:.*]] = fir.do_loop %arg0 = %[[c0]] to %[[sub1]] step %[[c1]] unordered iter_args(%arg1 = %[[arrayld]]) -> (!fir.array<3xi32>) {
+! CHECK: %[[doloop:.*]] = fir.do_loop %arg0 = %[[c0]] to %[[sub1]] step %[[c1]] unordered iter_args(%arg1 = %[[arrayld]]) -> (!fir.array<3xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK: %[[arrayupdate:.*]] = fir.array_update %arg1, %[[c2n]], %arg0 : (!fir.array<3xi32>, i32, index) -> !fir.array<3xi32>
 ! CHECK: fir.result %[[arrayupdate]] : !fir.array<3xi32>
 ! CHECK: fir.array_merge_store %[[arrayld]], %[[doloop]] to %[[ld]] : !fir.array<3xi32>, !fir.array<3xi32>, !fir.ptr<!fir.array<3xi32>>
@@ -359,7 +359,7 @@ subroutine cray_arraySection()
 ! CHECK: %[[c1_3:.*]] = arith.constant 1 : index
 ! CHECK: %[[c0_4:.*]] = arith.constant 0 : index
 ! CHECK: %[[sub:.*]] = arith.subi %[[c2]], %[[c1_3]] : index
-! CHECK: %[[doloop:.*]] = fir.do_loop %arg0 = %[[c0_4]] to %[[sub]] step %[[c1_3]] unordered iter_args(%arg1 = %[[arrayld1]]) -> (!fir.array<2xi32>) {
+! CHECK: %[[doloop:.*]] = fir.do_loop %arg0 = %[[c0_4]] to %[[sub]] step %[[c1_3]] unordered iter_args(%arg1 = %[[arrayld1]]) -> (!fir.array<2xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK: %[[arrayfetch:.*]] = fir.array_fetch %[[arrayld]], %arg0 : (!fir.array<3xi32>, index) -> i32
 ! CHECK: %[[arrayupdate:.*]] = fir.array_update %arg1, %[[arrayfetch]], %arg0 : (!fir.array<2xi32>, i32, index) -> !fir.array<2xi32>
 ! CHECK: fir.result %[[arrayupdate]] : !fir.array<2xi32>
@@ -391,7 +391,7 @@ subroutine cray_arraySection()
 ! CHECK: %[[c1_9:.*]] = arith.constant 1 : index
 ! CHECK: %[[c0_8:.*]] = arith.constant 0 : index
 ! CHECK: %[[sub1:.*]] = arith.subi %[[sel]], %[[c1_9]] : index
-! CHECK: %[[doloop:.*]] = fir.do_loop %arg0 = %[[c0_8]] to %[[sub1]] step %[[c1_9]] unordered iter_args(%arg1 = %[[arrayld]]) -> (!fir.array<3xi32>) {
+! CHECK: %[[doloop:.*]] = fir.do_loop %arg0 = %[[c0_8]] to %[[sub1]] step %[[c1_9]] unordered iter_args(%arg1 = %[[arrayld]]) -> (!fir.array<3xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK: %[[arrayupdate:.*]] = fir.array_update %arg1, %[[c2n]], %arg0 : (!fir.array<3xi32>, i32, index) -> !fir.array<3xi32>
 ! CHECK: fir.result %[[arrayupdate]] : !fir.array<3xi32>
 ! CHECK: fir.array_merge_store %[[arrayld]], %[[doloop]] to %[[ld]][%[[slice]]] : !fir.array<3xi32>, !fir.array<3xi32>, !fir.ptr<!fir.array<3xi32>>, !fir.slice<1>

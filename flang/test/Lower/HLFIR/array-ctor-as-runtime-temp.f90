@@ -30,7 +30,7 @@ end subroutine
 ! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (i64) -> index
 ! CHECK:           %[[VAL_20:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i64) -> index
-! CHECK:           fir.do_loop %[[VAL_22:.*]] = %[[VAL_16]] to %[[VAL_19]] step %[[VAL_21]] {
+! CHECK:           fir.do_loop %[[VAL_22:.*]] = %[[VAL_16]] to %[[VAL_19]] step %[[VAL_21]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_23:.*]] = arith.constant 1 : i64
 ! CHECK:             %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (i64) -> index
 ! CHECK:             %[[VAL_25:.*]] = fir.call @_QMarrayctorPifoo() fastmath<contract> : () -> i32
@@ -38,7 +38,7 @@ end subroutine
 ! CHECK:             %[[VAL_27:.*]] = fir.convert %[[VAL_26]] : (i64) -> index
 ! CHECK:             %[[VAL_28:.*]] = arith.constant 1 : i64
 ! CHECK:             %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (i64) -> index
-! CHECK:             fir.do_loop %[[VAL_30:.*]] = %[[VAL_24]] to %[[VAL_27]] step %[[VAL_29]] {
+! CHECK:             fir.do_loop %[[VAL_30:.*]] = %[[VAL_24]] to %[[VAL_27]] step %[[VAL_29]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:               %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (index) -> i64
 ! CHECK:               %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (i64) -> i32
 ! CHECK:               fir.store %[[VAL_32]] to %[[VAL_0]] : !fir.ref<i32>

@@ -19,13 +19,13 @@
 // CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]](%[[VAL_12]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2xf32>>, !fir.heap<!fir.array<2xf32>>)
 // CHECK:           %[[VAL_15:.*]] = arith.constant true
 // CHECK:           %[[VAL_16:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_17:.*]] = %[[VAL_16]] to %[[VAL_2]] step %[[VAL_16]] {
+// CHECK:           fir.do_loop %[[VAL_17:.*]] = %[[VAL_16]] to %[[VAL_2]] step %[[VAL_16]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_18:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 // CHECK:             %[[VAL_19:.*]] = fir.allocmem !fir.array<2xf32> {bindc_name = ".tmp.array", uniq_name = ""}
 // CHECK:             %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]](%[[VAL_18]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<2xf32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<2xf32>>, !fir.heap<!fir.array<2xf32>>)
 // CHECK:             %[[VAL_21:.*]] = arith.constant true
 // CHECK:             %[[VAL_22:.*]] = arith.constant 1 : index
-// CHECK:             fir.do_loop %[[VAL_23:.*]] = %[[VAL_22]] to %[[VAL_2]] step %[[VAL_22]] {
+// CHECK:             fir.do_loop %[[VAL_23:.*]] = %[[VAL_22]] to %[[VAL_2]] step %[[VAL_22]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:               %[[VAL_24:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<f32>
 // CHECK:               %[[VAL_25:.*]] = hlfir.designate %[[VAL_20]]#0 (%[[VAL_23]])  : (!fir.heap<!fir.array<2xf32>>, index) -> !fir.ref<f32>
 // CHECK:               hlfir.assign %[[VAL_24]] to %[[VAL_25]] temporary_lhs : f32, !fir.ref<f32>

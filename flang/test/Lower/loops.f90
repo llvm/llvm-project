@@ -111,14 +111,14 @@ subroutine lis(n)
   integer, pointer   :: p(:,:,:) ! local_init locality
 
   p => a
-  ! CHECK:     fir.do_loop %arg1 = %c0{{.*}} to %{{.*}} step %c1{{.*}} unordered iter_args(%arg2 = %{{.*}}) -> (!fir.array<?x?xi32>) {
-  ! CHECK:       fir.do_loop %arg3 = %c0{{.*}} to %{{.*}} step %c1{{.*}} unordered iter_args(%arg4 = %arg2) -> (!fir.array<?x?xi32>) {
+  ! CHECK:     fir.do_loop %arg1 = %c0{{.*}} to %{{.*}} step %c1{{.*}} unordered iter_args(%arg2 = %{{.*}}) -> (!fir.array<?x?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
+  ! CHECK:       fir.do_loop %arg3 = %c0{{.*}} to %{{.*}} step %c1{{.*}} unordered iter_args(%arg4 = %arg2) -> (!fir.array<?x?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   ! CHECK:       }
   ! CHECK:     }
   r = 0
 
-  ! CHECK:     fir.do_loop %arg1 = %{{.*}} to %{{.*}} step %{{.*}} unordered {
-  ! CHECK:       fir.do_loop %arg2 = %{{.*}} to %{{.*}} step %c1{{.*}} iter_args(%arg3 = %{{.*}}) -> (index, i32) {
+  ! CHECK:     fir.do_loop %arg1 = %{{.*}} to %{{.*}} step %{{.*}} unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+  ! CHECK:       fir.do_loop %arg2 = %{{.*}} to %{{.*}} step %c1{{.*}} iter_args(%arg3 = %{{.*}}) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   ! CHECK:       }
   ! CHECK:     }
   do concurrent (integer(kind=1)::i=n:1:-1)
@@ -128,14 +128,14 @@ subroutine lis(n)
     enddo
   enddo
 
-  ! CHECK:     fir.do_loop %arg1 = %{{.*}} to %{{.*}} step %c1{{.*}} unordered {
-  ! CHECK:       fir.do_loop %arg2 = %{{.*}} to %{{.*}} step %c1{{.*}} unordered {
+  ! CHECK:     fir.do_loop %arg1 = %{{.*}} to %{{.*}} step %c1{{.*}} unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+  ! CHECK:       fir.do_loop %arg2 = %{{.*}} to %{{.*}} step %c1{{.*}} unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:         fir.if %{{.*}} {
   ! CHECK:           %[[V_95:[0-9]+]] = fir.alloca !fir.array<?x?xi32>, %{{.*}}, %{{.*}} {bindc_name = "t", pinned, uniq_name = "_QFlisEt"}
   ! CHECK:           %[[V_96:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?x?xi32>>> {bindc_name = "p", pinned, uniq_name = "_QFlisEp"}
   ! CHECK:           fir.store %{{.*}} to %[[V_96]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>
-  ! CHECK:           fir.do_loop %arg3 = %{{.*}} to %{{.*}} step %c1{{.*}} iter_args(%arg4 = %{{.*}}) -> (index, i32) {
-  ! CHECK:             fir.do_loop %arg5 = %{{.*}} to %{{.*}} step %c1{{.*}} unordered {
+  ! CHECK:           fir.do_loop %arg3 = %{{.*}} to %{{.*}} step %c1{{.*}} iter_args(%arg4 = %{{.*}}) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
+  ! CHECK:             fir.do_loop %arg5 = %{{.*}} to %{{.*}} step %c1{{.*}} unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:               fir.load %[[V_96]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x?xi32>>>>
   ! CHECK:               fir.convert %[[V_95]] : (!fir.ref<!fir.array<?x?xi32>>) -> !fir.ref<!fir.array<?xi32>>
   ! CHECK:             }

@@ -68,7 +68,7 @@ subroutine test_optional(string, set, back)
 ! CHECK:  %[[VAL_15:.*]] = fir.embox %[[VAL_12]](%[[VAL_14]]) : (!fir.ref<!fir.array<?x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.logical<4>>>
 ! CHECK:  %[[VAL_16:.*]] = arith.select %[[VAL_11]], %[[VAL_2]], %[[VAL_15]] : !fir.box<!fir.array<?x!fir.logical<4>>>
 ! CHECK:  %[[VAL_17:.*]] = fir.array_load %[[VAL_16]] {fir.optional} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.array<?x!fir.logical<4>>
-! CHECK:  %[[VAL_24:.*]] = fir.do_loop %[[VAL_25:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[VAL_26:.*]] = %{{.*}}) -> (!fir.array<?xi32>) {
+! CHECK:  %[[VAL_24:.*]] = fir.do_loop %[[VAL_25:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[VAL_26:.*]] = %{{.*}}) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   ! CHECK:  %[[VAL_31:.*]] = fir.if %[[VAL_11]] -> (!fir.logical<4>) {
     ! CHECK:  %[[VAL_32:.*]] = fir.array_fetch %[[VAL_17]], %[[VAL_25]] : (!fir.array<?x!fir.logical<4>>, index) -> !fir.logical<4>
     ! CHECK:  fir.result %[[VAL_32]] : !fir.logical<4>

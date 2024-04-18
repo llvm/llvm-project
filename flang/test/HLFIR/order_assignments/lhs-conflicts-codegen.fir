@@ -39,7 +39,7 @@ func.func @save_box_in_ssa_register(%arg0: !fir.box<!fir.array<?xi64>>, %arg1: !
 // CHECK-SAME:                                        %[[VAL_1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>) {
 // CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<?xi64>>) -> (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>)
 // CHECK:           %[[VAL_18:.*]] = hlfir.designate %[[VAL_5]]#0 (%{{.*}}:%{{.*}}:%{{.*}})  shape %{{.*}} : (!fir.box<!fir.array<?xi64>>, i64, i64, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi64>>
-// CHECK:           fir.do_loop %[[VAL_20:.*]] = {{.*}} {
+// CHECK:           fir.do_loop %[[VAL_20:.*]] = {{.*}} attributes {{.*}} {
 // CHECK:             %[[VAL_21:.*]] = hlfir.designate %[[VAL_18]] (%[[VAL_20]])  : (!fir.box<!fir.array<?xi64>>, index) -> !fir.ref<i64>
 // CHECK:             fir.call @logical_to_real(%[[VAL_21]], %{{.*}}) : (!fir.ref<i64>, !fir.logical<4>) -> ()
 // CHECK:           }
@@ -195,7 +195,7 @@ func.func @test_vector_subscript_overlap(%arg0: !fir.ref<!fir.array<?xi64>>) {
 // CHECK:             %[[VAL_76:.*]] = arith.constant 0 : index
 // CHECK:             %[[VAL_77:.*]]:3 = fir.box_dims %[[VAL_75]], %[[VAL_76]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:             %[[VAL_79:.*]] = arith.constant 1 : index
-// CHECK:             fir.do_loop %[[VAL_80:.*]] = %[[VAL_79]] to %[[VAL_77]]#1 step %[[VAL_79]] {
+// CHECK:             fir.do_loop %[[VAL_80:.*]] = %[[VAL_79]] to %[[VAL_77]]#1 step %[[VAL_79]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:               %[[VAL_81:.*]] = fir.load %[[VAL_4]] : !fir.ref<i64>
 // CHECK:               %[[VAL_82:.*]] = arith.addi %[[VAL_81]], %{{.*}} : i64
 // CHECK:               fir.store %[[VAL_82]] to %[[VAL_4]] : !fir.ref<i64>

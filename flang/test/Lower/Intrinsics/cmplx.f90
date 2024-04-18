@@ -138,7 +138,7 @@ subroutine cmplx_array(x, y)
 ! CHECK:  %[[VAL_20:.*]] = arith.constant 1 : index
 ! CHECK:  %[[VAL_21:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_22:.*]] = arith.subi %[[VAL_8]]#1, %[[VAL_20]] : index
-! CHECK:  %[[VAL_23:.*]] = fir.do_loop %[[VAL_24:.*]] = %[[VAL_21]] to %[[VAL_22]] step %[[VAL_20]] unordered iter_args(%[[VAL_25:.*]] = %[[VAL_19]]) -> (!fir.array<?x!fir.complex<4>>) {
+! CHECK:  %[[VAL_23:.*]] = fir.do_loop %[[VAL_24:.*]] = %[[VAL_21]] to %[[VAL_22]] step %[[VAL_20]] unordered iter_args(%[[VAL_25:.*]] = %[[VAL_19]]) -> (!fir.array<?x!fir.complex<4>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   ! CHECK:  %[[VAL_26:.*]] = fir.array_fetch %[[VAL_9]], %[[VAL_24]] : (!fir.array<?xf32>, index) -> f32
   ! CHECK:  %[[VAL_27:.*]] = fir.if %[[VAL_10]] -> (f32) {
     ! CHECK:  %[[VAL_28:.*]] = fir.array_fetch %[[VAL_16]], %[[VAL_24]] : (!fir.array<?xf32>, index) -> f32

@@ -49,12 +49,12 @@ func.func @_QPupdate() {
   %21 = arith.subi %20, %c1_i32 : i32
   %22 = fir.convert %21 : (i32) -> index
   %23 = fir.convert %c1 : (index) -> i32
-  %24:2 = fir.do_loop %arg0 = %c1 to %22 step %c1 iter_args(%arg1 = %23) -> (index, i32) {
+  %24:2 = fir.do_loop %arg0 = %c1 to %22 step %c1 iter_args(%arg1 = %23) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg1 to %11#1 : !fir.ref<i32>
     %25 = fir.load %9#0 : !fir.ref<i32>
     %26 = arith.subi %25, %c1_i32 : i32
     %27 = fir.convert %26 : (i32) -> index
-    %28:2 = fir.do_loop %arg2 = %c1 to %27 step %c1 iter_args(%arg3 = %23) -> (index, i32) {
+    %28:2 = fir.do_loop %arg2 = %c1 to %27 step %c1 iter_args(%arg3 = %23) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       fir.store %arg3 to %7#1 : !fir.ref<i32>
       %32 = fir.load %17#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?x?x?xf64>>>>
       %33 = fir.load %3#0 : !fir.ref<i32>

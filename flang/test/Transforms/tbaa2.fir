@@ -118,7 +118,7 @@
     %36 = fir.load %17 : !fir.ref<i32>
     %37 = fir.convert %36 : (i32) -> index
     %38 = fir.convert %35 : (index) -> i32
-    %39:2 = fir.do_loop %arg3 = %35 to %37 step %c1 iter_args(%arg4 = %38) -> (index, i32) {
+    %39:2 = fir.do_loop %arg3 = %35 to %37 step %c1 iter_args(%arg4 = %38) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       fir.store %arg4 to %27 : !fir.ref<i32>
       %40 = fir.load %11 : !fir.ref<i32>
       %41 = arith.addi %40, %c1_i32 : i32
@@ -126,13 +126,13 @@
       %43 = fir.load %13 : !fir.ref<i32>
       %44 = fir.convert %43 : (i32) -> index
       %45 = fir.convert %42 : (index) -> i32
-      %46:2 = fir.do_loop %arg5 = %42 to %44 step %c1 iter_args(%arg6 = %45) -> (index, i32) {
+      %46:2 = fir.do_loop %arg5 = %42 to %44 step %c1 iter_args(%arg6 = %45) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
         fir.store %arg6 to %25 : !fir.ref<i32>
         %51 = fir.load %9 : !fir.ref<i32>
         %52 = arith.addi %51, %c1_i32 : i32
         %53 = fir.convert %52 : (i32) -> index
         %54 = fir.convert %53 : (index) -> i32
-        %55:2 = fir.do_loop %arg7 = %53 to %c0 step %c1 iter_args(%arg8 = %54) -> (index, i32) {
+        %55:2 = fir.do_loop %arg7 = %53 to %c0 step %c1 iter_args(%arg8 = %54) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
           fir.store %arg8 to %23 : !fir.ref<i32>
           %60 = fir.load %28 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>>
           %61 = fir.load %23 : !fir.ref<i32>
@@ -271,7 +271,7 @@
 // CHECK:           %[[VAL_43:.*]] = fir.load %[[VAL_24]] {tbaa = [#[[GLBL_ZSTOP_TAG]]]} : !fir.ref<i32>
 // CHECK:           %[[VAL_44:.*]] = fir.convert %[[VAL_43]] : (i32) -> index
 // CHECK:           %[[VAL_45:.*]] = fir.convert %[[VAL_42]] : (index) -> i32
-// CHECK:           %[[VAL_46:.*]]:2 = fir.do_loop %[[VAL_47:.*]] = %[[VAL_42]] to %[[VAL_44]] step %[[VAL_5]] iter_args(%[[VAL_48:.*]] = %[[VAL_45]]) -> (index, i32) {
+// CHECK:           %[[VAL_46:.*]]:2 = fir.do_loop %[[VAL_47:.*]] = %[[VAL_42]] to %[[VAL_44]] step %[[VAL_5]] iter_args(%[[VAL_48:.*]] = %[[VAL_45]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:             fir.store %[[VAL_48]] to %[[VAL_34]] : !fir.ref<i32>
 // CHECK:             %[[VAL_49:.*]] = fir.load %[[VAL_18]] {tbaa = [#[[GLBL_YSTART_TAG]]]} : !fir.ref<i32>
 // CHECK:             %[[VAL_50:.*]] = arith.addi %[[VAL_49]], %[[VAL_6]] : i32
@@ -279,13 +279,13 @@
 // CHECK:             %[[VAL_52:.*]] = fir.load %[[VAL_20]] {tbaa = [#[[GLBL_YSTOP_TAG]]]} : !fir.ref<i32>
 // CHECK:             %[[VAL_53:.*]] = fir.convert %[[VAL_52]] : (i32) -> index
 // CHECK:             %[[VAL_54:.*]] = fir.convert %[[VAL_51]] : (index) -> i32
-// CHECK:             %[[VAL_55:.*]]:2 = fir.do_loop %[[VAL_56:.*]] = %[[VAL_51]] to %[[VAL_53]] step %[[VAL_5]] iter_args(%[[VAL_57:.*]] = %[[VAL_54]]) -> (index, i32) {
+// CHECK:             %[[VAL_55:.*]]:2 = fir.do_loop %[[VAL_56:.*]] = %[[VAL_51]] to %[[VAL_53]] step %[[VAL_5]] iter_args(%[[VAL_57:.*]] = %[[VAL_54]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:               fir.store %[[VAL_57]] to %[[VAL_32]] : !fir.ref<i32>
 // CHECK:               %[[VAL_58:.*]] = fir.load %[[VAL_16]] {tbaa = [#[[GLBL_XSTART_TAG]]]} : !fir.ref<i32>
 // CHECK:               %[[VAL_59:.*]] = arith.addi %[[VAL_58]], %[[VAL_6]] : i32
 // CHECK:               %[[VAL_60:.*]] = fir.convert %[[VAL_59]] : (i32) -> index
 // CHECK:               %[[VAL_61:.*]] = fir.convert %[[VAL_60]] : (index) -> i32
-// CHECK:               %[[VAL_62:.*]]:2 = fir.do_loop %[[VAL_63:.*]] = %[[VAL_60]] to %[[VAL_4]] step %[[VAL_5]] iter_args(%[[VAL_64:.*]] = %[[VAL_61]]) -> (index, i32) {
+// CHECK:               %[[VAL_62:.*]]:2 = fir.do_loop %[[VAL_63:.*]] = %[[VAL_60]] to %[[VAL_4]] step %[[VAL_5]] iter_args(%[[VAL_64:.*]] = %[[VAL_61]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // TODO: local allocation assumed to always alias
 // CHECK:                 fir.store %[[VAL_64]] to %[[VAL_30]] : !fir.ref<i32>
 // load from box tagged in CodeGen

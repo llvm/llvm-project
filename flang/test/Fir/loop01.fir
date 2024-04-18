@@ -2,7 +2,7 @@
 // RUN: fir-opt --split-input-file --cfg-conversion="set-nsw=true" %s | FileCheck %s --check-prefix=NSW
 
 func.func @x(%lb : index, %ub : index, %step : index, %b : i1, %addr : !fir.ref<index>) {
-  fir.do_loop %iv = %lb to %ub step %step unordered {
+  fir.do_loop %iv = %lb to %ub step %step unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     // expect following conditional blocks to get fused
     fir.if %b {
       fir.store %iv to %addr : !fir.ref<index>
@@ -137,7 +137,7 @@ func.func private @f3(i16)
 func.func @x3(%lo : index, %up : index) -> i1 {
   %c1 = arith.constant 1 : index
   %ok1 = arith.constant true
-  %ok2 = fir.do_loop %i = %lo to %up step %c1 iter_args(%j = %ok1) -> i1 {
+  %ok2 = fir.do_loop %i = %lo to %up step %c1 iter_args(%j = %ok1) -> i1 attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %ok = fir.call @f2() : () -> i1
     fir.result %ok : i1
   }
@@ -197,7 +197,7 @@ func.func @y3(%lo : index, %up : index) -> i1 {
   %c1 = arith.constant 1 : index
   %ok1 = arith.constant true
   %ok4 = fir.call @f2() : () -> i1
-  %ok2:2 = fir.iterate_while (%i = %lo to %up step %c1) and (%ok3 = %ok1) iter_args(%j = %ok4) -> i1 {
+  %ok2:2 = fir.iterate_while (%i = %lo to %up step %c1) and (%ok3 = %ok1) iter_args(%j = %ok4) -> i1 attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %ok = fir.call @f2() : () -> i1
     fir.result %ok3, %ok : i1, i1
   }
@@ -268,7 +268,7 @@ func.func private @f4(i32) -> i1
 // do_loop that returns the final value of the induction
 func.func @x4(%lo : index, %up : index) -> index {
   %c1 = arith.constant 1 : index
-  %v = fir.do_loop %i = %lo to %up step %c1 -> index {
+  %v = fir.do_loop %i = %lo to %up step %c1 -> index attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %i1 = fir.convert %i : (index) -> i32
     %ok = fir.call @f4(%i1) : (i32) -> i1
     fir.result %i : index
@@ -395,7 +395,7 @@ func.func @y4(%lo : index, %up : index) -> index {
 func.func @x5(%lo : index, %up : index) -> index {
   %c1 = arith.constant 1 : index
   %s1 = arith.constant 42 : i16
-  %v:2 = fir.do_loop %i = %lo to %up step %c1 iter_args(%s = %s1) -> (index, i16) {
+  %v:2 = fir.do_loop %i = %lo to %up step %c1 iter_args(%s = %s1) -> (index, i16) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %ok = fir.call @f2() : () -> i1
     %s2 = fir.convert %ok : (i1) -> i16
     fir.result %i, %s2 : index, i16
@@ -462,7 +462,7 @@ func.func @y5(%lo : index, %up : index) -> index {
   %c1 = arith.constant 1 : index
   %s1 = arith.constant 42 : i16
   %ok1 = arith.constant true
-  %v:3 = fir.iterate_while (%i = %lo to %up step %c1) and (%ok2 = %ok1) iter_args(%s = %s1) -> (index, i1, i16) {
+  %v:3 = fir.iterate_while (%i = %lo to %up step %c1) and (%ok2 = %ok1) iter_args(%s = %s1) -> (index, i1, i16) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %ok = fir.call @f2() : () -> i1
     %s2 = fir.convert %ok : (i1) -> i16
     fir.result %i, %ok, %s2 : index, i1, i16

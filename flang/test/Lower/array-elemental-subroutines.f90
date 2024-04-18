@@ -16,7 +16,7 @@
 ! CHECK:         %[[VAL_15:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_16:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_17:.*]] = arith.subi %[[VAL_6]]#1, %[[VAL_15]] : index
-! CHECK:         fir.do_loop %[[VAL_18:.*]] = %[[VAL_16]] to %[[VAL_17]] step %[[VAL_15]] {
+! CHECK:         fir.do_loop %[[VAL_18:.*]] = %[[VAL_16]] to %[[VAL_17]] step %[[VAL_15]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:           %[[VAL_19:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_20:.*]] = arith.addi %[[VAL_18]], %[[VAL_19]] : index
 ! CHECK:           %[[VAL_21:.*]] = fir.array_coor %[[VAL_0]] %[[VAL_20]] : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>

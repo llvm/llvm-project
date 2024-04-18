@@ -115,7 +115,7 @@ subroutine test_array_comp(t1, t2)
   ! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : index
   ! CHECK:  %[[VAL_6:.*]] = arith.constant 1 : index
   ! CHECK:  %[[VAL_7:.*]] = arith.constant 9 : index
-  ! CHECK:  fir.do_loop %[[VAL_8:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_6]] {
+  ! CHECK:  fir.do_loop %[[VAL_8:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_6]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:    %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_4]], %[[VAL_8]] : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
   ! CHECK:    %[[VAL_10:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_8]] : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
   ! CHECK:    %[[VAL_11:.*]] = fir.load %[[VAL_10]] : !fir.ref<f32>

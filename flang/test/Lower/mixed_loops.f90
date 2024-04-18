@@ -94,7 +94,7 @@ subroutine do_inside_while_loop
       ! CHECK: %[[I_LB:.*]] = fir.convert %[[C8]] : (index) -> i32
       ! CHECK: %[[RESULT:.*]]:2 = fir.do_loop %[[IDX:[^ ]*]] =
       ! CHECK-SAME: %[[C8]] to %[[C13]] step %[[C1]]
-      ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (index, i32) {
+      ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
         ! CHECK: fir.store %[[I_IV]] to %[[I_REF]] : !fir.ref<i32>
         ! CHECK-DAG: %[[J2:.*]] = fir.load %[[J_REF]] : !fir.ref<i32>
         ! CHECK-DAG: %[[C2:.*]] = arith.constant 2 : i32

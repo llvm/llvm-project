@@ -206,7 +206,7 @@ func.func @loop() {
   %c10 = arith.constant 10 : index
   %ct = arith.constant true
 
-// CHECK: fir.do_loop [[VAL_65:%.*]] = [[VAL_62]] to [[VAL_63]] step [[VAL_62]] {
+// CHECK: fir.do_loop [[VAL_65:%.*]] = [[VAL_62]] to [[VAL_63]] step [[VAL_62]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK: fir.if [[VAL_64]] {
 // CHECK: fir.call @nop() : () -> ()
 // CHECK: } else {
@@ -215,7 +215,7 @@ func.func @loop() {
 // CHECK: }
 // CHECK: fir.unreachable
 // CHECK: }
-  fir.do_loop %i = %c1 to %c10 step %c1 {
+  fir.do_loop %i = %c1 to %c10 step %c1 attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     fir.if %ct {
       fir.call @nop() : () -> ()
     } else {
@@ -597,9 +597,9 @@ func.func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
   %c0 = arith.constant 0 : index
   %c99 = arith.constant 99 : index
   %c1 = arith.constant 1 : index
-  fir.do_loop %i = %c0 to %c99 step %c1 {
+  fir.do_loop %i = %c0 to %c99 step %c1 attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %c49 = arith.constant 49 : index
-    fir.do_loop %j = %c0 to %c49 step %c1 {
+    fir.do_loop %j = %c0 to %c49 step %c1 attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
       // CHECK: fir.array_coor %{{.*}}(%[[sh]]) [%[[sl]]] %{{.*}}, %{{.*}} :
       %p = fir.array_coor %arr(%shape)[%slice] %i, %j : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.slice<2>, index, index) -> !fir.ref<f32>
       %x = arith.constant 42.0 : f32
@@ -834,7 +834,7 @@ func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived_poly{a:
   %2 = fir.convert %c10_i32 : (i32) -> index
   %c1 = arith.constant 1 : index
   %3 = fir.convert %1 : (index) -> i32
-  %4:2 = fir.do_loop %arg2 = %1 to %2 step %c1 iter_args(%arg3 = %3) -> (index, i32) {
+  %4:2 = fir.do_loop %arg2 = %1 to %2 step %c1 iter_args(%arg3 = %3) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg3 to %0 : !fir.ref<i32>
     %9 = fir.load %0 : !fir.ref<i32>
     %10 = fir.convert %9 : (i32) -> i64

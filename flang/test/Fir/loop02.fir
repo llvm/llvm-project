@@ -4,7 +4,7 @@
 func.func @x(%addr : !fir.ref<index>) {
   %bound = arith.constant 452 : index
   %step = arith.constant 1 : index
-  fir.do_loop %iv = %bound to %bound step %step {
+  fir.do_loop %iv = %bound to %bound step %step attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     fir.call @y(%addr) : (!fir.ref<index>) -> ()
   }
   return

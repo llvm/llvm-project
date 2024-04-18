@@ -353,7 +353,7 @@ func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived{a:i32,b
   %2 = fir.convert %c10_i32 : (i32) -> index
   %c1 = arith.constant 1 : index
   %3 = fir.convert %1 : (index) -> i32
-  %4:2 = fir.do_loop %arg2 = %1 to %2 step %c1 iter_args(%arg3 = %3) -> (index, i32) {
+  %4:2 = fir.do_loop %arg2 = %1 to %2 step %c1 iter_args(%arg3 = %3) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg3 to %0 : !fir.ref<i32>
     %9 = fir.load %0 : !fir.ref<i32>
     %10 = fir.convert %9 : (i32) -> i64
@@ -405,14 +405,14 @@ func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived{a:i32,b
 %c1 = arith.constant 1 : index
 %c10 = arith.constant 10 : index
 // expected-error@+1 {{'fir.do_loop' op unordered loop has no final value}}
-fir.do_loop %i = %c1 to %c10 step %c1 unordered -> index {
+fir.do_loop %i = %c1 to %c10 step %c1 unordered -> index attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 }
 
 // -----
 
 %c1 = arith.constant 1 : index
 %c10 = arith.constant 10 : index
-fir.do_loop %i = %c1 to %c10 step %c1 -> index {
+fir.do_loop %i = %c1 to %c10 step %c1 -> index attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   %f1 = arith.constant 1.0 : f32
   // expected-error@+1 {{'fir.result' op types mismatch between result op and its parent}}
   fir.result %f1 : f32
@@ -423,7 +423,7 @@ fir.do_loop %i = %c1 to %c10 step %c1 -> index {
 %c1 = arith.constant 1 : index
 %c10 = arith.constant 10 : index
 // expected-error@+1 {{'fir.result' op parent of result must have same arity}}
-fir.do_loop %i = %c1 to %c10 step %c1 -> index {
+fir.do_loop %i = %c1 to %c10 step %c1 -> index attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 }
 
 // -----
@@ -770,9 +770,9 @@ func.func @foo(%arg0: !fir.ref<!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>
   %c30 = arith.constant 30 : index
   %0 = fir.shape %c30 : (index) -> !fir.shape<1>
   %1 = fir.array_load %arg0(%0) : (!fir.ref<!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>>, !fir.shape<1>) -> !fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>
-  %2 = fir.do_loop %arg1 = %c1 to %c9 step %c1 unordered iter_args(%arg2 = %1) -> (!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>) {
+  %2 = fir.do_loop %arg1 = %c1 to %c9 step %c1 unordered iter_args(%arg2 = %1) -> (!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %3 = fir.field_index c, !fir.type<t{c:!fir.array<20xi32>}>
-    %4 = fir.do_loop %arg3 = %c0 to %c19 step %c1 unordered iter_args(%arg4 = %arg2) -> (!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>) {
+    %4 = fir.do_loop %arg3 = %c0 to %c19 step %c1 unordered iter_args(%arg4 = %arg2) -> (!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       // expected-error@+1 {{'fir.array_access' op return type and/or indices do not type check}}
       %5 = fir.array_access %1, %arg1, %3, %arg3 : (!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>, index, !fir.field, index) -> !fir.ref<f32>
       %6 = fir.call @ifoo(%5) : (!fir.ref<f32>) -> i32

@@ -19,7 +19,7 @@ end subroutine
 ! CHECK:         %[[VAL_4:.*]] = arith.constant 1 : i32
 ! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i32) -> index
 ! CHECK:         %[[VAL_6:.*]] = arith.constant 1 : index
-! CHECK:         fir.do_loop %[[VAL_7:.*]] = %[[VAL_3]] to %[[VAL_5]] step %[[VAL_6]] unordered {
+! CHECK:         fir.do_loop %[[VAL_7:.*]] = %[[VAL_3]] to %[[VAL_5]] step %[[VAL_6]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_8]] to %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_9:.*]] = arith.constant true

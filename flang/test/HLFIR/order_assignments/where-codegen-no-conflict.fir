@@ -27,7 +27,7 @@ func.func @test_simple(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.
 // CHECK:           %[[VAL_6:.*]]:3 = fir.box_dims %[[VAL_3]]#0, %[[VAL_5]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_6]]#1 : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_8:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_9:.*]] = %[[VAL_8]] to %[[VAL_6]]#1 step %[[VAL_8]] {
+// CHECK:           fir.do_loop %[[VAL_9:.*]] = %[[VAL_8]] to %[[VAL_6]]#1 step %[[VAL_8]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_10:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_9]])  : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_11:.*]] = fir.load %[[VAL_10]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.logical<4>) -> i1
@@ -89,7 +89,7 @@ func.func @test_elsewhere(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.ref<
 // CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_6]]) {uniq_name = "y"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
 // CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_6]]) {uniq_name = "z"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
 // CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_13:.*]] = %[[VAL_12]] to %[[VAL_5]] step %[[VAL_12]] {
+// CHECK:           fir.do_loop %[[VAL_13:.*]] = %[[VAL_12]] to %[[VAL_5]] step %[[VAL_12]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (!fir.logical<4>) -> i1
@@ -100,7 +100,7 @@ func.func @test_elsewhere(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.ref<
 // CHECK:             }
 // CHECK:           }
 // CHECK:           %[[VAL_19:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_20:.*]] = %[[VAL_19]] to %[[VAL_5]] step %[[VAL_19]] {
+// CHECK:           fir.do_loop %[[VAL_20:.*]] = %[[VAL_19]] to %[[VAL_5]] step %[[VAL_19]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_21:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_20]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_22:.*]] = fir.load %[[VAL_21]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (!fir.logical<4>) -> i1
@@ -117,7 +117,7 @@ func.func @test_elsewhere(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.ref<
 // CHECK:             }
 // CHECK:           }
 // CHECK:           %[[VAL_29:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_30:.*]] = %[[VAL_29]] to %[[VAL_5]] step %[[VAL_29]] {
+// CHECK:           fir.do_loop %[[VAL_30:.*]] = %[[VAL_29]] to %[[VAL_5]] step %[[VAL_29]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_31:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_30]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_32:.*]] = fir.load %[[VAL_31]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.logical<4>) -> i1
@@ -208,7 +208,7 @@ func.func @expr_tree(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.ar
 // CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_11:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_6]]:%[[VAL_5]]:%[[VAL_4]])  shape %[[VAL_10]] : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<10xf32>>
 // CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_13:.*]] = %[[VAL_12]] to %[[VAL_6]] step %[[VAL_12]] {
+// CHECK:           fir.do_loop %[[VAL_13:.*]] = %[[VAL_12]] to %[[VAL_6]] step %[[VAL_12]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_11]] (%[[VAL_13]])  : (!fir.box<!fir.array<10xf32>>, index) -> !fir.ref<f32>
 // CHECK:             %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ref<f32>
 // CHECK:             %[[VAL_16:.*]] = math.absf %[[VAL_15]] fastmath<contract> : f32
@@ -287,10 +287,10 @@ func.func @inside_forall(%arg0: !fir.ref<!fir.array<10x20xf32>>, %arg1: !fir.ref
 // CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_5]] : (i32) -> index
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_4]] : (i32) -> index
 // CHECK:           %[[VAL_14:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_15:.*]] = %[[VAL_12]] to %[[VAL_13]] step %[[VAL_14]] {
+// CHECK:           fir.do_loop %[[VAL_15:.*]] = %[[VAL_12]] to %[[VAL_13]] step %[[VAL_14]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (index) -> i32
 // CHECK:             %[[VAL_17:.*]] = arith.constant 1 : index
-// CHECK:             fir.do_loop %[[VAL_20:.*]] = %[[VAL_17]] to %[[VAL_7]] step %[[VAL_17]] {
+// CHECK:             fir.do_loop %[[VAL_20:.*]] = %[[VAL_17]] to %[[VAL_7]] step %[[VAL_17]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:               %[[VAL_21:.*]] = hlfir.designate %[[VAL_11]]#0 (%[[VAL_20]])  : (!fir.ref<!fir.array<20xf32>>, index) -> !fir.ref<f32>
 // CHECK:               %[[VAL_22:.*]] = fir.load %[[VAL_21]] : !fir.ref<f32>
 // CHECK:               %[[VAL_23:.*]] = arith.cmpf ogt, %[[VAL_22]], %[[VAL_3]] : f32

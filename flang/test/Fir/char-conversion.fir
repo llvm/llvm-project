@@ -16,7 +16,7 @@ func.func @char_convert() {
 // CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_0]] : (i32) -> index
 // CHECK:           %[[VAL_6:.*]] = arith.subi %[[VAL_5]], %[[VAL_4]] : index
-// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_4]] {
+// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_4]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.array<?xi8>>
 // CHECK:             %[[VAL_9:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<?x!fir.char<2,?>>>) -> !fir.ref<!fir.array<?xi16>>
 // CHECK:             %[[VAL_10:.*]] = fir.coordinate_of %[[VAL_8]], %[[VAL_7]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>

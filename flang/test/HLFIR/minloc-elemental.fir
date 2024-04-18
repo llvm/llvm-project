@@ -40,7 +40,7 @@ func.func @_QPtest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"}
 // CHECK-NEXT:    fir.store %c0_i32 to %[[V0]] : !fir.ref<i32>
 // CHECK-NEXT:    %[[V9:.*]]:3 = fir.box_dims %[[V1]]#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK-NEXT:    %[[V10:.*]] = arith.subi %[[V9]]#1, %c1 : index
-// CHECK-NEXT:    %[[V11:.*]] = fir.do_loop %arg3 = %c0 to %[[V10]] step %c1 iter_args(%arg4 = %c2147483647_i32) -> (i32) {
+// CHECK-NEXT:    %[[V11:.*]] = fir.do_loop %arg3 = %c0 to %[[V10]] step %c1 iter_args(%arg4 = %c2147483647_i32) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NEXT:      %[[V14:.*]] = arith.addi %arg3, %c1 : index
 // CHECK-NEXT:      %[[V15:.*]] = hlfir.designate %[[V1]]#0 (%[[V14]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK-NEXT:      %[[V16:.*]] = fir.load %[[V15]] : !fir.ref<i32>
@@ -72,7 +72,7 @@ func.func @_QPtest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"}
 // CHECK-NEXT:      fir.result %[[V18]] : i32
 // CHECK-NEXT:    }
 // CHECK-NEXT:    %[[BD:.*]]:3 = fir.box_dims %[[V2]]#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK-NEXT:    fir.do_loop %arg3 = %c1 to %[[BD]]#1 step %c1 unordered {
+// CHECK-NEXT:    fir.do_loop %arg3 = %c1 to %[[BD]]#1 step %c1 unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK-NEXT:      %[[V13:.*]] = hlfir.designate %[[RES]] (%arg3)  : (!fir.ref<!fir.array<1xi32>>, index) -> !fir.ref<i32>
 // CHECK-NEXT:      %[[V14:.*]] = fir.load %[[V13]] : !fir.ref<i32>
 // CHECK-NEXT:      %[[V15:.*]] = hlfir.designate %[[V2]]#0 (%arg3)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
@@ -122,7 +122,7 @@ func.func @_QPtest_kind2(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a
 // CHECK-NEXT:    fir.store %c0_i16 to %[[V0]] : !fir.ref<i16>
 // CHECK-NEXT:    %[[V9:.*]]:3 = fir.box_dims %[[V1]]#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK-NEXT:    %[[V10:.*]] = arith.subi %[[V9]]#1, %c1 : index
-// CHECK-NEXT:    %[[V11:.*]] = fir.do_loop %arg3 = %c0 to %[[V10]] step %c1 iter_args(%arg4 = %c2147483647_i32) -> (i32) {
+// CHECK-NEXT:    %[[V11:.*]] = fir.do_loop %arg3 = %c0 to %[[V10]] step %c1 iter_args(%arg4 = %c2147483647_i32) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NEXT:      %[[V14:.*]] = arith.addi %arg3, %c1 : index
 // CHECK-NEXT:      %[[V15:.*]] = hlfir.designate %[[V1]]#0 (%[[V14]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK-NEXT:      %[[V16:.*]] = fir.load %[[V15]] : !fir.ref<i32>
@@ -154,7 +154,7 @@ func.func @_QPtest_kind2(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a
 // CHECK-NEXT:      fir.result %[[V18]] : i32
 // CHECK-NEXT:    }
 // CHECK-NEXT:    %[[BD:.*]]:3 = fir.box_dims %[[V2]]#0, %c0 : (!fir.box<!fir.array<?xi16>>, index) -> (index, index, index)
-// CHECK-NEXT:    fir.do_loop %arg3 = %c1 to %[[BD]]#1 step %c1 unordered {
+// CHECK-NEXT:    fir.do_loop %arg3 = %c1 to %[[BD]]#1 step %c1 unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK-NEXT:      %[[V13:.*]] = hlfir.designate %[[RES]] (%arg3)  : (!fir.ref<!fir.array<1xi16>>, index) -> !fir.ref<i16>
 // CHECK-NEXT:      %[[V14:.*]] = fir.load %[[V13]] : !fir.ref<i16>
 // CHECK-NEXT:      %[[V15:.*]] = hlfir.designate %[[V2]]#0 (%arg3)  : (!fir.box<!fir.array<?xi16>>, index) -> !fir.ref<i16>
@@ -215,7 +215,7 @@ func.func @_QPtest_kind2_convert(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_n
 // CHECK-NEXT:   fir.store %c0_i16 to %[[V0]] : !fir.ref<i16>
 // CHECK-NEXT:   %[[V7:.*]]:3 = fir.box_dims %[[V2]]#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK-NEXT:   %[[V8:.*]] = arith.subi %[[V7]]#1, %c1 : index
-// CHECK-NEXT:   %[[V9:.*]] = fir.do_loop %arg3 = %c0 to %[[V8]] step %c1 iter_args(%arg4 = %c2147483647_i32) -> (i32) {
+// CHECK-NEXT:   %[[V9:.*]] = fir.do_loop %arg3 = %c0 to %[[V8]] step %c1 iter_args(%arg4 = %c2147483647_i32) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NEXT:     %[[V15:.*]] = arith.addi %arg3, %c1 : index
 // CHECK-NEXT:     %[[V16:.*]] = hlfir.designate %[[V2]]#0 (%[[V15]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK-NEXT:     %[[V17:.*]] = fir.load %[[V16]] : !fir.ref<i32>
@@ -284,7 +284,7 @@ func.func @_QPtest_float(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
 }
 // CHECK-LABEL: _QPtest_float
 // CHECK:        %cst = arith.constant 0x7F800000 : f32
-// CHECK:        %[[V11:.*]] = fir.do_loop %arg3 = %c0 to %[[V10:.*]] step %c1 iter_args(%arg4 = %cst) -> (f32) {
+// CHECK:        %[[V11:.*]] = fir.do_loop %arg3 = %c0 to %[[V10:.*]] step %c1 iter_args(%arg4 = %cst) -> (f32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NEXT:     %[[V14:.*]] = arith.addi %arg3, %c1 : index
 // CHECK-NEXT:     %[[V15:.*]] = hlfir.designate %[[V1:.*]]#0 (%[[V14]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // CHECK-NEXT:     %[[V16:.*]] = fir.load %[[V15]] : !fir.ref<f32>
@@ -419,5 +419,5 @@ func.func @_QPtest_parts(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "x
 }
 // Characters are not supported at the moment
 // CHECK-LABEL: _QPtest_parts
-// CHECK: fir.do_loop %{{.*}} = %c0 to %{{.*}} step %c1 iter_args(%{{.*}} = %c2147483647_i32) -> (i32) {
+// CHECK: fir.do_loop %{{.*}} = %c0 to %{{.*}} step %c1 iter_args(%{{.*}} = %c2147483647_i32) -> (i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 

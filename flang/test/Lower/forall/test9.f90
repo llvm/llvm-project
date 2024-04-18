@@ -45,7 +45,7 @@ end subroutine test9
 ! CHECK:         %[[VAL_26:.*]] = fir.array_load %[[VAL_0]](%[[VAL_25]]) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.array<?xf32>
 ! CHECK:         %[[VAL_27:.*]] = fir.shape %[[VAL_15]] : (index) -> !fir.shape<1>
 ! CHECK:         %[[VAL_28:.*]] = fir.array_load %[[VAL_1]](%[[VAL_27]]) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.array<?xf32>
-! CHECK:         %[[VAL_29:.*]] = fir.do_loop %[[VAL_30:.*]] = %[[VAL_17]] to %[[VAL_21]] step %[[VAL_22]] unordered iter_args(%[[VAL_31:.*]] = %[[VAL_24]]) -> (!fir.array<?xf32>) {
+! CHECK:         %[[VAL_29:.*]] = fir.do_loop %[[VAL_30:.*]] = %[[VAL_17]] to %[[VAL_21]] step %[[VAL_22]] unordered iter_args(%[[VAL_31:.*]] = %[[VAL_24]]) -> (!fir.array<?xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_30]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_32]] to %[[VAL_3]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_33:.*]] = arith.constant 1 : index

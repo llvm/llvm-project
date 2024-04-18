@@ -37,7 +37,7 @@ func.func @concat(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>, %arg2: !fir.bo
 // CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_16]], %[[VAL_17]], %[[VAL_14]], %[[VAL_15]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 // CHECK:  %[[VAL_18:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_19:.*]] = arith.subi %[[VAL_10]], %[[VAL_18]] : index
-// CHECK:  fir.do_loop %[[VAL_20:.*]] = %[[VAL_5]]#1 to %[[VAL_19]] step %[[VAL_18]] {
+// CHECK:  fir.do_loop %[[VAL_20:.*]] = %[[VAL_5]]#1 to %[[VAL_19]] step %[[VAL_18]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:    %[[VAL_21:.*]] = arith.subi %[[VAL_20]], %[[VAL_5]]#1 : index
 // CHECK:    %[[VAL_22:.*]] = fir.convert %[[VAL_8]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:    %[[VAL_23:.*]] = fir.coordinate_of %[[VAL_22]], %[[VAL_21]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
@@ -91,7 +91,7 @@ func.func @concat_chained(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>, %arg2:
 // CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_19]], %[[VAL_20]], %[[VAL_17]], %[[VAL_18]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 // CHECK:  %[[VAL_21:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_22:.*]] = arith.subi %[[VAL_13]], %[[VAL_21]] : index
-// CHECK:  fir.do_loop %[[VAL_23:.*]] = %[[VAL_6]]#1 to %[[VAL_22]] step %[[VAL_21]] {
+// CHECK:  fir.do_loop %[[VAL_23:.*]] = %[[VAL_6]]#1 to %[[VAL_22]] step %[[VAL_21]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:    %[[VAL_24:.*]] = arith.subi %[[VAL_23]], %[[VAL_6]]#1 : index
 // CHECK:    %[[VAL_25:.*]] = fir.convert %[[VAL_9]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:    %[[VAL_26:.*]] = fir.coordinate_of %[[VAL_25]], %[[VAL_24]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
@@ -113,7 +113,7 @@ func.func @concat_chained(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>, %arg2:
 // CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_38]], %[[VAL_39]], %[[VAL_36]], %[[VAL_37]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 // CHECK:  %[[VAL_40:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_41:.*]] = arith.subi %[[VAL_32]], %[[VAL_40]] : index
-// CHECK:  fir.do_loop %[[VAL_42:.*]] = %[[VAL_13]] to %[[VAL_41]] step %[[VAL_40]] {
+// CHECK:  fir.do_loop %[[VAL_42:.*]] = %[[VAL_13]] to %[[VAL_41]] step %[[VAL_40]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:    %[[VAL_43:.*]] = arith.subi %[[VAL_42]], %[[VAL_13]] : index
 // CHECK:    %[[VAL_44:.*]] = fir.convert %[[VAL_11]]#1 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:    %[[VAL_45:.*]] = fir.coordinate_of %[[VAL_44]], %[[VAL_43]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>

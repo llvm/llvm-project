@@ -84,7 +84,7 @@ func.func @inline_to_loop(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "
   %array = fir.array_load %0#0 : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
   %c1 = arith.constant 1 : index
   %max = arith.subi %4#1, %c1 : index
-  %7 = fir.do_loop %arg4 = %c0 to %max step %c1 unordered iter_args(%arg5 = %array) -> (!fir.array<?xi32>) {
+  %7 = fir.do_loop %arg4 = %c0 to %max step %c1 unordered iter_args(%arg5 = %array) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %8 = hlfir.apply %6, %arg4 : (!hlfir.expr<?xi32>, index) -> i32
     %9 = hlfir.designate %3#0 (%arg4)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %10 = fir.load %9 : !fir.ref<i32>

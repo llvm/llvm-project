@@ -43,7 +43,7 @@ end program
 ! CHECK:           %[[VAL_13:.*]] = arith.constant 2 : i32
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_15:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_16:.*]] = %[[VAL_15]] to %[[VAL_0]] step %[[VAL_15]] {
+! CHECK:           fir.do_loop %[[VAL_16:.*]] = %[[VAL_15]] to %[[VAL_0]] step %[[VAL_15]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_17:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_16]])  : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
 ! CHECK:             %[[VAL_18:.*]] = fir.load %[[VAL_17]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_19:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_16]])  : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>

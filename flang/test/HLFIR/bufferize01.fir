@@ -54,7 +54,7 @@
 // CHECK:           %[[VAL_42:.*]]:2 = hlfir.declare %[[VAL_41]](%[[VAL_40]]) typeparams %[[VAL_39]] {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<1x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<1x!fir.char<1,?>>>, !fir.heap<!fir.array<1x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_43:.*]] = arith.constant true
 // CHECK:           %[[VAL_44:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_45:.*]] = %[[VAL_44]] to %[[VAL_3]] step %[[VAL_44]] {
+// CHECK:           fir.do_loop %[[VAL_45:.*]] = %[[VAL_44]] to %[[VAL_3]] step %[[VAL_44]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_46:.*]] = fir.box_elesize %[[VAL_35]] : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> index
 // CHECK:             %[[VAL_47:.*]] = hlfir.designate %[[VAL_35]] (%[[VAL_45]])  typeparams %[[VAL_46]] : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, index, index) -> !fir.boxchar<1>
 // CHECK:             %[[VAL_48:.*]] = arith.constant false

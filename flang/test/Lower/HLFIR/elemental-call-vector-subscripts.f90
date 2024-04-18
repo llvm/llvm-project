@@ -24,7 +24,7 @@ end subroutine
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_11:.*]] = %[[VAL_10]] to %[[VAL_8]] step %[[VAL_10]] unordered {
+! CHECK:           fir.do_loop %[[VAL_11:.*]] = %[[VAL_10]] to %[[VAL_8]] step %[[VAL_10]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_11]])  : (!fir.ref<!fir.array<3xi64>>, index) -> !fir.ref<i64>
 ! CHECK:             %[[VAL_13:.*]] = fir.load %[[VAL_12]] : !fir.ref<i64>
 ! CHECK:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<10xf32>>, i64) -> !fir.ref<f32>
@@ -65,7 +65,7 @@ end subroutine
 ! CHECK:           }
 ! CHECK:           %[[VAL_16:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:           %[[VAL_17:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_18:.*]] = %[[VAL_17]] to %[[VAL_8]] step %[[VAL_17]] unordered {
+! CHECK:           fir.do_loop %[[VAL_18:.*]] = %[[VAL_17]] to %[[VAL_8]] step %[[VAL_17]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_19:.*]] = hlfir.apply %[[VAL_10]], %[[VAL_18]] : (!hlfir.expr<3xf32>, index) -> f32
 ! CHECK:             fir.call @_QPfoo_value(%[[VAL_19]], %[[VAL_16]]) {{.*}}: (f32, f32) -> ()
 ! CHECK:           }
@@ -85,7 +85,7 @@ end subroutine
 ! CHECK:           hlfir.elemental
 ! CHECK:           %[[VAL_16:.*]] = hlfir.elemental
 ! CHECK:           %[[VAL_20:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_21:.*]] = {{.*}}
+! CHECK:           fir.do_loop %[[VAL_21:.*]] = {{.*}} attributes {{.*}}
 ! CHECK:             %[[VAL_22:.*]] = hlfir.apply %[[VAL_16]], %[[VAL_21]] : (!hlfir.expr<?xi64>, index) -> i64
 ! CHECK:             %[[VAL_23:.*]]:3 = hlfir.associate %[[VAL_22]] {adapt.valuebyref} : (i64) -> (!fir.ref<i64>, !fir.ref<i64>, i1)
 ! CHECK:             fir.call @_QPfoo2(%[[VAL_23]]#1){{.*}}: (!fir.ref<i64>) -> ()

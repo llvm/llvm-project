@@ -32,7 +32,7 @@
 ! CHECK:               %[[LB:.*]] = fir.convert %[[VAL_8]] : (index) -> i32
 ! CHECK:               %[[VAL_12:.*]]:2 = fir.do_loop %[[VAL_13:[^ ]*]] =
 ! CHECK-SAME:              %[[VAL_8]] to %[[VAL_10]] step %[[VAL_11]]
-! CHECK-SAME:              iter_args(%[[IV:.*]] = %[[LB]]) -> (index, i32) {
+! CHECK-SAME:              iter_args(%[[IV:.*]] = %[[LB]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:                 fir.store %[[IV]] to %[[PRIV_J_DECL]]#1 : !fir.ref<i32>
 ! CHECK:                 %[[LOAD:.*]] = fir.load %[[PRIV_I_DECL]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_15:.*]] = fir.load %[[PRIV_J_DECL]]#0 : !fir.ref<i32>

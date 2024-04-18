@@ -96,7 +96,7 @@
 
   ! CHECK:     %[[V_140:[0-9]+]] = fir.address_of(@_QQro.2x_QM__fortran_ieee_exceptionsTieee_flag_type.1) : !fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
   ! CHECK:     %[[V_141:[0-9]+]] = fir.declare %[[V_140]](%[[V_59]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.2x_QM__fortran_ieee_exceptionsTieee_flag_type.1"} : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_141]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.load %[[V_311]] : !fir.ref<i8>
@@ -112,7 +112,7 @@
 
   ! CHECK:     %[[V_142:[0-9]+]] = fir.address_of(@_QQro.2x_QM__fortran_ieee_exceptionsTieee_flag_type.2) : !fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
   ! CHECK:     %[[V_143:[0-9]+]] = fir.declare %[[V_142]](%[[V_59]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.2x_QM__fortran_ieee_exceptionsTieee_flag_type.2"} : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_143]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_60]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
@@ -132,7 +132,7 @@
   ! CHECK:     %[[V_154:[0-9]+]] = fir.declare %[[V_140]](%[[V_59]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.2x_QM__fortran_ieee_exceptionsTieee_flag_type.1"} : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
   ! CHECK:     %[[V_155:[0-9]+]] = fir.address_of(@_QQro.2xl4.3) : !fir.ref<!fir.array<2x!fir.logical<4>>>
   ! CHECK:     %[[V_156:[0-9]+]] = fir.declare %[[V_155]](%[[V_59]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.2xl4.3"} : (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.logical<4>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_154]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_156]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.load %[[V_311]] : !fir.ref<!fir.logical<4>>
@@ -150,7 +150,7 @@
   call ieee_set_flag([ieee_invalid, ieee_overflow], [.false., .true.])
 
   ! CHECK:     %[[V_157:[0-9]+]] = fir.declare %[[V_142]](%[[V_59]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.2x_QM__fortran_ieee_exceptionsTieee_flag_type.2"} : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_157]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_60]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
@@ -169,7 +169,7 @@
 
   ! CHECK:     %[[V_165:[0-9]+]] = fir.address_of(@_QQro.3x_QM__fortran_ieee_exceptionsTieee_flag_type.4) : !fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
   ! CHECK:     %[[V_166:[0-9]+]] = fir.declare %[[V_165]](%[[V_54]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3x_QM__fortran_ieee_exceptionsTieee_flag_type.4"} : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_166]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.load %[[V_311]] : !fir.ref<i8>
@@ -184,7 +184,7 @@
   call ieee_set_flag(ieee_usual, .true.)
 
   ! CHECK:     %[[V_167:[0-9]+]] = fir.declare %[[V_165]](%[[V_54]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3x_QM__fortran_ieee_exceptionsTieee_flag_type.4"} : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_167]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_64]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
@@ -204,7 +204,7 @@
   ! CHECK:     %[[V_178:[0-9]+]] = fir.declare %[[V_165]](%[[V_54]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3x_QM__fortran_ieee_exceptionsTieee_flag_type.4"} : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
   ! CHECK:     %[[V_179:[0-9]+]] = fir.address_of(@_QQro.3xl4.5) : !fir.ref<!fir.array<3x!fir.logical<4>>>
   ! CHECK:     %[[V_180:[0-9]+]] = fir.declare %[[V_179]](%[[V_54]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3xl4.5"} : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> !fir.ref<!fir.array<3x!fir.logical<4>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_178]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_180]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.load %[[V_311]] : !fir.ref<!fir.logical<4>>
@@ -222,7 +222,7 @@
   call ieee_set_flag(ieee_usual, [.true., .false., .true.])
 
   ! CHECK:     %[[V_181:[0-9]+]] = fir.declare %[[V_165]](%[[V_54]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3x_QM__fortran_ieee_exceptionsTieee_flag_type.4"} : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_181]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_64]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
@@ -241,7 +241,7 @@
 
   ! CHECK:     %[[V_189:[0-9]+]] = fir.address_of(@_QQro.5x_QM__fortran_ieee_exceptionsTieee_flag_type.6) : !fir.ref<!fir.array<5x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
   ! CHECK:     %[[V_190:[0-9]+]] = fir.declare %[[V_189]](%[[V_1]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.5x_QM__fortran_ieee_exceptionsTieee_flag_type.6"} : (!fir.ref<!fir.array<5x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<5x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c5{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c5{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_190]](%[[V_1]]) %arg0 : (!fir.ref<!fir.array<5x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.load %[[V_311]] : !fir.ref<i8>
@@ -256,7 +256,7 @@
   call ieee_set_flag(ieee_all, .false.)
 
   ! CHECK:     %[[V_191:[0-9]+]] = fir.declare %[[V_189]](%[[V_1]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.5x_QM__fortran_ieee_exceptionsTieee_flag_type.6"} : (!fir.ref<!fir.array<5x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<5x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c5{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c5{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_191]](%[[V_1]]) %arg0 : (!fir.ref<!fir.array<5x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_62]](%[[V_1]]) %arg0 : (!fir.ref<!fir.array<5x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
@@ -343,7 +343,7 @@
   print*, 'invalid[T]: ', v
 
   ! CHECK:     %[[V_266:[0-9]+]] = fir.declare %[[V_140]](%[[V_59]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.2x_QM__fortran_ieee_exceptionsTieee_flag_type.1"} : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_266]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.load %[[V_311]] : !fir.ref<i8>
@@ -358,7 +358,7 @@
   call ieee_set_halting_mode([ieee_invalid, ieee_overflow], .false.)
 
   ! CHECK:     %[[V_267:[0-9]+]] = fir.declare %[[V_142]](%[[V_59]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.2x_QM__fortran_ieee_exceptionsTieee_flag_type.2"} : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_267]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_60]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
@@ -378,7 +378,7 @@
 
   ! CHECK:     %[[V_274:[0-9]+]] = fir.declare %[[V_140]](%[[V_59]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.2x_QM__fortran_ieee_exceptionsTieee_flag_type.1"} : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
   ! CHECK:     %[[V_275:[0-9]+]] = fir.declare %[[V_155]](%[[V_59]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.2xl4.3"} : (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.logical<4>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_274]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_275]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.load %[[V_311]] : !fir.ref<!fir.logical<4>>
@@ -396,7 +396,7 @@
   call ieee_set_halting_mode([ieee_invalid, ieee_overflow], [.false., .true.])
 
   ! CHECK:     %[[V_276:[0-9]+]] = fir.declare %[[V_142]](%[[V_59]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.2x_QM__fortran_ieee_exceptionsTieee_flag_type.2"} : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c2{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_276]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_60]](%[[V_59]]) %arg0 : (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
@@ -415,7 +415,7 @@
   print*, '[overflow[T], invalid[F]]: ', v2
 
   ! CHECK:     %[[V_283:[0-9]+]] = fir.declare %[[V_165]](%[[V_54]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3x_QM__fortran_ieee_exceptionsTieee_flag_type.4"} : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_283]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.load %[[V_311]] : !fir.ref<i8>
@@ -430,7 +430,7 @@
   call ieee_set_halting_mode(ieee_usual, .true.)
 
   ! CHECK:     %[[V_284:[0-9]+]] = fir.declare %[[V_165]](%[[V_54]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3x_QM__fortran_ieee_exceptionsTieee_flag_type.4"} : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_284]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_64]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
@@ -450,7 +450,7 @@
 
   ! CHECK:     %[[V_291:[0-9]+]] = fir.declare %[[V_165]](%[[V_54]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3x_QM__fortran_ieee_exceptionsTieee_flag_type.4"} : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
   ! CHECK:     %[[V_292:[0-9]+]] = fir.declare %[[V_179]](%[[V_54]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3xl4.5"} : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> !fir.ref<!fir.array<3x!fir.logical<4>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_291]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_292]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.load %[[V_311]] : !fir.ref<!fir.logical<4>>
@@ -468,7 +468,7 @@
   call ieee_set_halting_mode(ieee_usual, [.true., .false., .true.])
 
   ! CHECK:     %[[V_293:[0-9]+]] = fir.declare %[[V_165]](%[[V_54]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3x_QM__fortran_ieee_exceptionsTieee_flag_type.4"} : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c3{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_293]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_64]](%[[V_54]]) %arg0 : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
@@ -487,7 +487,7 @@
   print*, '[overflow[T], divide_by_zero[F], invalid[T]]: ', v_usual
 
   ! CHECK:     %[[V_300:[0-9]+]] = fir.declare %[[V_189]](%[[V_1]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.5x_QM__fortran_ieee_exceptionsTieee_flag_type.6"} : (!fir.ref<!fir.array<5x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<5x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c5{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c5{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_300]](%[[V_1]]) %arg0 : (!fir.ref<!fir.array<5x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.load %[[V_311]] : !fir.ref<i8>
@@ -502,7 +502,7 @@
   call ieee_set_halting_mode(ieee_all, .true.)
 
   ! CHECK:     %[[V_301:[0-9]+]] = fir.declare %[[V_189]](%[[V_1]]) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.5x_QM__fortran_ieee_exceptionsTieee_flag_type.6"} : (!fir.ref<!fir.array<5x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<5x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>
-  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c5{{.*}} step %c1{{.*}} {
+  ! CHECK:     fir.do_loop %arg0 = %c1{{.*}} to %c5{{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
   ! CHECK:       %[[V_310:[0-9]+]] = fir.array_coor %[[V_301]](%[[V_1]]) %arg0 : (!fir.ref<!fir.array<5x!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>>, !fir.shape<1>, index) -> !fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>
   ! CHECK:       %[[V_311:[0-9]+]] = fir.array_coor %[[V_62]](%[[V_1]]) %arg0 : (!fir.ref<!fir.array<5x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
   ! CHECK:       %[[V_312:[0-9]+]] = fir.coordinate_of %[[V_310]], %[[V_82]] : (!fir.ref<!fir.type<_QM__fortran_ieee_exceptionsTieee_flag_type{_QM__fortran_ieee_exceptionsTieee_flag_type.flag:i8}>>, !fir.field) -> !fir.ref<i8>

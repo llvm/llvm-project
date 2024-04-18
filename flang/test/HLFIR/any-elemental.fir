@@ -45,7 +45,7 @@ func.func @_QFPtest(%arg0: !fir.ref<!fir.array<4x7xi32>> {fir.bindc_name = "b"},
 // CHECK-NEXT:     %[[V8:.*]] = fir.shape %c7 : (index) -> !fir.shape<1>
 // CHECK-NEXT:     %[[V9:.*]] = hlfir.designate %[[V1]]#0 (%[[V7]], %c1:%c7:%c1)  shape %[[V8]] : (!fir.ref<!fir.array<4x7xi32>>, i64, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<7xi32>>
 // CHECK-NEXT:     %[[V10:.*]] = fir.load %[[V5]]#0 : !fir.ref<i32>
-// CHECK-NEXT:     %[[V11:.*]] = fir.do_loop %arg3 = %c1 to %c7 step %c1 iter_args(%arg4 = %false) -> (i1) {
+// CHECK-NEXT:     %[[V11:.*]] = fir.do_loop %arg3 = %c1 to %c7 step %c1 iter_args(%arg4 = %false) -> (i1) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK-NEXT:       %[[V14:.*]] = hlfir.designate %[[V9]] (%arg3)  : (!fir.box<!fir.array<7xi32>>, index) -> !fir.ref<i32>
 // CHECK-NEXT:       %[[V15:.*]] = fir.load %[[V14]] : !fir.ref<i32>
 // CHECK-NEXT:       %[[V16:.*]] = arith.cmpi sge, %[[V15]], %[[V10]] : i32
@@ -116,7 +116,7 @@ func.func @_Qtest_recursive() attributes {fir.bindc_name = "test"} {
   hlfir.assign %c1_i32 to %5#0 : i32, !fir.ref<i32>
   %13 = fir.load %1#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %14:3 = fir.box_dims %13, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-  fir.do_loop %arg0 = %c1 to %14#1 step %c1 unordered {
+  fir.do_loop %arg0 = %c1 to %14#1 step %c1 unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %27:3 = fir.box_dims %13, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
     %28 = arith.subi %27#0, %c1 : index
     %29 = arith.addi %arg0, %28 : index
@@ -167,7 +167,7 @@ func.func @_Qtest_recursive() attributes {fir.bindc_name = "test"} {
   return
 }
 // CHECK-LABEL: func.func @_Qtest_recursive()
-// CHECK:    %[[V20:.*]] = fir.do_loop %arg0 = %c1 to %{{.*}} step %c1 iter_args(%arg1 = %false) -> (i1) {
+// CHECK:    %[[V20:.*]] = fir.do_loop %arg0 = %c1 to %{{.*}} step %c1 iter_args(%arg1 = %false) -> (i1) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:      %[[V26:.*]] = fir.load %[[V1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK:      %[[V27:.*]]:3 = fir.box_dims %[[V26]], %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 // CHECK:      %[[V28:.*]] = arith.addi %[[V27]]#0, %[[V27]]#1 : index
@@ -178,7 +178,7 @@ func.func @_Qtest_recursive() attributes {fir.bindc_name = "test"} {
 // CHECK:      %[[V33:.*]] = arith.select %[[V32]], %[[V31]], %c0 : index
 // CHECK:      %[[V34:.*]] = fir.shape %[[V33]] : (index) -> !fir.shape<1>
 // CHECK:      %[[V35:.*]] = hlfir.designate %[[V26]] (%[[V27]]#0:%[[V29]]:%c1)  shape %[[V34]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-// CHECK:      %[[V36:.*]] = fir.do_loop %arg2 = %c1 to %[[V33]] step %c1 iter_args(%arg3 = %false) -> (i1) {
+// CHECK:      %[[V36:.*]] = fir.do_loop %arg2 = %c1 to %[[V33]] step %c1 iter_args(%arg3 = %false) -> (i1) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 // CHECK:        %[[V38:.*]] = hlfir.designate %[[V35]] (%arg2)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:        %[[V39:.*]] = fir.load %[[V38]] : !fir.ref<i32>
 // CHECK:        %[[V40:.*]] = arith.cmpi eq, %[[V39]], %c1_i32 : i32

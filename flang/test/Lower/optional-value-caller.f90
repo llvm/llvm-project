@@ -190,7 +190,7 @@ subroutine test_array(i)
 ! CHECK:    %[[VAL_9:.*]] = arith.constant 1 : index
 ! CHECK:    %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:    %[[VAL_11:.*]] = arith.subi %[[VAL_1]], %[[VAL_9]] : index
-! CHECK:    %[[VAL_12:.*]] = fir.do_loop %[[VAL_13:.*]] = %[[VAL_10]] to %[[VAL_11]] step %[[VAL_9]] unordered iter_args(%[[VAL_14:.*]] = %[[VAL_6]]) -> (!fir.array<100xi32>) {
+! CHECK:    %[[VAL_12:.*]] = fir.do_loop %[[VAL_13:.*]] = %[[VAL_10]] to %[[VAL_11]] step %[[VAL_9]] unordered iter_args(%[[VAL_14:.*]] = %[[VAL_6]]) -> (!fir.array<100xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:      %[[VAL_15:.*]] = fir.array_fetch %[[VAL_8]], %[[VAL_13]] : (!fir.array<100xi32>, index) -> i32
 ! CHECK:      %[[VAL_16:.*]] = fir.array_update %[[VAL_14]], %[[VAL_15]], %[[VAL_13]] : (!fir.array<100xi32>, i32, index) -> !fir.array<100xi32>
 ! CHECK:      fir.result %[[VAL_16]] : !fir.array<100xi32>

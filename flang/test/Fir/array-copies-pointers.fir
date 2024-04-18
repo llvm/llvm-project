@@ -20,7 +20,7 @@ func.func @maybe_overlap(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1 : !fir.ref<
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
   %2 = fir.array_load %arg0(%1) : (!fir.ptr<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
   %3 = fir.array_load %arg1(%1) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
-  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %2) -> (!fir.array<100xf32>) {
+  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %2) -> (!fir.array<100xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %5 = fir.array_fetch %3, %arg2 : (!fir.array<100xf32>, index) -> f32
     %6 = fir.array_update %arg3, %5, %arg2 : (!fir.array<100xf32>, f32, index) -> !fir.array<100xf32>
     fir.result %6 : !fir.array<100xf32>
@@ -48,7 +48,7 @@ func.func @no_overlap1(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1 : !fir.ref<!f
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
   %2 = fir.array_load %arg0(%1) : (!fir.ptr<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
   %3 = fir.array_load %arg1(%1) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
-  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %2) -> (!fir.array<100xf32>) {
+  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %2) -> (!fir.array<100xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %5 = fir.array_fetch %3, %arg2 : (!fir.array<100xf32>, index) -> f32
     %6 = fir.array_update %arg3, %5, %arg2 : (!fir.array<100xf32>, f32, index) -> !fir.array<100xf32>
     fir.result %6 : !fir.array<100xf32>
@@ -74,7 +74,7 @@ func.func @no_overlap(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref<!fir
   %0 = fir.alloca f32
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
   %2 = fir.array_load %arg0(%1) : (!fir.ptr<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
-  %3 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %2) -> (!fir.array<100xf32>) {
+  %3 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %2) -> (!fir.array<100xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %4 = fir.array_fetch %2, %arg2 : (!fir.array<100xf32>, index) -> f32
     %5 = fir.array_update %arg3, %4, %arg2 : (!fir.array<100xf32>, f32, index) -> !fir.array<100xf32>
     fir.result %5 : !fir.array<100xf32>
@@ -101,7 +101,7 @@ func.func @maybe_overlap_2(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
   %2 = fir.array_load %arg0(%1) : (!fir.ptr<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
   %3 = fir.array_load %arg1(%1) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
-  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %3) -> (!fir.array<100xf32>) {
+  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %3) -> (!fir.array<100xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %5 = fir.array_fetch %2, %arg2 : (!fir.array<100xf32>, index) -> f32
     %6 = fir.array_update %arg3, %5, %arg2 : (!fir.array<100xf32>, f32, index) -> !fir.array<100xf32>
     fir.result %6 : !fir.array<100xf32>
@@ -129,7 +129,7 @@ func.func @no_overlap_2(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref<!f
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
   %2 = fir.array_load %arg0(%1) : (!fir.ptr<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
   %3 = fir.array_load %arg1(%1) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
-  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %3) -> (!fir.array<100xf32>) {
+  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %3) -> (!fir.array<100xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %5 = fir.array_fetch %2, %arg2 : (!fir.array<100xf32>, index) -> f32
     %6 = fir.array_update %arg3, %5, %arg2 : (!fir.array<100xf32>, f32, index) -> !fir.array<100xf32>
     fir.result %6 : !fir.array<100xf32>
@@ -156,7 +156,7 @@ func.func @maybe_overlap_3(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ptr
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
   %2 = fir.array_load %arg0(%1) : (!fir.ptr<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
   %3 = fir.array_load %arg1(%1) : (!fir.ptr<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
-  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %3) -> (!fir.array<100xf32>) {
+  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %3) -> (!fir.array<100xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %5 = fir.array_fetch %2, %arg2 : (!fir.array<100xf32>, index) -> f32
     %6 = fir.array_update %arg3, %5, %arg2 : (!fir.array<100xf32>, f32, index) -> !fir.array<100xf32>
     fir.result %6 : !fir.array<100xf32>
@@ -185,7 +185,7 @@ func.func @derived_whose_component_may_be_aliased(%arg0: !fir.box<!fir.array<4x!
   %5 = fir.shift %4#0 : (index) -> !fir.shift<1>
   %6 = fir.array_load %3(%5) : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.shift<1>) -> !fir.array<?xi32>
   %7 = arith.subi %c4, %c1 : index
-  %8 = fir.do_loop %arg2 = %c0 to %7 step %c1 unordered iter_args(%arg3 = %2) -> (!fir.array<4xi32>) {
+  %8 = fir.do_loop %arg2 = %c0 to %7 step %c1 unordered iter_args(%arg3 = %2) -> (!fir.array<4xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %9 = fir.array_fetch %6, %arg2 : (!fir.array<?xi32>, index) -> i32
     %10 = fir.array_update %arg3, %9, %arg2 : (!fir.array<4xi32>, i32, index) -> !fir.array<4xi32>
     fir.result %10 : !fir.array<4xi32>
@@ -215,7 +215,7 @@ func.func @complex_real_aliasing(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x
   %5 = fir.slice %c1, %c4, %c1 path %c0_i32 : (index, index, index, i32) -> !fir.slice<1>
   %6 = fir.array_load %arg1(%4) [%5] : (!fir.ref<!fir.array<4x!fir.complex<4>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<4xf32>
   %7 = arith.subi %c4, %c1 : index
-  %8 = fir.do_loop %arg2 = %c0 to %7 step %c1 unordered iter_args(%arg3 = %3) -> (!fir.array<?xf32>) {
+  %8 = fir.do_loop %arg2 = %c0 to %7 step %c1 unordered iter_args(%arg3 = %3) -> (!fir.array<?xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %9 = fir.array_fetch %6, %arg2 : (!fir.array<4xf32>, index) -> f32
     %10 = fir.array_update %arg3, %9, %arg2 : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
     fir.result %10 : !fir.array<?xf32>
@@ -247,7 +247,7 @@ func.func @maybe_overlap_3(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
   %2 = fir.array_load %arg0(%1) : (!fir.ptr<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
   %3 = fir.array_load %0(%1) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
-  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %3) -> (!fir.array<100xf32>) {
+  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %3) -> (!fir.array<100xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %5 = fir.array_fetch %2, %arg2 : (!fir.array<100xf32>, index) -> f32
     %6 = fir.array_update %arg3, %5, %arg2 : (!fir.array<100xf32>, f32, index) -> !fir.array<100xf32>
     fir.result %6 : !fir.array<100xf32>
@@ -280,7 +280,7 @@ func.func @no_overlap_3(%arg0: !fir.ptr<!fir.array<100xf32>>, %arg1: !fir.ref<!f
   %1 = fir.shape %c100 : (index) -> !fir.shape<1>
   %2 = fir.array_load %arg0(%1) : (!fir.ptr<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
   %3 = fir.array_load %0(%1) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
-  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %3) -> (!fir.array<100xf32>) {
+  %4 = fir.do_loop %arg2 = %c0 to %c99 step %c1 unordered iter_args(%arg3 = %3) -> (!fir.array<100xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %5 = fir.array_fetch %2, %arg2 : (!fir.array<100xf32>, index) -> f32
     %6 = fir.array_update %arg3, %5, %arg2 : (!fir.array<100xf32>, f32, index) -> !fir.array<100xf32>
     fir.result %6 : !fir.array<100xf32>

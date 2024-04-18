@@ -44,7 +44,7 @@ end
 ! CHECK:         %[[VAL_11:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_12:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_13:.*]] = arith.subi %[[VAL_6]]#1, %[[VAL_11]] : index
-! CHECK:         fir.do_loop %[[VAL_14:.*]] = %[[VAL_12]] to %[[VAL_13]] step %[[VAL_11]] {
+! CHECK:         fir.do_loop %[[VAL_14:.*]] = %[[VAL_12]] to %[[VAL_13]] step %[[VAL_11]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:           %[[VAL_15:.*]] = fir.array_fetch %[[VAL_7]], %[[VAL_14]] : (!fir.array<?xi32>, index) -> i32
 ! CHECK:           %[[VAL_16:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_17:.*]] = arith.addi %[[VAL_14]], %[[VAL_16]] : index

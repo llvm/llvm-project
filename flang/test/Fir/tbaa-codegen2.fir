@@ -29,7 +29,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     %5 = fir.allocmem !fir.array<?xi32>, %3#1 {bindc_name = ".tmp.array", uniq_name = ""}
     %6 = fir.declare %5(%4) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xi32>>
     %7 = fir.embox %6(%4) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-    fir.do_loop %arg1 = %c1 to %3#1 step %c1 unordered {
+    fir.do_loop %arg1 = %c1 to %3#1 step %c1 unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
       %16 = fir.array_coor %2 %arg1 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
       // load with tbaa
       %17 = fir.load %16 {tbaa = [#tbaa_tag]} : !fir.ref<i32>

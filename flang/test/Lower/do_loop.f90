@@ -23,7 +23,7 @@ subroutine simple_loop
   ! CHECK: %[[LI_RES:.*]]:2 = fir.do_loop %[[LI:[^ ]*]] =
   ! NSW:   %[[LI_RES:.*]]:2 = fir.do_loop %[[LI:[^ ]*]] =
   ! CHECK-SAME: %[[C1_CVT]] to %[[C5_CVT]] step %[[C1]]
-  ! CHECK-SAME: iter_args(%[[IV:.*]] = %[[LB]]) -> (index, i32) {
+  ! CHECK-SAME: iter_args(%[[IV:.*]] = %[[LB]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   do i=1,5
   ! CHECK:   fir.store %[[IV]] to %[[I_REF]] : !fir.ref<i32>
   ! CHECK:   %[[LI_NEXT:.*]] = arith.addi %[[LI]], %[[C1]] : index
@@ -64,7 +64,7 @@ subroutine nested_loop
   ! CHECK: %[[I_RES:.*]]:2 = fir.do_loop %[[LI:[^ ]*]] =
   ! NSW:   %[[I_RES:.*]]:2 = fir.do_loop %[[LI:[^ ]*]] =
   ! CHECK-SAME: %[[S_I_CVT]] to %[[E_I_CVT]] step %[[ST_I]]
-  ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (index, i32) {
+  ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   do i=1,5
     ! CHECK: fir.store %[[I_IV]] to %[[I_REF]] : !fir.ref<i32>
     ! CHECK: %[[S_J:.*]] = arith.constant 1 : i32
@@ -76,7 +76,7 @@ subroutine nested_loop
     ! CHECK: %[[J_RES:.*]]:2 = fir.do_loop %[[LJ:[^ ]*]] =
     ! NSW:   %[[J_RES:.*]]:2 = fir.do_loop %[[LJ:[^ ]*]] =
     ! CHECK-SAME: %[[S_J_CVT]] to %[[E_J_CVT]] step %[[ST_J]]
-    ! CHECK-SAME: iter_args(%[[J_IV:.*]] = %[[J_LB]]) -> (index, i32) {
+    ! CHECK-SAME: iter_args(%[[J_IV:.*]] = %[[J_LB]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     do j=1,5
       ! CHECK: fir.store %[[J_IV]] to %[[J_REF]] : !fir.ref<i32>
       ! CHECK: %[[ASUM:.*]] = fir.load %[[ASUM_REF]] : !fir.ref<i32>
@@ -135,7 +135,7 @@ subroutine down_counting_loop()
   ! CHECK: %[[I_RES:.*]]:2 = fir.do_loop %[[LI:[^ ]*]] =
   ! NSW:   %[[I_RES:.*]]:2 = fir.do_loop %[[LI:[^ ]*]] =
   ! CHECK-SAME: %[[C5_CVT]] to %[[C1_CVT]] step %[[CMINUS1_STEP_CVT]]
-  ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (index, i32) {
+  ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   do i=5,1,-1
   ! CHECK: fir.store %[[I_IV]] to %[[I_REF]] : !fir.ref<i32>
   ! CHECK: %[[LI_NEXT:.*]] = arith.addi %[[LI]], %[[CMINUS1_STEP_CVT]] : index
@@ -168,7 +168,7 @@ subroutine loop_with_variable_step(s,e,st)
   ! CHECK: %[[I_RES:.*]]:2 = fir.do_loop %[[LI:[^ ]*]] =
   ! NSW:   %[[I_RES:.*]]:2 = fir.do_loop %[[LI:[^ ]*]] =
   ! CHECK-SAME: %[[S_CVT]] to %[[E_CVT]] step %[[ST_CVT]]
-  ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (index, i32) {
+  ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   do i=s,e,st
   ! CHECK:  fir.store %[[I_IV]] to %[[I_REF]] : !fir.ref<i32>
   ! CHECK:  %[[LI_NEXT:.*]] = arith.addi %[[LI]], %[[ST_CVT]] : index
@@ -227,7 +227,7 @@ subroutine loop_with_pointer_variables(s,e,st)
 ! CHECK:  %[[I_RES:.*]]:2 = fir.do_loop %[[LI:[^ ]*]] =
 ! NSW:    %[[I_RES:.*]]:2 = fir.do_loop %[[LI:[^ ]*]] =
 ! CHECK-SAME: %[[S_CVT]] to %[[E_CVT]] step %[[ST_CVT]]
-! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (index, i32) {
+! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   do iptr=sptr,eptr,stptr
 ! CHECK:    fir.store %[[I_IV]] to %[[I_PTR]] : !fir.ptr<i32>
 ! CHECK:    %[[LI_NEXT:.*]] = arith.addi %[[LI]], %[[ST_CVT]] : index
@@ -263,7 +263,7 @@ subroutine loop_with_non_default_integer(s,e,st)
   ! CHECK: %[[I_RES:.*]]:2 = fir.do_loop %[[LI:[^ ]*]] =
   ! NSW:   %[[I_RES:.*]]:2 = fir.do_loop %[[LI:[^ ]*]] =
   ! CHECK-SAME: %[[S_CVT]] to %[[E_CVT]] step %[[ST_CVT]]
-  ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (index, i64) {
+  ! CHECK-SAME: iter_args(%[[I_IV:.*]] = %[[I_LB]]) -> (index, i64) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   do i=s,e,st
     ! CHECK: fir.store %[[I_IV]] to %[[I_REF]] : !fir.ref<i64>
     ! CHECK: %[[LI_NEXT:.*]] = arith.addi %[[LI]], %[[ST_CVT]] : index

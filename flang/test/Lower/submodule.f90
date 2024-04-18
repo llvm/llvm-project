@@ -35,7 +35,7 @@ contains
   ! CHECK:     %[[V_8:[0-9]+]] = fir.array_load %[[V_6]](%[[V_7]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.array<?xi32>
   ! CHECK:     %[[V_9:[0-9]+]] = fir.call @_QMmmSss1Pfff(%arg0) {{.*}} : (!fir.ref<i32>) -> i32
   ! CHECK:     %[[V_10:[0-9]+]] = arith.subi %[[V_5]], %c1{{.*}} : index
-  ! CHECK:     %[[V_11:[0-9]+]] = fir.do_loop %arg1 = %c0{{.*}} to %[[V_10]] step %c1{{.*}} unordered iter_args(%arg2 = %[[V_8]]) -> (!fir.array<?xi32>) {
+  ! CHECK:     %[[V_11:[0-9]+]] = fir.do_loop %arg1 = %c0{{.*}} to %[[V_10]] step %c1{{.*}} unordered iter_args(%arg2 = %[[V_8]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   ! CHECK:       %[[V_13:[0-9]+]] = fir.array_update %arg2, %[[V_9]], %arg1 : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
   ! CHECK:       fir.result %[[V_13]] : !fir.array<?xi32>
   ! CHECK:     }
@@ -64,7 +64,7 @@ contains
   ! CHECK:     %[[V_10:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<i32>
   ! CHECK:     %[[V_11:[0-9]+]] = arith.addi %[[V_10]], %c2{{.*}} : i32
   ! CHECK:     %[[V_12:[0-9]+]] = arith.subi %[[V_6]], %c1{{.*}} : index
-  ! CHECK:     %[[V_13:[0-9]+]] = fir.do_loop %arg1 = %c0{{.*}} to %[[V_12]] step %c1{{.*}} unordered iter_args(%arg2 = %[[V_9]]) -> (!fir.array<?xi32>) {
+  ! CHECK:     %[[V_13:[0-9]+]] = fir.do_loop %arg1 = %c0{{.*}} to %[[V_12]] step %c1{{.*}} unordered iter_args(%arg2 = %[[V_9]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   ! CHECK:       %[[V_15:[0-9]+]] = fir.array_update %arg2, %[[V_11]], %arg1 : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
   ! CHECK:       fir.result %[[V_15]] : !fir.array<?xi32>
   ! CHECK:     }
@@ -112,7 +112,7 @@ contains
   ! CHECK:     %[[V_12:[0-9]+]] = arith.muli %[[V_10]], %[[V_11]] : i32
   ! CHECK:     %[[V_13:[0-9]+]] = arith.addi %[[V_12]], %c6{{.*}} : i32
   ! CHECK:     %[[V_14:[0-9]+]] = arith.subi %[[V_6]], %c1{{.*}} : index
-  ! CHECK:     %[[V_15:[0-9]+]] = fir.do_loop %arg1 = %c0{{.*}} to %[[V_14]] step %c1{{.*}} unordered iter_args(%arg2 = %[[V_9]]) -> (!fir.array<?xi32>) {
+  ! CHECK:     %[[V_15:[0-9]+]] = fir.do_loop %arg1 = %c0{{.*}} to %[[V_14]] step %c1{{.*}} unordered iter_args(%arg2 = %[[V_9]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
   ! CHECK:       %[[V_17:[0-9]+]] = fir.array_update %arg2, %[[V_13]], %arg1 : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
   ! CHECK:       fir.result %[[V_17]] : !fir.array<?xi32>
   ! CHECK:     }

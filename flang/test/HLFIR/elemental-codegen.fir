@@ -26,8 +26,8 @@ func.func @numeric_type(%arg0: !fir.ref<!fir.array<10x20xi32>>, %arg1: !fir.ref<
 // CHECK:    %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_4]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<10x20xi32>>, !fir.shape<2>) -> (!fir.heap<!fir.array<10x20xi32>>, !fir.heap<!fir.array<10x20xi32>>)
 // CHECK:    %[[VAL_7:.*]] = arith.constant true
 // CHECK:    %[[VAL_8:.*]] = arith.constant 1 : index
-// CHECK:    fir.do_loop %[[VAL_9:.*]] = %[[VAL_8]] to %[[VAL_3]] step %[[VAL_8]] {
-// CHECK:      fir.do_loop %[[VAL_10:.*]] = %[[VAL_8]] to %[[VAL_2]] step %[[VAL_8]] {
+// CHECK:    fir.do_loop %[[VAL_9:.*]] = %[[VAL_8]] to %[[VAL_3]] step %[[VAL_8]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+// CHECK:      fir.do_loop %[[VAL_10:.*]] = %[[VAL_8]] to %[[VAL_2]] step %[[VAL_8]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:        %[[VAL_11:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_10]], %[[VAL_9]])  : (!fir.ref<!fir.array<10x20xi32>>, index, index) -> !fir.ref<i32>
 // CHECK:        %[[VAL_12:.*]] = hlfir.designate %[[VAL_1]] (%[[VAL_10]], %[[VAL_9]])  : (!fir.ref<!fir.array<10x20xi32>>, index, index) -> !fir.ref<i32>
 // CHECK:        %[[VAL_13:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
@@ -62,7 +62,7 @@ func.func @char_type(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>, %arg1: index
 // CHECK:    %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_4]]) typeparams %[[VAL_2]] {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.heap<!fir.array<?x!fir.char<1,?>>>)
 // CHECK:    %[[VAL_7:.*]] = arith.constant true
 // CHECK:    %[[VAL_8:.*]] = arith.constant 1 : index
-// CHECK:    fir.do_loop %[[VAL_9:.*]] = %[[VAL_8]] to %[[VAL_1]] step %[[VAL_8]] {
+// CHECK:    fir.do_loop %[[VAL_9:.*]] = %[[VAL_8]] to %[[VAL_1]] step %[[VAL_8]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:      %[[VAL_10:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_9]])  typeparams %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
                // concatenation
 // CHECK:      %[[VAL_30:.*]]:2 = hlfir.declare %[[VAL_14:.*]] typeparams %[[VAL_13:.*]] {uniq_name = "tmp"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
@@ -97,8 +97,8 @@ func.func @derived_transpose(%arg0: !fir.box<!fir.array<?x?x!fir.type<t{field:f3
 // CHECK:    %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_3]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<?x?x!fir.type<t{field:f32}>>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?x!fir.type<t{field:f32}>>>, !fir.heap<!fir.array<?x?x!fir.type<t{field:f32}>>>)
 // CHECK:    %[[VAL_6:.*]] = arith.constant true
 // CHECK:    %[[VAL_7:.*]] = arith.constant 1 : index
-// CHECK:    fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_1]] step %[[VAL_7]] {
-// CHECK:      fir.do_loop %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_2]] step %[[VAL_7]] {
+// CHECK:    fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_1]] step %[[VAL_7]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+// CHECK:      fir.do_loop %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_2]] step %[[VAL_7]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:        %[[VAL_10:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_9]], %[[VAL_8]])  : (!fir.box<!fir.array<?x?x!fir.type<t{field:f32}>>>, index, index) -> !fir.box<!fir.type<t{field:f32}>>
 // CHECK:        %[[VAL_11:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_9]], %[[VAL_8]])  : (!fir.box<!fir.array<?x?x!fir.type<t{field:f32}>>>, index, index) -> !fir.ref<!fir.type<t{field:f32}>>
 // CHECK:        hlfir.assign %[[VAL_10]] to %[[VAL_11]] temporary_lhs : !fir.box<!fir.type<t{field:f32}>>, !fir.ref<!fir.type<t{field:f32}>>
@@ -127,8 +127,8 @@ func.func @unordered() {
 // CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_2]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<10x20xi32>>, !fir.shape<2>) -> (!fir.heap<!fir.array<10x20xi32>>, !fir.heap<!fir.array<10x20xi32>>)
 // CHECK:           %[[VAL_5:.*]] = arith.constant true
 // CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_6]] to %[[VAL_1]] step %[[VAL_6]] unordered {
-// CHECK:             fir.do_loop %[[VAL_8:.*]] = %[[VAL_6]] to %[[VAL_0]] step %[[VAL_6]] unordered {
+// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_6]] to %[[VAL_1]] step %[[VAL_6]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+// CHECK:             fir.do_loop %[[VAL_8:.*]] = %[[VAL_6]] to %[[VAL_0]] step %[[VAL_6]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:               %[[VAL_9:.*]] = arith.constant 0 : i32
 // CHECK:               %[[VAL_10:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_8]], %[[VAL_7]])  : (!fir.heap<!fir.array<10x20xi32>>, index, index) -> !fir.ref<i32>
 // CHECK:               hlfir.assign %[[VAL_9]] to %[[VAL_10]] temporary_lhs : i32, !fir.ref<i32>
@@ -195,8 +195,8 @@ func.func @test_polymorphic(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.bindc_
 // CHECK:           %[[VAL_38:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_36]], %[[VAL_34]], %[[VAL_35]], %[[VAL_37]], %[[VAL_33]]) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:           %[[VAL_39:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_40:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_41:.*]] = %[[VAL_40]] to %[[EX1]] step %[[VAL_40]] unordered {
-// CHECK:             fir.do_loop %[[VAL_42:.*]] = %[[VAL_40]] to %[[EX0]] step %[[VAL_40]] unordered {
+// CHECK:           fir.do_loop %[[VAL_41:.*]] = %[[VAL_40]] to %[[EX1]] step %[[VAL_40]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+// CHECK:             fir.do_loop %[[VAL_42:.*]] = %[[VAL_40]] to %[[EX0]] step %[[VAL_40]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:               %[[VAL_43:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_42]], %[[VAL_41]])  : (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
 // CHECK:               %[[VAL_44:.*]] = arith.constant 0 : index
 // CHECK:               %[[VAL_45:.*]]:3 = fir.box_dims %[[VAL_39]], %[[VAL_44]] : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, index) -> (index, index, index)
@@ -279,8 +279,8 @@ func.func @test_polymorphic_expr(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.b
 // CHECK:           %[[VAL_39:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_37]], %[[VAL_35]], %[[VAL_36]], %[[VAL_38]], %[[VAL_34]]) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:           %[[VAL_40:.*]] = fir.load %[[VAL_14]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_41:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_42:.*]] = %[[VAL_41]] to %[[VAL_3]] step %[[VAL_41]] unordered {
-// CHECK:             fir.do_loop %[[VAL_43:.*]] = %[[VAL_41]] to %[[VAL_2]] step %[[VAL_41]] unordered {
+// CHECK:           fir.do_loop %[[VAL_42:.*]] = %[[VAL_41]] to %[[VAL_3]] step %[[VAL_41]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+// CHECK:             fir.do_loop %[[VAL_43:.*]] = %[[VAL_41]] to %[[VAL_2]] step %[[VAL_41]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:               %[[VAL_44:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_43]], %[[VAL_42]])  : (!fir.class<!fir.array<?x?x!fir.type<_QMtypesTt>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
 // CHECK:               %[[VAL_45:.*]] = arith.constant 0 : index
 // CHECK:               %[[VAL_46:.*]]:3 = fir.box_dims %[[VAL_40]], %[[VAL_45]] : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, index) -> (index, index, index)
@@ -332,8 +332,8 @@ func.func @test_polymorphic_expr(%arg0: !fir.class<!fir.type<_QMtypesTt>> {fir.b
 // CHECK:           %[[VAL_88:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_86]], %[[VAL_84]], %[[VAL_85]], %[[VAL_87]], %[[VAL_83]]) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK:           %[[VAL_89:.*]] = fir.load %[[VAL_63]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_90:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_91:.*]] = %[[VAL_90]] to %[[VAL_3]] step %[[VAL_90]] unordered {
-// CHECK:             fir.do_loop %[[VAL_92:.*]] = %[[VAL_90]] to %[[VAL_2]] step %[[VAL_90]] unordered {
+// CHECK:           fir.do_loop %[[VAL_91:.*]] = %[[VAL_90]] to %[[VAL_3]] step %[[VAL_90]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+// CHECK:             fir.do_loop %[[VAL_92:.*]] = %[[VAL_90]] to %[[VAL_2]] step %[[VAL_90]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:               %[[VAL_93:.*]] = hlfir.designate %[[VAL_40]] (%[[VAL_92]], %[[VAL_91]])  : (!fir.class<!fir.heap<!fir.array<?x?x!fir.type<_QMtypesTt>>>>, index, index) -> !fir.class<!fir.type<_QMtypesTt>>
 // CHECK:               %[[VAL_94:.*]] = arith.constant false
 // CHECK:               %[[VAL_95:.*]] = fir.undefined tuple<!fir.class<!fir.type<_QMtypesTt>>, i1>

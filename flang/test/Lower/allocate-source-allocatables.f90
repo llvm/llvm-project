@@ -195,7 +195,7 @@ end
 ! CHECK:         %[[VAL_19:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_20:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_21:.*]] = arith.subi %[[VAL_11]], %[[VAL_19]] : index
-! CHECK:         %[[VAL_27:.*]] = fir.do_loop %[[VAL_23:.*]] = %[[VAL_20]] to %[[VAL_21]] step %[[VAL_19]] unordered iter_args(%[[VAL_24:.*]] = %[[VAL_18]]) -> (!fir.array<5xi32>) {
+! CHECK:         %[[VAL_27:.*]] = fir.do_loop %[[VAL_23:.*]] = %[[VAL_20]] to %[[VAL_21]] step %[[VAL_19]] unordered iter_args(%[[VAL_24:.*]] = %[[VAL_18]]) -> (!fir.array<5xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_25:.*]] = fir.array_fetch %[[VAL_15]], %[[VAL_23]] : (!fir.array<5xi32>, index) -> i32
 ! CHECK:           %[[VAL_26:.*]] = fir.array_update %[[VAL_24]], %[[VAL_25]], %[[VAL_23]] : (!fir.array<5xi32>, i32, index) -> !fir.array<5xi32>
 ! CHECK:           fir.result %[[VAL_26]] : !fir.array<5xi32>

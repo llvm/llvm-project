@@ -25,7 +25,7 @@ end function test1
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i64) -> index
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (i64) -> index
-! CHECK:           %[[VAL_16:.*]] = fir.do_loop %[[VAL_17:.*]] = %[[VAL_11]] to %[[VAL_13]] step %[[VAL_15]] iter_args(%[[VAL_18:.*]] = %[[VAL_8]]) -> (!fir.heap<!fir.array<4xi64>>) {
+! CHECK:           %[[VAL_16:.*]] = fir.do_loop %[[VAL_17:.*]] = %[[VAL_11]] to %[[VAL_13]] step %[[VAL_15]] iter_args(%[[VAL_18:.*]] = %[[VAL_8]]) -> (!fir.heap<!fir.array<4xi64>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_17]] : (index) -> i64
 ! CHECK:             %[[VAL_20:.*]] = fir.load %[[VAL_0]] : !fir.ref<i8>
 ! CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i8) -> i64
@@ -63,7 +63,7 @@ end function test1
 ! CHECK:           %[[VAL_46:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_47:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_48:.*]] = arith.subi %[[VAL_3]], %[[VAL_46]] : index
-! CHECK:           %[[VAL_49:.*]] = fir.do_loop %[[VAL_50:.*]] = %[[VAL_47]] to %[[VAL_48]] step %[[VAL_46]] unordered iter_args(%[[VAL_51:.*]] = %[[VAL_6]]) -> (!fir.array<4xi8>) {
+! CHECK:           %[[VAL_49:.*]] = fir.do_loop %[[VAL_50:.*]] = %[[VAL_47]] to %[[VAL_48]] step %[[VAL_46]] unordered iter_args(%[[VAL_51:.*]] = %[[VAL_6]]) -> (!fir.array<4xi8>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_52:.*]] = fir.array_fetch %[[VAL_44]], %[[VAL_50]] : (!fir.array<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_53:.*]] = fir.no_reassoc %[[VAL_52]] : i64
 ! CHECK:             %[[VAL_54:.*]] = fir.convert %[[VAL_53]] : (i64) -> i8
@@ -100,7 +100,7 @@ end function test2
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i64) -> index
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (i64) -> index
-! CHECK:           %[[VAL_16:.*]] = fir.do_loop %[[VAL_17:.*]] = %[[VAL_11]] to %[[VAL_13]] step %[[VAL_15]] iter_args(%[[VAL_18:.*]] = %[[VAL_8]]) -> (!fir.heap<!fir.array<4xi64>>) {
+! CHECK:           %[[VAL_16:.*]] = fir.do_loop %[[VAL_17:.*]] = %[[VAL_11]] to %[[VAL_13]] step %[[VAL_15]] iter_args(%[[VAL_18:.*]] = %[[VAL_8]]) -> (!fir.heap<!fir.array<4xi64>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_17]] : (index) -> i64
 ! CHECK:             %[[VAL_20:.*]] = fir.load %[[VAL_0]] : !fir.ref<i16>
 ! CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i16) -> i64
@@ -138,7 +138,7 @@ end function test2
 ! CHECK:           %[[VAL_46:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_47:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_48:.*]] = arith.subi %[[VAL_3]], %[[VAL_46]] : index
-! CHECK:           %[[VAL_49:.*]] = fir.do_loop %[[VAL_50:.*]] = %[[VAL_47]] to %[[VAL_48]] step %[[VAL_46]] unordered iter_args(%[[VAL_51:.*]] = %[[VAL_6]]) -> (!fir.array<4xi16>) {
+! CHECK:           %[[VAL_49:.*]] = fir.do_loop %[[VAL_50:.*]] = %[[VAL_47]] to %[[VAL_48]] step %[[VAL_46]] unordered iter_args(%[[VAL_51:.*]] = %[[VAL_6]]) -> (!fir.array<4xi16>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_52:.*]] = fir.array_fetch %[[VAL_44]], %[[VAL_50]] : (!fir.array<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_53:.*]] = fir.no_reassoc %[[VAL_52]] : i64
 ! CHECK:             %[[VAL_54:.*]] = fir.convert %[[VAL_53]] : (i64) -> i16
@@ -175,7 +175,7 @@ end function test3
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i64) -> index
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (i64) -> index
-! CHECK:           %[[VAL_16:.*]] = fir.do_loop %[[VAL_17:.*]] = %[[VAL_11]] to %[[VAL_13]] step %[[VAL_15]] iter_args(%[[VAL_18:.*]] = %[[VAL_8]]) -> (!fir.heap<!fir.array<4xi64>>) {
+! CHECK:           %[[VAL_16:.*]] = fir.do_loop %[[VAL_17:.*]] = %[[VAL_11]] to %[[VAL_13]] step %[[VAL_15]] iter_args(%[[VAL_18:.*]] = %[[VAL_8]]) -> (!fir.heap<!fir.array<4xi64>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_17]] : (index) -> i64
 ! CHECK:             %[[VAL_20:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i32) -> i64
@@ -213,7 +213,7 @@ end function test3
 ! CHECK:           %[[VAL_46:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_47:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_48:.*]] = arith.subi %[[VAL_3]], %[[VAL_46]] : index
-! CHECK:           %[[VAL_49:.*]] = fir.do_loop %[[VAL_50:.*]] = %[[VAL_47]] to %[[VAL_48]] step %[[VAL_46]] unordered iter_args(%[[VAL_51:.*]] = %[[VAL_6]]) -> (!fir.array<4xi32>) {
+! CHECK:           %[[VAL_49:.*]] = fir.do_loop %[[VAL_50:.*]] = %[[VAL_47]] to %[[VAL_48]] step %[[VAL_46]] unordered iter_args(%[[VAL_51:.*]] = %[[VAL_6]]) -> (!fir.array<4xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_52:.*]] = fir.array_fetch %[[VAL_44]], %[[VAL_50]] : (!fir.array<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_53:.*]] = fir.no_reassoc %[[VAL_52]] : i64
 ! CHECK:             %[[VAL_54:.*]] = fir.convert %[[VAL_53]] : (i64) -> i32
@@ -250,7 +250,7 @@ end function test4
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i64) -> index
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (i64) -> index
-! CHECK:           %[[VAL_16:.*]] = fir.do_loop %[[VAL_17:.*]] = %[[VAL_11]] to %[[VAL_13]] step %[[VAL_15]] iter_args(%[[VAL_18:.*]] = %[[VAL_8]]) -> (!fir.heap<!fir.array<4xi64>>) {
+! CHECK:           %[[VAL_16:.*]] = fir.do_loop %[[VAL_17:.*]] = %[[VAL_11]] to %[[VAL_13]] step %[[VAL_15]] iter_args(%[[VAL_18:.*]] = %[[VAL_8]]) -> (!fir.heap<!fir.array<4xi64>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_17]] : (index) -> i64
 ! CHECK:             %[[VAL_20:.*]] = fir.load %[[VAL_0]] : !fir.ref<i64>
 ! CHECK:             %[[VAL_21:.*]] = arith.muli %[[VAL_19]], %[[VAL_20]] : i64
@@ -287,7 +287,7 @@ end function test4
 ! CHECK:           %[[VAL_45:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_46:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_47:.*]] = arith.subi %[[VAL_3]], %[[VAL_45]] : index
-! CHECK:           %[[VAL_48:.*]] = fir.do_loop %[[VAL_49:.*]] = %[[VAL_46]] to %[[VAL_47]] step %[[VAL_45]] unordered iter_args(%[[VAL_50:.*]] = %[[VAL_6]]) -> (!fir.array<4xi64>) {
+! CHECK:           %[[VAL_48:.*]] = fir.do_loop %[[VAL_49:.*]] = %[[VAL_46]] to %[[VAL_47]] step %[[VAL_45]] unordered iter_args(%[[VAL_50:.*]] = %[[VAL_6]]) -> (!fir.array<4xi64>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_51:.*]] = fir.array_fetch %[[VAL_43]], %[[VAL_49]] : (!fir.array<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_52:.*]] = fir.no_reassoc %[[VAL_51]] : i64
 ! CHECK:             %[[VAL_53:.*]] = fir.array_update %[[VAL_50]], %[[VAL_52]], %[[VAL_49]] : (!fir.array<4xi64>, i64, index) -> !fir.array<4xi64>

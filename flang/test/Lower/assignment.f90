@@ -336,7 +336,7 @@ end
 ! CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
 ! CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 ! CHECK-DAG:     %[[UB:.*]] = arith.subi %[[C10_0]], %c1 : index
-! CHECK:         %[[DO_RES:.*]] = fir.do_loop %[[ARG1:.*]] = %[[C0]] to %[[UB]] step %[[C1]] unordered iter_args(%[[ARG2:.*]] = %[[LOAD]]) -> (!fir.array<10xi32>) {
+! CHECK:         %[[DO_RES:.*]] = fir.do_loop %[[ARG1:.*]] = %[[C0]] to %[[UB]] step %[[C1]] unordered iter_args(%[[ARG2:.*]] = %[[LOAD]]) -> (!fir.array<10xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[RES:.*]] = fir.array_update %[[ARG2]], %[[C10_1]], %[[ARG1]] : (!fir.array<10xi32>, i32, index) -> !fir.array<10xi32>
 ! CHECK:           fir.result %[[RES]] : !fir.array<10xi32>
 ! CHECK:         }

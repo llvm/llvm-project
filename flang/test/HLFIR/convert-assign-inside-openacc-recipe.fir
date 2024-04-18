@@ -28,7 +28,7 @@ acc.reduction.recipe @reduction_add_box_heap_Uxi32 : !fir.box<!fir.heap<!fir.arr
   %9:2 = hlfir.declare %8(%5) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
   %true = arith.constant true
   %c1_0 = arith.constant 1 : index
-  fir.do_loop %arg5 = %c1_0 to %4 step %c1_0 unordered {
+  fir.do_loop %arg5 = %c1_0 to %4 step %c1_0 unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %13 = hlfir.designate %6 (%arg5)  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
     %14 = hlfir.designate %7 (%arg5)  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
     %15 = fir.load %13 : !fir.ref<i32>

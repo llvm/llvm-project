@@ -101,7 +101,7 @@ struct IncrementLoopInfo {
 
   bool hasLocalitySpecs() const {
     return !localSymList.empty() || !localInitSymList.empty() ||
-           !sharedSymList.empty();
+           !reduceSymList.empty() || !sharedSymList.empty();
   }
 
   // Data members common to both structured and unstructured loops.
@@ -113,6 +113,8 @@ struct IncrementLoopInfo {
   bool isUnordered; // do concurrent, forall
   llvm::SmallVector<const Fortran::semantics::Symbol *> localSymList;
   llvm::SmallVector<const Fortran::semantics::Symbol *> localInitSymList;
+  llvm::SmallVector<std::pair<fir::ReduceOperationEnum,
+      const Fortran::semantics::Symbol *>> reduceSymList;
   llvm::SmallVector<const Fortran::semantics::Symbol *> sharedSymList;
   mlir::Value loopVariable = nullptr;
 
@@ -1696,6 +1698,62 @@ private:
     builder->create<fir::UnreachableOp>(loc);
   }
 
+  fir::ReduceOperationEnum getReduceOperationEnum(
+      const Fortran::parser::ReduceOperation &rOpr) const {
+    fir::ReduceOperationEnum reduce_operation = fir::ReduceOperationEnum::Add;
+    using IntrinsicOperator =
+        Fortran::parser::DefinedOperator::IntrinsicOperator;
+    std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::parser::DefinedOperator &dOpr) {
+              const auto &intrinsicOp{std::get<IntrinsicOperator>(dOpr.u)};
+              switch (intrinsicOp) {
+              case IntrinsicOperator::Add:
+                reduce_operation = fir::ReduceOperationEnum::Add;
+                return;
+              case IntrinsicOperator::Multiply:
+                reduce_operation = fir::ReduceOperationEnum::Multiply;
+                return;
+              case IntrinsicOperator::AND:
+                reduce_operation = fir::ReduceOperationEnum::AND;
+                return;
+              case IntrinsicOperator::OR:
+                reduce_operation = fir::ReduceOperationEnum::OR;
+                return;
+              case IntrinsicOperator::EQV:
+                reduce_operation = fir::ReduceOperationEnum::EQV;
+                return;
+              case IntrinsicOperator::NEQV:
+                reduce_operation = fir::ReduceOperationEnum::NEQV;
+                return;
+              default:
+                return;
+              }
+            },
+            [&](const Fortran::parser::ProcedureDesignator &procD) {
+              const Fortran::parser::Name *name{
+                std::get_if<Fortran::parser::Name>(&procD.u)
+              };
+              if (name && name->symbol) {
+                const Fortran::parser::CharBlock
+                    &realName{name->symbol->GetUltimate().name()};
+                if (realName == "max")
+                  reduce_operation = fir::ReduceOperationEnum::MAX;
+                else if (realName == "min")
+                  reduce_operation = fir::ReduceOperationEnum::MIN;
+                else if (realName == "iand")
+                  reduce_operation = fir::ReduceOperationEnum::IAND;
+                else if (realName == "ior")
+                  reduce_operation = fir::ReduceOperationEnum::IOR;
+                else if (realName == "ieor")
+                  reduce_operation = fir::ReduceOperationEnum::EIOR;
+              }
+            }
+        },
+        rOpr.u);
+    return fir::ReduceOperationEnum(reduce_operation);
+  }
+
   /// Collect DO CONCURRENT or FORALL loop control information.
   IncrementLoopNestInfo getConcurrentControl(
       const Fortran::parser::ConcurrentHeader &header,
@@ -1718,6 +1776,15 @@ private:
               std::get_if<Fortran::parser::LocalitySpec::LocalInit>(&x.u))
         for (const Fortran::parser::Name &x : localInitList->v)
           info.localInitSymList.push_back(x.symbol);
+      if (const auto *reduceList =
+              std::get_if<Fortran::parser::LocalitySpec::Reduce>(&x.u)) {
+        fir::ReduceOperationEnum reduce_operation = getReduceOperationEnum(
+            std::get<Fortran::parser::ReduceOperation>(reduceList->t));
+        for (const Fortran::parser::Name &x :
+                 std::get<std::list<Fortran::parser::Name>>(reduceList->t)) {
+          info.reduceSymList.push_back(std::make_pair(reduce_operation, x.symbol));
+        }
+      }
       if (const auto *sharedList =
               std::get_if<Fortran::parser::LocalitySpec::Shared>(&x.u))
         for (const Fortran::parser::Name &x : sharedList->v)
@@ -1910,9 +1977,26 @@ private:
         mlir::Type loopVarType = info.getLoopVariableType();
         mlir::Value loopValue;
         if (info.isUnordered) {
+          llvm::SmallVector<mlir::Value> reduceOperands;
+          llvm::SmallVector<mlir::Attribute> reduceAttrs;
+          // Create DO CONCURRENT reduce operations and attributes
+          for (const auto reduceSym : info.reduceSymList) {
+            const fir::ReduceOperationEnum reduce_operation = reduceSym.first;
+            const Fortran::semantics::Symbol *sym = reduceSym.second;
+            fir::ExtendedValue exv = getSymbolExtendedValue(*sym, nullptr);
+            auto reduce_op = builder->create<fir::ReduceOp>(
+                loc, fir::ReferenceType::get(genType(*sym)), fir::getBase(exv),
+                builder->getStringAttr(sym->name().ToString()));
+            reduceOperands.push_back(reduce_op);
+            auto reduce_attr = fir::ReduceAttr::get(
+                builder->getContext(), reduce_operation);
+            reduceAttrs.push_back(reduce_attr);
+          }
           // The loop variable value is explicitly updated.
           info.doLoop = builder->create<fir::DoLoopOp>(
-              loc, lowerValue, upperValue, stepValue, /*unordered=*/true);
+              loc, lowerValue, upperValue, stepValue, /*unordered=*/true,
+              /*finalCountValue=*/false, /*iterArgs=*/std::nullopt,
+              llvm::ArrayRef<mlir::Value>(reduceOperands), reduceAttrs);
           builder->setInsertionPointToStart(info.doLoop.getBody());
           loopValue = builder->createConvert(loc, loopVarType,
                                              info.doLoop.getInductionVar());

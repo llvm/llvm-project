@@ -144,7 +144,7 @@ end subroutine
 ! CHECK:           %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (i64) -> index
 ! CHECK:           %[[VAL_26:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_26]] : (i64) -> index
-! CHECK:           fir.do_loop %[[VAL_28:.*]] = %[[VAL_23]] to %[[VAL_25]] step %[[VAL_27]] {
+! CHECK:           fir.do_loop %[[VAL_28:.*]] = %[[VAL_23]] to %[[VAL_25]] step %[[VAL_27]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_29:.*]] = arith.constant 42 : i32
 ! CHECK:             %[[VAL_30:.*]] = fir.load %[[VAL_1]] : !fir.ref<index>
 ! CHECK:             %[[VAL_31:.*]] = arith.addi %[[VAL_30]], %[[VAL_18B]] : index
@@ -208,7 +208,7 @@ end subroutine
 ! CHECK:           %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (i64) -> index
 ! CHECK:           %[[VAL_30:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i64>
 ! CHECK:           %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (i64) -> index
-! CHECK:           fir.do_loop %[[VAL_32:.*]] = %[[VAL_27]] to %[[VAL_29]] step %[[VAL_31]] {
+! CHECK:           fir.do_loop %[[VAL_32:.*]] = %[[VAL_27]] to %[[VAL_29]] step %[[VAL_31]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_33:.*]] = arith.constant 42 : i32
 ! CHECK:             %[[VAL_34:.*]] = fir.load %[[VAL_3]] : !fir.ref<index>
 ! CHECK:             %[[VAL_35:.*]] = arith.addi %[[VAL_34]], %[[VAL_22B]] : index
@@ -281,14 +281,14 @@ end subroutine
 ! CHECK:           %[[VAL_38:.*]] = fir.convert %[[VAL_37]] : (i64) -> index
 ! CHECK:           %[[VAL_39:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_40:.*]] = fir.convert %[[VAL_39]] : (i64) -> index
-! CHECK:           fir.do_loop %[[VAL_41:.*]] = %[[VAL_36]] to %[[VAL_38]] step %[[VAL_40]] {
+! CHECK:           fir.do_loop %[[VAL_41:.*]] = %[[VAL_36]] to %[[VAL_38]] step %[[VAL_40]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:             %[[VAL_42:.*]] = arith.constant 1 : i64
 ! CHECK:             %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (i64) -> index
 ! CHECK:             %[[VAL_44:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i64>
 ! CHECK:             %[[VAL_45:.*]] = fir.convert %[[VAL_44]] : (i64) -> index
 ! CHECK:             %[[VAL_46:.*]] = arith.constant 1 : i64
 ! CHECK:             %[[VAL_47:.*]] = fir.convert %[[VAL_46]] : (i64) -> index
-! CHECK:             fir.do_loop %[[VAL_48:.*]] = %[[VAL_43]] to %[[VAL_45]] step %[[VAL_47]] {
+! CHECK:             fir.do_loop %[[VAL_48:.*]] = %[[VAL_43]] to %[[VAL_45]] step %[[VAL_47]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:               %[[VAL_49:.*]] = fir.convert %[[VAL_48]] : (index) -> i64
 ! CHECK:               %[[VAL_50:.*]] = fir.convert %[[VAL_49]] : (i64) -> i32
 ! CHECK:               %[[VAL_51:.*]] = fir.convert %[[VAL_41]] : (index) -> i64

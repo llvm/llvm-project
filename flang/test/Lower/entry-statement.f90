@@ -376,7 +376,7 @@ contains
     ! CHECK:   %[[V_10:[0-9]+]] = arith.subi %[[V_2]]#1, %c1{{.*}} : index
     ! CHECK:   %[[V_11:[0-9]+]] = fir.undefined !fir.char<1>
     ! CHECK:   %[[V_12:[0-9]+]] = fir.insert_value %[[V_11]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
-    ! CHECK:   fir.do_loop %arg1 = %[[V_5]] to %[[V_10]] step %c1{{.*}} {
+    ! CHECK:   fir.do_loop %arg1 = %[[V_5]] to %[[V_10]] step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     ! CHECK:     %[[V_13:[0-9]+]] = fir.convert %[[V_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
     ! CHECK:     %[[V_14:[0-9]+]] = fir.coordinate_of %[[V_13]], %arg1 : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
     ! CHECK:     fir.store %[[V_12]] to %[[V_14]] : !fir.ref<!fir.char<1>>
@@ -402,7 +402,7 @@ contains
     ! CHECK:   %[[V_10:[0-9]+]] = arith.subi %[[V_2]]#1, %c1{{.*}} : index
     ! CHECK:   %[[V_11:[0-9]+]] = fir.undefined !fir.char<1>
     ! CHECK:   %[[V_12:[0-9]+]] = fir.insert_value %[[V_11]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
-    ! CHECK:   fir.do_loop %arg1 = %[[V_5]] to %[[V_10]] step %c1{{.*}} {
+    ! CHECK:   fir.do_loop %arg1 = %[[V_5]] to %[[V_10]] step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     ! CHECK:     %[[V_13:[0-9]+]] = fir.convert %[[V_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
     ! CHECK:     %[[V_14:[0-9]+]] = fir.coordinate_of %[[V_13]], %arg1 : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
     ! CHECK:     fir.store %[[V_12]] to %[[V_14]] : !fir.ref<!fir.char<1>>

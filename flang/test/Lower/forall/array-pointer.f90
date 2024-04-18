@@ -67,7 +67,7 @@ end subroutine s1
 ! CHECK:         %[[VAL_7:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_8:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>>) -> !fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>
 ! CHECK:         %[[VAL_9:.*]] = fir.array_load %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
-! CHECK:         %[[VAL_10:.*]] = fir.do_loop %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_7]] unordered iter_args(%[[VAL_12:.*]] = %[[VAL_8]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) {
+! CHECK:         %[[VAL_10:.*]] = fir.do_loop %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_7]] unordered iter_args(%[[VAL_12:.*]] = %[[VAL_8]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_11]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_13]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 1 : index
@@ -119,7 +119,7 @@ end subroutine s1_1
 ! CHECK:         %[[VAL_11:.*]] = fir.array_load %[[VAL_0]](%[[VAL_10]]) : (!fir.ref<!fir.array<10x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>) -> !fir.array<10x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>
 ! CHECK:         %[[VAL_12:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 ! CHECK:         %[[VAL_13:.*]] = fir.array_load %[[VAL_1]](%[[VAL_12]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.array<10xi32>
-! CHECK:         %[[VAL_14:.*]] = fir.do_loop %[[VAL_15:.*]] = %[[VAL_6]] to %[[VAL_8]] step %[[VAL_9]] unordered iter_args(%[[VAL_16:.*]] = %[[VAL_11]]) -> (!fir.array<10x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) {
+! CHECK:         %[[VAL_14:.*]] = fir.do_loop %[[VAL_15:.*]] = %[[VAL_6]] to %[[VAL_8]] step %[[VAL_9]] unordered iter_args(%[[VAL_16:.*]] = %[[VAL_11]]) -> (!fir.array<10x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_15]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_17]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_18:.*]] = arith.constant 1 : index
@@ -179,7 +179,7 @@ end subroutine s2
 ! CHECK:         %[[VAL_7:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_8:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>>) -> !fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>
 ! CHECK:         %[[VAL_9:.*]] = fir.array_load %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
-! CHECK:         %[[VAL_10:.*]] = fir.do_loop %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_7]] unordered iter_args(%[[VAL_12:.*]] = %[[VAL_8]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) {
+! CHECK:         %[[VAL_10:.*]] = fir.do_loop %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_7]] unordered iter_args(%[[VAL_12:.*]] = %[[VAL_8]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_11]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_13]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 1 : index
@@ -229,7 +229,7 @@ end subroutine s2_1
 ! CHECK:         %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_9]], %[[VAL_10]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:         %[[VAL_12:.*]] = fir.shift %[[VAL_11]]#0 : (index) -> !fir.shift<1>
 ! CHECK:         %[[VAL_13:.*]] = fir.array_load %[[VAL_9]](%[[VAL_12]]) : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.shift<1>) -> !fir.array<?xi32>
-! CHECK:         %[[VAL_14:.*]] = fir.do_loop %[[VAL_15:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_7]] unordered iter_args(%[[VAL_16:.*]] = %[[VAL_8]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) {
+! CHECK:         %[[VAL_14:.*]] = fir.do_loop %[[VAL_15:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_7]] unordered iter_args(%[[VAL_16:.*]] = %[[VAL_8]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_15]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_17]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
@@ -279,7 +279,7 @@ end subroutine s2_2
 ! CHECK:         %[[VAL_12:.*]] = fir.box_addr %[[VAL_9]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 ! CHECK:         %[[VAL_13:.*]] = fir.shape_shift %[[VAL_11]]#0, %[[VAL_11]]#1 : (index, index) -> !fir.shapeshift<1>
 ! CHECK:         %[[VAL_14:.*]] = fir.array_load %[[VAL_12]](%[[VAL_13]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
-! CHECK:         %[[VAL_15:.*]] = fir.do_loop %[[VAL_16:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_7]] unordered iter_args(%[[VAL_17:.*]] = %[[VAL_8]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) {
+! CHECK:         %[[VAL_15:.*]] = fir.do_loop %[[VAL_16:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_7]] unordered iter_args(%[[VAL_17:.*]] = %[[VAL_8]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_16]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_18]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_19:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
@@ -335,7 +335,7 @@ end subroutine s2_3
 ! CHECK:         %[[VAL_15:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:         %[[VAL_16:.*]] = fir.shape_shift %[[VAL_13]], %[[VAL_14]] : (index, index) -> !fir.shapeshift<1>
 ! CHECK:         %[[VAL_17:.*]] = fir.array_load %[[VAL_15]](%[[VAL_16]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
-! CHECK:         %[[VAL_18:.*]] = fir.do_loop %[[VAL_19:.*]] = %[[VAL_8]] to %[[VAL_10]] step %[[VAL_11]] unordered iter_args(%[[VAL_20:.*]] = %[[VAL_12]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) {
+! CHECK:         %[[VAL_18:.*]] = fir.do_loop %[[VAL_19:.*]] = %[[VAL_8]] to %[[VAL_10]] step %[[VAL_11]] unordered iter_args(%[[VAL_20:.*]] = %[[VAL_12]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_19]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_21]] to %[[VAL_1]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_22:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
@@ -392,7 +392,7 @@ end subroutine s3
 ! CHECK:         %[[VAL_7:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_8:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>) -> !fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>
 ! CHECK:         %[[VAL_9:.*]] = fir.array_load %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
-! CHECK:         %[[VAL_10:.*]] = fir.do_loop %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_7]] unordered iter_args(%[[VAL_12:.*]] = %[[VAL_8]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>) {
+! CHECK:         %[[VAL_10:.*]] = fir.do_loop %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_7]] unordered iter_args(%[[VAL_12:.*]] = %[[VAL_8]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_11]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_13]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 1 : index
@@ -441,7 +441,7 @@ end subroutine s3_1
 ! CHECK:         %[[VAL_7:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_8:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>) -> !fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>
 ! CHECK:         %[[VAL_9:.*]] = fir.array_load %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
-! CHECK:         %[[VAL_10:.*]] = fir.do_loop %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_7]] unordered iter_args(%[[VAL_12:.*]] = %[[VAL_8]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>) {
+! CHECK:         %[[VAL_10:.*]] = fir.do_loop %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_6]] step %[[VAL_7]] unordered iter_args(%[[VAL_12:.*]] = %[[VAL_8]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_11]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_13]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_14:.*]] = arith.constant 1 : index
@@ -509,7 +509,7 @@ end subroutine s5
 ! CHECK:         %[[VAL_10:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_11:.*]] = fir.array_load %[[VAL_1]] : (!fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtb{ip:!fir.box<!fir.ptr<!fir.array<?x?xi32>>>}>>>) -> !fir.array<?x!fir.type<_QMarray_of_pointer_testTtb{ip:!fir.box<!fir.ptr<!fir.array<?x?xi32>>>}>>
 ! CHECK:         %[[VAL_12:.*]] = fir.array_load %[[VAL_2]] : (!fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTta{ip:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>>) -> !fir.array<?x!fir.type<_QMarray_of_pointer_testTta{ip:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>
-! CHECK:         %[[VAL_13:.*]] = fir.do_loop %[[VAL_14:.*]] = %[[VAL_7]] to %[[VAL_9]] step %[[VAL_10]] unordered iter_args(%[[VAL_15:.*]] = %[[VAL_11]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtb{ip:!fir.box<!fir.ptr<!fir.array<?x?xi32>>>}>>) {
+! CHECK:         %[[VAL_13:.*]] = fir.do_loop %[[VAL_14:.*]] = %[[VAL_7]] to %[[VAL_9]] step %[[VAL_10]] unordered iter_args(%[[VAL_15:.*]] = %[[VAL_11]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtb{ip:!fir.box<!fir.ptr<!fir.array<?x?xi32>>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_14]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_16]] to %[[VAL_5]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_17:.*]] = arith.constant 1 : i64
@@ -583,10 +583,10 @@ end subroutine s6
 ! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i32) -> index
 ! CHECK:         %[[VAL_15:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtv{jp:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>}>>>) -> !fir.array<?x!fir.type<_QMarray_of_pointer_testTtv{jp:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>}>>
 ! CHECK:         %[[VAL_16:.*]] = fir.array_load %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
-! CHECK:         %[[VAL_17:.*]] = fir.do_loop %[[VAL_18:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_8]] unordered iter_args(%[[VAL_19:.*]] = %[[VAL_15]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtv{jp:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>}>>) {
+! CHECK:         %[[VAL_17:.*]] = fir.do_loop %[[VAL_18:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_8]] unordered iter_args(%[[VAL_19:.*]] = %[[VAL_15]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtv{jp:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_18]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_20]] to %[[VAL_3]] : !fir.ref<i32>
-! CHECK:           %[[VAL_21:.*]] = fir.do_loop %[[VAL_22:.*]] = %[[VAL_10]] to %[[VAL_12]] step %[[VAL_14]] unordered iter_args(%[[VAL_23:.*]] = %[[VAL_19]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtv{jp:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>}>>) {
+! CHECK:           %[[VAL_21:.*]] = fir.do_loop %[[VAL_22:.*]] = %[[VAL_10]] to %[[VAL_12]] step %[[VAL_14]] unordered iter_args(%[[VAL_23:.*]] = %[[VAL_19]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTtv{jp:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QMarray_of_pointer_testTtu{ip:!fir.box<!fir.ptr<!fir.type<_QMarray_of_pointer_testTu{v:i32}>>>}>>>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_24:.*]] = fir.convert %[[VAL_22]] : (index) -> i32
 ! CHECK:             fir.store %[[VAL_24]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_25:.*]] = arith.constant 1 : index
@@ -645,7 +645,7 @@ end subroutine s7
 ! CHECK:         %[[VAL_8:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_9:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>>) -> !fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>
 ! CHECK:         %[[VAL_10:.*]] = fir.array_load %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
-! CHECK:         %[[VAL_11:.*]] = fir.do_loop %[[VAL_12:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_8]] unordered iter_args(%[[VAL_13:.*]] = %[[VAL_9]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) {
+! CHECK:         %[[VAL_11:.*]] = fir.do_loop %[[VAL_12:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_8]] unordered iter_args(%[[VAL_13:.*]] = %[[VAL_9]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTt{ip:!fir.box<!fir.ptr<i32>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_12]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_14]] to %[[VAL_3]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_15:.*]] = arith.constant 1 : index
@@ -706,7 +706,7 @@ end subroutine s8
 ! CHECK:         %[[VAL_11:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_12:.*]]:3 = fir.box_dims %[[VAL_10]], %[[VAL_11]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:         %[[VAL_13:.*]] = fir.shift %[[VAL_12]]#0 : (index) -> !fir.shift<1>
-! CHECK:         %[[VAL_14:.*]] = fir.do_loop %[[VAL_15:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_8]] unordered iter_args(%[[VAL_16:.*]] = %[[VAL_9]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTta{ip:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) {
+! CHECK:         %[[VAL_14:.*]] = fir.do_loop %[[VAL_15:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_8]] unordered iter_args(%[[VAL_16:.*]] = %[[VAL_9]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTta{ip:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_15]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_17]] to %[[VAL_3]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
@@ -752,7 +752,7 @@ end subroutine s8_1
 ! CHECK:         %[[VAL_12:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_13:.*]]:3 = fir.box_dims %[[VAL_11]], %[[VAL_12]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:         %[[VAL_14:.*]] = fir.shift %[[VAL_13]]#0 : (index) -> !fir.shift<1>
-! CHECK:         %[[VAL_15:.*]] = fir.do_loop %[[VAL_16:.*]] = %[[VAL_6]] to %[[VAL_8]] step %[[VAL_9]] unordered iter_args(%[[VAL_17:.*]] = %[[VAL_10]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTta{ip:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) {
+! CHECK:         %[[VAL_15:.*]] = fir.do_loop %[[VAL_16:.*]] = %[[VAL_6]] to %[[VAL_8]] step %[[VAL_9]] unordered iter_args(%[[VAL_17:.*]] = %[[VAL_10]]) -> (!fir.array<?x!fir.type<_QMarray_of_pointer_testTta{ip:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_16]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_18]] to %[[VAL_4]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_19:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>

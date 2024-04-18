@@ -86,8 +86,8 @@ module {
     %45 = fir.array_load %0(%43) [%44] : (!fir.ref<!fir.array<4x27xf64>>, !fir.shape<2>, !fir.slice<2>) -> !fir.array<4x27xf64>
     %46 = arith.subi %23, %c1 : index
     %47 = arith.subi %29, %c1 : index
-    %48 = fir.do_loop %arg5 = %c0 to %47 step %c1 unordered iter_args(%arg6 = %40) -> (!fir.array<?x?x?x?x?xf64>) {
-      %49 = fir.do_loop %arg7 = %c0 to %46 step %c1 unordered iter_args(%arg8 = %arg6) -> (!fir.array<?x?x?x?x?xf64>) {
+    %48 = fir.do_loop %arg5 = %c0 to %47 step %c1 unordered iter_args(%arg6 = %40) -> (!fir.array<?x?x?x?x?xf64>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
+      %49 = fir.do_loop %arg7 = %c0 to %46 step %c1 unordered iter_args(%arg8 = %arg6) -> (!fir.array<?x?x?x?x?xf64>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
         %50 = fir.array_fetch %45, %arg7, %arg5 : (!fir.array<4x27xf64>, index, index) -> f64
         %51 = fir.array_update %arg8, %50, %15, %arg7, %arg5, %33, %37 : (!fir.array<?x?x?x?x?xf64>, f64, index, index, index, index, index) -> !fir.array<?x?x?x?x?xf64>
         fir.result %51 : !fir.array<?x?x?x?x?xf64>

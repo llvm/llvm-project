@@ -351,7 +351,7 @@ func.func @_QPopenmp_target_data_region() {
     %3 = fir.convert %c1024_i32 : (i32) -> index
     %c1 = arith.constant 1 : index
     %4 = fir.convert %2 : (index) -> i32
-    %5:2 = fir.do_loop %arg0 = %2 to %3 step %c1 iter_args(%arg1 = %4) -> (index, i32) {
+    %5:2 = fir.do_loop %arg0 = %2 to %3 step %c1 iter_args(%arg1 = %4) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
       fir.store %arg1 to %1 : !fir.ref<i32>
       %6 = fir.load %1 : !fir.ref<i32>
       %7 = fir.load %1 : !fir.ref<i32>
@@ -499,7 +499,7 @@ func.func @_QPsimd_with_nested_loop() {
       %c10_i32_2 = arith.constant 10 : i32
       %5 = fir.convert %c10_i32_2 : (i32) -> index
       %c1 = arith.constant 1 : index
-      %6 = fir.do_loop %arg1 = %4 to %5 step %c1 -> index {
+      %6 = fir.do_loop %arg1 = %4 to %5 step %c1 -> index attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
         %8 = fir.convert %arg1 : (index) -> i32
         fir.store %8 to %3 : !fir.ref<i32>
         %9 = fir.load %0 : !fir.ref<i32>
@@ -655,7 +655,7 @@ func.func @_QPsb() {
   omp.sections   {
     omp.section {
       %2 = fir.convert %c1 : (index) -> i32
-      %3:2 = fir.do_loop %arg0 = %c1 to %c10 step %c1 iter_args(%arg1 = %2) -> (index, i32) {
+      %3:2 = fir.do_loop %arg0 = %c1 to %c10 step %c1 iter_args(%arg1 = %2) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
         fir.store %arg1 to %0 : !fir.ref<i32>
         %4 = fir.load %1 : !fir.ref<i32>
         %5 = arith.addi %4, %c1_i32 : i32

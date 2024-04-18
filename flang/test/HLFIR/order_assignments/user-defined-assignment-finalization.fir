@@ -142,7 +142,7 @@ func.func @_QPtest2() {
 // CHECK:           %[[VAL_8:.*]] = hlfir.as_expr %[[VAL_7]]#0 : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>) -> !hlfir.expr<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
 // CHECK:           %[[VAL_9:.*]]:3 = hlfir.associate %[[VAL_8]](%[[VAL_3]]) {uniq_name = ".tmp.assign"} : (!hlfir.expr<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, i1)
 // CHECK:           %[[VAL_10:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_11:.*]] = %[[VAL_10]] to %[[VAL_0]] step %[[VAL_10]] {
+// CHECK:           fir.do_loop %[[VAL_11:.*]] = %[[VAL_10]] to %[[VAL_0]] step %[[VAL_10]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_11]])  : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, index) -> !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
 // CHECK:             %[[VAL_13:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_11]])  : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, index) -> !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
 // CHECK:             %[[VAL_14:.*]] = fir.embox %[[VAL_12]] : (!fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
@@ -245,7 +245,7 @@ func.func @_QPtest3(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "y"}) {
 // CHECK:           fir.save_result %[[VAL_19]] to %[[VAL_5]](%[[VAL_7]]) : !fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>, !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>
 // CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_7]]) {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>)
 // CHECK:           %[[VAL_27:.*]] = fir.call @_FortranACreateValueStack(%{{.*}}, %{{.*}}) : (!fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
-// CHECK:           fir.do_loop %[[VAL_28:.*]] = %{{.*}} to %[[VAL_4]] step %{{.*}} {
+// CHECK:           fir.do_loop %[[VAL_28:.*]] = %{{.*}} to %[[VAL_4]] step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_29:.*]] = hlfir.designate %[[VAL_16]]#0 (%[[VAL_28]])  : (!fir.ref<!fir.array<2x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_30:.*]] = fir.load %[[VAL_29]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (!fir.logical<4>) -> i1
@@ -257,7 +257,7 @@ func.func @_QPtest3(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "y"}) {
 // CHECK:               %[[VAL_35:.*]] = fir.call @_FortranAPushValue(%[[VAL_27]], %[[VAL_34]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
 // CHECK:             }
 // CHECK:           }
-// CHECK:           fir.do_loop %[[VAL_37:.*]] = %{{.*}} to %[[VAL_4]] step %{{.*}} {
+// CHECK:           fir.do_loop %[[VAL_37:.*]] = %{{.*}} to %[[VAL_4]] step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_38:.*]] = hlfir.designate %[[VAL_16]]#0 (%[[VAL_37]])  : (!fir.ref<!fir.array<2x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_39:.*]] = fir.load %[[VAL_38]] : !fir.ref<!fir.logical<4>>
 // CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_39]] : (!fir.logical<4>) -> i1

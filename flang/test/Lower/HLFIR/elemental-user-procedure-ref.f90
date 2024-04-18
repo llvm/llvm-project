@@ -90,8 +90,8 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 20 : index
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1:.*]](%[[VAL_5:[^)]*]]) {{.*}}y
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 1 : index
-! CHECK:  fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_4]] step %[[VAL_7]] unordered {
-! CHECK:    fir.do_loop %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_3]] step %[[VAL_7]] unordered {
+! CHECK:  fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_4]] step %[[VAL_7]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+! CHECK:    fir.do_loop %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_3]] step %[[VAL_7]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:      %[[VAL_10:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_9]], %[[VAL_8]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
 ! CHECK:      fir.call @_QPelem_sub(%[[VAL_2]]#1, %[[VAL_10]]) fastmath<contract> : (!fir.ref<i32>, !fir.ref<f32>) -> ()
 ! CHECK:    }
@@ -113,8 +113,8 @@ end subroutine
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QFimpure_elementalEx"} : (!fir.ref<!fir.array<10x20xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<10x20xf32>>, !fir.ref<!fir.array<10x20xf32>>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_5]] to %[[VAL_2]] step %[[VAL_5]] {
-! CHECK:             fir.do_loop %[[VAL_7:.*]] = %[[VAL_5]] to %[[VAL_1]] step %[[VAL_5]] {
+! CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_5]] to %[[VAL_2]] step %[[VAL_5]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+! CHECK:             fir.do_loop %[[VAL_7:.*]] = %[[VAL_5]] to %[[VAL_1]] step %[[VAL_5]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:               %[[VAL_8:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_7]], %[[VAL_6]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
 ! CHECK:               fir.call @_QPimpure_elem(%[[VAL_8]]) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:             }
@@ -138,8 +138,8 @@ end subroutine
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QFordered_elementalEx"} : (!fir.ref<!fir.array<10x20xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<10x20xf32>>, !fir.ref<!fir.array<10x20xf32>>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_5]] to %[[VAL_2]] step %[[VAL_5]] {
-! CHECK:             fir.do_loop %[[VAL_7:.*]] = %[[VAL_5]] to %[[VAL_1]] step %[[VAL_5]] {
+! CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_5]] to %[[VAL_2]] step %[[VAL_5]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+! CHECK:             fir.do_loop %[[VAL_7:.*]] = %[[VAL_5]] to %[[VAL_1]] step %[[VAL_5]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:               %[[VAL_8:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_7]], %[[VAL_6]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
 ! CHECK:               fir.call @_QPordered_elem(%[[VAL_8]]) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:             }
@@ -171,8 +171,8 @@ end subroutine
 ! CHECK:           }
 ! CHECK:           %[[VAL_11:.*]]:3 = hlfir.associate %[[VAL_5]](%[[VAL_3]]) {uniq_name = "adapt.impure_arg_eval"} : (!hlfir.expr<10x20xf32>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x20xf32>>, !fir.ref<!fir.array<10x20xf32>>, i1)
 ! CHECK:           %[[VAL_13:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_14:.*]] = %[[VAL_13]] to %[[VAL_2]] step %[[VAL_13]] {
-! CHECK:             fir.do_loop %[[VAL_15:.*]] = %[[VAL_13]] to %[[VAL_1]] step %[[VAL_13]] {
+! CHECK:           fir.do_loop %[[VAL_14:.*]] = %[[VAL_13]] to %[[VAL_2]] step %[[VAL_13]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+! CHECK:             fir.do_loop %[[VAL_15:.*]] = %[[VAL_13]] to %[[VAL_1]] step %[[VAL_13]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:               %[[VAL_16:.*]] = hlfir.designate %[[VAL_11]]#0 (%[[VAL_15]], %[[VAL_14]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
 ! CHECK:               fir.call @_QPimpure_elem(%[[VAL_16]]) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:             }

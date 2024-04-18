@@ -50,7 +50,7 @@ end subroutine conflicting_allocatable
 ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> index
 ! CHECK:         %[[VAL_11:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>) -> !fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
 ! CHECK:         %[[VAL_12:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>) -> !fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
-! CHECK:         %[[VAL_13:.*]] = fir.do_loop %[[VAL_14:.*]] = %[[VAL_6]] to %[[VAL_8]] step %[[VAL_10]] unordered iter_args(%[[VAL_15:.*]] = %[[VAL_11]]) -> (!fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) {
+! CHECK:         %[[VAL_13:.*]] = fir.do_loop %[[VAL_14:.*]] = %[[VAL_6]] to %[[VAL_8]] step %[[VAL_10]] unordered iter_args(%[[VAL_15:.*]] = %[[VAL_11]]) -> (!fir.array<?x!fir.type<_QFforall_pointer_assignTt{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_14]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_16]] to %[[VAL_4]] : !fir.ref<i32>
 ! CHECK-DAG:       %[[VAL_17:.*]] = arith.constant 1 : index
@@ -110,7 +110,7 @@ end subroutine forall_pointer_assign
 ! CHECK:         %[[VAL_8:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_9:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
 ! CHECK:         %[[VAL_10:.*]] = fir.array_load %[[VAL_3]](%[[VAL_9]]) : (!fir.ref<!fir.array<10x10xi32>>, !fir.shape<2>) -> !fir.array<10x10xi32>
-! CHECK:         %[[VAL_11:.*]] = fir.do_loop %[[VAL_12:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_8]] unordered iter_args(%[[VAL_13:.*]] = %[[VAL_10]]) -> (!fir.array<10x10xi32>) {
+! CHECK:         %[[VAL_11:.*]] = fir.do_loop %[[VAL_12:.*]] = %[[VAL_5]] to %[[VAL_7]] step %[[VAL_8]] unordered iter_args(%[[VAL_13:.*]] = %[[VAL_10]]) -> (!fir.array<10x10xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_12]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_14]] to %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_15:.*]] = arith.constant 1 : index
@@ -137,7 +137,7 @@ end subroutine forall_pointer_assign
 ! CHECK:           %[[VAL_33:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_34:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_35:.*]] = arith.subi %[[VAL_28]], %[[VAL_33]] : index
-! CHECK:           %[[VAL_36:.*]] = fir.do_loop %[[VAL_37:.*]] = %[[VAL_34]] to %[[VAL_35]] step %[[VAL_33]] unordered iter_args(%[[VAL_38:.*]] = %[[VAL_13]]) -> (!fir.array<10x10xi32>) {
+! CHECK:           %[[VAL_36:.*]] = fir.do_loop %[[VAL_37:.*]] = %[[VAL_34]] to %[[VAL_35]] step %[[VAL_33]] unordered iter_args(%[[VAL_38:.*]] = %[[VAL_13]]) -> (!fir.array<10x10xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:             %[[VAL_42:.*]] = arith.subi %[[VAL_17]], %[[VAL_15]] : index
 ! CHECK:             %[[VAL_43:.*]] = arith.muli %[[VAL_37]], %[[VAL_19]] : index
 ! CHECK:             %[[VAL_44:.*]] = arith.addi %[[VAL_42]], %[[VAL_43]] : index
@@ -171,7 +171,7 @@ end subroutine slice_with_explicit_iters
 ! CHECK:         %[[VAL_10:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_11:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 ! CHECK:         %[[VAL_12:.*]] = fir.array_load %[[VAL_0]](%[[VAL_11]]) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
-! CHECK:         %[[VAL_13:.*]] = fir.do_loop %[[VAL_14:.*]] = %[[VAL_7]] to %[[VAL_9]] step %[[VAL_10]] unordered iter_args(%[[VAL_15:.*]] = %[[VAL_12]]) -> (!fir.array<1xi32>) {
+! CHECK:         %[[VAL_13:.*]] = fir.do_loop %[[VAL_14:.*]] = %[[VAL_7]] to %[[VAL_9]] step %[[VAL_10]] unordered iter_args(%[[VAL_15:.*]] = %[[VAL_12]]) -> (!fir.array<1xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_14]] : (index) -> i32
 ! CHECK:           fir.store %[[VAL_16]] to %[[VAL_2]] : !fir.ref<i32>
 ! CHECK-DAG:       %[[VAL_18:.*]] = arith.constant 1 : index

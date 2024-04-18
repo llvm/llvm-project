@@ -2065,9 +2065,15 @@ void fir::DoLoopOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, mlir::Value lb,
                           mlir::Value ub, mlir::Value step, bool unordered,
                           bool finalCountValue, mlir::ValueRange iterArgs,
+                          mlir::ValueRange reduceOperands,
+                          llvm::ArrayRef<mlir::Attribute> reduceAttrs,
                           llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   result.addOperands({lb, ub, step});
   result.addOperands(iterArgs);
+  result.addOperands(reduceOperands);
+  result.addAttribute(getOperandSegmentSizeAttr(), builder.getDenseI32ArrayAttr(
+                          {1, 1, 1, static_cast<int32_t>(iterArgs.size()),
+                           static_cast<int32_t>(reduceOperands.size())}));
   if (finalCountValue) {
     result.addTypes(builder.getIndexType());
     result.addAttribute(getFinalValueAttrName(result.name),
@@ -2086,6 +2092,9 @@ void fir::DoLoopOp::build(mlir::OpBuilder &builder,
   if (unordered)
     result.addAttribute(getUnorderedAttrName(result.name),
                         builder.getUnitAttr());
+  if (!reduceAttrs.empty())
+    result.addAttribute(getReduceAttrsAttrName(result.name),
+                        builder.getArrayAttr(reduceAttrs));
   result.addAttributes(attributes);
 }
 
@@ -2113,26 +2122,55 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
 
   // Parse the optional initial iteration arguments.
   llvm::SmallVector<mlir::OpAsmParser::Argument> regionArgs;
-  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> iterOperands;
   llvm::SmallVector<mlir::Type> argTypes;
   bool prependCount = false;
   regionArgs.push_back(inductionVariable);
 
   if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
     // Parse assignment list and results type list.
-    if (parser.parseAssignmentList(regionArgs, operands) ||
+    if (parser.parseAssignmentList(regionArgs, iterOperands) ||
         parser.parseArrowTypeList(result.types))
       return mlir::failure();
-    if (result.types.size() == operands.size() + 1)
+    if (result.types.size() == iterOperands.size() + 1)
       prependCount = true;
     // Resolve input operands.
     llvm::ArrayRef<mlir::Type> resTypes = result.types;
     for (auto operand_type :
-         llvm::zip(operands, prependCount ? resTypes.drop_front() : resTypes))
+         llvm::zip(iterOperands, prependCount ? resTypes.drop_front() : resTypes))
       if (parser.resolveOperand(std::get<0>(operand_type),
                                 std::get<1>(operand_type), result.operands))
         return mlir::failure();
-  } else if (succeeded(parser.parseOptionalArrow())) {
+  }
+
+  // Parse the reduction arguments.
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> reduceOperands;
+  llvm::SmallVector<mlir::Type> reduceArgTypes;
+  if (succeeded(parser.parseOptionalKeyword("reduce"))) {
+    // Parse reduction attributes and variables.
+    llvm::SmallVector<ReduceAttr> attributes;
+    if (failed(parser.parseCommaSeparatedList(mlir::AsmParser::Delimiter::Paren,
+                                              [&]() {
+          if (parser.parseAttribute(attributes.emplace_back()) ||
+              parser.parseArrow() ||
+              parser.parseOperand(reduceOperands.emplace_back()) ||
+              parser.parseColonType(reduceArgTypes.emplace_back()))
+            return mlir::failure();
+          return mlir::success();
+       })))
+      return mlir::failure();
+    // Resolve input operands.
+    for (auto operand_type : llvm::zip(reduceOperands, reduceArgTypes))
+      if (parser.resolveOperand(std::get<0>(operand_type),
+                                std::get<1>(operand_type), result.operands))
+        return mlir::failure();
+    llvm::SmallVector<mlir::Attribute> arrayAttr(attributes.begin(),
+                                                 attributes.end());
+    result.addAttribute(getReduceAttrsAttrName(result.name),
+                        builder.getArrayAttr(arrayAttr));
+  }
+
+  if (!iterOperands.size() && succeeded(parser.parseOptionalArrow())) {
     if (parser.parseKeyword("index"))
       return mlir::failure();
     result.types.push_back(indexType);
@@ -2215,6 +2253,11 @@ mlir::LogicalResult fir::DoLoopOp::verify() {
 
     i++;
   }
+  auto reduceAttrs = getReduceAttrsAttr();
+  if (getNumReduceOperands() != (reduceAttrs ? reduceAttrs.size() : 0))
+    return emitOpError(
+        "mismatch in number of reduction variables and reduction attributes");
+
   return mlir::success();
 }
 
@@ -2233,12 +2276,24 @@ void fir::DoLoopOp::print(mlir::OpAsmPrinter &p) {
     });
     p << ") -> (" << getResultTypes() << ')';
     printBlockTerminators = true;
-  } else if (getFinalValue()) {
+  }
+  if (hasReduceOperands()) {
+    p << " reduce(";
+    auto attrs = getReduceAttrsAttr();
+    auto operands = getReduceOperands();
+    llvm::interleaveComma(llvm::zip(attrs, operands), p, [&](auto it) {
+      p << std::get<0>(it) << " -> " << std::get<1>(it) << " : "
+        << std::get<1>(it).getType();
+    });
+    p << ')';
+    printBlockTerminators = true;
+  }
+  if (!hasIterOperands() && getFinalValue()) {
     p << " -> " << getResultTypes();
     printBlockTerminators = true;
   }
-  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
-                                     {"unordered", "finalValue"});
+  p.printOptionalAttrDictWithKeyword(
+      (*this)->getAttrs(), {"unordered", "reduceAttrs", "finalValue"});
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 printBlockTerminators);

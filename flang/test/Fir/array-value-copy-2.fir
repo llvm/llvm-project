@@ -31,7 +31,7 @@ func.func @_QPslice1(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.ref<i32>, %
   %18 = fir.array_load %arg0 [%17] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.array<?xf32>
   %c1 = arith.constant 1 : index
   %19 = arith.subi %8, %c1 : index
-  %20 = fir.do_loop %arg3 = %c0 to %19 step %c1 unordered iter_args(%arg4 = %10) -> (!fir.array<?xf32>) {
+  %20 = fir.do_loop %arg3 = %c0 to %19 step %c1 unordered iter_args(%arg4 = %10) -> (!fir.array<?xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %21 = fir.array_fetch %18, %arg3 : (!fir.array<?xf32>, index) -> f32
     %22 = fir.array_update %arg4, %21, %arg3 : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
     fir.result %22 : !fir.array<?xf32>
@@ -77,7 +77,7 @@ func.func @_QPslice2(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.ref<i32>, %
   %c1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %22 = arith.subi %9, %c1 : index
-  %23 = fir.do_loop %arg3 = %c0_2 to %22 step %c1 unordered iter_args(%arg4 = %11) -> (!fir.array<?xf32>) {
+  %23 = fir.do_loop %arg3 = %c0_2 to %22 step %c1 unordered iter_args(%arg4 = %11) -> (!fir.array<?xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %24 = fir.array_fetch %21, %arg3 : (!fir.array<?xf32>, index) -> f32
     %25 = fir.array_update %arg4, %24, %arg3 : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
     fir.result %25 : !fir.array<?xf32>

@@ -476,7 +476,7 @@ contains
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:  %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[UB:.*]] = arith.subi %[[SELECTOR_DIMS:.*]]#1, %[[C1]] : index
-! CHECK:  %[[LOOP_RES:.*]] = fir.do_loop %[[IND:.*]] = %[[C0:.*]] to %[[UB]] step %[[C1]] unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
+! CHECK:  %[[LOOP_RES:.*]] = fir.do_loop %[[IND:.*]] = %[[C0:.*]] to %[[UB]] step %[[C1]] unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:    %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %[[C100]], %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:    fir.result %[[ARR_UP]] : !fir.array<?xi32>
 ! CHECK:  }
@@ -491,7 +491,7 @@ contains
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:  %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[UB:.*]] = arith.subi %[[SELECTOR_DIMS]]#1, %[[C1]] : index
-! CHECK:  %[[LOOP_RES:.*]] = fir.do_loop %[[IND:.*]] = %[[C0]] to %[[UB]] step %[[C1]] unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xf32>) {
+! CHECK:  %[[LOOP_RES:.*]] = fir.do_loop %[[IND:.*]] = %[[C0]] to %[[UB]] step %[[C1]] unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:    %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %[[VALUE]], %[[IND]] : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
 ! CHECK:    fir.result %[[ARR_UP]] : !fir.array<?xf32>
 ! CHECK:  }
@@ -508,7 +508,7 @@ contains
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:  %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_A]] : (index, index, index, !fir.field) -> !fir.slice<1>
 ! CHECK:  %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32>
-! CHECK:  %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
+! CHECK:  %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:    %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:    fir.result %[[ARR_UP]] : !fir.array<?xi32>
 ! CHECK:  }
@@ -519,7 +519,7 @@ contains
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:  %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_B]] : (index, index, index, !fir.field) -> !fir.slice<1>
 ! CHECK:  %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32> 
-! CHECK:  %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %c{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
+! CHECK:  %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %c{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:    %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:    fir.result %[[ARR_UP]] : !fir.array<?xi32>
 ! CHECK:  }
@@ -533,7 +533,7 @@ contains
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:  %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_A]] : (index, index, index, !fir.field) -> !fir.slice<1>
 ! CHECK:  %[[ARRAY_LOAD:.*]] = fir.array_load %[[CLASS_BOX]] [%[[SLICE]]] : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32>
-! CHECK:  %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
+! CHECK:  %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:    %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:    fir.result %[[ARR_UP]] : !fir.array<?xi32>
 ! CHECK:  }
@@ -544,7 +544,7 @@ contains
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:  %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_B]] : (index, index, index, !fir.field) -> !fir.slice<1>
 ! CHECK:  %[[ARRAY_LOAD:.*]] = fir.array_load %[[CLASS_BOX]] [%[[SLICE]]] : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32>
-! CHECK:  %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
+! CHECK:  %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:    %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:    fir.result %[[ARR_UP]] : !fir.array<?xi32>
 ! CHECK:  }
@@ -555,7 +555,7 @@ contains
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:  %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_C]] : (index, index, index, !fir.field) -> !fir.slice<1>
 ! CHECK:  %[[ARRAY_LOAD:.*]] = fir.array_load %[[CLASS_BOX]] [%[[SLICE]]] : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32>
-! CHECK:  %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
+! CHECK:  %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:    %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:    fir.result %[[ARR_UP]] : !fir.array<?xi32>
 ! CHECK:  }
@@ -590,7 +590,7 @@ contains
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_A]] : (index, index, index, !fir.field) -> !fir.slice<1>
 ! CHECK: %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32>
-! CHECK: %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
+! CHECK: %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:   %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:   fir.result %[[ARR_UP]] : !fir.array<?xi32>
 ! CHECK: }
@@ -601,7 +601,7 @@ contains
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_B]] : (index, index, index, !fir.field) -> !fir.slice<1>
 ! CHECK: %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32> 
-! CHECK: %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %c{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
+! CHECK: %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %c{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:   %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:   fir.result %[[ARR_UP]] : !fir.array<?xi32>
 ! CHECK: }
@@ -615,7 +615,7 @@ contains
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_A]] : (index, index, index, !fir.field) -> !fir.slice<1>
 ! CHECK: %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32>
-! CHECK: %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
+! CHECK: %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:   %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:   fir.result %[[ARR_UP]] : !fir.array<?xi32>
 ! CHECK: }
@@ -626,7 +626,7 @@ contains
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_B]] : (index, index, index, !fir.field) -> !fir.slice<1>
 ! CHECK: %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32>
-! CHECK: %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
+! CHECK: %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:   %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:   fir.result %[[ARR_UP]] : !fir.array<?xi32>
 ! CHECK: }
@@ -637,7 +637,7 @@ contains
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_C]] : (index, index, index, !fir.field) -> !fir.slice<1>
 ! CHECK: %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32>
-! CHECK: %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
+! CHECK: %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:   %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:   fir.result %[[ARR_UP]] : !fir.array<?xi32>
 ! CHECK: }

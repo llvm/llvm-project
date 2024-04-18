@@ -49,7 +49,7 @@ func.func @_QPmax1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_24:.*]] = fir.undefined !fir.char<1>
 // CHECK:   %[[VAL_25:.*]] = fir.insert_value %[[VAL_24]], %[[C32_I8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 // CHECK:   %[[C1_0:.*]] = arith.constant 1 : index
-// CHECK:   fir.do_loop %[[ARG3:.*]] = %[[VAL_18:.*]] to %[[VAL_23]] step %[[C1_0]] {
+// CHECK:   fir.do_loop %[[ARG3:.*]] = %[[VAL_18:.*]] to %[[VAL_23]] step %[[C1_0]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:     %[[VAL_30:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:     %[[VAL_31:.*]] = fir.coordinate_of %[[VAL_30]], %[[ARG3]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_25:.*]] to %[[VAL_31]] : !fir.ref<!fir.char<1>>
@@ -110,7 +110,7 @@ func.func @_QPmin1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_24:.*]] = fir.undefined !fir.char<1>
 // CHECK:   %[[VAL_25:.*]] = fir.insert_value %[[VAL_24]], %[[C32_I8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 // CHECK:   %[[C1_0:.*]] = arith.constant 1 : index
-// CHECK:   fir.do_loop %[[ARG3:.*]] = %[[VAL_18:.*]] to %[[VAL_23]] step %[[C1_0]] {
+// CHECK:   fir.do_loop %[[ARG3:.*]] = %[[VAL_18:.*]] to %[[VAL_23]] step %[[C1_0]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:     %[[VAL_30:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:     %[[VAL_31:.*]] = fir.coordinate_of %[[VAL_30]], %[[ARG3]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_25:.*]] to %[[VAL_31]] : !fir.ref<!fir.char<1>>
@@ -205,7 +205,7 @@ func.func @_QPmax2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_34:.*]] = fir.undefined !fir.char<1>
 // CHECK:   %[[VAL_35:.*]] = fir.insert_value %[[VAL_34]], %[[C32_I8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 // CHECK:   %[[C1_4:.*]] = arith.constant 1 : index
-// CHECK:   fir.do_loop %[[ARG3:.*]] = %[[VAL_28:.*]] to %[[VAL_33]] step %[[C1_4]] {
+// CHECK:   fir.do_loop %[[ARG3:.*]] = %[[VAL_28:.*]] to %[[VAL_33]] step %[[C1_4]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:     %[[VAL_42:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:     %[[VAL_43:.*]] = fir.coordinate_of %[[VAL_42]], %[[ARG3]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_35:.*]] to %[[VAL_43]] : !fir.ref<!fir.char<1>>
@@ -303,7 +303,7 @@ func.func @_QPmin2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_34:.*]] = fir.undefined !fir.char<1>
 // CHECK:   %[[VAL_35:.*]] = fir.insert_value %[[VAL_34]], %[[C32_I8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 // CHECK:   %[[C1_4:.*]] = arith.constant 1 : index
-// CHECK:   fir.do_loop %[[ARG3:.*]] = %[[VAL_28:.*]] to %[[VAL_33]] step %[[C1_4]] {
+// CHECK:   fir.do_loop %[[ARG3:.*]] = %[[VAL_28:.*]] to %[[VAL_33]] step %[[C1_4]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:     %[[VAL_42:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:     %[[VAL_43:.*]] = fir.coordinate_of %[[VAL_42]], %[[ARG3]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_35:.*]] to %[[VAL_43]] : !fir.ref<!fir.char<1>>
@@ -382,7 +382,7 @@ func.func @_QPmax3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_36:.*]] = fir.undefined !fir.char<1>
 // CHECK:   %[[VAL_37:.*]] = fir.insert_value %[[VAL_36]], %[[C32_I8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 // CHECK:   %[[C1_1:.*]] = arith.constant 1 : index
-// CHECK:   fir.do_loop %[[ARG4:.*]] = %[[VAL_30:.*]] to %[[VAL_35]] step %[[C1_1]] {
+// CHECK:   fir.do_loop %[[ARG4:.*]] = %[[VAL_30:.*]] to %[[VAL_35]] step %[[C1_1]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:     %[[VAL_42:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:     %[[VAL_43:.*]] = fir.coordinate_of %[[VAL_42]], %[[ARG4]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_37:.*]] to %[[VAL_43]] : !fir.ref<!fir.char<1>>
@@ -458,7 +458,7 @@ func.func @_QPmin3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_36:.*]] = fir.undefined !fir.char<1>
 // CHECK:   %[[VAL_37:.*]] = fir.insert_value %[[VAL_36]], %[[C32_I8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 // CHECK:   %[[C1_1:.*]] = arith.constant 1 : index
-// CHECK:   fir.do_loop %[[ARG4:.*]] = %[[VAL_30:.*]] to %[[VAL_35]] step %[[C1_1]] {
+// CHECK:   fir.do_loop %[[ARG4:.*]] = %[[VAL_30:.*]] to %[[VAL_35]] step %[[C1_1]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:     %[[VAL_42:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:     %[[VAL_43:.*]] = fir.coordinate_of %[[VAL_42]], %[[ARG4]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_37:.*]] to %[[VAL_43]] : !fir.ref<!fir.char<1>>

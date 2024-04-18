@@ -34,7 +34,7 @@ func.func @test_assignment_fusing(%x: !fir.ref<!fir.array<10xi32>>, %y : !fir.bo
 // FUSE:           %[[VAL_3:.*]] = arith.constant 1 : index
 // FUSE:           %[[VAL_4:.*]] = arith.constant 10 : index
 // FUSE:           %[[VAL_5:.*]] = arith.constant 1 : index
-// FUSE:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_3]] to %[[VAL_4]] step %[[VAL_5]] {
+// FUSE:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_3]] to %[[VAL_4]] step %[[VAL_5]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // FUSE-NEXT:         %[[VAL_7:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_6]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 // FUSE-NEXT:         hlfir.assign %[[VAL_2]] to %[[VAL_7]] : i32, !fir.ref<i32>
 // FUSE-NEXT:         %[[VAL_8:.*]] = hlfir.designate %[[VAL_1]] (%[[VAL_6]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>

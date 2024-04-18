@@ -325,7 +325,7 @@
 ! CHECK:   %[[LB:.*]] = arith.constant 0 : index
 ! CHECK:   %[[UB:.*]] = arith.constant 99 : index
 ! CHECK:   %[[STEP:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:     %[[COORD:.*]] = fir.coordinate_of %[[DECLARE]]#0, %[[IV]] : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
 ! CHECK:     fir.store %[[INIT]] to %[[COORD]] : !fir.ref<f32>
 ! CHECK:   }
@@ -335,7 +335,7 @@
 ! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
 ! CHECK:   %[[UB0:.*]] = arith.constant 99 : index
 ! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
+! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:     %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]] : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
 ! CHECK:     %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]] : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
 ! CHECK:     %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<f32>
@@ -376,11 +376,11 @@
 ! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
 ! CHECK:   %[[UB0:.*]] = arith.constant 9 : index
 ! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
+! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
 ! CHECK:     %[[UB1:.*]] = arith.constant 99 : index
 ! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
-! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
+! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:       %[[COORD1:.*]] = fir.coordinate_of %[[ARG0:.*]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
 ! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1:.*]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
 ! CHECK:       %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<i32>
@@ -422,11 +422,11 @@
 ! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
 ! CHECK:   %[[UB0:.*]] = arith.constant 9 : index
 ! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
+! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
 ! CHECK:     %[[UB1:.*]] = arith.constant 99 : index
 ! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
-! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
+! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:       %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xf32>>, index, index) -> !fir.ref<f32>
 ! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xf32>>, index, index) -> !fir.ref<f32>
 ! CHECK:       %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<f32>
@@ -468,7 +468,7 @@
 ! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
 ! CHECK:   %[[UB0:.*]] = arith.constant 99 : index
 ! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
+! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:     %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]] : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:     %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]] : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:     %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<i32>
@@ -525,7 +525,7 @@
 ! CHECK:   %[[LB:.*]] = arith.constant 0 : index
 ! CHECK:   %[[UB:.*]] = arith.constant 99 : index
 ! CHECK:   %[[STEP:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:     %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV]] : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:     %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV]] : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:     %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<i32>
@@ -564,7 +564,7 @@
 ! CHECK:   %[[LB:.*]] = arith.constant 0 : index
 ! CHECK:   %[[UB:.*]] = arith.constant 99 : index
 ! CHECK:   %[[STEP:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:   %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV]] : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
 ! CHECK:   %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV]] : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
 ! CHECK:   %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<f32>
@@ -603,15 +603,15 @@
 ! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
 ! CHECK:   %[[UB0:.*]] = arith.constant 1 : index
 ! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
+! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
 ! CHECK:     %[[UB1:.*]] = arith.constant 9 : index
 ! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
-! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
+! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:       %[[LB2:.*]] = arith.constant 0 : index
 ! CHECK:       %[[UB2:.*]] = arith.constant 99 : index
 ! CHECK:       %[[STEP2:.*]] = arith.constant 1 : index
-! CHECK:       fir.do_loop %[[IV2:.*]] = %[[LB2]] to %[[UB2]] step %[[STEP2]] {
+! CHECK:       fir.do_loop %[[IV2:.*]] = %[[LB2]] to %[[UB2]] step %[[STEP2]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:         %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]], %[[IV1]], %[[IV2]] : (!fir.ref<!fir.array<100x10x2xi32>>, index, index, index) -> !fir.ref<i32>
 ! CHECK:         %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]], %[[IV1]], %[[IV2]] : (!fir.ref<!fir.array<100x10x2xi32>>, index, index, index) -> !fir.ref<i32>
 ! CHECK:         %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<i32>
@@ -636,11 +636,11 @@
 ! CHECK:   %[[LB0:.*]] = arith.constant 0 : index
 ! CHECK:   %[[UB0:.*]] = arith.constant 9 : index
 ! CHECK:   %[[STEP0:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] {
+! CHECK:   fir.do_loop %[[IV0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:     %[[LB1:.*]] = arith.constant 0 : index
 ! CHECK:     %[[UB1:.*]] = arith.constant 99 : index
 ! CHECK:     %[[STEP1:.*]] = arith.constant 1 : index
-! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] {
+! CHECK:     fir.do_loop %[[IV1:.*]] = %[[LB1]] to %[[UB1]] step %[[STEP1]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:       %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
 ! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
 ! CHECK:       %[[LOAD1]] = fir.load %[[COORD1]] : !fir.ref<i32>
@@ -664,7 +664,7 @@
 ! CHECK:   %[[LB:.*]] = arith.constant 0 : index
 ! CHECK:   %[[UB:.*]] = arith.constant 99 : index
 ! CHECK:   %[[STEP:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
+! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK:     %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV]] : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:     %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV]] : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:     %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<i32>

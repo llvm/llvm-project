@@ -176,6 +176,6 @@ end subroutine
 ! CHECK: %[[c1_i64:.*]] = arith.constant 1 : i64
 ! CHECK: %[[ub:.*]] = arith.subi %[[c10]], %[[c1_i64]] : i64
 ! CHECK: %[[ub_index:.*]] = fir.convert %[[ub]] : (i64) -> index
-! CHECK: fir.do_loop %{{.*}} = %[[select]] to %[[ub_index]] step %{{.*}} {
+! CHECK: fir.do_loop %{{.*}} = %[[select]] to %[[ub_index]] step %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 ! CHECK: %[[cast_temp:.*]] = fir.convert %[[temp:.*]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK: %{{.*}} = fir.call @_FortranAioOutputAscii(%{{.*}}, %[[cast_temp]], %[[c10]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> i1

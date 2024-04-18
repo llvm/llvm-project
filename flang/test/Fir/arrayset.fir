@@ -8,7 +8,7 @@ func.func @x(%arr : !fir.ref<!fir.array<10xf32>>) {
   %stepvar = arith.constant 1 : index
   // CHECK: alloca [10 x float], i64 1
   %a = fir.alloca !fir.array<10xf32>
-  fir.do_loop %iv = %1 to %2 step %stepvar unordered {
+  fir.do_loop %iv = %1 to %2 step %stepvar unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     %3 = fir.coordinate_of %arr, %iv : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
   // CHECK: %[[reg10:.*]] = load float, ptr
     %4 = fir.load %3 : !fir.ref<f32>

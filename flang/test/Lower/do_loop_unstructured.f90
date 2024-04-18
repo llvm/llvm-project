@@ -357,7 +357,7 @@ end subroutine
 ! CHECK: ^[[BODY]]:
 ! CHECK:   %{{.*}} = fir.do_loop %[[J_INDEX:[^ ]*]] =
 ! CHECK-SAME: %{{.*}} to %{{.*}} step %[[ST:[^ ]*]]
-! CHECK-SAME: iter_args(%[[J_IV:.*]] = %{{.*}}) -> (index, i32) {
+! CHECK-SAME: iter_args(%[[J_IV:.*]] = %{{.*}}) -> (index, i32) {{.*}} {
 ! CHECK:     fir.store %[[J_IV]] to %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
 ! CHECK:     %[[J_INDEX_NEXT:.*]] = arith.addi %[[J_INDEX]], %[[ST]] : index
 ! CHECK:     %[[LOOP_VAR_J:.*]] = fir.load %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
@@ -396,7 +396,7 @@ end subroutine
 ! NSW: ^[[BODY]]:
 ! NSW:   %{{.*}} = fir.do_loop %[[J_INDEX:[^ ]*]] =
 ! NSW-SAME: %{{.*}} to %{{.*}} step %[[ST:[^ ]*]]
-! NSW-SAME: iter_args(%[[J_IV:.*]] = %{{.*}}) -> (index, i32) {
+! NSW-SAME: iter_args(%[[J_IV:.*]] = %{{.*}}) -> (index, i32) {{.*}} {
 ! NSW:     fir.store %[[J_IV]] to %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
 ! NSW:     %[[J_INDEX_NEXT:.*]] = arith.addi %[[J_INDEX]], %[[ST]] overflow<nsw> : index
 ! NSW:     %[[LOOP_VAR_J:.*]] = fir.load %[[LOOP_VAR_J_REF]] : !fir.ref<i32>

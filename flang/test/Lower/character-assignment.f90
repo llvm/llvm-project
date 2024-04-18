@@ -19,7 +19,7 @@ subroutine assign1(lhs, rhs)
 
   ! Padding
   ! CHECK-DAG: %[[blank:.*]] = fir.insert_value %{{.*}}, %c32{{.*}}, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
-  ! CHECK: fir.do_loop %[[ij:.*]] =
+  ! CHECK: fir.do_loop %[[ij:.*]] = %{{.*}} attributes
     ! CHECK-DAG: %[[lhs_cast:.*]] = fir.convert %[[lhs]]#0
     ! CHECK: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs_cast]], %[[ij]]
     ! CHECK: fir.store %[[blank]] to %[[lhs_addr]]
@@ -76,7 +76,7 @@ subroutine assign_constant(lhs)
 
   ! Padding
   ! CHECK-DAG: %[[blank:.*]] = fir.insert_value %{{.*}}, %c32{{.*}}, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
-  ! CHECK: fir.do_loop %[[j:.*]] = %{{.*}} to %{{.*}} {
+  ! CHECK: fir.do_loop %[[j:.*]] = %{{.*}} to %{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     ! CHECK-DAG: %[[jhs_cast:.*]] = fir.convert %[[lhs]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
     ! CHECK: %[[jhs_addr:.*]] = fir.coordinate_of %[[jhs_cast]], %[[j]]
     ! CHECK: fir.store %[[blank]] to %[[jhs_addr]]
@@ -92,8 +92,8 @@ end subroutine
     ! CHECK:   %[[VAL_1:.*]] = arith.cmpi ne, %{{.*}}, %c0{{.*}} : i64
     ! CHECK:   %[[VAL_2:.*]]:2 = fir.if %[[VAL_1]] -> (i1, !fir.heap<!fir.array<?x!fir.char<1,?>>>) {
     ! CHECK:     %{{.*}} = fir.if %{{.*}} -> (!fir.heap<!fir.array<?x!fir.char<1,?>>>) {
-    ! CHECK:   %{{.*}} = fir.do_loop %{{.*}} = %c0{{.*}} to %{{.*}} step %c1{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<?x!fir.char<1,?>>) {
-    ! CHECK:     fir.do_loop %[[ARG_0:.*]] = %{{.*}} to {{.*}} step %c1{{.*}} {
+    ! CHECK:   %{{.*}} = fir.do_loop %{{.*}} = %c0{{.*}} to %{{.*}} step %c1{{.*}} unordered iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<?x!fir.char<1,?>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
+    ! CHECK:     fir.do_loop %[[ARG_0:.*]] = %{{.*}} to {{.*}} step %c1{{.*}} attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
     ! CHECK:       %{{.*}} = fir.coordinate_of %{{.*}}, %[[ARG_0]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
     ! CHECK:   fir.if %[[VAL_2]]#0 {
     ! CHECK:     fir.if %[[VAL_1]] {

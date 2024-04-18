@@ -14,7 +14,7 @@ module max_test
     ! CHECK:  %[[VAL_12:.*]] = fir.is_present %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>) -> i1
     ! CHECK:  %[[VAL_17:.*]] = arith.select %[[VAL_12]], %[[VAL_2]], %{{.*}} : !fir.box<!fir.array<?xi32>>
     ! CHECK:  %[[VAL_18:.*]] = fir.array_load %[[VAL_17]] {fir.optional} : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
-    ! CHECK:  fir.do_loop %[[VAL_26:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[VAL_27:.*]] = %{{.*}}) -> (!fir.array<?xi32>) {
+    ! CHECK:  fir.do_loop %[[VAL_26:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[VAL_27:.*]] = %{{.*}}) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     ! CHECK:    %[[VAL_28:.*]] = fir.array_fetch %[[VAL_10]], %[[VAL_26]] : (!fir.array<?xi32>, index) -> i32
     ! CHECK:    %[[VAL_29:.*]] = fir.array_fetch %[[VAL_11]], %[[VAL_26]] : (!fir.array<?xi32>, index) -> i32
     ! CHECK:    %[[VAL_30:.*]] = arith.cmpi sgt, %[[VAL_28]], %[[VAL_29]] : i32
@@ -44,7 +44,7 @@ module max_test
     ! CHECK:  %[[VAL_10:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
     ! CHECK:  %[[VAL_11:.*]] = fir.array_load %[[VAL_1]] : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
     ! CHECK:  %[[VAL_12:.*]] = fir.is_present %[[VAL_2]] : (!fir.ref<i32>) -> i1
-    ! CHECK:  fir.do_loop %[[VAL_20:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[VAL_21:.*]] = %{{.*}}) -> (!fir.array<?xi32>) {
+    ! CHECK:  fir.do_loop %[[VAL_20:.*]] = %{{.*}} to %{{.*}} step %{{.*}} unordered iter_args(%[[VAL_21:.*]] = %{{.*}}) -> (!fir.array<?xi32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     ! CHECK:    %[[VAL_22:.*]] = fir.array_fetch %[[VAL_10]], %[[VAL_20]] : (!fir.array<?xi32>, index) -> i32
     ! CHECK:    %[[VAL_23:.*]] = fir.array_fetch %[[VAL_11]], %[[VAL_20]] : (!fir.array<?xi32>, index) -> i32
     ! CHECK:    %[[VAL_24:.*]] = arith.cmpi sgt, %[[VAL_22]], %[[VAL_23]] : i32

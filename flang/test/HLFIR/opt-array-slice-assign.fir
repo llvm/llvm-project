@@ -40,8 +40,8 @@ func.func @_QPtest1(%arg0: !fir.ref<!fir.array<8000x120x3xf32>> {fir.bindc_name 
   return
 }
 // CHECK-LABEL:   func.func @_QPtest1(
-// CHECK:           fir.do_loop %[[VAL_21:.*]] =
-// CHECK:             fir.do_loop %[[VAL_22:.*]] =
+// CHECK:           fir.do_loop %[[VAL_21:.*]] = {{.*}} attributes {{.*}}
+// CHECK:             fir.do_loop %[[VAL_22:.*]] = {{.*}} attributes {{.*}}
 // CHECK:               %[[VAL_23:.*]] = hlfir.designate %[[VAL_17:.*]] (%[[VAL_22]], %[[VAL_21]])  : (!fir.box<!fir.array<7998x120xf32>>, index, index) -> !fir.ref<f32>
 // CHECK:               %[[VAL_24:.*]] = fir.load %[[VAL_23]] : !fir.ref<f32>
 // CHECK:               %[[VAL_25:.*]] = hlfir.no_reassoc %[[VAL_24]] : f32
@@ -73,8 +73,8 @@ func.func @_QPtest2(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf32>>>> 
   return
 }
 // CHECK-LABEL:   func.func @_QPtest2(
-// CHECK:           fir.do_loop %[[VAL_11:.*]] =
-// CHECK:             fir.do_loop %[[VAL_12:.*]] =
+// CHECK:           fir.do_loop %[[VAL_11:.*]] = {{.*}} attributes {{.*}}
+// CHECK:             fir.do_loop %[[VAL_12:.*]] = {{.*}} attributes {{.*}}
 // CHECK:               %[[VAL_13:.*]] = hlfir.designate %[[VAL_9:.*]] (%[[VAL_12]], %[[VAL_11]])  : (!fir.box<!fir.array<7998x120xf32>>, index, index) -> !fir.ref<f32>
 // CHECK:               %[[VAL_14:.*]] = fir.load %[[VAL_13]] : !fir.ref<f32>
 // CHECK:               %[[VAL_15:.*]] = hlfir.no_reassoc %[[VAL_14]] : f32
@@ -119,8 +119,8 @@ func.func @_QPtest3(%arg0: !fir.ref<!fir.array<10x!fir.type<_QMtypesTt{x:!fir.ar
   return
 }
 // CHECK-LABEL:   func.func @_QPtest3(
-// CHECK:           fir.do_loop %[[VAL_24:.*]] =
-// CHECK:             fir.do_loop %[[VAL_25:.*]] =
+// CHECK:           fir.do_loop %[[VAL_24:.*]] = {{.*}} attributes {{.*}}
+// CHECK:             fir.do_loop %[[VAL_25:.*]] = {{.*}} attributes {{.*}}
 // CHECK:               %[[VAL_26:.*]] = hlfir.designate %[[VAL_20:.*]] (%[[VAL_25]], %[[VAL_24]])  : (!fir.box<!fir.array<7998x120xf32>>, index, index) -> !fir.ref<f32>
 // CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_26]] : !fir.ref<f32>
 // CHECK:               %[[VAL_28:.*]] = hlfir.no_reassoc %[[VAL_27]] : f32
@@ -160,7 +160,7 @@ func.func @_QPtest4(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x"}, %
   %17 = fir.load %6#0 : !fir.ref<i32>
   %18 = fir.convert %17 : (i32) -> index
   %19 = fir.convert %14 : (index) -> i32
-  %20:2 = fir.do_loop %arg4 = %14 to %16 step %18 iter_args(%arg5 = %19) -> (index, i32) {
+  %20:2 = fir.do_loop %arg4 = %14 to %16 step %18 iter_args(%arg5 = %19) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg5 to %3#1 : !fir.ref<i32>
     %21 = fir.load %3#0 : !fir.ref<i32>
     %22 = fir.load %6#0 : !fir.ref<i32>
@@ -236,7 +236,7 @@ func.func @_QPtest5(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x"}, %
   %17 = fir.load %6#0 : !fir.ref<i32>
   %18 = fir.convert %17 : (i32) -> index
   %19 = fir.convert %14 : (index) -> i32
-  %20:2 = fir.do_loop %arg4 = %14 to %16 step %18 iter_args(%arg5 = %19) -> (index, i32) {
+  %20:2 = fir.do_loop %arg4 = %14 to %16 step %18 iter_args(%arg5 = %19) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg5 to %3#1 : !fir.ref<i32>
     %21 = fir.load %3#0 : !fir.ref<i32>
     %22 = fir.load %6#0 : !fir.ref<i32>
@@ -322,7 +322,7 @@ func.func @_QPtest6(%arg0: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "x"},
   %25 = fir.load %14#0 : !fir.ref<i32>
   %26 = fir.convert %25 : (i32) -> index
   %27 = fir.convert %22 : (index) -> i32
-  %28:2 = fir.do_loop %arg4 = %22 to %24 step %26 iter_args(%arg5 = %27) -> (index, i32) {
+  %28:2 = fir.do_loop %arg4 = %22 to %24 step %26 iter_args(%arg5 = %27) -> (index, i32) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     fir.store %arg5 to %3#1 : !fir.ref<i32>
     %29 = fir.load %3#0 : !fir.ref<i32>
     %30 = fir.load %14#0 : !fir.ref<i32>

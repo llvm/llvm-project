@@ -86,7 +86,7 @@ func.func @associate_char(%arg0: !fir.boxchar<1> ) {
 // CHECK:           fir.call @llvm.memmove.p0.p0.i64(%[[VAL_13]], %[[VAL_14]], %[[VAL_11]], %[[VAL_12]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 // CHECK:           %[[VAL_15:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_16:.*]] = arith.subi %[[VAL_7]], %[[VAL_15]] : index
-// CHECK:           fir.do_loop %[[VAL_17:.*]] = %[[VAL_2]]#1 to %[[VAL_16]] step %[[VAL_15]] {
+// CHECK:           fir.do_loop %[[VAL_17:.*]] = %[[VAL_2]]#1 to %[[VAL_16]] step %[[VAL_15]] attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_18:.*]] = arith.subi %[[VAL_17]], %[[VAL_2]]#1 : index
 // CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_6]]#1 : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.array<1x!fir.char<1>>>
 // CHECK:             %[[VAL_20:.*]] = fir.coordinate_of %[[VAL_19]], %[[VAL_18]] : (!fir.ref<!fir.array<1x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
@@ -221,8 +221,8 @@ func.func @test_shape_of(%arg0: !fir.ref<!fir.array<4x3xi32>>) {
 // CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_3]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<3x4xi32>>, !fir.shape<2>) -> (!fir.heap<!fir.array<3x4xi32>>, !fir.heap<!fir.array<3x4xi32>>)
 // CHECK:           %[[VAL_6:.*]] = arith.constant true
 // CHECK:           %[[VAL_7:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_1]] step %[[VAL_7]] unordered {
-// CHECK:             fir.do_loop %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_2]] step %[[VAL_7]] unordered {
+// CHECK:           fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_1]] step %[[VAL_7]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
+// CHECK:             fir.do_loop %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_2]] step %[[VAL_7]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:               %[[VAL_10:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_8]], %[[VAL_9]])  : (!fir.ref<!fir.array<4x3xi32>>, index, index) -> !fir.ref<i32>
 // CHECK:               %[[VAL_11:.*]] = fir.load %[[VAL_10]] : !fir.ref<i32>
 // CHECK:               %[[VAL_12:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_9]], %[[VAL_8]])  : (!fir.heap<!fir.array<3x4xi32>>, index, index) -> !fir.ref<i32>
@@ -353,7 +353,7 @@ func.func @_QPtest_multiple_expr_uses_inside_elemental() {
 // CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_11]](%[[VAL_10]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<?x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.heap<!fir.array<?x!fir.logical<4>>>)
 // CHECK:           %[[VAL_13:.*]] = arith.constant true
 // CHECK:           %[[VAL_14:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_15:.*]] = %[[VAL_14]] to %[[VAL_9]] step %[[VAL_14]] unordered {
+// CHECK:           fir.do_loop %[[VAL_15:.*]] = %[[VAL_14]] to %[[VAL_9]] step %[[VAL_14]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_16:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_4]] : index) {bindc_name = ".tmp"}
 // CHECK:             %[[VAL_17:.*]] = arith.constant false
 // CHECK:             %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_16]] typeparams %[[VAL_4]] {uniq_name = ".tmp"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
@@ -398,7 +398,7 @@ func.func @_QPtest_multitple_associates_for_same_expr() {
 // CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_2]]) typeparams %[[VAL_0]] {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>)
 // CHECK:           %[[VAL_5:.*]] = arith.constant true
 // CHECK:           %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_6]] to %[[VAL_1]] step %[[VAL_6]] unordered {
+// CHECK:           fir.do_loop %[[VAL_7:.*]] = %[[VAL_6]] to %[[VAL_1]] step %[[VAL_6]] unordered attributes {operandSegmentSizes = array<i32: 1, 1, 1, 0, 0>} {
 // CHECK:             %[[VAL_8:.*]] = fir.undefined !fir.ref<!fir.char<1>>
 // CHECK:             %[[VAL_9:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_7]])  typeparams %[[VAL_0]] : (!fir.heap<!fir.array<10x!fir.char<1>>>, index, index) -> !fir.ref<!fir.char<1>>
 // CHECK:             hlfir.assign %[[VAL_8]] to %[[VAL_9]] temporary_lhs : !fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>

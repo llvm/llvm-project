@@ -32,7 +32,7 @@ func.func @_QMmodPsub1(%arg0: !fir.box<!fir.array<?x!fir.type<_QMmodTrec1{dat:!f
   %c1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %16 = arith.subi %8, %c1 : index
-  %17 = fir.do_loop %arg1 = %c0_2 to %16 step %c1 unordered iter_args(%arg2 = %10) -> (!fir.array<?x!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) {
+  %17 = fir.do_loop %arg1 = %c0_2 to %16 step %c1 unordered iter_args(%arg2 = %10) -> (!fir.array<?x!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
     %18 = fir.array_access %15, %arg1 : (!fir.array<?x!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, index) -> !fir.ref<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
     %19 = fir.array_access %arg2, %arg1 : (!fir.array<?x!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, index) -> !fir.ref<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
     %20 = fir.embox %19 : (!fir.ref<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.box<!fir.type<_QMmodTrec1{dat:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>

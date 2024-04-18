@@ -76,7 +76,7 @@ subroutine test_vector_subcripted_section_to_box(v, x)
 ! CHECK:  %[[VAL_14:.*]] = arith.constant 1 : index
 ! CHECK:  %[[VAL_15:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_16:.*]] = arith.subi %[[VAL_9]], %[[VAL_14]] : index
-! CHECK:  %[[VAL_17:.*]] = fir.do_loop %[[VAL_18:.*]] = %[[VAL_15]] to %[[VAL_16]] step %[[VAL_14]] unordered iter_args(%[[VAL_19:.*]] = %[[VAL_13]]) -> (!fir.array<?xf32>) {
+! CHECK:  %[[VAL_17:.*]] = fir.do_loop %[[VAL_18:.*]] = %[[VAL_15]] to %[[VAL_16]] step %[[VAL_14]] unordered iter_args(%[[VAL_19:.*]] = %[[VAL_13]]) -> (!fir.array<?xf32>) attributes {operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>} {
 ! CHECK:    %[[VAL_20:.*]] = fir.array_fetch %[[VAL_7]], %[[VAL_18]] : (!fir.array<?xi32>, index) -> i32
 ! CHECK:    %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i32) -> index
 ! CHECK:    %[[VAL_22:.*]] = arith.subi %[[VAL_21]], %[[VAL_2]] : index
