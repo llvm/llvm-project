@@ -94,14 +94,12 @@ getExplicitLbounds(fir::FortranVariableOpInterface var) {
   return {};
 }
 
-static void
-genLboundsAndExtentsFromBox(mlir::Location loc, fir::FirOpBuilder &builder,
-                            hlfir::Entity boxEntity,
-                            llvm::SmallVectorImpl<mlir::Value> &lbounds,
-                            llvm::SmallVectorImpl<mlir::Value> *extents) {
+void hlfir::genLboundsAndExtentsFromBox(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value boxEntity,
+    int rank, llvm::SmallVectorImpl<mlir::Value> &lbounds,
+    llvm::SmallVectorImpl<mlir::Value> *extents) {
   assert(boxEntity.getType().isa<fir::BaseBoxType>() && "must be a box");
   mlir::Type idxTy = builder.getIndexType();
-  const int rank = boxEntity.getRank();
   for (int i = 0; i < rank; ++i) {
     mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
     auto dimInfo = builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
@@ -125,7 +123,8 @@ getNonDefaultLowerBounds(mlir::Location loc, fir::FirOpBuilder &builder,
   if (entity.isMutableBox())
     entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
   llvm::SmallVector<mlir::Value> lowerBounds;
-  genLboundsAndExtentsFromBox(loc, builder, entity, lowerBounds,
+  genLboundsAndExtentsFromBox(loc, builder, entity, entity.getRank(),
+                              lowerBounds,
                               /*extents=*/nullptr);
   return lowerBounds;
 }
@@ -887,8 +886,8 @@ translateVariableToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
       !variable.getIfVariableInterface()) {
     // This special case avoids generating two sets of identical
     // fir.box_dim to get both the lower bounds and extents.
-    genLboundsAndExtentsFromBox(loc, builder, variable, nonDefaultLbounds,
-                                &extents);
+    genLboundsAndExtentsFromBox(loc, builder, variable, variable.getRank(),
+                                nonDefaultLbounds, &extents);
   } else {
     extents = getVariableExtents(loc, builder, variable);
     nonDefaultLbounds = getNonDefaultLowerBounds(loc, builder, variable);

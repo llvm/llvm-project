@@ -462,6 +462,10 @@ genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
                       hlfir::Entity source, mlir::Type toType,
                       bool preserveLowerBounds);
 
+void genLboundsAndExtentsFromBox(mlir::Location loc, fir::FirOpBuilder &builder,
+                                 mlir::Value boxEntity, int rank,
+                                 llvm::SmallVectorImpl<mlir::Value> &lbounds,
+                                 llvm::SmallVectorImpl<mlir::Value> *extents);
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H

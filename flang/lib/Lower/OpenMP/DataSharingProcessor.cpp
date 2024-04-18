@@ -15,6 +15,7 @@
 #include "Utils.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -393,25 +394,17 @@ void DataSharingProcessor::doPrivatize(
 
       fir::ExtendedValue localExV = symExV.match(
           [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
-            auto idxTy = firOpBuilder.getIndexType();
             llvm::SmallVector<mlir::Value> extents;
             llvm::SmallVector<mlir::Value> lBounds;
-
-            for (unsigned dim = 0; dim < box.getExtents().size(); ++dim) {
-              mlir::Value dimVal =
-                  firOpBuilder.createIntegerConstant(symLoc, idxTy, dim);
-              fir::BoxDimsOp dimInfo = firOpBuilder.create<fir::BoxDimsOp>(
-                  symLoc, idxTy, idxTy, idxTy, allocRegion.getArgument(0),
-                  dimVal);
-              extents.push_back(dimInfo.getExtent());
-              lBounds.push_back(dimInfo.getLowerBound());
-            }
+            hlfir::genLboundsAndExtentsFromBox(symLoc, firOpBuilder,
+                                               allocRegion.getArgument(0),
+                                               box.rank(), lBounds, &extents);
 
             return fir::ArrayBoxValue(allocRegion.getArgument(0), extents,
                                       lBounds);
           },
           [&](const auto &box) -> fir::ExtendedValue {
-            return fir::substBase(symExV, allocRegion.getArgument(0));
+            return fir::substBase(box, allocRegion.getArgument(0));
           });
 
       symTable->addSymbol(*sym, localExV);
