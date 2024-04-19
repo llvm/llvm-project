@@ -401,6 +401,28 @@ public:
     return true;
   }
 
+  void
+  PropagateResultObjectToRecordInitList(const RecordInitListHelper &InitList,
+                                        RecordStorageLocation *Loc) {
+    for (auto [Base, Init] : InitList.base_inits()) {
+      assert(Base->getType().getCanonicalType() ==
+             Init->getType().getCanonicalType());
+
+      // Storage location for the base class is the same as that of the
+      // derived class because we "flatten" the object hierarchy and put all
+      // fields in `RecordStorageLocation` of the derived class.
+      PropagateResultObject(Init, Loc);
+    }
+
+    for (auto [Field, Init] : InitList.field_inits()) {
+      // Fields of non-record type are handled in
+      // `TransferVisitor::VisitInitListExpr()`.
+      if (Field->getType()->isRecordType())
+        PropagateResultObject(Init,
+                              cast<RecordStorageLocation>(Loc->getChild(*Field)));
+    }
+  }
+
   // Assigns `Loc` as the result object location of `E`, then propagates the
   // location to all lower-level prvalues that initialize the same object as
   // `E` (or one of its base classes or member variables).
@@ -440,26 +462,14 @@ public:
         return;
       }
 
-      RecordInitListHelper InitListHelper(InitList);
+      PropagateResultObjectToRecordInitList(RecordInitListHelper(InitList),
+                                            Loc);
+      return;
+    }
 
-      for (auto [Base, Init] : InitListHelper.base_inits()) {
-        assert(Base->getType().getCanonicalType() ==
-               Init->getType().getCanonicalType());
-
-        // Storage location for the base class is the same as that of the
-        // derived class because we "flatten" the object hierarchy and put all
-        // fields in `RecordStorageLocation` of the derived class.
-        PropagateResultObject(Init, Loc);
-      }
-
-      for (auto [Field, Init] : InitListHelper.field_inits()) {
-        // Fields of non-record type are handled in
-        // `TransferVisitor::VisitInitListExpr()`.
-        if (!Field->getType()->isRecordType())
-          continue;
-        PropagateResultObject(
-            Init, cast<RecordStorageLocation>(Loc->getChild(*Field)));
-      }
+    if (auto *ParenInitList = dyn_cast<CXXParenListInitExpr>(E)) {
+      PropagateResultObjectToRecordInitList(RecordInitListHelper(ParenInitList),
+                                            Loc);
       return;
     }
 

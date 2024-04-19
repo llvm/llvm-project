@@ -8346,14 +8346,15 @@ def _SLASH_FI : CLJoinedOrSeparate<"FI">,
 def _SLASH_Fe : CLJoined<"Fe">,
   HelpText<"Set output executable file name">,
   MetaVarName<"<file or dir/>">;
-def _SLASH_Fe_COLON : CLJoined<"Fe:">, Alias<_SLASH_Fe>;
+def _SLASH_Fe_COLON : CLJoinedOrSeparate<"Fe:">, Alias<_SLASH_Fe>;
 def _SLASH_Fi : CLCompileJoined<"Fi">,
   HelpText<"Set preprocess output file name (with /P)">,
   MetaVarName<"<file>">;
+def _SLASH_Fi_COLON : CLJoinedOrSeparate<"Fi:">, Alias<_SLASH_Fi>;
 def _SLASH_Fo : CLCompileJoined<"Fo">,
   HelpText<"Set output object file (with /c)">,
   MetaVarName<"<file or dir/>">;
-def _SLASH_Fo_COLON : CLCompileJoined<"Fo:">, Alias<_SLASH_Fo>;
+def _SLASH_Fo_COLON : CLCompileJoinedOrSeparate<"Fo:">, Alias<_SLASH_Fo>;
 def _SLASH_guard : CLJoined<"guard:">,
   HelpText<"Enable Control Flow Guard with /guard:cf, or only the table with /guard:cf,nochecks. "
            "Enable EH Continuation Guard with /guard:ehcont">;
@@ -8448,6 +8449,7 @@ def _SLASH_Zc_dllexportInlines_ : CLFlag<"Zc:dllexportInlines-">,
   HelpText<"Do not dllexport/dllimport inline member functions of dllexport/import classes">;
 def _SLASH_Fp : CLJoined<"Fp">,
   HelpText<"Set pch file name (with /Yc and /Yu)">, MetaVarName<"<file>">;
+def _SLASH_Fp_COLON : CLJoinedOrSeparate<"Fp:">, Alias<_SLASH_Fp>;
 
 def _SLASH_Gd : CLFlag<"Gd">,
   HelpText<"Set __cdecl as a default calling convention">;
