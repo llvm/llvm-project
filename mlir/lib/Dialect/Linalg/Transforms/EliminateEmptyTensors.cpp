@@ -49,7 +49,8 @@ LogicalResult linalg::linalgOpAnchoredEmptyTensorEliminationStep(
 
     for (OpOperand *in : op.getDpsInputOperands()) {
       // Skip non-tensor operands.
-      if (!isa<RankedTensorType>(in->get().getType())) continue;
+      if (!isa<RankedTensorType>(in->get().getType()))
+        continue;
 
       // Find tensor.empty ops on the reverse SSA use-def chain. Only follow
       // equivalent tensors. I.e., stop when there are ops such as extract_slice

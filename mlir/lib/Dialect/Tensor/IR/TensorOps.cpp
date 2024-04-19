@@ -3475,7 +3475,8 @@ SplatOp::reifyResultShapes(OpBuilder &builder,
 
 OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
   auto constOperand = adaptor.getInput();
-  if (!isa_and_nonnull<IntegerAttr, FloatAttr>(constOperand)) return {};
+  if (!isa_and_nonnull<IntegerAttr, FloatAttr>(constOperand))
+    return {};
 
   // Do not fold if the splat is not statically shaped
   if (!getType().hasStaticShape())

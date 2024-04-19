@@ -2489,7 +2489,8 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
   auto addDevInfos = [&, fail](auto devOperands, auto devOpType) -> void {
     for (const auto &devOp : devOperands) {
       // TODO: Only LLVMPointerTypes are handled.
-      if (!isa<LLVM::LLVMPointerType>(devOp.getType())) return fail();
+      if (!isa<LLVM::LLVMPointerType>(devOp.getType()))
+        return fail();
 
       llvm::Value *mapOpValue = moduleTranslation.lookupValue(devOp);
 

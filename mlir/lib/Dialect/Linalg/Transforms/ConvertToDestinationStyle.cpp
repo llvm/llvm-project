@@ -508,7 +508,8 @@ Value linalg::bufferizeToAllocation(
   // Gather tensor results.
   SmallVector<OpResult> tensorResults;
   for (OpResult result : op->getResults()) {
-    if (!isa<TensorType>(result.getType())) continue;
+    if (!isa<TensorType>(result.getType()))
+      continue;
     // Unranked tensors are not supported
     if (!isa<RankedTensorType>(result.getType()))
       return nullptr;
