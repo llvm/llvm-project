@@ -411,6 +411,7 @@ protected:
   std::string getStaticSymbolName(uint32_t Index) const;
   StringRef getDynamicString(uint64_t Value) const;
 
+  std::pair<Elf_Sym_Range, std::optional<StringRef>> getSymtabAndStrtab() const;
   void printSymbolsHelper(bool IsDynamic, bool ExtraSymInfo) const;
   std::string getDynamicEntry(uint64_t Type, uint64_t Value) const;
 
@@ -513,6 +514,28 @@ ELFDumper<ELFT>::getVersionTable(const Elf_Shdr &Sec, ArrayRef<Elf_Sym> *SymTab,
 }
 
 template <class ELFT>
+std::pair<typename ELFDumper<ELFT>::Elf_Sym_Range, std::optional<StringRef>>
+ELFDumper<ELFT>::getSymtabAndStrtab() const {
+  assert(DotSymtabSec);
+  Elf_Sym_Range Syms(nullptr, nullptr);
+  std::optional<StringRef> StrTable;
+  if (Expected<StringRef> StrTableOrErr =
+          Obj.getStringTableForSymtab(*DotSymtabSec))
+    StrTable = *StrTableOrErr;
+  else
+    reportUniqueWarning(
+        "unable to get the string table for the SHT_SYMTAB section: " +
+        toString(StrTableOrErr.takeError()));
+
+  if (Expected<Elf_Sym_Range> SymsOrErr = Obj.symbols(DotSymtabSec))
+    Syms = *SymsOrErr;
+  else
+    reportUniqueWarning("unable to read symbols from the SHT_SYMTAB section: " +
+                        toString(SymsOrErr.takeError()));
+  return {Syms, StrTable};
+}
+
+template <class ELFT>
 void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic,
                                          bool ExtraSymInfo) const {
   std::optional<StringRef> StrTable;
@@ -525,20 +548,7 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic,
     Syms = dynamic_symbols();
     Entries = Syms.size();
   } else if (DotSymtabSec) {
-    if (Expected<StringRef> StrTableOrErr =
-            Obj.getStringTableForSymtab(*DotSymtabSec))
-      StrTable = *StrTableOrErr;
-    else
-      reportUniqueWarning(
-          "unable to get the string table for the SHT_SYMTAB section: " +
-          toString(StrTableOrErr.takeError()));
-
-    if (Expected<Elf_Sym_Range> SymsOrErr = Obj.symbols(DotSymtabSec))
-      Syms = *SymsOrErr;
-    else
-      reportUniqueWarning(
-          "unable to read symbols from the SHT_SYMTAB section: " +
-          toString(SymsOrErr.takeError()));
+    std::tie(Syms, StrTable) = getSymtabAndStrtab();
     Entries = DotSymtabSec->getEntityCount();
   }
   if (Syms.empty())
@@ -658,6 +668,7 @@ private:
   void printHashedSymbol(const Elf_Sym *Sym, unsigned SymIndex,
                          DataRegion<Elf_Word> ShndxTable, StringRef StrTable,
                          uint32_t Bucket);
+  void printRelr(const Elf_Shdr &Sec);
   void printRelrReloc(const Elf_Relr &R) override;
   void printRelRelaReloc(const Relocation<ELFT> &R,
                          const RelSymbol<ELFT> &RelSym) override;
@@ -3882,6 +3893,12 @@ static bool isRelocationSec(const typename ELFT::Shdr &Sec,
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
+  auto PrintAsRelr = [&](const Elf_Shdr &Sec) {
+    return !opts::RawRelr && (Sec.sh_type == ELF::SHT_RELR ||
+                              Sec.sh_type == ELF::SHT_ANDROID_RELR ||
+                              (this->Obj.getHeader().e_machine == EM_AARCH64 &&
+                               Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR));
+  };
   auto GetEntriesNum = [&](const Elf_Shdr &Sec) -> Expected<size_t> {
     // Android's packed relocation section needs to be unpacked first
     // to get the actual number of entries.
@@ -3894,10 +3911,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
       return RelasOrErr->size();
     }
 
-    if (!opts::RawRelr &&
-        (Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_ANDROID_RELR ||
-         (this->Obj.getHeader().e_machine == EM_AARCH64 &&
-          Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR))) {
+    if (PrintAsRelr(Sec)) {
       Expected<Elf_Relr_Range> RelrsOrErr = this->Obj.relrs(Sec);
       if (!RelrsOrErr)
         return RelrsOrErr.takeError();
@@ -3926,11 +3940,87 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
     OS << "\nRelocation section '" << Name << "' at offset 0x"
        << utohexstr(Offset, /*LowerCase=*/true) << " contains " << EntriesNum
        << " entries:\n";
-    printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader());
-    this->printRelocationsHelper(Sec);
+
+    if (PrintAsRelr(Sec)) {
+      printRelr(Sec);
+    } else {
+      printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader());
+      this->printRelocationsHelper(Sec);
+    }
   }
   if (!HasRelocSections)
     OS << "\nThere are no relocations in this file.\n";
+}
+
+template <class ELFT> void GNUELFDumper<ELFT>::printRelr(const Elf_Shdr &Sec) {
+  Expected<Elf_Relr_Range> RangeOrErr = this->Obj.relrs(Sec);
+  if (!RangeOrErr) {
+    this->reportUniqueWarning("unable to read relocations from " +
+                              this->describe(Sec) + ": " +
+                              toString(RangeOrErr.takeError()));
+    return;
+  }
+  if (ELFT::Is64Bits)
+    OS << "Index: Entry            Address           Symbolic Address\n";
+  else
+    OS << "Index: Entry    Address   Symbolic Address\n";
+
+  // If .symtab is available, collect its defined symbols and sort them by
+  // st_value.
+  SmallVector<std::pair<uint64_t, std::string>, 0> Syms;
+  if (this->DotSymtabSec) {
+    Elf_Sym_Range Symtab;
+    std::optional<StringRef> Strtab;
+    std::tie(Symtab, Strtab) = this->getSymtabAndStrtab();
+    if (Symtab.size() && Strtab) {
+      for (auto [I, Sym] : enumerate(Symtab)) {
+        if (!Sym.st_shndx)
+          continue;
+        Syms.emplace_back(Sym.st_value,
+                          this->getFullSymbolName(Sym, I, ArrayRef<Elf_Word>(),
+                                                  *Strtab, false));
+      }
+    }
+  }
+  llvm::stable_sort(Syms);
+
+  typename ELFT::uint Base = 0;
+  size_t I = 0;
+  auto Print = [&](uint64_t Where) {
+    OS << format_hex_no_prefix(Where, ELFT::Is64Bits ? 16 : 8);
+    for (; I < Syms.size() && Syms[I].first <= Where; ++I)
+      ;
+    // Try symbolizing the address. Find the nearest symbol before or at the
+    // address and print the symbol and the address difference.
+    if (I) {
+      OS << "  " << Syms[I - 1].second;
+      if (Syms[I - 1].first < Where)
+        OS << " + 0x" << Twine::utohexstr(Where - Syms[I - 1].first);
+    }
+    OS << '\n';
+  };
+  for (auto [Index, R] : enumerate(*RangeOrErr)) {
+    typename ELFT::uint Entry = R;
+    OS << formatv("{0:4}:  ", Index)
+       << format_hex_no_prefix(Entry, ELFT::Is64Bits ? 16 : 8) << ' ';
+    if ((Entry & 1) == 0) {
+      Print(Entry);
+      Base = Entry + sizeof(typename ELFT::uint);
+    } else {
+      bool First = true;
+      for (auto Where = Base; Entry >>= 1;
+           Where += sizeof(typename ELFT::uint)) {
+        if (Entry & 1) {
+          if (First)
+            First = false;
+          else
+            OS.indent(ELFT::Is64Bits ? 24 : 16);
+          Print(Where);
+        }
+      }
+      Base += (CHAR_BIT * sizeof(Entry) - 1) * sizeof(typename ELFT::uint);
+    }
+  }
 }
 
 // Print the offset of a particular section from anyone of the ranges:
