@@ -373,9 +373,10 @@ private:
     }
   }
   void Check(const parser::IfStmt &is) {
-    const auto &uS{std::get<parser::UnlabeledStatement<parser::ActionStmt>>(is.t)};
-    CheckUnwrappedExpr(context_, uS.source,
-        std::get<parser::ScalarLogicalExpr>(is.t));
+    const auto &uS{
+        std::get<parser::UnlabeledStatement<parser::ActionStmt>>(is.t)};
+    CheckUnwrappedExpr(
+        context_, uS.source, std::get<parser::ScalarLogicalExpr>(is.t));
     Check(uS.statement, uS.source);
   }
   void Check(const parser::LoopControl::Bounds &bounds) {
