@@ -436,7 +436,12 @@ bool hasReservedScope(const DeclContext &DC) {
 }
 
 QualType declaredType(const TypeDecl *D) {
-  return D->getASTContext().getTypeDeclType(D);
+  ASTContext &Context = D->getASTContext();
+  if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(D))
+    if (const auto *Args = CTSD->getTemplateArgsAsWritten())
+      return Context.getTemplateSpecializationType(
+          TemplateName(CTSD->getSpecializedTemplate()), Args->arguments());
+  return Context.getTypeDeclType(D);
 }
 
 namespace {
