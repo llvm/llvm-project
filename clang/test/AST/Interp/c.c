@@ -257,3 +257,7 @@ int Y __attribute__((annotate(
   42,
   (struct TestStruct) { .a = 1, .b = 2 }
 )));
+
+/// This tests that we have full type info, even for values we cannot read.
+int dummyarray[5];
+_Static_assert(&dummyarray[0] < &dummyarray[1], ""); // pedantic-warning {{GNU extension}}
