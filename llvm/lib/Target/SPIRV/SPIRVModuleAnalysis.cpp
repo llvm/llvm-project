@@ -167,10 +167,21 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     unsigned MajorNum = getMetadataUInt(VersionMD, 0, 2);
     unsigned MinorNum = getMetadataUInt(VersionMD, 1);
     unsigned RevNum = getMetadataUInt(VersionMD, 2);
-    MAI.SrcLangVersion = (MajorNum * 100 + MinorNum) * 1000 + RevNum;
+    // Prevent Major part of OpenCL version to be 0
+    MAI.SrcLangVersion =
+        (std::max(1U, MajorNum) * 100 + MinorNum) * 1000 + RevNum;
   } else {
-    MAI.SrcLang = SPIRV::SourceLanguage::Unknown;
-    MAI.SrcLangVersion = 0;
+    // If there is no information about OpenCL version we are forced to generate
+    // OpenCL 1.0 by default for the OpenCL environment to avoid puzzling
+    // run-times with Unknown/0.0 version output. For a reference, LLVM-SPIRV
+    // Translator avoids potential issues with run-times in a similar manner.
+    if (ST->isOpenCLEnv()) {
+      MAI.SrcLang = SPIRV::SourceLanguage::OpenCL_CPP;
+      MAI.SrcLangVersion = 100000;
+    } else {
+      MAI.SrcLang = SPIRV::SourceLanguage::Unknown;
+      MAI.SrcLangVersion = 0;
+    }
   }
 
   if (auto ExtNode = M.getNamedMetadata("opencl.used.extensions")) {
