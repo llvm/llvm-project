@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/atexit.h"
+#include "src/__support/CPP/mutex.h" // For lock_guard
 #include "src/__support/blockstore.h"
 #include "src/__support/common.h"
-#include "src/__support/CPP/mutex.h" // For lock_guard
 #include "src/__support/fixedvector.h"
 #include "src/__support/threads/mutex.h"
 
