@@ -47,7 +47,7 @@ static void normalizeCharSetName(StringRef CSName,
 }
 
 // Maps the charset name to enum constant if possible.
-std::optional<text_encoding::id> getKnownCharSet(StringRef CSName) {
+static std::optional<text_encoding::id> getKnownCharSet(StringRef CSName) {
   SmallString<16> Normalized;
   normalizeCharSetName(CSName, Normalized);
   if (Normalized.equals("utf8"))
@@ -57,8 +57,9 @@ std::optional<text_encoding::id> getKnownCharSet(StringRef CSName) {
   return std::nullopt;
 }
 
-void HandleOverflow(size_t &Capacity, char *&Output, size_t &OutputLength,
-                    SmallVectorImpl<char> &Result) {
+static void HandleOverflow(size_t &Capacity, char *&Output,
+                           size_t &OutputLength,
+                           SmallVectorImpl<char> &Result) {
   // No space left in output buffer. Double the size of the underlying
   // memory in the SmallVectorImpl, adjust pointer and length and continue
   // the conversion.
@@ -150,9 +151,10 @@ std::error_code CharSetConverterICU::convert(StringRef Source,
                                              SmallVectorImpl<char> &Result,
                                              bool ShouldAutoFlush) const {
   // Setup the output. We directly write into the SmallVector.
-  Result.resize_for_overwrite(Source.size());
-  size_t OutputLength, Capacity = Result.capacity();
+  size_t Capacity = Result.capacity();
+  size_t OutputLength = Capacity;
   char *Output, *Out;
+  Result.resize_for_overwrite(Capacity);
 
   UErrorCode EC = U_ZERO_ERROR;
 
@@ -163,9 +165,7 @@ std::error_code CharSetConverterICU::convert(StringRef Source,
         InputLength ? const_cast<char *>(Source.data()) : nullptr;
     const char *In = Input;
     Output = InputLength ? static_cast<char *>(Result.data()) : nullptr;
-    OutputLength = Capacity;
     Out = Output;
-    Result.resize_for_overwrite(Capacity);
     ucnv_convertEx(ToConvDesc, FromConvDesc, &Output, Out + OutputLength,
                    &Input, In + InputLength, /*pivotStart=*/NULL,
                    /*pivotSource=*/NULL, /*pivotTarget=*/NULL,
@@ -177,7 +177,7 @@ std::error_code CharSetConverterICU::convert(StringRef Source,
         HandleOverflow(Capacity, Output, OutputLength, Result);
       else
         // Some other error occured.
-        return std::error_code(errno, std::generic_category());
+        return std::error_code(EILSEQ, std::generic_category());
     } else if (U_SUCCESS(EC))
       break;
   } while (U_FAILURE(EC));
