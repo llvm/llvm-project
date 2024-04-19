@@ -3655,7 +3655,7 @@ bool ASTNodeImporter::hasReturnTypeDeclaredInside(FunctionDecl *D) {
   assert(FromFPT && "Must be called on FunctionProtoType");
 
   auto IsCXX11LambdaWithouTrailingReturn = [&]() {
-    if (!Importer.FromContext.getLangOpts().CPlusPlus11)
+    if (Importer.FromContext.getLangOpts().CPlusPlus14) // C++14 or later
       return false;
 
     if (FromFPT->hasTrailingReturn())
