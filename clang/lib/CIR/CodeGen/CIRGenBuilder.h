@@ -373,29 +373,18 @@ public:
   }
   bool isInt(mlir::Type i) { return i.isa<mlir::cir::IntType>(); }
 
-  mlir::Type getLongDouble80BitsTy() const { llvm_unreachable("NYI"); }
-
-  /// Get the proper floating point type for the given semantics.
-  mlir::Type getFloatTyForFormat(const llvm::fltSemantics &format,
-                                 bool useNativeHalf) const {
-    if (&format == &llvm::APFloat::IEEEhalf()) {
-      llvm_unreachable("IEEEhalf float format is NYI");
-    }
-
-    if (&format == &llvm::APFloat::BFloat())
-      llvm_unreachable("BFloat float format is NYI");
-    if (&format == &llvm::APFloat::IEEEsingle())
-      return typeCache.FloatTy;
+  mlir::cir::LongDoubleType
+  getLongDoubleTy(const llvm::fltSemantics &format) const {
     if (&format == &llvm::APFloat::IEEEdouble())
-      return typeCache.DoubleTy;
-    if (&format == &llvm::APFloat::IEEEquad())
-      llvm_unreachable("IEEEquad float format is NYI");
-    if (&format == &llvm::APFloat::PPCDoubleDouble())
-      llvm_unreachable("PPCDoubleDouble float format is NYI");
+      return mlir::cir::LongDoubleType::get(getContext(), typeCache.DoubleTy);
     if (&format == &llvm::APFloat::x87DoubleExtended())
-      return getLongDouble80BitsTy();
+      return mlir::cir::LongDoubleType::get(getContext(), typeCache.FP80Ty);
+    if (&format == &llvm::APFloat::IEEEquad())
+      llvm_unreachable("NYI");
+    if (&format == &llvm::APFloat::PPCDoubleDouble())
+      llvm_unreachable("NYI");
 
-    llvm_unreachable("Unknown float format!");
+    llvm_unreachable("unsupported long double format");
   }
 
   mlir::Type getVirtualFnPtrType(bool isVarArg = false) {

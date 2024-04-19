@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffast-math -fclangir -emit-cir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-apple-darwin-macho -ffast-math -fclangir -emit-cir %s -o - | FileCheck %s --check-prefix=AARCH64
 
 // ceil
 
@@ -14,15 +15,16 @@ double my_ceil(double f) {
   // CHECK: {{.+}} = cir.ceil {{.+}} : !cir.double
 }
 
-// long double my_ceill(long double f) {
-//   return __builtin_ceill(f);
-//   // DISABLED-CHECK: cir.func @my_ceill
-//   // DISABLED-CHECK: {{.+}} = cir.ceil {{.+}} : f80
-// }
+long double my_ceill(long double f) {
+  return __builtin_ceill(f);
+  // CHECK: cir.func @my_ceill
+  // CHECK: {{.+}} = cir.ceil {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.ceil {{.+}} : !cir.long_double<!cir.double>
+}
 
 float ceilf(float);
 double ceil(double);
-// long double ceill(long double);
+long double ceill(long double);
 
 float call_ceilf(float f) {
   return ceilf(f);
@@ -36,11 +38,12 @@ double call_ceil(double f) {
   // CHECK: {{.+}} = cir.ceil {{.+}} : !cir.double
 }
 
-// long double call_ceill(long double f) {
-//   return ceill(f);
-//   // DISABLED-CHECK: cir.func @call_ceill
-//   // DISABLED-CHECK: {{.+}} = cir.ceil {{.+}} : f80
-// }
+long double call_ceill(long double f) {
+  return ceill(f);
+  // CHECK: cir.func @call_ceill
+  // CHECK: {{.+}} = cir.ceil {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.ceil {{.+}} : !cir.long_double<!cir.double>
+}
 
 // cos
 
@@ -56,15 +59,16 @@ double my_cos(double f) {
   // CHECK: {{.+}} = cir.cos {{.+}} : !cir.double
 }
 
-// long double my_cosl(long double f) {
-//   return __builtin_cosl(f);
-//   // DISABLED-CHECK: cir.func @my_cosl
-//   // DISABLED-CHECK: {{.+}} = cir.cos {{.+}} : f80
-// }
+long double my_cosl(long double f) {
+  return __builtin_cosl(f);
+  // CHECK: cir.func @my_cosl
+  // CHECK: {{.+}} = cir.cos {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.cos {{.+}} : !cir.long_double<!cir.double>
+}
 
 float cosf(float);
 double cos(double);
-// long double cosl(long double);
+long double cosl(long double);
 
 float call_cosf(float f) {
   return cosf(f);
@@ -78,11 +82,12 @@ double call_cos(double f) {
   // CHECK: {{.+}} = cir.cos {{.+}} : !cir.double
 }
 
-// long double call_cosl(long double f) {
-//   return cosl(f);
-//   // DISABLED-CHECK: cir.func @call_cosl
-//   // DISABLED-CHECK: {{.+}} = cir.cos {{.+}} : f80
-// }
+long double call_cosl(long double f) {
+  return cosl(f);
+  // CHECK: cir.func @call_cosl
+  // CHECK: {{.+}} = cir.cos {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.cos {{.+}} : !cir.long_double<!cir.double>
+}
 
 // exp
 
@@ -98,15 +103,16 @@ double my_exp(double f) {
   // CHECK: {{.+}} = cir.exp {{.+}} : !cir.double
 }
 
-// long double my_expl(long double f) {
-//   return __builtin_expl(f);
-//   // DISABLED-CHECK: cir.func @my_expl
-//   // DISABLED-CHECK: {{.+}} = cir.exp {{.+}} : f80
-// }
+long double my_expl(long double f) {
+  return __builtin_expl(f);
+  // CHECK: cir.func @my_expl
+  // CHECK: {{.+}} = cir.exp {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.exp {{.+}} : !cir.long_double<!cir.double>
+}
 
 float expf(float);
 double exp(double);
-// long double expl(long double);
+long double expl(long double);
 
 float call_expf(float f) {
   return expf(f);
@@ -120,11 +126,12 @@ double call_exp(double f) {
   // CHECK: {{.+}} = cir.exp {{.+}} : !cir.double
 }
 
-// long double call_expl(long double f) {
-//   return expl(f);
-//   // DISABLED-CHECK: cir.func @call_expl
-//   // DISABLED-CHECK: {{.+}} = cir.exp {{.+}} : f80
-// }
+long double call_expl(long double f) {
+  return expl(f);
+  // CHECK: cir.func @call_expl
+  // CHECK: {{.+}} = cir.exp {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.exp {{.+}} : !cir.long_double<!cir.double>
+}
 
 // exp2
 
@@ -140,15 +147,16 @@ double my_exp2(double f) {
   // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.double
 }
 
-// long double my_exp2l(long double f) {
-//   return __builtin_exp2l(f);
-//   // DISABLED-CHECK: cir.func @my_exp2l
-//   // DISABLED-CHECK: {{.+}} = cir.exp2 {{.+}} : f80
-// }
+long double my_exp2l(long double f) {
+  return __builtin_exp2l(f);
+  // CHECK: cir.func @my_exp2l
+  // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.exp2 {{.+}} : !cir.long_double<!cir.double>
+}
 
 float exp2f(float);
 double exp2(double);
-// long double exp2l(long double);
+long double exp2l(long double);
 
 float call_exp2f(float f) {
   return exp2f(f);
@@ -162,11 +170,12 @@ double call_exp2(double f) {
   // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.double
 }
 
-// long double call_exp2l(long double f) {
-//   return exp2l(f);
-//   // DISABLED-CHECK: cir.func @call_exp2l
-//   // DISABLED-CHECK: {{.+}} = cir.exp2 {{.+}} : f80
-// }
+long double call_exp2l(long double f) {
+  return exp2l(f);
+  // CHECK: cir.func @call_exp2l
+  // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.exp2 {{.+}} : !cir.long_double<!cir.double>
+}
 
 // floor
 
@@ -182,15 +191,16 @@ double my_floor(double f) {
   // CHECK: {{.+}} = cir.floor {{.+}} : !cir.double
 }
 
-// long double my_floorl(long double f) {
-//   return __builtin_floorl(f);
-//   // DISABLED-CHECK: cir.func @my_floorl
-//   // DISABLED-CHECK: {{.+}} = cir.floor {{.+}} : f80
-// }
+long double my_floorl(long double f) {
+  return __builtin_floorl(f);
+  // CHECK: cir.func @my_floorl
+  // CHECK: {{.+}} = cir.floor {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.floor {{.+}} : !cir.long_double<!cir.double>
+}
 
 float floorf(float);
 double floor(double);
-// long double floorl(long double);
+long double floorl(long double);
 
 float call_floorf(float f) {
   return floorf(f);
@@ -204,11 +214,12 @@ double call_floor(double f) {
   // CHECK: {{.+}} = cir.floor {{.+}} : !cir.double
 }
 
-// long double call_floorl(long double f) {
-//   return floorl(f);
-//   // DISABLED-CHECK: cir.func @call_floorl
-//   // DISABLED-CHECK: {{.+}} = cir.floor {{.+}} : f80
-// }
+long double call_floorl(long double f) {
+  return floorl(f);
+  // CHECK: cir.func @call_floorl
+  // CHECK: {{.+}} = cir.floor {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.floor {{.+}} : !cir.long_double<!cir.double>
+}
 
 // log
 
@@ -224,15 +235,16 @@ double my_log(double f) {
   // CHECK: {{.+}} = cir.log {{.+}} : !cir.double
 }
 
-// long double my_logl(long double f) {
-//   return __builtin_logl(f);
-//   // DISABLED-CHECK: cir.func @my_logl
-//   // DISABLED-CHECK: {{.+}} = cir.log {{.+}} : f80
-// }
+long double my_logl(long double f) {
+  return __builtin_logl(f);
+  // CHECK: cir.func @my_logl
+  // CHECK: {{.+}} = cir.log {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.log {{.+}} : !cir.long_double<!cir.double>
+}
 
 float logf(float);
 double log(double);
-// long double logl(long double);
+long double logl(long double);
 
 float call_logf(float f) {
   return logf(f);
@@ -246,11 +258,12 @@ double call_log(double f) {
   // CHECK: {{.+}} = cir.log {{.+}} : !cir.double
 }
 
-// long double call_logl(long double f) {
-//   return logl(f);
-//   // DISABLED-CHECK: cir.func @call_logl
-//   // DISABLED-CHECK: {{.+}} = cir.log {{.+}} : f80
-// }
+long double call_logl(long double f) {
+  return logl(f);
+  // CHECK: cir.func @call_logl
+  // CHECK: {{.+}} = cir.log {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.log {{.+}} : !cir.long_double<!cir.double>
+}
 
 // log10
 
@@ -266,15 +279,16 @@ double my_log10(double f) {
   // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.double
 }
 
-// long double my_log10l(long double f) {
-//   return __builtin_log10l(f);
-//   // DISABLED-CHECK: cir.func @my_log10l
-//   // DISABLED-CHECK: {{.+}} = cir.log10 {{.+}} : f80
-// }
+long double my_log10l(long double f) {
+  return __builtin_log10l(f);
+  // CHECK: cir.func @my_log10l
+  // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.log10 {{.+}} : !cir.long_double<!cir.double>
+}
 
 float log10f(float);
 double log10(double);
-// long double log10l(long double);
+long double log10l(long double);
 
 float call_log10f(float f) {
   return log10f(f);
@@ -288,11 +302,12 @@ double call_log10(double f) {
   // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.double
 }
 
-// long double call_log10l(long double f) {
-//   return log10l(f);
-//   // DISABLED-CHECK: cir.func @call_log10l
-//   // DISABLED-CHECK: {{.+}} = cir.log10 {{.+}} : f80
-// }
+long double call_log10l(long double f) {
+  return log10l(f);
+  // CHECK: cir.func @call_log10l
+  // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.log10 {{.+}} : !cir.long_double<!cir.double>
+}
 
 // log2
 
@@ -308,15 +323,16 @@ double my_log2(double f) {
   // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.double
 }
 
-// long double my_log2l(long double f) {
-//   return __builtin_log2l(f);
-//   // DISABLED-CHECK: cir.func @my_log2l
-//   // DISABLED-CHECK: {{.+}} = cir.log2 {{.+}} : f80
-// }
+long double my_log2l(long double f) {
+  return __builtin_log2l(f);
+  // CHECK: cir.func @my_log2l
+  // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.log2 {{.+}} : !cir.long_double<!cir.double>
+}
 
 float log2f(float);
 double log2(double);
-// long double log2l(long double);
+long double log2l(long double);
 
 float call_log2f(float f) {
   return log2f(f);
@@ -330,11 +346,12 @@ double call_log2(double f) {
   // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.double
 }
 
-// long double call_log2l(long double f) {
-//   return log2l(f);
-//   // DISABLED-CHECK: cir.func @call_log2l
-//   // DISABLED-CHECK: {{.+}} = cir.log2 {{.+}} : f80
-// }
+long double call_log2l(long double f) {
+  return log2l(f);
+  // CHECK: cir.func @call_log2l
+  // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.log2 {{.+}} : !cir.long_double<!cir.double>
+}
 
 // nearbyint
 
@@ -350,15 +367,16 @@ double my_nearbyint(double f) {
   // CHECK: {{.+}} = cir.nearbyint {{.+}} : !cir.double
 }
 
-// long double my_nearbyintl(long double f) {
-//   return __builtin_nearbyintl(f);
-//   // DISABLED-CHECK: cir.func @my_nearbyintl
-//   // DISABLED-CHECK: {{.+}} = cir.nearbyint {{.+}} : f80
-// }
+long double my_nearbyintl(long double f) {
+  return __builtin_nearbyintl(f);
+  // CHECK: cir.func @my_nearbyintl
+  // CHECK: {{.+}} = cir.nearbyint {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.nearbyint {{.+}} : !cir.long_double<!cir.double>
+}
 
 float nearbyintf(float);
 double nearbyint(double);
-// long double nearbyintl(long double);
+long double nearbyintl(long double);
 
 float call_nearbyintf(float f) {
   return nearbyintf(f);
@@ -372,11 +390,12 @@ double call_nearbyint(double f) {
   // CHECK: {{.+}} = cir.nearbyint {{.+}} : !cir.double
 }
 
-// long double call_nearbyintl(long double f) {
-//   return nearbyintl(f);
-//   // DISABLED-CHECK: cir.func @call_nearbyintl
-//   // DISABLED-CHECK: {{.+}} = cir.nearbyint {{.+}} : f80
-// }
+long double call_nearbyintl(long double f) {
+  return nearbyintl(f);
+  // CHECK: cir.func @call_nearbyintl
+  // CHECK: {{.+}} = cir.nearbyint {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.nearbyint {{.+}} : !cir.long_double<!cir.double>
+}
 
 // rint
 
@@ -392,15 +411,16 @@ double my_rint(double f) {
   // CHECK: {{.+}} = cir.rint {{.+}} : !cir.double
 }
 
-// long double my_rintl(long double f) {
-//   return __builtin_rintl(f);
-//   // DISABLED-CHECK: cir.func @my_rintl
-//   // DISABLED-CHECK: {{.+}} = cir.rint {{.+}} : f80
-// }
+long double my_rintl(long double f) {
+  return __builtin_rintl(f);
+  // CHECK: cir.func @my_rintl
+  // CHECK: {{.+}} = cir.rint {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.rint {{.+}} : !cir.long_double<!cir.double>
+}
 
 float rintf(float);
 double rint(double);
-// long double rintl(long double);
+long double rintl(long double);
 
 float call_rintf(float f) {
   return rintf(f);
@@ -414,11 +434,12 @@ double call_rint(double f) {
   // CHECK: {{.+}} = cir.rint {{.+}} : !cir.double
 }
 
-// long double call_rintl(long double f) {
-//   return rintl(f);
-//   // DISABLED-CHECK: cir.func @call_rintl
-//   // DISABLED-CHECK: {{.+}} = cir.rint {{.+}} : f80
-// }
+long double call_rintl(long double f) {
+  return rintl(f);
+  // CHECK: cir.func @call_rintl
+  // CHECK: {{.+}} = cir.rint {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.rint {{.+}} : !cir.long_double<!cir.double>
+}
 
 // round
 
@@ -434,15 +455,16 @@ double my_round(double f) {
   // CHECK: {{.+}} = cir.round {{.+}} : !cir.double
 }
 
-// long double my_roundl(long double f) {
-//   return __builtin_roundl(f);
-//   // DISABLED-CHECK: cir.func @my_roundl
-//   // DISABLED-CHECK: {{.+}} = cir.round {{.+}} : f80
-// }
+long double my_roundl(long double f) {
+  return __builtin_roundl(f);
+  // CHECK: cir.func @my_roundl
+  // CHECK: {{.+}} = cir.round {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.round {{.+}} : !cir.long_double<!cir.double>
+}
 
 float roundf(float);
 double round(double);
-// long double roundl(long double);
+long double roundl(long double);
 
 float call_roundf(float f) {
   return roundf(f);
@@ -456,11 +478,12 @@ double call_round(double f) {
   // CHECK: {{.+}} = cir.round {{.+}} : !cir.double
 }
 
-// long double call_roundl(long double f) {
-//   return roundl(f);
-//   // DISABLED-CHECK: cir.func @call_roundl
-//   // DISABLED-CHECK: {{.+}} = cir.round {{.+}} : f80
-// }
+long double call_roundl(long double f) {
+  return roundl(f);
+  // CHECK: cir.func @call_roundl
+  // CHECK: {{.+}} = cir.round {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.round {{.+}} : !cir.long_double<!cir.double>
+}
 
 // sin
 
@@ -476,15 +499,16 @@ double my_sin(double f) {
   // CHECK: {{.+}} = cir.sin {{.+}} : !cir.double
 }
 
-// long double my_sinl(long double f) {
-//   return __builtin_sinl(f);
-//   // DISABLED-CHECK: cir.func @my_sinl
-//   // DISABLED-CHECK: {{.+}} = cir.sin {{.+}} : f80
-// }
+long double my_sinl(long double f) {
+  return __builtin_sinl(f);
+  // CHECK: cir.func @my_sinl
+  // CHECK: {{.+}} = cir.sin {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.sin {{.+}} : !cir.long_double<!cir.double>
+}
 
 float sinf(float);
 double sin(double);
-// long double sinl(long double);
+long double sinl(long double);
 
 float call_sinf(float f) {
   return sinf(f);
@@ -498,11 +522,12 @@ double call_sin(double f) {
   // CHECK: {{.+}} = cir.sin {{.+}} : !cir.double
 }
 
-// long double call_sinl(long double f) {
-//   return sinl(f);
-//   // DISABLED-CHECK: cir.func @call_sinl
-//   // DISABLED-CHECK: {{.+}} = cir.sin {{.+}} : f80
-// }
+long double call_sinl(long double f) {
+  return sinl(f);
+  // CHECK: cir.func @call_sinl
+  // CHECK: {{.+}} = cir.sin {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.sin {{.+}} : !cir.long_double<!cir.double>
+}
 
 // sqrt
 
@@ -518,15 +543,16 @@ double my_sqrt(double f) {
   // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.double
 }
 
-// long double my_sqrtl(long double f) {
-//   return __builtin_sqrtl(f);
-//   // DISABLED-CHECK: cir.func @my_sqrtl
-//   // DISABLED-CHECK: {{.+}} = cir.sqrt {{.+}} : f80
-// }
+long double my_sqrtl(long double f) {
+  return __builtin_sqrtl(f);
+  // CHECK: cir.func @my_sqrtl
+  // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.sqrt {{.+}} : !cir.long_double<!cir.double>
+}
 
 float sqrtf(float);
 double sqrt(double);
-// long double sqrtl(long double);
+long double sqrtl(long double);
 
 float call_sqrtf(float f) {
   return sqrtf(f);
@@ -540,11 +566,12 @@ double call_sqrt(double f) {
   // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.double
 }
 
-// long double call_sqrtl(long double f) {
-//   return sqrtl(f);
-//   // DISABLED-CHECK: cir.func @call_sqrtl
-//   // DISABLED-CHECK: {{.+}} = cir.sqrt {{.+}} : f80
-// }
+long double call_sqrtl(long double f) {
+  return sqrtl(f);
+  // CHECK: cir.func @call_sqrtl
+  // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.sqrt {{.+}} : !cir.long_double<!cir.double>
+}
 
 // trunc
 
@@ -560,15 +587,16 @@ double my_trunc(double f) {
   // CHECK: {{.+}} = cir.trunc {{.+}} : !cir.double
 }
 
-// long double my_truncl(long double f) {
-//   return __builtin_truncl(f);
-//   // DISABLED-CHECK: cir.func @my_truncl
-//   // DISABLED-CHECK: {{.+}} = cir.trunc {{.+}} : f80
-// }
+long double my_truncl(long double f) {
+  return __builtin_truncl(f);
+  // CHECK: cir.func @my_truncl
+  // CHECK: {{.+}} = cir.trunc {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.trunc {{.+}} : !cir.long_double<!cir.double>
+}
 
 float truncf(float);
 double trunc(double);
-// long double truncl(long double);
+long double truncl(long double);
 
 float call_truncf(float f) {
   return truncf(f);
@@ -582,8 +610,9 @@ double call_trunc(double f) {
   // CHECK: {{.+}} = cir.trunc {{.+}} : !cir.double
 }
 
-// long double call_truncl(long double f) {
-//   return truncl(f);
-//   // DISABLED-CHECK: cir.func @call_truncl
-//   // DISABLED-CHECK: {{.+}} = cir.trunc {{.+}} : f80
-// }
+long double call_truncl(long double f) {
+  return truncl(f);
+  // CHECK: cir.func @call_truncl
+  // CHECK: {{.+}} = cir.trunc {{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: {{.+}} = cir.trunc {{.+}} : !cir.long_double<!cir.double>
+}

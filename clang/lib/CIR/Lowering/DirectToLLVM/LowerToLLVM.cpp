@@ -2954,6 +2954,12 @@ void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   converter.addConversion([&](mlir::cir::DoubleType type) -> mlir::Type {
     return mlir::FloatType::getF64(type.getContext());
   });
+  converter.addConversion([&](mlir::cir::FP80Type type) -> mlir::Type {
+    return mlir::FloatType::getF80(type.getContext());
+  });
+  converter.addConversion([&](mlir::cir::LongDoubleType type) -> mlir::Type {
+    return converter.convertType(type.getUnderlying());
+  });
   converter.addConversion([&](mlir::cir::FuncType type) -> mlir::Type {
     auto result = converter.convertType(type.getReturnType());
     llvm::SmallVector<mlir::Type> arguments;

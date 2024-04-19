@@ -150,9 +150,36 @@ def CIR_Double : CIR_FloatType<"Double", "double"> {
   }];
 }
 
+def CIR_FP80 : CIR_FloatType<"FP80", "f80"> {
+  let summary = "CIR type that represents x87 80-bit floating-point format";
+  let description = [{
+    Floating-point type that represents the x87 80-bit floating-point format.
+  }];
+}
+
+def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
+  let summary = "CIR extended-precision float type";
+  let description = [{
+    Floating-point type that represents the `long double` type in C/C++.
+
+    The underlying floating-point format of a long double value depends on the
+    implementation. The `underlying` parameter specifies the CIR floating-point
+    type that corresponds to this format. For now, it can only be either
+    `!cir.double` or `!cir.fp80`.
+  }];
+
+  let parameters = (ins "mlir::Type":$underlying);
+
+  let assemblyFormat = [{
+    `<` $underlying `>`
+  }];
+
+  let genVerifyDecl = 1;
+}
+
 // Constraints
 
-def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double]>;
+def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double, CIR_LongDouble]>;
 def CIR_AnyIntOrFloat: AnyTypeOf<[CIR_AnyFloat, CIR_IntType]>;
 
 //===----------------------------------------------------------------------===//

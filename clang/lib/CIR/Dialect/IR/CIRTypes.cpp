@@ -695,6 +695,67 @@ DoubleType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
   return (uint64_t)(getWidth() / 8);
 }
 
+const llvm::fltSemantics &FP80Type::getFloatSemantics() const {
+  return llvm::APFloat::x87DoubleExtended();
+}
+
+llvm::TypeSize
+FP80Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                            mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(16);
+}
+
+uint64_t FP80Type::getABIAlignment(const mlir::DataLayout &dataLayout,
+                                   mlir::DataLayoutEntryListRef params) const {
+  return 16;
+}
+
+uint64_t
+FP80Type::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
+                                ::mlir::DataLayoutEntryListRef params) const {
+  return 16;
+}
+
+const llvm::fltSemantics &LongDoubleType::getFloatSemantics() const {
+  return getUnderlying()
+      .cast<mlir::cir::CIRFPTypeInterface>()
+      .getFloatSemantics();
+}
+
+llvm::TypeSize
+LongDoubleType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                                  mlir::DataLayoutEntryListRef params) const {
+  return getUnderlying()
+      .cast<mlir::DataLayoutTypeInterface>()
+      .getTypeSizeInBits(dataLayout, params);
+}
+
+uint64_t
+LongDoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                                mlir::DataLayoutEntryListRef params) const {
+  return getUnderlying().cast<mlir::DataLayoutTypeInterface>().getABIAlignment(
+      dataLayout, params);
+}
+
+uint64_t LongDoubleType::getPreferredAlignment(
+    const ::mlir::DataLayout &dataLayout,
+    mlir::DataLayoutEntryListRef params) const {
+  return getUnderlying()
+      .cast<mlir::DataLayoutTypeInterface>()
+      .getPreferredAlignment(dataLayout, params);
+}
+
+LogicalResult
+LongDoubleType::verify(function_ref<InFlightDiagnostic()> emitError,
+                       mlir::Type underlying) {
+  if (!underlying.isa<DoubleType, FP80Type>()) {
+    emitError() << "invalid underlying type for long double";
+    return failure();
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // FuncType Definitions
 //===----------------------------------------------------------------------===//
