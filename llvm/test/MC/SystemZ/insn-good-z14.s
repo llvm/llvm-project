@@ -2720,3 +2720,9 @@
 	wftcixb	%v31, %v0, 0
 	wftcixb	%v4, %v21, 0x678
 
+#CHECK: tpei %r0, %r15					# encoding: [0xb9,0xa1,0x00,0x0f]
+#CHECK: tpei %r15, %r0					# encoding: [0xb9,0xa1,0x00,0xf0]
+#CHECK: tpei %r4, %r10					# encoding: [0xb9,0xa1,0x00,0x4a]
+	tpei %r0, %r15
+	tpei %r15, %r0
+	tpei %r4, %r10
