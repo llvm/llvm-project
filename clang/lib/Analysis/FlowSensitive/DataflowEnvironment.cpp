@@ -400,8 +400,8 @@ public:
       // Fields of non-record type are handled in
       // `TransferVisitor::VisitInitListExpr()`.
       if (Field->getType()->isRecordType())
-        PropagateResultObject(Init,
-                              cast<RecordStorageLocation>(Loc->getChild(*Field)));
+        PropagateResultObject(
+            Init, cast<RecordStorageLocation>(Loc->getChild(*Field)));
     }
   }
 
@@ -610,8 +610,8 @@ Environment Environment::pushCall(const CallExpr *Call) const {
   if (const auto *MethodCall = dyn_cast<CXXMemberCallExpr>(Call)) {
     if (const Expr *Arg = MethodCall->getImplicitObjectArgument()) {
       if (!isa<CXXThisExpr>(Arg))
-          Env.ThisPointeeLoc =
-              cast<RecordStorageLocation>(getStorageLocation(*Arg));
+        Env.ThisPointeeLoc =
+            cast<RecordStorageLocation>(getStorageLocation(*Arg));
       // Otherwise (when the argument is `this`), retain the current
       // environment's `ThisPointeeLoc`.
     }
@@ -1083,7 +1083,7 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
     // be null.
     if (InitExpr) {
       if (auto *InitExprLoc = getStorageLocation(*InitExpr))
-          return *InitExprLoc;
+        return *InitExprLoc;
     }
 
     // Even though we have an initializer, we might not get an
@@ -1191,9 +1191,7 @@ void Environment::dump(raw_ostream &OS) const {
   DACtx->dumpFlowCondition(FlowConditionToken, OS);
 }
 
-void Environment::dump() const {
-  dump(llvm::dbgs());
-}
+void Environment::dump() const { dump(llvm::dbgs()); }
 
 Environment::PrValueToResultObject Environment::buildResultObjectMap(
     DataflowAnalysisContext *DACtx, const FunctionDecl *FuncDecl,
