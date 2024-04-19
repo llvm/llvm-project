@@ -414,6 +414,7 @@ add_entrypoint_object(
   CXX_STANDARD
     20 # For constinit of the atexit callback list.
   DEPENDS
+    libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
     libc.src.__support.OSUtil.osutil
     libc.src.__support.blockstore

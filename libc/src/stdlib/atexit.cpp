@@ -9,6 +9,7 @@
 #include "src/stdlib/atexit.h"
 #include "src/__support/blockstore.h"
 #include "src/__support/common.h"
+#include "src/__support/CPP/mutex.h" // For lock_guard
 #include "src/__support/fixedvector.h"
 #include "src/__support/threads/mutex.h"
 
@@ -68,7 +69,7 @@ void call_exit_callbacks() {
 }
 
 int add_atexit_unit(const AtExitUnit &unit) {
-  MutexLock lock(&handler_list_mtx);
+  cpp::lock_guard<Mutex> lock(handler_list_mtx);
   if (exit_callbacks.push_back(unit))
     return 0;
   return -1;
