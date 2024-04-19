@@ -8,9 +8,7 @@ define ptr @test_zero(ptr %base, i64 %a) {
 ; CHECK-LABEL: define ptr @test_zero(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 -4
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[P1]], i64 [[A]]
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[A]]
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
 entry:
@@ -24,10 +22,9 @@ define ptr @test_nonzero(ptr %base, i64 %a) {
 ; CHECK-LABEL: define ptr @test_nonzero(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BASE]], i64 -4
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BASE]], i64 4
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[TMP0]], i64 [[A]]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P2]], i64 8
-; CHECK-NEXT:    ret ptr [[P3]]
+; CHECK-NEXT:    ret ptr [[P2]]
 ;
 entry:
   %p1 = getelementptr i8, ptr %base, i64 -4
@@ -40,9 +37,7 @@ define ptr @test_or_disjoint(ptr %base, i64 %a) {
 ; CHECK-LABEL: define ptr @test_or_disjoint(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 -4
-; CHECK-NEXT:    [[INDEX:%.*]] = or disjoint i64 [[A]], 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[A]]
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
 entry:
@@ -56,10 +51,9 @@ define ptr @test_zero_multiuse_index(ptr %base, i64 %a) {
 ; CHECK-LABEL: define ptr @test_zero_multiuse_index(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 -4
 ; CHECK-NEXT:    [[INDEX:%.*]] = add i64 [[A]], 1
 ; CHECK-NEXT:    call void @use64(i64 [[INDEX]])
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[A]]
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
 entry:
@@ -76,8 +70,7 @@ define ptr @test_zero_multiuse_ptr(ptr %base, i64 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 -4
 ; CHECK-NEXT:    call void @useptr(ptr [[P1]])
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[P1]], i64 [[A]]
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[A]]
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
 entry:
@@ -109,10 +102,8 @@ define ptr @test_zero_trunc_add(ptr %base, i128 %a) {
 ; CHECK-LABEL: define ptr @test_zero_trunc_add(
 ; CHECK-SAME: ptr [[BASE:%.*]], i128 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 -4
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[A]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P1]], i64 [[TMP0]]
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[TMP0]]
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
 entry:
@@ -126,10 +117,9 @@ define ptr @test_non_i8(ptr %base, i64 %a) {
 ; CHECK-LABEL: define ptr @test_non_i8(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 -8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 -4
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[P1]], i64 [[A]]
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4
-; CHECK-NEXT:    ret ptr [[P2]]
+; CHECK-NEXT:    ret ptr [[TMP0]]
 ;
 entry:
   %p1 = getelementptr i16, ptr %base, i64 -4
@@ -223,10 +213,9 @@ define ptr @test_smul_overflow(ptr %base, i64 %a) {
 ; CHECK-LABEL: define ptr @test_smul_overflow(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 -4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 -12
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[P1]], i64 [[A]]
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -8
-; CHECK-NEXT:    ret ptr [[P2]]
+; CHECK-NEXT:    ret ptr [[TMP0]]
 ;
 entry:
   %p1 = getelementptr i8, ptr %base, i64 -4
@@ -239,10 +228,9 @@ define ptr @test_sadd_overflow(ptr %base, i64 %a) {
 ; CHECK-LABEL: define ptr @test_sadd_overflow(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 9223372036854775804
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[BASE]], i64 -9223372036854775808
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[P1]], i64 [[A]]
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4
-; CHECK-NEXT:    ret ptr [[P2]]
+; CHECK-NEXT:    ret ptr [[TMP0]]
 ;
 entry:
   %p1 = getelementptr i8, ptr %base, i64 9223372036854775804
