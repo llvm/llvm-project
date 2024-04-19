@@ -26,7 +26,7 @@ def INSN : I<(outs GPR32:$dst), (ins GPR32:$src1, complex:$src2), []>;
 //===- Bail out when we define a variable twice wrt complex suboperands. -===//
 
 #ifdef IGNORE
-let ISelShouldIgnore = 1 in
+let GISelShouldIgnore = 1 in
 #endif
 // CHECK0-NOT: warning: Skipped pattern: Error: {{.*}}
 // CHECK: warning: Skipped pattern: Error: Complex suboperand x referenced by different operands: complex_rr:x:y and complex_rr:x:z.

@@ -4379,7 +4379,7 @@ void CodeGenDAGPatterns::ParsePatterns() {
                                   InstResults, InstImpResults);
 
     ParseOnePattern(CurPattern, Pattern, Result, InstImpResults,
-                    CurPattern->getValueAsBit("ISelShouldIgnore"));
+                    CurPattern->getValueAsBit("GISelShouldIgnore"));
   }
 }
 
@@ -4411,7 +4411,7 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
     PatternsToMatch.emplace_back(
         P.getSrcRecord(), P.getPredicates(), std::move(NewSrc),
         std::move(NewDst), P.getDstRegs(), P.getAddedComplexity(),
-        Record::getNewUID(Records), P.getISelShouldIgnore(), Check);
+        Record::getNewUID(Records), P.getGISelShouldIgnore(), Check);
   };
 
   for (PatternToMatch &P : Copy) {
@@ -4782,7 +4782,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
           Variant, PatternsToMatch[i].getDstPatternShared(),
           PatternsToMatch[i].getDstRegs(),
           PatternsToMatch[i].getAddedComplexity(), Record::getNewUID(Records),
-          PatternsToMatch[i].getISelShouldIgnore(),
+          PatternsToMatch[i].getGISelShouldIgnore(),
           PatternsToMatch[i].getHwModeFeatures());
     }
 
