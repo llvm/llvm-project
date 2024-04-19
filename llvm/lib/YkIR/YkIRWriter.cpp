@@ -203,8 +203,8 @@ private:
 
   // Return the index of the LLVM global `G`, inserting a new entry if
   // necessary.
-  size_t globalIndex(class GlobalVariable *G) {
-    vector<class GlobalVariable *>::iterator Found =
+  size_t globalIndex(GlobalVariable *G) {
+    vector<GlobalVariable *>::iterator Found =
         std::find(Globals.begin(), Globals.end(), G);
     if (Found != Globals.end()) {
       return std::distance(Globals.begin(), Found);
@@ -790,7 +790,7 @@ private:
     }
   }
 
-  void serialiseGlobal(class GlobalVariable *G) {
+  void serialiseGlobal(GlobalVariable *G) {
     OutStreamer.emitInt8(G->isThreadLocal());
     serialiseString(G->getName());
   }
@@ -829,7 +829,7 @@ public:
     // num_globals:
     OutStreamer.emitSizeT(Globals.size());
     // globals:
-    for (class GlobalVariable *&G : Globals) {
+    for (GlobalVariable *&G : Globals) {
       serialiseGlobal(G);
     }
 
