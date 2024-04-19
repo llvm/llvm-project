@@ -447,6 +447,54 @@ DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// DynamicCastInfoAtttr definitions
+//===----------------------------------------------------------------------===//
+
+std::string DynamicCastInfoAttr::getAlias() const {
+  // The alias looks like: `dyn_cast_info_<src>_<dest>`
+
+  std::string alias = "dyn_cast_info_";
+
+  alias.append(getSrcRtti().getSymbol().getValue());
+  alias.push_back('_');
+  alias.append(getDestRtti().getSymbol().getValue());
+
+  return alias;
+}
+
+LogicalResult DynamicCastInfoAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError,
+    mlir::cir::GlobalViewAttr srcRtti, mlir::cir::GlobalViewAttr destRtti,
+    mlir::FlatSymbolRefAttr runtimeFunc, mlir::FlatSymbolRefAttr badCastFunc,
+    mlir::cir::IntAttr offsetHint) {
+  auto isRttiPtr = [](mlir::Type ty) {
+    // RTTI pointers are !cir.ptr<!u8i>.
+
+    auto ptrTy = ty.dyn_cast<mlir::cir::PointerType>();
+    if (!ptrTy)
+      return false;
+
+    auto pointeeIntTy = ptrTy.getPointee().dyn_cast<mlir::cir::IntType>();
+    if (!pointeeIntTy)
+      return false;
+
+    return pointeeIntTy.isUnsigned() && pointeeIntTy.getWidth() == 8;
+  };
+
+  if (!isRttiPtr(srcRtti.getType())) {
+    emitError() << "srcRtti must be an RTTI pointer";
+    return failure();
+  }
+
+  if (!isRttiPtr(destRtti.getType())) {
+    emitError() << "destRtti must be an RTTI pointer";
+    return failure();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
 

@@ -125,6 +125,66 @@ def CastOp : CIR_Op<"cast", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// DynamicCastOp
+//===----------------------------------------------------------------------===//
+
+def DCK_PtrCast : I32EnumAttrCase<"ptr", 1>;
+def DCK_RefCast : I32EnumAttrCase<"ref", 2>;
+
+def DynamicCastKind : I32EnumAttr<
+    "DynamicCastKind", "dynamic cast kind", [DCK_PtrCast, DCK_RefCast]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def DynamicCastOp : CIR_Op<"dyn_cast"> {
+  let summary = "Perform dynamic cast on struct pointers";
+  let description = [{
+    The `cir.dyn_cast` operation models part of the semantics of the
+    `dynamic_cast` operator in C++. It can be used to perform 2 kinds of casts
+    on struct pointers:
+
+    - Down-cast, which casts a base class pointer to a derived class pointer;
+    - Side-cast, which casts a class pointer to a sibling class pointer.
+
+    The input of the operation must be a struct pointer. The result of the
+    operation is also a struct pointer.
+
+    The parameter `kind` specifies the semantics of this operation. If its value
+    is `ptr`, then the operation models dynamic casts on pointers. Otherwise, if
+    its value is `ref`, the operation models dynamic casts on references.
+    Specifically:
+
+    - When the input pointer is a null pointer value:
+      - If `kind` is `ref`, the operation will invoke undefined behavior. A
+        sanitizer check will be emitted if sanitizer is on.
+      - Otherwise, the operation will return a null pointer value as its result.
+    - When the runtime type check fails:
+      - If `kind` is `ref`, the operation will throw a `bad_cast` exception.
+      - Otherwise, the operation will return a null pointer value as its result.
+
+    The `info` argument gives detailed information about the requested dynamic
+    cast operation.
+  }];
+
+  let arguments = (ins DynamicCastKind:$kind,
+                       StructPtr:$src,
+                       DynamicCastInfoAttr:$info);
+  let results = (outs StructPtr:$result);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $src `:` type($src) `,` qualified($info) `)`
+    `->` type($result) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Determine whether this operation models reference casting in C++.
+    bool isRefcast() {
+      return getKind() == ::mlir::cir::DynamicCastKind::ref;
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ObjSizeOp
 //===----------------------------------------------------------------------===//
 
@@ -2653,6 +2713,11 @@ def CallOp : CIR_CallOp<"call"> {
       $_state.addOperands(operands);
       $_state.addAttribute("callee", callee);
       $_state.addTypes(resType);
+    }]>,
+    OpBuilder<(ins "SymbolRefAttr":$callee,
+              CArg<"ValueRange", "{}">:$operands), [{
+      $_state.addOperands(operands);
+      $_state.addAttribute("callee", callee);
     }]>];
 }
 

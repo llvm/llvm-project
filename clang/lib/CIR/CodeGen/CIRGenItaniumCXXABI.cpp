@@ -27,6 +27,7 @@
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace cir;
@@ -283,15 +284,15 @@ public:
 
   void buildBadCastCall(CIRGenFunction &CGF, mlir::Location loc) override;
 
-  bool shouldDynamicCastCallBeNullChecked(bool SrcIsPtr,
-                                          QualType SrcRecordTy) override {
-    return SrcIsPtr;
-  }
+  // The traditional clang CodeGen emits calls to `__dynamic_cast` directly into
+  // LLVM in the `emitDynamicCastCall` function. In CIR, `dynamic_cast`
+  // expressions are lowered to `cir.dyn_cast` ops instead of calls to runtime
+  // functions. So during CIRGen we don't need the `emitDynamicCastCall`
+  // function that clang CodeGen has.
 
-  mlir::Value buildDynamicCastCall(CIRGenFunction &CGF, mlir::Location Loc,
-                                   Address Value, QualType SrcRecordTy,
-                                   QualType DestTy,
-                                   QualType DestRecordTy) override;
+  mlir::cir::DynamicCastInfoAttr
+  buildDynamicCastInfo(CIRGenFunction &CGF, mlir::Location Loc,
+                       QualType SrcRecordTy, QualType DestRecordTy) override;
 
   mlir::Value buildDynamicCastToVoid(CIRGenFunction &CGF, mlir::Location Loc,
                                      Address Value,
@@ -2287,55 +2288,29 @@ static mlir::cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &CGF) {
   return CGF.CGM.createRuntimeFunction(FTy, "__dynamic_cast");
 }
 
-mlir::Value CIRGenItaniumCXXABI::buildDynamicCastCall(
-    CIRGenFunction &CGF, mlir::Location Loc, Address Value,
-    QualType SrcRecordTy, QualType DestTy, QualType DestRecordTy) {
-  mlir::Type ptrdiffTy = CGF.ConvertType(CGF.getContext().getPointerDiffType());
+mlir::cir::DynamicCastInfoAttr CIRGenItaniumCXXABI::buildDynamicCastInfo(
+    CIRGenFunction &CGF, mlir::Location Loc, QualType SrcRecordTy,
+    QualType DestRecordTy) {
+  auto srcRtti = CGF.CGM.getAddrOfRTTIDescriptor(Loc, SrcRecordTy)
+                     .cast<mlir::cir::GlobalViewAttr>();
+  auto destRtti = CGF.CGM.getAddrOfRTTIDescriptor(Loc, DestRecordTy)
+                      .cast<mlir::cir::GlobalViewAttr>();
 
-  mlir::Value srcRtti = CGF.getBuilder().getConstant(
-      Loc,
-      CGF.CGM.getAddrOfRTTIDescriptor(Loc, SrcRecordTy.getUnqualifiedType())
-          .cast<mlir::TypedAttr>());
-  mlir::Value destRtti = CGF.getBuilder().getConstant(
-      Loc,
-      CGF.CGM.getAddrOfRTTIDescriptor(Loc, DestRecordTy.getUnqualifiedType())
-          .cast<mlir::TypedAttr>());
+  auto runtimeFuncOp = getItaniumDynamicCastFn(CGF);
+  auto badCastFuncOp = getBadCastFn(CGF);
+  auto runtimeFuncRef = mlir::FlatSymbolRefAttr::get(runtimeFuncOp);
+  auto badCastFuncRef = mlir::FlatSymbolRefAttr::get(badCastFuncOp);
 
-  // Compute the offset hint.
   const CXXRecordDecl *srcDecl = SrcRecordTy->getAsCXXRecordDecl();
   const CXXRecordDecl *destDecl = DestRecordTy->getAsCXXRecordDecl();
-  mlir::Value offsetHint = CGF.getBuilder().getConstAPInt(
-      Loc, ptrdiffTy,
-      llvm::APSInt::get(computeOffsetHint(CGF.getContext(), srcDecl, destDecl)
-                            .getQuantity()));
+  auto offsetHint = computeOffsetHint(CGF.getContext(), srcDecl, destDecl);
 
-  // Emit the call to __dynamic_cast.
-  mlir::Value srcPtr =
-      CGF.getBuilder().createBitcast(Value.getPointer(), CGF.VoidPtrTy);
-  mlir::Value args[4] = {srcPtr, srcRtti, destRtti, offsetHint};
-  mlir::Value castedPtr =
-      CGF.buildRuntimeCall(Loc, getItaniumDynamicCastFn(CGF), args);
+  mlir::Type ptrdiffTy = CGF.ConvertType(CGF.getContext().getPointerDiffType());
+  auto offsetHintAttr =
+      mlir::cir::IntAttr::get(ptrdiffTy, offsetHint.getQuantity());
 
-  assert(castedPtr.getType().isa<mlir::cir::PointerType>() &&
-         "the return value of __dynamic_cast should be a ptr");
-
-  /// C++ [expr.dynamic.cast]p9:
-  ///   A failed cast to reference type throws std::bad_cast
-  if (DestTy->isReferenceType()) {
-    // Emit a cir.if that checks the casted value.
-    mlir::Value castedValueIsNull = CGF.getBuilder().createPtrIsNull(castedPtr);
-    CGF.getBuilder().create<mlir::cir::IfOp>(
-        Loc, castedValueIsNull, false, [&](mlir::OpBuilder &, mlir::Location) {
-          buildBadCastCall(CGF, Loc);
-          // TODO(cir): remove this once buildBadCastCall inserts unreachable
-          CGF.getBuilder().createYield(Loc);
-        });
-  }
-
-  // Note that castedPtr is a void*. Cast it to a pointer to the destination
-  // type before return.
-  mlir::Type destCIRTy = CGF.ConvertType(DestTy);
-  return CGF.getBuilder().createBitcast(castedPtr, destCIRTy);
+  return mlir::cir::DynamicCastInfoAttr::get(srcRtti, destRtti, runtimeFuncRef,
+                                             badCastFuncRef, offsetHintAttr);
 }
 
 mlir::Value CIRGenItaniumCXXABI::buildDynamicCastToVoid(CIRGenFunction &CGF,

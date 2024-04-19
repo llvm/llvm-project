@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LoweringPrepareCXXABI.h"
 #include "PassDetail.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -24,6 +25,8 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
+
+#include <memory>
 
 using cir::CIRBaseBuilderTy;
 using namespace mlir;
@@ -68,6 +71,7 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   void runOnOp(Operation *op);
   void lowerThreeWayCmpOp(CmpThreeWayOp op);
   void lowerGlobalOp(GlobalOp op);
+  void lowerDynamicCastOp(DynamicCastOp op);
   void lowerStdFindOp(StdFindOp op);
   void lowerIterBeginOp(IterBeginOp op);
   void lowerIterEndOp(IterEndOp op);
@@ -100,7 +104,23 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   /// -----------
 
   clang::ASTContext *astCtx;
-  void setASTContext(clang::ASTContext *c) { astCtx = c; }
+  std::shared_ptr<::cir::LoweringPrepareCXXABI> cxxABI;
+
+  void setASTContext(clang::ASTContext *c) {
+    astCtx = c;
+    switch (c->getCXXABIKind()) {
+    case clang::TargetCXXABI::GenericItanium:
+    case clang::TargetCXXABI::GenericAArch64:
+    case clang::TargetCXXABI::AppleARM64:
+      // TODO: this isn't quite right, clang uses AppleARM64CXXABI which
+      // inherits from ARMCXXABI. We'll have to follow suit.
+      cxxABI.reset(::cir::LoweringPrepareCXXABI::createItaniumABI());
+      break;
+
+    default:
+      llvm_unreachable("NYI");
+    }
+  }
 
   /// Tracks current module.
   ModuleOp theModule;
@@ -377,6 +397,15 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   builder.create<ReturnOp>(f.getLoc());
 }
 
+void LoweringPreparePass::lowerDynamicCastOp(DynamicCastOp op) {
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op);
+
+  auto loweredValue = cxxABI->lowerDynamicCast(builder, op);
+  op.replaceAllUsesWith(loweredValue);
+  op.erase();
+}
+
 static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
                                        mlir::Operation *op, mlir::Type eltTy,
                                        mlir::Value arrayAddr,
@@ -507,6 +536,8 @@ void LoweringPreparePass::runOnOp(Operation *op) {
     lowerThreeWayCmpOp(threeWayCmp);
   } else if (auto getGlobal = dyn_cast<GlobalOp>(op)) {
     lowerGlobalOp(getGlobal);
+  } else if (auto dynamicCast = dyn_cast<DynamicCastOp>(op)) {
+    lowerDynamicCastOp(dynamicCast);
   } else if (auto stdFind = dyn_cast<StdFindOp>(op)) {
     lowerStdFindOp(stdFind);
   } else if (auto iterBegin = dyn_cast<IterBeginOp>(op)) {
@@ -535,8 +566,8 @@ void LoweringPreparePass::runOnOperation() {
 
   SmallVector<Operation *> opsToTransform;
   op->walk([&](Operation *op) {
-    if (isa<CmpThreeWayOp, GlobalOp, StdFindOp, IterBeginOp, IterEndOp,
-            ArrayCtor, ArrayDtor, mlir::cir::FuncOp>(op))
+    if (isa<CmpThreeWayOp, GlobalOp, DynamicCastOp, StdFindOp, IterEndOp,
+            IterBeginOp, ArrayCtor, ArrayDtor, mlir::cir::FuncOp>(op))
       opsToTransform.push_back(op);
   });
 

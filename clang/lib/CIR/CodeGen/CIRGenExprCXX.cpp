@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include <CIRGenCXXABI.h>
 #include <CIRGenFunction.h>
 #include <CIRGenModule.h>
@@ -1113,6 +1114,8 @@ mlir::Value CIRGenFunction::buildDynamicCast(Address ThisAddr,
   //   If T is "pointer to cv void," then the result is a pointer to the most
   //   derived object pointed to by v.
   bool isDynCastToVoid = destTy->isVoidPointerType();
+  bool isRefCast = destTy->isReferenceType();
+
   QualType srcRecordTy;
   QualType destRecordTy;
   if (isDynCastToVoid) {
@@ -1126,45 +1129,36 @@ mlir::Value CIRGenFunction::buildDynamicCast(Address ThisAddr,
     destRecordTy = destTy->castAs<ReferenceType>()->getPointeeType();
   }
 
+  assert(srcRecordTy->isRecordType() && "source type must be a record type!");
   buildTypeCheck(TCK_DynamicOperation, DCE->getExprLoc(), ThisAddr.getPointer(),
                  srcRecordTy);
 
   if (DCE->isAlwaysNull())
     return buildDynamicCastToNull(*this, loc, destTy);
 
-  assert(srcRecordTy->isRecordType() && "source type must be a record type!");
+  if (isDynCastToVoid) {
+    auto srcIsNull = builder.createPtrIsNull(ThisAddr.getPointer());
+    return builder
+        .create<mlir::cir::TernaryOp>(
+            loc, srcIsNull,
+            [&](mlir::OpBuilder &, mlir::Location) {
+              auto nullPtr =
+                  builder.getNullPtr(builder.getVoidPtrTy(), loc).getResult();
+              builder.createYield(loc, nullPtr);
+            },
+            [&](mlir::OpBuilder &, mlir::Location) {
+              auto castedPtr = CGM.getCXXABI().buildDynamicCastToVoid(
+                  *this, loc, ThisAddr, srcRecordTy);
+              builder.createYield(loc, castedPtr);
+            })
+        .getResult();
+  }
 
-  // C++ [expr.dynamic.cast]p4:
-  //   If the value of v is a null pointer value in the pointer case, the result
-  //   is the null pointer value of type T.
-  bool shouldNullCheckSrcValue =
-      CGM.getCXXABI().shouldDynamicCastCallBeNullChecked(srcTy->isPointerType(),
-                                                         srcRecordTy);
+  assert(destRecordTy->isRecordType() && "dest type must be a record type!");
 
-  auto buildDynamicCastAfterNullCheck = [&]() -> mlir::Value {
-    if (isDynCastToVoid)
-      return CGM.getCXXABI().buildDynamicCastToVoid(*this, loc, ThisAddr,
-                                                    srcRecordTy);
-
-    assert(destRecordTy->isRecordType() &&
-           "destination type must be a record type!");
-    return CGM.getCXXABI().buildDynamicCastCall(
-        *this, loc, ThisAddr, srcRecordTy, destTy, destRecordTy);
-  };
-
-  if (!shouldNullCheckSrcValue)
-    return buildDynamicCastAfterNullCheck();
-
-  mlir::Value srcValueIsNull = builder.createPtrIsNull(ThisAddr.getPointer());
-  return builder
-      .create<mlir::cir::TernaryOp>(
-          loc, srcValueIsNull,
-          [&](mlir::OpBuilder &, mlir::Location) {
-            builder.createYield(loc,
-                                buildDynamicCastToNull(*this, loc, destTy));
-          },
-          [&](mlir::OpBuilder &, mlir::Location) {
-            builder.createYield(loc, buildDynamicCastAfterNullCheck());
-          })
-      .getResult();
+  auto destCirTy = ConvertType(destTy).cast<mlir::cir::PointerType>();
+  auto castInfo = CGM.getCXXABI().buildDynamicCastInfo(*this, loc, srcRecordTy,
+                                                       destRecordTy);
+  return builder.createDynCast(loc, ThisAddr.getPointer(), destCirTy, isRefCast,
+                               castInfo);
 }
