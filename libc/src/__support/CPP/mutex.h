@@ -13,10 +13,12 @@ namespace LIBC_NAMESPACE {
 namespace cpp {
 
 // Assume the calling thread has already obtained mutex ownership.
-struct adopt_lock_t { explicit adopt_lock_t() = default; };
+struct adopt_lock_t {
+  explicit adopt_lock_t() = default;
+};
 
 // Tag used to make a scoped lock take ownership of a locked mutex.
-constexpr adopt_lock_t	adopt_lock { };
+constexpr adopt_lock_t adopt_lock{};
 
 // An RAII class for easy locking and unlocking of mutexes.
 template <typename MutexType> class lock_guard {
