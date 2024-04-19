@@ -73,8 +73,8 @@ Changes to the AMDGPU Backend
 -----------------------------
 
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
-* Added ``!amdgpu.no.access.location.types`` metadata to control
-  atomic behavior.
+* Added ``!amdgpu.no.fine.grained.memory`` and
+  ``!amdgpu.no.remote.memory.access`` metadata to control atomic behavior.
 
 Changes to the ARM Backend
 --------------------------
