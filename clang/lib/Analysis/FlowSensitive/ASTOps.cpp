@@ -246,4 +246,10 @@ ReferencedDecls getReferencedDecls(const FunctionDecl &FD) {
   return Result;
 }
 
+ReferencedDecls getReferencedDecls(const Stmt &S) {
+  ReferencedDecls Result;
+  getReferencedDecls(S, Result);
+  return Result;
+}
+
 } // namespace clang::dataflow
