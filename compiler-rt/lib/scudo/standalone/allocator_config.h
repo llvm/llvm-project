@@ -150,7 +150,6 @@ struct FuchsiaConfig {
 #else
     static const uptr RegionSizeLog = 30U;
     static const uptr GroupSizeLog = 21U;
-    static const bool EnableContiguousRegions = true;
 #endif
     typedef u32 CompactPtrT;
     static const bool EnableRandomOffset = true;
