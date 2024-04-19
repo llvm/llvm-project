@@ -193,7 +193,7 @@ bool isLinearizableVector(VectorType type);
 /// for each dimension of the passed in tensor.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              ArrayRef<int64_t> readShape, Value padValue,
-                             bool enableMasking = true);
+                             bool useInBoundsInsteadOfMasking = true);
 
 /// Returns success if `inputVectorSizes` is a valid masking configuraion for
 /// given `shape`, i.e., it meets:

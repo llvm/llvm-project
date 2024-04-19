@@ -330,7 +330,8 @@ bool vector::isLinearizableVector(VectorType type) {
 
 Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                      Value source, ArrayRef<int64_t> readShape,
-                                     Value padValue, bool enableMasking) {
+                                     Value padValue,
+                                     bool useInBoundsInsteadOfMasking) {
   assert(llvm::none_of(readShape,
                        [](int64_t s) { return s == ShapedType::kDynamic; }) &&
          "expected static shape");
@@ -344,7 +345,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   int64_t readRank = readShape.size();
   auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
   SmallVector<bool> inBoundsVal(readRank, true);
-  if (!enableMasking) {
+  if (!useInBoundsInsteadOfMasking) {
     // Update the inBounds attribute.
     for (unsigned i = 0; i < readRank; i++)
       inBoundsVal[i] = (sourceShape[i] == readShape[i]) &&
@@ -358,7 +359,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
       /*padding=*/padValue,
       /*inBounds=*/inBoundsVal);
 
-  if (llvm::equal(readShape, sourceShape) || !enableMasking)
+  if (llvm::equal(readShape, sourceShape) || !useInBoundsInsteadOfMasking)
     return transferReadOp;
   SmallVector<OpFoldResult> mixedSourceDims =
       tensor::getMixedSizes(builder, loc, source);
