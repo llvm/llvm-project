@@ -373,6 +373,8 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    llvm::tdl::TDLD_dira, static_cast<llvm::tdl::Directive>(0),
 // IMPL-NEXT:  };
 // IMPL-EMPTY:
+// IMPL-NEXT:  {{.*}} static auto LeafConstructTableEndDirective = LeafConstructTable + 1;
+// IMPL-EMPTY:
 // IMPL-NEXT:  {{.*}} static const int LeafConstructTableOrdering[] = {
 // IMPL-NEXT:    0,
 // IMPL-NEXT:  };
