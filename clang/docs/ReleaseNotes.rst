@@ -431,6 +431,10 @@ Bug Fixes in This Version
   during instantiation, and instead will only diagnose it once, during checking
   of the function template.
 
+- Clang now allows the value of unroll count to be zero in ``#pragma GCC unroll`` and ``#pragma unroll``.
+  The values of 0 and 1 block any unrolling of the loop. This keeps the same behavior with GCC.
+  Fixes (`#88624 <https://github.com/llvm/llvm-project/issues/88624>`_).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

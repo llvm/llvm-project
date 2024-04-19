@@ -3902,7 +3902,7 @@ static Expr *BuildFloatingLiteral(Sema &S, NumericLiteralParser &Literal,
   return FloatingLiteral::Create(S.Context, Val, isExact, Ty, Loc);
 }
 
-bool Sema::CheckLoopHintExpr(Expr *E, SourceLocation Loc) {
+bool Sema::CheckLoopHintExpr(Expr *E, SourceLocation Loc, bool AllowZero) {
   assert(E && "Invalid expression");
 
   if (E->isValueDependent())
@@ -3920,7 +3920,13 @@ bool Sema::CheckLoopHintExpr(Expr *E, SourceLocation Loc) {
   if (R.isInvalid())
     return true;
 
-  bool ValueIsPositive = ValueAPS.isStrictlyPositive();
+  // GCC allows the value of unroll count to be 0.
+  // https://gcc.gnu.org/onlinedocs/gcc/Loop-Specific-Pragmas.html says
+  // "The values of 0 and 1 block any unrolling of the loop."
+  // The values doesn't have to be strictly positive in '#pragma GCC unroll' and
+  // '#pragma unroll' cases.
+  bool ValueIsPositive =
+      AllowZero ? ValueAPS.isNonNegative() : ValueAPS.isStrictlyPositive();
   if (!ValueIsPositive || ValueAPS.getActiveBits() > 31) {
     Diag(E->getExprLoc(), diag::err_pragma_loop_invalid_argument_value)
         << toString(ValueAPS, 10) << ValueIsPositive;
