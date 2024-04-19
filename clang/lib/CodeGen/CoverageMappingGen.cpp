@@ -339,8 +339,18 @@ public:
 
     llvm::SmallSet<FileID, 8> Visited;
     SmallVector<std::pair<SourceLocation, unsigned>, 8> FileLocs;
-    for (const auto &Region : SourceRegions) {
+    for (auto &Region : SourceRegions) {
       SourceLocation Loc = Region.getBeginLoc();
+
+      // Replace Region with its definition if it is in <scratch space>.
+      while (Loc.isMacroID() &&
+             SM.isWrittenInScratchSpace(SM.getSpellingLoc(Loc))) {
+        auto ExpansionRange = SM.getImmediateExpansionRange(Loc);
+        Loc = ExpansionRange.getBegin();
+        Region.setStartLoc(Loc);
+        Region.setEndLoc(ExpansionRange.getEnd());
+      }
+
       FileID File = SM.getFileID(Loc);
       if (!Visited.insert(File).second)
         continue;
