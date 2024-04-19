@@ -501,6 +501,8 @@ private:
   /// = I + 1 has already been loaded.
   llvm::PagedVector<Decl *> DeclsLoaded;
 
+  static_assert(std::is_same_v<serialization::DeclID, Decl::DeclID>);
+
   using GlobalDeclMapType =
       ContinuousRangeMap<serialization::DeclID, ModuleFile *, 4>;
 
