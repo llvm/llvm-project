@@ -406,7 +406,8 @@ template <typename Predicate> struct api_pred_ty : public Predicate {
       }
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
-        if (auto *CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue()))
+        if (auto *CI = dyn_cast_or_null<ConstantInt>(
+                C->getSplatValue(/*AllowPoison=*/true)))
           if (this->isValue(CI->getValue())) {
             Res = &CI->getValue();
             return true;
