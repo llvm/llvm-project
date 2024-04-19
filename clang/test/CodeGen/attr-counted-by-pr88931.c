@@ -35,6 +35,6 @@ struct bux { struct mux x; };
 // CHECK-NEXT:    tail call void @init(ptr noundef [[P]], i64 noundef -1) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
-void test2(struct foo *p) {
+void test2(struct bux *p) {
   init(p);
 }
