@@ -366,7 +366,24 @@ getDeclareTargetFunctionDevice(
   return std::nullopt;
 }
 
-static llvm::SmallVector<const Fortran::semantics::Symbol *>
+/// Set up the entry block of the given `omp.loop_nest` operation, adding a
+/// block argument for each loop induction variable and allocating and
+/// initializing a private value to hold each of them.
+///
+/// This function can also bind the symbols of any variables that should match
+/// block arguments on parent loop wrapper operations attached to the same
+/// loop. This allows the introduction of any necessary `hlfir.declare`
+/// operations inside of the entry block of the `omp.loop_nest` operation and
+/// not directly under any of the wrappers, which would invalidate them.
+///
+/// \param [in]          op - the loop nest operation.
+/// \param [in]   converter - PFT to MLIR conversion interface.
+/// \param [in]         loc - location.
+/// \param [in]        args - symbols of induction variables.
+/// \param [in] wrapperSyms - symbols of variables to be mapped to loop wrapper
+///                           entry block arguments.
+/// \param [in] wrapperArgs - entry block arguments of parent loop wrappers.
+static void
 genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
             mlir::Location &loc,
             llvm::ArrayRef<const Fortran::semantics::Symbol *> args,
@@ -384,9 +401,7 @@ genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
   firOpBuilder.createBlock(&region, {}, tiv, locs);
 
   // Bind the entry block arguments of parent wrappers to the corresponding
-  // symbols. Do it here so that any hlfir.declare operations created as a
-  // result are inserted inside of the omp.loop_nest rather than the wrapper
-  // operations.
+  // symbols.
   for (auto [arg, prv] : llvm::zip_equal(wrapperSyms, wrapperArgs))
     converter.bindSymbol(*arg, prv);
 
@@ -399,7 +414,6 @@ genLoopVars(mlir::Operation *op, Fortran::lower::AbstractConverter &converter,
         createAndSetPrivatizedLoopVar(converter, loc, indexVal, argSymbol);
   }
   firOpBuilder.setInsertionPointAfter(storeOp);
-  return llvm::SmallVector<const Fortran::semantics::Symbol *>(args);
 }
 
 static void genReductionVars(
@@ -1517,7 +1531,8 @@ genSimdOp(Fortran::lower::AbstractConverter &converter,
       getCollapsedLoopEval(eval, Fortran::lower::getCollapseValue(clauseList));
 
   auto ivCallback = [&](mlir::Operation *op) {
-    return genLoopVars(op, converter, loc, iv);
+    genLoopVars(op, converter, loc, iv);
+    return iv;
   };
 
   createBodyOfOp(*loopOp,
@@ -1829,8 +1844,9 @@ genWsloopOp(Fortran::lower::AbstractConverter &converter,
       eval, Fortran::lower::getCollapseValue(beginClauseList));
 
   auto ivCallback = [&](mlir::Operation *op) {
-    return genLoopVars(op, converter, loc, iv, reductionSyms,
-                       wsloopEntryBlock->getArguments());
+    genLoopVars(op, converter, loc, iv, reductionSyms,
+                wsloopEntryBlock->getArguments());
+    return iv;
   };
 
   createBodyOfOp(*loopOp,
