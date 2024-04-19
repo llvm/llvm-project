@@ -13,24 +13,37 @@ using LIBC_NAMESPACE::cpp::lock_guard;
 
 // Simple class for testing cpp::lock_guard. It defines methods 'lock' and 
 // 'unlock' which are required for the cpp::lock_guard class template.
-class LockableObject {
-    bool locked;
+struct Mutex {
+    Mutex() : locked(false) {}
 
-public:
-    LockableObject() : locked(false) {}
-    void lock() { locked = true; }
-    void unlock() { locked = false; }
-    bool is_locked() { return locked; }
+    void lock() {
+        if (locked)
+            // Sends signal 6.
+            abort();
+        locked = true;
+    }
+
+    void unlock() { 
+        if (!locked)
+            // Sends signal 6.
+            abort();
+        locked = false;
+    }
+
+    bool locked;
 };
 
 TEST(LlvmLibcMutexTest, Basic) {
-    LockableObject obj;
-    ASSERT_FALSE(obj.is_locked());
+    Mutex m;
+    ASSERT_FALSE(m.locked);
+
+    const int SIGABRT = 5;
 
     {
-        lock_guard<LockableObject> lg(obj);
-        ASSERT_TRUE(obj.is_locked());
+        lock_guard<Mutex> lg(m);
+        ASSERT_TRUE(m.locked);
+        ASSERT_DEATH([&](){ lock_guard<Mutex> lg2(m); }, SIGABRT);
     }
 
-    ASSERT_FALSE(obj.is_locked());
+    ASSERT_FALSE(m.locked);
 }
