@@ -1629,6 +1629,7 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
         VarDeclBits.getNextBit();
 
     VD->NonParmVarDeclBits.EscapingByref = VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.CapturedByOwnInit = VarDeclBits.getNextBit();
     HasDeducedType = VarDeclBits.getNextBit();
     VD->NonParmVarDeclBits.ImplicitParamKind =
         VarDeclBits.getNextBits(/*Width*/ 3);

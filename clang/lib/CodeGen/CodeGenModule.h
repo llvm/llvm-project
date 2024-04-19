@@ -84,6 +84,7 @@ class InitSegAttr;
 
 namespace CodeGen {
 
+class BlockByrefInfo;
 class CodeGenFunction;
 class CodeGenTBAA;
 class CGCXXABI;
@@ -257,13 +258,16 @@ public:
   /// have different helper functions.
   CharUnits Alignment;
 
-  BlockByrefHelpers(CharUnits alignment)
-      : CopyHelper(nullptr), DisposeHelper(nullptr), Alignment(alignment) {}
+  /// Emit a trivial copy helper; true if the variable is NeedsInitOnHeap.
+  bool ForceNoopCopy;
+
+  BlockByrefHelpers(const BlockByrefInfo &byrefInfo);
   BlockByrefHelpers(const BlockByrefHelpers &) = default;
   virtual ~BlockByrefHelpers();
 
   void Profile(llvm::FoldingSetNodeID &id) const {
     id.AddInteger(Alignment.getQuantity());
+    id.AddInteger(ForceNoopCopy);
     profileImpl(id);
   }
   virtual void profileImpl(llvm::FoldingSetNodeID &id) const = 0;

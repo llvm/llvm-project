@@ -139,6 +139,7 @@ public:
   unsigned FieldIndex;
   CharUnits ByrefAlignment;
   CharUnits FieldOffset;
+  bool ForceNoopCopy;
 };
 
 /// Represents a type of copy/destroy operation that should be performed for an

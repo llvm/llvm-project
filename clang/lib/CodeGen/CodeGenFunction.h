@@ -2313,6 +2313,7 @@ public:
 
   class AutoVarEmission;
 
+  void emitByrefInitOnHeap(llvm::Value *P);
   void emitByrefStructureInit(const AutoVarEmission &emission);
 
   /// Enter a cleanup to destroy a __block variable.  Note that this
@@ -3356,6 +3357,14 @@ public:
     /// escaping block.
     bool IsEscapingByRef;
 
+    /// True if the variable is a __block variable that is captured by a block
+    // referenced in its own initializer.
+    bool IsCapturedByOwnInit;
+
+    /// True if the variable is a __block variable that needs to be initialized
+    /// directly on the heap.
+    bool NeedsInitOnHeap;
+
     /// True if the variable is of aggregate type and has a constant
     /// initializer.
     bool IsConstantAggregate;
@@ -3374,7 +3383,8 @@ public:
 
     AutoVarEmission(const VarDecl &variable)
         : Variable(&variable), Addr(Address::invalid()), NRVOFlag(nullptr),
-          IsEscapingByRef(false), IsConstantAggregate(false),
+          IsEscapingByRef(false), IsCapturedByOwnInit(false),
+          NeedsInitOnHeap(false), IsConstantAggregate(false),
           SizeForLifetimeMarkers(nullptr), AllocaAddr(RawAddress::invalid()) {}
 
     bool wasEmittedAsGlobal() const { return !Addr.isValid(); }

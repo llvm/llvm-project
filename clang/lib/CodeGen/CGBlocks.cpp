@@ -45,6 +45,13 @@ CGBlockInfo::CGBlockInfo(const BlockDecl *block, StringRef name)
     name = name.substr(1);
 }
 
+BlockByrefHelpers::BlockByrefHelpers(const BlockByrefInfo &info)
+    : CopyHelper(nullptr), DisposeHelper(nullptr),
+      // The alignment we care about for the purposes of uniquing byref
+      // helpers is the alignment of the actual byref value field.
+      Alignment(info.ByrefAlignment.alignmentAtOffset(info.FieldOffset)),
+      ForceNoopCopy(info.ForceNoopCopy) {}
+
 // Anchor the vtable to this translation unit.
 BlockByrefHelpers::~BlockByrefHelpers() {}
 
@@ -2127,8 +2134,8 @@ class ObjectByrefHelpers final : public BlockByrefHelpers {
   BlockFieldFlags Flags;
 
 public:
-  ObjectByrefHelpers(CharUnits alignment, BlockFieldFlags flags)
-    : BlockByrefHelpers(alignment), Flags(flags) {}
+  ObjectByrefHelpers(const BlockByrefInfo &info, BlockFieldFlags flags)
+      : BlockByrefHelpers(info), Flags(flags) {}
 
   void emitCopy(CodeGenFunction &CGF, Address destField,
                 Address srcField) override {
@@ -2161,7 +2168,7 @@ public:
 /// Emits the copy/dispose helpers for an ARC __block __weak variable.
 class ARCWeakByrefHelpers final : public BlockByrefHelpers {
 public:
-  ARCWeakByrefHelpers(CharUnits alignment) : BlockByrefHelpers(alignment) {}
+  ARCWeakByrefHelpers(const BlockByrefInfo &info) : BlockByrefHelpers(info) {}
 
   void emitCopy(CodeGenFunction &CGF, Address destField,
                 Address srcField) override {
@@ -2182,7 +2189,7 @@ public:
 /// that's not of block-pointer type.
 class ARCStrongByrefHelpers final : public BlockByrefHelpers {
 public:
-  ARCStrongByrefHelpers(CharUnits alignment) : BlockByrefHelpers(alignment) {}
+  ARCStrongByrefHelpers(const BlockByrefInfo &info) : BlockByrefHelpers(info) {}
 
   void emitCopy(CodeGenFunction &CGF, Address destField,
                 Address srcField) override {
@@ -2218,8 +2225,8 @@ public:
 /// variable that's of block-pointer type.
 class ARCStrongBlockByrefHelpers final : public BlockByrefHelpers {
 public:
-  ARCStrongBlockByrefHelpers(CharUnits alignment)
-    : BlockByrefHelpers(alignment) {}
+  ARCStrongBlockByrefHelpers(const BlockByrefInfo &info)
+      : BlockByrefHelpers(info) {}
 
   void emitCopy(CodeGenFunction &CGF, Address destField,
                 Address srcField) override {
@@ -2248,9 +2255,9 @@ class CXXByrefHelpers final : public BlockByrefHelpers {
   const Expr *CopyExpr;
 
 public:
-  CXXByrefHelpers(CharUnits alignment, QualType type,
+  CXXByrefHelpers(const BlockByrefInfo &info, QualType type,
                   const Expr *copyExpr)
-    : BlockByrefHelpers(alignment), VarType(type), CopyExpr(copyExpr) {}
+      : BlockByrefHelpers(info), VarType(type), CopyExpr(copyExpr) {}
 
   bool needsCopy() const override { return CopyExpr != nullptr; }
   void emitCopy(CodeGenFunction &CGF, Address destField,
@@ -2276,8 +2283,8 @@ class NonTrivialCStructByrefHelpers final : public BlockByrefHelpers {
   QualType VarType;
 
 public:
-  NonTrivialCStructByrefHelpers(CharUnits alignment, QualType type)
-    : BlockByrefHelpers(alignment), VarType(type) {}
+  NonTrivialCStructByrefHelpers(const BlockByrefInfo &info, QualType type)
+      : BlockByrefHelpers(info), VarType(type) {}
 
   void emitCopy(CodeGenFunction &CGF, Address destField,
                 Address srcField) override {
@@ -2336,7 +2343,7 @@ generateByrefCopyHelper(CodeGenFunction &CGF, const BlockByrefInfo &byrefInfo,
     // Create a scope with an artificial location for the body of this function.
   auto AL = ApplyDebugLocation::CreateArtificial(CGF);
 
-  if (generator.needsCopy()) {
+  if (generator.needsCopy() && !generator.ForceNoopCopy) {
     // dst->x
     Address destField = CGF.GetAddrOfLocalVar(&Dst);
     destField = Address(CGF.Builder.CreateLoad(destField), byrefInfo.Type,
@@ -2458,26 +2465,21 @@ CodeGenFunction::buildByrefHelpers(llvm::StructType &byrefType,
 
   auto &byrefInfo = getBlockByrefInfo(&var);
 
-  // The alignment we care about for the purposes of uniquing byref
-  // helpers is the alignment of the actual byref value field.
-  CharUnits valueAlignment =
-    byrefInfo.ByrefAlignment.alignmentAtOffset(byrefInfo.FieldOffset);
-
   if (const CXXRecordDecl *record = type->getAsCXXRecordDecl()) {
     const Expr *copyExpr =
         CGM.getContext().getBlockVarCopyInit(&var).getCopyExpr();
     if (!copyExpr && record->hasTrivialDestructor()) return nullptr;
 
-    return ::buildByrefHelpers(
-        CGM, byrefInfo, CXXByrefHelpers(valueAlignment, type, copyExpr));
+    return ::buildByrefHelpers(CGM, byrefInfo,
+                               CXXByrefHelpers(byrefInfo, type, copyExpr));
   }
 
   // If type is a non-trivial C struct type that is non-trivial to
   // destructly move or destroy, build the copy and dispose helpers.
   if (type.isNonTrivialToPrimitiveDestructiveMove() == QualType::PCK_Struct ||
       type.isDestructedType() == QualType::DK_nontrivial_c_struct)
-    return ::buildByrefHelpers(
-        CGM, byrefInfo, NonTrivialCStructByrefHelpers(valueAlignment, type));
+    return ::buildByrefHelpers(CGM, byrefInfo,
+                               NonTrivialCStructByrefHelpers(byrefInfo, type));
 
   // Otherwise, if we don't have a retainable type, there's nothing to do.
   // that the runtime does extra copies.
@@ -2499,7 +2501,7 @@ CodeGenFunction::buildByrefHelpers(llvm::StructType &byrefType,
     // byref routines.
     case Qualifiers::OCL_Weak:
       return ::buildByrefHelpers(CGM, byrefInfo,
-                                 ARCWeakByrefHelpers(valueAlignment));
+                                 ARCWeakByrefHelpers(byrefInfo));
 
     // ARC __strong __block variables need to be retained.
     case Qualifiers::OCL_Strong:
@@ -2507,13 +2509,13 @@ CodeGenFunction::buildByrefHelpers(llvm::StructType &byrefType,
       // transfer possible.
       if (type->isBlockPointerType()) {
         return ::buildByrefHelpers(CGM, byrefInfo,
-                                   ARCStrongBlockByrefHelpers(valueAlignment));
+                                   ARCStrongBlockByrefHelpers(byrefInfo));
 
-      // Otherwise, we transfer ownership of the retain from the stack
-      // to the heap.
+        // Otherwise, we transfer ownership of the retain from the stack
+        // to the heap.
       } else {
         return ::buildByrefHelpers(CGM, byrefInfo,
-                                   ARCStrongByrefHelpers(valueAlignment));
+                                   ARCStrongByrefHelpers(byrefInfo));
       }
     }
     llvm_unreachable("fell out of lifetime switch!");
@@ -2533,7 +2535,7 @@ CodeGenFunction::buildByrefHelpers(llvm::StructType &byrefType,
     flags |= BLOCK_FIELD_IS_WEAK;
 
   return ::buildByrefHelpers(CGM, byrefInfo,
-                             ObjectByrefHelpers(valueAlignment, flags));
+                             ObjectByrefHelpers(byrefInfo, flags));
 }
 
 Address CodeGenFunction::emitBlockByrefAddress(Address baseAddr,
@@ -2653,9 +2655,37 @@ const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
   info.FieldOffset = varOffset;
   info.ByrefAlignment = std::max(varAlign, getPointerAlign());
 
+  // If we're initializing directly on the heap, then we should emit a
+  // no-op copy helper, both because we don't need a real one (the
+  // object will never move), and because a real one would break the
+  // pre-init _Block_object_assign.
+  info.ForceNoopCopy = D->needsInitOnHeap();
+
   auto pair = BlockByrefInfos.insert({D, info});
   assert(pair.second && "info was inserted recursively?");
   return pair.first->second;
+}
+
+void CodeGenFunction::emitByrefInitOnHeap(llvm::Value *P) {
+  // The object itself is initialized directly on the heap.  But for ABI
+  // backwards compatibility reasons, we have to set up a fake byref struct on
+  // the stack (with the structural components initialized but not the object
+  // itself), then call _Block_object_assign to move it to the heap (which is
+  // safe because we forced a no-op copy helper), then call
+  // _Block_object_dispose to release the extra ref from _Block_object_assign.
+  //
+  // 'P' points to the fake byref struct.
+
+  BlockFieldFlags flags = BLOCK_FIELD_IS_BYREF;
+  // Ignored out-parameter.  We'll use the forwarding pointer instead.
+  RawAddress out = CreateDefaultAlignTempAlloca(P->getType(), "initOnHeap.out");
+
+  llvm::Value *args[] = {Builder.CreateBitCast(out.getPointer(), VoidPtrTy),
+                         Builder.CreateBitCast(P, VoidPtrTy),
+                         llvm::ConstantInt::get(Int32Ty, flags.getBitMask())};
+  EmitNounwindRuntimeCall(CGM.getBlockObjectAssign(), args);
+
+  BuildBlockRelease(P, flags, false);
 }
 
 /// Initialize the structural components of a __block variable, i.e.
@@ -2699,8 +2729,8 @@ void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
   storeHeaderField(V, getPointerSize(), "byref.isa");
 
   // Store the address of the variable into its own forwarding pointer.
-  storeHeaderField(addr.emitRawPointer(*this), getPointerSize(),
-                   "byref.forwarding");
+  llvm::Value *pointer = addr.emitRawPointer(*this);
+  storeHeaderField(pointer, getPointerSize(), "byref.forwarding");
 
   // Blocks ABI:
   //   c) the flags field is set to either 0 if no helper functions are
@@ -2764,6 +2794,9 @@ void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
     auto layoutInfo = CGM.getObjCRuntime().BuildByrefLayout(CGM, type);
     storeHeaderField(layoutInfo, getPointerSize(), "byref.layout");
   }
+
+  if (emission.NeedsInitOnHeap)
+    emitByrefInitOnHeap(pointer);
 }
 
 void CodeGenFunction::BuildBlockRelease(llvm::Value *V, BlockFieldFlags flags,
