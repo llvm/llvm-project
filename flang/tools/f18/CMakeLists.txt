@@ -8,7 +8,7 @@ set(LLVM_LINK_COMPONENTS
 # to produce an object file for inclusion into the FortranRuntime
 # library.
 set(MODULES_WITH_IMPLEMENTATION
-  "__fortran_builtin_kinds"
+  "iso_fortran_env_impl"
 )
 
 # Define the list of Fortran module files for which it is
@@ -57,7 +57,7 @@ if (NOT CMAKE_CROSSCOMPILING)
         set(depends ${depends} ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_type_info.mod)
       endif()
       if(${filename} STREQUAL "iso_fortran_env")
-        set(depends ${depends} ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtin_kinds.mod)
+        set(depends ${depends} ${FLANG_INTRINSIC_MODULES_DIR}/iso_fortran_env_impl.mod)
       endif()
       if(${filename} STREQUAL "ieee_arithmetic" OR
          ${filename} STREQUAL "ieee_exceptions")
@@ -83,8 +83,8 @@ if (NOT CMAKE_CROSSCOMPILING)
     set(object_output "")
     set(include_in_link FALSE)
     if(${filename} IN_LIST MODULES_WITH_IMPLEMENTATION)
-      set(compile_with "-c")
       set(object_output "${CMAKE_CURRENT_BINARY_DIR}/${filename}${CMAKE_CXX_OUTPUT_EXTENSION}")
+      set(compile_with -c -o ${object_output})
       set(include_in_link TRUE)
     endif()
 

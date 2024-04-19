@@ -6,7 +6,11 @@
 !
 !===------------------------------------------------------------------------===!
 
-module __fortran_builtin_kinds
+! This MODULE implements part of the ISO_FORTRAN_ENV module file, which
+! partially requires linkable symbols for some entities defined
+! (e.g., real_kinds).
+
+module iso_fortran_env_impl
   implicit none
   private
 
@@ -107,4 +111,4 @@ module __fortran_builtin_kinds
       pack([real64x2], real64x2 >= 0), &
       pack([real128], real128 >= 0) &
     ]
-end module __fortran_builtin_kinds
+end module iso_fortran_env_impl

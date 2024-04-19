@@ -22,7 +22,7 @@ module iso_fortran_env
     compiler_options => __builtin_compiler_options, &
     compiler_version => __builtin_compiler_version
 
-  use __fortran_builtin_kinds, only: &
+  use iso_fortran_env_impl, only: &
     selectedInt8, selectedInt16, selectedInt32, selectedInt64, selectedInt128, &
     safeInt8, safeInt16, safeInt32, safeInt64, safeInt128, &
     int8, int16, int32, int64, int128, &
