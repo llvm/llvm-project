@@ -1176,9 +1176,8 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
 CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name) {
   if (name.empty())
     return CompilerType();
-  auto type_system = GetTypeSystem(/*prefer_dynamic*/ false);
-  return type_system->GetDirectNestedTypeWithName(
-      m_static_type.GetOpaqueQualType(), name);
+  return GetCompilerType(/*prefer_dynamic=*/false)
+      .GetDirectNestedTypeWithName(name);
 }
 
 bool TypeMemberFunctionImpl::IsValid() {
