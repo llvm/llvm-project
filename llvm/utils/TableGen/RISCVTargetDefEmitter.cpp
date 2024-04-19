@@ -27,7 +27,7 @@ static void printMArch(raw_ostream &OS, const Record &Rec) {
   std::map<std::string, std::pair<unsigned, unsigned>,
            RISCVISAInfo::ExtensionComparator>
       Extensions;
-  unsigned XLen = 32;
+  unsigned XLen = 0;
 
   // Convert features to FeatureVector.
   for (auto *Feature : Rec.getValueAsListOfDefs("Features")) {
@@ -36,9 +36,16 @@ static void printMArch(raw_ostream &OS, const Record &Rec) {
       unsigned Major = Feature->getValueAsInt("MajorVersion");
       unsigned Minor = Feature->getValueAsInt("MinorVersion");
       Extensions.try_emplace(FeatureName.str(), Major, Minor);
-    } else if (FeatureName == "64bit")
+    } else if (FeatureName == "64bit") {
+      assert(XLen == 0 && "Already determined XLen");
       XLen = 64;
+    } else if (FeatureName == "32bit") {
+      assert(XLen == 0 && "Already determined XLen");
+      XLen = 32;
+    }
   }
+
+  assert(XLen != 0 && "Unable to determine XLen");
 
   OS << "rv" << XLen;
 
