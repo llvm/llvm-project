@@ -64,5 +64,5 @@ add_custom_target(libcxx-generate-files
             libcxx-generate-extended-grapheme-cluster-tests
             libcxx-generate-escaped-output-table
             libcxx-generate-width-estimation-table
-			libcxx-indic-conjunct-break-table
+            libcxx-indic-conjunct-break-table
     COMMENT "Create all the auto-generated files in libc++ and its tests.")
