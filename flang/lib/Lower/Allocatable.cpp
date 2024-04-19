@@ -859,18 +859,20 @@ genDeallocate(fir::FirOpBuilder &builder,
 void Fortran::lower::genDeallocateBox(
     Fortran::lower::AbstractConverter &converter,
     const fir::MutableBoxValue &box, mlir::Location loc,
-    mlir::Value declaredTypeDesc) {
+    const Fortran::semantics::Symbol *sym, mlir::Value declaredTypeDesc) {
   const Fortran::lower::SomeExpr *statExpr = nullptr;
   const Fortran::lower::SomeExpr *errMsgExpr = nullptr;
   ErrorManager errorManager;
   errorManager.init(converter, loc, statExpr, errMsgExpr);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  genDeallocate(builder, converter, loc, box, errorManager, declaredTypeDesc);
+  genDeallocate(builder, converter, loc, box, errorManager, declaredTypeDesc,
+                sym);
 }
 
 void Fortran::lower::genDeallocateIfAllocated(
     Fortran::lower::AbstractConverter &converter,
-    const fir::MutableBoxValue &box, mlir::Location loc) {
+    const fir::MutableBoxValue &box, mlir::Location loc,
+    const Fortran::semantics::Symbol *sym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Value isAllocated =
       fir::factory::genIsAllocatedOrAssociatedTest(builder, loc, box);
@@ -880,9 +882,9 @@ void Fortran::lower::genDeallocateIfAllocated(
             eleType.isa<fir::RecordType>() && box.isPolymorphic()) {
           mlir::Value declaredTypeDesc = builder.create<fir::TypeDescOp>(
               loc, mlir::TypeAttr::get(eleType));
-          genDeallocateBox(converter, box, loc, declaredTypeDesc);
+          genDeallocateBox(converter, box, loc, sym, declaredTypeDesc);
         } else {
-          genDeallocateBox(converter, box, loc);
+          genDeallocateBox(converter, box, loc, sym);
         }
       })
       .end();
