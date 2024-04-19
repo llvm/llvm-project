@@ -40,7 +40,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
                      StringRef ABIName) {
   auto TargetABI = getTargetABI(ABIName);
   bool IsRV64 = TT.isArch64Bit();
-  bool IsRVE = FeatureBits[RISCV::FeatureRVE];
+  bool IsRVE = FeatureBits[RISCV::FeatureStdExtE];
 
   if (!ABIName.empty() && TargetABI == ABI_Unknown) {
     errs()
