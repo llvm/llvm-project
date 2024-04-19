@@ -69,10 +69,7 @@ void InitOnlyAction::ExecuteAction() {
 
 // Basically PreprocessOnlyAction::ExecuteAction.
 void ReadPCHAndPreprocessAction::ExecuteAction() {
-  CompilerInstance &CI = getCompilerInstance();
-  AdjustCI(CI);
-
-  Preprocessor &PP = CI.getPreprocessor();
+  Preprocessor &PP = getCompilerInstance().getPreprocessor();
 
   // Ignore unknown pragmas.
   PP.IgnorePragmas();
@@ -284,6 +281,13 @@ GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
   if (Consumers.empty())
     return nullptr;
 
+  if (CI.getFrontendOpts().GenReducedBMI &&
+      !CI.getFrontendOpts().ModuleOutputPath.empty()) {
+    Consumers.push_back(std::make_unique<ReducedBMIGenerator>(
+        CI.getPreprocessor(), CI.getModuleCache(),
+        CI.getFrontendOpts().ModuleOutputPath));
+  }
+
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
@@ -453,6 +457,8 @@ private:
       return "BuildingBuiltinDumpStructCall";
     case CodeSynthesisContext::BuildingDeductionGuides:
       return "BuildingDeductionGuides";
+    case CodeSynthesisContext::TypeAliasTemplateInstantiation:
+      return "TypeAliasTemplateInstantiation";
     }
     return "";
   }
@@ -1191,8 +1197,6 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
 
 void GetDependenciesByModuleNameAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
-  AdjustCI(CI);
-
   Preprocessor &PP = CI.getPreprocessor();
   SourceManager &SM = PP.getSourceManager();
   FileID MainFileID = SM.getMainFileID();
