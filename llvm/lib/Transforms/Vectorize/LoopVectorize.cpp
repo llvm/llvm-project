@@ -9349,7 +9349,6 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
     if (CreateGather) {
       NewLI = Builder.CreateMaskedGather(DataTy, Addr, Alignment, Mask, nullptr,
                                          "wide.masked.gather");
-      State.addMetadata(NewLI, LI);
     } else if (Mask) {
       NewLI = Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
                                        PoisonValue::get(DataTy),
@@ -9398,7 +9397,6 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   }
   NewLI->addParamAttr(
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
-
   State.addMetadata(NewLI, LI);
   State.set(this, NewLI, 0);
 }
@@ -9433,14 +9431,12 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
       // another expression. So don't call resetVectorValue(StoredVal).
     }
     Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateScatter);
-    if (CreateScatter) {
+    if (CreateScatter)
       NewSI = Builder.CreateMaskedScatter(StoredVal, Addr, Alignment, Mask);
-    } else {
-      if (Mask)
-        NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
-      else
-        NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
-    }
+    else if (Mask)
+      NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
+    else
+      NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
     State.addMetadata(NewSI, SI);
   }
 }
@@ -9481,9 +9477,9 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   }
   NewSI->addParamAttr(
       1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
-
   State.addMetadata(NewSI, SI);
 }
+
 // Determine how to lower the scalar epilogue, which depends on 1) optimising
 // for minimum code-size, 2) predicate compiler options, 3) loop hints forcing
 // predication, and 4) a TTI hook that analyses whether the loop is suitable

@@ -2398,9 +2398,9 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
 /// mask.
 struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe *L, VPValue *EVL, VPValue *Mask)
-      : VPWidenMemoryRecipe(
-            VPDef::VPWidenLoadEVLSC, *cast<LoadInst>(&L->getIngredient()),
-            {L->getAddr(), EVL}, L->isConsecutive(), false, L->getDebugLoc()),
+      : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L->getIngredient(),
+                            {L->getAddr(), EVL}, L->isConsecutive(), false,
+                            L->getDebugLoc()),
         VPValue(this, &getIngredient()) {
     setMask(Mask);
   }

@@ -1215,7 +1215,7 @@ static SmallVector<VPValue *> collectAllHeaderMasks(VPlan &Plan) {
   assert(count_if(Plan.getCanonicalIV()->users(),
                   [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); }) <=
              1 &&
-         "Must at most one VPWideCanonicalIVRecipe");
+         "Must have at most one VPWideCanonicalIVRecipe");
   if (FoundWidenCanonicalIVUser != Plan.getCanonicalIV()->users().end()) {
     auto *WideCanonicalIV =
         cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
@@ -1280,10 +1280,8 @@ void VPlanTransforms::addActiveLaneMask(
   // Walk users of WideCanonicalIV and replace all compares of the form
   // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with an
   // active-lane-mask.
-  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
+  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan))
     HeaderMask->replaceAllUsesWith(LaneMask);
-    recursivelyDeleteDeadRecipes(HeaderMask);
-  }
 }
 
 /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
