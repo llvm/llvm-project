@@ -4365,44 +4365,31 @@ void SwiftASTContext::RegisterSectionModules(
     }
   };
 
-  if (auto section_sp =
-          section_list->FindSectionByType(eSectionTypeSwiftModules, true)) {
-    DataExtractor section_data;
+  if (m_ast_file_data_map.find(&module) != m_ast_file_data_map.end())
+    return;
 
-    if (section_sp->GetSectionData(section_data)) {
-      llvm::StringRef section_data_ref(
-          (const char *)section_data.GetDataStart(),
-          section_data.GetByteSize());
-      parse_ast_section(section_data_ref, 1, 1);
-    }
-  } else {
-    if (m_ast_file_data_map.find(&module) != m_ast_file_data_map.end())
-      return;
+  // Grab all the AST blobs from the symbol vendor.
+  auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
+  LOG_PRINTF(GetLog(LLDBLog::Types),
+             "(\"%s\") retrieved %zu AST Data blobs from the symbol vendor "
+             "(filter=\"%s\").",
+             GetBriefModuleName(module).c_str(), ast_file_datas.size(),
+             filter.str().c_str());
 
-    // Grab all the AST blobs from the symbol vendor.
-    auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
-    LOG_PRINTF(GetLog(LLDBLog::Types),
-               "(\"%s\") retrieved %zu AST Data blobs from the symbol vendor "
-               "(filter=\"%s\").",
-               GetBriefModuleName(module).c_str(), ast_file_datas.size(),
-               filter.str().c_str());
+  // Add each of the AST blobs to the vector of AST blobs for
+  // the module.
+  auto &ast_vector = GetASTVectorForModule(&module);
+  ast_vector.insert(ast_vector.end(), ast_file_datas.begin(),
+                    ast_file_datas.end());
 
-    // Add each of the AST blobs to the vector of AST blobs for
-    // the module.
-    auto &ast_vector = GetASTVectorForModule(&module);
-    ast_vector.insert(ast_vector.end(), ast_file_datas.begin(),
-                      ast_file_datas.end());
-
-    // Retrieve the module names from the AST blobs retrieved
-    // from the symbol vendor.
-    size_t i = 0;
-    for (auto ast_file_data_sp : ast_file_datas) {
-      // Parse the AST section info from the AST blob.
-      llvm::StringRef section_data_ref(
-          (const char *)ast_file_data_sp->GetBytes(),
-          ast_file_data_sp->GetByteSize());
-      parse_ast_section(section_data_ref, ++i, ast_file_datas.size());
-    }
+  // Retrieve the module names from the AST blobs retrieved
+  // from the symbol vendor.
+  size_t i = 0;
+  for (auto ast_file_data_sp : ast_file_datas) {
+    // Parse the AST section info from the AST blob.
+    llvm::StringRef section_data_ref((const char *)ast_file_data_sp->GetBytes(),
+                                     ast_file_data_sp->GetByteSize());
+    parse_ast_section(section_data_ref, ++i, ast_file_datas.size());
   }
 }
 
