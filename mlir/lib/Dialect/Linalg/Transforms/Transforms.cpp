@@ -557,7 +557,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
       Value dest = tensor::PackOp::createDestinationTensor(
           rewriter, loc, operand, innerPackSizes, innerPos,
           /*outerDimsPerm=*/{});
-      ShapedType operandType = operand.getType().cast<ShapedType>();
+      ShapedType operandType = cast<ShapedType>(operand.getType());
       bool areConstantTiles =
           llvm::all_of(innerPackSizes, [](OpFoldResult tile) {
             return getConstantIntValue(tile).has_value();
@@ -565,7 +565,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
       if (areConstantTiles && operandType.hasStaticShape() &&
           !tensor::PackOp::requirePaddingValue(
               operandType.getShape(), innerPos,
-              dest.getType().cast<ShapedType>().getShape(), {},
+              cast<ShapedType>(dest.getType()).getShape(), {},
               innerPackSizes)) {
         packOps.push_back(rewriter.create<tensor::PackOp>(
             loc, operand, dest, innerPos, innerPackSizes));

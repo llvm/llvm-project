@@ -65,7 +65,7 @@ static Value castF32To(Type elementType, Value f32, Location loc,
 
 LogicalResult ExtFOnFloat8RewritePattern::match(arith::ExtFOp op) const {
   Type inType = op.getIn().getType();
-  if (auto inVecType = inType.dyn_cast<VectorType>()) {
+  if (auto inVecType = dyn_cast<VectorType>(inType)) {
     if (inVecType.isScalable())
       return failure();
     if (inVecType.getShape().size() > 1)
@@ -81,13 +81,13 @@ void ExtFOnFloat8RewritePattern::rewrite(arith::ExtFOp op,
   Location loc = op.getLoc();
   Value in = op.getIn();
   Type outElemType = getElementTypeOrSelf(op.getOut().getType());
-  if (!in.getType().isa<VectorType>()) {
+  if (!isa<VectorType>(in.getType())) {
     Value asFloat = rewriter.create<amdgpu::ExtPackedFp8Op>(
         loc, rewriter.getF32Type(), in, 0);
     Value result = castF32To(outElemType, asFloat, loc, rewriter);
     return rewriter.replaceOp(op, result);
   }
-  VectorType inType = in.getType().cast<VectorType>();
+  VectorType inType = cast<VectorType>(in.getType());
   int64_t numElements = inType.getNumElements();
   Value zero = rewriter.create<arith::ConstantOp>(
       loc, outElemType, rewriter.getFloatAttr(outElemType, 0.0));
@@ -179,7 +179,7 @@ LogicalResult TruncFToFloat8RewritePattern::match(arith::TruncFOp op) const {
   if (op.getRoundingmodeAttr())
     return failure();
   Type outType = op.getOut().getType();
-  if (auto outVecType = outType.dyn_cast<VectorType>()) {
+  if (auto outVecType = dyn_cast<VectorType>(outType)) {
     if (outVecType.isScalable())
       return failure();
     if (outVecType.getShape().size() > 1)
@@ -202,7 +202,7 @@ void TruncFToFloat8RewritePattern::rewrite(arith::TruncFOp op,
   if (saturateFP8)
     in = clampInput(rewriter, loc, outElemType, in);
   VectorType truncResType = VectorType::get(4, outElemType);
-  if (!in.getType().isa<VectorType>()) {
+  if (!isa<VectorType>(in.getType())) {
     Value asFloat = castToF32(in, loc, rewriter);
     Value asF8s = rewriter.create<amdgpu::PackedTrunc2xFp8Op>(
         loc, truncResType, asFloat, /*sourceB=*/nullptr, 0,
@@ -210,7 +210,7 @@ void TruncFToFloat8RewritePattern::rewrite(arith::TruncFOp op,
     Value result = rewriter.create<vector::ExtractOp>(loc, asF8s, 0);
     return rewriter.replaceOp(op, result);
   }
-  VectorType outType = op.getOut().getType().cast<VectorType>();
+  VectorType outType = cast<VectorType>(op.getOut().getType());
   int64_t numElements = outType.getNumElements();
   Value zero = rewriter.create<arith::ConstantOp>(
       loc, outElemType, rewriter.getFloatAttr(outElemType, 0.0));

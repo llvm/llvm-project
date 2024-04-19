@@ -820,7 +820,7 @@ struct DimOfDestStyleOp : public OpRewritePattern<DimOp> {
     if (!destOp)
       return failure();
 
-    auto resultIndex = source.cast<OpResult>().getResultNumber();
+    auto resultIndex = cast<OpResult>(source).getResultNumber();
     auto *initOperand = destOp.getDpsInitOperand(resultIndex);
 
     rewriter.modifyOpInPlace(
@@ -3475,7 +3475,7 @@ SplatOp::reifyResultShapes(OpBuilder &builder,
 
 OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
   auto constOperand = adaptor.getInput();
-  if (!constOperand.isa_and_nonnull<IntegerAttr, FloatAttr>())
+  if (!isa_and_nonnull<IntegerAttr, FloatAttr>(constOperand))
     return {};
 
   // Do not fold if the splat is not statically shaped
@@ -4307,7 +4307,7 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
   /// unpack(destinationStyleOp(x)) -> unpack(x)
   if (auto dstStyleOp =
           unPackOp.getDest().getDefiningOp<DestinationStyleOpInterface>()) {
-    auto destValue = unPackOp.getDest().cast<OpResult>();
+    auto destValue = cast<OpResult>(unPackOp.getDest());
     Value newDest = dstStyleOp.getDpsInits()[destValue.getResultNumber()];
     rewriter.modifyOpInPlace(unPackOp,
                              [&]() { unPackOp.setDpsInitOperand(0, newDest); });

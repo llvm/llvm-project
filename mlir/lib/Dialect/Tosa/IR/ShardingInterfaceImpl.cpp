@@ -32,7 +32,7 @@ namespace {
 struct MatMulOpSharding
     : public ShardingInterface::ExternalModel<MatMulOpSharding, MatMulOp> {
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
-    auto tensorType = op->getResult(0).getType().dyn_cast<RankedTensorType>();
+    auto tensorType = dyn_cast<RankedTensorType>(op->getResult(0).getType());
     if (!tensorType)
       return {};
 
@@ -48,7 +48,7 @@ struct MatMulOpSharding
   }
 
   SmallVector<AffineMap> getIndexingMaps(Operation *op) const {
-    auto tensorType = op->getResult(0).getType().dyn_cast<RankedTensorType>();
+    auto tensorType = dyn_cast<RankedTensorType>(op->getResult(0).getType());
     if (!tensorType)
       return {};
     MLIRContext *ctx = op->getContext();

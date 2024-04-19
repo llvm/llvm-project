@@ -354,7 +354,7 @@ static WalkResult loadOperation(
 
     // Gather the variadicities of each result
     for (Attribute attr : resultsOp->getVariadicity())
-      resultVariadicity.push_back(attr.cast<VariadicityAttr>().getValue());
+      resultVariadicity.push_back(cast<VariadicityAttr>(attr).getValue());
   }
 
   // Gather which constraint slots correspond to attributes constraints
@@ -367,7 +367,7 @@ static WalkResult loadOperation(
     for (const auto &[name, value] : llvm::zip(names, values)) {
       for (auto [i, constr] : enumerate(constrToValue)) {
         if (constr == value) {
-          attributesContraints[name.cast<StringAttr>()] = i;
+          attributesContraints[cast<StringAttr>(name)] = i;
           break;
         }
       }

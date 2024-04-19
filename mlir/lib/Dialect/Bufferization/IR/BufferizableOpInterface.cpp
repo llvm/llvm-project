@@ -684,7 +684,7 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options,
 
   // Op is not bufferizable.
   auto memSpace =
-      options.defaultMemorySpaceFn(value.getType().cast<TensorType>());
+      options.defaultMemorySpaceFn(cast<TensorType>(value.getType()));
   if (!memSpace.has_value())
     return op->emitError("could not infer memory space");
 
@@ -939,7 +939,7 @@ FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
   // If we do not know the memory space and there is no default memory space,
   // report a failure.
   auto memSpace =
-      options.defaultMemorySpaceFn(value.getType().cast<TensorType>());
+      options.defaultMemorySpaceFn(cast<TensorType>(value.getType()));
   if (!memSpace.has_value())
     return op->emitError("could not infer memory space");
 
@@ -987,7 +987,7 @@ bufferization::detail::unknownGetAliasingValues(OpOperand &opOperand) {
   for (Region &region : opOperand.getOwner()->getRegions())
     if (!region.getBlocks().empty())
       for (BlockArgument bbArg : region.getBlocks().front().getArguments())
-        if (bbArg.getType().isa<TensorType>())
+        if (isa<TensorType>(bbArg.getType()))
           r.addAlias({bbArg, BufferRelation::Unknown, /*isDefinite=*/false});
   return r;
 }

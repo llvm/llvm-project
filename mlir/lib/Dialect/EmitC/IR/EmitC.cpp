@@ -160,13 +160,13 @@ LogicalResult AddOp::verify() {
   Type lhsType = getLhs().getType();
   Type rhsType = getRhs().getType();
 
-  if (lhsType.isa<emitc::PointerType>() && rhsType.isa<emitc::PointerType>())
+  if (isa<emitc::PointerType>(lhsType) && isa<emitc::PointerType>(rhsType))
     return emitOpError("requires that at most one operand is a pointer");
 
-  if ((lhsType.isa<emitc::PointerType>() &&
-       !rhsType.isa<IntegerType, emitc::OpaqueType>()) ||
-      (rhsType.isa<emitc::PointerType>() &&
-       !lhsType.isa<IntegerType, emitc::OpaqueType>()))
+  if ((isa<emitc::PointerType>(lhsType) &&
+       !isa<IntegerType, emitc::OpaqueType>(rhsType)) ||
+      (isa<emitc::PointerType>(rhsType) &&
+       !isa<IntegerType, emitc::OpaqueType>(lhsType)))
     return emitOpError("requires that one operand is an integer or of opaque "
                        "type if the other is a pointer");
 
@@ -778,16 +778,16 @@ LogicalResult SubOp::verify() {
   Type rhsType = getRhs().getType();
   Type resultType = getResult().getType();
 
-  if (rhsType.isa<emitc::PointerType>() && !lhsType.isa<emitc::PointerType>())
+  if (isa<emitc::PointerType>(rhsType) && !isa<emitc::PointerType>(lhsType))
     return emitOpError("rhs can only be a pointer if lhs is a pointer");
 
-  if (lhsType.isa<emitc::PointerType>() &&
-      !rhsType.isa<IntegerType, emitc::OpaqueType, emitc::PointerType>())
+  if (isa<emitc::PointerType>(lhsType) &&
+      !isa<IntegerType, emitc::OpaqueType, emitc::PointerType>(rhsType))
     return emitOpError("requires that rhs is an integer, pointer or of opaque "
                        "type if lhs is a pointer");
 
-  if (lhsType.isa<emitc::PointerType>() && rhsType.isa<emitc::PointerType>() &&
-      !resultType.isa<IntegerType, emitc::OpaqueType>())
+  if (isa<emitc::PointerType>(lhsType) && isa<emitc::PointerType>(rhsType) &&
+      !isa<IntegerType, emitc::OpaqueType>(resultType))
     return emitOpError("requires that the result is an integer or of opaque "
                        "type if lhs and rhs are pointers");
   return success();

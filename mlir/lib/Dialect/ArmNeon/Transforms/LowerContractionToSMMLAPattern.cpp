@@ -99,7 +99,7 @@ public:
     Value extsiLhs;
     Value extsiRhs;
     if (auto lhsExtInType =
-            origLhsExtOp.getIn().getType().dyn_cast<mlir::VectorType>()) {
+            dyn_cast<mlir::VectorType>(origLhsExtOp.getIn().getType())) {
       if (lhsExtInType.getElementTypeBitWidth() <= 8) {
         Type targetLhsExtTy =
             matchContainerType(rewriter.getI8Type(), lhsExtInType);
@@ -108,7 +108,7 @@ public:
       }
     }
     if (auto rhsExtInType =
-            origRhsExtOp.getIn().getType().dyn_cast<mlir::VectorType>()) {
+            dyn_cast<mlir::VectorType>(origRhsExtOp.getIn().getType())) {
       if (rhsExtInType.getElementTypeBitWidth() <= 8) {
         Type targetRhsExtTy =
             matchContainerType(rewriter.getI8Type(), rhsExtInType);
@@ -161,9 +161,9 @@ public:
           extractOperand(op.getAcc(), accPermutationMap, accOffsets);
 
       auto inputElementType =
-          tiledLhs.getType().cast<ShapedType>().getElementType();
+          cast<ShapedType>(tiledLhs.getType()).getElementType();
       auto accElementType =
-          tiledAcc.getType().cast<ShapedType>().getElementType();
+          cast<ShapedType>(tiledAcc.getType()).getElementType();
       auto inputExpandedType = VectorType::get({2, 8}, inputElementType);
       auto outputExpandedType = VectorType::get({2, 2}, accElementType);
 
@@ -175,9 +175,9 @@ public:
           auto emptyOperand = rewriter.create<arith::ConstantOp>(
               loc, expandedTypeType, rewriter.getZeroAttr(expandedTypeType));
           SmallVector<int64_t> offsets(
-              emptyOperand.getType().cast<ShapedType>().getRank(), 0);
+              cast<ShapedType>(emptyOperand.getType()).getRank(), 0);
           SmallVector<int64_t> strides(
-              tiledOperand.getType().cast<ShapedType>().getRank(), 1);
+              cast<ShapedType>(tiledOperand.getType()).getRank(), 1);
           return rewriter.createOrFold<vector::InsertStridedSliceOp>(
               loc, tiledOperand, emptyOperand, offsets, strides);
         };
@@ -214,7 +214,7 @@ public:
       // Insert the tiled result back into the non tiled result of the
       // contract op.
       SmallVector<int64_t> strides(
-          tiledRes.getType().cast<ShapedType>().getRank(), 1);
+          cast<ShapedType>(tiledRes.getType()).getRank(), 1);
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, tiledRes, result, accOffsets, strides);
     }
