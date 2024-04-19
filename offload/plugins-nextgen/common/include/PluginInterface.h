@@ -830,9 +830,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   }
 
   /// Whether or not to reuse blocks for high trip count loops.
-  /// @see OMPX__ReuseBlocksForHighTripCount
-  virtual bool getReuseBlocksForHighTripCount() {
-    return OMPX__ReuseBlocksForHighTripCount;
+  /// @see OMPX_ReuseBlocksForHighTripCount
+  bool getReuseBlocksForHighTripCount() {
+    return OMPX_ReuseBlocksForHighTripCount;
   }
 
   /// Get the total amount of hardware parallelism supported by the target
@@ -910,7 +910,7 @@ private:
   UInt32Envar OMPX_MinThreadsForLowTripCount =
       UInt32Envar("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32);
 
-  BoolEnvar OMPX__ReuseBlocksForHighTripCount =
+  BoolEnvar OMPX_ReuseBlocksForHighTripCount =
       BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
 
 protected:
