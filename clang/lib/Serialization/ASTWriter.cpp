@@ -187,7 +187,8 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
       continue;
 
     const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
+    if (!HFI || ((HFI->isModuleHeader || HFI->isTextualModuleHeader) &&
+                 !HFI->isCompilingModuleHeader))
       continue;
 
     for (const auto &KH : HS.findResolvedModulesForHeader(*File)) {
@@ -2055,11 +2056,12 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
 
     // Get the file info. Skip emitting this file if we have no information on
     // it as a header file (in which case HFI will be null) or if it hasn't
-    // changed since it was loaded. Also skip it if it's for a modular header
-    // from a different module; in that case, we rely on the module(s)
+    // changed since it was loaded. Also skip it if it's for a non-excluded
+    // header from a different module; in that case, we rely on the module(s)
     // containing the header to provide this information.
     const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
+    if (!HFI || ((HFI->isModuleHeader || HFI->isTextualModuleHeader) &&
+                 !HFI->isCompilingModuleHeader))
       continue;
 
     // Massage the file path into an appropriate form.
