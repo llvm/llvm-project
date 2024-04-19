@@ -1791,6 +1791,10 @@ struct ExplicitInstantiationInfo {
   ExplicitInstantiationInfo() = default;
 };
 
+using SpecializationOrInstantiationInfo =
+    llvm::PointerUnion<const ASTTemplateArgumentListInfo *,
+                       ExplicitInstantiationInfo *>;
+
 /// Represents a class template specialization, which refers to
 /// a class template with a given set of template arguments.
 ///
@@ -1804,8 +1808,8 @@ struct ExplicitInstantiationInfo {
 /// template<>
 /// class array<bool> { }; // class template specialization array<bool>
 /// \endcode
-class ClassTemplateSpecializationDecl
-  : public CXXRecordDecl, public llvm::FoldingSetNode {
+class ClassTemplateSpecializationDecl : public CXXRecordDecl,
+                                        public llvm::FoldingSetNode {
   /// Structure that stores information about a class template
   /// specialization that was instantiated from a class template partial
   /// specialization.
@@ -1825,9 +1829,7 @@ class ClassTemplateSpecializationDecl
 
   /// Further info for explicit template specialization/instantiation.
   /// Does not apply to implicit specializations.
-  llvm::PointerUnion<const ASTTemplateArgumentListInfo *,
-                     ExplicitInstantiationInfo *>
-      ExplicitInfo = nullptr;
+  SpecializationOrInstantiationInfo ExplicitInfo = nullptr;
 
   /// The template arguments used to describe this specialization.
   const TemplateArgumentList *TemplateArgs;
@@ -2607,9 +2609,7 @@ class VarTemplateSpecializationDecl : public VarDecl,
 
   /// Further info for explicit template specialization/instantiation.
   /// Does not apply to implicit specializations.
-  llvm::PointerUnion<const ASTTemplateArgumentListInfo *,
-                     ExplicitInstantiationInfo *>
-      ExplicitInfo = nullptr;
+  SpecializationOrInstantiationInfo ExplicitInfo = nullptr;
 
   /// The template arguments used to describe this specialization.
   const TemplateArgumentList *TemplateArgs;
