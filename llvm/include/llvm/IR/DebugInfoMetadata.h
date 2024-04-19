@@ -1115,11 +1115,17 @@ public:
 
   /// Get extra data associated with this derived type.
   /// Class type for pointer-to-members, objective-c property node for ivars,
-  /// global constant wrapper for static members, or virtual base pointer offset
-  /// for inheritance.
+  /// global constant wrapper for static members, virtual base pointer offset
+  /// for inheritance, or a tuple of template parameters for template aliases.
+  ///
   /// TODO: Separate out types that need this extra operand: pointer-to-member
   Metadata *getExtraData() const { return getRawExtraData(); }
   Metadata *getRawExtraData() const { return getOperand(4); }
+
+  /// Get the template parameters from a template alias.
+  DITemplateParameterArray getTemplateParams() const {
+    return cast_or_null<MDTuple>(getExtraData());
+  }
 
   /// Get annotations associated with this derived type.
   DINodeArray getAnnotations() const {
