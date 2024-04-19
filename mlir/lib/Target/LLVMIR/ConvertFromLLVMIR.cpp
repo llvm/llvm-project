@@ -30,6 +30,11 @@ void registerFromLLVMIRTranslation() {
       llvm::cl::desc("Emit expensive warnings during LLVM IR import "
                      "(discouraged: testing only!)"),
       llvm::cl::init(false));
+  static llvm::cl::opt<bool> importEmptyDICompositeTypes(
+      "import-empty-di-composite-types",
+      llvm::cl::desc("Avoid translating the members of DICompositeTypes during "
+                     "the LLVM IR import (discouraged: testing only!)"),
+      llvm::cl::init(false));
 
   TranslateToMLIRRegistration registration(
       "import-llvm", "Translate LLVMIR to MLIR",
@@ -51,7 +56,8 @@ void registerFromLLVMIRTranslation() {
           return nullptr;
 
         return translateLLVMIRToModule(std::move(llvmModule), context,
-                                       emitExpensiveWarnings);
+                                       emitExpensiveWarnings,
+                                       importEmptyDICompositeTypes);
       },
       [](DialectRegistry &registry) {
         // Register the DLTI dialect used to express the data layout
