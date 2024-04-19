@@ -22,7 +22,7 @@
 namespace llvm {
 namespace exegesis {
 
-#if defined(__linux__)
+#if defined(__linux__) && !defined(__ANDROID__)
 
 long SubprocessMemory::getCurrentTID() {
   // We're using the raw syscall here rather than the gettid() function provided
@@ -30,8 +30,6 @@ long SubprocessMemory::getCurrentTID() {
   // version 2.30.
   return syscall(SYS_gettid);
 }
-
-#if !defined(__ANDROID__)
 
 Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
   // Add the PID to the shared memory name so that if we're running multiple
@@ -159,8 +157,7 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
 
 SubprocessMemory::~SubprocessMemory() {}
 
-#endif // !defined(__ANDROID__)
-#endif // defined(__linux__)
+#endif // defined(__linux__) && !defined(__ANDROID__)
 
 } // namespace exegesis
 } // namespace llvm
