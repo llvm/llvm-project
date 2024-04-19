@@ -7,8 +7,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i8> @select_v4i8(<4 x i8> %op1, <4 x i8> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w0
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
@@ -23,8 +23,8 @@ define <4 x i8> @select_v4i8(<4 x i8> %op1, <4 x i8> %op2, i1 %mask) {
 define <8 x i8> @select_v8i8(<8 x i8> %op1, <8 x i8> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w0
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
@@ -38,8 +38,8 @@ define <8 x i8> @select_v8i8(<8 x i8> %op1, <8 x i8> %op2, i1 %mask) {
 define <16 x i8> @select_v16i8(<16 x i8> %op1, <16 x i8> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.b, w0
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
@@ -53,8 +53,8 @@ define <16 x i8> @select_v16i8(<16 x i8> %op1, <16 x i8> %op2, i1 %mask) {
 define void @select_v32i8(ptr %a, ptr %b, i1 %mask) {
 ; CHECK-LABEL: select_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z0.b, w2
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x0, #16]
@@ -74,8 +74,8 @@ define void @select_v32i8(ptr %a, ptr %b, i1 %mask) {
 define <2 x i16> @select_v2i16(<2 x i16> %op1, <2 x i16> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    mov z2.s, w8
@@ -90,8 +90,8 @@ define <2 x i16> @select_v2i16(<2 x i16> %op1, <2 x i16> %op2, i1 %mask) {
 define <4 x i16> @select_v4i16(<4 x i16> %op1, <4 x i16> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w0
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
@@ -106,8 +106,8 @@ define <4 x i16> @select_v4i16(<4 x i16> %op1, <4 x i16> %op2, i1 %mask) {
 define <8 x i16> @select_v8i16(<8 x i16> %op1, <8 x i16> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z2.h, w0
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    and z2.h, z2.h, #0x1
@@ -122,8 +122,8 @@ define <8 x i16> @select_v8i16(<8 x i16> %op1, <8 x i16> %op2, i1 %mask) {
 define void @select_v16i16(ptr %a, ptr %b, i1 %mask) {
 ; CHECK-LABEL: select_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z0.h, w2
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    and z0.h, z0.h, #0x1
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -144,8 +144,8 @@ define void @select_v16i16(ptr %a, ptr %b, i1 %mask) {
 define <2 x i32> @select_v2i32(<2 x i32> %op1, <2 x i32> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    mov z2.s, w8
@@ -160,8 +160,8 @@ define <2 x i32> @select_v2i32(<2 x i32> %op1, <2 x i32> %op2, i1 %mask) {
 define <4 x i32> @select_v4i32(<4 x i32> %op1, <4 x i32> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and w8, w0, #0x1
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov z2.s, w8
@@ -176,8 +176,8 @@ define <4 x i32> @select_v4i32(<4 x i32> %op1, <4 x i32> %op2, i1 %mask) {
 define void @select_v8i32(ptr %a, ptr %b, i1 %mask) {
 ; CHECK-LABEL: select_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    and w8, w2, #0x1
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z0.s, w8
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -198,9 +198,9 @@ define void @select_v8i32(ptr %a, ptr %b, i1 %mask) {
 define <1 x i64> @select_v1i64(<1 x i64> %op1, <1 x i64> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    and x8, x0, #0x1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    mov z2.d, x8
@@ -215,9 +215,9 @@ define <1 x i64> @select_v1i64(<1 x i64> %op1, <1 x i64> %op2, i1 %mask) {
 define <2 x i64> @select_v2i64(<2 x i64> %op1, <2 x i64> %op2, i1 %mask) {
 ; CHECK-LABEL: select_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    and x8, x0, #0x1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov z2.d, x8
@@ -232,9 +232,9 @@ define <2 x i64> @select_v2i64(<2 x i64> %op1, <2 x i64> %op2, i1 %mask) {
 define void @select_v4i64(ptr %a, ptr %b, i1 %mask) {
 ; CHECK-LABEL: select_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    and x8, x2, #0x1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z0.d, x8
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ldr q0, [x0]

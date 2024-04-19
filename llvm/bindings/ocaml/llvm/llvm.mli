@@ -36,6 +36,9 @@ type lltype
     This type covers a wide range of subclasses. *)
 type llvalue
 
+(** Non-instruction debug info record. See the [llvm::DbgRecord] class.*)
+type lldbgrecord
+
 (** Used to store users and usees of values. See the [llvm::Use] class. *)
 type lluse
 
@@ -792,6 +795,9 @@ val dump_value : llvalue -> unit
 
 (** [string_of_llvalue v] returns a string describing the value [v]. *)
 val string_of_llvalue : llvalue -> string
+
+(** [string_of_lldbgrecord r] returns a string describing the DbgRecord [r]. *)
+val string_of_lldbgrecord : lldbgrecord -> string
 
 (** [replace_all_uses_with old new] replaces all uses of the value [old]
     with the value [new]. See the method [llvm::Value::replaceAllUsesWith]. *)
