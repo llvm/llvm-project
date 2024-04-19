@@ -18410,6 +18410,24 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::amdgcn_update_dpp, Args[0]->getType());
     return Builder.CreateCall(F, Args);
   }
+  case AMDGPU::BI__builtin_amdgcn_readlane:
+  case AMDGPU::BI__builtin_amdgcn_readfirstlane: {
+    llvm::SmallVector<llvm::Value *, 6> Args;
+    unsigned ICEArguments = 0;
+    ASTContext::GetBuiltinTypeError Error;
+    Intrinsic::ID IID = (BuiltinID == AMDGPU::BI__builtin_amdgcn_readlane)
+                            ? Intrinsic::amdgcn_readlane
+                            : Intrinsic::amdgcn_readfirstlane;
+
+    getContext().GetBuiltinType(BuiltinID, Error, &ICEArguments);
+    assert(Error == ASTContext::GE_None && "Should not codegen an error");
+    for (unsigned I = 0; I != E->getNumArgs(); ++I) {
+      Args.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, I, E));
+    }
+
+    Function *F = CGM.getIntrinsic(IID, Args[0]->getType());
+    return Builder.CreateCall(F, Args);
+  }
   case AMDGPU::BI__builtin_amdgcn_div_fixup:
   case AMDGPU::BI__builtin_amdgcn_div_fixupf:
   case AMDGPU::BI__builtin_amdgcn_div_fixuph:
