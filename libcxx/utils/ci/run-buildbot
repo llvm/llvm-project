@@ -217,7 +217,7 @@ function test-armv7m-picolibc() {
         "${@}"
 
     ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
-    mv "${BUILD_DIR}/install/lib/armv7m-none-eabi"/* "${BUILD_DIR}/install/lib"
+    mv "${BUILD_DIR}/install/lib/armv7m-none-unknown-eabi"/* "${BUILD_DIR}/install/lib"
 
     check-runtimes
 }
