@@ -3754,6 +3754,16 @@ def err_sme_definition_using_za_in_non_sme_target : Error<
   "function using ZA state requires 'sme'">;
 def err_sme_definition_using_zt0_in_non_sme2_target : Error<
   "function using ZT0 state requires 'sme2'">;
+def warn_sme_streaming_pass_return_vl_to_non_streaming : Warning<
+  "passing a VL-dependent argument to/from a function that has a different"
+  " streaming-mode. The streaming and non-streaming vector lengths may be"
+  " different">,
+  InGroup<AArch64SMEAttributes>, DefaultIgnore;
+def warn_sme_locally_streaming_has_vl_args_returns : Warning<
+  "passing/returning a VL-dependent argument to/from a __arm_locally_streaming"
+  " function. The streaming and non-streaming vector"
+  " lengths may be different">,
+  InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
 def err_sme_streaming_cannot_be_multiversioned : Error<
