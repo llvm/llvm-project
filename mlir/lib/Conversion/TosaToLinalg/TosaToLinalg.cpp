@@ -618,7 +618,7 @@ static Value expandRank(PatternRewriter &rewriter, Location loc, Value tensor,
 static SmallVector<Value> expandInputRanks(PatternRewriter &rewriter,
                                            Location loc, Operation *operation) {
   auto rank =
-      operation->getResultTypes().front().cast<RankedTensorType>().getRank();
+      cast<RankedTensorType>(operation->getResultTypes().front()).getRank();
   return llvm::map_to_vector(operation->getOperands(), [&](Value operand) {
     return expandRank(rewriter, loc, operand, rank);
   });
@@ -680,7 +680,7 @@ computeTargetSize(PatternRewriter &rewriter, Location loc, IndexPool &indexPool,
   // dimension, that is the target size. An occurrence of an additional static
   // dimension greater than 1 with a different value is undefined behavior.
   for (auto operand : operands) {
-    auto size = operand.getType().cast<RankedTensorType>().getDimSize(dim);
+    auto size = cast<RankedTensorType>(operand.getType()).getDimSize(dim);
     if (!ShapedType::isDynamic(size) && size > 1)
       return {rewriter.getIndexAttr(size), operand};
   }
@@ -688,7 +688,7 @@ computeTargetSize(PatternRewriter &rewriter, Location loc, IndexPool &indexPool,
   // Filter operands with dynamic dimension
   auto operandsWithDynamicDim =
       llvm::to_vector(llvm::make_filter_range(operands, [&](Value operand) {
-        return operand.getType().cast<RankedTensorType>().isDynamicDim(dim);
+        return cast<RankedTensorType>(operand.getType()).isDynamicDim(dim);
       }));
 
   // If no operand has a dynamic dimension, it means all sizes were 1
@@ -718,7 +718,7 @@ static std::pair<SmallVector<OpFoldResult>, SmallVector<Value>>
 computeTargetShape(PatternRewriter &rewriter, Location loc,
                    IndexPool &indexPool, ValueRange operands) {
   assert(!operands.empty());
-  auto rank = operands.front().getType().cast<RankedTensorType>().getRank();
+  auto rank = cast<RankedTensorType>(operands.front().getType()).getRank();
   SmallVector<OpFoldResult> targetShape;
   SmallVector<Value> masterOperands;
   for (auto dim : llvm::seq<int64_t>(0, rank)) {
@@ -735,7 +735,7 @@ static Value broadcastDynamicDimension(PatternRewriter &rewriter, Location loc,
                                        int64_t dim, OpFoldResult targetSize,
                                        Value masterOperand) {
   // Nothing to do if this is a static dimension
-  auto rankedTensorType = operand.getType().cast<RankedTensorType>();
+  auto rankedTensorType = cast<RankedTensorType>(operand.getType());
   if (!rankedTensorType.isDynamicDim(dim))
     return operand;
 
@@ -817,7 +817,7 @@ static Value broadcastDynamicDimensions(PatternRewriter &rewriter, Location loc,
                                         IndexPool &indexPool, Value operand,
                                         ArrayRef<OpFoldResult> targetShape,
                                         ArrayRef<Value> masterOperands) {
-  int64_t rank = operand.getType().cast<RankedTensorType>().getRank();
+  int64_t rank = cast<RankedTensorType>(operand.getType()).getRank();
   assert((int64_t)targetShape.size() == rank);
   assert((int64_t)masterOperands.size() == rank);
   for (auto index : llvm::seq<int64_t>(0, rank))
@@ -848,8 +848,7 @@ emitElementwiseComputation(PatternRewriter &rewriter, Location loc,
                            Operation *operation, ValueRange operands,
                            ArrayRef<OpFoldResult> targetShape) {
   // Generate output tensor
-  auto resultType =
-      operation->getResultTypes().front().cast<RankedTensorType>();
+  auto resultType = cast<RankedTensorType>(operation->getResultTypes().front());
   Value outputTensor = rewriter.create<tensor::EmptyOp>(
       loc, targetShape, resultType.getElementType());
 
@@ -2274,8 +2273,7 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
     llvm::SmallVector<int64_t, 3> staticSizes;
     dispatchIndexOpFoldResults(dims, dynamicSizes, staticSizes);
 
-    auto elementType =
-        input.getType().cast<RankedTensorType>().getElementType();
+    auto elementType = cast<RankedTensorType>(input.getType()).getElementType();
     return RankedTensorType::get(staticSizes, elementType);
   }
 
@@ -2327,7 +2325,7 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
     auto loc = rfft2d.getLoc();
     auto input = rfft2d.getInput();
     auto elementType =
-        input.getType().cast<ShapedType>().getElementType().cast<FloatType>();
+        cast<FloatType>(cast<ShapedType>(input.getType()).getElementType());
 
     // Compute the output type and set of dynamic sizes
     llvm::SmallVector<Value> dynamicSizes;
