@@ -549,6 +549,7 @@ Bug Fixes to C++ Support
 - Fix a crash in requires expression with templated base class member function. Fixes (#GH84020).
 - Fix a crash caused by defined struct in a type alias template when the structure
   has fields with dependent type. Fixes (#GH75221).
+- Fix the Itanium mangling of lambdas defined in a member of a local class (#GH88906)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
