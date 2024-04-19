@@ -1667,8 +1667,8 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
           .reifyResultShapes(rewriter, reifiedReturnShapes);
   (void)status; // prevent unused variable warning on non-assert builds
   assert(succeeded(status) && "failed to reify result shapes");
-  auto maskedRead = createReadOrMaskedRead(rewriter, loc, padOp.getSource(),
-                                           inputVectorSizes, padValue);
+  auto maskedRead = vector::createReadOrMaskedRead(
+      rewriter, loc, padOp.getSource(), inputVectorSizes, padValue);
   Operation *write = createWriteOrMaskedWrite(
       rewriter, loc, maskedRead, reifiedReturnShapes[0], inputVectorSizes);
   newResults.push_back(write->getResult(0));
@@ -1741,41 +1741,6 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
   return success();
 }
 
-/// Returns success if `inputVectorSizes` is a valid masking configuraion for
-/// given `shape`, i.e., it meets:
-///   1. The numbers of elements in both array are equal.
-///   2. `inputVectorSizes` does not have dynamic dimensions.
-///   3. All the values in `inputVectorSizes` are greater than or equal to
-///      static sizes in `shape`.
-static LogicalResult
-isValidMaskedInputVector(ArrayRef<int64_t> shape,
-                         ArrayRef<int64_t> inputVectorSizes) {
-  LDBG("Iteration space static sizes:");
-  LLVM_DEBUG(llvm::interleaveComma(shape, llvm::dbgs()));
-  LLVM_DEBUG(llvm::dbgs() << "\n");
-
-  if (inputVectorSizes.size() != shape.size()) {
-    LDBG("Input vector sizes don't match the number of loops");
-    return failure();
-  }
-  if (ShapedType::isDynamicShape(inputVectorSizes)) {
-    LDBG("Input vector sizes can't have dynamic dimensions");
-    return failure();
-  }
-  if (!llvm::all_of(llvm::zip(shape, inputVectorSizes),
-                    [](std::tuple<int64_t, int64_t> sizePair) {
-                      int64_t staticSize = std::get<0>(sizePair);
-                      int64_t inputSize = std::get<1>(sizePair);
-                      return ShapedType::isDynamic(staticSize) ||
-                             staticSize <= inputSize;
-                    })) {
-    LDBG("Input vector sizes must be greater than or equal to iteration space "
-         "static sizes");
-    return failure();
-  }
-  return success();
-}
-
 /// Need to check if the inner-tiles are static/constant.
 static LogicalResult
 vectorizeUnPackOpPrecondition(tensor::UnPackOp unpackOp,
@@ -1789,7 +1754,7 @@ vectorizeUnPackOpPrecondition(tensor::UnPackOp unpackOp,
   }
   llvm::ArrayRef<int64_t> resultShape = unpackOp.getDestType().getShape();
   if (!inputVectorSizes.empty() &&
-      failed(isValidMaskedInputVector(resultShape, inputVectorSizes)))
+      failed(vector::isValidMaskedInputVector(resultShape, inputVectorSizes)))
     return failure();
 
   return success();
@@ -1803,8 +1768,8 @@ static LogicalResult vectorizeLinalgOpPrecondition(
     return failure();
   // Check API contract for input vector sizes.
   if (!inputVectorSizes.empty() &&
-      failed(isValidMaskedInputVector(linalgOp.getStaticLoopRanges(),
-                                      inputVectorSizes)))
+      failed(vector::isValidMaskedInputVector(linalgOp.getStaticLoopRanges(),
+                                              inputVectorSizes)))
     return failure();
 
   if (linalgOp.hasDynamicShape() && failed(vectorizeDynamicLinalgOpPrecondition(
@@ -1880,7 +1845,7 @@ vectorizePackOpPrecondition(tensor::PackOp packOp,
   }
 
   if (!satisfyEmptyCond &&
-      failed(isValidMaskedInputVector(
+      failed(vector::isValidMaskedInputVector(
           resultTensorShape.take_front(packOp.getSourceRank()),
           inputVectorSizes)))
     return failure();
@@ -1905,7 +1870,8 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
   }
 
   ArrayRef<int64_t> resultTensorShape = padOp.getResultType().getShape();
-  if (failed(isValidMaskedInputVector(resultTensorShape, inputVectorSizes)))
+  if (failed(vector::isValidMaskedInputVector(resultTensorShape,
+                                              inputVectorSizes)))
     return failure();
 
   if (llvm::any_of(padOp.getLow(), [](Value v) {
