@@ -3656,6 +3656,45 @@ floating-point transformations.
 ``fast``
    This flag implies all of the others.
 
+When performing a transformation that involves more that one instruction, the
+flags required to enable the transformation must be set on all instructions
+involved in the transformation, and any new instructions created by the
+transformation should have only those flags set which were set on all the
+original instructions that are being transformed.
+
+For example
+
+::
+
+%mul1 = fmul float %x, %y
+%mul2 = fmul fast float %mul1, %z
+
+cannot be transformed to
+
+::
+
+%mul1 = fmul float %x, %z
+%mul2 = fmul fast float %mul1, %y
+
+because the %mul1 instruction does not have the 'reassoc' flag set.
+
+Similarly, if applying reassociation to
+
+::
+
+%mul1 = fmul reassoc float %x, %y
+%mul2 = fmul fast float %mul1, %z
+
+the result must be
+
+::
+
+%mul1 = fmul reassoc float %x, %z
+%mul2 = fmul reassoc float %mul1, %y
+
+because only the reassoc flag is set on both original instructions.
+
+
 .. _uselistorder:
 
 Use-list Order Directives
