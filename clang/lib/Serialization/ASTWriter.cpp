@@ -166,9 +166,9 @@ namespace {
 
 std::optional<std::set<const FileEntry *>>
 GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
-  // Without implicit module map search, there's no good reason to know about
-  // any module maps that are not affecting.
-  if (!PP.getHeaderSearchInfo().getHeaderSearchOpts().ImplicitModuleMaps)
+  if (!PP.getHeaderSearchInfo()
+           .getHeaderSearchOpts()
+           .ModulesPruneNonAffectingModuleMaps)
     return std::nullopt;
 
   SmallVector<const Module *> ModulesToProcess{RootModule};
