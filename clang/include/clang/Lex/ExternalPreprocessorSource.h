@@ -31,7 +31,7 @@ public:
   virtual void ReadDefinedMacros() = 0;
 
   /// Update an out-of-date identifier.
-  virtual void updateOutOfDateIdentifier(IdentifierInfo &II) = 0;
+  virtual void updateOutOfDateIdentifier(const IdentifierInfo &II) = 0;
 
   /// Return the identifier associated with the given ID number.
   ///

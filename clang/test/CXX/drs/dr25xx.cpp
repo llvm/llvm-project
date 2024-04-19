@@ -10,9 +10,9 @@
 // expected-no-diagnostics
 #endif
 
-// dr2504 is in dr2504.cpp
+// cwg2504 is in cwg2504.cpp
 
-namespace dr2516 { // dr2516: 3.0
+namespace cwg2516 { // cwg2516: 3.0
                    // NB: reusing 1482 test
 #if __cplusplus >= 201103L
 template <typename T> struct S {
@@ -21,9 +21,9 @@ template <typename T> struct S {
 enum E2 : S<E2>::I { e };
 // since-cxx11-error@-1 {{use of undeclared identifier 'E2'}}
 #endif
-} // namespace dr2516
+} // namespace cwg2516
 
-namespace dr2518 { // dr2518: 17
+namespace cwg2518 { // cwg2518: 17
 
 #if __cplusplus >= 201103L
 template <class T>
@@ -32,13 +32,13 @@ void f(T t) {
   // cxx11-14-error@-1 {{constexpr if is a C++17 extension}}
     static_assert(false, "must be int-sized");
     // since-cxx11-error@-1 {{static assertion failed: must be int-sized}}
-    //   since-cxx11-note@#dr2518-f-c {{in instantiation of function template specialization 'dr2518::f<char>' requested here}}
+    //   since-cxx11-note@#cwg2518-f-c {{in instantiation of function template specialization 'cwg2518::f<char>' requested here}}
   }
 }
 
 void g(char c) {
   f(0);
-  f(c); // #dr2518-f-c
+  f(c); // #cwg2518-f-c
 }
 
 template <typename Ty>
@@ -46,7 +46,7 @@ struct S {
   static_assert(false);
   // cxx11-14-error@-1 {{'static_assert' with no message is a C++17 extension}}
   // since-cxx11-error@-2 {{static assertion failed}}
-  //   since-cxx11-note@#dr2518-S-double {{in instantiation of template class 'dr2518::S<double>' requested here}}
+  //   since-cxx11-note@#cwg2518-S-double {{in instantiation of template class 'cwg2518::S<double>' requested here}}
 };
 
 template <>
@@ -58,13 +58,13 @@ struct S<float> {};
 int test_specialization() {
   S<int> s1;
   S<float> s2;
-  S<double> s3; // #dr2518-S-double
+  S<double> s3; // #cwg2518-S-double
 }
 #endif
 
 }
 
-namespace dr2521 { // dr2521: 17
+namespace cwg2521 { // cwg2521: 17
 #if __cplusplus >= 201103L
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Wdeprecated-literal-operator"
@@ -76,61 +76,61 @@ template <char... Chars> decltype(sizeof 0)
 operator""  _div();
 // since-cxx11-warning@-1 {{identifier '_div' preceded by whitespace in a literal operator declaration is deprecated}}
 
-using ::dr2521::operator"" _\u03C0___;
-using ::dr2521::operator""_div;
+using ::cwg2521::operator"" _\u03C0___;
+using ::cwg2521::operator""_div;
 // since-cxx11-warning@-2 {{identifier '_π___' preceded by whitespace in a literal operator declaration is deprecated}}
 #pragma clang diagnostic pop
 #endif
-} // namespace dr2521
+} // namespace cwg2521
 
 
 #if __cplusplus >= 202302L
-namespace dr2553 { // dr2553: 18 review 2023-07-14
+namespace cwg2553 { // cwg2553: 18 review 2023-07-14
 struct B {
   virtual void f(this B&); 
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
   static void f(this B&);
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a static function}}
-  virtual void g(); // #dr2553-g
+  virtual void g(); // #cwg2553-g
 };
 struct D : B {
   void g(this D&);
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
-  //   since-cxx23-note@#dr2553-g {{overridden virtual function is here}}
+  //   since-cxx23-note@#cwg2553-g {{overridden virtual function is here}}
 };
 
 }
 #endif
 
 #if __cplusplus >= 202302L
-namespace dr2554 { // dr2554: 18 review 2021-12-10
+namespace cwg2554 { // cwg2554: 18 review 2021-12-10
 struct B {
-  virtual void f(); // #dr2554-g
+  virtual void f(); // #cwg2554-g
 };
 
 struct D : B {
   void f(this D&);
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
-  //   since-cxx23-note@#dr2554-g {{overridden virtual function is here}}
+  //   since-cxx23-note@#cwg2554-g {{overridden virtual function is here}}
 };
 
 struct D2 : B {
   void f(this B&);
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
-  //   since-cxx23-note@#dr2554-g {{overridden virtual function is here}}
+  //   since-cxx23-note@#cwg2554-g {{overridden virtual function is here}}
 };
 struct T {};
 struct D3 : B {
   void f(this T&);
   // since-cxx23-error@-1 {{an explicit object parameter cannot appear in a virtual function}}
-  //   since-cxx23-note@#dr2554-g {{overridden virtual function is here}}
+  //   since-cxx23-note@#cwg2554-g {{overridden virtual function is here}}
 };
 
 }
 #endif
 
 #if __cplusplus >= 202302L
-namespace dr2561 { // dr2561: 18 review 2023-11-09
+namespace cwg2561 { // cwg2561: 18 review 2023-11-09
 struct C {
     constexpr C(auto) { }
 };
@@ -145,7 +145,7 @@ void foo() {
 #endif
 
 
-namespace dr2565 { // dr2565: 16 open 2023-06-07
+namespace cwg2565 { // cwg2565: 16 open 2023-06-07
 #if __cplusplus >= 202002L
   template<typename T>
     concept C = requires (typename T::type x) {
@@ -165,28 +165,28 @@ namespace dr2565 { // dr2565: 16 open 2023-06-07
   static_assert(is_referenceable<int>::value);
 
   template<typename T, typename U>
-  concept TwoParams = requires (T *a, U b){ true;}; // #dr2565-TPC
+  concept TwoParams = requires (T *a, U b){ true;}; // #cwg2565-TPC
 
   template<typename T, typename U>
-    requires TwoParams<T, U> // #dr2565-TPSREQ
+    requires TwoParams<T, U> // #cwg2565-TPSREQ
   struct TwoParamsStruct{};
 
   using TPSU = TwoParamsStruct<void, void>;
   // since-cxx20-error@-1 {{constraints not satisfied for class template 'TwoParamsStruct'}}
-  //   since-cxx20-note@#dr2565-TPSREQ {{because 'TwoParams<void, void>' evaluated to false}}
-  //   since-cxx20-note@#dr2565-TPC {{because 'b' would be invalid: argument may not have 'void' type}}
+  //   since-cxx20-note@#cwg2565-TPSREQ {{because 'TwoParams<void, void>' evaluated to false}}
+  //   since-cxx20-note@#cwg2565-TPC {{because 'b' would be invalid: argument may not have 'void' type}}
 
   template<typename T, typename ...U>
-  concept Variadic = requires (U* ... a, T b){ true;}; // #dr2565-VC
+  concept Variadic = requires (U* ... a, T b){ true;}; // #cwg2565-VC
 
   template<typename T, typename ...U>
-    requires Variadic<T, U...> // #dr2565-VSREQ
+    requires Variadic<T, U...> // #cwg2565-VSREQ
   struct VariadicStruct{};
 
   using VSU = VariadicStruct<void, int, char, double>;
   // since-cxx20-error@-1 {{constraints not satisfied for class template 'VariadicStruct'}}
-  //   since-cxx20-note@#dr2565-VSREQ {{because 'Variadic<void, int, char, double>' evaluated to false}}
-  //   since-cxx20-note@#dr2565-VC {{because 'b' would be invalid: argument may not have 'void' type}}
+  //   since-cxx20-note@#cwg2565-VSREQ {{because 'Variadic<void, int, char, double>' evaluated to false}}
+  //   since-cxx20-note@#cwg2565-VC {{because 'b' would be invalid: argument may not have 'void' type}}
 
   template<typename T>
   concept ErrorRequires = requires (ErrorRequires auto x) {
@@ -211,7 +211,7 @@ namespace dr2565 { // dr2565: 16 open 2023-06-07
 #endif
 }
 
-namespace dr2583 { // dr2583: 19
+namespace cwg2583 { // cwg2583: 19
 #if __cplusplus >= 201103L
 struct A {
   int i;
@@ -236,9 +236,9 @@ union V {
 static_assert(!__is_layout_compatible(A, B), "");
 static_assert(__is_layout_compatible(U, V), "");
 #endif
-} // namespace dr2583
+} // namespace cwg2583
 
-namespace dr2598 { // dr2598: 18
+namespace cwg2598 { // cwg2598: 18
 #if __cplusplus >= 201103L
 struct NonLiteral {
     NonLiteral();

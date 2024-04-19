@@ -919,7 +919,8 @@ void SwingSchedulerDAG::updatePhiDependences() {
           if (!MI->isPHI()) {
             SDep Dep(SU, SDep::Data, Reg);
             Dep.setLatency(0);
-            ST.adjustSchedDependency(SU, 0, &I, MO.getOperandNo(), Dep);
+            ST.adjustSchedDependency(SU, 0, &I, MO.getOperandNo(), Dep,
+                                     &SchedModel);
             I.addPred(Dep);
           } else {
             HasPhiUse = Reg;
@@ -1247,7 +1248,7 @@ private:
     for (auto &MI : *OrigMBB) {
       if (MI.isDebugInstr())
         continue;
-      for (auto Use : ROMap[&MI].Uses) {
+      for (auto &Use : ROMap[&MI].Uses) {
         auto Reg = Use.RegUnit;
         // Ignore the variable that appears only on one side of phi instruction
         // because it's used only at the first iteration.
@@ -1268,7 +1269,7 @@ private:
   // Calculate the upper limit of each pressure set
   void computePressureSetLimit(const RegisterClassInfo &RCI) {
     for (unsigned PSet = 0; PSet < PSetNum; PSet++)
-      PressureSetLimit[PSet] = RCI.getRegPressureSetLimit(PSet);
+      PressureSetLimit[PSet] = TRI->getRegPressureSetLimit(MF, PSet);
 
     // We assume fixed registers, such as stack pointer, are already in use.
     // Therefore subtracting the weight of the fixed registers from the limit of
@@ -1345,7 +1346,7 @@ private:
 
     DenseMap<Register, MachineInstr *> LastUseMI;
     for (MachineInstr *MI : llvm::reverse(OrderedInsts)) {
-      for (auto Use : ROMap.find(MI)->getSecond().Uses) {
+      for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
         auto Reg = Use.RegUnit;
         if (!TargetRegs.contains(Reg))
           continue;

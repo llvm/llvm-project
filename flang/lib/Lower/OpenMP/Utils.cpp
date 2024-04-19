@@ -39,6 +39,17 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 
+int64_t getCollapseValue(const List<Clause> &clauses) {
+  auto iter = llvm::find_if(clauses, [](const Clause &clause) {
+    return clause.id == llvm::omp::Clause::OMPC_collapse;
+  });
+  if (iter != clauses.end()) {
+    const auto &collapse = std::get<clause::Collapse>(iter->u);
+    return evaluate::ToInt64(collapse.v).value();
+  }
+  return 1;
+}
+
 void genObjectList(const ObjectList &objects,
                    Fortran::lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands) {
@@ -52,25 +63,6 @@ void genObjectList(const ObjectList &objects,
       operands.push_back(converter.getSymbolAddress(details->symbol()));
       converter.copySymbolBinding(details->symbol(), *sym);
     }
-  }
-}
-
-void genObjectList2(const Fortran::parser::OmpObjectList &objectList,
-                    Fortran::lower::AbstractConverter &converter,
-                    llvm::SmallVectorImpl<mlir::Value> &operands) {
-  auto addOperands = [&](Fortran::lower::SymbolRef sym) {
-    const mlir::Value variable = converter.getSymbolAddress(sym);
-    if (variable) {
-      operands.push_back(variable);
-    } else if (const auto *details =
-                   sym->detailsIf<Fortran::semantics::HostAssocDetails>()) {
-      operands.push_back(converter.getSymbolAddress(details->symbol()));
-      converter.copySymbolBinding(details->symbol(), sym);
-    }
-  };
-  for (const Fortran::parser::OmpObject &ompObject : objectList.v) {
-    Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
-    addOperands(*sym);
   }
 }
 
@@ -208,8 +200,10 @@ void insertChildMapInfoIntoParent(
     bool parentExists = false;
     size_t parentIdx;
     for (parentIdx = 0; parentIdx < mapSymbols->size(); ++parentIdx)
-      if ((*mapSymbols)[parentIdx] == indices.first)
+      if ((*mapSymbols)[parentIdx] == indices.first) {
         parentExists = true;
+        break;
+      }
 
     if (parentExists) {
       auto mapOp = mlir::dyn_cast<mlir::omp::MapInfoOp>(
@@ -217,6 +211,15 @@ void insertChildMapInfoIntoParent(
       assert(mapOp && "Parent provided to insertChildMapInfoIntoParent was not "
                       "an expected MapInfoOp");
 
+      // NOTE: To maintain appropriate SSA ordering, we move the parent map
+      // which will now have references to it's children after the last 
+      // of it's members to be generated. This is neccesary when a user
+      // has defined a series of parent and children maps where the parent
+      // precedes the children. An alternative, may be to do
+      // delayed generation of map info operations from the clauses and 
+      // organize them first before generation. 
+      mapOp->moveAfter(indices.second.back().memberMap);
+      
       for (auto memberIndicesData : indices.second)
         mapOp.getMembersMutable().append(
             (mlir::Value)memberIndicesData.memberMap);

@@ -456,10 +456,8 @@ EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
   assert(PM && "Runtime not initialized");
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
-  for (auto &R : PM->pluginAdaptors()) {
-    if (R.set_info_flag)
-      R.set_info_flag(NewInfoLevel);
-  }
+  for (auto &R : PM->pluginAdaptors())
+    R.set_info_flag(NewInfoLevel);
 }
 
 EXTERN int __tgt_print_device_info(int64_t DeviceId) {
@@ -497,7 +495,7 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   if (QueryCounter.isAboveThreshold())
     AsyncInfo->SyncType = AsyncInfoTy::SyncTy::BLOCKING;
 
-  if (const int Rc = AsyncInfo->synchronize())
+  if (AsyncInfo->synchronize())
     FATAL_MESSAGE0(1, "Error while querying the async queue for completion.\n");
   // If there are device operations still pending, return immediately without
   // deallocating the handle and increase the current thread query count.
