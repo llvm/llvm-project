@@ -502,10 +502,9 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
         loopOpEntryBlock.eraseArguments(
             numLoops, loopOpEntryBlock.getNumArguments() - numLoops);
 
-        Block *ops = rewriter.splitBlock(&*loopOp.getRegion().begin(),
-                                         loopOp.getRegion().begin()->begin());
-
-        rewriter.setInsertionPointToStart(&*loopOp.getRegion().begin());
+        Block *ops =
+            rewriter.splitBlock(&loopOpEntryBlock, loopOpEntryBlock.begin());
+        rewriter.setInsertionPointToStart(&loopOpEntryBlock);
 
         auto scope = rewriter.create<memref::AllocaScopeOp>(parallelOp.getLoc(),
                                                             TypeRange());
