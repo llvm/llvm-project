@@ -6,6 +6,8 @@ struct S {
   unsigned _BitInt(7) x : 2;
   unsigned _BitInt(2) y : 2;
   unsigned _BitInt(72) z : 28;
+  _BitInt(31) a : 12;
+  _BitInt(33) b : 33;
 };
 
 // We don't have to worry about promotion cases where the bit-precise type is
@@ -35,4 +37,18 @@ static_assert(
     unsigned _BitInt(28) : 2
   ) == 1);
 
+static_assert(
+  _Generic(+(struct S){}.a,
+    int : 0,
+    _BitInt(31) : 1,
+    _BitInt(12) : 2,
+    unsigned _BitInt(31) : 3
+  ) == 1);
 
+static_assert(
+  _Generic(+(struct S){}.b,
+    int : 0,
+    long long : 1,
+    _BitInt(33) : 2,
+    unsigned _BitInt(33) : 3
+  ) == 2);
