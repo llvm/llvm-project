@@ -447,6 +447,8 @@ public:
                                 bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) const;
 
+  CompilerType GetDirectNestedTypeWithName(llvm::StringRef name) const;
+
   /// Return the number of template arguments the type has.
   /// If expand_pack is true, then variadic argument packs are automatically
   /// expanded to their supplied arguments. If it is false an argument pack
