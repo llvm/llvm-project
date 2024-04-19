@@ -5,28 +5,28 @@
 // RUN:		--target=powerpc-ibm-aix \
 // RUN:		-resource-dir=%S/Inputs/resource_dir \
 // RUN:		--sysroot=%S/Inputs/basic_aix_tree \
-// RUN:         -fopenmp \
+// RUN:		-fopenmp=libomp \
 // RUN:   | FileCheck -check-prefixes=CHECK-INTERNAL-INCLUDE,CHECK-INTERNAL-INCLUDE-CXX %s
 
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:		--target=powerpc64-ibm-aix \
 // RUN:		-resource-dir=%S/Inputs/resource_dir \
 // RUN:		--sysroot=%S/Inputs/basic_aix_tree \
-// RUN:         -fopenmp \
+// RUN:		-fopenmp=libomp \
 // RUN:   | FileCheck -check-prefixes=CHECK-INTERNAL-INCLUDE,CHECK-INTERNAL-INCLUDE-CXX %s
 
 // RUN: %clang -### -xc %s 2>&1 \
 // RUN:		--target=powerpc-ibm-aix \
 // RUN:		-resource-dir=%S/Inputs/resource_dir \
 // RUN:		--sysroot=%S/Inputs/basic_aix_tree \
-// RUN:         -fopenmp \
+// RUN:		-fopenmp=libomp \
 // RUN:   | FileCheck -check-prefix=CHECK-INTERNAL-INCLUDE %s
 
 // RUN: %clang -### -xc %s 2>&1 \
 // RUN:		--target=powerpc64-ibm-aix \
 // RUN:		-resource-dir=%S/Inputs/resource_dir \
 // RUN:		--sysroot=%S/Inputs/basic_aix_tree \
-// RUN:         -fopenmp \
+// RUN:		-fopenmp=libomp \
 // RUN:   | FileCheck -check-prefix=CHECK-INTERNAL-INCLUDE %s
 
 // CHECK-INTERNAL-INCLUDE:      "-cc1"
@@ -78,7 +78,7 @@
 // RUN:		-resource-dir=%S/Inputs/resource_dir \
 // RUN:		--sysroot=%S/Inputs/basic_aix_tree \
 // RUN:		-nostdlibinc \
-// RUN:         -fopenmp \
+// RUN:		-fopenmp=libomp \
 // RUN:   | FileCheck -check-prefix=CHECK-NOSTDLIBINC-INCLUDE %s
 
 // RUN: %clangxx -### %s 2>&1 \
@@ -86,7 +86,7 @@
 // RUN:		-resource-dir=%S/Inputs/resource_dir \
 // RUN:		--sysroot=%S/Inputs/basic_aix_tree \
 // RUN:		-nostdlibinc \
-// RUN:         -fopenmp \
+// RUN:		-fopenmp=libomp \
 // RUN:   | FileCheck -check-prefix=CHECK-NOSTDLIBINC-INCLUDE %s
 
 // RUN: %clang -### -xc %s 2>&1 \
@@ -94,7 +94,7 @@
 // RUN:		-resource-dir=%S/Inputs/resource_dir \
 // RUN:		--sysroot=%S/Inputs/basic_aix_tree \
 // RUN:		-nostdlibinc \
-// RUN:         -fopenmp \
+// RUN:		-fopenmp=libomp \
 // RUN:   | FileCheck -check-prefix=CHECK-NOSTDLIBINC-INCLUDE %s
 
 // RUN: %clang -### -xc %s 2>&1 \
@@ -102,7 +102,7 @@
 // RUN:		-resource-dir=%S/Inputs/resource_dir \
 // RUN:		--sysroot=%S/Inputs/basic_aix_tree \
 // RUN:		-nostdlibinc \
-// RUN:         -fopenmp \
+// RUN:		-fopenmp=libomp \
 // RUN:   | FileCheck -check-prefix=CHECK-NOSTDLIBINC-INCLUDE %s
 
 // CHECK-NOSTDLIBINC-INCLUDE:	"-cc1"
@@ -120,7 +120,7 @@
 // RUN:		-resource-dir=%S/Inputs/resource_dir \
 // RUN:		--sysroot=%S/Inputs/basic_aix_tree \
 // RUN:		-nobuiltininc \
-// RUN:         -fopenmp \
+// RUN:		-fopenmp=libomp \
 // RUN:   | FileCheck -check-prefixes=CHECK-NOBUILTININC-INCLUDE,CHECK-NOBUILTININC-INCLUDE-CXX %s
 
 // RUN: %clangxx -### %s 2>&1 \
@@ -128,7 +128,7 @@
 // RUN:		-resource-dir=%S/Inputs/resource_dir \
 // RUN:		--sysroot=%S/Inputs/basic_aix_tree \
 // RUN:		-nobuiltininc \
-// RUN:         -fopenmp \
+// RUN:		-fopenmp=libomp \
 // RUN:   | FileCheck -check-prefixes=CHECK-NOBUILTININC-INCLUDE,CHECK-NOBUILTININC-INCLUDE-CXX  %s
 
 // RUN: %clang -### -xc %s 2>&1 \
@@ -136,7 +136,7 @@
 // RUN:		-resource-dir=%S/Inputs/resource_dir \
 // RUN:		--sysroot=%S/Inputs/basic_aix_tree \
 // RUN:		-nobuiltininc \
-// RUN:         -fopenmp \
+// RUN:		-fopenmp=libomp \
 // RUN:   | FileCheck -check-prefix=CHECK-NOBUILTININC-INCLUDE %s
 
 // RUN: %clang -### -xc %s 2>&1 \
@@ -144,7 +144,7 @@
 // RUN:		-resource-dir=%S/Inputs/resource_dir \
 // RUN:		--sysroot=%S/Inputs/basic_aix_tree \
 // RUN:		-nobuiltininc \
-// RUN:         -fopenmp \
+// RUN:		-fopenmp=libomp \
 // RUN:   | FileCheck -check-prefix=CHECK-NOBUILTININC-INCLUDE %s
 
 // CHECK-NOBUILTININC-INCLUDE:	"-cc1"
@@ -162,7 +162,7 @@
 // RUN:  -resource-dir=%S/Inputs/resource_dir \
 // RUN:  --sysroot=%S/Inputs/basic_aix_tree \
 // RUN:  -nostdinc++ \
-// RUN:  -fopenmp \
+// RUN:  -fopenmp=libomp \
 // RUN:   | FileCheck -check-prefix=CHECK-NOSTDINCXX-INCLUDE %s
 
 // RUN: %clangxx -### %s 2>&1 \
@@ -170,7 +170,7 @@
 // RUN:  -resource-dir=%S/Inputs/resource_dir \
 // RUN:  --sysroot=%S/Inputs/basic_aix_tree \
 // RUN:  -nostdinc++ \
-// RUN:  -fopenmp \
+// RUN:  -fopenmp=libomp \
 // RUN:   | FileCheck -check-prefix=CHECK-NOSTDINCXX-INCLUDE  %s
 
 // CHECK-NOSTDINCXX-INCLUDE:      "-cc1"

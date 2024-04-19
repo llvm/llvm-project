@@ -96,6 +96,8 @@ static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
 }
 
 static void propagateValue(const Expr &From, const Expr &To, Environment &Env) {
+  if (From.getType()->isRecordType())
+    return;
   if (auto *Val = Env.getValue(From))
     Env.setValue(To, *Val);
 }
@@ -403,6 +405,9 @@ public:
       return;
 
     if (Ret->isPRValue()) {
+      if (Ret->getType()->isRecordType())
+        return;
+
       auto *Val = Env.getValue(*Ret);
       if (Val == nullptr)
         return;
@@ -457,15 +462,9 @@ public:
     assert(ArgExpr != nullptr);
     propagateValueOrStorageLocation(*ArgExpr, *S, Env);
 
-    // If this is a prvalue of record type, we consider it to be an "original
-    // record constructor", which we always require to have a `RecordValue`.
-    // So make sure we have a value if we didn't propagate one above.
     if (S->isPRValue() && S->getType()->isRecordType()) {
-      if (Env.getValue(*S) == nullptr) {
-        auto &Loc = Env.getResultObjectLocation(*S);
-        Env.initializeFieldsWithValues(Loc);
-        refreshRecordValue(Loc, Env);
-      }
+      auto &Loc = Env.getResultObjectLocation(*S);
+      Env.initializeFieldsWithValues(Loc);
     }
   }
 
@@ -495,7 +494,6 @@ public:
     }
 
     RecordStorageLocation &Loc = Env.getResultObjectLocation(*S);
-    Env.setValue(*S, refreshRecordValue(Loc, Env));
 
     if (ConstructorDecl->isCopyOrMoveConstructor()) {
       // It is permissible for a copy/move constructor to have additional
@@ -542,8 +540,7 @@ public:
 
       RecordStorageLocation *LocSrc = nullptr;
       if (Arg1->isPRValue()) {
-        if (auto *Val = Env.get<RecordValue>(*Arg1))
-          LocSrc = &Val->getLoc();
+        LocSrc = &Env.getResultObjectLocation(*Arg1);
       } else {
         LocSrc = Env.get<RecordStorageLocation>(*Arg1);
       }
@@ -575,15 +572,6 @@ public:
     propagateValue(*RBO->getSemanticForm(), *RBO, Env);
   }
 
-  void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *S) {
-    if (S->getCastKind() == CK_ConstructorConversion) {
-      const Expr *SubExpr = S->getSubExpr();
-      assert(SubExpr != nullptr);
-
-      propagateValue(*SubExpr, *S, Env);
-    }
-  }
-
   void VisitCallExpr(const CallExpr *S) {
     // Of clang's builtins, only `__builtin_expect` is handled explicitly, since
     // others (like trap, debugtrap, and unreachable) are handled by CFG
@@ -613,12 +601,10 @@ public:
 
       // If this call produces a prvalue of record type, initialize its fields
       // with values.
-      if (S->getType()->isRecordType() && S->isPRValue())
-        if (Env.getValue(*S) == nullptr) {
-          RecordStorageLocation &Loc = Env.getResultObjectLocation(*S);
-          Env.initializeFieldsWithValues(Loc);
-          Env.setValue(*S, refreshRecordValue(Loc, Env));
-        }
+      if (S->getType()->isRecordType() && S->isPRValue()) {
+        RecordStorageLocation &Loc = Env.getResultObjectLocation(*S);
+        Env.initializeFieldsWithValues(Loc);
+      }
     }
   }
 
@@ -626,18 +612,16 @@ public:
     const Expr *SubExpr = S->getSubExpr();
     assert(SubExpr != nullptr);
 
-    Value *SubExprVal = Env.getValue(*SubExpr);
-    if (SubExprVal == nullptr)
-      return;
-
-    if (RecordValue *RecordVal = dyn_cast<RecordValue>(SubExprVal)) {
-      Env.setStorageLocation(*S, RecordVal->getLoc());
-      return;
-    }
-
     StorageLocation &Loc = Env.createStorageLocation(*S);
-    Env.setValue(Loc, *SubExprVal);
     Env.setStorageLocation(*S, Loc);
+
+    if (SubExpr->getType()->isRecordType())
+      // Nothing else left to do -- we initialized the record when transferring
+      // `SubExpr`.
+      return;
+
+    if (Value *SubExprVal = Env.getValue(*SubExpr))
+      Env.setValue(Loc, *SubExprVal);
   }
 
   void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *S) {
@@ -683,15 +667,11 @@ public:
       return;
     }
 
-    // In case the initializer list is transparent, we just need to propagate
-    // the value that it contains.
-    if (S->isSemanticForm() && S->isTransparent()) {
-      propagateValue(*S->getInit(0), *S, Env);
+    // If the initializer list is transparent, there's nothing to do.
+    if (S->isSemanticForm() && S->isTransparent())
       return;
-    }
 
     RecordStorageLocation &Loc = Env.getResultObjectLocation(*S);
-    Env.setValue(*S, refreshRecordValue(Loc, Env));
 
     // Initialization of base classes and fields of record type happens when we
     // visit the nested `CXXConstructExpr` or `InitListExpr` for that base class
