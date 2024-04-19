@@ -6,12 +6,12 @@ cmp x0, #4
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      203
+# CHECK-NEXT: Total Cycles:      54
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    15
-# CHECK-NEXT: uOps Per Cycle:    0.99
-# CHECK-NEXT: IPC:               0.99
+# CHECK-NEXT: uOps Per Cycle:    3.70
+# CHECK-NEXT: IPC:               3.70
 # CHECK-NEXT: Block RThroughput: 0.3
 
 # CHECK:      Instruction Info:
@@ -45,25 +45,24 @@ cmp x0, #4
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    [9]    [10]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50   0.50   0.50    -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    [9]    [10]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     mov	x0, x1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     cmp	x0, #4
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.48   0.50   0.01   0.01    -      -      -      -     mov	x0, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.02    -     0.49   0.49    -      -      -      -     cmp	x0, #4
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: Index     012345
 
-# CHECK:      [0,0]     DeER .    .   mov	x0, x1
-# CHECK-NEXT: [0,1]     D=eER.    .   cmp	x0, #4
-# CHECK-NEXT: [1,0]     D==eER    .   mov	x0, x1
-# CHECK-NEXT: [1,1]     D===eER   .   cmp	x0, #4
-# CHECK-NEXT: [2,0]     D====eER  .   mov	x0, x1
-# CHECK-NEXT: [2,1]     D=====eER .   cmp	x0, #4
-# CHECK-NEXT: [3,0]     D======eER.   mov	x0, x1
-# CHECK-NEXT: [3,1]     D=======eER   cmp	x0, #4
+# CHECK:      [0,0]     DeER .   mov	x0, x1
+# CHECK-NEXT: [0,1]     D=eER.   cmp	x0, #4
+# CHECK-NEXT: [1,0]     DeE-R.   mov	x0, x1
+# CHECK-NEXT: [1,1]     D=eER.   cmp	x0, #4
+# CHECK-NEXT: [2,0]     DeE-R.   mov	x0, x1
+# CHECK-NEXT: [2,1]     D=eER.   cmp	x0, #4
+# CHECK-NEXT: [3,0]     DeE-R.   mov	x0, x1
+# CHECK-NEXT: [3,1]     D==eER   cmp	x0, #4
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -72,6 +71,6 @@ cmp x0, #4
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     4     4.0    0.3    0.0       mov	x0, x1
-# CHECK-NEXT: 1.     4     5.0    0.0    0.0       cmp	x0, #4
-# CHECK-NEXT:        4     4.5    0.1    0.0       <total>
+# CHECK-NEXT: 0.     4     1.0    1.0    0.8       mov	x0, x1
+# CHECK-NEXT: 1.     4     2.3    0.3    0.0       cmp	x0, #4
+# CHECK-NEXT:        4     1.6    0.6    0.4       <total>

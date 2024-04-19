@@ -126,6 +126,9 @@ struct MCRegisterDesc {
   /// Index into list with lane mask sequences. The sequence contains a lanemask
   /// for every register unit.
   uint16_t RegUnitLaneMasks;
+
+  // Returns true for constant registers
+  bool Constant;
 };
 
 /// MCRegisterInfo base class - We assume that the target defines a static
@@ -380,6 +383,10 @@ public:
   /// specified physical register.
   const char *getName(MCRegister RegNo) const {
     return RegStrings + get(RegNo).Name;
+  }
+
+  bool isConstant(MCRegister RegNo) const {
+    return get(RegNo).Constant && MCRegister::isPhysicalRegister(RegNo.id());
   }
 
   /// Return the number of registers this target has (useful for
