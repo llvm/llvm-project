@@ -481,9 +481,11 @@ public:
       assert(Arg < (1 << 16) && "Arg out of range");
     }
   };
-  /// Vector of call argument and its forwarding register.
-  using CallSiteInfo = SmallVector<ArgRegPair, 1>;
-  using CallSiteInfoImpl = SmallVectorImpl<ArgRegPair>;
+
+  struct CallSiteInfo {
+    /// Vector of call argument and its forwarding register.
+    SmallVector<ArgRegPair, 1> ArgRegPairs;
+  };
 
 private:
   Delegate *TheDelegate = nullptr;
@@ -1058,8 +1060,9 @@ public:
                                           int64_t Offset, LocationSize Size) {
     return getMachineMemOperand(
         MMO, Offset,
-        !Size.hasValue() || Size.isScalable()
-            ? LLT()
+        !Size.hasValue() ? LLT()
+        : Size.isScalable()
+            ? LLT::scalable_vector(1, 8 * Size.getValue().getKnownMinValue())
             : LLT::scalar(8 * Size.getValue().getKnownMinValue()));
   }
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
@@ -1344,8 +1347,7 @@ public:
   }
 
   /// Start tracking the arguments passed to the call \p CallI.
-  void addCallArgsForwardingRegs(const MachineInstr *CallI,
-                                 CallSiteInfoImpl &&CallInfo) {
+  void addCallSiteInfo(const MachineInstr *CallI, CallSiteInfo &&CallInfo) {
     assert(CallI->isCandidateForCallSiteEntry());
     bool Inserted =
         CallSitesInfo.try_emplace(CallI, std::move(CallInfo)).second;

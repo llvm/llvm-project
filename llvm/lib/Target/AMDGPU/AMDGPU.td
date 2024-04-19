@@ -168,6 +168,10 @@ def FeatureCuMode : SubtargetFeature<"cumode",
   "Enable CU wavefront execution mode"
 >;
 
+def FeaturePreciseMemory
+    : SubtargetFeature<"precise-memory", "EnablePreciseMemory",
+                       "true", "Enable precise memory mode">;
+
 def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
   "SGPRInitBug",
   "true",
@@ -831,10 +835,12 @@ def FeatureNoDataDepHazard : SubtargetFeature<"no-data-dep-hazard",
   "Does not need SW waitstates"
 >;
 
-def FeatureGFX11FullVGPRs : SubtargetFeature<"gfx11-full-vgprs",
-  "HasGFX11FullVGPRs",
+// Allocate 1536 VGPRs for wave32 and 768 VGPRs for wave64
+// with allocation granularity 24 for wave32 and 12 for wave64
+def Feature1_5xVGPRs : SubtargetFeature<"allocate1_5xvgprs",
+  "Has1_5xVGPRs",
   "true",
-  "GFX11 with 50% more physical VGPRs and 50% larger allocation granule than GFX10"
+  "Has 50% more physical VGPRs and 50% larger allocation granule"
 >;
 
 
@@ -1491,12 +1497,12 @@ def FeatureISAVersion11_0_Common : FeatureSet<
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [FeatureGFX11FullVGPRs,
+    [Feature1_5xVGPRs,
      FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [FeatureGFX11FullVGPRs])>;
+    [Feature1_5xVGPRs])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1517,7 +1523,7 @@ def FeatureISAVersion11_5_1 : FeatureSet<
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureVGPRSingleUseHintInsts,
-     FeatureGFX11FullVGPRs])>;
+     Feature1_5xVGPRs])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,

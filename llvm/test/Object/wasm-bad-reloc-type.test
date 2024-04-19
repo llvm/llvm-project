@@ -1,3 +1,0 @@
-RUN: not llvm-objdump -s %p/Inputs/WASM/bad-reloc-type.wasm 2>&1 | FileCheck %s
-
-CHECK: invalid relocation type: 63

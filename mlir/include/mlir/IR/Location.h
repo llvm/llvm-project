@@ -154,7 +154,7 @@ public:
   /// Support llvm style casting.
   static bool classof(Attribute attr) {
     auto fusedLoc = llvm::dyn_cast<FusedLoc>(attr);
-    return fusedLoc && fusedLoc.getMetadata().isa_and_nonnull<MetadataT>();
+    return fusedLoc && mlir::isa_and_nonnull<MetadataT>(fusedLoc.getMetadata());
   }
 };
 
