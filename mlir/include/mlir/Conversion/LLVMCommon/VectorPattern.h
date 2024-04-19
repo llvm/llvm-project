@@ -54,11 +54,11 @@ LogicalResult handleMultidimensionalVectors(
     std::function<Value(Type, ValueRange)> createOperand,
     ConversionPatternRewriter &rewriter);
 
-LogicalResult vectorOneToOneRewrite(
-    Operation *op, StringRef targetOp, ValueRange operands,
-    ArrayRef<NamedAttribute> targetAttrs,
-    const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
-    IntegerOverflowFlags overflowFlags = IntegerOverflowFlags::none);
+LogicalResult vectorOneToOneRewrite(Operation *op, StringRef targetOp,
+                                    ValueRange operands,
+                                    ArrayRef<NamedAttribute> targetAttrs,
+                                    const LLVMTypeConverter &typeConverter,
+                                    ConversionPatternRewriter &rewriter);
 } // namespace detail
 } // namespace LLVM
 
@@ -70,9 +70,6 @@ public:
   AttrConvertPassThrough(SourceOp srcOp) : srcAttrs(srcOp->getAttrs()) {}
 
   ArrayRef<NamedAttribute> getAttrs() const { return srcAttrs; }
-  LLVM::IntegerOverflowFlags getOverflowFlags() const {
-    return LLVM::IntegerOverflowFlags::none;
-  }
 
 private:
   ArrayRef<NamedAttribute> srcAttrs;
@@ -103,8 +100,7 @@ public:
 
     return LLVM::detail::vectorOneToOneRewrite(
         op, TargetOp::getOperationName(), adaptor.getOperands(),
-        attrConvert.getAttrs(), *this->getTypeConverter(), rewriter,
-        attrConvert.getOverflowFlags());
+        attrConvert.getAttrs(), *this->getTypeConverter(), rewriter);
   }
 };
 } // namespace mlir
