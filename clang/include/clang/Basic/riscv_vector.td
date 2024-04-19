@@ -357,13 +357,13 @@ multiclass RVVNonTupleVCreateBuiltin<int dst_lmul, list<int> src_lmul_list> {
     defvar src_s = FixedVString<src_lmul, num, "v">.S;
     def vcreate # src_v # dst_v : RVVBuiltin<src_v # dst_v,
                                              dst_v # src_s,
-                                             "csilxfd", dst_v>;
+                                             "csilxfd">;
 
     defvar src_uv = FixedVString<src_lmul, num, "Uv">.V;
     defvar src_us = FixedVString<src_lmul, num, "Uv">.S;
     def vcreate_u # src_uv # dst_uv : RVVBuiltin<src_uv # dst_uv,
                                                  dst_uv # src_us,
-                                                 "csil", dst_uv>;
+                                                 "csil">;
   }
 }
 
