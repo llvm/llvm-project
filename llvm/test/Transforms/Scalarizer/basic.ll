@@ -868,9 +868,9 @@ define <2 x float> @f25(<2 x float> %src) {
 define <2 x i8> @test_copy_trunc_flags(<2 x i32> %src) {
 ; CHECK-LABEL: @test_copy_trunc_flags(
 ; CHECK-NEXT:    [[SRC_I0:%.*]] = extractelement <2 x i32> [[SRC:%.*]], i64 0
-; CHECK-NEXT:    [[TRUNC_I0:%.*]] = trunc i32 [[SRC_I0]] to i8
+; CHECK-NEXT:    [[TRUNC_I0:%.*]] = trunc nuw nsw i32 [[SRC_I0]] to i8
 ; CHECK-NEXT:    [[SRC_I1:%.*]] = extractelement <2 x i32> [[SRC]], i64 1
-; CHECK-NEXT:    [[TRUNC_I1:%.*]] = trunc i32 [[SRC_I1]] to i8
+; CHECK-NEXT:    [[TRUNC_I1:%.*]] = trunc nuw nsw i32 [[SRC_I1]] to i8
 ; CHECK-NEXT:    [[TRUNC_UPTO0:%.*]] = insertelement <2 x i8> poison, i8 [[TRUNC_I0]], i64 0
 ; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <2 x i8> [[TRUNC_UPTO0]], i8 [[TRUNC_I1]], i64 1
 ; CHECK-NEXT:    ret <2 x i8> [[TRUNC]]
