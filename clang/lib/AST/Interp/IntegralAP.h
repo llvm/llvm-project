@@ -154,7 +154,10 @@ public:
   }
 
   IntegralAP truncate(unsigned BitWidth) const {
-    return IntegralAP(V.trunc(BitWidth));
+    if constexpr (Signed)
+      return IntegralAP(V.trunc(BitWidth).sextOrTrunc(this->bitWidth()));
+    else
+      return IntegralAP(V.trunc(BitWidth).zextOrTrunc(this->bitWidth()));
   }
 
   IntegralAP<false> toUnsigned() const {
