@@ -742,6 +742,7 @@ variables is defined below.
     * ``LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_JIT_POST_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT=<Num> (default: 32)``
+    * ``LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT=[TRUE/FALSE] (default TRUE)``
 
 LIBOMPTARGET_DEBUG
 """"""""""""""""""
