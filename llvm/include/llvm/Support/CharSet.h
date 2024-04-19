@@ -131,7 +131,7 @@ public:
 
   ErrorOr<std::string> convert(StringRef Source,
                                bool ShouldAutoFlush = true) const {
-    SmallString<1> Result;
+    SmallString<100> Result;
     auto EC = Converter->convert(Source, Result, ShouldAutoFlush);
     if (!EC)
       return std::string(Result);
