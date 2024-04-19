@@ -13,6 +13,21 @@ define <vscale x 4 x i32> @bsl(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
   ret <vscale x 4 x i32> %c
 }
 
+define <vscale x 4 x i32> @bsl_add_sub(<vscale x 4 x i32> %pre_cond, <vscale x 4 x i32> %left, <vscale x 4 x i32> %right) #0 {
+; CHECK-LABEL: bsl_add_sub:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
+; CHECK-NEXT:    bsl z1.d, z1.d, z2.d, z0.d
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ret
+  %neg_cond = sub <vscale x 4 x i32> zeroinitializer, %pre_cond
+  %min_cond = add <vscale x 4 x i32> %pre_cond, splat(i32 -1)
+  %left_bits_0 = and <vscale x 4 x i32> %neg_cond, %left
+  %right_bits_0 = and <vscale x 4 x i32> %min_cond, %right
+  %bsl0000 = or <vscale x 4 x i32> %right_bits_0, %left_bits_0
+  ret <vscale x 4 x i32> %bsl0000
+}
+
 ; we are not expecting bsl instruction here. the constants do not match to fold to bsl.
 define <vscale x 4 x i32> @no_bsl_fold(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: no_bsl_fold:
