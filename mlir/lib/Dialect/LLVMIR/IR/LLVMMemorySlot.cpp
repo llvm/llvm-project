@@ -319,7 +319,7 @@ LogicalResult LLVM::StoreOp::ensureOnlySafeAccesses(
 static Type getTypeAtIndex(const DestructurableMemorySlot &slot,
                            Attribute index) {
   auto subelementIndexMap =
-      slot.elemType.cast<DestructurableTypeInterface>().getSubelementIndexMap();
+      cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap();
   if (!subelementIndexMap)
     return {};
   assert(!subelementIndexMap->empty());
@@ -913,8 +913,7 @@ bool LLVM::MemsetOp::canRewire(const DestructurableMemorySlot &slot,
   if (getIsVolatile())
     return false;
 
-  if (!slot.elemType.cast<DestructurableTypeInterface>()
-           .getSubelementIndexMap())
+  if (!cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap())
     return false;
 
   if (!areAllIndicesI32(slot))
@@ -928,7 +927,7 @@ DeletionKind LLVM::MemsetOp::rewire(const DestructurableMemorySlot &slot,
                                     RewriterBase &rewriter,
                                     const DataLayout &dataLayout) {
   std::optional<DenseMap<Attribute, Type>> types =
-      slot.elemType.cast<DestructurableTypeInterface>().getSubelementIndexMap();
+      cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap();
 
   IntegerAttr memsetLenAttr;
   bool successfulMatch =
@@ -1047,8 +1046,7 @@ static bool memcpyCanRewire(MemcpyLike op, const DestructurableMemorySlot &slot,
   if (op.getIsVolatile())
     return false;
 
-  if (!slot.elemType.cast<DestructurableTypeInterface>()
-           .getSubelementIndexMap())
+  if (!cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap())
     return false;
 
   if (!areAllIndicesI32(slot))

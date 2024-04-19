@@ -2489,7 +2489,7 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
   auto addDevInfos = [&, fail](auto devOperands, auto devOpType) -> void {
     for (const auto &devOp : devOperands) {
       // TODO: Only LLVMPointerTypes are handled.
-      if (!devOp.getType().template isa<LLVM::LLVMPointerType>())
+      if (!isa<LLVM::LLVMPointerType>(devOp.getType()))
         return fail();
 
       llvm::Value *mapOpValue = moduleTranslation.lookupValue(devOp);
@@ -3083,10 +3083,9 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       std::vector<llvm::GlobalVariable *> generatedRefs;
 
       std::vector<llvm::Triple> targetTriple;
-      auto targetTripleAttr =
-          op->getParentOfType<mlir::ModuleOp>()
-              ->getAttr(LLVM::LLVMDialect::getTargetTripleAttrName())
-              .dyn_cast_or_null<mlir::StringAttr>();
+      auto targetTripleAttr = dyn_cast_or_null<mlir::StringAttr>(
+          op->getParentOfType<mlir::ModuleOp>()->getAttr(
+              LLVM::LLVMDialect::getTargetTripleAttrName()));
       if (targetTripleAttr)
         targetTriple.emplace_back(targetTripleAttr.data());
 
@@ -3328,7 +3327,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
              attribute.getName())
       .Case("omp.is_target_device",
             [&](Attribute attr) {
-              if (auto deviceAttr = attr.dyn_cast<BoolAttr>()) {
+              if (auto deviceAttr = dyn_cast<BoolAttr>(attr)) {
                 llvm::OpenMPIRBuilderConfig &config =
                     moduleTranslation.getOpenMPBuilder()->Config;
                 config.setIsTargetDevice(deviceAttr.getValue());
@@ -3338,7 +3337,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
             })
       .Case("omp.is_gpu",
             [&](Attribute attr) {
-              if (auto gpuAttr = attr.dyn_cast<BoolAttr>()) {
+              if (auto gpuAttr = dyn_cast<BoolAttr>(attr)) {
                 llvm::OpenMPIRBuilderConfig &config =
                     moduleTranslation.getOpenMPBuilder()->Config;
                 config.setIsGPU(gpuAttr.getValue());
@@ -3348,7 +3347,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
             })
       .Case("omp.host_ir_filepath",
             [&](Attribute attr) {
-              if (auto filepathAttr = attr.dyn_cast<StringAttr>()) {
+              if (auto filepathAttr = dyn_cast<StringAttr>(attr)) {
                 llvm::OpenMPIRBuilder *ompBuilder =
                     moduleTranslation.getOpenMPBuilder();
                 ompBuilder->loadOffloadInfoMetadata(filepathAttr.getValue());
@@ -3358,13 +3357,13 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
             })
       .Case("omp.flags",
             [&](Attribute attr) {
-              if (auto rtlAttr = attr.dyn_cast<omp::FlagsAttr>())
+              if (auto rtlAttr = dyn_cast<omp::FlagsAttr>(attr))
                 return convertFlagsAttr(op, rtlAttr, moduleTranslation);
               return failure();
             })
       .Case("omp.version",
             [&](Attribute attr) {
-              if (auto versionAttr = attr.dyn_cast<omp::VersionAttr>()) {
+              if (auto versionAttr = dyn_cast<omp::VersionAttr>(attr)) {
                 llvm::OpenMPIRBuilder *ompBuilder =
                     moduleTranslation.getOpenMPBuilder();
                 ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp",
@@ -3376,15 +3375,14 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
       .Case("omp.declare_target",
             [&](Attribute attr) {
               if (auto declareTargetAttr =
-                      attr.dyn_cast<omp::DeclareTargetAttr>())
+                      dyn_cast<omp::DeclareTargetAttr>(attr))
                 return convertDeclareTargetAttr(op, declareTargetAttr,
                                                 moduleTranslation);
               return failure();
             })
       .Case("omp.requires",
             [&](Attribute attr) {
-              if (auto requiresAttr =
-                      attr.dyn_cast<omp::ClauseRequiresAttr>()) {
+              if (auto requiresAttr = dyn_cast<omp::ClauseRequiresAttr>(attr)) {
                 using Requires = omp::ClauseRequires;
                 Requires flags = requiresAttr.getValue();
                 llvm::OpenMPIRBuilderConfig &config =

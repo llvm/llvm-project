@@ -214,7 +214,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
        llvm::enumerate(gpuFuncOp.getArgumentTypes())) {
     auto remapping = signatureConversion.getInputMapping(idx);
     NamedAttrList argAttr =
-        argAttrs ? argAttrs[idx].cast<DictionaryAttr>() : NamedAttrList();
+        argAttrs ? cast<DictionaryAttr>(argAttrs[idx]) : NamedAttrList();
     auto copyAttribute = [&](StringRef attrName) {
       Attribute attr = argAttr.erase(attrName);
       if (!attr)
@@ -234,9 +234,8 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         return;
       }
       for (size_t i = 0, e = remapping->size; i < e; ++i) {
-        if (llvmFuncOp.getArgument(remapping->inputNo + i)
-                .getType()
-                .isa<LLVM::LLVMPointerType>()) {
+        if (isa<LLVM::LLVMPointerType>(
+                llvmFuncOp.getArgument(remapping->inputNo + i).getType())) {
           llvmFuncOp.setArgAttr(remapping->inputNo + i, attrName, attr);
         }
       }

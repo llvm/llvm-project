@@ -2078,7 +2078,7 @@ struct SparseTensorAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
-    if (attr.isa<SparseTensorEncodingAttr>()) {
+    if (isa<SparseTensorEncodingAttr>(attr)) {
       os << "sparse";
       return AliasResult::OverridableAlias;
     }

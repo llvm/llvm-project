@@ -127,7 +127,7 @@ LogicalResult CreateNdDescOp::verify() {
 
   // check source type matches the rank if it is a memref.
   // It also should have the same ElementType as TensorDesc.
-  auto memrefTy = getSourceType().dyn_cast<MemRefType>();
+  auto memrefTy = dyn_cast<MemRefType>(getSourceType());
   if (memrefTy) {
     invalidRank |= (memrefTy.getRank() != rank);
     invalidElemTy |= memrefTy.getElementType() != getElementType();
