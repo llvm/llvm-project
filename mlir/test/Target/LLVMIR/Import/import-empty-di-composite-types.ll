@@ -1,4 +1,4 @@
-; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -split-input-file -import-empty-di-composite-types %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -split-input-file -drop-di-composite-type-elements %s | FileCheck %s
 
 ; Verifies that the "-import-empty-di-composite-types" flag avoids the
 ; conversion of the elements of the DICompositeType.

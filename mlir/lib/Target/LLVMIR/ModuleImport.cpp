@@ -2095,7 +2095,7 @@ ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
 OwningOpRef<ModuleOp>
 mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                               MLIRContext *context, bool emitExpensiveWarnings,
-                              bool importEmptyDICompositeTypes) {
+                              bool dropDICompositeTypeElements) {
   // Preload all registered dialects to allow the import to iterate the
   // registered LLVMImportDialectInterface implementations and query the
   // supported LLVM IR constructs before starting the translation. Assumes the
@@ -2111,7 +2111,7 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
       /*column=*/0)));
 
   ModuleImport moduleImport(module.get(), std::move(llvmModule),
-                            emitExpensiveWarnings, importEmptyDICompositeTypes);
+                            emitExpensiveWarnings, dropDICompositeTypeElements);
   if (failed(moduleImport.initializeImportInterface()))
     return {};
   if (failed(moduleImport.convertDataLayout()))

@@ -35,14 +35,14 @@ class ModuleOp;
 /// the MLIR context.
 /// The `emitExpensiveWarnings` option controls if expensive
 /// but uncritical diagnostics should be emitted.
-/// The `importEmptyDICompositeTypes` option controls if DICompositeTypes should
-/// be imported without elements. This is a way to avoid triggering any parts of
-/// the recursive DI metadata import, which can consume substantial amounts of
-/// time.
+/// The `dropDICompositeTypeElements` option controls if DICompositeTypes should
+/// be imported without elements. If set, the option avoids the recursive
+/// traversal of composite type debug information, which can be expensive for
+/// adversarial inputs.
 OwningOpRef<ModuleOp>
 translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                         MLIRContext *context, bool emitExpensiveWarnings = true,
-                        bool importEmptyDICompositeTypes = false);
+                        bool dropDICompositeTypeElements = false);
 
 /// Translate the given LLVM data layout into an MLIR equivalent using the DLTI
 /// dialect.

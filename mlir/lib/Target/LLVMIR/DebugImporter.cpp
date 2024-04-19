@@ -27,10 +27,10 @@ using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
 
 DebugImporter::DebugImporter(ModuleOp mlirModule,
-                             bool importEmptyDICompositeTypes)
+                             bool dropDICompositeTypeElements)
     : recursionPruner(mlirModule.getContext()),
       context(mlirModule.getContext()), mlirModule(mlirModule),
-      importEmptyDICompositeTypes(importEmptyDICompositeTypes) {}
+      dropDICompositeTypeElements(dropDICompositeTypeElements) {}
 
 Location DebugImporter::translateFuncLocation(llvm::Function *func) {
   llvm::DISubprogram *subprogram = func->getSubprogram();
@@ -71,7 +71,7 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
   std::optional<DIFlags> flags = symbolizeDIFlags(node->getFlags());
   SmallVector<DINodeAttr> elements;
-  if (!importEmptyDICompositeTypes) {
+  if (!dropDICompositeTypeElements) {
     for (llvm::DINode *element : node->getElements()) {
       assert(element && "expected a non-null element type");
       elements.push_back(translate(element));
