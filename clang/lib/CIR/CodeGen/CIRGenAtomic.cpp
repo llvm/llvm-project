@@ -580,22 +580,16 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
   uint64_t Size = TInfo.Width.getQuantity();
   unsigned MaxInlineWidthInBits = getTarget().getMaxAtomicInlineWidth();
 
-  bool Oversized = getContext().toBits(TInfo.Width) > MaxInlineWidthInBits;
-  bool Misaligned = (Ptr.getAlignment() % TInfo.Width) != 0;
-  bool UseLibcall = Misaligned | Oversized;
-  bool ShouldCastToIntPtrTy = true;
-
   CharUnits MaxInlineWidth =
       getContext().toCharUnitsFromBits(MaxInlineWidthInBits);
-
   DiagnosticsEngine &Diags = CGM.getDiags();
-
+  bool Misaligned = (Ptr.getAlignment() % TInfo.Width) != 0;
+  bool Oversized = getContext().toBits(TInfo.Width) > MaxInlineWidthInBits;
   if (Misaligned) {
     Diags.Report(E->getBeginLoc(), diag::warn_atomic_op_misaligned)
         << (int)TInfo.Width.getQuantity()
         << (int)Ptr.getAlignment().getQuantity();
   }
-
   if (Oversized) {
     Diags.Report(E->getBeginLoc(), diag::warn_atomic_op_oversized)
         << (int)TInfo.Width.getQuantity() << (int)MaxInlineWidth.getQuantity();
@@ -603,6 +597,7 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
 
   auto Order = buildScalarExpr(E->getOrder());
   auto Scope = E->getScopeModel() ? buildScalarExpr(E->getScope()) : nullptr;
+  bool ShouldCastToIntPtrTy = true;
 
   switch (E->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
@@ -742,6 +737,9 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
     if (ShouldCastToIntPtrTy)
       Dest = Atomics.castToAtomicIntPointer(Dest);
   }
+
+  bool PowerOf2Size = (Size & (Size - 1)) == 0;
+  bool UseLibcall = !PowerOf2Size || (Size > 16);
 
   // For atomics larger than 16 bytes, emit a libcall from the frontend. This
   // avoids the overhead of dealing with excessively-large value types in IR.
