@@ -690,11 +690,11 @@ inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call,
 bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
     const CallBase *Call, bool MustPreserveNullness);
 
-/// This method strips off any GEP address adjustments and pointer casts from
-/// the specified value, returning the original object being addressed. Note
-/// that the returned value has pointer type if the specified value does. If
-/// the MaxLookup value is non-zero, it limits the number of instructions to
-/// be stripped off.
+/// This method strips off any GEP address adjustments, pointer casts
+/// or `llvm.threadlocal.address` from the specified value \p V, returning the
+/// original object being addressed. Note that the returned value has pointer
+/// type if the specified value does. If the \p MaxLookup value is non-zero, it
+/// limits the number of instructions to be stripped off.
 const Value *getUnderlyingObject(const Value *V, unsigned MaxLookup = 6);
 inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
   // Force const to avoid infinite recursion.
