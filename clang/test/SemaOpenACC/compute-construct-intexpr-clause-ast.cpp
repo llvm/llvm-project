@@ -77,6 +77,17 @@ void NormalUses() {
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt
+
+#pragma acc kernels vector_length(some_short())
+  while(true){}
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: vector_length clause
+  // CHECK-NEXT: CallExpr{{.*}}'short'
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'short (*)()' <FunctionToPointerDecay>
+  // CHECK-NEXT: DeclRefExpr{{.*}}'short ()' lvalue Function{{.*}} 'some_short' 'short ()'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
 }
 
 template<typename T, typename U>
@@ -153,6 +164,25 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: num_workers clause
   // CHECK-NEXT: CXXUnresolvedConstructExpr{{.*}} 'typename U::ShortTy' 'typename U::ShortTy' list
   // CHECK-NEXT: InitListExpr{{.*}} 'void'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+#pragma acc kernels vector_length(u)
+  while(true){}
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: vector_length clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'U' lvalue ParmVar{{.*}} 'u' 'U'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+#pragma acc parallel vector_length(U::value)
+  while(true){}
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: vector_length clause
+  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'U'
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt
@@ -236,6 +266,25 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: num_workers clause
   // CHECK-NEXT: CXXFunctionalCastExpr{{.*}} 'typename HasInt::ShortTy':'short' functional cast to typename struct HasInt::ShortTy <NoOp>
   // CHECK-NEXT: InitListExpr{{.*}}'typename HasInt::ShortTy':'short'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: vector_length clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'char' <UserDefinedConversion>
+  // CHECK-NEXT: CXXMemberCallExpr{{.*}}'char'
+  // CHECK-NEXT: MemberExpr{{.*}} '<bound member function type>' .operator char
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'HasInt' lvalue ParmVar
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: vector_length clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'const int' lvalue Var{{.*}} 'value' 'const int'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'HasInt'
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt

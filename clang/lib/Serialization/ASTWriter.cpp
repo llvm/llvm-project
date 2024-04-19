@@ -5005,7 +5005,7 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
 
   if (!ModularCodegenDecls.empty())
     Stream.EmitRecord(MODULAR_CODEGEN_DECLS, ModularCodegenDecls);
-  
+
   // Write the record containing tentative definitions.
   RecordData TentativeDefinitions;
   AddLazyVectorEmiitedDecls(*this, SemaRef.TentativeDefinitions,
@@ -5126,7 +5126,7 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
   }
   if (!UndefinedButUsed.empty())
     Stream.EmitRecord(UNDEFINED_BUT_USED, UndefinedButUsed);
-  
+
   // Write all delete-expressions that we would like to
   // analyze later in AST.
   RecordData DeleteExprsToAnalyze;
@@ -7654,6 +7654,12 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     AddStmt(const_cast<Expr *>(NWC->getIntExpr()));
     return;
   }
+  case OpenACCClauseKind::VectorLength: {
+    const auto *NWC = cast<OpenACCVectorLengthClause>(C);
+    writeSourceLocation(NWC->getLParenLoc());
+    AddStmt(const_cast<Expr *>(NWC->getIntExpr()));
+    return;
+  }
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
@@ -7682,7 +7688,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Reduction:
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
-  case OpenACCClauseKind::VectorLength:
   case OpenACCClauseKind::NumGangs:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
