@@ -1487,9 +1487,8 @@ void SimplifyAffineOp<AffinePrefetchOp>::replaceAffineOp(
     PatternRewriter &rewriter, AffinePrefetchOp prefetch, AffineMap map,
     ArrayRef<Value> mapOperands) const {
   rewriter.replaceOpWithNewOp<AffinePrefetchOp>(
-      prefetch, prefetch.getMemref(), map, mapOperands,
-      prefetch.getLocalityHint(), prefetch.getIsWrite(),
-      prefetch.getIsDataCache());
+      prefetch, prefetch.getMemref(), map, mapOperands, prefetch.getIsWrite(),
+      prefetch.getLocalityHint(), prefetch.getIsDataCache());
 }
 template <>
 void SimplifyAffineOp<AffineStoreOp>::replaceAffineOp(

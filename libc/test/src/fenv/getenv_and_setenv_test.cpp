@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/fenv_t.h"
 #include "src/fenv/fegetenv.h"
 #include "src/fenv/fegetround.h"
 #include "src/fenv/fesetenv.h"
@@ -13,8 +14,6 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "test/UnitTest/Test.h"
-
-#include <fenv.h>
 
 TEST(LlvmLibcFenvTest, GetEnvAndSetEnv) {
   // We will disable all exceptions to prevent invocation of the exception

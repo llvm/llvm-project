@@ -17,6 +17,7 @@
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
 
 #  include <__availability>
+#  include <__chrono/time_zone.h>
 #  include <__chrono/tzdb.h>
 #  include <__config>
 #  include <__fwd/string.h>
@@ -82,6 +83,15 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI tzdb_l
 
 _LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline const tzdb& get_tzdb() {
   return get_tzdb_list().front();
+}
+
+_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline const time_zone*
+locate_zone(string_view __name) {
+  return get_tzdb().locate_zone(__name);
+}
+
+_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline const time_zone* current_zone() {
+  return get_tzdb().current_zone();
 }
 
 _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI const tzdb& reload_tzdb();

@@ -84,11 +84,11 @@ try to be explicitly typed when possible.
 
 The transform IR values have transform IR types, which should implement exactly one of:
 
-  * [TransformHandleTypeInterface](Transform.md#transformhandletypeinterface-transformhandletypeinterface),
+  * [TransformHandleTypeInterface](#transformhandletypeinterface-transformhandletypeinterface),
 
-  * [TransformValueHandleTypeInterface](Transform.md#transformvaluehandletypeinterface-transformvaluehandletypeinterface),
+  * [TransformValueHandleTypeInterface](#transformvaluehandletypeinterface-transformvaluehandletypeinterface),
 
-  * [TransformParamTypeInterface](Transform.md##transformparamtypeinterface-transformparamtypeinterface).
+  * [TransformParamTypeInterface](#transformparamtypeinterface-transformparamtypeinterface).
 
 The goal of these type interfaces, beyond providing a common base for accepted
 types, is to verify the properties of the associated objects. For example, a

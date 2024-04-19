@@ -107,6 +107,12 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
       /*args=*/(ins)
     >,
     InterfaceMethod<
+      /*description=*/"Returns the endianness identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getEndiannessIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
       /*description=*/"Returns the alloca memory space identifier.",
       /*retTy=*/"::mlir::StringAttr",
       /*methodName=*/"getAllocaMemorySpaceIdentifier",
@@ -294,6 +300,18 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       /*defaultImplementation=*/[{
         return ::mlir::detail::getDefaultIndexBitwidth(type, dataLayout,
                                                        params);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the endianness used by the ABI computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"::mlir::Attribute",
+      /*methodName=*/"getEndianness",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultEndianness(entry);
       }]
     >,
     StaticInterfaceMethod<

@@ -44,6 +44,7 @@ bool Operator::hasPoisonGeneratingFlags() const {
     // Note: inrange exists on constexpr only
     return GEP->isInBounds() || GEP->getInRange() != std::nullopt;
   }
+  case Instruction::UIToFP:
   case Instruction::ZExt:
     if (auto *NNI = dyn_cast<PossiblyNonNegInst>(this))
       return NNI->hasNonNeg();
@@ -55,11 +56,12 @@ bool Operator::hasPoisonGeneratingFlags() const {
   }
 }
 
-bool Operator::hasPoisonGeneratingFlagsOrMetadata() const {
+bool Operator::hasPoisonGeneratingAnnotations() const {
   if (hasPoisonGeneratingFlags())
     return true;
   auto *I = dyn_cast<Instruction>(this);
-  return I && I->hasPoisonGeneratingMetadata();
+  return I && (I->hasPoisonGeneratingReturnAttributes() ||
+               I->hasPoisonGeneratingMetadata());
 }
 
 Type *GEPOperator::getSourceElementType() const {
