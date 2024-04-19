@@ -9324,52 +9324,6 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
       State.ILV->scalarizeInstruction(UI, this, VPIteration(Part, Lane), State);
 }
 
-/// Creates either vp_store or vp_scatter intrinsics calls to represent
-/// predicated store/scatter.
-static Instruction *
-lowerStoreUsingVectorIntrinsics(IRBuilderBase &Builder, Value *Addr,
-                                Value *StoredVal, bool IsScatter, Value *Mask,
-                                Value *EVL, const Align &Alignment) {
-  CallInst *Call;
-  if (IsScatter) {
-    Call = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
-                                   Intrinsic::vp_scatter,
-                                   {StoredVal, Addr, Mask, EVL});
-  } else {
-    VectorBuilder VBuilder(Builder);
-    VBuilder.setEVL(EVL).setMask(Mask);
-    Call = cast<CallInst>(VBuilder.createVectorInstruction(
-        Instruction::Store, Type::getVoidTy(EVL->getContext()),
-        {StoredVal, Addr}));
-  }
-  Call->addParamAttr(
-      1, Attribute::getWithAlignment(Call->getContext(), Alignment));
-  return Call;
-}
-
-/// Creates either vp_load or vp_gather intrinsics calls to represent
-/// predicated load/gather.
-static Instruction *lowerLoadUsingVectorIntrinsics(IRBuilderBase &Builder,
-                                                   VectorType *DataTy,
-                                                   Value *Addr, bool IsGather,
-                                                   Value *Mask, Value *EVL,
-                                                   const Align &Alignment) {
-  CallInst *Call;
-  if (IsGather) {
-    Call =
-        Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
-                                nullptr, "wide.masked.gather");
-  } else {
-    VectorBuilder VBuilder(Builder);
-    VBuilder.setEVL(EVL).setMask(Mask);
-    Call = cast<CallInst>(VBuilder.createVectorInstruction(
-        Instruction::Load, DataTy, Addr, "vp.op.load"));
-  }
-  Call->addParamAttr(
-      0, Attribute::getWithAlignment(Call->getContext(), Alignment));
-  return Call;
-}
-
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
   auto *LI = cast<LoadInst>(&Ingredient);
 
@@ -9391,46 +9345,60 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
         Mask = Builder.CreateVectorReverse(Mask, "reverse");
     }
 
-    // TODO: split this into several classes for better design.
-    if (State.EVL) {
-      assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
-                              "explicit vector length.");
-      assert(cast<VPInstruction>(State.EVL)->getOpcode() ==
-                 VPInstruction::ExplicitVectorLength &&
-             "EVL must be VPInstruction::ExplicitVectorLength.");
-      Value *EVL = State.get(State.EVL, VPIteration(0, 0));
-      // If EVL is not nullptr, then EVL must be a valid value set during plan
-      // creation, possibly default value = whole vector register length. EVL
-      // is created only if TTI prefers predicated vectorization, thus if EVL
-      // is not nullptr it also implies preference for predicated
-      // vectorization.
-      // FIXME: Support reverse loading after vp_reverse is added.
-      NewLI = lowerLoadUsingVectorIntrinsics(
-          Builder, DataTy, State.get(getAddr(), Part, !CreateGather),
-          CreateGather, Mask, EVL, Alignment);
-    } else if (CreateGather) {
-      Value *VectorGep = State.get(getAddr(), Part);
-      NewLI = Builder.CreateMaskedGather(DataTy, VectorGep, Alignment, Mask,
-                                         nullptr, "wide.masked.gather");
-      State.addMetadata(NewLI, LI);
+    Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateGather);
+    if (CreateGather) {
+      NewLI = Builder.CreateMaskedGather(DataTy, Addr, Alignment, Mask, nullptr,
+                                         "wide.masked.gather");
+    } else if (Mask) {
+      NewLI = Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
+                                       PoisonValue::get(DataTy),
+                                       "wide.masked.load");
     } else {
-      auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
-      if (Mask)
-        NewLI = Builder.CreateMaskedLoad(DataTy, VecPtr, Alignment, Mask,
-                                         PoisonValue::get(DataTy),
-                                         "wide.masked.load");
-      else
-        NewLI =
-            Builder.CreateAlignedLoad(DataTy, VecPtr, Alignment, "wide.load");
-
-      // Add metadata to the load, but setVectorValue to the reverse shuffle.
-      State.addMetadata(NewLI, LI);
-      if (Reverse)
-        NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
+      NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
     }
-
+    // Add metadata to the load, but setVectorValue to the reverse shuffle.
+    State.addMetadata(NewLI, LI);
+    if (Reverse)
+      NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
     State.set(this, NewLI, Part);
   }
+}
+
+void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
+  assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
+                          "explicit vector length.");
+  // FIXME: Support reverse loading after vp_reverse is added.
+  assert(!isReverse() && "Reverse loads are not implemented yet.");
+
+  auto *LI = cast<LoadInst>(&Ingredient);
+
+  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+  bool CreateGather = !isConsecutive();
+
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+  CallInst *NewLI;
+  Value *EVL = State.get(getEVL(), VPIteration(0, 0));
+  Value *Addr = State.get(getAddr(), 0, !CreateGather);
+  Value *Mask =
+      getMask() ? State.get(getMask(), 0)
+                : Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  if (CreateGather) {
+    NewLI =
+        Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
+                                nullptr, "wide.masked.gather");
+  } else {
+    VectorBuilder VBuilder(Builder);
+    VBuilder.setEVL(EVL).setMask(Mask);
+    NewLI = cast<CallInst>(VBuilder.createVectorInstruction(
+        Instruction::Load, DataTy, Addr, "vp.op.load"));
+  }
+  NewLI->addParamAttr(
+      0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
+  State.addMetadata(NewLI, LI);
+  State.set(this, NewLI, 0);
 }
 
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
@@ -9456,43 +9424,60 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
 
     Value *StoredVal = State.get(StoredVPValue, Part);
     if (isReverse()) {
-      assert(!State.EVL && "reversing not yet implemented with EVL");
       // If we store to reverse consecutive memory locations, then we need
       // to reverse the order of elements in the stored value.
       StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
       // We don't want to update the value in the map as it might be used in
       // another expression. So don't call resetVectorValue(StoredVal).
     }
-    // TODO: split this into several classes for better design.
-    if (State.EVL) {
-      assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
-                              "explicit vector length.");
-      assert(cast<VPInstruction>(State.EVL)->getOpcode() ==
-                 VPInstruction::ExplicitVectorLength &&
-             "EVL must be VPInstruction::ExplicitVectorLength.");
-      Value *EVL = State.get(State.EVL, VPIteration(0, 0));
-      // If EVL is not nullptr, then EVL must be a valid value set during plan
-      // creation, possibly default value = whole vector register length. EVL
-      // is created only if TTI prefers predicated vectorization, thus if EVL
-      // is not nullptr it also implies preference for predicated
-      // vectorization.
-      // FIXME: Support reverse store after vp_reverse is added.
-      NewSI = lowerStoreUsingVectorIntrinsics(
-          Builder, State.get(getAddr(), Part, !CreateScatter), StoredVal,
-          CreateScatter, Mask, EVL, Alignment);
-    } else if (CreateScatter) {
-      Value *VectorGep = State.get(getAddr(), Part);
-      NewSI =
-          Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment, Mask);
-    } else {
-      auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
-      if (Mask)
-        NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment, Mask);
-      else
-        NewSI = Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment);
-    }
+    Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateScatter);
+    if (CreateScatter)
+      NewSI = Builder.CreateMaskedScatter(StoredVal, Addr, Alignment, Mask);
+    else if (Mask)
+      NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
+    else
+      NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
     State.addMetadata(NewSI, SI);
   }
+}
+
+void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
+  assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
+                          "explicit vector length.");
+  // FIXME: Support reverse loading after vp_reverse is added.
+  assert(!isReverse() && "Reverse store are not implemented yet.");
+
+  auto *SI = cast<StoreInst>(&Ingredient);
+
+  VPValue *StoredValue = getStoredValue();
+  bool CreateScatter = !isConsecutive();
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+
+  CallInst *NewSI = nullptr;
+  Value *StoredVal = State.get(StoredValue, 0);
+  Value *EVL = State.get(getEVL(), VPIteration(0, 0));
+  // FIXME: Support reverse store after vp_reverse is added.
+  Value *Mask =
+      getMask() ? State.get(getMask(), 0)
+                : Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  Value *Addr = State.get(getAddr(), 0, !CreateScatter);
+  if (CreateScatter) {
+    NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
+                                    Intrinsic::vp_scatter,
+                                    {StoredVal, Addr, Mask, EVL});
+  } else {
+    VectorBuilder VBuilder(Builder);
+    VBuilder.setEVL(EVL).setMask(Mask);
+    NewSI = cast<CallInst>(VBuilder.createVectorInstruction(
+        Instruction::Store, Type::getVoidTy(EVL->getContext()),
+        {StoredVal, Addr}));
+  }
+  NewSI->addParamAttr(
+      1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
+  State.addMetadata(NewSI, SI);
 }
 
 // Determine how to lower the scalar epilogue, which depends on 1) optimising
