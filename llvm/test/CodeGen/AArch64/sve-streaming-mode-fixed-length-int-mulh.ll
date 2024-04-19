@@ -101,8 +101,8 @@ define <16 x i8> @smulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 define void @smulh_v32i8(ptr %a, ptr %b) {
 ; SVE-LABEL: smulh_v32i8:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.b, vl16
 ; SVE-NEXT:    ldp q0, q3, [x1]
+; SVE-NEXT:    ptrue p0.b, vl16
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    smulh z0.b, p0/m, z0.b, z1.b
 ; SVE-NEXT:    movprfx z1, z2
@@ -214,8 +214,8 @@ define <8 x i16> @smulh_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 define void @smulh_v16i16(ptr %a, ptr %b) {
 ; SVE-LABEL: smulh_v16i16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.h, vl8
 ; SVE-NEXT:    ldp q0, q3, [x1]
+; SVE-NEXT:    ptrue p0.h, vl8
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    smulh z0.h, p0/m, z0.h, z1.h
 ; SVE-NEXT:    movprfx z1, z2
@@ -295,8 +295,8 @@ define <4 x i32> @smulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @smulh_v8i32(ptr %a, ptr %b) {
 ; SVE-LABEL: smulh_v8i32:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    ldp q0, q3, [x1]
+; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    smulh z0.s, p0/m, z0.s, z1.s
 ; SVE-NEXT:    movprfx z1, z2
@@ -378,8 +378,8 @@ define <2 x i64> @smulh_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @smulh_v4i64(ptr %a, ptr %b) {
 ; SVE-LABEL: smulh_v4i64:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.d, vl2
 ; SVE-NEXT:    ldp q0, q3, [x1]
+; SVE-NEXT:    ptrue p0.d, vl2
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    smulh z0.d, p0/m, z0.d, z1.d
 ; SVE-NEXT:    movprfx z1, z2
@@ -413,9 +413,9 @@ define void @smulh_v4i64(ptr %a, ptr %b) {
 define <4 x i8> @umulh_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; SVE-LABEL: umulh_v4i8:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.h, vl4
 ; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    ptrue p0.h, vl4
 ; SVE-NEXT:    and z0.h, z0.h, #0xff
 ; SVE-NEXT:    and z1.h, z1.h, #0xff
 ; SVE-NEXT:    mul z0.h, p0/m, z0.h, z1.h
@@ -494,8 +494,8 @@ define <16 x i8> @umulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 define void @umulh_v32i8(ptr %a, ptr %b) {
 ; SVE-LABEL: umulh_v32i8:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.b, vl16
 ; SVE-NEXT:    ldp q0, q3, [x1]
+; SVE-NEXT:    ptrue p0.b, vl16
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    umulh z0.b, p0/m, z0.b, z1.b
 ; SVE-NEXT:    movprfx z1, z2
@@ -525,9 +525,9 @@ define void @umulh_v32i8(ptr %a, ptr %b) {
 define <2 x i16> @umulh_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 ; SVE-LABEL: umulh_v2i16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.s, vl2
 ; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; SVE-NEXT:    ptrue p0.s, vl2
 ; SVE-NEXT:    and z0.s, z0.s, #0xffff
 ; SVE-NEXT:    and z1.s, z1.s, #0xffff
 ; SVE-NEXT:    mul z0.s, p0/m, z0.s, z1.s
@@ -606,8 +606,8 @@ define <8 x i16> @umulh_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 define void @umulh_v16i16(ptr %a, ptr %b) {
 ; SVE-LABEL: umulh_v16i16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.h, vl8
 ; SVE-NEXT:    ldp q0, q3, [x1]
+; SVE-NEXT:    ptrue p0.h, vl8
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
 ; SVE-NEXT:    movprfx z1, z2
@@ -687,8 +687,8 @@ define <4 x i32> @umulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @umulh_v8i32(ptr %a, ptr %b) {
 ; SVE-LABEL: umulh_v8i32:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    ldp q0, q3, [x1]
+; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
 ; SVE-NEXT:    movprfx z1, z2
@@ -770,8 +770,8 @@ define <2 x i64> @umulh_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @umulh_v4i64(ptr %a, ptr %b) {
 ; SVE-LABEL: umulh_v4i64:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.d, vl2
 ; SVE-NEXT:    ldp q0, q3, [x1]
+; SVE-NEXT:    ptrue p0.d, vl2
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
 ; SVE-NEXT:    movprfx z1, z2

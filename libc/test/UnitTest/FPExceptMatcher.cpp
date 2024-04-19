@@ -8,7 +8,8 @@
 
 #include "FPExceptMatcher.h"
 
-#include <fenv.h>
+#include "hdr/types/fenv_t.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include <memory>
 #include <setjmp.h>
 #include <signal.h>
@@ -36,12 +37,12 @@ FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
 
   caughtExcept = false;
   fenv_t oldEnv;
-  fegetenv(&oldEnv);
+  fputil::get_env(&oldEnv);
   if (sigsetjmp(jumpBuffer, 1) == 0)
     funcUP->call();
   // We restore the previous floating point environment after
   // the call to the function which can potentially raise SIGFPE.
-  fesetenv(&oldEnv);
+  fputil::set_env(&oldEnv);
   signal(SIGFPE, oldSIGFPEHandler);
   exceptionRaised = caughtExcept;
 }

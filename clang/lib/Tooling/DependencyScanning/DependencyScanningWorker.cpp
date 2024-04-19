@@ -364,18 +364,16 @@ public:
         return false;
 
     // Use the dependency scanning optimized file system if requested to do so.
-    if (DepFS) {
-      llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> LocalDepFS =
-          DepFS;
+    if (DepFS)
       ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
-          [LocalDepFS = std::move(LocalDepFS)](FileEntryRef File)
+          [LocalDepFS = DepFS](FileEntryRef File)
           -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
         if (llvm::ErrorOr<EntryRef> Entry =
                 LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-          return Entry->getDirectiveTokens();
+          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
+            return Entry->getDirectiveTokens();
         return std::nullopt;
       };
-    }
 
     // Create the dependency collector that will collect the produced
     // dependencies.

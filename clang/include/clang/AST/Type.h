@@ -1690,7 +1690,10 @@ protected:
 
     /// Whether we have a stored size expression.
     LLVM_PREFERRED_TYPE(bool)
-    unsigned HasStoredSizeExpr : 1;
+    unsigned HasExternalSize : 1;
+
+    LLVM_PREFERRED_TYPE(unsigned)
+    unsigned SizeWidth : 5;
   };
 
   class BuiltinTypeBitfields {
@@ -2297,6 +2300,7 @@ public:
   bool isConstantArrayType() const;
   bool isIncompleteArrayType() const;
   bool isVariableArrayType() const;
+  bool isArrayParameterType() const;
   bool isDependentSizedArrayType() const;
   bool isRecordType() const;
   bool isClassType() const;
@@ -3331,42 +3335,114 @@ public:
     return T->getTypeClass() == ConstantArray ||
            T->getTypeClass() == VariableArray ||
            T->getTypeClass() == IncompleteArray ||
-           T->getTypeClass() == DependentSizedArray;
+           T->getTypeClass() == DependentSizedArray ||
+           T->getTypeClass() == ArrayParameter;
   }
 };
 
 /// Represents the canonical version of C arrays with a specified constant size.
 /// For example, the canonical type for 'int A[4 + 4*100]' is a
 /// ConstantArrayType where the element type is 'int' and the size is 404.
-class ConstantArrayType final
-    : public ArrayType,
-      private llvm::TrailingObjects<ConstantArrayType, const Expr *> {
+class ConstantArrayType : public ArrayType {
   friend class ASTContext; // ASTContext creates these.
-  friend TrailingObjects;
 
-  llvm::APInt Size; // Allows us to unique the type.
+  struct ExternalSize {
+    ExternalSize(const llvm::APInt &Sz, const Expr *SE)
+        : Size(Sz), SizeExpr(SE) {}
+    llvm::APInt Size; // Allows us to unique the type.
+    const Expr *SizeExpr;
+  };
 
-  ConstantArrayType(QualType et, QualType can, const llvm::APInt &size,
-                    const Expr *sz, ArraySizeModifier sm, unsigned tq)
-      : ArrayType(ConstantArray, et, can, sm, tq, sz), Size(size) {
-    ConstantArrayTypeBits.HasStoredSizeExpr = sz != nullptr;
-    if (ConstantArrayTypeBits.HasStoredSizeExpr) {
-      assert(!can.isNull() && "canonical constant array should not have size");
-      *getTrailingObjects<const Expr*>() = sz;
-    }
+  union {
+    uint64_t Size;
+    ExternalSize *SizePtr;
+  };
+
+  ConstantArrayType(QualType Et, QualType Can, uint64_t Width, uint64_t Sz,
+                    ArraySizeModifier SM, unsigned TQ)
+      : ArrayType(ConstantArray, Et, Can, SM, TQ, nullptr), Size(Sz) {
+    ConstantArrayTypeBits.HasExternalSize = false;
+    ConstantArrayTypeBits.SizeWidth = Width / 8;
+    // The in-structure size stores the size in bytes rather than bits so we
+    // drop the three least significant bits since they're always zero anyways.
+    assert(Width < 0xFF && "Type width in bits must be less than 8 bits");
   }
 
-  unsigned numTrailingObjects(OverloadToken<const Expr*>) const {
-    return ConstantArrayTypeBits.HasStoredSizeExpr;
+  ConstantArrayType(QualType Et, QualType Can, ExternalSize *SzPtr,
+                    ArraySizeModifier SM, unsigned TQ)
+      : ArrayType(ConstantArray, Et, Can, SM, TQ, SzPtr->SizeExpr),
+        SizePtr(SzPtr) {
+    ConstantArrayTypeBits.HasExternalSize = true;
+    ConstantArrayTypeBits.SizeWidth = 0;
+
+    assert((SzPtr->SizeExpr == nullptr || !Can.isNull()) &&
+           "canonical constant array should not have size expression");
+  }
+
+  static ConstantArrayType *Create(const ASTContext &Ctx, QualType ET,
+                                   QualType Can, const llvm::APInt &Sz,
+                                   const Expr *SzExpr, ArraySizeModifier SzMod,
+                                   unsigned Qual);
+
+protected:
+  ConstantArrayType(TypeClass Tc, const ConstantArrayType *ATy, QualType Can)
+      : ArrayType(Tc, ATy->getElementType(), Can, ATy->getSizeModifier(),
+                  ATy->getIndexTypeQualifiers().getAsOpaqueValue(), nullptr) {
+    ConstantArrayTypeBits.HasExternalSize =
+        ATy->ConstantArrayTypeBits.HasExternalSize;
+    if (!ConstantArrayTypeBits.HasExternalSize) {
+      ConstantArrayTypeBits.SizeWidth = ATy->ConstantArrayTypeBits.SizeWidth;
+      Size = ATy->Size;
+    } else
+      SizePtr = ATy->SizePtr;
   }
 
 public:
-  const llvm::APInt &getSize() const { return Size; }
-  const Expr *getSizeExpr() const {
-    return ConstantArrayTypeBits.HasStoredSizeExpr
-               ? *getTrailingObjects<const Expr *>()
-               : nullptr;
+  /// Return the constant array size as an APInt.
+  llvm::APInt getSize() const {
+    return ConstantArrayTypeBits.HasExternalSize
+               ? SizePtr->Size
+               : llvm::APInt(ConstantArrayTypeBits.SizeWidth * 8, Size);
   }
+
+  /// Return the bit width of the size type.
+  unsigned getSizeBitWidth() const {
+    return ConstantArrayTypeBits.HasExternalSize
+               ? SizePtr->Size.getBitWidth()
+               : static_cast<unsigned>(ConstantArrayTypeBits.SizeWidth * 8);
+  }
+
+  /// Return true if the size is zero.
+  bool isZeroSize() const {
+    return ConstantArrayTypeBits.HasExternalSize ? SizePtr->Size.isZero()
+                                                 : 0 == Size;
+  }
+
+  /// Return the size zero-extended as a uint64_t.
+  uint64_t getZExtSize() const {
+    return ConstantArrayTypeBits.HasExternalSize ? SizePtr->Size.getZExtValue()
+                                                 : Size;
+  }
+
+  /// Return the size sign-extended as a uint64_t.
+  int64_t getSExtSize() const {
+    return ConstantArrayTypeBits.HasExternalSize ? SizePtr->Size.getSExtValue()
+                                                 : static_cast<int64_t>(Size);
+  }
+
+  /// Return the size zero-extended to uint64_t or UINT64_MAX if the value is
+  /// larger than UINT64_MAX.
+  uint64_t getLimitedSize() const {
+    return ConstantArrayTypeBits.HasExternalSize
+               ? SizePtr->Size.getLimitedValue()
+               : Size;
+  }
+
+  /// Return a pointer to the size expression.
+  const Expr *getSizeExpr() const {
+    return ConstantArrayTypeBits.HasExternalSize ? SizePtr->SizeExpr : nullptr;
+  }
+
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
@@ -3383,17 +3459,31 @@ public:
   static unsigned getMaxSizeBits(const ASTContext &Context);
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) {
-    Profile(ID, Ctx, getElementType(), getSize(), getSizeExpr(),
+    Profile(ID, Ctx, getElementType(), getZExtSize(), getSizeExpr(),
             getSizeModifier(), getIndexTypeCVRQualifiers());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
-                      QualType ET, const llvm::APInt &ArraySize,
-                      const Expr *SizeExpr, ArraySizeModifier SizeMod,
-                      unsigned TypeQuals);
+                      QualType ET, uint64_t ArraySize, const Expr *SizeExpr,
+                      ArraySizeModifier SizeMod, unsigned TypeQuals);
 
   static bool classof(const Type *T) {
-    return T->getTypeClass() == ConstantArray;
+    return T->getTypeClass() == ConstantArray ||
+           T->getTypeClass() == ArrayParameter;
+  }
+};
+
+/// Represents a constant array type that does not decay to a pointer when used
+/// as a function parameter.
+class ArrayParameterType : public ConstantArrayType {
+  friend class ASTContext; // ASTContext creates these.
+
+  ArrayParameterType(const ConstantArrayType *ATy, QualType CanTy)
+      : ConstantArrayType(ArrayParameter, ATy, CanTy) {}
+
+public:
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == ArrayParameter;
   }
 };
 
@@ -7125,7 +7215,8 @@ inline bool QualType::isCanonicalAsParam() const {
   if (T->isVariablyModifiedType() && T->hasSizedVLAType())
     return false;
 
-  return !isa<FunctionType>(T) && !isa<ArrayType>(T);
+  return !isa<FunctionType>(T) &&
+         (!isa<ArrayType>(T) || isa<ArrayParameterType>(T));
 }
 
 inline bool QualType::isConstQualified() const {
@@ -7388,6 +7479,10 @@ inline bool Type::isIncompleteArrayType() const {
 
 inline bool Type::isVariableArrayType() const {
   return isa<VariableArrayType>(CanonicalType);
+}
+
+inline bool Type::isArrayParameterType() const {
+  return isa<ArrayParameterType>(CanonicalType);
 }
 
 inline bool Type::isDependentSizedArrayType() const {
@@ -7753,7 +7848,7 @@ inline bool Type::isTypedefNameType() const {
 
 /// Determines whether this type can decay to a pointer type.
 inline bool Type::canDecayToPointerType() const {
-  return isFunctionType() || isArrayType();
+  return isFunctionType() || (isArrayType() && !isArrayParameterType());
 }
 
 inline bool Type::hasPointerRepresentation() const {

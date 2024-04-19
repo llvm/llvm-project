@@ -127,6 +127,12 @@ public:
   /// the variable.
   void setId(VarKind kind, unsigned i, Identifier id);
 
+  void resetIds() { space.resetIds(); }
+
+  /// Get the identifiers for the variables of specified varKind. Calls resetIds
+  /// on the relations space if identifiers are not enabled.
+  ArrayRef<Identifier> getIds(VarKind kind);
+
   /// Returns a copy of the space without locals.
   PresburgerSpace getSpaceWithoutLocals() const {
     return PresburgerSpace::getRelationSpace(space.getNumDomainVars(),
@@ -673,6 +679,11 @@ public:
   /// Formally, R1.applyRange(R2) is the same as R1.compose(R2) but we provide
   /// this for uniformity with `applyDomain`.
   void applyRange(const IntegerRelation &rel);
+
+  /// Given a relation `other: (A -> B)`, this operation merges the symbol and
+  /// local variables and then takes the composition of `other` on `this: (B ->
+  /// C)`. The resulting relation represents tuples of the form: `A -> C`.
+  void mergeAndCompose(const IntegerRelation &other);
 
   /// Compute an equivalent representation of the same set, such that all local
   /// vars in all disjuncts have division representations. This representation

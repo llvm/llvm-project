@@ -11,8 +11,8 @@
 
 #ifndef FORTRAN_RUNTIME_STAT_H_
 #define FORTRAN_RUNTIME_STAT_H_
+#include "flang/Common/api-attrs.h"
 #include "flang/ISO_Fortran_binding_wrapper.h"
-#include "flang/Runtime/api-attrs.h"
 #include "flang/Runtime/magic-numbers.h"
 namespace Fortran::runtime {
 

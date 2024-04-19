@@ -8,25 +8,35 @@
 #
 # ===------------------------------------------------------------------------===#
 
-r"""
+"""
 ClangTidy Test Helper
 =====================
 
-This script runs clang-tidy in fix mode and verify fixes, messages or both.
+This script is used to simplify writing, running, and debugging tests compatible
+with llvm-lit. By default it runs clang-tidy in fix mode and uses FileCheck to
+verify messages and/or fixes.
 
-Usage:
-  check_clang_tidy.py [-resource-dir=<resource-dir>] \
-    [-assume-filename=<file-with-source-extension>] \
-    [-check-suffix=<comma-separated-file-check-suffixes>] \
-    [-check-suffixes=<comma-separated-file-check-suffixes>] \
-    [-std=c++(98|11|14|17|20)[-or-later]] \
-    <source-file> <check-name> <temp-file> \
-    -- [optional clang-tidy arguments]
+For debugging, with --export-fixes, the tool simply exports fixes to a provided
+file and does not run FileCheck.
 
-Example:
+Extra arguments, those after the first -- if any, are passed to either
+clang-tidy or clang:
+* Arguments between the first -- and second -- are clang-tidy arguments.
+  * May be only whitespace if there are no clang-tidy arguments.
+  * clang-tidy's --config would go here.
+* Arguments after the second -- are clang arguments
+
+Examples
+--------
+
   // RUN: %check_clang_tidy %s llvm-include-order %t -- -- -isystem %S/Inputs
 
-Notes:
+or
+
+  // RUN: %check_clang_tidy %s llvm-include-order --export-fixes=fixes.yaml %t -std=c++20
+
+Notes
+-----
   -std=c++(98|11|14|17|20)-or-later:
     This flag will cause multiple runs within the same check_clang_tidy
     execution. Make sure you don't have shared state across these runs.
@@ -34,6 +44,7 @@ Notes:
 
 import argparse
 import os
+import pathlib
 import re
 import subprocess
 import sys
@@ -88,6 +99,7 @@ class CheckRunner:
         self.has_check_fixes = False
         self.has_check_messages = False
         self.has_check_notes = False
+        self.export_fixes = args.export_fixes
         self.fixes = MessagePrefix("CHECK-FIXES")
         self.messages = MessagePrefix("CHECK-MESSAGES")
         self.notes = MessagePrefix("CHECK-NOTES")
@@ -181,7 +193,13 @@ class CheckRunner:
             [
                 "clang-tidy",
                 self.temp_file_name,
-                "-fix",
+            ]
+            + [
+                "-fix"
+                if self.export_fixes is None
+                else "--export-fixes=" + self.export_fixes
+            ]
+            + [
                 "--checks=-*," + self.check_name,
             ]
             + self.clang_tidy_extra_args
@@ -255,12 +273,14 @@ class CheckRunner:
 
     def run(self):
         self.read_input()
-        self.get_prefixes()
+        if self.export_fixes is None:
+            self.get_prefixes()
         self.prepare_test_inputs()
         clang_tidy_output = self.run_clang_tidy()
-        self.check_fixes()
-        self.check_messages(clang_tidy_output)
-        self.check_notes(clang_tidy_output)
+        if self.export_fixes is None:
+            self.check_fixes()
+            self.check_messages(clang_tidy_output)
+            self.check_notes(clang_tidy_output)
 
 
 def expand_std(std):
@@ -284,7 +304,11 @@ def csv(string):
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        prog=pathlib.Path(__file__).stem,
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("-expect-clang-tidy-error", action="store_true")
     parser.add_argument("-resource-dir")
     parser.add_argument("-assume-filename")
@@ -298,7 +322,19 @@ def parse_arguments():
         type=csv,
         help="comma-separated list of FileCheck suffixes",
     )
-    parser.add_argument("-std", type=csv, default=["c++11-or-later"])
+    parser.add_argument(
+        "-export-fixes",
+        default=None,
+        type=str,
+        metavar="file",
+        help="A file to export fixes into instead of fixing.",
+    )
+    parser.add_argument(
+        "-std",
+        type=csv,
+        default=["c++11-or-later"],
+        help="Passed to clang. Special -or-later values are expanded.",
+    )
     return parser.parse_known_args()
 
 

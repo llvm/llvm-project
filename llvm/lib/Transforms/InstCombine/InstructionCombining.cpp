@@ -1431,7 +1431,7 @@ Instruction *InstCombinerImpl::foldFBinOpOfIntCastsFromSign(
     if (OpsKnown[OpNo].hasKnownBits() &&
         OpsKnown[OpNo].getKnownBits(SQ).isNonZero())
       return true;
-    return isKnownNonZero(IntOps[OpNo], SQ.DL);
+    return isKnownNonZero(IntOps[OpNo], SQ);
   };
 
   auto IsNonNeg = [&](unsigned OpNo) -> bool {
@@ -2190,7 +2190,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     Value *Y, *OtherOp;
     if (!match(LHS,
                m_OneUse(m_Shuffle(m_Value(X), m_Undef(), m_Mask(MaskC)))) ||
-        !match(MaskC, m_SplatOrUndefMask(SplatIndex)) ||
+        !match(MaskC, m_SplatOrPoisonMask(SplatIndex)) ||
         X->getType() != Inst.getType() ||
         !match(RHS, m_OneUse(m_BinOp(Opcode, m_Value(Y), m_Value(OtherOp)))))
       return nullptr;
@@ -3572,6 +3572,38 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
   return nullptr;
 }
 
+// Replaces (switch (select cond, X, C)/(select cond, C, X)) with (switch X) if
+// we can prove that both (switch C) and (switch X) go to the default when cond
+// is false/true.
+static Value *simplifySwitchOnSelectUsingRanges(SwitchInst &SI,
+                                                SelectInst *Select,
+                                                bool IsTrueArm) {
+  unsigned CstOpIdx = IsTrueArm ? 1 : 2;
+  auto *C = dyn_cast<ConstantInt>(Select->getOperand(CstOpIdx));
+  if (!C)
+    return nullptr;
+
+  BasicBlock *CstBB = SI.findCaseValue(C)->getCaseSuccessor();
+  if (CstBB != SI.getDefaultDest())
+    return nullptr;
+  Value *X = Select->getOperand(3 - CstOpIdx);
+  ICmpInst::Predicate Pred;
+  const APInt *RHSC;
+  if (!match(Select->getCondition(),
+             m_ICmp(Pred, m_Specific(X), m_APInt(RHSC))))
+    return nullptr;
+  if (IsTrueArm)
+    Pred = ICmpInst::getInversePredicate(Pred);
+
+  // See whether we can replace the select with X
+  ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *RHSC);
+  for (auto Case : SI.cases())
+    if (!CR.contains(Case.getCaseValue()->getValue()))
+      return nullptr;
+
+  return X;
+}
+
 Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
   Value *Cond = SI.getCondition();
   Value *Op0;
@@ -3645,6 +3677,16 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
     }
   }
 
+  // Fold switch(select cond, X, Y) into switch(X/Y) if possible
+  if (auto *Select = dyn_cast<SelectInst>(Cond)) {
+    if (Value *V =
+            simplifySwitchOnSelectUsingRanges(SI, Select, /*IsTrueArm=*/true))
+      return replaceOperand(SI, 0, V);
+    if (Value *V =
+            simplifySwitchOnSelectUsingRanges(SI, Select, /*IsTrueArm=*/false))
+      return replaceOperand(SI, 0, V);
+  }
+
   KnownBits Known = computeKnownBits(Cond, 0, &SI);
   unsigned LeadingKnownZeros = Known.countMinLeadingZeros();
   unsigned LeadingKnownOnes = Known.countMinLeadingOnes();
@@ -3698,7 +3740,7 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
 
   Intrinsic::ID OvID = WO->getIntrinsicID();
   const APInt *C = nullptr;
-  if (match(WO->getRHS(), m_APIntAllowUndef(C))) {
+  if (match(WO->getRHS(), m_APIntAllowPoison(C))) {
     if (*EV.idx_begin() == 0 && (OvID == Intrinsic::smul_with_overflow ||
                                  OvID == Intrinsic::umul_with_overflow)) {
       // extractvalue (any_mul_with_overflow X, -1), 0 --> -X
@@ -4288,7 +4330,7 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
       return nullptr;
   }
 
-  OrigOpInst->dropPoisonGeneratingFlagsAndMetadata();
+  OrigOpInst->dropPoisonGeneratingAnnotations();
 
   // If all operands are guaranteed to be non-poison, we can drop freeze.
   if (!MaybePoisonOperand)
@@ -4359,7 +4401,7 @@ Instruction *InstCombinerImpl::foldFreezeIntoRecurrence(FreezeInst &FI,
   }
 
   for (Instruction *I : DropFlags)
-    I->dropPoisonGeneratingFlagsAndMetadata();
+    I->dropPoisonGeneratingAnnotations();
 
   if (StartNeedsFreeze) {
     Builder.SetInsertPoint(StartBB->getTerminator());
