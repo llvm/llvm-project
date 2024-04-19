@@ -9924,7 +9924,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     assert(VTList.VTs[0].isInteger() && VTList.VTs[1].isInteger() &&
            Ops[0].getValueType() == Ops[1].getValueType() &&
            Ops[0].getValueType() == VTList.VTs[0] &&
-           Ops[2].getValueType().isInteger() &&
+           Ops[2].getValueType() == VTList.VTs[1] &&
            "Binary operator types must match!");
     break;
   case ISD::SMUL_LOHI:

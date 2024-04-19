@@ -220,12 +220,12 @@ mlir::Value ReductionProcessor::createScalarCombiner(
   switch (redId) {
   case ReductionIdentifier::MAX:
     reductionOp =
-        getReductionOperation<mlir::arith::MaximumFOp, mlir::arith::MaxSIOp>(
+        getReductionOperation<mlir::arith::MaxNumFOp, mlir::arith::MaxSIOp>(
             builder, type, loc, op1, op2);
     break;
   case ReductionIdentifier::MIN:
     reductionOp =
-        getReductionOperation<mlir::arith::MinimumFOp, mlir::arith::MinSIOp>(
+        getReductionOperation<mlir::arith::MinNumFOp, mlir::arith::MinSIOp>(
             builder, type, loc, op1, op2);
     break;
   case ReductionIdentifier::IOR:
