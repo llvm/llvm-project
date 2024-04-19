@@ -1510,7 +1510,7 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
 void WsloopOp::build(OpBuilder &builder, OperationState &state,
                      const WsloopClauseOps &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: allocateVars, allocatorVars, privateVars,
+  // TODO: Store clauses in op: allocateVars, allocatorVars, privateVars,
   // privatizers.
   WsloopOp::build(
       builder, state, clauses.linearVars, clauses.linearStepVars,
