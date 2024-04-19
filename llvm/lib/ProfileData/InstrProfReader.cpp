@@ -1202,6 +1202,99 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
   }
 }
 
+Error IndexedMemProfReader::deserialize(const unsigned char *Start,
+                                        uint64_t MemProfOffset) {
+  const unsigned char *Ptr = Start + MemProfOffset;
+
+  // Read the first 64-bit word, which may be RecordTableOffset in
+  // memprof::MemProfVersion0 or the MemProf version number in
+  // memprof::MemProfVersion1 and above.
+  const uint64_t FirstWord =
+      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+
+  memprof::IndexedVersion Version = memprof::Version0;
+  if (FirstWord == memprof::Version1 || FirstWord == memprof::Version2) {
+    // Everything is good.  We can proceed to deserialize the rest.
+    Version = static_cast<memprof::IndexedVersion>(FirstWord);
+  } else if (FirstWord >= 24) {
+    // This is a heuristic/hack to detect memprof::MemProfVersion0,
+    // which does not have a version field in the header.
+    // In memprof::MemProfVersion0, FirstWord will be RecordTableOffset,
+    // which should be at least 24 because of the MemProf header size.
+    Version = memprof::Version0;
+  } else {
+    return make_error<InstrProfError>(
+        instrprof_error::unsupported_version,
+        formatv("MemProf version {} not supported; "
+                "requires version between {} and {}, inclusive",
+                FirstWord, memprof::MinimumSupportedVersion,
+                memprof::MaximumSupportedVersion));
+  }
+
+  // The value returned from RecordTableGenerator.Emit.
+  const uint64_t RecordTableOffset =
+      Version == memprof::Version0
+          ? FirstWord
+          : support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+  // The offset in the stream right before invoking
+  // FrameTableGenerator.Emit.
+  const uint64_t FramePayloadOffset =
+      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+  // The value returned from FrameTableGenerator.Emit.
+  const uint64_t FrameTableOffset =
+      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+
+  // The offset in the stream right before invoking
+  // CallStackTableGenerator.Emit.
+  uint64_t CallStackPayloadOffset = 0;
+  // The value returned from CallStackTableGenerator.Emit.
+  uint64_t CallStackTableOffset = 0;
+  if (Version >= memprof::Version2) {
+    CallStackPayloadOffset =
+        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+    CallStackTableOffset =
+        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+  }
+
+  // Read the schema.
+  auto SchemaOr = memprof::readMemProfSchema(Ptr);
+  if (!SchemaOr)
+    return SchemaOr.takeError();
+  Schema = SchemaOr.get();
+
+  // Now initialize the table reader with a pointer into data buffer.
+  MemProfRecordTable.reset(MemProfRecordHashTable::Create(
+      /*Buckets=*/Start + RecordTableOffset,
+      /*Payload=*/Ptr,
+      /*Base=*/Start, memprof::RecordLookupTrait(Version, Schema)));
+
+  // Initialize the frame table reader with the payload and bucket offsets.
+  MemProfFrameTable.reset(MemProfFrameHashTable::Create(
+      /*Buckets=*/Start + FrameTableOffset,
+      /*Payload=*/Start + FramePayloadOffset,
+      /*Base=*/Start, memprof::FrameLookupTrait()));
+
+  if (Version >= memprof::Version2)
+    MemProfCallStackTable.reset(MemProfCallStackHashTable::Create(
+        /*Buckets=*/Start + CallStackTableOffset,
+        /*Payload=*/Start + CallStackPayloadOffset,
+        /*Base=*/Start, memprof::CallStackLookupTrait()));
+
+#ifdef EXPENSIVE_CHECKS
+  // Go through all the records and verify that CSId has been correctly
+  // populated.  Do this only under EXPENSIVE_CHECKS.  Otherwise, we
+  // would defeat the purpose of OnDiskIterableChainedHashTable.
+  // Note that we can compare CSId against actual call stacks only for
+  // Version0 and Version1 because IndexedAllocationInfo::CallStack and
+  // IndexedMemProfRecord::CallSites are not populated in Version2.
+  if (Version <= memprof::Version1)
+    for (const auto &Record : MemProfRecordTable->data())
+      verifyIndexedMemProfRecord(Record);
+#endif
+
+  return Error::success();
+}
+
 Error IndexedInstrProfReader::readHeader() {
   using namespace support;
 
@@ -1244,95 +1337,8 @@ Error IndexedInstrProfReader::readHeader() {
     uint64_t MemProfOffset =
         endian::byte_swap<uint64_t, llvm::endianness::little>(
             Header->MemProfOffset);
-
-    const unsigned char *Ptr = Start + MemProfOffset;
-
-    // Read the first 64-bit word, which may be RecordTableOffset in
-    // memprof::MemProfVersion0 or the MemProf version number in
-    // memprof::MemProfVersion1 and above.
-    const uint64_t FirstWord =
-        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-
-    memprof::IndexedVersion Version = memprof::Version0;
-    if (FirstWord == memprof::Version1 || FirstWord == memprof::Version2) {
-      // Everything is good.  We can proceed to deserialize the rest.
-      Version = static_cast<memprof::IndexedVersion>(FirstWord);
-    } else if (FirstWord >= 24) {
-      // This is a heuristic/hack to detect memprof::MemProfVersion0,
-      // which does not have a version field in the header.
-      // In memprof::MemProfVersion0, FirstWord will be RecordTableOffset,
-      // which should be at least 24 because of the MemProf header size.
-      Version = memprof::Version0;
-    } else {
-      return make_error<InstrProfError>(
-          instrprof_error::unsupported_version,
-          formatv("MemProf version {} not supported; "
-                  "requires version between {} and {}, inclusive",
-                  FirstWord, memprof::MinimumSupportedVersion,
-                  memprof::MaximumSupportedVersion));
-    }
-
-    // The value returned from RecordTableGenerator.Emit.
-    const uint64_t RecordTableOffset =
-        Version == memprof::Version0
-            ? FirstWord
-            : support::endian::readNext<uint64_t, llvm::endianness::little>(
-                  Ptr);
-    // The offset in the stream right before invoking
-    // FrameTableGenerator.Emit.
-    const uint64_t FramePayloadOffset =
-        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-    // The value returned from FrameTableGenerator.Emit.
-    const uint64_t FrameTableOffset =
-        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-
-    // The offset in the stream right before invoking
-    // CallStackTableGenerator.Emit.
-    uint64_t CallStackPayloadOffset = 0;
-    // The value returned from CallStackTableGenerator.Emit.
-    uint64_t CallStackTableOffset = 0;
-    if (Version >= memprof::Version2) {
-      CallStackPayloadOffset =
-          support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-      CallStackTableOffset =
-          support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-    }
-
-    // Read the schema.
-    auto SchemaOr = memprof::readMemProfSchema(Ptr);
-    if (!SchemaOr)
-      return SchemaOr.takeError();
-    Schema = SchemaOr.get();
-
-    // Now initialize the table reader with a pointer into data buffer.
-    MemProfRecordTable.reset(MemProfRecordHashTable::Create(
-        /*Buckets=*/Start + RecordTableOffset,
-        /*Payload=*/Ptr,
-        /*Base=*/Start, memprof::RecordLookupTrait(Version, Schema)));
-
-    // Initialize the frame table reader with the payload and bucket offsets.
-    MemProfFrameTable.reset(MemProfFrameHashTable::Create(
-        /*Buckets=*/Start + FrameTableOffset,
-        /*Payload=*/Start + FramePayloadOffset,
-        /*Base=*/Start, memprof::FrameLookupTrait()));
-
-    if (Version >= memprof::Version2)
-      MemProfCallStackTable.reset(MemProfCallStackHashTable::Create(
-          /*Buckets=*/Start + CallStackTableOffset,
-          /*Payload=*/Start + CallStackPayloadOffset,
-          /*Base=*/Start, memprof::CallStackLookupTrait()));
-
-#ifdef EXPENSIVE_CHECKS
-    // Go through all the records and verify that CSId has been correctly
-    // populated.  Do this only under EXPENSIVE_CHECKS.  Otherwise, we
-    // would defeat the purpose of OnDiskIterableChainedHashTable.
-    // Note that we can compare CSId against actual call stacks only for
-    // Version0 and Version1 because IndexedAllocationInfo::CallStack and
-    // IndexedMemProfRecord::CallSites are not populated in Version2.
-    if (Version <= memprof::Version1)
-      for (const auto &Record : MemProfRecordTable->data())
-        verifyIndexedMemProfRecord(Record);
-#endif
+    if (Error E = MemProfReader.deserialize(Start, MemProfOffset))
+      return E;
   }
 
   // BinaryIdOffset field in the header is only valid when the format version
@@ -1501,7 +1507,7 @@ Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
 }
 
 Expected<memprof::MemProfRecord>
-IndexedInstrProfReader::getMemProfRecord(const uint64_t FuncNameHash) {
+IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
   // TODO: Add memprof specific errors.
   if (MemProfRecordTable == nullptr)
     return make_error<InstrProfError>(instrprof_error::invalid_prof,
