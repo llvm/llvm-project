@@ -3100,6 +3100,11 @@ defm modules_skip_header_search_paths : BoolFOption<"modules-skip-header-search-
     HeaderSearchOpts<"ModulesSkipHeaderSearchPaths">, DefaultFalse,
     PosFlag<SetTrue, [], [], "Disable writing header search paths">,
     NegFlag<SetFalse>, BothFlags<[], [CC1Option]>>;
+def fno_modules_prune_non_affecting_module_map_files :
+    Flag<["-"], "fno-modules-prune-non-affecting-module-map-files">,
+    Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
+    MarshallingInfoNegativeFlag<HeaderSearchOpts<"ModulesPruneNonAffectingModuleMaps">>,
+    HelpText<"Do not prune non-affecting module map files when writing module files">;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
