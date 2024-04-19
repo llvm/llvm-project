@@ -80,11 +80,12 @@ bool containsSameFields(const FieldSet &Fields,
 }
 
 /// Returns the fields of a `RecordDecl` that are initialized by an
-/// `InitListExpr`, in the order in which they appear in
-/// `InitListExpr::inits()`.
-/// `Init->getType()` must be a record type.
+/// `InitListExpr` or `CXXParenListInitExpr`, in the order in which they appear
+/// in `InitListExpr::inits()` / `CXXParenListInitExpr::getInitExprs()`.
+/// `InitList->getType()` must be a record type.
+template <class InitListT>
 static std::vector<const FieldDecl *>
-getFieldsForInitListExpr(const InitListExpr *InitList) {
+getFieldsForInitListExpr(const InitListT *InitList) {
   const RecordDecl *RD = InitList->getType()->getAsRecordDecl();
   assert(RD != nullptr);
 
@@ -105,19 +106,29 @@ getFieldsForInitListExpr(const InitListExpr *InitList) {
   return Fields;
 }
 
-RecordInitListHelper::RecordInitListHelper(const InitListExpr *InitList) {
-  auto *RD = InitList->getType()->getAsCXXRecordDecl();
-  assert(RD != nullptr);
+RecordInitListHelper::RecordInitListHelper(const InitListExpr *InitList)
+    : RecordInitListHelper(InitList->getType(),
+                           getFieldsForInitListExpr(InitList),
+                           InitList->inits()) {}
 
-  std::vector<const FieldDecl *> Fields = getFieldsForInitListExpr(InitList);
-  ArrayRef<Expr *> Inits = InitList->inits();
+RecordInitListHelper::RecordInitListHelper(
+    const CXXParenListInitExpr *ParenInitList)
+    : RecordInitListHelper(ParenInitList->getType(),
+                           getFieldsForInitListExpr(ParenInitList),
+                           ParenInitList->getInitExprs()) {}
+
+RecordInitListHelper::RecordInitListHelper(
+    QualType Ty, std::vector<const FieldDecl *> Fields,
+    ArrayRef<Expr *> Inits) {
+  auto *RD = Ty->getAsCXXRecordDecl();
+  assert(RD != nullptr);
 
   // Unions initialized with an empty initializer list need special treatment.
   // For structs/classes initialized with an empty initializer list, Clang
   // puts `ImplicitValueInitExpr`s in `InitListExpr::inits()`, but for unions,
   // it doesn't do this -- so we create an `ImplicitValueInitExpr` ourselves.
   SmallVector<Expr *> InitsForUnion;
-  if (InitList->getType()->isUnionType() && Inits.empty()) {
+  if (Ty->isUnionType() && Inits.empty()) {
     assert(Fields.size() == 1);
     ImplicitValueInitForUnion.emplace(Fields.front()->getType());
     InitsForUnion.push_back(&*ImplicitValueInitForUnion);
@@ -216,6 +227,10 @@ static void getReferencedDecls(const Stmt &S, ReferencedDecls &Referenced) {
   } else if (auto *InitList = dyn_cast<InitListExpr>(&S)) {
     if (InitList->getType()->isRecordType())
       for (const auto *FD : getFieldsForInitListExpr(InitList))
+        Referenced.Fields.insert(FD);
+  } else if (auto *ParenInitList = dyn_cast<CXXParenListInitExpr>(&S)) {
+    if (ParenInitList->getType()->isRecordType())
+      for (const auto *FD : getFieldsForInitListExpr(ParenInitList))
         Referenced.Fields.insert(FD);
   }
 }
