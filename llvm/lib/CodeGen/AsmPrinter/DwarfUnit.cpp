@@ -820,6 +820,11 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
          {dwarf::DW_AT_address_class, dwarf::DW_AT_LLVM_address_space})
       addUInt(Buffer, ASTag, dwarf::DW_FORM_data4, *AS);
   }
+
+  // Add template alias template parameters.
+  if (Tag == dwarf::DW_TAG_template_alias)
+    addTemplateParams(Buffer, DTy->getTemplateParams());
+
   if (auto PtrAuthData = DTy->getPtrAuthData()) {
     addUInt(Buffer, dwarf::DW_AT_LLVM_ptrauth_key, dwarf::DW_FORM_data1,
             PtrAuthData->key());
