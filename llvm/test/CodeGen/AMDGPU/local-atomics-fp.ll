@@ -1673,3 +1673,133 @@ define void @lds_atomic_fadd_noret_bf16(ptr addrspace(3) %ptr) nounwind {
   %result = atomicrmw fadd ptr addrspace(3) %ptr, bfloat 4.0 seq_cst
   ret void
 }
+
+define float @lds_atomic_fadd_ret_f32__amdgpu_ignore_denormal_mode(ptr addrspace(3) %ptr) {
+; VI-LABEL: lds_atomic_fadd_ret_f32__amdgpu_ignore_denormal_mode:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v1, 4.0
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    ds_add_rtn_f32 v0, v0, v1
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: lds_atomic_fadd_ret_f32__amdgpu_ignore_denormal_mode:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX9-NEXT:    ds_add_rtn_f32 v0, v0, v1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: lds_atomic_fadd_ret_f32__amdgpu_ignore_denormal_mode:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    ds_read_b32 v1, v0
+; GFX7-NEXT:    s_mov_b64 s[4:5], 0
+; GFX7-NEXT:  .LBB12_1: ; %atomicrmw.start
+; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    v_mov_b32_e32 v2, v1
+; GFX7-NEXT:    v_add_f32_e32 v1, 4.0, v2
+; GFX7-NEXT:    ds_cmpst_rtn_b32 v1, v0, v2, v1
+; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
+; GFX7-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX7-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX7-NEXT:    s_cbranch_execnz .LBB12_1
+; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX7-NEXT:    v_mov_b32_e32 v0, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: lds_atomic_fadd_ret_f32__amdgpu_ignore_denormal_mode:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    ds_read_b32 v1, v0
+; GFX8-NEXT:    s_mov_b64 s[4:5], 0
+; GFX8-NEXT:  .LBB12_1: ; %atomicrmw.start
+; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v2, v1
+; GFX8-NEXT:    v_add_f32_e32 v1, 4.0, v2
+; GFX8-NEXT:    ds_cmpst_rtn_b32 v1, v0, v2, v1
+; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
+; GFX8-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX8-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX8-NEXT:    s_cbranch_execnz .LBB12_1
+; GFX8-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX8-NEXT:    v_mov_b32_e32 v0, v1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+  %result = atomicrmw fadd ptr addrspace(3) %ptr, float 4.0 seq_cst, !amdgpu.ignore.denormal.mode !0
+  ret float %result
+}
+
+define void @lds_atomic_fadd_noret_f32__amdgpu_ignore_denormal_mode(ptr addrspace(3) %ptr) {
+; VI-LABEL: lds_atomic_fadd_noret_f32__amdgpu_ignore_denormal_mode:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v1, 4.0
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    ds_add_f32 v0, v1
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: lds_atomic_fadd_noret_f32__amdgpu_ignore_denormal_mode:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v1, 4.0
+; GFX9-NEXT:    ds_add_f32 v0, v1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: lds_atomic_fadd_noret_f32__amdgpu_ignore_denormal_mode:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    ds_read_b32 v1, v0
+; GFX7-NEXT:    s_mov_b64 s[4:5], 0
+; GFX7-NEXT:  .LBB13_1: ; %atomicrmw.start
+; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    v_add_f32_e32 v2, 4.0, v1
+; GFX7-NEXT:    ds_cmpst_rtn_b32 v2, v0, v1, v2
+; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
+; GFX7-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX7-NEXT:    v_mov_b32_e32 v1, v2
+; GFX7-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX7-NEXT:    s_cbranch_execnz .LBB13_1
+; GFX7-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: lds_atomic_fadd_noret_f32__amdgpu_ignore_denormal_mode:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    ds_read_b32 v1, v0
+; GFX8-NEXT:    s_mov_b64 s[4:5], 0
+; GFX8-NEXT:  .LBB13_1: ; %atomicrmw.start
+; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    v_add_f32_e32 v2, 4.0, v1
+; GFX8-NEXT:    ds_cmpst_rtn_b32 v2, v0, v1, v2
+; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v1
+; GFX8-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; GFX8-NEXT:    v_mov_b32_e32 v1, v2
+; GFX8-NEXT:    s_andn2_b64 exec, exec, s[4:5]
+; GFX8-NEXT:    s_cbranch_execnz .LBB13_1
+; GFX8-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+  %result = atomicrmw fadd ptr addrspace(3) %ptr, float 4.0 seq_cst, !amdgpu.ignore.denormal.mode !0
+  ret void
+}
+
+!0 = !{}
