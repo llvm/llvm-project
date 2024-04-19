@@ -31,6 +31,11 @@ convertArithFastMathAttrToLLVM(arith::FastMathFlagsAttr fmfAttr);
 LLVM::IntegerOverflowFlags
 convertArithOverflowFlagsToLLVM(arith::IntegerOverflowFlags arithFlags);
 
+/// Creates an LLVM overflow attribute from a given arithmetic overflow
+/// attribute.
+LLVM::IntegerOverflowFlagsAttr
+convertArithOverflowAttrToLLVM(arith::IntegerOverflowFlagsAttr flagsAttr);
+
 /// Creates an LLVM rounding mode enum value from a given arithmetic rounding
 /// mode enum value.
 LLVM::RoundingMode
@@ -67,9 +72,6 @@ public:
   }
 
   ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
-  LLVM::IntegerOverflowFlags getOverflowFlags() const {
-    return LLVM::IntegerOverflowFlags::none;
-  }
 
 private:
   NamedAttrList convertedAttr;
@@ -87,18 +89,19 @@ public:
     // Get the name of the arith overflow attribute.
     StringRef arithAttrName = SourceOp::getIntegerOverflowAttrName();
     // Remove the source overflow attribute.
-    if (auto arithAttr = dyn_cast_if_present<arith::IntegerOverflowFlagsAttr>(
-            convertedAttr.erase(arithAttrName))) {
-      overflowFlags = convertArithOverflowFlagsToLLVM(arithAttr.getValue());
+    auto arithAttr = dyn_cast_if_present<arith::IntegerOverflowFlagsAttr>(
+        convertedAttr.erase(arithAttrName));
+    if (arithAttr) {
+      StringRef targetAttrName = TargetOp::getIntegerOverflowAttrName();
+      convertedAttr.set(targetAttrName,
+                        convertArithOverflowAttrToLLVM(arithAttr));
     }
   }
 
   ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
-  LLVM::IntegerOverflowFlags getOverflowFlags() const { return overflowFlags; }
 
 private:
   NamedAttrList convertedAttr;
-  LLVM::IntegerOverflowFlags overflowFlags = LLVM::IntegerOverflowFlags::none;
 };
 
 template <typename SourceOp, typename TargetOp>
@@ -129,9 +132,6 @@ public:
   }
 
   ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
-  LLVM::IntegerOverflowFlags getOverflowFlags() const {
-    return LLVM::IntegerOverflowFlags::none;
-  }
 
 private:
   NamedAttrList convertedAttr;
