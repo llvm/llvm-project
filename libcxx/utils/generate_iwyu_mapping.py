@@ -53,10 +53,16 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
     else:
         return None
 
+
 def main(argv: typing.List[str]):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-o", help="File to output the IWYU mappings into",
-                              type=argparse.FileType('w'), required=True, dest="output")
+    parser.add_argument(
+        "-o",
+        help="File to output the IWYU mappings into",
+        type=argparse.FileType("w"),
+        required=True,
+        dest="output",
+    )
     args = parser.parse_args(argv)
 
     mappings = []  # Pairs of (header, public_header)
