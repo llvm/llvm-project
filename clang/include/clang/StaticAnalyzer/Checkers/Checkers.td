@@ -571,7 +571,6 @@ def StreamChecker : Checker<"Stream">,
                   "Pedantic",
                   "If false, assume that stream operations which are often not "
                   "checked for error do not fail."
-                  "fail.",
                   "false",
                   InAlpha>
   ]>,

@@ -1465,7 +1465,7 @@ Default value of the option is ``true``.
 .. _unix-Stream:
 
 unix.Stream (C)
-"""""""""""""""""""""
+"""""""""""""""
 Check C stream handling functions:
 ``fopen, fdopen, freopen, tmpfile, fclose, fread, fwrite, fgetc, fgets, fputc, fputs, fprintf, fscanf, ungetc, getdelim, getline, fseek, fseeko, ftell, ftello, fflush, rewind, fgetpos, fsetpos, clearerr, feof, ferror, fileno``.
 
