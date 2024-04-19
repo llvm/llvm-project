@@ -3977,56 +3977,27 @@ Type TransferReadOp::getExpectedMaskType() {
   return inferTransferOpMaskType(getVectorType(), getPermutationMap());
 }
 
-// Determine the loop upper bound UB == s1 - ((s1 - LB) mod Step).
-// Then loop iteration = UB - LB = s1 - LB - ((s1 - LB) mod Step)
-// which is multiple of step.
-// The loop could be produced by -scf-for-loop-peeling.
-static bool isLoopIterationAsMultipleOfStep(mlir::scf::ForOp forOp) {
-  OpBuilder b(forOp.getContext());
-
-  auto UBOp = forOp.getUpperBound().getDefiningOp();
-  if (!UBOp)
-    return false;
-  auto applyOp = dyn_cast<mlir::affine::AffineApplyOp>(UBOp);
-  if (!applyOp)
-    return false;
-
-  SmallVector<Value> mapOps(applyOp.getMapOperands().begin(),
-                            applyOp.getMapOperands().end());
-  if (mapOps.size() != 3)
-    return false;
-  if (mapOps[0] != forOp.getLowerBound())
-    return false;
-  if (mapOps[2] != forOp.getStep())
-    return false;
-
-  auto UBExpr = applyOp.getAffineMap().getResult(0);
-  auto LBExpr = b.getAffineSymbolExpr(0);
-  auto sym1 = b.getAffineSymbolExpr(1);
-  auto stepExpr = b.getAffineSymbolExpr(2);
-
-  return UBExpr == (sym1 - (sym1 - LBExpr) % stepExpr);
-}
-
+// If the indice of vector.transfer_load/store is loop IV,
+// check the loop_upper_bound + vector_size <= source_type.
 template <typename TransferOp>
-static bool isLoopIterationAsMultipleOfVectorSize(TransferOp op,
+static bool isLoopUpperBoundPlusVectorSizeInBound(TransferOp op,
                                                   int64_t resultIdx,
                                                   int64_t indicesIdx) {
   Value index = op.getIndices()[indicesIdx];
   auto forOp = dyn_cast<mlir::scf::ForOp>(op->getParentOp());
   if (!forOp)
     return false;
-  auto constantStep = forOp.getConstantStep();
-  if (!constantStep)
-    return false;
   if (index != forOp.getInductionVar())
     return false;
-  if (!isLoopIterationAsMultipleOfStep(forOp))
+  Value upperBound = forOp.getUpperBound();
+  std::optional<int64_t> cstUpper = getConstantIntValue(upperBound);
+  if (!cstUpper.has_value())
     return false;
 
+  int64_t sourceSize = op.getShapedType().getDimSize(indicesIdx);
   int64_t vectorSize = op.getVectorType().getDimSize(resultIdx);
 
-  return vectorSize == *constantStep;
+  return *cstUpper + vectorSize <= sourceSize;
 }
 
 template <typename TransferOp>
@@ -4038,7 +4009,7 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   Value index = op.getIndices()[indicesIdx];
   std::optional<int64_t> cstOp = getConstantIntValue(index);
   if (!cstOp.has_value())
-    return isLoopIterationAsMultipleOfVectorSize(op, resultIdx, indicesIdx);
+    return isLoopUpperBoundPlusVectorSizeInBound(op, resultIdx, indicesIdx);
 
   int64_t sourceSize = op.getShapedType().getDimSize(indicesIdx);
   int64_t vectorSize = op.getVectorType().getDimSize(resultIdx);

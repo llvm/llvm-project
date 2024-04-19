@@ -445,23 +445,19 @@ func.func @vec_0D(%arg0: vector<f32>) -> vector<i32> {
 
 // CHECK-LABEL: func @set_inbound
 //       CHECK:   scf.for
-//       CHECK:   vector.transfer_read  %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true]}
-//       CHECK:   vector.transfer_write %{{.*}}[%{{.*}}, %{{.*}}] {in_bounds = [true]}
+//       CHECK:   vector.transfer_read  %{{.*}}[%{{.*}}], %{{.*}} {in_bounds = [true]}
+//       CHECK:   vector.transfer_write %{{.*}}[%{{.*}}] {in_bounds = [true]}
 //       CHECK:   }
 //       CHECK:   return
-#map = affine_map<()[s0, s1, s2] -> (s1 - (s1 - s0) mod s2)>
-func.func @set_inbound(%arg0: index, %a : memref<100x100xi32>, %b : memref<100x100xi32>) {
+func.func @set_inbound(%arg0: index, %a: memref<200xi32>, %b: memref<200xi32>) {
   %c0_i32 = arith.constant 0 : i32
   %c64 = arith.constant 64 : index
-  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
   %c0 = arith.constant 0 : index
-  scf.for %arg1 = %c0 to %arg0 step %c1 {
-    %2 = affine.apply #map()[%c0, %arg0, %c64]
-    scf.for %arg2 = %c0 to %2 step %c64 {
-      %3 = vector.transfer_read %a[%arg1, %arg2], %c0_i32 : memref<100x100xi32>, vector<64xi32>
-      %4 = arith.addi %3, %3 : vector<64xi32>
-      vector.transfer_write %4, %b[%arg1, %arg2] : vector<64xi32>, memref<100x100xi32>
-    }
+  scf.for %arg3 = %c0 to %c128 step %c64 {
+    %0 = vector.transfer_read %a[%arg3], %c0_i32 : memref<200xi32>, vector<64xi32>
+    %1 = arith.addi %0, %0 : vector<64xi32>
+    vector.transfer_write %1, %b[%arg3] : vector<64xi32>, memref<200xi32>
   }
   return
 }
