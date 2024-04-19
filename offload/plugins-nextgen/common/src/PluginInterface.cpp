@@ -708,9 +708,8 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
 
   uint32_t PreferredNumBlocks = TripCountNumBlocks;
   // If the loops are long running we rather reuse blocks than spawn too many.
-  if (GenericDevice.getReuseBlocksForHighTripCount()) {
+  if (GenericDevice.getReuseBlocksForHighTripCount())
     PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
-  }
   return std::min(PreferredNumBlocks, GenericDevice.getBlockLimit());
 }
 
