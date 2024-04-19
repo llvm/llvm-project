@@ -10,7 +10,7 @@
 
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: f32, %[[VAL_1:.*]]: f32):
-! CHECK:           %[[VAL_2:.*]] = arith.maximumf %[[VAL_0]], %[[VAL_1]] fastmath<contract> : f32
+! CHECK:           %[[VAL_2:.*]] = arith.maxnumf %[[VAL_0]], %[[VAL_1]] fastmath<contract> : f32
 ! CHECK:           omp.yield(%[[VAL_2]] : f32)
 ! CHECK:         }
 
