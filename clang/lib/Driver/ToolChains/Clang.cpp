@@ -4733,7 +4733,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                        Output.getFilename());
 }
 
-static void ProcessVSRuntimeLibrary(const ArgList &Args,
+static void ProcessVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   unsigned RTOptionID = options::OPT__SLASH_MT;
 
@@ -4796,6 +4796,12 @@ static void ProcessVSRuntimeLibrary(const ArgList &Args,
     // implemented in clang.
     CmdArgs.push_back("--dependent-lib=oldnames");
   }
+
+  // All Arm64EC object files implicitly add softintrin.lib. This is necessary
+  // even if the file doesn't actually refer to any of the routines because
+  // the CRT itself has incomplete dependency markings.
+  if (TC.getTriple().isWindowsArm64EC())
+    CmdArgs.push_back("--dependent-lib=softintrin");
 }
 
 void Clang::ConstructJob(Compilation &C, const JobAction &JA,
@@ -7051,7 +7057,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Triple.isWindowsMSVCEnvironment() && !D.IsCLMode() &&
       Args.hasArg(options::OPT_fms_runtime_lib_EQ))
-    ProcessVSRuntimeLibrary(Args, CmdArgs);
+    ProcessVSRuntimeLibrary(getToolChain(), Args, CmdArgs);
 
   // Handle -fgcc-version, if present.
   VersionTuple GNUCVer;
@@ -8178,7 +8184,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
                            ArgStringList &CmdArgs) const {
   bool isNVPTX = getToolChain().getTriple().isNVPTX();
 
-  ProcessVSRuntimeLibrary(Args, CmdArgs);
+  ProcessVSRuntimeLibrary(getToolChain(), Args, CmdArgs);
 
   if (Arg *ShowIncludes =
           Args.getLastArg(options::OPT__SLASH_showIncludes,
