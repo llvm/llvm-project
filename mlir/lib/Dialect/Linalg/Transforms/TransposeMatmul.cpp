@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// This pass converts `linalg.matmul` operations to the transposed
+// `linalg.matmul_transpose_a` or `linalg.matmul_transpose_b` variants.
+//
+// This is intended to be a simple high-level (target-agnostic) matmul
+// transposition transformation.
+//===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
