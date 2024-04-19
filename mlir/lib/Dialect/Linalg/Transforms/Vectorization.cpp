@@ -1516,8 +1516,8 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
                              invertPermutationVector(outerDimsPerm));
   for (auto [idx, size] : enumerate(innerTiles))
     inputShape[innerDimsPos[idx]] *= size;
-  auto maskedRead = createReadOrMaskedRead(rewriter, loc, packOp.getSource(),
-                                           inputShape, padValue, doMasking);
+  auto maskedRead = vector::createReadOrMaskedRead(
+      rewriter, loc, packOp.getSource(), inputShape, padValue, doMasking);
 
   // Create ShapeCastOp.
   SmallVector<int64_t> destShape(inputVectorSizes);
@@ -1609,7 +1609,7 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, tensor::UnPackOp unpackOp,
 
   // Read result, mask if necessary. If transferReadOp shape is not equal
   // to shape of source, then a mask is necessary.
-  Value readResult = createReadOrMaskedRead(
+  Value readResult = vector::createReadOrMaskedRead(
       rewriter, loc, unpackOp.getSource(),
       ArrayRef<int64_t>(readMaskShape.begin(), readMaskShape.end()), padValue);
 

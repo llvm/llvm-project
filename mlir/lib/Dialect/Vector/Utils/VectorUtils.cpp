@@ -30,6 +30,11 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 
+#define DEBUG_TYPE "vector-utils"
+
+#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
+
 using namespace mlir;
 
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on
@@ -329,20 +334,21 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   assert(llvm::none_of(readShape,
                        [](int64_t s) { return s == ShapedType::kDynamic; }) &&
          "expected static shape");
-  auto sourceShape = cast<ShapedType>(source.getType()).getShape();
+  auto sourceShapedType = cast<ShapedType>(source.getType());
+  auto sourceShape = sourceShapedType.getShape();
   assert(sourceShape.size() == readShape.size() && "expected same ranks.");
   auto maskType = VectorType::get(readShape, builder.getI1Type());
   auto vectorType = VectorType::get(readShape, padValue.getType());
-  assert(padValue.getType() == sourceShape.getElementType() &&
-         "expected same pad element type to match source element type")
-      int64_t readRank = readShape.size();
+  assert(padValue.getType() == sourceShapedType.getElementType() &&
+         "expected same pad element type to match source element type");
+  int64_t readRank = readShape.size();
   auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
   SmallVector<bool> inBoundsVal(readRank, true);
   if (!enableMasking) {
     // Update the inBounds attribute.
     for (unsigned i = 0; i < readRank; i++)
       inBoundsVal[i] = (sourceShape[i] == readShape[i]) &&
-                       !ShapedType::isDynamic(sourceShape[] i);
+                       !ShapedType::isDynamic(sourceShape[i]);
   }
   auto transferReadOp = builder.create<vector::TransferReadOp>(
       loc,
@@ -352,7 +358,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
       /*padding=*/padValue,
       /*inBounds=*/inBoundsVal);
 
-  if (llvm::equal(readShape, sourceShape) || !doMasking)
+  if (llvm::equal(readShape, sourceShape) || !enableMasking)
     return transferReadOp;
   SmallVector<OpFoldResult> mixedSourceDims =
       tensor::getMixedSizes(builder, loc, source);
