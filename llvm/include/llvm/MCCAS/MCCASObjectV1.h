@@ -588,6 +588,8 @@ private:
 
   Expected<SmallVector<DebugStrRef, 0>> createDebugStringRefs();
 
+  std::optional<Expected<DebugStrOffsetsRef>> createDebugStrOffsetsRef();
+
   template <typename SectionTy>
   std::optional<Expected<SectionTy>> createGenericDebugRef(MCSection *Section);
 
