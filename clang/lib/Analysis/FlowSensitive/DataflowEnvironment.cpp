@@ -417,10 +417,9 @@ public:
     for (auto [Field, Init] : InitList.field_inits()) {
       // Fields of non-record type are handled in
       // `TransferVisitor::VisitInitListExpr()`.
-      if (!Field->getType()->isRecordType())
-        continue;
-      PropagateResultObject(Init,
-                            cast<RecordStorageLocation>(Loc->getChild(*Field)));
+      if (Field->getType()->isRecordType())
+        PropagateResultObject(Init,
+                              cast<RecordStorageLocation>(Loc->getChild(*Field)));
     }
   }
 
