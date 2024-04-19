@@ -4093,9 +4093,8 @@ define i32 @fold_zext_addition_fail2(i8 %x) {
 
 define i32 @fold_zext_nneg_add_const(i8 %x) {
 ; CHECK-LABEL: @fold_zext_nneg_add_const(
-; CHECK-NEXT:    [[XX:%.*]] = add nsw i8 [[X:%.*]], 123
-; CHECK-NEXT:    [[ZE:%.*]] = zext nneg i8 [[XX]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[ZE]], -25
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[TMP1]], 98
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xx = add nsw i8 %x, 123
