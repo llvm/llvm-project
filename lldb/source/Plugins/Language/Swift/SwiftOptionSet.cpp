@@ -113,6 +113,10 @@ void lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
                m_type.GetMangledTypeName());
     }
   }
+  if (!tss) {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters), "No typesystem");
+    return;
+  }
 
   auto iter = enum_decl->enumerator_begin(), end = enum_decl->enumerator_end();
   for (; iter != end; ++iter) {
