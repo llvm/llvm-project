@@ -344,6 +344,15 @@ public:
     for (auto &Region : SourceRegions) {
       SourceLocation Loc = Region.getBeginLoc();
 
+      // Replace Region with its definition if it is in <scratch space>.
+      while (Loc.isMacroID() &&
+             SM.isWrittenInScratchSpace(SM.getSpellingLoc(Loc))) {
+        auto ExpansionRange = SM.getImmediateExpansionRange(Loc);
+        Loc = ExpansionRange.getBegin();
+        Region.setStartLoc(Loc);
+        Region.setEndLoc(ExpansionRange.getEnd());
+      }
+
       // Replace Loc with FileLoc if it is expanded with system headers.
       if (!SystemHeadersCoverage && SM.isInSystemMacro(Loc)) {
         auto BeginLoc = SM.getSpellingLoc(Loc);
