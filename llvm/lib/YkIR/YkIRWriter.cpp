@@ -60,12 +60,12 @@ enum OperandKind {
 };
 
 enum TypeKind {
-  Void = 0,
-  Integer,
-  Ptr,
-  FunctionTy,
-  Struct,
-  UnimplementedType = 255, // YKFIXME: Will eventually be deleted.
+  TypeKindVoid = 0,
+  TypeKindInteger,
+  TypeKindPtr,
+  TypeKindFunction,
+  TypeKindStruct,
+  TypeKindUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
 
 // A predicate used in a numeric comparison.
@@ -227,8 +227,8 @@ private:
   }
 
   void serialiseOpcode(OpCode Code) { OutStreamer.emitInt8(Code); }
-
   void serialiseOperandKind(OperandKind Kind) { OutStreamer.emitInt8(Kind); }
+  void serialiseTypeKind(TypeKind Kind) { OutStreamer.emitInt8(Kind); }
 
   void serialiseConstantOperand(Instruction *Parent, llvm::Constant *C) {
     serialiseOperandKind(OperandKindConstant);
@@ -715,7 +715,7 @@ private:
   }
 
   void serialiseFunctionType(FunctionType *Ty) {
-    OutStreamer.emitInt8(TypeKind::FunctionTy);
+    serialiseTypeKind(TypeKindFunction);
     // num_args:
     OutStreamer.emitSizeT(Ty->getNumParams());
     // arg_tys:
@@ -729,7 +729,7 @@ private:
   }
 
   void serialiseStructType(StructType *STy) {
-    OutStreamer.emitInt8(TypeKind::Struct);
+    serialiseTypeKind(TypeKindStruct);
     unsigned NumFields = STy->getNumElements();
     DataLayout DL(&M);
     const StructLayout *SL = DL.getStructLayout(STy);
@@ -747,20 +747,20 @@ private:
 
   void serialiseType(llvm::Type *Ty) {
     if (Ty->isVoidTy()) {
-      OutStreamer.emitInt8(TypeKind::Void);
+      serialiseTypeKind(TypeKindVoid);
     } else if (PointerType *PT = dyn_cast<PointerType>(Ty)) {
       // FIXME: The Yk runtime assumes all pointers are void-ptr-sized.
       assert(DL.getPointerSize(PT->getAddressSpace()) == sizeof(void *));
-      OutStreamer.emitInt8(TypeKind::Ptr);
+      serialiseTypeKind(TypeKindPtr);
     } else if (IntegerType *ITy = dyn_cast<IntegerType>(Ty)) {
-      OutStreamer.emitInt8(TypeKind::Integer);
+      serialiseTypeKind(TypeKindInteger);
       OutStreamer.emitInt32(ITy->getBitWidth());
     } else if (FunctionType *FTy = dyn_cast<FunctionType>(Ty)) {
       serialiseFunctionType(FTy);
     } else if (StructType *STy = dyn_cast<StructType>(Ty)) {
       serialiseStructType(STy);
     } else {
-      OutStreamer.emitInt8(TypeKind::UnimplementedType);
+      serialiseTypeKind(TypeKindUnimplemented);
       serialiseString(toString(Ty));
     }
   }
