@@ -376,16 +376,13 @@ void SelfClause() {
 #pragma acc serial self(i > j, seq
   for(;;){}
 
-  // expected-warning@+2{{left operand of comma operator has no effect}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
+  // expected-warning@+1{{left operand of comma operator has no effect}}
 #pragma acc serial self(i, j)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
 #pragma acc serial self(i > j)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'self' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial self(1+5>3), seq
   for(;;){}
@@ -896,11 +893,9 @@ void IntExprParsing() {
 #pragma acc parallel vector_length(5, 4)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length(5)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length(returns_int())
   {}
 
@@ -946,11 +941,9 @@ void IntExprParsing() {
 #pragma acc parallel num_workers(5, 4)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel num_workers(5)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel num_workers(returns_int())
   {}
 

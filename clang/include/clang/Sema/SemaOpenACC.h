@@ -44,7 +44,13 @@ public:
       Expr *ConditionExpr;
     };
 
-    std::variant<DefaultDetails, ConditionDetails> Details;
+    struct IntExprDetails {
+      SmallVector<Expr *> IntExprs;
+    };
+
+    std::variant<std::monostate, DefaultDetails, ConditionDetails,
+                 IntExprDetails>
+        Details = std::monostate{};
 
   public:
     OpenACCParsedClause(OpenACCDirectiveKind DirKind,
@@ -72,9 +78,36 @@ public:
     }
 
     Expr *getConditionExpr() {
-      assert(ClauseKind == OpenACCClauseKind::If &&
+      assert((ClauseKind == OpenACCClauseKind::If ||
+              (ClauseKind == OpenACCClauseKind::Self &&
+               DirKind != OpenACCDirectiveKind::Update)) &&
              "Parsed clause kind does not have a condition expr");
+
+      // 'self' has an optional ConditionExpr, so be tolerant of that. This will
+      // assert in variant otherwise.
+      if (ClauseKind == OpenACCClauseKind::Self &&
+          std::holds_alternative<std::monostate>(Details))
+        return nullptr;
+
       return std::get<ConditionDetails>(Details).ConditionExpr;
+    }
+
+    unsigned getNumIntExprs() const {
+      assert((ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::VectorLength) &&
+             "Parsed clause kind does not have a int exprs");
+      return std::get<IntExprDetails>(Details).IntExprs.size();
+    }
+
+    ArrayRef<Expr *> getIntExprs() {
+      assert((ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::VectorLength) &&
+             "Parsed clause kind does not have a int exprs");
+      return std::get<IntExprDetails>(Details).IntExprs;
+    }
+
+    ArrayRef<Expr *> getIntExprs() const {
+      return const_cast<OpenACCParsedClause *>(this)->getIntExprs();
     }
 
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
@@ -87,7 +120,9 @@ public:
     }
 
     void setConditionDetails(Expr *ConditionExpr) {
-      assert(ClauseKind == OpenACCClauseKind::If &&
+      assert((ClauseKind == OpenACCClauseKind::If ||
+              (ClauseKind == OpenACCClauseKind::Self &&
+               DirKind != OpenACCDirectiveKind::Update)) &&
              "Parsed clause kind does not have a condition expr");
       // In C++ we can count on this being a 'bool', but in C this gets left as
       // some sort of scalar that codegen will have to take care of converting.
@@ -96,6 +131,13 @@ public:
              "Condition expression type not scalar/dependent");
 
       Details = ConditionDetails{ConditionExpr};
+    }
+
+    void setIntExprDetails(ArrayRef<Expr *> IntExprs) {
+      assert((ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::VectorLength) &&
+             "Parsed clause kind does not have a int exprs");
+      Details = IntExprDetails{{IntExprs.begin(), IntExprs.end()}};
     }
   };
 
@@ -136,6 +178,11 @@ public:
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
   DeclGroupRef ActOnEndDeclDirective();
+
+  /// Called when encountering an 'int-expr' for OpenACC, and manages
+  /// conversions and diagnostics to 'int'.
+  ExprResult ActOnIntExpr(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                          SourceLocation Loc, Expr *IntExpr);
 };
 
 } // namespace clang

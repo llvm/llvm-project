@@ -2912,6 +2912,8 @@ private:
       return TT_UnaryOperator;
     if (PrevToken->is(TT_TypeName))
       return TT_PointerOrReference;
+    if (PrevToken->isOneOf(tok::kw_new, tok::kw_delete) && Tok.is(tok::ampamp))
+      return TT_BinaryOperator;
 
     const FormatToken *NextToken = Tok.getNextNonComment();
 
@@ -5595,12 +5597,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
   if (Left.IsUnterminatedLiteral)
     return true;
-  // FIXME: Breaking after newlines seems useful in general. Turn this into an
-  // option and recognize more cases like endl etc, and break independent of
-  // what comes after operator lessless.
-  if (Right.is(tok::lessless) && Right.Next &&
-      Right.Next->is(tok::string_literal) && Left.is(tok::string_literal) &&
-      Left.TokenText.ends_with("\\n\"")) {
+  if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
+      Right.Next->is(tok::string_literal)) {
     return true;
   }
   if (Right.is(TT_RequiresClause)) {

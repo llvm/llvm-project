@@ -35,6 +35,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -2640,7 +2641,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
   } else if (isSFINAEContext()) {
     VLADiag = diag::err_vla_in_sfinae;
     VLAIsError = true;
-  } else if (getLangOpts().OpenMP && isInOpenMPTaskUntiedContext()) {
+  } else if (getLangOpts().OpenMP && OpenMP().isInOpenMPTaskUntiedContext()) {
     VLADiag = diag::err_openmp_vla_in_task_untied;
     VLAIsError = true;
   } else if (getLangOpts().CPlusPlus) {
@@ -4728,7 +4729,8 @@ static bool shouldHaveNullability(QualType T) {
          // It's unclear whether the pragma's behavior is useful for C++.
          // e.g. treating type-aliases and template-type-parameters differently
          // from types of declarations can be surprising.
-         !isa<RecordType>(T->getCanonicalTypeInternal());
+         !isa<RecordType, TemplateSpecializationType>(
+             T->getCanonicalTypeInternal());
 }
 
 static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,

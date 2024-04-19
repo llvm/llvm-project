@@ -150,24 +150,24 @@ define i32 @test5_add_nsw(i32 %A, i32 %B) {
   ret i32 %D
 }
 
-define <2 x i8> @neg_op0_vec_undef_elt(<2 x i8> %a, <2 x i8> %b) {
-; CHECK-LABEL: @neg_op0_vec_undef_elt(
+define <2 x i8> @neg_op0_vec_poison_elt(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @neg_op0_vec_poison_elt(
 ; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
-  %nega = sub <2 x i8> <i8 0, i8 undef>, %a
+  %nega = sub <2 x i8> <i8 0, i8 poison>, %a
   %r = add <2 x i8> %nega, %b
   ret <2 x i8> %r
 }
 
-define <2 x i8> @neg_neg_vec_undef_elt(<2 x i8> %a, <2 x i8> %b) {
-; CHECK-LABEL: @neg_neg_vec_undef_elt(
+define <2 x i8> @neg_neg_vec_poison_elt(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @neg_neg_vec_poison_elt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
-  %nega = sub <2 x i8> <i8 undef, i8 0>, %a
-  %negb = sub <2 x i8> <i8 undef, i8 0>, %b
+  %nega = sub <2 x i8> <i8 poison, i8 0>, %a
+  %negb = sub <2 x i8> <i8 poison, i8 0>, %b
   %r = add <2 x i8> %nega, %negb
   ret <2 x i8> %r
 }
@@ -1196,14 +1196,14 @@ define <2 x i32> @test44_vec_non_matching(<2 x i32> %A) {
   ret <2 x i32> %C
 }
 
-define <2 x i32> @test44_vec_undef(<2 x i32> %A) {
-; CHECK-LABEL: @test44_vec_undef(
-; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> [[A:%.*]], <i32 123, i32 undef>
-; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], <i32 -123, i32 undef>
+define <2 x i32> @test44_vec_poison(<2 x i32> %A) {
+; CHECK-LABEL: @test44_vec_poison(
+; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> [[A:%.*]], <i32 123, i32 poison>
+; CHECK-NEXT:    [[C:%.*]] = add nsw <2 x i32> [[B]], <i32 -123, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
-  %B = or <2 x i32> %A, <i32 123, i32 undef>
-  %C = add <2 x i32> %B, <i32 -123, i32 undef>
+  %B = or <2 x i32> %A, <i32 123, i32 poison>
+  %C = add <2 x i32> %B, <i32 -123, i32 poison>
   ret <2 x i32> %C
 }
 
@@ -2983,7 +2983,7 @@ define i8 @signum_i8_i8_use3(i8 %x) {
   ret i8 %r
 }
 
-; poison/undef is ok to propagate in shift amount
+; poison is ok to propagate in shift amount
 ; complexity canonicalization guarantees that shift is op0 of add
 
 define <2 x i5> @signum_v2i5_v2i5(<2 x i5> %x) {

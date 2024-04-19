@@ -562,7 +562,7 @@ def LoopNestOp : OpenMP_Op<"loop_nest", [SameVariadicOperandSize,
     loop operations intended to serve as a stopgap solution until the long-term
     representation of canonical loops is defined. Specifically, this operation
     is intended to serve as a unique source for loop information during the
-    transition to making `omp.distribute`, `omp.simdloop`, `omp.taskloop` and
+    transition to making `omp.distribute`, `omp.simd`, `omp.taskloop` and
     `omp.wsloop` wrapper operations. It is not intended to help with the
     addition of support for loop transformations, non-rectangular loops and
     non-perfectly nested loops.
@@ -722,24 +722,19 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
 // Simd construct [2.9.3.1]
 //===----------------------------------------------------------------------===//
 
-def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
-                         AllTypesMatch<["lowerBound", "upperBound", "step"]>,
-                         DeclareOpInterfaceMethods<LoopWrapperInterface>,
-                         RecursiveMemoryEffects]> {
- let summary = "simd loop construct";
+def SimdOp : OpenMP_Op<"simd", [AttrSizedOperandSegments,
+                       DeclareOpInterfaceMethods<LoopWrapperInterface>,
+                       RecursiveMemoryEffects,
+                       SingleBlockImplicitTerminator<"TerminatorOp">]> {
+ let summary = "simd construct";
   let description = [{
     The simd construct can be applied to a loop to indicate that the loop can be
     transformed into a SIMD loop (that is, multiple iterations of the loop can
-    be executed concurrently using SIMD instructions).. The lower and upper
-    bounds specify a half-open range: the range includes the lower bound but
-    does not include the upper bound. If the `inclusive` attribute is specified
-    then the upper bound is also included.
+    be executed concurrently using SIMD instructions).
 
-    The body region can contain any number of blocks. The region is terminated
-    by "omp.yield" instruction without operands.
-
-    Collapsed loops are represented by the simd-loop having a list of indices,
-    bounds and steps where the size of the list is equal to the collapse value.
+    The body region can contain a single block which must contain a single
+    operation and a terminator. The operation must be another compatible loop
+    wrapper or an `omp.loop_nest`.
 
     The `alignment_values` attribute additionally specifies alignment of each
     corresponding aligned operand. Note that `$aligned_vars` and
@@ -763,32 +758,32 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
     SIMD chunk can have a distance in the logical iteration space that is
     greater than or equal to the value given in the clause.
     ```
-    omp.simdloop <clauses>
-    for (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
-      // block operations
-      omp.yield
+    omp.simd <clauses> {
+      omp.loop_nest (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+        %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+        %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+        %sum = arith.addf %a, %b : f32
+        store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+        omp.yield
+      }
     }
     ```
   }];
 
   // TODO: Add other clauses
-  let arguments = (ins Variadic<IntLikeType>:$lowerBound,
-             Variadic<IntLikeType>:$upperBound,
-             Variadic<IntLikeType>:$step,
-             Variadic<OpenMP_PointerLikeType>:$aligned_vars,
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$aligned_vars,
              OptionalAttr<I64ArrayAttr>:$alignment_values,
              Optional<I1>:$if_expr,
              Variadic<OpenMP_PointerLikeType>:$nontemporal_vars,
              OptionalAttr<OrderKindAttr>:$order_val,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$simdlen,
-             ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$safelen,
-             UnitAttr:$inclusive
+             ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$safelen
      );
 
   let regions = (region AnyRegion:$region);
 
   let builders = [
-    OpBuilder<(ins CArg<"const SimdLoopClauseOps &">:$clauses)>
+    OpBuilder<(ins CArg<"const SimdClauseOps &">:$clauses)>
   ];
 
   let assemblyFormat = [{
@@ -800,14 +795,7 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
           |`order` `(` custom<ClauseAttr>($order_val) `)`
           |`simdlen` `(` $simdlen  `)`
           |`safelen` `(` $safelen  `)`
-    ) `for` custom<LoopControl>($region, $lowerBound, $upperBound, $step,
-                                  type($step), $inclusive) attr-dict
-  }];
-
-  let extraClassDeclaration = [{
-    /// Returns the number of loops in the simd loop nest.
-    unsigned getNumLoops() { return getLowerBound().size(); }
-
+    ) $region attr-dict
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -818,7 +806,7 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
 def YieldOp : OpenMP_Op<"yield",
     [Pure, ReturnLike, Terminator,
      ParentOneOf<["LoopNestOp", "WsloopOp", "DeclareReductionOp",
-     "AtomicUpdateOp", "SimdLoopOp", "PrivateClauseOp"]>]> {
+     "AtomicUpdateOp", "PrivateClauseOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and
@@ -840,7 +828,8 @@ def YieldOp : OpenMP_Op<"yield",
 //===----------------------------------------------------------------------===//
 def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
                              DeclareOpInterfaceMethods<LoopWrapperInterface>,
-                             RecursiveMemoryEffects]> {
+                             RecursiveMemoryEffects,
+                             SingleBlockImplicitTerminator<"TerminatorOp">]> {
   let summary = "distribute construct";
   let description = [{
     The distribute construct specifies that the iterations of one or more loops
@@ -855,15 +844,28 @@ def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
     The distribute loop construct specifies that the iterations of the loop(s)
     will be executed in parallel by threads in the current context. These
     iterations are spread across threads that already exist in the enclosing
-    region. The lower and upper bounds specify a half-open range: the
-    range includes the lower bound but does not include the upper bound. If the
-    `inclusive` attribute is specified then the upper bound is also included.
+    region.
+    
+    The body region can contain a single block which must contain a single
+    operation and a terminator. The operation must be another compatible loop
+    wrapper or an `omp.loop_nest`.
 
     The `dist_schedule_static` attribute specifies the  schedule for this
     loop, determining how the loop is distributed across the parallel threads.
     The optional `schedule_chunk` associated with this determines further
     controls this distribution.
 
+    ```mlir
+    omp.distribute <clauses> {
+      omp.loop_nest (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+        %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+        %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+        %sum = arith.addf %a, %b : f32
+        store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+        omp.yield
+      }
+    }
+    ```
     // TODO: private_var, firstprivate_var, lastprivate_var, collapse
   }];
   let arguments = (ins
@@ -1016,10 +1018,10 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
 }
 
 def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
-                           AutomaticAllocationScope, RecursiveMemoryEffects,
-                           AllTypesMatch<["lowerBound", "upperBound", "step"]>,
+                           AutomaticAllocationScope,
                            DeclareOpInterfaceMethods<LoopWrapperInterface>,
-                           ReductionClauseInterface]> {
+                           RecursiveMemoryEffects, ReductionClauseInterface,
+                           SingleBlockImplicitTerminator<"TerminatorOp">]> {
   let summary = "taskloop construct";
   let description = [{
     The taskloop construct specifies that the iterations of one or more
@@ -1027,21 +1029,19 @@ def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
     iterations are distributed across tasks generated by the construct and
     scheduled to be executed.
 
-    The `lowerBound` and `upperBound` specify a half-open range: the range
-    includes the lower bound but does not include the upper bound. If the
-    `inclusive` attribute is specified then the upper bound is also included.
-    The `step` specifies the loop step.
-
-    The body region can contain any number of blocks.
+    The body region can contain a single block which must contain a single
+    operation and a terminator. The operation must be another compatible loop
+    wrapper or an `omp.loop_nest`.
 
     ```
-    omp.taskloop <clauses>
-    for (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
-      %a = load %arrA[%i1, %i2] : memref<?x?xf32>
-      %b = load %arrB[%i1, %i2] : memref<?x?xf32>
-      %sum = arith.addf %a, %b : f32
-      store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
-      omp.terminator
+    omp.taskloop <clauses> {
+      omp.loop_nest (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+        %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+        %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+        %sum = arith.addf %a, %b : f32
+        store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+        omp.yield
+      }
     }
     ```
 
@@ -1118,11 +1118,7 @@ def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
     created.
   }];
 
-  let arguments = (ins Variadic<IntLikeType>:$lowerBound,
-                       Variadic<IntLikeType>:$upperBound,
-                       Variadic<IntLikeType>:$step,
-                       UnitAttr:$inclusive,
-                       Optional<I1>:$if_expr,
+  let arguments = (ins Optional<I1>:$if_expr,
                        Optional<I1>:$final_expr,
                        UnitAttr:$untied,
                        UnitAttr:$mergeable,
@@ -1165,8 +1161,7 @@ def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
           |`grain_size` `(` $grain_size `:` type($grain_size) `)`
           |`num_tasks` `(` $num_tasks `:` type($num_tasks) `)`
           |`nogroup` $nogroup
-    ) `for` custom<LoopControl>($region, $lowerBound, $upperBound, $step,
-                                  type($step), $inclusive) attr-dict
+    ) $region attr-dict
   }];
 
   let extraClassDeclaration = [{

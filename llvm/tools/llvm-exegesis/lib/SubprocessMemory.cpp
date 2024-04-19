@@ -22,7 +22,16 @@
 namespace llvm {
 namespace exegesis {
 
-#if defined(__linux__) && !defined(__ANDROID__)
+#if defined(__linux__)
+
+// The SYS_* macros for system calls are provided by the libc whereas the
+// __NR_* macros are from the linux headers. This means that sometimes
+// SYS_* macros might not be available for certain system calls depending
+// upon the libc. This happens with the gettid syscall and bionic for
+// example, so we use __NR_gettid when no SYS_gettid is available.
+#ifndef SYS_gettid
+#define SYS_gettid __NR_gettid
+#endif
 
 long SubprocessMemory::getCurrentTID() {
   // We're using the raw syscall here rather than the gettid() function provided
@@ -30,6 +39,8 @@ long SubprocessMemory::getCurrentTID() {
   // version 2.30.
   return syscall(SYS_gettid);
 }
+
+#if !defined(__ANDROID__)
 
 Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
   // Add the PID to the shared memory name so that if we're running multiple
@@ -157,7 +168,8 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
 
 SubprocessMemory::~SubprocessMemory() {}
 
-#endif // defined(__linux__) && !defined(__ANDROID__)
+#endif // !defined(__ANDROID__)
+#endif // defined(__linux__)
 
 } // namespace exegesis
 } // namespace llvm
