@@ -2360,7 +2360,7 @@ RegionBindingsRef
 RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
   // We only care about region locations.
   auto MemRegVal = L.getAs<loc::MemRegionVal>();
-  if (!MemRegVal.has_value())
+  if (!MemRegVal)
     return B;
 
   const MemRegion *R = MemRegVal->getRegion();
