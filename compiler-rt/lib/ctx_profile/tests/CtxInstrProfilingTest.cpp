@@ -4,11 +4,11 @@
 using namespace __ctx_profile;
 
 TEST(ArenaTest, Basic) {
-  Arena * A = Arena::allocateNewArena(1024);
+  Arena *A = Arena::allocateNewArena(1024);
   EXPECT_EQ(A->size(), 1024U);
   EXPECT_EQ(A->next(), nullptr);
 
-  auto *M1 = A->tryBumpAllocate(1020); 
+  auto *M1 = A->tryBumpAllocate(1020);
   EXPECT_NE(M1, nullptr);
   auto *M2 = A->tryBumpAllocate(4);
   EXPECT_NE(M2, nullptr);

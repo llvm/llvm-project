@@ -22,7 +22,7 @@ public:
   // to, assumed to be the last in the Arena list. We only need to support
   // appending to the arena list.
   static Arena *allocateNewArena(size_t Size, Arena *Prev = nullptr);
-  static void freeArenaList(Arena*& A);
+  static void freeArenaList(Arena *&A);
 
   uint64_t size() const { return Size; }
 
@@ -51,5 +51,5 @@ private:
   const uint64_t Size;
 };
 
-}
+} // namespace __ctx_profile
 #endif // CTX_PROFILE_CTXINSTRPROFILING_H_
