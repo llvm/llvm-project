@@ -28,7 +28,7 @@ TEST(LlvmLibcMutexTest, Basic) {
     ASSERT_FALSE(obj.is_locked());
 
     {
-        lock_guard lg(obj);
+        lock_guard<LockableObject> lg(obj);
         ASSERT_TRUE(obj.is_locked());
     }
 
