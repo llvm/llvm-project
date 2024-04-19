@@ -17927,11 +17927,11 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       } else
         continue;
 
-      if (!ISD::isBuildVectorAllZeros(Sub.getOperand(0).getNode()))
+      if (!ISD::isConstantSplatVectorAllZeros(Sub.getOperand(0).getNode()))
         continue;
 
       // Constant ones is always righthand operand of the Add.
-      if (!ISD::isBuildVectorAllOnes(Add.getOperand(1).getNode()))
+      if (!ISD::isConstantSplatVectorAllOnes(Add.getOperand(1).getNode()))
         continue;
 
       if (Sub.getOperand(1) != Add.getOperand(0))

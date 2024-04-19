@@ -29,7 +29,7 @@ enum IndexedVersion : uint64_t {
 };
 
 constexpr uint64_t MinimumSupportedVersion = Version0;
-constexpr uint64_t MaximumSupportedVersion = Version1;
+constexpr uint64_t MaximumSupportedVersion = Version2;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
 static_assert(MinimumSupportedVersion <= MaximumSupportedVersion);
@@ -630,6 +630,96 @@ public:
   data_type ReadData(uint64_t K, const unsigned char *D,
                      offset_type /*Unused*/) {
     return Frame::deserialize(D);
+  }
+};
+
+// Trait for writing call stacks to the on-disk hash table.
+class CallStackWriterTrait {
+public:
+  using key_type = CallStackId;
+  using key_type_ref = CallStackId;
+
+  using data_type = llvm::SmallVector<FrameId>;
+  using data_type_ref = llvm::SmallVector<FrameId> &;
+
+  using hash_value_type = CallStackId;
+  using offset_type = uint64_t;
+
+  static hash_value_type ComputeHash(key_type_ref K) { return K; }
+
+  static std::pair<offset_type, offset_type>
+  EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
+    using namespace support;
+    endian::Writer LE(Out, llvm::endianness::little);
+    offset_type N = sizeof(K);
+    LE.write<offset_type>(N);
+    offset_type M = sizeof(FrameId) * V.size();
+    LE.write<offset_type>(M);
+    return std::make_pair(N, M);
+  }
+
+  void EmitKey(raw_ostream &Out, key_type_ref K, offset_type /*Unused*/) {
+    using namespace support;
+    endian::Writer LE(Out, llvm::endianness::little);
+    LE.write<key_type>(K);
+  }
+
+  void EmitData(raw_ostream &Out, key_type_ref /*Unused*/, data_type_ref V,
+                offset_type /*Unused*/) {
+    using namespace support;
+    endian::Writer LE(Out, llvm::endianness::little);
+    // Emit the frames.  We do not explicitly emit the length of the vector
+    // because it can be inferred from the data length.
+    for (FrameId F : V)
+      LE.write<FrameId>(F);
+  }
+};
+
+// Trait for reading call stack mappings from the on-disk hash table.
+class CallStackLookupTrait {
+public:
+  using data_type = const llvm::SmallVector<FrameId>;
+  using internal_key_type = CallStackId;
+  using external_key_type = CallStackId;
+  using hash_value_type = CallStackId;
+  using offset_type = uint64_t;
+
+  static bool EqualKey(internal_key_type A, internal_key_type B) {
+    return A == B;
+  }
+  static uint64_t GetInternalKey(internal_key_type K) { return K; }
+  static uint64_t GetExternalKey(external_key_type K) { return K; }
+
+  hash_value_type ComputeHash(internal_key_type K) { return K; }
+
+  static std::pair<offset_type, offset_type>
+  ReadKeyDataLength(const unsigned char *&D) {
+    using namespace support;
+
+    offset_type KeyLen =
+        endian::readNext<offset_type, llvm::endianness::little>(D);
+    offset_type DataLen =
+        endian::readNext<offset_type, llvm::endianness::little>(D);
+    return std::make_pair(KeyLen, DataLen);
+  }
+
+  uint64_t ReadKey(const unsigned char *D, offset_type /*Unused*/) {
+    using namespace support;
+    return endian::readNext<external_key_type, llvm::endianness::little>(D);
+  }
+
+  data_type ReadData(uint64_t K, const unsigned char *D, offset_type Length) {
+    using namespace support;
+    llvm::SmallVector<FrameId> CS;
+    // Derive the number of frames from the data length.
+    uint64_t NumFrames = Length / sizeof(FrameId);
+    assert(Length % sizeof(FrameId) == 0);
+    CS.reserve(NumFrames);
+    for (size_t I = 0; I != NumFrames; ++I) {
+      FrameId F = endian::readNext<FrameId, llvm::endianness::little>(D);
+      CS.push_back(F);
+    }
+    return CS;
   }
 };
 
