@@ -4834,7 +4834,8 @@ static MachineBasicBlock *lowerPseudoLaneOp(MachineInstr &MI,
   MachineOperand &Dest = MI.getOperand(0);
   MachineOperand &Src0 = MI.getOperand(1);
 
-  const TargetRegisterClass *Src0RC = MRI.getRegClass(Src0.getReg());
+  const TargetRegisterClass *Src0RC =
+      Src0.isReg() ? MRI.getRegClass(Src0.getReg()) : &AMDGPU::SReg_64RegClass;
   const TargetRegisterClass *Src0SubRC =
       TRI->getSubRegisterClass(Src0RC, AMDGPU::sub0);
 
@@ -4895,6 +4896,7 @@ static MachineBasicBlock *lowerPseudoLaneOp(MachineInstr &MI,
 
     if (IsKill)
       Src1.setIsKill(false);
+
     LoHalf = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), DestSub0)
                  .add(SrcReg0Sub0)
                  .add(Src1)
