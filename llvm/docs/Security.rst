@@ -53,9 +53,9 @@ username for an individual isn't available, the brackets will be empty.
 * Peter Smith (ARM) [@smithp35]
 * Pietro Albini (Ferrous Systems; Rust) [@pietroalbini]
 * Serge Guelton (Mozilla) [@serge-sans-paille]
-* Sergey Maslov (Intel) [@smaslov-intel]
 * Shayne Hiet-Block (Microsoft) [@GreatKeeper]
 * Tim Penge (Sony) []
+* Will Huhn (Intel) [@wphuhn-intel]
 
 Criteria
 --------
