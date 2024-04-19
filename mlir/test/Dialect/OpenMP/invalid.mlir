@@ -10,6 +10,58 @@ func.func @unknown_clause() {
 
 // -----
 
+func.func @not_wrapper() {
+  omp.distribute {
+    // expected-error@+1 {{op must take a loop wrapper role if nested inside of 'omp.distribute'}}
+    omp.parallel {
+      %0 = arith.constant 0 : i32
+      omp.terminator
+    }
+    omp.terminator
+  }
+
+  return
+}
+
+// -----
+
+func.func @invalid_nested_wrapper(%lb : index, %ub : index, %step : index) {
+  omp.distribute {
+    // expected-error@+1 {{only supported nested wrapper is 'omp.wsloop'}}
+    omp.parallel {
+      omp.simd {
+        omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+          omp.yield
+        }
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+
+  return
+}
+
+// -----
+
+func.func @no_nested_wrapper(%lb : index, %ub : index, %step : index) {
+  omp.distribute {
+    // expected-error@+1 {{op must not wrap an 'omp.loop_nest' directly}}
+    omp.parallel {
+      omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+
+  return
+}
+
+// -----
+
 func.func @if_once(%n : i1) {
   // expected-error@+1 {{`if` clause can appear at most once in the expansion of the oilist directive}}
   omp.parallel if(%n : i1) if(%n : i1) {
