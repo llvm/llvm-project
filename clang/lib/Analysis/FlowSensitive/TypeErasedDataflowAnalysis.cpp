@@ -367,11 +367,11 @@ builtinTransferInitializer(const CFGInitializer &Elt,
       return;
 
     ParentLoc->setChild(*Member, InitExprLoc);
-  } else if (auto *InitExprVal = Env.getValue(*InitExpr)) {
-    assert(MemberLoc != nullptr);
     // Record-type initializers construct themselves directly into the result
     // object, so there is no need to handle them here.
-    if (!Member->getType()->isRecordType())
+  } else if (!Member->getType()->isRecordType()) {
+    assert(MemberLoc != nullptr);
+    if (auto *InitExprVal = Env.getValue(*InitExpr))
       Env.setValue(*MemberLoc, *InitExprVal);
   }
 }
