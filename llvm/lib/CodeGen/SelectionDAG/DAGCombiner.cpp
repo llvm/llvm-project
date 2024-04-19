@@ -3520,6 +3520,8 @@ static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
     return SDValue();
 
   SDLoc DL(N);
+  CarryIn = DAG.getBoolExtOrTrunc(CarryIn, DL, Carry1->getValueType(1),
+                                  Carry1->getValueType(0));
   SDValue Merged =
       DAG.getNode(NewOp, DL, Carry1->getVTList(), Carry0.getOperand(0),
                   Carry0.getOperand(1), CarryIn);
@@ -24478,7 +24480,8 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     unsigned NumSubElts = NVT.getVectorMinNumElements();
     if (InsIdx <= ExtIdx && (ExtIdx + NumSubElts) <= (InsIdx + NumInsElts) &&
         TLI.isExtractSubvectorCheap(NVT, InsSubVT, ExtIdx - InsIdx) &&
-        InsSubVT.isFixedLengthVector() && NVT.isFixedLengthVector())
+        InsSubVT.isFixedLengthVector() && NVT.isFixedLengthVector() &&
+        V.getValueType().isFixedLengthVector())
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, InsSub,
                          DAG.getVectorIdxConstant(ExtIdx - InsIdx, DL));
   }

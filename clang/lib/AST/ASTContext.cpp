@@ -2684,7 +2684,7 @@ getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context,
   if (Field->isBitField()) {
     // If we have explicit padding bits, they don't contribute bits
     // to the actual object representation, so return 0.
-    if (Field->isUnnamedBitfield())
+    if (Field->isUnnamedBitField())
       return 0;
 
     int64_t BitfieldSize = Field->getBitWidthValue(Context);
