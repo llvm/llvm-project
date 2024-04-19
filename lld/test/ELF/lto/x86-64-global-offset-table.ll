@@ -1,19 +1,33 @@
 ; REQUIRES: x86
+;; LTO-generated felocatable files may reference _GLOBAL_OFFSET_TABLE_ while
+;; the IR does not mention _GLOBAL_OFFSET_TABLE_.
+;; Test that there is no spurious "undefined symbol" error.
+
 ; RUN: rm -rf %t && split-file %s %t && cd %t
-; RUN: llvm-mc -filetype=obj -triple=x86_64 b.s -o b.o
+; RUN: opt -module-summary b.ll -o b.bc
 
-; RUN: cat a.ll medium.ll | llvm-as - -o medium.bc
-; RUN: ld.lld -pie --no-relax medium.bc b.o -o medium
-; RUN: llvm-objdump -d medium | FileCheck %s
+;; Test Thin LTO.
+; RUN: cat a.ll medium.ll | opt -module-summary - -o medium.bc
+; RUN: ld.lld -pie --no-relax medium.bc b.bc -o medium
+; RUN: llvm-objdump -dt medium | FileCheck %s
 
+;; Test regular LTO.
 ; RUN: cat a.ll large.ll | llvm-as - -o large.bc
-; RUN: ld.lld -pie large.bc b.o -o large
-; RUN: llvm-objdump -d large | FileCheck %s
+; RUN: ld.lld -pie large.bc b.bc -o large
+; RUN: llvm-objdump -dt large | FileCheck %s
 
-; RUN: cat a.ll medium.ll ref.ll | llvm-as - -o ref.bc
-; RUN: ld.lld -pie --no-relax -u ref ref.bc b.o -o ref
-; RUN: llvm-objdump -d ref | FileCheck %s
+;; Explicit reference of _GLOBAL_OFFSET_TABLE_ is fine.
+; RUN: cat a.ll medium.ll ref.ll | opt -module-summary - -o ref.bc
+; RUN: ld.lld -pie -u ref ref.bc b.bc -y _GLOBAL_OFFSET_TABLE_ -o ref 2>&1 | FileCheck %s --check-prefix=TRACE
+; RUN: llvm-objdump -dt ref | FileCheck %s
 
+; TRACE:      ref.bc: reference to _GLOBAL_OFFSET_TABLE_
+; TRACE-NEXT: ref.bc: reference to _GLOBAL_OFFSET_TABLE_
+; TRACE-NEXT: <internal>: definition of _GLOBAL_OFFSET_TABLE_
+; TRACE-NEXT: ref.lto.ref.o: reference to _GLOBAL_OFFSET_TABLE_
+
+;; The IR symbol table references _GLOBAL_OFFSET_TABLE_, which causes lld to define the symbol.
+; CHECK: .got.plt       0000000000000000 .hidden _GLOBAL_OFFSET_TABLE_
 ; CHECK: movabsq
 
 ;--- a.ll
@@ -50,8 +64,8 @@ entry:
   ret ptr @_GLOBAL_OFFSET_TABLE_
 }
 
-;--- b.s
-.data
-.globl i
-i:
-.long 0
+;--- b.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+@i = global i32 0

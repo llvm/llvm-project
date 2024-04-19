@@ -1,18 +1,25 @@
 ; REQUIRES: x86
-; RUN: llvm-as %s -o %t.bc
-; RUN: ld.lld %t.bc -o %t
+;; LTO-generated felocatable files may reference _GLOBAL_OFFSET_TABLE_ while
+;; the IR does not mention _GLOBAL_OFFSET_TABLE_.
+;; Test that there is no spurious "undefined symbol" error.
+
+; RUN: rm -rf %t && mkdir %t && cd %t
+; RUN: llvm-as %s -o a.bc
+; RUN: ld.lld -pie a.bc -o a
+; RUN: llvm-nm a | FileCheck %s
+
+; CHECK: d _GLOBAL_OFFSET_TABLE_
 
 target datalayout = "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-i128:128-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i386-pc-linux-gnu"
 
-define dso_local void @f() {
-entry:
-  ret void
-}
+@i = global i32 0
 
 define dso_local void @_start() {
 entry:
-  call void @f()
+  %0 = load i32, ptr @i
+  %inc = add nsw i32 %0, 1
+  store i32 %inc, ptr @i
   ret void
 }
 
