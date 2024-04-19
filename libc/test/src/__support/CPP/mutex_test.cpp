@@ -9,6 +9,7 @@
 #include "src/__support/CPP/mutex.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::cpp::adopt_lock;
 using LIBC_NAMESPACE::cpp::lock_guard;
 
 static const int SIGABRT = 6;
@@ -43,6 +44,21 @@ TEST(LlvmLibcMutexTest, Basic) {
     lock_guard<Mutex> lg(m);
     ASSERT_TRUE(m.locked);
     ASSERT_DEATH([&]() { lock_guard<Mutex> lg2(m); }, SIGABRT);
+  }
+
+  ASSERT_FALSE(m.locked);
+}
+
+TEST(LlvmLibcMutexTest, AcquireLocked) {
+  Mutex m;
+  ASSERT_FALSE(m.locked);
+
+  m.lock();
+  ASSERT_TRUE(m.locked);
+
+  {
+    lock_guard<Mutex> lg(m, adopt_lock);
+    ASSERT_TRUE(m.locked);
   }
 
   ASSERT_FALSE(m.locked);
