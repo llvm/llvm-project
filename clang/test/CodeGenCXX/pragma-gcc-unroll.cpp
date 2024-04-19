@@ -96,6 +96,26 @@ void template_test(double *List, int Length) {
   for_template_define_test<double>(List, Length, Value);
 }
 
+void for_unroll_zero_test(int *List, int Length) {
+  // CHECK: define {{.*}} @_Z20for_unroll_zero_testPii
+  #pragma GCC unroll 0
+  for (int i = 0; i < Length; i++) {
+    // CHECK: br label {{.*}}, !llvm.loop ![[LOOP_14:.*]]
+    List[i] = i * 2;
+  }
+}
+
+void while_unroll_zero_test(int *List, int Length) {
+  // CHECK: define {{.*}} @_Z22while_unroll_zero_testPii
+  int i = 0;
+#pragma GCC unroll(0)
+  while (i < Length) {
+    // CHECK: br label {{.*}}, !llvm.loop ![[LOOP_15:.*]]
+    List[i] = i * 2;
+    i++;
+  }
+}
+
 // CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], [[MP:![0-9]+]], ![[UNROLL_ENABLE:.*]]}
 // CHECK: ![[UNROLL_ENABLE]] = !{!"llvm.loop.unroll.enable"}
 // CHECK: ![[LOOP_2]] = distinct !{![[LOOP_2:.*]], ![[UNROLL_DISABLE:.*]]}
@@ -107,3 +127,5 @@ void template_test(double *List, int Length) {
 // CHECK: ![[LOOP_5]] = distinct !{![[LOOP_5]], ![[UNROLL_8:.*]]}
 // CHECK: ![[LOOP_6]] = distinct !{![[LOOP_6]], ![[UNROLL_8:.*]]}
 // CHECK: ![[LOOP_7]] = distinct !{![[LOOP_7]], ![[UNROLL_8:.*]]}
+// CHECK: ![[LOOP_14]] = distinct !{![[LOOP_14]], [[MP]], ![[UNROLL_DISABLE:.*]]}
+// CHECK: ![[LOOP_15]] = distinct !{![[LOOP_15]], [[MP]], ![[UNROLL_DISABLE:.*]]}

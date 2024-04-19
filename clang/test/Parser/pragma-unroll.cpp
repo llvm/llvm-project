@@ -40,10 +40,14 @@ void test(int *List, int Length) {
 
 /* expected-error {{expected ')'}} */ #pragma unroll(()
 /* expected-error {{expected expression}} */ #pragma unroll -
-/* expected-error {{invalid value '0'; must be positive}} */ #pragma unroll(0)
-/* expected-error {{invalid value '0'; must be positive}} */ #pragma unroll 0
+/* The values of 0 and 1 block any unrolling of the loop. */ #pragma unroll 0
 /* expected-error {{value '3000000000' is too large}} */ #pragma unroll(3000000000)
 /* expected-error {{value '3000000000' is too large}} */ #pragma unroll 3000000000
+  while (i-8 < Length) {
+    List[i] = i;
+  }
+
+/* The values of 0 and 1 block any unrolling of the loop. */ #pragma unroll(0)
   while (i-8 < Length) {
     List[i] = i;
   }
