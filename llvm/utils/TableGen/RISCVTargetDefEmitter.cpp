@@ -82,7 +82,6 @@ static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifndef TUNE_PROC\n"
      << "#define TUNE_PROC(ENUM, NAME)\n"
      << "#endif\n\n";
-  OS << "TUNE_PROC(GENERIC, \"generic\")\n";
 
   for (const Record *Rec :
        RK.getAllDerivedDefinitions("RISCVTuneProcessorModel")) {
