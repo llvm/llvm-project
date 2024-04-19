@@ -185,7 +185,8 @@ bool isLinearizableVector(VectorType type);
 /// mask is created on the read, if use of mask is specified or the bounds on a
 /// dimension are different.
 ///
-/// `enableMasking` if false, the inBoundsVal values are set properly, based on
+/// `useInBoundsInsteadOfMasking` if false, the inBoundsVal values are set
+/// properly, based on
 ///   the rank dimensions of the source and destination tensors. And that is
 ///   what determines if masking is done.
 ///
