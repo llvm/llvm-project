@@ -66,7 +66,7 @@ fmla za.h[w8, 8, vgx2], {z12.h-z13.h}, {z8.h-z9.h}
 // Invalid Register Suffix
 
 fmla za.d[w8, 7, vgx2], {z12.h-z13.h}, {z8.h-z9.h}
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid matrix operand, expected suffix .h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid matrix operand, expected suffix .s
 // CHECK-NEXT: fmla za.d[w8, 7, vgx2], {z12.h-z13.h}, {z8.h-z9.h}
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
