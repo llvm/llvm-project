@@ -229,24 +229,24 @@ define signext i32 @test3() {
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    mflr r0
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stdu r1, -48(r1)
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tlsldm) @"_$TLSML"
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r8, L..C3(r2) # target-flags(ppc-tlsld) @ElementIntTLSv2
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    std r0, 64(r1)
+; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r6, 2
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    bla .__tls_get_mod[PR]
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r4, 1
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    la r5, ElementIntTLS2[TL]@ld(r3)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    la r6, ElementIntTLS3[TL]@ld(r3)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    la r7, ElementIntTLS4[TL]@ld(r3)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    la r9, ElementIntTLS5[TL]@ld(r3)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stwux r4, r3, r8
+; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    la r7, ElementIntTLS3[TL]@ld(r3)
+; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r6, 320(r5)
+; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r5, 3
+; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    la r6, ElementIntTLS4[TL]@ld(r3)
+; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r5, 324(r7)
+; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r5, L..C3(r2) # target-flags(ppc-tlsld) @ElementIntTLSv2
+; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    la r7, ElementIntTLS5[TL]@ld(r3)
+; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stwux r4, r3, r5
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r4, 4
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r4, 24(r3)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r3, 2
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r3, 320(r5)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r3, 3
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r3, 324(r6)
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r3, 88
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r4, 328(r7)
-; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r3, 332(r9)
+; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r4, 328(r6)
+; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    stw r3, 332(r7)
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    li r3, 102
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    addi r1, r1, 48
 ; SMALL-LOCAL-DYNAMIC-SMALLCM64-NEXT:    ld r0, 16(r1)
@@ -258,26 +258,26 @@ define signext i32 @test3() {
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    mflr r0
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stdu r1, -48(r1)
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C3@u(r2)
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    std r0, 64(r1)
+; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addis r6, L..C3@u(r2)
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r6, L..C3@l(r6)
+; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r7, 3
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    bla .__tls_get_mod[PR]
+; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r5, 2
+; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    la r4, ElementIntTLS2[TL]@ld(r3)
+; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r5, 320(r4)
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r4, 1
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    la r5, ElementIntTLS2[TL]@ld(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    la r7, ElementIntTLS3[TL]@ld(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    la r8, ElementIntTLS4[TL]@ld(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    la r9, ElementIntTLS5[TL]@ld(r3)
+; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    la r5, ElementIntTLS3[TL]@ld(r3)
+; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r7, 324(r5)
+; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    la r5, ElementIntTLS4[TL]@ld(r3)
+; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    la r7, ElementIntTLS5[TL]@ld(r3)
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stwux r4, r3, r6
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r4, 4
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r4, 24(r3)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r3, 2
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r3, 320(r5)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r3, 3
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r3, 324(r7)
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r3, 88
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r4, 328(r8)
-; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r3, 332(r9)
+; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r4, 328(r5)
+; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    stw r3, 332(r7)
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    li r3, 102
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    addi r1, r1, 48
 ; SMALL-LOCAL-DYNAMIC-LARGECM64-NEXT:    ld r0, 16(r1)
@@ -351,12 +351,12 @@ entry:
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 9, 3, 9
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 6, 3, 6
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stwux 4, 3, 5
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 2
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 320(6)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 3
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 324(7)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 4
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 24(3)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 2
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 320(6)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 3
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 324(7)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 88
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 328(8)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 332(9)
@@ -466,12 +466,12 @@ entry:
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 9, 3, 9
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 6, 3, 6
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stwux 4, 3, 5
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 2
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 320(6)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 3
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 324(7)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 4
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 24(3)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 2
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 320(6)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 3
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 324(7)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 88
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 328(8)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 332(9)

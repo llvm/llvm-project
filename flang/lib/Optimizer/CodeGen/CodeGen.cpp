@@ -2110,9 +2110,8 @@ struct XArrayCoorOpConversion
     const bool baseIsBoxed = coor.getMemref().getType().isa<fir::BaseBoxType>();
     TypePair baseBoxTyPair =
         baseIsBoxed ? getBoxTypePair(coor.getMemref().getType()) : TypePair{};
-    mlir::LLVM::IntegerOverflowFlagsAttr nsw =
-        mlir::LLVM::IntegerOverflowFlagsAttr::get(
-            rewriter.getContext(), mlir::LLVM::IntegerOverflowFlags::nsw);
+    mlir::LLVM::IntegerOverflowFlags nsw =
+        mlir::LLVM::IntegerOverflowFlags::nsw;
 
     // For each dimension of the array, generate the offset calculation.
     for (unsigned i = 0; i < rank; ++i, ++indexOffset, ++shapeOffset,
@@ -2396,9 +2395,8 @@ private:
     auto cpnTy = fir::dyn_cast_ptrOrBoxEleTy(boxObjTy);
     mlir::Type llvmPtrTy = ::getLlvmPtrType(coor.getContext());
     mlir::Type byteTy = ::getI8Type(coor.getContext());
-    mlir::LLVM::IntegerOverflowFlagsAttr nsw =
-        mlir::LLVM::IntegerOverflowFlagsAttr::get(
-            rewriter.getContext(), mlir::LLVM::IntegerOverflowFlags::nsw);
+    mlir::LLVM::IntegerOverflowFlags nsw =
+        mlir::LLVM::IntegerOverflowFlags::nsw;
 
     for (unsigned i = 1, last = operands.size(); i < last; ++i) {
       if (auto arrTy = cpnTy.dyn_cast<fir::SequenceType>()) {
