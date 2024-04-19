@@ -1154,6 +1154,17 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     MutableArrayRef<BlockArgument> reductionArgs =
         opInst.getRegion().getArguments().take_back(
             opInst.getNumReductionVars());
+
+    SmallVector<llvm::Value *> byRefVars;
+    if (isByRef) {
+      for (unsigned i = 0; i < opInst.getNumReductionVars(); ++i) {
+        // Allocate reduction variable (which is a pointer to the real reduciton
+        // variable allocated in the inlined region)
+        byRefVars.push_back(builder.CreateAlloca(
+            moduleTranslation.convertType(reductionDecls[i].getType())));
+      }
+    }
+
     for (unsigned i = 0; i < opInst.getNumReductionVars(); ++i) {
       SmallVector<llvm::Value *> phis;
 
@@ -1166,18 +1177,13 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       assert(phis.size() == 1 &&
              "expected one value to be yielded from the "
              "reduction neutral element declaration region");
-      builder.restoreIP(allocaIP);
 
-      if (isByRef[i]) {
-        // Allocate reduction variable (which is a pointer to the real reduciton
-        // variable allocated in the inlined region)
-        llvm::Value *var = builder.CreateAlloca(
-            moduleTranslation.convertType(reductionDecls[i].getType()));
+      if (isByRef) {
         // Store the result of the inlined region to the allocated reduction var
         // ptr
-        builder.CreateStore(phis[0], var);
+        builder.CreateStore(phis[0], byRefVars[i]);
 
-        privateReductionVariables.push_back(var);
+        privateReductionVariables.push_back(byRefVars[i]);
         moduleTranslation.mapValue(reductionArgs[i], phis[0]);
         reductionVariableMap.try_emplace(opInst.getReductionVars()[i], phis[0]);
       } else {
