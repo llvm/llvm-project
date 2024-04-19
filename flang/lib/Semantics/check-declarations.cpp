@@ -948,11 +948,6 @@ void CheckHelper::CheckObjectEntity(
             "Component '%s' with ATTRIBUTES(DEVICE) must also be allocatable"_err_en_US,
             symbol.name());
       }
-      if (IsAssumedSizeArray(symbol)) {
-        messages_.Say(
-            "Object '%s' with ATTRIBUTES(DEVICE) may not be assumed size"_err_en_US,
-            symbol.name());
-      }
       break;
     case common::CUDADataAttr::Managed:
       if (!IsAutomatic(symbol) && !IsAllocatable(symbol) &&
