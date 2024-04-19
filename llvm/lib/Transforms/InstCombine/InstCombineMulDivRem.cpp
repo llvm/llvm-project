@@ -276,7 +276,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     const APInt *NegPow2C;
     Value *X;
     if (match(Op0, m_ZExtOrSExt(m_Value(X))) &&
-        match(Op1, m_APIntAllowUndef(NegPow2C))) {
+        match(Op1, m_APIntAllowPoison(NegPow2C))) {
       unsigned SrcWidth = X->getType()->getScalarSizeInBits();
       unsigned ShiftAmt = NegPow2C->countr_zero();
       if (ShiftAmt >= BitWidth - SrcWidth) {
@@ -319,19 +319,12 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   }
 
   // abs(X) * abs(X) -> X * X
-  // nabs(X) * nabs(X) -> X * X
-  if (Op0 == Op1) {
-    Value *X, *Y;
-    SelectPatternFlavor SPF = matchSelectPattern(Op0, X, Y).Flavor;
-    if (SPF == SPF_ABS || SPF == SPF_NABS)
-      return BinaryOperator::CreateMul(X, X);
-
-    if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
-      return BinaryOperator::CreateMul(X, X);
-  }
+  Value *X;
+  if (Op0 == Op1 && match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
+    return BinaryOperator::CreateMul(X, X);
 
   {
-    Value *X, *Y;
+    Value *Y;
     // abs(X) * abs(Y) -> abs(X * Y)
     if (I.hasNoSignedWrap() &&
         match(Op0,
@@ -344,7 +337,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   }
 
   // -X * C --> X * -C
-  Value *X, *Y;
+  Value *Y;
   Constant *Op1C;
   if (match(Op0, m_Neg(m_Value(X))) && match(Op1, m_Constant(Op1C)))
     return BinaryOperator::CreateMul(X, ConstantExpr::getNeg(Op1C));
@@ -492,7 +485,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   // ((ashr X, 31) | 1) * X --> abs(X)
   // X * ((ashr X, 31) | 1) --> abs(X)
   if (match(&I, m_c_BinOp(m_Or(m_AShr(m_Value(X),
-                                      m_SpecificIntAllowUndef(BitWidth - 1)),
+                                      m_SpecificIntAllowPoison(BitWidth - 1)),
                                m_One()),
                           m_Deferred(X)))) {
     Value *Abs = Builder.CreateBinaryIntrinsic(
@@ -631,31 +624,38 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
   Value *Op1 = I.getOperand(1);
   Value *X, *Y;
   Constant *C;
+  BinaryOperator *Op0BinOp;
 
   // Reassociate constant RHS with another constant to form constant
   // expression.
-  if (match(Op1, m_Constant(C)) && C->isFiniteNonZeroFP()) {
+  if (match(Op1, m_Constant(C)) && C->isFiniteNonZeroFP() &&
+      match(Op0, m_AllowReassoc(m_BinOp(Op0BinOp)))) {
+    // Everything in this scope folds I with Op0, intersecting their FMF.
+    FastMathFlags FMF = I.getFastMathFlags() & Op0BinOp->getFastMathFlags();
+    IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+    Builder.setFastMathFlags(FMF);
     Constant *C1;
     if (match(Op0, m_OneUse(m_FDiv(m_Constant(C1), m_Value(X))))) {
       // (C1 / X) * C --> (C * C1) / X
       Constant *CC1 =
           ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL);
       if (CC1 && CC1->isNormalFP())
-        return BinaryOperator::CreateFDivFMF(CC1, X, &I);
+        return BinaryOperator::CreateFDivFMF(CC1, X, FMF);
     }
     if (match(Op0, m_FDiv(m_Value(X), m_Constant(C1)))) {
+      // FIXME: This seems like it should also be checking for arcp
       // (X / C1) * C --> X * (C / C1)
       Constant *CDivC1 =
           ConstantFoldBinaryOpOperands(Instruction::FDiv, C, C1, DL);
       if (CDivC1 && CDivC1->isNormalFP())
-        return BinaryOperator::CreateFMulFMF(X, CDivC1, &I);
+        return BinaryOperator::CreateFMulFMF(X, CDivC1, FMF);
 
       // If the constant was a denormal, try reassociating differently.
       // (X / C1) * C --> X / (C1 / C)
       Constant *C1DivC =
           ConstantFoldBinaryOpOperands(Instruction::FDiv, C1, C, DL);
       if (C1DivC && Op0->hasOneUse() && C1DivC->isNormalFP())
-        return BinaryOperator::CreateFDivFMF(X, C1DivC, &I);
+        return BinaryOperator::CreateFDivFMF(X, C1DivC, FMF);
     }
 
     // We do not need to match 'fadd C, X' and 'fsub X, C' because they are
@@ -665,26 +665,33 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
       // (X + C1) * C --> (X * C) + (C * C1)
       if (Constant *CC1 =
               ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL)) {
-        Value *XC = Builder.CreateFMulFMF(X, C, &I);
-        return BinaryOperator::CreateFAddFMF(XC, CC1, &I);
+        Value *XC = Builder.CreateFMul(X, C);
+        return BinaryOperator::CreateFAddFMF(XC, CC1, FMF);
       }
     }
     if (match(Op0, m_OneUse(m_FSub(m_Constant(C1), m_Value(X))))) {
       // (C1 - X) * C --> (C * C1) - (X * C)
       if (Constant *CC1 =
               ConstantFoldBinaryOpOperands(Instruction::FMul, C, C1, DL)) {
-        Value *XC = Builder.CreateFMulFMF(X, C, &I);
-        return BinaryOperator::CreateFSubFMF(CC1, XC, &I);
+        Value *XC = Builder.CreateFMul(X, C);
+        return BinaryOperator::CreateFSubFMF(CC1, XC, FMF);
       }
     }
   }
 
   Value *Z;
   if (match(&I,
-            m_c_FMul(m_OneUse(m_FDiv(m_Value(X), m_Value(Y))), m_Value(Z)))) {
-    // Sink division: (X / Y) * Z --> (X * Z) / Y
-    Value *NewFMul = Builder.CreateFMulFMF(X, Z, &I);
-    return BinaryOperator::CreateFDivFMF(NewFMul, Y, &I);
+            m_c_FMul(m_AllowReassoc(m_OneUse(m_FDiv(m_Value(X), m_Value(Y)))),
+                     m_Value(Z)))) {
+    BinaryOperator *DivOp = cast<BinaryOperator>(((Z == Op0) ? Op1 : Op0));
+    FastMathFlags FMF = I.getFastMathFlags() & DivOp->getFastMathFlags();
+    if (FMF.allowReassoc()) {
+      // Sink division: (X / Y) * Z --> (X * Z) / Y
+      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+      Builder.setFastMathFlags(FMF);
+      auto *NewFMul = Builder.CreateFMul(X, Z);
+      return BinaryOperator::CreateFDivFMF(NewFMul, Y, FMF);
+    }
   }
 
   // sqrt(X) * sqrt(Y) -> sqrt(X * Y)
@@ -829,15 +836,12 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   // X * 0.0 --> copysign(0.0, X)
   // X * -0.0 --> copysign(0.0, -X)
   const APFloat *FPC;
-  if (match(Op1, m_APFloatAllowUndef(FPC)) && FPC->isZero() &&
+  if (match(Op1, m_APFloatAllowPoison(FPC)) && FPC->isZero() &&
       ((I.hasNoInfs() &&
         isKnownNeverNaN(Op0, /*Depth=*/0, SQ.getWithInstruction(&I))) ||
        isKnownNeverNaN(&I, /*Depth=*/0, SQ.getWithInstruction(&I)))) {
     if (FPC->isNegative())
       Op0 = Builder.CreateFNegFMF(Op0, &I);
-    Op1 = Constant::replaceUndefsWith(
-        cast<Constant>(Op1),
-        ConstantFP::get(Op1->getType()->getScalarType(), *FPC));
     CallInst *CopySign = Builder.CreateIntrinsic(Intrinsic::copysign,
                                                  {I.getType()}, {Op1, Op0}, &I);
     return replaceInstUsesWith(I, CopySign);

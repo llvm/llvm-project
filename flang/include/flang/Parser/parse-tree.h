@@ -3552,7 +3552,10 @@ struct OmpReductionOperator {
 //                                         variable-name-list)
 struct OmpReductionClause {
   TUPLE_CLASS_BOILERPLATE(OmpReductionClause);
-  std::tuple<OmpReductionOperator, OmpObjectList> t;
+  ENUM_CLASS(ReductionModifier, Inscan, Task, Default)
+  std::tuple<std::optional<ReductionModifier>, OmpReductionOperator,
+      OmpObjectList>
+      t;
 };
 
 // OMP 5.0 2.19.5.6 in_reduction-clause -> IN_REDUCTION (reduction-identifier:

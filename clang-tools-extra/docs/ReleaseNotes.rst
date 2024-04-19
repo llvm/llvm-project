@@ -147,6 +147,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
   effect from calling a method with non-const reference parameters.
 
+- Improved :doc:`bugprone-forwarding-reference-overload
+  <clang-tidy/checks/bugprone/forwarding-reference-overload>`
+  check to ignore deleted constructors which won't hide other overloads.
+
 - Improved :doc:`bugprone-inc-dec-in-conditions
   <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check to ignore code
   within unevaluated contexts, such as ``decltype``.
@@ -302,6 +306,10 @@ Miscellaneous
 - Fixed incorrect formatting in :program:`clang-apply-replacements` when no
   ``--format`` option is specified. Now :program:`clang-apply-replacements`
   applies formatting only with the option.
+
+- Fixed the :doc:`linuxkernel-must-check-errs
+  <clang-tidy/checks/linuxkernel/must-check-errs>` documentation to consistently
+  use the check's proper name.
 
 Improvements to include-fixer
 -----------------------------

@@ -508,18 +508,16 @@ define <2 x i16> @test40vec_nonuniform(<2 x i16> %a) {
   ret <2 x i16> %r
 }
 
-define <2 x i16> @test40vec_undef(<2 x i16> %a) {
-; ALL-LABEL: @test40vec_undef(
-; ALL-NEXT:    [[T:%.*]] = zext <2 x i16> [[A:%.*]] to <2 x i32>
-; ALL-NEXT:    [[T21:%.*]] = lshr <2 x i32> [[T]], <i32 9, i32 undef>
-; ALL-NEXT:    [[T5:%.*]] = shl <2 x i32> [[T]], <i32 8, i32 undef>
-; ALL-NEXT:    [[T32:%.*]] = or <2 x i32> [[T21]], [[T5]]
-; ALL-NEXT:    [[R:%.*]] = trunc <2 x i32> [[T32]] to <2 x i16>
+define <2 x i16> @test40vec_poison(<2 x i16> %a) {
+; ALL-LABEL: @test40vec_poison(
+; ALL-NEXT:    [[T21:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 9, i16 poison>
+; ALL-NEXT:    [[T5:%.*]] = shl <2 x i16> [[A]], <i16 8, i16 poison>
+; ALL-NEXT:    [[R:%.*]] = or disjoint <2 x i16> [[T21]], [[T5]]
 ; ALL-NEXT:    ret <2 x i16> [[R]]
 ;
   %t = zext <2 x i16> %a to <2 x i32>
-  %t21 = lshr <2 x i32> %t, <i32 9, i32 undef>
-  %t5 = shl <2 x i32> %t, <i32 8, i32 undef>
+  %t21 = lshr <2 x i32> %t, <i32 9, i32 poison>
+  %t5 = shl <2 x i32> %t, <i32 8, i32 poison>
   %t32 = or <2 x i32> %t21, %t5
   %r = trunc <2 x i32> %t32 to <2 x i16>
   ret <2 x i16> %r
@@ -1452,7 +1450,7 @@ define i32 @test89() {
 ; LE-LABEL: @test89(
 ; LE-NEXT:    ret i32 6
 ;
-  ret i32 bitcast (<2 x i16> <i16 6, i16 undef> to i32)
+  ret i32 bitcast (<2 x i16> <i16 6, i16 poison> to i32)
 }
 
 define <2 x i32> @test90() {
@@ -1462,7 +1460,7 @@ define <2 x i32> @test90() {
 ; LE-LABEL: @test90(
 ; LE-NEXT:    ret <2 x i32> <i32 0, i32 1006632960>
 ;
-  %t6 = bitcast <4 x half> <half undef, half undef, half undef, half 0xH3C00> to <2 x i32>
+  %t6 = bitcast <4 x half> <half poison, half poison, half poison, half 0xH3C00> to <2 x i32>
   ret <2 x i32> %t6
 }
 
@@ -1537,13 +1535,13 @@ define <2 x i8> @trunc_lshr_sext_uniform(<2 x i8> %A) {
   ret <2 x i8> %D
 }
 
-define <2 x i8> @trunc_lshr_sext_uniform_undef(<2 x i8> %A) {
-; ALL-LABEL: @trunc_lshr_sext_uniform_undef(
-; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A:%.*]], <i8 6, i8 undef>
+define <2 x i8> @trunc_lshr_sext_uniform_poison(<2 x i8> %A) {
+; ALL-LABEL: @trunc_lshr_sext_uniform_poison(
+; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A:%.*]], <i8 6, i8 poison>
 ; ALL-NEXT:    ret <2 x i8> [[D]]
 ;
   %B = sext <2 x i8> %A to <2 x i32>
-  %C = lshr <2 x i32> %B, <i32 6, i32 undef>
+  %C = lshr <2 x i32> %B, <i32 6, i32 poison>
   %D = trunc <2 x i32> %C to <2 x i8>
   ret <2 x i8> %D
 }
@@ -1559,13 +1557,13 @@ define <2 x i8> @trunc_lshr_sext_nonuniform(<2 x i8> %A) {
   ret <2 x i8> %D
 }
 
-define <3 x i8> @trunc_lshr_sext_nonuniform_undef(<3 x i8> %A) {
-; ALL-LABEL: @trunc_lshr_sext_nonuniform_undef(
-; ALL-NEXT:    [[D:%.*]] = ashr <3 x i8> [[A:%.*]], <i8 6, i8 2, i8 undef>
+define <3 x i8> @trunc_lshr_sext_nonuniform_poison(<3 x i8> %A) {
+; ALL-LABEL: @trunc_lshr_sext_nonuniform_poison(
+; ALL-NEXT:    [[D:%.*]] = ashr <3 x i8> [[A:%.*]], <i8 6, i8 2, i8 poison>
 ; ALL-NEXT:    ret <3 x i8> [[D]]
 ;
   %B = sext <3 x i8> %A to <3 x i32>
-  %C = lshr <3 x i32> %B, <i32 6, i32 2, i32 undef>
+  %C = lshr <3 x i32> %B, <i32 6, i32 2, i32 poison>
   %D = trunc <3 x i32> %C to <3 x i8>
   ret <3 x i8> %D
 }
@@ -2014,15 +2012,13 @@ define <2 x i8> @trunc_lshr_zext_uniform(<2 x i8> %A) {
   ret <2 x i8> %D
 }
 
-define <2 x i8> @trunc_lshr_zext_uniform_undef(<2 x i8> %A) {
-; ALL-LABEL: @trunc_lshr_zext_uniform_undef(
-; ALL-NEXT:    [[B:%.*]] = zext <2 x i8> [[A:%.*]] to <2 x i32>
-; ALL-NEXT:    [[C:%.*]] = lshr <2 x i32> [[B]], <i32 6, i32 undef>
-; ALL-NEXT:    [[D:%.*]] = trunc nuw <2 x i32> [[C]] to <2 x i8>
+define <2 x i8> @trunc_lshr_zext_uniform_poison(<2 x i8> %A) {
+; ALL-LABEL: @trunc_lshr_zext_uniform_poison(
+; ALL-NEXT:    [[D:%.*]] = lshr <2 x i8> [[A:%.*]], <i8 6, i8 poison>
 ; ALL-NEXT:    ret <2 x i8> [[D]]
 ;
   %B = zext <2 x i8> %A to <2 x i32>
-  %C = lshr <2 x i32> %B, <i32 6, i32 undef>
+  %C = lshr <2 x i32> %B, <i32 6, i32 poison>
   %D = trunc <2 x i32> %C to <2 x i8>
   ret <2 x i8> %D
 }
@@ -2038,15 +2034,13 @@ define <2 x i8> @trunc_lshr_zext_nonuniform(<2 x i8> %A) {
   ret <2 x i8> %D
 }
 
-define <3 x i8> @trunc_lshr_zext_nonuniform_undef(<3 x i8> %A) {
-; ALL-LABEL: @trunc_lshr_zext_nonuniform_undef(
-; ALL-NEXT:    [[B:%.*]] = zext <3 x i8> [[A:%.*]] to <3 x i32>
-; ALL-NEXT:    [[C:%.*]] = lshr <3 x i32> [[B]], <i32 6, i32 2, i32 undef>
-; ALL-NEXT:    [[D:%.*]] = trunc nuw <3 x i32> [[C]] to <3 x i8>
+define <3 x i8> @trunc_lshr_zext_nonuniform_poison(<3 x i8> %A) {
+; ALL-LABEL: @trunc_lshr_zext_nonuniform_poison(
+; ALL-NEXT:    [[D:%.*]] = lshr <3 x i8> [[A:%.*]], <i8 6, i8 2, i8 poison>
 ; ALL-NEXT:    ret <3 x i8> [[D]]
 ;
   %B = zext <3 x i8> %A to <3 x i32>
-  %C = lshr <3 x i32> %B, <i32 6, i32 2, i32 undef>
+  %C = lshr <3 x i32> %B, <i32 6, i32 2, i32 poison>
   %D = trunc <3 x i32> %C to <3 x i8>
   ret <3 x i8> %D
 }

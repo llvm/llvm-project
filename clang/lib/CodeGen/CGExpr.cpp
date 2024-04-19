@@ -115,16 +115,10 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
 llvm::AllocaInst *CodeGenFunction::CreateTempAlloca(llvm::Type *Ty,
                                                     const Twine &Name,
                                                     llvm::Value *ArraySize) {
-  llvm::AllocaInst *Alloca;
   if (ArraySize)
-    Alloca = Builder.CreateAlloca(Ty, ArraySize, Name);
-  else
-    Alloca = new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
-                                  ArraySize, Name, AllocaInsertPt);
-  if (Allocas) {
-    Allocas->Add(Alloca);
-  }
-  return Alloca;
+    return Builder.CreateAlloca(Ty, ArraySize, Name);
+  return new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
+                              ArraySize, Name, AllocaInsertPt);
 }
 
 /// CreateDefaultAlignTempAlloca - This creates an alloca with the
@@ -4710,7 +4704,7 @@ unsigned CodeGenFunction::getDebugInfoFIndex(const RecordDecl *Rec,
   for (auto *F : Rec->getDefinition()->fields()) {
     if (I == FieldIndex)
       break;
-    if (F->isUnnamedBitfield())
+    if (F->isUnnamedBitField())
       Skipped++;
     I++;
   }
