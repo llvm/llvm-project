@@ -631,8 +631,7 @@ static Value createMaskNeutralValue(ConversionPatternRewriter &rewriter,
                                     Type vectorType) {
   const auto &floatSemantics = cast<FloatType>(llvmType).getFloatSemantics();
   auto value = getMaskNeutralValue(MaskNeutral{}, floatSemantics);
-  auto denseValue =
-      DenseElementsAttr::get(vectorType.cast<ShapedType>(), value);
+  auto denseValue = DenseElementsAttr::get(cast<ShapedType>(vectorType), value);
   return rewriter.create<LLVM::ConstantOp>(loc, vectorType, denseValue);
 }
 

@@ -16,6 +16,15 @@ void f()
     new(&x) TArray();
 }
 
+template <typename T>
+void f1() {
+  int (*x)[1] = new int[1][1];
+}
+template void f1<char>();
+void f2() {
+  int (*x)[1] = new int[1][1];
+}
+
 int main()
 {
     f<char>();
