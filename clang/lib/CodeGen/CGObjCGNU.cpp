@@ -2072,7 +2072,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
 
         Builder.CreateCondBr(Builder.CreateICmpEQ(selfValue, Zero),
                              SelfIsNilBlock, ContBlock,
-                             MDHelper.createBranchWeights(1, 1 << 20));
+                             MDHelper.createUnlikelyBranchWeights());
 
         CGF.EmitBlock(SelfIsNilBlock);
 
@@ -2107,7 +2107,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
             CGF.createBasicBlock("objc_direct_method.class_initialized");
         Builder.CreateCondBr(Builder.CreateICmpEQ(isInitialized, Zeros[0]),
                              notInitializedBlock, initializedBlock,
-                             MDHelper.createBranchWeights(1, 1 << 20));
+                             MDHelper.createUnlikelyBranchWeights());
         CGF.EmitBlock(notInitializedBlock);
         Builder.SetInsertPoint(notInitializedBlock);
         CGF.EmitRuntimeCall(SentInitializeFn, selfValue);
