@@ -2,11 +2,11 @@
 // and other floating point options get a warning diagnostic.
 //
 
-// RUN: %clang -### -ffp-model=fast -ffp-contract=off -c %s 2>&1 \
+// RUN: %clang -### -ffp-model=aggressive -ffp-contract=off -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN %s
 // WARN: warning: overriding '-ffp-model=fast' option with '-ffp-contract=off' [-Woverriding-option]
 
-// RUN: %clang -### -ffp-model=fast -ffp-contract=on -c %s 2>&1 \
+// RUN: %clang -### -ffp-model=aggressive -ffp-contract=on -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN1 %s
 // WARN1: warning: overriding '-ffp-model=fast' option with '-ffp-contract=on' [-Woverriding-option]
 
