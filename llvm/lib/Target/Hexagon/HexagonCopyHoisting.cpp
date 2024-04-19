@@ -87,8 +87,7 @@ bool HexagonCopyHoisting::runOnMachineFunction(MachineFunction &Fn) {
   MFN = &Fn;
   MRI = &Fn.getRegInfo();
 
-  LLVM_DEBUG(dbgs() << "\nCopy Hoisting:"
-                    << "\'" << Fn.getName() << "\'\n");
+  LLVM_DEBUG(dbgs() << "\nCopy Hoisting:" << "\'" << Fn.getName() << "\'\n");
 
   CopyMIList.clear();
   CopyMIList.resize(Fn.getNumBlockIDs());
