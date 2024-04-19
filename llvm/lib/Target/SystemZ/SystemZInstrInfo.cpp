@@ -625,12 +625,9 @@ static void transferMIFlag(MachineInstr *OldMI, MachineInstr *NewMI,
 }
 
 MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
-                                                  MachineRegisterInfo *MRI,
+                                                  const MachineRegisterInfo *MRI,
                                                   Register &FoldAsLoadDefReg,
                                                   MachineInstr *&DefMI) const {
-  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
-  MachineBasicBlock *MBB = MI.getParent();
-
   // Check whether we can move the DefMI load, and that it only has one use.
   DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
   assert(DefMI);
@@ -639,76 +636,9 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
       !MRI->hasOneNonDBGUse(FoldAsLoadDefReg))
     return nullptr;
 
-  // For reassociable FP operations, any loads have been purposefully left
-  // unfolded so that MachineCombiner can do its work on reg/reg
-  // opcodes. After that, as many loads as possible are now folded.
-  // TODO: This may be beneficial with other opcodes as well as machine-sink
-  // can move loads close to their user in a different MBB.
-  unsigned LoadOpc = 0;
-  unsigned RegMemOpcode = 0;
-  const TargetRegisterClass *FPRC = nullptr;
-  RegMemOpcode = MI.getOpcode() == SystemZ::WFADB   ? SystemZ::ADB
-                 : MI.getOpcode() == SystemZ::WFSDB ? SystemZ::SDB
-                 : MI.getOpcode() == SystemZ::WFMDB ? SystemZ::MDB
-                                                    : 0;
-  if (RegMemOpcode) {
-    LoadOpc = SystemZ::VL64;
-    FPRC = &SystemZ::FP64BitRegClass;
-  } else {
-    RegMemOpcode = MI.getOpcode() == SystemZ::WFASB   ? SystemZ::AEB
-                   : MI.getOpcode() == SystemZ::WFSSB ? SystemZ::SEB
-                   : MI.getOpcode() == SystemZ::WFMSB ? SystemZ::MEEB
-                                                      : 0;
-    if (RegMemOpcode) {
-      LoadOpc = SystemZ::VL32;
-      FPRC = &SystemZ::FP32BitRegClass;
-    }
-  }
-  if (!RegMemOpcode || DefMI->getOpcode() != LoadOpc)
-    return nullptr;
-
-  // If RegMemOpcode clobbers CC, first make sure CC is not live at this point.
-  if (get(RegMemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC)) {
-    assert(DefMI->getParent() == MI.getParent() && "Assuming a local fold.");
-    for (MachineBasicBlock::iterator MII = std::prev(MI.getIterator());;
-         --MII) {
-      if (MII->definesRegister(SystemZ::CC)) {
-        if (!MII->registerDefIsDead(SystemZ::CC))
-          return nullptr;
-        break;
-      }
-      if (MII == MBB->begin()) {
-        if (MBB->isLiveIn(SystemZ::CC))
-          return nullptr;
-        break;
-      }
-    }
-  }
-
-  Register DstReg = MI.getOperand(0).getReg();
-  MachineOperand LHS = MI.getOperand(1);
-  MachineOperand RHS = MI.getOperand(2);
-  MachineOperand &RegMO = RHS.getReg() == FoldAsLoadDefReg ? LHS : RHS;
-  if ((RegMemOpcode == SystemZ::SDB || RegMemOpcode == SystemZ::SEB) &&
-      FoldAsLoadDefReg != RHS.getReg())
-    return nullptr;
-
-  MachineOperand &Base = DefMI->getOperand(1);
-  MachineOperand &Disp = DefMI->getOperand(2);
-  MachineOperand &Indx = DefMI->getOperand(3);
-  MachineInstrBuilder MIB =
-      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(RegMemOpcode), DstReg)
-          .add(RegMO)
-          .add(Base)
-          .add(Disp)
-          .add(Indx)
-          .addMemOperand(*DefMI->memoperands_begin());
-  MIB->addRegisterDead(SystemZ::CC, TRI);
-  MRI->setRegClass(DstReg, FPRC);
-  MRI->setRegClass(RegMO.getReg(), FPRC);
-  transferMIFlag(&MI, MIB, MachineInstr::NoFPExcept);
-
-  return MIB;
+  int UseOpIdx = MI.findRegisterUseOperandIdx(FoldAsLoadDefReg);
+  assert(UseOpIdx != -1 && "Expected FoldAsLoadDefReg to be used by MI.");
+  return foldMemoryOperand(MI, {((unsigned) UseOpIdx)}, *DefMI);
 }
 
 bool SystemZInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
@@ -1486,7 +1416,84 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
     LiveIntervals *LIS) const {
-  return nullptr;
+  MachineRegisterInfo *MRI = &MF.getRegInfo();
+  MachineBasicBlock *MBB = MI.getParent();
+
+  // For reassociable FP operations, any loads have been purposefully left
+  // unfolded so that MachineCombiner can do its work on reg/reg
+  // opcodes. After that, as many loads as possible are now folded.
+  // TODO: This may be beneficial with other opcodes as well as machine-sink
+  // can move loads close to their user in a different MBB, which the isel
+  // matcher did not see.
+  unsigned LoadOpc = 0;
+  unsigned RegMemOpcode = 0;
+  const TargetRegisterClass *FPRC = nullptr;
+  RegMemOpcode = MI.getOpcode() == SystemZ::WFADB   ? SystemZ::ADB
+                 : MI.getOpcode() == SystemZ::WFSDB ? SystemZ::SDB
+                 : MI.getOpcode() == SystemZ::WFMDB ? SystemZ::MDB
+                                                    : 0;
+  if (RegMemOpcode) {
+    LoadOpc = SystemZ::VL64;
+    FPRC = &SystemZ::FP64BitRegClass;
+  } else {
+    RegMemOpcode = MI.getOpcode() == SystemZ::WFASB   ? SystemZ::AEB
+                   : MI.getOpcode() == SystemZ::WFSSB ? SystemZ::SEB
+                   : MI.getOpcode() == SystemZ::WFMSB ? SystemZ::MEEB
+                                                      : 0;
+    if (RegMemOpcode) {
+      LoadOpc = SystemZ::VL32;
+      FPRC = &SystemZ::FP32BitRegClass;
+    }
+  }
+  if (!RegMemOpcode || LoadMI.getOpcode() != LoadOpc)
+    return nullptr;
+
+  // If RegMemOpcode clobbers CC, first make sure CC is not live at this point.
+  if (get(RegMemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC)) {
+    assert(LoadMI.getParent() == MI.getParent() && "Assuming a local fold.");
+    assert(LoadMI != InsertPt && "Assuming InsertPt not to be first in MBB.");
+    for (MachineBasicBlock::iterator MII = std::prev(InsertPt);;
+         --MII) {
+      if (MII->definesRegister(SystemZ::CC)) {
+        if (!MII->registerDefIsDead(SystemZ::CC))
+          return nullptr;
+        break;
+      }
+      if (MII == MBB->begin()) {
+        if (MBB->isLiveIn(SystemZ::CC))
+          return nullptr;
+        break;
+      }
+    }
+  }
+
+  Register FoldAsLoadDefReg = LoadMI.getOperand(0).getReg();
+  // We don't really need Ops, but do a sanity check:
+  assert(Ops.size() == 1 && FoldAsLoadDefReg == MI.getOperand(Ops[0]).getReg() &&
+         "Expected MI to be the only user of the load.");
+  Register DstReg = MI.getOperand(0).getReg();
+  MachineOperand LHS = MI.getOperand(1);
+  MachineOperand RHS = MI.getOperand(2);
+  MachineOperand &RegMO = RHS.getReg() == FoldAsLoadDefReg ? LHS : RHS;
+  if ((RegMemOpcode == SystemZ::SDB || RegMemOpcode == SystemZ::SEB) &&
+      FoldAsLoadDefReg != RHS.getReg())
+    return nullptr;
+
+  MachineOperand &Base = LoadMI.getOperand(1);
+  MachineOperand &Disp = LoadMI.getOperand(2);
+  MachineOperand &Indx = LoadMI.getOperand(3);
+  MachineInstrBuilder MIB =
+      BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(RegMemOpcode), DstReg)
+          .add(RegMO)
+          .add(Base)
+          .add(Disp)
+          .add(Indx);
+  MIB->addRegisterDead(SystemZ::CC, &RI);
+  MRI->setRegClass(DstReg, FPRC);
+  MRI->setRegClass(RegMO.getReg(), FPRC);
+  transferMIFlag(&MI, MIB, MachineInstr::NoFPExcept);
+
+  return MIB;
 }
 
 bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {

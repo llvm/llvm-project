@@ -255,7 +255,7 @@ public:
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
                     Register FalseReg) const override;
   MachineInstr *optimizeLoadInstr(MachineInstr &MI,
-                                  MachineRegisterInfo *MRI,
+                                  const MachineRegisterInfo *MRI,
                                   Register &FoldAsLoadDefReg,
                                   MachineInstr *&DefMI) const override;
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,

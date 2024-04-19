@@ -1710,7 +1710,7 @@ public:
   /// instruction that defines FoldAsLoadDefReg, and the function returns
   /// the machine instruction generated due to folding.
   virtual MachineInstr *optimizeLoadInstr(MachineInstr &MI,
-                                          MachineRegisterInfo *MRI,
+                                          const MachineRegisterInfo *MRI,
                                           Register &FoldAsLoadDefReg,
                                           MachineInstr *&DefMI) const {
     return nullptr;
