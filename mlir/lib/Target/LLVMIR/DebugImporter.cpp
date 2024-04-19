@@ -71,7 +71,10 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
   std::optional<DIFlags> flags = symbolizeDIFlags(node->getFlags());
   SmallVector<DINodeAttr> elements;
-  if (!dropDICompositeTypeElements) {
+
+  // A vector always requires an element.
+  bool isVectorType = flags && bitEnumContainsAll(*flags, DIFlags::Vector);
+  if (isVectorType || !dropDICompositeTypeElements) {
     for (llvm::DINode *element : node->getElements()) {
       assert(element && "expected a non-null element type");
       elements.push_back(translate(element));
