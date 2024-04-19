@@ -861,14 +861,13 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
 static unsigned CountCountedByAttrs(const RecordDecl *RD) {
   unsigned Num = 0;
 
-  for (const Decl *D : RD->decls()) {
-    if (const auto *FD = dyn_cast<FieldDecl>(D);
-        FD && FD->getType()->isCountAttributedType()) {
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD->getType()->isCountAttributedType())
       return ++Num;
-    }
 
-    if (const auto *Rec = dyn_cast<RecordDecl>(D))
-      Num += CountCountedByAttrs(Rec);
+    QualType Ty = FD->getType();
+    if (Ty->isRecordType())
+      Num += CountCountedByAttrs(Ty->getAsRecordDecl());
   }
 
   return Num;
