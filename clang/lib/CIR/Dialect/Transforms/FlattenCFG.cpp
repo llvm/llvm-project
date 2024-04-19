@@ -244,10 +244,59 @@ public:
   }
 };
 
+class CIRTernaryOpFlattening
+    : public mlir::OpRewritePattern<mlir::cir::TernaryOp> {
+public:
+  using OpRewritePattern<mlir::cir::TernaryOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::TernaryOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    auto *condBlock = rewriter.getInsertionBlock();
+    auto opPosition = rewriter.getInsertionPoint();
+    auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
+    auto *continueBlock = rewriter.createBlock(
+        remainingOpsBlock, op->getResultTypes(),
+        SmallVector<mlir::Location>(/* result number always 1 */ 1, loc));
+    rewriter.create<mlir::cir::BrOp>(loc, remainingOpsBlock);
+
+    auto &trueRegion = op.getTrueRegion();
+    auto *trueBlock = &trueRegion.front();
+    mlir::Operation *trueTerminator = trueRegion.back().getTerminator();
+    rewriter.setInsertionPointToEnd(&trueRegion.back());
+    auto trueYieldOp = dyn_cast<mlir::cir::YieldOp>(trueTerminator);
+
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+        trueYieldOp, trueYieldOp.getArgs(), continueBlock);
+    rewriter.inlineRegionBefore(trueRegion, continueBlock);
+
+    auto *falseBlock = continueBlock;
+    auto &falseRegion = op.getFalseRegion();
+
+    falseBlock = &falseRegion.front();
+    mlir::Operation *falseTerminator = falseRegion.back().getTerminator();
+    rewriter.setInsertionPointToEnd(&falseRegion.back());
+    auto falseYieldOp = dyn_cast<mlir::cir::YieldOp>(falseTerminator);
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+        falseYieldOp, falseYieldOp.getArgs(), continueBlock);
+    rewriter.inlineRegionBefore(falseRegion, continueBlock);
+
+    rewriter.setInsertionPointToEnd(condBlock);
+    rewriter.create<mlir::cir::BrCondOp>(loc, op.getCond(), trueBlock,
+                                         falseBlock);
+
+    rewriter.replaceOp(op, continueBlock->getArguments());
+
+    // Ok, we're done!
+    return mlir::success();
+  }
+};
+
 void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
-  patterns
-      .add<CIRIfFlattening, CIRLoopOpInterfaceFlattening, CIRScopeOpFlattening>(
-          patterns.getContext());
+  patterns.add<CIRIfFlattening, CIRLoopOpInterfaceFlattening,
+               CIRScopeOpFlattening, CIRTernaryOpFlattening>(
+      patterns.getContext());
 }
 
 void FlattenCFGPass::runOnOperation() {
@@ -257,7 +306,7 @@ void FlattenCFGPass::runOnOperation() {
   // Collect operations to apply patterns.
   SmallVector<Operation *, 16> ops;
   getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
-    if (isa<IfOp, ScopeOp, LoopOpInterface>(op))
+    if (isa<IfOp, ScopeOp, LoopOpInterface, TernaryOp>(op))
       ops.push_back(op);
   });
 
