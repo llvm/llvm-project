@@ -16,8 +16,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace fir {
@@ -357,13 +357,39 @@ public:
     }
   }
 
-  virtual bool canScheduleOn(RegisteredOperationName opName) const override {
-    return fir::isa_toplevel(opName);
+  /// Run the pass on a ModuleOp. This makes fir-opt --abstract-result work.
+  void runOnModule() {
+    mlir::ModuleOp mod = mlir::cast<mlir::ModuleOp>(getOperation());
+
+    auto pass = std::make_unique<AbstractResultOpt>();
+    pass->copyOptionValuesFrom(this);
+    mlir::OpPassManager pipeline;
+    pipeline.addPass(std::unique_ptr<mlir::Pass>{pass.release()});
+
+    // Run the pass on all operations directly nested inside of the ModuleOp
+    // we can't just call runOnSpecificOperation here because the pass
+    // implementation only works when scoped to a particular func.func or
+    // fir.global
+    for (mlir::Region &region : mod->getRegions()) {
+      for (mlir::Block &block : region.getBlocks()) {
+        for (mlir::Operation &op : block.getOperations()) {
+          if (mlir::failed(runPipeline(pipeline, &op))) {
+            mlir::emitError(op.getLoc(), "Failed to run abstract result pass");
+            signalPassFailure();
+            return;
+          }
+        }
+      }
+    }
   }
 
   void runOnOperation() override {
     auto *context = &this->getContext();
     mlir::Operation *op = this->getOperation();
+    if (mlir::isa<mlir::ModuleOp>(op)) {
+      runOnModule();
+      return;
+    }
 
     mlir::RewritePatternSet patterns(context);
     mlir::ConversionTarget target = *context;

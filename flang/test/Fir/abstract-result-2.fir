@@ -1,4 +1,4 @@
-// RUN: fir-opt %s --pass-pipeline="builtin.module(func.func(abstract-result))" | FileCheck %s
+// RUN: fir-opt %s --abstract-result | FileCheck %s
 
 // Check that the attributes are shifted along with their corresponding arguments
 

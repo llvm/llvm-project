@@ -1,5 +1,5 @@
 ! RUN: %flang_fc1 -emit-mlir %s -o - | FileCheck %s --check-prefix=BEFORE
-! RUN: %flang_fc1 -emit-mlir %s -o - | fir-opt --pass-pipeline="builtin.module(fir.global(abstract-result))" | FileCheck %s --check-prefix=AFTER
+! RUN: %flang_fc1 -emit-mlir %s -o - | fir-opt --abstract-result | FileCheck %s --check-prefix=AFTER
 module a
   type f
   contains

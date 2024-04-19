@@ -105,8 +105,6 @@ void addNestedPassToOps(mlir::PassManager &pm, PassConstructor ctor) {
 
 void addNestedPassToAllTopLevelOperations(
     mlir::PassManager &pm, PassConstructor ctor) {
-  // TODO: add more operations that might need full lowering support
-  // any operations also need to be added to fir::isa_toplevel
   addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
       fir::GlobalOp>(pm, ctor);
 }

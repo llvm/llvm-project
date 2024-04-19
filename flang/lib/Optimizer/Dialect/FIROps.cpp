@@ -3846,19 +3846,6 @@ std::optional<std::int64_t> fir::getIntIfConstant(mlir::Value value) {
   return {};
 }
 
-bool fir::isa_toplevel(mlir::RegisteredOperationName opName) {
-  const std::initializer_list<llvm::StringLiteral> topLevelOps{
-      fir::GlobalOp::getOperationName(),
-      mlir::func::FuncOp::getOperationName(),
-      mlir::omp::DeclareReductionOp::getOperationName(),
-  };
-
-  llvm::StringRef opStr = opName.getStringRef();
-  return llvm::any_of(topLevelOps, [&](const llvm::StringRef &topLevelOp) {
-    return opStr == topLevelOp;
-  });
-}
-
 mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
   for (auto i = path.begin(), end = path.end(); eleTy && i < end;) {
     eleTy = llvm::TypeSwitch<mlir::Type, mlir::Type>(eleTy)

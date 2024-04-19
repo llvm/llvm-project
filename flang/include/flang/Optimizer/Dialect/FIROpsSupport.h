@@ -173,13 +173,6 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
           builder.getUnitAttr()};
 }
 
-/// Returns true if the operation name is for a container operation expected to
-/// contain (HL)FIR operations which need to be lowered by FIR passes. The
-/// simplest example of this is func.func.
-/// This operates on mlir::RegisteredOperationName so that it can be used to
-/// implement mlir::Pass::canScheduleOn.
-bool isa_toplevel(mlir::RegisteredOperationName opName);
-
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIROPSSUPPORT_H
