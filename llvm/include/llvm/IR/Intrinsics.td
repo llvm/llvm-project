@@ -320,6 +320,7 @@ def IIT_I2 : IIT_Int<2, 57>;
 def IIT_I4 : IIT_Int<4, 58>;
 def IIT_AARCH64_SVCOUNT : IIT_VT<aarch64svcount, 59>;
 def IIT_V6 : IIT_Vec<6, 60>;
+def IIT_V10 : IIT_Vec<10, 61>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
