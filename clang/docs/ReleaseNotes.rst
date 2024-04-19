@@ -287,6 +287,9 @@ Attribute Changes in Clang
   This allows the ``_Nullable`` and ``_Nonnull`` family of type attributes to
   apply to this class.
 
+- Clang now warns that the ``exclude_from_explicit_instantiation`` attribute
+  is ignored when applied to a local class or a member thereof.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
@@ -423,6 +426,14 @@ Bug Fixes in This Version
   incorrect constraint substitution. (#GH86769).
 
 - Fixed an assertion failure on invalid InitListExpr in C89 mode (#GH88008).
+
+- Clang will no longer diagnose an erroneous non-dependent ``switch`` condition
+  during instantiation, and instead will only diagnose it once, during checking
+  of the function template.
+
+- Clang now allows the value of unroll count to be zero in ``#pragma GCC unroll`` and ``#pragma unroll``.
+  The values of 0 and 1 block any unrolling of the loop. This keeps the same behavior with GCC.
+  Fixes (`#88624 <https://github.com/llvm/llvm-project/issues/88624>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

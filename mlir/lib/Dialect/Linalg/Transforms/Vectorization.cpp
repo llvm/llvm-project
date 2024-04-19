@@ -3410,8 +3410,8 @@ struct Conv1DGenerator
       //  * shape_cast(broadcast(filter))
       //  * broadcast(shuffle(filter))
       // Opt for the option without shape_cast to simplify the codegen.
-      auto rhsSize = rhs.getType().cast<VectorType>().getShape()[0];
-      auto resSize = res.getType().cast<VectorType>().getShape()[1];
+      auto rhsSize = cast<VectorType>(rhs.getType()).getShape()[0];
+      auto resSize = cast<VectorType>(res.getType()).getShape()[1];
 
       SmallVector<int64_t, 16> indicies;
       for (int i = 0; i < resSize / rhsSize; ++i) {

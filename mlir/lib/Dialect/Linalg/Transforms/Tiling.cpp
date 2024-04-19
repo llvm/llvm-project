@@ -405,7 +405,7 @@ static FailureOr<ForallTilingResult> tileToForallOpImpl(
       for (OpOperand &outOperand : destinationStyleOp.getDpsInitsMutable()) {
         // Swap tensor inits with the corresponding block argument of the
         // scf.forall op. Memref inits remain as is.
-        if (outOperand.get().getType().isa<TensorType>()) {
+        if (isa<TensorType>(outOperand.get().getType())) {
           auto *it = llvm::find(dest, outOperand.get());
           assert(it != dest.end() && "could not find destination tensor");
           unsigned destNum = std::distance(dest.begin(), it);

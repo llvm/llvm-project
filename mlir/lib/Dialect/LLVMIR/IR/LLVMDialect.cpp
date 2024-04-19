@@ -559,7 +559,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
     // we don't do anything here. The verifier will catch it and emit a proper
     // error. All other canonicalization is done in the fold method.
     bool requiresConst = !rawConstantIndices.empty() &&
-                         currType.isa_and_nonnull<LLVMStructType>();
+                         isa_and_nonnull<LLVMStructType>(currType);
     if (Value val = llvm::dyn_cast_if_present<Value>(iter)) {
       APInt intC;
       if (requiresConst && matchPattern(val, m_ConstantInt(&intC)) &&
@@ -2564,14 +2564,14 @@ LogicalResult LLVM::ConstantOp::verify() {
     }
     // See the comment for getLLVMConstant for more details about why 8-bit
     // floats can be represented by integers.
-    if (getType().isa<IntegerType>() && !getType().isInteger(floatWidth)) {
+    if (isa<IntegerType>(getType()) && !getType().isInteger(floatWidth)) {
       return emitOpError() << "expected integer type of width " << floatWidth;
     }
   }
   if (auto splatAttr = dyn_cast<SplatElementsAttr>(getValue())) {
-    if (!getType().isa<VectorType>() && !getType().isa<LLVM::LLVMArrayType>() &&
-        !getType().isa<LLVM::LLVMFixedVectorType>() &&
-        !getType().isa<LLVM::LLVMScalableVectorType>())
+    if (!isa<VectorType>(getType()) && !isa<LLVM::LLVMArrayType>(getType()) &&
+        !isa<LLVM::LLVMFixedVectorType>(getType()) &&
+        !isa<LLVM::LLVMScalableVectorType>(getType()))
       return emitOpError() << "expected vector or array type";
   }
   return success();

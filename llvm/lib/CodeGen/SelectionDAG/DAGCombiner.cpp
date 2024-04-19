@@ -2831,9 +2831,9 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 
   // (x - y) + -1  ->  add (xor y, -1), x
   if (N0.getOpcode() == ISD::SUB && N0.hasOneUse() &&
-      isAllOnesOrAllOnesSplat(N1)) {
-    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(1), N1);
-    return DAG.getNode(ISD::ADD, DL, VT, Xor, N0.getOperand(0));
+      isAllOnesOrAllOnesSplat(N1, /*AllowUndefs=*/true)) {
+    SDValue Not = DAG.getNOT(DL, N0.getOperand(1), VT);
+    return DAG.getNode(ISD::ADD, DL, VT, Not, N0.getOperand(0));
   }
 
   if (SDValue Combined = visitADDLikeCommutative(N0, N1, N))
@@ -3520,6 +3520,8 @@ static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
     return SDValue();
 
   SDLoc DL(N);
+  CarryIn = DAG.getBoolExtOrTrunc(CarryIn, DL, Carry1->getValueType(1),
+                                  Carry1->getValueType(0));
   SDValue Merged =
       DAG.getNode(NewOp, DL, Carry1->getVTList(), Carry0.getOperand(0),
                   Carry0.getOperand(1), CarryIn);
@@ -24478,7 +24480,8 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     unsigned NumSubElts = NVT.getVectorMinNumElements();
     if (InsIdx <= ExtIdx && (ExtIdx + NumSubElts) <= (InsIdx + NumInsElts) &&
         TLI.isExtractSubvectorCheap(NVT, InsSubVT, ExtIdx - InsIdx) &&
-        InsSubVT.isFixedLengthVector() && NVT.isFixedLengthVector())
+        InsSubVT.isFixedLengthVector() && NVT.isFixedLengthVector() &&
+        V.getValueType().isFixedLengthVector())
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, InsSub,
                          DAG.getVectorIdxConstant(ExtIdx - InsIdx, DL));
   }
