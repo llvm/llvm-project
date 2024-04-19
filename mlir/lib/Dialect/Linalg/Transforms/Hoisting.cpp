@@ -43,32 +43,39 @@ using llvm::dbgs;
 using namespace mlir;
 using namespace mlir::linalg;
 
-scf::ForOp replaceWithDifferentYield(RewriterBase &rewriter, scf::ForOp loop,
-                                     Value newInitOperand, int index,
-                                     Value newYieldValue) {
+/// Replace `loop` with a new loop that has a different init operand at
+/// position `index`. The body of this loop is moved over to the new loop.
+///
+/// `newInitOperands` specifies the replacement "init" operands.
+/// `newYieldValue` is the replacement yield value of the loop at position
+/// `index`.
+static scf::ForOp replaceWithDifferentYield(RewriterBase &rewriter,
+                                            scf::ForOp loop,
+                                            Value newInitOperand,
+                                            unsigned index,
+                                            Value newYieldValue) {
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(loop.getOperation());
   auto inits = llvm::to_vector(loop.getInits());
 
-  // Replace the init value with the new operand
+  // Replace the init value with the new operand.
+  assert(index < inits.size());
   inits[index] = newInitOperand;
 
   scf::ForOp newLoop = rewriter.create<scf::ForOp>(
       loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(), loop.getStep(),
       inits, [](OpBuilder &, Location, Value, ValueRange) {});
 
-  // Generate the new yield with the replaced operand
+  // Generate the new yield with the replaced operand.
   auto yieldOp = cast<scf::YieldOp>(loop.getBody()->getTerminator());
-  rewriter.replaceAllUsesWith(yieldOp->getOperand(index), newYieldValue);
+  yieldOp.setOperand(index, newYieldValue);
 
   // Move the loop body to the new op.
   rewriter.mergeBlocks(loop.getBody(), newLoop.getBody(),
-                       newLoop.getBody()->getArguments().take_front(
-                           loop.getBody()->getNumArguments()));
+                       newLoop.getBody()->getArguments());
 
   // Replace the old loop.
-  rewriter.replaceOp(loop.getOperation(),
-                     newLoop->getResults().take_front(loop.getNumResults()));
+  rewriter.replaceOp(loop.getOperation(), newLoop->getResults());
   return newLoop;
 }
 
@@ -87,7 +94,8 @@ scf::ForOp replaceWithDifferentYield(RewriterBase &rewriter, scf::ForOp loop,
 //   scf.yield %u' : t2
 //  }
 //  %res = vector.broadcast %res' : t2 to t1
-void mlir::linalg::hoistRedundantVectorBroadcasts(Operation *root) {
+void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
+                                                  Operation *root) {
   bool changed = true;
   while (changed) {
     changed = false;
@@ -104,9 +112,14 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(Operation *root) {
       if (!loop)
         return WalkResult::advance();
 
-      // Check that the vector to extract from is an iter_arg
+      // Check that the vector to extract from is a BlockArgument.
       auto blockArg = dyn_cast<BlockArgument>(extractOp.getVector());
       if (!blockArg)
+        return WalkResult::advance();
+
+      // Check that the blockArg is an iter_arg of the loop.
+      OpOperand *initArg = loop.getTiedLoopInit(blockArg);
+      if (!initArg)
         return WalkResult::advance();
 
       // If the iter_arg does not have only one use, it won't be possible to
@@ -114,14 +127,13 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(Operation *root) {
       if (!blockArg.hasOneUse())
         return WalkResult::advance();
 
-      auto initArg = loop.getTiedLoopInit(blockArg)->get();
-      auto index = blockArg.getArgNumber() - loop.getNumInductionVars();
+      unsigned index = blockArg.getArgNumber() - loop.getNumInductionVars();
 
-      // Check that the loop yields a broadcast
-      auto yieldedVal =
+      // Check that the loop yields a broadcast that has just one use.
+      Operation *yieldedVal =
           loop.getTiedLoopYieldedValue(blockArg)->get().getDefiningOp();
       auto broadcast = dyn_cast<vector::BroadcastOp>(yieldedVal);
-      if (!broadcast)
+      if (!broadcast || !broadcast.getResult().hasOneUse())
         return WalkResult::advance();
 
       LLVM_DEBUG(DBGS() << "Candidate broadcast: " << broadcast << "\n");
@@ -131,26 +143,25 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(Operation *root) {
         return WalkResult::advance();
 
       // The position of the extract must be defined outside of the loop if
-      // it is dynamic
+      // it is dynamic.
       for (auto operand : extractOp.getDynamicPosition())
         if (!loop.isDefinedOutsideOfLoop(operand))
           return WalkResult::advance();
 
-      IRRewriter rewriter(extractOp.getContext());
-
-      extractOp.getVectorMutable().assign(initArg);
+      rewriter.modifyOpInPlace(broadcast, [&] {
+        extractOp.getVectorMutable().assign(initArg->get());
+      });
       loop.moveOutOfLoop(extractOp);
       rewriter.moveOpAfter(broadcast, loop);
 
-      auto newLoop = replaceWithDifferentYield(
+      scf::ForOp newLoop = replaceWithDifferentYield(
           rewriter, loop, extractOp.getResult(), index, broadcast.getSource());
 
       LLVM_DEBUG(DBGS() << "New loop: " << newLoop << "\n");
 
       rewriter.replaceAllUsesWith(newLoop.getResult(index), broadcast);
-      rewriter.modifyOpInPlace(broadcast, [&] {
-        broadcast.getSourceMutable().assign(newLoop.getResult(index));
-      });
+      rewriter.modifyOpInPlace(
+          broadcast, [&] { broadcast.setOperand(newLoop.getResult(index)); });
 
       changed = true;
       return WalkResult::interrupt();

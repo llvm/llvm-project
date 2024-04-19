@@ -3315,7 +3315,8 @@ transform::HoistRedundantVectorBroadcastsOp::applyToOne(
     transform::TransformRewriter &rewriter, mlir::Operation *target,
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
-  linalg::hoistRedundantVectorBroadcasts(target);
+  rewriter.setInsertionPoint(target);
+  linalg::hoistRedundantVectorBroadcasts(rewriter, target);
   results.push_back(target);
   return DiagnosedSilenceableFailure::success();
 }
