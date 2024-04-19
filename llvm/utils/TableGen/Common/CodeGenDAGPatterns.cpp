@@ -4246,7 +4246,7 @@ static TreePatternNodePtr PromoteXForms(TreePatternNodePtr N) {
 
 void CodeGenDAGPatterns::ParseOnePattern(
     Record *TheDef, TreePattern &Pattern, TreePattern &Result,
-    const std::vector<Record *> &InstImpResults, bool ShouldIgnore) {
+    const std::vector<Record *> &InstImpResults) {
 
   // Inline pattern fragments and expand multiple alternatives.
   Pattern.InlinePatternFragments();
@@ -4332,7 +4332,7 @@ void CodeGenDAGPatterns::ParseOnePattern(
         AddPatternToMatch(&Pattern,
                           PatternToMatch(TheDef, Preds, T, Temp.getOnlyTree(),
                                          InstImpResults, Complexity,
-                                         TheDef->getID(), ShouldIgnore));
+                                         TheDef->getID()));
     }
   } else {
     // Show a message about a dropped pattern with some info to make it
@@ -4378,8 +4378,8 @@ void CodeGenDAGPatterns::ParsePatterns() {
       FindPatternInputsAndOutputs(Pattern, Pattern.getTree(j), InstInputs,
                                   InstResults, InstImpResults);
 
-    ParseOnePattern(CurPattern, Pattern, Result, InstImpResults,
-                    CurPattern->getValueAsBit("GISelShouldIgnore"));
+    if (!CurPattern->getValueAsBit("GISelShouldIgnore"))
+      ParseOnePattern(CurPattern, Pattern, Result, InstImpResults);
   }
 }
 
@@ -4408,10 +4408,10 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
       return;
     }
 
-    PatternsToMatch.emplace_back(
-        P.getSrcRecord(), P.getPredicates(), std::move(NewSrc),
-        std::move(NewDst), P.getDstRegs(), P.getAddedComplexity(),
-        Record::getNewUID(Records), P.getGISelShouldIgnore(), Check);
+    PatternsToMatch.emplace_back(P.getSrcRecord(), P.getPredicates(),
+                                 std::move(NewSrc), std::move(NewDst),
+                                 P.getDstRegs(), P.getAddedComplexity(),
+                                 Record::getNewUID(Records), Check);
   };
 
   for (PatternToMatch &P : Copy) {
@@ -4782,7 +4782,6 @@ void CodeGenDAGPatterns::GenerateVariants() {
           Variant, PatternsToMatch[i].getDstPatternShared(),
           PatternsToMatch[i].getDstRegs(),
           PatternsToMatch[i].getAddedComplexity(), Record::getNewUID(Records),
-          PatternsToMatch[i].getGISelShouldIgnore(),
           PatternsToMatch[i].getHwModeFeatures());
     }
 
