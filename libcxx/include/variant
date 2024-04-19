@@ -782,7 +782,7 @@ _LIBCPP_VARIANT_DESTRUCTOR(
 
 _LIBCPP_VARIANT_DESTRUCTOR(
     _Trait::_Available,
-    _LIBCPP_HIDE_FROM_ABI ~__dtor() { __destroy(); },
+    _LIBCPP_HIDE_FROM_ABI ~__dtor() { __destroy(); } _LIBCPP_EAT_SEMICOLON,
     _LIBCPP_HIDE_FROM_ABI void __destroy() noexcept {
       if (!this->valueless_by_exception()) {
         __visitation::__base::__visit_alt(
