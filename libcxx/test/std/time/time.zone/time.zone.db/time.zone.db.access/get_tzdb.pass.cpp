@@ -35,5 +35,8 @@ int main(int, const char**) {
   assert(std::ranges::is_sorted(db.links));
   assert(std::ranges::adjacent_find(db.links) == db.links.end()); // is unique?
 
+  assert(!db.leap_seconds.empty());
+  assert(std::ranges::is_sorted(db.leap_seconds));
+
   return 0;
 }
