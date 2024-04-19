@@ -52,6 +52,9 @@ public:
   bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TTPL) {
     SourceLocation Loc = TTPL.getNameLoc();
     TemplateTypeParmDecl *TTPD = TTPL.getDecl();
+    if (!TTPD)
+      return false;
+
     return IndexCtx.handleReference(TTPD, Loc, Parent, ParentDC,
                                     SymbolRoleSet());
   }

@@ -453,6 +453,33 @@ TEST(IndexTest, ReadWriteRoles) {
                            WrittenAt(Position(6, 17))))));
 }
 
+TEST(IndexTest, gh89389) {
+  std::string Code = R"cpp(
+    namespace test18 {
+    template<typename T>
+    concept False = false;
+
+    template <typename T> struct Foo { T t; };
+
+    template<typename T> requires False<T>
+    Foo(T) -> Foo<int>;
+
+    template <typename U>
+    using Bar = Foo<U>;
+
+    Bar s = {1};
+    } // namespace test18
+  )cpp";
+  auto Index = std::make_shared<Indexer>();
+  IndexingOptions Opts;
+  Opts.IndexTemplateParameters = true;
+
+  // This test case is invalid code, so the expected return value is `false`.
+  // What is being tested is that there is no crash.
+  EXPECT_FALSE(tooling::runToolOnCodeWithArgs(
+      std::make_unique<IndexAction>(Index, Opts), Code, {"-std=c++20"}));
+}
+
 } // namespace
 } // namespace index
 } // namespace clang
