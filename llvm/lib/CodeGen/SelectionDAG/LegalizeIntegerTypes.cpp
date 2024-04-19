@@ -949,7 +949,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Overflow(SDNode *N) {
   unsigned NumOps = N->getNumOperands();
   assert(NumOps <= 3 && "Too many operands");
   if (NumOps == 3)
-    Ops[2] = N->getOperand(2);
+    Ops[2] = PromoteTargetBoolean(N->getOperand(2), VT);
 
   SDLoc dl(N);
   SDValue Res = DAG.getNode(N->getOpcode(), dl, DAG.getVTList(VT, SVT),
@@ -1867,11 +1867,6 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::FSHL:
   case ISD::FSHR: Res = PromoteIntOp_FunnelShift(N); break;
 
-  case ISD::SADDO_CARRY:
-  case ISD::SSUBO_CARRY:
-  case ISD::UADDO_CARRY:
-  case ISD::USUBO_CARRY: Res = PromoteIntOp_ADDSUBO_CARRY(N, OpNo); break;
-
   case ISD::FRAMEADDR:
   case ISD::RETURNADDR: Res = PromoteIntOp_FRAMERETURNADDR(N); break;
 
@@ -2371,19 +2366,6 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VP_ZERO_EXTEND(SDNode *N) {
                                    N->getOperand(0).getScalarValueSizeInBits());
   return DAG.getNode(ISD::VP_AND, dl, VT, Op, DAG.getConstant(Imm, dl, VT),
                      N->getOperand(1), N->getOperand(2));
-}
-
-SDValue DAGTypeLegalizer::PromoteIntOp_ADDSUBO_CARRY(SDNode *N, unsigned OpNo) {
-  assert(OpNo == 2 && "Don't know how to promote this operand!");
-
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-  SDValue Carry = N->getOperand(2);
-  SDLoc DL(N);
-
-  Carry = PromoteTargetBoolean(Carry, LHS.getValueType());
-
-  return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS, Carry), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_FIX(SDNode *N) {
