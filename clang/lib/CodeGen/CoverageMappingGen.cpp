@@ -2011,11 +2011,13 @@ struct CounterCoverageMappingBuilder
     Counter TrueCount = llvm::EnableSingleByteCoverage
                             ? getRegionCounter(E->getTrueExpr())
                             : getRegionCounter(E);
-
-    propagateCounts(ParentCount, E->getCond());
     Counter OutCount;
 
-    if (!isa<BinaryConditionalOperator>(E)) {
+    if (const auto *BCO = dyn_cast<BinaryConditionalOperator>(E)) {
+      propagateCounts(ParentCount, BCO->getCommon());
+      OutCount = TrueCount;
+    } else {
+      propagateCounts(ParentCount, E->getCond());
       // The 'then' count applies to the area immediately after the condition.
       auto Gap =
           findGapAreaBetween(E->getQuestionLoc(), getStart(E->getTrueExpr()));
@@ -2024,8 +2026,6 @@ struct CounterCoverageMappingBuilder
 
       extendRegion(E->getTrueExpr());
       OutCount = propagateCounts(TrueCount, E->getTrueExpr());
-    } else {
-      OutCount = TrueCount;
     }
 
     extendRegion(E->getFalseExpr());
