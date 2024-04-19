@@ -60,16 +60,16 @@ class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
     LLVM_ArithmeticOpBase<AnySignlessInteger, mnemonic, instName,
     !listconcat([DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)> {
   dag iofArg = (
-    ins EnumProperty<"IntegerOverflowFlags">:$overflowFlags);
+    ins DefaultValuedAttr<LLVM_IntegerOverflowFlagsAttr, "{}">:$overflowFlags);
   let arguments = !con(commonArgs, iofArg);
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
-    moduleImport.setIntegerOverflowFlags(inst, op);
+    moduleImport.setIntegerOverflowFlagsAttr(inst, op);
     $res = op;
   }];
   let assemblyFormat = [{
-    $lhs `,` $rhs `` custom<OverflowFlags>($overflowFlags)
-    `` custom<LLVMOpAttrs>(attr-dict) `:` type($res)
+    $lhs `,` $rhs (`overflow` `` $overflowFlags^)?
+    custom<LLVMOpAttrs>(attr-dict) `:` type($res)
   }];
   string llvmBuilder =
     "$res = builder.Create" # instName #
