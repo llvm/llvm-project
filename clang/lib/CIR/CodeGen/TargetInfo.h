@@ -60,6 +60,11 @@ public:
                            std::vector<LValue> &ResultRegDests,
                            std::string &AsmString, unsigned NumOutputs) const {}
 
+  /// Get the AST address space for alloca.
+  virtual clang::LangAS getASTAllocaAddressSpace() const {
+    return clang::LangAS::Default;
+  }
+
   virtual ~TargetCIRGenInfo() {}
 };
 

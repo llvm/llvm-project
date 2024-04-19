@@ -161,7 +161,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
   AllocaInt8PtrTy = UInt8PtrTy;
   // TODO: GlobalsInt8PtrTy
   // TODO: ConstGlobalsPtrTy
-  // TODO: ASTAllocaAddressSpace
+  ASTAllocaAddressSpace = getTargetCIRGenInfo().getASTAllocaAddressSpace();
 
   PtrDiffTy = ::mlir::cir::IntType::get(
       builder.getContext(), astCtx.getTargetInfo().getMaxPointerWidth(),

@@ -2672,7 +2672,9 @@ Address CIRGenFunction::CreateTempAlloca(mlir::Type Ty, CharUnits Align,
   // be different from the type defined by the language. For example,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
-  assert(!UnimplementedFeature::getASTAllocaAddressSpace());
+  if (getASTAllocaAddressSpace() != LangAS::Default) {
+    llvm_unreachable("Requires address space cast which is NYI");
+  }
   return Address(V, Ty, Align);
 }
 
