@@ -15,6 +15,7 @@
 #include "GCNSubtarget.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -86,7 +87,7 @@ class SIAnnotateControlFlow : public FunctionPass {
 
   bool handleLoop(BranchInst *Term);
 
-  bool insertWaveReconverge(BasicBlock *BB);
+  bool tryWaveReconverge(BasicBlock *BB);
 
 public:
   static char ID;
@@ -203,8 +204,6 @@ bool SIAnnotateControlFlow::eraseIfUnused(PHINode *Phi) {
 
 /// Open a new "If" block
 bool SIAnnotateControlFlow::openIf(BranchInst *Term) {
-  if (isUniform(Term))
-    return false;
 
   IRBuilder<> IRB(Term);
   Value *IfCall = IRB.CreateCall(If, {Term->getCondition()});
@@ -305,20 +304,44 @@ bool SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
 }
 
 /// Close the last opened control flow
-bool SIAnnotateControlFlow::insertWaveReconverge(BasicBlock *BB) {
-      assert(succ_empty(BB) || succ_size(BB) == 1);
-      
-      if (succ_empty(BB))
-        return false;
+bool SIAnnotateControlFlow::tryWaveReconverge(BasicBlock *BB) {
 
-      BasicBlock *SingleSucc = *succ_begin(BB);
-      BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator());
-      BasicBlock::iterator InsPt = Term ? BasicBlock::iterator(Term) : BB->end();
+  if (succ_empty(BB))
+    return false;
 
-      if (isTopOfStack(SingleSucc)) {
-        Value *Exec = Stack.back().second;
-        IRBuilder<>(BB, InsPt).CreateCall(WaveReconverge, {Exec});
+  BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator());
+  if (Term->getNumSuccessors() == 1) {
+    // The current BBs single successor is a top of the stack. We need to
+    // reconverge over thaqt path.
+    BasicBlock *SingleSucc = *succ_begin(BB);
+    BasicBlock::iterator InsPt = Term ? BasicBlock::iterator(Term) : BB->end();
+
+    if (isTopOfStack(SingleSucc)) {
+      Value *Exec = Stack.back().second;
+      IRBuilder<>(BB, InsPt).CreateCall(WaveReconverge, {Exec});
+    }
+  } else {
+    // We have a uniform conditional branch terminating the block.
+    // THis block may be the last in the Then path of the enclosing divergent
+    // IF.
+    if (!isUniform(Term))
+      // Divergent loop is going to be further processed in another place
+      return false;
+
+    for (auto Succ : Term->successors()) {
+      if (isTopOfStack(Succ)) {
+        // Just split to make a room for further WAVE_RECONVERGE insertion
+        SmallVector<BasicBlock*, 2> Preds;
+        for (auto P : predecessors(Succ)) {
+          if (DT->dominates(BB, P))
+            Preds.push_back(P);
+        }
+        DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+        SplitBlockPredecessors(Succ, Preds, ".reconverge", &DTU, LI,
+                                            nullptr, false);
       }
+    }
+  }
 
   return true;
 }
@@ -342,8 +365,8 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
     if (!Term || Term->isUnconditional()) {
       if (isTopOfStack(BB))
         Stack.pop_back();
-      
-      insertWaveReconverge(BB);
+
+      Changed |= tryWaveReconverge(BB);
 
       continue;
     }
@@ -351,6 +374,10 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
     if (I.nodeVisited(Term->getSuccessor(1))) {
       if (isTopOfStack(BB))
         Stack.pop_back();
+
+      // Let's take care of uniform loop latch that may be closing the Then
+      // path of the enclosing divergent branch.
+      Changed |= tryWaveReconverge(BB);
 
       if (DT->dominates(Term->getSuccessor(1), BB))
         Changed |= handleLoop(Term);
@@ -368,7 +395,12 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
       Stack.pop_back();
     }
 
-    Changed |= openIf(Term);
+    if (isUniform(Term))
+      // Uniform conditional branch may be in the block that closes the Then
+      // path of the divergent conditional branch.
+      Changed |= tryWaveReconverge(BB);
+    else
+      Changed |= openIf(Term);
   }
 
   if (!Stack.empty()) {
