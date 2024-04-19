@@ -238,6 +238,7 @@ private:
   void serialiseLocalVariableOperand(Instruction *I, ValueLoweringMap &VLMap) {
     auto [BBIdx, InstIdx] = VLMap.at(I);
     serialiseOperandKind(OperandKindLocal);
+    OutStreamer.emitSizeT(getIndex(&M, I->getFunction()));
     OutStreamer.emitSizeT(BBIdx);
     OutStreamer.emitSizeT(InstIdx);
   }
