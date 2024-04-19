@@ -31,4 +31,12 @@ module m
     !ERROR: Object in ALLOCATE must have PINNED attribute when PINNED option is specified
     allocate(ia(100), pinned = plog)
   end subroutine
+
+  subroutine host2()
+    integer, allocatable, pinned :: ia(:)
+    integer :: istream
+
+    !ERROR: Object in ALLOCATE must have DEVICE attribute when STREAM option is specified
+    allocate(ia(100), stream = istream)
+  end subroutine
 end module
