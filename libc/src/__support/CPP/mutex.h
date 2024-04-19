@@ -13,8 +13,7 @@ namespace LIBC_NAMESPACE {
 namespace cpp {
 
 // An RAII class for easy locking and unlocking of mutexes.
-template <typename LockableType>
-class lock_guard {
+template <typename LockableType> class lock_guard {
 public:
   explicit lock_guard(LockableType &m) : mutex(m) { mutex.lock(); }
   ~lock_guard() { mutex.unlock(); }

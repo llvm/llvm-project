@@ -13,7 +13,7 @@ using LIBC_NAMESPACE::cpp::lock_guard;
 
 static const int SIGABRT = 6;
 
-// Simple class for testing cpp::lock_guard. It defines methods 'lock' and 
+// Simple class for testing cpp::lock_guard. It defines methods 'lock' and
 // 'unlock' which are required for the cpp::lock_guard class template.
 struct Mutex {
   Mutex() : locked(false) {}
@@ -43,7 +43,7 @@ TEST(LlvmLibcMutexTest, Basic) {
     lock_guard<Mutex> lg(m);
     ASSERT_TRUE(m.locked);
     ASSERT_DEATH([&]() { lock_guard<Mutex> lg2(m); }, SIGABRT);
-    }
+  }
 
-    ASSERT_FALSE(m.locked);
+  ASSERT_FALSE(m.locked);
 }
