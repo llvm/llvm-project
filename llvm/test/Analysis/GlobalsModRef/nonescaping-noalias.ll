@@ -79,7 +79,7 @@ resume:
   ret ptr %coro
 
 suspend:
-  call i1 @llvm.coro.end(ptr %coro, i1 0)
+  call i1 @llvm.coro.end(ptr %coro, i1 0, token none)
   ret ptr %coro
 }
 
