@@ -13510,7 +13510,10 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     //   operator is <= or >= and false otherwise; otherwise the result is
     //   unspecified.
     // We interpret this as applying to pointers to *cv* void.
-    if (LHSTy->isVoidPointerType() && LHSOffset != RHSOffset && IsRelational)
+    // This only applies until C++14; in C++17 a "cv void*" value can "point to
+    // an object" and is not treated specially in [expr.rel].
+    if (!Info.getLangOpts().CPlusPlus17 &&
+        LHSTy->isVoidPointerType() && LHSOffset != RHSOffset && IsRelational)
       Info.CCEDiag(E, diag::note_constexpr_void_comparison);
 
     // C++11 [expr.rel]p2:

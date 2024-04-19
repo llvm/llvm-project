@@ -571,18 +571,21 @@ namespace UnspecifiedRelations {
   // [expr.rel]p3: Pointers to void can be compared [...] if both pointers
   // represent the same address or are both the null pointer [...]; otherwise
   // the result is unspecified.
-  struct S { int a, b; } s;
+  struct S { int a, b; static int c; } s;
   constexpr void *null = 0;
-  constexpr void *pv = (void*)&s.a;
-  constexpr void *qv = (void*)&s.b;
+  constexpr void *av = (void*)&s.a;
+  constexpr void *bv = (void*)&s.b;
+  constexpr void *cv = (void*)&s.c;
   constexpr bool v1 = null < (int*)0;
-  constexpr bool v2 = null < pv; // expected-error {{constant expression}} expected-note {{comparison between 'nullptr' and '&s.a' has unspecified value}}
-  constexpr bool v3 = null == pv; // ok
-  constexpr bool v4 = qv == pv; // ok
-  constexpr bool v5 = qv >= pv; // expected-error {{constant expression}} expected-note {{unequal pointers to void}}
-  constexpr bool v6 = qv > null; // expected-error {{constant expression}} expected-note {{comparison between '&s.b' and 'nullptr' has unspecified value}}
-  constexpr bool v7 = qv <= (void*)&s.b; // ok
-  constexpr bool v8 = qv > (void*)&s.a; // expected-error {{constant expression}} expected-note {{unequal pointers to void}}
+  constexpr bool v2 = null < av; // expected-error {{constant expression}} expected-note {{comparison between 'nullptr' and '&s.a' has unspecified value}}
+  constexpr bool v3 = null == av; // ok
+  constexpr bool v4 = bv == av; // ok
+  constexpr bool v5 = bv >= av; // cxx11-error {{constant expression}} cxx11-note {{unequal pointers to void}}
+  constexpr bool v6 = bv > null; // expected-error {{constant expression}} expected-note {{comparison between '&s.b' and 'nullptr' has unspecified value}}
+  constexpr bool v7 = bv <= (void*)&s.b; // ok
+  constexpr bool v8 = bv > (void*)&s.a; // cxx11-error {{constant expression}} cxx11-note {{unequal pointers to void}}
+  constexpr bool v9 = cv > bv; // expected-error {{constant expression}} expected-note {{comparison between '&c' and '&s.b' has unspecified value}}
+  constexpr bool v10 = cv <= (void*)&s; // expected-error {{constant expression}} expected-note {{comparison between '&c' and '&s' has unspecified value}}
 }
 
 // - an assignment or a compound assignment (5.17); or

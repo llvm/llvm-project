@@ -238,3 +238,5 @@ void test() {
 }
 }
 #endif
+
+// cwg2696: dup 2749

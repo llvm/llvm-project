@@ -83,6 +83,7 @@ using ::cwg2521::operator""_div;
 #endif
 } // namespace cwg2521
 
+// cwg2526: sup 2749
 
 #if __cplusplus >= 202302L
 namespace cwg2553 { // cwg2553: 18 review 2023-07-14

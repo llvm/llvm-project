@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-vla -fms-extensions -std=c++11 -verify=expected,both %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-vla -fms-extensions -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++11 -fms-extensions -Wno-vla -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++11 -fms-extensions -Wno-vla -verify=ref,ref-cxx11,both %s
 // RUN: %clang_cc1 -std=c++20 -fms-extensions -Wno-vla -verify=ref,both %s
 
 #define INT_MIN (~__INT_MAX__)
@@ -193,10 +193,10 @@ namespace PointerComparison {
 
   /// FIXME: These two are rejected by the current interpreter, but
   ///   accepted by GCC.
-  constexpr bool v5 = qv >= pv; // ref-error {{constant expression}} \
-                                // ref-note {{unequal pointers to void}}
-  constexpr bool v8 = qv > (void*)&s.a; // ref-error {{constant expression}} \
-                                        // ref-note {{unequal pointers to void}}
+  constexpr bool v5 = qv >= pv; // ref-cxx11-error {{constant expression}} \
+                                // ref-cxx11-note {{unequal pointers to void}}
+  constexpr bool v8 = qv > (void*)&s.a; // ref-cxx11-error {{constant expression}} \
+                                        // ref-cxx11-note {{unequal pointers to void}}
   constexpr bool v6 = qv > null; // both-error {{must be initialized by a constant expression}} \
                                  // both-note {{comparison between '&s.b' and 'nullptr' has unspecified value}}
 

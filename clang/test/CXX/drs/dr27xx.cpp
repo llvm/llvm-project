@@ -10,6 +10,28 @@
 // expected-no-diagnostics
 #endif
 
+namespace cwg2749 { // cwg2749: 19
+#if __cplusplus >= 201703L
+
+constexpr bool f() {
+  int arr[2] {};
+  return (void*)arr < arr + 1;
+}
+static_assert(f());
+
+constexpr bool g() {
+  struct {
+    char c;
+    short s;
+    int i;
+  } s {};
+  return (void*)&s.c < &s.i;
+}
+static_assert(g());
+
+#endif
+}
+
 namespace cwg2759 { // cwg2759: 19
 #if __cplusplus >= 201103L
 
