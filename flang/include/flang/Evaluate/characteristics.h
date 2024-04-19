@@ -365,7 +365,7 @@ struct Procedure {
   static std::optional<Procedure> Characterize(
       const semantics::Symbol &, FoldingContext &);
   static std::optional<Procedure> Characterize(
-      const ProcedureDesignator &, FoldingContext &);
+      const ProcedureDesignator &, FoldingContext &, bool emitError);
   static std::optional<Procedure> Characterize(
       const ProcedureRef &, FoldingContext &);
   static std::optional<Procedure> Characterize(

@@ -244,7 +244,8 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   } else if (const auto *intrinsic{f.proc().GetSpecificIntrinsic()}) {
     funcName = intrinsic->name;
   }
-  auto proc{Procedure::Characterize(f.proc(), foldingContext_)};
+  auto proc{
+      Procedure::Characterize(f.proc(), foldingContext_, /*emitError=*/true)};
   if (!proc) {
     return false;
   }
@@ -393,7 +394,8 @@ bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
           symbol->name());
     }
   }
-  if (auto chars{Procedure::Characterize(d, foldingContext_)}) {
+  if (auto chars{
+          Procedure::Characterize(d, foldingContext_, /*emitError=*/true)}) {
     // Disregard the elemental attribute of RHS intrinsics.
     if (symbol && symbol->GetUltimate().attrs().test(Attr::INTRINSIC)) {
       chars->attrs.reset(Procedure::Attr::Elemental);

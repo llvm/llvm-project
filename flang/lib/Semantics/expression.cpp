@@ -2562,7 +2562,8 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
       }
       if (std::optional<characteristics::Procedure> procedure{
               characteristics::Procedure::Characterize(
-                  ProcedureDesignator{specific}, context_.foldingContext())}) {
+                  ProcedureDesignator{specific}, context_.foldingContext(),
+                  /*emitError=*/false)}) {
         ActualArguments localActuals{actuals};
         if (specific.has<semantics::ProcBindingDetails>()) {
           if (!adjustActuals.value()(specific, localActuals)) {
@@ -3164,7 +3165,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
   }
   if (!chars) {
     chars = characteristics::Procedure::Characterize(
-        proc, context_.foldingContext());
+        proc, context_.foldingContext(), /*emitError=*/true);
   }
   bool ok{true};
   if (chars) {
