@@ -2,7 +2,7 @@
 
 // Supported targets
 //
-// RUN: %clang -target dxil-unknown-shadermodel6.2-compute %s -S -o /dev/null 2>&1 | FileCheck --allow-empty --check-prefix=CHECK-VALID %s
+// RUN: %clang -target dxilv1.2-unknown-shadermodel6.2-compute %s -S -o /dev/null 2>&1 | FileCheck --allow-empty --check-prefix=CHECK-VALID %s
 // RUN: %clang -target spirv-unknown-vulkan-compute %s -S -o /dev/null 2>&1 | FileCheck --allow-empty --check-prefix=CHECK-VALID %s
 // RUN: %clang -target spirv-unknown-vulkan1.2-compute %s -S -o /dev/null 2>&1 | FileCheck --allow-empty --check-prefix=CHECK-VALID %s
 // RUN: %clang -target spirv-unknown-vulkan1.3-compute %s -S -o /dev/null 2>&1 | FileCheck --allow-empty --check-prefix=CHECK-VALID %s

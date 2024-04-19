@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -emit-llvm -o - -O0 %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-compute -emit-llvm -o - -O0 %s | FileCheck %s
 
 RWBuffer<int> In;
 RWBuffer<int> Out;

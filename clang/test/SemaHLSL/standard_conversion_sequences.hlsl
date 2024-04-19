@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -Wconversion -verify -o - %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -Wno-conversion -DNO_ERR -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-library -Wconversion -verify -o - %s
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-library -Wno-conversion -DNO_ERR -ast-dump %s | FileCheck %s
 
 void test() {
-  
+
   // CHECK: VarDecl {{.*}} used f3 'vector<float, 3>':'float __attribute__((ext_vector_type(3)))' cinit
   // CHECK-NEXt: ImplicitCastExpr {{.*}} 'vector<float, 3>':'float __attribute__((ext_vector_type(3)))' <VectorSplat>
   // CHECK-NEXt: ImplicitCastExpr {{.*}} 'float' <FloatingCast>
@@ -38,7 +38,7 @@ void test() {
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>':'float __attribute__((ext_vector_type(2)))' lvalue Var {{.*}} 'f2' 'vector<float, 2>':'float __attribute__((ext_vector_type(2)))'
   // expected-warning@#i2{{mplicit conversion turns floating-point number into integer: 'vector<float, 2>' (vector of 2 'float' values) to 'vector<int, 2>' (vector of 2 'int' values)}}
   vector<int,2> i2 = f2; // #i2
-  
+
   // CHECK: VarDecl {{.*}} i2_2 'vector<int, 2>':'int __attribute__((ext_vector_type(2)))' cinit
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 2>':'int __attribute__((ext_vector_type(2)))' <FloatingToIntegral>
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(2)))' <HLSLVectorTruncation>

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -std=hlsl202x  -o - -fsyntax-only %s -verify
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-library -x hlsl -std=hlsl202x  -o - -fsyntax-only %s -verify
 
 // expected-error@+1 {{return type cannot be qualified with address space}}
 auto func() -> groupshared void;

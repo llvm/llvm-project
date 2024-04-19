@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxilv1.3-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 // CHECK-LABEL: builtin_bool_to_float_type_promotion
 // CHECK: %conv1 = uitofp i1 %tobool to double

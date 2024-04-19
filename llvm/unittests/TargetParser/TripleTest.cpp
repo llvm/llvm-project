@@ -866,121 +866,106 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
   EXPECT_TRUE(T.isArch32Bit());
 
-  T = Triple("dxil-unknown-shadermodel-pixel");
+  T = Triple("dxilv1.0-unknown-shadermodel-pixel");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Pixel, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-vertex");
+  T = Triple("dxilv1.0-unknown-shadermodel-vertex");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Vertex, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-geometry");
+  T = Triple("dxilv1.0-unknown-shadermodel-geometry");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Geometry, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-hull");
+  T = Triple("dxilv1.0-unknown-shadermodel-hull");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Hull, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-domain");
+  T = Triple("dxilv1.0-unknown-shadermodel-domain");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Domain, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-compute");
+  T = Triple("dxilv1.0-unknown-shadermodel-compute");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Compute, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-library");
+  T = Triple("dxilv1.0-unknown-shadermodel-library");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Library, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-raygeneration");
+  T = Triple("dxilv1.0-unknown-shadermodel-raygeneration");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::RayGeneration, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-intersection");
+  T = Triple("dxilv1.0-unknown-shadermodel-intersection");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Intersection, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-anyhit");
+  T = Triple("dxilv1.0-unknown-shadermodel-anyhit");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::AnyHit, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-closesthit");
+  T = Triple("dxilv1.0-unknown-shadermodel-closesthit");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::ClosestHit, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-miss");
+  T = Triple("dxilv1.0-unknown-shadermodel-miss");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Miss, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-callable");
+  T = Triple("dxilv1.0-unknown-shadermodel-callable");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Callable, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-mesh");
+  T = Triple("dxilv1.0-unknown-shadermodel-mesh");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Mesh, T.getEnvironment());
   EXPECT_FALSE(T.supportsCOMDAT());
 
-  T = Triple("dxil-unknown-shadermodel-amplification");
+  T = Triple("dxilv1.0-unknown-shadermodel-amplification");
   EXPECT_EQ(Triple::dxil, T.getArch());
-  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Amplification, T.getEnvironment());
@@ -1048,8 +1033,13 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
 
-  T = Triple("dxil-unknown-unknown");
+  T = Triple("dxilv1.0-unknown-unknown");
   EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+
+  T = Triple("dxil-unknown-unknown");
+  EXPECT_EQ(Triple::UnknownArch, T.getArch());
   EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
@@ -1153,6 +1143,26 @@ TEST(TripleTest, Normalization) {
 
   EXPECT_EQ("x86_64-unknown-linux-gnu", Triple::normalize("x86_64-gnu-linux"));
 
+  // A few normalization tests for triple strings with DXIL Arch
+  EXPECT_EQ("dxilv1.0-pc-shadermodel6.0",
+            Triple::normalize("dxilv1.0-shadermodel6.0-pc"));
+  EXPECT_EQ("dxilv1.1-pc-shadermodel6.1",
+            Triple::normalize("shadermodel6.1-dxilv1.1-pc"));
+  EXPECT_EQ("dxilv1.2-pc-shadermodel6.2",
+            Triple::normalize("shadermodel6.2-pc-dxilv1.2"));
+  EXPECT_EQ("dxilv1.3-pc-shadermodel6.3-unknown",
+            Triple::normalize("pc-shadermodel6.3-unknown-dxilv1.3"));
+  EXPECT_EQ("dxilv1.4-pc-shadermodel6.4",
+            Triple::normalize("pc-dxilv1.4-shadermodel6.4"));
+  EXPECT_EQ("dxilv1.5-pc-shadermodel6.5",
+            Triple::normalize("pc-shadermodel6.5-dxilv1.5"));
+  EXPECT_EQ("dxilv1.6-pc-shadermodel6.6-unknown",
+            Triple::normalize("dxilv1.6-unknown-shadermodel6.6-pc"));
+  EXPECT_EQ("dxilv1.7-unknown-shadermodel6.7-unknown",
+            Triple::normalize("dxilv1.7-shadermodel6.7-unknown"));
+  EXPECT_EQ("dxilv1.8-pc-shadermodel6.8-unknown",
+            Triple::normalize("unknown-dxilv1.8-pc-shadermodel6.8"));
+
   // Check that normalizing a permutated set of valid components returns a
   // triple with the unpermuted components.
   //
@@ -1171,18 +1181,27 @@ TEST(TripleTest, Normalization) {
                           Triple::getOSTypeName(FirstOSType),
                           Triple::getEnvironmentTypeName(FirstEnvType)};
   for (int Arch = FirstArchType; Arch <= Triple::LastArchType; ++Arch) {
-    StringRef C[] = {InitialC[0], InitialC[1], InitialC[2], InitialC[3]};
-    C[0] = Triple::getArchTypeName(Triple::ArchType(Arch));
-    std::string E = Join(C[0], C[1], C[2]);
-    int I[] = {0, 1, 2};
-    do {
-      EXPECT_EQ(E, Triple::normalize(Join(C[I[0]], C[I[1]], C[I[2]])));
-    } while (std::next_permutation(std::begin(I), std::end(I)));
-    std::string F = Join(C[0], C[1], C[2], C[3]);
-    int J[] = {0, 1, 2, 3};
-    do {
-      EXPECT_EQ(F, Triple::normalize(Join(C[J[0]], C[J[1]], C[J[2]], C[J[3]])));
-    } while (std::next_permutation(std::begin(J), std::end(J)));
+    // Valid DXIL ArchTypes are changed to include version number as SubArch
+    // type.
+
+    // Exclude testing DXIL Arch since arch type name for Triple::dxil depends
+    // on SubArch and is no longer "dxil". Instead, normalization tests for
+    // Triple::dxil are added at an earlier location in this test function.
+    if (Arch != Triple::dxil) {
+      StringRef C[] = {InitialC[0], InitialC[1], InitialC[2], InitialC[3]};
+      C[0] = Triple::getArchTypeName(Triple::ArchType(Arch));
+      std::string E = Join(C[0], C[1], C[2]);
+      int I[] = {0, 1, 2};
+      do {
+        EXPECT_EQ(E, Triple::normalize(Join(C[I[0]], C[I[1]], C[I[2]])));
+      } while (std::next_permutation(std::begin(I), std::end(I)));
+      std::string F = Join(C[0], C[1], C[2], C[3]);
+      int J[] = {0, 1, 2, 3};
+      do {
+        EXPECT_EQ(F,
+                  Triple::normalize(Join(C[J[0]], C[J[1]], C[J[2]], C[J[3]])));
+      } while (std::next_permutation(std::begin(J), std::end(J)));
+    }
   }
   for (int Vendor = FirstVendorType; Vendor <= Triple::LastVendorType;
        ++Vendor) {
@@ -1470,7 +1489,7 @@ TEST(TripleTest, BitWidthChecks) {
   EXPECT_TRUE(T.isLoongArch());
   EXPECT_TRUE(T.isLoongArch64());
 
-  T.setArch(Triple::dxil);
+  T.setArch(Triple::dxil, Triple::DXILSubArch_v1_0);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
@@ -1675,7 +1694,7 @@ TEST(TripleTest, BitWidthArchVariants) {
   EXPECT_EQ(Triple::xcore, T.get32BitArchVariant().getArch());
   EXPECT_EQ(Triple::UnknownArch, T.get64BitArchVariant().getArch());
 
-  T.setArch(Triple::dxil);
+  T.setArch(Triple::dxil, Triple::DXILSubArch_v1_0);
   EXPECT_EQ(Triple::dxil, T.get32BitArchVariant().getArch());
   EXPECT_EQ(Triple::UnknownArch, T.get64BitArchVariant().getArch());
 
@@ -1831,7 +1850,7 @@ TEST(TripleTest, EndianArchVariants) {
   EXPECT_EQ(Triple::UnknownArch, T.getBigEndianArchVariant().getArch());
   EXPECT_EQ(Triple::loongarch64, T.getLittleEndianArchVariant().getArch());
 
-  T.setArch(Triple::dxil);
+  T.setArch(Triple::dxil, Triple::DXILSubArch_v1_0);
   EXPECT_TRUE(T.isLittleEndian());
   EXPECT_EQ(Triple::UnknownArch, T.getBigEndianArchVariant().getArch());
   EXPECT_EQ(Triple::dxil, T.getLittleEndianArchVariant().getArch());
@@ -2012,7 +2031,7 @@ TEST(TripleTest, getOSVersion) {
   Version = T.getDriverKitVersion();
   EXPECT_EQ(VersionTuple(19, 0), Version);
 
-  T = Triple("dxil-unknown-shadermodel6.6-pixel");
+  T = Triple("dxilv1.0-unknown-shadermodel6.6-pixel");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
@@ -2020,7 +2039,7 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_EQ(VersionTuple(6, 6), Version);
   EXPECT_EQ(Triple::Pixel, T.getEnvironment());
 
-  T = Triple("dxil-unknown-shadermodel6.0-pixel");
+  T = Triple("dxilv1.0-unknown-shadermodel6.0-pixel");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
@@ -2142,7 +2161,7 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::ELF, CygwinNormalized.getObjectFormat());
 
   EXPECT_EQ(Triple::DXContainer,
-            Triple("dxil-unknown-shadermodel").getObjectFormat());
+            Triple("dxilv1.0-unknown-shadermodel").getObjectFormat());
 
   Triple T = Triple("");
   T.setObjectFormat(Triple::ELF);
@@ -2170,7 +2189,8 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::SPIRV, Triple("spirv-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv32-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv64-apple-macosx").getObjectFormat());
-  EXPECT_EQ(Triple::DXContainer, Triple("dxil-apple-macosx").getObjectFormat());
+  EXPECT_EQ(Triple::DXContainer,
+            Triple("dxilv1.0-apple-macosx").getObjectFormat());
 }
 
 TEST(TripleTest, NormalizeWindows) {

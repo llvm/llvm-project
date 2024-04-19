@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-library -x hlsl -ast-dump -o - %s | FileCheck %s
 
 //CHECK:VarDecl 0x[[A:[0-9a-f]+]] <{{.*}} col:24> col:20 used a 'groupshared float[10]'
  groupshared float a[10];

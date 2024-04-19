@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fsyntax-only %s -verify
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-library -fsyntax-only %s -verify
 
 int i;
 

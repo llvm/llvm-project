@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple dxilv1.6-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify %s
 
 Resource ResourceDescriptorHeap[5];
 typedef vector<float, 3> float3;

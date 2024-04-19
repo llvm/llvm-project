@@ -5,7 +5,7 @@
 ; CHECK:call half @dx.op.unary.f16(i32 21, half %{{.*}})
 
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
-target triple = "dxil-pc-shadermodel6.7-library"
+target triple = "dxilv1.7-pc-shadermodel6.7-library"
 
 ; Function Attrs: noinline nounwind optnone
 define noundef float @exp2_float(float noundef %a) #0 {

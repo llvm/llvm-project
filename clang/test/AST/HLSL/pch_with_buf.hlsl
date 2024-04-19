@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -finclude-default-header -emit-pch -o %t %S/Inputs/pch_with_buf.hlsl
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl \
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-library -x hlsl -finclude-default-header -emit-pch -o %t %S/Inputs/pch_with_buf.hlsl
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-library -x hlsl \
 // RUN:  -finclude-default-header -include-pch %t -fsyntax-only -ast-dump-all %s | FileCheck  %s
 
 // Make sure PCH works by using function declared in PCH header.

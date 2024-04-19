@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
 // expected-error@+1 {{invalid resource class specifier 'c' used; expected 'b', 's', 't', or 'u'}}
 float a : register(c0, space1);

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-compute -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 RWBuffer<float> Buffer1;
 RWBuffer<vector<float, 4> > BufferArray[4];

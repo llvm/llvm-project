@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxilv1.3-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 // CHECK-LABEL: builtin_test_clamp_int4
 // CHECK: %dx.clamp = call <4 x i32> @llvm.dx.clamp.v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2)

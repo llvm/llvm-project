@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -o - %s -verify
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-library -x hlsl -o - %s -verify
 
 // expected-no-error
 [shader("compute")][numthreads(32,1,1)]

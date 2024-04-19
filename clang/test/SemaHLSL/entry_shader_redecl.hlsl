@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -x hlsl -hlsl-entry cs1 -o - %s -ast-dump -verify | FileCheck -DSHADERFN=cs1 -check-prefix=CHECK-ENV %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -x hlsl -hlsl-entry cs2 -o - %s -ast-dump -verify | FileCheck -DSHADERFN=cs2 -check-prefix=CHECK-ENV %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -x hlsl -hlsl-entry cs3 -o - %s -ast-dump -verify | FileCheck -DSHADERFN=cs3 -check-prefix=CHECK-ENV %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - %s -ast-dump -verify | FileCheck -check-prefix=CHECK-LIB %s
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-compute -x hlsl -hlsl-entry cs1 -o - %s -ast-dump -verify | FileCheck -DSHADERFN=cs1 -check-prefix=CHECK-ENV %s
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-compute -x hlsl -hlsl-entry cs2 -o - %s -ast-dump -verify | FileCheck -DSHADERFN=cs2 -check-prefix=CHECK-ENV %s
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-compute -x hlsl -hlsl-entry cs3 -o - %s -ast-dump -verify | FileCheck -DSHADERFN=cs3 -check-prefix=CHECK-ENV %s
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-library -x hlsl -o - %s -ast-dump -verify | FileCheck -check-prefix=CHECK-LIB %s
 
 // expected-no-diagnostics
 

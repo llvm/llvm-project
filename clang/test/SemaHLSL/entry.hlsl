@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -x hlsl -hlsl-entry foo -DWITH_NUM_THREADS -ast-dump -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -x hlsl -hlsl-entry foo  -o - %s  -verify
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-compute -x hlsl -hlsl-entry foo -DWITH_NUM_THREADS -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-compute -x hlsl -hlsl-entry foo  -o - %s  -verify
 
 
 // Make sure add HLSLShaderAttr along with HLSLNumThreadsAttr.

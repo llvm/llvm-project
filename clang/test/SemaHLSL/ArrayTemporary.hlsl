@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-library -ast-dump %s | FileCheck %s
 
 void fn(float x[2]) { }
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -disable-llvm-passes -o - -hlsl-entry main %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-compute -x hlsl -ast-dump -disable-llvm-passes -o - -hlsl-entry main %s | FileCheck %s
 
 class Pair {
   int First;

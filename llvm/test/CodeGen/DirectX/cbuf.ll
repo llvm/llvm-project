@@ -2,7 +2,7 @@
 ; RUN: opt -S --passes="print-dxil-resource" < %s 2>&1 | FileCheck %s --check-prefix=PRINT
 
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
-target triple = "dxil-unknown-shadermodel6.7-library"
+target triple = "dxilv1.5-unknown-shadermodel6.7-library"
 
 ; Make sure the size is 24 = 16 + 8 (float,i32,double -> 16 and int2 -> 8)
 ; DXILMD:!{i32 0, ptr @A.cb., !"", i32 1, i32 2, i32 1, i32 24}

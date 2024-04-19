@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel5.0-library -verify %s
+// RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-pc-shadermodel5.0-library -verify %s
 // WaveActiveCountBits is unavailable before ShaderModel 6.0.
 
 unsigned foo(bool b) {

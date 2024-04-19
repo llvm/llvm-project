@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library %s -verify
+// RUN: %clang_cc1 -triple dxilv1.6-pc-shadermodel6.6-library %s -verify
 void fn(in out float f); // #fn
 
 // expected-error@#fn2{{duplicate parameter modifier 'in'}}
@@ -52,7 +52,7 @@ void callFns() {
   // expected-note@#inoutFn{{candidate function not viable: no known conversion from 'int' to 'float &' for 1st argument}}
   outFn(1); // expected-error{{no matching function for call to 'outFn}}
   // expected-note@#outFn{{candidate function not viable: no known conversion from 'int' to 'float &' for 1st argument}}
-  
+
   // Call with variables.
   float f;
   implicitFn(f); // Ok.

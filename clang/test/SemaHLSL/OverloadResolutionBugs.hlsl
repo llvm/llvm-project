@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -o - -fsyntax-only %s -verify
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-library -o - -fsyntax-only %s -verify
 // XFAIL: *
 
 // https://github.com/llvm/llvm-project/issues/81047
@@ -64,7 +64,7 @@ float test_frac_bool(bool p0) { return frac(p0); }
 // https://github.com/llvm/llvm-project/issues/81049
 
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.2-library %s -emit-llvm -disable-llvm-passes \
+// RUN:   dxilv1.2-pc-shadermodel6.2-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefix=NO_HALF
 
 half sqrt_h(half x) { return sqrt(x); }

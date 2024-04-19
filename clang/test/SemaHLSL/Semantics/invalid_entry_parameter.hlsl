@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -ast-dump -verify -o - %s
+// RUN: %clang_cc1 -triple dxilv1.3-pc-shadermodel6.3-library -finclude-default-header -x hlsl -ast-dump -verify -o - %s
 
 [numthreads(8,8,1)]
 // expected-error@+1 {{attribute 'SV_DispatchThreadID' only applies to a field or parameter of type 'uint/uint2/uint3'}}

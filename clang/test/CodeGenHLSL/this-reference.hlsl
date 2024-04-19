@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -emit-llvm -disable-llvm-passes -o - -hlsl-entry main %s -debug-info-kind=standalone -dwarf-version=4 | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-compute -x hlsl -emit-llvm -disable-llvm-passes -o - -hlsl-entry main %s -debug-info-kind=standalone -dwarf-version=4 | FileCheck %s
 
 struct Pair {
   int First;

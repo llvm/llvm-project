@@ -115,6 +115,30 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
     if (SubArch == AArch64SubArch_arm64e)
       return "arm64e";
     break;
+  case Triple::dxil:
+    switch (SubArch) {
+    case Triple::DXILSubArch_v1_0:
+      return "dxilv1.0";
+    case Triple::DXILSubArch_v1_1:
+      return "dxilv1.1";
+    case Triple::DXILSubArch_v1_2:
+      return "dxilv1.2";
+    case Triple::DXILSubArch_v1_3:
+      return "dxilv1.3";
+    case Triple::DXILSubArch_v1_4:
+      return "dxilv1.4";
+    case Triple::DXILSubArch_v1_5:
+      return "dxilv1.5";
+    case Triple::DXILSubArch_v1_6:
+      return "dxilv1.6";
+    case Triple::DXILSubArch_v1_7:
+      return "dxilv1.7";
+    case Triple::DXILSubArch_v1_8:
+      return "dxilv1.8";
+    default:
+      report_fatal_error("Unknown DXIL Version",
+                         /*gen_crash_diag=*/false);
+    }
   default:
     break;
   }
@@ -559,11 +583,11 @@ static Triple::ArchType parseArch(StringRef ArchName) {
           .Case("spir64", Triple::spir64)
           .Cases("spirv", "spirv1.5", "spirv1.6", Triple::spirv)
           .Cases("spirv32", "spirv32v1.0", "spirv32v1.1", "spirv32v1.2",
-            "spirv32v1.3", "spirv32v1.4", "spirv32v1.5",
-            "spirv32v1.6", Triple::spirv32)
+                 "spirv32v1.3", "spirv32v1.4", "spirv32v1.5", "spirv32v1.6",
+                 Triple::spirv32)
           .Cases("spirv64", "spirv64v1.0", "spirv64v1.1", "spirv64v1.2",
-            "spirv64v1.3", "spirv64v1.4", "spirv64v1.5",
-            "spirv64v1.6", Triple::spirv64)
+                 "spirv64v1.3", "spirv64v1.4", "spirv64v1.5", "spirv64v1.6",
+                 Triple::spirv64)
           .StartsWith("kalimba", Triple::kalimba)
           .Case("lanai", Triple::lanai)
           .Case("renderscript32", Triple::renderscript32)
@@ -575,9 +599,8 @@ static Triple::ArchType parseArch(StringRef ArchName) {
           .Case("csky", Triple::csky)
           .Case("loongarch32", Triple::loongarch32)
           .Case("loongarch64", Triple::loongarch64)
-          .Cases("dxil", "dxilv1.0", "dxilv1.1", "dxilv1.2", "dxilv1.3",
-                 "dxilv1.4", "dxilv1.5", "dxilv1.6", "dxilv1.7", "dxilv1.8",
-                 Triple::dxil)
+          .Cases("dxilv1.0", "dxilv1.1", "dxilv1.2", "dxilv1.3", "dxilv1.4",
+                 "dxilv1.5", "dxilv1.6", "dxilv1.7", "dxilv1.8", Triple::dxil)
           .Case("xtensa", Triple::xtensa)
           .Default(Triple::UnknownArch);
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple dxilv1.6-pc-shadermodel6.0-compute -x hlsl -fsyntax-only -verify %s
 
 typedef float float2 __attribute__((ext_vector_type(2)));
 typedef float float3 __attribute__((ext_vector_type(3)));

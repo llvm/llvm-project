@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -o - -fsyntax-only %s -verify
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-library -x hlsl -o - -fsyntax-only %s -verify
 
 // expected-error@+1 {{pointers are unsupported in HLSL}}
 typedef int (*fn_int)(int);
@@ -16,15 +16,15 @@ void woof(int Foo::*Member);
 int entry() {
   int X;
   Foo F;
-  
+
   // expected-error@+2 {{the '&' operator is unsupported in HLSL}}
   // expected-error@+1 {{pointers are unsupported in HLSL}}
   int Foo::*Member = &F.X;
 
-  
+
   // expected-error@+1 {{the '&' operator is unsupported in HLSL}}
   int *Y = &X; // expected-error {{pointers are unsupported in HLSL}}
-  
+
   // expected-error@+2 {{the '->' operator is unsupported in HLSL}}
   // expected-error@+1 {{the '&' operator is unsupported in HLSL}}
   int W = (&F)->X;

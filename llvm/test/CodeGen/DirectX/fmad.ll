@@ -7,7 +7,7 @@
 
 
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
-target triple = "dxil-pc-shadermodel6.7-library"
+target triple = "dxilv1.7-pc-shadermodel6.7-library"
 
 ; Function Attrs: noinline nounwind optnone
 define noundef half @fmad_half(half noundef %p0, half noundef %p1, half noundef %p2) #0 {

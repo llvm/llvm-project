@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library  -x hlsl -finclude-default-header -verify %s
+// RUN: %clang_cc1 -triple dxilv1.6-pc-shadermodel6.6-library  -x hlsl -finclude-default-header -verify %s
 
 int2 ToTwoInts(int V) {
   return V.xy; // expected-error{{vector component access exceeds type 'int __attribute__((ext_vector_type(1)))' (vector of 1 'int' value)}}

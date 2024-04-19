@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl  -finclude-default-header -ast-dump  -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-compute -x hlsl  -finclude-default-header -ast-dump  -o - %s | FileCheck %s
 
 [numthreads(8,8,1)]
 void CSMain(uint ID : SV_DispatchThreadID) {

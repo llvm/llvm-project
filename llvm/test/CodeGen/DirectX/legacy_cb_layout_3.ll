@@ -1,7 +1,7 @@
 ; RUN: opt -S -dxil-metadata-emit < %s | FileCheck %s --check-prefix=DXILMD
 
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
-target triple = "dxil-unknown-shadermodel6.7-library"
+target triple = "dxilv1.7-unknown-shadermodel6.7-library"
 
 ; cbuffer D
 ; {
@@ -22,7 +22,7 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 ;           float B6;                                 ; Offset:   96
 ;           half3 B7;                                 ; Offset:  100
 ;           half3 B8;                                 ; Offset:  106
-;       
+;
 ;       } D1;                                         ; Offset:   16
 ;
 ;       half D2;                                      ; Offset:  112
@@ -39,7 +39,7 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 ;               int16_t A4;                           ; Offset:  150
 ;               int64_t A5;                           ; Offset:  152
 ;               int A6;                               ; Offset:  160
-;           
+;
 ;           } C0;                                     ; Offset:  128
 ;
 ;           float C1[1];                              ; Offset:  176
@@ -55,15 +55,15 @@ target triple = "dxil-unknown-shadermodel6.7-library"
 ;               float B6;                             ; Offset:  272
 ;               half3 B7;                             ; Offset:  276
 ;               half3 B8;                             ; Offset:  282
-;           
+;
 ;           } C2[2];;                                 ; Offset:  192
 ;
 ;           half C3;                                  ; Offset:  384
-;       
+;
 ;       } D3;                                         ; Offset:  128
 ;
 ;       double D4;                                    ; Offset:  392
-;   
+;
 ;   } D;                                              ; Offset:    0 Size:   400
 
 

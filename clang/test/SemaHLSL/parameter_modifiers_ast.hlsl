@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library %s -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.6-pc-shadermodel6.6-library %s -ast-dump | FileCheck %s
 
 // CHECK: FunctionDecl {{.*}} fn 'void (float)'
 // CHECK-NEXT: ParmVarDecl {{.*}} f 'float'

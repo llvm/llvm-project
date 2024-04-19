@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library  -x hlsl \
+// RUN: %clang_cc1 -triple dxilv1.6-pc-shadermodel6.6-library  -x hlsl \
 // RUN:   -finclude-default-header -ast-dump %s | FileCheck %s
 
 

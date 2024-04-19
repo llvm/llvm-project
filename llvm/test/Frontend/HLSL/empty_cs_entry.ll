@@ -2,7 +2,7 @@
 ; RUN: %if spirv-registered-target   %{ llc %s -mtriple=spirv-unknown-unknown -o - | FileCheck %s --check-prefix=SPIRV-CHECK %}
 
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
-target triple = "dxil-unknown-shadermodel6.7-compute"
+target triple = "dxilv1.7-unknown-shadermodel6.7-compute"
 
 ;DXIL-CHECK:!dx.entryPoints = !{![[entry:[0-9]+]]}
 

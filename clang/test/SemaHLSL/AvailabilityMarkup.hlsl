@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel5.0-library -verify %s
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel5.0-library -verify %s
 
 __attribute__((availability(shadermodel, introduced = 6.0)))
 unsigned fn6_0(); // #fn6_0

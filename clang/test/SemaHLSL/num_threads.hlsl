@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-mesh -x hlsl -ast-dump -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-amplification -x hlsl -ast-dump -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -ast-dump -o - %s -verify
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-vertex -x hlsl -ast-dump -o - %s -verify
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-hull -x hlsl -ast-dump -o - %s -verify
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-domain -x hlsl -ast-dump -o - %s -verify
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s -DFAIL -verify
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel5.0-compute -x hlsl -ast-dump -o - %s -DFAIL -verify
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel4.0-compute -x hlsl -ast-dump -o - %s -DFAIL -verify
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-mesh -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-amplification -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-library -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-pixel -x hlsl -ast-dump -o - %s -verify
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-vertex -x hlsl -ast-dump -o - %s -verify
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-hull -x hlsl -ast-dump -o - %s -verify
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-domain -x hlsl -ast-dump -o - %s -verify
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s -DFAIL -verify
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel5.0-compute -x hlsl -ast-dump -o - %s -DFAIL -verify
+// RUN: %clang_cc1 -triple dxilv1.0-pc-shadermodel4.0-compute -x hlsl -ast-dump -o - %s -DFAIL -verify
 
 #if __SHADER_TARGET_STAGE == __SHADER_STAGE_COMPUTE || __SHADER_TARGET_STAGE == __SHADER_STAGE_MESH || __SHADER_TARGET_STAGE == __SHADER_STAGE_AMPLIFICATION || __SHADER_TARGET_STAGE == __SHADER_STAGE_LIBRARY
 #ifdef FAIL

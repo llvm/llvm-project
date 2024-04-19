@@ -2,39 +2,42 @@
 
 // Supported targets
 //
-// RUN: %clang -target dxil--shadermodel6.2-pixel %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
-// RUN: %clang -target dxil-unknown-shadermodel6.2-pixel %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
-// RUN: %clang -target dxil--shadermodel6.2-library %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
-// RUN: %clang -target dxil-unknown-shadermodel6.2-library %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
+// RUN: %clang -target dxilv1.2--shadermodel6.2-pixel %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
+// RUN: %clang -target dxilv1.2-unknown-shadermodel6.2-pixel %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
+// RUN: %clang -target dxilv1.2--shadermodel6.2-library %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
+// RUN: %clang -target dxilv1.2-unknown-shadermodel6.2-library %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
 
 // Empty shader model
 //
-// RUN: not %clang -target dxil %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-NO-OS %s
+// RUN: not %clang -target dxilv1.2 %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-NO-OS %s
 
 // Invalid shader models
 //
-// RUN: not %clang -target dxil--linux %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-OS %s
-// RUN: not %clang -target dxil--win32 %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-OS %s
-// RUN: not %clang -target dxil--unknown %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-OS %s
-// RUN: not %clang -target dxil--invalidos %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-OS %s
+// RUN: not %clang -target dxilv1.2--linux %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-OS %s
+// RUN: not %clang -target dxilv1.2--win32 %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-OS %s
+// RUN: not %clang -target dxilv1.2--unknown %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-OS %s
+// RUN: not %clang -target dxilv1.2--invalidos %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-OS %s
 
 // Bad shader model versions. Currently we just check for any version at all.
 //
-// RUN: not %clang -target dxil--shadermodel %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-OS %s
-// RUN: not %clang -target dxil--shadermodel0.0 %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-OS %s
+// RUN: not %clang -target dxilv1.2--shadermodel %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-OS %s
+// RUN: not %clang -target dxilv1.2--shadermodel0.0 %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-OS %s
 
 // Empty shader stage
 //
-// RUN: not %clang -target dxil-shadermodel6.2 %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-NO-ENV %s
-// RUN: not %clang -target dxil--shadermodel6.2 %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-NO-ENV %s
-// RUN: not %clang -target dxil--shadermodel6.2 %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-NO-ENV %s
+// RUN: not %clang -target dxilv1.2-shadermodel6.2 %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-NO-ENV %s
+// RUN: not %clang -target dxilv1.2--shadermodel6.2 %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-NO-ENV %s
+// RUN: not %clang -target dxilv1.2--shadermodel6.2 %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-NO-ENV %s
 
 // Invalid shader stages
 //
-// RUN: not %clang -target dxil--shadermodel6.2-unknown %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-ENV %s
-// RUN: not %clang --target=dxil--shadermodel6.2-invalidenvironment %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-ENV-DRV %s
-// RUN: not %clang -target dxil--shadermodel6.2-eabi %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-ENV %s
-// RUN: not %clang -target dxil--shadermodel6.2-msvc %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-ENV %s
+// RUN: not %clang -target dxilv1.2--shadermodel6.2-unknown %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-ENV %s
+// RUN: not %clang --target=dxilv1.2--shadermodel6.2-invalidenvironment %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-ENV-DRV %s
+// RUN: not %clang -target dxilv1.2--shadermodel6.2-eabi %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-ENV %s
+// RUN: not %clang -target dxilv1.2--shadermodel6.2-msvc %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-ENV %s
+
+// Invaliddxil target with no version number
+// RUN: not %clang -target dxil--shadermodel6.2-msvc %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-TARGET %s
 
 // Non-dxil targets
 //

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxilv1.6-pc-shadermodel6.3-library -x hlsl -ast-dump -o - %s | FileCheck %s
 
 // CHECK:HLSLBufferDecl 0x[[CB:[0-9a-f]+]] {{.*}} line:5:9 cbuffer CB
 // CHECK-NEXT:VarDecl 0x[[A:[0-9a-f]+]] {{.*}} col:9 used a 'float'
