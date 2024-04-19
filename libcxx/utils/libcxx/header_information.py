@@ -157,7 +157,6 @@ def is_header(file):
     return not file.is_dir() and not file.name in [
         "module.modulemap",
         "CMakeLists.txt",
-        "libcxx.imp",
     ]
 
 
