@@ -695,6 +695,8 @@ Static Analyzer
 - Support C++23 static operator calls. (#GH84972)
 - Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
   matched user-defined ``strerror`` and similar library functions. (GH#88181)
+- Fixed a crash when storing through an address that refers to the address of
+  a label. (GH#89185)
 
 New features
 ^^^^^^^^^^^^
