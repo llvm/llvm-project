@@ -16,33 +16,33 @@ static const int SIGABRT = 6;
 // Simple class for testing cpp::lock_guard. It defines methods 'lock' and 
 // 'unlock' which are required for the cpp::lock_guard class template.
 struct Mutex {
-    Mutex() : locked(false) {}
+  Mutex() : locked(false) {}
 
-    void lock() {
-        if (locked)
-            // Sends signal 6.
-            abort();
-        locked = true;
-    }
+  void lock() {
+    if (locked)
+      // Sends signal 6.
+      abort();
+    locked = true;
+  }
 
-    void unlock() { 
-        if (!locked)
-            // Sends signal 6.
-            abort();
-        locked = false;
-    }
+  void unlock() {
+    if (!locked)
+      // Sends signal 6.
+      abort();
+    locked = false;
+  }
 
-    bool locked;
+  bool locked;
 };
 
 TEST(LlvmLibcMutexTest, Basic) {
-    Mutex m;
-    ASSERT_FALSE(m.locked);
+  Mutex m;
+  ASSERT_FALSE(m.locked);
 
-    {
-        lock_guard<Mutex> lg(m);
-        ASSERT_TRUE(m.locked);
-        ASSERT_DEATH([&](){ lock_guard<Mutex> lg2(m); }, SIGABRT);
+  {
+    lock_guard<Mutex> lg(m);
+    ASSERT_TRUE(m.locked);
+    ASSERT_DEATH([&]() { lock_guard<Mutex> lg2(m); }, SIGABRT);
     }
 
     ASSERT_FALSE(m.locked);
