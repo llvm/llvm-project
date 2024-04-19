@@ -4885,18 +4885,8 @@ defm UABDL   : SIMDLongThreeVectorBHSabdl<1, 0b0111, "uabdl",
 def : Pat<(abs (v8i16 (sub (zext (v8i8 V64:$opA)),
                            (zext (v8i8 V64:$opB))))),
           (UABDLv8i8_v8i16 V64:$opA, V64:$opB)>;
-def : Pat<(xor (v8i16 (AArch64vashr v8i16:$src, (i32 15))),
-               (v8i16 (add (sub (zext (v8i8 V64:$opA)),
-                                (zext (v8i8 V64:$opB))),
-                           (AArch64vashr v8i16:$src, (i32 15))))),
-          (UABDLv8i8_v8i16 V64:$opA, V64:$opB)>;
 def : Pat<(abs (v8i16 (sub (zext (extract_high_v16i8 (v16i8 V128:$opA))),
                            (zext (extract_high_v16i8 (v16i8 V128:$opB)))))),
-          (UABDLv16i8_v8i16 V128:$opA, V128:$opB)>;
-def : Pat<(xor (v8i16 (AArch64vashr v8i16:$src, (i32 15))),
-               (v8i16 (add (sub (zext (extract_high_v16i8 (v16i8 V128:$opA))),
-                                (zext (extract_high_v16i8 (v16i8 V128:$opB)))),
-                           (AArch64vashr v8i16:$src, (i32 15))))),
           (UABDLv16i8_v8i16 V128:$opA, V128:$opB)>;
 def : Pat<(abs (v4i32 (sub (zext (v4i16 V64:$opA)),
                            (zext (v4i16 V64:$opB))))),
