@@ -24,6 +24,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <utility>
@@ -80,7 +81,6 @@ static bool equateUnknownValues(Value::Kind K) {
   switch (K) {
   case Value::Kind::Integer:
   case Value::Kind::Pointer:
-  case Value::Kind::Record:
     return true;
   default:
     return false;
@@ -145,25 +145,7 @@ static Value *joinDistinctValues(QualType Type, Value &Val1,
     return &A.makeBoolValue(JoinedVal);
   }
 
-  Value *JoinedVal = nullptr;
-  if (auto *RecordVal1 = dyn_cast<RecordValue>(&Val1)) {
-    auto *RecordVal2 = cast<RecordValue>(&Val2);
-
-    if (&RecordVal1->getLoc() == &RecordVal2->getLoc())
-      // `RecordVal1` and `RecordVal2` may have different properties associated
-      // with them. Create a new `RecordValue` with the same location but
-      // without any properties so that we soundly approximate both values. If a
-      // particular analysis needs to join properties, it should do so in
-      // `DataflowAnalysis::join()`.
-      JoinedVal = &JoinedEnv.create<RecordValue>(RecordVal1->getLoc());
-    else
-      // If the locations for the two records are different, need to create a
-      // completely new value.
-      JoinedVal = JoinedEnv.createValue(Type);
-  } else {
-    JoinedVal = JoinedEnv.createValue(Type);
-  }
-
+  Value *JoinedVal = JoinedEnv.createValue(Type);
   if (JoinedVal)
     Model.join(Type, Val1, Env1, Val2, Env2, *JoinedVal, JoinedEnv);
 
@@ -401,6 +383,28 @@ public:
     return true;
   }
 
+  void
+  PropagateResultObjectToRecordInitList(const RecordInitListHelper &InitList,
+                                        RecordStorageLocation *Loc) {
+    for (auto [Base, Init] : InitList.base_inits()) {
+      assert(Base->getType().getCanonicalType() ==
+             Init->getType().getCanonicalType());
+
+      // Storage location for the base class is the same as that of the
+      // derived class because we "flatten" the object hierarchy and put all
+      // fields in `RecordStorageLocation` of the derived class.
+      PropagateResultObject(Init, Loc);
+    }
+
+    for (auto [Field, Init] : InitList.field_inits()) {
+      // Fields of non-record type are handled in
+      // `TransferVisitor::VisitInitListExpr()`.
+      if (Field->getType()->isRecordType())
+        PropagateResultObject(
+            Init, cast<RecordStorageLocation>(Loc->getChild(*Field)));
+    }
+  }
+
   // Assigns `Loc` as the result object location of `E`, then propagates the
   // location to all lower-level prvalues that initialize the same object as
   // `E` (or one of its base classes or member variables).
@@ -440,26 +444,14 @@ public:
         return;
       }
 
-      RecordInitListHelper InitListHelper(InitList);
+      PropagateResultObjectToRecordInitList(RecordInitListHelper(InitList),
+                                            Loc);
+      return;
+    }
 
-      for (auto [Base, Init] : InitListHelper.base_inits()) {
-        assert(Base->getType().getCanonicalType() ==
-               Init->getType().getCanonicalType());
-
-        // Storage location for the base class is the same as that of the
-        // derived class because we "flatten" the object hierarchy and put all
-        // fields in `RecordStorageLocation` of the derived class.
-        PropagateResultObject(Init, Loc);
-      }
-
-      for (auto [Field, Init] : InitListHelper.field_inits()) {
-        // Fields of non-record type are handled in
-        // `TransferVisitor::VisitInitListExpr()`.
-        if (!Field->getType()->isRecordType())
-          continue;
-        PropagateResultObject(
-            Init, cast<RecordStorageLocation>(Loc->getChild(*Field)));
-      }
+    if (auto *ParenInitList = dyn_cast<CXXParenListInitExpr>(E)) {
+      PropagateResultObjectToRecordInitList(RecordInitListHelper(ParenInitList),
+                                            Loc);
       return;
     }
 
@@ -555,7 +547,6 @@ void Environment::initialize() {
       auto &ThisLoc =
           cast<RecordStorageLocation>(createStorageLocation(ThisPointeeType));
       setThisPointeeStorageLocation(ThisLoc);
-      refreshRecordValue(ThisLoc, *this);
       // Initialize fields of `*this` with values, but only if we're not
       // analyzing a constructor; after all, it's the constructor's job to do
       // this (and we want to be able to test that).
@@ -619,8 +610,8 @@ Environment Environment::pushCall(const CallExpr *Call) const {
   if (const auto *MethodCall = dyn_cast<CXXMemberCallExpr>(Call)) {
     if (const Expr *Arg = MethodCall->getImplicitObjectArgument()) {
       if (!isa<CXXThisExpr>(Arg))
-          Env.ThisPointeeLoc =
-              cast<RecordStorageLocation>(getStorageLocation(*Arg));
+        Env.ThisPointeeLoc =
+            cast<RecordStorageLocation>(getStorageLocation(*Arg));
       // Otherwise (when the argument is `this`), retain the current
       // environment's `ThisPointeeLoc`.
     }
@@ -699,10 +690,6 @@ void Environment::popCall(const CXXConstructExpr *Call,
   // See also comment in `popCall(const CallExpr *, const Environment &)` above.
   this->LocToVal = std::move(CalleeEnv.LocToVal);
   this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
-
-  if (Value *Val = CalleeEnv.getValue(*CalleeEnv.ThisPointeeLoc)) {
-    setValue(*Call, *Val);
-  }
 }
 
 bool Environment::equivalentTo(const Environment &Other,
@@ -926,24 +913,23 @@ void Environment::initializeFieldsWithValues(RecordStorageLocation &Loc,
 }
 
 void Environment::setValue(const StorageLocation &Loc, Value &Val) {
-  assert(!isa<RecordValue>(&Val) || &cast<RecordValue>(&Val)->getLoc() == &Loc);
-
+  // Records should not be associated with values.
+  assert(!isa<RecordStorageLocation>(Loc));
   LocToVal[&Loc] = &Val;
 }
 
 void Environment::setValue(const Expr &E, Value &Val) {
   const Expr &CanonE = ignoreCFGOmittedNodes(E);
 
-  if (auto *RecordVal = dyn_cast<RecordValue>(&Val)) {
-    assert(&RecordVal->getLoc() == &getResultObjectLocation(CanonE));
-    (void)RecordVal;
-  }
-
   assert(CanonE.isPRValue());
+  // Records should not be associated with values.
+  assert(!CanonE.getType()->isRecordType());
   ExprToVal[&CanonE] = &Val;
 }
 
 Value *Environment::getValue(const StorageLocation &Loc) const {
+  // Records should not be associated with values.
+  assert(!isa<RecordStorageLocation>(Loc));
   return LocToVal.lookup(&Loc);
 }
 
@@ -955,6 +941,9 @@ Value *Environment::getValue(const ValueDecl &D) const {
 }
 
 Value *Environment::getValue(const Expr &E) const {
+  // Records should not be associated with values.
+  assert(!E.getType()->isRecordType());
+
   if (E.isPRValue()) {
     auto It = ExprToVal.find(&ignoreCFGOmittedNodes(E));
     return It == ExprToVal.end() ? nullptr : It->second;
@@ -983,6 +972,7 @@ Value *Environment::createValueUnlessSelfReferential(
     int &CreatedValuesCount) {
   assert(!Type.isNull());
   assert(!Type->isReferenceType());
+  assert(!Type->isRecordType());
 
   // Allow unlimited fields at depth 1; only cap at deeper nesting levels.
   if ((Depth > 1 && CreatedValuesCount > MaxCompositeValueSize) ||
@@ -1011,15 +1001,6 @@ Value *Environment::createValueUnlessSelfReferential(
     return &arena().create<PointerValue>(PointeeLoc);
   }
 
-  if (Type->isRecordType()) {
-    CreatedValuesCount++;
-    auto &Loc = cast<RecordStorageLocation>(createStorageLocation(Type));
-    initializeFieldsWithValues(Loc, Loc.getType(), Visited, Depth,
-                               CreatedValuesCount);
-
-    return &refreshRecordValue(Loc, *this);
-  }
-
   return nullptr;
 }
 
@@ -1029,20 +1010,23 @@ Environment::createLocAndMaybeValue(QualType Ty,
                                     int Depth, int &CreatedValuesCount) {
   if (!Visited.insert(Ty.getCanonicalType()).second)
     return createStorageLocation(Ty.getNonReferenceType());
-  Value *Val = createValueUnlessSelfReferential(
-      Ty.getNonReferenceType(), Visited, Depth, CreatedValuesCount);
-  Visited.erase(Ty.getCanonicalType());
+  auto EraseVisited = llvm::make_scope_exit(
+      [&Visited, Ty] { Visited.erase(Ty.getCanonicalType()); });
 
   Ty = Ty.getNonReferenceType();
 
-  if (Val == nullptr)
-    return createStorageLocation(Ty);
-
-  if (Ty->isRecordType())
-    return cast<RecordValue>(Val)->getLoc();
+  if (Ty->isRecordType()) {
+    auto &Loc = cast<RecordStorageLocation>(createStorageLocation(Ty));
+    initializeFieldsWithValues(Loc, Ty, Visited, Depth, CreatedValuesCount);
+    return Loc;
+  }
 
   StorageLocation &Loc = createStorageLocation(Ty);
-  setValue(Loc, *Val);
+
+  if (Value *Val = createValueUnlessSelfReferential(Ty, Visited, Depth,
+                                                    CreatedValuesCount))
+    setValue(Loc, *Val);
+
   return Loc;
 }
 
@@ -1054,10 +1038,11 @@ void Environment::initializeFieldsWithValues(RecordStorageLocation &Loc,
   auto initField = [&](QualType FieldType, StorageLocation &FieldLoc) {
     if (FieldType->isRecordType()) {
       auto &FieldRecordLoc = cast<RecordStorageLocation>(FieldLoc);
-      setValue(FieldRecordLoc, create<RecordValue>(FieldRecordLoc));
       initializeFieldsWithValues(FieldRecordLoc, FieldRecordLoc.getType(),
                                  Visited, Depth + 1, CreatedValuesCount);
     } else {
+      if (getValue(FieldLoc) != nullptr)
+        return;
       if (!Visited.insert(FieldType.getCanonicalType()).second)
         return;
       if (Value *Val = createValueUnlessSelfReferential(
@@ -1098,7 +1083,7 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
     // be null.
     if (InitExpr) {
       if (auto *InitExprLoc = getStorageLocation(*InitExpr))
-          return *InitExprLoc;
+        return *InitExprLoc;
     }
 
     // Even though we have an initializer, we might not get an
@@ -1115,7 +1100,6 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
     auto &RecordLoc = cast<RecordStorageLocation>(Loc);
     if (!InitExpr)
       initializeFieldsWithValues(RecordLoc);
-    refreshRecordValue(RecordLoc, *this);
   } else {
     Value *Val = nullptr;
     if (InitExpr)
@@ -1207,9 +1191,7 @@ void Environment::dump(raw_ostream &OS) const {
   DACtx->dumpFlowCondition(FlowConditionToken, OS);
 }
 
-void Environment::dump() const {
-  dump(llvm::dbgs());
-}
+void Environment::dump() const { dump(llvm::dbgs()); }
 
 Environment::PrValueToResultObject Environment::buildResultObjectMap(
     DataflowAnalysisContext *DACtx, const FunctionDecl *FuncDecl,
@@ -1252,26 +1234,6 @@ RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
     return nullptr;
   }
   return Env.get<RecordStorageLocation>(*Base);
-}
-
-RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env) {
-  auto &NewVal = Env.create<RecordValue>(Loc);
-  Env.setValue(Loc, NewVal);
-  return NewVal;
-}
-
-RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env) {
-  assert(Expr.getType()->isRecordType());
-
-  if (Expr.isPRValue())
-    refreshRecordValue(Env.getResultObjectLocation(Expr), Env);
-
-  if (auto *Loc = Env.get<RecordStorageLocation>(Expr))
-    refreshRecordValue(*Loc, Env);
-
-  auto &NewVal = *cast<RecordValue>(Env.createValue(Expr.getType()));
-  Env.setStorageLocation(Expr, NewVal.getLoc());
-  return NewVal;
 }
 
 } // namespace dataflow

@@ -212,11 +212,8 @@ define <3 x i1> @positive_vec_poison0(<3 x i32> %arg) {
 
 define <3 x i1> @positive_vec_poison1(<3 x i32> %arg) {
 ; CHECK-LABEL: @positive_vec_poison1(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <3 x i32> [[ARG:%.*]], <i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[ARG]], <i32 128, i32 poison, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult <3 x i32> [[T2]], <i32 256, i32 256, i32 256>
-; CHECK-NEXT:    [[T4:%.*]] = and <3 x i1> [[T1]], [[T3]]
-; CHECK-NEXT:    ret <3 x i1> [[T4]]
+; CHECK-NEXT:    [[T4_SIMPLIFIED:%.*]] = icmp ult <3 x i32> [[ARG:%.*]], <i32 128, i32 128, i32 128>
+; CHECK-NEXT:    ret <3 x i1> [[T4_SIMPLIFIED]]
 ;
   %t1 = icmp sgt <3 x i32> %arg, <i32 -1, i32 -1, i32 -1>
   %t2 = add <3 x i32> %arg, <i32 128, i32 poison, i32 128>
@@ -227,11 +224,8 @@ define <3 x i1> @positive_vec_poison1(<3 x i32> %arg) {
 
 define <3 x i1> @positive_vec_poison2(<3 x i32> %arg) {
 ; CHECK-LABEL: @positive_vec_poison2(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <3 x i32> [[ARG:%.*]], <i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[ARG]], <i32 128, i32 128, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult <3 x i32> [[T2]], <i32 256, i32 poison, i32 256>
-; CHECK-NEXT:    [[T4:%.*]] = and <3 x i1> [[T1]], [[T3]]
-; CHECK-NEXT:    ret <3 x i1> [[T4]]
+; CHECK-NEXT:    [[T4_SIMPLIFIED:%.*]] = icmp ult <3 x i32> [[ARG:%.*]], <i32 128, i32 128, i32 128>
+; CHECK-NEXT:    ret <3 x i1> [[T4_SIMPLIFIED]]
 ;
   %t1 = icmp sgt <3 x i32> %arg, <i32 -1, i32 -1, i32 -1>
   %t2 = add <3 x i32> %arg, <i32 128, i32 128, i32 128>
@@ -242,11 +236,8 @@ define <3 x i1> @positive_vec_poison2(<3 x i32> %arg) {
 
 define <3 x i1> @positive_vec_poison3(<3 x i32> %arg) {
 ; CHECK-LABEL: @positive_vec_poison3(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <3 x i32> [[ARG:%.*]], <i32 -1, i32 poison, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[ARG]], <i32 128, i32 poison, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult <3 x i32> [[T2]], <i32 256, i32 256, i32 256>
-; CHECK-NEXT:    [[T4:%.*]] = and <3 x i1> [[T1]], [[T3]]
-; CHECK-NEXT:    ret <3 x i1> [[T4]]
+; CHECK-NEXT:    [[T4_SIMPLIFIED:%.*]] = icmp ult <3 x i32> [[ARG:%.*]], <i32 128, i32 128, i32 128>
+; CHECK-NEXT:    ret <3 x i1> [[T4_SIMPLIFIED]]
 ;
   %t1 = icmp sgt <3 x i32> %arg, <i32 -1, i32 poison, i32 -1>
   %t2 = add <3 x i32> %arg, <i32 128, i32 poison, i32 128>
@@ -257,11 +248,8 @@ define <3 x i1> @positive_vec_poison3(<3 x i32> %arg) {
 
 define <3 x i1> @positive_vec_poison4(<3 x i32> %arg) {
 ; CHECK-LABEL: @positive_vec_poison4(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <3 x i32> [[ARG:%.*]], <i32 -1, i32 poison, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[ARG]], <i32 128, i32 128, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult <3 x i32> [[T2]], <i32 256, i32 poison, i32 256>
-; CHECK-NEXT:    [[T4:%.*]] = and <3 x i1> [[T1]], [[T3]]
-; CHECK-NEXT:    ret <3 x i1> [[T4]]
+; CHECK-NEXT:    [[T4_SIMPLIFIED:%.*]] = icmp ult <3 x i32> [[ARG:%.*]], <i32 128, i32 128, i32 128>
+; CHECK-NEXT:    ret <3 x i1> [[T4_SIMPLIFIED]]
 ;
   %t1 = icmp sgt <3 x i32> %arg, <i32 -1, i32 poison, i32 -1>
   %t2 = add <3 x i32> %arg, <i32 128, i32 128, i32 128>
@@ -272,11 +260,8 @@ define <3 x i1> @positive_vec_poison4(<3 x i32> %arg) {
 
 define <3 x i1> @positive_vec_poison5(<3 x i32> %arg) {
 ; CHECK-LABEL: @positive_vec_poison5(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <3 x i32> [[ARG:%.*]], <i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[ARG]], <i32 128, i32 poison, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult <3 x i32> [[T2]], <i32 256, i32 poison, i32 256>
-; CHECK-NEXT:    [[T4:%.*]] = and <3 x i1> [[T1]], [[T3]]
-; CHECK-NEXT:    ret <3 x i1> [[T4]]
+; CHECK-NEXT:    [[T4_SIMPLIFIED:%.*]] = icmp ult <3 x i32> [[ARG:%.*]], <i32 128, i32 128, i32 128>
+; CHECK-NEXT:    ret <3 x i1> [[T4_SIMPLIFIED]]
 ;
   %t1 = icmp sgt <3 x i32> %arg, <i32 -1, i32 -1, i32 -1>
   %t2 = add <3 x i32> %arg, <i32 128, i32 poison, i32 128>
@@ -287,11 +272,8 @@ define <3 x i1> @positive_vec_poison5(<3 x i32> %arg) {
 
 define <3 x i1> @positive_vec_poison6(<3 x i32> %arg) {
 ; CHECK-LABEL: @positive_vec_poison6(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <3 x i32> [[ARG:%.*]], <i32 -1, i32 poison, i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[ARG]], <i32 128, i32 poison, i32 128>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult <3 x i32> [[T2]], <i32 256, i32 poison, i32 256>
-; CHECK-NEXT:    [[T4:%.*]] = and <3 x i1> [[T1]], [[T3]]
-; CHECK-NEXT:    ret <3 x i1> [[T4]]
+; CHECK-NEXT:    [[T4_SIMPLIFIED:%.*]] = icmp ult <3 x i32> [[ARG:%.*]], <i32 128, i32 128, i32 128>
+; CHECK-NEXT:    ret <3 x i1> [[T4_SIMPLIFIED]]
 ;
   %t1 = icmp sgt <3 x i32> %arg, <i32 -1, i32 poison, i32 -1>
   %t2 = add <3 x i32> %arg, <i32 128, i32 poison, i32 128>

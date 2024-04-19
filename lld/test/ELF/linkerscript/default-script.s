@@ -17,7 +17,7 @@
 # RUN: ld.lld --default-script def.t b.t a.o -o out1
 # RUN: llvm-readelf -Ss out1 | FileCheck %s --check-prefix=CHECK1
 # RUN: ld.lld -dT def.t b.t a.o -o out1a && cmp out1 out1a
-## The last -dT wins.
+## If multiple -dT options are specified, the last -dT wins.
 # RUN: ld.lld -dT a.t -dT def.t b.t a.o -o out1a && cmp out1 out1a
 
 # RUN: mkdir d && cp def.t d/default.t
