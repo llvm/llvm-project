@@ -142,7 +142,6 @@ uint64_t mlir::detail::getDefaultABIAlignment(
     ArrayRef<DataLayoutEntryInterface> params) {
   // Natural alignment is the closest power-of-two number above. For scalable
   // vectors, aligning them to the same as the base vector is sufficient.
-  // This should be consitent with LLVM.
   if (isa<VectorType>(type))
     return llvm::PowerOf2Ceil(dataLayout.getTypeSize(type).getKnownMinValue());
 
