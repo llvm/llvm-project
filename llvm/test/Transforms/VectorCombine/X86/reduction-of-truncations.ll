@@ -49,7 +49,7 @@ define i8 @reduce_or_trunc_v8i32_i8(<8 x i32> %a0)  {
   %red = tail call i8 @llvm.vector.reduce.or.v8i32(<8 x i8> %tr)
   ret i8 %red
 }
-declare i32 @llvm.vector.reduce.or.v8i8(<8 x i8>)
+declare i8 @llvm.vector.reduce.or.v8i8(<8 x i8>)
 
 define i8 @reduce_xor_trunc_v16i64_i8(<16 x i64> %a0)  {
 ; CHECK-LABEL: @reduce_xor_trunc_v16i64_i8(

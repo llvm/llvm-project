@@ -120,7 +120,7 @@ public:
   ASTContext &getASTContext() const { return Ctx; }
 
   NamespaceDecl *getAnonymousNamespace() const { return AnonymousNamespace; }
-  void setAnonymousNamespace(NamespaceDecl *D) { AnonymousNamespace = D; }
+  void setAnonymousNamespace(NamespaceDecl *D);
 
   static TranslationUnitDecl *Create(ASTContext &C);
 
@@ -3149,7 +3149,7 @@ public:
   bool isBitField() const { return BitField; }
 
   /// Determines whether this is an unnamed bitfield.
-  bool isUnnamedBitfield() const { return isBitField() && !getDeclName(); }
+  bool isUnnamedBitField() const { return isBitField() && !getDeclName(); }
 
   /// Determines whether this field is a
   /// representative for an anonymous struct or union. Such fields are
