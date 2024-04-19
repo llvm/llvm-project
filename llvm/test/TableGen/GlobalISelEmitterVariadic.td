@@ -1,4 +1,5 @@
 // RUN: llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common %s -o - | FileCheck %s
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../include -I %p/Common %s -o - -DIGNORE | FileCheck %s --check-prefix=CHECK0
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
@@ -17,11 +18,20 @@ def TWO : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2), []>;
 def : Pat<(build_vector GPR32:$src1),
           (ONE GPR32:$src1)> {
   let AddedComplexity = 1000;
+#ifdef IGNORE
+  let GISelShouldIgnore = 1;
+#endif
 }
 
+#ifdef IGNORE
+let GISelShouldIgnore = 1 in
+#endif
 def : Pat<(build_vector GPR32:$src1, GPR32:$src2),
           (TWO GPR32:$src1, GPR32:$src2)>;
 
+// CHECK0: constexpr static uint8_t MatchTable0[] = {
+// CHECK0-NEXT: GIM_Reject,
+// CHECK0-NEXT:}; // Size: 1 bytes
 // CHECK:       GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4([[NEXT_OPCODE_LABEL:[0-9]+]]),
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_BUILD_VECTOR),
 // CHECK-NEXT:    GIM_Try, /*On fail goto*//*Label 1*/ GIMT_Encode4([[NEXT_NUM_OPERANDS_LABEL_1:[0-9]+]]), // Rule ID 0 //
