@@ -24,6 +24,7 @@ body: |
     ; GFX9-NEXT: [[V_XAD_U32_e64_:%[0-9]+]]:vgpr_32 = V_XAD_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
     ; GFX9-NEXT: [[V_SUB_I32_e64_:%[0-9]+]]:vgpr_32 = V_SUB_I32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
     ; GFX9-NEXT: [[V_SUB_I32_e64_1:%[0-9]+]]:vgpr_32 = V_SUB_I32_e64 [[COPY1]], [[COPY]], 0, implicit $exec
+    ;
     ; GFX10-LABEL: name: commute_vop3
     ; GFX10: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX10-NEXT: {{  $}}

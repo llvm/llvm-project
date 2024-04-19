@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/MLProgram/IR/MLProgram.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -24,6 +25,18 @@ using namespace mlir::ml_program;
 #include "mlir/Dialect/MLProgram/IR/MLProgramTypes.cpp.inc"
 
 namespace {
+
+struct MLProgramInlinerInterface : public DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+
+  bool isLegalToInline(Operation *, Region *, bool,
+                       IRMapping &) const override {
+    // We have no specific opinion on whether ops defined in this dialect should
+    // be inlined.
+    return true;
+  }
+};
+
 struct MLProgramOpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
 
@@ -53,5 +66,5 @@ void ml_program::MLProgramDialect::initialize() {
 #include "mlir/Dialect/MLProgram/IR/MLProgramOps.cpp.inc"
       >();
 
-  addInterfaces<MLProgramOpAsmDialectInterface>();
+  addInterfaces<MLProgramInlinerInterface, MLProgramOpAsmDialectInterface>();
 }

@@ -43,10 +43,10 @@ static cl::opt<bool>
 UseAddressTopByteIgnored("aarch64-use-tbi", cl::desc("Assume that top byte of "
                          "an address is ignored"), cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    UseNonLazyBind("aarch64-enable-nonlazybind",
-                   cl::desc("Call nonlazybind functions via direct GOT load"),
-                   cl::init(false), cl::Hidden);
+static cl::opt<bool> MachOUseNonLazyBind(
+    "aarch64-macho-enable-nonlazybind",
+    cl::desc("Call nonlazybind functions via direct GOT load for Mach-O"),
+    cl::Hidden);
 
 static cl::opt<bool> UseAA("aarch64-use-aa", cl::init(true),
                            cl::desc("Enable the use of AA during codegen."));
@@ -140,6 +140,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA76:
   case CortexA77:
   case CortexA78:
+  case CortexA78AE:
   case CortexA78C:
   case CortexR82:
   case CortexX1:
@@ -397,7 +398,7 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   if (GV->isTagged())
     return AArch64II::MO_GOT;
 
-  if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV)) {
+  if (!TM.shouldAssumeDSOLocal(GV)) {
     if (GV->hasDLLImportStorageClass()) {
       return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
     }
@@ -433,8 +434,8 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
 
   // NonLazyBind goes via GOT unless we know it's available locally.
   auto *F = dyn_cast<Function>(GV);
-  if (UseNonLazyBind && F && F->hasFnAttribute(Attribute::NonLazyBind) &&
-      !TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+  if ((!isTargetMachO() || MachOUseNonLazyBind) && F &&
+      F->hasFnAttribute(Attribute::NonLazyBind) && !TM.shouldAssumeDSOLocal(GV))
     return AArch64II::MO_GOT;
 
   if (getTargetTriple().isOSWindows()) {
@@ -469,6 +470,45 @@ void AArch64Subtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // help nearly no benchmark on out-of-order architectures, on the other hand
   // it regresses register pressure on a few benchmarking.
   Policy.DisableLatencyHeuristic = DisableLatencySchedHeuristic;
+}
+
+void AArch64Subtarget::adjustSchedDependency(
+    SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx, SDep &Dep,
+    const TargetSchedModel *SchedModel) const {
+  if (!SchedModel || Dep.getKind() != SDep::Kind::Data || !Dep.getReg() ||
+      !Def->isInstr() || !Use->isInstr() ||
+      (Def->getInstr()->getOpcode() != TargetOpcode::BUNDLE &&
+       Use->getInstr()->getOpcode() != TargetOpcode::BUNDLE))
+    return;
+
+  // If the Def is a BUNDLE, find the last instruction in the bundle that defs
+  // the register.
+  const MachineInstr *DefMI = Def->getInstr();
+  if (DefMI->getOpcode() == TargetOpcode::BUNDLE) {
+    Register Reg = DefMI->getOperand(DefOpIdx).getReg();
+    for (const auto &Op : const_mi_bundle_ops(*DefMI)) {
+      if (Op.isReg() && Op.isDef() && Op.getReg() == Reg) {
+        DefMI = Op.getParent();
+        DefOpIdx = Op.getOperandNo();
+      }
+    }
+  }
+
+  // If the Use is a BUNDLE, find the first instruction that uses the Reg.
+  const MachineInstr *UseMI = Use->getInstr();
+  if (UseMI->getOpcode() == TargetOpcode::BUNDLE) {
+    Register Reg = UseMI->getOperand(UseOpIdx).getReg();
+    for (const auto &Op : const_mi_bundle_ops(*UseMI)) {
+      if (Op.isReg() && Op.isUse() && Op.getReg() == Reg) {
+        UseMI = Op.getParent();
+        UseOpIdx = Op.getOperandNo();
+        break;
+      }
+    }
+  }
+
+  Dep.setLatency(
+      SchedModel->computeOperandLatency(DefMI, DefOpIdx, UseMI, UseOpIdx));
 }
 
 bool AArch64Subtarget::enableEarlyIfConversion() const {

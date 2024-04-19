@@ -131,13 +131,11 @@ int main(void) {
 #pragma omp atomic write
   ullx = ullv;
 // CHECK: load float, ptr
-// CHECK: bitcast float {{.*}} to i32
-// CHECK: store atomic i32 {{.*}}, ptr {{.*}} monotonic, align 4
+// CHECK: store atomic float {{.*}}, ptr {{.*}} monotonic, align 4
 #pragma omp atomic write
   fx = fv;
 // CHECK: load double, ptr
-// CHECK: bitcast double {{.*}} to i64
-// CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8
+// CHECK: store atomic double {{.*}}, ptr {{.*}} monotonic, align 8
 #pragma omp atomic write
   dx = dv;
 // CHECK: [[LD:%.+]] = load x86_fp80, ptr
@@ -215,11 +213,11 @@ int main(void) {
 #pragma omp atomic write
   cix = lv;
 // CHECK: load i64, ptr
-// CHECK: store atomic i32 %{{.+}}, ptr {{.*}} monotonic, align 4
+// CHECK: store atomic float %{{.+}}, ptr {{.*}} monotonic, align 4
 #pragma omp atomic write
   fx = ulv;
 // CHECK: load i64, ptr
-// CHECK: store atomic i64 %{{.+}}, ptr {{.*}} monotonic, align 8
+// CHECK: store atomic double %{{.+}}, ptr {{.*}} monotonic, align 8
 #pragma omp atomic write
   dx = llv;
 // CHECK: load i64, ptr
@@ -415,7 +413,7 @@ int main(void) {
   bfx4.a = ldv;
 // CHECK: load x86_fp80, ptr @{{.+}}
 // CHECK: [[NEW_VAL:%.+]] = fptosi x86_fp80 %{{.+}} to i32
-// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr (i8, ptr @{{.+}}, i64 2) monotonic, align 1
+// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr inbounds (%struct.BitFields4_packed, ptr @{{.+}}, i32 0, i32 1) monotonic, align 1
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD_BF_VALUE:%.+]] = phi i8 [ [[PREV_VALUE]], %[[EXIT]] ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
@@ -425,7 +423,7 @@ int main(void) {
 // CHECK: or i8 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i8 %{{.+}}, ptr [[LDTEMP:%.+]]
 // CHECK: [[NEW_BF_VALUE:%.+]] = load i8, ptr [[LDTEMP]]
-// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr (i8, ptr @{{.+}}, i64 2), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
+// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds (%struct.BitFields4_packed, ptr @{{.+}}, i32 0, i32 1), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
 // CHECK: [[FAILED_OLD_VAL]] = extractvalue { i8, i1 } [[RES]], 0
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
@@ -453,7 +451,7 @@ int main(void) {
   bfx4.b = ldv;
 // CHECK: load x86_fp80, ptr @{{.+}}
 // CHECK: [[NEW_VAL:%.+]] = fptosi x86_fp80 %{{.+}} to i64
-// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr (i8, ptr @{{.+}}, i64 2) monotonic, align 1
+// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr inbounds (%struct.BitFields4_packed, ptr @{{.+}}, i32 0, i32 1) monotonic, align 1
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD_BF_VALUE:%.+]] = phi i8 [ [[PREV_VALUE]], %[[EXIT]] ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
@@ -464,7 +462,7 @@ int main(void) {
 // CHECK: or i8 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i8 %{{.+}}, ptr [[LDTEMP:%.+]]
 // CHECK: [[NEW_BF_VALUE:%.+]] = load i8, ptr [[LDTEMP]]
-// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr (i8, ptr @{{.+}}, i64 2), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
+// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds (%struct.BitFields4_packed, ptr @{{.+}}, i32 0, i32 1), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
 // CHECK: [[FAILED_OLD_VAL]] = extractvalue { i8, i1 } [[RES]], 0
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
@@ -491,8 +489,7 @@ int main(void) {
   float2x.x = ulv;
 // CHECK: call i32 @llvm.read_register.i32(
 // CHECK: sitofp i32 %{{.+}} to double
-// CHECK: bitcast double %{{.+}} to i64
-// CHECK: store atomic i64 %{{.+}}, ptr @{{.+}} seq_cst, align 8
+// CHECK: store atomic double %{{.+}}, ptr @{{.+}} seq_cst, align 8
 // CHECK: call{{.*}} @__kmpc_flush(
 #pragma omp atomic write seq_cst
   dv = rix;

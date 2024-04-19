@@ -125,6 +125,8 @@ Improvements and New Features
   ``${PREFIX}/share/libc++/v1``.
 
 - AddressSanitizer annotations have been added to ``std::basic_string``.
+  These annotations are enabled for all allocators by default.
+  It's only enabled for long strings, strings using the small buffer optimization are not annotated.
 
 - The libc++ source code has been formatted with ``clang-format``. This
   `discourse thread <https://discourse.llvm.org/t/rfc-clang-formatting-all-of-libc-once-and-for-all>`_

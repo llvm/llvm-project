@@ -144,8 +144,8 @@ class UniversalTestCase(TestBase):
 
         bkpt = target.BreakpointCreateBySourceRegex("sleep", lldb.SBFileSpec("main.c"))
         self.assertTrue(bkpt.IsValid(), "Valid breakpoint")
-        self.assertTrue(
-            bkpt.GetNumLocations() >= 1, "Our main breakpoint has locations."
+        self.assertGreaterEqual(
+            bkpt.GetNumLocations(), 1, "Our main breakpoint has locations."
         )
 
         popen = self.spawnSubprocess(exe, ["keep_waiting"])
@@ -167,4 +167,4 @@ class UniversalTestCase(TestBase):
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertEqual(len(threads), 1)
         thread = threads[0]
-        self.assertTrue(thread.GetNumFrames() > 1, "We were able to backtrace.")
+        self.assertGreater(thread.GetNumFrames(), 1, "We were able to backtrace.")

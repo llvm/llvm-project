@@ -77,6 +77,11 @@
 
 using namespace llvm;
 
+static const char LintAbortOnErrorArgName[] = "lint-abort-on-error";
+static cl::opt<bool>
+    LintAbortOnError(LintAbortOnErrorArgName, cl::init(false),
+                     cl::desc("In the Lint pass, abort on errors."));
+
 namespace {
 namespace MemRef {
 static const unsigned Read = 1;
@@ -345,10 +350,7 @@ void Lint::visitCallBase(CallBase &I) {
     }
 
     case Intrinsic::vastart:
-      Check(I.getParent()->getParent()->isVarArg(),
-            "Undefined behavior: va_start called in a non-varargs function",
-            &I);
-
+      // vastart in non-varargs function is rejected by the verifier
       visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
                            std::nullopt, nullptr, MemRef::Read | MemRef::Write);
       break;
@@ -715,6 +717,10 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   Lint L(Mod, DL, AA, AC, DT, TLI);
   L.visit(F);
   dbgs() << L.MessagesStr.str();
+  if (LintAbortOnError && !L.MessagesStr.str().empty())
+    report_fatal_error(Twine("Linter found errors, aborting. (enabled by --") +
+                           LintAbortOnErrorArgName + ")",
+                       false);
   return PreservedAnalyses::all();
 }
 

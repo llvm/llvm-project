@@ -1,5 +1,6 @@
 include(CMakePushCheckState)
 include(CheckLibraryExists)
+include(CheckSymbolExists)
 include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
@@ -97,6 +98,8 @@ int main(void) { return 0; }
   cmake_pop_check_state()
 endif()
 
+check_symbol_exists(__PICOLIBC__ "string.h" PICOLIBC)
+
 # Check libraries
 if(WIN32 AND NOT MINGW)
   # TODO(compnerd) do we want to support an emulation layer that allows for the
@@ -113,6 +116,10 @@ elseif(FUCHSIA)
   set(LIBCXX_HAS_RT_LIB NO)
   check_library_exists(atomic __atomic_fetch_add_8 "" LIBCXX_HAS_ATOMIC_LIB)
 elseif(ANDROID)
+  set(LIBCXX_HAS_PTHREAD_LIB NO)
+  set(LIBCXX_HAS_RT_LIB NO)
+  set(LIBCXX_HAS_ATOMIC_LIB NO)
+elseif(PICOLIBC)
   set(LIBCXX_HAS_PTHREAD_LIB NO)
   set(LIBCXX_HAS_RT_LIB NO)
   set(LIBCXX_HAS_ATOMIC_LIB NO)

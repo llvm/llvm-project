@@ -157,7 +157,8 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
 bool Parser::ParseOptionalCXXScopeSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
-    IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration) {
+    const IdentifierInfo **LastII, bool OnlyNamespace,
+    bool InUsingDeclaration) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
 
@@ -806,9 +807,8 @@ ExprResult Parser::ParseLambdaExpression() {
 ///
 /// If we are not looking at a lambda expression, returns ExprError().
 ExprResult Parser::TryParseLambdaExpression() {
-  assert(getLangOpts().CPlusPlus11
-         && Tok.is(tok::l_square)
-         && "Not at the start of a possible lambda expression.");
+  assert(getLangOpts().CPlusPlus && Tok.is(tok::l_square) &&
+         "Not at the start of a possible lambda expression.");
 
   const Token Next = NextToken();
   if (Next.is(tok::eof)) // Nothing else to lookup here...
@@ -1326,7 +1326,9 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                      LambdaIntroducer &Intro) {
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
-  Diag(LambdaBeginLoc, diag::warn_cxx98_compat_lambda);
+  Diag(LambdaBeginLoc, getLangOpts().CPlusPlus11
+                           ? diag::warn_cxx98_compat_lambda
+                           : diag::ext_lambda);
 
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(), LambdaBeginLoc,
                                 "lambda expression parsing");
@@ -1385,6 +1387,16 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       Diag(RAngleLoc,
            diag::err_lambda_template_parameter_list_empty);
     } else {
+      // We increase the template depth before recursing into a requires-clause.
+      //
+      // This depth is used for setting up a LambdaScopeInfo (in
+      // Sema::RecordParsingTemplateParameterDepth), which is used later when
+      // inventing template parameters in InventTemplateParameter.
+      //
+      // This way, abbreviated generic lambdas could have different template
+      // depths, avoiding substitution into the wrong template parameters during
+      // constraint satisfaction check.
+      ++CurTemplateDepthTracker;
       ExprResult RequiresClause;
       if (TryConsumeToken(tok::kw_requires)) {
         RequiresClause =
@@ -1396,7 +1408,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
       Actions.ActOnLambdaExplicitTemplateParameterList(
           Intro, LAngleLoc, TemplateParams, RAngleLoc, RequiresClause);
-      ++CurTemplateDepthTracker;
     }
   }
 
@@ -2616,7 +2627,7 @@ bool Parser::ParseUnqualifiedIdTemplateId(
     // UnqualifiedId.
 
     // FIXME: Store name for literal operator too.
-    IdentifierInfo *TemplateII =
+    const IdentifierInfo *TemplateII =
         Id.getKind() == UnqualifiedIdKind::IK_Identifier ? Id.Identifier
                                                          : nullptr;
     OverloadedOperatorKind OpKind =
@@ -3899,7 +3910,10 @@ ExprResult Parser::ParseTypeTrait() {
   SmallVector<ParsedType, 2> Args;
   do {
     // Parse the next type.
-    TypeResult Ty = ParseTypeName();
+    TypeResult Ty = ParseTypeName(/*SourceRange=*/nullptr,
+                                  getLangOpts().CPlusPlus
+                                      ? DeclaratorContext::TemplateTypeArg
+                                      : DeclaratorContext::TypeName);
     if (Ty.isInvalid()) {
       Parens.skipToEnd();
       return ExprError();
@@ -3941,7 +3955,8 @@ ExprResult Parser::ParseArrayTypeTrait() {
   if (T.expectAndConsume())
     return ExprError();
 
-  TypeResult Ty = ParseTypeName();
+  TypeResult Ty = ParseTypeName(/*SourceRange=*/nullptr,
+                                DeclaratorContext::TemplateTypeArg);
   if (Ty.isInvalid()) {
     SkipUntil(tok::comma, StopAtSemi);
     SkipUntil(tok::r_paren, StopAtSemi);

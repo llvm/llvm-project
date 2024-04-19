@@ -1,4 +1,6 @@
-// RUN: mlir-opt --mesh-spmdization --test-constant-fold %s | FileCheck %s
+// RUN: mlir-opt \
+// RUN:   --pass-pipeline="builtin.module(func.func(mesh-spmdization,test-constant-fold))" \
+// RUN:   %s | FileCheck %s
 
 mesh.mesh @mesh_1d(shape = 2)
 
@@ -126,4 +128,18 @@ func.func @multiple_chained_ops(
   %7 = mesh.shard %6 to <@mesh_1d, [[0]]> annotate_for_users: tensor<2xi8>
   // CHECK: return %[[RESHARD3]] : tensor<1xi8>
   return %7 : tensor<2xi8>
+}
+
+// CHECK-LABEL: func @incomplete_sharding
+func.func @incomplete_sharding(
+  // CHECK-SAME: %[[ARG:.*]]: tensor<4x16xf32>
+  %arg0: tensor<8x16xf32>
+// CHECK-SAME: -> tensor<4x16xf32> {
+) -> tensor<8x16xf32> {
+  %0 = mesh.shard %arg0 to <@mesh_1d, [[0]]> annotate_for_users : tensor<8x16xf32>
+  // CHECK: %[[RES:.*]] = tosa.sigmoid %[[ARG]] : (tensor<4x16xf32>) -> tensor<4x16xf32>
+  %1 = tosa.sigmoid %0 : (tensor<8x16xf32>) -> tensor<8x16xf32>
+  %2 = mesh.shard %1 to <@mesh_1d, [[0]]> : tensor<8x16xf32>
+  // CHECK: return %[[RES]] : tensor<4x16xf32>
+  return %2 : tensor<8x16xf32>
 }

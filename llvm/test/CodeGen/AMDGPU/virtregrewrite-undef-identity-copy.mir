@@ -20,6 +20,7 @@ name:            undef_identity_copy
 tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
+  adjustsStack:    true
   hasCalls:        true
 machineFunctionInfo:
   isEntryFunction: true

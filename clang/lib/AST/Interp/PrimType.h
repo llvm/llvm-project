@@ -1,4 +1,4 @@
-//===--- PrimType.h - Types for the constexpr VM --------------------*- C++ -*-===//
+//===--- PrimType.h - Types for the constexpr VM ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,6 +45,10 @@ enum PrimType : unsigned {
   PT_Ptr,
   PT_FnPtr,
 };
+
+inline constexpr bool isPtrType(PrimType T) {
+  return T == PT_Ptr || T == PT_FnPtr;
+}
 
 enum class CastKind : uint8_t {
   Reinterpret,

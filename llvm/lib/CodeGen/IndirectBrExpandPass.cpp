@@ -113,7 +113,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
       // Handle the degenerate case of no successors by replacing the indirectbr
       // with unreachable as there is no successor available.
       if (IBr->getNumSuccessors() == 0) {
-        (void)new UnreachableInst(F.getContext(), IBr);
+        (void)new UnreachableInst(F.getContext(), IBr->getIterator());
         IBr->eraseFromParent();
         continue;
       }
@@ -183,7 +183,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
         for (BasicBlock *SuccBB : IBr->successors())
           Updates.push_back({DominatorTree::Delete, IBr->getParent(), SuccBB});
       }
-      (void)new UnreachableInst(F.getContext(), IBr);
+      (void)new UnreachableInst(F.getContext(), IBr->getIterator());
       IBr->eraseFromParent();
     }
     if (DTU) {
@@ -207,9 +207,10 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
   }
 
   auto GetSwitchValue = [CommonITy](IndirectBrInst *IBr) {
-    return CastInst::CreatePointerCast(
-        IBr->getAddress(), CommonITy,
-        Twine(IBr->getAddress()->getName()) + ".switch_cast", IBr);
+    return CastInst::CreatePointerCast(IBr->getAddress(), CommonITy,
+                                       Twine(IBr->getAddress()->getName()) +
+                                           ".switch_cast",
+                                       IBr->getIterator());
   };
 
   SmallVector<DominatorTree::UpdateType, 8> Updates;
@@ -243,7 +244,7 @@ bool runImpl(Function &F, const TargetLowering *TLI, DomTreeUpdater *DTU) {
       Updates.reserve(IndirectBrs.size() + 2 * IndirectBrSuccs.size());
     for (auto *IBr : IndirectBrs) {
       SwitchPN->addIncoming(GetSwitchValue(IBr), IBr->getParent());
-      BranchInst::Create(SwitchBB, IBr);
+      BranchInst::Create(SwitchBB, IBr->getIterator());
       if (DTU) {
         Updates.push_back({DominatorTree::Insert, IBr->getParent(), SwitchBB});
         for (BasicBlock *SuccBB : IBr->successors())

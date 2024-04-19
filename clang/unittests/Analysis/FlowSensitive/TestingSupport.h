@@ -28,7 +28,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
@@ -100,7 +100,7 @@ struct AnalysisOutputs {
   const FunctionDecl *Target;
   /// Contains the control flow graph built from the body of the `Target`
   /// function and is analyzed.
-  const ControlFlowContext &CFCtx;
+  const AdornedCFG &ACFG;
   /// The analysis to be run.
   TypeErasedDataflowAnalysis &Analysis;
   /// Initial state to start the analysis.
@@ -261,9 +261,10 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
           llvm::errc::invalid_argument, "Could not find the target function.");
 
     // Build the control flow graph for the target function.
-    auto MaybeCFCtx = ControlFlowContext::build(*Target);
-    if (!MaybeCFCtx) return MaybeCFCtx.takeError();
-    auto &CFCtx = *MaybeCFCtx;
+    auto MaybeACFG = AdornedCFG::build(*Target);
+    if (!MaybeACFG)
+      return MaybeACFG.takeError();
+    auto &ACFG = *MaybeACFG;
 
     // Initialize states for running dataflow analysis.
     DataflowAnalysisContext DACtx(AI.SolverFactory(),
@@ -271,7 +272,7 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     Environment InitEnv(DACtx, *Target);
     auto Analysis = AI.MakeAnalysis(Context, InitEnv);
 
-    AnalysisOutputs AO{AnnotatedCode, Context, Target, CFCtx,
+    AnalysisOutputs AO{AnnotatedCode, Context, Target, ACFG,
                        Analysis,      InitEnv, {}};
 
     // Additional test setup.
@@ -283,7 +284,7 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     // the post-analysis states for the CFG blocks that have been evaluated.
     llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
         MaybeBlockStates =
-            runTypeErasedDataflowAnalysis(CFCtx, Analysis, InitEnv,
+            runTypeErasedDataflowAnalysis(ACFG, Analysis, InitEnv,
                                           TypeErasedPostVisitCFG,
                                           MaxBlockVisitsInAnalysis);
     if (!MaybeBlockStates) return MaybeBlockStates.takeError();
@@ -432,6 +433,8 @@ llvm::Error checkDataflowWithNoopAnalysis(
         {});
 
 /// Returns the `ValueDecl` for the given identifier.
+/// The returned pointer is guaranteed to be non-null; the function asserts if
+/// no `ValueDecl` with the given name is found.
 ///
 /// Requirements:
 ///
@@ -475,6 +478,15 @@ ValueT &getValueForDecl(ASTContext &ASTCtx, const Environment &Env,
   return *cast<ValueT>(Env.getValue(*VD));
 }
 
+/// Returns the storage location for the field called `Name` of `Loc`.
+/// Optionally casts the field storage location to `T`.
+template <typename T = StorageLocation>
+std::enable_if_t<std::is_base_of_v<StorageLocation, T>, T &>
+getFieldLoc(const RecordStorageLocation &Loc, llvm::StringRef Name,
+            ASTContext &ASTCtx) {
+  return *cast<T>(Loc.getChild(*findValueDecl(ASTCtx, Name)));
+}
+
 /// Returns the value of a `Field` on the record referenced by `Loc.`
 /// Returns null if `Loc` is null.
 inline Value *getFieldValue(const RecordStorageLocation *Loc,
@@ -485,6 +497,14 @@ inline Value *getFieldValue(const RecordStorageLocation *Loc,
   if (FieldLoc == nullptr)
     return nullptr;
   return Env.getValue(*FieldLoc);
+}
+
+/// Returns the value of a `Field` on the record referenced by `Loc.`
+/// Returns null if `Loc` is null.
+inline Value *getFieldValue(const RecordStorageLocation *Loc,
+                            llvm::StringRef Name, ASTContext &ASTCtx,
+                            const Environment &Env) {
+  return getFieldValue(Loc, *findValueDecl(ASTCtx, Name), Env);
 }
 
 /// Creates and owns constraints which are boolean values.

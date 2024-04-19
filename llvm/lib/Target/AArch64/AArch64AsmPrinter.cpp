@@ -268,13 +268,19 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     if (Sign->getZExtValue())
       Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
 
-  if (Flags == 0)
-    return;
+  uint64_t PAuthABIPlatform = -1;
+  if (const auto *PAP = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("aarch64-elf-pauthabi-platform")))
+    PAuthABIPlatform = PAP->getZExtValue();
+  uint64_t PAuthABIVersion = -1;
+  if (const auto *PAV = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("aarch64-elf-pauthabi-version")))
+    PAuthABIVersion = PAV->getZExtValue();
 
   // Emit a .note.gnu.property section with the flags.
   auto *TS =
       static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
-  TS->emitNoteSection(Flags);
+  TS->emitNoteSection(Flags, PAuthABIPlatform, PAuthABIVersion);
 }
 
 void AArch64AsmPrinter::emitFunctionHeaderComment() {
@@ -1121,7 +1127,8 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
     TS->emitDirectiveVariantPCS(CurrentFnSym);
   }
 
-  if (TM.getTargetTriple().isWindowsArm64EC()) {
+  if (TM.getTargetTriple().isWindowsArm64EC() &&
+      !MF->getFunction().hasLocalLinkage()) {
     // For ARM64EC targets, a function definition's name is mangled differently
     // from the normal symbol. We emit the alias from the unmangled symbol to
     // mangled symbol name here.

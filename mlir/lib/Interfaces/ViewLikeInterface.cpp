@@ -27,7 +27,7 @@ LogicalResult mlir::verifyListOfOperandsOrIntegers(Operation *op,
     return op->emitError("expected ") << numElements << " " << name
                                       << " values, got " << staticVals.size();
   unsigned expectedNumDynamicEntries =
-      llvm::count_if(staticVals, [&](int64_t staticVal) {
+      llvm::count_if(staticVals, [](int64_t staticVal) {
         return ShapedType::isDynamic(staticVal);
       });
   if (values.size() != expectedNumDynamicEntries)

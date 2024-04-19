@@ -195,8 +195,8 @@ define i8 @test_redxor_v1i8(<1 x i8> %a) {
 ;
 ; GISEL-LABEL: test_redxor_v1i8:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    fmov x0, d0
-; GISEL-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
+; GISEL-NEXT:    umov w0, v0.b[0]
 ; GISEL-NEXT:    ret
   %xor_result = call i8 @llvm.vector.reduce.xor.v1i8(<1 x i8> %a)
   ret i8 %xor_result

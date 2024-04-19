@@ -19,18 +19,36 @@ T tmain(T argc) {
   for (int i = 0; i < 10; ++i) {
 #pragma omp scan inclusive(a)
   }
+#pragma omp parallel for reduction(inscan, +:a)
+  for (int i = 0; i < 10; ++i) {
+#pragma omp scan inclusive(a)
+  }
   return a + argc;
 }
 // CHECK:      static T a;
 // CHECK-NEXT: #pragma omp for reduction(inscan, +: a)
 // CHECK-NEXT: for (int i = 0; i < 10; ++i) {
 // CHECK-NEXT: #pragma omp scan inclusive(a){{$}}
+
+// CHECK: #pragma omp parallel for reduction(inscan, +: a)
+// CHECK-NEXT: for (int i = 0; i < 10; ++i) {
+// CHECK-NEXT: #pragma omp scan inclusive(a){{$}}
+
 // CHECK:      static int a;
 // CHECK-NEXT: #pragma omp for reduction(inscan, +: a)
 // CHECK-NEXT: for (int i = 0; i < 10; ++i) {
 // CHECK-NEXT: #pragma omp scan inclusive(a)
+
+// CHECK: #pragma omp parallel for reduction(inscan, +: a)
+// CHECK-NEXT: for (int i = 0; i < 10; ++i) {
+// CHECK-NEXT: #pragma omp scan inclusive(a)
+
 // CHECK:      static char a;
 // CHECK-NEXT: #pragma omp for reduction(inscan, +: a)
+// CHECK-NEXT: for (int i = 0; i < 10; ++i) {
+// CHECK-NEXT: #pragma omp scan inclusive(a)
+
+// CHECK: #pragma omp parallel for reduction(inscan, +: a)
 // CHECK-NEXT: for (int i = 0; i < 10; ++i) {
 // CHECK-NEXT: #pragma omp scan inclusive(a)
 

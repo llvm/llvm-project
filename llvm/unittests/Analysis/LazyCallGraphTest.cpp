@@ -1829,7 +1829,7 @@ TEST(LazyCallGraphTest, InternalRefEdgeToCallBothPartitionAndMerge) {
   // a cycle.
   //
   // Diagram for the graph we want on the left and the graph we use to force
-  // the ordering on the right. Edges ponit down or right.
+  // the ordering on the right. Edges point down or right.
   //
   //   A    |    A    |
   //  / \   |   / \   |

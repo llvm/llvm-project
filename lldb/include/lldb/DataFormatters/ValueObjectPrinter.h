@@ -127,7 +127,7 @@ protected:
   void PrintChild(lldb::ValueObjectSP child_sp,
                   const DumpValueObjectOptions::PointerDepth &curr_ptr_depth);
 
-  uint32_t GetMaxNumChildrenToPrint(bool &print_dotdotdot);
+  llvm::Expected<uint32_t> GetMaxNumChildrenToPrint(bool &print_dotdotdot);
 
   void
   PrintChildren(bool value_printed, bool summary_printed,

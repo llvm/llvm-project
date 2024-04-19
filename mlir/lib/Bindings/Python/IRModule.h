@@ -223,6 +223,7 @@ public:
   /// Clears all operations nested inside the given op using
   /// `clearOperation(MlirOperation)`.
   void clearOperationsInside(PyOperationBase &op);
+  void clearOperationsInside(MlirOperation op);
 
   /// Gets the count of live modules associated with this context.
   /// Used for testing.
@@ -577,6 +578,10 @@ public:
   // Implement the bound 'writeBytecode' method.
   void writeBytecode(const pybind11::object &fileObject,
                      std::optional<int64_t> bytecodeVersion);
+
+  // Implement the walk method.
+  void walk(std::function<MlirWalkResult(MlirOperation)> callback,
+            MlirWalkOrder walkOrder);
 
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);

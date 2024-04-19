@@ -39,3 +39,11 @@ contains
    print *, x
  end subroutine
 end subroutine
+
+!construct-name inside default(none)
+subroutine sb4
+  !$omp parallel default(none)
+    loop: do i = 1, 10
+    end do loop
+  !$omp end parallel
+end subroutine

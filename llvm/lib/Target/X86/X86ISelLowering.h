@@ -295,6 +295,10 @@ namespace llvm {
     // thunk at the address from an earlier relocation.
     TLSCALL,
 
+    // Thread Local Storage. A descriptor containing pointer to
+    // code and to argument to get the TLS offset for the symbol.
+    TLSDESC,
+
     // Exception Handling helpers.
     EH_RETURN,
 
@@ -1150,6 +1154,10 @@ namespace llvm {
 
     bool preferScalarizeSplat(SDNode *N) const override;
 
+    CondMergingParams
+    getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
+                                  const Value *Rhs) const override;
+
     bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                            CombineLevel Level) const override;
 
@@ -1314,6 +1322,8 @@ namespace llvm {
     bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
                                Type *Ty, unsigned AS,
                                Instruction *I = nullptr) const override;
+
+    bool addressingModeSupportsTLS(const GlobalValue &GV) const override;
 
     /// Return true if the specified immediate is legal
     /// icmp immediate, that is the target has icmp instructions which can

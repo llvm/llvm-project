@@ -24,7 +24,7 @@ define <vscale x 32 x i1> @vector_interleave_nxv32i1_nxv16i1(<vscale x 16 x i1> 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vx v0, v8, a0
 ; CHECK-NEXT:    ret
 ;
@@ -44,7 +44,7 @@ define <vscale x 32 x i1> @vector_interleave_nxv32i1_nxv16i1(<vscale x 16 x i1> 
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    srli a0, a0, 2
 ; ZVBB-NEXT:    add a1, a0, a0
-; ZVBB-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
+; ZVBB-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; ZVBB-NEXT:    vslideup.vx v0, v8, a0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 32 x i1> @llvm.experimental.vector.interleave2.nxv32i1(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
@@ -376,9 +376,9 @@ define <vscale x 4 x half> @vector_interleave_nxv4f16_nxv2f16(<vscale x 2 x half
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v10, a0
 ; CHECK-NEXT:    add a1, a0, a0
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v10, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv4f16_nxv2f16:
@@ -391,9 +391,9 @@ define <vscale x 4 x half> @vector_interleave_nxv4f16_nxv2f16(<vscale x 2 x half
 ; ZVBB-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; ZVBB-NEXT:    vslidedown.vx v8, v10, a0
 ; ZVBB-NEXT:    add a1, a0, a0
-; ZVBB-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
+; ZVBB-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; ZVBB-NEXT:    vslideup.vx v10, v8, a0
-; ZVBB-NEXT:    vmv1r.v v8, v10
+; ZVBB-NEXT:    vmv.v.v v8, v10
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 4 x half> @llvm.experimental.vector.interleave2.nxv4f16(<vscale x 2 x half> %a, <vscale x 2 x half> %b)
   ret <vscale x 4 x half> %res
@@ -654,6 +654,44 @@ define <vscale x 16 x double> @vector_interleave_nxv16f64_nxv8f64(<vscale x 8 x 
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 16 x double> @llvm.experimental.vector.interleave2.nxv16f64(<vscale x 8 x double> %a, <vscale x 8 x double> %b)
   ret <vscale x 16 x double> %res
+}
+
+define <vscale x 8 x i32> @vector_interleave_nxv8i32_nxv4i32_poison(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: vector_interleave_nxv8i32_nxv4i32_poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vzext.vf2 v12, v8
+; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    ret
+;
+; ZVBB-LABEL: vector_interleave_nxv8i32_nxv4i32_poison:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; ZVBB-NEXT:    vzext.vf2 v12, v8
+; ZVBB-NEXT:    vmv.v.v v8, v12
+; ZVBB-NEXT:    ret
+  %res = call <vscale x 8 x i32> @llvm.experimental.vector.interleave2.nxv8i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> poison)
+  ret <vscale x 8 x i32> %res
+}
+
+define <vscale x 8 x i32> @vector_interleave_nxv8i32_nxv4i32_poison2(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: vector_interleave_nxv8i32_nxv4i32_poison2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vzext.vf2 v12, v8
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsll.vx v8, v12, a0
+; CHECK-NEXT:    ret
+;
+; ZVBB-LABEL: vector_interleave_nxv8i32_nxv4i32_poison2:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    li a0, 32
+; ZVBB-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; ZVBB-NEXT:    vwsll.vx v12, v8, a0
+; ZVBB-NEXT:    vmv4r.v v8, v12
+; ZVBB-NEXT:    ret
+  %res = call <vscale x 8 x i32> @llvm.experimental.vector.interleave2.nxv8i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a)
+  ret <vscale x 8 x i32> %res
 }
 
 declare <vscale x 64 x half> @llvm.experimental.vector.interleave2.nxv64f16(<vscale x 32 x half>, <vscale x 32 x half>)

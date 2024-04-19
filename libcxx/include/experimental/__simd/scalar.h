@@ -10,6 +10,7 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_SCALAR_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_SCALAR_H
 
+#include <__assert>
 #include <cstddef>
 #include <experimental/__config>
 #include <experimental/__simd/declaration.h>

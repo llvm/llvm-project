@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s
-// RUN: %clang_cc1 -std=c++2a -Wc++23-default-comp-relaxed-constexpr -verify=expected,extension %s
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx2a %s
+// RUN: %clang_cc1 -std=c++23 -verify=expected %s
 
 // This test is for [class.compare.default]p3 as modified and renumbered to p4
 // by P2002R0.
-// Also covers modifications made by P2448R2 and extension warnings
+// Also covers modifications made by P2448R2
 
 namespace std {
   struct strong_ordering {
@@ -78,13 +78,13 @@ void use_g(G g) {
 }
 
 struct H {
-  bool operator==(const H&) const; // extension-note {{non-constexpr comparison function declared here}}
+  bool operator==(const H&) const; // cxx2a-note {{non-constexpr comparison function declared here}}
   constexpr std::strong_ordering operator<=>(const H&) const { return std::strong_ordering::equal; }
 };
 
 struct I {
-  H h; // extension-note {{non-constexpr comparison function would be used to compare member 'h'}}
-  constexpr std::strong_ordering operator<=>(const I&) const = default; // extension-warning {{implicit 'operator=='  invokes a non-constexpr comparison function is a C++23 extension}}
+  H h; // cxx2a-note {{non-constexpr comparison function would be used to compare member 'h'}}
+  constexpr std::strong_ordering operator<=>(const I&) const = default; // cxx2a-error {{cannot be declared constexpr}}
 };
 
 struct J {
@@ -148,16 +148,16 @@ namespace NoInjectionIfOperatorEqualsDeclared {
 
 namespace GH61238 {
 template <typename A> struct my_struct {
-    A value; // extension-note {{non-constexpr comparison function would be used to compare member 'value'}}
+    A value; // cxx2a-note {{non-constexpr comparison function would be used to compare member 'value'}}
 
-    constexpr friend bool operator==(const my_struct &, const my_struct &) noexcept = default; // extension-warning {{declared constexpr but invokes a non-constexpr comparison function is a C++23 extension}}
+    constexpr friend bool operator==(const my_struct &, const my_struct &) noexcept = default; // cxx2a-error {{cannot be declared constexpr}}
 };
 
 struct non_constexpr_type {
-    friend bool operator==(non_constexpr_type, non_constexpr_type) noexcept { // extension-note {{non-constexpr comparison function declared here}}
+    friend bool operator==(non_constexpr_type, non_constexpr_type) noexcept { // cxx2a-note {{non-constexpr comparison function declared here}}
         return false;
     }
 };
 
-my_struct<non_constexpr_type> obj; // extension-note {{in instantiation of template class 'GH61238::my_struct<GH61238::non_constexpr_type>' requested here}}
+my_struct<non_constexpr_type> obj; // cxx2a-note {{in instantiation of template class 'GH61238::my_struct<GH61238::non_constexpr_type>' requested here}}
 }

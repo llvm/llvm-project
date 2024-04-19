@@ -86,6 +86,7 @@ def OPCODE5_BC1NEZ : OPCODE5<0b01101>;
 def OPCODE5_BC2EQZ : OPCODE5<0b01001>;
 def OPCODE5_BC2NEZ : OPCODE5<0b01101>;
 def OPCODE5_BGEZAL : OPCODE5<0b10001>;
+def OPCODE5_NAL : OPCODE5<0b10000>;
 def OPCODE5_SIGRIE : OPCODE5<0b10111>;
 // The next four constants are unnamed in the spec. These names are taken from
 // the OPGROUP names they are used with.
@@ -199,6 +200,16 @@ class BAL_FM : MipsR6Inst {
   let Inst{25-21} = 0b00000;
   let Inst{20-16} = OPCODE5_BGEZAL.Value;
   let Inst{15-0} = offset;
+}
+
+// NAL for Release 6
+class NAL_FM : MipsR6Inst {
+  bits<32> Inst;
+
+  let Inst{31-26} = OPGROUP_REGIMM.Value;
+  let Inst{25-21} = 0b00000; 
+  let Inst{20-16} = OPCODE5_NAL.Value;
+  let Inst{15-0} = 0x00;
 }
 
 class COP0_EVP_DVP_FM<bits<1> sc> : MipsR6Inst {

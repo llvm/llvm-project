@@ -770,3 +770,13 @@ func.func @mmt4d_rank_mismatch(%A: tensor<16x16x8x1xf32>,
                      -> tensor<8x8xf32>
     return %res : tensor<8x8xf32>
 }
+
+// -----
+
+func.func @mixed_semantics(%a: tensor<?x?xf32>, %b: tensor<?x?xf32>, %c: memref<?x?xf32>) {
+  // expected-error @+1 {{expected to have pure tensor or buffer semantics}}
+  linalg.matmul ins(%a, %b: tensor<?x?xf32>, tensor<?x?xf32>)
+               outs(%c: memref<?x?xf32>)
+  return
+}
+

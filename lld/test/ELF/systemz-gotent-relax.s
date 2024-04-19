@@ -1,7 +1,7 @@
 # REQUIRES: systemz
 ## Test R_390_GOTENT optimization.
 
-# RUN: llvm-mc -filetype=obj -relax-relocations -triple=s390x-unknown-linux %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=s390x-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t1 --no-apply-dynamic-relocs
 # RUN: llvm-readelf -S -r -x .got.plt %t1 | FileCheck --check-prefixes=CHECK,NOAPPLY %s
 # RUN: ld.lld %t.o -o %t1 --apply-dynamic-relocs

@@ -741,8 +741,8 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   switch(Opcode) {
   default: break;
 
-  case Mips::PseudoD_SELECT_I:
-  case Mips::PseudoD_SELECT_I64: {
+  case MipsISD::DOUBLE_SELECT_I:
+  case MipsISD::DOUBLE_SELECT_I64: {
     MVT VT = Subtarget->isGP64bit() ? MVT::i64 : MVT::i32;
     SDValue cond = Node->getOperand(0);
     SDValue Hi1 = Node->getOperand(1);

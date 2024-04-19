@@ -22,11 +22,7 @@
 #include <utility>
 
 #include "test_iterators.h"
-
-template <class View, class T>
-concept CanBePiped = requires(View&& view, T&& t) {
-  { std::forward<View>(view) | std::forward<T>(t) };
-};
+#include "test_range.h"
 
 struct Pred {
   constexpr bool operator()(int x, int y) const { return x != -y; }

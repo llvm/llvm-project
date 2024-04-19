@@ -61,7 +61,7 @@ TEST_F(AArch64GISelMITest, MatchIntConstantSplat) {
   LLT v4s64 = LLT::fixed_vector(4, s64);
 
   MachineInstrBuilder FortyTwoSplat =
-      B.buildSplatVector(v4s64, B.buildConstant(s64, 42));
+      B.buildSplatBuildVector(v4s64, B.buildConstant(s64, 42));
   int64_t Cst;
   EXPECT_TRUE(mi_match(FortyTwoSplat.getReg(0), *MRI, m_ICstOrSplat(Cst)));
   EXPECT_EQ(Cst, 42);
@@ -625,7 +625,7 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstantSplat) {
   LLT v4s64 = LLT::fixed_vector(4, s64);
 
   MachineInstrBuilder FortyTwoSplat =
-      B.buildSplatVector(v4s64, B.buildConstant(s64, 42));
+      B.buildSplatBuildVector(v4s64, B.buildConstant(s64, 42));
   MachineInstrBuilder FortyTwo = B.buildConstant(s64, 42);
 
   EXPECT_TRUE(mi_match(FortyTwoSplat.getReg(0), *MRI, m_SpecificICstSplat(42)));
@@ -655,7 +655,7 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstantOrSplat) {
   LLT v4s64 = LLT::fixed_vector(4, s64);
 
   MachineInstrBuilder FortyTwoSplat =
-      B.buildSplatVector(v4s64, B.buildConstant(s64, 42));
+      B.buildSplatBuildVector(v4s64, B.buildConstant(s64, 42));
   MachineInstrBuilder FortyTwo = B.buildConstant(s64, 42);
 
   EXPECT_TRUE(

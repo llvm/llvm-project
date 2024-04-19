@@ -193,7 +193,9 @@ end
   converted.  BOZ literals are interpreted as default INTEGER only
   when they appear as the first items of array constructors with no
   explicit type.  Otherwise, they generally cannot be used if the type would
-  not be known (e.g., `IAND(X'1',X'2')`).
+  not be known (e.g., `IAND(X'1',X'2')`, or as arguments of `DIM`, `MOD`,
+  `MODULO`, and `SIGN`. Note that while other compilers may accept such usages,
+  the type resolution of such BOZ literals usages is highly non portable).
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
 * EQUIVALENCE of numeric and character sequences (a ubiquitous extension),
@@ -306,9 +308,10 @@ end
   enforce it and the constraint is not necessary for a correct
   implementation.
 * A label may follow a semicolon in fixed form source.
-* A scalar logical dummy argument to a `BIND(C)` procedure does
-  not have to have `KIND=C_BOOL` since it can be converted to/from
-  `_Bool` without loss of information.
+* A logical dummy argument to a `BIND(C)` procedure, or a logical
+  component to a `BIND(C)` derived type does not have to have
+  `KIND=C_BOOL` since it can be converted to/from `_Bool` without
+  loss of information.
 * The character length of the `SOURCE=` or `MOLD=` in `ALLOCATE`
   may be distinct from the constant character length, if any,
   of an allocated object.
@@ -344,6 +347,10 @@ end
 * A `NAMELIST` input group may begin with either `&` or `$`.
 * A comma in a fixed-width numeric input field terminates the
   field rather than signaling an invalid character error.
+* Arguments to the intrinsic functions `MAX` and `MIN` are converted
+  when necessary to the type of the result.
+  An `OPTIONAL`, `POINTER`, or `ALLOCATABLE` argument after
+  the first two cannot be converted, as it may not be present.
 
 ### Extensions supported when enabled by options
 
@@ -481,6 +488,11 @@ end
 * Many compilers disallow a `VALUE` assumed-length character dummy
   argument, which has been standard since F'2008.
   We accept this usage with an optional portability warning.
+* The `ASYNCHRONOUS` attribute can be implied by usage in data
+  transfer I/O statements.  Only one other compiler supports this
+  correctly.  This compiler does, apart from objects in asynchronous
+  NAMELIST I/O, for which an actual asynchronous runtime implementation
+  seems unlikely.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
@@ -686,6 +698,35 @@ end
 * For real `MAXVAL`, `MINVAL`, `MAXLOC`, and `MINLOC`, NaN values are
   essentially ignored unless there are some unmasked array entries and
   *all* of them are NaNs.
+
+* When `INDEX` is used as an unrestricted specific intrinsic function
+  in the context of an actual procedure, as the explicit interface in
+  a `PROCEDURE` declaration statement, or as the target of a procedure
+  pointer assignment, its interface has exactly two dummy arguments
+  (`STRING=` and `SUBSTRING=`), and includes neither `BACK=` nor
+  `KIND=`.
+  This is how `INDEX` as an unrestricted specific intrinsic function was
+  documented in FORTRAN '77 and Fortran '90; later revisions of the
+  standard deleted the argument information from the section on
+  unrestricted specific intrinsic functions.
+  At least one other compiler (XLF) seems to expect that the interface for
+  `INDEX` include an optional `BACK=` argument, but it doesn't actually
+  work.
+
+* Allocatable components of array and structure constructors are deallocated
+  after use without calling final subroutines.
+  The standard does not specify when and how deallocation of array and structure
+  constructors allocatable components should happen. All compilers free the
+  memory after use, but the behavior when the allocatable component is a derived
+  type with finalization differ, especially when dealing with nested array and
+  structure constructors expressions. Some compilers call final routine for the
+  allocatable components of each constructor sub-expressions, some call it only
+  for the allocatable component of the top level constructor, and some only
+  deallocate the memory. Deallocating only the memory offers the most
+  flexibility when lowering such expressions, and it is not clear finalization
+  is desirable in such context (Fortran interop 1.6.2 in F2018 standards require
+  array and structure constructors not to be finalized, so it also makes sense
+  not to finalize their allocatable components when releasing their storage).
 
 ## De Facto Standard Features
 

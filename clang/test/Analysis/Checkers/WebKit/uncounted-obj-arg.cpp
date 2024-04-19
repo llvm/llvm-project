@@ -4,6 +4,7 @@
 
 void WTFBreakpointTrap();
 void WTFCrashWithInfo(int, const char*, const char*, int);
+void WTFReportAssertionFailure(const char* file, int line, const char* function, const char* assertion);
 
 inline void compilerFenceForCrash()
 {
@@ -31,21 +32,19 @@ void isIntegralOrPointerType(T, Types... types)
         CRASH_WITH_INFO(__VA_ARGS__); \
 } while (0)
 
-#if !defined(NOT_TAIL_CALLED)
-#if __has_attribute(not_tail_called)
-#define NOT_TAIL_CALLED __attribute__((not_tail_called))
-#else
-#define NOT_TAIL_CALLED
-#endif
-#endif
-#define NO_RETURN_DUE_TO_CRASH
+#define ASSERT(assertion, ...) do { \
+    if (!(assertion)) { \
+        WTFReportAssertionFailure(__FILE__, __LINE__, __PRETTY_FUNCTION__, #assertion); \
+        CRASH_WITH_INFO(__VA_ARGS__); \
+    } \
+} while (0)
 
 #if !defined(ALWAYS_INLINE)
 #define ALWAYS_INLINE inline
 #endif
 
-NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void WTFCrashWithInfoImpl(int line, const char* file, const char* function, int counter, unsigned long reason);
-NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void WTFCrashWithInfo(int line, const char* file, const char* function, int counter);
+void WTFCrashWithInfoImpl(int line, const char* file, const char* function, int counter, unsigned long reason);
+void WTFCrashWithInfo(int line, const char* file, const char* function, int counter);
 
 template<typename T>
 ALWAYS_INLINE unsigned long wtfCrashArg(T* arg) { return reinterpret_cast<unsigned long>(arg); }
@@ -54,7 +53,7 @@ template<typename T>
 ALWAYS_INLINE unsigned long wtfCrashArg(T arg) { return arg; }
 
 template<typename T>
-NO_RETURN_DUE_TO_CRASH ALWAYS_INLINE void WTFCrashWithInfo(int line, const char* file, const char* function, int counter, T reason)
+void WTFCrashWithInfo(int line, const char* file, const char* function, int counter, T reason)
 {
     WTFCrashWithInfoImpl(line, file, function, counter, wtfCrashArg(reason));
 }
@@ -198,6 +197,10 @@ public:
   bool trivial22() { return enumValue == Enum::Value1; }
 
   bool trivial23() const { return OptionSet<Flags>::fromRaw(v).contains(Flags::Flag1); }
+  int trivial24() const { ASSERT(v); return v; }
+  unsigned trivial25() const { return __c11_atomic_load((volatile _Atomic(unsigned) *)&v, __ATOMIC_RELAXED); }
+  bool trivial26() { bool hasValue = v; return !hasValue; }
+  bool trivial27(int v) { bool value; value = v ? 1 : 0; return value; }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -256,6 +259,20 @@ public:
     }
   }
 
+  static unsigned* another();
+  unsigned nonTrivial10() const {
+    return __c11_atomic_load((volatile _Atomic(unsigned) *)another(), __ATOMIC_RELAXED);
+  }
+
+  void nonTrivial11() {
+    Number num(0.3);
+  }
+
+  bool nonTrivial12() {
+    bool val = otherFunction();
+    return val;
+  }
+
   unsigned v { 0 };
   Number* number { nullptr };
   Enum enumValue { Enum::Value1 };
@@ -301,6 +318,10 @@ public:
     getFieldTrivial().trivial21(); // no-warning
     getFieldTrivial().trivial22(); // no-warning
     getFieldTrivial().trivial23(); // no-warning
+    getFieldTrivial().trivial24(); // no-warning
+    getFieldTrivial().trivial25(); // no-warning
+    getFieldTrivial().trivial26(); // no-warning
+    getFieldTrivial().trivial27(5); // no-warning
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
 
@@ -324,6 +345,12 @@ public:
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().nonTrivial9();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial10();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial11();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial12();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 };
 
@@ -342,3 +369,10 @@ public:
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 };
+
+RefPtr<RefCounted> object();
+void someFunction(const RefCounted&);
+
+void test2() {
+    someFunction(*object());
+}

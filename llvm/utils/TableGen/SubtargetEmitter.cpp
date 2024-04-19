@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenHwModes.h"
-#include "CodeGenSchedule.h"
-#include "CodeGenTarget.h"
-#include "PredicateExpander.h"
+#include "Common/CodeGenHwModes.h"
+#include "Common/CodeGenSchedule.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/PredicateExpander.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1262,7 +1262,10 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         WriteIDs.push_back(0);
       else {
         for (Record *VW : ValidWrites) {
-          WriteIDs.push_back(SchedModels.getSchedRWIdx(VW, /*IsRead=*/false));
+          unsigned WriteID = SchedModels.getSchedRWIdx(VW, /*IsRead=*/false);
+          assert(WriteID != 0 &&
+                 "Expected a valid SchedRW in the list of ValidWrites");
+          WriteIDs.push_back(WriteID);
         }
       }
       llvm::sort(WriteIDs);

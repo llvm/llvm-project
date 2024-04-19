@@ -9,6 +9,16 @@
 // RUN:     -triple %itanium_abi_triple -emit-llvm -o - | FileCheck %t/use.cpp
 // RUN: %clang_cc1 -std=c++20 %t/a.pcm -triple %itanium_abi_triple -emit-llvm -o - | FileCheck %t/a.cppm
 
+// Test again with reduced BMI.
+// RUN: %clang_cc1 -std=c++20 %t/a.cppm -triple %itanium_abi_triple -emit-module-interface \
+// RUN:     -o %t/a.full.pcm
+// RUN: %clang_cc1 -std=c++20 %t/a.cppm -triple %itanium_abi_triple -emit-reduced-module-interface \
+// RUN:     -o %t/a.pcm
+// RUN: %clang_cc1 -std=c++20 %t/use.cpp -fprebuilt-module-path=%t -S \
+// RUN:     -triple %itanium_abi_triple -emit-llvm -o - | FileCheck %t/use.cpp
+// RUN: %clang_cc1 -std=c++20 %t/a.full.pcm -triple %itanium_abi_triple -emit-llvm -o - | FileCheck %t/a.cppm
+
+
 //--- a.cppm
 export module a;
 

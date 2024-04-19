@@ -1,6 +1,7 @@
 add_clang_library(clangAnalysisFlowSensitive
+  AdornedCFG.cpp
   Arena.cpp
-  ControlFlowContext.cpp
+  ASTOps.cpp
   DataflowAnalysisContext.cpp
   DataflowEnvironment.cpp
   Formula.cpp

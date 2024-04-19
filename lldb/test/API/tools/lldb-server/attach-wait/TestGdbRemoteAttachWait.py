@@ -26,7 +26,7 @@ class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
     def _launch_inferior(self, args):
         inferior = self.spawnSubprocess(self.getBuildArtifact(self._exe_to_run), args)
         self.assertIsNotNone(inferior)
-        self.assertTrue(inferior.pid > 0)
+        self.assertGreater(inferior.pid, 0)
         self.assertTrue(lldbgdbserverutils.process_is_running(inferior.pid, True))
         return inferior
 

@@ -406,6 +406,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_ELFOSABI>::enumeration(
   ECase(ELFOSABI_AMDGPU_PAL);
   ECase(ELFOSABI_AMDGPU_MESA3D);
   ECase(ELFOSABI_ARM);
+  ECase(ELFOSABI_ARM_FDPIC);
   ECase(ELFOSABI_C6000_ELFABI);
   ECase(ELFOSABI_C6000_LINUX);
   ECase(ELFOSABI_STANDALONE);
@@ -715,6 +716,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
     break;
   case ELF::EM_HEXAGON:
     ECase(SHT_HEX_ORDERED);
+    ECase(SHT_HEXAGON_ATTRIBUTES);
     break;
   case ELF::EM_X86_64:
     ECase(SHT_X86_64_UNWIND);

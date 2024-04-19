@@ -9,12 +9,14 @@
 #include "check-cuda.h"
 #include "flang/Common/template.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Semantics/tools.h"
 
 // Once labeled DO constructs have been canonicalized and their parse subtrees
 // transformed into parser::DoConstructs, scan the parser::Blocks of the program
@@ -275,9 +277,73 @@ private:
         },
         ec.u);
   }
+  template <typename SEEK, typename A>
+  static const SEEK *GetIOControl(const A &stmt) {
+    for (const auto &spec : stmt.controls) {
+      if (const auto *result{std::get_if<SEEK>(&spec.u)}) {
+        return result;
+      }
+    }
+    return nullptr;
+  }
+  template <typename A> static bool IsInternalIO(const A &stmt) {
+    if (stmt.iounit.has_value()) {
+      return std::holds_alternative<Fortran::parser::Variable>(stmt.iounit->u);
+    }
+    if (auto *unit{GetIOControl<Fortran::parser::IoUnit>(stmt)}) {
+      return std::holds_alternative<Fortran::parser::Variable>(unit->u);
+    }
+    return false;
+  }
+  void WarnOnIoStmt(const parser::CharBlock &source) {
+    context_.Say(
+        source, "I/O statement might not be supported on device"_warn_en_US);
+  }
+  template <typename A>
+  void WarnIfNotInternal(const A &stmt, const parser::CharBlock &source) {
+    if (!IsInternalIO(stmt)) {
+      WarnOnIoStmt(source);
+    }
+  }
   void Check(const parser::ActionStmt &stmt, const parser::CharBlock &source) {
     common::visit(
         common::visitors{
+            [&](const common::Indirection<parser::PrintStmt> &) {},
+            [&](const common::Indirection<parser::WriteStmt> &x) {
+              if (x.value().format) { // Formatted write to '*' or '6'
+                if (std::holds_alternative<Fortran::parser::Star>(
+                        x.value().format->u)) {
+                  if (x.value().iounit) {
+                    if (std::holds_alternative<Fortran::parser::Star>(
+                            x.value().iounit->u)) {
+                      return;
+                    }
+                  }
+                }
+              }
+              WarnIfNotInternal(x.value(), source);
+            },
+            [&](const common::Indirection<parser::CloseStmt> &x) {
+              WarnOnIoStmt(source);
+            },
+            [&](const common::Indirection<parser::EndfileStmt> &x) {
+              WarnOnIoStmt(source);
+            },
+            [&](const common::Indirection<parser::OpenStmt> &x) {
+              WarnOnIoStmt(source);
+            },
+            [&](const common::Indirection<parser::ReadStmt> &x) {
+              WarnIfNotInternal(x.value(), source);
+            },
+            [&](const common::Indirection<parser::InquireStmt> &x) {
+              WarnOnIoStmt(source);
+            },
+            [&](const common::Indirection<parser::RewindStmt> &x) {
+              WarnOnIoStmt(source);
+            },
+            [&](const common::Indirection<parser::BackspaceStmt> &x) {
+              WarnOnIoStmt(source);
+            },
             [&](const auto &x) {
               if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
                 context_.Say(source, std::move(*msg));
@@ -410,6 +476,30 @@ void CUDAChecker::Enter(const parser::CUFKernelDoConstruct &x) {
   }
   if (innerBlock) {
     DeviceContextChecker<true>{context_}.Check(*innerBlock);
+  }
+}
+
+void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
+  auto lhsLoc{std::get<parser::Variable>(x.t).GetSource()};
+  const auto &scope{context_.FindScope(lhsLoc)};
+  const Scope &progUnit{GetProgramUnitContaining(scope)};
+  if (IsCUDADeviceContext(&progUnit)) {
+    return; // Data transfer with assignment is only perform on host.
+  }
+
+  const evaluate::Assignment *assign{semantics::GetAssignment(x)};
+  if (!assign) {
+    return;
+  }
+
+  int nbLhs{evaluate::GetNbOfCUDASymbols(assign->lhs)};
+  int nbRhs{evaluate::GetNbOfCUDASymbols(assign->rhs)};
+
+  // device to host transfer with more than one device object on the rhs is not
+  // legal.
+  if (nbLhs == 0 && nbRhs > 1) {
+    context_.Say(lhsLoc,
+        "More than one reference to a CUDA object on the right hand side of the assigment"_err_en_US);
   }
 }
 

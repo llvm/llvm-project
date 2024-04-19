@@ -1,6 +1,6 @@
 ! Test passing rank 2 CLASS(*) deferred shape to assumed size assumed type
 ! This requires copy-in/copy-out logic.
-! RUN: bbc -emit-hlfir -polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine pass_poly_to_assumed_type_assumed_size(x)
   class(*), target :: x(:,:)
