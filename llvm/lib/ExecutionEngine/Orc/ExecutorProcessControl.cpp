@@ -63,7 +63,7 @@ SelfExecutorProcessControl::Create(
 
   if (!D) {
 #if LLVM_ENABLE_THREADS
-    D = std::make_unique<DynamicThreadPoolTaskDispatcher>();
+    D = std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt);
 #else
     D = std::make_unique<InPlaceTaskDispatcher>();
 #endif
