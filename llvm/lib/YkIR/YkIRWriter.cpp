@@ -36,19 +36,19 @@ const uint32_t Magic = 0xedd5f00d;
 const uint32_t Version = 0;
 
 enum OpCode {
-  Nop = 0,
-  Load,
-  Store,
-  Alloca,
-  Call,
-  Br,
-  CondBr,
-  ICmp,
-  Ret,
-  InsertValue,
-  PtrAdd,
-  BinOp,
-  UnimplementedInstruction = 255, // YKFIXME: Will eventually be deleted.
+  OpCodeNop = 0,
+  OpCodeLoad,
+  OpCodeStore,
+  OpCodeAlloca,
+  OpCodeCall,
+  OpCodeBr,
+  OpCodeCondBr,
+  OpCodeICmp,
+  OpCodeRet,
+  OpCodeInsertValue,
+  OpCodePtrAdd,
+  OpCodeBinOp,
+  OpCodeUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
 
 enum OperandKind {
@@ -290,7 +290,7 @@ private:
     assert(I->getNumOperands() == 2);
 
     // opcode:
-    OutStreamer.emitInt8(OpCode::BinOp);
+    serialiseOpcode(OpCodeBinOp);
     // left-hand side:
     serialiseOperand(I, VLMap, I->getOperand(0));
     // binary operator:
@@ -370,7 +370,7 @@ private:
   void serialiseAllocaInst(AllocaInst *I, ValueLoweringMap &VLMap,
                            unsigned BBIdx, unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(OpCode::Alloca);
+    serialiseOpcode(OpCodeAlloca);
 
     // type to be allocated:
     OutStreamer.emitSizeT(typeIndex(I->getAllocatedType()));
@@ -418,7 +418,7 @@ private:
     assert(I->getCalledFunction());
 
     // opcode:
-    serialiseOpcode(OpCode::Call);
+    serialiseOpcode(OpCodeCall);
     // callee:
     OutStreamer.emitSizeT(functionIndex(I->getCalledFunction()));
     // num_args:
@@ -445,10 +445,10 @@ private:
       // traces will guide us.
       //
       // opcode:
-      serialiseOpcode(OpCode::Br);
+      serialiseOpcode(OpCodeBr);
     } else {
       // opcode:
-      serialiseOpcode(OpCode::CondBr);
+      serialiseOpcode(OpCodeCondBr);
       // We DO need operands for conditional branches, so that we can build
       // guards.
       //
@@ -465,7 +465,7 @@ private:
   void serialiseLoadInst(LoadInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                          unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(OpCode::Load);
+    serialiseOpcode(OpCodeLoad);
     // ptr:
     serialiseOperand(I, VLMap, I->getPointerOperand());
     // type_idx:
@@ -478,7 +478,7 @@ private:
   void serialiseStoreInst(StoreInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                           unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(OpCode::Store);
+    serialiseOpcode(OpCodeStore);
     // value:
     serialiseOperand(I, VLMap, I->getValueOperand());
     // ptr:
@@ -497,7 +497,7 @@ private:
     assert(Res);
 
     // opcode:
-    serialiseOpcode(OpCode::PtrAdd);
+    serialiseOpcode(OpCodePtrAdd);
     // type_idx:
     OutStreamer.emitSizeT(typeIndex(I->getType()));
     // pointer:
@@ -552,7 +552,7 @@ private:
   void serialiseICmpInst(ICmpInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                          unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(OpCode::ICmp);
+    serialiseOpcode(OpCodeICmp);
     // type_idx:
     OutStreamer.emitSizeT(typeIndex(I->getType()));
     // lhs:
@@ -569,7 +569,7 @@ private:
   void serialiseReturnInst(ReturnInst *I, ValueLoweringMap &VLMap,
                            unsigned BBIdx, unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(OpCode::Ret);
+    serialiseOpcode(OpCodeRet);
 
     Value *RV = I->getReturnValue();
     if (RV == nullptr) {
@@ -588,7 +588,7 @@ private:
   void serialiseInsertValueInst(InsertValueInst *I, ValueLoweringMap &VLMap,
                                 unsigned BBIdx, unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(OpCode::InsertValue);
+    serialiseOpcode(OpCodeInsertValue);
     // agg:
     serialiseOperand(I, VLMap, I->getAggregateOperand());
     // elem:
@@ -626,7 +626,7 @@ private:
                                          ValueLoweringMap &VLMap,
                                          unsigned BBIdx, unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(UnimplementedInstruction);
+    serialiseOpcode(OpCodeUnimplemented);
     // stringified problem instruction
     serialiseString(toString(I));
 
