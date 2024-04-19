@@ -27,6 +27,11 @@ static void reduceFlagsInModule(Oracle &O, ReducerWorkItem &WorkItem) {
           I.setHasNoSignedWrap(false);
         if (OBO->hasNoUnsignedWrap() && !O.shouldKeep())
           I.setHasNoUnsignedWrap(false);
+      } else if (auto *Trunc = dyn_cast<TruncInst>(&I)) {
+        if (Trunc->hasNoSignedWrap() && !O.shouldKeep())
+          Trunc->setHasNoSignedWrap(false);
+        if (Trunc->hasNoUnsignedWrap() && !O.shouldKeep())
+          Trunc->setHasNoUnsignedWrap(false);
       } else if (auto *PE = dyn_cast<PossiblyExactOperator>(&I)) {
         if (PE->isExact() && !O.shouldKeep())
           I.setIsExact(false);

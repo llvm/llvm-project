@@ -153,28 +153,30 @@ public:
 
   using iterator = UnresolvedSetImpl::iterator;
 
-  LookupResult(Sema &SemaRef, const DeclarationNameInfo &NameInfo,
-               Sema::LookupNameKind LookupKind,
-               Sema::RedeclarationKind Redecl = Sema::NotForRedeclaration)
+  LookupResult(
+      Sema &SemaRef, const DeclarationNameInfo &NameInfo,
+      Sema::LookupNameKind LookupKind,
+      RedeclarationKind Redecl = RedeclarationKind::NotForRedeclaration)
       : SemaPtr(&SemaRef), NameInfo(NameInfo), LookupKind(LookupKind),
-        Redecl(Redecl != Sema::NotForRedeclaration),
-        ExternalRedecl(Redecl == Sema::ForExternalRedeclaration),
-        DiagnoseAccess(Redecl == Sema::NotForRedeclaration),
-        DiagnoseAmbiguous(Redecl == Sema::NotForRedeclaration) {
+        Redecl(Redecl != RedeclarationKind::NotForRedeclaration),
+        ExternalRedecl(Redecl == RedeclarationKind::ForExternalRedeclaration),
+        DiagnoseAccess(Redecl == RedeclarationKind::NotForRedeclaration),
+        DiagnoseAmbiguous(Redecl == RedeclarationKind::NotForRedeclaration) {
     configure();
   }
 
   // TODO: consider whether this constructor should be restricted to take
   // as input a const IdentifierInfo* (instead of Name),
   // forcing other cases towards the constructor taking a DNInfo.
-  LookupResult(Sema &SemaRef, DeclarationName Name, SourceLocation NameLoc,
-               Sema::LookupNameKind LookupKind,
-               Sema::RedeclarationKind Redecl = Sema::NotForRedeclaration)
+  LookupResult(
+      Sema &SemaRef, DeclarationName Name, SourceLocation NameLoc,
+      Sema::LookupNameKind LookupKind,
+      RedeclarationKind Redecl = RedeclarationKind::NotForRedeclaration)
       : SemaPtr(&SemaRef), NameInfo(Name, NameLoc), LookupKind(LookupKind),
-        Redecl(Redecl != Sema::NotForRedeclaration),
-        ExternalRedecl(Redecl == Sema::ForExternalRedeclaration),
-        DiagnoseAccess(Redecl == Sema::NotForRedeclaration),
-        DiagnoseAmbiguous(Redecl == Sema::NotForRedeclaration) {
+        Redecl(Redecl != RedeclarationKind::NotForRedeclaration),
+        ExternalRedecl(Redecl == RedeclarationKind::ForExternalRedeclaration),
+        DiagnoseAccess(Redecl == RedeclarationKind::NotForRedeclaration),
+        DiagnoseAmbiguous(Redecl == RedeclarationKind::NotForRedeclaration) {
     configure();
   }
 
@@ -285,9 +287,10 @@ public:
     return ExternalRedecl;
   }
 
-  Sema::RedeclarationKind redeclarationKind() const {
-    return ExternalRedecl ? Sema::ForExternalRedeclaration :
-           Redecl ? Sema::ForVisibleRedeclaration : Sema::NotForRedeclaration;
+  RedeclarationKind redeclarationKind() const {
+    return ExternalRedecl ? RedeclarationKind::ForExternalRedeclaration
+           : Redecl       ? RedeclarationKind::ForVisibleRedeclaration
+                          : RedeclarationKind::NotForRedeclaration;
   }
 
   /// Specify whether hidden declarations are visible, e.g.,
@@ -615,9 +618,9 @@ public:
   }
 
   /// Change this lookup's redeclaration kind.
-  void setRedeclarationKind(Sema::RedeclarationKind RK) {
-    Redecl = (RK != Sema::NotForRedeclaration);
-    ExternalRedecl = (RK == Sema::ForExternalRedeclaration);
+  void setRedeclarationKind(RedeclarationKind RK) {
+    Redecl = (RK != RedeclarationKind::NotForRedeclaration);
+    ExternalRedecl = (RK == RedeclarationKind::ForExternalRedeclaration);
     configure();
   }
 

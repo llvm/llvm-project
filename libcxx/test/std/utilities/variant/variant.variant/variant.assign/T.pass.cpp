@@ -155,16 +155,6 @@ void test_T_assignment_sfinae() {
     static_assert(std::is_assignable<V, Y>::value,
                   "regression on user-defined conversions in operator=");
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<int, int &&>;
-    static_assert(!std::is_assignable<V, int>::value, "ambiguous");
-  }
-  {
-    using V = std::variant<int, const int &>;
-    static_assert(!std::is_assignable<V, int>::value, "ambiguous");
-  }
-#endif // TEST_VARIANT_HAS_NO_REFERENCES
 }
 
 void test_T_assignment_basic() {
@@ -204,25 +194,6 @@ void test_T_assignment_basic() {
     assert(v.index() == 1);
     assert(std::get<1>(v) == nullptr);
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<int &, int &&, long>;
-    int x = 42;
-    V v(43l);
-    v = x;
-    assert(v.index() == 0);
-    assert(&std::get<0>(v) == &x);
-    v = std::move(x);
-    assert(v.index() == 1);
-    assert(&std::get<1>(v) == &x);
-    // 'long' is selected by FUN(const int &) since 'const int &' cannot bind
-    // to 'int&'.
-    const int &cx = x;
-    v = cx;
-    assert(v.index() == 2);
-    assert(std::get<2>(v) == 42);
-  }
-#endif // TEST_VARIANT_HAS_NO_REFERENCES
 }
 
 void test_T_assignment_performs_construction() {

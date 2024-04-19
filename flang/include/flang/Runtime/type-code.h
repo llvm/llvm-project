@@ -12,7 +12,6 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/optional.h"
 #include "flang/ISO_Fortran_binding_wrapper.h"
-#include <optional>
 #include <utility>
 
 namespace Fortran::runtime {

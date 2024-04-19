@@ -24,8 +24,8 @@ include "RISCVSystemOperands.td"
 // Registers, calling conventions, instruction descriptions.
 //===----------------------------------------------------------------------===//
 
-include "RISCVSchedule.td"
 include "RISCVRegisterInfo.td"
+include "RISCVSchedule.td"
 include "RISCVCallingConv.td"
 include "RISCVInstrInfo.td"
 include "GISel/RISCVRegisterBanks.td"
