@@ -828,9 +828,10 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
 
   // More general combining of constants in the wide type.
   // (sext (X +nsw NarrowC)) + C --> (sext X) + (sext(NarrowC) + C)
+  // or (zext nneg (X +nsw NarrowC)) + C --> (sext X) + (sext(NarrowC) + C)
   Constant *NarrowC;
-  if (match(Op0,
-            m_OneUse(m_SExt(m_NSWAddLike(m_Value(X), m_Constant(NarrowC)))))) {
+  if (match(Op0, m_OneUse(m_SExtLike(
+                     m_NSWAddLike(m_Value(X), m_Constant(NarrowC)))))) {
     Value *WideC = Builder.CreateSExt(NarrowC, Ty);
     Value *NewC = Builder.CreateAdd(WideC, Op1C);
     Value *WideX = Builder.CreateSExt(X, Ty);
@@ -844,7 +845,6 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
     Value *WideX = Builder.CreateZExt(X, Ty);
     return BinaryOperator::CreateAdd(WideX, NewC);
   }
-
   return nullptr;
 }
 
