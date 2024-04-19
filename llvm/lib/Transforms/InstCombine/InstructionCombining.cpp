@@ -2318,7 +2318,7 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
 }
 
 // Canonicalization:
-// gep T, (gep i8, base, C1), (Index +nsw C2) into
+// gep T, (gep i8, base, C1), (Index + C2) into
 // gep T, (gep i8, base, C1 + C2 * sizeof(T)), Index
 static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
                                                 GEPOperator *Src,
