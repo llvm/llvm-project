@@ -1988,7 +1988,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // is not entirely arbitrary. For historical reasons, the backend may
       // recognize rotate left patterns but miss rotate right patterns.
       if (IID == Intrinsic::fshr) {
-        // fshr X, Y, C --> fshl X, Y, (BitWidth - C)
+        // fshr X, Y, C --> fshl X, Y, (BitWidth - C) if C is not zero.
+        if (!isKnownNonZero(ShAmtC, SQ.getWithInstruction(II)))
+          return nullptr;
+
         Constant *LeftShiftC = ConstantExpr::getSub(WidthC, ShAmtC);
         Module *Mod = II->getModule();
         Function *Fshl = Intrinsic::getDeclaration(Mod, Intrinsic::fshl, Ty);
