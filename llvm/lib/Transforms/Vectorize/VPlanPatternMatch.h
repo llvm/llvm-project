@@ -185,6 +185,47 @@ using AllBinaryRecipe_match =
     BinaryRecipe_match<Op0_t, Op1_t, Opcode, VPWidenRecipe, VPReplicateRecipe,
                        VPWidenCastRecipe, VPInstruction>;
 
+template <typename Op0_t, typename Op1_t, unsigned Opcode, bool Commutable,
+          typename... RecipeTys>
+struct LogicalRecipe_match {
+  Op0_t LHS;
+  Op1_t RHS;
+
+  LogicalRecipe_match(Op0_t LHS, Op1_t RHS) : LHS(LHS), RHS(RHS) {}
+
+  bool match(const VPValue *V) {
+    auto *DefR = V->getDefiningRecipe();
+    return DefR && match(DefR);
+  }
+
+  bool match(const VPSingleDefRecipe *R) {
+    return match(static_cast<const VPRecipeBase *>(R));
+  }
+
+  bool match(const VPRecipeBase *R) {
+    if (!detail::MatchRecipeAndOpcode<Opcode, RecipeTys...>::match(R)) {
+      if (!detail::MatchRecipeAndOpcode<Instruction::Select,
+                                        RecipeTys...>::match(R))
+        return false;
+      if (Opcode == Instruction::And) {
+        if (!m_SpecificInt(0).match(R->getOperand(2)))
+          return false;
+      } else if (Opcode == Instruction::Or) {
+        if (!m_SpecificInt(1).match(R->getOperand(1)))
+          return false;
+      } else {
+        llvm_unreachable("unsupported opcode");
+      }
+    } else {
+      assert(R->getNumOperands() == 2 &&
+             "recipe with matched opcode does not have 2 operands");
+    }
+    return (LHS.match(R->getOperand(0)) && RHS.match(R->getOperand(1))) ||
+           (Commutable && LHS.match(R->getOperand(1)) &&
+            RHS.match(R->getOperand(0)));
+  }
+};
+
 template <unsigned Opcode, typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, Opcode>
 m_VPInstruction(const Op0_t &Op0) {
@@ -265,6 +306,24 @@ template <typename Op0_t, typename Op1_t>
 inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or>
 m_Or(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::Or, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline LogicalRecipe_match<Op0_t, Op1_t, Instruction::Or, true, VPWidenRecipe,
+                           VPReplicateRecipe, VPWidenCastRecipe, VPInstruction>
+m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
+  return LogicalRecipe_match<Op0_t, Op1_t, Instruction::Or, true, VPWidenRecipe,
+                             VPReplicateRecipe, VPWidenCastRecipe,
+                             VPInstruction>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline LogicalRecipe_match<Op0_t, Op1_t, Instruction::And, true, VPWidenRecipe,
+                           VPReplicateRecipe, VPWidenCastRecipe, VPInstruction>
+m_c_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
+  return LogicalRecipe_match<Op0_t, Op1_t, Instruction::And, true,
+                             VPWidenRecipe, VPReplicateRecipe,
+                             VPWidenCastRecipe, VPInstruction>(Op0, Op1);
 }
 } // namespace VPlanPatternMatch
 } // namespace llvm
