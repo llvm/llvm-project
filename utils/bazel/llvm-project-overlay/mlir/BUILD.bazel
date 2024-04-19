@@ -3722,7 +3722,7 @@ cc_library(
         ":TransformUtils",
         ":XeGPUDialect",
         ":XeGPUPassIncGen",
-        “//llvm:Support",
+        "//llvm:Support",
     ],
 )
 
