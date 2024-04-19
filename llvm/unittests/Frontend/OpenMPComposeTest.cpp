@@ -37,5 +37,5 @@ TEST(Composition, GetCompoundConstruct) {
   Directive C6 = getCompoundConstruct({OMPD_parallel_for, OMPD_simd});
   ASSERT_EQ(C6, OMPD_parallel_for_simd);
   Directive C7 = getCompoundConstruct({OMPD_do, OMPD_simd});
-  ASSERT_EQ(C7, OMPD_do_simd);  // Make sure it's not OMPD_end_do_simd
+  ASSERT_EQ(C7, OMPD_do_simd); // Make sure it's not OMPD_end_do_simd
 }

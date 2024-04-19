@@ -417,8 +417,8 @@ GenerateCaseForVersionedClauses(const std::vector<Record *> &Clauses,
 static std::string GetDirectiveName(const DirectiveLanguage &DirLang,
                                     const Record *Rec) {
   Directive Dir{Rec};
-  return (llvm::Twine("llvm::") + DirLang.getCppNamespace() + "::" +
-          DirLang.getDirectivePrefix() + Dir.getFormattedName())
+  return (llvm::Twine("llvm::") + DirLang.getCppNamespace() +
+          "::" + DirLang.getDirectivePrefix() + Dir.getFormattedName())
       .str();
 }
 
