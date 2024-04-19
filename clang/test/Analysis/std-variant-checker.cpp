@@ -81,6 +81,7 @@ void stdGetObject() {
   Foo f = std::get<Foo>(v);
   int i = std::get<int>(v); // expected-warning {{std::variant 'v' held a 'Foo', not an 'int'}}
   (void)i;
+  (void)f;
 }
 
 void stdGetPointerAndPointee() {
@@ -355,4 +356,38 @@ void nonInlineFunctionCallPtr() {
   char c = std::get<char> (v); // no-warning
   (void)a;
   (void)c;
+}
+
+//----------------------------------------------------------------------------//
+// std::swap for std::variant
+//----------------------------------------------------------------------------//
+
+void swapForVariants() {
+  std::variant<int, char> a = 5;
+  std::variant<int, char> b = 'C';
+  std::swap(a, b);
+  int a1 = std::get<int>(b);
+  char c = std::get<int>(a); // expected-warning {{std::variant 'a' held a 'char', not an 'int'}}
+  (void)a1;
+  (void)c;
+}
+
+//----------------------------------------------------------------------------//
+// std::swap for std::variant
+//----------------------------------------------------------------------------//
+
+void stdEmplace() {
+  std::variant<int, char> v = 'c';
+  v.emplace<int> (5);
+  int a = std::get<int> (v); // no-warning
+  char c = std::get<char> (v); // no-warning
+  (void)a;
+  (void)c;
+}
+
+void followHeldValue() {
+  std::variant<int, char> v = 0;
+  int a = std::get<int> (v);
+  int b = 5/a;
+  (void)b;
 }
