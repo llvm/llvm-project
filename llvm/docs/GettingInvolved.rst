@@ -204,10 +204,6 @@ what to add to your calendar invite.
      - Every 3rd Wednesday of the month
      - `gcal <https://calendar.google.com/calendar/u/0?cid=MDI1ODI1MDdiYWM3OWQxODY5MDA3MTI1NjZlYzNmYzY5YjMzYWMyNGQ3ZGUwYThjNzZjN2IxOTk3NmYxOTBjMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
      - `Meeting details/agenda: <https://docs.google.com/document/d/1QcmUlWftPlBi-Wz6b6PipqJfvjpJ-OuRMRnN9Dm2t0c>`__
-   * - `MLIR <https://mlir.llvm.org>`__ design meetings
-     - Weekly, on Thursdays
-     -
-     - `Minutes/docs <https://docs.google.com/document/d/1y_9f1AbfgcoVdJh4_aM6-BaSHvrHl8zuA5G4jv_94K8/edit#heading=h.cite1kolful9>`__
 
 Past online sync-ups
 ^^^^^^^^^^^^^^^^^^^^
@@ -246,6 +242,10 @@ the future.
      - Every 2 weeks on Tuesdays, 3pm UTC
      -
      - `Minutes/docs <https://docs.google.com/document/d/1q26ToudQjnqN5x31zk8zgq_s0lem1-BF8pQmciLa4k8/edit?usp=sharing>`__
+   * - `MLIR <https://mlir.llvm.org>`__ design meetings
+     - Weekly, on Thursdays
+     -
+     - `Minutes/docs <https://docs.google.com/document/d/1y_9f1AbfgcoVdJh4_aM6-BaSHvrHl8zuA5G4jv_94K8/edit#heading=h.cite1kolful9>`__
 
 .. _office-hours:
 
