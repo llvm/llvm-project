@@ -106,7 +106,7 @@ def HasStdExtZihintpause : Predicate<"Subtarget->hasStdExtZihintpause()">,
 
 def FeatureStdExtZihintntl
     : RISCVExtension<"zihintntl", 1, 0, "HasStdExtZihintntl", "true",
-                       "'Zihintntl' (Non-Temporal Locality Hints)">;
+                     "'Zihintntl' (Non-Temporal Locality Hints)">;
 def HasStdExtZihintntl : Predicate<"Subtarget->hasStdExtZihintntl()">,
                          AssemblerPredicate<(all_of FeatureStdExtZihintntl),
                              "'Zihintntl' (Non-Temporal Locality Hints)">;
@@ -182,7 +182,7 @@ def FeatureStdExtZa128rs : RISCVExtension<"za128rs", 1, 0, "HasStdExtZa128rs", "
 
 def FeatureStdExtZaamo
     : RISCVExperimentalExtension<"zaamo", 0, 2, "HasStdExtZaamo", "true",
-                       "'Zaamo' (Atomic Memory Operations)">;
+                                 "'Zaamo' (Atomic Memory Operations)">;
 def HasStdExtAOrZaamo
     : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasStdExtZaamo()">,
       AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZaamo),
@@ -368,8 +368,8 @@ def FeatureStdExtZcd
 def HasStdExtCOrZcd
     : Predicate<"Subtarget->hasStdExtCOrZcd()">,
       AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcd),
-                       "'C' (Compressed Instructions) or "
-                       "'Zcd' (Compressed Double-Precision Floating-Point Instructions)">;
+                         "'C' (Compressed Instructions) or "
+                         "'Zcd' (Compressed Double-Precision Floating-Point Instructions)">;
 
 def FeatureStdExtZcf
     : RISCVExtension<"zcf", 1, 0, "HasStdExtZcf", "true",
@@ -811,8 +811,8 @@ def FeatureStdExtSmaia
                      "'Smaia' (Advanced Interrupt Architecture Machine Level)">;
 def FeatureStdExtSsaia
     : RISCVExtension<"ssaia", 1, 0, "HasStdExtSsaia", "true",
-                       "'Ssaia' (Advanced Interrupt Architecture Supervisor "
-                       "Level)">;
+                     "'Ssaia' (Advanced Interrupt Architecture Supervisor "
+                     "Level)">;
 
 def FeatureStdExtSmepmp
     : RISCVExtension<"smepmp", 1, 0, "HasStdExtSmepmp", "true",
@@ -906,7 +906,7 @@ def FeatureStdExtSvpbmt
 // present.
 def FeatureStdExtSsnpm
     : RISCVExperimentalExtension<"ssnpm", 0, 8, "HasStdExtSsnpm", "true",
-                                "'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)">;
+                                 "'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)">;
 
 // A machine-level extension that provides pointer masking for the next lower
 // privilege mode (S/HS if S-mode is implemented, or U-mode otherwise).
