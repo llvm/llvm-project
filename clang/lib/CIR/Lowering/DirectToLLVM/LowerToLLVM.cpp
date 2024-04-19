@@ -2015,58 +2015,6 @@ public:
   }
 };
 
-class CIRTernaryOpLowering
-    : public mlir::OpConversionPattern<mlir::cir::TernaryOp> {
-public:
-  using OpConversionPattern<mlir::cir::TernaryOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(mlir::cir::TernaryOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    auto loc = op->getLoc();
-    auto *condBlock = rewriter.getInsertionBlock();
-    auto opPosition = rewriter.getInsertionPoint();
-    auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
-    auto *continueBlock = rewriter.createBlock(
-        remainingOpsBlock, op->getResultTypes(),
-        SmallVector<mlir::Location>(/* result number always 1 */ 1, loc));
-    rewriter.create<mlir::cir::BrOp>(loc, remainingOpsBlock);
-
-    auto &trueRegion = op.getTrueRegion();
-    auto *trueBlock = &trueRegion.front();
-    mlir::Operation *trueTerminator = trueRegion.back().getTerminator();
-    rewriter.setInsertionPointToEnd(&trueRegion.back());
-    auto trueYieldOp = dyn_cast<mlir::cir::YieldOp>(trueTerminator);
-
-    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
-        trueYieldOp, trueYieldOp.getArgs(), continueBlock);
-    rewriter.inlineRegionBefore(trueRegion, continueBlock);
-
-    auto *falseBlock = continueBlock;
-    auto &falseRegion = op.getFalseRegion();
-
-    falseBlock = &falseRegion.front();
-    mlir::Operation *falseTerminator = falseRegion.back().getTerminator();
-    rewriter.setInsertionPointToEnd(&falseRegion.back());
-    auto falseYieldOp = dyn_cast<mlir::cir::YieldOp>(falseTerminator);
-    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
-        falseYieldOp, falseYieldOp.getArgs(), continueBlock);
-    rewriter.inlineRegionBefore(falseRegion, continueBlock);
-
-    rewriter.setInsertionPointToEnd(condBlock);
-    auto condition = adaptor.getCond();
-    auto i1Condition = rewriter.create<mlir::LLVM::TruncOp>(
-        op.getLoc(), rewriter.getI1Type(), condition);
-    rewriter.create<mlir::LLVM::CondBrOp>(loc, i1Condition.getResult(),
-                                          trueBlock, falseBlock);
-
-    rewriter.replaceOp(op, continueBlock->getArguments());
-
-    // Ok, we're done!
-    return mlir::success();
-  }
-};
-
 class CIRCmpOpLowering : public mlir::OpConversionPattern<mlir::cir::CmpOp> {
 public:
   using OpConversionPattern<mlir::cir::CmpOp>::OpConversionPattern;
@@ -2964,17 +2912,17 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
       CIRCastOpLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
       CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering,
-      CIRBrOpLowering, CIRTernaryOpLowering, CIRGetMemberOpLowering,
-      CIRSwitchOpLowering, CIRPtrDiffOpLowering, CIRCopyOpLowering,
-      CIRMemCpyOpLowering, CIRFAbsOpLowering, CIRExpectOpLowering,
-      CIRVTableAddrPointOpLowering, CIRVectorCreateLowering,
-      CIRVectorInsertLowering, CIRVectorExtractLowering, CIRVectorCmpOpLowering,
-      CIRVectorSplatLowering, CIRVectorTernaryLowering,
-      CIRVectorShuffleIntsLowering, CIRVectorShuffleVecLowering,
-      CIRStackSaveLowering, CIRStackRestoreLowering, CIRUnreachableLowering,
-      CIRTrapLowering, CIRInlineAsmOpLowering, CIRSetBitfieldLowering,
-      CIRGetBitfieldLowering, CIRPrefetchLowering, CIRObjSizeOpLowering,
-      CIRIsConstantOpLowering>(converter, patterns.getContext());
+      CIRBrOpLowering, CIRGetMemberOpLowering, CIRSwitchOpLowering,
+      CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering,
+      CIRFAbsOpLowering, CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
+      CIRVectorCreateLowering, CIRVectorInsertLowering,
+      CIRVectorExtractLowering, CIRVectorCmpOpLowering, CIRVectorSplatLowering,
+      CIRVectorTernaryLowering, CIRVectorShuffleIntsLowering,
+      CIRVectorShuffleVecLowering, CIRStackSaveLowering,
+      CIRStackRestoreLowering, CIRUnreachableLowering, CIRTrapLowering,
+      CIRInlineAsmOpLowering, CIRSetBitfieldLowering, CIRGetBitfieldLowering,
+      CIRPrefetchLowering, CIRObjSizeOpLowering, CIRIsConstantOpLowering>(
+      converter, patterns.getContext());
 }
 
 namespace {

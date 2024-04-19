@@ -33,19 +33,17 @@ cir.func @_Z1xi(%arg0: !s32i) -> !s32i {
 // MLIR-NEXT:    %4 = llvm.load %1 : !llvm.ptr -> i32
 // MLIR-NEXT:    %5 = llvm.mlir.constant(0 : i32) : i32
 // MLIR-NEXT:    %6 = llvm.icmp "sgt" %4, %5 : i32
-// MLIR-NEXT:    %7 = llvm.zext %6 : i1 to i8
-// MLIR-NEXT:    %8 = llvm.trunc %7 : i8 to i1
-// MLIR-NEXT:    llvm.cond_br %8, ^bb1, ^bb2
+// MLIR-NEXT:    llvm.cond_br %6, ^bb1, ^bb2
 // MLIR-NEXT:  ^bb1:  // pred: ^bb0
-// MLIR-NEXT:    %9 = llvm.mlir.constant(3 : i32) : i32
-// MLIR-NEXT:    llvm.br ^bb3(%9 : i32)
+// MLIR-NEXT:    %7 = llvm.mlir.constant(3 : i32) : i32
+// MLIR-NEXT:    llvm.br ^bb3(%7 : i32)
 // MLIR-NEXT:  ^bb2:  // pred: ^bb0
-// MLIR-NEXT:    %10 = llvm.mlir.constant(5 : i32) : i32
-// MLIR-NEXT:    llvm.br ^bb3(%10 : i32)
-// MLIR-NEXT:  ^bb3(%11: i32):  // 2 preds: ^bb1, ^bb2
+// MLIR-NEXT:    %8 = llvm.mlir.constant(5 : i32) : i32
+// MLIR-NEXT:    llvm.br ^bb3(%8 : i32)
+// MLIR-NEXT:  ^bb3(%9: i32):  // 2 preds: ^bb1, ^bb2
 // MLIR-NEXT:    llvm.br ^bb4
 // MLIR-NEXT:  ^bb4:  // pred: ^bb3
-// MLIR-NEXT:    llvm.store %11, %3 : i32, !llvm.ptr
-// MLIR-NEXT:    %12 = llvm.load %3 : !llvm.ptr -> i32
-// MLIR-NEXT:    llvm.return %12 : i32
+// MLIR-NEXT:    llvm.store %9, %3 : i32, !llvm.ptr
+// MLIR-NEXT:    %10 = llvm.load %3 : !llvm.ptr -> i32
+// MLIR-NEXT:    llvm.return %10 : i32
 // MLIR-NEXT:  }
