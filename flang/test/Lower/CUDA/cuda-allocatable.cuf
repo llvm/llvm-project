@@ -68,21 +68,21 @@ end subroutine
 ! CHECK: }
 
 subroutine sub4()
-  real, allocatable, unified :: a(:)
+  real, allocatable, device :: a(:)
   integer :: istream
   allocate(a(10), stream=istream)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub4()
 ! CHECK: %[[BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QFsub4Ea"}
-! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %0 {cuda_attr = #fir.cuda<unified>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub4Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %0 {cuda_attr = #fir.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub4Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 ! CHECK: %[[ISTREAM:.*]] = fir.alloca i32 {bindc_name = "istream", uniq_name = "_QFsub4Eistream"}
 ! CHECK: %[[ISTREAM_DECL:.*]]:2 = hlfir.declare %[[ISTREAM]] {uniq_name = "_QFsub4Eistream"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: fir.call @_FortranAAllocatableSetBounds
 ! CHECK: %[[STREAM:.*]] = fir.load %[[ISTREAM_DECL]]#0 : !fir.ref<i32>
-! CHECK: %{{.*}} = fir.cuda_allocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> stream(%[[STREAM]] : i32) {cuda_attr = #fir.cuda<unified>} -> i32
+! CHECK: %{{.*}} = fir.cuda_allocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> stream(%[[STREAM]] : i32) {cuda_attr = #fir.cuda<device>} -> i32
 ! CHECK: fir.if %{{.*}} {
-! CHECK:   %{{.*}} = fir.cuda_deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<unified>} -> i32
+! CHECK:   %{{.*}} = fir.cuda_deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<device>} -> i32
 ! CHECK: }
 
 subroutine sub5()
