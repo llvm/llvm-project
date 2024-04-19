@@ -20,16 +20,18 @@ struct Mutex {
   Mutex() : locked(false) {}
 
   void lock() {
-    if (locked)
+    if (locked) {
       // Sends signal 6.
       abort();
+    }
     locked = true;
   }
 
   void unlock() {
-    if (!locked)
+    if (!locked) {
       // Sends signal 6.
       abort();
+    }
     locked = false;
   }
 
