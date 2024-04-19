@@ -52,11 +52,11 @@ enum OpCode {
 };
 
 enum OperandKind {
-  Constant = 0,
-  LocalVariable,
-  Global,
-  Function,
-  Arg,
+  OperandKindConstant = 0,
+  OperandKindLocal,
+  OperandKindGlobal,
+  OperandKindFunction,
+  OperandKindArg,
 };
 
 enum TypeKind {
@@ -190,8 +190,8 @@ private:
 
   // Return the index of the LLVM constant `C`, inserting a new entry if
   // necessary.
-  size_t constantIndex(class Constant *C) {
-    vector<class Constant *>::iterator Found =
+  size_t constantIndex(Constant *C) {
+    vector<Constant *>::iterator Found =
         std::find(Constants.begin(), Constants.end(), C);
     if (Found != Constants.end()) {
       return std::distance(Constants.begin(), Found);
@@ -228,20 +228,22 @@ private:
 
   void serialiseOpcode(OpCode Code) { OutStreamer.emitInt8(Code); }
 
+  void serialiseOperandKind(OperandKind Kind) { OutStreamer.emitInt8(Kind); }
+
   void serialiseConstantOperand(Instruction *Parent, llvm::Constant *C) {
-    OutStreamer.emitInt8(OperandKind::Constant);
+    serialiseOperandKind(OperandKindConstant);
     OutStreamer.emitSizeT(constantIndex(C));
   }
 
   void serialiseLocalVariableOperand(Instruction *I, ValueLoweringMap &VLMap) {
     auto [BBIdx, InstIdx] = VLMap.at(I);
-    OutStreamer.emitInt8(OperandKind::LocalVariable);
+    serialiseOperandKind(OperandKindLocal);
     OutStreamer.emitSizeT(BBIdx);
     OutStreamer.emitSizeT(InstIdx);
   }
 
   void serialiseFunctionOperand(llvm::Function *F) {
-    OutStreamer.emitInt8(OperandKind::Function);
+    serialiseOperandKind(OperandKindFunction);
     OutStreamer.emitSizeT(functionIndex(F));
   }
 
@@ -254,7 +256,7 @@ private:
     // This assumes that the argument indices match in both IRs.
 
     // opcode:
-    OutStreamer.emitInt8(OperandKind::Arg);
+    serialiseOperandKind(OperandKindArg);
     // parent function index:
     OutStreamer.emitSizeT(getIndex(&M, A->getParent()));
     // arg index
@@ -262,7 +264,7 @@ private:
   }
 
   void serialiseGlobalOperand(GlobalVariable *G) {
-    OutStreamer.emitInt8(OperandKind::Global);
+    serialiseOperandKind(OperandKindGlobal);
     OutStreamer.emitSizeT(globalIndex(G));
   }
 
@@ -772,7 +774,7 @@ private:
     }
   }
 
-  void serialiseUnimplementedConstant(class Constant *C) {
+  void serialiseUnimplementedConstant(Constant *C) {
     // type_index:
     OutStreamer.emitSizeT(typeIndex(C->getType()));
     // num_bytes:
@@ -780,7 +782,7 @@ private:
     OutStreamer.emitSizeT(0);
   }
 
-  void serialiseConstant(class Constant *C) {
+  void serialiseConstant(Constant *C) {
     if (ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
       serialiseConstantInt(CI);
     } else {
@@ -820,7 +822,7 @@ public:
     // num_constants:
     OutStreamer.emitSizeT(Constants.size());
     // constants:
-    for (class Constant *&C : Constants) {
+    for (Constant *&C : Constants) {
       serialiseConstant(C);
     }
 
