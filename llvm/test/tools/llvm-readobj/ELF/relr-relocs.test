@@ -71,6 +71,7 @@
 # GNU1-NEXT:                        0000000000020368  bar + 0x168
 # GNU1-NEXT:                        0000000000020380  bar + 0x180
 # GNU1-NEXT:                        0000000000020390  bar + 0x190
+#  GNU1-NOT:{{.}}
 
 ## The addresses are not symbolized in the absence of .symtab.
 # RUN: llvm-objcopy --strip-all %t1 %t1.stripped
@@ -162,6 +163,7 @@ Symbols:
 # GNU2-NEXT:                000200d4  .relr.dyn + 0xf374
 # GNU2-NEXT:                000200ec  .relr.dyn + 0xf38c
 # GNU2-NEXT:                000200f4  .relr.dyn + 0xf394
+# GNU2-NOT:{{.}}
 
 --- !ELF
 FileHeader:
@@ -247,16 +249,17 @@ Symbols:
 
 ## .symtab is invalid. Check we report a warning and print entries without symbolization.
 # RUN: yaml2obj --docnum=3 -DENTSIZE=1 %s -o %t3.err1
-# RUN: llvm-readelf -r %t3.err1 2>&1 | FileCheck -DFILE=%t3.err1 --check-prefixes=GNU3,GNU3-ERR1 %s
+# RUN: llvm-readelf -r %t3.err1 2>&1 | FileCheck -DFILE=%t3.err1 --check-prefixes=GNU3,GNU3-ERR1 --match-full-lines %s
 # RUN: yaml2obj --docnum=3 -DLINK=0xff %s -o %t3.err2
-# RUN: llvm-readelf -r %t3.err2 2>&1 | FileCheck -DFILE=%t3.err2 --check-prefixes=GNU3,GNU3-ERR2 %s
+# RUN: llvm-readelf -r %t3.err2 2>&1 | FileCheck -DFILE=%t3.err2 --check-prefixes=GNU3,GNU3-ERR2 --match-full-lines %s
 
-# GNU3:      Index: Entry            Address           Symbolic Address
-# GNU3-ERR1-NEXT: warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 2] has invalid sh_entsize: expected 24, but got 1
-# GNU3-ERR2-NEXT: warning: '[[FILE]]': unable to get the string table for the SHT_SYMTAB section: invalid section index: 255
-# GNU3-NEXT: 0000:  0000000000010d60 0000000000010d60
-# GNU3-NEXT: 0001:  0000000000000103 0000000000010d68
-# GNU3-NEXT:                         0000000000010da0
+#      GNU3:Index: Entry            Address           Symbolic Address
+# GNU3-ERR1-NEXT:{{.*}}warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 2] has invalid sh_entsize: expected 24, but got 1
+# GNU3-ERR2-NEXT:{{.*}}warning: '[[FILE]]': unable to get the string table for the SHT_SYMTAB section: invalid section index: 255
+# GNU3-NEXT:0000:  0000000000010d60 0000000000010d60
+# GNU3-NEXT:0001:  0000000000000103 0000000000010d68
+# GNU3-NEXT:                        0000000000010da0
+#  GNU3-NOT:{{.}}
 
 --- !ELF
 FileHeader:
