@@ -41,6 +41,12 @@ public:
   }
 
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
+
+  // Return the offset of the backchain.
+  virtual unsigned getBackchainOffset(MachineFunction &MF) const = 0;
+
+  // Get or create the frame index of where the old frame pointer is stored.
+  virtual int getOrCreateFramePointerSaveIndex(MachineFunction &MF) const = 0;
 };
 
 class SystemZELFFrameLowering : public SystemZFrameLowering {
@@ -86,13 +92,13 @@ public:
   bool usePackedStack(MachineFunction &MF) const;
 
   // Return the offset of the backchain.
-  unsigned getBackchainOffset(MachineFunction &MF) const {
+  unsigned getBackchainOffset(MachineFunction &MF) const override {
     // The back chain is stored topmost with packed-stack.
     return usePackedStack(MF) ? SystemZMC::ELFCallFrameSize - 8 : 0;
   }
 
   // Get or create the frame index of where the old frame pointer is stored.
-  int getOrCreateFramePointerSaveIndex(MachineFunction &MF) const;
+  int getOrCreateFramePointerSaveIndex(MachineFunction &MF) const override;
 };
 
 class SystemZXPLINKFrameLowering : public SystemZFrameLowering {
@@ -133,6 +139,15 @@ public:
                                            RegScavenger *RS) const override;
 
   void determineFrameLayout(MachineFunction &MF) const;
+
+  // Return the offset of the backchain.
+  unsigned getBackchainOffset(MachineFunction &MF) const override {
+    // The back chain is always the first element of the frame.
+    return 0;
+  }
+
+  // Get or create the frame index of where the old frame pointer is stored.
+  int getOrCreateFramePointerSaveIndex(MachineFunction &MF) const override;
 };
 } // end namespace llvm
 
