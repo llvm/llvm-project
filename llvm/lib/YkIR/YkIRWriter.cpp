@@ -8,6 +8,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -53,14 +54,9 @@ enum OpCode {
 enum OperandKind {
   Constant = 0,
   LocalVariable,
-  Type,
-  Function,
-  Block,
-  Arg,
   Global,
-  Predicate,
-  OpKindBinOp,
-  UnimplementedOperand = 255,
+  Function,
+  Arg,
 };
 
 enum TypeKind {
@@ -244,34 +240,24 @@ private:
     OutStreamer.emitSizeT(InstIdx);
   }
 
-  void serialiseStringOperand(const char *S) {
-    OutStreamer.emitInt8(OperandKind::UnimplementedOperand);
-    serialiseString(S);
-  }
-
   void serialiseFunctionOperand(llvm::Function *F) {
     OutStreamer.emitInt8(OperandKind::Function);
     OutStreamer.emitSizeT(functionIndex(F));
   }
 
-  void serialiseBlockOperand(BasicBlock *BB, ValueLoweringMap &VLMap) {
-    OutStreamer.emitInt8(OperandKind::Block);
-    // FIXME: For now we assume that basic block indices are the same in LLVM
-    // IR and our IR.
+  void serialiseBlockLabel(BasicBlock *BB) {
+    // Basic block indices are the same in both LLVM IR and our IR.
     OutStreamer.emitSizeT(getIndex(BB->getParent(), BB));
-  }
-
-  // YKFIXME: This allows programs which we haven't yet defined a
-  // lowering for to compile. For now We just emit a string operand containing
-  // the unhandled LLVM operand in textual form.
-  void serialiseUnimplementedOperand(Value *V) {
-    OutStreamer.emitInt8(OperandKind::UnimplementedOperand);
-    serialiseString(toString(V));
   }
 
   void serialiseArgOperand(ValueLoweringMap &VLMap, Argument *A) {
     // This assumes that the argument indices match in both IRs.
+
+    // opcode:
     OutStreamer.emitInt8(OperandKind::Arg);
+    // parent function index:
+    OutStreamer.emitSizeT(getIndex(&M, A->getParent()));
+    // arg index
     OutStreamer.emitSizeT(A->getArgNo());
   }
 
@@ -291,46 +277,24 @@ private:
     } else if (llvm::Argument *A = dyn_cast<llvm::Argument>(V)) {
       serialiseArgOperand(VLMap, A);
     } else if (Instruction *I = dyn_cast<Instruction>(V)) {
-      // If an instruction defines the operand, it's a local variable.
       serialiseLocalVariableOperand(I, VLMap);
-    } else if (BasicBlock *BB = dyn_cast<BasicBlock>(V)) {
-      serialiseBlockOperand(BB, VLMap);
     } else {
-      serialiseUnimplementedOperand(V);
+      llvm::report_fatal_error(
+          StringRef("attempt to serialise non-yk-operand: " + toString(V)));
     }
   }
 
-  /// Does a naiave serialisation of an LLVM instruction by iterating over its
-  /// operands and serialising them in turn.
-  void serialiseInstGeneric(Instruction *I, ValueLoweringMap &VLMap,
-                            unsigned BBIdx, unsigned &InstIdx, OpCode Opc) {
-    OutStreamer.emitSizeT(typeIndex(I->getType()));
-    serialiseOpcode(Opc);
-    OutStreamer.emitInt32(I->getNumOperands());
-    for (Value *O : I->operands()) {
-      serialiseOperand(I, VLMap, O);
-    }
-    if (!I->getType()->isVoidTy()) {
-      VLMap[I] = {BBIdx, InstIdx};
-    }
-    InstIdx++;
-  }
-
-  void serialiseBinaryOperation(llvm::BinaryOperator *I,
-                                ValueLoweringMap &VLMap, unsigned BBIdx,
-                                unsigned &InstIdx) {
+  void serialiseBinaryOperatorInst(llvm::BinaryOperator *I,
+                                   ValueLoweringMap &VLMap, unsigned BBIdx,
+                                   unsigned &InstIdx) {
     assert(I->getNumOperands() == 2);
 
-    // type index:
-    OutStreamer.emitSizeT(typeIndex(I->getType()));
     // opcode:
     OutStreamer.emitInt8(OpCode::BinOp);
-    // num operands:
-    OutStreamer.emitInt32(3);
     // left-hand side:
     serialiseOperand(I, VLMap, I->getOperand(0));
     // binary operator:
-    serialiseBinOperatorOperand(I->getOpcode());
+    serialiseBinOperator(I->getOpcode());
     // right-hand side:
     serialiseOperand(I, VLMap, I->getOperand(1));
 
@@ -339,9 +303,9 @@ private:
   }
 
   // Serialise a binary operator.
-  void serialiseBinOperatorOperand(Instruction::BinaryOps BO) {
+  void serialiseBinOperator(Instruction::BinaryOps BO) {
     // operand kind:
-    OutStreamer.emitInt8(OperandKind::OpKindBinOp);
+    // OutStreamer.emitInt8(OperandKind::OpKindBinOp);
     // the operator:
     switch (BO) {
     case Instruction::BinaryOps::Add:
@@ -405,25 +369,16 @@ private:
 
   void serialiseAllocaInst(AllocaInst *I, ValueLoweringMap &VLMap,
                            unsigned BBIdx, unsigned &InstIdx) {
-    // type_index:
-    OutStreamer.emitSizeT(typeIndex(I->getType()));
     // opcode:
     serialiseOpcode(OpCode::Alloca);
-    // num_operands:
-    OutStreamer.emitInt32(2);
 
-    // OPERAND 0: allocated type
-    // Needs custom serialisation: not stored in the instruction's operand list.
-    //
-    // operand_kind:
-    OutStreamer.emitInt8(OperandKind::Type);
-    // type_index
+    // type to be allocated:
     OutStreamer.emitSizeT(typeIndex(I->getAllocatedType()));
 
-    // OPERAND 1: number of objects to allocate
-    Value *Op0 = I->getOperand(0);
-    assert(isa<ConstantInt>(Op0));
-    serialiseOperand(I, VLMap, Op0);
+    // number of objects to allocate
+    ConstantInt *CI = cast<ConstantInt>(I->getArraySize());
+    // XXX guard cast
+    OutStreamer.emitSizeT(CI->getZExtValue());
 
     VLMap[I] = {BBIdx, InstIdx};
     InstIdx++;
@@ -431,23 +386,50 @@ private:
 
   void serialiseCallInst(CallInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                          unsigned &InstIdx) {
-    // type_index:
-    OutStreamer.emitSizeT(typeIndex(I->getType()));
+    if (I->isInlineAsm()) {
+      // For now we omit calls to empty inline asm blocks.
+      //
+      // These are pretty much always present in yk unit tests to block
+      // optimisations.
+      // if (!(cast<InlineAsm>(Callee)->getAsmString().empty())) {
+      if (!(cast<InlineAsm>(I->getCalledOperand())->getAsmString().empty())) {
+        // Non-empty asm block. We can't ignore it.
+        serialiseUnimplementedInstruction(I, VLMap, BBIdx, InstIdx);
+      }
+      return;
+    }
+
+    // FIXME: indirect calls.
+    //
+    // Note that this assertion can also fail if you do a direct call without
+    // the correct type annotation at the call site.
+    //
+    // e.g. for a functiion:
+    //
+    //   define i32 @f(i32, ...)
+    //
+    // if you do:
+    //
+    //   call i32 @f(1i32, 2i32);
+    //
+    // instead of:
+    //
+    //   call i32 (i32, ...) @f(1i32, 2i32);
+    assert(I->getCalledFunction());
+
     // opcode:
     serialiseOpcode(OpCode::Call);
-    // num_operands:
-    OutStreamer.emitInt32(I->arg_size() + 1); // +1 for callee operand.
-
-    // OPERAND 0: What to call.
-    //
-    // In LLVM IR this is the final operand, which is a cause of confusion.
-    serialiseOperand(I, VLMap, I->getCalledOperand());
-
-    // Now the rest of the operands.
+    // callee:
+    OutStreamer.emitSizeT(functionIndex(I->getCalledFunction()));
+    // num_args:
+    // (this includes static and varargs arguments)
+    OutStreamer.emitInt32(I->arg_size());
+    // args:
     for (unsigned OI = 0; OI < I->arg_size(); OI++) {
       serialiseOperand(I, VLMap, I->getOperand(OI));
     }
 
+    // If the return type is non-void, then this defines a local.
     if (!I->getType()->isVoidTy()) {
       VLMap[I] = {BBIdx, InstIdx};
     }
@@ -459,40 +441,54 @@ private:
     // We split LLVM's `br` into two Yk IR instructions: one for unconditional
     // branching, another for conidtional branching.
     if (!I->isConditional()) {
-      // type_index:
-      OutStreamer.emitSizeT(typeIndex(I->getType()));
+      // We don't serialise the branch target for unconditional branches because
+      // traces will guide us.
+      //
       // opcode:
       serialiseOpcode(OpCode::Br);
-      // num_operands:
-      // We don't serialise any operands, because traces will guide us.
-      OutStreamer.emitInt32(0);
     } else {
-      // type_index:
-      OutStreamer.emitSizeT(typeIndex(I->getType()));
       // opcode:
       serialiseOpcode(OpCode::CondBr);
       // We DO need operands for conditional branches, so that we can build
       // guards.
       //
-      // Note that in LLVM IR, the operands are ordered (despite the order they
-      // appear in the language reference): cond, if-false, if-true. We
-      // use `getSuccessor()`, so as to re-order those during lowering to avoid
-      // confusion.
-      //
-      // num_operands:
-      OutStreamer.emitInt32(3);
-      // OPERAND 0: condition.
-      serialiseOperand(I, VLMap, I->getOperand(0));
-      // OPERAND 1: block to go to if true.
-      serialiseOperand(I, VLMap, I->getSuccessor(0));
-      // OPERAND 2: block to go to if false.
-      serialiseOperand(I, VLMap, I->getSuccessor(1));
+      // cond:
+      serialiseOperand(I, VLMap, I->getCondition());
+      // true_bb:
+      serialiseBlockLabel(I->getSuccessor(0));
+      // false_bb:
+      serialiseBlockLabel(I->getSuccessor(1));
     }
     InstIdx++;
   }
 
-  void serialiseGetElementPtr(GetElementPtrInst *I, ValueLoweringMap &VLMap,
-                              unsigned BBIdx, unsigned &InstIdx) {
+  void serialiseLoadInst(LoadInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
+                         unsigned &InstIdx) {
+    // opcode:
+    serialiseOpcode(OpCode::Load);
+    // ptr:
+    serialiseOperand(I, VLMap, I->getPointerOperand());
+    // type_idx:
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
+
+    VLMap[I] = {BBIdx, InstIdx};
+    InstIdx++;
+  }
+
+  void serialiseStoreInst(StoreInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
+                          unsigned &InstIdx) {
+    // opcode:
+    serialiseOpcode(OpCode::Store);
+    // value:
+    serialiseOperand(I, VLMap, I->getValueOperand());
+    // ptr:
+    serialiseOperand(I, VLMap, I->getPointerOperand());
+
+    InstIdx++;
+  }
+
+  void serialiseGetElementPtrInst(GetElementPtrInst *I, ValueLoweringMap &VLMap,
+                                  unsigned BBIdx, unsigned &InstIdx) {
     unsigned BitWidth = 64;
     MapVector<Value *, APInt> Offsets;
     APInt Offset(BitWidth, 0);
@@ -500,12 +496,10 @@ private:
     bool Res = I->collectOffset(DL, BitWidth, Offsets, Offset);
     assert(Res);
 
-    // type_index:
-    OutStreamer.emitSizeT(typeIndex(I->getType()));
     // opcode:
     serialiseOpcode(OpCode::PtrAdd);
-    // num_operands:
-    OutStreamer.emitInt32(2);
+    // type_idx:
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
     // pointer:
     serialiseOperand(I, VLMap, I->getPointerOperand());
     // offset:
@@ -516,10 +510,7 @@ private:
   }
 
   // Serialise an LLVM predicate.
-  //
-  // Note that this can't be handled by `serialiseOperand()` as in LLVM a
-  // `Predicate` isn't a `Value`.
-  void serialisePredicateOperand(llvm::CmpInst::Predicate P) {
+  void serialisePredicate(llvm::CmpInst::Predicate P) {
     std::optional<CmpPredicate> LP = std::nullopt;
     switch (P) {
     case llvm::CmpInst::ICMP_EQ:
@@ -555,78 +546,89 @@ private:
     default:
       abort(); // TODO: floating point predicates.
     }
-    OutStreamer.emitInt8(OperandKind::Predicate);
     OutStreamer.emitInt8(LP.value());
   }
 
-  // We use a custom lowering for ICmp, as a generic lowering misses
-  // the predicate.
   void serialiseICmpInst(ICmpInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                          unsigned &InstIdx) {
-    // type_index:
-    OutStreamer.emitSizeT(typeIndex(I->getType()));
     // opcode:
     serialiseOpcode(OpCode::ICmp);
-    // num_operands:
-    OutStreamer.emitInt32(3);
-    // op1:
+    // type_idx:
+    OutStreamer.emitSizeT(typeIndex(I->getType()));
+    // lhs:
     serialiseOperand(I, VLMap, I->getOperand(0));
     // predicate:
-    serialisePredicateOperand(I->getPredicate());
-    // op2:
+    serialisePredicate(I->getPredicate());
+    // rhs:
     serialiseOperand(I, VLMap, I->getOperand(1));
 
     VLMap[I] = {BBIdx, InstIdx};
     InstIdx++;
   }
 
+  void serialiseReturnInst(ReturnInst *I, ValueLoweringMap &VLMap,
+                           unsigned BBIdx, unsigned &InstIdx) {
+    // opcode:
+    serialiseOpcode(OpCode::Ret);
+
+    Value *RV = I->getReturnValue();
+    if (RV == nullptr) {
+      // has_val = 0:
+      OutStreamer.emitInt8(0);
+    } else {
+      // has_val = 1:
+      OutStreamer.emitInt8(1);
+      // value:
+      serialiseOperand(I, VLMap, RV);
+    }
+
+    InstIdx++;
+  }
+
+  void serialiseInsertValueInst(InsertValueInst *I, ValueLoweringMap &VLMap,
+                                unsigned BBIdx, unsigned &InstIdx) {
+    // opcode:
+    serialiseOpcode(OpCode::InsertValue);
+    // agg:
+    serialiseOperand(I, VLMap, I->getAggregateOperand());
+    // elem:
+    serialiseOperand(I, VLMap, I->getInsertedValueOperand());
+
+    InstIdx++;
+  }
+
   void serialiseInst(Instruction *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                      unsigned &InstIdx) {
-// Macros to help dispatch to serialisers.
-//
-// Note that this is unhygenic so as to make the call-sites readable.
-#define GENERIC_INST_SERIALISE(LLVM_INST, LLVM_INST_TYPE, YKIR_OPCODE)         \
-  if (isa<LLVM_INST_TYPE>(LLVM_INST)) {                                        \
-    serialiseInstGeneric(LLVM_INST, VLMap, BBIdx, InstIdx, YKIR_OPCODE);       \
-    return;                                                                    \
-  }
-#define CUSTOM_INST_SERIALISE(LLVM_INST, LLVM_INST_TYPE, SERIALISER)           \
+    // Macro to make the dispatch below easier to read/sort.
+#define INST_SERIALISE(LLVM_INST, LLVM_INST_TYPE, SERIALISER)                  \
   if (LLVM_INST_TYPE *II = dyn_cast<LLVM_INST_TYPE>(LLVM_INST)) {              \
     SERIALISER(II, VLMap, BBIdx, InstIdx);                                     \
     return;                                                                    \
   }
 
-    GENERIC_INST_SERIALISE(I, LoadInst, Load)
-    GENERIC_INST_SERIALISE(I, StoreInst, Store)
-    GENERIC_INST_SERIALISE(I, ReturnInst, Ret)
-    GENERIC_INST_SERIALISE(I, llvm::InsertValueInst, InsertValue)
-    GENERIC_INST_SERIALISE(I, StoreInst, Store)
+    INST_SERIALISE(I, AllocaInst, serialiseAllocaInst);
+    INST_SERIALISE(I, BinaryOperator, serialiseBinaryOperatorInst);
+    INST_SERIALISE(I, BranchInst, serialiseBranchInst);
+    INST_SERIALISE(I, CallInst, serialiseCallInst);
+    INST_SERIALISE(I, GetElementPtrInst, serialiseGetElementPtrInst);
+    INST_SERIALISE(I, ICmpInst, serialiseICmpInst);
+    INST_SERIALISE(I, InsertValueInst, serialiseInsertValueInst);
+    INST_SERIALISE(I, LoadInst, serialiseLoadInst);
+    INST_SERIALISE(I, ReturnInst, serialiseReturnInst);
+    INST_SERIALISE(I, StoreInst, serialiseStoreInst);
 
-    CUSTOM_INST_SERIALISE(I, AllocaInst, serialiseAllocaInst)
-    CUSTOM_INST_SERIALISE(I, CallInst, serialiseCallInst)
-    CUSTOM_INST_SERIALISE(I, BranchInst, serialiseBranchInst)
-    CUSTOM_INST_SERIALISE(I, GetElementPtrInst, serialiseGetElementPtr)
-    CUSTOM_INST_SERIALISE(I, llvm::BinaryOperator, serialiseBinaryOperation)
-    CUSTOM_INST_SERIALISE(I, ICmpInst, serialiseICmpInst)
-
-    // GENERIC_INST_SERIALISE and CUSTOM_INST_SERIALISE do an early return upon
-    // a match, so if we get here then the instruction wasn't handled.
+    // INST_SERIALISE does an early return upon a match, so if we get here then
+    // the instruction wasn't handled.
     serialiseUnimplementedInstruction(I, VLMap, BBIdx, InstIdx);
   }
 
-  // An unimplemented instruction is lowered to an instruction with one
-  // unimplemented operand containing the textual LLVM IR we couldn't handle.
   void serialiseUnimplementedInstruction(Instruction *I,
                                          ValueLoweringMap &VLMap,
                                          unsigned BBIdx, unsigned &InstIdx) {
-    // type_index:
-    OutStreamer.emitSizeT(typeIndex(I->getType()));
     // opcode:
     serialiseOpcode(UnimplementedInstruction);
-    // num_operands:
-    OutStreamer.emitInt32(1);
-    // problem instruction:
-    serialiseUnimplementedOperand(I);
+    // stringified problem instruction
+    serialiseString(toString(I));
 
     if (!I->getType()->isVoidTy()) {
       VLMap[I] = {BBIdx, InstIdx};
@@ -642,7 +644,18 @@ private:
       //
       // We may come back to them later if we need better debugging
       // facilities, but for now they just clutter up our AOT module.
-      return I->isDebugOrPseudoInst();
+      if (I->isDebugOrPseudoInst()) {
+        return true;
+      }
+
+      // See serialiseCallInst() for details.
+      if (CallInst *CI = dyn_cast<CallInst>(I)) {
+        if (InlineAsm *IA = dyn_cast<InlineAsm>(CI->getCalledOperand())) {
+          return IA->getAsmString().empty();
+        }
+      }
+
+      return false;
     };
 
     // Count instructions.
