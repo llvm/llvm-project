@@ -468,6 +468,7 @@ public:
   bool isUnknown() const { return State == Unknown; }
 
   void setAVLReg(Register Reg) {
+    assert(Reg.isVirtual() || Reg == RISCV::X0 || Reg == RISCV::NoRegister);
     AVLReg = Reg;
     State = AVLIsReg;
   }
@@ -615,7 +616,7 @@ public:
     if (SEWLMULRatioOnly)
       return false;
 
-    if (Used.VLAny && !hasSameAVL(Require))
+    if (Used.VLAny && !(hasSameAVL(Require) && hasSameVLMAX(Require)))
       return false;
 
     if (Used.VLZeroness && !hasEquallyZeroAVL(Require, MRI))
@@ -1514,12 +1515,9 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
 
     // If the AVL is a register, we need to make sure MI's AVL dominates PrevMI.
     // For now just check that PrevMI uses the same virtual register.
-    if (AVL.isReg() && AVL.getReg() != RISCV::X0) {
-      if (AVL.getReg().isPhysical())
-        return false;
-      if (!PrevAVL.isReg() || PrevAVL.getReg() != AVL.getReg())
-        return false;
-    }
+    if (AVL.isReg() && AVL.getReg() != RISCV::X0 &&
+        (!PrevAVL.isReg() || PrevAVL.getReg() != AVL.getReg()))
+      return false;
   }
 
   assert(PrevMI.getOperand(2).isImm() && MI.getOperand(2).isImm());
@@ -1540,12 +1538,15 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
 
     if (!isVectorConfigInstr(MI)) {
       doUnion(Used, getDemanded(MI, MRI, ST));
+      if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
+          MI.modifiesRegister(RISCV::VTYPE))
+        NextMI = nullptr;
       continue;
     }
 
-    Register VRegDef = MI.getOperand(0).getReg();
-    if (VRegDef != RISCV::X0 &&
-        !(VRegDef.isVirtual() && MRI->use_nodbg_empty(VRegDef)))
+    Register RegDef = MI.getOperand(0).getReg();
+    assert(RegDef == RISCV::X0 || RegDef.isVirtual());
+    if (RegDef != RISCV::X0 && !MRI->use_nodbg_empty(RegDef))
       Used.demandVL();
 
     if (NextMI) {
@@ -1553,7 +1554,9 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
         ToDelete.push_back(&MI);
         // Leave NextMI unchanged
         continue;
-      } else if (canMutatePriorConfig(MI, *NextMI, Used, *MRI)) {
+      }
+
+      if (canMutatePriorConfig(MI, *NextMI, Used, *MRI)) {
         if (!isVLPreservingConfig(*NextMI)) {
           MI.getOperand(0).setReg(NextMI->getOperand(0).getReg());
           MI.getOperand(0).setIsDead(false);
