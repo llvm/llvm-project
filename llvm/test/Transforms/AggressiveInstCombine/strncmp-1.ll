@@ -1,0 +1,203 @@
+; RUN: opt -S -passes=aggressive-instcombine -strncmp-inline-threshold=3 < %s | FileCheck %s
+
+declare i32 @strncmp(ptr nocapture, ptr nocapture, i64)
+declare i32 @strcmp(ptr nocapture, ptr nocapture)
+
+@.str = private unnamed_addr constant [3 x i8] c"ab\00", align 1
+@.str.1 = private unnamed_addr constant [2 x i8] c"a\00", align 1
+
+define i32 @test_strncmp_1(ptr nocapture readonly %s) {
+; CHECK-LABEL: @test_strncmp_1(
+; CHECK-NEXT:  entry.before:
+; CHECK-NEXT:    br label [[SUB:%.*]]
+; CHECK:       sub:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 97, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[SUB2:%.*]], label [[SUB1:%.*]]
+; CHECK:       sub1:
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 98, [[TMP7]]
+; CHECK-NEXT:    br label [[SUB2]]
+; CHECK:       sub2:
+; CHECK-NEXT:    [[TMP9:%.*]] = phi i32 [ [[TMP3]], [[SUB]] ], [ [[TMP8]], [[SUB1]] ]
+; CHECK-NEXT:    br label [[ENTRY:%.*]]
+; CHECK:       entry:
+; CHECK-NEXT:    ret i32 [[TMP9]]
+;
+entry:
+  %call = tail call i32 @strncmp(ptr nonnull dereferenceable(3) @.str, ptr nonnull dereferenceable(1) %s, i64 2)
+  ret i32 %call
+}
+
+define i32 @test_strncmp_2(ptr nocapture readonly %s) {
+; CHECK-LABEL: @test_strncmp_2(
+; CHECK-NEXT:  entry.before:
+; CHECK-NEXT:    br label [[SUB:%.*]]
+; CHECK:       sub:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 97, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[SUB3:%.*]], label [[SUB1:%.*]]
+; CHECK:       sub1:
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 98, [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i32 [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[SUB3]], label [[SUB2:%.*]]
+; CHECK:       sub2:
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP10]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP11]] to i32
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i32 0, [[TMP12]]
+; CHECK-NEXT:    br label [[SUB3]]
+; CHECK:       sub3:
+; CHECK-NEXT:    [[TMP14:%.*]] = phi i32 [ [[TMP3]], [[SUB]] ], [ [[TMP8]], [[SUB1]] ], [ [[TMP13]], [[SUB2]] ]
+; CHECK-NEXT:    br label [[ENTRY:%.*]]
+; CHECK:       entry:
+; CHECK-NEXT:    ret i32 [[TMP14]]
+;
+entry:
+  %call = tail call i32 @strncmp(ptr nonnull dereferenceable(3) @.str, ptr nonnull dereferenceable(1) %s, i64 3)
+  ret i32 %call
+}
+
+define i32 @test_strncmp_3(ptr nocapture readonly %s) {
+; CHECK-LABEL: @test_strncmp_3(
+; CHECK-NEXT:  entry.before:
+; CHECK-NEXT:    br label [[SUB:%.*]]
+; CHECK:       sub:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 97, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[SUB3:%.*]], label [[SUB1:%.*]]
+; CHECK:       sub1:
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 98, [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i32 [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[SUB3]], label [[SUB2:%.*]]
+; CHECK:       sub2:
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP10]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP11]] to i32
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i32 0, [[TMP12]]
+; CHECK-NEXT:    br label [[SUB3]]
+; CHECK:       sub3:
+; CHECK-NEXT:    [[TMP14:%.*]] = phi i32 [ [[TMP3]], [[SUB]] ], [ [[TMP8]], [[SUB1]] ], [ [[TMP13]], [[SUB2]] ]
+; CHECK-NEXT:    br label [[ENTRY:%.*]]
+; CHECK:       entry:
+; CHECK-NEXT:    ret i32 [[TMP14]]
+;
+entry:
+  %call = tail call i32 @strncmp(ptr nonnull dereferenceable(3) @.str, ptr nonnull dereferenceable(1) %s, i64 4)
+  ret i32 %call
+}
+
+define i32 @test_strcmp_1(ptr nocapture readonly %s) {
+; CHECK-LABEL: @test_strcmp_1(
+; CHECK-NEXT:  entry.before:
+; CHECK-NEXT:    br label [[SUB:%.*]]
+; CHECK:       sub:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], 97
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[SUB2:%.*]], label [[SUB1:%.*]]
+; CHECK:       sub1:
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP7]], 0
+; CHECK-NEXT:    br label [[SUB2]]
+; CHECK:       sub2:
+; CHECK-NEXT:    [[TMP9:%.*]] = phi i32 [ [[TMP3]], [[SUB]] ], [ [[TMP8]], [[SUB1]] ]
+; CHECK-NEXT:    br label [[ENTRY:%.*]]
+; CHECK:       entry:
+; CHECK-NEXT:    ret i32 [[TMP9]]
+;
+entry:
+  %call = tail call i32 @strcmp(ptr nonnull dereferenceable(1) %s, ptr nonnull dereferenceable(2) @.str.1)
+  ret i32 %call
+}
+
+define i32 @test_strcmp_2(ptr nocapture readonly %s) {
+; CHECK-LABEL: @test_strcmp_2(
+; CHECK-NEXT:  entry.before:
+; CHECK-NEXT:    br label [[SUB:%.*]]
+; CHECK:       sub:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], 97
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[SUB3:%.*]], label [[SUB1:%.*]]
+; CHECK:       sub1:
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP7]], 98
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i32 [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[SUB3]], label [[SUB2:%.*]]
+; CHECK:       sub2:
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP10]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP11]] to i32
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i32 [[TMP12]], 0
+; CHECK-NEXT:    br label [[SUB3]]
+; CHECK:       sub3:
+; CHECK-NEXT:    [[TMP14:%.*]] = phi i32 [ [[TMP3]], [[SUB]] ], [ [[TMP8]], [[SUB1]] ], [ [[TMP13]], [[SUB2]] ]
+; CHECK-NEXT:    br label [[ENTRY:%.*]]
+; CHECK:       entry:
+; CHECK-NEXT:    ret i32 [[TMP14]]
+;
+entry:
+  %call = tail call i32 @strcmp(ptr nonnull dereferenceable(1) %s, ptr nonnull dereferenceable(3) @.str)
+  ret i32 %call
+}
+
+define i32 @test_strcmp_3(ptr nocapture readonly %s) {
+; CHECK-LABEL: @test_strcmp_3(
+; CHECK-NEXT:  entry.before:
+; CHECK-NEXT:    br label [[SUB:%.*]]
+; CHECK:       sub:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 97, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[SUB3:%.*]], label [[SUB1:%.*]]
+; CHECK:       sub1:
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 98, [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i32 [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[SUB3]], label [[SUB2:%.*]]
+; CHECK:       sub2:
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP10]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP11]] to i32
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i32 0, [[TMP12]]
+; CHECK-NEXT:    br label [[SUB3]]
+; CHECK:       sub3:
+; CHECK-NEXT:    [[TMP14:%.*]] = phi i32 [ [[TMP3]], [[SUB]] ], [ [[TMP8]], [[SUB1]] ], [ [[TMP13]], [[SUB2]] ]
+; CHECK-NEXT:    br label [[ENTRY:%.*]]
+; CHECK:       entry:
+; CHECK-NEXT:    ret i32 [[TMP14]]
+;
+entry:
+  %call = tail call i32 @strcmp(ptr nonnull dereferenceable(3) @.str, ptr nonnull dereferenceable(1) %s)
+  ret i32 %call
+}
