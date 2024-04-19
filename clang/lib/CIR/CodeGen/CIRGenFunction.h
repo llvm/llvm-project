@@ -1408,6 +1408,19 @@ public:
   LValue MakeNaturalAlignPointeeAddrLValue(mlir::Value V, clang::QualType T);
   LValue MakeNaturalAlignAddrLValue(mlir::Value V, QualType T);
 
+  /// Construct an address with the natural alignment of T. If a pointer to T
+  /// is expected to be signed, the pointer passed to this function must have
+  /// been signed, and the returned Address will have the pointer authentication
+  /// information needed to authenticate the signed pointer.
+  Address makeNaturalAddressForPointer(
+      mlir::Value Ptr, QualType T, CharUnits Alignment = CharUnits::Zero(),
+      bool ForPointeeType = false, LValueBaseInfo *BaseInfo = nullptr,
+      KnownNonNull_t IsKnownNonNull = NotKnownNonNull) {
+    if (Alignment.isZero())
+      Alignment = CGM.getNaturalTypeAlignment(T, BaseInfo, ForPointeeType);
+    return Address(Ptr, convertTypeForMem(T), Alignment, IsKnownNonNull);
+  }
+
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
   /// FIXME(cir): this should return a mlir::Value!
