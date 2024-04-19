@@ -150,11 +150,10 @@ private:
   /// to use SExt/ZExt flags in later optimization.
   std::vector<std::pair<Register, ISD::ArgFlagsTy>> LiveInAttrs;
 
-  /// Flags for aix-shared-library-tls-model-heuristic, will be lazily
-  /// initialized for each function.
-  bool AIXFuncUseTLSLD = false;
-  bool AIXFuncUseTLSIE = false;
-  bool AIXFuncUseInitDone = false;
+  /// Flags for aix-shared-lib-tls-model-opt, will be lazily initialized for
+  /// each function.
+  bool AIXFuncUseTLSIEForLD = false;
+  bool AIXFuncTLSModelOptInitDone = false;
 
 public:
   explicit PPCFunctionInfo(const Function &F, const TargetSubtargetInfo *STI);
@@ -227,12 +226,12 @@ public:
   void setHasFastCall() { HasFastCall = true; }
   bool hasFastCall() const { return HasFastCall;}
 
-  void setAIXFuncUseInitDone() { AIXFuncUseInitDone = true; }
-  bool isAIXFuncUseInitDone() const { return AIXFuncUseInitDone; }
-  void setAIXFuncUseTLSLD() { AIXFuncUseTLSLD = true; }
-  bool isAIXFuncUseTLSLD() const { return AIXFuncUseTLSLD; }
-  void setAIXFuncUseTLSIE() { AIXFuncUseTLSIE = true; }
-  bool isAIXFuncUseTLSIE() const { return AIXFuncUseTLSIE; }
+  void setAIXFuncTLSModelOptInitDone() { AIXFuncTLSModelOptInitDone = true; }
+  bool isAIXFuncTLSModelOptInitDone() const {
+    return AIXFuncTLSModelOptInitDone;
+  }
+  void setAIXFuncUseTLSIEForLD() { AIXFuncUseTLSIEForLD = true; }
+  bool isAIXFuncUseTLSIEForLD() const { return AIXFuncUseTLSIEForLD; }
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
   void setVarArgsFrameIndex(int Index) { VarArgsFrameIndex = Index; }

@@ -881,7 +881,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       // On AIX, TLS model heuristics may have turned local-dynamic accesses
       // into initial-exec accesses.
       PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
-      if (Model == TLSModel::LocalDynamic && FuncInfo->isAIXFuncUseTLSIE()) {
+      if (Model == TLSModel::LocalDynamic &&
+          FuncInfo->isAIXFuncUseTLSIEForLD()) {
         LLVM_DEBUG(
             dbgs() << "Current function uses IE access for default LD vars.\n");
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;

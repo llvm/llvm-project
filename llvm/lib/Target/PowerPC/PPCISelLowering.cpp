@@ -141,6 +141,11 @@ static cl::opt<unsigned> PPCGatherAllAliasesMaxDepth(
     "ppc-gather-alias-max-depth", cl::init(18), cl::Hidden,
     cl::desc("max depth when checking alias info in GatherAllAliases()"));
 
+static cl::opt<unsigned> PPCAIXTLSModelOptUseIEForLDLimit(
+    "ppc-aix-shared-lib-tls-model-opt-limit", cl::init(1), cl::Hidden,
+    cl::desc("Set inclusive limit count of TLS local-dynamic access(es) in a "
+             "function to use initial-exec"));
+
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumSiblingCalls, "Number of sibling calls");
 STATISTIC(ShufflesHandledWithVPERM,
@@ -3373,7 +3378,7 @@ static void updateForAIXShLibTLSModelOpt(TLSModel::Model &Model,
   // function.
   PPCFunctionInfo *FuncInfo =
       DAG.getMachineFunction().getInfo<PPCFunctionInfo>();
-  if (!FuncInfo->isAIXFuncUseInitDone()) {
+  if (!FuncInfo->isAIXFuncTLSModelOptInitDone()) {
     SmallPtrSet<const GlobalValue *, 8> TLSGV;
     // Iterate over all instructions within current function, collect all TLS
     // global variables (global variables taken as the first parameter to
@@ -3391,31 +3396,21 @@ static void updateForAIXShLibTLSModelOpt(TLSModel::Model &Model,
                 if (const GlobalValue *GV =
                         dyn_cast<GlobalValue>(II->getOperand(0))) {
                   TLSModel::Model GVModel = TM.getTLSModel(GV);
-                  if (GVModel == TLSModel::InitialExec ||
-                      GVModel == TLSModel::LocalDynamic)
+                  if (GVModel == TLSModel::LocalDynamic)
                     TLSGV.insert(GV);
                 }
 
     unsigned TLSGVCnt = TLSGV.size();
-    LLVM_DEBUG(dbgs() << format("TLSGV count:%d\n", TLSGVCnt));
-    if (TLSGVCnt == 1)
-      FuncInfo->setAIXFuncUseTLSIE();
-    else if (TLSGVCnt > 1)
-      FuncInfo->setAIXFuncUseTLSLD();
-    FuncInfo->setAIXFuncUseInitDone();
+    LLVM_DEBUG(dbgs() << format("LocalDynamic TLSGV count:%d\n", TLSGVCnt));
+    if (TLSGVCnt <= PPCAIXTLSModelOptUseIEForLDLimit)
+      FuncInfo->setAIXFuncUseTLSIEForLD();
+    FuncInfo->setAIXFuncTLSModelOptInitDone();
   }
 
-  if (FuncInfo->isAIXFuncUseTLSLD()) {
+  if (FuncInfo->isAIXFuncUseTLSIEForLD()) {
     LLVM_DEBUG(
-        dbgs()
-        << DAG.getMachineFunction().getName()
-        << " function is using the TLS-LD model for TLS IE/LD accesses.\n");
-    Model = TLSModel::LocalDynamic;
-  } else if (FuncInfo->isAIXFuncUseTLSIE()) {
-    LLVM_DEBUG(
-        dbgs()
-        << DAG.getMachineFunction().getName()
-        << " function is using the TLS-IE model for TLS IE/LD accesses.\n");
+        dbgs() << DAG.getMachineFunction().getName()
+               << " function is using the TLS-IE model for TLS-LD access.\n");
     Model = TLSModel::InitialExec;
   }
 }
