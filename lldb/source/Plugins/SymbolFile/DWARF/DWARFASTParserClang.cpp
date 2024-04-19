@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstdlib>
+#include <iostream>
 
 #include "DWARFASTParser.h"
 #include "DWARFASTParserClang.h"
@@ -1621,6 +1622,15 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
   const char *name = die.GetName();
   if (!name)
     return "";
+  static int indent = 0;
+  std::cerr << std::string(indent, ' ') << "starting qualified name for: " << name << '\n';
+  auto &FS = die.GetCU()->GetSymbolFileDWARF().GetObjectFile()->GetFileSpec();
+  std::string Directory = FS.GetDirectory().AsCString("");
+  std::cerr << std::string(indent, ' ')
+            << Directory.substr(std::min(59ul, Directory.size())) << '/'
+            << FS.GetFilename().AsCString("") << ':' << std::hex
+            << die.GetDIE()->GetOffset() << '\n';
+  ++indent;
   std::string qualified_name;
   DWARFDIE parent_decl_ctx_die = die.GetParentDeclContextDIE();
   // TODO: change this to get the correct decl context parent....
@@ -1665,6 +1675,9 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
 
   qualified_name.append(name);
   qualified_name.append(GetDIEClassTemplateParams(die).AsCString(""));
+
+  --indent;
+  std::cerr << std::string(indent, ' ') << "computed qualified name: " << qualified_name << '\n';
 
   return qualified_name;
 }
