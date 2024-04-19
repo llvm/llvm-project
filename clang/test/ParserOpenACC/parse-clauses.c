@@ -911,16 +911,12 @@ void IntExprParsing() {
 #pragma acc parallel num_gangs(invalid)
   {}
 
-  // expected-error@+2{{expected ')'}}
-  // expected-note@+1{{to match this '('}}
 #pragma acc parallel num_gangs(5, 4)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
 #pragma acc parallel num_gangs(5)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
 #pragma acc parallel num_gangs(returns_int())
   {}
 

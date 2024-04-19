@@ -124,6 +124,16 @@ OpenACCVectorLengthClause::Create(const ASTContext &C, SourceLocation BeginLoc,
       OpenACCVectorLengthClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
 }
 
+OpenACCNumGangsClause *OpenACCNumGangsClause::Create(const ASTContext &C,
+                                                     SourceLocation BeginLoc,
+                                                     SourceLocation LParenLoc,
+                                                     ArrayRef<Expr *> IntExprs,
+                                                     SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCNumGangsClause::totalSizeToAlloc<Expr *>(IntExprs.size()));
+  return new (Mem) OpenACCNumGangsClause(BeginLoc, LParenLoc, IntExprs, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -139,6 +149,12 @@ void OpenACCClausePrinter::VisitSelfClause(const OpenACCSelfClause &C) {
   OS << "self";
   if (const Expr *CondExpr = C.getConditionExpr())
     OS << "(" << CondExpr << ")";
+}
+
+void OpenACCClausePrinter::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
+  OS << "num_gangs(";
+  llvm::interleaveComma(C.getIntExprs(), OS);
+  OS << ")";
 }
 
 void OpenACCClausePrinter::VisitNumWorkersClause(
