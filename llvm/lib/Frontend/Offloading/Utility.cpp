@@ -40,8 +40,8 @@ offloading::getOffloadingEntryInitializer(Module &M, Constant *Addr,
 
   Constant *AddrName = ConstantDataArray::getString(M.getContext(), Name);
 
-  StringRef Prefix = Triple.isNVPTX() ? "$omp_offloading$entry_name"
-                                      : ".omp_offloading.entry_name";
+  StringRef Prefix =
+      Triple.isNVPTX() ? "$offloading$entry_name" : ".offloading.entry_name";
 
   // Create the constant string used to look up the symbol in the device.
   auto *Str =
@@ -70,7 +70,7 @@ void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
       getOffloadingEntryInitializer(M, Addr, Name, Size, Flags, Data);
 
   StringRef Prefix =
-      Triple.isNVPTX() ? "$omp_offloading$entry$" : ".omp_offloading.entry.";
+      Triple.isNVPTX() ? "$offloading$entry$" : ".offloading.entry.";
   auto *Entry = new GlobalVariable(
       M, getEntryTy(M),
       /*isConstant=*/true, GlobalValue::WeakAnyLinkage, EntryInitializer,

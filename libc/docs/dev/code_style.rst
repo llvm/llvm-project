@@ -186,3 +186,36 @@ We expect contributions to be free of warnings from the `minimum supported
 compiler versions`__ (and newer).
 
 .. __: https://libc.llvm.org/compiler_support.html#minimum-supported-versions
+
+Header Inclusion Policy
+=======================
+
+Because llvm-libc supports
+`Overlay Mode <https://libc.llvm.org/overlay_mode.html>`__ and
+`Fullbuild Mode <https://libc.llvm.org/fullbuild_mode.html>`__ care must be
+taken when ``#include``'ing certain headers.
+
+The ``include/`` directory contains public facing headers that users must
+consume for fullbuild mode. As such, types defined here will have ABI
+implications as these definitions may differ from the underlying system for
+overlay mode and are NEVER appropriate to include in ``libc/src/`` without
+preprocessor guards for ``LLVM_LIBC_FULL_BUILD``.
+
+Consider the case where an implementation in ``libc/src/`` may wish to refer to
+a ``sigset_t``, what header should be included? ``<signal.h>``, ``<spawn.h>``,
+``<sys/select.h>``?
+
+None of the above. Instead, code under ``src/`` should ``#include
+"hdr/types/sigset_t.h"`` which contains preprocessor guards on
+``LLVM_LIBC_FULL_BUILD`` to either include the public type (fullbuild mode) or
+the underlying system header (overlay mode).
+
+Implementations in ``libc/src/`` should NOT be ``#include``'ing using ``<>`` or
+``"include/*``, except for these "proxy" headers that first check for
+``LLVM_LIBC_FULL_BUILD``.
+
+These "proxy" headers are similarly used when referring to preprocessor
+defines. Code under ``libc/src/`` should ``#include`` a proxy header from
+``hdr/``, which contains a guard on ``LLVM_LIBC_FULL_BUILD`` to either include
+our header from ``libc/include/`` (fullbuild) or the corresponding underlying
+system header (overlay).

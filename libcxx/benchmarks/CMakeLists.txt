@@ -182,6 +182,7 @@ set(BENCHMARK_TESTS
     algorithms/make_heap.bench.cpp
     algorithms/make_heap_then_sort_heap.bench.cpp
     algorithms/min.bench.cpp
+    algorithms/minmax.bench.cpp
     algorithms/min_max_element.bench.cpp
     algorithms/mismatch.bench.cpp
     algorithms/pop_heap.bench.cpp
@@ -220,6 +221,7 @@ set(BENCHMARK_TESTS
     map.bench.cpp
     monotonic_buffer.bench.cpp
     ordered_set.bench.cpp
+    shared_mutex_vs_mutex.bench.cpp
     stop_token.bench.cpp
     std_format_spec_string_unicode.bench.cpp
     string.bench.cpp

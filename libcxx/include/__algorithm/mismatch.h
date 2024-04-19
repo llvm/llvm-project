@@ -16,11 +16,11 @@
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
 #include <__functional/identity.h>
+#include <__type_traits/desugars_to.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_integral.h>
-#include <__type_traits/operation_traits.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/unreachable.h>
@@ -59,7 +59,7 @@ template <class _Tp,
           class _Pred,
           class _Proj1,
           class _Proj2,
-          __enable_if_t<is_integral<_Tp>::value && __desugars_to<__equal_tag, _Pred, _Tp, _Tp>::value &&
+          __enable_if_t<is_integral<_Tp>::value && __desugars_to_v<__equal_tag, _Pred, _Tp, _Tp> &&
                             __is_identity<_Proj1>::value && __is_identity<_Proj2>::value,
                         int> = 0>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Tp*, _Tp*>
