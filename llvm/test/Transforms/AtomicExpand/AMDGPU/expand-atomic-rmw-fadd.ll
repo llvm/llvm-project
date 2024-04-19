@@ -4109,6 +4109,90 @@ define double @test_atomicrmw_fadd_f64_dyndenorm_flat_system_ret__amdgpu_ignore_
   ret double %ret
 }
 
+define void @test_atomicrmw_fadd_f32_region_noret(ptr addrspace(2) %ptr, float %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_f32_region_noret(
+; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(2) [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(2) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret void
+;
+  %unused = atomicrmw fadd ptr addrspace(2) %ptr, float %value monotonic
+  ret void
+}
+
+define float @test_atomicrmw_fadd_f32_region_ret(ptr addrspace(2) %ptr, float %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_f32_region_ret(
+; ALL-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(2) [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(2) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret float [[TMP5]]
+;
+  %ret = atomicrmw fadd ptr addrspace(2) %ptr, float %value monotonic
+  ret float %ret
+}
+
+define void @test_atomicrmw_fadd_f64_region_noret(ptr addrspace(2) %ptr, double %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_f64_region_noret(
+; ALL-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(2) [[PTR:%.*]], align 8
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(2) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret void
+;
+  %unused = atomicrmw fadd ptr addrspace(2) %ptr, double %value monotonic
+  ret void
+}
+
+define double @test_atomicrmw_fadd_f64_region_ret(ptr addrspace(2) %ptr, double %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_f64_region_ret(
+; ALL-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(2) [[PTR:%.*]], align 8
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(2) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] monotonic monotonic, align 8
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret double [[TMP5]]
+;
+  %ret = atomicrmw fadd ptr addrspace(2) %ptr, double %value monotonic
+  ret double %ret
+}
+
 attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
 attributes #1 = { strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
 attributes #2 = { strictfp }
