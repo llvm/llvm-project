@@ -41,7 +41,7 @@ class HexagonCopyHoisting : public MachineFunctionPass {
 
 public:
   static char ID;
-  HexagonCopyHoisting() : MachineFunctionPass(ID), MFN(0), MRI(0) {
+  HexagonCopyHoisting() : MachineFunctionPass(ID), MFN(nullptr), MRI(nullptr) {
     initializeHexagonCopyHoistingPass(*PassRegistry::getPassRegistry());
   }
 
@@ -62,13 +62,14 @@ public:
   void addMItoCopyList(MachineInstr *MI);
   bool analyzeCopy(MachineBasicBlock *BB);
   bool isSafetoMove(MachineInstr *CandMI);
-  void moveCopyInstr(MachineBasicBlock *DestBB, StringRef key,
-                     MachineInstr *MI);
+  void moveCopyInstr(MachineBasicBlock *DestBB,
+                     std::pair<Register, Register> Key, MachineInstr *MI);
 
   MachineFunction *MFN;
   MachineRegisterInfo *MRI;
   StringMap<MachineInstr *> CopyMI;
-  std::vector<StringMap<MachineInstr *>> CopyMIList;
+  std::vector<DenseMap<std::pair<Register, Register>, MachineInstr *>>
+      CopyMIList;
 };
 
 } // namespace
@@ -77,7 +78,7 @@ char HexagonCopyHoisting::ID = 0;
 
 namespace llvm {
 char &HexagonCopyHoistingID = HexagonCopyHoisting::ID;
-}
+} // namespace llvm
 
 bool HexagonCopyHoisting::runOnMachineFunction(MachineFunction &Fn) {
 
@@ -97,19 +98,18 @@ bool HexagonCopyHoisting::runOnMachineFunction(MachineFunction &Fn) {
 
   // Traverse through the basic blocks again and move the COPY instructions
   // that are present in all the successors of BB to BB.
-  bool changed = false;
-  for (auto I = po_begin(&Fn), E = po_end(&Fn); I != E; ++I) {
-    MachineBasicBlock &BB = **I;
-    if (!BB.empty()) {
-      if (BB.pred_size() != 1) //
+  bool Changed = false;
+  for (MachineBasicBlock *BB : post_order(&Fn)) {
+    if (!BB->empty()) {
+      if (BB->pred_size() != 1)
         continue;
-      auto &BBCopyInst = CopyMIList[BB.getNumber()];
+      auto &BBCopyInst = CopyMIList[BB->getNumber()];
       if (BBCopyInst.size() > 0)
-        changed |= analyzeCopy(*BB.pred_begin());
+        Changed |= analyzeCopy(*BB->pred_begin());
     }
   }
   // Re-compute liveness
-  if (changed) {
+  if (Changed) {
     LiveIntervals &LIS = getAnalysis<LiveIntervals>();
     SlotIndexes *SI = LIS.getSlotIndexes();
     SI->releaseMemory();
@@ -117,24 +117,22 @@ bool HexagonCopyHoisting::runOnMachineFunction(MachineFunction &Fn) {
     LIS.releaseMemory();
     LIS.runOnMachineFunction(Fn);
   }
-  return changed;
+  return Changed;
 }
 
 //===----------------------------------------------------------------------===//
 // Save all COPY instructions for each basic block in CopyMIList vector.
 //===----------------------------------------------------------------------===//
 void HexagonCopyHoisting::collectCopyInst() {
-  for (auto BI = MFN->begin(), BE = MFN->end(); BI != BE; ++BI) {
-    MachineBasicBlock *BB = &*BI;
+  for (MachineBasicBlock &BB : *MFN) {
 #ifndef NDEBUG
-    auto &BBCopyInst = CopyMIList[BB->getNumber()];
-    LLVM_DEBUG(dbgs() << "Visiting BB#" << BB->getNumber() << ":\n");
+    auto &BBCopyInst = CopyMIList[BB.getNumber()];
+    LLVM_DEBUG(dbgs() << "Visiting BB#" << BB.getNumber() << ":\n");
 #endif
 
-    for (auto MII = BB->begin(), MIE = BB->end(); MII != MIE; ++MII) {
-      MachineInstr *MI = &*MII;
-      if (MI->getOpcode() == TargetOpcode::COPY)
-        addMItoCopyList(MI);
+    for (MachineInstr &MI : BB) {
+      if (MI.getOpcode() == TargetOpcode::COPY)
+        addMItoCopyList(&MI);
     }
     LLVM_DEBUG(dbgs() << "\tNumber of copies: " << BBCopyInst.size() << "\n");
   }
@@ -143,8 +141,8 @@ void HexagonCopyHoisting::collectCopyInst() {
 void HexagonCopyHoisting::addMItoCopyList(MachineInstr *MI) {
   unsigned BBNum = MI->getParent()->getNumber();
   auto &BBCopyInst = CopyMIList[BBNum];
-  unsigned DstReg = MI->getOperand(0).getReg();
-  unsigned SrcReg = MI->getOperand(1).getReg();
+  Register DstReg = MI->getOperand(0).getReg();
+  Register SrcReg = MI->getOperand(1).getReg();
 
   if (!Register::isVirtualRegister(DstReg) ||
       !Register::isVirtualRegister(SrcReg) ||
@@ -152,16 +150,16 @@ void HexagonCopyHoisting::addMItoCopyList(MachineInstr *MI) {
       MRI->getRegClass(SrcReg) != &Hexagon::IntRegsRegClass)
     return;
 
-  StringRef key;
+  StringRef Key;
   SmallString<256> TmpData("");
   (void)Twine(Register::virtReg2Index(DstReg)).toStringRef(TmpData);
   TmpData += '=';
-  key = Twine(Register::virtReg2Index(SrcReg)).toStringRef(TmpData);
-  BBCopyInst[key] = MI;
+  Key = Twine(Register::virtReg2Index(SrcReg)).toStringRef(TmpData);
+  BBCopyInst.insert(std::pair(std::pair(SrcReg, DstReg), MI));
 #ifndef NDEBUG
   LLVM_DEBUG(dbgs() << "\tAdding Copy Instr to the list: " << MI << "\n");
-  for (auto II = BBCopyInst.begin(), IE = BBCopyInst.end(); II != IE; ++II) {
-    MachineInstr *TempMI = (*II).getValue();
+  for (auto II : BBCopyInst) {
+    MachineInstr *TempMI = II.getSecond();
     LLVM_DEBUG(dbgs() << "\tIn the list: " << TempMI << "\n");
   }
 #endif
@@ -174,37 +172,32 @@ void HexagonCopyHoisting::addMItoCopyList(MachineInstr *MI) {
 //===----------------------------------------------------------------------===//
 bool HexagonCopyHoisting::analyzeCopy(MachineBasicBlock *BB) {
 
-  bool changed = false;
+  bool Changed = false;
   if (BB->succ_size() < 2)
     return false;
 
-  for (auto I = BB->succ_begin(), E = BB->succ_end(); I != E; ++I) {
-    MachineBasicBlock *SB = *I;
+  for (MachineBasicBlock *SB : BB->successors()) {
     if (SB->pred_size() != 1 || SB->isEHPad() || SB->hasAddressTaken())
       return false;
   }
 
-  auto SuccI = BB->succ_begin(), SuccE = BB->succ_end();
-
-  MachineBasicBlock *SBB1 = *SuccI;
-  ++SuccI;
+  MachineBasicBlock *SBB1 = *BB->succ_begin();
   auto &BBCopyInst1 = CopyMIList[SBB1->getNumber()];
 
-  for (auto II = BBCopyInst1.begin(), IE = BBCopyInst1.end(); II != IE; ++II) {
-    StringRef key = (*II).getKeyData();
-    MachineInstr *MI = (*II).getValue();
+  for (auto II : BBCopyInst1) {
+    std::pair<Register, Register> Key = II.getFirst();
+    MachineInstr *MI = II.getSecond();
     bool IsSafetoMove = true;
-    for (SuccI = BB->succ_begin(); SuccI != SuccE; ++SuccI) {
-      MachineBasicBlock *SuccBB = *SuccI;
+    for (MachineBasicBlock *SuccBB : BB->successors()) {
       auto &SuccBBCopyInst = CopyMIList[SuccBB->getNumber()];
-      if (!SuccBBCopyInst.count(key)) {
+      if (!SuccBBCopyInst.count(Key)) {
         // Same copy not present in this successor
         IsSafetoMove = false;
         break;
       }
       // If present, make sure that it's safe to pull this copy instruction
       // into the predecessor.
-      MachineInstr *SuccMI = SuccBBCopyInst[key];
+      MachineInstr *SuccMI = SuccBBCopyInst[Key];
       if (!isSafetoMove(SuccMI)) {
         IsSafetoMove = false;
         break;
@@ -215,67 +208,63 @@ bool HexagonCopyHoisting::analyzeCopy(MachineBasicBlock *BB) {
     if (IsSafetoMove) {
       LLVM_DEBUG(dbgs() << "\t\t Moving instr to BB#" << BB->getNumber() << ": "
                         << MI << "\n");
-      moveCopyInstr(BB, key, MI);
+      moveCopyInstr(BB, Key, MI);
       // Add my into BB copyMI list.
-      changed = true;
+      Changed = true;
     }
   }
 
 #ifndef NDEBUG
   auto &BBCopyInst = CopyMIList[BB->getNumber()];
-  for (auto II = BBCopyInst.begin(), IE = BBCopyInst.end(); II != IE; ++II) {
-    MachineInstr *TempMI = (*II).getValue();
+  for (auto II : BBCopyInst) {
+    MachineInstr *TempMI = II.getSecond();
     LLVM_DEBUG(dbgs() << "\tIn the list: " << TempMI << "\n");
   }
 #endif
-  return changed;
+  return Changed;
 }
 
 bool HexagonCopyHoisting::isSafetoMove(MachineInstr *CandMI) {
   // Make sure that it's safe to move this 'copy' instruction to the predecessor
   // basic block.
   assert(CandMI->getOperand(0).isReg() && CandMI->getOperand(1).isReg());
-  unsigned DefR = CandMI->getOperand(0).getReg();
-  unsigned UseR = CandMI->getOperand(1).getReg();
+  Register DefR = CandMI->getOperand(0).getReg();
+  Register UseR = CandMI->getOperand(1).getReg();
 
   MachineBasicBlock *BB = CandMI->getParent();
   // There should not be a def/use of DefR between the start of BB and CandMI.
   MachineBasicBlock::iterator MII, MIE;
   for (MII = BB->begin(), MIE = CandMI; MII != MIE; ++MII) {
-    MachineInstr *otherMI = &*MII;
-    for (MachineInstr::mop_iterator Mo = otherMI->operands_begin(),
-                                    E = otherMI->operands_end();
-         Mo != E; ++Mo)
-      if (Mo->isReg() && Mo->getReg() == DefR)
+    MachineInstr *OtherMI = &*MII;
+    for (const MachineOperand &Mo : OtherMI->operands())
+      if (Mo.isReg() && Mo.getReg() == DefR)
         return false;
   }
   // There should not be a def of UseR between the start of BB and CandMI.
   for (MII = BB->begin(), MIE = CandMI; MII != MIE; ++MII) {
-    MachineInstr *otherMI = &*MII;
-    for (MachineInstr::mop_iterator Mo = otherMI->operands_begin(),
-                                    E = otherMI->operands_end();
-         Mo != E; ++Mo)
-      if (Mo->isReg() && Mo->isDef() && Mo->getReg() == UseR)
+    MachineInstr *OtherMI = &*MII;
+    for (const MachineOperand &Mo : OtherMI->operands())
+      if (Mo.isReg() && Mo.isDef() && Mo.getReg() == UseR)
         return false;
   }
   return true;
 }
 
 void HexagonCopyHoisting::moveCopyInstr(MachineBasicBlock *DestBB,
-                                        StringRef key, MachineInstr *MI) {
+                                        std::pair<Register, Register> Key,
+                                        MachineInstr *MI) {
   MachineBasicBlock::iterator FirstTI = DestBB->getFirstTerminator();
   assert(FirstTI != DestBB->end());
 
   DestBB->splice(FirstTI, MI->getParent(), MI);
 
   addMItoCopyList(MI);
-  auto I = ++(DestBB->succ_begin()), E = DestBB->succ_end();
-  for (; I != E; ++I) {
+  for (auto I = ++(DestBB->succ_begin()), E = DestBB->succ_end(); I != E; ++I) {
     MachineBasicBlock *SuccBB = *I;
     auto &BBCopyInst = CopyMIList[SuccBB->getNumber()];
-    MachineInstr *SuccMI = BBCopyInst[key];
+    MachineInstr *SuccMI = BBCopyInst[Key];
     SuccMI->eraseFromParent();
-    BBCopyInst.erase(key);
+    BBCopyInst.erase(Key);
   }
 }
 
