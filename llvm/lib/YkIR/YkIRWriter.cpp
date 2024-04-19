@@ -36,36 +36,36 @@ const uint32_t Magic = 0xedd5f00d;
 const uint32_t Version = 0;
 
 enum OpCode {
-  Nop = 0,
-  Load,
-  Store,
-  Alloca,
-  Call,
-  Br,
-  CondBr,
-  ICmp,
-  Ret,
-  InsertValue,
-  PtrAdd,
-  BinOp,
-  UnimplementedInstruction = 255, // YKFIXME: Will eventually be deleted.
+  OpCodeNop = 0,
+  OpCodeLoad,
+  OpCodeStore,
+  OpCodeAlloca,
+  OpCodeCall,
+  OpCodeBr,
+  OpCodeCondBr,
+  OpCodeICmp,
+  OpCodeRet,
+  OpCodeInsertValue,
+  OpCodePtrAdd,
+  OpCodeBinOp,
+  OpCodeUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
 
 enum OperandKind {
-  Constant = 0,
-  LocalVariable,
-  Global,
-  Function,
-  Arg,
+  OperandKindConstant = 0,
+  OperandKindLocal,
+  OperandKindGlobal,
+  OperandKindFunction,
+  OperandKindArg,
 };
 
 enum TypeKind {
-  Void = 0,
-  Integer,
-  Ptr,
-  FunctionTy,
-  Struct,
-  UnimplementedType = 255, // YKFIXME: Will eventually be deleted.
+  TypeKindVoid = 0,
+  TypeKindInteger,
+  TypeKindPtr,
+  TypeKindFunction,
+  TypeKindStruct,
+  TypeKindUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
 
 // A predicate used in a numeric comparison.
@@ -190,8 +190,8 @@ private:
 
   // Return the index of the LLVM constant `C`, inserting a new entry if
   // necessary.
-  size_t constantIndex(class Constant *C) {
-    vector<class Constant *>::iterator Found =
+  size_t constantIndex(Constant *C) {
+    vector<Constant *>::iterator Found =
         std::find(Constants.begin(), Constants.end(), C);
     if (Found != Constants.end()) {
       return std::distance(Constants.begin(), Found);
@@ -203,8 +203,8 @@ private:
 
   // Return the index of the LLVM global `G`, inserting a new entry if
   // necessary.
-  size_t globalIndex(class GlobalVariable *G) {
-    vector<class GlobalVariable *>::iterator Found =
+  size_t globalIndex(GlobalVariable *G) {
+    vector<GlobalVariable *>::iterator Found =
         std::find(Globals.begin(), Globals.end(), G);
     if (Found != Globals.end()) {
       return std::distance(Globals.begin(), Found);
@@ -227,21 +227,23 @@ private:
   }
 
   void serialiseOpcode(OpCode Code) { OutStreamer.emitInt8(Code); }
+  void serialiseOperandKind(OperandKind Kind) { OutStreamer.emitInt8(Kind); }
+  void serialiseTypeKind(TypeKind Kind) { OutStreamer.emitInt8(Kind); }
 
   void serialiseConstantOperand(Instruction *Parent, llvm::Constant *C) {
-    OutStreamer.emitInt8(OperandKind::Constant);
+    serialiseOperandKind(OperandKindConstant);
     OutStreamer.emitSizeT(constantIndex(C));
   }
 
   void serialiseLocalVariableOperand(Instruction *I, ValueLoweringMap &VLMap) {
     auto [BBIdx, InstIdx] = VLMap.at(I);
-    OutStreamer.emitInt8(OperandKind::LocalVariable);
+    serialiseOperandKind(OperandKindLocal);
     OutStreamer.emitSizeT(BBIdx);
     OutStreamer.emitSizeT(InstIdx);
   }
 
   void serialiseFunctionOperand(llvm::Function *F) {
-    OutStreamer.emitInt8(OperandKind::Function);
+    serialiseOperandKind(OperandKindFunction);
     OutStreamer.emitSizeT(functionIndex(F));
   }
 
@@ -254,7 +256,7 @@ private:
     // This assumes that the argument indices match in both IRs.
 
     // opcode:
-    OutStreamer.emitInt8(OperandKind::Arg);
+    serialiseOperandKind(OperandKindArg);
     // parent function index:
     OutStreamer.emitSizeT(getIndex(&M, A->getParent()));
     // arg index
@@ -262,7 +264,7 @@ private:
   }
 
   void serialiseGlobalOperand(GlobalVariable *G) {
-    OutStreamer.emitInt8(OperandKind::Global);
+    serialiseOperandKind(OperandKindGlobal);
     OutStreamer.emitSizeT(globalIndex(G));
   }
 
@@ -290,7 +292,7 @@ private:
     assert(I->getNumOperands() == 2);
 
     // opcode:
-    OutStreamer.emitInt8(OpCode::BinOp);
+    serialiseOpcode(OpCodeBinOp);
     // left-hand side:
     serialiseOperand(I, VLMap, I->getOperand(0));
     // binary operator:
@@ -370,7 +372,7 @@ private:
   void serialiseAllocaInst(AllocaInst *I, ValueLoweringMap &VLMap,
                            unsigned BBIdx, unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(OpCode::Alloca);
+    serialiseOpcode(OpCodeAlloca);
 
     // type to be allocated:
     OutStreamer.emitSizeT(typeIndex(I->getAllocatedType()));
@@ -418,7 +420,7 @@ private:
     assert(I->getCalledFunction());
 
     // opcode:
-    serialiseOpcode(OpCode::Call);
+    serialiseOpcode(OpCodeCall);
     // callee:
     OutStreamer.emitSizeT(functionIndex(I->getCalledFunction()));
     // num_args:
@@ -445,10 +447,10 @@ private:
       // traces will guide us.
       //
       // opcode:
-      serialiseOpcode(OpCode::Br);
+      serialiseOpcode(OpCodeBr);
     } else {
       // opcode:
-      serialiseOpcode(OpCode::CondBr);
+      serialiseOpcode(OpCodeCondBr);
       // We DO need operands for conditional branches, so that we can build
       // guards.
       //
@@ -465,7 +467,7 @@ private:
   void serialiseLoadInst(LoadInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                          unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(OpCode::Load);
+    serialiseOpcode(OpCodeLoad);
     // ptr:
     serialiseOperand(I, VLMap, I->getPointerOperand());
     // type_idx:
@@ -478,7 +480,7 @@ private:
   void serialiseStoreInst(StoreInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                           unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(OpCode::Store);
+    serialiseOpcode(OpCodeStore);
     // value:
     serialiseOperand(I, VLMap, I->getValueOperand());
     // ptr:
@@ -497,7 +499,7 @@ private:
     assert(Res);
 
     // opcode:
-    serialiseOpcode(OpCode::PtrAdd);
+    serialiseOpcode(OpCodePtrAdd);
     // type_idx:
     OutStreamer.emitSizeT(typeIndex(I->getType()));
     // pointer:
@@ -552,7 +554,7 @@ private:
   void serialiseICmpInst(ICmpInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                          unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(OpCode::ICmp);
+    serialiseOpcode(OpCodeICmp);
     // type_idx:
     OutStreamer.emitSizeT(typeIndex(I->getType()));
     // lhs:
@@ -569,7 +571,7 @@ private:
   void serialiseReturnInst(ReturnInst *I, ValueLoweringMap &VLMap,
                            unsigned BBIdx, unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(OpCode::Ret);
+    serialiseOpcode(OpCodeRet);
 
     Value *RV = I->getReturnValue();
     if (RV == nullptr) {
@@ -588,7 +590,7 @@ private:
   void serialiseInsertValueInst(InsertValueInst *I, ValueLoweringMap &VLMap,
                                 unsigned BBIdx, unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(OpCode::InsertValue);
+    serialiseOpcode(OpCodeInsertValue);
     // agg:
     serialiseOperand(I, VLMap, I->getAggregateOperand());
     // elem:
@@ -626,7 +628,7 @@ private:
                                          ValueLoweringMap &VLMap,
                                          unsigned BBIdx, unsigned &InstIdx) {
     // opcode:
-    serialiseOpcode(UnimplementedInstruction);
+    serialiseOpcode(OpCodeUnimplemented);
     // stringified problem instruction
     serialiseString(toString(I));
 
@@ -713,7 +715,7 @@ private:
   }
 
   void serialiseFunctionType(FunctionType *Ty) {
-    OutStreamer.emitInt8(TypeKind::FunctionTy);
+    serialiseTypeKind(TypeKindFunction);
     // num_args:
     OutStreamer.emitSizeT(Ty->getNumParams());
     // arg_tys:
@@ -727,7 +729,7 @@ private:
   }
 
   void serialiseStructType(StructType *STy) {
-    OutStreamer.emitInt8(TypeKind::Struct);
+    serialiseTypeKind(TypeKindStruct);
     unsigned NumFields = STy->getNumElements();
     DataLayout DL(&M);
     const StructLayout *SL = DL.getStructLayout(STy);
@@ -745,20 +747,20 @@ private:
 
   void serialiseType(llvm::Type *Ty) {
     if (Ty->isVoidTy()) {
-      OutStreamer.emitInt8(TypeKind::Void);
+      serialiseTypeKind(TypeKindVoid);
     } else if (PointerType *PT = dyn_cast<PointerType>(Ty)) {
       // FIXME: The Yk runtime assumes all pointers are void-ptr-sized.
       assert(DL.getPointerSize(PT->getAddressSpace()) == sizeof(void *));
-      OutStreamer.emitInt8(TypeKind::Ptr);
+      serialiseTypeKind(TypeKindPtr);
     } else if (IntegerType *ITy = dyn_cast<IntegerType>(Ty)) {
-      OutStreamer.emitInt8(TypeKind::Integer);
+      serialiseTypeKind(TypeKindInteger);
       OutStreamer.emitInt32(ITy->getBitWidth());
     } else if (FunctionType *FTy = dyn_cast<FunctionType>(Ty)) {
       serialiseFunctionType(FTy);
     } else if (StructType *STy = dyn_cast<StructType>(Ty)) {
       serialiseStructType(STy);
     } else {
-      OutStreamer.emitInt8(TypeKind::UnimplementedType);
+      serialiseTypeKind(TypeKindUnimplemented);
       serialiseString(toString(Ty));
     }
   }
@@ -772,7 +774,7 @@ private:
     }
   }
 
-  void serialiseUnimplementedConstant(class Constant *C) {
+  void serialiseUnimplementedConstant(Constant *C) {
     // type_index:
     OutStreamer.emitSizeT(typeIndex(C->getType()));
     // num_bytes:
@@ -780,7 +782,7 @@ private:
     OutStreamer.emitSizeT(0);
   }
 
-  void serialiseConstant(class Constant *C) {
+  void serialiseConstant(Constant *C) {
     if (ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
       serialiseConstantInt(CI);
     } else {
@@ -788,7 +790,7 @@ private:
     }
   }
 
-  void serialiseGlobal(class GlobalVariable *G) {
+  void serialiseGlobal(GlobalVariable *G) {
     OutStreamer.emitInt8(G->isThreadLocal());
     serialiseString(G->getName());
   }
@@ -820,14 +822,14 @@ public:
     // num_constants:
     OutStreamer.emitSizeT(Constants.size());
     // constants:
-    for (class Constant *&C : Constants) {
+    for (Constant *&C : Constants) {
       serialiseConstant(C);
     }
 
     // num_globals:
     OutStreamer.emitSizeT(Globals.size());
     // globals:
-    for (class GlobalVariable *&G : Globals) {
+    for (GlobalVariable *&G : Globals) {
       serialiseGlobal(G);
     }
 
