@@ -3785,8 +3785,7 @@ class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
 
 def Callseq_Start :
   NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),
-            "\\{ // callseq $amt1, $amt2\n"
-            "\t.reg .b32 temp_param_reg;",
+            "\\{ // callseq $amt1, $amt2",
             [(callseq_start timm:$amt1, timm:$amt2)]>;
 def Callseq_End :
   NVPTXInst<(outs), (ins i32imm:$amt1, i32imm:$amt2),

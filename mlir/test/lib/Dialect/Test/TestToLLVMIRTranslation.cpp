@@ -61,7 +61,7 @@ LogicalResult TestDialectLLVMIRTranslationInterface::amendOperation(
               }
 
               bool createSymbol = false;
-              if (auto boolAttr = attr.dyn_cast<BoolAttr>())
+              if (auto boolAttr = dyn_cast<BoolAttr>(attr))
                 createSymbol = boolAttr.getValue();
 
               if (createSymbol) {

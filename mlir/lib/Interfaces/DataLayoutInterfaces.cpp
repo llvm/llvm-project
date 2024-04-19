@@ -75,10 +75,12 @@ mlir::detail::getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
   // there is no bit-packing at the moment element sizes are taken in bytes and
   // multiplied with 8 bits.
   // TODO: make this extensible.
-  if (auto vecType = dyn_cast<VectorType>(type))
-    return vecType.getNumElements() / vecType.getShape().back() *
-           llvm::PowerOf2Ceil(vecType.getShape().back()) *
-           dataLayout.getTypeSize(vecType.getElementType()) * 8;
+  if (auto vecType = dyn_cast<VectorType>(type)) {
+    uint64_t baseSize = vecType.getNumElements() / vecType.getShape().back() *
+                        llvm::PowerOf2Ceil(vecType.getShape().back()) *
+                        dataLayout.getTypeSize(vecType.getElementType()) * 8;
+    return llvm::TypeSize::get(baseSize, vecType.isScalable());
+  }
 
   if (auto typeInterface = dyn_cast<DataLayoutTypeInterface>(type))
     return typeInterface.getTypeSizeInBits(dataLayout, params);
@@ -138,9 +140,10 @@ getFloatTypeABIAlignment(FloatType fltType, const DataLayout &dataLayout,
 uint64_t mlir::detail::getDefaultABIAlignment(
     Type type, const DataLayout &dataLayout,
     ArrayRef<DataLayoutEntryInterface> params) {
-  // Natural alignment is the closest power-of-two number above.
+  // Natural alignment is the closest power-of-two number above. For scalable
+  // vectors, aligning them to the same as the base vector is sufficient.
   if (isa<VectorType>(type))
-    return llvm::PowerOf2Ceil(dataLayout.getTypeSize(type));
+    return llvm::PowerOf2Ceil(dataLayout.getTypeSize(type).getKnownMinValue());
 
   if (auto fltType = dyn_cast<FloatType>(type))
     return getFloatTypeABIAlignment(fltType, dataLayout, params);
@@ -232,6 +235,15 @@ std::optional<uint64_t> mlir::detail::getDefaultIndexBitwidth(
   // Return std::nullopt for all other types, which are assumed to be non
   // pointer-like types.
   return std::nullopt;
+}
+
+// Returns the endianness if specified in the given entry. If the entry is empty
+// the default endianness represented by an empty attribute is returned.
+Attribute mlir::detail::getDefaultEndianness(DataLayoutEntryInterface entry) {
+  if (entry == DataLayoutEntryInterface())
+    return Attribute();
+
+  return entry.getValue();
 }
 
 // Returns the memory space used for alloca operations if specified in the
@@ -546,6 +558,22 @@ std::optional<uint64_t> mlir::DataLayout::getTypeIndexBitwidth(Type t) const {
       return iface.getIndexBitwidth(ty, *this, list);
     return detail::getDefaultIndexBitwidth(ty, *this, list);
   });
+}
+
+mlir::Attribute mlir::DataLayout::getEndianness() const {
+  checkValid();
+  if (endianness)
+    return *endianness;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getEndiannessIdentifier(originalLayout.getContext()));
+
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    endianness = iface.getEndianness(entry);
+  else
+    endianness = detail::getDefaultEndianness(entry);
+  return *endianness;
 }
 
 mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {

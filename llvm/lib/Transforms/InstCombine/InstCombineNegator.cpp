@@ -140,7 +140,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
 
   // Integral constants can be freely negated.
   if (match(V, m_AnyIntegralConstant()))
-    return ConstantExpr::getNeg(cast<Constant>(V), /*HasNUW=*/false,
+    return ConstantExpr::getNeg(cast<Constant>(V),
                                 /*HasNSW=*/false);
 
   // If we have a non-instruction, then give up.
@@ -249,7 +249,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     unsigned SrcWidth = SrcOp->getType()->getScalarSizeInBits();
     const APInt &FullShift = APInt(SrcWidth, SrcWidth - 1);
     if (IsTrulyNegation &&
-        match(SrcOp, m_LShr(m_Value(X), m_SpecificIntAllowUndef(FullShift)))) {
+        match(SrcOp, m_LShr(m_Value(X), m_SpecificIntAllowPoison(FullShift)))) {
       Value *Ashr = Builder.CreateAShr(X, FullShift);
       return Builder.CreateSExt(Ashr, I->getType());
     }

@@ -265,7 +265,8 @@ class BinaryContext {
 
 public:
   static Expected<std::unique_ptr<BinaryContext>>
-  createBinaryContext(const ObjectFile *File, bool IsPIC,
+  createBinaryContext(Triple TheTriple, StringRef InputFileName,
+                      SubtargetFeatures *Features, bool IsPIC,
                       std::unique_ptr<DWARFContext> DwCtx,
                       JournalingStreams Logger);
 

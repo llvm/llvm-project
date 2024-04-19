@@ -559,7 +559,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
     // we don't do anything here. The verifier will catch it and emit a proper
     // error. All other canonicalization is done in the fold method.
     bool requiresConst = !rawConstantIndices.empty() &&
-                         currType.isa_and_nonnull<LLVMStructType>();
+                         isa_and_nonnull<LLVMStructType>(currType);
     if (Value val = llvm::dyn_cast_if_present<Value>(iter)) {
       APInt intC;
       if (requiresConst && matchPattern(val, m_ConstantInt(&intC)) &&
@@ -2564,14 +2564,14 @@ LogicalResult LLVM::ConstantOp::verify() {
     }
     // See the comment for getLLVMConstant for more details about why 8-bit
     // floats can be represented by integers.
-    if (getType().isa<IntegerType>() && !getType().isInteger(floatWidth)) {
+    if (isa<IntegerType>(getType()) && !getType().isInteger(floatWidth)) {
       return emitOpError() << "expected integer type of width " << floatWidth;
     }
   }
   if (auto splatAttr = dyn_cast<SplatElementsAttr>(getValue())) {
-    if (!getType().isa<VectorType>() && !getType().isa<LLVM::LLVMArrayType>() &&
-        !getType().isa<LLVM::LLVMFixedVectorType>() &&
-        !getType().isa<LLVM::LLVMScalableVectorType>())
+    if (!isa<VectorType>(getType()) && !isa<LLVM::LLVMArrayType>(getType()) &&
+        !isa<LLVM::LLVMFixedVectorType>(getType()) &&
+        !isa<LLVM::LLVMScalableVectorType>(getType()))
       return emitOpError() << "expected vector or array type";
   }
   return success();
@@ -2761,15 +2761,25 @@ LogicalResult SExtOp::verify() { return verifyExtOp<SExtOp>(*this); }
 // Folder and verifier for LLVM::BitcastOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
-  // bitcast(x : T0, T0) -> x
-  if (getArg().getType() == getType())
-    return getArg();
-  // bitcast(bitcast(x : T0, T1), T0) -> x
-  if (auto prev = getArg().getDefiningOp<BitcastOp>())
-    if (prev.getArg().getType() == getType())
+/// Folds a cast op that can be chained.
+template <typename T>
+static Value foldChainableCast(T castOp, typename T::FoldAdaptor adaptor) {
+  // cast(x : T0, T0) -> x
+  if (castOp.getArg().getType() == castOp.getType())
+    return castOp.getArg();
+  if (auto prev = castOp.getArg().template getDefiningOp<T>()) {
+    // cast(cast(x : T0, T1), T0) -> x
+    if (prev.getArg().getType() == castOp.getType())
       return prev.getArg();
+    // cast(cast(x : T0, T1), T2) -> cast(x: T0, T2)
+    castOp.getArgMutable().set(prev.getArg());
+    return Value{castOp};
+  }
   return {};
+}
+
+OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
+  return foldChainableCast(*this, adaptor);
 }
 
 LogicalResult LLVM::BitcastOp::verify() {
@@ -2786,10 +2796,8 @@ LogicalResult LLVM::BitcastOp::verify() {
   if (!resultType)
     return success();
 
-  auto isVector = [](Type type) {
-    return llvm::isa<VectorType, LLVMScalableVectorType, LLVMFixedVectorType>(
-        type);
-  };
+  auto isVector =
+      llvm::IsaPred<VectorType, LLVMScalableVectorType, LLVMFixedVectorType>;
 
   // Due to bitcast requiring both operands to be of the same size, it is not
   // possible for only one of the two to be a pointer of vectors.
@@ -2813,14 +2821,7 @@ LogicalResult LLVM::BitcastOp::verify() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult LLVM::AddrSpaceCastOp::fold(FoldAdaptor adaptor) {
-  // addrcast(x : T0, T0) -> x
-  if (getArg().getType() == getType())
-    return getArg();
-  // addrcast(addrcast(x : T0, T1), T0) -> x
-  if (auto prev = getArg().getDefiningOp<AddrSpaceCastOp>())
-    if (prev.getArg().getType() == getType())
-      return prev.getArg();
-  return {};
+  return foldChainableCast(*this, adaptor);
 }
 
 //===----------------------------------------------------------------------===//

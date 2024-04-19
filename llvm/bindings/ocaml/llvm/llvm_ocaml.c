@@ -800,6 +800,15 @@ value llvm_string_of_llvalue(value M) {
   return ValueStr;
 }
 
+/* lldbgrecord -> string */
+value llvm_string_of_lldbgrecord(value Record) {
+  char *ValueCStr = LLVMPrintDbgRecordToString(DbgRecord_val(Record));
+  value ValueStr = caml_copy_string(ValueCStr);
+  LLVMDisposeMessage(ValueCStr);
+
+  return ValueStr;
+}
+
 /* llvalue -> llvalue -> unit */
 value llvm_replace_all_uses_with(value OldVal, value NewVal) {
   LLVMReplaceAllUsesWith(Value_val(OldVal), Value_val(NewVal));
