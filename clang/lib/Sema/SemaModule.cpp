@@ -1003,6 +1003,10 @@ Decl *Sema::ActOnFinishExportDecl(Scope *S, Decl *D, SourceLocation RBraceLoc) {
     }
   }
 
+  // Anything exported from a module should never be considered unused.
+  for (auto *Exported : ED->decls())
+    Exported->markUsed(getASTContext());
+
   return D;
 }
 
