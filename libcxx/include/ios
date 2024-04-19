@@ -524,7 +524,7 @@ inline _LIBCPP_HIDE_FROM_ABI void ios_base::exceptions(iostate __iostate) {
 
 template <class _Traits>
 // Attribute 'packed' is used to keep the layout compatible with the previous
-// definition of '__set_' in basic_ios on AIX.
+// definition of the '__fill_' and '_set_' pair in basic_ios on AIX & z/OS.
 struct _LIBCPP_PACKED _OptionalFill {
   _OptionalFill() : __set_(false) { }
   _OptionalFill& operator=(typename _Traits::int_type __x) { __set_ = true; __fill_val_ = __x; return *this; }
