@@ -9,10 +9,8 @@ module {
     // CHECK: %{{.+}} = llvm.mlir.constant(1.000000e+00 : f32) : f32
     %2 = cir.const(#cir.fp<1.0> : !cir.double) : !cir.double
     // CHECK: %{{.+}} = llvm.mlir.constant(1.000000e+00 : f64) : f64
-    // %3 = cir.const(1.0 : f128) : f128
-    // DISABLED-CHECK: %{{.+}} = llvm.mlir.constant(1.000000e+00 : f128) : f128
-    // %4 = cir.const(1.0 : f80) : f80
-    // DISABLED-CHECK: %{{.+}} = llvm.mlir.constant(1.000000e+00 : f80) : f80
+    %3 = cir.const(#cir.fp<1.0> : !cir.long_double<!cir.f80>) : !cir.long_double<!cir.f80>
+    // CHECK: %{{.+}} = llvm.mlir.constant(1.000000e+00 : f80) : f80
     // %5 = cir.const(1.0 : bf16) : bf16
     // DISABLED-CHECK: %{{.+}} = llvm.mlir.constant(1.000000e+00 : bf16) : bf16
     cir.return
