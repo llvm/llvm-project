@@ -31,8 +31,8 @@ using namespace llvm;
 #define PASS_NAME "NVPTX DAG->DAG Pattern Instruction Selection"
 
 static cl::opt<bool>
-    DisableRsqrtOpt("nvptx-disable-rsqrt-opt", cl::init(false), cl::Hidden,
-                    cl::desc("Disable reciprocal sqrt optimization"));
+    EnableRsqrtOpt("nvptx-rsqrt-approx-opt", cl::init(true), cl::Hidden,
+                   cl::desc("Enable reciprocal sqrt optimization"));
 
 /// createNVPTXISelDag - This pass converts a legalized DAG into a
 /// NVPTX-specific DAG, ready for instruction scheduling.
@@ -78,7 +78,7 @@ bool NVPTXDAGToDAGISel::allowUnsafeFPMath() const {
   return TL->allowUnsafeFPMath(*MF);
 }
 
-bool NVPTXDAGToDAGISel::doRsqrtOpt() const { return !DisableRsqrtOpt; }
+bool NVPTXDAGToDAGISel::doRsqrtOpt() const { return EnableRsqrtOpt; }
 
 /// Select - Select instructions not customized! Used for
 /// expanded, promoted and normal instructions.
