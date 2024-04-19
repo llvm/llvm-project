@@ -54,24 +54,18 @@ static cl::opt<bool>
                    cl::cat(SplitCategory));
 
 static cl::opt<std::string>
-    MTarget("mtarget",
+    MTriple("mtriple",
             cl::desc("Target triple. When present, a TargetMachine is created "
                      "and TargetMachine::splitModule is used instead of the "
                      "common SplitModule logic."),
             cl::value_desc("triple"), cl::cat(SplitCategory));
 
 static cl::opt<std::string>
-    MCPU("mcpu", cl::desc("Target CPU, ignored if -mtarget is not used"),
+    MCPU("mcpu", cl::desc("Target CPU, ignored if -mtriple is not used"),
          cl::value_desc("cpu"), cl::cat(SplitCategory));
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
-
-  // NOTE: If mtarget is not present we could avoid initializing targets to save
-  // time, but this is a testing tool and it's likely not worth the added
-  // complexity.
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
 
   LLVMContext Context;
   SMDiagnostic Err;
@@ -79,16 +73,19 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "LLVM module splitter\n");
 
   TargetMachine *TM = nullptr;
-  if (!MTarget.empty()) {
+  if (!MTriple.empty()) {
+    InitializeAllTargets();
+    InitializeAllTargetMCs();
+
     std::string Error;
-    const Target *T = TargetRegistry::lookupTarget(MTarget, Error);
+    const Target *T = TargetRegistry::lookupTarget(MTriple, Error);
     if (!T) {
-      errs() << "unknown target '" << MTarget << "': " << Error << "\n";
+      errs() << "unknown target '" << MTriple << "': " << Error << "\n";
       return 1;
     }
 
     TargetOptions Options;
-    TM = T->createTargetMachine(MTarget, MCPU, /*FS*/ "", Options, std::nullopt,
+    TM = T->createTargetMachine(MTriple, MCPU, /*FS*/ "", Options, std::nullopt,
                                 std::nullopt);
   }
 
@@ -129,7 +126,7 @@ int main(int argc, char **argv) {
     if (TM->splitModule(*M, NumOutputs, HandleModulePart))
       return 0;
 
-    errs() << "warning:"
+    errs() << "warning: "
               "TargetMachine::splitModule failed, falling back to default "
               "splitModule implementation\n";
   }
