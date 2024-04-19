@@ -645,8 +645,12 @@ public:
     const Environment *TrueEnv = StmtToEnv.getEnvironment(*S->getTrueExpr());
     const Environment *FalseEnv = StmtToEnv.getEnvironment(*S->getFalseExpr());
 
-    if (TrueEnv == nullptr || FalseEnv == nullptr)
+    if (TrueEnv == nullptr || FalseEnv == nullptr) {
+      // We should always have an environment as we should visit the true /
+      // false branches before the conditional operator.
+      assert(false);
       return;
+    }
 
     if (S->isGLValue()) {
       StorageLocation *TrueLoc = TrueEnv->getStorageLocation(*S->getTrueExpr());
