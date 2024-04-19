@@ -4193,6 +4193,258 @@ define double @test_atomicrmw_fadd_f64_region_ret(ptr addrspace(2) %ptr, double 
   ret double %ret
 }
 
+define <2 x half> @test_atomicrmw_fadd_v2f16_flat_agent(ptr %ptr, <2 x half> %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent(
+; ALL-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret <2 x half> [[TMP5]]
+;
+  %res = atomicrmw fadd ptr %ptr, <2 x half> %value syncscope("agent") seq_cst
+  ret <2 x half> %res
+}
+
+define void @test_atomicrmw_fadd_v2f16_flat_agent_noret(ptr %ptr, <2 x half> %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_v2f16_flat_agent_noret(
+; ALL-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret void
+;
+  %res = atomicrmw fadd ptr %ptr, <2 x half> %value syncscope("agent") seq_cst
+  ret void
+}
+
+define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent(ptr addrspace(1) %ptr, <2 x half> %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_v2f16_global_agent(
+; ALL-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret <2 x half> [[TMP5]]
+;
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst
+  ret <2 x half> %res
+}
+
+define void @test_atomicrmw_fadd_v2f16_flat_global_noret(ptr addrspace(1) %ptr, <2 x half> %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_v2f16_flat_global_noret(
+; ALL-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret void
+;
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x half> %value syncscope("agent") seq_cst
+  ret void
+}
+
+define <2 x half> @test_atomicrmw_fadd_v2f16_local_agent(ptr addrspace(3) %ptr, <2 x half> %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_v2f16_local_agent(
+; ALL-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret <2 x half> [[TMP5]]
+;
+  %res = atomicrmw fadd ptr addrspace(3) %ptr, <2 x half> %value syncscope("agent") seq_cst
+  ret <2 x half> %res
+}
+
+define void @test_atomicrmw_fadd_v2f16_flat_local_noret(ptr addrspace(3) %ptr, <2 x half> %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_v2f16_flat_local_noret(
+; ALL-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(3) [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret void
+;
+  %res = atomicrmw fadd ptr addrspace(3) %ptr, <2 x half> %value syncscope("agent") seq_cst
+  ret void
+}
+
+define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_flat_agent(ptr %ptr, <2 x bfloat> %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent(
+; ALL-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret <2 x bfloat> [[TMP5]]
+;
+  %res = atomicrmw fadd ptr %ptr, <2 x bfloat> %value syncscope("agent") seq_cst
+  ret <2 x bfloat> %res
+}
+
+define void @test_atomicrmw_fadd_v2bf16_flat_agent_noret(ptr %ptr, <2 x bfloat> %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_v2bf16_flat_agent_noret(
+; ALL-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret void
+;
+  %res = atomicrmw fadd ptr %ptr, <2 x bfloat> %value syncscope("agent") seq_cst
+  ret void
+}
+
+define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_global_agent(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_v2bf16_global_agent(
+; ALL-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret <2 x bfloat> [[TMP5]]
+;
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value syncscope("agent") seq_cst
+  ret <2 x bfloat> %res
+}
+
+define void @test_atomicrmw_fadd_v2bf16_flat_global_noret(ptr addrspace(1) %ptr, <2 x bfloat> %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_v2bf16_flat_global_noret(
+; ALL-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(1) [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret void
+;
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, <2 x bfloat> %value syncscope("agent") seq_cst
+  ret void
+}
+
+define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_local_agent(ptr addrspace(3) %ptr, <2 x bfloat> %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_v2bf16_local_agent(
+; ALL-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret <2 x bfloat> [[TMP5]]
+;
+  %res = atomicrmw fadd ptr addrspace(3) %ptr, <2 x bfloat> %value syncscope("agent") seq_cst
+  ret <2 x bfloat> %res
+}
+
+define void @test_atomicrmw_fadd_v2bf16_flat_local_noret(ptr addrspace(3) %ptr, <2 x bfloat> %value) {
+; ALL-LABEL: @test_atomicrmw_fadd_v2bf16_flat_local_noret(
+; ALL-NEXT:    [[TMP1:%.*]] = load <2 x bfloat>, ptr addrspace(3) [[PTR:%.*]], align 4
+; ALL-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; ALL:       atomicrmw.start:
+; ALL-NEXT:    [[LOADED:%.*]] = phi <2 x bfloat> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; ALL-NEXT:    [[NEW:%.*]] = fadd <2 x bfloat> [[LOADED]], [[VALUE:%.*]]
+; ALL-NEXT:    [[TMP2:%.*]] = bitcast <2 x bfloat> [[NEW]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = bitcast <2 x bfloat> [[LOADED]] to i32
+; ALL-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; ALL-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; ALL-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; ALL-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x bfloat>
+; ALL-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; ALL:       atomicrmw.end:
+; ALL-NEXT:    ret void
+;
+  %res = atomicrmw fadd ptr addrspace(3) %ptr, <2 x bfloat> %value syncscope("agent") seq_cst
+  ret void
+}
+
 attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
 attributes #1 = { strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
 attributes #2 = { strictfp }
