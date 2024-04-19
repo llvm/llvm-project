@@ -92,6 +92,7 @@ public:
   }
 
   template <typename T, typename... Args> T *alloc(Args &&... ConstructorArgs) {
+    static_assert(sizeof(T) < AllocUnit);
     uint8_t *Data = allocAlignedBuffer(sizeof(T), alignof(T));
     return new (Data) T(std::forward<Args>(ConstructorArgs)...);
   }
