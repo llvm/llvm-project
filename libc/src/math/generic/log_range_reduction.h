@@ -44,7 +44,7 @@ log_range_reduction(double m_x, const LogRR &log_table,
   // Output range: vv2 in [-0x1.3ffcp-15, 0x1.3e3dp-15].
   // idx2 = trunc(2^14 * (v + 2^-8 + 2^-15))
   size_t idx2 = static_cast<size_t>((v + 0x10'2000'0000'0000) >> 46);
-  sum = fputil::quick_add(sum, log_table.step_2[idx2]);
+  sum = quick_add(sum, log_table.step_2[idx2]);
 
   int64_t s2 = static_cast<int64_t>(S2[idx2]); // |s| <= 2^-7, ulp = 2^-16
   int64_t sv2 = s2 * v;             // |s*v| < 2^-14, ulp = 2^(-60-16) = 2^-76
@@ -55,7 +55,7 @@ log_range_reduction(double m_x, const LogRR &log_table,
   // Output range: vv3 in [-0x1.01928p-22 , 0x1p-22]
   // idx3 = trunc(2^21 * (v + 80*2^-21 + 2^-22))
   size_t idx3 = static_cast<size_t>((vv2 + 0x2840'0000'0000'0000) >> 55);
-  sum = fputil::quick_add(sum, log_table.step_3[idx3]);
+  sum = quick_add(sum, log_table.step_3[idx3]);
 
   int64_t s3 = static_cast<int64_t>(S3[idx3]); // |s| < 2^-13, ulp = 2^-21
   int64_t spv3 = (s3 << 55) + vv2;             // |s + v| < 2^-21, ulp = 2^-76
@@ -69,7 +69,7 @@ log_range_reduction(double m_x, const LogRR &log_table,
   // idx4 = trunc(2^21 * (v + 65*2^-28 + 2^-29))
   size_t idx4 = static_cast<size_t>((static_cast<int>(vv3 >> 68) + 131) >> 1);
 
-  sum = fputil::quick_add(sum, log_table.step_4[idx4]);
+  sum = quick_add(sum, log_table.step_4[idx4]);
 
   Int128 s4 = static_cast<Int128>(S4[idx4]); // |s| < 2^-21, ulp = 2^-28
   // |s + v| < 2^-28, ulp = 2^-97

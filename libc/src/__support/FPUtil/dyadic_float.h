@@ -200,129 +200,122 @@ template <size_t Bits> struct DyadicFloat {
 
     return new_mant;
   }
-};
 
-// Quick add - Add 2 dyadic floats with rounding toward 0 and then normalize the
-// output:
-//   - Align the exponents so that:
-//     new a.exponent = new b.exponent = max(a.exponent, b.exponent)
-//   - Add or subtract the mantissas depending on the signs.
-//   - Normalize the result.
-// The absolute errors compared to the mathematical sum is bounded by:
-//   | quick_add(a, b) - (a + b) | < MSB(a + b) * 2^(-Bits + 2),
-// i.e., errors are up to 2 ULPs.
-// Assume inputs are normalized (by constructors or other functions) so that we
-// don't need to normalize the inputs again in this function.  If the inputs are
-// not normalized, the results might lose precision significantly.
-template <size_t Bits>
-LIBC_INLINE constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
-                                                  DyadicFloat<Bits> b) {
-  if (LIBC_UNLIKELY(a.mantissa.is_zero()))
-    return b;
-  if (LIBC_UNLIKELY(b.mantissa.is_zero()))
-    return a;
+  // Quick add - Add 2 dyadic floats with rounding toward 0 and then normalize
+  // the output:
+  //   - Align the exponents so that:
+  //     new a.exponent = new b.exponent = max(a.exponent, b.exponent)
+  //   - Add or subtract the mantissas depending on the signs.
+  //   - Normalize the result.
+  // The absolute errors compared to the mathematical sum is bounded by:
+  //   | quick_add(a, b) - (a + b) | < MSB(a + b) * 2^(-Bits + 2),
+  // i.e., errors are up to 2 ULPs.
+  // Assume inputs are normalized (by constructors or other functions) so that
+  // we don't need to normalize the inputs again in this function.  If the
+  // inputs are not normalized, the results might lose precision significantly.
+  LIBC_INLINE friend constexpr DyadicFloat quick_add(DyadicFloat a,
+                                                     DyadicFloat b) {
+    if (LIBC_UNLIKELY(a.mantissa.is_zero()))
+      return b;
+    if (LIBC_UNLIKELY(b.mantissa.is_zero()))
+      return a;
 
-  // Align exponents
-  if (a.exponent > b.exponent)
-    b.shift_right(a.exponent - b.exponent);
-  else if (b.exponent > a.exponent)
-    a.shift_right(b.exponent - a.exponent);
+    // Align exponents
+    if (a.exponent > b.exponent)
+      b.shift_right(a.exponent - b.exponent);
+    else if (b.exponent > a.exponent)
+      a.shift_right(b.exponent - a.exponent);
 
-  DyadicFloat<Bits> result;
+    DyadicFloat result;
 
-  if (a.sign == b.sign) {
-    // Addition
-    result.sign = a.sign;
-    result.exponent = a.exponent;
-    result.mantissa = a.mantissa;
-    if (result.mantissa.add_overflow(b.mantissa)) {
-      // Mantissa addition overflow.
-      result.shift_right(1);
-      result.mantissa.val[DyadicFloat<Bits>::MantissaType::WORD_COUNT - 1] |=
-          (uint64_t(1) << 63);
+    if (a.sign == b.sign) {
+      // Addition
+      result.sign = a.sign;
+      result.exponent = a.exponent;
+      result.mantissa = a.mantissa;
+      if (result.mantissa.add_overflow(b.mantissa)) {
+        // Mantissa addition overflow.
+        result.shift_right(1);
+        result.mantissa.val[DyadicFloat::MantissaType::WORD_COUNT - 1] |=
+            (uint64_t(1) << 63);
+      }
+      // Result is already normalized.
+      return result;
     }
-    // Result is already normalized.
+
+    // Subtraction
+    if (a.mantissa >= b.mantissa) {
+      result.sign = a.sign;
+      result.exponent = a.exponent;
+      result.mantissa = a.mantissa - b.mantissa;
+    } else {
+      result.sign = b.sign;
+      result.exponent = b.exponent;
+      result.mantissa = b.mantissa - a.mantissa;
+    }
+
+    return result.normalize();
+  }
+
+  // Quick Mul - Slightly less accurate but efficient multiplication of 2 dyadic
+  // floats with rounding toward 0 and then normalize the output:
+  //   result.exponent = a.exponent + b.exponent + Bits,
+  //   result.mantissa = quick_mul_hi(a.mantissa + b.mantissa)
+  //                   ~ (full product a.mantissa * b.mantissa) >> Bits.
+  // The errors compared to the mathematical product is bounded by:
+  //   2 * errors of quick_mul_hi = 2 * (UInt<Bits>::WORD_COUNT - 1) in ULPs.
+  // Assume inputs are normalized (by constructors or other functions) so that
+  // we don't need to normalize the inputs again in this function.  If the
+  // inputs are not normalized, the results might lose precision significantly.
+  LIBC_INLINE friend constexpr DyadicFloat quick_mul(DyadicFloat a,
+                                                     DyadicFloat b) {
+    DyadicFloat result;
+    result.sign = (a.sign != b.sign) ? Sign::NEG : Sign::POS;
+    result.exponent = a.exponent + b.exponent + int(Bits);
+
+    if (!(a.mantissa.is_zero() || b.mantissa.is_zero())) {
+      result.mantissa = a.mantissa.quick_mul_hi(b.mantissa);
+      // Check the leading bit directly, should be faster than using clz in
+      // normalize().
+      if (result.mantissa.val[DyadicFloat::MantissaType::WORD_COUNT - 1] >>
+              63 ==
+          0)
+        result.shift_left(1);
+    } else {
+      result.mantissa = (typename DyadicFloat::MantissaType)(0);
+    }
     return result;
   }
 
-  // Subtraction
-  if (a.mantissa >= b.mantissa) {
-    result.sign = a.sign;
-    result.exponent = a.exponent;
-    result.mantissa = a.mantissa - b.mantissa;
-  } else {
-    result.sign = b.sign;
-    result.exponent = b.exponent;
-    result.mantissa = b.mantissa - a.mantissa;
+  // Simple polynomial approximation.
+  LIBC_INLINE friend constexpr DyadicFloat multiply_add(const DyadicFloat &a,
+                                                        const DyadicFloat &b,
+                                                        const DyadicFloat &c) {
+    return quick_add(c, quick_mul(a, b));
   }
 
-  return result.normalize();
-}
+  // Simple exponentiation implementation for printf. Only handles positive
+  // exponents, since division isn't implemented.
+  LIBC_INLINE constexpr DyadicFloat pow_n(uint32_t power) const {
+    DyadicFloat result = 1.0;
+    DyadicFloat cur_power = *this;
 
-// Quick Mul - Slightly less accurate but efficient multiplication of 2 dyadic
-// floats with rounding toward 0 and then normalize the output:
-//   result.exponent = a.exponent + b.exponent + Bits,
-//   result.mantissa = quick_mul_hi(a.mantissa + b.mantissa)
-//                   ~ (full product a.mantissa * b.mantissa) >> Bits.
-// The errors compared to the mathematical product is bounded by:
-//   2 * errors of quick_mul_hi = 2 * (UInt<Bits>::WORD_COUNT - 1) in ULPs.
-// Assume inputs are normalized (by constructors or other functions) so that we
-// don't need to normalize the inputs again in this function.  If the inputs are
-// not normalized, the results might lose precision significantly.
-template <size_t Bits>
-LIBC_INLINE constexpr DyadicFloat<Bits> quick_mul(DyadicFloat<Bits> a,
-                                                  DyadicFloat<Bits> b) {
-  DyadicFloat<Bits> result;
-  result.sign = (a.sign != b.sign) ? Sign::NEG : Sign::POS;
-  result.exponent = a.exponent + b.exponent + int(Bits);
-
-  if (!(a.mantissa.is_zero() || b.mantissa.is_zero())) {
-    result.mantissa = a.mantissa.quick_mul_hi(b.mantissa);
-    // Check the leading bit directly, should be faster than using clz in
-    // normalize().
-    if (result.mantissa.val[DyadicFloat<Bits>::MantissaType::WORD_COUNT - 1] >>
-            63 ==
-        0)
-      result.shift_left(1);
-  } else {
-    result.mantissa = (typename DyadicFloat<Bits>::MantissaType)(0);
-  }
-  return result;
-}
-
-// Simple polynomial approximation.
-template <size_t Bits>
-LIBC_INLINE constexpr DyadicFloat<Bits>
-multiply_add(const DyadicFloat<Bits> &a, const DyadicFloat<Bits> &b,
-             const DyadicFloat<Bits> &c) {
-  return quick_add(c, quick_mul(a, b));
-}
-
-// Simple exponentiation implementation for printf. Only handles positive
-// exponents, since division isn't implemented.
-template <size_t Bits>
-LIBC_INLINE constexpr DyadicFloat<Bits> pow_n(DyadicFloat<Bits> a,
-                                              uint32_t power) {
-  DyadicFloat<Bits> result = 1.0;
-  DyadicFloat<Bits> cur_power = a;
-
-  while (power > 0) {
-    if ((power % 2) > 0) {
-      result = quick_mul(result, cur_power);
+    while (power > 0) {
+      if ((power % 2) > 0) {
+        result = quick_mul(result, cur_power);
+      }
+      power = power >> 1;
+      cur_power = quick_mul(cur_power, cur_power);
     }
-    power = power >> 1;
-    cur_power = quick_mul(cur_power, cur_power);
+    return result;
   }
-  return result;
-}
 
-template <size_t Bits>
-LIBC_INLINE constexpr DyadicFloat<Bits> mul_pow_2(DyadicFloat<Bits> a,
-                                                  int32_t pow_2) {
-  DyadicFloat<Bits> result = a;
-  result.exponent += pow_2;
-  return result;
-}
+  LIBC_INLINE constexpr DyadicFloat mul_pow_2(int32_t pow_2) const {
+    DyadicFloat result = *this;
+    result.exponent += pow_2;
+    return result;
+  }
+};
 
 } // namespace LIBC_NAMESPACE::fputil
 

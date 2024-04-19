@@ -148,34 +148,30 @@ Float128 expm1_f128(double x, double kd, int idx1, int idx2) {
   double t2 = kd * MLOG_2_EXP2_M12_MID_30;                     // exact
   double t3 = kd * MLOG_2_EXP2_M12_LO;                         // Error < 2^-133
 
-  Float128 dx = fputil::quick_add(
-      Float128(t1), fputil::quick_add(Float128(t2), Float128(t3)));
+  Float128 dx = quick_add(Float128(t1), quick_add(Float128(t2), Float128(t3)));
 
   // TODO: Skip recalculating exp_mid1 and exp_mid2.
-  Float128 exp_mid1 =
-      fputil::quick_add(Float128(EXP2_MID1[idx1].hi),
-                        fputil::quick_add(Float128(EXP2_MID1[idx1].mid),
-                                          Float128(EXP2_MID1[idx1].lo)));
+  Float128 exp_mid1 = quick_add(
+      Float128(EXP2_MID1[idx1].hi),
+      quick_add(Float128(EXP2_MID1[idx1].mid), Float128(EXP2_MID1[idx1].lo)));
 
-  Float128 exp_mid2 =
-      fputil::quick_add(Float128(EXP2_MID2[idx2].hi),
-                        fputil::quick_add(Float128(EXP2_MID2[idx2].mid),
-                                          Float128(EXP2_MID2[idx2].lo)));
+  Float128 exp_mid2 = quick_add(
+      Float128(EXP2_MID2[idx2].hi),
+      quick_add(Float128(EXP2_MID2[idx2].mid), Float128(EXP2_MID2[idx2].lo)));
 
-  Float128 exp_mid = fputil::quick_mul(exp_mid1, exp_mid2);
+  Float128 exp_mid = quick_mul(exp_mid1, exp_mid2);
 
   int hi = static_cast<int>(kd) >> 12;
   Float128 minus_one{Sign::NEG, -127 - hi,
                      0x80000000'00000000'00000000'00000000_u128};
 
-  Float128 exp_mid_m1 = fputil::quick_add(exp_mid, minus_one);
+  Float128 exp_mid_m1 = quick_add(exp_mid, minus_one);
 
   Float128 p = poly_approx_f128(dx);
 
   // r = exp_mid * (1 + dx * P) - 1
   //   = (exp_mid - 1) + (dx * exp_mid) * P
-  Float128 r =
-      fputil::multiply_add(fputil::quick_mul(exp_mid, dx), p, exp_mid_m1);
+  Float128 r = multiply_add(quick_mul(exp_mid, dx), p, exp_mid_m1);
 
   r.exponent += hi;
 
