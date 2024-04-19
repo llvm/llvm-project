@@ -77,16 +77,9 @@ bb1:
 define void @subvector_v2i16(ptr %in, ptr %out) {
 ; CHECK-LABEL: subvector_v2i16:
 ; CHECK:       // %bb.0: // %bb1
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w8, [x0, #2]
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    str w8, [sp, #12]
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    str w8, [sp, #8]
-; CHECK-NEXT:    ldr d0, [sp, #8]
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %a = load <2 x i16>, ptr %in
   br label %bb1
