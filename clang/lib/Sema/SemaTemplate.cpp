@@ -2962,19 +2962,6 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
           Context.getCanonicalTemplateArgument(
               Context.getInjectedTemplateArg(NewParam));
     }
-    // Substitute new template parameters into requires-clause if present.
-    Expr *RequiresClause =
-        transformRequireClause(SemaRef, F, TemplateArgsForBuildingFPrime);
-    // FIXME: implement the is_deducible constraint per C++
-    // [over.match.class.deduct]p3.3:
-    //    ... and a constraint that is satisfied if and only if the arguments
-    //    of A are deducible (see below) from the return type.
-    auto *FPrimeTemplateParamList = TemplateParameterList::Create(
-        Context, AliasTemplate->getTemplateParameters()->getTemplateLoc(),
-        AliasTemplate->getTemplateParameters()->getLAngleLoc(),
-        FPrimeTemplateParams,
-        AliasTemplate->getTemplateParameters()->getRAngleLoc(),
-        /*RequiresClause=*/RequiresClause);
 
     // To form a deduction guide f' from f, we leverage clang's instantiation
     // mechanism, we construct a template argument list where the template
@@ -3020,6 +3007,20 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
             F, TemplateArgListForBuildingFPrime, AliasTemplate->getLocation(),
             Sema::CodeSynthesisContext::BuildingDeductionGuides)) {
       auto *GG = cast<CXXDeductionGuideDecl>(FPrime);
+      // Substitute new template parameters into requires-clause if present.
+      Expr *RequiresClause =
+          transformRequireClause(SemaRef, F, TemplateArgsForBuildingFPrime);
+      // FIXME: implement the is_deducible constraint per C++
+      // [over.match.class.deduct]p3.3:
+      //    ... and a constraint that is satisfied if and only if the arguments
+      //    of A are deducible (see below) from the return type.
+      auto *FPrimeTemplateParamList = TemplateParameterList::Create(
+          Context, AliasTemplate->getTemplateParameters()->getTemplateLoc(),
+          AliasTemplate->getTemplateParameters()->getLAngleLoc(),
+          FPrimeTemplateParams,
+          AliasTemplate->getTemplateParameters()->getRAngleLoc(),
+          /*RequiresClause=*/RequiresClause);
+
       buildDeductionGuide(SemaRef, AliasTemplate, FPrimeTemplateParamList,
                           GG->getCorrespondingConstructor(),
                           GG->getExplicitSpecifier(), GG->getTypeSourceInfo(),
