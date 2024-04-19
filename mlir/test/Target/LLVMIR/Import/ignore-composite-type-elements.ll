@@ -1,7 +1,7 @@
 ; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -split-input-file -drop-di-composite-type-elements %s | FileCheck %s
 
-; Verifies that the "-import-empty-di-composite-types" flag avoids the
-; conversion of the elements of the DICompositeType.
+; Verifies that the according flag avoids the conversion of the elements of the
+; DICompositeType.
 
 ; CHECK-NOT: di_derive_type
 ; CHECK: #{{.+}} = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class">
