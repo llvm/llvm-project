@@ -4091,6 +4091,43 @@ define i32 @fold_zext_addition_fail2(i8 %x) {
   ret i32 %r
 }
 
+define i32 @fold_zext_nneg_add_const(i8 %x) {
+; CHECK-LABEL: @fold_zext_nneg_add_const(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[TMP1]], 98
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = add nsw i8 %x, 123
+  %ze = zext nneg i8 %xx to i32
+  %r = add nsw i32 %ze, -25
+  ret i32 %r
+}
+
+define i32 @fold_zext_nneg_add_const_fail1(i8 %x) {
+; CHECK-LABEL: @fold_zext_nneg_add_const_fail1(
+; CHECK-NEXT:    [[XX:%.*]] = add nsw i8 [[X:%.*]], 123
+; CHECK-NEXT:    [[ZE:%.*]] = zext i8 [[XX]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[ZE]], -25
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = add nsw i8 %x, 123
+  %ze = zext i8 %xx to i32
+  %r = add nsw i32 %ze, -25
+  ret i32 %r
+}
+
+define i32 @fold_zext_nneg_add_const_fail2(i8 %x) {
+; CHECK-LABEL: @fold_zext_nneg_add_const_fail2(
+; CHECK-NEXT:    [[XX:%.*]] = add i8 [[X:%.*]], 123
+; CHECK-NEXT:    [[ZE:%.*]] = zext nneg i8 [[XX]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[ZE]], -25
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xx = add i8 %x, 123
+  %ze = zext nneg i8 %xx to i32
+  %r = add nsw i32 %ze, -25
+  ret i32 %r
+}
 
 declare void @llvm.assume(i1)
 declare void @fake_func(i32)
