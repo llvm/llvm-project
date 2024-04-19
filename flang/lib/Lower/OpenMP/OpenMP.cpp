@@ -1091,16 +1091,12 @@ static void genParallelClauses(
 static void genSectionsClauses(Fortran::lower::AbstractConverter &converter,
                                Fortran::semantics::SemanticsContext &semaCtx,
                                const List<Clause> &clauses, mlir::Location loc,
-                               bool clausesFromBeginSections,
                                mlir::omp::SectionsClauseOps &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
-  if (clausesFromBeginSections) {
-    cp.processAllocate(clauseOps);
-    cp.processSectionsReduction(loc, clauseOps);
-    // TODO Support delayed privatization.
-  } else {
-    cp.processNowait(clauseOps);
-  }
+  cp.processAllocate(clauseOps);
+  cp.processSectionsReduction(loc, clauseOps);
+  // TODO Support delayed privatization.
+  cp.processNowait(clauseOps);
 }
 
 static void genSimdClauses(Fortran::lower::AbstractConverter &converter,
@@ -2433,13 +2429,17 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   List<Clause> clauses = makeClauses(
       std::get<Fortran::parser::OmpClauseList>(beginSectionsDirective.t),
       semaCtx);
+  const auto &endSectionsDirective =
+      std::get<Fortran::parser::OmpEndSectionsDirective>(sectionsConstruct.t);
+  clauses.append(makeClauses(
+      std::get<Fortran::parser::OmpClauseList>(endSectionsDirective.t),
+      semaCtx));
 
   // Process clauses before optional omp.parallel, so that new variables are
   // allocated outside of the parallel region
   mlir::Location currentLocation = converter.getCurrentLocation();
   mlir::omp::SectionsClauseOps clauseOps;
-  genSectionsClauses(converter, semaCtx, clauses, currentLocation,
-                     /*clausesFromBeginSections=*/true, clauseOps);
+  genSectionsClauses(converter, semaCtx, clauses, currentLocation, clauseOps);
 
   // Parallel wrapper of PARALLEL SECTIONS construct
   llvm::omp::Directive dir =
@@ -2449,14 +2449,6 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     genParallelOp(converter, symTable, semaCtx, eval,
                   /*genNested=*/false, currentLocation, clauses,
                   /*outerCombined=*/true);
-  } else {
-    const auto &endSectionsDirective =
-        std::get<Fortran::parser::OmpEndSectionsDirective>(sectionsConstruct.t);
-    clauses = makeClauses(
-        std::get<Fortran::parser::OmpClauseList>(endSectionsDirective.t),
-        semaCtx);
-    genSectionsClauses(converter, semaCtx, clauses, currentLocation,
-                       /*clausesFromBeginSections=*/false, clauseOps);
   }
 
   // SECTIONS construct.
