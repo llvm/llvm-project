@@ -9,10 +9,28 @@
 #include "src/__support/CPP/mutex.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+using LIBC_NAMESPACE::cpp::lock_guard;
+
+// Simple class for testing cpp::lock_guard. It defines methods 'lock' and 
+// 'unlock' which are required for the cpp::lock_guard class template.
+class LockableObject {
+    bool locked;
+
+public:
+    LockableObject() : locked(false) {}
+    void lock() { locked = true; }
+    void unlock() { locked = false; }
+    bool is_locked() { return locked; }
+};
 
 TEST(LlvmLibcMutexTest, Basic) {
-    // ...
-}
+    LockableObject obj;
+    ASSERT_FALSE(obj.is_locked());
 
-} // namespace LIBC_NAMESPACE
+    {
+        lock_guard lg(obj);
+        ASSERT_TRUE(obj.is_locked());
+    }
+
+    ASSERT_FALSE(obj.is_locked());
+}
