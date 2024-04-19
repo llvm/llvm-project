@@ -259,7 +259,6 @@ bool SystemZPassConfig::addILPOpts() {
 
 void SystemZPassConfig::addPreRegAlloc() {
   addPass(createSystemZCopyPhysRegsPass(getSystemZTargetMachine()));
-  addPass(createSystemZFinalizeReassociationPass(getSystemZTargetMachine()));
 }
 
 void SystemZPassConfig::addPostRewrite() {

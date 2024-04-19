@@ -292,9 +292,6 @@ public:
                                       LiveIntervals *LIS) const override;
 
   bool useMachineCombiner() const override { return true; }
-  void
-  finalizeInsInstrs(MachineInstr &Root, unsigned &P,
-                    SmallVectorImpl<MachineInstr *> &InsInstrs) const override;
   bool isAssociativeAndCommutative(const MachineInstr &Inst,
                                    bool Invert) const override;
   std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;

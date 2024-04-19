@@ -841,15 +841,6 @@ def z_any_fmul_noreassoc : PatFrag<(ops node:$src1, node:$src2),
                                    (any_fmul node:$src1, node:$src2),
                                    [{ return !shouldSelectForReassoc(N); }]>;
 
-// Floating-point operations which are reassociable, and therefore should be
-// selected as reg/reg instructions (no memop folding).
-def z_fadd_reassoc : PatFrag<(ops node:$src1, node:$src2),
-                             (fadd node:$src1, node:$src2),
-                             [{ return shouldSelectForReassoc(N); }]>;
-def z_fsub_reassoc : PatFrag<(ops node:$src1, node:$src2),
-                             (fsub node:$src1, node:$src2),
-                             [{ return shouldSelectForReassoc(N); }]>;
-
 // Strict floating-point fragments.
 def z_any_fcmp    : PatFrags<(ops node:$lhs, node:$rhs),
                              [(z_strict_fcmp node:$lhs, node:$rhs),

@@ -629,6 +629,7 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
                                                   Register &FoldAsLoadDefReg,
                                                   MachineInstr *&DefMI) const {
   const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  MachineBasicBlock *MBB = MI.getParent();
 
   // Check whether we can move the DefMI load, and that it only has one use.
   DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
@@ -641,21 +642,23 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
   // For reassociable FP operations, any loads have been purposefully left
   // unfolded so that MachineCombiner can do its work on reg/reg
   // opcodes. After that, as many loads as possible are now folded.
+  // TODO: This may be beneficial with other opcodes as well as machine-sink
+  // can move loads close to their user in a different MBB.
   unsigned LoadOpc = 0;
   unsigned RegMemOpcode = 0;
   const TargetRegisterClass *FPRC = nullptr;
-  RegMemOpcode = MI.getOpcode() == SystemZ::WFADB_CCPseudo   ? SystemZ::ADB
-                 : MI.getOpcode() == SystemZ::WFSDB_CCPseudo ? SystemZ::SDB
-                 : MI.getOpcode() == SystemZ::WFMDB          ? SystemZ::MDB
-                                                             : 0;
+  RegMemOpcode = MI.getOpcode() == SystemZ::WFADB   ? SystemZ::ADB
+                 : MI.getOpcode() == SystemZ::WFSDB ? SystemZ::SDB
+                 : MI.getOpcode() == SystemZ::WFMDB ? SystemZ::MDB
+                                                    : 0;
   if (RegMemOpcode) {
     LoadOpc = SystemZ::VL64;
     FPRC = &SystemZ::FP64BitRegClass;
   } else {
-    RegMemOpcode = MI.getOpcode() == SystemZ::WFASB_CCPseudo   ? SystemZ::AEB
-                   : MI.getOpcode() == SystemZ::WFSSB_CCPseudo ? SystemZ::SEB
-                   : MI.getOpcode() == SystemZ::WFMSB          ? SystemZ::MEEB
-                                                               : 0;
+    RegMemOpcode = MI.getOpcode() == SystemZ::WFASB   ? SystemZ::AEB
+                   : MI.getOpcode() == SystemZ::WFSSB ? SystemZ::SEB
+                   : MI.getOpcode() == SystemZ::WFMSB ? SystemZ::MEEB
+                                                      : 0;
     if (RegMemOpcode) {
       LoadOpc = SystemZ::VL32;
       FPRC = &SystemZ::FP32BitRegClass;
@@ -663,9 +666,24 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
   }
   if (!RegMemOpcode || DefMI->getOpcode() != LoadOpc)
     return nullptr;
-  assert((MI.findRegisterDefOperandIdx(SystemZ::CC) == -1 ||
-          MI.findRegisterDefOperandIdx(SystemZ::CC, /*isDead=*/true) != -1) &&
-         "Expected dead CC-def on add/sub pseudo instruction.");
+
+  // If RegMemOpcode clobbers CC, first make sure CC is not live at this point.
+  if (get(RegMemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC)) {
+    assert(DefMI->getParent() == MI.getParent() && "Assuming a local fold.");
+    for (MachineBasicBlock::iterator MII = std::prev(MI.getIterator());;
+         --MII) {
+      if (MII->definesRegister(SystemZ::CC)) {
+        if (!MII->registerDefIsDead(SystemZ::CC))
+          return nullptr;
+        break;
+      }
+      if (MII == MBB->begin()) {
+        if (MBB->isLiveIn(SystemZ::CC))
+          return nullptr;
+        break;
+      }
+    }
+  }
 
   Register DstReg = MI.getOperand(0).getReg();
   MachineOperand LHS = MI.getOperand(1);
@@ -1073,25 +1091,6 @@ SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
   return nullptr;
 }
 
-void SystemZInstrInfo::finalizeInsInstrs(
-    MachineInstr &Root, unsigned &P,
-    SmallVectorImpl<MachineInstr *> &InsInstrs) const {
-  const TargetRegisterInfo *TRI =
-      Root.getParent()->getParent()->getSubtarget().getRegisterInfo();
-  for (auto *Inst : InsInstrs) {
-    switch (Inst->getOpcode()) {
-    case SystemZ::WFADB_CCPseudo:
-    case SystemZ::WFASB_CCPseudo:
-    case SystemZ::WFSDB_CCPseudo:
-    case SystemZ::WFSSB_CCPseudo:
-      Inst->addRegisterDead(SystemZ::CC, TRI);
-      break;
-    default:
-      break;
-    }
-  }
-}
-
 bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
                                                    bool Invert) const {
   unsigned Opc = Inst.getOpcode();
@@ -1106,11 +1105,8 @@ bool SystemZInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
   default:
     break;
   // Adds and multiplications.
-  case SystemZ::WFADB_CCPseudo:
-  case SystemZ::WFASB_CCPseudo:
-    assert(Inst.findRegisterDefOperandIdx(SystemZ::CC, /*isDead=*/true) != -1 &&
-           "Expected dead CC-def on add/sub pseudo instruction.");
-    LLVM_FALLTHROUGH;
+  case SystemZ::WFADB:
+  case SystemZ::WFASB:
   case SystemZ::WFAXB:
   case SystemZ::VFADB:
   case SystemZ::VFASB:
@@ -1130,10 +1126,10 @@ std::optional<unsigned>
 SystemZInstrInfo::getInverseOpcode(unsigned Opcode) const {
   // fadd => fsub
   switch (Opcode) {
-  case SystemZ::WFADB_CCPseudo:
-    return SystemZ::WFSDB_CCPseudo;
-  case SystemZ::WFASB_CCPseudo:
-    return SystemZ::WFSSB_CCPseudo;
+  case SystemZ::WFADB:
+    return SystemZ::WFSDB;
+  case SystemZ::WFASB:
+    return SystemZ::WFSSB;
   case SystemZ::WFAXB:
     return SystemZ::WFSXB;
   case SystemZ::VFADB:
@@ -1141,10 +1137,10 @@ SystemZInstrInfo::getInverseOpcode(unsigned Opcode) const {
   case SystemZ::VFASB:
     return SystemZ::VFSSB;
   // fsub => fadd
-  case SystemZ::WFSDB_CCPseudo:
-    return SystemZ::WFADB_CCPseudo;
-  case SystemZ::WFSSB_CCPseudo:
-    return SystemZ::WFASB_CCPseudo;
+  case SystemZ::WFSDB:
+    return SystemZ::WFADB;
+  case SystemZ::WFSSB:
+    return SystemZ::WFASB;
   case SystemZ::WFSXB:
     return SystemZ::WFAXB;
   case SystemZ::VFSDB:
