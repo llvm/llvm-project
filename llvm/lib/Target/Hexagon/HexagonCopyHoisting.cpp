@@ -9,20 +9,19 @@
 // present in all the successor of a basic block (BB) to the end of BB.
 //===----------------------------------------------------------------------===//
 
+#include "HexagonTargetMachine.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/CommandLine.h"
-#include "HexagonTargetMachine.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "CopyHoist"
 
@@ -32,9 +31,9 @@ static cl::opt<std::string> CPHoistFn("cphoistfn", cl::Hidden, cl::desc(""),
                                       cl::init(""));
 
 namespace llvm {
-  void initializeHexagonCopyHoistingPass(PassRegistry& Registry);
-  FunctionPass *createHexagonCopyHoisting();
-}
+void initializeHexagonCopyHoistingPass(PassRegistry &Registry);
+FunctionPass *createHexagonCopyHoisting();
+} // namespace llvm
 
 namespace {
 
@@ -42,14 +41,11 @@ class HexagonCopyHoisting : public MachineFunctionPass {
 
 public:
   static char ID;
-  HexagonCopyHoisting()
-      : MachineFunctionPass(ID), MFN(0), MRI(0) {
+  HexagonCopyHoisting() : MachineFunctionPass(ID), MFN(0), MRI(0) {
     initializeHexagonCopyHoistingPass(*PassRegistry::getPassRegistry());
   }
 
-  StringRef getPassName() const override {
-    return "Hexagon Copy Hoisting";
-  }
+  StringRef getPassName() const override { return "Hexagon Copy Hoisting"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<SlotIndexes>();
@@ -71,16 +67,16 @@ public:
 
   MachineFunction *MFN;
   MachineRegisterInfo *MRI;
-  StringMap<MachineInstr*> CopyMI;
-  std::vector<StringMap<MachineInstr*> > CopyMIList;
+  StringMap<MachineInstr *> CopyMI;
+  std::vector<StringMap<MachineInstr *>> CopyMIList;
 };
 
-}
+} // namespace
 
 char HexagonCopyHoisting::ID = 0;
 
 namespace llvm {
-  char &HexagonCopyHoistingID = HexagonCopyHoisting::ID;
+char &HexagonCopyHoistingID = HexagonCopyHoisting::ID;
 }
 
 bool HexagonCopyHoisting::runOnMachineFunction(MachineFunction &Fn) {
@@ -106,7 +102,7 @@ bool HexagonCopyHoisting::runOnMachineFunction(MachineFunction &Fn) {
   for (auto I = po_begin(&Fn), E = po_end(&Fn); I != E; ++I) {
     MachineBasicBlock &BB = **I;
     if (!BB.empty()) {
-      if (BB.pred_size() != 1)//
+      if (BB.pred_size() != 1) //
         continue;
       auto &BBCopyInst = CopyMIList[BB.getNumber()];
       if (BBCopyInst.size() > 0)
@@ -138,7 +134,7 @@ void HexagonCopyHoisting::collectCopyInst() {
 
     for (auto MII = BB->begin(), MIE = BB->end(); MII != MIE; ++MII) {
       MachineInstr *MI = &*MII;
-      if (MI->getOpcode() == TargetOpcode::COPY )
+      if (MI->getOpcode() == TargetOpcode::COPY)
         addMItoCopyList(MI);
     }
     LLVM_DEBUG(dbgs() << "\tNumber of copies: " << BBCopyInst.size() << "\n");
@@ -160,9 +156,9 @@ void HexagonCopyHoisting::addMItoCopyList(MachineInstr *MI) {
   StringRef key;
   SmallString<256> TmpData("");
   (void)Twine(Register::virtReg2Index(DstReg)).toStringRef(TmpData);
-  TmpData+='=';
+  TmpData += '=';
   key = Twine(Register::virtReg2Index(SrcReg)).toStringRef(TmpData);
-  BBCopyInst[key]=MI;
+  BBCopyInst[key] = MI;
 #ifndef NDEBUG
   LLVM_DEBUG(dbgs() << "\tAdding Copy Instr to the list: " << MI << "\n");
   for (auto II = BBCopyInst.begin(), IE = BBCopyInst.end(); II != IE; ++II) {
@@ -180,7 +176,7 @@ void HexagonCopyHoisting::addMItoCopyList(MachineInstr *MI) {
 bool HexagonCopyHoisting::analyzeCopy(MachineBasicBlock *BB) {
 
   bool changed = false;
-  if (BB->succ_size() < 2 )
+  if (BB->succ_size() < 2)
     return false;
 
   for (auto I = BB->succ_begin(), E = BB->succ_end(); I != E; ++I) {
@@ -195,7 +191,7 @@ bool HexagonCopyHoisting::analyzeCopy(MachineBasicBlock *BB) {
   ++SuccI;
   auto &BBCopyInst1 = CopyMIList[SBB1->getNumber()];
 
-  for ( auto II = BBCopyInst1.begin(), IE = BBCopyInst1.end(); II != IE; ++II) {
+  for (auto II = BBCopyInst1.begin(), IE = BBCopyInst1.end(); II != IE; ++II) {
     StringRef key = (*II).getKeyData();
     MachineInstr *MI = (*II).getValue();
     bool IsSafetoMove = true;
@@ -228,7 +224,7 @@ bool HexagonCopyHoisting::analyzeCopy(MachineBasicBlock *BB) {
 
 #ifndef NDEBUG
   auto &BBCopyInst = CopyMIList[BB->getNumber()];
-  for ( auto II = BBCopyInst.begin(), IE = BBCopyInst.end(); II != IE; ++II) {
+  for (auto II = BBCopyInst.begin(), IE = BBCopyInst.end(); II != IE; ++II) {
     MachineInstr *TempMI = (*II).getValue();
     LLVM_DEBUG(dbgs() << "\tIn the list: " << TempMI << "\n");
   }
@@ -237,8 +233,8 @@ bool HexagonCopyHoisting::analyzeCopy(MachineBasicBlock *BB) {
 }
 
 bool HexagonCopyHoisting::isSafetoMove(MachineInstr *CandMI) {
-// Make sure that it's safe to move this 'copy' instruction to the predecessor
-// basic block.
+  // Make sure that it's safe to move this 'copy' instruction to the predecessor
+  // basic block.
   assert(CandMI->getOperand(0).isReg() && CandMI->getOperand(1).isReg());
   unsigned DefR = CandMI->getOperand(0).getReg();
   unsigned UseR = CandMI->getOperand(1).getReg();
@@ -246,18 +242,20 @@ bool HexagonCopyHoisting::isSafetoMove(MachineInstr *CandMI) {
   MachineBasicBlock *BB = CandMI->getParent();
   // There should not be a def/use of DefR between the start of BB and CandMI.
   MachineBasicBlock::iterator MII, MIE;
-  for (MII = BB->begin(), MIE = CandMI; MII != MIE;  ++MII) {
-    MachineInstr *otherMI =  &*MII;
+  for (MII = BB->begin(), MIE = CandMI; MII != MIE; ++MII) {
+    MachineInstr *otherMI = &*MII;
     for (MachineInstr::mop_iterator Mo = otherMI->operands_begin(),
-           E = otherMI->operands_end(); Mo != E; ++Mo)
+                                    E = otherMI->operands_end();
+         Mo != E; ++Mo)
       if (Mo->isReg() && Mo->getReg() == DefR)
         return false;
   }
   // There should not be a def of UseR between the start of BB and CandMI.
-  for (MII = BB->begin(), MIE = CandMI; MII != MIE;  ++MII) {
+  for (MII = BB->begin(), MIE = CandMI; MII != MIE; ++MII) {
     MachineInstr *otherMI = &*MII;
     for (MachineInstr::mop_iterator Mo = otherMI->operands_begin(),
-           E = otherMI->operands_end(); Mo != E; ++Mo)
+                                    E = otherMI->operands_end();
+         Mo != E; ++Mo)
       if (Mo->isReg() && Mo->isDef() && Mo->getReg() == UseR)
         return false;
   }
@@ -265,7 +263,7 @@ bool HexagonCopyHoisting::isSafetoMove(MachineInstr *CandMI) {
 }
 
 void HexagonCopyHoisting::moveCopyInstr(MachineBasicBlock *DestBB,
-                                       StringRef key, MachineInstr *MI) {
+                                        StringRef key, MachineInstr *MI) {
   MachineBasicBlock::iterator FirstTI = DestBB->getFirstTerminator();
   assert(FirstTI != DestBB->end());
 
@@ -287,8 +285,8 @@ void HexagonCopyHoisting::moveCopyInstr(MachineBasicBlock *DestBB,
 //===----------------------------------------------------------------------===//
 
 INITIALIZE_PASS(HexagonCopyHoisting, "hexagon-move-phicopy",
-    "Hexagon move phi copy", false, false)
+                "Hexagon move phi copy", false, false)
 
-FunctionPass* llvm::createHexagonCopyHoisting() {
+FunctionPass *llvm::createHexagonCopyHoisting() {
   return new HexagonCopyHoisting();
 }
