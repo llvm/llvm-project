@@ -1616,10 +1616,9 @@ void populateSplitReductionPattern(
     const ControlSplitReductionFn &controlSplitReductionFn,
     bool useAlloc = false);
 
-/// Pattern to convert `linalg.matmul` to `linalg.matmul_transpose_a` (default)
-/// or `linalg.matmul_transpose_b`.
-void populateTransposeMatmulPattern(RewritePatternSet &patterns,
-                                    bool transposeA = true);
+/// Patterns to convert Linalg matmul ops to transposed variants.
+void populateTransposeMatmulPatterns(RewritePatternSet &patterns,
+                                     bool transposeA = true);
 
 } // namespace linalg
 } // namespace mlir
