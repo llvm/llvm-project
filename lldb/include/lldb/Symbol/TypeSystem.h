@@ -28,6 +28,7 @@
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/lldb-private.h"
+#include "lldb/lldb-types.h"
 
 class PDBASTParser;
 
@@ -393,6 +394,12 @@ public:
                                 llvm::StringRef name, ExecutionContext *exe_ctx,
                                 bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) = 0;
+
+  virtual CompilerType
+  GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
+                              llvm::StringRef name) {
+    return CompilerType();
+  }
 
   virtual bool IsTemplateType(lldb::opaque_compiler_type_t type);
 
