@@ -67,9 +67,8 @@ static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     bool FastUnalignedAccess =
         FastScalarUnalignedAccess && FastVectorUnalignedAccess;
 
-    OS << "PROC(" << Rec->getName() << ", "
-       << "{\"" << Rec->getValueAsString("Name") << "\"}, "
-       << "{\"";
+    OS << "PROC(" << Rec->getName() << ", {\"" << Rec->getValueAsString("Name")
+       << "\"}, {\"";
 
     StringRef MArch = Rec->getValueAsString("DefaultMarch");
 
