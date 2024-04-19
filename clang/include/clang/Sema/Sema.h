@@ -5450,7 +5450,7 @@ public:
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
   ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
 
-  bool CheckLoopHintExpr(Expr *E, SourceLocation Loc);
+  bool CheckLoopHintExpr(Expr *E, SourceLocation Loc, bool AllowZero);
 
   ExprResult ActOnNumericConstant(const Token &Tok, Scope *UDLScope = nullptr);
   ExprResult ActOnCharacterConstant(const Token &Tok,
