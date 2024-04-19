@@ -14442,18 +14442,11 @@ bool BoUpSLP::collectValuesToDemote(
     }
     auto NumSignBits = ComputeNumSignBits(V, *DL, 0, AC, nullptr, DT);
     unsigned BitWidth1 = OrigBitWidth - NumSignBits;
-    bool IsSigned = !isKnownNonNegative(V, SimplifyQuery(*DL));
-    if (IsSigned)
+    if (!isKnownNonNegative(V, SimplifyQuery(*DL)))
       ++BitWidth1;
     if (auto *I = dyn_cast<Instruction>(V)) {
       APInt Mask = DB->getDemandedBits(I);
       unsigned BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
-      while (!IsSigned && BitWidth2 < OrigBitWidth) {
-        APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth2 - 1);
-        if (MaskedValueIsZero(V, Mask, SimplifyQuery(*DL)))
-          break;
-        BitWidth2 *= 2;
-      }
       BitWidth1 = std::min(BitWidth1, BitWidth2);
     }
     BitWidth = std::max(BitWidth, BitWidth1);
