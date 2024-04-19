@@ -338,12 +338,12 @@ define <8 x i8> @extrause_add(<8 x i8> %a, <8 x i8> %b) {
 
 define <8 x i8> @extrause_shuffle(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: @extrause_shuffle(
-; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i8> [[B:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i8> [[A:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+; CHECK-NEXT:    [[BB:%.*]] = shufflevector <8 x i8> [[B:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[BT:%.*]] = shufflevector <8 x i8> [[B]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    [[BB:%.*]] = shufflevector <8 x i8> [[B1:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[BT1:%.*]] = shufflevector <8 x i8> [[B1]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
-; CHECK-NEXT:    call void @use(<4 x i8> [[BT1]])
-; CHECK-NEXT:    [[ABT:%.*]] = add <4 x i8> [[BT]], [[BT1]]
+; CHECK-NEXT:    call void @use(<4 x i8> [[BT]])
+; CHECK-NEXT:    [[ABT:%.*]] = add <4 x i8> [[AT]], [[BT]]
 ; CHECK-NEXT:    [[ABB:%.*]] = add <4 x i8> [[AB]], [[BB]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[ABT]], <4 x i8> [[ABB]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
@@ -431,8 +431,8 @@ define void @exttrunc(<8 x i32> %a, <8 x i32> %b, ptr %p) {
 ; CHECK-NEXT:    [[ABT:%.*]] = add <4 x i64> [[AT1]], [[BT1]]
 ; CHECK-NEXT:    [[ABB1:%.*]] = trunc <4 x i64> [[ABB]] to <4 x i32>
 ; CHECK-NEXT:    [[ABT1:%.*]] = trunc <4 x i64> [[ABT]] to <4 x i32>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[ABB1]], <4 x i32> [[ABT1]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-; CHECK-NEXT:    store <8 x i32> [[TMP1]], ptr [[P:%.*]], align 32
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[ABB1]], <4 x i32> [[ABT1]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NEXT:    store <8 x i32> [[R]], ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %ab = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -460,14 +460,14 @@ define <8 x i8> @intrinsics_minmax(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-NEXT:    [[BT:%.*]] = shufflevector <8 x i8> [[B]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
 ; CHECK-NEXT:    [[ABT:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[AT]], <4 x i8> [[BT]])
 ; CHECK-NEXT:    [[ABB:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[AB]], <4 x i8> [[BB]])
-; CHECK-NEXT:    [[ABT1:%.*]] = call <4 x i8> @llvm.smix.v4i8(<4 x i8> [[ABT]], <4 x i8> [[BT]])
+; CHECK-NEXT:    [[ABT1:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[ABT]], <4 x i8> [[BT]])
 ; CHECK-NEXT:    [[ABB1:%.*]] = call <4 x i8> @llvm.smax.v4i8(<4 x i8> [[ABB]], <4 x i8> [[BB]])
 ; CHECK-NEXT:    [[ABT2:%.*]] = call <4 x i8> @llvm.umin.v4i8(<4 x i8> [[ABT1]], <4 x i8> [[BT]])
 ; CHECK-NEXT:    [[ABB2:%.*]] = call <4 x i8> @llvm.umin.v4i8(<4 x i8> [[ABB1]], <4 x i8> [[BB]])
 ; CHECK-NEXT:    [[ABT3:%.*]] = call <4 x i8> @llvm.umax.v4i8(<4 x i8> [[ABT2]], <4 x i8> [[BT]])
 ; CHECK-NEXT:    [[ABB3:%.*]] = call <4 x i8> @llvm.umax.v4i8(<4 x i8> [[ABB2]], <4 x i8> [[BB]])
-; CHECK-NEXT:    [[R1:%.*]] = shufflevector <4 x i8> [[ABT3]], <4 x i8> [[ABB3]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    ret <8 x i8> [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[ABT3]], <4 x i8> [[ABB3]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %at = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
@@ -475,7 +475,7 @@ define <8 x i8> @intrinsics_minmax(<8 x i8> %a, <8 x i8> %b) {
   %bt = shufflevector <8 x i8> %b, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
   %abt = call <4 x i8> @llvm.smin.v4i8(<4 x i8> %at, <4 x i8> %bt)
   %abb = call <4 x i8> @llvm.smin.v4i8(<4 x i8> %ab, <4 x i8> %bb)
-  %abt1 = call <4 x i8> @llvm.smix.v4i8(<4 x i8> %abt, <4 x i8> %bt)
+  %abt1 = call <4 x i8> @llvm.smin.v4i8(<4 x i8> %abt, <4 x i8> %bt)
   %abb1 = call <4 x i8> @llvm.smax.v4i8(<4 x i8> %abb, <4 x i8> %bb)
   %abt2 = call <4 x i8> @llvm.umin.v4i8(<4 x i8> %abt1, <4 x i8> %bt)
   %abb2 = call <4 x i8> @llvm.umin.v4i8(<4 x i8> %abb1, <4 x i8> %bb)
@@ -499,8 +499,8 @@ define <8 x i8> @intrinsics_addsat(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-NEXT:    [[ABB2:%.*]] = call <4 x i8> @llvm.uadd.sat.v4i8(<4 x i8> [[ABB1]], <4 x i8> [[BB]])
 ; CHECK-NEXT:    [[ABT3:%.*]] = call <4 x i8> @llvm.usub.sat.v4i8(<4 x i8> [[ABT2]], <4 x i8> [[BT]])
 ; CHECK-NEXT:    [[ABB3:%.*]] = call <4 x i8> @llvm.usub.sat.v4i8(<4 x i8> [[ABB2]], <4 x i8> [[BB]])
-; CHECK-NEXT:    [[R1:%.*]] = shufflevector <4 x i8> [[ABT3]], <4 x i8> [[ABB3]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    ret <8 x i8> [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[ABT3]], <4 x i8> [[ABB3]], <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %at = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
