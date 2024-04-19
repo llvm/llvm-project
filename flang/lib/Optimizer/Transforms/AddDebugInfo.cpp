@@ -111,6 +111,7 @@ void AddDebugInfoPass::runOnOperation() {
     mlir::LLVM::DIBasicTypeAttr bT = mlir::LLVM::DIBasicTypeAttr::get(
         context, llvm::dwarf::DW_TAG_base_type, "void", /*sizeInBits=*/0,
         /*encoding=*/1);
+    // FIXME: Provide proper type for subroutine
     mlir::LLVM::DISubroutineTypeAttr subTypeAttr =
         mlir::LLVM::DISubroutineTypeAttr::get(context, CC, {bT, bT});
     mlir::LLVM::DIFileAttr funcFileAttr =
@@ -126,8 +127,10 @@ void AddDebugInfoPass::runOnOperation() {
     if (!funcOp.isExternal()) {
       id = mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
       compilationUnit = cuAttr;
-      subprogramFlags = mlir::LLVM::DISubprogramFlags::Definition;
+      subprogramFlags =
+          subprogramFlags | mlir::LLVM::DISubprogramFlags::Definition;
     }
+    // FIXME: Provide proper line and scopeline.
     auto spAttr = mlir::LLVM::DISubprogramAttr::get(
         context, id, compilationUnit, fileAttr, funcName, funcName,
         funcFileAttr, /*line=*/1, /*scopeline=*/1, subprogramFlags,

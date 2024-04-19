@@ -304,20 +304,8 @@ inline void createOpenMPFIRPassPipeline(
 inline void createDebugPasses(mlir::PassManager &pm,
     llvm::codegenoptions::DebugInfoKind debugLevel,
     llvm::OptimizationLevel OptLevel, llvm::StringRef inputFilename) {
-  // Currently only -g1, -g, -gline-tables-only supported
-  switch (debugLevel) {
-  case llvm::codegenoptions::DebugLineTablesOnly:
+  if (debugLevel != llvm::codegenoptions::NoDebugInfo)
     addDebugInfoPass(pm, debugLevel, OptLevel, inputFilename);
-    return;
-  case llvm::codegenoptions::NoDebugInfo:
-    return;
-  default:
-    // TODO: Add cases and passes for other debug options.
-    // All other debug options not implemented yet, currently emits warning
-    // and generates as much debug information as possible.
-    addDebugInfoPass(pm, debugLevel, OptLevel, inputFilename);
-    return;
-  }
 }
 
 inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
