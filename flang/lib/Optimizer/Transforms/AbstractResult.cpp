@@ -287,6 +287,9 @@ private:
 class AbstractResultOpt
     : public fir::impl::AbstractResultOptBase<AbstractResultOpt> {
 public:
+  using fir::impl::AbstractResultOptBase<
+      AbstractResultOpt>::AbstractResultOptBase;
+
   void runOnSpecificOperation(mlir::func::FuncOp func, bool shouldBoxResult,
                               mlir::RewritePatternSet &patterns,
                               mlir::ConversionTarget &target) {
@@ -430,7 +433,3 @@ public:
 
 } // end anonymous namespace
 } // namespace fir
-
-std::unique_ptr<mlir::Pass> fir::createAbstractResultOptPass() {
-  return std::make_unique<AbstractResultOpt>();
-}
