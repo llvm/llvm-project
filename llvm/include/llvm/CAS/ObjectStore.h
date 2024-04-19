@@ -259,6 +259,10 @@ public:
 
   /// Asynchronous version of \c getProxyIfExists using a callback.
   void getProxyAsync(
+      const CASID &ID,
+      unique_function<void(Expected<std::optional<ObjectProxy>>)> Callback);
+  /// Asynchronous version of \c getProxyIfExists using a callback.
+  void getProxyAsync(
       ObjectRef Ref,
       unique_function<void(Expected<std::optional<ObjectProxy>>)> Callback);
 

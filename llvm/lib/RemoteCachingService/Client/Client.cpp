@@ -54,6 +54,14 @@ createGetValueResponse(const GetValueResponse &Resp) {
   return Ret;
 }
 
+static Error createPutValueResponse(const PutValueResponse &Resp) {
+  if (Resp.has_error())
+    return createStringError(inconvertibleErrorCode(),
+                             Resp.error().description());
+
+  return Error::success();
+}
+
 static Expected<CASDBClient::LoadResponse>
 createLoadResponse(const CASLoadResponse &Response,
                    std::optional<std::string> OutFilePath) {
@@ -504,6 +512,22 @@ class KeyValueDBClientImpl : public KeyValueDBClient {
     return createGetValueResponse(Resp);
   }
 
+  void getValueAsyncImpl(std::string Key, GetValueCb Callback) override {
+    auto Request = std::make_shared<GetValueRequest>();
+    auto Context = std::make_shared<grpc::ClientContext>();
+    auto Resp = std::make_shared<GetValueResponse>();
+    Request->set_key(Key);
+    Stub->async()->GetValue(&*Context, &*Request, &*Resp,
+                            [=](grpc::Status Status) {
+                              (void)Request;
+                              (void)Context;
+                              if (!Status.ok())
+                                return Callback(errorFromGRPCStatus(Status));
+
+                              return Callback(createGetValueResponse(*Resp));
+                            });
+  }
+
   Error putValueSyncImpl(std::string Key,
                          const KeyValueDBClient::ValueTy &Value) override {
     PutValueRequest Request;
@@ -517,12 +541,27 @@ class KeyValueDBClientImpl : public KeyValueDBClient {
     grpc::Status Status = Stub->PutValue(&Context, Request, &Resp);
     if (!Status.ok())
       return errorFromGRPCStatus(Status);
+    return createPutValueResponse(Resp);
+  }
 
-    if (Resp.has_error())
-      return createStringError(inconvertibleErrorCode(),
-                               Resp.error().description());
-
-    return Error::success();
+  void putValueAsyncImpl(std::string Key, const ValueTy &Value,
+                         std::function<void(Error)> Callback) override {
+    auto Request = std::make_shared<PutValueRequest>();
+    auto Context = std::make_shared<grpc::ClientContext>();
+    auto Response = std::make_shared<PutValueResponse>();
+    Request->set_key(Key);
+    auto &PBMap = *Request->mutable_value()->mutable_entries();
+    for (const auto &Entry : Value) {
+      PBMap[Entry.first().str()] = Entry.second;
+    }
+    Stub->async()->PutValue(
+        &*Context, &*Request, &*Response, [=](grpc::Status Status) mutable {
+          (void)Request;
+          (void)Context;
+          if (!Status.ok())
+            return Callback(errorFromGRPCStatus(Status));
+          return Callback(createPutValueResponse(*Response));
+        });
   }
 
 public:
@@ -550,6 +589,23 @@ class CASDBClientImpl : public CASDBClient {
     return createLoadResponse(Response, OutFilePath);
   }
 
+  void loadAsyncImpl(std::string CASID, std::optional<std::string> OutFilePath,
+                     LoadCb Callback) override {
+    auto Request = std::make_shared<CASLoadRequest>();
+    auto Context = std::make_shared<grpc::ClientContext>();
+    auto Response = std::make_shared<CASLoadResponse>();
+    Request->mutable_cas_id()->set_id(std::move(CASID));
+    Request->set_write_to_disk(OutFilePath.has_value());
+    Stub->async()->Load(
+        &*Context, &*Request, &*Response, [=](grpc::Status Status) {
+          (void)Request;
+          (void)Context;
+          if (!Status.ok())
+            return Callback(errorFromGRPCStatus(Status));
+          return Callback(createLoadResponse(*Response, OutFilePath));
+        });
+  }
+
   Expected<std::string> saveDataSyncImpl(std::string BlobData) override {
     CASSaveRequest Request;
     Request.mutable_data()->mutable_blob()->set_data(std::move(BlobData));
@@ -563,6 +619,13 @@ class CASDBClientImpl : public CASDBClient {
     return casSaveSync(Request);
   }
 
+  void saveFileAsyncImpl(std::string FilePath, SaveFileCb Callback) override {
+    assert(!FilePath.empty());
+    CASSaveRequest Request;
+    Request.mutable_data()->mutable_blob()->set_file_path(std::move(FilePath));
+    return casSaveAsync(std::move(Request), Callback);
+  }
+
   Expected<std::string> casSaveSync(const CASSaveRequest &Request) {
     grpc::ClientContext Context;
     CASSaveResponse Response;
@@ -573,6 +636,21 @@ class CASDBClientImpl : public CASDBClient {
       return createStringError(inconvertibleErrorCode(),
                                Response.error().description());
     return Response.cas_id().id();
+  }
+
+  void casSaveAsync(CASSaveRequest Req,
+                    std::function<void(Expected<std::string>)> Callback) {
+    auto Context = std::make_shared<grpc::ClientContext>();
+    auto Request = std::make_shared<CASSaveRequest>(std::move(Req));
+    auto Response = std::make_shared<CASSaveResponse>();
+    Stub->async()->Save(&*Context, &*Request, &*Response,
+                        [=](grpc::Status Status) {
+                          (void)Context;
+                          (void)Request;
+                          if (!Status.ok())
+                            return Callback(errorFromGRPCStatus(Status));
+                          return Callback(Response->cas_id().id());
+                        });
   }
 
   Expected<CASDBClient::GetResponse>

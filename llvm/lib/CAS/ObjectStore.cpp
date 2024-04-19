@@ -128,6 +128,15 @@ std::future<AsyncProxyValue> ObjectStore::getProxyFuture(ObjectRef Ref) {
 }
 
 void ObjectStore::getProxyAsync(
+    const CASID &ID,
+    unique_function<void(Expected<std::optional<ObjectProxy>>)> Callback) {
+  std::optional<ObjectRef> Ref = getReference(ID);
+  if (!Ref)
+    return Callback(createUnknownObjectError(ID));
+  return getProxyAsync(*Ref, std::move(Callback));
+}
+
+void ObjectStore::getProxyAsync(
     ObjectRef Ref,
     unique_function<void(Expected<std::optional<ObjectProxy>>)> Callback) {
   // FIXME: there is potential for use-after-free for the 'this' pointer.
