@@ -329,7 +329,7 @@
 // RELR64-EMPTY: 
 // RELR64-NEXT:  Relocation section '.relr.dyn' at offset {{.*}} contains 24 entries:
 // RELR64-NEXT:  Symbolic Address
-// RELR64-NEXT:  $d.0
+// RELR64-NEXT:  $d.0{{$}}
 // RELR64-NEXT:  $d.0 + 0x8
 // RELR64-NEXT:  $d.0 + 0x10
 // RELR64-NEXT:  $d.0 + 0x18
