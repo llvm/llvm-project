@@ -165,21 +165,8 @@ void DAGISelEmitter::run(raw_ostream &OS) {
   // Add all the patterns to a temporary list so we can sort them.
   Records.startTimer("Sort patterns");
   std::vector<const PatternToMatch *> Patterns;
-  for (const PatternToMatch &PTM : CGP.ptms()) {
-
-    // Disable import of patterns marked as ignore.
-    const TreePatternNode &Dst = PTM.getDstPattern();
-    if (!Dst.isLeaf()) {
-      const Record *Op = Dst.getOperator();
-      const bool ShouldIgnore =
-          Op->isSubClassOf("Instruction") &&
-          CGP.getTargetInfo().getInstruction(Op).DAGISelShouldIgnore;
-      if (ShouldIgnore)
-        continue;
-    }
-
+  for (const PatternToMatch &PTM : CGP.ptms())
     Patterns.push_back(&PTM);
-  }
 
   // We want to process the matches in order of minimal cost.  Sort the patterns
   // so the least cost one is at the start.

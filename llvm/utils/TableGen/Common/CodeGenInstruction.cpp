@@ -465,7 +465,6 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   isConvergent = R->getValueAsBit("isConvergent");
   hasNoSchedulingInfo = R->getValueAsBit("hasNoSchedulingInfo");
   FastISelShouldIgnore = R->getValueAsBit("FastISelShouldIgnore");
-  DAGISelShouldIgnore = R->getValueAsBit("DAGISelShouldIgnore");
   variadicOpsAreDefs = R->getValueAsBit("variadicOpsAreDefs");
   isAuthenticated = R->getValueAsBit("isAuthenticated");
 

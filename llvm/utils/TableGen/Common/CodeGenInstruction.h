@@ -282,7 +282,6 @@ public:
   bool isConvergent : 1;
   bool hasNoSchedulingInfo : 1;
   bool FastISelShouldIgnore : 1;
-  bool DAGISelShouldIgnore : 1;
   bool hasChain : 1;
   bool hasChain_Inferred : 1;
   bool variadicOpsAreDefs : 1;

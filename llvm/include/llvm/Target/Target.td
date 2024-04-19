@@ -777,10 +777,6 @@ class Instruction : InstructionEncoding {
   /// SelectionDAG can.
   bit FastISelShouldIgnore = false;
 
-  /// Should DAGISel ignore this instruction. In cases where lowering may
-  /// be done elsewhere or is unneeded, DAGISel may skip over them.
-  bit DAGISelShouldIgnore = false;
-
   /// HasPositionOrder: Indicate tablegen to sort the instructions by record
   /// ID, so that instruction that is defined earlier can be sorted earlier
   /// in the assembly matching table.
