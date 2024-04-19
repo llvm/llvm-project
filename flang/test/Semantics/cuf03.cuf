@@ -85,6 +85,11 @@ module m
     real, unified :: ru ! ok
     type(t1), unified :: tu ! ok
     type(t2) :: t ! ok
+
+    block
+      real, device :: a(100) ! ok
+    end block
   end subroutine
+
 
 end module
