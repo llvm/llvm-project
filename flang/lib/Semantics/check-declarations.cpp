@@ -956,9 +956,9 @@ void CheckHelper::CheckObjectEntity(
       break;
     case common::CUDADataAttr::Managed:
       if (!IsAutomatic(symbol) && !IsAllocatable(symbol) &&
-          !details.isDummy()) {
+          !details.isDummy() && !evaluate::IsExplicitShape(symbol)) {
         messages_.Say(
-            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument"_err_en_US,
+            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, explicit shape, or a dummy argument"_err_en_US,
             symbol.name());
       }
       break;
