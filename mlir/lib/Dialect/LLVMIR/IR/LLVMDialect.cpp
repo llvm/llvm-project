@@ -47,6 +47,74 @@ using mlir::LLVM::linkage::getMaxEnumValForLinkage;
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsDialect.cpp.inc"
 
+//===----------------------------------------------------------------------===//
+// Property Helpers
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// IntegerOverflowFlags
+
+namespace mlir {
+static Attribute convertToAttribute(MLIRContext *ctx,
+                                    IntegerOverflowFlags flags) {
+  return IntegerOverflowFlagsAttr::get(ctx, flags);
+}
+
+static LogicalResult
+convertFromAttribute(IntegerOverflowFlags &flags, Attribute attr,
+                     function_ref<InFlightDiagnostic()> emitError) {
+  auto flagsAttr = dyn_cast<IntegerOverflowFlagsAttr>(attr);
+  if (!flagsAttr) {
+    return emitError() << "expected 'overflowFlags' attribute to be an "
+                          "IntegerOverflowFlagsAttr, but got "
+                       << attr;
+  }
+  flags = flagsAttr.getValue();
+  return success();
+}
+} // namespace mlir
+
+static ParseResult parseOverflowFlags(AsmParser &p,
+                                      IntegerOverflowFlags &flags) {
+  if (failed(p.parseOptionalKeyword("overflow"))) {
+    flags = IntegerOverflowFlags::none;
+    return success();
+  }
+  if (p.parseLess())
+    return failure();
+  do {
+    StringRef kw;
+    SMLoc loc = p.getCurrentLocation();
+    if (p.parseKeyword(&kw))
+      return failure();
+    std::optional<IntegerOverflowFlags> flag =
+        symbolizeIntegerOverflowFlags(kw);
+    if (!flag)
+      return p.emitError(loc,
+                         "invalid overflow flag: expected nsw, nuw, or none");
+    flags = flags | *flag;
+  } while (succeeded(p.parseOptionalComma()));
+  return p.parseGreater();
+}
+
+static void printOverflowFlags(AsmPrinter &p, Operation *op,
+                               IntegerOverflowFlags flags) {
+  if (flags == IntegerOverflowFlags::none)
+    return;
+  p << " overflow<";
+  SmallVector<StringRef, 2> strs;
+  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nsw))
+    strs.push_back("nsw");
+  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nuw))
+    strs.push_back("nuw");
+  llvm::interleaveComma(strs, p);
+  p << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// Attribute Helpers
+//===----------------------------------------------------------------------===//
+
 static constexpr const char kElemTypeAttrName[] = "elem_type";
 
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
@@ -70,12 +138,12 @@ static ParseResult parseLLVMOpAttrs(OpAsmParser &parser,
 static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
                              DictionaryAttr attrs) {
   auto filteredAttrs = processFMFAttr(attrs.getValue());
-  if (auto iface = dyn_cast<IntegerOverflowFlagsInterface>(op))
+  if (auto iface = dyn_cast<IntegerOverflowFlagsInterface>(op)) {
     printer.printOptionalAttrDict(
-        filteredAttrs,
-        /*elidedAttrs=*/{iface.getIntegerOverflowAttrName()});
-  else
+        filteredAttrs, /*elidedAttrs=*/{iface.getOverflowFlagsAttrName()});
+  } else {
     printer.printOptionalAttrDict(filteredAttrs);
+  }
 }
 
 /// Verifies `symbol`'s use in `op` to ensure the symbol is a valid and
