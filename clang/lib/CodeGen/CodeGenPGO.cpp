@@ -1235,7 +1235,8 @@ void CodeGenPGO::emitMCDCParameters(CGBuilderTy &Builder) {
 
 void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
                                                 const Expr *S,
-                                                Address MCDCCondBitmapAddr) {
+                                                Address MCDCCondBitmapAddr,
+                                                CodeGenFunction &CGF) {
   if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
 
@@ -1258,7 +1259,7 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
                           Builder.getInt64(FunctionHash),
                           Builder.getInt32(RegionMCDCState->BitmapBits),
                           Builder.getInt32(MCDCTestVectorBitmapOffset),
-                          MCDCCondBitmapAddr.getPointer()};
+                          MCDCCondBitmapAddr.emitRawPointer(CGF)};
   Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_tvbitmap_update), Args);
 }
@@ -1279,7 +1280,8 @@ void CodeGenPGO::emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
 
 void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
                                           Address MCDCCondBitmapAddr,
-                                          llvm::Value *Val) {
+                                          llvm::Value *Val,
+                                          CodeGenFunction &CGF) {
   if (!canEmitMCDCCoverage(Builder) || !RegionMCDCState)
     return;
 

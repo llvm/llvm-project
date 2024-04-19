@@ -1361,11 +1361,11 @@ define <2 x i8> @ashr_demanded_bits_splat(<2 x i8> %x) {
 
 define <vscale x 8 x i8> @ashr_demanded_bits_splat2(<vscale x 8 x i8> %x) {
 ; CHECK-LABEL: @ashr_demanded_bits_splat2(
-; CHECK-NEXT:    [[SHR:%.*]] = ashr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    [[SHR:%.*]] = ashr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i64 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 8 x i8> [[SHR]]
 ;
-  %and = and <vscale x 8 x i8> %x, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 128, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
-  %shr = ashr <vscale x 8 x i8> %and, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+  %and = and <vscale x 8 x i8> %x, splat (i8 128)
+  %shr = ashr <vscale x 8 x i8> %and, splat (i8 7)
   ret <vscale x 8 x i8> %shr
 }
 
@@ -1381,11 +1381,11 @@ define <2 x i8> @lshr_demanded_bits_splat(<2 x i8> %x) {
 
 define <vscale x 8 x i8> @lshr_demanded_bits_splat2(<vscale x 8 x i8> %x) {
 ; CHECK-LABEL: @lshr_demanded_bits_splat2(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i64 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 8 x i8> [[SHR]]
 ;
-  %and = and <vscale x 8 x i8> %x, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 128, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
-  %shr = lshr <vscale x 8 x i8> %and, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+  %and = and <vscale x 8 x i8> %x, splat (i8 128)
+  %shr = lshr <vscale x 8 x i8> %and, splat (i8 7)
   ret <vscale x 8 x i8> %shr
 }
 
@@ -1751,12 +1751,11 @@ define void @ashr_out_of_range_1(ptr %A) {
 ; CHECK-NEXT:    [[L:%.*]] = load i177, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[L_FROZEN:%.*]] = freeze i177 [[L]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L_FROZEN]], -1
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[TMP1]], i177 0, i177 [[L_FROZEN]]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i177 [[B]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i177 [[L_FROZEN]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -24
-; CHECK-NEXT:    [[C17:%.*]] = icmp sgt i177 [[B]], [[L_FROZEN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[C17]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i1 [[TMP1]] to i64
 ; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i177 [[L_FROZEN]], -1
 ; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP5]], i177 0, i177 [[L_FROZEN]]

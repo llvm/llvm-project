@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -std=c++23 -emit-module-interface %t/a.cppm -o %t/a.pcm
 // RUN: %clang_cc1 -std=c++23 %t/b.cpp -fmodule-file=a=%t/a.pcm -fsyntax-only -verify
 
+// RUN: %clang_cc1 -std=c++23 -emit-reduced-module-interface %t/a.cppm -o %t/a.pcm
+// RUN: %clang_cc1 -std=c++23 %t/b.cpp -fmodule-file=a=%t/a.pcm -fsyntax-only -verify
+
 //--- foo.h
 class TypeA {};
 

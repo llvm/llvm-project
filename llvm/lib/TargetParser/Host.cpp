@@ -196,35 +196,53 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xb36", "arm1136j-s")
         .Case("0xb56", "arm1156t2-s")
         .Case("0xb76", "arm1176jz-s")
+        .Case("0xc05", "cortex-a5")
+        .Case("0xc07", "cortex-a7")
         .Case("0xc08", "cortex-a8")
         .Case("0xc09", "cortex-a9")
         .Case("0xc0f", "cortex-a15")
+        .Case("0xc0e", "cortex-a17")
         .Case("0xc20", "cortex-m0")
         .Case("0xc23", "cortex-m3")
         .Case("0xc24", "cortex-m4")
+        .Case("0xc27", "cortex-m7")
+        .Case("0xd20", "cortex-m23")
+        .Case("0xd21", "cortex-m33")
         .Case("0xd24", "cortex-m52")
         .Case("0xd22", "cortex-m55")
+        .Case("0xd23", "cortex-m85")
+        .Case("0xc18", "cortex-r8")
+        .Case("0xd13", "cortex-r52")
+        .Case("0xd15", "cortex-r82")
         .Case("0xd02", "cortex-a34")
         .Case("0xd04", "cortex-a35")
         .Case("0xd03", "cortex-a53")
         .Case("0xd05", "cortex-a55")
         .Case("0xd46", "cortex-a510")
         .Case("0xd80", "cortex-a520")
+        .Case("0xd88", "cortex-a520ae")
         .Case("0xd07", "cortex-a57")
+        .Case("0xd06", "cortex-a65")
+        .Case("0xd43", "cortex-a65ae")
         .Case("0xd08", "cortex-a72")
         .Case("0xd09", "cortex-a73")
         .Case("0xd0a", "cortex-a75")
         .Case("0xd0b", "cortex-a76")
+        .Case("0xd0e", "cortex-a76ae")
         .Case("0xd0d", "cortex-a77")
         .Case("0xd41", "cortex-a78")
+        .Case("0xd42", "cortex-a78ae")
+        .Case("0xd4b", "cortex-a78c")
         .Case("0xd47", "cortex-a710")
         .Case("0xd4d", "cortex-a715")
         .Case("0xd81", "cortex-a720")
+        .Case("0xd89", "cortex-a720ae")
         .Case("0xd44", "cortex-x1")
         .Case("0xd4c", "cortex-x1c")
         .Case("0xd48", "cortex-x2")
         .Case("0xd4e", "cortex-x3")
         .Case("0xd82", "cortex-x4")
+        .Case("0xd4a", "neoverse-e1")
         .Case("0xd0c", "neoverse-n1")
         .Case("0xd49", "neoverse-n2")
         .Case("0xd40", "neoverse-v1")
@@ -1465,6 +1483,8 @@ StringRef sys::getHostCPUName() {
 #define CPUFAMILY_ARM_VORTEX_TEMPEST 0x07d34b9f
 #define CPUFAMILY_ARM_LIGHTNING_THUNDER 0x462504d2
 #define CPUFAMILY_ARM_FIRESTORM_ICESTORM 0x1b588bb3
+#define CPUFAMILY_ARM_BLIZZARD_AVALANCHE 0xda33d83d
+#define CPUFAMILY_ARM_EVEREST_SAWTOOTH 0x8765edea
 
 StringRef sys::getHostCPUName() {
   uint32_t Family;
@@ -1490,9 +1510,13 @@ StringRef sys::getHostCPUName() {
     return "apple-a13";
   case CPUFAMILY_ARM_FIRESTORM_ICESTORM:
     return "apple-m1";
+  case CPUFAMILY_ARM_BLIZZARD_AVALANCHE:
+    return "apple-m2";
+  case CPUFAMILY_ARM_EVEREST_SAWTOOTH:
+    return "apple-m3";
   default:
     // Default to the newest CPU we know about.
-    return "apple-m1";
+    return "apple-m3";
   }
 }
 #elif defined(_AIX)

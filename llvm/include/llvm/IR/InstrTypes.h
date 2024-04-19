@@ -43,6 +43,7 @@ namespace llvm {
 class StringRef;
 class Type;
 class Value;
+class ConstantRange;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -468,20 +469,12 @@ public:
   static BinaryOperator *CreateNeg(Value *Op, const Twine &Name,
                                    BasicBlock::iterator InsertBefore);
   static BinaryOperator *CreateNeg(Value *Op, const Twine &Name = "",
-                                   Instruction *InsertBefore = nullptr);
-  static BinaryOperator *CreateNeg(Value *Op, const Twine &Name,
-                                   BasicBlock *InsertAtEnd);
+                                   BasicBlock *InsertAtEnd = nullptr);
   static BinaryOperator *CreateNSWNeg(Value *Op, const Twine &Name,
                                       BasicBlock::iterator InsertBefore);
   static BinaryOperator *CreateNSWNeg(Value *Op, const Twine &Name = "",
                                       Instruction *InsertBefore = nullptr);
   static BinaryOperator *CreateNSWNeg(Value *Op, const Twine &Name,
-                                      BasicBlock *InsertAtEnd);
-  static BinaryOperator *CreateNUWNeg(Value *Op, const Twine &Name,
-                                      BasicBlock::iterator InsertBefore);
-  static BinaryOperator *CreateNUWNeg(Value *Op, const Twine &Name = "",
-                                      Instruction *InsertBefore = nullptr);
-  static BinaryOperator *CreateNUWNeg(Value *Op, const Twine &Name,
                                       BasicBlock *InsertAtEnd);
   static BinaryOperator *CreateNot(Value *Op, const Twine &Name,
                                    BasicBlock::iterator InsertBefore);
@@ -934,13 +927,19 @@ public:
   }
 };
 
-/// Instruction that can have a nneg flag (only zext).
+/// Instruction that can have a nneg flag (zext/uitofp).
 class PossiblyNonNegInst : public CastInst {
 public:
   enum { NonNeg = (1 << 0) };
 
   static bool classof(const Instruction *I) {
-    return I->getOpcode() == Instruction::ZExt;
+    switch (I->getOpcode()) {
+    case Instruction::ZExt:
+    case Instruction::UIToFP:
+      return true;
+    default:
+      return false;
+    }
   }
 
   static bool classof(const Value *V) {
@@ -1039,7 +1038,7 @@ public:
   /// the two operands. Insert the instruction into a BasicBlock right before
   /// the specified instruction.
   /// Create a CmpInst
-  static CmpInst *Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
+  static CmpInst *Create(OtherOps Op, Predicate Pred, Value *S1, Value *S2,
                          const Twine &Name, BasicBlock::iterator InsertBefore);
 
   /// Construct a compare instruction, given the opcode, the predicate and
@@ -1047,17 +1046,28 @@ public:
   /// instruction into a BasicBlock right before the specified instruction.
   /// The specified Instruction is allowed to be a dereferenced end iterator.
   /// Create a CmpInst
-  static CmpInst *Create(OtherOps Op,
-                         Predicate predicate, Value *S1,
-                         Value *S2, const Twine &Name = "",
+  static CmpInst *Create(OtherOps Op, Predicate Pred, Value *S1, Value *S2,
+                         const Twine &Name = "",
                          Instruction *InsertBefore = nullptr);
 
   /// Construct a compare instruction, given the opcode, the predicate and the
   /// two operands.  Also automatically insert this instruction to the end of
   /// the BasicBlock specified.
   /// Create a CmpInst
-  static CmpInst *Create(OtherOps Op, Predicate predicate, Value *S1,
-                         Value *S2, const Twine &Name, BasicBlock *InsertAtEnd);
+  static CmpInst *Create(OtherOps Op, Predicate Pred, Value *S1, Value *S2,
+                         const Twine &Name, BasicBlock *InsertAtEnd);
+
+  /// Construct a compare instruction, given the opcode, the predicate,
+  /// the two operands and the instruction to copy the flags from. Optionally
+  /// (if InstBefore is specified) insert the instruction into a BasicBlock
+  /// right before the specified instruction. The specified Instruction is
+  /// allowed to be a dereferenced end iterator.
+  /// Create a CmpInst
+  static CmpInst *CreateWithCopiedFlags(OtherOps Op, Predicate Pred, Value *S1,
+                                        Value *S2,
+                                        const Instruction *FlagsSource,
+                                        const Twine &Name = "",
+                                        Instruction *InsertBefore = nullptr);
 
   /// Get the opcode casted to the right type
   OtherOps getOpcode() const {
@@ -1538,9 +1548,18 @@ public:
                                     OperandBundleDef OB,
                                     Instruction *InsertPt = nullptr);
 
+  /// Create a clone of \p CB with operand bundle \p OB added.
+  static CallBase *addOperandBundle(CallBase *CB, uint32_t ID,
+                                    OperandBundleDef OB,
+                                    BasicBlock::iterator InsertPt);
+
   /// Create a clone of \p CB with operand bundle \p ID removed.
   static CallBase *removeOperandBundle(CallBase *CB, uint32_t ID,
                                        Instruction *InsertPt = nullptr);
+
+  /// Create a clone of \p CB with operand bundle \p ID removed.
+  static CallBase *removeOperandBundle(CallBase *CB, uint32_t ID,
+                                       BasicBlock::iterator InsertPt);
 
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Call ||
@@ -1902,6 +1921,18 @@ public:
   /// Determine whether the return value has the given attribute.
   bool hasRetAttr(StringRef Kind) const { return hasRetAttrImpl(Kind); }
 
+  /// Return the attribute for the given attribute kind for the return value.
+  Attribute getRetAttr(Attribute::AttrKind Kind) const {
+    Attribute RetAttr = Attrs.getRetAttr(Kind);
+    if (RetAttr.isValid())
+      return RetAttr;
+
+    // Look at the callee, if available.
+    if (const Function *F = getCalledFunction())
+      return F->getRetAttribute(Kind);
+    return Attribute();
+  }
+
   /// Determine whether the argument or parameter has the given attribute.
   bool paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
@@ -2134,6 +2165,10 @@ public:
   /// Extract a test mask for disallowed floating-point value classes for the
   /// parameter.
   FPClassTest getParamNoFPClass(unsigned i) const;
+
+  /// If this return value has a range attribute, return the value range of the
+  /// argument. Otherwise, std::nullopt is returned.
+  std::optional<ConstantRange> getRange() const;
 
   /// Return true if the return value is known to be not null.
   /// This may be because it has the nonnull attribute, or because at least

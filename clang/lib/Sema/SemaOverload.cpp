@@ -160,6 +160,7 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
       ICR_C_Conversion_Extension,
       ICR_Conversion,
       ICR_Conversion,
+      ICR_Conversion,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
@@ -201,6 +202,7 @@ static const char *GetImplicitConversionName(ImplicitConversionKind Kind) {
       "Incompatible pointer conversion",
       "Fixed point conversion",
       "HLSL vector truncation",
+      "Non-decaying array conversion",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -332,7 +334,8 @@ static const Expr *IgnoreNarrowingConversion(ASTContext &Ctx,
 NarrowingKind StandardConversionSequence::getNarrowingKind(
     ASTContext &Ctx, const Expr *Converted, APValue &ConstantValue,
     QualType &ConstantType, bool IgnoreFloatToIntegralConversion) const {
-  assert(Ctx.getLangOpts().CPlusPlus && "narrowing check outside C++");
+  assert((Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().C23) &&
+         "narrowing check outside C++");
 
   // C++11 [dcl.init.list]p7:
   //   A narrowing conversion is an implicit conversion ...
@@ -414,20 +417,41 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       if (Initializer->isValueDependent())
         return NK_Dependent_Narrowing;
 
-      if (Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue)) {
+      Expr::EvalResult R;
+      if ((Ctx.getLangOpts().C23 && Initializer->EvaluateAsRValue(R, Ctx)) ||
+          Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue)) {
         // Constant!
+        if (Ctx.getLangOpts().C23)
+          ConstantValue = R.Val;
         assert(ConstantValue.isFloat());
         llvm::APFloat FloatVal = ConstantValue.getFloat();
         // Convert the source value into the target type.
         bool ignored;
-        llvm::APFloat::opStatus ConvertStatus = FloatVal.convert(
-          Ctx.getFloatTypeSemantics(ToType),
-          llvm::APFloat::rmNearestTiesToEven, &ignored);
-        // If there was no overflow, the source value is within the range of
-        // values that can be represented.
-        if (ConvertStatus & llvm::APFloat::opOverflow) {
-          ConstantType = Initializer->getType();
-          return NK_Constant_Narrowing;
+        llvm::APFloat Converted = FloatVal;
+        llvm::APFloat::opStatus ConvertStatus =
+            Converted.convert(Ctx.getFloatTypeSemantics(ToType),
+                              llvm::APFloat::rmNearestTiesToEven, &ignored);
+        Converted.convert(Ctx.getFloatTypeSemantics(FromType),
+                          llvm::APFloat::rmNearestTiesToEven, &ignored);
+        if (Ctx.getLangOpts().C23) {
+          if (FloatVal.isNaN() && Converted.isNaN() &&
+              !FloatVal.isSignaling() && !Converted.isSignaling()) {
+            // Quiet NaNs are considered the same value, regardless of
+            // payloads.
+            return NK_Not_Narrowing;
+          }
+          // For normal values, check exact equality.
+          if (!Converted.bitwiseIsEqual(FloatVal)) {
+            ConstantType = Initializer->getType();
+            return NK_Constant_Narrowing;
+          }
+        } else {
+          // If there was no overflow, the source value is within the range of
+          // values that can be represented.
+          if (ConvertStatus & llvm::APFloat::opOverflow) {
+            ConstantType = Initializer->getType();
+            return NK_Constant_Narrowing;
+          }
         }
       } else {
         return NK_Variable_Narrowing;
@@ -494,7 +518,30 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
     }
     return NK_Not_Narrowing;
   }
+  case ICK_Complex_Real:
+    if (FromType->isComplexType() && !ToType->isComplexType())
+      return NK_Type_Narrowing;
+    return NK_Not_Narrowing;
 
+  case ICK_Floating_Promotion:
+    if (Ctx.getLangOpts().C23) {
+      const Expr *Initializer = IgnoreNarrowingConversion(Ctx, Converted);
+      Expr::EvalResult R;
+      if (Initializer->EvaluateAsRValue(R, Ctx)) {
+        ConstantValue = R.Val;
+        assert(ConstantValue.isFloat());
+        llvm::APFloat FloatVal = ConstantValue.getFloat();
+        // C23 6.7.3p6 If the initializer has real type and a signaling NaN
+        // value, the unqualified versions of the type of the initializer and
+        // the corresponding real type of the object declared shall be
+        // compatible.
+        if (FloatVal.isNaN() && FloatVal.isSignaling()) {
+          ConstantType = Initializer->getType();
+          return NK_Constant_Narrowing;
+        }
+      }
+    }
+    return NK_Not_Narrowing;
   default:
     // Other kinds of conversions are not narrowings.
     return NK_Not_Narrowing;
@@ -2086,8 +2133,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   //   A glvalue (3.10) of a non-function, non-array type T can
   //   be converted to a prvalue.
   bool argIsLValue = From->isGLValue();
-  if (argIsLValue &&
-      !FromType->isFunctionType() && !FromType->isArrayType() &&
+  if (argIsLValue && !FromType->canDecayToPointerType() &&
       S.Context.getCanonicalType(FromType) != S.Context.OverloadTy) {
     SCS.First = ICK_Lvalue_To_Rvalue;
 
@@ -2102,6 +2148,19 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // is T (C++ 4.1p1). C++ can't get here with class types; in C, we
     // just strip the qualifiers because they don't matter.
     FromType = FromType.getUnqualifiedType();
+  } else if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
+             ToType->isArrayParameterType()) {
+    // HLSL constant array parameters do not decay, so if the argument is a
+    // constant array and the parameter is an ArrayParameterType we have special
+    // handling here.
+    FromType = S.Context.getArrayParameterType(FromType);
+    if (S.Context.getCanonicalType(FromType) !=
+        S.Context.getCanonicalType(ToType))
+      return false;
+
+    SCS.First = ICK_HLSL_Array_RValue;
+    SCS.setAllToTypes(ToType);
+    return true;
   } else if (FromType->isArrayType()) {
     // Array-to-pointer conversion (C++ 4.2)
     SCS.First = ICK_Array_To_Pointer;
@@ -6055,6 +6114,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Lvalue_To_Rvalue:
   case ICK_Array_To_Pointer:
   case ICK_Function_To_Pointer:
+  case ICK_HLSL_Array_RValue:
     llvm_unreachable("found a first conversion kind in Second");
 
   case ICK_Function_Conversion:
@@ -6294,6 +6354,7 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
         // by this point.
         assert(CE->getResultStorageKind() != ConstantResultStorageKind::None &&
                "ConstantExpr has no value associated with it");
+        (void)CE;
       } else {
         E = ConstantExpr::Create(Context, Result.get(), Value);
       }
@@ -6820,6 +6881,32 @@ static bool IsAcceptableNonMemberOperatorCandidate(ASTContext &Context,
   return false;
 }
 
+static bool isNonViableMultiVersionOverload(FunctionDecl *FD) {
+  if (FD->isTargetMultiVersionDefault())
+    return false;
+
+  if (!FD->getASTContext().getTargetInfo().getTriple().isAArch64())
+    return FD->isTargetMultiVersion();
+
+  if (!FD->isMultiVersion())
+    return false;
+
+  // Among multiple target versions consider either the default,
+  // or the first non-default in the absence of default version.
+  unsigned SeenAt = 0;
+  unsigned I = 0;
+  bool HasDefault = false;
+  FD->getASTContext().forEachMultiversionedFunctionVersion(
+      FD, [&](const FunctionDecl *CurFD) {
+        if (FD == CurFD)
+          SeenAt = I;
+        else if (CurFD->isTargetMultiVersionDefault())
+          HasDefault = true;
+        ++I;
+      });
+  return HasDefault || SeenAt != 0;
+}
+
 /// AddOverloadCandidate - Adds the given function to the set of
 /// candidate functions, using the given function call arguments.  If
 /// @p SuppressUserConversions, then don't allow user-defined
@@ -6925,11 +7012,7 @@ void Sema::AddOverloadCandidate(
     }
   }
 
-  if (Function->isMultiVersion() &&
-      ((Function->hasAttr<TargetAttr>() &&
-        !Function->getAttr<TargetAttr>()->isDefaultVersion()) ||
-       (Function->hasAttr<TargetVersionAttr>() &&
-        !Function->getAttr<TargetVersionAttr>()->isDefaultVersion()))) {
+  if (isNonViableMultiVersionOverload(Function)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
     return;
@@ -7592,11 +7675,7 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
     return;
   }
 
-  if (Method->isMultiVersion() &&
-      ((Method->hasAttr<TargetAttr>() &&
-        !Method->getAttr<TargetAttr>()->isDefaultVersion()) ||
-       (Method->hasAttr<TargetVersionAttr>() &&
-        !Method->getAttr<TargetVersionAttr>()->isDefaultVersion()))) {
+  if (isNonViableMultiVersionOverload(Method)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
   }
@@ -8082,11 +8161,7 @@ void Sema::AddConversionCandidate(
     return;
   }
 
-  if (Conversion->isMultiVersion() &&
-      ((Conversion->hasAttr<TargetAttr>() &&
-        !Conversion->getAttr<TargetAttr>()->isDefaultVersion()) ||
-       (Conversion->hasAttr<TargetVersionAttr>() &&
-        !Conversion->getAttr<TargetVersionAttr>()->isDefaultVersion()))) {
+  if (isNonViableMultiVersionOverload(Conversion)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_non_default_multiversion_function;
   }
@@ -8471,6 +8546,9 @@ class BuiltinCandidateTypeSet  {
   /// candidates.
   TypeSet MatrixTypes;
 
+  /// The set of _BitInt types that will be used in the built-in candidates.
+  TypeSet BitIntTypes;
+
   /// A flag indicating non-record types are viable candidates
   bool HasNonRecordTypes;
 
@@ -8519,6 +8597,7 @@ public:
   }
   llvm::iterator_range<iterator> vector_types() { return VectorTypes; }
   llvm::iterator_range<iterator> matrix_types() { return MatrixTypes; }
+  llvm::iterator_range<iterator> bitint_types() { return BitIntTypes; }
 
   bool containsMatrixType(QualType Ty) const { return MatrixTypes.count(Ty); }
   bool hasNonRecordTypes() { return HasNonRecordTypes; }
@@ -8690,6 +8769,9 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
   } else if (Ty->isEnumeralType()) {
     HasArithmeticOrEnumeralTypes = true;
     EnumerationTypes.insert(Ty);
+  } else if (Ty->isBitIntType()) {
+    HasArithmeticOrEnumeralTypes = true;
+    BitIntTypes.insert(Ty);
   } else if (Ty->isVectorType()) {
     // We treat vector types as arithmetic types in many contexts as an
     // extension.
@@ -8868,7 +8950,7 @@ class BuiltinOperatorOverloadBuilder {
   SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes;
   OverloadCandidateSet &CandidateSet;
 
-  static constexpr int ArithmeticTypesCap = 24;
+  static constexpr int ArithmeticTypesCap = 26;
   SmallVector<CanQualType, ArithmeticTypesCap> ArithmeticTypes;
 
   // Define some indices used to iterate over the arithmetic types in
@@ -8910,6 +8992,20 @@ class BuiltinOperatorOverloadBuilder {
         (S.Context.getAuxTargetInfo() &&
          S.Context.getAuxTargetInfo()->hasInt128Type()))
       ArithmeticTypes.push_back(S.Context.UnsignedInt128Ty);
+
+    /// We add candidates for the unique, unqualified _BitInt types present in
+    /// the candidate type set. The candidate set already handled ensuring the
+    /// type is unqualified and canonical, but because we're adding from N
+    /// different sets, we need to do some extra work to unique things. Insert
+    /// the candidates into a unique set, then move from that set into the list
+    /// of arithmetic types.
+    llvm::SmallSetVector<CanQualType, 2> BitIntCandidates;
+    llvm::for_each(CandidateTypes, [&BitIntCandidates](
+                                       BuiltinCandidateTypeSet &Candidate) {
+      for (QualType BitTy : Candidate.bitint_types())
+        BitIntCandidates.insert(CanQualType::CreateUnsafe(BitTy));
+    });
+    llvm::move(BitIntCandidates, std::back_inserter(ArithmeticTypes));
     LastPromotedIntegralType = ArithmeticTypes.size();
     LastPromotedArithmeticType = ArithmeticTypes.size();
     // End of promoted types.
@@ -8930,7 +9026,11 @@ class BuiltinOperatorOverloadBuilder {
     // End of integral types.
     // FIXME: What about complex? What about half?
 
-    assert(ArithmeticTypes.size() <= ArithmeticTypesCap &&
+    // We don't know for sure how many bit-precise candidates were involved, so
+    // we subtract those from the total when testing whether we're under the
+    // cap or not.
+    assert(ArithmeticTypes.size() - BitIntCandidates.size() <=
+               ArithmeticTypesCap &&
            "Enough inline storage for all arithmetic types.");
   }
 
@@ -10526,14 +10626,23 @@ bool clang::isBetterOverloadCandidate(
   //      according to the partial ordering rules described in 14.5.5.2, or,
   //      if not that,
   if (Cand1IsSpecialization && Cand2IsSpecialization) {
+    const auto *Obj1Context =
+        dyn_cast<CXXRecordDecl>(Cand1.FoundDecl->getDeclContext());
+    const auto *Obj2Context =
+        dyn_cast<CXXRecordDecl>(Cand2.FoundDecl->getDeclContext());
     if (FunctionTemplateDecl *BetterTemplate = S.getMoreSpecializedTemplate(
             Cand1.Function->getPrimaryTemplate(),
             Cand2.Function->getPrimaryTemplate(), Loc,
             isa<CXXConversionDecl>(Cand1.Function) ? TPOC_Conversion
                                                    : TPOC_Call,
-            Cand1.ExplicitCallArguments, Cand2.ExplicitCallArguments,
-            Cand1.isReversed() ^ Cand2.isReversed()))
+            Cand1.ExplicitCallArguments,
+            Obj1Context ? QualType(Obj1Context->getTypeForDecl(), 0)
+                        : QualType{},
+            Obj2Context ? QualType(Obj2Context->getTypeForDecl(), 0)
+                        : QualType{},
+            Cand1.isReversed() ^ Cand2.isReversed())) {
       return BetterTemplate == Cand1.Function->getPrimaryTemplate();
+    }
   }
 
   //   -— F1 and F2 are non-template functions with the same
@@ -14571,6 +14680,23 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
                                        CurFPFeatureOverrides());
   }
 
+  // If this is the .* operator, which is not overloadable, just
+  // create a built-in binary operator.
+  if (Opc == BO_PtrMemD) {
+    auto CheckPlaceholder = [&](Expr *&Arg) {
+      ExprResult Res = CheckPlaceholderExpr(Arg);
+      if (Res.isUsable())
+        Arg = Res.get();
+      return !Res.isUsable();
+    };
+
+    // CreateBuiltinBinOp() doesn't like it if we tell it to create a '.*'
+    // expression that contains placeholders (in either the LHS or RHS).
+    if (CheckPlaceholder(Args[0]) || CheckPlaceholder(Args[1]))
+      return ExprError();
+    return CreateBuiltinBinOp(OpLoc, Opc, Args[0], Args[1]);
+  }
+
   // Always do placeholder-like conversions on the RHS.
   if (checkPlaceholderForOverload(*this, Args[1]))
     return ExprError();
@@ -14588,11 +14714,6 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
   // problems. So we do it this way, which pretty much follows what GCC does.
   // Note that we go the traditional code path for compound assignment forms.
   if (Opc == BO_Assign && !Args[0]->getType()->isOverloadableType())
-    return CreateBuiltinBinOp(OpLoc, Opc, Args[0], Args[1]);
-
-  // If this is the .* operator, which is not overloadable, just
-  // create a built-in binary operator.
-  if (Opc == BO_PtrMemD)
     return CreateBuiltinBinOp(OpLoc, Opc, Args[0], Args[1]);
 
   // Build the overload set.
@@ -14705,6 +14826,13 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
             }
           }
         }
+
+        // Check for nonnull = nullable.
+        // This won't be caught in the arg's initialization: the parameter to
+        // the assignment operator is not marked nonnull.
+        if (Op == OO_Equal)
+          diagnoseNullableToNonnullConversion(Args[0]->getType(),
+                                              Args[1]->getType(), OpLoc);
 
         // Convert the arguments.
         if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(FnDecl)) {

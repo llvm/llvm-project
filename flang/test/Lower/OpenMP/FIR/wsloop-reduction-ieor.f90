@@ -1,7 +1,7 @@
 ! RUN: bbc -emit-fir -hlfir=false -fopenmp %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
 
-!CHECK: omp.reduction.declare @[[IEOR_DECLARE_I:.*]] : i32 init {
+!CHECK: omp.declare_reduction @[[IEOR_DECLARE_I:.*]] : i32 init {
 !CHECK: %[[ZERO_VAL_I:.*]] = arith.constant 0 : i32
 !CHECK: omp.yield(%[[ZERO_VAL_I]] : i32)
 !CHECK: combiner

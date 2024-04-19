@@ -32,15 +32,13 @@
 using namespace llvm;
 
 void AccelTableBase::computeBucketCount() {
-  // First get the number of unique hashes.
   SmallVector<uint32_t, 0> Uniques;
   Uniques.reserve(Entries.size());
   for (const auto &E : Entries)
     Uniques.push_back(E.second.HashValue);
-
-  auto Counts = llvm::dwarf::getDebugNamesBucketAndHashCount(Uniques);
-  BucketCount = Counts.first;
-  UniqueHashCount = Counts.second;
+  llvm::sort(Uniques);
+  UniqueHashCount = llvm::unique(Uniques) - Uniques.begin();
+  BucketCount = dwarf::getDebugNamesBucketCount(UniqueHashCount);
 }
 
 void AccelTableBase::finalize(AsmPrinter *Asm, StringRef Prefix) {
@@ -370,7 +368,8 @@ void AppleAccelTableWriter::emit() const {
 DWARF5AccelTableData::DWARF5AccelTableData(const DIE &Die,
                                            const uint32_t UnitID,
                                            const bool IsTU)
-    : OffsetVal(&Die), DieTag(Die.getTag()), IsTU(IsTU), UnitID(UnitID) {}
+    : OffsetVal(&Die), DieTag(Die.getTag()), AbbrevNumber(0), IsTU(IsTU),
+      UnitID(UnitID) {}
 
 void Dwarf5AccelTableWriter::Header::emit(Dwarf5AccelTableWriter &Ctx) {
   assert(CompUnitCount > 0 && "Index must have at least one CU.");

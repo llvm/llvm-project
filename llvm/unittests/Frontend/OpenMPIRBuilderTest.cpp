@@ -3327,8 +3327,8 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
     EXPECT_NE(IPBB->end(), IP.getPoint());
   };
 
-  Builder.restoreIP(OMPBuilder.createSingle(
-      Builder, BodyGenCB, FiniCB, /*IsNowait*/ false, /*DidIt*/ nullptr));
+  Builder.restoreIP(
+      OMPBuilder.createSingle(Builder, BodyGenCB, FiniCB, /*IsNowait*/ false));
   Value *EntryBBTI = EntryBB->getTerminator();
   EXPECT_NE(EntryBBTI, nullptr);
   EXPECT_TRUE(isa<BranchInst>(EntryBBTI));
@@ -3417,8 +3417,8 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
     EXPECT_NE(IPBB->end(), IP.getPoint());
   };
 
-  Builder.restoreIP(OMPBuilder.createSingle(
-      Builder, BodyGenCB, FiniCB, /*IsNowait*/ true, /*DidIt*/ nullptr));
+  Builder.restoreIP(
+      OMPBuilder.createSingle(Builder, BodyGenCB, FiniCB, /*IsNowait*/ true));
   Value *EntryBBTI = EntryBB->getTerminator();
   EXPECT_NE(EntryBBTI, nullptr);
   EXPECT_TRUE(isa<BranchInst>(EntryBBTI));
@@ -3462,6 +3462,151 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
     }
   }
   EXPECT_EQ(ExitBarrier, nullptr);
+}
+
+// Helper class to check each instruction of a BB.
+class BBInstIter {
+  BasicBlock *BB;
+  BasicBlock::iterator BBI;
+
+public:
+  BBInstIter(BasicBlock *BB) : BB(BB), BBI(BB->begin()) {}
+
+  bool hasNext() const { return BBI != BB->end(); }
+
+  template <typename InstTy> InstTy *next() {
+    if (!hasNext())
+      return nullptr;
+    Instruction *Cur = &*BBI++;
+    if (!isa<InstTy>(Cur))
+      return nullptr;
+    return cast<InstTy>(Cur);
+  }
+};
+
+TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  AllocaInst *PrivAI = nullptr;
+
+  BasicBlock *EntryBB = nullptr;
+  BasicBlock *ThenBB = nullptr;
+
+  Value *CPVar = Builder.CreateAlloca(F->arg_begin()->getType());
+  Builder.CreateStore(F->arg_begin(), CPVar);
+
+  FunctionType *CopyFuncTy = FunctionType::get(
+      Builder.getVoidTy(), {Builder.getPtrTy(), Builder.getPtrTy()}, false);
+  Function *CopyFunc =
+      Function::Create(CopyFuncTy, Function::PrivateLinkage, "copy_var", *M);
+
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+    if (AllocaIP.isSet())
+      Builder.restoreIP(AllocaIP);
+    else
+      Builder.SetInsertPoint(&*(F->getEntryBlock().getFirstInsertionPt()));
+    PrivAI = Builder.CreateAlloca(F->arg_begin()->getType());
+    Builder.CreateStore(F->arg_begin(), PrivAI);
+
+    llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
+    llvm::Instruction *CodeGenIPInst = &*CodeGenIP.getPoint();
+    EXPECT_EQ(CodeGenIPBB->getTerminator(), CodeGenIPInst);
+
+    Builder.restoreIP(CodeGenIP);
+
+    // collect some info for checks later
+    ThenBB = Builder.GetInsertBlock();
+    EntryBB = ThenBB->getUniquePredecessor();
+
+    // simple instructions for body
+    Value *PrivLoad =
+        Builder.CreateLoad(PrivAI->getAllocatedType(), PrivAI, "local.use");
+    Builder.CreateICmpNE(F->arg_begin(), PrivLoad);
+  };
+
+  auto FiniCB = [&](InsertPointTy IP) {
+    BasicBlock *IPBB = IP.getBlock();
+    // IP must be before the unconditional branch to ExitBB
+    EXPECT_NE(IPBB->end(), IP.getPoint());
+  };
+
+  Builder.restoreIP(OMPBuilder.createSingle(Builder, BodyGenCB, FiniCB,
+                                            /*IsNowait*/ false, {CPVar},
+                                            {CopyFunc}));
+  Value *EntryBBTI = EntryBB->getTerminator();
+  EXPECT_NE(EntryBBTI, nullptr);
+  EXPECT_TRUE(isa<BranchInst>(EntryBBTI));
+  BranchInst *EntryBr = cast<BranchInst>(EntryBB->getTerminator());
+  EXPECT_TRUE(EntryBr->isConditional());
+  EXPECT_EQ(EntryBr->getSuccessor(0), ThenBB);
+  BasicBlock *ExitBB = ThenBB->getUniqueSuccessor();
+  EXPECT_EQ(EntryBr->getSuccessor(1), ExitBB);
+
+  CmpInst *CondInst = cast<CmpInst>(EntryBr->getCondition());
+  EXPECT_TRUE(isa<CallInst>(CondInst->getOperand(0)));
+
+  CallInst *SingleEntryCI = cast<CallInst>(CondInst->getOperand(0));
+  EXPECT_EQ(SingleEntryCI->arg_size(), 2U);
+  EXPECT_EQ(SingleEntryCI->getCalledFunction()->getName(), "__kmpc_single");
+  EXPECT_TRUE(isa<GlobalVariable>(SingleEntryCI->getArgOperand(0)));
+
+  // check ThenBB
+  BBInstIter ThenBBI(ThenBB);
+  // load PrivAI
+  auto *PrivLI = ThenBBI.next<LoadInst>();
+  EXPECT_NE(PrivLI, nullptr);
+  EXPECT_EQ(PrivLI->getPointerOperand(), PrivAI);
+  // icmp
+  EXPECT_TRUE(ThenBBI.next<ICmpInst>());
+  // store 1, DidIt
+  auto *DidItSI = ThenBBI.next<StoreInst>();
+  EXPECT_NE(DidItSI, nullptr);
+  EXPECT_EQ(DidItSI->getValueOperand(),
+            ConstantInt::get(Type::getInt32Ty(Ctx), 1));
+  Value *DidIt = DidItSI->getPointerOperand();
+  // call __kmpc_end_single
+  auto *SingleEndCI = ThenBBI.next<CallInst>();
+  EXPECT_NE(SingleEndCI, nullptr);
+  EXPECT_EQ(SingleEndCI->getCalledFunction()->getName(), "__kmpc_end_single");
+  EXPECT_EQ(SingleEndCI->arg_size(), 2U);
+  EXPECT_TRUE(isa<GlobalVariable>(SingleEndCI->getArgOperand(0)));
+  EXPECT_EQ(SingleEndCI->getArgOperand(1), SingleEntryCI->getArgOperand(1));
+  // br ExitBB
+  auto *ExitBBBI = ThenBBI.next<BranchInst>();
+  EXPECT_NE(ExitBBBI, nullptr);
+  EXPECT_TRUE(ExitBBBI->isUnconditional());
+  EXPECT_EQ(ExitBBBI->getOperand(0), ExitBB);
+  EXPECT_FALSE(ThenBBI.hasNext());
+
+  // check ExitBB
+  BBInstIter ExitBBI(ExitBB);
+  // call __kmpc_global_thread_num
+  auto *ThreadNumCI = ExitBBI.next<CallInst>();
+  EXPECT_NE(ThreadNumCI, nullptr);
+  EXPECT_EQ(ThreadNumCI->getCalledFunction()->getName(),
+            "__kmpc_global_thread_num");
+  // load DidIt
+  auto *DidItLI = ExitBBI.next<LoadInst>();
+  EXPECT_NE(DidItLI, nullptr);
+  EXPECT_EQ(DidItLI->getPointerOperand(), DidIt);
+  // call __kmpc_copyprivate
+  auto *CopyPrivateCI = ExitBBI.next<CallInst>();
+  EXPECT_NE(CopyPrivateCI, nullptr);
+  EXPECT_EQ(CopyPrivateCI->arg_size(), 6U);
+  EXPECT_TRUE(isa<AllocaInst>(CopyPrivateCI->getArgOperand(3)));
+  EXPECT_EQ(CopyPrivateCI->getArgOperand(3), CPVar);
+  EXPECT_TRUE(isa<Function>(CopyPrivateCI->getArgOperand(4)));
+  EXPECT_EQ(CopyPrivateCI->getArgOperand(4), CopyFunc);
+  EXPECT_TRUE(isa<LoadInst>(CopyPrivateCI->getArgOperand(5)));
+  DidItLI = cast<LoadInst>(CopyPrivateCI->getArgOperand(5));
+  EXPECT_EQ(DidItLI->getOperand(0), DidIt);
+  EXPECT_FALSE(ExitBBI.hasNext());
 }
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicReadFlt) {
@@ -5711,6 +5856,23 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
   EXPECT_TRUE(TargetDataCall->getOperand(2)->getType()->isIntegerTy(32));
   EXPECT_TRUE(TargetDataCall->getOperand(8)->getType()->isPointerTy());
 
+  // Check that BodyGenCB is still made when IsTargetDevice is set to true.
+  OMPBuilder.Config.setIsTargetDevice(true);
+  bool CheckDevicePassBodyGen = false;
+  auto BodyTargetCB = [&](InsertPointTy CodeGenIP, BodyGenTy BodyGenType) {
+    CheckDevicePassBodyGen = true;
+    Builder.restoreIP(CodeGenIP);
+    CallInst *TargetDataCall =
+        dyn_cast<CallInst>(BB->back().getPrevNode()->getPrevNode());
+    // Make sure no begin_mapper call is present for device pass.
+    EXPECT_EQ(TargetDataCall, nullptr);
+    return Builder.saveIP();
+  };
+  Builder.restoreIP(OMPBuilder.createTargetData(
+      Loc, AllocaIP, Builder.saveIP(), Builder.getInt64(DeviceID),
+      /* IfCond= */ nullptr, Info, GenMapInfoCB, nullptr, BodyTargetCB));
+  EXPECT_TRUE(CheckDevicePassBodyGen);
+
   Builder.CreateRetVoid();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
@@ -6813,16 +6975,16 @@ TEST_F(OpenMPIRBuilderTest, registerTargetGlobalVariable) {
 
   // Clauses for data_int_0 with To + Any clauses for the host
   std::vector<GlobalVariable *> OffloadEntries;
-  OffloadEntries.push_back(M->getNamedGlobal(".omp_offloading.entry_name"));
+  OffloadEntries.push_back(M->getNamedGlobal(".offloading.entry_name"));
   OffloadEntries.push_back(
-      M->getNamedGlobal(".omp_offloading.entry.test_data_int_0"));
+      M->getNamedGlobal(".offloading.entry.test_data_int_0"));
 
   // Clauses for data_int_1 with Link + Any clauses for the host
   OffloadEntries.push_back(
       M->getNamedGlobal("test_data_int_1_decl_tgt_ref_ptr"));
-  OffloadEntries.push_back(M->getNamedGlobal(".omp_offloading.entry_name.1"));
-  OffloadEntries.push_back(M->getNamedGlobal(
-      ".omp_offloading.entry.test_data_int_1_decl_tgt_ref_ptr"));
+  OffloadEntries.push_back(M->getNamedGlobal(".offloading.entry_name.1"));
+  OffloadEntries.push_back(
+      M->getNamedGlobal(".offloading.entry.test_data_int_1_decl_tgt_ref_ptr"));
 
   for (unsigned I = 0; I < OffloadEntries.size(); ++I)
     EXPECT_NE(OffloadEntries[I], nullptr);

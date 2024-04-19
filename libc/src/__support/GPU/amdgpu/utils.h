@@ -145,6 +145,12 @@ LIBC_INLINE uint32_t get_lane_size() {
   __builtin_amdgcn_wave_barrier();
 }
 
+/// Shuffles the the lanes inside the wavefront according to the given index.
+[[clang::convergent]] LIBC_INLINE uint32_t shuffle(uint64_t, uint32_t idx,
+                                                   uint32_t x) {
+  return __builtin_amdgcn_ds_bpermute(idx << 2, x);
+}
+
 /// Returns the current value of the GPU's processor clock.
 /// NOTE: The RDNA3 and RDNA2 architectures use a 20-bit cycle counter.
 LIBC_INLINE uint64_t processor_clock() { return __builtin_readcyclecounter(); }

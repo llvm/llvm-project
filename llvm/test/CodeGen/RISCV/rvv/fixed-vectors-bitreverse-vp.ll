@@ -54,9 +54,7 @@ define <2 x i8> @vp_bitreverse_v2i8_unmasked(<2 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i8> @llvm.vp.bitreverse.v2i8(<2 x i8> %va, <2 x i1> %m, i32 %evl)
+  %v = call <2 x i8> @llvm.vp.bitreverse.v2i8(<2 x i8> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x i8> %v
 }
 
@@ -110,9 +108,7 @@ define <4 x i8> @vp_bitreverse_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i8> @llvm.vp.bitreverse.v4i8(<4 x i8> %va, <4 x i1> %m, i32 %evl)
+  %v = call <4 x i8> @llvm.vp.bitreverse.v4i8(<4 x i8> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i8> %v
 }
 
@@ -166,9 +162,7 @@ define <8 x i8> @vp_bitreverse_v8i8_unmasked(<8 x i8> %va, i32 zeroext %evl) {
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i8> @llvm.vp.bitreverse.v8i8(<8 x i8> %va, <8 x i1> %m, i32 %evl)
+  %v = call <8 x i8> @llvm.vp.bitreverse.v8i8(<8 x i8> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x i8> %v
 }
 
@@ -222,9 +216,7 @@ define <16 x i8> @vp_bitreverse_v16i8_unmasked(<16 x i8> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i8> @llvm.vp.bitreverse.v16i8(<16 x i8> %va, <16 x i1> %m, i32 %evl)
+  %v = call <16 x i8> @llvm.vp.bitreverse.v16i8(<16 x i8> %va, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i8> %v
 }
 
@@ -292,9 +284,7 @@ define <2 x i16> @vp_bitreverse_v2i16_unmasked(<2 x i16> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i16> @llvm.vp.bitreverse.v2i16(<2 x i16> %va, <2 x i1> %m, i32 %evl)
+  %v = call <2 x i16> @llvm.vp.bitreverse.v2i16(<2 x i16> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x i16> %v
 }
 
@@ -362,9 +352,7 @@ define <4 x i16> @vp_bitreverse_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i16> @llvm.vp.bitreverse.v4i16(<4 x i16> %va, <4 x i1> %m, i32 %evl)
+  %v = call <4 x i16> @llvm.vp.bitreverse.v4i16(<4 x i16> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i16> %v
 }
 
@@ -432,9 +420,7 @@ define <8 x i16> @vp_bitreverse_v8i16_unmasked(<8 x i16> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i16> @llvm.vp.bitreverse.v8i16(<8 x i16> %va, <8 x i1> %m, i32 %evl)
+  %v = call <8 x i16> @llvm.vp.bitreverse.v8i16(<8 x i16> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x i16> %v
 }
 
@@ -502,9 +488,7 @@ define <16 x i16> @vp_bitreverse_v16i16_unmasked(<16 x i16> %va, i32 zeroext %ev
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v10, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i16> @llvm.vp.bitreverse.v16i16(<16 x i16> %va, <16 x i1> %m, i32 %evl)
+  %v = call <16 x i16> @llvm.vp.bitreverse.v16i16(<16 x i16> %va, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i16> %v
 }
 
@@ -588,9 +572,7 @@ define <2 x i32> @vp_bitreverse_v2i32_unmasked(<2 x i32> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i32> @llvm.vp.bitreverse.v2i32(<2 x i32> %va, <2 x i1> %m, i32 %evl)
+  %v = call <2 x i32> @llvm.vp.bitreverse.v2i32(<2 x i32> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x i32> %v
 }
 
@@ -674,9 +656,7 @@ define <4 x i32> @vp_bitreverse_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i32> @llvm.vp.bitreverse.v4i32(<4 x i32> %va, <4 x i1> %m, i32 %evl)
+  %v = call <4 x i32> @llvm.vp.bitreverse.v4i32(<4 x i32> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i32> %v
 }
 
@@ -760,9 +740,7 @@ define <8 x i32> @vp_bitreverse_v8i32_unmasked(<8 x i32> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v10, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i32> @llvm.vp.bitreverse.v8i32(<8 x i32> %va, <8 x i1> %m, i32 %evl)
+  %v = call <8 x i32> @llvm.vp.bitreverse.v8i32(<8 x i32> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x i32> %v
 }
 
@@ -846,9 +824,7 @@ define <16 x i32> @vp_bitreverse_v16i32_unmasked(<16 x i32> %va, i32 zeroext %ev
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v12, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i32> @llvm.vp.bitreverse.v16i32(<16 x i32> %va, <16 x i1> %m, i32 %evl)
+  %v = call <16 x i32> @llvm.vp.bitreverse.v16i32(<16 x i32> %va, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i32> %v
 }
 
@@ -896,7 +872,7 @@ define <2 x i64> @vp_bitreverse_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v9, v8, 4, v0.t
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v9, v9, v10, v0.t
@@ -906,7 +882,7 @@ define <2 x i64> @vp_bitreverse_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v9, v8, 2, v0.t
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v9, v9, v10, v0.t
@@ -916,7 +892,7 @@ define <2 x i64> @vp_bitreverse_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v9, v8, 1, v0.t
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v9, v9, v10, v0.t
@@ -1031,7 +1007,7 @@ define <2 x i64> @vp_bitreverse_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v9, v8, 4
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v9, v9, v10
@@ -1041,7 +1017,7 @@ define <2 x i64> @vp_bitreverse_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v9, v8, 2
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v9, v9, v10
@@ -1051,7 +1027,7 @@ define <2 x i64> @vp_bitreverse_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v9, v8, 1
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.v.x v10, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vand.vv v9, v9, v10
@@ -1120,9 +1096,7 @@ define <2 x i64> @vp_bitreverse_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) 
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v9, v8
 ; RV64-NEXT:    ret
-  %head = insertelement <2 x i1> poison, i1 true, i32 0
-  %m = shufflevector <2 x i1> %head, <2 x i1> poison, <2 x i32> zeroinitializer
-  %v = call <2 x i64> @llvm.vp.bitreverse.v2i64(<2 x i64> %va, <2 x i1> %m, i32 %evl)
+  %v = call <2 x i64> @llvm.vp.bitreverse.v2i64(<2 x i64> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x i64> %v
 }
 
@@ -1170,7 +1144,7 @@ define <4 x i64> @vp_bitreverse_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v10, v8, 4, v0.t
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v10, v10, v12, v0.t
@@ -1180,7 +1154,7 @@ define <4 x i64> @vp_bitreverse_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v10, v8, 2, v0.t
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v10, v10, v12, v0.t
@@ -1190,7 +1164,7 @@ define <4 x i64> @vp_bitreverse_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v10, v8, 1, v0.t
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v10, v10, v12, v0.t
@@ -1305,7 +1279,7 @@ define <4 x i64> @vp_bitreverse_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v10, v8, 4
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v10, v10, v12
@@ -1315,7 +1289,7 @@ define <4 x i64> @vp_bitreverse_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v10, v8, 2
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v10, v10, v12
@@ -1325,7 +1299,7 @@ define <4 x i64> @vp_bitreverse_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v10, v8, 1
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vand.vv v10, v10, v12
@@ -1394,9 +1368,7 @@ define <4 x i64> @vp_bitreverse_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) 
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v10, v8
 ; RV64-NEXT:    ret
-  %head = insertelement <4 x i1> poison, i1 true, i32 0
-  %m = shufflevector <4 x i1> %head, <4 x i1> poison, <4 x i32> zeroinitializer
-  %v = call <4 x i64> @llvm.vp.bitreverse.v4i64(<4 x i64> %va, <4 x i1> %m, i32 %evl)
+  %v = call <4 x i64> @llvm.vp.bitreverse.v4i64(<4 x i64> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i64> %v
 }
 
@@ -1444,7 +1416,7 @@ define <8 x i64> @vp_bitreverse_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v12, v8, 4, v0.t
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vv v12, v12, v16, v0.t
@@ -1454,7 +1426,7 @@ define <8 x i64> @vp_bitreverse_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v12, v8, 2, v0.t
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vv v12, v12, v16, v0.t
@@ -1464,7 +1436,7 @@ define <8 x i64> @vp_bitreverse_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %e
 ; RV32-NEXT:    vsrl.vi v12, v8, 1, v0.t
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vv v12, v12, v16, v0.t
@@ -1579,7 +1551,7 @@ define <8 x i64> @vp_bitreverse_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v12, v8, 4
 ; RV32-NEXT:    lui a1, 61681
 ; RV32-NEXT:    addi a1, a1, -241
-; RV32-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vv v12, v12, v16
@@ -1589,7 +1561,7 @@ define <8 x i64> @vp_bitreverse_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v12, v8, 2
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
-; RV32-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vv v12, v12, v16
@@ -1599,7 +1571,7 @@ define <8 x i64> @vp_bitreverse_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) 
 ; RV32-NEXT:    vsrl.vi v12, v8, 1
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    vsetvli a2, zero, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vmv.v.x v16, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vand.vv v12, v12, v16
@@ -1668,9 +1640,7 @@ define <8 x i64> @vp_bitreverse_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) 
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v12, v8
 ; RV64-NEXT:    ret
-  %head = insertelement <8 x i1> poison, i1 true, i32 0
-  %m = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %v = call <8 x i64> @llvm.vp.bitreverse.v8i64(<8 x i64> %va, <8 x i1> %m, i32 %evl)
+  %v = call <8 x i64> @llvm.vp.bitreverse.v8i64(<8 x i64> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x i64> %v
 }
 
@@ -2034,9 +2004,7 @@ define <15 x i64> @vp_bitreverse_v15i64_unmasked(<15 x i64> %va, i32 zeroext %ev
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v16, v8
 ; RV64-NEXT:    ret
-  %head = insertelement <15 x i1> poison, i1 true, i32 0
-  %m = shufflevector <15 x i1> %head, <15 x i1> poison, <15 x i32> zeroinitializer
-  %v = call <15 x i64> @llvm.vp.bitreverse.v15i64(<15 x i64> %va, <15 x i1> %m, i32 %evl)
+  %v = call <15 x i64> @llvm.vp.bitreverse.v15i64(<15 x i64> %va, <15 x i1> splat (i1 true), i32 %evl)
   ret <15 x i64> %v
 }
 
@@ -2400,9 +2368,7 @@ define <16 x i64> @vp_bitreverse_v16i64_unmasked(<16 x i64> %va, i32 zeroext %ev
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v16, v8
 ; RV64-NEXT:    ret
-  %head = insertelement <16 x i1> poison, i1 true, i32 0
-  %m = shufflevector <16 x i1> %head, <16 x i1> poison, <16 x i32> zeroinitializer
-  %v = call <16 x i64> @llvm.vp.bitreverse.v16i64(<16 x i64> %va, <16 x i1> %m, i32 %evl)
+  %v = call <16 x i64> @llvm.vp.bitreverse.v16i64(<16 x i64> %va, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i64> %v
 }
 
@@ -2555,8 +2521,6 @@ define <128 x i16> @vp_bitreverse_v128i16_unmasked(<128 x i16> %va, i32 zeroext 
 ; CHECK-NEXT:    vadd.vv v16, v16, v16
 ; CHECK-NEXT:    vor.vv v16, v24, v16
 ; CHECK-NEXT:    ret
-  %head = insertelement <128 x i1> poison, i1 true, i32 0
-  %m = shufflevector <128 x i1> %head, <128 x i1> poison, <128 x i32> zeroinitializer
-  %v = call <128 x i16> @llvm.vp.bitreverse.v128i16(<128 x i16> %va, <128 x i1> %m, i32 %evl)
+  %v = call <128 x i16> @llvm.vp.bitreverse.v128i16(<128 x i16> %va, <128 x i1> splat (i1 true), i32 %evl)
   ret <128 x i16> %v
 }

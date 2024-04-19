@@ -987,7 +987,7 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   // Expand the pseudo into smstart or smstop instruction. The pseudo has the
   // following operands:
   //
-  //   MSRpstatePseudo <za|sm|both>, <0|1>, pstate.sm, expectedval, <regmask>
+  //   MSRpstatePseudo <za|sm|both>, <0|1>, condition[, pstate.sm], <regmask>
   //
   // The pseudo is expanded into a conditional smstart/smstop, with a
   // check if pstate.sm (register) equals the expected value, and if not,
@@ -997,9 +997,9 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   // streaming-compatible function:
   //
   // OrigBB:
-  //   MSRpstatePseudo 3, 0, %0, 0, <regmask>             <- Conditional SMSTOP
+  //   MSRpstatePseudo 3, 0, IfCallerIsStreaming, %0, <regmask>  <- Cond SMSTOP
   //   bl @normal_callee
-  //   MSRpstatePseudo 3, 1, %0, 0, <regmask>             <- Conditional SMSTART
+  //   MSRpstatePseudo 3, 1, IfCallerIsStreaming, %0, <regmask>  <- Cond SMSTART
   //
   // ...which will be transformed into:
   //
@@ -1022,11 +1022,20 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   // We test the live value of pstate.sm and toggle pstate.sm if this is not the
   // expected value for the callee (0 for a normal callee and 1 for a streaming
   // callee).
-  auto PStateSM = MI.getOperand(2).getReg();
+  unsigned Opc;
+  switch (MI.getOperand(2).getImm()) {
+  case AArch64SME::Always:
+    llvm_unreachable("Should have matched to instruction directly");
+  case AArch64SME::IfCallerIsStreaming:
+    Opc = AArch64::TBNZW;
+    break;
+  case AArch64SME::IfCallerIsNonStreaming:
+    Opc = AArch64::TBZW;
+    break;
+  }
+  auto PStateSM = MI.getOperand(3).getReg();
   auto TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
   unsigned SMReg32 = TRI->getSubReg(PStateSM, AArch64::sub_32);
-  bool IsStreamingCallee = MI.getOperand(3).getImm();
-  unsigned Opc = IsStreamingCallee ? AArch64::TBZW : AArch64::TBNZW;
   MachineInstrBuilder Tbx =
       BuildMI(MBB, MBBI, DL, TII->get(Opc)).addReg(SMReg32).addImm(0);
 

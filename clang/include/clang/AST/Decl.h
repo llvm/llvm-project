@@ -1100,6 +1100,9 @@ protected:
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned EscapingByref : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsCXXCondDecl : 1;
   };
 
   union {
@@ -1587,6 +1590,15 @@ public:
 
   void setEscapingByref() {
     NonParmVarDeclBits.EscapingByref = true;
+  }
+
+  bool isCXXCondDecl() const {
+    return isa<ParmVarDecl>(this) ? false : NonParmVarDeclBits.IsCXXCondDecl;
+  }
+
+  void setCXXCondDecl() {
+    assert(!isa<ParmVarDecl>(this));
+    NonParmVarDeclBits.IsCXXCondDecl = true;
   }
 
   /// Determines if this variable's alignment is dependent.
@@ -4419,7 +4431,7 @@ public:
 ///
 /// \note This is used in libInterpreter, clang -cc1 -fincremental-extensions
 /// and in tools such as clang-repl.
-class TopLevelStmtDecl : public Decl {
+class TopLevelStmtDecl : public Decl, public DeclContext {
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
 
@@ -4427,7 +4439,7 @@ class TopLevelStmtDecl : public Decl {
   bool IsSemiMissing = false;
 
   TopLevelStmtDecl(DeclContext *DC, SourceLocation L, Stmt *S)
-      : Decl(TopLevelStmt, DC, L), Statement(S) {}
+      : Decl(TopLevelStmt, DC, L), DeclContext(TopLevelStmt), Statement(S) {}
 
   virtual void anchor();
 
@@ -4438,15 +4450,19 @@ public:
   SourceRange getSourceRange() const override LLVM_READONLY;
   Stmt *getStmt() { return Statement; }
   const Stmt *getStmt() const { return Statement; }
-  void setStmt(Stmt *S) {
-    assert(IsSemiMissing && "Operation supported for printing values only!");
-    Statement = S;
-  }
+  void setStmt(Stmt *S);
   bool isSemiMissing() const { return IsSemiMissing; }
   void setSemiMissing(bool Missing = true) { IsSemiMissing = Missing; }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == TopLevelStmt; }
+
+  static DeclContext *castToDeclContext(const TopLevelStmtDecl *D) {
+    return static_cast<DeclContext *>(const_cast<TopLevelStmtDecl *>(D));
+  }
+  static TopLevelStmtDecl *castFromDeclContext(const DeclContext *DC) {
+    return static_cast<TopLevelStmtDecl *>(const_cast<DeclContext *>(DC));
+  }
 };
 
 /// Represents a block literal declaration, which is like an

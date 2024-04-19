@@ -296,7 +296,7 @@ public:
         DisableFree(DisableFree), ModuleName(ModuleName) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
-                     FileManager *FileMgr,
+                     FileManager *DriverFileMgr,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override {
     // Make a deep copy of the original Clang invocation.
@@ -342,12 +342,13 @@ public:
     ScanInstance.getHeaderSearchOpts().ModulesIncludeVFSUsage =
         any(OptimizeArgs & ScanningOptimizations::VFS);
 
-    ScanInstance.setFileManager(FileMgr);
     // Support for virtual file system overlays.
-    FileMgr->setVirtualFileSystem(createVFSFromCompilerInvocation(
+    auto FS = createVFSFromCompilerInvocation(
         ScanInstance.getInvocation(), ScanInstance.getDiagnostics(),
-        FileMgr->getVirtualFileSystemPtr()));
+        DriverFileMgr->getVirtualFileSystemPtr());
 
+    // Create a new FileManager to match the invocation's FileSystemOptions.
+    auto *FileMgr = ScanInstance.createFileManager(FS);
     ScanInstance.createSourceManager(*FileMgr);
 
     // Store the list of prebuilt module files into header search options. This
@@ -363,18 +364,16 @@ public:
         return false;
 
     // Use the dependency scanning optimized file system if requested to do so.
-    if (DepFS) {
-      llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> LocalDepFS =
-          DepFS;
+    if (DepFS)
       ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
-          [LocalDepFS = std::move(LocalDepFS)](FileEntryRef File)
+          [LocalDepFS = DepFS](FileEntryRef File)
           -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
         if (llvm::ErrorOr<EntryRef> Entry =
                 LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-          return Entry->getDirectiveTokens();
+          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
+            return Entry->getDirectiveTokens();
         return std::nullopt;
       };
-    }
 
     // Create the dependency collector that will collect the produced
     // dependencies.
@@ -624,9 +623,8 @@ bool DependencyScanningWorker::computeDependencies(
       ModifiedCommandLine ? *ModifiedCommandLine : CommandLine;
   auto &FinalFS = ModifiedFS ? ModifiedFS : BaseFS;
 
-  FileSystemOptions FSOpts;
-  FSOpts.WorkingDir = WorkingDirectory.str();
-  auto FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(FSOpts, FinalFS);
+  auto FileMgr =
+      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions{}, FinalFS);
 
   std::vector<const char *> FinalCCommandLine(FinalCommandLine.size(), nullptr);
   llvm::transform(FinalCommandLine, FinalCCommandLine.begin(),

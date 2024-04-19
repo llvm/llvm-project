@@ -3,6 +3,7 @@ architecture and/or the platform dependent nature of the tests. """
 
 # System modules
 import itertools
+import json
 import re
 import subprocess
 import sys
@@ -16,6 +17,7 @@ from . import configuration
 from . import lldbtest_config
 import lldbsuite.test.lldbplatform as lldbplatform
 from lldbsuite.test.builders import get_builder
+from lldbsuite.test.lldbutil import is_exe
 
 
 def check_first_register_readable(test_case):
@@ -331,5 +333,30 @@ def expectedCompiler(compilers):
     for compiler in compilers:
         if compiler in getCompiler():
             return True
+
+    return False
+
+
+# This is a helper function to determine if a specific version of Xcode's linker
+# contains a TLS bug. We want to skip TLS tests if they contain this bug, but
+# adding a linker/linker_version conditions to a decorator is challenging due to
+# the number of ways linkers can enter the build process.
+def xcode15LinkerBug():
+    """Returns true iff a test is running on a darwin platform and the host linker is between versions 1000 and 1109."""
+    darwin_platforms = lldbplatform.translate(lldbplatform.darwin_all)
+    if getPlatform() not in darwin_platforms:
+        return False
+
+    try:
+        raw_version_details = subprocess.check_output(
+            ("xcrun", "ld", "-version_details")
+        )
+        version_details = json.loads(raw_version_details)
+        version = version_details.get("version", "0")
+        version_tuple = tuple(int(x) for x in version.split("."))
+        if (1000,) <= version_tuple <= (1109,):
+            return True
+    except:
+        pass
 
     return False

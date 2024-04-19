@@ -28,17 +28,15 @@ bool isELF(llvm::StringRef Buffer);
 llvm::Expected<bool> checkMachine(llvm::StringRef Object, uint16_t EMachine);
 
 /// Returns a pointer to the given \p Symbol inside of an ELF object.
-llvm::Expected<const void *> getSymbolAddress(
-    const llvm::object::ELFObjectFile<llvm::object::ELF64LE> &ELFObj,
-    const llvm::object::ELF64LE::Sym &Symbol);
+llvm::Expected<const void *>
+getSymbolAddress(const llvm::object::ELFSymbolRef &Symbol);
 
 /// Returns the symbol associated with the \p Name in the \p ELFObj. It will
 /// first search for the hash sections to identify symbols from the hash table.
 /// If that fails it will fall back to a linear search in the case of an
 /// executable file without a hash table.
-llvm::Expected<const typename llvm::object::ELF64LE::Sym *>
-getSymbol(const llvm::object::ELFObjectFile<llvm::object::ELF64LE> &ELFObj,
-          llvm::StringRef Name);
+llvm::Expected<std::optional<llvm::object::ELFSymbolRef>>
+getSymbol(const llvm::object::ObjectFile &ELFObj, llvm::StringRef Name);
 
 } // namespace elf
 } // namespace utils

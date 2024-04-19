@@ -14,7 +14,7 @@ func.func @transfer_read_2d(%A : memref<?x?xf32>, %base1: index, %base2: index) 
   %0 = vector.transfer_read %A[%base1, %base2], %pad {in_bounds=[true, true]} :
     memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>
 
   return
@@ -27,7 +27,7 @@ func.func @transfer_read_2d_transposed(%A : memref<?x?xf32>, %base1: index, %bas
     {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds=[true, true]}
       : memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0 : vector<[4]x[4]xf32>
 
   return
@@ -42,7 +42,7 @@ func.func @transfer_read_2d_mask(%A : memref<?x?xf32>, %base1: index, %base2: in
   %0 = vector.transfer_read %A[%base1, %base2], %pad, %mask
     {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>
 
   return
@@ -58,7 +58,7 @@ func.func @transfer_read_2d_mask_transposed(%A : memref<?x?xf32>, %base1: index,
     {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds=[true, true]}
       : memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>
 
   return
@@ -73,7 +73,7 @@ func.func @transfer_read_2d_mask_non_zero_pad(%A : memref<?x?xf32>, %base1: inde
   %0 = vector.transfer_read %A[%base1, %base2], %pad, %mask
     {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>
 
   return
@@ -89,7 +89,7 @@ func.func @transfer_read_2d_mask_non_zero_pad_transposed(%A : memref<?x?xf32>, %
     {permutation_map = affine_map<(d0, d1) -> (d1, d0)>, in_bounds=[true, true]}
       : memref<?x?xf32>, vector<[4]x[4]xf32>
 
-  vector.print str "TILE BEGIN:"
+  vector.print str "TILE BEGIN:\n"
   vector.print %0: vector<[4]x[4]xf32>
 
   return

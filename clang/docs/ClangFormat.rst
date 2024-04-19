@@ -61,6 +61,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
     --dry-run                      - If set, do not actually make the formatting changes
     --dump-config                  - Dump configuration options to stdout and exit.
                                      Can be used with -style option.
+    --fail-on-incomplete-format    - If set, fail with exit code 1 on incomplete format.
     --fallback-style=<string>      - The name of the predefined style used as a
                                      fallback in case clang-format is invoked with
                                      -style=file, but can not find the .clang-format

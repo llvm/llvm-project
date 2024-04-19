@@ -538,6 +538,14 @@ bool InlineAsmLowering::lowerInlineAsm(
     }
   }
 
+  if (auto Bundle = Call.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+    auto *Token = Bundle->Inputs[0].get();
+    ArrayRef<Register> SourceRegs = GetOrCreateVRegs(*Token);
+    assert(SourceRegs.size() == 1 &&
+           "Expected the control token to fit into a single virtual register");
+    Inst.addUse(SourceRegs[0], RegState::Implicit);
+  }
+
   if (const MDNode *SrcLoc = Call.getMetadata("srcloc"))
     Inst.addMetadata(SrcLoc);
 

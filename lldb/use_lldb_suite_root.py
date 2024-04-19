@@ -21,5 +21,7 @@ def add_lldbsuite_packages_dir(lldb_root):
 
 lldb_root = os.path.dirname(inspect.getfile(inspect.currentframe()))
 
-add_third_party_module_dirs(lldb_root)
+# Use environment variables to avoid plumbing flags, lit configs, etc.
+if os.getenv("LLDB_TEST_USE_VENDOR_PACKAGES"):
+    add_third_party_module_dirs(lldb_root)
 add_lldbsuite_packages_dir(lldb_root)

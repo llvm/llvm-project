@@ -19,6 +19,7 @@
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -46,6 +47,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::VPlanPatternMatch;
 
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
@@ -356,23 +358,14 @@ void VPTransformState::addNewMetadata(Instruction *To,
     LVer->annotateInstWithNoAlias(To, Orig);
 }
 
-void VPTransformState::addMetadata(Instruction *To, Instruction *From) {
+void VPTransformState::addMetadata(Value *To, Instruction *From) {
   // No source instruction to transfer metadata from?
   if (!From)
     return;
 
-  propagateMetadata(To, From);
-  addNewMetadata(To, From);
-}
-
-void VPTransformState::addMetadata(ArrayRef<Value *> To, Instruction *From) {
-  // No source instruction to transfer metadata from?
-  if (!From)
-    return;
-
-  for (Value *V : To) {
-    if (Instruction *I = dyn_cast<Instruction>(V))
-      addMetadata(I, From);
+  if (Instruction *ToI = dyn_cast<Instruction>(To)) {
+    propagateMetadata(ToI, From);
+    addNewMetadata(ToI, From);
   }
 }
 
@@ -569,11 +562,9 @@ static bool hasConditionalTerminator(const VPBasicBlock *VPBB) {
   }
 
   const VPRecipeBase *R = &VPBB->back();
-  auto *VPI = dyn_cast<VPInstruction>(R);
-  bool IsCondBranch =
-      isa<VPBranchOnMaskRecipe>(R) ||
-      (VPI && (VPI->getOpcode() == VPInstruction::BranchOnCond ||
-               VPI->getOpcode() == VPInstruction::BranchOnCount));
+  bool IsCondBranch = isa<VPBranchOnMaskRecipe>(R) ||
+                      match(R, m_BranchOnCond(m_VPValue())) ||
+                      match(R, m_BranchOnCount(m_VPValue(), m_VPValue()));
   (void)IsCondBranch;
 
   if (VPBB->getNumSuccessors() >= 2 ||
@@ -812,7 +803,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   // needs to be changed from zero to the value after the main vector loop.
   // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
   if (CanonicalIVStartValue) {
-    VPValue *VPV = getVPValueOrAddLiveIn(CanonicalIVStartValue);
+    VPValue *VPV = getOrAddLiveIn(CanonicalIVStartValue);
     auto *IV = getCanonicalIV();
     assert(all_of(IV->users(),
                   [](const VPUser *U) {
@@ -860,11 +851,8 @@ void VPlan::execute(VPTransformState *State) {
         Phi = cast<PHINode>(State->get(R.getVPSingleValue(), 0));
       } else {
         auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
-        // TODO: Split off the case that all users of a pointer phi are scalar
-        // from the VPWidenPointerInductionRecipe.
-        if (WidenPhi->onlyScalarsGenerated(State->VF.isScalable()))
-          continue;
-
+        assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
+               "recipe generating only scalars should have been replaced");
         auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi, 0));
         Phi = cast<PHINode>(GEP->getPointerOperand());
       }
@@ -883,13 +871,15 @@ void VPlan::execute(VPTransformState *State) {
     // only a single part is generated, which provides the last part from the
     // previous iteration. For non-ordered reductions all UF parts are
     // generated.
-    bool SinglePartNeeded = isa<VPCanonicalIVPHIRecipe>(PhiR) ||
-                            isa<VPFirstOrderRecurrencePHIRecipe>(PhiR) ||
-                            (isa<VPReductionPHIRecipe>(PhiR) &&
-                             cast<VPReductionPHIRecipe>(PhiR)->isOrdered());
-    bool NeedsScalar = isa<VPCanonicalIVPHIRecipe>(PhiR) ||
-                       (isa<VPReductionPHIRecipe>(PhiR) &&
-                        cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+    bool SinglePartNeeded =
+        isa<VPCanonicalIVPHIRecipe>(PhiR) ||
+        isa<VPFirstOrderRecurrencePHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
+        (isa<VPReductionPHIRecipe>(PhiR) &&
+         cast<VPReductionPHIRecipe>(PhiR)->isOrdered());
+    bool NeedsScalar =
+        isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(PhiR) ||
+        (isa<VPReductionPHIRecipe>(PhiR) &&
+         cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
     unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;
 
     for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
@@ -1091,7 +1081,7 @@ VPlan *VPlan::duplicate() {
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPValue *OldLiveIn : VPLiveInsToFree) {
     Old2NewVPValues[OldLiveIn] =
-        NewPlan->getVPValueOrAddLiveIn(OldLiveIn->getLiveInIRValue());
+        NewPlan->getOrAddLiveIn(OldLiveIn->getLiveInIRValue());
   }
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
@@ -1102,7 +1092,7 @@ VPlan *VPlan::duplicate() {
   assert(TripCount && "trip count must be set");
   if (TripCount->isLiveIn())
     Old2NewVPValues[TripCount] =
-        NewPlan->getVPValueOrAddLiveIn(TripCount->getLiveInIRValue());
+        NewPlan->getOrAddLiveIn(TripCount->getLiveInIRValue());
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
@@ -1384,6 +1374,8 @@ VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
 }
 
 void VPSlotTracker::assignSlot(const VPValue *V) {
+  if (V->getUnderlyingValue())
+    return;
   assert(!Slots.contains(V) && "VPValue already has a slot!");
   Slots[V] = NextSlot++;
 }
@@ -1425,9 +1417,9 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
     return Expanded;
   VPValue *Expanded = nullptr;
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
-    Expanded = Plan.getVPValueOrAddLiveIn(E->getValue());
+    Expanded = Plan.getOrAddLiveIn(E->getValue());
   else if (auto *E = dyn_cast<SCEVUnknown>(Expr))
-    Expanded = Plan.getVPValueOrAddLiveIn(E->getValue());
+    Expanded = Plan.getOrAddLiveIn(E->getValue());
   else {
     Expanded = new VPExpandSCEVRecipe(Expr, SE);
     Plan.getPreheader()->appendRecipe(Expanded->getDefiningRecipe());

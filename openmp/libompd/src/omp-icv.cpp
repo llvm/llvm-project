@@ -18,7 +18,9 @@
 #include "omp.h"
 #include "ompd-private.h"
 #include "TargetValue.h"
+#define OMPD_SKIP_HWLOC 1
 #include "kmp.h"
+#undef OMPD_SKIP_HWLOC
 #include <cstring>
 
 /* The ICVs ompd-final-var and ompd-implicit-var below are for backward

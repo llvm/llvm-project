@@ -11,14 +11,15 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/Sema/SemaOpenACC.h"
+#include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/DiagnosticSema.h"
-#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Sema/Sema.h"
 
 using namespace clang;
 
 namespace {
-bool diagnoseConstructAppertainment(Sema &S, OpenACCDirectiveKind K,
+bool diagnoseConstructAppertainment(SemaOpenACC &S, OpenACCDirectiveKind K,
                                     SourceLocation StartLoc, bool IsStmt) {
   switch (K) {
   default:
@@ -27,25 +28,50 @@ bool diagnoseConstructAppertainment(Sema &S, OpenACCDirectiveKind K,
     // do anything.
     break;
   case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::Kernels:
     if (!IsStmt)
       return S.Diag(StartLoc, diag::err_acc_construct_appertainment) << K;
     break;
   }
   return false;
 }
+
+bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
+                                OpenACCClauseKind ClauseKind) {
+  // FIXME: For each clause as we implement them, we can add the
+  // 'legalization' list here.
+
+  // Do nothing so we can go to the 'unimplemented' diagnostic instead.
+  return true;
+}
 } // namespace
 
-bool Sema::ActOnOpenACCClause(OpenACCClauseKind ClauseKind,
-                              SourceLocation StartLoc) {
-  if (ClauseKind == OpenACCClauseKind::Invalid)
-    return false;
-  // For now just diagnose that it is unsupported and leave the parsing to do
-  // whatever it can do. This function will eventually need to start returning
-  // some sort of Clause AST type, but for now just return true/false based on
-  // success.
-  return Diag(StartLoc, diag::warn_acc_clause_unimplemented) << ClauseKind;
+SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
+
+OpenACCClause *
+SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                         OpenACCParsedClause &Clause) {
+  if (Clause.getClauseKind() == OpenACCClauseKind::Invalid)
+    return nullptr;
+
+  // Diagnose that we don't support this clause on this directive.
+  if (!doesClauseApplyToDirective(Clause.getDirectiveKind(),
+                                  Clause.getClauseKind())) {
+    Diag(Clause.getBeginLoc(), diag::err_acc_clause_appertainment)
+        << Clause.getDirectiveKind() << Clause.getClauseKind();
+    return nullptr;
+  }
+
+  // TODO OpenACC: Switch over the clauses we implement here and 'create'
+  // them.
+
+  Diag(Clause.getBeginLoc(), diag::warn_acc_clause_unimplemented)
+      << Clause.getClauseKind();
+  return nullptr;
 }
-void Sema::ActOnOpenACCConstruct(OpenACCDirectiveKind K,
+
+void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
                                  SourceLocation StartLoc) {
   switch (K) {
   case OpenACCDirectiveKind::Invalid:
@@ -55,6 +81,8 @@ void Sema::ActOnOpenACCConstruct(OpenACCDirectiveKind K,
     // rules anywhere.
     break;
   case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::Kernels:
     // Nothing to do here, there is no real legalization that needs to happen
     // here as these constructs do not take any arguments.
     break;
@@ -64,14 +92,15 @@ void Sema::ActOnOpenACCConstruct(OpenACCDirectiveKind K,
   }
 }
 
-bool Sema::ActOnStartOpenACCStmtDirective(OpenACCDirectiveKind K,
+bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
-StmtResult Sema::ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
+StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
                                               SourceLocation StartLoc,
                                               SourceLocation EndLoc,
+                                              ArrayRef<OpenACCClause *> Clauses,
                                               StmtResult AssocStmt) {
   switch (K) {
   default:
@@ -79,19 +108,24 @@ StmtResult Sema::ActOnEndOpenACCStmtDirective(OpenACCDirectiveKind K,
   case OpenACCDirectiveKind::Invalid:
     return StmtError();
   case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::Kernels:
+    // TODO OpenACC: Add clauses to the construct here.
     return OpenACCComputeConstruct::Create(
-        getASTContext(), K, StartLoc, EndLoc,
+        getASTContext(), K, StartLoc, EndLoc, Clauses,
         AssocStmt.isUsable() ? AssocStmt.get() : nullptr);
   }
   llvm_unreachable("Unhandled case in directive handling?");
 }
 
-StmtResult Sema::ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
+StmtResult SemaOpenACC::ActOnAssociatedStmt(OpenACCDirectiveKind K,
                                             StmtResult AssocStmt) {
   switch (K) {
   default:
     llvm_unreachable("Unimplemented associated statement application");
   case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::Kernels:
     // There really isn't any checking here that could happen. As long as we
     // have a statement to associate, this should be fine.
     // OpenACC 3.3 Section 6:
@@ -106,9 +140,9 @@ StmtResult Sema::ActOnOpenACCAssociatedStmt(OpenACCDirectiveKind K,
   llvm_unreachable("Invalid associated statement application");
 }
 
-bool Sema::ActOnStartOpenACCDeclDirective(OpenACCDirectiveKind K,
+bool SemaOpenACC::ActOnStartDeclDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/false);
 }
 
-DeclGroupRef Sema::ActOnEndOpenACCDeclDirective() { return DeclGroupRef{}; }
+DeclGroupRef SemaOpenACC::ActOnEndDeclDirective() { return DeclGroupRef{}; }

@@ -52,16 +52,40 @@ contains
   end
 end
 
-module m
-  ! subroutine vs. function is determined at end of specification part
-  external :: a
-  procedure() :: b
+module m1
+  !Function vs subroutine in a module is resolved to a subroutine if
+  !no other information.
+  external :: exts, extf, extunk
+  procedure() :: procs, procf, procunk
 contains
-  subroutine s()
-    call a()
-    !ERROR: Cannot call subroutine 'b' like a function
-    x = b()
+  subroutine s
+    call exts()
+    call procs()
+    x = extf()
+    x = procf()
   end
+end
+
+module m2
+  use m1
+ contains
+  subroutine test
+    call exts() ! ok
+    call procs() ! ok
+    call extunk() ! ok
+    call procunk() ! ok
+    x = extf() ! ok
+    x = procf() ! ok
+    !ERROR: Cannot call subroutine 'extunk' like a function
+    !ERROR: Function result characteristics are not known
+    x = extunk()
+    !ERROR: Cannot call subroutine 'procunk' like a function
+    !ERROR: Function result characteristics are not known
+    x = procunk()
+  end
+end
+
+module modulename
 end
 
 ! Call to entity in global scope, even with IMPORT, NONE
@@ -69,8 +93,8 @@ subroutine s4
   block
     import, none
     integer :: i
-    !ERROR: 'm' is not a callable procedure
-    call m()
+    !ERROR: 'modulename' is not a callable procedure
+    call modulename()
   end block
 end
 

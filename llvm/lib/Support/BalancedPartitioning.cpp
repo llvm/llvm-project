@@ -82,7 +82,7 @@ void BalancedPartitioning::run(std::vector<BPFunctionNode> &Nodes) const {
           Nodes.size(), Config.SplitDepth, Config.IterationsPerSplit));
   std::optional<BPThreadPool> TP;
 #if LLVM_ENABLE_THREADS
-  ThreadPool TheThreadPool;
+  DefaultThreadPool TheThreadPool;
   if (Config.TaskSplitDepth > 1)
     TP.emplace(TheThreadPool);
 #endif
@@ -136,7 +136,7 @@ void BalancedPartitioning::bisect(const FunctionNodeRange Nodes,
   // Split into two and assign to the left and right buckets
   split(Nodes, LeftBucket);
 
-  runIterations(Nodes, RecDepth, LeftBucket, RightBucket, RNG);
+  runIterations(Nodes, LeftBucket, RightBucket, RNG);
 
   // Split nodes wrt the resulting buckets
   auto NodesMid =
@@ -163,7 +163,7 @@ void BalancedPartitioning::bisect(const FunctionNodeRange Nodes,
 }
 
 void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
-                                         unsigned RecDepth, unsigned LeftBucket,
+                                         unsigned LeftBucket,
                                          unsigned RightBucket,
                                          std::mt19937 &RNG) const {
   unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());

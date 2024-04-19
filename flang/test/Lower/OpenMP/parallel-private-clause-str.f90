@@ -10,7 +10,7 @@
 !CHECK:    %[[C_DECL:.*]]:2 = hlfir.declare %[[C_BOX_REF]] typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_allocatable_stringEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, i32) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
 !CHECK:    omp.parallel {
 !CHECK:      %[[C_PVT_BOX_REF:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {bindc_name = "c", pinned, uniq_name = "_QFtest_allocatable_stringEc"}
-!CHECK:      %[[C_BOX:.*]] = fir.load %[[C_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+!CHECK:      %[[C_BOX:.*]] = fir.load %[[C_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 !CHECK:      fir.if %{{.*}} {
 !CHECK:        %[[C_PVT_MEM:.*]] = fir.allocmem !fir.char<1,?>(%{{.*}} : index) {fir.must_be_heap = true, uniq_name = "_QFtest_allocatable_stringEc.alloc"}
 !CHECK:        %[[C_PVT_BOX:.*]] = fir.embox %[[C_PVT_MEM]] typeparams %{{.*}} : (!fir.heap<!fir.char<1,?>>, index) -> !fir.box<!fir.heap<!fir.char<1,?>>>
@@ -18,7 +18,7 @@
 !CHECK:      }
 !CHECK:      %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT_BOX_REF]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_allocatable_stringEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>)
 !CHECK:      fir.if %{{.*}} {
-!CHECK:        %[[C_PVT_BOX:.*]] = fir.load %[[C_PVT_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+!CHECK:        %[[C_PVT_BOX:.*]] = fir.load %[[C_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 !CHECK:        %[[C_PVT_BOX_ADDR:.*]] = fir.box_addr %[[C_PVT_BOX]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
 !CHECK:        fir.freemem %[[C_PVT_BOX_ADDR]] : !fir.heap<!fir.char<1,?>>
 !CHECK:      }
@@ -38,16 +38,16 @@ end subroutine
 !CHECK:    %[[C_DECL:.*]]:2 = hlfir.declare %[[C_BOX_REF]] typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_allocatable_string_arrayEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, i32) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>)
 !CHECK:    omp.parallel {
 !CHECK:      %[[C_PVT_BOX_REF:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>> {bindc_name = "c", pinned, uniq_name = "_QFtest_allocatable_string_arrayEc"}
-!CHECK:      %{{.*}} = fir.load %[[C_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
+!CHECK:      %{{.*}} = fir.load %[[C_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 !CHECK:      fir.if %{{.*}} {
 !CHECK:        %[[C_PVT_ALLOC:.*]] = fir.allocmem !fir.array<?x!fir.char<1,?>>(%{{.*}} : index), %{{.*}} {fir.must_be_heap = true, uniq_name = "_QFtest_allocatable_string_arrayEc.alloc"}
 !CHECK:        %[[C_PVT_BOX:.*]] = fir.embox %[[C_PVT_ALLOC]](%{{.*}}) typeparams %{{.*}} : (!fir.heap<!fir.array<?x!fir.char<1,?>>>, !fir.shapeshift<1>, index) -> !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
 !CHECK:        fir.store %[[C_PVT_BOX]] to %[[C_PVT_BOX_REF]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 !CHECK:      }
 !CHECK:      %[[C_PVT_DECL:.*]]:2 = hlfir.declare %[[C_PVT_BOX_REF]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_allocatable_string_arrayEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>)
-!CHECK:      %{{.*}} = fir.load %[[C_PVT_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
+!CHECK:      %{{.*}} = fir.load %[[C_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 !CHECK:      fir.if %{{.*}} {
-!CHECK:        %[[C_PVT_BOX:.*]] = fir.load %[[C_PVT_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
+!CHECK:        %[[C_PVT_BOX:.*]] = fir.load %[[C_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 !CHECK:        %[[C_PVT_ADDR:.*]] = fir.box_addr %[[C_PVT_BOX]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
 !CHECK:        fir.freemem %[[C_PVT_ADDR]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
 !CHECK:      }

@@ -333,21 +333,37 @@ public:
     return lvlBits & static_cast<uint64_t>(p);
   }
 
+  /// Check if the `LevelType` is considered to be sparse.
+  constexpr bool hasSparseSemantic() const {
+    return isa<LevelFormat::Compressed, LevelFormat::Singleton,
+               LevelFormat::LooseCompressed, LevelFormat::NOutOfM>();
+  }
+
+  /// Check if the `LevelType` is considered to be dense-like.
+  constexpr bool hasDenseSemantic() const {
+    return isa<LevelFormat::Dense, LevelFormat::Batch>();
+  }
+
   /// Check if the `LevelType` needs positions array.
   constexpr bool isWithPosLT() const {
-    return isa<LevelFormat::Compressed>() ||
-           isa<LevelFormat::LooseCompressed>();
+    assert(!isa<LevelFormat::Undef>());
+    return isa<LevelFormat::Compressed, LevelFormat::LooseCompressed>();
   }
 
   /// Check if the `LevelType` needs coordinates array.
   constexpr bool isWithCrdLT() const {
+    assert(!isa<LevelFormat::Undef>());
     // All sparse levels has coordinate array.
-    return !isa<LevelFormat::Dense>();
+    return hasSparseSemantic();
   }
 
   std::string toMLIRString() const {
     std::string lvlStr = toFormatString(getLvlFmt());
     std::string propStr = "";
+    if (isa<LevelFormat::NOutOfM>()) {
+      lvlStr +=
+          "[" + std::to_string(getN()) + ", " + std::to_string(getM()) + "]";
+    }
     if (isa<LevelPropNonDefault::Nonunique>())
       propStr += toPropString(LevelPropNonDefault::Nonunique);
 

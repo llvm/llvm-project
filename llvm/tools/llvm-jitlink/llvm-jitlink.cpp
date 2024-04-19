@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/VTuneSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -34,6 +35,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderVTune.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -148,6 +150,10 @@ static cl::opt<bool> PerfSupport("perf-support",
                                  cl::init(false), cl::Hidden,
                                  cl::cat(JITLinkCategory));
 
+static cl::opt<bool> VTuneSupport("vtune-support",
+                                  cl::desc("Enable vtune profiling support"),
+                                  cl::init(false), cl::Hidden,
+                                  cl::cat(JITLinkCategory));
 static cl::opt<bool>
     NoProcessSymbols("no-process-syms",
                      cl::desc("Do not resolve to llvm-jitlink process symbols"),
@@ -264,7 +270,10 @@ static LLVM_ATTRIBUTE_USED void linkComponents() {
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfStart << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfEnd << '\n'
-         << (void *)&llvm_orc_registerJITLoaderPerfImpl << '\n';
+         << (void *)&llvm_orc_registerJITLoaderPerfImpl << '\n'
+         << (void *)&llvm_orc_registerVTuneImpl << '\n'
+         << (void *)&llvm_orc_unregisterVTuneImpl << '\n'
+         << (void *)&llvm_orc_test_registerVTuneImpl << '\n';
 }
 
 static bool UseTestResultOverride = false;
@@ -1002,6 +1011,14 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     ObjLayer.addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
     ObjLayer.addPlugin(ExitOnErr(PerfSupportPlugin::Create(
         this->ES.getExecutorProcessControl(), *ProcessSymsJD, true, true)));
+  }
+
+  if (VTuneSupport && TT.isOSBinFormatELF()) {
+    ObjLayer.addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
+    ObjLayer.addPlugin(ExitOnErr(
+        VTuneSupportPlugin::Create(this->ES.getExecutorProcessControl(),
+                                   *ProcessSymsJD, /*EmitDebugInfo=*/true,
+                                   /*TestMode=*/true)));
   }
 
   // Set up the platform.

@@ -14,6 +14,22 @@
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/moduleA.cpp \
 // RUN:  -fprebuilt-module-path=%t
 
+// Test again with reduced BMI
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+// RUN: split-file %s %t
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/partition1.cpp \
+// RUN:  -o %t/A-Part1.pcm
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/partition2.cpp \
+// RUN:  -o %t/A-Part2.pcm
+
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/partition3.cpp \
+// RUN:  -o %t/A-Part3.pcm
+
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/moduleA.cpp -fprebuilt-module-path=%t 
+
 // expected-no-diagnostics
 
 //--- partition1.cpp

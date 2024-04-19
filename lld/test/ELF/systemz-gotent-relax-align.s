@@ -1,7 +1,7 @@
 # REQUIRES: systemz
 ## Verify that R_390_GOTENT optimization is not performed on misaligned symbols.
 
-# RUN: llvm-mc -filetype=obj -relax-relocations -triple=s390x-unknown-linux %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=s390x-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t1
 # RUN: llvm-readelf -S -r -x .got -x .got.plt %t1 | FileCheck --check-prefixes=CHECK %s
 # RUN: llvm-objdump --no-print-imm-hex -d %t1 | FileCheck --check-prefix=DISASM %s

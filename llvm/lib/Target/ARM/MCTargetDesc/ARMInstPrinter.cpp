@@ -91,6 +91,38 @@ void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   unsigned Opcode = MI->getOpcode();
 
   switch (Opcode) {
+  case ARM::VLLDM: {
+    const MCOperand &Reg = MI->getOperand(0);
+    O << '\t' << "vlldm" << '\t';
+    printRegName(O, Reg.getReg());
+    O << ", "
+      << "{d0 - d15}";
+    return;
+  }
+  case ARM::VLLDM_T2: {
+    const MCOperand &Reg = MI->getOperand(0);
+    O << '\t' << "vlldm" << '\t';
+    printRegName(O, Reg.getReg());
+    O << ", "
+      << "{d0 - d31}";
+    return;
+  }
+  case ARM::VLSTM: {
+    const MCOperand &Reg = MI->getOperand(0);
+    O << '\t' << "vlstm" << '\t';
+    printRegName(O, Reg.getReg());
+    O << ", "
+      << "{d0 - d15}";
+    return;
+  }
+  case ARM::VLSTM_T2: {
+    const MCOperand &Reg = MI->getOperand(0);
+    O << '\t' << "vlstm" << '\t';
+    printRegName(O, Reg.getReg());
+    O << ", "
+      << "{d0 - d31}";
+    return;
+  }
   // Check for MOVs and print canonical forms, instead.
   case ARM::MOVsr: {
     // FIXME: Thumb variants?

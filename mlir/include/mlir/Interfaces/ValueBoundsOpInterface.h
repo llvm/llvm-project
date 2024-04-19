@@ -15,6 +15,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 
 #include <queue>
 
@@ -63,7 +64,8 @@ using ValueDimList = SmallVector<std::pair<Value, std::optional<int64_t>>>;
 ///
 /// Note: Any modification of existing IR invalides the data stored in this
 /// class. Adding new operations is allowed.
-class ValueBoundsConstraintSet {
+class ValueBoundsConstraintSet
+    : public llvm::RTTIExtends<ValueBoundsConstraintSet, llvm::RTTIRoot> {
 protected:
   /// Helper class that builds a bound for a shaped value dimension or
   /// index-typed value.
@@ -107,14 +109,17 @@ protected:
   };
 
 public:
+  static char ID;
+
   /// The stop condition when traversing the backward slice of a shaped value/
   /// index-type value. The traversal continues until the stop condition
   /// evaluates to "true" for a value.
   ///
   /// The first parameter of the function is the shaped value/index-typed
   /// value. The second parameter is the dimension in case of a shaped value.
-  using StopConditionFn =
-      function_ref<bool(Value, std::optional<int64_t> /*dim*/)>;
+  /// The third parameter is this constraint set.
+  using StopConditionFn = std::function<bool(
+      Value, std::optional<int64_t> /*dim*/, ValueBoundsConstraintSet &cstr)>;
 
   /// Compute a bound for the given index-typed value or shape dimension size.
   /// The computed bound is stored in `resultMap`. The operands of the bound are
@@ -198,6 +203,26 @@ public:
                        std::optional<int64_t> dim1 = std::nullopt,
                        std::optional<int64_t> dim2 = std::nullopt);
 
+  /// Traverse the IR starting from the given value/dim and populate constraints
+  /// as long as the stop condition holds. Also process all values/dims that are
+  /// already on the worklist.
+  void populateConstraints(Value value, std::optional<int64_t> dim);
+
+  /// Comparison operator for `ValueBoundsConstraintSet::compare`.
+  enum ComparisonOperator { LT, LE, EQ, GT, GE };
+
+  /// Try to prove that, based on the current state of this constraint set
+  /// (i.e., without analyzing additional IR or adding new constraints), the
+  /// "lhs" value/dim is LE/LT/EQ/GT/GE than the "rhs" value/dim.
+  ///
+  /// Return "true" if the specified relation between the two values/dims was
+  /// proven to hold. Return "false" if the specified relation could not be
+  /// proven. This could be because the specified relation does in fact not hold
+  /// or because there is not enough information in the constraint set. In other
+  /// words, if we do not know for sure, this function returns "false".
+  bool compare(Value lhs, std::optional<int64_t> lhsDim, ComparisonOperator cmp,
+               Value rhs, std::optional<int64_t> rhsDim);
+
   /// Compute whether the given values/dimensions are equal. Return "failure" if
   /// equality could not be determined.
   ///
@@ -255,6 +280,10 @@ public:
   /// Return an expression that represents a constant.
   AffineExpr getExpr(int64_t constant);
 
+  /// Debugging only: Dump the constraint set and the column-to-value/dim
+  /// mapping to llvm::errs.
+  void dump() const;
+
 protected:
   /// Dimension identifier to indicate a value is index-typed. This is used for
   /// internal data structures/API only.
@@ -263,12 +292,20 @@ protected:
   /// An index-typed value or the dimension of a shaped-type value.
   using ValueDim = std::pair<Value, int64_t>;
 
-  ValueBoundsConstraintSet(MLIRContext *ctx);
+  ValueBoundsConstraintSet(MLIRContext *ctx, StopConditionFn stopCondition);
+
+  /// Given an affine map with a single result (and map operands), add a new
+  /// column to the constraint set that represents the result of the map.
+  /// Traverse additional IR starting from the map operands as needed (as long
+  /// as the stop condition is not satisfied). Also process all values/dims that
+  /// are already on the worklist. Return the position of the newly added
+  /// column.
+  int64_t populateConstraints(AffineMap map, ValueDimList mapOperands);
 
   /// Iteratively process all elements on the worklist until an index-typed
   /// value or shaped value meets `stopCondition`. Such values are not processed
   /// any further.
-  void processWorklist(StopConditionFn stopCondition);
+  void processWorklist();
 
   /// Bound the given column in the underlying constraint set by the given
   /// expression.
@@ -278,14 +315,19 @@ protected:
   /// value/dimension exists in the constraint set.
   int64_t getPos(Value value, std::optional<int64_t> dim = std::nullopt) const;
 
+  /// Return an affine expression that represents column `pos` in the constraint
+  /// set.
+  AffineExpr getPosExpr(int64_t pos);
+
   /// Insert a value/dimension into the constraint set. If `isSymbol` is set to
   /// "false", a dimension is added. The value/dimension is added to the
-  /// worklist.
+  /// worklist if `addToWorklist` is set.
   ///
   /// Note: There are certain affine restrictions wrt. dimensions. E.g., they
   /// cannot be multiplied. Furthermore, bounds can only be queried for
   /// dimensions but not for symbols.
-  int64_t insert(Value value, std::optional<int64_t> dim, bool isSymbol = true);
+  int64_t insert(Value value, std::optional<int64_t> dim, bool isSymbol = true,
+                 bool addToWorklist = true);
 
   /// Insert an anonymous column into the constraint set. The column is not
   /// bound to any value/dimension. If `isSymbol` is set to "false", a dimension
@@ -315,6 +357,9 @@ protected:
 
   /// Builder for constructing affine expressions.
   Builder builder;
+
+  /// The current stop condition function.
+  StopConditionFn stopCondition = nullptr;
 };
 
 } // namespace mlir

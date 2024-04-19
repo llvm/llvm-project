@@ -19,22 +19,17 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_builtin(__remove_cv) && !defined(_LIBCPP_COMPILER_GCC)
 template <class _Tp>
 struct remove_cv {
   using type _LIBCPP_NODEBUG = __remove_cv(_Tp);
 };
 
+#if defined(_LIBCPP_COMPILER_GCC)
 template <class _Tp>
-using __remove_cv_t = __remove_cv(_Tp);
+using __remove_cv_t = typename remove_cv<_Tp>::type;
 #else
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS remove_cv {
-  typedef __remove_volatile_t<__remove_const_t<_Tp> > type;
-};
-
-template <class _Tp>
-using __remove_cv_t = __remove_volatile_t<__remove_const_t<_Tp> >;
+using __remove_cv_t = __remove_cv(_Tp);
 #endif // __has_builtin(__remove_cv)
 
 #if _LIBCPP_STD_VER >= 14

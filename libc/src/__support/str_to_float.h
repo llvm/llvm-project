@@ -17,13 +17,13 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/UInt128.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/detailed_powers_of_ten.h"
 #include "src/__support/high_precision_decimal.h"
 #include "src/__support/str_to_integer.h"
 #include "src/__support/str_to_num_result.h"
+#include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h" // For ERANGE
 
 namespace LIBC_NAMESPACE {
@@ -51,13 +51,13 @@ template <class T> LIBC_INLINE void set_implicit_bit(fputil::FPBits<T> &) {
   return;
 }
 
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 template <>
 LIBC_INLINE void
 set_implicit_bit<long double>(fputil::FPBits<long double> &result) {
   result.set_implicit_bit(result.get_biased_exponent() != 0);
 }
-#endif
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 // This Eisel-Lemire implementation is based on the algorithm described in the
 // paper Number Parsing at a Gigabyte per Second, Software: Practice and
@@ -176,7 +176,7 @@ eisel_lemire(ExpandedFloat<T> init_num,
   return output;
 }
 
-#if !defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 template <>
 LIBC_INLINE cpp::optional<ExpandedFloat<long double>>
 eisel_lemire<long double>(ExpandedFloat<long double> init_num,
@@ -297,7 +297,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   output.exponent = exp2;
   return output;
 }
-#endif
+#endif // !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 
 // The nth item in POWERS_OF_TWO represents the greatest power of two less than
 // 10^n. This tells us how much we can safely shift without overshooting.
@@ -313,14 +313,15 @@ constexpr int32_t NUM_POWERS_OF_TWO =
 // on the Simple Decimal Conversion algorithm by Nigel Tao, described at this
 // link: https://nigeltao.github.io/blog/2020/parse-number-f64-simple.html
 template <class T>
-LIBC_INLINE FloatConvertReturn<T>
-simple_decimal_conversion(const char *__restrict numStart,
-                          RoundDirection round = RoundDirection::Nearest) {
+LIBC_INLINE FloatConvertReturn<T> simple_decimal_conversion(
+    const char *__restrict numStart,
+    const size_t num_len = cpp::numeric_limits<size_t>::max(),
+    RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
   int32_t exp2 = 0;
-  HighPrecisionDecimal hpd = HighPrecisionDecimal(numStart);
+  HighPrecisionDecimal hpd = HighPrecisionDecimal(numStart, num_len);
 
   FloatConvertReturn<T> output;
 
@@ -460,7 +461,7 @@ public:
   static constexpr double MAX_EXACT_INT = 9007199254740991.0;
 };
 
-#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
 template <> class ClingerConsts<long double> {
 public:
   static constexpr long double POWERS_OF_TEN_ARRAY[] = {
@@ -473,7 +474,7 @@ public:
   static constexpr long double MAX_EXACT_INT =
       ClingerConsts<double>::MAX_EXACT_INT;
 };
-#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 template <> class ClingerConsts<long double> {
 public:
   static constexpr long double POWERS_OF_TEN_ARRAY[] = {
@@ -484,7 +485,7 @@ public:
   static constexpr int32_t DIGITS_IN_MANTISSA = 21;
   static constexpr long double MAX_EXACT_INT = 18446744073709551615.0L;
 };
-#else
+#elif defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)
 template <> class ClingerConsts<long double> {
 public:
   static constexpr long double POWERS_OF_TEN_ARRAY[] = {
@@ -498,6 +499,8 @@ public:
   static constexpr long double MAX_EXACT_INT =
       10384593717069655257060992658440191.0L;
 };
+#else
+#error "Unknown long double type"
 #endif
 
 // Take an exact mantissa and exponent and attempt to convert it using only
@@ -510,7 +513,6 @@ clinger_fast_path(ExpandedFloat<T> init_num,
                   RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = fputil::Sign;
 
   StorageType mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
@@ -521,7 +523,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
 
   FPBits result;
   T float_mantissa;
-  if constexpr (cpp::is_same_v<StorageType, cpp::UInt<128>>) {
+  if constexpr (cpp::is_same_v<StorageType, UInt<128>>) {
     float_mantissa = static_cast<T>(fputil::DyadicFloat<128>(
         Sign::POS, 0,
         fputil::DyadicFloat<128>::MantissaType(
@@ -598,13 +600,17 @@ clinger_fast_path(ExpandedFloat<T> init_num,
 // non-inf result for this size of float. The value is
 // log10(2^(exponent bias)).
 // The generic approximation uses the fact that log10(2^x) ~= x/3
-template <typename T> constexpr int32_t get_upper_bound() {
+template <typename T> LIBC_INLINE constexpr int32_t get_upper_bound() {
   return fputil::FPBits<T>::EXP_BIAS / 3;
 }
 
-template <> constexpr int32_t get_upper_bound<float>() { return 39; }
+template <> LIBC_INLINE constexpr int32_t get_upper_bound<float>() {
+  return 39;
+}
 
-template <> constexpr int32_t get_upper_bound<double>() { return 309; }
+template <> LIBC_INLINE constexpr int32_t get_upper_bound<double>() {
+  return 309;
+}
 
 // The lower bound is the largest negative base-10 exponent that could possibly
 // give a non-zero result for this size of float. The value is
@@ -614,18 +620,18 @@ template <> constexpr int32_t get_upper_bound<double>() { return 309; }
 // low base 10 exponent with a very high intermediate mantissa can cancel each
 // other out, and subnormal numbers allow for the result to be at the very low
 // end of the final mantissa.
-template <typename T> constexpr int32_t get_lower_bound() {
+template <typename T> LIBC_INLINE constexpr int32_t get_lower_bound() {
   using FPBits = typename fputil::FPBits<T>;
   return -((FPBits::EXP_BIAS +
             static_cast<int32_t>(FPBits::FRACTION_LEN + FPBits::STORAGE_LEN)) /
            3);
 }
 
-template <> constexpr int32_t get_lower_bound<float>() {
+template <> LIBC_INLINE constexpr int32_t get_lower_bound<float>() {
   return -(39 + 6 + 10);
 }
 
-template <> constexpr int32_t get_lower_bound<double>() {
+template <> LIBC_INLINE constexpr int32_t get_lower_bound<double>() {
   return -(309 + 15 + 20);
 }
 
@@ -635,9 +641,10 @@ template <> constexpr int32_t get_lower_bound<double>() {
 // accuracy. The resulting mantissa and exponent are placed in outputMantissa
 // and outputExp2.
 template <class T>
-LIBC_INLINE FloatConvertReturn<T>
-decimal_exp_to_float(ExpandedFloat<T> init_num, const char *__restrict numStart,
-                     bool truncated, RoundDirection round) {
+LIBC_INLINE FloatConvertReturn<T> decimal_exp_to_float(
+    ExpandedFloat<T> init_num, bool truncated, RoundDirection round,
+    const char *__restrict numStart,
+    const size_t num_len = cpp::numeric_limits<size_t>::max()) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
@@ -699,7 +706,7 @@ decimal_exp_to_float(ExpandedFloat<T> init_num, const char *__restrict numStart,
 #endif // LIBC_COPT_STRTOFLOAT_DISABLE_EISEL_LEMIRE
 
 #ifndef LIBC_COPT_STRTOFLOAT_DISABLE_SIMPLE_DECIMAL_CONVERSION
-  output = simple_decimal_conversion<T>(numStart, round);
+  output = simple_decimal_conversion<T>(numStart, num_len, round);
 #else
 #warning "Simple decimal conversion is disabled, result may not be correct."
 #endif // LIBC_COPT_STRTOFLOAT_DISABLE_SIMPLE_DECIMAL_CONVERSION
@@ -892,6 +899,8 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
   if (!seen_digit)
     return output;
 
+  // TODO: When adding max length argument, handle the case of a trailing
+  // EXPONENT MARKER, see scanf for more details.
   if (tolower(src[index]) == EXPONENT_MARKER) {
     bool has_sign = false;
     if (src[index + 1] == '+' || src[index + 1] == '-') {
@@ -926,7 +935,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
     output.value = {0, 0};
   } else {
     auto temp =
-        decimal_exp_to_float<T>({mantissa, exponent}, src, truncated, round);
+        decimal_exp_to_float<T>({mantissa, exponent}, truncated, round, src);
     output.value = temp.num;
     output.error = temp.error;
   }
@@ -1046,17 +1055,17 @@ hexadecimal_string_to_float(const char *__restrict src,
   return output;
 }
 
-LIBC_INLINE uint64_t
+template <class T>
+LIBC_INLINE typename fputil::FPBits<T>::StorageType
 nan_mantissa_from_ncharseq(const cpp::string_view ncharseq) {
-  uint64_t nan_mantissa = 0;
+  using FPBits = typename fputil::FPBits<T>;
+  using StorageType = typename FPBits::StorageType;
+
+  StorageType nan_mantissa = 0;
 
   if (ncharseq.data() != nullptr && isdigit(ncharseq[0])) {
-    // This is to prevent errors when StorageType is larger than 64
-    // bits, since strtointeger only supports up to 64 bits. This is
-    // actually more than is required by the specification, which says
-    // for the input type "NAN(n-char-sequence)" that "the meaning of
-    // the n-char sequence is implementation-defined."
-    auto strtoint_result = strtointeger<uint64_t>(ncharseq.data(), 0);
+    StrToNumResult<StorageType> strtoint_result =
+        strtointeger<StorageType>(ncharseq.data(), 0);
     if (!strtoint_result.has_error())
       nan_mantissa = strtoint_result.value;
 
@@ -1069,11 +1078,12 @@ nan_mantissa_from_ncharseq(const cpp::string_view ncharseq) {
 
 // Takes a pointer to a string and a pointer to a string pointer. This function
 // is used as the backend for all of the string to float functions.
+// TODO: Add src_len member to match strtointeger.
+// TODO: Next, move from char* and length to string_view
 template <class T>
 LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = fputil::Sign;
 
   FPBits result = FPBits();
   bool seen_digit = false;
@@ -1160,9 +1170,8 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
           ++index;
         if (src[index] == ')') {
           ++index;
-          auto nan_mantissa_result = nan_mantissa_from_ncharseq(
+          nan_mantissa = nan_mantissa_from_ncharseq<T>(
               cpp::string_view(src + (left_paren + 1), index - left_paren - 2));
-          nan_mantissa = static_cast<StorageType>(nan_mantissa_result);
         } else {
           index = left_paren;
         }
@@ -1209,13 +1218,10 @@ template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
   while (isalnum(arg[index]) || arg[index] == '_')
     ++index;
 
-  if (arg[index] == '\0') {
-    auto nan_mantissa_result =
-        nan_mantissa_from_ncharseq(cpp::string_view(arg, index));
-    nan_mantissa = static_cast<StorageType>(nan_mantissa_result);
-  }
+  if (arg[index] == '\0')
+    nan_mantissa = nan_mantissa_from_ncharseq<T>(cpp::string_view(arg, index));
 
-  result = FPBits::quiet_nan(fputil::Sign::POS, nan_mantissa);
+  result = FPBits::quiet_nan(Sign::POS, nan_mantissa);
   return {result.get_val(), 0, error};
 }
 

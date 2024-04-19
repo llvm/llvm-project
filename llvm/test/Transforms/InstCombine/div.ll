@@ -1065,7 +1065,7 @@ define <vscale x 2 x i8> @sdiv_by_negconst_nxv2i8(<vscale x 2 x i8> %x) {
 ; CHECK-NEXT:    [[DIV_NEG:%.*]] = sdiv <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 108, i64 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i8> [[DIV_NEG]]
 ;
-  %div = sdiv <vscale x 2 x i8> %x, shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 -108, i32 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
+  %div = sdiv <vscale x 2 x i8> %x, splat (i8 -108)
   %sub = sub <vscale x 2 x i8> zeroinitializer, %div
   ret <vscale x 2 x i8> %sub
 }
@@ -1083,11 +1083,11 @@ define <2 x i8> @sdiv_by_minSigned_v2i8(<2 x i8> %x) {
 
 define <vscale x 2 x i8> @sdiv_by_minSigned_nxv2i8(<vscale x 2 x i8> %x) {
 ; CHECK-LABEL: @sdiv_by_minSigned_nxv2i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 -128, i32 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 -128, i64 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[DIV_NEG:%.*]] = sext <vscale x 2 x i1> [[TMP1]] to <vscale x 2 x i8>
 ; CHECK-NEXT:    ret <vscale x 2 x i8> [[DIV_NEG]]
 ;
-  %div = sdiv <vscale x 2 x i8> %x, shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 -128, i32 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
+  %div = sdiv <vscale x 2 x i8> %x, splat (i8 -128)
   %sub = sub <vscale x 2 x i8> zeroinitializer, %div
   ret <vscale x 2 x i8> %sub
 }
@@ -1809,4 +1809,26 @@ define i6 @udiv_distribute_mul_nsw_add_nuw(i6 %x) {
   %add = add nuw i6 %mul, 9
   %div = udiv i6 %add, 3
   ret i6 %div
+}
+
+define i32 @fold_disjoint_or_over_sdiv(i32 %x) {
+; CHECK-LABEL: @fold_disjoint_or_over_sdiv(
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[X:%.*]], 9
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %mul = mul nsw i32 %x, 9
+  %or = or disjoint i32 %mul, 81
+  %r = sdiv i32 %or, 9
+  ret i32 %r
+}
+
+define i32 @fold_disjoint_or_over_udiv(i32 %x) {
+; CHECK-LABEL: @fold_disjoint_or_over_udiv(
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[X:%.*]], 9
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %mul = mul nuw i32 %x, 9
+  %or = or disjoint i32 %mul, 81
+  %r = udiv i32 %or, 9
+  ret i32 %r
 }

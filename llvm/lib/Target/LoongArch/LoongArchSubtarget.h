@@ -113,6 +113,7 @@ public:
   Align getPrefFunctionAlignment() const { return PrefFunctionAlignment; }
   Align getPrefLoopAlignment() const { return PrefLoopAlignment; }
   unsigned getMaxBytesForAlignment() const { return MaxBytesForAlignment; }
+  bool enableMachineScheduler() const override { return true; }
 };
 } // end namespace llvm
 

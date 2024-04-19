@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___RANGES_REPEAT_VIEW_H
 #define _LIBCPP___RANGES_REPEAT_VIEW_H
 
+#include <__assert>
 #include <__concepts/constructible.h>
 #include <__concepts/same_as.h>
 #include <__concepts/semiregular.h>
@@ -228,14 +229,13 @@ namespace views {
 namespace __repeat {
 struct __fn {
   template <class _Tp>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __value) const
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Tp&& __value)
     noexcept(noexcept(ranges::repeat_view(std::forward<_Tp>(__value))))
     -> decltype(      ranges::repeat_view(std::forward<_Tp>(__value)))
     { return          ranges::repeat_view(std::forward<_Tp>(__value)); }
 
-
   template <class _Tp, class _Bound>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __value, _Bound&& __bound_sentinel) const
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Tp&& __value, _Bound&& __bound_sentinel)
     noexcept(noexcept(ranges::repeat_view(std::forward<_Tp>(__value), std::forward<_Bound>(__bound_sentinel))))
     -> decltype(      ranges::repeat_view(std::forward<_Tp>(__value), std::forward<_Bound>(__bound_sentinel)))
     { return          ranges::repeat_view(std::forward<_Tp>(__value), std::forward<_Bound>(__bound_sentinel)); }

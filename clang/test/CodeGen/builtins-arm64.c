@@ -156,4 +156,10 @@ int rndrrs(uint64_t *__addr) {
   return __builtin_arm_rndrrs(__addr);
 }
 
+// CHECK-LABEL: @trap(
+// CHECK: call void @llvm.aarch64.break(i32 42)
+void trap() {
+  __builtin_arm_trap(42);
+}
+
 // CHECK: ![[M0]] = !{!"1:2:3:4:5"}

@@ -480,10 +480,12 @@ multiclass VOP3PDOTF8Inst <string OpName, SDPatternOperator intrinsic_node> {
                                           i32:$src2_modifiers, f32:$src2)>;
 }
 
+let OtherPredicates = [HasDot11Insts] in {
 defm V_DOT4_F32_FP8_BF8 : VOP3PDOTF8Inst<"v_dot4_f32_fp8_bf8", int_amdgcn_dot4_f32_fp8_bf8>;
 defm V_DOT4_F32_BF8_FP8 : VOP3PDOTF8Inst<"v_dot4_f32_bf8_fp8", int_amdgcn_dot4_f32_bf8_fp8>;
 defm V_DOT4_F32_FP8_FP8 : VOP3PDOTF8Inst<"v_dot4_f32_fp8_fp8", int_amdgcn_dot4_f32_fp8_fp8>;
 defm V_DOT4_F32_BF8_BF8 : VOP3PDOTF8Inst<"v_dot4_f32_bf8_bf8", int_amdgcn_dot4_f32_bf8_bf8>;
+}
 
 def : UDot2Pat<V_DOT2_U32_U16>;
 def : SDot2Pat<V_DOT2_I32_I16>;
@@ -1005,6 +1007,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                                !cast<RegisterOperand>("VISrc_"#ArgTy[3].Size#
                                                       !cond(IsC_F32: "_f32",
                                                             IsC_F16: "_f16",
+                                                            IsC_BF16: "_bf16",
                                                             1: "_b32")));
 
   // For f16 and bf16 matrices A and B, each element can be modified by
@@ -1351,7 +1354,7 @@ class VOP3P_DPP16<bits<7> op, VOP_DPP_Pseudo ps, int subtarget,
   let SchedRW = ps.SchedRW;
   let Uses = ps.Uses;
   let AssemblerPredicate = HasDPP16;
-  let SubtargetPredicate = HasDPP16;
+  let SubtargetPredicate = ps.SubtargetPredicate;
   let OtherPredicates = ps.OtherPredicates;
   let IsPacked = ps.IsPacked;
 }
@@ -1362,6 +1365,7 @@ class VOP3P_DPP8_Base<bits<7> op, VOP_Pseudo ps, string opName = ps.OpName>
   let Defs = ps.Defs;
   let SchedRW = ps.SchedRW;
   let Uses = ps.Uses;
+  let SubtargetPredicate = ps.SubtargetPredicate;
   let OtherPredicates = ps.OtherPredicates;
   let IsPacked = ps.IsPacked;
 }

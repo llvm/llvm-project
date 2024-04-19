@@ -28,12 +28,9 @@
 #include <__type_traits/can_extract_key.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_const.h>
-#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_constructible.h>
+#include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_nothrow_copy_constructible.h>
-#include <__type_traits/is_nothrow_default_constructible.h>
-#include <__type_traits/is_nothrow_move_assignable.h>
-#include <__type_traits/is_nothrow_move_constructible.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_swappable.h>
@@ -284,13 +281,21 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __hash_iterator() _NOEXCEPT : __node_(nullptr) {}
 
-  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __node_->__upcast()->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI reference operator*() const {
+    _LIBCPP_ASSERT_NON_NULL(
+        __node_ != nullptr, "Attempted to dereference a non-dereferenceable unordered container iterator");
+    return __node_->__upcast()->__get_value();
+  }
 
   _LIBCPP_HIDE_FROM_ABI pointer operator->() const {
+    _LIBCPP_ASSERT_NON_NULL(
+        __node_ != nullptr, "Attempted to dereference a non-dereferenceable unordered container iterator");
     return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__get_value());
   }
 
   _LIBCPP_HIDE_FROM_ABI __hash_iterator& operator++() {
+    _LIBCPP_ASSERT_NON_NULL(
+        __node_ != nullptr, "Attempted to increment a non-incrementable unordered container iterator");
     __node_ = __node_->__next_;
     return *this;
   }
@@ -345,12 +350,20 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __hash_const_iterator(const __non_const_iterator& __x) _NOEXCEPT : __node_(__x.__node_) {}
 
-  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __node_->__upcast()->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI reference operator*() const {
+    _LIBCPP_ASSERT_NON_NULL(
+        __node_ != nullptr, "Attempted to dereference a non-dereferenceable unordered container const_iterator");
+    return __node_->__upcast()->__get_value();
+  }
   _LIBCPP_HIDE_FROM_ABI pointer operator->() const {
+    _LIBCPP_ASSERT_NON_NULL(
+        __node_ != nullptr, "Attempted to dereference a non-dereferenceable unordered container const_iterator");
     return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__get_value());
   }
 
   _LIBCPP_HIDE_FROM_ABI __hash_const_iterator& operator++() {
+    _LIBCPP_ASSERT_NON_NULL(
+        __node_ != nullptr, "Attempted to increment a non-incrementable unordered container const_iterator");
     __node_ = __node_->__next_;
     return *this;
   }
@@ -400,13 +413,21 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __hash_local_iterator() _NOEXCEPT : __node_(nullptr) {}
 
-  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __node_->__upcast()->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI reference operator*() const {
+    _LIBCPP_ASSERT_NON_NULL(
+        __node_ != nullptr, "Attempted to dereference a non-dereferenceable unordered container local_iterator");
+    return __node_->__upcast()->__get_value();
+  }
 
   _LIBCPP_HIDE_FROM_ABI pointer operator->() const {
+    _LIBCPP_ASSERT_NON_NULL(
+        __node_ != nullptr, "Attempted to dereference a non-dereferenceable unordered container local_iterator");
     return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__get_value());
   }
 
   _LIBCPP_HIDE_FROM_ABI __hash_local_iterator& operator++() {
+    _LIBCPP_ASSERT_NON_NULL(
+        __node_ != nullptr, "Attempted to increment a non-incrementable unordered container local_iterator");
     __node_ = __node_->__next_;
     if (__node_ != nullptr && std::__constrain_hash(__node_->__hash(), __bucket_count_) != __bucket_)
       __node_ = nullptr;
@@ -475,13 +496,21 @@ public:
         __bucket_(__x.__bucket_),
         __bucket_count_(__x.__bucket_count_) {}
 
-  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __node_->__upcast()->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI reference operator*() const {
+    _LIBCPP_ASSERT_NON_NULL(
+        __node_ != nullptr, "Attempted to dereference a non-dereferenceable unordered container const_local_iterator");
+    return __node_->__upcast()->__get_value();
+  }
 
   _LIBCPP_HIDE_FROM_ABI pointer operator->() const {
+    _LIBCPP_ASSERT_NON_NULL(
+        __node_ != nullptr, "Attempted to dereference a non-dereferenceable unordered container const_local_iterator");
     return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__get_value());
   }
 
   _LIBCPP_HIDE_FROM_ABI __hash_const_local_iterator& operator++() {
+    _LIBCPP_ASSERT_NON_NULL(
+        __node_ != nullptr, "Attempted to increment a non-incrementable unordered container const_local_iterator");
     __node_ = __node_->__next_;
     if (__node_ != nullptr && std::__constrain_hash(__node_->__hash(), __bucket_count_) != __bucket_)
       __node_ = nullptr;

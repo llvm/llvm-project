@@ -1,6 +1,6 @@
 ! Test passing mismatching rank arguments to unlimited polymorphic
 ! dummy with IGNORE_TKR(R).
-! RUN: bbc -emit-hlfir -polymorphic-type -o - -I nowhere %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - -I nowhere %s 2>&1 | FileCheck %s
 
 module m
   interface

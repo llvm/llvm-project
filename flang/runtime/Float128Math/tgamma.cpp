@@ -14,7 +14,7 @@ extern "C" {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(TgammaF128)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Tgamma<RTNAME(TgammaF128)>::invoke(x);
+  return Tgamma<true>::invoke(x);
 }
 #endif
 

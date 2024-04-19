@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
-#define LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
+#ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/math_macros.h"
 #include <errno.h>
-#include <math.h>
 
 static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
@@ -28,7 +28,6 @@ public:
 private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<F>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
   const F zero = FPBits::zero(Sign::POS).get_val();
   const F neg_zero = FPBits::zero(Sign::NEG).get_val();
@@ -169,4 +168,4 @@ public:
 #define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(F, I, func)                     \
   LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, true)
 
-#endif // LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
+#endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H

@@ -77,7 +77,6 @@ define <1 x i32> @test_bitf_v1i32(<1 x i32> %A, <1 x i32> %B, <1 x i32> %C) {
 ; CHECK-GI-NEXT:    and w8, w8, w10
 ; CHECK-GI-NEXT:    orr w8, w9, w8
 ; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov v0.s[1], w8
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %neg = xor <1 x i32> %C, <i32 -1>

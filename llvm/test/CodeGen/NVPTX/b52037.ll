@@ -47,7 +47,7 @@ bb:
   %tmp5 = load ptr, ptr %tmp4, align 8
   %tmp9 = getelementptr inbounds %struct.zot, ptr %tmp, i64 0, i32 2, i32 1
   store ptr %tmp5, ptr %tmp9, align 8
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @global_1, i64 0, inrange i32 0, i64 3), ptr %tmp, align 16
+  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @global_1, i64 0, i32 0, i64 3), ptr %tmp, align 16
   %tmp.i1 = tail call i64 @foo()
   %tmp44.i16 = getelementptr inbounds i16, ptr %tmp5, i64 undef
   %tmp45.i17 = load i16, ptr %tmp44.i16, align 2

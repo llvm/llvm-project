@@ -42,111 +42,6 @@ static Type isElementTypeInconsistent(Value addr, Type expectedType) {
   return elemType;
 }
 
-/// Checks that two types are the same or can be bitcast into one another.
-static bool areBitcastCompatible(DataLayout &layout, Type lhs, Type rhs) {
-  return lhs == rhs || (!isa<LLVMStructType, LLVMArrayType>(lhs) &&
-                        !isa<LLVMStructType, LLVMArrayType>(rhs) &&
-                        layout.getTypeSize(lhs) == layout.getTypeSize(rhs));
-}
-
-//===----------------------------------------------------------------------===//
-// AddFieldGetterToStructDirectUse
-//===----------------------------------------------------------------------===//
-
-/// Gets the type of the first subelement of `type` if `type` is destructurable,
-/// nullptr otherwise.
-static Type getFirstSubelementType(Type type) {
-  auto destructurable = dyn_cast<DestructurableTypeInterface>(type);
-  if (!destructurable)
-    return nullptr;
-
-  Type subelementType = destructurable.getTypeAtIndex(
-      IntegerAttr::get(IntegerType::get(type.getContext(), 32), 0));
-  if (subelementType)
-    return subelementType;
-
-  return nullptr;
-}
-
-/// Extracts a pointer to the first field of an `elemType` from the address
-/// pointer of the provided MemOp, and rewires the MemOp so it uses that pointer
-/// instead.
-template <class MemOp>
-static void insertFieldIndirection(MemOp op, PatternRewriter &rewriter,
-                                   Type elemType) {
-  PatternRewriter::InsertionGuard guard(rewriter);
-
-  rewriter.setInsertionPointAfterValue(op.getAddr());
-  SmallVector<GEPArg> firstTypeIndices{0, 0};
-
-  Value properPtr = rewriter.create<GEPOp>(
-      op->getLoc(), LLVM::LLVMPointerType::get(op.getContext()), elemType,
-      op.getAddr(), firstTypeIndices);
-
-  rewriter.modifyOpInPlace(op,
-                           [&]() { op.getAddrMutable().assign(properPtr); });
-}
-
-template <>
-LogicalResult AddFieldGetterToStructDirectUse<LoadOp>::matchAndRewrite(
-    LoadOp load, PatternRewriter &rewriter) const {
-  PatternRewriter::InsertionGuard guard(rewriter);
-
-  Type inconsistentElementType =
-      isElementTypeInconsistent(load.getAddr(), load.getType());
-  if (!inconsistentElementType)
-    return failure();
-  Type firstType = getFirstSubelementType(inconsistentElementType);
-  if (!firstType)
-    return failure();
-  DataLayout layout = DataLayout::closest(load);
-  if (!areBitcastCompatible(layout, firstType, load.getResult().getType()))
-    return failure();
-
-  insertFieldIndirection<LoadOp>(load, rewriter, inconsistentElementType);
-
-  // If the load does not use the first type but a type that can be casted from
-  // it, add a bitcast and change the load type.
-  if (firstType != load.getResult().getType()) {
-    rewriter.setInsertionPointAfterValue(load.getResult());
-    BitcastOp bitcast = rewriter.create<BitcastOp>(
-        load->getLoc(), load.getResult().getType(), load.getResult());
-    rewriter.modifyOpInPlace(load,
-                             [&]() { load.getResult().setType(firstType); });
-    rewriter.replaceAllUsesExcept(load.getResult(), bitcast.getResult(),
-                                  bitcast);
-  }
-
-  return success();
-}
-
-template <>
-LogicalResult AddFieldGetterToStructDirectUse<StoreOp>::matchAndRewrite(
-    StoreOp store, PatternRewriter &rewriter) const {
-  PatternRewriter::InsertionGuard guard(rewriter);
-
-  Type inconsistentElementType =
-      isElementTypeInconsistent(store.getAddr(), store.getValue().getType());
-  if (!inconsistentElementType)
-    return failure();
-  Type firstType = getFirstSubelementType(inconsistentElementType);
-  if (!firstType)
-    return failure();
-
-  DataLayout layout = DataLayout::closest(store);
-  // Check that the first field has the right type or can at least be bitcast
-  // to the right type.
-  if (!areBitcastCompatible(layout, firstType, store.getValue().getType()))
-    return failure();
-
-  insertFieldIndirection<StoreOp>(store, rewriter, inconsistentElementType);
-
-  rewriter.modifyOpInPlace(
-      store, [&]() { store.getValueMutable().assign(store.getValue()); });
-
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // CanonicalizeAlignedGep
 //===----------------------------------------------------------------------===//
@@ -616,26 +511,6 @@ LogicalResult SplitStores::matchAndRewrite(StoreOp store,
   return success();
 }
 
-LogicalResult BitcastStores::matchAndRewrite(StoreOp store,
-                                             PatternRewriter &rewriter) const {
-  Type sourceType = store.getValue().getType();
-  Type typeHint = isElementTypeInconsistent(store.getAddr(), sourceType);
-  if (!typeHint) {
-    // Nothing to do, since it is already consistent.
-    return failure();
-  }
-
-  auto dataLayout = DataLayout::closest(store);
-  if (!areBitcastCompatible(dataLayout, typeHint, sourceType))
-    return failure();
-
-  auto bitcastOp =
-      rewriter.create<BitcastOp>(store.getLoc(), typeHint, store.getValue());
-  rewriter.modifyOpInPlace(store,
-                           [&] { store.getValueMutable().assign(bitcastOp); });
-  return success();
-}
-
 LogicalResult SplitGEP::matchAndRewrite(GEPOp gepOp,
                                         PatternRewriter &rewriter) const {
   FailureOr<Type> typeHint = getRequiredConsistentGEPType(gepOp);
@@ -684,12 +559,8 @@ struct LLVMTypeConsistencyPass
     : public LLVM::impl::LLVMTypeConsistencyBase<LLVMTypeConsistencyPass> {
   void runOnOperation() override {
     RewritePatternSet rewritePatterns(&getContext());
-    rewritePatterns.add<AddFieldGetterToStructDirectUse<LoadOp>>(&getContext());
-    rewritePatterns.add<AddFieldGetterToStructDirectUse<StoreOp>>(
-        &getContext());
     rewritePatterns.add<CanonicalizeAlignedGep>(&getContext());
     rewritePatterns.add<SplitStores>(&getContext(), maxVectorSplitSize);
-    rewritePatterns.add<BitcastStores>(&getContext());
     rewritePatterns.add<SplitGEP>(&getContext());
     FrozenRewritePatternSet frozen(std::move(rewritePatterns));
 

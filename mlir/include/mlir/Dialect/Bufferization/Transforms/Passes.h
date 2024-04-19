@@ -148,23 +148,35 @@ std::unique_ptr<Pass> createBufferLoopHoistingPass();
 
 // Options struct for BufferResultsToOutParams pass.
 // Note: defined only here, not in tablegen.
-struct BufferResultsToOutParamsOptions {
+struct BufferResultsToOutParamsOpts {
+  /// Memcpy function: Generate a memcpy between two memrefs.
+  using MemCpyFn =
+      std::function<LogicalResult(OpBuilder &, Location, Value, Value)>;
+
   // Filter function; returns true if the function should be converted.
   // Defaults to true, i.e. all functions are converted.
   llvm::function_ref<bool(func::FuncOp *)> filterFn = [](func::FuncOp *func) {
     return true;
   };
+
+  /// Memcpy function; used to create a copy between two memrefs.
+  /// If this is empty, memref.copy is used.
+  std::optional<MemCpyFn> memCpyFn;
+
+  /// If true, the pass adds a "bufferize.result" attribute to each output
+  /// parameter.
+  bool addResultAttribute = false;
 };
 
 /// Creates a pass that converts memref function results to out-params.
 std::unique_ptr<Pass> createBufferResultsToOutParamsPass(
-    const BufferResultsToOutParamsOptions &options = {});
+    const BufferResultsToOutParamsOpts &options = {});
 
 /// Replace buffers that are returned from a function with an out parameter.
 /// Also update all call sites.
 LogicalResult
 promoteBufferResultsToOutParams(ModuleOp module,
-                                const BufferResultsToOutParamsOptions &options);
+                                const BufferResultsToOutParamsOpts &options);
 
 /// Creates a pass that drops memref function results that are equivalent to a
 /// function argument.

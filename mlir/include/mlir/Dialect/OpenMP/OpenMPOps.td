@@ -162,7 +162,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
     and how to initialize the copy from the original item in the copy region.
 
     Examples:
-    ---------
+
     * `private(x)` would be emitted as:
     ```mlir
     omp.private {type = private} @x.privatizer : !fir.ref<i32> alloc {
@@ -268,6 +268,9 @@ def ParallelOp : OpenMP_Op<"parallel", [
 
     The optional $proc_bind_val attribute controls the thread affinity for the execution
     of the parallel region.
+
+    The optional byref attribute controls whether reduction arguments are passed by
+    reference or by value.
   }];
 
   let arguments = (ins Optional<I1>:$if_expr_var,
@@ -278,12 +281,14 @@ def ParallelOp : OpenMP_Op<"parallel", [
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
              OptionalAttr<ProcBindKindAttr>:$proc_bind_val,
              Variadic<AnyType>:$private_vars,
-             OptionalAttr<SymbolRefArrayAttr>:$privatizers);
+             OptionalAttr<SymbolRefArrayAttr>:$privatizers,
+             UnitAttr:$byref);
 
   let regions = (region AnyRegion:$region);
 
   let builders = [
-    OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
+    OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins CArg<"const ParallelClauseOps &">:$clauses)>
   ];
   let extraClassDeclaration = [{
     /// Returns the number of reduction variables.
@@ -299,6 +304,7 @@ def ParallelOp : OpenMP_Op<"parallel", [
                 $allocators_vars, type($allocators_vars)
               ) `)`
           | `proc_bind` `(` custom<ClauseAttr>($proc_bind_val) `)`
+          | `byref` $byref
     ) custom<ParallelRegion>($region, $reduction_vars, type($reduction_vars),
                              $reductions, $private_vars, type($private_vars),
                              $privatizers) attr-dict
@@ -356,6 +362,10 @@ def TeamsOp : OpenMP_Op<"teams", [
                        OptionalAttr<SymbolRefArrayAttr>:$reductions);
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TeamsClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist(
@@ -446,6 +456,10 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments,
 
   let regions = (region SizedRegion<1>:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const SectionsClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist( `reduction` `(`
               custom<ReductionVarList>(
@@ -490,6 +504,10 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
 
   let regions = (region AnyRegion:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const SingleClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`allocate` `(`
               custom<AllocateAndAllocator>(
@@ -510,7 +528,7 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
 // 2.9.2 Workshare Loop Construct
 //===----------------------------------------------------------------------===//
 
-def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
+def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                          AllTypesMatch<["lowerBound", "upperBound", "step"]>,
                          RecursiveMemoryEffects, ReductionClauseInterface]> {
   let summary = "worksharing-loop construct";
@@ -570,6 +588,9 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     The optional `order` attribute specifies which order the iterations of the
     associate loops are executed in. Currently the only option for this
     attribute is "concurrent".
+
+    The optional `byref` attribute indicates that reduction arguments should be
+    passed by reference.
   }];
 
   let arguments = (ins Variadic<IntLikeType>:$lowerBound,
@@ -584,6 +605,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              OptionalAttr<ScheduleModifierAttr>:$schedule_modifier,
              UnitAttr:$simd_modifier,
              UnitAttr:$nowait,
+             UnitAttr:$byref,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
              OptionalAttr<OrderKindAttr>:$order_val,
              UnitAttr:$inclusive);
@@ -592,6 +614,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     OpBuilder<(ins "ValueRange":$lowerBound, "ValueRange":$upperBound,
                "ValueRange":$step,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins CArg<"const WsloopClauseOps &">:$clauses)>
   ];
 
   let regions = (region AnyRegion:$region);
@@ -613,11 +636,12 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                 $schedule_val, $schedule_modifier, $simd_modifier,
                 $schedule_chunk_var, type($schedule_chunk_var)) `)`
           |`nowait` $nowait
+          |`byref` $byref
           |`ordered` `(` $ordered_val `)`
           |`order` `(` custom<ClauseAttr>($order_val) `)`
-    ) custom<WsLoop>($region, $lowerBound, $upperBound, $step,
-                                  type($step), $reduction_vars, type($reduction_vars), $reductions,
-                                  $inclusive) attr-dict
+    ) custom<Wsloop>($region, $lowerBound, $upperBound, $step, type($step),
+                     $reduction_vars, type($reduction_vars), $reductions,
+                     $inclusive) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -688,6 +712,11 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
      );
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const SimdLoopClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`aligned` `(`
               custom<AlignedClause>($aligned_vars, type($aligned_vars),
@@ -714,7 +743,7 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
 
 def YieldOp : OpenMP_Op<"yield",
     [Pure, ReturnLike, Terminator,
-     ParentOneOf<["WsLoopOp", "ReductionDeclareOp",
+     ParentOneOf<["WsloopOp", "DeclareReductionOp",
      "AtomicUpdateOp", "SimdLoopOp", "PrivateClauseOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
@@ -770,6 +799,10 @@ def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
              OptionalAttr<OrderKindAttr>:$order_val);
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const DistributeClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist(`dist_schedule_static` $dist_schedule_static
@@ -873,6 +906,9 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
                        Variadic<AnyType>:$allocate_vars,
                        Variadic<AnyType>:$allocators_vars);
   let regions = (region AnyRegion:$region);
+  let builders = [
+    OpBuilder<(ins CArg<"const TaskClauseOps &">:$clauses)>
+  ];
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `)`
           |`final` `(` $final_expr `)`
@@ -904,7 +940,7 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
-def TaskLoopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
+def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
                            AutomaticAllocationScope, RecursiveMemoryEffects,
                            AllTypesMatch<["lowerBound", "upperBound", "step"]>,
                            ReductionClauseInterface]> {
@@ -1027,6 +1063,10 @@ def TaskLoopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
 
   let regions = (region AnyRegion:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const TaskloopClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `)`
           |`final` `(` $final_expr `)`
@@ -1062,7 +1102,7 @@ def TaskLoopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
-def TaskGroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
+def TaskgroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
                             ReductionClauseInterface,
                             AutomaticAllocationScope]> {
   let summary = "taskgroup construct";
@@ -1095,6 +1135,10 @@ def TaskGroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
                        Variadic<AnyType>:$allocators_vars);
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TaskgroupClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist(`task_reduction` `(`
@@ -1181,24 +1225,24 @@ def VariableCaptureKindAttr : EnumAttr<OpenMP_Dialect, VariableCaptureKind,
   let assemblyFormat = "`(` $value `)`";
 }
 
-def DataBoundsType : OpenMP_Type<"DataBounds", "data_bounds_ty"> {
-  let summary = "Type for representing omp data clause bounds information";
+def MapBoundsType : OpenMP_Type<"MapBounds", "map_bounds_ty"> {
+  let summary = "Type for representing omp map clause bounds information";
 }
 
-def DataBoundsOp : OpenMP_Op<"bounds",
+def MapBoundsOp : OpenMP_Op<"map.bounds",
     [AttrSizedOperandSegments, NoMemoryEffect]> {
   let summary = "Represents normalized bounds information for map clauses.";
 
   let description = [{
     This operation is a variation on the OpenACC dialects DataBoundsOp. Within
     the OpenMP dialect it stores the bounds/range of data to be mapped to a
-    device specified by map clauses on target directives. Within,
-    the OpenMP dialect the DataBoundsOp is associated with MapInfoOp,
+    device specified by map clauses on target directives. Within
+    the OpenMP dialect, the MapBoundsOp is associated with MapInfoOp,
     helping to store bounds information for the mapped variable.
 
     It is used to support OpenMP array sectioning, Fortran pointer and
     allocatable mapping and pointer/allocatable member of derived types.
-    In all cases the DataBoundsOp holds information on the section of
+    In all cases the MapBoundsOp holds information on the section of
     data to be mapped. Such as the upper bound and lower bound of the
     section of data to be mapped. This information is currently
     utilised by the LLVM-IR lowering to help generate instructions to
@@ -1217,7 +1261,7 @@ def DataBoundsOp : OpenMP_Op<"bounds",
     ```
     =>
     ```mlir
-    omp.bounds lower_bound(1) upper_bound(9) extent(9) start_idx(0)
+    omp.map.bounds lower_bound(1) upper_bound(9) extent(9) start_idx(0)
     ```
 
     Fortran:
@@ -1227,7 +1271,7 @@ def DataBoundsOp : OpenMP_Op<"bounds",
     ```
     =>
     ```mlir
-    omp.bounds lower_bound(1) upper_bound(9) extent(9) start_idx(1)
+    omp.map.bounds lower_bound(1) upper_bound(9) extent(9) start_idx(1)
     ```
 
     For Fortran pointers and allocatables (as well as those that are
@@ -1247,7 +1291,7 @@ def DataBoundsOp : OpenMP_Op<"bounds",
     ```
     =>
     ```mlir
-    omp.bounds lower_bound(0) upper_bound(9) extent(10) start_idx(1)
+    omp.map.bounds lower_bound(0) upper_bound(9) extent(10) start_idx(1)
     ```
 
     This operation records the bounds information in a normalized fashion
@@ -1266,7 +1310,7 @@ def DataBoundsOp : OpenMP_Op<"bounds",
                        Optional<IntLikeType>:$stride,
                        DefaultValuedAttr<BoolAttr, "false">:$stride_in_bytes,
                        Optional<IntLikeType>:$start_idx);
-  let results = (outs DataBoundsType:$result);
+  let results = (outs MapBoundsType:$result);
 
   let assemblyFormat = [{
     oilist(
@@ -1293,12 +1337,12 @@ def DataBoundsOp : OpenMP_Op<"bounds",
   let hasVerifier = 1;
 }
 
-def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
+def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
   let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
                        TypeAttr:$var_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<OpenMP_PointerLikeType>:$members,
-                       Variadic<DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
+                       Variadic<MapBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
                        OptionalAttr<UI64Attr>:$map_type,
                        OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
                        OptionalAttr<StrAttr>:$name);
@@ -1328,7 +1372,7 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
     ```
     =>
     ```mlir
-    omp.map_info var_ptr(%index_ssa) map_type(to) map_capture_type(ByRef)
+    omp.map.info var_ptr(%index_ssa) map_type(to) map_capture_type(ByRef)
       name(index)
     ```
 
@@ -1337,10 +1381,10 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
     - `var_type`: The type of the variable to copy.
     - `var_ptr_ptr`: Used when the variable copied is a member of a class, structure
       or derived type and refers to the originating struct.
-    - `members`:  Used to indicate mapped child members for the current MapInfoOp, 
-       represented as other MapInfoOp's, utilised in cases where a parent structure 
-       type and members of the structure type are being mapped at the same time. 
-       For example: map(to: parent, parent->member, parent->member2[:10])  
+    - `members`:  Used to indicate mapped child members for the current MapInfoOp,
+       represented as other MapInfoOp's, utilised in cases where a parent structure
+       type and members of the structure type are being mapped at the same time.
+       For example: map(to: parent, parent->member, parent->member2[:10])
     - `bounds`: Used when copying slices of array's, pointers or pointer members of
        objects (e.g. derived types or classes), indicates the bounds to be copied
        of the variable. When it's an array slice it is in rank order where rank 0
@@ -1381,8 +1425,8 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
 // 2.14.2 target data Construct
 //===---------------------------------------------------------------------===//
 
-def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments, 
-                                             MapClauseOwningOpInterface]>{
+def TargetDataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments,
+                                            MapClauseOwningOpInterface]>{
   let summary = "target data construct";
   let description = [{
     Map variables to a device data environment for the extent of the region.
@@ -1422,6 +1466,10 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments,
 
   let regions = (region AnyRegion:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetDataClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
@@ -1438,8 +1486,8 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments,
 // 2.14.3 target enter data Construct
 //===---------------------------------------------------------------------===//
 
-def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
-                                                 [AttrSizedOperandSegments, 
+def TargetEnterDataOp: OpenMP_Op<"target_enter_data",
+                                                 [AttrSizedOperandSegments,
                                                   MapClauseOwningOpInterface]>{
   let  summary = "target enter data construct";
   let description = [{
@@ -1476,6 +1524,10 @@ def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
                        UnitAttr:$nowait,
                        Variadic<AnyType>:$map_operands);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
@@ -1492,7 +1544,7 @@ def Target_EnterDataOp: OpenMP_Op<"target_enter_data",
 // 2.14.4 target exit data Construct
 //===---------------------------------------------------------------------===//
 
-def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
+def TargetExitDataOp: OpenMP_Op<"target_exit_data",
                                                  [AttrSizedOperandSegments,
                                                   MapClauseOwningOpInterface]>{
   let  summary = "target exit data construct";
@@ -1530,6 +1582,10 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
                        UnitAttr:$nowait,
                        Variadic<AnyType>:$map_operands);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
@@ -1543,13 +1599,12 @@ def Target_ExitDataOp: OpenMP_Op<"target_exit_data",
 }
 
 //===---------------------------------------------------------------------===//
-// 2.14.6 target update data Construct
+// 2.14.6 target update Construct
 //===---------------------------------------------------------------------===//
 
-def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
-                                                 [AttrSizedOperandSegments,
-                                                  MapClauseOwningOpInterface]>{
-  let  summary = "target update data construct";
+def TargetUpdateOp: OpenMP_Op<"target_update", [AttrSizedOperandSegments,
+                                                MapClauseOwningOpInterface]>{
+  let  summary = "target update construct";
   let description = [{
     The target update directive makes the corresponding list items in the device
     data environment consistent with their original list items, according to the
@@ -1587,6 +1642,10 @@ def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
                        UnitAttr:$nowait,
                        Variadic<OpenMP_PointerLikeType>:$map_operands);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
     | `device` `(` $device `:` type($device) `)`
@@ -1603,7 +1662,7 @@ def Target_UpdateDataOp: OpenMP_Op<"target_update_data",
 // 2.14.5 target construct
 //===----------------------------------------------------------------------===//
 
-def TargetOp : OpenMP_Op<"target",[IsolatedFromAbove, MapClauseOwningOpInterface,
+def TargetOp : OpenMP_Op<"target", [IsolatedFromAbove, MapClauseOwningOpInterface,
                                    OutlineableOpenMPOpInterface, AttrSizedOperandSegments]> {
   let summary = "target construct";
   let description = [{
@@ -1639,6 +1698,10 @@ def TargetOp : OpenMP_Op<"target",[IsolatedFromAbove, MapClauseOwningOpInterface
                        Variadic<AnyType>:$map_operands);
 
   let regions = (region AnyRegion:$region);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TargetClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     oilist( `if` `(` $if_expr `)`
@@ -1683,6 +1746,10 @@ def CriticalDeclareOp : OpenMP_Op<"critical.declare", [Symbol]> {
 
   let arguments = (ins SymbolNameAttr:$sym_name,
                        DefaultValuedAttr<I64Attr, "0">:$hint_val);
+
+  let builders = [
+    OpBuilder<(ins CArg<"const CriticalClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = [{
     $sym_name oilist(`hint` `(` custom<SynchronizationHint>($hint_val) `)`)
@@ -1764,6 +1831,10 @@ def OrderedOp : OpenMP_Op<"ordered"> {
              ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$num_loops_val,
              Variadic<AnyType>:$depend_vec_vars);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const OrderedOpClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{
     ( `depend_type` `` $depend_type_val^ )?
     ( `depend_vec` `(` $depend_vec_vars^ `:` type($depend_vec_vars) `)` )?
@@ -1772,7 +1843,7 @@ def OrderedOp : OpenMP_Op<"ordered"> {
   let hasVerifier = 1;
 }
 
-def OrderedRegionOp : OpenMP_Op<"ordered_region"> {
+def OrderedRegionOp : OpenMP_Op<"ordered.region"> {
   let summary = "ordered construct with region";
   let description = [{
     The ordered construct with region specifies a structured block in a
@@ -1788,6 +1859,10 @@ def OrderedRegionOp : OpenMP_Op<"ordered_region"> {
 
   let regions = (region AnyRegion:$region);
 
+  let builders = [
+    OpBuilder<(ins CArg<"const OrderedRegionClauseOps &">:$clauses)>
+  ];
+
   let assemblyFormat = [{ ( `simd` $simd^ )? $region attr-dict}];
   let hasVerifier = 1;
 }
@@ -1802,6 +1877,10 @@ def TaskwaitOp : OpenMP_Op<"taskwait"> {
     The taskwait construct specifies a wait on the completion of child tasks
     of the current task.
   }];
+
+  let builders = [
+    OpBuilder<(ins CArg<"const TaskwaitClauseOps &">:$clauses)>
+  ];
 
   let assemblyFormat = "attr-dict";
 }
@@ -2103,7 +2182,7 @@ def CancelOp : OpenMP_Op<"cancel"> {
 //===----------------------------------------------------------------------===//
 // 2.18.2 Cancellation Point Construct
 //===----------------------------------------------------------------------===//
-def CancellationPointOp : OpenMP_Op<"cancellationpoint"> {
+def CancellationPointOp : OpenMP_Op<"cancellation_point"> {
   let summary = "cancellation point directive";
   let description = [{
     The cancellation point construct introduces a user-defined cancellation
@@ -2121,13 +2200,13 @@ def CancellationPointOp : OpenMP_Op<"cancellationpoint"> {
 // 2.19.5.7 declare reduction Directive
 //===----------------------------------------------------------------------===//
 
-def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol,
+def DeclareReductionOp : OpenMP_Op<"declare_reduction", [Symbol,
                                                          IsolatedFromAbove]> {
   let summary = "declares a reduction kind";
 
   let description = [{
-    Declares an OpenMP reduction kind. This requires two mandatory and one
-    optional region.
+    Declares an OpenMP reduction kind. This requires two mandatory and two
+    optional regions.
 
       1. The initializer region specifies how to initialize the thread-local
          reduction value. This is usually the neutral element of the reduction.
@@ -2140,6 +2219,10 @@ def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol,
       3. The atomic reduction region is optional and specifies how two values
          can be combined atomically given local accumulator variables. It is
          expected to store the combined value in the first accumulator variable.
+      4. The cleanup region is optional and specifies how to clean up any memory
+         allocated by the initializer region. The region has an argument that
+         contains the value of the thread-local reduction accumulator. This will
+         be executed after the reduction has completed.
 
     Note that the MLIR type system does not allow for type-polymorphic
     reductions. Separate reduction declarations should be created for different
@@ -2154,12 +2237,14 @@ def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol,
 
   let regions = (region AnyRegion:$initializerRegion,
                         AnyRegion:$reductionRegion,
-                        AnyRegion:$atomicReductionRegion);
+                        AnyRegion:$atomicReductionRegion,
+                        AnyRegion:$cleanupRegion);
 
   let assemblyFormat = "$sym_name `:` $type attr-dict-with-keyword "
                        "`init` $initializerRegion "
                        "`combiner` $reductionRegion "
-                       "custom<AtomicReductionRegion>($atomicReductionRegion)";
+                       "custom<AtomicReductionRegion>($atomicReductionRegion) "
+                       "custom<CleanupReductionRegion>($cleanupRegion)";
 
   let extraClassDeclaration = [{
     PointerLikeType getAccumulatorType() {

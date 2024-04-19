@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_TESTUTILS_ROUNDINGMODEUTILS_H
-#define LLVM_LIBC_UTILS_TESTUTILS_ROUNDINGMODEUTILS_H
+#ifndef LLVM_LIBC_TEST_UNITTEST_ROUNDINGMODEUTILS_H
+#define LLVM_LIBC_TEST_UNITTEST_ROUNDINGMODEUTILS_H
 
 #include <stdint.h>
 
@@ -34,4 +34,4 @@ template <RoundingMode R> struct ForceRoundingModeTest : ForceRoundingMode {
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_UTILS_TESTUTILS_ROUNDINGMODEUTILS_H
+#endif // LLVM_LIBC_TEST_UNITTEST_ROUNDINGMODEUTILS_H

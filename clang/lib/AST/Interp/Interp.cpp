@@ -254,10 +254,10 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
     if (VD->isConstexpr())
       return true;
 
-    if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
-      return false;
-
     QualType T = VD->getType();
+    if (S.getLangOpts().CPlusPlus && !S.getLangOpts().CPlusPlus11)
+      return T->isSignedIntegerOrEnumerationType() || T->isUnsignedIntegerOrEnumerationType();
+
     if (T.isConstQualified())
       return true;
 
@@ -283,10 +283,6 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 
 static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return CheckConstant(S, OpPC, Ptr.getDeclDesc());
-}
-
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  return !Ptr.isDummy();
 }
 
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -489,7 +485,9 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
         // Don't emit anything if the function isn't defined and we're checking
         // for a constant expression. It might be defined at the point we're
         // actually calling it.
-        if (!DiagDecl->isDefined() && S.checkingPotentialConstantExpression())
+        bool IsExtern = DiagDecl->getStorageClass() == SC_Extern;
+        if (!DiagDecl->isDefined() && !IsExtern &&
+            S.checkingPotentialConstantExpression())
           return false;
 
         // If the declaration is defined _and_ declared 'constexpr', the below
@@ -595,10 +593,8 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
   return true;
 }
 
-/// We aleady know the given DeclRefExpr is invalid for some reason,
-/// now figure out why and print appropriate diagnostics.
-bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
-  const ValueDecl *D = DR->getDecl();
+static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
+                                const ValueDecl *D) {
   const SourceInfo &E = S.Current->getSource(OpPC);
 
   if (isa<ParmVarDecl>(D)) {
@@ -621,8 +617,26 @@ bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
       return false;
     }
   }
-
   return false;
+}
+
+/// We aleady know the given DeclRefExpr is invalid for some reason,
+/// now figure out why and print appropriate diagnostics.
+bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
+  const ValueDecl *D = DR->getDecl();
+  return diagnoseUnknownDecl(S, OpPC, D);
+}
+
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!Ptr.isDummy())
+    return true;
+
+  const Descriptor *Desc = Ptr.getDeclDesc();
+  const ValueDecl *D = Desc->asValueDecl();
+  if (!D)
+    return false;
+
+  return diagnoseUnknownDecl(S, OpPC, D);
 }
 
 bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,

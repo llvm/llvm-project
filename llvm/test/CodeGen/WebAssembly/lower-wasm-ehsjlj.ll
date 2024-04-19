@@ -108,8 +108,8 @@ catch:                                            ; preds = %catch.start
   call void @__cxa_end_catch() [ "funclet"(token %2) ]
   catchret from %2 to label %catchret.dest
 ; CHECK: catch:                                            ; preds = %catch.start
-; CHECK-NEXT:   %exn = load ptr, ptr %exn.slot15, align 4
-; CHECK-NEXT:   %5 = call ptr @__cxa_begin_catch(ptr %exn) #7 [ "funclet"(token %2) ]
+; CHECK-NEXT:   %exn = load ptr, ptr %exn.slot6, align 4
+; CHECK-NEXT:   %5 = call ptr @__cxa_begin_catch(ptr %exn) #6 [ "funclet"(token %2) ]
 ; CHECK-NEXT:   invoke void @__cxa_end_catch() [ "funclet"(token %2) ]
 ; CHECK-NEXT:           to label %.noexc unwind label %catch.dispatch.longjmp
 
@@ -265,7 +265,7 @@ ehcleanup:                                        ; preds = %entry
   ; (cleanuppad), whose parent is 'none', so we should unwind directly to
   ; %catch.dispatch.longjmp.
   %call2 = call noundef ptr @_ZN4TempD2Ev(ptr noundef %t) #2 [ "funclet"(token %0) ]
-; CHECK: %call13 = invoke {{.*}} ptr @_ZN4TempD2Ev(ptr
+; CHECK: %call11 = invoke {{.*}} ptr @_ZN4TempD2Ev(ptr
 ; CHECK-NEXT:    to label {{.*}} unwind label %catch.dispatch.longjmp
   cleanupret from %0 unwind to caller
 }

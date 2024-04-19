@@ -40,7 +40,7 @@ void Fn3( int64_t2 p0);
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'half2':'half __attribute__((ext_vector_type(2)))' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'half2':'half __attribute__((ext_vector_type(2)))' lvalue ParmVar {{.*}} 'p0' 'half2':'half __attribute__((ext_vector_type(2)))'
 // CHECKIR-LABEL: Call3
-// CHECKIR: %conv = fptosi <2 x half> {{.*}} to <2 x i64>
+// CHECKIR: {{.*}} = fptosi <2 x half> {{.*}} to <2 x i64>
 void Call3(half2 p0) {
   Fn3(p0);
 }

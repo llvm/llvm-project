@@ -497,7 +497,7 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   // Is X in [IntMin, 0]?  NOTE: INT_MIN is fine!
   if (Range.getSignedMax().isNonPositive()) {
     IRBuilder<> B(II);
-    Value *NegX = B.CreateNeg(X, II->getName(), /*HasNUW=*/false,
+    Value *NegX = B.CreateNeg(X, II->getName(),
                               /*HasNSW=*/IsIntMinPoison);
     ++NumAbs;
     II->replaceAllUsesWith(NegX);
@@ -590,7 +590,7 @@ static bool processSaturatingInst(SaturatingInst *SI, LazyValueInfo *LVI) {
   bool NSW = SI->isSigned();
   bool NUW = !SI->isSigned();
   BinaryOperator *BinOp = BinaryOperator::Create(
-      Opcode, SI->getLHS(), SI->getRHS(), SI->getName(), SI);
+      Opcode, SI->getLHS(), SI->getRHS(), SI->getName(), SI->getIterator());
   BinOp->setDebugLoc(SI->getDebugLoc());
   setDeducedOverflowingFlags(BinOp, Opcode, NSW, NUW);
 
@@ -805,9 +805,12 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
     Value *FrozenX = X;
     if (!isGuaranteedNotToBeUndef(X))
       FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
-    auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
-    auto *Cmp =
-        B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, Y, Instr->getName() + ".cmp");
+    Value *FrozenY = Y;
+    if (!isGuaranteedNotToBeUndef(Y))
+      FrozenY = B.CreateFreeze(Y, Y->getName() + ".frozen");
+    auto *AdjX = B.CreateNUWSub(FrozenX, FrozenY, Instr->getName() + ".urem");
+    auto *Cmp = B.CreateICmp(ICmpInst::ICMP_ULT, FrozenX, FrozenY,
+                             Instr->getName() + ".cmp");
     ExpandedOp = B.CreateSelect(Cmp, FrozenX, AdjX);
   } else {
     auto *Cmp =
@@ -905,21 +908,22 @@ static bool processSRem(BinaryOperator *SDI, const ConstantRange &LCR,
   for (Operand &Op : Ops) {
     if (Op.D == Domain::NonNegative)
       continue;
-    auto *BO =
-        BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg", SDI);
+    auto *BO = BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg",
+                                         SDI->getIterator());
     BO->setDebugLoc(SDI->getDebugLoc());
     Op.V = BO;
   }
 
-  auto *URem =
-      BinaryOperator::CreateURem(Ops[0].V, Ops[1].V, SDI->getName(), SDI);
+  auto *URem = BinaryOperator::CreateURem(Ops[0].V, Ops[1].V, SDI->getName(),
+                                          SDI->getIterator());
   URem->setDebugLoc(SDI->getDebugLoc());
 
   auto *Res = URem;
 
   // If the divident was non-positive, we need to negate the result.
   if (Ops[0].D == Domain::NonPositive) {
-    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg",
+                                    SDI->getIterator());
     Res->setDebugLoc(SDI->getDebugLoc());
   }
 
@@ -966,14 +970,14 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
   for (Operand &Op : Ops) {
     if (Op.D == Domain::NonNegative)
       continue;
-    auto *BO =
-        BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg", SDI);
+    auto *BO = BinaryOperator::CreateNeg(Op.V, Op.V->getName() + ".nonneg",
+                                         SDI->getIterator());
     BO->setDebugLoc(SDI->getDebugLoc());
     Op.V = BO;
   }
 
-  auto *UDiv =
-      BinaryOperator::CreateUDiv(Ops[0].V, Ops[1].V, SDI->getName(), SDI);
+  auto *UDiv = BinaryOperator::CreateUDiv(Ops[0].V, Ops[1].V, SDI->getName(),
+                                          SDI->getIterator());
   UDiv->setDebugLoc(SDI->getDebugLoc());
   UDiv->setIsExact(SDI->isExact());
 
@@ -981,7 +985,8 @@ static bool processSDiv(BinaryOperator *SDI, const ConstantRange &LCR,
 
   // If the operands had two different domains, we need to negate the result.
   if (Ops[0].D != Ops[1].D) {
-    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+    Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg",
+                                    SDI->getIterator());
     Res->setDebugLoc(SDI->getDebugLoc());
   }
 
@@ -1039,7 +1044,7 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
 
   ++NumAShrsConverted;
   auto *BO = BinaryOperator::CreateLShr(SDI->getOperand(0), SDI->getOperand(1),
-                                        "", SDI);
+                                        "", SDI->getIterator());
   BO->takeName(SDI);
   BO->setDebugLoc(SDI->getDebugLoc());
   BO->setIsExact(SDI->isExact());
@@ -1059,7 +1064,8 @@ static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
     return false;
 
   ++NumSExt;
-  auto *ZExt = CastInst::CreateZExtOrBitCast(Base, SDI->getType(), "", SDI);
+  auto *ZExt = CastInst::CreateZExtOrBitCast(Base, SDI->getType(), "",
+                                             SDI->getIterator());
   ZExt->takeName(SDI);
   ZExt->setDebugLoc(SDI->getDebugLoc());
   ZExt->setNonNeg();

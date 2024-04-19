@@ -167,9 +167,13 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("-relax");
   }
 
-  // -mno-unaligned-access is default, unless -munaligned-access is specified.
-  AddTargetFeature(Args, Features, options::OPT_munaligned_access,
-                   options::OPT_mno_unaligned_access, "fast-unaligned-access");
+  // Android requires fast unaligned access on RISCV64.
+  if (Triple.isAndroid())
+    Features.push_back("+fast-unaligned-access");
+
+  // -mstrict-align is default, unless -mno-strict-align is specified.
+  AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
+                   options::OPT_mstrict_align, "fast-unaligned-access");
 
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.

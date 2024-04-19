@@ -2233,12 +2233,16 @@ void Sema::CheckImplementationIvars(ObjCImplementationDecl *ImpDecl,
     Diag(IVI->getLocation(), diag::err_inconsistent_ivar_count);
 }
 
+static bool shouldWarnUndefinedMethod(const ObjCMethodDecl *M) {
+  // No point warning no definition of method which is 'unavailable'.
+  return M->getAvailability() != AR_Unavailable;
+}
+
 static void WarnUndefinedMethod(Sema &S, ObjCImplDecl *Impl,
                                 ObjCMethodDecl *method, bool &IncompleteImpl,
                                 unsigned DiagID,
                                 NamedDecl *NeededFor = nullptr) {
-  // No point warning no definition of method which is 'unavailable'.
-  if (method->getAvailability() == AR_Unavailable)
+  if (!shouldWarnUndefinedMethod(method))
     return;
 
   // FIXME: For now ignore 'IncompleteImpl'.

@@ -1,6 +1,6 @@
 // RUN: mlir-opt -convert-scf-to-openmp -split-input-file %s | FileCheck %s
 
-// CHECK: omp.reduction.declare @[[$REDF:.*]] : f32
+// CHECK: omp.declare_reduction @[[$REDF:.*]] : f32
 
 // CHECK: init
 // CHECK: %[[INIT:.*]] = llvm.mlir.constant(0.000000e+00 : f32)
@@ -51,7 +51,7 @@ func.func @reduction1(%arg0 : index, %arg1 : index, %arg2 : index,
 // -----
 
 // Only check the declaration here, the rest is same as above.
-// CHECK: omp.reduction.declare @{{.*}} : f32
+// CHECK: omp.declare_reduction @{{.*}} : f32
 
 // CHECK: init
 // CHECK: %[[INIT:.*]] = llvm.mlir.constant(1.000000e+00 : f32)
@@ -87,7 +87,7 @@ func.func @reduction2(%arg0 : index, %arg1 : index, %arg2 : index,
 // Mostly, the same check as above, except for the types,
 // the name of the op and the init value.
 
-// CHECK: omp.reduction.declare @[[$REDI:.*]] : i32
+// CHECK: omp.declare_reduction @[[$REDI:.*]] : i32
 
 // CHECK: init
 // CHECK: %[[INIT:.*]] = llvm.mlir.constant(1 : i32)
@@ -126,7 +126,7 @@ func.func @reduction_muli(%arg0 : index, %arg1 : index, %arg2 : index,
 // -----
 
 // Only check the declaration here, the rest is same as above.
-// CHECK: omp.reduction.declare @{{.*}} : f32
+// CHECK: omp.declare_reduction @{{.*}} : f32
 
 // CHECK: init
 // CHECK: %[[INIT:.*]] = llvm.mlir.constant(-3.4
@@ -160,7 +160,7 @@ func.func @reduction3(%arg0 : index, %arg1 : index, %arg2 : index,
 
 // -----
 
-// CHECK: omp.reduction.declare @[[$REDF1:.*]] : f32
+// CHECK: omp.declare_reduction @[[$REDF1:.*]] : f32
 
 // CHECK: init
 // CHECK: %[[INIT:.*]] = llvm.mlir.constant(-3.4
@@ -174,7 +174,7 @@ func.func @reduction3(%arg0 : index, %arg1 : index, %arg2 : index,
 
 // CHECK-NOT: atomic
 
-// CHECK: omp.reduction.declare @[[$REDF2:.*]] : i64
+// CHECK: omp.declare_reduction @[[$REDF2:.*]] : i64
 
 // CHECK: init
 // CHECK: %[[INIT:.*]] = llvm.mlir.constant
