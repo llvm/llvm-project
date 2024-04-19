@@ -3098,6 +3098,79 @@ TEST(TransferTest, ResultObjectLocationForCXXOperatorCallExpr) {
       });
 }
 
+TEST(TransferTest, ResultObjectLocationForInitListExpr) {
+  std::string Code = R"cc(
+    struct Inner {};
+
+    struct Outer { Inner I; };
+
+    void target() {
+      Outer O = { Inner() };
+      // [[p]]
+    }
+  )cc";
+  using ast_matchers::asString;
+  using ast_matchers::cxxConstructExpr;
+  using ast_matchers::hasType;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  using ast_matchers::traverse;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Construct = selectFirst<CXXConstructExpr>(
+            "construct",
+            match(
+                cxxConstructExpr(hasType(asString("Inner"))).bind("construct"),
+                ASTCtx));
+
+        EXPECT_EQ(
+            &Env.getResultObjectLocation(*Construct),
+            &getFieldLoc(getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "O"),
+                         "I", ASTCtx));
+      });
+}
+
+TEST(TransferTest, ResultObjectLocationForParenInitListExpr) {
+  std::string Code = R"cc(
+    struct Inner {};
+
+    struct Outer { Inner I; };
+
+    void target() {
+      Outer O((Inner()));
+      // [[p]]
+    }
+  )cc";
+  using ast_matchers::asString;
+  using ast_matchers::cxxConstructExpr;
+  using ast_matchers::hasType;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  using ast_matchers::traverse;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Construct = selectFirst<CXXConstructExpr>(
+            "construct",
+            match(
+                cxxConstructExpr(hasType(asString("Inner"))).bind("construct"),
+                ASTCtx));
+
+        EXPECT_EQ(
+            &Env.getResultObjectLocation(*Construct),
+            &getFieldLoc(getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "O"),
+                         "I", ASTCtx));
+      },
+      LangStandard::lang_cxx20);
+}
+
 // Check that the `std::strong_ordering` object returned by builtin `<=>` has a
 // correctly modeled result object location.
 TEST(TransferTest, ResultObjectLocationForBuiltinSpaceshipOperator) {
