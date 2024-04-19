@@ -48,9 +48,15 @@ struct TestDataLayoutQuery
       uint64_t stackAlignment = layout.getStackAlignment();
 
       auto convertTypeSizeToAttr = [&](llvm::TypeSize typeSize) -> Attribute {
-        if (typeSize.isScalable())
-          return builder.getStringAttr("scalable");
-        return builder.getIndexAttr(typeSize);
+        if (!typeSize.isScalable())
+          return builder.getIndexAttr(typeSize);
+
+        return builder.getDictionaryAttr({
+            builder.getNamedAttr("scalable", builder.getUnitAttr()),
+            builder.getNamedAttr(
+                "minimal_size",
+                builder.getIndexAttr(typeSize.getKnownMinValue())),
+        });
       };
 
       op->setAttrs(
