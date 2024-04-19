@@ -1309,6 +1309,13 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__GCC_ATOMIC_TEST_AND_SET_TRUEVAL", "1");
   }
 
+  // GCC defines these macros in both C and C++ modes despite them being needed
+  // mostly for STL implementations in C++.
+  Builder.defineMacro("__GCC_DESTRUCTIVE_SIZE",
+                      Twine(TI.hardwareDestructiveInterferenceSize()));
+  Builder.defineMacro("__GCC_CONSTRUCTIVE_SIZE",
+                      Twine(TI.hardwareConstructiveInterferenceSize()));
+
   auto addLockFreeMacros = [&](const llvm::Twine &Prefix) {
     // Used by libc++ and libstdc++ to implement ATOMIC_<foo>_LOCK_FREE.
 #define DEFINE_LOCK_FREE_MACRO(TYPE, Type)                                     \

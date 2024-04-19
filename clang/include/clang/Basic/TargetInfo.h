@@ -1792,6 +1792,11 @@ public:
   /// Whether to support HIP image/texture API's.
   virtual bool hasHIPImageSupport() const { return true; }
 
+  /// The minimum offset between two objects to avoid false sharing.
+  virtual unsigned hardwareDestructiveInterferenceSize() const { return 64; }
+  // The maximum size of contiguous memory to promote true sharing.
+  virtual unsigned hardwareConstructiveInterferenceSize() const { return 64; }
+
 protected:
   /// Copy type and layout related info.
   void copyAuxTarget(const TargetInfo *Aux);
