@@ -4322,25 +4322,6 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst::Predicate Pred, Value *Op0,
   if (!IsLowBitMask())
     return nullptr;
 
-  // The mask value may be a vector constant that has undefined elements. But
-  // it may not be safe to propagate those undefs into the new compare, so
-  // replace those elements by copying an existing, defined, and safe scalar
-  // constant.
-  Type *OpTy = M->getType();
-  auto *VecC = dyn_cast<Constant>(M);
-  auto *OpVTy = dyn_cast<FixedVectorType>(OpTy);
-  if (OpVTy && VecC && VecC->containsUndefOrPoisonElement()) {
-    Constant *SafeReplacementConstant = nullptr;
-    for (unsigned i = 0, e = OpVTy->getNumElements(); i != e; ++i) {
-      if (!isa<UndefValue>(VecC->getAggregateElement(i))) {
-        SafeReplacementConstant = VecC->getAggregateElement(i);
-        break;
-      }
-    }
-    assert(SafeReplacementConstant && "Failed to find undef replacement");
-    M = Constant::replaceUndefsWith(VecC, SafeReplacementConstant);
-  }
-
   return IC.Builder.CreateICmp(DstPred, X, M);
 }
 

@@ -842,9 +842,6 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
        isKnownNeverNaN(&I, /*Depth=*/0, SQ.getWithInstruction(&I)))) {
     if (FPC->isNegative())
       Op0 = Builder.CreateFNegFMF(Op0, &I);
-    Op1 = Constant::replaceUndefsWith(
-        cast<Constant>(Op1),
-        ConstantFP::get(Op1->getType()->getScalarType(), *FPC));
     CallInst *CopySign = Builder.CreateIntrinsic(Intrinsic::copysign,
                                                  {I.getType()}, {Op1, Op0}, &I);
     return replaceInstUsesWith(I, CopySign);
