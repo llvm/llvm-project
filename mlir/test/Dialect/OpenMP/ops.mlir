@@ -90,7 +90,8 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
     // CHECK-NEXT: omp.parallel
     omp.parallel {
       // CHECK-NEXT: omp.wsloop
-      omp.wsloop {
+      // TODO Remove induction variables from omp.wsloop.
+      omp.wsloop for (%iv) : index = (%idx) to (%idx) step (%idx) {
         // CHECK-NEXT: omp.loop_nest
         omp.loop_nest (%iv2) : index = (%idx) to (%idx) step (%idx) {
           omp.yield
