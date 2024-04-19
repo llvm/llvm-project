@@ -6169,8 +6169,7 @@ void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
 
 OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
   auto constOperand = adaptor.getInput();
-  if (!constOperand.isa_and_nonnull<IntegerAttr, FloatAttr>())
-    return {};
+  if (!isa_and_nonnull<IntegerAttr, FloatAttr>(constOperand)) return {};
 
   // SplatElementsAttr::get treats single value for second arg as being a splat.
   return SplatElementsAttr::get(getType(), {constOperand});
