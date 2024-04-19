@@ -1176,21 +1176,8 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
 CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name) {
   if (name.empty())
     return CompilerType();
-  auto type_system = GetTypeSystem(/*prefer_dynamic*/ false);
-  auto *symbol_file = type_system->GetSymbolFile();
-  if (!symbol_file)
-    return CompilerType();
-  auto decl_context = type_system->GetCompilerDeclContextForType(m_static_type);
-  if (!decl_context.IsValid())
-    return CompilerType();
-  TypeQuery query(decl_context, ConstString(name),
-                  TypeQueryOptions::e_find_one);
-  TypeResults results;
-  symbol_file->FindTypes(query, results);
-  TypeSP type_sp = results.GetFirstType();
-  if (type_sp)
-    return type_sp->GetFullCompilerType();
-  return CompilerType();
+  return GetCompilerType(/*prefer_dynamic=*/false)
+      .GetDirectNestedTypeWithName(name);
 }
 
 bool TypeMemberFunctionImpl::IsValid() {
