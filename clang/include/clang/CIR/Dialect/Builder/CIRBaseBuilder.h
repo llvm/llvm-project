@@ -54,6 +54,18 @@ public:
                                          getAttr<mlir::cir::IntAttr>(typ, val));
   }
 
+  mlir::cir::ConstantOp getConstant(mlir::Location loc, mlir::TypedAttr attr) {
+    return create<mlir::cir::ConstantOp>(loc, attr.getType(), attr);
+  }
+
+  mlir::cir::BoolType getBoolTy() {
+    return ::mlir::cir::BoolType::get(getContext());
+  }
+
+  mlir::cir::VoidType getVoidTy() {
+    return ::mlir::cir::VoidType::get(getContext());
+  }
+
   mlir::cir::PointerType getVoidPtrTy(unsigned AddrSpace = 0) {
     if (AddrSpace)
       llvm_unreachable("address space is NYI");
@@ -181,6 +193,11 @@ public:
                                      mlir::cir::CastKind::ptr_to_int, src);
   }
 
+  mlir::Value createPtrToBoolCast(mlir::Value v) {
+    return create<mlir::cir::CastOp>(v.getLoc(), getBoolTy(),
+                                     mlir::cir::CastKind::ptr_to_bool, v);
+  }
+
   // TODO(cir): the following function was introduced to keep in sync with LLVM
   // codegen. CIR does not have "zext" operations. It should eventually be
   // renamed or removed. For now, we just add whatever cast is required here.
@@ -211,6 +228,10 @@ public:
       return src;
     return create<mlir::cir::CastOp>(loc, newTy, mlir::cir::CastKind::bitcast,
                                      src);
+  }
+
+  mlir::Value createPtrIsNull(mlir::Value ptr) {
+    return createNot(createPtrToBoolCast(ptr));
   }
 
   //

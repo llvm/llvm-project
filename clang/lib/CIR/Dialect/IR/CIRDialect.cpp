@@ -99,6 +99,11 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << cmpThreeWayInfoAttr.getAlias();
       return AliasResult::FinalAlias;
     }
+    if (auto dynCastInfoAttr =
+            attr.dyn_cast<mlir::cir::DynamicCastInfoAttr>()) {
+      os << dynCastInfoAttr.getAlias();
+      return AliasResult::FinalAlias;
+    }
 
     return AliasResult::NoAlias;
   }

@@ -19,6 +19,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
+#include "mlir/IR/Attributes.h"
 #include "clang/AST/Mangle.h"
 
 namespace cir {
@@ -304,14 +305,9 @@ public:
 
   virtual void buildBadCastCall(CIRGenFunction &CGF, mlir::Location loc) = 0;
 
-  virtual bool shouldDynamicCastCallBeNullChecked(bool SrcIsPtr,
-                                                  QualType SrcRecordTy) = 0;
-
-  virtual mlir::Value buildDynamicCastCall(CIRGenFunction &CGF,
-                                           mlir::Location Loc, Address Value,
-                                           QualType SrcRecordTy,
-                                           QualType DestTy,
-                                           QualType DestRecordTy) = 0;
+  virtual mlir::cir::DynamicCastInfoAttr
+  buildDynamicCastInfo(CIRGenFunction &CGF, mlir::Location Loc,
+                       QualType SrcRecordTy, QualType DestRecordTy) = 0;
 
   virtual mlir::Value buildDynamicCastToVoid(CIRGenFunction &CGF,
                                              mlir::Location Loc, Address Value,

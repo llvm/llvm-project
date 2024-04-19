@@ -20,6 +20,13 @@ namespace cir {
 struct MissingFeatures {
   // C++ ABI support
   static bool cxxABI() { return false; }
+  static bool setCallingConv() { return false; }
+
+  // Address space related
+  static bool addressSpace() { return false; }
+
+  // Sanitizers
+  static bool buildTypeCheck() { return false; }
 };
 
 } // namespace cir

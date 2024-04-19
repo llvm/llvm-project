@@ -1,6 +1,7 @@
 add_clang_library(MLIRCIRTransforms
   LifetimeCheck.cpp
   LoweringPrepare.cpp
+  LoweringPrepareItaniumCXXABI.cpp
   MergeCleanups.cpp
   DropAST.cpp
   IdiomRecognizer.cpp
