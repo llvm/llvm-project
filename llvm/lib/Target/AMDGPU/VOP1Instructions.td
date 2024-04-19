@@ -242,7 +242,7 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
 let SubtargetPredicate = isGFX940orGFX12_10, SchedRW = [Write64Bit] in
-defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOPProfile_MOV_B64, null_frag, 0x1d>;
+defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOPProfile_MOV_B64, null_frag, 0x25>;
 } // End isMoveImm = 1
 
 def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
