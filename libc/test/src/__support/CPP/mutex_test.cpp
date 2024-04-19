@@ -14,7 +14,7 @@ using LIBC_NAMESPACE::cpp::lock_guard;
 
 static const int SIGABRT = 6;
 
-// Simple class for testing cpp::lock_guard. It defines methods 'lock' and
+// Simple struct for testing cpp::lock_guard. It defines methods 'lock' and
 // 'unlock' which are required for the cpp::lock_guard class template.
 struct Mutex {
   Mutex() : locked(false) {}
