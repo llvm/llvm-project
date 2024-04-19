@@ -1,4 +1,4 @@
-; RUN: llvm-split -o %t %s -j 4 -mtarget amdgcn-amd-amdhsa
+; RUN: llvm-split -o %t %s -j 4 -mtriple amdgcn-amd-amdhsa
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
 ; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 %s
