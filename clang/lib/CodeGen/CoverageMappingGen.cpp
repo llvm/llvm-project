@@ -190,11 +190,21 @@ public:
 
   bool isBranch() const { return FalseCount.has_value(); }
 
+  bool isMCDCBranch() const {
+    const auto *BranchParams = std::get_if<mcdc::BranchParameters>(&MCDCParams);
+    assert(BranchParams == nullptr || BranchParams->ID >= 0);
+    return (BranchParams != nullptr);
+  }
+
+  const auto &getMCDCBranchParams() const {
+    return mcdc::getParams<const mcdc::BranchParameters>(MCDCParams);
+  }
+
   bool isMCDCDecision() const {
     const auto *DecisionParams =
         std::get_if<mcdc::DecisionParameters>(&MCDCParams);
-    assert(!DecisionParams || DecisionParams->NumConditions > 0);
-    return DecisionParams;
+    assert(DecisionParams == nullptr || DecisionParams->NumConditions > 0);
+    return (DecisionParams != nullptr);
   }
 
   const auto &getMCDCDecisionParams() const {
@@ -464,13 +474,19 @@ public:
       // Ignore regions from system headers unless collecting coverage from
       // system headers is explicitly enabled.
       if (!SystemHeadersCoverage &&
-          SM.isInSystemHeader(SM.getSpellingLoc(LocStart)))
+          SM.isInSystemHeader(SM.getSpellingLoc(LocStart))) {
+        assert(!Region.isMCDCBranch() && !Region.isMCDCDecision() &&
+               "Don't suppress the condition in system headers");
         continue;
+      }
 
       auto CovFileID = getCoverageFileID(LocStart);
       // Ignore regions that don't have a file, such as builtin macros.
-      if (!CovFileID)
+      if (!CovFileID) {
+        assert(!Region.isMCDCBranch() && !Region.isMCDCDecision() &&
+               "Don't suppress the condition in non-file regions");
         continue;
+      }
 
       SourceLocation LocEnd = Region.getEndLoc();
       assert(SM.isWrittenInSameFile(LocStart, LocEnd) &&
@@ -480,8 +496,11 @@ public:
       // This not only suppresses redundant regions, but sometimes prevents
       // creating regions with wrong counters if, for example, a statement's
       // body ends at the end of a nested macro.
-      if (Filter.count(std::make_pair(LocStart, LocEnd)))
+      if (Filter.count(std::make_pair(LocStart, LocEnd))) {
+        assert(!Region.isMCDCBranch() && !Region.isMCDCDecision() &&
+               "Don't suppress the condition");
         continue;
+      }
 
       // Find the spelling locations for the mapping region.
       SpellingRegion SR{SM, LocStart, LocEnd};
