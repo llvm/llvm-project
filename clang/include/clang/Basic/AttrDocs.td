@@ -2668,11 +2668,10 @@ def ARMInterruptSaveFPDocs : Documentation {
   let Content = [{
 Clang supports the GNU style ``__attribute__((interrupt_save_fp("TYPE")))``
 on ARM targets. This attribute behaves the same way as the ARM interrupt
-attribute, except the general purpose floating point registers are also saved. 
-If the FPEXC or FPSCR are needed, that state must be saved manually. Note, even 
-on M-class CPUs, where the floating point context can be automatically saved 
-depending on the FPCCR, the general purpose floating point registers will be 
-saved.
+attribute, except the general purpose floating point registers are also saved,
+along with FPEXC and FPSCR. Note, even on M-class CPUs, where the floating
+point context can be automatically saved depending on the FPCCR, the general
+purpose floating point registers will be saved.
   }];
 }
 

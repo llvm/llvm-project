@@ -268,7 +268,7 @@ def CC_ARM_Win32_CFGuard_Check : CallingConv<[
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
 def CSR_FPRegs : CalleeSavedRegs<(add (sequence "D%u", 0, 31))>;
 
-def CSR_FP_Interrupt_Regs : CalleeSavedRegs<(add (sequence "D%u", 7, 0))>;
+def CSR_FP_Interrupt_Regs : CalleeSavedRegs<(add FPSCR, FPEXC, (sequence "D%u", 15, 0))>;
 def CSR_FP_NEON_Interrupt_Regs : CalleeSavedRegs<(add CSR_FP_Interrupt_Regs, 
                                                   (sequence "D%u", 31, 16))>;
 
@@ -276,20 +276,6 @@ def CSR_AAPCS : CalleeSavedRegs<(add LR, R11, R10, R9, R8, R7, R6, R5, R4,
                                      (sequence "D%u", 15, 8))>;
 
 def CSR_AAPCS_FP : CalleeSavedRegs<(add CSR_AAPCS, CSR_FP_Interrupt_Regs)>;
-
-def CSR_AAPCS_FP_NEON : CalleeSavedRegs<(add CSR_AAPCS_FP, 
-                                         CSR_FP_NEON_Interrupt_Regs)>;
-
-// The Windows Control Flow Guard Check function preserves the same registers as
-// AAPCS, and also preserves all floating point registers.
-def CSR_Win_AAPCS_CFGuard_Check : CalleeSavedRegs<(add LR, R11, R10, R9, R8, R7,
-                                     R6, R5, R4, (sequence "D%u", 15, 0))>;
-
-// R8 is used to pass swifterror, remove it from CSR.
-def CSR_AAPCS_SwiftError : CalleeSavedRegs<(sub CSR_AAPCS, R8)>;
-
-// R10 is used to pass swiftself, remove it from CSR.
-def CSR_AAPCS_SwiftTail : CalleeSavedRegs<(sub CSR_AAPCS, R10)>;
 
 // The order of callee-saved registers needs to match the order we actually push
 // them in FrameLowering, because this order is what's used by
@@ -303,11 +289,19 @@ def CSR_Win_SplitFP : CalleeSavedRegs<(add R10, R9, R8, R7, R6, R5, R4,
                                                (sequence "D%u", 15, 8),
                                                LR, R11)>;
 
-def CSR_AAPCS_SplitPush_FP : CalleeSavedRegs<(add CSR_AAPCS_SplitPush, 
+def CSR_ATPCS_SplitPush_FP : CalleeSavedRegs<(add CSR_ATPCS_SplitPush,
                                               CSR_FP_Interrupt_Regs)>;
 
-def CSR_AAPCS_SplitPush_FP_NEON : CalleeSavedRegs<(add CSR_AAPCS_SplitPush_FP, 
-                                                   CSR_FP_NEON_Interrupt_Regs)>;
+// The Windows Control Flow Guard Check function preserves the same registers as
+// AAPCS, and also preserves all floating point registers.
+def CSR_Win_AAPCS_CFGuard_Check : CalleeSavedRegs<(add LR, R11, R10, R9, R8, R7,
+                                     R6, R5, R4, (sequence "D%u", 15, 0))>;
+
+// R8 is used to pass swifterror, remove it from CSR.
+def CSR_AAPCS_SwiftError : CalleeSavedRegs<(sub CSR_AAPCS, R8)>;
+
+// R10 is used to pass swiftself, remove it from CSR.
+def CSR_AAPCS_SwiftTail : CalleeSavedRegs<(sub CSR_AAPCS, R10)>;
 
 
 // R8 is used to pass swifterror, remove it from CSR.

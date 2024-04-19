@@ -1207,6 +1207,14 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
     SrcReg = ~0U;
     DstReg = MI->getOperand(0).getReg();
     break;
+  case ARM::VMRS:
+    SrcReg = ARM::FPSCR;
+    DstReg = MI->getOperand(0).getReg();
+    break;
+  case ARM::VMRS_FPEXC:
+    SrcReg = ARM::FPEXC;
+    DstReg = MI->getOperand(0).getReg();
+    break;
   default:
     SrcReg = MI->getOperand(1).getReg();
     DstReg = MI->getOperand(0).getReg();
@@ -1369,6 +1377,13 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       switch (Opc) {
       case ARM::tMOVr:
         // If a Thumb1 function spills r8-r11, we copy the values to low
+        // registers before pushing them. Record the copy so we can emit the
+        // correct ".save" later.
+        AFI->EHPrologueRemappedRegs[DstReg] = SrcReg;
+        break;
+      case ARM::VMRS:
+      case ARM::VMRS_FPEXC:
+        // If a function spills FPSCR or FPEXC, we copy the values to low
         // registers before pushing them. Record the copy so we can emit the
         // correct ".save" later.
         AFI->EHPrologueRemappedRegs[DstReg] = SrcReg;
