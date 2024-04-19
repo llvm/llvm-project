@@ -4,8 +4,10 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
+# This is the list of module files to be generated when building Flang
 set(MODULES
   "__fortran_builtins"
+  "__fortran_builtin_kinds"
   "__fortran_ieee_exceptions"
   "__fortran_type_info"
   "__ppc_types"
@@ -17,6 +19,12 @@ set(MODULES
   "ieee_features"
   "iso_c_binding"
   "iso_fortran_env"
+)
+
+# This is the subset of modules that also have an implementation and
+# thus need to be compiled and linked into the runtime libraries.
+set(MODULES_WITH_IMPLEMENTATION
+  "__fortran_builtin_kinds"
 )
 
 # Create module files directly from the top-level module source directory.
@@ -52,13 +60,22 @@ if (NOT CMAKE_CROSSCOMPILING)
         # Do not compile PPC module if the target is not available.
         continue()
       endif()
+      endif()
+
+    # Some modules have an implementation part that needs to be added to the
+    # FortranRuntime library.
+    set(compile_with "-fsyntax-only")
+    set(include_in_link FALSE)
+    if(${filename} IN_LIST MODULES_WITH_IMPLEMENTATION)
+      set(compile_with "-c")
+      set(include_in_link TRUE)
     endif()
 
     set(base ${FLANG_INTRINSIC_MODULES_DIR}/${filename})
     # TODO: We may need to flag this with conditional, in case Flang is built w/o OpenMP support
     add_custom_command(OUTPUT ${base}.mod
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
-      COMMAND flang-new -cpp -fsyntax-only ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
+      COMMAND flang-new -cpp ${compile_with} ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
         ${FLANG_SOURCE_DIR}/module/${filename}.f90
       DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )
