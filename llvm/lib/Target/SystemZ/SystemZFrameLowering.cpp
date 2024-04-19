@@ -56,14 +56,17 @@ static const TargetFrameLowering::SpillSlot XPLINKSpillOffsetTable[] = {
 
 SystemZFrameLowering::SystemZFrameLowering(StackDirection D, Align StackAl,
                                            int LAO, Align TransAl,
-                                           bool StackReal)
-    : TargetFrameLowering(D, StackAl, LAO, TransAl, StackReal) {}
+                                           bool StackReal, unsigned PointerSize)
+    : TargetFrameLowering(D, StackAl, LAO, TransAl, StackReal),
+      PointerSize(PointerSize) {}
 
 std::unique_ptr<SystemZFrameLowering>
 SystemZFrameLowering::create(const SystemZSubtarget &STI) {
+  unsigned PtrSz =
+      STI.getTargetLowering()->getTargetMachine().getPointerSize(0);
   if (STI.isTargetXPLINK64())
-    return std::make_unique<SystemZXPLINKFrameLowering>();
-  return std::make_unique<SystemZELFFrameLowering>();
+    return std::make_unique<SystemZXPLINKFrameLowering>(PtrSz);
+  return std::make_unique<SystemZELFFrameLowering>(PtrSz);
 }
 
 namespace {
@@ -272,9 +275,9 @@ void SystemZELFFrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 }
 
-SystemZELFFrameLowering::SystemZELFFrameLowering()
+SystemZELFFrameLowering::SystemZELFFrameLowering(unsigned PointerSize)
     : SystemZFrameLowering(TargetFrameLowering::StackGrowsDown, Align(8), 0,
-                           Align(8), /* StackRealignable */ false),
+                           Align(8), /* StackRealignable */ false, PointerSize),
       RegSpillOffsets(0) {
 
   // Due to the SystemZ ABI, the DWARF CFA (Canonical Frame Address) is not
@@ -884,9 +887,10 @@ bool SystemZELFFrameLowering::usePackedStack(MachineFunction &MF) const {
   return HasPackedStackAttr && CallConv;
 }
 
-SystemZXPLINKFrameLowering::SystemZXPLINKFrameLowering()
+SystemZXPLINKFrameLowering::SystemZXPLINKFrameLowering(unsigned PointerSize)
     : SystemZFrameLowering(TargetFrameLowering::StackGrowsDown, Align(32), 0,
-                           Align(32), /* StackRealignable */ false),
+                           Align(32), /* StackRealignable */ false,
+                           PointerSize),
       RegSpillOffsets(-1) {
 
   // Create a mapping from register number to save slot offset.
