@@ -114,6 +114,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
       ExprResult R = S.VerifyIntegerConstantExpression(ValueExpr, &ValueAPS);
       assert(!R.isInvalid() && "unroll count value must be a valid value, it's "
                                "should be checked in Sema::CheckLoopHintExpr");
+      (void)R;
       // The values of 0 and 1 block any unrolling of the loop.
       if (ValueAPS.isZero() || ValueAPS.isOne())
         SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Disable);
