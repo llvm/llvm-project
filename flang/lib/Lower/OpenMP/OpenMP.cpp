@@ -1841,11 +1841,12 @@ genWsloopOp(Fortran::lower::AbstractConverter &converter,
 // Code generation functions for composite constructs
 //===----------------------------------------------------------------------===//
 
-static void genCompositeDistributeParallelDo(
-    Fortran::lower::AbstractConverter &converter,
-    Fortran::semantics::SemanticsContext &semaCtx,
-    Fortran::lower::pft::Evaluation &eval, const List<Clause> &clauses,
-    mlir::Location loc) {
+static void
+genCompositeDistributeParallelDo(Fortran::lower::AbstractConverter &converter,
+                                 Fortran::semantics::SemanticsContext &semaCtx,
+                                 Fortran::lower::pft::Evaluation &eval,
+                                 const List<Clause> &clauses,
+                                 mlir::Location loc) {
   TODO(loc, "Composite DISTRIBUTE PARALLEL DO");
 }
 
