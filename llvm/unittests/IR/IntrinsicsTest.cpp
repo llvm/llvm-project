@@ -106,7 +106,5 @@ TEST_F(IntrinsicsTest, InstrProfInheritance) {
     auto *Intr = makeIntrinsic(ID);
     EXPECT_TRUE(Checker(*Intr));
   }
-
-#undef RULES
 }
 } // end namespace
