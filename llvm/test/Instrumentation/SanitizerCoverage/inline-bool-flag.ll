@@ -19,7 +19,7 @@ define void @foo() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i1, ptr @__sancov_gen_, align 1, !nosanitize [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i1 [[TMP0]], false
-; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       2:
 ; CHECK-NEXT:    store i1 true, ptr @__sancov_gen_, align 1, !nosanitize [[META0]]
 ; CHECK-NEXT:    br label [[TMP3]]
@@ -34,4 +34,5 @@ entry:
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind }
 ;.
 ; CHECK: [[META0]] = !{}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.
