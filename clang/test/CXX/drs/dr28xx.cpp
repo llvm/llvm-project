@@ -10,6 +10,14 @@
 // expected-no-diagnostics
 #endif
 
+namespace cwg2819 { // cwg2819: 19 review 2023-12-01
+#if __cpp_constexpr >= 202306L
+  constexpr void* p = nullptr;
+  constexpr int* q = static_cast<int*>(p);
+  static_assert(q == nullptr);
+#endif
+}
+
 namespace cwg2847 { // cwg2847: 19
 
 #if __cplusplus >= 202002L
