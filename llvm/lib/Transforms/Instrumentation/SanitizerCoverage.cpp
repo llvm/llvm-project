@@ -209,12 +209,13 @@ public:
   using DomTreeCallback = function_ref<const DominatorTree &(Function &F)>;
   using PostDomTreeCallback =
       function_ref<const PostDominatorTree &(Function &F)>;
-  ModuleSanitizerCoverage(
-      const SanitizerCoverageOptions &Options = SanitizerCoverageOptions(),
-      const SpecialCaseList *Allowlist = nullptr,
-      const SpecialCaseList *Blocklist = nullptr)
-      : Options(OverrideFromCL(Options)), Allowlist(Allowlist),
+
+  ModuleSanitizerCoverage(const SanitizerCoverageOptions &Options,
+                          const SpecialCaseList *Allowlist,
+                          const SpecialCaseList *Blocklist)
+      : Options(Options), Allowlist(Allowlist),
         Blocklist(Blocklist) {}
+
   bool instrumentModule(Module &M, DomTreeCallback DTCallback,
                         PostDomTreeCallback PDTCallback);
 
@@ -285,7 +286,7 @@ private:
 
 PreservedAnalyses SanitizerCoveragePass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
-  ModuleSanitizerCoverage ModuleSancov(Options, Allowlist.get(),
+  ModuleSanitizerCoverage ModuleSancov(OverrideFromCL(Options), Allowlist.get(),
                                        Blocklist.get());
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto DTCallback = [&FAM](Function &F) -> const DominatorTree & {
