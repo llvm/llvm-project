@@ -489,18 +489,23 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   };
   SmallVector<StackEntry, 8> LBraceStack;
   assert(Tok->is(tok::l_brace));
+
   do {
-    // Get next non-comment, non-preprocessor token.
     FormatToken *NextTok;
     do {
       NextTok = Tokens->getNextToken();
     } while (NextTok->is(tok::comment));
-    while (NextTok->is(tok::hash) && !Line->InMacroBody) {
-      NextTok = Tokens->getNextToken();
-      do {
-        NextTok = Tokens->getNextToken();
-      } while (NextTok->is(tok::comment) ||
-               (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof)));
+
+    if (!Line->InMacroBody) {
+      // Skip PPDirective lines and comments.
+      while (NextTok->is(tok::hash)) {
+        do {
+          NextTok = Tokens->getNextToken();
+        } while (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof));
+
+        while (NextTok->is(tok::comment))
+          NextTok = Tokens->getNextToken();
+      }
     }
 
     switch (Tok->Tok.getKind()) {
@@ -631,6 +636,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     default:
       break;
     }
+
     PrevTok = Tok;
     Tok = NextTok;
   } while (Tok->isNot(tok::eof) && !LBraceStack.empty());
