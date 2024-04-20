@@ -203,7 +203,4 @@
 /* Define if plugins enabled */
 #cmakedefine LLVM_ENABLE_PLUGINS
 
-/* Define if logf128 is available */
-#cmakedefine LLVM_HAS_LOGF128
-
 #endif
