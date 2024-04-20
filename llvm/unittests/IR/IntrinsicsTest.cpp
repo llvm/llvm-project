@@ -13,7 +13,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "gtest/gtest.h"
-#include <cstdarg>
 
 using namespace llvm;
 
