@@ -89,15 +89,14 @@ static cl::opt<int> ClCoverageLevel(
     "sanitizer-coverage-level",
     cl::desc("Sanitizer Coverage. 0: none, 1: entry block, 2: all blocks, "
              "3: all blocks and critical edges"),
-    cl::Hidden, cl::init(0));
+    cl::Hidden);
 
 static cl::opt<bool> ClTracePC("sanitizer-coverage-trace-pc",
-                               cl::desc("Experimental pc tracing"), cl::Hidden,
-                               cl::init(false));
+                               cl::desc("Experimental pc tracing"), cl::Hidden);
 
 static cl::opt<bool> ClTracePCGuard("sanitizer-coverage-trace-pc-guard",
                                     cl::desc("pc tracing with a guard"),
-                                    cl::Hidden, cl::init(false));
+                                    cl::Hidden);
 
 // If true, we create a global variable that contains PCs of all instrumented
 // BBs, put this global into a named section, and pass this section's bounds
@@ -107,38 +106,38 @@ static cl::opt<bool> ClTracePCGuard("sanitizer-coverage-trace-pc-guard",
 // inline-bool-flag.
 static cl::opt<bool> ClCreatePCTable("sanitizer-coverage-pc-table",
                                      cl::desc("create a static PC table"),
-                                     cl::Hidden, cl::init(false));
+                                     cl::Hidden);
 
 static cl::opt<bool>
     ClInline8bitCounters("sanitizer-coverage-inline-8bit-counters",
                          cl::desc("increments 8-bit counter for every edge"),
-                         cl::Hidden, cl::init(false));
+                         cl::Hidden);
 
 static cl::opt<bool>
     ClInlineBoolFlag("sanitizer-coverage-inline-bool-flag",
-                     cl::desc("sets a boolean flag for every edge"), cl::Hidden,
-                     cl::init(false));
+                     cl::desc("sets a boolean flag for every edge"),
+                     cl::Hidden);
 
 static cl::opt<bool>
     ClCMPTracing("sanitizer-coverage-trace-compares",
                  cl::desc("Tracing of CMP and similar instructions"),
-                 cl::Hidden, cl::init(false));
+                 cl::Hidden);
 
 static cl::opt<bool> ClDIVTracing("sanitizer-coverage-trace-divs",
                                   cl::desc("Tracing of DIV instructions"),
-                                  cl::Hidden, cl::init(false));
+                                  cl::Hidden);
 
 static cl::opt<bool> ClLoadTracing("sanitizer-coverage-trace-loads",
                                    cl::desc("Tracing of load instructions"),
-                                   cl::Hidden, cl::init(false));
+                                   cl::Hidden);
 
 static cl::opt<bool> ClStoreTracing("sanitizer-coverage-trace-stores",
                                     cl::desc("Tracing of store instructions"),
-                                    cl::Hidden, cl::init(false));
+                                    cl::Hidden);
 
 static cl::opt<bool> ClGEPTracing("sanitizer-coverage-trace-geps",
                                   cl::desc("Tracing of GEP instructions"),
-                                  cl::Hidden, cl::init(false));
+                                  cl::Hidden);
 
 static cl::opt<bool>
     ClPruneBlocks("sanitizer-coverage-prune-blocks",
@@ -147,12 +146,11 @@ static cl::opt<bool>
 
 static cl::opt<bool> ClStackDepth("sanitizer-coverage-stack-depth",
                                   cl::desc("max stack depth tracing"),
-                                  cl::Hidden, cl::init(false));
+                                  cl::Hidden);
 
 static cl::opt<bool>
     ClCollectCF("sanitizer-coverage-control-flow",
-                cl::desc("collect control flow for each function"), cl::Hidden,
-                cl::init(false));
+                cl::desc("collect control flow for each function"), cl::Hidden);
 
 namespace {
 
@@ -213,8 +211,7 @@ public:
   ModuleSanitizerCoverage(const SanitizerCoverageOptions &Options,
                           const SpecialCaseList *Allowlist,
                           const SpecialCaseList *Blocklist)
-      : Options(Options), Allowlist(Allowlist),
-        Blocklist(Blocklist) {}
+      : Options(Options), Allowlist(Allowlist), Blocklist(Blocklist) {}
 
   bool instrumentModule(Module &M, DomTreeCallback DTCallback,
                         PostDomTreeCallback PDTCallback);
