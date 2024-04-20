@@ -40,7 +40,7 @@ class IntrinsicsTest : public ::testing::Test {
 public:
   Instruction *makeIntrinsic(Intrinsic::ID ID) const {
     IRBuilder<> Builder(BB);
-    SmallVector<Value*, 4> ProcessedArgs;
+    SmallVector<Value *, 4> ProcessedArgs;
     auto *Decl = Intrinsic::getDeclaration(M.get(), ID);
     for (auto *Ty : Decl->getFunctionType()->params()) {
       auto *Val = Constant::getNullValue(Ty);
