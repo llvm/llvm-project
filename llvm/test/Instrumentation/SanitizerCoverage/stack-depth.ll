@@ -43,7 +43,7 @@ define i32 @bar() {
 ; L1-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; L1-NEXT:    [[TMP2:%.*]] = load i64, ptr @__sancov_lowest_stack, align 8, !nosanitize [[META0:![0-9]+]]
 ; L1-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]]
-; L1-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
+; L1-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1:![0-9]+]]
 ; L1:       4:
 ; L1-NEXT:    store i64 [[TMP1]], ptr @__sancov_lowest_stack, align 8, !nosanitize [[META0]]
 ; L1-NEXT:    br label [[TMP5]]
@@ -58,7 +58,7 @@ define i32 @bar() {
 ; L3-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; L3-NEXT:    [[TMP2:%.*]] = load i64, ptr @__sancov_lowest_stack, align 8, !nosanitize [[META0:![0-9]+]]
 ; L3-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]]
-; L3-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
+; L3-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF1:![0-9]+]]
 ; L3:       4:
 ; L3-NEXT:    store i64 [[TMP1]], ptr @__sancov_lowest_stack, align 8, !nosanitize [[META0]]
 ; L3-NEXT:    br label [[TMP5]]
@@ -90,6 +90,8 @@ define weak_odr hidden ptr @_ZTW21__sancov_lowest_stack() {
 ; L3: attributes #[[ATTR2]] = { nomerge }
 ;.
 ; L1: [[META0]] = !{}
+; L1: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.
 ; L3: [[META0]] = !{}
+; L3: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.

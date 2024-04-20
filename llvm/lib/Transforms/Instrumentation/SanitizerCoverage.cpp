@@ -25,6 +25,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
@@ -979,8 +980,9 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
         FunctionBoolArray->getValueType(), FunctionBoolArray,
         {ConstantInt::get(IntptrTy, 0), ConstantInt::get(IntptrTy, Idx)});
     auto Load = IRB.CreateLoad(Int1Ty, FlagPtr);
-    auto ThenTerm =
-        SplitBlockAndInsertIfThen(IRB.CreateIsNull(Load), &*IP, false);
+    auto ThenTerm = SplitBlockAndInsertIfThen(
+        IRB.CreateIsNull(Load), &*IP, false,
+        MDBuilder(IRB.getContext()).createBranchWeights(1, (1 << 20) - 1));
     IRBuilder<> ThenIRB(ThenTerm);
     auto Store = ThenIRB.CreateStore(ConstantInt::getTrue(Int1Ty), FlagPtr);
     Load->setNoSanitizeMetadata();
@@ -997,7 +999,9 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     auto FrameAddrInt = IRB.CreatePtrToInt(FrameAddrPtr, IntptrTy);
     auto LowestStack = IRB.CreateLoad(IntptrTy, SanCovLowestStack);
     auto IsStackLower = IRB.CreateICmpULT(FrameAddrInt, LowestStack);
-    auto ThenTerm = SplitBlockAndInsertIfThen(IsStackLower, &*IP, false);
+    auto ThenTerm = SplitBlockAndInsertIfThen(
+        IsStackLower, &*IP, false,
+        MDBuilder(IRB.getContext()).createBranchWeights(1, (1 << 20) - 1));
     IRBuilder<> ThenIRB(ThenTerm);
     auto Store = ThenIRB.CreateStore(FrameAddrInt, SanCovLowestStack);
     LowestStack->setNoSanitizeMetadata();
