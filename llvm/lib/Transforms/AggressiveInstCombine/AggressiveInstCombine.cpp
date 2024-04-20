@@ -1055,18 +1055,17 @@ bool StrNCmpInliner::optimizeStrNCmp() {
 ///
 bool StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
                                    bool Switched) {
-  IRBuilder<> B(CI->getContext());
+  auto &Ctx = CI->getContext();
+  IRBuilder<> B(Ctx);
 
   BasicBlock *BBCI = CI->getParent();
-  bool IsEntry = BBCI->isEntryBlock();
   BasicBlock *BBBefore = splitBlockBefore(BBCI, CI, DTU, nullptr, nullptr,
                                           BBCI->getName() + ".before");
 
   SmallVector<BasicBlock *> BBSubs;
-  for (uint64_t i = 0; i < N + 1; ++i)
-    BBSubs.push_back(
-        BasicBlock::Create(CI->getContext(), "sub", BBCI->getParent(), BBCI));
-  BasicBlock *BBNE = BBSubs[N];
+  for (uint64_t i = 0; i < N; ++i)
+    BBSubs.push_back(BasicBlock::Create(Ctx, "sub", BBCI->getParent(), BBCI));
+  BasicBlock *BBNE = BasicBlock::Create(Ctx, "ne", BBCI->getParent(), BBCI);
 
   cast<BranchInst>(BBBefore->getTerminator())->setSuccessor(0, BBSubs[0]);
 
@@ -1099,27 +1098,23 @@ bool StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
 
   // Update DomTree
   if (DTU) {
-    if (IsEntry) {
-      DTU->recalculate(*BBCI->getParent());
-    } else {
-      SmallVector<DominatorTree::UpdateType, 8> Updates;
-      Updates.push_back({DominatorTree::Delete, BBBefore, BBCI});
-      Updates.push_back({DominatorTree::Insert, BBBefore, BBSubs[0]});
-      for (uint64_t i = 0; i < N; ++i) {
-        if (i < N - 1)
-          Updates.push_back({DominatorTree::Insert, BBSubs[i], BBSubs[i + 1]});
-        Updates.push_back({DominatorTree::Insert, BBSubs[i], BBNE});
-      }
-      Updates.push_back({DominatorTree::Insert, BBNE, BBCI});
-      DTU->applyUpdates(Updates);
+    SmallVector<DominatorTree::UpdateType, 8> Updates;
+    Updates.push_back({DominatorTree::Delete, BBBefore, BBCI});
+    Updates.push_back({DominatorTree::Insert, BBBefore, BBSubs[0]});
+    for (uint64_t i = 0; i < N; ++i) {
+      if (i < N - 1)
+        Updates.push_back({DominatorTree::Insert, BBSubs[i], BBSubs[i + 1]});
+      Updates.push_back({DominatorTree::Insert, BBSubs[i], BBNE});
     }
+    Updates.push_back({DominatorTree::Insert, BBNE, BBCI});
+    DTU->applyUpdates(Updates);
   }
   return true;
 }
 
 static bool inlineLibCalls(Function &F, TargetLibraryInfo &TLI,
                            const TargetTransformInfo &TTI, DominatorTree &DT,
-                           bool &MadeCFGChange) {
+                           const DataLayout &DL, bool &MadeCFGChange) {
   MadeCFGChange = false;
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
@@ -1137,20 +1132,13 @@ static bool inlineLibCalls(Function &F, TargetLibraryInfo &TLI,
       if (!Call || !(CalledFunc = Call->getCalledFunction()))
         continue;
 
-      if (Call->isNoBuiltin())
-        continue;
-
-      // Skip if function either has local linkage or is not a known library
-      // function.
       LibFunc LF;
-      if (CalledFunc->hasLocalLinkage() || !TLI.getLibFunc(*CalledFunc, LF) ||
-          !TLI.has(LF))
+      if (!TLI.getLibFunc(*CalledFunc, LF))
         continue;
 
       switch (LF) {
       case LibFunc_strcmp:
       case LibFunc_strncmp: {
-        auto &DL = F.getParent()->getDataLayout();
         if (StrNCmpInliner(Call, LF, BB, &DTU, DL).optimizeStrNCmp()) {
           MadeCFGChange = true;
           break;
@@ -1221,7 +1209,7 @@ static bool runImpl(Function &F, AssumptionCache &AC, TargetTransformInfo &TTI,
   const DataLayout &DL = F.getParent()->getDataLayout();
   TruncInstCombine TIC(AC, TLI, DL, DT);
   MadeChange |= TIC.run(F);
-  MadeChange |= inlineLibCalls(F, TLI, TTI, DT, MadeCFGChange);
+  MadeChange |= inlineLibCalls(F, TLI, TTI, DT, DL, MadeCFGChange);
   MadeChange |= foldUnusualPatterns(F, DT, TTI, TLI, AA, AC);
   return MadeChange;
 }

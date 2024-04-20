@@ -22,6 +22,16 @@ entry:
 ; CHECK-LABEL: @test_strncmp_1(
 ; CHECK-NOT: @strncmp
 
+define i32 @test_strncmp_1_dereferenceable(i8* nocapture readonly dereferenceable(2) %s) {
+entry:
+  %call = tail call i32 @strncmp(ptr nonnull %s, ptr nonnull dereferenceable(3) @.str, i64 2)
+  %tobool.not = icmp eq i32 %call, 0
+  %retval.0 = select i1 %tobool.not, i32 11, i32 41
+  ret i32 %retval.0
+}
+; CHECK-LABEL: @test_strncmp_1_dereferenceable(
+; CHECK: @strncmp
+
 ; int test_strncmp_2(const char *s) {
 ;   if (!strncmp(s, "aa", 3))
 ;     return 11;
@@ -128,6 +138,16 @@ entry:
 }
 ; CHECK-LABEL: @test_strcmp_1(
 ; CHECK-NOT: @strcmp
+
+define i32 @test_strcmp_1_dereferenceable(i8* nocapture readonly dereferenceable(2) %s) {
+entry:
+  %call = tail call i32 @strcmp(ptr nonnull %s, ptr nonnull dereferenceable(3) @.str)
+  %tobool.not = icmp eq i32 %call, 0
+  %retval.0 = select i1 %tobool.not, i32 11, i32 41
+  ret i32 %retval.0
+}
+; CHECK-LABEL: @test_strcmp_1_dereferenceable(
+; CHECK: @strcmp
 
 ; int test_strcmp_2(const char *s) {
 ;   if (!strcmp(s, "aab"))
