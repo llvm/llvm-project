@@ -916,14 +916,13 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
       break;
     case VariableCleanUp::Deallocate:
       auto *converterPtr = &converter;
-      auto *sym = &var.getSymbol();
-      converter.getFctCtx().attachCleanup([converterPtr, loc, exv, sym]() {
+      converter.getFctCtx().attachCleanup([converterPtr, loc, exv]() {
         const fir::MutableBoxValue *mutableBox =
             exv.getBoxOf<fir::MutableBoxValue>();
         assert(mutableBox &&
                "trying to deallocate entity not lowered as allocatable");
         Fortran::lower::genDeallocateIfAllocated(*converterPtr, *mutableBox,
-                                                 loc, sym);
+                                                 loc);
       });
     }
   }
