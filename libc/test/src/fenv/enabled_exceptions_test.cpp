@@ -13,16 +13,20 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/FPExceptMatcher.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/fenv_macros.h"
 #include <signal.h>
 
+#include "excepts.h"
+
+using LlvmLibcExceptionStatusTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
+
 // This test enables an exception and verifies that raising that exception
 // triggers SIGFPE.
-TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
-#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) ||                                    \
-    defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+TEST_F(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) || defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
   // Few Arm HW implementations do not trap exceptions. We skip this test
   // completely on such HW.
   //
@@ -34,23 +38,14 @@ TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
   LIBC_NAMESPACE::fputil::enable_except(FE_DIVBYZERO);
   if (LIBC_NAMESPACE::fputil::get_except() == 0)
     return;
-#endif // Architectures where exception trapping is not supported
+#endif  // Architectures where exception trapping is not supported
 
   // TODO: Install a floating point exception handler and verify that the
   // the expected exception was raised. One will have to longjmp back from
   // that exception handler, so such a testing can be done after we have
   // longjmp implemented.
 
-  int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
-                   FE_UNDERFLOW};
-
-  // We '|' the individual exception flags instead of using FE_ALL_EXCEPT
-  // as it can include non-standard extensions. Note that we should be able
-  // to compile this file with headers from other libcs as well.
-  constexpr int ALL_EXCEPTS =
-      FE_DIVBYZERO | FE_INVALID | FE_INEXACT | FE_OVERFLOW | FE_UNDERFLOW;
-
-  for (int e : excepts) {
+  for (int e : EXCEPTS) {
     LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
     LIBC_NAMESPACE::fputil::enable_except(e);
     ASSERT_EQ(LIBC_NAMESPACE::feclearexcept(FE_ALL_EXCEPT), 0);

@@ -11,10 +11,11 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
 template <typename T>
-class FMinimumNumTest : public LIBC_NAMESPACE::testing::Test {
+class FMinimumNumTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

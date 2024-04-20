@@ -10,10 +10,11 @@
 #define LIBC_TEST_SRC_MATH_SMOKE_FROMFPTEST_H
 
 #include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
 template <typename T>
-class FromfpTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class FromfpTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
