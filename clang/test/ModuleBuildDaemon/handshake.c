@@ -7,6 +7,7 @@
 //--- main.c
 int main() {return 0;}
 
+// Return true regardless so lit test does not exit before daemon is killed
 // RUN: %clang -fmodule-build-daemon=mbd-handshake -Rmodule-build-daemon %t/main.c &> %t/output-new || true
 // RUN: %clang -fmodule-build-daemon=mbd-handshake -Rmodule-build-daemon %t/main.c &> %t/output-existing || true
 // RUN: %kill-process "-cc1modbuildd mbd-handshake"
@@ -15,11 +16,11 @@ int main() {return 0;}
 // RUN: cat %t/output-existing |  sed 's:\\\\\?:/:g' | FileCheck %s --check-prefix=CHECK-EXIST
 
 // CHECK: remark: Successfully spawned module build daemon [-Rmodule-build-daemon]
-// CHECK: remark: Successfully connected to module build daemon at mbd-handshake/mbd.sock [-Rmodule-build-daemon]
-// CHECK: remark: Successfully completed handshake with module build daemon [-Rmodule-build-daemon]
+// CHECK-NEXT: remark: Successfully connected to module build daemon at mbd-handshake/mbd.sock [-Rmodule-build-daemon]
+// CHECK-NEXT: remark: Clang invocation responsible for {{.*main.c}} successfully completed handshake with module build daemon [-Rmodule-build-daemon]
 
 // Check that a clang invocation can handshake with an existing module build daemon
-// CHECK-EXIST: remark: Successfully completed handshake with module build daemon [-Rmodule-build-daemon]
+// CHECK-EXIST: remark: Clang invocation responsible for {{.*main.c}} successfully completed handshake with module build daemon [-Rmodule-build-daemon]
 
 // Make sure mbd.err is empty
 // RUN: [ ! -s "mbd-launch/mbd.err" ] && true || false

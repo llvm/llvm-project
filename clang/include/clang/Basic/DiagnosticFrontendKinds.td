@@ -284,7 +284,8 @@ def remark_mbd_connection :
   Remark<"Successfully connected to module build daemon at %0">,
   InGroup<ModuleBuildDaemon>;
 def remark_mbd_handshake :
-  Remark<"Successfully completed handshake with module build daemon">,
+  Remark<"Clang invocation responsible for %0 successfully completed handshake "
+         "with module build daemon">,
   InGroup<ModuleBuildDaemon>;
 
 def warn_eagerly_load_for_standard_cplusplus_modules : Warning<

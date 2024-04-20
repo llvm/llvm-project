@@ -145,7 +145,8 @@ void spawnModuleBuildDaemonAndHandshake(const CompilerInvocation &Clang,
     return;
   }
 
-  Diag.Report(diag::remark_mbd_handshake);
+  Diag.Report(diag::remark_mbd_handshake)
+      << Clang.getFrontendOpts().Inputs[0].getFile();
   return;
 }
 

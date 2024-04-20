@@ -3,7 +3,7 @@
 // RUN: rm -rf mbd-crash %t
 
 // timeout should exit with status 124 which is treated as a failure by lit on 
-// windows. Ideally we would be like to check the exit code and only return true
+// windows. Ideally we would like to check the exit code and only return true
 // if it equals 124 but lit does not support global bash sysmbols like $?
 
 // RUN: timeout --signal=SIGKILL 2 %clang -cc1modbuildd mbd-crash -v || true
