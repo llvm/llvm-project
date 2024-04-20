@@ -46,7 +46,7 @@ using namespace mlir;
 /// Control flow can create situations where a load could be replaced by
 /// multiple possible stores depending on the control flow path taken. As a
 /// result, this pass must introduce new block arguments in some blocks to
-/// accomodate for the multiple possible definitions. Each predecessor will
+/// accommodate for the multiple possible definitions. Each predecessor will
 /// populate the block argument with the definition reached at its end. With
 /// this, the value stored can be well defined at block boundaries, allowing
 /// the propagation of replacement through blocks.
@@ -109,7 +109,7 @@ struct MemorySlotPromotionInfo {
   /// This is a DAG structure because if an operation must eliminate some of
   /// its uses, it is because the defining ops of the blocking uses requested
   /// it. The defining ops therefore must also have blocking uses or be the
-  /// starting point of the bloccking uses.
+  /// starting point of the blocking uses.
   BlockingUsesMap userToBlockingUses;
 };
 
@@ -414,7 +414,7 @@ MemorySlotPromotionAnalyzer::computeInfo() {
 
   // Then, compute blocks in which two or more definitions of the allocated
   // variable may conflict. These blocks will need a new block argument to
-  // accomodate this.
+  // accommodate this.
   computeMergePoints(info.mergePoints);
 
   // The slot can be promoted if the block arguments to be created can
