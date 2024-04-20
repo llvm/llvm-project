@@ -1170,7 +1170,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (EnableSyntheticCounts && !PGOOpt)
     MPM.addPass(SyntheticCountsPropagation());
 
-  if (EnablePGOForceFunctionAttrs)
+  if (EnablePGOForceFunctionAttrs && PGOOpt)
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
 
   if (EnableModuleInliner)
