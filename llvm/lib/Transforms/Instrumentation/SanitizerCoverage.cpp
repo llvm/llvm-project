@@ -631,8 +631,10 @@ void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
     return;
   if (F.hasFnAttribute(Attribute::NoSanitizeCoverage))
     return;
-  if (Options.CoverageType >= SanitizerCoverageOptions::SCK_Edge)
-    SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions().setIgnoreUnreachableDests());
+  if (Options.CoverageType >= SanitizerCoverageOptions::SCK_Edge) {
+    SplitAllCriticalEdges(
+        F, CriticalEdgeSplittingOptions().setIgnoreUnreachableDests());
+  }
   SmallVector<Instruction *, 8> IndirCalls;
   SmallVector<BasicBlock *, 16> BlocksToInstrument;
   SmallVector<Instruction *, 8> CmpTraceTargets;
