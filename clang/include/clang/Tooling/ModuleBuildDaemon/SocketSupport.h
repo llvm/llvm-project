@@ -98,27 +98,34 @@ llvm::Error writeMsgStructToSocket(llvm::raw_socket_stream &Socket,
 
 } // namespace clang::tooling::cc1modbuildd
 
-namespace cc1mod = clang::tooling::cc1modbuildd;
-
-template <> struct llvm::yaml::ScalarEnumerationTraits<cc1mod::StatusType> {
-  static void enumeration(IO &Io, cc1mod::StatusType &Value) {
-    Io.enumCase(Value, "REQUEST", cc1mod::StatusType::REQUEST);
-    Io.enumCase(Value, "SUCCESS", cc1mod::StatusType::SUCCESS);
-    Io.enumCase(Value, "FAILURE", cc1mod::StatusType::FAILURE);
+namespace llvm {
+namespace yaml {
+template <>
+struct ScalarEnumerationTraits<clang::tooling::cc1modbuildd::StatusType> {
+  static void enumeration(IO &Io, clang::tooling::cc1modbuildd::StatusType &S) {
+    Io.enumCase(S, "REQUEST",
+                clang::tooling::cc1modbuildd::StatusType::REQUEST);
+    Io.enumCase(S, "SUCCESS",
+                clang::tooling::cc1modbuildd::StatusType::SUCCESS);
+    Io.enumCase(S, "FAILURE",
+                clang::tooling::cc1modbuildd::StatusType::FAILURE);
   }
 };
 
-template <> struct llvm::yaml::ScalarEnumerationTraits<cc1mod::ActionType> {
-  static void enumeration(IO &Io, cc1mod::ActionType &Value) {
-    Io.enumCase(Value, "HANDSHAKE", cc1mod::ActionType::HANDSHAKE);
+template <>
+struct ScalarEnumerationTraits<clang::tooling::cc1modbuildd::ActionType> {
+  static void enumeration(IO &Io, clang::tooling::cc1modbuildd::ActionType &A) {
+    Io.enumCase(A, "HANDSHAKE",
+                clang::tooling::cc1modbuildd::ActionType::HANDSHAKE);
   }
 };
 
-template <> struct llvm::yaml::MappingTraits<cc1mod::HandshakeMsg> {
-  static void mapping(IO &Io, cc1mod::HandshakeMsg &Info) {
-    Io.mapRequired("Action", Info.MsgAction);
-    Io.mapRequired("Status", Info.MsgStatus);
+template <> struct MappingTraits<clang::tooling::cc1modbuildd::HandshakeMsg> {
+  static void mapping(IO &Io, clang::tooling::cc1modbuildd::HandshakeMsg &H) {
+    Io.mapRequired("Action", H.MsgAction);
+    Io.mapRequired("Status", H.MsgStatus);
   }
 };
-
+} // namespace yaml
+} // namespace llvm
 #endif // LLVM_CLANG_TOOLING_MODULEBUILDDAEMON_SOCKETMSGSUPPORT_H
