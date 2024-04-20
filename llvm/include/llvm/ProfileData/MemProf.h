@@ -514,16 +514,17 @@ public:
   using hash_value_type = uint64_t;
   using offset_type = uint64_t;
 
-  // Pointer to the memprof schema to use for the generator. Unlike the reader
-  // we must use a default constructor with no params for the writer trait so we
-  // have a public member which must be initialized by the user.
-  MemProfSchema *Schema = nullptr;
+private:
+  // Pointer to the memprof schema to use for the generator.
+  const MemProfSchema *Schema;
   // The MemProf version to use for the serialization.
   IndexedVersion Version;
 
+public:
   // We do not support the default constructor, which does not set Version.
   RecordWriterTrait() = delete;
-  RecordWriterTrait(IndexedVersion V) : Version(V) {}
+  RecordWriterTrait(const MemProfSchema *Schema, IndexedVersion V)
+      : Schema(Schema), Version(V) {}
 
   static hash_value_type ComputeHash(key_type_ref K) { return K; }
 

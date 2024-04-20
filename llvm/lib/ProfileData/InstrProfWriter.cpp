@@ -451,8 +451,7 @@ static uint64_t writeMemProfRecords(
     llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
         &MemProfRecordData,
     memprof::MemProfSchema *Schema, memprof::IndexedVersion Version) {
-  memprof::RecordWriterTrait RecordWriter(Version);
-  RecordWriter.Schema = Schema;
+  memprof::RecordWriterTrait RecordWriter(Schema, Version);
   OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
       RecordTableGenerator;
   for (auto &[GUID, Record] : MemProfRecordData) {
