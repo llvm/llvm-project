@@ -376,8 +376,7 @@ std::unique_ptr<llvm::Module> IncrementalParser::GenModule() {
             (CachedInCodeGenModule->empty() &&
              CachedInCodeGenModule->global_empty() &&
              CachedInCodeGenModule->alias_empty() &&
-             CachedInCodeGenModule->ifunc_empty() &&
-             CachedInCodeGenModule->named_metadata_empty())) &&
+             CachedInCodeGenModule->ifunc_empty())) &&
            "CodeGen wrote to a readonly module");
     std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
     CG->StartModule("incr_module_" + std::to_string(ID++), M->getContext());
