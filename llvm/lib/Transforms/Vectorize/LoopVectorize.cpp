@@ -9382,9 +9382,9 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewLI;
   Value *EVL = State.get(getEVL(), VPIteration(0, 0));
   Value *Addr = State.get(getAddr(), 0, !CreateGather);
-  Value *Mask =
-      getMask() ? State.get(getMask(), 0)
-                : Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  Value *Mask = getMask()
+                    ? State.get(getMask(), 0)
+                    : Builder.CreateVectorSplat(State.VF, Builder.getTrue());
   if (CreateGather) {
     NewLI =
         Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
@@ -9460,9 +9460,9 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   Value *StoredVal = State.get(StoredValue, 0);
   Value *EVL = State.get(getEVL(), VPIteration(0, 0));
   // FIXME: Support reverse store after vp_reverse is added.
-  Value *Mask =
-      getMask() ? State.get(getMask(), 0)
-                : Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  Value *Mask = getMask()
+                    ? State.get(getMask(), 0)
+                    : Builder.CreateVectorSplat(State.VF, Builder.getTrue());
   Value *Addr = State.get(getAddr(), 0, !CreateScatter);
   if (CreateScatter) {
     NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
