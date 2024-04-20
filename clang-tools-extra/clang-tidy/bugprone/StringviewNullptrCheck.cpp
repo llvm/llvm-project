@@ -74,8 +74,9 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
   auto BasicStringViewConstructingFromNullExpr =
       cxxConstructExpr(
           HasBasicStringViewType, argumentCountIs(1),
-          hasAnyArgument(/* `hasArgument` would skip over parens */ anyOf(
-              NullLiteral, NullInitList, EmptyInitList)),
+          hasAnyArgument(
+              /* `hasArgument` would skip over parens */ ignoringParenImpCasts(
+                  anyOf(NullLiteral, NullInitList, EmptyInitList))),
           unless(cxxTemporaryObjectExpr(/* filters out type spellings */)),
           has(expr().bind("null_arg_expr")))
           .bind("construct_expr");
@@ -90,8 +91,9 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
   auto HandleTemporaryCXXTemporaryObjectExprAndCompoundLiteralExpr = makeRule(
       cxxTemporaryObjectExpr(cxxConstructExpr(
           HasBasicStringViewType, argumentCountIs(1),
-          hasAnyArgument(/* `hasArgument` would skip over parens */ anyOf(
-              NullLiteral, NullInitList, EmptyInitList)),
+          hasAnyArgument(
+              /* `hasArgument` would skip over parens */ ignoringParenImpCasts(
+                  anyOf(NullLiteral, NullInitList, EmptyInitList))),
           has(expr().bind("null_arg_expr")))),
       remove(node("null_arg_expr")), construction_warning);
 
@@ -263,7 +265,7 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
   auto HandleConstructorInvocation =
       makeRule(cxxConstructExpr(
                    hasAnyArgument(/* `hasArgument` would skip over parens */
-                                  ignoringImpCasts(
+                                  ignoringParenImpCasts(
                                       BasicStringViewConstructingFromNullExpr)),
                    unless(HasBasicStringViewType)),
                changeTo(node("construct_expr"), cat("\"\"")),

@@ -86,9 +86,9 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   // functions shall be 'gsl::owner<>'.
   Finder->addMatcher(
       traverse(TK_AsIs, callExpr(callee(LegacyOwnerConsumers),
-                                 hasAnyArgument(expr(
+                                 hasAnyArgument(ignoringParenImpCasts(expr(
                                      unless(ignoringImpCasts(ConsideredOwner)),
-                                     hasType(pointerType()))))
+                                     hasType(pointerType())))))
                             .bind("legacy_consumer")),
       this);
 

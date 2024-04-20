@@ -618,10 +618,11 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
   // Note: Sometimes the size of char is explicitly written out.
   auto SizeExpr = anyOf(SizeOfCharExpr, integerLiteral(equals(1)));
 
-  auto MallocLengthExpr = allOf(
-      callee(functionDecl(
-          hasAnyName("::alloca", "::calloc", "malloc", "realloc"))),
-      hasAnyArgument(allOf(unless(SizeExpr), expr().bind(DestMallocExprName))));
+  auto MallocLengthExpr =
+      allOf(callee(functionDecl(
+                hasAnyName("::alloca", "::calloc", "malloc", "realloc"))),
+            hasAnyArgument(ignoringParenImpCasts(
+                allOf(unless(SizeExpr), expr().bind(DestMallocExprName)))));
 
   // - Example:  (char *)malloc(length);
   auto DestMalloc = anyOf(callExpr(MallocLengthExpr),

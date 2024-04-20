@@ -42,7 +42,8 @@ void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(varDecl(hasInitializer(Cast)), this);
   Finder->addMatcher(returnStmt(hasReturnValue(Cast)), this);
-  Finder->addMatcher(callExpr(hasAnyArgument(Cast)), this);
+  Finder->addMatcher(callExpr(hasAnyArgument(ignoringParenImpCasts(Cast))),
+                     this);
   Finder->addMatcher(binaryOperator(hasOperatorName("="), hasRHS(Cast)), this);
   Finder->addMatcher(
       binaryOperator(isComparisonOperator(), hasEitherOperand(Cast)), this);

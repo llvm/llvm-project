@@ -98,8 +98,8 @@ auto hasWantedType(llvm::ArrayRef<StringRef> TypeNames) {
 
 // Matches member call expressions of the named method on the listed container
 // types.
-auto cxxMemberCallExprOnContainer(
-    StringRef MethodName, llvm::ArrayRef<StringRef> ContainerNames) {
+auto cxxMemberCallExprOnContainer(StringRef MethodName,
+                                  llvm::ArrayRef<StringRef> ContainerNames) {
   return cxxMemberCallExpr(
       hasDeclaration(functionDecl(hasName(MethodName))),
       on(hasTypeOrPointeeType(hasWantedType(ContainerNames))));
@@ -177,16 +177,16 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
       hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(SmartPointers))));
 
   // Bitfields binds only to consts and emplace_back take it by universal ref.
-  auto BitFieldAsArgument = hasAnyArgument(
-      ignoringImplicit(memberExpr(hasDeclaration(fieldDecl(isBitField())))));
+  auto BitFieldAsArgument = hasAnyArgument(ignoringParenImpCasts(
+      memberExpr(hasDeclaration(fieldDecl(isBitField())))));
 
   // Initializer list can't be passed to universal reference.
   auto InitializerListAsArgument = hasAnyArgument(
-      ignoringImplicit(allOf(cxxConstructExpr(isListInitialization()),
-                             unless(cxxTemporaryObjectExpr()))));
+      ignoringParenImpCasts(allOf(cxxConstructExpr(isListInitialization()),
+                                  unless(cxxTemporaryObjectExpr()))));
 
   // We could have leak of resource.
-  auto NewExprAsArgument = hasAnyArgument(ignoringImplicit(cxxNewExpr()));
+  auto NewExprAsArgument = hasAnyArgument(ignoringParenImpCasts(cxxNewExpr()));
   // We would call another constructor.
   auto ConstructingDerived =
       hasParent(implicitCastExpr(hasCastKind(CastKind::CK_DerivedToBase)));
