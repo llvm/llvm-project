@@ -184,11 +184,9 @@ void ModuleBuildDaemonServer::handleConnection(
 
   // Send response to frontend
   HandshakeMsg Msg(ActionType::HANDSHAKE, StatusType::SUCCESS);
-  if (llvm::Error WriteErr = writeMsgStructToSocket(Connection, Msg)) {
+  if (llvm::Error WriteErr = writeMsgStructToSocket(Connection, Msg))
     llvm::errs() << "MBD failed to respond to frontend request: "
                  << llvm::toString(std::move(WriteErr)) << '\n';
-    return;
-  }
   return;
 }
 
