@@ -1297,7 +1297,7 @@ void VPlanTransforms::addActiveLaneMask(
 /// ...
 /// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
 ///                                               [ %NextEVLIV, %vector.body ]
-/// %VPEVL = EXPLICIT-VECTOR-LENGTH %EVLPhi, original TC
+/// %VPEVL = EXPLICIT-VECTOR-LENGTH %EVLPhi, vector TC
 /// ...
 /// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
 /// ...
@@ -1321,7 +1321,7 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
   EVLPhi->insertAfter(CanonicalIVPHI);
   auto *VPEVL = new VPInstruction(VPInstruction::ExplicitVectorLength,
-                                  {EVLPhi, Plan.getTripCount()});
+                                  {EVLPhi, &Plan.getVectorTripCount()});
   VPEVL->insertBefore(*Header, Header->getFirstNonPhi());
 
   auto *CanonicalIVIncrement =
