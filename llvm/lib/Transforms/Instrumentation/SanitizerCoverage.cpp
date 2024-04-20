@@ -208,18 +208,19 @@ public:
   using PostDomTreeCallback =
       function_ref<const PostDominatorTree &(Function &F)>;
 
-  ModuleSanitizerCoverage(const SanitizerCoverageOptions &Options,
+  ModuleSanitizerCoverage(Module &M, DomTreeCallback DTCallback,
+                          PostDomTreeCallback PDTCallback,
+                          const SanitizerCoverageOptions &Options,
                           const SpecialCaseList *Allowlist,
                           const SpecialCaseList *Blocklist)
-      : Options(Options), Allowlist(Allowlist), Blocklist(Blocklist) {}
+      : M(M), DTCallback(DTCallback), PDTCallback(PDTCallback),
+        Options(Options), Allowlist(Allowlist), Blocklist(Blocklist) {}
 
-  bool instrumentModule(Module &M, DomTreeCallback DTCallback,
-                        PostDomTreeCallback PDTCallback);
+  bool instrumentModule();
 
 private:
   void createFunctionControlFlow(Function &F);
-  void instrumentFunction(Function &F, DomTreeCallback DTCallback,
-                          PostDomTreeCallback PDTCallback);
+  void instrumentFunction(Function &F);
   void InjectCoverageForIndirectCalls(Function &F,
                                       ArrayRef<Instruction *> IndirCalls);
   void InjectTraceForCmp(Function &F, ArrayRef<Instruction *> CmpTraceTargets);
@@ -249,6 +250,11 @@ private:
   std::string getSectionName(const std::string &Section) const;
   std::string getSectionStart(const std::string &Section) const;
   std::string getSectionEnd(const std::string &Section) const;
+
+  Module &M;
+  DomTreeCallback DTCallback;
+  PostDomTreeCallback PDTCallback;
+
   FunctionCallee SanCovTracePCIndir;
   FunctionCallee SanCovTracePC, SanCovTracePCGuard;
   std::array<FunctionCallee, 4> SanCovTraceCmpFunction;
@@ -283,8 +289,6 @@ private:
 
 PreservedAnalyses SanitizerCoveragePass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
-  ModuleSanitizerCoverage ModuleSancov(OverrideFromCL(Options), Allowlist.get(),
-                                       Blocklist.get());
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto DTCallback = [&FAM](Function &F) -> const DominatorTree & {
     return FAM.getResult<DominatorTreeAnalysis>(F);
@@ -292,7 +296,10 @@ PreservedAnalyses SanitizerCoveragePass::run(Module &M,
   auto PDTCallback = [&FAM](Function &F) -> const PostDominatorTree & {
     return FAM.getResult<PostDominatorTreeAnalysis>(F);
   };
-  if (!ModuleSancov.instrumentModule(M, DTCallback, PDTCallback))
+  ModuleSanitizerCoverage ModuleSancov(M, DTCallback, PDTCallback,
+                                       OverrideFromCL(Options), Allowlist.get(),
+                                       Blocklist.get());
+  if (!ModuleSancov.instrumentModule())
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = PreservedAnalyses::none();
@@ -363,8 +370,7 @@ Function *ModuleSanitizerCoverage::CreateInitCallsForSections(
   return CtorFunc;
 }
 
-bool ModuleSanitizerCoverage::instrumentModule(
-    Module &M, DomTreeCallback DTCallback, PostDomTreeCallback PDTCallback) {
+bool ModuleSanitizerCoverage::instrumentModule() {
   if (Options.CoverageType == SanitizerCoverageOptions::SCK_None)
     return false;
   if (Allowlist &&
@@ -477,7 +483,7 @@ bool ModuleSanitizerCoverage::instrumentModule(
       M.getOrInsertFunction(SanCovTracePCGuardName, VoidTy, PtrTy);
 
   for (auto &F : M)
-    instrumentFunction(F, DTCallback, PDTCallback);
+    instrumentFunction(F);
 
   Function *Ctor = nullptr;
 
@@ -596,8 +602,7 @@ static bool IsInterestingCmp(ICmpInst *CMP, const DominatorTree &DT,
   return true;
 }
 
-void ModuleSanitizerCoverage::instrumentFunction(
-    Function &F, DomTreeCallback DTCallback, PostDomTreeCallback PDTCallback) {
+void ModuleSanitizerCoverage::instrumentFunction(Function &F) {
   if (F.empty())
     return;
   if (F.getName().contains(".module_ctor"))
