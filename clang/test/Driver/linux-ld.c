@@ -1417,6 +1417,9 @@
 // RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -funsafe-math-optimizations\
 // RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -ffp-model=fast \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH %s
 // RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -Ofast\
 // RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH %s

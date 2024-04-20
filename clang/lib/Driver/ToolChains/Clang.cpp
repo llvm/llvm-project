@@ -2924,6 +2924,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       if (Val.equals("fast")) {
         FPModel = Val;
         applyFastMath();
+        // The target-specific getDefaultDenormalModeForType handler should
+        // account for -ffp-model=fast and choose its behavior
+        DenormalFPMath = DefaultDenormalFPMath;
+        DenormalFP32Math = DefaultDenormalFP32Math;
       } else if (Val.equals("precise")) {
         optID = options::OPT_ffp_contract;
         FPModel = Val;
