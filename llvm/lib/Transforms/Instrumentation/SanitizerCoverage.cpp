@@ -204,12 +204,11 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
   return Options;
 }
 
-using DomTreeCallback = function_ref<const DominatorTree *(Function &F)>;
-using PostDomTreeCallback =
-    function_ref<const PostDominatorTree *(Function &F)>;
-
 class ModuleSanitizerCoverage {
 public:
+  using DomTreeCallback = function_ref<const DominatorTree &(Function &F)>;
+  using PostDomTreeCallback =
+      function_ref<const PostDominatorTree &(Function &F)>;
   ModuleSanitizerCoverage(
       const SanitizerCoverageOptions &Options = SanitizerCoverageOptions(),
       const SpecialCaseList *Allowlist = nullptr,
@@ -289,11 +288,11 @@ PreservedAnalyses SanitizerCoveragePass::run(Module &M,
   ModuleSanitizerCoverage ModuleSancov(Options, Allowlist.get(),
                                        Blocklist.get());
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  auto DTCallback = [&FAM](Function &F) -> const DominatorTree * {
-    return &FAM.getResult<DominatorTreeAnalysis>(F);
+  auto DTCallback = [&FAM](Function &F) -> const DominatorTree & {
+    return FAM.getResult<DominatorTreeAnalysis>(F);
   };
-  auto PDTCallback = [&FAM](Function &F) -> const PostDominatorTree * {
-    return &FAM.getResult<PostDominatorTreeAnalysis>(F);
+  auto PDTCallback = [&FAM](Function &F) -> const PostDominatorTree & {
+    return FAM.getResult<PostDominatorTreeAnalysis>(F);
   };
   if (!ModuleSancov.instrumentModule(M, DTCallback, PDTCallback))
     return PreservedAnalyses::all();
@@ -519,29 +518,29 @@ bool ModuleSanitizerCoverage::instrumentModule(
 }
 
 // True if block has successors and it dominates all of them.
-static bool isFullDominator(const BasicBlock *BB, const DominatorTree *DT) {
+static bool isFullDominator(const BasicBlock *BB, const DominatorTree &DT) {
   if (succ_empty(BB))
     return false;
 
   return llvm::all_of(successors(BB), [&](const BasicBlock *SUCC) {
-    return DT->dominates(BB, SUCC);
+    return DT.dominates(BB, SUCC);
   });
 }
 
 // True if block has predecessors and it postdominates all of them.
 static bool isFullPostDominator(const BasicBlock *BB,
-                                const PostDominatorTree *PDT) {
+                                const PostDominatorTree &PDT) {
   if (pred_empty(BB))
     return false;
 
   return llvm::all_of(predecessors(BB), [&](const BasicBlock *PRED) {
-    return PDT->dominates(BB, PRED);
+    return PDT.dominates(BB, PRED);
   });
 }
 
 static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
-                                  const DominatorTree *DT,
-                                  const PostDominatorTree *PDT,
+                                  const DominatorTree &DT,
+                                  const PostDominatorTree &PDT,
                                   const SanitizerCoverageOptions &Options) {
   // Don't insert coverage for blocks containing nothing but unreachable: we
   // will never call __sanitizer_cov() for them, so counting them in
@@ -569,17 +568,16 @@ static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
     && !(isFullPostDominator(BB, PDT) && !BB->getSinglePredecessor());
 }
 
-
 // Returns true iff From->To is a backedge.
 // A twist here is that we treat From->To as a backedge if
 //   * To dominates From or
 //   * To->UniqueSuccessor dominates From
 static bool IsBackEdge(BasicBlock *From, BasicBlock *To,
-                       const DominatorTree *DT) {
-  if (DT->dominates(To, From))
+                       const DominatorTree &DT) {
+  if (DT.dominates(To, From))
     return true;
   if (auto Next = To->getUniqueSuccessor())
-    if (DT->dominates(Next, From))
+    if (DT.dominates(Next, From))
       return true;
   return false;
 }
@@ -589,7 +587,7 @@ static bool IsBackEdge(BasicBlock *From, BasicBlock *To,
 //
 // Note that Cmp pruning is controlled by the same flag as the
 // BB pruning.
-static bool IsInterestingCmp(ICmpInst *CMP, const DominatorTree *DT,
+static bool IsInterestingCmp(ICmpInst *CMP, const DominatorTree &DT,
                              const SanitizerCoverageOptions &Options) {
   if (!Options.NoPrune)
     if (CMP->hasOneUse())
@@ -641,8 +639,8 @@ void ModuleSanitizerCoverage::instrumentFunction(
   SmallVector<LoadInst *, 8> Loads;
   SmallVector<StoreInst *, 8> Stores;
 
-  const DominatorTree *DT = DTCallback(F);
-  const PostDominatorTree *PDT = PDTCallback(F);
+  const DominatorTree &DT = DTCallback(F);
+  const PostDominatorTree &PDT = PDTCallback(F);
   bool IsLeafFunc = true;
 
   for (auto &BB : F) {
