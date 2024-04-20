@@ -212,10 +212,9 @@ def AlderLakePfmCounters : ProcPfmCounters {
     PfmIssueCounter<"ADLPPort01", "uops_dispatched_port:port_1">,
     PfmIssueCounter<"ADLPPort02_03_10", "uops_dispatched_port:port_2_3_10">,
     PfmIssueCounter<"ADLPPort04_09", "uops_dispatched_port:port_4_9">,
-    PfmIssueCounter<"ADLPPort05", "uops_dispatched_port:port_5_11">,
+    PfmIssueCounter<"ADLPPort05_11", "uops_dispatched_port:port_5_11">,
     PfmIssueCounter<"ADLPPort06", "uops_dispatched_port:port_6">,
-    PfmIssueCounter<"ADLPPort07_08", "uops_dispatched_port:port_7_8">,
-    PfmIssueCounter<"ADLPPort11", "uops_dispatched_port:port_5_11">,
+    PfmIssueCounter<"ADLPPort07_08", "uops_dispatched_port:port_7_8">
   ];
   let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
