@@ -1272,13 +1272,13 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   MemProfFrameTable.reset(MemProfFrameHashTable::Create(
       /*Buckets=*/Start + FrameTableOffset,
       /*Payload=*/Start + FramePayloadOffset,
-      /*Base=*/Start, memprof::FrameLookupTrait()));
+      /*Base=*/Start));
 
   if (Version >= memprof::Version2)
     MemProfCallStackTable.reset(MemProfCallStackHashTable::Create(
         /*Buckets=*/Start + CallStackTableOffset,
         /*Payload=*/Start + CallStackPayloadOffset,
-        /*Base=*/Start, memprof::CallStackLookupTrait()));
+        /*Base=*/Start));
 
 #ifdef EXPENSIVE_CHECKS
   // Go through all the records and verify that CSId has been correctly
