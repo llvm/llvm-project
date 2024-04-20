@@ -14,7 +14,7 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 #  include <__algorithm/ranges_lower_bound.h>
 #  include <__chrono/leap_second.h>
@@ -89,6 +89,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 #endif // _LIBCPP___CHRONO_TZDB_H
