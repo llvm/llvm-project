@@ -12,56 +12,72 @@
 using LIBC_NAMESPACE::cpp::adopt_lock;
 using LIBC_NAMESPACE::cpp::lock_guard;
 
-static const int SIGABRT = 6;
-
 // Simple struct for testing cpp::lock_guard. It defines methods 'lock' and
 // 'unlock' which are required for the cpp::lock_guard class template.
 struct Mutex {
-  Mutex() : locked(false) {}
+  // Flag to show whether this mutex is locked.
+  bool locked;
+
+  // Flag to show if this mutex has been double locked.
+  bool double_locked;
+
+  // Flag to show if this mutex has been double unlocked.
+  bool double_unlocked;
+
+  Mutex()
+    : locked(false)
+    , double_locked(false)
+    , double_unlocked(false)
+  {}
 
   void lock() {
     if (locked) {
-      // Sends signal 6.
-      abort();
+      double_locked = true;
     }
     locked = true;
   }
 
   void unlock() {
     if (!locked) {
-      // Sends signal 6.
-      abort();
+      double_unlocked = true;
     }
     locked = false;
   }
-
-  bool locked;
 };
 
 TEST(LlvmLibcMutexTest, Basic) {
   Mutex m;
   ASSERT_FALSE(m.locked);
+  ASSERT_FALSE(m.double_locked);
+  ASSERT_FALSE(m.double_unlocked);
 
   {
     lock_guard<Mutex> lg(m);
     ASSERT_TRUE(m.locked);
-    ASSERT_DEATH([&]() { lock_guard<Mutex> lg2(m); }, SIGABRT);
+    ASSERT_FALSE(m.double_locked);
   }
 
   ASSERT_FALSE(m.locked);
+  ASSERT_FALSE(m.double_unlocked);
 }
 
 TEST(LlvmLibcMutexTest, AcquireLocked) {
   Mutex m;
   ASSERT_FALSE(m.locked);
+  ASSERT_FALSE(m.double_locked);
+  ASSERT_FALSE(m.double_unlocked);
 
+  // Lock the mutex before placing a lock guard on it.
   m.lock();
   ASSERT_TRUE(m.locked);
+  ASSERT_FALSE(m.double_locked);
 
   {
     lock_guard<Mutex> lg(m, adopt_lock);
     ASSERT_TRUE(m.locked);
+    ASSERT_FALSE(m.double_locked);
   }
 
   ASSERT_FALSE(m.locked);
+  ASSERT_FALSE(m.double_unlocked);
 }
