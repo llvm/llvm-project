@@ -69,7 +69,7 @@ void call_exit_callbacks() {
 }
 
 int add_atexit_unit(const AtExitUnit &unit) {
-  cpp::lock_guard<Mutex> lock(handler_list_mtx);
+  cpp::lock_guard lock(handler_list_mtx);
   if (exit_callbacks.push_back(unit))
     return 0;
   return -1;

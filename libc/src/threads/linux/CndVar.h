@@ -59,7 +59,7 @@ struct CndVar {
 
     CndWaiter waiter;
     {
-      cpp::lock_guard<Mutex> ml(qmtx);
+      cpp::lock_guard ml(qmtx);
       CndWaiter *old_back = nullptr;
       if (waitq_front == nullptr) {
         waitq_front = waitq_back = &waiter;
@@ -118,7 +118,7 @@ struct CndVar {
   }
 
   int broadcast() {
-    cpp::lock_guard<Mutex> ml(qmtx);
+    cpp::lock_guard ml(qmtx);
     uint32_t dummy_futex_word;
     CndWaiter *waiter = waitq_front;
     waitq_front = waitq_back = nullptr;

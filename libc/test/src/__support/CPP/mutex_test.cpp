@@ -48,7 +48,7 @@ TEST(LlvmLibcMutexTest, Basic) {
   ASSERT_FALSE(m.double_unlocked);
 
   {
-    lock_guard<Mutex> lg(m);
+    lock_guard lg(m);
     ASSERT_TRUE(m.locked);
     ASSERT_FALSE(m.double_locked);
   }
@@ -69,7 +69,7 @@ TEST(LlvmLibcMutexTest, AcquireLocked) {
   ASSERT_FALSE(m.double_locked);
 
   {
-    lock_guard<Mutex> lg(m, adopt_lock);
+    lock_guard lg(m, adopt_lock);
     ASSERT_TRUE(m.locked);
     ASSERT_FALSE(m.double_locked);
   }

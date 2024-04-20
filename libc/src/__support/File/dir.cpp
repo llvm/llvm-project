@@ -28,7 +28,7 @@ ErrorOr<Dir *> Dir::open(const char *path) {
 }
 
 ErrorOr<struct ::dirent *> Dir::read() {
-  cpp::lock_guard<Mutex> lock(mutex);
+  cpp::lock_guard lock(mutex);
   if (readptr >= fillsize) {
     auto readsize = platform_fetch_dirents(fd, buffer);
     if (!readsize)
@@ -52,7 +52,7 @@ ErrorOr<struct ::dirent *> Dir::read() {
 
 int Dir::close() {
   {
-    cpp::lock_guard<Mutex> lock(mutex);
+    cpp::lock_guard lock(mutex);
     int retval = platform_closedir(fd);
     if (retval != 0)
       return retval;

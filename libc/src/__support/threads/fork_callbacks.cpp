@@ -36,7 +36,7 @@ public:
   constexpr AtForkCallbackManager() : mtx(false, false, false), next_index(0) {}
 
   bool register_triple(const ForkCallbackTriple &triple) {
-    cpp::lock_guard<Mutex> lock(mtx);
+    cpp::lock_guard lock(mtx);
     if (next_index >= CALLBACK_SIZE)
       return false;
     list[next_index] = triple;
@@ -45,7 +45,7 @@ public:
   }
 
   void invoke_prepare() {
-    cpp::lock_guard<Mutex> lock(mtx);
+    cpp::lock_guard lock(mtx);
     for (size_t i = 0; i < next_index; ++i) {
       auto prepare = list[i].prepare;
       if (prepare)
@@ -54,7 +54,7 @@ public:
   }
 
   void invoke_parent() {
-    cpp::lock_guard<Mutex> lock(mtx);
+    cpp::lock_guard lock(mtx);
     for (size_t i = 0; i < next_index; ++i) {
       auto parent = list[i].parent;
       if (parent)
@@ -63,7 +63,7 @@ public:
   }
 
   void invoke_child() {
-    cpp::lock_guard<Mutex> lock(mtx);
+    cpp::lock_guard lock(mtx);
     for (size_t i = 0; i < next_index; ++i) {
       auto child = list[i].child;
       if (child)
