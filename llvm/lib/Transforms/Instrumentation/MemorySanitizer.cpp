@@ -1040,8 +1040,8 @@ void MemorySanitizer::initializeModule(Module &M) {
   OriginTy = IRB.getInt32Ty();
   PtrTy = IRB.getPtrTy();
 
-  ColdCallWeights = MDBuilder(*C).createBranchWeights(1, 1000);
-  OriginStoreWeights = MDBuilder(*C).createBranchWeights(1, 1000);
+  ColdCallWeights = MDBuilder(*C).createUnlikelyBranchWeights();
+  OriginStoreWeights = MDBuilder(*C).createUnlikelyBranchWeights();
 
   if (!CompileKernel) {
     if (TrackOrigins)
