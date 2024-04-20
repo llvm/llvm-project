@@ -167,9 +167,10 @@ public:
 
   // Utilities for lazily computing and cacheing data layout info.
 private:
-  mutable Type largestMember{};
-  mutable std::optional<bool> padded{};
-  mutable std::optional<unsigned> size{}, align{};
+  // FIXME: currently opaque because there's a cycle if CIRTypes.types include
+  // from CIRAttrs.h. The implementation operates in terms of StructLayoutAttr
+  // instead.
+  mutable mlir::Attribute layoutInfo;
   bool isPadded(const DataLayout &dataLayout) const;
   void computeSizeAndAlignment(const DataLayout &dataLayout) const;
 };

@@ -165,6 +165,12 @@ LogicalResult ConstStructAttr::verify(
   return success();
 }
 
+LogicalResult StructLayoutAttr::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, unsigned size,
+    unsigned alignment, bool padded, mlir::Type largest_member) {
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // LangAttr definitions
 //===----------------------------------------------------------------------===//
