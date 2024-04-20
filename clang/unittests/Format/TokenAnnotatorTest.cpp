@@ -1885,14 +1885,20 @@ TEST_F(TokenAnnotatorTest, UnderstandHashInMacro) {
                          "    #Bar \\\n"
                          "  }");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
-  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[6], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
 
   Tokens = annotate("#define Foo(Bar) \\\n"
                     "  { #Bar }");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
-  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[6], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
+
+  Tokens = annotate("#define FOO(typeName, realClass) \\\n"
+                    "  {#typeName, foo<Foo>(new foo<realClass>(#typeName))}");
+  ASSERT_EQ(Tokens.size(), 29u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[8], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[27], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacros) {
