@@ -142,6 +142,7 @@ public:
       : AC(AC), DT(DT), LI(LI), TTI(TTI), ORE(ORE) {}
 
   bool run(Function &F);
+  bool LoopInfoBroken;
 
 private:
   void
@@ -1297,6 +1298,7 @@ bool DFAJumpThreading::run(Function &F) {
 
   SmallVector<AllSwitchPaths, 2> ThreadableLoops;
   bool MadeChanges = false;
+  LoopInfoBroken = false;
 
   for (BasicBlock &BB : F) {
     auto *SI = dyn_cast<SwitchInst>(BB.getTerminator());
@@ -1329,9 +1331,14 @@ bool DFAJumpThreading::run(Function &F) {
       // strict requirement but it can cause buggy behavior if there is an
       // overlap of blocks in different opportunities. There is a lot of room to
       // experiment with catching more opportunities here.
+      // NOTE: To release this contraint, we must handle LoopInfo invalidation
       break;
     }
   }
+
+#ifdef NDEBUG
+  LI->verify(*DT);
+#endif
 
   SmallPtrSet<const Value *, 32> EphValues;
   if (ThreadableLoops.size() > 0)
@@ -1341,6 +1348,7 @@ bool DFAJumpThreading::run(Function &F) {
     TransformDFA Transform(&SwitchPaths, DT, AC, TTI, ORE, EphValues);
     Transform.run();
     MadeChanges = true;
+    LoopInfoBroken = true;
   }
 
 #ifdef EXPENSIVE_CHECKS
@@ -1361,11 +1369,13 @@ PreservedAnalyses DFAJumpThreadingPass::run(Function &F,
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
   TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
   OptimizationRemarkEmitter ORE(&F);
-
-  if (!DFAJumpThreading(&AC, &DT, &LI, &TTI, &ORE).run(F))
+  DFAJumpThreading ThreadImpl(&AC, &DT, &LI, &TTI, &ORE);
+  if (!ThreadImpl.run(F))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
+  if (!ThreadImpl.LoopInfoBroken)
+    PA.preserve<LoopAnalysis>();
   return PA;
 }
