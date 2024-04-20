@@ -2760,6 +2760,13 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
   IRBuilder<> Builder(InsertBlock->getTerminator());
 
   Type *Ty = TC->getType();
+  // If the tail is to be folded by EVL, typically the original trip count can
+  // be used directly as the vector trip count.
+  // TODO: However, in cases where the epilogue is required, the last iteration
+  // needs to be left for execution by the epilogue.
+  if (Cost->foldTailWithEVL())
+    return VectorTripCount = TC;
+
   // This is where we can make the step a runtime constant.
   Value *Step = createStepForVF(Builder, Ty, VF, UF);
 
