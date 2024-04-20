@@ -24,11 +24,7 @@ struct Mutex {
   // Flag to show if this mutex has been double unlocked.
   bool double_unlocked;
 
-  Mutex()
-    : locked(false)
-    , double_locked(false)
-    , double_unlocked(false)
-  {}
+  Mutex() : locked(false), double_locked(false), double_unlocked(false) {}
 
   void lock() {
     if (locked) {
