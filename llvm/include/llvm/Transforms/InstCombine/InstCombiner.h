@@ -76,6 +76,7 @@ protected:
   SimplifyQuery SQ;
   OptimizationRemarkEmitter &ORE;
   BlockFrequencyInfo *BFI;
+  BranchProbabilityInfo *BPI;
   ProfileSummaryInfo *PSI;
   DomConditionCache DC;
 
@@ -96,13 +97,13 @@ public:
                bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
                TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                DominatorTree &DT, OptimizationRemarkEmitter &ORE,
-               BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
-               const DataLayout &DL, LoopInfo *LI)
+               BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
+               ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI)
       : TTI(TTI), Builder(Builder), Worklist(Worklist),
         MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
         SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
            /*CanUseUndef*/ true, &DC),
-        ORE(ORE), BFI(BFI), PSI(PSI), LI(LI) {}
+        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), LI(LI) {}
 
   virtual ~InstCombiner() = default;
 
