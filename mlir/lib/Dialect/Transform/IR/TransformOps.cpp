@@ -1615,7 +1615,7 @@ transform::GetTypeOp::apply(transform::TransformRewriter &rewriter,
     }
     params.push_back(TypeAttr::get(type));
   }
-  results.setParams(getResult().cast<OpResult>(), params);
+  results.setParams(cast<OpResult>(getResult()), params);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -2217,14 +2217,14 @@ transform::NumAssociationsOp::apply(transform::TransformRewriter &rewriter,
             llvm_unreachable("unknown kind of transform dialect type");
             return 0;
           });
-  results.setParams(getNum().cast<OpResult>(),
+  results.setParams(cast<OpResult>(getNum()),
                     rewriter.getI64IntegerAttr(numAssociations));
   return DiagnosedSilenceableFailure::success();
 }
 
 LogicalResult transform::NumAssociationsOp::verify() {
   // Verify that the result type accepts an i64 attribute as payload.
-  auto resultType = getNum().getType().cast<TransformParamTypeInterface>();
+  auto resultType = cast<TransformParamTypeInterface>(getNum().getType());
   return resultType
       .checkPayload(getLoc(), {Builder(getContext()).getI64IntegerAttr(0)})
       .checkAndReport();

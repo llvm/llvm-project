@@ -931,6 +931,15 @@ size_t CompilerType::GetIndexOfChildMemberWithName(
   return 0;
 }
 
+CompilerType
+CompilerType::GetDirectNestedTypeWithName(llvm::StringRef name) const {
+  if (IsValid() && !name.empty()) {
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetDirectNestedTypeWithName(m_type, name);
+  }
+  return CompilerType();
+}
+
 size_t CompilerType::GetNumTemplateArguments(bool expand_pack) const {
   if (IsValid()) {
     if (auto type_system_sp = GetTypeSystem())
