@@ -211,7 +211,7 @@ IncrementalParser::IncrementalParser(Interpreter &Interp,
   CI->ExecuteAction(*Act);
 
   if (getCodeGen())
-    CachedInCodeGenModule = std::move(GenModule());
+    CachedInCodeGenModule = GenModule();
 
   std::unique_ptr<ASTConsumer> IncrConsumer =
       std::make_unique<IncrementalASTConsumer>(Interp, CI->takeASTConsumer());
@@ -229,7 +229,7 @@ IncrementalParser::IncrementalParser(Interpreter &Interp,
   }
 
   if (getCodeGen()) {
-    PTU->TheModule = std::move(GenModule());
+    PTU->TheModule = GenModule();
     assert(PTU->TheModule && "Failed to create initial PTU");
   }
 }
