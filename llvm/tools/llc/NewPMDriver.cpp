@@ -155,7 +155,7 @@ int llvm::compileModuleWithNewPM(
       return 1;
   } else {
     ExitOnErr(LLVMTM.buildCodeGenPipeline(
-        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
+        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, PB));
   }
 
   if (PrintPipelinePasses) {
