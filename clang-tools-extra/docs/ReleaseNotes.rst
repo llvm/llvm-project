@@ -112,6 +112,12 @@ New checks
   Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
   can be constructed outside itself and the derived class.
 
+- New :doc:`bugprone-return-const-ref-from-parameter
+  <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check.
+
+  Detects the function which returns the const reference from parameter which
+  causes potential use after free if the caller uses xvalue as argument.
+
 - New :doc:`bugprone-suspicious-stringview-data-usage
   <clang-tidy/checks/bugprone/suspicious-stringview-data-usage>` check.
 
