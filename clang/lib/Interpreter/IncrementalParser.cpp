@@ -209,10 +209,6 @@ IncrementalParser::IncrementalParser(Interpreter &Interp,
   if (Err)
     return;
   CI->ExecuteAction(*Act);
-
-  if (getCodeGen())
-    CachedInCodeGenModule = GenModule();
-
   std::unique_ptr<ASTConsumer> IncrConsumer =
       std::make_unique<IncrementalASTConsumer>(Interp, CI->takeASTConsumer());
   CI->setASTConsumer(std::move(IncrConsumer));
@@ -228,8 +224,11 @@ IncrementalParser::IncrementalParser(Interpreter &Interp,
     return;                     // PTU.takeError();
   }
 
-  if (getCodeGen()) {
-    PTU->TheModule = GenModule();
+  if (CodeGenerator *CG = getCodeGen()) {
+    std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
+    CG->StartModule("incr_module_" + std::to_string(PTUs.size()),
+                    M->getContext());
+    PTU->TheModule = std::move(M);
     assert(PTU->TheModule && "Failed to create initial PTU");
   }
 }
@@ -365,20 +364,6 @@ IncrementalParser::Parse(llvm::StringRef input) {
 std::unique_ptr<llvm::Module> IncrementalParser::GenModule() {
   static unsigned ID = 0;
   if (CodeGenerator *CG = getCodeGen()) {
-    // Clang's CodeGen is designed to work with a single llvm::Module. In many
-    // cases for convenience various CodeGen parts have a reference to the
-    // llvm::Module (TheModule or Module) which does not change when a new
-    // module is pushed. However, the execution engine wants to take ownership
-    // of the module which does not map well to CodeGen's design. To work this
-    // around we created an empty module to make CodeGen happy. We should make
-    // sure it always stays empty.
-    assert((!CachedInCodeGenModule ||
-            (CachedInCodeGenModule->empty() &&
-             CachedInCodeGenModule->global_empty() &&
-             CachedInCodeGenModule->alias_empty() &&
-             CachedInCodeGenModule->ifunc_empty() &&
-             CachedInCodeGenModule->named_metadata_empty())) &&
-           "CodeGen wrote to a readonly module");
     std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
     CG->StartModule("incr_module_" + std::to_string(ID++), M->getContext());
     return M;
