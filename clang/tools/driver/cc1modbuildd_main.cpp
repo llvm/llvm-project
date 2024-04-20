@@ -86,20 +86,25 @@ public:
   // TODO: modify so when shutdownDaemon is called the daemon stops accepting
   // new client connections and waits for all existing client connections to
   // terminate before closing the file descriptor and exiting
+  // Meant to be called by signal handler to clean up resources
   void shutdownDaemon() {
     RunServiceLoop = false;
-    if (ServerListener.has_value())
-      ServerListener.value().shutdown();
+    // Signal handler is installed after ServerListener is created and emplaced
+    // into the std::optional<llvm::ListeningSocket>
+    ServerListener.value().shutdown();
   }
 
 private:
   std::atomic<bool> RunServiceLoop = true;
-  std::atomic<llvm::ListeningSocket *> ServerListenerAtomicPtr;
+  // llvm::ListeningSocket does not have a default constructor so use
+  // std::optional as storage
   std::optional<llvm::ListeningSocket> ServerListener;
 };
 
 // Used to handle signals
 ModuleBuildDaemonServer *DaemonPtr = nullptr;
+// DaemonPtr is set to a valid ModuleBuildDaemonServer before the signal handler
+// is installed so there is no need to check if DaemonPtr equals nullptr
 void handleSignal(int) { DaemonPtr->shutdownDaemon(); }
 } // namespace
 
@@ -121,8 +126,6 @@ void ModuleBuildDaemonServer::setupDaemonEnv() {
     llvm::errs() << "Failed to redirect stderr to " << Stderr << '\n';
     exit(EXIT_FAILURE);
   }
-
-  modifySignals(handleSignal);
 }
 
 // Creates unix socket for IPC with frontends
@@ -193,6 +196,7 @@ void ModuleBuildDaemonServer::handleConnection(
 void ModuleBuildDaemonServer::listenForClients() {
   llvm::DefaultThreadPool Pool;
   std::chrono::seconds DaemonTimeout(15);
+  modifySignals(handleSignal);
 
   while (RunServiceLoop) {
     llvm::Expected<std::unique_ptr<llvm::raw_socket_stream>> MaybeConnection =
@@ -212,7 +216,6 @@ void ModuleBuildDaemonServer::listenForClients() {
           llvm::errs() << "MBD failed to accept incoming connection: "
                        << SE.getMessage() << ": " << EC.message() << '\n';
       });
-
       continue;
     }
 
