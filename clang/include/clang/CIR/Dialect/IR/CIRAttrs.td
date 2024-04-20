@@ -512,6 +512,42 @@ def VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// StructLayoutAttr
+//===----------------------------------------------------------------------===//
+
+// Used to decouple layout information from the struct type. StructType's
+// uses this attribute to cache that information.
+
+def StructLayoutAttr : CIR_Attr<"StructLayout", "struct_layout"> {
+  let summary = "ABI specific information about a struct layout";
+  let description = [{
+  }];
+
+  let parameters = (ins "unsigned":$size,
+                        "unsigned":$alignment,
+                        "bool":$padded,
+                        "mlir::Type":$largest_member);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "unsigned":$size,
+                                        "unsigned":$alignment,
+                                        "bool":$padded,
+                                        "mlir::Type":$largest_member
+                                        ), [{
+      return $_get(largest_member.getContext(), size, alignment, padded,
+                   largest_member);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<`
+      struct($size, $alignment, $padded, $largest_member)
+    `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // DynamicCastInfoAttr
 //===----------------------------------------------------------------------===//
 

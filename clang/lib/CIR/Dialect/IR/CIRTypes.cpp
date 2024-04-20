@@ -127,9 +127,9 @@ void BoolType::print(mlir::AsmPrinter &printer) const {}
 ///
 /// Recurses into union members never returning a union as the largest member.
 Type StructType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
-  if (!largestMember)
+  if (!layoutInfo)
     computeSizeAndAlignment(dataLayout);
-  return largestMember;
+  return layoutInfo.cast<mlir::cir::StructLayoutAttr>().getLargestMember();
 }
 
 Type StructType::parse(mlir::AsmParser &parser) {
@@ -472,17 +472,18 @@ uint64_t mlir::cir::VectorType::getPreferredAlignment(
 llvm::TypeSize
 StructType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                               ::mlir::DataLayoutEntryListRef params) const {
-  if (!size)
+  if (!layoutInfo)
     computeSizeAndAlignment(dataLayout);
-  return llvm::TypeSize::getFixed(*size * 8);
+  return llvm::TypeSize::getFixed(
+      layoutInfo.cast<mlir::cir::StructLayoutAttr>().getSize() * 8);
 }
 
 uint64_t
 StructType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                             ::mlir::DataLayoutEntryListRef params) const {
-  if (!align)
+  if (!layoutInfo)
     computeSizeAndAlignment(dataLayout);
-  return *align;
+  return layoutInfo.cast<mlir::cir::StructLayoutAttr>().getAlignment();
 }
 
 uint64_t
@@ -492,24 +493,25 @@ StructType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
 }
 
 bool StructType::isPadded(const ::mlir::DataLayout &dataLayout) const {
-  if (!padded)
+  if (!layoutInfo)
     computeSizeAndAlignment(dataLayout);
-  return *padded;
+  return layoutInfo.cast<mlir::cir::StructLayoutAttr>().getPadded();
 }
 
 void StructType::computeSizeAndAlignment(
     const ::mlir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete structs");
   // Do not recompute.
-  if (size || align || padded || largestMember)
+  if (layoutInfo)
     return;
 
   // This is a similar algorithm to LLVM's StructLayout.
   unsigned structSize = 0;
   llvm::Align structAlignment{1};
-  [[maybe_unused]] bool isPadded = false;
+  bool isPadded = false;
   unsigned numElements = getNumElements();
   auto members = getMembers();
+  mlir::Type largestMember;
   unsigned largestMemberSize = 0;
 
   // Loop over each of the elements, placing them in memory.
@@ -551,22 +553,20 @@ void StructType::computeSizeAndAlignment(
 
   // For unions, the size and aligment is that of the largest element.
   if (isUnion()) {
-    size = largestMemberSize;
-    align = structAlignment.value();
-    padded = false;
-    return;
+    structSize = largestMemberSize;
+    isPadded = false;
+  } else {
+    // Add padding to the end of the struct so that it could be put in an array
+    // and all array elements would be aligned correctly.
+    if (!llvm::isAligned(structAlignment, structSize)) {
+      isPadded = true;
+      structSize = llvm::alignTo(structSize, structAlignment);
+    }
   }
 
-  // Add padding to the end of the struct so that it could be put in an array
-  // and all array elements would be aligned correctly.
-  if (!llvm::isAligned(structAlignment, structSize)) {
-    isPadded = true;
-    structSize = llvm::alignTo(structSize, structAlignment);
-  }
-
-  size = structSize;
-  align = structAlignment.value();
-  padded = isPadded;
+  layoutInfo = mlir::cir::StructLayoutAttr::get(getContext(), structSize,
+                                                structAlignment.value(),
+                                                isPadded, largestMember);
 }
 
 //===----------------------------------------------------------------------===//
