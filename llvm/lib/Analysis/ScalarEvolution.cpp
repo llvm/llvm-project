@@ -510,7 +510,7 @@ const SCEV *ScalarEvolution::getVScale(Type *Ty) {
   return S;
 }
 
-void ScalarEvolution::setAssumeLoopExits() { this->AssumeLoopExits = true; }
+void ScalarEvolution::setAssumeLoopExits() { this->AssumeLoopFinite = true; }
 
 SCEVCastExpr::SCEVCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                            const SCEV *op, Type *ty)
@@ -7416,7 +7416,7 @@ bool ScalarEvolution::loopIsFiniteByAssumption(const Loop *L) {
   // A mustprogress loop without side effects must be finite.
   // TODO: The check used here is very conservative.  It's only *specific*
   // side effects which are well defined in infinite loops.
-  return AssumeLoopExits || isFinite(L) ||
+  return AssumeLoopFinite || isFinite(L) ||
          (isMustProgress(L) && loopHasNoSideEffects(L));
 }
 
@@ -8832,7 +8832,7 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
                                       bool AllowPredicates) {
-  if (AssumeLoopExits) {
+  if (AssumeLoopFinite) {
     SmallVector<BasicBlock *, 8> ExitingBlocks;
     L->getExitingBlocks(ExitingBlocks);
     for (auto &ExitingBlock : ExitingBlocks) {
@@ -8877,7 +8877,7 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
     BasicBlock *Exit = nullptr;
     for (auto *SBB : successors(ExitingBlock))
       if (!L->contains(SBB)) {
-        if (AssumeLoopExits and GuaranteedUnreachable.count(SBB))
+        if (AssumeLoopFinite and GuaranteedUnreachable.count(SBB))
           continue;
         if (Exit) // Multiple exit successors.
           return getCouldNotCompute();
@@ -8982,9 +8982,9 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromCondImpl(
     return getZero(CI->getType());
   }
 
-  // If we're exiting based on the overflow flag of an x.with.overflow
-  // intrinsic with a constant step, we can form an equivalent icmp predicate
-  // and figure out how many iterations will be taken before we exit.
+  // If we're exiting based on the overflow flag of an x.with.overflow intrinsic
+  // with a constant step, we can form an equivalent icmp predicate and figure
+  // out how many iterations will be taken before we exit.
   const WithOverflowInst *WO;
   const APInt *C;
   if (match(ExitCond, m_ExtractValue<1>(m_WithOverflowInst(WO))) &&
@@ -9076,7 +9076,7 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
       BECount = EL0.ExactNotTaken;
     // This was executed in Enzyme's must exit code under the
     // logic for when the binary op was OR
-    if (AssumeLoopExits && !IsAnd) {
+    if (AssumeLoopFinite && !IsAnd) {
       if (EL0.ExactNotTaken == EL1.ExactNotTaken)
         ConstantMaxBECount = EL0.ExactNotTaken;
     }
@@ -9088,7 +9088,7 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
   // and
   // EL1.ExactNotTaken to match, but for EL0.ConstantMaxNotTaken and
   // EL1.ConstantMaxNotTaken to not.
-  if (!AssumeLoopExits || !IsAnd) { // should skip if assume exits and OR
+  if (!AssumeLoopFinite || !IsAnd) { // should skip if assume exits and OR
     if (isa<SCEVCouldNotCompute>(ConstantMaxBECount) &&
         !isa<SCEVCouldNotCompute>(BECount))
       ConstantMaxBECount = getConstant(getUnsignedRangeMax(BECount));
@@ -9130,7 +9130,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
     const Loop *L, ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS,
     bool ControlsOnlyExit, bool AllowPredicates) {
-  if (AssumeLoopExits) {
+  if (AssumeLoopFinite) {
 #define PROP_PHI(LHS)                                                          \
   if (auto un = dyn_cast<SCEVUnknown>(LHS)) {                                  \
     if (auto pn = dyn_cast_or_null<PHINode>(un->getValue())) {                 \
@@ -9250,7 +9250,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
 
   case ICmpInst::ICMP_SLE:
   case ICmpInst::ICMP_ULE:
-    if (!AssumeLoopExits) {
+    if (!AssumeLoopFinite) {
       // Since the loop is finite, an invariant RHS cannot include the boundary
       // value, otherwise it would loop forever.
       if (!EnableFiniteLoopControl || !ControllingFiniteLoop ||
@@ -9263,21 +9263,6 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   case ICmpInst::ICMP_SLT:
   case ICmpInst::ICMP_ULT: { // while (X < Y)
     bool IsSigned = ICmpInst::isSigned(Pred);
-    if (AssumeLoopExits) {
-      if (Pred == ICmpInst::ICMP_SLE || Pred == ICmpInst::ICMP_ULE) {
-        if (!isa<IntegerType>(RHS->getType()))
-          break;
-        SmallVector<const SCEV *, 2> sv = {
-            RHS, getConstant(
-                     ConstantInt::get(cast<IntegerType>(RHS->getType()), 1))};
-        // Since this is not an infinite loop by induction, RHS cannot be
-        // int_max/uint_max Therefore adding 1 does not wrap.
-        if (IsSigned)
-          RHS = getAddExpr(sv, SCEV::FlagNSW);
-        else
-          RHS = getAddExpr(sv, SCEV::FlagNUW);
-      }
-    }
     ExitLimit EL = howManyLessThans(LHS, RHS, L, IsSigned, ControlsOnlyExit,
                                     AllowPredicates);
     if (EL.hasAnyInfo())
@@ -9286,7 +9271,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   }
   case ICmpInst::ICMP_SGE:
   case ICmpInst::ICMP_UGE:
-    if (!AssumeLoopExits) {
+    if (!AssumeLoopFinite) {
       // Since the loop is finite, an invariant RHS cannot include the boundary
       // value, otherwise it would loop forever.
       if (!EnableFiniteLoopControl || !ControllingFiniteLoop ||
@@ -9298,7 +9283,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   case ICmpInst::ICMP_SGT:
   case ICmpInst::ICMP_UGT: { // while (X > Y)
     bool IsSigned = ICmpInst::isSigned(Pred);
-    if (AssumeLoopExits) {
+    if (AssumeLoopFinite) {
       if (Pred == ICmpInst::ICMP_SGE || Pred == ICmpInst::ICMP_UGE) {
         if (!isa<IntegerType>(RHS->getType()))
           break;
@@ -9340,7 +9325,7 @@ ScalarEvolution::computeExitLimitFromSingleExitSwitch(const Loop *L,
   // if not using enzyme executes by default
   // if using enzyme and the code is guaranteed unreachable,
   // the default destination doesn't matter
-  if (!AssumeLoopExits ||
+  if (!AssumeLoopFinite ||
       !GuaranteedUnreachable.count(Switch->getDefaultDest())) {
     assert(L->contains(Switch->getDefaultDest()) &&
            "Default case must not exit the loop!");
@@ -12958,7 +12943,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     // has not yet been sufficiently auditted or tested with negative strides.
     // We used to filter out all known-non-positive cases here, we're in the
     // process of being less restrictive bit by bit.
-    if (AssumeLoopExits && IsSigned && isKnownNonPositive(Stride))
+    if (AssumeLoopFinite && IsSigned && isKnownNonPositive(Stride))
       return getCouldNotCompute();
 
     if (!isKnownNonZero(Stride)) {
@@ -13097,7 +13082,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       // In the Enzyme MustExitScalarEvolutionCode, this check was missing
       // I do not have enough context to know if these two checks should be
       // mutually Exclusive. If they aren't then this bool check is unnecessary
-      if (!AssumeLoopExits) {
+      if (!AssumeLoopFinite) {
         const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
         const SCEV *GuardedStart = applyLoopGuards(OrigStart, L);
 
@@ -13240,7 +13225,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   if (isa<SCEVCouldNotCompute>(ConstantMaxBECount) &&
       !isa<SCEVCouldNotCompute>(BECount))
     ConstantMaxBECount = getConstant(getUnsignedRangeMax(BECount));
-  if (AssumeLoopExits) {
+  if (AssumeLoopFinite) {
     return ExitLimit(BECount, ConstantMaxBECount, ConstantMaxBECount, MaxOrZero,
                      Predicates);
   }
