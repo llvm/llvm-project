@@ -6,8 +6,8 @@
 ; CHECK-NEXT:   edge %entry -> %bb2 probability is 0x79e79e7a / 0x80000000 = 95.24% [HOT edge]
 ; CHECK-NEXT: Printing analysis 'Branch Probability Analysis' for function 'invert_cond':
 ; CHECK-NEXT: ---- Branch Probabilities ----
-; CHECK-NEXT:   edge %entry -> %bb2 probability is 0x06186186 / 0x80000000 = 4.76%
-; CHECK-NEXT:   edge %entry -> %bb1 probability is 0x79e79e7a / 0x80000000 = 95.24% [HOT edge]
+; CHECK-NEXT:   edge %entry -> %bb2 probability is 0x79e79e7a / 0x80000000 = 95.24% [HOT edge]
+; CHECK-NEXT:   edge %entry -> %bb1 probability is 0x06186186 / 0x80000000 = 4.76%
 
 define i32 @invert_cond(ptr %p) {
 ; CHECK-LABEL: define i32 @invert_cond(
