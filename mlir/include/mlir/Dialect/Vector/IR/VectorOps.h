@@ -145,6 +145,10 @@ inline bool isReductionIterator(Attribute attr) {
 /// constant operations.
 SmallVector<int64_t> getAsIntegers(ArrayRef<Value> values);
 
+/// Returns the integer numbers in `foldResult`. `foldResult` is expected to
+/// be constant operations.
+int64_t getAsInteger(OpFoldResult foldResult);
+
 /// Returns the integer numbers in `foldResults`. `foldResults` are expected to
 /// be constant operations.
 SmallVector<int64_t> getAsIntegers(ArrayRef<OpFoldResult> foldResults);

@@ -291,6 +291,13 @@ SmallVector<int64_t> vector::getAsIntegers(ArrayRef<Value> values) {
   return ints;
 }
 
+/// Returns the integer numbers in `foldResult`. `foldResult` is expected to
+/// be constant operations.
+int64_t vector::getAsInteger(OpFoldResult foldResult) {
+  assert(foldResult.is<Attribute>() && "Unexpected non-constant index");
+  return cast<IntegerAttr>(foldResult.get<Attribute>()).getInt();
+}
+
 /// Returns the integer numbers in `foldResults`. `foldResults` are expected to
 /// be constant operations.
 SmallVector<int64_t> vector::getAsIntegers(ArrayRef<OpFoldResult> foldResults) {
