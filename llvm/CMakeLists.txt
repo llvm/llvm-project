@@ -903,8 +903,8 @@ set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
   "Profiling data file to use when compiling in order to improve runtime performance.")
 
 if(LLVM_INCLUDE_TESTS)
-  # Lit test suite requires at least python 3.6
-  set(LLVM_MINIMUM_PYTHON_VERSION 3.6)
+  # All LLVM Python files should be compatible down to this minimum version.
+  set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
 else()
   # FIXME: it is unknown if this is the actual minimum bound
   set(LLVM_MINIMUM_PYTHON_VERSION 3.0)
