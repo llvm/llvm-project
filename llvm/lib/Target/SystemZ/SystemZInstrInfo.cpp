@@ -610,20 +610,6 @@ void SystemZInstrInfo::insertSelect(MachineBasicBlock &MBB,
     .addImm(CCValid).addImm(CCMask);
 }
 
-static void transferDeadCC(MachineInstr *OldMI, MachineInstr *NewMI) {
-  if (OldMI->registerDefIsDead(SystemZ::CC)) {
-    MachineOperand *CCDef = NewMI->findRegisterDefOperand(SystemZ::CC);
-    if (CCDef != nullptr)
-      CCDef->setIsDead(true);
-  }
-}
-
-static void transferMIFlag(MachineInstr *OldMI, MachineInstr *NewMI,
-                           MachineInstr::MIFlag Flag) {
-  if (OldMI->getFlag(Flag))
-    NewMI->setFlag(Flag);
-}
-
 MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
                                                   const MachineRegisterInfo *MRI,
                                                   Register &FoldAsLoadDefReg,
@@ -968,6 +954,19 @@ static LogicOp interpretAndImmediate(unsigned Opcode) {
   }
 }
 
+static void transferDeadCC(MachineInstr *OldMI, MachineInstr *NewMI) {
+  if (OldMI->registerDefIsDead(SystemZ::CC)) {
+    MachineOperand *CCDef = NewMI->findRegisterDefOperand(SystemZ::CC);
+    if (CCDef != nullptr)
+      CCDef->setIsDead(true);
+  }
+}
+
+static void transferMIFlag(MachineInstr *OldMI, MachineInstr *NewMI,
+                           MachineInstr::MIFlag Flag) {
+  if (OldMI->getFlag(Flag))
+    NewMI->setFlag(Flag);
+}
 
 MachineInstr *
 SystemZInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
@@ -1470,7 +1469,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   Register FoldAsLoadDefReg = LoadMI.getOperand(0).getReg();
   // We don't really need Ops, but do a sanity check:
   assert(Ops.size() == 1 && FoldAsLoadDefReg == MI.getOperand(Ops[0]).getReg() &&
-         "Expected MI to be the only user of the load.");
+         "Expected MI to have the only use of the load.");
   Register DstReg = MI.getOperand(0).getReg();
   MachineOperand LHS = MI.getOperand(1);
   MachineOperand RHS = MI.getOperand(2);
