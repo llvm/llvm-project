@@ -113,7 +113,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Rp __saturate_cast(_Tp __x) noexcept {
 
 template <__libcpp_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
-  return std::add_sat(__x, __y);
+  return std::__add_sat(__x, __y);
 }
 
 template <__libcpp_integer _Tp>
