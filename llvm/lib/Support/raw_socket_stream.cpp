@@ -200,21 +200,32 @@ ListeningSocket::accept(std::chrono::milliseconds Timeout) {
   while (PollStatus == -1 && (Timeout.count() == -1 || ElapsedTime < Timeout)) {
     if (Timeout.count() != -1)
       RemainingTime -= ElapsedTime.count();
-
     auto Start = std::chrono::steady_clock::now();
+
 #ifdef _WIN32
     PollStatus = WSAPoll(FDs, 2, RemainingTime);
-    if (PollStatus == SOCKET_ERROR) {
 #else
     PollStatus = ::poll(FDs, 2, RemainingTime);
+#endif
+    // If FD equals -1 then ListeningSocket::shutdown has been called and it is
+    // appropriate to return operation_canceled. ListeningSocket::shutdown
+    // copies FD's value to ObservedFD then sets FD to -1 before canceling
+    // ::poll by calling close on ObservedFD and writing to the pipe.
+    if (FD.load() == -1)
+      return llvm::make_error<StringError>(
+          std::make_error_code(std::errc::operation_canceled),
+          "Accept canceled");
+
+#if _WIN32
+    if (PollStatus == SOCKET_ERROR) {
+#else
     if (PollStatus == -1) {
 #endif
-      // Ignore error if caused by interupting signal
       std::error_code PollErrCode = getLastSocketErrorCode();
+      // Ignore EINTR (signal occured before any request event) and retry
       if (PollErrCode != std::errc::interrupted)
         return llvm::make_error<StringError>(PollErrCode, "FD poll failed");
     }
-
     if (PollStatus == 0)
       return llvm::make_error<StringError>(
           std::make_error_code(std::errc::timed_out),
@@ -222,13 +233,7 @@ ListeningSocket::accept(std::chrono::milliseconds Timeout) {
 
     if (FDs[0].revents & POLLNVAL)
       return llvm::make_error<StringError>(
-          std::make_error_code(std::errc::bad_file_descriptor),
-          "File descriptor closed by another thread");
-
-    if (FDs[1].revents & POLLIN)
-      return llvm::make_error<StringError>(
-          std::make_error_code(std::errc::operation_canceled),
-          "Accept canceled");
+          std::make_error_code(std::errc::bad_file_descriptor));
 
     auto Stop = std::chrono::steady_clock::now();
     ElapsedTime +=
