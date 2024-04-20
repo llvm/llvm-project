@@ -14,7 +14,7 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 #  include <__chrono/duration.h>
 #  include <__chrono/system_clock.h>
@@ -121,6 +121,6 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(const leap_second& __x, const s
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 #endif // _LIBCPP___CHRONO_LEAP_SECOND_H
