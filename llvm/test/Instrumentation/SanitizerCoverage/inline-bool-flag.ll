@@ -34,5 +34,5 @@ entry:
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind }
 ;.
 ; CHECK: [[META0]] = !{}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 100000}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.

@@ -90,8 +90,8 @@ define weak_odr hidden ptr @_ZTW21__sancov_lowest_stack() {
 ; L3: attributes #[[ATTR2]] = { nomerge }
 ;.
 ; L1: [[META0]] = !{}
-; L1: [[PROF1]] = !{!"branch_weights", i32 1, i32 100000}
+; L1: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.
 ; L3: [[META0]] = !{}
-; L3: [[PROF1]] = !{!"branch_weights", i32 1, i32 100000}
+; L3: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.
