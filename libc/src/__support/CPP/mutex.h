@@ -1,4 +1,4 @@
-//===--- A simple lock_guard implementation ---------------------*- C++ -*-===//
+//===--- A self contained equivalent of std::mutex --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,7 +30,7 @@ public:
 
   // Acquires ownership of the mutex object `m` without attempting to lock
   // it. The behavior is undefined if the current thread does not hold the
-  // lock on `m`.
+  // lock on `m`. Does not call `m.lock` upon resource acquisition.
   lock_guard(MutexType &m, adopt_lock_t t) : mutex(m) {}
 
   ~lock_guard() { mutex.unlock(); }

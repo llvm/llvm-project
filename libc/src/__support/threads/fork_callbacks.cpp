@@ -8,7 +8,7 @@
 
 #include "fork_callbacks.h"
 
-#include "src/__support/CPP/mutex.h" // For lock_guard
+#include "src/__support/CPP/mutex.h" // lock_guard
 #include "src/__support/threads/mutex.h"
 
 #include <stddef.h> // For size_t

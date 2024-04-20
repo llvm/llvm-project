@@ -8,7 +8,7 @@
 
 #include "dir.h"
 
-#include "src/__support/CPP/mutex.h" // For lock_guard
+#include "src/__support/CPP/mutex.h" // lock_guard
 #include "src/__support/CPP/new.h"
 #include "src/__support/error_or.h"
 #include "src/errno/libc_errno.h" // For error macros

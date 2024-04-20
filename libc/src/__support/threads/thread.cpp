@@ -10,7 +10,7 @@
 #include "mutex.h"
 
 #include "src/__support/CPP/array.h"
-#include "src/__support/CPP/mutex.h" // For lock_guard
+#include "src/__support/CPP/mutex.h" // lock_guard
 #include "src/__support/CPP/optional.h"
 #include "src/__support/fixedvector.h"
 #include "src/__support/macros/attributes.h"
