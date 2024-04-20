@@ -521,28 +521,31 @@ def VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
 def StructLayoutAttr : CIR_Attr<"StructLayout", "struct_layout"> {
   let summary = "ABI specific information about a struct layout";
   let description = [{
+    Holds layout information often queried by !cir.struct users
+    during lowering passes and optimizations.
   }];
 
   let parameters = (ins "unsigned":$size,
                         "unsigned":$alignment,
                         "bool":$padded,
-                        "mlir::Type":$largest_member);
+                        "mlir::Type":$largest_member,
+                        "mlir::ArrayAttr":$offsets);
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "unsigned":$size,
                                         "unsigned":$alignment,
                                         "bool":$padded,
-                                        "mlir::Type":$largest_member
-                                        ), [{
+                                        "mlir::Type":$largest_member,
+                                        "mlir::ArrayAttr":$offsets), [{
       return $_get(largest_member.getContext(), size, alignment, padded,
-                   largest_member);
+                   largest_member, offsets);
     }]>,
   ];
 
   let genVerifyDecl = 1;
   let assemblyFormat = [{
     `<`
-      struct($size, $alignment, $padded, $largest_member)
+      struct($size, $alignment, $padded, $largest_member, $offsets)
     `>`
   }];
 }
