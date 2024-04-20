@@ -1229,8 +1229,8 @@ bool DataFlowSanitizer::initializeModule(Module &M) {
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanMemTransferCallbackArgs,
                         /*isVarArg=*/false);
 
-  ColdCallWeights = MDBuilder(*Ctx).createBranchWeights(1, 1000);
-  OriginStoreWeights = MDBuilder(*Ctx).createBranchWeights(1, 1000);
+  ColdCallWeights = MDBuilder(*Ctx).createUnlikelyBranchWeights();
+  OriginStoreWeights = MDBuilder(*Ctx).createUnlikelyBranchWeights();
   return true;
 }
 
