@@ -22,6 +22,8 @@ constexpr adopt_lock_t adopt_lock{};
 
 // An RAII class for easy locking and unlocking of mutexes.
 template <typename MutexType> class lock_guard {
+  MutexType &mutex;
+
 public:
   // Calls `m.lock()` upon resource acquisition.
   explicit lock_guard(MutexType &m) : mutex(m) { mutex.lock(); }
@@ -37,8 +39,6 @@ private:
   // non-copyable
   lock_guard &operator=(const lock_guard &) = delete;
   lock_guard(const lock_guard &) = delete;
-
-  MutexType &mutex;
 };
 
 } // namespace cpp
