@@ -3100,6 +3100,11 @@ defm modules_skip_header_search_paths : BoolFOption<"modules-skip-header-search-
     HeaderSearchOpts<"ModulesSkipHeaderSearchPaths">, DefaultFalse,
     PosFlag<SetTrue, [], [], "Disable writing header search paths">,
     NegFlag<SetFalse>, BothFlags<[], [CC1Option]>>;
+def fno_modules_prune_non_affecting_module_map_files :
+    Flag<["-"], "fno-modules-prune-non-affecting-module-map-files">,
+    Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
+    MarshallingInfoNegativeFlag<HeaderSearchOpts<"ModulesPruneNonAffectingModuleMaps">>,
+    HelpText<"Do not prune non-affecting module map files when writing module files">;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
@@ -4747,9 +4752,9 @@ def munaligned_symbols : Flag<["-"], "munaligned-symbols">, Group<m_Group>,
   HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
 def mno_unaligned_symbols : Flag<["-"], "mno-unaligned-symbols">, Group<m_Group>,
   HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
-def mstrict_align : Flag<["-"], "mstrict-align">,
+def mstrict_align : Flag<["-"], "mstrict-align">, Group<m_Group>,
   HelpText<"Force all memory accesses to be aligned (AArch64/LoongArch/RISC-V only)">;
-def mno_strict_align : Flag<["-"], "mno-strict-align">,
+def mno_strict_align : Flag<["-"], "mno-strict-align">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch64/LoongArch/RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
