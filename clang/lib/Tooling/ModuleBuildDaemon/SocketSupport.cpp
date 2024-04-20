@@ -13,12 +13,10 @@
 #include <memory>
 #include <string>
 
-using namespace llvm;
-
 namespace clang::tooling::cc1modbuildd {
 
-Expected<std::string> readBufferFromSocket(raw_socket_stream &Socket) {
-
+llvm::Expected<std::string>
+readBufferFromSocket(llvm::raw_socket_stream &Socket) {
   constexpr unsigned short MAX_BUFFER = 4096;
   char Buffer[MAX_BUFFER];
   std::string ReturnBuffer;
@@ -34,22 +32,22 @@ Expected<std::string> readBufferFromSocket(raw_socket_stream &Socket) {
   if (Socket.has_error()) {
     std::error_code EC = Socket.error();
     Socket.clear_error();
-    return make_error<StringError>("Failed socket read", EC);
+    return llvm::make_error<llvm::StringError>("Failed socket read", EC);
   }
   return ReturnBuffer;
 }
 
-Error writeBufferToSocket(raw_socket_stream &Socket, StringRef Buffer) {
+llvm::Error writeBufferToSocket(llvm::raw_socket_stream &Socket,
+                                llvm::StringRef Buffer) {
   Socket << Buffer;
-
   if (Socket.has_error()) {
     std::error_code EC = Socket.error();
     Socket.clear_error();
-    return make_error<StringError>("Failed socket write", EC);
+    return llvm::make_error<llvm::StringError>("Failed socket write", EC);
   }
 
   Socket.flush();
-  return Error::success();
+  return llvm::Error::success();
 }
 
 } // namespace  clang::tooling::cc1modbuildd

@@ -17,8 +17,6 @@
 
 #include <string>
 
-using namespace llvm;
-
 namespace clang::tooling::cc1modbuildd {
 
 std::string getBasePath() {
@@ -31,7 +29,7 @@ std::string getBasePath() {
   std::string Key = toString(llvm::APInt(64, HashValue), 36, /*Signed*/ false);
 
   // Set paths
-  SmallString<128> BasePath;
+  llvm::SmallString<128> BasePath;
   llvm::sys::path::system_temp_directory(/*erasedOnReboot*/ true, BasePath);
   llvm::sys::path::append(BasePath, "clang-" + Key);
   return BasePath.c_str();
