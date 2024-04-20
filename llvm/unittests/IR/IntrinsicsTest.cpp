@@ -12,9 +12,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
-#include <algorithm>
 #include <cstdarg>
 
 using namespace llvm;
