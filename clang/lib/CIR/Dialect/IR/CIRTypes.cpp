@@ -498,6 +498,16 @@ bool StructType::isPadded(const ::mlir::DataLayout &dataLayout) const {
   return layoutInfo.cast<mlir::cir::StructLayoutAttr>().getPadded();
 }
 
+uint64_t StructType::getElementOffset(const ::mlir::DataLayout &dataLayout,
+                                      unsigned idx) const {
+  assert(idx < getMembers().size() && "access not valid");
+  if (!layoutInfo)
+    computeSizeAndAlignment(dataLayout);
+  auto offsets = layoutInfo.cast<mlir::cir::StructLayoutAttr>().getOffsets();
+  auto intAttr = offsets[idx].cast<mlir::IntegerAttr>();
+  return intAttr.getInt();
+}
+
 void StructType::computeSizeAndAlignment(
     const ::mlir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete structs");
@@ -513,8 +523,10 @@ void StructType::computeSizeAndAlignment(
   auto members = getMembers();
   mlir::Type largestMember;
   unsigned largestMemberSize = 0;
+  SmallVector<mlir::Attribute, 4> memberOffsets;
 
   // Loop over each of the elements, placing them in memory.
+  memberOffsets.reserve(numElements);
   for (unsigned i = 0, e = numElements; i != e; ++i) {
     auto ty = members[i];
 
@@ -544,8 +556,9 @@ void StructType::computeSizeAndAlignment(
     // Keep track of maximum alignment constraint.
     structAlignment = std::max(tyAlign, structAlignment);
 
-    // FIXME: track struct size up to each element.
-    // getMemberOffsets()[i] = structSize;
+    // Struct size up to each element is the element offset.
+    memberOffsets.push_back(mlir::IntegerAttr::get(
+        mlir::IntegerType::get(getContext(), 32), structSize));
 
     // Consume space for this data item
     structSize += dataLayout.getTypeSize(ty);
@@ -564,9 +577,10 @@ void StructType::computeSizeAndAlignment(
     }
   }
 
-  layoutInfo = mlir::cir::StructLayoutAttr::get(getContext(), structSize,
-                                                structAlignment.value(),
-                                                isPadded, largestMember);
+  auto offsets = mlir::ArrayAttr::get(getContext(), memberOffsets);
+  layoutInfo = mlir::cir::StructLayoutAttr::get(
+      getContext(), structSize, structAlignment.value(), isPadded,
+      largestMember, offsets);
 }
 
 //===----------------------------------------------------------------------===//

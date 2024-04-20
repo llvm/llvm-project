@@ -172,6 +172,8 @@ private:
   // instead.
   mutable mlir::Attribute layoutInfo;
   bool isPadded(const DataLayout &dataLayout) const;
+  uint64_t getElementOffset(const DataLayout &dataLayout, unsigned idx) const;
+
   void computeSizeAndAlignment(const DataLayout &dataLayout) const;
 };
 
