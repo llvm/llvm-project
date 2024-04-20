@@ -2502,7 +2502,10 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
       assert(Arg.getKind() == TemplateArgument::Type &&
              "unexpected nontype template argument kind in template rewrite");
       QualType NewT = Arg.getAsType();
-      TLB.pushTrivial(SemaRef.Context, NewT, TL.getNameLoc());
+      assert(isa<TemplateTypeParmType>(NewT) &&
+             "type parm not rewritten to type parm");
+      auto NewTL = TLB.push<TemplateTypeParmTypeLoc>(NewT);
+      NewTL.setNameLoc(TL.getNameLoc());
       return NewT;
     }
 
