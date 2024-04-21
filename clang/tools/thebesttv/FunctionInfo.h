@@ -48,6 +48,12 @@ struct FunctionInfo {
     void buildStmtBlockPairs() {
         for (auto BI = cfg->begin(); BI != cfg->end(); ++BI) {
             const CFGBlock &B = **BI;
+
+            // swith 的 case 语句等
+            if (B.getLabel() != nullptr) {
+                stmtBlockPairs.push_back({B.getLabel(), &B});
+            }
+
             for (auto EI = B.begin(); EI != B.end(); ++EI) {
                 const CFGElement &E = *EI;
                 if (std::optional<CFGStmt> CS = E.getAs<CFGStmt>()) {
