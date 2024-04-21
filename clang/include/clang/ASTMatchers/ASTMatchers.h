@@ -4560,7 +4560,7 @@ AST_POLYMORPHIC_MATCHER_P2(hasArgument,
   const Expr *Arg = Node.getArg(N);
   if (Finder->isTraversalIgnoringImplicitNodes() && isa<CXXDefaultArgExpr>(Arg))
     return false;
-  return InnerMatcher.matches(*Arg->IgnoreParenImpCasts(), Finder, Builder);
+  return InnerMatcher.matches(*Arg->ignoringParenImpCasts(), Finder, Builder);
 }
 
 /// Matches the operand that does not contain the parameter pack.
