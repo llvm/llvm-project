@@ -346,8 +346,11 @@ define i32 @rem_euclid_pow2_false_arm_folded(i32 %n) {
 
 define i8 @pr89516(i8 %n, i8 %x) {
 ; CHECK-LABEL: @pr89516(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[N:%.*]], 0
-; CHECK-NEXT:    [[RES:%.*]] = zext i1 [[TMP1]] to i8
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[POW2:%.*]] = shl nuw i8 1, [[N:%.*]]
+; CHECK-NEXT:    [[SREM:%.*]] = srem i8 1, [[POW2]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[COND]], i8 [[POW2]], i8 0
+; CHECK-NEXT:    [[RES:%.*]] = add nuw i8 [[SREM]], [[ADD]]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %cond = icmp slt i8 %x, 0
