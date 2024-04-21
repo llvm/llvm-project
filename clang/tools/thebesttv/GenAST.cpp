@@ -166,10 +166,22 @@ std::unique_ptr<ASTUnit> loadFromASTDump(std::string AstDumpPath) {
         Diags, FileSystemOptions(), HSOpts);
 }
 
-std::unique_ptr<ASTUnit> getASTOfFile(const std::string &file) {
+std::unique_ptr<ASTUnit> getASTOfFile(std::string file) {
     std::string AstDumpPath = getASTDumpFile(file);
     if (!fileExists(AstDumpPath)) {
         // logger.warn("AST dump not found, generating from: {}", file);
+        // 文件并不直接记录在 cc.json 中，很可能是头文件
+        // 需要找到 ICFG 生成时，它的 AST 对应 cc.json 中的哪个文件
+        if (Global.allFiles.find(file) == Global.allFiles.end()) {
+            logger.warn("File has no record in cc.json (possible header): {}",
+                        file);
+            const auto &sourceForFile = Global.icfg.sourceForFile;
+            if (sourceForFile.find(file) != sourceForFile.end()) {
+                file = sourceForFile.at(file);
+                AstDumpPath = getASTDumpFile(file);
+                logger.warn("  Replacing with source: {}", file);
+            }
+        }
         auto commands = Global.cb->getCompileCommands(file);
         if (commands.empty()) {
             logger.error("No compile command found for {}!", file);

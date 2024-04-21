@@ -26,6 +26,7 @@ struct ICFG {
     // <function id, CFGBlock id> -> node id (of current graph);
     std::map<std::pair<int, int>, int> nodeIdOfFunctionBlock;
     std::vector<std::pair<int, int>> functionBlockOfNodeId;
+    std::map<std::string, std::string> sourceForFile;
 
     int getNodeId(int fid, int bid);
 

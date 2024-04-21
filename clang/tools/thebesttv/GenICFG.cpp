@@ -30,6 +30,12 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
     if (!pLoc)
         return true;
 
+    // 记录 .h 文件的 AST 对应 cc.json 中哪个文件
+    auto &sourceForFile = Global.icfg.sourceForFile;
+    if (sourceForFile.find(pLoc->file) == sourceForFile.end()) {
+        sourceForFile[pLoc->file] = filePath;
+    }
+
     /**
      * 跳过不在 Global.projectDirectory 中的函数。
      *
