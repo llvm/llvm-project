@@ -5443,9 +5443,19 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     if (ValKnown.isNegative())
       return true;
     // If max shift cnt of known ones is non-zero, result is non-zero.
-    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
-    if (MaxCnt.ult(ValKnown.getBitWidth()) &&
-        !ValKnown.One.lshr(MaxCnt).isZero())
+    const KnownBits Shift = computeKnownBits(Op.getOperand(1), Depth + 1);
+    APInt MaxCnt = Shift.getMaxValue();
+    if (MaxCnt.uge(ValKnown.getBitWidth()))
+      return false;
+    if (!ValKnown.One.lshr(MaxCnt).isZero())
+      return true;
+    // We try to see if we can turn it into a division
+    const KnownBits One =
+        KnownBits::makeConstant(APInt(ValKnown.getBitWidth(), 1));
+
+    std::optional<bool> uge =
+        KnownBits::uge(ValKnown, KnownBits::shl(One, Shift));
+    if (uge && *uge)
       return true;
     break;
   }
