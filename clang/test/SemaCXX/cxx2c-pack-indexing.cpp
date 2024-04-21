@@ -154,3 +154,9 @@ void f() {
 }
 
 }
+
+namespace GH88929 {
+    bool b = a...[0];  // expected-error {{use of undeclared identifier 'a'}}
+    using E = P...[0]; // expected-error {{unknown type name 'P'}} \
+                       // expected-error {{expected ';' after alias declaration}}
+}
