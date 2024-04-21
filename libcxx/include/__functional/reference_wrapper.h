@@ -11,13 +11,13 @@
 #define _LIBCPP___FUNCTIONAL_REFERENCE_WRAPPER_H
 
 #include <__compare/synth_three_way.h>
+#include <__concepts/boolean_testable.h>
 #include <__config>
 #include <__functional/invoke.h>
 #include <__functional/weak_result_type.h>
 #include <__memory/addressof.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_const.h>
-#include <__type_traits/is_convertible.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
