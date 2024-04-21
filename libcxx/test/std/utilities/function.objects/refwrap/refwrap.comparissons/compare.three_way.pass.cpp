@@ -46,23 +46,67 @@ constexpr void test() {
   T bigger{94};
   T smaller{82};
 
-  // Identical contents
+  // operator<=>(reference_wrapper, reference_wrapper)
   {
-    std::reference_wrapper<T> rw1{t};
-    std::reference_wrapper<T> rw2{t};
-    assert(testOrder(rw1, rw2, Order::equivalent));
+    // Identical contents
+    {
+      std::reference_wrapper<T> rw1{t};
+      std::reference_wrapper<T> rw2{t};
+      assert(testOrder(rw1, rw2, Order::equivalent));
+    }
+    // Less
+    {
+      std::reference_wrapper<T> rw1{smaller};
+      std::reference_wrapper<T> rw2{bigger};
+      assert(testOrder(rw1, rw2, Order::less));
+    }
+    // Greater
+    {
+      std::reference_wrapper<T> rw1{bigger};
+      std::reference_wrapper<T> rw2{smaller};
+      assert(testOrder(rw1, rw2, Order::greater));
+    }
   }
-  // Less
+
+  // operator<=>(reference_wrapper, const T&)
   {
-    std::reference_wrapper<T> rw1{smaller};
-    std::reference_wrapper<T> rw2{bigger};
-    assert(testOrder(rw1, rw2, Order::less));
+    // Identical contents
+    {
+      std::reference_wrapper<T> rw1{t};
+      assert(testOrder(rw1, t, Order::equivalent));
+    }
+    // Less
+    {
+      std::reference_wrapper<T> rw1{smaller};
+      assert(testOrder(rw1, bigger, Order::less));
+    }
+    // Greater
+    {
+      std::reference_wrapper<T> rw1{bigger};
+      assert(testOrder(rw1, smaller, Order::greater));
+    }
   }
-  // Greater
+
+  // operator<=>(reference_wrapper, reference_wrapper<const T>)
   {
-    std::reference_wrapper<T> rw1{bigger};
-    std::reference_wrapper<T> rw2{smaller};
-    assert(testOrder(rw1, rw2, Order::greater));
+    // Identical contents
+    {
+      std::reference_wrapper<T> rw1{t};
+      std::reference_wrapper<const T> rw2{t};
+      assert(testOrder(rw1, rw2, Order::equivalent));
+    }
+    // Less
+    {
+      std::reference_wrapper<T> rw1{smaller};
+      std::reference_wrapper<const T> rw2{bigger};
+      assert(testOrder(rw1, rw2, Order::less));
+    }
+    // Greater
+    {
+      std::reference_wrapper<T> rw1{bigger};
+      std::reference_wrapper<const T> rw2{smaller};
+      assert(testOrder(rw1, rw2, Order::greater));
+    }
   }
 }
 
