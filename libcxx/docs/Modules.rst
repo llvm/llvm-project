@@ -142,7 +142,7 @@ This is a small sample program that uses the module ``std``. It consists of a
 .. code-block:: cmake
 
   cmake_minimum_required(VERSION 3.26.0 FATAL_ERROR)
-  project("module"
+  project("example"
     LANGUAGES CXX
   )
 
@@ -223,14 +223,14 @@ Building this project is done with the following steps, assuming the files
 Using the installed modules
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-CMake has added experimental support for importing the standard modules. This
+CMake has added experimental support for importing the Standard modules. This
 is available in the current nightly builds and will be part of the 3.30
 release. Currently CMake only supports importing the Standard modules in C++23
 and later. Enabling this for C++20 is on the TODO list of the CMake
 developers.
 
 The example uses the same ``main.cpp`` as above. It uses the following
-``CMakeLists.txt``
+``CMakeLists.txt``:
 
 .. code-block:: cmake
 
@@ -243,7 +243,7 @@ The example uses the same ``main.cpp`` as above. It uses the following
   set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "0e5b6991-d74f-4b3d-a41c-cf096e0b2508")
   set(CMAKE_CXX_MODULE_STD ON)
 
-  project("module"
+  project("example"
     LANGUAGES CXX
   )
 
@@ -253,7 +253,9 @@ The example uses the same ``main.cpp`` as above. It uses the following
 
   set(CMAKE_CXX_STANDARD 23)
   set(CMAKE_CXX_STANDARD_REQUIRED YES)
-  # This seems to be required to be on.
+  # Currently CMake requires extensions enabled when using import std.
+  # https://gitlab.kitware.com/cmake/cmake/-/issues/25916
+  # https://gitlab.kitware.com/cmake/cmake/-/issues/25539
   set(CMAKE_CXX_EXTENSIONS ON)
 
   add_executable(main)
