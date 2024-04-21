@@ -455,7 +455,9 @@ template <unsigned B> constexpr inline int32_t SignExtend32(uint32_t X) {
 /// Requires B <= 32.
 inline int32_t SignExtend32(uint32_t X, unsigned B) {
   assert(B <= 32 && "Bit width out of range.");
-  return B == 0 ? 0 : int32_t(X << (32 - B)) >> (32 - B);
+  if (B == 0)
+    return 0;
+  return int32_t(X << (32 - B)) >> (32 - B);
 }
 
 /// Sign-extend the number in the bottom B bits of X to a 64-bit integer.
@@ -471,7 +473,9 @@ template <unsigned B> constexpr inline int64_t SignExtend64(uint64_t x) {
 /// Requires B <= 64.
 inline int64_t SignExtend64(uint64_t X, unsigned B) {
   assert(B <= 64 && "Bit width out of range.");
-  return B == 0 ? 0 : int64_t(X << (64 - B)) >> (64 - B);
+  if (B == 0)
+    return 0;
+  return int64_t(X << (64 - B)) >> (64 - B);
 }
 
 /// Subtract two unsigned integers, X and Y, of type T and return the absolute
