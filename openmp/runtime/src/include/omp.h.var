@@ -192,7 +192,8 @@
         omp_ifr_sycl = 4,
         omp_ifr_hip = 5,
         omp_ifr_level_zero = 6,
-        omp_ifr_last = 7
+        omp_ifr_amdhsa = 7,
+        omp_ifr_last = 8
     } omp_interop_fr_t;
 
     typedef void * omp_interop_t;

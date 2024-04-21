@@ -1143,6 +1143,17 @@ struct CUDADeviceTy : public GenericDeviceTy {
   /// Returns the clock frequency for the given NVPTX device.
   uint64_t getClockFrequency() const override { return 1000000000; }
 
+  virtual Error setInteropInfo(omp_interop_val_t *InterOpPtr) override {
+    InterOpPtr->vendor_id = cuda;
+    InterOpPtr->backend_type_id = omp_interop_backend_type_cuda;
+
+    __tgt_device_info *DevInfo = &InterOpPtr->device_info;
+    DevInfo->Context = Context;
+    DevInfo->Device = Device;
+
+    return Plugin::success();
+  }
+
 private:
   using CUDAStreamManagerTy = GenericDeviceResourceManagerTy<CUDAStreamRef>;
   using CUDAEventManagerTy = GenericDeviceResourceManagerTy<CUDAEventRef>;

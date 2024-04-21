@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "OpenMP/InteropAPI.h"
 #include "Shared/APITypes.h"
 
 extern "C" {
@@ -164,6 +165,9 @@ void __tgt_rtl_set_info_flag(uint32_t);
 
 // Print the device information
 void __tgt_rtl_print_device_info(int32_t ID);
+
+// Set the runtime related information for interop object
+int32_t __tgt_rtl_set_interop_info(omp_interop_val_t *InteropPtr);
 
 // Event related interfaces. It is expected to use the interfaces in the
 // following way:

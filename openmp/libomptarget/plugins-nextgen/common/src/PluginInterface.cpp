@@ -2040,6 +2040,21 @@ int32_t __tgt_rtl_init_plugin() {
   return OFFLOAD_SUCCESS;
 }
 
+int32_t __tgt_rtl_set_interop_info(omp_interop_val_t *InterOpPtr) {
+  assert(InterOpPtr && "Interop object is allocated");
+  int32_t DevId = InterOpPtr->device_id;
+
+  assert(PluginTy::get().isValidDeviceId(DevId) && "Device Id is valid");
+  if (auto Err = PluginTy::get().getDevice(DevId).setInteropInfo(InterOpPtr)) {
+    REPORT("Failure to determine the OpenMP interop object info for Device Id "
+           "%i\n",
+           DevId);
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
   if (!PluginTy::isActive())
     return false;

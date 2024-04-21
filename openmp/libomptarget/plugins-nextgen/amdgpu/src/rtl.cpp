@@ -2772,6 +2772,17 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   bool useMultipleSdmaEngines() const { return OMPX_UseMultipleSdmaEngines; }
 
+  virtual Error setInteropInfo(omp_interop_val_t *InterOpPtr) override {
+    InterOpPtr->vendor_id = amdhsa;
+    InterOpPtr->backend_type_id = omp_interop_backend_type_amdhsa;
+
+    __tgt_device_info *DevInfo = &InterOpPtr->device_info;
+    DevInfo->Context = nullptr;
+    DevInfo->Device = &Agent;
+
+    return Plugin::success();
+  }
+
 private:
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
   using AMDGPUEventManagerTy = GenericDeviceResourceManagerTy<AMDGPUEventRef>;

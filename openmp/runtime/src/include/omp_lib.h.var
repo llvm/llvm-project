@@ -261,8 +261,10 @@
       parameter(omp_ifr_hip=5)
       integer(kind=omp_interop_fr_kind)omp_ifr_level_zero
       parameter(omp_ifr_level_zero=6)
+      integer(kind=omp_interop_fr_kind)omp_ifr_amdhsa
+      parameter(omp_ifr_amdhsa=7)
       integer(kind=omp_interop_fr_kind)omp_ifr_last
-      parameter(omp_ifr_last=7)
+      parameter(omp_ifr_last=8)
 
       integer(kind=omp_interop_kind)omp_interop_none
       parameter(omp_interop_none=0)
