@@ -34,6 +34,8 @@ public:
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
   static void printRegOperand(unsigned RegNo, raw_ostream &O,
                               const MCRegisterInfo &MRI);
+  void printRegOperand(unsigned RegNo, unsigned Opc, unsigned OpNo,
+                       raw_ostream &O, const MCRegisterInfo &MRI);
 
 private:
   void printU4ImmOperand(const MCInst *MI, unsigned OpNo,

@@ -25,7 +25,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstPrinter.h"
-#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -119,73 +118,37 @@ static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
                                  std::move(Emitter), RelaxAll);
 }
 
-namespace {
+namespace llvm {
+namespace AMDGPU {
 
-class AMDGPUMCInstrAnalysis : public MCInstrAnalysis {
-private:
-  unsigned VgprMSBs = 0;
+bool AMDGPUMCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
+                                           uint64_t Size,
+                                           uint64_t &Target) const {
+  if (Inst.getNumOperands() == 0 || !Inst.getOperand(0).isImm() ||
+      Info->get(Inst.getOpcode()).operands()[0].OperandType !=
+          MCOI::OPERAND_PCREL)
+    return false;
 
-public:
-  explicit AMDGPUMCInstrAnalysis(const MCInstrInfo *Info)
-      : MCInstrAnalysis(Info) {}
+  int64_t Imm = Inst.getOperand(0).getImm();
+  // Our branches take a simm16, but we need two extra bits to account for
+  // the factor of 4.
+  APInt SignedOffset(18, Imm * 4, true);
+  Target = (SignedOffset.sext(64) + Addr + Size).getZExtValue();
+  return true;
+}
 
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
-    if (Inst.getNumOperands() == 0 || !Inst.getOperand(0).isImm() ||
-        Info->get(Inst.getOpcode()).operands()[0].OperandType !=
-            MCOI::OPERAND_PCREL)
-      return false;
+void AMDGPUMCInstrAnalysis::updateState(const MCInst &Inst, uint64_t Addr) {
+  if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_MSB_gfx12)
+    VgprMSBs = Inst.getOperand(0).getImm();
+  else if (isTerminator(Inst))
+    VgprMSBs = 0;
+}
 
-    int64_t Imm = Inst.getOperand(0).getImm();
-    // Our branches take a simm16, but we need two extra bits to account for
-    // the factor of 4.
-    APInt SignedOffset(18, Imm * 4, true);
-    Target = (SignedOffset.sext(64) + Addr + Size).getZExtValue();
-    return true;
-  }
-
-  void resetState() override { VgprMSBs = 0; }
-
-  void updateState(const MCInst &Inst, uint64_t Addr) override {
-    if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_MSB_gfx12)
-      VgprMSBs = Inst.getOperand(0).getImm();
-    else if (isTerminator(Inst))
-      VgprMSBs = 0;
-  }
-
-  void updateInst(MCInst &Inst, const MCContext &Ctx) const override {
-    if (!VgprMSBs)
-      return;
-    auto Ops =
-        AMDGPU::getVGPRLoweringOperandTables(Info->get(Inst.getOpcode()));
-    if (!Ops.first)
-      return;
-
-    const MCRegisterInfo &MRI = *Ctx.getRegisterInfo();
-    for (unsigned I = 0; I < 4; ++I) {
-      unsigned OpMSBs = (VgprMSBs >> (I * 2)) & 3;
-      if (!OpMSBs)
-        continue;
-      for (auto OpNames : { Ops.first, Ops.second }) {
-        if (!OpNames)
-          continue;
-        auto OpIdx = AMDGPU::getNamedOperandIdx(Inst.getOpcode(), OpNames[I]);
-        if (OpIdx == -1)
-          continue;
-        MCOperand &Op = Inst.getOperand(OpIdx);
-        if (!Op.isReg())
-          continue;
-        if (MCRegister Reg = AMDGPU::getVGPRWithMSBs(Op.getReg(), OpMSBs, MRI))
-          Op.setReg(Reg);
-      }
-    }
-  }
-};
-
-} // end anonymous namespace
+} // end namespace AMDGPU
+} // end namespace llvm
 
 static MCInstrAnalysis *createAMDGPUMCInstrAnalysis(const MCInstrInfo *Info) {
-  return new AMDGPUMCInstrAnalysis(Info);
+  return new AMDGPU::AMDGPUMCInstrAnalysis(Info);
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTargetMC() {

@@ -349,6 +349,8 @@ protected:
   LLVM_PREFERRED_TYPE(Linkage)
   mutable unsigned CacheValidAndLinkage : 3;
 
+  using DeclID = uint32_t;
+
   /// Allocate memory for a deserialized declaration.
   ///
   /// This routine must be used to allocate memory for any declaration that is
@@ -358,7 +360,7 @@ protected:
   /// \param Ctx The context in which we will allocate memory.
   /// \param ID The global ID of the deserialized declaration.
   /// \param Extra The amount of extra space to allocate after the object.
-  void *operator new(std::size_t Size, const ASTContext &Ctx, unsigned ID,
+  void *operator new(std::size_t Size, const ASTContext &Ctx, DeclID ID,
                      std::size_t Extra = 0);
 
   /// Allocate memory for a non-deserialized declaration.
