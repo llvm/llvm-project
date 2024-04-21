@@ -272,26 +272,43 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
 
 void InstrProfWriter::addMemProfRecord(
     const Function::GUID Id, const memprof::IndexedMemProfRecord &Record) {
-  auto Result = MemProfRecordData.insert({Id, Record});
+  auto [Iter, Inserted] = MemProfRecordData.insert({Id, Record});
   // If we inserted a new record then we are done.
-  if (Result.second) {
+  if (Inserted) {
     return;
   }
-  memprof::IndexedMemProfRecord &Existing = Result.first->second;
+  memprof::IndexedMemProfRecord &Existing = Iter->second;
   Existing.merge(Record);
 }
 
 bool InstrProfWriter::addMemProfFrame(const memprof::FrameId Id,
                                       const memprof::Frame &Frame,
                                       function_ref<void(Error)> Warn) {
-  auto Result = MemProfFrameData.insert({Id, Frame});
+  auto [Iter, Inserted] = MemProfFrameData.insert({Id, Frame});
   // If a mapping already exists for the current frame id and it does not
   // match the new mapping provided then reset the existing contents and bail
   // out. We don't support the merging of memprof data whose Frame -> Id
   // mapping across profiles is inconsistent.
-  if (!Result.second && Result.first->second != Frame) {
+  if (!Inserted && Iter->second != Frame) {
     Warn(make_error<InstrProfError>(instrprof_error::malformed,
                                     "frame to id mapping mismatch"));
+    return false;
+  }
+  return true;
+}
+
+bool InstrProfWriter::addMemProfCallStack(
+    const memprof::CallStackId CSId,
+    const llvm::SmallVector<memprof::FrameId> &CallStack,
+    function_ref<void(Error)> Warn) {
+  auto [Iter, Inserted] = MemProfCallStackData.insert({CSId, CallStack});
+  // If a mapping already exists for the current call stack id and it does not
+  // match the new mapping provided then reset the existing contents and bail
+  // out. We don't support the merging of memprof data whose CallStack -> Id
+  // mapping across profiles is inconsistent.
+  if (!Inserted && Iter->second != CallStack) {
+    Warn(make_error<InstrProfError>(instrprof_error::malformed,
+                                    "call stack to id mapping mismatch"));
     return false;
   }
   return true;
@@ -371,16 +388,22 @@ void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
                            IPW.TemporalProfTraceStreamSize);
 
   MemProfFrameData.reserve(IPW.MemProfFrameData.size());
-  for (auto &I : IPW.MemProfFrameData) {
+  for (auto &[FrameId, Frame] : IPW.MemProfFrameData) {
     // If we weren't able to add the frame mappings then it doesn't make sense
     // to try to merge the records from this profile.
-    if (!addMemProfFrame(I.first, I.second, Warn))
+    if (!addMemProfFrame(FrameId, Frame, Warn))
+      return;
+  }
+
+  MemProfCallStackData.reserve(IPW.MemProfCallStackData.size());
+  for (auto &[CSId, CallStack] : IPW.MemProfCallStackData) {
+    if (!addMemProfCallStack(CSId, CallStack, Warn))
       return;
   }
 
   MemProfRecordData.reserve(IPW.MemProfRecordData.size());
-  for (auto &I : IPW.MemProfRecordData) {
-    addMemProfRecord(I.first, I.second);
+  for (auto &[GUID, Record] : IPW.MemProfRecordData) {
+    addMemProfRecord(GUID, Record);
   }
 }
 
@@ -427,15 +450,13 @@ static uint64_t writeMemProfRecords(
     ProfOStream &OS,
     llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
         &MemProfRecordData,
-    memprof::MemProfSchema *Schema) {
-  auto RecordWriter =
-      std::make_unique<memprof::RecordWriterTrait>(memprof::Version1);
-  RecordWriter->Schema = Schema;
+    memprof::MemProfSchema *Schema, memprof::IndexedVersion Version) {
+  memprof::RecordWriterTrait RecordWriter(Schema, Version);
   OnDiskChainedHashTableGenerator<memprof::RecordWriterTrait>
       RecordTableGenerator;
   for (auto &[GUID, Record] : MemProfRecordData) {
     // Insert the key (func hash) and value (memprof record).
-    RecordTableGenerator.insert(GUID, Record, *RecordWriter.get());
+    RecordTableGenerator.insert(GUID, Record, RecordWriter);
   }
   // Release the memory of this MapVector as it is no longer needed.
   MemProfRecordData.clear();
@@ -443,14 +464,13 @@ static uint64_t writeMemProfRecords(
   // The call to Emit invokes RecordWriterTrait::EmitData which destructs
   // the memprof record copies owned by the RecordTableGenerator. This works
   // because the RecordTableGenerator is not used after this point.
-  return RecordTableGenerator.Emit(OS.OS, *RecordWriter);
+  return RecordTableGenerator.Emit(OS.OS, RecordWriter);
 }
 
 // Serialize MemProfFrameData.  Return FrameTableOffset.
 static uint64_t writeMemProfFrames(
     ProfOStream &OS,
     llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
-  auto FrameWriter = std::make_unique<memprof::FrameWriterTrait>();
   OnDiskChainedHashTableGenerator<memprof::FrameWriterTrait>
       FrameTableGenerator;
   for (auto &[FrameId, Frame] : MemProfFrameData) {
@@ -460,7 +480,21 @@ static uint64_t writeMemProfFrames(
   // Release the memory of this MapVector as it is no longer needed.
   MemProfFrameData.clear();
 
-  return FrameTableGenerator.Emit(OS.OS, *FrameWriter);
+  return FrameTableGenerator.Emit(OS.OS);
+}
+
+static uint64_t writeMemProfCallStacks(
+    ProfOStream &OS,
+    llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
+        &MemProfCallStackData) {
+  OnDiskChainedHashTableGenerator<memprof::CallStackWriterTrait>
+      CallStackTableGenerator;
+  for (auto &[CSId, CallStack] : MemProfCallStackData)
+    CallStackTableGenerator.insert(CSId, CallStack);
+  // Release the memory of this vector as it is no longer needed.
+  MemProfCallStackData.clear();
+
+  return CallStackTableGenerator.Emit(OS.OS);
 }
 
 static Error writeMemProfV0(
@@ -477,7 +511,7 @@ static Error writeMemProfV0(
   writeMemProfSchema(OS, Schema);
 
   uint64_t RecordTableOffset =
-      writeMemProfRecords(OS, MemProfRecordData, &Schema);
+      writeMemProfRecords(OS, MemProfRecordData, &Schema, memprof::Version0);
 
   uint64_t FramePayloadOffset = OS.tell();
   uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfFrameData);
@@ -503,12 +537,49 @@ static Error writeMemProfV1(
   writeMemProfSchema(OS, Schema);
 
   uint64_t RecordTableOffset =
-      writeMemProfRecords(OS, MemProfRecordData, &Schema);
+      writeMemProfRecords(OS, MemProfRecordData, &Schema, memprof::Version1);
 
   uint64_t FramePayloadOffset = OS.tell();
   uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfFrameData);
 
   uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
+  OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
+
+  return Error::success();
+}
+
+static Error writeMemProfV2(
+    ProfOStream &OS,
+    llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
+        &MemProfRecordData,
+    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData,
+    llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
+        &MemProfCallStackData) {
+  OS.write(memprof::Version2);
+  uint64_t HeaderUpdatePos = OS.tell();
+  OS.write(0ULL); // Reserve space for the memprof record table offset.
+  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
+  OS.write(0ULL); // Reserve space for the memprof frame table offset.
+  OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
+  OS.write(0ULL); // Reserve space for the memprof call stack table offset.
+
+  auto Schema = memprof::PortableMemInfoBlock::getSchema();
+  writeMemProfSchema(OS, Schema);
+
+  uint64_t RecordTableOffset =
+      writeMemProfRecords(OS, MemProfRecordData, &Schema, memprof::Version2);
+
+  uint64_t FramePayloadOffset = OS.tell();
+  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfFrameData);
+
+  uint64_t CallStackPayloadOffset = OS.tell();
+  uint64_t CallStackTableOffset =
+      writeMemProfCallStacks(OS, MemProfCallStackData);
+
+  uint64_t Header[] = {
+      RecordTableOffset,      FramePayloadOffset,   FrameTableOffset,
+      CallStackPayloadOffset, CallStackTableOffset,
+  };
   OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
 
   return Error::success();
@@ -532,6 +603,8 @@ static Error writeMemProf(
     llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
         &MemProfRecordData,
     llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData,
+    llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
+        &MemProfCallStackData,
     memprof::IndexedVersion MemProfVersionRequested) {
 
   switch (MemProfVersionRequested) {
@@ -540,8 +613,8 @@ static Error writeMemProf(
   case memprof::Version1:
     return writeMemProfV1(OS, MemProfRecordData, MemProfFrameData);
   case memprof::Version2:
-    // TODO: Implement.  Fall through to the error handling below for now.
-    break;
+    return writeMemProfV2(OS, MemProfRecordData, MemProfFrameData,
+                          MemProfCallStackData);
   }
 
   return make_error<InstrProfError>(
@@ -660,7 +733,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
     if (auto E = writeMemProf(OS, MemProfRecordData, MemProfFrameData,
-                              MemProfVersionRequested))
+                              MemProfCallStackData, MemProfVersionRequested))
       return E;
   }
 

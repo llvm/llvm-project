@@ -113,7 +113,15 @@ clang/test/AST/Interp/ @tbaederr
 
 # MLIR NVVM Dialect in MLIR
 /mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
-/mlir/**/NVVM*/ @grypp
+/mlir/**/NVVM* @grypp
+
+# MLIR Python Bindings
+/mlir/test/python/ @ftynse @makslevental @stellaraccident
+/mlir/python/ @ftynse @makslevental @stellaraccident
+
+# MLIR Mem2Reg/SROA
+/mlir/**/Transforms/Mem2Reg.* @moxinilian
+/mlir/**/Transforms/SROA.* @moxinilian
 
 # BOLT
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci

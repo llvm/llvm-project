@@ -222,7 +222,7 @@ define i8 @must_drop_poison(i32 %x, i32 %y)  {
 define i32 @f_t15_t01_t09(i40 %t2) {
 ; CHECK-LABEL: @f_t15_t01_t09(
 ; CHECK-NEXT:    [[SH_DIFF:%.*]] = ashr i40 [[T2:%.*]], 15
-; CHECK-NEXT:    [[TR_SH_DIFF:%.*]] = trunc i40 [[SH_DIFF]] to i32
+; CHECK-NEXT:    [[TR_SH_DIFF:%.*]] = trunc nsw i40 [[SH_DIFF]] to i32
 ; CHECK-NEXT:    [[SHL1:%.*]] = and i32 [[TR_SH_DIFF]], -65536
 ; CHECK-NEXT:    ret i32 [[SHL1]]
 ;

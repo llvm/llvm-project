@@ -13,11 +13,11 @@ using namespace llvm;
 
 MCDisassembler::~MCDisassembler() = default;
 
-std::optional<MCDisassembler::DecodeStatus>
-MCDisassembler::onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
-                              ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &CStream) const {
-  return std::nullopt;
+Expected<bool> MCDisassembler::onSymbolStart(SymbolInfoTy &Symbol,
+                                             uint64_t &Size,
+                                             ArrayRef<uint8_t> Bytes,
+                                             uint64_t Address) const {
+  return false;
 }
 
 uint64_t MCDisassembler::suggestBytesToSkip(ArrayRef<uint8_t> Bytes,

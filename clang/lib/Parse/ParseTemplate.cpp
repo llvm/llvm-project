@@ -805,10 +805,12 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
   // identifier, comma, or greater. Provide a fixit if the identifier, comma,
   // or greater appear immediately or after 'struct'. In the latter case,
   // replace the keyword with 'class'.
+  bool TypenameKeyword = false;
   if (!TryConsumeToken(tok::kw_class)) {
     bool Replace = Tok.isOneOf(tok::kw_typename, tok::kw_struct);
     const Token &Next = Tok.is(tok::kw_struct) ? NextToken() : Tok;
     if (Tok.is(tok::kw_typename)) {
+      TypenameKeyword = true;
       Diag(Tok.getLocation(),
            getLangOpts().CPlusPlus17
                ? diag::warn_cxx14_compat_template_template_param_typename
@@ -878,10 +880,9 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
     }
   }
 
-  return Actions.ActOnTemplateTemplateParameter(getCurScope(), TemplateLoc,
-                                                ParamList, EllipsisLoc,
-                                                ParamName, NameLoc, Depth,
-                                                Position, EqualLoc, DefaultArg);
+  return Actions.ActOnTemplateTemplateParameter(
+      getCurScope(), TemplateLoc, ParamList, TypenameKeyword, EllipsisLoc,
+      ParamName, NameLoc, Depth, Position, EqualLoc, DefaultArg);
 }
 
 /// ParseNonTypeTemplateParameter - Handle the parsing of non-type
