@@ -201,7 +201,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
           llvmFuncOp.getBody().getArgument(remapping->inputNo);
       auto placeholder = rewriter.create<LLVM::UndefOp>(
           loc, getTypeConverter()->convertType(memrefTy));
-      rewriter.replaceUsesOfBlockArgument(newArg, placeholder);
+      rewriter.replaceAllUsesWith(newArg, placeholder);
       Value desc = MemRefDescriptor::fromStaticShape(
           rewriter, loc, *getTypeConverter(), memrefTy, newArg);
       rewriter.replaceOp(placeholder, {desc});

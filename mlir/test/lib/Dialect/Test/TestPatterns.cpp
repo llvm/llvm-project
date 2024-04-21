@@ -785,8 +785,8 @@ struct TestUndoBlockArgReplace : public ConversionPattern {
                   ConversionPatternRewriter &rewriter) const final {
     auto illegalOp =
         rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
-    rewriter.replaceUsesOfBlockArgument(op->getRegion(0).getArgument(0),
-                                        illegalOp->getResult(0));
+    rewriter.replaceAllUsesWith(op->getRegion(0).getArgument(0),
+                                illegalOp->getResult(0));
     rewriter.modifyOpInPlace(op, [] {});
     return success();
   }
@@ -836,6 +836,24 @@ struct TestUndoPropertiesModification : public ConversionPattern {
       return failure();
     rewriter.modifyOpInPlace(
         op, [&]() { cast<TestOpWithProperties>(op).getProperties().setA(42); });
+    return success();
+  }
+};
+
+/// A pattern that replaces all uses of illegal_op_h with a newly created op
+/// that has one i32 result. The old op is marked as "legal".
+struct ReplaceAllUsesOfIllegalOp : public ConversionPattern {
+  ReplaceAllUsesOfIllegalOp(MLIRContext *context)
+      : ConversionPattern("test.illegal_op_h", /*benefit=*/1, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    Operation *legalOp =
+        rewriter.create<LegalOpB>(op->getLoc(), rewriter.getIntegerType(32));
+    rewriter.replaceAllOpUsesWith(op, legalOp);
+    rewriter.modifyOpInPlace(
+        op, [&] { op->setAttr("not_illegal", rewriter.getUnitAttr()); });
     return success();
   }
 };
@@ -1120,7 +1138,8 @@ struct TestLegalizePatternDriver
              TestNonRootReplacement, TestBoundedRecursiveRewrite,
              TestNestedOpCreationUndoRewrite, TestReplaceEraseOp,
              TestCreateUnregisteredOp, TestUndoMoveOpBefore,
-             TestUndoPropertiesModification>(&getContext());
+             TestUndoPropertiesModification, ReplaceAllUsesOfIllegalOp>(
+            &getContext());
     patterns.add<TestDropOpSignatureConversion>(&getContext(), converter);
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
@@ -1133,6 +1152,8 @@ struct TestLegalizePatternDriver
                       TerminatorOp, OneRegionOp>();
     target
         .addIllegalOp<ILLegalOpF, TestRegionBuilderOp, TestOpWithRegionFold>();
+    target.addDynamicallyLegalOp<ILLegalOpH>(
+        [](ILLegalOpH op) { return op->hasAttr("not_illegal"); });
     target.addDynamicallyLegalOp<TestReturnOp>([](TestReturnOp op) {
       // Don't allow F32 operands.
       return llvm::none_of(op.getOperandTypes(),
