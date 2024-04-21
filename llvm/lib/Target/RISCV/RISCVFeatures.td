@@ -24,11 +24,11 @@
 class RISCVExtension<string name, int major, int minor, string fieldname,
                      string desc, list<SubtargetFeature> implies = [],
                      string value = "true">
-  : SubtargetFeature<name, fieldname, value, desc, implies> {
+    : SubtargetFeature<name, fieldname, value, desc, implies> {
   // MajorVersion - The major version for this extension.
   int MajorVersion = major;
 
-  // MajorVersion - The minor version for this extension.
+  // MinorVersion - The minor version for this extension.
   int MinorVersion = minor;
 
   // Experimental - Does this extension require -menable-experimental-extensions
@@ -41,8 +41,8 @@ class RISCVExperimentalExtension<string name, int major, int minor,
                                  string fieldname, string desc,
                                  list<RISCVExtension> implies = [],
                                  string value = "true">
-  : RISCVExtension<"experimental-"#name, major, minor, fieldname, desc, implies,
-                   value> {
+    : RISCVExtension<"experimental-"#name, major, minor, fieldname, desc,
+                     implies, value> {
   let Experimental = true;
 }
 
@@ -575,12 +575,12 @@ def FeatureStdExtZkn
 
 def FeatureStdExtZks
     : RISCVExtension<"zks", 1, 0, "HasStdExtZks",
-                      "'Zks' (ShangMi Algorithm Suite)",
-                      [FeatureStdExtZbkb,
-                       FeatureStdExtZbkc,
-                       FeatureStdExtZbkx,
-                       FeatureStdExtZksed,
-                       FeatureStdExtZksh]>;
+                     "'Zks' (ShangMi Algorithm Suite)",
+                     [FeatureStdExtZbkb,
+                      FeatureStdExtZbkc,
+                      FeatureStdExtZbkx,
+                      FeatureStdExtZksed,
+                      FeatureStdExtZksh]>;
 
 def FeatureStdExtZkt
     : RISCVExtension<"zkt", 1, 0, "HasStdExtZkt",
@@ -588,10 +588,10 @@ def FeatureStdExtZkt
 
 def FeatureStdExtZk
     : RISCVExtension<"zk", 1, 0, "HasStdExtZk",
-                      "'Zk' (Standard scalar cryptography extension)",
-                      [FeatureStdExtZkn,
-                       FeatureStdExtZkr,
-                       FeatureStdExtZkt]>;
+                     "'Zk' (Standard scalar cryptography extension)",
+                     [FeatureStdExtZkn,
+                      FeatureStdExtZkr,
+                      FeatureStdExtZkt]>;
 
 // Vector Extensions
 
@@ -603,45 +603,45 @@ foreach i = { 6-16 } in {
   defvar I = !shl(1, i);
   def FeatureStdExtZvl#I#b :
       RISCVExtension<"zvl"#I#"b", 1, 0, "ZvlLen",
-                      "'Zvl' (Minimum Vector Length) "#I,
-                      [!cast<RISCVExtension>("FeatureStdExtZvl"#!srl(I, 1)#"b")],
-                      !cast<string>(I)>;
+                     "'Zvl' (Minimum Vector Length) "#I,
+                     [!cast<RISCVExtension>("FeatureStdExtZvl"#!srl(I, 1)#"b")],
+                     !cast<string>(I)>;
 }
 
 def FeatureStdExtZve32x
     : RISCVExtension<"zve32x", 1, 0, "HasStdExtZve32x",
-                      "'Zve32x' (Vector Extensions for Embedded Processors "
-                      "with maximal 32 EEW)",
-                      [FeatureStdExtZicsr, FeatureStdExtZvl32b]>;
+                     "'Zve32x' (Vector Extensions for Embedded Processors "
+                     "with maximal 32 EEW)",
+                     [FeatureStdExtZicsr, FeatureStdExtZvl32b]>;
 
 def FeatureStdExtZve32f
     : RISCVExtension<"zve32f", 1, 0, "HasStdExtZve32f",
-                      "'Zve32f' (Vector Extensions for Embedded Processors "
-                      "with maximal 32 EEW and F extension)",
-                      [FeatureStdExtZve32x, FeatureStdExtF]>;
+                     "'Zve32f' (Vector Extensions for Embedded Processors "
+                     "with maximal 32 EEW and F extension)",
+                     [FeatureStdExtZve32x, FeatureStdExtF]>;
 
 def FeatureStdExtZve64x
     : RISCVExtension<"zve64x", 1, 0, "HasStdExtZve64x",
-                      "'Zve64x' (Vector Extensions for Embedded Processors "
-                      "with maximal 64 EEW)",
-                      [FeatureStdExtZve32x, FeatureStdExtZvl64b]>;
+                     "'Zve64x' (Vector Extensions for Embedded Processors "
+                     "with maximal 64 EEW)",
+                     [FeatureStdExtZve32x, FeatureStdExtZvl64b]>;
 
 def FeatureStdExtZve64f
     : RISCVExtension<"zve64f", 1, 0, "HasStdExtZve64f",
-                      "'Zve64f' (Vector Extensions for Embedded Processors "
-                      "with maximal 64 EEW and F extension)",
-                      [FeatureStdExtZve32f, FeatureStdExtZve64x]>;
+                     "'Zve64f' (Vector Extensions for Embedded Processors "
+                     "with maximal 64 EEW and F extension)",
+                     [FeatureStdExtZve32f, FeatureStdExtZve64x]>;
 
 def FeatureStdExtZve64d
     : RISCVExtension<"zve64d", 1, 0, "HasStdExtZve64d",
-                      "'Zve64d' (Vector Extensions for Embedded Processors "
-                      "with maximal 64 EEW, F and D extension)",
-                      [FeatureStdExtZve64f, FeatureStdExtD]>;
+                     "'Zve64d' (Vector Extensions for Embedded Processors "
+                     "with maximal 64 EEW, F and D extension)",
+                     [FeatureStdExtZve64f, FeatureStdExtD]>;
 
 def FeatureStdExtV
     : RISCVExtension<"v", 1, 0, "HasStdExtV",
-                      "'V' (Vector Extension for Application Processors)",
-                      [FeatureStdExtZvl128b, FeatureStdExtZve64d]>;
+                     "'V' (Vector Extension for Application Processors)",
+                     [FeatureStdExtZvl128b, FeatureStdExtZve64d]>;
 
 def FeatureStdExtZvfbfmin
     : RISCVExperimentalExtension<"zvfbfmin", 1, 0, "HasStdExtZvfbfmin",
