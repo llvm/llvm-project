@@ -51,3 +51,18 @@ def FeaturePromoteAlloca : SubtargetFeature <"promote-alloca",
   "Enable promote alloca pass"
 >;
 
+class SubtargetFeatureMaxWaveScratchSize <int Value, int FieldSize,
+                                          int Elements> :
+        SubtargetFeature<
+          "maxwavescratchsize"#FieldSize#"x"#Elements,
+          "MaxWaveScratchSize",
+          !cast<string>(Value),
+          "The dynamic callstack size in bytes"
+>;
+
+def FeatureMaxWaveScratchSize13x256 :
+  SubtargetFeatureMaxWaveScratchSize<8387584, 13, 256>;
+def FeatureMaxWaveScratchSize15x64 :
+  SubtargetFeatureMaxWaveScratchSize<8388352, 15, 64>;
+def FeatureMaxWaveScratchSize18x64 :
+  SubtargetFeatureMaxWaveScratchSize<67108608, 18, 64>;
