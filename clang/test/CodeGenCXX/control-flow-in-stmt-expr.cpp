@@ -301,12 +301,21 @@ void LambdaInit() {
                              })]() { return a; };
 }
 
+struct PrintyRefBind {
+  const Printy &a;
+  const Printy &b;
+};
+
+struct Temp {
+  Temp();
+  ~Temp();
+};
+Temp CreateTemp();
+Printy CreatePrinty();
+Printy CreatePrinty(const Temp&);
+
 void LifetimeExtended() {
   // CHECK-LABEL: define dso_local void @_Z16LifetimeExtendedv
-  struct PrintyRefBind {
-    const Printy &a;
-    const Printy &b;
-  };
   PrintyRefBind ps = {Printy("a"), ({
                         if (foo()) {
                           return;
@@ -316,6 +325,41 @@ void LifetimeExtended() {
                         }
                         Printy("b");
                       })};
+}
+
+void ConditionalLifetimeExtended() {
+  // CHECK-LABEL: @_Z27ConditionalLifetimeExtendedv()
+
+  // Verify that we create two cleanup flags.
+  //  1. First for the cleanup which is deactivated after full expression.
+  //  2. Second for the life-ext cleanup which is activated if the branch is taken.
+
+  // Note: We use `CreateTemp()` to ensure that life-ext destroy cleanup is not at
+  // the top of EHStack on deactivation. This ensures using active flags.
+
+  Printy* p1 = nullptr;
+  // CHECK:       store i1 false, ptr [[BRANCH1_DEFERRED:%cleanup.cond]], align 1
+  // CHECK-NEXT:  store i1 false, ptr [[BRANCH1_LIFEEXT:%cleanup.cond.*]], align 1
+  PrintyRefBind ps = {
+      p1 != nullptr ? static_cast<const Printy&>(CreatePrinty())
+      // CHECK:       cond.true:
+      // CHECK-NEXT:    call void @_Z12CreatePrintyv
+      // CHECK-NEXT:    store i1 true, ptr [[BRANCH1_DEFERRED]], align 1
+      // CHECK-NEXT:    store i1 true, ptr [[BRANCH1_LIFEEXT]], align 1
+      // CHECK-NEXT:    br label %{{.*}}
+      : foo() ? static_cast<const Printy&>(CreatePrinty(CreateTemp()))
+              : *p1,
+      ({
+        if (foo()) return;
+        Printy("c");
+        // CHECK:       if.end:
+        // CHECK-NEXT:    call void @_ZN6PrintyC1EPKc
+        // CHECK-NEXT:    store ptr
+      })};
+      // CHECK-NEXT:      store i1 false, ptr [[BRANCH1_DEFERRED]], align 1
+      // CHECK-NEXT:      store i32 0, ptr %cleanup.dest.slot, align 4
+      // CHECK-NEXT:      br label %cleanup
+
 }
 
 void NewArrayInit() {
