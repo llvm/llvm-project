@@ -52,16 +52,12 @@ static LogicalResult isPackOn1D(RewriterBase &rewriter, Operation *op,
 struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
   using OpRewritePattern<PackOp>::OpRewritePattern;
 
-  FailureOr<Value>
-  insertExpand(RewriterBase &rewriter, Location loc, Value operand,
-               Type newOperandType,
-               ArrayRef<ReassociationIndices> reassociation) const {
+  Value insertExpand(RewriterBase &rewriter, Location loc, Value operand,
+                     Type newOperandType, ArrayAttr reassociation) const {
     if (operand.getType() == newOperandType)
       return operand;
-    return rewriter
-        .create<tensor::ExpandShapeOp>(loc, newOperandType, operand,
-                                       reassociation)
-        .getResult();
+    return rewriter.create<tensor::ExpandShapeOp>(loc, newOperandType, operand,
+                                                  reassociation);
   }
 
   /// Returns success() if it is only packing on the innermost dimension.
@@ -100,14 +96,10 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
         getReassociationIndicesForReshape(sourceType, destType);
     if (!reassociation)
       return failure();
-    FailureOr<Value> expanded =
-        insertExpand(rewriter, packOp.getLoc(), packOp.getSource(), destType,
-                     *reassociation);
-    if (failed(expanded)) {
-      return rewriter.notifyMatchFailure(
-          packOp, "unable to expand source of tensor.pack");
-    }
-    rewriter.replaceOp(packOp, *expanded);
+    Value expanded = insertExpand(
+        rewriter, packOp.getLoc(), packOp.getSource(), destType,
+        getReassociationIndicesAttribute(rewriter, *reassociation));
+    rewriter.replaceOp(packOp, expanded);
     return success();
   }
 };
