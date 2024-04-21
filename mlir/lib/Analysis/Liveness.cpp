@@ -67,18 +67,16 @@ struct BlockInfoBuilder {
     // Mark all nested operation results as defined, and nested operation
     // operands as used. All defined value will be removed from the used set
     // at the end.
-    block->walk([&](Block *nestedBlock) {
-      if (block != nestedBlock) {
-        for (BlockArgument arg : nestedBlock->getArguments()) {
-          defValues.insert(arg);
-        }
-      }
-      for (Operation &op : *nestedBlock) {
-        for (Value result : op.getResults())
-          defValues.insert(result);
-        for (Value operand : op.getOperands())
-          useValues.insert(operand);
-      }
+    block->walk([&](Operation *op) {
+      for (Value result : op->getResults())
+        defValues.insert(result);
+      for (Value operand : op->getOperands())
+        useValues.insert(operand);
+      for (Region &region : op->getRegions())
+        for (Block &child : region.getBlocks())
+          for (BlockArgument arg : child.getArguments()) {
+            defValues.insert(arg);
+          }
     });
     llvm::set_subtract(useValues, defValues);
   }
