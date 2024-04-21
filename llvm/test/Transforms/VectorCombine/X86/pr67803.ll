@@ -5,8 +5,8 @@
 define <4 x i64> @PR67803(<8 x i32> %x, <8 x i32> %y, <8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: @PR67803(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <8 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt <8 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i1> [[TMP0]] to <8 x i32>
 ; CHECK-NEXT:    [[CONCAT:%.*]] = bitcast <8 x i32> [[TMP1]] to <4 x i64>
 ; CHECK-NEXT:    [[MASK:%.*]] = bitcast <4 x i64> [[CONCAT]] to <8 x float>
 ; CHECK-NEXT:    [[SEL:%.*]] = tail call noundef <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> [[A:%.*]], <8 x float> [[B:%.*]], <8 x float> [[MASK]])
