@@ -15,13 +15,6 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-std::optional<TraversalKind>
-ReturnConstRefFromParameterCheck::getCheckTraversalKind() const {
-  // Use 'AsIs' to make sure the return type is exactly the same as the
-  // parameter type.
-  return TK_AsIs;
-}
-
 void ReturnConstRefFromParameterCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       returnStmt(hasReturnValue(declRefExpr(to(parmVarDecl(hasType(

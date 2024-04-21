@@ -13,8 +13,9 @@
 
 namespace clang::tidy::bugprone {
 
-/// Detects the function which returns the const reference from parameter which
-/// causes potential use after free if the caller uses xvalue as argument.
+/// Detects the function which returns the const reference parameter as const
+/// reference. This might causes potential use after free errors if the caller
+/// uses xvalue as arguments.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/return-const-ref-from-parameter.html
@@ -24,7 +25,11 @@ public:
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  std::optional<TraversalKind> getCheckTraversalKind() const override;
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    // Use 'AsIs' to make sure the return type is exactly the same as the
+    // parameter type.
+    return TK_AsIs;
+  }
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
