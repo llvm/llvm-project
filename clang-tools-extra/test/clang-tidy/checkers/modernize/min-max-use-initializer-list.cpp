@@ -265,4 +265,41 @@ int maxTN2 = std::max({1, 2, 3});
 int maxTN3 = std::max({1, 2, 3}, less_than);
 // CHECK-FIXES: int maxTN3 = std::max({1, 2, 3}, less_than);
 
-}
+// non-trivial types
+struct A {
+  int a;
+  A(int a) : a(a) {}
+  bool operator<(const A &rhs) const { return a < rhs.a; }
+};
+
+A maxNT1 = std::max(A(1), A(2));
+// CHECK-FIXES: A maxNT1 = std::max(A(1), A(2));
+
+A maxNT2 = std::max(A(1), std::max(A(2), A(3)));
+// CHECK-FIXES: A maxNT2 = std::max(A(1), std::max(A(2), A(3)));
+
+A maxNT3 = std::max(A(1), std::max(A(2), A(3)), [](const A &lhs, const A &rhs) { return lhs.a < rhs.a; });
+// CHECK-FIXES: A maxNT3 = std::max(A(1), std::max(A(2), A(3)), [](const A &lhs, const A &rhs) { return lhs.a < rhs.a; });
+
+// Trivial type with size greater than 32
+struct B {
+  // 9*4 = 36 bytes > 32 bytes
+  int a[9];
+
+  bool operator<(const B& rhs) const {
+    return a[0] < rhs.a[0];
+  }
+};
+
+B maxTT1 = std::max(B(), B());
+// CHECK-FIXES: B maxTT1 = std::max(B(), B());
+
+B maxTT2 = std::max(B(), std::max(B(), B()));
+// CHECK-FIXES: B maxTT2 = std::max(B(), std::max(B(), B()));
+
+B maxTT3 = std::max(B(), std::max(B(), B()), [](const B &lhs, const B &rhs) { return lhs.a[0] < rhs.a[0]; });
+// CHECK-FIXES: B maxTT3 = std::max(B(), std::max(B(), B()), [](const B &lhs, const B &rhs) { return lhs.a[0] < rhs.a[0]; });
+
+
+} // namespace
+

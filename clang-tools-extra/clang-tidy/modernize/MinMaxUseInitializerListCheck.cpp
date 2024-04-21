@@ -78,7 +78,9 @@ static FindArgsResult findArgs(const CallExpr *Call) {
 
 static SmallVector<FixItHint>
 generateReplacements(const MatchFinder::MatchResult &Match,
-                    const CallExpr *TopCall, const FindArgsResult &Result) {
+                     const CallExpr *TopCall, const FindArgsResult &Result,
+                     const bool IgnoreNonTrivialTypes,
+                     const unsigned long IgnoreTrivialTypesOfSizeAbove) {
   SmallVector<FixItHint> FixItHints;
 
   const QualType ResultType = TopCall->getDirectCallee()
@@ -86,8 +88,21 @@ generateReplacements(const MatchFinder::MatchResult &Match,
                                   .getNonReferenceType()
                                   .getUnqualifiedType()
                                   .getCanonicalType();
+
+  // check if the type is trivial
+  const bool isResultTypeTrivial = Match.Context->getBaseElementType(ResultType)
+                                       .isTrivialType(*Match.Context);
   const SourceManager &SourceMngr = *Match.SourceManager;
   const LangOptions &LanguageOpts = Match.Context->getLangOpts();
+
+  if ((!isResultTypeTrivial && IgnoreNonTrivialTypes))
+    return FixItHints;
+
+  if (isResultTypeTrivial &&
+      // size in bits divided by 8 to get bytes
+      Match.Context->getTypeSize(ResultType) / 8 >
+          IgnoreTrivialTypesOfSizeAbove)
+    return FixItHints;
 
   for (const Expr *Arg : Result.Args) {
     const auto *InnerCall = dyn_cast<CallExpr>(Arg->IgnoreParenImpCasts());
@@ -157,8 +172,9 @@ generateReplacements(const MatchFinder::MatchResult &Match,
           CharSourceRange::getTokenRange(InnerResult.First->getEndLoc())));
     }
 
-    const SmallVector<FixItHint> InnerReplacements =
-        generateReplacements(Match, InnerCall, InnerResult);
+    const SmallVector<FixItHint> InnerReplacements = generateReplacements(
+        Match, InnerCall, InnerResult, IgnoreNonTrivialTypes,
+        IgnoreTrivialTypesOfSizeAbove);
 
     FixItHints.append(InnerReplacements);
 
@@ -182,12 +198,18 @@ generateReplacements(const MatchFinder::MatchResult &Match,
 MinMaxUseInitializerListCheck::MinMaxUseInitializerListCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      IgnoreNonTrivialTypes(Options.get("IgnoreNonTrivialTypes", true)),
+      IgnoreTrivialTypesOfSizeAbove(
+          Options.get("IgnoreTrivialTypesOfSizeAbove", 32UL)),
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()) {}
 
 void MinMaxUseInitializerListCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreNonTrivialTypes", IgnoreNonTrivialTypes);
+  Options.store(Opts, "IgnoreTrivialTypesOfSizeAbove",
+                IgnoreTrivialTypesOfSizeAbove);
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
 }
 
@@ -220,7 +242,8 @@ void MinMaxUseInitializerListCheck::check(
 
   const FindArgsResult Result = findArgs(TopCall);
   const SmallVector<FixItHint> Replacements =
-      generateReplacements(Match, TopCall, Result);
+      generateReplacements(Match, TopCall, Result, IgnoreNonTrivialTypes,
+                           IgnoreTrivialTypesOfSizeAbove);
 
   if (Replacements.empty())
     return;
@@ -238,11 +261,11 @@ void MinMaxUseInitializerListCheck::check(
     // add { and } insertions
     Diagnostic << FixItHint::CreateInsertion(Result.First->getBeginLoc(), "{");
 
-      Diagnostic << FixItHint::CreateInsertion(
-          Lexer::getLocForEndOfToken(Result.Last->getEndLoc(), 0,
-                                     *Match.SourceManager,
-                                     Match.Context->getLangOpts()),
-          "}");
+    Diagnostic << FixItHint::CreateInsertion(
+        Lexer::getLocForEndOfToken(Result.Last->getEndLoc(), 0,
+                                   *Match.SourceManager,
+                                   Match.Context->getLangOpts()),
+        "}");
   }
 
   Diagnostic << Replacements;
