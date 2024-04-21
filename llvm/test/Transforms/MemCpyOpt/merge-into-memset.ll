@@ -36,5 +36,175 @@ exit:
   ret void
 }
 
-declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
-declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)
+define void @memset_clobber_no_alias(ptr %p) {
+; CHECK-LABEL: @memset_clobber_no_alias(
+; CHECK-NEXT:    [[STACK:%.*]] = alloca <256 x i8>, align 8
+; CHECK-NEXT:    [[STACK1:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 24
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK2]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %stack = alloca <256 x i8>, align 8
+  %stack1 = getelementptr inbounds i8, ptr %stack, i64 8
+  call void @llvm.memset.p0.i64(ptr %stack1, i8 0, i64 136, i1 false)
+  call void @llvm.memset.p0.i64(ptr %p, i8 0, i64 16, i1 false)
+  %stack2 = getelementptr inbounds i8, ptr %stack, i64 24
+  call void @llvm.memset.p0.i64(ptr %stack2, i8 0, i64 24, i1 false)
+  ret void
+}
+
+define void @store_clobber_no_alias1(i64 %a, ptr %p) {
+; CHECK-LABEL: @store_clobber_no_alias1(
+; CHECK-NEXT:    [[STACK:%.*]] = alloca <256 x i8>, align 8
+; CHECK-NEXT:    [[STACK1:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
+; CHECK-NEXT:    store i64 [[A:%.*]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 24
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK2]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %stack = alloca <256 x i8>, align 8
+  %stack1 = getelementptr inbounds i8, ptr %stack, i64 8
+  call void @llvm.memset.p0.i64(ptr %stack1, i8 0, i64 136, i1 false)
+  store i64 %a, ptr %p, align 8
+  %stack2 = getelementptr inbounds i8, ptr %stack, i64 24
+  call void @llvm.memset.p0.i64(ptr %stack2, i8 0, i64 24, i1 false)
+  ret void
+}
+
+define void @store_clobber_no_alias2(i64 %a, ptr %p) {
+; CHECK-LABEL: @store_clobber_no_alias2(
+; CHECK-NEXT:    [[STACK:%.*]] = alloca <256 x i8>, align 8
+; CHECK-NEXT:    [[STACK1:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
+; CHECK-NEXT:    store i64 [[A:%.*]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 24
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK2]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %stack = alloca <256 x i8>, align 8
+  %stack1 = getelementptr inbounds i8, ptr %stack, i64 8
+  call void @llvm.memset.p0.i64(ptr %stack1, i8 0, i64 136, i1 false)
+  store i64 %a, ptr %p, align 8
+  %stack2 = getelementptr inbounds i8, ptr %stack, i64 24
+  call void @llvm.memset.p0.i64(ptr %stack2, i8 0, i64 24, i1 false)
+  ret void
+}
+
+define void @store_clobber_no_alias_precise_fail(i64 %a) {
+; CHECK-LABEL: @store_clobber_no_alias_precise_fail(
+; CHECK-NEXT:    [[STACK:%.*]] = alloca <256 x i8>, align 8
+; CHECK-NEXT:    [[STACK1:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
+; CHECK-NEXT:    store i64 [[A:%.*]], ptr [[STACK]], align 8
+; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 24
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK2]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %stack = alloca <256 x i8>, align 8
+  %stack1 = getelementptr inbounds i8, ptr %stack, i64 8
+  call void @llvm.memset.p0.i64(ptr %stack1, i8 0, i64 136, i1 false)
+  store i64 %a, ptr %stack, align 8
+  %stack2 = getelementptr inbounds i8, ptr %stack, i64 24
+  call void @llvm.memset.p0.i64(ptr %stack2, i8 0, i64 24, i1 false)
+  ret void
+}
+
+define void @store_clobber_may_alias_fail(ptr %p, ptr %p1) {
+; CHECK-LABEL: @store_clobber_may_alias_fail(
+; CHECK-NEXT:    [[STACK1:%.*]] = getelementptr inbounds i8, ptr [[STACK:%.*]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
+; CHECK-NEXT:    store i64 0, ptr [[P1:%.*]], align 8
+; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 24
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK2]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %stack1 = getelementptr inbounds i8, ptr %p, i64 8
+  call void @llvm.memset.p0.i64(ptr %stack1, i8 0, i64 136, i1 false)
+  store i64 0, ptr %p1, align 8
+  %stack2 = getelementptr inbounds i8, ptr %p, i64 24
+  call void @llvm.memset.p0.i64(ptr %stack2, i8 0, i64 24, i1 false)
+  ret void
+}
+
+define void @load_clobber_no_alias(ptr %p, ptr %p1) {
+; CHECK-LABEL: @load_clobber_no_alias(
+; CHECK-NEXT:    [[STACK:%.*]] = alloca <256 x i8>, align 8
+; CHECK-NEXT:    [[STACK1:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store i64 [[A]], ptr [[P1:%.*]], align 8
+; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 24
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK2]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %stack = alloca <256 x i8>, align 8
+  %stack1 = getelementptr inbounds i8, ptr %stack, i64 8
+  call void @llvm.memset.p0.i64(ptr %stack1, i8 0, i64 136, i1 false)
+  %a = load i64, ptr %p, align 8
+  store i64 %a, ptr %p1, align 8
+  %stack2 = getelementptr inbounds i8, ptr %stack, i64 24
+  call void @llvm.memset.p0.i64(ptr %stack2, i8 0, i64 24, i1 false)
+  ret void
+}
+
+define void @load_clobber_alias_fail(ptr %p, ptr %p1) {
+; CHECK-LABEL: @load_clobber_alias_fail(
+; CHECK-NEXT:    [[STACK:%.*]] = alloca <256 x i8>, align 8
+; CHECK-NEXT:    [[STACK1:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
+; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[STACK]], align 8
+; CHECK-NEXT:    store i64 [[A]], ptr [[P1:%.*]], align 8
+; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 24
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK2]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %stack = alloca <256 x i8>, align 8
+  %stack1 = getelementptr inbounds i8, ptr %stack, i64 8
+  call void @llvm.memset.p0.i64(ptr %stack1, i8 0, i64 136, i1 false)
+  %a = load i64, ptr %stack, align 8
+  store i64 %a, ptr %p1, align 8
+  %stack2 = getelementptr inbounds i8, ptr %stack, i64 24
+  call void @llvm.memset.p0.i64(ptr %stack2, i8 0, i64 24, i1 false)
+  ret void
+}
+
+define void @memset_volatile_fail(ptr %p) {
+; CHECK-LABEL: @memset_volatile_fail(
+; CHECK-NEXT:    [[STACK:%.*]] = alloca <256 x i8>, align 8
+; CHECK-NEXT:    [[STACK1:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P:%.*]], i8 0, i64 16, i1 true)
+; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 24
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK2]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %stack = alloca <256 x i8>, align 8
+  %stack1 = getelementptr inbounds i8, ptr %stack, i64 8
+  call void @llvm.memset.p0.i64(ptr %stack1, i8 0, i64 136, i1 false)
+  call void @llvm.memset.p0.i64(ptr %p, i8 0, i64 16, i1 true)
+  %stack2 = getelementptr inbounds i8, ptr %stack, i64 24
+  call void @llvm.memset.p0.i64(ptr %stack2, i8 0, i64 24, i1 false)
+  ret void
+}
+
+define void @store_volatile_fail(i64 %a, ptr %p) {
+; CHECK-LABEL: @store_volatile_fail(
+; CHECK-NEXT:    [[STACK:%.*]] = alloca <256 x i8>, align 8
+; CHECK-NEXT:    [[STACK1:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
+; CHECK-NEXT:    store volatile i64 [[A:%.*]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 24
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK2]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %stack = alloca <256 x i8>, align 8
+  %stack1 = getelementptr inbounds i8, ptr %stack, i64 8
+  call void @llvm.memset.p0.i64(ptr %stack1, i8 0, i64 136, i1 false)
+  store volatile i64 %a, ptr %p
+  %stack2 = getelementptr inbounds i8, ptr %stack, i64 24
+  call void @llvm.memset.p0.i64(ptr %stack2, i8 0, i64 24, i1 false)
+  ret void
+}
