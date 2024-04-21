@@ -1093,7 +1093,10 @@ private:
     if (Queue == nullptr)
       return Plugin::error("Target queue was nullptr");
 
-    /// The signal that we must wait from the other stream.
+    // Guard access to the Slots data structure.
+    std::lock_guard<std::mutex> Lock(Mutex);
+
+    // The signal that we must wait from the other stream.
     AMDGPUSignalTy *OtherSignal = OtherStream.Slots[Slot].Signal;
 
     // Prevent the release of the other stream's signal.
