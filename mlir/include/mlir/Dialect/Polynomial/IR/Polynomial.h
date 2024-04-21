@@ -102,6 +102,8 @@ public:
 
   unsigned getDegree() const;
 
+  ArrayRef<Monomial> getTerms() const { return terms; }
+
   friend ::llvm::hash_code hash_value(const Polynomial &arg);
 
 private:
