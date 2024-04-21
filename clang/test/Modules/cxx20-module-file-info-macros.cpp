@@ -40,6 +40,11 @@
 // CHECK-DAG: FUNC_Macro
 // CHECK-DAG: CONSTANT
 // CHECK-DAG: FOO
+// CHECK: Macro Definition Bodies:
+// CHECK-DAG: REDEFINE
+// CHECK-DAG: FUNC_Macro(X) (X+1)
+// CHECK-DAG: CONSTANT 43
+// CHECK-DAG: FOO
 // CHECK-NEXT: ===
 
 //--- include_foo.h
@@ -48,6 +53,10 @@
 // CHECK: Macro Definitions:
 // CHECK-DAG: CONSTANT
 // CHECK-DAG: FUNC_Macro
+// CHECK-DAG: FOO
+// CHECK: Macro Definition Bodies:
+// CHECK-DAG: FUNC_Macro(X) (X+1)
+// CHECK-DAG: CONSTANT 43
 // CHECK-DAG: FOO
 // CHECK-NEXT: ===
 
@@ -58,6 +67,10 @@ import "foo.h";
 // CHECK-DAG: CONSTANT
 // CHECK-DAG: FUNC_Macro
 // CHECK-DAG: FOO
+// CHECK: Macro Definition Bodies:
+// CHECK-DAG: FUNC_Macro
+// CHECK-DAG: CONSTANT
+// CHECK-DAG: FOO
 // CHECK-NEXT: ===
 
 //--- named_module.cppm
@@ -66,3 +79,4 @@ module;
 export module M;
 #define M_Module 43
 // CHECK-NOT: Macro Definitions:
+// CHECK-NOT: Macro Definition Bodies:
