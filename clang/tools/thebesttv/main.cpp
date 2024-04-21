@@ -492,21 +492,30 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
         requireTrue(to.isValid());
 
         logger.info("Generating NPE bug version ...");
-        findPathBetween(from, fromLine, to, toLine, path, {}, "npe-bug",
-                        jResults);
+        int size = findPathBetween(from, fromLine, to, toLine, path, {},
+                                   "npe-bug", jResults);
+        if (size == 0)
+            logger.warn("Unable to find any path for NPE bug version!");
 
         // 无缺陷版本：source -> sink 所在函数的出口
         // 尽量符合原始缺陷路径。如果找不到，就一步步减小路径
         logger.info("Generating NPE fix version ...");
         auto sinkExit = getExit(to);
         std::vector<VarLocResult> p = path;
+        bool found = false;
         while (true) {
             int result = findPathBetween(from, fromLine, sinkExit, INT_MAX, p,
                                          {to}, "npe-fix", jResults);
-            if (result || p.empty())
+            if (result) {
+                found = true;
+                break;
+            }
+            if (p.empty()) // no more path to find
                 break;
             p.pop_back();
         }
+        if (!found)
+            logger.warn("Unable to find any path for NPE fix version!");
     } else {
         logger.info("Handle unknown type: {}", type);
         requireTrue(from.isValid());
