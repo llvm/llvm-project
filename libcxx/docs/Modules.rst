@@ -109,7 +109,7 @@ Currently there are two ways to build modules
     Clang 17 or later and CMake 3.26 or later.
 
   * Use the installed modules. This requires Clang 18.1.2 or later and
-    a recent build of CMake. The CMake changes will be part CMake 3.30. This
+    a recent build of CMake. The CMake changes will be part of CMake 3.30. This
     method requires you or your distribution to enable module installation.
 
 Using the local build
