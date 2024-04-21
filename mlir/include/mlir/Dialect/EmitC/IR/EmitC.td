@@ -34,16 +34,16 @@ class EmitC_Op<string mnemonic, list<Trait> traits = []>
 // Base class for unary operations.
 class EmitC_UnaryOp<string mnemonic, list<Trait> traits = []> :
     EmitC_Op<mnemonic, traits> {
-  let arguments = (ins AnyType);
-  let results = (outs AnyType);
+  let arguments = (ins EmitCType);
+  let results = (outs EmitCType);
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 // Base class for binary operations.
 class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
     EmitC_Op<mnemonic, traits> {
-  let arguments = (ins AnyType:$lhs, AnyType:$rhs);
-  let results = (outs AnyType);
+  let arguments = (ins EmitCType:$lhs, EmitCType:$rhs);
+  let results = (outs EmitCType);
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
@@ -97,9 +97,9 @@ def EmitC_ApplyOp : EmitC_Op<"apply", [CExpression]> {
   }];
   let arguments = (ins
     Arg<StrAttr, "the operator to apply">:$applicableOperator,
-    AnyType:$operand
+    EmitCType:$operand
   );
-  let results = (outs AnyType:$result);
+  let results = (outs EmitCType:$result);
   let assemblyFormat = [{
     $applicableOperator `(` $operand `)` attr-dict `:` functional-type($operand, results)
   }];
@@ -240,9 +240,9 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpression]> {
     Arg<StrAttr, "the C++ function to call">:$callee,
     Arg<OptionalAttr<ArrayAttr>, "the order of operands and further attributes">:$args,
     Arg<OptionalAttr<ArrayAttr>, "template arguments">:$template_args,
-    Variadic<AnyType>:$operands
+    Variadic<EmitCType>:$operands
   );
-  let results = (outs Variadic<AnyType>);
+  let results = (outs Variadic<EmitCType>);
   let builders = [
     OpBuilder<(ins
       "::mlir::TypeRange":$resultTypes,
@@ -284,8 +284,8 @@ def EmitC_CastOp : EmitC_Op<"cast",
     ```
   }];
 
-  let arguments = (ins AnyType:$source);
-  let results = (outs AnyType:$dest);
+  let arguments = (ins EmitCType:$source);
+  let results = (outs EmitCType:$dest);
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 }
 
@@ -323,9 +323,9 @@ def EmitC_CmpOp : EmitC_BinaryOp<"cmp", [CExpression]> {
   }];
 
   let arguments = (ins EmitC_CmpPredicateAttr:$predicate,
-                       AnyType:$lhs,
-                       AnyType:$rhs);
-  let results = (outs AnyType);
+                       EmitCType:$lhs,
+                       EmitCType:$rhs);
+  let results = (outs EmitCType);
 
   let assemblyFormat = "$predicate `,` operands attr-dict `:` functional-type(operands, results)";
 }
@@ -353,7 +353,7 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
   }];
 
   let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
-  let results = (outs AnyType);
+  let results = (outs EmitCType);
 
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -423,7 +423,7 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
   }];
 
   let arguments = (ins UnitAttr:$do_not_inline);
-  let results = (outs AnyType:$result);
+  let results = (outs EmitCType:$result);
   let regions = (region SizedRegion<1>:$region);
 
   let hasVerifier = 1;
@@ -531,8 +531,8 @@ def EmitC_CallOp : EmitC_Op<"call",
     %2 = emitc.call @my_add(%0, %1) : (f32, f32) -> f32
     ```
   }];
-  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
-  let results = (outs Variadic<AnyType>);
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<EmitCType>:$operands);
+  let results = (outs Variadic<EmitCType>);
 
   let builders = [
     OpBuilder<(ins "FuncOp":$callee, CArg<"ValueRange", "{}">:$operands), [{
@@ -722,7 +722,7 @@ def EmitC_ReturnOp : EmitC_Op<"return", [Pure, HasParent<"FuncOp">,
     }
     ```
   }];
-  let arguments = (ins Optional<AnyType>:$operand);
+  let arguments = (ins Optional<EmitCType>:$operand);
 
   let assemblyFormat = "attr-dict ($operand^ `:` type($operand))?";
   let hasVerifier = 1;
@@ -766,7 +766,7 @@ def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
   }];
 
   let arguments = (ins StrAttr:$value);
-  let results = (outs AnyType:$result);
+  let results = (outs EmitCType:$result);
 
   let hasVerifier = 1;
   let assemblyFormat = "$value attr-dict `:` type($result)";
@@ -932,8 +932,8 @@ def EmitC_ConditionalOp : EmitC_Op<"conditional",
     int32_t v6 = v3 ? v4 : v5;
     ```
   }];
-  let arguments = (ins I1:$condition, AnyType:$true_value, AnyType:$false_value);
-  let results = (outs AnyType:$result);
+  let arguments = (ins I1:$condition, EmitCType:$true_value, EmitCType:$false_value);
+  let results = (outs EmitCType:$result);
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
@@ -1009,7 +1009,7 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
   }];
 
   let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
-  let results = (outs AnyType);
+  let results = (outs EmitCType);
 
   let hasVerifier = 1;
 }
@@ -1068,7 +1068,7 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
     ```
   }];
 
-  let arguments = (ins AnyType:$var, AnyType:$value);
+  let arguments = (ins EmitCType:$var, EmitCType:$value);
   let results = (outs);
 
   let hasVerifier = 1;
@@ -1089,7 +1089,7 @@ def EmitC_YieldOp : EmitC_Op<"yield",
     value is yielded.
   }];
 
-  let arguments = (ins Optional<AnyType>:$result);
+  let arguments = (ins Optional<EmitCType>:$result);
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
   let hasVerifier = 1;
@@ -1173,8 +1173,8 @@ def EmitC_SubscriptOp : EmitC_Op<"subscript", []> {
       EmitC_OpaqueType,
       EmitC_PointerType]>,
     "the value to subscript">:$value,
-    Variadic<AnyType>:$indices);
-  let results = (outs AnyType:$result);
+    Variadic<EmitCType>:$indices);
+  let results = (outs EmitCType:$result);
 
   let builders = [
     OpBuilder<(ins "TypedValue<ArrayType>":$array, "ValueRange":$indices), [{

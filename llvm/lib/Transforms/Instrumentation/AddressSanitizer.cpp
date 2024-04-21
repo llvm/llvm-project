@@ -1817,7 +1817,7 @@ Instruction *AddressSanitizer::genAMDGPUReportBlock(IRBuilder<> &IRB,
 
   auto *Trm =
       SplitBlockAndInsertIfThen(ReportCond, &*IRB.GetInsertPoint(), false,
-                                MDBuilder(*C).createBranchWeights(1, 100000));
+                                MDBuilder(*C).createUnlikelyBranchWeights());
   Trm->getParent()->setName("asan.report");
 
   if (Recover)
@@ -1894,7 +1894,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
     // We use branch weights for the slow path check, to indicate that the slow
     // path is rarely taken. This seems to be the case for SPEC benchmarks.
     Instruction *CheckTerm = SplitBlockAndInsertIfThen(
-        Cmp, InsertBefore, false, MDBuilder(*C).createBranchWeights(1, 100000));
+        Cmp, InsertBefore, false, MDBuilder(*C).createUnlikelyBranchWeights());
     assert(cast<BranchInst>(CheckTerm)->isUnconditional());
     BasicBlock *NextBB = CheckTerm->getSuccessor(0);
     IRB.SetInsertPoint(CheckTerm);

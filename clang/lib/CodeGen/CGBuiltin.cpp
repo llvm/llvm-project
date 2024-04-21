@@ -826,29 +826,32 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
     ASTContext &Ctx, const RecordDecl *RD, StringRef Name, uint64_t &Offset) {
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       getLangOpts().getStrictFlexArraysLevel();
-  unsigned FieldNo = 0;
-  bool IsUnion = RD->isUnion();
+  uint32_t FieldNo = 0;
 
-  for (const Decl *D : RD->decls()) {
-    if (const auto *Field = dyn_cast<FieldDecl>(D);
-        Field && (Name.empty() || Field->getNameAsString() == Name) &&
+  if (RD->isImplicit())
+    return nullptr;
+
+  for (const FieldDecl *FD : RD->fields()) {
+    if ((Name.empty() || FD->getNameAsString() == Name) &&
         Decl::isFlexibleArrayMemberLike(
-            Ctx, Field, Field->getType(), StrictFlexArraysLevel,
+            Ctx, FD, FD->getType(), StrictFlexArraysLevel,
             /*IgnoreTemplateOrMacroSubstitution=*/true)) {
       const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
       Offset += Layout.getFieldOffset(FieldNo);
-      return Field;
+      return FD;
     }
 
-    if (const auto *Record = dyn_cast<RecordDecl>(D))
-      if (const FieldDecl *Field =
-              FindFlexibleArrayMemberField(Ctx, Record, Name, Offset)) {
+    QualType Ty = FD->getType();
+    if (Ty->isRecordType()) {
+      if (const FieldDecl *Field = FindFlexibleArrayMemberField(
+              Ctx, Ty->getAsRecordDecl(), Name, Offset)) {
         const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
         Offset += Layout.getFieldOffset(FieldNo);
         return Field;
       }
+    }
 
-    if (!IsUnion && isa<FieldDecl>(D))
+    if (!RD->isUnion())
       ++FieldNo;
   }
 
@@ -858,14 +861,13 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
 static unsigned CountCountedByAttrs(const RecordDecl *RD) {
   unsigned Num = 0;
 
-  for (const Decl *D : RD->decls()) {
-    if (const auto *FD = dyn_cast<FieldDecl>(D);
-        FD && FD->getType()->isCountAttributedType()) {
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD->getType()->isCountAttributedType())
       return ++Num;
-    }
 
-    if (const auto *Rec = dyn_cast<RecordDecl>(D))
-      Num += CountCountedByAttrs(Rec);
+    QualType Ty = FD->getType();
+    if (Ty->isRecordType())
+      Num += CountCountedByAttrs(Ty->getAsRecordDecl());
   }
 
   return Num;
@@ -18302,20 +18304,28 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *M = EmitScalarExpr(E->getArg(0));
     Value *A = EmitScalarExpr(E->getArg(1));
     Value *B = EmitScalarExpr(E->getArg(2));
-    if (E->getArg(0)->getType()->hasFloatingRepresentation()) {
+    if (E->getArg(0)->getType()->hasFloatingRepresentation())
       return Builder.CreateIntrinsic(
           /*ReturnType*/ M->getType(), Intrinsic::fmuladd,
-          ArrayRef<Value *>{M, A, B}, nullptr, "dx.fmad");
-    }
+          ArrayRef<Value *>{M, A, B}, nullptr, "hlsl.fmad");
+
     if (E->getArg(0)->getType()->hasSignedIntegerRepresentation()) {
-      return Builder.CreateIntrinsic(
-          /*ReturnType*/ M->getType(), Intrinsic::dx_imad,
-          ArrayRef<Value *>{M, A, B}, nullptr, "dx.imad");
+      if (CGM.getTarget().getTriple().getArch() == llvm::Triple::dxil)
+        return Builder.CreateIntrinsic(
+            /*ReturnType*/ M->getType(), Intrinsic::dx_imad,
+            ArrayRef<Value *>{M, A, B}, nullptr, "dx.imad");
+
+      Value *Mul = Builder.CreateNSWMul(M, A);
+      return Builder.CreateNSWAdd(Mul, B);
     }
     assert(E->getArg(0)->getType()->hasUnsignedIntegerRepresentation());
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/M->getType(), Intrinsic::dx_umad,
-        ArrayRef<Value *>{M, A, B}, nullptr, "dx.umad");
+    if (CGM.getTarget().getTriple().getArch() == llvm::Triple::dxil)
+      return Builder.CreateIntrinsic(
+          /*ReturnType=*/M->getType(), Intrinsic::dx_umad,
+          ArrayRef<Value *>{M, A, B}, nullptr, "dx.umad");
+
+    Value *Mul = Builder.CreateNUWMul(M, A);
+    return Builder.CreateNUWAdd(Mul, B);
   }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
