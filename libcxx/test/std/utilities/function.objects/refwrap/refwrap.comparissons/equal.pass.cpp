@@ -24,7 +24,6 @@
 #include "test_comparisons.h"
 #include "test_macros.h"
 
-// Test SFINAE
 
 struct EqualityComparable {
   constexpr EqualityComparable(int value) : value_{value} {};
@@ -38,27 +37,17 @@ static_assert(std::equality_comparable<EqualityComparable>);
 static_assert(EqualityComparable{94} == EqualityComparable{94});
 static_assert(EqualityComparable{94} != EqualityComparable{82});
 
-// struct EqualityComparableWith {
-//   constexpr EqualityComparableWith(int value) : value_{value} {};
-
-//   friend constexpr bool operator==(const EqualityComparableWith&, const EqualityComparableWith&) noexcept = default;
-//   friend constexpr bool operator==(const EqualityComparableWith& x, const int& y) noexcept { return x.value_ == y; };
-
-//   int value_;
-// };
-
 struct NonComparable {};
 
 static_assert(!std::equality_comparable<NonComparable>);
 
-// struct NonComparableWith {
-//   constexpr NonComparableWith(int value);
-// };
+// Test SFINAE.
 
 static_assert(std::equality_comparable<std::reference_wrapper<EqualityComparable>>);
-// static_assert(std::equality_comparable_with<std::reference_wrapper<EqualityComparableWith>, int>);
+
 static_assert(!std::equality_comparable<std::reference_wrapper<NonComparable>>);
-// static_assert(!std::equality_comparable_with<std::reference_wrapper<NonComparableWith>, int>);
+
+// Test equality.
 
 template <typename T>
 constexpr void test() {

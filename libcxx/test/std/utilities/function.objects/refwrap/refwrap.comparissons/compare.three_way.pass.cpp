@@ -19,42 +19,60 @@
 // friend constexpr synth-three-way-result<T> operator<=>(reference_wrapper, reference_wrapper<const T>); // Since C++26
 
 #include <cassert>
+#include <concepts>
 #include <functional>
 
 #include "test_comparisons.h"
 #include "test_macros.h"
 
-template <typename Order>
-constexpr void test() {
-  int integer = 47;
+struct NonComparable {};
 
-  int bigger  = 94;
-  int smaller = 82;
+static_assert(!std::three_way_comparable<NonComparable>);
+
+// Test SFINAE.
+
+static_assert(std::three_way_comparable<std::reference_wrapper<StrongOrder>>);
+static_assert(std::three_way_comparable<std::reference_wrapper<WeakOrder>>);
+static_assert(std::three_way_comparable<std::reference_wrapper<PartialOrder>>);
+
+static_assert(!std::three_way_comparable<std::reference_wrapper<NonComparable>>);
+
+// Test comparisons.
+
+template <typename T, typename Order>
+constexpr void test() {
+  T t{47};
+
+  T bigger{94};
+  T smaller{82};
 
   // Identical contents
   {
-    std::reference_wrapper<int> rw1{integer};
-    std::reference_wrapper<int> rw2{integer};
+    std::reference_wrapper<T> rw1{t};
+    std::reference_wrapper<T> rw2{t};
     assert(testOrder(rw1, rw2, Order::equivalent));
   }
   // Less
   {
-    std::reference_wrapper<int> rw1{smaller};
-    std::reference_wrapper<int> rw2{bigger};
+    std::reference_wrapper<T> rw1{smaller};
+    std::reference_wrapper<T> rw2{bigger};
     assert(testOrder(rw1, rw2, Order::less));
   }
   // Greater
   {
-    std::reference_wrapper<int> rw1{bigger};
-    std::reference_wrapper<int> rw2{smaller};
+    std::reference_wrapper<T> rw1{bigger};
+    std::reference_wrapper<T> rw2{smaller};
     assert(testOrder(rw1, rw2, Order::greater));
   }
 }
 
 constexpr bool test() {
-  test<std::strong_ordering>();
-  test<std::weak_ordering>();
-  test<std::partial_ordering>();
+  test<int, std::strong_ordering>();
+  test<StrongOrder, std::strong_ordering>();
+  test<int, std::weak_ordering>();
+  test<WeakOrder, std::weak_ordering>();
+  test<int, std::partial_ordering>();
+  test<PartialOrder, std::partial_ordering>();
 
   return true;
 }
