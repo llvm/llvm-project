@@ -652,8 +652,8 @@ public:
   EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
     using namespace support;
     endian::Writer LE(Out, llvm::endianness::little);
+    // We do not explicitly emit the key length because it is a constant.
     offset_type N = sizeof(K);
-    LE.write<offset_type>(N);
     offset_type M = sizeof(FrameId) * V.size();
     LE.write<offset_type>(M);
     return std::make_pair(N, M);
@@ -697,8 +697,8 @@ public:
   ReadKeyDataLength(const unsigned char *&D) {
     using namespace support;
 
-    offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little>(D);
+    // We do not explicitly read the key length because it is a constant.
+    offset_type KeyLen = sizeof(external_key_type);
     offset_type DataLen =
         endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);
