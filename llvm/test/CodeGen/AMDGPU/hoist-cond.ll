@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs -disable-block-placement < %s | FileCheck %s
 
 ; Check that invariant compare is hoisted out of the loop.

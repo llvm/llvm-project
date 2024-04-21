@@ -115,9 +115,9 @@ body:             |
   ; GCN-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub1_sub2_sub3_sub4_sub5, killed [[REG_SEQUENCE3]], %subreg.sub1_sub2_sub3_sub4_sub5_sub6
   ; GCN-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 killed [[V_MOV_B32_e32_1]], [[V_LSHL_B64_e64_]], killed [[REG_SEQUENCE4]], 0, 0, 0, 0, implicit $exec
+  ; GCN-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.bb2:
-  ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0.bb:
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
@@ -158,9 +158,9 @@ body:             |
     %29 = V_MOV_B32_e32 0, implicit $exec
     %30 = COPY %24
     BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, implicit $exec
+    SI_WAVE_RECONVERGE %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2.bb2:
-    SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -257,9 +257,9 @@ body:             |
   ; GCN-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GCN-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[S_LSHL_B64_]]
   ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 killed [[V_MOV_B32_e32_2]], killed [[COPY3]], killed [[REG_SEQUENCE5]], 0, 0, 0, 0, implicit $exec
+  ; GCN-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.bb2:
-  ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0.bb:
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
@@ -308,9 +308,9 @@ body:             |
     %38 = V_MOV_B32_e32 0, implicit $exec
     %39 = COPY %33
     BUFFER_STORE_DWORD_ADDR64 killed %38, killed %39, killed %37, 0, 0, 0, 0, implicit $exec
+    SI_WAVE_RECONVERGE %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2.bb2:
-    SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -388,9 +388,9 @@ body:             |
   ; GCN-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub1_sub2_sub3_sub4_sub5, killed [[REG_SEQUENCE2]], %subreg.sub1_sub2_sub3_sub4_sub5_sub6
   ; GCN-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 killed [[V_MOV_B32_e32_1]], [[V_LSHL_B64_e64_]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
+  ; GCN-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.bb2:
-  ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0.bb:
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
@@ -431,9 +431,9 @@ body:             |
     %29 = V_MOV_B32_e32 0, implicit $exec
     %30 = COPY %24
     BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, implicit $exec
+    SI_WAVE_RECONVERGE %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2.bb2:
-    SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...

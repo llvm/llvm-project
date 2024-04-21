@@ -207,7 +207,6 @@ define amdgpu_ps void @struct_buffer_store_format_f16__sgpr_val__vgpr_rsrc__sgpr
   ; UNPACKED-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; UNPACKED-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
   ; UNPACKED-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
-  ; UNPACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT: bb.2:
   ; UNPACKED-NEXT:   successors: %bb.3(0x80000000)
@@ -234,13 +233,11 @@ define amdgpu_ps void @struct_buffer_store_format_f16__sgpr_val__vgpr_rsrc__sgpr
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
   ; UNPACKED-NEXT:   BUFFER_STORE_FORMAT_D16_X_gfx80_BOTHEN_exact [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
-  ; UNPACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; UNPACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; UNPACKED-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; UNPACKED-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.2, implicit $exec
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT: bb.4:
   ; UNPACKED-NEXT:   successors: %bb.5(0x80000000)
-  ; UNPACKED-NEXT: {{  $}}
-  ; UNPACKED-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT: bb.5:
   ; UNPACKED-NEXT:   S_ENDPGM 0
@@ -262,7 +259,6 @@ define amdgpu_ps void @struct_buffer_store_format_f16__sgpr_val__vgpr_rsrc__sgpr
   ; PACKED-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; PACKED-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
   ; PACKED-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
-  ; PACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT: bb.2:
   ; PACKED-NEXT:   successors: %bb.3(0x80000000)
@@ -289,13 +285,11 @@ define amdgpu_ps void @struct_buffer_store_format_f16__sgpr_val__vgpr_rsrc__sgpr
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
   ; PACKED-NEXT:   BUFFER_STORE_FORMAT_D16_X_BOTHEN_exact [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
-  ; PACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; PACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; PACKED-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; PACKED-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.2, implicit $exec
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT: bb.4:
   ; PACKED-NEXT:   successors: %bb.5(0x80000000)
-  ; PACKED-NEXT: {{  $}}
-  ; PACKED-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT: bb.5:
   ; PACKED-NEXT:   S_ENDPGM 0
@@ -317,7 +311,6 @@ define amdgpu_ps void @struct_buffer_store_format_f16__sgpr_val__vgpr_rsrc__sgpr
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
   ; GFX12-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY6]]
-  ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
   ; GFX12-NEXT:   successors: %bb.3(0x80000000)
@@ -344,13 +337,11 @@ define amdgpu_ps void @struct_buffer_store_format_f16__sgpr_val__vgpr_rsrc__sgpr
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
   ; GFX12-NEXT:   BUFFER_STORE_FORMAT_D16_X_VBUFFER_BOTHEN_exact [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
-  ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; GFX12-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX12-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.2, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.4:
   ; GFX12-NEXT:   successors: %bb.5(0x80000000)
-  ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.5:
   ; GFX12-NEXT:   S_ENDPGM 0

@@ -92,8 +92,6 @@ define void @atomicrmw_rel(ptr %ptr) {
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.atomicrmw.end:
-  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:sreg_64 = PHI [[SI_IF_BREAK]], %bb.1
-  ; CHECK-NEXT:   SI_END_CF [[PHI2]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   SI_RETURN
   %old.2 = atomicrmw add ptr %ptr, i8 0 release,        !mmra !1
   ret void
@@ -160,22 +158,20 @@ define void @cmpxchg(ptr %ptr) {
   ; CHECK-NEXT:   [[S_ANDN2_B64_:%[0-9]+]]:sreg_64 = S_ANDN2_B64 [[S_OR_B64_]], $exec, implicit-def $scc
   ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP_EQ_U32_e64_]], $exec, implicit-def $scc
   ; CHECK-NEXT:   [[S_OR_B64_1:%[0-9]+]]:sreg_64 = S_OR_B64 [[S_ANDN2_B64_]], [[S_AND_B64_]], implicit-def $scc
+  ; CHECK-NEXT:   SI_WAVE_RECONVERGE [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.Flow:
   ; CHECK-NEXT:   successors: %bb.4(0x04000000), %bb.1(0x7c000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:sreg_64 = PHI [[S_OR_B64_]], %bb.1, [[S_OR_B64_1]], %bb.2
   ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:vgpr_32 = PHI [[COPY7]], %bb.1, [[V_AND_B32_e64_3]], %bb.2
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sreg_64 = COPY [[PHI3]]
   ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64 = SI_IF_BREAK [[COPY8]], [[PHI1]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.partword.cmpxchg.end:
-  ; CHECK-NEXT:   [[PHI5:%[0-9]+]]:sreg_64 = PHI [[SI_IF_BREAK]], %bb.3
-  ; CHECK-NEXT:   [[PHI6:%[0-9]+]]:vgpr_32 = PHI [[FLAT_ATOMIC_CMPSWAP_RTN]], %bb.3
-  ; CHECK-NEXT:   SI_END_CF [[PHI5]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[PHI5:%[0-9]+]]:vgpr_32 = PHI [[FLAT_ATOMIC_CMPSWAP_RTN]], %bb.3
   ; CHECK-NEXT:   SI_RETURN
   %pair = cmpxchg ptr %ptr, i8 0, i8 1 acquire acquire, !mmra !2
   ret void

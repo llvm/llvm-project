@@ -350,6 +350,8 @@ class WrapTerminatorInst<SOP_Pseudo base_inst> : SPseudoInstSI<
 
 let WaveSizePredicate = isWave64 in {
 def S_MOV_B64_term : WrapTerminatorInst<S_MOV_B64>;
+def S_CMOV_B64_term : WrapTerminatorInst<S_CMOV_B64>;
+def S_CSELECT_B64_term : WrapTerminatorInst<S_CSELECT_B64>;
 def S_XOR_B64_term : WrapTerminatorInst<S_XOR_B64>;
 def S_OR_B64_term : WrapTerminatorInst<S_OR_B64>;
 def S_ANDN2_B64_term : WrapTerminatorInst<S_ANDN2_B64>;
@@ -359,6 +361,8 @@ def S_AND_SAVEEXEC_B64_term : WrapTerminatorInst<S_AND_SAVEEXEC_B64>;
 
 let WaveSizePredicate = isWave32 in {
 def S_MOV_B32_term : WrapTerminatorInst<S_MOV_B32>;
+def S_CMOV_B32_term : WrapTerminatorInst<S_CMOV_B32>;
+def S_CSELECT_B32_term : WrapTerminatorInst<S_CSELECT_B32>;
 def S_XOR_B32_term : WrapTerminatorInst<S_XOR_B32>;
 def S_OR_B32_term : WrapTerminatorInst<S_OR_B32>;
 def S_ANDN2_B32_term : WrapTerminatorInst<S_ANDN2_B32>;
@@ -460,7 +464,7 @@ def SI_ELSE : CFPseudoInstSI <
 
 def SI_WATERFALL_LOOP : CFPseudoInstSI <
   (outs),
-  (ins brtarget:$target), [], 1> {
+  (ins SReg_1:$LoopMask, SReg_1:$ExitMask, brtarget:$target), [], 1> {
   let Size = 8;
   let isBranch = 1;
   let Defs = [];
@@ -475,9 +479,7 @@ def SI_LOOP : CFPseudoInstSI <
   let IsNeverUniform = 1;
 }
 
-} // End isTerminator = 1
-
-def SI_END_CF : CFPseudoInstSI <
+def SI_WAVE_RECONVERGE : CFPseudoInstSI <
   (outs), (ins SReg_1:$saved), [], 1, 1> {
   let Size = 4;
   let isAsCheapAsAMove = 1;
@@ -487,6 +489,8 @@ def SI_END_CF : CFPseudoInstSI <
   let mayLoad = 1; // FIXME: Should not need memory flags
   let mayStore = 1;
 }
+
+} // End isTerminator = 1
 
 def SI_IF_BREAK : CFPseudoInstSI <
   (outs SReg_1:$dst), (ins SReg_1:$vcc, SReg_1:$src), []> {

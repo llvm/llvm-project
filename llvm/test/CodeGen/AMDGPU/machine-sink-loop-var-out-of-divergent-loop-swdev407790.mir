@@ -50,7 +50,6 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.4
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
   ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]]
   ; CHECK-NEXT:   S_BRANCH %bb.2
@@ -64,7 +63,7 @@ body:             |
   ; CHECK-NEXT: bb.7:
   ; CHECK-NEXT:   successors: %bb.7(0x40000000), %bb.8(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.7, implicit undef $vcc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.7, implicit undef $vcc_lo
   ; CHECK-NEXT:   S_BRANCH %bb.8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8:
@@ -96,7 +95,6 @@ body:             |
 
   bb.5:
     %7:vgpr_32 = PHI %0, %bb.4
-    SI_END_CF %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     INLINEASM &"", 1, implicit %5
     S_BRANCH %bb.2
 
@@ -161,7 +159,6 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.4
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY]], [[COPY1]], implicit-def dead $scc
   ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[S_ADD_I32_]]
   ; CHECK-NEXT:   S_BRANCH %bb.2
@@ -175,7 +172,7 @@ body:             |
   ; CHECK-NEXT: bb.7:
   ; CHECK-NEXT:   successors: %bb.7(0x40000000), %bb.8(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.7, implicit undef $vcc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.7, implicit undef $vcc_lo
   ; CHECK-NEXT:   S_BRANCH %bb.8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8:
@@ -207,7 +204,6 @@ body:             |
 
   bb.5:
     %7:vgpr_32 = PHI %0, %bb.4
-    SI_END_CF %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     INLINEASM &"", 1, implicit %5
     S_BRANCH %bb.2
 

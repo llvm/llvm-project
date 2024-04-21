@@ -41,8 +41,7 @@ define amdgpu_ps void @_amdgpu_ps_main(i1 %arg) {
 ; CHECK-NEXT:    .p2align 6
 ; CHECK-NEXT:  .LBB0_3: ; %bb6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s3
-; CHECK-NEXT:    s_and_b32 s2, 1, s2
+; CHECK-NEXT:    s_and_b32 s2, 1, s3
 ; CHECK-NEXT:    v_or_b32_e32 v1, 1, v0
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s2, 0, s2
 ; CHECK-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0, v0
@@ -54,12 +53,16 @@ define amdgpu_ps void @_amdgpu_ps_main(i1 %arg) {
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_1
 ; CHECK-NEXT:  .LBB0_4: ; %bb2
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_mov_b32 s2, 0
-; CHECK-NEXT:    s_and_saveexec_b32 s3, s0
-; CHECK-NEXT:    s_cbranch_execz .LBB0_3
+; CHECK-NEXT:    s_and_b32 s4, s0, exec_lo
+; CHECK-NEXT:    s_mov_b32 s2, exec_lo
+; CHECK-NEXT:    s_mov_b32 s3, 0
+; CHECK-NEXT:    s_and_b32 s5, s4, -1
+; CHECK-NEXT:    s_cmov_b32 exec_lo, s4
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_3
 ; CHECK-NEXT:  ; %bb.5: ; %bb5
 ; CHECK-NEXT:    ; in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    s_mov_b32 s2, 1
+; CHECK-NEXT:    s_mov_b32 s3, 1
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; CHECK-NEXT:    s_branch .LBB0_3
 bb:
   %i = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> zeroinitializer, i32 0, i32 0)

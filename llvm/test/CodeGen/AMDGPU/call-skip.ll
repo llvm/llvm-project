@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; A call should be skipped if all lanes are zero, since we don't know

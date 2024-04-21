@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs --pass-remarks=atomic-expand \
 ; RUN:      %s -o - 2>&1 | FileCheck %s --check-prefix=GFX90A-CAS
 

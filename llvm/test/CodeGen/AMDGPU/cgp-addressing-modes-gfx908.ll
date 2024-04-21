@@ -28,9 +28,11 @@ define amdgpu_kernel void @test_sink_small_offset_global_atomic_fadd_f32(ptr add
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GCN-NEXT:    s_mov_b64 s[6:7], exec
+; GCN-NEXT:    s_and_b64 s[4:5], vcc, -1
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GCN-NEXT:    s_cbranch_execz .LBB0_2
+; GCN-NEXT:    s_cmov_b64 exec, vcc
+; GCN-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %if
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 2.0
@@ -38,8 +40,8 @@ define amdgpu_kernel void @test_sink_small_offset_global_atomic_fadd_f32(ptr add
 ; GCN-NEXT:    global_atomic_add_f32 v0, v1, s[2:3] offset:28
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN-NEXT:  .LBB0_2: ; %endif
-; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0x3d0000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_store_dword v1, v0, s[0:1] offset:2300

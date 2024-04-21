@@ -213,7 +213,6 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX10_GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX10_GFX11-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr5
   ; GFX10_GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; GFX10_GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.2:
   ; GFX10_GFX11-NEXT:   successors: %bb.3(0x80000000)
@@ -236,13 +235,11 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX10_GFX11-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT:   TBUFFER_STORE_FORMAT_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[COPY6]], 0, 94, 1, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
-  ; GFX10_GFX11-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX10_GFX11-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; GFX10_GFX11-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX10_GFX11-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.2, implicit $exec
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.4:
   ; GFX10_GFX11-NEXT:   successors: %bb.5(0x80000000)
-  ; GFX10_GFX11-NEXT: {{  $}}
-  ; GFX10_GFX11-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.5:
   ; GFX10_GFX11-NEXT:   S_ENDPGM 0
@@ -260,7 +257,6 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr5
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
   ; GFX12-NEXT:   successors: %bb.3(0x80000000)
@@ -283,13 +279,11 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX12-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[COPY6]], 0, 94, 1, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
-  ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; GFX12-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX12-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.2, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.4:
   ; GFX12-NEXT:   successors: %bb.5(0x80000000)
-  ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.5:
   ; GFX12-NEXT:   S_ENDPGM 0
@@ -312,7 +306,6 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__vgpr_soff
   ; GFX10_GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX10_GFX11-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr5
   ; GFX10_GFX11-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr6
-  ; GFX10_GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.2:
   ; GFX10_GFX11-NEXT:   successors: %bb.3(0x80000000)
@@ -338,13 +331,11 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__vgpr_soff
   ; GFX10_GFX11-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT:   TBUFFER_STORE_FORMAT_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 94, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
-  ; GFX10_GFX11-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX10_GFX11-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; GFX10_GFX11-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX10_GFX11-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.2, implicit $exec
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.4:
   ; GFX10_GFX11-NEXT:   successors: %bb.5(0x80000000)
-  ; GFX10_GFX11-NEXT: {{  $}}
-  ; GFX10_GFX11-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.5:
   ; GFX10_GFX11-NEXT:   S_ENDPGM 0
@@ -362,7 +353,6 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__vgpr_soff
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr5
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr6
-  ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
   ; GFX12-NEXT:   successors: %bb.3(0x80000000)
@@ -388,13 +378,11 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__vgpr_soff
   ; GFX12-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 94, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
-  ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; GFX12-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX12-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.2, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.4:
   ; GFX12-NEXT:   successors: %bb.5(0x80000000)
-  ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.5:
   ; GFX12-NEXT:   S_ENDPGM 0
@@ -418,7 +406,6 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; GFX10_GFX11-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX10_GFX11-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr5
   ; GFX10_GFX11-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
-  ; GFX10_GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.2:
   ; GFX10_GFX11-NEXT:   successors: %bb.3(0x80000000)
@@ -444,13 +431,11 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; GFX10_GFX11-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT:   TBUFFER_STORE_FORMAT_X_OFFEN_exact [[COPY]], [[COPY7]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
-  ; GFX10_GFX11-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX10_GFX11-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; GFX10_GFX11-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX10_GFX11-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.2, implicit $exec
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.4:
   ; GFX10_GFX11-NEXT:   successors: %bb.5(0x80000000)
-  ; GFX10_GFX11-NEXT: {{  $}}
-  ; GFX10_GFX11-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.5:
   ; GFX10_GFX11-NEXT:   S_ENDPGM 0
@@ -469,7 +454,6 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr5
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
-  ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
   ; GFX12-NEXT:   successors: %bb.3(0x80000000)
@@ -495,13 +479,11 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; GFX12-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY7]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
-  ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; GFX12-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX12-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.2, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.4:
   ; GFX12-NEXT:   successors: %bb.5(0x80000000)
-  ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.5:
   ; GFX12-NEXT:   S_ENDPGM 0
@@ -1059,7 +1041,6 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX10_GFX11-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX10_GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 5000
   ; GFX10_GFX11-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY6]], [[S_MOV_B32_]], implicit-def dead $scc
-  ; GFX10_GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.2:
   ; GFX10_GFX11-NEXT:   successors: %bb.3(0x80000000)
@@ -1082,13 +1063,11 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX10_GFX11-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT:   TBUFFER_STORE_FORMAT_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[S_ADD_I32_]], 0, 94, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
-  ; GFX10_GFX11-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX10_GFX11-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; GFX10_GFX11-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX10_GFX11-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.2, implicit $exec
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.4:
   ; GFX10_GFX11-NEXT:   successors: %bb.5(0x80000000)
-  ; GFX10_GFX11-NEXT: {{  $}}
-  ; GFX10_GFX11-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_1]]
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.5:
   ; GFX10_GFX11-NEXT:   S_ENDPGM 0
@@ -1108,7 +1087,6 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 5000
   ; GFX12-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY6]], [[S_MOV_B32_]], implicit-def dead $scc
-  ; GFX12-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
   ; GFX12-NEXT:   successors: %bb.3(0x80000000)
@@ -1131,13 +1109,11 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX12-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[S_ADD_I32_]], 0, 94, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
-  ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; GFX12-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX12-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.2, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.4:
   ; GFX12-NEXT:   successors: %bb.5(0x80000000)
-  ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_1]]
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.5:
   ; GFX12-NEXT:   S_ENDPGM 0
@@ -1164,7 +1140,6 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX10_GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; GFX10_GFX11-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GFX10_GFX11-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY5]], [[COPY7]], 0, implicit $exec
-  ; GFX10_GFX11-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.2:
   ; GFX10_GFX11-NEXT:   successors: %bb.3(0x80000000)
@@ -1187,13 +1162,11 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX10_GFX11-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT:   TBUFFER_STORE_FORMAT_X_OFFEN_exact [[COPY]], [[V_ADD_U32_e64_]], [[REG_SEQUENCE1]], [[COPY6]], 904, 94, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
-  ; GFX10_GFX11-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX10_GFX11-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; GFX10_GFX11-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX10_GFX11-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.2, implicit $exec
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.4:
   ; GFX10_GFX11-NEXT:   successors: %bb.5(0x80000000)
-  ; GFX10_GFX11-NEXT: {{  $}}
-  ; GFX10_GFX11-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_1]]
   ; GFX10_GFX11-NEXT: {{  $}}
   ; GFX10_GFX11-NEXT: bb.5:
   ; GFX10_GFX11-NEXT:   S_ENDPGM 0
@@ -1211,7 +1184,6 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr5
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr2
-  ; GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
   ; GFX12-NEXT:   successors: %bb.3(0x80000000)
@@ -1234,13 +1206,11 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX12-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[COPY6]], 5000, 94, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
-  ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
+  ; GFX12-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX12-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.2, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.4:
   ; GFX12-NEXT:   successors: %bb.5(0x80000000)
-  ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.5:
   ; GFX12-NEXT:   S_ENDPGM 0

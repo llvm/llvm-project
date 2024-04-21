@@ -44,11 +44,10 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   BUFFER_STORE_FORMAT_X_OFFEN_exact [[COPY2]], [[COPY1]], killed [[REG_SEQUENCE3]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
-  ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX908-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; GFX908-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.f32(float %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -96,11 +95,10 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__voffset_4095__sgpr_so
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   BUFFER_STORE_FORMAT_X_OFFSET_exact [[COPY1]], killed [[REG_SEQUENCE3]], killed [[V_READFIRSTLANE_B32_4]], 4095, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
-  ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX908-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; GFX908-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.f32(float %val, <4 x i32> %rsrc, i32 4095, i32 %soffset, i32 0)
   ret void
@@ -154,11 +152,10 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   BUFFER_STORE_FORMAT_XY_OFFEN_exact [[COPY8]], [[COPY1]], killed [[REG_SEQUENCE4]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 8)
-  ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX908-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; GFX908-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.v2f32(<2 x float> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -214,11 +211,10 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   BUFFER_STORE_FORMAT_XYZ_OFFEN_exact [[COPY9]], [[COPY1]], killed [[REG_SEQUENCE4]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s96), align 1, addrspace 8)
-  ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX908-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; GFX908-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.v3f32(<3 x float> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -276,11 +272,10 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   BUFFER_STORE_FORMAT_XYZW_OFFEN_exact [[COPY10]], [[COPY1]], killed [[REG_SEQUENCE4]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s128), align 1, addrspace 8)
-  ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX908-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; GFX908-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -338,11 +333,10 @@ define void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   BUFFER_STORE_FORMAT_XYZW_OFFEN_exact [[COPY10]], [[COPY1]], killed [[REG_SEQUENCE4]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s128), align 1, addrspace 8)
-  ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX908-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; GFX908-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -392,11 +386,10 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   BUFFER_STORE_FORMAT_XY_OFFEN_exact [[COPY7]], [[COPY]], killed [[REG_SEQUENCE4]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 8)
-  ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX908-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; GFX908-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.v2f32(<2 x float> %val, <4 x i32> %rsrc, i32 %voffset, i32 4095, i32 0)
   ret void
@@ -446,11 +439,10 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   BUFFER_STORE_FORMAT_XY_OFFEN_exact [[COPY7]], [[COPY]], killed [[REG_SEQUENCE4]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 8)
-  ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX908-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; GFX908-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.v2f32(<2 x float> %val, <4 x i32> %rsrc, i32 %voffset, i32 4096, i32 0)
   ret void
@@ -504,11 +496,10 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   BUFFER_STORE_FORMAT_XY_OFFEN_exact [[COPY8]], [[COPY1]], killed [[REG_SEQUENCE4]], killed [[V_READFIRSTLANE_B32_4]], 16, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 8)
-  ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX908-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; GFX908-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   %voffset.add = add i32 %voffset, 16
   call void @llvm.amdgcn.raw.buffer.store.format.v2f32(<2 x float> %val, <4 x i32> %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
@@ -563,11 +554,10 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   BUFFER_STORE_FORMAT_XY_OFFEN_exact [[COPY8]], [[COPY1]], killed [[REG_SEQUENCE4]], killed [[V_READFIRSTLANE_B32_4]], 4095, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 8)
-  ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX908-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; GFX908-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   %voffset.add = add i32 %voffset, 4095
   call void @llvm.amdgcn.raw.buffer.store.format.v2f32(<2 x float> %val, <4 x i32> %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
@@ -624,11 +614,10 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   BUFFER_STORE_FORMAT_XY_OFFEN_exact [[COPY8]], [[V_ADD_U32_e64_]], killed [[REG_SEQUENCE4]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 8)
-  ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX908-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; GFX908-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   %voffset.add = add i32 %voffset, 4096
   call void @llvm.amdgcn.raw.buffer.store.format.v2f32(<2 x float> %val, <4 x i32> %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
@@ -691,11 +680,10 @@ define void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   BUFFER_STORE_FORMAT_XYZW_OFFEN_exact [[COPY10]], [[V_ADD_U32_e64_]], killed [[REG_SEQUENCE4]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s128), align 1, addrspace 8)
-  ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-  ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX908-NEXT:   [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+  ; GFX908-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   %voffset.add = add i32 %voffset, 4096
   call void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float> %val, <4 x i32> %rsrc, i32 %voffset.add, i32 %soffset, i32 0)

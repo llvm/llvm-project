@@ -22,7 +22,7 @@ body: |
   ; GFX10-NEXT: bb.1:
   ; GFX10-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF]](s1), %bb.0, %22(s1), %bb.1
+  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF]](s1), %bb.0, %21(s1), %bb.1
   ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI %7(s32), %bb.1, [[C1]](s32), %bb.0
   ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:_(s32) = G_PHI [[C1]](s32), %bb.0, %9(s32), %bb.1
   ; GFX10-NEXT:   [[PHI3:%[0-9]+]]:_(s1) = G_PHI [[C]](s1), %bb.0, %11(s1), %bb.1
@@ -42,9 +42,7 @@ body: |
   ; GFX10-NEXT:   G_BR %bb.2
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2:
-  ; GFX10-NEXT:   [[PHI4:%[0-9]+]]:_(s32) = G_PHI [[INT]](s32), %bb.1
   ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_]](s1)
-  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI4]](s32)
   ; GFX10-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
   ; GFX10-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
   ; GFX10-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[COPY5]](s1), [[C5]], [[C4]]
@@ -79,8 +77,6 @@ body: |
 
   bb.2:
     %16:_(s1) = G_PHI %10(s1), %bb.1
-    %17:_(s32) = G_PHI %7(s32), %bb.1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %17(s32)
     %18:_(s32) = G_FCONSTANT float 0.000000e+00
     %19:_(s32) = G_FCONSTANT float 1.000000e+00
     %20:_(s32) = G_SELECT %16(s1), %19, %18
@@ -109,7 +105,7 @@ body: |
   ; GFX10-NEXT: bb.1:
   ; GFX10-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF]](s1), %bb.0, %22(s1), %bb.1
+  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF]](s1), %bb.0, %21(s1), %bb.1
   ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI %7(s32), %bb.1, [[C1]](s32), %bb.0
   ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:_(s32) = G_PHI [[C1]](s32), %bb.0, %9(s32), %bb.1
   ; GFX10-NEXT:   [[PHI3:%[0-9]+]]:_(s1) = G_PHI [[C]](s1), %bb.0, %11(s1), %bb.1
@@ -129,9 +125,7 @@ body: |
   ; GFX10-NEXT:   G_BR %bb.2
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2:
-  ; GFX10-NEXT:   [[PHI4:%[0-9]+]]:_(s32) = G_PHI [[INT]](s32), %bb.1
   ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_]](s1)
-  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI4]](s32)
   ; GFX10-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
   ; GFX10-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
   ; GFX10-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[COPY5]](s1), [[C5]], [[C4]]
@@ -166,8 +160,6 @@ body: |
 
   bb.2:
     %16:_(s1) = G_PHI %11(s1), %bb.1
-    %17:_(s32) = G_PHI %7(s32), %bb.1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %17(s32)
     %18:_(s32) = G_FCONSTANT float 0.000000e+00
     %19:_(s32) = G_FCONSTANT float 1.000000e+00
     %20:_(s32) = G_SELECT %16(s1), %19, %18
@@ -203,8 +195,8 @@ body: |
   ; GFX10-NEXT: bb.1:
   ; GFX10-NEXT:   successors: %bb.3(0x50000000), %bb.5(0x30000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI [[DEF2]](s1), %bb.0, %53(s1), %bb.5
-  ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:sreg_32(s1) = PHI [[DEF1]](s1), %bb.0, %42(s1), %bb.5
+  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec(s1) = PHI [[DEF2]](s1), %bb.0, %52(s1), %bb.5
+  ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:sreg_32(s1) = PHI [[DEF1]](s1), %bb.0, %41(s1), %bb.5
   ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:_(s32) = G_PHI %13(s32), %bb.5, [[C]](s32), %bb.0
   ; GFX10-NEXT:   [[PHI3:%[0-9]+]]:_(s32) = G_PHI [[C]](s32), %bb.0, %15(s32), %bb.5
   ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[PHI]](s1)
@@ -230,6 +222,7 @@ body: |
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
   ; GFX10-NEXT:   G_STORE [[C4]](s32), [[MV2]](p1) :: (store (s32), addrspace 1)
+  ; GFX10-NEXT:   G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.wave.reconverge), %25(s32)
   ; GFX10-NEXT:   G_BR %bb.4
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.3:
@@ -252,7 +245,6 @@ body: |
   ; GFX10-NEXT:   G_BR %bb.5
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.4:
-  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %34(s32)
   ; GFX10-NEXT:   S_ENDPGM 0
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.5:
@@ -273,9 +265,7 @@ body: |
   ; GFX10-NEXT: bb.6:
   ; GFX10-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI7:%[0-9]+]]:_(s32) = G_PHI [[INT]](s32), %bb.5
   ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[S_OR_B32_2]](s1)
-  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI7]](s32)
   ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY14]](s1), %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   G_BR %bb.2
   bb.0:
@@ -316,6 +306,7 @@ body: |
 
     %24:_(s32) = G_CONSTANT i32 10
     G_STORE %24(s32), %9(p1) :: (store (s32), addrspace 1)
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.wave.reconverge), %34(s32)
     G_BR %bb.4
 
   bb.3:
@@ -334,7 +325,6 @@ body: |
     G_BR %bb.5
 
   bb.4:
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %34(s32)
     S_ENDPGM 0
 
   bb.5:
@@ -351,8 +341,6 @@ body: |
     successors: %bb.2(0x40000000), %bb.4(0x40000000)
 
     %37:sreg_32_xm0_xexec(s1) = G_PHI %35(s1), %bb.5
-    %38:_(s32) = G_PHI %13(s32), %bb.5
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %38(s32)
     %34:sreg_32_xm0_xexec(s32) = SI_IF %37(s1), %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
     G_BR %bb.2
 ...

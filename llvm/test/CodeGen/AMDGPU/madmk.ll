@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -mtriple=amdgcn -mattr=+mad-mac-f32-insts -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
 ; XUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 

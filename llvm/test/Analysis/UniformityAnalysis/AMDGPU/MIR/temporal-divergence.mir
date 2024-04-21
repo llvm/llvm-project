@@ -33,9 +33,6 @@ body:             |
     G_BR %bb.3
 
   bb.3:
-  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
-    %14:_(s64) = G_PHI %12(s64), %bb.2
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %14(s64)
     S_ENDPGM 0
 
 ...
@@ -88,9 +85,6 @@ body:             |
     G_BR %bb.5
 
   bb.5:
-  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
-    %18:_(s64) = G_PHI %16(s64), %bb.4
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %18(s64)
     G_BR %bb.3
 
   bb.6:
@@ -146,9 +140,6 @@ body:             |
     G_BR %bb.5
 
   bb.5:
-  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
-    %18:_(s64) = G_PHI %16(s64), %bb.4
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %18(s64)
     G_BR %bb.3
 
   bb.6:
@@ -197,11 +188,8 @@ body:             |
     G_BR %bb.4
 
   bb.4:
-  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
     successors: %bb.5, %bb.2
 
-    %18:_(s64) = G_PHI %16(s64), %bb.3
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %18(s64)
     G_BRCOND %13(s1), %bb.2
     G_BR %bb.5
 
@@ -257,9 +245,6 @@ body:             |
     G_BR %bb.5
 
   bb.5:
-  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
-    %18:_(s64) = G_PHI %16(s64), %bb.4
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %18(s64)
     S_ENDPGM 0
 
 ...
@@ -297,10 +282,7 @@ body:             |
     G_BR %bb.3
 
   bb.3:
-  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
   ; CHECK-NOT:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
-    %13:_(s64) = G_PHI %11(s64), %bb.2
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %13(s64)
     %14:_(p4) = COPY %3(p4)
     %15:_(s64) = G_CONSTANT i64 40
     %16:_(p4) = G_PTR_ADD %14, %15(s64)
@@ -360,9 +342,6 @@ body:             |
     G_BR %bb.4
 
   bb.4:
-  ; CHECK:   DIVERGENT: %{{[0-9]+}}: %{{[0-9]+}}:_(s64) = G_PHI
-    %18:_(s64) = G_PHI %16(s64), %bb.3
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %18(s64)
 
   bb.5:
 

@@ -60,11 +60,10 @@ define amdgpu_ps float @vimage_move_to_valu(<8 x i32> %rsrc) {
   ; GFX11-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   [[IMAGE_LOAD_V1_V2_gfx11_:%[0-9]+]]:vgpr_32 = IMAGE_LOAD_V1_V2_gfx11 [[REG_SEQUENCE1]], killed [[REG_SEQUENCE6]], 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
-  ; GFX11-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX11-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX11-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX11-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.1, implicit $exec
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.3:
-  ; GFX11-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
   ; GFX11-NEXT:   $vgpr0 = COPY [[IMAGE_LOAD_V1_V2_gfx11_]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
@@ -122,11 +121,10 @@ define amdgpu_ps float @vimage_move_to_valu(<8 x i32> %rsrc) {
   ; GFX12-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   [[IMAGE_LOAD_V1_V2_gfx12_:%[0-9]+]]:vgpr_32 = IMAGE_LOAD_V1_V2_gfx12 [[V_MOV_B32_e32_]], [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE5]], 1, 1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
-  ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX12-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX12-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.1, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.3:
-  ; GFX12-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
   ; GFX12-NEXT:   $vgpr0 = COPY [[IMAGE_LOAD_V1_V2_gfx12_]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
 bb:
@@ -194,11 +192,10 @@ define amdgpu_ps float @vsample_move_to_valu_rsrc(<8 x i32> %rsrc, <4 x i32> inr
   ; GFX11-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   [[IMAGE_SAMPLE_V1_V1_gfx11_:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_V1_V1_gfx11 [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE6]], [[REG_SEQUENCE1]], 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
-  ; GFX11-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX11-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX11-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX11-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.1, implicit $exec
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.3:
-  ; GFX11-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
   ; GFX11-NEXT:   $vgpr0 = COPY [[IMAGE_SAMPLE_V1_V1_gfx11_]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
@@ -261,11 +258,10 @@ define amdgpu_ps float @vsample_move_to_valu_rsrc(<8 x i32> %rsrc, <4 x i32> inr
   ; GFX12-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   [[IMAGE_SAMPLE_V1_V1_gfx12_:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_V1_V1_gfx12 [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE6]], [[REG_SEQUENCE1]], 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
-  ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX12-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX12-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.1, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.3:
-  ; GFX12-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
   ; GFX12-NEXT:   $vgpr0 = COPY [[IMAGE_SAMPLE_V1_V1_gfx12_]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
 main_body:
@@ -319,11 +315,10 @@ define amdgpu_ps float @vsample_move_to_valu_samp(<8 x i32> inreg %rsrc, <4 x i3
   ; GFX11-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   [[IMAGE_SAMPLE_V1_V1_gfx11_:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_V1_V1_gfx11 [[V_MOV_B32_e32_]], [[REG_SEQUENCE]], killed [[REG_SEQUENCE4]], 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
-  ; GFX11-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX11-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX11-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX11-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.1, implicit $exec
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.3:
-  ; GFX11-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
   ; GFX11-NEXT:   $vgpr0 = COPY [[IMAGE_SAMPLE_V1_V1_gfx11_]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
@@ -372,11 +367,10 @@ define amdgpu_ps float @vsample_move_to_valu_samp(<8 x i32> inreg %rsrc, <4 x i3
   ; GFX12-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   [[IMAGE_SAMPLE_V1_V1_gfx12_:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_V1_V1_gfx12 [[V_MOV_B32_e32_]], [[REG_SEQUENCE]], killed [[REG_SEQUENCE4]], 1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
-  ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-  ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
+  ; GFX12-NEXT:   [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+  ; GFX12-NEXT:   SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.1, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.3:
-  ; GFX12-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
   ; GFX12-NEXT:   $vgpr0 = COPY [[IMAGE_SAMPLE_V1_V1_gfx12_]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
 main_body:

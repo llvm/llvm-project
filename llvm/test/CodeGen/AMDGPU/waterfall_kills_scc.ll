@@ -18,16 +18,16 @@ declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 i
 define amdgpu_kernel void  @foo(i1 %cmp1) {
 ; GFX906-LABEL: foo:
 ; GFX906:       ; %bb.0: ; %entry
-; GFX906-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
-; GFX906-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
-; GFX906-NEXT:    s_mov_b32 s10, -1
-; GFX906-NEXT:    s_mov_b32 s11, 0xe00000
-; GFX906-NEXT:    s_add_u32 s8, s8, s3
-; GFX906-NEXT:    s_addc_u32 s9, s9, 0
-; GFX906-NEXT:    buffer_load_dword v3, off, s[8:11], 0
-; GFX906-NEXT:    buffer_load_dword v4, off, s[8:11], 0 offset:4
-; GFX906-NEXT:    buffer_load_dword v5, off, s[8:11], 0 offset:8
-; GFX906-NEXT:    buffer_load_dword v6, off, s[8:11], 0 offset:12
+; GFX906-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
+; GFX906-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
+; GFX906-NEXT:    s_mov_b32 s14, -1
+; GFX906-NEXT:    s_mov_b32 s15, 0xe00000
+; GFX906-NEXT:    s_add_u32 s12, s12, s3
+; GFX906-NEXT:    s_addc_u32 s13, s13, 0
+; GFX906-NEXT:    buffer_load_dword v3, off, s[12:15], 0
+; GFX906-NEXT:    buffer_load_dword v4, off, s[12:15], 0 offset:4
+; GFX906-NEXT:    buffer_load_dword v5, off, s[12:15], 0 offset:8
+; GFX906-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:12
 ; GFX906-NEXT:    s_load_dword s4, s[0:1], 0x24
 ; GFX906-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x1c
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
@@ -39,8 +39,7 @@ define amdgpu_kernel void  @foo(i1 %cmp1) {
 ; GFX906-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX906-NEXT:    s_mov_b32 s4, 0
 ; GFX906-NEXT:    v_mov_b32_e32 v1, v0
-; GFX906-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX906-NEXT:    s_mov_b64 s[2:3], exec
+; GFX906-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX906-NEXT:    ds_write_b64 v2, v[0:1]
 ; GFX906-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX906-NEXT:    s_waitcnt vmcnt(3)
@@ -55,12 +54,13 @@ define amdgpu_kernel void  @foo(i1 %cmp1) {
 ; GFX906-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[0:1], v[5:6]
 ; GFX906-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; GFX906-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
+; GFX906-NEXT:    s_xor_b64 s[6:7], exec, s[0:1]
+; GFX906-NEXT:    s_and_b64 s[8:9], s[6:7], -1
 ; GFX906-NEXT:    ; implicit-def: $vgpr3_vgpr4_vgpr5_vgpr6
-; GFX906-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; GFX906-NEXT:    s_cbranch_execnz .LBB0_1
+; GFX906-NEXT:    s_cselect_b64 exec, s[6:7], s[0:1]
+; GFX906-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GFX906-NEXT:  ; %bb.2:
-; GFX906-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX906-NEXT:    s_mov_b64 exec, s[2:3]
+; GFX906-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX906-NEXT:    s_cselect_b32 s5, 0x3ff00000, 0
 ; GFX906-NEXT:    v_cvt_f32_f64_e32 v0, s[4:5]
 ; GFX906-NEXT:    s_mov_b32 s5, s4

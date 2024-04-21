@@ -2103,10 +2103,34 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(AMDGPU::S_MOV_B64));
     break;
 
+  case AMDGPU::S_CMOV_B64_term:
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(get(AMDGPU::S_CMOV_B64));
+    break;
+
   case AMDGPU::S_MOV_B32_term:
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
     MI.setDesc(get(AMDGPU::S_MOV_B32));
+    break;
+
+  case AMDGPU::S_CMOV_B32_term:
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(get(AMDGPU::S_CMOV_B32));
+    break;
+
+  case AMDGPU::S_CSELECT_B32_term:
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(get(AMDGPU::S_CSELECT_B32));
+    break;
+
+  case AMDGPU::S_CSELECT_B64_term:
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(get(AMDGPU::S_CSELECT_B64));
     break;
 
   case AMDGPU::S_XOR_B64_term:
@@ -3088,20 +3112,25 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
   while (I != E && !I->isBranch() && !I->isReturn()) {
     switch (I->getOpcode()) {
     case AMDGPU::S_MOV_B64_term:
+    case AMDGPU::S_CMOV_B64_term:
     case AMDGPU::S_XOR_B64_term:
     case AMDGPU::S_OR_B64_term:
     case AMDGPU::S_ANDN2_B64_term:
     case AMDGPU::S_AND_B64_term:
     case AMDGPU::S_AND_SAVEEXEC_B64_term:
+    case AMDGPU::S_CSELECT_B64_term:
     case AMDGPU::S_MOV_B32_term:
+    case AMDGPU::S_CMOV_B32_term:
     case AMDGPU::S_XOR_B32_term:
     case AMDGPU::S_OR_B32_term:
     case AMDGPU::S_ANDN2_B32_term:
     case AMDGPU::S_AND_B32_term:
     case AMDGPU::S_AND_SAVEEXEC_B32_term:
+    case AMDGPU::S_CSELECT_B32_term:
       break;
     case AMDGPU::SI_IF:
     case AMDGPU::SI_ELSE:
+    case AMDGPU::SI_WAVE_RECONVERGE:
     case AMDGPU::SI_KILL_I1_TERMINATOR:
     case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
       // FIXME: It's messy that these need to be considered here at all.
@@ -6386,6 +6415,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
   }
 
   Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
+  Register LoopMask = MRI.createVirtualRegister(BoolXExecRC);
   MRI.setSimpleHint(SaveExec, CondReg);
 
   // Update EXEC to matching lanes, saving original to SaveExec.
@@ -6396,11 +6426,14 @@ static void emitLoadScalarOpsFromVGPRLoop(
   I = BodyBB.end();
 
   // Update EXEC, switch all done bits to 0 and all todo bits to 1.
-  BuildMI(BodyBB, I, DL, TII.get(XorTermOpc), Exec)
+  BuildMI(BodyBB, I, DL, TII.get(XorTermOpc), LoopMask)
       .addReg(Exec)
       .addReg(SaveExec);
 
-  BuildMI(BodyBB, I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP)).addMBB(&LoopBB);
+  BuildMI(BodyBB, I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP))
+      .addReg(LoopMask)
+      .addReg(SaveExec)
+      .addMBB(&LoopBB);
 }
 
 // Build a waterfall loop around \p MI, replacing the VGPR \p ScalarOp register
@@ -6502,8 +6535,10 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
         .addImm(0);
   }
 
+  // BuildMI(*BodyBB, BodyBB->end(), DL, TII.get(AMDGPU::S_BRANCH))
+  //       .addMBB(RemainderBB);
   // Restore the EXEC mask
-  BuildMI(*RemainderBB, First, DL, TII.get(MovExecOpc), Exec).addReg(SaveExec);
+  // BuildMI(*RemainderBB, First, DL, TII.get(MovExecOpc), Exec).addReg(SaveExec);
   return BodyBB;
 }
 
@@ -8782,7 +8817,7 @@ void SIInstrInfo::convertNonUniformIfRegion(MachineBasicBlock *IfEntry,
             .add(Branch->getOperand(0))
             .add(Branch->getOperand(1));
     MachineInstr *SIEND =
-        BuildMI(*MF, Branch->getDebugLoc(), get(AMDGPU::SI_END_CF))
+        BuildMI(*MF, Branch->getDebugLoc(), get(AMDGPU::SI_WAVE_RECONVERGE))
             .addReg(DstReg);
 
     IfEntry->erase(TI);

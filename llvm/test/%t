@@ -1,0 +1,1 @@
+remark: <unknown>:0:0: removing function 'needs_extimg': +extended-image-insts is not supported on the current target

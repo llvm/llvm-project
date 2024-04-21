@@ -10,14 +10,16 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_bfe_u32 v6, v5, 20, 11
 ; SDAG-NEXT:    v_mov_b32_e32 v7, 0
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0x3fe
-; SDAG-NEXT:    v_mov_b32_e32 v4, v0
 ; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[6:7]
+; SDAG-NEXT:    v_mov_b32_e32 v4, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; SDAG-NEXT:    s_mov_b64 s[8:9], exec
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v3, 0
-; SDAG-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; SDAG-NEXT:    s_cbranch_execz .LBB0_10
+; SDAG-NEXT:    s_and_b64 s[4:5], vcc, -1
+; SDAG-NEXT:    s_cmov_b64 exec, vcc
+; SDAG-NEXT:    s_cbranch_scc0 .LBB0_10
 ; SDAG-NEXT:  ; %bb.1: ; %fp-to-i-if-end
 ; SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffffb81, v6
 ; SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v7, vcc
@@ -29,26 +31,29 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_cmp_eq_u64_e64 s[6:7], -1, v[2:3]
 ; SDAG-NEXT:    v_cmp_lt_i64_e32 vcc, -1, v[4:5]
 ; SDAG-NEXT:    s_and_b64 s[4:5], s[6:7], s[4:5]
+; SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; SDAG-NEXT:    s_xor_b64 s[10:11], s[4:5], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[10:11], exec, s[6:7]
-; SDAG-NEXT:    s_cbranch_execz .LBB0_7
+; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB0_7
 ; SDAG-NEXT:  ; %bb.2: ; %fp-to-i-if-end9
 ; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; SDAG-NEXT:    v_add_co_u32_e64 v9, s[4:5], -1, v0
 ; SDAG-NEXT:    v_addc_co_u32_e64 v10, s[4:5], 0, -1, s[4:5]
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0x432
-; SDAG-NEXT:    v_and_b32_e32 v0, 0xfffff, v5
 ; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[4:5], v[6:7]
+; SDAG-NEXT:    v_and_b32_e32 v0, 0xfffff, v5
+; SDAG-NEXT:    s_xor_b64 s[12:13], s[4:5], exec
 ; SDAG-NEXT:    v_cndmask_b32_e64 v8, -1, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v11, -1, 1, vcc
+; SDAG-NEXT:    s_and_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    v_or_b32_e32 v5, 0x100000, v0
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[12:13], exec, s[6:7]
-; SDAG-NEXT:    s_cbranch_execz .LBB0_4
+; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB0_4
 ; SDAG-NEXT:  ; %bb.3: ; %fp-to-i-if-else
 ; SDAG-NEXT:    v_sub_u32_e32 v0, 0x473, v6
 ; SDAG-NEXT:    v_add_u32_e32 v2, 0xfffffb8d, v6
@@ -90,9 +95,12 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; SDAG-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; SDAG-NEXT:    ; implicit-def: $vgpr9
 ; SDAG-NEXT:    ; implicit-def: $vgpr10
+; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SDAG-NEXT:  .LBB0_4: ; %Flow
-; SDAG-NEXT:    s_andn2_saveexec_b64 s[12:13], s[12:13]
-; SDAG-NEXT:    s_cbranch_execz .LBB0_6
+; SDAG-NEXT:    s_xor_b64 s[14:15], s[12:13], exec
+; SDAG-NEXT:    s_and_b64 s[4:5], s[12:13], -1
+; SDAG-NEXT:    s_cmov_b64 exec, s[12:13]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB0_6
 ; SDAG-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; SDAG-NEXT:    v_sub_u32_e32 v2, 0x433, v6
 ; SDAG-NEXT:    v_lshrrev_b64 v[0:1], v2, v[4:5]
@@ -114,10 +122,14 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v9, v6, v[2:3]
 ; SDAG-NEXT:    v_mad_u64_u32 v[3:4], s[4:5], v10, v6, v[3:4]
 ; SDAG-NEXT:    v_mad_i32_i24 v3, v9, v5, v3
+; SDAG-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; SDAG-NEXT:  .LBB0_6: ; %Flow1
-; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
+; SDAG-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; SDAG-NEXT:  .LBB0_7: ; %Flow2
-; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
+; SDAG-NEXT:    s_xor_b64 s[4:5], s[10:11], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], s[10:11], -1
+; SDAG-NEXT:    s_cmov_b64 exec, s[10:11]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB0_9
 ; SDAG-NEXT:  ; %bb.8: ; %fp-to-i-if-then5
 ; SDAG-NEXT:    v_bfrev_b32_e32 v0, 1
 ; SDAG-NEXT:    v_bfrev_b32_e32 v1, -2
@@ -125,10 +137,10 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_cndmask_b32_e32 v3, v0, v1, vcc
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v2
-; SDAG-NEXT:  ; %bb.9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SDAG-NEXT:  .LBB0_10: ; %fp-to-i-cleanup
+; SDAG-NEXT:  .LBB0_9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[8:9]
+; SDAG-NEXT:  .LBB0_10: ; %fp-to-i-cleanup
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: fptosi_f64_to_i128:
@@ -139,17 +151,19 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v0, 20, v5
 ; GISEL-NEXT:    v_and_b32_e32 v6, 0x7ff, v0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x3ff
-; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v7, 0
+; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[6:7], v[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GISEL-NEXT:    s_mov_b64 s[12:13], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], vcc, -1
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s7
-; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB0_10
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB0_10
 ; GISEL-NEXT:  ; %bb.1: ; %fp-to-i-if-end
 ; GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffffb81, v6
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffff80
@@ -166,10 +180,11 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GISEL-NEXT:    s_xor_b64 s[14:15], vcc, exec
+; GISEL-NEXT:    s_and_b64 s[6:7], vcc, -1
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GISEL-NEXT:    s_xor_b64 s[14:15], exec, s[6:7]
-; GISEL-NEXT:    s_cbranch_execz .LBB0_7
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB0_7
 ; GISEL-NEXT:  ; %bb.2: ; %fp-to-i-if-end9
 ; GISEL-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[6:7]
@@ -220,57 +235,61 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_or_b32_e32 v1, v1, v19
 ; GISEL-NEXT:    v_or_b32_e32 v0, v0, v20
 ; GISEL-NEXT:    v_or_b32_e32 v1, v1, v20
-; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v0
 ; GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
-; GISEL-NEXT:    v_lshl_or_b32 v10, v0, 16, v0
-; GISEL-NEXT:    v_or3_b32 v8, v1, v2, 1
-; GISEL-NEXT:    v_or3_b32 v9, v0, v2, 0
+; GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
+; GISEL-NEXT:    v_or3_b32 v8, v1, v3, 1
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x433
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    v_and_b32_e32 v2, 0xfffff, v5
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[6:7], v[0:1]
-; GISEL-NEXT:    v_or_b32_e32 v5, 0x100000, v2
+; GISEL-NEXT:    v_and_b32_e32 v0, 0xfffff, v5
+; GISEL-NEXT:    s_xor_b64 s[16:17], vcc, exec
+; GISEL-NEXT:    v_lshl_or_b32 v9, v2, 16, v2
+; GISEL-NEXT:    v_or3_b32 v10, v2, v3, 0
+; GISEL-NEXT:    s_and_b64 s[6:7], vcc, -1
+; GISEL-NEXT:    v_or_b32_e32 v5, 0x100000, v0
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GISEL-NEXT:    s_xor_b64 s[16:17], exec, s[6:7]
-; GISEL-NEXT:    s_cbranch_execz .LBB0_4
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB0_4
 ; GISEL-NEXT:  ; %bb.3: ; %fp-to-i-if-else
 ; GISEL-NEXT:    v_add_u32_e32 v6, 0xfffffbcd, v6
 ; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v6, v[4:5]
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v6
 ; GISEL-NEXT:    v_cndmask_b32_e32 v11, 0, v0, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e32 v12, 0, v1, vcc
-; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v11, v10, 0
+; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v11, v9, 0
 ; GISEL-NEXT:    v_subrev_u32_e32 v7, 64, v6
 ; GISEL-NEXT:    v_sub_u32_e32 v2, 64, v6
 ; GISEL-NEXT:    v_lshrrev_b64 v[2:3], v2, v[4:5]
 ; GISEL-NEXT:    v_lshlrev_b64 v[4:5], v7, v[4:5]
 ; GISEL-NEXT:    v_cmp_eq_u32_e64 s[6:7], 0, v6
-; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v12, v9, v[0:1]
+; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v12, v10, v[0:1]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e64 v13, v2, 0, s[6:7]
 ; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v13, v8, v[6:7]
 ; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], v11, v8, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v6
-; GISEL-NEXT:    v_mul_lo_u32 v6, v11, v10
-; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[8:9], v11, v9, v[1:2]
-; GISEL-NEXT:    v_mul_lo_u32 v4, v12, v10
+; GISEL-NEXT:    v_mul_lo_u32 v6, v11, v9
+; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[8:9], v11, v10, v[1:2]
+; GISEL-NEXT:    v_mul_lo_u32 v4, v12, v9
 ; GISEL-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[10:11], v12, v8, v[1:2]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v6, s[10:11], v7, v6, s[10:11]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v4, s[8:9], v6, v4, s[8:9]
-; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v13, v9, v[4:5]
+; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v13, v10, v[4:5]
 ; GISEL-NEXT:    v_cndmask_b32_e64 v3, v3, 0, s[6:7]
-; GISEL-NEXT:    ; implicit-def: $vgpr10
 ; GISEL-NEXT:    ; implicit-def: $vgpr9
+; GISEL-NEXT:    ; implicit-def: $vgpr10
 ; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v3, v8, v[6:7]
 ; GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr8
+; GISEL-NEXT:    s_or_b64 exec, exec, s[16:17]
 ; GISEL-NEXT:  .LBB0_4: ; %Flow
-; GISEL-NEXT:    s_andn2_saveexec_b64 s[8:9], s[16:17]
-; GISEL-NEXT:    s_cbranch_execz .LBB0_6
+; GISEL-NEXT:    s_xor_b64 s[8:9], s[16:17], exec
+; GISEL-NEXT:    s_and_b64 s[6:7], s[16:17], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[16:17]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB0_6
 ; GISEL-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; GISEL-NEXT:    v_sub_co_u32_e32 v6, vcc, 0x433, v6
 ; GISEL-NEXT:    v_subrev_u32_e32 v2, 64, v6
@@ -281,21 +300,24 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v6
 ; GISEL-NEXT:    v_cndmask_b32_e32 v4, v0, v4, vcc
-; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[6:7], v4, v10, 0
+; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[6:7], v4, v9, 0
 ; GISEL-NEXT:    v_cndmask_b32_e32 v5, v1, v5, vcc
 ; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v4, v8, 0
-; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[6:7], v5, v9, v[2:3]
-; GISEL-NEXT:    v_mul_lo_u32 v6, v5, v10
-; GISEL-NEXT:    v_mad_u64_u32 v[1:2], vcc, v4, v9, v[1:2]
-; GISEL-NEXT:    v_mul_lo_u32 v4, v4, v10
+; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[6:7], v5, v10, v[2:3]
+; GISEL-NEXT:    v_mul_lo_u32 v6, v5, v9
+; GISEL-NEXT:    v_mad_u64_u32 v[1:2], vcc, v4, v10, v[1:2]
+; GISEL-NEXT:    v_mul_lo_u32 v4, v4, v9
 ; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[6:7], v5, v8, v[1:2]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[6:7], v3, v4, s[6:7]
 ; GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v6, vcc
-; GISEL-NEXT:  .LBB0_6: ; %Flow1
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GISEL-NEXT:  .LBB0_6: ; %Flow1
+; GISEL-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; GISEL-NEXT:  .LBB0_7: ; %Flow2
-; GISEL-NEXT:    s_andn2_saveexec_b64 s[6:7], s[14:15]
-; GISEL-NEXT:    s_cbranch_execz .LBB0_9
+; GISEL-NEXT:    s_xor_b64 s[6:7], s[14:15], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], s[14:15], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[14:15]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB0_9
 ; GISEL-NEXT:  ; %bb.8: ; %fp-to-i-if-then5
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[4:5]
 ; GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
@@ -365,10 +387,10 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_or3_b32 v1, v2, v13, v1
 ; GISEL-NEXT:    v_add_u32_e32 v3, 0x80000000, v1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v1
-; GISEL-NEXT:  .LBB0_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GISEL-NEXT:  .LBB0_10: ; %fp-to-i-cleanup
+; GISEL-NEXT:  .LBB0_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GISEL-NEXT:  .LBB0_10: ; %fp-to-i-cleanup
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %cvt = fptosi double %x to i128
   ret i128 %cvt
@@ -382,14 +404,16 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_bfe_u32 v6, v5, 20, 11
 ; SDAG-NEXT:    v_mov_b32_e32 v7, 0
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0x3fe
-; SDAG-NEXT:    v_mov_b32_e32 v4, v0
 ; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[6:7]
+; SDAG-NEXT:    v_mov_b32_e32 v4, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; SDAG-NEXT:    s_mov_b64 s[8:9], exec
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v3, 0
-; SDAG-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; SDAG-NEXT:    s_cbranch_execz .LBB1_10
+; SDAG-NEXT:    s_and_b64 s[4:5], vcc, -1
+; SDAG-NEXT:    s_cmov_b64 exec, vcc
+; SDAG-NEXT:    s_cbranch_scc0 .LBB1_10
 ; SDAG-NEXT:  ; %bb.1: ; %fp-to-i-if-end
 ; SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffffb81, v6
 ; SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v7, vcc
@@ -401,26 +425,29 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_cmp_eq_u64_e64 s[6:7], -1, v[2:3]
 ; SDAG-NEXT:    v_cmp_lt_i64_e32 vcc, -1, v[4:5]
 ; SDAG-NEXT:    s_and_b64 s[4:5], s[6:7], s[4:5]
+; SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; SDAG-NEXT:    s_xor_b64 s[10:11], s[4:5], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[10:11], exec, s[6:7]
-; SDAG-NEXT:    s_cbranch_execz .LBB1_7
+; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB1_7
 ; SDAG-NEXT:  ; %bb.2: ; %fp-to-i-if-end9
 ; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; SDAG-NEXT:    v_add_co_u32_e64 v9, s[4:5], -1, v0
 ; SDAG-NEXT:    v_addc_co_u32_e64 v10, s[4:5], 0, -1, s[4:5]
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0x432
-; SDAG-NEXT:    v_and_b32_e32 v0, 0xfffff, v5
 ; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[4:5], v[6:7]
+; SDAG-NEXT:    v_and_b32_e32 v0, 0xfffff, v5
+; SDAG-NEXT:    s_xor_b64 s[12:13], s[4:5], exec
 ; SDAG-NEXT:    v_cndmask_b32_e64 v8, -1, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v11, -1, 1, vcc
+; SDAG-NEXT:    s_and_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    v_or_b32_e32 v5, 0x100000, v0
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[12:13], exec, s[6:7]
-; SDAG-NEXT:    s_cbranch_execz .LBB1_4
+; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB1_4
 ; SDAG-NEXT:  ; %bb.3: ; %fp-to-i-if-else
 ; SDAG-NEXT:    v_sub_u32_e32 v0, 0x473, v6
 ; SDAG-NEXT:    v_add_u32_e32 v2, 0xfffffb8d, v6
@@ -462,9 +489,12 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; SDAG-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; SDAG-NEXT:    ; implicit-def: $vgpr9
 ; SDAG-NEXT:    ; implicit-def: $vgpr10
+; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SDAG-NEXT:  .LBB1_4: ; %Flow
-; SDAG-NEXT:    s_andn2_saveexec_b64 s[12:13], s[12:13]
-; SDAG-NEXT:    s_cbranch_execz .LBB1_6
+; SDAG-NEXT:    s_xor_b64 s[14:15], s[12:13], exec
+; SDAG-NEXT:    s_and_b64 s[4:5], s[12:13], -1
+; SDAG-NEXT:    s_cmov_b64 exec, s[12:13]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB1_6
 ; SDAG-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; SDAG-NEXT:    v_sub_u32_e32 v2, 0x433, v6
 ; SDAG-NEXT:    v_lshrrev_b64 v[0:1], v2, v[4:5]
@@ -486,10 +516,14 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v9, v6, v[2:3]
 ; SDAG-NEXT:    v_mad_u64_u32 v[3:4], s[4:5], v10, v6, v[3:4]
 ; SDAG-NEXT:    v_mad_i32_i24 v3, v9, v5, v3
+; SDAG-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; SDAG-NEXT:  .LBB1_6: ; %Flow1
-; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
+; SDAG-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; SDAG-NEXT:  .LBB1_7: ; %Flow2
-; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
+; SDAG-NEXT:    s_xor_b64 s[4:5], s[10:11], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], s[10:11], -1
+; SDAG-NEXT:    s_cmov_b64 exec, s[10:11]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB1_9
 ; SDAG-NEXT:  ; %bb.8: ; %fp-to-i-if-then5
 ; SDAG-NEXT:    v_bfrev_b32_e32 v0, 1
 ; SDAG-NEXT:    v_bfrev_b32_e32 v1, -2
@@ -497,10 +531,10 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_cndmask_b32_e32 v3, v0, v1, vcc
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v2
-; SDAG-NEXT:  ; %bb.9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SDAG-NEXT:  .LBB1_10: ; %fp-to-i-cleanup
+; SDAG-NEXT:  .LBB1_9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[8:9]
+; SDAG-NEXT:  .LBB1_10: ; %fp-to-i-cleanup
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: fptoui_f64_to_i128:
@@ -511,17 +545,19 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v0, 20, v5
 ; GISEL-NEXT:    v_and_b32_e32 v6, 0x7ff, v0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x3ff
-; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v7, 0
+; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[6:7], v[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GISEL-NEXT:    s_mov_b64 s[12:13], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], vcc, -1
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s7
-; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB1_10
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB1_10
 ; GISEL-NEXT:  ; %bb.1: ; %fp-to-i-if-end
 ; GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffffb81, v6
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffff80
@@ -538,10 +574,11 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GISEL-NEXT:    s_xor_b64 s[14:15], vcc, exec
+; GISEL-NEXT:    s_and_b64 s[6:7], vcc, -1
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GISEL-NEXT:    s_xor_b64 s[14:15], exec, s[6:7]
-; GISEL-NEXT:    s_cbranch_execz .LBB1_7
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB1_7
 ; GISEL-NEXT:  ; %bb.2: ; %fp-to-i-if-end9
 ; GISEL-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[6:7]
@@ -592,57 +629,61 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_or_b32_e32 v1, v1, v19
 ; GISEL-NEXT:    v_or_b32_e32 v0, v0, v20
 ; GISEL-NEXT:    v_or_b32_e32 v1, v1, v20
-; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v0
 ; GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
-; GISEL-NEXT:    v_lshl_or_b32 v10, v0, 16, v0
-; GISEL-NEXT:    v_or3_b32 v8, v1, v2, 1
-; GISEL-NEXT:    v_or3_b32 v9, v0, v2, 0
+; GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
+; GISEL-NEXT:    v_or3_b32 v8, v1, v3, 1
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x433
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    v_and_b32_e32 v2, 0xfffff, v5
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[6:7], v[0:1]
-; GISEL-NEXT:    v_or_b32_e32 v5, 0x100000, v2
+; GISEL-NEXT:    v_and_b32_e32 v0, 0xfffff, v5
+; GISEL-NEXT:    s_xor_b64 s[16:17], vcc, exec
+; GISEL-NEXT:    v_lshl_or_b32 v9, v2, 16, v2
+; GISEL-NEXT:    v_or3_b32 v10, v2, v3, 0
+; GISEL-NEXT:    s_and_b64 s[6:7], vcc, -1
+; GISEL-NEXT:    v_or_b32_e32 v5, 0x100000, v0
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GISEL-NEXT:    s_xor_b64 s[16:17], exec, s[6:7]
-; GISEL-NEXT:    s_cbranch_execz .LBB1_4
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB1_4
 ; GISEL-NEXT:  ; %bb.3: ; %fp-to-i-if-else
 ; GISEL-NEXT:    v_add_u32_e32 v6, 0xfffffbcd, v6
 ; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v6, v[4:5]
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v6
 ; GISEL-NEXT:    v_cndmask_b32_e32 v11, 0, v0, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e32 v12, 0, v1, vcc
-; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v11, v10, 0
+; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v11, v9, 0
 ; GISEL-NEXT:    v_subrev_u32_e32 v7, 64, v6
 ; GISEL-NEXT:    v_sub_u32_e32 v2, 64, v6
 ; GISEL-NEXT:    v_lshrrev_b64 v[2:3], v2, v[4:5]
 ; GISEL-NEXT:    v_lshlrev_b64 v[4:5], v7, v[4:5]
 ; GISEL-NEXT:    v_cmp_eq_u32_e64 s[6:7], 0, v6
-; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v12, v9, v[0:1]
+; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v12, v10, v[0:1]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e64 v13, v2, 0, s[6:7]
 ; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v13, v8, v[6:7]
 ; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], v11, v8, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v6
-; GISEL-NEXT:    v_mul_lo_u32 v6, v11, v10
-; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[8:9], v11, v9, v[1:2]
-; GISEL-NEXT:    v_mul_lo_u32 v4, v12, v10
+; GISEL-NEXT:    v_mul_lo_u32 v6, v11, v9
+; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[8:9], v11, v10, v[1:2]
+; GISEL-NEXT:    v_mul_lo_u32 v4, v12, v9
 ; GISEL-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[10:11], v12, v8, v[1:2]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v6, s[10:11], v7, v6, s[10:11]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v4, s[8:9], v6, v4, s[8:9]
-; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v13, v9, v[4:5]
+; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v13, v10, v[4:5]
 ; GISEL-NEXT:    v_cndmask_b32_e64 v3, v3, 0, s[6:7]
-; GISEL-NEXT:    ; implicit-def: $vgpr10
 ; GISEL-NEXT:    ; implicit-def: $vgpr9
+; GISEL-NEXT:    ; implicit-def: $vgpr10
 ; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v3, v8, v[6:7]
 ; GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr8
+; GISEL-NEXT:    s_or_b64 exec, exec, s[16:17]
 ; GISEL-NEXT:  .LBB1_4: ; %Flow
-; GISEL-NEXT:    s_andn2_saveexec_b64 s[8:9], s[16:17]
-; GISEL-NEXT:    s_cbranch_execz .LBB1_6
+; GISEL-NEXT:    s_xor_b64 s[8:9], s[16:17], exec
+; GISEL-NEXT:    s_and_b64 s[6:7], s[16:17], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[16:17]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB1_6
 ; GISEL-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; GISEL-NEXT:    v_sub_co_u32_e32 v6, vcc, 0x433, v6
 ; GISEL-NEXT:    v_subrev_u32_e32 v2, 64, v6
@@ -653,21 +694,24 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v6
 ; GISEL-NEXT:    v_cndmask_b32_e32 v4, v0, v4, vcc
-; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[6:7], v4, v10, 0
+; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[6:7], v4, v9, 0
 ; GISEL-NEXT:    v_cndmask_b32_e32 v5, v1, v5, vcc
 ; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v4, v8, 0
-; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[6:7], v5, v9, v[2:3]
-; GISEL-NEXT:    v_mul_lo_u32 v6, v5, v10
-; GISEL-NEXT:    v_mad_u64_u32 v[1:2], vcc, v4, v9, v[1:2]
-; GISEL-NEXT:    v_mul_lo_u32 v4, v4, v10
+; GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[6:7], v5, v10, v[2:3]
+; GISEL-NEXT:    v_mul_lo_u32 v6, v5, v9
+; GISEL-NEXT:    v_mad_u64_u32 v[1:2], vcc, v4, v10, v[1:2]
+; GISEL-NEXT:    v_mul_lo_u32 v4, v4, v9
 ; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[6:7], v5, v8, v[1:2]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v3, s[6:7], v3, v4, s[6:7]
 ; GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v6, vcc
-; GISEL-NEXT:  .LBB1_6: ; %Flow1
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[8:9]
+; GISEL-NEXT:  .LBB1_6: ; %Flow1
+; GISEL-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; GISEL-NEXT:  .LBB1_7: ; %Flow2
-; GISEL-NEXT:    s_andn2_saveexec_b64 s[6:7], s[14:15]
-; GISEL-NEXT:    s_cbranch_execz .LBB1_9
+; GISEL-NEXT:    s_xor_b64 s[6:7], s[14:15], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], s[14:15], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[14:15]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB1_9
 ; GISEL-NEXT:  ; %bb.8: ; %fp-to-i-if-then5
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[4:5]
 ; GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
@@ -737,10 +781,10 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_or3_b32 v1, v2, v13, v1
 ; GISEL-NEXT:    v_add_u32_e32 v3, 0x80000000, v1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v1
-; GISEL-NEXT:  .LBB1_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GISEL-NEXT:  .LBB1_10: ; %fp-to-i-cleanup
+; GISEL-NEXT:  .LBB1_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GISEL-NEXT:  .LBB1_10: ; %fp-to-i-cleanup
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %cvt = fptoui double %x to i128
   ret i128 %cvt
@@ -753,14 +797,16 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; SDAG-NEXT:    v_mov_b32_e32 v4, v0
 ; SDAG-NEXT:    v_bfe_u32 v5, v4, 23, 8
 ; SDAG-NEXT:    s_movk_i32 s4, 0x7e
+; SDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v5
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; SDAG-NEXT:    v_mov_b32_e32 v6, 0
+; SDAG-NEXT:    s_mov_b64 s[8:9], exec
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v3, 0
-; SDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v5
-; SDAG-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; SDAG-NEXT:    s_cbranch_execz .LBB2_10
+; SDAG-NEXT:    s_and_b64 s[4:5], vcc, -1
+; SDAG-NEXT:    v_mov_b32_e32 v6, 0
+; SDAG-NEXT:    s_cmov_b64 exec, vcc
+; SDAG-NEXT:    s_cbranch_scc0 .LBB2_10
 ; SDAG-NEXT:  ; %bb.1: ; %fp-to-i-if-end
 ; SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff01, v5
 ; SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v6, vcc
@@ -768,31 +814,34 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; SDAG-NEXT:    s_movk_i32 s4, 0xff7f
 ; SDAG-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v6, vcc
 ; SDAG-NEXT:    s_mov_b32 s5, -1
-; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[4:5], v[0:1]
-; SDAG-NEXT:    v_cmp_eq_u64_e64 s[6:7], -1, v[2:3]
-; SDAG-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v4
-; SDAG-NEXT:    s_and_b64 s[4:5], s[6:7], s[4:5]
+; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[0:1]
+; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], -1, v[2:3]
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[10:11], exec, s[6:7]
-; SDAG-NEXT:    s_cbranch_execz .LBB2_7
+; SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
+; SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; SDAG-NEXT:    s_xor_b64 s[10:11], s[4:5], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], s[4:5], -1
+; SDAG-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v4
+; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB2_7
 ; SDAG-NEXT:  ; %bb.2: ; %fp-to-i-if-end9
 ; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; SDAG-NEXT:    v_add_co_u32_e64 v9, s[4:5], -1, v0
 ; SDAG-NEXT:    v_addc_co_u32_e64 v11, s[4:5], 0, -1, s[4:5]
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0x95
-; SDAG-NEXT:    v_and_b32_e32 v0, 0x7fffff, v4
 ; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[4:5], v[5:6]
+; SDAG-NEXT:    v_and_b32_e32 v0, 0x7fffff, v4
+; SDAG-NEXT:    s_xor_b64 s[12:13], s[4:5], exec
 ; SDAG-NEXT:    v_mov_b32_e32 v7, 0
 ; SDAG-NEXT:    v_cndmask_b32_e64 v8, -1, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v10, -1, 1, vcc
+; SDAG-NEXT:    s_and_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    v_or_b32_e32 v6, 0x800000, v0
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[12:13], exec, s[6:7]
-; SDAG-NEXT:    s_cbranch_execz .LBB2_4
+; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB2_4
 ; SDAG-NEXT:  ; %bb.3: ; %fp-to-i-if-else
 ; SDAG-NEXT:    v_sub_u32_e32 v0, 0xd6, v5
 ; SDAG-NEXT:    v_add_u32_e32 v2, 0xffffff2a, v5
@@ -830,12 +879,15 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; SDAG-NEXT:    v_add3_u32 v3, v7, v2, v3
 ; SDAG-NEXT:    v_add_co_u32_e64 v2, s[4:5], v5, v1
 ; SDAG-NEXT:    v_addc_co_u32_e64 v3, s[4:5], v6, v3, s[4:5]
-; SDAG-NEXT:    ; implicit-def: $vgpr5_vgpr6
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v4
+; SDAG-NEXT:    ; implicit-def: $vgpr5_vgpr6
 ; SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SDAG-NEXT:  .LBB2_4: ; %Flow
-; SDAG-NEXT:    s_andn2_saveexec_b64 s[6:7], s[12:13]
-; SDAG-NEXT:    s_cbranch_execz .LBB2_6
+; SDAG-NEXT:    s_xor_b64 s[6:7], s[12:13], exec
+; SDAG-NEXT:    s_and_b64 s[4:5], s[12:13], -1
+; SDAG-NEXT:    s_cmov_b64 exec, s[12:13]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB2_6
 ; SDAG-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; SDAG-NEXT:    v_sub_u32_e32 v2, 0x96, v5
 ; SDAG-NEXT:    v_lshrrev_b64 v[0:1], v2, v[6:7]
@@ -849,10 +901,14 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v5
 ; SDAG-NEXT:    v_mad_i64_i32 v[2:3], s[4:5], v9, v3, v[1:2]
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v4
-; SDAG-NEXT:  .LBB2_6: ; %Flow1
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
+; SDAG-NEXT:  .LBB2_6: ; %Flow1
+; SDAG-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; SDAG-NEXT:  .LBB2_7: ; %Flow2
-; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
+; SDAG-NEXT:    s_xor_b64 s[4:5], s[10:11], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], s[10:11], -1
+; SDAG-NEXT:    s_cmov_b64 exec, s[10:11]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB2_9
 ; SDAG-NEXT:  ; %bb.8: ; %fp-to-i-if-then5
 ; SDAG-NEXT:    v_bfrev_b32_e32 v0, 1
 ; SDAG-NEXT:    v_bfrev_b32_e32 v1, -2
@@ -860,10 +916,10 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; SDAG-NEXT:    v_cndmask_b32_e32 v3, v0, v1, vcc
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v2
-; SDAG-NEXT:  ; %bb.9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SDAG-NEXT:  .LBB2_10: ; %fp-to-i-cleanup
+; SDAG-NEXT:  .LBB2_9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[8:9]
+; SDAG-NEXT:  .LBB2_10: ; %fp-to-i-cleanup
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: fptosi_f32_to_i128:
@@ -872,39 +928,42 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v4, v0
 ; GISEL-NEXT:    v_mov_b32_e32 v5, 0
 ; GISEL-NEXT:    v_lshrrev_b64 v[0:1], 23, v[4:5]
-; GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GISEL-NEXT:    v_mov_b32_e32 v7, v5
 ; GISEL-NEXT:    v_bfe_u32 v6, v0, 0, 8
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x7f
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    v_mov_b32_e32 v7, v5
+; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[6:7], v[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GISEL-NEXT:    s_mov_b64 s[12:13], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], vcc, -1
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s7
-; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB2_10
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB2_10
 ; GISEL-NEXT:  ; %bb.1: ; %fp-to-i-if-end
 ; GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff01, v6
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffff80
-; GISEL-NEXT:    v_addc_co_u32_e64 v1, s[6:7], 0, -1, vcc
+; GISEL-NEXT:    v_addc_co_u32_e64 v1, s[4:5], 0, -1, vcc
 ; GISEL-NEXT:    v_mov_b32_e32 v3, -1
-; GISEL-NEXT:    v_addc_co_u32_e64 v8, s[6:7], 0, -1, s[6:7]
+; GISEL-NEXT:    v_addc_co_u32_e64 v8, s[4:5], 0, -1, s[4:5]
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[0:1], v[2:3]
-; GISEL-NEXT:    v_addc_co_u32_e64 v9, s[6:7], 0, -1, s[6:7]
+; GISEL-NEXT:    v_addc_co_u32_e64 v9, s[4:5], 0, -1, s[4:5]
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GISEL-NEXT:    v_cmp_le_u64_e32 vcc, -1, v[8:9]
-; GISEL-NEXT:    v_cmp_lt_i32_e64 s[4:5], -1, v4
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, -1, v[8:9]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GISEL-NEXT:    s_xor_b64 s[14:15], vcc, exec
+; GISEL-NEXT:    s_and_b64 s[4:5], vcc, -1
+; GISEL-NEXT:    v_cmp_lt_i32_e64 s[4:5], -1, v4
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GISEL-NEXT:    s_xor_b64 s[14:15], exec, s[6:7]
-; GISEL-NEXT:    s_cbranch_execz .LBB2_7
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB2_7
 ; GISEL-NEXT:  ; %bb.2: ; %fp-to-i-if-end9
 ; GISEL-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[6:7]
@@ -963,14 +1022,15 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_or3_b32 v8, v0, v2, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x96
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    v_and_b32_e32 v2, 0x7fffff, v4
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[6:7], v[0:1]
+; GISEL-NEXT:    v_and_b32_e32 v2, 0x7fffff, v4
+; GISEL-NEXT:    s_xor_b64 s[16:17], vcc, exec
 ; GISEL-NEXT:    v_or_b32_e32 v4, 0x800000, v2
+; GISEL-NEXT:    s_and_b64 s[6:7], vcc, -1
 ; GISEL-NEXT:    v_mov_b32_e32 v5, 0
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GISEL-NEXT:    s_xor_b64 s[16:17], exec, s[6:7]
-; GISEL-NEXT:    s_cbranch_execz .LBB2_4
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB2_4
 ; GISEL-NEXT:  ; %bb.3: ; %fp-to-i-if-else
 ; GISEL-NEXT:    v_add_u32_e32 v6, 0xffffff6a, v6
 ; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v6, v[4:5]
@@ -1004,9 +1064,12 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr9
+; GISEL-NEXT:    s_or_b64 exec, exec, s[16:17]
 ; GISEL-NEXT:  .LBB2_4: ; %Flow
-; GISEL-NEXT:    s_andn2_saveexec_b64 s[6:7], s[16:17]
-; GISEL-NEXT:    s_cbranch_execz .LBB2_6
+; GISEL-NEXT:    s_xor_b64 s[6:7], s[16:17], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], s[16:17], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[16:17]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB2_6
 ; GISEL-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; GISEL-NEXT:    v_sub_co_u32_e32 v3, vcc, 0x96, v6
 ; GISEL-NEXT:    v_subrev_u32_e32 v2, 64, v3
@@ -1021,11 +1084,14 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_mul_lo_u32 v5, v4, v10
 ; GISEL-NEXT:    v_mad_u64_u32 v[1:2], vcc, v4, v8, v[1:2]
 ; GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v5, vcc
-; GISEL-NEXT:  .LBB2_6: ; %Flow1
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GISEL-NEXT:  .LBB2_6: ; %Flow1
+; GISEL-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; GISEL-NEXT:  .LBB2_7: ; %Flow2
-; GISEL-NEXT:    s_andn2_saveexec_b64 s[6:7], s[14:15]
-; GISEL-NEXT:    s_cbranch_execz .LBB2_9
+; GISEL-NEXT:    s_xor_b64 s[6:7], s[14:15], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], s[14:15], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[14:15]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB2_9
 ; GISEL-NEXT:  ; %bb.8: ; %fp-to-i-if-then5
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[4:5]
 ; GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
@@ -1095,10 +1161,10 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_or3_b32 v1, v2, v13, v1
 ; GISEL-NEXT:    v_add_u32_e32 v3, 0x80000000, v1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v1
-; GISEL-NEXT:  .LBB2_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GISEL-NEXT:  .LBB2_10: ; %fp-to-i-cleanup
+; GISEL-NEXT:  .LBB2_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GISEL-NEXT:  .LBB2_10: ; %fp-to-i-cleanup
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %cvt = fptosi float %x to i128
   ret i128 %cvt
@@ -1111,14 +1177,16 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; SDAG-NEXT:    v_mov_b32_e32 v4, v0
 ; SDAG-NEXT:    v_bfe_u32 v5, v4, 23, 8
 ; SDAG-NEXT:    s_movk_i32 s4, 0x7e
+; SDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v5
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; SDAG-NEXT:    v_mov_b32_e32 v6, 0
+; SDAG-NEXT:    s_mov_b64 s[8:9], exec
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v3, 0
-; SDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v5
-; SDAG-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; SDAG-NEXT:    s_cbranch_execz .LBB3_10
+; SDAG-NEXT:    s_and_b64 s[4:5], vcc, -1
+; SDAG-NEXT:    v_mov_b32_e32 v6, 0
+; SDAG-NEXT:    s_cmov_b64 exec, vcc
+; SDAG-NEXT:    s_cbranch_scc0 .LBB3_10
 ; SDAG-NEXT:  ; %bb.1: ; %fp-to-i-if-end
 ; SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff01, v5
 ; SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v6, vcc
@@ -1126,31 +1194,34 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; SDAG-NEXT:    s_movk_i32 s4, 0xff7f
 ; SDAG-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v6, vcc
 ; SDAG-NEXT:    s_mov_b32 s5, -1
-; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[4:5], v[0:1]
-; SDAG-NEXT:    v_cmp_eq_u64_e64 s[6:7], -1, v[2:3]
-; SDAG-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v4
-; SDAG-NEXT:    s_and_b64 s[4:5], s[6:7], s[4:5]
+; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[0:1]
+; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], -1, v[2:3]
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[10:11], exec, s[6:7]
-; SDAG-NEXT:    s_cbranch_execz .LBB3_7
+; SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
+; SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; SDAG-NEXT:    s_xor_b64 s[10:11], s[4:5], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], s[4:5], -1
+; SDAG-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v4
+; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB3_7
 ; SDAG-NEXT:  ; %bb.2: ; %fp-to-i-if-end9
 ; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; SDAG-NEXT:    v_add_co_u32_e64 v9, s[4:5], -1, v0
 ; SDAG-NEXT:    v_addc_co_u32_e64 v11, s[4:5], 0, -1, s[4:5]
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0x95
-; SDAG-NEXT:    v_and_b32_e32 v0, 0x7fffff, v4
 ; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[4:5], v[5:6]
+; SDAG-NEXT:    v_and_b32_e32 v0, 0x7fffff, v4
+; SDAG-NEXT:    s_xor_b64 s[12:13], s[4:5], exec
 ; SDAG-NEXT:    v_mov_b32_e32 v7, 0
 ; SDAG-NEXT:    v_cndmask_b32_e64 v8, -1, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v10, -1, 1, vcc
+; SDAG-NEXT:    s_and_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    v_or_b32_e32 v6, 0x800000, v0
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[12:13], exec, s[6:7]
-; SDAG-NEXT:    s_cbranch_execz .LBB3_4
+; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB3_4
 ; SDAG-NEXT:  ; %bb.3: ; %fp-to-i-if-else
 ; SDAG-NEXT:    v_sub_u32_e32 v0, 0xd6, v5
 ; SDAG-NEXT:    v_add_u32_e32 v2, 0xffffff2a, v5
@@ -1188,12 +1259,15 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; SDAG-NEXT:    v_add3_u32 v3, v7, v2, v3
 ; SDAG-NEXT:    v_add_co_u32_e64 v2, s[4:5], v5, v1
 ; SDAG-NEXT:    v_addc_co_u32_e64 v3, s[4:5], v6, v3, s[4:5]
-; SDAG-NEXT:    ; implicit-def: $vgpr5_vgpr6
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v4
+; SDAG-NEXT:    ; implicit-def: $vgpr5_vgpr6
 ; SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SDAG-NEXT:  .LBB3_4: ; %Flow
-; SDAG-NEXT:    s_andn2_saveexec_b64 s[6:7], s[12:13]
-; SDAG-NEXT:    s_cbranch_execz .LBB3_6
+; SDAG-NEXT:    s_xor_b64 s[6:7], s[12:13], exec
+; SDAG-NEXT:    s_and_b64 s[4:5], s[12:13], -1
+; SDAG-NEXT:    s_cmov_b64 exec, s[12:13]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB3_6
 ; SDAG-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; SDAG-NEXT:    v_sub_u32_e32 v2, 0x96, v5
 ; SDAG-NEXT:    v_lshrrev_b64 v[0:1], v2, v[6:7]
@@ -1207,10 +1281,14 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v5
 ; SDAG-NEXT:    v_mad_i64_i32 v[2:3], s[4:5], v9, v3, v[1:2]
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v4
-; SDAG-NEXT:  .LBB3_6: ; %Flow1
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
+; SDAG-NEXT:  .LBB3_6: ; %Flow1
+; SDAG-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; SDAG-NEXT:  .LBB3_7: ; %Flow2
-; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
+; SDAG-NEXT:    s_xor_b64 s[4:5], s[10:11], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], s[10:11], -1
+; SDAG-NEXT:    s_cmov_b64 exec, s[10:11]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB3_9
 ; SDAG-NEXT:  ; %bb.8: ; %fp-to-i-if-then5
 ; SDAG-NEXT:    v_bfrev_b32_e32 v0, 1
 ; SDAG-NEXT:    v_bfrev_b32_e32 v1, -2
@@ -1218,10 +1296,10 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; SDAG-NEXT:    v_cndmask_b32_e32 v3, v0, v1, vcc
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v2
-; SDAG-NEXT:  ; %bb.9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SDAG-NEXT:  .LBB3_10: ; %fp-to-i-cleanup
+; SDAG-NEXT:  .LBB3_9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[8:9]
+; SDAG-NEXT:  .LBB3_10: ; %fp-to-i-cleanup
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: fptoui_f32_to_i128:
@@ -1230,39 +1308,42 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v4, v0
 ; GISEL-NEXT:    v_mov_b32_e32 v5, 0
 ; GISEL-NEXT:    v_lshrrev_b64 v[0:1], 23, v[4:5]
-; GISEL-NEXT:    s_mov_b64 s[4:5], 0
+; GISEL-NEXT:    v_mov_b32_e32 v7, v5
 ; GISEL-NEXT:    v_bfe_u32 v6, v0, 0, 8
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x7f
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    v_mov_b32_e32 v7, v5
+; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[6:7], v[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GISEL-NEXT:    s_mov_b64 s[12:13], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], vcc, -1
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s7
-; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB3_10
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB3_10
 ; GISEL-NEXT:  ; %bb.1: ; %fp-to-i-if-end
 ; GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff01, v6
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffff80
-; GISEL-NEXT:    v_addc_co_u32_e64 v1, s[6:7], 0, -1, vcc
+; GISEL-NEXT:    v_addc_co_u32_e64 v1, s[4:5], 0, -1, vcc
 ; GISEL-NEXT:    v_mov_b32_e32 v3, -1
-; GISEL-NEXT:    v_addc_co_u32_e64 v8, s[6:7], 0, -1, s[6:7]
+; GISEL-NEXT:    v_addc_co_u32_e64 v8, s[4:5], 0, -1, s[4:5]
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[0:1], v[2:3]
-; GISEL-NEXT:    v_addc_co_u32_e64 v9, s[6:7], 0, -1, s[6:7]
+; GISEL-NEXT:    v_addc_co_u32_e64 v9, s[4:5], 0, -1, s[4:5]
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GISEL-NEXT:    v_cmp_le_u64_e32 vcc, -1, v[8:9]
-; GISEL-NEXT:    v_cmp_lt_i32_e64 s[4:5], -1, v4
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, -1, v[8:9]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GISEL-NEXT:    s_xor_b64 s[14:15], vcc, exec
+; GISEL-NEXT:    s_and_b64 s[4:5], vcc, -1
+; GISEL-NEXT:    v_cmp_lt_i32_e64 s[4:5], -1, v4
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GISEL-NEXT:    s_xor_b64 s[14:15], exec, s[6:7]
-; GISEL-NEXT:    s_cbranch_execz .LBB3_7
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB3_7
 ; GISEL-NEXT:  ; %bb.2: ; %fp-to-i-if-end9
 ; GISEL-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[6:7]
@@ -1321,14 +1402,15 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_or3_b32 v8, v0, v2, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x96
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    v_and_b32_e32 v2, 0x7fffff, v4
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[6:7], v[0:1]
+; GISEL-NEXT:    v_and_b32_e32 v2, 0x7fffff, v4
+; GISEL-NEXT:    s_xor_b64 s[16:17], vcc, exec
 ; GISEL-NEXT:    v_or_b32_e32 v4, 0x800000, v2
+; GISEL-NEXT:    s_and_b64 s[6:7], vcc, -1
 ; GISEL-NEXT:    v_mov_b32_e32 v5, 0
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GISEL-NEXT:    s_xor_b64 s[16:17], exec, s[6:7]
-; GISEL-NEXT:    s_cbranch_execz .LBB3_4
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB3_4
 ; GISEL-NEXT:  ; %bb.3: ; %fp-to-i-if-else
 ; GISEL-NEXT:    v_add_u32_e32 v6, 0xffffff6a, v6
 ; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v6, v[4:5]
@@ -1362,9 +1444,12 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr9
+; GISEL-NEXT:    s_or_b64 exec, exec, s[16:17]
 ; GISEL-NEXT:  .LBB3_4: ; %Flow
-; GISEL-NEXT:    s_andn2_saveexec_b64 s[6:7], s[16:17]
-; GISEL-NEXT:    s_cbranch_execz .LBB3_6
+; GISEL-NEXT:    s_xor_b64 s[6:7], s[16:17], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], s[16:17], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[16:17]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB3_6
 ; GISEL-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; GISEL-NEXT:    v_sub_co_u32_e32 v3, vcc, 0x96, v6
 ; GISEL-NEXT:    v_subrev_u32_e32 v2, 64, v3
@@ -1379,11 +1464,14 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_mul_lo_u32 v5, v4, v10
 ; GISEL-NEXT:    v_mad_u64_u32 v[1:2], vcc, v4, v8, v[1:2]
 ; GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v5, vcc
-; GISEL-NEXT:  .LBB3_6: ; %Flow1
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GISEL-NEXT:  .LBB3_6: ; %Flow1
+; GISEL-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; GISEL-NEXT:  .LBB3_7: ; %Flow2
-; GISEL-NEXT:    s_andn2_saveexec_b64 s[6:7], s[14:15]
-; GISEL-NEXT:    s_cbranch_execz .LBB3_9
+; GISEL-NEXT:    s_xor_b64 s[6:7], s[14:15], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], s[14:15], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[14:15]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB3_9
 ; GISEL-NEXT:  ; %bb.8: ; %fp-to-i-if-then5
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[4:5]
 ; GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
@@ -1453,10 +1541,10 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_or3_b32 v1, v2, v13, v1
 ; GISEL-NEXT:    v_add_u32_e32 v3, 0x80000000, v1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v1
-; GISEL-NEXT:  .LBB3_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GISEL-NEXT:  .LBB3_10: ; %fp-to-i-cleanup
+; GISEL-NEXT:  .LBB3_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GISEL-NEXT:  .LBB3_10: ; %fp-to-i-cleanup
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %cvt = fptoui float %x to i128
   ret i128 %cvt
@@ -1497,14 +1585,16 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_mov_b32_e32 v4, v0
 ; SDAG-NEXT:    v_bfe_u32 v5, v4, 7, 8
 ; SDAG-NEXT:    s_movk_i32 s4, 0x7e
+; SDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v5
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; SDAG-NEXT:    v_mov_b32_e32 v6, 0
+; SDAG-NEXT:    s_mov_b64 s[8:9], exec
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v3, 0
-; SDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v5
-; SDAG-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; SDAG-NEXT:    s_cbranch_execz .LBB6_10
+; SDAG-NEXT:    s_and_b64 s[4:5], vcc, -1
+; SDAG-NEXT:    v_mov_b32_e32 v6, 0
+; SDAG-NEXT:    s_cmov_b64 exec, vcc
+; SDAG-NEXT:    s_cbranch_scc0 .LBB6_10
 ; SDAG-NEXT:  ; %bb.1: ; %fp-to-i-if-end
 ; SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff01, v5
 ; SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v6, vcc
@@ -1512,29 +1602,32 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    s_movk_i32 s4, 0xff7f
 ; SDAG-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v6, vcc
 ; SDAG-NEXT:    s_mov_b32 s5, -1
-; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[4:5], v[0:1]
-; SDAG-NEXT:    v_cmp_eq_u64_e64 s[6:7], -1, v[2:3]
-; SDAG-NEXT:    v_cmp_lt_i16_e32 vcc, -1, v4
-; SDAG-NEXT:    s_and_b64 s[4:5], s[6:7], s[4:5]
+; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[0:1]
+; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], -1, v[2:3]
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[10:11], exec, s[6:7]
-; SDAG-NEXT:    s_cbranch_execz .LBB6_7
+; SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
+; SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; SDAG-NEXT:    s_xor_b64 s[10:11], s[4:5], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], s[4:5], -1
+; SDAG-NEXT:    v_cmp_lt_i16_e32 vcc, -1, v4
+; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB6_7
 ; SDAG-NEXT:  ; %bb.2: ; %fp-to-i-if-end9
-; SDAG-NEXT:    s_movk_i32 s4, 0x7f
-; SDAG-NEXT:    v_and_b32_sdwa v0, v4, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0x85
 ; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[4:5], v[5:6]
+; SDAG-NEXT:    s_movk_i32 s6, 0x7f
+; SDAG-NEXT:    v_and_b32_sdwa v0, v4, s6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; SDAG-NEXT:    s_xor_b64 s[12:13], s[4:5], exec
 ; SDAG-NEXT:    v_mov_b32_e32 v7, 0
 ; SDAG-NEXT:    v_cndmask_b32_e64 v9, -1, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v8, -1, 1, vcc
+; SDAG-NEXT:    s_and_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    v_or_b32_e32 v6, 0x80, v0
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[12:13], exec, s[6:7]
-; SDAG-NEXT:    s_cbranch_execz .LBB6_4
+; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB6_4
 ; SDAG-NEXT:  ; %bb.3: ; %fp-to-i-if-else
 ; SDAG-NEXT:    v_sub_u32_e32 v0, 0xc6, v5
 ; SDAG-NEXT:    v_add_u32_e32 v2, 0xffffff3a, v5
@@ -1573,11 +1666,15 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_add3_u32 v3, v7, v2, v3
 ; SDAG-NEXT:    v_add_co_u32_e64 v2, s[4:5], v5, v1
 ; SDAG-NEXT:    v_addc_co_u32_e64 v3, s[4:5], v6, v3, s[4:5]
-; SDAG-NEXT:    ; implicit-def: $vgpr5_vgpr6
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v4
+; SDAG-NEXT:    ; implicit-def: $vgpr5_vgpr6
 ; SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SDAG-NEXT:  .LBB6_4: ; %Flow
-; SDAG-NEXT:    s_andn2_saveexec_b64 s[6:7], s[12:13]
+; SDAG-NEXT:    s_xor_b64 s[6:7], s[12:13], exec
+; SDAG-NEXT:    s_and_b64 s[4:5], s[12:13], -1
+; SDAG-NEXT:    s_cmov_b64 exec, s[12:13]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB6_6
 ; SDAG-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; SDAG-NEXT:    v_sub_u32_e32 v2, 0x86, v5
 ; SDAG-NEXT:    v_lshrrev_b64 v[0:1], v2, v[6:7]
@@ -1589,10 +1686,14 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; SDAG-NEXT:    v_mul_i32_i24_e32 v0, v0, v8
 ; SDAG-NEXT:    v_mov_b32_e32 v3, v2
-; SDAG-NEXT:  ; %bb.6: ; %Flow1
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
+; SDAG-NEXT:  .LBB6_6: ; %Flow1
+; SDAG-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; SDAG-NEXT:  .LBB6_7: ; %Flow2
-; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
+; SDAG-NEXT:    s_xor_b64 s[4:5], s[10:11], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], s[10:11], -1
+; SDAG-NEXT:    s_cmov_b64 exec, s[10:11]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB6_9
 ; SDAG-NEXT:  ; %bb.8: ; %fp-to-i-if-then5
 ; SDAG-NEXT:    v_bfrev_b32_e32 v0, 1
 ; SDAG-NEXT:    v_bfrev_b32_e32 v1, -2
@@ -1600,10 +1701,10 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_cndmask_b32_e32 v3, v0, v1, vcc
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v2
-; SDAG-NEXT:  ; %bb.9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SDAG-NEXT:  .LBB6_10: ; %fp-to-i-cleanup
+; SDAG-NEXT:  .LBB6_9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[8:9]
+; SDAG-NEXT:  .LBB6_10: ; %fp-to-i-cleanup
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: fptosi_bf16_to_i128:
@@ -1614,37 +1715,40 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v6, 0
 ; GISEL-NEXT:    v_lshrrev_b64 v[0:1], 7, v[5:6]
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0x7f
-; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfe_u32 v5, v0, 0, 8
+; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[5:6], v[1:2]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GISEL-NEXT:    s_mov_b64 s[12:13], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], vcc, -1
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s7
-; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB6_10
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB6_10
 ; GISEL-NEXT:  ; %bb.1: ; %fp-to-i-if-end
 ; GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff01, v5
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffff80
-; GISEL-NEXT:    v_addc_co_u32_e64 v1, s[6:7], 0, -1, vcc
+; GISEL-NEXT:    v_addc_co_u32_e64 v1, s[4:5], 0, -1, vcc
 ; GISEL-NEXT:    v_mov_b32_e32 v3, -1
-; GISEL-NEXT:    v_addc_co_u32_e64 v7, s[6:7], 0, -1, s[6:7]
+; GISEL-NEXT:    v_addc_co_u32_e64 v7, s[4:5], 0, -1, s[4:5]
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[0:1], v[2:3]
-; GISEL-NEXT:    v_addc_co_u32_e64 v8, s[6:7], 0, -1, s[6:7]
+; GISEL-NEXT:    v_addc_co_u32_e64 v8, s[4:5], 0, -1, s[4:5]
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GISEL-NEXT:    v_cmp_le_u64_e32 vcc, -1, v[7:8]
-; GISEL-NEXT:    v_cmp_lt_i16_e64 s[4:5], -1, v4
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, -1, v[7:8]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GISEL-NEXT:    s_xor_b64 s[14:15], vcc, exec
+; GISEL-NEXT:    s_and_b64 s[4:5], vcc, -1
+; GISEL-NEXT:    v_cmp_lt_i16_e64 s[4:5], -1, v4
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GISEL-NEXT:    s_xor_b64 s[14:15], exec, s[6:7]
-; GISEL-NEXT:    s_cbranch_execz .LBB6_7
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB6_7
 ; GISEL-NEXT:  ; %bb.2: ; %fp-to-i-if-end9
 ; GISEL-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[6:7]
@@ -1695,74 +1799,81 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; GISEL-NEXT:    v_or_b32_e32 v1, v1, v18
 ; GISEL-NEXT:    v_or_b32_e32 v0, v0, v19
 ; GISEL-NEXT:    v_or_b32_e32 v1, v1, v19
-; GISEL-NEXT:    v_and_b32_e32 v11, 0xffff, v0
+; GISEL-NEXT:    v_and_b32_e32 v10, 0xffff, v0
 ; GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v11
-; GISEL-NEXT:    v_or3_b32 v9, v1, v0, 1
-; GISEL-NEXT:    v_or3_b32 v10, v11, v0, 0
+; GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v10
+; GISEL-NEXT:    v_or3_b32 v8, v1, v0, 1
+; GISEL-NEXT:    v_or3_b32 v9, v10, v0, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x86
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    v_and_b32_e32 v2, 0x7f, v4
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[5:6], v[0:1]
-; GISEL-NEXT:    v_or_b32_e32 v7, 0x80, v2
-; GISEL-NEXT:    v_mov_b32_e32 v8, 0
+; GISEL-NEXT:    v_and_b32_e32 v2, 0x7f, v4
+; GISEL-NEXT:    s_xor_b64 s[16:17], vcc, exec
+; GISEL-NEXT:    v_or_b32_e32 v6, 0x80, v2
+; GISEL-NEXT:    s_and_b64 s[6:7], vcc, -1
+; GISEL-NEXT:    v_mov_b32_e32 v7, 0
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GISEL-NEXT:    s_xor_b64 s[16:17], exec, s[6:7]
-; GISEL-NEXT:    s_cbranch_execz .LBB6_4
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB6_4
 ; GISEL-NEXT:  ; %bb.3: ; %fp-to-i-if-else
-; GISEL-NEXT:    v_add_u32_e32 v6, 0xffffff7a, v5
-; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v6, v[7:8]
-; GISEL-NEXT:    v_subrev_u32_e32 v4, 64, v6
-; GISEL-NEXT:    v_sub_u32_e32 v2, 64, v6
-; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v6
-; GISEL-NEXT:    v_lshl_or_b32 v11, v11, 16, v11
-; GISEL-NEXT:    v_lshrrev_b64 v[2:3], v2, v[7:8]
-; GISEL-NEXT:    v_lshlrev_b64 v[4:5], v4, v[7:8]
-; GISEL-NEXT:    v_cndmask_b32_e32 v8, 0, v0, vcc
-; GISEL-NEXT:    v_cndmask_b32_e32 v12, 0, v1, vcc
-; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v8, v11, 0
-; GISEL-NEXT:    v_cmp_eq_u32_e64 s[6:7], 0, v6
+; GISEL-NEXT:    v_add_u32_e32 v11, 0xffffff7a, v5
+; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v11, v[6:7]
+; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v11
+; GISEL-NEXT:    v_lshl_or_b32 v10, v10, 16, v10
+; GISEL-NEXT:    v_cndmask_b32_e32 v12, 0, v0, vcc
+; GISEL-NEXT:    v_cndmask_b32_e32 v13, 0, v1, vcc
+; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v12, v10, 0
+; GISEL-NEXT:    v_subrev_u32_e32 v4, 64, v11
+; GISEL-NEXT:    v_sub_u32_e32 v2, 64, v11
+; GISEL-NEXT:    v_lshrrev_b64 v[2:3], v2, v[6:7]
+; GISEL-NEXT:    v_lshlrev_b64 v[4:5], v4, v[6:7]
+; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v13, v9, v[0:1]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
-; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v12, v10, v[0:1]
-; GISEL-NEXT:    v_cndmask_b32_e64 v13, v2, 0, s[6:7]
-; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], v8, v9, 0
-; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v13, v9, v[6:7]
-; GISEL-NEXT:    v_mul_lo_u32 v4, v12, v11
-; GISEL-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
+; GISEL-NEXT:    v_cmp_eq_u32_e64 s[6:7], 0, v11
+; GISEL-NEXT:    v_cndmask_b32_e64 v11, v2, 0, s[6:7]
+; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v11, v8, v[6:7]
+; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], v12, v8, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v6
-; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[8:9], v8, v10, v[1:2]
-; GISEL-NEXT:    v_mul_lo_u32 v6, v8, v11
-; GISEL-NEXT:    v_cndmask_b32_e64 v3, v3, 0, s[6:7]
-; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[10:11], v12, v9, v[1:2]
+; GISEL-NEXT:    v_mul_lo_u32 v6, v12, v10
+; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[8:9], v12, v9, v[1:2]
+; GISEL-NEXT:    v_mul_lo_u32 v4, v13, v10
+; GISEL-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
+; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[10:11], v13, v8, v[1:2]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v6, s[10:11], v7, v6, s[10:11]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v4, s[8:9], v6, v4, s[8:9]
-; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v13, v10, v[4:5]
+; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v11, v9, v[4:5]
+; GISEL-NEXT:    v_cndmask_b32_e64 v3, v3, 0, s[6:7]
 ; GISEL-NEXT:    ; implicit-def: $vgpr5
-; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v3, v9, v[6:7]
-; GISEL-NEXT:    ; implicit-def: $vgpr7_vgpr8
-; GISEL-NEXT:    ; implicit-def: $vgpr9
+; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v3, v8, v[6:7]
+; GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GISEL-NEXT:    ; implicit-def: $vgpr8
+; GISEL-NEXT:    s_or_b64 exec, exec, s[16:17]
 ; GISEL-NEXT:  .LBB6_4: ; %Flow
-; GISEL-NEXT:    s_andn2_saveexec_b64 s[6:7], s[16:17]
-; GISEL-NEXT:    s_cbranch_execz .LBB6_6
+; GISEL-NEXT:    s_xor_b64 s[6:7], s[16:17], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], s[16:17], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[16:17]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB6_6
 ; GISEL-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; GISEL-NEXT:    v_sub_co_u32_e32 v3, vcc, 0x86, v5
 ; GISEL-NEXT:    v_subrev_u32_e32 v2, 64, v3
-; GISEL-NEXT:    v_lshrrev_b64 v[0:1], v3, v[7:8]
+; GISEL-NEXT:    v_lshrrev_b64 v[0:1], v3, v[6:7]
 ; GISEL-NEXT:    v_lshrrev_b64 v[1:2], v2, 0
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v3
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v3
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v7, vcc
-; GISEL-NEXT:    v_mul_hi_i32_i24_e32 v1, v0, v9
+; GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
+; GISEL-NEXT:    v_mul_hi_i32_i24_e32 v1, v0, v8
 ; GISEL-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
-; GISEL-NEXT:    v_mul_i32_i24_e32 v0, v0, v9
+; GISEL-NEXT:    v_mul_i32_i24_e32 v0, v0, v8
 ; GISEL-NEXT:    v_mov_b32_e32 v3, v2
-; GISEL-NEXT:  .LBB6_6: ; %Flow1
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GISEL-NEXT:  .LBB6_6: ; %Flow1
+; GISEL-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; GISEL-NEXT:  .LBB6_7: ; %Flow2
-; GISEL-NEXT:    s_andn2_saveexec_b64 s[6:7], s[14:15]
-; GISEL-NEXT:    s_cbranch_execz .LBB6_9
+; GISEL-NEXT:    s_xor_b64 s[6:7], s[14:15], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], s[14:15], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[14:15]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB6_9
 ; GISEL-NEXT:  ; %bb.8: ; %fp-to-i-if-then5
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[4:5]
 ; GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
@@ -1832,10 +1943,10 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; GISEL-NEXT:    v_or3_b32 v1, v2, v13, v1
 ; GISEL-NEXT:    v_add_u32_e32 v3, 0x80000000, v1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v1
-; GISEL-NEXT:  .LBB6_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GISEL-NEXT:  .LBB6_10: ; %fp-to-i-cleanup
+; GISEL-NEXT:  .LBB6_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GISEL-NEXT:  .LBB6_10: ; %fp-to-i-cleanup
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %cvt = fptosi bfloat %x to i128
   ret i128 %cvt
@@ -1848,14 +1959,16 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_mov_b32_e32 v4, v0
 ; SDAG-NEXT:    v_bfe_u32 v5, v4, 7, 8
 ; SDAG-NEXT:    s_movk_i32 s4, 0x7e
+; SDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v5
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; SDAG-NEXT:    v_mov_b32_e32 v6, 0
+; SDAG-NEXT:    s_mov_b64 s[8:9], exec
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-NEXT:    v_mov_b32_e32 v3, 0
-; SDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v5
-; SDAG-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; SDAG-NEXT:    s_cbranch_execz .LBB7_10
+; SDAG-NEXT:    s_and_b64 s[4:5], vcc, -1
+; SDAG-NEXT:    v_mov_b32_e32 v6, 0
+; SDAG-NEXT:    s_cmov_b64 exec, vcc
+; SDAG-NEXT:    s_cbranch_scc0 .LBB7_10
 ; SDAG-NEXT:  ; %bb.1: ; %fp-to-i-if-end
 ; SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff01, v5
 ; SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v6, vcc
@@ -1863,29 +1976,32 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    s_movk_i32 s4, 0xff7f
 ; SDAG-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v6, vcc
 ; SDAG-NEXT:    s_mov_b32 s5, -1
-; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[4:5], v[0:1]
-; SDAG-NEXT:    v_cmp_eq_u64_e64 s[6:7], -1, v[2:3]
-; SDAG-NEXT:    v_cmp_lt_i16_e32 vcc, -1, v4
-; SDAG-NEXT:    s_and_b64 s[4:5], s[6:7], s[4:5]
+; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[0:1]
+; SDAG-NEXT:    v_cmp_eq_u64_e64 s[4:5], -1, v[2:3]
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[10:11], exec, s[6:7]
-; SDAG-NEXT:    s_cbranch_execz .LBB7_7
+; SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
+; SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; SDAG-NEXT:    s_xor_b64 s[10:11], s[4:5], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], s[4:5], -1
+; SDAG-NEXT:    v_cmp_lt_i16_e32 vcc, -1, v4
+; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB7_7
 ; SDAG-NEXT:  ; %bb.2: ; %fp-to-i-if-end9
-; SDAG-NEXT:    s_movk_i32 s4, 0x7f
-; SDAG-NEXT:    v_and_b32_sdwa v0, v4, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0x85
 ; SDAG-NEXT:    v_cmp_lt_u64_e64 s[4:5], s[4:5], v[5:6]
+; SDAG-NEXT:    s_movk_i32 s6, 0x7f
+; SDAG-NEXT:    v_and_b32_sdwa v0, v4, s6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; SDAG-NEXT:    s_xor_b64 s[12:13], s[4:5], exec
 ; SDAG-NEXT:    v_mov_b32_e32 v7, 0
 ; SDAG-NEXT:    v_cndmask_b32_e64 v9, -1, 0, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e64 v8, -1, 1, vcc
+; SDAG-NEXT:    s_and_b64 s[6:7], s[4:5], -1
 ; SDAG-NEXT:    v_or_b32_e32 v6, 0x80, v0
 ; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[12:13], exec, s[6:7]
-; SDAG-NEXT:    s_cbranch_execz .LBB7_4
+; SDAG-NEXT:    s_cmov_b64 exec, s[4:5]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB7_4
 ; SDAG-NEXT:  ; %bb.3: ; %fp-to-i-if-else
 ; SDAG-NEXT:    v_sub_u32_e32 v0, 0xc6, v5
 ; SDAG-NEXT:    v_add_u32_e32 v2, 0xffffff3a, v5
@@ -1924,11 +2040,15 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_add3_u32 v3, v7, v2, v3
 ; SDAG-NEXT:    v_add_co_u32_e64 v2, s[4:5], v5, v1
 ; SDAG-NEXT:    v_addc_co_u32_e64 v3, s[4:5], v6, v3, s[4:5]
-; SDAG-NEXT:    ; implicit-def: $vgpr5_vgpr6
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v4
+; SDAG-NEXT:    ; implicit-def: $vgpr5_vgpr6
 ; SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SDAG-NEXT:  .LBB7_4: ; %Flow
-; SDAG-NEXT:    s_andn2_saveexec_b64 s[6:7], s[12:13]
+; SDAG-NEXT:    s_xor_b64 s[6:7], s[12:13], exec
+; SDAG-NEXT:    s_and_b64 s[4:5], s[12:13], -1
+; SDAG-NEXT:    s_cmov_b64 exec, s[12:13]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB7_6
 ; SDAG-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; SDAG-NEXT:    v_sub_u32_e32 v2, 0x86, v5
 ; SDAG-NEXT:    v_lshrrev_b64 v[0:1], v2, v[6:7]
@@ -1940,10 +2060,14 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; SDAG-NEXT:    v_mul_i32_i24_e32 v0, v0, v8
 ; SDAG-NEXT:    v_mov_b32_e32 v3, v2
-; SDAG-NEXT:  ; %bb.6: ; %Flow1
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[6:7]
+; SDAG-NEXT:  .LBB7_6: ; %Flow1
+; SDAG-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; SDAG-NEXT:  .LBB7_7: ; %Flow2
-; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
+; SDAG-NEXT:    s_xor_b64 s[4:5], s[10:11], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], s[10:11], -1
+; SDAG-NEXT:    s_cmov_b64 exec, s[10:11]
+; SDAG-NEXT:    s_cbranch_scc0 .LBB7_9
 ; SDAG-NEXT:  ; %bb.8: ; %fp-to-i-if-then5
 ; SDAG-NEXT:    v_bfrev_b32_e32 v0, 1
 ; SDAG-NEXT:    v_bfrev_b32_e32 v1, -2
@@ -1951,10 +2075,10 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_cndmask_b32_e32 v3, v0, v1, vcc
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v2
-; SDAG-NEXT:  ; %bb.9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SDAG-NEXT:  .LBB7_10: ; %fp-to-i-cleanup
+; SDAG-NEXT:  .LBB7_9: ; %Flow3
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[8:9]
+; SDAG-NEXT:  .LBB7_10: ; %fp-to-i-cleanup
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: fptoui_bf16_to_i128:
@@ -1965,37 +2089,40 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v6, 0
 ; GISEL-NEXT:    v_lshrrev_b64 v[0:1], 7, v[5:6]
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0x7f
-; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfe_u32 v5, v0, 0, 8
+; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[5:6], v[1:2]
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[4:5]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; GISEL-NEXT:    s_mov_b64 s[12:13], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], vcc, -1
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s6
 ; GISEL-NEXT:    v_mov_b32_e32 v3, s7
-; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB7_10
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB7_10
 ; GISEL-NEXT:  ; %bb.1: ; %fp-to-i-if-end
 ; GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0xffffff01, v5
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffff80
-; GISEL-NEXT:    v_addc_co_u32_e64 v1, s[6:7], 0, -1, vcc
+; GISEL-NEXT:    v_addc_co_u32_e64 v1, s[4:5], 0, -1, vcc
 ; GISEL-NEXT:    v_mov_b32_e32 v3, -1
-; GISEL-NEXT:    v_addc_co_u32_e64 v7, s[6:7], 0, -1, s[6:7]
+; GISEL-NEXT:    v_addc_co_u32_e64 v7, s[4:5], 0, -1, s[4:5]
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[0:1], v[2:3]
-; GISEL-NEXT:    v_addc_co_u32_e64 v8, s[6:7], 0, -1, s[6:7]
+; GISEL-NEXT:    v_addc_co_u32_e64 v8, s[4:5], 0, -1, s[4:5]
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GISEL-NEXT:    v_cmp_le_u64_e32 vcc, -1, v[7:8]
-; GISEL-NEXT:    v_cmp_lt_i16_e64 s[4:5], -1, v4
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, -1, v[7:8]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GISEL-NEXT:    s_xor_b64 s[14:15], vcc, exec
+; GISEL-NEXT:    s_and_b64 s[4:5], vcc, -1
+; GISEL-NEXT:    v_cmp_lt_i16_e64 s[4:5], -1, v4
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GISEL-NEXT:    s_xor_b64 s[14:15], exec, s[6:7]
-; GISEL-NEXT:    s_cbranch_execz .LBB7_7
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB7_7
 ; GISEL-NEXT:  ; %bb.2: ; %fp-to-i-if-end9
 ; GISEL-NEXT:    s_xor_b64 s[6:7], s[4:5], -1
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[6:7]
@@ -2046,74 +2173,81 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; GISEL-NEXT:    v_or_b32_e32 v1, v1, v18
 ; GISEL-NEXT:    v_or_b32_e32 v0, v0, v19
 ; GISEL-NEXT:    v_or_b32_e32 v1, v1, v19
-; GISEL-NEXT:    v_and_b32_e32 v11, 0xffff, v0
+; GISEL-NEXT:    v_and_b32_e32 v10, 0xffff, v0
 ; GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v11
-; GISEL-NEXT:    v_or3_b32 v9, v1, v0, 1
-; GISEL-NEXT:    v_or3_b32 v10, v11, v0, 0
+; GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v10
+; GISEL-NEXT:    v_or3_b32 v8, v1, v0, 1
+; GISEL-NEXT:    v_or3_b32 v9, v10, v0, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x86
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    v_and_b32_e32 v2, 0x7f, v4
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[5:6], v[0:1]
-; GISEL-NEXT:    v_or_b32_e32 v7, 0x80, v2
-; GISEL-NEXT:    v_mov_b32_e32 v8, 0
+; GISEL-NEXT:    v_and_b32_e32 v2, 0x7f, v4
+; GISEL-NEXT:    s_xor_b64 s[16:17], vcc, exec
+; GISEL-NEXT:    v_or_b32_e32 v6, 0x80, v2
+; GISEL-NEXT:    s_and_b64 s[6:7], vcc, -1
+; GISEL-NEXT:    v_mov_b32_e32 v7, 0
 ; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GISEL-NEXT:    s_xor_b64 s[16:17], exec, s[6:7]
-; GISEL-NEXT:    s_cbranch_execz .LBB7_4
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
+; GISEL-NEXT:    s_cbranch_scc0 .LBB7_4
 ; GISEL-NEXT:  ; %bb.3: ; %fp-to-i-if-else
-; GISEL-NEXT:    v_add_u32_e32 v6, 0xffffff7a, v5
-; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v6, v[7:8]
-; GISEL-NEXT:    v_subrev_u32_e32 v4, 64, v6
-; GISEL-NEXT:    v_sub_u32_e32 v2, 64, v6
-; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v6
-; GISEL-NEXT:    v_lshl_or_b32 v11, v11, 16, v11
-; GISEL-NEXT:    v_lshrrev_b64 v[2:3], v2, v[7:8]
-; GISEL-NEXT:    v_lshlrev_b64 v[4:5], v4, v[7:8]
-; GISEL-NEXT:    v_cndmask_b32_e32 v8, 0, v0, vcc
-; GISEL-NEXT:    v_cndmask_b32_e32 v12, 0, v1, vcc
-; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v8, v11, 0
-; GISEL-NEXT:    v_cmp_eq_u32_e64 s[6:7], 0, v6
+; GISEL-NEXT:    v_add_u32_e32 v11, 0xffffff7a, v5
+; GISEL-NEXT:    v_lshlrev_b64 v[0:1], v11, v[6:7]
+; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v11
+; GISEL-NEXT:    v_lshl_or_b32 v10, v10, 16, v10
+; GISEL-NEXT:    v_cndmask_b32_e32 v12, 0, v0, vcc
+; GISEL-NEXT:    v_cndmask_b32_e32 v13, 0, v1, vcc
+; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[6:7], v12, v10, 0
+; GISEL-NEXT:    v_subrev_u32_e32 v4, 64, v11
+; GISEL-NEXT:    v_sub_u32_e32 v2, 64, v11
+; GISEL-NEXT:    v_lshrrev_b64 v[2:3], v2, v[6:7]
+; GISEL-NEXT:    v_lshlrev_b64 v[4:5], v4, v[6:7]
+; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v13, v9, v[0:1]
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
-; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v12, v10, v[0:1]
-; GISEL-NEXT:    v_cndmask_b32_e64 v13, v2, 0, s[6:7]
-; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], v8, v9, 0
-; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v13, v9, v[6:7]
-; GISEL-NEXT:    v_mul_lo_u32 v4, v12, v11
-; GISEL-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
+; GISEL-NEXT:    v_cmp_eq_u32_e64 s[6:7], 0, v11
+; GISEL-NEXT:    v_cndmask_b32_e64 v11, v2, 0, s[6:7]
+; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v11, v8, v[6:7]
+; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[8:9], v12, v8, 0
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v6
-; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[8:9], v8, v10, v[1:2]
-; GISEL-NEXT:    v_mul_lo_u32 v6, v8, v11
-; GISEL-NEXT:    v_cndmask_b32_e64 v3, v3, 0, s[6:7]
-; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[10:11], v12, v9, v[1:2]
+; GISEL-NEXT:    v_mul_lo_u32 v6, v12, v10
+; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[8:9], v12, v9, v[1:2]
+; GISEL-NEXT:    v_mul_lo_u32 v4, v13, v10
+; GISEL-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
+; GISEL-NEXT:    v_mad_u64_u32 v[1:2], s[10:11], v13, v8, v[1:2]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v6, s[10:11], v7, v6, s[10:11]
 ; GISEL-NEXT:    v_addc_co_u32_e64 v4, s[8:9], v6, v4, s[8:9]
-; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v13, v10, v[4:5]
+; GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[8:9], v11, v9, v[4:5]
+; GISEL-NEXT:    v_cndmask_b32_e64 v3, v3, 0, s[6:7]
 ; GISEL-NEXT:    ; implicit-def: $vgpr5
-; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v3, v9, v[6:7]
-; GISEL-NEXT:    ; implicit-def: $vgpr7_vgpr8
-; GISEL-NEXT:    ; implicit-def: $vgpr9
+; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[6:7], v3, v8, v[6:7]
+; GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GISEL-NEXT:    ; implicit-def: $vgpr8
+; GISEL-NEXT:    s_or_b64 exec, exec, s[16:17]
 ; GISEL-NEXT:  .LBB7_4: ; %Flow
-; GISEL-NEXT:    s_andn2_saveexec_b64 s[6:7], s[16:17]
-; GISEL-NEXT:    s_cbranch_execz .LBB7_6
+; GISEL-NEXT:    s_xor_b64 s[6:7], s[16:17], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], s[16:17], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[16:17]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB7_6
 ; GISEL-NEXT:  ; %bb.5: ; %fp-to-i-if-then12
 ; GISEL-NEXT:    v_sub_co_u32_e32 v3, vcc, 0x86, v5
 ; GISEL-NEXT:    v_subrev_u32_e32 v2, 64, v3
-; GISEL-NEXT:    v_lshrrev_b64 v[0:1], v3, v[7:8]
+; GISEL-NEXT:    v_lshrrev_b64 v[0:1], v3, v[6:7]
 ; GISEL-NEXT:    v_lshrrev_b64 v[1:2], v2, 0
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v3
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v3
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v7, vcc
-; GISEL-NEXT:    v_mul_hi_i32_i24_e32 v1, v0, v9
+; GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v6, vcc
+; GISEL-NEXT:    v_mul_hi_i32_i24_e32 v1, v0, v8
 ; GISEL-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
-; GISEL-NEXT:    v_mul_i32_i24_e32 v0, v0, v9
+; GISEL-NEXT:    v_mul_i32_i24_e32 v0, v0, v8
 ; GISEL-NEXT:    v_mov_b32_e32 v3, v2
-; GISEL-NEXT:  .LBB7_6: ; %Flow1
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GISEL-NEXT:  .LBB7_6: ; %Flow1
+; GISEL-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; GISEL-NEXT:  .LBB7_7: ; %Flow2
-; GISEL-NEXT:    s_andn2_saveexec_b64 s[6:7], s[14:15]
-; GISEL-NEXT:    s_cbranch_execz .LBB7_9
+; GISEL-NEXT:    s_xor_b64 s[6:7], s[14:15], exec
+; GISEL-NEXT:    s_and_b64 s[8:9], s[14:15], -1
+; GISEL-NEXT:    s_cmov_b64 exec, s[14:15]
+; GISEL-NEXT:    s_cbranch_scc0 .LBB7_9
 ; GISEL-NEXT:  ; %bb.8: ; %fp-to-i-if-then5
 ; GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, -1, s[4:5]
 ; GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
@@ -2183,10 +2317,10 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; GISEL-NEXT:    v_or3_b32 v1, v2, v13, v1
 ; GISEL-NEXT:    v_add_u32_e32 v3, 0x80000000, v1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v1
-; GISEL-NEXT:  .LBB7_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GISEL-NEXT:  .LBB7_10: ; %fp-to-i-cleanup
+; GISEL-NEXT:  .LBB7_9: ; %Flow3
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GISEL-NEXT:  .LBB7_10: ; %fp-to-i-cleanup
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %cvt = fptoui bfloat %x to i128
   ret i128 %cvt

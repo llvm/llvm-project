@@ -54,13 +54,13 @@ body:             |
     %21:_(s32) = G_EXTRACT_VECTOR_ELT %9(<3 x s32>), %15(s32)
     %22:_(s32) = G_EXTRACT_VECTOR_ELT %9(<3 x s32>), %23(s32)
     %24:_(s1) = G_ICMP intpred(slt), %21(s32), %15
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.wave.reconverge), %20(s64)
 
   bb.3:
     successors: %bb.4(0x40000000), %bb.5(0x40000000)
 
     %25:_(s32) = G_PHI %22(s32), %bb.2, %33(s32), %bb.1
     %26:_(s1) = G_PHI %24(s1), %bb.2, %18(s1), %bb.1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %20(s64)
     %27:_(s1), %28:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %26(s1)
     G_BRCOND %27(s1), %bb.4
     G_BR %bb.5
@@ -69,10 +69,10 @@ body:             |
     successors: %bb.5(0x80000000)
 
     %29:_(s32) = G_EXTRACT_VECTOR_ELT %9(<3 x s32>), %30(s32)
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.wave.reconverge), %28(s64)
 
   bb.5:
     %31:_(s32) = G_PHI %25(s32), %bb.3, %29(s32), %bb.4
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %28(s64)
     G_STORE %31(s32), %32(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
     S_ENDPGM 0
 

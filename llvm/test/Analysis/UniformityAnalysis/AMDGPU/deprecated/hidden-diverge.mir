@@ -47,13 +47,13 @@ body:             |
     S_CMP_LT_I32 killed %24, killed %25, implicit-def $scc
     %26:sreg_64 = COPY $scc
     %4:sreg_64 = COPY %26
+    SI_WAVE_RECONVERGE %2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.2:
     successors: %bb.3(0x40000000), %bb.4(0x40000000)
 
     %5:sreg_32 = PHI %14, %bb.0, %3, %bb.1
     %6:vreg_1 = PHI %1, %bb.0, %4, %bb.1
-    SI_END_CF %2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %27:sreg_64 = COPY %6
     %7:sreg_64 = SI_IF %27, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
@@ -62,10 +62,10 @@ body:             |
     successors: %bb.4(0x80000000)
 
     %8:sreg_32 = COPY %0.sub2
+    SI_WAVE_RECONVERGE %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.4:
     %9:vgpr_32 = PHI %5, %bb.2, %8, %bb.3
-    SI_END_CF %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %28:sreg_64 = IMPLICIT_DEF
     %29:vreg_64 = COPY %28
     GLOBAL_STORE_DWORD killed %29, %9, 0, 0, implicit $exec

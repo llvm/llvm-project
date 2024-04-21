@@ -296,7 +296,7 @@ entry:
 ; GCN: v_readfirstlane_b32
 ; GCN: s_and_saveexec_b64
 ; GCN: s_swappc_b64
-; GCN: s_cbranch_execnz
+; GCN: s_cbranch_scc1
 ; GCN: s_setpc_b64
 define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr %func.ptr, i32 %a, i32 %b, i32 %c) #1 {
 entry:

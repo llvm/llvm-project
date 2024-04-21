@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s

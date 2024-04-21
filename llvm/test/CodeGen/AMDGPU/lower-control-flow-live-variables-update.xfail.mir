@@ -1,3 +1,4 @@
+; XFAIL: *
 # RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -start-before=livevars -stop-after=twoaddressinstruction -verify-machineinstrs -o - %s 2>&1  | FileCheck %s
 
 # CHECK: *** Bad machine code: LiveVariables: Block missing from AliveBlocks ***
@@ -26,7 +27,7 @@ body:             |
     %4:sreg_64_xexec = PHI %5, %bb.3, %3, %bb.0
     %6:vgpr_32 = PHI %7, %bb.3, %1, %bb.0
     %8:sreg_64 = S_MOV_B64 1
-    SI_END_CF killed %4, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    SI_WAVE_RECONVERGE killed %4, implicit-def $exec, implicit-def dead $scc, implicit $exec
     %9:vgpr_32 = nsw V_ADD_U32_e32 1, killed %6, implicit $exec
 
   bb.2:

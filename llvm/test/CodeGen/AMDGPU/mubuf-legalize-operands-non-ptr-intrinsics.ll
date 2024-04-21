@@ -13,7 +13,6 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; GFX9_W64-LABEL: mubuf_vgpr:
 ; GFX9_W64:       ; %bb.0:
 ; GFX9_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9_W64-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX9_W64-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s9, v1
@@ -25,12 +24,13 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; GFX9_W64-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX9_W64-NEXT:    s_nop 0
 ; GFX9_W64-NEXT:    buffer_load_format_x v5, v4, s[8:11], 0 idxen
+; GFX9_W64-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
+; GFX9_W64-NEXT:    s_and_b64 s[8:9], s[6:7], -1
 ; GFX9_W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX9_W64-NEXT:    ; implicit-def: $vgpr4
-; GFX9_W64-NEXT:    s_xor_b64 exec, exec, s[4:5]
-; GFX9_W64-NEXT:    s_cbranch_execnz .LBB0_1
+; GFX9_W64-NEXT:    s_cselect_b64 exec, s[6:7], s[4:5]
+; GFX9_W64-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GFX9_W64-NEXT:  ; %bb.2:
-; GFX9_W64-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX9_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9_W64-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX9_W64-NEXT:    s_setpc_b64 s[30:31]
@@ -38,7 +38,6 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; GFX1010_W32-LABEL: mubuf_vgpr:
 ; GFX1010_W32:       ; %bb.0:
 ; GFX1010_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010_W32-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1010_W32-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s9, v1
@@ -49,13 +48,14 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; GFX1010_W32-NEXT:    s_and_b32 s4, vcc_lo, s4
 ; GFX1010_W32-NEXT:    s_and_saveexec_b32 s4, s4
 ; GFX1010_W32-NEXT:    buffer_load_format_x v5, v4, s[8:11], 0 idxen
+; GFX1010_W32-NEXT:    s_xor_b32 s5, exec_lo, s4
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr4
+; GFX1010_W32-NEXT:    s_and_b32 s6, s5, -1
 ; GFX1010_W32-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX1010_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
-; GFX1010_W32-NEXT:    s_cbranch_execnz .LBB0_1
+; GFX1010_W32-NEXT:    s_cselect_b32 exec_lo, s5, s4
+; GFX1010_W32-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GFX1010_W32-NEXT:  ; %bb.2:
-; GFX1010_W32-NEXT:    s_mov_b32 exec_lo, s5
 ; GFX1010_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W32-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX1010_W32-NEXT:    s_setpc_b64 s[30:31]
@@ -63,7 +63,6 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; GFX1010_W64-LABEL: mubuf_vgpr:
 ; GFX1010_W64:       ; %bb.0:
 ; GFX1010_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010_W64-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX1010_W64-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s9, v1
@@ -74,13 +73,14 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; GFX1010_W64-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX1010_W64-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX1010_W64-NEXT:    buffer_load_format_x v5, v4, s[8:11], 0 idxen
+; GFX1010_W64-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr4
 ; GFX1010_W64-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX1010_W64-NEXT:    s_xor_b64 exec, exec, s[4:5]
-; GFX1010_W64-NEXT:    s_cbranch_execnz .LBB0_1
+; GFX1010_W64-NEXT:    s_and_b64 s[8:9], s[6:7], -1
+; GFX1010_W64-NEXT:    s_cselect_b64 exec, s[6:7], s[4:5]
+; GFX1010_W64-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GFX1010_W64-NEXT:  ; %bb.2:
-; GFX1010_W64-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX1010_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W64-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX1010_W64-NEXT:    s_setpc_b64 s[30:31]
@@ -88,7 +88,6 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; GFX1100_W32-LABEL: mubuf_vgpr:
 ; GFX1100_W32:       ; %bb.0:
 ; GFX1100_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100_W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX1100_W32-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s5, v1
@@ -101,12 +100,14 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; GFX1100_W32-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1100_W32-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1100_W32-NEXT:    buffer_load_format_x v5, v4, s[4:7], 0 idxen
+; GFX1100_W32-NEXT:    s_xor_b32 s1, exec_lo, s0
 ; GFX1100_W32-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1100_W32-NEXT:    ; implicit-def: $vgpr4
-; GFX1100_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX1100_W32-NEXT:    s_cbranch_execnz .LBB0_1
+; GFX1100_W32-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100_W32-NEXT:    s_and_b32 s2, s1, -1
+; GFX1100_W32-NEXT:    s_cselect_b32 exec_lo, s1, s0
+; GFX1100_W32-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GFX1100_W32-NEXT:  ; %bb.2:
-; GFX1100_W32-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX1100_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W32-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX1100_W32-NEXT:    s_setpc_b64 s[30:31]
@@ -114,7 +115,6 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; GFX1100_W64-LABEL: mubuf_vgpr:
 ; GFX1100_W64:       ; %bb.0:
 ; GFX1100_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100_W64-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1100_W64-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s5, v1
@@ -127,12 +127,14 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; GFX1100_W64-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; GFX1100_W64-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX1100_W64-NEXT:    buffer_load_format_x v5, v4, s[4:7], 0 idxen
+; GFX1100_W64-NEXT:    s_xor_b64 s[2:3], exec, s[0:1]
 ; GFX1100_W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1100_W64-NEXT:    ; implicit-def: $vgpr4
-; GFX1100_W64-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; GFX1100_W64-NEXT:    s_cbranch_execnz .LBB0_1
+; GFX1100_W64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100_W64-NEXT:    s_and_b64 s[4:5], s[2:3], -1
+; GFX1100_W64-NEXT:    s_cselect_b64 exec, s[2:3], s[0:1]
+; GFX1100_W64-NEXT:    s_cbranch_scc1 .LBB0_1
 ; GFX1100_W64-NEXT:  ; %bb.2:
-; GFX1100_W64-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX1100_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W64-NEXT:    v_mov_b32_e32 v0, v5
 ; GFX1100_W64-NEXT:    s_setpc_b64 s[30:31]
@@ -169,12 +171,10 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7
 ; W64-O0-NEXT:    s_mov_b32 s4, 0
 ; W64-O0-NEXT:    v_writelane_b32 v0, s4, 0
-; W64-O0-NEXT:    s_mov_b64 s[4:5], exec
-; W64-O0-NEXT:    v_writelane_b32 v0, s4, 1
-; W64-O0-NEXT:    v_writelane_b32 v0, s5, 2
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
+; W64-O0-NEXT:    s_mov_b64 s[4:5], exec
 ; W64-O0-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -199,13 +199,13 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W64-O0-NEXT:    s_mov_b32 s9, s12
 ; W64-O0-NEXT:    s_mov_b32 s10, s7
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
-; W64-O0-NEXT:    v_writelane_b32 v0, s8, 3
-; W64-O0-NEXT:    v_writelane_b32 v0, s9, 4
-; W64-O0-NEXT:    v_writelane_b32 v0, s10, 5
-; W64-O0-NEXT:    v_writelane_b32 v0, s11, 6
+; W64-O0-NEXT:    v_writelane_b32 v0, s8, 1
+; W64-O0-NEXT:    v_writelane_b32 v0, s9, 2
+; W64-O0-NEXT:    v_writelane_b32 v0, s10, 3
+; W64-O0-NEXT:    v_writelane_b32 v0, s11, 4
 ; W64-O0-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
-; W64-O0-NEXT:    v_writelane_b32 v0, s4, 7
-; W64-O0-NEXT:    v_writelane_b32 v0, s5, 8
+; W64-O0-NEXT:    v_writelane_b32 v0, s4, 5
+; W64-O0-NEXT:    v_writelane_b32 v0, s5, 6
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
@@ -214,29 +214,27 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
-; W64-O0-NEXT:    v_readlane_b32 s4, v1, 7
-; W64-O0-NEXT:    v_readlane_b32 s5, v1, 8
-; W64-O0-NEXT:    v_readlane_b32 s8, v1, 3
-; W64-O0-NEXT:    v_readlane_b32 s9, v1, 4
-; W64-O0-NEXT:    v_readlane_b32 s10, v1, 5
-; W64-O0-NEXT:    v_readlane_b32 s11, v1, 6
-; W64-O0-NEXT:    v_readlane_b32 s6, v1, 0
+; W64-O0-NEXT:    v_readlane_b32 s6, v1, 5
+; W64-O0-NEXT:    v_readlane_b32 s7, v1, 6
+; W64-O0-NEXT:    v_readlane_b32 s8, v1, 1
+; W64-O0-NEXT:    v_readlane_b32 s9, v1, 2
+; W64-O0-NEXT:    v_readlane_b32 s10, v1, 3
+; W64-O0-NEXT:    v_readlane_b32 s11, v1, 4
+; W64-O0-NEXT:    v_readlane_b32 s4, v1, 0
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    s_nop 2
-; W64-O0-NEXT:    buffer_load_format_x v0, v0, s[8:11], s6 idxen
+; W64-O0-NEXT:    buffer_load_format_x v0, v0, s[8:11], s4 idxen
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_xor_b64 exec, exec, s[4:5]
-; W64-O0-NEXT:    s_cbranch_execnz .LBB0_1
+; W64-O0-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; W64-O0-NEXT:    s_and_b64 s[8:9], s[4:5], -1
+; W64-O0-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
+; W64-O0-NEXT:    s_cbranch_scc1 .LBB0_1
 ; W64-O0-NEXT:  ; %bb.3:
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
-; W64-O0-NEXT:    s_waitcnt vmcnt(0)
-; W64-O0-NEXT:    v_readlane_b32 s4, v1, 1
-; W64-O0-NEXT:    v_readlane_b32 s5, v1, 2
-; W64-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    ; kill: killed $vgpr1
 ; W64-O0-NEXT:    s_xor_saveexec_b64 s[4:5], -1
@@ -259,7 +257,6 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX9_W64-LABEL: mubuf_vgpr_adjacent_in_block:
 ; GFX9_W64:       ; %bb.0: ; %entry
 ; GFX9_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9_W64-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX9_W64-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s9, v1
@@ -271,13 +268,12 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX9_W64-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX9_W64-NEXT:    s_nop 0
 ; GFX9_W64-NEXT:    buffer_load_format_x v13, v8, s[8:11], 0 idxen
+; GFX9_W64-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
+; GFX9_W64-NEXT:    s_and_b64 s[8:9], s[6:7], -1
 ; GFX9_W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX9_W64-NEXT:    s_xor_b64 exec, exec, s[4:5]
-; GFX9_W64-NEXT:    s_cbranch_execnz .LBB1_1
-; GFX9_W64-NEXT:  ; %bb.2:
-; GFX9_W64-NEXT:    s_mov_b64 exec, s[6:7]
-; GFX9_W64-NEXT:    s_mov_b64 s[6:7], exec
-; GFX9_W64-NEXT:  .LBB1_3: ; =>This Inner Loop Header: Depth=1
+; GFX9_W64-NEXT:    s_cselect_b64 exec, s[6:7], s[4:5]
+; GFX9_W64-NEXT:    s_cbranch_scc1 .LBB1_1
+; GFX9_W64-NEXT:  .LBB1_2: ; =>This Inner Loop Header: Depth=1
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s8, v4
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s9, v5
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s10, v6
@@ -288,12 +284,13 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX9_W64-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX9_W64-NEXT:    s_nop 0
 ; GFX9_W64-NEXT:    buffer_load_format_x v0, v8, s[8:11], 0 idxen
+; GFX9_W64-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
+; GFX9_W64-NEXT:    s_and_b64 s[8:9], s[6:7], -1
 ; GFX9_W64-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX9_W64-NEXT:    ; implicit-def: $vgpr8
-; GFX9_W64-NEXT:    s_xor_b64 exec, exec, s[4:5]
-; GFX9_W64-NEXT:    s_cbranch_execnz .LBB1_3
-; GFX9_W64-NEXT:  ; %bb.4:
-; GFX9_W64-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX9_W64-NEXT:    s_cselect_b64 exec, s[6:7], s[4:5]
+; GFX9_W64-NEXT:    s_cbranch_scc1 .LBB1_2
+; GFX9_W64-NEXT:  ; %bb.3:
 ; GFX9_W64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9_W64-NEXT:    global_store_dword v[9:10], v13, off
 ; GFX9_W64-NEXT:    s_waitcnt vmcnt(0)
@@ -304,7 +301,6 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1010_W32-LABEL: mubuf_vgpr_adjacent_in_block:
 ; GFX1010_W32:       ; %bb.0: ; %entry
 ; GFX1010_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010_W32-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1010_W32-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s9, v1
@@ -315,14 +311,13 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1010_W32-NEXT:    s_and_b32 s4, vcc_lo, s4
 ; GFX1010_W32-NEXT:    s_and_saveexec_b32 s4, s4
 ; GFX1010_W32-NEXT:    buffer_load_format_x v13, v8, s[8:11], 0 idxen
+; GFX1010_W32-NEXT:    s_xor_b32 s5, exec_lo, s4
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX1010_W32-NEXT:    s_and_b32 s6, s5, -1
 ; GFX1010_W32-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX1010_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
-; GFX1010_W32-NEXT:    s_cbranch_execnz .LBB1_1
-; GFX1010_W32-NEXT:  ; %bb.2:
-; GFX1010_W32-NEXT:    s_mov_b32 exec_lo, s5
-; GFX1010_W32-NEXT:    s_mov_b32 s5, exec_lo
-; GFX1010_W32-NEXT:  .LBB1_3: ; =>This Inner Loop Header: Depth=1
+; GFX1010_W32-NEXT:    s_cselect_b32 exec_lo, s5, s4
+; GFX1010_W32-NEXT:    s_cbranch_scc1 .LBB1_1
+; GFX1010_W32-NEXT:  .LBB1_2: ; =>This Inner Loop Header: Depth=1
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s8, v4
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s9, v5
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s10, v6
@@ -332,13 +327,14 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1010_W32-NEXT:    s_and_b32 s4, vcc_lo, s4
 ; GFX1010_W32-NEXT:    s_and_saveexec_b32 s4, s4
 ; GFX1010_W32-NEXT:    buffer_load_format_x v0, v8, s[8:11], 0 idxen
+; GFX1010_W32-NEXT:    s_xor_b32 s5, exec_lo, s4
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr8
+; GFX1010_W32-NEXT:    s_and_b32 s6, s5, -1
 ; GFX1010_W32-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX1010_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
-; GFX1010_W32-NEXT:    s_cbranch_execnz .LBB1_3
-; GFX1010_W32-NEXT:  ; %bb.4:
-; GFX1010_W32-NEXT:    s_mov_b32 exec_lo, s5
+; GFX1010_W32-NEXT:    s_cselect_b32 exec_lo, s5, s4
+; GFX1010_W32-NEXT:    s_cbranch_scc1 .LBB1_2
+; GFX1010_W32-NEXT:  ; %bb.3:
 ; GFX1010_W32-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1010_W32-NEXT:    global_store_dword v[9:10], v13, off
 ; GFX1010_W32-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -350,7 +346,6 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1010_W64-LABEL: mubuf_vgpr_adjacent_in_block:
 ; GFX1010_W64:       ; %bb.0: ; %entry
 ; GFX1010_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010_W64-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX1010_W64-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s9, v1
@@ -361,14 +356,13 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1010_W64-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX1010_W64-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX1010_W64-NEXT:    buffer_load_format_x v13, v8, s[8:11], 0 idxen
+; GFX1010_W64-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1010_W64-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX1010_W64-NEXT:    s_xor_b64 exec, exec, s[4:5]
-; GFX1010_W64-NEXT:    s_cbranch_execnz .LBB1_1
-; GFX1010_W64-NEXT:  ; %bb.2:
-; GFX1010_W64-NEXT:    s_mov_b64 exec, s[6:7]
-; GFX1010_W64-NEXT:    s_mov_b64 s[6:7], exec
-; GFX1010_W64-NEXT:  .LBB1_3: ; =>This Inner Loop Header: Depth=1
+; GFX1010_W64-NEXT:    s_and_b64 s[8:9], s[6:7], -1
+; GFX1010_W64-NEXT:    s_cselect_b64 exec, s[6:7], s[4:5]
+; GFX1010_W64-NEXT:    s_cbranch_scc1 .LBB1_1
+; GFX1010_W64-NEXT:  .LBB1_2: ; =>This Inner Loop Header: Depth=1
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s8, v4
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s9, v5
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s10, v6
@@ -378,13 +372,14 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1010_W64-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX1010_W64-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX1010_W64-NEXT:    buffer_load_format_x v0, v8, s[8:11], 0 idxen
+; GFX1010_W64-NEXT:    s_xor_b64 s[6:7], exec, s[4:5]
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr8
 ; GFX1010_W64-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX1010_W64-NEXT:    s_xor_b64 exec, exec, s[4:5]
-; GFX1010_W64-NEXT:    s_cbranch_execnz .LBB1_3
-; GFX1010_W64-NEXT:  ; %bb.4:
-; GFX1010_W64-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX1010_W64-NEXT:    s_and_b64 s[8:9], s[6:7], -1
+; GFX1010_W64-NEXT:    s_cselect_b64 exec, s[6:7], s[4:5]
+; GFX1010_W64-NEXT:    s_cbranch_scc1 .LBB1_2
+; GFX1010_W64-NEXT:  ; %bb.3:
 ; GFX1010_W64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1010_W64-NEXT:    global_store_dword v[9:10], v13, off
 ; GFX1010_W64-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -396,7 +391,6 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1100_W32-LABEL: mubuf_vgpr_adjacent_in_block:
 ; GFX1100_W32:       ; %bb.0: ; %entry
 ; GFX1100_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100_W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX1100_W32-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s5, v1
@@ -409,14 +403,13 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1100_W32-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1100_W32-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1100_W32-NEXT:    buffer_load_format_x v13, v8, s[4:7], 0 idxen
+; GFX1100_W32-NEXT:    s_xor_b32 s1, exec_lo, s0
 ; GFX1100_W32-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX1100_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX1100_W32-NEXT:    s_cbranch_execnz .LBB1_1
-; GFX1100_W32-NEXT:  ; %bb.2:
-; GFX1100_W32-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX1100_W32-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100_W32-NEXT:    s_mov_b32 s1, exec_lo
-; GFX1100_W32-NEXT:  .LBB1_3: ; =>This Inner Loop Header: Depth=1
+; GFX1100_W32-NEXT:    s_and_b32 s2, s1, -1
+; GFX1100_W32-NEXT:    s_cselect_b32 exec_lo, s1, s0
+; GFX1100_W32-NEXT:    s_cbranch_scc1 .LBB1_1
+; GFX1100_W32-NEXT:  .LBB1_2: ; =>This Inner Loop Header: Depth=1
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s4, v4
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s5, v5
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s6, v6
@@ -428,12 +421,14 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1100_W32-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1100_W32-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1100_W32-NEXT:    buffer_load_format_x v0, v8, s[4:7], 0 idxen
+; GFX1100_W32-NEXT:    s_xor_b32 s1, exec_lo, s0
 ; GFX1100_W32-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1100_W32-NEXT:    ; implicit-def: $vgpr8
-; GFX1100_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX1100_W32-NEXT:    s_cbranch_execnz .LBB1_3
-; GFX1100_W32-NEXT:  ; %bb.4:
-; GFX1100_W32-NEXT:    s_mov_b32 exec_lo, s1
+; GFX1100_W32-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100_W32-NEXT:    s_and_b32 s2, s1, -1
+; GFX1100_W32-NEXT:    s_cselect_b32 exec_lo, s1, s0
+; GFX1100_W32-NEXT:    s_cbranch_scc1 .LBB1_2
+; GFX1100_W32-NEXT:  ; %bb.3:
 ; GFX1100_W32-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1100_W32-NEXT:    global_store_b32 v[9:10], v13, off dlc
 ; GFX1100_W32-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -445,7 +440,6 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1100_W64-LABEL: mubuf_vgpr_adjacent_in_block:
 ; GFX1100_W64:       ; %bb.0: ; %entry
 ; GFX1100_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100_W64-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1100_W64-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s5, v1
@@ -458,14 +452,13 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1100_W64-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; GFX1100_W64-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX1100_W64-NEXT:    buffer_load_format_x v13, v8, s[4:7], 0 idxen
+; GFX1100_W64-NEXT:    s_xor_b64 s[2:3], exec, s[0:1]
 ; GFX1100_W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX1100_W64-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; GFX1100_W64-NEXT:    s_cbranch_execnz .LBB1_1
-; GFX1100_W64-NEXT:  ; %bb.2:
-; GFX1100_W64-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX1100_W64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100_W64-NEXT:    s_mov_b64 s[2:3], exec
-; GFX1100_W64-NEXT:  .LBB1_3: ; =>This Inner Loop Header: Depth=1
+; GFX1100_W64-NEXT:    s_and_b64 s[4:5], s[2:3], -1
+; GFX1100_W64-NEXT:    s_cselect_b64 exec, s[2:3], s[0:1]
+; GFX1100_W64-NEXT:    s_cbranch_scc1 .LBB1_1
+; GFX1100_W64-NEXT:  .LBB1_2: ; =>This Inner Loop Header: Depth=1
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s4, v4
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s5, v5
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s6, v6
@@ -477,12 +470,14 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1100_W64-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; GFX1100_W64-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX1100_W64-NEXT:    buffer_load_format_x v0, v8, s[4:7], 0 idxen
+; GFX1100_W64-NEXT:    s_xor_b64 s[2:3], exec, s[0:1]
 ; GFX1100_W64-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1100_W64-NEXT:    ; implicit-def: $vgpr8
-; GFX1100_W64-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; GFX1100_W64-NEXT:    s_cbranch_execnz .LBB1_3
-; GFX1100_W64-NEXT:  ; %bb.4:
-; GFX1100_W64-NEXT:    s_mov_b64 exec, s[2:3]
+; GFX1100_W64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100_W64-NEXT:    s_and_b64 s[4:5], s[2:3], -1
+; GFX1100_W64-NEXT:    s_cselect_b64 exec, s[2:3], s[0:1]
+; GFX1100_W64-NEXT:    s_cbranch_scc1 .LBB1_2
+; GFX1100_W64-NEXT:  ; %bb.3:
 ; GFX1100_W64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1100_W64-NEXT:    global_store_b32 v[9:10], v13, off dlc
 ; GFX1100_W64-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -561,12 +556,10 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7
 ; W64-O0-NEXT:    s_mov_b32 s4, 0
 ; W64-O0-NEXT:    v_writelane_b32 v0, s4, 0
-; W64-O0-NEXT:    s_mov_b64 s[4:5], exec
-; W64-O0-NEXT:    v_writelane_b32 v0, s4, 1
-; W64-O0-NEXT:    v_writelane_b32 v0, s5, 2
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
+; W64-O0-NEXT:    s_mov_b64 s[4:5], exec
 ; W64-O0-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -591,13 +584,13 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    s_mov_b32 s9, s12
 ; W64-O0-NEXT:    s_mov_b32 s10, s7
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
-; W64-O0-NEXT:    v_writelane_b32 v0, s8, 3
-; W64-O0-NEXT:    v_writelane_b32 v0, s9, 4
-; W64-O0-NEXT:    v_writelane_b32 v0, s10, 5
-; W64-O0-NEXT:    v_writelane_b32 v0, s11, 6
+; W64-O0-NEXT:    v_writelane_b32 v0, s8, 1
+; W64-O0-NEXT:    v_writelane_b32 v0, s9, 2
+; W64-O0-NEXT:    v_writelane_b32 v0, s10, 3
+; W64-O0-NEXT:    v_writelane_b32 v0, s11, 4
 ; W64-O0-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
-; W64-O0-NEXT:    v_writelane_b32 v0, s4, 7
-; W64-O0-NEXT:    v_writelane_b32 v0, s5, 8
+; W64-O0-NEXT:    v_writelane_b32 v0, s4, 5
+; W64-O0-NEXT:    v_writelane_b32 v0, s5, 6
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
@@ -606,35 +599,25 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
-; W64-O0-NEXT:    v_readlane_b32 s4, v1, 7
-; W64-O0-NEXT:    v_readlane_b32 s5, v1, 8
-; W64-O0-NEXT:    v_readlane_b32 s8, v1, 3
-; W64-O0-NEXT:    v_readlane_b32 s9, v1, 4
-; W64-O0-NEXT:    v_readlane_b32 s10, v1, 5
-; W64-O0-NEXT:    v_readlane_b32 s11, v1, 6
-; W64-O0-NEXT:    v_readlane_b32 s6, v1, 0
+; W64-O0-NEXT:    v_readlane_b32 s6, v1, 5
+; W64-O0-NEXT:    v_readlane_b32 s7, v1, 6
+; W64-O0-NEXT:    v_readlane_b32 s8, v1, 1
+; W64-O0-NEXT:    v_readlane_b32 s9, v1, 2
+; W64-O0-NEXT:    v_readlane_b32 s10, v1, 3
+; W64-O0-NEXT:    v_readlane_b32 s11, v1, 4
+; W64-O0-NEXT:    v_readlane_b32 s4, v1, 0
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    s_nop 2
-; W64-O0-NEXT:    buffer_load_format_x v0, v0, s[8:11], s6 idxen
+; W64-O0-NEXT:    buffer_load_format_x v0, v0, s[8:11], s4 idxen
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_xor_b64 exec, exec, s[4:5]
-; W64-O0-NEXT:    s_cbranch_execnz .LBB1_1
+; W64-O0-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; W64-O0-NEXT:    s_and_b64 s[8:9], s[4:5], -1
+; W64-O0-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
+; W64-O0-NEXT:    s_cbranch_scc1 .LBB1_1
 ; W64-O0-NEXT:  ; %bb.3:
-; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
-; W64-O0-NEXT:    s_waitcnt vmcnt(0)
-; W64-O0-NEXT:    v_readlane_b32 s4, v0, 1
-; W64-O0-NEXT:    v_readlane_b32 s5, v0, 2
-; W64-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; W64-O0-NEXT:    s_mov_b64 s[4:5], exec
-; W64-O0-NEXT:    v_writelane_b32 v0, s4, 9
-; W64-O0-NEXT:    v_writelane_b32 v0, s5, 10
-; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:  .LBB1_4: ; =>This Inner Loop Header: Depth=1
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -659,13 +642,13 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    s_mov_b32 s9, s12
 ; W64-O0-NEXT:    s_mov_b32 s10, s7
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
-; W64-O0-NEXT:    v_writelane_b32 v0, s8, 11
-; W64-O0-NEXT:    v_writelane_b32 v0, s9, 12
-; W64-O0-NEXT:    v_writelane_b32 v0, s10, 13
-; W64-O0-NEXT:    v_writelane_b32 v0, s11, 14
+; W64-O0-NEXT:    v_writelane_b32 v0, s8, 7
+; W64-O0-NEXT:    v_writelane_b32 v0, s9, 8
+; W64-O0-NEXT:    v_writelane_b32 v0, s10, 9
+; W64-O0-NEXT:    v_writelane_b32 v0, s11, 10
 ; W64-O0-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
-; W64-O0-NEXT:    v_writelane_b32 v0, s4, 15
-; W64-O0-NEXT:    v_writelane_b32 v0, s5, 16
+; W64-O0-NEXT:    v_writelane_b32 v0, s4, 11
+; W64-O0-NEXT:    v_writelane_b32 v0, s5, 12
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
@@ -674,29 +657,27 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
-; W64-O0-NEXT:    v_readlane_b32 s4, v1, 15
-; W64-O0-NEXT:    v_readlane_b32 s5, v1, 16
-; W64-O0-NEXT:    v_readlane_b32 s8, v1, 11
-; W64-O0-NEXT:    v_readlane_b32 s9, v1, 12
-; W64-O0-NEXT:    v_readlane_b32 s10, v1, 13
-; W64-O0-NEXT:    v_readlane_b32 s11, v1, 14
-; W64-O0-NEXT:    v_readlane_b32 s6, v1, 0
+; W64-O0-NEXT:    v_readlane_b32 s6, v1, 11
+; W64-O0-NEXT:    v_readlane_b32 s7, v1, 12
+; W64-O0-NEXT:    v_readlane_b32 s8, v1, 7
+; W64-O0-NEXT:    v_readlane_b32 s9, v1, 8
+; W64-O0-NEXT:    v_readlane_b32 s10, v1, 9
+; W64-O0-NEXT:    v_readlane_b32 s11, v1, 10
+; W64-O0-NEXT:    v_readlane_b32 s4, v1, 0
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    s_nop 2
-; W64-O0-NEXT:    buffer_load_format_x v0, v0, s[8:11], s6 idxen
+; W64-O0-NEXT:    buffer_load_format_x v0, v0, s[8:11], s4 idxen
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_xor_b64 exec, exec, s[4:5]
-; W64-O0-NEXT:    s_cbranch_execnz .LBB1_4
+; W64-O0-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; W64-O0-NEXT:    s_and_b64 s[8:9], s[4:5], -1
+; W64-O0-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
+; W64-O0-NEXT:    s_cbranch_scc1 .LBB1_4
 ; W64-O0-NEXT:  ; %bb.6:
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
-; W64-O0-NEXT:    s_waitcnt vmcnt(0)
-; W64-O0-NEXT:    v_readlane_b32 s4, v0, 9
-; W64-O0-NEXT:    v_readlane_b32 s5, v0, 10
-; W64-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; W64-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
@@ -733,8 +714,7 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX9_W64-NEXT:    ;;#ASMSTART
 ; GFX9_W64-NEXT:    s_mov_b32 s4, 17
 ; GFX9_W64-NEXT:    ;;#ASMEND
-; GFX9_W64-NEXT:    v_mov_b32_e32 v8, s4
-; GFX9_W64-NEXT:    s_mov_b64 s[12:13], exec
+; GFX9_W64-NEXT:    v_mov_b32_e32 v9, s4
 ; GFX9_W64-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s9, v1
@@ -745,20 +725,22 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX9_W64-NEXT:    s_and_b64 s[6:7], vcc, s[6:7]
 ; GFX9_W64-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
 ; GFX9_W64-NEXT:    s_nop 0
-; GFX9_W64-NEXT:    buffer_load_format_x v9, v8, s[8:11], 0 idxen
+; GFX9_W64-NEXT:    buffer_load_format_x v8, v9, s[8:11], 0 idxen
+; GFX9_W64-NEXT:    s_xor_b64 s[8:9], exec, s[6:7]
+; GFX9_W64-NEXT:    s_and_b64 s[10:11], s[8:9], -1
 ; GFX9_W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX9_W64-NEXT:    ; implicit-def: $vgpr8
-; GFX9_W64-NEXT:    s_xor_b64 exec, exec, s[6:7]
-; GFX9_W64-NEXT:    s_cbranch_execnz .LBB2_1
+; GFX9_W64-NEXT:    ; implicit-def: $vgpr9
+; GFX9_W64-NEXT:    s_cselect_b64 exec, s[8:9], s[6:7]
+; GFX9_W64-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GFX9_W64-NEXT:  ; %bb.2:
-; GFX9_W64-NEXT:    s_mov_b64 exec, s[12:13]
 ; GFX9_W64-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX9_W64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX9_W64-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GFX9_W64-NEXT:    s_cbranch_execz .LBB2_6
+; GFX9_W64-NEXT:    s_mov_b64 s[6:7], exec
+; GFX9_W64-NEXT:    s_and_b64 s[8:9], vcc, -1
+; GFX9_W64-NEXT:    s_cmov_b64 exec, vcc
+; GFX9_W64-NEXT:    s_cbranch_scc0 .LBB2_6
 ; GFX9_W64-NEXT:  ; %bb.3: ; %bb1
 ; GFX9_W64-NEXT:    v_mov_b32_e32 v0, s4
-; GFX9_W64-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX9_W64-NEXT:  .LBB2_4: ; =>This Inner Loop Header: Depth=1
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s8, v4
 ; GFX9_W64-NEXT:    v_readfirstlane_b32 s9, v5
@@ -769,17 +751,18 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX9_W64-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX9_W64-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX9_W64-NEXT:    s_nop 0
-; GFX9_W64-NEXT:    buffer_load_format_x v9, v0, s[8:11], 0 idxen
+; GFX9_W64-NEXT:    buffer_load_format_x v8, v0, s[8:11], 0 idxen
+; GFX9_W64-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
+; GFX9_W64-NEXT:    s_and_b64 s[10:11], s[8:9], -1
 ; GFX9_W64-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX9_W64-NEXT:    ; implicit-def: $vgpr0
-; GFX9_W64-NEXT:    s_xor_b64 exec, exec, s[4:5]
-; GFX9_W64-NEXT:    s_cbranch_execnz .LBB2_4
+; GFX9_W64-NEXT:    s_cselect_b64 exec, s[8:9], s[4:5]
+; GFX9_W64-NEXT:    s_cbranch_scc1 .LBB2_4
 ; GFX9_W64-NEXT:  ; %bb.5:
-; GFX9_W64-NEXT:    s_mov_b64 exec, s[12:13]
-; GFX9_W64-NEXT:  .LBB2_6: ; %bb2
 ; GFX9_W64-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GFX9_W64-NEXT:  .LBB2_6: ; %bb2
 ; GFX9_W64-NEXT:    s_waitcnt vmcnt(0)
-; GFX9_W64-NEXT:    global_store_dword v[11:12], v9, off
+; GFX9_W64-NEXT:    global_store_dword v[11:12], v8, off
 ; GFX9_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9_W64-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -790,7 +773,6 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1010_W32-NEXT:    s_mov_b32 s4, 17
 ; GFX1010_W32-NEXT:    ;;#ASMEND
 ; GFX1010_W32-NEXT:    v_mov_b32_e32 v8, s4
-; GFX1010_W32-NEXT:    s_mov_b32 s6, exec_lo
 ; GFX1010_W32-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s9, v1
@@ -801,20 +783,22 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1010_W32-NEXT:    s_and_b32 s5, vcc_lo, s5
 ; GFX1010_W32-NEXT:    s_and_saveexec_b32 s5, s5
 ; GFX1010_W32-NEXT:    buffer_load_format_x v9, v8, s[8:11], 0 idxen
+; GFX1010_W32-NEXT:    s_xor_b32 s6, exec_lo, s5
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr8
+; GFX1010_W32-NEXT:    s_and_b32 s7, s6, -1
 ; GFX1010_W32-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX1010_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s5
-; GFX1010_W32-NEXT:    s_cbranch_execnz .LBB2_1
+; GFX1010_W32-NEXT:    s_cselect_b32 exec_lo, s6, s5
+; GFX1010_W32-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GFX1010_W32-NEXT:  ; %bb.2:
-; GFX1010_W32-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX1010_W32-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
+; GFX1010_W32-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1010_W32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1010_W32-NEXT:    s_and_saveexec_b32 s5, vcc_lo
-; GFX1010_W32-NEXT:    s_cbranch_execz .LBB2_6
+; GFX1010_W32-NEXT:    s_and_b32 s6, vcc_lo, -1
+; GFX1010_W32-NEXT:    s_cmov_b32 exec_lo, vcc_lo
+; GFX1010_W32-NEXT:    s_cbranch_scc0 .LBB2_6
 ; GFX1010_W32-NEXT:  ; %bb.3: ; %bb1
 ; GFX1010_W32-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1010_W32-NEXT:    s_mov_b32 s6, exec_lo
 ; GFX1010_W32-NEXT:  .LBB2_4: ; =>This Inner Loop Header: Depth=1
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s8, v4
 ; GFX1010_W32-NEXT:    v_readfirstlane_b32 s9, v5
@@ -825,15 +809,16 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1010_W32-NEXT:    s_and_b32 s4, vcc_lo, s4
 ; GFX1010_W32-NEXT:    s_and_saveexec_b32 s4, s4
 ; GFX1010_W32-NEXT:    buffer_load_format_x v9, v0, s[8:11], 0 idxen
+; GFX1010_W32-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr0
+; GFX1010_W32-NEXT:    s_and_b32 s7, s6, -1
 ; GFX1010_W32-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX1010_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
-; GFX1010_W32-NEXT:    s_cbranch_execnz .LBB2_4
+; GFX1010_W32-NEXT:    s_cselect_b32 exec_lo, s6, s4
+; GFX1010_W32-NEXT:    s_cbranch_scc1 .LBB2_4
 ; GFX1010_W32-NEXT:  ; %bb.5:
-; GFX1010_W32-NEXT:    s_mov_b32 exec_lo, s6
-; GFX1010_W32-NEXT:  .LBB2_6: ; %bb2
 ; GFX1010_W32-NEXT:    s_or_b32 exec_lo, exec_lo, s5
+; GFX1010_W32-NEXT:  .LBB2_6: ; %bb2
 ; GFX1010_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W32-NEXT:    global_store_dword v[11:12], v9, off
 ; GFX1010_W32-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -846,7 +831,6 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1010_W64-NEXT:    s_mov_b32 s4, 17
 ; GFX1010_W64-NEXT:    ;;#ASMEND
 ; GFX1010_W64-NEXT:    v_mov_b32_e32 v8, s4
-; GFX1010_W64-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX1010_W64-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s9, v1
@@ -857,20 +841,22 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1010_W64-NEXT:    s_and_b64 s[6:7], vcc, s[6:7]
 ; GFX1010_W64-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
 ; GFX1010_W64-NEXT:    buffer_load_format_x v9, v8, s[8:11], 0 idxen
+; GFX1010_W64-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010_W64-NEXT:    s_xor_b64 s[8:9], exec, s[6:7]
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr8
-; GFX1010_W64-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX1010_W64-NEXT:    s_xor_b64 exec, exec, s[6:7]
-; GFX1010_W64-NEXT:    s_cbranch_execnz .LBB2_1
+; GFX1010_W64-NEXT:    s_and_b64 s[10:11], s[8:9], -1
+; GFX1010_W64-NEXT:    s_cselect_b64 exec, s[8:9], s[6:7]
+; GFX1010_W64-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GFX1010_W64-NEXT:  ; %bb.2:
-; GFX1010_W64-NEXT:    s_mov_b64 exec, s[12:13]
 ; GFX1010_W64-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
+; GFX1010_W64-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX1010_W64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX1010_W64-NEXT:    s_and_saveexec_b64 s[6:7], vcc
-; GFX1010_W64-NEXT:    s_cbranch_execz .LBB2_6
+; GFX1010_W64-NEXT:    s_and_b64 s[8:9], vcc, -1
+; GFX1010_W64-NEXT:    s_cmov_b64 exec, vcc
+; GFX1010_W64-NEXT:    s_cbranch_scc0 .LBB2_6
 ; GFX1010_W64-NEXT:  ; %bb.3: ; %bb1
 ; GFX1010_W64-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1010_W64-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX1010_W64-NEXT:  .LBB2_4: ; =>This Inner Loop Header: Depth=1
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s8, v4
 ; GFX1010_W64-NEXT:    v_readfirstlane_b32 s9, v5
@@ -881,15 +867,16 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1010_W64-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX1010_W64-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX1010_W64-NEXT:    buffer_load_format_x v9, v0, s[8:11], 0 idxen
+; GFX1010_W64-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010_W64-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr0
-; GFX1010_W64-NEXT:    s_waitcnt_depctr 0xffe3
-; GFX1010_W64-NEXT:    s_xor_b64 exec, exec, s[4:5]
-; GFX1010_W64-NEXT:    s_cbranch_execnz .LBB2_4
+; GFX1010_W64-NEXT:    s_and_b64 s[10:11], s[8:9], -1
+; GFX1010_W64-NEXT:    s_cselect_b64 exec, s[8:9], s[4:5]
+; GFX1010_W64-NEXT:    s_cbranch_scc1 .LBB2_4
 ; GFX1010_W64-NEXT:  ; %bb.5:
-; GFX1010_W64-NEXT:    s_mov_b64 exec, s[12:13]
-; GFX1010_W64-NEXT:  .LBB2_6: ; %bb2
 ; GFX1010_W64-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GFX1010_W64-NEXT:  .LBB2_6: ; %bb2
 ; GFX1010_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W64-NEXT:    global_store_dword v[11:12], v9, off
 ; GFX1010_W64-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -902,7 +889,6 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1100_W32-NEXT:    s_mov_b32 s4, 17
 ; GFX1100_W32-NEXT:    ;;#ASMEND
 ; GFX1100_W32-NEXT:    v_mov_b32_e32 v8, s4
-; GFX1100_W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX1100_W32-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s9, v1
@@ -915,20 +901,23 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1100_W32-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1100_W32-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1100_W32-NEXT:    buffer_load_format_x v9, v8, s[8:11], 0 idxen
+; GFX1100_W32-NEXT:    s_xor_b32 s1, exec_lo, s0
 ; GFX1100_W32-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1100_W32-NEXT:    ; implicit-def: $vgpr8
-; GFX1100_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX1100_W32-NEXT:    s_cbranch_execnz .LBB2_1
+; GFX1100_W32-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100_W32-NEXT:    s_and_b32 s2, s1, -1
+; GFX1100_W32-NEXT:    s_cselect_b32 exec_lo, s1, s0
+; GFX1100_W32-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GFX1100_W32-NEXT:  ; %bb.2:
-; GFX1100_W32-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX1100_W32-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX1100_W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX1100_W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100_W32-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1100_W32-NEXT:    s_cbranch_execz .LBB2_6
+; GFX1100_W32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GFX1100_W32-NEXT:    s_and_b32 s0, vcc_lo, -1
+; GFX1100_W32-NEXT:    s_cmov_b32 exec_lo, vcc_lo
+; GFX1100_W32-NEXT:    s_cbranch_scc0 .LBB2_6
 ; GFX1100_W32-NEXT:  ; %bb.3: ; %bb1
 ; GFX1100_W32-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1100_W32-NEXT:    s_mov_b32 s2, exec_lo
 ; GFX1100_W32-NEXT:  .LBB2_4: ; =>This Inner Loop Header: Depth=1
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s4, v4
 ; GFX1100_W32-NEXT:    v_readfirstlane_b32 s5, v5
@@ -941,15 +930,16 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1100_W32-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1100_W32-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX1100_W32-NEXT:    buffer_load_format_x v9, v0, s[4:7], 0 idxen
+; GFX1100_W32-NEXT:    s_xor_b32 s2, exec_lo, s0
 ; GFX1100_W32-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1100_W32-NEXT:    ; implicit-def: $vgpr0
-; GFX1100_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GFX1100_W32-NEXT:    s_cbranch_execnz .LBB2_4
-; GFX1100_W32-NEXT:  ; %bb.5:
-; GFX1100_W32-NEXT:    s_mov_b32 exec_lo, s2
-; GFX1100_W32-NEXT:  .LBB2_6: ; %bb2
 ; GFX1100_W32-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100_W32-NEXT:    s_and_b32 s3, s2, -1
+; GFX1100_W32-NEXT:    s_cselect_b32 exec_lo, s2, s0
+; GFX1100_W32-NEXT:    s_cbranch_scc1 .LBB2_4
+; GFX1100_W32-NEXT:  ; %bb.5:
 ; GFX1100_W32-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; GFX1100_W32-NEXT:  .LBB2_6: ; %bb2
 ; GFX1100_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W32-NEXT:    global_store_b32 v[11:12], v9, off dlc
 ; GFX1100_W32-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -962,7 +952,6 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1100_W64-NEXT:    s_mov_b32 s4, 17
 ; GFX1100_W64-NEXT:    ;;#ASMEND
 ; GFX1100_W64-NEXT:    v_mov_b32_e32 v8, s4
-; GFX1100_W64-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1100_W64-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s9, v1
@@ -975,20 +964,23 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1100_W64-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; GFX1100_W64-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX1100_W64-NEXT:    buffer_load_format_x v9, v8, s[8:11], 0 idxen
+; GFX1100_W64-NEXT:    s_xor_b64 s[2:3], exec, s[0:1]
 ; GFX1100_W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1100_W64-NEXT:    ; implicit-def: $vgpr8
-; GFX1100_W64-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; GFX1100_W64-NEXT:    s_cbranch_execnz .LBB2_1
+; GFX1100_W64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100_W64-NEXT:    s_and_b64 s[6:7], s[2:3], -1
+; GFX1100_W64-NEXT:    s_cselect_b64 exec, s[2:3], s[0:1]
+; GFX1100_W64-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GFX1100_W64-NEXT:  ; %bb.2:
-; GFX1100_W64-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX1100_W64-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX1100_W64-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX1100_W64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100_W64-NEXT:    v_cmpx_eq_u32_e32 0, v0
-; GFX1100_W64-NEXT:    s_cbranch_execz .LBB2_6
+; GFX1100_W64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX1100_W64-NEXT:    s_and_b64 s[0:1], vcc, -1
+; GFX1100_W64-NEXT:    s_cmov_b64 exec, vcc
+; GFX1100_W64-NEXT:    s_cbranch_scc0 .LBB2_6
 ; GFX1100_W64-NEXT:  ; %bb.3: ; %bb1
 ; GFX1100_W64-NEXT:    v_mov_b32_e32 v0, s4
-; GFX1100_W64-NEXT:    s_mov_b64 s[8:9], exec
 ; GFX1100_W64-NEXT:  .LBB2_4: ; =>This Inner Loop Header: Depth=1
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s4, v4
 ; GFX1100_W64-NEXT:    v_readfirstlane_b32 s5, v5
@@ -1001,15 +993,16 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1100_W64-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; GFX1100_W64-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX1100_W64-NEXT:    buffer_load_format_x v9, v0, s[4:7], 0 idxen
+; GFX1100_W64-NEXT:    s_xor_b64 s[4:5], exec, s[0:1]
 ; GFX1100_W64-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1100_W64-NEXT:    ; implicit-def: $vgpr0
-; GFX1100_W64-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; GFX1100_W64-NEXT:    s_cbranch_execnz .LBB2_4
-; GFX1100_W64-NEXT:  ; %bb.5:
-; GFX1100_W64-NEXT:    s_mov_b64 exec, s[8:9]
-; GFX1100_W64-NEXT:  .LBB2_6: ; %bb2
 ; GFX1100_W64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1100_W64-NEXT:    s_and_b64 s[6:7], s[4:5], -1
+; GFX1100_W64-NEXT:    s_cselect_b64 exec, s[4:5], s[0:1]
+; GFX1100_W64-NEXT:    s_cbranch_scc1 .LBB2_4
+; GFX1100_W64-NEXT:  ; %bb.5:
 ; GFX1100_W64-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX1100_W64-NEXT:  .LBB2_6: ; %bb2
 ; GFX1100_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W64-NEXT:    global_store_b32 v[11:12], v9, off dlc
 ; GFX1100_W64-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -1036,7 +1029,7 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:48 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    v_mov_b32_e32 v6, v0
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4
@@ -1079,17 +1072,15 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    v_writelane_b32 v0, s5, 0
 ; W64-O0-NEXT:    s_mov_b32 s5, 0
 ; W64-O0-NEXT:    v_writelane_b32 v0, s5, 1
-; W64-O0-NEXT:    v_mov_b32_e32 v1, s4
-; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_mov_b64 s[4:5], exec
-; W64-O0-NEXT:    v_writelane_b32 v0, s4, 2
-; W64-O0-NEXT:    v_writelane_b32 v0, s5, 3
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
+; W64-O0-NEXT:    v_mov_b32_e32 v0, s4
+; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; W64-O0-NEXT:    s_mov_b64 s[4:5], exec
 ; W64-O0-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
@@ -1111,81 +1102,79 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    s_mov_b32 s9, s12
 ; W64-O0-NEXT:    s_mov_b32 s10, s7
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
-; W64-O0-NEXT:    v_writelane_b32 v0, s8, 4
-; W64-O0-NEXT:    v_writelane_b32 v0, s9, 5
-; W64-O0-NEXT:    v_writelane_b32 v0, s10, 6
-; W64-O0-NEXT:    v_writelane_b32 v0, s11, 7
+; W64-O0-NEXT:    v_writelane_b32 v0, s8, 2
+; W64-O0-NEXT:    v_writelane_b32 v0, s9, 3
+; W64-O0-NEXT:    v_writelane_b32 v0, s10, 4
+; W64-O0-NEXT:    v_writelane_b32 v0, s11, 5
 ; W64-O0-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
-; W64-O0-NEXT:    v_writelane_b32 v0, s4, 8
-; W64-O0-NEXT:    v_writelane_b32 v0, s5, 9
+; W64-O0-NEXT:    v_writelane_b32 v0, s4, 6
+; W64-O0-NEXT:    v_writelane_b32 v0, s5, 7
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:  ; %bb.2: ; in Loop: Header=BB2_1 Depth=1
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
+; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
-; W64-O0-NEXT:    v_readlane_b32 s4, v1, 8
-; W64-O0-NEXT:    v_readlane_b32 s5, v1, 9
-; W64-O0-NEXT:    v_readlane_b32 s8, v1, 4
-; W64-O0-NEXT:    v_readlane_b32 s9, v1, 5
-; W64-O0-NEXT:    v_readlane_b32 s10, v1, 6
-; W64-O0-NEXT:    v_readlane_b32 s11, v1, 7
-; W64-O0-NEXT:    v_readlane_b32 s6, v1, 1
-; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; W64-O0-NEXT:    v_readlane_b32 s6, v1, 6
+; W64-O0-NEXT:    v_readlane_b32 s7, v1, 7
+; W64-O0-NEXT:    v_readlane_b32 s8, v1, 2
+; W64-O0-NEXT:    v_readlane_b32 s9, v1, 3
+; W64-O0-NEXT:    v_readlane_b32 s10, v1, 4
+; W64-O0-NEXT:    v_readlane_b32 s11, v1, 5
+; W64-O0-NEXT:    v_readlane_b32 s4, v1, 1
+; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    s_nop 2
-; W64-O0-NEXT:    buffer_load_format_x v0, v0, s[8:11], s6 idxen
+; W64-O0-NEXT:    buffer_load_format_x v0, v0, s[8:11], s4 idxen
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_xor_b64 exec, exec, s[4:5]
-; W64-O0-NEXT:    s_cbranch_execnz .LBB2_1
+; W64-O0-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; W64-O0-NEXT:    s_and_b64 s[8:9], s[4:5], -1
+; W64-O0-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
+; W64-O0-NEXT:    s_cbranch_scc1 .LBB2_1
 ; W64-O0-NEXT:  ; %bb.3:
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
-; W64-O0-NEXT:    v_readlane_b32 s6, v0, 2
-; W64-O0-NEXT:    v_readlane_b32 s7, v0, 3
-; W64-O0-NEXT:    s_mov_b64 exec, s[6:7]
 ; W64-O0-NEXT:    v_readlane_b32 s4, v0, 1
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b32 s5, 0x3ff
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    v_and_b32_e64 v2, v2, s5
-; W64-O0-NEXT:    v_cmp_eq_u32_e64 s[6:7], v2, s4
+; W64-O0-NEXT:    v_cmp_eq_u32_e64 s[4:5], v2, s4
 ; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_mov_b64 s[4:5], exec
-; W64-O0-NEXT:    v_writelane_b32 v0, s4, 10
-; W64-O0-NEXT:    v_writelane_b32 v0, s5, 11
+; W64-O0-NEXT:    s_mov_b64 s[6:7], exec
+; W64-O0-NEXT:    v_writelane_b32 v0, s6, 8
+; W64-O0-NEXT:    v_writelane_b32 v0, s7, 9
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
-; W64-O0-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
-; W64-O0-NEXT:    s_mov_b64 exec, s[4:5]
-; W64-O0-NEXT:    s_cbranch_execz .LBB2_8
-; W64-O0-NEXT:  ; %bb.4: ; %bb1
+; W64-O0-NEXT:    s_and_b64 s[6:7], s[4:5], -1
+; W64-O0-NEXT:    s_cmov_b64 exec, s[4:5]
+; W64-O0-NEXT:    s_cbranch_scc1 .LBB2_4
+; W64-O0-NEXT:    s_branch .LBB2_8
+; W64-O0-NEXT:  .LBB2_4: ; %bb1
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    v_readlane_b32 s4, v0, 0
 ; W64-O0-NEXT:    s_mov_b32 s5, 0
-; W64-O0-NEXT:    v_writelane_b32 v0, s5, 12
-; W64-O0-NEXT:    v_mov_b32_e32 v1, s4
-; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
+; W64-O0-NEXT:    v_writelane_b32 v0, s5, 10
+; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
+; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
+; W64-O0-NEXT:    v_mov_b32_e32 v0, s4
+; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:68 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7
 ; W64-O0-NEXT:    s_mov_b64 s[4:5], exec
-; W64-O0-NEXT:    v_writelane_b32 v0, s4, 13
-; W64-O0-NEXT:    v_writelane_b32 v0, s5, 14
-; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:  .LBB2_5: ; =>This Inner Loop Header: Depth=1
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
@@ -1207,55 +1196,53 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    s_mov_b32 s9, s12
 ; W64-O0-NEXT:    s_mov_b32 s10, s7
 ; W64-O0-NEXT:    s_mov_b32 s11, s6
-; W64-O0-NEXT:    v_writelane_b32 v0, s8, 15
-; W64-O0-NEXT:    v_writelane_b32 v0, s9, 16
-; W64-O0-NEXT:    v_writelane_b32 v0, s10, 17
-; W64-O0-NEXT:    v_writelane_b32 v0, s11, 18
+; W64-O0-NEXT:    v_writelane_b32 v0, s8, 11
+; W64-O0-NEXT:    v_writelane_b32 v0, s9, 12
+; W64-O0-NEXT:    v_writelane_b32 v0, s10, 13
+; W64-O0-NEXT:    v_writelane_b32 v0, s11, 14
 ; W64-O0-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
-; W64-O0-NEXT:    v_writelane_b32 v0, s4, 19
-; W64-O0-NEXT:    v_writelane_b32 v0, s5, 20
+; W64-O0-NEXT:    v_writelane_b32 v0, s4, 15
+; W64-O0-NEXT:    v_writelane_b32 v0, s5, 16
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:  ; %bb.6: ; in Loop: Header=BB2_5 Depth=1
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
+; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
-; W64-O0-NEXT:    v_readlane_b32 s4, v1, 19
-; W64-O0-NEXT:    v_readlane_b32 s5, v1, 20
-; W64-O0-NEXT:    v_readlane_b32 s8, v1, 15
-; W64-O0-NEXT:    v_readlane_b32 s9, v1, 16
-; W64-O0-NEXT:    v_readlane_b32 s10, v1, 17
-; W64-O0-NEXT:    v_readlane_b32 s11, v1, 18
-; W64-O0-NEXT:    v_readlane_b32 s6, v1, 12
+; W64-O0-NEXT:    v_readlane_b32 s6, v1, 15
+; W64-O0-NEXT:    v_readlane_b32 s7, v1, 16
+; W64-O0-NEXT:    v_readlane_b32 s8, v1, 11
+; W64-O0-NEXT:    v_readlane_b32 s9, v1, 12
+; W64-O0-NEXT:    v_readlane_b32 s10, v1, 13
+; W64-O0-NEXT:    v_readlane_b32 s11, v1, 14
+; W64-O0-NEXT:    v_readlane_b32 s4, v1, 10
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    s_nop 2
-; W64-O0-NEXT:    buffer_load_format_x v0, v0, s[8:11], s6 idxen
+; W64-O0-NEXT:    buffer_load_format_x v0, v0, s[8:11], s4 idxen
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_xor_b64 exec, exec, s[4:5]
-; W64-O0-NEXT:    s_cbranch_execnz .LBB2_5
+; W64-O0-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; W64-O0-NEXT:    s_and_b64 s[8:9], s[4:5], -1
+; W64-O0-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
+; W64-O0-NEXT:    s_cbranch_scc1 .LBB2_5
 ; W64-O0-NEXT:  ; %bb.7:
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 ; 4-byte Folded Reload
+; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
-; W64-O0-NEXT:    v_readlane_b32 s4, v1, 13
-; W64-O0-NEXT:    v_readlane_b32 s5, v1, 14
-; W64-O0-NEXT:    s_mov_b64 exec, s[4:5]
+; W64-O0-NEXT:    v_readlane_b32 s4, v1, 8
+; W64-O0-NEXT:    v_readlane_b32 s5, v1, 9
 ; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:72 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; W64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
+; W64-O0-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; W64-O0-NEXT:  .LBB2_8: ; %bb2
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
+; W64-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    s_mov_b64 exec, s[16:17]
-; W64-O0-NEXT:    s_waitcnt vmcnt(0)
-; W64-O0-NEXT:    v_readlane_b32 s4, v0, 10
-; W64-O0-NEXT:    v_readlane_b32 s5, v0, 11
-; W64-O0-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; W64-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:24 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
 ; W64-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload

@@ -6299,7 +6299,7 @@ unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
       return AMDGPUISD::ELSE;
     case Intrinsic::amdgcn_loop:
       return AMDGPUISD::LOOP;
-    case Intrinsic::amdgcn_end_cf:
+    case Intrinsic::amdgcn_wave_reconverge:
       llvm_unreachable("should not occur");
     default:
       return 0;
@@ -9940,8 +9940,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     return SDValue(Load, 0);
   }
-  case Intrinsic::amdgcn_end_cf:
-    return SDValue(DAG.getMachineNode(AMDGPU::SI_END_CF, DL, MVT::Other,
+  case Intrinsic::amdgcn_wave_reconverge:
+    return SDValue(DAG.getMachineNode(AMDGPU::SI_WAVE_RECONVERGE, DL, MVT::Other,
                                       Op->getOperand(2), Chain), 0);
   case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_join:
@@ -15740,6 +15740,32 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
     }
   }
 
+  // ISel inserts copy to regs for the successor PHIs
+  // at the BB end. We need to move the SI_WAVE_RECONVERGE right before the
+  // branch.
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (MI.getOpcode() == AMDGPU::SI_WAVE_RECONVERGE) {
+        MachineBasicBlock::iterator I(MI);
+        MachineBasicBlock::iterator Next = std::next(I);
+        bool NeedToMove = false;
+        while (Next != MBB.end() && !Next->isBranch()) {
+          NeedToMove = true;
+          Next++;
+        }
+
+        assert((Next == MBB.end() || !Next->readsRegister(AMDGPU::SCC, TRI)) &&
+               "Malformed CFG detected!\n");
+
+        if (NeedToMove) {
+          MBB.splice(Next, &MBB, &MI);
+        }
+
+        break;
+      }
+    }
+  }
+
   // FIXME: This is a hack to fixup AGPR classes to use the properly aligned
   // classes if required. Ideally the register class constraints would differ
   // per-subtarget, but there's no easy way to achieve that right now. This is
@@ -16336,7 +16362,7 @@ static bool hasCFUser(const Value *V, SmallPtrSet<const Value *, 16> &Visited,
         default:
           Result = false;
           break;
-        case Intrinsic::amdgcn_end_cf:
+        case Intrinsic::amdgcn_wave_reconverge:
         case Intrinsic::amdgcn_loop:
           Result = true;
           break;

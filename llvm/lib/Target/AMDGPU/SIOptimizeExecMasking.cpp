@@ -114,7 +114,9 @@ Register SIOptimizeExecMasking::isCopyToExec(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case AMDGPU::COPY:
   case AMDGPU::S_MOV_B64:
-  case AMDGPU::S_MOV_B32: {
+  case AMDGPU::S_MOV_B32:
+  case AMDGPU::S_CMOV_B64:
+  case AMDGPU::S_CMOV_B32: {
     const MachineOperand &Dst = MI.getOperand(0);
     if (Dst.isReg() && Dst.getReg() == Exec && MI.getOperand(1).isReg())
       return MI.getOperand(1).getReg();

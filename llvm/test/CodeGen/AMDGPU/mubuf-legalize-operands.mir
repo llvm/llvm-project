@@ -62,11 +62,10 @@ body:             |
     ; W64-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: [[BUFFER_LOAD_FORMAT_X_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[COPY1]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W64-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-    ; W64-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
+    ; W64-NEXT: [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+    ; W64-NEXT: SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .3:
-    ; W64-NEXT: $exec = S_MOV_B64 [[S_MOV_B64_]]
     ; W64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; W64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_IDXEN]]
     ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
@@ -107,11 +106,10 @@ body:             |
     ; W32-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: [[BUFFER_LOAD_FORMAT_X_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[COPY1]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W32-NEXT: $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-    ; W32-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
+    ; W32-NEXT: [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+    ; W32-NEXT: SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.1, implicit $exec
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: .3:
-    ; W32-NEXT: $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
     ; W32-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; W32-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_IDXEN]]
     ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
@@ -177,11 +175,10 @@ body:             |
     ; W64-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: [[BUFFER_LOAD_FORMAT_X_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFEN [[COPY1]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W64-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-    ; W64-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
+    ; W64-NEXT: [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+    ; W64-NEXT: SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .3:
-    ; W64-NEXT: $exec = S_MOV_B64 [[S_MOV_B64_]]
     ; W64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; W64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_OFFEN]]
     ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
@@ -222,11 +219,10 @@ body:             |
     ; W32-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: [[BUFFER_LOAD_FORMAT_X_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFEN [[COPY1]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W32-NEXT: $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-    ; W32-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
+    ; W32-NEXT: [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+    ; W32-NEXT: SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.1, implicit $exec
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: .3:
-    ; W32-NEXT: $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
     ; W32-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; W32-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_OFFEN]]
     ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
@@ -292,11 +288,10 @@ body:             |
     ; W64-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: [[BUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN [[COPY1]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W64-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-    ; W64-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
+    ; W64-NEXT: [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+    ; W64-NEXT: SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .3:
-    ; W64-NEXT: $exec = S_MOV_B64 [[S_MOV_B64_]]
     ; W64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; W64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_BOTHEN]]
     ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
@@ -337,11 +332,10 @@ body:             |
     ; W32-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: [[BUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN [[COPY1]], killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W32-NEXT: $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-    ; W32-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
+    ; W32-NEXT: [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+    ; W32-NEXT: SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.1, implicit $exec
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: .3:
-    ; W32-NEXT: $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
     ; W32-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; W32-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_BOTHEN]]
     ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
@@ -512,11 +506,10 @@ body:             |
     ; W64-NO-ADDR64-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W64-NO-ADDR64-NEXT: {{  $}}
     ; W64-NO-ADDR64-NEXT: [[BUFFER_LOAD_FORMAT_X_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFSET killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W64-NO-ADDR64-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
-    ; W64-NO-ADDR64-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
+    ; W64-NO-ADDR64-NEXT: [[S_XOR_B64_term:%[0-9]+]]:sreg_64_xexec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
+    ; W64-NO-ADDR64-NEXT: SI_WATERFALL_LOOP [[S_XOR_B64_term]], [[S_AND_SAVEEXEC_B64_]], %bb.1, implicit $exec
     ; W64-NO-ADDR64-NEXT: {{  $}}
     ; W64-NO-ADDR64-NEXT: .3:
-    ; W64-NO-ADDR64-NEXT: $exec = S_MOV_B64 [[S_MOV_B64_]]
     ; W64-NO-ADDR64-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; W64-NO-ADDR64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_OFFSET]]
     ; W64-NO-ADDR64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0
@@ -557,11 +550,10 @@ body:             |
     ; W32-NEXT: successors: %bb.1(0x40000000), %bb.3(0x40000000)
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: [[BUFFER_LOAD_FORMAT_X_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFSET killed [[REG_SEQUENCE3]], 0, 0, 0, 0, implicit $exec
-    ; W32-NEXT: $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
-    ; W32-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
+    ; W32-NEXT: [[S_XOR_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
+    ; W32-NEXT: SI_WATERFALL_LOOP [[S_XOR_B32_term]], [[S_AND_SAVEEXEC_B32_]], %bb.1, implicit $exec
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: .3:
-    ; W32-NEXT: $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
     ; W32-NEXT: $sgpr30_sgpr31 = COPY [[COPY]]
     ; W32-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_OFFSET]]
     ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0

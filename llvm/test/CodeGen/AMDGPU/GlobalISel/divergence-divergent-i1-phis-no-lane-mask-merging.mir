@@ -206,7 +206,7 @@ body: |
   ; GFX10-NEXT: bb.1:
   ; GFX10-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF]](s1), %bb.0, %22(s1), %bb.1
+  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF]](s1), %bb.0, %21(s1), %bb.1
   ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI %7(s32), %bb.1, [[C1]](s32), %bb.0
   ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:_(s32) = G_PHI [[C1]](s32), %bb.0, %9(s32), %bb.1
   ; GFX10-NEXT:   [[PHI3:%[0-9]+]]:_(s1) = G_PHI [[C]](s1), %bb.0, %11(s1), %bb.1
@@ -226,9 +226,7 @@ body: |
   ; GFX10-NEXT:   G_BR %bb.2
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.2:
-  ; GFX10-NEXT:   [[PHI4:%[0-9]+]]:_(s32) = G_PHI [[INT]](s32), %bb.1
   ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_]](s1)
-  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI4]](s32)
   ; GFX10-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
   ; GFX10-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
   ; GFX10-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[COPY5]](s1), [[C5]], [[C4]]
@@ -263,8 +261,6 @@ body: |
 
   bb.2:
     %16:_(s1) = G_PHI %11(s1), %bb.1
-    %17:_(s32) = G_PHI %7(s32), %bb.1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %17(s32)
     %18:_(s32) = G_FCONSTANT float 0.000000e+00
     %19:_(s32) = G_FCONSTANT float 1.000000e+00
     %20:_(s32) = G_SELECT %16(s1), %19, %18
@@ -302,8 +298,8 @@ body: |
   ; GFX10-NEXT: bb.1:
   ; GFX10-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF]](s1), %bb.0, %42(s1), %bb.5
-  ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:sreg_32(s1) = PHI [[COPY8]](s1), %bb.0, %39(s1), %bb.5
+  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF]](s1), %bb.0, %41(s1), %bb.5
+  ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:sreg_32(s1) = PHI [[COPY8]](s1), %bb.0, %38(s1), %bb.5
   ; GFX10-NEXT:   [[PHI2:%[0-9]+]]:_(s32) = G_PHI %15(s32), %bb.5, [[C]](s32), %bb.0
   ; GFX10-NEXT:   [[PHI3:%[0-9]+]]:_(s32) = G_PHI [[C]](s32), %bb.0, %17(s32), %bb.5
   ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:sreg_32(s1) = COPY [[PHI]](s1)
@@ -357,9 +353,7 @@ body: |
   ; GFX10-NEXT:   G_BR %bb.6
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.6:
-  ; GFX10-NEXT:   [[PHI5:%[0-9]+]]:_(s32) = G_PHI [[INT]](s32), %bb.5
   ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_]](s1)
-  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI5]](s32)
   ; GFX10-NEXT:   [[C10:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
   ; GFX10-NEXT:   [[C11:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
   ; GFX10-NEXT:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[COPY13]](s1), [[C11]], [[C10]]
@@ -435,8 +429,6 @@ body: |
 
   bb.6:
     %33:_(s1) = G_PHI %19(s1), %bb.5
-    %34:_(s32) = G_PHI %15(s32), %bb.5
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %34(s32)
     %35:_(s32) = G_FCONSTANT float 0.000000e+00
     %36:_(s32) = G_FCONSTANT float 1.000000e+00
     %37:_(s32) = G_SELECT %33(s1), %36, %35
