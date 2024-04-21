@@ -663,6 +663,11 @@ int main(int argc, const char **argv) {
     logger.info("Compilation database: {}", compile_commands);
     fixCompilationDatabase(compile_commands);
     Global.cb = getCompilationDatabaseWithASTEmit(compile_commands);
+    {
+        auto allFiles = Global.cb->getAllFiles();
+        Global.allFiles =
+            std::set<std::string>(allFiles.begin(), allFiles.end());
+    }
 
     if (argSequential) {
         generateICFG(*Global.cb);
