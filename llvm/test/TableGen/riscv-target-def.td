@@ -5,7 +5,7 @@ include "llvm/Target/Target.td"
 class RISCVExtension<string name, int major, int minor, string fieldname,
                      string desc, list<SubtargetFeature> implies = [],
                      string value = "true">
-  : SubtargetFeature<name, fieldname, value, desc, implies> {
+    : SubtargetFeature<name, fieldname, value, desc, implies> {
   int MajorVersion = major;
   int MinorVersion = minor;
   bit Experimental = false;
@@ -37,7 +37,7 @@ class RISCVProcessorModel<string n,
                           list<SubtargetFeature> f,
                           list<SubtargetFeature> tunef = [],
                           string default_march = "">
-      :  ProcessorModel<n, m, f, tunef> {
+    :  ProcessorModel<n, m, f, tunef> {
   string DefaultMarch = default_march;
 }
 
@@ -45,7 +45,7 @@ class RISCVTuneProcessorModel<string n,
                               SchedMachineModel m,
                               list<SubtargetFeature> tunef = [],
                               list<SubtargetFeature> f = []>
-      : ProcessorModel<n, m, f,tunef>;
+    : ProcessorModel<n, m, f,tunef>;
 
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
