@@ -20,7 +20,6 @@
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
-#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -73,16 +72,10 @@ FunctionPass *llvm::createX86LowerTileCopyPass() {
 bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   const X86InstrInfo *TII = ST.getInstrInfo();
-  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
-  BitVector GR64Regs =
-      TRI->getAllocatableSet(MF, TRI->getRegClass(X86::GR64RegClassID));
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    LiveRegUnits UsedRegs(*TRI);
-    UsedRegs.addLiveOuts(MBB);
-    for (MachineInstr &MI : llvm::make_early_inc_range(reverse(MBB))) {
-      UsedRegs.stepBackward(MI);
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
       if (!MI.isCopy())
         continue;
       MachineOperand &DstMO = MI.getOperand(0);
@@ -92,41 +85,27 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
       if (!X86::TILERegClass.contains(DstReg, SrcReg))
         continue;
 
+      const TargetRegisterInfo *TRI = ST.getRegisterInfo();
       // Allocate stack slot for tile register
       unsigned Size = TRI->getSpillSize(X86::TILERegClass);
       Align Alignment = TRI->getSpillAlign(X86::TILERegClass);
       int TileSS = MF.getFrameInfo().CreateSpillStackObject(Size, Alignment);
+      // Allocate stack slot for stride register
+      Size = TRI->getSpillSize(X86::GR64RegClass);
+      Alignment = TRI->getSpillAlign(X86::GR64RegClass);
+      int StrideSS = MF.getFrameInfo().CreateSpillStackObject(Size, Alignment);
 
-      int StrideSS = 0;
-
-      // Pick a killed register to avoid a save/reload.
-      Register GR64Cand = X86::NoRegister;
-      for (auto RegT : GR64Regs.set_bits()) {
-        if (UsedRegs.available(RegT)) {
-          GR64Cand = RegT;
-          break;
-        }
-      }
+      // TODO: Pick a killed regiter to avoid save/reload. There is problem
+      // to get live interval in this stage.
+      Register GR64Cand = X86::RAX;
 
       const DebugLoc &DL = MI.getDebugLoc();
-      if (GR64Cand) {
-        // mov 64 %reg
-        BuildMI(MBB, MI, DL, TII->get(X86::MOV64ri), GR64Cand).addImm(64);
-      } else {
-        // No available register? Save RAX and reload it after use.
-
-        // Allocate stack slot for stride register
-        Size = TRI->getSpillSize(X86::GR64RegClass);
-        Alignment = TRI->getSpillAlign(X86::GR64RegClass);
-        StrideSS = MF.getFrameInfo().CreateSpillStackObject(Size, Alignment);
-
-        // mov %reg (%sp)
-        addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOV64mr)),
-                          StrideSS)
-            .addReg(X86::RAX);
-        // mov 64 %reg
-        BuildMI(MBB, MI, DL, TII->get(X86::MOV64ri), X86::RAX).addImm(64);
-      }
+      // mov %rax (%sp)
+      BuildMI(MBB, MI, DL, TII->get(X86::IMPLICIT_DEF), GR64Cand);
+      addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOV64mr)), StrideSS)
+          .addReg(GR64Cand);
+      // mov 64 %rax
+      BuildMI(MBB, MI, DL, TII->get(X86::MOV64ri), GR64Cand).addImm(64);
       // tilestored %tmm, (%sp, %idx)
 #define GET_EGPR_IF_ENABLED(OPC) (ST.hasEGPR() ? OPC##_EVEX : OPC)
       unsigned Opc = GET_EGPR_IF_ENABLED(X86::TILESTORED);
@@ -141,12 +120,10 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
 #undef GET_EGPR_IF_ENABLED
       NewMI = addFrameReference(BuildMI(MBB, MI, DL, TII->get(Opc), DstReg),
                                 TileSS);
-      if (!GR64Cand) {
-        // restore %rax
-        // mov (%sp) %rax
-        addFrameReference(
-            BuildMI(MBB, MI, DL, TII->get(X86::MOV64rm), GR64Cand), StrideSS);
-      }
+      // restore %rax
+      // mov (%sp) %rax
+      addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOV64rm), GR64Cand),
+                        StrideSS);
       MI.eraseFromParent();
       Changed = true;
     }
