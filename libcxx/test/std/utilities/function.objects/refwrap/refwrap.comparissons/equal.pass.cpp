@@ -42,9 +42,20 @@ static_assert(!std::equality_comparable<NonComparable>);
 
 // Test SFINAE.
 
+template <typename T>
+concept HasEqualityOperatorWithInt = requires(T t, int i) {
+  { t.get() == i } -> std::convertible_to<bool>;
+};
+
 static_assert(std::equality_comparable<std::reference_wrapper<EqualityComparable>>);
+static_assert(HasEqualityOperatorWithInt<std::reference_wrapper<EqualityComparable>>);
+static_assert(std::equality_comparable_with<std::reference_wrapper<EqualityComparable>,
+                                            std::reference_wrapper<const EqualityComparable>>);
 
 static_assert(!std::equality_comparable<std::reference_wrapper<NonComparable>>);
+static_assert(!HasEqualityOperatorWithInt<std::reference_wrapper<NonComparable>>);
+static_assert(!std::equality_comparable_with<std::reference_wrapper<EqualityComparable>,
+                                             std::reference_wrapper<const NonComparable>>);
 
 // Test equality.
 
