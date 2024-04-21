@@ -130,9 +130,13 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                 if ((requireExact && matchExact) ||
                     (!requireExact && matchInexact)) {
                     int id = block->getBlockID();
-                    logger.info("Found stmt in {} B{} at {}:{}:{}",
-                                fi->signature, id, file, line, column);
-                    return VarLocResult(fi, block);
+                    auto result = VarLocResult(fi, block);
+                    int nodeId =
+                        Global.icfg
+                            .nodeIdOfFunctionBlock[{result.fid, result.bid}];
+                    logger.info("Found stmt in {} B{} ({}) at {}:{}:{}",
+                                fi->signature, id, nodeId, file, line, column);
+                    return result;
                 }
             } else {
                 // search for var within stmt
