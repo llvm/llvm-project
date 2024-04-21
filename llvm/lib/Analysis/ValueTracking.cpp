@@ -2682,7 +2682,6 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     if (cast<PossiblyExactOperator>(I)->isExact())
       return isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
 
-    std::optional<bool> XUgeY;
     KnownBits XKnown =
         computeKnownBits(I->getOperand(0), DemandedElts, Depth, Q);
     // If X is fully unknown we won't be able to figure anything out so don't
@@ -2698,7 +2697,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       YKnown = YKnown.abs(/*IntMinIsPoison*/ false);
     }
     // If X u>= Y then div is non zero (0/0 is UB).
-    XUgeY = KnownBits::uge(XKnown, YKnown);
+    std::optional<bool> XUgeY = KnownBits::uge(XKnown, YKnown);
     // If X is total unknown or X u< Y we won't be able to prove non-zero
     // with compute known bits so just return early.
     return XUgeY && *XUgeY;
