@@ -727,7 +727,8 @@ public:
   std::string IntrinsicID;
   std::vector<const Type *> ParamTypes;
   std::vector<Ptr> Args;
-  IRIntrinsicResult(StringRef IntrinsicID, const std::vector<const Type *> &ParamTypes,
+  IRIntrinsicResult(StringRef IntrinsicID,
+                    const std::vector<const Type *> &ParamTypes,
                     const std::vector<Ptr> &Args)
       : IntrinsicID(std::string(IntrinsicID)), ParamTypes(ParamTypes),
         Args(Args) {}
