@@ -1062,7 +1062,8 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
     Tensor_Op<mnemonic, !listconcat(traits, [
       DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
       Pure])>,
-    Results<(outs AnyTensor:$result)> {
+    Arguments<(ins AnyRankedTensor:$src, IndexListArrayAttr:$reassociation)>,
+    Results<(outs AnyRankedTensor:$result)> {
 
   code commonExtraClassDeclaration = [{
     static StringRef getReassociationAttrStrName() { return "reassociation"; }
@@ -1085,6 +1086,10 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
     }
   }];
 
+  let assemblyFormat = [{
+    $src $reassociation attr-dict `:` type($src) `into` type($result)
+  }];
+
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
@@ -1097,75 +1102,43 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
     rank than the operand `src` whose dimension sizes are a reassociation of
     `src`.
 
-    A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an array of DenseI64ArrayAttr attribute.  The reassociation
-    maps applied to the result tensor with the higher rank must result in the
-    operand tensor with the smaller rank.
+    A reassociation is defined as a continuous grouping of dimensions. It is
+    represented with an array of DenseI64ArrayAttr attribute. Entries in the
+    array are referred to as reassociation maps.
 
-    The representation for the output shape supports a partially-static
-    specification via attributes specified through the `static_output_shape`
-    argument.  A special sentinel value `ShapedType::kDynamic` encodes that the
-    corresponding entry has a dynamic value.  There must be exactly as many SSA
-    inputs in `output_shape` as there are `ShapedType::kDynamic` entries in
-    `static_output_shape`.
+    The reassociation maps are applied to the result shape to obtain the operand
+    shape.
 
     Example:
 
     ```mlir
     // Dimension expansion i -> (i', j') and (k) -> (k')
-    %b = tensor.expand_shape %a [[0, 1], [2]] output_shape [%sz0, %sz1, 32]
-        : tensor<?x32xf32> into tensor<?x?x32xf32>
+    %b = tensor.expand_shape %a [[0, 1], [2]]
+        : tensor<?x?xf32> into tensor<?x?x?xf32>
     ```
   }];
-
-  let arguments = (ins AnyTensor:$src, IndexListArrayAttr:$reassociation,
-                       Variadic<Index>:$output_shape,
-                       DenseI64ArrayAttr:$static_output_shape);
-
-  let assemblyFormat = [{
-    $src $reassociation `output_shape`
-    custom<DynamicIndexList>($output_shape, $static_output_shape) attr-dict `:`
-    type($src) `into` type($result)
-  }];
-
   let builders = [
     // Builders using ReassociationIndices.
     OpBuilder<(ins "Type":$resultType, "Value":$src,
       "ArrayRef<ReassociationIndices>":$reassociation,
-      "ArrayRef<OpFoldResult>":$outputShape)>,
-
-    // It will infer output shape using inferOutputShape() method.
-    OpBuilder<(ins "Type":$resultType, "Value":$src,
-      "ArrayRef<ReassociationIndices>":$reassociation)>,
-
-    // Builder using ReassociationExprs.
-    OpBuilder<(ins "Type":$resultType, "Value":$src,
-      "ArrayRef<ReassociationExprs>":$reassociation),
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
-      auto reassociationIndices =
-          convertReassociationMapsToIndices(reassociation);
-      build($_builder, $_state, resultType, src, reassociationIndices);
+      build($_builder, $_state, resultType, src, attrs);
+      $_state.addAttribute("reassociation",
+          getReassociationIndicesAttribute($_builder, reassociation));
     }]>,
     OpBuilder<(ins "Type":$resultType, "Value":$src,
       "ArrayRef<ReassociationExprs>":$reassociation,
-      "ArrayRef<OpFoldResult>":$outputShape),
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
-      auto reassociationIndices =
-          convertReassociationMapsToIndices(reassociation);
-      build($_builder, $_state, resultType, src, reassociationIndices,
-            outputShape);
+      auto reassociationMaps =
+          convertReassociationMapsToIndices($_builder, reassociation);
+      build($_builder, $_state, resultType, src, reassociationMaps, attrs);
     }]>
   ];
 
   let extraClassDeclaration = commonExtraClassDeclaration # [{
     int64_t getCorrespondingSourceDim(int64_t resultDim);
-
-    // Infer the output shape for a tensor.expand_shape when it is possible
-    // to do so.
-    static FailureOr<SmallVector<OpFoldResult>> inferOutputShape(
-        OpBuilder &b, Location loc, RankedTensorType expandedType,
-        ArrayRef<ReassociationIndices> reassociation,
-        ArrayRef<OpFoldResult> inputShape);
   }];
 
   let hasVerifier = 1;
@@ -1173,7 +1146,6 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
 
 def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
   let summary = "operation to produce a tensor with a smaller rank";
-  let arguments = (ins AnyTensor:$src, IndexListArrayAttr:$reassociation);
   let description = [{
     The `tensor.collapse_shape` op produces a new tensor of lower (or equal)
     rank whose dimension sizes are a reassociation of the original `src` dimensions.
@@ -1191,11 +1163,6 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
         : tensor<?x?x?xf32> into tensor<?x?xf32>
     ```
   }];
-
-  let assemblyFormat = [{
-    $src $reassociation attr-dict `:` type($src) `into` type($result)
-  }];
-
   let builders = [
     // Builders for a contracting reshape whose result type is computed from
     // `src` and `reassociation`.
@@ -1207,7 +1174,7 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
       auto reassociationMaps =
-          convertReassociationMapsToIndices(reassociation);
+          convertReassociationMapsToIndices($_builder, reassociation);
       build($_builder, $_state, src, reassociationMaps, attrs);
     }]>,
 
@@ -1225,7 +1192,7 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
       auto reassociationMaps =
-          convertReassociationMapsToIndices(reassociation);
+          convertReassociationMapsToIndices($_builder, reassociation);
       build($_builder, $_state, resultType, src, reassociationMaps, attrs);
     }]>
   ];
