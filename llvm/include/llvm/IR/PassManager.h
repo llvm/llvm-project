@@ -934,9 +934,13 @@ createModuleToFunctionPassAdaptor(FunctionPassT &&Pass,
 ///
 /// Specific patterns of run-method extra arguments and analysis manager extra
 /// arguments will have to be defined as appropriate specializations.
-template <typename AnalysisT, typename IRUnitT,
-          typename AnalysisManagerT = AnalysisManager<IRUnitT>,
-          typename... ExtraArgTs>
+template <
+    typename AnalysisT,
+    typename IRUnitT = std::remove_reference_t<
+        typename function_traits<decltype(&AnalysisT::run)>::template arg_t<0>>,
+    typename AnalysisManagerT = std::remove_reference_t<
+        typename function_traits<decltype(&AnalysisT::run)>::template arg_t<1>>,
+    typename... ExtraArgTs>
 struct RequireAnalysisPass
     : PassInfoMixin<RequireAnalysisPass<AnalysisT, IRUnitT, AnalysisManagerT,
                                         ExtraArgTs...>> {
