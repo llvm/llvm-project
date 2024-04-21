@@ -53,76 +53,26 @@ constexpr void test() {
   T i{92};
   T j{84};
 
-  // `operator==`
-  {
-    // refwrap, refwrap
-    std::reference_wrapper<T> rw1{i};
-    std::reference_wrapper<T> rw2 = rw1;
+  std::reference_wrapper<T> rw1{i};
+  std::reference_wrapper<T> rw2 = rw1;
+  std::reference_wrapper<T> rw3{j};
+  std::reference_wrapper<const T> crw1{i};
+  std::reference_wrapper<const T> crw3{j};
 
-    std::same_as<bool> decltype(auto) _ = rw1 == rw1;
-    assert(rw1 == rw1);
+  /// refwrap, refwrap
+  AssertEqualityReturnBool<decltype(rw1), decltype(rw2)>();
+  assert(testEquality(rw1, rw2, true));
+  assert(testEquality(rw1, rw3, false));
 
-    std::same_as<bool> decltype(auto) _ = rw1 == rw2;
-    assert(rw1 == rw2);
+  // refwrap, const&
+  AssertEqualityReturnBool<decltype(rw1), decltype(i)>();
+  assert(testEquality(rw1, i, true));
+  assert(testEquality(rw1, j, false));
 
-    std::same_as<bool> decltype(auto) _ = rw2 == rw1;
-    assert(rw2 == rw1);
-  }
-  {
-    // refwrap, const&
-    std::reference_wrapper<T> rw{i};
-
-    std::same_as<bool> decltype(auto) _ = rw == i;
-    assert(rw == i);
-
-    std::same_as<bool> decltype(auto) _ = i == rw;
-    assert(i == rw);
-  }
-  {
-    // refwrap, refwrap<const>
-    std::reference_wrapper<T> rw1{i};
-    std::reference_wrapper<const T> rw2 = rw1;
-
-    std::same_as<bool> decltype(auto) _ = rw1 == rw2;
-    assert(rw1 == rw2);
-
-    std::same_as<bool> decltype(auto) _ = rw2 == rw1;
-    assert(rw2 == rw1);
-  }
-
-  // `operator!=`
-  {
-    // refwrap, refwrap
-    std::reference_wrapper<T> rw1{i};
-    std::reference_wrapper<T> rw2{j};
-
-    std::same_as<bool> decltype(auto) _ = rw1 != rw2;
-    assert(rw1 != rw2);
-
-    std::same_as<bool> decltype(auto) _ = rw2 != rw1;
-    assert(rw2 != rw1);
-  }
-  {
-    // refwrap, const&
-    std::reference_wrapper<T> rw{i};
-
-    std::same_as<bool> decltype(auto) _ = rw != j;
-    assert(rw != j);
-
-    std::same_as<bool> decltype(auto) _ = j != rw;
-    assert(j != rw);
-  }
-  {
-    // refwrap, refwrap<const>
-    std::reference_wrapper<T> rw1{i};
-    std::reference_wrapper<const T> rw2{j};
-
-    std::same_as<bool> decltype(auto) _ = rw1 != rw2;
-    assert(rw1 != rw2);
-
-    std::same_as<bool> decltype(auto) _ = rw2 != rw1;
-    assert(rw2 != rw1);
-  }
+  // refwrap, refwrap<const>
+  AssertEqualityReturnBool<decltype(rw1), decltype(crw1)>();
+  assert(testEquality(rw1, crw1, true));
+  assert(testEquality(rw1, crw3, false));
 }
 
 constexpr bool test() {
