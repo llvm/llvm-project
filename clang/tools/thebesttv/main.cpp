@@ -547,6 +547,13 @@ void generatePathFromOneEntry(const ordered_json &result,
         // 精确匹配不上的话，就模糊匹配
         bool isStmt = true; // type == "stmt";
         Location jsonLoc(loc);
+
+        // 跳过项目以外的库函数路径
+        if (!Global.isUnderProject(jsonLoc.file)) {
+            logger.warn("Skipping lib function in {}", jsonLoc.file);
+            continue;
+        }
+
         VarLocResult varLoc = locateVariable(locator, jsonLoc, isStmt);
         if (!varLoc.isValid()) {
             logger.error(
