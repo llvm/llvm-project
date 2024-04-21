@@ -46,18 +46,6 @@ static_assert(std::equality_comparable<std::reference_wrapper<EqualityComparable
 
 static_assert(!std::equality_comparable<std::reference_wrapper<NonComparable>>);
 
-// // refwrap, refwrap
-// static_assert(AssertEqualityAreNoexcept<std::reference_wrapper<EqualityComparable>>());
-// static_assert(AssertEqualityReturnBool<std::reference_wrapper<EqualityComparable>>());
-// // refwrap, const&
-// static_assert(AssertEqualityAreNoexcept<std::reference_wrapper<EqualityComparable>, int>());
-// static_assert(AssertEqualityReturnBool<std::reference_wrapper<EqualityComparable>, int>());
-// // refwrap, refwrap<const>
-// static_assert(AssertEqualityAreNoexcept<std::reference_wrapper<EqualityComparable>,
-//                                         std::reference_wrapper<const EqualityComparable>>());
-// static_assert(AssertEqualityReturnBool<std::reference_wrapper<EqualityComparable>,
-//                                        std::reference_wrapper<const EqualityComparable>>());
-
 // Test equality.
 
 template <typename T>
@@ -70,39 +58,35 @@ constexpr void test() {
     // refwrap, refwrap
     std::reference_wrapper<T> rw1{i};
     std::reference_wrapper<T> rw2 = rw1;
-    // std::reference_wrapper<T> rw3{j};
-    // static_assert(AssertEqualityAreNoexcept<decltype(rw1), decltype(rw1)>);
-    // static_assert(AssertEqualityReturnBool<decltype(rw1), decltype(rw1)>);
+
     std::same_as<bool> decltype(auto) _ = rw1 == rw1;
     assert(rw1 == rw1);
-    // static_assert(AssertEqualityAreNoexcept<decltype(rw1), decltype(rw2)>);
-    // static_assert(AssertEqualityReturnBool<decltype(rw1), decltype(rw2)>);
+
     std::same_as<bool> decltype(auto) _ = rw1 == rw2;
     assert(rw1 == rw2);
-    // static_assert(AssertEqualityAreNoexcept<decltype(rw2), decltype(rw1)>);
-    // static_assert(AssertEqualityReturnBool<decltype(rw2), decltype(rw1)>);
+
     std::same_as<bool> decltype(auto) _ = rw2 == rw1;
     assert(rw2 == rw1);
   }
   {
     // refwrap, const&
     std::reference_wrapper<T> rw{i};
-    // static_assert(AssertEqualityAreNoexcept<decltype(rw), decltype(i)>);
-    // static_assert(AssertEqualityReturnBool<decltype(rw), decltype(i)>);
+
+    std::same_as<bool> decltype(auto) _ = rw == i;
     assert(rw == i);
-    // static_assert(AssertEqualityAreNoexcept<decltype(i), decltype(rw)>);
-    // static_assert(AssertEqualityReturnBool<decltype(i), decltype(rw)>);
+
+    std::same_as<bool> decltype(auto) _ = i == rw;
     assert(i == rw);
   }
   {
     // refwrap, refwrap<const>
     std::reference_wrapper<T> rw1{i};
     std::reference_wrapper<const T> rw2 = rw1;
-    // static_assert(AssertEqualityAreNoexcept<decltype(rw1), decltype(rw2)>);
-    // static_assert(AssertEqualityReturnBool<decltype(rw1), decltype(rw2)>);
+
+    std::same_as<bool> decltype(auto) _ = rw1 == rw2;
     assert(rw1 == rw2);
-    // static_assert(AssertEqualityAreNoexcept<decltype(rw2), decltype(rw1)>);
-    // static_assert(AssertEqualityReturnBool<decltype(rw2), decltype(rw1)>);
+
+    std::same_as<bool> decltype(auto) _ = rw2 == rw1;
     assert(rw2 == rw1);
   }
 
@@ -111,20 +95,32 @@ constexpr void test() {
     // refwrap, refwrap
     std::reference_wrapper<T> rw1{i};
     std::reference_wrapper<T> rw2{j};
+
+    std::same_as<bool> decltype(auto) _ = rw1 != rw2;
     assert(rw1 != rw2);
+
+    std::same_as<bool> decltype(auto) _ = rw2 != rw1;
     assert(rw2 != rw1);
   }
   {
     // refwrap, const&
     std::reference_wrapper<T> rw{i};
+
+    std::same_as<bool> decltype(auto) _ = rw != j;
     assert(rw != j);
+
+    std::same_as<bool> decltype(auto) _ = j != rw;
     assert(j != rw);
   }
   {
     // refwrap, refwrap<const>
     std::reference_wrapper<T> rw1{i};
     std::reference_wrapper<const T> rw2{j};
+
+    std::same_as<bool> decltype(auto) _ = rw1 != rw2;
     assert(rw1 != rw2);
+
+    std::same_as<bool> decltype(auto) _ = rw2 != rw1;
     assert(rw2 != rw1);
   }
 }
