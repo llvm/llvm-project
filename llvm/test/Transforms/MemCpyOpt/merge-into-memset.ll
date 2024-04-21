@@ -40,10 +40,9 @@ define void @memset_clobber_no_alias(ptr %p) {
 ; CHECK-LABEL: @memset_clobber_no_alias(
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca <256 x i8>, align 8
 ; CHECK-NEXT:    [[STACK1:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 8
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P:%.*]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 24
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK2]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %stack = alloca <256 x i8>, align 8
@@ -59,10 +58,9 @@ define void @store_clobber_no_alias1(i64 %a, ptr %p) {
 ; CHECK-LABEL: @store_clobber_no_alias1(
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca <256 x i8>, align 8
 ; CHECK-NEXT:    [[STACK1:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 8
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
 ; CHECK-NEXT:    store i64 [[A:%.*]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 24
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK2]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %stack = alloca <256 x i8>, align 8
@@ -78,10 +76,9 @@ define void @store_clobber_no_alias2(i64 %a, ptr %p) {
 ; CHECK-LABEL: @store_clobber_no_alias2(
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca <256 x i8>, align 8
 ; CHECK-NEXT:    [[STACK1:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 8
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
 ; CHECK-NEXT:    store i64 [[A:%.*]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 24
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK2]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %stack = alloca <256 x i8>, align 8
@@ -133,11 +130,10 @@ define void @load_clobber_no_alias(ptr %p, ptr %p1) {
 ; CHECK-LABEL: @load_clobber_no_alias(
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca <256 x i8>, align 8
 ; CHECK-NEXT:    [[STACK1:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 8
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
 ; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    store i64 [[A]], ptr [[P1:%.*]], align 8
 ; CHECK-NEXT:    [[STACK2:%.*]] = getelementptr inbounds i8, ptr [[STACK]], i64 24
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK2]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[STACK1]], i8 0, i64 136, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %stack = alloca <256 x i8>, align 8
