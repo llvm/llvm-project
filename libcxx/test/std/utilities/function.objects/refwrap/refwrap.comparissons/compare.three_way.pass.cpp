@@ -31,11 +31,41 @@ static_assert(!std::three_way_comparable<NonComparable>);
 
 // Test SFINAE.
 
+template <class _Tp>
+concept BooleanTestableImpl = std::convertible_to<_Tp, bool>;
+
+template <class _Tp>
+concept BooleanTestable = BooleanTestableImpl<_Tp> && requires(_Tp&& __t) {
+  { !std::forward<_Tp>(__t) } -> BooleanTestableImpl;
+};
+
+template <typename T>
+concept HasEqualityOperatorWithInt = requires(T t, int i) {
+  { t < i } -> BooleanTestable;
+  { i < t } -> BooleanTestable;
+};
+
+// refwrap, refwrap
 static_assert(std::three_way_comparable<std::reference_wrapper<StrongOrder>>);
 static_assert(std::three_way_comparable<std::reference_wrapper<WeakOrder>>);
 static_assert(std::three_way_comparable<std::reference_wrapper<PartialOrder>>);
+// refwrap, const&
+static_assert(HasEqualityOperatorWithInt<std::reference_wrapper<StrongOrder>>);
+static_assert(HasEqualityOperatorWithInt<std::reference_wrapper<WeakOrder>>);
+static_assert(HasEqualityOperatorWithInt<std::reference_wrapper<PartialOrder>>);
+// refwrap, refwrap<const>
+static_assert(std::three_way_comparable_with<std::reference_wrapper<StrongOrder>, const StrongOrder>);
+static_assert(std::three_way_comparable_with<std::reference_wrapper<WeakOrder>, const WeakOrder>);
+static_assert(std::three_way_comparable_with<std::reference_wrapper<PartialOrder>, const PartialOrder>);
 
+// refwrap, refwrap
 static_assert(!std::three_way_comparable<std::reference_wrapper<NonComparable>>);
+// refwrap, const&
+static_assert(!HasEqualityOperatorWithInt<std::reference_wrapper<NonComparable>>);
+// refwrap, refwrap<const>
+static_assert(!std::three_way_comparable_with<std::reference_wrapper<StrongOrder>, const NonComparable>);
+static_assert(!std::three_way_comparable_with<std::reference_wrapper<WeakOrder>, const NonComparable>);
+static_assert(!std::three_way_comparable_with<std::reference_wrapper<PartialOrder>, const NonComparable>);
 
 // Test comparisons.
 
@@ -45,6 +75,8 @@ constexpr void test() {
 
   T bigger{94};
   T smaller{82};
+
+  T unordered{std::numeric_limits<int>::min()};
 
   // operator<=>(reference_wrapper, reference_wrapper)
   {
@@ -66,6 +98,12 @@ constexpr void test() {
       std::reference_wrapper<T> rw2{smaller};
       assert(testOrder(rw1, rw2, Order::greater));
     }
+    // Unordered
+    if constexpr (std::same_as<T, PartialOrder>) {
+      std::reference_wrapper<T> rw1{bigger};
+      std::reference_wrapper<T> rw2{unordered};
+      assert(testOrder(rw1, rw2, Order::unordered));
+    }
   }
 
   // operator<=>(reference_wrapper, const T&)
@@ -84,6 +122,11 @@ constexpr void test() {
     {
       std::reference_wrapper<T> rw1{bigger};
       assert(testOrder(rw1, smaller, Order::greater));
+    }
+    // Unordered
+    if constexpr (std::same_as<T, PartialOrder>) {
+      std::reference_wrapper<T> rw1{bigger};
+      assert(testOrder(rw1, unordered, Order::unordered));
     }
   }
 
@@ -107,6 +150,12 @@ constexpr void test() {
       std::reference_wrapper<const T> rw2{smaller};
       assert(testOrder(rw1, rw2, Order::greater));
     }
+    // Unordered
+    if constexpr (std::same_as<T, PartialOrder>) {
+      std::reference_wrapper<T> rw1{bigger};
+      std::reference_wrapper<const T> rw2{unordered};
+      assert(testOrder(rw1, rw2, Order::unordered));
+    }
   }
 }
 
@@ -117,6 +166,9 @@ constexpr bool test() {
   test<WeakOrder, std::weak_ordering>();
   test<int, std::partial_ordering>();
   test<PartialOrder, std::partial_ordering>();
+
+  // `LessAndEqComp` does not have `operator<=>`. Ordering is synthesized based on `operator<`
+  test<LessAndEqComp, std::weak_ordering>();
 
   return true;
 }

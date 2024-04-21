@@ -47,13 +47,19 @@ concept HasEqualityOperatorWithInt = requires(T t, int i) {
   { t.get() == i } -> std::convertible_to<bool>;
 };
 
+// refwrap, refwrap
 static_assert(std::equality_comparable<std::reference_wrapper<EqualityComparable>>);
+// refwrap, const&
 static_assert(HasEqualityOperatorWithInt<std::reference_wrapper<EqualityComparable>>);
+// refwrap, refwrap<const>
 static_assert(std::equality_comparable_with<std::reference_wrapper<EqualityComparable>,
                                             std::reference_wrapper<const EqualityComparable>>);
 
+// refwrap, refwrap
 static_assert(!std::equality_comparable<std::reference_wrapper<NonComparable>>);
+// refwrap, const&
 static_assert(!HasEqualityOperatorWithInt<std::reference_wrapper<NonComparable>>);
+// refwrap, refwrap<const>
 static_assert(!std::equality_comparable_with<std::reference_wrapper<EqualityComparable>,
                                              std::reference_wrapper<const NonComparable>>);
 
