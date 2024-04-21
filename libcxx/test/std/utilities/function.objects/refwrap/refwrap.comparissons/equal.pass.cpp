@@ -18,32 +18,71 @@
 // friend constexpr bool operator==(reference_wrapper, reference_wrapper<const T>);                       // Since C++26
 
 #include <cassert>
+#include <concepts>
 #include <functional>
 
+#include "test_comparisons.h"
 #include "test_macros.h"
 
-constexpr bool test() {
-  int i = 92;
-  int j = 84;
+// Test SFINAE
+
+struct EqualityComparable {
+  constexpr EqualityComparable(int value) : value_{value} {};
+
+  friend constexpr bool operator==(const EqualityComparable&, const EqualityComparable&) noexcept = default;
+
+  int value_;
+};
+
+static_assert(std::equality_comparable<EqualityComparable>);
+static_assert(EqualityComparable{94} == EqualityComparable{94});
+static_assert(EqualityComparable{94} != EqualityComparable{82});
+
+// struct EqualityComparableWith {
+//   constexpr EqualityComparableWith(int value) : value_{value} {};
+
+//   friend constexpr bool operator==(const EqualityComparableWith&, const EqualityComparableWith&) noexcept = default;
+//   friend constexpr bool operator==(const EqualityComparableWith& x, const int& y) noexcept { return x.value_ == y; };
+
+//   int value_;
+// };
+
+struct NonComparable {};
+
+static_assert(!std::equality_comparable<NonComparable>);
+
+// struct NonComparableWith {
+//   constexpr NonComparableWith(int value);
+// };
+
+static_assert(std::equality_comparable<std::reference_wrapper<EqualityComparable>>);
+// static_assert(std::equality_comparable_with<std::reference_wrapper<EqualityComparableWith>, int>);
+static_assert(!std::equality_comparable<std::reference_wrapper<NonComparable>>);
+// static_assert(!std::equality_comparable_with<std::reference_wrapper<NonComparableWith>, int>);
+
+template <typename T>
+constexpr void test() {
+  T i{92};
+  T j{84};
 
   // ==
   {
     // refwrap, refwrap
-    std::reference_wrapper<int> rw1{i};
-    std::reference_wrapper<int> rw2 = rw1;
+    std::reference_wrapper<T> rw1{i};
+    std::reference_wrapper<T> rw2 = rw1;
     assert(rw1 == rw2);
     assert(rw2 == rw1);
   }
   {
     // refwrap, const&
-    std::reference_wrapper<int> rw{i};
+    std::reference_wrapper<T> rw{i};
     assert(rw == i);
     assert(i == rw);
   }
   {
     // refwrap, refwrap<const>
-    std::reference_wrapper<int> rw1{i};
-    std::reference_wrapper<const int> rw2 = rw1;
+    std::reference_wrapper<T> rw1{i};
+    std::reference_wrapper<const T> rw2 = rw1;
     assert(rw1 == rw2);
     assert(rw2 == rw1);
   }
@@ -51,24 +90,29 @@ constexpr bool test() {
   // !=
   {
     // refwrap, refwrap
-    std::reference_wrapper<int> rw1{i};
-    std::reference_wrapper<int> rw2{j};
+    std::reference_wrapper<T> rw1{i};
+    std::reference_wrapper<T> rw2{j};
     assert(rw1 != rw2);
     assert(rw2 != rw1);
   }
   {
     // refwrap, const&
-    std::reference_wrapper<int> rw{i};
+    std::reference_wrapper<T> rw{i};
     assert(rw != j);
     assert(j != rw);
   }
   {
     // refwrap, refwrap<const>
-    std::reference_wrapper<int> rw1{i};
-    std::reference_wrapper<const int> rw2{j};
+    std::reference_wrapper<T> rw1{i};
+    std::reference_wrapper<const T> rw2{j};
     assert(rw1 != rw2);
     assert(rw2 != rw1);
   }
+}
+
+constexpr bool test() {
+  test<int>();
+  test<EqualityComparable>();
 
   return true;
 }
