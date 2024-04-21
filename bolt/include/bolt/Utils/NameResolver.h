@@ -28,6 +28,13 @@ class NameResolver {
   static constexpr char Sep = '/';
 
 public:
+  /// Return the number of duplicates registered for a given \p Name.
+  uint64_t getNumDuplicates(StringRef Name) {
+    if (Counters.contains(Name))
+      return Counters.at(Name);
+    return 0;
+  }
+
   /// Return unique version of the \p Name in the form "Name<Sep><Number>".
   std::string uniquify(StringRef Name) {
     const uint64_t ID = ++Counters[Name];

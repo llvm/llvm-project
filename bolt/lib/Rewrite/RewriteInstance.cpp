@@ -840,6 +840,7 @@ void RewriteInstance::discoverFileObjects() {
       continue;
 
     if (cantFail(Symbol.getType()) == SymbolRef::ST_File) {
+      FileSymbols.emplace_back(Symbol.getRawDataRefImpl());
       StringRef Name =
           cantFail(std::move(NameOrError), "cannot get symbol name for file");
       // Ignore Clang LTO artificial FILE symbol as it is not always generated,
@@ -1417,49 +1418,105 @@ void RewriteInstance::registerFragments() {
   if (!BC->HasSplitFunctions)
     return;
 
+  std::vector<std::pair<StringRef, BinaryFunction *>> AmbiguousFragments;
   for (auto &BFI : BC->getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
     if (!Function.isFragment())
       continue;
-    unsigned ParentsFound = 0;
-    for (StringRef Name : Function.getNames()) {
+    for (MCSymbol *Symbol : Function.Symbols) {
+      StringRef Name = Symbol->getName();
       StringRef BaseName, Suffix;
       std::tie(BaseName, Suffix) = Name.split('/');
       const size_t ColdSuffixPos = BaseName.find(".cold");
       if (ColdSuffixPos == StringRef::npos)
         continue;
-      // For cold function with local (foo.cold/1) symbol, prefer a parent with
-      // local symbol as well (foo/1) over global symbol (foo).
-      std::string ParentName = BaseName.substr(0, ColdSuffixPos).str();
+      StringRef ParentName = BaseName.substr(0, ColdSuffixPos);
       const BinaryData *BD = BC->getBinaryDataByName(ParentName);
-      if (Suffix != "") {
-        ParentName.append(Twine("/", Suffix).str());
-        const BinaryData *BDLocal = BC->getBinaryDataByName(ParentName);
-        if (BDLocal || !BD)
-          BD = BDLocal;
-      }
-      if (!BD) {
-        if (opts::Verbosity >= 1)
-          BC->outs() << "BOLT-INFO: parent function not found for " << Name
-                     << "\n";
+      uint64_t NumPossibleLocalParents = NR.getNumDuplicates(ParentName);
+      // The most common case: single local parent fragment.
+      if (!BD && NumPossibleLocalParents == 1) {
+        BD = BC->getBinaryDataByName((Twine(ParentName) + "/1").str());
+      } else if (BD && (!NumPossibleLocalParents || Suffix.empty())) {
+        // Global parent and either no local candidates (second most common), or
+        // the fragment is global as well (uncommon).
+      } else {
+        // Any other case: need to disambiguate using FILE symbols.
+        AmbiguousFragments.emplace_back(ParentName, &Function);
         continue;
       }
+      assert(BD);
       const uint64_t Address = BD->getAddress();
       BinaryFunction *BF = BC->getBinaryFunctionAtAddress(Address);
       if (!BF) {
-        if (opts::Verbosity >= 1)
-          BC->outs() << formatv(
-              "BOLT-INFO: parent function not found at {0:x}\n", Address);
-        continue;
+        BC->errs() << "BOLT-ERROR: parent function not found for " << Function
+                   << '\n';
+        exit(1);
       }
       BC->registerFragment(Function, *BF);
-      ++ParentsFound;
     }
-    if (!ParentsFound) {
-      BC->errs() << "BOLT-ERROR: parent function not found for " << Function
-                 << '\n';
-      exit(1);
+  }
+
+  if (AmbiguousFragments.empty())
+    return;
+
+  if (!BC->hasSymbolsWithFileName()) {
+    BC->errs() << "BOLT-ERROR: input file has split functions but does not "
+                  "have FILE symbols. If the binary was stripped, preserve "
+                  "FILE symbols with --keep-file-symbols strip option.";
+    exit(1);
+  }
+
+  // The first global symbol is identified by the symbol table sh_info value.
+  // Used as local symbol search stopping point.
+  uint32_t FirstGlobal{0};
+  auto *ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
+  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
+  for (const auto &Sec : cantFail(Obj.sections())) {
+    if (Sec.sh_type == ELF::SHT_SYMTAB) {
+      FirstGlobal = Sec.sh_info;
+      break;
     }
+  }
+
+  for (auto &[ParentName, BF]: AmbiguousFragments) {
+    const uint64_t Address = BF->getAddress();
+
+    // Get fragment's own symbol
+    const auto SymIt = FileSymRefs.find(Address);
+    assert(SymIt != FileSymRefs.end());
+
+    // Find containing FILE symbol
+    auto FSI =
+        llvm::upper_bound(FileSymbols, SymIt->second.getRawDataRefImpl(),
+                          [](const DataRefImpl &A, const DataRefImpl &B) {
+                            return A.d.b < B.d.b;
+                          });
+    assert(FSI != FileSymbols.begin());
+
+    uint32_t StopSymbolNum = FirstGlobal;
+    if (FSI != FileSymbols.end())
+      StopSymbolNum = FSI->d.b;
+
+    uint64_t ParentAddress{0};
+    // Iterate over local file symbols and check symbol names to match parent.
+    for (SymbolRef Symbol(FSI[-1], InputFile);
+         Symbol.getRawDataRefImpl().d.b != StopSymbolNum; Symbol.moveNext()) {
+      if (cantFail(Symbol.getName()) == ParentName) {
+        ParentAddress = cantFail(Symbol.getAddress());
+        break;
+      }
+    }
+
+    // No local parent is found, use global parent function.
+    if (!ParentAddress) {
+      BinaryData *ParentBD = BC->getBinaryDataByName(ParentName);
+      assert(ParentBD);
+      ParentAddress = ParentBD->getAddress();
+    }
+
+    BinaryFunction *ParentBF = BC->getBinaryFunctionAtAddress(ParentAddress);
+    assert(ParentBF);
+    BC->registerFragment(*BF, *ParentBF);
   }
 }
 
