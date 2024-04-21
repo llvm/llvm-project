@@ -410,6 +410,23 @@ define i32 @test11(i32 %x) {
   ret i32 %mul
 }
 
+define i32 @test11_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
+; CHECK-LABEL: test11_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, w0, lsl #2
+; CHECK-NEXT:    add w0, w0, w8, lsl #1
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test11_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #11 // =0xb
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 11 ; 11 = (((1<<2) + 1) << 1) + 1
+  ret i32 %mul
+}
+
 define i32 @test12(i32 %x) {
 ; CHECK-LABEL: test12:
 ; CHECK:       // %bb.0:
@@ -545,6 +562,24 @@ define i32 @test45(i32 %x) {
   ret i32 %mul
 }
 
+; Negative test: The shift number 5 is out of bound
+define i32 @test67_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
+; CHECK-LABEL: test67_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #67 // =0x43
+; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test67_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #67 // =0x43
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 67 ; 67 = (((1<<5) + 1) << 1) + 1
+  ret i32 %mul
+}
+
 define i32 @test85_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: test85_fast_shift:
 ; CHECK:       // %bb.0:
@@ -559,6 +594,24 @@ define i32 @test85_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
 ; GISEL-NEXT:    ret
 
   %mul = mul nsw i32 %x, 85 ; 85 = (1+4)*(1+16)
+  ret i32 %mul
+}
+
+; Negative test: The shift number 5 is out of bound
+define i32 @test97_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
+; CHECK-LABEL: test97_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #97 // =0x61
+; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test97_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #97 // =0x61
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 97 ; 97 = ((2 + 1) << 5) + 1
   ret i32 %mul
 }
 
@@ -857,9 +910,9 @@ define <4 x i32> @muladd_demand_commute(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; GISEL-LABEL: muladd_demand_commute:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x8, .LCPI49_0
+; GISEL-NEXT:    adrp x8, .LCPI52_0
 ; GISEL-NEXT:    movi v3.4s, #1, msl #16
-; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI49_0]
+; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI52_0]
 ; GISEL-NEXT:    mla v1.4s, v0.4s, v2.4s
 ; GISEL-NEXT:    and v0.16b, v1.16b, v3.16b
 ; GISEL-NEXT:    ret
