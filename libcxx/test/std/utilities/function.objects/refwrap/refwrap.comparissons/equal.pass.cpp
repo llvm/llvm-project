@@ -24,7 +24,6 @@
 #include "test_comparisons.h"
 #include "test_macros.h"
 
-
 struct EqualityComparable {
   constexpr EqualityComparable(int value) : value_{value} {};
 
