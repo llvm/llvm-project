@@ -77,9 +77,13 @@ install(
 )
 
 if(LIBC_TARGET_OS_IS_GPU)
+  set(gpu_install_dir lib${LLVM_LIBDIR_SUFFIX})
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+    set(gpu_install_dir lib${LLVM_LIBDIR_SUFFIX}/${LLVM_HOST_TRIPLE})
+  endif()
   install(
     TARGETS ${added_gpu_archive_targets}
-    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+    ARCHIVE DESTINATION ${gpu_install_dir}
     COMPONENT libc
   )
   foreach(file ${added_gpu_bitcode_targets})

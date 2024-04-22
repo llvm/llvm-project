@@ -11,7 +11,7 @@
 
 #include "rpc.h"
 
-#include "llvm-libc-types/rpc_opcodes_t.h"
+#include "include/llvm-libc-types/rpc_opcodes_t.h"
 
 namespace LIBC_NAMESPACE {
 namespace rpc {

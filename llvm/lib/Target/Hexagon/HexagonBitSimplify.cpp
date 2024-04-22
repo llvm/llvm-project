@@ -1002,7 +1002,7 @@ namespace {
 bool DeadCodeElimination::isDead(unsigned R) const {
   for (const MachineOperand &MO : MRI.use_operands(R)) {
     const MachineInstr *UseI = MO.getParent();
-    if (UseI->isDebugValue())
+    if (UseI->isDebugInstr())
       continue;
     if (UseI->isPHI()) {
       assert(!UseI->getOperand(0).getSubReg());

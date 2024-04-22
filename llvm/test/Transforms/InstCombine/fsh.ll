@@ -1001,3 +1001,12 @@ define <2 x i32> @fsh_unary_shuffle_ops_partial_widening(<3 x i32> %x, <2 x i32>
   %r = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c)
   ret <2 x i32> %r
 }
+
+define <2 x i32> @fshr_vec_zero_elem(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @fshr_vec_zero_elem(
+; CHECK-NEXT:    [[FSH:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> <i32 2, i32 0>)
+; CHECK-NEXT:    ret <2 x i32> [[FSH]]
+;
+  %fsh = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> <i32 2, i32 0>)
+  ret <2 x i32> %fsh
+}

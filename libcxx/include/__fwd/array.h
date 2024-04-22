@@ -35,6 +35,12 @@ template <size_t _Ip, class _Tp, size_t _Size>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp&& get(const array<_Tp, _Size>&&) _NOEXCEPT;
 #endif
 
+template <class>
+struct __is_std_array : false_type {};
+
+template <class _Tp, size_t _Size>
+struct __is_std_array<array<_Tp, _Size> > : true_type {};
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___FWD_ARRAY_H

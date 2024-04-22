@@ -1,3 +1,9 @@
+ClangIR:
+  - clang/include/clang/CIR/**/*
+  - clang/lib/CIR/**/*
+  - clang/tools/cir-*/**/*
+  - clang/test/CIR/**/*
+
 clang:dataflow:
   - clang/include/clang/Analysis/FlowSensitive/**/*
   - clang/lib/Analysis/FlowSensitive/**/*
@@ -629,6 +635,8 @@ backend:DirectX:
   - '**/*DirectX*/**'
   - '**/*DXIL*/**'
   - '**/*dxil*/**'
+  - '**/*DXContainer*'
+  - '**/*DXContainer*/**'
 
 backend:SPIR-V:
   - clang/lib/Driver/ToolChains/SPIRV.*
@@ -869,6 +877,9 @@ backend:SystemZ:
 third-party:unittests:
   - third-party/unittests/**
 
+third-party:benchmark:
+  - third-party/benchmark/**
+
 llvm:binary-utilities:
   - llvm/docs/CommandGuide/llvm-*
   - llvm/include/llvm/BinaryFormat/**
@@ -930,3 +941,9 @@ openmp:libomp:
 
 openmp:libomptarget:
   - any: ['openmp/**', '!openmp/runtime/**']
+
+bazel:
+  - utils/bazel/**
+
+offload:
+  - offload/**

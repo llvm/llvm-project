@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
@@ -91,6 +92,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              ArrayRef<Register> ResRegs,
                              ArrayRef<ArrayRef<Register>> ArgRegs,
                              Register SwiftErrorVReg,
+                             Register ConvergenceCtrlToken,
                              std::function<unsigned()> GetCalleeReg) const {
   CallLoweringInfo Info;
   const DataLayout &DL = MIRBuilder.getDataLayout();
@@ -121,7 +123,6 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
     CanBeTailCalled = false;
   }
 
-
   // First step is to marshall all the function's parameters into the correct
   // physregs and memory locations. Gather the sequence of argument types that
   // we'll pass to the assigner function.
@@ -144,9 +145,15 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   // Try looking through a bitcast from one function type to another.
   // Commonly happens with calls to objc_msgSend().
   const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
-  if (const Function *F = dyn_cast<Function>(CalleeV))
-    Info.Callee = MachineOperand::CreateGA(F, 0);
-  else if (isa<GlobalIFunc>(CalleeV) || isa<GlobalAlias>(CalleeV)) {
+  if (const Function *F = dyn_cast<Function>(CalleeV)) {
+    if (F->hasFnAttribute(Attribute::NonLazyBind)) {
+      LLT Ty = getLLTForType(*F->getType(), DL);
+      Register Reg = MIRBuilder.buildGlobalValue(Ty, F).getReg(0);
+      Info.Callee = MachineOperand::CreateReg(Reg, false);
+    } else {
+      Info.Callee = MachineOperand::CreateGA(F, 0);
+    }
+  } else if (isa<GlobalIFunc>(CalleeV) || isa<GlobalAlias>(CalleeV)) {
     // IR IFuncs and Aliases can't be forward declared (only defined), so the
     // callee must be in the same TU and therefore we can direct-call it without
     // worrying about it being out of range.
@@ -181,6 +188,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Info.KnownCallees = CB.getMetadata(LLVMContext::MD_callees);
   Info.CallConv = CallConv;
   Info.SwiftErrorVReg = SwiftErrorVReg;
+  Info.ConvergenceCtrlToken = ConvergenceCtrlToken;
   Info.IsMustTailCall = CB.isMustTailCall();
   Info.IsTailCall = CanBeTailCalled;
   Info.IsVarArg = IsVarArg;

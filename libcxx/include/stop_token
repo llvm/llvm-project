@@ -37,7 +37,6 @@ namespace std {
 #  error "<stop_token> is not supported since libc++ has been configured without support for threads."
 #endif
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__stop_token/stop_callback.h>
 #include <__stop_token/stop_source.h>
 #include <__stop_token/stop_token.h>

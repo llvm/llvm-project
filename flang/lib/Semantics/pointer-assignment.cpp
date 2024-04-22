@@ -266,7 +266,7 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   } else if (isContiguous_ &&
       !funcResult->attrs.test(FunctionResult::Attr::Contiguous)) {
     msg = "CONTIGUOUS %s is associated with the result of reference to"
-          " function '%s' that is not contiguous"_err_en_US;
+          " function '%s' that is not known to be contiguous"_warn_en_US;
   } else if (lhsType_) {
     const auto *frTypeAndShape{funcResult->GetTypeAndShape()};
     CHECK(frTypeAndShape);
@@ -362,7 +362,8 @@ bool PointerAssignmentChecker::Check(parser::CharBlock rhsName, bool isCall,
   std::optional<std::string> warning;
   CharacterizeProcedure();
   if (std::optional<MessageFixedText> msg{evaluate::CheckProcCompatibility(
-          isCall, procedure_, rhsProcedure, specific, whyNot, warning)}) {
+          isCall, procedure_, rhsProcedure, specific, whyNot, warning,
+          /*ignoreImplicitVsExplicit=*/isCall)}) {
     Say(std::move(*msg), description_, rhsName, whyNot);
     return false;
   }

@@ -94,20 +94,20 @@ namespace InitVTable {
   };
 
   // CHECK-LABEL: define{{.*}} void @_ZN10InitVTable1BC2Ev(ptr {{[^,]*}} %this) unnamed_addr
-  // CHECK: store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN10InitVTable1BE, i32 0, inrange i32 0, i32 2), ptr [[THIS:%.*]],
+  // CHECK: store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN10InitVTable1BE, i32 0, i32 0, i32 2), ptr [[THIS:%.*]],
   // CHECK:      [[VTBL:%.*]] = load ptr, ptr {{%.*}}
   // CHECK-NEXT: [[FNP:%.*]] = getelementptr inbounds ptr, ptr [[VTBL]], i64 0
   // CHECK-NEXT: [[FN:%.*]] = load ptr, ptr [[FNP]]
   // CHECK-NEXT: [[ARG:%.*]] = call noundef i32 [[FN]](ptr {{[^,]*}} [[THIS]])
   // CHECK-NEXT: call void @_ZN10InitVTable1AC2Ei(ptr {{[^,]*}} {{%.*}}, i32 noundef [[ARG]])
-  // CHECK-NEXT: store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN10InitVTable1BE, i32 0, inrange i32 0, i32 2), ptr [[THIS]]
+  // CHECK-NEXT: store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN10InitVTable1BE, i32 0, i32 0, i32 2), ptr [[THIS]]
   // CHECK-NEXT: ret void
   B::B() : A(foo()) {}
 
   // CHECK-LABEL: define{{.*}} void @_ZN10InitVTable1BC2Ei(ptr {{[^,]*}} %this, i32 noundef %x) unnamed_addr
   // CHECK:      [[ARG:%.*]] = add nsw i32 {{%.*}}, 5
   // CHECK-NEXT: call void @_ZN10InitVTable1AC2Ei(ptr {{[^,]*}} {{%.*}}, i32 noundef [[ARG]])
-  // CHECK-NEXT: store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN10InitVTable1BE, i32 0, inrange i32 0, i32 2), ptr {{%.*}}
+  // CHECK-NEXT: store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTVN10InitVTable1BE, i32 0, i32 0, i32 2), ptr {{%.*}}
   // CHECK-NEXT: ret void
   B::B(int x) : A(x + 5) {}
 }

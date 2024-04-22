@@ -7,15 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "math-entries.h"
+#include "numeric-template-specs.h"
 
 namespace Fortran::runtime {
 extern "C" {
 
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-CppTypeFor<TypeCategory::Real, 16> RTDEF(SqrtF128)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return Sqrt<RTNAME(SqrtF128)>::invoke(x);
-}
+F128Type RTDEF(SqrtF128)(F128Type x) { return SQRTTy<F128Type>::compute(x); }
 #endif
 
 } // extern "C"

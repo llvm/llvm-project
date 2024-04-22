@@ -54,15 +54,6 @@ static cl::opt<bool> WasmDisableFixIrreducibleControlFlowPass(
              " irreducible control flow optimization pass"),
     cl::init(false));
 
-// A temporary option to control emission of multivalue until multivalue
-// implementation is stable enough. We currently don't emit multivalue by
-// default even if the feature section allows it.
-// TODO Stabilize multivalue and delete this option
-cl::opt<bool>
-    WasmEmitMultiValue("wasm-emit-multivalue", cl::Hidden,
-                       cl::desc("WebAssembly: Emit multivalue in the backend"),
-                       cl::init(false));
-
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   // Register the target.
   RegisterTargetMachine<WebAssemblyTargetMachine> X(
@@ -77,6 +68,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeLowerGlobalDtorsLegacyPassPass(PR);
   initializeFixFunctionBitcastsPass(PR);
   initializeOptimizeReturnedPass(PR);
+  initializeWebAssemblyRefTypeMem2LocalPass(PR);
   initializeWebAssemblyArgumentMovePass(PR);
   initializeWebAssemblySetP2AlignOperandsPass(PR);
   initializeWebAssemblyReplacePhysRegsPass(PR);
@@ -299,6 +291,17 @@ private:
     bool Stripped = false;
     for (auto &GV : M.globals()) {
       if (GV.isThreadLocal()) {
+        // replace `@llvm.threadlocal.address.pX(GV)` with `GV`.
+        for (Use &U : make_early_inc_range(GV.uses())) {
+          if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U.getUser())) {
+            if (II->getIntrinsicID() == Intrinsic::threadlocal_address &&
+                II->getArgOperand(0) == &GV) {
+              II->replaceAllUsesWith(&GV);
+              II->eraseFromParent();
+            }
+          }
+        }
+
         Stripped = true;
         GV.setThreadLocal(false);
       }
@@ -486,8 +489,9 @@ void WebAssemblyPassConfig::addISelPrepare() {
       WasmTM->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
                                std::string(WasmTM->getTargetFeatureString()));
   if (Subtarget->hasReferenceTypes()) {
-    // We need to remove allocas for reference types
-    addPass(createPromoteMemoryToRegisterPass(true));
+    // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
+    // loads and stores are promoted to local.gets/local.sets.
+    addPass(createWebAssemblyRefTypeMem2Local());
   }
   // Lower atomics and TLS if necessary
   addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));

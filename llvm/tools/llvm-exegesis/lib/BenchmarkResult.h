@@ -74,6 +74,8 @@ struct BenchmarkKey {
   // The address that the snippet should be loaded in at if the execution mode
   // being used supports it.
   intptr_t SnippetAddress = 0;
+  // The register that should be used to hold the loop counter.
+  unsigned LoopRegister;
 };
 
 struct BenchmarkMeasure {

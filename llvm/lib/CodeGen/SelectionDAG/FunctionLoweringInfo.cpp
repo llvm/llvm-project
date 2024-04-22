@@ -358,7 +358,7 @@ void FunctionLoweringInfo::clear() {
   StatepointRelocationMaps.clear();
   PreferredExtendType.clear();
   PreprocessedDbgDeclares.clear();
-  PreprocessedDPVDeclares.clear();
+  PreprocessedDVRDeclares.clear();
 }
 
 /// CreateReg - Allocate a single virtual register for the given type.
@@ -393,6 +393,16 @@ Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
 Register FunctionLoweringInfo::CreateRegs(const Value *V) {
   return CreateRegs(V->getType(), UA && UA->isDivergent(V) &&
                                       !TLI->requiresUniformRegister(*MF, V));
+}
+
+Register FunctionLoweringInfo::InitializeRegForValue(const Value *V) {
+  // Tokens live in vregs only when used for convergence control.
+  if (V->getType()->isTokenTy() && !isa<ConvergenceControlInst>(V))
+    return 0;
+  Register &R = ValueMap[V];
+  assert(R == Register() && "Already initialized this value register!");
+  assert(VirtReg2Value.empty());
+  return R = CreateRegs(V);
 }
 
 /// GetLiveOutRegInfo - Gets LiveOutInfo for a register, returning NULL if the

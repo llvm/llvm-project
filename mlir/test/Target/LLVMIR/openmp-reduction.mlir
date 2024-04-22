@@ -3,7 +3,7 @@
 // Only check the overall shape of the code and the presence of relevant
 // runtime calls. Actual IR checking is done at the OpenMPIRBuilder level.
 
-omp.reduction.declare @add_f32 : f32
+omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(0.0 : f32) : f32
@@ -78,7 +78,7 @@ llvm.func @simple_reduction(%lb : i64, %ub : i64, %step : i64) {
 
 // -----
 
-omp.reduction.declare @add_f32 : f32
+omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(0.0 : f32) : f32
@@ -170,7 +170,7 @@ llvm.func @reuse_declaration(%lb : i64, %ub : i64, %step : i64) {
 
 // -----
 
-omp.reduction.declare @add_f32 : f32
+omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(0.0 : f32) : f32
@@ -255,7 +255,7 @@ llvm.func @missing_omp_reduction(%lb : i64, %ub : i64, %step : i64) {
 
 // -----
 
-omp.reduction.declare @add_f32 : f32
+omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(0.0 : f32) : f32
@@ -338,7 +338,7 @@ llvm.func @double_reference(%lb : i64, %ub : i64, %step : i64) {
 
 // -----
 
-omp.reduction.declare @add_f32 : f32
+omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(0.0 : f32) : f32
@@ -356,7 +356,7 @@ atomic {
   omp.yield
 }
 
-omp.reduction.declare @mul_f32 : f32
+omp.declare_reduction @mul_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(1.0 : f32) : f32
@@ -435,7 +435,7 @@ llvm.func @no_atomic(%lb : i64, %ub : i64, %step : i64) {
 
 // -----
 
-omp.reduction.declare @add_f32 : f32
+omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
   %0 = llvm.mlir.constant(0.0 : f32) : f32
@@ -504,7 +504,7 @@ llvm.func @simple_reduction_parallel() {
 
 // -----
 
-omp.reduction.declare @add_i32 : i32
+omp.declare_reduction @add_i32 : i32
 init {
 ^bb0(%arg: i32):
   %0 = llvm.mlir.constant(0 : i32) : i32

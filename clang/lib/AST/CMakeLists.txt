@@ -66,7 +66,6 @@ add_clang_library(clangAST
   InheritViz.cpp
   Interp/ByteCodeEmitter.cpp
   Interp/ByteCodeExprGen.cpp
-  Interp/ByteCodeGenError.cpp
   Interp/ByteCodeStmtGen.cpp
   Interp/Context.cpp
   Interp/Descriptor.cpp
@@ -99,6 +98,7 @@ add_clang_library(clangAST
   NSAPI.cpp
   ODRDiagsEmitter.cpp
   ODRHash.cpp
+  OpenACCClause.cpp
   OpenMPClause.cpp
   OSLog.cpp
   ParentMap.cpp

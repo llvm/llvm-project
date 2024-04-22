@@ -12,6 +12,7 @@
 // Access and manipulate the fields of an IEEE-754 binary
 // floating-point value via a generalized template.
 
+#include "flang/Common/api-attrs.h"
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
 #include <cinttypes>
@@ -47,9 +48,11 @@ public:
 
   using RawType = common::HostUnsignedIntType<bits>;
   static_assert(CHAR_BIT * sizeof(RawType) >= bits);
+  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr RawType significandMask{(RawType{1} << significandBits) - 1};
 
-  constexpr BinaryFloatingPointNumber() {} // zero
+  constexpr RT_API_ATTRS BinaryFloatingPointNumber() {} // zero
+  RT_OFFLOAD_VAR_GROUP_END
   constexpr BinaryFloatingPointNumber(
       const BinaryFloatingPointNumber &that) = default;
   constexpr BinaryFloatingPointNumber(
@@ -58,26 +61,30 @@ public:
       const BinaryFloatingPointNumber &that) = default;
   constexpr BinaryFloatingPointNumber &operator=(
       BinaryFloatingPointNumber &&that) = default;
-  constexpr explicit BinaryFloatingPointNumber(RawType raw) : raw_{raw} {}
+  constexpr explicit RT_API_ATTRS BinaryFloatingPointNumber(RawType raw)
+      : raw_{raw} {}
 
-  RawType raw() const { return raw_; }
+  RT_API_ATTRS RawType raw() const { return raw_; }
 
-  template <typename A> explicit constexpr BinaryFloatingPointNumber(A x) {
+  template <typename A>
+  explicit constexpr RT_API_ATTRS BinaryFloatingPointNumber(A x) {
     static_assert(sizeof raw_ <= sizeof x);
     std::memcpy(reinterpret_cast<void *>(&raw_),
         reinterpret_cast<const void *>(&x), sizeof raw_);
   }
 
-  constexpr int BiasedExponent() const {
+  constexpr RT_API_ATTRS int BiasedExponent() const {
     return static_cast<int>(
         (raw_ >> significandBits) & ((1 << exponentBits) - 1));
   }
-  constexpr int UnbiasedExponent() const {
+  constexpr RT_API_ATTRS int UnbiasedExponent() const {
     int biased{BiasedExponent()};
     return biased - exponentBias + (biased == 0);
   }
-  constexpr RawType Significand() const { return raw_ & significandMask; }
-  constexpr RawType Fraction() const {
+  constexpr RT_API_ATTRS RawType Significand() const {
+    return raw_ & significandMask;
+  }
+  constexpr RT_API_ATTRS RawType Fraction() const {
     RawType sig{Significand()};
     if (isImplicitMSB && BiasedExponent() > 0) {
       sig |= RawType{1} << significandBits;
@@ -85,10 +92,10 @@ public:
     return sig;
   }
 
-  constexpr bool IsZero() const {
+  constexpr RT_API_ATTRS bool IsZero() const {
     return (raw_ & ((RawType{1} << (bits - 1)) - 1)) == 0;
   }
-  constexpr bool IsNaN() const {
+  constexpr RT_API_ATTRS bool IsNaN() const {
     auto expo{BiasedExponent()};
     auto sig{Significand()};
     if constexpr (bits == 80) { // x87
@@ -102,7 +109,7 @@ public:
       return expo == maxExponent && sig != 0;
     }
   }
-  constexpr bool IsInfinite() const {
+  constexpr RT_API_ATTRS bool IsInfinite() const {
     if constexpr (bits == 80) { // x87
       return BiasedExponent() == maxExponent &&
           Significand() == ((significandMask >> 1) + 1);
@@ -110,27 +117,30 @@ public:
       return BiasedExponent() == maxExponent && Significand() == 0;
     }
   }
-  constexpr bool IsMaximalFiniteMagnitude() const {
+  constexpr RT_API_ATTRS bool IsMaximalFiniteMagnitude() const {
     return BiasedExponent() == maxExponent - 1 &&
         Significand() == significandMask;
   }
-  constexpr bool IsNegative() const { return ((raw_ >> (bits - 1)) & 1) != 0; }
+  constexpr RT_API_ATTRS bool IsNegative() const {
+    return ((raw_ >> (bits - 1)) & 1) != 0;
+  }
 
-  constexpr void Negate() { raw_ ^= RawType{1} << (bits - 1); }
+  constexpr RT_API_ATTRS void Negate() { raw_ ^= RawType{1} << (bits - 1); }
 
   // For calculating the nearest neighbors of a floating-point value
-  constexpr void Previous() {
+  constexpr RT_API_ATTRS void Previous() {
     RemoveExplicitMSB();
     --raw_;
     InsertExplicitMSB();
   }
-  constexpr void Next() {
+  constexpr RT_API_ATTRS void Next() {
     RemoveExplicitMSB();
     ++raw_;
     InsertExplicitMSB();
   }
 
-  static constexpr BinaryFloatingPointNumber Infinity(bool isNegative) {
+  static constexpr RT_API_ATTRS BinaryFloatingPointNumber Infinity(
+      bool isNegative) {
     RawType result{RawType{maxExponent} << significandBits};
     if (isNegative) {
       result |= RawType{1} << (bits - 1);
@@ -139,7 +149,8 @@ public:
   }
 
   // Returns true when the result is exact
-  constexpr bool RoundToBits(int keepBits, enum FortranRounding mode) {
+  constexpr RT_API_ATTRS bool RoundToBits(
+      int keepBits, enum FortranRounding mode) {
     if (IsNaN() || IsInfinite() || keepBits >= binaryPrecision) {
       return true;
     }
@@ -180,12 +191,12 @@ public:
   }
 
 private:
-  constexpr void RemoveExplicitMSB() {
+  constexpr RT_API_ATTRS void RemoveExplicitMSB() {
     if constexpr (!isImplicitMSB) {
       raw_ = (raw_ & (significandMask >> 1)) | ((raw_ & ~significandMask) >> 1);
     }
   }
-  constexpr void InsertExplicitMSB() {
+  constexpr RT_API_ATTRS void InsertExplicitMSB() {
     if constexpr (!isImplicitMSB) {
       constexpr RawType mask{significandMask >> 1};
       raw_ = (raw_ & mask) | ((raw_ & ~mask) << 1);

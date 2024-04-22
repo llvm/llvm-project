@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++14 -verify=expected,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=expected,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -triple i686 -verify=expected,both %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple i686 -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++14 %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++17 %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++17 -triple i686 %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
-// RUN: %clang_cc1 -verify=ref,both -triple i686 %s
 
 /// Used to crash.
 struct Empty {};
@@ -1237,4 +1237,96 @@ namespace InvalidCtorInitializer {
   };
   // no crash on evaluating the constexpr ctor.
   constexpr int Z = X().Y; // both-error {{constexpr variable 'Z' must be initialized by a constant expression}}
+}
+
+extern int f(); // both-note {{here}}
+struct HasNonConstExprMemInit {
+  int x = f(); // both-note {{non-constexpr function}}
+  constexpr HasNonConstExprMemInit() {} // both-error {{never produces a constant expression}}
+};
+
+namespace {
+  template <class Tp, Tp v>
+  struct integral_constant {
+    static const Tp value = v;
+  };
+
+  template <class Tp, Tp v>
+  const Tp integral_constant<Tp, v>::value;
+
+  typedef integral_constant<bool, true> true_type;
+  typedef integral_constant<bool, false> false_type;
+
+  /// This might look innocent, but we get an evaluateAsInitializer call for the
+  /// static bool member before evaluating the first static_assert, but we do NOT
+  /// get such a call for the second one. So the second one needs to lazily visit
+  /// the data member itself.
+  static_assert(true_type::value, "");
+  static_assert(true_type::value, "");
+}
+
+#if __cplusplus >= 202002L
+namespace {
+  /// Used to crash because the CXXDefaultInitExpr is of compound type.
+  struct A {
+    int &x;
+    constexpr ~A() { --x; }
+  };
+  struct B {
+    int &x;
+    const A &a = A{x};
+  };
+  constexpr int a() {
+    int x = 1;
+    int f = B{x}.x;
+    B{x}; // both-warning {{expression result unused}}
+
+    return 1;
+  }
+}
+#endif
+
+namespace pr18633 {
+  struct A1 {
+    static const int sz;
+    static const int sz2;
+  };
+  const int A1::sz2 = 11;
+  template<typename T>
+  void func () {
+    int arr[A1::sz];
+    // both-warning@-1 {{variable length arrays in C++ are a Clang extension}}
+    // both-note@-2 {{initializer of 'sz' is unknown}}
+    // both-note@-9 {{declared here}}
+  }
+  template<typename T>
+  void func2 () {
+    int arr[A1::sz2];
+  }
+  const int A1::sz = 12;
+  void func2() {
+    func<int>();
+    func2<int>();
+  }
+}
+
+namespace {
+  struct F {
+    static constexpr int Z = 12;
+  };
+  F f;
+  static_assert(f.Z == 12, "");
+}
+
+namespace UnnamedBitFields {
+  struct A {
+    int : 1;
+    double f;
+    int : 1;
+    char c;
+  };
+
+  constexpr A a = (A){1.0, 'a'};
+  static_assert(a.f == 1.0, "");
+  static_assert(a.c == 'a', "");
 }

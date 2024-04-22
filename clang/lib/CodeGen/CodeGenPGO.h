@@ -94,6 +94,8 @@ public:
   // Set a module flag indicating if value profiling is enabled.
   void setValueProfilingFlag(llvm::Module &M);
 
+  void setProfileVersion(llvm::Module &M);
+
 private:
   void setFuncName(llvm::Function *Fn);
   void setFuncName(StringRef Name, llvm::GlobalValue::LinkageTypes Linkage);
@@ -108,15 +110,17 @@ private:
   bool canEmitMCDCCoverage(const CGBuilderTy &Builder);
 
 public:
-  void emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
-                            llvm::Value *StepV);
+  void emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
+                                 llvm::Value *StepV);
   void emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
-                                      Address MCDCCondBitmapAddr);
+                                      Address MCDCCondBitmapAddr,
+                                      CodeGenFunction &CGF);
   void emitMCDCParameters(CGBuilderTy &Builder);
   void emitMCDCCondBitmapReset(CGBuilderTy &Builder, const Expr *S,
                                Address MCDCCondBitmapAddr);
   void emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
-                                Address MCDCCondBitmapAddr, llvm::Value *Val);
+                                Address MCDCCondBitmapAddr, llvm::Value *Val,
+                                CodeGenFunction &CGF);
 
   /// Return the region count for the counter at the given index.
   uint64_t getRegionCount(const Stmt *S) {

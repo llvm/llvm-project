@@ -15,7 +15,7 @@ namespace objcopy {
 
 Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
   if (!Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
-      !Common.SymbolsPrefixRemove.empty() ||
+      !Common.SymbolsPrefixRemove.empty() || !Common.SymbolsToSkip.empty() ||
       !Common.AllocSectionsPrefix.empty() || !Common.KeepSection.empty() ||
       !Common.SymbolsToGlobalize.empty() || !Common.SymbolsToKeep.empty() ||
       !Common.SymbolsToLocalize.empty() || !Common.SymbolsToWeaken.empty() ||
@@ -34,7 +34,7 @@ Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
 
 Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
   if (!Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
-      !Common.SymbolsPrefixRemove.empty() ||
+      !Common.SymbolsPrefixRemove.empty() || !Common.SymbolsToSkip.empty() ||
       !Common.AllocSectionsPrefix.empty() || !Common.KeepSection.empty() ||
       !Common.SymbolsToGlobalize.empty() || !Common.SymbolsToKeep.empty() ||
       !Common.SymbolsToLocalize.empty() ||
@@ -56,7 +56,7 @@ Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
 Expected<const WasmConfig &> ConfigManager::getWasmConfig() const {
   if (!Common.AddGnuDebugLink.empty() || Common.ExtractPartition ||
       !Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
-      !Common.SymbolsPrefixRemove.empty() ||
+      !Common.SymbolsPrefixRemove.empty() || !Common.SymbolsToSkip.empty() ||
       !Common.AllocSectionsPrefix.empty() ||
       Common.DiscardMode != DiscardType::None || !Common.SymbolsToAdd.empty() ||
       !Common.SymbolsToGlobalize.empty() || !Common.SymbolsToLocalize.empty() ||
@@ -77,7 +77,7 @@ Expected<const WasmConfig &> ConfigManager::getWasmConfig() const {
 Expected<const XCOFFConfig &> ConfigManager::getXCOFFConfig() const {
   if (!Common.AddGnuDebugLink.empty() || Common.ExtractPartition ||
       !Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
-      !Common.SymbolsPrefixRemove.empty() ||
+      !Common.SymbolsPrefixRemove.empty() || !Common.SymbolsToSkip.empty() ||
       !Common.AllocSectionsPrefix.empty() ||
       Common.DiscardMode != DiscardType::None || !Common.AddSection.empty() ||
       !Common.DumpSection.empty() || !Common.SymbolsToAdd.empty() ||

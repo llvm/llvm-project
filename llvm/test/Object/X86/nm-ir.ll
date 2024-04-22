@@ -29,15 +29,15 @@ module asm ".long undef_asm_sym"
 @g3 = common global i32 0
 @g4 = private global i32 42
 
-@a1 = alias i32, i32* @g1
-@a2 = internal alias i32, i32* @g1
+@a1 = alias i32, ptr @g1
+@a2 = internal alias i32, ptr @g1
 
-define void ()* @f1() {
+define ptr @f1() {
   call void @f5()
-  ret void ()* null
+  ret ptr null
 }
 
-@ifunc_f1 = ifunc void (), void ()* ()* @f1
+@ifunc_f1 = ifunc void (), ptr @f1
 
 define internal void @f2() {
   ret void

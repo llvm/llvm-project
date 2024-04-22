@@ -50,6 +50,11 @@ static constexpr OptionEnumValueElement g_sort_option_enumeration[] = {
         "name",
         "Sort output by symbol name.",
     },
+    {
+        eSortOrderBySize,
+        "size",
+        "Sort output by symbol byte size.",
+    },
 };
 
 // Note that the negation in the argument name causes a slightly confusing

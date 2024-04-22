@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(unsigned, stdc_count_ones_uc, (unsigned char value)) {
-  return static_cast<unsigned>(cpp::count_ones(value));
+  return static_cast<unsigned>(cpp::popcount(value));
 }
 
 } // namespace LIBC_NAMESPACE

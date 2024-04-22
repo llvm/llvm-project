@@ -23,9 +23,9 @@ func.func @entry() -> i32 {
   // CHECK-NEXT: ( 123, 123, 123, 123
   // CHECK-NEXT: ( 123, 123, 123, 123
   // CHECK:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %tile : vector<[4]x[4]xi32>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   %c0_i32 = arith.constant 0 : i32
   return %c0_i32 : i32

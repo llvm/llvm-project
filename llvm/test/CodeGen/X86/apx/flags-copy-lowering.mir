@@ -29,6 +29,18 @@
     call void @foo()
     ret void
   }
+
+  define void @test_cmov(i64 %a, i64 %b) {
+  entry:
+    call void @foo()
+    ret void
+  }
+
+  define void @test_cfcmov(i64 %a, i64 %b) {
+  entry:
+    call void @foo()
+    ret void
+  }
 ...
 ---
 name:            test_adc
@@ -165,4 +177,94 @@ body:             |
 
     RET 0
 
+...
+---
+name:            test_cmov
+# CHECK-LABEL: name: test_cmov
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+  - { reg: '$rsi', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $rdi, $rsi
+
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    CMP64rr %0, %1, implicit-def $eflags
+    %2:gr64 = COPY $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+  ; CHECK:      %[[A_REG:[^:]*]]:gr8 = SETCCr 7, implicit $eflags
+  ; CHECK-NEXT: %[[B_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
+  ; CHECK-NEXT: %[[E_REG:[^:]*]]:gr8 = SETCCr 4, implicit $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+    $eflags = COPY %2
+    %3:gr64 = CMOV64rr_ND %0, %1, 7, implicit $eflags
+    %4:gr64 = CMOV64rr_ND %0, %1, 2, implicit $eflags
+    %5:gr64 = CMOV64rr_ND %0, %1, 4, implicit $eflags
+    %6:gr64 = CMOV64rr_ND %0, %1, 5, implicit killed $eflags
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         TEST8rr %[[A_REG]], %[[A_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %3:gr64 = CMOV64rr_ND %0, %1, 5, implicit killed $eflags
+  ; CHECK-NEXT:    TEST8rr %[[B_REG]], %[[B_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %4:gr64 = CMOV64rr_ND %0, %1, 5, implicit killed $eflags
+  ; CHECK-NEXT:    TEST8rr %[[E_REG]], %[[E_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %5:gr64 = CMOV64rr_ND %0, %1, 5, implicit killed $eflags
+  ; CHECK-NEXT:    TEST8rr %[[E_REG]], %[[E_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %6:gr64 = CMOV64rr_ND %0, %1, 4, implicit killed $eflags
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %3
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %4
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %6
+
+    RET 0
+...
+---
+name:            test_cfcmov
+# CHECK-LABEL: name: test_cfcmov
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+  - { reg: '$rsi', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $rdi, $rsi
+
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    CMP64rr %0, %1, implicit-def $eflags
+    %2:gr64 = COPY $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+  ; CHECK:      %[[A_REG:[^:]*]]:gr8 = SETCCr 7, implicit $eflags
+  ; CHECK-NEXT: %[[B_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
+  ; CHECK-NEXT: %[[E_REG:[^:]*]]:gr8 = SETCCr 4, implicit $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+    $eflags = COPY %2
+    %3:gr64 = CFCMOV64rr %1, 7, implicit $eflags
+    %4:gr64 = CFCMOV64rr %1, 2, implicit $eflags
+    %5:gr64 = CFCMOV64rr_ND %0, %1, 4, implicit $eflags
+    %6:gr64 = CFCMOV64rr_ND %0, %1, 5, implicit killed $eflags
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         TEST8rr %[[A_REG]], %[[A_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %3:gr64 = CFCMOV64rr %1, 5, implicit killed $eflags
+  ; CHECK-NEXT:    TEST8rr %[[B_REG]], %[[B_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %4:gr64 = CFCMOV64rr %1, 5, implicit killed $eflags
+  ; CHECK-NEXT:    TEST8rr %[[E_REG]], %[[E_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %5:gr64 = CFCMOV64rr_ND %0, %1, 5, implicit killed $eflags
+  ; CHECK-NEXT:    TEST8rr %[[E_REG]], %[[E_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %6:gr64 = CFCMOV64rr_ND %0, %1, 4, implicit killed $eflags
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %3
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %4
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
+    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %6
+
+    RET 0
 ...

@@ -689,7 +689,7 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
     if (auto *CRI = dyn_cast<CleanupReturnInst>(BB->getTerminator())) {
       if (CRI->unwindsToCaller()) {
         auto *CleanupPad = CRI->getCleanupPad();
-        CleanupReturnInst::Create(CleanupPad, UnwindDest, CRI);
+        CleanupReturnInst::Create(CleanupPad, UnwindDest, CRI->getIterator());
         CRI->eraseFromParent();
         UpdatePHINodes(&*BB);
         // Finding a cleanupret with an unwind destination would confuse
@@ -737,7 +737,7 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
         auto *NewCatchSwitch = CatchSwitchInst::Create(
             CatchSwitch->getParentPad(), UnwindDest,
             CatchSwitch->getNumHandlers(), CatchSwitch->getName(),
-            CatchSwitch);
+            CatchSwitch->getIterator());
         for (BasicBlock *PadBB : CatchSwitch->handlers())
           NewCatchSwitch->addHandler(PadBB);
         // Propagate info for the old catchswitch over to the new one in
@@ -972,7 +972,7 @@ static void PropagateOperandBundles(Function::iterator InlinedBB,
     I->getOperandBundlesAsDefs(OpBundles);
     OpBundles.emplace_back("funclet", CallSiteEHPad);
 
-    Instruction *NewInst = CallBase::Create(I, OpBundles, I);
+    Instruction *NewInst = CallBase::Create(I, OpBundles, I->getIterator());
     NewInst->takeName(I);
     I->replaceAllUsesWith(NewInst);
     I->eraseFromParent();
@@ -1710,17 +1710,17 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   };
 
   // Helper-util for updating debug-info records attached to instructions.
-  auto UpdateDPV = [&](DbgRecord *DPV) {
-    assert(DPV->getDebugLoc() && "Debug Value must have debug loc");
+  auto UpdateDVR = [&](DbgRecord *DVR) {
+    assert(DVR->getDebugLoc() && "Debug Value must have debug loc");
     if (NoInlineLineTables) {
-      DPV->setDebugLoc(TheCallDL);
+      DVR->setDebugLoc(TheCallDL);
       return;
     }
-    DebugLoc DL = DPV->getDebugLoc();
+    DebugLoc DL = DVR->getDebugLoc();
     DebugLoc IDL =
         inlineDebugLoc(DL, InlinedAtNode,
-                       DPV->getMarker()->getParent()->getContext(), IANodes);
-    DPV->setDebugLoc(IDL);
+                       DVR->getMarker()->getParent()->getContext(), IANodes);
+    DVR->setDebugLoc(IDL);
   };
 
   // Iterate over all instructions, updating metadata and debug-info records.
@@ -1728,8 +1728,8 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
     for (BasicBlock::iterator BI = FI->begin(), BE = FI->end(); BI != BE;
          ++BI) {
       UpdateInst(*BI);
-      for (DbgRecord &DPV : BI->getDbgValueRange()) {
-        UpdateDPV(&DPV);
+      for (DbgRecord &DVR : BI->getDbgRecordRange()) {
+        UpdateDVR(&DVR);
       }
     }
 
@@ -1741,7 +1741,7 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
           BI = BI->eraseFromParent();
           continue;
         } else {
-          BI->dropDbgValues();
+          BI->dropDbgRecords();
         }
         ++BI;
       }
@@ -1797,7 +1797,7 @@ static at::StorageToVarsMap collectEscapedLocals(const DataLayout &DL,
       EscapedLocals[Base].insert(at::VarRecord(DbgAssign));
     };
     for_each(at::getAssignmentMarkers(Base), CollectAssignsForStorage);
-    for_each(at::getDPVAssignmentMarkers(Base), CollectAssignsForStorage);
+    for_each(at::getDVRAssignmentMarkers(Base), CollectAssignsForStorage);
   }
   return EscapedLocals;
 }
@@ -1829,9 +1829,9 @@ static void fixupAssignments(Function::iterator Start, Function::iterator End) {
   // attachment or use, replace it with a new version.
   for (auto BBI = Start; BBI != End; ++BBI) {
     for (Instruction &I : *BBI) {
-      for (DPValue &DPV : DPValue::filter(I.getDbgValueRange())) {
-        if (DPV.isDbgAssign())
-          DPV.setAssignId(GetNewID(DPV.getAssignID()));
+      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+        if (DVR.isDbgAssign())
+          DVR.setAssignId(GetNewID(DVR.getAssignID()));
       }
       if (auto *ID = I.getMetadata(LLVMContext::MD_DIAssignID))
         I.setMetadata(LLVMContext::MD_DIAssignID, GetNewID(ID));
@@ -2002,7 +2002,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       Value *BundleArgs[] = {*objcarc::getAttachedARCFunction(&CB)};
       OperandBundleDef OB("clang.arc.attachedcall", BundleArgs);
       auto *NewCall = CallBase::addOperandBundle(
-          CI, LLVMContext::OB_clang_arc_attachedcall, OB, CI);
+          CI, LLVMContext::OB_clang_arc_attachedcall, OB, CI->getIterator());
       NewCall->copyMetadata(*CI);
       CI->replaceAllUsesWith(NewCall);
       CI->eraseFromParent();
@@ -2326,7 +2326,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
           OpDefs.emplace_back("deopt", std::move(MergedDeoptArgs));
         }
 
-        Instruction *NewI = CallBase::Create(ICS, OpDefs, ICS);
+        Instruction *NewI = CallBase::Create(ICS, OpDefs, ICS->getIterator());
 
         // Note: the RAUW does the appropriate fixup in VMap, so we need to do
         // this even if the call returns void.
@@ -2479,7 +2479,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
           SmallVector<Value *, 6> Params(CI->args());
           Params.append(VarArgsToForward.begin(), VarArgsToForward.end());
           CallInst *NewCI = CallInst::Create(
-              CI->getFunctionType(), CI->getCalledOperand(), Params, "", CI);
+              CI->getFunctionType(), CI->getCalledOperand(), Params, "", CI->getIterator());
           NewCI->setDebugLoc(CI->getDebugLoc());
           NewCI->setAttributes(Attrs);
           NewCI->setCallingConv(CI->getCallingConv());
@@ -2776,7 +2776,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // If the call site was an invoke instruction, add a branch to the normal
     // destination.
     if (InvokeInst *II = dyn_cast<InvokeInst>(&CB)) {
-      BranchInst *NewBr = BranchInst::Create(II->getNormalDest(), &CB);
+      BranchInst *NewBr = BranchInst::Create(II->getNormalDest(), CB.getIterator());
       NewBr->setDebugLoc(Returns[0]->getDebugLoc());
     }
 
@@ -2813,7 +2813,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   if (InvokeInst *II = dyn_cast<InvokeInst>(&CB)) {
 
     // Add an unconditional branch to make this look like the CallInst case...
-    CreatedBranchToNormalDest = BranchInst::Create(II->getNormalDest(), &CB);
+    CreatedBranchToNormalDest = BranchInst::Create(II->getNormalDest(), CB.getIterator());
 
     // Split the basic block.  This guarantees that no PHI nodes will have to be
     // updated due to new incoming edges, and make the invoke case more
@@ -2881,7 +2881,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     DebugLoc Loc;
     for (unsigned i = 0, e = Returns.size(); i != e; ++i) {
       ReturnInst *RI = Returns[i];
-      BranchInst* BI = BranchInst::Create(AfterCallBB, RI);
+      BranchInst* BI = BranchInst::Create(AfterCallBB, RI->getIterator());
       Loc = RI->getDebugLoc();
       BI->setDebugLoc(Loc);
       RI->eraseFromParent();

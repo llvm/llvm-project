@@ -78,7 +78,7 @@ public:
 
   template <typename... ArgTs>
   MachOBuilderLoadCommand(ArgTs &&...Args)
-      : MachOBuilderLoadCommand(std::forward<ArgTs>(Args)...) {}
+      : MachOBuilderLoadCommandImplBase<LCType>(std::forward<ArgTs>(Args)...) {}
 };
 
 template <>

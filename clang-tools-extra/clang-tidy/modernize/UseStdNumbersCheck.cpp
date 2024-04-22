@@ -29,6 +29,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <initializer_list>

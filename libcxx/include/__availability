@@ -72,11 +72,10 @@
 #  endif
 #endif
 
-// Availability markup is disabled when building the library, or when the compiler
+// Availability markup is disabled when building the library, or when a non-Clang
+// compiler is used because only Clang supports the necessary attributes.
 // doesn't support the proper attributes.
-#if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCXXABI_BUILDING_LIBRARY) ||                                       \
-    !__has_feature(attribute_availability_with_strict) || !__has_feature(attribute_availability_in_templates) ||       \
-    !__has_extension(pragma_clang_attribute_external_declaration)
+#if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCXXABI_BUILDING_LIBRARY) || !defined(_LIBCPP_COMPILER_CLANG_BASED)
 #  if !defined(_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
 #    define _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS
 #  endif
@@ -160,6 +159,15 @@
 // The parser code is built in the library.
 #  define _LIBCPP_AVAILABILITY_HAS_TZDB 1
 #  define _LIBCPP_AVAILABILITY_TZDB
+
+// These macros determine whether we assume that std::bad_function_call and
+// std::bad_expected_access provide a key function in the dylib. This allows
+// centralizing their vtable and typeinfo instead of having all TUs provide
+// a weak definition that then gets deduplicated.
+#  define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION 1
+#  define _LIBCPP_AVAILABILITY_BAD_FUNCTION_CALL_KEY_FUNCTION
+#  define _LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION 1
+#  define _LIBCPP_AVAILABILITY_BAD_EXPECTED_ACCESS_KEY_FUNCTION
 
 #elif defined(__APPLE__)
 
@@ -291,6 +299,13 @@
 #  else
 #    define _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1 1
 #  endif
+
+#  define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION 0
+#  define _LIBCPP_AVAILABILITY_BAD_FUNCTION_CALL_KEY_FUNCTION __attribute__((unavailable))
+
+#  define _LIBCPP_AVAILABILITY_HAS_BAD_EXPECTED_ACCESS_KEY_FUNCTION 0
+#  define _LIBCPP_AVAILABILITY_BAD_EXPECTED_ACCESS_KEY_FUNCTION __attribute__((unavailable))
+
 #else
 
 // ...New vendors can add availability markup here...

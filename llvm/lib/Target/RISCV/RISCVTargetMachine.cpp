@@ -278,21 +278,7 @@ public:
 
 static bool onlyAllocateRVVReg(const TargetRegisterInfo &TRI,
                                const TargetRegisterClass &RC) {
-  return RISCV::VRRegClass.hasSubClassEq(&RC) ||
-         RISCV::VRM2RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRM4RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRM8RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN2M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN2M2RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN2M4RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN3M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN3M2RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN4M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN4M2RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN5M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN6M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN7M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN8M1RegClass.hasSubClassEq(&RC);
+  return RISCVRegisterInfo::isRVVRegClass(&RC);
 }
 
 static FunctionPass *useDefaultRegisterAllocator() { return nullptr; }

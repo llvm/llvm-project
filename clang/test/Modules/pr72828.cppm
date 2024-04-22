@@ -17,7 +17,7 @@ struct s {
 
 void f() {
 	auto [x] = s();
-	[x] {};
+	(void) [x] {};
 }
 
 // Check that we can generate the LLVM IR expectedly.

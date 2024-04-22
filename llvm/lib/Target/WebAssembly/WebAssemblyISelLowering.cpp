@@ -43,8 +43,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-lower"
 
-extern cl::opt<bool> WasmEmitMultiValue;
-
 WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     const TargetMachine &TM, const WebAssemblySubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
@@ -1290,7 +1288,7 @@ bool WebAssemblyTargetLowering::CanLowerReturn(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     LLVMContext & /*Context*/) const {
   // WebAssembly can only handle returning tuples with multivalue enabled
-  return (Subtarget->hasMultivalue() && WasmEmitMultiValue) || Outs.size() <= 1;
+  return Subtarget->hasMultivalue() || Outs.size() <= 1;
 }
 
 SDValue WebAssemblyTargetLowering::LowerReturn(
@@ -1298,8 +1296,7 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
     SelectionDAG &DAG) const {
-  assert(((Subtarget->hasMultivalue() && WasmEmitMultiValue) ||
-          Outs.size() <= 1) &&
+  assert((Subtarget->hasMultivalue() || Outs.size() <= 1) &&
          "MVP WebAssembly can only return up to one value");
   if (!callingConvSupported(CallConv))
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");
@@ -1686,7 +1683,7 @@ WebAssemblyTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   if (model == GlobalValue::LocalExecTLSModel ||
       model == GlobalValue::LocalDynamicTLSModel ||
       (model == GlobalValue::GeneralDynamicTLSModel &&
-       getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV))) {
+       getTargetMachine().shouldAssumeDSOLocal(GV))) {
     // For DSO-local TLS variables we use offset from __tls_base
 
     MVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -1732,7 +1729,7 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
   // need special treatment for tables in PIC mode.
   if (isPositionIndependent() &&
       !WebAssembly::isWebAssemblyTableType(GV->getValueType())) {
-    if (getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV)) {
+    if (getTargetMachine().shouldAssumeDSOLocal(GV)) {
       MachineFunction &MF = DAG.getMachineFunction();
       MVT PtrVT = getPointerTy(MF.getDataLayout());
       const char *BaseName;

@@ -29,7 +29,9 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -41,6 +43,8 @@ using namespace llvm;
 
 namespace {
 class SPIRVAsmPrinter : public AsmPrinter {
+  unsigned NLabels = 0;
+
 public:
   explicit SPIRVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
@@ -102,6 +106,20 @@ void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
     outputModuleSections();
     ModuleSectionsEmitted = true;
   }
+
+  ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
+  uint32_t DecSPIRVVersion = ST->getSPIRVVersion();
+  uint32_t Major = DecSPIRVVersion / 10;
+  uint32_t Minor = DecSPIRVVersion - Major * 10;
+  // Bound is an approximation that accounts for the maximum used register
+  // number and number of generated OpLabels
+  unsigned Bound = 2 * (ST->getBound() + 1) + NLabels;
+  bool FlagToRestore = OutStreamer->getUseAssemblerInfoForParsing();
+  OutStreamer->setUseAssemblerInfoForParsing(true);
+  if (MCAssembler *Asm = OutStreamer->getAssemblerPtr())
+    Asm->setBuildVersion(static_cast<MachO::PlatformType>(0), Major, Minor,
+                         Bound, VersionTuple(Major, Minor, 0, Bound));
+  OutStreamer->setUseAssemblerInfoForParsing(FlagToRestore);
 }
 
 void SPIRVAsmPrinter::emitFunctionHeader() {
@@ -141,6 +159,7 @@ void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
   LabelInst.setOpcode(SPIRV::OpLabel);
   LabelInst.addOperand(MCOperand::createReg(MAI->getOrCreateMBBRegister(MBB)));
   outputMCInst(LabelInst);
+  ++NLabels;
 }
 
 void SPIRVAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
@@ -507,6 +526,13 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
         report_fatal_error("Unsupported value in llvm.global.annotations");
       Function *Func = cast<Function>(AnnotatedVar);
       Register Reg = MAI->getFuncReg(Func);
+      if (!Reg.isValid()) {
+        std::string DiagMsg;
+        raw_string_ostream OS(DiagMsg);
+        AnnotatedVar->print(OS);
+        DiagMsg = "Unknown function in llvm.global.annotations: " + DiagMsg;
+        report_fatal_error(DiagMsg.c_str());
+      }
 
       // The second field contains a pointer to a global annotation string.
       GlobalVariable *GV =

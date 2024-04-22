@@ -9,6 +9,12 @@
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/c.cppm -fprebuilt-module-path=%t -o %t/c.pcm
 // RUN: %clang_cc1 -std=c++20 %t/d.cpp -fprebuilt-module-path=%t -S -emit-llvm -o -
 
+// Test again with reduced BMI
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/a.cppm -o %t/a.pcm
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/b.cppm -fprebuilt-module-path=%t -o %t/b.pcm
+// RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/c.cppm -fprebuilt-module-path=%t -o %t/c.pcm
+// RUN: %clang_cc1 -std=c++20 %t/d.cpp -fprebuilt-module-path=%t -S -emit-llvm -o -
+
 //--- a.cppm
 export module a;
  

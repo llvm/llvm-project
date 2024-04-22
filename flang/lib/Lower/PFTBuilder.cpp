@@ -1594,6 +1594,11 @@ private:
           if (!s->has<semantics::DerivedTypeDetails>())
             depth = std::max(analyze(s) + 1, depth);
     }
+
+    // Make sure cray pointer is instantiated even if it is not visible.
+    if (ultimate.test(Fortran::semantics::Symbol::Flag::CrayPointee))
+      depth = std::max(
+          analyze(Fortran::semantics::GetCrayPointer(ultimate)) + 1, depth);
     adjustSize(depth + 1);
     bool global = lower::symbolIsGlobal(sym);
     layeredVarList[depth].emplace_back(sym, global, depth);
@@ -2002,6 +2007,10 @@ struct SymbolVisitor {
         }
       }
     }
+    // - CrayPointer needs to be available whenever a CrayPointee is used.
+    if (symbol.GetUltimate().test(
+            Fortran::semantics::Symbol::Flag::CrayPointee))
+      visitSymbol(Fortran::semantics::GetCrayPointer(symbol));
   }
 
   template <typename A>

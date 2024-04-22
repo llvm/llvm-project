@@ -115,6 +115,8 @@ public:
                              // this instruction.
     Unpredictable = 1 << 16, // Instruction with unpredictable condition.
     NoConvergent = 1 << 17,  // Call does not require convergence guarantees.
+    NonNeg = 1 << 18,        // The operand is non-negative.
+    Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
   };
 
 private:

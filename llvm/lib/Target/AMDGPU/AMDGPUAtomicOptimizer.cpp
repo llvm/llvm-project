@@ -209,8 +209,9 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
     break;
   }
 
-  // Only 32-bit floating point atomic ops are supported.
-  if (AtomicRMWInst::isFPOperation(Op) && !I.getType()->isFloatTy()) {
+  // Only 32 and 64 bit floating point atomic ops are supported.
+  if (AtomicRMWInst::isFPOperation(Op) &&
+      !(I.getType()->isFloatTy() || I.getType()->isDoubleTy())) {
     return;
   }
 
@@ -742,7 +743,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
 
   Function *F = I.getFunction();
   LLVMContext &C = F->getContext();
-  
+
   // For atomic sub, perform scan with add operation and allow one lane to
   // subtract the reduced value later.
   AtomicRMWInst::BinOp ScanOp = Op;
@@ -854,7 +855,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   Value *const Cond = B.CreateICmpEQ(Mbcnt, B.getInt32(0));
 
   // Store I's original basic block before we split the block.
-  BasicBlock *const EntryBB = I.getParent();
+  BasicBlock *const OriginalBB = I.getParent();
 
   // We need to introduce some new control flow to force a single lane to be
   // active. We do this by splitting I's basic block at I, and introducing the
@@ -875,25 +876,36 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   BasicBlock *Predecessor = nullptr;
   if (ValDivergent && ScanImpl == ScanOptions::Iterative) {
     // Move terminator from I's block to ComputeEnd block.
-    Instruction *Terminator = EntryBB->getTerminator();
+    //
+    // OriginalBB is known to have a branch as terminator because
+    // SplitBlockAndInsertIfThen will have inserted one.
+    BranchInst *Terminator = cast<BranchInst>(OriginalBB->getTerminator());
     B.SetInsertPoint(ComputeEnd);
     Terminator->removeFromParent();
     B.Insert(Terminator);
 
     // Branch to ComputeLoop Block unconditionally from the I's block for
     // iterative approach.
-    B.SetInsertPoint(EntryBB);
+    B.SetInsertPoint(OriginalBB);
     B.CreateBr(ComputeLoop);
 
     // Update the dominator tree for new control flow.
-    DTU.applyUpdates(
-        {{DominatorTree::Insert, EntryBB, ComputeLoop},
-         {DominatorTree::Insert, ComputeLoop, ComputeEnd},
-         {DominatorTree::Delete, EntryBB, SingleLaneTerminator->getParent()}});
+    SmallVector<DominatorTree::UpdateType, 6> DomTreeUpdates(
+        {{DominatorTree::Insert, OriginalBB, ComputeLoop},
+         {DominatorTree::Insert, ComputeLoop, ComputeEnd}});
+
+    // We're moving the terminator from EntryBB to ComputeEnd, make sure we move
+    // the DT edges as well.
+    for (auto *Succ : Terminator->successors()) {
+      DomTreeUpdates.push_back({DominatorTree::Insert, ComputeEnd, Succ});
+      DomTreeUpdates.push_back({DominatorTree::Delete, OriginalBB, Succ});
+    }
+
+    DTU.applyUpdates(DomTreeUpdates);
 
     Predecessor = ComputeEnd;
   } else {
-    Predecessor = EntryBB;
+    Predecessor = OriginalBB;
   }
   // Move the IR builder into single_lane next.
   B.SetInsertPoint(SingleLaneTerminator);
@@ -920,8 +932,10 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     Value *BroadcastI = nullptr;
 
     if (TyBitWidth == 64) {
-      Value *const ExtractLo = B.CreateTrunc(PHI, Int32Ty);
-      Value *const ExtractHi = B.CreateTrunc(B.CreateLShr(PHI, 32), Int32Ty);
+      Value *CastedPhi = B.CreateBitCast(PHI, IntNTy);
+      Value *const ExtractLo = B.CreateTrunc(CastedPhi, Int32Ty);
+      Value *const ExtractHi =
+          B.CreateTrunc(B.CreateLShr(CastedPhi, 32), Int32Ty);
       CallInst *const ReadFirstLaneLo =
           B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractLo);
       CallInst *const ReadFirstLaneHi =

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClauseProcessor.h"
+#include "Clauses.h"
 
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/tools.h"
@@ -30,132 +31,87 @@ static void checkMapType(mlir::Location location, mlir::Type type) {
 }
 
 static mlir::omp::ScheduleModifier
-translateScheduleModifier(const Fortran::parser::OmpScheduleModifierType &m) {
-  switch (m.v) {
-  case Fortran::parser::OmpScheduleModifierType::ModType::Monotonic:
+translateScheduleModifier(const omp::clause::Schedule::OrderingModifier &m) {
+  switch (m) {
+  case omp::clause::Schedule::OrderingModifier::Monotonic:
     return mlir::omp::ScheduleModifier::monotonic;
-  case Fortran::parser::OmpScheduleModifierType::ModType::Nonmonotonic:
+  case omp::clause::Schedule::OrderingModifier::Nonmonotonic:
     return mlir::omp::ScheduleModifier::nonmonotonic;
-  case Fortran::parser::OmpScheduleModifierType::ModType::Simd:
+  }
+  return mlir::omp::ScheduleModifier::none;
+}
+
+static mlir::omp::ScheduleModifier
+getScheduleModifier(const omp::clause::Schedule &clause) {
+  using Schedule = omp::clause::Schedule;
+  const auto &modifier =
+      std::get<std::optional<Schedule::OrderingModifier>>(clause.t);
+  if (modifier)
+    return translateScheduleModifier(*modifier);
+  return mlir::omp::ScheduleModifier::none;
+}
+
+static mlir::omp::ScheduleModifier
+getSimdModifier(const omp::clause::Schedule &clause) {
+  using Schedule = omp::clause::Schedule;
+  const auto &modifier =
+      std::get<std::optional<Schedule::ChunkModifier>>(clause.t);
+  if (modifier && *modifier == Schedule::ChunkModifier::Simd)
     return mlir::omp::ScheduleModifier::simd;
-  }
-  return mlir::omp::ScheduleModifier::none;
-}
-
-static mlir::omp::ScheduleModifier
-getScheduleModifier(const Fortran::parser::OmpScheduleClause &x) {
-  const auto &modifier =
-      std::get<std::optional<Fortran::parser::OmpScheduleModifier>>(x.t);
-  // The input may have the modifier any order, so we look for one that isn't
-  // SIMD. If modifier is not set at all, fall down to the bottom and return
-  // "none".
-  if (modifier) {
-    const auto &modType1 =
-        std::get<Fortran::parser::OmpScheduleModifier::Modifier1>(modifier->t);
-    if (modType1.v.v ==
-        Fortran::parser::OmpScheduleModifierType::ModType::Simd) {
-      const auto &modType2 = std::get<
-          std::optional<Fortran::parser::OmpScheduleModifier::Modifier2>>(
-          modifier->t);
-      if (modType2 &&
-          modType2->v.v !=
-              Fortran::parser::OmpScheduleModifierType::ModType::Simd)
-        return translateScheduleModifier(modType2->v);
-
-      return mlir::omp::ScheduleModifier::none;
-    }
-
-    return translateScheduleModifier(modType1.v);
-  }
-  return mlir::omp::ScheduleModifier::none;
-}
-
-static mlir::omp::ScheduleModifier
-getSimdModifier(const Fortran::parser::OmpScheduleClause &x) {
-  const auto &modifier =
-      std::get<std::optional<Fortran::parser::OmpScheduleModifier>>(x.t);
-  // Either of the two possible modifiers in the input can be the SIMD modifier,
-  // so look in either one, and return simd if we find one. Not found = return
-  // "none".
-  if (modifier) {
-    const auto &modType1 =
-        std::get<Fortran::parser::OmpScheduleModifier::Modifier1>(modifier->t);
-    if (modType1.v.v == Fortran::parser::OmpScheduleModifierType::ModType::Simd)
-      return mlir::omp::ScheduleModifier::simd;
-
-    const auto &modType2 = std::get<
-        std::optional<Fortran::parser::OmpScheduleModifier::Modifier2>>(
-        modifier->t);
-    if (modType2 && modType2->v.v ==
-                        Fortran::parser::OmpScheduleModifierType::ModType::Simd)
-      return mlir::omp::ScheduleModifier::simd;
-  }
   return mlir::omp::ScheduleModifier::none;
 }
 
 static void
 genAllocateClause(Fortran::lower::AbstractConverter &converter,
-                  const Fortran::parser::OmpAllocateClause &ompAllocateClause,
+                  const omp::clause::Allocate &clause,
                   llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
                   llvm::SmallVectorImpl<mlir::Value> &allocateOperands) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
 
-  mlir::Value allocatorOperand;
-  const Fortran::parser::OmpObjectList &ompObjectList =
-      std::get<Fortran::parser::OmpObjectList>(ompAllocateClause.t);
-  const auto &allocateModifier = std::get<
-      std::optional<Fortran::parser::OmpAllocateClause::AllocateModifier>>(
-      ompAllocateClause.t);
+  auto &objects = std::get<omp::ObjectList>(clause.t);
 
-  // If the allocate modifier is present, check if we only use the allocator
-  // submodifier.  ALIGN in this context is unimplemented
-  const bool onlyAllocator =
-      allocateModifier &&
-      std::holds_alternative<
-          Fortran::parser::OmpAllocateClause::AllocateModifier::Allocator>(
-          allocateModifier->u);
-
-  if (allocateModifier && !onlyAllocator) {
+  using Allocate = omp::clause::Allocate;
+  // ALIGN in this context is unimplemented
+  if (std::get<std::optional<Allocate::AlignModifier>>(clause.t))
     TODO(currentLocation, "OmpAllocateClause ALIGN modifier");
-  }
 
   // Check if allocate clause has allocator specified. If so, add it
   // to list of allocators, otherwise, add default allocator to
   // list of allocators.
-  if (onlyAllocator) {
-    const auto &allocatorValue = std::get<
-        Fortran::parser::OmpAllocateClause::AllocateModifier::Allocator>(
-        allocateModifier->u);
-    allocatorOperand = fir::getBase(converter.genExprValue(
-        *Fortran::semantics::GetExpr(allocatorValue.v), stmtCtx));
-    allocatorOperands.insert(allocatorOperands.end(), ompObjectList.v.size(),
-                             allocatorOperand);
+  using SimpleModifier = Allocate::AllocatorSimpleModifier;
+  using ComplexModifier = Allocate::AllocatorComplexModifier;
+  if (auto &mod = std::get<std::optional<SimpleModifier>>(clause.t)) {
+    mlir::Value operand = fir::getBase(converter.genExprValue(*mod, stmtCtx));
+    allocatorOperands.append(objects.size(), operand);
+  } else if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
+    mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
+    allocatorOperands.append(objects.size(), operand);
   } else {
-    allocatorOperand = firOpBuilder.createIntegerConstant(
+    mlir::Value operand = firOpBuilder.createIntegerConstant(
         currentLocation, firOpBuilder.getI32Type(), 1);
-    allocatorOperands.insert(allocatorOperands.end(), ompObjectList.v.size(),
-                             allocatorOperand);
+    allocatorOperands.append(objects.size(), operand);
   }
-  genObjectList(ompObjectList, converter, allocateOperands);
+
+  genObjectList(objects, converter, allocateOperands);
 }
 
-static mlir::omp::ClauseProcBindKindAttr genProcBindKindAttr(
-    fir::FirOpBuilder &firOpBuilder,
-    const Fortran::parser::OmpClause::ProcBind *procBindClause) {
+static mlir::omp::ClauseProcBindKindAttr
+genProcBindKindAttr(fir::FirOpBuilder &firOpBuilder,
+                    const omp::clause::ProcBind &clause) {
   mlir::omp::ClauseProcBindKind procBindKind;
-  switch (procBindClause->v.v) {
-  case Fortran::parser::OmpProcBindClause::Type::Master:
+  switch (clause.v) {
+  case omp::clause::ProcBind::AffinityPolicy::Master:
     procBindKind = mlir::omp::ClauseProcBindKind::Master;
     break;
-  case Fortran::parser::OmpProcBindClause::Type::Close:
+  case omp::clause::ProcBind::AffinityPolicy::Close:
     procBindKind = mlir::omp::ClauseProcBindKind::Close;
     break;
-  case Fortran::parser::OmpProcBindClause::Type::Spread:
+  case omp::clause::ProcBind::AffinityPolicy::Spread:
     procBindKind = mlir::omp::ClauseProcBindKind::Spread;
     break;
-  case Fortran::parser::OmpProcBindClause::Type::Primary:
+  case omp::clause::ProcBind::AffinityPolicy::Primary:
     procBindKind = mlir::omp::ClauseProcBindKind::Primary;
     break;
   }
@@ -165,68 +121,79 @@ static mlir::omp::ClauseProcBindKindAttr genProcBindKindAttr(
 
 static mlir::omp::ClauseTaskDependAttr
 genDependKindAttr(fir::FirOpBuilder &firOpBuilder,
-                  const Fortran::parser::OmpClause::Depend *dependClause) {
+                  const omp::clause::Depend::TaskDependenceType kind) {
   mlir::omp::ClauseTaskDepend pbKind;
-  switch (
-      std::get<Fortran::parser::OmpDependenceType>(
-          std::get<Fortran::parser::OmpDependClause::InOut>(dependClause->v.u)
-              .t)
-          .v) {
-  case Fortran::parser::OmpDependenceType::Type::In:
+  switch (kind) {
+  case omp::clause::Depend::TaskDependenceType::In:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependin;
     break;
-  case Fortran::parser::OmpDependenceType::Type::Out:
+  case omp::clause::Depend::TaskDependenceType::Out:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependout;
     break;
-  case Fortran::parser::OmpDependenceType::Type::Inout:
+  case omp::clause::Depend::TaskDependenceType::Inout:
     pbKind = mlir::omp::ClauseTaskDepend::taskdependinout;
     break;
-  default:
-    llvm_unreachable("unknown parser task dependence type");
+  case omp::clause::Depend::TaskDependenceType::Mutexinoutset:
+  case omp::clause::Depend::TaskDependenceType::Inoutset:
+  case omp::clause::Depend::TaskDependenceType::Depobj:
+    llvm_unreachable("unhandled parser task dependence type");
     break;
   }
   return mlir::omp::ClauseTaskDependAttr::get(firOpBuilder.getContext(),
                                               pbKind);
 }
 
-static mlir::Value getIfClauseOperand(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::OmpClause::If *ifClause,
-    Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
-    mlir::Location clauseLocation) {
+static mlir::Value
+getIfClauseOperand(Fortran::lower::AbstractConverter &converter,
+                   const omp::clause::If &clause,
+                   omp::clause::If::DirectiveNameModifier directiveName,
+                   mlir::Location clauseLocation) {
   // Only consider the clause if it's intended for the given directive.
-  auto &directive = std::get<
-      std::optional<Fortran::parser::OmpIfClause::DirectiveNameModifier>>(
-      ifClause->v.t);
+  auto &directive =
+      std::get<std::optional<omp::clause::If::DirectiveNameModifier>>(clause.t);
   if (directive && directive.value() != directiveName)
     return nullptr;
 
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
   mlir::Value ifVal = fir::getBase(
-      converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx));
+      converter.genExprValue(std::get<omp::SomeExpr>(clause.t), stmtCtx));
   return firOpBuilder.createConvert(clauseLocation, firOpBuilder.getI1Type(),
                                     ifVal);
 }
 
-static void
-addUseDeviceClause(Fortran::lower::AbstractConverter &converter,
-                   const Fortran::parser::OmpObjectList &useDeviceClause,
-                   llvm::SmallVectorImpl<mlir::Value> &operands,
-                   llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
-                   llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
-                   llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-                       &useDeviceSymbols) {
-  genObjectList(useDeviceClause, converter, operands);
+static void addUseDeviceClause(
+    Fortran::lower::AbstractConverter &converter,
+    const omp::ObjectList &objects,
+    llvm::SmallVectorImpl<mlir::Value> &operands,
+    llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
+    llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &useDeviceSyms) {
+  genObjectList(objects, converter, operands);
   for (mlir::Value &operand : operands) {
     checkMapType(operand.getLoc(), operand.getType());
     useDeviceTypes.push_back(operand.getType());
     useDeviceLocs.push_back(operand.getLoc());
   }
-  for (const Fortran::parser::OmpObject &ompObject : useDeviceClause.v) {
-    Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
-    useDeviceSymbols.push_back(sym);
+  for (const omp::Object &object : objects)
+    useDeviceSyms.push_back(object.id());
+}
+
+static void convertLoopBounds(Fortran::lower::AbstractConverter &converter,
+                              mlir::Location loc,
+                              mlir::omp::CollapseClauseOps &result,
+                              std::size_t loopVarTypeSize) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  // The types of lower bound, upper bound, and step are converted into the
+  // type of the loop variable if necessary.
+  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
+  for (unsigned it = 0; it < (unsigned)result.loopLBVar.size(); it++) {
+    result.loopLBVar[it] =
+        firOpBuilder.createConvert(loc, loopVarType, result.loopLBVar[it]);
+    result.loopUBVar[it] =
+        firOpBuilder.createConvert(loc, loopVarType, result.loopUBVar[it]);
+    result.loopStepVar[it] =
+        firOpBuilder.createConvert(loc, loopVarType, result.loopStepVar[it]);
   }
 }
 
@@ -236,11 +203,8 @@ addUseDeviceClause(Fortran::lower::AbstractConverter &converter,
 
 bool ClauseProcessor::processCollapse(
     mlir::Location currentLocation, Fortran::lower::pft::Evaluation &eval,
-    llvm::SmallVectorImpl<mlir::Value> &lowerBound,
-    llvm::SmallVectorImpl<mlir::Value> &upperBound,
-    llvm::SmallVectorImpl<mlir::Value> &step,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv,
-    std::size_t &loopVarTypeSize) const {
+    mlir::omp::CollapseClauseOps &result,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv) const {
   bool found = false;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
@@ -253,13 +217,12 @@ bool ClauseProcessor::processCollapse(
   }
 
   std::int64_t collapseValue = 1l;
-  if (auto *collapseClause = findUniqueClause<ClauseTy::Collapse>()) {
-    const auto *expr = Fortran::semantics::GetExpr(collapseClause->v);
-    collapseValue = Fortran::evaluate::ToInt64(*expr).value();
+  if (auto *clause = findUniqueClause<omp::clause::Collapse>()) {
+    collapseValue = Fortran::evaluate::ToInt64(clause->v).value();
     found = true;
   }
 
-  loopVarTypeSize = 0;
+  std::size_t loopVarTypeSize = 0;
   do {
     Fortran::lower::pft::Evaluation *doLoop =
         &doConstructEval->getFirstNestedEvaluation();
@@ -271,15 +234,15 @@ bool ClauseProcessor::processCollapse(
         std::get_if<Fortran::parser::LoopControl::Bounds>(&loopControl->u);
     assert(bounds && "Expected bounds for worksharing do loop");
     Fortran::lower::StatementContext stmtCtx;
-    lowerBound.push_back(fir::getBase(converter.genExprValue(
+    result.loopLBVar.push_back(fir::getBase(converter.genExprValue(
         *Fortran::semantics::GetExpr(bounds->lower), stmtCtx)));
-    upperBound.push_back(fir::getBase(converter.genExprValue(
+    result.loopUBVar.push_back(fir::getBase(converter.genExprValue(
         *Fortran::semantics::GetExpr(bounds->upper), stmtCtx)));
     if (bounds->step) {
-      step.push_back(fir::getBase(converter.genExprValue(
+      result.loopStepVar.push_back(fir::getBase(converter.genExprValue(
           *Fortran::semantics::GetExpr(bounds->step), stmtCtx)));
     } else { // If `step` is not present, assume it as `1`.
-      step.push_back(firOpBuilder.createIntegerConstant(
+      result.loopStepVar.push_back(firOpBuilder.createIntegerConstant(
           currentLocation, firOpBuilder.getIntegerType(32), 1));
     }
     iv.push_back(bounds->name.thing.symbol);
@@ -290,23 +253,25 @@ bool ClauseProcessor::processCollapse(
         &*std::next(doConstructEval->getNestedEvaluations().begin());
   } while (collapseValue > 0);
 
+  convertLoopBounds(converter, currentLocation, result, loopVarTypeSize);
+
   return found;
 }
 
 bool ClauseProcessor::processDefault() const {
-  if (auto *defaultClause = findUniqueClause<ClauseTy::Default>()) {
+  if (auto *clause = findUniqueClause<omp::clause::Default>()) {
     // Private, Firstprivate, Shared, None
-    switch (defaultClause->v.v) {
-    case Fortran::parser::OmpDefaultClause::Type::Shared:
-    case Fortran::parser::OmpDefaultClause::Type::None:
+    switch (clause->v) {
+    case omp::clause::Default::DataSharingAttribute::Shared:
+    case omp::clause::Default::DataSharingAttribute::None:
       // Default clause with shared or none do not require any handling since
       // Shared is the default behavior in the IR and None is only required
       // for semantic checks.
       break;
-    case Fortran::parser::OmpDefaultClause::Type::Private:
+    case omp::clause::Default::DataSharingAttribute::Private:
       // TODO Support default(private)
       break;
-    case Fortran::parser::OmpDefaultClause::Type::Firstprivate:
+    case omp::clause::Default::DataSharingAttribute::Firstprivate:
       // TODO Support default(firstprivate)
       break;
     }
@@ -316,40 +281,38 @@ bool ClauseProcessor::processDefault() const {
 }
 
 bool ClauseProcessor::processDevice(Fortran::lower::StatementContext &stmtCtx,
-                                    mlir::Value &result) const {
+                                    mlir::omp::DeviceClauseOps &result) const {
   const Fortran::parser::CharBlock *source = nullptr;
-  if (auto *deviceClause = findUniqueClause<ClauseTy::Device>(&source)) {
+  if (auto *clause = findUniqueClause<omp::clause::Device>(&source)) {
     mlir::Location clauseLocation = converter.genLocation(*source);
-    if (auto deviceModifier = std::get<
-            std::optional<Fortran::parser::OmpDeviceClause::DeviceModifier>>(
-            deviceClause->v.t)) {
-      if (deviceModifier ==
-          Fortran::parser::OmpDeviceClause::DeviceModifier::Ancestor) {
+    if (auto deviceModifier =
+            std::get<std::optional<omp::clause::Device::DeviceModifier>>(
+                clause->t)) {
+      if (deviceModifier == omp::clause::Device::DeviceModifier::Ancestor) {
         TODO(clauseLocation, "OMPD_target Device Modifier Ancestor");
       }
     }
-    if (const auto *deviceExpr = Fortran::semantics::GetExpr(
-            std::get<Fortran::parser::ScalarIntExpr>(deviceClause->v.t))) {
-      result = fir::getBase(converter.genExprValue(*deviceExpr, stmtCtx));
-    }
+    const auto &deviceExpr = std::get<omp::SomeExpr>(clause->t);
+    result.deviceVar =
+        fir::getBase(converter.genExprValue(deviceExpr, stmtCtx));
     return true;
   }
   return false;
 }
 
 bool ClauseProcessor::processDeviceType(
-    mlir::omp::DeclareTargetDeviceType &result) const {
-  if (auto *deviceTypeClause = findUniqueClause<ClauseTy::DeviceType>()) {
+    mlir::omp::DeviceTypeClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::DeviceType>()) {
     // Case: declare target ... device_type(any | host | nohost)
-    switch (deviceTypeClause->v.v) {
-    case Fortran::parser::OmpDeviceTypeClause::Type::Nohost:
-      result = mlir::omp::DeclareTargetDeviceType::nohost;
+    switch (clause->v) {
+    case omp::clause::DeviceType::DeviceTypeDescription::Nohost:
+      result.deviceType = mlir::omp::DeclareTargetDeviceType::nohost;
       break;
-    case Fortran::parser::OmpDeviceTypeClause::Type::Host:
-      result = mlir::omp::DeclareTargetDeviceType::host;
+    case omp::clause::DeviceType::DeviceTypeDescription::Host:
+      result.deviceType = mlir::omp::DeclareTargetDeviceType::host;
       break;
-    case Fortran::parser::OmpDeviceTypeClause::Type::Any:
-      result = mlir::omp::DeclareTargetDeviceType::any;
+    case omp::clause::DeviceType::DeviceTypeDescription::Any:
+      result.deviceType = mlir::omp::DeclareTargetDeviceType::any;
       break;
     }
     return true;
@@ -358,195 +321,185 @@ bool ClauseProcessor::processDeviceType(
 }
 
 bool ClauseProcessor::processFinal(Fortran::lower::StatementContext &stmtCtx,
-                                   mlir::Value &result) const {
+                                   mlir::omp::FinalClauseOps &result) const {
   const Fortran::parser::CharBlock *source = nullptr;
-  if (auto *finalClause = findUniqueClause<ClauseTy::Final>(&source)) {
+  if (auto *clause = findUniqueClause<omp::clause::Final>(&source)) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     mlir::Location clauseLocation = converter.genLocation(*source);
 
-    mlir::Value finalVal = fir::getBase(converter.genExprValue(
-        *Fortran::semantics::GetExpr(finalClause->v), stmtCtx));
-    result = firOpBuilder.createConvert(clauseLocation,
-                                        firOpBuilder.getI1Type(), finalVal);
+    mlir::Value finalVal =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.finalVar = firOpBuilder.createConvert(
+        clauseLocation, firOpBuilder.getI1Type(), finalVal);
     return true;
   }
   return false;
 }
 
-bool ClauseProcessor::processHint(mlir::IntegerAttr &result) const {
-  if (auto *hintClause = findUniqueClause<ClauseTy::Hint>()) {
+bool ClauseProcessor::processHint(mlir::omp::HintClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Hint>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    const auto *expr = Fortran::semantics::GetExpr(hintClause->v);
-    int64_t hintValue = *Fortran::evaluate::ToInt64(*expr);
-    result = firOpBuilder.getI64IntegerAttr(hintValue);
+    int64_t hintValue = *Fortran::evaluate::ToInt64(clause->v);
+    result.hintAttr = firOpBuilder.getI64IntegerAttr(hintValue);
     return true;
   }
   return false;
 }
 
-bool ClauseProcessor::processMergeable(mlir::UnitAttr &result) const {
-  return markClauseOccurrence<ClauseTy::Mergeable>(result);
+bool ClauseProcessor::processMergeable(
+    mlir::omp::MergeableClauseOps &result) const {
+  return markClauseOccurrence<omp::clause::Mergeable>(result.mergeableAttr);
 }
 
-bool ClauseProcessor::processNowait(mlir::UnitAttr &result) const {
-  return markClauseOccurrence<ClauseTy::Nowait>(result);
+bool ClauseProcessor::processNowait(mlir::omp::NowaitClauseOps &result) const {
+  return markClauseOccurrence<omp::clause::Nowait>(result.nowaitAttr);
 }
 
-bool ClauseProcessor::processNumTeams(Fortran::lower::StatementContext &stmtCtx,
-                                      mlir::Value &result) const {
+bool ClauseProcessor::processNumTeams(
+    Fortran::lower::StatementContext &stmtCtx,
+    mlir::omp::NumTeamsClauseOps &result) const {
   // TODO Get lower and upper bounds for num_teams when parser is updated to
   // accept both.
-  if (auto *numTeamsClause = findUniqueClause<ClauseTy::NumTeams>()) {
-    result = fir::getBase(converter.genExprValue(
-        *Fortran::semantics::GetExpr(numTeamsClause->v), stmtCtx));
+  if (auto *clause = findUniqueClause<omp::clause::NumTeams>()) {
+    // auto lowerBound = std::get<std::optional<ExprTy>>(clause->t);
+    auto &upperBound = std::get<ExprTy>(clause->t);
+    result.numTeamsUpperVar =
+        fir::getBase(converter.genExprValue(upperBound, stmtCtx));
     return true;
   }
   return false;
 }
 
 bool ClauseProcessor::processNumThreads(
-    Fortran::lower::StatementContext &stmtCtx, mlir::Value &result) const {
-  if (auto *numThreadsClause = findUniqueClause<ClauseTy::NumThreads>()) {
+    Fortran::lower::StatementContext &stmtCtx,
+    mlir::omp::NumThreadsClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::NumThreads>()) {
     // OMPIRBuilder expects `NUM_THREADS` clause as a `Value`.
-    result = fir::getBase(converter.genExprValue(
-        *Fortran::semantics::GetExpr(numThreadsClause->v), stmtCtx));
+    result.numThreadsVar =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
   return false;
 }
 
-bool ClauseProcessor::processOrdered(mlir::IntegerAttr &result) const {
-  if (auto *orderedClause = findUniqueClause<ClauseTy::Ordered>()) {
+bool ClauseProcessor::processOrdered(
+    mlir::omp::OrderedClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Ordered>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     int64_t orderedClauseValue = 0l;
-    if (orderedClause->v.has_value()) {
-      const auto *expr = Fortran::semantics::GetExpr(orderedClause->v);
-      orderedClauseValue = *Fortran::evaluate::ToInt64(*expr);
-    }
-    result = firOpBuilder.getI64IntegerAttr(orderedClauseValue);
+    if (clause->v.has_value())
+      orderedClauseValue = *Fortran::evaluate::ToInt64(*clause->v);
+    result.orderedAttr = firOpBuilder.getI64IntegerAttr(orderedClauseValue);
     return true;
   }
   return false;
 }
 
-bool ClauseProcessor::processPriority(Fortran::lower::StatementContext &stmtCtx,
-                                      mlir::Value &result) const {
-  if (auto *priorityClause = findUniqueClause<ClauseTy::Priority>()) {
-    result = fir::getBase(converter.genExprValue(
-        *Fortran::semantics::GetExpr(priorityClause->v), stmtCtx));
+bool ClauseProcessor::processPriority(
+    Fortran::lower::StatementContext &stmtCtx,
+    mlir::omp::PriorityClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Priority>()) {
+    result.priorityVar =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
   return false;
 }
 
 bool ClauseProcessor::processProcBind(
-    mlir::omp::ClauseProcBindKindAttr &result) const {
-  if (auto *procBindClause = findUniqueClause<ClauseTy::ProcBind>()) {
+    mlir::omp::ProcBindClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::ProcBind>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    result = genProcBindKindAttr(firOpBuilder, procBindClause);
+    result.procBindKindAttr = genProcBindKindAttr(firOpBuilder, *clause);
     return true;
   }
   return false;
 }
 
-bool ClauseProcessor::processSafelen(mlir::IntegerAttr &result) const {
-  if (auto *safelenClause = findUniqueClause<ClauseTy::Safelen>()) {
+bool ClauseProcessor::processSafelen(
+    mlir::omp::SafelenClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Safelen>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    const auto *expr = Fortran::semantics::GetExpr(safelenClause->v);
     const std::optional<std::int64_t> safelenVal =
-        Fortran::evaluate::ToInt64(*expr);
-    result = firOpBuilder.getI64IntegerAttr(*safelenVal);
+        Fortran::evaluate::ToInt64(clause->v);
+    result.safelenAttr = firOpBuilder.getI64IntegerAttr(*safelenVal);
     return true;
   }
   return false;
 }
 
 bool ClauseProcessor::processSchedule(
-    mlir::omp::ClauseScheduleKindAttr &valAttr,
-    mlir::omp::ScheduleModifierAttr &modifierAttr,
-    mlir::UnitAttr &simdModifierAttr) const {
-  if (auto *scheduleClause = findUniqueClause<ClauseTy::Schedule>()) {
+    Fortran::lower::StatementContext &stmtCtx,
+    mlir::omp::ScheduleClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Schedule>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
     mlir::MLIRContext *context = firOpBuilder.getContext();
-    const Fortran::parser::OmpScheduleClause &scheduleType = scheduleClause->v;
-    const auto &scheduleClauseKind =
-        std::get<Fortran::parser::OmpScheduleClause::ScheduleType>(
-            scheduleType.t);
+    const auto &scheduleType = std::get<omp::clause::Schedule::Kind>(clause->t);
 
     mlir::omp::ClauseScheduleKind scheduleKind;
-    switch (scheduleClauseKind) {
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Static:
+    switch (scheduleType) {
+    case omp::clause::Schedule::Kind::Static:
       scheduleKind = mlir::omp::ClauseScheduleKind::Static;
       break;
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Dynamic:
+    case omp::clause::Schedule::Kind::Dynamic:
       scheduleKind = mlir::omp::ClauseScheduleKind::Dynamic;
       break;
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Guided:
+    case omp::clause::Schedule::Kind::Guided:
       scheduleKind = mlir::omp::ClauseScheduleKind::Guided;
       break;
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Auto:
+    case omp::clause::Schedule::Kind::Auto:
       scheduleKind = mlir::omp::ClauseScheduleKind::Auto;
       break;
-    case Fortran::parser::OmpScheduleClause::ScheduleType::Runtime:
+    case omp::clause::Schedule::Kind::Runtime:
       scheduleKind = mlir::omp::ClauseScheduleKind::Runtime;
       break;
     }
 
-    mlir::omp::ScheduleModifier scheduleModifier =
-        getScheduleModifier(scheduleClause->v);
+    result.scheduleValAttr =
+        mlir::omp::ClauseScheduleKindAttr::get(context, scheduleKind);
 
+    mlir::omp::ScheduleModifier scheduleModifier = getScheduleModifier(*clause);
     if (scheduleModifier != mlir::omp::ScheduleModifier::none)
-      modifierAttr =
+      result.scheduleModAttr =
           mlir::omp::ScheduleModifierAttr::get(context, scheduleModifier);
 
-    if (getSimdModifier(scheduleClause->v) != mlir::omp::ScheduleModifier::none)
-      simdModifierAttr = firOpBuilder.getUnitAttr();
+    if (getSimdModifier(*clause) != mlir::omp::ScheduleModifier::none)
+      result.scheduleSimdAttr = firOpBuilder.getUnitAttr();
 
-    valAttr = mlir::omp::ClauseScheduleKindAttr::get(context, scheduleKind);
+    if (const auto &chunkExpr = std::get<omp::MaybeExpr>(clause->t))
+      result.scheduleChunkVar =
+          fir::getBase(converter.genExprValue(*chunkExpr, stmtCtx));
+
     return true;
   }
   return false;
 }
 
-bool ClauseProcessor::processScheduleChunk(
-    Fortran::lower::StatementContext &stmtCtx, mlir::Value &result) const {
-  if (auto *scheduleClause = findUniqueClause<ClauseTy::Schedule>()) {
-    if (const auto &chunkExpr =
-            std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
-                scheduleClause->v.t)) {
-      if (const auto *expr = Fortran::semantics::GetExpr(*chunkExpr)) {
-        result = fir::getBase(converter.genExprValue(*expr, stmtCtx));
-      }
-    }
-    return true;
-  }
-  return false;
-}
-
-bool ClauseProcessor::processSimdlen(mlir::IntegerAttr &result) const {
-  if (auto *simdlenClause = findUniqueClause<ClauseTy::Simdlen>()) {
+bool ClauseProcessor::processSimdlen(
+    mlir::omp::SimdlenClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Simdlen>()) {
     fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-    const auto *expr = Fortran::semantics::GetExpr(simdlenClause->v);
     const std::optional<std::int64_t> simdlenVal =
-        Fortran::evaluate::ToInt64(*expr);
-    result = firOpBuilder.getI64IntegerAttr(*simdlenVal);
+        Fortran::evaluate::ToInt64(clause->v);
+    result.simdlenAttr = firOpBuilder.getI64IntegerAttr(*simdlenVal);
     return true;
   }
   return false;
 }
 
 bool ClauseProcessor::processThreadLimit(
-    Fortran::lower::StatementContext &stmtCtx, mlir::Value &result) const {
-  if (auto *threadLmtClause = findUniqueClause<ClauseTy::ThreadLimit>()) {
-    result = fir::getBase(converter.genExprValue(
-        *Fortran::semantics::GetExpr(threadLmtClause->v), stmtCtx));
+    Fortran::lower::StatementContext &stmtCtx,
+    mlir::omp::ThreadLimitClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::ThreadLimit>()) {
+    result.threadLimitVar =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
     return true;
   }
   return false;
 }
 
-bool ClauseProcessor::processUntied(mlir::UnitAttr &result) const {
-  return markClauseOccurrence<ClauseTy::Untied>(result);
+bool ClauseProcessor::processUntied(mlir::omp::UntiedClauseOps &result) const {
+  return markClauseOccurrence<omp::clause::Untied>(result.untiedAttr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -554,13 +507,12 @@ bool ClauseProcessor::processUntied(mlir::UnitAttr &result) const {
 //===----------------------------------------------------------------------===//
 
 bool ClauseProcessor::processAllocate(
-    llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
-    llvm::SmallVectorImpl<mlir::Value> &allocateOperands) const {
-  return findRepeatableClause<ClauseTy::Allocate>(
-      [&](const ClauseTy::Allocate *allocateClause,
+    mlir::omp::AllocateClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Allocate>(
+      [&](const omp::clause::Allocate &clause,
           const Fortran::parser::CharBlock &) {
-        genAllocateClause(converter, allocateClause->v, allocatorOperands,
-                          allocateOperands);
+        genAllocateClause(converter, clause, result.allocatorVars,
+                          result.allocateVars);
       });
 }
 
@@ -576,12 +528,12 @@ bool ClauseProcessor::processCopyin() const {
         if (converter.isPresentShallowLookup(*sym))
           converter.copyHostAssociateVar(*sym, copyAssignIP);
       };
-  bool hasCopyin = findRepeatableClause<ClauseTy::Copyin>(
-      [&](const ClauseTy::Copyin *copyinClause,
+  bool hasCopyin = findRepeatableClause<omp::clause::Copyin>(
+      [&](const omp::clause::Copyin &clause,
           const Fortran::parser::CharBlock &) {
-        const Fortran::parser::OmpObjectList &ompObjectList = copyinClause->v;
-        for (const Fortran::parser::OmpObject &ompObject : ompObjectList.v) {
-          Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
+        for (const omp::Object &object : clause.v) {
+          Fortran::semantics::Symbol *sym = object.id();
+          assert(sym && "Expecting symbol");
           if (const auto *commonDetails =
                   sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
             for (const auto &mem : commonDetails->objects())
@@ -620,7 +572,7 @@ public:
   }
 
   // Returns the shape of array types.
-  const llvm::SmallVector<int64_t> &getShape() const { return shape; }
+  llvm::ArrayRef<int64_t> getShape() const { return shape; }
 
   // Is the type inside a box?
   bool isBox() const { return inBox; }
@@ -709,10 +661,9 @@ createCopyFunc(mlir::Location loc, Fortran::lower::AbstractConverter &converter,
   return funcOp;
 }
 
-bool ClauseProcessor::processCopyPrivate(
+bool ClauseProcessor::processCopyprivate(
     mlir::Location currentLocation,
-    llvm::SmallVectorImpl<mlir::Value> &copyPrivateVars,
-    llvm::SmallVectorImpl<mlir::Attribute> &copyPrivateFuncs) const {
+    mlir::omp::CopyprivateClauseOps &result) const {
   auto addCopyPrivateVar = [&](Fortran::semantics::Symbol *sym) {
     mlir::Value symVal = converter.getSymbolAddress(*sym);
     auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>();
@@ -739,19 +690,17 @@ bool ClauseProcessor::processCopyPrivate(
       cpVar = alloca;
     }
 
-    copyPrivateVars.push_back(cpVar);
+    result.copyprivateVars.push_back(cpVar);
     mlir::func::FuncOp funcOp =
         createCopyFunc(currentLocation, converter, cpVar.getType(), attrs);
-    copyPrivateFuncs.push_back(mlir::SymbolRefAttr::get(funcOp));
+    result.copyprivateFuncs.push_back(mlir::SymbolRefAttr::get(funcOp));
   };
 
-  bool hasCopyPrivate = findRepeatableClause<ClauseTy::Copyprivate>(
-      [&](const ClauseTy::Copyprivate *copyPrivateClause,
+  bool hasCopyPrivate = findRepeatableClause<clause::Copyprivate>(
+      [&](const clause::Copyprivate &clause,
           const Fortran::parser::CharBlock &) {
-        const Fortran::parser::OmpObjectList &ompObjectList =
-            copyPrivateClause->v;
-        for (const Fortran::parser::OmpObject &ompObject : ompObjectList.v) {
-          Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
+        for (const Object &object : clause.v) {
+          Fortran::semantics::Symbol *sym = object.id();
           if (const auto *commonDetails =
                   sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
             for (const auto &mem : commonDetails->objects())
@@ -765,85 +714,104 @@ bool ClauseProcessor::processCopyPrivate(
   return hasCopyPrivate;
 }
 
-bool ClauseProcessor::processDepend(
-    llvm::SmallVectorImpl<mlir::Attribute> &dependTypeOperands,
-    llvm::SmallVectorImpl<mlir::Value> &dependOperands) const {
+bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  return findRepeatableClause<ClauseTy::Depend>(
-      [&](const ClauseTy::Depend *dependClause,
+  return findRepeatableClause<omp::clause::Depend>(
+      [&](const omp::clause::Depend &clause,
           const Fortran::parser::CharBlock &) {
-        const std::list<Fortran::parser::Designator> &depVal =
-            std::get<std::list<Fortran::parser::Designator>>(
-                std::get<Fortran::parser::OmpDependClause::InOut>(
-                    dependClause->v.u)
-                    .t);
+        using Depend = omp::clause::Depend;
+        assert(std::holds_alternative<Depend::WithLocators>(clause.u) &&
+               "Only the modern form is handled at the moment");
+        auto &modern = std::get<Depend::WithLocators>(clause.u);
+        auto kind = std::get<Depend::TaskDependenceType>(modern.t);
+        auto &objects = std::get<omp::ObjectList>(modern.t);
+
         mlir::omp::ClauseTaskDependAttr dependTypeOperand =
-            genDependKindAttr(firOpBuilder, dependClause);
-        dependTypeOperands.insert(dependTypeOperands.end(), depVal.size(),
-                                  dependTypeOperand);
-        for (const Fortran::parser::Designator &ompObject : depVal) {
-          Fortran::semantics::Symbol *sym = nullptr;
-          std::visit(
-              Fortran::common::visitors{
-                  [&](const Fortran::parser::DataRef &designator) {
-                    if (const Fortran::parser::Name *name =
-                            std::get_if<Fortran::parser::Name>(&designator.u)) {
-                      sym = name->symbol;
-                    } else if (std::get_if<Fortran::common::Indirection<
-                                   Fortran::parser::ArrayElement>>(
-                                   &designator.u)) {
-                      TODO(converter.getCurrentLocation(),
-                           "array sections not supported for task depend");
-                    }
-                  },
-                  [&](const Fortran::parser::Substring &designator) {
-                    TODO(converter.getCurrentLocation(),
-                         "substring not supported for task depend");
-                  }},
-              (ompObject).u);
+            genDependKindAttr(firOpBuilder, kind);
+        result.dependTypeAttrs.append(objects.size(), dependTypeOperand);
+
+        for (const omp::Object &object : objects) {
+          assert(object.ref() && "Expecting designator");
+
+          if (Fortran::evaluate::ExtractSubstring(*object.ref())) {
+            TODO(converter.getCurrentLocation(),
+                 "substring not supported for task depend");
+          } else if (Fortran::evaluate::IsArrayElement(*object.ref())) {
+            TODO(converter.getCurrentLocation(),
+                 "array sections not supported for task depend");
+          }
+
+          Fortran::semantics::Symbol *sym = object.id();
           const mlir::Value variable = converter.getSymbolAddress(*sym);
-          dependOperands.push_back(variable);
+          result.dependVars.push_back(variable);
         }
       });
 }
 
+bool ClauseProcessor::processHasDeviceAddr(
+    mlir::omp::HasDeviceAddrClauseOps &result,
+    llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
+    llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &isDeviceSymbols)
+    const {
+  return findRepeatableClause<omp::clause::HasDeviceAddr>(
+      [&](const omp::clause::HasDeviceAddr &devAddrClause,
+          const Fortran::parser::CharBlock &) {
+        addUseDeviceClause(converter, devAddrClause.v, result.hasDeviceAddrVars,
+                           isDeviceTypes, isDeviceLocs, isDeviceSymbols);
+      });
+}
+
 bool ClauseProcessor::processIf(
-    Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
-    mlir::Value &result) const {
+    omp::clause::If::DirectiveNameModifier directiveName,
+    mlir::omp::IfClauseOps &result) const {
   bool found = false;
-  findRepeatableClause<ClauseTy::If>(
-      [&](const ClauseTy::If *ifClause,
+  findRepeatableClause<omp::clause::If>(
+      [&](const omp::clause::If &clause,
           const Fortran::parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
-        mlir::Value operand = getIfClauseOperand(converter, ifClause,
+        mlir::Value operand = getIfClauseOperand(converter, clause,
                                                  directiveName, clauseLocation);
         // Assume that, at most, a single 'if' clause will be applicable to the
         // given directive.
         if (operand) {
-          result = operand;
+          result.ifVar = operand;
           found = true;
         }
       });
   return found;
 }
 
+bool ClauseProcessor::processIsDevicePtr(
+    mlir::omp::IsDevicePtrClauseOps &result,
+    llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
+    llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &isDeviceSymbols)
+    const {
+  return findRepeatableClause<omp::clause::IsDevicePtr>(
+      [&](const omp::clause::IsDevicePtr &devPtrClause,
+          const Fortran::parser::CharBlock &) {
+        addUseDeviceClause(converter, devPtrClause.v, result.isDevicePtrVars,
+                           isDeviceTypes, isDeviceLocs, isDeviceSymbols);
+      });
+}
+
 bool ClauseProcessor::processLink(
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
-  return findRepeatableClause<ClauseTy::Link>(
-      [&](const ClauseTy::Link *linkClause,
-          const Fortran::parser::CharBlock &) {
+  return findRepeatableClause<omp::clause::Link>(
+      [&](const omp::clause::Link &clause, const Fortran::parser::CharBlock &) {
         // Case: declare target link(var1, var2)...
         gatherFuncAndVarSyms(
-            linkClause->v, mlir::omp::DeclareTargetCaptureClause::link, result);
+            clause.v, mlir::omp::DeclareTargetCaptureClause::link, result);
       });
 }
 
 mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
-                mlir::SmallVector<mlir::Value> bounds,
-                mlir::SmallVector<mlir::Value> members, uint64_t mapType,
+                llvm::ArrayRef<mlir::Value> bounds,
+                llvm::ArrayRef<mlir::Value> members, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool isVal) {
   if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
@@ -864,73 +832,70 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 bool ClauseProcessor::processMap(
-    mlir::Location currentLocation, const llvm::omp::Directive &directive,
-    Fortran::lower::StatementContext &stmtCtx,
-    llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
+    mlir::Location currentLocation, Fortran::lower::StatementContext &stmtCtx,
+    mlir::omp::MapClauseOps &result,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSyms,
     llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols)
-    const {
+    llvm::SmallVectorImpl<mlir::Type> *mapSymTypes) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  return findRepeatableClause<ClauseTy::Map>(
-      [&](const ClauseTy::Map *mapClause,
+  return findRepeatableClause<omp::clause::Map>(
+      [&](const omp::clause::Map &clause,
           const Fortran::parser::CharBlock &source) {
+        using Map = omp::clause::Map;
         mlir::Location clauseLocation = converter.genLocation(source);
-        const auto &oMapType =
-            std::get<std::optional<Fortran::parser::OmpMapType>>(
-                mapClause->v.t);
+        const auto &mapType = std::get<std::optional<Map::MapType>>(clause.t);
         llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
         // If the map type is specified, then process it else Tofrom is the
         // default.
-        if (oMapType) {
-          const Fortran::parser::OmpMapType::Type &mapType =
-              std::get<Fortran::parser::OmpMapType::Type>(oMapType->t);
-          switch (mapType) {
-          case Fortran::parser::OmpMapType::Type::To:
+        if (mapType) {
+          switch (*mapType) {
+          case Map::MapType::To:
             mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
             break;
-          case Fortran::parser::OmpMapType::Type::From:
+          case Map::MapType::From:
             mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
             break;
-          case Fortran::parser::OmpMapType::Type::Tofrom:
+          case Map::MapType::Tofrom:
             mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
                            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
             break;
-          case Fortran::parser::OmpMapType::Type::Alloc:
-          case Fortran::parser::OmpMapType::Type::Release:
+          case Map::MapType::Alloc:
+          case Map::MapType::Release:
             // alloc and release is the default map_type for the Target Data
             // Ops, i.e. if no bits for map_type is supplied then alloc/release
             // is implicitly assumed based on the target directive. Default
             // value for Target Data and Enter Data is alloc and for Exit Data
             // it is release.
             break;
-          case Fortran::parser::OmpMapType::Type::Delete:
+          case Map::MapType::Delete:
             mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
           }
 
-          if (std::get<std::optional<Fortran::parser::OmpMapType::Always>>(
-                  oMapType->t))
-            mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+          auto &modTypeMods =
+              std::get<std::optional<Map::MapTypeModifiers>>(clause.t);
+          if (modTypeMods) {
+            if (llvm::is_contained(*modTypeMods, Map::MapTypeModifier::Always))
+              mapTypeBits |=
+                  llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+          }
         } else {
           mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
         }
 
-        for (const Fortran::parser::OmpObject &ompObject :
-             std::get<Fortran::parser::OmpObjectList>(mapClause->v.t).v) {
+        for (const omp::Object &object : std::get<omp::ObjectList>(clause.t)) {
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
 
           Fortran::lower::AddrAndBoundsInfo info =
               Fortran::lower::gatherDataOperandAddrAndBounds<
-                  Fortran::parser::OmpObject, mlir::omp::DataBoundsOp,
-                  mlir::omp::DataBoundsType>(
-                  converter, firOpBuilder, semaCtx, stmtCtx, ompObject,
-                  clauseLocation, asFortran, bounds, treatIndexAsSection);
+                  mlir::omp::MapBoundsOp, mlir::omp::MapBoundsType>(
+                  converter, firOpBuilder, semaCtx, stmtCtx, *object.id(),
+                  object.ref(), clauseLocation, asFortran, bounds,
+                  treatIndexAsSection);
 
-          auto origSymbol =
-              converter.getSymbolAddress(*getOmpObjectSymbol(ompObject));
+          auto origSymbol = converter.getSymbolAddress(*object.id());
           mlir::Value symAddr = info.addr;
           if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
             symAddr = origSymbol;
@@ -946,91 +911,112 @@ bool ClauseProcessor::processMap(
                   mapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
-          mapOperands.push_back(mapOp);
-          if (mapSymTypes)
-            mapSymTypes->push_back(symAddr.getType());
+          result.mapVars.push_back(mapOp);
+
+          if (mapSyms)
+            mapSyms->push_back(object.id());
           if (mapSymLocs)
             mapSymLocs->push_back(symAddr.getLoc());
-
-          if (mapSymbols)
-            mapSymbols->push_back(getOmpObjectSymbol(ompObject));
+          if (mapSymTypes)
+            mapSymTypes->push_back(symAddr.getType());
         }
       });
 }
 
 bool ClauseProcessor::processReduction(
-    mlir::Location currentLocation,
-    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
-    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *reductionSymbols)
+    mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
+    llvm::SmallVectorImpl<mlir::Type> *outReductionTypes,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *outReductionSyms)
     const {
-  return findRepeatableClause<ClauseTy::Reduction>(
-      [&](const ClauseTy::Reduction *reductionClause,
+  return findRepeatableClause<omp::clause::Reduction>(
+      [&](const omp::clause::Reduction &clause,
           const Fortran::parser::CharBlock &) {
+        // Use local lists of reductions to prevent variables from other
+        // already-processed reduction clauses from impacting this reduction.
+        // For example, the whole `reductionVars` array is queried to decide
+        // whether to do the reduction byref.
+        llvm::SmallVector<mlir::Value> reductionVars;
+        llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
+        llvm::SmallVector<const Fortran::semantics::Symbol *> reductionSyms;
         ReductionProcessor rp;
-        rp.addReductionDecl(currentLocation, converter, reductionClause->v,
-                            reductionVars, reductionDeclSymbols,
-                            reductionSymbols);
+        rp.addDeclareReduction(currentLocation, converter, clause,
+                               reductionVars, reductionDeclSymbols,
+                               outReductionSyms ? &reductionSyms : nullptr);
+
+        // Copy local lists into the output.
+        llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
+        llvm::copy(reductionDeclSymbols,
+                   std::back_inserter(result.reductionDeclSymbols));
+
+        if (outReductionTypes) {
+          outReductionTypes->reserve(outReductionTypes->size() +
+                                     reductionVars.size());
+          llvm::transform(reductionVars, std::back_inserter(*outReductionTypes),
+                          [](mlir::Value v) { return v.getType(); });
+        }
+
+        if (outReductionSyms)
+          llvm::copy(reductionSyms, std::back_inserter(*outReductionSyms));
       });
 }
 
 bool ClauseProcessor::processSectionsReduction(
-    mlir::Location currentLocation) const {
-  return findRepeatableClause<ClauseTy::Reduction>(
-      [&](const ClauseTy::Reduction *, const Fortran::parser::CharBlock &) {
+    mlir::Location currentLocation, mlir::omp::ReductionClauseOps &) const {
+  return findRepeatableClause<omp::clause::Reduction>(
+      [&](const omp::clause::Reduction &, const Fortran::parser::CharBlock &) {
         TODO(currentLocation, "OMPC_Reduction");
       });
 }
 
 bool ClauseProcessor::processTo(
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
-  return findRepeatableClause<ClauseTy::To>(
-      [&](const ClauseTy::To *toClause, const Fortran::parser::CharBlock &) {
+  return findRepeatableClause<omp::clause::To>(
+      [&](const omp::clause::To &clause, const Fortran::parser::CharBlock &) {
         // Case: declare target to(func, var1, var2)...
-        gatherFuncAndVarSyms(toClause->v,
+        gatherFuncAndVarSyms(std::get<ObjectList>(clause.t),
                              mlir::omp::DeclareTargetCaptureClause::to, result);
       });
 }
 
 bool ClauseProcessor::processEnter(
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
-  return findRepeatableClause<ClauseTy::Enter>(
-      [&](const ClauseTy::Enter *enterClause,
+  return findRepeatableClause<omp::clause::Enter>(
+      [&](const omp::clause::Enter &clause,
           const Fortran::parser::CharBlock &) {
         // Case: declare target enter(func, var1, var2)...
-        gatherFuncAndVarSyms(enterClause->v,
-                             mlir::omp::DeclareTargetCaptureClause::enter,
-                             result);
+        gatherFuncAndVarSyms(
+            clause.v, mlir::omp::DeclareTargetCaptureClause::enter, result);
       });
 }
 
 bool ClauseProcessor::processUseDeviceAddr(
-    llvm::SmallVectorImpl<mlir::Value> &operands,
+    mlir::omp::UseDeviceClauseOps &result,
     llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
     llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &useDeviceSymbols)
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &useDeviceSyms)
     const {
-  return findRepeatableClause<ClauseTy::UseDeviceAddr>(
-      [&](const ClauseTy::UseDeviceAddr *devAddrClause,
+  return findRepeatableClause<omp::clause::UseDeviceAddr>(
+      [&](const omp::clause::UseDeviceAddr &clause,
           const Fortran::parser::CharBlock &) {
-        addUseDeviceClause(converter, devAddrClause->v, operands,
-                           useDeviceTypes, useDeviceLocs, useDeviceSymbols);
+        addUseDeviceClause(converter, clause.v, result.useDeviceAddrVars,
+                           useDeviceTypes, useDeviceLocs, useDeviceSyms);
       });
 }
 
 bool ClauseProcessor::processUseDevicePtr(
-    llvm::SmallVectorImpl<mlir::Value> &operands,
+    mlir::omp::UseDeviceClauseOps &result,
     llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
     llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &useDeviceSymbols)
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &useDeviceSyms)
     const {
-  return findRepeatableClause<ClauseTy::UseDevicePtr>(
-      [&](const ClauseTy::UseDevicePtr *devPtrClause,
+  return findRepeatableClause<omp::clause::UseDevicePtr>(
+      [&](const omp::clause::UseDevicePtr &clause,
           const Fortran::parser::CharBlock &) {
-        addUseDeviceClause(converter, devPtrClause->v, operands, useDeviceTypes,
-                           useDeviceLocs, useDeviceSymbols);
+        addUseDeviceClause(converter, clause.v, result.useDevicePtrVars,
+                           useDeviceTypes, useDeviceLocs, useDeviceSyms);
       });
 }
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

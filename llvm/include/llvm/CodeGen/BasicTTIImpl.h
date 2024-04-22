@@ -209,28 +209,31 @@ private:
                                               Align Alignment,
                                               bool VariableMask,
                                               bool IsGatherScatter,
-                                              TTI::TargetCostKind CostKind) {
+                                              TTI::TargetCostKind CostKind,
+                                              unsigned AddressSpace = 0) {
     // We cannot scalarize scalable vectors, so return Invalid.
     if (isa<ScalableVectorType>(DataTy))
       return InstructionCost::getInvalid();
 
     auto *VT = cast<FixedVectorType>(DataTy);
+    unsigned VF = VT->getNumElements();
+
     // Assume the target does not have support for gather/scatter operations
     // and provide a rough estimate.
     //
     // First, compute the cost of the individual memory operations.
     InstructionCost AddrExtractCost =
         IsGatherScatter
-            ? getVectorInstrCost(Instruction::ExtractElement,
-                                 FixedVectorType::get(
-                                     PointerType::get(VT->getElementType(), 0),
-                                     VT->getNumElements()),
-                                 CostKind, -1, nullptr, nullptr)
+            ? getScalarizationOverhead(
+                  FixedVectorType::get(
+                      PointerType::get(VT->getElementType(), 0), VF),
+                  /*Insert=*/false, /*Extract=*/true, CostKind)
             : 0;
-    InstructionCost LoadCost =
-        VT->getNumElements() *
-        (AddrExtractCost +
-         getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind));
+
+    // The cost of the scalar loads/stores.
+    InstructionCost MemoryOpCost =
+        VF * getMemoryOpCost(Opcode, VT->getElementType(), Alignment,
+                             AddressSpace, CostKind);
 
     // Next, compute the cost of packing the result in a vector.
     InstructionCost PackingCost =
@@ -246,17 +249,14 @@ private:
       // operations accurately is quite difficult and the current solution
       // provides a very rough estimate only.
       ConditionalCost =
-          VT->getNumElements() *
-          (getVectorInstrCost(
-               Instruction::ExtractElement,
-               FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()),
-                                    VT->getNumElements()),
-               CostKind, -1, nullptr, nullptr) +
-           getCFInstrCost(Instruction::Br, CostKind) +
-           getCFInstrCost(Instruction::PHI, CostKind));
+          getScalarizationOverhead(
+              FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()), VF),
+              /*Insert=*/false, /*Extract=*/true, CostKind) +
+          VF * (getCFInstrCost(Instruction::Br, CostKind) +
+                getCFInstrCost(Instruction::PHI, CostKind));
     }
 
-    return LoadCost + PackingCost + ConditionalCost;
+    return AddrExtractCost + MemoryOpCost + PackingCost + ConditionalCost;
   }
 
 protected:
@@ -328,18 +328,24 @@ public:
     return getTLI()->isLegalAddImmediate(imm);
   }
 
+  bool isLegalAddScalableImmediate(int64_t Imm) {
+    return getTLI()->isLegalAddScalableImmediate(Imm);
+  }
+
   bool isLegalICmpImmediate(int64_t imm) {
     return getTLI()->isLegalICmpImmediate(imm);
   }
 
   bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
-                             bool HasBaseReg, int64_t Scale,
-                             unsigned AddrSpace, Instruction *I = nullptr) {
+                             bool HasBaseReg, int64_t Scale, unsigned AddrSpace,
+                             Instruction *I = nullptr,
+                             int64_t ScalableOffset = 0) {
     TargetLoweringBase::AddrMode AM;
     AM.BaseGV = BaseGV;
     AM.BaseOffs = BaseOffset;
     AM.HasBaseReg = HasBaseReg;
     AM.Scale = Scale;
+    AM.ScalableOffset = ScalableOffset;
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace, I);
   }
 
@@ -1012,7 +1018,8 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt) {
+                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 const Instruction *CxtI = nullptr) {
     switch (improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp)) {
     case TTI::SK_Broadcast:
       if (auto *FVT = dyn_cast<FixedVectorType>(Tp))
@@ -1363,6 +1370,7 @@ public:
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *DataTy,
                                         Align Alignment, unsigned AddressSpace,
                                         TTI::TargetCostKind CostKind) {
+    // TODO: Pass on AddressSpace when we have test coverage.
     return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, true, false,
                                        CostKind);
   }

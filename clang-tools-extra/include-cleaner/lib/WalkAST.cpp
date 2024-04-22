@@ -228,6 +228,11 @@ public:
     // Mark declaration from definition as it needs type-checking.
     if (FD->isThisDeclarationADefinition())
       report(FD->getLocation(), FD);
+    // Explicit specializaiton/instantiations of a function template requires
+    // primary template.
+    if (clang::isTemplateExplicitInstantiationOrSpecialization(
+            FD->getTemplateSpecializationKind()))
+      report(FD->getLocation(), FD->getPrimaryTemplate());
     return true;
   }
   bool VisitVarDecl(VarDecl *VD) {

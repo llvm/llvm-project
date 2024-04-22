@@ -1847,19 +1847,50 @@ floating point semantic models: precise (the default), strict, and fast.
    * ``16`` - Forces ``_Float16`` operations to be emitted without using excess
      precision arithmetic.
 
+.. option:: -fcomplex-arithmetic=<value>:
+
+   This option specifies the implementation for complex multiplication and division.
+
+   Valid values are: ``basic``, ``improved``, ``full`` and ``promoted``.
+
+   * ``basic`` Implementation of complex division and multiplication using
+     algebraic formulas at source precision. No special handling to avoid
+     overflow. NaN and infinite values are not handled.
+   * ``improved`` Implementation of complex division using the Smith algorithm
+     at source precision. Smith's algorithm for complex division.
+     See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8 (1962).
+     This value offers improved handling for overflow in intermediate
+     calculations, but overflow may occur. NaN and infinite values are not
+     handled in some cases.
+   * ``full`` Implementation of complex division and multiplication using a
+     call to runtime library functions (generally the case, but the BE might
+     sometimes replace the library call if it knows enough about the potential
+     range of the inputs). Overflow and non-finite values are handled by the
+     library implementation. For the case of multiplication overflow will occur in
+     accordance with normal floating-point rules. This is the default value.
+   * ``promoted`` Implementation of complex division using algebraic formulas at
+     higher precision. Overflow is handled. Non-finite values are handled in some
+     cases. If the target does not have native support for a higher precision
+     data type, the implementation for the complex operation using the Smith
+     algorithm will be used. Overflow may still occur in some cases. NaN and
+     infinite values are not handled.
+
 .. option:: -fcx-limited-range:
 
-   This option enables the naive mathematical formulas for complex division and
-   multiplication with no NaN checking of results. The default is
-   ``-fno-cx-limited-range``, but this option is enabled by the ``-ffast-math``
+   This option is aliased to ``-fcomplex-arithmetic=basic``. It enables the
+   naive mathematical formulas for complex division and multiplication with no
+   NaN checking of results. The default is ``-fno-cx-limited-range`` aliased to
+   ``-fcomplex-arithmetic=full``. This option is enabled by the ``-ffast-math``
    option.
 
 .. option:: -fcx-fortran-rules:
 
-   This option enables the naive mathematical formulas for complex
-   multiplication and enables application of Smith's algorithm for complex
-   division. See SMITH, R. L. Algorithm 116: Complex division. Commun.
-   ACM 5, 8 (1962). The default is ``-fno-cx-fortran-rules``.
+   This option is aliased to ``-fcomplex-arithmetic=improved``. It enables the
+   naive mathematical formulas for complex multiplication and enables application
+   of Smith's algorithm for complex division. See SMITH, R. L. Algorithm 116:
+   Complex division. Commun. ACM 5, 8 (1962).
+   The default is ``-fno-cx-fortran-rules`` aliased to
+   ``-fcomplex-arithmetic=full``.
 
 .. _floating-point-environment:
 
@@ -2410,20 +2441,39 @@ usual build cycle when using sample profilers for optimization:
 
 1. Build the code with source line table information. You can use all the
    usual build flags that you always build your application with. The only
-   requirement is that you add ``-gline-tables-only`` or ``-g`` to the
-   command line. This is important for the profiler to be able to map
-   instructions back to source line locations.
+   requirement is that DWARF debug info including source line information is
+   generated. This DWARF information is important for the profiler to be able
+   to map instructions back to source line locations.
+
+   On Linux, ``-g`` or just ``-gline-tables-only`` is sufficient:
 
    .. code-block:: console
 
      $ clang++ -O2 -gline-tables-only code.cc -o code
 
+   While MSVC-style targets default to CodeView debug information, DWARF debug
+   information is required to generate source-level LLVM profiles. Use
+   ``-gdwarf`` to include DWARF debug information:
+
+   .. code-block:: console
+
+     $ clang-cl -O2 -gdwarf -gline-tables-only coff-profile.cpp -fuse-ld=lld -link -debug:dwarf
+
 2. Run the executable under a sampling profiler. The specific profiler
    you use does not really matter, as long as its output can be converted
-   into the format that the LLVM optimizer understands. Currently, there
-   exists a conversion tool for the Linux Perf profiler
-   (https://perf.wiki.kernel.org/), so these examples assume that you
-   are using Linux Perf to profile your code.
+   into the format that the LLVM optimizer understands.
+
+   Two such profilers are the the Linux Perf profiler
+   (https://perf.wiki.kernel.org/) and Intel's Sampling Enabling Product (SEP),
+   available as part of `Intel VTune
+   <https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/vtune-profiler.html>`_.
+   While Perf is Linux-specific, SEP can be used on Linux, Windows, and FreeBSD.
+
+   The LLVM tool ``llvm-profgen`` can convert output of either Perf or SEP. An
+   external project, `AutoFDO <https://github.com/google/autofdo>`_, also
+   provides a ``create_llvm_prof`` tool which supports Linux Perf output.
+
+   When using Perf:
 
    .. code-block:: console
 
@@ -2434,11 +2484,19 @@ usual build cycle when using sample profilers for optimization:
    it provides better call information, which improves the accuracy of
    the profile data.
 
-3. Convert the collected profile data to LLVM's sample profile format.
-   This is currently supported via the AutoFDO converter ``create_llvm_prof``.
-   It is available at https://github.com/google/autofdo. Once built and
-   installed, you can convert the ``perf.data`` file to LLVM using
-   the command:
+   When using SEP:
+
+   .. code-block:: console
+
+     $ sep -start -out code.tb7 -ec BR_INST_RETIRED.NEAR_TAKEN:precise=yes:pdir -lbr no_filter:usr -perf-script brstack -app ./code
+
+   This produces a ``code.perf.data.script`` output which can be used with
+   ``llvm-profgen``'s ``--perfscript`` input option.
+
+3. Convert the collected profile data to LLVM's sample profile format. This is
+   currently supported via the `AutoFDO <https://github.com/google/autofdo>`_
+   converter ``create_llvm_prof``. Once built and installed, you can convert
+   the ``perf.data`` file to LLVM using the command:
 
    .. code-block:: console
 
@@ -2454,7 +2512,14 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: console
 
-     $ llvm-profgen --binary=./code --output=code.prof--perfdata=perf.data
+     $ llvm-profgen --binary=./code --output=code.prof --perfdata=perf.data
+
+   When using SEP the output is in the textual format corresponding to
+   ``llvm-profgen --perfscript``. For example:
+
+   .. code-block:: console
+
+     $ llvm-profgen --binary=./code --output=code.prof --perfscript=code.perf.data.script
 
 
 4. Build the code again using the collected profile. This step feeds
@@ -4227,7 +4292,68 @@ Clang expects the GCC executable "gcc.exe" compiled for
 
 AIX
 ^^^
+TOC Data Transformation
+"""""""""""""""""""""""
+TOC data transformation is off by default (``-mno-tocdata``).
+When ``-mtocdata`` is specified, the TOC data transformation will be applied to
+all suitable variables with static storage duration, including static data
+members of classes and block-scope static variables (if not marked as exceptions,
+see further below).
 
+Suitable variables must:
+
+-  have complete types
+-  be independently generated (i.e., not placed in a pool)
+-  be at most as large as a pointer
+-  not be aligned more strictly than a pointer
+-  not be structs containing flexible array members
+-  not have internal linkage
+-  not have aliases
+-  not have section attributes
+-  not be thread local storage
+
+The TOC data transformation results in the variable, not its address,
+being placed in the TOC. This eliminates the need to load the address of the
+variable from the TOC.
+
+Note:
+If the TOC data transformation is applied to a variable whose definition
+is imported, the linker will generate fixup code for reading or writing to the
+variable.
+
+When multiple toc-data options are used, the last option used has the affect.
+For example: -mno-tocdata=g5,g1 -mtocdata=g1,g2 -mno-tocdata=g2 -mtocdata=g3,g4
+results in -mtocdata=g1,g3,g4
+
+Names of variables not having external linkage will be ignored.
+
+**Options:**
+
+.. option:: -mno-tocdata
+
+  This is the default behaviour. Only variables explicitly specified with
+  ``-mtocdata=`` will have the TOC data transformation applied.
+
+.. option:: -mtocdata
+
+  Apply the TOC data transformation to all suitable variables with static
+  storage duration (including static data members of classes and block-scope
+  static variables) that are not explicitly specified with ``-mno-tocdata=``.
+
+.. option:: -mno-tocdata=
+
+  Can be used in conjunction with ``-mtocdata`` to mark the comma-separated
+  list of external linkage variables, specified using their mangled names, as
+  exceptions to ``-mtocdata``.
+
+.. option:: -mtocdata=
+
+  Apply the TOC data transformation to the comma-separated list of external
+  linkage variables, specified using their mangled names, if they are suitable.
+  Emit diagnostics for all unsuitable variables specified.
+
+Default Visibility Export Mapping
+"""""""""""""""""""""""""""""""""
 The ``-mdefault-visibility-export-mapping=`` option can be used to control
 mapping of default visibility to an explicit shared object export
 (i.e. XCOFF exported visibility). Three values are provided for the option:

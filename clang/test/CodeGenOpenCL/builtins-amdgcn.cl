@@ -528,7 +528,7 @@ void test_read_exec_lo(global uint* out) {
 // CHECK-LABEL: @test_read_exec_hi(
 // CHECK: call i64 @llvm.amdgcn.ballot.i64(i1 true)
 // CHECK: lshr i64 [[A:%.*]], 32
-// CHECK: trunc i64 [[B:%.*]] to i32
+// CHECK: trunc nuw i64 [[B:%.*]] to i32
 void test_read_exec_hi(global uint* out) {
   *out = __builtin_amdgcn_read_exec_hi();
 }
@@ -837,6 +837,18 @@ unsigned test_wavefrontsize() {
 
   // CHECK: call i32 @llvm.amdgcn.wavefrontsize()
   return __builtin_amdgcn_wavefrontsize();
+}
+
+// CHECK-LABEL test_get_fpenv(
+unsigned long test_get_fpenv() {
+  // CHECK: call i64 @llvm.get.fpenv.i64()
+  return __builtin_amdgcn_get_fpenv();
+}
+
+// CHECK-LABEL test_set_fpenv(
+void test_set_fpenv(unsigned long env) {
+  // CHECK: call void @llvm.set.fpenv.i64(i64 %[[ENV:.+]])
+  __builtin_amdgcn_set_fpenv(env);
 }
 
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}

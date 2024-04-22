@@ -201,6 +201,8 @@ private:
   /// @}
 };
 
+class CowCompilerInvocation;
+
 /// Helper class for holding the data necessary to invoke the compiler.
 ///
 /// This class is designed to represent an abstract "invocation" of the
@@ -219,6 +221,9 @@ public:
     return *this;
   }
   ~CompilerInvocation() = default;
+
+  explicit CompilerInvocation(const CowCompilerInvocation &X);
+  CompilerInvocation &operator=(const CowCompilerInvocation &X);
 
   /// Const getters.
   /// @{

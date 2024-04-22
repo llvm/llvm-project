@@ -167,10 +167,21 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     unsigned MajorNum = getMetadataUInt(VersionMD, 0, 2);
     unsigned MinorNum = getMetadataUInt(VersionMD, 1);
     unsigned RevNum = getMetadataUInt(VersionMD, 2);
-    MAI.SrcLangVersion = (MajorNum * 100 + MinorNum) * 1000 + RevNum;
+    // Prevent Major part of OpenCL version to be 0
+    MAI.SrcLangVersion =
+        (std::max(1U, MajorNum) * 100 + MinorNum) * 1000 + RevNum;
   } else {
-    MAI.SrcLang = SPIRV::SourceLanguage::Unknown;
-    MAI.SrcLangVersion = 0;
+    // If there is no information about OpenCL version we are forced to generate
+    // OpenCL 1.0 by default for the OpenCL environment to avoid puzzling
+    // run-times with Unknown/0.0 version output. For a reference, LLVM-SPIRV
+    // Translator avoids potential issues with run-times in a similar manner.
+    if (ST->isOpenCLEnv()) {
+      MAI.SrcLang = SPIRV::SourceLanguage::OpenCL_CPP;
+      MAI.SrcLangVersion = 100000;
+    } else {
+      MAI.SrcLang = SPIRV::SourceLanguage::Unknown;
+      MAI.SrcLangVersion = 0;
+    }
   }
 
   if (auto ExtNode = M.getNamedMetadata("opencl.used.extensions")) {
@@ -658,7 +669,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Provided by all supported Vulkan versions.
   addAvailableCaps({Capability::Int16, Capability::Int64, Capability::Float16,
-                    Capability::Float64});
+                    Capability::Float64, Capability::GroupNonUniform});
 }
 
 } // namespace SPIRV
@@ -1110,6 +1121,21 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpAtomicFMaxEXT:
     AddAtomicFloatRequirements(MI, Reqs, ST);
     break;
+  case SPIRV::OpConvertBF16ToFINTEL:
+  case SPIRV::OpConvertFToBF16INTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_conversion)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_conversion);
+      Reqs.addCapability(SPIRV::Capability::BFloat16ConversionINTEL);
+    }
+    break;
+  case SPIRV::OpVariableLengthArrayINTEL:
+  case SPIRV::OpSaveMemoryINTEL:
+  case SPIRV::OpRestoreMemoryINTEL:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_variable_length_array)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_variable_length_array);
+      Reqs.addCapability(SPIRV::Capability::VariableLengthArrayINTEL);
+    }
+    break;
   default:
     break;
   }
@@ -1135,6 +1161,8 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
   // Collect requirements for OpExecutionMode instructions.
   auto Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
+    // SPV_KHR_float_controls is not available until v1.4
+    bool RequireFloatControls = false, VerLower14 = !ST.isAtLeastSPIRVVer(14);
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
       MDNode *MDN = cast<MDNode>(Node->getOperand(i));
       const MDOperand &MDOp = MDN->getOperand(1);
@@ -1144,9 +1172,22 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           auto EM = Const->getZExtValue();
           MAI.Reqs.getAndAddRequirements(
               SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
+          // add SPV_KHR_float_controls if the version is too low
+          switch (EM) {
+          case SPIRV::ExecutionMode::DenormPreserve:
+          case SPIRV::ExecutionMode::DenormFlushToZero:
+          case SPIRV::ExecutionMode::SignedZeroInfNanPreserve:
+          case SPIRV::ExecutionMode::RoundingModeRTE:
+          case SPIRV::ExecutionMode::RoundingModeRTZ:
+            RequireFloatControls = VerLower14;
+            break;
+          }
         }
       }
     }
+    if (RequireFloatControls &&
+        ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls))
+      MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls);
   }
   for (auto FI = M.begin(), E = M.end(); FI != E; ++FI) {
     const Function &F = *FI;
@@ -1278,6 +1319,9 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
   // If there are no entry points, we need the Linkage capability.
   if (MAI.MS[SPIRV::MB_EntryPoints].empty())
     MAI.Reqs.addCapability(SPIRV::Capability::Linkage);
+
+  // Set maximum ID used.
+  GR->setBound(MAI.MaxID);
 
   return false;
 }

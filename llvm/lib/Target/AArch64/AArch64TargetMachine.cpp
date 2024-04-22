@@ -235,6 +235,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64O0PreLegalizerCombinerPass(*PR);
   initializeAArch64PreLegalizerCombinerPass(*PR);
   initializeAArch64PointerAuthPass(*PR);
+  initializeAArch64PostCoalescerPass(*PR);
   initializeAArch64PostLegalizerCombinerPass(*PR);
   initializeAArch64PostLegalizerLoweringPass(*PR);
   initializeAArch64PostSelectOptimizePass(*PR);
@@ -539,6 +540,7 @@ public:
   void addPreEmitPass() override;
   void addPostBBSections() override;
   void addPreEmitPass2() override;
+  bool addRegAssignAndRewriteOptimized() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
@@ -547,6 +549,10 @@ public:
 
 void AArch64TargetMachine::registerPassBuilderCallbacks(
     PassBuilder &PB, bool PopulateClassToPassNames) {
+
+#define GET_PASS_REGISTRY "AArch64PassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
         LPM.addPass(AArch64LoopIdiomTransformPass());
@@ -599,7 +605,7 @@ void AArch64PassConfig::addIRPasses() {
       addPass(createFalkorMarkStridedAccessesPass());
   }
 
-  if (TM->getOptLevel() == CodeGenOptLevel::Aggressive && EnableGEPOpt) {
+  if (EnableGEPOpt) {
     // Call SeparateConstOffsetFromGEP pass to extract constants within indices
     // and lower a GEP with multiple indices to either arithmetic operations or
     // multiple GEPs with single index.
@@ -820,9 +826,6 @@ void AArch64PassConfig::addPreSched2() {
   // info.
   addPass(createAArch64SpeculationHardeningPass());
 
-  addPass(createAArch64IndirectThunks());
-  addPass(createAArch64SLSHardeningPass());
-
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     if (EnableFalkorHWPFFix)
       addPass(createFalkorHWPFFixPass());
@@ -855,6 +858,8 @@ void AArch64PassConfig::addPreEmitPass() {
 }
 
 void AArch64PassConfig::addPostBBSections() {
+  addPass(createAArch64IndirectThunks());
+  addPass(createAArch64SLSHardeningPass());
   addPass(createAArch64PointerAuthPass());
   if (EnableBranchTargets)
     addPass(createAArch64BranchTargetsPass());
@@ -871,6 +876,11 @@ void AArch64PassConfig::addPreEmitPass2() {
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.
   addPass(createUnpackMachineBundles(nullptr));
+}
+
+bool AArch64PassConfig::addRegAssignAndRewriteOptimized() {
+  addPass(createAArch64PostCoalescerPass());
+  return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
 
 MachineFunctionInfo *AArch64TargetMachine::createMachineFunctionInfo(

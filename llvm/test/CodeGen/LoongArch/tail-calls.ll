@@ -19,10 +19,12 @@ declare void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i1)
 define void @caller_extern(ptr %src) optsize {
 ; CHECK-LABEL: caller_extern:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    move $a1, $a0
-; CHECK-NEXT:    pcalau12i $a0, %got_pc_hi20(dest)
-; CHECK-NEXT:    ld.d $a0, $a0, %got_pc_lo12(dest)
+; CHECK-NEXT:    pcalau12i $a1, %got_pc_hi20(dest)
+; CHECK-NEXT:    ld.d $a1, $a1, %got_pc_lo12(dest)
 ; CHECK-NEXT:    ori $a2, $zero, 33
+; CHECK-NEXT:    move $a3, $a0
+; CHECK-NEXT:    move $a0, $a1
+; CHECK-NEXT:    move $a1, $a3
 ; CHECK-NEXT:    b %plt(memcpy)
 entry:
   tail call void @llvm.memcpy.p0.p0.i32(ptr @dest, ptr %src, i32 33, i1 false)
@@ -35,13 +37,13 @@ declare void @callee_indirect2()
 define void @caller_indirect_tail(i32 %a) nounwind {
 ; CHECK-LABEL: caller_indirect_tail:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.w $a0, $a0, 0
-; CHECK-NEXT:    sltui $a0, $a0, 1
 ; CHECK-NEXT:    pcalau12i $a1, %got_pc_hi20(callee_indirect2)
 ; CHECK-NEXT:    ld.d $a1, $a1, %got_pc_lo12(callee_indirect2)
-; CHECK-NEXT:    masknez $a1, $a1, $a0
 ; CHECK-NEXT:    pcalau12i $a2, %got_pc_hi20(callee_indirect1)
 ; CHECK-NEXT:    ld.d $a2, $a2, %got_pc_lo12(callee_indirect1)
+; CHECK-NEXT:    addi.w $a0, $a0, 0
+; CHECK-NEXT:    sltui $a0, $a0, 1
+; CHECK-NEXT:    masknez $a1, $a1, $a0
 ; CHECK-NEXT:    maskeqz $a0, $a2, $a0
 ; CHECK-NEXT:    or $a0, $a0, $a1
 ; CHECK-NEXT:    jr $a0
@@ -103,9 +105,9 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-NEXT:    st.d $zero, $sp, 24
 ; CHECK-NEXT:    st.d $zero, $sp, 16
 ; CHECK-NEXT:    st.d $zero, $sp, 8
-; CHECK-NEXT:    ori $a0, $zero, 1
-; CHECK-NEXT:    st.d $a0, $sp, 0
+; CHECK-NEXT:    ori $a1, $zero, 1
 ; CHECK-NEXT:    addi.d $a0, $sp, 0
+; CHECK-NEXT:    st.d $a1, $sp, 0
 ; CHECK-NEXT:    bl %plt(callee_indirect_args)
 ; CHECK-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 48

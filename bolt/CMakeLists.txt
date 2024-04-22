@@ -45,9 +45,9 @@ if (BOLT_ENABLE_RUNTIME)
   execute_process(COMMAND ls /proc/self/map_files
     RESULT_VARIABLE LS OUTPUT_QUIET ERROR_QUIET)
   if (LS)
-    set(BOLT_ENABLE_RUNTIME OFF)
     message(WARNING
-      "BOLT runtime is disabled as /proc/self/map_files is unreadable.")
+      "BOLT runtime may not be able to read /proc/self/map_files. Please use
+      `--instrumentation-binpath <path-to-instrumented-binary>` option.")
   endif()
 endif()
 

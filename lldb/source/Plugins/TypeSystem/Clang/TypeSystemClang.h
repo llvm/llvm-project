@@ -833,9 +833,10 @@ public:
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                   ExecutionContextScope *exe_scope) override;
 
-  uint32_t GetNumChildren(lldb::opaque_compiler_type_t type,
-                          bool omit_empty_base_classes,
-                          const ExecutionContext *exe_ctx) override;
+  llvm::Expected<uint32_t>
+  GetNumChildren(lldb::opaque_compiler_type_t type,
+                 bool omit_empty_base_classes,
+                 const ExecutionContext *exe_ctx) override;
 
   CompilerType GetBuiltinTypeByName(ConstString name) override;
 
@@ -895,6 +896,9 @@ public:
                                 llvm::StringRef name,
                                 bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) override;
+
+  CompilerType GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
+                                           llvm::StringRef name) override;
 
   bool IsTemplateType(lldb::opaque_compiler_type_t type) override;
 

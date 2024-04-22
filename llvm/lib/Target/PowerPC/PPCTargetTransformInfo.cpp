@@ -219,7 +219,7 @@ InstructionCost PPCTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
+  case Intrinsic::experimental_patchpoint:
     if ((Idx < 4) || (Imm.getBitWidth() <= 64 && isInt<64>(Imm.getSExtValue())))
       return TTI::TCC_Free;
     break;
@@ -607,7 +607,8 @@ InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
                                            ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
                                            int Index, Type *SubTp,
-                                           ArrayRef<const Value *> Args) {
+                                           ArrayRef<const Value *> Args,
+                                           const Instruction *CxtI) {
 
   InstructionCost CostFactor =
       vectorCostAdjustmentFactor(Instruction::ShuffleVector, Tp, nullptr);
@@ -716,12 +717,10 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       } else if (ISD == ISD::EXTRACT_VECTOR_ELT) {
         // It's an extract.  Maybe we can do a cheap move-from VSR.
         unsigned EltSize = Val->getScalarSizeInBits();
-        if (EltSize == 64) {
-          // FIXME: no need to worry about endian, P9 has both mfvsrd/mfvsrld.
-          unsigned MfvsrdIndex = ST->isLittleEndian() ? 1 : 0;
-          if (Index == MfvsrdIndex)
-            return 1;
-        } else if (EltSize == 32) {
+        // P9 has both mfvsrd and mfvsrld for 64 bit integer.
+        if (EltSize == 64 && Index != -1U)
+          return 1;
+        else if (EltSize == 32) {
           unsigned MfvsrwzIndex = ST->isLittleEndian() ? 2 : 1;
           if (Index == MfvsrwzIndex)
             return 1;

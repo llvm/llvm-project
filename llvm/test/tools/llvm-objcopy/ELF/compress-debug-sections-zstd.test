@@ -12,8 +12,10 @@
 # CHECK:             Name              Type            Address          Off    Size   ES Flg Lk Inf Al
 # COMPRESSED:        .debug_foo        PROGBITS        0000000000000000 000040 {{.*}} 00   C  0   0  8
 # COMPRESSED-NEXT:   .notdebug_foo     PROGBITS        0000000000000000 {{.*}} 000008 00      0   0  0
+# COMPRESSED:        .debug_alloc      PROGBITS        0000000000000000 {{.*}} 000040 00   A  0   0  0
 # DECOMPRESSED:      .debug_foo        PROGBITS        0000000000000000 000040 000008 00      0   0  0
 # DECOMPRESSED-NEXT: .notdebug_foo     PROGBITS        0000000000000000 {{.*}} 000008 00      0   0  0
+# DECOMPRESSED:      .debug_alloc      PROGBITS        0000000000000000 {{.*}} 000040 00   A  0   0  0
 
 ## Relocations do not change.
 # CHECK:             Relocation section '.rela.debug_foo' at offset {{.*}} contains 2 entries:

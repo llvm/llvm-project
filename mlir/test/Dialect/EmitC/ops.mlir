@@ -61,6 +61,21 @@ func.func @add_pointer(%arg0: !emitc.ptr<f32>, %arg1: i32, %arg2: !emitc.opaque<
   return
 }
 
+func.func @bitwise(%arg0: i32, %arg1: i32) -> () {
+  %0 = emitc.bitwise_and %arg0, %arg1 : (i32, i32) -> i32
+  %1 = emitc.bitwise_left_shift %arg0, %arg1 : (i32, i32) -> i32
+  %2 = emitc.bitwise_not %arg0 : (i32) -> i32
+  %3 = emitc.bitwise_or %arg0, %arg1 : (i32, i32) -> i32
+  %4 = emitc.bitwise_right_shift %arg0, %arg1 : (i32, i32) -> i32
+  %5 = emitc.bitwise_xor %arg0, %arg1 : (i32, i32) -> i32
+  return
+}
+
+func.func @cond(%cond: i1, %arg0: i32, %arg1: i32) -> () {
+  %0 = emitc.conditional %cond, %arg0, %arg1 : i32
+  return
+}
+
 func.func @div_int(%arg0: i32, %arg1: i32) {
   %1 = "emitc.div" (%arg0, %arg1) : (i32, i32) -> i32
   return
@@ -114,6 +129,19 @@ func.func @cmp(%arg0 : i32, %arg1 : f32, %arg2 : i64, %arg3 : f64, %arg4 : !emit
   %12 = emitc.cmp ge, %arg5, %arg5 : (!emitc.opaque<"std::valarray<int>">, !emitc.opaque<"std::valarray<int>">) -> !emitc.opaque<"std::valarray<bool>">
   %13 = "emitc.cmp" (%arg6, %arg6) {predicate = 6} : (!emitc.opaque<"custom">, !emitc.opaque<"custom">) -> !emitc.opaque<"custom">
   %14 = emitc.cmp three_way, %arg6, %arg6 : (!emitc.opaque<"custom">, !emitc.opaque<"custom">) -> !emitc.opaque<"custom">
+  return
+}
+
+func.func @logical(%arg0: i32, %arg1: i32) {
+  %0 = emitc.logical_and %arg0, %arg1 : i32, i32
+  %1 = emitc.logical_not %arg0 : i32
+  %2 = emitc.logical_or %arg0, %arg1 : i32, i32
+  return
+}
+
+func.func @unary(%arg0: i32) {
+  %0 = emitc.unary_minus %arg0 : (i32) -> i32
+  %1 = emitc.unary_plus %arg0 : (i32) -> i32
   return
 }
 
@@ -183,6 +211,13 @@ func.func @test_for_not_index_induction(%arg0 : i16, %arg1 : i16, %arg2 : i16) {
   emitc.for %i0 = %arg0 to %arg1 step %arg2 : i16 {
     %0 = emitc.call_opaque "func_const"(%i0) : (i16) -> i32
   }
+  return
+}
+
+func.func @test_subscript(%arg0 : !emitc.array<2x3xf32>, %arg1 : !emitc.ptr<i32>, %arg2 : !emitc.opaque<"std::map<char, int>">, %idx0 : index, %idx1 : i32, %idx2 : !emitc.opaque<"char">) {
+  %0 = emitc.subscript %arg0[%idx0, %idx1] : (!emitc.array<2x3xf32>, index, i32) -> f32
+  %1 = emitc.subscript %arg1[%idx0] : (!emitc.ptr<i32>, index) -> i32
+  %2 = emitc.subscript %arg2[%idx2] : (!emitc.opaque<"std::map<char, int>">, !emitc.opaque<"char">) -> !emitc.opaque<"int">
   return
 }
 

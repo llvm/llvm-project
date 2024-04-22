@@ -2,7 +2,7 @@ version: '3.7'
 
 x-versions: &compiler_versions
   GCC_LATEST_VERSION: 13
-  LLVM_HEAD_VERSION: 18
+  LLVM_HEAD_VERSION: 19
 
 services:
   buildkite-builder:
@@ -21,7 +21,7 @@ services:
       dockerfile: Dockerfile
       target: actions-builder
       args:
-        BASE_IMAGE: ghcr.io/actions/actions-runner:2.311.0
+        BASE_IMAGE: ghcr.io/actions/actions-runner:2.314.1
         <<: *compiler_versions
   android-buildkite-builder:
     image: ghcr.io/libcxx/android-buildkite-builder:${TAG:-latest}

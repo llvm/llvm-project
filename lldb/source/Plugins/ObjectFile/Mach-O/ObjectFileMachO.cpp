@@ -905,6 +905,11 @@ ConstString ObjectFileMachO::GetSegmentNameDWARF() {
   return g_section_name;
 }
 
+ConstString ObjectFileMachO::GetSegmentNameLLVM_COV() {
+  static ConstString g_section_name("__LLVM_COV");
+  return g_section_name;
+}
+
 ConstString ObjectFileMachO::GetSectionNameEHFrame() {
   static ConstString g_section_name_eh_frame("__eh_frame");
   return g_section_name_eh_frame;
@@ -6145,6 +6150,13 @@ bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
     return false;
   if (GetModule().get() != section->GetModule().get())
     return false;
+  // firmware style binaries with llvm gcov segment do
+  // not have that segment mapped into memory.
+  if (section->GetName() == GetSegmentNameLLVM_COV()) {
+    const Strata strata = GetStrata();
+    if (strata == eStrataKernel || strata == eStrataRawImage)
+      return false;
+  }
   // Be careful with __LINKEDIT and __DWARF segments
   if (section->GetName() == GetSegmentNameLINKEDIT() ||
       section->GetName() == GetSegmentNameDWARF()) {
@@ -6620,7 +6632,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         // Bits will be set to indicate which bits are NOT used in
         // addressing in this process or 0 for unknown.
         uint64_t address_mask = process_sp->GetCodeAddressMask();
-        if (address_mask != 0) {
+        if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
           // LC_NOTE "addrable bits"
           mach_header.ncmds++;
           mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
@@ -6654,7 +6666,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         std::vector<std::unique_ptr<LCNoteEntry>> lc_notes;
 
         // Add "addrable bits" LC_NOTE when an address mask is available
-        if (address_mask != 0) {
+        if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
           std::unique_ptr<LCNoteEntry> addrable_bits_lcnote_up(
               new LCNoteEntry(addr_byte_size, byte_order));
           addrable_bits_lcnote_up->name = "addrable bits";

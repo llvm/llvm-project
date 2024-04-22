@@ -86,7 +86,7 @@ define float @fcmp_select_fp_constants(float %x) nounwind readnone {
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    vcmpneqss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k1
 ; X64-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = [2.3E+1,0.0E+0,0.0E+0,0.0E+0]
-; X64-AVX512F-NEXT:    vmovss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1}
+; X64-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 {%k1} = [4.2E+1,0.0E+0,0.0E+0,0.0E+0]
 ; X64-AVX512F-NEXT:    retq
  %c = fcmp une float %x, -4.0
  %r = select i1 %c, float 42.0, float 23.0
