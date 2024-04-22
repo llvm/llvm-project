@@ -127,10 +127,10 @@ define i32 @test_atomicrmw_xor_0_global_system(ptr addrspace(1) %ptr) {
 define i32 @test_atomicrmw_or_0_global_system__metadata(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_or_0_global_system__metadata(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 0 seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
-  %res = atomicrmw or ptr addrspace(1) %ptr, i32 0 seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw or ptr addrspace(1) %ptr, i32 0 seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i32 %res
 }
 
