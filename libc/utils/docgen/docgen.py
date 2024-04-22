@@ -102,8 +102,8 @@ def print_tbl_dir():
 
   * - Function
     - Implemented
-    - C Standard
-    - POSIX Standard"""
+    - C23 Standard Section
+    - POSIX 2018 Standard Section"""
     )
 
 
