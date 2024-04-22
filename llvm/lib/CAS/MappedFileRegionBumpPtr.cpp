@@ -52,12 +52,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/MappedFileRegionBumpPtr.h"
-#include "llvm/ADT/ScopeExit.h"
+#include "OnDiskCommon.h"
 #include "llvm/ADT/StringMap.h"
-#include <mutex>
 
 using namespace llvm;
 using namespace llvm::cas;
+using namespace llvm::cas::ondisk;
 
 namespace {
 struct FileLockRAII {
@@ -70,7 +70,7 @@ struct FileLockRAII {
   ~FileLockRAII() { consumeError(unlock()); }
 
   Error lock(LockKind LK) {
-    if (std::error_code EC = sys::fs::lockFile(FD, LK == Exclusive))
+    if (std::error_code EC = lockFileThreadSafe(FD, LK == Exclusive))
       return createFileError(Path, EC);
     Locked = LK;
     return Error::success();
@@ -79,7 +79,7 @@ struct FileLockRAII {
   Error unlock() {
     if (Locked) {
       Locked = std::nullopt;
-      if (std::error_code EC = sys::fs::unlockFile(FD))
+      if (std::error_code EC = unlockFileThreadSafe(FD))
         return createFileError(Path, EC);
     }
     return Error::success();
@@ -111,7 +111,8 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
 
   // Take shared/reader lock that will be held until we close the file; unlocked
   // by destroyImpl.
-  if (std::error_code EC = sys::fs::lockFile(SharedLockFD, /*Exclusive=*/false))
+  if (std::error_code EC =
+          lockFileThreadSafe(SharedLockFD, /*Exclusive=*/false))
     return createFileError(Path, EC);
 
   // Take shared/reader lock for initialization.
@@ -172,73 +173,22 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
   return Result;
 }
 
-Expected<std::shared_ptr<MappedFileRegionBumpPtr>>
-MappedFileRegionBumpPtr::createShared(
-    const Twine &PathTwine, uint64_t Capacity, int64_t BumpPtrOffset,
-    function_ref<Error(MappedFileRegionBumpPtr &)> NewFileConstructor) {
-  struct MapNode {
-    std::mutex Mutex;
-    std::weak_ptr<MappedFileRegionBumpPtr> MFR;
-  };
-  static std::mutex Mutex;
-
-  // FIXME: Map should be by sys::fs::UniqueID instead of by path. Here's how
-  // it should work:
-  //
-  // 1. Open the file.
-  // 2. Stat the file descriptor to get the UniqueID.
-  // 3. Check the map.
-  // 4. If new, pass the open file descriptor to a helper extracted from
-  //    MappedFileRegionBumpPtr::create().
-  static StringMap<MapNode> Regions;
-
-  SmallString<128> PathStorage;
-  const StringRef Path = PathTwine.toStringRef(PathStorage);
-
-  MapNode *Node;
-  {
-    std::lock_guard<std::mutex> Lock(Mutex);
-    Node = &Regions[Path];
-  }
-
-  if (std::shared_ptr<MappedFileRegionBumpPtr> MFR = Node->MFR.lock())
-    return MFR;
-
-  // Construct a new region. Use a fine-grained lock to allow other regions to
-  // be opened concurrently.
-  std::lock_guard<std::mutex> Lock(Node->Mutex);
-
-  // Open / create / initialize files on disk.
-  Expected<MappedFileRegionBumpPtr> ExpectedMFR =
-      MappedFileRegionBumpPtr::create(Path, Capacity, BumpPtrOffset,
-                                      NewFileConstructor);
-  if (!ExpectedMFR)
-    return ExpectedMFR.takeError();
-
-  auto SharedMFR =
-      std::make_shared<MappedFileRegionBumpPtr>(std::move(*ExpectedMFR));
-
-  // Success.
-  Node->MFR = SharedMFR;
-  return std::move(SharedMFR);
-}
-
 void MappedFileRegionBumpPtr::destroyImpl() {
   if (!FD)
     return;
 
   // Drop the shared lock indicating we are no longer accessing the file.
   if (SharedLockFD)
-    (void)sys::fs::unlockFile(*SharedLockFD);
+    (void)unlockFileThreadSafe(*SharedLockFD);
 
   // Attempt to truncate the file if we can get exclusive access. Ignore any
   // errors.
   if (BumpPtr) {
     assert(SharedLockFD && "Must have shared lock file open");
-    if (sys::fs::tryLockFile(*SharedLockFD) == std::error_code()) {
+    if (tryLockFileThreadSafe(*SharedLockFD) == std::error_code()) {
       assert(size() <= capacity());
       (void)sys::fs::resize_file(*FD, size());
-      (void)sys::fs::unlockFile(*SharedLockFD);
+      (void)unlockFileThreadSafe(*SharedLockFD);
     }
   }
 

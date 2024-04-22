@@ -50,21 +50,6 @@ public:
   create(const Twine &Path, uint64_t Capacity, int64_t BumpPtrOffset,
          function_ref<Error(MappedFileRegionBumpPtr &)> NewFileConstructor);
 
-  /// Create a \c MappedFileRegionBumpPtr., shared across the process via a
-  /// singleton map.
-  ///
-  /// FIXME: Singleton map should be based on sys::fs::UniqueID, but currently
-  /// it is just based on \p Path.
-  ///
-  /// \param Path the path to open the mapped region.
-  /// \param Capacity the maximum size for the mapped file region.
-  /// \param BumpPtrOffset the offset at which to store the bump pointer.
-  /// \param NewFileConstructor is for constructing new files. It has exclusive
-  /// access to the file. Must call \c initializeBumpPtr.
-  static Expected<std::shared_ptr<MappedFileRegionBumpPtr>> createShared(
-      const Twine &Path, uint64_t Capacity, int64_t BumpPtrOffset,
-      function_ref<Error(MappedFileRegionBumpPtr &)> NewFileConstructor);
-
   /// Finish initializing the bump pointer. Must be called by
   /// \c NewFileConstructor.
   void initializeBumpPtr(int64_t BumpPtrOffset);

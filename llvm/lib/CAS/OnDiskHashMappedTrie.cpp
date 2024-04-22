@@ -138,7 +138,7 @@ public:
 
 private:
   static Expected<DatabaseFile>
-  get(std::shared_ptr<MappedFileRegionBumpPtr> Alloc) {
+  get(std::unique_ptr<MappedFileRegionBumpPtr> Alloc) {
     if (Error E = validate(Alloc->getRegion()))
       return std::move(E);
     return DatabaseFile(std::move(Alloc));
@@ -148,14 +148,14 @@ private:
 
   DatabaseFile(MappedFileRegionBumpPtr &Alloc)
       : H(reinterpret_cast<Header *>(Alloc.data())), Alloc(Alloc) {}
-  DatabaseFile(std::shared_ptr<MappedFileRegionBumpPtr> Alloc)
+  DatabaseFile(std::unique_ptr<MappedFileRegionBumpPtr> Alloc)
       : DatabaseFile(*Alloc) {
     OwnedAlloc = std::move(Alloc);
   }
 
   Header *H = nullptr;
   MappedFileRegionBumpPtr &Alloc;
-  std::shared_ptr<MappedFileRegionBumpPtr> OwnedAlloc;
+  std::unique_ptr<MappedFileRegionBumpPtr> OwnedAlloc;
 };
 
 } // end anonymous namespace
@@ -173,14 +173,15 @@ DatabaseFile::create(const Twine &Path, uint64_t Capacity,
   };
 
   // Get or create the file.
-  std::shared_ptr<MappedFileRegionBumpPtr> Alloc;
-  if (Error E = MappedFileRegionBumpPtr::createShared(Path, Capacity,
-                                                      offsetof(Header, BumpPtr),
-                                                      NewFileConstructor)
+  MappedFileRegionBumpPtr Alloc;
+  if (Error E = MappedFileRegionBumpPtr::create(Path, Capacity,
+                                                offsetof(Header, BumpPtr),
+                                                NewFileConstructor)
                     .moveInto(Alloc))
     return std::move(E);
 
-  return DatabaseFile::get(std::move(Alloc));
+  return DatabaseFile::get(
+      std::make_unique<MappedFileRegionBumpPtr>(std::move(Alloc)));
 }
 
 void DatabaseFile::addTable(TableHandle Table) {
