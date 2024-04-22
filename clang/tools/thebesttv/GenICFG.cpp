@@ -62,6 +62,14 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
     if (idOfFunction.find(fullSignature) != idOfFunction.end())
         return true;
 
+    std::unique_ptr<CFG> cfg = CFG::buildCFG(
+        D, D->getBody(), &D->getASTContext(), CFG::BuildOptions());
+    if (!cfg) {
+        logger.error("Unable to create CFG for function {} in {}:{}:{}",
+                     fullSignature, pLoc->file, pLoc->line, pLoc->column);
+        return true;
+    }
+
     idOfFunction[fullSignature] = functionCnt++;
     functionLocations.emplace_back(*pLoc, fullSignature);
 
@@ -88,8 +96,6 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
         }
     }
 
-    std::unique_ptr<CFG> cfg = CFG::buildCFG(
-        D, D->getBody(), &D->getASTContext(), CFG::BuildOptions());
     Global.icfg.addFunction(Global.getIdOfFunction(fullSignature), *cfg);
 
     /*
