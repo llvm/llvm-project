@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @use(i1)
+declare void @usef64(double)
 
 ; X == 42.0 ? X : 42.0 --> 42.0
 
@@ -176,9 +177,9 @@ define i1 @test_fcmp_select_var_const(double %x, double %y) {
 define i1 @test_fcmp_select_var_const_fmf(double %x, double %y) {
 ; CHECK-LABEL: @test_fcmp_select_var_const_fmf(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ule double [[X:%.*]], 0x3E80000000000000
-; CHECK-NEXT:    [[CMP2:%.*]] = fcmp nnan olt double [[SEL:%.*]], 0x3E80000000000000
-; CHECK-NEXT:    [[CMP3:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
-; CHECK-NEXT:    ret i1 [[CMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan olt double [[Y:%.*]], 0x3E80000000000000
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = fcmp ogt double %x, 0x3E80000000000000
   %sel = select i1 %cmp1, double %y, double 0.000000e+00
@@ -212,4 +213,34 @@ define double @test_fcmp_select_clamp(double %x) {
   %cmp2 = fcmp olt double %sel1, 5.000000e-01
   %sel2 = select i1 %cmp2, double 5.000000e-01, double %sel1
   ret double %sel2
+}
+
+; Don't break fmin/fmax idioms
+
+define double @test_fcmp_select_maxnum(double %x) {
+; CHECK-LABEL: @test_fcmp_select_maxnum(
+; CHECK-NEXT:    [[SEL1:%.*]] = call nnan nsz double @llvm.maxnum.f64(double [[X:%.*]], double 1.000000e+00)
+; CHECK-NEXT:    [[SEL2:%.*]] = call nnan nsz double @llvm.minnum.f64(double [[SEL1]], double 2.550000e+02)
+; CHECK-NEXT:    ret double [[SEL2]]
+;
+  %cmp1 = fcmp ogt double %x, 1.0
+  %sel1 = select nnan nsz i1 %cmp1, double %x, double 1.0
+  %cmp2 = fcmp olt double %sel1, 255.0
+  %sel2 = select nnan nsz i1 %cmp2, double %sel1, double 255.0
+  ret double %sel2
+}
+
+define i1 @test_fcmp_select_const_const_multiuse(double %x) {
+; CHECK-LABEL: @test_fcmp_select_const_const_multiuse(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord double [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], double 0xFFFFFFFFFFFFFFFF, double 0.000000e+00
+; CHECK-NEXT:    call void @usef64(double [[SEL]])
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp oeq double [[SEL]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp1 = fcmp ord double %x, 0.000000e+00
+  %sel = select i1 %cmp1, double 0xFFFFFFFFFFFFFFFF, double 0.000000e+00
+  call void @usef64(double %sel)
+  %cmp2 = fcmp oeq double %sel, 0.000000e+00
+  ret i1 %cmp2
 }
