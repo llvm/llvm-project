@@ -571,9 +571,8 @@ void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
 
     std::string SymName = "__hwasan_check_x" + utostr(Reg - AArch64::X0) + "_" +
                           utostr(AccessInfo);
-    if (IsFixedShadow) {
+    if (IsFixedShadow)
       SymName += "_fixed_" + utostr(FixedShadowOffset);
-    }
     if (IsShort)
       SymName += "_short_v2";
     Sym = OutContext.getOrCreateSymbol(SymName);
@@ -641,6 +640,10 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
                                  *STI);
 
     if (IsFixedShadow) {
+      // Aarch64 makes it difficult to embed large constants in the code.
+      // Fortuitously, kShadowBaseAlignment == 32, so we use the 32-bit
+      // right-shift option in the MOV instruction. Combined with the 16-bit
+      // immediate, this is enough to represent any offset up to 2**48.
       OutStreamer->emitInstruction(MCInstBuilder(AArch64::MOVZXi)
                                        .addReg(AArch64::X17)
                                        .addImm(FixedShadowOffset >> 32)

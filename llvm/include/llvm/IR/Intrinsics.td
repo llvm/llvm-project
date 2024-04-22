@@ -2364,15 +2364,16 @@ def int_asan_check_memaccess :
 
 // HWASan intrinsics to test whether a pointer is addressable.
 //===----------------------------------------------------------------------===//
-// Parameters: Shadow base (passed in a register), pointer to be checked for validity, AccessInfo
-// (AccessInfo is defined in HWAddressSanitizer.h)
 //
-// Variant 1)
+// Variant 1) is the OG memaccess intrinsic
+// Parameters: Shadow base (passed in a register), pointer to be checked for
+// validity, AccessInfo (AccessInfo is defined in HWAddressSanitizer.h)
 def int_hwasan_check_memaccess :
   Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
             [ImmArg<ArgIndex<2>>]>;
 
-// Variant 2) supports short granule checks.
+// Variant 2) supports short granule checks
+// Parameters: same as Variant 1
 def int_hwasan_check_memaccess_shortgranules :
   Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
             [ImmArg<ArgIndex<2>>]>;
@@ -2384,6 +2385,7 @@ def int_hwasan_check_memaccess_fixedshadow :
             [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 // Variant 4) supports short granule checks and assumes a fixed shadow offset
+// Parameters: same as Variant 3
 def int_hwasan_check_memaccess_shortgranules_fixedshadow :
   Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty, llvm_i64_ty],
             [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
