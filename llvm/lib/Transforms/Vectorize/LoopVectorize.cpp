@@ -9472,9 +9472,9 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
         StoredValTy, Intrinsic::experimental_vp_reverse,
         {StoredVal, MaskVal, EVL}, nullptr, "vp.reverse");
   }
-  Value *Mask =
-      getMask() ? State.get(getMask(), 0)
-                : Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  Value *Mask = getMask()
+                    ? State.get(getMask(), 0)
+                    : Builder.CreateVectorSplat(State.VF, Builder.getTrue());
   Value *Addr = State.get(getAddr(), 0, !CreateScatter);
   if (CreateScatter) {
     NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),

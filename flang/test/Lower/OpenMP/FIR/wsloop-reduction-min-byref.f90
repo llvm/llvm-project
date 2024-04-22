@@ -11,7 +11,7 @@
 !CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<f32>, %[[ARG1:.*]]: !fir.ref<f32>):
 !CHECK:   %[[LD0:.*]] = fir.load %[[ARG0]] : !fir.ref<f32>
 !CHECK:   %[[LD1:.*]] = fir.load %[[ARG1]] : !fir.ref<f32>
-!CHECK:   %[[RES:.*]] = arith.minimumf %[[LD0]], %[[LD1]] {{.*}}: f32
+!CHECK:   %[[RES:.*]] = arith.minnumf %[[LD0]], %[[LD1]] {{.*}}: f32
 !CHECK:   fir.store %[[RES]] to %[[ARG0]] : !fir.ref<f32>
 !CHECK:   omp.yield(%[[ARG0]] : !fir.ref<f32>)
 
