@@ -36,8 +36,7 @@ SYMBOL_NAME(LIBC_NAMESPACE_setjmp):
   mov %rax, RIP_OFFSET(%rdi)
   xor %eax, %eax
   ret
-
-.size setjmp, . - setjmp
-.size LIBC_NAMESPACE_setjmp, . - LIBC_NAMESPACE_setjmp
+END_FUNC(setjmp)
+END_FUNC(LIBC_NAMESPACE_setjmp)
 
 NO_EXEC_STACK_DIRECTIVE

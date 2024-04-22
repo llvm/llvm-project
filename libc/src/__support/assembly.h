@@ -22,11 +22,13 @@
 // clang-format off
 #define NO_EXEC_STACK_DIRECTIVE .section .note.GNU-stack, "", @progbits
 #define SYMBOL_IS_FUNC(name) .type SYMBOL_NAME(name), %function
+#define END_FUNC(name) .size SYMBOL_NAME(name), . - SYMBOL_NAME(name)
 // clang-format on
 
 #else // !ELF
 #define NO_EXEC_STACK_DIRECTIVE
 #define SYMBOL_IS_FUNC(name)
+#define END_FUNC(name)
 #endif // ELF
 
 #endif // LLVM_LIBC_SRC___SUPPORT_ASSEMBLY_H
