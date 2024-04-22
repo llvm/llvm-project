@@ -229,7 +229,9 @@ IncrementalCompilerBuilder::CreateCudaHost() {
 }
 
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> CI,
-                         llvm::Error &ErrOut) {
+                         llvm::Error &ErrOut,
+                         std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder)
+    : JITBuilder(std::move(JITBuilder)) {
   llvm::ErrorAsOutParameter EAO(&ErrOut);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
@@ -400,14 +402,6 @@ createJITTargetMachineBuilder(const std::string &TT) {
   return llvm::orc::JITTargetMachineBuilder(llvm::Triple(TT));
 }
 
-llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
-Interpreter::CreateJITBuilder(CompilerInstance &CI) {
-  auto JTMB = createJITTargetMachineBuilder(CI.getTargetOpts().Triple);
-  if (!JTMB)
-    return JTMB.takeError();
-  return IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
-}
-
 llvm::Error Interpreter::CreateExecutor() {
   if (IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "
@@ -417,14 +411,20 @@ llvm::Error Interpreter::CreateExecutor() {
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "No code generator available",
                                                std::error_code());
-
-  llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>> JB =
-      CreateJITBuilder(*getCompilerInstance());
-  if (!JB)
-    return JB.takeError();
+  if (!JITBuilder) {
+    const std::string &TT = getCompilerInstance()->getTargetOpts().Triple;
+    auto JTMB = createJITTargetMachineBuilder(TT);
+    if (!JTMB)
+      return JTMB.takeError();
+    auto JB = IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
+    if (!JB)
+      return JB.takeError();
+    JITBuilder = std::move(*JB);
+  }
 
   llvm::Error Err = llvm::Error::success();
-  auto Executor = std::make_unique<IncrementalExecutor>(*TSCtx, **JB, Err);
+  auto Executor =
+      std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err);
   if (!Err)
     IncrExecutor = std::move(Executor);
 
