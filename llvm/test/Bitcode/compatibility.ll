@@ -1819,6 +1819,14 @@ define void @call_with_operand_bundle4(ptr %ptr) {
   ret void
 }
 
+define void @call_with_operand_bundle5(ptr %ptr) {
+; CHECK-LABEL: call_with_operand_bundle5(
+ entry:
+  call void @op_bundle_callee_0() [ "foo"(metadata !"metadata_string") ]
+; CHECK: call void @op_bundle_callee_0() [ "foo"(metadata !"metadata_string") ]
+  ret void
+}
+
 ; Invoke versions of the above tests:
 
 
@@ -1906,6 +1914,19 @@ define void @invoke_with_operand_bundle4(ptr %ptr) personality i8 3 {
   invoke void @op_bundle_callee_1(i32 10, i32 %x) [ "foo"(i32 42, i64 100, i32 %x), "foo"(i32 42, float  0.000000e+00, i32 %l) ]
         to label %normal unwind label %exception
 ; CHECK: invoke void @op_bundle_callee_1(i32 10, i32 %x) [ "foo"(i32 42, i64 100, i32 %x), "foo"(i32 42, float  0.000000e+00, i32 %l) ]
+
+exception:
+  %cleanup = landingpad i8 cleanup
+  br label %normal
+normal:
+  ret void
+}
+
+define void @invoke_with_operand_bundle5(ptr %ptr) personality i8 3 {
+; CHECK-LABEL: @invoke_with_operand_bundle5(
+ entry:
+  invoke void @op_bundle_callee_0() [ "foo"(metadata !"metadata_string") ] to label %normal unwind label %exception
+; CHECK: invoke void @op_bundle_callee_0() [ "foo"(metadata !"metadata_string") ]
 
 exception:
   %cleanup = landingpad i8 cleanup

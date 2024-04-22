@@ -58,6 +58,13 @@ define void @f4(i32* %ptr) {
 
 ; Invoke versions of the above tests:
 
+define void @f5(i32* %ptr) {
+; CHECK-LABEL: @f5(
+ entry:
+  call void @callee0() [ "foo"(metadata !"metadata_string") ]
+; CHECK: call void @callee0() [ "foo"(metadata !"metadata_string") ]
+  ret void
+}
 
 define void @g0(i32* %ptr) personality i8 3 {
 ; CHECK-LABEL: @g0(
@@ -143,6 +150,19 @@ define void @g4(i32* %ptr) personality i8 3 {
   invoke void @callee1(i32 10, i32 %x) [ "foo"(i32 42, i64 100, i32 %x), "foo"(i32 42, float  0.000000e+00, i32 %l) ]
         to label %normal unwind label %exception
 ; CHECK: invoke void @callee1(i32 10, i32 %x) [ "foo"(i32 42, i64 100, i32 %x), "foo"(i32 42, float  0.000000e+00, i32 %l) ]
+
+exception:
+  %cleanup = landingpad i8 cleanup
+  br label %normal
+normal:
+  ret void
+}
+
+define void @g5(i32* %ptr) personality i8 3 {
+; CHECK-LABEL: @g5(
+ entry:
+  invoke void @callee0() [ "foo"(metadata !"metadata_string") ] to label %normal unwind label %exception
+; CHECK: invoke void @callee0() [ "foo"(metadata !"metadata_string") ]
 
 exception:
   %cleanup = landingpad i8 cleanup
