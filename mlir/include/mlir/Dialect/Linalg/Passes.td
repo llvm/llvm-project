@@ -141,4 +141,24 @@ def LinalgDetensorizePass : InterfacePass<"linalg-detensorize", "FunctionOpInter
   ];
 }
 
+def LinalgPackMatmul : Pass<"linalg-pack-matmul"> {
+  let summary = "Convert linalg matmul ops to block layout and back";
+  let description = [{
+    Pack a matmul MxNxK operation into blocked layout
+    as: [MB][NB][mb][nb] += [MB][KB][mb][kb] * [NB][KB][kb][nb].
+    The result is unpacked back to the original layout.
+
+    Matmul packing splits the operands into smaller blocks (inner dimensions)
+    and then block-transposes the block sub-groups (outer dimensions).
+
+    This data arrangement minimizes distance between consecutive blocks
+    which improves spacial locality and cache behavior.
+  }];
+  let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
+  let options = [
+    ListOption<"blockFactors", "block-factors", "int64_t",
+               "Block factors (mb, nb, kb) for relayout">
+  ];
+}
+
 #endif // MLIR_DIALECT_LINALG_PASSES

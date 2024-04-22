@@ -1628,6 +1628,10 @@ void populateSplitReductionPattern(
 void populateTransposeMatmulPatterns(RewritePatternSet &patterns,
                                      bool transposeLHS = true);
 
+/// Patterns to pack Linalg matmul ops.
+void populatePackMatmulPatterns(RewritePatternSet &patterns,
+                                ArrayRef<int64_t> blockingFactors);
+
 } // namespace linalg
 } // namespace mlir
 
