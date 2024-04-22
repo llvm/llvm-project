@@ -639,9 +639,11 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       return InstDesc(Select, Prev.getRecKind());
   }
 
+  // Find the compare instruction that is associated with OrigPhi, i.e
+  // recurrent-reduction. And determine that SelectInst and CmpInst multiple
+  // instructions usage are safe to vectorise.
   SelectInst *SI = dyn_cast<SelectInst>(I);
   Instruction *Cmp = nullptr;
-
   if (SI) {
     bool HasOrigPhiUser = false;
     bool SelectNonPHIUserInLoop = false;
@@ -653,6 +655,8 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       if (Inst == OrigPhi) {
         HasOrigPhiUser = true;
       } else {
+        // If we found SelectInstr usage in the loop then the reduction stops
+        // to be recurrent and it is not safe to procede further.
         if (std::find(Blocks.begin(), Blocks.end(), Inst->getParent()) !=
             Blocks.end())
           SelectNonPHIUserInLoop = true;
@@ -683,6 +687,8 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       }
       if (!IsSafeCMP)
         Cmp = nullptr;
+    } else {
+      Cmp = nullptr;
     }
   }
 
