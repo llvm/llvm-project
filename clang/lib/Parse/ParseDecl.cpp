@@ -2553,7 +2553,7 @@ Decl *Parser::ParseDeclarationAfterDeclarator(
 }
 
 static bool isConstexprVariable(const Decl *D) {
-  if (const VarDecl *Var = dyn_cast_or_null<VarDecl>(D))
+  if (const VarDecl *Var = dyn_cast<VarDecl>(D))
     return Var->isConstexpr();
 
   return false;
