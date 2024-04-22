@@ -3904,10 +3904,11 @@ mlir::ParseResult parseCUFKernelValues(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &values,
     llvm::SmallVectorImpl<mlir::Type> &types) {
-  if (mlir::succeeded(parser.parseOptionalStar()))
+  if (mlir::succeeded(parser.parseOptionalStar())) {
     return mlir::success();
+  }
 
-  if (parser.parseOptionalLParen()) {
+  if (mlir::succeeded(parser.parseOptionalLParen())) {
     if (mlir::failed(parser.parseCommaSeparatedList(
             mlir::AsmParser::Delimiter::None, [&]() {
               if (parser.parseOperand(values.emplace_back()))
@@ -3915,11 +3916,17 @@ mlir::ParseResult parseCUFKernelValues(
               return mlir::success();
             })))
       return mlir::failure();
+    auto builder = parser.getBuilder();
+    for (size_t i = 0; i < values.size(); i++) {
+      types.emplace_back(builder.getType<mlir::IntegerType>(32));
+    }
     if (parser.parseRParen())
       return mlir::failure();
   } else {
     if (parser.parseOperand(values.emplace_back()))
       return mlir::failure();
+    auto builder = parser.getBuilder();
+    types.emplace_back(builder.getType<mlir::IntegerType>(32));
     return mlir::success();
   }
   return mlir::success();
