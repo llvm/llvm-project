@@ -125,6 +125,11 @@ static cl::opt<unsigned> PrintBeforePassNumber(
     cl::desc("Print IR before the pass with this number as "
              "reported by print-pass-numbers"));
 
+static cl::opt<unsigned>
+    PrintAfterPassNumber("print-after-pass-number", cl::init(0), cl::Hidden,
+                         cl::desc("Print IR after the pass with this number as "
+                                  "reported by print-pass-numbers"));
+
 static cl::opt<std::string> IRDumpDirectory(
     "ir-dump-directory",
     cl::desc("If specified, IR printed using the "
@@ -854,7 +859,9 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
 
   std::string DumpIRFilename;
   if (!IRDumpDirectory.empty() &&
-      (shouldPrintBeforePass(PassID) || shouldPrintAfterPass(PassID)))
+      (shouldPrintBeforePass(PassID) || shouldPrintAfterPass(PassID) ||
+       shouldPrintBeforeCurrentPassNumber() ||
+       shouldPrintAfterCurrentPassNumber()))
     DumpIRFilename = fetchDumpFilename(PassID, IR);
 
   // Saving Module for AfterPassInvalidated operations.
@@ -873,12 +880,15 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
     dbgs() << " Running pass " << CurrentPassNumber << " " << PassID
            << " on " << getIRName(IR) << "\n";
 
-  if (!shouldPrintBeforePass(PassID))
+  if (shouldPrintAfterCurrentPassNumber())
+    pushPassRunDescriptor(PassID, IR, DumpIRFilename);
+
+  if (!shouldPrintBeforePass(PassID) && !shouldPrintBeforeCurrentPassNumber())
     return;
 
   auto WriteIRToStream = [&](raw_ostream &Stream) {
     Stream << "; *** IR Dump Before ";
-    if (shouldPrintBeforePassNumber())
+    if (shouldPrintBeforeSomePassNumber())
       Stream << CurrentPassNumber << "-";
     Stream << PassID << " on " << getIRName(IR) << " ***\n";
     unwrapAndPrint(Stream, IR);
@@ -898,18 +908,21 @@ void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {
   if (isIgnored(PassID))
     return;
 
-  if (!shouldPrintAfterPass(PassID))
+  if (!shouldPrintAfterPass(PassID) && !shouldPrintAfterCurrentPassNumber())
     return;
 
   auto [M, DumpIRFilename, IRName, StoredPassID] = popPassRunDescriptor(PassID);
   assert(StoredPassID == PassID && "mismatched PassID");
 
-  if (!shouldPrintIR(IR) || !shouldPrintAfterPass(PassID))
+  if (!shouldPrintIR(IR) ||
+      (!shouldPrintAfterPass(PassID) && !shouldPrintAfterCurrentPassNumber()))
     return;
 
   auto WriteIRToStream = [&](raw_ostream &Stream, const StringRef IRName) {
-    Stream << "; *** IR Dump " << StringRef(formatv("After {0}", PassID))
-           << " on " << IRName << " ***\n";
+    Stream << "; *** IR Dump After ";
+    if (shouldPrintAfterSomePassNumber())
+      Stream << CurrentPassNumber << "-";
+    Stream << StringRef(formatv("{0}", PassID)) << " on " << IRName << " ***\n";
     unwrapAndPrint(Stream, IR);
   };
 
@@ -931,14 +944,15 @@ void PrintIRInstrumentation::printAfterPassInvalidated(StringRef PassID) {
   if (isIgnored(PassID))
     return;
 
-  if (!shouldPrintAfterPass(PassID))
+  if (!shouldPrintAfterPass(PassID) && !shouldPrintAfterCurrentPassNumber())
     return;
 
   auto [M, DumpIRFilename, IRName, StoredPassID] = popPassRunDescriptor(PassID);
   assert(StoredPassID == PassID && "mismatched PassID");
   // Additional filtering (e.g. -filter-print-func) can lead to module
   // printing being skipped.
-  if (!M || !shouldPrintAfterPass(PassID))
+  if (!M ||
+      (!shouldPrintAfterPass(PassID) && !shouldPrintAfterCurrentPassNumber()))
     return;
 
   auto WriteIRToStream = [&](raw_ostream &Stream, const Module *M,
@@ -968,10 +982,6 @@ bool PrintIRInstrumentation::shouldPrintBeforePass(StringRef PassID) {
   if (shouldPrintBeforeAll())
     return true;
 
-  if (shouldPrintBeforePassNumber() &&
-      CurrentPassNumber == PrintBeforePassNumber)
-    return true;
-
   StringRef PassName = PIC->getPassNameForClassName(PassID);
   return is_contained(printBeforePasses(), PassName);
 }
@@ -984,12 +994,26 @@ bool PrintIRInstrumentation::shouldPrintAfterPass(StringRef PassID) {
   return is_contained(printAfterPasses(), PassName);
 }
 
+bool PrintIRInstrumentation::shouldPrintBeforeCurrentPassNumber() {
+  return shouldPrintBeforeSomePassNumber() &&
+         (CurrentPassNumber == PrintBeforePassNumber);
+}
+
+bool PrintIRInstrumentation::shouldPrintAfterCurrentPassNumber() {
+  return shouldPrintAfterSomePassNumber() &&
+         (CurrentPassNumber == PrintAfterPassNumber);
+}
+
 bool PrintIRInstrumentation::shouldPrintPassNumbers() {
   return PrintPassNumbers;
 }
 
-bool PrintIRInstrumentation::shouldPrintBeforePassNumber() {
+bool PrintIRInstrumentation::shouldPrintBeforeSomePassNumber() {
   return PrintBeforePassNumber > 0;
+}
+
+bool PrintIRInstrumentation::shouldPrintAfterSomePassNumber() {
+  return PrintAfterPassNumber > 0;
 }
 
 void PrintIRInstrumentation::registerCallbacks(
@@ -997,13 +1021,15 @@ void PrintIRInstrumentation::registerCallbacks(
   this->PIC = &PIC;
 
   // BeforePass callback is not just for printing, it also saves a Module
-  // for later use in AfterPassInvalidated.
-  if (shouldPrintPassNumbers() || shouldPrintBeforePassNumber() ||
-      shouldPrintBeforeSomePass() || shouldPrintAfterSomePass())
+  // for later use in AfterPassInvalidated and keeps tracks of the
+  // CurrentPassNumber.
+  if (shouldPrintPassNumbers() || shouldPrintBeforeSomePassNumber() ||
+      shouldPrintAfterSomePassNumber() || shouldPrintBeforeSomePass() ||
+      shouldPrintAfterSomePass())
     PIC.registerBeforeNonSkippedPassCallback(
         [this](StringRef P, Any IR) { this->printBeforePass(P, IR); });
 
-  if (shouldPrintAfterSomePass()) {
+  if (shouldPrintAfterSomePass() || shouldPrintAfterSomePassNumber()) {
     PIC.registerAfterPassCallback(
         [this](StringRef P, Any IR, const PreservedAnalyses &) {
           this->printAfterPass(P, IR);

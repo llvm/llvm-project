@@ -572,12 +572,12 @@ dwarf::findDebugNamesOffsets(uint64_t EndOfHeaderOffset,
 
 Error DWARFDebugNames::NameIndex::extract() {
   const DWARFDataExtractor &AS = Section.AccelSection;
-  uint64_t hdrSize = Base;
-  if (Error E = Hdr.extract(AS, &hdrSize))
+  uint64_t EndOfHeaderOffset = Base;
+  if (Error E = Hdr.extract(AS, &EndOfHeaderOffset))
     return E;
 
   const unsigned SectionOffsetSize = dwarf::getDwarfOffsetByteSize(Hdr.Format);
-  Offsets = dwarf::findDebugNamesOffsets(hdrSize, Hdr);
+  Offsets = dwarf::findDebugNamesOffsets(EndOfHeaderOffset, Hdr);
 
   uint64_t Offset =
       Offsets.EntryOffsetsBase + (Hdr.NameCount * SectionOffsetSize);

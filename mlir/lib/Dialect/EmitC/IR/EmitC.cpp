@@ -10,11 +10,15 @@
 #include "mlir/Dialect/EmitC/IR/EmitCTraits.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Types.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 
 using namespace mlir;
 using namespace mlir::emitc;
@@ -52,6 +56,40 @@ Operation *EmitCDialect::materializeConstant(OpBuilder &builder,
 /// without arguments.
 void mlir::emitc::buildTerminatedBody(OpBuilder &builder, Location loc) {
   builder.create<emitc::YieldOp>(loc);
+}
+
+bool mlir::emitc::isSupportedEmitCType(Type type) {
+  if (llvm::isa<emitc::OpaqueType>(type))
+    return true;
+  if (auto ptrType = llvm::dyn_cast<emitc::PointerType>(type))
+    return isSupportedEmitCType(ptrType.getPointee());
+  if (auto arrayType = llvm::dyn_cast<emitc::ArrayType>(type)) {
+    auto elemType = arrayType.getElementType();
+    return !llvm::isa<emitc::ArrayType>(elemType) &&
+           isSupportedEmitCType(elemType);
+  }
+  if (type.isIndex())
+    return true;
+  if (llvm::isa<IntegerType>(type))
+    return isSupportedIntegerType(type);
+  if (llvm::isa<FloatType>(type))
+    return isSupportedFloatType(type);
+  if (auto tensorType = llvm::dyn_cast<TensorType>(type)) {
+    if (!tensorType.hasStaticShape()) {
+      return false;
+    }
+    auto elemType = tensorType.getElementType();
+    if (llvm::isa<emitc::ArrayType>(elemType)) {
+      return false;
+    }
+    return isSupportedEmitCType(elemType);
+  }
+  if (auto tupleType = llvm::dyn_cast<TupleType>(type)) {
+    return llvm::all_of(tupleType.getTypes(), [](Type type) {
+      return !llvm::isa<emitc::ArrayType>(type) && isSupportedEmitCType(type);
+    });
+  }
+  return false;
 }
 
 bool mlir::emitc::isSupportedIntegerType(Type type) {
@@ -122,13 +160,13 @@ LogicalResult AddOp::verify() {
   Type lhsType = getLhs().getType();
   Type rhsType = getRhs().getType();
 
-  if (lhsType.isa<emitc::PointerType>() && rhsType.isa<emitc::PointerType>())
+  if (isa<emitc::PointerType>(lhsType) && isa<emitc::PointerType>(rhsType))
     return emitOpError("requires that at most one operand is a pointer");
 
-  if ((lhsType.isa<emitc::PointerType>() &&
-       !rhsType.isa<IntegerType, emitc::OpaqueType>()) ||
-      (rhsType.isa<emitc::PointerType>() &&
-       !lhsType.isa<IntegerType, emitc::OpaqueType>()))
+  if ((isa<emitc::PointerType>(lhsType) &&
+       !isa<IntegerType, emitc::OpaqueType>(rhsType)) ||
+      (isa<emitc::PointerType>(rhsType) &&
+       !isa<IntegerType, emitc::OpaqueType>(lhsType)))
     return emitOpError("requires that one operand is an integer or of opaque "
                        "type if the other is a pointer");
 
@@ -740,16 +778,16 @@ LogicalResult SubOp::verify() {
   Type rhsType = getRhs().getType();
   Type resultType = getResult().getType();
 
-  if (rhsType.isa<emitc::PointerType>() && !lhsType.isa<emitc::PointerType>())
+  if (isa<emitc::PointerType>(rhsType) && !isa<emitc::PointerType>(lhsType))
     return emitOpError("rhs can only be a pointer if lhs is a pointer");
 
-  if (lhsType.isa<emitc::PointerType>() &&
-      !rhsType.isa<IntegerType, emitc::OpaqueType, emitc::PointerType>())
+  if (isa<emitc::PointerType>(lhsType) &&
+      !isa<IntegerType, emitc::OpaqueType, emitc::PointerType>(rhsType))
     return emitOpError("requires that rhs is an integer, pointer or of opaque "
                        "type if lhs is a pointer");
 
-  if (lhsType.isa<emitc::PointerType>() && rhsType.isa<emitc::PointerType>() &&
-      !resultType.isa<IntegerType, emitc::OpaqueType>())
+  if (isa<emitc::PointerType>(lhsType) && isa<emitc::PointerType>(rhsType) &&
+      !isa<IntegerType, emitc::OpaqueType>(resultType))
     return emitOpError("requires that the result is an integer or of opaque "
                        "type if lhs and rhs are pointers");
   return success();

@@ -215,6 +215,7 @@ export namespace std {
 #    endif // if 0
 
     // [time.zone.info], information classes
+    using std::chrono::local_info;
     using std::chrono::sys_info;
 
 #    if 0

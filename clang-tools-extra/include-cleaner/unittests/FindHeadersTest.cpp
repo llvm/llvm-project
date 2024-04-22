@@ -628,5 +628,24 @@ TEST_F(HeadersForSymbolTest, StandardHeaders) {
                            tooling::stdlib::Header::named("<assert.h>")));
 }
 
+TEST_F(HeadersForSymbolTest, ExporterNoNameMatch) {
+  Inputs.Code = R"cpp(
+    #include "exporter/foo.h"
+    #include "foo_public.h"
+  )cpp";
+  Inputs.ExtraArgs.emplace_back("-I.");
+  // Deliberately named as foo_public to make sure it doesn't get name-match
+  // boost and also gets lexicographically bigger order than "exporter/foo.h".
+  Inputs.ExtraFiles["foo_public.h"] = guard(R"cpp(
+    struct foo {};
+  )cpp");
+  Inputs.ExtraFiles["exporter/foo.h"] = guard(R"cpp(
+    #include "foo_public.h" // IWYU pragma: export
+  )cpp");
+  buildAST();
+  EXPECT_THAT(headersForFoo(), ElementsAre(physicalHeader("foo_public.h"),
+                                           physicalHeader("exporter/foo.h")));
+}
+
 } // namespace
 } // namespace clang::include_cleaner

@@ -177,7 +177,7 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
   bool IsStatic, IsExtern;
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
     IsStatic = Context::shouldBeGloballyIndexed(VD);
-    IsExtern = !Var->getAnyInitializer();
+    IsExtern = Var->hasExternalStorage();
   } else if (isa<UnnamedGlobalConstantDecl, MSGuidDecl>(VD)) {
     IsStatic = true;
     IsExtern = false;
@@ -312,6 +312,11 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   // Reserve space for fields.
   Record::FieldList Fields;
   for (const FieldDecl *FD : RD->fields()) {
+    // Note that we DO create fields and descriptors
+    // for unnamed bitfields here, even though we later ignore
+    // them everywhere. That's because so the FieldDecl's
+    // getFieldIndex() matches.
+
     // Reserve space for the field's descriptor and the offset.
     BaseSize += align(sizeof(InlineDescriptor));
 

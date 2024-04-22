@@ -501,6 +501,8 @@ private:
   /// = I + 1 has already been loaded.
   llvm::PagedVector<Decl *> DeclsLoaded;
 
+  static_assert(std::is_same_v<serialization::DeclID, Decl::DeclID>);
+
   using GlobalDeclMapType =
       ContinuousRangeMap<serialization::DeclID, ModuleFile *, 4>;
 
@@ -516,6 +518,20 @@ private:
   /// Declarations that have modifications residing in a later file
   /// in the chain.
   DeclUpdateOffsetsMap DeclUpdateOffsets;
+
+  using DelayedNamespaceOffsetMapTy = llvm::DenseMap<
+      serialization::DeclID,
+      std::pair</*LexicalOffset*/ uint64_t, /*VisibleOffset*/ uint64_t>>;
+
+  /// Mapping from global declaration IDs to the lexical and visible block
+  /// offset for delayed namespace in reduced BMI.
+  ///
+  /// We can't use the existing DeclUpdate mechanism since the DeclUpdate
+  /// may only be applied in an outer most read. However, we need to know
+  /// whether or not a DeclContext has external storage during the recursive
+  /// reading. So we need to apply the offset immediately after we read the
+  /// namespace as if it is not delayed.
+  DelayedNamespaceOffsetMapTy DelayedNamespaceOffsetMap;
 
   struct PendingUpdateRecord {
     Decl *D;
@@ -859,7 +875,7 @@ private:
 
   /// Our current depth in #pragma cuda force_host_device begin/end
   /// macros.
-  unsigned ForceCUDAHostDeviceDepth = 0;
+  unsigned ForceHostDeviceDepth = 0;
 
   /// The IDs of the declarations Sema stores directly.
   ///
@@ -2443,6 +2459,12 @@ private:
   uint32_t Value;
   uint32_t CurrentBitsIndex = ~0;
 };
+
+inline bool shouldSkipCheckingODR(const Decl *D) {
+  return D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
+         D->isFromExplicitGlobalModule();
+}
+
 } // namespace clang
 
 #endif // LLVM_CLANG_SERIALIZATION_ASTREADER_H
