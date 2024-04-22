@@ -135,9 +135,7 @@ def PolynomialLike: TypeOrContainer<Polynomial_PolynomialType, "polynomial-like"
 
 class Polynomial_Op<string mnemonic, list<Trait> traits = []> :
     Op<Polynomial_Dialect, mnemonic, traits # [Pure]> {
-  let assemblyFormat = [{
-    operands attr-dict `:` `(` qualified(type(operands)) `)` `->` qualified(type(results))
-  }];
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 class Polynomial_UnaryOp<string mnemonic, list<Trait> traits = []> :
