@@ -91,7 +91,6 @@ public:
   std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result,
                           bool ShouldAutoFlush) const override;
   std::error_code flush() const override;
-  std::error_code flush(SmallVectorImpl<char> &Result) const override;
 };
 
 std::error_code CharSetConverterTable::convert(StringRef Source,
@@ -108,11 +107,6 @@ std::error_code CharSetConverterTable::convert(StringRef Source,
 }
 
 std::error_code CharSetConverterTable::flush() const {
-  return std::error_code();
-}
-
-std::error_code
-CharSetConverterTable::flush(SmallVectorImpl<char> &Result) const {
   return std::error_code();
 }
 
@@ -144,7 +138,6 @@ public:
   std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result,
                           bool ShouldAutoFlush) const override;
   std::error_code flush() const override;
-  std::error_code flush(SmallVectorImpl<char> &Result) const override;
 };
 
 std::error_code CharSetConverterICU::convert(StringRef Source,
@@ -164,7 +157,7 @@ std::error_code CharSetConverterICU::convert(StringRef Source,
     const char *Input =
         InputLength ? const_cast<char *>(Source.data()) : nullptr;
     const char *In = Input;
-    Output = InputLength ? static_cast<char *>(Result.data()) : nullptr;
+    Output = static_cast<char *>(Result.data());
     Out = Output;
     ucnv_convertEx(ToConvDesc, FromConvDesc, &Output, Out + OutputLength,
                    &Input, In + InputLength, /*pivotStart=*/NULL,
@@ -173,25 +166,21 @@ std::error_code CharSetConverterICU::convert(StringRef Source,
                    /*flush=*/ShouldAutoFlush, &EC);
     if (U_FAILURE(EC)) {
       if (EC == U_BUFFER_OVERFLOW_ERROR &&
-          Capacity < std::numeric_limits<size_t>::max())
+          Capacity < std::numeric_limits<size_t>::max()) {
         HandleOverflow(Capacity, Output, OutputLength, Result);
-      else
+        continue;
+      } else
         // Some other error occured.
         return std::error_code(EILSEQ, std::generic_category());
-    } else if (U_SUCCESS(EC))
-      break;
-  } while (U_FAILURE(EC));
+    }
+    break;
+  } while (true);
 
   Result.resize(Output - Out);
   return std::error_code();
 }
 
 std::error_code CharSetConverterICU::flush() const { return std::error_code(); }
-
-std::error_code
-CharSetConverterICU::flush(SmallVectorImpl<char> &Result) const {
-  return std::error_code();
-}
 
 #elif defined(HAVE_ICONV)
 class CharSetConverterIconv : public details::CharSetConverterImplBase {
@@ -203,7 +192,6 @@ public:
   std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result,
                           bool ShouldAutoFlush) const override;
   std::error_code flush() const override;
-  std::error_code flush(SmallVectorImpl<char> &Result) const override;
 };
 
 std::error_code CharSetConverterIconv::convert(StringRef Source,
@@ -261,11 +249,6 @@ std::error_code CharSetConverterIconv::flush() const {
     return std::error_code(errno, std::generic_category());
   }
   return std::error_code();
-}
-
-std::error_code
-CharSetConverterIconv::flush(SmallVectorImpl<char> &Result) const {
-  return convert("", Result, /*ShouldAutoFlush=*/true);
 }
 
 #endif // HAVE_ICONV
