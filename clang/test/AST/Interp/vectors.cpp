@@ -8,6 +8,13 @@ static_assert(A[1] == 2, ""); // ref-error {{not an integral constant expression
 static_assert(A[2] == 3, ""); // ref-error {{not an integral constant expression}}
 static_assert(A[3] == 4, ""); // ref-error {{not an integral constant expression}}
 
+
+/// FIXME: It would be nice if the note said 'vector' instead of 'array'.
+static_assert(A[12] == 4, ""); // ref-error {{not an integral constant expression}} \
+                               // expected-error {{not an integral constant expression}} \
+                               // expected-note {{cannot refer to element 12 of array of 4 elements in a constant expression}}
+
+
 /// VectorSplat casts
 typedef __attribute__(( ext_vector_type(4) )) float float4;
 constexpr float4 vec4_0 = (float4)0.5f;
