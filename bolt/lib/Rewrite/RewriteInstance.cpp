@@ -1512,7 +1512,8 @@ void RewriteInstance::registerFragments() {
       if (BinaryData *ParentBD = BC->getBinaryDataByName(ParentName))
         ParentAddress = ParentBD->getAddress();
 
-    if (BinaryFunction *ParentBF = BC->getBinaryFunctionAtAddress(ParentAddress)) {
+    if (BinaryFunction *ParentBF =
+            BC->getBinaryFunctionAtAddress(ParentAddress)) {
       BC->registerFragment(*BF, *ParentBF);
       continue;
     }
