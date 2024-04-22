@@ -65,7 +65,7 @@ static void printRanLibHelp(StringRef ToolName) {
          << "USAGE: " + ToolName + " archive...\n\n"
          << "OPTIONS:\n"
          << "  -h --help             - Display available options\n"
-         << "  -v --version          - Display the version of this program\n"
+         << "  -V --version          - Display the version of this program\n"
          << "  -D                    - Use zero for timestamps and uids/gids "
             "(default)\n"
          << "  -U                    - Use actual timestamps and uids/gids\n"
@@ -1439,7 +1439,7 @@ static int ranlib_main(int argc, char **argv) {
         } else if (arg.front() == 'h') {
           printHelpMessage();
           return 0;
-        } else if (arg.front() == 'v') {
+        } else if (arg.front() == 'V') {
           cl::PrintVersionMessage();
           return 0;
         } else if (arg.front() == 'X') {

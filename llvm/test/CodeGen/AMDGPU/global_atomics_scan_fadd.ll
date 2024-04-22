@@ -4180,8 +4180,8 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp(ptr addrspace(1) %ptr) #2 {
-; GFX7LESS-LABEL: global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp:
+define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_default_scope_strictfp(ptr addrspace(1) %ptr) #2 {
+; GFX7LESS-LABEL: global_atomic_fadd_uni_address_uni_value_default_scope_strictfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX7LESS-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -4227,7 +4227,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scop
 ; GFX7LESS-NEXT:  .LBB7_3:
 ; GFX7LESS-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp:
+; GFX9-LABEL: global_atomic_fadd_uni_address_uni_value_default_scope_strictfp:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX9-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -4269,7 +4269,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scop
 ; GFX9-NEXT:  .LBB7_3:
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1064-LABEL: global_atomic_fadd_uni_address_uni_value_default_scope_strictfp:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX1064-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -4309,7 +4309,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scop
 ; GFX1064-NEXT:  .LBB7_3:
 ; GFX1064-NEXT:    s_endpgm
 ;
-; GFX1032-LABEL: global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1032-LABEL: global_atomic_fadd_uni_address_uni_value_default_scope_strictfp:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX1032-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -4348,7 +4348,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scop
 ; GFX1032-NEXT:  .LBB7_3:
 ; GFX1032-NEXT:    s_endpgm
 ;
-; GFX1164-LABEL: global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1164-LABEL: global_atomic_fadd_uni_address_uni_value_default_scope_strictfp:
 ; GFX1164:       ; %bb.0:
 ; GFX1164-NEXT:    s_bcnt1_i32_b64 s2, exec
 ; GFX1164-NEXT:    v_mov_b32_e32 v0, 0x43300000
@@ -4391,7 +4391,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scop
 ; GFX1164-NEXT:  .LBB7_3:
 ; GFX1164-NEXT:    s_endpgm
 ;
-; GFX1132-LABEL: global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1132-LABEL: global_atomic_fadd_uni_address_uni_value_default_scope_strictfp:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s2, exec_lo
 ; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -4431,7 +4431,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scop
 ; GFX1132-NEXT:  .LBB7_3:
 ; GFX1132-NEXT:    s_endpgm
 ;
-; GFX9-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp:
+; GFX9-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_default_scope_strictfp:
 ; GFX9-DPP:       ; %bb.0:
 ; GFX9-DPP-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX9-DPP-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -4473,7 +4473,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scop
 ; GFX9-DPP-NEXT:  .LBB7_3:
 ; GFX9-DPP-NEXT:    s_endpgm
 ;
-; GFX1064-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1064-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_default_scope_strictfp:
 ; GFX1064-DPP:       ; %bb.0:
 ; GFX1064-DPP-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX1064-DPP-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -4513,7 +4513,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scop
 ; GFX1064-DPP-NEXT:  .LBB7_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
-; GFX1032-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1032-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_default_scope_strictfp:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    s_mov_b32 s8, SCRATCH_RSRC_DWORD0
 ; GFX1032-DPP-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
@@ -4552,7 +4552,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scop
 ; GFX1032-DPP-NEXT:  .LBB7_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
-; GFX1164-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1164-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_default_scope_strictfp:
 ; GFX1164-DPP:       ; %bb.0:
 ; GFX1164-DPP-NEXT:    s_bcnt1_i32_b64 s2, exec
 ; GFX1164-DPP-NEXT:    v_mov_b32_e32 v0, 0x43300000
@@ -4595,7 +4595,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scop
 ; GFX1164-DPP-NEXT:  .LBB7_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
-; GFX1132-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1132-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_default_scope_strictfp:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    s_bcnt1_i32_b32 s2, exec_lo
 ; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -4638,8 +4638,8 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_defalut_scop
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp(ptr addrspace(1) %ptr) #2 {
-; GFX7LESS-LABEL: global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp:
+define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_default_scope_strictfp(ptr addrspace(1) %ptr) #2 {
+; GFX7LESS-LABEL: global_atomic_fadd_uni_address_div_value_default_scope_strictfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b32 s32, 0
 ; GFX7LESS-NEXT:    s_mov_b32 s40, SCRATCH_RSRC_DWORD0
@@ -4689,7 +4689,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scop
 ; GFX7LESS-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7LESS-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp:
+; GFX9-LABEL: global_atomic_fadd_uni_address_div_value_default_scope_strictfp:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX9-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -4755,7 +4755,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scop
 ; GFX9-NEXT:  .LBB8_5:
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp:
+; GFX1064-LABEL: global_atomic_fadd_uni_address_div_value_default_scope_strictfp:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1064-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -4821,7 +4821,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scop
 ; GFX1064-NEXT:  .LBB8_5:
 ; GFX1064-NEXT:    s_endpgm
 ;
-; GFX1032-LABEL: global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp:
+; GFX1032-LABEL: global_atomic_fadd_uni_address_div_value_default_scope_strictfp:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1032-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -4886,7 +4886,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scop
 ; GFX1032-NEXT:  .LBB8_5:
 ; GFX1032-NEXT:    s_endpgm
 ;
-; GFX1164-LABEL: global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp:
+; GFX1164-LABEL: global_atomic_fadd_uni_address_div_value_default_scope_strictfp:
 ; GFX1164:       ; %bb.0:
 ; GFX1164-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1164-NEXT:    s_mov_b32 s14, s8
@@ -4947,7 +4947,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scop
 ; GFX1164-NEXT:  .LBB8_5:
 ; GFX1164-NEXT:    s_endpgm
 ;
-; GFX1132-LABEL: global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp:
+; GFX1132-LABEL: global_atomic_fadd_uni_address_div_value_default_scope_strictfp:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1132-NEXT:    v_mov_b32_e32 v31, v0
@@ -5007,7 +5007,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scop
 ; GFX1132-NEXT:  .LBB8_5:
 ; GFX1132-NEXT:    s_endpgm
 ;
-; GFX9-DPP-LABEL: global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp:
+; GFX9-DPP-LABEL: global_atomic_fadd_uni_address_div_value_default_scope_strictfp:
 ; GFX9-DPP:       ; %bb.0:
 ; GFX9-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX9-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -5091,7 +5091,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scop
 ; GFX9-DPP-NEXT:  .LBB8_3:
 ; GFX9-DPP-NEXT:    s_endpgm
 ;
-; GFX1064-DPP-LABEL: global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp:
+; GFX1064-DPP-LABEL: global_atomic_fadd_uni_address_div_value_default_scope_strictfp:
 ; GFX1064-DPP:       ; %bb.0:
 ; GFX1064-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1064-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -5173,7 +5173,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scop
 ; GFX1064-DPP-NEXT:  .LBB8_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
-; GFX1032-DPP-LABEL: global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp:
+; GFX1032-DPP-LABEL: global_atomic_fadd_uni_address_div_value_default_scope_strictfp:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    s_mov_b32 s36, SCRATCH_RSRC_DWORD0
 ; GFX1032-DPP-NEXT:    s_mov_b32 s37, SCRATCH_RSRC_DWORD1
@@ -5249,7 +5249,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scop
 ; GFX1032-DPP-NEXT:  .LBB8_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
-; GFX1164-DPP-LABEL: global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp:
+; GFX1164-DPP-LABEL: global_atomic_fadd_uni_address_div_value_default_scope_strictfp:
 ; GFX1164-DPP:       ; %bb.0:
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1164-DPP-NEXT:    s_mov_b32 s14, s8
@@ -5331,7 +5331,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_defalut_scop
 ; GFX1164-DPP-NEXT:  .LBB8_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
-; GFX1132-DPP-LABEL: global_atomic_fadd_uni_address_div_value_defalut_scope_strictfp:
+; GFX1132-DPP-LABEL: global_atomic_fadd_uni_address_div_value_default_scope_strictfp:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1132-DPP-NEXT:    v_mov_b32_e32 v31, v0
@@ -9365,8 +9365,8 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_agent
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_defalut_scope_strictfp(ptr addrspace(1) %ptr) #2 {
-; GFX7LESS-LABEL: global_atomic_fadd_double_uni_address_uni_value_defalut_scope_strictfp:
+define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_default_scope_strictfp(ptr addrspace(1) %ptr) #2 {
+; GFX7LESS-LABEL: global_atomic_fadd_double_uni_address_uni_value_default_scope_strictfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_movk_i32 s32, 0x800
 ; GFX7LESS-NEXT:    s_mov_b32 s40, SCRATCH_RSRC_DWORD0
@@ -9438,7 +9438,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_defal
 ; GFX7LESS-NEXT:  .LBB16_3:
 ; GFX7LESS-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: global_atomic_fadd_double_uni_address_uni_value_defalut_scope_strictfp:
+; GFX9-LABEL: global_atomic_fadd_double_uni_address_uni_value_default_scope_strictfp:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b32 s40, SCRATCH_RSRC_DWORD0
 ; GFX9-NEXT:    s_mov_b32 s41, SCRATCH_RSRC_DWORD1
@@ -9508,7 +9508,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_defal
 ; GFX9-NEXT:  .LBB16_3:
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: global_atomic_fadd_double_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1064-LABEL: global_atomic_fadd_double_uni_address_uni_value_default_scope_strictfp:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_mov_b32 s40, SCRATCH_RSRC_DWORD0
 ; GFX1064-NEXT:    s_mov_b32 s41, SCRATCH_RSRC_DWORD1
@@ -9577,7 +9577,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_defal
 ; GFX1064-NEXT:  .LBB16_3:
 ; GFX1064-NEXT:    s_endpgm
 ;
-; GFX1032-LABEL: global_atomic_fadd_double_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1032-LABEL: global_atomic_fadd_double_uni_address_uni_value_default_scope_strictfp:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_mov_b32 s33, s2
 ; GFX1032-NEXT:    s_mov_b32 s2, exec_lo
@@ -9645,7 +9645,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_defal
 ; GFX1032-NEXT:  .LBB16_3:
 ; GFX1032-NEXT:    s_endpgm
 ;
-; GFX1164-LABEL: global_atomic_fadd_double_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1164-LABEL: global_atomic_fadd_double_uni_address_uni_value_default_scope_strictfp:
 ; GFX1164:       ; %bb.0:
 ; GFX1164-NEXT:    s_mov_b64 s[34:35], s[0:1]
 ; GFX1164-NEXT:    s_bcnt1_i32_b64 s0, exec
@@ -9715,7 +9715,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_defal
 ; GFX1164-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX1164-NEXT:    s_endpgm
 ;
-; GFX1132-LABEL: global_atomic_fadd_double_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1132-LABEL: global_atomic_fadd_double_uni_address_uni_value_default_scope_strictfp:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    s_mov_b64 s[34:35], s[0:1]
 ; GFX1132-NEXT:    s_bcnt1_i32_b32 s0, exec_lo
@@ -9778,7 +9778,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_defal
 ; GFX1132-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX1132-NEXT:    s_endpgm
 ;
-; GFX9-DPP-LABEL: global_atomic_fadd_double_uni_address_uni_value_defalut_scope_strictfp:
+; GFX9-DPP-LABEL: global_atomic_fadd_double_uni_address_uni_value_default_scope_strictfp:
 ; GFX9-DPP:       ; %bb.0:
 ; GFX9-DPP-NEXT:    s_mov_b32 s40, SCRATCH_RSRC_DWORD0
 ; GFX9-DPP-NEXT:    s_mov_b32 s41, SCRATCH_RSRC_DWORD1
@@ -9848,7 +9848,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_defal
 ; GFX9-DPP-NEXT:  .LBB16_3:
 ; GFX9-DPP-NEXT:    s_endpgm
 ;
-; GFX1064-DPP-LABEL: global_atomic_fadd_double_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1064-DPP-LABEL: global_atomic_fadd_double_uni_address_uni_value_default_scope_strictfp:
 ; GFX1064-DPP:       ; %bb.0:
 ; GFX1064-DPP-NEXT:    s_mov_b32 s40, SCRATCH_RSRC_DWORD0
 ; GFX1064-DPP-NEXT:    s_mov_b32 s41, SCRATCH_RSRC_DWORD1
@@ -9917,7 +9917,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_defal
 ; GFX1064-DPP-NEXT:  .LBB16_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
-; GFX1032-DPP-LABEL: global_atomic_fadd_double_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1032-DPP-LABEL: global_atomic_fadd_double_uni_address_uni_value_default_scope_strictfp:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    s_mov_b32 s33, s2
 ; GFX1032-DPP-NEXT:    s_mov_b32 s2, exec_lo
@@ -9985,7 +9985,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_defal
 ; GFX1032-DPP-NEXT:  .LBB16_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
-; GFX1164-DPP-LABEL: global_atomic_fadd_double_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1164-DPP-LABEL: global_atomic_fadd_double_uni_address_uni_value_default_scope_strictfp:
 ; GFX1164-DPP:       ; %bb.0:
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[34:35], s[0:1]
 ; GFX1164-DPP-NEXT:    s_bcnt1_i32_b64 s0, exec
@@ -10055,7 +10055,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_defal
 ; GFX1164-DPP-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
-; GFX1132-DPP-LABEL: global_atomic_fadd_double_uni_address_uni_value_defalut_scope_strictfp:
+; GFX1132-DPP-LABEL: global_atomic_fadd_double_uni_address_uni_value_default_scope_strictfp:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    s_mov_b64 s[34:35], s[0:1]
 ; GFX1132-DPP-NEXT:    s_bcnt1_i32_b32 s0, exec_lo
@@ -10121,8 +10121,8 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_defal
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defalut_scope_strictfp(ptr addrspace(1) %ptr) #2 {
-; GFX7LESS-LABEL: global_atomic_fadd_double_uni_address_div_value_defalut_scope_strictfp:
+define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_default_scope_strictfp(ptr addrspace(1) %ptr) #2 {
+; GFX7LESS-LABEL: global_atomic_fadd_double_uni_address_div_value_default_scope_strictfp:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_movk_i32 s32, 0x800
 ; GFX7LESS-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
@@ -10208,7 +10208,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defal
 ; GFX7LESS-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX7LESS-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: global_atomic_fadd_double_uni_address_div_value_defalut_scope_strictfp:
+; GFX9-LABEL: global_atomic_fadd_double_uni_address_div_value_default_scope_strictfp:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
 ; GFX9-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
@@ -10290,7 +10290,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defal
 ; GFX9-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: global_atomic_fadd_double_uni_address_div_value_defalut_scope_strictfp:
+; GFX1064-LABEL: global_atomic_fadd_double_uni_address_div_value_default_scope_strictfp:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
 ; GFX1064-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
@@ -10373,7 +10373,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defal
 ; GFX1064-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1064-NEXT:    s_endpgm
 ;
-; GFX1032-LABEL: global_atomic_fadd_double_uni_address_div_value_defalut_scope_strictfp:
+; GFX1032-LABEL: global_atomic_fadd_double_uni_address_div_value_default_scope_strictfp:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
 ; GFX1032-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
@@ -10456,7 +10456,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defal
 ; GFX1032-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1032-NEXT:    s_endpgm
 ;
-; GFX1164-LABEL: global_atomic_fadd_double_uni_address_div_value_defalut_scope_strictfp:
+; GFX1164-LABEL: global_atomic_fadd_double_uni_address_div_value_default_scope_strictfp:
 ; GFX1164:       ; %bb.0:
 ; GFX1164-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1164-NEXT:    s_mov_b32 s33, s8
@@ -10529,7 +10529,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defal
 ; GFX1164-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX1164-NEXT:    s_endpgm
 ;
-; GFX1132-LABEL: global_atomic_fadd_double_uni_address_div_value_defalut_scope_strictfp:
+; GFX1132-LABEL: global_atomic_fadd_double_uni_address_div_value_default_scope_strictfp:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1132-NEXT:    s_mov_b64 s[38:39], s[0:1]
@@ -10595,7 +10595,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defal
 ; GFX1132-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX1132-NEXT:    s_endpgm
 ;
-; GFX9-DPP-LABEL: global_atomic_fadd_double_uni_address_div_value_defalut_scope_strictfp:
+; GFX9-DPP-LABEL: global_atomic_fadd_double_uni_address_div_value_default_scope_strictfp:
 ; GFX9-DPP:       ; %bb.0:
 ; GFX9-DPP-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
 ; GFX9-DPP-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
@@ -10677,7 +10677,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defal
 ; GFX9-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX9-DPP-NEXT:    s_endpgm
 ;
-; GFX1064-DPP-LABEL: global_atomic_fadd_double_uni_address_div_value_defalut_scope_strictfp:
+; GFX1064-DPP-LABEL: global_atomic_fadd_double_uni_address_div_value_default_scope_strictfp:
 ; GFX1064-DPP:       ; %bb.0:
 ; GFX1064-DPP-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
 ; GFX1064-DPP-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
@@ -10760,7 +10760,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defal
 ; GFX1064-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
-; GFX1032-DPP-LABEL: global_atomic_fadd_double_uni_address_div_value_defalut_scope_strictfp:
+; GFX1032-DPP-LABEL: global_atomic_fadd_double_uni_address_div_value_default_scope_strictfp:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    s_mov_b32 s48, SCRATCH_RSRC_DWORD0
 ; GFX1032-DPP-NEXT:    s_mov_b32 s49, SCRATCH_RSRC_DWORD1
@@ -10843,7 +10843,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defal
 ; GFX1032-DPP-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
-; GFX1164-DPP-LABEL: global_atomic_fadd_double_uni_address_div_value_defalut_scope_strictfp:
+; GFX1164-DPP-LABEL: global_atomic_fadd_double_uni_address_div_value_default_scope_strictfp:
 ; GFX1164-DPP:       ; %bb.0:
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1164-DPP-NEXT:    s_mov_b32 s33, s8
@@ -10916,7 +10916,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defal
 ; GFX1164-DPP-NEXT:    s_set_inst_prefetch_distance 0x2
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
-; GFX1132-DPP-LABEL: global_atomic_fadd_double_uni_address_div_value_defalut_scope_strictfp:
+; GFX1132-DPP-LABEL: global_atomic_fadd_double_uni_address_div_value_default_scope_strictfp:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    s_mov_b64 s[34:35], s[2:3]
 ; GFX1132-DPP-NEXT:    s_mov_b64 s[38:39], s[0:1]
@@ -10988,7 +10988,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defal
 
 attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
 attributes #1 = { strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }
-attributes #2 = { strictfp}
+attributes #2 = { strictfp }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

@@ -1917,14 +1917,30 @@ isLoopVariantIndirectAddress(ArrayRef<const Value *> UnderlyingObjects,
   });
 }
 
-// Get the dependence distance, stride, type size in whether i is a write for
+namespace {
+struct DepDistanceStrideAndSizeInfo {
+  const SCEV *Dist;
+  uint64_t Stride;
+  uint64_t TypeByteSize;
+  bool AIsWrite;
+  bool BIsWrite;
+
+  DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t Stride,
+                               uint64_t TypeByteSize, bool AIsWrite,
+                               bool BIsWrite)
+      : Dist(Dist), Stride(Stride), TypeByteSize(TypeByteSize),
+        AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
+};
+} // namespace
+
+// Get the dependence distance, stride, type size and whether it is a write for
 // the dependence between A and B. Returns a DepType, if we can prove there's
 // no dependence or the analysis fails. Outlined to lambda to limit he scope
 // of various temporary variables, like A/BPtr, StrideA/BPtr and others.
 // Returns either the dependence result, if it could already be determined, or a
-// tuple with (Distance, Stride, TypeSize, AIsWrite, BIsWrite).
+// struct containing (Distance, Stride, TypeSize, AIsWrite, BIsWrite).
 static std::variant<MemoryDepChecker::Dependence::DepType,
-                    std::tuple<const SCEV *, uint64_t, uint64_t, bool, bool>>
+                    DepDistanceStrideAndSizeInfo>
 getDependenceDistanceStrideAndSize(
     const AccessAnalysis::MemAccessInfo &A, Instruction *AInst,
     const AccessAnalysis::MemAccessInfo &B, Instruction *BInst,
@@ -1993,7 +2009,8 @@ getDependenceDistanceStrideAndSize(
   if (!HasSameSize)
     TypeByteSize = 0;
   uint64_t Stride = std::abs(StrideAPtr);
-  return std::make_tuple(Dist, Stride, TypeByteSize, AIsWrite, BIsWrite);
+  return DepDistanceStrideAndSizeInfo(Dist, Stride, TypeByteSize, AIsWrite,
+                                      BIsWrite);
 }
 
 MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
@@ -2012,7 +2029,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     return std::get<Dependence::DepType>(Res);
 
   const auto &[Dist, Stride, TypeByteSize, AIsWrite, BIsWrite] =
-      std::get<std::tuple<const SCEV *, uint64_t, uint64_t, bool, bool>>(Res);
+      std::get<DepDistanceStrideAndSizeInfo>(Res);
   bool HasSameSize = TypeByteSize > 0;
 
   ScalarEvolution &SE = *PSE.getSE();

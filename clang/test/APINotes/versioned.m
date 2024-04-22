@@ -13,7 +13,7 @@
 #import <VersionedKit/VersionedKit.h>
 
 // CHECK-UNVERSIONED: void moveToPointDUMP(double x, double y) __attribute__((swift_name("moveTo(x:y:)")));
-// CHECK-VERSIONED: void moveToPointDUMP(double x, double y) __attribute__((swift_name("moveTo(a:b:)")));
+// CHECK-VERSIONED:__attribute__((swift_name("moveTo(a:b:)"))) void moveToPointDUMP(double x, double y);
 
 // CHECK-DUMP-LABEL: Dumping moveToPointDUMP
 // CHECK-VERSIONED-DUMP: SwiftVersionedAdditionAttr {{.+}} Implicit 3.0 IsReplacedByActive{{$}}
@@ -65,7 +65,7 @@
 
 // CHECK-DUMP-NOT: Dumping
 
-// CHECK-UNVERSIONED: void acceptClosure(void (^block)(void) __attribute__((noescape)));
+// CHECK-UNVERSIONED: void acceptClosure(__attribute__((noescape)) void (^block)(void));
 // CHECK-VERSIONED: void acceptClosure(void (^block)(void));
 
 // CHECK-UNVERSIONED: void privateFunc(void) __attribute__((swift_private));

@@ -320,6 +320,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__bit_reference>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__debug_utils/sanitizers.h>
 #include <__format/enable_insertable.h>
 #include <__format/formatter.h>
 #include <__format/formatter_bool.h>
@@ -834,15 +835,7 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
-    (void)__old_mid;
-    (void)__new_mid;
-#ifndef _LIBCPP_HAS_NO_ASAN
-    const void* __beg = data();
-    const void* __end = data() + capacity();
-    if (!__libcpp_is_constant_evaluated() && __beg != nullptr &&
-        __asan_annotate_container_with_allocator<_Allocator>::value)
-      __sanitizer_annotate_contiguous_container(__beg, __end, __old_mid, __new_mid);
-#endif
+    std::__annotate_contiguous_container<_Allocator>(data(), data() + capacity(), __old_mid, __new_mid);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_new(size_type __current_size) const _NOEXCEPT {

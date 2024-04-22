@@ -517,6 +517,91 @@ static void printOptionalCustomParser(AsmPrinter &p, Operation *,
 }
 
 //===----------------------------------------------------------------------===//
+// ReifyBoundOp
+//===----------------------------------------------------------------------===//
+
+::mlir::presburger::BoundType ReifyBoundOp::getBoundType() {
+  if (getType() == "EQ")
+    return ::mlir::presburger::BoundType::EQ;
+  if (getType() == "LB")
+    return ::mlir::presburger::BoundType::LB;
+  if (getType() == "UB")
+    return ::mlir::presburger::BoundType::UB;
+  llvm_unreachable("invalid bound type");
+}
+
+LogicalResult ReifyBoundOp::verify() {
+  if (isa<ShapedType>(getVar().getType())) {
+    if (!getDim().has_value())
+      return emitOpError("expected 'dim' attribute for shaped type variable");
+  } else if (getVar().getType().isIndex()) {
+    if (getDim().has_value())
+      return emitOpError("unexpected 'dim' attribute for index variable");
+  } else {
+    return emitOpError("expected index-typed variable or shape type variable");
+  }
+  if (getConstant() && getScalable())
+    return emitOpError("'scalable' and 'constant' are mutually exlusive");
+  if (getScalable() != getVscaleMin().has_value())
+    return emitOpError("expected 'vscale_min' if and only if 'scalable'");
+  if (getScalable() != getVscaleMax().has_value())
+    return emitOpError("expected 'vscale_min' if and only if 'scalable'");
+  return success();
+}
+
+::mlir::ValueBoundsConstraintSet::Variable ReifyBoundOp::getVariable() {
+  if (getDim().has_value())
+    return ValueBoundsConstraintSet::Variable(getVar(), *getDim());
+  return ValueBoundsConstraintSet::Variable(getVar());
+}
+
+::mlir::ValueBoundsConstraintSet::ComparisonOperator
+CompareOp::getComparisonOperator() {
+  if (getCmp() == "EQ")
+    return ValueBoundsConstraintSet::ComparisonOperator::EQ;
+  if (getCmp() == "LT")
+    return ValueBoundsConstraintSet::ComparisonOperator::LT;
+  if (getCmp() == "LE")
+    return ValueBoundsConstraintSet::ComparisonOperator::LE;
+  if (getCmp() == "GT")
+    return ValueBoundsConstraintSet::ComparisonOperator::GT;
+  if (getCmp() == "GE")
+    return ValueBoundsConstraintSet::ComparisonOperator::GE;
+  llvm_unreachable("invalid comparison operator");
+}
+
+::mlir::ValueBoundsConstraintSet::Variable CompareOp::getLhs() {
+  if (!getLhsMap())
+    return ValueBoundsConstraintSet::Variable(getVarOperands()[0]);
+  SmallVector<Value> mapOperands(
+      getVarOperands().slice(0, getLhsMap()->getNumInputs()));
+  return ValueBoundsConstraintSet::Variable(*getLhsMap(), mapOperands);
+}
+
+::mlir::ValueBoundsConstraintSet::Variable CompareOp::getRhs() {
+  int64_t rhsOperandsBegin = getLhsMap() ? getLhsMap()->getNumInputs() : 1;
+  if (!getRhsMap())
+    return ValueBoundsConstraintSet::Variable(
+        getVarOperands()[rhsOperandsBegin]);
+  SmallVector<Value> mapOperands(
+      getVarOperands().slice(rhsOperandsBegin, getRhsMap()->getNumInputs()));
+  return ValueBoundsConstraintSet::Variable(*getRhsMap(), mapOperands);
+}
+
+LogicalResult CompareOp::verify() {
+  if (getCompose() && (getLhsMap() || getRhsMap()))
+    return emitOpError(
+        "'compose' not supported when 'lhs_map' or 'rhs_map' is present");
+  int64_t expectedNumOperands = getLhsMap() ? getLhsMap()->getNumInputs() : 1;
+  expectedNumOperands += getRhsMap() ? getRhsMap()->getNumInputs() : 1;
+  if (getVarOperands().size() != size_t(expectedNumOperands))
+    return emitOpError("expected ")
+           << expectedNumOperands << " operands, but got "
+           << getVarOperands().size();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Test removing op with inner ops.
 //===----------------------------------------------------------------------===//
 
@@ -737,6 +822,17 @@ LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
         }));
     shapes.emplace_back(std::move(currShape));
   }
+  return success();
+}
+
+LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
+    MLIRContext *context, std::optional<Location>, ValueRange operands,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+
+  Adaptor adaptor(operands, attributes, properties, regions);
+  inferredReturnTypes.push_back(IntegerType::get(
+      context, adaptor.getLhs() + adaptor.getProperties().rhs));
   return success();
 }
 

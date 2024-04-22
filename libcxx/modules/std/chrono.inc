@@ -199,10 +199,10 @@ export namespace std {
     using std::chrono::tzdb_list;
 
     // [time.zone.db.access], time zone database access
-    // using std::chrono::current_zone;
+    using std::chrono::current_zone;
     using std::chrono::get_tzdb;
     using std::chrono::get_tzdb_list;
-    // using std::chrono::locate_zone;
+    using std::chrono::locate_zone;
 
     // [time.zone.db.remote], remote time zone database support
     using std::chrono::reload_tzdb;
@@ -212,10 +212,13 @@ export namespace std {
     // [time.zone.exception], exception classes
     using std::chrono::ambiguous_local_time;
     using std::chrono::nonexistent_local_time;
+#    endif // if 0
 
     // [time.zone.info], information classes
+    using std::chrono::local_info;
     using std::chrono::sys_info;
 
+#    if 0
     // [time.zone.timezone], class time_zone
     using std::chrono::choose;
 #    endif // if 0
