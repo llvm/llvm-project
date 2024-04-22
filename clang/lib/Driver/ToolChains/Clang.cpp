@@ -4634,7 +4634,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
 
   // Emit DW_TAG_template_alias for template aliases? True by default for SCE.
   bool UseDebugTemplateAlias =
-      DebuggerTuning == llvm::DebuggerKind::SCE && RequestedDWARFVersion >= 5;
+      DebuggerTuning == llvm::DebuggerKind::SCE && RequestedDWARFVersion >= 4;
   if (const auto *DebugTemplateAlias = Args.getLastArg(
           options::OPT_gtemplate_alias, options::OPT_gno_template_alias)) {
     // DW_TAG_template_alias is only supported from DWARFv5 but if a user
