@@ -482,11 +482,9 @@ static Expr<Type<TypeCategory::Logical, KIND>> RewriteOutOfRange(
     CHECK(x != nullptr);
     if (const auto *mold{UnwrapExpr<Expr<SomeType>>(args[1])}) {
       DynamicType xType{x->GetType().value()};
-      DynamicType moldType{mold->GetType().value()};
       std::optional<Expr<LogicalResult>> result;
       bool alwaysFalse{false};
       if (auto *iXExpr{UnwrapExpr<Expr<SomeInteger>>(*x)}) {
-        DynamicType iXType{iXExpr->GetType().value()};
         int iXKind{iXExpr->GetType().value().kind()};
         if (auto *iMoldExpr{UnwrapExpr<Expr<SomeInteger>>(*mold)}) {
           // INTEGER -> INTEGER
@@ -522,7 +520,6 @@ static Expr<Type<TypeCategory::Logical, KIND>> RewriteOutOfRange(
           }
         }
       } else if (auto *rXExpr{UnwrapExpr<Expr<SomeReal>>(*x)}) {
-        DynamicType rXType{rXExpr->GetType().value()};
         int rXKind{rXExpr->GetType().value().kind()};
         if (auto *iMoldExpr{UnwrapExpr<Expr<SomeInteger>>(*mold)}) {
           // REAL -> INTEGER
