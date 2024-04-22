@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   MC
   Support
   Target
+  TargetParser
   )
 
 add_llvm_tool(llvm-split
