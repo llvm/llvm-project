@@ -2327,6 +2327,18 @@ inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
   return CheckDeclRef(S, OpPC, DR);
 }
 
+inline bool Assume(InterpState &S, CodePtr OpPC) {
+  const auto Val = S.Stk.pop<Boolean>();
+
+  if (Val)
+    return true;
+
+  // Else, diagnose.
+  const SourceLocation &Loc = S.Current->getLocation(OpPC);
+  S.CCEDiag(Loc, diag::note_constexpr_assumption_failed);
+  return false;
+}
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool OffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E) {
   llvm::SmallVector<int64_t> ArrayIndices;
