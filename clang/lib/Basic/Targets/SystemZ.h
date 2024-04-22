@@ -220,6 +220,13 @@ public:
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     return RegNo < 4 ? 6 + RegNo : -1;
   }
+
+  virtual unsigned hardwareDestructiveInterferenceSize() const override {
+    return 256;
+  }
+  virtual unsigned hardwareConstructiveInterferenceSize() const override {
+    return 256;
+  }
 };
 } // namespace targets
 } // namespace clang
