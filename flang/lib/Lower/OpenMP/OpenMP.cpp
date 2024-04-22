@@ -1095,8 +1095,8 @@ static void genSectionsClauses(Fortran::lower::AbstractConverter &converter,
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
   cp.processSectionsReduction(loc, clauseOps);
-  // TODO Support delayed privatization.
   cp.processNowait(clauseOps);
+  // TODO Support delayed privatization.
 }
 
 static void genSimdClauses(Fortran::lower::AbstractConverter &converter,
@@ -1121,10 +1121,9 @@ static void genSingleClauses(Fortran::lower::AbstractConverter &converter,
                              mlir::omp::SingleClauseOps &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
-  // TODO Support delayed privatization.
-
   cp.processCopyprivate(loc, clauseOps);
   cp.processNowait(clauseOps);
+  // TODO Support delayed privatization.
 }
 
 static void genTargetClauses(
@@ -1282,6 +1281,7 @@ static void genWsloopClauses(
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processCollapse(loc, eval, clauseOps, iv);
+  cp.processNowait(clauseOps);
   cp.processOrdered(clauseOps);
   cp.processReduction(loc, clauseOps, &reductionTypes, &reductionSyms);
   cp.processSchedule(stmtCtx, clauseOps);
@@ -1290,8 +1290,6 @@ static void genWsloopClauses(
 
   if (ReductionProcessor::doReductionByRef(clauseOps.reductionVars))
     clauseOps.reductionByRefAttr = firOpBuilder.getUnitAttr();
-
-  cp.processNowait(clauseOps);
 
   cp.processTODO<clause::Allocate, clause::Linear, clause::Order>(
       loc, llvm::omp::Directive::OMPD_do);
