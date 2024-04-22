@@ -6,9 +6,8 @@ define i16 @load16_shr63(i64 %a, i64 %b, ptr %table) {
 ; CHECK-LABEL: load16_shr63:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul x8, x1, x0
-; CHECK-NEXT:    lsr x8, x8, #62
-; CHECK-NEXT:    and x8, x8, #0x2
-; CHECK-NEXT:    ldrh w0, [x2, x8]
+; CHECK-NEXT:    lsr x8, x8, #63
+; CHECK-NEXT:    ldrh w0, [x2, x8, lsl #1]
 ; CHECK-NEXT:    ret
 entry:
   %mul = mul i64 %b, %a
@@ -22,9 +21,8 @@ define i16 @load16_shr2(i64 %a, i64 %b, ptr %table) {
 ; CHECK-LABEL: load16_shr2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul x8, x1, x0
-; CHECK-NEXT:    lsr x8, x8, #1
-; CHECK-NEXT:    and x8, x8, #0x7ffffffffffffffe
-; CHECK-NEXT:    ldrh w0, [x2, x8]
+; CHECK-NEXT:    lsr x8, x8, #2
+; CHECK-NEXT:    ldrh w0, [x2, x8, lsl #1]
 ; CHECK-NEXT:    ret
 entry:
   %mul = mul i64 %b, %a
@@ -38,8 +36,8 @@ define i16 @load16_shr1(i64 %a, i64 %b, ptr %table) {
 ; CHECK-LABEL: load16_shr1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul x8, x1, x0
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffffe
-; CHECK-NEXT:    ldrh w0, [x2, x8]
+; CHECK-NEXT:    lsr x8, x8, #1
+; CHECK-NEXT:    ldrh w0, [x2, x8, lsl #1]
 ; CHECK-NEXT:    ret
 entry:
   %mul = mul i64 %b, %a
@@ -53,9 +51,8 @@ define i32 @load32_shr63(i64 %a, i64 %b, ptr %table) {
 ; CHECK-LABEL: load32_shr63:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul x8, x1, x0
-; CHECK-NEXT:    lsr x8, x8, #61
-; CHECK-NEXT:    and x8, x8, #0x4
-; CHECK-NEXT:    ldr w0, [x2, x8]
+; CHECK-NEXT:    lsr x8, x8, #63
+; CHECK-NEXT:    ldr w0, [x2, x8, lsl #2]
 ; CHECK-NEXT:    ret
 entry:
   %mul = mul i64 %b, %a
@@ -69,8 +66,8 @@ define i32 @load32_shr2(i64 %a, i64 %b, ptr %table) {
 ; CHECK-LABEL: load32_shr2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul x8, x1, x0
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffffc
-; CHECK-NEXT:    ldr w0, [x2, x8]
+; CHECK-NEXT:    lsr x8, x8, #2
+; CHECK-NEXT:    ldr w0, [x2, x8, lsl #2]
 ; CHECK-NEXT:    ret
 entry:
   %mul = mul i64 %b, %a
@@ -84,9 +81,8 @@ define i32 @load32_shr1(i64 %a, i64 %b, ptr %table) {
 ; CHECK-LABEL: load32_shr1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul x8, x1, x0
-; CHECK-NEXT:    lsl x8, x8, #1
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffffc
-; CHECK-NEXT:    ldr w0, [x2, x8]
+; CHECK-NEXT:    lsr x8, x8, #1
+; CHECK-NEXT:    ldr w0, [x2, x8, lsl #2]
 ; CHECK-NEXT:    ret
 entry:
   %mul = mul i64 %b, %a
@@ -100,9 +96,8 @@ define i64 @load64_shr63(i64 %a, i64 %b, ptr %table) {
 ; CHECK-LABEL: load64_shr63:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul x8, x1, x0
-; CHECK-NEXT:    lsr x8, x8, #60
-; CHECK-NEXT:    and x8, x8, #0x8
-; CHECK-NEXT:    ldr x0, [x2, x8]
+; CHECK-NEXT:    lsr x8, x8, #63
+; CHECK-NEXT:    ldr x0, [x2, x8, lsl #3]
 ; CHECK-NEXT:    ret
 entry:
   %mul = mul i64 %b, %a
@@ -116,9 +111,8 @@ define i64 @load64_shr2(i64 %a, i64 %b, ptr %table) {
 ; CHECK-LABEL: load64_shr2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul x8, x1, x0
-; CHECK-NEXT:    lsl x8, x8, #1
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff8
-; CHECK-NEXT:    ldr x0, [x2, x8]
+; CHECK-NEXT:    lsr x8, x8, #2
+; CHECK-NEXT:    ldr x0, [x2, x8, lsl #3]
 ; CHECK-NEXT:    ret
 entry:
   %mul = mul i64 %b, %a
@@ -132,9 +126,8 @@ define i64 @load64_shr1(i64 %a, i64 %b, ptr %table) {
 ; CHECK-LABEL: load64_shr1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul x8, x1, x0
-; CHECK-NEXT:    lsl x8, x8, #2
-; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff8
-; CHECK-NEXT:    ldr x0, [x2, x8]
+; CHECK-NEXT:    lsr x8, x8, #1
+; CHECK-NEXT:    ldr x0, [x2, x8, lsl #3]
 ; CHECK-NEXT:    ret
 entry:
   %mul = mul i64 %b, %a
