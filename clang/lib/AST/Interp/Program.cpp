@@ -169,7 +169,6 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
 
 std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
                                               const Expr *Init) {
-  assert(!getGlobal(VD));
   bool IsStatic, IsExtern;
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
     IsStatic = Context::shouldBeGloballyIndexed(VD);
