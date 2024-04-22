@@ -228,7 +228,7 @@ def Polynomial_FromTensorOp : Polynomial_Op<"from_tensor", [Pure]> {
   let builders = [
     // Builder that infers coefficient modulus from tensor bit width,
     // and uses whatever input ring is provided by the caller.
-    OpBuilder<(ins "::mlir::Value":$input, "RingAttr":$ring)>
+    OpBuilder<(ins "::mlir::Value":$input, "::mlir::polynomial::RingAttr":$ring)>
   ];
   let hasVerifier = 1;
 }
