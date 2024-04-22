@@ -736,6 +736,8 @@ def InvalidDeclRef : Opcode {
   let Args = [ArgDeclRef];
 }
 
+def Assume : Opcode;
+
 def ArrayDecay : Opcode;
 
 def CheckNonNullArg : Opcode {

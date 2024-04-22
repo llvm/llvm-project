@@ -675,7 +675,30 @@ bool ByteCodeStmtGen<Emitter>::visitDefaultStmt(const DefaultStmt *S) {
 
 template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitAttributedStmt(const AttributedStmt *S) {
-  // Ignore all attributes.
+
+  for (const Attr *A : S->getAttrs()) {
+    auto *AA = dyn_cast<CXXAssumeAttr>(A);
+    if (!AA)
+      continue;
+
+    assert(isa<NullStmt>(S->getSubStmt()));
+
+    const Expr *Assumption = AA->getAssumption();
+    if (Assumption->isValueDependent())
+      return false;
+
+    if (Assumption->HasSideEffects(this->Ctx.getASTContext()))
+      continue;
+
+    // Evaluate assumption.
+    if (!this->visitBool(Assumption))
+      return false;
+
+    if (!this->emitAssume(Assumption))
+      return false;
+  }
+
+  // Ignore other attributes.
   return this->visitStmt(S->getSubStmt());
 }
 
