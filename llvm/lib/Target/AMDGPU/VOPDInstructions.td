@@ -289,6 +289,7 @@ def GFX1210GenD3 : GFXGenD<GFX12_10Gen, VOPD3XPseudosGFX1210, VOPD3YPseudosGFX12
 class getOpcMap<string OPName> {
   defvar BaseName = !substr(OPName,2);
   string ret = !cond(!eq(BaseName, "LSHL_ADD_U64_e64") : "LSHLREV_ADD_U64_e64",
+                     !eq(BaseName, "BITOP3_B32_e64")   : "BITOP2_B32_e64",
                      1 : BaseName);
 }
 
