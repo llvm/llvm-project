@@ -66,12 +66,53 @@ namespace clang {
 namespace clangd {
 namespace {
 
+// A PrintingCallbacks implementation that prints public fields of
+// record types and enum members. Meant to be used with TerseOutput=true.
+class ClangdPrintingCallbacks : public PrintingCallbacks {
+public:
+  virtual ~ClangdPrintingCallbacks() = default;
+
+  void summarizeTagDecl(raw_ostream &Out, const TagDecl *D,
+                        const PrintingPolicy &PP) const override {
+    if (!Config::current().Hover.ShowFields) {
+      Out << " {}";
+      return;
+    }
+
+    // Don't worry about the details of the whitespace, e.g. space vs. newline,
+    // as the printed definition will be passed through clang-format before
+    // being sent to the client.
+    Out << " { ";
+    const bool IsRecord = isa<RecordDecl>(D);
+    for (DeclContext::decl_iterator Member = D->decls_begin(),
+                                    MemberEnd = D->decls_end();
+         Member != MemberEnd; ++Member) {
+      if (isa<EnumConstantDecl>(*Member) ||
+          (isa<FieldDecl>(*Member) &&
+           dyn_cast<FieldDecl>(*Member)->getAccess() == AS_public)) {
+        Member->print(Out, PP, 1);
+        if (IsRecord) {
+          Out << "; ";
+        } else {
+          DeclContext::decl_iterator Next = Member;
+          ++Next;
+          if (Next != MemberEnd)
+            Out << ", ";
+        }
+      }
+    }
+    Out << "}";
+  }
+};
+
 PrintingPolicy getPrintingPolicy(PrintingPolicy Base) {
+  static ClangdPrintingCallbacks Callbacks;
   Base.AnonymousTagLocations = false;
   Base.TerseOutput = true;
   Base.PolishForDeclaration = true;
   Base.ConstantsAsWritten = true;
   Base.SuppressTemplateArgsInCXXConstructors = true;
+  Base.Callbacks = &Callbacks;
   return Base;
 }
 

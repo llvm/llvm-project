@@ -235,6 +235,10 @@ private:
       if (auto ShowAKA = boolValue(N, "ShowAKA"))
         F.ShowAKA = *ShowAKA;
     });
+    Dict.handle("ShowFields", [&](Node &N) {
+      if (auto ShowFields = boolValue(N, "ShowFields"))
+        F.ShowFields = *ShowFields;
+    });
     Dict.parse(N);
   }
 

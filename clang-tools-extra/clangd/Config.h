@@ -136,6 +136,9 @@ struct Config {
   struct {
     /// Whether hover show a.k.a type.
     bool ShowAKA = true;
+
+    /// Whether to show struct fields
+    bool ShowFields = false;
   } Hover;
 
   struct {

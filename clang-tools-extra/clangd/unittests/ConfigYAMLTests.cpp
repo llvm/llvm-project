@@ -230,6 +230,19 @@ Hover:
   EXPECT_THAT(Results[0].Hover.ShowAKA, llvm::ValueIs(val(true)));
 }
 
+TEST(ParseYAML, ShowFields) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+Hover:
+  ShowFields: True
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Hover.ShowFields, llvm::ValueIs(val(true)));
+}
+
 TEST(ParseYAML, InlayHints) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(

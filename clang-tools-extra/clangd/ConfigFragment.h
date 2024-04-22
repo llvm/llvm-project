@@ -309,8 +309,11 @@ struct Fragment {
 
   /// Describes hover preferences.
   struct HoverBlock {
-    /// Whether hover show a.k.a type.
+    /// Whether hovers show a.k.a type.
     std::optional<Located<bool>> ShowAKA;
+
+    /// Whether hovers show struct fields
+    std::optional<Located<bool>> ShowFields;
   };
   HoverBlock Hover;
 

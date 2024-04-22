@@ -616,6 +616,12 @@ struct FragmentCompiler {
         C.Hover.ShowAKA = ShowAKA;
       });
     }
+    if (F.ShowFields) {
+      Out.Apply.push_back(
+          [ShowFields(**F.ShowFields)](const Params &, Config &C) {
+            C.Hover.ShowFields = ShowFields;
+          });
+    }
   }
 
   void compile(Fragment::InlayHintsBlock &&F) {

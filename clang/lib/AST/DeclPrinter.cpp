@@ -21,6 +21,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/Specifiers.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
@@ -631,9 +632,16 @@ void DeclPrinter::VisitEnumDecl(EnumDecl *D) {
     Out << " : " << D->getIntegerType().stream(Policy);
 
   if (D->isCompleteDefinition()) {
-    Out << " {\n";
-    VisitDeclContext(D);
-    Indent() << "}";
+    if (Policy.TerseOutput) {
+      if (Policy.Callbacks)
+        Policy.Callbacks->summarizeTagDecl(Out, D, Policy);
+      else
+        Out << " {}";
+    } else {
+      Out << " {\n";
+      VisitDeclContext(D);
+      Indent() << "}";
+    }
   }
 }
 
@@ -648,9 +656,16 @@ void DeclPrinter::VisitRecordDecl(RecordDecl *D) {
     Out << ' ' << *D;
 
   if (D->isCompleteDefinition()) {
-    Out << " {\n";
-    VisitDeclContext(D);
-    Indent() << "}";
+    if (Policy.TerseOutput) {
+      if (Policy.Callbacks)
+        Policy.Callbacks->summarizeTagDecl(Out, D, Policy);
+      else
+        Out << " {}";
+    } else {
+      Out << " {\n";
+      VisitDeclContext(D);
+      Indent() << "}";
+    }
   }
 }
 
@@ -1183,7 +1198,10 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     // Print the class definition
     // FIXME: Doesn't print access specifiers, e.g., "public:"
     if (Policy.TerseOutput) {
-      Out << " {}";
+      if (Policy.Callbacks)
+        Policy.Callbacks->summarizeTagDecl(Out, D, Policy);
+      else
+        Out << " {}";
     } else {
       Out << " {\n";
       VisitDeclContext(D);

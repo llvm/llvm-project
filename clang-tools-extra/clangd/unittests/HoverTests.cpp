@@ -1645,7 +1645,11 @@ TEST(Hover, All) {
       {
           R"cpp(// Struct
             namespace ns1 {
-              struct MyClass {};
+              struct MyClass {
+                // Fields not shown without ShowFields=true
+                int field1;
+                int field2;
+              };
             } // namespace ns1
             int main() {
               ns1::[[My^Class]]* Params;
@@ -3939,6 +3943,157 @@ TEST(Hover, DisableShowAKA) {
 
   ASSERT_TRUE(H);
   EXPECT_EQ(H->Type, HoverInfo::PrintedType("m_int"));
+}
+
+TEST(Hover, ShowFields) {
+  struct {
+    const char *const Code;
+    const std::function<void(HoverInfo &)> ExpectedBuilder;
+  } Cases[] = {
+    {
+      R"cpp(// Struct
+        namespace ns1 {
+          struct MyClass {
+            // Public fields shown in hover
+            int field1;
+            int field2;
+
+            // Methods and private fields not shown
+            void method();
+          private:
+            bool private_field;
+          };
+        } // namespace ns1
+        int main() {
+          ns1::[[My^Class]]* Params;
+        }
+      )cpp",
+      [](HoverInfo &HI) {
+        HI.Definition = "struct MyClass {\n  int field1;\n  int field2;\n}";
+      }
+    },
+    {
+      R"cpp(// Union
+        namespace ns1 {
+          union MyUnion { int x; int y; };
+        } // namespace ns1
+        int main() {
+          ns1::[[My^Union]] Params;
+        }
+      )cpp",
+      [](HoverInfo &HI) {
+        HI.Definition = "union MyUnion {\n  int x;\n  int y;\n}";
+      }
+    },
+    {
+      R"cpp(// Enum declaration
+        enum Hello {
+          ONE, TWO, THREE,
+        };
+        void foo() {
+          [[Hel^lo]] hello = ONE;
+        }
+      )cpp",
+      [](HoverInfo &HI) {
+        HI.Definition = "enum Hello { ONE, TWO, THREE }";
+      }
+    },
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    TU.ExtraArgs.push_back("-std=c++20");
+    TU.ExtraArgs.push_back("-xobjective-c++");
+
+    // Types might be different depending on the target triplet, we chose a
+    // fixed one to make sure tests passes on different platform.
+    TU.ExtraArgs.push_back("--target=x86_64-pc-linux-gnu");
+    auto AST = TU.build();
+    Config Cfg;
+    Cfg.Hover.ShowFields = true;
+    WithContextValue WithCfg(Config::Key, std::move(Cfg));
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    HoverInfo Expected;
+    Expected.SymRange = T.range();
+    Case.ExpectedBuilder(Expected);
+
+    SCOPED_TRACE(H->present().asPlainText());
+    EXPECT_EQ(H->Definition, Expected.Definition);
+  }
+}
+
+TEST(Hover, ShowFields_CLanguage) {
+  struct {
+    const char *const Code;
+    const std::function<void(HoverInfo &)> ExpectedBuilder;
+  } Cases[] = {
+    {
+      R"cpp(// Struct
+        struct MyStruct {
+          // Public fields shown in hover
+          int field1;
+          int field2;
+        };
+        int main() {
+          struct [[My^Struct]]* Params;
+        }
+      )cpp",
+      [](HoverInfo &HI) {
+        HI.Definition = "struct MyStruct {\n  int field1;\n  int field2;\n}";
+      }
+    },
+    {
+      R"cpp(// Union
+        union MyUnion { int x; int y; };
+        int main() {
+          union [[My^Union]] Params;
+        }
+      )cpp",
+      [](HoverInfo &HI) {
+        HI.Definition = "union MyUnion {\n  int x;\n  int y;\n}";
+      }
+    },
+    {
+      R"cpp(// Enum declaration
+        enum Hello {
+          ONE, TWO, THREE,
+        };
+        void foo() {
+          enum [[Hel^lo]] hello = ONE;
+        }
+      )cpp",
+      [](HoverInfo &HI) {
+        HI.Definition = "enum Hello { ONE, TWO, THREE }";
+      }
+    },
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    TU.ExtraArgs.push_back("-std=c99");
+    TU.ExtraArgs.push_back("-xc");
+
+    // Types might be different depending on the target triplet, we chose a
+    // fixed one to make sure tests passes on different platform.
+    TU.ExtraArgs.push_back("--target=x86_64-pc-linux-gnu");
+    auto AST = TU.build();
+    Config Cfg;
+    Cfg.Hover.ShowFields = true;
+    WithContextValue WithCfg(Config::Key, std::move(Cfg));
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    HoverInfo Expected;
+    Expected.SymRange = T.range();
+    Case.ExpectedBuilder(Expected);
+
+    SCOPED_TRACE(H->present().asPlainText());
+    EXPECT_EQ(H->Definition, Expected.Definition);
+  }
 }
 
 TEST(Hover, HideBigInitializers) {

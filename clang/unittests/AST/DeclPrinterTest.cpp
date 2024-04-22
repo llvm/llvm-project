@@ -20,6 +20,7 @@
 
 #include "ASTPrint.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
@@ -78,12 +79,13 @@ PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                             PolicyModifier);
 }
 
-::testing::AssertionResult PrintedDeclCXX11Matches(StringRef Code,
-                                                   StringRef DeclName,
-                                                   StringRef ExpectedPrinted) {
+::testing::AssertionResult
+PrintedDeclCXX11Matches(StringRef Code, StringRef DeclName,
+                        StringRef ExpectedPrinted,
+                        PrintingPolicyAdjuster PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c++11");
   return PrintedDeclMatches(Code, Args, namedDecl(hasName(DeclName)).bind("id"),
-                            ExpectedPrinted, "input.cc");
+                            ExpectedPrinted, "input.cc", PolicyModifier);
 }
 
 ::testing::AssertionResult PrintedDeclCXX11Matches(
@@ -1429,4 +1431,28 @@ TEST(DeclPrinter, VarDeclWithInitializer) {
   ASSERT_TRUE(
       PrintedDeclCXX17Matches("void foo() {int arr[42]; for(int a : arr);}",
                               namedDecl(hasName("a")).bind("id"), "int a"));
+}
+
+TEST(DeclPrinter, SummarizeTagDecl) {
+  class TestPrintingCallbacks : public PrintingCallbacks {
+  public:
+    virtual ~TestPrintingCallbacks() = default;
+    virtual void summarizeTagDecl(raw_ostream &Out, const TagDecl *D,
+                                  const PrintingPolicy &PP) const {
+      Out << " { Custom Tag Decl Summary }";
+    }
+  };
+  TestPrintingCallbacks Callbacks;
+  auto UseCallbacks = [&](PrintingPolicy &Policy) {
+    Policy.Callbacks = &Callbacks;
+  };
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "struct MyStruct { int x; int y; };", "MyStruct",
+      "struct MyStruct { Custom Tag Decl Summary }", UseCallbacks));
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "union MyUnion { int x; int y; };", "MyUnion",
+      "union MyUnion { Custom Tag Decl Summary }", UseCallbacks));
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "enum MyEnum { one, two, three };", "MyEnum",
+      "enum MyEnum { Custom Tag Decl Summary }", UseCallbacks));
 }

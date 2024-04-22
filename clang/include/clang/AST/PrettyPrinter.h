@@ -21,6 +21,7 @@ namespace clang {
 class DeclContext;
 class LangOptions;
 class Stmt;
+class TagDecl;
 
 class PrinterHelper {
 public:
@@ -29,6 +30,9 @@ public:
 };
 
 /// Callbacks to use to customize the behavior of the pretty-printer.
+
+struct PrintingPolicy;
+
 class PrintingCallbacks {
 protected:
   ~PrintingCallbacks() = default;
@@ -47,6 +51,13 @@ public:
   /// The printing stops at the first isScopeVisible() == true, so there will
   /// be no calls with outer scopes.
   virtual bool isScopeVisible(const DeclContext *DC) const { return false; }
+
+  /// Print a summary of the body of a TagDecl when PrintingPolicy::TerseOutput
+  /// is true.
+  virtual void summarizeTagDecl(raw_ostream &Out, const TagDecl *D,
+                                const PrintingPolicy &PP) const {
+    Out << " {}";
+  }
 };
 
 /// Describes how types, statements, expressions, and declarations should be
@@ -249,6 +260,8 @@ struct PrintingPolicy {
   /// For example, in this mode we don't print function bodies, class members,
   /// declarations inside namespaces etc.  Effectively, this should print
   /// only the requested declaration.
+  /// The behaviour for printing the bodies of record and enum decls can be
+  /// customized by overriding PrintingCallbacks::summarizeTagDecl.
   LLVM_PREFERRED_TYPE(bool)
   unsigned TerseOutput : 1;
 
