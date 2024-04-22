@@ -194,6 +194,12 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
 
     PrimType T = classifyPrim(CE->getType());
+    if (T == PT_IntAP)
+      return this->emitCastPointerIntegralAP(Ctx.getBitWidth(CE->getType()),
+                                             CE);
+    if (T == PT_IntAPS)
+      return this->emitCastPointerIntegralAPS(Ctx.getBitWidth(CE->getType()),
+                                              CE);
     return this->emitCastPointerIntegral(T, CE);
   }
 
@@ -922,11 +928,25 @@ bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueIni
     return true;
   }
 
-  if (QT->isAnyComplexType()) {
+  if (const auto *ComplexTy = E->getType()->getAs<ComplexType>()) {
     assert(Initializing);
-    QualType ElemQT = QT->getAs<ComplexType>()->getElementType();
+    QualType ElemQT = ComplexTy->getElementType();
     PrimType ElemT = classifyPrim(ElemQT);
     for (unsigned I = 0; I < 2; ++I) {
+      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    return true;
+  }
+
+  if (const auto *VecT = E->getType()->getAs<VectorType>()) {
+    unsigned NumVecElements = VecT->getNumElements();
+    QualType ElemQT = VecT->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+
+    for (unsigned I = 0; I < NumVecElements; ++I) {
       if (!this->visitZeroInitializer(ElemT, ElemQT, E))
         return false;
       if (!this->emitInitElem(ElemT, I, E))
@@ -1098,13 +1118,13 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
     return true;
   }
 
-  if (T->isAnyComplexType()) {
+  if (const auto *ComplexTy = E->getType()->getAs<ComplexType>()) {
     unsigned NumInits = E->getNumInits();
 
     if (NumInits == 1)
       return this->delegate(E->inits()[0]);
 
-    QualType ElemQT = E->getType()->getAs<ComplexType>()->getElementType();
+    QualType ElemQT = ComplexTy->getElementType();
     PrimType ElemT = classifyPrim(ElemQT);
     if (NumInits == 0) {
       // Zero-initialize both elements.
@@ -1337,6 +1357,8 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (const auto *FD = dyn_cast<FieldDecl>(Member)) {
     const RecordDecl *RD = FD->getParent();
     const Record *R = getRecord(RD);
+    if (!R)
+      return false;
     const Record::Field *F = R->getField(FD);
     // Leave a pointer to the field on the stack.
     if (F->Decl->getType()->isReferenceType())

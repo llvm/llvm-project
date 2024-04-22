@@ -15977,6 +15977,8 @@ bool SITargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
                                                             SNaN, Depth);
 }
 
+#if 0
+// FIXME: This should be checked before unsafe fp atomics are enabled
 // Global FP atomic instructions have a hardcoded FP mode and do not support
 // FP32 denormals, and only support v2f16 denormals.
 static bool fpModeMatchesGlobalFPAtomicMode(const AtomicRMWInst *RMW) {
@@ -15986,6 +15988,7 @@ static bool fpModeMatchesGlobalFPAtomicMode(const AtomicRMWInst *RMW) {
     return DenormMode == DenormalMode::getPreserveSign();
   return DenormMode == DenormalMode::getIEEE();
 }
+#endif
 
 // The amdgpu-unsafe-fp-atomics attribute enables generation of unsafe
 // floating point atomic instructions. May generate more efficient code,
@@ -15996,32 +15999,35 @@ bool unsafeFPAtomicsDisabled(Function *F) {
          "true";
 }
 
+static OptimizationRemark emitAtomicRMWLegalRemark(const AtomicRMWInst *RMW) {
+  LLVMContext &Ctx = RMW->getContext();
+  SmallVector<StringRef> SSNs;
+  Ctx.getSyncScopeNames(SSNs);
+  StringRef MemScope = SSNs[RMW->getSyncScopeID()].empty()
+                           ? "system"
+                           : SSNs[RMW->getSyncScopeID()];
+
+  return OptimizationRemark(DEBUG_TYPE, "Passed", RMW)
+         << "Hardware instruction generated for atomic "
+         << RMW->getOperationName(RMW->getOperation())
+         << " operation at memory scope " << MemScope;
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return AtomicExpansionKind::NotAtomic;
 
-  auto SSID = RMW->getSyncScopeID();
-
-  auto ReportUnsafeHWInst = [&](TargetLowering::AtomicExpansionKind Kind) {
+  auto ReportUnsafeHWInst = [=](TargetLowering::AtomicExpansionKind Kind) {
     OptimizationRemarkEmitter ORE(RMW->getFunction());
-    LLVMContext &Ctx = RMW->getFunction()->getContext();
-    SmallVector<StringRef> SSNs;
-    Ctx.getSyncScopeNames(SSNs);
-    auto MemScope = SSNs[RMW->getSyncScopeID()].empty()
-                        ? "system"
-                        : SSNs[RMW->getSyncScopeID()];
-    ORE.emit([&]() {
-      return OptimizationRemark(DEBUG_TYPE, "Passed", RMW)
-             << "Hardware instruction generated for atomic "
-             << RMW->getOperationName(RMW->getOperation())
-             << " operation at memory scope " << MemScope
-             << " due to an unsafe request.";
+    ORE.emit([=]() {
+      return emitAtomicRMWLegalRemark(RMW) << " due to an unsafe request.";
     });
     return Kind;
   };
 
+  auto SSID = RMW->getSyncScopeID();
   bool HasSystemScope =
       SSID == SyncScope::System ||
       SSID == RMW->getContext().getOrInsertSyncScopeID("one-as");
@@ -16043,43 +16049,63 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::FAdd: {
     Type *Ty = RMW->getType();
 
-    if (Ty->isHalfTy())
-      return AtomicExpansionKind::CmpXChg;
-
-    if (!Ty->isFloatTy() && (!Subtarget->hasGFX90AInsts() || !Ty->isDoubleTy()))
-      return AtomicExpansionKind::CmpXChg;
-
-    if ((AMDGPU::isFlatGlobalAddrSpace(AS) ||
-         AS == AMDGPUAS::BUFFER_FAT_POINTER) &&
-        Subtarget->hasAtomicFaddNoRtnInsts()) {
-      if (Subtarget->hasGFX940Insts())
-        return AtomicExpansionKind::None;
-
-      if (unsafeFPAtomicsDisabled(RMW->getFunction()))
-        return AtomicExpansionKind::CmpXChg;
-
-      // Always expand system scope fp atomics.
-      if (HasSystemScope)
-        return AtomicExpansionKind::CmpXChg;
-
-      if ((AMDGPU::isExtendedGlobalAddrSpace(AS) ||
-           AS == AMDGPUAS::BUFFER_FAT_POINTER) &&
-          Ty->isFloatTy()) {
-        // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940, gfx11+.
-        if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
-        // global/buffer atomic fadd f32 rtn: gfx90a, gfx940, gfx11+.
-        if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
-          return ReportUnsafeHWInst(AtomicExpansionKind::None);
+    // TODO: Handle REGION_ADDRESS
+    if (AS == AMDGPUAS::LOCAL_ADDRESS) {
+      // DS F32 FP atomics do respect the denormal mode, but the rounding mode
+      // is fixed to round-to-nearest-even.
+      //
+      // F64 / PK_F16 / PK_BF16 never flush and are also fixed to
+      // round-to-nearest-even.
+      //
+      // We ignore the rounding mode problem, even in strictfp. The C++ standard
+      // suggests it is OK if the floating-point mode may not match the calling
+      // thread.
+      if (Ty->isFloatTy()) {
+        return Subtarget->hasLDSFPAtomicAddF32() ? AtomicExpansionKind::None
+                                                 : AtomicExpansionKind::CmpXChg;
       }
 
-      // flat atomic fadd f32: gfx940, gfx11+.
-      if (AS == AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy() &&
-          Subtarget->hasFlatAtomicFaddF32Inst())
-        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+      if (Ty->isDoubleTy()) {
+        // Ignores denormal mode, but we don't consider flushing mandatory.
+        return Subtarget->hasLDSFPAtomicAddF64() ? AtomicExpansionKind::None
+                                                 : AtomicExpansionKind::CmpXChg;
+      }
 
-      // global and flat atomic fadd f64: gfx90a, gfx940.
-      if (Ty->isDoubleTy() && Subtarget->hasGFX90AInsts())
+      // TODO: Handle v2f16/v2bf16 cases for gfx940
+      return AtomicExpansionKind::CmpXChg;
+    }
+
+    if (!AMDGPU::isFlatGlobalAddrSpace(AS) &&
+        AS != AMDGPUAS::BUFFER_FAT_POINTER)
+      return AtomicExpansionKind::CmpXChg;
+
+    // TODO: gfx940 supports v2f16 and v2bf16
+    if (Subtarget->hasGFX940Insts() && (Ty->isFloatTy() || Ty->isDoubleTy()))
+      return AtomicExpansionKind::None;
+
+    if (unsafeFPAtomicsDisabled(RMW->getFunction()))
+      return AtomicExpansionKind::CmpXChg;
+
+    // Always expand system scope fp atomics.
+    if (HasSystemScope)
+      return AtomicExpansionKind::CmpXChg;
+
+    // global and flat atomic fadd f64: gfx90a, gfx940.
+    if (Subtarget->hasGFX90AInsts() && Ty->isDoubleTy())
+      return ReportUnsafeHWInst(AtomicExpansionKind::None);
+
+    if (AS != AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy()) {
+      // global/buffer atomic fadd f32 no-rtn: gfx908, gfx90a, gfx940, gfx11+.
+      if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+      // global/buffer atomic fadd f32 rtn: gfx90a, gfx940, gfx11+.
+      if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
+        return ReportUnsafeHWInst(AtomicExpansionKind::None);
+    }
+
+    // flat atomic fadd f32: gfx940, gfx11+.
+    if (AS == AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy()) {
+      if (Subtarget->hasFlatAtomicFaddF32Inst())
         return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
       // If it is in flat address space, and the type is float, we will try to
@@ -16087,32 +16113,12 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       // reason we need that is, in the expansion, we emit the check of address
       // space. If it is in global address space, we emit the global atomic
       // fadd; if it is in shared address space, we emit the LDS atomic fadd.
-      if (AS == AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy() &&
-          Subtarget->hasLDSFPAtomicAdd()) {
+      if (Subtarget->hasLDSFPAtomicAddF32()) {
         if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
           return AtomicExpansionKind::Expand;
         if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
           return AtomicExpansionKind::Expand;
       }
-
-      return AtomicExpansionKind::CmpXChg;
-    }
-
-    // DS FP atomics do respect the denormal mode, but the rounding mode is
-    // fixed to round-to-nearest-even.
-    // The only exception is DS_ADD_F64 which never flushes regardless of mode.
-    if (AS == AMDGPUAS::LOCAL_ADDRESS && Subtarget->hasLDSFPAtomicAdd()) {
-      if (!Ty->isDoubleTy())
-        return AtomicExpansionKind::None;
-
-      if (fpModeMatchesGlobalFPAtomicMode(RMW))
-        return AtomicExpansionKind::None;
-
-      return RMW->getFunction()
-                         ->getFnAttribute("amdgpu-unsafe-fp-atomics")
-                         .getValueAsString() == "true"
-                 ? ReportUnsafeHWInst(AtomicExpansionKind::None)
-                 : AtomicExpansionKind::CmpXChg;
     }
 
     return AtomicExpansionKind::CmpXChg;
