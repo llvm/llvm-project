@@ -29628,6 +29628,62 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
                        DAG.getNode(Opc, dl, ExtVT, R, Amt));
   }
 
+  // GFNI - we can perform SHL with a GF multiplication, and can convert
+  // SRL/SRA to a SHL.
+  if (VT == MVT::v16i8 ||
+      (VT == MVT::v32i8 && Subtarget.hasInt256() && !Subtarget.hasXOP()) ||
+      (VT == MVT::v64i8 && Subtarget.hasBWI())) {
+    if (Subtarget.hasGFNI() && Subtarget.hasSSSE3()) {
+      auto GFShiftLeft = [&](SDValue Val) {
+        // Use PSHUFB as a LUT from the shift amount to create a per-element
+        // byte mask for the shift value and an index. For shift amounts greater
+        // than 7, the result will be zero.
+        SmallVector<APInt, 8> MaskBits, IdxBits;
+        for (unsigned I = 0, E = VT.getSizeInBits() / 128; I != E; ++I) {
+          MaskBits.push_back(APInt(64, 0x0103070F1F3F7FFFULL));
+          IdxBits.push_back(APInt(64, 0x8040201008040201ULL));
+          MaskBits.push_back(APInt::getZero(64));
+          IdxBits.push_back(APInt::getZero(64));
+        }
+
+        MVT CVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
+        SDValue Mask =
+            DAG.getBitcast(VT, getConstVector(MaskBits, CVT, DAG, dl));
+        SDValue Idx = DAG.getBitcast(VT, getConstVector(IdxBits, CVT, DAG, dl));
+        Mask = DAG.getNode(X86ISD::PSHUFB, dl, VT, Mask, Amt);
+        Idx = DAG.getNode(X86ISD::PSHUFB, dl, VT, Idx, Amt);
+        Mask = DAG.getNode(ISD::AND, dl, VT, Val, Mask);
+        return DAG.getNode(X86ISD::GF2P8MULB, dl, VT, Mask, Idx);
+      };
+
+      if (Opc == ISD::SHL)
+        return GFShiftLeft(R);
+
+      // srl(x,y)
+      // --> bitreverse(shl(bitreverse(x),y))
+      if (Opc == ISD::SRL) {
+        R = DAG.getNode(ISD::BITREVERSE, dl, VT, R);
+        R = GFShiftLeft(R);
+        return DAG.getNode(ISD::BITREVERSE, dl, VT, R);
+      }
+
+      // sra(x,y)
+      // --> sub(xor(srl(x,y), m),m)
+      // --> sub(xor(bitreverse(shl(bitreverse(x),y)), m),m)
+      // where m = srl(signbit, amt) --> bitreverse(shl(lsb, amt))
+      if (Opc == ISD::SRA) {
+        SDValue LSB = DAG.getConstant(APInt::getOneBitSet(8, 0), dl, VT);
+        SDValue M = DAG.getNode(ISD::BITREVERSE, dl, VT, GFShiftLeft(LSB));
+        R = DAG.getNode(ISD::BITREVERSE, dl, VT, R);
+        R = GFShiftLeft(R);
+        R = DAG.getNode(ISD::BITREVERSE, dl, VT, R);
+        R = DAG.getNode(ISD::XOR, dl, VT, R, M);
+        R = DAG.getNode(ISD::SUB, dl, VT, R, M);
+        return R;
+      }
+    }
+  }
+
   // Constant ISD::SRA/SRL can be performed efficiently on vXi8 vectors as we
   // extend to vXi16 to perform a MUL scale effectively as a MUL_LOHI.
   if (ConstantAmt && (Opc == ISD::SRA || Opc == ISD::SRL) &&
@@ -55805,6 +55861,15 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                        (VT.is512BitVector() && Subtarget.useBWIRegs()))) {
         return DAG.getNode(Op0.getOpcode(), DL, VT,
                            ConcatSubOperand(VT, Ops, 0));
+      }
+      break;
+    case X86ISD::GF2P8MULB:
+      if (!IsSplat &&
+          (VT.is256BitVector() ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           ConcatSubOperand(VT, Ops, 0),
+                           ConcatSubOperand(VT, Ops, 1));
       }
       break;
     case X86ISD::GF2P8AFFINEQB:
