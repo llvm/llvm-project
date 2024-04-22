@@ -18267,8 +18267,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("lerp operand must have a float representation");
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType(), Intrinsic::dx_lerp,
-        ArrayRef<Value *>{X, Y, S}, nullptr, "dx.lerp");
+        /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getLerpIntrinsic(),
+        ArrayRef<Value *>{X, Y, S}, nullptr, "hlsl.lerp");
   }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
