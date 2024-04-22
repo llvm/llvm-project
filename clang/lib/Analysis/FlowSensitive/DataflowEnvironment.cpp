@@ -237,8 +237,13 @@ joinLocToVal(const llvm::MapVector<const StorageLocation *, Value *> &LocToVal,
       continue;
     assert(It->second != nullptr);
 
-    if (Value *JoinedVal = Environment::joinValues(
-            Loc->getType(), Val, Env1, It->second, Env2, JoinedEnv, Model)) {
+    if (areEquivalentValues(*Val, *It->second)) {
+      Result.insert({Loc, Val});
+      continue;
+    }
+
+    if (Value *JoinedVal = joinDistinctValues(
+            Loc->getType(), *Val, Env1, *It->second, Env2, JoinedEnv, Model)) {
       Result.insert({Loc, JoinedVal});
     }
   }
@@ -770,16 +775,27 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   JoinedEnv.LocForRecordReturnVal = EnvA.LocForRecordReturnVal;
   JoinedEnv.ThisPointeeLoc = EnvA.ThisPointeeLoc;
 
-  if (EnvA.CallStack.empty()) {
+  if (EnvA.ReturnVal == nullptr || EnvB.ReturnVal == nullptr) {
+    // `ReturnVal` might not always get set -- for example if we have a return
+    // statement of the form `return some_other_func()` and we decide not to
+    // analyze `some_other_func()`.
+    // In this case, we can't say anything about the joined return value -- we
+    // don't simply want to propagate the return value that we do have, because
+    // it might not be the correct one.
+    // This occurs for example in the test `ContextSensitiveMutualRecursion`.
     JoinedEnv.ReturnVal = nullptr;
+  } else if (areEquivalentValues(*EnvA.ReturnVal, *EnvB.ReturnVal)) {
+    JoinedEnv.ReturnVal = EnvA.ReturnVal;
   } else {
+    assert(!EnvA.CallStack.empty());
     // FIXME: Make `CallStack` a vector of `FunctionDecl` so we don't need this
     // cast.
     auto *Func = dyn_cast<FunctionDecl>(EnvA.CallStack.back());
     assert(Func != nullptr);
-    JoinedEnv.ReturnVal =
-        joinValues(Func->getReturnType(), EnvA.ReturnVal, EnvA, EnvB.ReturnVal,
-                   EnvB, JoinedEnv, Model);
+    if (Value *JoinedVal =
+            joinDistinctValues(Func->getReturnType(), *EnvA.ReturnVal, EnvA,
+                               *EnvB.ReturnVal, EnvB, JoinedEnv, Model))
+      JoinedEnv.ReturnVal = JoinedVal;
   }
 
   if (EnvA.ReturnLoc == EnvB.ReturnLoc)
@@ -803,24 +819,6 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   }
 
   return JoinedEnv;
-}
-
-Value *Environment::joinValues(QualType Ty, Value *Val1,
-                               const Environment &Env1, Value *Val2,
-                               const Environment &Env2, Environment &JoinedEnv,
-                               Environment::ValueModel &Model) {
-  if (Val1 == nullptr || Val2 == nullptr)
-    // We can't say anything about the joined value -- even if one of the values
-    // is non-null, we don't want to simply propagate it, because it would be
-    // too specific: Because the other value is null, that means we have no
-    // information at all about the value (i.e. the value is unconstrained).
-    return nullptr;
-
-  if (areEquivalentValues(*Val1, *Val2))
-    // Arbitrarily return one of the two values.
-    return Val1;
-
-  return joinDistinctValues(Ty, *Val1, Env1, *Val2, Env2, JoinedEnv, Model);
 }
 
 StorageLocation &Environment::createStorageLocation(QualType Type) {
