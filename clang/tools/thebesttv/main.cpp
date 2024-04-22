@@ -125,7 +125,8 @@ VarLocResult locateVariable(const fif &functionsInFile, const std::string &file,
                 // 精确匹配：要求行号、列号相同
                 bool matchExact = bLoc->line == line && bLoc->column == column;
                 // 模糊匹配：行号在语句 begin 和 end 之间即可
-                bool matchInexact = bLoc->line <= line && line <= eLoc->line;
+                bool matchInexact =
+                    eLoc != nullptr && bLoc->line <= line && line <= eLoc->line;
 
                 if ((requireExact && matchExact) ||
                     (!requireExact && matchInexact)) {
