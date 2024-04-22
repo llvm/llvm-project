@@ -593,6 +593,8 @@ Bug Fixes to C++ Support
 - Fixed a use-after-free bug in parsing of type constraints with default arguments that involve lambdas. (#GH67235)
 - Fixed bug in which the body of a consteval lambda within a template was not parsed as within an
   immediate function context.
+- Fix a bug in which valid constexpr variable initializers containing immediate function calls were
+  sometimes diagnosed as not constant expressions.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
