@@ -224,15 +224,15 @@ template <class T> struct add_pointer { // #add_pointer
 class A {};
 
 int main() {
-  std::__add_pointer<A>::type ptr; // #ill-formed-decl
-  // expected-error@#ill-formed-decl {{no template named '__add_pointer'}}
+  std::__add_pointer<A>::type ptr;
+  // expected-warning@-1 {{keyword '__add_pointer' will be made available as an identifier here}}
+  // expected-error@-2 {{no template named '__add_pointer'}}
   // expected-note@#add_pointer {{'add_pointer' declared here}}
-  // expected-error@#ill-formed-decl {{expected ';' after expression}}
-  // expected-error@#ill-formed-decl {{no type named 'type' in the global namespace}}
-  // expected-error@#ill-formed-decl {{'std::add_pointer' is expected to be a non-type template, but instantiated to a class template}}
-  // expected-note@#add_pointer {{class template declared here}}
-
-  // expected-warning@#ill-formed-decl {{keyword '__add_pointer' will be made available as an identifier here}}
+  // expected-error-re@-4 {{no type named 'type' in '{{.*}}std::add_pointer<{{.*}}A>'}}
+  __add_pointer<A>::type ptr2;
+  // expected-error@-1 {{no template named '__add_pointer'}}
+  // expected-error-re@-2 {{no type named 'type' in '{{.*}}std::add_pointer<{{.*}}A>'}}
+  // expected-note@#add_pointer {{'std::add_pointer' declared here}}
 }
 
 } // namespace PR63243

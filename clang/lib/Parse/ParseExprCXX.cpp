@@ -407,6 +407,20 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       continue;
     }
 
+    switch (Tok.getKind()) {
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
+#include "clang/Basic/TransformTypeTraits.def"
+      if (!NextToken().is(tok::l_paren)) {
+        Tok.setKind(tok::identifier);
+        Diag(Tok, diag::ext_keyword_as_ident)
+            << Tok.getIdentifierInfo()->getName() << 0;
+        continue;
+      }
+      [[fallthrough]];
+    default:
+      break;
+    }
+
     // The rest of the nested-name-specifier possibilities start with
     // tok::identifier.
     if (Tok.isNot(tok::identifier))

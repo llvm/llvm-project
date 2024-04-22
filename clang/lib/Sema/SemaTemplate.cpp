@@ -5572,7 +5572,8 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
       R.begin(), R.end(), KnownDependent);
 
   // Model the templates with UnresolvedTemplateTy. The expression should then
-  // either be transformed in an instantiation or diagnosed.
+  // either be transformed in an instantiation or be diagnosed in
+  // CheckPlaceholderExpr.
   if (ULE->getType() == Context.OverloadTy && R.isSingleResult() &&
       !R.getFoundDecl()->getAsFunction())
     ULE->setType(Context.UnresolvedTemplateTy);
