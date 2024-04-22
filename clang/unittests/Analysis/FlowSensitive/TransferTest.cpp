@@ -3637,7 +3637,7 @@ TEST(TransferTest, VarDeclInitAssignConditionalOperator) {
     };
 
     void target(A Foo, A Bar, bool Cond) {
-      A Baz = Cond ?  Foo : Bar;
+      A Baz = Cond ?  A(Foo) : A(Bar);
       // Make sure A::i is modeled.
       Baz.i;
       /*[[p]]*/

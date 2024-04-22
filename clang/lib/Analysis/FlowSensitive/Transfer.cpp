@@ -646,9 +646,10 @@ public:
     const Environment *FalseEnv = StmtToEnv.getEnvironment(*S->getFalseExpr());
 
     if (TrueEnv == nullptr || FalseEnv == nullptr) {
-      // We should always have an environment as we should visit the true /
-      // false branches before the conditional operator.
-      assert(false);
+      // If the true or false branch is dead, we may not have an environment for
+      // it. We could handle this specifically by forwarding the value or
+      // location of the live branch, but this case is rare enough that this
+      // probably isn't worth the additional complexity.
       return;
     }
 
