@@ -1898,12 +1898,9 @@ bool SIGfx10CacheControl::enableVolatileAndOrNonTemporal(
   }
 
   if (IsNonTemporal) {
-    // For loads setting SLC configures L0 and L1 cache policy to HIT_EVICT
-    // and L2 cache policy to STREAM.
-    // For stores setting both GLC and SLC configures L0 and L1 cache policy
-    // to MISS_EVICT and the L2 cache policy to STREAM.
-    if (Op == SIMemOp::STORE)
-      Changed |= enableGLCBit(MI);
+    // Setting both GLC and SLC configures L0 and L1 cache policy to MISS_EVICT
+    // and the L2 cache policy to STREAM for loads and stores.
+    Changed |= enableGLCBit(MI);
     Changed |= enableSLCBit(MI);
 
     return Changed;
@@ -2170,12 +2167,9 @@ bool SIGfx11CacheControl::enableVolatileAndOrNonTemporal(
   }
 
   if (IsNonTemporal) {
-    // For loads setting SLC configures L0 and L1 cache policy to HIT_EVICT
-    // and L2 cache policy to STREAM.
-    // For stores setting both GLC and SLC configures L0 and L1 cache policy
-    // to MISS_EVICT and the L2 cache policy to STREAM.
-    if (Op == SIMemOp::STORE)
-      Changed |= enableGLCBit(MI);
+    // Setting both GLC and SLC configures L0 and L1 cache policy to MISS_EVICT
+    // and the L2 cache policy to STREAM for loads and stores.
+    Changed |= enableGLCBit(MI);
     Changed |= enableSLCBit(MI);
 
     // Set MALL NOALLOC for load and store instructions.

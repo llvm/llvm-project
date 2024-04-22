@@ -12192,7 +12192,7 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-gfx11-table`.
                                                          - !volatile & nontemporal
 
                                                            1. buffer/global/flat_load
-                                                              slc=1 dlc=1
+                                                              glc=1 slc=1 dlc=1
 
                                                             - If GFX10, omit dlc=1.
 
