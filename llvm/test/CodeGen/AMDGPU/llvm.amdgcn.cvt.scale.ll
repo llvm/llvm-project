@@ -18,6 +18,8 @@ declare <2 x float> @llvm.amdgcn.cvt.scalef32.pk.f32.fp4(i32, float, i32)
 declare i32 @llvm.amdgcn.cvt.scalef32.pk.fp4.f32(i32, float, float, float, i32)
 declare <2 x half> @llvm.amdgcn.cvt.scalef32.pk.f16.fp4(i32, float, i32)
 declare <2 x bfloat> @llvm.amdgcn.cvt.scalef32.pk.bf16.fp4(i32, float, i32)
+declare <32 x float> @llvm.amdgcn.cvt.scalef32.pk32.f32.fp6(<6 x i32>, float)
+declare <32 x float> @llvm.amdgcn.cvt.scalef32.pk32.f32.bf6(<6 x i32>, float)
 
 define <2 x half> @test_cvt_scalef32_f16_fp8_byte0_dst_lo(i32 %src, float %scale, <2 x half> %old) {
 ; GCN-LABEL: test_cvt_scalef32_f16_fp8_byte0_dst_lo:
@@ -727,4 +729,24 @@ define <2 x bfloat> @test_cvt_scale_bf16_fp4_byte3(i32 %src, float %scale) {
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %ret = tail call <2 x bfloat> @llvm.amdgcn.cvt.scalef32.pk.bf16.fp4(i32 %src, float %scale, i32 3)
   ret <2 x bfloat> %ret
+}
+
+define <32 x float> @test_cvt_scale_pk32_f32_fp6(<6 x i32> %src, float %scale) {
+; GCN-LABEL: test_cvt_scale_pk32_f32_fp6:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_scalef32_pk32_f32_fp6 v[0:31], v[0:5], v6
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %ret = tail call <32 x float>  @llvm.amdgcn.cvt.scalef32.pk32.f32.fp6(<6 x i32> %src, float %scale)
+  ret <32 x float> %ret
+}
+
+define <32 x float> @test_cvt_scale_pk32_f32_bf6(<6 x i32> %src, float %scale) {
+; GCN-LABEL: test_cvt_scale_pk32_f32_bf6:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_cvt_scalef32_pk32_f32_bf6 v[0:31], v[0:5], v6
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %ret = tail call <32 x float>  @llvm.amdgcn.cvt.scalef32.pk32.f32.bf6(<6 x i32> %src, float %scale)
+  ret <32 x float> %ret
 }
