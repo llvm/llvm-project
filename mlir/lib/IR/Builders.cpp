@@ -478,7 +478,7 @@ Operation *OpBuilder::create(Location loc, StringAttr opName,
 
 LogicalResult OpBuilder::tryFold(Operation *op,
                                  SmallVectorImpl<Value> &results) {
-  assert(results.empty());
+  assert(results.empty() && "expected empty results");
   ResultRange opResults = op->getResults();
 
   results.reserve(opResults.size());

@@ -1170,9 +1170,7 @@ struct TestLegalizePatternDriver
 
     // Create a dynamically legal rule that can only be legalized by folding it.
     target.addDynamicallyLegalOp<TestOpInPlaceSelfFold>(
-        [](TestOpInPlaceSelfFold op) {
-          return op.getProperties().folded != nullptr;
-        });
+        [](TestOpInPlaceSelfFold op) { return op.getFolded(); });
 
     // Handle a partial conversion.
     if (mode == ConversionMode::Partial) {

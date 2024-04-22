@@ -567,7 +567,7 @@ public:
   }
 
   /// Attempts to fold the given operation and places new results within
-  /// 'results'. Returns success if the operation was folded, failure otherwise.
+  /// `results`. Returns success if the operation was folded, failure otherwise.
   /// If the fold was in-place, `results` will not be filled.
   /// Note: This function does not erase the operation on a successful fold.
   LogicalResult tryFold(Operation *op, SmallVectorImpl<Value> &results);

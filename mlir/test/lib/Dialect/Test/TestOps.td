@@ -1352,7 +1352,7 @@ def TestOpInPlaceFold : TEST_Op<"op_in_place_fold"> {
 }
 
 def TestOpInPlaceSelfFold : TEST_Op<"op_in_place_self_fold"> {
-  let arguments = (ins OptionalAttr<BoolAttr>:$folded);
+  let arguments = (ins UnitAttr:$folded);
   let results = (outs I32);
   let hasFolder = 1;
 }
