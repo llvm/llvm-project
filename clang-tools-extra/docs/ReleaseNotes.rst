@@ -105,6 +105,9 @@ Improvements to clang-tidy
 - Fixed bug where big values for unsigned check options overflowed into negative values
   when being printed with ``--dump-config``.
 
+- Fixed ``--verify-config`` option not properly parsing checks when using the 
+  literal operator in the ``.clang-tidy`` config.
+
 New checks
 ^^^^^^^^^^
 
