@@ -1,3 +1,5 @@
+; REQUIRES: x86-registered-target
+
 ; RUN: llvm-split -o %t %s -mtriple x86_64 -preserve-locals 2>&1 | FileCheck %s
 
 ; Basic test for a target that doesn't support target-specific module splitting.
