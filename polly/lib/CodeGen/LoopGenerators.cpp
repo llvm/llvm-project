@@ -14,6 +14,7 @@
 #include "polly/CodeGen/LoopGenerators.h"
 #include "polly/Options.h"
 #include "polly/ScopDetection.h"
+#include "polly/ScopInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -34,6 +35,8 @@ static cl::opt<int, true>
                      cl::desc("Number of threads to use (0 = auto)"),
                      cl::Hidden, cl::location(polly::PollyNumThreads),
                      cl::init(0), cl::cat(PollyCategory));
+
+extern cl::opt<bool> PollyVectorizeMetadata;
 
 static cl::opt<OMPGeneralSchedulingType, true> XPollyScheduling(
     "polly-scheduling",
@@ -159,8 +162,19 @@ Value *polly::createLoop(Value *LB, Value *UB, Value *Stride,
 
   // Create the loop latch and annotate it as such.
   BranchInst *B = Builder.CreateCondBr(LoopCondition, HeaderBB, ExitBB);
-  if (Annotator)
-    Annotator->annotateLoopLatch(B, NewLoop, Parallel, LoopVectDisabled);
+
+  // If the 'polly-annotate-metadata-vectorize' flag is passed, we add
+  // the vectorize metadata. Otherwise we fall back to previous behavior
+  // of annotating the loop only when LoopVectDisabled is true.
+  if (Annotator) {
+    if (PollyVectorizeMetadata)
+      Annotator->annotateLoopLatch(B, NewLoop, Parallel, true,
+                                   !LoopVectDisabled);
+    else if (LoopVectDisabled)
+      Annotator->annotateLoopLatch(B, NewLoop, Parallel, true, false);
+    else
+      Annotator->annotateLoopLatch(B, NewLoop, Parallel, false, false);
+  }
 
   IV->addIncoming(IncrementedIV, HeaderBB);
   if (GuardBB)

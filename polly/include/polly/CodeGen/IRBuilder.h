@@ -60,7 +60,8 @@ public:
 
   /// Annotate the loop latch @p B wrt. @p L.
   void annotateLoopLatch(llvm::BranchInst *B, llvm::Loop *L, bool IsParallel,
-                         bool IsLoopVectorizerDisabled) const;
+                         bool setVectorizeMetadata,
+                         bool EnableLoopVectorizer) const;
 
   /// Add alternative alias based pointers
   ///

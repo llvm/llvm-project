@@ -128,8 +128,25 @@ void ScopAnnotator::popLoop(bool IsParallel) {
   LoopAttrEnv.pop_back();
 }
 
+void addVectorizeMetadata(LLVMContext &Ctx, SmallVector<Metadata *, 3> *Args,
+                          bool EnableLoopVectorizer) {
+  MDString *PropName = MDString::get(Ctx, "llvm.loop.vectorize.enable");
+  ConstantInt *Value =
+      ConstantInt::get(Type::getInt1Ty(Ctx), EnableLoopVectorizer);
+  ValueAsMetadata *PropValue = ValueAsMetadata::get(Value);
+  Args->push_back(MDNode::get(Ctx, {PropName, PropValue}));
+}
+
+void addParallelMetadata(LLVMContext &Ctx, SmallVector<Metadata *, 3> *Args,
+                         llvm::SmallVector<llvm::MDNode *, 8> ParallelLoops) {
+  MDString *PropName = MDString::get(Ctx, "llvm.loop.parallel_accesses");
+  MDNode *AccGroup = ParallelLoops.back();
+  Args->push_back(MDNode::get(Ctx, {PropName, AccGroup}));
+}
+
 void ScopAnnotator::annotateLoopLatch(BranchInst *B, Loop *L, bool IsParallel,
-                                      bool IsLoopVectorizerDisabled) const {
+                                      bool setVectorizeMetadata,
+                                      bool EnableLoopVectorizer) const {
   LLVMContext &Ctx = SE->getContext();
   SmallVector<Metadata *, 3> Args;
 
@@ -145,19 +162,10 @@ void ScopAnnotator::annotateLoopLatch(BranchInst *B, Loop *L, bool IsParallel,
     if (MData)
       llvm::append_range(Args, drop_begin(MData->operands(), 1));
   }
-
-  if (IsLoopVectorizerDisabled) {
-    MDString *PropName = MDString::get(Ctx, "llvm.loop.vectorize.enable");
-    ConstantInt *FalseValue = ConstantInt::get(Type::getInt1Ty(Ctx), 0);
-    ValueAsMetadata *PropValue = ValueAsMetadata::get(FalseValue);
-    Args.push_back(MDNode::get(Ctx, {PropName, PropValue}));
-  }
-
-  if (IsParallel) {
-    MDString *PropName = MDString::get(Ctx, "llvm.loop.parallel_accesses");
-    MDNode *AccGroup = ParallelLoops.back();
-    Args.push_back(MDNode::get(Ctx, {PropName, AccGroup}));
-  }
+  if (IsParallel)
+    addParallelMetadata(Ctx, &Args, ParallelLoops);
+  if (setVectorizeMetadata)
+    addVectorizeMetadata(Ctx, &Args, EnableLoopVectorizer);
 
   // No metadata to annotate.
   if (!MData && Args.size() <= 1)
