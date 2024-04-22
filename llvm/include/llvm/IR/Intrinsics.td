@@ -2363,30 +2363,30 @@ def int_asan_check_memaccess :
   Intrinsic<[],[llvm_ptr_ty, llvm_i32_ty], [ImmArg<ArgIndex<1>>]>;
 
 // HWASan intrinsics to test whether a pointer is addressable.
-// Parameters: Shadow base, pointer to be checked for validity, AccessInfo
+//===----------------------------------------------------------------------===//
+// Parameters: Shadow base (passed in a register), pointer to be checked for validity, AccessInfo
 // (AccessInfo is defined in HWAddressSanitizer.h)
+//
+// Variant 1)
 def int_hwasan_check_memaccess :
   Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
             [ImmArg<ArgIndex<2>>]>;
 
-// Same as memaccess but supports short granule checks.
-// Parameters: Shadow base, pointer to be checked for validity, AccessInfo
+// Variant 2) supports short granule checks.
 def int_hwasan_check_memaccess_shortgranules :
   Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
             [ImmArg<ArgIndex<2>>]>;
 
-// Same as memaccess but assumes a fixed shadow offset,
-// which no longer needs to be passed as a parameter.
-// Parameters: Pointer to be checked for validity, AccessInfo
+// Variant 3) assumes a fixed shadow offset
+// Parameters: Pointer to be checked for validity, AccessInfo, Shadow base
 def int_hwasan_check_memaccess_fixedshadow :
-  Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
-            [ImmArg<ArgIndex<1>>]>;
+  Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty, llvm_i64_ty],
+            [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
-// Same as memaccess but supports short granule checks and assumes a fixed
-// shadow offset, which no longer needs to be passed as a parameter.
+// Variant 4) supports short granule checks and assumes a fixed shadow offset
 def int_hwasan_check_memaccess_shortgranules_fixedshadow :
-  Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
-            [ImmArg<ArgIndex<1>>]>;
+  Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty, llvm_i64_ty],
+            [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 // Xray intrinsics
 //===----------------------------------------------------------------------===//

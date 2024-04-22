@@ -1820,15 +1820,15 @@ def HWASAN_CHECK_MEMACCESS_SHORTGRANULES : Pseudo<
 
 let Defs = [ X16, X17, LR, NZCV ] in {
 def HWASAN_CHECK_MEMACCESS_FIXEDSHADOW : Pseudo<
-  (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo),
-  [(int_hwasan_check_memaccess_fixedshadow GPR64noip:$ptr, (i32 timm:$accessinfo))]>,
+  (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo, i64imm:$fixed_shadow),
+  [(int_hwasan_check_memaccess_fixedshadow GPR64noip:$ptr, (i32 timm:$accessinfo), (i64 timm:$fixed_shadow))]>,
   Sched<[]>;
 }
 
 let Defs = [ X16, X17, LR, NZCV ] in {
 def HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW : Pseudo<
-  (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo),
-  [(int_hwasan_check_memaccess_shortgranules_fixedshadow GPR64noip:$ptr, (i32 timm:$accessinfo))]>,
+  (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo, i64imm:$fixed_shadow),
+  [(int_hwasan_check_memaccess_shortgranules_fixedshadow GPR64noip:$ptr, (i32 timm:$accessinfo), (i64 timm:$fixed_shadow))]>,
   Sched<[]>;
 }
 
