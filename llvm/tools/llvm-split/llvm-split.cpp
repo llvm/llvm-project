@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&SplitCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "LLVM module splitter\n");
 
-  TargetMachine *TM = nullptr;
+  std::unique_ptr<TargetMachine> TM;
   if (!MTriple.empty()) {
     InitializeAllTargets();
     InitializeAllTargetMCs();
@@ -85,8 +85,8 @@ int main(int argc, char **argv) {
     }
 
     TargetOptions Options;
-    TM = T->createTargetMachine(MTriple, MCPU, /*FS*/ "", Options, std::nullopt,
-                                std::nullopt);
+    TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
+        MTriple, MCPU, /*FS*/ "", Options, std::nullopt, std::nullopt));
   }
 
   std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
