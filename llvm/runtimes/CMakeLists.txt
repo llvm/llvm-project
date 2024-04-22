@@ -208,6 +208,36 @@ foreach(entry ${runtimes})
   list(APPEND RUNTIME_NAMES ${name})
 endforeach()
 
+# Set LLVM_RUNTIME_<project>_BUILD variables if a sub-project is enabled to be built as
+# a runtime.  As with LLVM_TOOL_<project>_BUILD, the LLVM_RUNTIME_<project>_BUILD variables
+# should be not directly used from the CMake configuration command line.
+foreach(proj ${LLVM_SUPPORTED_RUNTIMES})
+  set(SHOULD_ENABLE_RUNTIME FALSE)
+  string(TOUPPER "${proj}" upper_proj)
+  string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
+  if ("${proj}" IN_LIST LLVM_ENABLE_RUNTIMES)
+    message(STATUS "${proj} runtime is enabled")
+    set(SHOULD_ENABLE_RUNTIME TRUE)
+    set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
+    if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
+      message(FATAL_ERROR "LLVM_ENABLE_RUNTIMES requests ${proj} but directory not found: ${PROJ_DIR}")
+    endif()
+    if(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR STREQUAL "" )
+      set(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}" CACHE PATH "" FORCE)
+    else()
+      set(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}" CACHE PATH "")
+    endif()
+  else()
+    message(STATUS "${proj} runtime is disabled")
+    set(SHOULD_ENABLE_RUNTIME FALSE)
+  endif()
+  set(LLVM_RUNTIME_${upper_proj}_BUILD
+      ${SHOULD_ENABLE_RUNTIME}
+      CACHE
+      BOOL "Whether to build runtime ${upper_proj} as part of LLVM" FORCE)
+endforeach()
+unset(SHOULD_ENABLE_RUNTIME)
+
 function(runtime_default_target)
   cmake_parse_arguments(ARG "" "" "DEPENDS;CMAKE_ARGS;PREFIXES" ${ARGN})
 
