@@ -117,7 +117,8 @@ public:
   void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
   void LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI, bool Typed);
 
-  typedef std::tuple<unsigned, bool, uint32_t, bool, uint64_t> HwasanMemaccessTuple;
+  typedef std::tuple<unsigned, bool, uint32_t, bool, uint64_t>
+      HwasanMemaccessTuple;
   std::map<HwasanMemaccessTuple, MCSymbol *> HwasanMemaccessSymbols;
   void LowerKCFI_CHECK(const MachineInstr &MI);
   void LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI);
@@ -560,8 +561,7 @@ void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
       ((MI.getOpcode() == AArch64::HWASAN_CHECK_MEMACCESS_FIXEDSHADOW) ||
        (MI.getOpcode() ==
         AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW));
-  uint64_t FixedShadowOffset =
-      IsFixedShadow ? MI.getOperand(2).getImm() : 0;
+  uint64_t FixedShadowOffset = IsFixedShadow ? MI.getOperand(2).getImm() : 0;
 
   MCSymbol *&Sym = HwasanMemaccessSymbols[HwasanMemaccessTuple(
       Reg, IsShort, AccessInfo, IsFixedShadow, FixedShadowOffset)];
@@ -573,7 +573,7 @@ void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
     std::string SymName = "__hwasan_check_x" + utostr(Reg - AArch64::X0) + "_" +
                           utostr(AccessInfo);
     if (IsFixedShadow) {
-      SymName += "_" + utostr (FixedShadowOffset);
+      SymName += "_" + utostr(FixedShadowOffset);
     }
     if (IsShort)
       SymName += "_short_v2";
@@ -642,12 +642,11 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
                                  *STI);
 
     if (IsFixedShadow) {
-      OutStreamer->emitInstruction(
-          MCInstBuilder(AArch64::MOVZXi)
-              .addReg(AArch64::X17)
-              .addImm(FixedShadowOffset >> 32)
-              .addImm(32),
-          *STI);
+      OutStreamer->emitInstruction(MCInstBuilder(AArch64::MOVZXi)
+                                       .addReg(AArch64::X17)
+                                       .addImm(FixedShadowOffset >> 32)
+                                       .addImm(32),
+                                   *STI);
       OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDRBBroX)
                                        .addReg(AArch64::W16)
                                        .addReg(AArch64::X17)
