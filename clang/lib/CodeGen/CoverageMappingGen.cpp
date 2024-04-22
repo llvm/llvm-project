@@ -203,8 +203,8 @@ public:
   bool isMCDCDecision() const {
     const auto *DecisionParams =
         std::get_if<mcdc::DecisionParameters>(&MCDCParams);
-    assert(DecisionParams == nullptr || DecisionParams->NumConditions > 0);
-    return (DecisionParams != nullptr);
+    assert(!DecisionParams || DecisionParams->NumConditions > 0);
+    return DecisionParams;
   }
 
   const auto &getMCDCDecisionParams() const {
