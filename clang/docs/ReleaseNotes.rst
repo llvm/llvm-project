@@ -95,8 +95,7 @@ C++17 Feature Support
   predefined macros to support standard library implementations of
   ``std::hardware_destructive_interference_size`` and
   ``std::hardware_constructive_interference_size``, respectively. These macros
-  are predefined in all C and C++ language modes. These macros can be
-  overridden on the command line with ``-D``, if desired. The values the macros
+  are predefined in all C and C++ language modes. The values the macros
   expand to are not stable between releases of Clang and do not need to match
   the values produced by GCC, so these macros should not be used from header
   files because they may not be stable across multiple TUs (the values may vary
