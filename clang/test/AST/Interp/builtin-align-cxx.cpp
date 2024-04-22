@@ -2,6 +2,19 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-unknown -std=c++11 %s -fsyntax-only -verify=expected,both -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -triple=x86_64-unknown-unknown -std=c++11 %s -fsyntax-only -verify=ref,both
 
+
+/// This is just a copy of the one from test/SemaCXX/ with some of the
+/// diagnostic output adapted.
+/// Also, align32array has an initializer now, which means it's not just
+/// a dummy pointer for us and we do actually have type information for it.
+/// In the future, we need to retain type information for dummy pointers as
+/// well, so here is a test that will break once we do that:
+namespace {
+  _Alignas(32) char heh[4];
+  static_assert(!__builtin_is_aligned(&heh[1], 4), ""); // expected-error {{failed}}
+}
+
+
 // Check that we don't crash when using dependent types in __builtin_align:
 template <typename a, a b>
 void *c(void *d) { // both-note{{candidate template ignored}}
@@ -164,7 +177,7 @@ static_assert(wrap_align_up(static_cast<bool>(1), const_value(1 << 21)), ""); //
 // both-note@-1{{in instantiation of function template specialization 'wrap_align_up<bool>' requested here}}
 
 // Check constant evaluation for pointers:
-_Alignas(32) char align32array[128];
+_Alignas(32) char align32array[128] = {};
 static_assert(&align32array[0] == &align32array[0], "");
 // __builtin_align_up/down can be constant evaluated as a no-op for values
 // that are known to have greater alignment:
