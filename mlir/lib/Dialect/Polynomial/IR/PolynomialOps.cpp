@@ -73,17 +73,16 @@ LogicalResult ToTensorOp::verify() {
                             .getDegree();
   bool compatible = tensorShape.size() == 1 && tensorShape[0] == polyDegree;
 
-  if (!compatible) {
-    InFlightDiagnostic diag = emitOpError()
-                              << "input type " << getInput().getType()
-                              << " does not match output type "
-                              << getOutput().getType();
-    diag.attachNote() << "The input type must be a tensor of shape [d] where d "
-                         "is at most the degree of the polynomialModulus of "
-                         "the output type's ring attribute.";
-    return diag;
-  }
-  return success();
+  if (compatible)
+    return success();
+
+  InFlightDiagnostic diag =
+      emitOpError() << "input type " << getInput().getType()
+                    << " does not match output type " << getOutput().getType();
+  diag.attachNote() << "The input type must be a tensor of shape [d] where d "
+                       "is at most the degree of the polynomialModulus of "
+                       "the output type's ring attribute.";
+  return diag;
 }
 
 LogicalResult MonomialMulOp::verify() {
@@ -95,11 +94,10 @@ LogicalResult MonomialMulOp::verify() {
       (idealTerms[0].coefficient == -1 && idealTerms[0].exponent == 0) &&
       (idealTerms[1].coefficient == 1);
 
-  if (!compatible) {
-    InFlightDiagnostic diag = emitOpError()
-                              << "unsupported ring type: " << ring;
-    diag.attachNote() << "The ring must be of the form (x^n - 1) for some n";
-    return diag;
-  }
-  return success();
+  if (compatible)
+    return success();
+
+  InFlightDiagnostic diag = emitOpError() << "unsupported ring type: " << ring;
+  diag.attachNote() << "The ring must be of the form (x^n - 1) for some n";
+  return diag;
 }
