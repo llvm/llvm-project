@@ -84,20 +84,3 @@ LogicalResult ToTensorOp::verify() {
                        "the output type's ring attribute.";
   return diag;
 }
-
-LogicalResult MonicMonomialMulOp::verify() {
-  RingAttr ring = getInput().getType().getRing();
-  ArrayRef<Monomial> idealTerms =
-      ring.getPolynomialModulus().getPolynomial().getTerms();
-  bool compatible =
-      idealTerms.size() == 2 &&
-      (idealTerms[0].coefficient == -1 && idealTerms[0].exponent == 0) &&
-      (idealTerms[1].coefficient == 1);
-
-  if (compatible)
-    return success();
-
-  InFlightDiagnostic diag = emitOpError() << "unsupported ring type: " << ring;
-  diag.attachNote() << "The ring must be of the form (x^n - 1) for some n";
-  return diag;
-}

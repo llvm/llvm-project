@@ -315,7 +315,7 @@ def Polynomial_MonomialOp: Polynomial_Op<"monomial"> {
   let results = (outs Polynomial_PolynomialType:$output);
 }
 
-def Polynomial_MonomialMulOp: Polynomial_Op<"monic_monomial_mul", [AllTypesMatch<["input", "output"]>]> {
+def Polynomial_MonicMonomialMulOp: Polynomial_Op<"monic_monomial_mul", [AllTypesMatch<["input", "output"]>]> {
   let summary = "Multiply a polynomial by a monic monomial.";
   let description = [{
     Multiply a polynomial by a monic monomial, meaning a polynomial of the form
@@ -327,9 +327,8 @@ def Polynomial_MonomialMulOp: Polynomial_Op<"monic_monomial_mul", [AllTypesMatch
     optimized lowerings that involve rotations and rescaling of the
     coefficients of the input.
   }];
-  let arguments = (ins Polynomial_PolynomialType:$input, Index:$monomialDegree);
-  let results = (outs Polynomial_PolynomialType:$output);
-  let hasVerifier = 1;
+  let arguments = (ins PolynomialLike:$input, Index:$monomialDegree);
+  let results = (outs PolynomialLike:$output);
 }
 
 def Polynomial_FromTensorOp : Polynomial_Op<"from_tensor", [Pure]> {
