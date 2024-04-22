@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1103 -S -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1150 -S -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1151 -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1152 -S -emit-llvm -o - %s | FileCheck %s
 
 typedef unsigned int uint;
 typedef unsigned long ulong;
