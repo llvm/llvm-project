@@ -79,10 +79,15 @@ static Address buildAddrOfFieldStorage(CIRGenFunction &CGF, Address Base,
   auto memberAddr = CGF.getBuilder().createGetMember(
       loc, fieldPtr, Base.getPointer(), fieldName, fieldIndex);
 
-  // TODO: We could get the alignment from the CIRGenRecordLayout, but given the
-  // member name based lookup of the member here we probably shouldn't be. We'll
-  // have to consider this later.
-  auto addr = Address(memberAddr, CharUnits::One());
+  // Retrieve layout information, compute alignment and return the final
+  // address.
+  const RecordDecl *rec = field->getParent();
+  auto &layout = CGF.CGM.getTypes().getCIRGenRecordLayout(rec);
+  unsigned idx = layout.getCIRFieldNo(field);
+  auto offset = CharUnits::fromQuantity(layout.getCIRType().getElementOffset(
+      CGF.CGM.getDataLayout().layout, idx));
+  auto addr =
+      Address(memberAddr, Base.getAlignment().alignmentAtOffset(offset));
   return addr;
 }
 

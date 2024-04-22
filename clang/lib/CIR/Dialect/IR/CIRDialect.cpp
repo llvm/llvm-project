@@ -2549,7 +2549,7 @@ mlir::OpTrait::impl::verifySameSecondOperandAndResultType(Operation *op) {
 
   if (type != opType)
     return op->emitOpError()
-           << "requires the same type for first operand and result";
+           << "requires the same type for second operand and result";
 
   return success();
 }
@@ -2563,7 +2563,7 @@ mlir::OpTrait::impl::verifySameFirstSecondOperandAndResultType(Operation *op) {
   if (checkType != op->getOperand(0).getType() &&
       checkType != op->getOperand(1).getType())
     return op->emitOpError()
-           << "requires the same type for first operand and result";
+           << "requires the same type for first, second operand and result";
 
   return success();
 }

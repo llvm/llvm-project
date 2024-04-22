@@ -3703,6 +3703,29 @@ def AtomicFetch : CIR_Op<"atomic.fetch",
   let hasVerifier = 1;
 }
 
+def AtomicXchg : CIR_Op<"atomic.xchg", [Pure, SameSecondOperandAndResultType]> {
+  let summary = "Atomic exchange";
+  let description = [{
+    Atomic exchange functionality mapped from different use of builtins in
+    C/C++.
+  }];
+  let results = (outs CIR_AnyType:$result);
+  let arguments = (ins CIR_PointerType:$ptr, CIR_AnyType:$val,
+                       Arg<MemOrder, "memory order">:$mem_order,
+                       UnitAttr:$is_volatile);
+
+  let assemblyFormat = [{
+    `(`
+    $ptr `:` qualified(type($ptr)) `,`
+    $val `:` type($val) `,`
+    $mem_order `)`
+    (`volatile` $is_volatile^)?
+    `:` type($result) attr-dict
+  }];
+
+  let hasVerifier = 0;
+}
+
 //===----------------------------------------------------------------------===//
 // Operations Lowered Directly to LLVM IR
 //
