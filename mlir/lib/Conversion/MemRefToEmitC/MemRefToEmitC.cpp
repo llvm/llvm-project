@@ -86,9 +86,13 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
     bool staticSpecifier = visibility == SymbolTable::Visibility::Private;
     bool externSpecifier = !staticSpecifier;
 
+    Attribute initialValue = operands.getInitialValueAttr();
+    if (isa_and_present<UnitAttr>(initialValue))
+      initialValue = {};
+
     rewriter.replaceOpWithNewOp<emitc::GlobalOp>(
-        op, operands.getSymName(), resultTy, operands.getInitialValueAttr(),
-        externSpecifier, staticSpecifier, operands.getConstant());
+        op, operands.getSymName(), resultTy, initialValue, externSpecifier,
+        staticSpecifier, operands.getConstant());
     return success();
   }
 };

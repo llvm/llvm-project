@@ -1047,14 +1047,14 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
   let arguments = (ins SymbolNameAttr:$sym_name,
                        TypeAttr:$type,
                        OptionalAttr<EmitC_OpaqueOrTypedAttr>:$initial_value,
-                       UnitAttr:$externSpecifier,
-                       UnitAttr:$staticSpecifier,
-                       UnitAttr:$constSpecifier);
+                       UnitAttr:$extern_specifier,
+                       UnitAttr:$static_specifier,
+                       UnitAttr:$const_specifier);
 
   let assemblyFormat = [{
-       (`extern` $externSpecifier^)?
-       (`static` $staticSpecifier^)?
-       (`const` $constSpecifier^)?
+       (`extern` $extern_specifier^)?
+       (`static` $static_specifier^)?
+       (`const` $const_specifier^)?
        $sym_name
        `:` custom<EmitCGlobalOpTypeAndInitialValue>($type, $initial_value)
        attr-dict
