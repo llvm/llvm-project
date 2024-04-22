@@ -287,6 +287,9 @@ Attribute Changes in Clang
   This allows the ``_Nullable`` and ``_Nonnull`` family of type attributes to
   apply to this class.
 
+- Clang now warns that the ``exclude_from_explicit_instantiation`` attribute
+  is ignored when applied to a local class or a member thereof.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang now applies syntax highlighting to the code snippets it
@@ -424,6 +427,14 @@ Bug Fixes in This Version
 
 - Fixed an assertion failure on invalid InitListExpr in C89 mode (#GH88008).
 
+- Clang will no longer diagnose an erroneous non-dependent ``switch`` condition
+  during instantiation, and instead will only diagnose it once, during checking
+  of the function template.
+
+- Clang now allows the value of unroll count to be zero in ``#pragma GCC unroll`` and ``#pragma unroll``.
+  The values of 0 and 1 block any unrolling of the loop. This keeps the same behavior with GCC.
+  Fixes (`#88624 <https://github.com/llvm/llvm-project/issues/88624>`_).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -536,6 +547,9 @@ Bug Fixes to C++ Support
   Fixes (#GH70604), (#GH79754), (#GH84163), (#GH84425), (#GH86054), (#GH86398), and (#GH86399).
 - Fix a crash when deducing ``auto`` from an invalid dereference (#GH88329).
 - Fix a crash in requires expression with templated base class member function. Fixes (#GH84020).
+- Fix a crash caused by defined struct in a type alias template when the structure
+  has fields with dependent type. Fixes (#GH75221).
+- Fix the Itanium mangling of lambdas defined in a member of a local class (#GH88906)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -544,6 +558,9 @@ Bug Fixes to AST Handling
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed an infinite recursion in ASTImporter, on return type declared inside
+  body of C++11 lambda without trailing return (#GH68775).
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -682,6 +699,8 @@ Static Analyzer
 - Support C++23 static operator calls. (#GH84972)
 - Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
   matched user-defined ``strerror`` and similar library functions. (GH#88181)
+- Fixed a crash when storing through an address that refers to the address of
+  a label. (GH#89185)
 
 New features
 ^^^^^^^^^^^^

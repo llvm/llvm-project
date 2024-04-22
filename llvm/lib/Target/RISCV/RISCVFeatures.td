@@ -15,9 +15,11 @@
 def FeatureStdExtI
     : SubtargetFeature<"i", "HasStdExtI", "true",
                        "'I' (Base Integer Instruction Set)">;
-def HasStdExtI : Predicate<"Subtarget->hasStdExtI()">,
-                 AssemblerPredicate<(all_of FeatureStdExtI),
-                                    "'I' (Base Integer Instruction Set)">;
+
+def FeatureStdExtE
+    : SubtargetFeature<"e", "HasStdExtE", "true",
+                       "Implements RV{32,64}E (provides 16 rather than 32 GPRs)">;
+
 def FeatureStdExtZic64b
     : SubtargetFeature<"zic64b", "HasStdExtZic64b", "true",
                        "'Zic64b' (Cache Block Size Is 64 Bytes)">;
@@ -211,9 +213,6 @@ def HasStdExtAOrZalrsc
 def FeatureStdExtZama16b
     : SubtargetFeature<"zama16b", "HasStdExtZama16b", "true",
                        "'Zama16b' (Atomic 16-byte misaligned loads, stores and AMOs)">;
-def HasStdExtZama16b : Predicate<"Subtarget->hasStdExtZama16b()">,
-                       AssemblerPredicate<(all_of FeatureStdExtZama16b),
-                           "'Zama16b' (Atomic 16-byte misaligned loads, stores and AMOs)">;
 
 def FeatureStdExtZawrs : SubtargetFeature<"zawrs", "HasStdExtZawrs", "true",
                                           "'Zawrs' (Wait on Reservation Set)">;
@@ -1166,12 +1165,6 @@ def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
 
 defvar RV32 = DefaultMode;
 def RV64           : HwMode<"+64bit", [IsRV64]>;
-
-def FeatureRVE
-    : SubtargetFeature<"e", "IsRVE", "true",
-                       "Implements RV{32,64}E (provides 16 rather than 32 GPRs)">;
-def IsRVE : Predicate<"Subtarget->isRVE()">,
-            AssemblerPredicate<(all_of FeatureRVE)>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",

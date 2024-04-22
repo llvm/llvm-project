@@ -279,3 +279,31 @@ Bar t = Foo<K<Container>>();
 
 Bar s = 1; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of}}
 } // namespace test20
+
+namespace test21 {
+template <typename T, unsigned N>
+struct Array { const T member[N]; };
+template <unsigned N>
+using String = Array<char, N>;
+
+// Verify no crash on constructing the aggregate deduction guides.
+String s("hello");
+} // namespace test21
+
+// GH89013
+namespace test22 {
+class Base {};
+template <typename T>
+class Derived final : public Base {};
+
+template <typename T, typename D>
+requires __is_base_of(Base, D)
+struct Foo {
+  explicit Foo(D) {}
+};
+
+template <typename U>
+using AFoo = Foo<int, Derived<U>>;
+
+AFoo a(Derived<int>{});
+} // namespace test22

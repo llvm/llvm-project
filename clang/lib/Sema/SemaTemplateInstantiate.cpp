@@ -2150,7 +2150,8 @@ TemplateInstantiator::TransformLoopHintAttr(const LoopHintAttr *LH) {
     return LH;
 
   // Generate error if there is a problem with the value.
-  if (getSema().CheckLoopHintExpr(TransformedExpr, LH->getLocation()))
+  if (getSema().CheckLoopHintExpr(TransformedExpr, LH->getLocation(),
+                                  LH->getOption() == LoopHintAttr::UnrollCount))
     return LH;
 
   // Create new LoopHintValueAttr with integral expression in place of the
@@ -2501,10 +2502,7 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
       assert(Arg.getKind() == TemplateArgument::Type &&
              "unexpected nontype template argument kind in template rewrite");
       QualType NewT = Arg.getAsType();
-      assert(isa<TemplateTypeParmType>(NewT) &&
-             "type parm not rewritten to type parm");
-      auto NewTL = TLB.push<TemplateTypeParmTypeLoc>(NewT);
-      NewTL.setNameLoc(TL.getNameLoc());
+      TLB.pushTrivial(SemaRef.Context, NewT, TL.getNameLoc());
       return NewT;
     }
 
