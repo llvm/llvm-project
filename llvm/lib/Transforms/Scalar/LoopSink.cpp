@@ -259,7 +259,7 @@ static bool sinkInstruction(
       return UIToReplace->getParent() == N && !isa<PHINode>(UIToReplace);
     });
     // Replaces uses of I with IC in blocks dominated by N
-    replaceDominatedUsesWith(&I, IC, DT, N);
+    replaceDominatedUsesWith(&I, IC, I.getModule()->getDataLayout(), DT, N);
     LLVM_DEBUG(dbgs() << "Sinking a clone of " << I << " To: " << N->getName()
                       << '\n');
     NumLoopSunkCloned++;

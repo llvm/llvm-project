@@ -2420,6 +2420,10 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
     if (isa<Constant>(LHS) || (isa<Argument>(LHS) && !isa<Constant>(RHS)))
       std::swap(LHS, RHS);
     assert((isa<Argument>(LHS) || isa<Instruction>(LHS)) && "Unexpected value!");
+    const DataLayout &DL =
+        isa<Argument>(LHS)
+            ? cast<Argument>(LHS)->getParent()->getParent()->getDataLayout()
+            : cast<Instruction>(LHS)->getModule()->getDataLayout();
 
     // If there is no obvious reason to prefer the left-hand side over the
     // right-hand side, ensure the longest lived term is on the right-hand side,
@@ -2447,7 +2451,7 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
     // The leader table only tracks basic blocks, not edges. Only add to if we
     // have the simple case where the edge dominates the end.
     if (RootDominatesEnd && !isa<Instruction>(RHS) &&
-        canReplacePointersIfEqual(LHS, RHS))
+        canReplacePointersIfEqual(LHS, RHS, DL))
       addToLeaderTable(LVN, RHS, Root.getEnd());
 
     // Replace all occurrences of 'LHS' with 'RHS' everywhere in the scope.  As
@@ -2456,9 +2460,9 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
     if (!LHS->hasOneUse()) {
       unsigned NumReplacements =
           DominatesByEdge
-              ? replaceDominatedUsesWithIf(LHS, RHS, *DT, Root,
+              ? replaceDominatedUsesWithIf(LHS, RHS, DL, *DT, Root,
                                            canReplacePointersInUseIfEqual)
-              : replaceDominatedUsesWithIf(LHS, RHS, *DT, Root.getStart(),
+              : replaceDominatedUsesWithIf(LHS, RHS, DL, *DT, Root.getStart(),
                                            canReplacePointersInUseIfEqual);
 
       if (NumReplacements > 0) {
@@ -2523,8 +2527,8 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
         if (NotCmp && isa<Instruction>(NotCmp)) {
           unsigned NumReplacements =
               DominatesByEdge
-                  ? replaceDominatedUsesWith(NotCmp, NotVal, *DT, Root)
-                  : replaceDominatedUsesWith(NotCmp, NotVal, *DT,
+                  ? replaceDominatedUsesWith(NotCmp, NotVal, DL, *DT, Root)
+                  : replaceDominatedUsesWith(NotCmp, NotVal, DL, *DT,
                                              Root.getStart());
           Changed |= NumReplacements > 0;
           NumGVNEqProp += NumReplacements;

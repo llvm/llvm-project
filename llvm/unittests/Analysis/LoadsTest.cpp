@@ -81,6 +81,7 @@ define void @f(i32* %p1, i32* %p2, i64 %i) {
   ret void
 }
 )IR");
+  const DataLayout &DL = M->getDataLayout();
   auto *GV = M->getNamedValue("f");
   ASSERT_TRUE(GV);
   auto *F = dyn_cast<Function>(GV);
@@ -95,21 +96,21 @@ define void @f(i32* %p1, i32* %p2, i64 %i) {
   // We cannot replace two pointers in arbitrary instructions unless we are
   // replacing with null, a constant dereferencable pointer or they have the
   // same underlying object.
-  EXPECT_FALSE(canReplacePointersIfEqual(ConstDerefPtr, P1));
-  EXPECT_FALSE(canReplacePointersIfEqual(P1, P2));
-  EXPECT_TRUE(canReplacePointersIfEqual(P1, ConstDerefPtr));
-  EXPECT_TRUE(canReplacePointersIfEqual(P1, NullPtr));
+  EXPECT_FALSE(canReplacePointersIfEqual(ConstDerefPtr, P1, DL));
+  EXPECT_FALSE(canReplacePointersIfEqual(P1, P2, DL));
+  EXPECT_TRUE(canReplacePointersIfEqual(P1, ConstDerefPtr, DL));
+  EXPECT_TRUE(canReplacePointersIfEqual(P1, NullPtr, DL));
 
   GetElementPtrInst *BasedOnP1 = cast<GetElementPtrInst>(&*++InstIter);
-  EXPECT_TRUE(canReplacePointersIfEqual(BasedOnP1, P1));
-  EXPECT_FALSE(canReplacePointersIfEqual(BasedOnP1, P2));
+  EXPECT_TRUE(canReplacePointersIfEqual(BasedOnP1, P1, DL));
+  EXPECT_FALSE(canReplacePointersIfEqual(BasedOnP1, P2, DL));
 
   // // We can replace two arbitrary pointers in icmp and ptrtoint instructions.
   auto P1UseIter = P1->use_begin();
   const Use &PtrToIntUse = *P1UseIter;
   const Use &IcmpUse = *++P1UseIter;
   const Use &GEPUse = *++P1UseIter;
-  EXPECT_FALSE(canReplacePointersInUseIfEqual(GEPUse, P2));
-  EXPECT_TRUE(canReplacePointersInUseIfEqual(PtrToIntUse, P2));
-  EXPECT_TRUE(canReplacePointersInUseIfEqual(IcmpUse, P2));
+  EXPECT_FALSE(canReplacePointersInUseIfEqual(GEPUse, P2, DL));
+  EXPECT_TRUE(canReplacePointersInUseIfEqual(PtrToIntUse, P2, DL));
+  EXPECT_TRUE(canReplacePointersInUseIfEqual(IcmpUse, P2, DL));
 }

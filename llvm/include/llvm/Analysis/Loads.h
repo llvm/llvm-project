@@ -180,8 +180,10 @@ Value *findAvailablePtrLoadStore(const MemoryLocation &Loc, Type *AccessTy,
 /// instructions, as well as when we are replacing with a null pointer.
 /// Additionally it also allows replacement of pointers when both pointers have
 /// the same underlying object.
-bool canReplacePointersIfEqual(const Value *From, const Value *To);
-bool canReplacePointersInUseIfEqual(const Use &U, const Value *To);
+bool canReplacePointersIfEqual(const Value *From, const Value *To,
+                               const DataLayout &DL);
+bool canReplacePointersInUseIfEqual(const Use &U, const Value *To,
+                                    const DataLayout &DL);
 }
 
 #endif

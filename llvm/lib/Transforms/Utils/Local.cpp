@@ -3429,18 +3429,16 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   combineMetadataForCSE(ReplInst, I, false);
 }
 
-template <typename RootType, typename DominatesFn>
-static unsigned replaceDominatedUsesWith(
-    Value *From, Value *To, const RootType &Root, const DominatesFn &Dominates,
-    std::optional<function_ref<bool(const Use &U, const Value *To)>>
-        ShouldReplace) {
+template <typename RootType, typename ShouldReplaceFn>
+static unsigned replaceDominatedUsesWith(Value *From, Value *To,
+                                         const DataLayout &DL,
+                                         const RootType &Root,
+                                         const ShouldReplaceFn &ShouldReplace) {
   assert(From->getType() == To->getType());
 
   unsigned Count = 0;
   for (Use &U : llvm::make_early_inc_range(From->uses())) {
-    if (!Dominates(Root, U))
-      continue;
-    if (ShouldReplace.has_value() && !ShouldReplace.value()(U, To))
+    if (!ShouldReplace(Root, U))
       continue;
     LLVM_DEBUG(dbgs() << "Replace dominated use of '";
                From->printAsOperand(dbgs());
@@ -3467,39 +3465,47 @@ unsigned llvm::replaceNonLocalUsesWith(Instruction *From, Value *To) {
 }
 
 unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
-                                        DominatorTree &DT,
+                                        const DataLayout &DL, DominatorTree &DT,
                                         const BasicBlockEdge &Root) {
   auto Dominates = [&DT](const BasicBlockEdge &Root, const Use &U) {
     return DT.dominates(Root, U);
   };
-  return ::replaceDominatedUsesWith(From, To, Root, Dominates, std::nullopt);
+  return ::replaceDominatedUsesWith(From, To, DL, Root, Dominates);
 }
 
 unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
-                                        DominatorTree &DT,
+                                        const DataLayout &DL, DominatorTree &DT,
                                         const BasicBlock *BB) {
   auto Dominates = [&DT](const BasicBlock *BB, const Use &U) {
     return DT.dominates(BB, U);
   };
-  return ::replaceDominatedUsesWith(From, To, BB, Dominates, std::nullopt);
+  return ::replaceDominatedUsesWith(From, To, DL, BB, Dominates);
 }
 
 unsigned llvm::replaceDominatedUsesWithIf(
-    Value *From, Value *To, DominatorTree &DT, const BasicBlockEdge &Root,
-    function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
-  auto Dominates = [&DT](const BasicBlockEdge &Root, const Use &U) {
-    return DT.dominates(Root, U);
-  };
-  return ::replaceDominatedUsesWith(From, To, Root, Dominates, ShouldReplace);
+    Value *From, Value *To, const DataLayout &DL, DominatorTree &DT,
+    const BasicBlockEdge &Root,
+    function_ref<bool(const Use &U, const Value *To, const DataLayout &DL)>
+        ShouldReplace) {
+  auto DominatesAndShouldReplace =
+      [ShouldReplace, To, &DT, &DL](const BasicBlockEdge &Root, const Use &U) {
+        return DT.dominates(Root, U) && ShouldReplace(U, To, DL);
+      };
+  return ::replaceDominatedUsesWith(From, To, DL, Root,
+                                    DominatesAndShouldReplace);
 }
 
 unsigned llvm::replaceDominatedUsesWithIf(
-    Value *From, Value *To, DominatorTree &DT, const BasicBlock *BB,
-    function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
-  auto Dominates = [&DT](const BasicBlock *BB, const Use &U) {
-    return DT.dominates(BB, U);
+    Value *From, Value *To, const DataLayout &DL, DominatorTree &DT,
+    const BasicBlock *BB,
+    function_ref<bool(const Use &U, const Value *To, const DataLayout &DL)>
+        ShouldReplace) {
+  auto DominatesAndShouldReplace = [ShouldReplace, To, &DT,
+                                    &DL](const BasicBlock *BB, const Use &U) {
+    return DT.dominates(BB, U) && ShouldReplace(U, To, DL);
   };
-  return ::replaceDominatedUsesWith(From, To, BB, Dominates, ShouldReplace);
+  return ::replaceDominatedUsesWith(From, To, DL, BB,
+                                    DominatesAndShouldReplace);
 }
 bool llvm::callsGCLeafFunction(const CallBase *Call,
                                const TargetLibraryInfo &TLI) {

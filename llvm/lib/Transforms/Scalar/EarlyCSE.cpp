@@ -1228,8 +1228,9 @@ bool EarlyCSE::handleBranchCondition(Instruction *CondInst,
       LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
     } else {
       // Replace all dominated uses with the known value.
-      if (unsigned Count = replaceDominatedUsesWith(Curr, TorF, DT,
-                                                    BasicBlockEdge(Pred, BB))) {
+      if (unsigned Count = replaceDominatedUsesWith(
+              Curr, TorF, Curr->getModule()->getDataLayout(), DT,
+              BasicBlockEdge(Pred, BB))) {
         NumCSECVP += Count;
         MadeChanges = true;
       }

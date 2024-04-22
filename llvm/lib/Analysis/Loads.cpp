@@ -730,46 +730,38 @@ static bool isPointerUseReplacable(const Use &U, int MaxLookup = 6) {
   return false;
 }
 
-static const DataLayout &getDLFromVal(const Value *V) {
-  if (const Argument *A = dyn_cast<Argument>(V))
-    return A->getParent()->getParent()->getDataLayout();
-  if (const Instruction *I = dyn_cast<Instruction>(V))
-    return I->getModule()->getDataLayout();
-  if (const GlobalValue *GV = dyn_cast<GlobalValue>(V))
-    return GV->getParent()->getDataLayout();
-  llvm_unreachable("Unknown Value type");
-}
-
 // Returns true if `To` is a null pointer, constant dereferenceable pointer or
 // both pointers have the same underlying objects.
-static bool isPointerAlwaysReplaceable(const Value *From, const Value *To) {
+static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
+                                       const DataLayout &DL) {
   if (isa<ConstantPointerNull>(To))
     return true;
   if (isa<Constant>(To) &&
-      isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()),
-                               getDLFromVal(From)))
+      isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL))
     return true;
   if (getUnderlyingObject(From) == getUnderlyingObject(To))
     return true;
   return false;
 }
 
-bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To) {
+bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
+                                          const DataLayout &DL) {
   assert(U->getType() == To->getType() && "values must have matching types");
   // Not a pointer, just return true.
   if (!To->getType()->isPointerTy())
     return true;
 
-  if (isPointerAlwaysReplaceable(&*U, To))
+  if (isPointerAlwaysReplaceable(&*U, To, DL))
     return true;
   return isPointerUseReplacable(U);
 }
 
-bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To) {
+bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
+                                     const DataLayout &DL) {
   assert(From->getType() == To->getType() && "values must have matching types");
   // Not a pointer, just return true.
   if (!From->getType()->isPointerTy())
     return true;
 
-  return isPointerAlwaysReplaceable(From, To);
+  return isPointerAlwaysReplaceable(From, To, DL);
 }
