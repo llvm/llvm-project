@@ -103,6 +103,9 @@ Improvements to clang-tidy
 - Improved :program:`check_clang_tidy.py` script. Added argument `-export-fixes`
   to aid in clang-tidy and test development.
 
+- Fixed ``--verify-config`` option not properly parsing checks when using the 
+  literal operator in the ``.clang-tidy`` config.
+
 New checks
 ^^^^^^^^^^
 
