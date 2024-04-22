@@ -25,26 +25,20 @@ using BinaryBitsFn =
 using BinaryIntFn =
     llvm::function_ref<std::optional<APInt>(const APInt &, const APInt &)>;
 
-static testing::AssertionResult isCorrect(const KnownBits &Exact,
-                                          const KnownBits &Computed,
-                                          ArrayRef<KnownBits> Inputs) {
-  if (Computed.Zero.isSubsetOf(Exact.Zero) &&
-      Computed.One.isSubsetOf(Exact.One))
-    return testing::AssertionSuccess();
-
-  testing::AssertionResult Result = testing::AssertionFailure();
-  Result << "Inputs = ";
-  for (const KnownBits &Input : Inputs)
-    Result << Input << ", ";
-  Result << "Computed = " << Computed << ", Exact = " << Exact;
-  return Result;
-}
-
-static testing::AssertionResult isOptimal(const KnownBits &Exact,
-                                          const KnownBits &Computed,
-                                          ArrayRef<KnownBits> Inputs) {
-  if (Computed == Exact)
-    return testing::AssertionSuccess();
+static testing::AssertionResult checkResult(const KnownBits &Exact,
+                                            const KnownBits &Computed,
+                                            ArrayRef<KnownBits> Inputs,
+                                            bool CheckOptimality) {
+  if (CheckOptimality) {
+    // We generally don't want to return conflicting known bits, even if it is
+    // legal for always poison results.
+    if (Exact.hasConflict() || Computed == Exact)
+      return testing::AssertionSuccess();
+  } else {
+    if (Computed.Zero.isSubsetOf(Exact.Zero) &&
+        Computed.One.isSubsetOf(Exact.One))
+      return testing::AssertionSuccess();
+  }
 
   testing::AssertionResult Result = testing::AssertionFailure();
   Result << "Inputs = ";
@@ -71,12 +65,7 @@ static void testUnaryOpExhaustive(UnaryBitsFn BitsFn, UnaryIntFn IntFn,
       });
 
       EXPECT_TRUE(!Computed.hasConflict());
-      EXPECT_TRUE(isCorrect(Exact, Computed, Known));
-      // We generally don't want to return conflicting known bits, even if it is
-      // legal for always poison results.
-      if (CheckOptimality && !Exact.hasConflict()) {
-        EXPECT_TRUE(isOptimal(Exact, Computed, Known));
-      }
+      EXPECT_TRUE(checkResult(Exact, Computed, Known, CheckOptimality));
     });
   }
 }
@@ -102,12 +91,8 @@ static void testBinaryOpExhaustive(BinaryBitsFn BitsFn, BinaryIntFn IntFn,
         });
 
         EXPECT_TRUE(!Computed.hasConflict());
-        EXPECT_TRUE(isCorrect(Exact, Computed, {Known1, Known2}));
-        // We generally don't want to return conflicting known bits, even if it
-        // is legal for always poison results.
-        if (CheckOptimality && !Exact.hasConflict()) {
-          EXPECT_TRUE(isOptimal(Exact, Computed, {Known1, Known2}));
-        }
+        EXPECT_TRUE(
+            checkResult(Exact, Computed, {Known1, Known2}, CheckOptimality));
         // In some cases we choose to return zero if the result is always
         // poison.
         if (RefinePoisonToZero && Exact.hasConflict()) {
@@ -201,23 +186,23 @@ static void TestAddSubExhaustive(bool IsAdd) {
 
       KnownBits KnownComputed = KnownBits::computeForAddSub(
           IsAdd, /*NSW=*/false, /*NUW=*/false, Known1, Known2);
-      EXPECT_TRUE(isOptimal(Known, KnownComputed, {Known1, Known2}));
+      EXPECT_TRUE(checkResult(Known, KnownComputed, {Known1, Known2},
+                              /*CheckOptimality=*/true));
 
       KnownBits KnownNSWComputed = KnownBits::computeForAddSub(
           IsAdd, /*NSW=*/true, /*NUW=*/false, Known1, Known2);
-      if (!KnownNSW.hasConflict())
-        EXPECT_TRUE(isOptimal(KnownNSW, KnownNSWComputed, {Known1, Known2}));
+      EXPECT_TRUE(checkResult(KnownNSW, KnownNSWComputed, {Known1, Known2},
+                              /*CheckOptimality=*/true));
 
       KnownBits KnownNUWComputed = KnownBits::computeForAddSub(
           IsAdd, /*NSW=*/false, /*NUW=*/true, Known1, Known2);
-      if (!KnownNUW.hasConflict())
-        EXPECT_TRUE(isOptimal(KnownNUW, KnownNUWComputed, {Known1, Known2}));
+      EXPECT_TRUE(checkResult(KnownNUW, KnownNUWComputed, {Known1, Known2},
+                              /*CheckOptimality=*/true));
 
       KnownBits KnownNSWAndNUWComputed = KnownBits::computeForAddSub(
           IsAdd, /*NSW=*/true, /*NUW=*/true, Known1, Known2);
-      if (!KnownNSWAndNUW.hasConflict())
-        EXPECT_TRUE(isOptimal(KnownNSWAndNUW, KnownNSWAndNUWComputed,
-                              {Known1, Known2}));
+      EXPECT_TRUE(checkResult(KnownNSWAndNUW, KnownNSWAndNUWComputed,
+                              {Known1, Known2}, /*CheckOptimality=*/true));
     });
   });
 }
