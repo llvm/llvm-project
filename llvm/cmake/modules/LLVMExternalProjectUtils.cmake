@@ -57,7 +57,7 @@ endfunction()
 #   TARGET_TRIPLE triple
 #     Optional target triple to pass to the compiler
 #   FOLDER
-#     For IDEs, the Folder to put the targets into.=
+#     For IDEs, the Folder to put the targets into.
 #   )
 function(llvm_ExternalProject_Add name source_dir)
   cmake_parse_arguments(ARG
