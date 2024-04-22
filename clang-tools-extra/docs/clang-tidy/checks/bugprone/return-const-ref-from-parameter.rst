@@ -3,7 +3,7 @@
 bugprone-return-const-ref-from-parameter
 ========================================
 
-Detects return statements that return constant reference parameter as constant
+Detects return statements that return a constant reference parameter as constant
 reference. This may cause use-after-free errors if the caller uses xvalue as
 arguments.
 
