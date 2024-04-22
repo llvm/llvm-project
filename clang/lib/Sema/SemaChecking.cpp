@@ -3927,10 +3927,10 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
         if (CallerFD->hasAttr<ArmLocallyStreamingAttr>())
           Diag(Loc, diag::warn_sme_locally_streaming_no_sve);
 
-          if ((CallerFnType == SemaARM::ArmStreaming ||
-               CallerFnType == SemaARM::ArmStreamingCompatible) &&
-              (!IsCalleeStreaming && !IsCalleeStreamingCompatible))
-            Diag(Loc, diag::warn_sme_streaming_mode_change_no_sve);
+        if ((CallerFnType == SemaARM::ArmStreaming ||
+             CallerFnType == SemaARM::ArmStreamingCompatible) &&
+            (!IsCalleeStreaming && !IsCalleeStreamingCompatible))
+          Diag(Loc, diag::warn_sme_streaming_mode_change_no_sve);
       }
 
       // If the call requires a streaming-mode change and has scalable vector
