@@ -3659,7 +3659,7 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
       misparsedStmtFuncFound_ = true;
       return false;
     }
-    if (DoesScopeContain(&ultimate.owner(), currScope())) {
+    if (IsHostAssociated(*symbol, currScope())) {
       if (context().ShouldWarn(
               common::LanguageFeature::StatementFunctionExtensions)) {
         Say(name,
