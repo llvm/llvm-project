@@ -67,7 +67,8 @@ public:
                       SourceLocation ColonLocFirst,
                       SourceLocation ColonLocSecond, SourceLocation RBracketLoc)
       : ArraySectionExprBase(OMPArraySectionExprClass, Base, LowerBound, Length,
-                             Type, VK, OK, ColonLocFirst, RBracketLoc) {
+                             Type, VK, OK, ColonLocFirst, RBracketLoc),
+        ColonLocSecond(ColonLocSecond) {
     setSubExpr(OMPArraySectionIndices::STRIDE, Stride);
     setDependence(computeDependence(this));
   }
