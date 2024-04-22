@@ -750,6 +750,175 @@ DebugStringSectionRef::create(MCCASBuilder &MB,
   return get(B->build());
 }
 
+// Creating a Debug Section CAS Object is the same for most sections, this
+// function improve code reuse.
+template <typename SectionTy>
+static Error createGenericDebugSection(MCCASBuilder &MB,
+                                       ArrayRef<cas::ObjectRef> Fragments,
+                                       SmallVectorImpl<char> &Data,
+                                       SmallVectorImpl<cas::ObjectRef> &Refs) {
+
+  if (auto E = SectionTy::encodeReferences(Fragments, Data, Refs))
+    return E;
+
+  writeRelocations(MB.getSectionRelocs(), Data);
+  return Error::success();
+}
+
+Expected<DebugStringOffsetsSectionRef>
+DebugStringOffsetsSectionRef::create(MCCASBuilder &MB,
+                                     ArrayRef<cas::ObjectRef> Fragments) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+
+  if (auto E = createGenericDebugSection<DebugStringOffsetsSectionRef>(
+          MB, Fragments, B->Data, B->Refs))
+    return E;
+
+  return get(B->build());
+}
+
+Expected<DebugLocSectionRef>
+DebugLocSectionRef::create(MCCASBuilder &MB,
+                           ArrayRef<cas::ObjectRef> Fragments) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+
+  if (auto E = createGenericDebugSection<DebugLocSectionRef>(MB, Fragments,
+                                                             B->Data, B->Refs))
+    return E;
+
+  return get(B->build());
+}
+
+Expected<DebugLoclistsSectionRef>
+DebugLoclistsSectionRef::create(MCCASBuilder &MB,
+                                ArrayRef<cas::ObjectRef> Fragments) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+
+  if (auto E = createGenericDebugSection<DebugLoclistsSectionRef>(
+          MB, Fragments, B->Data, B->Refs))
+    return E;
+
+  return get(B->build());
+}
+
+Expected<DebugRangesSectionRef>
+DebugRangesSectionRef::create(MCCASBuilder &MB,
+                              ArrayRef<cas::ObjectRef> Fragments) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+
+  if (auto E = createGenericDebugSection<DebugRangesSectionRef>(
+          MB, Fragments, B->Data, B->Refs))
+    return E;
+
+  return get(B->build());
+}
+
+Expected<DebugRangelistsSectionRef>
+DebugRangelistsSectionRef::create(MCCASBuilder &MB,
+                                  ArrayRef<cas::ObjectRef> Fragments) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+
+  if (auto E = createGenericDebugSection<DebugRangelistsSectionRef>(
+          MB, Fragments, B->Data, B->Refs))
+    return E;
+
+  return get(B->build());
+}
+
+Expected<DebugLineStrSectionRef>
+DebugLineStrSectionRef::create(MCCASBuilder &MB,
+                               ArrayRef<cas::ObjectRef> Fragments) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+
+  if (auto E = createGenericDebugSection<DebugLineStrSectionRef>(
+          MB, Fragments, B->Data, B->Refs))
+    return E;
+
+  return get(B->build());
+}
+
+Expected<DebugNamesSectionRef>
+DebugNamesSectionRef::create(MCCASBuilder &MB,
+                             ArrayRef<cas::ObjectRef> Fragments) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+
+  if (auto E = createGenericDebugSection<DebugNamesSectionRef>(
+          MB, Fragments, B->Data, B->Refs))
+    return E;
+
+  return get(B->build());
+}
+
+Expected<AppleNamesSectionRef>
+AppleNamesSectionRef::create(MCCASBuilder &MB,
+                             ArrayRef<cas::ObjectRef> Fragments) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+
+  if (auto E = createGenericDebugSection<AppleNamesSectionRef>(
+          MB, Fragments, B->Data, B->Refs))
+    return E;
+
+  return get(B->build());
+}
+
+Expected<AppleTypesSectionRef>
+AppleTypesSectionRef::create(MCCASBuilder &MB,
+                             ArrayRef<cas::ObjectRef> Fragments) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+
+  if (auto E = createGenericDebugSection<AppleTypesSectionRef>(
+          MB, Fragments, B->Data, B->Refs))
+    return E;
+
+  return get(B->build());
+}
+
+Expected<AppleNamespaceSectionRef>
+AppleNamespaceSectionRef::create(MCCASBuilder &MB,
+                                 ArrayRef<cas::ObjectRef> Fragments) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+
+  if (auto E = createGenericDebugSection<AppleNamespaceSectionRef>(
+          MB, Fragments, B->Data, B->Refs))
+    return E;
+
+  return get(B->build());
+}
+
+Expected<AppleObjCSectionRef>
+AppleObjCSectionRef::create(MCCASBuilder &MB,
+                                 ArrayRef<cas::ObjectRef> Fragments) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+
+  if (auto E = createGenericDebugSection<AppleObjCSectionRef>(MB, Fragments,
+                                                              B->Data, B->Refs))
+    return E;
+
+  return get(B->build());
+}
+
 Expected<uint64_t> SectionRef::materialize(MCCASReader &Reader,
                                            raw_ostream *Stream) const {
   // Start a new section for relocations.
@@ -1173,6 +1342,122 @@ DebugStringSectionRef::materialize(MCCASReader &Reader,
   return Size;
 }
 
+// Materializing a Debug Section CAS Object is the same for most sections, this
+// function improve code reuse.
+template <typename SectionTy>
+static Expected<uint64_t> materializeGenericDebugSection(MCCASReader &Reader,
+                                                         StringRef Remaining,
+                                                         SectionTy Section) {
+  // Start a new section for relocations.
+  Reader.Relocations.emplace_back();
+  SmallVector<char, 0> SectionContents;
+  raw_svector_ostream SectionStream(SectionContents);
+
+  unsigned Size = 0;
+  auto Refs = SectionTy::decodeReferences(Section, Remaining);
+  if (!Refs)
+    return Refs.takeError();
+
+  for (auto ID : *Refs) {
+    auto FragmentSize = Reader.materializeSection(ID, &SectionStream);
+    if (!FragmentSize)
+      return FragmentSize.takeError();
+    Size += *FragmentSize;
+  }
+
+  if (auto E = decodeRelocations(Reader, Remaining))
+    return std::move(E);
+  Reader.OS << SectionContents;
+
+  return Size;
+}
+
+Expected<uint64_t>
+DebugStringOffsetsSectionRef::materialize(MCCASReader &Reader,
+                                          raw_ostream *Stream) const {
+  StringRef Remaining = getData();
+  return materializeGenericDebugSection<DebugStringOffsetsSectionRef>(
+      Reader, Remaining, *this);
+}
+
+Expected<uint64_t> DebugLocSectionRef::materialize(MCCASReader &Reader,
+                                                   raw_ostream *Stream) const {
+  StringRef Remaining = getData();
+  return materializeGenericDebugSection<DebugLocSectionRef>(Reader, Remaining,
+                                                            *this);
+}
+
+Expected<uint64_t>
+DebugLoclistsSectionRef::materialize(MCCASReader &Reader,
+                                     raw_ostream *Stream) const {
+  StringRef Remaining = getData();
+  return materializeGenericDebugSection<DebugLoclistsSectionRef>(
+      Reader, Remaining, *this);
+}
+
+Expected<uint64_t>
+DebugRangesSectionRef::materialize(MCCASReader &Reader,
+                                   raw_ostream *Stream) const {
+  StringRef Remaining = getData();
+  return materializeGenericDebugSection<DebugRangesSectionRef>(
+      Reader, Remaining, *this);
+}
+
+Expected<uint64_t>
+DebugRangelistsSectionRef::materialize(MCCASReader &Reader,
+                                       raw_ostream *Stream) const {
+  StringRef Remaining = getData();
+  return materializeGenericDebugSection<DebugRangelistsSectionRef>(
+      Reader, Remaining, *this);
+}
+
+Expected<uint64_t>
+DebugLineStrSectionRef::materialize(MCCASReader &Reader,
+                                    raw_ostream *Stream) const {
+  StringRef Remaining = getData();
+  return materializeGenericDebugSection<DebugLineStrSectionRef>(
+      Reader, Remaining, *this);
+}
+
+Expected<uint64_t>
+DebugNamesSectionRef::materialize(MCCASReader &Reader,
+                                  raw_ostream *Stream) const {
+  StringRef Remaining = getData();
+  return materializeGenericDebugSection<DebugNamesSectionRef>(Reader, Remaining,
+                                                              *this);
+}
+
+Expected<uint64_t>
+AppleNamesSectionRef::materialize(MCCASReader &Reader,
+                                  raw_ostream *Stream) const {
+  StringRef Remaining = getData();
+  return materializeGenericDebugSection<AppleNamesSectionRef>(Reader, Remaining,
+                                                              *this);
+}
+
+Expected<uint64_t>
+AppleTypesSectionRef::materialize(MCCASReader &Reader,
+                                  raw_ostream *Stream) const {
+  StringRef Remaining = getData();
+  return materializeGenericDebugSection<AppleTypesSectionRef>(Reader, Remaining,
+                                                              *this);
+}
+
+Expected<uint64_t>
+AppleNamespaceSectionRef::materialize(MCCASReader &Reader,
+                                      raw_ostream *Stream) const {
+  StringRef Remaining = getData();
+  return materializeGenericDebugSection<AppleNamespaceSectionRef>(
+      Reader, Remaining, *this);
+}
+
+Expected<uint64_t> AppleObjCSectionRef::materialize(MCCASReader &Reader,
+                                                    raw_ostream *Stream) const {
+  StringRef Remaining = getData();
+  return materializeGenericDebugSection<AppleObjCSectionRef>(Reader, Remaining,
+                                                             *this);
+}
+
 Expected<AtomRef> AtomRef::create(MCCASBuilder &MB,
                                   ArrayRef<cas::ObjectRef> Fragments) {
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
@@ -1502,7 +1787,17 @@ DwarfSectionsCache mccasformats::v1::getDwarfSections(MCAssembler &Asm) {
       Asm.getContext().getObjectFileInfo()->getDwarfLineSection(),
       Asm.getContext().getObjectFileInfo()->getDwarfStrSection(),
       Asm.getContext().getObjectFileInfo()->getDwarfAbbrevSection(),
-      Asm.getContext().getObjectFileInfo()->getDwarfStrOffSection()};
+      Asm.getContext().getObjectFileInfo()->getDwarfStrOffSection(),
+      Asm.getContext().getObjectFileInfo()->getDwarfLocSection(),
+      Asm.getContext().getObjectFileInfo()->getDwarfLoclistsSection(),
+      Asm.getContext().getObjectFileInfo()->getDwarfRangesSection(),
+      Asm.getContext().getObjectFileInfo()->getDwarfRnglistsSection(),
+      Asm.getContext().getObjectFileInfo()->getDwarfLineStrSection(),
+      Asm.getContext().getObjectFileInfo()->getDwarfDebugNamesSection(),
+      Asm.getContext().getObjectFileInfo()->getDwarfAccelNamesSection(),
+      Asm.getContext().getObjectFileInfo()->getDwarfAccelTypesSection(),
+      Asm.getContext().getObjectFileInfo()->getDwarfAccelNamespaceSection(),
+      Asm.getContext().getObjectFileInfo()->getDwarfAccelObjCSection()};
 }
 
 Error MCCASBuilder::prepare() {
@@ -1809,6 +2104,12 @@ Expected<SmallVector<char, 0>> MCCASBuilder::mergeMCFragmentContents(
   for (const MCFragment &Fragment : FragmentList) {
     if (const auto *DataFragment = dyn_cast<MCDataFragment>(&Fragment))
       llvm::append_range(mergedData, DataFragment->getContents());
+    else if (const auto *CompactEncodedInstFragment =
+                 dyn_cast<MCCompactEncodedInstFragment>(&Fragment))
+      llvm::append_range(mergedData, CompactEncodedInstFragment->getContents());
+    else if (const auto *RelaxableFragment =
+                 dyn_cast<MCRelaxableFragment>(&Fragment))
+      llvm::append_range(mergedData, RelaxableFragment->getContents());
     else if (const auto *DwarfLineAddrFrag =
                  dyn_cast<MCDwarfLineAddrFragment>(&Fragment))
       if (IsDebugLineSection)
@@ -1817,9 +2118,29 @@ Expected<SmallVector<char, 0>> MCCASBuilder::mergeMCFragmentContents(
         return createStringError(
             inconvertibleErrorCode(),
             "Invalid MCDwarfLineAddrFragment in a non debug line section");
-    else
-      return createStringError(inconvertibleErrorCode(),
-                               "Invalid fragment type");
+    else if (const auto *DwarfCallFrameFragment =
+                 dyn_cast<MCDwarfCallFrameFragment>(&Fragment))
+      llvm::append_range(mergedData, DwarfCallFrameFragment->getContents());
+    else if (const auto *CVDefRangeFragment =
+                 dyn_cast<MCCVDefRangeFragment>(&Fragment))
+      llvm::append_range(mergedData, CVDefRangeFragment->getContents());
+    else if (const auto *PseudoProbeAddrFragment =
+                 dyn_cast<MCPseudoProbeAddrFragment>(&Fragment))
+      llvm::append_range(mergedData, PseudoProbeAddrFragment->getContents());
+    else if (const auto *LEBFragment = dyn_cast<MCLEBFragment>(&Fragment))
+      llvm::append_range(mergedData, LEBFragment->getContents());
+    else if (const auto *CVInlineLineTableFragment =
+                 dyn_cast<MCCVInlineLineTableFragment>(&Fragment))
+      llvm::append_range(mergedData, CVInlineLineTableFragment->getContents());
+    else if (const auto *AlignFragment = dyn_cast<MCAlignFragment>(&Fragment)) {
+      auto FragmentSize = Asm.computeFragmentSize(Layout, Fragment);
+      raw_svector_ostream OS(mergedData);
+      if (auto E = writeAlignFragment(*this, *AlignFragment, OS, FragmentSize))
+        return std::move(E);
+    } else
+      // All other fragment types can be considered empty, see
+      // getFragmentContents() for all fragments that have contents.
+      continue;
   }
   return mergedData;
 }
@@ -2281,6 +2602,213 @@ Expected<SmallVector<DebugStrRef, 0>> MCCASBuilder::createDebugStringRefs() {
   return DebugStringRefs;
 }
 
+template <typename SectionTy>
+std::optional<Expected<SectionTy>>
+MCCASBuilder::createGenericDebugRef(MCSection *Section) {
+  if (!Section || !Section->getFragmentList().size())
+    return std::nullopt;
+
+  auto DebugCASData =
+      mergeMCFragmentContents(Section->getFragmentList(), false);
+
+  if (!DebugCASData)
+    return DebugCASData.takeError();
+
+  StringRef S(DebugCASData->data(), DebugCASData->size());
+
+  auto DebugCASRef = SectionTy::create(*this, S);
+  if (!DebugCASRef)
+    return DebugCASRef.takeError();
+
+  return *DebugCASRef;
+}
+
+Error MCCASBuilder::createDebugStrOffsetsSection() {
+
+  auto MaybeDebugStringOffsetsRef =
+      createGenericDebugRef<DebugStrOffsetsRef>(DwarfSections.StrOffsets);
+  if (!MaybeDebugStringOffsetsRef)
+    return Error::success();
+
+  if (!*MaybeDebugStringOffsetsRef)
+    return MaybeDebugStringOffsetsRef->takeError();
+
+  startSection(DwarfSections.StrOffsets);
+  addNode(**MaybeDebugStringOffsetsRef);
+  if (auto E = createPaddingRef(DwarfSections.StrOffsets))
+    return E;
+  return finalizeSection<DebugStringOffsetsSectionRef>();
+}
+
+Error MCCASBuilder::createDebugLocSection() {
+
+  auto MaybeDebugLocRef = createGenericDebugRef<DebugLocRef>(DwarfSections.Loc);
+  if (!MaybeDebugLocRef)
+    return Error::success();
+
+  if (!*MaybeDebugLocRef)
+    return MaybeDebugLocRef->takeError();
+
+  startSection(DwarfSections.Loc);
+  addNode(**MaybeDebugLocRef);
+  if (auto E = createPaddingRef(DwarfSections.Loc))
+    return E;
+  return finalizeSection<DebugLocSectionRef>();
+}
+
+Error MCCASBuilder::createDebugLoclistsSection() {
+
+  auto MaybeDebugLoclistsRef =
+      createGenericDebugRef<DebugLoclistsRef>(DwarfSections.Loclists);
+  if (!MaybeDebugLoclistsRef)
+    return Error::success();
+
+  if (!*MaybeDebugLoclistsRef)
+    return MaybeDebugLoclistsRef->takeError();
+
+  startSection(DwarfSections.Loclists);
+  addNode(**MaybeDebugLoclistsRef);
+  if (auto E = createPaddingRef(DwarfSections.Loclists))
+    return E;
+  return finalizeSection<DebugLoclistsSectionRef>();
+}
+
+Error MCCASBuilder::createDebugRangesSection() {
+
+  auto MaybeDebugRangesRef =
+      createGenericDebugRef<DebugRangesRef>(DwarfSections.Ranges);
+  if (!MaybeDebugRangesRef)
+    return Error::success();
+
+  if (!*MaybeDebugRangesRef)
+    return MaybeDebugRangesRef->takeError();
+
+  startSection(DwarfSections.Ranges);
+  addNode(**MaybeDebugRangesRef);
+  if (auto E = createPaddingRef(DwarfSections.Ranges))
+    return E;
+  return finalizeSection<DebugRangesSectionRef>();
+}
+
+Error MCCASBuilder::createDebugRangelistsSection() {
+
+  auto MaybeDebugRangelistsRef =
+      createGenericDebugRef<DebugRangelistsRef>(DwarfSections.Rangelists);
+  if (!MaybeDebugRangelistsRef)
+    return Error::success();
+
+  if (!*MaybeDebugRangelistsRef)
+    return MaybeDebugRangelistsRef->takeError();
+
+  startSection(DwarfSections.Rangelists);
+  addNode(**MaybeDebugRangelistsRef);
+  if (auto E = createPaddingRef(DwarfSections.Rangelists))
+    return E;
+  return finalizeSection<DebugRangelistsSectionRef>();
+}
+
+Error MCCASBuilder::createDebugLineStrSection() {
+
+  auto MaybeDebugLineStrRef =
+      createGenericDebugRef<DebugLineStrRef>(DwarfSections.LineStr);
+  if (!MaybeDebugLineStrRef)
+    return Error::success();
+
+  if (!*MaybeDebugLineStrRef)
+    return MaybeDebugLineStrRef->takeError();
+
+  startSection(DwarfSections.LineStr);
+  addNode(**MaybeDebugLineStrRef);
+  if (auto E = createPaddingRef(DwarfSections.LineStr))
+    return E;
+  return finalizeSection<DebugLineStrSectionRef>();
+}
+
+Error MCCASBuilder::createDebugNamesSection() {
+
+  auto MaybeDebugNamesRef =
+      createGenericDebugRef<DebugNamesRef>(DwarfSections.Names);
+  if (!MaybeDebugNamesRef)
+    return Error::success();
+
+  if (!*MaybeDebugNamesRef)
+    return MaybeDebugNamesRef->takeError();
+
+  startSection(DwarfSections.Names);
+  addNode(**MaybeDebugNamesRef);
+  if (auto E = createPaddingRef(DwarfSections.Names))
+    return E;
+  return finalizeSection<DebugNamesSectionRef>();
+}
+
+Error MCCASBuilder::createAppleNamesSection() {
+
+  auto MaybeAppleNamesRef =
+      createGenericDebugRef<AppleNamesRef>(DwarfSections.AppleNames);
+  if (!MaybeAppleNamesRef)
+    return Error::success();
+
+  if (!*MaybeAppleNamesRef)
+    return MaybeAppleNamesRef->takeError();
+
+  startSection(DwarfSections.AppleNames);
+  addNode(**MaybeAppleNamesRef);
+  if (auto E = createPaddingRef(DwarfSections.AppleNames))
+    return E;
+  return finalizeSection<AppleNamesSectionRef>();
+}
+
+Error MCCASBuilder::createAppleTypesSection() {
+
+  auto MaybeAppleTypesRef =
+      createGenericDebugRef<AppleTypesRef>(DwarfSections.AppleTypes);
+  if (!MaybeAppleTypesRef)
+    return Error::success();
+
+  if (!*MaybeAppleTypesRef)
+    return MaybeAppleTypesRef->takeError();
+
+  startSection(DwarfSections.AppleTypes);
+  addNode(**MaybeAppleTypesRef);
+  if (auto E = createPaddingRef(DwarfSections.AppleTypes))
+    return E;
+  return finalizeSection<AppleTypesSectionRef>();
+}
+
+Error MCCASBuilder::createAppleNamespaceSection() {
+
+  auto MaybeAppleNamespaceRef =
+      createGenericDebugRef<AppleNamespaceRef>(DwarfSections.AppleNamespace);
+  if (!MaybeAppleNamespaceRef)
+    return Error::success();
+
+  if (!*MaybeAppleNamespaceRef)
+    return MaybeAppleNamespaceRef->takeError();
+
+  startSection(DwarfSections.AppleNamespace);
+  addNode(**MaybeAppleNamespaceRef);
+  if (auto E = createPaddingRef(DwarfSections.AppleNamespace))
+    return E;
+  return finalizeSection<AppleNamespaceSectionRef>();
+}
+
+Error MCCASBuilder::createAppleObjCSection() {
+
+  auto MaybeAppleObjCRef =
+      createGenericDebugRef<AppleObjCRef>(DwarfSections.AppleObjC);
+  if (!MaybeAppleObjCRef)
+    return Error::success();
+
+  if (!*MaybeAppleObjCRef)
+    return MaybeAppleObjCRef->takeError();
+
+  startSection(DwarfSections.AppleObjC);
+  addNode(**MaybeAppleObjCRef);
+  if (auto E = createPaddingRef(DwarfSections.AppleObjC))
+    return E;
+  return finalizeSection<AppleObjCSectionRef>();
+}
+
 static ArrayRef<char> getFragmentContents(const MCFragment &Fragment) {
   switch (Fragment.getKind()) {
 #define MCFRAGMENT_NODE_REF(MCFragmentName, MCEnumName, MCEnumIdentifier)      \
@@ -2408,6 +2936,83 @@ Error MCCASBuilder::buildFragments() {
     // Handle Debug Str sections separately.
     if (&Sec == DwarfSections.Str) {
       if (auto E = createDebugStrSection())
+        return E;
+      continue;
+    }
+
+    // Handle Debug Str Offsets sections separately.
+    if (&Sec == DwarfSections.StrOffsets) {
+      if (auto E = createDebugStrOffsetsSection())
+        return E;
+      continue;
+    }
+
+    // Handle Debug Loc sections separately.
+    if (&Sec == DwarfSections.Loc) {
+      if (auto E = createDebugLocSection())
+        return E;
+      continue;
+    }
+
+    // Handle Debug Loclists sections separately.
+    if (&Sec == DwarfSections.Loclists) {
+      if (auto E = createDebugLoclistsSection())
+        return E;
+      continue;
+    }
+
+    // Handle Debug Ranges sections separately.
+    if (&Sec == DwarfSections.Ranges) {
+      if (auto E = createDebugRangesSection())
+        return E;
+      continue;
+    }
+
+    // Handle Debug Rangelists sections separately.
+    if (&Sec == DwarfSections.Rangelists) {
+      if (auto E = createDebugRangelistsSection())
+        return E;
+      continue;
+    }
+
+    // Handle Debug LineStr sections separately.
+    if (&Sec == DwarfSections.LineStr) {
+      if (auto E = createDebugLineStrSection())
+        return E;
+      continue;
+    }
+
+    // Handle Debug Names sections separately.
+    if (&Sec == DwarfSections.Names) {
+      if (auto E = createDebugNamesSection())
+        return E;
+      continue;
+    }
+
+    // Handle Debug AppleNames sections separately.
+    if (&Sec == DwarfSections.AppleNames) {
+      if (auto E = createAppleNamesSection())
+        return E;
+      continue;
+    }
+
+    // Handle Debug AppleTypes sections separately.
+    if (&Sec == DwarfSections.AppleTypes) {
+      if (auto E = createAppleTypesSection())
+        return E;
+      continue;
+    }
+
+    // Handle Debug AppleNamespace sections separately.
+    if (&Sec == DwarfSections.AppleNamespace) {
+      if (auto E = createAppleNamespaceSection())
+        return E;
+      continue;
+    }
+
+    // Handle Debug AppleObjC sections separately.
+    if (&Sec == DwarfSections.AppleObjC) {
+      if (auto E = createAppleObjCSection())
         return E;
       continue;
     }
@@ -2571,7 +3176,12 @@ void MCCASBuilder::startSection(const MCSection *Sec) {
       // For the Dwarf Sections, just append the relocations to the
       // SectionRelocs. No Atoms are considered for this section.
       if (R.F && Sec != DwarfSections.Line && Sec != DwarfSections.DebugInfo &&
-          Sec != DwarfSections.Abbrev)
+          Sec != DwarfSections.Abbrev && Sec != DwarfSections.StrOffsets &&
+          Sec != DwarfSections.Loclists && Sec != DwarfSections.Ranges &&
+          Sec != DwarfSections.Rangelists && Sec != DwarfSections.LineStr &&
+          Sec != DwarfSections.Names && Sec != DwarfSections.AppleNames &&
+          Sec != DwarfSections.AppleTypes &&
+          Sec != DwarfSections.AppleNamespace && Sec != DwarfSections.AppleObjC)
         RelMap[R.F].push_back(R.MRE);
       else
         // If the fragment is nullptr, it should a section with only relocation
@@ -2774,6 +3384,28 @@ Expected<uint64_t> MCCASReader::materializeGroup(cas::ObjectRef ID) {
     return F->materialize(*this);
   if (auto F = DebugStringSectionRef::Cast(*Node))
     return F->materialize(*this);
+  if (auto F = DebugStringOffsetsSectionRef::Cast(*Node))
+    return F->materialize(*this);
+  if (auto F = DebugLocSectionRef::Cast(*Node))
+    return F->materialize(*this);
+  if (auto F = DebugLoclistsSectionRef::Cast(*Node))
+    return F->materialize(*this);
+  if (auto F = DebugRangesSectionRef::Cast(*Node))
+    return F->materialize(*this);
+  if (auto F = DebugRangelistsSectionRef::Cast(*Node))
+    return F->materialize(*this);
+  if (auto F = DebugLineStrSectionRef::Cast(*Node))
+    return F->materialize(*this);
+  if (auto F = DebugNamesSectionRef::Cast(*Node))
+    return F->materialize(*this);
+  if (auto F = AppleNamesSectionRef::Cast(*Node))
+    return F->materialize(*this);
+  if (auto F = AppleTypesSectionRef::Cast(*Node))
+    return F->materialize(*this);
+  if (auto F = AppleNamespaceSectionRef::Cast(*Node))
+    return F->materialize(*this);
+  if (auto F = AppleObjCSectionRef::Cast(*Node))
+    return F->materialize(*this);
   if (auto F = CStringRef::Cast(*Node)) {
     auto Size = F->materialize(OS);
     if (!Size)
@@ -2838,6 +3470,28 @@ Expected<uint64_t> MCCASReader::materializeSection(cas::ObjectRef ID,
     Stream->write_zeros(1);
     return *Size + 1;
   }
+  if (auto F = DebugStrOffsetsRef::Cast(*Node))
+    return F->materialize(*Stream);
+  if (auto F = DebugLocRef::Cast(*Node))
+    return F->materialize(*Stream);
+  if (auto F = DebugLoclistsRef::Cast(*Node))
+    return F->materialize(*Stream);
+  if (auto F = DebugRangesRef::Cast(*Node))
+    return F->materialize(*Stream);
+  if (auto F = DebugRangelistsRef::Cast(*Node))
+    return F->materialize(*Stream);
+  if (auto F = DebugLineStrRef::Cast(*Node))
+    return F->materialize(*Stream);
+  if (auto F = DebugNamesRef::Cast(*Node))
+    return F->materialize(*Stream);
+  if (auto F = AppleNamesRef::Cast(*Node))
+    return F->materialize(*Stream);
+  if (auto F = AppleTypesRef::Cast(*Node))
+    return F->materialize(*Stream);
+  if (auto F = AppleNamespaceRef::Cast(*Node))
+    return F->materialize(*Stream);
+  if (auto F = AppleObjCRef::Cast(*Node))
+    return F->materialize(*Stream);
   if (auto F = AddendsRef::Cast(*Node))
     // AddendsRef is already handled when materializing Atoms, skip.
     return 0;

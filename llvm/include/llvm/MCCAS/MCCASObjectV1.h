@@ -480,6 +480,16 @@ struct DwarfSectionsCache {
   MCSection *Str;
   MCSection *Abbrev;
   MCSection *StrOffsets;
+  MCSection *Loc;
+  MCSection *Loclists;
+  MCSection *Ranges;
+  MCSection *Rangelists;
+  MCSection *LineStr;
+  MCSection *Names;
+  MCSection *AppleNames;
+  MCSection *AppleTypes;
+  MCSection *AppleNamespace;
+  MCSection *AppleObjC;
 };
 
 /// Queries `Asm` for all dwarf sections and returns an object with (possibly
@@ -578,6 +588,9 @@ private:
 
   Expected<SmallVector<DebugStrRef, 0>> createDebugStringRefs();
 
+  template <typename SectionTy>
+  std::optional<Expected<SectionTy>> createGenericDebugRef(MCSection *Section);
+
   struct CUSplit {
     SmallVector<MutableArrayRef<char>> SplitCUData;
     SmallVector<size_t> AbbrevOffsets;
@@ -595,6 +608,50 @@ private:
   // If a DWARF String section exists, create a DebugStrRef CAS object per
   // string in the section.
   Error createDebugStrSection();
+
+  // If a DWARF String Offsets section exists, create a DebugStrOffsetsRef CAS
+  // object for the section.
+  Error createDebugStrOffsetsSection();
+
+  // If a DWARF Loc section exists, create a DebugLocRef CAS object for the
+  // section.
+  Error createDebugLocSection();
+
+  // If a DWARF Loclists section exists, create a DebugLoclistsRef CAS
+  // object for the section.
+  Error createDebugLoclistsSection();
+
+  // If a DWARF Ranges section exists, create a DebugRangesRef CAS
+  // object for the section.
+  Error createDebugRangesSection();
+
+  // If a DWARF Rangeslists section exists, create a DebugRangeslistsRef CAS
+  // object for the section.
+  Error createDebugRangelistsSection();
+
+  // If a DWARF LineStr section exists, create a DebugLineStrRef CAS
+  // object for the section.
+  Error createDebugLineStrSection();
+
+  // If a DWARF Names section exists, create a DebugNamesRef CAS
+  // object for the section.
+  Error createDebugNamesSection();
+
+  // If a DWARF Apple Names section exists, create a AppleNamesRef CAS
+  // object for the section.
+  Error createAppleNamesSection();
+
+  // If a DWARF Apple Types section exists, create a AppleTypesRef CAS
+  // object for the section.
+  Error createAppleTypesSection();
+
+  // If a DWARF Apple Namespaces section exists, create a AppleNamespaceRef CAS
+  // object for the section.
+  Error createAppleNamespaceSection();
+
+  // If a DWARF Apple Objc section exists, create a AppleObjcRef CAS
+  // object for the section.
+  Error createAppleObjCSection();
 
   /// If there is any padding between one section and the next, create a
   /// PaddingRef CAS object to represent the bytes of Padding between the two
