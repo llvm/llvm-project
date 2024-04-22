@@ -1,4 +1,5 @@
 // RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1210 %s | FileCheck --check-prefix=GFX1210 %s
+// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1300 %s | FileCheck --check-prefix=GFX1210 %s
 
 v_ceil_f64 v[254:255], 0x10abcdef12345678
 // GFX1210: v_ceil_f64_e32 v[254:255], 0x10abcdef12345678 ; encoding: [0xfe,0x30,0xfc,0x7f,0x78,0x56,0x34,0x12,0xef,0xcd,0xab,0x10]
