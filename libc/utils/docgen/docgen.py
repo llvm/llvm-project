@@ -157,6 +157,7 @@ def print_macros_rst(header: Header, macros: Dict):
             print(f'    - {macros[name]["posix-definition"]}')
         else:
             print("    -")
+    print()
 
 
 def print_impl_status_rst(header: Header, api: Dict):
@@ -170,7 +171,6 @@ def print_impl_status_rst(header: Header, api: Dict):
     # the macro and function sections are both optional
     if "macros" in api:
         print_macros_rst(header, api["macros"])
-        print()
 
     if "functions" in api:
         print_functions_rst(header, api["functions"])

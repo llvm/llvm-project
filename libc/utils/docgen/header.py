@@ -77,4 +77,10 @@ class Header:
         return False
 
     def __get_macro_files(self) -> Generator[Path, None, None]:
+        """
+        This function uses a glob on, e.g., ``"**/fcntl.macros.h"`` because the
+        macro file might be located in a subdirectory:
+        libc/include/llvm-libc-macros/fcntl-macros.h
+        libc/include/llvm-libc-macros/linux/fcntl-macros.h
+        """
         return self.macros_dir.glob(f"**/{self.stem}-macros.h")
