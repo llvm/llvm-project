@@ -1271,21 +1271,21 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
   getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
-    .legalFor({{S32, S32}, {S32, S64}})
-    .customFor({{S32, S8}, {S32, S16}})
-    .clampScalar(0, S32, S32)
-    .clampScalar(1, S32, S64)
-    .scalarize(0)
-    .widenScalarToNextPow2(0, 32)
-    .widenScalarToNextPow2(1, 32);
+      .legalFor({{S32, S32}, {S32, S64}})
+      .customFor({{S32, S8}, {S32, S16}})
+      .clampScalar(0, S32, S32)
+      .clampScalar(1, S32, S64)
+      .scalarize(0)
+      .widenScalarToNextPow2(0, 32)
+      .widenScalarToNextPow2(1, 32);
 
   getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF)
-    .legalFor({{S32, S32}, {S32, S64}})
-    .clampScalar(0, S32, S32)
-    .clampScalar(1, S32, S64)
-    .scalarize(0)
-    .widenScalarToNextPow2(0, 32)
-    .widenScalarToNextPow2(1, 32);
+      .legalFor({{S32, S32}, {S32, S64}})
+      .clampScalar(0, S32, S32)
+      .clampScalar(1, S32, S64)
+      .scalarize(0)
+      .widenScalarToNextPow2(0, 32)
+      .widenScalarToNextPow2(1, 32);
 
   // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
   // RegBankSelect.
