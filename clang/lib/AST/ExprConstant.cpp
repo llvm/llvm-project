@@ -14553,8 +14553,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluatePointer(E->getArg(1), Pointer, Info))
       return false;
-    llvm::RoundingMode RM =
-        E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).getRoundingMode();
+    llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
     int FrexpExp;
     Result = llvm::frexp(Result, FrexpExp, RM);
     return true;

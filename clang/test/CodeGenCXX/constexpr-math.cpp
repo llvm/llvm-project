@@ -1,14 +1,16 @@
 // RUN: %clang_cc1 -x c++ -triple x86_64-unknown-unknown -std=c++23 \
-// RUN: -emit-llvm -o - %s | FileCheck %s
+// RUN: -DWIN -emit-llvm -o - %s | FileCheck %s --check-prefixes=WIN
 
-// RUN %clang_cc1 -x c++ -triple x86_64-linux-gnu -emit-llvm -o - %s \
-// RUN -std=c++23
+// RUN: %clang_cc1 -x c++ -triple x86_64-unknown-unknown -std=c++23 \
+// RUN: -emit-llvm -o - %s | FileCheck %s --check-prefixes=LNX
 
+#ifdef WIN
 #define INFINITY ((float)(1e+300 * 1e+300))
 #define NAN      (-(float)(INFINITY * 0.0F))
-
-//constexpr double frexp ( double num, int* exp );
-//constexpr float foo ( float num, int* exp );
+#else
+#define NAN (__builtin_nanf(""))
+#define INFINITY (__builtin_inff())
+#endif
 
 int func()
 {
@@ -38,7 +40,8 @@ int func()
 // CHECK: store double 1.300000e+00, ptr {{.*}}
 // CHECK: store double -0.000000e+00, ptr {{.*}}
 // CHECK: store double -0.000000e+00, ptr {{.*}}
-// CHECK: store float 0xFFF8000000000000, ptr {{.*}}
+// WIN: store float 0xFFF8000000000000, ptr {{.*}}
+// LNX: store float 0x7FF8000000000000, ptr {{.*}}
 // CHECK: store float -1.000000e+00, ptr {{.*}}
 // CHECK: store float 0xFFF0000000000000, ptr {{.*}}
 
@@ -46,6 +49,7 @@ int func()
 // CHECK: store double 0.000000e+00, ptr {{.*}}
 // CHECK: store double -0.000000e+00, ptr {{.*}}
 // CHECK: store double 0xFFF8000000000000, ptr {{.*}}
-// CHECK: store double 0x7FF8000000000000, ptr {{.*}}
+// WIN: store double 0x7FF8000000000000, ptr {{.*}}
+// LNX: store double 0xFFF8000000000000, ptr {{.*}}
 // CHECK: store double 0x7FF0000000000000, ptr {{.*}}
 // CHECK: store double 0x7FF0000000000000, ptr {{.*}}
