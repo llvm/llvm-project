@@ -8,6 +8,7 @@
 
 #include "include/llvm-libc-macros/offsetof-macro.h"
 #include "include/llvm-libc-types/jmp_buf.h"
+#include "src/setjmp/x86_64/setjmp.h"
 #include "test/UnitTest/Test.h"
 
 // If this test fails, then *_OFFSET macro definitions in
@@ -15,14 +16,14 @@
 // detector.
 TEST(LlvmLibcSetjmpTest, JmpBufLayout) {
 #ifdef __x86_64__
-  ASSERT_EQ(offsetof(__jmp_buf, rbx), 0UL);
-  ASSERT_EQ(offsetof(__jmp_buf, rbp), 8UL);
-  ASSERT_EQ(offsetof(__jmp_buf, r12), 16UL);
-  ASSERT_EQ(offsetof(__jmp_buf, r13), 24UL);
-  ASSERT_EQ(offsetof(__jmp_buf, r14), 32UL);
-  ASSERT_EQ(offsetof(__jmp_buf, r15), 40UL);
-  ASSERT_EQ(offsetof(__jmp_buf, rsp), 48UL);
-  ASSERT_EQ(offsetof(__jmp_buf, rip), 56UL);
+  ASSERT_EQ(offsetof(__jmp_buf, rbx), RBX_OFFSET);
+  ASSERT_EQ(offsetof(__jmp_buf, rbp), RBP_OFFSET);
+  ASSERT_EQ(offsetof(__jmp_buf, r12), R12_OFFSET);
+  ASSERT_EQ(offsetof(__jmp_buf, r13), R13_OFFSET);
+  ASSERT_EQ(offsetof(__jmp_buf, r14), R14_OFFSET);
+  ASSERT_EQ(offsetof(__jmp_buf, r15), R15_OFFSET);
+  ASSERT_EQ(offsetof(__jmp_buf, rsp), RSP_OFFSET);
+  ASSERT_EQ(offsetof(__jmp_buf, rip), RIP_OFFSET);
   ASSERT_EQ(sizeof(__jmp_buf), 64UL);
   ASSERT_EQ(alignof(__jmp_buf), 8UL);
 #endif // __x86_64__

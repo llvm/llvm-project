@@ -7,22 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/assembly.h"
+#include "src/setjmp/x86_64/setjmp.h"
 
 #define paste(ns) _ZN22 ## ns ## 6setjmpEP9__jmp_buf
 #define expand(x) paste(x)
 #define LIBC_NAMESPACE_setjump expand(LIBC_NAMESPACE)
 // aka _ZN22__llvm_libc_19_0_0_git6setjmpEP9__jmp_buf
 // aka __llvm_libc_19_0_0_git::setjmp(__jmp_buf*)
-
-// Brittle! Changing the layout of __jmp_buf will break this!
-#define RBX_OFFSET 0
-#define RBP_OFFSET 8
-#define R12_OFFSET 16
-#define R13_OFFSET 24
-#define R14_OFFSET 32
-#define R15_OFFSET 40
-#define RSP_OFFSET 48
-#define RIP_OFFSET 56
 
 .global setjump
 .global LIBC_NAMESPACE_setjump
