@@ -2553,7 +2553,7 @@ Decl *Parser::ParseDeclarationAfterDeclarator(
 }
 
 static bool isConstexprVariable(const Decl *D) {
-  if (const VarDecl *Var = dyn_cast<VarDecl>(D))
+  if (const VarDecl *Var = dyn_cast_if_present<VarDecl>(D))
     return Var->isConstexpr();
 
   return false;
@@ -2566,12 +2566,13 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     Parser &P;
     Declarator &D;
     Decl *ThisDecl;
-    llvm::SaveAndRestore<bool> ConstantContext;
+    EnterExpressionEvaluationContext EC;
 
     InitializerScopeRAII(Parser &P, Declarator &D, Decl *ThisDecl)
         : P(P), D(D), ThisDecl(ThisDecl),
-          ConstantContext(P.Actions.isConstantEvaluatedOverride,
-                          isConstexprVariable(ThisDecl)) {
+          EC(P.Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+             ThisDecl, Sema::ExpressionEvaluationContextRecord::EK_Other,
+             isConstexprVariable(ThisDecl)) {
       if (ThisDecl && P.getLangOpts().CPlusPlus) {
         Scope *S = nullptr;
         if (D.getCXXScopeSpec().isSet()) {
