@@ -9,6 +9,3 @@ Revert :breaks hip catch tests.
 1de7e6c8cba2 [clang] move -Wcast-function-type under -Wextra (#77178)
 999d4f840777 Split -Wcast-function-type into a separate group (#86131)   
 
-Revert; breaks build of rccl and blas and rocSolver
-* f4bbcac2 [Clang] Allow the value of unroll count to be zero  in `#pragma GCC unroll` and `#pragma unroll` (#88666)
-Clang] Fix a crash introduced in PR#88666 (#89567)   
