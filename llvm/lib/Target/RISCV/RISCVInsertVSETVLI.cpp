@@ -1614,6 +1614,8 @@ bool RISCVCoalesceVSETVLI::runOnBasicBlock(MachineBasicBlock &MBB) {
             LiveInterval::Segment S(MISlot, DefLI.beginIndex(), DefVNI);
             DefLI.addSegment(S);
             DefVNI->def = MISlot;
+            // Mark DefLI as spillable if it was previously unspillable
+            DefLI.setWeight(0);
 
             // DefReg may have had no uses, in which case we need to shrink
             // the LiveInterval up to MI.
