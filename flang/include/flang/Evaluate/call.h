@@ -287,15 +287,19 @@ public:
       : ProcedureRef{std::move(p), std::move(a)} {}
 
   std::optional<DynamicType> GetType() const {
-    if (auto type{proc_.GetType()}) {
-      // TODO: Non constant explicit length parameters of PDTs result should
-      // likely be dropped too. This is not as easy as for characters since some
-      // long lived DerivedTypeSpec pointer would need to be created here. It is
-      // not clear if this is causing any issue so far since the storage size of
-      // PDTs is independent of length parameters.
-      return type->DropNonConstantCharacterLength();
+    if constexpr (IsLengthlessIntrinsicType<A>) {
+      return A::GetType();
+    } else {
+      if (auto type{proc_.GetType()}) {
+        // TODO: Non constant explicit length parameters of PDTs result should
+        // likely be dropped too. This is not as easy as for characters since
+        // some long lived DerivedTypeSpec pointer would need to be created
+        // here. It is not clear if this is causing any issue so far since the
+        // storage size of PDTs is independent of length parameters.
+        return type->DropNonConstantCharacterLength();
+      }
+      return std::nullopt;
     }
-    return std::nullopt;
   }
 };
 } // namespace Fortran::evaluate
