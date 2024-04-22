@@ -444,8 +444,8 @@ incompatible with the flags that gdb specifies.
 //  request packet contains the ASCII hex encoded filename
 //
 //  If the hash succeeded, the response is "F," followed by the low 64
-//  bits of the result, then the high 64 bits of the result. Both are hex
-//  without a prefix.
+//  bits of the result, and finally the high 64 bits of the result. Both are in
+//  hex format without a prefix.
 //
 //  The response is "F,", followed by "x" if the file did not exist
 //  or failed to hash.
