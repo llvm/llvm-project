@@ -49,8 +49,8 @@ class Header:
         """
         self.name = header_name
         self.stem = header_name.rstrip(".h")
-        self.libc_root = Path(__file__).parent.parent.parent
         self.docgen_root = Path(__file__).parent
+        self.libc_root = self.docgen_root.parent.parent
         self.docgen_json = self.docgen_root / Path(header_name).with_suffix(".json")
         self.fns_dir = Path(self.libc_root, "src", self.stem)
         self.macros_dir = Path(self.libc_root, "include", "llvm-libc-macros")
