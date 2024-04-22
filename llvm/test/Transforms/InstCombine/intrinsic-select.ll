@@ -280,3 +280,67 @@ entry:
   %ret = icmp eq i64 %masked, 0
   ret i1 %ret
 }
+
+define double @test_fabs_select1(double %a) {
+; CHECK-LABEL: @test_fabs_select1(
+; CHECK-NEXT:    [[COND:%.*]] = fcmp uno double [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], double 0x7FF8000000000000, double [[A]]
+; CHECK-NEXT:    ret double [[SEL1]]
+;
+  %cond = fcmp uno double %a, 0.000000e+00
+  %sel1 = select i1 %cond, double 0x7FF8000000000000, double %a
+  %fabs = call double @llvm.fabs.f64(double %sel1)
+  %sel2 = select i1 %cond, double %fabs, double %a
+  ret double %sel2
+}
+
+define <2 x double> @test_fabs_select1_vec(<2 x double> %a) {
+; CHECK-LABEL: @test_fabs_select1_vec(
+; CHECK-NEXT:    [[COND:%.*]] = fcmp uno <2 x double> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[COND]], <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>, <2 x double> [[A]]
+; CHECK-NEXT:    ret <2 x double> [[SEL2]]
+;
+  %cond = fcmp uno <2 x double> %a, zeroinitializer
+  %sel1 = select <2 x i1> %cond, <2 x double> splat(double 0x7FF8000000000000), <2 x double> %a
+  %fabs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %sel1)
+  %sel2 = select <2 x i1> %cond, <2 x double> %fabs, <2 x double> %a
+  ret <2 x double> %sel2
+}
+
+define double @test_fabs_select2(double %a) {
+; CHECK-LABEL: @test_fabs_select2(
+; CHECK-NEXT:    [[ABS1:%.*]] = call double @llvm.fabs.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[ABS1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[ABS2:%.*]] = select i1 [[CMP]], double 0.000000e+00, double [[ABS1]]
+; CHECK-NEXT:    ret double [[ABS2]]
+;
+  %abs1 = call double @llvm.fabs.f64(double %a)
+  %cmp = fcmp oeq double %abs1, 0x7FF0000000000000
+  %sel = select i1 %cmp, double -0.000000e+00, double %abs1
+  %abs2 = call double @llvm.fabs.f64(double %sel)
+  ret double %abs2
+}
+
+; nsz flag should be dropped.
+
+define double @test_fabs_select_fmf1(i1 %cond, double %a) {
+; CHECK-LABEL: @test_fabs_select_fmf1(
+; CHECK-NEXT:    [[A:%.*]] = call double @llvm.fabs.f64(double [[A1:%.*]])
+; CHECK-NEXT:    [[FABS:%.*]] = select nnan ninf i1 [[COND:%.*]], double 0.000000e+00, double [[A]]
+; CHECK-NEXT:    ret double [[FABS]]
+;
+  %sel1 = select nnan ninf nsz i1 %cond, double 0.0, double %a
+  %fabs = call double @llvm.fabs.f64(double %sel1)
+  ret double %fabs
+}
+
+define double @test_fabs_select_fmf2(i1 %cond, double %a) {
+; CHECK-LABEL: @test_fabs_select_fmf2(
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[SEL1:%.*]] = select nnan ninf nsz i1 [[COND:%.*]], double 0.000000e+00, double [[TMP1]]
+; CHECK-NEXT:    ret double [[SEL1]]
+;
+  %sel1 = select i1 %cond, double 0.0, double %a
+  %fabs = call nnan ninf nsz double @llvm.fabs.f64(double %sel1)
+  ret double %fabs
+}
