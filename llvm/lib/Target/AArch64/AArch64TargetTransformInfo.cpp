@@ -3827,9 +3827,18 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
       Tp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
       Mask.size() > LT.second.getVectorNumElements() && !Index && !SubTp) {
 
+    // Check for LD3/LD4 instructions, which are represented in llvm IR as
+    // deinterleaving-shuffle(load). The shuffle cost could potentially be free,
+    // but we model it with a cost of LT.first so that LD3/LD4 have a higher
+    // cost than just the load.
+    if (Args.size() >= 1 && isa<LoadInst>(Args[0]) &&
+        (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 3) ||
+         ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 4)))
+      return std::max<InstructionCost>(1, LT.first / 4);
+
     // Check for ST3/ST4 instructions, which are represented in llvm IR as
     // store(interleaving-shuffle). The shuffle cost could potentially be free,
-    // but we model it with a cost of LT.first so that LD3/LD3 have a higher
+    // but we model it with a cost of LT.first so that ST3/ST4 have a higher
     // cost than just the store.
     if (CxtI && CxtI->hasOneUse() && isa<StoreInst>(*CxtI->user_begin()) &&
         (ShuffleVectorInst::isInterleaveMask(
