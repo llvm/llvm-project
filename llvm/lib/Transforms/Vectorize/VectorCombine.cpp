@@ -1405,6 +1405,11 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
       B0->getOpcode() != B1->getOpcode() || B0->getType() != VecTy)
     return false;
 
+  // Don't introduce poison into div/rem.
+  if (any_of(Mask, [](int M) { return M == PoisonMaskElem; }) &&
+      B0->isIntDivRem())
+    return false;
+
   // Try to replace a binop with a shuffle if the shuffle is not costly.
   // The new shuffle will choose from a single, common operand, so it may be
   // cheaper than the existing two-operand shuffle.
