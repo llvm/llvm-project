@@ -176,11 +176,12 @@ def PThreadAPI : PublicAPI<"pthread.h"> {
       "__pthread_tss_dtor_t",
       "pthread_attr_t",
       "pthread_condattr_t",
+      "pthread_key_t",
       "pthread_mutex_t",
       "pthread_mutexattr_t",
-      "pthread_t",
-      "pthread_key_t",
       "pthread_once_t",
+      "pthread_rwlockattr_t",
+      "pthread_t",
   ];
 }
 
@@ -259,6 +260,7 @@ def SysTypesAPI : PublicAPI<"sys/types.h"> {
     "pthread_mutex_t",
     "pthread_mutexattr_t",
     "pthread_once_t",
+    "pthread_rwlockattr_t",
     "pthread_t",
     "size_t",
     "ssize_t",
