@@ -1417,7 +1417,7 @@ LogicalResult CppEmitter::emitGlobalVariable(GlobalOp op) {
   }
 
   std::optional<Attribute> initialValue = op.getInitialValue();
-  if (initialValue && !isa<UnitAttr>(*initialValue)) {
+  if (initialValue) {
     os << " = ";
     if (failed(emitAttribute(op->getLoc(), *initialValue)))
       return failure();
