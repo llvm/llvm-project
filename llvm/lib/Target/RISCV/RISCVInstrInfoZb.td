@@ -31,19 +31,19 @@ def SDTIntShiftAddOp : SDTypeProfile<1, 3, [   // shl_add
   SDTCisInt<3>
 ]>;
 
-def riscv_shl_add    : SDNode<"RISCVISD::SHL_ADD"   , SDTIntShiftAddOp>;
-def riscv_clzw   : SDNode<"RISCVISD::CLZW",   SDT_RISCVIntUnaryOpW>;
-def riscv_ctzw   : SDNode<"RISCVISD::CTZW",   SDT_RISCVIntUnaryOpW>;
-def riscv_rolw   : SDNode<"RISCVISD::ROLW",   SDT_RISCVIntBinOpW>;
-def riscv_rorw   : SDNode<"RISCVISD::RORW",   SDT_RISCVIntBinOpW>;
-def riscv_brev8  : SDNode<"RISCVISD::BREV8",  SDTIntUnaryOp>;
-def riscv_orc_b  : SDNode<"RISCVISD::ORC_B",  SDTIntUnaryOp>;
-def riscv_zip    : SDNode<"RISCVISD::ZIP",    SDTIntUnaryOp>;
-def riscv_unzip  : SDNode<"RISCVISD::UNZIP",  SDTIntUnaryOp>;
-def riscv_absw   : SDNode<"RISCVISD::ABSW",   SDTIntUnaryOp>;
-def riscv_clmul  : SDNode<"RISCVISD::CLMUL",  SDTIntBinOp>;
-def riscv_clmulh : SDNode<"RISCVISD::CLMULH", SDTIntBinOp>;
-def riscv_clmulr : SDNode<"RISCVISD::CLMULR", SDTIntBinOp>;
+def riscv_shl_add : SDNode<"RISCVISD::SHL_ADD", SDTIntShiftAddOp>;
+def riscv_clzw    : SDNode<"RISCVISD::CLZW",    SDT_RISCVIntUnaryOpW>;
+def riscv_ctzw    : SDNode<"RISCVISD::CTZW",    SDT_RISCVIntUnaryOpW>;
+def riscv_rolw    : SDNode<"RISCVISD::ROLW",    SDT_RISCVIntBinOpW>;
+def riscv_rorw    : SDNode<"RISCVISD::RORW",    SDT_RISCVIntBinOpW>;
+def riscv_brev8   : SDNode<"RISCVISD::BREV8",   SDTIntUnaryOp>;
+def riscv_orc_b   : SDNode<"RISCVISD::ORC_B",   SDTIntUnaryOp>;
+def riscv_zip     : SDNode<"RISCVISD::ZIP",     SDTIntUnaryOp>;
+def riscv_unzip   : SDNode<"RISCVISD::UNZIP",   SDTIntUnaryOp>;
+def riscv_absw    : SDNode<"RISCVISD::ABSW",    SDTIntUnaryOp>;
+def riscv_clmul   : SDNode<"RISCVISD::CLMUL",   SDTIntBinOp>;
+def riscv_clmulh  : SDNode<"RISCVISD::CLMULH",  SDTIntBinOp>;
+def riscv_clmulr  : SDNode<"RISCVISD::CLMULR",  SDTIntBinOp>;
 
 def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
   let Name = "UImmLog2XLenHalf";
