@@ -238,6 +238,8 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     CollectIncludingMapsFromAncestors(CurrentModule);
     for (const Module *ImportedModule : CurrentModule->Imports)
       CollectIncludingMapsFromAncestors(ImportedModule);
+    for (const Module *UsedModule : CurrentModule->DirectUses)
+      CollectIncludingMapsFromAncestors(UsedModule);
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
       CollectIncludingMapsFromAncestors(UndeclaredModule);
   }
