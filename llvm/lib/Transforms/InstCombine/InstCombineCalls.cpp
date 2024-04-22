@@ -2501,10 +2501,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(II->getArgOperand(0),
               m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
       // fabs (select Cond, TrueC, FalseC) --> select Cond, AbsT, AbsF
-      if (isa<Constant>(TVal) && isa<Constant>(FVal)) {
+      if (isa<Constant>(TVal) || isa<Constant>(FVal)) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
-        return SelectInst::Create(Cond, AbsT, AbsF);
+        SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);
+        FastMathFlags FMF1 = II->getFastMathFlags();
+        FastMathFlags FMF2 =
+            cast<SelectInst>(II->getArgOperand(0))->getFastMathFlags();
+        FMF2.setNoSignedZeros(false);
+        SI->setFastMathFlags(FMF1 | FMF2);
+        return SI;
       }
       // fabs (select Cond, -FVal, FVal) --> fabs FVal
       if (match(TVal, m_FNeg(m_Specific(FVal))))
